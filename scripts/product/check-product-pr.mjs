@@ -79,6 +79,23 @@ const readField = (label) => {
   return "";
 };
 
+const sectionBody = (heading) => {
+  const headingIndex = lines.findIndex(
+    (line) => line.trim().toLowerCase() === `## ${heading}`.toLowerCase(),
+  );
+  if (headingIndex < 0) return "";
+  const collected = [];
+  for (let i = headingIndex + 1; i < lines.length; i += 1) {
+    if (/^##\s+/.test(lines[i])) break;
+    collected.push(lines[i]);
+  }
+  return collected
+    .join("\n")
+    .replace(/<!--([\s\S]*?)-->/g, "")
+    .replace(/[-*]\s*\[[ xX]\]/g, "")
+    .trim();
+};
+
 const requiredFields = [
   "User",
   "Capability",
@@ -89,14 +106,7 @@ const requiredFields = [
 ];
 
 const missingFields = requiredFields.filter((field) => !readField(field));
-
-const acceptanceMatch = body.match(
-  /^##\s+Acceptance\s*$([\s\S]*?)(?=^##\s+|$)/mi,
-);
-const acceptance = acceptanceMatch?.[1]
-  ?.replace(/<!--([\s\S]*?)-->/g, "")
-  .replace(/[-*]\s*\[[ xX]\]/g, "")
-  .trim();
+const acceptance = sectionBody("Acceptance");
 
 if (missingFields.length || !acceptance) {
   console.error("FAIL: product behavior changed but PR Product Impact is incomplete.");
