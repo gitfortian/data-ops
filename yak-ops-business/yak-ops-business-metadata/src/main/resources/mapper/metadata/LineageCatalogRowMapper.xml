@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.yak.ops.business.metadata.dao.mapper.LineageCatalogRowMapper">
+
+    <!--
+      共表 yak_metadata_asset 的目录侧写路径（ticket 114，plan §3.3）。三条不变式都写在这里，
+      因为它们是"编译得过、语义已坏"那一类，只能靠 SQL 形状本身守：
+
+      ① UPDATE 子句里没有 lineage owns 的列：asset_type / parent_asset_id / properties / project_id /
+         name / source_type / source_id / data_source_id…column_name。它们在 INSERT 列表里出现一次，
+         之后不刷（§2.3 后果 1/2/5）。properties 连 INSERT 都不参与——目录的属性袋是 md_attributes。
+      ② create_time / update_time 必须显式带值：这张表由 lineage 建，这两列 NOT NULL 且无默认值，
+         strict 模式省掉就是 1364。
+      ③ 没变的行不产生实际写入：三个 <=> 守卫让 SET 赋回原值，MySQL 不记行变更，
+         "重跑幂等 = 除 last_collect_at 外零写入"靠这一段成立。
+    -->
+
+    <select id="selectStates" resultType="io.yak.ops.business.metadata.dao.model.CatalogAssetState">
+        SELECT id,
+               asset_key     AS assetKey,
+               provider_type AS providerType,
+               content_hash  AS contentHash,
+               source_hash   AS sourceHash,
+               source_updated_at AS sourceUpdatedAt,
+               gone_at       AS goneAt
+        FROM yak_metadata_asset
+        WHERE project_id = #{projectId}
+          AND asset_key IN
+        <foreach collection="assetKeys" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </select>
+
+    <insert id="upsertAssets">
+        INSERT INTO yak_metadata_asset
+            (project_id, asset_key, asset_type, name, source_type, source_id, parent_asset_id,
+             data_source_id, database_name, schema_name, table_name, column_name,
+             type_id, display_name, fully_qualified_name, fqn_hash, summary, entity_status,
+             owner_user, domain_ids, layer_code,
+             provider_type, collect_job_id, content_hash, source_hash, source_updated_at,
+             first_seen_at, last_collect_at, md_attributes, updated_by, create_time, update_time)
+        VALUES
+        <foreach collection="rows" item="row" separator=",">
+            (#{row.projectId}, #{row.assetKey}, #{row.assetType}, #{row.name}, #{row.sourceType},
+             #{row.sourceId}, #{row.parentAssetId}, #{row.dataSourceId}, #{row.databaseName},
+             #{row.schemaName}, #{row.tableName}, #{row.columnName},
+             #{row.typeId}, #{row.displayName}, #{row.fullyQualifiedName}, #{row.fqnHash},
+             #{row.summary}, #{row.entityStatus},
+             #{row.ownerUser}, #{row.domainIds}, #{row.layerCode},
+             #{row.providerType}, #{row.collectJobId},
+             #{row.contentHash}, #{row.sourceHash}, #{row.sourceUpdatedAt}, #{row.firstSeenAt},
+             #{row.lastCollectAt}, #{row.mdAttributes}, #{row.updatedBy}, NOW(6), NOW(6))
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+        <![CDATA[
+            id = LAST_INSERT_ID(id),
+            -- 先算这一条：三把指纹都没动就保持 update_time 不变，整行不产生写入（不变式 ③）。
+            -- 放在最前是必须的——SET 从左往右求值，往后 content_hash 已是新值，比不出"变没变"。
+            update_time = IF((content_hash  <=> VALUES(content_hash))
+                             AND (source_hash <=> VALUES(source_hash))
+                             AND (md_attributes <=> VALUES(md_attributes)),
+                             update_time, NOW(6)),
+            -- <=> 而不是 =：两把指纹都允许 NULL（遗留行），= 遇 NULL 恒为 NULL 会判成"变了"。
+            content_hash = IF(content_hash  <=> VALUES(content_hash),  content_hash,  VALUES(content_hash)),
+            source_hash  = IF(source_hash   <=> VALUES(source_hash),   source_hash,   VALUES(source_hash)),
+            md_attributes = IF(md_attributes <=> VALUES(md_attributes), md_attributes, VALUES(md_attributes)),
+            type_id = VALUES(type_id),
+            display_name = VALUES(display_name),
+            fully_qualified_name = VALUES(fully_qualified_name),
+            fqn_hash = VALUES(fqn_hash),
+            summary = VALUES(summary),
+            -- 投影归属列（ticket 130）：IF 守卫让"这条通道没交值"不等于"把值清空"——
+            -- 采集侧永远交 NULL，若无守卫，一轮物理采集就会抹掉登记通道写进的 owner/域/分层。
+            owner_user = IF(VALUES(owner_user) IS NULL, owner_user, VALUES(owner_user)),
+            domain_ids = IF(VALUES(domain_ids) IS NULL, domain_ids, VALUES(domain_ids)),
+            layer_code = IF(VALUES(layer_code) IS NULL, layer_code, VALUES(layer_code)),
+            provider_type = VALUES(provider_type),
+            collect_job_id = VALUES(collect_job_id),
+            updated_by = VALUES(updated_by),
+            -- 在场即复活：曾 GONE 的实体回来只清标记，entity_status 不在这里改（人工治理状态不被采集刷掉）。
+            gone_at = NULL
+            -- 到此为止：entity_status / first_seen_at / catalog_version / last_collect_at 与 ① 里那批列都不刷。
+        ]]>
+    </insert>
+
+    <update id="touchLastCollected">
+        UPDATE yak_metadata_asset
+        SET last_collect_at = #{collectedAt}
+        WHERE project_id = #{projectId}
+          AND asset_key IN
+        <foreach collection="assetKeys" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </update>
+
+    <!--
+      ticket 115：在场性扫描。四个条件缺一个都不能上生产——
+        provider_type='HARVESTED'  登记通道（REGISTERED）的行由源域负责缺席，采集无权判它消失；
+        source_type='METADATA'     我们的 source_id 就是数据源 id，而 lineage 用同一个数字做它的
+                                   DATASOURCE 行的 source_id，少了这条就会去软删别人的实体；
+        gone_at IS NULL            已软删的行不再参与计数，否则一轮 GONE 会让下一轮的分母永远偏大；
+        LIMIT                      扫描是"整个数据源的在场集"，行数由源侧决定，不给上限就是别人的一次
+                                   误建库能把我们的一次采集跑成内存问题；触顶由上层判 SUSPECT。
+    -->
+    <select id="selectPresenceRows" resultType="io.yak.ops.business.metadata.dao.model.CatalogPresenceRow">
+        SELECT id,
+               asset_key     AS assetKey,
+               asset_type    AS assetType,
+               database_name AS databaseName,
+               schema_name   AS schemaName,
+               table_name    AS tableName,
+               content_hash  AS contentHash,
+               last_collect_at AS lastCollectAt
+        FROM yak_metadata_asset
+        WHERE project_id = #{projectId}
+          AND source_type = 'METADATA'
+          AND source_id = #{sourceId}
+          AND provider_type = 'HARVESTED'
+          AND gone_at IS NULL
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      ticket 130：unregister 的候选圈定。谓词形状与 selectPresenceRows 对称，方向相反：
+        provider_type='REGISTERED'  只有登记行归源域管——采集物理看到的表不因某次投影 unregister 消失；
+        type_id = #{typeId}         unregister 按元模型类型收窄，同源的 metric 下线不该带走 model；
+        LIMIT                       与在场扫描同一理由：行数由源侧决定，必须给上限。
+      读 source_hash：REGISTERED 行的 content_hash 恒为 NULL，GONE 流水的"消失前指纹"只能取源指纹。
+    -->
+    <select id="selectRegisteredRows" resultType="io.yak.ops.business.metadata.dao.model.CatalogPresenceRow">
+        SELECT id,
+               asset_key     AS assetKey,
+               asset_type    AS assetType,
+               content_hash  AS contentHash,
+               source_hash   AS sourceHash,
+               last_collect_at AS lastCollectAt
+        FROM yak_metadata_asset
+        WHERE project_id = #{projectId}
+          AND source_type = 'METADATA'
+          AND source_id = #{sourceId}
+          AND type_id = #{typeId}
+          AND provider_type = 'REGISTERED'
+          AND gone_at IS NULL
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      软删只有这一条语句，且 SET 里只有 gone_at 与 update_time 两列：
+      实体消失不代表它从未存在（plan §2.4.5），所以 first_seen_at / entity_status / 标签一律留在原地，
+      等它回来时还是同一行同一段治理历史（upsert 的 gone_at = NULL 即复活）。
+    -->
+    <update id="markGone">
+        UPDATE yak_metadata_asset
+        SET gone_at = #{goneAt}, update_time = #{goneAt}
+        WHERE gone_at IS NULL
+          AND source_type = 'METADATA'
+          AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+</mapper>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>语义建模 · 口径字典 · 两层建模原型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:#f5f6f8; color:#1f2329; font-size:14px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  .topbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:10px 20px; display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .layer-chip { font-size:11px; color:#fff; background:#FE2C55; border-radius:10px; padding:2px 10px; }
+  .back { color:#6b7280; text-decoration:none; font-size:13px; }
+  .back:hover { color:#FE2C55; }
+  .topbar h1 { font-size:15px; font-weight:600; }
+  .topbar .crumb { color:#9ca3af; font-size:12px; }
+  .toolbar { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .btn { border:1px solid #d9dce1; background:#fff; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; }
+  .btn:hover { border-color:#FE2C55; color:#FE2C55; }
+  .btn.primary { background:#FE2C55; border-color:#FE2C55; color:#fff; }
+  .btn.primary:hover { color:#fff; opacity:.92; }
+
+  .main { flex:1; display:flex; min-height:0; }
+  /* 左：指标库 */
+  .lib { width:300px; background:#fff; border-right:1px solid #e5e7eb; display:flex; flex-direction:column; flex-shrink:0; }
+  .lib-tabs { display:flex; border-bottom:1px solid #f0f1f3; }
+  .lib-tabs div { flex:1; text-align:center; padding:10px 0; font-size:13px; cursor:pointer; color:#6b7280; border-bottom:2px solid transparent; }
+  .lib-tabs div.on { color:#FE2C55; border-bottom-color:#FE2C55; font-weight:600; }
+  .lib-search { padding:10px 12px; display:flex; gap:8px; }
+  .lib-search input { flex:1; border:1px solid #d9dce1; border-radius:6px; padding:6px 10px; font-size:12.5px; outline:none; }
+  .lib-search select { border:1px solid #d9dce1; border-radius:6px; font-size:12px; padding:6px; }
+  .mlist { flex:1; overflow-y:auto; padding:0 10px 12px; }
+  .m-item { padding:10px 12px; border-radius:9px; cursor:pointer; margin-bottom:6px; border:1px solid transparent; }
+  .m-item:hover { background:#fff1f3; }
+  .m-item.on { background:#fff1f3; border-color:#ffd6de; }
+  .m-item b { font-size:13px; }
+  .m-type { font-size:10px; padding:0 6px; border-radius:8px; margin-left:6px; }
+  .t-atomic { background:#fff0f6; color:#c41d7f; } .t-derived { background:#f0f5ff; color:#1d39c4; } .t-composite { background:#f9f0ff; color:#531dab; }
+  .m-oneliner { font-size:11.5px; color:#6b7280; margin-top:4px; font-family:Consolas,monospace; }
+  .m-meta { font-size:10.5px; color:#9ca3af; margin-top:3px; display:flex; gap:8px; }
+  .st { color:#52c41a; } .st.draft { color:#fa8c16; }
+
+  /* 右：口径编辑器 */
+  .editor { flex:1; overflow-y:auto; padding:18px 24px 40px; }
+  .ed-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .ed-head h2 { font-size:18px; }
+  .ed-head .ver { font-size:11px; color:#FE2C55; background:#fff1f3; border:1px solid #ffd6de; border-radius:9px; padding:1px 9px; }
+  .ed-sub { color:#9ca3af; font-size:12px; margin-bottom:14px; }
+  .oneliner { background:#fff; border:1px solid #ffd6de; border-left:3px solid #FE2C55; border-radius:9px; padding:12px 16px; font-size:14px; margin-bottom:16px; }
+  .oneliner small { display:block; color:#9ca3af; font-size:11px; margin-bottom:4px; }
+  .oneliner code { font-family:Consolas,monospace; color:#c41d7f; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; margin-bottom:16px; }
+  .card h3 { font-size:13.5px; padding:12px 16px; border-bottom:1px solid #f0f1f3; display:flex; align-items:center; gap:8px; }
+  .card h3 .tip { font-weight:400; color:#9ca3af; font-size:11px; margin-left:auto; }
+  .card-b { padding:14px 16px; }
+  .kv { display:flex; font-size:12.5px; padding:3px 0; }
+  .kv .k { width:96px; color:#9ca3af; flex-shrink:0; }
+  .cond-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .cond-row select,.cond-row input { border:1px solid #d9dce1; border-radius:6px; padding:6px 9px; font-size:12.5px; flex:1; outline:none; }
+  .cond-row select:focus,.cond-row input:focus { border-color:#FE2C55; }
+  .cond-box { border:1px dashed #ffd6de; background:#fffafb; border-radius:8px; padding:12px; }
+  .add-cond { font-size:12px; color:#FE2C55; background:none; border:1px dashed #ffb3c2; border-radius:6px; padding:4px 10px; cursor:pointer; }
+  .excl { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .excl span { font-size:11.5px; background:#fff1f0; color:#cf1322; border:1px solid #ffccc7; border-radius:5px; padding:2px 8px; }
+  .chain { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; }
+  .chain .nd { background:#f0f5ff; color:#1d39c4; border:1px solid #d6e4ff; border-radius:7px; padding:5px 11px; }
+  .chain .nd b { font-family:Consolas,monospace; font-size:12px; }
+  .chain .op { color:#9ca3af; font-size:12px; }
+  .applies { font-size:12.5px; line-height:2; }
+  .applies code { background:#fff1f3; color:#c41d7f; border-radius:4px; padding:1px 7px; font-size:11.5px; font-family:Consolas,monospace; }
+  .audit { background:#fafafa; border:1px solid #f0f1f3; border-radius:8px; padding:10px 12px; font-size:12px; color:#9ca3af; }
+  .audit b { color:#6b7280; font-weight:500; }
+  .audit .lock { font-size:11px; background:#f0f1f3; border-radius:4px; padding:0 6px; margin-right:6px; }
+  .audit code { font-family:Consolas,monospace; color:#8c8c8c; }
+  .gates { font-size:12.5px; line-height:2.1; }
+  .gates i { font-style:normal; margin-right:8px; }
+  .ok { color:#52c41a; } .warn { color:#fa8c16; }
+  .ver-line { display:flex; gap:10px; font-size:12.5px; padding:6px 0; border-bottom:1px dashed #f0f1f3; }
+  .ver-line:last-child { border-bottom:none; }
+  .ver-line .v { color:#FE2C55; font-family:Consolas,monospace; width:34px; flex-shrink:0; }
+  .ver-line .who { color:#9ca3af; margin-left:auto; font-size:11.5px; }
+  .sepline { height:1px; background:#f0f1f3; margin:16px 0; }
+  .footnote { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); background:rgba(31,35,41,.85); color:#fff; font-size:11.5px; border-radius:8px; padding:6px 14px; z-index:20; }
+  .footnote a { color:#ff8ba6; }
+  .ftable { width:100%; border-collapse:collapse; }
+  .ftable th,.ftable td { text-align:left; padding:9px 12px; font-size:12.5px; border-bottom:1px solid #f0f1f3; }
+  .ftable th { color:#6b7280; font-weight:500; background:#fafafa; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← 原型首页</a>
+  <span class="layer-chip">语义建模层</span>
+  <h1>口径字典</h1>
+  <span class="crumb">怎么算：指标口径 / 派生链 / 适用前提 / 函数 —— 引用本体属性，口径独立演进</span>
+  <div class="toolbar">
+    <button class="btn">批量导出</button>
+    <button class="btn primary">＋ 新建指标</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- 左：指标库 -->
+  <div class="lib">
+    <div class="lib-tabs">
+      <div class="on" onclick="switchTab(this,'metrics')">指标</div>
+      <div onclick="switchTab(this,'functions')">函数</div>
+    </div>
+    <div class="lib-search">
+      <input placeholder="搜索指标 / 口径 / 同义词…">
+      <select><option>全部</option><option>原子</option><option>派生</option><option>复合</option></select>
+    </div>
+    <div class="mlist" id="metrics">
+      <div class="m-item on">
+        <b>GMV（已支付）</b><span class="m-type t-atomic">原子</span>
+        <div class="m-oneliner">SUM(sales_order.pay_amount) · 仅已支付 · 剔除退款</div>
+        <div class="m-meta"><span class="st">已发布</span><span>v3</span><span>元</span><span>销售订单</span></div>
+      </div>
+      <div class="m-item">
+        <b>下单量</b><span class="m-type t-atomic">原子</span>
+        <div class="m-oneliner">COUNT(sales_order) · 全部状态</div>
+        <div class="m-meta"><span class="st">已发布</span><span>v2</span><span>单</span><span>销售订单</span></div>
+      </div>
+      <div class="m-item">
+        <b>客单价</b><span class="m-type t-derived">派生</span>
+        <div class="m-oneliner">GMV ÷ 下单量</div>
+        <div class="m-meta"><span class="st">已发布</span><span>v1</span><span>元/单</span><span>销售订单</span></div>
+      </div>
+      <div class="m-item">
+        <b>动销率</b><span class="m-type t-composite">复合</span>
+        <div class="m-oneliner">有销量商品数 ÷ 在售商品数</div>
+        <div class="m-meta"><span class="st draft">草稿</span><span>v0</span><span>%</span><span>商品</span></div>
+      </div>
+      <div class="m-item">
+        <b>退款金额</b><span class="m-type t-atomic">原子</span>
+        <div class="m-oneliner">SUM(refund.amount) · 仅退款成功</div>
+        <div class="m-meta"><span class="st">已发布</span><span>v1</span><span>元</span><span>退款单</span></div>
+      </div>
+    </div>
+    <div class="mlist" id="functions" style="display:none; padding-top:10px;">
+      <table class="ftable">
+        <tr><th>函数</th><th>绑定</th></tr>
+        <tr><td><b>rfm_score</b><div style="color:#9ca3af;font-size:11px;">RFM 得分计算</div></td><td>SQL 模板</td></tr>
+        <tr><td><b>forecast_next</b><div style="color:#9ca3af;font-size:11px;">下周销量预测</div></td><td>SQL 模板</td></tr>
+        <tr><td><b>cohort_retain</b><div style="color:#9ca3af;font-size:11px;">同期群留存</div></td><td>SQL 模板</td></tr>
+      </table>
+      <button class="add-cond" style="margin-top:12px;">＋ 注册函数</button>
+    </div>
+  </div>
+
+  <!-- 右：口径编辑器 -->
+  <div class="editor">
+    <div class="ed-head"><h2>GMV（已支付）</h2><span class="ver">v3 · 已发布</span></div>
+    <div class="ed-sub">gmv_paid · 统计主体：销售订单 sales_order · 单位：元 · 时间粒度：日</div>
+
+    <div class="oneliner"><small>口径一句话（metricOneLiner）</small><code>SUM(sales_order.pay_amount) · 仅已支付 · 不含已退款部分</code></div>
+
+    <div class="grid2">
+      <div>
+        <div class="card">
+          <h3>🧮 口径构造器 <span class="tip">可执行条件 → 编译为 SQL WHERE</span></h3>
+          <div class="card-b">
+            <div class="kv"><span class="k">聚合</span>
+              <div class="cond-row" style="flex:1;">
+                <select style="flex:0 0 110px;"><option>SUM</option><option>AVG</option><option>COUNT</option><option>COUNT_DISTINCT</option><option>MAX</option><option>MIN</option></select>
+                <select><option>sales_order.pay_amount（度量）</option><option>sales_order.quantity</option></select>
+              </div>
+            </div>
+            <div class="kv" style="align-items:flex-start;"><span class="k" style="padding-top:8px;">过滤条件</span>
+              <div class="cond-box" style="flex:1;">
+                <div class="cond-row">
+                  <select><option>sales_order.order_status</option></select>
+                  <select style="flex:0 0 80px;"><option>==</option></select>
+                  <select><option>'已支付'</option><option>'已完成'</option></select>
+                  <span style="color:#9ca3af;cursor:pointer;">✕</span>
+                </div>
+                <div class="cond-row">
+                  <select><option>sales_order.created_at</option></select>
+                  <select style="flex:0 0 80px;"><option>between</option></select>
+                  <input value="查询时间范围（自动注入）">
+                  <span style="color:#9ca3af;cursor:pointer;">✕</span>
+                </div>
+                <button class="add-cond">＋ 添加条件</button>
+              </div>
+            </div>
+            <div class="kv" style="align-items:flex-start;"><span class="k" style="padding-top:4px;">口径例外</span>
+              <div class="excl" style="flex:1;">
+                <span>不含已退款部分</span><span style="border-style:dashed;background:none;color:#FE2C55;">＋ 添加例外</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🚦 适用前提（appliesTo）<span class="tip">查询必须携带的过滤，否则 Guard 拒绝</span></h3>
+          <div class="card-b applies">
+            查询该指标时必须携带 <code>order_status == '已支付'</code> 或更细的时间范围过滤。<br>
+            <span style="color:#9ca3af;font-size:11.5px;">来源：语义建模层自身声明（原 METRIC_APPLIES_TO 已从属性 requiresJson 迁出）</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🔒 审计引用（ruleRefs）<span class="tip">只读溯源 · 不合并进口径</span></h3>
+          <div class="card-b">
+            <div class="audit">
+              <span class="lock">只读</span>本口径参考了本体规则 <b>「金额非负」</b> <code>sales_order.pay_amount >= 0</code><br>
+              <span style="font-size:11px;">规则不参与本指标计算——口径由上方过滤条件独立定义（设计文档 §4.4）</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>⛓️ 派生链 <span class="tip">本例为原子指标，展示派生示例</span></h3>
+          <div class="card-b">
+            <div class="chain">
+              <span class="nd">🧩 <b>gmv_paid</b><br><small>原子 · SUM</small></span>
+              <span class="op">÷</span>
+              <span class="nd">🧩 <b>order_count</b><br><small>原子 · COUNT</small></span>
+              <span class="op">=</span>
+              <span class="nd" style="background:#f9f0ff;border-color:#efdbff;color:#531dab;">📐 <b>avg_order_value</b><br><small>派生 · 客单价</small></span>
+            </div>
+            <div style="font-size:11.5px;color:#9ca3af;margin-top:10px;">派生/复合指标引用原子指标；同统计主体校验 + 无环校验在发布闸门执行。</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>✅ 发布闸门 <span class="tip">语义层自身校验</span></h3>
+          <div class="card-b gates">
+            <div><i class="ok">✔</i>聚合合法（SUM ∈ 度量字段允许聚合）</div>
+            <div><i class="ok">✔</i>base_attribute role=MEASURE 且可聚合</div>
+            <div><i class="ok">✔</i>口径条件属性存在、类型匹配、值域未越界（调本体层服务）</div>
+            <div><i class="ok">✔</i>DERIVED/COMPOSITE：同统计主体 · 无环</div>
+            <div><i class="warn">⚠</i>口径变更后引用它的派生指标需重校验（1 个）</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🕘 版本历史 <span class="tip">口径高频迭代 · 独立于本体变更</span></h3>
+          <div class="card-b">
+            <div class="ver-line"><span class="v">v3</span>过滤条件改为"已支付"（原"已支付+已完成"）<span class="who">lucas · 09-06</span></div>
+            <div class="ver-line"><span class="v">v2</span>新增口径例外"不含已退款部分"<span class="who">lucas · 08-28</span></div>
+            <div class="ver-line"><span class="v">v1</span>创建指标<span class="who">lucas · 08-12</span></div>
+            <div style="font-size:11.5px;color:#9ca3af;margin-top:8px;">本体对象变更（如字段含义修改）会触发本指标「需重校验」标记，但不自动改版本。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">设计要点：口径编辑器中「过滤条件/例外」为可编辑口径（红），「审计引用」为只读规则溯源（灰）——规则≠口径，见设计文档 §4.3/§4.4；指标入口已从本体画布整体迁入本页</div>
+
+<script>
+  function switchTab(el, id){
+    document.querySelectorAll('.lib-tabs div').forEach(function(d){ d.classList.remove('on'); });
+    el.classList.add('on');
+    document.getElementById('metrics').style.display = id==='metrics'?'':'none';
+    document.getElementById('functions').style.display = id==='functions'?'':'none';
+  }
+  document.querySelectorAll('.m-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('.m-item').forEach(function(x){ x.classList.remove('on'); });
+      el.classList.add('on');
+    });
+  });
+</script>
+</body>
+</html>

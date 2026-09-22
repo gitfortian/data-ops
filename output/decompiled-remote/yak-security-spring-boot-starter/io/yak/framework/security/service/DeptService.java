@@ -1,0 +1,44 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package io.yak.framework.security.service;
+
+import io.yak.framework.security.common.dto.dept.DeptDTO;
+import io.yak.framework.security.common.dto.dept.DeptSaveDTO;
+import io.yak.framework.security.common.entity.dept.Dept;
+import io.yak.framework.security.common.entity.dept.DeptBrief;
+import io.yak.framework.security.common.vo.dept.DeptBriefVO;
+import io.yak.framework.security.common.vo.dept.DeptDeleteCheckVO;
+import io.yak.framework.security.common.vo.dept.DeptTreeVO;
+import io.yak.framework.security.common.vo.dept.DeptVO;
+import java.util.List;
+import java.util.Map;
+
+public interface DeptService {
+    public DeptTreeVO buildDeptTree();
+
+    public DeptVO getDeptDetail(Long var1);
+
+    public void createDept(DeptSaveDTO var1);
+
+    public void updateDept(DeptSaveDTO var1);
+
+    public DeptDeleteCheckVO checkBeforeDelete(Long var1);
+
+    public void deleteDept(Long var1);
+
+    public List<DeptBriefVO> getDeptBriefListByChildId(Long var1);
+
+    public List<Long> getDeptIdListByParentId(Long var1);
+
+    public List<Long> getDeptIdListByParentIdAndDeptName(Long var1, String var2);
+
+    public Map<Long, Dept> getAllDeptMap();
+
+    public List<DeptBriefVO> getDeptBriefListFromDeptMapByChildId(Map<Long, Dept> var1, Long var2);
+
+    public void saveDept(List<DeptDTO> var1);
+
+    public List<DeptBrief> listAllDeptBrief();
+}
+

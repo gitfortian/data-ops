@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yak Ops 主脉与模块交互图</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #242731; }
+  header { background: #171717; color: #fff; padding: 18px 32px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 6px 0 0; font-size: 13px; opacity: .75; }
+  main { max-width: 1280px; margin: 0 auto; padding: 24px 32px 64px; }
+  section { background: #fff; border: 1px solid #e4e4e1; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; }
+  h2 { font-size: 17px; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: #667085; margin: 0 0 16px; }
+  .legend { font-size: 12.5px; color: #475467; background: #f8f9fb; border-radius: 8px; padding: 10px 14px; margin-top: 14px; line-height: 1.9; }
+  .mermaid { text-align: center; }
+  .note { font-size: 12px; color: #98a2b3; margin-top: 8px; }
+  .warn { color: #b42318; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Yak Ops 主脉与模块交互图</h1>
+  <p>给用户和产品经理的一张图 · 2026-09-21 · 文字版见 docs/v1/04-主脉与模块交互图.md 与 05-模块交互与乱象清单.md</p>
+</header>
+<main>
+  <section>
+    <h2>图一 · 主脉图：一条数据的旅程</h2>
+    <p class="sub">数据从左上流向右下：接进来 → 搬进来 → 定规矩建模型 → 定时跑 → 被用起来。中间③最重：先标准、再指标、再表、再任务，顺序不能反。</p>
+    <pre class="mermaid">
+flowchart TB
+    subgraph S1["① 接入｜通往外部的门"]
+        DS["数据源<br/><small>连接·目录·SQL执行</small>"]
+        RES["文件资源<br/><small>文件·版本</small>"]
+    end
+    subgraph S2["② 同步与采集｜把数据搬进来"]
+        SYN["离线同步<br/><small>批量搬运·对账</small>"]
+        RTS["实时同步<br/><small>CDC实时</small>"]
+        MET["元数据采集<br/><small>数据目录</small>"]
+    end
+    subgraph S3["③ 标准与建模｜定义数据长什么样、怎么算"]
+        SEM["语义中心<br/><small>六类标准·业务域·业务过程·分层</small>"]
+        MTR["指标中心<br/><small>原子/派生/复合指标</small>"]
+        MOD["模型工作台<br/><small>分层可配置·预置四层</small>"]
+        DEV["数据开发<br/><small>SQL等加工任务</small>"]
+    end
+    subgraph S4["④ 编排执行｜把定义变成定时运行"]
+        CAT["任务目录<br/><small>不可变版本货架</small>"]
+        JOB["任务内核<br/><small>执行机制</small>"]
+        WFL["工作流<br/><small>DAG编排·调度</small>"]
+    end
+    subgraph S5["⑤ 消费与服务｜让数据被用起来"]
+        DST["数据集"]
+        ANA["分析"]
+        DBH["仪表盘"]
+        SCR["大屏"]
+        SVC["数据服务API"]
+        AGT["智能问数"]
+        HOM["首页<br/><small>只读总览</small>"]
+    end
+    DS -->|"连接"| SYN
+    DS -->|"连接"| RTS
+    SYN -->|"落地表"| MOD
+    RTS -->|"落地表"| MOD
+    MET -->|"数据目录"| MOD
+    SEM -->|"标准·业务域·业务过程"| MTR
+    SEM -->|"标准·业务过程"| MOD
+    MOD -->|"模型表＝指标数据来源"| MTR
+    MTR -->|"指标反推汇总表"| MOD
+    DEV -->|"发布任务"| CAT
+    CAT -->|"锁版本任务"| WFL
+    WFL -->|"每天定时跑"| DEV
+    DEV -->|"Dataset节点产出"| DST
+    DST --> ANA
+    ANA --> DBH
+    DST --> SVC
+    DST --> AGT
+    WFL -->|"运行事实"| HOM
+    QUA["数据质量"] -.->|"质检结论"| HOM
+    style HOM fill:#fff3cd
+    </pre>
+    <div class="legend"><b>读图三句话</b>：① 数据从左上流向右下；② ③段顺序不能反（先标准→指标→表→任务）；③ 指标↔建模是唯一一对双向箭头。</div>
+  </section>
+
+  <section>
+    <h2>图二 · 交互全景图：谁传给谁什么 + 已知乱象</h2>
+    <p class="sub">实线＝主数据流（标注传的是什么）；虚线＝治理/横切交互；<span class="warn">⚠️＝已发现的乱象或待办</span>。</p>
+    <pre class="mermaid">
+flowchart TB
+    subgraph S1["① 接入"]
+        DS["数据源"]
+        RES["文件资源"]
+    end
+    subgraph S2["② 同步与采集"]
+        SYN["离线同步"]
+        RTS["实时同步"]
+        MET["元数据采集"]
+    end
+    subgraph S3["③ 标准与建模"]
+        SEM["语义中心"]
+        MTR["指标中心"]
+        MOD["模型工作台"]
+        DEV["数据开发"]
+    end
+    subgraph S4["④ 编排执行"]
+        CAT["任务目录"]
+        JOB["任务内核"]
+        WFL["工作流"]
+    end
+    subgraph S5["⑤ 消费与服务"]
+        DST["数据集"]
+        ANA["分析"]
+        DBH["仪表盘"]
+        SCR["大屏 ⚠️与仪表盘重复嫌疑"]
+        SVC["数据服务"]
+        AGT["智能问数 ⚠️未过准入闸"]
+        HOM["首页"]
+    end
+    subgraph CA["横切A｜质量与安全"]
+        QUA["数据质量"]
+        SEC["数据安全"]
+    end
+    subgraph CB["横切B｜治理"]
+        AST["数据资产<br/><small>七格状态机</small>"]
+        LIN["数据血缘"]
+        APR["审批中心"]
+        AUD["审计"]
+        ALR["告警"]
+        LIF["生命周期"]
+        MDM["主数据"]
+    end
+    DS -->|"①连接"| SYN & RTS & DEV & QUA
+    SYN -->|"②落地表"| MOD
+    RTS -->|"②落地表"| MOD
+    MET -->|"②数据目录"| MOD
+    MET -.->|"目录并入资产目录（M2-2 已拍板）"| AST
+    SEM -->|"③标准·业务域·过程"| MTR & MOD & DEV
+    MOD -->|"③模型表"| MTR & DEV
+    MTR -->|"③指标反推"| MOD
+    DEV -->|"③不可变Revision"| CAT
+    CAT -->|"④锁版本任务"| WFL & QUA & DST
+    RES -->|"脚本/JAR"| JOB
+    JOB -->|"执行"| WFL & QUA & SYN
+    WFL -->|"④运行事实"| HOM & AST
+    DEV -->|"Dataset节点"| DST
+    DST -->|"⑤"| ANA & SVC & AGT & SCR
+    ANA -->|"⑤"| DBH
+    MTR -->|"被数据集/看板/API引用"| DBH & SVC
+    QUA -.->|"质量结论盖章"| AST
+    SEC -.->|"分级打标盖章"| AST
+    AST -.->|"上架申请"| APR
+    MOD -.->|"模型TTL绑定"| LIF
+    SEM -.->|"标准"| SEC & LIF & MDM
+    MOD & SEM & SEC & MDM -.->|"变更审批"| APR
+    WFL & QUA -.->|"失败通知"| ALR
+    MOD & MTR & DEV & DST -.->|"血缘登记"| LIN
+    DS & SYN & DEV & WFL & QUA -.->|"操作记录"| AUD
+    MDM -.->|"复用同步搬运"| SYN
+    style SCR fill:#ffe6e6
+    style AGT fill:#ffe6e6
+    </pre>
+    <div class="legend"><b>乱象标注</b>：大屏与仪表盘重复嫌疑 · 智能问数未过准入闸。（指标中心入口已归位至标准与建模组；元数据目录并入是 M2-2 已拍板设计）元数据目录并入资产目录是 M2-2 已拍板设计（非乱象）。详见 05 清单 R-1~R-8。</div>
+  </section>
+
+  <p class="note">本页需要联网加载图表渲染库（mermaid CDN）。离线环境请用 VS Code / Typora 直接打开 docs/v1/04-主脉与模块交互图.md。</p>
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "base", flowchart: { htmlLabels: true, curve: "basis" } });
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>盘点上架 · 数据资产中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f5;color:#1f1f1f;font-size:14px}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10}
+.logo{font-weight:600;font-size:15px;color:#FE2C55;margin-right:28px;white-space:nowrap;flex-shrink:0}.logo b{color:#1f1f1f}
+.nav{display:flex}.nav a{margin-right:22px;text-decoration:none;color:#595959;padding:15px 2px;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap}
+.nav a.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.right{margin-left:auto;color:#8c8c8c;font-size:12px}
+.page{max-width:1280px;margin:16px auto 64px;padding:0 16px}
+.card{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.card>h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card>h3 .sub{color:#8c8c8c;font-weight:400;font-size:12px}
+.head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.head .mini{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:8px 16px;font-size:12px;color:#8c8c8c;flex:1}
+.head .mini b{display:block;font-size:18px;color:#1f1f1f}
+.head .mini em{font-style:normal;font-size:11px}
+.head .mini .ok{color:#52c41a}.head .mini .bd{color:#ff4d4f}.head .mini .wr{color:#fa8c16}
+.btn{display:inline-block;padding:6px 16px;border-radius:8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:13px}
+.btn.pri{background:#FE2C55;border-color:#FE2C55;color:#fff}
+.btn.sm{padding:2px 10px;font-size:12px}
+.btn.dis{color:#bfbfbf;border-color:#e8e8e8}
+table{width:100%;border-collapse:collapse}
+th{background:#fafafa;text-align:left;font-weight:500}
+th,td{padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:12.5px;vertical-align:middle}
+.tag{display:inline-block;padding:0 7px;border-radius:4px;font-size:11.5px;border:1px solid;line-height:18px}
+.t-red{color:#FE2C55;border-color:#ffd6de;background:#fff0f3}.t-green{color:#52c41a;border-color:#b7eb8f;background:#f6ffed}
+.t-blue{color:#1677ff;border-color:#91caff;background:#e6f4ff}.t-orange{color:#fa8c16;border-color:#ffd591;background:#fff7e6}
+.t-purple{color:#722ed1;border-color:#d3adf7;background:#f9f0ff}.t-gray{color:#8c8c8c;border-color:#d9d9d9;background:#fafafa}
+.miss{display:inline-block;font-size:10.5px;color:#ff4d4f;border:1px dashed #ffa39e;border-radius:4px;padding:0 5px;margin-right:4px;line-height:16px;background:#fff1f0}
+.gap{color:#595959;font-size:11.5px}
+.gap b{color:#ff4d4f;font-weight:500}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #f0f0f0;margin-bottom:14px}
+.tabs span{padding:8px 14px;font-size:13px;color:#595959;cursor:pointer;border-bottom:2px solid transparent}
+.tabs span.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.pane{display:none}.pane.on{display:block}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:20}
+.modal{background:#fff;border-radius:12px;width:720px;max-height:86vh;overflow:auto;padding:22px 26px}
+.modal h4{font-size:15px;margin-bottom:4px}
+.modal .s{color:#8c8c8c;font-size:12px;margin-bottom:14px}
+.step{display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:16px;color:#8c8c8c}
+.step i{width:20px;height:20px;border-radius:50%;background:#f0f0f0;font-style:normal;display:flex;align-items:center;justify-content:center;color:#595959}
+.step i.on{background:#FE2C55;color:#fff}
+.step .ln{width:44px;height:1px;background:#e8e8e8}
+.gcard{border:1px solid #f0f0f0;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.gcard .t{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
+.gcard ul{margin:8px 0 0 16px;font-size:12px;color:#595959;line-height:2}
+.fix{color:#1677ff;cursor:pointer;font-weight:400;font-size:11.5px;text-decoration:underline}
+.risk{background:#fffbe6;border:1px solid #ffe58f;border-radius:8px;padding:10px 12px;font-size:12px;color:#8c6916;margin:10px 0}
+.mfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+.note{background:#e6f4ff;border:1px solid #91caff;border-radius:8px;padding:8px 12px;font-size:12px;color:#095eca;margin-bottom:12px}
+.diff ins{color:#52c41a;text-decoration:none;background:#f6ffed;border-radius:3px;padding:0 3px}
+.diff del{color:#ff4d4f;background:#fff1f0;border-radius:3px}
+details.design{margin-top:4px}
+details.design summary{cursor:pointer;color:#FE2C55;font-size:13px;padding:8px 0}
+details.design>div{background:#fff;border:1px dashed #ffd6de;border-radius:10px;padding:16px;font-size:13px;line-height:2;color:#595959}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Yak Ops <b>数据资产中心</b></div>
+  <div class="nav"><a href="asset-overview.html">资产概览</a><a href="asset-catalog.html">资产目录</a><a class="on" href="asset-inventory.html">盘点上架</a><a href="asset-taxonomy.html">目录与标签</a></div>
+  <div class="right">默认空间 ▾ ｜ 治理管理员</div>
+</div>
+<div class="page">
+  <div class="head">
+    <div class="mini">最近对账 <b>今日 02:00 <em class="ok">成功 4 / 重试 1 / 失败 1</em></b>耗时 58s · 拉取 1,124 条描述符（分批 ≤500）</div>
+    <div class="mini">待上架 <b style="color:#fa8c16">98</b>自动登记 · 已过规则预编目</div>
+    <div class="mini">变更待确认 <b style="color:#1677ff">15</b>NEW 之外 content_hash 变化</div>
+    <div class="mini">源消失 <b style="color:#8c8c8c">7</b>连续 2 周期未再见</div>
+    <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+      <button class="btn pri">▶ 立即对账</button>
+      <button class="btn sm" style="margin:0">对账历史</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <span class="on" data-p="p1">待上架池 98</span><span data-p="p2">变更确认 15</span><span data-p="p3">源消失归档 7</span><span data-p="p4">源接入 6</span>
+    </div>
+
+    <div class="pane on" id="p1">
+      <div class="note">全部来自对账自动登记（NEW）与手工登记；勾选后「批量上架」将逐资产预检并汇总。「忽略」转 IGNORED 抑制态——对账不再复活，源指纹再变化时自动回到待上架。列表按登记时间倒序。</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center">
+        <button class="btn pri sm">⇪ 批量上架（已选 3）</button><button class="btn sm">批量指派负责人</button><button class="btn sm">批量忽略</button>
+        <span style="margin-left:auto;font-size:12px;color:#8c8c8c">预检不过项支持「一键补默认」，全部缺口补齐率 <b style="color:#FE2C55">71%</b></span>
+      </div>
+      <table>
+        <tr><th><input type="checkbox" checked></th><th>资产</th><th>来源</th><th>登记</th><th>预检缺口（负责人/描述/目录/定级）</th><th>健康</th><th>操作</th></tr>
+        <tr><td><input type="checkbox" checked></td><td><b>ods_raw_trade_order</b><br><span style="color:#8c8c8c;font-size:11px">MODEL:2107 · 交易域</span></td><td><span class="tag t-blue">建模</span></td><td>09-19 02:00<br><span class="gap">规则→未分类</span></td><td><span class="miss">负责人</span><span class="miss">描述</span><span class="miss">定级</span><div class="gap" style="margin-top:4px">缺 3 项 · <span class="fix">一键补默认</span></div></td><td><span class="tag t-red" style="border-color:#ffa39e;color:#ff4d4f;background:#fff1f0">D 42</span></td><td><button class="btn sm" onclick="openM()">上架</button> <button class="btn sm">详情</button></td></tr>
+        <tr><td><input type="checkbox" checked></td><td><b>metric.user.retention_7d</b><br><span style="color:#8c8c8c;font-size:11px">METRIC:338 · 用户域</span></td><td><span class="tag t-purple">指标</span></td><td>09-19 02:00<br><span class="gap">规则→用户域/DWS</span></td><td><span class="miss">定级(建议)</span><div class="gap" style="margin-top:4px">仅建议项 · <span class="fix">一键补齐</span></div></td><td><span class="tag t-green">B 76</span></td><td><button class="btn sm" onclick="openM()">上架</button> <button class="btn sm">详情</button></td></tr>
+        <tr><td><input type="checkbox" checked></td><td><b>sync_order_binlog_task</b><br><span style="color:#8c8c8c;font-size:11px">TASK:T-88 · 交易域</span></td><td><span class="tag t-gray">任务</span></td><td>09-18 02:00</td><td><span class="gap" style="color:#52c41a">✓ 4/4 全部通过</span></td><td><span class="tag t-green">A 86</span></td><td><button class="btn sm" onclick="openM()">上架</button> <button class="btn sm">详情</button></td></tr>
+        <tr><td><input></td><td><b>dws_user_active_1d</b><br><span style="color:#8c8c8c;font-size:11px">MODEL:2112 · 用户域</span></td><td><span class="tag t-blue">建模</span></td><td>09-18 02:00</td><td><span class="miss">目录</span><div class="gap" style="margin-top:4px"><span class="fix">选择目录▾</span></div></td><td><span class="tag t-orange">C 61</span></td><td><button class="btn sm" onclick="openM()">上架</button> <button class="btn sm">详情</button></td></tr>
+        <tr><td><input></td><td><b>外部·竞品价格周刊.xlsx</b><br><span style="color:#8c8c8c;font-size:11px">MANUAL · 手工登记</span></td><td><span class="tag t-gray">手工</span></td><td>09-16</td><td><span class="miss">访问入口失效?</span></td><td><span class="tag t-orange">C 58</span></td><td><button class="btn sm" onclick="openM()">上架</button> <button class="btn sm">编辑</button></td></tr>
+      </table>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:#8c8c8c">
+        <span>已选 3 / 共 98 条</span><span>‹ 1 <b style="color:#FE2C55">2</b> 3 … 20 ›</span>
+      </div>
+    </div>
+
+    <div class="pane" id="p2">
+      <div class="note">META_CHANGED 由源域 descriptor 指纹（content_hash）判定；台账展示字段<b>不自动覆盖</b>（D1 防静默改事实），确认后才同步。PUBLISHED 资产在详情页挂"源已变更"黄标。</div>
+      <table>
+        <tr><th>资产</th><th>变更</th><th>差异摘要</th><th>发现</th><th>操作</th></tr>
+        <tr><td><b>dwd_trade_order_detail</b> <span class="tag t-green">已上架</span></td><td><span class="tag t-blue">结构</span></td><td class="diff">新增列 <ins>refund_stage, freight_amount, coupon_id</ins>；注释覆盖 87%→82%</td><td>今日 02:00</td><td><button class="btn sm">确认同步</button> <button class="btn sm">查看详情</button> <button class="btn sm">忽略</button></td></tr>
+        <tr><td><b>metric.gmv.pay_amount</b> <span class="tag t-green">已上架</span></td><td><span class="tag t-purple">描述</span></td><td class="diff"><del>不含退款</del> → <ins>不含退款与运费</ins>（口径收紧）</td><td>今日 02:00</td><td><button class="btn sm">确认同步</button> <button class="btn sm">影响分析</button></td></tr>
+        <tr><td><b>ads_risk_blacklist</b> <span class="tag t-orange">待上架</span></td><td><span class="tag t-gray">属性</span></td><td class="diff">业务域 风控域 → <ins>交易域</ins>（源域改挂）</td><td>09-17</td><td><button class="btn sm">确认同步</button></td></tr>
+      </table>
+    </div>
+
+    <div class="pane" id="p3">
+      <div class="note">SOURCE_GONE 判定要求连续两个对账周期缺失（默认窗口 7 天，防源域临时故障误判，dev-plan §4）；归档不影响血缘历史。</div>
+      <table>
+        <tr><th>资产</th><th>最后在场</th><th>原状态</th><th>建议</th><th>操作</th></tr>
+        <tr><td>dws_user_active_90d <span class="tag t-gray">任务下线</span></td><td>09-12（建模侧已删）</td><td>OFFLINE</td><td>确认归档</td><td><button class="btn sm pri">归档</button> <button class="btn sm">删除</button></td></tr>
+        <tr><td>ods_pay_gateway_log</td><td>09-13</td><td><span class="tag t-green">已上架</span> ⚠ 下游仍有 2 引用</td><td>先通知负责人</td><td><button class="btn sm">归档</button> <button class="btn sm">查看引用</button></td></tr>
+        <tr><td>chart_legacy_cart_ctr</td><td>09-11</td><td>PENDING</td><td>批量删除</td><td><button class="btn sm">删除</button></td></tr>
+      </table>
+    </div>
+
+    <div class="pane" id="p4">
+      <table>
+        <tr><th>Provider（来源域）</th><th>最近对账</th><th>耗时</th><th>拉取</th><th>状态</th><th>操作</th></tr>
+        <tr><td>建模 MODEL</td><td>今日 02:00</td><td>12s</td><td>262</td><td><span class="tag t-green">正常</span></td><td><button class="btn sm">单域重跑</button></td></tr>
+        <tr><td>指标 METRIC</td><td>今日 02:00</td><td>5s</td><td>98</td><td><span class="tag t-green">正常</span></td><td><button class="btn sm">单域重跑</button></td></tr>
+        <tr><td>数据集 DATASET</td><td>今日 02:03</td><td>41s</td><td>44</td><td><span class="tag t-orange">超时重试 ×2</span></td><td><button class="btn sm">日志</button></td></tr>
+        <tr><td>报表 DASHBOARD/CHART</td><td>今日 02:00</td><td>3s</td><td>50</td><td><span class="tag t-green">正常</span></td><td><button class="btn sm">单域重跑</button></td></tr>
+        <tr><td>任务 TASK（yak_task_asset）</td><td>今日 02:00</td><td>—</td><td>0</td><td><span class="tag" style="color:#ff4d4f;border-color:#ffa39e;background:#fff1f0">失败：SPI 超时</span> 不影响其他域</td><td><button class="btn sm">重试</button> <button class="btn sm">诊断</button></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <details class="design"><summary>设计要点（对应文档章节）</summary><div>
+    ① 本页是"盘点→上架"治理工作台：台账来源全部机器登记（对账），人只做<b>确认、补齐、上下架</b>三类动作（需求 §3.1/3.2）；<br>
+    ② 上架向导 = 预检（逐资产缺口+一键补默认）→ 风险确认 → 5 分钟 token 防盲发 → 逐条结果（design §6.2，对齐 lifecycle"预览确认 token"先例）；<br>
+    ③ 变更确认列表展示字段级 diff 而非整行覆盖：源域事实变化必须经人确认才同步进台账（D1）；<br>
+    ④ 源接入 Tab 体现 provider 分域容错：TASK 域失败不阻塞其余四域（design §6.1），失败可见可重试；<br>
+    ⑤ 下架复用同一向导骨架，但强制"原因必填 + 下游引用预览"两步（本页因已上架未演示，见资产详情"下架"按钮）。
+  </div></details>
+</div>
+
+<div class="mask" id="m" style="display:none">
+  <div class="modal">
+    <h4>上架预检 · 批量（已选 3）</h4>
+    <div class="s">预检通过项将携带 5 分钟时效 token 执行；缺口支持一键补默认（D10）。</div>
+    <div class="step"><i class="on">1</i>预检确认<span class="ln"></span><i>2</i>执行结果</div>
+    <div class="gcard">
+      <div class="t">✓ sync_order_binlog_task <span class="tag t-green">4/4 通过</span></div>
+      <ul style="color:#52c41a;font-size:12px">负责人 · 描述 · 目录 · 定级 全部满足，直接上架</ul>
+    </div>
+    <div class="gcard">
+      <div class="t">⚠ ods_raw_trade_order <span class="tag t-orange">缺 3 项 · 含建议项</span></div>
+      <ul>
+        <li><b style="color:#ff4d4f">负责人</b> 未设置 → 默认继承源域创建人 <i class="fix">zhang ✓已勾选补默认</i></li>
+        <li><b style="color:#ff4d4f">描述</b> 为空 → 取源域模型描述"trade 原始订单表…" <i class="fix">✓已勾选</i></li>
+        <li><b style="color:#ff4d4f">目录</b> 未分类 → 规则命中「交易域/ODS」 <i class="fix">✓已勾选</i></li>
+        <li><b style="color:#fa8c16">定级（建议）</b> 未定级 → 不带默认，可跳过 <i class="fix">去分级分类页</i></li>
+      </ul>
+    </div>
+    <div class="gcard">
+      <div class="t">⚠ metric.user.retention_7d <span class="tag t-blue">仅建议项</span></div>
+      <ul><li><b style="color:#fa8c16">定级（建议）</b> 指标类默认可跳过</li></ul>
+    </div>
+    <div class="risk">带风险上架：勾选补齐后仍缺 1 项建议（定级）。风险项将完整写入审计流水（D8：本期无审批，预检留痕即放行）。</div>
+    <label style="font-size:12px;color:#8c6916"><input type="checkbox"> 我已知悉并接受上述风险上架</label>
+    <div class="mfoot"><button class="btn">取消</button><button class="btn pri">确认上架（3）→</button></div>
+  </div>
+</div>
+<script>
+function openM(){document.getElementById('m').style.display='flex'}
+document.getElementById('m').addEventListener('click',e=>{if(e.target.id==='m')document.getElementById('m').style.display='none'});
+document.getElementById('tabs').addEventListener('click',e=>{
+  if(e.target.dataset.p){
+    document.querySelectorAll('.tabs span').forEach(s=>s.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+    e.target.classList.add('on');document.getElementById(e.target.dataset.p).classList.add('on');
+  }
+});
+</script>
+</body>
+</html>

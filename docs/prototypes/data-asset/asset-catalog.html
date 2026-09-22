@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>资产目录 · 数据资产中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f5;color:#1f1f1f;font-size:14px}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10}
+.logo{font-weight:600;font-size:15px;color:#FE2C55;margin-right:28px;white-space:nowrap;flex-shrink:0}
+.logo b{color:#1f1f1f}
+.nav{display:flex}.nav a{margin-right:22px;text-decoration:none;color:#595959;padding:15px 2px;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap}
+.nav a.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.right{margin-left:auto;color:#8c8c8c;font-size:12px}
+.page{max-width:1280px;margin:16px auto 64px;padding:0 16px;display:flex;gap:16px;align-items:flex-start}
+.card{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.side{width:230px;flex-shrink:0;background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:12px}
+.side h4{font-size:13px;margin:4px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.side h4 .ops{color:#8c8c8c;font-weight:400;font-size:12px}
+.tree{font-size:12.5px;line-height:2.15;color:#595959}
+.tree div{padding-left:14px;cursor:pointer;border-radius:6px;padding-right:6px;display:flex;justify-content:space-between}
+.tree div:hover{background:#fafafa}
+.tree .lv1{padding-left:2px;font-weight:500;color:#1f1f1f}
+.tree .on{background:#fff0f3;color:#FE2C55;font-weight:500}
+.tree .n{color:#bfbfbf;font-size:11px}
+.main{flex:1;min-width:0}
+.searchbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.input{padding:7px 12px;border:1px solid #d9d9d9;border-radius:8px;background:#fff;font-size:13px;outline:none}
+.input:focus{border-color:#FE2C55}
+.searchbar .kw{flex:1;position:relative}
+.searchbar .kw input{width:100%;padding-left:34px}
+.searchbar .kw:before{content:'⌕';position:absolute;left:11px;top:6px;color:#bfbfbf;font-size:16px}
+.btn{display:inline-block;padding:6px 16px;border-radius:8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:13px}
+.btn.pri{background:#FE2C55;border-color:#FE2C55;color:#fff}
+.btn.sm{padding:2px 10px;font-size:12px}
+.seg{display:flex;border:1px solid #d9d9d9;border-radius:8px;overflow:hidden}
+.seg span{padding:6px 14px;font-size:12.5px;cursor:pointer;background:#fff}
+.seg span.on{background:#fff0f3;color:#FE2C55;font-weight:500}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12.5px;color:#8c8c8c}
+.chip{border:1px solid #d9d9d9;border-radius:14px;padding:2px 12px;background:#fff;cursor:pointer;font-size:12px;color:#595959}
+.chip.on{border-color:#FE2C55;color:#FE2C55;background:#fff0f3}
+.chip .x{margin-left:4px}
+.hity{font-size:12px;color:#8c8c8c;margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.acard{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:14px 16px;position:relative;transition:.15s;cursor:pointer;text-decoration:none;color:inherit;display:block}
+.acard:hover{border-color:#ffa3b6;box-shadow:0 4px 14px rgba(254,44,85,.07)}
+.acard .nm{font-weight:600;font-size:13.5px;margin-bottom:2px;padding-right:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acard .nm small{color:#8c8c8c;font-weight:400}
+.acard .ds{color:#8c8c8c;font-size:12px;height:34px;overflow:hidden;line-height:1.5;margin-bottom:8px}
+.acard .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.acard .foot{display:flex;align-items:center;gap:8px;border-top:1px dashed #f0f0f0;padding-top:9px;font-size:11.5px;color:#8c8c8c}
+.gauge{position:absolute;right:12px;top:12px;width:38px;height:38px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*3.6deg), #f0f0f0 0)}
+.gauge:after{content:attr(data-v);position:absolute;inset:4px;background:#fff;border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center;color:#595959;font-weight:600}
+.tag{display:inline-block;padding:0 7px;border-radius:4px;font-size:11px;border:1px solid;line-height:17px}
+.t-red{color:#FE2C55;border-color:#ffd6de;background:#fff0f3}
+.t-green{color:#52c41a;border-color:#b7eb8f;background:#f6ffed}
+.t-blue{color:#1677ff;border-color:#91caff;background:#e6f4ff}
+.t-orange{color:#fa8c16;border-color:#ffd591;background:#fff7e6}
+.t-purple{color:#722ed1;border-color:#d3adf7;background:#f9f0ff}
+.t-cyan{color:#13c2c2;border-color:#87e8de;background:#e6fffb}
+.t-gray{color:#8c8c8c;border-color:#d9d9d9;background:#fafafa}
+.lv{border-radius:4px;padding:0 6px;font-size:10.5px;line-height:17px;border:1px solid}
+.l1{color:#8c8c8c;border-color:#d9d9d9}.l2{color:#1677ff;border-color:#91caff}.l3{color:#fa8c16;border-color:#ffd591}.l4{color:#ff4d4f;border-color:#ffa39e;background:#fff1f0}
+.st{position:absolute;right:12px;top:56px;font-size:10.5px}
+.pager{display:flex;gap:6px;justify-content:flex-end;margin-top:14px;font-size:12px;color:#595959}
+.pager span{border:1px solid #d9d9d9;border-radius:6px;padding:2px 9px;background:#fff}
+.pager span.on{border-color:#FE2C55;color:#FE2C55}
+details.design{margin-top:4px}
+details.design summary{cursor:pointer;color:#FE2C55;font-size:13px;padding:8px 0}
+details.design>div{background:#fff;border:1px dashed #ffd6de;border-radius:10px;padding:16px;font-size:13px;line-height:2;color:#595959}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Yak Ops <b>数据资产中心</b></div>
+  <div class="nav">
+    <a href="asset-overview.html">资产概览</a>
+    <a class="on" href="asset-catalog.html">资产目录</a>
+    <a href="asset-inventory.html">盘点上架</a>
+    <a href="asset-taxonomy.html">目录与标签</a>
+  </div>
+  <div class="right">默认空间 ▾ ｜ 治理管理员</div>
+</div>
+
+<div class="page">
+  <div class="side">
+    <h4>资产目录 <span class="ops">＋ ⌗</span></h4>
+    <div class="tree">
+      <div class="lv1 on">全部资产 <span class="n">386</span></div>
+      <div class="lv1">▾ 交易域 <span class="n">142</span></div>
+      <div style="padding-left:16px">ODS 贴源层 <span class="n">31</span></div>
+      <div style="padding-left:16px">DIM 维度层 <span class="n">18</span></div>
+      <div style="padding-left:16px" class="on">DWD 明细层 <span class="n">52</span></div>
+      <div style="padding-left:16px">DWS 汇总层 <span class="n">27</span></div>
+      <div style="padding-left:16px">ADS 应用层 <span class="n">14</span></div>
+      <div class="lv1">▸ 用户域 <span class="n">96</span></div>
+      <div class="lv1">▸ 商品域 <span class="n">74</span></div>
+      <div class="lv1">▸ 风控域 <span class="n">41</span></div>
+      <div class="lv1">报表与大屏 <span class="n">29</span></div>
+      <div class="lv1">任务资产 <span class="n">21</span></div>
+      <div class="lv1" style="color:#8c8c8c">未分类 <span class="n">23</span></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="searchbar">
+      <div class="kw"><input class="input" placeholder="搜资产名称 / 描述 / 负责人 / 标签，如：订单明细"></div>
+      <div class="seg"><span class="on">卡片</span><span>列表</span></div>
+      <button class="btn">手工登记</button>
+    </div>
+    <div class="filters" style="margin-bottom:14px">
+      类型：<span class="chip on">表/模型 ×</span><span class="chip">指标</span><span class="chip">数据集</span><span class="chip">仪表盘</span><span class="chip">任务</span>
+      ｜ 状态：<span class="chip on">已上架 ×</span><span class="chip">待上架</span>
+      ｜ 等级：<span class="chip">L1</span><span class="chip">L2</span><span class="chip">L3</span><span class="chip">L4</span>
+      ｜ 健康：<span class="chip">A</span><span class="chip">B</span><span class="chip on">≥B ×</span><span class="chip">C</span><span class="chip">D</span>
+      ｜ 分层：<span class="chip">DWD</span><span class="chip">DWS</span><span class="chip">ADS</span>
+      ｜ 标签：<span class="chip">核心资产</span><span class="chip">高频引用</span>
+      <span class="hity">命中 26 · 按 健康度×活跃度 加权排序</span>
+    </div>
+
+    <div class="grid">
+      <a class="acard" href="asset-detail.html">
+        <div class="gauge" style="--c:#1677ff;--p:78" data-v="B"></div><div class="st"><span class="tag t-green">已上架</span></div>
+        <div class="nm">dwd_trade_order_detail <small>· 表</small></div>
+        <div class="ds">交易订单明细事实表，一行一笔订单子单；日分区，主键 order_item_id。</div>
+        <div class="meta"><span class="tag t-blue">DWD</span><span class="tag t-cyan">交易域</span><span class="lv l3">L3 敏感</span><span class="tag t-red">核心资产</span></div>
+        <div class="foot"><span>👤 zhang</span><span>· 浏览 128/30d</span><span>· 质量 96</span><span style="margin-left:auto;color:#FE2C55">详情 ›</span></div>
+      </a>
+      <a class="acard" href="asset-detail.html">
+        <div class="gauge" style="--c:#52c41a;--p:88" data-v="A"></div><div class="st"><span class="tag t-green">已上架</span></div>
+        <div class="nm">ads_trade_gmv_daily <small>· 表</small></div>
+        <div class="ds">GMV 日汇总应用表：口径挂接原子指标「成交金额」，服务大屏与日报。</div>
+        <div class="meta"><span class="tag t-orange">ADS</span><span class="tag t-cyan">交易域</span><span class="lv l2">L2 内部</span><span class="tag t-red">核心资产</span><span class="tag t-purple">指标驱动</span></div>
+        <div class="foot"><span>👤 lucas</span><span>· 浏览 341/30d</span><span>· 质量 99</span><span style="margin-left:auto;color:#FE2C55">详情 ›</span></div>
+      </a>
+      <a class="acard" href="asset-detail.html">
+        <div class="gauge" style="--c:#1677ff;--p:72" data-v="B"></div><div class="st"><span class="tag t-green">已上架</span></div>
+        <div class="nm">metric.gmv.pay_amount <small>· 指标</small></div>
+        <div class="ds">成交金额：支付成功口径，不含退款；派生自原子指标 GMV × 时间周期 1d。</div>
+        <div class="meta"><span class="tag t-red">指标</span><span class="tag t-cyan">交易域</span><span class="tag t-purple">高频引用</span></div>
+        <div class="foot"><span>👤 wang</span><span>· 浏览 205/30d</span><span>· 引用 17</span><span style="margin-left:auto;color:#FE2C55">详情 ›</span></div>
+      </a>
+      <a class="acard" href="asset-detail.html">
+        <div class="gauge" style="--c:#fa8c16;--p:61" data-v="C"></div><div class="st"><span class="tag t-green">已上架</span></div>
+        <div class="nm">trade_order_snapshot_ds <small>· 数据集</small></div>
+        <div class="ds">对外数据服务快照数据集，v7 冻结 schema；分析页与 API 共用。</div>
+        <div class="meta"><span class="tag t-purple">数据集</span><span class="tag t-cyan">交易域</span><span class="lv l3">L3 敏感</span></div>
+        <div class="foot"><span>👤 chen</span><span>· 浏览 77/30d</span><span>· 未挂质量</span><span style="margin-left:auto;color:#FE2C55">详情 ›</span></div>
+      </a>
+      <a class="acard" href="asset-detail.html">
+        <div class="gauge" style="--c:#1677ff;--p:80" data-v="B"></div><div class="st"><span class="tag t-green">已上架</span></div>
+        <div class="nm">交易经营日报大屏 <small>· 仪表盘</small></div>
+        <div class="ds">GMV/订单量/退款率三主题，订阅 42 人；数据源锁定 ads_trade_gmv_daily。</div>
+        <div class="meta"><span class="tag t-purple">仪表盘</span><span class="tag t-cyan">交易域</span><span class="tag t-purple">高频引用</span></div>
+        <div class="foot"><span>👤 zhang</span><span>· 浏览 512/30d</span><span style="margin-left:auto;color:#FE2C55">详情 ›</span></div>
+      </a>
+      <a class="acard" href="asset-detail.html">
+        <div class="gauge" style="--c:#ff4d4f;--p:42" data-v="D"></div><div class="st"><span class="tag t-orange">待上架</span></div>
+        <div class="nm">ods_raw_trade_order <small>· 表</small></div>
+        <div class="ds">（源域同步描述）trade 库原始订单表 ODS 贴源，未补业务描述与字段注释。</div>
+        <div class="meta"><span class="tag t-gray">ODS</span><span class="tag t-cyan">交易域</span><span class="tag t-gray">未定级</span></div>
+        <div class="foot"><span>👤 —</span><span>· 缺：负责人/描述/定级</span><span style="margin-left:auto;color:#FE2C55">去补齐 ›</span></div>
+      </a>
+    </div>
+    <div class="pager"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>…</span><span>5</span><span>›</span></div>
+
+    <details class="design"><summary>设计要点（对应文档章节）</summary><div>
+      ① 搜索/过滤命中<b>台账快照字段</b>（name/description/layer/tags，design §4.1），结果按健康度×活跃度加权排序，DB LIKE + 索引起步（D9，不建 ES）；<br>
+      ② 卡片四要素传达"能不能用"：健康度环（A绿/B蓝/C橙/D红）、安全等级色标、负责人、近30天浏览——全部来自台账与派生列，<b>零实时跨域调用</b>保证列表性能；<br>
+      ③ 目录树是资产中心自有的<b>跨域目录</b>（D5）：模板=业务域一级 × 分层二级，新资产由编目规则自动预归入；源域自身目录不回迁；<br>
+      ④ "待上架"卡片对无权限者隐藏，对治理角色显示"去补齐"直达上架预检（需求 §3.2 的 D10 交互原则：缺口可一键补默认）；<br>
+      ⑤ 手工登记按钮 = 唯一需要人填的入口（source_type=MANUAL，物理表/外部对象兜底，需求 §3.1）。
+    </div></details>
+  </div>
+</div>
+</body>
+</html>

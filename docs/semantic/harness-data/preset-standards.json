@@ -1,0 +1,1134 @@
+{
+ "TYPE": [
+  {
+   "id": 254,
+   "std_code": "address",
+   "std_name": "地址",
+   "type_code": "address",
+   "std_type": "string"
+  },
+  {
+   "id": 221,
+   "std_code": "amount",
+   "std_name": "金额",
+   "type_code": "amount",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 222,
+   "std_code": "amount_tax",
+   "std_name": "含税金额",
+   "type_code": "amount_tax",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 248,
+   "std_code": "array",
+   "std_name": "数组",
+   "type_code": "array",
+   "std_type": "string"
+  },
+  {
+   "id": 226,
+   "std_code": "balance",
+   "std_name": "余额",
+   "type_code": "balance",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 253,
+   "std_code": "bankcard",
+   "std_name": "银行卡",
+   "type_code": "bankcard",
+   "std_type": "string"
+  },
+  {
+   "id": 201,
+   "std_code": "batch_no",
+   "std_name": "批次号",
+   "type_code": "batch_no",
+   "std_type": "string"
+  },
+  {
+   "id": 213,
+   "std_code": "category",
+   "std_name": "分类",
+   "type_code": "category",
+   "std_type": "string"
+  },
+  {
+   "id": 198,
+   "std_code": "code",
+   "std_name": "编码",
+   "type_code": "code",
+   "std_type": "string"
+  },
+  {
+   "id": 217,
+   "std_code": "content",
+   "std_name": "内容",
+   "type_code": "content",
+   "std_type": "string"
+  },
+  {
+   "id": 224,
+   "std_code": "cost",
+   "std_name": "成本",
+   "type_code": "cost",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 231,
+   "std_code": "count",
+   "std_name": "计数",
+   "type_code": "count",
+   "std_type": "bigint"
+  },
+  {
+   "id": 256,
+   "std_code": "currency",
+   "std_name": "币种",
+   "type_code": "currency",
+   "std_type": "string"
+  },
+  {
+   "id": 240,
+   "std_code": "date",
+   "std_name": "日期",
+   "type_code": "date",
+   "std_type": "string"
+  },
+  {
+   "id": 243,
+   "std_code": "datetime",
+   "std_name": "日期时间",
+   "type_code": "datetime",
+   "std_type": "string"
+  },
+  {
+   "id": 208,
+   "std_code": "desc",
+   "std_name": "描述",
+   "type_code": "desc",
+   "std_type": "string"
+  },
+  {
+   "id": 227,
+   "std_code": "discount",
+   "std_name": "折扣额",
+   "type_code": "discount",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 245,
+   "std_code": "duration",
+   "std_name": "时长",
+   "type_code": "duration",
+   "std_type": "bigint"
+  },
+  {
+   "id": 251,
+   "std_code": "email",
+   "std_name": "邮箱",
+   "type_code": "email",
+   "std_type": "string"
+  },
+  {
+   "id": 220,
+   "std_code": "flag",
+   "std_name": "标志",
+   "type_code": "flag",
+   "std_type": "tinyint"
+  },
+  {
+   "id": 229,
+   "std_code": "freight",
+   "std_name": "运费",
+   "type_code": "freight",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 207,
+   "std_code": "full_name",
+   "std_name": "全称",
+   "type_code": "full_name",
+   "std_type": "string"
+  },
+  {
+   "id": 197,
+   "std_code": "id",
+   "std_name": "标识",
+   "type_code": "id",
+   "std_type": "string"
+  },
+  {
+   "id": 252,
+   "std_code": "idcard",
+   "std_name": "身份证",
+   "type_code": "idcard",
+   "std_type": "string"
+  },
+  {
+   "id": 246,
+   "std_code": "interval",
+   "std_name": "间隔",
+   "type_code": "interval",
+   "std_type": "int"
+  },
+  {
+   "id": 255,
+   "std_code": "ip",
+   "std_name": "IP地址",
+   "type_code": "ip",
+   "std_type": "string"
+  },
+  {
+   "id": 247,
+   "std_code": "json",
+   "std_name": "JSON",
+   "type_code": "json",
+   "std_type": "string"
+  },
+  {
+   "id": 215,
+   "std_code": "keyword",
+   "std_name": "关键词",
+   "type_code": "keyword",
+   "std_type": "string"
+  },
+  {
+   "id": 212,
+   "std_code": "level",
+   "std_name": "级别",
+   "type_code": "level",
+   "std_type": "string"
+  },
+  {
+   "id": 249,
+   "std_code": "map",
+   "std_name": "映射",
+   "type_code": "map",
+   "std_type": "string"
+  },
+  {
+   "id": 250,
+   "std_code": "mobile",
+   "std_name": "手机号",
+   "type_code": "mobile",
+   "std_type": "string"
+  },
+  {
+   "id": 241,
+   "std_code": "month",
+   "std_name": "月份",
+   "type_code": "month",
+   "std_type": "string"
+  },
+  {
+   "id": 205,
+   "std_code": "name",
+   "std_name": "名称",
+   "type_code": "name",
+   "std_type": "string"
+  },
+  {
+   "id": 203,
+   "std_code": "parent_id",
+   "std_name": "父级标识",
+   "type_code": "parent_id",
+   "std_type": "string"
+  },
+  {
+   "id": 219,
+   "std_code": "path",
+   "std_name": "路径",
+   "type_code": "path",
+   "std_type": "string"
+  },
+  {
+   "id": 234,
+   "std_code": "percent",
+   "std_name": "百分比",
+   "type_code": "percent",
+   "std_type": "decimal(9,4)"
+  },
+  {
+   "id": 236,
+   "std_code": "point",
+   "std_name": "积分",
+   "type_code": "point",
+   "std_type": "bigint"
+  },
+  {
+   "id": 223,
+   "std_code": "price",
+   "std_name": "单价",
+   "type_code": "price",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 225,
+   "std_code": "profit",
+   "std_name": "利润",
+   "type_code": "profit",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 230,
+   "std_code": "quantity",
+   "std_name": "数量",
+   "type_code": "quantity",
+   "std_type": "int"
+  },
+  {
+   "id": 233,
+   "std_code": "rate",
+   "std_name": "比率",
+   "type_code": "rate",
+   "std_type": "decimal(9,4)"
+  },
+  {
+   "id": 209,
+   "std_code": "remark",
+   "std_name": "备注",
+   "type_code": "remark",
+   "std_type": "string"
+  },
+  {
+   "id": 204,
+   "std_code": "root_id",
+   "std_name": "根标识",
+   "type_code": "root_id",
+   "std_type": "string"
+  },
+  {
+   "id": 235,
+   "std_code": "score",
+   "std_name": "分值",
+   "type_code": "score",
+   "std_type": "decimal(9,2)"
+  },
+  {
+   "id": 200,
+   "std_code": "serial_no",
+   "std_name": "流水号",
+   "type_code": "serial_no",
+   "std_type": "string"
+  },
+  {
+   "id": 206,
+   "std_code": "short_name",
+   "std_name": "简称",
+   "type_code": "short_name",
+   "std_type": "string"
+  },
+  {
+   "id": 210,
+   "std_code": "status",
+   "std_name": "状态",
+   "type_code": "status",
+   "std_type": "string"
+  },
+  {
+   "id": 232,
+   "std_code": "stock",
+   "std_name": "库存",
+   "type_code": "stock",
+   "std_type": "int"
+  },
+  {
+   "id": 214,
+   "std_code": "tag",
+   "std_name": "标签",
+   "type_code": "tag",
+   "std_type": "string"
+  },
+  {
+   "id": 228,
+   "std_code": "tax",
+   "std_name": "税额",
+   "type_code": "tax",
+   "std_type": "decimal(18,2)"
+  },
+  {
+   "id": 239,
+   "std_code": "time",
+   "std_name": "时间",
+   "type_code": "time",
+   "std_type": "string"
+  },
+  {
+   "id": 244,
+   "std_code": "timestamp",
+   "std_name": "时间戳",
+   "type_code": "timestamp",
+   "std_type": "bigint"
+  },
+  {
+   "id": 216,
+   "std_code": "title",
+   "std_name": "标题",
+   "type_code": "title",
+   "std_type": "string"
+  },
+  {
+   "id": 211,
+   "std_code": "type",
+   "std_name": "类型",
+   "type_code": "type",
+   "std_type": "string"
+  },
+  {
+   "id": 218,
+   "std_code": "url",
+   "std_name": "链接",
+   "type_code": "url",
+   "std_type": "string"
+  },
+  {
+   "id": 199,
+   "std_code": "uuid",
+   "std_name": "唯一标识",
+   "type_code": "uuid",
+   "std_type": "string"
+  },
+  {
+   "id": 202,
+   "std_code": "version_no",
+   "std_name": "版本号",
+   "type_code": "version_no",
+   "std_type": "string"
+  },
+  {
+   "id": 238,
+   "std_code": "volume",
+   "std_name": "体积",
+   "type_code": "volume",
+   "std_type": "decimal(12,3)"
+  },
+  {
+   "id": 237,
+   "std_code": "weight",
+   "std_name": "重量",
+   "type_code": "weight",
+   "std_type": "decimal(12,3)"
+  },
+  {
+   "id": 242,
+   "std_code": "year",
+   "std_name": "年份",
+   "type_code": "year",
+   "std_type": "string"
+  }
+ ],
+ "UNIT": [
+  {
+   "id": 270,
+   "std_code": "bao",
+   "std_name": "包",
+   "unit_code": "bao",
+   "unit_type": "数量"
+  },
+  {
+   "id": 268,
+   "std_code": "ben",
+   "std_name": "本",
+   "unit_code": "ben",
+   "unit_type": "数量"
+  },
+  {
+   "id": 296,
+   "std_code": "cal",
+   "std_name": "卡路里",
+   "unit_code": "cal",
+   "unit_type": "能量"
+  },
+  {
+   "id": 260,
+   "std_code": "cent",
+   "std_name": "分",
+   "unit_code": "cent",
+   "unit_type": "金额"
+  },
+  {
+   "id": 282,
+   "std_code": "cm",
+   "std_name": "厘米",
+   "unit_code": "cm",
+   "unit_type": "长度"
+  },
+  {
+   "id": 290,
+   "std_code": "day",
+   "std_name": "天",
+   "unit_code": "day",
+   "unit_type": "时间"
+  },
+  {
+   "id": 261,
+   "std_code": "dollar",
+   "std_name": "美元",
+   "unit_code": "dollar",
+   "unit_type": "金额"
+  },
+  {
+   "id": 262,
+   "std_code": "euro",
+   "std_name": "欧元",
+   "unit_code": "euro",
+   "unit_type": "金额"
+  },
+  {
+   "id": 280,
+   "std_code": "ft3",
+   "std_name": "立方英尺",
+   "unit_code": "ft3",
+   "unit_type": "体积"
+  },
+  {
+   "id": 273,
+   "std_code": "g",
+   "std_name": "克",
+   "unit_code": "g",
+   "unit_type": "重量"
+  },
+  {
+   "id": 279,
+   "std_code": "gal",
+   "std_name": "加仑",
+   "unit_code": "gal",
+   "unit_type": "体积"
+  },
+  {
+   "id": 264,
+   "std_code": "ge",
+   "std_name": "个",
+   "unit_code": "ge",
+   "unit_type": "数量"
+  },
+  {
+   "id": 289,
+   "std_code": "hour",
+   "std_name": "小时",
+   "unit_code": "hour",
+   "unit_type": "时间"
+  },
+  {
+   "id": 285,
+   "std_code": "inch",
+   "std_name": "英寸",
+   "unit_code": "inch",
+   "unit_type": "长度"
+  },
+  {
+   "id": 272,
+   "std_code": "kg",
+   "std_name": "千克",
+   "unit_code": "kg",
+   "unit_type": "重量"
+  },
+  {
+   "id": 284,
+   "std_code": "km",
+   "std_name": "千米",
+   "unit_code": "km",
+   "unit_type": "长度"
+  },
+  {
+   "id": 295,
+   "std_code": "kwh",
+   "std_name": "千瓦时",
+   "unit_code": "kwh",
+   "unit_type": "能量"
+  },
+  {
+   "id": 277,
+   "std_code": "l",
+   "std_name": "升",
+   "unit_code": "l",
+   "unit_type": "体积"
+  },
+  {
+   "id": 275,
+   "std_code": "lb",
+   "std_name": "磅",
+   "unit_code": "lb",
+   "unit_type": "重量"
+  },
+  {
+   "id": 281,
+   "std_code": "m",
+   "std_name": "米",
+   "unit_code": "m",
+   "unit_type": "长度"
+  },
+  {
+   "id": 276,
+   "std_code": "m3",
+   "std_name": "立方米",
+   "unit_code": "m3",
+   "unit_type": "体积"
+  },
+  {
+   "id": 274,
+   "std_code": "mg",
+   "std_name": "毫克",
+   "unit_code": "mg",
+   "unit_type": "重量"
+  },
+  {
+   "id": 288,
+   "std_code": "minute",
+   "std_name": "分钟",
+   "unit_code": "minute",
+   "unit_type": "时间"
+  },
+  {
+   "id": 278,
+   "std_code": "ml",
+   "std_name": "毫升",
+   "unit_code": "ml",
+   "unit_type": "体积"
+  },
+  {
+   "id": 283,
+   "std_code": "mm",
+   "std_name": "毫米",
+   "unit_code": "mm",
+   "unit_type": "长度"
+  },
+  {
+   "id": 291,
+   "std_code": "month",
+   "std_name": "月",
+   "unit_code": "month",
+   "unit_type": "时间"
+  },
+  {
+   "id": 286,
+   "std_code": "ms",
+   "std_name": "毫秒",
+   "unit_code": "ms",
+   "unit_type": "时间"
+  },
+  {
+   "id": 292,
+   "std_code": "percent",
+   "std_name": "百分比",
+   "unit_code": "percent",
+   "unit_type": "比率"
+  },
+  {
+   "id": 293,
+   "std_code": "permille",
+   "std_name": "千分比",
+   "unit_code": "permille",
+   "unit_type": "比率"
+  },
+  {
+   "id": 263,
+   "std_code": "piece",
+   "std_name": "件",
+   "unit_code": "piece",
+   "unit_type": "数量"
+  },
+  {
+   "id": 294,
+   "std_code": "ratio",
+   "std_name": "比率",
+   "unit_code": "ratio",
+   "unit_type": "比率"
+  },
+  {
+   "id": 287,
+   "std_code": "second",
+   "std_name": "秒",
+   "unit_code": "second",
+   "unit_type": "时间"
+  },
+  {
+   "id": 265,
+   "std_code": "tai",
+   "std_name": "台",
+   "unit_code": "tai",
+   "unit_type": "数量"
+  },
+  {
+   "id": 266,
+   "std_code": "tao",
+   "std_name": "套",
+   "unit_code": "tao",
+   "unit_type": "数量"
+  },
+  {
+   "id": 271,
+   "std_code": "ton",
+   "std_name": "吨",
+   "unit_code": "ton",
+   "unit_type": "重量"
+  },
+  {
+   "id": 258,
+   "std_code": "wan_yuan",
+   "std_name": "万元",
+   "unit_code": "wan_yuan",
+   "unit_type": "金额"
+  },
+  {
+   "id": 269,
+   "std_code": "xiang",
+   "std_name": "箱",
+   "unit_code": "xiang",
+   "unit_type": "数量"
+  },
+  {
+   "id": 259,
+   "std_code": "yi_yuan",
+   "std_name": "亿元",
+   "unit_code": "yi_yuan",
+   "unit_type": "金额"
+  },
+  {
+   "id": 257,
+   "std_code": "yuan",
+   "std_name": "元",
+   "unit_code": "yuan",
+   "unit_type": "金额"
+  },
+  {
+   "id": 267,
+   "std_code": "zhang",
+   "std_name": "张",
+   "unit_code": "zhang",
+   "unit_type": "数量"
+  }
+ ],
+ "CALIBER": [
+  {
+   "id": 16,
+   "std_code": "active_user_cnt",
+   "std_name": "活跃用户数",
+   "caliber_code": "active_user_cnt"
+  },
+  {
+   "id": 19,
+   "std_code": "arpu",
+   "std_name": "ARPU",
+   "caliber_code": "arpu"
+  },
+  {
+   "id": 37,
+   "std_code": "avg_amount",
+   "std_name": "金额均值",
+   "caliber_code": "avg_amount"
+  },
+  {
+   "id": 7,
+   "std_code": "avg_order_amount",
+   "std_name": "客单价",
+   "caliber_code": "avg_order_amount"
+  },
+  {
+   "id": 9,
+   "std_code": "cancel_rate",
+   "std_name": "取消率",
+   "caliber_code": "cancel_rate"
+  },
+  {
+   "id": 18,
+   "std_code": "churn_rate",
+   "std_name": "流失率",
+   "caliber_code": "churn_rate"
+  },
+  {
+   "id": 34,
+   "std_code": "click_rate",
+   "std_name": "点击率",
+   "caliber_code": "click_rate"
+  },
+  {
+   "id": 33,
+   "std_code": "conversion_rate",
+   "std_name": "转化率",
+   "caliber_code": "conversion_rate"
+  },
+  {
+   "id": 35,
+   "std_code": "count",
+   "std_name": "计数",
+   "caliber_code": "count"
+  },
+  {
+   "id": 29,
+   "std_code": "coupon_use_rate",
+   "std_name": "优惠券使用率",
+   "caliber_code": "coupon_use_rate"
+  },
+  {
+   "id": 40,
+   "std_code": "distinct_cnt",
+   "std_name": "去重计数",
+   "caliber_code": "distinct_cnt"
+  },
+  {
+   "id": 1,
+   "std_code": "gmv",
+   "std_name": "GMV",
+   "caliber_code": "gmv"
+  },
+  {
+   "id": 2,
+   "std_code": "gmv_tax",
+   "std_name": "含税GMV",
+   "caliber_code": "gmv_tax"
+  },
+  {
+   "id": 28,
+   "std_code": "item_avg_price",
+   "std_name": "商品均价",
+   "caliber_code": "item_avg_price"
+  },
+  {
+   "id": 25,
+   "std_code": "item_conversion_rate",
+   "std_name": "商品转化率",
+   "caliber_code": "item_conversion_rate"
+  },
+  {
+   "id": 24,
+   "std_code": "item_pv",
+   "std_name": "商品PV",
+   "caliber_code": "item_pv"
+  },
+  {
+   "id": 27,
+   "std_code": "item_return_rate",
+   "std_name": "商品退货率",
+   "caliber_code": "item_return_rate"
+  },
+  {
+   "id": 22,
+   "std_code": "item_sale_amount",
+   "std_name": "商品销售额",
+   "caliber_code": "item_sale_amount"
+  },
+  {
+   "id": 21,
+   "std_code": "item_sale_cnt",
+   "std_name": "商品销量",
+   "caliber_code": "item_sale_cnt"
+  },
+  {
+   "id": 23,
+   "std_code": "item_uv",
+   "std_name": "商品UV",
+   "caliber_code": "item_uv"
+  },
+  {
+   "id": 38,
+   "std_code": "max_amount",
+   "std_name": "金额最大",
+   "caliber_code": "max_amount"
+  },
+  {
+   "id": 39,
+   "std_code": "min_amount",
+   "std_name": "金额最小",
+   "caliber_code": "min_amount"
+  },
+  {
+   "id": 6,
+   "std_code": "net_gmv",
+   "std_name": "净GMV",
+   "caliber_code": "net_gmv"
+  },
+  {
+   "id": 15,
+   "std_code": "new_user_cnt",
+   "std_name": "新增用户数",
+   "caliber_code": "new_user_cnt"
+  },
+  {
+   "id": 3,
+   "std_code": "order_cnt",
+   "std_name": "订单量",
+   "caliber_code": "order_cnt"
+  },
+  {
+   "id": 11,
+   "std_code": "order_user_cnt",
+   "std_name": "下单用户数",
+   "caliber_code": "order_user_cnt"
+  },
+  {
+   "id": 4,
+   "std_code": "pay_amount",
+   "std_name": "支付金额",
+   "caliber_code": "pay_amount"
+  },
+  {
+   "id": 10,
+   "std_code": "pay_rate",
+   "std_name": "支付率",
+   "caliber_code": "pay_rate"
+  },
+  {
+   "id": 12,
+   "std_code": "pay_user_cnt",
+   "std_name": "支付用户数",
+   "caliber_code": "pay_user_cnt"
+  },
+  {
+   "id": 30,
+   "std_code": "promotion_gmv",
+   "std_name": "活动GMV",
+   "caliber_code": "promotion_gmv"
+  },
+  {
+   "id": 31,
+   "std_code": "promotion_order_cnt",
+   "std_name": "活动订单量",
+   "caliber_code": "promotion_order_cnt"
+  },
+  {
+   "id": 14,
+   "std_code": "pv",
+   "std_name": "PV",
+   "caliber_code": "pv"
+  },
+  {
+   "id": 5,
+   "std_code": "refund_amount",
+   "std_name": "退款金额",
+   "caliber_code": "refund_amount"
+  },
+  {
+   "id": 8,
+   "std_code": "refund_rate",
+   "std_name": "退款率",
+   "caliber_code": "refund_rate"
+  },
+  {
+   "id": 17,
+   "std_code": "retention_rate",
+   "std_name": "留存率",
+   "caliber_code": "retention_rate"
+  },
+  {
+   "id": 32,
+   "std_code": "roi",
+   "std_name": "ROI",
+   "caliber_code": "roi"
+  },
+  {
+   "id": 26,
+   "std_code": "stock_turnover_rate",
+   "std_name": "库存周转率",
+   "caliber_code": "stock_turnover_rate"
+  },
+  {
+   "id": 36,
+   "std_code": "sum_amount",
+   "std_name": "金额合计",
+   "caliber_code": "sum_amount"
+  },
+  {
+   "id": 20,
+   "std_code": "user_avg_order_cnt",
+   "std_name": "人均订单数",
+   "caliber_code": "user_avg_order_cnt"
+  },
+  {
+   "id": 13,
+   "std_code": "uv",
+   "std_name": "UV",
+   "caliber_code": "uv"
+  }
+ ],
+ "SECURITY": [
+  {
+   "id": 177,
+   "std_code": "address",
+   "std_name": "地址",
+   "level_code": "L2"
+  },
+  {
+   "id": 194,
+   "std_code": "birthday",
+   "std_name": "生日",
+   "level_code": "L2"
+  },
+  {
+   "id": 192,
+   "std_code": "device_id",
+   "std_name": "设备ID",
+   "level_code": "L2"
+  },
+  {
+   "id": 175,
+   "std_code": "email",
+   "std_name": "邮箱",
+   "level_code": "L2"
+  },
+  {
+   "id": 187,
+   "std_code": "invoice_no",
+   "std_name": "发票号",
+   "level_code": "L2"
+  },
+  {
+   "id": 189,
+   "std_code": "ip",
+   "std_name": "IP地址",
+   "level_code": "L2"
+  },
+  {
+   "id": 193,
+   "std_code": "location",
+   "std_name": "位置",
+   "level_code": "L2"
+  },
+  {
+   "id": 190,
+   "std_code": "mac",
+   "std_name": "MAC地址",
+   "level_code": "L2"
+  },
+  {
+   "id": 172,
+   "std_code": "mobile",
+   "std_name": "手机号",
+   "level_code": "L2"
+  },
+  {
+   "id": 176,
+   "std_code": "name",
+   "std_name": "姓名",
+   "level_code": "L2"
+  },
+  {
+   "id": 186,
+   "std_code": "tax_no",
+   "std_name": "税号",
+   "level_code": "L2"
+  },
+  {
+   "id": 188,
+   "std_code": "account_balance",
+   "std_name": "账户余额",
+   "level_code": "L3"
+  },
+  {
+   "id": 174,
+   "std_code": "bankcard",
+   "std_name": "银行卡",
+   "level_code": "L3"
+  },
+  {
+   "id": 173,
+   "std_code": "idcard",
+   "std_name": "身份证",
+   "level_code": "L3"
+  },
+  {
+   "id": 191,
+   "std_code": "imei",
+   "std_name": "设备IMEI",
+   "level_code": "L3"
+  },
+  {
+   "id": 185,
+   "std_code": "income",
+   "std_name": "收入",
+   "level_code": "L3"
+  },
+  {
+   "id": 178,
+   "std_code": "passport",
+   "std_name": "护照",
+   "level_code": "L3"
+  },
+  {
+   "id": 184,
+   "std_code": "salary",
+   "std_name": "薪资",
+   "level_code": "L3"
+  },
+  {
+   "id": 179,
+   "std_code": "social_security",
+   "std_name": "社保号",
+   "level_code": "L3"
+  },
+  {
+   "id": 196,
+   "std_code": "biometric",
+   "std_name": "生物特征",
+   "level_code": "L4"
+  },
+  {
+   "id": 195,
+   "std_code": "medical",
+   "std_name": "医疗信息",
+   "level_code": "L4"
+  },
+  {
+   "id": 180,
+   "std_code": "password",
+   "std_name": "密码",
+   "level_code": "L4"
+  },
+  {
+   "id": 183,
+   "std_code": "private_key",
+   "std_name": "私钥",
+   "level_code": "L4"
+  },
+  {
+   "id": 182,
+   "std_code": "secret_key",
+   "std_name": "密钥",
+   "level_code": "L4"
+  },
+  {
+   "id": 181,
+   "std_code": "token",
+   "std_name": "令牌",
+   "level_code": "L4"
+  }
+ ],
+ "CODE_SETS": [
+  "activity_status",
+  "audit_status",
+  "audit_status_item",
+  "coupon_status",
+  "coupon_type",
+  "currency_code",
+  "delete_flag",
+  "delivery_status",
+  "enable_status",
+  "gender",
+  "invoice_status",
+  "invoice_type",
+  "item_status",
+  "item_type",
+  "log_level",
+  "logistics_company",
+  "member_level",
+  "order_status",
+  "pay_channel",
+  "pay_status",
+  "priority",
+  "promotion_type",
+  "refund_status",
+  "register_source",
+  "settle_status",
+  "shelf_status",
+  "stock_status",
+  "task_status",
+  "user_status",
+  "user_type",
+  "valid_flag",
+  "yes_no"
+ ]
+}

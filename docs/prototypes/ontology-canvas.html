@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本体画布 · 两层建模原型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:#f5f6f8; color:#1f2329; font-size:14px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  .topbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:10px 20px; display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .layer-chip { font-size:11px; color:#fff; background:#2f6bff; border-radius:10px; padding:2px 10px; }
+  .back { color:#6b7280; text-decoration:none; font-size:13px; }
+  .back:hover { color:#2f6bff; }
+  .topbar h1 { font-size:15px; font-weight:600; }
+  .topbar .crumb { color:#9ca3af; font-size:12px; }
+  .toolbar { display:flex; gap:8px; margin-left:auto; align-items:center; }
+  .btn { border:1px solid #d9dce1; background:#fff; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; color:#1f2329; }
+  .btn:hover { border-color:#2f6bff; color:#2f6bff; }
+  .btn.primary { background:#2f6bff; border-color:#2f6bff; color:#fff; }
+  .btn.primary:hover { opacity:.9; color:#fff; }
+  .search { border:1px solid #d9dce1; border-radius:6px; padding:5px 10px; font-size:13px; width:160px; outline:none; }
+
+  .main { flex:1; display:flex; min-height:0; }
+  /* 左：对象列表 */
+  .objlist { width:216px; background:#fff; border-right:1px solid #e5e7eb; overflow-y:auto; flex-shrink:0; padding:10px; }
+  .objlist h4 { font-size:12px; color:#6b7280; margin:8px 4px 6px; font-weight:500; }
+  .obj-item { padding:8px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px; }
+  .obj-item:hover { background:#f0f4ff; }
+  .obj-item.active { background:#e8efff; color:#2f6bff; font-weight:600; }
+  .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .obj-item .st { margin-left:auto; font-size:10px; color:#9ca3af; }
+  .obj-item .st.pub { color:#52c41a; }
+
+  /* 中：画布 */
+  .canvas-wrap { flex:1; position:relative; overflow:hidden;
+    background:#fff; background-image:radial-gradient(#e8eaf0 1px, transparent 1px); background-size:22px 22px; }
+  svg.edges { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .node { position:absolute; width:190px; background:#fff; border:1.5px solid #d9dce1; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06); cursor:pointer; transition:.12s; }
+  .node:hover { box-shadow:0 4px 14px rgba(47,107,255,.15); }
+  .node.sel { border-color:#2f6bff; box-shadow:0 0 0 3px rgba(47,107,255,.15); }
+  .node-head { display:flex; align-items:center; gap:8px; padding:9px 10px; border-bottom:1px solid #f0f1f3; }
+  .node-head .ic { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff; }
+  .node-head b { font-size:13px; }
+  .node-head .code { font-size:10px; color:#9ca3af; display:block; }
+  .node-head .more { margin-left:auto; color:#9ca3af; font-size:15px; padding:0 4px; border-radius:4px; }
+  .node-head .more:hover { background:#f0f1f3; color:#1f2329; }
+  .node-body { padding:7px 10px 9px; font-size:11.5px; color:#6b7280; }
+  .attr { display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .attr .t { font-size:9px; padding:0 5px; border-radius:3px; background:#f0f1f3; color:#6b7280; flex-shrink:0; }
+  .attr .t.pk { background:#fff1f0; color:#cf1322; } .attr .t.ms { background:#fff0f6; color:#c41d7f; }
+  .attr .t.tm { background:#e6fffb; color:#08979c; } .attr .t.dm { background:#f0f5ff; color:#1d39c4; }
+  .rule-chip { margin-top:7px; font-size:10.5px; color:#1d39c4; background:#f0f5ff; border:1px solid #d6e4ff; border-radius:5px; padding:2px 7px; display:inline-block; }
+  .node-menu { position:absolute; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.12); padding:5px; z-index:30; width:132px; }
+  .node-menu div { padding:6px 10px; font-size:12.5px; border-radius:5px; cursor:pointer; }
+  .node-menu div:hover { background:#f0f4ff; color:#2f6bff; }
+  .legend { position:absolute; left:14px; bottom:12px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:8px 12px; font-size:11.5px; color:#6b7280; display:flex; gap:12px; }
+  .legend b { font-weight:500; color:#1f2329; }
+  .removed { position:absolute; right:14px; bottom:12px; font-size:11px; color:#bfbfbf; border:1px dashed #d9dce1; border-radius:8px; padding:6px 10px; background:#fff; }
+  .removed s { color:#cf1322; }
+
+  /* 右：检查器 */
+  .inspector { width:342px; background:#fff; border-left:1px solid #e5e7eb; overflow-y:auto; flex-shrink:0; }
+  .insp-head { padding:14px 16px 10px; border-bottom:1px solid #f0f1f3; }
+  .insp-head h3 { font-size:15px; display:flex; align-items:center; gap:8px; }
+  .insp-head .code { color:#9ca3af; font-size:12px; }
+  .pub-tag { font-size:10px; color:#52c41a; background:#f6ffed; border:1px solid #b7eb8f; padding:0 8px; border-radius:9px; }
+  .sec { padding:12px 16px; border-bottom:1px solid #f0f1f3; }
+  .sec h4 { font-size:12px; color:#6b7280; margin-bottom:8px; font-weight:500; display:flex; justify-content:space-between; align-items:center; }
+  .sec h4 .act { color:#2f6bff; cursor:pointer; font-size:12px; }
+  .kv { display:flex; font-size:12.5px; padding:3px 0; }
+  .kv .k { width:88px; color:#9ca3af; flex-shrink:0; }
+  .kv .v { color:#1f2329; }
+  .prog { height:6px; background:#f0f1f3; border-radius:3px; margin:6px 0 4px; overflow:hidden; }
+  .prog i { display:block; height:100%; background:#2f6bff; border-radius:3px; }
+  .rule-item { border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; margin-bottom:8px; font-size:12.5px; }
+  .rule-item b { font-size:12.5px; }
+  .rule-item .req { display:block; color:#1d39c4; background:#f0f5ff; border-radius:5px; padding:3px 8px; margin-top:5px; font-size:11.5px; font-family:Consolas,monospace; }
+  .rule-item .src { color:#9ca3af; font-size:10.5px; margin-top:4px; display:block; }
+  .mini-btn { font-size:12px; border:1px solid #d9dce1; background:#fff; border-radius:6px; padding:4px 10px; cursor:pointer; }
+  .mini-btn:hover { color:#2f6bff; border-color:#2f6bff; }
+  .mini-btn.red { color:#FE2C55; border-color:#ffd6de; }
+  .mini-btn.red:hover { border-color:#FE2C55; }
+
+  /* 弹窗 */
+  .mask { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:50; align-items:center; justify-content:center; }
+  .mask.show { display:flex; }
+  .modal { background:#fff; border-radius:12px; width:560px; max-height:84vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,.18); }
+  .modal-h { padding:16px 20px 12px; border-bottom:1px solid #f0f1f3; display:flex; align-items:center; }
+  .modal-h b { font-size:15px; }
+  .modal-h .x { margin-left:auto; cursor:pointer; color:#9ca3af; font-size:16px; }
+  .modal-b { padding:16px 20px; }
+  .form-row { margin-bottom:12px; }
+  .form-row label { font-size:12.5px; color:#6b7280; display:block; margin-bottom:5px; }
+  .form-row input,.form-row select { width:100%; border:1px solid #d9dce1; border-radius:6px; padding:7px 10px; font-size:13px; outline:none; }
+  .form-row input:focus,.form-row select:focus { border-color:#2f6bff; }
+  .cond { border:1px dashed #d9dce1; border-radius:8px; padding:12px; margin-bottom:10px; }
+  .cond-row { display:flex; gap:8px; margin-bottom:8px; }
+  .cond-row select,.cond-row input { flex:1; }
+  .preview { background:#f0f5ff; border:1px solid #d6e4ff; border-radius:8px; padding:10px 12px; font-size:13px; color:#1d39c4; margin-top:4px; }
+  .preview small { display:block; color:#9ca3af; font-size:11px; margin-bottom:4px; }
+  .modal-f { padding:12px 20px 16px; display:flex; gap:10px; justify-content:flex-end; }
+  .footnote { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); background:rgba(31,35,41,.85); color:#fff; font-size:11.5px; border-radius:8px; padding:6px 14px; z-index:20; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← 模型列表</a>
+  <span class="layer-chip">本体建模层</span>
+  <h1>销售域 · 本体画布</h1>
+  <span class="crumb">业务世界：对象 / 关系 / 规则 / 动作（声明式，与数据无关）</span>
+  <div class="toolbar">
+    <button class="btn">＋ 新建对象</button>
+    <button class="btn">自动整理</button>
+    <button class="btn">术语表</button>
+    <button class="btn">业务动作</button>
+    <button class="btn primary">上线自查</button>
+    <input class="search" placeholder="定位对象…">
+  </div>
+</div>
+
+<div class="main">
+  <!-- 左：对象列表 -->
+  <div class="objlist">
+    <h4>实体 ENTITY</h4>
+    <div class="obj-item active" data-obj="order"><span class="dot" style="background:#2f6bff"></span>销售订单<span class="st pub">已上线</span></div>
+    <div class="obj-item" data-obj="customer"><span class="dot" style="background:#2f6bff"></span>客户<span class="st pub">已上线</span></div>
+    <div class="obj-item" data-obj="product"><span class="dot" style="background:#2f6bff"></span>商品<span class="st">草稿</span></div>
+    <h4>取值 VALUE</h4>
+    <div class="obj-item" data-obj="paytype"><span class="dot" style="background:#52c41a"></span>支付方式<span class="st pub">已上线</span></div>
+    <div class="obj-item" data-obj="orderstatus"><span class="dot" style="background:#52c41a"></span>订单状态<span class="st pub">已上线</span></div>
+    <h4>流程 PROCESS</h4>
+    <div class="obj-item" data-obj="saleflow"><span class="dot" style="background:#fa8c16"></span>销售履约流程<span class="st">草稿</span></div>
+  </div>
+
+  <!-- 中：画布 -->
+  <div class="canvas-wrap" id="canvas">
+    <svg class="edges" id="edges"></svg>
+
+    <div class="node sel" data-obj="order" style="left:390px; top:110px;">
+      <div class="node-head"><span class="ic" style="background:#2f6bff">👤</span>
+        <span><b>销售订单</b><span class="code">sales_order</span></span>
+        <span class="more" onclick="toggleMenu(event)">⋮</span></div>
+      <div class="node-body">
+        <div class="attr"><span class="t pk">主键</span>order_id</div>
+        <div class="attr"><span class="t ms">度量</span>pay_amount</div>
+        <div class="attr"><span class="t dm">维度</span>order_status</div>
+        <div class="attr"><span class="t tm">时间</span>created_at</div>
+        <span class="rule-chip">📦 2 条业务规则</span>
+      </div>
+    </div>
+
+    <div class="node" data-obj="customer" style="left:100px; top:60px;">
+      <div class="node-head"><span class="ic" style="background:#2f6bff">👤</span>
+        <span><b>客户</b><span class="code">customer</span></span>
+        <span class="more" onclick="toggleMenu(event)">⋮</span></div>
+      <div class="node-body">
+        <div class="attr"><span class="t pk">主键</span>customer_id</div>
+        <div class="attr"><span class="t dm">维度</span>city</div>
+      </div>
+    </div>
+
+    <div class="node" data-obj="product" style="left:110px; top:290px;">
+      <div class="node-head"><span class="ic" style="background:#2f6bff">📦</span>
+        <span><b>商品</b><span class="code">product</span></span>
+        <span class="more" onclick="toggleMenu(event)">⋮</span></div>
+      <div class="node-body">
+        <div class="attr"><span class="t pk">主键</span>sku_id</div>
+        <div class="attr"><span class="t dm">维度</span>category</div>
+      </div>
+    </div>
+
+    <div class="node" data-obj="paytype" style="left:700px; top:50px;">
+      <div class="node-head"><span class="ic" style="background:#52c41a">🎫</span>
+        <span><b>支付方式</b><span class="code">pay_type</span></span>
+        <span class="more" onclick="toggleMenu(event)">⋮</span></div>
+      <div class="node-body"><div class="attr"><span class="t">枚举</span>微信/支付宝/银行卡</div></div>
+    </div>
+
+    <div class="node" data-obj="orderstatus" style="left:700px; top:250px;">
+      <div class="node-head"><span class="ic" style="background:#52c41a">🎫</span>
+        <span><b>订单状态</b><span class="code">order_status</span></span>
+        <span class="more" onclick="toggleMenu(event)">⋮</span></div>
+      <div class="node-body"><div class="attr"><span class="t">枚举</span>待支付/已支付/已发货/已完成</div></div>
+    </div>
+
+    <div class="legend"><b>图例</b><span>👤 实体</span><span>🎫 取值</span><span>🧾 流程</span><span>— 拉线=登记关系</span></div>
+    <div class="removed">指标入口已迁至 <s>登记指标</s> → <a href="semantic-workspace.html" style="color:#FE2C55">语义建模工作台</a></div>
+  </div>
+
+  <!-- 右：检查器 -->
+  <div class="inspector">
+    <div class="insp-head">
+      <h3>销售订单 <span class="pub-tag">已上线</span></h3>
+      <span class="code">sales_order · 销售域</span>
+    </div>
+    <div class="sec">
+      <h4>建模进度 <span class="act">详情页 →</span></h4>
+      <div class="prog"><i style="width:85%"></i></div>
+      <div style="font-size:11.5px;color:#9ca3af;">主键 ✓ · 字段含义 12/14 · 绑定 ✓ · 规则 2 条 · Definition ✓</div>
+    </div>
+    <div class="sec">
+      <h4>身份与定义（元数据契约）</h4>
+      <div class="kv"><span class="k">identify_by</span><span class="v">order_id</span></div>
+      <div class="kv"><span class="k">IRI</span><span class="v" style="font-family:Consolas,monospace;font-size:11px;">yak://ontology/sales_order</span></div>
+      <div class="kv"><span class="k">Definition</span><span class="v">一次已确认的销售交易单据</span></div>
+    </div>
+    <div class="sec">
+      <h4>业务规则 requires（2） <span class="act" onclick="openRule()">＋ 编辑规则</span></h4>
+      <div class="rule-item"><b>金额非负</b>
+        <span class="req">sales_order.pay_amount >= 0</span>
+        <span class="src">声明式约束 · 不参与指标计算</span></div>
+      <div class="rule-item"><b>支付先于发货</b>
+        <span class="req">sales_order.paid_at &lt;= sales_order.shipped_at</span>
+        <span class="src">跨属性时序约束 · GB/T 日期有效性公理</span></div>
+    </div>
+    <div class="sec">
+      <h4>业务动作（1） <span class="act">管理动作 →</span></h4>
+      <div class="rule-item"><b>取消订单</b><span style="color:#9ca3af;font-size:11px;">effect: 作废未发货订单 · 风险: 中</span></div>
+    </div>
+    <div class="sec">
+      <h4>关系（3）</h4>
+      <div class="kv"><span class="k">客户</span><span class="v">下单 → M:1 · customer_id</span></div>
+      <div class="kv"><span class="k">支付方式</span><span class="v">使用 → M:1 · pay_type</span></div>
+      <div class="kv"><span class="k">订单状态</span><span class="v">处于 → M:1 · order_status</span></div>
+    </div>
+    <div class="sec" style="border-bottom:none;">
+      <button class="mini-btn red" style="width:100%;">上线自查（含元数据契约校验）</button>
+    </div>
+  </div>
+</div>
+
+<!-- 规则弹窗：requires 条件构造器 -->
+<div class="mask" id="ruleMask">
+  <div class="modal">
+    <div class="modal-h"><b>业务规则 · requires 条件构造器</b><span class="x" onclick="closeRule()">✕</span></div>
+    <div class="modal-b">
+      <div class="form-row"><label>规则名称</label><input value="支付先于发货"></div>
+      <div class="form-row"><label>条件（引用本体属性 · 声明式约束，不参与指标计算）</label>
+        <div class="cond">
+          <div class="cond-row">
+            <select><option>sales_order.paid_at</option><option>sales_order.shipped_at</option><option>sales_order.pay_amount</option></select>
+            <select style="flex:0 0 90px;"><option>&lt;=</option><option>&lt;</option><option>&gt;=</option><option>==</option><option>∈</option></select>
+            <select><option>sales_order.shipped_at</option><option>0</option><option>枚举值…</option></select>
+          </div>
+          <button class="mini-btn" onclick="addCond()">＋ 添加条件（AND）</button>
+        </div>
+      </div>
+      <div class="preview"><small>人话预览（verbalizes）</small>销售订单的支付时间不晚于发货时间</div>
+      <div class="form-row" style="margin-top:12px;"><label>业务描述</label><input value="已发货订单必须先完成支付，用于财务对账与合规校验"></div>
+      <div class="note" style="background:#fff1f0;border-color:#ffccc7;color:#820014;">
+        <b>边界提醒</b>：若这条约束是「某次计算只选部分实例」（如"只统计已支付订单的金额"），那不是业务规则，请到 <b style="color:#FE2C55">语义建模 → 口径过滤</b> 中定义。
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeRule()">取消</button>
+      <button class="btn primary" style="background:#2f6bff;border-color:#2f6bff;" onclick="closeRule()">保存规则</button>
+    </div>
+  </div>
+</div>
+
+<div class="node-menu" id="nodeMenu" style="display:none;">
+  <div>编辑字段含义</div><div>编辑业务规则</div><div>绑定数据</div><div>上线</div><div>详情页</div><div style="color:#cf1322;">移除</div>
+</div>
+
+<div class="footnote">设计要点：本体画布 = 纯业务世界（对象/关系/规则/动作）。指标入口已剥离 → <a href="semantic-workspace.html" style="color:#7ee2b8;">语义建模工作台</a>；规则为声明式 requires，见设计文档 §3.3/§3.4</div>
+
+<script>
+  // 节点选中
+  document.querySelectorAll('.node, .obj-item').forEach(function(el){
+    el.addEventListener('click', function(e){
+      if (e.target.classList.contains('more')) return;
+      var key = el.dataset.obj || el.getAttribute('data-obj');
+      document.querySelectorAll('.node').forEach(function(n){ n.classList.toggle('sel', n.dataset.obj===key); });
+      document.querySelectorAll('.obj-item').forEach(function(n){ n.classList.toggle('active', n.dataset.obj===key); });
+      hideMenu();
+    });
+  });
+  // 关系连线
+  function drawEdges(){
+    var c = document.getElementById('canvas'), svg = document.getElementById('edges');
+    var list = [["customer","order","下单 M:1"],["product","order","包含 M:N"],["paytype","order","使用 M:1"],["order","orderstatus","处于 M:1"]];
+    var s = '';
+    list.forEach(function(it){
+      var a = document.querySelector('.node[data-obj="'+it[0]+'"]'), b = document.querySelector('.node[data-obj="'+it[1]+'"]');
+      if(!a||!b) return;
+      var x1=a.offsetLeft+a.offsetWidth, y1=a.offsetTop+a.offsetHeight/2, x2=b.offsetLeft, y2=b.offsetTop+b.offsetHeight/2;
+      var mx=(x1+x2)/2;
+      s += '<path d="M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2+'" fill="none" stroke="#b9c6ff" stroke-width="1.6"/>';
+      s += '<text x="'+(mx-24)+'" y="'+((y1+y2)/2-6)+'" font-size="10.5" fill="#8c9bbf">'+it[2]+'</text>';
+    });
+    svg.innerHTML = s;
+  }
+  drawEdges(); window.addEventListener('resize', drawEdges);
+  // 节点菜单
+  function toggleMenu(e){
+    e.stopPropagation();
+    var m = document.getElementById('nodeMenu'), n = e.target.closest('.node');
+    m.style.display='block';
+    m.style.left = Math.min(n.offsetLeft+150, c.clientWidth-140)+'px';
+    m.style.top = (n.offsetTop+34)+'px';
+    m.dataset.for = n.dataset.obj;
+  }
+  function hideMenu(){ document.getElementById('nodeMenu').style.display='none'; }
+  document.addEventListener('click', hideMenu);
+  // 规则弹窗
+  function openRule(){ document.getElementById('ruleMask').classList.add('show'); }
+  function closeRule(){ document.getElementById('ruleMask').classList.remove('show'); }
+  function addCond(){ var r=document.querySelector('.cond-row'); var c=r.cloneNode(true); r.parentNode.insertBefore(c, r.nextSibling); }
+</script>
+</body>
+</html>

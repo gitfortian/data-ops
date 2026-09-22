@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>目录与标签 · 数据资产中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f5;color:#1f1f1f;font-size:14px}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10}
+.logo{font-weight:600;font-size:15px;color:#FE2C55;margin-right:28px;white-space:nowrap;flex-shrink:0}.logo b{color:#1f1f1f}
+.nav{display:flex}.nav a{margin-right:22px;text-decoration:none;color:#595959;padding:15px 2px;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap}
+.nav a.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.right{margin-left:auto;color:#8c8c8c;font-size:12px}
+.page{max-width:1280px;margin:16px auto 64px;padding:0 16px}
+.card{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.card>h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.card>h3 .sub{color:#8c8c8c;font-weight:400;font-size:12px}
+.split{display:flex;gap:16px;align-items:flex-start}
+.tree{width:300px;flex-shrink:0;border:1px solid #f0f0f0;border-radius:10px;padding:12px;font-size:12.5px;line-height:2.2;background:#fff}
+.tree .lv1{font-weight:600;display:flex;justify-content:space-between}
+.tree div div{padding-left:18px;color:#595959;display:flex;justify-content:space-between;padding-right:6px;border-radius:6px}
+.tree .n{color:#bfbfbf;font-size:11px;font-weight:400}
+.tree .hv{color:#bfbfbf}
+.tree .row:hover .hv{color:#FE2C55}
+.right2{flex:1;min-width:0}
+.btn{display:inline-block;padding:6px 16px;border-radius:8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:13px}
+.btn.pri{background:#FE2C55;border-color:#FE2C55;color:#fff}
+.btn.sm{padding:2px 10px;font-size:12px}
+table{width:100%;border-collapse:collapse}
+th{background:#fafafa;text-align:left;font-weight:500}
+th,td{padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:12.5px;vertical-align:top}
+.tag{display:inline-block;padding:0 7px;border-radius:4px;font-size:11.5px;border:1px solid;line-height:18px}
+.t-red{color:#FE2C55;border-color:#ffd6de;background:#fff0f3}.t-green{color:#52c41a;border-color:#b7eb8f;background:#f6ffed}
+.t-blue{color:#1677ff;border-color:#91caff;background:#e6f4ff}.t-orange{color:#fa8c16;border-color:#ffd591;background:#fff7e6}
+.t-purple{color:#722ed1;border-color:#d3adf7;background:#f9f0ff}.t-gray{color:#8c8c8c;border-color:#d9d9d9;background:#fafafa}
+.t-cyan{color:#13c2c2;border-color:#87e8de;background:#e6fffb}
+.cond{font-size:11.5px;color:#595959;line-height:1.9}
+.cond code{background:#fafafa;border:1px solid #f0f0f0;border-radius:4px;padding:0 5px;font-size:11px}
+.arrow{color:#FE2C55;font-weight:700}
+.note{background:#e6f4ff;border:1px solid #91caff;border-radius:8px;padding:8px 12px;font-size:12px;color:#095eca;margin-bottom:12px}
+.warn{background:#fffbe6;border:1px solid #ffe58f;border-radius:8px;padding:8px 12px;font-size:12px;color:#8c6916;margin-bottom:12px}
+.dryrun{border:1px dashed #ffd6de;border-radius:10px;padding:14px 16px;margin-top:12px;background:#fffafa}
+.dryrun b{color:#FE2C55}
+.dryrun .its{margin-top:8px;font-size:12px;color:#595959;line-height:2}
+.sw{display:inline-block;width:34px;height:18px;border-radius:9px;background:#f0f0f0;position:relative;vertical-align:middle}
+.sw:after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.sw.on{background:#FE2C55}.sw.on:after{left:18px}
+.dotc{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+details.design{margin-top:4px}
+details.design summary{cursor:pointer;color:#FE2C55;font-size:13px;padding:8px 0}
+details.design>div{background:#fff;border:1px dashed #ffd6de;border-radius:10px;padding:16px;font-size:13px;line-height:2;color:#595959}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Yak Ops <b>数据资产中心</b></div>
+  <div class="nav"><a href="asset-overview.html">资产概览</a><a href="asset-catalog.html">资产目录</a><a href="asset-inventory.html">盘点上架</a><a class="on" href="asset-taxonomy.html">目录与标签</a></div>
+  <div class="right">默认空间 ▾ ｜ 治理管理员</div>
+</div>
+<div class="page">
+  <div class="card">
+    <h3>资产目录树 <span class="sub">跨域目录，资产中心自有（D5）；modeling 域内目录不回迁、详情页并列回显</span>
+      <span style="margin-left:auto"><button class="btn sm">＋ 新建目录</button> <button class="btn pri sm">⚡ 按分层+业务域模板初始化</button></span></h3>
+    <div class="split">
+      <div class="tree">
+        <div class="lv1 row">▾ 交易域 <span class="n">142 <span class="hv">✎ ⋮</span></span></div>
+        <div class="row"><span style="padding-left:18px">ODS 贴源层</span><span class="n">31 <span class="hv">✎ ⋮</span></span></div>
+        <div class="row"><span style="padding-left:18px">DIM 维度层</span><span class="n">18 <span class="hv">✎ ⋮</span></span></div>
+        <div class="row"><span style="padding-left:18px">DWD 明细层</span><span class="n">52 <span class="hv">✎ ⋮</span></span></div>
+        <div class="row"><span style="padding-left:18px">DWS 汇总层</span><span class="n">27 <span class="hv">✎ ⋮</span></span></div>
+        <div class="row"><span style="padding-left:18px">ADS 应用层</span><span class="n">14 <span class="hv">✎ ⋮</span></span></div>
+        <div class="lv1 row">▸ 用户域 <span class="n">96 <span class="hv">✎ ⋮</span></span></div>
+        <div class="lv1 row">▸ 商品域 <span class="n">74 <span class="hv">✎ ⋮</span></span></div>
+        <div class="lv1 row">▸ 风控域 <span class="n">41 <span class="hv">✎ ⋮</span></span></div>
+        <div class="lv1 row">报表与大屏 <span class="n">29</span></div>
+        <div class="lv1 row">任务资产 <span class="n">21</span></div>
+        <div class="lv1 row" style="color:#8c8c8c">未分类（规则兜底） <span class="n">23</span></div>
+      </div>
+      <div class="right2">
+        <div class="note">模板初始化幂等：已存在的层跳过并提示（对齐生命周期"从分层模板初始化"先例）；目录编码自动生成 <code style="background:#fff;border:1px solid #e8e8e8;border-radius:3px;padding:0 4px">{父编码}_{序号}</code>，名称自动取层名/业务域名 —— 建目录零手填（交互原则 §3）。</div>
+        <table>
+          <tr><th>目录</th><th>资产数</th><th>健康均值</th><th>已上架率</th><th>近30天浏览</th><th>操作</th></tr>
+          <tr><td>交易域 / DWD 明细层</td><td>52</td><td><b style="color:#1677ff">B 74</b></td><td>68%</td><td>4,120</td><td><button class="btn sm">查看资产</button> <button class="btn sm">命中规则 2 条</button></td></tr>
+          <tr><td>交易域 / ADS 应用层</td><td>14</td><td><b style="color:#52c41a">A 85</b></td><td>93%</td><td>7,860</td><td><button class="btn sm">查看资产</button> <button class="btn sm">命中规则 1 条</button></td></tr>
+          <tr><td style="color:#8c8c8c">未分类</td><td>23</td><td><b style="color:#ff4d4f">D 51</b></td><td>0%</td><td>—</td><td><button class="btn sm">批量移动 ▾</button></td></tr>
+        </table>
+        <div style="font-size:12px;color:#8c8c8c;margin-top:8px">拖拽可调整目录层级；移动目录自动带子树（物化路径 path 更新，design §4.2）。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>编目规则 <span class="sub">条件 → 动作；新登记自动套用；规则变更须"重新应用"（预览影响数）</span>
+      <span style="margin-left:auto"><button class="btn pri sm">＋ 新建规则</button></span></h3>
+    <div class="warn">规则<b>必须先 dry-run 试跑</b>产出命中报告才允许启用（后端拦截 48010）——防止一条宽泛正则把 300 个资产误归目录。</div>
+    <table>
+      <tr><th style="width:36px">优先级</th><th>规则</th><th>条件（AND）</th><th>动作</th><th>最近命中</th><th>状态</th><th>操作</th></tr>
+      <tr><td>10</td><td><b>分层即目录</b><br><span style="color:#8c8c8c;font-size:11px">dir_layer_first</span></td><td class="cond">分层 <code>= DWD</code> ∧ 业务域 <code>有值</code></td><td class="cond"><span class="arrow">→</span> 归入 {域}/DWD 明细层</td><td>52 <button class="btn sm">试跑</button></td><td><span class="sw on"></span></td><td><button class="btn sm">编辑</button></td></tr>
+      <tr><td>20</td><td><b>ods_ 前缀贴源</b></td><td class="cond">名称 <code>^ods_</code> ∧ 类型 <code>= 表</code></td><td class="cond"><span class="arrow">→</span> 归入 {域}/ODS 贴源层</td><td>31 <button class="btn sm">试跑</button></td><td><span class="sw on"></span></td><td><button class="btn sm">编辑</button></td></tr>
+      <tr><td>30</td><td><b>大屏资产聚拢</b></td><td class="cond">类型 <code>∈ 仪表盘,图表</code></td><td class="cond"><span class="arrow">→</span> 归入 报表与大屏</td><td>29 <button class="btn sm">试跑</button></td><td><span class="sw on"></span></td><td><button class="btn sm">编辑</button></td></tr>
+      <tr><td>40</td><td><b>ads_ 即核心</b><br><span style="color:#8c8c8c;font-size:11px">tag_core_ads</span></td><td class="cond">名称 <code>^ads_</code> ∧ 下游引用 <code>≥ 5</code></td><td class="cond"><span class="arrow">→</span> 打标签 <span class="tag t-red">核心资产</span></td><td>14 <button class="btn sm">试跑</button></td><td><span class="sw on"></span></td><td><button class="btn sm">编辑</button></td></tr>
+      <tr><td>90</td><td><b>兜底未分类</b></td><td class="cond">（无条件 = 通配）</td><td class="cond"><span class="arrow">→</span> 归入 未分类</td><td>23 <button class="btn sm">试跑</button></td><td><span class="sw on"></span></td><td><button class="btn sm">编辑</button></td></tr>
+      <tr><td>15</td><td style="opacity:.55"><b>风控关键字</b></td><td class="cond">描述含 <code>黑名单|风控|欺诈</code></td><td class="cond"><span class="arrow">→</span> 归入 风控域</td><td>试跑未通过</td><td><span class="sw"></span></td><td><button class="btn sm">试跑</button></td></tr>
+    </table>
+
+    <div class="dryrun">
+      <b>⌕ dry-run 试跑报告</b> · 规则「ads_ 即核心」 · 未写入任何数据 · 2026-09-19 10:02
+      <div class="its">
+        将命中 <b>14</b> 个资产（其中已打标跳过 6 · 新增打标 <b>8</b>）<br>
+        样例：ads_trade_gmv_daily ✓引用17 · ads_risk_blacklist ✓引用9 · ads_user_churn ⚠引用4不满足 · …共 8 条<br>
+        <button class="btn pri sm">确认并启用</button> <button class="btn sm">导出清单</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>业务标签字典 <span class="sub">跨域消费侧标签；与「安全分级(security)」「源域标签(modeling/指标)」三套体系并列、互不覆盖（需求 §3.5）</span>
+      <span style="margin-left:auto"><button class="btn sm">＋ 新建标签</button></span></h3>
+    <table>
+      <tr><th>标签</th><th>编码</th><th>资产数</th><th>来源</th><th>操作</th></tr>
+      <tr><td><span class="dotc" style="background:#FE2C55"></span><b>核心资产</b></td><td><code style="font-size:11px">tag_core_asset</code>（自动）</td><td>41</td><td>规则 4 条 + 人工</td><td><button class="btn sm">看资产</button> <button class="btn sm">编辑</button></td></tr>
+      <tr><td><span class="dotc" style="background:#722ed1"></span><b>高频引用</b></td><td>tag_hot_ref</td><td>67</td><td>规则 + 浏览派生建议</td><td><button class="btn sm">看资产</button> <button class="btn sm">编辑</button></td></tr>
+      <tr><td><span class="dotc" style="background:#1677ff"></span><b>指标驱动</b></td><td>tag_metric_drv</td><td>18</td><td>人工</td><td><button class="btn sm">看资产</button></td></tr>
+      <tr><td><span class="dotc" style="background:#8c8c8c"></span><b>待退役</b></td><td>tag_deprecating</td><td>6</td><td>人工（下架预备役，详情页醒目展示）</td><td><button class="btn sm">看资产</button></td></tr>
+      <tr><td><span class="dotc" style="background:#13c2c2"></span><b>PII 相关</b> <span class="tag t-orange">与 L3/L4 联动建议</span></td><td>tag_pii_like</td><td>12</td><td>人工 · <span style="color:#8c8c8c">不复制 security 定级，仅业务提示</span></td><td><button class="btn sm">看资产</button></td></tr>
+    </table>
+    <div style="font-size:12px;color:#8c8c8c;margin-top:8px">标签颜色从预置色板下拉选择（能选不填）；删除保护：被引用 &gt; 0 时需先批量去标（预检列出受影响资产）。</div>
+  </div>
+
+  <details class="design"><summary>设计要点（对应文档章节）</summary><div>
+    ① 目录/规则/标签三块都遵循「能默认就不填」：编码自动生成、模板一键初始化、名称自动带出（交互原则 §3-§4）；<br>
+    ② 规则是<b>预编目器</b>不是同步器：只在新登记与显式"重新应用"时生效，且首条命中即停（priority 小者优先，design §4.4）；<br>
+    ③ dry-run 是启用前置闸门（错误码 48010），报告展示"将命中/将变更/跳过"三类计数，杜绝规则误伤；<br>
+    ④ 与 security 分级标签的边界用色板与文案双重区隔：本域标签面向消费语义（能不能用/重不重要），分级面向合规（敏感不敏感），互不覆盖（D5）；<br>
+    ⑤ 未分类目录 = 兜底规则目标，保证每个资产永远有归属，概览"未编目"计数恒为 0 可信。
+  </div></details>
+</div>
+</body>
+</html>

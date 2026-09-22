@@ -1,0 +1,2 @@
+Summary for output/m2-remote/io/yak/framework/yak-common/1.0.0-SNAPSHOT/yak-common-1.0.0-SNAPSHOT.jar
+Decompiled with CFR 0.152

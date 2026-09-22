@@ -1,0 +1,2 @@
+export const DATA_SERVICE_RECOMMENDED_LIMIT = 8;
+export const DATA_SERVICE_HOT_LIMIT = 5;

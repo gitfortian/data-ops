@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>资产360° · dwd_trade_order_detail</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f5;color:#1f1f1f;font-size:14px}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10}
+.logo{font-weight:600;font-size:15px;color:#FE2C55;margin-right:28px;white-space:nowrap;flex-shrink:0}.logo b{color:#1f1f1f}
+.nav{display:flex}.nav a{margin-right:22px;text-decoration:none;color:#595959;padding:15px 2px;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap}
+.nav a.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.right{margin-left:auto;color:#8c8c8c;font-size:12px}
+.page{max-width:1280px;margin:16px auto 64px;padding:0 16px}
+.card{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.hdr{display:flex;align-items:flex-start;gap:16px}
+.hdr .nm{font-size:19px;font-weight:600}
+.hdr .nm small{color:#8c8c8c;font-weight:400;font-size:12px;margin-left:10px}
+.hdr .tags{margin:8px 0;display:flex;gap:6px;flex-wrap:wrap}
+.hdr .desc{color:#595959;font-size:12.5px;max-width:820px;line-height:1.7}
+.hdr .acts{margin-left:auto;text-align:right;flex-shrink:0}
+.gauge{width:64px;height:64px;border-radius:50%;background:conic-gradient(#1677ff calc(78*3.6deg),#f0f0f0 0);position:relative;display:inline-block;margin-right:10px;vertical-align:middle}
+.gauge:after{content:'B 78';position:absolute;inset:7px;background:#fff;border-radius:50%;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;color:#1677ff}
+.btn{display:inline-block;padding:6px 16px;border-radius:8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:13px;margin-left:8px}
+.btn.pri{background:#FE2C55;border-color:#FE2C55;color:#fff}
+.btn.warn{color:#fa8c16;border-color:#ffd591}
+.btn.sm{padding:2px 10px;font-size:12px;margin-left:0}
+.tag{display:inline-block;padding:0 7px;border-radius:4px;font-size:11.5px;border:1px solid;line-height:18px}
+.t-red{color:#FE2C55;border-color:#ffd6de;background:#fff0f3}.t-green{color:#52c41a;border-color:#b7eb8f;background:#f6ffed}
+.t-blue{color:#1677ff;border-color:#91caff;background:#e6f4ff}.t-orange{color:#fa8c16;border-color:#ffd591;background:#fff7e6}
+.t-purple{color:#722ed1;border-color:#d3adf7;background:#f9f0ff}.t-cyan{color:#13c2c2;border-color:#87e8de;background:#e6fffb}
+.t-gray{color:#8c8c8c;border-color:#d9d9d9;background:#fafafa}
+.lv{border-radius:4px;padding:0 6px;font-size:11px;line-height:17px;border:1px solid;color:#fa8c16;border-color:#ffd591;background:#fff7e6}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #f0f0f0;margin-bottom:14px;flex-wrap:wrap}
+.tabs span{padding:8px 14px;font-size:13px;color:#595959;cursor:pointer;border-bottom:2px solid transparent}
+.tabs span.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.pane{display:none}.pane.on{display:block}
+.desc2{display:grid;grid-template-columns:repeat(3,1fr);gap:0 24px;font-size:12.5px}
+.desc2 div{padding:7px 0;border-bottom:1px dashed #f5f5f5;display:flex}
+.desc2 b{color:#8c8c8c;font-weight:400;width:80px;flex-shrink:0}
+table{width:100%;border-collapse:collapse}
+th{background:#fafafa;text-align:left;font-weight:500}
+th,td{padding:7px 10px;border-bottom:1px solid #f0f0f0;font-size:12.5px}
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.hsec{font-size:13px;font-weight:600;margin:4px 0 10px}
+.hrow{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:9px}
+.hrow .lb{width:130px;color:#595959;text-align:right;flex-shrink:0}
+.hrow .tr{flex:1;height:8px;background:#f5f5f5;border-radius:4px;overflow:hidden}
+.hrow .fl{height:100%;border-radius:4px}
+.hrow .pt{width:76px;color:#8c8c8c}
+.lg{display:flex;height:16px;border-radius:4px;overflow:hidden;font-size:10.5px;color:#fff;margin:10px 0 4px}
+.lg div{display:flex;align-items:center;justify-content:center}
+.graph{background:#fafafa;border:1px dashed #d9d9d9;border-radius:10px;padding:22px;position:relative;height:250px}
+.node{position:absolute;background:#fff;border:1.5px solid #d9d9d9;border-radius:8px;padding:6px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.node.up{left:26px;top:38px;border-color:#91caff;color:#1677ff}
+.node.up2{left:26px;top:150px;border-color:#91caff;color:#1677ff}
+.node.cur{left:44%;top:92px;border-color:#FE2C55;color:#FE2C55;font-weight:600}
+.node.dn{right:26px;top:38px;border-color:#b7eb8f;color:#52c41a}
+.node.dn2{right:26px;top:150px;border-color:#ffd591;color:#fa8c16}
+.edge{position:absolute;height:1.5px;background:#bfbfbf;transform-origin:left}
+.spark{display:flex;align-items:flex-end;gap:3px;height:56px}
+.spark i{flex:1;background:#ffd6de;border-radius:2px 2px 0 0;display:block}
+.spark i.hi{background:#FE2C55}
+.note{background:#fffbe6;border:1px solid #ffe58f;border-radius:8px;padding:8px 12px;font-size:12px;color:#8c6916;margin-bottom:12px}
+.fail{background:#fafafa;border:1px dashed #d9d9d9;border-radius:8px;padding:14px;color:#8c8c8c;font-size:12px}
+details.design{margin-top:4px}
+details.design summary{cursor:pointer;color:#FE2C55;font-size:13px;padding:8px 0}
+details.design>div{background:#fff;border:1px dashed #ffd6de;border-radius:10px;padding:16px;font-size:13px;line-height:2;color:#595959}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Yak Ops <b>数据资产中心</b></div>
+  <div class="nav"><a href="asset-overview.html">资产概览</a><a class="on" href="asset-catalog.html">资产目录</a><a href="asset-inventory.html">盘点上架</a><a href="asset-taxonomy.html">目录与标签</a></div>
+  <div class="right">默认空间 ▾ ｜ 治理管理员</div>
+</div>
+<div class="page">
+  <div class="crumbs" style="color:#8c8c8c;font-size:12px;margin-bottom:10px">资产目录 / 交易域 / DWD 明细层 / <span style="color:#1f1f1f">dwd_trade_order_detail</span></div>
+
+  <div class="card">
+    <div class="hdr">
+      <div style="flex:1">
+        <div class="nm">dwd_trade_order_detail <small>MODEL:2041 · 资产键 table:11:dwd_db.public.dwd_trade_order_detail（与血缘节点同源）</small></div>
+        <div class="tags">
+          <span class="tag t-green">已上架</span><span class="tag t-blue">表/模型</span><span class="tag t-blue">DWD</span><span class="tag t-cyan">交易域</span><span class="lv">L3 敏感</span>
+          <span class="tag t-red">核心资产</span><span class="tag t-purple">高频引用</span><span class="tag t-gray">源域标签: 订单主题</span>
+        </div>
+        <div class="desc">交易订单明细事实表：一行一笔订单子单，日分区（dt=yyyyMMdd），主键 order_item_id；覆盖下单-支付-履约全链路状态。</div>
+        <div style="font-size:12px;color:#8c8c8c;margin-top:8px">负责人 <b style="color:#1f1f1f">zhang</b> ｜ 上架于 2026-08-02 ｜ 源域更新 2026-09-18 ｜ 最近对账 今日 02:00</div>
+      </div>
+      <div style="flex-shrink:0;text-align:center">
+        <div class="gauge"></div>
+        <div style="font-size:11px;color:#8c8c8c">健康度 · 每日重算</div>
+        <div style="margin-top:10px">
+          <button class="btn pri" style="margin-left:0">已上架 ▾ 下架</button>
+        </div>
+        <div style="margin-top:8px">
+          <button class="btn sm">换负责人</button><button class="btn sm">打标</button><button class="btn sm">打开建模页 ↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <span class="on" data-p="p1">概览</span><span data-p="p2">字段 32</span><span data-p="p3">血缘</span><span data-p="p4">质量</span><span data-p="p5">安全</span><span data-p="p6">生命周期</span><span data-p="p7">使用</span><span data-p="p8">变更</span>
+    </div>
+
+    <div class="pane on" id="p1">
+      <div class="cols">
+        <div>
+          <div class="hsec">基本信息 <span style="font-weight:400;color:#8c8c8c;font-size:11.5px">名称/描述为台账快照；物理属性实时读源域（D1）</span></div>
+          <div class="desc2">
+            <div><b>来源域</b>建模 MODEL · 已发布 v3</div><div><b>物理表</b>dwd_db.dwd_trade_order_detail</div><div><b>存储引擎</b>Doris · UNIQUE KEY</div>
+            <div><b>分区</b>dt 日分区 · 保留 730d</div><div><b>行数</b>约 2.4 亿（源域统计快照）</div><div><b>更新频率</b>每日 T+1（挂任务 2 个）</div>
+            <div><b>业务域</b>交易域 / 订单主题</div><div><b>目录</b>交易域 / DWD 明细层</div><div><b>上架人</b>lucas · 2026-08-02</div>
+          </div>
+          <div class="hsec" style="margin-top:16px">源域实时属性（只读，来自 modeling）</div>
+          <div class="desc2">
+            <div><b>模型状态</b>已发布（≠ 资产上架状态）</div><div><b>粒度</b>order_item_id + dt</div><div><b>SCD 策略</b>n/a（事实表）</div>
+          </div>
+        </div>
+        <div>
+          <div class="hsec">健康度明细 78 / B <span style="font-weight:400;color:#8c8c8c;font-size:11.5px">缺口即动作</span></div>
+          <div class="hrow"><div class="lb">描述 · 完整性</div><div class="tr"><div class="fl" style="width:100%;background:#52c41a"></div></div><div class="pt">10 / 10</div></div>
+          <div class="hrow"><div class="lb">负责人</div><div class="tr"><div class="fl" style="width:100%;background:#52c41a"></div></div><div class="pt">10 / 10</div></div>
+          <div class="hrow"><div class="lb">目录 / 业务标签</div><div class="tr"><div class="fl" style="width:100%;background:#52c41a"></div></div><div class="pt">10 / 10</div></div>
+          <div class="hrow"><div class="lb">字段注释覆盖 82%</div><div class="tr"><div class="fl" style="width:82%;background:#1677ff"></div></div><div class="pt">8.2 / 10</div></div>
+          <div class="hrow"><div class="lb">质量监控与通过</div><div class="tr"><div class="fl" style="width:96%;background:#52c41a"></div></div><div class="pt">14.4 / 15</div></div>
+          <div class="hrow"><div class="lb">血缘已登记</div><div class="tr"><div class="fl" style="width:100%;background:#52c41a"></div></div><div class="pt">10 / 10</div></div>
+          <div class="hrow"><div class="lb">安全已定级</div><div class="tr"><div class="fl" style="width:100%;background:#52c41a"></div></div><div class="pt">10 / 10</div></div>
+          <div class="hrow"><div class="lb">变更确认及时性</div><div class="tr"><div class="fl" style="width:0%;background:#f0f0f0"></div></div><div class="pt" style="color:#fa8c16">0 / 5 · 有未确认</div></div>
+          <div class="hrow"><div class="lb">浏览 / 新鲜度 / 引用</div><div class="tr"><div class="fl" style="width:80%;background:#1677ff"></div></div><div class="pt">16 / 20</div></div>
+          <div style="font-size:12px;color:#8c8c8c;margin-top:6px">建议：到「盘点上架」确认源变更（+3 列）可 +5 分升 A。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="p2">
+      <div class="note">字段清单与列注释实时读源域；安全等级列读 security 分级标签（无集中元数据仓，D5/D6）。</div>
+      <table>
+        <tr><th>#</th><th>字段</th><th>类型</th><th>注释（源域）</th><th>角色</th><th>安全等级</th><th>标准关联</th></tr>
+        <tr><td>1</td><td>order_item_id</td><td>BIGINT</td><td>订单子单号（主键）</td><td>维度</td><td><span class="tag" style="color:#8c8c8c">L1 公开</span></td><td>标准字段 SF0012</td></tr>
+        <tr><td>7</td><td>buyer_phone</td><td>VARCHAR</td><td>买家手机号</td><td>维度</td><td><span class="lv">L4 机密</span></td><td>SF0055 · 已配脱敏</td></tr>
+        <tr><td>12</td><td>pay_amount</td><td>DECIMAL(18,2)</td><td>支付金额（元）</td><td>度量</td><td><span class="tag" style="color:#fa8c16">L3 敏感</span></td><td>挂接指标 gmv.pay_amount</td></tr>
+        <tr><td>26</td><td>dt</td><td>DATE</td><td>分区日期</td><td>分区键</td><td><span class="tag" style="color:#1677ff">L2 内部</span></td><td>—</td></tr>
+        <tr><td colspan="7" style="text-align:center;color:#8c8c8c">… 共 32 列 · 注释覆盖 82%（缺 6 列 → 扣分项见概览）</td></tr>
+      </table>
+    </div>
+
+    <div class="pane" id="p3">
+      <div class="note">血缘局部图（1 跳）读 lineage 服务；点击节点或「全屏血缘图谱」进入统一图谱 —— 资产中心不建第二张图（D6）。</div>
+      <div class="graph">
+        <div class="edge" style="left:150px;top:50px;width:38%;transform:rotate(14deg)"></div>
+        <div class="edge" style="left:150px;top:162px;width:38%;transform:rotate(-14deg)"></div>
+        <div class="edge" style="right:150px;top:50px;width:38%;transform:rotate(-16deg)"></div>
+        <div class="edge" style="right:150px;top:162px;width:38%;transform:rotate(16deg)"></div>
+        <div class="node up">ods_raw_trade_order <small>表</small></div>
+        <div class="node up2">dim_product <small>维表</small></div>
+        <div class="node cur">dwd_trade_order_detail（本资产）</div>
+        <div class="node dn">ads_trade_gmv_daily <small>表</small></div>
+        <div class="node dn2">交易经营日报大屏 <small>仪表盘</small></div>
+        <div style="position:absolute;left:12px;bottom:8px;font-size:11px;color:#8c8c8c">上游 2 · 下游 20（列 3 跳）</div>
+        <div style="position:absolute;right:12px;bottom:8px"><button class="btn sm">打开全屏血缘图谱 ↗</button></div>
+      </div>
+    </div>
+
+    <div class="pane" id="p4">
+      <div class="cols">
+        <div>
+          <div class="hsec">质量规则执行（近 7 天 · 读 quality）</div>
+          <table>
+            <tr><th>规则</th><th>类型</th><th>通过率</th><th>最近执行</th><th></th></tr>
+            <tr><td>主键唯一 order_item_id+dt</td><td>唯一性</td><td><span class="tag t-green">100%</span></td><td>今日 05:10</td><td></td></tr>
+            <tr><td>pay_amount ≥ 0</td><td>值域</td><td><span class="tag t-green">99.98%</span></td><td>今日 05:11</td><td></td></tr>
+            <tr><td>行数环比波动 ≤ 30%</td><td>完整性</td><td><span class="tag t-orange">2/7 告警</span></td><td>今日 05:12</td><td><button class="btn sm">告警记录</button></td></tr>
+            <tr><td>dt 分区按时产出</td><td>及时性</td><td><span class="tag t-green">100%</span></td><td>今日 05:00</td><td></td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="hsec">综合质量分</div>
+          <div style="font-size:30px;font-weight:600;color:#52c41a">96 <span style="font-size:12px;color:#8c8c8c;font-weight:400">/ 100 · 近7天加权</span></div>
+          <div class="lg"><div style="background:#52c41a;width:86%">通过 86%</div><div style="background:#fa8c16;width:14%">告警</div></div>
+          <div style="font-size:12px;color:#8c8c8c;margin-top:8px">监控覆盖：已挂 4 规则 · 该域模板建议 6 → 「补挂建议」</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="p5">
+      <div class="note">定级与脱敏的唯一事实源在数据安全模块（D5）；本页只读回显，「去调整」跳转分级分类页。</div>
+      <div class="desc2" style="grid-template-columns:repeat(2,1fr)">
+        <div><b>表级等级</b>L3 敏感（人工定级 · security · 2026-07-11）</div><div><b>分类</b>业务 / 交易</div>
+        <div><b>列级定级</b>已覆盖 28/32 · L4×3 L3×9</div><div><b>脱敏策略</b>phone→部分遮蔽；id_card→哈希</div>
+        <div><b>发现来源</b>规则命中 12 · 人工 16 · 继承 0</div><div><b>合规体检</b>该资产无缺口</div>
+      </div>
+      <div style="margin-top:12px"><button class="btn sm">去数据安全调整定级 ↗</button></div>
+    </div>
+
+    <div class="pane" id="p6">
+      <div class="note">TTL 策略与下发的唯一出口在数据生命周期模块（只读回显，D5）。</div>
+      <div class="desc2" style="grid-template-columns:repeat(2,1fr)">
+        <div><b>生效策略</b>DWD 默认策略（继承分层）</div><div><b>下发状态</b><span class="tag t-green">APPLIED</span> 2026-09-01</div>
+        <div><b>保留窗口</b>热 30d · 冷 180d · 销毁 730d</div><div><b>分区粒度</b>DAY · 当前 42 个分区</div>
+      </div>
+      <div style="margin-top:12px"><button class="btn sm">查看 TTL 监控 ↗</button></div>
+    </div>
+
+    <div class="pane" id="p7">
+      <div class="cols">
+        <div>
+          <div class="hsec">近 30 天浏览（本模块流水，同用户同资产 5min 去重）</div>
+          <div class="spark"><i style="height:20%"></i><i style="height:34%"></i><i style="height:28%"></i><i style="height:50%"></i><i style="height:42%"></i><i style="height:66%"></i><i class="hi" style="height:88%"></i><i style="height:44%"></i><i style="height:38%"></i><i style="height:56%"></i><i style="height:48%"></i><i style="height:70%"></i><i class="hi" style="height:92%"></i><i style="height:52%"></i><i style="height:40%"></i><i style="height:58%"></i><i style="height:46%"></i><i style="height:36%"></i><i style="height:64%"></i><i style="height:55%"></i><i style="height:47%"></i><i style="height:60%"></i><i style="height:50%"></i><i style="height:44%"></i><i style="height:68%"></i><i class="hi" style="height:96%"></i><i style="height:58%"></i><i style="height:52%"></i><i style="height:62%"></i><i style="height:70%"></i></div>
+          <div style="font-size:12px;color:#8c8c8c">128 次 / 31 天 · 峰值 09-17（大屏改版评审周）</div>
+        </div>
+        <div>
+          <div class="hsec">下游引用（读源域 SPI 摘要）</div>
+          <table>
+            <tr><td>指标 gmv.pay_amount 挂接列</td><td><span class="tag t-blue">指标</span></td></tr>
+            <tr><td>ads_trade_gmv_daily（派生建模）</td><td><span class="tag t-blue">表</span></td></tr>
+            <tr><td>trade_order_snapshot_ds</td><td><span class="tag t-purple">数据集</span></td></tr>
+            <tr><td>数据服务 API /order/detail ×2</td><td><span class="tag t-cyan">API</span></td></tr>
+          </table>
+          <div style="font-size:12px;color:#8c8c8c;margin-top:6px">下架前影响预览将读取本区数据（design §6.2）。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="p8">
+      <table>
+        <tr><th>时间</th><th>类型</th><th>内容</th><th>操作人</th></tr>
+        <tr><td>09-19 02:00</td><td><span class="tag t-orange">盘点</span></td><td>META_CHANGED：源域新增 3 列（refund_stage/…），<b>待确认</b></td><td>定时对账</td></tr>
+        <tr><td>09-01 10:22</td><td><span class="tag t-green">下发</span></td><td>TTL 策略 APPLIED（快照自 lifecycle）</td><td>系统</td></tr>
+        <tr><td>08-02 14:07</td><td><span class="tag t-red">上架</span></td><td>预检 4/4 通过 → PUBLISHED（审计 ID 8841）</td><td>lucas</td></tr>
+        <tr><td>07-30 09:12</td><td><span class="tag t-gray">打标</span></td><td>+核心资产 +高频引用</td><td>zhang</td></tr>
+        <tr><td>07-21 02:00</td><td><span class="tag t-blue">登记</span></td><td>对账 NEW 自动登记；规则「DWD→交易域/DWD」预归目录；owner 继承创建人 zhang</td><td>定时对账</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <details class="design"><summary>设计要点（对应文档章节）</summary><div>
+    ① 八分区独立容错：任一域 SPI 失败显示"暂不可用"占位，不伪造空、不阻塞整页（6.4，home 契约语义）；<br>
+    ② 台账快照 vs 源域实时：名称/描述/标签可编辑（资产中心拥有），物理属性一律实时 provider.fetchDetail —— "管目录不管内容"（D1）的界面表达；<br>
+    ③ 健康度明细把每个扣分项翻译成动作（缺 5 分→"去确认源变更可升 A"），治理零学习成本（需求 §3.8）；<br>
+    ④ 安全/生命周期区只有"跳转调整"，无编辑控件：单一事实源不在本域（D5），页面用顶部黄条明示；<br>
+    ⑤ 血缘用 1 跳局部图 + 全屏跳转，绝不重建图引擎（D6）；下游引用区同时服务下架影响预览（design §6.2）。
+  </div></details>
+</div>
+
+<script>
+document.getElementById('tabs').addEventListener('click',e=>{
+  if(e.target.dataset.p){
+    document.querySelectorAll('.tabs span').forEach(s=>s.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+    e.target.classList.add('on');document.getElementById(e.target.dataset.p).classList.add('on');
+  }
+});
+</script>
+</body>
+</html>

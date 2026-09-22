@@ -1,0 +1,922 @@
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/ARCHITECTURE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/REQUIREMENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/api/MdmCleanApi.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmCleanService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmEntityService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/MdmCleanController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/vo/MdmCleanRuleVO.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/clean/CleanJson.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/record/MdmRecord.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepositoryAdapter.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/yak-ops-business/yak-ops-business-mdm/ARCHITECTURE.md b/yak-ops-business/yak-ops-business-mdm/ARCHITECTURE.md
+index e09df4a76..db3cba79e 100644
+--- a/yak-ops-business/yak-ops-business-mdm/ARCHITECTURE.md
++++ b/yak-ops-business/yak-ops-business-mdm/ARCHITECTURE.md
+@@ -54,9 +54,12 @@ io.yak.ops.business.mdm
+ | yak_mdm_source | V4 | 53 |
+ | yak_mdm_record | V6 | 55 |
+ | yak_mdm_clean_rule(DEDUP) | V7 | 56 |
+-| yak_mdm_clean_rule(STANDARDIZE/COMPLETE) | V8 | 57 |
++| yak_mdm_merge_log | V8 | 56 |
++| (57 澶嶇敤 V7 琛?rule_type 宸插惈 STANDARDIZE/COMPLETE,鏃犳柊杩佺Щ) | 鈥?| 57 |
+ | yak_mdm_distribution | V9 | 58 |
+-| yak_mdm_change | V10 | 60 |
++| yak_mdm_subscription | V10 | 59 |
++| yak_mdm_change | V11 | 60 |
++| (61/62 澶嶇敤鐜版湁琛?鏃犳柊杩佺Щ,浠呮湇鍔＄鑱氬悎) | 鈥?| 61/62 |
+ 
+ ## 鑿滃崟娉ㄥ唽
+ 
+diff --git a/yak-ops-business/yak-ops-business-mdm/REQUIREMENTS.md b/yak-ops-business/yak-ops-business-mdm/REQUIREMENTS.md
+index 51e56286c..a8b54347d 100644
+--- a/yak-ops-business/yak-ops-business-mdm/REQUIREMENTS.md
++++ b/yak-ops-business/yak-ops-business-mdm/REQUIREMENTS.md
+@@ -86,3 +86,85 @@
+ - 鍚堝苟鎵ц:閫変富璁板綍 鈫?涓昏褰?attributes/source_ids 鍚堝苟銆乿ersion+1;鍏朵綑璁板綍 status=MERGED銆乿ersion+1;鍐?`mdm_merge_log`(V8:project_id/entity_id/rule_id/master_record_id/merged_record_ids/operator_id/result/鏃堕棿)鍙拷婧?鍚堝苟涓嶅彲鍥炴粴浣嗚褰曚繚鐣?瀹¤ `MDM_MERGE_*`銆? - 鍓嶇:娓呮礂椤?瀹炰綋閫夋嫨 鈫?瑙勫垯鍒楄〃/鏂板缓/缂栬緫/鍚仠/鍒犻櫎 鈫?鎵ц鍘婚噸鍙戠幇 鈫?閲嶅缁勫垎椤靛睍绀?鈫?鍚堝苟棰勮寮圭獥 鈫?鍚堝苟鎵ц/淇濈暀);鑿滃崟 `mdm-cleansing` 鏈?ticket 娉ㄥ唽(V2027)銆? - 鏈?ticket 杩藉姞閿欒鐮?44022 鍘婚噸瑙勫垯涓嶅瓨鍦?44023 鍘婚噸瑙勫垯涓嶅悎娉?44024 鍚堝苟璇锋眰涓嶅悎娉曘€?+
++## Ticket 57:涓绘暟鎹竻娲椔锋爣鍑嗗寲涓庤ˉ鍏?鏈€灏忓寲璁捐,鏈€澶у寲澶嶇敤)
++
++- 绠＄悊鍛樺湪娓呮礂椤?mdmcleansing)闄ゅ幓閲嶈鍒欏,鍙寜瀹炰綋閰嶇疆鏍囧噯鍖栬鍒欎笌琛ュ叏瑙勫垯;瑙勫垯涓庡幓閲嶅叡鐢?`mdm_clean_rule` 琛?V7 宸叉敮鎸?rule_type 鏋氫妇 STANDARDIZE/COMPLETE),鏃犳柊 Flyway 杩佺Щ銆?+- 鏍囧噯鍖栬鍒?STANDARDIZE):
++  - 鍒涘缓:rule_name 蹇呭～(鈮?28),瀹炰綋鍐呭敮涓€;rule_expr JSON 閰嶇疆灞炴€у€兼槧灏勮〃:`{"fields":{"gender":{"M":"1","F":"2"}}}`,閿负灞炴€х紪鐮?鍊间负婧愨啋鐩爣鏄犲皠;灞炴€у繀椤绘槸瀹炰綋宸插畾涔夊睘鎬?鏄犲皠涓嶅彲涓虹┖銆?+  - 棰勮:鎵弿瀹炰綋 ACTIVE 璁板綍,鎸夋槧灏勮绠楀彈褰卞搷璁板綍鏁颁笌鍙樻洿鏄庣粏(鍓?N 鏉?銆?+  - 鎵ц:鎵归噺鏇存柊鍙楀奖鍝嶈褰曠殑 attributes(version 閫掑,status 淇濇寔 ACTIVE);鍐欏璁?`MDM_CLEAN_APPLY_STANDARDIZE`銆?+- 琛ュ叏瑙勫垯(COMPLETE):
++  - 鍒涘缓:rule_expr JSON 閰嶇疆榛樿鍊?`{"defaults":{"grade":"鏅€?}}`,閿负灞炴€х紪鐮?鍊间负榛樿鍊?灞炴€у繀椤绘槸瀹炰綋宸插畾涔夊睘鎬?榛樿鍊间笉鍙负绌恒€?+  - 棰勮:鎵弿瀹炰綋 ACTIVE 璁板綍,缁熻缂哄け/绌哄€煎睘鎬т細琚～鍏呯殑璁板綍鏁颁笌鍙樻洿鏄庣粏銆?+  - 鎵ц:鎵归噺鏇存柊鍙楀奖鍝嶈褰?version 閫掑;鍐欏璁?`MDM_CLEAN_APPLY_COMPLETE`銆?+- 閫氱敤瑙勫垯绠＄悊(涓?DEDUP 鍏辩敤):CRUD銆佸惎鍋溿€佹帓搴忋€佹寜瀹炰綋鏌ョ湅;鍒涘缓鏃舵寜 ruleType 鍒嗘淳鏍￠獙閫昏緫(DEDUP 璧板師鍖归厤瀛楁鏍￠獙,STANDARDIZE/COMPLETE 璧板睘鎬х紪鐮?琛ㄨ揪寮忔牎楠?銆?+- 澶嶇敤:澶嶇敤鐜版湁 `mdm_clean_rule` 琛?鏃犳柊杩佺Щ)銆佸鐢?audit 鏈嶅姟(鏃犳柊鎵ц鏃ュ織琛?銆佸鐢ㄧ幇鏈夐敊璇爜 INVALID_CLEAN_RULE(44023)銆?+- 鍓嶇:娓呮礂椤佃鍒欏垪琛ㄦ敮鎸佸叏閮ㄧ被鍨嬪睍绀?鏍囧噯鍖?琛ュ叏鏂板缓寮圭獥(灞炴€ч€夋嫨 + 鏄犲皠/榛樿鍊奸厤缃?+ 棰勮寮圭獥 + 鎵ц纭;澶嶇敤鍘婚噸瑙勫垯鐨勭鐐圭粨鏋勩€?+- 鏈?ticket 涓嶈拷鍔犳柊閿欒鐮?澶嶇敤 44023 INVALID_CLEAN_RULE)銆?+
++## Ticket 58:涓绘暟鎹垎鍙?閰嶇疆/鎵ц/鐩戞帶,鏈€灏忓寲璁捐)
++
++- 绠＄悊鍛樺湪瀹炰綋璇︽儏椤碘€滃垎鍙戦厤缃€漈ab(鏃犵嫭绔嬭彍鍗?menu.md 浜?缁存姢鍒嗗彂閰嶇疆:鐩爣绯荤粺 + 鍒嗗彂鏂瑰紡(API/MESSAGE/FILE) + 棰戠巼(MANUAL/DAILY/HOURLY) + 鑼冨洿(FULL/INCREMENTAL)銆?+- 鍒嗗彂閰嶇疆(`mdm_distribution` V9):
++  - 鍒涘缓:target_system 蹇呭～(鈮?4),瀹炰綋鍐?鐩爣绯荤粺+鏂瑰紡)鍞竴;mode 蹇呭～;鍒濆鐘舵€?DRAFT銆?+  - 缂栬緫:target_name/mode/freq/scope 鍙敼;target_system 涓嶅彲鏀广€?+  - 鐘舵€佹祦杞?鑽夌鈫掔敓鏁堚啋鍋滅敤鈫掔敓鏁?DRAFT 涓哄垱寤烘€?涓嶅厑璁哥洿鎺?DRAFT鈫扗ISABLED)銆?+  - 鍒犻櫎:鐗╃悊鍒犻櫎,瀹¤鐣欑棔銆?+- 鍒嗗彂鎵ц(鏈€灏忓寲):
++  - 鎵嬪姩瑙﹀彂:浠?ACTIVE 閰嶇疆鍙墽琛?鍗曠洰鏍囧け璐ヤ笉褰卞搷鍏朵粬鐩爣銆?+  - API 鏂瑰紡:鏌ヨ瀹炰綋 ACTIVE 璁板綍鏁颁綔涓哄崰浣?瀹為檯鎺ㄩ€佸緟 data-service 闆嗘垚,鍚庣画澧為噺)銆?+  - MESSAGE/FILE 鏂瑰紡:涓哄崰浣?鍚庣画鍙傜収 alert/storage 鑳藉姏銆?+  - 鎵ц缁撴灉鍐欓厤缃〃(last_distribute_time/count/fail),涓嶅缓鐙珛鏃ュ織琛ㄣ€?+- 鍒嗗彂鐩戞帶:閰嶇疆琛ㄨ嚜甯?last_distribute_time/status,鎸夊疄浣撴煡鐪?鎬昏鈥滃垎鍙戠姸鎬佲€濆崱鐗囧睍绀烘椿璺冮厤缃暟(鏈嶅姟绔仛鍚?銆?+- 澶嶇敤:澶嶇敤鐜版湁 DISTRIBUTE_FAILED(44006)閿欒鐮?鏃犵嫭绔嬭彍鍗?璺虫暟鎹湇鍔?銆?+- 瀹¤:鍒涘缓/缂栬緫/鍚仠/鍒犻櫎/鎵ц鍏ㄩ儴钀藉璁?fail-open),浜嬩欢鍛藉悕 `MDM_DISTRIBUTION_*`銆?+- 鏈?ticket 涓嶈拷鍔犳柊閿欒鐮?澶嶇敤 44006 DISTRIBUTE_FAILED)銆?+
++## Ticket 59:涓绘暟鎹湇鍔?鏌ヨ API/璁㈤槄/缂撳瓨,鏈€灏忓寲璁捐)
++
++- 鏌ヨ API(鏃犵嫭绔嬭彍鍗?璺虫暟鎹湇鍔?:
++  - 鎸?master_id 鏌ュ崟鏉?ACTIVE 璁板綍:`GET /api/v1/mdm/service/entity/{entityId}/record/{masterId}`,浠呰繑鍥?ACTIVE 鐘舵€併€?+  - 鏉′欢鎼滅储鍒嗛〉:`POST /api/v1/mdm/service/entity/{entityId}/search`,澶嶇敤 record 鍒嗛〉(浠?ACTIVE)銆?+  - 缂撳瓨/API 绠＄悊璺?data-service,涓嶅疄鐜般€?+- 璁㈤槄绠＄悊(瀹炰綋璇︽儏椤靛垎鍙戦厤缃?璁㈤槄鍖?:
++  - `mdm_subscription`(V10):subscriber_code 蹇呭～(鈮?4),瀹炰綋鍐?璁㈤槄鏂?鍞竴;notify_mode EVENT/WEBHOOK銆?+  - 鍒涘缓:鍒濆鐘舵€?ACTIVE;缂栬緫:鍚嶇О/閫氱煡鏂瑰紡;鐘舵€佸垏鎹?ACTIVE鈫擠ISABLED;鍒犻櫎:鐗╃悊鍒犻櫎銆?+  - 璁㈤槄鏁版湇鍔＄鑱氬悎(鎬昏鍗＄墖)銆?+- 鍙樻洿閫氱煡:鍗犱綅(瀹¤璁板綍),瀹為檯鎺ㄩ€佸緟鍚庣画澧為噺銆?+- 澶嶇敤:澶嶇敤 RECORD_NOT_FOUND(44002)閿欒鐮?鏃犵嫭绔嬭彍鍗?璺虫暟鎹湇鍔?銆?+- 瀹¤:鍒涘缓/缂栬緫/鍚仠/鍒犻櫎鍏ㄩ儴钀藉璁?fail-open),浜嬩欢鍛藉悕 `MDM_SUBSCRIPTION_*`銆?+- 鏈?ticket 涓嶈拷鍔犳柊閿欒鐮併€?+
++## Ticket 60:涓绘暟鎹鎵?鐢宠/瀹℃壒娴?鐗堟湰,鏈€灏忓寲璁捐)
++
++- 鍙樻洿鐢宠:閫夊疄浣?璁板綍 鈫?鍙樻洿绫诲瀷(CREATE/UPDATE/MERGE/DELETE) 鈫?鍙樻洿鍐呭(JSON,灞炴€у€煎姣? 鈫?鎻愪氦瀹℃壒銆?+- `mdm_change`(V11):project_id/entity_id/master_id/change_type/change_content/approval_level(1/2)/approval_status/applicant/approver/approval_comment/approval_time銆?+- 瀹℃壒娴?涓€绾?鏁版嵁绠＄悊鍛?鈫?浜岀骇(鏁版嵁娌荤悊璐熻矗浜?,鍙厤缃?1 鎴?2 绾?鏆傜敤鍥哄畾 1 绾?銆?+- 瀹℃壒澶勭悊:
++  - 閫氳繃:UPDATE 绫诲瀷搴旂敤鍙樻洿鍒?mdm_record(JSON patch 鍚堝苟 attributes,version 閫掑);DELETE 绫诲瀷鏍囪 DELETED;CREATE/MERGE 涓哄崰浣?涓嶇洿鍐?record)銆?+  - 鎷掔粷:璁板綍瀹℃壒鎰忚,鍙樻洿鐘舵€?REJECTED銆?+  - 鎾ゅ洖:浠呯敵璇蜂汉鍙挙鍥?PENDING 鐢宠銆?+- 瀹℃壒鍒楄〃:鍒嗛〉鏌ヨ,鎸夌姸鎬?鐢宠浜虹瓫閫?寰呮垜瀹℃壒/鎴戝彂璧风殑/鍏ㄩ儴銆?+- 鐗堟湰绠＄悊:鎸?master_id 鍒楀嚭鍙樻洿鍘嗗彶(鍙灞曠ず)銆?+- 鑿滃崟:娉ㄥ唽 `mdm-approval`(V2028),璺敱 `/mdm/approval`銆?+- 澶嶇敤:澶嶇敤 RECORD_NOT_FOUND(44002)閿欒鐮併€?+- 瀹¤:鎻愪氦/閫氳繃/鎷掔粷/鎾ゅ洖鍏ㄩ儴钀藉璁?fail-open),浜嬩欢鍛藉悕 `MDM_CHANGE_*`銆?+- 鏈?ticket 涓嶈拷鍔犳柊閿欒鐮併€?+
++## Ticket 61:涓绘暟鎹不鐞?璐ㄩ噺/琛€缂?鏉冮檺,鏈€灏忓寲璁捐)
++
++- 鏃犵嫭绔嬭彍鍗?鍏ュ彛鍦ㄥ疄浣撹鎯呴〉 Tab,璐ㄩ噺/琛€缂樿烦骞冲彴妯″潡銆?+- 娌荤悊姒傝(鏈嶅姟绔仛鍚?:涓婃父鏉ユ簮鏁?MdmSource)銆丄CTIVE 璁板綍鏁般€佷笅娓稿垎鍙?璁㈤槄鐩爣鏁般€佸緟瀹℃壒鏁?姣忓紶鍗＄墖鐙珛瀹归敊(-1=鏌ヤ笉鍒?銆?+- 鏉冮檺:骞冲彴 RBAC(md m:read/create/update/delete)+ 瀹炰綋 owner 杞婚噺鎺у埗(owner 鍖归厤鎴栨棤 owner 鏃舵斁琛?銆?+- 澶嶇敤:璐ㄩ噺澶嶇敤 quality 妯″潡,琛€缂樺鐢?lineage,鏉冮檺澶嶇敤 security RBAC;涓嶈拷鍔犳柊琛?閿欒鐮併€?+- 绔偣:`GET /api/v1/mdm/governance/entity/{entityId}` + `GET /api/v1/mdm/governance/entity/{entityId}/owner-check`銆?+
++## Ticket 62:涓绘暟鎹€昏涓庡垎鏋?鍒嗗竷/鍙樻洿/浣跨敤,鏈€灏忓寲璁捐)
++
++- 鏃犵嫭绔嬭彍鍗?鎬昏鍗冲垎鏋愬叆鍙?`mdm-overview`)銆?+- 鎬昏鍗＄墖(鏈嶅姟绔仛鍚?:瀹炰綋璁板綍鏁?ACTIVE)銆佸垎鍙戠洰鏍囨暟銆佽闃呮柟鏁般€佸緟瀹℃壒鏁?姣忓紶鍗＄墖鐙珛瀹归敊(-1=鏌ヤ笉鍒?銆?+- 鍏ㄩ噺鎬昏:閬嶅巻鍏ㄩ儴瀹炰綋,閫愬疄浣撹仛鍚堝崱鐗?姹囨€绘€诲疄浣撴暟/鎬昏褰曟暟/鎬诲緟瀹℃壒銆?+- 鍗曞疄浣撴瑙?鎸囧畾瀹炰綋鐨勮仛鍚堝崱鐗囥€?+- 澶嶇敤:缁熻澶嶇敤鐜版湁 Repository 鑱氬悎鏂规硶;涓嶈拷鍔犳柊琛?閿欒鐮併€?+- 绔偣:`GET /api/v1/mdm/overview` + `GET /api/v1/mdm/overview/entity/{entityId}`銆?diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/api/MdmCleanApi.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/api/MdmCleanApi.java
+index 98a31b81d..b2347ac22 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/api/MdmCleanApi.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/api/MdmCleanApi.java
+@@ -1,6 +1,7 @@
+ package io.yak.ops.business.mdm.api;
+ 
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleExpr;
++import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleType;
+ import jakarta.validation.Valid;
+ import jakarta.validation.constraints.NotBlank;
+ import jakarta.validation.constraints.NotEmpty;
+@@ -8,12 +9,12 @@ import jakarta.validation.constraints.NotNull;
+ import jakarta.validation.constraints.Size;
+ import java.util.List;
+ 
+-/** Request contracts of the master data cleansing (ticket 56). */
++/** Request contracts of the master data cleansing (ticket 56/57). */
+ public final class MdmCleanApi {
+ 
+   private MdmCleanApi() {}
+ 
+-  /** 鍒涘缓鍘婚噸瑙勫垯:瀹炰綋 + 鍚嶇О + 琛ㄨ揪寮?瀛楁 + 缁勫悎鏉′欢) + 鎺掑簭銆?*/
++  /** 鍒涘缓鍘婚噸瑙勫垯(鍚戝悗鍏煎):瀹炰綋 + 鍚嶇О + 琛ㄨ揪寮?瀛楁 + 缁勫悎鏉′欢) + 鎺掑簭銆?*/
+   public record RuleSaveRequest(
+       @NotNull(message = "瀹炰綋涓嶈兘涓虹┖") Long entityId,
+       @NotBlank(message = "瑙勫垯鍚嶇О涓嶈兘涓虹┖")
+@@ -22,6 +23,24 @@ public final class MdmCleanApi {
+       @Valid @NotNull(message = "瑙勫垯琛ㄨ揪寮忎笉鑳戒负绌?) MdmCleanRuleExpr ruleExpr,
+       Integer sortOrder) {}
+ 
++  /** 閫氱敤瑙勫垯鍒涘缓(ticket 57):鏀寔 DEDUP/STANDARDIZE/COMPLETE,ruleExpr 涓哄師濮?JSON銆?*/
++  public record TypedRuleSaveRequest(
++      @NotNull(message = "瀹炰綋涓嶈兘涓虹┖") Long entityId,
++      MdmCleanRuleType ruleType,
++      @NotBlank(message = "瑙勫垯鍚嶇О涓嶈兘涓虹┖")
++          @Size(max = 128, message = "瑙勫垯鍚嶇О涓嶈兘瓒呰繃 128 涓瓧绗?)
++          String ruleName,
++      @NotBlank(message = "瑙勫垯琛ㄨ揪寮忎笉鑳戒负绌?) String ruleExpr,
++      Integer sortOrder) {}
++
++  /** 閫氱敤瑙勫垯鏇存柊(ticket 57):鍚嶇О + 琛ㄨ揪寮?JSON + 鎺掑簭銆?*/
++  public record TypedRuleUpdateRequest(
++      @NotBlank(message = "瑙勫垯鍚嶇О涓嶈兘涓虹┖")
++          @Size(max = 128, message = "瑙勫垯鍚嶇О涓嶈兘瓒呰繃 128 涓瓧绗?)
++          String ruleName,
++      @NotBlank(message = "瑙勫垯琛ㄨ揪寮忎笉鑳戒负绌?) String ruleExpr,
++      Integer sortOrder) {}
++
+   /** 缂栬緫鍘婚噸瑙勫垯:鍚嶇О + 琛ㄨ揪寮?+ 鎺掑簭(缂栫爜/瀹炰綋/绫诲瀷涓嶅彲鏀?銆?*/
+   public record RuleUpdateRequest(
+       @NotBlank(message = "瑙勫垯鍚嶇О涓嶈兘涓虹┖")
+@@ -52,4 +71,9 @@ public final class MdmCleanApi {
+       Long ruleId,
+       @NotNull(message = "璇烽€夋嫨淇濈暀鐨勪富璁板綍") Long masterRecordId,
+       @NotEmpty(message = "璇烽€夋嫨鑷冲皯涓€鏉¤鍚堝苟璁板綍") List<Long> mergedRecordIds) {}
++
++  /** 鏍囧噯鍖?琛ュ叏鎵ц(ticket 57)銆?*/
++  public record TransformApplyRequest(
++      @NotNull(message = "瀹炰綋涓嶈兘涓虹┖") Long entityId,
++      @NotNull(message = "瑙勫垯涓嶈兘涓虹┖") Long ruleId) {}
+ }
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmCleanService.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmCleanService.java
+index 51ebf1419..a5fd315c7 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmCleanService.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmCleanService.java
+@@ -8,13 +8,16 @@ import io.yak.ops.business.audit.BusinessAuditService;
+ import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
+ import io.yak.ops.business.mdm.domain.attribute.MdmAttribute;
+ import io.yak.ops.business.mdm.domain.clean.CleanJson;
++import io.yak.ops.business.mdm.domain.clean.CompleteExpr;
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRule;
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleExpr;
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleType;
+ import io.yak.ops.business.mdm.domain.clean.MdmMatchField;
+ import io.yak.ops.business.mdm.domain.clean.MdmMatchType;
+ import io.yak.ops.business.mdm.domain.clean.MdmMergeLog;
++import io.yak.ops.business.mdm.domain.clean.StandardizeExpr;
+ import io.yak.ops.business.mdm.domain.record.MdmRecord;
++import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
+ import io.yak.ops.business.mdm.exception.MdmException;
+ import io.yak.ops.business.mdm.infrastructure.repository.MdmAttributeRepository;
+ import io.yak.ops.business.mdm.infrastructure.repository.MdmCleanRuleRepository;
+@@ -28,6 +31,7 @@ import java.util.Comparator;
+ import java.util.HashSet;
+ import java.util.LinkedHashMap;
+ import java.util.List;
++import java.util.Locale;
+ import java.util.Map;
+ import java.util.Objects;
+ import java.util.Set;
+@@ -37,9 +41,11 @@ import org.springframework.transaction.annotation.Transactional;
+ import org.springframework.util.StringUtils;
+ 
+ /**
+- * Owns master data cleansing (ticket 56): dedup rule CRUD, server-side dedup
++ * Owns master data cleansing (ticket 56/57): dedup rule CRUD, server-side dedup
+  * discovery (DB-level GROUP BY aggregation, home-overview-contract: no unbounded
+- * list() then in-memory stats), and explicit merge with preview. Quality checks
++ * list() then in-memory stats), and explicit merge with preview. Standardize and
++ * complete rule CRUD + preview/apply (ticket 57, minimal design: simple value
++ * mapping and default fill, no separate execution engine). Quality checks
+  * (completeness/format) belong to data-quality and are reached by navigation.
+  */
+ @Component
+@@ -76,45 +82,64 @@ public class MdmCleanService {
+   public MdmCleanRule create(
+       Long entityId, String ruleName, MdmCleanRuleExpr expr, Integer sortOrder, String operator) {
+     entityService.get(entityId);
+-    validateRule(entityId, ruleName, expr);
++    if (!StringUtils.hasText(ruleName) || ruleName.trim().length() > MAX_RULE_NAME_LENGTH) {
++      throw new MdmException(
++          MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鍚嶇О蹇呭～涓斾笉瓒呰繃 128 瀛楃");
++    }
++    if (expr == null || expr.fields() == null || expr.fields().isEmpty()) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鑷冲皯閰嶇疆涓€涓尮閰嶅瓧娈?);
++    }
++    validateAttrCodes(entityId, expr.fields());
++    return doCreate(entityId, MdmCleanRuleType.DEDUP, ruleName,
++        CleanJson.writeExpr(expr), sortOrder, operator);
++  }
++
++  /** 閫氱敤瑙勫垯鍒涘缓:鏀寔 DEDUP/STANDARDIZE/COMPLETE 涓夌绫诲瀷(ticket 57)銆?*/
++  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
++  public MdmCleanRule createGeneric(
++      Long entityId,
++      MdmCleanRuleType ruleType,
++      String ruleName,
++      String ruleExprJson,
++      Integer sortOrder,
++      String operator) {
++    entityService.get(entityId);
++    if (ruleType == null) {
++      ruleType = MdmCleanRuleType.DEDUP;
++    }
++    validateGenericRule(entityId, ruleType, ruleName, ruleExprJson);
++    return doCreate(entityId, ruleType, ruleName, ruleExprJson, sortOrder, operator);
++  }
++
++  private MdmCleanRule doCreate(
++      Long entityId, MdmCleanRuleType ruleType, String ruleName,
++      String ruleExprJson, Integer sortOrder, String operator) {
+     if (ruleRepository.existsByName(entityId, ruleName, null)) {
+       throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鍚嶇О宸插瓨鍦? " + ruleName);
+     }
++    String eventType = "MDM_CLEAN_RULE_CREATE_" + ruleType.name();
+     AuditOperationHandle audit =
+         auditService.start(
+             new AuditOperationRequest(
+-                "MDM_CLEAN_RULE_CREATE",
+-                "Create cleansing rule",
++                eventType,
++                "Create " + ruleType.name().toLowerCase(Locale.ROOT) + " cleansing rule",
+                 "MDM_CLEAN_RULE",
+                 null,
+                 ruleName,
+                 "APPLICATION",
+                 Map.of(
+-                    "entityId",
+-                    String.valueOf(entityId),
+-                    "ruleType",
+-                    MdmCleanRuleType.DEDUP.name())));
++                    "entityId", String.valueOf(entityId),
++                    "ruleType", ruleType.name())));
+     try {
+       MdmCleanRule inserted =
+           ruleRepository.insert(
+               new MdmCleanRule(
+-                  null,
+-                  entityId,
+-                  MdmCleanRuleType.DEDUP,
+-                  ruleName,
+-                  CleanJson.writeExpr(expr),
+-                  true,
+-                  sortOrder == null ? 0 : sortOrder,
+-                  operator,
+-                  null,
+-                  null),
++                  null, entityId, ruleType, ruleName, ruleExprJson, true,
++                  sortOrder == null ? 0 : sortOrder, operator, null, null),
+               operator);
+       AuditTransactions.completeOnCommit(
+-          audit,
+-          AuditEventType.RESOURCE_CREATED,
+-          "Cleansing rule created",
+-          Map.of(),
+-          "Cleansing rule created");
++          audit, AuditEventType.RESOURCE_CREATED, "Cleansing rule created",
++          Map.of(), "Cleansing rule created");
+       return inserted;
+     } catch (RuntimeException exception) {
+       audit.failure("MDM_CLEAN_RULE_CREATE_FAILED", exception);
+@@ -122,10 +147,59 @@ public class MdmCleanService {
+     }
+   }
+ 
++  private void validateAttrCodes(Long entityId, List<MdmMatchField> fields) {
++    Set<String> validCodes =
++        attributeRepository.listByEntity(entityId).stream()
++            .map(MdmAttribute::code)
++            .collect(Collectors.toSet());
++    String condition = null;
++    Set<String> seen = new HashSet<>();
++    for (MdmMatchField field : fields) {
++      if (field == null || field.attrCode() == null || field.attrCode().isBlank()) {
++        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤瀛楁缂栫爜涓嶈兘涓虹┖");
++      }
++      if (!DedupSql.isValidAttrCode(field.attrCode())) {
++        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "闈炴硶灞炴€х紪鐮? " + field.attrCode());
++      }
++      if (!validCodes.contains(field.attrCode())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤瀛楁蹇呴』鏄疄浣撳凡瀹氫箟灞炴€? " + field.attrCode());
++      }
++      if (!seen.add(field.attrCode())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "鍚屼竴瀛楁浠呭厑璁稿嚭鐜颁竴娆? " + field.attrCode());
++      }
++      if (field.matchType() == null) {
++        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤鏂瑰紡涓嶈兘涓虹┖");
++      }
++    }
++  }
++
+   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+   public void update(Long id, String ruleName, MdmCleanRuleExpr expr, Integer sortOrder) {
+     MdmCleanRule existing = get(id);
+-    validateRule(existing.entityId(), ruleName, expr);
++    if (!StringUtils.hasText(ruleName) || ruleName.trim().length() > MAX_RULE_NAME_LENGTH) {
++      throw new MdmException(
++          MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鍚嶇О蹇呭～涓斾笉瓒呰繃 128 瀛楃");
++    }
++    if (expr == null || expr.fields() == null || expr.fields().isEmpty()) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鑷冲皯閰嶇疆涓€涓尮閰嶅瓧娈?);
++    }
++    validateAttrCodes(existing.entityId(), expr.fields());
++    doUpdate(id, existing, ruleName, CleanJson.writeExpr(expr), sortOrder);
++  }
++
++  /** 閫氱敤瑙勫垯鏇存柊:鍚嶇О + 琛ㄨ揪寮?+ 鎺掑簭(缂栫爜/瀹炰綋/绫诲瀷涓嶅彲鏀?銆?*/
++  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
++  public void updateGeneric(Long id, String ruleName, String ruleExprJson, Integer sortOrder) {
++    MdmCleanRule existing = get(id);
++    validateGenericRule(existing.entityId(), existing.ruleType(), ruleName, ruleExprJson);
++    doUpdate(id, existing, ruleName, ruleExprJson, sortOrder);
++  }
++
++  private void doUpdate(
++      Long id, MdmCleanRule existing, String ruleName,
++      String ruleExprJson, Integer sortOrder) {
+     if (ruleRepository.existsByName(existing.entityId(), ruleName, id)) {
+       throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鍚嶇О宸插瓨鍦? " + ruleName);
+     }
+@@ -142,8 +216,7 @@ public class MdmCleanService {
+     try {
+       if (!ruleRepository.update(
+           existing.withEditable(
+-              ruleName,
+-              CleanJson.writeExpr(expr),
++              ruleName, ruleExprJson,
+               sortOrder == null ? existing.sortOrder() : sortOrder))) {
+         throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鏇存柊澶辫触");
+       }
+@@ -448,47 +521,6 @@ public class MdmCleanService {
+ 
+   // ==== 鍐呴儴鏂规硶 ====
+ 
+-  private void validateRule(Long entityId, String ruleName, MdmCleanRuleExpr expr) {
+-    if (!StringUtils.hasText(ruleName) || ruleName.trim().length() > MAX_RULE_NAME_LENGTH) {
+-      throw new MdmException(
+-          MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鍚嶇О蹇呭～涓斾笉瓒呰繃 128 瀛楃");
+-    }
+-    if (expr == null || expr.fields() == null || expr.fields().isEmpty()) {
+-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鑷冲皯閰嶇疆涓€涓尮閰嶅瓧娈?);
+-    }
+-    String condition = expr.condition();
+-    if (condition != null
+-        && !condition.isBlank()
+-        && !MdmCleanRuleExpr.CONDITION_AND.equalsIgnoreCase(condition.trim())
+-        && !MdmCleanRuleExpr.CONDITION_OR.equalsIgnoreCase(condition.trim())) {
+-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "缁勫悎鏉′欢浠呮敮鎸?AND/OR");
+-    }
+-    Set<String> validCodes =
+-        attributeRepository.listByEntity(entityId).stream()
+-            .map(MdmAttribute::code)
+-            .collect(Collectors.toSet());
+-    Set<String> seen = new HashSet<>();
+-    for (MdmMatchField field : expr.fields()) {
+-      if (field == null || field.attrCode() == null || field.attrCode().isBlank()) {
+-        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤瀛楁缂栫爜涓嶈兘涓虹┖");
+-      }
+-      if (!DedupSql.isValidAttrCode(field.attrCode())) {
+-        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "闈炴硶灞炴€х紪鐮? " + field.attrCode());
+-      }
+-      if (!validCodes.contains(field.attrCode())) {
+-        throw new MdmException(
+-            MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤瀛楁蹇呴』鏄疄浣撳凡瀹氫箟灞炴€? " + field.attrCode());
+-      }
+-      if (!seen.add(field.attrCode())) {
+-        throw new MdmException(
+-            MdmErrorCode.INVALID_CLEAN_RULE, "鍚屼竴瀛楁浠呭厑璁稿嚭鐜颁竴娆? " + field.attrCode());
+-      }
+-      if (field.matchType() == null) {
+-        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤鏂瑰紡涓嶈兘涓虹┖");
+-      }
+-    }
+-  }
+-
+   private MergeTarget resolveMergeTargets(
+       Long entityId, Long masterRecordId, List<Long> mergedRecordIds) {
+     if (masterRecordId == null) {
+@@ -588,6 +620,211 @@ public class MdmCleanService {
+     return false;
+   }
+ 
++  // ==== 鏍囧噯鍖?琛ュ叏 棰勮涓庢墽琛?ticket 57) ====
++
++  /** 棰勮鏍囧噯鍖?琛ュ叏褰卞搷:杩斿洖鍙楀奖鍝嶈褰曟暟涓庡彉鏇存槑缁?鍓?limit 鏉?銆?*/
++  public TransformPreview previewTransform(Long entityId, Long ruleId) {
++    MdmCleanRule rule = get(ruleId);
++    if (!entityId.equals(rule.entityId())) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯涓嶅睘浜庤瀹炰綋");
++    }
++    List<MdmRecord> records = recordRepository.listActiveByEntity(entityId);
++    List<ChangeItem> changes = new ArrayList<>();
++    for (MdmRecord record : records) {
++      Map<String, Object> attrs = safeObject(record.attributes());
++      Map<String, Object> transformed = applyTransformExpr(rule, attrs);
++      if (transformed != null) {
++        changes.add(new ChangeItem(record.id(), record.masterId(), attrs, transformed));
++      }
++    }
++    return new TransformPreview(changes.size(), changes);
++  }
++
++  /** 鎵ц鏍囧噯鍖?琛ュ叏:鎵归噺鏇存柊鍙楀奖鍝嶈褰?杩斿洖鍙樻洿鏉℃暟銆?*/
++  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
++  public int applyTransform(Long entityId, Long ruleId, String operator) {
++    entityService.get(entityId);
++    MdmCleanRule rule = get(ruleId);
++    if (!entityId.equals(rule.entityId())) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯涓嶅睘浜庤瀹炰綋");
++    }
++    if (rule.ruleType() != MdmCleanRuleType.STANDARDIZE
++        && rule.ruleType() != MdmCleanRuleType.COMPLETE) {
++      throw new MdmException(
++          MdmErrorCode.INVALID_CLEAN_RULE,
++          "瑙勫垯绫诲瀷 " + rule.ruleType() + " 涓嶆敮鎸佹爣鍑嗗寲/琛ュ叏鎵ц");
++    }
++    List<MdmRecord> records = recordRepository.listActiveByEntity(entityId);
++    AuditOperationHandle audit =
++        auditService.start(
++            new AuditOperationRequest(
++                "MDM_CLEAN_APPLY_" + rule.ruleType().name(),
++                "Apply " + rule.ruleType().name().toLowerCase(Locale.ROOT) + " transform",
++                "MDM_CLEAN_RECORD",
++                null,
++                rule.ruleName(),
++                "APPLICATION",
++                Map.of(
++                    "entityId", String.valueOf(entityId),
++                    "ruleId", String.valueOf(ruleId))));
++    try {
++      int count = 0;
++      for (MdmRecord record : records) {
++        Map<String, Object> attrs = safeObject(record.attributes());
++        Map<String, Object> transformed = applyTransformExpr(rule, attrs);
++        if (transformed != null) {
++          if (!recordRepository.update(record.cleaned(CleanJson.write(transformed)))) {
++            throw new MdmException(
++                MdmErrorCode.RECORD_NOT_FOUND, "璁板綍鏇存柊澶辫触: " + record.masterId());
++          }
++          count++;
++        }
++      }
++      int finalCount = count;
++      AuditTransactions.completeOnCommit(
++          audit, AuditEventType.RESOURCE_UPDATED,
++          "Clean transform applied: " + finalCount + " records",
++          Map.of(), "Clean transform applied");
++      return count;
++    } catch (RuntimeException exception) {
++      audit.failure("MDM_CLEAN_APPLY_FAILED", exception);
++      throw exception;
++    }
++  }
++
++  /** 鎸夎鍒欑被鍨嬪垎鍙戣〃杈惧紡瑙ｆ瀽涓庢墽琛?鏈煡绫诲瀷鎶涘紓甯搞€?*/
++  private Map<String, Object> applyTransformExpr(MdmCleanRule rule, Map<String, Object> attrs) {
++    return switch (rule.ruleType()) {
++      case STANDARDIZE -> {
++        StandardizeExpr expr;
++        try {
++          expr = CleanJson.parseStandardizeExpr(rule.ruleExpr());
++        } catch (IllegalArgumentException exception) {
++          throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
++        }
++        yield expr.apply(attrs);
++      }
++      case COMPLETE -> {
++        CompleteExpr expr;
++        try {
++          expr = CleanJson.parseCompleteExpr(rule.ruleExpr());
++        } catch (IllegalArgumentException exception) {
++          throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
++        }
++        yield expr.apply(attrs);
++      }
++      default -> throw new MdmException(
++          MdmErrorCode.INVALID_CLEAN_RULE,
++          "瑙勫垯绫诲瀷 " + rule.ruleType() + " 涓嶆敮鎸佹爣鍑嗗寲/琛ュ叏鎵ц");
++    };
++  }
++
++  // ==== 閫氱敤瑙勫垯鏍￠獙(ticket 57) ====
++
++  private void validateGenericRule(
++      Long entityId, MdmCleanRuleType ruleType, String ruleName, String ruleExprJson) {
++    if (!StringUtils.hasText(ruleName) || ruleName.trim().length() > MAX_RULE_NAME_LENGTH) {
++      throw new MdmException(
++          MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯鍚嶇О蹇呭～涓斾笉瓒呰繃 128 瀛楃");
++    }
++    if (!StringUtils.hasText(ruleExprJson)) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "瑙勫垯琛ㄨ揪寮忎笉鑳戒负绌?);
++    }
++    Set<String> validCodes =
++        attributeRepository.listByEntity(entityId).stream()
++            .map(MdmAttribute::code)
++            .collect(Collectors.toSet());
++    switch (ruleType) {
++      case DEDUP -> validateDedupExpr(ruleExprJson, validCodes);
++      case STANDARDIZE -> validateStandardizeExpr(ruleExprJson, validCodes);
++      case COMPLETE -> validateCompleteExpr(ruleExprJson, validCodes);
++    }
++  }
++
++  private void validateDedupExpr(String json, Set<String> validCodes) {
++    MdmCleanRuleExpr expr;
++    try {
++      expr = CleanJson.parseExpr(json);
++    } catch (IllegalArgumentException exception) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
++    }
++    if (expr.fields() == null || expr.fields().isEmpty()) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鑷冲皯閰嶇疆涓€涓尮閰嶅瓧娈?);
++    }
++    Set<String> seen = new HashSet<>();
++    for (MdmMatchField field : expr.fields()) {
++      if (field == null || field.attrCode() == null || field.attrCode().isBlank()) {
++        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤瀛楁缂栫爜涓嶈兘涓虹┖");
++      }
++      if (!DedupSql.isValidAttrCode(field.attrCode())) {
++        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "闈炴硶灞炴€х紪鐮? " + field.attrCode());
++      }
++      if (!validCodes.contains(field.attrCode())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤瀛楁蹇呴』鏄疄浣撳凡瀹氫箟灞炴€? " + field.attrCode());
++      }
++      if (!seen.add(field.attrCode())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "鍚屼竴瀛楁浠呭厑璁稿嚭鐜颁竴娆? " + field.attrCode());
++      }
++      if (field.matchType() == null) {
++        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鍖归厤鏂瑰紡涓嶈兘涓虹┖");
++      }
++    }
++  }
++
++  private void validateStandardizeExpr(String json, Set<String> validCodes) {
++    StandardizeExpr expr;
++    try {
++      expr = CleanJson.parseStandardizeExpr(json);
++    } catch (IllegalArgumentException exception) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
++    }
++    if (expr.fields() == null || expr.fields().isEmpty()) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鑷冲皯閰嶇疆涓€涓爣鍑嗗寲瀛楁");
++    }
++    for (Map.Entry<String, Map<String, String>> entry : expr.fields().entrySet()) {
++      if (!validCodes.contains(entry.getKey())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "瀛楁蹇呴』鏄疄浣撳凡瀹氫箟灞炴€? " + entry.getKey());
++      }
++      if (!DedupSql.isValidAttrCode(entry.getKey())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "闈炴硶灞炴€х紪鐮? " + entry.getKey());
++      }
++      if (entry.getValue() == null || entry.getValue().isEmpty()) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "瀛楁 " + entry.getKey() + " 鐨勫€兼槧灏勪笉鑳戒负绌?);
++      }
++    }
++  }
++
++  private void validateCompleteExpr(String json, Set<String> validCodes) {
++    CompleteExpr expr;
++    try {
++      expr = CleanJson.parseCompleteExpr(json);
++    } catch (IllegalArgumentException exception) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
++    }
++    if (expr.defaults() == null || expr.defaults().isEmpty()) {
++      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "鑷冲皯閰嶇疆涓€涓ˉ鍏ㄩ粯璁ゅ€?);
++    }
++    for (Map.Entry<String, String> entry : expr.defaults().entrySet()) {
++      if (!validCodes.contains(entry.getKey())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "瀛楁蹇呴』鏄疄浣撳凡瀹氫箟灞炴€? " + entry.getKey());
++      }
++      if (!DedupSql.isValidAttrCode(entry.getKey())) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "闈炴硶灞炴€х紪鐮? " + entry.getKey());
++      }
++      if (entry.getValue() == null) {
++        throw new MdmException(
++            MdmErrorCode.INVALID_CLEAN_RULE, "瀛楁 " + entry.getKey() + " 鐨勯粯璁ゅ€间笉鑳戒负绌?);
++      }
++    }
++  }
++
+   /** 鍘婚噸鍙戠幇鐨勯噸澶嶇粍:缁勫唴璁板綍(鎴柇)銆佸尮閰嶄緷鎹€佺疆淇″害銆佺粍澶у皬銆?*/
+   public record DedupGroup(
+       List<MdmRecord> records, String matchBasis, double confidence, long total) {}
+@@ -606,6 +843,16 @@ public class MdmCleanService {
+       Map<String, Object> attributes,
+       Map<String, Object> sourceIds) {}
+ 
++  /** 鏍囧噯鍖?琛ュ叏棰勮:鍙楀奖鍝嶈褰曟暟 + 鍙樻洿鏄庣粏(鍓?N 鏉?銆?*/
++  public record TransformPreview(int affectedCount, List<ChangeItem> changes) {}
++
++  /** 鏍囧噯鍖?琛ュ叏鐨勫崟鏉″彉鏇存槑缁?璁板綍 ID銆乵aster_id銆佸彉鏇村墠/鍚庡睘鎬с€?*/
++  public record ChangeItem(
++      Long recordId,
++      String masterId,
++      Map<String, Object> before,
++      Map<String, Object> after) {}
++
+   private record MergeTarget(MdmRecord master, List<MdmRecord> merged) {}
+ 
+   private record FieldHit(MdmMatchField field, String keyExpr, MdmDedupKeyRow row) {}
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmEntityService.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmEntityService.java
+index 0170d385a..1375505a1 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmEntityService.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/application/MdmEntityService.java
+@@ -11,6 +11,7 @@ import io.yak.ops.business.mdm.exception.MdmException;
+ import io.yak.ops.business.mdm.infrastructure.repository.MdmEntityRepository;
+ import io.yak.ops.business.mdm.support.audit.AuditTransactions;
+ import io.yak.ops.common.enums.mdm.MdmErrorCode;
++import java.util.List;
+ import java.util.Map;
+ import java.util.regex.Pattern;
+ import org.springframework.stereotype.Component;
+@@ -46,6 +47,11 @@ public class MdmEntityService {
+         .orElseThrow(() -> new MdmException(MdmErrorCode.ENTITY_NOT_FOUND, String.valueOf(id)));
+   }
+ 
++  /** 鍒楀嚭鍏ㄩ儴瀹炰綋(鎬昏/娌荤悊鑱氬悎鐢?ticket 62)銆?*/
++  public List<MdmEntity> findAll() {
++    return repository.findAll();
++  }
++
+   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+   public MdmEntity create(
+       String code, String name, String owner, String description, String operator) {
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/MdmCleanController.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/MdmCleanController.java
+index e05913562..7eaa59411 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/MdmCleanController.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/MdmCleanController.java
+@@ -10,8 +10,10 @@ import io.yak.ops.business.mdm.api.MdmCleanApi;
+ import io.yak.ops.business.mdm.application.MdmCleanService;
+ import io.yak.ops.business.mdm.application.MdmCleanService.DedupGroup;
+ import io.yak.ops.business.mdm.application.MdmCleanService.MergePreview;
++import io.yak.ops.business.mdm.application.MdmCleanService.TransformPreview;
+ import io.yak.ops.business.mdm.controller.v1.vo.MdmCleanRuleVO;
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRule;
++import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleType;
+ import io.yak.ops.business.mdm.domain.clean.MdmMergeLog;
+ import io.yak.ops.common.constant.mdm.MdmPermissionCode;
+ import io.yak.ops.core.project.ProjectMigrationMode;
+@@ -30,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.bind.annotation.RestController;
+ 
+-/** Master data cleansing: dedup rules, server-side dedup discovery, merge (ticket 56). */
++/** Master data cleansing: dedup/standardize/complete rules, dedup discovery, merge (ticket 56/57). */
+ @Tag(name = "涓绘暟鎹竻娲楁帴鍙?)
+ @RestController
+ @RequiredArgsConstructor
+@@ -49,6 +51,34 @@ public class MdmCleanController {
+         service.listRules(entityId).stream().map(MdmCleanRuleVO::from).toList());
+   }
+ 
++  @Operation(summary = "鍒涘缓娓呮礂瑙勫垯(閫氱敤:鏀寔 DEDUP/STANDARDIZE/COMPLETE)")
++  @RequiresPermission(MdmPermissionCode.CREATE)
++  @PostMapping("/rules/typed")
++  public Result<MdmCleanRuleVO> createTyped(
++      @Valid @RequestBody MdmCleanApi.TypedRuleSaveRequest request,
++      HttpServletRequest httpRequest) {
++    String operator = currentUserProvider.getCurrentUser(httpRequest);
++    MdmCleanRule rule =
++        service.createGeneric(
++            request.entityId(),
++            request.ruleType(),
++            request.ruleName(),
++            request.ruleExpr(),
++            request.sortOrder(),
++            operator);
++    return Result.success(MdmCleanRuleVO.from(rule));
++  }
++
++  @Operation(summary = "缂栬緫娓呮礂瑙勫垯(閫氱敤)")
++  @RequiresPermission(MdmPermissionCode.UPDATE)
++  @PutMapping("/rules/{id}/typed")
++  public Result<Boolean> updateTyped(
++      @PathVariable("id") Long id,
++      @Valid @RequestBody MdmCleanApi.TypedRuleUpdateRequest request) {
++    service.updateGeneric(id, request.ruleName(), request.ruleExpr(), request.sortOrder());
++    return Result.success(Boolean.TRUE);
++  }
++
+   @Operation(summary = "鍒涘缓鍘婚噸瑙勫垯(瑙勫垯琛ㄨ揪寮?JSON)")
+   @RequiresPermission(MdmPermissionCode.CREATE)
+   @PostMapping("/rules")
+@@ -127,6 +157,24 @@ public class MdmCleanController {
+     return Result.success(Boolean.TRUE);
+   }
+ 
++  @Operation(summary = "鏍囧噯鍖?琛ュ叏棰勮(杩斿洖鍙楀奖鍝嶈褰曟暟涓庡彉鏇存槑缁?")
++  @GetMapping("/transform/{ruleId}/preview")
++  public Result<TransformPreview> previewTransform(
++      @PathVariable("ruleId") Long ruleId,
++      @RequestParam("entityId") Long entityId) {
++    return Result.success(service.previewTransform(entityId, ruleId));
++  }
++
++  @Operation(summary = "鎵ц鏍囧噯鍖?琛ュ叏(鎵归噺鏇存柊鍙楀奖鍝嶈褰?")
++  @RequiresPermission(MdmPermissionCode.UPDATE)
++  @PostMapping("/transform/apply")
++  public Result<Integer> applyTransform(
++      @Valid @RequestBody MdmCleanApi.TransformApplyRequest request,
++      HttpServletRequest httpRequest) {
++    String operator = currentUserProvider.getCurrentUser(httpRequest);
++    return Result.success(service.applyTransform(request.entityId(), request.ruleId(), operator));
++  }
++
+   @Operation(summary = "鍚堝苟鏃ュ織(鎸夊疄浣?")
+   @GetMapping("/merge-logs")
+   public Result<List<MdmMergeLog>> mergeLogs(@RequestParam("entityId") Long entityId) {
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/vo/MdmCleanRuleVO.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/vo/MdmCleanRuleVO.java
+index 012fbd440..ef4888b8d 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/vo/MdmCleanRuleVO.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/controller/v1/vo/MdmCleanRuleVO.java
+@@ -3,18 +3,26 @@ package io.yak.ops.business.mdm.controller.v1.vo;
+ import io.yak.ops.business.mdm.domain.clean.CleanJson;
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRule;
+ import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleExpr;
++import io.yak.ops.business.mdm.domain.clean.MdmCleanRuleType;
+ import io.yak.ops.business.mdm.domain.clean.MdmMatchField;
+ import java.time.LocalDateTime;
+ import java.util.List;
+ 
+-/** 鍘婚噸瑙勫垯瑙嗗浘:rule_expr 宸茶В鏋愪负瀛楁 + 缁勫悎鏉′欢,渚夸簬鍓嶇鐩存帴娓叉煋銆?*/
++/**
++ * 娓呮礂瑙勫垯瑙嗗浘:rule_expr 宸茶В鏋愪负缁撴瀯鍖栧瓧娈?鍘婚噸)鎴栧師濮?JSON(鏍囧噯鍖?琛ュ叏),
++ * 渚夸簬鍓嶇鐩存帴娓叉煋銆倀icket 57 鎵╁睍鏀寔鍏ㄩ儴瑙勫垯绫诲瀷銆?+ */
+ public record MdmCleanRuleVO(
+     Long id,
+     Long entityId,
+     String ruleType,
+     String ruleName,
++    /** 浠?DEDUP 绫诲瀷鏈夊€?STANDARDIZE/COMPLETE 涓?null銆?*/
+     List<MdmMatchField> fields,
++    /** 浠?DEDUP 绫诲瀷鏈夊€笺€?*/
+     String condition,
++    /** 鍘熷瑙勫垯琛ㄨ揪寮?JSON,鎵€鏈夌被鍨嬪潎鏈夊€笺€?*/
++    String rawExpr,
+     boolean enabled,
+     int sortOrder,
+     String createdBy,
+@@ -22,19 +30,24 @@ public record MdmCleanRuleVO(
+     LocalDateTime updateTime) {
+ 
+   public static MdmCleanRuleVO from(MdmCleanRule rule) {
+-    MdmCleanRuleExpr expr = parseSafely(rule.ruleExpr());
++    if (rule.ruleType() == MdmCleanRuleType.DEDUP) {
++      MdmCleanRuleExpr expr = parseSafely(rule.ruleExpr());
++      return new MdmCleanRuleVO(
++          rule.id(), rule.entityId(), rule.ruleType().name(), rule.ruleName(),
++          expr == null ? List.of() : expr.fields(),
++          expr == null || expr.condition() == null ? "AND" : expr.condition(),
++          rule.ruleExpr(),
++          rule.enabled(), rule.sortOrder(), rule.createdBy(),
++          rule.createTime(), rule.updateTime());
++    }
++    // STANDARDIZE/COMPLETE:杩斿洖鍘熷 JSON,鍓嶇鎸?ruleType 瑙ｆ瀽
+     return new MdmCleanRuleVO(
+-        rule.id(),
+-        rule.entityId(),
++        rule.id(), rule.entityId(),
+         rule.ruleType() == null ? null : rule.ruleType().name(),
+         rule.ruleName(),
+-        expr == null ? List.of() : expr.fields(),
+-        expr == null || expr.condition() == null ? "AND" : expr.condition(),
+-        rule.enabled(),
+-        rule.sortOrder(),
+-        rule.createdBy(),
+-        rule.createTime(),
+-        rule.updateTime());
++        null, null, rule.ruleExpr(),
++        rule.enabled(), rule.sortOrder(), rule.createdBy(),
++        rule.createTime(), rule.updateTime());
+   }
+ 
+   /** DB 鍐呰鍒欒〃杈惧紡鐢辨湇鍔″眰鍐欏叆,瑙ｆ瀽澶辫触鏃舵寜绌鸿〃杈惧紡灞曠ず(涓嶉樆鏂垪琛?銆?*/
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/clean/CleanJson.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/clean/CleanJson.java
+index 0840c18ee..9186df5d1 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/clean/CleanJson.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/clean/CleanJson.java
+@@ -24,6 +24,22 @@ public final class CleanJson {
+     }
+   }
+ 
++  public static StandardizeExpr parseStandardizeExpr(String json) {
++    try {
++      return MAPPER.readValue(json, StandardizeExpr.class);
++    } catch (Exception exception) {
++      throw new IllegalArgumentException("鏍囧噯鍖栬鍒欒〃杈惧紡 JSON 涓嶅悎娉?, exception);
++    }
++  }
++
++  public static CompleteExpr parseCompleteExpr(String json) {
++    try {
++      return MAPPER.readValue(json, CompleteExpr.class);
++    } catch (Exception exception) {
++      throw new IllegalArgumentException("琛ュ叏瑙勫垯琛ㄨ揪寮?JSON 涓嶅悎娉?, exception);
++    }
++  }
++
+   public static String writeExpr(MdmCleanRuleExpr expr) {
+     return write(expr);
+   }
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/record/MdmRecord.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/record/MdmRecord.java
+index 366af72de..ba49c6298 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/record/MdmRecord.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/domain/record/MdmRecord.java
+@@ -27,4 +27,18 @@ public record MdmRecord(
+         id, entityId, masterId, attributes, sourceIds, MdmRecordStatus.MERGED, version + 1,
+         createTime, updateTime);
+   }
++
++  /** 娓呮礂鍚庤褰?attributes 鏇存柊,version 閫掑,淇濇寔 ACTIVE(鏍囧噯鍖?琛ュ叏,ticket 57)銆?*/
++  public MdmRecord cleaned(String attributes) {
++    return new MdmRecord(
++        id, entityId, masterId, attributes, sourceIds, MdmRecordStatus.ACTIVE, version + 1,
++        createTime, updateTime);
++  }
++
++  /** 瀹℃壒閫氳繃鍚庡簲鐢ㄥ彉鏇?鏇存柊 attributes/status,version 閫掑(ticket 60)銆?*/
++  public MdmRecord appliedChange(String attributes, MdmRecordStatus status) {
++    return new MdmRecord(
++        id, entityId, masterId, attributes, sourceIds, status, version + 1,
++        createTime, updateTime);
++  }
+ }
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepository.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepository.java
+index a7aeb2000..77e29565f 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepository.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepository.java
+@@ -5,6 +5,7 @@ import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
+ import io.yak.ops.business.mdm.domain.record.MdmRecord;
+ import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
+ import java.util.List;
++import java.util.Optional;
+ 
+ /**
+  * Project-scoped boundary for the master data record. Records are written by
+@@ -28,4 +29,16 @@ public interface MdmRecordRepository {
+ 
+   /** 鍚堝苟鎵ц鍚庢洿鏂拌褰?attributes/source_ids/status/version)銆?*/
+   boolean update(MdmRecord record);
++
++  /** 鍒楀嚭瀹炰綋鍏ㄩ儴 ACTIVE 璁板綍(娓呮礂棰勮/鎵ц鐢?鏈夊畨鍏ㄤ笂闄愰槻姝㈡棤鐣屾煡璇?銆?*/
++  List<MdmRecord> listActiveByEntity(Long entityId);
++
++  /** 鎸?master_id 鏌ヨ鍗曟潯 ACTIVE 璁板綍(ticket 59 鏌ヨ API)銆?*/
++  Optional<MdmRecord> findByMasterId(Long entityId, String masterId);
++
++  /** 缁熻瀹炰綋 ACTIVE 璁板綍鏁?鎬昏/娌荤悊鑱氬悎,ticket 62)銆?*/
++  long countActiveByEntity(Long entityId);
++
++  /** 缁熻瀹炰綋鎸囧畾鐘舵€佽褰曟暟(鎬昏鑱氬悎,ticket 62)銆?*/
++  long countByEntity(Long entityId, MdmRecordStatus status);
+ }
+diff --git a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepositoryAdapter.java b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepositoryAdapter.java
+index 3baabc3fe..1fd82db7d 100644
+--- a/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepositoryAdapter.java
++++ b/yak-ops-business/yak-ops-business-mdm/src/main/java/io/yak/ops/business/mdm/infrastructure/repository/MdmRecordRepositoryAdapter.java
+@@ -11,6 +11,7 @@ import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
+ import io.yak.ops.common.bean.po.mdm.MdmRecordPO;
+ import io.yak.ops.core.project.CurrentProject;
+ import java.util.List;
++import java.util.Optional;
+ import org.springframework.stereotype.Repository;
+ import org.springframework.util.StringUtils;
+ 
+@@ -97,6 +98,56 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
+         > 0;
+   }
+ 
++  @Override
++  public List<MdmRecord> listActiveByEntity(Long entityId) {
++    Long projectId = requiredProjectId();
++    return mapper
++        .selectList(
++            new LambdaQueryWrapper<MdmRecordPO>()
++                .eq(MdmRecordPO::getProjectId, projectId)
++                .eq(MdmRecordPO::getEntityId, entityId)
++                .eq(MdmRecordPO::getStatus, MdmRecordStatus.ACTIVE.name())
++                .orderByAsc(MdmRecordPO::getId)
++                .last("LIMIT 10000"))
++        .stream()
++        .map(MdmRecordRepositoryAdapter::toDomain)
++        .toList();
++  }
++
++  @Override
++  public Optional<MdmRecord> findByMasterId(Long entityId, String masterId) {
++    Long projectId = requiredProjectId();
++    return Optional.ofNullable(
++            mapper.selectOne(
++                new LambdaQueryWrapper<MdmRecordPO>()
++                    .eq(MdmRecordPO::getProjectId, projectId)
++                    .eq(MdmRecordPO::getEntityId, entityId)
++                    .eq(MdmRecordPO::getMasterId, masterId)
++                    .eq(MdmRecordPO::getStatus, MdmRecordStatus.ACTIVE.name())
++                    .last("LIMIT 1")))
++        .map(MdmRecordRepositoryAdapter::toDomain);
++  }
++
++  @Override
++  public long countActiveByEntity(Long entityId) {
++    Long projectId = requiredProjectId();
++    return mapper.selectCount(
++        new LambdaQueryWrapper<MdmRecordPO>()
++            .eq(MdmRecordPO::getProjectId, projectId)
++            .eq(MdmRecordPO::getEntityId, entityId)
++            .eq(MdmRecordPO::getStatus, MdmRecordStatus.ACTIVE.name()));
++  }
++
++  @Override
++  public long countByEntity(Long entityId, MdmRecordStatus status) {
++    Long projectId = requiredProjectId();
++    return mapper.selectCount(
++        new LambdaQueryWrapper<MdmRecordPO>()
++            .eq(MdmRecordPO::getProjectId, projectId)
++            .eq(MdmRecordPO::getEntityId, entityId)
++            .eq(MdmRecordPO::getStatus, status.name()));
++  }
++
+   private Long requiredProjectId() {
+     return currentProject.requireProjectId();
+   }

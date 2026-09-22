@@ -1,0 +1,68 @@
+{
+ "fields": [
+  {
+   "id": 11,
+   "field_code": "cust_name",
+   "std_type_id": 205,
+   "std_unit_id": null,
+   "std_caliber_id": null,
+   "std_code_set_code": null,
+   "std_security_id": null,
+   "data_type": "string"
+  },
+  {
+   "id": 6,
+   "field_code": "order_amount",
+   "std_type_id": 221,
+   "std_unit_id": 260,
+   "std_caliber_id": 1,
+   "std_code_set_code": null,
+   "std_security_id": null,
+   "data_type": "decimal(18,2)"
+  },
+  {
+   "id": 5,
+   "field_code": "order_status",
+   "std_type_id": 198,
+   "std_unit_id": null,
+   "std_caliber_id": null,
+   "std_code_set_code": "order_status",
+   "std_security_id": null,
+   "data_type": "string"
+  },
+  {
+   "id": 4,
+   "field_code": "order_time",
+   "std_type_id": null,
+   "std_unit_id": null,
+   "std_caliber_id": null,
+   "std_code_set_code": null,
+   "std_security_id": null,
+   "data_type": null
+  },
+  {
+   "id": 7,
+   "field_code": "quantity",
+   "std_type_id": 230,
+   "std_unit_id": 263,
+   "std_caliber_id": null,
+   "std_code_set_code": null,
+   "std_security_id": null,
+   "data_type": "int"
+  }
+ ],
+ "layers": [
+  {
+   "id": 4,
+   "layer_code": "ADS",
+   "database_name": null,
+   "datasource_id": null
+  },
+  {
+   "id": 3,
+   "layer_code": "DWS",
+   "database_name": null,
+   "datasource_id": null
+  }
+ ]
+}

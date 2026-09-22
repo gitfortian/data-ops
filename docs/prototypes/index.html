@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>两层建模原型 · 导航首页</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:#f5f6f8; color:#1f2329; font-size:14px; }
+  .topbar { position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid #e5e7eb; padding:14px 32px; display:flex; align-items:center; gap:12px; }
+  .logo { width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#FE2C55,#2f6bff); }
+  .topbar h1 { font-size:16px; font-weight:600; }
+  .topbar .sub { color:#6b7280; font-size:12px; }
+  .wrap { max-width:1180px; margin:0 auto; padding:28px 32px 60px; }
+  h2 { font-size:17px; margin:32px 0 14px; display:flex; align-items:center; gap:8px; }
+  h2:first-of-type { margin-top:8px; }
+  .layers { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .layer { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; border-top:3px solid; }
+  .layer h3 { font-size:14px; margin-bottom:6px; }
+  .layer p { color:#6b7280; font-size:12px; line-height:1.7; }
+  .layer .tag { display:inline-block; font-size:11px; padding:1px 8px; border-radius:10px; margin-bottom:8px; color:#fff; }
+  .l-onto { border-top-color:#2f6bff; } .l-onto .tag { background:#2f6bff; }
+  .l-sem  { border-top-color:#FE2C55; } .l-sem .tag  { background:#FE2C55; }
+  .l-bind { border-top-color:#722ed1; } .l-bind .tag{ background:#722ed1; }
+  .l-run  { border-top-color:#13c2c2; } .l-run .tag { background:#13c2c2; }
+  .pages { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .pcard { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; text-decoration:none; color:inherit; display:block; transition:.15s; }
+  .pcard:hover { border-color:#FE2C55; box-shadow:0 4px 16px rgba(254,44,85,.10); transform:translateY(-2px); }
+  .pcard .badge { font-size:11px; padding:1px 8px; border-radius:10px; color:#fff; margin-right:6px; }
+  .pcard h3 { font-size:14px; margin:8px 0 6px; }
+  .pcard p { color:#6b7280; font-size:12px; line-height:1.7; }
+  .pcard .go { color:#FE2C55; font-size:12px; margin-top:10px; display:inline-block; }
+  .b-onto { background:#2f6bff; } .b-sem { background:#FE2C55; } .b-bind { background:#722ed1; } .b-agent { background:#52c41a; } .b-new { background:#fa8c16; }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; border:1px solid #e5e7eb; }
+  th,td { padding:10px 14px; text-align:left; font-size:13px; border-bottom:1px solid #f0f1f3; }
+  th { background:#fafafa; color:#6b7280; font-weight:500; }
+  tr:last-child td { border-bottom:none; }
+  .arrow { color:#9ca3af; padding:0 6px; }
+  .del { color:#cf1322; text-decoration:line-through; }
+  .note { background:#fffbe6; border:1px solid #ffe58f; border-radius:8px; padding:12px 16px; font-size:12.5px; color:#614700; line-height:1.8; margin-top:8px; }
+  code { background:#f0f1f3; border-radius:4px; padding:1px 6px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"></div>
+  <h1>两层建模 · 前端原型</h1>
+  <span class="sub">本体建模（业务世界） + 语义建模（口径字典） · 对应设计文档 docs/two-layer-modeling-design.md</span>
+</div>
+<div class="wrap">
+
+  <h2>一、分层总览</h2>
+  <div class="layers">
+    <div class="layer l-onto"><span class="tag">本体建模层</span><h3>业务世界长什么样</h3>业务对象、关系（roles/multiplicity）、业务规则 requires（声明式约束）、业务动作、术语。声明式，与物理数据无关。</div>
+    <div class="layer l-sem"><span class="tag">语义建模层</span><h3>怎么算</h3>指标口径（聚合+过滤+派生+单位+时间粒度）、适用前提、函数。引用本体属性，口径独立定义与演进。</div>
+    <div class="layer l-bind"><span class="tag">绑定层</span><h3>本体 ↔ 数据</h3>对象→数据集、属性→字段（Ossie Ontology mappings）。锚定一致性、失效监控、join 命中率。</div>
+    <div class="layer l-run"><span class="tag">运行时</span><h3>守卫+编译+执行</h3>读两层快照：值域/规则来自本体，口径来自语义；编译为数据集查询。Agent 唯一执行入口。</div>
+  </div>
+
+  <h2>二、原型页面</h2>
+  <div class="pages">
+    <a class="pcard" href="ontology-canvas.html">
+      <span class="badge b-onto">本体</span><span class="badge b-new">改造</span>
+      <h3>本体画布</h3>三栏布局：对象列表 / 对象关系图 / 检查器。业务规则 requires 条件构造器、业务动作、术语表。指标入口已剥离。<span class="go">打开原型 →</span>
+    </a>
+    <a class="pcard" href="semantic-workspace.html">
+      <span class="badge b-sem">语义</span><span class="badge b-new">新增</span>
+      <h3>语义建模 · 口径字典</h3>指标库 + 口径编辑器：聚合/过滤/口径例外/派生链/适用前提/审计引用（只读）/版本与发布闸门。<span class="go">打开原型 →</span>
+    </a>
+    <a class="pcard" href="binding.html">
+      <span class="badge b-bind">绑定</span><span class="badge b-new">新增</span>
+      <h3>绑定管理</h3>对象→数据集、属性→字段映射总览；锚定健康度（BROKEN/命中率）；重绑与重校验。<span class="go">打开原型 →</span>
+    </a>
+    <a class="pcard" href="agent-contracts.html">
+      <span class="badge b-agent">Agent</span><span class="badge b-new">新增</span>
+      <h3>Agent 契约预览</h3>WorldView（世界地图）与 CaliberView（口径字典）双契约，工具清单与三步决策流。<span class="go">打开原型 →</span>
+    </a>
+    <a class="pcard" href="export-preview.html">
+      <span class="badge b-agent">导出</span><span class="badge b-new">新增</span>
+      <h3>导出 · 三产物</h3>ontology.yaml（flights 形状）/ semantic_model.yaml（tpcds 形状）/ mappings.yaml 预览与下载。<span class="go">打开原型 →</span>
+    </a>
+    <a class="pcard" href="README.md">
+      <span class="badge b-onto">规划</span>
+      <h3>页面功能规划</h3>信息架构、7 个页面的功能清单、复用/新增组件对照（Markdown）。<span class="go">查看 →</span>
+    </a>
+  </div>
+
+  <h2>三、现有页面 → 新页面迁移映射</h2>
+  <table>
+    <tr><th>现状</th><th></th><th>目标</th><th>说明</th></tr>
+    <tr><td>本体建模（模型列表）</td><td class="arrow">→</td><td>保留</td><td>域卡片网格不变</td></tr>
+    <tr><td>建模画布（含指标抽屉/指标注册）</td><td class="arrow">→</td><td>本体画布（纯本体）</td><td>节点菜单去掉「登记指标」，新增「编辑规则/业务动作」</td></tr>
+    <tr><td>记录详情·指标分区</td><td class="arrow">→</td><td>迁至语义建模</td><td>六分区改为：基本信息/字段含义(含值域)/数据绑定/关系/业务规则/变更单</td></tr>
+    <tr><td>函数注册表 <code>/semantic/registry</code></td><td class="arrow">→</td><td class="del">删除</td><td>Functions → 语义建模；Actions → 本体建模（业务动作）</td></tr>
+    <tr><td>MetricsDrawer / MetricRegisterModal / MetricFormModal</td><td class="arrow">→</td><td>语义建模工作台</td><td>升级为独立页面，新增口径编辑器与适用前提</td></tr>
+    <tr><td>AnchorModal（对象内弹窗）</td><td class="arrow">→</td><td>绑定管理</td><td>升级为独立页面 + 健康度总览</td></tr>
+    <tr><td>（无）</td><td class="arrow">→</td><td>Agent 契约预览 / 导出</td><td>新增只读页面</td></tr>
+  </table>
+
+  <div class="note">
+    <b>设计要点</b>：画布里不再出现任何指标概念——对象节点菜单的「登记指标」「管理规则」拆开：规则留在本体画布，指标全部进入语义建模工作台。规则与口径的关系只在语义建模侧以「审计引用（只读）」呈现，体现设计文档 §4.4 的解耦。
+  </div>
+
+</div>
+</body>
+</html>

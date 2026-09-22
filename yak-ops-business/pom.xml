@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.yak.ops</groupId>
+        <artifactId>yak-ops</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>yak-ops-business</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Yak Ops Business</name>
+    <description>Yak Ops business-domain module aggregation</description>
+
+    <modules>
+        <module>yak-ops-business-audit</module>
+        <module>yak-ops-business-datasource</module>
+        <module>yak-ops-business-data-service</module>
+        <module>yak-ops-business-job</module>
+        <module>yak-ops-business-task-catalog</module>
+        <module>yak-ops-business-data-development</module>
+        <module>yak-ops-business-lineage</module>
+        <module>yak-ops-business-dataset</module>
+        <module>yak-ops-business-analysis</module>
+        <module>yak-ops-business-dashboard</module>
+        <module>yak-ops-business-digital-screen</module>
+        <module>yak-ops-business-resource</module>
+        <module>yak-ops-business-sync</module>
+        <module>yak-ops-business-quality</module>
+        <module>yak-ops-business-workflow</module>
+        <module>yak-ops-business-alert</module>
+        <module>yak-ops-business-agent</module>
+        <module>yak-ops-business-home</module>
+        <module>yak-ops-business-modeling</module>
+        <module>yak-ops-business-semantic</module>
+        <module>yak-ops-business-mdm</module>
+        <module>yak-ops-business-metric</module>
+        <module>yak-ops-business-security</module>
+        <module>yak-ops-business-lifecycle</module>
+        <module>yak-ops-business-asset</module>
+        <module>yak-ops-business-metadata</module>
+        <module>yak-ops-business-approval</module>
+    </modules>
+</project>

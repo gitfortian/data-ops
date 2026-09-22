@@ -1,0 +1,209 @@
+/** Metric module API types (matches backend VO/DTO contracts). */
+
+export type MetricType = 'ATOMIC' | 'DERIVED' | 'COMPOSITE';
+export type MetricStatus = 'ENABLED' | 'DISABLED';
+export type StatPeriod = 'DAY' | 'WEEK' | 'MONTH';
+
+/** 派生指标结构化限定条件(02):与后端 MetricQualifier 契约一致。 */
+export interface MetricQualifier {
+  field: string;
+  op: string;
+  value?: string;
+}
+
+export interface MetricRecord {
+  id: number;
+  metricCode: string;
+  metricName: string;
+  domainId?: number;
+  domainName?: string;
+  processId?: number;
+  processName?: string;
+  metricType: MetricType;
+  caliberId?: number;
+  caliberName?: string;
+  calRule?: string;
+  measureExpr?: string;
+  filterExpr?: string;
+  dimModelIds?: string;
+  refMetricId?: number;
+  refMetricName?: string;
+  dimConstraint?: string;
+  qualifiersJson?: string;
+  modelId?: number;
+  modelName?: string;
+  statDimensions?: string;
+  statPeriod: StatPeriod;
+  unitId?: number;
+  unitName?: string;
+  businessDesc?: string;
+  owner?: string;
+  status: MetricStatus;
+  version: number;
+  createdBy?: string;
+  updatedBy?: string;
+  createTime?: string;
+  updateTime?: string;
+  compositions?: CompositionItem[];
+}
+
+export interface CompositionItem {
+  id?: number;
+  subMetricId: number;
+  operator: string;
+  expression?: string;
+  sortOrder: number;
+  subMetricCode?: string;
+  subMetricName?: string;
+}
+
+export interface MetricPageParams {
+  pageNo: number;
+  pageSize: number;
+  domainId?: number;
+  metricType?: string;
+  status?: string;
+  keyword?: string;
+  owner?: string;
+  tagIds?: number[];
+}
+
+export interface MetricPageResult {
+  records: MetricRecord[];
+  total: number;
+  pages: number;
+  pageNo: number;
+  pageSize: number;
+}
+
+export interface MetricCreatePayload {
+  metricName: string;
+  metricCode?: string;
+  domainId?: number;
+  processId?: number;
+  metricType: MetricType;
+  caliberId?: number;
+  calRule?: string;
+  measureExpr?: string;
+  filterExpr?: string;
+  dimModelIds?: string;
+  refMetricId?: number;
+  dimConstraint?: string;
+  qualifiersJson?: string;
+  modelId?: number;
+  statDimensions?: string;
+  statPeriod?: StatPeriod;
+  unitId?: number;
+  businessDesc?: string;
+  owner?: string;
+  compositions?: Omit<CompositionItem, 'id'>[];
+}
+
+export interface MetricUpdatePayload extends MetricCreatePayload {
+  expectedVersion: number;
+}
+
+export interface MetricStats {
+  total: number;
+  atomic: number;
+  derived: number;
+  composite: number;
+}
+
+export interface MetricTagRecord {
+  id: number;
+  tagCode: string;
+  tagName: string;
+  sortOrder: number;
+  status: string;
+}
+
+export interface MetricVersionRecord {
+  id: number;
+  version: number;
+  snapshot: string;
+  changeDesc?: string;
+  changedBy: string;
+  createTime: string;
+}
+
+export interface MetricDependencyRecord {
+  id: number;
+  dependencyType: string;
+  dependencyId: number;
+  dependencyCode?: string;
+  dependencyVersion?: number;
+  createTime: string;
+}
+
+export interface UsageSummary {
+  metricId: number;
+  totalCount: number;
+  reportCount: number;
+  datasetCount: number;
+  dashboardCount: number;
+  apiCount: number;
+  screenCount: number;
+}
+
+/** 指标使用明细(01 消费接线)。 */
+export interface MetricUsageRecord {
+  id: number;
+  usageType: string;
+  usageId: number;
+  usageName?: string;
+  createTime?: string;
+}
+
+export interface LineageGraphNode {
+  id: number;
+  assetKey: string;
+  assetType: string;
+  name: string;
+  sourceType: string;
+}
+
+export interface LineageGraphEdge {
+  id: number;
+  sourceAssetId: number;
+  targetAssetId: number;
+  relationType: string;
+  expression?: string;
+}
+
+export interface LineageGraphView {
+  root: LineageGraphNode;
+  direction: string;
+  depth: number;
+  nodes: LineageGraphNode[];
+  relations: LineageGraphEdge[];
+}
+
+export interface ImpactReport {
+  metricId: number;
+  metricCode: string;
+  metricName: string;
+  changes: DependencyChange[];
+  usageCount: number;
+}
+
+export interface DependencyChange {
+  dependencyType: string;
+  dependencyId: number;
+  dependencyCode?: string;
+  registeredVersion?: number;
+  currentVersion?: number;
+  changeStatus: string;
+}
+
+/** 反向影响分析:引用了上游对象的指标行(dependencyTypes 为命中的登记类型)。 */
+export interface AffectedMetricRecord {
+  metricId: number;
+  metricCode: string;
+  metricName: string;
+  metricType: MetricType;
+  metricStatus: MetricStatus;
+  owner?: string;
+  registeredVersion?: number;
+  dependencyTypes: string[];
+}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 契约预览 · 两层建模原型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:#f5f6f8; color:#1f2329; font-size:14px; }
+  .topbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:10px 24px; display:flex; align-items:center; gap:10px; }
+  .layer-chip { font-size:11px; color:#fff; background:#52c41a; border-radius:10px; padding:2px 10px; }
+  .back { color:#6b7280; text-decoration:none; font-size:13px; }
+  .topbar h1 { font-size:15px; font-weight:600; }
+  .topbar .crumb { color:#9ca3af; font-size:12px; }
+  .wrap { max-width:1240px; margin:0 auto; padding:22px 24px 60px; }
+  /* 决策流 */
+  .flow { display:flex; align-items:stretch; gap:0; margin-bottom:24px; }
+  .step { flex:1; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:14px 18px; position:relative; }
+  .step .no { width:22px; height:22px; border-radius:50%; color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+  .step h4 { font-size:13.5px; margin-bottom:4px; }
+  .step p { font-size:12px; color:#6b7280; line-height:1.7; }
+  .step+.step { margin-left:34px; }
+  .step+.step::before { content:"→"; position:absolute; left:-26px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:18px; }
+  /* 双契约 */
+  .contracts { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .ct { border-radius:12px; overflow:hidden; border:1px solid #e5e7eb; background:#fff; }
+  .ct-h { padding:12px 18px; color:#fff; display:flex; align-items:center; gap:8px; }
+  .ct-h b { font-size:14px; }
+  .ct-h small { opacity:.85; font-size:11.5px; margin-left:auto; }
+  .wv .ct-h { background:linear-gradient(90deg,#2f6bff,#5b8cff); }
+  .cv .ct-h { background:linear-gradient(90deg,#FE2C55,#ff5c7a); }
+  .ct-b { padding:14px 18px 18px; }
+  .grp { margin-bottom:14px; }
+  .grp h5 { font-size:12px; color:#9ca3af; font-weight:500; margin-bottom:7px; letter-spacing:.4px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #e5e7eb; border-radius:8px; padding:6px 11px; font-size:12.5px; margin:0 6px 6px 0; cursor:default; }
+  .chip:hover { border-color:#2f6bff; }
+  .cv .chip:hover { border-color:#FE2C55; }
+  .chip b { font-weight:600; }
+  .chip small { color:#9ca3af; font-size:11px; }
+  .req-line { font-family:Consolas,monospace; font-size:11.5px; color:#1d39c4; background:#f0f5ff; border-radius:5px; padding:2px 8px; display:inline-block; }
+  .cal-line { font-family:Consolas,monospace; font-size:11.5px; color:#c41d7f; background:#fff1f3; border-radius:5px; padding:2px 8px; display:inline-block; }
+  /* 工具 */
+  .h2-sec { font-size:15px; margin:28px 0 12px; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+  th,td { text-align:left; padding:9px 14px; font-size:12.5px; border-bottom:1px solid #f0f1f3; }
+  th { background:#fafafa; color:#6b7280; font-weight:500; }
+  tr:last-child td { border-bottom:none; }
+  .tag { font-size:10.5px; padding:1px 8px; border-radius:8px; color:#fff; }
+  .tg-w { background:#2f6bff; } .tg-c { background:#FE2C55; } .tg-r { background:#13c2c2; } .tg-n { background:#9ca3af; }
+  code.tool { font-family:Consolas,monospace; color:#1f2329; background:#f0f1f3; border-radius:4px; padding:1px 7px; font-size:11.5px; }
+  .note { background:#f6ffed; border:1px solid #b7eb8f; border-radius:8px; padding:12px 16px; font-size:12.5px; color:#237804; line-height:1.9; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← 原型首页</a>
+  <span class="layer-chip">Agent 契约</span>
+  <h1>Agent 契约预览</h1>
+  <span class="crumb">Agent 眼中的两层模型：WorldView（世界地图）+ CaliberView（口径字典）——只读视图</span>
+</div>
+
+<div class="wrap">
+  <div class="flow">
+    <div class="step"><div class="no" style="background:#2f6bff;">1</div><h4>世界地图 · 理解与决策</h4><p>search_concepts → get_object_schema：有哪些对象、关系是否允许、规则约束什么、能做什么动作。</p></div>
+    <div class="step"><div class="no" style="background:#FE2C55;">2</div><h4>口径字典 · 怎么算</h4><p>从 CaliberView 选指标：口径一句话、适用前提（查询必须带什么过滤）、派生链。</p></div>
+    <div class="step"><div class="no" style="background:#13c2c2;">3</div><h4>运行时 · 执行</h4><p>run_semantic_query → Guard（值域/规则来自本体快照 + 口径来自语义快照）→ 编译 → 数据集执行。</p></div>
+  </div>
+
+  <div class="contracts">
+    <!-- WorldView -->
+    <div class="ct wv">
+      <div class="ct-h">🗺️ <b>WorldView · 世界地图</b><small>来源：本体建模层快照</small></div>
+      <div class="ct-b">
+        <div class="grp"><h5>对象（3/6 展示）</h5>
+          <span class="chip">👤 <b>销售订单</b> <small>id: order_id</small></span>
+          <span class="chip">👤 <b>客户</b> <small>id: customer_id</small></span>
+          <span class="chip">📦 <b>商品</b> <small>id: sku_id</small></span>
+          <span class="chip">🧾 <b>销售履约流程</b></span>
+        </div>
+        <div class="grp"><h5>关系（verbalizes）</h5>
+          <span class="chip">客户 <b>下单</b> 销售订单 <small>M:1</small></span>
+          <span class="chip">销售订单 <b>包含</b> 商品 <small>M:N</small></span>
+          <span class="chip">销售订单 <b>使用</b> 支付方式 <small>M:1</small></span>
+        </div>
+        <div class="grp"><h5>业务规则（requires · 世界必须成立）</h5>
+          <div style="line-height:2.2;"><span class="req-line">sales_order.pay_amount >= 0</span><br><span class="req-line">sales_order.paid_at &lt;= sales_order.shipped_at</span></div>
+        </div>
+        <div class="grp"><h5>业务动作（可做什么）</h5>
+          <span class="chip">⚡ <b>取消订单</b> <small>风险:中</small></span>
+          <span class="chip">⚡ <b>标记已发货</b> <small>风险:低</small></span>
+        </div>
+        <div class="grp" style="margin-bottom:0;"><h5>术语（Glossary）</h5>
+          <span class="chip">📖 <b>大促</b> <small>→ 销售订单.时间过滤</small></span>
+          <span class="chip">📖 <b>客单</b> <small>→ 销售订单</small></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CaliberView -->
+    <div class="ct cv">
+      <div class="ct-h">🧮 <b>CaliberView · 口径字典</b><small>来源：语义建模层快照</small></div>
+      <div class="ct-b">
+        <div class="grp"><h5>指标（口径一句话 + 适用前提）</h5>
+          <div class="chip" style="display:block; margin-bottom:8px;"><b>GMV（已支付）</b><br>
+            <span class="cal-line">SUM(pay_amount) · 仅已支付 · 剔除退款</span><br>
+            <small>适用前提：查询须带 <code style="color:#c41d7f;">order_status=='已支付'</code></small></div>
+          <div class="chip" style="display:block; margin-bottom:8px;"><b>下单量</b><br>
+            <span class="cal-line">COUNT(sales_order) · 全部状态</span></div>
+          <div class="chip" style="display:block;"><b>客单价</b> <small>派生 = GMV ÷ 下单量</small></div>
+        </div>
+        <div class="grp"><h5>同义词检索（glossary/verbalizes 打分）</h5>
+          <span class="chip">"销售额" → GMV（已支付）</span>
+          <span class="chip">"成交" → 下单量</span>
+        </div>
+        <div class="grp" style="margin-bottom:0;"><h5>函数（可复用计算）</h5>
+          <span class="chip">ƒ <b>rfm_score</b> <small>RFM 得分</small></span>
+          <span class="chip">ƒ <b>forecast_next</b> <small>下周预测</small></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="h2-sec">Agent 工具清单（toolset 改造）</div>
+  <table>
+    <tr><th>工具</th><th>归属</th><th>说明</th></tr>
+    <tr><td><code class="tool">search_concepts</code></td><td><span class="tag tg-w">本体</span><span class="tag tg-c">语义</span></td><td>跨两层搜索（对象/指标/术语），结果标注归属层</td></tr>
+    <tr><td><code class="tool">get_object_schema</code></td><td><span class="tag tg-w">本体</span><span class="tag tg-c">语义</span></td><td>返回 WorldView 卡 + CaliberView 卡（不再混装 MetricCard）</td></tr>
+    <tr><td><code class="tool">list_rules</code>（新增）</td><td><span class="tag tg-w">本体</span></td><td>业务规则发现（requires 约束）</td></tr>
+    <tr><td><code class="tool">list_actions</code>（新增）</td><td><span class="tag tg-w">本体</span></td><td>业务动作发现（能力词汇）</td></tr>
+    <tr><td><code class="tool">run_semantic_query</code></td><td><span class="tag tg-r">运行时</span></td><td>语义查询（Guard → 编译 → 数据集）</td></tr>
+    <tr><td><code class="tool">run_function</code></td><td><span class="tag tg-c">语义</span></td><td>执行注册函数</td></tr>
+    <tr><td><code class="tool">get_object_instance</code></td><td><span class="tag tg-r">运行时</span></td><td>实例明细（走绑定层）</td></tr>
+    <tr><td><code class="tool">run_dataset_query</code></td><td><span class="tag tg-n">物理</span></td><td>字段级明细查询（白名单校验）</td></tr>
+  </table>
+
+  <div class="note"><b>设计要点</b>：WorldView 与 CaliberView 是两套独立契约（设计文档 §7）——Agent 判断"允不允许"看 WorldView 的规则，决定"怎么算"看 CaliberView 的口径；两套契约由运行时（semantic-compile）统一暴露给 agent，保持 agent → compile 单走廊依赖。</div>
+</div>
+
+</body>
+</html>

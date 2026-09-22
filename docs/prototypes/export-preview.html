@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>导出 · 三产物 · 两层建模原型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:#f5f6f8; color:#1f2329; font-size:14px; }
+  .topbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:10px 24px; display:flex; align-items:center; gap:10px; }
+  .layer-chip { font-size:11px; color:#fff; background:#13c2c2; border-radius:10px; padding:2px 10px; }
+  .back { color:#6b7280; text-decoration:none; font-size:13px; }
+  .topbar h1 { font-size:15px; font-weight:600; }
+  .topbar .crumb { color:#9ca3af; font-size:12px; }
+  .wrap { max-width:1080px; margin:0 auto; padding:22px 24px 60px; }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tab { border:1px solid #d9dce1; background:#fff; border-radius:8px; padding:8px 18px; font-size:13px; cursor:pointer; font-family:Consolas,monospace; }
+  .tab.on { background:#0f1722; color:#7ee2b8; border-color:#0f1722; }
+  .pane { display:none; background:#0f1722; border-radius:12px; padding:18px 22px; }
+  .pane.show { display:block; }
+  .pane pre { font-family:Consolas,"Courier New",monospace; font-size:12.5px; line-height:1.75; color:#c9d4e3; overflow-x:auto; white-space:pre; }
+  .k { color:#7cc4ff; } .s { color:#a8e6a3; } .c { color:#5b6b80; font-style:italic; } .t { color:#ffd591; font-weight:600; }
+  .pane-bar { display:flex; align-items:center; margin-bottom:10px; }
+  .pane-bar .fname { font-family:Consolas,monospace; color:#7ee2b8; font-size:13px; }
+  .dl { margin-left:auto; background:rgba(126,226,184,.15); color:#7ee2b8; border:1px solid rgba(126,226,184,.4); border-radius:6px; padding:4px 12px; font-size:12px; cursor:pointer; }
+  .dl:hover { background:rgba(126,226,184,.28); }
+  .desc { font-size:12.5px; color:#6b7280; line-height:1.9; margin-bottom:14px; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 16px; }
+  .desc b { color:#1f2329; }
+  .note { background:#e6fffb; border:1px solid #87e8de; border-radius:8px; padding:12px 16px; font-size:12.5px; color:#006d75; line-height:1.9; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← 原型首页</a>
+  <span class="layer-chip">导出</span>
+  <h1>导出 · 三产物</h1>
+  <span class="crumb">单 artifact（semantic_model + custom_extensions）→ ontology / semantic_model / mappings（对应 Ossie 两规范）</span>
+</div>
+
+<div class="wrap">
+  <div class="desc">
+    <b>ontology.yaml</b>（本体层，flights.yaml 形状）： EntityType/ValueType 概念、identify_by、relationships（roles/multiplicity/verbalizes）、<b>requires</b>（业务规则）。&nbsp;&nbsp;
+    <b>semantic_model.yaml</b>（语义层+绑定+数据集，tpcds 形状）： datasets/fields/metrics（SQL 口径）。&nbsp;&nbsp;
+    <b>mappings.yaml</b>（绑定层）： concept_mappings 把语义字段映射进本体对象与关系。
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" onclick="show(0,this)">ontology.yaml</div>
+    <div class="tab" onclick="show(1,this)">semantic_model.yaml</div>
+    <div class="tab" onclick="show(2,this)">mappings.yaml</div>
+  </div>
+
+  <div class="pane show">
+    <div class="pane-bar"><span class="fname">ontology.yaml · 本体建模层产物</span><button class="dl" onclick="dl(0)">⬇ 下载</button></div>
+    <pre id="p0"><span class="c"># Ossie ontology · flights 形状（业务世界：对象/关系/规则）</span>
+<span class="t">name</span>: <span class="s">SalesOntology</span>
+<span class="t">description</span>: <span class="s">销售域业务世界：订单/客户/商品及其规则</span>
+<span class="t">ai_context</span>: <span class="s">用于销售域问答与决策：先看规则，再选指标</span>
+<span class="t">ontology</span>:
+  - <span class="t">concept</span>: <span class="s">SalesOrder</span>
+    <span class="t">type</span>: <span class="s">EntityType</span>
+    <span class="t">identify_by</span>: [<span class="s">order_id</span>]
+    <span class="t">requires</span>:                       <span class="c"># ← 业务规则（本体层）</span>
+      - <span class="s">SalesOrder.pay_amount &gt;= 0</span>
+      - <span class="s">SalesOrder.paid_at &lt;= SalesOrder.shipped_at</span>
+    <span class="t">relationships</span>:
+      - <span class="t">name</span>: <span class="s">order_id</span>
+        <span class="t">roles</span>: [{ <span class="t">concept</span>: <span class="s">OrderNr</span> }]
+        <span class="t">multiplicity</span>: <span class="s">OneToOne</span>
+        <span class="t">verbalizes</span>: [<span class="s">'{SalesOrder} is identified by {OrderNr}'</span>]
+      - <span class="t">name</span>: <span class="s">placed_by</span>
+        <span class="t">roles</span>: [{ <span class="t">concept</span>: <span class="s">Customer</span> }]
+        <span class="t">multiplicity</span>: <span class="s">ManyToOne</span>
+        <span class="t">verbalizes</span>: [<span class="s">'{SalesOrder} was placed by {Customer}'</span>]
+      - <span class="t">name</span>: <span class="s">pay_amount</span>
+        <span class="t">roles</span>: [{ <span class="t">concept</span>: <span class="s">Amount</span> }]
+        <span class="t">multiplicity</span>: <span class="s">ManyToOne</span>
+        <span class="t">verbalizes</span>: [<span class="s">'{SalesOrder} has pay amount {Amount}'</span>]
+
+  - <span class="t">concept</span>: <span class="s">Customer</span>
+    <span class="t">type</span>: <span class="s">EntityType</span>
+    <span class="t">identify_by</span>: [<span class="s">customer_id</span>]
+
+  - <span class="t">concept</span>: <span class="s">Amount</span>
+    <span class="t">type</span>: <span class="s">ValueType</span>
+    <span class="t">extends</span>: [<span class="s">Decimal</span>]
+    <span class="t">requires</span>: [<span class="s">Amount &gt;= 0</span>]          <span class="c"># ← 属性值域（本体层）</span>
+
+  - <span class="t">concept</span>: <span class="s">OrderNr</span>
+    <span class="t">type</span>: <span class="s">ValueType</span>
+    <span class="t">extends</span>: [<span class="s">String</span>]</pre>
+  </div>
+
+  <div class="pane">
+    <div class="pane-bar"><span class="fname">semantic_model.yaml · 语义建模层 + 绑定 + 数据集产物</span><button class="dl" onclick="dl(1)">⬇ 下载</button></div>
+    <pre id="p1"><span class="c"># Ossie semantic model · tpcds 形状（怎么算：datasets/fields/metrics）</span>
+<span class="t">semantic_model</span>:
+  - <span class="t">name</span>: <span class="s">sales_analytics_model</span>
+    <span class="t">description</span>: <span class="s">销售域指标口径与物理数据</span>
+    <span class="t">datasets</span>:
+      - <span class="t">name</span>: <span class="s">order_fact</span>
+        <span class="t">source</span>: <span class="s">dwh.dwd_sales_order</span>      <span class="c"># ← 绑定层解析（object.datasetId）</span>
+        <span class="t">primary_key</span>: [<span class="s">order_id</span>]
+        <span class="t">fields</span>:
+          - <span class="t">name</span>: <span class="s">order_id</span>
+            <span class="t">datatype</span>: <span class="s">String</span>
+            <span class="t">dimension</span>: { <span class="t">is_time</span>: <span class="t">false</span> }
+          - <span class="t">name</span>: <span class="s">pay_amount</span>
+            <span class="t">datatype</span>: <span class="s">Decimal</span>
+            <span class="t">ai_context</span>: { <span class="t">synonyms</span>: [<span class="s">"支付金额"</span>, <span class="s">"实付"</span>] }
+          - <span class="t">name</span>: <span class="s">order_status</span>
+            <span class="t">dimension</span>: { <span class="t">is_time</span>: <span class="t">false</span> }
+    <span class="t">relationships</span>:
+      - <span class="t">name</span>: <span class="s">order_to_customer</span>
+        <span class="t">from</span>: <span class="s">order_fact</span>  <span class="t">to</span>: <span class="s">customer_dim</span>
+        <span class="t">from_columns</span>: [<span class="s">customer_id</span>]  <span class="t">to_columns</span>: [<span class="s">customer_id</span>]
+    <span class="t">metrics</span>:                               <span class="c"># ← 语义建模层（口径，独立于规则）</span>
+      - <span class="t">name</span>: <span class="s">gmv_paid</span>
+        <span class="t">expression</span>:
+          <span class="t">dialects</span>:
+            - <span class="t">dialect</span>: <span class="s">ANSI_SQL</span>
+              <span class="t">expression</span>: <span class="s">SUM(order_fact.pay_amount)</span>
+        <span class="t">ai_context</span>:
+          <span class="t">caliber_filter</span>: <span class="s">order_status == '已支付'</span>
+          <span class="t">exclusions</span>: [<span class="s">"不含已退款部分"</span>]
+          <span class="t">synonyms</span>: [<span class="s">"GMV"</span>, <span class="s">"销售额"</span>]
+      - <span class="t">name</span>: <span class="s">avg_order_value</span>
+        <span class="t">expression</span>:
+          <span class="t">dialects</span>:
+            - <span class="t">dialect</span>: <span class="s">ANSI_SQL</span>
+              <span class="t">expression</span>: <span class="s">SUM(order_fact.pay_amount) / COUNT(DISTINCT order_fact.order_id)</span></pre>
+  </div>
+
+  <div class="pane">
+    <div class="pane-bar"><span class="fname">mappings.yaml · 绑定层产物（Ossie Ontology mappings）</span><button class="dl" onclick="dl(2)">⬇ 下载</button></div>
+    <pre id="p2"><span class="c"># 本体对象/关系 ← 语义模型字段（object_mappings / link_mappings）</span>
+<span class="t">concept_mappings</span>:
+  - <span class="t">concept</span>: <span class="s">SalesOrder</span>
+    <span class="t">object_mappings</span>:                      <span class="c"># ← 本体对象实例化（对象→数据集）</span>
+      - <span class="t">expression</span>: <span class="s">order_fact.order_id</span>
+    <span class="t">link_mappings</span>:                        <span class="c"># ← 本体关系实例化（属性→字段）</span>
+      - <span class="t">object_mapping</span>:
+          <span class="t">concept</span>: <span class="s">Amount</span>
+          <span class="t">expression</span>: <span class="s">order_fact.pay_amount</span>
+        <span class="t">relationship</span>: <span class="s">SalesOrder.pay_amount</span>
+      - <span class="t">object_mapping</span>:
+          <span class="t">referent_mappings</span>:
+            - <span class="t">relationship</span>: <span class="s">Customer.customer_id</span>
+              <span class="t">expression</span>: <span class="s">order_fact.customer_id</span>
+        <span class="t">relationship</span>: <span class="s">SalesOrder.placed_by</span>
+
+  - <span class="t">concept</span>: <span class="s">Customer</span>
+    <span class="t">object_mappings</span>:
+      - <span class="t">expression</span>: <span class="s">customer_dim.customer_id</span></pre>
+  </div>
+
+  <div class="note"><b>设计要点</b>：对应设计文档 §8.4——规则进 ontology 产物的 <b>requires</b>，指标口径进 semantic_model 产物的 <b>metrics</b>，锚定进 <b>mappings</b>；custom_extensions 不再承载本体内容。迁移映射见设计文档第 8 节。</div>
+</div>
+
+<script>
+  var panes = document.querySelectorAll('.pane');
+  function show(i, el){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+    el.classList.add('on');
+    panes.forEach(function(p, j){ p.classList.toggle('show', j===i); });
+  }
+  function dl(i){
+    var names = ['ontology.yaml','semantic_model.yaml','mappings.yaml'];
+    var text = document.getElementById('p'+i).innerText;
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type:'text/yaml'}));
+    a.download = names[i]; a.click();
+  }
+</script>
+</body>
+</html>

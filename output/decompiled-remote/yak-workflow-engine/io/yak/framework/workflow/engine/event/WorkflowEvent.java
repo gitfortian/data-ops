@@ -1,0 +1,33 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package io.yak.framework.workflow.engine.event;
+
+import java.time.Instant;
+
+public record WorkflowEvent(Type type, String workflowExecutionId, String nodeId, String attemptId, String message, Instant occurredAt) {
+
+    public static enum Type {
+        WORKFLOW_STARTED,
+        WORKFLOW_PAUSE_REQUESTED,
+        NODE_PAUSE_REQUESTED,
+        NODE_PAUSED,
+        WORKFLOW_PAUSED,
+        WORKFLOW_RESUME_REQUESTED,
+        NODE_RESUME_REQUESTED,
+        NODE_RESUMED,
+        WORKFLOW_RESUMED,
+        NODE_SUBMITTED,
+        NODE_STARTED,
+        NODE_SUCCEEDED,
+        NODE_FAILED,
+        NODE_DISPATCH_TIMED_OUT,
+        NODE_EXECUTION_TIMED_OUT,
+        NODE_RETRY_SCHEDULED,
+        WORKFLOW_COMPLETED,
+        WORKFLOW_CANCELED,
+        WORKFLOW_TIMED_OUT;
+
+    }
+}
+

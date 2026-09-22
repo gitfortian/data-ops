@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>绑定管理 · 两层建模原型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; background:#f5f6f8; color:#1f2329; font-size:14px; }
+  .topbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:10px 24px; display:flex; align-items:center; gap:10px; }
+  .layer-chip { font-size:11px; color:#fff; background:#722ed1; border-radius:10px; padding:2px 10px; }
+  .back { color:#6b7280; text-decoration:none; font-size:13px; }
+  .topbar h1 { font-size:15px; font-weight:600; }
+  .topbar .crumb { color:#9ca3af; font-size:12px; }
+  .toolbar { margin-left:auto; display:flex; gap:8px; }
+  .btn { border:1px solid #d9dce1; background:#fff; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; }
+  .btn:hover { border-color:#722ed1; color:#722ed1; }
+  .wrap { max-width:1180px; margin:0 auto; padding:22px 24px 60px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+  .stat { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:14px 18px; }
+  .stat .n { font-size:24px; font-weight:700; }
+  .stat .l { font-size:12px; color:#9ca3af; margin-top:2px; }
+  .stat .n.ok { color:#52c41a; } .stat .n.bad { color:#cf1322; } .stat .n.pur { color:#722ed1; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+  th,td { text-align:left; padding:10px 14px; font-size:12.5px; border-bottom:1px solid #f0f1f3; }
+  th { background:#fafafa; color:#6b7280; font-weight:500; }
+  tr:last-child td { border-bottom:none; }
+  tr.obj-row { cursor:pointer; }
+  tr.obj-row:hover { background:#faf5ff; }
+  .tag { font-size:11px; padding:1px 9px; border-radius:9px; }
+  .tg-ok { background:#f6ffed; color:#52c41a; border:1px solid #b7eb8f; }
+  .tg-broken { background:#fff1f0; color:#cf1322; border:1px solid #ffa39e; }
+  .tg-none { background:#fafafa; color:#9ca3af; border:1px solid #f0f1f3; }
+  .op { color:#722ed1; cursor:pointer; margin-right:10px; }
+  .op:hover { text-decoration:underline; }
+  .fieldmap { background:#faf5ff; display:none; }
+  .fieldmap.show { display:table-row; }
+  .fieldmap td { padding:10px 14px 14px 46px; }
+  .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .fmap { background:#fff; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+  .fmap h5 { font-size:12px; color:#6b7280; padding:8px 12px; border-bottom:1px solid #f0f1f3; font-weight:500; }
+  .fmap .row { display:flex; align-items:center; gap:8px; font-size:12px; padding:5px 12px; font-family:Consolas,monospace; }
+  .fmap .row .ok { color:#52c41a; margin-left:auto; font-size:11px; }
+  .fmap .row .bad { color:#cf1322; margin-left:auto; font-size:11px; }
+  .h2-sec { font-size:15px; margin:26px 0 12px; }
+  .health { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .hcard { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; }
+  .hcard h4 { font-size:13.5px; margin-bottom:10px; }
+  .hitem { display:flex; align-items:center; gap:10px; font-size:12.5px; padding:7px 0; border-bottom:1px dashed #f0f1f3; }
+  .hitem:last-child { border-bottom:none; }
+  .hitem .why { color:#cf1322; }
+  .hitem .rate { margin-left:auto; font-family:Consolas,monospace; }
+  .bar { height:6px; background:#f0f1f3; border-radius:3px; overflow:hidden; width:120px; }
+  .bar i { display:block; height:100%; background:#52c41a; }
+  .bar i.mid { background:#fa8c16; } .bar i.bad { background:#cf1322; }
+  .note { background:#f9f0ff; border:1px solid #efdbff; border-radius:8px; padding:12px 16px; font-size:12.5px; color:#531dab; line-height:1.9; margin-top:16px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← 原型首页</a>
+  <span class="layer-chip">绑定层</span>
+  <h1>绑定管理</h1>
+  <span class="crumb">本体对象 ↔ 物理数据（Ossie Ontology mappings：object_mappings / link_mappings）</span>
+  <div class="toolbar"><button class="btn">刷新健康度</button></div>
+</div>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="n pur">6/7</div><div class="l">对象已锚定数据集</div></div>
+    <div class="stat"><div class="n ok">82%</div><div class="l">属性已映射字段（102/124）</div></div>
+    <div class="stat"><div class="n bad">1</div><div class="l">锚定失效（BROKEN）</div></div>
+    <div class="stat"><div class="n ok">96.4%</div><div class="l">join 命中率（近 7 天）</div></div>
+  </div>
+
+  <div class="h2-sec">对象 → 数据集映射</div>
+  <table>
+    <tr><th>本体对象</th><th>域</th><th>绑定数据集</th><th>锚定粒度</th><th>状态</th><th>操作</th></tr>
+    <tr class="obj-row" onclick="toggleMap(this)">
+      <td><b>销售订单</b> sales_order</td><td>销售域</td><td>dwd_sales_order（v12）</td><td>单据粒度</td>
+      <td><span class="tag tg-ok">OK</span></td>
+      <td><span class="op">字段映射</span><span class="op">重绑</span><span class="op">重校验</span></td>
+    </tr>
+    <tr class="fieldmap"><td colspan="6">
+      <div class="fgrid">
+        <div class="fmap"><h5>本体属性 → 物理字段（角色/类型交叉校验）</h5>
+          <div class="row">order_id → order_id <span class="ok">主键✓ 角色✓</span></div>
+          <div class="row">pay_amount → pay_amount <span class="ok">度量✓ decimal✓</span></div>
+          <div class="row">order_status → order_status <span class="ok">维度✓</span></div>
+          <div class="row">created_at → created_at <span class="ok">时间✓ datetime✓</span></div>
+          <div class="row">discount_fee → — <span class="bad">未映射</span></div>
+        </div>
+        <div class="fmap"><h5>Ossie mappings 片段（concept_mappings）</h5>
+          <div class="row" style="white-space:pre; color:#531dab; font-size:11px; line-height:1.8;">concept: SalesOrder
+object_mappings:
+  - expression: dwd_sales_order.order_id
+link_mappings:
+  - relationship: SalesOrder.pay_type
+    object_mapping: { expression: ... }</div>
+        </div>
+      </div>
+    </td></tr>
+    <tr class="obj-row" onclick="toggleMap(this)">
+      <td><b>退款单</b> refund_order</td><td>销售域</td><td>dwd_refund_order（v5）</td><td>单据粒度</td>
+      <td><span class="tag tg-broken">BROKEN</span></td>
+      <td><span class="op">字段映射</span><span class="op">重绑</span></td>
+    </tr>
+    <tr class="fieldmap"><td colspan="6">
+      <div style="font-size:12.5px;color:#cf1322;">失效原因：数据集 v5 演进删除字段 <code>refund_channel</code>，本体属性 refund_channel 映射悬空（AnchorInvalidationListener 自动标记）。修复：重绑或移除该属性。</div>
+    </td></tr>
+    <tr class="obj-row">
+      <td><b>客户</b> customer</td><td>销售域</td><td>dwd_customer（v8）</td><td>主体粒度</td>
+      <td><span class="tag tg-ok">OK</span></td><td><span class="op">字段映射</span><span class="op">重绑</span></td>
+    </tr>
+    <tr class="obj-row">
+      <td><b>商品</b> product</td><td>销售域</td><td>dim_product（v21）</td><td>主体粒度</td>
+      <td><span class="tag tg-ok">OK</span></td><td><span class="op">字段映射</span><span class="op">重绑</span></td>
+    </tr>
+    <tr class="obj-row">
+      <td><b>销售履约流程</b> sale_flow</td><td>销售域</td><td>—</td><td>—</td>
+      <td><span class="tag tg-none">未绑定</span></td><td><span class="op">绑定数据</span></td>
+    </tr>
+  </table>
+
+  <div class="h2-sec">健康度</div>
+  <div class="health">
+    <div class="hcard">
+      <h4>⚠ 锚定失效与风险</h4>
+      <div class="hitem"><span class="why">BROKEN</span><span>退款单 · 字段映射悬空（v5 演进）</span><span class="op" style="margin-left:auto;">去修复</span></div>
+      <div class="hitem"><span class="why">风险</span><span>销售订单 · discount_fee 未映射（不影响已发布指标）</span></div>
+    </div>
+    <div class="hcard">
+      <h4>↔ join 命中率（多跳维度路径依赖）</h4>
+      <div class="hitem"><span>销售订单 → 客户</span><div class="bar"><i style="width:98%"></i></div><span class="rate">98.2%</span></div>
+      <div class="hitem"><span>销售订单 → 商品</span><div class="bar"><i style="width:95%"></i></div><span class="rate">95.1%</span></div>
+      <div class="hitem"><span>销售订单 → 支付方式</span><div class="bar"><i class="mid" style="width:76%"></i></div><span class="rate">76.3%</span></div>
+      <div class="hitem"><span>退款单 → 商品</span><div class="bar"><i class="bad" style="width:41%"></i></div><span class="rate">41.0%</span></div>
+    </div>
+  </div>
+
+  <div class="note"><b>设计要点</b>：本页即设计文档 §5 绑定层——object.datasetId / attribute.datasetFieldId 对应 Ossie Ontology mappings；「角色/类型交叉校验」来自 AnchorConsistencyValidator（metric 检查已移入语义建模层发布闸门）；失效自动标记来自 AnchorInvalidationListener。</div>
+</div>
+
+<script>
+  function toggleMap(row){
+    var m = row.nextElementSibling;
+    if (m && m.classList.contains('fieldmap')) m.classList.toggle('show');
+  }
+</script>
+</body>
+</html>

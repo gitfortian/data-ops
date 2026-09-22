@@ -1,0 +1,2 @@
+Summary for output/m2-remote/io/yak/framework/yak-security-spring-boot-starter/1.0.0-SNAPSHOT/yak-security-spring-boot-starter-1.0.0-SNAPSHOT.jar
+Decompiled with CFR 0.152

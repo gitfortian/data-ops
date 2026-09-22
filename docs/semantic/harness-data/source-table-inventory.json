@@ -1,0 +1,867 @@
+{
+ "trade_db.trade_order": {
+  "comment": "订单主表（脏数据）",
+  "cols": [
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID"
+   },
+   {
+    "cn": "order_no",
+    "dt": "varchar",
+    "cc": "订单号"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID（逻辑外键）"
+   },
+   {
+    "cn": "order_city",
+    "dt": "varchar",
+    "cc": "下单时客户城市（来自 SCD 历史维表）"
+   },
+   {
+    "cn": "order_time",
+    "dt": "varchar",
+    "cc": "下单时间（不统一）"
+   },
+   {
+    "cn": "order_status",
+    "dt": "varchar",
+    "cc": "订单状态（不统一，2024 数字、2025 后混用）"
+   },
+   {
+    "cn": "order_amount",
+    "dt": "varchar",
+    "cc": "订单金额（5% 与明细汇总不一致）"
+   },
+   {
+    "cn": "pay_amount",
+    "dt": "varchar",
+    "cc": "支付金额"
+   },
+   {
+    "cn": "discount_amount",
+    "dt": "varchar",
+    "cc": "优惠金额（5% 用了券但此处为 0）"
+   },
+   {
+    "cn": "freight_amount",
+    "dt": "varchar",
+    "cc": "运费"
+   },
+   {
+    "cn": "pay_time",
+    "dt": "varchar",
+    "cc": "支付时间"
+   },
+   {
+    "cn": "ship_time",
+    "dt": "varchar",
+    "cc": "发货时间"
+   },
+   {
+    "cn": "finish_time",
+    "dt": "varchar",
+    "cc": "完成时间"
+   },
+   {
+    "cn": "cancel_time",
+    "dt": "varchar",
+    "cc": "取消时间"
+   },
+   {
+    "cn": "cancel_reason",
+    "dt": "varchar",
+    "cc": "取消原因"
+   },
+   {
+    "cn": "channel",
+    "dt": "varchar",
+    "cc": "渠道（不统一）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "trade_db.trade_order_detail": {
+  "comment": "订单明细表",
+  "cols": [
+   {
+    "cn": "detail_id",
+    "dt": "varchar",
+    "cc": "明细ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID（1% 孤儿记录）"
+   },
+   {
+    "cn": "item_id",
+    "dt": "varchar",
+    "cc": "商品ID（1% ITEM- 前缀）"
+   },
+   {
+    "cn": "item_name",
+    "dt": "varchar",
+    "cc": "商品名称"
+   },
+   {
+    "cn": "quantity",
+    "dt": "int",
+    "cc": "数量（0.5% 极值 9999）"
+   },
+   {
+    "cn": "price",
+    "dt": "varchar",
+    "cc": "单价"
+   },
+   {
+    "cn": "amount",
+    "dt": "varchar",
+    "cc": "金额（0.5% 负数）"
+   },
+   {
+    "cn": "discount",
+    "dt": "varchar",
+    "cc": "折扣"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "item_db.item_item": {
+  "comment": "商品表",
+  "cols": [
+   {
+    "cn": "item_id",
+    "dt": "varchar",
+    "cc": "商品ID（格式 I000001）"
+   },
+   {
+    "cn": "item_name",
+    "dt": "varchar",
+    "cc": "商品名称"
+   },
+   {
+    "cn": "category_id",
+    "dt": "varchar",
+    "cc": "类目ID"
+   },
+   {
+    "cn": "category_name",
+    "dt": "varchar",
+    "cc": "类目名称"
+   },
+   {
+    "cn": "brand",
+    "dt": "varchar",
+    "cc": "品牌"
+   },
+   {
+    "cn": "price",
+    "dt": "varchar",
+    "cc": "价格（类型不统一）"
+   },
+   {
+    "cn": "cost",
+    "dt": "varchar",
+    "cc": "成本"
+   },
+   {
+    "cn": "status",
+    "dt": "varchar",
+    "cc": "状态：0/1/on/off（不统一）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "crm_db.crm_customer": {
+  "comment": "客户表（脏数据，逻辑外键无物理约束）",
+  "cols": [
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "cust_name",
+    "dt": "varchar",
+    "cc": "客户姓名"
+   },
+   {
+    "cn": "cust_mobile",
+    "dt": "varchar",
+    "cc": "手机号（明文，待脱敏）"
+   },
+   {
+    "cn": "cust_idcard",
+    "dt": "varchar",
+    "cc": "身份证（明文，待脱敏）"
+   },
+   {
+    "cn": "gender",
+    "dt": "varchar",
+    "cc": "性别：M/F/1/2/男/女（不统一）"
+   },
+   {
+    "cn": "birthday",
+    "dt": "varchar",
+    "cc": "生日：多格式（不统一）"
+   },
+   {
+    "cn": "reg_time",
+    "dt": "varchar",
+    "cc": "注册时间（不统一）"
+   },
+   {
+    "cn": "reg_source",
+    "dt": "varchar",
+    "cc": "注册来源：APP/1/wechat/小程序（不统一）"
+   },
+   {
+    "cn": "member_level",
+    "dt": "varchar",
+    "cc": "会员等级：1/2/3/VIP/GOLD（不统一）"
+   },
+   {
+    "cn": "city",
+    "dt": "varchar",
+    "cc": "当前城市（SCD 当前值）"
+   },
+   {
+    "cn": "province",
+    "dt": "varchar",
+    "cc": "省份"
+   },
+   {
+    "cn": "status",
+    "dt": "varchar",
+    "cc": "状态：0/1/active/正常（不统一）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "crm_db.crm_customer_address": {
+  "comment": "客户地址表",
+  "cols": [
+   {
+    "cn": "addr_id",
+    "dt": "varchar",
+    "cc": "地址ID"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "receiver_name",
+    "dt": "varchar",
+    "cc": "收货人"
+   },
+   {
+    "cn": "receiver_mobile",
+    "dt": "varchar",
+    "cc": "收货人手机（明文）"
+   },
+   {
+    "cn": "address",
+    "dt": "varchar",
+    "cc": "详细地址"
+   },
+   {
+    "cn": "is_default",
+    "dt": "varchar",
+    "cc": "是否默认：0/1/Y/N（不统一）"
+   }
+  ]
+ },
+ "crm_db.crm_customer_history": {
+  "comment": "客户历史维表（SCD Type 2）",
+  "cols": [
+   {
+    "cn": "history_id",
+    "dt": "varchar",
+    "cc": "历史记录ID"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "version",
+    "dt": "int",
+    "cc": "版本号"
+   },
+   {
+    "cn": "cust_name",
+    "dt": "varchar",
+    "cc": "客户姓名（当时）"
+   },
+   {
+    "cn": "city",
+    "dt": "varchar",
+    "cc": "城市（当时）"
+   },
+   {
+    "cn": "province",
+    "dt": "varchar",
+    "cc": "省份（当时）"
+   },
+   {
+    "cn": "member_level",
+    "dt": "varchar",
+    "cc": "会员等级（当时）"
+   },
+   {
+    "cn": "status",
+    "dt": "varchar",
+    "cc": "状态（当时）"
+   },
+   {
+    "cn": "start_time",
+    "dt": "datetime",
+    "cc": "生效时间"
+   },
+   {
+    "cn": "end_time",
+    "dt": "datetime",
+    "cc": "失效时间（NULL 表示当前有效）"
+   },
+   {
+    "cn": "is_current",
+    "dt": "tinyint",
+    "cc": "是否当前版本：1=是"
+   },
+   {
+    "cn": "change_reason",
+    "dt": "varchar",
+    "cc": "变更原因"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "pay_db.pay_payment": {
+  "comment": "支付表",
+  "cols": [
+   {
+    "cn": "pay_id",
+    "dt": "varchar",
+    "cc": "支付ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "pay_amount",
+    "dt": "decimal",
+    "cc": "支付金额（老系统 DECIMAL；3% 与订单应付不一致）"
+   },
+   {
+    "cn": "pay_channel",
+    "dt": "varchar",
+    "cc": "支付渠道（不统一）"
+   },
+   {
+    "cn": "pay_status",
+    "dt": "varchar",
+    "cc": "支付状态（不统一）"
+   },
+   {
+    "cn": "pay_time",
+    "dt": "varchar",
+    "cc": "支付时间"
+   },
+   {
+    "cn": "trade_no",
+    "dt": "varchar",
+    "cc": "第三方流水号"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "pay_db.pay_refund": {
+  "comment": "退款表",
+  "cols": [
+   {
+    "cn": "refund_id",
+    "dt": "varchar",
+    "cc": "退款ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID"
+   },
+   {
+    "cn": "pay_id",
+    "dt": "varchar",
+    "cc": "支付ID"
+   },
+   {
+    "cn": "refund_amount",
+    "dt": "varchar",
+    "cc": "退款金额（2% > 支付金额）"
+   },
+   {
+    "cn": "refund_status",
+    "dt": "varchar",
+    "cc": "退款状态（不统一）"
+   },
+   {
+    "cn": "refund_time",
+    "dt": "varchar",
+    "cc": "退款时间"
+   },
+   {
+    "cn": "refund_reason",
+    "dt": "varchar",
+    "cc": "退款原因"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "mkt_db.mkt_activity": {
+  "comment": "活动表",
+  "cols": [
+   {
+    "cn": "activity_id",
+    "dt": "varchar",
+    "cc": "活动ID"
+   },
+   {
+    "cn": "activity_name",
+    "dt": "varchar",
+    "cc": "活动名称"
+   },
+   {
+    "cn": "activity_type",
+    "dt": "varchar",
+    "cc": "活动类型（不统一）"
+   },
+   {
+    "cn": "start_time",
+    "dt": "varchar",
+    "cc": "开始时间"
+   },
+   {
+    "cn": "end_time",
+    "dt": "varchar",
+    "cc": "结束时间"
+   },
+   {
+    "cn": "status",
+    "dt": "varchar",
+    "cc": "状态（不统一）"
+   },
+   {
+    "cn": "budget",
+    "dt": "varchar",
+    "cc": "预算"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "mkt_db.mkt_coupon": {
+  "comment": "优惠券表",
+  "cols": [
+   {
+    "cn": "coupon_id",
+    "dt": "varchar",
+    "cc": "优惠券ID"
+   },
+   {
+    "cn": "coupon_code",
+    "dt": "varchar",
+    "cc": "券码"
+   },
+   {
+    "cn": "activity_id",
+    "dt": "varchar",
+    "cc": "活动ID"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "coupon_type",
+    "dt": "varchar",
+    "cc": "类型（不统一）"
+   },
+   {
+    "cn": "coupon_amount",
+    "dt": "varchar",
+    "cc": "券金额"
+   },
+   {
+    "cn": "status",
+    "dt": "varchar",
+    "cc": "状态（不统一）"
+   },
+   {
+    "cn": "receive_time",
+    "dt": "varchar",
+    "cc": "领取时间"
+   },
+   {
+    "cn": "use_time",
+    "dt": "varchar",
+    "cc": "使用时间"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "使用的订单ID（已使用必回填）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "wms_db.wms_delivery": {
+  "comment": "发货表",
+  "cols": [
+   {
+    "cn": "delivery_id",
+    "dt": "varchar",
+    "cc": "发货ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID"
+   },
+   {
+    "cn": "logistics_no",
+    "dt": "varchar",
+    "cc": "物流单号"
+   },
+   {
+    "cn": "logistics_company",
+    "dt": "varchar",
+    "cc": "物流公司（不统一）"
+   },
+   {
+    "cn": "delivery_status",
+    "dt": "varchar",
+    "cc": "配送状态（不统一）"
+   },
+   {
+    "cn": "delivery_time",
+    "dt": "varchar",
+    "cc": "发货时间"
+   },
+   {
+    "cn": "sign_time",
+    "dt": "varchar",
+    "cc": "签收时间（1% 早于发货时间）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "wms_db.wms_inventory": {
+  "comment": "库存快照表（按月）",
+  "cols": [
+   {
+    "cn": "inventory_id",
+    "dt": "varchar",
+    "cc": "库存ID"
+   },
+   {
+    "cn": "item_id",
+    "dt": "varchar",
+    "cc": "商品ID"
+   },
+   {
+    "cn": "warehouse_id",
+    "dt": "varchar",
+    "cc": "仓库ID"
+   },
+   {
+    "cn": "stock_qty",
+    "dt": "int",
+    "cc": "库存数量（可能为负）"
+   },
+   {
+    "cn": "lock_qty",
+    "dt": "int",
+    "cc": "锁定数量"
+   },
+   {
+    "cn": "available_qty",
+    "dt": "int",
+    "cc": "可用数量（5% ≠ stock-lock）"
+   },
+   {
+    "cn": "snapshot_time",
+    "dt": "varchar",
+    "cc": "快照时间（按月快照）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "wms_db.wms_stock_log": {
+  "comment": "库存流水表",
+  "cols": [
+   {
+    "cn": "log_id",
+    "dt": "varchar",
+    "cc": "流水ID"
+   },
+   {
+    "cn": "item_id",
+    "dt": "varchar",
+    "cc": "商品ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "关联订单ID"
+   },
+   {
+    "cn": "change_type",
+    "dt": "varchar",
+    "cc": "变动类型：IN/OUT/LOCK/UNLOCK"
+   },
+   {
+    "cn": "change_qty",
+    "dt": "int",
+    "cc": "变动数量"
+   },
+   {
+    "cn": "before_qty",
+    "dt": "int",
+    "cc": "变动前库存"
+   },
+   {
+    "cn": "after_qty",
+    "dt": "int",
+    "cc": "变动后库存（1% before+change ≠ after）"
+   },
+   {
+    "cn": "log_time",
+    "dt": "varchar",
+    "cc": "变动时间"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "aftersale_db.aftersale_ticket": {
+  "comment": "售后工单表",
+  "cols": [
+   {
+    "cn": "ticket_id",
+    "dt": "varchar",
+    "cc": "工单ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "ticket_type",
+    "dt": "varchar",
+    "cc": "工单类型（不统一）"
+   },
+   {
+    "cn": "ticket_status",
+    "dt": "varchar",
+    "cc": "工单状态（不统一）"
+   },
+   {
+    "cn": "refund_id",
+    "dt": "varchar",
+    "cc": "关联退款ID"
+   },
+   {
+    "cn": "apply_time",
+    "dt": "varchar",
+    "cc": "申请时间"
+   },
+   {
+    "cn": "finish_time",
+    "dt": "varchar",
+    "cc": "完成时间（10% 早于申请时间）"
+   },
+   {
+    "cn": "reason",
+    "dt": "varchar",
+    "cc": "售后原因"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "settle_db.set_settlement": {
+  "comment": "结算单表",
+  "cols": [
+   {
+    "cn": "settle_id",
+    "dt": "varchar",
+    "cc": "结算ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID"
+   },
+   {
+    "cn": "merchant_id",
+    "dt": "varchar",
+    "cc": "商家ID"
+   },
+   {
+    "cn": "settle_amount",
+    "dt": "decimal",
+    "cc": "商家实收（= pay - commission，3% 偏差）"
+   },
+   {
+    "cn": "commission",
+    "dt": "decimal",
+    "cc": "平台佣金"
+   },
+   {
+    "cn": "settle_status",
+    "dt": "varchar",
+    "cc": "结算状态（不统一）"
+   },
+   {
+    "cn": "settle_cycle",
+    "dt": "varchar",
+    "cc": "结算周期（不统一）"
+   },
+   {
+    "cn": "currency",
+    "dt": "varchar",
+    "cc": "币种：CNY/USD"
+   },
+   {
+    "cn": "settle_time",
+    "dt": "varchar",
+    "cc": "结算时间"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ },
+ "review_db.review_product": {
+  "comment": "商品评价表",
+  "cols": [
+   {
+    "cn": "review_id",
+    "dt": "varchar",
+    "cc": "评价ID"
+   },
+   {
+    "cn": "order_id",
+    "dt": "varchar",
+    "cc": "订单ID（5% 与订单脱钩）"
+   },
+   {
+    "cn": "item_id",
+    "dt": "varchar",
+    "cc": "商品ID"
+   },
+   {
+    "cn": "cust_id",
+    "dt": "varchar",
+    "cc": "客户ID"
+   },
+   {
+    "cn": "score",
+    "dt": "varchar",
+    "cc": "评分（不统一）"
+   },
+   {
+    "cn": "content",
+    "dt": "varchar",
+    "cc": "评价内容"
+   },
+   {
+    "cn": "is_anonymous",
+    "dt": "varchar",
+    "cc": "是否匿名（不统一）"
+   },
+   {
+    "cn": "review_time",
+    "dt": "varchar",
+    "cc": "评价时间（1% 早于签收）"
+   },
+   {
+    "cn": "etl_time",
+    "dt": "datetime",
+    "cc": "抽取时间"
+   }
+  ]
+ }
+}

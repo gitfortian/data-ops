@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.yak.ops.business.metadata.dao.mapper.MdRegisterRetryMapper">
+
+    <!--
+      outbox 状态机（ticket 130，plan §3.2c）。形状抄 DevelopmentLineageOutboxRepositoryAdapter，
+      两处偏离都有理由：
+      ① 状态名用本模块枚举（PENDING/IN_PROGRESS/DONE/DEAD），与 yak_md_register_retry DDL 注释逐字一致；
+      ② 卡死阈值同样 10 分钟——worker 崩溃后任务不能永久占着 IN_PROGRESS。
+      没有 DELETE 语句是契约不是遗漏：DONE/DEAD 行的清理走库上归档（审计现场在 yak_md_change），
+      代码里一旦开了物理删的口，"这条为什么没重放"就永远查不清了。
+    -->
+
+    <select id="selectDue" resultType="io.yak.ops.common.bean.po.metadata.MdRegisterRetryPO">
+        SELECT task_id, project_id, type_name, asset_key, source_id, operation, status,
+               attempts, next_attempt_time, last_error, payload, source_updated_at,
+               create_time, update_time
+        FROM yak_md_register_retry
+        WHERE (status = 'PENDING' AND next_attempt_time &lt;= NOW(6))
+           OR (status = 'IN_PROGRESS' AND update_time &lt; DATE_SUB(NOW(6), INTERVAL 10 MINUTE))
+        ORDER BY next_attempt_time
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      WHERE 重带 due 的整个谓词：selectDue 与 claim 之间别的 worker 可能已抢走，
+      也可能时间刚走过退避点——认领必须只对"此刻仍然可认领"的行生效。
+    -->
+    <update id="claim">
+        UPDATE yak_md_register_retry
+        SET status = 'IN_PROGRESS', attempts = attempts + 1, update_time = NOW(6)
+        WHERE task_id = #{taskId}
+          AND ((status = 'PENDING' AND next_attempt_time &lt;= NOW(6))
+            OR (status = 'IN_PROGRESS' AND update_time &lt; DATE_SUB(NOW(6), INTERVAL 10 MINUTE)))
+    </update>
+
+    <update id="complete">
+        UPDATE yak_md_register_retry
+        SET status = 'DONE', last_error = NULL, update_time = NOW(6)
+        WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
+    </update>
+
+    <!--
+      退避时长与 DEAD 判定在 Java（RegisterRetryStore.fail）算，这里只执行：
+      SQL 里再写一遍 1<<attempts 就有了第二个真相源，改上界时必漏一边。
+    -->
+    <update id="fail">
+        UPDATE yak_md_register_retry
+        SET status = #{newStatus},
+            last_error = #{lastError},
+            next_attempt_time = DATE_ADD(NOW(6), INTERVAL #{delaySeconds} SECOND),
+            update_time = NOW(6)
+        WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
+    </update>
+</mapper>

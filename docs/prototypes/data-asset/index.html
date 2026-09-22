@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>数据资产中心 · 原型导航</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f5;color:#1f1f1f;font-size:14px}
+.hero{background:linear-gradient(135deg,#fff 60%,#fff0f3);border-bottom:1px solid #f0f0f0;padding:40px 48px}
+.hero h1{font-size:26px;margin-bottom:8px}
+.hero h1 em{color:#FE2C55;font-style:normal}
+.hero p{color:#595959;max-width:860px;line-height:1.9}
+.wrap{max-width:1200px;margin:24px 48px 64px}
+h2{font-size:16px;margin:28px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:20px;transition:.2s}
+.card a{text-decoration:none;color:inherit;display:block}
+.card a:hover{box-shadow:0 4px 16px rgba(254,44,85,.08)}
+.card .ic{width:36px;height:36px;border-radius:8px;background:#fff0f3;color:#FE2C55;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.card b{display:block;margin-bottom:6px}
+.card p{color:#8c8c8c;font-size:12px;line-height:1.7}
+.card .tag{display:inline-block;margin-top:10px;padding:1px 8px;border-radius:4px;font-size:12px;color:#FE2C55;border:1px solid #ffd6de;background:#fff0f3}
+pre{background:#1f1f1f;color:#d9d9d9;border-radius:10px;padding:20px;font-size:13px;line-height:1.9;overflow:auto}
+pre .hl{color:#FE2C55}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #f0f0f0}
+th{background:#fafafa;text-align:left;font-weight:500}
+th,td{padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;vertical-align:top}
+td code{background:#fafafa;border:1px solid #f0f0f0;border-radius:4px;padding:0 4px;font-size:12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#f6ffed;color:#52c41a;border:1px solid #b7eb8f}
+.pill.warn{background:#fff7e6;color:#fa8c16;border-color:#ffd591}
+.pill.new{background:#fff0f3;color:#FE2C55;border-color:#ffd6de}
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>数据资产中心 <em>·</em> 功能规划与页面原型</h1>
+  <p>定位一句话：<b>平台管目录，不管内容。</b>各源域（建模/指标/数据集/报表/任务）保持自身事实的唯一真相源；资产中心只拥有<b>跨域台账、盘点上架、统一负责人、目录与编目规则、业务标签、健康度评分、统一搜索</b>。把分散在各治理域的资产侧面，编成一本可盘点、可上架、可搜索、可评分的资产账本。</p>
+  <p style="margin-top:8px;color:#8c8c8c;font-size:12px">对应设计文档：<code>docs/data-asset/requirement.md · design.md · menu.md · dev-plan.md</code>（Ticket 90~100，错误码 48001+，菜单 V2032）</p>
+</div>
+<div class="wrap">
+  <h2>信息架构（菜单：数据资产，order 10，权限前缀 data-asset:）</h2>
+<pre>
+数据资产 (data-asset)
+├── <span class="hl">资产概览</span>   data-asset-overview    /data-asset/overview     治理驾驶舱：KPI/分布/待办直达
+├── <span class="hl">资产目录</span>   data-asset-catalog     /data-asset/catalog      统一搜索+目录树+多维过滤 ← 发现入口
+│   └── 资产360°详情（隐藏路由）        /data-asset/detail/:id   八个分区聚合、逐区容错
+├── <span class="hl">盘点上架</span>   data-asset-inventory   /data-asset/inventory    对账+待上架池+变更确认+源接入
+└── <span class="hl">目录与标签</span> data-asset-taxonomy    /data-asset/taxonomy     目录树+编目规则(dry-run)+标签字典
+</pre>
+
+  <h2>原型页面</h2>
+  <div class="grid">
+    <div class="card"><a href="asset-overview.html">
+      <div class="ic">◉</div><b>资产概览（驾驶舱）</b>
+      <p>家底 KPI、类型/分层/健康度分布、上架漏斗、治理待办一键直达、Provider 对账健康。</p>
+      <span class="tag">需求 §3.9</span></a></div>
+    <div class="card"><a href="asset-catalog.html">
+      <div class="ic">⌕</div><b>资产目录（搜索与发现）</b>
+      <p>左目录树 + 统一搜索 + 7 维过滤 + 卡片视图；健康度环、安全等级色标、近30天浏览。</p>
+      <span class="tag">需求 §3.6</span></a></div>
+    <div class="card"><a href="asset-detail.html">
+      <div class="ic">◎</div><b>资产 360° 详情</b>
+      <p>概览/字段/血缘/质量/安全/生命周期/使用/变更 八分区；各分区独立容错。</p>
+      <span class="tag">需求 §3.7</span></a></div>
+    <div class="card"><a href="asset-inventory.html">
+      <div class="ic">⇅</div><b>盘点上架工作台</b>
+      <p>自动对账结果：NEW/CHANGED/GONE；预检→一键补默认→带风险上架；批量上下架向导。</p>
+      <span class="tag">需求 §3.1/3.2/3.3</span></a></div>
+    <div class="card"><a href="asset-taxonomy.html">
+      <div class="ic">⌗</div><b>目录与编目规则</b>
+      <p>分层+业务域模板一键初始化；条件→动作规则、dry-run 试跑、新资产自动预编目。</p>
+      <span class="tag">需求 §3.4/3.5</span></a></div>
+    <div class="card" style="border-style:dashed">
+      <div class="ic">☰</div><b>台账数据模型</b>
+      <p>8 张 <code>yak_asset_*</code> 表：item 台账 / directory / tag+rel / assign_rule / change_record / view_record / health_snapshot / setting。</p>
+      <span class="tag" style="background:#fafafa;color:#8c8c8c;border-color:#d9d9d9">design §四</span></div>
+  </div>
+
+  <h2>资产状态机（上架 ≠ 源域发布，D3）</h2>
+  <table>
+    <tr><th style="width:160px">状态</th><th>进入路径</th><th style="width:340px">允许操作</th></tr>
+    <tr><td><span class="pill warn">PENDING 待上架</span></td><td>对账自动登记（NEW）/ 手工登记；自动套编目规则预归目录、继承源域创建人为负责人</td><td>上架（过预检）、编辑快照、改负责人、打标</td></tr>
+    <tr><td><span class="pill">PUBLISHED 已上架</span></td><td>预检通过或"带风险上架"（风险写审计），5 分钟预检 token 防盲发</td><td>下架（必填原因+预览确认）、变更快照、移目录</td></tr>
+    <tr><td><span class="pill" style="background:#fafafa;color:#8c8c8c;border-color:#d9d9d9">OFFLINE 已下架</span></td><td>人工下架</td><td>重新上架、忽略（抑制）、删除（软删）</td></tr>
+    <tr><td><span class="pill" style="background:#fafafa;color:#8c8c8c;border-color:#d9d9d9">IGNORED 已忽略</span></td><td>待上架池/已下架点"忽略"；对账仅刷新在场时间、<b>不复活</b>（防忽略后下轮被重新登记）</td><td>恢复为待上架、删除；源指纹变化自动回 PENDING 重新确认</td></tr>
+    <tr><td><span class="pill new">SOURCE_GONE 源消失</span></td><td>连续两个对账周期未再见（默认窗口 7 天，防误判）</td><td>确认归档、删除；源恢复→REAPPEARED 回原状态待确认</td></tr>
+  </table>
+
+  <h2>与既有能力的边界（避免重复建设）</h2>
+  <table>
+    <tr><th style="width:210px">既有能力</th><th>关系</th><th style="width:120px">原则</th></tr>
+    <tr><td>血缘 <code>yak_metadata_asset</code>（8 类统一节点）</td><td>图谱事实归 lineage；资产详情内嵌局部图并按 assetKey 跳转全屏图谱，互不写</td><td><span class="pill">D6 不动它</span></td></tr>
+    <tr><td><code>yak_task_asset</code>（task-catalog）</td><td>其 Reconciler 范式即本模块 AssetProvider 对账模板；任务作为来源域接入</td><td><span class="pill">D2 复用范式</span></td></tr>
+    <tr><td>modeling 目录 / 指标标签</td><td>域内概念保留不回迁；详情页"源域标签"分区只读回显</td><td><span class="pill">D5 不重造</span></td></tr>
+    <tr><td>security 分级标签</td><td>定级唯一事实源在 security；台账存 level 快照仅作过滤，详情实时读</td><td><span class="pill">D5 引用</span></td></tr>
+    <tr><td>quality / lifecycle</td><td>详情质量、生命周期分区与可信度评分项，经只读 SPI 消费</td><td><span class="pill">只读消费</span></td></tr>
+    <tr><td>首页 <code>/home/assets/overview</code></td><td>契约不变；未来资产 KPI 经 AssetCatalogApi 消费，不直连表</td><td><span class="pill">D11 守预算</span></td></tr>
+  </table>
+
+  <h2>健康度评分模型（派生值，定时重算，D7）</h2>
+  <table>
+    <tr><th style="width:120px">维度</th><th>构成</th><th style="width:150px">缺口→治理动作</th></tr>
+    <tr><td>完整性 40</td><td>描述 10 · 负责人 10 · 已入目录 5 · 业务标签 5 · 字段注释覆盖率 10</td><td>详情页逐项列出，可一键补齐</td></tr>
+    <tr><td>可信度 40</td><td>质量监控覆盖与通过率 15 · 血缘已登记 10 · 安全已定级 10 · 变更已确认 5</td><td>跳转对应治理域</td></tr>
+    <tr><td>活跃度 20</td><td>近 30 天浏览 10 · 更新新鲜度 5 · 下游引用 5</td><td>只读呈现</td></tr>
+  </table>
+  <p style="color:#8c8c8c;font-size:12px;margin-top:8px">等级：A ≥85 · B ≥70 · C ≥55 · D &lt;55；依赖域不可用时该项计 0 并标注"数据不可用"，不伪造。</p>
+
+  <details class="design" style="margin-top:32px">
+    <summary>原型说明 / 演示约定</summary>
+    <div>
+      1. 纯静态 HTML（内联 CSS/JS，无外部依赖），双击浏览器打开即可；视觉基调沿用平台 UI（antd 5 浅色、品牌色 #FE2C55）。<br>
+      2. 顶栏即菜单信息架构；各页可互相跳转，Tab/弹窗为静态演示（部分有轻量交互 JS）。<br>
+      3. 数据均为示意：模型（表）、指标、数据集、仪表盘、图表、任务六类来源 + MANUAL 手工登记。<br>
+      4. 每页底部「设计要点」折叠条标注对应的需求/设计章节，评审时对照阅读。<br>
+      5. 健康度环颜色约定：A 绿 / B 蓝 / C 橙 / D 红；安全等级色标 L1 灰 L2 蓝 L3 橙 L4 红。
+    </div>
+  </details>
+</div>
+</body>
+</html>

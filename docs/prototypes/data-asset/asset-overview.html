@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>资产概览 · 数据资产中心</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f5;color:#1f1f1f;font-size:14px}
+.topbar{height:52px;background:#fff;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10}
+.logo{font-weight:600;font-size:15px;color:#FE2C55;margin-right:28px;white-space:nowrap;flex-shrink:0}
+.logo b{color:#1f1f1f;font-weight:600}
+.nav{display:flex}.nav a{margin-right:22px;text-decoration:none;color:#595959;padding:15px 2px;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap}
+.nav a.on{color:#FE2C55;border-color:#FE2C55;font-weight:500}
+.right{margin-left:auto;color:#8c8c8c;font-size:12px}
+.page{max-width:1280px;margin:16px auto 64px;padding:0 16px}
+.card{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.card>h3{font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card>h3 .sub{color:#8c8c8c;font-weight:400;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:14px 16px}
+.kpi .n{font-size:22px;font-weight:600;margin:2px 0}
+.kpi .l{color:#8c8c8c;font-size:12px}
+.kpi .d{font-size:11px;color:#52c41a}
+.kpi .d.warn{color:#fa8c16}.kpi .d.bad{color:#ff4d4f}
+.kpi a{font-size:12px;color:#FE2C55;text-decoration:none}
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.cols2{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px}
+.bar .lb{width:76px;color:#595959;text-align:right;flex-shrink:0}
+.bar .tr{flex:1;background:#f5f5f5;border-radius:4px;height:14px;overflow:hidden}
+.bar .fl{height:100%;border-radius:4px}
+.bar .vl{width:52px;color:#8c8c8c}
+.f{display:flex;height:22px;border-radius:6px;overflow:hidden;font-size:11px;color:#fff;margin:6px 0 10px}
+.f div{display:flex;align-items:center;justify-content:center;white-space:nowrap}
+table{width:100%;border-collapse:collapse}
+th{background:#fafafa;text-align:left;font-weight:500}
+th,td{padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:12.5px}
+.tag{display:inline-block;padding:0 7px;border-radius:4px;font-size:11.5px;border:1px solid;line-height:18px}
+.t-red{color:#FE2C55;border-color:#ffd6de;background:#fff0f3}
+.t-green{color:#52c41a;border-color:#b7eb8f;background:#f6ffed}
+.t-blue{color:#1677ff;border-color:#91caff;background:#e6f4ff}
+.t-orange{color:#fa8c16;border-color:#ffd591;background:#fff7e6}
+.t-purple{color:#722ed1;border-color:#d3adf7;background:#f9f0ff}
+.t-gray{color:#8c8c8c;border-color:#d9d9d9;background:#fafafa}
+.btn{display:inline-block;padding:4px 14px;border-radius:6px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:12.5px}
+.btn.pri{background:#FE2C55;border-color:#FE2C55;color:#fff}
+.btn.sm{padding:1px 8px;font-size:11.5px}
+.todo{display:flex;align-items:center;justify-content:space-between;border:1px solid #f0f0f0;border-radius:8px;padding:10px 14px;margin-bottom:10px;text-decoration:none;color:inherit}
+.todo:hover{border-color:#ffd6de;background:#fffafa}
+.todo .cnt{font-size:18px;font-weight:600;width:46px;text-align:center;border-radius:8px;margin-right:12px;line-height:34px}
+.todo b{font-size:13px;display:block}
+.todo span{color:#8c8c8c;font-size:11.5px}
+.gauge{display:inline-block;width:34px;height:34px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%), #f0f0f0 0);position:relative}
+.gauge:after{content:attr(data-v);position:absolute;inset:4px;background:#fff;border-radius:50%;font-size:9.5px;display:flex;align-items:center;justify-content:center;color:#595959}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+details.design{margin-top:8px}
+details.design summary{cursor:pointer;color:#FE2C55;font-size:13px;padding:8px 0}
+details.design>div{background:#fff;border:1px dashed #ffd6de;border-radius:10px;padding:16px;font-size:13px;line-height:2;color:#595959}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Yak Ops <b>数据资产中心</b></div>
+  <div class="nav">
+    <a class="on" href="asset-overview.html">资产概览</a>
+    <a href="asset-catalog.html">资产目录</a>
+    <a href="asset-inventory.html">盘点上架</a>
+    <a href="asset-taxonomy.html">目录与标签</a>
+  </div>
+  <div class="right">默认空间 ▾ ｜ 治理管理员</div>
+</div>
+
+<div class="page">
+  <div class="kpis">
+    <div class="kpi"><div class="l">资产总数</div><div class="n">386</div><div class="d">+56 近30天</div></div>
+    <div class="kpi"><div class="l">已上架</div><div class="n" style="color:#FE2C55">241</div><div class="d">占比 62%</div></div>
+    <div class="kpi"><div class="l">待上架</div><div class="n" style="color:#fa8c16">98</div><div class="d"><a href="asset-inventory.html">去处理 ›</a></div></div>
+    <div class="kpi"><div class="l">源消失待归档</div><div class="n" style="color:#8c8c8c">7</div><div class="d"><a href="asset-inventory.html">去处理 ›</a></div></div>
+    <div class="kpi"><div class="l">负责人覆盖率</div><div class="n">87%</div><div class="d warn">50 个未指派</div></div>
+    <div class="kpi"><div class="l">安全定级覆盖率</div><div class="n">76%</div><div class="d warn">快照 · security</div></div>
+    <div class="kpi"><div class="l">健康度 A / D 级</div><div class="n" style="color:#1f1f1f">64 <span style="font-size:14px;color:#8c8c8c">/</span> <span style="color:#ff4d4f">22</span></div><div class="d bad">D 级待治理</div></div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h3>类型分布 <span class="sub">来源域自动对账</span></h3>
+      <div class="bar"><div class="lb">表/模型</div><div class="tr"><div class="fl" style="width:58%;background:#FE2C55"></div></div><div class="vl">186</div></div>
+      <div class="bar"><div class="lb">指标</div><div class="tr"><div class="fl" style="width:31%;background:#ff7a9f"></div></div><div class="vl">98</div></div>
+      <div class="bar"><div class="lb">数据集</div><div class="tr"><div class="fl" style="width:21%;background:#1677ff"></div></div><div class="vl">44</div></div>
+      <div class="bar"><div class="lb">仪表盘</div><div class="tr"><div class="fl" style="width:14%;background:#722ed1"></div></div><div class="vl">29</div></div>
+      <div class="bar"><div class="lb">任务</div><div class="tr"><div class="fl" style="width:10%;background:#13c2c2"></div></div><div class="vl">21</div></div>
+      <div class="bar"><div class="lb">手工登记</div><div class="tr"><div class="fl" style="width:4%;background:#8c8c8c"></div></div><div class="vl">8</div></div>
+    </div>
+    <div class="card">
+      <h3>分层分布 <span class="sub">快照 · semantic</span></h3>
+      <div class="bar"><div class="lb">ODS</div><div class="tr"><div class="fl" style="width:22%;background:#8c8c8c"></div></div><div class="vl">71</div></div>
+      <div class="bar"><div class="lb">DIM</div><div class="tr"><div class="fl" style="width:12%;background:#13c2c2"></div></div><div class="vl">36</div></div>
+      <div class="bar"><div class="lb">DWD</div><div class="tr"><div class="fl" style="width:40%;background:#1677ff"></div></div><div class="vl">118</div></div>
+      <div class="bar"><div class="lb">DWS</div><div class="tr"><div class="fl" style="width:30%;background:#FE2C55"></div></div><div class="vl">92</div></div>
+      <div class="bar"><div class="lb">ADS</div><div class="tr"><div class="fl" style="width:26%;background:#fa8c16"></div></div><div class="vl">69</div></div>
+    </div>
+    <div class="card">
+      <h3>健康度分布 <span class="sub">每日定时重算</span></h3>
+      <div class="f">
+        <div style="background:#52c41a;width:17%">A 64</div>
+        <div style="background:#1677ff;width:34%">B 131</div>
+        <div style="background:#fa8c16;width:31%">C 120</div>
+        <div style="background:#ff4d4f;width:18%">D 22</div>
+      </div>
+      <table>
+        <tr><td style="border:0;padding-left:0"><span class="dot" style="background:#ff4d4f"></span>D 级共性问题</td><td style="text-align:right;color:#8c8c8c">Top3</td></tr>
+        <tr><td style="border:0;padding-left:0">　无质量监控 17 · 未定级 14 · 无描述 11</td><td style="text-align:right"><a class="btn sm" href="asset-catalog.html" >筛出清单</a></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="cols2">
+    <div class="card">
+      <h3>上架状态漏斗 <span class="sub">台账 · 状态机</span></h3>
+      <div class="f" style="height:30px">
+        <div style="background:#ffe3ec;color:#FE2C55;width:52%">已登记 386</div>
+        <div style="background:#FE2C55;width:48%">已上架 241 · 可直接搜索消费</div>
+      </div>
+      <div class="bar"><div class="lb">待上架</div><div class="tr"><div class="fl" style="width:25%;background:#fa8c16"></div></div><div class="vl">98</div></div>
+      <div class="bar"><div class="lb">已下架</div><div class="tr"><div class="fl" style="width:13%;background:#8c8c8c"></div></div><div class="vl">40</div></div>
+      <div class="bar"><div class="lb">源消失</div><div class="tr"><div class="fl" style="width:3%;background:#ff4d4f"></div></div><div class="vl">7</div></div>
+      <h3 style="margin-top:18px">最近动态 <span class="sub">LIMIT 有上限</span></h3>
+      <table>
+        <tr><td><span class="tag t-red">上架</span></td><td>ads_trade_gmv_daily（模型）</td><td>lucas · 10:24</td></tr>
+        <tr><td><span class="tag t-orange">对账</span></td><td>新登记 6 个资产（来源域：建模 4 / 指标 2），已按规则预编目</td><td>定时 · 02:00</td></tr>
+        <tr><td><span class="tag t-blue">变更</span></td><td>dwd_trade_order_detail 源域字段 +3，待确认</td><td>定时 · 02:00</td></tr>
+        <tr><td><span class="tag t-gray">下架</span></td><td>dws_user_active_90d，原因：口径重构暂停对外</td><td>zhang · 昨日</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>治理待办 <span class="sub">点击带过滤上下文直达</span></h3>
+      <a class="todo" href="asset-inventory.html"><div class="cnt" style="background:#fff0f3;color:#FE2C55">98</div><div><b>待上架资产</b><span>自动登记后未过上架预检</span></div><span style="color:#FE2C55">›</span></a>
+      <a class="todo" href="asset-inventory.html"><div class="cnt" style="background:#e6f4ff;color:#1677ff">15</div><div><b>源变更待确认</b><span>名称/描述/结构指纹已变化</span></div><span style="color:#FE2C55">›</span></a>
+      <a class="todo" href="asset-catalog.html"><div class="cnt" style="background:#fff7e6;color:#fa8c16">50</div><div><b>无负责人</b><span>源域未能继承出责任人</span></div><span style="color:#FE2C55">›</span></a>
+      <a class="todo" href="asset-catalog.html"><div class="cnt" style="background:#fff1f0;color:#ff4d4f">22</div><div><b>D 级资产</b><span>健康度 &lt;55，缺口可见即治</span></div><span style="color:#FE2C55">›</span></a>
+      <a class="todo" href="asset-inventory.html"><div class="cnt" style="background:#fafafa;color:#8c8c8c">7</div><div><b>源消失待归档</b><span>连续两周期未再见</span></div><span style="color:#FE2C55">›</span></a>
+      <h3 style="margin-top:16px">源接入健康 <span class="sub">Provider 对账</span></h3>
+      <table>
+        <tr><td>建模 MODEL</td><td><span class="dot" style="background:#52c41a"></span>正常</td><td style="color:#8c8c8c">02:00 · 12s</td></tr>
+        <tr><td>指标 METRIC</td><td><span class="dot" style="background:#52c41a"></span>正常</td><td style="color:#8c8c8c">02:00 · 5s</td></tr>
+        <tr><td>数据集 DATASET</td><td><span class="dot" style="background:#fa8c16"></span>超时重试</td><td style="color:#8c8c8c">02:03 · 41s</td></tr>
+        <tr><td>报表 DASHBOARD</td><td><span class="dot" style="background:#52c41a"></span>正常</td><td style="color:#8c8c8c">02:00 · 3s</td></tr>
+        <tr><td>任务 TASK</td><td><span class="dot" style="background:#ff4d4f"></span>失败</td><td><a class="btn sm" href="asset-inventory.html">查看</a></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <details class="design"><summary>设计要点（对应文档章节）</summary><div>
+    ① 本页全部指标<b>服务端聚合 + 固定 ≤8 次查询</b>（D11，home-overview-contract），失败区域显示"暂不可用"而非 0；
+    ② 类型/分层/定级数据均为<b>快照</b>（D1），口径悬浮注明"来源域 + 对账时间"；
+    ③ 待办区每项跳转即带上对应过滤条件的资产列表（预置 URL 参数），处理动作全部发生在盘点工作台与目录页，本页不承载操作；
+    ④ 源接入健康是 Provider 分域容错的体现：单域失败不影响其余域对账（design §6.1）。
+  </div></details>
+</div>
+</body>
+</html>
