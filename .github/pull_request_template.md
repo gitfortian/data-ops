@@ -41,6 +41,14 @@
 - [ ] 没有绕过现有 Truth Owner
 - [ ] 治理能力如有配置，也进入了真实执行/消费链路
 
+## Product Surface Change
+
+仅当新增 `yak-ops-business-*` 模块或新增一级导航域时填写；否则保持为空。
+
+- Capability:
+- User Journey:
+- Why existing surface cannot carry this:
+
 ## UX & Failure
 
 - Entry:
