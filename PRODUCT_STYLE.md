@@ -32,13 +32,17 @@ Feature 必须回答：
 
 - User
 - Problem
+- Objective / Expected Outcome
 - Journey
-- Expected Outcome
+- Success Metrics / Success Signal
+- Assumptions / Open Questions
 - Truth Owner
 - Producer / Consumer
 - Reuse
 - Entry / Next Step
 - Acceptance Evidence
+
+Acceptance 与 Success Metrics 必须分开：前者证明交付符合约定，后者证明产品结果真的改善。
 
 ## 3. Product First
 
