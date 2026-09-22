@@ -1,30 +1,30 @@
-# F-001 — Asset Governance Hub Convergence
+# F-001 — 数据资产治理枢纽收敛
 
-Status: DRAFT  
+Status: APPROVED  \n状态说明：已批准，可进入实施拆分  
 Feature ID: F-001  
-Owner: Product  
-Target Release: TBD  
-Created: 2026-09-22  
-Related Decisions: PD-001 — Asset Governance Hub (ACCEPTED)  
-Related Issues / Designs: docs/reviews/productization-review-v1.md
+负责人：Product  
+目标版本：待定  
+创建日期：2026-09-22  
+关联产品决策：PD-001 — Asset Governance Hub（已接受）  
+关联材料：docs/reviews/productization-review-v1.md
 
 > 本 Feature 把 PD-001 从已接受产品方向转成可交付、可验收的产品契约。  
 > 它不要求一次 PR 完成全部实现；允许拆成多个 implementation slice，但所有 slice 必须服务同一用户闭环。
 
-## 1. Objective — Required
+## 1. 目标与价值（必填）
 
-**Feature：** Asset Governance Hub Convergence
+**功能：** 数据资产治理枢纽收敛
 
-**Primary User：** 需要发现、判断和使用数据对象的普通数据使用者 / 数据分析人员
+**主要用户：** 需要发现、判断和使用数据对象的普通数据使用者 / 数据分析人员
 
-**Secondary Users：**
+**次要用户：**
 
 - 数据工程师
 - 数据管理员 / 数据治理人员
 - 平台管理员
 - 需要通过 Agent / Home / Search 进入数据对象的后续消费者
 
-**Problem：**
+**用户问题：**
 
 当前平台已经有 Asset、Metadata、Quality、Security、Lineage、Lifecycle 等成熟或半成熟能力，但用户仍需要理解工程模块边界才能回答一个最基础的问题：
 
@@ -38,7 +38,7 @@ Asset 与 Metadata 目前都能承担“找数据 / 看详情”的一部分职�
 
 这导致用户必须先选择模块，再拼接事实。
 
-**Expected Outcome：**
+**期望结果：**
 
 用户从 Asset 入口找到一个治理对象后，可以在同一个上下文中判断：
 
@@ -59,19 +59,19 @@ Asset 与 Metadata 目前都能承担“找数据 / 看详情”的一部分职�
 - Asset 只聚合、索引和导航，不复制第二份业务真相；
 - 专业用户仍然可以进入 Metadata 技术工作台做采集、对账和深度诊断。
 
-**Why Now：**
+**为什么现在做：**
 
 PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider、Metadata Explorer 嵌入 Asset Catalog 等“半收敛”状态。
 
 如果此时继续独立扩展 Asset 与 Metadata 两套详情、搜索和治理入口，重复产品面会快速固化，后续再收敛成本更高。
 
-## 2. Success Metrics
+## 2. 成功指标
 
 > Acceptance 证明“功能按约定实现”；Success Metrics 证明“产品心智和用户结果真的改善”。
 
-### MVP Success Signals
+### MVP 成功信号
 
-| Metric / Signal | Baseline | Target | Measurement / Evidence |
+| 指标 / 信号 | 当前基线 | 目标状态 | 如何验证 |
 |---|---|---|---|
 | 普通数据发现默认入口 | Asset 与 Metadata 均可承担发现职责 | 产品文案和主流程明确 Asset 为默认治理发现入口 | 导航/入口测试 + 用户路径验收 |
 | 关键治理信息聚合完整度 | Quality / TTL / Fields 等存在 UNAVAILABLE 或割裂 | 对 MVP 资产类型，关键 Section 均能返回 OK / EMPTY / NOT_APPLICABLE / 有原因的 UNAVAILABLE | Asset 360 E2E evidence |
@@ -80,7 +80,7 @@ PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider�
 | “使用”语义真实性 | 主要是 Asset 页面浏览量 | 至少能区分“页面浏览”与“真实下游消费/引用” | Usage contract + E2E evidence |
 | 双详情重复增长 | Asset Detail / Metadata Detail 边界靠开发人员理解 | 两者职责在产品契约和 UI 文案中明确，新增字段有归属规则 | Product review + regression checklist |
 
-### Post-MVP Product Signal
+### MVP 后产品信号
 
 上线后观察：
 
@@ -90,17 +90,17 @@ PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider�
 
 暂不设未经真实基线验证的虚假百分比目标。
 
-## 3. Product Context — Required
+## 3. 产品上下文（必填）
 
-**Capability：** 数据资产与治理
+**所属产品能力：** 数据资产与治理
 
-**User Journeys：**
+**用户旅程：**
 
 - J1 — 从外部数据到可信、可治理的数据对象
 - J4 — 从发现问题到定位影响
 - J5 — 从敏感数据到安全消费
 
-**Entry Point：**
+**入口：**
 
 默认：
 
@@ -113,7 +113,7 @@ PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider�
 - Metadata technical workspace
 - Quality / Security / Lineage specialist pages
 
-**Previous Step：**
+**前置步骤：**
 
 可能来自：
 
@@ -121,7 +121,7 @@ PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider�
 - Modeling / Metric / Dataset / Dashboard / Development Provider
 - 手工登记
 
-**Next Step：**
+**下一步：**
 
 根据发现的问题进入专业域：
 
@@ -133,13 +133,13 @@ PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider�
 - source-domain detail
 - downstream consumer
 
-**User Story：**
+**用户故事：**
 
 > As a 数据使用者, I want 从一个统一资产入口判断数据是否可信、敏感、可追溯和正在被谁使用, so that 我不需要理解平台模块边界就能决定是否使用它以及下一步去哪处理问题。
 
-## 4. Assumptions & Validation
+## 4. 假设与验证
 
-| Assumption | Why we believe it | How to validate | Result |
+| 假设 | 为什么这样判断 | 如何验证 | 当前结果 |
 |---|---|---|---|
 | 普通用户更需要“治理后的对象”而不是先进入技术元数据 | PD-001 + 当前 Asset Provider / 360 方向 | F-001 UX review + E2E path | Pending |
 | Metadata 深度能力适合作为专业工作台保留 | Metadata 已有表/列/属性/采集/变更历史等深能力 | 不删除 Metadata；对典型排障场景做验收 | Pending |
@@ -150,9 +150,9 @@ PD-001 已经 ACCEPTED，而当前代码已经出现 Asset 360、AssetProvider�
 
 AI 不得把 Pending Assumption 自动升级为 Product Truth。
 
-## 5. Truth & Ownership — Required
+## 5. 事实归属与所有权（必填）
 
-### Asset owns
+### Asset 自己拥有
 
 - Asset ledger identity / projection
 - governance listing state
@@ -165,9 +165,9 @@ AI 不得把 Pending Assumption 自动升级为 Product Truth。
 - Asset page activity / view telemetry
 - cross-domain summary presentation
 
-### Source domains own
+### 源域拥有
 
-| Fact | Truth Owner |
+| 事实 | 真相归属 |
 |---|---|
 | physical table / column / schema metadata | Metadata |
 | model definition | Modeling |
@@ -180,7 +180,7 @@ AI 不得把 Pending Assumption 自动升级为 Product Truth。
 | retention / storage lifecycle policy | Lifecycle |
 | workflow / task definition | owning execution domain |
 
-**Producer(s)：**
+**事实生产方：**
 
 - Metadata
 - Modeling
@@ -194,7 +194,7 @@ AI 不得把 Pending Assumption 自动升级为 Product Truth。
 - Lineage
 - Lifecycle
 
-**Consumer(s)：**
+**消费方：**
 
 - Asset UI
 - Home / workspace
@@ -203,15 +203,15 @@ AI 不得把 Pending Assumption 自动升级为 Product Truth。
 - governance workflows
 - impact / trust views
 
-**Source of Truth：**
+**真相来源：**
 
 每个 Section 必须声明自己的 Source Domain。Asset 不因展示需要复制第二份业务事实。
 
 是否新增第二份业务真相：**否**
 
-## 6. Options & Scope
+## 6. 方案与范围
 
-### Chosen approach
+### 已选择方案
 
 采用 PD-001 已接受的模式：
 
@@ -219,7 +219,7 @@ AI 不得把 Pending Assumption 自动升级为 Product Truth。
 > Source domains = Truth owners  
 > Metadata = specialist technical metadata workspace
 
-### Alternatives considered
+### 已评估方案
 
 已在 PD-001 评估：
 
@@ -228,7 +228,7 @@ AI 不得把 Pending Assumption 自动升级为 Product Truth。
 
 本 Feature 不重新打开已接受的战略选择。
 
-### MVP In Scope
+### MVP 范围
 
 #### A. Asset 360 Information Architecture
 
@@ -355,7 +355,7 @@ F-001 MVP 至少需要定义 business usage 的 Owner、数据源和展示语义
 
 不要求暴露为普通用户主页面，可以先作为管理/诊断能力。
 
-### Out of Scope — Required
+### 明确不做（必填）
 
 F-001 不做：
 
@@ -372,7 +372,7 @@ F-001 不做：
 - 一次性让所有 Asset Type 拥有完全一致的 360° 信息
 - 把所有专业域配置页面搬进 Asset
 
-## 7. Reuse — Required
+## 7. 复用要求（必填）
 
 必须优先复用：
 
@@ -398,9 +398,9 @@ F-001 不做：
 
 允许 Asset 存储的仅限它明确拥有的治理事实和必要的派生缓存。
 
-## 8. User Experience — Required
+## 8. 用户体验（必填）
 
-### Happy Path
+### 正常路径
 
 1. 用户进入 Asset Catalog；
 2. 搜索“订单”；
@@ -411,7 +411,7 @@ F-001 不做：
 7. 如果发现问题，可直接进入对应专业域；
 8. 处理完成后能够回到原 Asset 上下文。
 
-### Empty State
+### 空状态
 
 区分：
 
@@ -420,19 +420,19 @@ F-001 不做：
 - 尚未配置；
 - Provider / owning service 不可用。
 
-### Error / Blocking State
+### 异常 / 阻断状态
 
 单个 Section 出错不能让整份 Asset Detail 不可用。
 
 本体 Asset 不存在时才允许整页失败。
 
-### Permission Denied
+### 无权限状态
 
 - Asset 基础可见性遵守 Project Space / Asset 权限；
 - 专业 Section 若无对应权限，不伪装为 EMPTY；
 - 应显示无权限或隐藏具体敏感内容，策略由 owning domain 决定。
 
-### Loading / Long-running
+### 加载与长耗时
 
 Asset 详情不得被最慢的跨域 Section 整体阻塞。
 
@@ -443,14 +443,14 @@ Asset 详情不得被最慢的跨域 Section 整体阻塞。
 - timeout + UNAVAILABLE
 - cached derived summary
 
-### Cross-domain backlink
+### 跨域回链
 
 每个可操作 Section 至少提供：
 
 - View details / Open specialist workspace
 - 返回 Asset context 的稳定 assetKey / source reference
 
-## 9. Governance Impact
+## 9. 治理影响
 
 ### Asset State
 
@@ -484,22 +484,22 @@ F-001 不改变现有 PENDING / PUBLISHED / OFFLINE / IGNORED / SOURCE_GONE 语�
 
 必须正式区分页面 activity 与真实业务 consumption。
 
-## 10. Open Questions
+## 10. 未决问题
 
-| Question | Blocking? | Owner | Decision / Answer | Date |
+| 问题 | 是否阻断 | 负责人 | 决策 / 答案 | 日期 |
 |---|---|---|---|---|
-| Physical Table / Model / Metric / Dataset 各自哪些 Section 是 NOT_APPLICABLE？ | Yes | Product + Domain Owners | Pending | |
-| Quality summary 的最小稳定 Query Contract 是什么？ | Yes | Quality / Asset | Pending | |
-| Lifecycle / TTL summary 的最小稳定 Query Contract 是什么？ | Yes | Lifecycle / Asset | Pending | |
-| Business Usage 的 Truth Owner 是 Asset、Lineage 还是各消费域提供 usage events？ | Yes | Product / Architecture | Pending | |
+| Physical Table / Model / Metric / Dataset 各自哪些 Section 明确不适用？ | 是 | Product + Domain Owners | 由 F-001-A 的适用矩阵固化：Quality 当前只对 Physical Table 生效；Lifecycle / TTL 当前只对 MODEL 生效；Technical Metadata 当前只对 Physical Table 作为独立 Section 生效；Lineage / Usage / Governance 作为跨类型能力，按 OK / EMPTY / UNAVAILABLE 表达真实状态。 | 2026-09-22 |
+| Quality 给 Asset 的最小稳定摘要契约是什么？ | 是 | Quality / Asset | Quality 继续拥有规则、监控和执行事实；Asset 只读摘要：是否已纳入质量管理、是否存在监控、最近一次执行状态/结论、最近问题数量、最近执行时间、专业页入口。对象级查询由 Quality read-side 提供，不复制到 Asset 表。 | 2026-09-22 |
+| Lifecycle / TTL 给 Asset 的最小稳定摘要契约是什么？ | 是 | Lifecycle / Asset | MVP 复用现有 AssetStatusTtlFacts：policyApplied、policyCode、bindingSource、state；当前只对 MODEL source 适用，其它类型返回 NOT_APPLICABLE，不把“暂未支持”伪装成无策略。 | 2026-09-22 |
+| 真实业务使用（Usage）的事实由谁拥有？ | 是 | Product / Architecture | 采用联邦归属：Asset 只拥有页面访问 activity；Lineage 拥有结构依赖；Dashboard / Data Service / Agent / Dataset 等消费域拥有自己的真实消费事实。Asset Usage Section 只聚合，不新建统一 Usage 真相库。 | 2026-09-22 |
 | Technical Metadata 在 Asset Detail 中采用摘要 + deep link，还是部分 inline 展开？ | No | Product / UX | Pending | |
 | Asset Catalog 是否保留当前“台账资产 / 元数据实体” Segmented 双视图？ | No | Product / UX | Pending | |
 | Provider coverage diagnostics 面向管理员还是仅运维/日志？ | No | Product / Architecture | Pending | |
 | 是否需要正式 PRODUCT_USERS.md 统一 Persona 名称？ | No | Product Governance | Pending | |
 
-**DRAFT -> APPROVED 前必须解决所有 Blocking = Yes。**
+**所有阻断问题已完成产品决策；后续实现必须遵守 F-001-A 的 Section Contract。**
 
-## 11. Supporting Evidence
+## 11. 支撑证据
 
 ### Product Decisions
 
@@ -534,7 +534,7 @@ F-001 不改变现有 PENDING / PUBLISHED / OFFLINE / IGNORED / SOURCE_GONE 语�
 - Asset Detail
 - current navigation
 
-## 12. Architecture Impact
+## 12. 架构影响
 
 > 本节定义产品要求对架构的约束，不预先指定具体类名/表结构。
 
@@ -582,7 +582,7 @@ F-001 不要求先引入新的全局 Event Bus。
 
 尽量保持兼容。
 
-## 13. Acceptance — Required
+## 13. 验收标准（必填）
 
 ### E2E Scenario A — Physical Table
 
@@ -652,7 +652,7 @@ Asset 本体和其它 Section 仍可使用；失败 Section 明确显示 UNAVAIL
 
 进入 owning domain 的正确对象上下文，并能够回到原 Asset identity。
 
-### Evidence
+### 验收证据
 
 实施阶段至少提供：
 
@@ -663,7 +663,7 @@ Asset 本体和其它 Section 仍可使用；失败 Section 明确显示 UNAVAIL
 - 关键 Asset Type E2E
 - failure/degradation evidence
 
-## 14. Delivery Slices
+## 14. 实施切片
 
 > 以下是建议的实现切片，不代表现在授权编码；F-001 APPROVED 后再创建对应实施 PR。
 
@@ -701,7 +701,7 @@ Asset 本体和其它 Section 仍可使用；失败 Section 明确显示 UNAVAIL
 - catalog entry wording
 - remove only proven duplicate entry points
 
-## 15. Closeout
+## 15. 收尾与沉淀
 
 当状态更新为 SHIPPED 时：
 
