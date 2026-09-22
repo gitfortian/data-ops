@@ -1,6 +1,6 @@
 # PD-001 — Asset Governance Hub
 
-Status: PROPOSED  
+Status: ACCEPTED  
 Implementation: NOT_STARTED  
 Date: 2026-09-22  
 Owner: Product
