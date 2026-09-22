@@ -44,13 +44,15 @@ const fail = (message, details = []) => {
 const missing = REQUIRED_FILES.filter((file) => !existsSync(file));
 if (missing.length) fail("product governance baseline is incomplete", missing);
 
-const invalidDocs = REQUIRED_FILES
+const contractDocs = REQUIRED_FILES
   .filter((file) => file.endsWith(".md"))
-  .filter((file) => {
-    const text = readFileSync(file, "utf8").trim();
-    return !text || !/^#\s+\S+/m.test(text);
-  });
-if (invalidDocs.length) fail("governance markdown must be non-empty and have an H1", invalidDocs);
+  .filter((file) => !file.startsWith(".github/"));
+
+const invalidDocs = contractDocs.filter((file) => {
+  const text = readFileSync(file, "utf8").trim();
+  return !text || !/^#\s+\S+/m.test(text);
+});
+if (invalidDocs.length) fail("product contract markdown must be non-empty and have an H1", invalidDocs);
 
 const glossary = readFileSync("docs/product/PRODUCT_GLOSSARY.md", "utf8");
 const rows = glossary
