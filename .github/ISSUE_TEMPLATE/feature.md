@@ -14,9 +14,13 @@ Who needs this?
 
 What can the user not accomplish today?
 
-## Expected Outcome
+## Objective / Expected Outcome
 
-What result should the user get after this is implemented?
+Why should this exist, and what user outcome should change?
+
+## Success Signal
+
+How will we know this was useful after it ships?
 
 ## Capability
 
@@ -25,6 +29,10 @@ Which capability in `docs/product/CAPABILITY_MAP.md` owns this?
 ## User Journey
 
 Which journey in `docs/product/USER_JOURNEYS.md` does this improve?
+
+## Assumptions / Open Questions
+
+What are we currently assuming? What is still unknown?
 
 ## Truth & Ownership
 
