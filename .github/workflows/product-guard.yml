@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch base branch
-        run: git fetch origin "${GITHUB_BASE_REF}" --depth=1
+        run: git fetch origin "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
 
       - name: Check product baseline
         run: node scripts/product/check-product-baseline.mjs
