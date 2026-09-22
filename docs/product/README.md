@@ -13,6 +13,7 @@
 7. [FEATURE_SPEC_TEMPLATE.md](./FEATURE_SPEC_TEMPLATE.md) — 新需求怎么写
 8. [DOCUMENT_GOVERNANCE.md](./DOCUMENT_GOVERNANCE.md) — 文档谁说了算
 9. [LEGACY_DOC_INDEX.md](./LEGACY_DOC_INDEX.md) — 现有文档怎么解释
+10. [PRODUCT_GUARD.md](./PRODUCT_GUARD.md) — 哪些产品规则由 CI 自动守
 
 仓库级研发规则见根目录 [PRODUCT_STYLE.md](../../PRODUCT_STYLE.md)。
 
