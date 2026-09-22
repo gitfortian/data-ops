@@ -64,14 +64,29 @@ if (productFiles.length === 0) {
 const body = (pr.body ?? "").replace(/\r/g, "");
 const lines = body.split("\n");
 
-const readField = (label) => {
+const sectionBody = (heading) => {
+  const headingIndex = lines.findIndex(
+    (line) => line.trim().toLowerCase() === `## ${heading}`.toLowerCase(),
+  );
+  if (headingIndex < 0) return "";
+
+  const collected = [];
+  for (let i = headingIndex + 1; i < lines.length; i += 1) {
+    if (/^##\s+/.test(lines[i])) break;
+    collected.push(lines[i]);
+  }
+  return collected.join("\n");
+};
+
+const readField = (section, label) => {
   const prefixes = [`${label}:`, `- ${label}:`, `* ${label}:`];
-  for (const line of lines) {
+  for (const line of section.split("\n")) {
     const trimmed = line.trim();
     const prefix = prefixes.find((candidate) =>
       trimmed.toLowerCase().startsWith(candidate.toLowerCase()),
     );
     if (!prefix) continue;
+
     const value = trimmed.slice(prefix.length).trim();
     if (!value || /^(n\/a|na|none|todo|tbd|-)$/i.test(value)) return "";
     return value;
@@ -79,34 +94,25 @@ const readField = (label) => {
   return "";
 };
 
-const sectionBody = (heading) => {
-  const headingIndex = lines.findIndex(
-    (line) => line.trim().toLowerCase() === `## ${heading}`.toLowerCase(),
-  );
-  if (headingIndex < 0) return "";
-  const collected = [];
-  for (let i = headingIndex + 1; i < lines.length; i += 1) {
-    if (/^##\s+/.test(lines[i])) break;
-    collected.push(lines[i]);
-  }
-  return collected
-    .join("\n")
-    .replace(/<!--([\s\S]*?)-->/g, "")
-    .replace(/[-*]\s*\[[ xX]\]/g, "")
-    .trim();
-};
+const productImpact = sectionBody("Product Impact");
+const ownership = sectionBody("Truth & Ownership");
+const acceptance = sectionBody("Acceptance")
+  .replace(/<!--([\s\S]*?)-->/g, "")
+  .replace(/[-*]\s*\[[ xX]\]/g, "")
+  .trim();
 
-const requiredFields = [
-  "User",
-  "Capability",
-  "User Journey",
-  "Problem",
-  "Expected Outcome",
-  "Truth Owner",
+const required = [
+  ["User", productImpact],
+  ["Capability", productImpact],
+  ["User Journey", productImpact],
+  ["Problem", productImpact],
+  ["Expected Outcome", productImpact],
+  ["Truth Owner", ownership],
 ];
 
-const missingFields = requiredFields.filter((field) => !readField(field));
-const acceptance = sectionBody("Acceptance");
+const missingFields = required
+  .filter(([label, section]) => !readField(section, label))
+  .map(([label]) => label);
 
 if (missingFields.length || !acceptance) {
   console.error("FAIL: product behavior changed but PR Product Impact is incomplete.");
@@ -115,6 +121,7 @@ if (missingFields.length || !acceptance) {
     for (const field of missingFields) console.error(`  - ${field}`);
   }
   if (!acceptance) console.error("  - Acceptance must contain a real E2E outcome");
+
   console.error("\nChanged product files include:");
   for (const file of productFiles.slice(0, 20)) console.error(`  ${file}`);
   process.exit(1);
