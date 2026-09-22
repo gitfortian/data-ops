@@ -1,0 +1,23 @@
+# Feature Product Specs
+
+Feature Spec 是“当前变更契约”，不是永久 Product Truth。
+
+## Location
+
+统一放在本目录：
+
+`F-XXX-short-title.md`
+
+## Status
+
+- DRAFT
+- APPROVED
+- IMPLEMENTING
+- SHIPPED
+- SUPERSEDED
+
+只有 APPROVED / IMPLEMENTING 可以指导当前实现。
+
+## Closeout
+
+Feature SHIPPED 后，将长期有效内容提升到 Product / Domain / Architecture Contract，然后保留 Feature Spec 作为交付证据。
