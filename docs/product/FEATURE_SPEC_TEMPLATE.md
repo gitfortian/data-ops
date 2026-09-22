@@ -1,94 +1,94 @@
-# Feature Product Spec
+# Feature 产品需求规格
 
 Status: DRAFT  
 Feature ID: F-XXX  
-Owner:  
-Target Release: TBD  
-Created: YYYY-MM-DD  
-Related Decisions: None  
-Related Issues / Designs: None
+负责人：  
+目标版本：待定  
+创建日期：YYYY-MM-DD  
+关联产品决策：无  
+关联 Issue / 设计材料：无
 
-> 固定存放于 `docs/product/features/`。只有 APPROVED / IMPLEMENTING 状态可以指导当前实现。
+> 固定存放于 `docs/product/features/`。只有 `APPROVED` / `IMPLEMENTING` 状态可以指导当前实现。
 
-## 1. Objective — Required
+## 1. 目标与价值（必填）
 
-**Feature：**
+**功能：**
 
-**User：**
+**主要用户：**
 
-**Problem：**
+**用户问题：**
 
-**Expected Outcome：**
+**期望结果：**
 
-**Why Now：**
+**为什么现在做：**
 
 一句话说明为什么值得现在做，而不是“因为模块还缺这个功能”。
 
-## 2. Success Metrics
+## 2. 成功指标
 
-> Acceptance 证明“做对了”；Success Metrics 证明“做这件事有价值”。两者不能互相替代。
+> 验收标准证明“做对了”；成功指标证明“这件事做出来真的有价值”。两者不能互相替代。
 
-中型/大型 Feature 必须至少定义一个可观察成功信号。
+中型 / 大型 Feature 至少定义一个可观察的成功信号。
 
-| Metric / Signal | Baseline | Target | Measurement / Evidence |
+| 指标 / 信号 | 当前基线 | 目标状态 | 如何验证 |
 |---|---|---|---|
 |  |  |  |  |
 
-如果当前无法量化，可以使用明确的行为/运营信号，但必须说明如何观察。
+如果当前无法量化，可以使用明确的行为或运营信号，但必须说明如何观察。
 
-## 3. Product Context — Required
+## 3. 产品上下文（必填）
 
-**Capability：**
+**所属产品能力：**
 
-**User Journey：**
+**用户旅程：**
 
-**Entry Point：**
+**入口：**
 
-**Previous Step：**
+**前置步骤：**
 
-**Next Step：**
+**下一步：**
 
-**User Story（optional）：**
+**用户故事（可选）：**
 
-> As a ..., I want ..., so that ...
+> 作为……，我希望……，从而……
 
-## 4. Assumptions & Validation
+## 4. 假设与验证
 
-把“事实”和“我们暂时相信的事情”分开。
+把“已经知道的事实”和“我们暂时相信的事情”分开。
 
-| Assumption | Why we believe it | How to validate | Result |
+| 假设 | 为什么这样判断 | 如何验证 | 当前结果 |
 |---|---|---|---|
 |  |  |  |  |
 
-AI 不得把未验证 Assumption 写成 Product Truth。
+AI 不得把尚未验证的假设写成 Product Truth。
 
-## 5. Truth & Ownership — Required
+## 5. 事实归属与所有权（必填）
 
 **Truth Owner：**
 
-**Producer(s)：**
+**事实生产方：**
 
-**Consumer(s)：**
+**消费方：**
 
-**Source of Truth：**
+**真相来源：**
 
 是否新增第二份业务真相：否 / 是（必须说明）
 
-## 6. Options & Scope
+## 6. 方案与范围
 
-对于存在明显方案选择的 Feature，列出考虑过的选项；跨产品域长期选择应提升为 Product Decision。
+如果存在明显方案选择，列出考虑过的方案；跨产品域的长期选择应提升为 Product Decision。
 
-### Chosen approach
+### 已选择方案
 
-### Alternatives considered
+### 已评估方案
 
-### In scope
+### 本次范围
 
-### Out of scope — Required
+### 明确不做（必填）
 
-## 7. Reuse — Required
+## 7. 复用要求（必填）
 
-复用现有能力：
+优先复用现有能力：
 
 - Project Space / RBAC
 - Dataset
@@ -100,25 +100,27 @@ AI 不得把未验证 Assumption 写成 Product Truth。
 - Audit
 - Alert / Notification
 - Task / Workflow
-- Other
+- 其它
 
 需要重复建设时说明原因。
 
-## 8. User Experience — Required
+## 8. 用户体验（必填）
 
-Happy Path：
+**正常路径：**
 
-Empty State：
+**空状态：**
 
-Error / Blocking State：
+**异常 / 阻断状态：**
 
-Permission Denied：
+**无权限状态：**
 
-Loading / Long-running：
+**加载与长耗时：**
 
-Cross-domain backlink：
+**跨域回链：**
 
-## 9. Governance Impact
+## 9. 治理影响
+
+按需说明是否影响：
 
 - Asset / governed object state
 - Lineage
@@ -129,59 +131,59 @@ Cross-domain backlink：
 - Lifecycle
 - Usage / Impact
 
-## 10. Open Questions
+## 10. 未决问题
 
-> 未解决问题要显式留在这里，不能由 AI 静默脑补。
+> 没想清楚的问题必须显式记录，不能由 AI 静默脑补。
 
-| Question | Blocking? | Owner | Decision / Answer | Date |
+| 问题 | 是否阻断 | 负责人 | 决策 / 答案 | 日期 |
 |---|---|---|---|---|
 |  |  |  |  |  |
 
-Status 升为 APPROVED 前，不允许仍存在未处理的 blocking question。
+Status 升为 `APPROVED` 前，不允许仍存在未解决的阻断问题。
 
-## 11. Supporting Evidence
+## 11. 支撑证据
 
 按需链接：
 
-- User / customer evidence:
-- Current-state data:
-- Mockup / prototype:
-- Architecture diagram:
-- Related review:
-- Related issue:
+- 用户 / 客户证据：
+- 当前状态数据：
+- 原型 / 交互稿：
+- 架构图：
+- 相关 Review：
+- 相关 Issue：
 
-## 12. Architecture Impact
+## 12. 架构影响
 
-本节只记录已决定产品形态对实现的影响：
+本节只记录已经决定的产品形态对实现的影响：
 
-- API:
-- DB:
-- Domain:
-- Events:
-- Compatibility:
+- API：
+- 数据库：
+- Domain：
+- Events：
+- 兼容性：
 
-## 13. Acceptance — Required
+## 13. 验收标准（必填）
 
-### E2E Scenario
+### E2E 场景
 
-Given:
+**Given / 前置条件：**
 
-When:
+**When / 用户动作：**
 
-Then:
+**Then / 期望结果：**
 
-### Evidence
+### 验收证据
 
-- UI / API:
-- Persisted fact / event:
-- Audit:
-- Observability:
+- UI / API：
+- 持久化事实 / Event：
+- Audit：
+- Observability：
 
-## 14. Closeout
+## 14. 收尾与沉淀
 
-当状态更新为 SHIPPED 时：
+当状态更新为 `SHIPPED` 时：
 
-- Success Metrics 当前结果：
+- 成功指标当前结果：
 - 哪些长期规则已提升到 Product Truth：
 - 哪些规则已提升到 Domain Contract：
 - 哪些边界已提升到 Architecture Contract：
