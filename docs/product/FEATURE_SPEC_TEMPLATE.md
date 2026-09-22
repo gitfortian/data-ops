@@ -1,6 +1,12 @@
-# Feature Product Spec Template
+# Feature Product Spec
 
-> Feature 实现前复制本模板。小需求可以精简，但标记为 Required 的字段必须存在。
+Status: DRAFT  
+Feature ID: F-XXX  
+Owner:  
+Created: YYYY-MM-DD  
+Related Decisions: None
+
+> 固定存放于 `docs/product/features/`。只有 APPROVED / IMPLEMENTING 状态可以指导当前实现。
 
 ## 1. Summary — Required
 
@@ -14,11 +20,9 @@
 
 ## 2. Product Context — Required
 
-**Capability：**  
-从 `CAPABILITY_MAP.md` 选择。
+**Capability：**
 
-**User Journey：**  
-从 `USER_JOURNEYS.md` 选择。
+**User Journey：**
 
 **Entry Point：**
 
@@ -36,26 +40,25 @@
 
 **Source of Truth：**
 
-是否新增第二份业务真相：否 / 是（必须说明原因）
+是否新增第二份业务真相：否 / 是（必须说明）
 
 ## 4. Reuse — Required
 
-本功能复用：
+复用现有能力：
 
-- [ ] Project Space
-- [ ] RBAC / Resource Authorization
-- [ ] Dataset
-- [ ] Semantic
-- [ ] Metric
-- [ ] Asset
-- [ ] Lineage
-- [ ] Approval
-- [ ] Audit
-- [ ] Alert / Notification
-- [ ] Task / Workflow
-- [ ] 其它：
+- Project Space / RBAC
+- Dataset
+- Semantic
+- Metric
+- Asset
+- Lineage
+- Approval
+- Audit
+- Alert / Notification
+- Task / Workflow
+- Other
 
-需要自建已有类似能力时，原因：
+需要重复建设时说明原因。
 
 ## 5. User Experience — Required
 
@@ -69,13 +72,11 @@ Permission Denied：
 
 Loading / Long-running：
 
-跨域回链：
+Cross-domain backlink：
 
 ## 6. Governance Impact
 
-是否影响：
-
-- Asset 状态
+- Asset / governed object state
 - Lineage
 - Quality
 - Security / Masking
@@ -84,11 +85,9 @@ Loading / Long-running：
 - Lifecycle
 - Usage / Impact
 
-如果“不影响”，是否符合产品逻辑？
+## 7. Architecture Impact
 
-## 7. API / Data / Architecture
-
-本节只记录产品已经决定后需要的实现影响，不在这里反向发明产品需求。
+本节只记录已决定的产品形态对实现的影响：
 
 - API:
 - DB:
@@ -98,28 +97,28 @@ Loading / Long-running：
 
 ## 8. Acceptance — Required
 
-### E2E Scenario
+### Scenario
 
 Given:
+
 When:
+
 Then:
 
 ### Evidence
 
-- UI:
-- API:
-- DB / Event:
+- UI / API:
+- Persisted fact / event:
 - Audit:
 - Observability:
 
 ## 9. Non-goals — Required
 
-明确本次不做：
+## 10. Closeout
 
-## 10. Product Decision
+当状态更新为 SHIPPED 时：
 
-需要拍板的问题：
-
-Decision:
-Date:
-Reason:
+- 哪些长期规则已提升到 Product Truth：
+- 哪些规则已提升到 Domain Contract：
+- 哪些边界已提升到 Architecture Contract：
+- 当前实现证据：
