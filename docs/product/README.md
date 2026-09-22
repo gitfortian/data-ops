@@ -9,9 +9,14 @@
 3. [CAPABILITY_MAP.md](./CAPABILITY_MAP.md) — 用户看到的能力地图
 4. [USER_JOURNEYS.md](./USER_JOURNEYS.md) — 产品如何形成闭环
 5. [PRODUCT_GLOSSARY.md](./PRODUCT_GLOSSARY.md) — 一词一义
-6. [FEATURE_SPEC_TEMPLATE.md](./FEATURE_SPEC_TEMPLATE.md) — 新需求怎么写
+6. [PRODUCT_CHANGE_PROCESS.md](./PRODUCT_CHANGE_PROCESS.md) — 产品变更怎么进入研发
+7. [FEATURE_SPEC_TEMPLATE.md](./FEATURE_SPEC_TEMPLATE.md) — 新需求怎么写
+8. [DOCUMENT_GOVERNANCE.md](./DOCUMENT_GOVERNANCE.md) — 文档谁说了算
+9. [LEGACY_DOC_INDEX.md](./LEGACY_DOC_INDEX.md) — 现有文档怎么解释
 
 仓库级研发规则见根目录 [PRODUCT_STYLE.md](../../PRODUCT_STYLE.md)。
+
+AI / Agent 进入仓库时先读根目录 [AGENTS.md](../../AGENTS.md)。
 
 ## 文档分层
 
