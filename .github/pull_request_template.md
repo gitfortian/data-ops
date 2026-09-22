@@ -1,8 +1,16 @@
 ## Summary
 
-这次 PR 改变了什么用户行为或产品结果？
+这次 PR 做了什么？
+
+## Change Classification
+
+- Change Type: PRODUCT / TECHNICAL / DOCS / OPS
+- Product Behavior Changed: Yes / No
+- If No, Why:
 
 ## Product Impact
+
+仅当 Product Behavior Changed = Yes 时填写。
 
 - User:
 - Capability:
@@ -13,14 +21,14 @@
 
 ## Truth & Ownership
 
+仅 PRODUCT change 必填。
+
 - Truth Owner:
 - Producer(s):
 - Consumer(s):
 - 是否新增第二份业务真相：No / Yes（说明原因）
 
 ## Reuse Check
-
-本 PR 是否复用了已有平台能力：
 
 - [ ] Project Space / RBAC
 - [ ] Dataset
@@ -31,15 +39,16 @@
 - [ ] Task / Workflow
 - [ ] 不适用
 
-如新增了已有类似能力，请说明为什么不能复用。
+## Product Surface Change
 
-## Product Boundary Check
+仅当新增/合并一级 Product Capability、新业务 Maven module 或一级导航域时填写。
 
-- [ ] 没有为了“模块完整”增加无用户目标的功能
-- [ ] 没有新增不必要的一级菜单
-- [ ] 没有新增同义不同义的术语
-- [ ] 没有绕过现有 Truth Owner
-- [ ] 治理能力如有配置，也进入了真实执行/消费链路
+- Product Decision:
+- Capability:
+- User Journey:
+- Why existing surface cannot carry this:
+
+Product Decision 必须是 `Status: ACCEPTED`。
 
 ## UX & Failure
 
@@ -51,18 +60,16 @@
 
 ## Acceptance
 
-E2E 场景：
+PRODUCT change 必须填写真实内容。
 
-证据：
-
-- [ ] UI / API 行为
-- [ ] 自动测试
-- [ ] Audit / Event / Runtime evidence（如适用）
+- Scenario:
+- Evidence:
 
 ## Engineering
 
 - [ ] 阅读并遵守 `PRODUCT_STYLE.md`
-- [ ] 阅读目标模块 `DOMAIN.md / REQUIREMENTS.md / ARCHITECTURE.md / DEPENDENCIES.md`
+- [ ] 阅读相关 ACCEPTED Product Decisions
+- [ ] 阅读目标模块 Domain / Requirements / Architecture / Dependencies
 - [ ] 遵守 `CODE_STYLE.md`
 
 ## Non-goals

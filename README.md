@@ -302,7 +302,7 @@ A good way to contribute is to:
 3. keep a pull request focused on one problem and explain the user-visible behavior it changes;
 4. add or update tests and documentation where the change introduces a new contract.
 
-Before contributing code, please read [`CODE_STYLE.md`](CODE_STYLE.md). Frontend changes should also follow [`yak-ops-ui/FRONTEND_CODE_STYLE.md`](yak-ops-ui/FRONTEND_CODE_STYLE.md).
+Before changing product behavior, start with [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) and the [`docs/product/`](docs/product/) baseline. AI / coding agents should enter through [`AGENTS.md`](AGENTS.md). Before contributing code, also read [`CODE_STYLE.md`](CODE_STYLE.md); frontend changes should follow [`yak-ops-ui/FRONTEND_CODE_STYLE.md`](yak-ops-ui/FRONTEND_CODE_STYLE.md).
 
 If Yak Ops is useful to you, a ⭐ helps more people discover the project.
 

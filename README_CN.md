@@ -312,7 +312,7 @@ Yak Ops 在 GitHub 上公开开发。Bug、产品建议、设计讨论、文档�
 3. Pull Request 尽量只解决一个清晰问题，并说明它改变了什么用户行为；
 4. 如果修改引入了新的契约，同步补充测试和文档。
 
-提交代码前请阅读 [`CODE_STYLE.md`](CODE_STYLE.md)。前端修改还应遵循 [`yak-ops-ui/FRONTEND_CODE_STYLE.md`](yak-ops-ui/FRONTEND_CODE_STYLE.md)。
+修改产品行为前，请先阅读 [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) 和 [`docs/product/`](docs/product/) 产品基线；AI / Coding Agent 统一从 [`AGENTS.md`](AGENTS.md) 进入仓库上下文。提交代码前还需阅读 [`CODE_STYLE.md`](CODE_STYLE.md)，前端修改应遵循 [`yak-ops-ui/FRONTEND_CODE_STYLE.md`](yak-ops-ui/FRONTEND_CODE_STYLE.md)。
 
 如果 Yak Ops 对你有帮助，一个 ⭐ 可以让更多人看到这个项目。
 

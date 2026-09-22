@@ -6,21 +6,19 @@
 
 用户目标：把外部数据可靠带进平台。
 
-包含能力：
+包含：
 
 - 数据源
 - 文件资源
 - 离线同步
 - 实时同步
-- 元数据采集
-
-内部实现可以分模块，但用户不需要理解底层引擎边界。
+- Metadata Harvest（发现外部物理结构）
 
 ## 2. 标准、指标与建模
 
-用户目标：定义数据应该长什么样、代表什么、怎么算。
+用户目标：定义数据应该代表什么、如何标准化、如何建模和度量。
 
-包含能力：
+包含：
 
 - 数据标准
 - 业务域 / 业务过程
@@ -28,84 +26,65 @@
 - 数仓分层
 - 指标
 - 模型工作台
-- 数据开发
 
-核心关系：
-
-```text
-Semantic
-  -> Model
-  <-> Metric
-  -> Development
-```
+Data Development 不归属本域；它消费这里产生的标准、模型和指标定义。
 
 ## 3. 开发与运行
 
-用户目标：把设计持续变成稳定运行的数据生产过程。
+用户目标：把设计变成可发布、可编排、可运行、可恢复的数据生产过程。
 
-包含能力：
+包含：
 
-- 数据开发任务
+- 数据开发
 - 发布版本
 - 工作流
 - 调度
 - 实例运维
 - 补数 / 重跑
 
-Task Catalog、Job Runtime 等属于平台实现能力，不作为独立产品域。
+Task Catalog、Job Runtime 等属于实现能力，不作为独立产品域。
 
 ## 4. 数据资产与治理
 
-用户目标：知道“有什么、是否可信、谁负责、来自哪里、被谁使用”。
+用户目标：知道“有什么、是什么、是否可信、谁负责、来自哪里、被谁使用”。
 
-产品入口：
+包含：
 
-- 资产目录
-- Asset 360
+- 资产目录 / 资产详情
+- Metadata Catalog / Reconciliation（管理已采集元数据事实）
 - 血缘
-- 元数据采集与对账
+- 数据质量
+- 数据安全
+- 生命周期
+- 使用 / 影响分析
 
-治理事实来源：
-
-- Semantic
-- Quality
-- Security
-- Approval
-- Audit
-- Lifecycle
-- Metadata
-- Usage
-
-Asset 聚合事实，但不复制源域业务内容。
+Asset、Metadata、Lineage、Quality 等谁承担统一入口，属于待正式 Product Decision 的产品设计问题，本文件不提前决定。
 
 ## 5. 数据消费与服务
 
-用户目标：稳定、安全地使用数据。
+用户目标：稳定、安全、可追溯地使用数据。
 
-默认主链：
+包含：
 
-```text
-Production
-  -> Dataset
-      -> Analysis / Dashboard
-      -> Data Service
-      -> Agent
-      -> Export / downstream
-```
+- Dataset
+- Analysis
+- Dashboard
+- Digital Screen
+- Data Service
+- Agent
+- Export / downstream consumption
 
-Dataset 是推荐消费契约。
+默认消费契约尚需正式 Product Decision；本文件只声明这些能力属于同一消费产品域。
 
 ## 6. 专业治理解决方案
 
 ### MDM
 
-主数据属于完整专业解决方案，可以复用同步、质量、审批、数据服务、资产、血缘等平台能力。
+主数据属于专业解决方案，可以复用同步、质量、审批、服务、资产、血缘等平台能力。
 
-MDM 不应自行复制平台已有能力，也不决定 DataOps Core 的主产品边界。
+是否作为独立 Solution Pack 长期呈现，需由正式 Product Decision 确认。
 
 ## 7. 横切平台能力
-
-这些能力重要，但不等于一级用户产品域：
 
 - Project Space
 - RBAC
@@ -117,16 +96,14 @@ MDM 不应自行复制平台已有能力，也不决定 DataOps Core 的主产�
 - Storage
 - Scheduler
 
-它们通过其它产品能力被用户感知。
+它们通过其它产品能力被用户感知，不自然等于一级产品域。
 
 ## 8. 能力准入规则
 
-新增 Capability 前必须明确：
+新增 / 合并 / 拆分一级 Product Capability 前必须：
 
-- 是否能归入现有 6 个产品域；
-- 是否真的产生新的用户目标；
-- Truth Owner 是否已有；
-- 是否只是技术实现的新模块；
-- 是否必须新增一级导航。
-
-无法证明新的独立用户目标时，不新增产品域。
+1. 有明确独立用户目标；
+2. 明确 Truth Owner；
+3. 证明现有能力无法承载；
+4. 有 ACCEPTED Product Decision；
+5. 再进入 Feature Spec 和实现。

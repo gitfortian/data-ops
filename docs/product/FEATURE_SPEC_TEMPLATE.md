@@ -1,8 +1,16 @@
-# Feature Product Spec Template
+# Feature Product Spec
 
-> Feature 实现前复制本模板。小需求可以精简，但标记为 Required 的字段必须存在。
+Status: DRAFT  
+Feature ID: F-XXX  
+Owner:  
+Target Release: TBD  
+Created: YYYY-MM-DD  
+Related Decisions: None  
+Related Issues / Designs: None
 
-## 1. Summary — Required
+> 固定存放于 `docs/product/features/`。只有 APPROVED / IMPLEMENTING 状态可以指导当前实现。
+
+## 1. Objective — Required
 
 **Feature：**
 
@@ -12,13 +20,27 @@
 
 **Expected Outcome：**
 
-## 2. Product Context — Required
+**Why Now：**
 
-**Capability：**  
-从 `CAPABILITY_MAP.md` 选择。
+一句话说明为什么值得现在做，而不是“因为模块还缺这个功能”。
 
-**User Journey：**  
-从 `USER_JOURNEYS.md` 选择。
+## 2. Success Metrics
+
+> Acceptance 证明“做对了”；Success Metrics 证明“做这件事有价值”。两者不能互相替代。
+
+中型/大型 Feature 必须至少定义一个可观察成功信号。
+
+| Metric / Signal | Baseline | Target | Measurement / Evidence |
+|---|---|---|---|
+|  |  |  |  |
+
+如果当前无法量化，可以使用明确的行为/运营信号，但必须说明如何观察。
+
+## 3. Product Context — Required
+
+**Capability：**
+
+**User Journey：**
 
 **Entry Point：**
 
@@ -26,7 +48,21 @@
 
 **Next Step：**
 
-## 3. Truth & Ownership — Required
+**User Story（optional）：**
+
+> As a ..., I want ..., so that ...
+
+## 4. Assumptions & Validation
+
+把“事实”和“我们暂时相信的事情”分开。
+
+| Assumption | Why we believe it | How to validate | Result |
+|---|---|---|---|
+|  |  |  |  |
+
+AI 不得把未验证 Assumption 写成 Product Truth。
+
+## 5. Truth & Ownership — Required
 
 **Truth Owner：**
 
@@ -36,28 +72,39 @@
 
 **Source of Truth：**
 
-是否新增第二份业务真相：否 / 是（必须说明原因）
+是否新增第二份业务真相：否 / 是（必须说明）
 
-## 4. Reuse — Required
+## 6. Options & Scope
 
-本功能复用：
+对于存在明显方案选择的 Feature，列出考虑过的选项；跨产品域长期选择应提升为 Product Decision。
 
-- [ ] Project Space
-- [ ] RBAC / Resource Authorization
-- [ ] Dataset
-- [ ] Semantic
-- [ ] Metric
-- [ ] Asset
-- [ ] Lineage
-- [ ] Approval
-- [ ] Audit
-- [ ] Alert / Notification
-- [ ] Task / Workflow
-- [ ] 其它：
+### Chosen approach
 
-需要自建已有类似能力时，原因：
+### Alternatives considered
 
-## 5. User Experience — Required
+### In scope
+
+### Out of scope — Required
+
+## 7. Reuse — Required
+
+复用现有能力：
+
+- Project Space / RBAC
+- Dataset
+- Semantic
+- Metric
+- Asset
+- Lineage
+- Approval
+- Audit
+- Alert / Notification
+- Task / Workflow
+- Other
+
+需要重复建设时说明原因。
+
+## 8. User Experience — Required
 
 Happy Path：
 
@@ -69,13 +116,11 @@ Permission Denied：
 
 Loading / Long-running：
 
-跨域回链：
+Cross-domain backlink：
 
-## 6. Governance Impact
+## 9. Governance Impact
 
-是否影响：
-
-- Asset 状态
+- Asset / governed object state
 - Lineage
 - Quality
 - Security / Masking
@@ -84,11 +129,30 @@ Loading / Long-running：
 - Lifecycle
 - Usage / Impact
 
-如果“不影响”，是否符合产品逻辑？
+## 10. Open Questions
 
-## 7. API / Data / Architecture
+> 未解决问题要显式留在这里，不能由 AI 静默脑补。
 
-本节只记录产品已经决定后需要的实现影响，不在这里反向发明产品需求。
+| Question | Blocking? | Owner | Decision / Answer | Date |
+|---|---|---|---|---|
+|  |  |  |  |  |
+
+Status 升为 APPROVED 前，不允许仍存在未处理的 blocking question。
+
+## 11. Supporting Evidence
+
+按需链接：
+
+- User / customer evidence:
+- Current-state data:
+- Mockup / prototype:
+- Architecture diagram:
+- Related review:
+- Related issue:
+
+## 12. Architecture Impact
+
+本节只记录已决定产品形态对实现的影响：
 
 - API:
 - DB:
@@ -96,30 +160,29 @@ Loading / Long-running：
 - Events:
 - Compatibility:
 
-## 8. Acceptance — Required
+## 13. Acceptance — Required
 
 ### E2E Scenario
 
 Given:
+
 When:
+
 Then:
 
 ### Evidence
 
-- UI:
-- API:
-- DB / Event:
+- UI / API:
+- Persisted fact / event:
 - Audit:
 - Observability:
 
-## 9. Non-goals — Required
+## 14. Closeout
 
-明确本次不做：
+当状态更新为 SHIPPED 时：
 
-## 10. Product Decision
-
-需要拍板的问题：
-
-Decision:
-Date:
-Reason:
+- Success Metrics 当前结果：
+- 哪些长期规则已提升到 Product Truth：
+- 哪些规则已提升到 Domain Contract：
+- 哪些边界已提升到 Architecture Contract：
+- 当前实现证据：

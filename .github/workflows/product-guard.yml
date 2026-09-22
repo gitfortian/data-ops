@@ -1,0 +1,38 @@
+name: Product Guard
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  product-guard:
+    name: Product governance checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch pull request base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch origin "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+
+      - name: Self-test Product Guard
+        run: node scripts/product/test-product-guard.mjs
+
+      - name: Check product governance baseline
+        run: node scripts/product/check-product-baseline.mjs
+
+      - name: Check PR product impact
+        run: node scripts/product/check-product-pr.mjs
+
+      - name: Check product surface growth
+        run: node scripts/product/check-product-surface.mjs
