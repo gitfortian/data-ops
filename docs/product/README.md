@@ -15,19 +15,21 @@
 9. [LEGACY_DOC_INDEX.md](./LEGACY_DOC_INDEX.md) — 现有文档怎么解释
 10. [PRODUCT_GUARD.md](./PRODUCT_GUARD.md) — 哪些产品规则由 CI 自动守
 
+正式跨域产品决策记录在 [decisions/](./decisions/)；只有 ACCEPTED Decision 才属于当前 Product Truth。
+
 仓库级研发规则见根目录 [PRODUCT_STYLE.md](../../PRODUCT_STYLE.md)。
 
 AI / Agent 进入仓库时先读根目录 [AGENTS.md](../../AGENTS.md)。
 
 ## 文档分层
 
-```text
+~~~text
 Product Truth
   -> Feature Product Spec
   -> Domain Contract
   -> Architecture
   -> Code
-```
+~~~
 
 `docs/v1/**`、各类 review、gap backlog、dev-plan、历史 issue 文档是重要分析材料，但默认属于 Evidence / Historical Context，不高于本目录中的产品基线。
 
