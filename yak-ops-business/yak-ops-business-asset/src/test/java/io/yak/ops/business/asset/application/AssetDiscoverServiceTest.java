@@ -138,7 +138,7 @@ class AssetDiscoverServiceTest {
     LineageQueryService lineage = mock(LineageQueryService.class);
     LineageAsset root = mock(LineageAsset.class);
     when(root.id()).thenReturn(7L);
-    when(lineage.getAssetByKey("modeling:model:42")).thenReturn(root);
+    when(lineage.findAssetByKey("modeling:model:42")).thenReturn(Optional.of(root));
     when(lineage.graph(7L, LineageDirection.BOTH, 1)).thenReturn(null);
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
@@ -146,15 +146,47 @@ class AssetDiscoverServiceTest {
   }
 
   @Test
-  void lineageKeyWithoutRegistrationIsUnavailableNotError() {
+  void lineageKeyWithoutRegistrationIsEmpty() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
     when(securityProvider.getIfAvailable()).thenReturn(null);
     LineageQueryService lineage = mock(LineageQueryService.class);
-    when(lineage.getAssetByKey(anyString())).thenThrow(new IllegalArgumentException("missing"));
+    when(lineage.findAssetByKey(anyString())).thenReturn(Optional.empty());
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    assertEquals("UNAVAILABLE", section(service.detail(1L, "alice"), "lineage").status());
+    AssetDiscoverService.SectionView result = section(service.detail(1L, "alice"), "lineage");
+    assertEquals("EMPTY", result.status());
+    assertEquals("该资产尚未登记血缘", result.note());
+  }
+
+  @Test
+  void lineageQueryFailureRemainsUnavailable() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+    when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
+    when(securityProvider.getIfAvailable()).thenReturn(null);
+    LineageQueryService lineage = mock(LineageQueryService.class);
+    when(lineage.findAssetByKey(anyString())).thenThrow(new IllegalStateException("database down"));
+    when(lineageProvider.getIfAvailable()).thenReturn(lineage);
+
+    AssetDiscoverService.SectionView result = section(service.detail(1L, "alice"), "lineage");
+    assertEquals("UNAVAILABLE", result.status());
+    assertEquals("血缘查询暂不可用，请稍后重试", result.note());
+  }
+
+  @Test
+  void invalidLineageKeyRemainsUnavailable() {
+    AssetItemPO item = modelItem();
+    item.setAssetKey(" ");
+    when(assetAppService.requireItem(1L)).thenReturn(item);
+    when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
+    when(securityProvider.getIfAvailable()).thenReturn(null);
+    LineageQueryService lineage = mock(LineageQueryService.class);
+    when(lineage.findAssetByKey(anyString()))
+        .thenThrow(new IllegalArgumentException("assetKey 不能为空"));
+    when(lineageProvider.getIfAvailable()).thenReturn(lineage);
+
+    AssetDiscoverService.SectionView result = section(service.detail(1L, "alice"), "lineage");
+    assertEquals("UNAVAILABLE", result.status());
   }
 
   @Test

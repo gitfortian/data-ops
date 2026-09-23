@@ -7,6 +7,7 @@ import io.yak.ops.business.lineage.domain.LineageGraph;
 import io.yak.ops.business.lineage.domain.LineageRelation;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +57,11 @@ public class LineageQueryService {
       noRollbackFor = IllegalArgumentException.class)
   public LineageAsset getAssetByKey(String assetKey) {
     return assetReader.getAssetByKey(assetKey);
+  }
+
+  @Transactional(value = "yakBusinessTransactionManager", readOnly = true)
+  public Optional<LineageAsset> findAssetByKey(String assetKey) {
+    return assetReader.findAssetByKey(assetKey);
   }
 
   @Transactional(value = "yakBusinessTransactionManager", readOnly = true)
