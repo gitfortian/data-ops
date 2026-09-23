@@ -4,6 +4,7 @@ import io.yak.ops.business.audit.AuditEventType;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
+import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.field.SemanticFieldService;

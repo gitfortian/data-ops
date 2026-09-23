@@ -33,6 +33,7 @@ import io.yak.ops.business.semantic.api.StandardQueryApi;
 import io.yak.ops.business.semantic.api.StandardRecommendApi;
 import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
+import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
 import io.yak.ops.common.api.metric.MetricQueryApi;
 import io.yak.ops.common.api.metric.MetricQueryView;
@@ -115,7 +116,7 @@ class ModelDeriveServiceTest {
     when(processApi.listProcesses(null))
         .thenReturn(
             List.of(
-                new io.yak.ops.business.semantic.process.BusinessProcess(
+                new BusinessProcess(
                     PROCESS_ID, "order_create", "下单", 1L, null, null, "tester", null, 0,
                     "tester", null, null)));
     service =

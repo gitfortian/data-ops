@@ -14,6 +14,7 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.api.BusinessDomain;
+import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
 import io.yak.ops.business.semantic.repository.SemanticDomainRepository;

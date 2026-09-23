@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.layer;
 
 import io.yak.ops.business.semantic.api.LayerConfigApi;
+import io.yak.ops.business.semantic.api.WarehouseLayer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

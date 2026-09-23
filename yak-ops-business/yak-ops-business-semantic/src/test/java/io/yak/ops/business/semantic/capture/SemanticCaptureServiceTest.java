@@ -16,6 +16,7 @@ import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.api.SemanticStandardApi;
 import io.yak.ops.business.semantic.api.StandardCaptureApi;
 import io.yak.ops.business.semantic.api.Standard;
+import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.semantic.catalog.StandardCatalogService;
 import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.exception.SemanticException;
@@ -53,7 +54,7 @@ class SemanticCaptureServiceTest {
             StandardKind.TYPE,
             "varchar128",
             "短文本",
-            io.yak.ops.business.semantic.catalog.StandardStatus.ENABLED,
+            StandardStatus.ENABLED,
             1,
             0,
             false,
@@ -88,7 +89,7 @@ class SemanticCaptureServiceTest {
                   StandardKind.TYPE,
                   request.code(),
                   request.name(),
-                  io.yak.ops.business.semantic.catalog.StandardStatus.ENABLED,
+                  StandardStatus.ENABLED,
                   1,
                   0,
                   false,

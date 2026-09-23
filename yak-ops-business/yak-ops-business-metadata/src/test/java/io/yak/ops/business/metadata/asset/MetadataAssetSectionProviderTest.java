@@ -29,7 +29,10 @@ class MetadataAssetSectionProviderTest {
     String key = "table:4:warehouse.public.orders";
     SectionContext context = new SectionContext(key, "METADATA", "12");
     EntityDTO table = new EntityDTO(
-        12, "table", Map.of("name", "orders"), Map.of("engine", "doris"), Map.of());
+        12, "table", Map.of(
+            "name", "orders", "dataSourceId", "4", "databaseName", "warehouse",
+            "schemaName", "public", "tableName", "orders"),
+        Map.of("engine", "doris"), Map.of());
     EntityDTO column = new EntityDTO(
         13, "tableColumn", Map.of("name", "order_id", "dataType", "BIGINT"),
         Map.of(), Map.of());

@@ -3,6 +3,7 @@ package io.yak.ops.business.semantic.process;
 import io.yak.ops.business.semantic.api.ProcessApi;
 import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.api.BusinessDomain;
+import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
 import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.repository.SemanticDomainRepository;
