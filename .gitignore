@@ -44,6 +44,8 @@ apidoc
 # Python
 *.py[cod]
 
+# Yarn
+/yarn.lock
 
 spark-warehouse
 *.flattened-pom.xml
