@@ -218,6 +218,10 @@ const LineageEmptyState = () => (
 export default function LineagePage() {
   const [searchParams] = useSearchParams();
   const urlAssetKey = assetKeyFromParams(searchParams);
+  const returnAssetIdValue = searchParams.get('returnAssetId');
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
+    ? Number(returnAssetIdValue)
+    : undefined;
   const [viewFromUrl] = useState(readViewFromUrl);
   const [rootAsset, setRootAsset] = useState<LineageAsset>();
   const [graph, setGraph] = useState<LineageGraph>();
@@ -255,9 +259,14 @@ export default function LineagePage() {
     setRightPanelOpen(true);
     setLoadError('');
     if (syncUrl) {
-      history.replace(`/data-analysis/lineage?assetKey=${encodeURIComponent(asset.assetKey)}`);
+      const returnContext = returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0
+        ? `&returnAssetId=${returnAssetId}`
+        : '';
+      history.replace(
+        `/data-analysis/lineage?assetKey=${encodeURIComponent(asset.assetKey)}${returnContext}`,
+      );
     }
-  }, []);
+  }, [returnAssetId]);
 
   const loadAssetByKey = useCallback(async (assetKey: string, syncUrl = true) => {
     setLoading(true);
@@ -511,6 +520,15 @@ export default function LineagePage() {
           </div>
 
           <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto">
+            {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
+              <Button
+                size="small"
+                className="!h-9 !shrink-0 !px-3"
+                onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}
+              >
+                返回资产详情
+              </Button>
+            )}
             <Input
               allowClear
               variant="filled"

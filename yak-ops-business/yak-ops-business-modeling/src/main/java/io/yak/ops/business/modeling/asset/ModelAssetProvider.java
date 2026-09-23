@@ -74,6 +74,9 @@ public class ModelAssetProvider implements AssetProvider {
     put(extra, "status", po.getStatus());
     put(extra, "latestVersionNo", po.getLatestVersionNo());
     put(extra, "sourceTable", joinSource(po));
+    put(extra, "sourceDatasourceId", po.getSourceDatasourceId());
+    put(extra, "sourceDatabase", po.getSourceDatabase());
+    put(extra, "sourceTableName", po.getSourceTable());
     return new AssetDescriptor(
         ModelingLineageRegistrationService.modelAssetKey(po.getId()),
         String.valueOf(po.getId()),

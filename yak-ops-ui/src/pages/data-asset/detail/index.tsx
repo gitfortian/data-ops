@@ -22,6 +22,7 @@ import type {
   AssetSection,
   AssetTagRecord,
 } from '@/services/data-asset/types';
+import { toAssetSectionView, unavailableAssetSection } from '@/services/data-asset/section-view';
 import {
   ASSET_SOURCE_TYPE_LABELS,
   ASSET_TYPE_LABELS,
@@ -57,6 +58,45 @@ const SectionBlock = ({
   section?: AssetSection;
   children?: ReactNode;
 }) => {
+  const contractFacts = section && (
+    <Space direction="vertical" className="!mb-3 w-full" size="small">
+      {(section.ownerDomain || section.provenance || section.updatedAt || section.capability) && (
+        <Descriptions
+          size="small"
+          column={2}
+          items={[
+            ...(section.ownerDomain ? [{ key: 'owner', label: '事实归属域', children: section.ownerDomain }] : []),
+            ...(section.provenance
+              ? [
+                  { key: 'source', label: '来源', children: `${section.provenance.sourceDomain} · ${section.provenance.sourceId}` },
+                  { key: 'observed', label: '读取时间', children: formatAssetTime(section.provenance.observedAt) },
+                ]
+              : []),
+            ...(section.updatedAt ? [{ key: 'updated', label: '事实更新时间', children: formatAssetTime(section.updatedAt) }] : []),
+            ...(section.capability
+              ? [{
+                  key: 'capability',
+                  label: '能力状态',
+                  children: !section.capability.applicable
+                    ? '不适用'
+                    : section.capability.available
+                      ? '可用'
+                      : `不可用${section.capability.reason ? `：${section.capability.reason}` : ''}`,
+                }]
+              : []),
+          ]}
+        />
+      )}
+      {!!section.evidence?.length && (
+        <div className="text-[12px] text-[#667085]">
+          证据：{section.evidence.map((evidence) =>
+            `${evidence.sourceDomain} · ${evidence.referenceId} · ${formatAssetTime(evidence.observedAt)}`,
+          ).join('；')}
+        </div>
+      )}
+    </Space>
+  );
+
   if (!section || section.status !== 'OK') {
     const state = section?.status;
     const stateTitle = state === 'EMPTY'
@@ -73,11 +113,13 @@ const SectionBlock = ({
           title={stateTitle}
           description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
         />
+        {contractFacts}
       </Card>
     );
   }
   return (
     <Card title={title} size="small" className="!mb-4">
+      {contractFacts}
       {children}
       {section?.actions && section.actions.length > 0 && (
         <Space className="!mt-3">
@@ -128,20 +170,11 @@ const AssetDetailPage = () => {
           const sections = { ...current.sections };
           settled.forEach((entry, index) => {
             const sectionType = sectionTypes[index];
-            if (entry.status === 'rejected') return;
-            const { result: response } = entry.value;
-            const raw = response.summary.values;
-            const data = Object.prototype.hasOwnProperty.call(raw, 'data')
-                ? raw.data
-                : raw;
-            const section: AssetSection = {
-              status: response.status,
-              note: response.reason,
-              data,
-              actions: response.actions,
-            };
+            const section: AssetSection = entry.status === 'rejected'
+              ? unavailableAssetSection()
+              : toAssetSectionView(entry.value.result, assetId);
             if (sectionType === 'TECHNICAL_METADATA') {
-              sections.sourceAttrs = section as NonNullable<typeof sections.sourceAttrs>;
+              sections.technicalMetadata = section as NonNullable<typeof sections.technicalMetadata>;
             }
             if (sectionType === 'QUALITY') sections.quality = section;
             if (sectionType === 'SECURITY') {
@@ -200,7 +233,9 @@ const AssetDetailPage = () => {
     }
   }, [detail]);
 
-  const sourceLink = asset ? sourceObjectPath(asset.sourceType, asset.sourceId) : undefined;
+  const sourceLink = asset
+    ? sourceObjectPath(asset.sourceType, asset.sourceId, asset.id)
+    : undefined;
 
   const saveSnapshot = async () => {
     setSaving(true);
@@ -324,9 +359,17 @@ const AssetDetailPage = () => {
                     size="small"
                     column={3}
                     items={[
-                      { key: 'type', label: '资产类型', children: asset?.assetType ? (ASSET_TYPE_LABELS[asset.assetType] ?? asset.assetType) : '-' },
+                      {
+                        key: 'type',
+                        label: '资产类型',
+                        children: asset?.assetType
+                          ? asset.sourceType === 'MODEL'
+                            ? `模型（展示类型：${ASSET_TYPE_LABELS[asset.assetType] ?? asset.assetType}）`
+                            : ASSET_TYPE_LABELS[asset.assetType] ?? asset.assetType
+                          : '-',
+                      },
                       { key: 'source', label: '来源域', children: asset?.sourceType ? (ASSET_SOURCE_TYPE_LABELS[asset.sourceType] ?? asset.sourceType) : '-' },
-                      { key: 'owner', label: '负责人', children: asset?.owner || <span className="text-[#f5222d]">未设置</span> },
+                      { key: 'owner', label: '治理联系人（Asset 台账）', children: asset?.owner || <span className="text-[#f5222d]">未设置</span> },
                       { key: 'layer', label: '分层', children: asset?.layerCode ?? '-' },
                       { key: 'domain', label: '业务域', children: asset?.domainCode ?? '-' },
                       {
@@ -351,7 +394,11 @@ const AssetDetailPage = () => {
                     ]}
                   />
                 </Card>
-                <SectionBlock title="源域实时属性(唯一事实源)" section={detail?.sections.sourceAttrs}>
+                {asset?.sourceType !== 'METADATA' && (
+                <SectionBlock
+                  title={asset?.sourceType === 'MODEL' ? '建模来源映射（Modeling 域）' : '源域实时属性(归属域事实)'}
+                  section={detail?.sections.sourceAttrs}
+                >
                   {(() => {
                     const data = detail?.sections.sourceAttrs?.data;
                     const metadata = data as (Record<string, unknown> & {
@@ -367,17 +414,40 @@ const AssetDetailPage = () => {
                           items={[
                             { key: 'n', label: '源名称', children: String(metadata?.name ?? '-') },
                             { key: 'd', label: '源描述', children: String(metadata?.description ?? '-') },
+                            ...(asset?.sourceType === 'MODEL' && asset.sourceId
+                              ? [{ key: 'model-id', label: 'Model ID', children: asset.sourceId }]
+                              : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.modelCode
+                              ? [{ key: 'model-code', label: '模型表名/编码', children: String(data.extra.modelCode) }]
+                              : []),
                             ...(metadata?.databaseName ? [{ key: 'db', label: '数据库', children: String(metadata.databaseName) }] : []),
                             ...(metadata?.schemaName ? [{ key: 'schema', label: 'Schema', children: String(metadata.schemaName) }] : []),
                             ...(metadata?.tableName ? [{ key: 'table', label: '物理表', children: String(metadata.tableName) }] : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.sourceDatasourceId
+                              ? [{ key: 'model-source-datasource', label: 'Model 来源数据源 ID', children: String(data.extra.sourceDatasourceId) }]
+                              : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.sourceDatabase
+                              ? [{ key: 'model-source-database', label: 'Model 来源数据库', children: String(data.extra.sourceDatabase) }]
+                              : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.sourceTableName
+                              ? [{ key: 'model-source-table', label: 'Model 来源物理表', children: String(data.extra.sourceTableName) }]
+                              : []),
                             ...(data?.suggestedOwner ? [{ key: 'o', label: '源建议负责人', children: data.suggestedOwner }] : []),
                             ...(data?.updatedAt ? [{ key: 'u', label: '源更新时间', children: formatAssetTime(data.updatedAt) }] : []),
                             ...(data?.extra
-                              ? Object.entries(data.extra).map(([k, v]) => ({
-                                  key: k,
-                                  label: k,
-                                  children: String(v ?? '-'),
-                                }))
+                              ? Object.entries(data.extra)
+                                  .filter(([key]) => ![
+                                    'modelCode',
+                                    'sourceDatasourceId',
+                                    'sourceDatabase',
+                                    'sourceTableName',
+                                    ...(asset?.sourceType === 'MODEL' ? ['sourceTable'] : []),
+                                  ].includes(key))
+                                  .map(([k, v]) => ({
+                                    key: k,
+                                    label: k,
+                                    children: String(v ?? '-'),
+                                  }))
                               : []),
                             ...(metadata?.attributes
                               ? Object.entries(metadata.attributes).map(([key, value]) => ({
@@ -394,6 +464,53 @@ const AssetDetailPage = () => {
                             <div className="max-h-64 overflow-auto rounded border border-[#f0f0f0]">
                               {columns.map((column, index) => (
                                 <div key={String(column.assetKey ?? column.columnName ?? index)} className="flex flex-wrap gap-x-4 border-b border-[#f0f0f0] px-3 py-2 last:border-0">
+                                  <span className="font-medium">{String(column.columnName ?? column.name ?? `字段 ${index + 1}`)}</span>
+                                  {column.dataType != null && <span className="text-[#667085]">{String(column.dataType)}</span>}
+                                  {column.description != null && <span className="text-[#667085]">{String(column.description)}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </Space>
+                    );
+                  })()}
+                </SectionBlock>
+                )}
+                <SectionBlock title="技术元数据" section={detail?.sections.technicalMetadata}>
+                  {(() => {
+                    const metadata = detail?.sections.technicalMetadata?.data as (Record<string, unknown> & {
+                      columns?: Record<string, unknown>[];
+                      attributes?: Record<string, unknown>;
+                    }) | undefined;
+                    const columns = metadata?.columns ?? [];
+                    const scalarEntries = Object.entries(metadata ?? {}).filter(([key, value]) =>
+                      !['columns', 'attributes'].includes(key) && (value == null || typeof value !== 'object'),
+                    );
+                    return (
+                      <Space direction="vertical" className="w-full">
+                        <Descriptions
+                          size="small"
+                          column={2}
+                          items={[
+                            ...scalarEntries.map(([key, value]) => ({
+                              key,
+                              label: key,
+                              children: String(value ?? '-'),
+                            })),
+                            ...Object.entries(metadata?.attributes ?? {}).map(([key, value]) => ({
+                              key: `attribute-${key}`,
+                              label: key,
+                              children: typeof value === 'object' ? JSON.stringify(value) : String(value ?? '-'),
+                            })),
+                          ]}
+                        />
+                        {columns.length > 0 && (
+                          <div className="w-full">
+                            <div className="mb-2 text-[13px] font-medium">字段（{columns.length}）</div>
+                            <div className="max-h-64 overflow-auto rounded border border-[#f0f0f0]">
+                              {columns.map((column, index) => (
+                                <div key={String(column.assetKey ?? column.columnName ?? column.name ?? index)} className="flex flex-wrap gap-x-4 border-b border-[#f0f0f0] px-3 py-2 last:border-0">
                                   <span className="font-medium">{String(column.columnName ?? column.name ?? `字段 ${index + 1}`)}</span>
                                   {column.dataType != null && <span className="text-[#667085]">{String(column.dataType)}</span>}
                                   {column.description != null && <span className="text-[#667085]">{String(column.description)}</span>}

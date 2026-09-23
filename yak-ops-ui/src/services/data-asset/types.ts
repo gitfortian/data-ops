@@ -2,8 +2,7 @@
 
 export type AssetStatus = 'PENDING' | 'PUBLISHED' | 'OFFLINE' | 'IGNORED' | 'SOURCE_GONE';
 
-export type AssetSourceType =
-  | 'MODEL' | 'METRIC' | 'METADATA' | 'DATASET' | 'DASHBOARD' | 'CHART' | 'TASK' | 'MANUAL';
+export type AssetSourceType = 'MODEL' | 'METRIC' | 'METADATA' | 'DATASET' | 'DASHBOARD' | 'CHART' | 'TASK' | 'MANUAL';
 
 /** 展示类型(与 LineageAssetType 命名对齐;DOC 仅 MANUAL 用)。 */
 export type AssetType = 'TABLE' | 'METRIC' | 'DATASET' | 'DASHBOARD' | 'CHART' | 'TASK' | 'DOC';
@@ -69,19 +68,50 @@ export interface AssetSection<T = unknown> {
   note?: string | null;
   data?: T | null;
   actions?: { label: string; target: string; sourceId: string }[];
+  ownerDomain?: string;
+  updatedAt?: string | null;
+  evidence?: AssetSectionEvidence[];
+  provenance?: AssetSectionProvenance | null;
+  capability?: AssetSectionCapability | null;
+}
+
+export interface AssetSectionEvidence {
+  sourceDomain: string;
+  referenceId: string;
+  observedAt: string;
+}
+
+export interface AssetSectionProvenance {
+  sourceDomain: string;
+  sourceId: string;
+  observedAt: string;
+}
+
+export interface AssetSectionCapability {
+  applicable: boolean;
+  available: boolean;
+  reason?: string | null;
 }
 
 export interface AssetSectionContract {
-  sectionType: 'OVERVIEW' | 'TECHNICAL_METADATA' | 'QUALITY' | 'SECURITY'
-    | 'LINEAGE' | 'USAGE' | 'LIFECYCLE' | 'GOVERNANCE';
+  sectionType:
+    | 'OVERVIEW'
+    | 'TECHNICAL_METADATA'
+    | 'QUALITY'
+    | 'SECURITY'
+    | 'LINEAGE'
+    | 'USAGE'
+    | 'LIFECYCLE'
+    | 'GOVERNANCE';
   status: AssetSection['status'];
   ownerDomain: string;
   summary: { values: Record<string, unknown> };
   reason?: string | null;
   updatedAt?: string | null;
   actions: { label: string; target: string; sourceId: string }[];
-  provenance: { sourceDomain: string; sourceId: string; observedAt: string };
-  capability: { applicable: boolean; available: boolean; reason?: string | null };
+  provenance: AssetSectionProvenance | null;
+  capability: AssetSectionCapability;
+  evidence: AssetSectionEvidence[];
 }
 
 export interface AssetSourceAttrs {
@@ -152,6 +182,7 @@ export interface AssetDetailView {
   sections: {
     statusFlow?: AssetSection<AssetStatusFlowData>;
     sourceAttrs?: AssetSection<AssetSourceAttrs>;
+    technicalMetadata?: AssetSection<Record<string, unknown>>;
     lineage?: AssetSection<LineageGraphData>;
     security?: AssetSection<ClassificationData>;
     fields?: AssetSection;
@@ -215,11 +246,7 @@ export interface DirNode {
 }
 
 /** 预检缺口编码(与 AssetLifecycleService 对齐)。 */
-export type AssetGapCode =
-  | 'OWNER_MISSING'
-  | 'DESCRIPTION_MISSING'
-  | 'DIRECTORY_MISSING'
-  | 'SECURITY_LEVEL_SUGGESTED';
+export type AssetGapCode = 'OWNER_MISSING' | 'DESCRIPTION_MISSING' | 'DIRECTORY_MISSING' | 'SECURITY_LEVEL_SUGGESTED';
 
 export interface AssetGapItem {
   assetId: number;

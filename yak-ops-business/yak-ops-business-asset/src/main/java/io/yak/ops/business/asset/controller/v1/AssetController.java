@@ -113,8 +113,13 @@ public class AssetController {
       return Result.success(sourceContract);
     }
     SectionType type = SectionType.valueOf(sectionType.trim().toUpperCase());
-    SectionStatus status = SectionStatus.valueOf(view.status());
     AssetView asset = assetService.get(id);
+    return Result.success(toSectionResult(type, view, asset));
+  }
+
+  static AssetSectionResult toSectionResult(
+      SectionType type, AssetDiscoverService.SectionView view, AssetView asset) {
+    SectionStatus status = SectionStatus.valueOf(view.status());
     String owner = switch (type) {
       case OVERVIEW, GOVERNANCE -> "ASSET";
       case USAGE -> "FEDERATED";
@@ -130,15 +135,16 @@ public class AssetController {
     } else if (view.data() != null) {
       values.put("data", view.data());
     }
+    boolean hasReadableResult = status == SectionStatus.OK || status == SectionStatus.EMPTY;
     AssetSectionResult result = new AssetSectionResult(
         type, status, owner, new SectionMapSummary(values),
         status == SectionStatus.OK ? null : view.note(),
         null, sectionActions(type, status, asset), List.of(),
-        new SectionProvenance(owner, asset.assetKey(), Instant.now()),
+        hasReadableResult ? new SectionProvenance(owner, asset.assetKey(), Instant.now()) : null,
         new SectionCapability(status != SectionStatus.NOT_APPLICABLE,
             status == SectionStatus.OK || status == SectionStatus.EMPTY,
             status == SectionStatus.OK || status == SectionStatus.EMPTY ? null : view.note()));
-    return Result.success(result);
+    return result;
   }
 
   private static List<SectionAction> sectionActions(
