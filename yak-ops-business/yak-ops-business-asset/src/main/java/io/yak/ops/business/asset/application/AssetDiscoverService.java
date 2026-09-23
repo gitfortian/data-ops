@@ -143,8 +143,8 @@ public class AssetDiscoverService {
       };
     } catch (RuntimeException e) {
       result = SectionView.unavailable("分区查询失败");
-      LOG.warn("asset section query failed, assetId={}, sectionType={}, reason={}",
-          id, key, e.getMessage());
+      LOG.warn("asset section query failed, assetId={}, sectionType={}, errorType={}",
+          id, key, e.getClass().getSimpleName());
     }
     LOG.info("asset section query completed, assetId={}, sectionType={}, status={}, durationMs={}",
         id, key, result.status(), (System.nanoTime() - startedAt) / 1_000_000);
@@ -208,7 +208,7 @@ public class AssetDiscoverService {
               "lastResult", summary.lastResult() == null ? "NOT_RUN" : summary.lastResult().name(),
               "lastRunTime", summary.lastRunTime() == null ? "" : summary.lastRunTime())).toList()));
     } catch (RuntimeException e) {
-      return SectionView.unavailable("质量查询失败: " + e.getMessage());
+      return SectionView.unavailable("质量查询暂不可用，请稍后重试");
     }
   }
 
@@ -231,7 +231,7 @@ public class AssetDiscoverService {
           "bindingSource", facts.bindingSource() == null ? "" : facts.bindingSource(),
           "state", facts.state() == null ? "" : facts.state()));
     } catch (RuntimeException e) {
-      return SectionView.unavailable("生命周期查询失败: " + e.getMessage());
+      return SectionView.unavailable("生命周期查询暂不可用，请稍后重试");
     }
   }
 
@@ -300,7 +300,7 @@ public class AssetDiscoverService {
       data.put("extra", d.extra());
       return SectionView.ok(data);
     } catch (RuntimeException e) {
-      return SectionView.unavailable("源域调用失败: " + e.getMessage());
+      return SectionView.unavailable("源域暂不可用，请稍后重试");
     }
   }
 
@@ -325,7 +325,7 @@ public class AssetDiscoverService {
       }
       return SectionView.ok(service.graph(root.id(), LineageDirection.BOTH, LINEAGE_HOP));
     } catch (RuntimeException e) {
-      return SectionView.unavailable("血缘查询失败: " + e.getMessage());
+      return SectionView.unavailable("血缘查询暂不可用，请稍后重试");
     }
   }
 
@@ -341,7 +341,7 @@ public class AssetDiscoverService {
           ? SectionView.unavailable("未定级,或该资产无对应物理定级对象")
           : SectionView.ok(view);
     } catch (RuntimeException e) {
-      return SectionView.unavailable("安全查询失败: " + e.getMessage());
+      return SectionView.unavailable("安全查询暂不可用，请稍后重试");
     }
   }
 }

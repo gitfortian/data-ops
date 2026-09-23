@@ -131,7 +131,11 @@ const AssetDetailPage = () => {
             if (entry.status === 'rejected') return;
             const { result: response } = entry.value;
             const raw = response.summary.values;
-            const data = Object.prototype.hasOwnProperty.call(raw, 'data') ? raw.data : raw;
+            const data = sectionType === 'USAGE'
+              ? raw.views
+              : Object.prototype.hasOwnProperty.call(raw, 'data')
+                ? raw.data
+                : raw;
             const section: AssetSection = {
               status: response.status,
               note: response.reason,
@@ -499,9 +503,58 @@ const AssetDetailPage = () => {
                     );
                   })()}
                 </SectionBlock>
-                <SectionBlock title="质量" section={detail?.sections.quality} />
+                <SectionBlock title="质量" section={detail?.sections.quality}>
+                  {(() => {
+                    const quality = detail?.sections.quality?.data as {
+                      monitorCount?: number;
+                      monitors?: {
+                        monitorName?: string;
+                        ruleCount?: number;
+                        lastResult?: string;
+                        lastRunTime?: string;
+                      }[];
+                    } | undefined;
+                    if (!quality) return null;
+                    return (
+                      <Descriptions
+                        size="small"
+                        column={1}
+                        items={[
+                          { key: 'count', label: '监控数', children: quality.monitorCount ?? 0 },
+                          {
+                            key: 'monitors',
+                            label: '最近结论',
+                            children: quality.monitors?.map((monitor) =>
+                              `${monitor.monitorName ?? '未命名'}：${monitor.lastResult ?? '未运行'}（${monitor.ruleCount ?? 0} 条规则）`,
+                            ).join('；') ?? '暂无监控',
+                          },
+                        ]}
+                      />
+                    );
+                  })()}
+                </SectionBlock>
                 <SectionBlock title="字段" section={detail?.sections.fields} />
-                <SectionBlock title="生命周期" section={detail?.sections.ttl} />
+                <SectionBlock title="生命周期" section={detail?.sections.ttl}>
+                  {(() => {
+                    const ttl = detail?.sections.ttl?.data as {
+                      policyCode?: string;
+                      bindingSource?: string;
+                      state?: string;
+                    } | undefined;
+                    if (!ttl) return null;
+                    return (
+                      <Descriptions
+                        size="small"
+                        column={1}
+                        items={[
+                          { key: 'policy', label: '策略', children: ttl.policyCode || '未命中策略' },
+                          { key: 'binding', label: '绑定来源', children: ttl.bindingSource ?? '-' },
+                          { key: 'state', label: '下发状态', children: ttl.state ?? '-' },
+                        ]}
+                      />
+                    );
+                  })()}
+                </SectionBlock>
               </div>
             ),
           },

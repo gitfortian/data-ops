@@ -125,7 +125,7 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
     assertEquals("UNAVAILABLE", sourceAttrs.status());
-    assertTrue(sourceAttrs.note().contains("db down"));
+    assertEquals("源域暂不可用，请稍后重试", sourceAttrs.note());
   }
 
   @Test
