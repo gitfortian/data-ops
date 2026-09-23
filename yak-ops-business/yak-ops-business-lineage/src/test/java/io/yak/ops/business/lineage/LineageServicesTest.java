@@ -101,7 +101,7 @@ class LineageServicesTest {
   void batchSizingMakesThousandColumnLineageWritesBounded() {
     assertEquals(25, 2 * LineageBatchSupport.batchExecutionCount(2_000, 200)
         + LineageBatchSupport.batchExecutionCount(1_000, 200));
-    assertEquals(5, LineageBatchSupport.batchExecutionCount(1_000, 256));
+    assertEquals(4, LineageBatchSupport.batchExecutionCount(1_000, 256));
     assertEquals(0, LineageBatchSupport.batchExecutionCount(0, 200));
   }
 
