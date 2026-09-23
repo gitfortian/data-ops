@@ -26,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
+import io.yak.ops.spi.section.SectionProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -39,6 +41,7 @@ class AssetDiscoverServiceTest {
   private AssetStatusFlowService statusFlowService;
   private ObjectProvider<LineageQueryService> lineageProvider;
   private ObjectProvider<SecurityClassificationQueryApi> securityProvider;
+  private ObjectProvider<SectionProvider> sectionProviders;
   private AssetDiscoverService service;
 
   @BeforeEach
@@ -53,8 +56,10 @@ class AssetDiscoverServiceTest {
             "discovered", "已发现", "PASS", null, Map.of())), "described"));
     lineageProvider = mock(ObjectProvider.class);
     securityProvider = mock(ObjectProvider.class);
+    sectionProviders = mock(ObjectProvider.class);
+    when(sectionProviders.stream()).thenReturn(Stream.empty());
     service = new AssetDiscoverService(assetAppService, registry, viewRecordService,
-        statusFlowService, lineageProvider, securityProvider);
+        statusFlowService, lineageProvider, securityProvider, sectionProviders);
     when(viewRecordService.trend(anyLong(), anyInt()))
         .thenReturn(List.of(new AssetViewRecordService.DailyView("2026-09-19", 2)));
   }

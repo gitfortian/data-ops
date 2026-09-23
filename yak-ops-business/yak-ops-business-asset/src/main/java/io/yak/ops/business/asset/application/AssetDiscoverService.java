@@ -13,6 +13,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import io.yak.ops.spi.section.SectionContext;
+import io.yak.ops.spi.section.SectionContract;
+import io.yak.ops.spi.section.SectionProvider;
+import io.yak.ops.spi.section.SectionType;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -34,6 +39,7 @@ public class AssetDiscoverService {
   private final AssetStatusFlowService statusFlowService;
   private final ObjectProvider<LineageQueryService> lineageQuery;
   private final ObjectProvider<SecurityClassificationQueryApi> securityQuery;
+  private final ObjectProvider<SectionProvider> sectionProviders;
 
   /** status: OK | UNAVAILABLE;note 为不可用原因(含 N/A 语义,如"MANUAL 无源域")。 */
   public record SectionView(String status, String note, Object data) {
@@ -54,6 +60,7 @@ public class AssetDiscoverService {
     Map<String, SectionView> sections = new LinkedHashMap<>();
     sections.put("statusFlow", SectionView.ok(statusFlowService.flow(po)));
     sections.put("sourceAttrs", sourceAttrs(po));
+    sections.put("technicalMetadata", technicalMetadata(po));
     sections.put("lineage", lineage(po));
     sections.put("security", security(po));
     sections.put("fields", SectionView.unavailable("源域尚未提供字段级 SPI,详情页暂不展示"));
@@ -62,6 +69,25 @@ public class AssetDiscoverService {
     sections.put("trend", SectionView.ok(viewRecordService.trend(po.getId(), TREND_DAYS)));
     sections.put("health", health(po));
     return new AssetDetailView(AssetAppService.toView(po), sections);
+  }
+
+  /** Metadata owns physical facts; each provider failure is isolated here. */
+  private SectionView technicalMetadata(AssetItemPO po) {
+    if (!AssetSourceType.METADATA.name().equals(po.getSourceType())) {
+      return new SectionView("NOT_APPLICABLE", "当前资产类型不适用技术元数据", null);
+    }
+    List<SectionProvider> providers = sectionProviders.stream()
+        .filter(provider -> provider.sectionType() == SectionType.TECHNICAL_METADATA).toList();
+    if (providers.size() != 1) {
+      return SectionView.unavailable("技术元数据 Provider 缺失或重复");
+    }
+    try {
+      SectionContract result = providers.get(0).query(
+          new SectionContext(po.getAssetKey(), po.getSourceType(), po.getSourceId()));
+      return new SectionView(result.status().name(), result.reason(), result);
+    } catch (RuntimeException e) {
+      return SectionView.unavailable("技术元数据查询暂不可用");
+    }
   }
 
   /** 健康度:派生缓存 + 评分明细(§6.3 口径,不可手改). */

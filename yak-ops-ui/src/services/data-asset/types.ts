@@ -65,7 +65,7 @@ export interface AssetPageResult {
 
 /** 分区容错:OK|UNAVAILABLE,note 为不可用原因(不伪造空)。 */
 export interface AssetSection<T = unknown> {
-  status: 'OK' | 'UNAVAILABLE';
+  status: 'OK' | 'EMPTY' | 'NOT_APPLICABLE' | 'UNAVAILABLE' | 'PERMISSION_DENIED';
   note?: string | null;
   data?: T | null;
 }
@@ -138,6 +138,13 @@ export interface AssetDetailView {
   sections: {
     statusFlow?: AssetSection<AssetStatusFlowData>;
     sourceAttrs?: AssetSection<AssetSourceAttrs>;
+    technicalMetadata?: AssetSection<{
+      summary?: { dataSourceId?: string; databaseName?: string; schemaName?: string;
+        tableName?: string; entityStatus?: string; metadataEntityId?: string };
+      ownerDomain?: string;
+      provenance?: { sourceDomain?: string; sourceId?: string; observedAt?: string };
+      actions?: { label: string; target: string; sourceId: string }[];
+    }>;
     lineage?: AssetSection<LineageGraphData>;
     security?: AssetSection<ClassificationData>;
     fields?: AssetSection;

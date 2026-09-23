@@ -56,12 +56,12 @@ const SectionBlock = ({
   section?: AssetSection;
   children?: ReactNode;
 }) => {
-  if (!section || section.status === 'UNAVAILABLE') {
+  if (!section || section.status !== 'OK') {
     return (
       <Card title={title} size="small" className="!mb-4">
         <YakEmpty
           compact
-          title="暂不可用"
+          title={section?.status === 'EMPTY' ? '暂无元数据' : section?.status === 'NOT_APPLICABLE' ? '不适用' : section?.status === 'PERMISSION_DENIED' ? '无权查看' : '暂不可用'}
           description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
         />
       </Card>
@@ -314,6 +314,24 @@ const AssetDetailPage = () => {
                   })()}
                 </SectionBlock>
               </div>
+            ),
+          },
+          {
+            key: 'technicalMetadata',
+            label: '技术元数据',
+            children: (
+              <SectionBlock title="技术元数据（来源：Metadata）" section={detail?.sections.technicalMetadata}>
+                <Descriptions size="small" column={2} items={[
+                  { key: 'source', label: '数据源', children: detail?.sections.technicalMetadata?.data?.summary?.dataSourceId ?? '-' },
+                  { key: 'database', label: '数据库', children: detail?.sections.technicalMetadata?.data?.summary?.databaseName ?? '-' },
+                  { key: 'schema', label: 'Schema', children: detail?.sections.technicalMetadata?.data?.summary?.schemaName ?? '-' },
+                  { key: 'table', label: '表', children: detail?.sections.technicalMetadata?.data?.summary?.tableName ?? '-' },
+                  { key: 'status', label: '目录状态', children: detail?.sections.technicalMetadata?.data?.summary?.entityStatus ?? '-' },
+                ]} />
+                {detail?.sections.technicalMetadata?.data?.actions?.map((action) => (
+                  <Button key={action.sourceId} onClick={() => history.push(action.target)}>{action.label}</Button>
+                ))}
+              </SectionBlock>
             ),
           },
           {
