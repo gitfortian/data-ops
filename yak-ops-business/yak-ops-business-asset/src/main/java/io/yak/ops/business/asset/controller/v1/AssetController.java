@@ -11,6 +11,7 @@ import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.asset.approval.AssetPublishApprovalService;
 import io.yak.ops.business.asset.application.AssetAppService;
 import io.yak.ops.business.asset.application.AssetAppService.AssetView;
+import io.yak.ops.business.asset.api.AssetSectionResult;
 import io.yak.ops.business.asset.application.AssetDiscoverService;
 import io.yak.ops.business.asset.application.AssetDiscoverService.AssetDetailView;
 import io.yak.ops.business.asset.application.AssetLineageSummaryService;
@@ -33,12 +34,19 @@ import io.yak.ops.business.asset.controller.v1.dto.AssetRequests.ViewReportDTO;
 import io.yak.ops.common.constant.asset.AssetPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
+import io.yak.ops.spi.section.SectionAction;
+import io.yak.ops.spi.section.SectionCapability;
+import io.yak.ops.spi.section.SectionProvenance;
+import io.yak.ops.spi.section.SectionStatus;
+import io.yak.ops.spi.section.SectionType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -86,8 +94,67 @@ public class AssetController {
 
   @Operation(summary = "360° 详情(本体+分区容错聚合,design §6.4)")
   @GetMapping("/{id}")
-  public Result<AssetDetailView> detail(@PathVariable("id") Long id) {
-    return Result.success(discoverService.detail(id));
+  public Result<AssetDetailView> detail(
+      @PathVariable("id") Long id, HttpServletRequest httpRequest) {
+    return Result.success(discoverService.detail(
+        id, currentUserProvider.getCurrentUser(httpRequest)));
+  }
+
+  @Operation(summary = "按分区独立读取治理证据(五态、来源失败隔离)")
+  @GetMapping("/{id}/sections/{sectionType}")
+  public Result<AssetSectionResult> section(
+      @PathVariable("id") Long id,
+      @PathVariable("sectionType") String sectionType,
+      HttpServletRequest httpRequest) {
+    String operator = currentUserProvider.getCurrentUser(httpRequest);
+    AssetDiscoverService.SectionView view = discoverService.section(id, sectionType, operator);
+    SectionType type = SectionType.valueOf(sectionType.trim().toUpperCase());
+    SectionStatus status = SectionStatus.valueOf(view.status());
+    AssetView asset = assetService.get(id);
+    String owner = switch (type) {
+      case OVERVIEW, GOVERNANCE, USAGE -> "ASSET";
+      case TECHNICAL_METADATA -> "METADATA";
+      case QUALITY -> "QUALITY";
+      case SECURITY -> "SECURITY";
+      case LINEAGE -> "LINEAGE";
+      case LIFECYCLE -> "LIFECYCLE";
+    };
+    Map<String, Object> values = new LinkedHashMap<>();
+    if (view.data() instanceof Map<?, ?> map) {
+      map.forEach((key, value) -> values.put(String.valueOf(key), value));
+    } else if (view.data() != null) {
+      values.put("data", view.data());
+    }
+    AssetSectionResult result = new AssetSectionResult(
+        type, status, owner, new AssetSectionResult.Payload(values),
+        status == SectionStatus.OK ? null : view.note(),
+        null, sectionActions(type, status, asset), List.of(),
+        new SectionProvenance(owner, asset.assetKey(), Instant.now()),
+        new SectionCapability(status != SectionStatus.NOT_APPLICABLE,
+            status == SectionStatus.OK || status == SectionStatus.EMPTY,
+            status == SectionStatus.OK || status == SectionStatus.EMPTY ? null : view.note()));
+    return Result.success(result);
+  }
+
+  private static List<SectionAction> sectionActions(
+      SectionType type, SectionStatus status, AssetView asset) {
+    if (status != SectionStatus.OK) {
+      return List.of();
+    }
+    String returnContext = "returnAssetId=" + asset.id();
+    return switch (type) {
+      case TECHNICAL_METADATA -> List.of(new SectionAction(
+          "查看元数据工作台",
+          "/data-asset/catalog?view=entity&" + returnContext,
+          asset.assetKey()));
+      case LINEAGE -> List.of(new SectionAction(
+          "打开全屏血缘图谱",
+          "/data-analysis/lineage?assetKey=" + java.net.URLEncoder.encode(
+              asset.assetKey(), java.nio.charset.StandardCharsets.UTF_8)
+              + "&" + returnContext,
+          asset.assetKey()));
+      default -> List.of();
+    };
   }
 
   @Operation(summary = "跨域引用摘要:上游 N 张表/其中 M 张未稽核(M2-3,只读,供指标详情等消费侧)")

@@ -10,6 +10,7 @@ import {
   changeAssetOwner,
   detachAssetTag,
   getAssetDetail,
+  getAssetSection,
   getAssetTags,
   getDirectoryTree,
   listAssetTags,
@@ -56,12 +57,20 @@ const SectionBlock = ({
   section?: AssetSection;
   children?: ReactNode;
 }) => {
-  if (!section || section.status === 'UNAVAILABLE') {
+  if (!section || section.status !== 'OK') {
+    const state = section?.status;
+    const stateTitle = state === 'EMPTY'
+      ? '确认无数据'
+      : state === 'NOT_APPLICABLE'
+        ? '当前类型不适用'
+        : state === 'PERMISSION_DENIED'
+          ? '无权查看'
+          : '暂不可用';
     return (
       <Card title={title} size="small" className="!mb-4">
         <YakEmpty
           compact
-          title="暂不可用"
+          title={stateTitle}
           description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
         />
       </Card>
@@ -70,6 +79,15 @@ const SectionBlock = ({
   return (
     <Card title={title} size="small" className="!mb-4">
       {children}
+      {section?.actions && section.actions.length > 0 && (
+        <Space className="!mt-3">
+          {section.actions.map((action) => (
+            <Button key={action.target} type="link" onClick={() => history.push(action.target)}>
+              {action.label}
+            </Button>
+          ))}
+        </Space>
+      )}
     </Card>
   );
 };
@@ -96,6 +114,48 @@ const AssetDetailPage = () => {
     try {
       const result = await getAssetDetail(assetId);
       setDetail(result);
+      const sectionTypes = [
+        'TECHNICAL_METADATA', 'QUALITY', 'SECURITY', 'LINEAGE', 'USAGE', 'LIFECYCLE',
+      ] as const;
+      void Promise.allSettled(
+        sectionTypes.map(async (sectionType) => ({
+          sectionType,
+          result: await getAssetSection(assetId, sectionType),
+        })),
+      ).then((settled) => {
+        setDetail((current) => {
+          if (!current || current.asset.id !== assetId) return current;
+          const sections = { ...current.sections };
+          settled.forEach((entry, index) => {
+            const sectionType = sectionTypes[index];
+            if (entry.status === 'rejected') return;
+            const { result: response } = entry.value;
+            const raw = response.summary.values;
+            const data = Object.prototype.hasOwnProperty.call(raw, 'data') ? raw.data : raw;
+            const section: AssetSection = {
+              status: response.status,
+              note: response.reason,
+              data,
+              actions: response.actions,
+            };
+            if (sectionType === 'TECHNICAL_METADATA') {
+              sections.sourceAttrs = section as NonNullable<typeof sections.sourceAttrs>;
+            }
+            if (sectionType === 'QUALITY') sections.quality = section;
+            if (sectionType === 'SECURITY') {
+              sections.security = section as NonNullable<typeof sections.security>;
+            }
+            if (sectionType === 'LINEAGE') {
+              sections.lineage = section as NonNullable<typeof sections.lineage>;
+            }
+            if (sectionType === 'USAGE') {
+              sections.trend = section as NonNullable<typeof sections.trend>;
+            }
+            if (sectionType === 'LIFECYCLE') sections.ttl = section;
+          });
+          return { ...current, sections };
+        });
+      });
       setSnapshot({
         name: result.asset.name ?? '',
         description: result.asset.description ?? '',
