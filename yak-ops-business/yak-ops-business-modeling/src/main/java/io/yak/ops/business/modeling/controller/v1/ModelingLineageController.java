@@ -5,11 +5,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
-import io.yak.ops.business.lineage.controller.v1.converter.LineageViewConverter;
-import io.yak.ops.business.lineage.controller.v1.vo.LineageViews.GraphView;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.yak.ops.business.lineage.domain.LineageAsset;
+import io.yak.ops.business.lineage.domain.LineageAssetType;
 import io.yak.ops.business.lineage.domain.LineageDirection;
 import io.yak.ops.business.lineage.domain.LineageGraph;
+import io.yak.ops.business.lineage.domain.LineageRelation;
+import io.yak.ops.business.lineage.domain.LineageRelationType;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.modeling.lineage.ModelingLineageRegistrationService;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
@@ -18,6 +20,9 @@ import io.yak.ops.core.project.ProjectScope;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,10 +46,48 @@ public class ModelingLineageController {
 
   private final ModelingLineageRegistrationService registrationService;
   private final LineageQueryService lineageQueryService;
-  private final LineageViewConverter lineageViewConverter;
   private final CurrentUserProvider currentUserProvider;
 
   public record RegisterView(Long tableAssetId, int columnCount) {}
+
+  public record AssetView(
+      String id,
+      String assetKey,
+      LineageAssetType assetType,
+      String name,
+      String sourceType,
+      String sourceId,
+      String parentAssetId,
+      String dataSourceId,
+      String databaseName,
+      String schemaName,
+      String tableName,
+      String columnName,
+      JsonNode properties,
+      Instant createTime,
+      Instant updateTime) {}
+
+  public record RelationView(
+      String id,
+      String sourceAssetId,
+      String targetAssetId,
+      LineageRelationType relationType,
+      String sourceType,
+      String sourceId,
+      String expression,
+      BigDecimal confidence,
+      String version,
+      Instant observedAt,
+      JsonNode properties,
+      Instant createTime,
+      Instant updateTime) {}
+
+  public record GraphView(
+      AssetView root,
+      LineageDirection direction,
+      int depth,
+      List<AssetView> nodes,
+      List<RelationView> relations) {}
 
   @Operation(summary = "登记模型血缘（表+字段资产；幂等；用户确认后调用）")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
@@ -84,7 +127,33 @@ public class ModelingLineageController {
       return Result.success(null);
     }
     LineageGraph graph = lineageQueryService.graph(asset.id(), direction, depth);
-    return Result.success(lineageViewConverter.graph(graph));
+    return Result.success(toGraphView(graph));
+  }
+
+  private static GraphView toGraphView(LineageGraph value) {
+    List<AssetView> nodes = value.nodes().stream().map(ModelingLineageController::toAssetView).toList();
+    List<RelationView> relations =
+        value.relations().stream().map(ModelingLineageController::toRelationView).toList();
+    return new GraphView(toAssetView(value.root()), value.direction(), value.depth(), nodes, relations);
+  }
+
+  private static AssetView toAssetView(LineageAsset value) {
+    if (value == null) return null;
+    return new AssetView(
+        String.valueOf(value.id()), value.assetKey(), value.assetType(), value.name(),
+        value.sourceType(), value.sourceId(),
+        value.parentAssetId() == null ? null : String.valueOf(value.parentAssetId()),
+        value.dataSourceId(), value.databaseName(), value.schemaName(), value.tableName(),
+        value.columnName(), value.properties(), value.createTime(), value.updateTime());
+  }
+
+  private static RelationView toRelationView(LineageRelation value) {
+    if (value == null) return null;
+    return new RelationView(
+        String.valueOf(value.id()), String.valueOf(value.sourceAssetId()),
+        String.valueOf(value.targetAssetId()), value.relationType(), value.sourceType(),
+        value.sourceId(), value.expression(), value.confidence(), value.version(),
+        value.observedAt(), value.properties(), value.createTime(), value.updateTime());
   }
 
   private static String assetKey(Long modelId) {
