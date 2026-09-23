@@ -78,6 +78,26 @@ class CatalogQueryServiceTest {
   }
 
   @Test
+  void nullableDirectoryFactsAndSlotValuesRemainReadable() {
+    when(typeRegistry.allTypeDefinitions()).thenReturn(List.of(type("table", null)));
+    when(typeRegistry.fields("table"))
+        .thenReturn(List.of(field("tableName", "STRING", "s_str_1")));
+    Map<String, Object> row = tableRow(3L, "s_str_1");
+    row.put("ownerUser", null);
+    row.put("schemaName", null);
+    Map<String, Object> bag = new LinkedHashMap<>();
+    bag.put("s_str_1", null);
+    row.put("attributes", bag);
+
+    EntityDTO dto = service.toEntityDto(row);
+
+    assertThat(dto.facts())
+        .containsEntry("ownerUser", null)
+        .containsEntry("schemaName", null);
+    assertThat(dto.slotValues()).containsEntry("tableName", null);
+  }
+
+  @Test
   void childTypeComesFromTheParentPairDeclaredInTypeDef() {
     when(typeRegistry.allTypeDefinitions())
         .thenReturn(List.of(type("table", null), type("tableColumn", "table")));
