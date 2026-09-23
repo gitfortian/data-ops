@@ -18,9 +18,9 @@ import io.yak.ops.business.agent.config.AgentProperties;
 import io.yak.ops.business.agent.domain.DatasetQuerySpec;
 import io.yak.ops.business.agent.domain.QueryEvidenceRecord;
 import io.yak.ops.business.agent.repository.QueryLogRepository;
-import io.yak.ops.business.dataset.DatasetQueryColumn;
 import io.yak.ops.business.dataset.DatasetQueryResult;
 import io.yak.ops.business.dataset.DatasetQueryService;
+import io.yak.ops.core.execution.sql.SqlExecutionColumn;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +51,7 @@ class DatasetQueryGatewayTest {
         new DatasetQueryResult(
             null, 7L, 1L, 1,
             List.of(),
-            List.of(new DatasetQueryColumn("region", "region", "VARCHAR", 12, true)),
+            List.of(new SqlExecutionColumn("region", "region", "VARCHAR", 12, true)),
             List.of(List.of("east", 100)),
             1, false, 5);
     when(queryService.query(eq(7L), any())).thenReturn(result);

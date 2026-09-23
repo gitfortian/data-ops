@@ -23,6 +23,7 @@ import io.yak.ops.business.modeling.repository.ModelDirectoryRepository;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.repository.ModelTagRepository;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
+import io.yak.ops.business.semantic.api.BusinessDomain;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,7 +115,7 @@ class ModelCatalogServiceTest {
     when(processApi.listDomains())
         .thenReturn(
             List.of(
-                new io.yak.ops.business.semantic.domain.BusinessDomain(
+                new BusinessDomain(
                     7L, "trade", "交易", 0L, null, null, 0, null, null, null)));
     when(directoryRepository.insert(null, "交易", 7L))
         .thenReturn(directory(9L, null, "交易"));
@@ -333,8 +334,8 @@ class ModelCatalogServiceTest {
     when(repository.findById(42L)).thenReturn(Optional.of(existing));
     when(repository.updateBasics(eq(42L), anyString(), anyString(), any(), anyString()))
         .thenReturn(true);
-    io.yak.ops.business.semantic.domain.BusinessDomain domain =
-        new io.yak.ops.business.semantic.domain.BusinessDomain(
+    BusinessDomain domain =
+        new BusinessDomain(
             7L, "trade", "交易", 0L, null, null, 0, null, null, null);
     when(processApi.listDomains()).thenReturn(List.of(domain));
     when(directoryRepository.insert(null, "交易", 7L))
@@ -361,7 +362,7 @@ class ModelCatalogServiceTest {
     when(processApi.listDomains())
         .thenReturn(
             List.of(
-                new io.yak.ops.business.semantic.domain.BusinessDomain(
+                new BusinessDomain(
                     7L, "trade", "交易", 0L, null, null, 0, null, null, null)));
     when(directoryRepository.findByDomainId(7L))
         .thenReturn(Optional.of(directory(9L, null, "交易")));
@@ -386,9 +387,9 @@ class ModelCatalogServiceTest {
     when(processApi.listDomains())
         .thenReturn(
             List.of(
-                new io.yak.ops.business.semantic.domain.BusinessDomain(
+                new BusinessDomain(
                     1L, "trd", "交易域", 0L, null, null, 0, null, null, null),
-                new io.yak.ops.business.semantic.domain.BusinessDomain(
+                new BusinessDomain(
                     7L, "trade", "下单", 1L, null, null, 0, null, null, null)));
     // 父域目录已存在；子域目录已绑定但域改过名
     when(directoryRepository.findByDomainId(1L)).thenReturn(Optional.of(directory(3L, null, "交易域")));

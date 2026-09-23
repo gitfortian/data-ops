@@ -9,6 +9,7 @@ import io.yak.ops.business.semantic.api.LayerStdBindingReader.StdBindingStats;
 import io.yak.ops.business.semantic.api.LayerUsageReader;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardKind;
+import io.yak.ops.business.semantic.api.WarehouseLayer;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticLayerRepository;
 import io.yak.ops.business.semantic.repository.SemanticLayerTemplateRepository;

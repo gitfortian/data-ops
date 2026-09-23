@@ -178,7 +178,7 @@ public class AssetDiscoverService {
         table = factsValue.tableName();
       } else {
         Optional<AssetSourceType> sourceType = parseSourceType(po.getSourceType());
-        Optional<AssetDescriptor> descriptor = sourceType.flatMap(registry::find)
+        Optional<AssetDescriptor> descriptor = sourceType.flatMap(providerRegistry::find)
             .flatMap(provider -> provider.refresh(po.getSourceId()));
         if (descriptor.isPresent()) {
           Map<String, String> extra = descriptor.get().extra();

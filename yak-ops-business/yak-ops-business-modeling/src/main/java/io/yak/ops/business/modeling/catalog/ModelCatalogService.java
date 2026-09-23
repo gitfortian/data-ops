@@ -14,6 +14,9 @@ import io.yak.ops.business.modeling.repository.ModelDirectoryRepository;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.repository.ModelTagRepository;
 import io.yak.ops.business.audit.AuditTransactions;
+import io.yak.ops.business.semantic.api.BusinessDomain;
+import io.yak.ops.business.semantic.api.BusinessProcess;
+import io.yak.ops.business.semantic.api.WarehouseLayer;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import java.util.List;
 import java.util.Map;
@@ -158,13 +161,13 @@ public class ModelCatalogService {
     if (domainId == null || domainId <= 0) {
       return null;
     }
-    Map<Long, io.yak.ops.business.semantic.domain.BusinessDomain> domains;
+    Map<Long, BusinessDomain> domains;
     try {
       domains =
           processApi.listDomains().stream()
               .collect(
                   java.util.stream.Collectors.toMap(
-                      io.yak.ops.business.semantic.domain.BusinessDomain::id,
+                      BusinessDomain::id,
                       domain -> domain,
                       (first, second) -> first));
     } catch (RuntimeException ignored) {
@@ -175,12 +178,12 @@ public class ModelCatalogService {
 
   private Long ensureDirectoryChain(
       Long domainId,
-      Map<Long, io.yak.ops.business.semantic.domain.BusinessDomain> domains,
+      Map<Long, BusinessDomain> domains,
       java.util.Set<Long> visited) {
     if (domainId == null || domainId <= 0 || !visited.add(domainId)) {
       return null;
     }
-    io.yak.ops.business.semantic.domain.BusinessDomain domain = domains.get(domainId);
+    BusinessDomain domain = domains.get(domainId);
     if (domain == null) {
       return null;
     }
@@ -226,8 +229,8 @@ public class ModelCatalogService {
       return processApi.listProcesses(null).stream()
           .collect(
               java.util.stream.Collectors.toMap(
-                  io.yak.ops.business.semantic.process.BusinessProcess::id,
-                  io.yak.ops.business.semantic.process.BusinessProcess::name,
+                  BusinessProcess::id,
+                  BusinessProcess::name,
                   (first, second) -> first));
     } catch (RuntimeException ignored) {
       return Map.of();
@@ -240,8 +243,8 @@ public class ModelCatalogService {
       return processApi.listDomains().stream()
           .collect(
               java.util.stream.Collectors.toMap(
-                  io.yak.ops.business.semantic.domain.BusinessDomain::id,
-                  io.yak.ops.business.semantic.domain.BusinessDomain::name,
+                  BusinessDomain::id,
+                  BusinessDomain::name,
                   (first, second) -> first));
     } catch (RuntimeException ignored) {
       return Map.of();
@@ -255,8 +258,8 @@ public class ModelCatalogService {
           .filter(layer -> layer.databaseName() != null)
           .collect(
               java.util.stream.Collectors.toMap(
-                  io.yak.ops.business.semantic.layer.WarehouseLayer::code,
-                  io.yak.ops.business.semantic.layer.WarehouseLayer::databaseName,
+                  WarehouseLayer::code,
+                  WarehouseLayer::databaseName,
                   (first, second) -> first));
     } catch (RuntimeException ignored) {
       return Map.of();
