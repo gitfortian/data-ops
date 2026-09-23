@@ -10,6 +10,7 @@ import io.yak.ops.core.project.CurrentProject;
 import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -179,7 +180,7 @@ public class CatalogQueryService {
     return new EntityDTO(
         ((Number) facts.get("id")).longValue(),
         typeName,
-        Map.copyOf(facts),
+        immutableNullableMap(facts),
         bag,
         slotValues(typeName, bag));
   }
@@ -200,7 +201,12 @@ public class CatalogQueryService {
         out.put(field.getFieldName(), bag.get(location.jsonKey()));
       }
     }
-    return Map.copyOf(out);
+    return immutableNullableMap(out);
+  }
+
+  /** Directory facts can be SQL NULL; keep them visible without exposing a mutable map. */
+  private static <K, V> Map<K, V> immutableNullableMap(Map<K, V> values) {
+    return Collections.unmodifiableMap(new LinkedHashMap<>(values));
   }
 
   @SuppressWarnings("unchecked")
