@@ -65,6 +65,10 @@ const AssetCatalogPage = () => {
 
   // 概览驾驶舱待办深链:?statuses=SOURCE_GONE&grades=D;实体视图深链:?view=entity
   const [entryParams, setEntryParams] = useSearchParams();
+  const returnAssetIdValue = entryParams.get('returnAssetId');
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
+    ? Number(returnAssetIdValue)
+    : undefined;
   const [view, setView] = useState<CatalogView>(() =>
     entryParams.get('view') === 'entity' ? '元数据实体' : '台账资产',
   );
@@ -316,6 +320,11 @@ const AssetCatalogPage = () => {
           </div>
         </div>
         <Space size={12}>
+          {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
+            <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>
+              返回资产详情
+            </Button>
+          )}
           <Segmented
             options={['台账资产', '元数据实体']}
             value={view}

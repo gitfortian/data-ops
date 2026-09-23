@@ -58,6 +58,10 @@ class ModelAssetProviderTest {
     assertEquals("alice", item.suggestedOwner());
     assertEquals("ods_x", item.extra().get("modelCode"));
     assertEquals("PUBLISHED", item.extra().get("status"));
+    assertEquals("3", item.extra().get("sourceDatasourceId"));
+    assertEquals("crm_db", item.extra().get("sourceDatabase"));
+    assertEquals("crm_customer", item.extra().get("sourceTableName"));
+    assertEquals("crm_db.crm_customer", item.extra().get("sourceTable"));
     assertTrue(item.contentHash().length() == 64);
   }
 
@@ -98,6 +102,9 @@ class ModelAssetProviderTest {
     po.setStatus("PUBLISHED");
     po.setCreatedBy("alice");
     po.setUpdateTime(LocalDateTime.now());
+    po.setSourceDatasourceId(3L);
+    po.setSourceDatabase("crm_db");
+    po.setSourceTable("crm_customer");
     po.setDeleted(deleted);
     return po;
   }

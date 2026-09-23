@@ -254,6 +254,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
 const ModelingModelDetail: React.FC = () => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const returnAssetIdValue = new URLSearchParams(window.location.search).get('returnAssetId');
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
+    ? Number(returnAssetIdValue)
+    : undefined;
   const [structure, setStructure] = useState<ModelingStructureRecord>();
   const [modelInfo, setModelInfo] = useState<ModelingModelRecord | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2055,6 +2059,14 @@ const ModelingModelDetail: React.FC = () => {
           ) : null}
         </div>
         <div className="flex items-center gap-3">
+          {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
+            <YakButton
+              className="!h-9 !rounded-lg !px-4"
+              onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}
+            >
+              返回资产详情
+            </YakButton>
+          )}
           <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => void handleGenerateDdl()}>
             建库脚本
           </YakButton>

@@ -172,7 +172,7 @@ const AssetDetailPage = () => {
             const sectionType = sectionTypes[index];
             const section: AssetSection = entry.status === 'rejected'
               ? unavailableAssetSection()
-              : toAssetSectionView(entry.value.result);
+              : toAssetSectionView(entry.value.result, assetId);
             if (sectionType === 'TECHNICAL_METADATA') {
               sections.technicalMetadata = section as NonNullable<typeof sections.technicalMetadata>;
             }
@@ -233,7 +233,9 @@ const AssetDetailPage = () => {
     }
   }, [detail]);
 
-  const sourceLink = asset ? sourceObjectPath(asset.sourceType, asset.sourceId) : undefined;
+  const sourceLink = asset
+    ? sourceObjectPath(asset.sourceType, asset.sourceId, asset.id)
+    : undefined;
 
   const saveSnapshot = async () => {
     setSaving(true);
@@ -357,9 +359,17 @@ const AssetDetailPage = () => {
                     size="small"
                     column={3}
                     items={[
-                      { key: 'type', label: '资产类型', children: asset?.assetType ? (ASSET_TYPE_LABELS[asset.assetType] ?? asset.assetType) : '-' },
+                      {
+                        key: 'type',
+                        label: '资产类型',
+                        children: asset?.assetType
+                          ? asset.sourceType === 'MODEL'
+                            ? `模型（展示类型：${ASSET_TYPE_LABELS[asset.assetType] ?? asset.assetType}）`
+                            : ASSET_TYPE_LABELS[asset.assetType] ?? asset.assetType
+                          : '-',
+                      },
                       { key: 'source', label: '来源域', children: asset?.sourceType ? (ASSET_SOURCE_TYPE_LABELS[asset.sourceType] ?? asset.sourceType) : '-' },
-                      { key: 'owner', label: '负责人', children: asset?.owner || <span className="text-[#f5222d]">未设置</span> },
+                      { key: 'owner', label: '治理联系人（Asset 台账）', children: asset?.owner || <span className="text-[#f5222d]">未设置</span> },
                       { key: 'layer', label: '分层', children: asset?.layerCode ?? '-' },
                       { key: 'domain', label: '业务域', children: asset?.domainCode ?? '-' },
                       {
@@ -385,7 +395,10 @@ const AssetDetailPage = () => {
                   />
                 </Card>
                 {asset?.sourceType !== 'METADATA' && (
-                <SectionBlock title="源域实时属性(归属域事实)" section={detail?.sections.sourceAttrs}>
+                <SectionBlock
+                  title={asset?.sourceType === 'MODEL' ? '建模来源映射（Modeling 域）' : '源域实时属性(归属域事实)'}
+                  section={detail?.sections.sourceAttrs}
+                >
                   {(() => {
                     const data = detail?.sections.sourceAttrs?.data;
                     const metadata = data as (Record<string, unknown> & {
@@ -401,17 +414,40 @@ const AssetDetailPage = () => {
                           items={[
                             { key: 'n', label: '源名称', children: String(metadata?.name ?? '-') },
                             { key: 'd', label: '源描述', children: String(metadata?.description ?? '-') },
+                            ...(asset?.sourceType === 'MODEL' && asset.sourceId
+                              ? [{ key: 'model-id', label: 'Model ID', children: asset.sourceId }]
+                              : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.modelCode
+                              ? [{ key: 'model-code', label: '模型表名/编码', children: String(data.extra.modelCode) }]
+                              : []),
                             ...(metadata?.databaseName ? [{ key: 'db', label: '数据库', children: String(metadata.databaseName) }] : []),
                             ...(metadata?.schemaName ? [{ key: 'schema', label: 'Schema', children: String(metadata.schemaName) }] : []),
                             ...(metadata?.tableName ? [{ key: 'table', label: '物理表', children: String(metadata.tableName) }] : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.sourceDatasourceId
+                              ? [{ key: 'model-source-datasource', label: 'Model 来源数据源 ID', children: String(data.extra.sourceDatasourceId) }]
+                              : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.sourceDatabase
+                              ? [{ key: 'model-source-database', label: 'Model 来源数据库', children: String(data.extra.sourceDatabase) }]
+                              : []),
+                            ...(asset?.sourceType === 'MODEL' && data?.extra?.sourceTableName
+                              ? [{ key: 'model-source-table', label: 'Model 来源物理表', children: String(data.extra.sourceTableName) }]
+                              : []),
                             ...(data?.suggestedOwner ? [{ key: 'o', label: '源建议负责人', children: data.suggestedOwner }] : []),
                             ...(data?.updatedAt ? [{ key: 'u', label: '源更新时间', children: formatAssetTime(data.updatedAt) }] : []),
                             ...(data?.extra
-                              ? Object.entries(data.extra).map(([k, v]) => ({
-                                  key: k,
-                                  label: k,
-                                  children: String(v ?? '-'),
-                                }))
+                              ? Object.entries(data.extra)
+                                  .filter(([key]) => ![
+                                    'modelCode',
+                                    'sourceDatasourceId',
+                                    'sourceDatabase',
+                                    'sourceTableName',
+                                    ...(asset?.sourceType === 'MODEL' ? ['sourceTable'] : []),
+                                  ].includes(key))
+                                  .map(([k, v]) => ({
+                                    key: k,
+                                    label: k,
+                                    children: String(v ?? '-'),
+                                  }))
                               : []),
                             ...(metadata?.attributes
                               ? Object.entries(metadata.attributes).map(([key, value]) => ({

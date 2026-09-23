@@ -147,25 +147,38 @@ export const distributionLabel = (group: 'status' | 'grade' | 'type' | 'layer', 
 };
 
 /** 源对象跳转(详情"源对象"链接,menu.md 跳转契约)。 */
-export const sourceObjectPath = (sourceType?: string, sourceId?: string): string | undefined => {
+export const sourceObjectPath = (
+  sourceType?: string,
+  sourceId?: string,
+  returnAssetId?: number,
+): string | undefined => {
   if (!sourceId) return undefined;
+  let path: string | undefined;
   switch (sourceType) {
     case 'MODEL':
-      return `/modeling/models/${sourceId}`;
+      path = `/modeling/models/${sourceId}`;
+      break;
     case 'METRIC':
-      return `/metric/manage/${sourceId}`;
+      path = `/metric/manage/${sourceId}`;
+      break;
     case 'METADATA':
       // sourceId 是目录行 id，实体视图暂不支持按 id 定位，先跳视图本身
-      return '/data-asset/catalog?view=entity';
+      path = '/data-asset/catalog?view=entity';
+      break;
     case 'DATASET':
-      return `/dataset/${sourceId}`;
+      path = `/dataset/${sourceId}`;
+      break;
     case 'DASHBOARD':
-      return `/dashboard/${sourceId}`;
+      path = `/dashboard/${sourceId}`;
+      break;
     case 'TASK':
-      return `/data-development/task/${sourceId}`;
+      path = `/data-development/task/${sourceId}`;
+      break;
     default:
       return undefined;
   }
+  if (sourceType !== 'MODEL' || !returnAssetId) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}returnAssetId=${returnAssetId}`;
 };
 
 export const formatAssetTime = (value?: string | null) =>

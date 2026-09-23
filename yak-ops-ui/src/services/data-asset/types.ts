@@ -109,7 +109,7 @@ export interface AssetSectionContract {
   reason?: string | null;
   updatedAt?: string | null;
   actions: { label: string; target: string; sourceId: string }[];
-  provenance: AssetSectionProvenance;
+  provenance: AssetSectionProvenance | null;
   capability: AssetSectionCapability;
   evidence: AssetSectionEvidence[];
 }
