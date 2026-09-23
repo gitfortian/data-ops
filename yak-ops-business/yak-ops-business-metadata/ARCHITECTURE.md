@@ -4,6 +4,7 @@
 
 ```
 io.yak.ops.business.metadata
+├── asset/      MetadataTableAssetProvider · MetadataAssetSectionProvider（物理表资产投影与技术元数据分区读适配器）
 ├── config/       ConditionalOnMetadataPersistence · MetadataPersistenceConfiguration(Flyway/MapperScan)
 │                 · MetadataSchedulingConfiguration(@EnableScheduling，可单独摘除)
 ├── api/          MetadataRegistrationApi + RegisterCommand(源域调用，ticket 130 已落地；

@@ -13,6 +13,10 @@ import io.yak.ops.business.security.api.ClassificationView;
 import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.common.bean.po.asset.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetSourceType;
+import io.yak.ops.spi.section.SectionContext;
+import io.yak.ops.spi.section.SectionContract;
+import io.yak.ops.spi.section.SectionProvider;
+import io.yak.ops.spi.section.SectionType;
 import io.yak.framework.security.service.RbacPermissionService;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,6 +51,7 @@ public class AssetDiscoverService {
   private final ObjectProvider<QualityMonitorReader> qualityReader;
   private final ObjectProvider<AssetStatusModelFacts> modelFacts;
   private final ObjectProvider<AssetStatusTtlFacts> ttlFacts;
+  private final ObjectProvider<SectionProvider> sectionProviders;
 
   /** Five-state section result; note explains every state other than OK. */
   public record SectionView(String status, String note, Object data) {
@@ -130,14 +135,11 @@ public class AssetDiscoverService {
           "status", po.getStatus(),
           "owner", po.getOwner() == null ? "" : po.getOwner(),
           "directoryId", po.getDirectoryId() == null ? "" : po.getDirectoryId()));
-      case "TECHNICAL_METADATA" -> sourceAttrs(po);
+      case "TECHNICAL_METADATA" -> technicalMetadata(po);
       case "QUALITY" -> quality(po);
       case "SECURITY" -> security(po);
       case "LINEAGE" -> lineage(po);
-      case "USAGE" -> SectionView.ok(Map.of(
-          "activityType", "ASSET_PAGE_VIEW",
-          "message", "页面浏览是资产页活动，不代表业务消费",
-          "views", viewRecordService.trend(po.getId(), TREND_DAYS)));
+      case "USAGE" -> usage(po);
       case "LIFECYCLE" -> lifecycle(po);
         default -> throw new IllegalArgumentException("未知资产分区: " + sectionType);
       };
@@ -253,6 +255,70 @@ public class AssetDiscoverService {
       return true;
     }
     return hasPermission(operator, permission);
+  }
+
+  private SectionView technicalMetadata(AssetItemPO po) {
+    SectionContext context =
+        new SectionContext(po.getAssetKey(), po.getSourceType(), po.getSourceId());
+    Optional<SectionProvider> provider = sectionProviders.orderedStream()
+        .filter(candidate -> candidate.sectionType() == SectionType.TECHNICAL_METADATA)
+        .filter(candidate -> candidate.supports(context))
+        .findFirst();
+    if (provider.isEmpty()) {
+      return sourceAttrs(po);
+    }
+    SectionContract contract = provider.get().query(context);
+    return new SectionView(contract.status().name(), contract.reason(), contract);
+  }
+
+  private SectionView usage(AssetItemPO po) {
+    Map<String, Object> data = new LinkedHashMap<>();
+    try {
+      data.put("pageActivity", Map.of(
+          "ownerDomain", "ASSET",
+          "status", "OK",
+          "views", viewRecordService.trend(po.getId(), TREND_DAYS)));
+    } catch (RuntimeException e) {
+      data.put("pageActivity", Map.of(
+          "ownerDomain", "ASSET",
+          "status", "UNAVAILABLE",
+          "reason", "资产页活动暂不可用"));
+    }
+
+    LineageQueryService service = lineageQuery.getIfAvailable();
+    if (service == null) {
+      data.put("structuralUsage", Map.of(
+          "ownerDomain", "LINEAGE",
+          "status", "UNAVAILABLE",
+          "reason", "血缘服务未装配"));
+    } else {
+      try {
+        LineageAsset root = service.getAssetByKey(po.getAssetKey());
+        if (root == null) {
+          data.put("structuralUsage", Map.of(
+              "ownerDomain", "LINEAGE",
+              "status", "UNAVAILABLE",
+              "reason", "血缘域尚无该资产登记"));
+        } else {
+          int downstreamCount =
+              service.graph(root.id(), LineageDirection.DOWNSTREAM, LINEAGE_HOP)
+                  .relations().size();
+          data.put("structuralUsage", Map.of(
+              "ownerDomain", "LINEAGE",
+              "status", "OK",
+              "downstreamReferenceCount", downstreamCount));
+        }
+      } catch (RuntimeException e) {
+        data.put("structuralUsage", Map.of(
+            "ownerDomain", "LINEAGE",
+            "status", "UNAVAILABLE",
+            "reason", "结构引用暂不可用"));
+      }
+    }
+    data.put("businessConsumption", Map.of(
+        "status", "UNAVAILABLE",
+        "reason", "当前尚未接入消费域的调用/引用读侧"));
+    return SectionView.ok(data);
   }
 
   private boolean hasPermission(String operator, String permission) {

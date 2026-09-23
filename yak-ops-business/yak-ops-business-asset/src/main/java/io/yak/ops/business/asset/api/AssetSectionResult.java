@@ -17,15 +17,13 @@ public record AssetSectionResult(
     SectionType sectionType,
     SectionStatus status,
     String ownerDomain,
-    Payload summary,
+    SectionSummary summary,
     String reason,
     Instant updatedAt,
     List<SectionAction> actions,
     List<SectionEvidence> evidence,
     SectionProvenance provenance,
     SectionCapability capability) implements SectionContract {
-
-  public record Payload(Map<String, Object> values) implements SectionSummary {}
 
   public AssetSectionResult {
     actions = actions == null ? List.of() : List.copyOf(actions);

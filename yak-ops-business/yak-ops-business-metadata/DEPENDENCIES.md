@@ -13,6 +13,7 @@
 | `yak-ops-business-lifecycle` | 编译（optional，只读） | `api` 包读 `yak_lc_storage_snapshot` 展示存储量（**本模块不建 mapper 查 `yak_lc_*`**） |
 | `yak-ops-business-semantic` | 编译（optional） | 分层/域字典（`layer_code` 回填与 facet 展示） |
 | `yak-ops-business-asset` | 编译（optional） | 标签字典复用（`label_code`） |
+| `yak-ops-spi` | 编译 | 实现 `SectionProvider`，由 Metadata 作为技术元数据事实的 owner 提供物理表/列详情 |
 | 调度引擎 `yak-schedule-api` | 编译 | 采集/对账 cron，本模块 handler 被回调；未装配时静默跳过 |
 | 统计方言 `MetadataStatsProvider` | 模块内 SPI | MySQL/Doris 各自的行数/分区/最后 DDL；`supports()` 路由，返回 null 记 UNKNOWN |
 
@@ -26,6 +27,7 @@
 | modeling（符合性对账） | `api/MetadataQueryApi` | `listPhysicalColumns` / `findPhysicalTable`（判定规则留在 modeling，复用其 `StandardFieldMatcher`） |
 | quality（表/列选择器） | `api/MetadataQueryApi` | 已采集清单，秒开；未覆盖时回落实时 catalog 并标注来源 |
 | asset（TABLE provider） | 本模块实现 `asset/api/AssetProvider` | `AssetSourceType.TABLE` + `MetadataTableAssetProvider`，assetKey 与目录同源 |
+| asset（技术元数据分区） | 本模块实现 `spi/section/SectionProvider` | `MetadataAssetSectionProvider` 读取 `MetadataQueryApi` 的物理表与列事实；Asset 只聚合并渲染 |
 | lineage | 本模块**不调**其内部包 | 共表：lineage 继续 own `asset_key/asset_type/parent_asset_id/properties` |
 | 前端目录/详情/筛选 | `GET /api/v1/metadata/types` | 元模型自省 = 渲染的唯一来源（新类型接入不改 `.tsx`） |
 

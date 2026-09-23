@@ -131,9 +131,7 @@ const AssetDetailPage = () => {
             if (entry.status === 'rejected') return;
             const { result: response } = entry.value;
             const raw = response.summary.values;
-            const data = sectionType === 'USAGE'
-              ? raw.views
-              : Object.prototype.hasOwnProperty.call(raw, 'data')
+            const data = Object.prototype.hasOwnProperty.call(raw, 'data')
                 ? raw.data
                 : raw;
             const section: AssetSection = {
@@ -356,24 +354,55 @@ const AssetDetailPage = () => {
                 <SectionBlock title="源域实时属性(唯一事实源)" section={detail?.sections.sourceAttrs}>
                   {(() => {
                     const data = detail?.sections.sourceAttrs?.data;
+                    const metadata = data as (Record<string, unknown> & {
+                      columns?: Record<string, unknown>[];
+                      attributes?: Record<string, unknown>;
+                    }) | undefined;
+                    const columns = metadata?.columns ?? [];
                     return (
-                      <Descriptions
-                        size="small"
-                        column={2}
-                        items={[
-                          { key: 'n', label: '源名称', children: data?.name ?? '-' },
-                          { key: 'd', label: '源描述', children: data?.description ?? '-' },
-                          { key: 'o', label: '源建议负责人', children: data?.suggestedOwner ?? '-' },
-                          { key: 'u', label: '源更新时间', children: formatAssetTime(data?.updatedAt) },
-                          ...(data?.extra
-                            ? Object.entries(data.extra).map(([k, v]) => ({
-                                key: k,
-                                label: k,
-                                children: String(v ?? '-'),
-                              }))
-                            : []),
-                        ]}
-                      />
+                      <Space direction="vertical" className="w-full">
+                        <Descriptions
+                          size="small"
+                          column={2}
+                          items={[
+                            { key: 'n', label: '源名称', children: String(metadata?.name ?? '-') },
+                            { key: 'd', label: '源描述', children: String(metadata?.description ?? '-') },
+                            ...(metadata?.databaseName ? [{ key: 'db', label: '数据库', children: String(metadata.databaseName) }] : []),
+                            ...(metadata?.schemaName ? [{ key: 'schema', label: 'Schema', children: String(metadata.schemaName) }] : []),
+                            ...(metadata?.tableName ? [{ key: 'table', label: '物理表', children: String(metadata.tableName) }] : []),
+                            ...(data?.suggestedOwner ? [{ key: 'o', label: '源建议负责人', children: data.suggestedOwner }] : []),
+                            ...(data?.updatedAt ? [{ key: 'u', label: '源更新时间', children: formatAssetTime(data.updatedAt) }] : []),
+                            ...(data?.extra
+                              ? Object.entries(data.extra).map(([k, v]) => ({
+                                  key: k,
+                                  label: k,
+                                  children: String(v ?? '-'),
+                                }))
+                              : []),
+                            ...(metadata?.attributes
+                              ? Object.entries(metadata.attributes).map(([key, value]) => ({
+                                  key: `attribute-${key}`,
+                                  label: key,
+                                  children: typeof value === 'object' ? JSON.stringify(value) : String(value ?? '-'),
+                                }))
+                              : []),
+                          ]}
+                        />
+                        {columns.length > 0 && (
+                          <div className="w-full">
+                            <div className="mb-2 text-[13px] font-medium">字段（{columns.length}）</div>
+                            <div className="max-h-64 overflow-auto rounded border border-[#f0f0f0]">
+                              {columns.map((column, index) => (
+                                <div key={String(column.assetKey ?? column.columnName ?? index)} className="flex flex-wrap gap-x-4 border-b border-[#f0f0f0] px-3 py-2 last:border-0">
+                                  <span className="font-medium">{String(column.columnName ?? column.name ?? `字段 ${index + 1}`)}</span>
+                                  {column.dataType != null && <span className="text-[#667085]">{String(column.dataType)}</span>}
+                                  {column.description != null && <span className="text-[#667085]">{String(column.description)}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </Space>
                     );
                   })()}
                 </SectionBlock>
@@ -464,20 +493,52 @@ const AssetDetailPage = () => {
             children: (
               <SectionBlock title="近 30 天资产页浏览" section={detail?.sections.trend}>
                 {(() => {
-                  const trend = (detail?.sections.trend?.data ?? []) as { date: string; count: number }[];
+                  const rawUsage = detail?.sections.trend?.data as
+                    | {
+                        pageActivity?: { status?: string; views?: { date: string; count: number }[] };
+                        structuralUsage?: { status?: string; downstreamReferenceCount?: number; reason?: string };
+                        businessConsumption?: { status?: string; reason?: string };
+                      }
+                    | { date: string; count: number }[]
+                    | undefined;
+                  const trend = (Array.isArray(rawUsage)
+                    ? rawUsage
+                    : rawUsage?.pageActivity?.views ?? []) as { date: string; count: number }[];
                   const max = Math.max(1, ...trend.map((point) => point.count));
                   return (
-                    <div className="flex h-[120px] items-end gap-[3px]">
-                      {trend.map((point) => (
-                        <Tooltip key={point.date} title={`${point.date}: ${point.count} 次`}>
-                          <div
-                            className="flex-1 rounded-t bg-[#FE2C55]/70"
-                            style={{ height: `${Math.max(4, (point.count / max) * 100)}%` }}
-                          />
-                        </Tooltip>
-                      ))}
-                      {trend.length === 0 && <span className="text-[12px] text-[#98a2b3]">近 30 天无浏览</span>}
-                    </div>
+                    <Space direction="vertical" className="w-full">
+                      {!Array.isArray(rawUsage) && rawUsage && (
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            {
+                              key: 'lineage',
+                              label: '下游结构引用（Lineage）',
+                              children: rawUsage.structuralUsage?.status === 'OK'
+                                ? rawUsage.structuralUsage.downstreamReferenceCount ?? 0
+                                : rawUsage.structuralUsage?.reason ?? '暂不可用',
+                            },
+                            {
+                              key: 'business',
+                              label: '业务消费',
+                              children: rawUsage.businessConsumption?.reason ?? '尚未接入消费域读侧',
+                            },
+                          ]}
+                        />
+                      )}
+                      <div className="flex h-[120px] items-end gap-[3px]">
+                        {trend.map((point) => (
+                          <Tooltip key={point.date} title={point.date + ': ' + point.count + ' 次'}>
+                            <div
+                              className="flex-1 rounded-t bg-[#FE2C55]/70"
+                              style={{ height: String(Math.max(4, (point.count / max) * 100)) + '%' }}
+                            />
+                          </Tooltip>
+                        ))}
+                        {trend.length === 0 && <span className="text-[12px] text-[#98a2b3]">近 30 天无浏览</span>}
+                      </div>
+                    </Space>
                   );
                 })()}
               </SectionBlock>

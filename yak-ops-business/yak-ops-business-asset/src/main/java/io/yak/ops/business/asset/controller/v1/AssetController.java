@@ -37,6 +37,7 @@ import io.yak.ops.core.project.ProjectScope;
 import io.yak.ops.spi.section.SectionAction;
 import io.yak.ops.spi.section.SectionCapability;
 import io.yak.ops.spi.section.SectionProvenance;
+import io.yak.ops.spi.section.SectionMapSummary;
 import io.yak.ops.spi.section.SectionStatus;
 import io.yak.ops.spi.section.SectionType;
 import jakarta.servlet.http.HttpServletRequest;
@@ -108,11 +109,15 @@ public class AssetController {
       HttpServletRequest httpRequest) {
     String operator = currentUserProvider.getCurrentUser(httpRequest);
     AssetDiscoverService.SectionView view = discoverService.section(id, sectionType, operator);
+    if (view.data() instanceof AssetSectionResult sourceContract) {
+      return Result.success(sourceContract);
+    }
     SectionType type = SectionType.valueOf(sectionType.trim().toUpperCase());
     SectionStatus status = SectionStatus.valueOf(view.status());
     AssetView asset = assetService.get(id);
     String owner = switch (type) {
-      case OVERVIEW, GOVERNANCE, USAGE -> "ASSET";
+      case OVERVIEW, GOVERNANCE -> "ASSET";
+      case USAGE -> "FEDERATED";
       case TECHNICAL_METADATA -> "METADATA";
       case QUALITY -> "QUALITY";
       case SECURITY -> "SECURITY";
@@ -126,7 +131,7 @@ public class AssetController {
       values.put("data", view.data());
     }
     AssetSectionResult result = new AssetSectionResult(
-        type, status, owner, new AssetSectionResult.Payload(values),
+        type, status, owner, new SectionMapSummary(values),
         status == SectionStatus.OK ? null : view.note(),
         null, sectionActions(type, status, asset), List.of(),
         new SectionProvenance(owner, asset.assetKey(), Instant.now()),

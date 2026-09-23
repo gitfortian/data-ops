@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 
 import io.yak.ops.business.asset.api.AssetDescriptor;
 import io.yak.ops.business.asset.api.AssetProvider;
+import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
@@ -46,6 +47,7 @@ class AssetDiscoverServiceTest {
   private ObjectProvider<io.yak.ops.business.quality.monitor.QualityMonitorReader> qualityProvider;
   private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusModelFacts> modelFactsProvider;
   private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusTtlFacts> ttlFactsProvider;
+  private ObjectProvider<SectionProvider> sectionProviders;
   private io.yak.framework.security.service.RbacPermissionService permissionService;
   private AssetDiscoverService service;
 
@@ -68,9 +70,11 @@ class AssetDiscoverServiceTest {
     qualityProvider = mock(ObjectProvider.class);
     modelFactsProvider = mock(ObjectProvider.class);
     ttlFactsProvider = mock(ObjectProvider.class);
+    sectionProviders = mock(ObjectProvider.class);
+    when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.empty());
     service = new AssetDiscoverService(assetAppService, registry, viewRecordService,
         statusFlowService, lineageProvider, securityProvider, rbacProvider,
-        qualityProvider, modelFactsProvider, ttlFactsProvider);
+        qualityProvider, modelFactsProvider, ttlFactsProvider, sectionProviders);
     when(viewRecordService.trend(anyLong(), anyInt()))
         .thenReturn(List.of(new AssetViewRecordService.DailyView("2026-09-19", 2)));
   }
