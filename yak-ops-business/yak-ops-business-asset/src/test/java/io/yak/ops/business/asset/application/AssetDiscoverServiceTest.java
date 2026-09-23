@@ -45,7 +45,6 @@ class AssetDiscoverServiceTest {
   private ObjectProvider<SecurityClassificationQueryApi> securityProvider;
   private ObjectProvider<io.yak.framework.security.service.RbacPermissionService> rbacProvider;
   private ObjectProvider<io.yak.ops.business.quality.monitor.QualityMonitorReader> qualityProvider;
-  private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusModelFacts> modelFactsProvider;
   private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusTtlFacts> ttlFactsProvider;
   private ObjectProvider<SectionProvider> sectionProviders;
   private io.yak.framework.security.service.RbacPermissionService permissionService;
@@ -68,13 +67,12 @@ class AssetDiscoverServiceTest {
     when(permissionService.hasPermission(anyString(), anyString())).thenReturn(true);
     when(rbacProvider.orderedStream()).thenAnswer(invocation -> Stream.of(permissionService));
     qualityProvider = mock(ObjectProvider.class);
-    modelFactsProvider = mock(ObjectProvider.class);
     ttlFactsProvider = mock(ObjectProvider.class);
     sectionProviders = mock(ObjectProvider.class);
     when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.empty());
     service = new AssetDiscoverService(assetAppService, registry, viewRecordService,
         statusFlowService, lineageProvider, securityProvider, rbacProvider,
-        qualityProvider, modelFactsProvider, ttlFactsProvider, sectionProviders);
+        qualityProvider, ttlFactsProvider, sectionProviders);
     when(viewRecordService.trend(anyLong(), anyInt()))
         .thenReturn(List.of(new AssetViewRecordService.DailyView("2026-09-19", 2)));
   }
@@ -94,8 +92,8 @@ class AssetDiscoverServiceTest {
     assertEquals("UNAVAILABLE", section(detail, "sourceAttrs").status());
     assertEquals("血缘服务未装配", section(detail, "lineage").note());
     assertEquals("安全域未装配", section(detail, "security").note());
-    assertEquals("UNAVAILABLE", section(detail, "fields").status());
-    assertEquals("UNAVAILABLE", section(detail, "quality").status());
+    assertEquals("NOT_APPLICABLE", section(detail, "fields").status());
+    assertEquals("NOT_APPLICABLE", section(detail, "quality").status());
     assertEquals("UNAVAILABLE", section(detail, "ttl").status());
   }
 
@@ -192,15 +190,54 @@ class AssetDiscoverServiceTest {
   }
 
   @Test
-  void singleSectionQueryDoesNotFanOutToOtherDomains() {
+  void modelAssetWithTableDisplayTypeDoesNotQueryPhysicalMetadata() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
-    when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
+
+    AssetDiscoverService.SectionView result = service.section(1L, "TECHNICAL_METADATA", "alice");
+
+    assertEquals("NOT_APPLICABLE", result.status());
+    assertNull(result.data());
+    verify(sectionProviders, never()).orderedStream();
+    verify(registry, never()).find(AssetSourceType.MODEL);
+    verify(lineageProvider, never()).getIfAvailable();
+    verify(securityProvider, never()).getIfAvailable();
+  }
+
+  @Test
+  void modelAssetQualityIsNotApplicableEvenWhenDisplayTypeIsTable() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+
+    AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
+
+    assertEquals("NOT_APPLICABLE", result.status());
+    assertNull(result.data());
+    verify(qualityProvider, never()).getIfAvailable();
+  }
+
+  @Test
+  void modelSourceAttributesRequireModelOwnerPermission() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+    when(permissionService.hasPermission("alice", "modeling:read")).thenReturn(false);
+    when(permissionService.hasPermission("alice", "data-metadata:read")).thenReturn(true);
+
+    AssetDiscoverService.AssetDetailView result = service.detail(1L, "alice");
+
+    assertEquals("PERMISSION_DENIED", section(result, "sourceAttrs").status());
+    verify(permissionService).hasPermission("alice", "modeling:read");
+  }
+
+  @Test
+  void physicalMetadataWithoutItsSectionProviderIsUnavailable() {
+    AssetItemPO physicalTable = modelItem();
+    physicalTable.setSourceType(AssetSourceType.METADATA.name());
+    when(assetAppService.requireItem(1L)).thenReturn(physicalTable);
 
     AssetDiscoverService.SectionView result = service.section(1L, "TECHNICAL_METADATA", "alice");
 
     assertEquals("UNAVAILABLE", result.status());
-    verify(lineageProvider, never()).getIfAvailable();
-    verify(securityProvider, never()).getIfAvailable();
+    assertEquals("技术元数据读取提供方未装配", result.note());
+    assertNull(result.data());
+    verify(registry, never()).find(AssetSourceType.METADATA);
   }
 
   @Test

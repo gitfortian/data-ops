@@ -1,7 +1,6 @@
 package io.yak.ops.business.asset.application;
 
 import io.yak.ops.business.asset.api.AssetDescriptor;
-import io.yak.ops.business.asset.api.AssetStatusModelFacts;
 import io.yak.ops.business.asset.api.AssetStatusTtlFacts;
 import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
@@ -49,7 +48,6 @@ public class AssetDiscoverService {
   private final ObjectProvider<SecurityClassificationQueryApi> securityQuery;
   private final ObjectProvider<RbacPermissionService> rbacPermissionServices;
   private final ObjectProvider<QualityMonitorReader> qualityReader;
-  private final ObjectProvider<AssetStatusModelFacts> modelFacts;
   private final ObjectProvider<AssetStatusTtlFacts> ttlFacts;
   private final ObjectProvider<SectionProvider> sectionProviders;
 
@@ -87,15 +85,15 @@ public class AssetDiscoverService {
     AssetItemPO po = assetAppService.requireItem(id);
     Map<String, SectionView> sections = new LinkedHashMap<>();
     sections.put("statusFlow", SectionView.ok(statusFlowService.flow(po)));
-    sections.put("sourceAttrs", hasSectionPermission(operator, "TECHNICAL_METADATA")
+    sections.put("sourceAttrs", hasSourceAttrsPermission(operator, po)
         ? sourceAttrs(po) : SectionView.denied());
     sections.put("lineage", lineage(po));
     sections.put("security", hasSectionPermission(operator, "SECURITY")
         ? security(po) : SectionView.denied());
-    sections.put("fields", "TABLE".equalsIgnoreCase(po.getAssetType())
+    sections.put("fields", isPhysicalTable(po)
         ? SectionView.unavailable("字段目录读取入口尚未接入")
         : SectionView.notApplicable("当前资产类型没有物理表字段"));
-    sections.put("quality", "TABLE".equalsIgnoreCase(po.getAssetType())
+    sections.put("quality", isPhysicalTable(po)
         ? (hasSectionPermission(operator, "QUALITY") ? quality(po) : SectionView.denied())
         : SectionView.notApplicable("当前 MVP 仅物理表纳入质量管理"));
     sections.put("ttl", AssetSourceType.MODEL.name().equals(po.getSourceType())
@@ -111,15 +109,13 @@ public class AssetDiscoverService {
     long startedAt = System.nanoTime();
     AssetItemPO po = assetAppService.requireItem(id);
     String key = sectionType == null ? "" : sectionType.trim().toUpperCase();
-    if ("QUALITY".equals(key) && !"TABLE".equalsIgnoreCase(po.getAssetType())) {
+    if ("QUALITY".equals(key) && !isPhysicalTable(po)) {
       return SectionView.notApplicable("当前 MVP 仅物理表接入质量治理");
     }
     if ("LIFECYCLE".equals(key) && !AssetSourceType.MODEL.name().equals(po.getSourceType())) {
       return SectionView.notApplicable("当前 MVP 生命周期事实仅适用于 Model");
     }
-    if ("TECHNICAL_METADATA".equals(key)
-        && !(AssetSourceType.METADATA.name().equals(po.getSourceType())
-            || "TABLE".equalsIgnoreCase(po.getAssetType()))) {
+    if ("TECHNICAL_METADATA".equals(key) && !isPhysicalTable(po)) {
       return SectionView.notApplicable("当前 MVP 技术元数据分区仅适用于物理表");
     }
     if (!hasSectionPermission(operator, key)) {
@@ -163,30 +159,14 @@ public class AssetDiscoverService {
       String database = null;
       String schema = null;
       String table = null;
-      if (AssetSourceType.MODEL.name().equals(po.getSourceType())) {
-        AssetStatusModelFacts factsApi = modelFacts.getIfAvailable();
-        Optional<AssetStatusModelFacts.ModelFacts> facts = factsApi == null
-            ? Optional.empty() : factsApi.modelFacts(po.getSourceId());
-        if (facts.isEmpty()) {
-          return SectionView.unavailable("无法从建模域解析物理落点");
-        }
-        AssetStatusModelFacts.ModelFacts factsValue = facts.get();
-        dataSourceId = factsValue.datasourceId() == null ? null
-            : String.valueOf(factsValue.datasourceId());
-        database = factsValue.databaseName();
-        schema = factsValue.schemaName();
-        table = factsValue.tableName();
-      } else {
-        Optional<AssetSourceType> sourceType = parseSourceType(po.getSourceType());
-        Optional<AssetDescriptor> descriptor = sourceType.flatMap(providerRegistry::find)
-            .flatMap(provider -> provider.refresh(po.getSourceId()));
-        if (descriptor.isPresent()) {
-          Map<String, String> extra = descriptor.get().extra();
-          dataSourceId = extra.get("dataSourceId");
-          database = extra.get("databaseName");
-          schema = extra.get("schemaName");
-          table = extra.get("tableName");
-        }
+      Optional<AssetDescriptor> descriptor = providerRegistry.find(AssetSourceType.METADATA)
+          .flatMap(provider -> provider.refresh(po.getSourceId()));
+      if (descriptor.isPresent()) {
+        Map<String, String> extra = descriptor.get().extra();
+        dataSourceId = extra.get("dataSourceId");
+        database = extra.get("databaseName");
+        schema = extra.get("schemaName");
+        table = extra.get("tableName");
       }
       if (!org.springframework.util.StringUtils.hasText(dataSourceId)
           || !org.springframework.util.StringUtils.hasText(database)
@@ -257,6 +237,24 @@ public class AssetDiscoverService {
     return hasPermission(operator, permission);
   }
 
+  private boolean hasSourceAttrsPermission(String operator, AssetItemPO po) {
+    if (operator == null || operator.isBlank()) {
+      return false;
+    }
+    String permission = switch (po.getSourceType() == null ? "" : po.getSourceType()) {
+      case "MODEL" -> "modeling:read";
+      case "METRIC" -> "metric:read";
+      case "METADATA" -> "data-metadata:read";
+      case "DATASET", "TASK" -> "data-development:read";
+      default -> null;
+    };
+    return permission == null || hasPermission(operator, permission);
+  }
+
+  private static boolean isPhysicalTable(AssetItemPO po) {
+    return AssetSourceType.METADATA.name().equals(po.getSourceType());
+  }
+
   private SectionView technicalMetadata(AssetItemPO po) {
     SectionContext context =
         new SectionContext(po.getAssetKey(), po.getSourceType(), po.getSourceId());
@@ -265,7 +263,7 @@ public class AssetDiscoverService {
         .filter(candidate -> candidate.supports(context))
         .findFirst();
     if (provider.isEmpty()) {
-      return sourceAttrs(po);
+      return SectionView.unavailable("技术元数据读取提供方未装配");
     }
     SectionContract contract = provider.get().query(context);
     return new SectionView(contract.status().name(), contract.reason(), contract);
