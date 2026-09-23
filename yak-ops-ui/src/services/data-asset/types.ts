@@ -63,11 +63,25 @@ export interface AssetPageResult {
   pageSize: number;
 }
 
-/** 分区容错:OK|UNAVAILABLE,note 为不可用原因(不伪造空)。 */
+/** 分区读取的五态语义；note 为原因，不可把故障伪装成空数据。 */
 export interface AssetSection<T = unknown> {
-  status: 'OK' | 'UNAVAILABLE';
+  status: 'OK' | 'EMPTY' | 'NOT_APPLICABLE' | 'UNAVAILABLE' | 'PERMISSION_DENIED';
   note?: string | null;
   data?: T | null;
+  actions?: { label: string; target: string; sourceId: string }[];
+}
+
+export interface AssetSectionContract {
+  sectionType: 'OVERVIEW' | 'TECHNICAL_METADATA' | 'QUALITY' | 'SECURITY'
+    | 'LINEAGE' | 'USAGE' | 'LIFECYCLE' | 'GOVERNANCE';
+  status: AssetSection['status'];
+  ownerDomain: string;
+  summary: { values: Record<string, unknown> };
+  reason?: string | null;
+  updatedAt?: string | null;
+  actions: { label: string; target: string; sourceId: string }[];
+  provenance: { sourceDomain: string; sourceId: string; observedAt: string };
+  capability: { applicable: boolean; available: boolean; reason?: string | null };
 }
 
 export interface AssetSourceAttrs {

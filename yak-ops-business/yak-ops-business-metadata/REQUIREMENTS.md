@@ -117,6 +117,9 @@
 
 ## Ticket 118：实体详情聚合与批量取实体（`detail` 包 + `GET /api/v1/metadata/entities[/{id}]`）
 
+- 资产详情的技术元数据分区由 Metadata 实现 `SectionProvider` 提供物理表与列事实；通过本模块既有 `MetadataQueryApi` 读取，
+  不复制目录查询逻辑或建立第二份事实。Asset 仅负责分区编排、状态传递与展示。未登记的物理表返回 `EMPTY`，列读取失败由 Asset 分区边界转为 `UNAVAILABLE`。
+
 - `GET /entities/{id}` 出「目录事实 + 分区」：`entity`（`typeName` + `facts` + `attributes` + `slotValues`）
   与 `sections`，块序固定为 `stats → children → history → labels → lineage → source`，每块一个
   `SectionState{status(OK/EMPTY/UNAVAILABLE), code, message, data}`。`GET /entities?ids=` 批量取，

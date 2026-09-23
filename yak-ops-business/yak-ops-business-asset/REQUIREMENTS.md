@@ -52,6 +52,16 @@
 - DATASET/DASHBOARD/TASK provider。
 - 浏览上报（同用户同资产 5 分钟去重）+ 趋势查询。
 
+## Asset Governance Hub MVP：独立 Section 查询
+
+- `GET /api/v1/assets/{id}/sections/{sectionType}` 按 OVERVIEW、TECHNICAL_METADATA、QUALITY、SECURITY、LINEAGE、USAGE、LIFECYCLE、GOVERNANCE 单独读取，不要求慢分区阻塞其它分区。
+- 返回 F-001-A 五态、事实 Owner、查询来源、能力状态和原因；单个源域异常只将自身分区降级为 UNAVAILABLE。
+- Security、Metadata、Quality、Lifecycle 分区额外校验对应域权限；拒绝时不返回摘要或证据。质量摘要同时需要 `quality:monitor:read` 与 `quality:execution:read`。
+- Quality 仅适用于物理表，查询已注册监控摘要；Model 复用 modeling 的物理落点事实，Metadata 物理表复用 AssetProvider 的源域坐标。确认未注册监控为 EMPTY，定位失败或服务异常为 UNAVAILABLE。
+- Lifecycle 仅适用于 MODEL，复用 `AssetStatusTtlFacts`；未命中策略为 EMPTY，解析失败为 UNAVAILABLE。
+- Usage 先呈现 Asset 自有页面活动，并明确说明不代表业务消费；不新建 Usage Truth。
+- 记录分区查询状态、耗时和失败原因，日志不得包含治理摘要或敏感事实。
+
 ## Ticket 98：健康度 + 驾驶舱
 
 - `HealthScorer` 纯函数：完整性 40（描述10/负责人10/目录5/标签5/注释覆盖率10）· 可信度 40（质量15/血缘10/定级10/变更确认5）· 活跃度 20（浏览10/新鲜度5/下游引用5）；N/A 剔分母；失败依赖记 0 并标注。

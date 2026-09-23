@@ -4,6 +4,7 @@ import type {
   AssetLineageSummary,
   AssetOverviewData,
   AssetDetailView,
+  AssetSectionContract,
   AssetPageParams,
   AssetPageResult,
   AssetRecord,
@@ -80,6 +81,11 @@ export const pageAssets = async (params: AssetPageParams): Promise<AssetPageResu
 
 export const getAssetDetail = (id: number) =>
   HttpUtils.getData<AssetDetailView>(`${ASSET_API_PREFIX}/${id}`);
+
+export const getAssetSection = (id: number, sectionType: AssetSectionContract['sectionType']) =>
+  HttpUtils.getData<AssetSectionContract>(
+    `${ASSET_API_PREFIX}/${id}/sections/${sectionType}`,
+  );
 
 /** 浏览上报(服务端同用户同资产 5 分钟去重;尽力而为,调用方静默 catch)。 */
 export const reportAssetView = (id: number, entry: string) =>

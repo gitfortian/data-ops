@@ -10,6 +10,7 @@ import {
   changeAssetOwner,
   detachAssetTag,
   getAssetDetail,
+  getAssetSection,
   getAssetTags,
   getDirectoryTree,
   listAssetTags,
@@ -56,12 +57,20 @@ const SectionBlock = ({
   section?: AssetSection;
   children?: ReactNode;
 }) => {
-  if (!section || section.status === 'UNAVAILABLE') {
+  if (!section || section.status !== 'OK') {
+    const state = section?.status;
+    const stateTitle = state === 'EMPTY'
+      ? '确认无数据'
+      : state === 'NOT_APPLICABLE'
+        ? '当前类型不适用'
+        : state === 'PERMISSION_DENIED'
+          ? '无权查看'
+          : '暂不可用';
     return (
       <Card title={title} size="small" className="!mb-4">
         <YakEmpty
           compact
-          title="暂不可用"
+          title={stateTitle}
           description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
         />
       </Card>
@@ -70,6 +79,15 @@ const SectionBlock = ({
   return (
     <Card title={title} size="small" className="!mb-4">
       {children}
+      {section?.actions && section.actions.length > 0 && (
+        <Space className="!mt-3">
+          {section.actions.map((action) => (
+            <Button key={action.target} type="link" onClick={() => history.push(action.target)}>
+              {action.label}
+            </Button>
+          ))}
+        </Space>
+      )}
     </Card>
   );
 };
@@ -96,6 +114,50 @@ const AssetDetailPage = () => {
     try {
       const result = await getAssetDetail(assetId);
       setDetail(result);
+      const sectionTypes = [
+        'TECHNICAL_METADATA', 'QUALITY', 'SECURITY', 'LINEAGE', 'USAGE', 'LIFECYCLE',
+      ] as const;
+      void Promise.allSettled(
+        sectionTypes.map(async (sectionType) => ({
+          sectionType,
+          result: await getAssetSection(assetId, sectionType),
+        })),
+      ).then((settled) => {
+        setDetail((current) => {
+          if (!current || current.asset.id !== assetId) return current;
+          const sections = { ...current.sections };
+          settled.forEach((entry, index) => {
+            const sectionType = sectionTypes[index];
+            if (entry.status === 'rejected') return;
+            const { result: response } = entry.value;
+            const raw = response.summary.values;
+            const data = Object.prototype.hasOwnProperty.call(raw, 'data')
+                ? raw.data
+                : raw;
+            const section: AssetSection = {
+              status: response.status,
+              note: response.reason,
+              data,
+              actions: response.actions,
+            };
+            if (sectionType === 'TECHNICAL_METADATA') {
+              sections.sourceAttrs = section as NonNullable<typeof sections.sourceAttrs>;
+            }
+            if (sectionType === 'QUALITY') sections.quality = section;
+            if (sectionType === 'SECURITY') {
+              sections.security = section as NonNullable<typeof sections.security>;
+            }
+            if (sectionType === 'LINEAGE') {
+              sections.lineage = section as NonNullable<typeof sections.lineage>;
+            }
+            if (sectionType === 'USAGE') {
+              sections.trend = section as NonNullable<typeof sections.trend>;
+            }
+            if (sectionType === 'LIFECYCLE') sections.ttl = section;
+          });
+          return { ...current, sections };
+        });
+      });
       setSnapshot({
         name: result.asset.name ?? '',
         description: result.asset.description ?? '',
@@ -292,24 +354,55 @@ const AssetDetailPage = () => {
                 <SectionBlock title="源域实时属性(唯一事实源)" section={detail?.sections.sourceAttrs}>
                   {(() => {
                     const data = detail?.sections.sourceAttrs?.data;
+                    const metadata = data as (Record<string, unknown> & {
+                      columns?: Record<string, unknown>[];
+                      attributes?: Record<string, unknown>;
+                    }) | undefined;
+                    const columns = metadata?.columns ?? [];
                     return (
-                      <Descriptions
-                        size="small"
-                        column={2}
-                        items={[
-                          { key: 'n', label: '源名称', children: data?.name ?? '-' },
-                          { key: 'd', label: '源描述', children: data?.description ?? '-' },
-                          { key: 'o', label: '源建议负责人', children: data?.suggestedOwner ?? '-' },
-                          { key: 'u', label: '源更新时间', children: formatAssetTime(data?.updatedAt) },
-                          ...(data?.extra
-                            ? Object.entries(data.extra).map(([k, v]) => ({
-                                key: k,
-                                label: k,
-                                children: String(v ?? '-'),
-                              }))
-                            : []),
-                        ]}
-                      />
+                      <Space direction="vertical" className="w-full">
+                        <Descriptions
+                          size="small"
+                          column={2}
+                          items={[
+                            { key: 'n', label: '源名称', children: String(metadata?.name ?? '-') },
+                            { key: 'd', label: '源描述', children: String(metadata?.description ?? '-') },
+                            ...(metadata?.databaseName ? [{ key: 'db', label: '数据库', children: String(metadata.databaseName) }] : []),
+                            ...(metadata?.schemaName ? [{ key: 'schema', label: 'Schema', children: String(metadata.schemaName) }] : []),
+                            ...(metadata?.tableName ? [{ key: 'table', label: '物理表', children: String(metadata.tableName) }] : []),
+                            ...(data?.suggestedOwner ? [{ key: 'o', label: '源建议负责人', children: data.suggestedOwner }] : []),
+                            ...(data?.updatedAt ? [{ key: 'u', label: '源更新时间', children: formatAssetTime(data.updatedAt) }] : []),
+                            ...(data?.extra
+                              ? Object.entries(data.extra).map(([k, v]) => ({
+                                  key: k,
+                                  label: k,
+                                  children: String(v ?? '-'),
+                                }))
+                              : []),
+                            ...(metadata?.attributes
+                              ? Object.entries(metadata.attributes).map(([key, value]) => ({
+                                  key: `attribute-${key}`,
+                                  label: key,
+                                  children: typeof value === 'object' ? JSON.stringify(value) : String(value ?? '-'),
+                                }))
+                              : []),
+                          ]}
+                        />
+                        {columns.length > 0 && (
+                          <div className="w-full">
+                            <div className="mb-2 text-[13px] font-medium">字段（{columns.length}）</div>
+                            <div className="max-h-64 overflow-auto rounded border border-[#f0f0f0]">
+                              {columns.map((column, index) => (
+                                <div key={String(column.assetKey ?? column.columnName ?? index)} className="flex flex-wrap gap-x-4 border-b border-[#f0f0f0] px-3 py-2 last:border-0">
+                                  <span className="font-medium">{String(column.columnName ?? column.name ?? `字段 ${index + 1}`)}</span>
+                                  {column.dataType != null && <span className="text-[#667085]">{String(column.dataType)}</span>}
+                                  {column.description != null && <span className="text-[#667085]">{String(column.description)}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </Space>
                     );
                   })()}
                 </SectionBlock>
@@ -400,20 +493,52 @@ const AssetDetailPage = () => {
             children: (
               <SectionBlock title="近 30 天资产页浏览" section={detail?.sections.trend}>
                 {(() => {
-                  const trend = (detail?.sections.trend?.data ?? []) as { date: string; count: number }[];
+                  const rawUsage = detail?.sections.trend?.data as
+                    | {
+                        pageActivity?: { status?: string; views?: { date: string; count: number }[] };
+                        structuralUsage?: { status?: string; downstreamReferenceCount?: number; reason?: string };
+                        businessConsumption?: { status?: string; reason?: string };
+                      }
+                    | { date: string; count: number }[]
+                    | undefined;
+                  const trend = (Array.isArray(rawUsage)
+                    ? rawUsage
+                    : rawUsage?.pageActivity?.views ?? []) as { date: string; count: number }[];
                   const max = Math.max(1, ...trend.map((point) => point.count));
                   return (
-                    <div className="flex h-[120px] items-end gap-[3px]">
-                      {trend.map((point) => (
-                        <Tooltip key={point.date} title={`${point.date}: ${point.count} 次`}>
-                          <div
-                            className="flex-1 rounded-t bg-[#FE2C55]/70"
-                            style={{ height: `${Math.max(4, (point.count / max) * 100)}%` }}
-                          />
-                        </Tooltip>
-                      ))}
-                      {trend.length === 0 && <span className="text-[12px] text-[#98a2b3]">近 30 天无浏览</span>}
-                    </div>
+                    <Space direction="vertical" className="w-full">
+                      {!Array.isArray(rawUsage) && rawUsage && (
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            {
+                              key: 'lineage',
+                              label: '下游结构引用（Lineage）',
+                              children: rawUsage.structuralUsage?.status === 'OK'
+                                ? rawUsage.structuralUsage.downstreamReferenceCount ?? 0
+                                : rawUsage.structuralUsage?.reason ?? '暂不可用',
+                            },
+                            {
+                              key: 'business',
+                              label: '业务消费',
+                              children: rawUsage.businessConsumption?.reason ?? '尚未接入消费域读侧',
+                            },
+                          ]}
+                        />
+                      )}
+                      <div className="flex h-[120px] items-end gap-[3px]">
+                        {trend.map((point) => (
+                          <Tooltip key={point.date} title={point.date + ': ' + point.count + ' 次'}>
+                            <div
+                              className="flex-1 rounded-t bg-[#FE2C55]/70"
+                              style={{ height: String(Math.max(4, (point.count / max) * 100)) + '%' }}
+                            />
+                          </Tooltip>
+                        ))}
+                        {trend.length === 0 && <span className="text-[12px] text-[#98a2b3]">近 30 天无浏览</span>}
+                      </div>
+                    </Space>
                   );
                 })()}
               </SectionBlock>
@@ -439,9 +564,58 @@ const AssetDetailPage = () => {
                     );
                   })()}
                 </SectionBlock>
-                <SectionBlock title="质量" section={detail?.sections.quality} />
+                <SectionBlock title="质量" section={detail?.sections.quality}>
+                  {(() => {
+                    const quality = detail?.sections.quality?.data as {
+                      monitorCount?: number;
+                      monitors?: {
+                        monitorName?: string;
+                        ruleCount?: number;
+                        lastResult?: string;
+                        lastRunTime?: string;
+                      }[];
+                    } | undefined;
+                    if (!quality) return null;
+                    return (
+                      <Descriptions
+                        size="small"
+                        column={1}
+                        items={[
+                          { key: 'count', label: '监控数', children: quality.monitorCount ?? 0 },
+                          {
+                            key: 'monitors',
+                            label: '最近结论',
+                            children: quality.monitors?.map((monitor) =>
+                              `${monitor.monitorName ?? '未命名'}：${monitor.lastResult ?? '未运行'}（${monitor.ruleCount ?? 0} 条规则）`,
+                            ).join('；') ?? '暂无监控',
+                          },
+                        ]}
+                      />
+                    );
+                  })()}
+                </SectionBlock>
                 <SectionBlock title="字段" section={detail?.sections.fields} />
-                <SectionBlock title="生命周期" section={detail?.sections.ttl} />
+                <SectionBlock title="生命周期" section={detail?.sections.ttl}>
+                  {(() => {
+                    const ttl = detail?.sections.ttl?.data as {
+                      policyCode?: string;
+                      bindingSource?: string;
+                      state?: string;
+                    } | undefined;
+                    if (!ttl) return null;
+                    return (
+                      <Descriptions
+                        size="small"
+                        column={1}
+                        items={[
+                          { key: 'policy', label: '策略', children: ttl.policyCode || '未命中策略' },
+                          { key: 'binding', label: '绑定来源', children: ttl.bindingSource ?? '-' },
+                          { key: 'state', label: '下发状态', children: ttl.state ?? '-' },
+                        ]}
+                      />
+                    );
+                  })()}
+                </SectionBlock>
               </div>
             ),
           },

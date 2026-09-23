@@ -1,19 +1,31 @@
 package io.yak.ops.business.asset.application;
 
 import io.yak.ops.business.asset.api.AssetDescriptor;
+import io.yak.ops.business.asset.api.AssetStatusModelFacts;
+import io.yak.ops.business.asset.api.AssetStatusTtlFacts;
 import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
 import io.yak.ops.business.lineage.query.LineageQueryService;
+import io.yak.ops.business.quality.domain.QualityDomain.TableMonitorSummary;
+import io.yak.ops.business.quality.monitor.QualityMonitorReader;
 import io.yak.ops.business.security.api.ClassificationView;
 import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.common.bean.po.asset.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetSourceType;
+import io.yak.ops.spi.section.SectionContext;
+import io.yak.ops.spi.section.SectionContract;
+import io.yak.ops.spi.section.SectionProvider;
+import io.yak.ops.spi.section.SectionType;
+import io.yak.framework.security.service.RbacPermissionService;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +37,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AssetDiscoverService {
 
+  private static final Logger LOG = LoggerFactory.getLogger(AssetDiscoverService.class);
   private static final int LINEAGE_HOP = 1;
   private static final int TREND_DAYS = 30;
 
@@ -34,8 +47,13 @@ public class AssetDiscoverService {
   private final AssetStatusFlowService statusFlowService;
   private final ObjectProvider<LineageQueryService> lineageQuery;
   private final ObjectProvider<SecurityClassificationQueryApi> securityQuery;
+  private final ObjectProvider<RbacPermissionService> rbacPermissionServices;
+  private final ObjectProvider<QualityMonitorReader> qualityReader;
+  private final ObjectProvider<AssetStatusModelFacts> modelFacts;
+  private final ObjectProvider<AssetStatusTtlFacts> ttlFacts;
+  private final ObjectProvider<SectionProvider> sectionProviders;
 
-  /** status: OK | UNAVAILABLE;note 为不可用原因(含 N/A 语义,如"MANUAL 无源域")。 */
+  /** Five-state section result; note explains every state other than OK. */
   public record SectionView(String status, String note, Object data) {
 
     static SectionView ok(Object data) {
@@ -45,23 +63,267 @@ public class AssetDiscoverService {
     static SectionView unavailable(String note) {
       return new SectionView("UNAVAILABLE", note, null);
     }
+
+    static SectionView empty(String note) {
+      return new SectionView("EMPTY", note, Map.of());
+    }
+
+    static SectionView notApplicable(String note) {
+      return new SectionView("NOT_APPLICABLE", note, null);
+    }
+
+    static SectionView denied() {
+      return new SectionView("PERMISSION_DENIED", "当前用户无权查看该治理证据", null);
+    }
   }
 
   public record AssetDetailView(AssetAppService.AssetView asset, Map<String, SectionView> sections) {}
 
   public AssetDetailView detail(Long id) {
+    return detail(id, null);
+  }
+
+  public AssetDetailView detail(Long id, String operator) {
     AssetItemPO po = assetAppService.requireItem(id);
     Map<String, SectionView> sections = new LinkedHashMap<>();
     sections.put("statusFlow", SectionView.ok(statusFlowService.flow(po)));
-    sections.put("sourceAttrs", sourceAttrs(po));
+    sections.put("sourceAttrs", hasSectionPermission(operator, "TECHNICAL_METADATA")
+        ? sourceAttrs(po) : SectionView.denied());
     sections.put("lineage", lineage(po));
-    sections.put("security", security(po));
-    sections.put("fields", SectionView.unavailable("源域尚未提供字段级 SPI,详情页暂不展示"));
-    sections.put("quality", SectionView.unavailable("质量域 SPI 未就绪(缺口 G1)"));
-    sections.put("ttl", SectionView.unavailable("生命周期 TTL SPI 未就绪(缺口 G2)"));
+    sections.put("security", hasSectionPermission(operator, "SECURITY")
+        ? security(po) : SectionView.denied());
+    sections.put("fields", "TABLE".equalsIgnoreCase(po.getAssetType())
+        ? SectionView.unavailable("字段目录读取入口尚未接入")
+        : SectionView.notApplicable("当前资产类型没有物理表字段"));
+    sections.put("quality", "TABLE".equalsIgnoreCase(po.getAssetType())
+        ? (hasSectionPermission(operator, "QUALITY") ? quality(po) : SectionView.denied())
+        : SectionView.notApplicable("当前 MVP 仅物理表纳入质量管理"));
+    sections.put("ttl", AssetSourceType.MODEL.name().equals(po.getSourceType())
+        ? (hasSectionPermission(operator, "LIFECYCLE") ? lifecycle(po) : SectionView.denied())
+        : SectionView.notApplicable("当前 MVP 生命周期只适用于 Model"));
     sections.put("trend", SectionView.ok(viewRecordService.trend(po.getId(), TREND_DAYS)));
     sections.put("health", health(po));
     return new AssetDetailView(AssetAppService.toView(po), sections);
+  }
+
+  /** Reads one independently degradable section for progressive Asset Detail loading. */
+  public SectionView section(Long id, String sectionType, String operator) {
+    long startedAt = System.nanoTime();
+    AssetItemPO po = assetAppService.requireItem(id);
+    String key = sectionType == null ? "" : sectionType.trim().toUpperCase();
+    if ("QUALITY".equals(key) && !"TABLE".equalsIgnoreCase(po.getAssetType())) {
+      return SectionView.notApplicable("当前 MVP 仅物理表接入质量治理");
+    }
+    if ("LIFECYCLE".equals(key) && !AssetSourceType.MODEL.name().equals(po.getSourceType())) {
+      return SectionView.notApplicable("当前 MVP 生命周期事实仅适用于 Model");
+    }
+    if ("TECHNICAL_METADATA".equals(key)
+        && !(AssetSourceType.METADATA.name().equals(po.getSourceType())
+            || "TABLE".equalsIgnoreCase(po.getAssetType()))) {
+      return SectionView.notApplicable("当前 MVP 技术元数据分区仅适用于物理表");
+    }
+    if (!hasSectionPermission(operator, key)) {
+      return SectionView.denied();
+    }
+    SectionView result;
+    try {
+      result = switch (key) {
+      case "OVERVIEW" -> SectionView.ok(Map.of(
+          "assetKey", po.getAssetKey(), "name", po.getName(),
+          "sourceType", po.getSourceType(), "sourceId", po.getSourceId()));
+      case "GOVERNANCE" -> SectionView.ok(Map.of(
+          "status", po.getStatus(),
+          "owner", po.getOwner() == null ? "" : po.getOwner(),
+          "directoryId", po.getDirectoryId() == null ? "" : po.getDirectoryId()));
+      case "TECHNICAL_METADATA" -> technicalMetadata(po);
+      case "QUALITY" -> quality(po);
+      case "SECURITY" -> security(po);
+      case "LINEAGE" -> lineage(po);
+      case "USAGE" -> usage(po);
+      case "LIFECYCLE" -> lifecycle(po);
+        default -> throw new IllegalArgumentException("未知资产分区: " + sectionType);
+      };
+    } catch (RuntimeException e) {
+      result = SectionView.unavailable("分区查询失败");
+      LOG.warn("asset section query failed, assetId={}, sectionType={}, errorType={}",
+          id, key, e.getClass().getSimpleName());
+    }
+    LOG.info("asset section query completed, assetId={}, sectionType={}, status={}, durationMs={}",
+        id, key, result.status(), (System.nanoTime() - startedAt) / 1_000_000);
+    return result;
+  }
+
+  private SectionView quality(AssetItemPO po) {
+    QualityMonitorReader reader = qualityReader.getIfAvailable();
+    if (reader == null) {
+      return SectionView.unavailable("质量读侧未装配");
+    }
+    try {
+      String dataSourceId = null;
+      String database = null;
+      String schema = null;
+      String table = null;
+      if (AssetSourceType.MODEL.name().equals(po.getSourceType())) {
+        AssetStatusModelFacts factsApi = modelFacts.getIfAvailable();
+        Optional<AssetStatusModelFacts.ModelFacts> facts = factsApi == null
+            ? Optional.empty() : factsApi.modelFacts(po.getSourceId());
+        if (facts.isEmpty()) {
+          return SectionView.unavailable("无法从建模域解析物理落点");
+        }
+        AssetStatusModelFacts.ModelFacts factsValue = facts.get();
+        dataSourceId = factsValue.datasourceId() == null ? null
+            : String.valueOf(factsValue.datasourceId());
+        database = factsValue.databaseName();
+        schema = factsValue.schemaName();
+        table = factsValue.tableName();
+      } else {
+        Optional<AssetSourceType> sourceType = parseSourceType(po.getSourceType());
+        Optional<AssetDescriptor> descriptor = sourceType.flatMap(registry::find)
+            .flatMap(provider -> provider.refresh(po.getSourceId()));
+        if (descriptor.isPresent()) {
+          Map<String, String> extra = descriptor.get().extra();
+          dataSourceId = extra.get("dataSourceId");
+          database = extra.get("databaseName");
+          schema = extra.get("schemaName");
+          table = extra.get("tableName");
+        }
+      }
+      if (!org.springframework.util.StringUtils.hasText(dataSourceId)
+          || !org.springframework.util.StringUtils.hasText(database)
+          || !org.springframework.util.StringUtils.hasText(table)) {
+        return SectionView.unavailable("物理表位置不完整，无法查询质量证据");
+      }
+      String resolvedTable = table;
+      List<TableMonitorSummary> matches = reader.tableSummaries(
+              Long.parseLong(dataSourceId), database, schema).stream()
+          .filter(summary -> resolvedTable.equalsIgnoreCase(summary.tableName()))
+          .toList();
+      if (matches.isEmpty()) {
+        return SectionView.empty("该物理表尚未纳入质量监控");
+      }
+      return SectionView.ok(Map.of(
+          "monitorCount", matches.size(),
+          "monitors", matches.stream().map(summary -> Map.of(
+              "monitorId", summary.monitorId() == null ? "" : summary.monitorId(),
+              "monitorName", summary.monitorName() == null ? "" : summary.monitorName(),
+              "ruleCount", summary.ruleCount(),
+              "lastResult", summary.lastResult() == null ? "NOT_RUN" : summary.lastResult().name(),
+              "lastRunTime", summary.lastRunTime() == null ? "" : summary.lastRunTime())).toList()));
+    } catch (RuntimeException e) {
+      return SectionView.unavailable("质量查询暂不可用，请稍后重试");
+    }
+  }
+
+  private SectionView lifecycle(AssetItemPO po) {
+    AssetStatusTtlFacts api = ttlFacts.getIfAvailable();
+    if (api == null) {
+      return SectionView.unavailable("生命周期读侧未装配");
+    }
+    try {
+      Optional<AssetStatusTtlFacts.TtlFacts> result = api.ttlFacts(po.getSourceId());
+      if (result.isEmpty()) {
+        return SectionView.unavailable("生命周期域无法解析该模型");
+      }
+      AssetStatusTtlFacts.TtlFacts facts = result.get();
+      if (!facts.policyApplied()) {
+        return SectionView.empty("当前模型尚未绑定有效生命周期策略");
+      }
+      return SectionView.ok(Map.of(
+          "policyCode", facts.policyCode() == null ? "" : facts.policyCode(),
+          "bindingSource", facts.bindingSource() == null ? "" : facts.bindingSource(),
+          "state", facts.state() == null ? "" : facts.state()));
+    } catch (RuntimeException e) {
+      return SectionView.unavailable("生命周期查询暂不可用，请稍后重试");
+    }
+  }
+
+  private boolean hasSectionPermission(String operator, String sectionType) {
+    if (operator == null || operator.isBlank()) {
+      return false;
+    }
+    if ("QUALITY".equals(sectionType)) {
+      return hasPermission(operator, "quality:monitor:read")
+          && hasPermission(operator, "quality:execution:read");
+    }
+    String permission = switch (sectionType) {
+      case "TECHNICAL_METADATA" -> "data-metadata:read";
+      case "SECURITY" -> "data-security:read";
+      case "LIFECYCLE" -> "data-lifecycle:read";
+      default -> null;
+    };
+    if (permission == null) {
+      return true;
+    }
+    return hasPermission(operator, permission);
+  }
+
+  private SectionView technicalMetadata(AssetItemPO po) {
+    SectionContext context =
+        new SectionContext(po.getAssetKey(), po.getSourceType(), po.getSourceId());
+    Optional<SectionProvider> provider = sectionProviders.orderedStream()
+        .filter(candidate -> candidate.sectionType() == SectionType.TECHNICAL_METADATA)
+        .filter(candidate -> candidate.supports(context))
+        .findFirst();
+    if (provider.isEmpty()) {
+      return sourceAttrs(po);
+    }
+    SectionContract contract = provider.get().query(context);
+    return new SectionView(contract.status().name(), contract.reason(), contract);
+  }
+
+  private SectionView usage(AssetItemPO po) {
+    Map<String, Object> data = new LinkedHashMap<>();
+    try {
+      data.put("pageActivity", Map.of(
+          "ownerDomain", "ASSET",
+          "status", "OK",
+          "views", viewRecordService.trend(po.getId(), TREND_DAYS)));
+    } catch (RuntimeException e) {
+      data.put("pageActivity", Map.of(
+          "ownerDomain", "ASSET",
+          "status", "UNAVAILABLE",
+          "reason", "资产页活动暂不可用"));
+    }
+
+    LineageQueryService service = lineageQuery.getIfAvailable();
+    if (service == null) {
+      data.put("structuralUsage", Map.of(
+          "ownerDomain", "LINEAGE",
+          "status", "UNAVAILABLE",
+          "reason", "血缘服务未装配"));
+    } else {
+      try {
+        LineageAsset root = service.getAssetByKey(po.getAssetKey());
+        if (root == null) {
+          data.put("structuralUsage", Map.of(
+              "ownerDomain", "LINEAGE",
+              "status", "UNAVAILABLE",
+              "reason", "血缘域尚无该资产登记"));
+        } else {
+          int downstreamCount =
+              service.graph(root.id(), LineageDirection.DOWNSTREAM, LINEAGE_HOP)
+                  .relations().size();
+          data.put("structuralUsage", Map.of(
+              "ownerDomain", "LINEAGE",
+              "status", "OK",
+              "downstreamReferenceCount", downstreamCount));
+        }
+      } catch (RuntimeException e) {
+        data.put("structuralUsage", Map.of(
+            "ownerDomain", "LINEAGE",
+            "status", "UNAVAILABLE",
+            "reason", "结构引用暂不可用"));
+      }
+    }
+    data.put("businessConsumption", Map.of(
+        "status", "UNAVAILABLE",
+        "reason", "当前尚未接入消费域的调用/引用读侧"));
+    return SectionView.ok(data);
+  }
+
+  private boolean hasPermission(String operator, String permission) {
+    return rbacPermissionServices.orderedStream()
+        .anyMatch(service -> service.hasPermission(operator, permission));
   }
 
   /** 健康度:派生缓存 + 评分明细(§6.3 口径,不可手改). */
@@ -104,7 +366,7 @@ public class AssetDiscoverService {
       data.put("extra", d.extra());
       return SectionView.ok(data);
     } catch (RuntimeException e) {
-      return SectionView.unavailable("源域调用失败: " + e.getMessage());
+      return SectionView.unavailable("源域暂不可用，请稍后重试");
     }
   }
 
@@ -129,7 +391,7 @@ public class AssetDiscoverService {
       }
       return SectionView.ok(service.graph(root.id(), LineageDirection.BOTH, LINEAGE_HOP));
     } catch (RuntimeException e) {
-      return SectionView.unavailable("血缘查询失败: " + e.getMessage());
+      return SectionView.unavailable("血缘查询暂不可用，请稍后重试");
     }
   }
 
@@ -145,7 +407,7 @@ public class AssetDiscoverService {
           ? SectionView.unavailable("未定级,或该资产无对应物理定级对象")
           : SectionView.ok(view);
     } catch (RuntimeException e) {
-      return SectionView.unavailable("安全查询失败: " + e.getMessage());
+      return SectionView.unavailable("安全查询暂不可用，请稍后重试");
     }
   }
 }

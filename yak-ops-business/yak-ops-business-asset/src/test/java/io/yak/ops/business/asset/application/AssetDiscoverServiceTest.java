@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import io.yak.ops.business.asset.api.AssetDescriptor;
 import io.yak.ops.business.asset.api.AssetProvider;
+import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
@@ -26,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -39,6 +43,12 @@ class AssetDiscoverServiceTest {
   private AssetStatusFlowService statusFlowService;
   private ObjectProvider<LineageQueryService> lineageProvider;
   private ObjectProvider<SecurityClassificationQueryApi> securityProvider;
+  private ObjectProvider<io.yak.framework.security.service.RbacPermissionService> rbacProvider;
+  private ObjectProvider<io.yak.ops.business.quality.monitor.QualityMonitorReader> qualityProvider;
+  private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusModelFacts> modelFactsProvider;
+  private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusTtlFacts> ttlFactsProvider;
+  private ObjectProvider<SectionProvider> sectionProviders;
+  private io.yak.framework.security.service.RbacPermissionService permissionService;
   private AssetDiscoverService service;
 
   @BeforeEach
@@ -53,8 +63,18 @@ class AssetDiscoverServiceTest {
             "discovered", "已发现", "PASS", null, Map.of())), "described"));
     lineageProvider = mock(ObjectProvider.class);
     securityProvider = mock(ObjectProvider.class);
+    rbacProvider = mock(ObjectProvider.class);
+    permissionService = mock(io.yak.framework.security.service.RbacPermissionService.class);
+    when(permissionService.hasPermission(anyString(), anyString())).thenReturn(true);
+    when(rbacProvider.orderedStream()).thenAnswer(invocation -> Stream.of(permissionService));
+    qualityProvider = mock(ObjectProvider.class);
+    modelFactsProvider = mock(ObjectProvider.class);
+    ttlFactsProvider = mock(ObjectProvider.class);
+    sectionProviders = mock(ObjectProvider.class);
+    when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.empty());
     service = new AssetDiscoverService(assetAppService, registry, viewRecordService,
-        statusFlowService, lineageProvider, securityProvider);
+        statusFlowService, lineageProvider, securityProvider, rbacProvider,
+        qualityProvider, modelFactsProvider, ttlFactsProvider, sectionProviders);
     when(viewRecordService.trend(anyLong(), anyInt()))
         .thenReturn(List.of(new AssetViewRecordService.DailyView("2026-09-19", 2)));
   }
@@ -66,7 +86,7 @@ class AssetDiscoverServiceTest {
     when(lineageProvider.getIfAvailable()).thenReturn(null);
     when(securityProvider.getIfAvailable()).thenReturn(null);
 
-    AssetDiscoverService.AssetDetailView detail = service.detail(1L);
+    AssetDiscoverService.AssetDetailView detail = service.detail(1L, "alice");
 
     assertEquals(1L, detail.asset().id());
     assertEquals("OK", section(detail, "statusFlow").status());
@@ -89,7 +109,7 @@ class AssetDiscoverServiceTest {
     when(lineageProvider.getIfAvailable()).thenReturn(null);
     when(securityProvider.getIfAvailable()).thenReturn(null);
 
-    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L), "sourceAttrs");
+    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
 
     assertEquals("OK", sourceAttrs.status());
     @SuppressWarnings("unchecked")
@@ -107,9 +127,9 @@ class AssetDiscoverServiceTest {
     when(lineageProvider.getIfAvailable()).thenReturn(null);
     when(securityProvider.getIfAvailable()).thenReturn(null);
 
-    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L), "sourceAttrs");
+    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
     assertEquals("UNAVAILABLE", sourceAttrs.status());
-    assertTrue(sourceAttrs.note().contains("db down"));
+    assertEquals("源域暂不可用，请稍后重试", sourceAttrs.note());
   }
 
   @Test
@@ -124,7 +144,7 @@ class AssetDiscoverServiceTest {
     when(lineage.graph(7L, LineageDirection.BOTH, 1)).thenReturn(null);
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    assertEquals("OK", section(service.detail(1L), "lineage").status());
+    assertEquals("OK", section(service.detail(1L, "alice"), "lineage").status());
   }
 
   @Test
@@ -136,7 +156,7 @@ class AssetDiscoverServiceTest {
     when(lineage.getAssetByKey(anyString())).thenThrow(new IllegalArgumentException("missing"));
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    assertEquals("UNAVAILABLE", section(service.detail(1L), "lineage").status());
+    assertEquals("UNAVAILABLE", section(service.detail(1L, "alice"), "lineage").status());
   }
 
   @Test
@@ -147,12 +167,12 @@ class AssetDiscoverServiceTest {
     SecurityClassificationQueryApi api = mock(SecurityClassificationQueryApi.class);
     when(api.find("modeling:model:42")).thenReturn(null);
     when(securityProvider.getIfAvailable()).thenReturn(api);
-    assertEquals("UNAVAILABLE", section(service.detail(1L), "security").status());
+    assertEquals("UNAVAILABLE", section(service.detail(1L, "alice"), "security").status());
 
     ClassificationView view = new ClassificationView("modeling:model:42", 3L, "L3", "内部",
         3, 9L, "PII", "个人信息");
     when(api.find("modeling:model:42")).thenReturn(view);
-    AssetDiscoverService.SectionView security = section(service.detail(1L), "security");
+    AssetDiscoverService.SectionView security = section(service.detail(1L, "alice"), "security");
     assertEquals("OK", security.status());
     assertEquals(view, security.data());
   }
@@ -165,10 +185,46 @@ class AssetDiscoverServiceTest {
     when(lineageProvider.getIfAvailable()).thenReturn(null);
     when(securityProvider.getIfAvailable()).thenReturn(null);
 
-    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L), "sourceAttrs");
+    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
     assertEquals("UNAVAILABLE", sourceAttrs.status());
     assertTrue(sourceAttrs.note().contains("手工登记"));
     assertNull(sourceAttrs.data());
+  }
+
+  @Test
+  void singleSectionQueryDoesNotFanOutToOtherDomains() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+    when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
+
+    AssetDiscoverService.SectionView result = service.section(1L, "TECHNICAL_METADATA", "alice");
+
+    assertEquals("UNAVAILABLE", result.status());
+    verify(lineageProvider, never()).getIfAvailable();
+    verify(securityProvider, never()).getIfAvailable();
+  }
+
+  @Test
+  void deniedSecuritySectionReturnsNoSummary() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+    when(permissionService.hasPermission("alice", "data-security:read")).thenReturn(false);
+
+    AssetDiscoverService.SectionView result = service.section(1L, "SECURITY", "alice");
+
+    assertEquals("PERMISSION_DENIED", result.status());
+    assertNull(result.data());
+    verify(securityProvider, never()).getIfAvailable();
+  }
+
+  @Test
+  void unsupportedQualitySectionIsExplicitlyNotApplicable() {
+    AssetItemPO metric = modelItem();
+    metric.setAssetType(AssetType.METRIC.name());
+    when(assetAppService.requireItem(1L)).thenReturn(metric);
+
+    AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
+
+    assertEquals("NOT_APPLICABLE", result.status());
+    assertNull(result.data());
   }
 
   // ---------- fixtures ----------

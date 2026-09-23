@@ -23,6 +23,28 @@ source domain. `SectionEvidence` links to verifiable source facts,
 Actions carry the source identity and are offered only after authorization.
 The Asset ledger must not persist source domain truth.
 
+## Adding a section provider
+
+1. Implement `SectionProvider` in the domain that owns the facts. Match only the
+   asset identities that domain can resolve; do not make Asset query another
+   domain's tables or internal services.
+2. Return the owning `SectionType`, owner domain, `SectionSummary`, provenance,
+   evidence, capability, and source-linked actions. A successful read proving no
+   record is `EMPTY`; a missing provider or failed read is `UNAVAILABLE`.
+3. Register the provider as an optional Spring bean and keep its dependency
+   direction through this SPI. The Asset query endpoint selects the matching
+   provider and isolates failures to that section.
+4. Add provider tests for identity matching, owner/provenance and empty results,
+   plus Asset query tests for permission denial and provider failure. Render the
+   five states explicitly and verify the user's path into and back from the
+   owning domain.
+
+The Metadata MVP provider handles physical tables and reads table/column facts
+through `MetadataQueryApi`. Usage stays federated: Asset page activity,
+Lineage structural references, and consuming-domain business activity retain
+separate owners and statuses. Do not report structural references as business
+consumption.
+
 This SPI is a contract, not the aggregation runtime or an HTTP endpoint.
 Asset identity resolution, access checks, isolation and rendered E2E evidence
 remain implementation acceptance for later slices.

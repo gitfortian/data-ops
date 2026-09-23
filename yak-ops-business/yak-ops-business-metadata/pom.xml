@@ -31,6 +31,10 @@
             <artifactId>yak-ops-business-asset</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.yak.ops</groupId>
+            <artifactId>yak-ops-spi</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.github.weifuwan</groupId>
             <artifactId>yak-schedule-api</artifactId>
         </dependency>

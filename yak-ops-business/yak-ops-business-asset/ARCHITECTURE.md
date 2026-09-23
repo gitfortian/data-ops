@@ -6,6 +6,7 @@
 io.yak.ops.business.asset
 ├── config/       ConditionalOnAssetPersistence + AssetPersistenceConfiguration(Flyway/MapperScan)
 ├── api/          AssetProvider(接口,源域实现) · AssetDescriptor/AssetCursorQuery/AssetPage · AssetCatalogApi(对外提供)
+│                 · AssetSectionResult(SectionContract 五态响应)
 ├── application/  AssetAppService(台账/状态机) · AssetDiscoverService(搜索/详情聚合) · AssetOverviewService(驾驶舱)
 ├── reconcile/    AssetReconcileService(编排+互斥锁) · AssetProviderRegistry(多 bean 收集) · ChangeRecorder
 ├── catalog/      DirectoryService(树/物化路径/模板) · AssignRuleService(匹配+dry-run) · TagService
@@ -31,5 +32,6 @@ io.yak.ops.business.asset
 
 - **纯函数优先**：HealthScorer、content_hash 判定、规则匹配（AND/优先级/通配）均为 static 纯函数，单测不打 Spring 上下文。
 - **SPI 纪律**：源域实现只读本域 Service；asset 只 import 各域 `api/` 包；provider 单个失败不影响其余（分区容错）。
+- **Asset Section Query**：`GET /api/v1/assets/{id}/sections/{sectionType}` 只读取请求分区；跨域事实标记 Owner / Provenance，状态严格遵循 SPI 五态；权限由 Asset 与事实 Owner 的 read 权限共同约束。
 - **调度**：`YakScheduleNamespaces.DATA_ASSET`；每日 02:00 对账、03:00 健康度重算+浏览聚合+流水清理、04:00 快照（P2）。
 - **Controller 层**：参数校验 + `@RequiresPermission` + 透传 operator，无业务规则；返回 service record 直接序列化。

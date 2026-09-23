@@ -5,6 +5,7 @@
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
 | `yak-ops-common` | 编译 | PO（`bean.po.asset`）、权限码（`constant.asset`）、错误码/枚举（`enums.asset`）——平台惯例 |
+| `yak-ops-spi` | 编译 | `SectionContract` / `SectionStatus` 与跨域只读分区数据契约 |
 | `yak-security-spring-boot-starter` | 编译 | `Result`/`PagingData`/`@RequiresPermission`/`CurrentUserProvider` |
 | `yak-ops-core` | 编译 | `CurrentProject`（接口，注入使用）、`@ProjectScope` |
 | `yak-ops-business-datasource` | 编译（optional） | 基础设施 `BusinessDatabaseConfiguration`（数据源开关/Flyway 共享） |
