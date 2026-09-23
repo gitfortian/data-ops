@@ -23,4 +23,10 @@ public class QualityTableAssetReader {
     if (query.dataSourceId() <= 0L) throw new IllegalArgumentException("数据源编号无效");
     return repository.pageTableAssets(query);
   }
+
+  @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
+  public boolean isRegistered(long dataSourceId, String database, String schema, String table) {
+    if (dataSourceId <= 0L) throw new IllegalArgumentException("数据源编号无效");
+    return repository.existsTableAssetTarget(dataSourceId, database, schema, table);
+  }
 }

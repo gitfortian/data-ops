@@ -13,7 +13,8 @@
 | `yak-ops-business-audit` | 编译 | `BusinessAuditService` 审计门面（fail-open），事件 `ASSET_*` |
 | `yak-ops-business-security` | 编译（ticket 96+） | **仅 `SecurityClassificationQueryApi`**（定级快照刷新与详情安全块） |
 | `yak-ops-business-lineage` | 编译（ticket 97） | **仅 `LineageQueryService` 只读**（详情血缘块；本模块不回写血缘） |
-| quality / lifecycle SPI | ticket 98 | 质量摘要、TTL 摘要；未就绪时对应分区降级 UNAVAILABLE，不阻塞 |
+| `yak-ops-business-quality` | 编译（optional） | Asset 仅通过 `yak-ops-spi` `SectionProvider` 消费 Quality-owned Quality Section；不调用 Quality 内部 Reader/Repository/DAO |
+| lifecycle SPI | ticket 98 | TTL 摘要；未就绪时对应分区降级 UNAVAILABLE，不阻塞 |
 | `yak-ops-business-approval` | 编译（M2-5） | 上架审批：发起走 `ApprovalApi`、终态回调实现 `ApprovalFlowHandler`（同 modeling/mdm 先例）；状态条消费经 `ObjectProvider` 优雅缺省。handler 只向下依赖 `AssetLifecycleService`，不回依赖 `ApprovalApi`（防 ApprovalService→Registry→handler bean 循环） |
 | 调度引擎（`YakScheduleGateway`） | 编译 | 每日对账/健康度闹钟，本模块 handler 被回调 |
 

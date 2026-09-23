@@ -44,7 +44,6 @@ class AssetDiscoverServiceTest {
   private ObjectProvider<LineageQueryService> lineageProvider;
   private ObjectProvider<SecurityClassificationQueryApi> securityProvider;
   private ObjectProvider<io.yak.framework.security.service.RbacPermissionService> rbacProvider;
-  private ObjectProvider<io.yak.ops.business.quality.monitor.QualityMonitorReader> qualityProvider;
   private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusTtlFacts> ttlFactsProvider;
   private ObjectProvider<SectionProvider> sectionProviders;
   private io.yak.framework.security.service.RbacPermissionService permissionService;
@@ -66,13 +65,12 @@ class AssetDiscoverServiceTest {
     permissionService = mock(io.yak.framework.security.service.RbacPermissionService.class);
     when(permissionService.hasPermission(anyString(), anyString())).thenReturn(true);
     when(rbacProvider.orderedStream()).thenAnswer(invocation -> Stream.of(permissionService));
-    qualityProvider = mock(ObjectProvider.class);
     ttlFactsProvider = mock(ObjectProvider.class);
     sectionProviders = mock(ObjectProvider.class);
     when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.empty());
     service = new AssetDiscoverService(assetAppService, registry, viewRecordService,
         statusFlowService, lineageProvider, securityProvider, rbacProvider,
-        qualityProvider, ttlFactsProvider, sectionProviders);
+        ttlFactsProvider, sectionProviders);
     when(viewRecordService.trend(anyLong(), anyInt()))
         .thenReturn(List.of(new AssetViewRecordService.DailyView("2026-09-19", 2)));
   }
@@ -243,7 +241,7 @@ class AssetDiscoverServiceTest {
 
     assertEquals("NOT_APPLICABLE", result.status());
     assertNull(result.data());
-    verify(qualityProvider, never()).getIfAvailable();
+    verify(sectionProviders, never()).orderedStream();
   }
 
   @Test

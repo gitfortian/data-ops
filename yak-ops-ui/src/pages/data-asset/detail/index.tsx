@@ -114,6 +114,15 @@ const SectionBlock = ({
           description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
         />
         {contractFacts}
+        {state === 'EMPTY' && section.actions && section.actions.length > 0 && (
+          <Space>
+            {section.actions.map((action) => (
+              <Button key={action.target} type="link" onClick={() => history.push(action.target)}>
+                {action.label}
+              </Button>
+            ))}
+          </Space>
+        )}
       </Card>
     );
   }
@@ -684,13 +693,17 @@ const AssetDetailPage = () => {
                 <SectionBlock title="质量" section={detail?.sections.quality}>
                   {(() => {
                     const quality = detail?.sections.quality?.data as {
+                      registered?: boolean;
                       monitorCount?: number;
-                      monitors?: {
-                        monitorName?: string;
-                        ruleCount?: number;
-                        lastResult?: string;
-                        lastRunTime?: string;
-                      }[];
+                      enabledMonitorCount?: number;
+                      latestExecution?: {
+                        executionNo?: string;
+                        lifecycleStatus?: string;
+                        result?: string;
+                        issueCount?: number;
+                        queuedAt?: string;
+                        finishedAt?: string;
+                      };
                     } | undefined;
                     if (!quality) return null;
                     return (
@@ -698,13 +711,14 @@ const AssetDetailPage = () => {
                         size="small"
                         column={1}
                         items={[
-                          { key: 'count', label: '监控数', children: quality.monitorCount ?? 0 },
+                          { key: 'registered', label: '质量纳管', children: quality.registered ? '已纳管' : '未纳管' },
+                          { key: 'count', label: '监控数', children: `${quality.monitorCount ?? 0}（启用 ${quality.enabledMonitorCount ?? 0}）` },
                           {
-                            key: 'monitors',
-                            label: '最近结论',
-                            children: quality.monitors?.map((monitor) =>
-                              `${monitor.monitorName ?? '未命名'}：${monitor.lastResult ?? '未运行'}（${monitor.ruleCount ?? 0} 条规则）`,
-                            ).join('；') ?? '暂无监控',
+                            key: 'execution',
+                            label: '最近执行',
+                            children: quality.latestExecution?.executionNo
+                              ? `${quality.latestExecution.lifecycleStatus ?? '状态未知'} · ${quality.latestExecution.result ?? '结论未知'} · ${quality.latestExecution.issueCount ?? 0} 个问题 · ${formatAssetTime(quality.latestExecution.finishedAt ?? quality.latestExecution.queuedAt)}`
+                              : '尚无执行记录',
                           },
                         ]}
                       />

@@ -23,7 +23,7 @@
 io.yak.ops.business.quality
 ├── controller
 │   └── v1/mapper          # HTTP inbound / DTO-VO mapping
-├── asset                  # table registration + candidate/read policy
+├── asset                  # table registration + candidate/read policy + Quality-owned Asset Section provider
 ├── monitor                # monitor/rule/settings lifecycle
 ├── task                   # Workflow publication / revision resolution / executor adapter
 ├── execution              # admission / plan / dispatch / worker
@@ -72,7 +72,17 @@ QualityWorkspaceController
 QualityExecutionWorkspaceController
     -> QualityExecutionWorkspaceReader
     -> QualityExecutionLogProjector
+
 ```
+
+```text
+Asset Detail Quality Section
+    -> QualityAssetSectionProvider
+    -> QualityTableAssetReader / QualityMonitorReader / QualityExecutionReader
+```
+
+Quality 的 Asset Detail Section Provider 实现稳定的 `yak-ops-spi` `SectionProvider` 契约。
+Asset 通过 `SectionContext` 传入 Metadata 拥有的物理坐标；Quality 不依赖 Asset 或 Metadata 实现包。
 
 Workflow 不直接进入 Quality Controller，而是通过 Task Catalog + generic Job TaskExecutor 进入 `task` subsystem。
 

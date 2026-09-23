@@ -49,7 +49,14 @@ public final class QualityDomain {
 
   public record TableMonitorSummary(
       String tableName, Long monitorId, String monitorName, int monitorCount,
-      int ruleCount, CheckResult lastResult, LocalDateTime lastRunTime) {}
+      int ruleCount, int enabledMonitorCount, String lastExecutionNo,
+      CheckResult lastResult, LocalDateTime lastRunTime) {
+    public TableMonitorSummary(
+        String tableName, Long monitorId, String monitorName, int monitorCount,
+        int ruleCount, CheckResult lastResult, LocalDateTime lastRunTime) {
+      this(tableName, monitorId, monitorName, monitorCount, 0, null, lastResult, lastRunTime);
+    }
+  }
 
   /** 告警事件只读投影：投递状态沿用存储原值(RECORDED/PENDING/FAILED),不臆造枚举语义。 */
   public record AlertEvent(
