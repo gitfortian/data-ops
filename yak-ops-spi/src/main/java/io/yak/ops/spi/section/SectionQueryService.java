@@ -1,9 +1,6 @@
 package io.yak.ops.spi.section;
 
-/**
- * Application boundary for Asset Detail section retrieval.
- */
+/** Asset Detail application boundary. The Asset itself must resolve first. */
 public interface SectionQueryService {
-
-    SectionResponse getSections(String assetId);
+    SectionResponse getSections(SectionContext context);
 }
