@@ -25,6 +25,10 @@
 - [LEGACY_DOC_INDEX.md](./LEGACY_DOC_INDEX.md)
 - [PRODUCT_GUARD.md](./PRODUCT_GUARD.md)
 
+## Acceptance Evidence
+
+- [Asset Understanding Acceptance Case：用户信息表](./acceptance/asset-understanding-user-info.md) — Golden Asset 候选样本；事实已核对，端到端验收尚未执行。该案例属于证据，不替代 ACCEPTED Decision 或 APPROVED Feature Spec。
+
 仓库级产品研发规则见 [PRODUCT_STYLE.md](../../PRODUCT_STYLE.md)。
 
 AI / Coding Agent 入口见 [AGENTS.md](../../AGENTS.md)。
