@@ -1,6 +1,7 @@
 package io.yak.ops.business.lineage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.yak.ops.business.lineage.dao.support.LineageBatchSupport;
@@ -31,6 +32,14 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class LineageServicesTest {
+
+  @Test
+  void missingAssetByKeyIsAvailableAsAnEmptyReadResult() {
+    InMemoryLineageRepository repository = new InMemoryLineageRepository();
+    LineageQueryService queryService = queryService(repository);
+
+    assertFalse(queryService.findAssetByKey("modeling:model:49").isPresent());
+  }
 
   @Test
   void traversesMultiHopGraphAndStopsAtVisitedAssets() {

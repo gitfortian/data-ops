@@ -4,6 +4,7 @@ import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageAssetType;
 import io.yak.ops.business.lineage.repository.LineageRepository;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /** Reads and validates lineage assets without owning transaction boundaries. */
@@ -25,9 +26,13 @@ public class LineageAssetReader {
   }
 
   public LineageAsset getAssetByKey(String assetKey) {
+    return findAssetByKey(assetKey)
+        .orElseThrow(() -> new IllegalArgumentException("血缘资产不存在：" + assetKey));
+  }
+
+  public Optional<LineageAsset> findAssetByKey(String assetKey) {
     String normalized = required(assetKey, "assetKey", 512);
-    return repository.findAssetByKey(normalized)
-        .orElseThrow(() -> new IllegalArgumentException("血缘资产不存在：" + normalized));
+    return repository.findAssetByKey(normalized);
   }
 
   public List<LineageAsset> searchAssets(

@@ -382,11 +382,16 @@ public class AssetDiscoverService {
     if (service == null) {
       return SectionView.unavailable("血缘服务未装配");
     }
+    LineageAsset root;
     try {
-      LineageAsset root = service.getAssetByKey(po.getAssetKey());
-      if (root == null) {
-        return SectionView.unavailable("血缘域暂无该资产登记");
-      }
+      root = service.findAssetByKey(po.getAssetKey()).orElse(null);
+    } catch (RuntimeException e) {
+      return SectionView.unavailable("血缘查询暂不可用，请稍后重试");
+    }
+    if (root == null) {
+      return SectionView.empty("该资产尚未登记血缘");
+    }
+    try {
       return SectionView.ok(service.graph(root.id(), LineageDirection.BOTH, LINEAGE_HOP));
     } catch (RuntimeException e) {
       return SectionView.unavailable("血缘查询暂不可用，请稍后重试");
