@@ -1,11 +1,13 @@
 package io.yak.ops.spi.section;
 
 /**
- * Extension point for section data providers.
+ * A section provider reads its owning domain. The caller enforces Project Space
+ * and permissions; provider failures are isolated to this section.
  */
 public interface SectionProvider {
+    SectionType sectionType();
 
-    String sectionId();
+    boolean supports(SectionContext context);
 
-    SectionContract provide();
+    SectionContract query(SectionContext context);
 }

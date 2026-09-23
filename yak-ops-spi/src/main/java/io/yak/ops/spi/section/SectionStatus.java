@@ -1,12 +1,10 @@
 package io.yak.ops.spi.section;
 
-/**
- * Lifecycle state shared by all Asset Detail sections.
- */
+/** A source domain must distinguish absence, inapplicability, outage and denial. */
 public enum SectionStatus {
-    AVAILABLE,
-    LOADING,
+    OK,
     EMPTY,
-    DEGRADED,
-    FAILED
+    NOT_APPLICABLE,
+    UNAVAILABLE,
+    PERMISSION_DENIED
 }
