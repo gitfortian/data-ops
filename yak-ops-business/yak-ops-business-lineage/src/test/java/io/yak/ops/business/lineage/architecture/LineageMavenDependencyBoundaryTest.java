@@ -38,12 +38,12 @@ class LineageMavenDependencyBoundaryTest {
   }
 
   @Test
-  void sharedDatabaseModuleOwnsMybatisAndFlywayRuntimeAdapters() throws Exception {
+  void sharedDatabaseModuleOwnsMybatisCompileAndFlywayRuntimeAdapters() throws Exception {
     Set<Dependency> dependencies = dependencies(datasourcePom());
 
     assertThat(dependencies)
         .contains(
-            runtimeDependency("com.baomidou", "mybatis-plus-jsqlparser-4.9"),
+            dependency("com.baomidou", "mybatis-plus-jsqlparser-4.9"),
             runtimeDependency("org.flywaydb", "flyway-mysql"));
   }
 
