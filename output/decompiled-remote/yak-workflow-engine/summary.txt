@@ -1,2 +1,0 @@
-Summary for output/m2-remote/io/yak/framework/yak-workflow-engine/1.0.0-SNAPSHOT/yak-workflow-engine-1.0.0-SNAPSHOT.jar
-Decompiled with CFR 0.152
