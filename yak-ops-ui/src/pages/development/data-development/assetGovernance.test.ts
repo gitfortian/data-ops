@@ -1,6 +1,7 @@
 import {
   datasetAssetDetailUrl,
   datasetAssetGovernanceLabel,
+  datasetIdFromSearch,
   type AssetSourceLookup,
 } from './assetGovernance';
 
@@ -22,6 +23,11 @@ describe('dataset asset governance projection', () => {
       sourceType: 'DATASET',
       sourceId: '55',
     })).toBeUndefined();
+  });
+
+  it('keeps the stable Dataset identity in the Asset-to-Development deep link', () => {
+    expect(datasetIdFromSearch('?datasetId=55')).toBe('55');
+    expect(datasetIdFromSearch('?nodeId=7')).toBeUndefined();
   });
 
   it('keeps not-indexed, permission and unavailable distinct', () => {
