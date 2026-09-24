@@ -166,7 +166,9 @@ export const sourceObjectPath = (
       path = '/data-asset/catalog?view=entity';
       break;
     case 'DATASET':
-      path = `/dataset/${sourceId}`;
+      // Asset Registry keeps stable Dataset identity only. Data Development resolves
+      // the owning Development Node through Dataset-domain provenance at navigation time.
+      path = `/data-development?datasetId=${encodeURIComponent(sourceId)}`;
       break;
     case 'DASHBOARD':
       path = `/dashboard/${sourceId}`;
@@ -177,7 +179,7 @@ export const sourceObjectPath = (
     default:
       return undefined;
   }
-  if (sourceType !== 'MODEL' || !returnAssetId) return path;
+  if (!returnAssetId || !['MODEL', 'DATASET'].includes(String(sourceType))) return path;
   return `${path}${path.includes('?') ? '&' : '?'}returnAssetId=${returnAssetId}`;
 };
 
