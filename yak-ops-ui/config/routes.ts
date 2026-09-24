@@ -32,6 +32,24 @@ const siteRoutes = appRoutes
   .filter((route) => !fullscreenRouteIds.has(route.id))
   .map(toProtectedRoute);
 
+const consumptionRoutes = [
+  {
+    path: '/data-analysis/consumption',
+    component: './data-analysis/consumption',
+    access: 'isAuthenticated',
+    wrappers: ['@/components/security/RouteAccessBoundary'],
+    hideInMenu: true,
+  },
+  {
+    path: '/data-analysis/consumption/:productKey',
+    component: './data-analysis/consumption/detail',
+    access: 'isAuthenticated',
+    wrappers: ['@/components/security/RouteAccessBoundary'],
+    hideInMenu: true,
+    hideInBreadcrumb: true,
+  },
+];
+
 /**
  * 普通业务页面进入自定义 SiteLayout；需要沉浸式创作空间的编辑器则使用
  * 独立 fullscreen workspace，不继承 Yak 左侧菜单和全局 Header。
@@ -65,6 +83,7 @@ export default [
         redirect: '/data-asset/catalog?view=entity',
         hideInMenu: true,
       },
+      ...consumptionRoutes,
       ...siteRoutes,
     ],
   },
