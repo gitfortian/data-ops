@@ -1,4 +1,4 @@
-package io.yak.ops.business.development.domain;
+package io.yak.ops.business.development.lineage.model;
 
 import io.yak.ops.business.lineage.domain.LineageAssetType;
 import io.yak.ops.business.lineage.domain.LineageDirection;

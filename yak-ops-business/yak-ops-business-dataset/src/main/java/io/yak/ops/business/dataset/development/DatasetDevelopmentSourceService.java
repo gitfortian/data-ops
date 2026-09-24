@@ -2,6 +2,7 @@ package io.yak.ops.business.dataset.development;
 
 import io.yak.ops.business.dataset.dao.DatasetDao;
 import io.yak.ops.business.dataset.dao.model.DatasetPO;
+import io.yak.ops.business.dataset.dao.model.DatasetVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,10 +24,19 @@ public class DatasetDevelopmentSourceService {
     }
     Long nodeId = dataset.getDevelopmentNodeId();
     if (nodeId == null || nodeId <= 0L) {
-      return new DevelopmentSource(datasetId, null, "NOT_APPLICABLE");
+      return new DevelopmentSource(datasetId, null, null, "NOT_APPLICABLE");
     }
-    return new DevelopmentSource(datasetId, nodeId, "FOUND");
+    Long currentVersionId = dataset.getCurrentVersionId();
+    DatasetVersionPO currentVersion = currentVersionId == null
+        ? null
+        : datasetDao.selectVersion(projectId, currentVersionId);
+    Integer versionNo = currentVersion == null ? null : currentVersion.getVersionNo();
+    return new DevelopmentSource(datasetId, nodeId, versionNo, "FOUND");
   }
 
-  public record DevelopmentSource(long datasetId, Long developmentNodeId, String state) {}
+  public record DevelopmentSource(
+      long datasetId,
+      Long developmentNodeId,
+      Integer currentDatasetVersionNo,
+      String state) {}
 }

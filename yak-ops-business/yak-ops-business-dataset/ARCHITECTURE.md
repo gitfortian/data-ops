@@ -86,12 +86,16 @@ DatasetPublisher
 主路径：
 
 ```text
-validate exact upstream source
- -> freeze exact revision/schema
+validate exact upstream source and discover schema outside the write transaction
+ -> lock the Project + TaskAsset publication key
+ -> recheck the exact source Revision
+ -> freeze the prepared schema and revision
  -> append immutable DatasetVersion
  -> update currentVersionId
  -> after-commit lineage refresh request
 ```
+
+`yak_dataset_source_publication_lock` 只用于同 Project、同 TaskAsset 的事务串行化，不拥有 Dataset 或 TaskAsset 的业务状态。已有 DatasetVersion append 先锁 Dataset identity 行，再分配 `version_no`，避免并发追加冲突。
 
 `DatasetVersionWriter` 只负责 append version + move pointer，不负责 source validation。
 

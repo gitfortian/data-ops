@@ -22,6 +22,9 @@ public interface DevelopmentTaskRevisionRepository {
 
   Optional<DevelopmentTaskRevision> findLatestByNodeId(Long nodeId);
 
+  /** Locks the latest immutable revision row until the caller's transaction completes. */
+  Optional<Long> findLatestIdForUpdateByNodeId(Long nodeId);
+
   Optional<DevelopmentTaskRevision> findByRevisionNo(Long nodeId, int revisionNo);
 
   List<DevelopmentTaskRevisionSummary> listByNodeId(Long nodeId);

@@ -17,6 +17,12 @@ public interface DatasetRepository {
 
   long insertDevelopmentNodeDataset(long developmentNodeId, String name, String description);
 
+  /** Serializes release publication attempts for one TaskAsset inside the current transaction. */
+  void lockSourceTaskAsset(long sourceTaskAssetId);
+
+  /** Locks an existing Dataset row until the current transaction completes. */
+  void lockDatasetForUpdate(long datasetId);
+
   /** Appends one immutable version and its field contract atomically inside the caller transaction. */
   long appendVersion(DatasetVersionDraft draft);
 

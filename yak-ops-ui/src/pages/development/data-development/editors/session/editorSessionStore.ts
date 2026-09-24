@@ -316,20 +316,28 @@ export const updateEditorSessionViewState = (
 export const markEditorSessionSaved = (
   nodeId: DevelopmentId,
   draftRevision?: number,
+  savedDefinition?: { content: string; configJson: string },
 ) => {
   ensureHydrated();
   const current = sessions.get(nodeId);
   if (!current) return;
 
-  sessions.set(nodeId, {
+  const savedContent = savedDefinition?.content ?? current.content;
+  const savedConfigJson = normalizedConfigJson(
+    savedDefinition?.configJson ?? current.configJson,
+  );
+  const next: DevelopmentEditorSession = {
     ...current,
-    originalContent: current.content,
+    originalContent: savedContent,
     configJson: normalizedConfigJson(current.configJson),
-    originalConfigJson: normalizedConfigJson(current.configJson),
+    originalConfigJson: savedConfigJson,
     draftRevision: draftRevision ?? current.draftRevision,
-    dirty: false,
+    dirty:
+      current.content !== savedContent ||
+      normalizedConfigJson(current.configJson) !== savedConfigJson,
     updatedAt: Date.now(),
-  });
+  };
+  sessions.set(nodeId, next);
   schedulePersist();
   emitChange();
 };

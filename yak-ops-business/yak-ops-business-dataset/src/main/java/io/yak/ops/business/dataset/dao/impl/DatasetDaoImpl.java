@@ -48,6 +48,19 @@ public class DatasetDaoImpl implements DatasetDao {
   }
 
   @Override
+  public void lockSourceTaskAsset(Long projectId, long sourceTaskAssetId) {
+    datasetMapper.insertSourcePublicationLock(projectId, sourceTaskAssetId);
+    if (datasetMapper.selectSourcePublicationLockForUpdate(projectId, sourceTaskAssetId) == null) {
+      throw new IllegalStateException("Dataset 来源发布锁不可用：" + sourceTaskAssetId);
+    }
+  }
+
+  @Override
+  public boolean lockDatasetForUpdate(Long projectId, long datasetId) {
+    return datasetMapper.selectProjectDatasetForUpdate(projectId, datasetId) != null;
+  }
+
+  @Override
   public int insertVersion(DatasetVersionPO version) {
     version.setCreateTime(Timestamp.from(Instant.now()));
     return versionMapper.insert(version);

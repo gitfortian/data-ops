@@ -1,5 +1,5 @@
 import { BRAND_THEME } from '@/styles/brand';
-import { useIntl } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import { ConfigProvider } from 'antd';
 import { useEffect, useRef } from 'react';
 
@@ -57,6 +57,14 @@ export default function DataDevelopmentPage() {
           resolvedNodeId
           && page.nodes.some((node) => String(node.id) === resolvedNodeId)
         ) {
+          const params = new URLSearchParams(window.location.search);
+          params.set('nodeId', resolvedNodeId);
+          if (source.currentDatasetVersionNo && source.currentDatasetVersionNo > 0) {
+            params.set('datasetVersionNo', String(source.currentDatasetVersionNo));
+          } else {
+            params.delete('datasetVersionNo');
+          }
+          history.replace(`${window.location.pathname}?${params.toString()}`);
           page.focusNode(resolvedNodeId);
         }
         deepLinkAppliedRef.current = true;

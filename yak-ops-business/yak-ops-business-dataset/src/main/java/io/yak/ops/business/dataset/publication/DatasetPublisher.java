@@ -1,6 +1,5 @@
 package io.yak.ops.business.dataset.publication;
 
-import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetDetail;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.definition.DatasetReader;
@@ -8,17 +7,13 @@ import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway
 import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway.DatasetTaskAssetSnapshot;
 import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway.SourceAvailability;
 import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway.SourceOrigin;
-import io.yak.ops.business.dataset.lineage.DatasetLineageRefreshPublisher;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
-import io.yak.ops.business.dataset.schema.DatasetFieldNormalizer;
 import io.yak.ops.business.dataset.schema.DatasetFieldSpec;
 import io.yak.ops.business.dataset.schema.DatasetSchemaDiscovery;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-/** Publishes exact upstream snapshots into immutable DatasetVersion aggregates. */
+/** Prepares exact source/schema evidence before delegating bounded writes to a transaction role. */
 @Component
 public class DatasetPublisher {
 
@@ -26,86 +21,52 @@ public class DatasetPublisher {
   private final DatasetReader reader;
   private final DatasetTaskCatalogGateway taskCatalogGateway;
   private final DatasetSchemaDiscovery schemaDiscovery;
-  private final DatasetFieldNormalizer fieldNormalizer;
-  private final DatasetVersionWriter versionWriter;
-  private final DatasetLineageRefreshPublisher lineagePublisher;
+  private final DatasetPublicationTransaction publicationTransaction;
 
   public DatasetPublisher(
       DatasetRepository repository,
       DatasetReader reader,
       DatasetTaskCatalogGateway taskCatalogGateway,
       DatasetSchemaDiscovery schemaDiscovery,
-      DatasetFieldNormalizer fieldNormalizer,
-      DatasetVersionWriter versionWriter,
-      DatasetLineageRefreshPublisher lineagePublisher) {
+      DatasetPublicationTransaction publicationTransaction) {
     this.repository = repository;
     this.reader = reader;
     this.taskCatalogGateway = taskCatalogGateway;
     this.schemaDiscovery = schemaDiscovery;
-    this.fieldNormalizer = fieldNormalizer;
-    this.versionWriter = versionWriter;
-    this.lineagePublisher = lineagePublisher;
+    this.publicationTransaction = publicationTransaction;
   }
 
-  @Transactional("yakBusinessTransactionManager")
   public DatasetDetail publish(DatasetPublishCommand command) {
     if (command == null) {
       throw new NullPointerException("command");
     }
     DatasetTaskAssetSnapshot asset = requirePublishableAsset(command.sourceTaskAssetId());
-    return createDataset(asset, command);
+    List<DatasetFieldSpec> fields = prepareFields(asset, command.fields());
+    return publicationTransaction.publish(
+        asset,
+        normalizeName(command.name(), asset.name()),
+        normalizeDescription(command.description()),
+        fields);
   }
 
-  @Transactional("yakBusinessTransactionManager")
   public DatasetDetail publishFromRelease(DatasetPublishCommand command) {
     if (command == null) {
       throw new NullPointerException("command");
     }
     DatasetTaskAssetSnapshot asset = requirePublishableAsset(command.sourceTaskAssetId());
-    Optional<Dataset> existing = repository.findDatasetBySourceTaskAssetId(asset.id());
-    if (existing.isEmpty()) {
-      return createDataset(asset, command);
-    }
-
-    long datasetId = existing.get().id();
-    DatasetDetail current = reader.require(datasetId);
-    DatasetVersion currentVersion = current.currentVersion();
-    if (currentVersion == null) {
-      List<DatasetFieldSpec> fields = resolveFields(datasetId, asset, command.fields());
-      versionWriter.appendNextQueryRevision(
-          datasetId,
-          asset.id(),
-          asset.currentRevisionId(),
-          asset.currentRevisionNo(),
-          fields);
-      lineagePublisher.request(datasetId);
-      return reader.require(datasetId);
-    }
-    if (currentVersion.sourceTaskAssetId() != asset.id()) {
-      throw new IllegalStateException(
-          "Dataset 来源 TaskAsset 不一致：datasetId="
-              + datasetId
-              + ", expected="
-              + currentVersion.sourceTaskAssetId()
-              + ", actual="
-              + asset.id());
-    }
-    if (currentVersion.sourceTaskRevisionId() == asset.currentRevisionId()) {
+    DatasetDetail current = findReleaseDataset(asset.id());
+    if (isCurrentRevision(current, asset)) {
       return current;
     }
 
-    List<DatasetFieldSpec> fields = resolveFields(datasetId, asset, command.fields());
-    versionWriter.appendNextQueryRevision(
-        datasetId,
-        asset.id(),
-        asset.currentRevisionId(),
-        asset.currentRevisionNo(),
+    List<DatasetFieldSpec> fields = prepareFields(asset, command.fields());
+    return publicationTransaction.publishFromRelease(
+        asset,
+        normalizeName(command.name(), asset.name()),
+        normalizeDescription(command.description()),
         fields);
-    lineagePublisher.request(datasetId);
-    return reader.require(datasetId);
   }
 
-  @Transactional("yakBusinessTransactionManager")
   public DatasetDetail createVersion(long datasetId, List<DatasetFieldSpec> fields) {
     DatasetDetail current = reader.require(datasetId);
     DatasetVersion currentVersion = current.currentVersion();
@@ -122,15 +83,12 @@ public class DatasetPublisher {
           "当前 TaskRevision 已经是 Dataset 的当前版本：V" + currentVersion.versionNo());
     }
 
-    List<DatasetFieldSpec> normalizedFields = resolveFields(datasetId, asset, fields);
-    versionWriter.appendNextQueryRevision(
+    List<DatasetFieldSpec> preparedFields = prepareFields(asset, fields);
+    return publicationTransaction.createVersion(
         datasetId,
-        asset.id(),
-        asset.currentRevisionId(),
-        asset.currentRevisionNo(),
-        normalizedFields);
-    lineagePublisher.request(datasetId);
-    return reader.require(datasetId);
+        asset,
+        currentVersion.sourceTaskRevisionId(),
+        preparedFields);
   }
 
   public List<DatasetFieldSpec> previewReleaseFields(long sourceTaskAssetId) {
@@ -154,28 +112,25 @@ public class DatasetPublisher {
     return asset;
   }
 
-  private DatasetDetail createDataset(
-      DatasetTaskAssetSnapshot asset, DatasetPublishCommand command) {
-    long datasetId =
-        repository.insertDataset(
-            normalizeName(command.name(), asset.name()), normalizeDescription(command.description()));
-    List<DatasetFieldSpec> fields = resolveFields(datasetId, asset, command.fields());
-    versionWriter.appendInitialQueryRevision(
-        datasetId,
-        asset.id(),
-        asset.currentRevisionId(),
-        asset.currentRevisionNo(),
-        fields);
-    lineagePublisher.request(datasetId);
-    return reader.require(datasetId);
+  private DatasetDetail findReleaseDataset(long sourceTaskAssetId) {
+    return repository.findDatasetBySourceTaskAssetId(sourceTaskAssetId)
+        .map(dataset -> reader.require(dataset.id()))
+        .orElse(null);
   }
 
-  private List<DatasetFieldSpec> resolveFields(
-      long datasetId, DatasetTaskAssetSnapshot asset, List<DatasetFieldSpec> requestedFields) {
-    if (requestedFields != null && !requestedFields.isEmpty()) {
-      return fieldNormalizer.normalize(datasetId, requestedFields);
-    }
-    return fieldNormalizer.normalize(datasetId, schemaDiscovery.discover(datasetId, asset));
+  private boolean isCurrentRevision(
+      DatasetDetail current, DatasetTaskAssetSnapshot asset) {
+    return current != null
+        && current.currentVersion() != null
+        && current.currentVersion().sourceTaskAssetId() == asset.id()
+        && current.currentVersion().sourceTaskRevisionId() == asset.currentRevisionId();
+  }
+
+  private List<DatasetFieldSpec> prepareFields(
+      DatasetTaskAssetSnapshot asset, List<DatasetFieldSpec> requestedFields) {
+    return requestedFields != null && !requestedFields.isEmpty()
+        ? List.copyOf(requestedFields)
+        : schemaDiscovery.preview(asset);
   }
 
   private String normalizeName(String value, String fallback) {

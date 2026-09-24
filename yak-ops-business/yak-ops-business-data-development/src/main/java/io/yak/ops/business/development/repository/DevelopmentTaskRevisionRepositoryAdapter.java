@@ -66,6 +66,11 @@ public class DevelopmentTaskRevisionRepositoryAdapter
   }
 
   @Override
+  public Optional<Long> findLatestIdForUpdateByNodeId(Long nodeId) {
+    return Optional.ofNullable(mapper.selectLatestIdForUpdateByNodeId(nodeId));
+  }
+
+  @Override
   public Optional<DevelopmentTaskRevision> findByRevisionNo(Long nodeId, int revisionNo) {
     return Optional.ofNullable(mapper.selectOne(
             new LambdaQueryWrapper<DevelopmentTaskRevisionPO>()

@@ -22,6 +22,7 @@ export interface AssetSourceLookup {
 export interface DatasetDevelopmentSource {
   datasetId: DevelopmentId;
   developmentNodeId?: DevelopmentId | null;
+  currentDatasetVersionNo?: number | null;
   state: 'FOUND' | 'NOT_APPLICABLE';
 }
 
@@ -47,6 +48,13 @@ export const resolveDatasetDevelopmentSource = (
 export const datasetIdFromSearch = (search: string) => {
   const value = new URLSearchParams(search).get('datasetId');
   return value?.trim() || undefined;
+};
+
+export const datasetVersionNoFromSearch = (search: string) => {
+  const value = new URLSearchParams(search).get('datasetVersionNo');
+  if (!value || !/^\d+$/.test(value)) return undefined;
+  const versionNo = Number(value);
+  return Number.isSafeInteger(versionNo) && versionNo > 0 ? versionNo : undefined;
 };
 
 export const datasetAssetDetailUrl = (asset?: AssetSourceLookup) =>

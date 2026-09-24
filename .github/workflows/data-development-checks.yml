@@ -35,6 +35,7 @@ jobs:
           yarn jest
           src/pages/development/data-development
           src/pages/data-asset/constants.test.ts
+          src/pages/data-service/utils.test.ts
           --runInBand
 
   backend-data-development:
@@ -54,6 +55,6 @@ jobs:
           mvn -B
           -pl yak-ops-business/yak-ops-business-data-development,yak-ops-business/yak-ops-business-dataset,yak-ops-business/yak-ops-business-asset
           -am
-          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest,DevelopmentLineageEvidenceServiceTest,DevelopmentLineageWorkerTest,DatasetDevelopmentSourceServiceTest,AssetSourceLookupServiceTest
+          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest,DevelopmentLineageEvidenceServiceTest,DevelopmentLineageWorkerTest,DevelopmentLineageWriteTransactionTest,DevelopmentSqlLineagePreviewServiceTest,DataDevelopmentDependencyBoundaryTest,DatasetPublisherTest,DatasetVersionWriterTest,DatasetDevelopmentSourceServiceTest,AssetSourceLookupServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test

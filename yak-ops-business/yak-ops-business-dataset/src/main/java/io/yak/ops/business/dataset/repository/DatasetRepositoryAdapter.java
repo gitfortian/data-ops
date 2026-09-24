@@ -60,6 +60,20 @@ public class DatasetRepositoryAdapter implements DatasetRepository {
     return insertDataset(developmentNodeId, name, description);
   }
 
+  @Override
+  public void lockSourceTaskAsset(long sourceTaskAssetId) {
+    if (sourceTaskAssetId <= 0L) throw new IllegalArgumentException("sourceTaskAssetId 必须大于 0");
+    datasetDao.lockSourceTaskAsset(requiredProjectId(), sourceTaskAssetId);
+  }
+
+  @Override
+  public void lockDatasetForUpdate(long datasetId) {
+    if (datasetId <= 0L) throw new IllegalArgumentException("datasetId 必须大于 0");
+    if (!datasetDao.lockDatasetForUpdate(requiredProjectId(), datasetId)) {
+      throw new ProjectContextException(ProjectContextError.PROJECT_NOT_FOUND);
+    }
+  }
+
   private long insertDataset(Long developmentNodeId, String name, String description) {
     DatasetPO po = new DatasetPO();
     po.setProjectId(requiredProjectId());

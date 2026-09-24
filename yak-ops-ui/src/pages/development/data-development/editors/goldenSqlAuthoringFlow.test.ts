@@ -162,4 +162,40 @@ describe('F-002-A Golden SQL authoring flow', () => {
       dialect: 'POSTGRE_SQL',
     });
   });
+
+  it('keeps edits made while a save request is in flight dirty', () => {
+    window.localStorage.clear();
+    const nodeId = 'golden-sql-save-race-node';
+    const original = 'select 1';
+    const submitted = { content: original, configJson: '{"dataSourceId":"source-1"}' };
+
+    hydrateDevelopmentTaskDraft(
+      {
+        id: nodeId,
+        name: 'Save race',
+        type: 'SQL',
+        configured: true,
+      },
+      {
+        nodeId,
+        draftRevision: 4,
+        definition: {
+          taskType: 'SQL',
+          schemaVersion: 1,
+          content: original,
+          configJson: submitted.configJson,
+        },
+      },
+    );
+    updateEditorSessionContent(nodeId, 'select 2');
+
+    markEditorSessionSaved(nodeId, 5, submitted);
+
+    expect(getEditorSession(nodeId)).toMatchObject({
+      content: 'select 2',
+      originalContent: original,
+      draftRevision: 5,
+      dirty: true,
+    });
+  });
 });

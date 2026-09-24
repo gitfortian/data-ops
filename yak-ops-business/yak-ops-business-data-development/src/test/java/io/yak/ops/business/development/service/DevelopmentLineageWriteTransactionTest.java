@@ -5,24 +5,25 @@ import static org.mockito.Mockito.*;
 
 import io.yak.ops.business.development.domain.DevelopmentNode;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevision;
+import io.yak.ops.business.development.repository.DevelopmentTaskRevisionRepository;
 import io.yak.ops.spi.task.model.TaskDefinition;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.ResultSetExtractor;
 
 class DevelopmentLineageWriteTransactionTest {
   @Test
   void staleRevisionCannotReplaceNewerLineage() {
-    JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    DevelopmentTaskRevisionRepository revisions = mock(DevelopmentTaskRevisionRepository.class);
     DevelopmentSqlLineageService lineage = mock(DevelopmentSqlLineageService.class);
-    when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(1L))).thenReturn(12L);
+    when(revisions.findLatestIdForUpdateByNodeId(1L)).thenReturn(Optional.of(12L));
     DevelopmentTaskRevision old = revision(11, 1);
 
-    new DevelopmentLineageWriteTransaction(jdbc, lineage)
+    new DevelopmentLineageWriteTransaction(revisions, lineage)
         .writeIfLatest(node(), old, mock(DevelopmentSqlLineageService.PreparedLineage.class));
 
     verify(lineage, never()).applyPrepared(any(), any(), any());
+    verify(revisions).findLatestIdForUpdateByNodeId(1L);
   }
 
   private static DevelopmentNode node() {
