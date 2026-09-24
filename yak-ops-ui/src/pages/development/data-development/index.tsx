@@ -3,6 +3,10 @@ import { useIntl } from '@umijs/max';
 import { ConfigProvider } from 'antd';
 import { useEffect, useRef } from 'react';
 
+import {
+  datasetIdFromSearch,
+  resolveDatasetDevelopmentSource,
+} from './assetGovernance';
 import CreateDevelopmentNodeModal from './components/CreateDevelopmentNodeModal';
 import CreateDirectoryModal from './components/CreateDirectoryModal';
 import DeleteDevelopmentResourceModal from './components/DeleteDevelopmentResourceModal';
@@ -21,19 +25,49 @@ export default function DataDevelopmentPage() {
   const intl = useIntl();
   const page = useDataDevelopmentPage();
   const deepLinkAppliedRef = useRef(false);
+  const datasetResolveInFlightRef = useRef(false);
   const directoryLabel = intl.formatMessage({ id: 'pages.dataDevelopment.common.directory' });
   const nodeLabel = intl.formatMessage({ id: 'pages.dataDevelopment.common.node' });
 
   useEffect(() => {
     if (deepLinkAppliedRef.current || page.treeLoading || page.treeFailure) return;
+
     const nodeId = developmentNodeIdFromSearch(window.location.search);
-    if (!nodeId) {
+    if (nodeId) {
+      if (!page.nodes.some((node) => String(node.id) === nodeId)) return;
+      deepLinkAppliedRef.current = true;
+      page.focusNode(nodeId);
+      return;
+    }
+
+    const datasetId = datasetIdFromSearch(window.location.search);
+    if (!datasetId) {
       deepLinkAppliedRef.current = true;
       return;
     }
-    if (!page.nodes.some((node) => String(node.id) === nodeId)) return;
-    deepLinkAppliedRef.current = true;
-    page.focusNode(nodeId);
+    if (datasetResolveInFlightRef.current) return;
+
+    datasetResolveInFlightRef.current = true;
+    void resolveDatasetDevelopmentSource(datasetId)
+      .then((source) => {
+        const resolvedNodeId = source.state === 'FOUND'
+          ? String(source.developmentNodeId || '')
+          : '';
+        if (
+          resolvedNodeId
+          && page.nodes.some((node) => String(node.id) === resolvedNodeId)
+        ) {
+          page.focusNode(resolvedNodeId);
+        }
+        deepLinkAppliedRef.current = true;
+      })
+      .catch(() => {
+        // Cross-domain provenance failure must not break the Development workspace itself.
+        deepLinkAppliedRef.current = true;
+      })
+      .finally(() => {
+        datasetResolveInFlightRef.current = false;
+      });
   }, [page.focusNode, page.nodes, page.treeFailure, page.treeLoading]);
 
   return (
