@@ -59,9 +59,34 @@ export interface ProductDiscoveryResult {
   providerReasons: Partial<Record<ProductType, string>>;
 }
 
+export interface ProductNavigation {
+  canonicalHref: string;
+  sourceHref?: string | null;
+  assetHref?: string | null;
+  producerHref?: string | null;
+}
+
+export interface GovernanceEvidence {
+  sectionKey: string;
+  state: ProviderEvidenceState;
+  ownerDomain: string;
+  observedAt?: string | null;
+  facts: Record<string, unknown>;
+  reason?: string | null;
+}
+
 export interface ProductLookupResult {
   state: ProductLookupState;
   product?: DataProductView | null;
+  navigation?: ProductNavigation | null;
+  governanceEvidence?: GovernanceEvidence[];
+  reason?: string | null;
+}
+
+export interface NavigationResolution {
+  state: ProductLookupState | 'NOT_APPLICABLE';
+  productKey?: ProductKeyRef | null;
+  canonicalHref?: string | null;
   reason?: string | null;
 }
 
