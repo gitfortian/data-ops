@@ -39,11 +39,13 @@
         <module>yak-ops-business-modeling</module>
         <module>yak-ops-business-semantic</module>
         <module>yak-ops-business-mdm</module>
+        <module>yak-ops-business-semantic</module>
         <module>yak-ops-business-metric</module>
         <module>yak-ops-business-security</module>
         <module>yak-ops-business-lifecycle</module>
         <module>yak-ops-business-asset</module>
         <module>yak-ops-business-metadata</module>
         <module>yak-ops-business-approval</module>
+        <module>yak-ops-business-consumption</module>
     </modules>
 </project>
