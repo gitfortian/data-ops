@@ -16,6 +16,7 @@ public record DevelopmentTaskExecutionDetail(
     String status,
     String operatorName,
     Long durationMs,
+    String failureReason,
     String errorMessage,
     String content,
     String configJson,
