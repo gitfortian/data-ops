@@ -4,9 +4,12 @@ on:
   pull_request:
     paths:
       - 'yak-ops-ui/src/pages/development/data-development/**'
+      - 'yak-ops-ui/src/pages/data-asset/**'
       - 'yak-ops-ui/src/services/data-development/**'
       - 'yak-ops-ui/src/locales/**/data-development-*.ts'
       - 'yak-ops-business/yak-ops-business-data-development/**'
+      - 'yak-ops-business/yak-ops-business-dataset/**'
+      - 'yak-ops-business/yak-ops-business-asset/**'
       - '.github/workflows/data-development-checks.yml'
 
 jobs:
@@ -27,11 +30,15 @@ jobs:
         run: npm install --global yarn@1.22.22
       - name: Install frontend dependencies
         run: yarn install --frozen-lockfile
-      - name: Run Data Development authoring tests
-        run: yarn jest src/pages/development/data-development --runInBand
+      - name: Run Data Development governance tests
+        run: >-
+          yarn jest
+          src/pages/development/data-development
+          src/pages/data-asset/constants.test.ts
+          --runInBand
 
   backend-data-development:
-    name: Backend Data Development tests
+    name: Backend Data Development and governance tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -42,11 +49,11 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run publish and execution truth tests
+      - name: Run publish, execution and governance truth tests
         run: >-
           mvn -B
-          -pl yak-ops-business/yak-ops-business-data-development
+          -pl yak-ops-business/yak-ops-business-data-development,yak-ops-business/yak-ops-business-dataset,yak-ops-business/yak-ops-business-asset
           -am
-          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest
+          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest,DevelopmentLineageEvidenceServiceTest,DevelopmentLineageWorkerTest,DatasetDevelopmentSourceServiceTest,AssetSourceLookupServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
