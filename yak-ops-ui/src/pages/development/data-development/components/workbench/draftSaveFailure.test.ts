@@ -1,4 +1,7 @@
-import { classifyDraftSaveFailure } from './draftSaveFailure';
+import {
+  classifyDraftSaveFailure,
+  rebaseDraftSavePayload,
+} from './draftSaveFailure';
 
 describe('draft save failure semantics', () => {
   it('recognizes optimistic conflicts and preserves the backend detail', () => {
@@ -44,5 +47,23 @@ describe('draft save failure semantics', () => {
       status: 500,
       detail: 'database unavailable',
     });
+  });
+
+  it('rebases only the optimistic revision and keeps editor content unchanged', () => {
+    const payload = {
+      taskType: 'SQL' as const,
+      schemaVersion: 3,
+      content: 'select customer_id from ods_customer',
+      configJson: '{"dataSourceId":"12"}',
+      baseRevision: 4,
+    };
+
+    expect(rebaseDraftSavePayload(payload, 7)).toEqual({
+      ...payload,
+      baseRevision: 7,
+    });
+    expect(payload.baseRevision).toBe(4);
+    expect(payload.content).toBe('select customer_id from ods_customer');
+    expect(payload.configJson).toBe('{"dataSourceId":"12"}');
   });
 });
