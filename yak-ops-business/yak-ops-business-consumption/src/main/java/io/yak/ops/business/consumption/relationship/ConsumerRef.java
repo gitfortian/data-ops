@@ -1,5 +1,6 @@
 package io.yak.ops.business.consumption.relationship;
 
+import java.util.Locale;
 import java.util.Objects;
 
 /** Stable consumer reference; displayHint is presentation-only and never part of identity. */
@@ -11,7 +12,7 @@ public record ConsumerRef(
 
   public ConsumerRef {
     Objects.requireNonNull(consumerType, "consumerType");
-    sourceDomain = requireText(sourceDomain, "sourceDomain").toUpperCase();
+    sourceDomain = requireText(sourceDomain, "sourceDomain").toUpperCase(Locale.ROOT);
     sourceIdentity = requireText(sourceIdentity, "sourceIdentity");
     displayHint = normalize(displayHint);
   }
