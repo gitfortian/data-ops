@@ -101,15 +101,17 @@ public class DevelopmentTaskExecutionRepositoryAdapter
       long id,
       String status,
       long durationMs,
+      String failureReason,
       String errorMessage,
       String outputJson) {
     Long projectId = requiredProjectId();
     jdbcTemplate.update(
-        "UPDATE yak_dev_task_execution SET status = ?, duration_ms = ?, error_message = ?, output_json = ?, "
-            + "end_time = NOW(6), update_time = NOW(6) WHERE id = ? AND project_id = ? "
-            + "AND status IN ('PENDING', 'RUNNING')",
+        "UPDATE yak_dev_task_execution SET status = ?, duration_ms = ?, failure_reason = ?, "
+            + "error_message = ?, output_json = ?, end_time = NOW(6), update_time = NOW(6) "
+            + "WHERE id = ? AND project_id = ? AND status IN ('PENDING', 'RUNNING')",
         status,
         durationMs,
+        failureReason,
         errorMessage,
         outputJson,
         id,
@@ -209,8 +211,8 @@ public class DevelopmentTaskExecutionRepositoryAdapter
 
   private static String detailSelect() {
     return "SELECT project_id, id, node_id, task_name, task_type, schema_version, trigger_type, "
-        + "runtime_execution_id, retry_of_execution_id, status, operator_name, duration_ms, error_message, "
-        + "content, config_json, output_json, start_time, end_time FROM yak_dev_task_execution";
+        + "runtime_execution_id, retry_of_execution_id, status, operator_name, duration_ms, failure_reason, "
+        + "error_message, content, config_json, output_json, start_time, end_time FROM yak_dev_task_execution";
   }
 
   private static ExecutionRecord mapRecord(ResultSet rs, int rowNum) throws SQLException {
@@ -233,6 +235,7 @@ public class DevelopmentTaskExecutionRepositoryAdapter
         rs.getString("status"),
         rs.getString("operator_name"),
         durationMs,
+        rs.getString("failure_reason"),
         rs.getString("error_message"),
         rs.getString("content"),
         rs.getString("config_json"),
