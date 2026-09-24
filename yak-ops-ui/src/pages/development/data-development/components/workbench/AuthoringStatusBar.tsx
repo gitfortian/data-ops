@@ -1,5 +1,13 @@
 import { useIntl } from '@umijs/max';
-import { Check, CircleDot, CloudUpload, FilePenLine, LoaderCircle, Play, Tag } from 'lucide-react';
+import {
+  Check,
+  CircleDot,
+  CloudUpload,
+  FilePenLine,
+  LoaderCircle,
+  Play,
+  Tag,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -17,6 +25,11 @@ interface AuthoringStatusBarProps {
   publishing?: boolean;
 }
 
+type PublishedRevisionState =
+  | { status: 'loading' }
+  | { status: 'ready'; revision: number | null }
+  | { status: 'unavailable' };
+
 const AuthoringStatusBar = ({
   node,
   saving = false,
@@ -24,7 +37,8 @@ const AuthoringStatusBar = ({
 }: AuthoringStatusBarProps) => {
   const intl = useIntl();
   useEditorSessionVersion();
-  const [publishedRevision, setPublishedRevision] = useState<number | null>();
+  const [publishedRevision, setPublishedRevision] =
+    useState<PublishedRevisionState>({ status: 'loading' });
   const session = getEditorSession(node.id);
   const state = deriveAuthoringState({
     draftRevision: session?.draftRevision,
@@ -36,6 +50,7 @@ const AuthoringStatusBar = ({
 
   useEffect(() => {
     let active = true;
+    setPublishedRevision({ status: 'loading' });
     listDevelopmentTaskRevisions(node.id)
       .then((response) => {
         if (!active) return;
@@ -43,10 +58,13 @@ const AuthoringStatusBar = ({
           response,
           intl.formatMessage({ id: 'pages.dataDevelopment.versions.queryFailed' }),
         );
-        setPublishedRevision(revisions[0]?.revisionNo ?? null);
+        setPublishedRevision({
+          status: 'ready',
+          revision: revisions[0]?.revisionNo ?? null,
+        });
       })
       .catch(() => {
-        if (active) setPublishedRevision(undefined);
+        if (active) setPublishedRevision({ status: 'unavailable' });
       });
     return () => {
       active = false;
@@ -59,6 +77,18 @@ const AuthoringStatusBar = ({
       : state.saveState === 'unsaved'
         ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.unsavedChanges' })
         : intl.formatMessage({ id: 'pages.dataDevelopment.authoring.saved' });
+
+  const publishedLabel =
+    publishedRevision.status === 'loading'
+      ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishedLoading' })
+      : publishedRevision.status === 'unavailable'
+        ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishedUnknown' })
+        : publishedRevision.revision === null
+          ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.notPublished' })
+          : intl.formatMessage(
+              { id: 'pages.dataDevelopment.authoring.publishedRevision' },
+              { revision: publishedRevision.revision },
+            );
 
   return (
     <div className="flex h-8 shrink-0 items-center justify-between gap-4 border-b border-[#eef0f2] bg-[#fbfcfd] px-3 text-[11px] text-[#667085]">
@@ -74,15 +104,12 @@ const AuthoringStatusBar = ({
         </span>
 
         <span className="inline-flex shrink-0 items-center gap-1 rounded-[3px] border border-[#e4e7ec] bg-white px-1.5 py-0.5 text-[#667085]">
-          <Tag size={11} strokeWidth={1.8} />
-          {publishedRevision === null
-            ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.notPublished' })
-            : typeof publishedRevision === 'number'
-              ? intl.formatMessage(
-                  { id: 'pages.dataDevelopment.authoring.publishedRevision' },
-                  { revision: publishedRevision },
-                )
-              : intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishedUnknown' })}
+          {publishedRevision.status === 'loading' ? (
+            <LoaderCircle size={11} className="animate-spin" />
+          ) : (
+            <Tag size={11} strokeWidth={1.8} />
+          )}
+          {publishedLabel}
         </span>
 
         <span
