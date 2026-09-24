@@ -9,6 +9,7 @@ import dashboardEditorStyle from './en-US/dashboard-editor-style';
 import dataDevelopment from './en-US/data-development';
 import dataDevelopmentAuthoring from './en-US/data-development-authoring';
 import dataDevelopmentEditor from './en-US/data-development-editor';
+import dataDevelopmentSqlContext from './en-US/data-development-sql-context';
 import dataDevelopmentWorkspaceState from './en-US/data-development-workspace-state';
 import dataQuality from './en-US/data-quality';
 import dataService from './en-US/data-service';
@@ -55,6 +56,7 @@ export default {
   ...dataDevelopmentAuthoring,
   ...dataDevelopmentWorkspaceState,
   ...dataDevelopmentEditor,
+  ...dataDevelopmentSqlContext,
   ...workflow,
   ...workflowEditor,
   ...workflowEditorRuntime,

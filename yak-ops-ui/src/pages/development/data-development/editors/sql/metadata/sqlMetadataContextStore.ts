@@ -5,8 +5,12 @@ import {
 } from '@/services/data-development';
 import { useSyncExternalStore } from 'react';
 
-import { updateEditorSessionConfig } from '../../session/editorSessionStore';
+import {
+  getEditorSession,
+  updateEditorSessionConfig,
+} from '../../session/editorSessionStore';
 import type { DevelopmentId } from '../../../types';
+import { mergeSqlTaskContextConfig } from './sqlTaskContextConfig';
 
 export interface SqlMetadataContext {
   nodeId: DevelopmentId;
@@ -113,20 +117,6 @@ const getVersion = () => {
   return version;
 };
 
-const configJsonForContext = (context: Partial<SqlMetadataContext>) =>
-  JSON.stringify(
-    Object.fromEntries(
-      Object.entries({
-        dataSourceId: context.dataSourceId,
-        databaseName: context.database,
-        schemaName: context.schema,
-        dialect: normalizeDevelopmentSqlDialect(
-          context.dialect ?? context.dbType,
-        ),
-      }).filter(([, value]) => value !== undefined && value !== ''),
-    ),
-  );
-
 export const ensureSqlMetadataContext = (
   nodeId: DevelopmentId,
 ): SqlMetadataContext => {
@@ -149,8 +139,11 @@ export const getSqlMetadataContext = (nodeId: DevelopmentId) => {
   return contexts.get(nodeId);
 };
 
-export const getSqlTaskConfigJson = (nodeId: DevelopmentId) =>
-  configJsonForContext(ensureSqlMetadataContext(nodeId));
+export const getSqlTaskConfigJson = (nodeId: DevelopmentId) => {
+  const context = ensureSqlMetadataContext(nodeId);
+  const currentConfigJson = getEditorSession(nodeId)?.configJson || '{}';
+  return mergeSqlTaskContextConfig(currentConfigJson, context);
+};
 
 export const updateSqlMetadataContext = (
   nodeId: DevelopmentId,
@@ -172,6 +165,17 @@ export const updateSqlMetadataContext = (
   persist();
   emitChange();
   return next;
+};
+
+const syncEditorSessionContext = (
+  nodeId: DevelopmentId,
+  context: SqlMetadataContext,
+) => {
+  const currentConfigJson = getEditorSession(nodeId)?.configJson || '{}';
+  updateEditorSessionConfig(
+    nodeId,
+    mergeSqlTaskContextConfig(currentConfigJson, context),
+  );
 };
 
 export const hydrateSqlTaskConfig = (
@@ -198,6 +202,22 @@ export const hydrateSqlTaskConfig = (
   return next;
 };
 
+/**
+ * Presentation-only enrichment for a Draft-owned dataSourceId. This must never
+ * clear database/schema or rewrite the editor Task config, otherwise merely
+ * opening an existing Draft would create a fake unsaved change.
+ */
+export const enrichSqlDataSourceContext = (
+  nodeId: DevelopmentId,
+  dataSource: { id: string; name?: string },
+) => {
+  const current = ensureSqlMetadataContext(nodeId);
+  if (current.dataSourceId !== dataSource.id || current.dataSourceName === dataSource.name) {
+    return current;
+  }
+  return updateSqlMetadataContext(nodeId, { dataSourceName: dataSource.name });
+};
+
 export const selectSqlDataSourceContext = (
   nodeId: DevelopmentId,
   dataSource?: { id: string; name?: string; dbType?: string },
@@ -213,7 +233,7 @@ export const selectSqlDataSourceContext = (
     database: undefined,
     schema: undefined,
   });
-  updateEditorSessionConfig(nodeId, configJsonForContext(next));
+  syncEditorSessionContext(nodeId, next);
   return next;
 };
 
@@ -225,7 +245,7 @@ export const selectSqlDatabaseContext = (
     database,
     schema: undefined,
   });
-  updateEditorSessionConfig(nodeId, configJsonForContext(next));
+  syncEditorSessionContext(nodeId, next);
   return next;
 };
 
@@ -234,7 +254,7 @@ export const selectSqlSchemaContext = (
   schema?: string,
 ) => {
   const next = updateSqlMetadataContext(nodeId, { schema });
-  updateEditorSessionConfig(nodeId, configJsonForContext(next));
+  syncEditorSessionContext(nodeId, next);
   return next;
 };
 
