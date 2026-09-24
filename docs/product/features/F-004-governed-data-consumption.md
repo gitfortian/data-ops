@@ -549,3 +549,54 @@ F-004-A / #101 可以关闭的前提：
 - [x] #102 / #103 / #104 实施边界冻结。
 
 F-004 整体完成仍需 #102、#103、#104 实现与 Evidence；`APPROVED` 不代表代码已经完成。
+
+## 15. Phase 4 实施校准与关闭约束
+
+本节细化 #102、#103、#104 的实施与验收，不改变 PD-002 已接受的产品模型。若实际来源领域无法提供 PD-002 要求的生命周期或访问语义，应先修订相应 Domain Contract；如需缩小已接受的产品规则，则按 Product Change Process 修订 Product Decision，不能在 Consumption 投影中猜测或伪造。
+
+### 15.1 用户闭环与首批范围
+
+- **User**：发现并使用 Dataset 的数据消费者、集成 Data Service 的开发人员，以及识别已知消费者的产品 Owner。
+- **Problem**：生产、治理、访问裁决与实际使用证据散落在不同入口，用户无法完成可信消费与影响判断。
+- **Capability / Journey**：现有“数据消费与服务”能力内的 Consumption Hub；服务 J3，并给 J4/J5 提供已知消费与访问证据。
+- **Expected Outcome**：从发现已发布对象到理解契约、通过真实授权动作消费、查看证据和回链形成闭环。
+- **Truth Owner**：Dataset / Data Service 拥有来源契约与发布事实；Security / 既有访问机制拥有授权事实；Consumption 只拥有 Subscription 与 normalized Usage Evidence；Asset、Quality、Lineage 保留各自 Truth。
+- **Producer / Consumer**：Dataset、Data Service、治理和实际执行入口生产事实；Consumption Hub、Asset、Consumer / Impact View 消费这些事实。
+- **Reuse**：Dataset Query、Data Service 公共调用与 Consumer/API Key、Project Space、RBAC、Security、Asset、Quality、Lineage、既有审计与诊断证据。
+- **E2E evidence**：一条真实 Dataset Query/Preview/Export 路径与一条真实 Data Service Invoke 路径，均证明身份、裁决、结果、Usage Evidence、影响视图与稳定回链。
+
+Phase 4 的 Data Product 来源仅为 Dataset 与 Data Service。Metric、MDM、Model、Semantic、Analysis、Agent 等只能在后续独立产品决策确认其可消费 owning contract 后扩展；早期 #102 草案中的“全域来源”表述不构成本期范围。
+
+### 15.2 发现、详情和状态
+
+Dataset 与 Data Service 分别由 source owner 提供稳定 source identity、active version、专业 schema/interface 与真实 endpoint。Consumption 可以组合或缓存只读投影，但必须保留可重建性、来源版本和证据时间。Search、Hub、Asset 的快捷入口最终进入同一 canonical Consumption Detail；直接打开 productKey 也必须解析到相同对象。
+
+查询结果须显式区分：对象不存在、按 visibility 不可发现、允许发现但无权查看、source provider 不可用、可查看但某一 section 不可用。仅在 provider 正常确认无数据时使用 `EMPTY`；`DEPRECATED` / `RETIRED` 属于 source lifecycle，不是 section state；不得用 `null`、空列表或单一总状态替代这些语义。
+
+Dataset 当前的 ONLINE/OFFLINE、Data Service 的 active revision/enabled/runtime 状态应由各 source owner 给出明确映射。停用或 runtime 故障不能自动改写已发布版本的 lifecycle。`DEPRECATED` / `RETIRED` 若尚无 source-owned 状态与行为，必须先补齐来源领域契约，Consumption 不得自行保存第二套状态。#104 验收前须记录两类产品每个 lifecycle、availability、access 与 evidence state 的来源映射。
+
+### 15.3 Access 必须进入真实消费动作
+
+Access projection 的键至少包含稳定 productKey、主体、动作与调用平面。**发现/查看权限与消费权限分别裁决**；消费动作包括 Dataset Query/Preview/Export 中实际交付的一项和 Data Service Invoke。前端提示不能替代执行入口的后端授权。
+
+- Dataset 的登录态读取继续遵守 Project Space / RBAC，并在真实 Query 等执行入口应用适用的 Security/Access 裁决。现有面向 DATASOURCE / DATABASE / TABLE / COLUMN 的物理资源裁决不能仅通过传入 `DATASET:<id>` 便宣称完成 Dataset 授权；对象与动作的策略归属需由 Security owner 明确。
+- Data Service 控制台查看使用 Project membership / RBAC；公共 Invoke 继续由服务所属 Project、IP 策略、Consumer grant、NONE/API_KEY 等现有调用契约裁决。登录用户的页面 Access State 不能冒充某个外部 API Key 的调用许可。
+- `REQUEST_REQUIRED` 必须指向实际可执行的申请流程或明确的 Owner 联系路径；Access provider 不可用时返回 provider state=`UNAVAILABLE`，执行入口不得默认放行。是否允许显示 `FORBIDDEN` 仍受 discoverability policy 约束。
+
+### 15.4 Subscription 与 Usage Evidence 的可验证边界
+
+Subscription 是 Consumption 拥有的声明依赖，不是 Data Service Consumer grant、API Key、收藏或权限申请。#103 须定义谁可代表 Consumer 创建/撤销、同一 productKey + ConsumerRef + consumptionMode 的幂等与唯一性、保留的历史状态，以及 source lifecycle 变化时的行为；未冻结前不得用授权记录自动生成 Subscription。
+
+Usage Evidence 只根据真实消费执行入口的来源证据归一化，至少保留 productKey、source version/revision、稳定 ConsumerRef、动作/结果、时间、project、provider、providerEvidenceRef 与去重 identity。Dataset 的 QueryPerformance 是诊断事实，不天然具备 ConsumerRef；Data Service 的调用日志/API Key 也不能仅凭展示名长期识别 Consumer。应复用 Data Service 已有 Consumer identity，在调用时保留稳定 ID；匿名或 legacy key 无法解析稳定 Consumer 时，明确表达未归属的 evidence coverage，不能虚构 known Consumer。失败尝试可作为审计，但不能计入“实际成功消费”的 known usage。
+
+归一化投递失败不得回滚已经成功的消费；同时必须有可重试的**来源持久证据**、去重、积压诊断与最终状态。若来源证据本身写入失败且消费仍成功，平台无法保证零遗漏：须暴露覆盖缺口并告警，不得展示虚假的 `0 usage` 或声称完整 Consumer 清单。
+
+### 15.5 实施切片与退出证据
+
+1. **#102 发现与理解**：Dataset/Data Service 真实 Provider、可发现范围、type-specific contract、partial section state、canonical Detail 和双向稳定回链。基础模型或 SPI 合并只算中间切片，不能关闭 #102。
+2. **#103 真实消费与关系**：动作级裁决、实际 Query/Invoke 集成、ConsumerRef、Subscription、可恢复的 Usage Evidence、已知 Consumer/Impact。#102/#103 可在冻结的契约上并行开发，但真实动作与证据联调后才算完成。
+3. **#104 产品验收**：登录态 Dataset 消费；登录态发现 Data Service 后，以受治理的真实 Consumer/API Key 执行公共 Invoke。两条路径均保存来源版本、裁决、执行结果、证据 ID、Consumer、Impact 与 source/Asset/Producer 回链。
+
+#104 至少覆盖：可见但不可消费、不可发现、不存在、source/Access/Usage provider 不可用、跨 Project、没有 Consumer、只有 Subscription、只有 Usage、重复订阅、证据归一化失败及恢复、已废弃/已退休产品的来源行为。关键治理 section 不得全部以 `UNAVAILABLE` 通过 Golden E2E；每条 Golden Path 至少展示真实来源的可解释治理证据，并说明其覆盖范围与时间。Impact 只能称为基于已知 Subscription / Usage / Lineage evidence 的影响，不能推断所有外部依赖。
+
+关闭 #100 前，#102/#103/#104 必须各自完成；一条契约回归测试不替代两条真实路径的可重复验收。保留实际页面/API 响应、稳定 ID、失败态、证据投递与恢复记录，并核对无第二份 Dataset / Data Service / Asset owning Truth。成功信号先记录发现→详情→实际消费→证据可见的漏斗与缺口，不在没有观测基线时设定百分比 KPI。
