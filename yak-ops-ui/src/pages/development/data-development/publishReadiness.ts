@@ -1,20 +1,12 @@
-export interface DevelopmentPublishValidationIssue {
-  code?: string | null;
-  field?: string | null;
-  path?: string | null;
-  message?: string | null;
-}
+import type {
+  DevelopmentTaskPublishValidation,
+  DevelopmentTaskValidationIssue,
+} from '@/services/data-development';
 
-export interface DevelopmentTaskPublishValidation {
-  nodeId: string;
-  draftRevision: number;
-  valid: boolean;
-  message?: string | null;
-  issues: DevelopmentPublishValidationIssue[];
-}
+export type { DevelopmentTaskPublishValidation } from '@/services/data-development';
 
-export const publishIssueLabel = (issue: DevelopmentPublishValidationIssue) => {
-  const field = issue.field || issue.path;
+export const publishIssueLabel = (issue: DevelopmentTaskValidationIssue) => {
+  const field = issue.field?.trim();
   const message = issue.message?.trim();
   if (field && message) return `${field}: ${message}`;
   if (message) return message;
