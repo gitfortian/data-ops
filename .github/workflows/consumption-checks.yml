@@ -8,6 +8,7 @@ on:
       - 'yak-ops-ui/src/pages/data-analysis/consumption/**'
       - 'yak-ops-ui/src/pages/data-analysis/data-catalog/**'
       - 'yak-ops-ui/src/pages/data-analysis/dataset/components/DatasetRowActions.tsx'
+      - 'yak-ops-ui/src/pages/data-asset/components/StatusFlowStrip.tsx'
       - 'yak-ops-ui/src/pages/home/**'
       - 'yak-ops-ui/config/routes.ts'
       - '.github/workflows/consumption-checks.yml'
