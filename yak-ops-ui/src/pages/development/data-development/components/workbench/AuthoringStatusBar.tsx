@@ -1,12 +1,15 @@
 import { useIntl } from '@umijs/max';
-import { Check, CircleDot, CloudUpload, FilePenLine, LoaderCircle, Play } from 'lucide-react';
+import { Check, CircleDot, CloudUpload, FilePenLine, LoaderCircle, Play, Tag } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import {
   getEditorSession,
   useEditorSessionVersion,
 } from '../../editors/session/editorSessionStore';
+import { listDevelopmentTaskRevisions } from '../../service';
 import type { DevelopmentNode } from '../../types';
 import { deriveAuthoringState } from './authoringState';
+import { responseData } from './workbenchResponse';
 
 interface AuthoringStatusBarProps {
   node: DevelopmentNode;
@@ -21,6 +24,7 @@ const AuthoringStatusBar = ({
 }: AuthoringStatusBarProps) => {
   const intl = useIntl();
   useEditorSessionVersion();
+  const [publishedRevision, setPublishedRevision] = useState<number | null>();
   const session = getEditorSession(node.id);
   const state = deriveAuthoringState({
     draftRevision: session?.draftRevision,
@@ -29,6 +33,25 @@ const AuthoringStatusBar = ({
     publishing,
     pendingPublish: node.pendingPublish,
   });
+
+  useEffect(() => {
+    let active = true;
+    listDevelopmentTaskRevisions(node.id)
+      .then((response) => {
+        if (!active) return;
+        const revisions = responseData(
+          response,
+          intl.formatMessage({ id: 'pages.dataDevelopment.versions.queryFailed' }),
+        );
+        setPublishedRevision(revisions[0]?.revisionNo ?? null);
+      })
+      .catch(() => {
+        if (active) setPublishedRevision(undefined);
+      });
+    return () => {
+      active = false;
+    };
+  }, [intl, node.id, node.pendingPublish, publishing]);
 
   const saveLabel =
     state.saveState === 'saving'
@@ -48,6 +71,18 @@ const AuthoringStatusBar = ({
                 { revision: state.draftRevision },
               )
             : intl.formatMessage({ id: 'pages.dataDevelopment.authoring.draftNotSaved' })}
+        </span>
+
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-[3px] border border-[#e4e7ec] bg-white px-1.5 py-0.5 text-[#667085]">
+          <Tag size={11} strokeWidth={1.8} />
+          {publishedRevision === null
+            ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.notPublished' })
+            : typeof publishedRevision === 'number'
+              ? intl.formatMessage(
+                  { id: 'pages.dataDevelopment.authoring.publishedRevision' },
+                  { revision: publishedRevision },
+                )
+              : intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishedUnknown' })}
         </span>
 
         <span
