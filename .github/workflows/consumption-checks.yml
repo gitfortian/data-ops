@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'yak-ops-business/yak-ops-business-consumption/**'
+      - 'yak-ops-bom/pom.xml'
+      - 'yak-ops-boot/pom.xml'
+      - 'yak-ops-boot/src/test/java/io/yak/ops/boot/architecture/ConsumptionRuntimeAssemblyTest.java'
       - 'yak-ops-ui/src/services/consumption/**'
       - 'yak-ops-ui/src/pages/data-analysis/consumption/**'
       - 'yak-ops-ui/src/pages/data-analysis/data-catalog/**'
@@ -33,6 +36,14 @@ jobs:
           -pl yak-ops-business/yak-ops-business-consumption
           -am
           -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+          test
+      - name: Verify executable Boot assembly contains Consumption
+        run: >-
+          mvn -B
+          -pl yak-ops-boot
+          -am
+          -Dtest=ConsumptionRuntimeAssemblyTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
 
