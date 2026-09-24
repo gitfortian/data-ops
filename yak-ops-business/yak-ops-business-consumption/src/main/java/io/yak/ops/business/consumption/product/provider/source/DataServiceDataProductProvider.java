@@ -23,6 +23,7 @@ import io.yak.ops.business.dataservice.query.DataServiceReader;
 import io.yak.ops.business.dataservice.query.DataServiceView;
 import io.yak.ops.business.dataservice.query.DataServiceViewFactory;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
@@ -34,6 +35,7 @@ public class DataServiceDataProductProvider implements DataProductProvider {
 
   private final DataServiceReader reader;
   private final DataServiceViewFactory viewFactory;
+  @SuppressWarnings("unused")
   private final AssetSourceLookupService assetLookup;
 
   public DataServiceDataProductProvider(
@@ -46,9 +48,7 @@ public class DataServiceDataProductProvider implements DataProductProvider {
   }
 
   @Override
-  public ProductType productType() {
-    return ProductType.DATA_SERVICE;
-  }
+  public ProductType productType() { return ProductType.DATA_SERVICE; }
 
   @Override
   public ProductLookupResult get(ProductKey productKey) {
@@ -57,7 +57,6 @@ public class DataServiceDataProductProvider implements DataProductProvider {
     }
     Long id = parsePositiveId(productKey.sourceIdentity());
     if (id == null) return ProductLookupResult.notFound();
-
     final DataServiceDefinition definition;
     try {
       definition = reader.require(id);
@@ -66,7 +65,6 @@ public class DataServiceDataProductProvider implements DataProductProvider {
     } catch (RuntimeException exception) {
       return ProductLookupResult.unavailable(exception.getMessage());
     }
-
     if (definition.projectId() == null) return ProductLookupResult.notDiscoverable();
     try {
       return ProductLookupResult.found(project(definition));
@@ -113,16 +111,27 @@ public class DataServiceDataProductProvider implements DataProductProvider {
   private DataProductView project(DataServiceDefinition definition) {
     DataServiceView view = viewFactory.view(definition);
     SourceReference source = definition.sourceReference();
-    AssetProjection asset = assetProjection(definition.id());
     List<ProductSectionState> sections = List.of(
         unavailableSection("ownership", "DATA_SERVICE", "Data Service owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Data Service visibility policy is not exposed yet"),
-        asset.section());
+        new ProductSectionState(
+            "security",
+            ProviderEvidenceState.READY,
+            "DATA_SERVICE",
+            definition.updateTime() == null ? null
+                : definition.updateTime().atZone(ZoneId.systemDefault()).toInstant(),
+            "Published authMode=" + definition.authMode().name()),
+        new ProductSectionState(
+            "asset",
+            ProviderEvidenceState.NOT_APPLICABLE,
+            "ASSET",
+            null,
+            "DATA_SERVICE is not an Asset Registry source type in the current baseline"));
     return new DataProductView(
         new ProductKey(ProductType.DATA_SERVICE, String.valueOf(definition.id())),
         new SourceRef(ProductType.DATA_SERVICE, String.valueOf(definition.id())),
         producerRef(source),
-        asset.ref(),
+        null,
         definition.settings().name(),
         definition.settings().description(),
         null,
@@ -134,17 +143,10 @@ public class DataServiceDataProductProvider implements DataProductProvider {
         AccessProjection.unavailable("Data Service subject/plane access is delivered by #103"),
         sections,
         new DataServiceContractPayload(
-            view.runtimePath(),
-            view.parameterNames(),
-            view.authMode(),
-            definition.settings().maxRows(),
-            definition.settings().timeoutSeconds(),
-            definition.settings().paginationEnabled(),
-            definition.settings().enabled(),
-            source.sourceType(),
-            source.sourceRef(),
-            source.sourceRevisionId(),
-            source.sourceRevisionNo(),
+            view.runtimePath(), view.parameterNames(), view.authMode(),
+            definition.settings().maxRows(), definition.settings().timeoutSeconds(),
+            definition.settings().paginationEnabled(), definition.settings().enabled(),
+            source.sourceType(), source.sourceRef(), source.sourceRevisionId(), source.sourceRevisionNo(),
             definition.runtimeGeneration()));
   }
 
@@ -161,9 +163,7 @@ public class DataServiceDataProductProvider implements DataProductProvider {
 
   private DomainRef producerRef(SourceReference source) {
     if (source.sourceType() == null || source.sourceType().isBlank()
-        || source.sourceRef() == null || source.sourceRef().isBlank()) {
-      return null;
-    }
+        || source.sourceRef() == null || source.sourceRef().isBlank()) return null;
     return new DomainRef(source.sourceType(), source.sourceRef());
   }
 
@@ -173,22 +173,6 @@ public class DataServiceDataProductProvider implements DataProductProvider {
 
   private boolean requiresUnavailableGovernanceFilter(ProductSearchCriteria criteria) {
     return criteria != null && (normalize(criteria.owner()) != null || normalize(criteria.visibility()) != null);
-  }
-
-  private AssetProjection assetProjection(Long serviceId) {
-    try {
-      AssetSourceLookupService.SourceLookup lookup = assetLookup.lookup("DATA_SERVICE", String.valueOf(serviceId));
-      if ("FOUND".equals(lookup.state()) && lookup.assetId() != null) {
-        return new AssetProjection(
-            new DomainRef("ASSET", String.valueOf(lookup.assetId())),
-            new ProductSectionState("asset", ProviderEvidenceState.READY, "ASSET", null, null));
-      }
-      return new AssetProjection(null,
-          new ProductSectionState("asset", ProviderEvidenceState.EMPTY, "ASSET", null,
-              "Data Service is not indexed in Asset Registry"));
-    } catch (RuntimeException exception) {
-      return new AssetProjection(null, unavailableSection("asset", "ASSET", exception.getMessage()));
-    }
   }
 
   private ProductSectionState unavailableSection(String key, String ownerDomain, String reason) {
@@ -211,6 +195,4 @@ public class DataServiceDataProductProvider implements DataProductProvider {
       return null;
     }
   }
-
-  private record AssetProjection(DomainRef ref, ProductSectionState section) {}
 }
