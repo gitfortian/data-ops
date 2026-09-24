@@ -15,6 +15,7 @@ public record DevelopmentTaskExecutionSummary(
     String status,
     String operatorName,
     Long durationMs,
+    String failureReason,
     String errorMessage,
     LocalDateTime startTime,
     LocalDateTime endTime) {}
