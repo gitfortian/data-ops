@@ -9,6 +9,10 @@ import DevelopmentEditorWorkspace from './components/DevelopmentEditorWorkspace'
 import DevelopmentTreePane from './components/DevelopmentTreePane';
 import MoveResourceModal from './components/MoveResourceModal';
 import RenameResourceModal from './components/RenameResourceModal';
+import {
+  ResourceInvalidatedNotice,
+  WorkspaceLoadFailureState,
+} from './components/WorkspaceStateFeedback';
 import { useDataDevelopmentPage } from './hooks/useDataDevelopmentPage';
 
 export default function DataDevelopmentPage() {
@@ -20,31 +24,49 @@ export default function DataDevelopmentPage() {
   return (
     <ConfigProvider theme={BRAND_THEME}>
       <div className="flex h-[calc(100vh-64px)] min-h-[640px] flex-col overflow-hidden bg-[#f5f5f6]">
-        <div className="flex min-h-0 flex-1 overflow-hidden border border-[#e4e7ec] bg-white">
-          <DevelopmentTreePane
-            treeData={page.treeData}
-            treeLoading={page.treeLoading}
-            selectedNodeKey={page.selectedNodeKey}
-            searchValue={page.treeKeyword}
-            leftWidth={page.treeWidth}
-            collapsed={page.treeCollapsed}
-            onCreateDirectory={page.openCreateDirectory}
-            onCreateNode={page.openCreateNode}
-            onResourceAction={page.handleResourceAction}
-            onSearchChange={page.setTreeKeyword}
-            onResizeStart={page.handleResizeStart}
-            onCollapsedChange={page.setTreeCollapsed}
-            onSelect={page.selectTreeNodes}
+        {page.invalidatedResource && !page.treeFailure ? (
+          <ResourceInvalidatedNotice
+            resourceType={page.invalidatedResource.resourceType}
+            onRefresh={() => void page.loadTree()}
+            onDismiss={page.dismissInvalidatedResource}
           />
+        ) : null}
 
-          <DevelopmentEditorWorkspace
-            nodes={page.nodes}
-            directories={page.directories}
-            selectedNodeId={page.selectedResourceNodeId}
-            onNodeFocus={page.focusNode}
-            onCreateNode={page.openCreateNode}
-            onNodesChanged={page.loadTree}
-          />
+        <div className="flex min-h-0 flex-1 overflow-hidden border border-[#e4e7ec] bg-white">
+          {page.treeFailure ? (
+            <WorkspaceLoadFailureState
+              failure={page.treeFailure}
+              loading={page.treeLoading}
+              onRetry={() => void page.loadTree()}
+            />
+          ) : (
+            <>
+              <DevelopmentTreePane
+                treeData={page.treeData}
+                treeLoading={page.treeLoading}
+                selectedNodeKey={page.selectedNodeKey}
+                searchValue={page.treeKeyword}
+                leftWidth={page.treeWidth}
+                collapsed={page.treeCollapsed}
+                onCreateDirectory={page.openCreateDirectory}
+                onCreateNode={page.openCreateNode}
+                onResourceAction={page.handleResourceAction}
+                onSearchChange={page.setTreeKeyword}
+                onResizeStart={page.handleResizeStart}
+                onCollapsedChange={page.setTreeCollapsed}
+                onSelect={page.selectTreeNodes}
+              />
+
+              <DevelopmentEditorWorkspace
+                nodes={page.nodes}
+                directories={page.directories}
+                selectedNodeId={page.selectedResourceNodeId}
+                onNodeFocus={page.focusNode}
+                onCreateNode={page.openCreateNode}
+                onNodesChanged={page.loadTree}
+              />
+            </>
+          )}
         </div>
 
         <CreateDevelopmentNodeModal
