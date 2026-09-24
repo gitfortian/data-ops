@@ -3,9 +3,11 @@ import {
   EyeOutlined,
   StopOutlined,
 } from '@ant-design/icons';
+import { history } from '@umijs/max';
 import { Popconfirm, Space } from 'antd';
 
 import { YakButton } from '@/components/ui';
+import { consumptionProductPath } from '@/services/consumption';
 import type { DatasetManagementItem } from '@/services/dataset';
 
 interface DatasetRowActionsProps {
@@ -34,6 +36,17 @@ export default function DatasetRowActions({
       >
         详情
       </YakButton>
+
+      {online ? (
+        <YakButton
+          type="text"
+          size="small"
+          className="!px-1.5 !text-slate-600 hover:!text-slate-900"
+          onClick={() => history.push(consumptionProductPath('DATASET', dataset.id))}
+        >
+          消费视图
+        </YakButton>
+      ) : null}
 
       <Popconfirm
         title={online ? '确认下线这个 Dataset？' : '确认上线这个 Dataset？'}

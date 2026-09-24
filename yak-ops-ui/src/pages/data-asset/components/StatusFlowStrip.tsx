@@ -1,6 +1,9 @@
-import { Tooltip } from 'antd';
+import { Button, Tooltip } from 'antd';
+import { history, useParams } from '@umijs/max';
 import { Check, Minus, TriangleAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { resolveProductFromAsset } from '@/services/consumption';
 import type {
   AssetSection,
   AssetStatusFlowData,
@@ -50,44 +53,75 @@ const formatFacts = (facts?: Record<string, unknown>) => {
   );
 };
 
-/** 资产状态条(M2-1 只读):七格 = 各域盖章事实的达成进度,不伪造、可追溯。 */
+/** 资产状态条(M2-1 只读):七格 = 各域盖章事实的达成进度,并提供稳定 ProductKey 消费入口。 */
 const StatusFlowStrip = ({ section }: { section?: AssetSection<AssetStatusFlowData> }) => {
+  const { id } = useParams<{ id: string }>();
+  const [canonicalHref, setCanonicalHref] = useState<string>();
   const steps = section?.status === 'OK' ? section.data?.steps ?? [] : [];
-  if (steps.length === 0) return null;
-  return (
-    <div className="mt-4 flex flex-wrap items-stretch gap-2 rounded-lg border border-[#f0f0f0] bg-[#fafafa] p-3">
-      {steps.map((step, index) => {
-        const style = RESULT_STYLE[step.result] ?? RESULT_STYLE.UNKNOWN;
-        return (
-          <div key={step.key} className="flex items-center gap-2">
-            {index > 0 && <span className="text-[12px] text-[#c4c9d4]">→</span>}
-            <Tooltip
-              title={(
-                <div>
-                  {step.note && <div className="mb-1">{step.note}</div>}
-                  {formatFacts(step.facts)}
-                </div>
-              )}
-            >
-              <div
-                className="flex cursor-default items-center gap-1.5 rounded-full px-3 py-1"
-                style={{ background: style.bg }}
-              >
-                <span style={{ color: style.color }}>
-                  {step.result === 'PASS'
-                    ? <Check size={14} strokeWidth={2.4} />
-                    : step.result === 'FAIL'
-                      ? <TriangleAlert size={14} strokeWidth={2} />
-                      : <Minus size={14} strokeWidth={2} />}
-                </span>
-                <span className="text-[13px] font-medium" style={{ color: style.color }}>
-                  {step.title}
-                </span>
-              </div>
-            </Tooltip>
-          </div>
+
+  useEffect(() => {
+    let active = true;
+    if (!id) {
+      setCanonicalHref(undefined);
+      return () => { active = false; };
+    }
+    void resolveProductFromAsset(id)
+      .then((resolution) => {
+        if (!active) return;
+        setCanonicalHref(
+          resolution.state === 'FOUND' && resolution.canonicalHref
+            ? resolution.canonicalHref
+            : undefined,
         );
-      })}
+      })
+      .catch(() => {
+        if (active) setCanonicalHref(undefined);
+      });
+    return () => { active = false; };
+  }, [id]);
+
+  if (steps.length === 0 && !canonicalHref) return null;
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0f0f0] bg-[#fafafa] p-3">
+      <div className="flex flex-1 flex-wrap items-center gap-2">
+        {steps.map((step, index) => {
+          const style = RESULT_STYLE[step.result] ?? RESULT_STYLE.UNKNOWN;
+          return (
+            <div key={step.key} className="flex items-center gap-2">
+              {index > 0 && <span className="text-[12px] text-[#c4c9d4]">→</span>}
+              <Tooltip
+                title={(
+                  <div>
+                    {step.note && <div className="mb-1">{step.note}</div>}
+                    {formatFacts(step.facts)}
+                  </div>
+                )}
+              >
+                <div
+                  className="flex cursor-default items-center gap-1.5 rounded-full px-3 py-1"
+                  style={{ background: style.bg }}
+                >
+                  <span style={{ color: style.color }}>
+                    {step.result === 'PASS'
+                      ? <Check size={14} strokeWidth={2.4} />
+                      : step.result === 'FAIL'
+                        ? <TriangleAlert size={14} strokeWidth={2} />
+                        : <Minus size={14} strokeWidth={2} />}
+                  </span>
+                  <span className="text-[13px] font-medium" style={{ color: style.color }}>
+                    {step.title}
+                  </span>
+                </div>
+              </Tooltip>
+            </div>
+          );
+        })}
+      </div>
+      {canonicalHref ? (
+        <Button size="small" type="link" onClick={() => history.push(canonicalHref)}>
+          消费视图
+        </Button>
+      ) : null}
     </div>
   );
 };

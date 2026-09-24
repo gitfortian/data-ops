@@ -4,6 +4,14 @@ on:
   pull_request:
     paths:
       - 'yak-ops-business/yak-ops-business-consumption/**'
+      - 'yak-ops-ui/src/services/consumption/**'
+      - 'yak-ops-ui/src/pages/data-analysis/consumption/**'
+      - 'yak-ops-ui/src/pages/data-analysis/data-catalog/**'
+      - 'yak-ops-ui/src/pages/data-analysis/dataset/components/DatasetRowActions.tsx'
+      - 'yak-ops-ui/src/pages/data-asset/components/StatusFlowStrip.tsx'
+      - 'yak-ops-ui/src/pages/home/**'
+      - 'yak-ops-ui/config/routes.ts'
+      - 'yak-ops-ui/scripts/check-consumption-type-errors.mjs'
       - '.github/workflows/consumption-checks.yml'
 
 jobs:
@@ -19,11 +27,41 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run Phase 4 consumption contract and source-provider tests
+      - name: Run Phase 4 consumption contract, provider, discovery and canonical-detail tests
         run: >-
           mvn -B
           -pl yak-ops-business/yak-ops-business-consumption
           -am
-          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest
+          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
+
+  frontend-consumption:
+    name: Frontend consumption changed-surface typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: yak-ops-ui
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: yak-ops-ui/yarn.lock
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Typecheck and gate Phase 4 consumption surfaces
+        shell: bash
+        run: |
+          set +e
+          yarn tsc --noEmit --pretty false > /tmp/consumption-tsc.log 2>&1
+          tsc_status=$?
+          set -e
+          cat /tmp/consumption-tsc.log
+          node scripts/check-consumption-type-errors.mjs /tmp/consumption-tsc.log
+          if [ "$tsc_status" -ne 0 ]; then
+            echo "Full repository TypeScript baseline still has diagnostics; no diagnostics are attributed to the Phase 4 consumption surfaces."
+          fi
