@@ -1,4 +1,8 @@
-import { useIntl } from '@umijs/max';
+import {
+  validateDevelopmentTaskPublish,
+  type DevelopmentTaskPublishValidation,
+} from '@/services/data-development';
+import { useAccess, useIntl } from '@umijs/max';
 import {
   Check,
   CircleDot,
@@ -6,6 +10,9 @@ import {
   FilePenLine,
   LoaderCircle,
   Play,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldQuestion,
   Tag,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -30,15 +37,27 @@ type PublishedRevisionState =
   | { status: 'ready'; revision: number | null }
   | { status: 'unavailable' };
 
+type PublishReadinessState =
+  | { status: 'hidden' }
+  | { status: 'needs-save' }
+  | { status: 'loading'; revision: number }
+  | { status: 'valid'; validation: DevelopmentTaskPublishValidation }
+  | { status: 'invalid'; validation: DevelopmentTaskPublishValidation }
+  | { status: 'unavailable'; revision: number };
+
 const AuthoringStatusBar = ({
   node,
   saving = false,
   publishing = false,
 }: AuthoringStatusBarProps) => {
+  const access = useAccess();
   const intl = useIntl();
   useEditorSessionVersion();
+  const canPublish = access.hasPermission('data-development:publish');
   const [publishedRevision, setPublishedRevision] =
     useState<PublishedRevisionState>({ status: 'loading' });
+  const [publishReadiness, setPublishReadiness] =
+    useState<PublishReadinessState>({ status: 'hidden' });
   const session = getEditorSession(node.id);
   const state = deriveAuthoringState({
     draftRevision: session?.draftRevision,
@@ -71,6 +90,47 @@ const AuthoringStatusBar = ({
     };
   }, [intl, node.id, node.pendingPublish, publishing]);
 
+  useEffect(() => {
+    let active = true;
+    if (!canPublish) {
+      setPublishReadiness({ status: 'hidden' });
+      return () => {
+        active = false;
+      };
+    }
+
+    const draftRevision = state.draftRevision;
+    if (!draftRevision || state.saveState !== 'saved') {
+      setPublishReadiness({ status: 'needs-save' });
+      return () => {
+        active = false;
+      };
+    }
+
+    setPublishReadiness({ status: 'loading', revision: draftRevision });
+    validateDevelopmentTaskPublish(node.id, draftRevision)
+      .then((validation) => {
+        if (!active) return;
+        if (validation.draftRevision !== draftRevision) {
+          setPublishReadiness({ status: 'unavailable', revision: draftRevision });
+          return;
+        }
+        setPublishReadiness({
+          status: validation.valid ? 'valid' : 'invalid',
+          validation,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setPublishReadiness({ status: 'unavailable', revision: draftRevision });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [canPublish, node.id, state.draftRevision, state.saveState]);
+
   const saveLabel =
     state.saveState === 'saving'
       ? intl.formatMessage({ id: 'pages.dataDevelopment.authoring.saving' })
@@ -89,6 +149,48 @@ const AuthoringStatusBar = ({
               { id: 'pages.dataDevelopment.authoring.publishedRevision' },
               { revision: publishedRevision.revision },
             );
+
+  const readinessLabel =
+    publishReadiness.status === 'needs-save'
+      ? intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.needsSave' })
+      : publishReadiness.status === 'loading'
+        ? intl.formatMessage(
+            { id: 'pages.dataDevelopment.publishReadiness.loading' },
+            { revision: publishReadiness.revision },
+          )
+        : publishReadiness.status === 'valid'
+          ? intl.formatMessage(
+              { id: 'pages.dataDevelopment.publishReadiness.valid' },
+              { revision: publishReadiness.validation.draftRevision },
+            )
+          : publishReadiness.status === 'invalid'
+            ? intl.formatMessage(
+                { id: 'pages.dataDevelopment.publishReadiness.invalid' },
+                { revision: publishReadiness.validation.draftRevision },
+              )
+            : publishReadiness.status === 'unavailable'
+              ? intl.formatMessage(
+                  { id: 'pages.dataDevelopment.publishReadiness.unavailable' },
+                  { revision: publishReadiness.revision },
+                )
+              : '';
+
+  const readinessTitle =
+    publishReadiness.status === 'valid'
+      ? intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.validHint' })
+      : publishReadiness.status === 'invalid'
+        ? publishReadiness.validation.issues
+            .map((issue) => issue.message)
+            .filter(Boolean)
+            .slice(0, 3)
+            .join('；') ||
+          publishReadiness.validation.message ||
+          intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.invalidHint' })
+        : publishReadiness.status === 'unavailable'
+          ? intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.unavailableHint' })
+          : publishReadiness.status === 'needs-save'
+            ? intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.needsSaveHint' })
+            : undefined;
 
   return (
     <div className="flex h-8 shrink-0 items-center justify-between gap-4 border-b border-[#eef0f2] bg-[#fbfcfd] px-3 text-[11px] text-[#667085]">
@@ -129,6 +231,31 @@ const AuthoringStatusBar = ({
           )}
           {saveLabel}
         </span>
+
+        {publishReadiness.status !== 'hidden' ? (
+          <span
+            title={readinessTitle}
+            className={[
+              'inline-flex shrink-0 items-center gap-1 rounded-[3px] px-1.5 py-0.5',
+              publishReadiness.status === 'valid'
+                ? 'bg-[#ecfdf3] text-[#027a48]'
+                : publishReadiness.status === 'invalid'
+                  ? 'bg-[#fef3f2] text-[#b42318]'
+                  : 'bg-[#f2f4f7] text-[#667085]',
+            ].join(' ')}
+          >
+            {publishReadiness.status === 'loading' ? (
+              <LoaderCircle size={11} className="animate-spin" />
+            ) : publishReadiness.status === 'valid' ? (
+              <ShieldCheck size={11} strokeWidth={1.8} />
+            ) : publishReadiness.status === 'invalid' ? (
+              <ShieldAlert size={11} strokeWidth={1.8} />
+            ) : (
+              <ShieldQuestion size={11} strokeWidth={1.8} />
+            )}
+            {readinessLabel}
+          </span>
+        ) : null}
 
         {state.publishState === 'pending' || state.publishState === 'publishing' ? (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-[3px] bg-[#eff8ff] px-1.5 py-0.5 text-[#175cd3]">

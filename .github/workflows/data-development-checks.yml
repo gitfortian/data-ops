@@ -1,0 +1,52 @@
+name: Data Development Checks
+
+on:
+  pull_request:
+    paths:
+      - 'yak-ops-ui/src/pages/development/data-development/**'
+      - 'yak-ops-ui/src/services/data-development/**'
+      - 'yak-ops-ui/src/locales/**/data-development-*.ts'
+      - 'yak-ops-business/yak-ops-business-data-development/**'
+      - '.github/workflows/data-development-checks.yml'
+
+jobs:
+  frontend-authoring:
+    name: Frontend authoring tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: yak-ops-ui
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Set up Yarn classic
+        run: npm install --global yarn@1.22.22
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+      - name: Run Data Development authoring tests
+        run: yarn jest src/pages/development/data-development --runInBand
+
+  backend-publish-readiness:
+    name: Backend publish readiness tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run publish readiness tests
+        run: >-
+          mvn -B
+          -pl yak-ops-business/yak-ops-business-data-development
+          -am
+          -Dtest=DevelopmentTaskPublishValidationTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+          test

@@ -11,10 +11,12 @@ describe('data-development standalone node model', () => {
       SHELL: 'PROCESSING',
       HTTP: 'PROCESSING',
       PYTHON: 'PROCESSING',
+      JAVA: 'PROCESSING',
       DATASET: 'OUTPUT',
       DATA_SERVICE: 'OUTPUT',
     });
     expect(getNodeCategory('SQL')).toBe('PROCESSING');
+    expect(getNodeCategory('JAVA')).toBe('PROCESSING');
     expect(getNodeCategory('DATASET')).toBe('OUTPUT');
     expect(getNodeCategory('DATA_SERVICE')).toBe('OUTPUT');
   });
@@ -22,6 +24,7 @@ describe('data-development standalone node model', () => {
   it('keeps output nodes outside the executable task editor lifecycle', () => {
     expect(isDevelopmentTaskNodeType('SQL')).toBe(true);
     expect(isDevelopmentTaskNodeType('SHELL')).toBe(true);
+    expect(isDevelopmentTaskNodeType('JAVA')).toBe(true);
     expect(isDevelopmentTaskNodeType('DATASET')).toBe(false);
     expect(isDevelopmentTaskNodeType('DATA_SERVICE')).toBe(false);
   });
