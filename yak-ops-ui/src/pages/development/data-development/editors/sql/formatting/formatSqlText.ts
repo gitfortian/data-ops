@@ -144,7 +144,10 @@ export const formatSqlText = (
   let formatted = output
     .replace(/[ \t]+/g, ' ')
     .replace(/ *\n */g, '\n')
-    .replace(new RegExp(`\\s+(${pattern})\\s+`, 'gi'), '\n$1 ')
+    // Keep the whitespace after a matched clause available to the global
+    // matcher so adjacent clauses (for example PostgreSQL "DO UPDATE SET")
+    // can both be split in a single pass.
+    .replace(new RegExp(`\\s+(${pattern})(?=\\s+)`, 'gi'), '\n$1')
     .replace(/\s+(AND|OR)\s+/gi, '\n  $1 ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
