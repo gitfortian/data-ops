@@ -39,6 +39,10 @@ import {
   filterDevelopmentTreeData,
   parseDevelopmentTreeWidth,
 } from '../utils';
+import {
+  classifyWorkspaceLoadFailure,
+  type WorkspaceLoadFailure,
+} from '../workspaceState';
 
 const initialTreeWidth = () => {
   if (typeof window === 'undefined') return parseDevelopmentTreeWidth(null);
@@ -46,6 +50,11 @@ const initialTreeWidth = () => {
     window.localStorage.getItem(DATA_DEVELOPMENT_TREE_WIDTH_STORAGE_KEY),
   );
 };
+
+interface InvalidatedWorkspaceResource {
+  resourceId: DevelopmentId;
+  resourceType: 'node' | 'directory';
+}
 
 export const useDataDevelopmentPage = () => {
   const intl = useIntl();
@@ -55,6 +64,9 @@ export const useDataDevelopmentPage = () => {
   const [directories, setDirectories] = useState<DevelopmentDirectory[]>([]);
   const [nodes, setNodes] = useState<DevelopmentResourceNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
+  const [treeFailure, setTreeFailure] = useState<WorkspaceLoadFailure>();
+  const [invalidatedResource, setInvalidatedResource] =
+    useState<InvalidatedWorkspaceResource>();
   const [treeKeyword, setTreeKeyword] = useState('');
   const [selectedNodeKey, setSelectedNodeKey] =
     useState<DevelopmentTreeNodeKey>();
@@ -85,6 +97,7 @@ export const useDataDevelopmentPage = () => {
   const loadTree = useCallback(async () => {
     const requestSequence = requestSequenceRef.current + 1;
     requestSequenceRef.current = requestSequence;
+    setTreeFailure(undefined);
     setTreeLoading(true);
 
     try {
@@ -93,23 +106,52 @@ export const useDataDevelopmentPage = () => {
         listDevelopmentNodes(),
       ]);
       if (requestSequence !== requestSequenceRef.current) return;
-      setDirectories(nextDirectories || []);
-      setNodes(nextNodes || []);
+
+      const resolvedDirectories = nextDirectories || [];
+      const resolvedNodes = nextNodes || [];
+      setDirectories(resolvedDirectories);
+      setNodes(resolvedNodes);
+      setSelectedNodeKey((current) => {
+        const selectedResourceId = developmentIdFromTreeKey(current, 'node:');
+        if (
+          selectedResourceId &&
+          !resolvedNodes.some((node) => node.id === selectedResourceId)
+        ) {
+          setInvalidatedResource({
+            resourceId: selectedResourceId,
+            resourceType: 'node',
+          });
+          return undefined;
+        }
+
+        const selectedDirectoryId = developmentIdFromTreeKey(
+          current,
+          'directory:',
+        );
+        if (
+          selectedDirectoryId &&
+          !resolvedDirectories.some(
+            (directory) => directory.id === selectedDirectoryId,
+          )
+        ) {
+          setInvalidatedResource({
+            resourceId: selectedDirectoryId,
+            resourceType: 'directory',
+          });
+          return undefined;
+        }
+
+        return current;
+      });
     } catch (error) {
       if (requestSequence !== requestSequenceRef.current) return;
-      message.error(
-        error instanceof Error
-          ? error.message
-          : text('pages.dataDevelopment.workspace.treeLoadFailed'),
-      );
-      setDirectories([]);
-      setNodes([]);
+      setTreeFailure(classifyWorkspaceLoadFailure(error));
     } finally {
       if (requestSequence === requestSequenceRef.current) {
         setTreeLoading(false);
       }
     }
-  }, [text]);
+  }, []);
 
   useEffect(() => {
     void loadTree();
@@ -188,6 +230,7 @@ export const useDataDevelopmentPage = () => {
 
   const openCreateNode = useCallback(
     (type: DevelopmentNodeType, sqlDialect?: DevelopmentSqlDialect) => {
+      setInvalidatedResource(undefined);
       setCreateNodeType(type);
       setCreateSqlDialect(type === 'SQL' ? sqlDialect : undefined);
       setCreateNodeOpen(true);
@@ -200,6 +243,7 @@ export const useDataDevelopmentPage = () => {
   }, [nodeSaving]);
 
   const openCreateDirectory = useCallback(() => {
+    setInvalidatedResource(undefined);
     setCreateDirectoryOpen(true);
   }, []);
 
@@ -216,6 +260,7 @@ export const useDataDevelopmentPage = () => {
         setTreeKeyword('');
         await loadTree();
         setSelectedNodeKey(developmentDirectoryKey(created.id));
+        setInvalidatedResource(undefined);
         message.success(text('pages.dataDevelopment.workspace.directoryCreated'));
       } catch (error) {
         message.error(
@@ -266,6 +311,7 @@ export const useDataDevelopmentPage = () => {
         setTreeKeyword('');
         await loadTree();
         setSelectedNodeKey(developmentNodeKey(created.id));
+        setInvalidatedResource(undefined);
         message.success(text('pages.dataDevelopment.workspace.nodeCreated'));
       } catch (error) {
         message.error(
@@ -295,6 +341,7 @@ export const useDataDevelopmentPage = () => {
 
   const handleResourceAction = useCallback(
     (action: DevelopmentTreeAction, resource: DevelopmentTreeNode) => {
+      setInvalidatedResource(undefined);
       setSelectedNodeKey(resource.key);
       if (action === 'create-directory') {
         setCreateDirectoryOpen(true);
@@ -375,6 +422,7 @@ export const useDataDevelopmentPage = () => {
       }
       setDeleteTarget(undefined);
       setSelectedNodeKey(undefined);
+      setInvalidatedResource(undefined);
       setTreeKeyword('');
       await loadTree();
       message.success(text('pages.dataDevelopment.workspace.deleted'));
@@ -426,13 +474,19 @@ export const useDataDevelopmentPage = () => {
 
   const selectTreeNodes = useCallback((keys: Key[]) => {
     const key = keys[0];
+    setInvalidatedResource(undefined);
     setSelectedNodeKey(
       key ? (String(key) as DevelopmentTreeNodeKey) : undefined,
     );
   }, []);
 
   const focusNode = useCallback((nodeId?: DevelopmentId) => {
+    setInvalidatedResource(undefined);
     setSelectedNodeKey(nodeId ? developmentNodeKey(nodeId) : undefined);
+  }, []);
+
+  const dismissInvalidatedResource = useCallback(() => {
+    setInvalidatedResource(undefined);
   }, []);
 
   return {
@@ -440,6 +494,8 @@ export const useDataDevelopmentPage = () => {
     nodes,
     treeData,
     treeLoading,
+    treeFailure,
+    invalidatedResource,
     treeKeyword,
     selectedNodeKey,
     selectedResourceNodeId,
@@ -476,6 +532,7 @@ export const useDataDevelopmentPage = () => {
     closeDelete,
     submitMove,
     closeMove,
+    dismissInvalidatedResource,
     loadTree,
   };
 };
