@@ -5,7 +5,10 @@ import HttpUtils from '@/utils/HttpUtils';
 import { getIntl } from '@umijs/max';
 import { Modal } from 'antd';
 
-import { classifyDraftSaveFailure } from './components/workbench/draftSaveFailure';
+import {
+  classifyDraftSaveFailure,
+  rebaseDraftSavePayload,
+} from './components/workbench/draftSaveFailure';
 import { getSqlMetadataContext } from './editors/sql/metadata/sqlMetadataContextStore';
 import type {
   DevelopmentId,
@@ -51,7 +54,9 @@ const formatSaveFailure = (error: unknown) => {
   const failure = classifyDraftSaveFailure(error);
   const detail =
     failure.detail ||
-    (failure.status ? `HTTP ${failure.status}` : intl.formatMessage({ id: 'pages.dataDevelopment.common.unavailable' }));
+    (failure.status
+      ? `HTTP ${failure.status}`
+      : intl.formatMessage({ id: 'pages.dataDevelopment.common.unavailable' }));
 
   switch (failure.kind) {
     case 'permission-denied':
@@ -142,10 +147,10 @@ export const saveDevelopmentTaskDraft = async (
     }
 
     try {
-      return await saveDraftRequest(nodeId, {
-        ...payload,
-        baseRevision: latest.draftRevision,
-      });
+      return await saveDraftRequest(
+        nodeId,
+        rebaseDraftSavePayload(payload, latest.draftRevision),
+      );
     } catch (retryError) {
       const retryFailure = classifyDraftSaveFailure(retryError);
       if (retryFailure.kind === 'conflict') {
