@@ -5,32 +5,19 @@ import {
   Button,
   ConfigProvider,
   DatePicker,
-  Descriptions,
-  Drawer,
   Empty,
   Input,
   Pagination,
   Select,
-  Spin,
   Table,
   Tooltip,
-  message,
 } from 'antd';
 import moment from 'moment';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { WorkspaceLoadFailureState } from '../components/WorkspaceStateFeedback';
-import {
-  developmentNodeUrl,
-  executionFailureMessageId,
-  isActiveExecutionStatus,
-} from './executionExperience';
-import {
-  getDevelopmentTaskExecution,
-  listDevelopmentTaskExecutions,
-} from '../service';
+import { listDevelopmentTaskExecutions } from '../service';
 import type {
-  DevelopmentTaskExecutionDetail,
   DevelopmentTaskExecutionStatus,
   DevelopmentTaskExecutionSummary,
   DevelopmentTaskType,
@@ -39,6 +26,11 @@ import {
   classifyWorkspaceLoadFailure,
   type WorkspaceLoadFailure,
 } from '../workspaceState';
+import ExecutionDetailDrawer from './ExecutionDetailDrawer';
+import {
+  developmentNodeUrl,
+  isActiveExecutionStatus,
+} from './executionExperience';
 
 const { RangePicker } = DatePicker;
 
@@ -93,13 +85,6 @@ const formatDuration = (duration?: number | null) => {
 
 const ExecutionHistoryPage = () => {
   const intl = useIntl();
-  const intlRef = useRef(intl);
-  intlRef.current = intl;
-  const text = useCallback(
-    (id: string) => intlRef.current.formatMessage({ id }),
-    [],
-  );
-
   const [records, setRecords] = useState<DevelopmentTaskExecutionSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadFailure, setLoadFailure] = useState<WorkspaceLoadFailure>();
@@ -113,9 +98,7 @@ const ExecutionHistoryPage = () => {
   const [keyword, setKeyword] = useState('');
   const [keywordDraft, setKeywordDraft] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detail, setDetail] = useState<DevelopmentTaskExecutionDetail>();
+  const [detailRecord, setDetailRecord] = useState<DevelopmentTaskExecutionSummary>();
 
   const loadRecords = useCallback(async () => {
     setLoading(true);
@@ -173,20 +156,6 @@ const ExecutionHistoryPage = () => {
     setTriggerType(undefined);
     setDateRange(undefined);
     setPageNo(1);
-  };
-
-  const openDetail = async (record: DevelopmentTaskExecutionSummary) => {
-    setDetailOpen(true);
-    setDetail(undefined);
-    setDetailLoading(true);
-    try {
-      const response = await getDevelopmentTaskExecution(record.id);
-      setDetail(response.data);
-    } catch {
-      message.error(text('pages.dataDevelopment.execution.detailFailed'));
-    } finally {
-      setDetailLoading(false);
-    }
   };
 
   const triggerLabel = (value?: string) => {
@@ -296,15 +265,13 @@ const ExecutionHistoryPage = () => {
           type="link"
           size="small"
           className="!px-0 !text-[12px] !text-[#475467]"
-          onClick={() => void openDetail(record)}
+          onClick={() => setDetailRecord(record)}
         >
           {intl.formatMessage({ id: 'pages.dataDevelopment.common.detail' })}
         </Button>
       ),
     },
   ];
-
-  const detailFailureMessageId = executionFailureMessageId(detail?.failureReason);
 
   return (
     <ConfigProvider
@@ -453,95 +420,12 @@ const ExecutionHistoryPage = () => {
         ) : null}
       </div>
 
-      <Drawer
-        title={intl.formatMessage({ id: 'pages.dataDevelopment.execution.detailTitle' })}
-        placement="right"
-        width={720}
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-      >
-        {detailLoading ? (
-          <div className="flex h-64 items-center justify-center"><Spin size="small" /></div>
-        ) : detail ? (
-          <div className="space-y-6">
-            <Descriptions size="small" column={2} bordered>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.taskName' })}>{detail.taskName}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.nodeId' })}>
-                <Button
-                  type="link"
-                  size="small"
-                  className="!h-auto !p-0"
-                  onClick={() => history.push(developmentNodeUrl(detail.nodeId))}
-                >
-                  {detail.nodeId}
-                </Button>
-              </Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.taskType' })}>{detail.taskType}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.status' })}><StatusBadge status={detail.status} /></Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.execution.trigger' })}>{triggerLabel(detail.triggerType)}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.operator' })}>{detail.operatorName || '-'}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.runtimeExecution' })} span={2}>{detail.runtimeExecutionId || '-'}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.startTime' })}>{detail.startTime ? moment(detail.startTime).format('YYYY-MM-DD HH:mm:ss') : '-'}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.duration' })}>{formatDuration(detail.durationMs)}</Descriptions.Item>
-            </Descriptions>
-
-            {detail.failureReason ? (
-              <section>
-                <div className="mb-2 text-[13px] font-semibold text-[#344054]">
-                  {intl.formatMessage({ id: 'pages.dataDevelopment.execution.failureReason' })}
-                </div>
-                <div className="rounded-md border border-[#fedf89] bg-[#fffaeb] px-3 py-2 text-[12px] leading-5 text-[#93370d]">
-                  <div className="font-medium">
-                    {detailFailureMessageId
-                      ? intl.formatMessage({ id: detailFailureMessageId })
-                      : detail.failureReason}
-                  </div>
-                  <div className="mt-1 font-mono text-[10px] text-[#b54708]">
-                    {detail.failureReason}
-                  </div>
-                </div>
-              </section>
-            ) : null}
-
-            {detail.errorMessage ? (
-              <section>
-                <div className="mb-2 text-[13px] font-semibold text-[#344054]">
-                  {intl.formatMessage({ id: 'pages.dataDevelopment.execution.error' })}
-                </div>
-                <div className="rounded-md bg-[#fef3f2] px-3 py-2 text-[12px] leading-5 text-[#b42318]">
-                  {detail.errorMessage}
-                </div>
-              </section>
-            ) : null}
-
-            <section>
-              <div className="mb-2 text-[13px] font-semibold text-[#344054]">
-                {intl.formatMessage({ id: 'pages.dataDevelopment.execution.content' })}
-              </div>
-              <pre className="max-h-[280px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[12px] leading-5 text-[#344054]">{detail.content || '-'}</pre>
-            </section>
-
-            <section>
-              <div className="mb-2 text-[13px] font-semibold text-[#344054]">
-                {intl.formatMessage({ id: 'pages.dataDevelopment.execution.config' })}
-              </div>
-              <pre className="max-h-[220px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[12px] leading-5 text-[#344054]">{detail.configJson || '{}'}</pre>
-            </section>
-
-            <section>
-              <div className="mb-2 text-[13px] font-semibold text-[#344054]">
-                {intl.formatMessage({ id: 'pages.dataDevelopment.execution.output' })}
-              </div>
-              <pre className="max-h-[360px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[12px] leading-5 text-[#344054]">{JSON.stringify(detail.output || {}, null, 2)}</pre>
-            </section>
-          </div>
-        ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={intl.formatMessage({ id: 'pages.dataDevelopment.execution.detailEmpty' })}
-          />
-        )}
-      </Drawer>
+      <ExecutionDetailDrawer
+        open={Boolean(detailRecord)}
+        record={detailRecord}
+        onClose={() => setDetailRecord(undefined)}
+        onChanged={() => setRefreshKey((value) => value + 1)}
+      />
     </ConfigProvider>
   );
 };
