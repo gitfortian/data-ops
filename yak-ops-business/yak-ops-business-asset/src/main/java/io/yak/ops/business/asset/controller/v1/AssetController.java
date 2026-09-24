@@ -144,12 +144,22 @@ public class AssetController {
     AssetSectionResult result = new AssetSectionResult(
         type, status, owner, new SectionMapSummary(values),
         status == SectionStatus.OK ? null : view.note(),
-        null, sectionActions(type, status, asset), List.of(),
+        null, combinedActions(view, type, status, asset), List.of(),
         hasReadableResult ? new SectionProvenance(owner, asset.assetKey(), Instant.now()) : null,
         new SectionCapability(status != SectionStatus.NOT_APPLICABLE,
             status == SectionStatus.OK || status == SectionStatus.EMPTY,
             status == SectionStatus.OK || status == SectionStatus.EMPTY ? null : view.note()));
     return result;
+  }
+
+  private static List<SectionAction> combinedActions(
+      AssetDiscoverService.SectionView view, SectionType type,
+      SectionStatus status, AssetView asset) {
+    if (status != SectionStatus.OK) return List.of();
+    java.util.ArrayList<SectionAction> actions = new java.util.ArrayList<>(
+        sectionActions(type, status, asset));
+    actions.addAll(view.actions());
+    return List.copyOf(actions);
   }
 
   private static List<SectionAction> sectionActions(

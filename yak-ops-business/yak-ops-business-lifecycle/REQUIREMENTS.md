@@ -43,6 +43,12 @@
 - 监控汇总：各状态数量、最近清理（成功下发的分区删除数）、异常告警列表；模型分页支持状态/层/关键词筛选与单模型重新下发。
 - 存储：每日快照各层表大小（parseSize 容错），统计页给各层量/趋势/按单价折算的月成本；单价存 `yak_lc_setting`。
 
+## Asset Lifecycle Section
+
+- Lifecycle 作为事实 Owner 实现只读 `SectionProvider`，复用 `AssetStatusTtlFacts` 的模型 TTL 解析事实，不在 Asset 创建缓存或副本。
+- 命中有效策略返回 `OK` 和 `policyApplied/policyCode/bindingSource/state`；确认未命中返回 `EMPTY`；模型身份无法解析或读侧失败返回 `UNAVAILABLE`。
+- 非 MODEL 资产由 Asset applicability 直接返回 `NOT_APPLICABLE`，不调用 Lifecycle Provider。
+
 ## Ticket 88~89：前端
 
 - 策略管理页（模板预填、三段带"永久"开关）、TTL 监控页、存储统计页；模型详情生命周期 Tab + 批量下发向导（预览→确认→结果）。

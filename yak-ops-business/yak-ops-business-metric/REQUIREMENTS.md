@@ -51,6 +51,7 @@
 ## Ticket 52：指标使用
 
 - `MetricUsageApi.record` 由消费方（dataset/dashboard/data-service）在保存引用时上报；`/{id}/usage` 提供明细。
+- Metric Asset 的 Usage Section 复用 `MetricUsageApi.summary`，按引用类型展示服务端聚合计数，并明确这是已记录引用数，不等于实时 API 调用量；Asset 不存储该统计。
 
 ## Ticket 53：影响分析（主动触发）
 

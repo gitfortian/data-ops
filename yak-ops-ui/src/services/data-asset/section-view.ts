@@ -4,6 +4,9 @@ const supportsAssetReturn = (target: string): boolean =>
   /^\/data-asset\/catalog(?:\?|$)/.test(target)
   || target.startsWith('/data-analysis/lineage?')
   || /^\/modeling\/models\/\d+(?:\?|$)/.test(target)
+  || /^\/data-security\/classification(?:\?|$)/.test(target)
+  || /^\/data-lifecycle\/monitor(?:\?|$)/.test(target)
+  || /^\/metric\/manage\/\d+(?:\?|$)/.test(target)
   || /^\/data-quality\/(?:table-config|monitor\/\d+|execution(?:\/[^?]+)?)(?:\?|$)/.test(target);
 
 /** Convert the Section API envelope without dropping its owner or source evidence. */

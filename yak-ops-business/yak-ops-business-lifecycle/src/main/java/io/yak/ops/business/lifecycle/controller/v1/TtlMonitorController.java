@@ -48,7 +48,7 @@ public class TtlMonitorController {
   public Result<PagingData<MonitorModelView>> pageModels(
       @Valid @RequestBody MonitorModelQueryDTO query) {
     PageData<MonitorModelView> page = monitorService.pageModels(query.getPageNo(),
-        query.getPageSize(), query.getState(), query.getLayerCode(), query.getKeyword());
+        query.getPageSize(), query.getState(), query.getLayerCode(), query.getKeyword(), query.getModelId());
     return Result.success(PagingData.from(page));
   }
 

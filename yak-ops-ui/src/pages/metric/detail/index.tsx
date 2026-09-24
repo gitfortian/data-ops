@@ -1,5 +1,5 @@
-import { useNavigate, useParams } from '@umijs/max';
-import { Descriptions, Drawer, message, Select, Spin, Table, Tabs, Tag, Timeline, Typography } from 'antd';
+import { useNavigate, useParams, useSearchParams } from '@umijs/max';
+import { Button, Descriptions, Drawer, message, Select, Spin, Table, Tabs, Tag, Timeline, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -111,6 +111,11 @@ const QualifierChips = ({ raw }: { raw?: string }) => {
 const MetricDetailPage = () => {
   const navigate = useNavigate();
   const params = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
+  const returnAssetIdValue = searchParams.get('returnAssetId');
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
+    ? Number(returnAssetIdValue)
+    : undefined;
   const metricId = Number(params.id);
   const [metric, setMetric] = useState<MetricRecord | null>(null);
   const [loading, setLoading] = useState(false);
@@ -302,6 +307,9 @@ const MetricDetailPage = () => {
           </div>
           <div className="mt-1 text-[13px] text-[#667085]">指标的完整信息：属性、依赖、标签、版本与使用情况</div>
         </div>
+        {returnAssetId ? (
+          <Button onClick={() => navigate(`/data-asset/detail/${returnAssetId}`)}>返回资产详情</Button>
+        ) : null}
       </div>
 
       <Spin spinning={loading}>

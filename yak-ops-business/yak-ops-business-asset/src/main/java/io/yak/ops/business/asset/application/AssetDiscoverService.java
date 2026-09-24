@@ -3,19 +3,22 @@ package io.yak.ops.business.asset.application;
 import io.yak.ops.business.asset.api.AssetDescriptor;
 import io.yak.ops.business.asset.api.AssetStatusTtlFacts;
 import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
+import io.yak.ops.business.security.api.ClassificationView;
+import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
 import io.yak.ops.business.lineage.query.LineageQueryService;
-import io.yak.ops.business.security.api.ClassificationView;
-import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.common.bean.po.asset.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import io.yak.ops.spi.section.SectionContext;
 import io.yak.ops.spi.section.SectionContract;
+import io.yak.ops.spi.section.SectionAction;
 import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.spi.section.SectionType;
 import io.yak.framework.security.service.RbacPermissionService;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -48,7 +51,15 @@ public class AssetDiscoverService {
   private final ObjectProvider<SectionProvider> sectionProviders;
 
   /** Five-state section result; note explains every state other than OK. */
-  public record SectionView(String status, String note, Object data) {
+  public record SectionView(String status, String note, Object data, List<SectionAction> actions) {
+
+    public SectionView(String status, String note, Object data) {
+      this(status, note, data, List.of());
+    }
+
+    public SectionView {
+      actions = actions == null ? List.of() : List.copyOf(actions);
+    }
 
     static SectionView ok(Object data) {
       return new SectionView("OK", null, data);
@@ -106,18 +117,24 @@ public class AssetDiscoverService {
     AssetItemPO po = assetAppService.requireItem(id);
     String key = sectionType == null ? "" : sectionType.trim().toUpperCase();
     if ("QUALITY".equals(key) && !isPhysicalTable(po)) {
+      logSectionCompletion(id, key, "NOT_APPLICABLE", "NOT_APPLICABLE", "NOT_APPLICABLE", startedAt);
       return SectionView.notApplicable("当前 MVP 仅物理表接入质量治理");
     }
     if ("LIFECYCLE".equals(key) && !AssetSourceType.MODEL.name().equals(po.getSourceType())) {
+      logSectionCompletion(id, key, "NOT_APPLICABLE", "NOT_APPLICABLE", "NOT_APPLICABLE", startedAt);
       return SectionView.notApplicable("当前 MVP 生命周期事实仅适用于 Model");
     }
     if ("TECHNICAL_METADATA".equals(key) && !isPhysicalTable(po)) {
+      logSectionCompletion(id, key, "NOT_APPLICABLE", "NOT_APPLICABLE", "NOT_APPLICABLE", startedAt);
       return SectionView.notApplicable("当前 MVP 技术元数据分区仅适用于物理表");
     }
     if (!hasSectionPermission(operator, key)) {
+      logSectionCompletion(id, key, "PERMISSION_DENIED", "NOT_INVOKED_PERMISSION",
+          "PERMISSION_DENIED", startedAt);
       return SectionView.denied();
     }
     SectionView result;
+    String providerStatus = "NOT_REQUIRED";
     try {
       result = switch (key) {
       case "OVERVIEW" -> SectionView.ok(Map.of(
@@ -127,22 +144,46 @@ public class AssetDiscoverService {
           "status", po.getStatus(),
           "owner", po.getOwner() == null ? "" : po.getOwner(),
           "directoryId", po.getDirectoryId() == null ? "" : po.getDirectoryId()));
-      case "TECHNICAL_METADATA" -> technicalMetadata(po);
+      case "TECHNICAL_METADATA" -> providerSection(po, SectionType.TECHNICAL_METADATA);
       case "QUALITY" -> quality(po);
-      case "SECURITY" -> security(po);
+      case "SECURITY" -> providerSection(po, SectionType.SECURITY);
       case "LINEAGE" -> lineage(po);
       case "USAGE" -> usage(po);
-      case "LIFECYCLE" -> lifecycle(po);
+      case "LIFECYCLE" -> providerSection(po, SectionType.LIFECYCLE);
         default -> throw new IllegalArgumentException("未知资产分区: " + sectionType);
       };
+      if ("PERMISSION_DENIED".equals(result.status())) {
+        providerStatus = "NOT_INVOKED_PERMISSION";
+      } else if ("NOT_APPLICABLE".equals(result.status())) {
+        providerStatus = "NOT_APPLICABLE";
+      } else if ("USAGE".equals(key) && result.data() instanceof Map<?, ?> usage) {
+        Object consumption = usage.get("businessConsumption");
+        Object status = consumption instanceof Map<?, ?> facts ? facts.get("status") : null;
+        providerStatus = "OK".equals(status) || "EMPTY".equals(status) ? "AVAILABLE" : "PARTIAL";
+      } else if ("TECHNICAL_METADATA".equals(key) || "QUALITY".equals(key)
+          || "SECURITY".equals(key) || "LIFECYCLE".equals(key)) {
+        providerStatus = "OK".equals(result.status()) || "EMPTY".equals(result.status())
+            ? "AVAILABLE" : "DEGRADED";
+      }
     } catch (RuntimeException e) {
       result = SectionView.unavailable("分区查询失败");
+      providerStatus = "DEGRADED";
       LOG.warn("asset section query failed, assetId={}, sectionType={}, errorType={}",
           id, key, e.getClass().getSimpleName());
     }
-    LOG.info("asset section query completed, assetId={}, sectionType={}, status={}, durationMs={}",
-        id, key, result.status(), (System.nanoTime() - startedAt) / 1_000_000);
+    String failureReason = "OK".equals(result.status()) || "EMPTY".equals(result.status())
+        ? ("PARTIAL".equals(providerStatus) ? "CONSUMER_READ_SIDE_UNAVAILABLE" : "NONE")
+        : result.status();
+    logSectionCompletion(id, key, result.status(), providerStatus, failureReason, startedAt);
     return result;
+  }
+
+  private static void logSectionCompletion(
+      Long assetId, String sectionType, String status, String providerStatus,
+      String failureReason, long startedAt) {
+    LOG.info("asset section query completed, assetId={}, sectionType={}, status={}, providerStatus={}, failureReason={}, durationMs={}",
+        assetId, sectionType, status, providerStatus, failureReason,
+        (System.nanoTime() - startedAt) / 1_000_000);
   }
 
   private SectionView quality(AssetItemPO po) {
@@ -158,17 +199,9 @@ public class AssetDiscoverService {
           || !org.springframework.util.StringUtils.hasText(coordinates.get("tableName"))) {
         return SectionView.unavailable("物理表位置不完整，无法查询质量证据");
       }
-      SectionContext context = new SectionContext(
-          po.getAssetKey(), po.getSourceType(), po.getSourceId(), coordinates);
-      Optional<SectionProvider> provider = sectionProviders.orderedStream()
-          .filter(candidate -> candidate.sectionType() == SectionType.QUALITY)
-          .filter(candidate -> candidate.supports(context))
-          .findFirst();
-      if (provider.isEmpty()) {
-        return SectionView.unavailable("质量分区读取提供方未装配");
-      }
-      SectionContract contract = provider.get().query(context);
-      return new SectionView(contract.status().name(), contract.reason(), contract);
+      Map<String, String> attributes = new LinkedHashMap<>(coordinates);
+      attributes.put("returnAssetId", String.valueOf(po.getId()));
+      return providerSection(po, SectionType.QUALITY, attributes);
     } catch (RuntimeException e) {
       LOG.warn("asset section query failed, assetId={}, sectionType=QUALITY, errorType={}",
           po.getId(), e.getClass().getSimpleName());
@@ -237,18 +270,47 @@ public class AssetDiscoverService {
     return AssetSourceType.METADATA.name().equals(po.getSourceType());
   }
 
-  private SectionView technicalMetadata(AssetItemPO po) {
-    SectionContext context =
-        new SectionContext(po.getAssetKey(), po.getSourceType(), po.getSourceId());
+  private SectionView providerSection(AssetItemPO po, SectionType type) {
+    Map<String, String> attributes = new LinkedHashMap<>();
+    attributes.put("returnAssetId", String.valueOf(po.getId()));
+    if (AssetSourceType.METADATA.name().equals(po.getSourceType())) {
+      try {
+        providerRegistry.find(AssetSourceType.METADATA)
+            .flatMap(provider -> provider.refresh(po.getSourceId()))
+            .ifPresent(descriptor -> attributes.putAll(descriptor.extra()));
+      } catch (RuntimeException e) {
+        LOG.warn("asset section context resolution failed, assetId={}, sectionType={}, errorType={}",
+            po.getId(), type, e.getClass().getSimpleName());
+        return SectionView.unavailable("物理表坐标暂不可用，无法读取该分区");
+      }
+    }
+    return providerSection(po, type, attributes);
+  }
+
+  private SectionView providerSection(
+      AssetItemPO po, SectionType type, Map<String, String> attributes) {
+    SectionContext context = new SectionContext(
+        po.getAssetKey(), po.getSourceType(), po.getSourceId(), attributes);
     Optional<SectionProvider> provider = sectionProviders.orderedStream()
-        .filter(candidate -> candidate.sectionType() == SectionType.TECHNICAL_METADATA)
+        .filter(candidate -> candidate.sectionType() == type)
         .filter(candidate -> candidate.supports(context))
         .findFirst();
     if (provider.isEmpty()) {
-      return SectionView.unavailable("技术元数据读取提供方未装配");
+      return SectionView.unavailable(type + " 分区读取提供方未装配");
     }
-    SectionContract contract = provider.get().query(context);
-    return new SectionView(contract.status().name(), contract.reason(), contract);
+    SectionProvider selected = provider.get();
+    long startedAt = System.nanoTime();
+    try {
+      SectionContract contract = selected.query(context);
+      LOG.info("asset section provider completed, assetId={}, sectionType={}, provider={}, status={}, durationMs={}",
+          po.getId(), type, selected.getClass().getSimpleName(), contract.status(),
+          (System.nanoTime() - startedAt) / 1_000_000);
+      return new SectionView(contract.status().name(), contract.reason(), contract);
+    } catch (RuntimeException e) {
+      LOG.warn("asset section provider failed, assetId={}, sectionType={}, provider={}, errorType={}",
+          po.getId(), type, selected.getClass().getSimpleName(), e.getClass().getSimpleName());
+      return SectionView.unavailable(type + " 分区暂不可用，请稍后重试");
+    }
   }
 
   private SectionView usage(AssetItemPO po) {
@@ -257,11 +319,15 @@ public class AssetDiscoverService {
       data.put("pageActivity", Map.of(
           "ownerDomain", "ASSET",
           "status", "OK",
+          "windowDays", TREND_DAYS,
+          "meaning", "资产详情页访问活动，不代表业务消费",
           "views", viewRecordService.trend(po.getId(), TREND_DAYS)));
     } catch (RuntimeException e) {
       data.put("pageActivity", Map.of(
           "ownerDomain", "ASSET",
           "status", "UNAVAILABLE",
+          "windowDays", TREND_DAYS,
+          "meaning", "资产详情页访问活动，不代表业务消费",
           "reason", "资产页活动暂不可用"));
     }
 
@@ -270,6 +336,8 @@ public class AssetDiscoverService {
       data.put("structuralUsage", Map.of(
           "ownerDomain", "LINEAGE",
           "status", "UNAVAILABLE",
+          "direction", "DOWNSTREAM",
+          "hop", LINEAGE_HOP,
           "reason", "血缘服务未装配"));
     } else {
       try {
@@ -278,6 +346,8 @@ public class AssetDiscoverService {
           data.put("structuralUsage", Map.of(
               "ownerDomain", "LINEAGE",
               "status", "UNAVAILABLE",
+              "direction", "DOWNSTREAM",
+              "hop", LINEAGE_HOP,
               "reason", "血缘域尚无该资产登记"));
         } else {
           int downstreamCount =
@@ -286,19 +356,58 @@ public class AssetDiscoverService {
           data.put("structuralUsage", Map.of(
               "ownerDomain", "LINEAGE",
               "status", "OK",
+              "direction", "DOWNSTREAM",
+              "hop", LINEAGE_HOP,
               "downstreamReferenceCount", downstreamCount));
         }
       } catch (RuntimeException e) {
         data.put("structuralUsage", Map.of(
-            "ownerDomain", "LINEAGE",
-            "status", "UNAVAILABLE",
-            "reason", "结构引用暂不可用"));
+              "ownerDomain", "LINEAGE",
+              "status", "UNAVAILABLE",
+              "direction", "DOWNSTREAM",
+              "hop", LINEAGE_HOP,
+              "reason", "结构引用暂不可用"));
       }
     }
-    data.put("businessConsumption", Map.of(
-        "status", "UNAVAILABLE",
-        "reason", "当前尚未接入消费域的调用/引用读侧"));
-    return SectionView.ok(data);
+    List<SectionAction> actions = new ArrayList<>();
+    SectionContext context = new SectionContext(po.getAssetKey(), po.getSourceType(), po.getSourceId(),
+        Map.of("returnAssetId", String.valueOf(po.getId())));
+    Optional<SectionProvider> usageProvider = sectionProviders.orderedStream()
+        .filter(provider -> provider.sectionType() == SectionType.USAGE)
+        .filter(provider -> provider.supports(context))
+        .findFirst();
+    if (usageProvider.isPresent()) {
+      SectionProvider selectedProvider = usageProvider.get();
+      long providerStartedAt = System.nanoTime();
+      try {
+        SectionContract contract = selectedProvider.query(context);
+        Map<String, Object> consumption = new LinkedHashMap<>(
+            contract.summary() == null ? Map.of() : contract.summary().values());
+        consumption.put("ownerDomain", contract.ownerDomain());
+        consumption.put("status", contract.status().name());
+        if (contract.reason() != null) consumption.put("reason", contract.reason());
+        data.put("businessConsumption", consumption);
+        actions.addAll(contract.actions());
+        LOG.info("asset section provider completed, assetId={}, sectionType=USAGE, provider={}, status={}, durationMs={}",
+            po.getId(), selectedProvider.getClass().getSimpleName(), contract.status(),
+            (System.nanoTime() - providerStartedAt) / 1_000_000);
+      } catch (RuntimeException e) {
+        data.put("businessConsumption", Map.of(
+            "ownerDomain", "CONSUMING_DOMAINS",
+            "status", "UNAVAILABLE",
+            "reason", "消费域使用事实暂不可用"));
+        LOG.warn("asset section provider failed, assetId={}, sectionType=USAGE, provider={}, errorType={}",
+            po.getId(), selectedProvider.getClass().getSimpleName(), e.getClass().getSimpleName());
+      }
+    } else {
+      data.put("businessConsumption", Map.of(
+          "ownerDomain", "CONSUMING_DOMAINS",
+          "status", "UNAVAILABLE",
+          "reason", "当前资产类型尚未接入消费域读侧"));
+      LOG.info("asset section provider unavailable, assetId={}, sectionType=USAGE, providerStatus=NOT_REGISTERED",
+          po.getId());
+    }
+    return new SectionView("OK", null, data, actions);
   }
 
   private boolean hasPermission(String operator, String permission) {

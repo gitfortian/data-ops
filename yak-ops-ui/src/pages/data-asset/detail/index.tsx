@@ -619,9 +619,19 @@ const AssetDetailPage = () => {
                 {(() => {
                   const rawUsage = detail?.sections.trend?.data as
                     | {
-                        pageActivity?: { status?: string; views?: { date: string; count: number }[] };
-                        structuralUsage?: { status?: string; downstreamReferenceCount?: number; reason?: string };
-                        businessConsumption?: { status?: string; reason?: string };
+                        pageActivity?: { status?: string; windowDays?: number; meaning?: string; views?: { date: string; count: number }[]; reason?: string };
+                        structuralUsage?: { status?: string; hop?: number; direction?: string; downstreamReferenceCount?: number; reason?: string };
+                        businessConsumption?: {
+                          status?: string;
+                          reason?: string;
+                          scope?: string;
+                          totalCount?: number;
+                          datasetCount?: number;
+                          dashboardCount?: number;
+                          reportCount?: number;
+                          apiCount?: number;
+                          screenCount?: number;
+                        };
                       }
                     | { date: string; count: number }[]
                     | undefined;
@@ -637,8 +647,15 @@ const AssetDetailPage = () => {
                           column={1}
                           items={[
                             {
+                              key: 'activity',
+                              label: '资产页访问活动（Asset）',
+                              children: rawUsage.pageActivity?.status === 'OK'
+                                ? `近 ${rawUsage.pageActivity.windowDays ?? 30} 天；不代表业务消费`
+                                : rawUsage.pageActivity?.reason ?? '暂不可用',
+                            },
+                            {
                               key: 'lineage',
-                              label: '下游结构引用（Lineage）',
+                              label: `下游结构引用（Lineage，${rawUsage.structuralUsage?.hop ?? 1} 跳）`,
                               children: rawUsage.structuralUsage?.status === 'OK'
                                 ? rawUsage.structuralUsage.downstreamReferenceCount ?? 0
                                 : rawUsage.structuralUsage?.reason ?? '暂不可用',
@@ -646,7 +663,11 @@ const AssetDetailPage = () => {
                             {
                               key: 'business',
                               label: '业务消费',
-                              children: rawUsage.businessConsumption?.reason ?? '尚未接入消费域读侧',
+                              children: rawUsage.businessConsumption?.status === 'OK'
+                                ? `已记录 ${rawUsage.businessConsumption.totalCount ?? 0} 次引用（数据集 ${rawUsage.businessConsumption.datasetCount ?? 0}、仪表盘 ${rawUsage.businessConsumption.dashboardCount ?? 0}、报表 ${rawUsage.businessConsumption.reportCount ?? 0}、API ${rawUsage.businessConsumption.apiCount ?? 0}、大屏 ${rawUsage.businessConsumption.screenCount ?? 0}）`
+                                : rawUsage.businessConsumption?.status === 'EMPTY'
+                                  ? rawUsage.businessConsumption.reason ?? '当前无已记录引用'
+                                  : rawUsage.businessConsumption?.reason ?? '尚未接入消费域读侧',
                             },
                           ]}
                         />
@@ -676,15 +697,27 @@ const AssetDetailPage = () => {
                 <SectionBlock title="安全分级(实时)" section={detail?.sections.security}>
                   {(() => {
                     const data = detail?.sections.security?.data;
+                    const classifications = Array.isArray(data?.classifications)
+                      ? data.classifications as Record<string, unknown>[]
+                      : [];
                     return (
-                      <Descriptions
-                        size="small"
-                        column={2}
-                        items={[
-                          { key: 'level', label: '等级', children: data?.levelName ?? data?.levelCode ?? '-' },
-                          { key: 'category', label: '分类', children: data?.categoryName ?? data?.categoryCode ?? '-' },
-                        ]}
-                      />
+                      <Space direction="vertical" className="w-full">
+                        <div className="text-[12px] text-[#667085]">
+                          安全分级证据：{classifications.length} 条。记录状态与访问/脱敏策略需在 Security 工作台核对；此摘要不代表访问许可。
+                        </div>
+                        {classifications.map((item, index) => (
+                          <Descriptions
+                            key={String(item.objectKey ?? index)}
+                            size="small"
+                            column={2}
+                            items={[
+                              { key: 'level', label: '等级', children: String(item.levelName ?? item.levelCode ?? '-') },
+                              { key: 'category', label: '分类', children: String(item.categoryName ?? item.categoryCode ?? '-') },
+                              { key: 'object', label: '对象', children: String(item.objectKey ?? '-') },
+                            ]}
+                          />
+                        ))}
+                      </Space>
                     );
                   })()}
                 </SectionBlock>
@@ -737,7 +770,7 @@ const AssetDetailPage = () => {
                         size="small"
                         column={1}
                         items={[
-                          { key: 'policy', label: '策略', children: ttl.policyCode || '未命中策略' },
+                          { key: 'policy', label: '策略', children: ttl.policyApplied ? ttl.policyCode || '-' : '未命中策略' },
                           { key: 'binding', label: '绑定来源', children: ttl.bindingSource ?? '-' },
                           { key: 'state', label: '下发状态', children: ttl.state ?? '-' },
                         ]}

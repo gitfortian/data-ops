@@ -11,6 +11,8 @@
 | `yak-ops-business-semantic` | 编译 | **仅经 `api` 包 SPI**（`StandardQueryApi`/`ProcessApi`），引用口径标准、业务域、字段库 |
 | `yak-ops-business-modeling` | 编译 | **仅经 `api` 包 SPI**（`ModelingModelApi`），引用 DWS/ADS 模型 |
 | `yak-ops-business-lineage` | 编译 | 调用 `LineageAssetRegistrar`/`LineageRelationRegistrar`/`LineageGraphReader`，血缘注册与可视化 |
+| `yak-ops-business-asset` | 编译 | 实现 AssetProvider，并向 Asset Usage Section 提供 Metric-owned 消费引用摘要 |
+| `yak-ops-spi` | 编译 | 实现 SectionProvider，供 Asset 聚合 Metric Usage Truth |
 
 ## 被依赖（入向，规划）
 
