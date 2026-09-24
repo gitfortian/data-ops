@@ -101,15 +101,16 @@ public class DatasetDataProductProvider implements DataProductProvider {
   private DataProductView project(DatasetCatalogEntry entry) {
     Dataset dataset = entry.dataset();
     DatasetVersion version = entry.currentVersion();
+    AssetProjection asset = assetProjection(dataset.id());
     List<ProductSectionState> sections = List.of(
         unavailableSection("ownership", "DATASET", "Dataset owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Dataset visibility policy is not exposed yet"),
-        assetSection(dataset.id()));
+        asset.section());
     return new DataProductView(
         new ProductKey(ProductType.DATASET, String.valueOf(dataset.id())),
         new SourceRef(ProductType.DATASET, String.valueOf(dataset.id())),
         new DomainRef("TASK_ASSET", String.valueOf(version.sourceTaskAssetId())),
-        assetRef(dataset.id()),
+        asset.ref(),
         dataset.name(),
         dataset.description(),
         null,
@@ -142,25 +143,19 @@ public class DatasetDataProductProvider implements DataProductProvider {
     return criteria != null && (normalize(criteria.owner()) != null || normalize(criteria.visibility()) != null);
   }
 
-  private ProductSectionState assetSection(long datasetId) {
+  private AssetProjection assetProjection(long datasetId) {
     try {
       AssetSourceLookupService.SourceLookup lookup = assetLookup.lookup("DATASET", String.valueOf(datasetId));
-      ProviderEvidenceState state = "FOUND".equals(lookup.state())
-          ? ProviderEvidenceState.READY : ProviderEvidenceState.EMPTY;
-      return new ProductSectionState("asset", state, "ASSET", null,
-          state == ProviderEvidenceState.EMPTY ? "Dataset is not indexed in Asset Registry" : null);
+      if ("FOUND".equals(lookup.state()) && lookup.assetId() != null) {
+        return new AssetProjection(
+            new DomainRef("ASSET", String.valueOf(lookup.assetId())),
+            new ProductSectionState("asset", ProviderEvidenceState.READY, "ASSET", null, null));
+      }
+      return new AssetProjection(null,
+          new ProductSectionState("asset", ProviderEvidenceState.EMPTY, "ASSET", null,
+              "Dataset is not indexed in Asset Registry"));
     } catch (RuntimeException exception) {
-      return unavailableSection("asset", "ASSET", exception.getMessage());
-    }
-  }
-
-  private DomainRef assetRef(long datasetId) {
-    try {
-      AssetSourceLookupService.SourceLookup lookup = assetLookup.lookup("DATASET", String.valueOf(datasetId));
-      return "FOUND".equals(lookup.state()) && lookup.assetId() != null
-          ? new DomainRef("ASSET", String.valueOf(lookup.assetId())) : null;
-    } catch (RuntimeException ignored) {
-      return null;
+      return new AssetProjection(null, unavailableSection("asset", "ASSET", exception.getMessage()));
     }
   }
 
@@ -184,4 +179,6 @@ public class DatasetDataProductProvider implements DataProductProvider {
       return null;
     }
   }
+
+  private record AssetProjection(DomainRef ref, ProductSectionState section) {}
 }
