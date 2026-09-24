@@ -1,6 +1,6 @@
 import { YakButton, YakEmpty, YakTab } from '@/components/ui';
 import { BRAND_THEME } from '@/styles/brand';
-import { history, useParams } from '@umijs/max';
+import { history, useLocation, useParams } from '@umijs/max';
 import { ConfigProvider, Spin } from 'antd';
 import { useMemo, useState } from 'react';
 
@@ -24,6 +24,13 @@ import {
 
 const ExecutionDetailPage = () => {
   const { executionNo = '' } = useParams<{ executionNo: string }>();
+  const location = useLocation();
+  const returnAssetId = new URLSearchParams(location.search).get('returnAssetId');
+  const hasAssetReturn = !!returnAssetId && /^\d+$/.test(returnAssetId);
+  const returnTarget = hasAssetReturn
+    ? `/data-asset/detail/${returnAssetId}`
+    : '/data-quality/execution';
+  const returnQuery = hasAssetReturn ? `?returnAssetId=${returnAssetId}` : '';
   const [activeTab, setActiveTab] =
     useState<ExecutionDetailTabKey>('overview');
   const {
@@ -72,8 +79,8 @@ const ExecutionDetailPage = () => {
               description="该运行记录可能已被删除，或当前账号无法访问"
             />
             <div className="flex justify-center pb-5">
-              <YakButton onClick={() => history.push('/data-quality/execution')}>
-                返回运行记录
+              <YakButton onClick={() => history.push(returnTarget)}>
+                {hasAssetReturn ? '返回资产详情' : '返回运行记录'}
               </YakButton>
             </div>
           </div>
@@ -206,11 +213,12 @@ const ExecutionDetailPage = () => {
             historyRecords={historyRecords}
             historyLoading={historyLoading}
             refreshing={refreshing}
-            onBack={() => history.push('/data-quality/execution')}
+            backLabel={hasAssetReturn ? '返回资产详情' : '返回运行记录'}
+            onBack={() => history.push(returnTarget)}
             onRefresh={() => void refresh()}
             onSelectExecution={(targetExecutionNo) => {
               if (targetExecutionNo !== detail.executionNo) {
-                history.push(`/data-quality/execution/${targetExecutionNo}`);
+                history.push(`/data-quality/execution/${targetExecutionNo}${returnQuery}`);
               }
             }}
           />

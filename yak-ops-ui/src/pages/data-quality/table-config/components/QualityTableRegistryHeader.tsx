@@ -5,11 +5,13 @@ import { RefreshCw } from 'lucide-react';
 interface QualityTableRegistryHeaderProps {
   refreshing: boolean;
   onRefresh: () => void;
+  onBackToAsset?: () => void;
 }
 
 const QualityTableRegistryHeader = ({
   refreshing,
   onRefresh,
+  onBackToAsset,
 }: QualityTableRegistryHeaderProps) => {
   const intl = useIntl();
   return (
@@ -17,13 +19,16 @@ const QualityTableRegistryHeader = ({
       <h1 className="m-0 text-[20px] font-semibold text-[#161823]">
         {intl.formatMessage({ id: 'pages.dataQuality.tableConfig.title' })}
       </h1>
-      <YakButton
-        icon={<RefreshCw size={14} />}
-        loading={refreshing}
-        onClick={onRefresh}
-      >
-        {intl.formatMessage({ id: 'pages.dataQuality.common.refresh' })}
-      </YakButton>
+      <div className="flex items-center gap-2">
+        {onBackToAsset ? <YakButton onClick={onBackToAsset}>返回资产详情</YakButton> : null}
+        <YakButton
+          icon={<RefreshCw size={14} />}
+          loading={refreshing}
+          onClick={onRefresh}
+        >
+          {intl.formatMessage({ id: 'pages.dataQuality.common.refresh' })}
+        </YakButton>
+      </div>
     </header>
   );
 };

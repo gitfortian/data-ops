@@ -1,5 +1,5 @@
 import { BRAND_THEME } from '@/styles/brand';
-import { history, useParams } from '@umijs/max';
+import { history, useLocation, useParams } from '@umijs/max';
 import { ConfigProvider, Spin } from 'antd';
 
 import { useMonitorDetailPage } from './hooks/useMonitorDetailPage';
@@ -11,10 +11,16 @@ import WorkspaceHeader from './WorkspaceHeader';
 
 const MonitorDetailPage = () => {
   const params = useParams<{ id: string }>();
+  const location = useLocation();
+  const returnAssetId = new URLSearchParams(location.search).get('returnAssetId');
+  const hasAssetReturn = !!returnAssetId && /^\d+$/.test(returnAssetId);
+  const returnTarget = hasAssetReturn
+    ? `/data-asset/detail/${returnAssetId}`
+    : '/data-quality/table-config';
   const detail = useMonitorDetailPage(params.id);
 
   const handleEdit = () => {
-    history.push(`/data-quality/monitor/${params.id}/edit`);
+    history.push(`/data-quality/monitor/${params.id}/edit${location.search}`);
   };
 
   return (
@@ -23,8 +29,9 @@ const MonitorDetailPage = () => {
         <WorkspaceHeader
           workspace={detail.workspace}
           activeTab={detail.activeTab}
+          backLabel={hasAssetReturn ? '返回资产详情' : '返回数据表监控'}
           onTabChange={detail.setActiveTab}
-          onBack={() => history.push('/data-quality/table-config')}
+          onBack={() => history.push(returnTarget)}
           onEdit={handleEdit}
         />
 

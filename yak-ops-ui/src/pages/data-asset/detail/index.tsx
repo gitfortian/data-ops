@@ -114,7 +114,7 @@ const SectionBlock = ({
           description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
         />
         {contractFacts}
-        {state === 'EMPTY' && section.actions && section.actions.length > 0 && (
+        {state === 'EMPTY' && section?.actions && section.actions.length > 0 && (
           <Space>
             {section.actions.map((action) => (
               <Button key={action.target} type="link" onClick={() => history.push(action.target)}>
@@ -169,19 +169,17 @@ const AssetDetailPage = () => {
         'TECHNICAL_METADATA', 'QUALITY', 'SECURITY', 'LINEAGE', 'USAGE', 'LIFECYCLE',
       ] as const;
       void Promise.allSettled(
-        sectionTypes.map(async (sectionType) => ({
-          sectionType,
-          result: await getAssetSection(assetId, sectionType),
-        })),
-      ).then((settled) => {
-        setDetail((current) => {
-          if (!current || current.asset.id !== assetId) return current;
-          const sections = { ...current.sections };
-          settled.forEach((entry, index) => {
-            const sectionType = sectionTypes[index];
-            const section: AssetSection = entry.status === 'rejected'
-              ? unavailableAssetSection()
-              : toAssetSectionView(entry.value.result, assetId);
+        sectionTypes.map(async (sectionType) => {
+          let section: AssetSection;
+          try {
+            const result = await getAssetSection(assetId, sectionType);
+            section = toAssetSectionView(result, assetId);
+          } catch {
+            section = unavailableAssetSection();
+          }
+          setDetail((current) => {
+            if (!current || current.asset.id !== assetId) return current;
+            const sections = { ...current.sections };
             if (sectionType === 'TECHNICAL_METADATA') {
               sections.technicalMetadata = section as NonNullable<typeof sections.technicalMetadata>;
             }
@@ -196,10 +194,10 @@ const AssetDetailPage = () => {
               sections.trend = section as NonNullable<typeof sections.trend>;
             }
             if (sectionType === 'LIFECYCLE') sections.ttl = section;
+            return { ...current, sections };
           });
-          return { ...current, sections };
-        });
-      });
+        }),
+      );
       setSnapshot({
         name: result.asset.name ?? '',
         description: result.asset.description ?? '',

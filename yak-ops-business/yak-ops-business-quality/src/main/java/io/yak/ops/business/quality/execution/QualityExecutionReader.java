@@ -52,4 +52,12 @@ public class QualityExecutionReader {
     return repository.findSummary(executionNo);
   }
 
+  @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
+  public Optional<Execution> findLatestForTarget(
+      long dataSourceId, String databaseName, String schemaName, String tableName) {
+    if (dataSourceId <= 0L) throw new IllegalArgumentException("数据源编号无效");
+    if (tableName == null || tableName.isBlank()) throw new IllegalArgumentException("物理表名不能为空");
+    return repository.findLatestForTarget(dataSourceId, databaseName, schemaName, tableName);
+  }
+
 }

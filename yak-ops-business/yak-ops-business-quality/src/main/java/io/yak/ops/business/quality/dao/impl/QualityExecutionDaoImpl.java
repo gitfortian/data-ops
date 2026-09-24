@@ -147,6 +147,31 @@ public class QualityExecutionDaoImpl implements QualityExecutionDao {
   }
 
   @Override
+  public QualityExecutionPO selectLatestForTarget(
+      long dataSourceId, String databaseName, String schemaName, String tableName) {
+    var query = Wrappers.<QualityExecutionPO>lambdaQuery()
+        .eq(QualityExecutionPO::getProjectId, currentProjectId())
+        .eq(QualityExecutionPO::getDataSourceId, dataSourceId)
+        .eq(QualityExecutionPO::getTableName, tableName);
+    if (databaseName == null) {
+      query.and(target -> target.isNull(QualityExecutionPO::getDatabaseName)
+          .or().eq(QualityExecutionPO::getDatabaseName, ""));
+    } else {
+      query.eq(QualityExecutionPO::getDatabaseName, databaseName);
+    }
+    if (schemaName == null) {
+      query.and(target -> target.isNull(QualityExecutionPO::getSchemaName)
+          .or().eq(QualityExecutionPO::getSchemaName, ""));
+    } else {
+      query.eq(QualityExecutionPO::getSchemaName, schemaName);
+    }
+    return executionMapper.selectOne(query
+        .orderByDesc(QualityExecutionPO::getQueuedAt)
+        .orderByDesc(QualityExecutionPO::getId)
+        .last("LIMIT 1"));
+  }
+
+  @Override
   public List<QualityRuleExecutionPO> selectRuleExecutions(long executionId) {
     requireOwnedExecution(executionId);
     return ruleExecutionMapper.selectList(

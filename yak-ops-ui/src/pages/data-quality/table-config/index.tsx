@@ -1,5 +1,6 @@
 import { BRAND_THEME } from '@/styles/brand';
 import { ConfigProvider } from 'antd';
+import { history, useLocation } from '@umijs/max';
 
 import DataSourceTreePane from './components/DataSourceTreePane';
 import QualityTableRegistryHeader from './components/QualityTableRegistryHeader';
@@ -8,6 +9,11 @@ import RegisterTableDrawer from './components/RegisterTableDrawer';
 import { useQualityTableRegistryPage } from './hooks/useQualityTableRegistryPage';
 
 const QualityTableRegistryPage = () => {
+  const location = useLocation();
+  const returnAssetId = new URLSearchParams(location.search).get('returnAssetId');
+  const returnTarget = returnAssetId && /^\d+$/.test(returnAssetId)
+    ? `/data-asset/detail/${returnAssetId}`
+    : undefined;
   const {
     source,
     table,
@@ -24,6 +30,7 @@ const QualityTableRegistryPage = () => {
         <QualityTableRegistryHeader
           refreshing={refreshing}
           onRefresh={() => void refresh()}
+          onBackToAsset={returnTarget ? () => history.push(returnTarget) : undefined}
         />
 
         <div className="flex min-h-0 flex-1 overflow-hidden">

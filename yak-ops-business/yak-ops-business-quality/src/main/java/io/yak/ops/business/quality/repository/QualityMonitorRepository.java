@@ -20,6 +20,8 @@ public interface QualityMonitorRepository {
   PageData<Monitor> pageMonitors(QualityQuery.Monitor query);
   Optional<Monitor> findMonitor(long id);
   List<TableMonitorSummary> tableSummaries(long dataSourceId, String databaseName, String schemaName);
+  List<TableMonitorSummary> tableSummaries(
+      long dataSourceId, String databaseName, String schemaName, String tableName);
   List<AlertEvent> recentAlertEvents(int limit);
   long countAlertEventsSince(LocalDateTime since);
   boolean existsMonitorForTarget(Long excludeId, long dataSourceId, String databaseName, String schemaName, String tableName);

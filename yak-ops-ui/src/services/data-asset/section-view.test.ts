@@ -61,4 +61,25 @@ describe('asset section view adapter', () => {
       { label: '无返回处理的页面', target: '/help', sourceId: 'table:3:db.t' },
     ]);
   });
+
+  it('preserves Asset return context when opening Quality monitor and execution pages', () => {
+    const contract: AssetSectionContract = {
+      sectionType: 'QUALITY',
+      status: 'OK',
+      ownerDomain: 'QUALITY',
+      summary: { values: {} },
+      actions: [
+        { label: '查看质量监控', target: '/data-quality/monitor/9', sourceId: '9' },
+        { label: '查看质量运行记录', target: '/data-quality/execution/QX-1', sourceId: 'QX-1' },
+      ],
+      evidence: [],
+      provenance: { sourceDomain: 'QUALITY', sourceId: 'QX-1', observedAt: '2026-09-23T00:00:00Z' },
+      capability: { applicable: true, available: true },
+    };
+
+    expect(toAssetSectionView(contract, 391).actions).toEqual([
+      { label: '查看质量监控', target: '/data-quality/monitor/9?returnAssetId=391', sourceId: '9' },
+      { label: '查看质量运行记录', target: '/data-quality/execution/QX-1?returnAssetId=391', sourceId: 'QX-1' },
+    ]);
+  });
 });

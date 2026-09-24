@@ -80,6 +80,14 @@ public class QualityExecutionReadRepositoryAdapter implements QualityExecutionRe
         .map(po -> execution(po, List.of()));
   }
 
+  @Override
+  public Optional<Execution> findLatestForTarget(
+      long dataSourceId, String databaseName, String schemaName, String tableName) {
+    return Optional.ofNullable(executionDao.selectLatestForTarget(
+        dataSourceId, databaseName, schemaName, tableName))
+        .map(po -> execution(po, List.of()));
+  }
+
   private Map<String, Object> params(QualityQuery.Execution query) {
     Map<String, Object> params = new LinkedHashMap<>();
     putLike(params, "keyword", query.keyword());

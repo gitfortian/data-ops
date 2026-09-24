@@ -25,6 +25,7 @@ interface ExecutionDetailHeaderProps {
   historyRecords: ExecutionWorkspaceListItem[];
   historyLoading: boolean;
   refreshing: boolean;
+  backLabel?: string;
   onBack: () => void;
   onRefresh: () => void;
   onSelectExecution: (executionNo: string) => void;
@@ -35,6 +36,7 @@ export const ExecutionDetailHeader = ({
   historyRecords,
   historyLoading,
   refreshing,
+  backLabel = '返回运行记录',
   onBack,
   onRefresh,
   onSelectExecution,
@@ -61,7 +63,7 @@ export const ExecutionDetailHeader = ({
           className="!h-9 !px-1 !text-[14px] !font-semibold !text-[#30343b]"
           onClick={onBack}
         >
-          返回运行记录
+          {backLabel}
         </YakButton>
       </div>
 

@@ -77,6 +77,15 @@ class QualityExecutionDaoProjectScopeTest {
     verify(fixture.executionMapper).selectOne(any());
   }
 
+  @Test
+  void latestTargetExecutionQueryUsesTrustedProjectAndExactPhysicalCoordinates() {
+    Fixture fixture = fixture(7L);
+
+    fixture.dao.selectLatestForTarget(3L, "sales", "public", "orders");
+
+    verify(fixture.executionMapper).selectOne(any());
+  }
+
   private Fixture fixture(long projectId) {
     QualityExecutionMapper executionMapper = mock(QualityExecutionMapper.class);
     QualityRuleExecutionMapper ruleExecutionMapper =

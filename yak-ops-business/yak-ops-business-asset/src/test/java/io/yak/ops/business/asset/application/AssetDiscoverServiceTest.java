@@ -323,6 +323,23 @@ class AssetDiscoverServiceTest {
     verify(registry, never()).find(AssetSourceType.METADATA);
   }
 
+  @Test
+  void qualitySectionRequiresExecutionReadPermissionAsWellAsMonitorRead() {
+    AssetItemPO physicalTable = modelItem();
+    physicalTable.setSourceType(AssetSourceType.METADATA.name());
+    when(assetAppService.requireItem(1L)).thenReturn(physicalTable);
+    when(permissionService.hasPermission("alice", "quality:execution:read")).thenReturn(false);
+
+    AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
+
+    assertEquals("PERMISSION_DENIED", result.status());
+    assertNull(result.data());
+    verify(permissionService).hasPermission("alice", "quality:monitor:read");
+    verify(permissionService).hasPermission("alice", "quality:execution:read");
+    verify(sectionProviders, never()).orderedStream();
+    verify(registry, never()).find(AssetSourceType.METADATA);
+  }
+
   private AssetProvider metadataProvider() {
     return new AssetProvider() {
       @Override public AssetSourceType sourceType() { return AssetSourceType.METADATA; }
