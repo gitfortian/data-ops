@@ -26,9 +26,11 @@ import org.springframework.stereotype.Component;
  * Resolves cross-module references (domain/process/caliber/unit/model) and
  * in-module display names through SPI interfaces only.
  *
- * <p>All lookups are best-effort: an unavailable or failing provider degrades
- * to an empty result and never blocks the caller. Direct imports of other
- * modules' dao layers are forbidden by the module contract (REVIEW #2).
+ * <p>Legacy display lookups remain best-effort and degrade to empty values so
+ * callers are not blocked. State-aware single-reference lookups preserve the
+ * difference between an absent entity and an unavailable/failing provider.
+ * Direct imports of other modules' dao layers are forbidden by the module
+ * contract (REVIEW #2).
  */
 @Component
 @Slf4j
@@ -37,6 +39,33 @@ public class MetricReferenceResolver {
   /** 上游引用在登记时刻的快照(编码 + 版本号);解析不到时为空项。 */
   public record Reference(String code, Integer version) {
     public static final Reference EMPTY = new Reference(null, null);
+  }
+
+  /** Provider/实体解析状态。EMPTY 表示 provider 正常但目标不存在；UNAVAILABLE 表示证据无法取得。 */
+  public enum ProviderState {
+    AVAILABLE,
+    EMPTY,
+    UNAVAILABLE
+  }
+
+  /** 带可用性证据的引用解析结果，供 canonical detail / validation 使用。 */
+  public record ReferenceResolution(Reference reference, ProviderState state) {
+    public ReferenceResolution {
+      reference = reference == null ? Reference.EMPTY : reference;
+      state = state == null ? ProviderState.UNAVAILABLE : state;
+    }
+
+    public static ReferenceResolution available(Reference reference) {
+      return new ReferenceResolution(reference, ProviderState.AVAILABLE);
+    }
+
+    public static ReferenceResolution empty() {
+      return new ReferenceResolution(Reference.EMPTY, ProviderState.EMPTY);
+    }
+
+    public static ReferenceResolution unavailable() {
+      return new ReferenceResolution(Reference.EMPTY, ProviderState.UNAVAILABLE);
+    }
   }
 
   private final MetricRepository repository;
@@ -112,32 +141,66 @@ public class MetricReferenceResolver {
         .collect(Collectors.toMap(Metric::id, Function.identity(), (a, b) -> a));
   }
 
-  /** 口径/单位引用的 code+version 快照(写路径单条解析,best-effort)。 */
-  public Reference standardReference(Long standardId) {
+  /**
+   * 口径/单位引用解析，显式保留 provider 可用性。
+   * EMPTY = provider 正常但目标不存在；UNAVAILABLE = provider 缺失或调用失败。
+   */
+  public ReferenceResolution standardReferenceResolution(Long standardId) {
     if (standardId == null || standardId <= 0) {
-      return Reference.EMPTY;
+      return ReferenceResolution.empty();
     }
-    return safeValue("standard:" + standardId,
-        () -> {
-          var standard = standardQueryApi.getIfAvailable().get(standardId);
-          return standard == null
-              ? Reference.EMPTY
-              : new Reference(standard.code(), standard.version());
-        },
-        Reference.EMPTY);
+    try {
+      StandardQueryApi api = standardQueryApi.getIfAvailable();
+      if (api == null) {
+        return ReferenceResolution.unavailable();
+      }
+      var standard = api.get(standardId);
+      return standard == null
+          ? ReferenceResolution.empty()
+          : ReferenceResolution.available(new Reference(standard.code(), standard.version()));
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for standard:{} (provider unavailable): {}",
+          standardId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
   }
 
-  /** 模型引用的 code+version 快照(写路径单条解析,best-effort)。 */
-  public Reference modelReference(Long modelId) {
+  /** 兼容旧调用方；需要区分 EMPTY/UNAVAILABLE 的新代码应使用 standardReferenceResolution。 */
+  public Reference standardReference(Long standardId) {
+    return standardReferenceResolution(standardId).reference();
+  }
+
+  /**
+   * 模型引用解析，显式保留 provider 可用性。
+   * EMPTY = provider 正常但目标不存在；UNAVAILABLE = provider 缺失、返回非法结果或调用失败。
+   */
+  public ReferenceResolution modelReferenceResolution(Long modelId) {
     if (modelId == null || modelId <= 0) {
-      return Reference.EMPTY;
+      return ReferenceResolution.empty();
     }
-    return safeValue("model:" + modelId,
-        () -> {
-          var brief = modelQueryApi.getIfAvailable().resolve(List.of(modelId)).get(modelId);
-          return brief == null ? Reference.EMPTY : new Reference(brief.code(), brief.latestVersionNo());
-        },
-        Reference.EMPTY);
+    try {
+      ModelQueryApi api = modelQueryApi.getIfAvailable();
+      if (api == null) {
+        return ReferenceResolution.unavailable();
+      }
+      Map<Long, ModelBrief> resolved = api.resolve(List.of(modelId));
+      if (resolved == null) {
+        return ReferenceResolution.unavailable();
+      }
+      ModelBrief brief = resolved.get(modelId);
+      return brief == null
+          ? ReferenceResolution.empty()
+          : ReferenceResolution.available(new Reference(brief.code(), brief.latestVersionNo()));
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for model:{} (provider unavailable): {}",
+          modelId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
+  }
+
+  /** 兼容旧调用方；需要区分 EMPTY/UNAVAILABLE 的新代码应使用 modelReferenceResolution。 */
+  public Reference modelReference(Long modelId) {
+    return modelReferenceResolution(modelId).reference();
   }
 
   private static Collection<Long> distinctIds(Collection<Long> ids) {
