@@ -2,12 +2,15 @@ import type { ApiResponse } from '@/services/http/response';
 import { API_SUCCESS_CODE } from '@/services/http/response';
 import HttpUtils from '@/utils/HttpUtils';
 import type {
+  NavigationResolution,
   ProductDiscoveryQuery,
   ProductDiscoveryResult,
   ProductLookupResult,
+  ProductType,
 } from './types';
 
-const PRODUCT_API = '/api/v1/consumption/products';
+const CONSUMPTION_API = '/api/v1/consumption';
+const PRODUCT_API = `${CONSUMPTION_API}/products`;
 
 const unwrap = <T,>(response: ApiResponse<T>, fallback: string): T => {
   if (response?.code !== API_SUCCESS_CODE || response.data === undefined) {
@@ -35,4 +38,21 @@ export const discoverProducts = async (
 export const getProduct = async (productKey: string): Promise<ProductLookupResult> => unwrap(
   await HttpUtils.get<ProductLookupResult>(`${PRODUCT_API}/${encodeURIComponent(productKey)}`),
   '加载数据产品详情失败',
+);
+
+export const resolveProductFromSource = async (
+  productType: ProductType,
+  sourceIdentity: string,
+): Promise<NavigationResolution> => unwrap(
+  await HttpUtils.get<NavigationResolution>(
+    `${CONSUMPTION_API}/navigation/sources/${productType}/${encodeURIComponent(sourceIdentity)}`,
+  ),
+  '解析来源数据产品失败',
+);
+
+export const resolveProductFromAsset = async (assetId: string | number): Promise<NavigationResolution> => unwrap(
+  await HttpUtils.get<NavigationResolution>(
+    `${CONSUMPTION_API}/navigation/assets/${encodeURIComponent(String(assetId))}`,
+  ),
+  '解析资产数据产品失败',
 );
