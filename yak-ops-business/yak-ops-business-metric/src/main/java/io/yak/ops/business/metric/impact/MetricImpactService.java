@@ -68,7 +68,8 @@ public class MetricImpactService {
           dep.getDependencyCode(),
           dep.getDependencyVersion(),
           currentVersion,
-          changeStatus(dep.getDependencyVersion(), currentVersion, removed)));
+          changeStatus(dep.getDependencyVersion(), currentVersion, removed),
+          dependencyHealth(dep.getDependencyVersion(), currentVersion, removed)));
     }
 
     MetricUsageApi.UsageSummary usage = usageApi.summary(metricId);
@@ -107,6 +108,22 @@ public class MetricImpactService {
     if (current == null) return "UNKNOWN";
     if (registered == null) return "UNKNOWN";
     return registered.equals(current) ? "UNCHANGED" : "CHANGED";
+  }
+
+  /**
+   * Stable product-facing dependency health semantics used by the canonical Metric context.
+   *
+   * <p>This intentionally coexists with the legacy {@code changeStatus} field so existing
+   * API consumers are not broken while Phase 5 adopts explicit product states. A missing
+   * snapshot/current version is evidence unavailability, never an empty or healthy result.
+   */
+  private static DependencyHealth dependencyHealth(
+      Integer registered, Integer current, boolean removed) {
+    if (removed) return DependencyHealth.REMOVED;
+    if (registered == null || current == null) return DependencyHealth.UNAVAILABLE;
+    return registered.equals(current)
+        ? DependencyHealth.UP_TO_DATE
+        : DependencyHealth.OUTDATED;
   }
 
   /**
@@ -157,6 +174,13 @@ public class MetricImpactService {
     return Math.min(a, b);
   }
 
+  public enum DependencyHealth {
+    UP_TO_DATE,
+    OUTDATED,
+    REMOVED,
+    UNAVAILABLE
+  }
+
   public record ImpactReport(
       Long metricId, String metricCode, String metricName,
       List<DependencyChange> changes, long usageCount) {}
@@ -164,7 +188,7 @@ public class MetricImpactService {
   public record DependencyChange(
       String dependencyType, Long dependencyId, String dependencyCode,
       Integer registeredVersion, Integer currentVersion,
-      String changeStatus) {}
+      String changeStatus, DependencyHealth dependencyHealth) {}
 
   public record AffectedMetric(
       Long metricId, String metricCode, String metricName,
