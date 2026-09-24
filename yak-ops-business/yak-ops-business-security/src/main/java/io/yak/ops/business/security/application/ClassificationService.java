@@ -242,13 +242,30 @@ public class ClassificationService implements SecurityClassificationQueryApi {
   }
 
   @Override
+  public List<ClassificationView> findActiveByTable(
+      String datasourceId, String dbName, String tableName) {
+    Long projectId = currentProject.requireProjectId();
+    return mapper.selectList(
+            new LambdaQueryWrapper<DsecClassificationPO>()
+                .eq(DsecClassificationPO::getProjectId, projectId)
+                .eq(DsecClassificationPO::getDbName, safe(dbName))
+                .eq(DsecClassificationPO::getDatasourceId, Long.valueOf(datasourceId))
+                .eq(DsecClassificationPO::getTableName, safe(tableName))
+                .eq(DsecClassificationPO::getStatus, "ACTIVE"))
+        .stream()
+        .map(this::toView)
+        .toList();
+  }
+
+  @Override
   public List<ClassificationView> findByTable(String dbName, String tableName) {
     Long projectId = currentProject.requireProjectId();
     return mapper.selectList(
             new LambdaQueryWrapper<DsecClassificationPO>()
                 .eq(DsecClassificationPO::getProjectId, projectId)
                 .eq(DsecClassificationPO::getDbName, safe(dbName))
-                .eq(DsecClassificationPO::getTableName, safe(tableName)))
+                .eq(DsecClassificationPO::getTableName, safe(tableName))
+                .eq(DsecClassificationPO::getStatus, "ACTIVE"))
         .stream()
         .map(this::toView)
         .toList();
@@ -274,7 +291,8 @@ public class ClassificationService implements SecurityClassificationQueryApi {
         level == null ? null : level.getRankNo(),
         po.getCategoryId(),
         category == null ? null : category.getCategoryCode(),
-        category == null ? null : category.getCategoryName());
+        category == null ? null : category.getCategoryName(),
+        po.getStatus());
   }
 
   private LambdaQueryWrapper<DsecSecurityLevelPO> scopedLevel(Long projectId, Long levelId) {

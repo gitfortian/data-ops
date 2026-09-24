@@ -37,7 +37,7 @@ class MetadataAssetSectionProviderTest {
         13, "tableColumn", Map.of("name", "order_id", "dataType", "BIGINT"),
         Map.of(), Map.of());
     when(queryApi.findPhysicalTable(key)).thenReturn(Optional.of(table));
-    when(queryApi.listPhysicalColumns("4", "warehouse", "orders"))
+    when(queryApi.listPhysicalColumns("4", "warehouse", "public", "orders"))
         .thenReturn(List.of(column));
 
     var result = provider.query(context);
@@ -49,7 +49,7 @@ class MetadataAssetSectionProviderTest {
     assertEquals(List.of(column.facts()), summary.values().get("columns"));
     assertEquals("METADATA", result.ownerDomain());
     assertTrue(result.actions().stream().anyMatch(action -> action.sourceId().equals(key)));
-    verify(queryApi).listPhysicalColumns("4", "warehouse", "orders");
+    verify(queryApi).listPhysicalColumns("4", "warehouse", "public", "orders");
   }
 
   @Test

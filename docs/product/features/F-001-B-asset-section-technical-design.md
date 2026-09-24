@@ -47,7 +47,7 @@ Quality API 不返回 PO、Mapper、DAO 类型或 HTTP controller VO；实现使
 
 Asset 从 Metadata `AssetProvider.refresh(sourceId)` 读取 `dataSourceId/databaseName/schemaName/tableName`，由 Quality `SectionProvider` 查询并返回 Section 五态。Section `summary` 至少包括 `registered`、`monitorCount`、`enabledMonitorCount`、`latestExecution`（可空的显式子对象）；`actions` 携带可由前端路由消费的 Quality Monitor / Execution 页面目标及 identity；Asset 不拼装或持有 Quality 事实。
 
-沿用 `GET /api/v1/assets/{id}/sections/{sectionType}` 渐进加载端点。完整详情 endpoint 中的 Quality projection 也调用同一 `quality(po)` adapter，避免两种读取语义分叉。Quality 摘要同时要求现有 `quality:monitor:read` 与 `quality:execution:read` 权限。
+沿用 `GET /api/v1/assets/{id}/sections/{sectionType}` 渐进加载端点。`GET /api/v1/assets/{id}` 只返回 Asset 台账与 Asset-owned facts；Quality、Metadata、Security、Lineage、Usage、Lifecycle 均通过独立 Section 请求读取，源域属性也通过独立请求读取。这样源域慢查询不会阻塞 Asset 本体和其它 Section。Quality 摘要同时要求现有 `quality:monitor:read` 与 `quality:execution:read` 权限。
 
 Section endpoint 必须保证本体已成功读取后，单个 Section 故障只降级自身。错误响应不泄漏 SQL、凭据或原始异常。
 

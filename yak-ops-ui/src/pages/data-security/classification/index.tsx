@@ -87,7 +87,7 @@ const LevelTab = () => {
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [keyword, setKeyword] = useState('');
+  const [keyword, setKeyword] = useState(() => new URLSearchParams(window.location.search).get('keyword') ?? '');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SecurityLevel | null>(null);
@@ -725,6 +725,7 @@ const DataSecurityClassificationPage = () => {
   const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
     ? Number(returnAssetIdValue)
     : undefined;
+  const activeTab = searchParams.get('activeTab') === 'classification' ? 'classification' : 'level';
 
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
@@ -737,6 +738,7 @@ const DataSecurityClassificationPage = () => {
       />
       <div className="mt-4">
         <Tabs
+          defaultActiveKey={activeTab}
           items={[
             { key: 'level', label: '安全等级', children: <LevelTab /> },
             { key: 'category', label: '数据分类', children: <CategoryTab categoryCodeOptions={categoryCodeOptions} /> },

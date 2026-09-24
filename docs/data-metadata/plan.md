@@ -1155,7 +1155,7 @@ PagingData<EntityDTO> search(EntityQuery q);                    // 跨类型统�
 Optional<EntityDTO>   getEntity(long id);
 List<EntityDTO>       listChildren(long parentId, String typeName);   // 表→列
 /** ↓ 两个便捷方法**只是 type_name 过滤的语法糖**，不是第二套模型；实现里禁止出现独立表 */
-List<EntityDTO>       listPhysicalColumns(String datasourceId, String database, String table);
+List<EntityDTO>       listPhysicalColumns(String datasourceId, String database, String schema, String table);
 Optional<EntityDTO>   findPhysicalTable(String assetKey);
 ```
 `EntityDTO` 携带 `typeName + attributes + slotValues`，消费方按 `typeName` 解释属性；

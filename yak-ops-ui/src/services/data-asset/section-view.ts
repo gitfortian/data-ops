@@ -14,7 +14,8 @@ export const toAssetSectionView = (
   contract: AssetSectionContract,
   returnAssetId?: number,
 ): AssetSection<Record<string, unknown>> => {
-  const values = contract.summary?.values ?? {};
+  const summary = contract.summary;
+  const values = summary?.values ?? summary ?? {};
   const data = Object.prototype.hasOwnProperty.call(values, 'data') ? values.data : values;
   const actions = contract.actions ?? [];
 
@@ -38,7 +39,7 @@ export const toAssetSectionView = (
   };
 };
 
-export const unavailableAssetSection = (): AssetSection => ({
+export const unavailableAssetSection = <T = unknown>(): AssetSection<T> => ({
   status: 'UNAVAILABLE',
   note: '该分区暂不可用，请稍后重试',
 });

@@ -93,6 +93,13 @@ export interface AssetSectionCapability {
   reason?: string | null;
 }
 
+export interface AssetLifecycleData {
+  policyApplied?: boolean;
+  policyCode?: string;
+  bindingSource?: string;
+  state?: string;
+}
+
 export interface AssetSectionContract {
   sectionType:
     | 'OVERVIEW'
@@ -105,7 +112,7 @@ export interface AssetSectionContract {
     | 'GOVERNANCE';
   status: AssetSection['status'];
   ownerDomain: string;
-  summary: { values: Record<string, unknown> };
+  summary: { values?: Record<string, unknown>; [key: string]: unknown };
   reason?: string | null;
   updatedAt?: string | null;
   actions: { label: string; target: string; sourceId: string }[];
@@ -143,12 +150,17 @@ export interface LineageGraphData {
 }
 
 export interface ClassificationData {
-  objectKey: string;
+  objectKey?: string;
   levelCode?: string;
   levelName?: string;
   levelRank?: number;
   categoryCode?: string;
   categoryName?: string;
+  status?: string;
+  classificationCount?: number;
+  classifications?: ClassificationData[];
+  strategySummaryStatus?: string;
+  strategySummaryReason?: string;
 }
 
 export interface AssetHealthData {
@@ -187,7 +199,7 @@ export interface AssetDetailView {
     security?: AssetSection<ClassificationData>;
     fields?: AssetSection;
     quality?: AssetSection;
-    ttl?: AssetSection;
+    ttl?: AssetSection<AssetLifecycleData>;
     trend?: AssetSection<DailyView[]>;
     health?: AssetSection<AssetHealthData>;
   };
@@ -327,6 +339,7 @@ export interface ReconcileLastRun {
 export interface ReconcileStatusRow {
   sourceType: AssetSourceType;
   registered: boolean;
+  supportedSections?: string[];
   lastRun?: ReconcileLastRun | null;
 }
 

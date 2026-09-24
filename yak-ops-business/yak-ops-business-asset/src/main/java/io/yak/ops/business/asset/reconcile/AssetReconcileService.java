@@ -32,6 +32,8 @@ import io.yak.ops.common.enums.asset.AssetEnums.HandleStatus;
 import io.yak.ops.common.enums.asset.AssetErrorCode;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.common.enums.asset.AssetSourceType;
+import io.yak.ops.spi.section.SectionProvider;
+import io.yak.ops.spi.section.SectionType;
 import io.yak.ops.core.project.CurrentProject;
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
@@ -48,6 +50,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -60,6 +63,8 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 @Slf4j
 public class AssetReconcileService {
+
+  private final ObjectProvider<SectionProvider> sectionProviders;
 
   /** SOURCE_GONE 判定窗口默认天数(yak_asset_setting 可覆盖)。 */
   public static final int DEFAULT_GONE_WINDOW_DAYS = 7;
@@ -163,6 +168,13 @@ public class AssetReconcileService {
       Map<String, Object> row = new LinkedHashMap<>();
       row.put("sourceType", type.name());
       row.put("registered", registry.find(type).isPresent());
+      row.put("supportedSections", sectionProviders.orderedStream()
+          .filter(provider -> provider.supportedSourceTypes().contains(type.name()))
+          .map(SectionProvider::sectionType)
+          .map(SectionType::name)
+          .distinct()
+          .sorted()
+          .toList());
       row.put("lastRun", readJsonMap(
           settingService.get(projectId, SETTING_LAST_PREFIX + type.name())));
       views.add(row);

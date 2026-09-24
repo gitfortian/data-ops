@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.spi.section.SectionContext;
-import io.yak.ops.spi.section.SectionMapSummary;
 import io.yak.ops.spi.section.SectionStatus;
 import io.yak.ops.spi.section.SectionType;
 import java.util.Map;
@@ -31,7 +30,8 @@ class QualityAssetSectionProviderTest {
     assertThat(provider.supports(context)).isTrue();
     assertThat(result.ownerDomain()).isEqualTo("QUALITY");
     assertThat(result.status()).isEqualTo(SectionStatus.OK);
-    assertThat(((SectionMapSummary) result.summary()).values())
+    assertThat(result.summary()).isInstanceOf(QualityAssetSectionSummary.class);
+    assertThat(result.summary().values())
         .containsEntry("registered", true)
         .containsEntry("monitorId", 9L)
         .containsEntry("monitorCount", 2)
@@ -71,7 +71,7 @@ class QualityAssetSectionProviderTest {
                 LocalDateTime.parse("2026-09-24T10:00:00"), null)));
 
     var result = provider.query(physicalTableContext());
-    var values = ((SectionMapSummary) result.summary()).values();
+    var values = result.summary().values();
 
     assertThat(result.status()).isEqualTo(SectionStatus.OK);
     assertThat(values.get("latestExecution"))

@@ -6,7 +6,6 @@ import io.yak.ops.spi.section.SectionCapability;
 import io.yak.ops.spi.section.SectionContext;
 import io.yak.ops.spi.section.SectionContract;
 import io.yak.ops.spi.section.SectionEvidence;
-import io.yak.ops.spi.section.SectionMapSummary;
 import io.yak.ops.spi.section.SectionProvenance;
 import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.spi.section.SectionStatus;
@@ -21,6 +20,11 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnQualityEnabled
 public class QualityAssetSectionProvider implements SectionProvider {
+
+  @Override
+  public java.util.Set<String> supportedSourceTypes() {
+    return java.util.Set.of("METADATA");
+  }
 
   private final QualityAssetSectionSummaryReader summaryReader;
 
@@ -47,14 +51,6 @@ public class QualityAssetSectionProvider implements SectionProvider {
         blankToNull(context.attributes().get("databaseName")),
         blankToNull(context.attributes().get("schemaName")),
         context.attributes().get("tableName"));
-    Map<String, Object> values = Map.of(
-        "registered", summary.registered(),
-        "monitorId", summary.monitorId() == null ? "" : summary.monitorId(),
-        "monitorCount", summary.monitorCount(),
-        "enabledMonitorCount", summary.enabledMonitorCount(),
-        "latestExecution", summary.latestExecution() == null
-            ? Map.of("status", "NOT_RUN") : summary.latestExecution());
-
     SectionStatus status = summary.monitorCount() > 0 ? SectionStatus.OK : SectionStatus.EMPTY;
     String reason = status == SectionStatus.EMPTY
         ? (summary.registered() ? "该物理表已纳入质量管理，尚未配置监控" : "该物理表尚未纳入质量管理")
@@ -64,7 +60,7 @@ public class QualityAssetSectionProvider implements SectionProvider {
         ? context.assetKey() : summary.latestExecution().executionNo();
     return new QualityAssetSectionResult(
         status,
-        new SectionMapSummary(values),
+        summary,
         reason,
         summary.latestExecution() == null || summary.latestExecution().finishedAt() == null ? null
             : summary.latestExecution().finishedAt().atZone(java.time.ZoneId.systemDefault()).toInstant(),

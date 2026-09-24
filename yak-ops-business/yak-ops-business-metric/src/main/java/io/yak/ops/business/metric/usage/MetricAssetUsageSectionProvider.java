@@ -8,9 +8,9 @@ import io.yak.ops.spi.section.SectionCapability;
 import io.yak.ops.spi.section.SectionContext;
 import io.yak.ops.spi.section.SectionContract;
 import io.yak.ops.spi.section.SectionEvidence;
-import io.yak.ops.spi.section.SectionMapSummary;
 import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.spi.section.SectionProvenance;
+import io.yak.ops.spi.section.SectionSummary;
 import io.yak.ops.spi.section.SectionStatus;
 import io.yak.ops.spi.section.SectionType;
 import java.time.Instant;
@@ -24,6 +24,27 @@ import org.springframework.stereotype.Component;
 @ConditionalOnMetricPersistence
 @RequiredArgsConstructor
 public class MetricAssetUsageSectionProvider implements SectionProvider {
+
+  public record MetricUsageSummary(
+      Long metricId, String scope, long totalCount, long reportCount, long datasetCount,
+      long dashboardCount, long apiCount, long screenCount) implements SectionSummary {
+    @Override public Map<String, Object> values() {
+      return Map.of(
+          "metricId", metricId,
+          "scope", scope,
+          "totalCount", totalCount,
+          "reportCount", reportCount,
+          "datasetCount", datasetCount,
+          "dashboardCount", dashboardCount,
+          "apiCount", apiCount,
+          "screenCount", screenCount);
+    }
+  }
+
+  @Override
+  public java.util.Set<String> supportedSourceTypes() {
+    return java.util.Set.of("METRIC");
+  }
 
   private final MetricUsageApi metricUsageApi;
 
@@ -41,25 +62,20 @@ public class MetricAssetUsageSectionProvider implements SectionProvider {
   public SectionContract query(SectionContext context) {
     Long metricId = parseMetricId(context.sourceId());
     if (metricId == null) {
-      return result(context, SectionStatus.UNAVAILABLE, Map.of(), "指标身份无法解析");
+      return result(context, SectionStatus.UNAVAILABLE, null, "指标身份无法解析");
     }
     MetricUsageApi.UsageSummary summary = metricUsageApi.summary(metricId);
     SectionStatus status = summary.totalCount() > 0 ? SectionStatus.OK : SectionStatus.EMPTY;
-    Map<String, Object> values = Map.of(
-        "metricId", summary.metricId(),
-        "scope", "已记录的指标引用总量（非实时 API 调用次数）",
-        "totalCount", summary.totalCount(),
-        "reportCount", summary.reportCount(),
-        "datasetCount", summary.datasetCount(),
-        "dashboardCount", summary.dashboardCount(),
-        "apiCount", summary.apiCount(),
-        "screenCount", summary.screenCount());
+    MetricUsageSummary values = new MetricUsageSummary(
+        summary.metricId(), "已记录的指标引用总量（非实时 API 调用次数）",
+        summary.totalCount(), summary.reportCount(), summary.datasetCount(),
+        summary.dashboardCount(), summary.apiCount(), summary.screenCount());
     return result(context, status, values,
         status == SectionStatus.EMPTY ? "当前没有已记录的指标引用" : null);
   }
 
   private static SectionContract result(
-      SectionContext context, SectionStatus status, Map<String, Object> values, String reason) {
+      SectionContext context, SectionStatus status, MetricUsageSummary values, String reason) {
     Instant observedAt = Instant.now();
     String assetId = context.attributes().get("returnAssetId");
     List<SectionAction> actions = assetId == null ? List.of() : List.of(
@@ -67,7 +83,7 @@ public class MetricAssetUsageSectionProvider implements SectionProvider {
             "/metric/manage/" + context.sourceId() + "?returnAssetId=" + assetId,
             context.sourceId()));
     return new AssetSectionResult(
-        SectionType.USAGE, status, "METRIC", new SectionMapSummary(values), reason,
+        SectionType.USAGE, status, "METRIC", values, reason,
         null, actions, status == SectionStatus.EMPTY ? List.of()
             : List.of(new SectionEvidence("METRIC", context.sourceId(), observedAt)),
         new SectionProvenance("METRIC", context.sourceId(), observedAt),
