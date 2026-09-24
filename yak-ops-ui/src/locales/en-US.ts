@@ -11,6 +11,7 @@ import dataDevelopmentAuthoring from './en-US/data-development-authoring';
 import dataDevelopmentEditor from './en-US/data-development-editor';
 import dataDevelopmentExecutionExperience from './en-US/data-development-execution-experience';
 import dataDevelopmentPublishReadiness from './en-US/data-development-publish-readiness';
+import dataDevelopmentReleaseExperience from './en-US/data-development-release-experience';
 import dataDevelopmentSqlContext from './en-US/data-development-sql-context';
 import dataDevelopmentWorkspaceState from './en-US/data-development-workspace-state';
 import dataQuality from './en-US/data-quality';
@@ -60,6 +61,7 @@ export default {
   ...dataDevelopmentEditor,
   ...dataDevelopmentSqlContext,
   ...dataDevelopmentPublishReadiness,
+  ...dataDevelopmentReleaseExperience,
   ...dataDevelopmentExecutionExperience,
   ...workflow,
   ...workflowEditor,
