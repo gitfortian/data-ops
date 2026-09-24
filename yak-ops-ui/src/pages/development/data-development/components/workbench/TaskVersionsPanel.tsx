@@ -1,9 +1,16 @@
 import { API_SUCCESS_CODE } from '@/services/http/response';
-import { useIntl } from '@umijs/max';
-import { Spin, message } from 'antd';
-import { FileCode2 } from 'lucide-react';
+import { history, useIntl } from '@umijs/max';
+import { Button, Spin, message } from 'antd';
+import { FileCode2, GitBranch } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import {
+  canOpenLineageEvidence,
+  getDevelopmentLineageEvidence,
+  lineageEvidenceStatusLabel,
+  lineageEvidenceUrl,
+  type DevelopmentLineageEvidence,
+} from '../../governanceEvidence';
 import {
   getDevelopmentTaskRevision,
   listDevelopmentTaskRevisions,
@@ -37,10 +44,13 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<DevelopmentTaskRevision>();
+  const [lineageLoading, setLineageLoading] = useState(false);
+  const [lineageEvidence, setLineageEvidence] = useState<DevelopmentLineageEvidence>();
+  const [lineageFailure, setLineageFailure] = useState<string>();
 
   const text = (id: string, values?: Record<string, string | number>) =>
     intlRef.current.formatMessage({ id }, values);
-  const formatTime = (value?: string) => {
+  const formatTime = (value?: string | null) => {
     if (!value) return '-';
     const date = new Date(value);
     return Number.isNaN(date.getTime())
@@ -52,6 +62,8 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
     let active = true;
     setLoading(true);
     setDetail(undefined);
+    setLineageEvidence(undefined);
+    setLineageFailure(undefined);
     listDevelopmentTaskRevisions(node.id)
       .then((response) => {
         if (!active) return;
@@ -80,8 +92,32 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
     };
   }, [node.id, refreshKey]);
 
+  const loadLineageEvidence = async (revisionNo: number) => {
+    setLineageLoading(true);
+    setLineageEvidence(undefined);
+    setLineageFailure(undefined);
+    try {
+      setLineageEvidence(
+        responseData(
+          await getDevelopmentLineageEvidence(node.id, revisionNo),
+          '读取 Lineage evidence 失败',
+        ),
+      );
+    } catch (error) {
+      setLineageFailure(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Lineage evidence 暂不可用',
+      );
+    } finally {
+      setLineageLoading(false);
+    }
+  };
+
   const openDetail = async (revisionNo: number) => {
     setDetailLoading(true);
+    setLineageEvidence(undefined);
+    setLineageFailure(undefined);
     try {
       setDetail(
         responseData(
@@ -89,6 +125,7 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
           text('pages.dataDevelopment.versions.detailFailed'),
         ),
       );
+      void loadLineageEvidence(revisionNo);
     } catch (error) {
       message.error(
         error instanceof Error
@@ -98,6 +135,12 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
     } finally {
       setDetailLoading(false);
     }
+  };
+
+  const openLineage = () => {
+    if (!lineageEvidence || !canOpenLineageEvidence(lineageEvidence)) return;
+    const url = lineageEvidenceUrl(lineageEvidence, node.id);
+    if (url) history.push(url);
   };
 
   if (loading) {
@@ -170,6 +213,67 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
           </pre>
           <div className="mt-2 break-all font-mono text-[9px] leading-4 text-[#b0b7c3]">
             SHA-256 {detail.checksum}
+          </div>
+
+          <div className="mt-3 border-t border-[#eef0f2] pt-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 font-medium text-[#344054]">
+                <GitBranch size={13} />
+                Governance / Lineage Evidence
+              </div>
+              {lineageEvidence && canOpenLineageEvidence(lineageEvidence) ? (
+                <Button size="small" type="link" className="!h-6 !px-0" onClick={openLineage}>
+                  打开 Lineage
+                </Button>
+              ) : null}
+            </div>
+
+            {lineageLoading ? (
+              <div className="flex h-14 items-center justify-center">
+                <Spin size="small" />
+              </div>
+            ) : lineageFailure ? (
+              <div className="mt-2 rounded-[3px] bg-[#fff6ed] px-2.5 py-2 text-[11px] leading-5 text-[#b54708]">
+                <div className="font-medium">Lineage Evidence 不可用</div>
+                <div>{lineageFailure}</div>
+                <div className="mt-1 text-[#667085]">读取失败不能解释为“没有血缘”。</div>
+              </div>
+            ) : lineageEvidence ? (
+              <div className="mt-2 space-y-1.5 rounded-[3px] bg-[#f8f9fa] px-2.5 py-2 text-[11px] leading-5 text-[#475467]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-[#344054]">
+                    {lineageEvidenceStatusLabel(lineageEvidence.status)}
+                  </span>
+                  <span className="font-mono text-[10px] text-[#98a2b3]">
+                    Node {lineageEvidence.nodeId} · Revision {lineageEvidence.revisionNo}
+                  </span>
+                </div>
+                <div>{lineageEvidence.reason || '-'}</div>
+                <div className="text-[#667085]">
+                  Publish {formatTime(lineageEvidence.publishTime)} · Attempts {lineageEvidence.attempts}
+                </div>
+                {lineageEvidence.deliveryUpdateTime ? (
+                  <div className="text-[#667085]">
+                    Evidence updated {formatTime(lineageEvidence.deliveryUpdateTime)}
+                  </div>
+                ) : null}
+                {lineageEvidence.status === 'FAILED' && lineageEvidence.nextAttemptTime ? (
+                  <div className="text-[#b54708]">
+                    Next retry {formatTime(lineageEvidence.nextAttemptTime)}
+                  </div>
+                ) : null}
+                {lineageEvidence.lastError ? (
+                  <div className="break-words rounded bg-white px-2 py-1 font-mono text-[10px] text-[#b42318]">
+                    {lineageEvidence.lastError}
+                  </div>
+                ) : null}
+                {lineageEvidence.lineageAssetKey ? (
+                  <div className="break-all font-mono text-[9px] text-[#98a2b3]">
+                    {lineageEvidence.lineageAssetKey}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
