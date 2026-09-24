@@ -1,6 +1,15 @@
-import { normalizeDevelopmentSqlDialect } from '@/services/data-development';
+import {
+  normalizeDevelopmentSqlDialect,
+  type DevelopmentSqlDialect,
+} from '@/services/data-development';
 
-import type { SqlMetadataContext } from './sqlMetadataContextStore';
+interface SqlTaskContextValues {
+  dataSourceId?: string;
+  database?: string;
+  schema?: string;
+  dialect?: DevelopmentSqlDialect;
+  dbType?: DevelopmentSqlDialect;
+}
 
 const CONTROLLED_KEYS = [
   'dataSourceId',
@@ -31,7 +40,7 @@ const parseConfigObject = (configJson?: string): Record<string, unknown> => {
  */
 export const mergeSqlTaskContextConfig = (
   configJson: string | undefined,
-  context: Partial<SqlMetadataContext>,
+  context: SqlTaskContextValues,
 ) => {
   const config = parseConfigObject(configJson);
   CONTROLLED_KEYS.forEach((key) => delete config[key]);
