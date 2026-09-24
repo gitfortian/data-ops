@@ -3,6 +3,7 @@ export type ProductSearchState = 'READY' | 'FORBIDDEN' | 'UNAVAILABLE';
 export type ProductLookupState = 'FOUND' | 'NOT_FOUND' | 'NOT_DISCOVERABLE' | 'FORBIDDEN' | 'UNAVAILABLE';
 export type AvailabilityState = 'AVAILABLE' | 'UNAVAILABLE' | 'UNKNOWN';
 export type SourceLifecycleState = 'DRAFT' | 'PUBLISHED' | 'OFFLINE' | 'DEPRECATED';
+export type ProviderEvidenceState = 'READY' | 'EMPTY' | 'FORBIDDEN' | 'UNAVAILABLE' | 'STALE';
 
 export interface ProductKeyRef {
   productType: ProductType;
@@ -20,14 +21,16 @@ export interface DomainRef {
 }
 
 export interface ProductSectionState {
-  section: string;
-  providerState: string;
+  sectionKey: string;
+  state: ProviderEvidenceState;
+  ownerDomain: string;
+  observedAt?: string | null;
   reason?: string | null;
 }
 
 export interface AccessProjection {
-  providerState: string;
   decision?: string | null;
+  providerState: ProviderEvidenceState;
   reason?: string | null;
 }
 
