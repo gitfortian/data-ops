@@ -5,6 +5,10 @@ import {
   publishDevelopmentTask as publishDevelopmentTaskRequest,
   runDevelopmentTask as runDevelopmentTaskRequest,
 } from '@/services/data-development/legacy';
+import {
+  validateDevelopmentTaskPublish,
+  type DevelopmentTaskPublishValidation,
+} from '@/services/data-development';
 import HttpUtils from '@/utils/HttpUtils';
 import { getIntl } from '@umijs/max';
 import { Modal } from 'antd';
@@ -16,10 +20,7 @@ import {
 } from './components/workbench/draftSaveFailure';
 import { getSqlMetadataContext } from './editors/sql/metadata/sqlMetadataContextStore';
 import { validateDevelopmentRunDefinition } from './executions/runPreflight';
-import {
-  publishReadinessSummary,
-  type DevelopmentTaskPublishValidation,
-} from './publishReadiness';
+import { publishReadinessSummary } from './publishReadiness';
 import type {
   DevelopmentId,
   DevelopmentSqlLineagePreview,
@@ -37,9 +38,8 @@ import type {
  */
 export * from '@/services/data-development/legacy';
 
-const nodePath = (nodeId: DevelopmentId) =>
-  `/api/v1/data-development/nodes/${encodeURIComponent(nodeId)}`;
-const draftPath = (nodeId: DevelopmentId) => `${nodePath(nodeId)}/draft`;
+const draftPath = (nodeId: DevelopmentId) =>
+  `/api/v1/data-development/nodes/${encodeURIComponent(nodeId)}/draft`;
 
 const saveDraftRequest = (
   nodeId: DevelopmentId,
@@ -55,16 +55,6 @@ const loadDraftRequest = (
   HttpUtils.get<DevelopmentTaskDraft>(draftPath(nodeId), {
     skipErrorHandler: true,
   });
-
-const validatePublishRequest = (
-  nodeId: DevelopmentId,
-  draftRevision: number,
-): Promise<ApiResponse<DevelopmentTaskPublishValidation>> =>
-  HttpUtils.post<DevelopmentTaskPublishValidation>(
-    `${nodePath(nodeId)}/publish-validation`,
-    { draftRevision },
-    { skipErrorHandler: true },
-  );
 
 const responseData = <T,>(response: ApiResponse<T>, fallback: string): T => {
   if (response?.code !== API_SUCCESS_CODE || response.data === undefined) {
@@ -287,10 +277,7 @@ export const publishDevelopmentTask = async (
   const intl = getIntl();
   let validation: DevelopmentTaskPublishValidation;
   try {
-    validation = responseData(
-      await validatePublishRequest(nodeId, draftRevision),
-      intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishValidationFailed' }),
-    );
+    validation = await validateDevelopmentTaskPublish(nodeId, draftRevision);
   } catch (error) {
     throw new Error(
       error instanceof Error && error.message
