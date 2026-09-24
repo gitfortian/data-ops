@@ -11,7 +11,7 @@ on:
       - 'yak-ops-ui/src/pages/data-asset/components/StatusFlowStrip.tsx'
       - 'yak-ops-ui/src/pages/home/**'
       - 'yak-ops-ui/config/routes.ts'
-      - 'yak-ops-ui/tsconfig.consumption.json'
+      - 'yak-ops-ui/scripts/check-consumption-type-errors.mjs'
       - '.github/workflows/consumption-checks.yml'
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
           test
 
   frontend-consumption:
-    name: Frontend consumption typecheck
+    name: Frontend consumption changed-surface typecheck
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,5 +53,15 @@ jobs:
           cache-dependency-path: yak-ops-ui/yarn.lock
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-      - name: Typecheck Phase 4 consumption UI
-        run: yarn tsc -p tsconfig.consumption.json
+      - name: Typecheck and gate Phase 4 consumption surfaces
+        shell: bash
+        run: |
+          set +e
+          yarn tsc --noEmit --pretty false > /tmp/consumption-tsc.log 2>&1
+          tsc_status=$?
+          set -e
+          cat /tmp/consumption-tsc.log
+          node scripts/check-consumption-type-errors.mjs /tmp/consumption-tsc.log
+          if [ "$tsc_status" -ne 0 ]; then
+            echo "Full repository TypeScript baseline still has diagnostics; no diagnostics are attributed to the Phase 4 consumption surfaces."
+          fi
