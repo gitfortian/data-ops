@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS yak_dev_task_execution (
     status VARCHAR(32) NOT NULL,
     operator_name VARCHAR(128) NULL,
     duration_ms BIGINT NULL,
+    failure_reason VARCHAR(64) NULL,
     error_message VARCHAR(1000) NULL,
     content LONGTEXT NOT NULL,
     config_json LONGTEXT NOT NULL,
