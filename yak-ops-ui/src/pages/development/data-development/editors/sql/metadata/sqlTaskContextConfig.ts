@@ -1,5 +1,6 @@
 import {
   normalizeDevelopmentSqlDialect,
+  parseDevelopmentSqlTaskConfig,
   type DevelopmentSqlDialect,
 } from '@/services/data-development';
 
@@ -34,21 +35,43 @@ const parseConfigObject = (configJson?: string): Record<string, unknown> => {
   }
 };
 
+const normalizeOptional = (value?: string) => value?.trim() || undefined;
+
+const hasSameSqlContext = (
+  configJson: string | undefined,
+  context: SqlTaskContextValues,
+) => {
+  const current = parseDevelopmentSqlTaskConfig(configJson);
+  return (
+    current.dataSourceId === normalizeOptional(context.dataSourceId) &&
+    current.databaseName === normalizeOptional(context.database) &&
+    current.schemaName === normalizeOptional(context.schema) &&
+    current.dialect ===
+      normalizeDevelopmentSqlDialect(context.dialect ?? context.dbType)
+  );
+};
+
 /**
  * Merge the SQL authoring context into the existing Task config without
  * replacing unrelated runtime options such as maxRows or timeoutSeconds.
+ *
+ * If the context is already semantically identical, return the original JSON
+ * byte-for-byte so merely opening or running an old Draft does not create a
+ * fake unsaved change through alias normalization or JSON re-serialization.
  */
 export const mergeSqlTaskContextConfig = (
   configJson: string | undefined,
   context: SqlTaskContextValues,
 ) => {
+  if (hasSameSqlContext(configJson, context)) return configJson || '{}';
+
   const config = parseConfigObject(configJson);
   CONTROLLED_KEYS.forEach((key) => delete config[key]);
 
   const values: Record<string, unknown> = {
-    dataSourceId: context.dataSourceId,
-    databaseName: context.database,
-    schemaName: context.schema,
+    dataSourceId: normalizeOptional(context.dataSourceId),
+    databaseName: normalizeOptional(context.database),
+    schemaName: normalizeOptional(context.schema),
     dialect: normalizeDevelopmentSqlDialect(context.dialect ?? context.dbType),
   };
 
