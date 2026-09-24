@@ -32,15 +32,31 @@ Business Domain / Process
 
 ## J3. 从数据生产到受治理消费
 
+默认消费路径由 `PD-002-governed-consumption-contract.md` 冻结：
+
 ~~~text
 Development / Workflow
- -> governed consumption contract
- -> Analysis / Dashboard / API / Agent / downstream
+ -> Published Dataset / Data Service
+ -> Asset Governance
+ -> Consumption Discovery
+ -> Governed Consumption Contract
+ -> Access State
+ -> Query / Preview / Export / Invoke
+ -> Usage Evidence
+ -> Consumer / Impact
+ -> Asset / Producer backlink
 ~~~
 
-成功结果：生产侧和消费侧通过稳定契约连接，不由每个消费产品重复定义数据访问和业务口径。
+其中：
 
-具体默认契约由 Product Decision 决定。
+- Data Product 是 Dataset / Data Service 的 governed projection，不创建第二份 source Truth；
+- Dataset 与 Data Service 共享治理外壳，但分别保留 schema contract 与 service interface/runtime contract；
+- Access、Subscription、Usage Evidence、Lineage 是不同事实；
+- Subscription 表达声明依赖，Usage Evidence 表达实际发生的消费；
+- EMPTY、UNAVAILABLE、FORBIDDEN、NOT_APPLICABLE 必须保持不同语义；
+- Consumption Hub、Asset、Dataset/Data Service 可以从不同上下文进入，但最终指向同一 canonical consumption context。
+
+成功结果：生产侧和消费侧通过稳定契约连接，用户能回答“这是什么、能不能用、怎么用、谁在用、变更影响谁”，且不由每个消费产品重复定义数据访问和业务口径。
 
 ## J4. 从发现问题到定位影响
 
@@ -48,12 +64,13 @@ Development / Workflow
 Runtime / Quality Alert
  -> governed object
  -> Lineage
- -> Upstream / Downstream
+ -> Subscription / Usage Evidence
+ -> Upstream / Downstream / Known Consumers
  -> Owner
  -> Rerun / Fix / Notify
 ~~~
 
-成功结果：用户从异常直接定位来源、影响范围和负责人。
+成功结果：用户从异常直接定位来源、影响范围和负责人。Impact View 可以组合 Lineage、Subscription 与 Usage Evidence，但不得把 downstream lineage 自动推断为真实 Consumer，也不得把 observed Usage 自动生成技术 lineage edge。
 
 ## J5. 从敏感数据到安全消费
 
@@ -61,12 +78,14 @@ Runtime / Quality Alert
 Metadata Discovery
  -> Classification
  -> Security Policy
- -> Consumption Query
- -> Mask / Deny
- -> Audit
+ -> Consumption Discovery
+ -> Access Decision
+ -> Query / Invoke
+ -> Mask / Deny when supported
+ -> Usage / Audit Evidence
 ~~~
 
-成功结果：安全策略真实进入消费链路且可审计。
+成功结果：安全策略真实进入消费链路且可审计；FORBIDDEN 与 provider UNAVAILABLE 不互相伪装。
 
 ## J6. 从数据问题到 AI 证据回答
 
@@ -81,6 +100,8 @@ User Question
 ~~~
 
 成功结果：Agent 答案建立在平台数据契约和 Evidence 上，而不是自由 SQL 或不可验证文本。
+
+Agent 可以在未来复用 Data Product / ConsumerRef / Usage Evidence contract，但 Agent 产品本身不是 Phase 4 的交付范围。
 
 ## Journey 规则
 

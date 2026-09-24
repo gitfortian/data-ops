@@ -58,23 +58,37 @@ Task Catalog、Job Runtime 等属于实现能力，不作为独立产品域。
 - 生命周期
 - 使用 / 影响分析
 
-Asset、Metadata、Lineage、Quality 等谁承担统一入口，属于待正式 Product Decision 的产品设计问题，本文件不提前决定。
+Asset Governance 是治理上下文入口；Usage / Impact 可以组合 Lineage、Subscription、Usage Evidence 等事实，但不得把这些事实重新复制成 Asset Truth。消费侧 relationship / evidence 的长期边界由 `PD-002-governed-consumption-contract.md` 定义。
 
 ## 5. 数据消费与服务
 
-用户目标：稳定、安全、可追溯地使用数据。
+用户目标：稳定、安全、可追溯地发现并使用数据，并理解“能否使用、如何使用、谁在使用、变更影响谁”。
 
 包含：
 
+- Consumption Hub / Data Product Discovery
+- Data Product View（governed projection，不是新的 owning entity）
 - Dataset
+- Data Service
+- Access projection
+- Subscription / Usage Evidence
 - Analysis
 - Dashboard
 - Digital Screen
-- Data Service
 - Agent
 - Export / downstream consumption
 
-默认消费契约尚需正式 Product Decision；本文件只声明这些能力属于同一消费产品域。
+默认消费契约由 `PD-002-governed-consumption-contract.md` 定义：
+
+```text
+Data Product View
+   +-- Dataset Contract
+   +-- Data Service Contract
+```
+
+其中 Dataset / Data Service 继续拥有 source product Truth；Asset 提供 governance identity/context；Consumption layer 负责 governed projection，并只拥有 Subscription / normalized Usage Evidence 等消费侧 relationship / evidence Truth。
+
+Consumption Hub 是本产品域的默认消费入口，不新增第七个一级产品域。Asset、Dataset、Data Service 等页面可以作为上下文入口，但必须回到同一 canonical consumption context，不得各自解释不同 Truth。
 
 ## 6. 专业治理解决方案
 
