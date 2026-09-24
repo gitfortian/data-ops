@@ -14,7 +14,7 @@
     <artifactId>yak-ops-business-consumption</artifactId>
 
     <name>Yak Ops Business Consumption</name>
-    <description>Data product consumption projection, discovery and consumer relationship management</description>
+    <description>Governed Dataset/Data Service consumption projection and consumer relationship management</description>
 
     <dependencies>
         <dependency>
@@ -33,6 +33,11 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
