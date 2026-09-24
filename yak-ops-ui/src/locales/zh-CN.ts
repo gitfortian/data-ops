@@ -11,6 +11,7 @@ import dataDevelopmentAuthoring from './zh-CN/data-development-authoring';
 import dataDevelopmentEditor from './zh-CN/data-development-editor';
 import dataDevelopmentExecutionExperience from './zh-CN/data-development-execution-experience';
 import dataDevelopmentPublishReadiness from './zh-CN/data-development-publish-readiness';
+import dataDevelopmentReleaseExperience from './zh-CN/data-development-release-experience';
 import dataDevelopmentSqlContext from './zh-CN/data-development-sql-context';
 import dataDevelopmentWorkspaceState from './zh-CN/data-development-workspace-state';
 import dataQuality from './zh-CN/data-quality';
@@ -53,6 +54,7 @@ export default {
   ...dataDevelopmentEditor,
   ...dataDevelopmentSqlContext,
   ...dataDevelopmentPublishReadiness,
+  ...dataDevelopmentReleaseExperience,
   ...dataDevelopmentExecutionExperience,
   ...workflow,
   ...workflowEditor,
