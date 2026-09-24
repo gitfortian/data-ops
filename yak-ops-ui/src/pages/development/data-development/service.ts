@@ -2,11 +2,17 @@ import type { ApiResponse } from '@/services/http/response';
 import { API_SUCCESS_CODE } from '@/services/http/response';
 import {
   previewDevelopmentSqlLineageRequest,
+  publishDevelopmentTask as publishDevelopmentTaskRequest,
   runDevelopmentTask as runDevelopmentTaskRequest,
 } from '@/services/data-development/legacy';
+import {
+  validateDevelopmentTaskPublish,
+  type DevelopmentTaskPublishValidation,
+} from '@/services/data-development';
 import HttpUtils from '@/utils/HttpUtils';
 import { getIntl } from '@umijs/max';
 import { Modal } from 'antd';
+import { createElement } from 'react';
 
 import {
   classifyDraftSaveFailure,
@@ -14,6 +20,7 @@ import {
 } from './components/workbench/draftSaveFailure';
 import { getSqlMetadataContext } from './editors/sql/metadata/sqlMetadataContextStore';
 import { validateDevelopmentRunDefinition } from './executions/runPreflight';
+import { publishReadinessSummary } from './publishReadiness';
 import type {
   DevelopmentId,
   DevelopmentSqlLineagePreview,
@@ -21,6 +28,7 @@ import type {
   DevelopmentTaskDefinition,
   DevelopmentTaskDraft,
   DevelopmentTaskExecutionSubmission,
+  DevelopmentTaskRevision,
   SaveDevelopmentTaskDraftPayload,
 } from './types';
 
@@ -110,6 +118,77 @@ const confirmConflictOverwrite = (
   });
 };
 
+const confirmPublishReadiness = (
+  validation: DevelopmentTaskPublishValidation,
+): Promise<boolean> => {
+  const intl = getIntl();
+  const summary = publishReadinessSummary(validation);
+  const issueList = summary.issueLabels.length
+    ? createElement(
+        'ul',
+        { className: 'mt-2 list-disc pl-5 text-[12px]' },
+        summary.issueLabels.map((issue, index) =>
+          createElement('li', { key: `${index}:${issue}` }, issue),
+        ),
+      )
+    : null;
+  const content = createElement(
+    'div',
+    { className: 'space-y-2 text-[12px] leading-5 text-[#475467]' },
+    createElement(
+      'div',
+      null,
+      intl.formatMessage(
+        { id: 'pages.dataDevelopment.publishReadiness.exactDraft' },
+        { revision: summary.draftRevision },
+      ),
+    ),
+    createElement(
+      'div',
+      { className: validation.valid ? 'text-[#027a48]' : 'text-[#b42318]' },
+      intl.formatMessage({
+        id: validation.valid
+          ? 'pages.dataDevelopment.publishReadiness.passed'
+          : 'pages.dataDevelopment.publishReadiness.blocked',
+      }),
+    ),
+    validation.message
+      ? createElement('div', { className: 'text-[#667085]' }, validation.message)
+      : null,
+    issueList,
+    validation.valid
+      ? createElement(
+          'div',
+          { className: 'rounded bg-[#f2f4f7] px-2 py-2 text-[#667085]' },
+          intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.resultHint' }),
+        )
+      : null,
+  );
+
+  return new Promise((resolve) => {
+    Modal.confirm({
+      title: intl.formatMessage({
+        id: validation.valid
+          ? 'pages.dataDevelopment.publishReadiness.confirmTitle'
+          : 'pages.dataDevelopment.publishReadiness.blockedTitle',
+      }),
+      content,
+      okText: intl.formatMessage({
+        id: validation.valid
+          ? 'pages.dataDevelopment.publishReadiness.confirmPublish'
+          : 'pages.dataDevelopment.publishReadiness.close',
+      }),
+      cancelText: intl.formatMessage({ id: 'pages.dataDevelopment.common.cancel' }),
+      cancelButtonProps: validation.valid ? undefined : { style: { display: 'none' } },
+      okButtonProps: validation.valid ? undefined : { type: 'default' },
+      closable: true,
+      maskClosable: false,
+      onOk: () => resolve(validation.valid),
+      onCancel: () => resolve(false),
+    });
+  });
+};
+
 /**
  * Workbench save corridor with explicit optimistic-conflict recovery.
  *
@@ -185,6 +264,41 @@ export const runDevelopmentTask = (
     );
   }
   return runDevelopmentTaskRequest(nodeId, payload);
+};
+
+/**
+ * Product-facing Publish corridor. Preflight is read-only and revision-bound;
+ * the backend still revalidates the locked Draft when the user confirms Publish.
+ */
+export const publishDevelopmentTask = async (
+  nodeId: DevelopmentId,
+  draftRevision: number,
+): Promise<ApiResponse<DevelopmentTaskRevision>> => {
+  const intl = getIntl();
+  let validation: DevelopmentTaskPublishValidation;
+  try {
+    validation = await validateDevelopmentTaskPublish(nodeId, draftRevision);
+  } catch (error) {
+    throw new Error(
+      error instanceof Error && error.message
+        ? error.message
+        : intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.requestFailed' }),
+    );
+  }
+
+  const confirmed = await confirmPublishReadiness(validation);
+  if (!validation.valid) {
+    throw new Error(
+      validation.message ||
+        intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.publishBlocked' }),
+    );
+  }
+  if (!confirmed) {
+    throw new Error(
+      intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.cancelled' }),
+    );
+  }
+  return publishDevelopmentTaskRequest(nodeId, draftRevision);
 };
 
 /**
