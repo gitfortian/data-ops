@@ -1,4 +1,5 @@
 import DataCenter from './components/DataCenter';
+import HomeConsumptionHub from './components/HomeConsumptionHub';
 import HomeDataAssets from './components/HomeDataAssets';
 import { HomeBackground } from './components/HomeBackground';
 import { HomeHeader } from './components/HomeHeader';
@@ -28,6 +29,7 @@ export default function HomePage() {
           <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_410px]">
             <div className="flex min-w-0 flex-col gap-4">
               <DataCenter />
+              <HomeConsumptionHub />
               <HomeWorkbenchMain />
               <HomeDataAssets />
             </div>
