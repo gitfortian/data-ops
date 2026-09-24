@@ -13,7 +13,13 @@ public interface DevelopmentTaskExecutionRepository {
 
   void updateActiveStatus(long id, String status);
 
-  void complete(long id, String status, long durationMs, String errorMessage, String outputJson);
+  void complete(
+      long id,
+      String status,
+      long durationMs,
+      String failureReason,
+      String errorMessage,
+      String outputJson);
 
   Page page(Query query);
 
@@ -63,6 +69,7 @@ public interface DevelopmentTaskExecutionRepository {
       String status,
       String operatorName,
       Long durationMs,
+      String failureReason,
       String errorMessage,
       String content,
       String configJson,
