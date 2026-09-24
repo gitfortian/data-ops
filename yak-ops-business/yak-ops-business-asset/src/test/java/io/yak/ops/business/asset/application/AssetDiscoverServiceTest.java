@@ -23,8 +23,6 @@ import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
 import io.yak.ops.business.lineage.query.LineageQueryService;
-import io.yak.ops.business.security.api.ClassificationView;
-import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.common.bean.po.asset.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetEnums.AssetType;
 import io.yak.ops.common.enums.asset.AssetSourceType;
@@ -45,9 +43,7 @@ class AssetDiscoverServiceTest {
   private AssetViewRecordService viewRecordService;
   private AssetStatusFlowService statusFlowService;
   private ObjectProvider<LineageQueryService> lineageProvider;
-  private ObjectProvider<SecurityClassificationQueryApi> securityProvider;
   private ObjectProvider<io.yak.framework.security.service.RbacPermissionService> rbacProvider;
-  private ObjectProvider<io.yak.ops.business.asset.api.AssetStatusTtlFacts> ttlFactsProvider;
   private ObjectProvider<SectionProvider> sectionProviders;
   private io.yak.framework.security.service.RbacPermissionService permissionService;
   private AssetDiscoverService service;
@@ -63,17 +59,14 @@ class AssetDiscoverServiceTest {
         List.of(new AssetStatusFlowService.StatusStep(
             "discovered", "已发现", "PASS", null, Map.of())), "described"));
     lineageProvider = mock(ObjectProvider.class);
-    securityProvider = mock(ObjectProvider.class);
     rbacProvider = mock(ObjectProvider.class);
     permissionService = mock(io.yak.framework.security.service.RbacPermissionService.class);
     when(permissionService.hasPermission(anyString(), anyString())).thenReturn(true);
     when(rbacProvider.orderedStream()).thenAnswer(invocation -> Stream.of(permissionService));
-    ttlFactsProvider = mock(ObjectProvider.class);
     sectionProviders = mock(ObjectProvider.class);
     when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.empty());
     service = new AssetDiscoverService(assetAppService, registry, viewRecordService,
-        statusFlowService, lineageProvider, securityProvider, rbacProvider,
-        ttlFactsProvider, sectionProviders);
+        statusFlowService, lineageProvider, rbacProvider, sectionProviders);
     when(viewRecordService.trend(anyLong(), anyInt()))
         .thenReturn(List.of(new AssetViewRecordService.DailyView("2026-09-19", 2)));
   }
@@ -81,21 +74,15 @@ class AssetDiscoverServiceTest {
   @Test
   void missingExtensionsDegradePerSectionWithoutFailingDetail() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
-    when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
-    when(lineageProvider.getIfAvailable()).thenReturn(null);
-    when(securityProvider.getIfAvailable()).thenReturn(null);
 
     AssetDiscoverService.AssetDetailView detail = service.detail(1L, "alice");
 
     assertEquals(1L, detail.asset().id());
-    assertEquals("OK", section(detail, "statusFlow").status());
-    assertEquals("OK", section(detail, "trend").status());
-    assertEquals("UNAVAILABLE", section(detail, "sourceAttrs").status());
-    assertEquals("血缘服务未装配", section(detail, "lineage").note());
-    assertEquals("安全域未装配", section(detail, "security").note());
-    assertEquals("NOT_APPLICABLE", section(detail, "fields").status());
-    assertEquals("NOT_APPLICABLE", section(detail, "quality").status());
-    assertEquals("UNAVAILABLE", section(detail, "ttl").status());
+    assertEquals(SectionStatus.OK, section(detail, "statusFlow").status());
+    assertEquals(SectionStatus.OK, section(detail, "trend").status());
+    assertEquals(3, detail.sections().size());
+    verify(registry, never()).find(any());
+    verify(lineageProvider, never()).getIfAvailable();
   }
 
   @Test
@@ -105,12 +92,10 @@ class AssetDiscoverServiceTest {
     AssetProvider provider = mock(AssetProvider.class);
     when(provider.refresh("42")).thenReturn(Optional.of(descriptor("other-hash")));
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.of(provider));
-    when(lineageProvider.getIfAvailable()).thenReturn(null);
-    when(securityProvider.getIfAvailable()).thenReturn(null);
 
-    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
+    AssetDiscoverService.SectionView sourceAttrs = service.sourceAttributes(1L, "alice");
 
-    assertEquals("OK", sourceAttrs.status());
+    assertEquals(SectionStatus.OK, sourceAttrs.status());
     @SuppressWarnings("unchecked")
     Map<String, Object> data = (Map<String, Object>) sourceAttrs.data();
     assertEquals(Boolean.TRUE, data.get("sourceChanged"));
@@ -123,11 +108,9 @@ class AssetDiscoverServiceTest {
     AssetProvider provider = mock(AssetProvider.class);
     when(provider.refresh(anyString())).thenThrow(new RuntimeException("db down"));
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.of(provider));
-    when(lineageProvider.getIfAvailable()).thenReturn(null);
-    when(securityProvider.getIfAvailable()).thenReturn(null);
 
-    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
-    assertEquals("UNAVAILABLE", sourceAttrs.status());
+    AssetDiscoverService.SectionView sourceAttrs = service.sourceAttributes(1L, "alice");
+    assertEquals(SectionStatus.UNAVAILABLE, sourceAttrs.status());
     assertEquals("源域暂不可用，请稍后重试", sourceAttrs.note());
   }
 
@@ -135,7 +118,6 @@ class AssetDiscoverServiceTest {
   void lineageResolvesAssetKeyThenReadsOneHopGraph() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
-    when(securityProvider.getIfAvailable()).thenReturn(null);
     LineageQueryService lineage = mock(LineageQueryService.class);
     LineageAsset root = mock(LineageAsset.class);
     when(root.id()).thenReturn(7L);
@@ -143,20 +125,19 @@ class AssetDiscoverServiceTest {
     when(lineage.graph(7L, LineageDirection.BOTH, 1)).thenReturn(null);
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    assertEquals("OK", section(service.detail(1L, "alice"), "lineage").status());
+    assertEquals(SectionStatus.OK, service.section(1L, "LINEAGE", "alice").status());
   }
 
   @Test
   void lineageKeyWithoutRegistrationIsEmpty() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
-    when(securityProvider.getIfAvailable()).thenReturn(null);
     LineageQueryService lineage = mock(LineageQueryService.class);
     when(lineage.findAssetByKey(anyString())).thenReturn(Optional.empty());
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    AssetDiscoverService.SectionView result = section(service.detail(1L, "alice"), "lineage");
-    assertEquals("EMPTY", result.status());
+    AssetDiscoverService.SectionView result = service.section(1L, "LINEAGE", "alice");
+    assertEquals(SectionStatus.EMPTY, result.status());
     assertEquals("该资产尚未登记血缘", result.note());
   }
 
@@ -164,13 +145,12 @@ class AssetDiscoverServiceTest {
   void lineageQueryFailureRemainsUnavailable() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
-    when(securityProvider.getIfAvailable()).thenReturn(null);
     LineageQueryService lineage = mock(LineageQueryService.class);
     when(lineage.findAssetByKey(anyString())).thenThrow(new IllegalStateException("database down"));
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    AssetDiscoverService.SectionView result = section(service.detail(1L, "alice"), "lineage");
-    assertEquals("UNAVAILABLE", result.status());
+    AssetDiscoverService.SectionView result = service.section(1L, "LINEAGE", "alice");
+    assertEquals(SectionStatus.UNAVAILABLE, result.status());
     assertEquals("血缘查询暂不可用，请稍后重试", result.note());
   }
 
@@ -180,32 +160,29 @@ class AssetDiscoverServiceTest {
     item.setAssetKey(" ");
     when(assetAppService.requireItem(1L)).thenReturn(item);
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
-    when(securityProvider.getIfAvailable()).thenReturn(null);
     LineageQueryService lineage = mock(LineageQueryService.class);
     when(lineage.findAssetByKey(anyString()))
         .thenThrow(new IllegalArgumentException("assetKey 不能为空"));
     when(lineageProvider.getIfAvailable()).thenReturn(lineage);
 
-    AssetDiscoverService.SectionView result = section(service.detail(1L, "alice"), "lineage");
-    assertEquals("UNAVAILABLE", result.status());
+    AssetDiscoverService.SectionView result = service.section(1L, "LINEAGE", "alice");
+    assertEquals(SectionStatus.UNAVAILABLE, result.status());
   }
 
   @Test
   void securityUsesLiveClassificationWhenKeyMatches() {
     when(assetAppService.requireItem(1L)).thenReturn(modelItem());
     when(registry.find(AssetSourceType.MODEL)).thenReturn(Optional.empty());
-    when(lineageProvider.getIfAvailable()).thenReturn(null);
-    SecurityClassificationQueryApi api = mock(SecurityClassificationQueryApi.class);
-    when(api.find("modeling:model:42")).thenReturn(null);
-    when(securityProvider.getIfAvailable()).thenReturn(api);
-    assertEquals("UNAVAILABLE", section(service.detail(1L, "alice"), "security").status());
-
-    ClassificationView view = new ClassificationView("modeling:model:42", 3L, "L3", "内部",
-        3, 9L, "PII", "个人信息");
-    when(api.find("modeling:model:42")).thenReturn(view);
-    AssetDiscoverService.SectionView security = section(service.detail(1L, "alice"), "security");
-    assertEquals("OK", security.status());
-    assertEquals(view, security.data());
+    SectionProvider provider = mock(SectionProvider.class);
+    SectionContract contract = mock(SectionContract.class);
+    when(provider.sectionType()).thenReturn(SectionType.SECURITY);
+    when(provider.supports(any())).thenReturn(true);
+    when(provider.query(any())).thenReturn(contract);
+    when(contract.status()).thenReturn(SectionStatus.OK);
+    when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.of(provider));
+    AssetDiscoverService.SectionView security = service.section(1L, "SECURITY", "alice");
+    assertEquals(SectionStatus.OK, security.status());
+    assertEquals(contract, security.data());
   }
 
   @Test
@@ -214,10 +191,8 @@ class AssetDiscoverServiceTest {
     po.setSourceType(AssetSourceType.MANUAL.name());
     when(assetAppService.requireItem(1L)).thenReturn(po);
     when(lineageProvider.getIfAvailable()).thenReturn(null);
-    when(securityProvider.getIfAvailable()).thenReturn(null);
-
-    AssetDiscoverService.SectionView sourceAttrs = section(service.detail(1L, "alice"), "sourceAttrs");
-    assertEquals("UNAVAILABLE", sourceAttrs.status());
+    AssetDiscoverService.SectionView sourceAttrs = service.sourceAttributes(1L, "alice");
+    assertEquals(SectionStatus.UNAVAILABLE, sourceAttrs.status());
     assertTrue(sourceAttrs.note().contains("手工登记"));
     assertNull(sourceAttrs.data());
   }
@@ -228,12 +203,11 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "TECHNICAL_METADATA", "alice");
 
-    assertEquals("NOT_APPLICABLE", result.status());
+    assertEquals(SectionStatus.NOT_APPLICABLE, result.status());
     assertNull(result.data());
     verify(sectionProviders, never()).orderedStream();
     verify(registry, never()).find(AssetSourceType.MODEL);
     verify(lineageProvider, never()).getIfAvailable();
-    verify(securityProvider, never()).getIfAvailable();
   }
 
   @Test
@@ -242,7 +216,7 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
 
-    assertEquals("NOT_APPLICABLE", result.status());
+    assertEquals(SectionStatus.NOT_APPLICABLE, result.status());
     assertNull(result.data());
     verify(sectionProviders, never()).orderedStream();
   }
@@ -253,9 +227,9 @@ class AssetDiscoverServiceTest {
     when(permissionService.hasPermission("alice", "modeling:read")).thenReturn(false);
     when(permissionService.hasPermission("alice", "data-metadata:read")).thenReturn(true);
 
-    AssetDiscoverService.AssetDetailView result = service.detail(1L, "alice");
+    AssetDiscoverService.SectionView result = service.sourceAttributes(1L, "alice");
 
-    assertEquals("PERMISSION_DENIED", section(result, "sourceAttrs").status());
+    assertEquals(SectionStatus.PERMISSION_DENIED, result.status());
     verify(permissionService).hasPermission("alice", "modeling:read");
   }
 
@@ -267,8 +241,8 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "TECHNICAL_METADATA", "alice");
 
-    assertEquals("UNAVAILABLE", result.status());
-    assertEquals("技术元数据读取提供方未装配", result.note());
+    assertEquals(SectionStatus.UNAVAILABLE, result.status());
+    assertEquals("TECHNICAL_METADATA 分区读取提供方未装配或暂不可用", result.note());
     assertNull(result.data());
     verify(registry, never()).find(AssetSourceType.METADATA);
   }
@@ -282,8 +256,8 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
 
-    assertEquals("UNAVAILABLE", result.status());
-    assertEquals("质量分区读取提供方未装配", result.note());
+    assertEquals(SectionStatus.UNAVAILABLE, result.status());
+    assertEquals("QUALITY 分区读取提供方未装配或暂不可用", result.note());
     verify(sectionProviders).orderedStream();
   }
 
@@ -303,7 +277,7 @@ class AssetDiscoverServiceTest {
 
       AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
 
-      assertEquals(status.name(), result.status());
+      assertEquals(status, result.status());
       verify(provider).query(any());
     }
   }
@@ -317,7 +291,7 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
 
-    assertEquals("PERMISSION_DENIED", result.status());
+    assertEquals(SectionStatus.PERMISSION_DENIED, result.status());
     assertNull(result.data());
     verify(sectionProviders, never()).orderedStream();
     verify(registry, never()).find(AssetSourceType.METADATA);
@@ -332,7 +306,7 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
 
-    assertEquals("PERMISSION_DENIED", result.status());
+    assertEquals(SectionStatus.PERMISSION_DENIED, result.status());
     assertNull(result.data());
     verify(permissionService).hasPermission("alice", "quality:monitor:read");
     verify(permissionService).hasPermission("alice", "quality:execution:read");
@@ -379,9 +353,8 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "SECURITY", "alice");
 
-    assertEquals("PERMISSION_DENIED", result.status());
+    assertEquals(SectionStatus.PERMISSION_DENIED, result.status());
     assertNull(result.data());
-    verify(securityProvider, never()).getIfAvailable();
   }
 
   @Test
@@ -392,7 +365,7 @@ class AssetDiscoverServiceTest {
 
     AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
 
-    assertEquals("NOT_APPLICABLE", result.status());
+    assertEquals(SectionStatus.NOT_APPLICABLE, result.status());
     assertNull(result.data());
   }
 

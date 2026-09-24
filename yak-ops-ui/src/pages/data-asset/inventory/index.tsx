@@ -456,6 +456,13 @@ const SourceAccess = () => {
         registered ? <Tag color="green">已注册</Tag> : <Tag>未注册</Tag>,
     },
     {
+      title: '支持 Section',
+      dataIndex: 'supportedSections',
+      render: (sections: string[] = []) => sections.length > 0
+        ? <Space size={[0, 4]} wrap>{sections.map((section) => <Tag key={section}>{section}</Tag>)}</Space>
+        : <span className="text-[12px] text-[#98a2b3]">暂无</span>,
+    },
+    {
       title: '最近对账',
       dataIndex: ['lastRun', 'at'],
       width: 150,

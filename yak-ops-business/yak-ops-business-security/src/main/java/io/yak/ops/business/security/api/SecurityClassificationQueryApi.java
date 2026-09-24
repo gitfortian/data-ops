@@ -13,6 +13,10 @@ public interface SecurityClassificationQueryApi {
   /** 批量分级视图,objectKey -> 视图;未定级的键不返回。 */
   Map<String, ClassificationView> findMany(Collection<String> objectKeys);
 
-  /** 某列(库/表/列)命中的启用状态分级标签列表。 */
+  /** 某物理表当前启用的分级；按完整项目内来源与物理坐标匹配。 */
+  List<ClassificationView> findActiveByTable(
+      String datasourceId, String dbName, String tableName);
+
+  /** Legacy project-scoped lookup for the Asset publish precheck. */
   List<ClassificationView> findByTable(String dbName, String tableName);
 }

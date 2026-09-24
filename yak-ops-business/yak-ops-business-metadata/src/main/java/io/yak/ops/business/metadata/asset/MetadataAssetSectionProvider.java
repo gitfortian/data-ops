@@ -27,6 +27,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MetadataAssetSectionProvider implements SectionProvider {
 
+  @Override
+  public java.util.Set<String> supportedSourceTypes() {
+    return java.util.Set.of("METADATA");
+  }
+
   private final MetadataQueryApi metadataQueryApi;
 
   @Override
@@ -49,7 +54,7 @@ public class MetadataAssetSectionProvider implements SectionProvider {
           "Metadata 目录中尚无该物理表记录", List.of());
     }
     List<EntityDTO> columns = metadataQueryApi.listPhysicalColumns(
-        table.dataSourceId(), table.databaseName(), table.tableName());
+        table.dataSourceId(), table.databaseName(), table.schemaName(), table.tableName());
     Map<String, Object> values = new LinkedHashMap<>();
     values.put("assetKey", context.assetKey());
     values.put("name", value(table.facts(), "name", context.assetKey()));
@@ -62,8 +67,15 @@ public class MetadataAssetSectionProvider implements SectionProvider {
     values.put("attributes", table.attributes());
     values.put("columns", columns.stream().map(EntityDTO::facts).toList());
     values.put("columnCount", columns.size());
+    String target = "/data-asset/catalog?view=entity&entityId=" + table.id()
+        + "&assetKey=" + java.net.URLEncoder.encode(
+            context.assetKey(), java.nio.charset.StandardCharsets.UTF_8);
+    String returnAssetId = context.attributes().get("returnAssetId");
+    if (returnAssetId != null && returnAssetId.matches("\\d+")) {
+      target += "&returnAssetId=" + returnAssetId;
+    }
     return response(context, SectionStatus.OK, values, null, List.of(
-        new SectionAction("返回资产目录", "/data-asset/catalog", context.assetKey())));
+        new SectionAction("打开 Metadata 实体", target, context.assetKey())));
   }
 
   private static SectionContract response(

@@ -109,8 +109,9 @@ public class CatalogQueryService {
    * 某表的全部物理列：先定位表行，再取其列子级（两条语句，都不出新表）。
    * 表不存在或该类型没有声明子级时给空——"没有"与"还没采到"在目录里同形，由采集侧的运行历史解释。
    */
-  public List<EntityDTO> physicalColumns(String datasourceId, String database, String table) {
-    Optional<EntityDTO> tableRow = physicalTable(datasourceId, database, table);
+  public List<EntityDTO> physicalColumns(
+      String datasourceId, String database, String schema, String table) {
+    Optional<EntityDTO> tableRow = physicalTable(datasourceId, database, schema, table);
     if (tableRow.isEmpty()) {
       return List.of();
     }
@@ -121,7 +122,8 @@ public class CatalogQueryService {
    * 按物理坐标定位表行。<b>不替调用方拼资产键</b>（键的拼法归采集侧 {@code PhysicalTableAssetKey}，
    * 这里再拼一份就是第二个出处），直接按固有列查。
    */
-  public Optional<EntityDTO> physicalTable(String datasourceId, String database, String table) {
+  public Optional<EntityDTO> physicalTable(
+      String datasourceId, String database, String schema, String table) {
     Long tableTypeId = entityTypeId("table").orElse(null);
     if (tableTypeId == null) {
       return Optional.empty();
@@ -131,11 +133,18 @@ public class CatalogQueryService {
         .addValue("database", database)
         .addValue("table", table)
         .addValue("tableTypeId", tableTypeId);
+    String schemaPredicate;
+    if (schema == null || schema.isBlank()) {
+      schemaPredicate = "(a.schema_name IS NULL OR a.schema_name = '')";
+    } else {
+      params.addValue("schema", schema);
+      schemaPredicate = "a.schema_name = :schema";
+    }
     return first(read(
         "a.type_id = :tableTypeId AND a.gone_at IS NULL"
             + " AND a.data_source_id = :datasourceId AND a.database_name = :database"
-            + " AND a.table_name = :table",
-        params, " ORDER BY a.schema_name, a.id LIMIT 1"));
+            + " AND " + schemaPredicate + " AND a.table_name = :table",
+        params, " ORDER BY a.id LIMIT 1"));
   }
 
   private Optional<Long> entityTypeId(String typeName) {

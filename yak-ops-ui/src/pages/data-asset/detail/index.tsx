@@ -10,6 +10,7 @@ import {
   changeAssetOwner,
   detachAssetTag,
   getAssetDetail,
+  getAssetSourceAttributes,
   getAssetSection,
   getAssetTags,
   getDirectoryTree,
@@ -19,7 +20,9 @@ import {
   updateAssetSnapshot,
 } from '@/services/data-asset/api';
 import type {
+  AssetLifecycleData,
   AssetSection,
+  AssetSourceAttrs,
   AssetTagRecord,
 } from '@/services/data-asset/types';
 import { toAssetSectionView, unavailableAssetSection } from '@/services/data-asset/section-view';
@@ -163,20 +166,33 @@ const AssetDetailPage = () => {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getAssetDetail(assetId);
-      setDetail(result);
       const sectionTypes = [
         'TECHNICAL_METADATA', 'QUALITY', 'SECURITY', 'LINEAGE', 'USAGE', 'LIFECYCLE',
       ] as const;
-      void Promise.allSettled(
+      const sectionLoads = Promise.all(
         sectionTypes.map(async (sectionType) => {
           let section: AssetSection;
           try {
-            const result = await getAssetSection(assetId, sectionType);
-            section = toAssetSectionView(result, assetId);
+            const sectionResult = await getAssetSection(assetId, sectionType);
+            section = toAssetSectionView(sectionResult, assetId);
           } catch {
             section = unavailableAssetSection();
           }
+          return { sectionType, section };
+        }),
+      );
+      const sourceAttributesLoad = getAssetSourceAttributes(assetId)
+        .catch(() => unavailableAssetSection<AssetSourceAttrs>());
+      const result = await getAssetDetail(assetId);
+      setDetail(result);
+      setSnapshot({
+        name: result.asset.name ?? '',
+        description: result.asset.description ?? '',
+        accessUri: result.asset.accessUri ?? '',
+      });
+      setOwnerValue(result.asset.owner ? [result.asset.owner] : []);
+      void sectionLoads.then((loadedSections) => {
+        loadedSections.forEach(({ sectionType, section }) => {
           setDetail((current) => {
             if (!current || current.asset.id !== assetId) return current;
             const sections = { ...current.sections };
@@ -193,17 +209,18 @@ const AssetDetailPage = () => {
             if (sectionType === 'USAGE') {
               sections.trend = section as NonNullable<typeof sections.trend>;
             }
-            if (sectionType === 'LIFECYCLE') sections.ttl = section;
+            if (sectionType === 'LIFECYCLE') {
+              sections.ttl = section as AssetSection<AssetLifecycleData>;
+            }
             return { ...current, sections };
           });
-        }),
-      );
-      setSnapshot({
-        name: result.asset.name ?? '',
-        description: result.asset.description ?? '',
-        accessUri: result.asset.accessUri ?? '',
+        });
       });
-      setOwnerValue(result.asset.owner ? [result.asset.owner] : []);
+      void sourceAttributesLoad.then((section) => {
+        setDetail((current) => current?.asset.id === assetId
+          ? { ...current, sections: { ...current.sections, sourceAttrs: section } }
+          : current);
+      });
     } catch {
       setDetail(null);
     } finally {
@@ -703,7 +720,7 @@ const AssetDetailPage = () => {
                     return (
                       <Space direction="vertical" className="w-full">
                         <div className="text-[12px] text-[#667085]">
-                          安全分级证据：{classifications.length} 条。记录状态与访问/脱敏策略需在 Security 工作台核对；此摘要不代表访问许可。
+                          安全分级证据：{classifications.length} 条。仅展示当前生效的分级记录；访问/脱敏策略需在 Security 工作台核对，此摘要不代表访问许可。
                         </div>
                         {classifications.map((item, index) => (
                           <Descriptions
@@ -756,10 +773,10 @@ const AssetDetailPage = () => {
                     );
                   })()}
                 </SectionBlock>
-                <SectionBlock title="字段" section={detail?.sections.fields} />
                 <SectionBlock title="生命周期" section={detail?.sections.ttl}>
                   {(() => {
                     const ttl = detail?.sections.ttl?.data as {
+                      policyApplied?: boolean;
                       policyCode?: string;
                       bindingSource?: string;
                       state?: string;

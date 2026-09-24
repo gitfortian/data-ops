@@ -12,14 +12,15 @@
 | `yak-ops-business-semantic` | 编译 | **仅经 `api` 包 SPI**（`LayerConfigApi.listLayers/resolveByCode` 分层配置；`lifecycle_days` 兜底） |
 | `yak-ops-business-audit` | 编译 | `BusinessAuditService` 审计门面（fail-open），事件 `LIFECYCLE_*` |
 | 调度引擎（`YakScheduleGateway`） | 编译 | 按项目登记重试/快照 alarm，本模块 handler 被回调 |
+| `yak-ops-spi` | 编译 | 实现 Lifecycle-owned `SectionProvider` / `SectionContract`，向 Asset 提供只读 TTL 摘要 |
 
 ## 被依赖（入向）
 
-无。生命周期是叶子业务模块；其它模块只看 UI。
+Asset 经 `yak-ops-spi` 消费本模块提供的 Lifecycle Section。TTL 事实仍由 Lifecycle 拥有；SPI 不引入 Asset 模块依赖或第二份真相。
 
 ## 禁止
 
 - 禁止 import `io.yak.ops.business.modeling.*` / `semantic.*` 的内部实现——仅经 `api` 包 SPI。
 - 禁止绕过 `TtlSqlGateway` 直连 JDBC 或自建 DataSource。
 - 禁止在 `writable=false` 语句上下发（网关双保险拒绝）。
-- dao/preview/dispatch 等内部类型不出现在对外 SPI（本模块无对外 SPI）。
+- dao/preview/dispatch 等内部类型不出现在 `SectionProvider` 对外契约。

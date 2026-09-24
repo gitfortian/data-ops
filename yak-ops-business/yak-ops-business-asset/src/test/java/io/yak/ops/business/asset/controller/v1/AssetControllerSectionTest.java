@@ -20,7 +20,7 @@ class AssetControllerSectionTest {
   void deniedSectionDoesNotExposeSummaryOrSourceIdentity() {
     AssetSectionResult result = AssetController.toSectionResult(
         SectionType.SECURITY,
-        new SectionView("PERMISSION_DENIED", "当前用户无权查看该治理证据", null),
+        new SectionView(io.yak.ops.spi.section.SectionStatus.PERMISSION_DENIED, "当前用户无权查看该治理证据", null),
         asset());
 
     assertEquals("PERMISSION_DENIED", result.status().name());
@@ -36,7 +36,7 @@ class AssetControllerSectionTest {
   void notApplicableSectionDoesNotClaimAReadSource() {
     AssetSectionResult result = AssetController.toSectionResult(
         SectionType.TECHNICAL_METADATA,
-        new SectionView("NOT_APPLICABLE", "当前资产类型不适用", null),
+        new SectionView(io.yak.ops.spi.section.SectionStatus.NOT_APPLICABLE, "当前资产类型不适用", null),
         asset());
 
     assertEquals("NOT_APPLICABLE", result.status().name());
@@ -50,7 +50,7 @@ class AssetControllerSectionTest {
   void confirmedEmptySectionRetainsQueryProvenanceAndReason() {
     AssetSectionResult result = AssetController.toSectionResult(
         SectionType.QUALITY,
-        new SectionView("EMPTY", "该物理表尚未纳入质量监控", Map.of()),
+        new SectionView(io.yak.ops.spi.section.SectionStatus.EMPTY, "该物理表尚未纳入质量监控", Map.of()),
         physicalTableAsset());
 
     assertEquals("EMPTY", result.status().name());

@@ -27,8 +27,9 @@ public interface MetadataQueryApi {
   /** 子级实体（表 → 列）。{@code typeName} 给定时收窄到该类型，否则取声明了父子关系的子类型。 */
   List<EntityDTO> listChildren(long parentId, String typeName);
 
-  /** 物理表的列清单——{@code listChildren} 的 {@code type_name=tableColumn} 特例。 */
-  List<EntityDTO> listPhysicalColumns(String datasourceId, String database, String table);
+  /** 物理表的列清单——按完整数据源/库/Schema/表坐标定位后读取其 tableColumn 子级。 */
+  List<EntityDTO> listPhysicalColumns(
+      String datasourceId, String database, String schema, String table);
 
   /** 按资产键定位物理表（键由采集侧 {@code PhysicalTableAssetKey} 生成，本 API 不替调用方拼键）。 */
   Optional<EntityDTO> findPhysicalTable(String assetKey);

@@ -44,6 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.ObjectProvider;
 
 /** 对账引擎单测:upsert 三分支、IGNORED 抑制、SOURCE_GONE/REAPPEARED、provider 容错、入口校验。 */
 class AssetReconcileServiceTest {
@@ -70,7 +71,7 @@ class AssetReconcileServiceTest {
         mock(io.yak.ops.business.audit.AuditOperationHandle.class);
     lenient().when(currentProject.requireProjectId()).thenReturn(1L);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(handle);
-    service = new AssetReconcileService(currentProject, registry, itemMapper, changeMapper,
+    service = new AssetReconcileService(mock(ObjectProvider.class), currentProject, registry, itemMapper, changeMapper,
         tagRelMapper, ruleService, settingService, auditService,
         mock(io.yak.ops.business.asset.schedule.AssetScheduleEngineBridge.class),
         mock(io.yak.ops.business.asset.health.HealthRecomputeService.class));

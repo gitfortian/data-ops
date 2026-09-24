@@ -67,8 +67,9 @@ public class MetadataQueryApiImpl implements MetadataQueryApi {
   }
 
   @Override
-  public List<EntityDTO> listPhysicalColumns(String datasourceId, String database, String table) {
-    return catalogQuery.physicalColumns(datasourceId, database, table);
+  public List<EntityDTO> listPhysicalColumns(
+      String datasourceId, String database, String schema, String table) {
+    return catalogQuery.physicalColumns(datasourceId, database, schema, table);
   }
 
   @Override

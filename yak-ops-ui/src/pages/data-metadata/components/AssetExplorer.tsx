@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 
 import { YakEmpty } from '@/components/ui';
 import { listAllDataSources } from '@/services/data-source/api';
-import { listEntityTypes, searchMetadata } from '@/services/metadata/api';
+import { getEntityDetail, listEntityTypes, searchMetadata } from '@/services/metadata/api';
 import type {
   EntityTypeView,
   MetadataFilter,
@@ -116,6 +116,28 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
         ),
       )
       .catch(() => setDataSourceNames([]));
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const entityIdValue = params.get('entityId');
+    const entityId = entityIdValue && /^\d+$/.test(entityIdValue) ? Number(entityIdValue) : undefined;
+    if (!entityId) return;
+    let current = true;
+    getEntityDetail(entityId).then(({ entity }) => {
+      if (!current) return;
+      const facts = entity.facts;
+      setDetail({
+        ...facts,
+        id: entity.id,
+        assetKey: String(facts.assetKey ?? params.get('assetKey') ?? ''),
+        typeName: entity.typeName,
+        attributes: entity.attributes,
+      } as MetadataSearchItem);
+    }).catch(() => {
+      if (current) setError('无法加载目标元数据实体');
+    });
+    return () => { current = false; };
   }, []);
 
   const filterKey = JSON.stringify(compactFilter(filter));

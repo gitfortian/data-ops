@@ -5,6 +5,8 @@ import type {
   AssetOverviewData,
   AssetDetailView,
   AssetSectionContract,
+  AssetSection,
+  AssetSourceAttrs,
   AssetPageParams,
   AssetPageResult,
   AssetRecord,
@@ -81,6 +83,9 @@ export const pageAssets = async (params: AssetPageParams): Promise<AssetPageResu
 
 export const getAssetDetail = (id: number) =>
   HttpUtils.getData<AssetDetailView>(`${ASSET_API_PREFIX}/${id}`);
+
+export const getAssetSourceAttributes = (id: number) =>
+  HttpUtils.getData<AssetSection<AssetSourceAttrs>>(`${ASSET_API_PREFIX}/${id}/source-attributes`);
 
 export const getAssetSection = (id: number, sectionType: AssetSectionContract['sectionType']) =>
   HttpUtils.getData<AssetSectionContract>(

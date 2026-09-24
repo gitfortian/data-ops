@@ -39,6 +39,7 @@ import io.yak.ops.spi.section.SectionCapability;
 import io.yak.ops.spi.section.SectionProvenance;
 import io.yak.ops.spi.section.SectionMapSummary;
 import io.yak.ops.spi.section.SectionStatus;
+import io.yak.ops.spi.section.SectionSummary;
 import io.yak.ops.spi.section.SectionType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -101,6 +102,14 @@ public class AssetController {
         id, currentUserProvider.getCurrentUser(httpRequest)));
   }
 
+  @Operation(summary = "独立读取源域对象概览属性，不阻塞 Asset 台账详情")
+  @GetMapping("/{id}/source-attributes")
+  public Result<AssetDiscoverService.SectionView> sourceAttributes(
+      @PathVariable("id") Long id, HttpServletRequest httpRequest) {
+    return Result.success(discoverService.sourceAttributes(
+        id, currentUserProvider.getCurrentUser(httpRequest)));
+  }
+
   @Operation(summary = "按分区独立读取治理证据(五态、来源失败隔离)")
   @GetMapping("/{id}/sections/{sectionType}")
   public Result<AssetSectionResult> section(
@@ -112,11 +121,11 @@ public class AssetController {
     SectionType type = SectionType.valueOf(sectionType.trim().toUpperCase());
     AssetView asset = assetService.get(id);
     if (view.data() instanceof io.yak.ops.spi.section.SectionContract contract) {
-      Map<String, Object> values = contract.summary() == null
-          ? Map.of() : contract.summary().values();
+      io.yak.ops.spi.section.SectionSummary summary = contract.summary() == null
+          ? new SectionMapSummary(Map.of()) : contract.summary();
       return Result.success(new AssetSectionResult(
           contract.sectionType(), contract.status(), contract.ownerDomain(),
-          new SectionMapSummary(values), contract.reason(), contract.updatedAt(),
+          summary, contract.reason(), contract.updatedAt(),
           contract.actions(), contract.evidence(), contract.provenance(), contract.capability()));
     }
     return Result.success(toSectionResult(type, view, asset));
@@ -124,7 +133,7 @@ public class AssetController {
 
   static AssetSectionResult toSectionResult(
       SectionType type, AssetDiscoverService.SectionView view, AssetView asset) {
-    SectionStatus status = SectionStatus.valueOf(view.status());
+    SectionStatus status = view.status();
     String owner = switch (type) {
       case OVERVIEW, GOVERNANCE -> "ASSET";
       case USAGE -> "FEDERATED";
@@ -134,15 +143,18 @@ public class AssetController {
       case LINEAGE -> "LINEAGE";
       case LIFECYCLE -> "LIFECYCLE";
     };
+    SectionSummary typedSummary = view.data() instanceof SectionSummary summary ? summary : null;
     Map<String, Object> values = new LinkedHashMap<>();
-    if (view.data() instanceof Map<?, ?> map) {
+    if (typedSummary != null) {
+      values.putAll(typedSummary.values());
+    } else if (view.data() instanceof Map<?, ?> map) {
       map.forEach((key, value) -> values.put(String.valueOf(key), value));
     } else if (view.data() != null) {
       values.put("data", view.data());
     }
     boolean hasReadableResult = status == SectionStatus.OK || status == SectionStatus.EMPTY;
     AssetSectionResult result = new AssetSectionResult(
-        type, status, owner, new SectionMapSummary(values),
+        type, status, owner, typedSummary == null ? new SectionMapSummary(values) : typedSummary,
         status == SectionStatus.OK ? null : view.note(),
         null, combinedActions(view, type, status, asset), List.of(),
         hasReadableResult ? new SectionProvenance(owner, asset.assetKey(), Instant.now()) : null,
@@ -169,10 +181,7 @@ public class AssetController {
     }
     String returnContext = "returnAssetId=" + asset.id();
     return switch (type) {
-      case TECHNICAL_METADATA -> List.of(new SectionAction(
-          "查看元数据工作台",
-          "/data-asset/catalog?view=entity&" + returnContext,
-          asset.assetKey()));
+      case TECHNICAL_METADATA -> List.of();
       case LINEAGE -> List.of(new SectionAction(
           "打开全屏血缘图谱",
           "/data-analysis/lineage?assetKey=" + java.net.URLEncoder.encode(
