@@ -11,6 +11,7 @@ on:
       - 'yak-ops-ui/src/pages/data-asset/components/StatusFlowStrip.tsx'
       - 'yak-ops-ui/src/pages/home/**'
       - 'yak-ops-ui/config/routes.ts'
+      - 'yak-ops-ui/tsconfig.consumption.json'
       - '.github/workflows/consumption-checks.yml'
 
 jobs:
@@ -52,5 +53,5 @@ jobs:
           cache-dependency-path: yak-ops-ui/yarn.lock
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-      - name: Typecheck consumption UI
-        run: yarn tsc
+      - name: Typecheck Phase 4 consumption UI
+        run: yarn tsc -p tsconfig.consumption.json
