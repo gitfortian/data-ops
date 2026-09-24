@@ -40,6 +40,12 @@ describe('source integration handoff', () => {
     ).toBe('/sync/batch-link-up');
   });
 
+  it('does not treat an ordinary source query as create intent', () => {
+    expect(
+      parseIntegrationSourceHandoff('?sourceDataSourceId=42&sourceDbType=MYSQL'),
+    ).toBeUndefined();
+  });
+
   it('strips only create handoff parameters', () => {
     expect(
       stripIntegrationCreateHandoff(
