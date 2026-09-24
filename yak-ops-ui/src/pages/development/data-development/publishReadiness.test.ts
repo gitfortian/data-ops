@@ -30,6 +30,8 @@ describe('data-development publish readiness', () => {
       }),
     ).toBe('config.dataSourceId: Data source is required');
 
-    expect(publishIssueLabel({ code: 'TASK_INVALID' })).toBe('TASK_INVALID');
+    expect(publishIssueLabel({ code: 'TASK_INVALID', message: '' })).toBe(
+      'TASK_INVALID',
+    );
   });
 });
