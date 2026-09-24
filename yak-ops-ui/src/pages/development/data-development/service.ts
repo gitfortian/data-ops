@@ -186,7 +186,7 @@ const confirmPublishReadiness = (
       okText: intl.formatMessage({
         id: validation.valid
           ? 'pages.dataDevelopment.authoring.publishConfirm'
-          : 'pages.dataDevelopment.common.close',
+          : 'pages.dataDevelopment.authoring.publishClose',
       }),
       cancelText: intl.formatMessage({ id: 'pages.dataDevelopment.common.cancel' }),
       cancelButtonProps: validation.valid ? undefined : { style: { display: 'none' } },
