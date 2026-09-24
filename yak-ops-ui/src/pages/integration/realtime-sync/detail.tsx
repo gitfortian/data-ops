@@ -11,9 +11,50 @@ import {
 } from './realtimeEditorMode';
 import type { CdcPipelineSpec, DataSourceOption, RealtimeJob } from './types';
 
+const DEFAULT_CREATE_SPEC: CdcPipelineSpec = {
+  sourceDataSourceRef: 0,
+  sinkDataSourceRef: 0,
+  tables: [],
+  startupMode: 'initial',
+  schemaEvolution: 'EVOLVE',
+  parallelism: 1,
+  checkpointIntervalMs: 60_000,
+  restart: { strategy: 'fixed-delay', attempts: 3, delayMs: 10_000 },
+  sink: {
+    maxRetries: 3,
+    batchSize: 1_000,
+    flushIntervalMs: 2_000,
+    maxBatchBytes: 16_777_216,
+    statementCacheSize: 128,
+    strictReplaySafety: true,
+  },
+};
+
 const editorFromSearch = (): RealtimeEditorMode | undefined => {
   const value = new URLSearchParams(history.location.search).get('editor');
   return value === 'wizard' || value === 'yaml' ? value : undefined;
+};
+
+const sourceIdFromSearch = (): number | undefined => {
+  const params = new URLSearchParams(history.location.search);
+  const dbType = String(params.get('sourceDbType') || '').toUpperCase();
+  const sourceId = Number(params.get('sourceDataSourceId'));
+  if (dbType && dbType !== 'MYSQL') return undefined;
+  return Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : undefined;
+};
+
+const withSourceHandoff = (
+  job: RealtimeJob,
+  sourceId?: number,
+): RealtimeJob => {
+  if (!sourceId || job.spec?.sourceDataSourceRef) return job;
+  return {
+    ...job,
+    spec: {
+      ...(job.spec || DEFAULT_CREATE_SPEC),
+      sourceDataSourceRef: sourceId,
+    },
+  };
 };
 
 const replaceEditorQuery = (mode: RealtimeEditorMode) => {
@@ -35,7 +76,7 @@ export default function RealtimeSyncDetail() {
     Promise.all([realtimeApi.detail(Number(id)), realtimeApi.dataSources()])
       .then(([detail, sources]) => {
         if (cancelled) return;
-        const nextJob = detail.data;
+        const nextJob = withSourceHandoff(detail.data, sourceIdFromSearch());
         const requestedMode = editorFromSearch();
         const compatibility = wizardCompatibility(nextJob.spec);
         const resolvedMode: RealtimeEditorMode =
