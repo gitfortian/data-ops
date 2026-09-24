@@ -1,6 +1,6 @@
 # Asset Quality 分区验收交接清单
 
-变更分类：TECHNICAL  
+变更分类：TECHNICAL
 产品行为变化：No。该改动修正 Quality Section provider 的重复装配，使既有 Section 契约由 Quality 域现有实现提供；不新增状态、字段、入口或 Quality Truth。
 
 ## 自动化证据
