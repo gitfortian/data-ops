@@ -30,6 +30,7 @@ export default {
   'pages.dataDevelopment.authoring.publishReadinessBlocked': '发布前校验未通过，请先修正下面的问题。',
   'pages.dataDevelopment.authoring.publishResultHint': '确认后会创建或复用一个 immutable Revision，并同步 Task Catalog 的 Release 投影；不会覆盖历史 Revision，也不会把后续 Draft 修改写回该 Revision。',
   'pages.dataDevelopment.authoring.publishConfirm': '发布这个 Draft',
+  'pages.dataDevelopment.authoring.publishClose': '关闭',
   'pages.dataDevelopment.authoring.publishCancelled': '发布已取消：没有创建新的 Revision，也没有改变 Release 状态。',
   'pages.dataDevelopment.authoring.publishValidationFailed': '无法完成发布前校验，请确认权限、Draft 状态和服务可用性后重试。',
   'pages.dataDevelopment.authoring.publishBlocked': '当前 Draft 未通过发布校验。',
