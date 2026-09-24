@@ -41,3 +41,15 @@ export const classifyDraftSaveFailure = (error: unknown): DraftSaveFailure => {
   if (status === undefined) return { kind: 'network', detail };
   return { kind: 'unknown', status, detail };
 };
+
+/**
+ * Conflict recovery may advance only the optimistic baseline. The editor definition
+ * captured for the original save attempt must remain byte-for-byte unchanged.
+ */
+export const rebaseDraftSavePayload = <T extends { baseRevision: number }>(
+  payload: T,
+  latestRevision: number,
+): T => ({
+  ...payload,
+  baseRevision: latestRevision,
+});
