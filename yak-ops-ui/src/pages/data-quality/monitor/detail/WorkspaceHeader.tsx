@@ -8,6 +8,7 @@ import { BRAND_COLOR, BRAND_COLOR_SOFT } from "@/styles/brand";
 interface WorkspaceHeaderProps {
   workspace?: MonitorWorkspaceView;
   activeTab: WorkspaceTab;
+  backLabel?: string;
   onTabChange: (value: WorkspaceTab) => void;
   onBack: () => void;
   onEdit?: () => void;
@@ -16,6 +17,7 @@ interface WorkspaceHeaderProps {
 const WorkspaceHeader = ({
   workspace,
   activeTab,
+  backLabel = '返回数据表监控',
   onTabChange,
   onBack,
   onEdit,
@@ -64,7 +66,7 @@ const WorkspaceHeader = ({
               className="!h-6 !px-0 !text-xs !text-[#667085]"
               onClick={onBack}
             >
-              返回数据表监控 <ExternalLink size={12} />
+              {backLabel} <ExternalLink size={12} />
             </YakButton>
           </div>
 

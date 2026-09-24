@@ -3,7 +3,8 @@ import type { AssetSection, AssetSectionContract } from './types';
 const supportsAssetReturn = (target: string): boolean =>
   /^\/data-asset\/catalog(?:\?|$)/.test(target)
   || target.startsWith('/data-analysis/lineage?')
-  || /^\/modeling\/models\/\d+(?:\?|$)/.test(target);
+  || /^\/modeling\/models\/\d+(?:\?|$)/.test(target)
+  || /^\/data-quality\/(?:table-config|monitor\/\d+|execution(?:\/[^?]+)?)(?:\?|$)/.test(target);
 
 /** Convert the Section API envelope without dropping its owner or source evidence. */
 export const toAssetSectionView = (

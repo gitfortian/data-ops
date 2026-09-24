@@ -170,6 +170,8 @@ public class AssetDiscoverService {
       SectionContract contract = provider.get().query(context);
       return new SectionView(contract.status().name(), contract.reason(), contract);
     } catch (RuntimeException e) {
+      LOG.warn("asset section query failed, assetId={}, sectionType=QUALITY, errorType={}",
+          po.getId(), e.getClass().getSimpleName());
       return SectionView.unavailable("质量查询暂不可用，请稍后重试");
     }
   }

@@ -75,7 +75,7 @@ Quality SectionProvider -> Quality TableAsset / Monitor / Execution Readers -> r
 1. Metadata 物理表 + Quality 未登记 → Asset QUALITY 为 EMPTY；明确 `registered=false`。
 2. 已登记但无 Monitor → EMPTY 且 `registered=true`。
 3. 有启用 Monitor、无执行 → OK、`NOT_RUN`、Monitor 入口可定位。
-4. 有最近成功 / 失败执行 → OK，状态、结论、failed/error 数、时间与 Quality 执行详情 identity 一致。
+4. 有最近 WAITING / RUNNING / 成功 / 失败执行 → OK，生命周期、结论、failed/error 数、时间与 Quality 执行详情 identity 一致。
 5. Metadata 坐标缺失 / Quality 读异常 → UNAVAILABLE；其它 Asset Sections 正常。
 6. Model / Metric / Dataset → NOT_APPLICABLE，验证未调用 Quality Query。
 7. 用户缺任一 Quality read 权限 → PERMISSION_DENIED，响应不含 Quality 摘要。
@@ -83,11 +83,22 @@ Quality SectionProvider -> Quality TableAsset / Monitor / Execution Readers -> r
 
 交付证据：Quality Query contract/read-side 行为测试、Asset mapping 行为测试、Section controller contract、依赖方向守卫、Maven 模块编译与目标测试、至少一个使用真实已注册表和执行记录的本地/集成验收记录。测试应验证公开行为，不绑定私有实现。
 
+### 实施证据（2026-09-24）
+
+- 已完成 Quality-owned typed Summary Reader；按当前 Project 与完整物理坐标读取 TableAsset、目标表 Monitor 汇总及最新 Execution（包括 WAITING / RUNNING），不再先读取整个 Schema 再在内存中过滤。
+- 已完成 Asset 五态映射、Quality 双权限校验、Metadata 坐标缺失 / 读取失败隔离，以及独立 Section API 的渐进加载。
+- Monitor / Execution 操作跳转携带原 Asset id，Quality 页面提供返回 Asset 的路径；存在 Monitor 时直达该 Monitor。
+- 定向 Maven 编译与测试通过：Quality Section / Project scope 11 项，Asset Section 22 项；前端 Section adapter Jest 5 项通过。
+- `npm run tsc` 在仓库其它既有页面与服务报出类型错误；本次修改涉及的页面、服务及 Section adapter 文件没有 TypeScript 诊断。
+- 本地前后端联调通过（2026-09-24，Project 1）：使用 Metadata 资产 `crm_customer_history`（Asset 17；数据源 3、数据库 `crm_db`、无 Schema）先验证未登记态 `EMPTY / registered=false`；通过 Quality 正常注册真实物理表后验证 `EMPTY / registered=true / monitorCount=0`；再创建手动行数检查并运行，获得 Execution `QM-20260924130147616-5FEBFF`（`SUCCESS / PASSED / issueCount=0`）。最终 Asset QUALITY Section 返回 `OK`、一个启用 Monitor、最新执行时间和证据，并分别指向 Monitor 2 与该 Execution 工作区。
+- 上述本地验收在重新打包并启动当前分支后端 JAR 后执行；测试创建的表注册、Monitor 与 Execution 保留在本地 Project 1 数据中，Monitor 名称为 `Asset Governance Hub E2E - crm_customer_history`，便于复查。
+- 本地实现和 E2E 验收已完成；Feature 继续保持 `IMPLEMENTING`，待按仓库发布流程合并到默认分支并通过 CI / Acceptance 后再标记 `SHIPPED`。
+
 ## 8. 实施拆分
 
-1. Quality 增加 typed object-level Summary Query 和受 Project scope 约束的实现；
-2. Asset 接入该 contract 并完成五态映射、Quality 回链和权限行为；
-3. Asset Detail 页面调用既有独立 Section endpoint 并呈现摘要及空态/错误态；
-4. 完成上述契约与 E2E 证据后再将 F-001-B 标记为 SHIPPED。
+1. Quality typed object-level Summary Query 和 Project scope 实现：代码及定向行为测试完成；
+2. Asset 五态映射、Quality 回链和双权限行为：代码及定向行为测试完成；
+3. Asset Detail 独立 Section endpoint、摘要、状态呈现与 Quality 返回路径：代码及前端 adapter 测试完成；
+4. 本地/集成 E2E 已在真实物理表、Quality 注册记录和新执行记录上完成；合并默认分支并通过 CI / Acceptance 后，再将 F-001-B 标记为 SHIPPED。
 
 本设计不授权扩张 Quality 到 Model / Metric / Dataset，也不改变导航或质量规则、监控与执行生命周期。

@@ -141,8 +141,8 @@
 
   <select id="selectTableSummaries" resultType="io.yak.ops.common.bean.po.quality.QualityQueryPO$TableMonitorSummaryRow">
     SELECT m.table_name,
-      MIN(m.id) AS monitor_id,
-      MIN(m.monitor_name) AS monitor_name,
+      SUBSTRING_INDEX(GROUP_CONCAT(m.id ORDER BY m.last_run_time DESC, m.id DESC), ',', 1) AS monitor_id,
+      SUBSTRING_INDEX(GROUP_CONCAT(m.monitor_name ORDER BY m.last_run_time DESC, m.id DESC), ',', 1) AS monitor_name,
       COUNT(DISTINCT m.id) AS monitor_count,
       COUNT(DISTINCT CASE WHEN m.enabled = 1 THEN m.id END) AS enabled_monitor_count,
       COUNT(r.id) AS rule_count,
@@ -154,6 +154,7 @@
     WHERE m.project_id = #{projectId} AND m.deleted = 0 AND m.data_source_id = #{dataSourceId}
     <if test="databaseFilter != null and databaseFilter">AND COALESCE(m.database_name, '') = #{databaseName}</if>
     <if test="schemaFilter != null and schemaFilter">AND COALESCE(m.schema_name, '') = #{schemaName}</if>
+    <if test="tableName != null">AND m.table_name = #{tableName}</if>
     GROUP BY m.table_name ORDER BY m.table_name ASC
   </select>
 

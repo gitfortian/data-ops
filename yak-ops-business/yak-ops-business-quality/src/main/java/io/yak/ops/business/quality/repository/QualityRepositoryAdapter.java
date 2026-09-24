@@ -144,10 +144,24 @@ public class QualityRepositoryAdapter implements
 
   @Override
   public List<TableMonitorSummary> tableSummaries(long dataSourceId, String databaseName, String schemaName) {
+    return tableSummaries(dataSourceId, databaseName, schemaName, null);
+  }
+
+  @Override
+  public List<TableMonitorSummary> tableSummaries(
+      long dataSourceId, String databaseName, String schemaName, String tableName) {
     Map<String, Object> params = new LinkedHashMap<>();
     params.put("dataSourceId", dataSourceId);
-    addNullableFilter(params, "database", databaseName);
-    addNullableFilter(params, "schema", schemaName);
+    if (tableName == null) {
+      addNullableFilter(params, "database", databaseName);
+      addNullableFilter(params, "schema", schemaName);
+    } else {
+      params.put("databaseFilter", true);
+      params.put("databaseName", blankToEmpty(databaseName));
+      params.put("schemaFilter", true);
+      params.put("schemaName", blankToEmpty(schemaName));
+      params.put("tableName", tableName);
+    }
     return monitorDao.selectTableSummaries(params).stream().map(this::tableSummary).toList();
   }
 

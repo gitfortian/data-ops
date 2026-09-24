@@ -18,4 +18,7 @@ public interface QualityExecutionReadRepository {
 
   /** Lightweight execution projection without rule details, intended for status tracking. */
   Optional<Execution> findSummary(String executionNo);
+
+  Optional<Execution> findLatestForTarget(
+      long dataSourceId, String databaseName, String schemaName, String tableName);
 }

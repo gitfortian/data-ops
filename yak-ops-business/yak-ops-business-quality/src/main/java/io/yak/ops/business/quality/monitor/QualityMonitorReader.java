@@ -53,6 +53,14 @@ public class QualityMonitorReader {
   }
 
   @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
+  public List<TableMonitorSummary> tableSummaries(
+      long dataSourceId, String databaseName, String schemaName, String tableName) {
+    if (dataSourceId <= 0L) throw new IllegalArgumentException("数据源编号无效");
+    if (tableName == null || tableName.isBlank()) throw new IllegalArgumentException("物理表名不能为空");
+    return repository.tableSummaries(dataSourceId, databaseName, schemaName, tableName);
+  }
+
+  @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
   public AlertOverview alertOverview(int recentLimit) {
     int limit = Math.max(1, Math.min(recentLimit, MAX_ALERT_RECENT));
     return new AlertOverview(
