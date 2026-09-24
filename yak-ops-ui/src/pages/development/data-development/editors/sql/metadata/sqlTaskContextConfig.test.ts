@@ -38,6 +38,20 @@ describe('SQL authoring context config', () => {
     });
   });
 
+  it('keeps legacy config byte-for-byte when the SQL context is semantically unchanged', () => {
+    const legacy =
+      '{ "dataSourceId":"source-1", "database":"legacy_db", "schema":"public", "dbType":"postgres", "maxRows":10 }';
+
+    expect(
+      mergeSqlTaskContextConfig(legacy, {
+        dataSourceId: 'source-1',
+        database: 'legacy_db',
+        schema: 'public',
+        dialect: 'POSTGRE_SQL',
+      }),
+    ).toBe(legacy);
+  });
+
   it('removes stale context aliases when an explicit context value is cleared', () => {
     const merged = JSON.parse(
       mergeSqlTaskContextConfig(
