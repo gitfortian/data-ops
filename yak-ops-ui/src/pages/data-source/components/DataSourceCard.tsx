@@ -1,7 +1,6 @@
 import { YakButton } from '@/components/ui';
 import type { DataSourceRecord } from '@/services/data-source';
 import { history, useAccess, useIntl } from '@umijs/max';
-import { Dropdown, type MenuProps } from 'antd';
 import { motion } from 'framer-motion';
 import {
   Clock3,
@@ -54,36 +53,22 @@ const DataSourceCard = ({
     icon: null,
   };
   const currentId = dataSourceRecordKey(record.id);
-  const canCreateBatch = access.hasPermission('task:batch:create');
-  const canCreateRealtime = access.hasPermission('task:realtime:create');
-  const canCreateIntegration =
-    Boolean(currentId) && (canCreateBatch || canCreateRealtime);
+  const canCreateRealtime =
+    Boolean(currentId) &&
+    String(record.dbType || '').toUpperCase() === 'MYSQL' &&
+    access.hasPermission('task:realtime:create');
   const actionAvailable =
     permissions.canTest ||
     permissions.canUpdate ||
     permissions.canDelete ||
     permissions.canReadSqlExecutions ||
-    canCreateIntegration;
+    canCreateRealtime;
   const isListView = viewMode === 'list';
 
-  const integrationItems: MenuProps['items'] = [];
-  if (canCreateBatch) {
-    integrationItems.push({
-      key: 'batch',
-      label: intl.formatMessage({ id: 'pages.batchLinkUp.page.create' }),
-    });
-  }
-  if (canCreateRealtime) {
-    integrationItems.push({
-      key: 'realtime',
-      label: intl.formatMessage({ id: 'pages.realtimeSync.page.create' }),
-    });
-  }
-
-  const openIntegrationCreate = (kind: 'batch' | 'realtime') => {
+  const openRealtimeCreate = () => {
     if (!currentId) return;
     history.push(
-      buildIntegrationCreatePath(kind, {
+      buildIntegrationCreatePath('realtime', {
         dataSourceId: currentId,
         dbType: record.dbType ? String(record.dbType) : undefined,
       }),
@@ -154,29 +139,16 @@ const DataSourceCard = ({
 
         {actionAvailable ? (
           <div className="flex shrink-0 -translate-y-1 gap-1 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-            {canCreateIntegration ? (
-              <Dropdown
-                trigger={['click']}
-                placement="bottomRight"
-                menu={{
-                  items: integrationItems,
-                  onClick: ({ key }) =>
-                    openIntegrationCreate(key === 'realtime' ? 'realtime' : 'batch'),
-                }}
-              >
-                <YakButton
-                  type="text"
-                  size="small"
-                  iconOnly
-                  title={`${intl.formatMessage({
-                    id: 'pages.batchLinkUp.page.create',
-                  })} / ${intl.formatMessage({
-                    id: 'pages.realtimeSync.page.create',
-                  })}`}
-                  className="!h-[30px] !w-[30px] !rounded-[8px] !border !border-[#e9ebef] !bg-white/90 !p-0 !text-[#7e838d] !shadow-[0_1px_3px_rgba(31,35,41,0.035)] hover:!text-[#4058c8]"
-                  icon={<Waypoints size={14} strokeWidth={1.9} />}
-                />
-              </Dropdown>
+            {canCreateRealtime ? (
+              <YakButton
+                type="text"
+                size="small"
+                iconOnly
+                title={intl.formatMessage({ id: 'pages.realtimeSync.page.create' })}
+                className="!h-[30px] !w-[30px] !rounded-[8px] !border !border-[#e9ebef] !bg-white/90 !p-0 !text-[#7e838d] !shadow-[0_1px_3px_rgba(31,35,41,0.035)] hover:!text-[#4058c8]"
+                icon={<Waypoints size={14} strokeWidth={1.9} />}
+                onClick={openRealtimeCreate}
+              />
             ) : null}
 
             {permissions.canTest ? (
