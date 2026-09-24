@@ -7,6 +7,7 @@ on:
       - 'yak-ops-ui/src/services/consumption/**'
       - 'yak-ops-ui/src/pages/data-analysis/consumption/**'
       - 'yak-ops-ui/src/pages/data-analysis/data-catalog/**'
+      - 'yak-ops-ui/src/pages/data-analysis/dataset/components/DatasetRowActions.tsx'
       - 'yak-ops-ui/src/pages/home/**'
       - 'yak-ops-ui/config/routes.ts'
       - '.github/workflows/consumption-checks.yml'
@@ -24,12 +25,12 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run Phase 4 consumption contract, provider and discovery tests
+      - name: Run Phase 4 consumption contract, provider, discovery and canonical-detail tests
         run: >-
           mvn -B
           -pl yak-ops-business/yak-ops-business-consumption
           -am
-          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest
+          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
 
