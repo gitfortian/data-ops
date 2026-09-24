@@ -45,5 +45,6 @@
         <module>yak-ops-business-asset</module>
         <module>yak-ops-business-metadata</module>
         <module>yak-ops-business-approval</module>
+        <module>yak-ops-business-consumption</module>
     </modules>
 </project>
