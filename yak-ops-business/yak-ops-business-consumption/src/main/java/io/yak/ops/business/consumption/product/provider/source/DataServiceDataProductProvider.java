@@ -57,12 +57,19 @@ public class DataServiceDataProductProvider implements DataProductProvider {
     }
     Long id = parsePositiveId(productKey.sourceIdentity());
     if (id == null) return ProductLookupResult.notFound();
+
+    final DataServiceDefinition definition;
     try {
-      DataServiceDefinition definition = reader.require(id);
-      if (definition.projectId() == null) return ProductLookupResult.notDiscoverable();
-      return ProductLookupResult.found(project(definition));
+      definition = reader.require(id);
     } catch (IllegalArgumentException notFound) {
       return ProductLookupResult.notFound();
+    } catch (RuntimeException exception) {
+      return ProductLookupResult.unavailable(exception.getMessage());
+    }
+
+    if (definition.projectId() == null) return ProductLookupResult.notDiscoverable();
+    try {
+      return ProductLookupResult.found(project(definition));
     } catch (RuntimeException exception) {
       return ProductLookupResult.unavailable(exception.getMessage());
     }
