@@ -1,0 +1,29 @@
+name: Consumption Checks
+
+on:
+  pull_request:
+    paths:
+      - 'yak-ops-business/yak-ops-business-consumption/**'
+      - '.github/workflows/consumption-checks.yml'
+
+jobs:
+  backend-consumption:
+    name: Backend consumption contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run Phase 4 consumption contract tests
+        run: >-
+          mvn -B
+          -pl yak-ops-business/yak-ops-business-consumption
+          -am
+          -Dtest=ConsumptionContractFoundationTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+          test
