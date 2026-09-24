@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import type { DevelopmentId, DevelopmentResourceNode } from '../../types';
 import DataServiceDeliveryTruthBar from '../data-service/DataServiceDeliveryTruthBar';
 import DataServiceNodeEditor from '../data-service/DataServiceNodeEditor';
+import DatasetGovernanceTruthBar from '../dataset/DatasetGovernanceTruthBar';
 import DatasetNodeEditor from '../dataset/DatasetNodeEditor';
 
 interface StandaloneWorkbenchEditorProps {
@@ -62,19 +63,32 @@ export const DatasetWorkbenchEditor = ({
   onDirtyChange,
 }: StandaloneWorkbenchEditorProps) => {
   const stableNode = useMemo(() => node, [node.id, node.name]);
+  const [governanceRefreshKey, setGovernanceRefreshKey] = useState(0);
+
+  const handleSaved = async () => {
+    setGovernanceRefreshKey((value) => value + 1);
+    await onSaved?.();
+  };
 
   return (
     <div
       className={[
-        'min-h-0 flex-1 overflow-hidden',
+        'min-h-0 flex-1 flex-col overflow-hidden',
         active ? 'flex' : 'hidden',
       ].join(' ')}
     >
-      <DatasetNodeEditor
-        node={stableNode}
-        onSaved={onSaved}
-        onDirtyChange={onDirtyChange}
+      <DatasetGovernanceTruthBar
+        nodeId={stableNode.id}
+        active={active}
+        refreshKey={governanceRefreshKey}
       />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <DatasetNodeEditor
+          node={stableNode}
+          onSaved={handleSaved}
+          onDirtyChange={onDirtyChange}
+        />
+      </div>
     </div>
   );
 };
