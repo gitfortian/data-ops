@@ -56,6 +56,10 @@ import type {
   DevelopmentTaskRunResult,
 } from '../../types';
 import SqlResultWorkspace from '../sql-result/SqlResultWorkspace';
+import {
+  datasetDeliveryState,
+  datasetPublishOutcome,
+} from './datasetDeliveryExperience';
 
 interface DatasetNodeEditorProps {
   node: DevelopmentResourceNode;
@@ -268,6 +272,7 @@ export default function DatasetNodeEditor({
   }, [context, loading, markDirty, metadataContext.dataSourceId]);
 
   const currentVersion = context?.dataset?.currentVersion;
+  const deliveryState = datasetDeliveryState(context, dirty);
   const versions = useMemo(
     () => [...(context?.dataset?.versions || [])].sort((a, b) => b.versionNo - a.versionNo),
     [context?.dataset?.versions],
@@ -458,15 +463,17 @@ export default function DatasetNodeEditor({
       });
       applyContext(next);
       await onSaved?.();
-      // 指标引用同步 fail-open:失败只提示，不吞掉保存成功
+      // 指标引用同步 fail-open:失败只提示，不吞掉 Draft 保存成功
       try {
         await syncDevelopmentDatasetMetricRefs(node.id, node.name, metricRefIds);
       } catch {
-        message.warning('指标引用上报失败，数据集已保存；可重新保存同步');
+        message.warning('指标引用上报失败，Dataset Draft 已保存；可重新保存同步');
       }
-      message.success(`数据集已保存 · DV${next.dataset?.currentVersion?.versionNo || 1}`);
+      message.success(
+        `Dataset Draft 已保存 · Dataset #${next.dataset?.datasetId || '-'}`,
+      );
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '保存 Dataset Node 失败');
+      message.error(error instanceof Error ? error.message : '保存 Dataset Draft 失败');
     } finally {
       setSaving(false);
     }
@@ -475,22 +482,40 @@ export default function DatasetNodeEditor({
   const publish = async () => {
     if (!context?.dataset || publishing) return;
     if (dirty) {
-      message.warning('当前有未保存修改，请先保存再发布版本');
+      message.warning('当前有未保存修改，请先保存 Draft 再发布 DatasetVersion');
       return;
     }
+    const beforeVersionNo = context.dataset.currentVersion?.versionNo;
     setPublishing(true);
     try {
       const next = await publishDevelopmentDatasetNode(node.id);
+      const outcome = datasetPublishOutcome(
+        beforeVersionNo,
+        next.dataset?.currentVersion?.versionNo,
+      );
       applyContext(next);
       await onSaved?.();
       setActivePanel('versions');
-      message.success(`版本已发布 · DV${next.dataset?.currentVersion?.versionNo || '-'}`);
+      if (outcome.kind === 'PUBLISHED') {
+        message.success(`已发布 immutable DatasetVersion · DV${outcome.versionNo}`);
+      } else if (outcome.kind === 'UNCHANGED') {
+        message.info(`Draft 与当前发布版本无 material change · 保持 DV${outcome.versionNo}`);
+      } else {
+        message.warning('发布请求已完成，但未返回可识别的 DatasetVersion');
+      }
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '发布 Dataset 版本失败');
+      message.error(error instanceof Error ? error.message : '发布 DatasetVersion 失败');
     } finally {
       setPublishing(false);
     }
   };
+
+  const draftStateText =
+    deliveryState.draftState === 'LOCAL_UNSAVED'
+      ? '本地有未保存修改'
+      : deliveryState.draftState === 'SAVED'
+        ? 'Draft 已保存'
+        : '尚未创建 Draft';
 
   const propertiesPanel = (
     <div className="text-[12px] leading-5">
@@ -528,14 +553,20 @@ export default function DatasetNodeEditor({
         />
       </div>
       <dl className="m-0 mt-5 grid grid-cols-[88px_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-[#eef0f2] pt-4">
-        <dt className="text-[#667085]">Dataset：</dt>
-        <dd className="m-0 text-[#344054]">
-          {context?.dataset ? `#${context.dataset.datasetId}` : '尚未创建'}
+        <dt className="text-[#667085]">Dataset ID：</dt>
+        <dd className="m-0 font-mono text-[#344054]">
+          {deliveryState.datasetId ? `#${deliveryState.datasetId}` : '尚未创建'}
         </dd>
-        <dt className="text-[#667085]">当前版本：</dt>
+        <dt className="text-[#667085]">Draft：</dt>
+        <dd className="m-0 text-[#344054]">{draftStateText}</dd>
+        <dt className="text-[#667085]">已发布版本：</dt>
         <dd className="m-0 text-[#344054]">
-          {currentVersion ? `DV${currentVersion.versionNo}` : '尚未保存'}
+          {deliveryState.publishedVersionNo
+            ? `DV${deliveryState.publishedVersionNo}`
+            : '尚未发布'}
         </dd>
+        <dt className="text-[#667085]">交付状态：</dt>
+        <dd className="m-0 text-[#344054]">{deliveryState.deliveryStatus || '-'}</dd>
         <dt className="text-[#667085]">查询 SQL：</dt>
         <dd className="m-0 text-[#344054]">{sqlText.trim() ? '已配置' : '未填写'}</dd>
         <dt className="text-[#667085]">字段：</dt>
@@ -574,7 +605,7 @@ export default function DatasetNodeEditor({
               <span className="font-medium text-[#344054]">DV{version.versionNo}</span>
               {index === 0 ? (
                 <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[10px] text-[#667085]">
-                  当前
+                  当前发布
                 </span>
               ) : null}
             </div>
@@ -586,7 +617,7 @@ export default function DatasetNodeEditor({
           </div>
         </div>
       )) : (
-        <div className="py-8 text-center text-[11px] text-[#98a2b3]">暂无数据集版本</div>
+        <div className="py-8 text-center text-[11px] text-[#98a2b3]">暂无已发布 DatasetVersion</div>
       )}
     </div>
   );
@@ -708,7 +739,7 @@ export default function DatasetNodeEditor({
           </ToolbarButton>
           <ToolbarDivider />
           <ToolbarButton
-            title="保存数据集"
+            title="保存 Dataset Draft"
             disabled={!canSave || saving || publishing}
             onClick={() => void save()}
           >
@@ -719,7 +750,7 @@ export default function DatasetNodeEditor({
             )}
           </ToolbarButton>
           <ToolbarButton
-            title="发布版本"
+            title="发布 immutable DatasetVersion"
             disabled={!canPublish}
             onClick={() => void publish()}
           >
@@ -765,11 +796,16 @@ export default function DatasetNodeEditor({
             <div className="flex min-w-0 items-center gap-3">
               <span className="font-medium text-[#667085]">DATASET</span>
               <span className="truncate">{node.name}</span>
+              {deliveryState.datasetId ? (
+                <span className="font-mono text-[#667085]">Dataset #{deliveryState.datasetId}</span>
+              ) : null}
               {dirty ? (
                 <span className="inline-flex shrink-0 items-center gap-1 text-[#667085]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#667085]" />
-                  未保存
+                  Draft 未保存
                 </span>
+              ) : context.dataset ? (
+                <span className="text-[#667085]">Draft 已保存</span>
               ) : null}
               <span
                 className="max-w-[280px] truncate text-[#667085]"
@@ -780,7 +816,11 @@ export default function DatasetNodeEditor({
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span>{fields.length ? `${fields.length} 个字段` : '运行查询以发现字段'}</span>
-              <span>{currentVersion ? `DV${currentVersion.versionNo}` : '尚未保存版本'}</span>
+              <span>
+                {deliveryState.publishedVersionNo
+                  ? `Published DV${deliveryState.publishedVersionNo}`
+                  : '尚未发布 DatasetVersion'}
+              </span>
               {position.selectionLength > 0 ? (
                 <span>已选择 {position.selectionLength} 字符</span>
               ) : null}
