@@ -1,5 +1,6 @@
 package io.yak.ops.business.development.repository;
 
+import io.yak.ops.business.development.repository.DevelopmentLineageOutboxRepository.DiagnosticRecord;
 import io.yak.ops.business.development.repository.DevelopmentLineageOutboxRepository.OutboxRecord;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
@@ -105,5 +106,30 @@ public class DevelopmentLineageOutboxRepositoryAdapter
         record.taskId(),
         record.projectId(),
         record.revisionId());
+  }
+
+  @Override
+  public Optional<DiagnosticRecord> findDiagnostic(long nodeId, long revisionId) {
+    Long projectId = currentProject.requireProjectId();
+    List<DiagnosticRecord> records = jdbc.query(
+        "SELECT task_id,node_id,revision_id,status,attempts,last_error,next_attempt_time,"
+            + "create_time,update_time FROM yak_dev_lineage_outbox "
+            + "WHERE project_id=? AND node_id=? AND revision_id=? ORDER BY create_time DESC LIMIT 1",
+        (rs, row) -> new DiagnosticRecord(
+            rs.getString("task_id"),
+            rs.getLong("node_id"),
+            rs.getLong("revision_id"),
+            rs.getString("status"),
+            rs.getInt("attempts"),
+            rs.getString("last_error"),
+            rs.getTimestamp("next_attempt_time") == null
+                ? null
+                : rs.getTimestamp("next_attempt_time").toLocalDateTime(),
+            rs.getTimestamp("create_time").toLocalDateTime(),
+            rs.getTimestamp("update_time").toLocalDateTime()),
+        projectId,
+        nodeId,
+        revisionId);
+    return records.stream().findFirst();
   }
 }

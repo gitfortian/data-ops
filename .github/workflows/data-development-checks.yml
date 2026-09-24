@@ -42,11 +42,11 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run publish and execution truth tests
+      - name: Run publish, execution and governance truth tests
         run: >-
           mvn -B
           -pl yak-ops-business/yak-ops-business-data-development
           -am
-          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest
+          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest,DevelopmentLineageEvidenceServiceTest,DevelopmentLineageWorkerTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
