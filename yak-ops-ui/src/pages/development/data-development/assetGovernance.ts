@@ -19,6 +19,12 @@ export interface AssetSourceLookup {
   assetStatus?: string | null;
 }
 
+export interface DatasetDevelopmentSource {
+  datasetId: DevelopmentId;
+  developmentNodeId?: DevelopmentId | null;
+  state: 'FOUND' | 'NOT_APPLICABLE';
+}
+
 export interface DatasetAssetGovernanceView {
   state: DatasetAssetGovernanceState;
   datasetId?: DevelopmentId;
@@ -30,6 +36,18 @@ export const lookupDatasetAsset = (datasetId: DevelopmentId): Promise<AssetSourc
   HttpUtils.getData<AssetSourceLookup>('/api/v1/assets/source-lookup', {
     params: { sourceType: 'DATASET', sourceId: String(datasetId) },
   });
+
+export const resolveDatasetDevelopmentSource = (
+  datasetId: DevelopmentId,
+): Promise<DatasetDevelopmentSource> =>
+  HttpUtils.getData<DatasetDevelopmentSource>(
+    `/api/v1/datasets/${encodeURIComponent(datasetId)}/development-source`,
+  );
+
+export const datasetIdFromSearch = (search: string) => {
+  const value = new URLSearchParams(search).get('datasetId');
+  return value?.trim() || undefined;
+};
 
 export const datasetAssetDetailUrl = (asset?: AssetSourceLookup) =>
   asset?.state === 'FOUND' && asset.assetId
