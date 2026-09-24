@@ -7,6 +7,7 @@ import dashboardEditorChart from './zh-CN/dashboard-editor-chart';
 import dashboardEditorFields from './zh-CN/dashboard-editor-fields';
 import dashboardEditorStyle from './zh-CN/dashboard-editor-style';
 import dataDevelopment from './zh-CN/data-development';
+import dataDevelopmentAuthoring from './zh-CN/data-development-authoring';
 import dataDevelopmentEditor from './zh-CN/data-development-editor';
 import dataQuality from './zh-CN/data-quality';
 import dataService from './zh-CN/data-service';
@@ -43,6 +44,7 @@ export default {
   ...home,
   ...homeSections,
   ...dataDevelopment,
+  ...dataDevelopmentAuthoring,
   ...dataDevelopmentEditor,
   ...workflow,
   ...workflowEditor,
