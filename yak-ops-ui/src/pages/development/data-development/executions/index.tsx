@@ -19,6 +19,12 @@ import {
 import moment from 'moment';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { WorkspaceLoadFailureState } from '../components/WorkspaceStateFeedback';
+import {
+  developmentNodeUrl,
+  executionFailureMessageId,
+  isActiveExecutionStatus,
+} from './executionExperience';
 import {
   getDevelopmentTaskExecution,
   listDevelopmentTaskExecutions,
@@ -29,6 +35,10 @@ import type {
   DevelopmentTaskExecutionSummary,
   DevelopmentTaskType,
 } from '../types';
+import {
+  classifyWorkspaceLoadFailure,
+  type WorkspaceLoadFailure,
+} from '../workspaceState';
 
 const { RangePicker } = DatePicker;
 
@@ -92,6 +102,7 @@ const ExecutionHistoryPage = () => {
 
   const [records, setRecords] = useState<DevelopmentTaskExecutionSummary[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<WorkspaceLoadFailure>();
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -108,6 +119,7 @@ const ExecutionHistoryPage = () => {
 
   const loadRecords = useCallback(async () => {
     setLoading(true);
+    setLoadFailure(undefined);
     try {
       const response = await listDevelopmentTaskExecutions({
         pageNo,
@@ -121,16 +133,27 @@ const ExecutionHistoryPage = () => {
       });
       setRecords(response.data?.records || []);
       setTotal(response.data?.total || 0);
-    } catch {
-      message.error(text('pages.dataDevelopment.execution.loadFailed'));
+    } catch (error) {
+      setLoadFailure(classifyWorkspaceLoadFailure(error));
     } finally {
       setLoading(false);
     }
-  }, [dateRange, keyword, pageNo, pageSize, refreshKey, status, taskType, text, triggerType]);
+  }, [dateRange, keyword, pageNo, pageSize, refreshKey, status, taskType, triggerType]);
 
   useEffect(() => {
     void loadRecords();
   }, [loadRecords]);
+
+  useEffect(() => {
+    if (loadFailure || !records.some((record) => isActiveExecutionStatus(record.status))) {
+      return;
+    }
+    const timer = window.setInterval(
+      () => setRefreshKey((value) => value + 1),
+      1500,
+    );
+    return () => window.clearInterval(timer);
+  }, [loadFailure, records]);
 
   const applyStatus = (value?: DevelopmentTaskExecutionStatus) => {
     setStatus(value);
@@ -197,7 +220,7 @@ const ExecutionHistoryPage = () => {
             type="button"
             className="max-w-full truncate border-0 bg-transparent p-0 text-left text-[13px] font-medium text-[#344054] hover:text-[#161823]"
             title={record.taskName}
-            onClick={() => history.push('/data-development')}
+            onClick={() => history.push(developmentNodeUrl(record.nodeId))}
           >
             {record.taskName || '-'}
           </button>
@@ -280,6 +303,8 @@ const ExecutionHistoryPage = () => {
       ),
     },
   ];
+
+  const detailFailureMessageId = executionFailureMessageId(detail?.failureReason);
 
   return (
     <ConfigProvider
@@ -374,46 +399,58 @@ const ExecutionHistoryPage = () => {
         </div>
 
         <div className="min-h-0 flex-1 pt-4">
-          <Table
-            rowKey="id"
-            size="small"
-            bordered
-            loading={loading}
-            columns={columns}
-            dataSource={records}
-            pagination={false}
-            scroll={{ x: 1320, y: 'calc(100vh - 300px)' }}
-            locale={{
-              emptyText: (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={intl.formatMessage({ id: 'pages.dataDevelopment.execution.empty' })}
-                />
-              ),
-            }}
-          />
+          {loadFailure ? (
+            <div className="flex h-full min-h-[360px]">
+              <WorkspaceLoadFailureState
+                failure={loadFailure}
+                loading={loading}
+                onRetry={() => setRefreshKey((value) => value + 1)}
+              />
+            </div>
+          ) : (
+            <Table
+              rowKey="id"
+              size="small"
+              bordered
+              loading={loading}
+              columns={columns}
+              dataSource={records}
+              pagination={false}
+              scroll={{ x: 1320, y: 'calc(100vh - 300px)' }}
+              locale={{
+                emptyText: (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={intl.formatMessage({ id: 'pages.dataDevelopment.execution.empty' })}
+                  />
+                ),
+              }}
+            />
+          )}
         </div>
 
-        <div className="flex h-16 shrink-0 items-center justify-between border-t border-[#f0f0f0]">
-          <span className="text-[12px] text-[#98a2b3]">
-            {intl.formatMessage(
-              { id: 'pages.dataDevelopment.execution.total' },
-              { count: total },
-            )}
-          </span>
-          <Pagination
-            current={pageNo}
-            pageSize={pageSize}
-            total={total}
-            showSizeChanger
-            showQuickJumper
-            pageSizeOptions={[10, 20, 50, 100]}
-            onChange={(page, size) => {
-              setPageNo(size === pageSize ? page : 1);
-              setPageSize(size);
-            }}
-          />
-        </div>
+        {!loadFailure ? (
+          <div className="flex h-16 shrink-0 items-center justify-between border-t border-[#f0f0f0]">
+            <span className="text-[12px] text-[#98a2b3]">
+              {intl.formatMessage(
+                { id: 'pages.dataDevelopment.execution.total' },
+                { count: total },
+              )}
+            </span>
+            <Pagination
+              current={pageNo}
+              pageSize={pageSize}
+              total={total}
+              showSizeChanger
+              showQuickJumper
+              pageSizeOptions={[10, 20, 50, 100]}
+              onChange={(page, size) => {
+                setPageNo(size === pageSize ? page : 1);
+                setPageSize(size);
+              }}
+            />
+          </div>
+        ) : null}
       </div>
 
       <Drawer
@@ -429,7 +466,16 @@ const ExecutionHistoryPage = () => {
           <div className="space-y-6">
             <Descriptions size="small" column={2} bordered>
               <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.taskName' })}>{detail.taskName}</Descriptions.Item>
-              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.nodeId' })}>{detail.nodeId}</Descriptions.Item>
+              <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.nodeId' })}>
+                <Button
+                  type="link"
+                  size="small"
+                  className="!h-auto !p-0"
+                  onClick={() => history.push(developmentNodeUrl(detail.nodeId))}
+                >
+                  {detail.nodeId}
+                </Button>
+              </Descriptions.Item>
               <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.taskType' })}>{detail.taskType}</Descriptions.Item>
               <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.status' })}><StatusBadge status={detail.status} /></Descriptions.Item>
               <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.execution.trigger' })}>{triggerLabel(detail.triggerType)}</Descriptions.Item>
@@ -438,6 +484,24 @@ const ExecutionHistoryPage = () => {
               <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.startTime' })}>{detail.startTime ? moment(detail.startTime).format('YYYY-MM-DD HH:mm:ss') : '-'}</Descriptions.Item>
               <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.duration' })}>{formatDuration(detail.durationMs)}</Descriptions.Item>
             </Descriptions>
+
+            {detail.failureReason ? (
+              <section>
+                <div className="mb-2 text-[13px] font-semibold text-[#344054]">
+                  {intl.formatMessage({ id: 'pages.dataDevelopment.execution.failureReason' })}
+                </div>
+                <div className="rounded-md border border-[#fedf89] bg-[#fffaeb] px-3 py-2 text-[12px] leading-5 text-[#93370d]">
+                  <div className="font-medium">
+                    {detailFailureMessageId
+                      ? intl.formatMessage({ id: detailFailureMessageId })
+                      : detail.failureReason}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] text-[#b54708]">
+                    {detail.failureReason}
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             {detail.errorMessage ? (
               <section>

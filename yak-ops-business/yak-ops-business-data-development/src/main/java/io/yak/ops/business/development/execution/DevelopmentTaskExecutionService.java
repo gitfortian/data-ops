@@ -22,6 +22,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class DevelopmentTaskExecutionService {
 
+  public static final String FAILURE_VALIDATION = "VALIDATION_FAILED";
+  public static final String FAILURE_RUNTIME_SUBMIT = "RUNTIME_SUBMIT_FAILED";
+  public static final String FAILURE_TASK = "TASK_FAILED";
+  public static final String FAILURE_TIMEOUT = "TIMEOUT";
+  public static final String FAILURE_RUNTIME_NOT_ATTACHED = "RUNTIME_NOT_ATTACHED";
+  public static final String FAILURE_RUNTIME_STATE_LOST = "RUNTIME_STATE_LOST";
+
   private static final TypeReference<Map<String, Object>> OUTPUT_TYPE = new TypeReference<>() {};
   private static final int MAX_PAGE_SIZE = 100;
   private static final int MAX_OUTPUT_JSON_LENGTH = 2_000_000;
@@ -90,10 +97,21 @@ public class DevelopmentTaskExecutionService {
       long durationMs,
       String errorMessage,
       Map<String, Object> output) {
+    complete(id, status, durationMs, null, errorMessage, output);
+  }
+
+  public void complete(
+      long id,
+      String status,
+      long durationMs,
+      String failureReason,
+      String errorMessage,
+      Map<String, Object> output) {
     repository.complete(
         id,
         normalizeUpper(status),
         Math.max(0L, durationMs),
+        optionalUpper(failureReason),
         trim(errorMessage, 1000),
         serializeOutput(output));
   }
@@ -155,6 +173,7 @@ public class DevelopmentTaskExecutionService {
         record.status(),
         record.operatorName(),
         record.durationMs(),
+        record.failureReason(),
         record.errorMessage(),
         record.startTime(),
         record.endTime());
@@ -173,6 +192,7 @@ public class DevelopmentTaskExecutionService {
         record.status(),
         record.operatorName(),
         record.durationMs(),
+        record.failureReason(),
         record.errorMessage(),
         record.content(),
         record.configJson(),

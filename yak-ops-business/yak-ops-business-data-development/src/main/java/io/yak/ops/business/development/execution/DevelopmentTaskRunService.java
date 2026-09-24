@@ -107,6 +107,7 @@ public class DevelopmentTaskRunService {
             historyId,
             status.name(),
             elapsedMillis(started),
+            terminalFailureReason(status),
             execution.errorMessage(),
             execution.output());
       }
@@ -121,6 +122,7 @@ public class DevelopmentTaskRunService {
           historyId,
           TaskExecutionStatus.FAILED.name(),
           elapsedMillis(started),
+          DevelopmentTaskExecutionService.FAILURE_VALIDATION,
           safeMessage(exception),
           Map.of());
       throw exception;
@@ -130,6 +132,7 @@ public class DevelopmentTaskRunService {
           historyId,
           TaskExecutionStatus.FAILED.name(),
           elapsedMillis(started),
+          DevelopmentTaskExecutionService.FAILURE_VALIDATION,
           message,
           Map.of());
       throw new DevelopmentTaskValidationException(
@@ -144,6 +147,7 @@ public class DevelopmentTaskRunService {
           historyId,
           TaskExecutionStatus.FAILED.name(),
           elapsedMillis(started),
+          DevelopmentTaskExecutionService.FAILURE_RUNTIME_SUBMIT,
           message,
           Map.of());
       return new DevelopmentTaskExecutionSubmission(
@@ -191,6 +195,7 @@ public class DevelopmentTaskRunService {
         submission.id(),
         status.name(),
         durationMs,
+        terminalFailureReason(status),
         completed.errorMessage(),
         completed.output());
     return new DevelopmentTaskRunResult(
@@ -216,6 +221,16 @@ public class DevelopmentTaskRunService {
 
   static boolean terminal(TaskExecutionStatus status) {
     return status != TaskExecutionStatus.PENDING && status != TaskExecutionStatus.RUNNING;
+  }
+
+  static String terminalFailureReason(TaskExecutionStatus status) {
+    if (status == TaskExecutionStatus.FAILED) {
+      return DevelopmentTaskExecutionService.FAILURE_TASK;
+    }
+    if (status == TaskExecutionStatus.TIMEOUT) {
+      return DevelopmentTaskExecutionService.FAILURE_TIMEOUT;
+    }
+    return null;
   }
 
   private void requireRuntime(TaskDefinition definition) {

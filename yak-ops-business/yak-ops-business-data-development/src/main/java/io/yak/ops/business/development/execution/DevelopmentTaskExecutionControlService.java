@@ -53,6 +53,7 @@ public class DevelopmentTaskExecutionControlService {
           current.id(),
           TaskExecutionStatus.CANCELLED.name(),
           durationMillis(current),
+          null,
           "运行在接管前被取消",
           current.output());
       return histories.get(current.id());
@@ -104,6 +105,7 @@ public class DevelopmentTaskExecutionControlService {
             current.id(),
             TaskExecutionStatus.FAILED.name(),
             durationMillis(current),
+            DevelopmentTaskExecutionService.FAILURE_RUNTIME_NOT_ATTACHED,
             "任务已创建但运行时未完成接管，可能在提交过程中发生服务重启",
             current.output());
         return histories.get(current.id());
@@ -128,6 +130,7 @@ public class DevelopmentTaskExecutionControlService {
         current.id(),
         status.name(),
         durationMillis(current),
+        failureReason(status),
         runtime.errorMessage(),
         runtime.output());
     return histories.get(current.id());
@@ -139,9 +142,20 @@ public class DevelopmentTaskExecutionControlService {
         current.id(),
         TaskExecutionStatus.FAILED.name(),
         durationMillis(current),
+        DevelopmentTaskExecutionService.FAILURE_RUNTIME_STATE_LOST,
         "运行时状态不可用，任务可能因服务重启而中断",
         Map.of());
     return histories.get(current.id());
+  }
+
+  private String failureReason(TaskExecutionStatus status) {
+    if (status == TaskExecutionStatus.FAILED) {
+      return DevelopmentTaskExecutionService.FAILURE_TASK;
+    }
+    if (status == TaskExecutionStatus.TIMEOUT) {
+      return DevelopmentTaskExecutionService.FAILURE_TIMEOUT;
+    }
+    return null;
   }
 
   private boolean staleWithoutRuntime(DevelopmentTaskExecutionDetail current) {

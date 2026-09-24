@@ -239,6 +239,7 @@ export interface DevelopmentTaskExecutionSummary {
   status: DevelopmentTaskExecutionStatus;
   operatorName?: string | null;
   durationMs?: number | null;
+  failureReason?: string | null;
   errorMessage?: string | null;
   startTime?: string | null;
   endTime?: string | null;

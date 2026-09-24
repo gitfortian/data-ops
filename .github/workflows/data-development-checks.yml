@@ -30,8 +30,8 @@ jobs:
       - name: Run Data Development authoring tests
         run: yarn jest src/pages/development/data-development --runInBand
 
-  backend-publish-readiness:
-    name: Backend publish readiness tests
+  backend-data-development:
+    name: Backend Data Development tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -42,11 +42,11 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run publish readiness tests
+      - name: Run publish and execution truth tests
         run: >-
           mvn -B
           -pl yak-ops-business/yak-ops-business-data-development
           -am
-          -Dtest=DevelopmentTaskPublishValidationTest
+          -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test

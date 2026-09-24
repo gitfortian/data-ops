@@ -1,6 +1,7 @@
 import { BRAND_THEME } from '@/styles/brand';
 import { useIntl } from '@umijs/max';
 import { ConfigProvider } from 'antd';
+import { useEffect, useRef } from 'react';
 
 import CreateDevelopmentNodeModal from './components/CreateDevelopmentNodeModal';
 import CreateDirectoryModal from './components/CreateDirectoryModal';
@@ -13,13 +14,27 @@ import {
   ResourceInvalidatedNotice,
   WorkspaceLoadFailureState,
 } from './components/WorkspaceStateFeedback';
+import { developmentNodeIdFromSearch } from './executions/executionExperience';
 import { useDataDevelopmentPage } from './hooks/useDataDevelopmentPage';
 
 export default function DataDevelopmentPage() {
   const intl = useIntl();
   const page = useDataDevelopmentPage();
+  const deepLinkAppliedRef = useRef(false);
   const directoryLabel = intl.formatMessage({ id: 'pages.dataDevelopment.common.directory' });
   const nodeLabel = intl.formatMessage({ id: 'pages.dataDevelopment.common.node' });
+
+  useEffect(() => {
+    if (deepLinkAppliedRef.current || page.treeLoading || page.treeFailure) return;
+    const nodeId = developmentNodeIdFromSearch(window.location.search);
+    if (!nodeId) {
+      deepLinkAppliedRef.current = true;
+      return;
+    }
+    if (!page.nodes.some((node) => String(node.id) === nodeId)) return;
+    deepLinkAppliedRef.current = true;
+    page.focusNode(nodeId);
+  }, [page.focusNode, page.nodes, page.treeFailure, page.treeLoading]);
 
   return (
     <ConfigProvider theme={BRAND_THEME}>
