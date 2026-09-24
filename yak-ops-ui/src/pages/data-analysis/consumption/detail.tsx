@@ -2,7 +2,9 @@ import {
   getProduct,
   productKeyValue,
   type DataProductView,
+  type GovernanceEvidence,
   type ProductLookupState,
+  type ProductNavigation,
 } from '@/services/consumption';
 import { history, useParams } from '@umijs/max';
 import {
@@ -48,16 +50,18 @@ const lookupResult = (state: ProductLookupState, reason?: string | null) => {
   );
 };
 
-const owningPath = (product: DataProductView) => (
-  product.productKey.productType === 'DATASET'
-    ? `/dataset/${product.productKey.sourceIdentity}`
-    : `/data-service/api/${product.productKey.sourceIdentity}`
-);
+const factText = (facts: Record<string, unknown>) => {
+  const entries = Object.entries(facts || {});
+  if (!entries.length) return '无附加事实';
+  return entries.map(([key, value]) => `${key}=${String(value)}`).join(' · ');
+};
 
 export default function ConsumptionDetailPage() {
   const params = useParams<{ productKey: string }>();
   const productKey = decodeURIComponent(params.productKey || '');
   const [product, setProduct] = useState<DataProductView | null>(null);
+  const [navigation, setNavigation] = useState<ProductNavigation | null>(null);
+  const [governanceEvidence, setGovernanceEvidence] = useState<GovernanceEvidence[]>([]);
   const [state, setState] = useState<ProductLookupState>('UNAVAILABLE');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(true);
@@ -70,12 +74,16 @@ export default function ConsumptionDetailPage() {
         if (!active) return;
         setState(result.state);
         setProduct(result.product || null);
+        setNavigation(result.navigation || null);
+        setGovernanceEvidence(result.governanceEvidence || []);
         setReason(result.reason || '');
       })
       .catch((cause) => {
         if (!active) return;
         setState('UNAVAILABLE');
         setProduct(null);
+        setNavigation(null);
+        setGovernanceEvidence([]);
         setReason(cause instanceof Error ? cause.message : '加载数据产品失败');
       })
       .finally(() => {
@@ -111,9 +119,14 @@ export default function ConsumptionDetailPage() {
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Space wrap>
           <Button onClick={() => history.push('/data-analysis/consumption')}>返回数据消费</Button>
-          <Button type="primary" onClick={() => history.push(owningPath(product))}>进入来源管理</Button>
-          {product.assetRef?.domain === 'ASSET' ? (
-            <Button onClick={() => history.push(`/data-asset/detail/${product.assetRef?.identity}`)}>查看资产</Button>
+          {navigation?.sourceHref ? (
+            <Button type="primary" onClick={() => history.push(navigation.sourceHref!)}>进入来源管理</Button>
+          ) : null}
+          {navigation?.assetHref ? (
+            <Button onClick={() => history.push(navigation.assetHref!)}>查看资产</Button>
+          ) : null}
+          {navigation?.producerHref ? (
+            <Button onClick={() => history.push(navigation.producerHref!)}>查看生产者</Button>
           ) : null}
         </Space>
 
@@ -153,6 +166,30 @@ export default function ConsumptionDetailPage() {
               <Descriptions.Item label="Asset">{product.assetRef.domain}:{product.assetRef.identity}</Descriptions.Item>
             ) : null}
           </Descriptions>
+        </Card>
+
+        <Card title="治理证据">
+          {governanceEvidence.length ? (
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              {governanceEvidence.map((evidence, index) => (
+                <div key={`${evidence.sectionKey}-${index}`}>
+                  <Space wrap>
+                    <Text strong>{evidence.sectionKey}</Text>
+                    <Tag color={evidence.state === 'READY' ? 'success' : evidence.state === 'FORBIDDEN' ? 'error' : 'warning'}>
+                      {evidence.state}
+                    </Tag>
+                    <Text type="secondary">{evidence.ownerDomain}</Text>
+                  </Space>
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="secondary">{factText(evidence.facts)}</Text>
+                    {evidence.reason ? <Text type="danger"> · {evidence.reason}</Text> : null}
+                  </div>
+                </div>
+              ))}
+            </Space>
+          ) : (
+            <Text type="secondary">暂无治理证据</Text>
+          )}
         </Card>
 
         {product.productKey.productType === 'DATASET' ? (
