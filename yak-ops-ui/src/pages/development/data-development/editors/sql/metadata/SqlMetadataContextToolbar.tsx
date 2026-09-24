@@ -360,7 +360,9 @@ const SqlMetadataContextToolbar = ({
   );
   const effectiveSchema = resolveSqlEffectiveSchema(context.schema, binding.schema);
 
-  const normalizedDbType = context.dbType?.trim().toUpperCase();
+  const normalizedDbType = (
+    selectedDataSource?.dbType || context.dbType
+  )?.trim().toUpperCase();
   const showSchemaPicker = Boolean(
     context.dataSourceId &&
       normalizedDbType &&
