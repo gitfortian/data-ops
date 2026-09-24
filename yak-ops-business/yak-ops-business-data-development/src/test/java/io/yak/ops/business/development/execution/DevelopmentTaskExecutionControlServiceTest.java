@@ -109,6 +109,36 @@ class DevelopmentTaskExecutionControlServiceTest {
   }
 
   @Test
+  void cancelConvergesTheRuntimeIntoCancelledDurableState() {
+    DevelopmentTaskExecutionService histories = mock(DevelopmentTaskExecutionService.class);
+    DevelopmentTaskRunService runs = mock(DevelopmentTaskRunService.class);
+    TaskExecutionGateway gateway = mock(TaskExecutionGateway.class);
+    ProjectContextScope projectScope = mock(ProjectContextScope.class);
+    DevelopmentTaskExecutionDetail running = execution("RUNNING", "runtime-1", null, null);
+    DevelopmentTaskExecutionDetail cancelled = execution("CANCELLED", "runtime-1", null, null);
+    when(histories.get(10L)).thenReturn(running, running, running, cancelled);
+    when(gateway.status("SQL", "runtime-1"))
+        .thenReturn(
+            new TaskExecution("runtime-1", "RUNNING", null, Map.of()),
+            new TaskExecution("runtime-1", "CANCELED", null, Map.of("cancelled", true)));
+
+    DevelopmentTaskExecutionControlService service =
+        new DevelopmentTaskExecutionControlService(histories, runs, gateway, projectScope);
+
+    DevelopmentTaskExecutionDetail result = service.cancel(10L);
+
+    assertEquals("CANCELLED", result.status());
+    verify(gateway).cancel("SQL", "runtime-1");
+    verify(histories).complete(
+        eq(10L),
+        eq("CANCELLED"),
+        anyLong(),
+        eq(null),
+        eq(null),
+        eq(Map.of("cancelled", true)));
+  }
+
+  @Test
   void retriesTheExactPersistedDefinitionAndLinksThePreviousExecution() {
     DevelopmentTaskExecutionService histories = mock(DevelopmentTaskExecutionService.class);
     DevelopmentTaskRunService runs = mock(DevelopmentTaskRunService.class);

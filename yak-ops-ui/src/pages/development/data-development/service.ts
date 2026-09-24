@@ -1,6 +1,9 @@
 import type { ApiResponse } from '@/services/http/response';
 import { API_SUCCESS_CODE } from '@/services/http/response';
-import { previewDevelopmentSqlLineageRequest } from '@/services/data-development/legacy';
+import {
+  previewDevelopmentSqlLineageRequest,
+  runDevelopmentTask as runDevelopmentTaskRequest,
+} from '@/services/data-development/legacy';
 import HttpUtils from '@/utils/HttpUtils';
 import { getIntl } from '@umijs/max';
 import { Modal } from 'antd';
@@ -10,11 +13,14 @@ import {
   rebaseDraftSavePayload,
 } from './components/workbench/draftSaveFailure';
 import { getSqlMetadataContext } from './editors/sql/metadata/sqlMetadataContextStore';
+import { validateDevelopmentRunDefinition } from './executions/runPreflight';
 import type {
   DevelopmentId,
   DevelopmentSqlLineagePreview,
   DevelopmentSqlLineagePreviewRequest,
+  DevelopmentTaskDefinition,
   DevelopmentTaskDraft,
+  DevelopmentTaskExecutionSubmission,
   SaveDevelopmentTaskDraftPayload,
 } from './types';
 
@@ -161,6 +167,24 @@ export const saveDevelopmentTaskDraft = async (
       throw new Error(formatSaveFailure(retryError));
     }
   }
+};
+
+/**
+ * Product-facing editor-run corridor. These checks intentionally happen before the
+ * HTTP submission so predictable authoring errors never masquerade as runtime failures.
+ * Plugin/runtime validation remains authoritative after submission.
+ */
+export const runDevelopmentTask = (
+  nodeId: DevelopmentId,
+  payload: DevelopmentTaskDefinition,
+): Promise<ApiResponse<DevelopmentTaskExecutionSubmission>> => {
+  const preflight = validateDevelopmentRunDefinition(payload);
+  if (preflight) {
+    return Promise.reject(
+      new Error(getIntl().formatMessage({ id: preflight.messageId })),
+    );
+  }
+  return runDevelopmentTaskRequest(nodeId, payload);
 };
 
 /**
