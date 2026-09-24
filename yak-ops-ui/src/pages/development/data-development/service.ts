@@ -139,7 +139,7 @@ const confirmPublishReadiness = (
       'div',
       null,
       intl.formatMessage(
-        { id: 'pages.dataDevelopment.authoring.publishReadinessDraft' },
+        { id: 'pages.dataDevelopment.publishReadiness.exactDraft' },
         { revision: summary.draftRevision },
       ),
     ),
@@ -148,8 +148,8 @@ const confirmPublishReadiness = (
       { className: validation.valid ? 'text-[#027a48]' : 'text-[#b42318]' },
       intl.formatMessage({
         id: validation.valid
-          ? 'pages.dataDevelopment.authoring.publishReadinessPassed'
-          : 'pages.dataDevelopment.authoring.publishReadinessBlocked',
+          ? 'pages.dataDevelopment.publishReadiness.passed'
+          : 'pages.dataDevelopment.publishReadiness.blocked',
       }),
     ),
     validation.message
@@ -160,7 +160,7 @@ const confirmPublishReadiness = (
       ? createElement(
           'div',
           { className: 'rounded bg-[#f2f4f7] px-2 py-2 text-[#667085]' },
-          intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishResultHint' }),
+          intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.resultHint' }),
         )
       : null,
   );
@@ -169,14 +169,14 @@ const confirmPublishReadiness = (
     Modal.confirm({
       title: intl.formatMessage({
         id: validation.valid
-          ? 'pages.dataDevelopment.authoring.publishReadinessTitle'
-          : 'pages.dataDevelopment.authoring.publishBlockedTitle',
+          ? 'pages.dataDevelopment.publishReadiness.confirmTitle'
+          : 'pages.dataDevelopment.publishReadiness.blockedTitle',
       }),
       content,
       okText: intl.formatMessage({
         id: validation.valid
-          ? 'pages.dataDevelopment.authoring.publishConfirm'
-          : 'pages.dataDevelopment.authoring.publishClose',
+          ? 'pages.dataDevelopment.publishReadiness.confirmPublish'
+          : 'pages.dataDevelopment.publishReadiness.close',
       }),
       cancelText: intl.formatMessage({ id: 'pages.dataDevelopment.common.cancel' }),
       cancelButtonProps: validation.valid ? undefined : { style: { display: 'none' } },
@@ -282,7 +282,7 @@ export const publishDevelopmentTask = async (
     throw new Error(
       error instanceof Error && error.message
         ? error.message
-        : intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishValidationFailed' }),
+        : intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.requestFailed' }),
     );
   }
 
@@ -290,12 +290,12 @@ export const publishDevelopmentTask = async (
   if (!validation.valid) {
     throw new Error(
       validation.message ||
-        intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishBlocked' }),
+        intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.publishBlocked' }),
     );
   }
   if (!confirmed) {
     throw new Error(
-      intl.formatMessage({ id: 'pages.dataDevelopment.authoring.publishCancelled' }),
+      intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.cancelled' }),
     );
   }
   return publishDevelopmentTaskRequest(nodeId, draftRevision);
