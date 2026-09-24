@@ -16,6 +16,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import io.yak.ops.business.asset.api.AssetDescriptor;
 import io.yak.ops.business.asset.api.AssetProvider;
 import io.yak.ops.spi.section.SectionProvider;
+import io.yak.ops.spi.section.SectionContract;
+import io.yak.ops.spi.section.SectionStatus;
+import io.yak.ops.spi.section.SectionType;
 import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
@@ -268,6 +271,88 @@ class AssetDiscoverServiceTest {
     assertEquals("技术元数据读取提供方未装配", result.note());
     assertNull(result.data());
     verify(registry, never()).find(AssetSourceType.METADATA);
+  }
+
+  @Test
+  void qualityWithoutAnAssembledProviderIsUnavailable() {
+    AssetItemPO physicalTable = modelItem();
+    physicalTable.setSourceType(AssetSourceType.METADATA.name());
+    when(assetAppService.requireItem(1L)).thenReturn(physicalTable);
+    when(registry.find(AssetSourceType.METADATA)).thenReturn(Optional.of(metadataProvider()));
+
+    AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
+
+    assertEquals("UNAVAILABLE", result.status());
+    assertEquals("质量分区读取提供方未装配", result.note());
+    verify(sectionProviders).orderedStream();
+  }
+
+  @Test
+  void qualitySectionPassesThroughEachOfTheFiveContractStates() {
+    AssetItemPO physicalTable = modelItem();
+    physicalTable.setSourceType(AssetSourceType.METADATA.name());
+    when(assetAppService.requireItem(1L)).thenReturn(physicalTable);
+    when(registry.find(AssetSourceType.METADATA)).thenReturn(Optional.of(metadataProvider()));
+
+    for (SectionStatus status : SectionStatus.values()) {
+      SectionProvider provider = mock(SectionProvider.class);
+      when(provider.sectionType()).thenReturn(SectionType.QUALITY);
+      when(provider.supports(any())).thenReturn(true);
+      when(provider.query(any())).thenReturn(contract(status));
+      when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.of(provider));
+
+      AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
+
+      assertEquals(status.name(), result.status());
+      verify(provider).query(any());
+    }
+  }
+
+  @Test
+  void deniedQualitySectionDoesNotEnumerateOrCallProvider() {
+    AssetItemPO physicalTable = modelItem();
+    physicalTable.setSourceType(AssetSourceType.METADATA.name());
+    when(assetAppService.requireItem(1L)).thenReturn(physicalTable);
+    when(permissionService.hasPermission("alice", "quality:monitor:read")).thenReturn(false);
+
+    AssetDiscoverService.SectionView result = service.section(1L, "QUALITY", "alice");
+
+    assertEquals("PERMISSION_DENIED", result.status());
+    assertNull(result.data());
+    verify(sectionProviders, never()).orderedStream();
+    verify(registry, never()).find(AssetSourceType.METADATA);
+  }
+
+  private AssetProvider metadataProvider() {
+    return new AssetProvider() {
+      @Override public AssetSourceType sourceType() { return AssetSourceType.METADATA; }
+      @Override public io.yak.ops.business.asset.api.AssetPage cursorList(
+          io.yak.ops.business.asset.api.AssetCursorQuery query) { return null; }
+      @Override public Optional<AssetDescriptor> refresh(String sourceId) {
+        return Optional.of(new AssetDescriptor("metadata:table:42", sourceId, "orders", "",
+            AssetType.TABLE, null, null, "alice", LocalDateTime.now(), "hash",
+            Map.of("dataSourceId", "7", "databaseName", "sales", "tableName", "orders")));
+      }
+    };
+  }
+
+  private static SectionContract contract(SectionStatus status) {
+    return new SectionContract() {
+      @Override public SectionType sectionType() { return SectionType.QUALITY; }
+      @Override public SectionStatus status() { return status; }
+      @Override public String ownerDomain() { return "QUALITY"; }
+      @Override public io.yak.ops.spi.section.SectionSummary summary() { return () -> Map.of(); }
+      @Override public String reason() { return status == SectionStatus.OK ? null : "reason"; }
+      @Override public java.time.Instant updatedAt() { return null; }
+      @Override public List<io.yak.ops.spi.section.SectionAction> actions() { return List.of(); }
+      @Override public List<io.yak.ops.spi.section.SectionEvidence> evidence() { return List.of(); }
+      @Override public io.yak.ops.spi.section.SectionProvenance provenance() {
+        return new io.yak.ops.spi.section.SectionProvenance("QUALITY", "test", null);
+      }
+      @Override public io.yak.ops.spi.section.SectionCapability capability() {
+        return new io.yak.ops.spi.section.SectionCapability(true, false, null);
+      }
+    };
   }
 
   @Test
