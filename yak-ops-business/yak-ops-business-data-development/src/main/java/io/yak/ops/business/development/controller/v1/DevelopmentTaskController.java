@@ -13,6 +13,7 @@ import io.yak.ops.business.development.api.DevelopmentTaskApi.StandardCheckReque
 import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview;
 import io.yak.ops.business.development.domain.DevelopmentStandardCheck;
 import io.yak.ops.business.development.domain.DevelopmentTaskDraft;
+import io.yak.ops.business.development.domain.DevelopmentTaskPublishValidation;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevision;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevisionSummary;
 import io.yak.ops.business.development.execution.DevelopmentTaskRunService;
@@ -127,6 +128,15 @@ public class DevelopmentTaskController {
       @Valid @RequestBody StandardCheckRequest request) {
     return Result.success(
         standardCheckService.check(nodeId, request.taskType(), request.content()));
+  }
+
+  @Operation(summary = "校验指定草稿版本是否可发布")
+  @RequiresPermission(DataDevelopmentPermissionCode.PUBLISH)
+  @PostMapping("/{nodeId}/publish-validation")
+  public Result<DevelopmentTaskPublishValidation> validatePublish(
+      @PathVariable("nodeId") Long nodeId,
+      @Valid @RequestBody PublishRequest request) {
+    return Result.success(service.validateForPublish(nodeId, request.draftRevision()));
   }
 
   @Operation(summary = "发布节点版本")
