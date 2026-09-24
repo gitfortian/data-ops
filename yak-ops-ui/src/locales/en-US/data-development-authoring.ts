@@ -30,6 +30,7 @@ export default {
   'pages.dataDevelopment.authoring.publishReadinessBlocked': 'Publish validation failed. Fix the issues below before publishing.',
   'pages.dataDevelopment.authoring.publishResultHint': 'Confirming creates or reuses an immutable Revision and reconciles the Task Catalog Release projection. It never overwrites historical Revisions, and later Draft edits do not mutate this Revision.',
   'pages.dataDevelopment.authoring.publishConfirm': 'Publish this Draft',
+  'pages.dataDevelopment.authoring.publishClose': 'Close',
   'pages.dataDevelopment.authoring.publishCancelled': 'Publish cancelled. No new Revision was created and the Release state was not changed.',
   'pages.dataDevelopment.authoring.publishValidationFailed': 'Publish validation could not be completed. Check permissions, Draft state, and service availability, then retry.',
   'pages.dataDevelopment.authoring.publishBlocked': 'The current Draft did not pass publish validation.',
