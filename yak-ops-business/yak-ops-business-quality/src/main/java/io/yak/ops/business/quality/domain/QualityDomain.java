@@ -54,7 +54,8 @@ public final class QualityDomain {
     public TableMonitorSummary(
         String tableName, Long monitorId, String monitorName, int monitorCount,
         int ruleCount, CheckResult lastResult, LocalDateTime lastRunTime) {
-      this(tableName, monitorId, monitorName, monitorCount, 0, null, lastResult, lastRunTime);
+      this(tableName, monitorId, monitorName, monitorCount, ruleCount, 0, null,
+          lastResult, lastRunTime);
     }
   }
 

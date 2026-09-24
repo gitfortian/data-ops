@@ -6,6 +6,7 @@ import io.yak.ops.business.quality.domain.QualityDomain.Execution;
 import io.yak.ops.business.quality.domain.QualityDomain.RuleExecutionWorkspaceItem;
 import io.yak.ops.business.quality.domain.QualityQuery;
 import io.yak.ops.business.quality.repository.QualityExecutionReadRepository;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,4 +46,10 @@ public class QualityExecutionReader {
     return repository.findSummary(executionNo)
         .orElseThrow(() -> new IllegalArgumentException("质量执行记录不存在：" + executionNo));
   }
+
+  @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
+  public Optional<Execution> findSummary(String executionNo) {
+    return repository.findSummary(executionNo);
+  }
+
 }
