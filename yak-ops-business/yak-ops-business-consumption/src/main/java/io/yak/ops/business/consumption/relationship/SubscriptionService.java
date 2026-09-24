@@ -4,6 +4,7 @@ import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.provider.ProductLookupResult;
 import io.yak.ops.business.consumption.product.provider.ProductLookupState;
+import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Owns declared consumer dependency truth. Subscription never changes source access policy. */
 @Service
+@ConditionalOnDataSourceEnabled
 @RequiredArgsConstructor
 public class SubscriptionService {
 
