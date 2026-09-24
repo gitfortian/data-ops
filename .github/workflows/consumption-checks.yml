@@ -19,11 +19,11 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run Phase 4 consumption contract tests
+      - name: Run Phase 4 consumption contract and source-provider tests
         run: >-
           mvn -B
           -pl yak-ops-business/yak-ops-business-consumption
           -am
-          -Dtest=ConsumptionContractFoundationTest
+          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test

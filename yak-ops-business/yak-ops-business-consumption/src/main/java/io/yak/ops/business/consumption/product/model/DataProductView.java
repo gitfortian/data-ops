@@ -29,9 +29,7 @@ public record DataProductView(
     Objects.requireNonNull(productKey, "productKey");
     Objects.requireNonNull(sourceRef, "sourceRef");
     name = requireText(name, "name");
-    owner = requireText(owner, "owner");
     Objects.requireNonNull(projectId, "projectId");
-    visibility = requireText(visibility, "visibility");
     Objects.requireNonNull(lifecycle, "lifecycle");
     Objects.requireNonNull(availability, "availability");
     Objects.requireNonNull(access, "access");
@@ -42,8 +40,22 @@ public record DataProductView(
     if (contractPayload.productType() != productKey.productType()) {
       throw new IllegalArgumentException("contract payload type must match productKey type");
     }
-    description = description == null || description.isBlank() ? null : description.trim();
+    description = normalizeOptional(description);
+    owner = normalizeOptional(owner);
+    visibility = normalizeOptional(visibility);
     sections = sections == null ? List.of() : List.copyOf(sections);
+    requireExplicitMissingEvidence(owner, "ownership", sections);
+    requireExplicitMissingEvidence(visibility, "visibility", sections);
+  }
+
+  private static void requireExplicitMissingEvidence(
+      String value, String sectionKey, List<ProductSectionState> sections) {
+    if (value != null) return;
+    boolean explained = sections.stream().anyMatch(section ->
+        sectionKey.equals(section.sectionKey()) && section.state() != ProviderEvidenceState.READY);
+    if (!explained) {
+      throw new IllegalArgumentException(sectionKey + " must be present or carry explicit non-READY evidence");
+    }
   }
 
   private static String requireText(String value, String field) {
@@ -51,5 +63,9 @@ public record DataProductView(
       throw new IllegalArgumentException(field + " must not be blank");
     }
     return value.trim();
+  }
+
+  private static String normalizeOptional(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
   }
 }
