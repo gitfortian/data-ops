@@ -11,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import io.yak.ops.business.asset.controller.v1.dto.AssetRequests.ItemQueryDTO;
 import io.yak.ops.business.asset.controller.v1.dto.AssetRequests.ManualRegisterDTO;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
@@ -63,6 +64,25 @@ class AssetAppServiceTest {
     assertTrue(view.assetKey().startsWith("manual:"));
     assertEquals(0, view.viewCount30d());
     verify(mapper).insert(any(AssetItemPO.class));
+  }
+
+  @Test
+  void assetDetailLookupAlwaysScopesTheIdToTheTrustedProject() {
+    when(mapper.selectOne(any())).thenReturn(new AssetItemPO());
+    ArgumentCaptor<Wrapper<AssetItemPO>> query = ArgumentCaptor.forClass(Wrapper.class);
+
+    service.requireItem(42L);
+
+    verify(currentProject).requireProjectId();
+    verify(mapper).selectOne(query.capture());
+    @SuppressWarnings("unchecked")
+    com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AssetItemPO> wrapper =
+        (com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AssetItemPO>)
+            query.getValue();
+    assertTrue(wrapper.getSqlSegment().contains("project_id"));
+    assertTrue(wrapper.getSqlSegment().contains("id"));
+    assertTrue(wrapper.getParamNameValuePairs().containsValue(1L));
+    assertTrue(wrapper.getParamNameValuePairs().containsValue(42L));
   }
 
   @Test
