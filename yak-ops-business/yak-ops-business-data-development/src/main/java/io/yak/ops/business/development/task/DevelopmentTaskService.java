@@ -3,6 +3,7 @@ package io.yak.ops.business.development.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.development.domain.DevelopmentNode;
 import io.yak.ops.business.development.domain.DevelopmentTaskDraft;
+import io.yak.ops.business.development.domain.DevelopmentTaskPublishValidation;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevision;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevisionSummary;
 import io.yak.ops.business.development.lineage.DevelopmentLineageOutbox;
@@ -123,6 +124,40 @@ public class DevelopmentTaskService {
     return drafts.save(node, definition, expectedRevision)
         .orElseThrow(() -> new DevelopmentDraftConflictException(
             "草稿已被其他会话更新，请刷新后重新保存（当前基线：" + expectedRevision + "）"));
+  }
+
+  /**
+   * Read-only publish preflight tied to one exact Draft revision.
+   *
+   * <p>This result is advisory for the authoring UI. {@link #publish(Long, long)}
+   * revalidates the locked Draft so this preflight can never bypass publication-time checks.
+   */
+  public DevelopmentTaskPublishValidation validateForPublish(
+      Long nodeId,
+      long expectedDraftRevision) {
+    DevelopmentNode node = nodes.requireTaskNode(nodeId);
+    DevelopmentTaskDraft draft = drafts.get(node);
+    if (!draft.matchesRevision(expectedDraftRevision)) {
+      throw new DevelopmentDraftConflictException(
+          "发布校验失败：草稿版本已变化，期望 "
+              + expectedDraftRevision
+              + "，当前 "
+              + draft.draftRevision());
+    }
+
+    TaskDefinition definition = definitions.normalize(
+        node,
+        draft.definition().taskType(),
+        draft.definition().schemaVersion(),
+        draft.definition().content(),
+        draft.definition().configJson());
+    DevelopmentTaskValidation validation = validator.validateForPublish(definition);
+    return new DevelopmentTaskPublishValidation(
+        node.id(),
+        draft.draftRevision(),
+        validation.valid(),
+        validation.message(),
+        validation.issues());
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
