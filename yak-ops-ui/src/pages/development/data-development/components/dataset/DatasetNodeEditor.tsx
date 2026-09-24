@@ -60,6 +60,7 @@ import {
   datasetDeliveryState,
   datasetPublishOutcome,
 } from './datasetDeliveryExperience';
+import { datasetVersionNoFromSearch } from '../../assetGovernance';
 
 interface DatasetNodeEditorProps {
   node: DevelopmentResourceNode;
@@ -173,6 +174,9 @@ export default function DatasetNodeEditor({
   onDirtyChange,
 }: DatasetNodeEditorProps) {
   const metadataContext = useSqlMetadataContext(node.id);
+  const requestedVersionNo = typeof window === 'undefined'
+    ? undefined
+    : datasetVersionNoFromSearch(window.location.search);
   const dirtyChangeRef = useRef(onDirtyChange);
   const savedDataSourceIdRef = useRef<DevelopmentId>();
 
@@ -187,7 +191,9 @@ export default function DatasetNodeEditor({
   const [running, setRunning] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [activePanel, setActivePanel] = useState<RightPanelKey>();
+  const [activePanel, setActivePanel] = useState<RightPanelKey | undefined>(
+    () => requestedVersionNo ? 'versions' : undefined,
+  );
   const [panelWidth, setPanelWidth] = useState(initialPanelWidth);
   const [resizing, setResizing] = useState(false);
   const [resultHeight, setResultHeight] = useState(initialResultHeight);
@@ -597,7 +603,13 @@ export default function DatasetNodeEditor({
       {versions.length ? versions.map((version, index) => (
         <div
           key={version.versionId}
-          className="flex items-center gap-2 rounded-[3px] border border-[#eaecf0] px-2.5 py-2"
+          aria-current={version.versionNo === requestedVersionNo ? 'true' : undefined}
+          className={[
+            'flex items-center gap-2 rounded-[3px] border px-2.5 py-2',
+            version.versionNo === requestedVersionNo
+              ? 'border-[#fe2c55] bg-[#fff7f8]'
+              : 'border-[#eaecf0]',
+          ].join(' ')}
         >
           <FileStack size={14} className="shrink-0 text-[#667085]" strokeWidth={1.7} />
           <div className="min-w-0 flex-1">

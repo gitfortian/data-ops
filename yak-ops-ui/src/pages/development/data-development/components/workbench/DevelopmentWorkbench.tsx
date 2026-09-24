@@ -327,7 +327,7 @@ const DevelopmentWorkbench = ({
       text('pages.dataDevelopment.workbench.saveDraftFailed'),
     );
 
-    markEditorSessionSaved(nodeId, draft.draftRevision);
+    markEditorSessionSaved(nodeId, draft.draftRevision, draft.definition);
     await onNodesChanged?.();
     return draft;
   };

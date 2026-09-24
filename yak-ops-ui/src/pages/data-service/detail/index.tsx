@@ -31,6 +31,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 
 import DataServiceAccessControlPanel from '../components/DataServiceAccessControlPanel';
 import DataServiceApiCallPanel from '../components/DataServiceApiCallPanel';
+import { dataServiceDevelopmentSourceUrl } from '../utils';
 
 type DetailTabKey = 'overview' | 'access' | 'network' | 'runtime' | 'logs';
 
@@ -190,6 +191,9 @@ export default function DataServiceDetailPage() {
 
   const sourceManaged = service?.sourceType === DATA_SERVICE_NODE_SOURCE;
   const legacySqlRelease = service?.sourceType === LEGACY_DATA_DEVELOPMENT_RELEASE_SOURCE;
+  const developmentSourceUrl = service
+    ? dataServiceDevelopmentSourceUrl(service)
+    : undefined;
 
   const dataSourceName = useMemo(() => {
     if (!service?.dataSourceId) return '-';
@@ -402,7 +406,7 @@ export default function DataServiceDetailPage() {
     <ConfigProvider theme={BRAND_THEME}>
       <div className="min-h-[calc(100vh-64px)] bg-[#f7f7f8] text-[#161823]">
         <div className="mx-auto w-full max-w-[1800px] px-4 pb-8 pt-0 lg:px-5">
-          <div className="mb-2 flex h-10 items-center">
+          <div className="mb-2 flex h-10 items-center justify-between">
             <Button
               type="text"
               icon={<ArrowLeft size={15} />}
@@ -411,6 +415,11 @@ export default function DataServiceDetailPage() {
             >
               返回 API 集市
             </Button>
+            {developmentSourceUrl ? (
+              <Button onClick={() => history.push(developmentSourceUrl)}>
+                查看 Data Development 来源
+              </Button>
+            ) : null}
           </div>
 
           <section className="rounded-lg bg-white">

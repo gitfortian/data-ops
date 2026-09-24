@@ -105,6 +105,20 @@ export interface DataServiceSourcePresentation {
   muted?: boolean;
 }
 
+export const dataServiceDetailUrl = (serviceId: number | string) =>
+  `/data-service/api/${encodeURIComponent(String(serviceId))}`;
+
+export const dataServiceDevelopmentSourceUrl = (
+  service: Pick<DataServiceApi, 'sourceType' | 'sourceRef'>,
+) => {
+  if (service.sourceType !== DATA_SERVICE_NODE_SOURCE || !/^\d+$/.test(service.sourceRef || '')) {
+    return undefined;
+  }
+  const nodeId = Number(service.sourceRef);
+  if (!Number.isSafeInteger(nodeId) || nodeId <= 0) return undefined;
+  return `/data-development?nodeId=${encodeURIComponent(String(nodeId))}`;
+};
+
 export const describeDataServiceSource = (
   service: DataServiceApi,
   dataSourceName: string,

@@ -7,6 +7,8 @@ import type {
 import {
   buildDataServiceCallCounts,
   buildDataSourceNameMap,
+  dataServiceDetailUrl,
+  dataServiceDevelopmentSourceUrl,
   describeDataServiceSource,
   filterDataServices,
   resolveDataSourceName,
@@ -149,5 +151,21 @@ describe('data service marketplace utilities', () => {
       secondary: '冻结来源 · 历史库',
       muted: true,
     });
+  });
+
+  it('routes source-managed APIs to their exact detail and development node', () => {
+    expect(dataServiceDetailUrl(88)).toBe('/data-service/api/88');
+    expect(dataServiceDevelopmentSourceUrl(service(88, {
+      sourceType: 'DATA_DEVELOPMENT_DATA_SERVICE',
+      sourceRef: '42',
+    }))).toBe('/data-development?nodeId=42');
+    expect(dataServiceDevelopmentSourceUrl(service(89, {
+      sourceType: 'DATA_DEVELOPMENT_RELEASE',
+      sourceRef: '42',
+    }))).toBeUndefined();
+    expect(dataServiceDevelopmentSourceUrl(service(90, {
+      sourceType: 'DATA_DEVELOPMENT_DATA_SERVICE',
+      sourceRef: 'not-a-node',
+    }))).toBeUndefined();
   });
 });

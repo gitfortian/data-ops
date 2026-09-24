@@ -1,4 +1,5 @@
 import { BRAND_CSS_VARIABLES } from '@/styles/brand';
+import { dataServiceDetailUrl } from '@/pages/data-service/utils';
 import { history } from '@umijs/max';
 import {
   Button,
@@ -606,6 +607,7 @@ export default function DataServiceNodeEditor({
       && !publicationState.updateAvailable
       && publicationState.detail?.enabled,
     );
+  const runtimeServiceId = publicationState?.detail?.id;
 
   const goOnline = async () => {
     if (!latestPublished || goingOnline || publicationError) return;
@@ -940,12 +942,12 @@ export default function DataServiceNodeEditor({
         >
           {onlineActionLabel}
         </Button>
-        {publicationState?.published ? (
+        {publicationState?.published && runtimeServiceId ? (
           <Button
             block
             className="mt-2"
             icon={<ExternalLink size={14} />}
-            onClick={() => history.push('/data-service')}
+            onClick={() => history.push(dataServiceDetailUrl(runtimeServiceId))}
           >
             打开 API 服务
           </Button>

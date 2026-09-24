@@ -14,6 +14,10 @@ public interface DatasetDao {
 
   int insertDataset(DatasetPO dataset);
 
+  void lockSourceTaskAsset(Long projectId, long sourceTaskAssetId);
+
+  boolean lockDatasetForUpdate(Long projectId, long datasetId);
+
   int insertVersion(DatasetVersionPO version);
 
   int insertField(DatasetFieldPO field);

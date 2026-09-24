@@ -29,7 +29,8 @@ io.yak.ops.business.development
 │   └── model           # release-center query projections
 ├── editor              # editor preference application boundary
 ├── lineage             # outbox / worker / write transaction / analysis adapter
-│   └── analysis        # shared Lineage analysis-contract implementation
+│   ├── analysis        # shared Lineage analysis-contract implementation
+│   └── model           # editor-time Lineage preview projection
 ├── domain              # truth-bearing facts / value objects / invariants only
 ├── repository          # persistence contracts + JDBC/MyBatis adapters
 ├── dao                 # MyBatis primitives
@@ -85,7 +86,7 @@ release.DevelopmentReleaseService
 editor.DevelopmentEditorSettingsService
 ```
 
-Controller 只依赖这些入口以及明确保留的 legacy lineage preview corridor，不直接进入 Repository / DAO。
+Controller 只依赖这些入口和 `lineage.DevelopmentSqlLineagePreviewService` read facade，不直接进入 Repository / DAO。
 
 ## Task Subsystem
 
@@ -182,7 +183,6 @@ DerivedAwareSqlColumnLineageParser
 DevelopmentDataServiceNodeService
 DevelopmentDataServiceSqlCompiler      # logic-free compatibility shell
 DevelopmentDraftConflictException
-DevelopmentSqlLineagePreviewService
 DevelopmentSqlLineageService
 DevelopmentTaskValidationException
 SqlColumnLineageParser

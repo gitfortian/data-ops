@@ -7,7 +7,7 @@
 ```text
 controller
    -> node / directory / task / execution / dataset / dataservice / release / standard / editor
-   -> frozen legacy preview corridor
+   -> lineage preview read facade / model
 
 node        -> domain + repository -> dao
 directory   -> domain + repository -> dao
@@ -34,7 +34,7 @@ domain      -> framework-light truth/value types only
 
 | From | Allowed module-internal targets |
 |---|---|
-| `controller` | `node`, `directory`, `task`, `execution`, `dataset`, `dataservice`, `release`, `standard`, `editor`, legacy preview |
+| `controller` | `node`, `directory`, `task`, `execution`, `dataset`, `dataservice`, `release`, `standard`, `editor`, `lineage` preview facade/model |
 | `node` | `domain`, `repository` |
 | `directory` | `domain`, `repository` |
 | `task` | `domain`, `repository`, `lineage`, compatibility exception corridor |
@@ -42,7 +42,7 @@ domain      -> framework-light truth/value types only
 | `dataset` | `domain`, `repository` |
 | `dataservice` | `domain`, `repository`; adjacent Data Service publication/runtime application boundary |
 | `release` | `domain`, `repository`; `release.model` 只能作为 read projection |
-| `lineage` | `domain`, `repository`, frozen legacy SQL parser implementation |
+| `lineage` | `domain`, `repository`, frozen legacy SQL parser implementation; `lineage.model` may expose shared Lineage read types |
 | `standard` | `domain`, `repository`, frozen legacy SQL parser implementation; semantic `api` SPI (see Cross-module Corridors) |
 | `editor` | `repository` |
 | `repository` | `domain`, `dao`, persistence primitives |

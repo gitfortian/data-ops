@@ -42,7 +42,7 @@ class DatasetPublisherTest {
         taskAsset(11L, SourceAvailability.ONLINE, "SQL", 71L, 3);
     when(fixture.taskCatalog.get(11L)).thenReturn(asset);
     when(fixture.repository.insertDataset("sales", "sales dataset")).thenReturn(21L);
-    when(fixture.schemaDiscovery.discover(21L, asset)).thenReturn(List.of());
+    when(fixture.schemaDiscovery.preview(asset)).thenReturn(List.of());
     stubVersion(fixture.repository, 21L, 31L, 1, 11L, 71L, 3);
 
     DatasetDetail result =
@@ -97,7 +97,7 @@ class DatasetPublisherTest {
         .thenReturn(List.of(version1), List.of(version2, version1));
     when(fixture.repository.listFields(31L)).thenReturn(List.of());
     when(fixture.repository.listFields(32L)).thenReturn(List.of());
-    when(fixture.schemaDiscovery.discover(21L, asset)).thenReturn(List.of());
+    when(fixture.schemaDiscovery.preview(asset)).thenReturn(List.of());
     when(fixture.repository.nextVersionNo(21L)).thenReturn(2);
     when(fixture.repository.appendVersion(
             argThat(
@@ -225,6 +225,60 @@ class DatasetPublisherTest {
                 new DatasetPublishCommand(11L, "sales", null, List.of())));
   }
 
+  @Test
+  void releasePublicationRechecksTheSourceOnlyAfterObtainingItsLock() {
+    Fixture fixture = fixture();
+    DatasetTaskAssetSnapshot asset =
+        taskAsset(11L, SourceAvailability.ONLINE, "SQL", 71L, 3);
+    when(fixture.taskCatalog.get(11L)).thenReturn(asset);
+    when(fixture.repository.findDatasetBySourceTaskAssetId(11L)).thenReturn(Optional.empty());
+    when(fixture.repository.insertDataset("sales", "sales dataset")).thenReturn(21L);
+    when(fixture.repository.nextVersionNo(21L)).thenReturn(1);
+    when(fixture.repository.appendVersion(argThat(draft -> draft.datasetId() == 21L)))
+        .thenReturn(31L);
+    when(fixture.repository.findDataset(21L)).thenReturn(Optional.of(dataset(21L, 31L)));
+    when(fixture.repository.findVersion(31L)).thenReturn(Optional.of(version(31L, 21L, 1, 11L, 71L, 3)));
+    when(fixture.repository.listVersions(21L)).thenReturn(List.of(version(31L, 21L, 1, 11L, 71L, 3)));
+    when(fixture.repository.listFields(31L)).thenReturn(List.of());
+    when(fixture.schemaDiscovery.preview(asset)).thenReturn(List.of());
+
+    fixture.publisher.publishFromRelease(
+        new DatasetPublishCommand(11L, "sales", "sales dataset", List.of()));
+
+    var order = org.mockito.Mockito.inOrder(fixture.repository);
+    order.verify(fixture.repository).findDatasetBySourceTaskAssetId(11L);
+    order.verify(fixture.repository).lockSourceTaskAsset(11L);
+    order.verify(fixture.repository).findDatasetBySourceTaskAssetId(11L);
+  }
+
+  @Test
+  void publicationRejectsARevisionThatChangedDuringSchemaDiscovery() {
+    Fixture fixture = fixture();
+    DatasetTaskAssetSnapshot prepared =
+        taskAsset(11L, SourceAvailability.ONLINE, "SQL", 71L, 3);
+    DatasetTaskAssetSnapshot current =
+        taskAsset(11L, SourceAvailability.ONLINE, "SQL", 72L, 4);
+    when(fixture.taskCatalog.get(11L)).thenReturn(prepared, current);
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> fixture.publisher.publish(
+            new DatasetPublishCommand(
+                11L,
+                "sales",
+                null,
+                List.of(new DatasetFieldSpec(
+                    null,
+                    "id",
+                    "id",
+                    DatasetFieldDataType.NUMBER,
+                    false,
+                    null,
+                    DatasetFieldRole.DIMENSION)))));
+
+    verify(fixture.repository, never()).insertDataset("sales", null);
+  }
+
   private Fixture fixture() {
     DatasetRepository repository = mock(DatasetRepository.class);
     DatasetTaskCatalogGateway taskCatalog = mock(DatasetTaskCatalogGateway.class);
@@ -234,15 +288,16 @@ class DatasetPublisherTest {
     DatasetFieldNormalizer fieldNormalizer =
         new DatasetFieldNormalizer(repository, new DatasetFieldIdentity());
     DatasetVersionWriter versionWriter = new DatasetVersionWriter(repository, fieldNormalizer);
-    DatasetPublisher publisher =
-        new DatasetPublisher(
+    DatasetPublicationTransaction transaction =
+        new DatasetPublicationTransaction(
             repository,
             reader,
             taskCatalog,
-            schemaDiscovery,
             fieldNormalizer,
             versionWriter,
             lineagePublisher);
+    DatasetPublisher publisher =
+        new DatasetPublisher(repository, reader, taskCatalog, schemaDiscovery, transaction);
     return new Fixture(repository, taskCatalog, schemaDiscovery, publisher);
   }
 

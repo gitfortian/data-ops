@@ -67,7 +67,7 @@ public class DatasetVersionWriter {
       int sourceTaskRevisionNo,
       List<DatasetFieldSpec> fields,
       boolean requireExistingDataset) {
-    requireDatasetIfNecessary(datasetId, requireExistingDataset);
+    lockDatasetIfNecessary(datasetId, requireExistingDataset);
     int versionNo = repository.nextVersionNo(datasetId);
     long versionId =
         repository.appendVersion(
@@ -88,7 +88,7 @@ public class DatasetVersionWriter {
       String sql,
       List<DatasetFieldSpec> fields,
       boolean requireExistingDataset) {
-    requireDatasetIfNecessary(datasetId, requireExistingDataset);
+    lockDatasetIfNecessary(datasetId, requireExistingDataset);
     int versionNo = repository.nextVersionNo(datasetId);
     long versionId =
         repository.appendVersion(
@@ -102,10 +102,11 @@ public class DatasetVersionWriter {
     return versionId;
   }
 
-  private void requireDatasetIfNecessary(long datasetId, boolean required) {
+  private void lockDatasetIfNecessary(long datasetId, boolean required) {
     if (!required) {
       return;
     }
+    repository.lockDatasetForUpdate(datasetId);
     repository
         .findDataset(datasetId)
         .orElseThrow(() -> new IllegalArgumentException("Dataset 不存在：" + datasetId));

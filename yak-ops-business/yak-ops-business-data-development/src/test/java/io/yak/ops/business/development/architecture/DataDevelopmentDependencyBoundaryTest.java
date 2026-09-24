@@ -26,7 +26,6 @@ class DataDevelopmentDependencyBoundaryTest {
           "DevelopmentDataServiceNodeService.java",
           "DevelopmentDataServiceSqlCompiler.java",
           "DevelopmentDraftConflictException.java",
-          "DevelopmentSqlLineagePreviewService.java",
           "DevelopmentSqlLineageService.java",
           "DevelopmentTaskValidationException.java",
           "SqlColumnLineageParser.java",

@@ -82,7 +82,7 @@ execution.model
 
 这些对象可以组合多个 truth owner 的数据用于 API 展示，但自身不是新的 truth owner。不能因为它们是 record / DTO 就放进 `domain`。
 
-当前仍保留在 `domain` 的历史 SQL lineage preview/result 等类型属于后续 legacy lineage 拆分范围，不在本次结构重构中顺手迁移。
+SQL Lineage preview 是 lineage 子系统的只读 read model，放在 `lineage.model`；它不拥有 Lineage 或 Development 的业务事实。历史 `SqlLineageResult` 仍按兼容 contract 管理，不作为新增 read model 的放置模板。
 
 ## 13 条硬规则
 

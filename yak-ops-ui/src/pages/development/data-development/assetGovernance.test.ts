@@ -2,6 +2,7 @@ import {
   datasetAssetDetailUrl,
   datasetAssetGovernanceLabel,
   datasetIdFromSearch,
+  datasetVersionNoFromSearch,
   type AssetSourceLookup,
 } from './assetGovernance';
 
@@ -28,6 +29,9 @@ describe('dataset asset governance projection', () => {
   it('keeps the stable Dataset identity in the Asset-to-Development deep link', () => {
     expect(datasetIdFromSearch('?datasetId=55')).toBe('55');
     expect(datasetIdFromSearch('?nodeId=7')).toBeUndefined();
+    expect(datasetVersionNoFromSearch('?datasetId=55&datasetVersionNo=3')).toBe(3);
+    expect(datasetVersionNoFromSearch('?datasetVersionNo=0')).toBeUndefined();
+    expect(datasetVersionNoFromSearch('?datasetVersionNo=abc')).toBeUndefined();
   });
 
   it('keeps not-indexed, permission and unavailable distinct', () => {

@@ -1,4 +1,4 @@
-package io.yak.ops.business.development.service;
+package io.yak.ops.business.development.lineage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -11,9 +11,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.datasource.domain.catalog.CatalogColumn;
 import io.yak.ops.business.development.domain.DevelopmentNode;
-import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview;
+import io.yak.ops.business.development.lineage.model.DevelopmentSqlLineagePreview;
 import io.yak.ops.business.development.lineage.analysis.DevelopmentSqlProjectionLineageAnalyzer;
 import io.yak.ops.business.development.repository.DevelopmentNodeRepository;
+import io.yak.ops.business.development.service.DerivedAwareSqlColumnLineageParser;
+import io.yak.ops.business.development.service.SqlColumnLineageParser;
+import io.yak.ops.business.development.service.SqlTableLineageParser;
 import io.yak.ops.business.lineage.domain.LineageRelationType;
 import java.sql.Types;
 import java.time.Instant;
@@ -46,7 +49,7 @@ class DevelopmentSqlLineagePreviewServiceTest {
     assertEquals(1, preview.graph().relations().size());
     assertEquals(LineageRelationType.READS_FROM, preview.graph().relations().get(0).relationType());
     assertTrue(preview.graph().nodes().stream()
-        .anyMatch(asset -> "table:12:ods.orders".equals(asset.assetKey())));
+        .anyMatch(asset -> "table:12:.ods.orders".equals(asset.assetKey())));
     assertTrue(preview.columnMappings().stream()
         .anyMatch(mapping -> "amount".equals(mapping.sourceColumn())
             && "total_amount".equals(mapping.targetColumn())

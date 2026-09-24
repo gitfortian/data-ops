@@ -1,16 +1,20 @@
-package io.yak.ops.business.development.service;
+package io.yak.ops.business.development.lineage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.development.domain.DevelopmentNode;
-import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview;
-import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview.ColumnMapping;
-import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview.PreviewAsset;
-import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview.PreviewGraph;
-import io.yak.ops.business.development.domain.DevelopmentSqlLineagePreview.PreviewRelation;
+import io.yak.ops.business.development.lineage.model.DevelopmentSqlLineagePreview;
+import io.yak.ops.business.development.lineage.model.DevelopmentSqlLineagePreview.ColumnMapping;
+import io.yak.ops.business.development.lineage.model.DevelopmentSqlLineagePreview.PreviewAsset;
+import io.yak.ops.business.development.lineage.model.DevelopmentSqlLineagePreview.PreviewGraph;
+import io.yak.ops.business.development.lineage.model.DevelopmentSqlLineagePreview.PreviewRelation;
 import io.yak.ops.business.development.repository.DevelopmentNodeRepository;
+import io.yak.ops.business.development.service.DevelopmentSqlLineageService;
+import io.yak.ops.business.development.service.SqlColumnLineageParser;
+import io.yak.ops.business.development.service.SqlTableLineageParser;
+import io.yak.ops.business.development.service.TableIdentityResolver;
 import io.yak.ops.business.lineage.analysis.sql.SqlProjectionLineageAnalyzer;
 import io.yak.ops.business.lineage.domain.LineageAssetType;
 import io.yak.ops.business.lineage.domain.LineageDirection;

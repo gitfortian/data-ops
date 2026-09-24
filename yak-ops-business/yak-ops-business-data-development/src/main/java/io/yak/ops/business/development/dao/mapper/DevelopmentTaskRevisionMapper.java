@@ -9,4 +9,7 @@ public interface DevelopmentTaskRevisionMapper extends BaseMapper<DevelopmentTas
 
   @Select("SELECT COALESCE(MAX(revision_no), 0) FROM yak_dev_task_revision WHERE node_id = #{nodeId}")
   Integer selectMaxRevisionNo(@Param("nodeId") Long nodeId);
+
+  @Select("SELECT id FROM yak_dev_task_revision WHERE node_id = #{nodeId} ORDER BY revision_no DESC LIMIT 1 FOR UPDATE")
+  Long selectLatestIdForUpdateByNodeId(@Param("nodeId") Long nodeId);
 }

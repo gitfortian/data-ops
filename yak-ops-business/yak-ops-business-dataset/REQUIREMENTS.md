@@ -21,6 +21,7 @@
 6. 事务提交后请求派生血缘刷新。
 
 同一个 current TaskRevision 的 release publish 保持幂等，不重复追加版本。
+同一个 Project 内对同一个 TaskAsset 的并发 release publish 必须串行化，最终只保留一个稳定 Dataset identity 和对应版本序列。
 
 ## 3. SQL_QUERY Version
 
