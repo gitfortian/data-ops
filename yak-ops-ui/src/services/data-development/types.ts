@@ -38,51 +38,22 @@ export interface DevelopmentResourceNodeBase {
 
 export interface DevelopmentNode extends DevelopmentResourceNodeBase {
   type: DevelopmentTaskType;
-  taskType?: DevelopmentTaskType;
-  sqlDialect?: DevelopmentSqlDialect;
 }
 
 export interface DevelopmentOutputNode extends DevelopmentResourceNodeBase {
   type: DevelopmentOutputNodeType;
 }
 
-export type DevelopmentResourceNode = DevelopmentNode | DevelopmentOutputNode;
+export type DevelopmentResourceNode =
+  | DevelopmentNode
+  | DevelopmentOutputNode;
 
 export interface CreateDevelopmentNodePayload {
   name: string;
   type: DevelopmentNodeType;
+  /** Omit to create the node in the data-development root. */
   directoryId?: DevelopmentId;
 }
-
-export interface MoveDevelopmentResourcePayload {
-  directoryId?: DevelopmentId | null;
-}
-
-export type DevelopmentSqlDialect =
-  | 'GENERIC'
-  | 'MYSQL'
-  | 'TIDB'
-  | 'GOLDENDB'
-  | 'GBASE8C'
-  | 'GBASE8A'
-  | 'GBASE8S'
-  | 'HANA'
-  | 'ORACLE'
-  | 'POSTGRE_SQL'
-  | 'DB2'
-  | 'OPEN_GAUSS'
-  | 'SQL_SERVER'
-  | 'OCEANBASE'
-  | 'YASHAN_DB'
-  | 'HIGHGO'
-  | 'IRIS'
-  | 'XUGU'
-  | 'DUCKDB'
-  | 'DORIS'
-  | 'STARROCKS'
-  | 'CLICKHOUSE'
-  | 'KINGBASE'
-  | 'DAMENG';
 
 export interface DevelopmentTaskDefinition {
   taskType: DevelopmentTaskType;
@@ -91,10 +62,17 @@ export interface DevelopmentTaskDefinition {
   configJson: string;
 }
 
-export interface DevelopmentTaskDraft extends DevelopmentTaskDefinition {
+export interface DevelopmentTaskDraft {
   nodeId: DevelopmentId;
+  definition: DevelopmentTaskDefinition;
   draftRevision: number;
-  updateTime?: string;
+  createTime?: string | null;
+  updateTime?: string | null;
+}
+
+export interface SaveDevelopmentTaskDraftPayload
+  extends DevelopmentTaskDefinition {
+  baseRevision: number;
 }
 
 export interface DevelopmentTaskRevisionSummary {
@@ -102,19 +80,13 @@ export interface DevelopmentTaskRevisionSummary {
   nodeId: DevelopmentId;
   revisionNo: number;
   sourceDraftRevision: number;
-  taskType: DevelopmentTaskType;
-  schemaVersion: number;
-  checksum?: string;
+  checksum: string;
   createTime?: string;
 }
 
-export interface DevelopmentTaskRevision extends DevelopmentTaskRevisionSummary {
-  content: string;
-  configJson: string;
-}
-
-export interface SaveDevelopmentTaskDraftPayload extends DevelopmentTaskDefinition {
-  baseRevision: number;
+export interface DevelopmentTaskRevision
+  extends DevelopmentTaskRevisionSummary {
+  definition: DevelopmentTaskDefinition;
 }
 
 export type DevelopmentTaskExecutionStatus =
@@ -125,6 +97,7 @@ export type DevelopmentTaskExecutionStatus =
   | 'CANCELLED'
   | 'TIMEOUT';
 
+/** Immediate acknowledgement after the shared Task Runtime accepts an editor run. */
 export interface DevelopmentTaskExecutionSubmission {
   id: DevelopmentId;
   nodeId: DevelopmentId;
@@ -133,24 +106,14 @@ export interface DevelopmentTaskExecutionSubmission {
   status: DevelopmentTaskExecutionStatus;
 }
 
+/** Workbench projection of one durable execution. */
 export interface DevelopmentTaskRunResult {
   executionId?: DevelopmentId;
   runtimeExecutionId?: string | null;
   status: DevelopmentTaskExecutionStatus;
-  message?: string | null;
-  durationMs?: number | null;
-  output?: Record<string, unknown>;
-}
-
-export interface DevelopmentTaskExecutionQuery {
-  pageNo?: number;
-  pageSize?: number;
-  keyword?: string;
-  status?: DevelopmentTaskExecutionStatus;
-  taskType?: DevelopmentTaskType;
-  triggerType?: string;
-  startTime?: string;
-  endTime?: string;
+  message: string;
+  durationMs: number;
+  output: Record<string, unknown>;
 }
 
 export interface DevelopmentSqlResultColumn {
@@ -296,46 +259,79 @@ export interface DevelopmentTaskExecutionPage {
   pageSize: number;
 }
 
-export interface DevelopmentTaskRevisionPage {
-  records: DevelopmentTaskRevisionSummary[];
+export interface DevelopmentTaskExecutionQuery {
+  pageNo?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: DevelopmentTaskExecutionStatus;
+  taskType?: DevelopmentTaskType;
+  triggerType?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export type DevelopmentReleaseStatus = 'ONLINE' | 'OFFLINE' | 'DISABLED';
+
+export interface DevelopmentReleaseSummary {
+  assetId: DevelopmentId;
+  nodeId: DevelopmentId;
+  taskName: string;
+  taskType: DevelopmentTaskType;
+  status: DevelopmentReleaseStatus;
+  currentRevisionId: DevelopmentId;
+  currentRevisionNo: number;
+  latestRevisionNo: number;
+  hasNewerRevision: boolean;
+  checksum: string;
+  revisionCreateTime?: string | null;
+  updateTime?: string | null;
+}
+
+export interface DevelopmentReleasePage {
+  records: DevelopmentReleaseSummary[];
   total: number;
   pageNo: number;
   pageSize: number;
+  onlineCount: number;
+  offlineCount: number;
+  disabledCount: number;
 }
 
-export interface DevelopmentTaskPublishValidationIssue {
-  code: string;
-  field?: string | null;
-  message: string;
+export interface DevelopmentReleaseDetail {
+  release: DevelopmentReleaseSummary;
+  currentRevision: DevelopmentTaskRevision;
+  revisions: DevelopmentTaskRevisionSummary[];
 }
 
-export interface DevelopmentTaskPublishValidation {
-  nodeId: DevelopmentId;
-  draftRevision: number;
-  valid: boolean;
-  issues: DevelopmentTaskPublishValidationIssue[];
+export interface DevelopmentReleaseQuery {
+  pageNo?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: DevelopmentReleaseStatus | 'ALL';
+  taskType?: DevelopmentTaskType;
 }
 
-export interface DevelopmentDatasetDefinition {
-  nodeId: DevelopmentId;
-  sourceNodeId?: DevelopmentId | null;
-  sourceRevisionId?: DevelopmentId | null;
-  sourceRevisionNo?: number | null;
-  name?: string;
-  description?: string;
-  schemaJson?: string;
-  configured?: boolean;
-}
+export type YakEditorLineHighlight = 'line' | 'none' | 'gutter' | 'all';
+export type YakSqlCompletionFqn = 'none' | 'table' | 'all';
+export type YakRenderWhitespace =
+  | 'none'
+  | 'boundary'
+  | 'selection'
+  | 'trailing'
+  | 'all';
 
-export interface DevelopmentDataServiceDefinition {
-  nodeId: DevelopmentId;
-  sourceNodeId?: DevelopmentId | null;
-  sourceRevisionId?: DevelopmentId | null;
-  sourceRevisionNo?: number | null;
-  name?: string;
-  description?: string;
-  path?: string;
-  method?: string;
-  definitionJson?: string;
-  configured?: boolean;
+export interface YakEditorSettings {
+  theme: string;
+  fontSize: number;
+  fontFamily: string;
+  customFontFamily: string;
+  lineHeight: number;
+  showLineNumber: boolean;
+  showMinimap: boolean;
+  wordWrap: boolean;
+  folding: boolean;
+  renderLineHighlight: YakEditorLineHighlight;
+  keywordCase: 'lower' | 'upper';
+  sqlCompletionFQN: YakSqlCompletionFqn;
+  renderWhitespace: YakRenderWhitespace;
 }
