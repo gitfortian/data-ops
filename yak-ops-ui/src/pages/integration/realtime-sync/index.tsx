@@ -1,6 +1,11 @@
 import { history } from '@umijs/max';
 import { ConfigProvider } from 'antd';
+import { useEffect, useMemo } from 'react';
 
+import {
+  parseIntegrationSourceHandoff,
+  stripIntegrationCreateHandoff,
+} from '../sourceHandoff';
 import CreateRealtimeTaskDrawer from './components/CreateRealtimeTaskDrawer';
 import RealtimeSyncFilterBar from './components/RealtimeSyncFilterBar';
 import RealtimeSyncPageHeader from './components/RealtimeSyncPageHeader';
@@ -11,6 +16,10 @@ import { useRealtimeSyncPage } from './hooks/useRealtimeSyncPage';
 import { getRealtimeEditPath } from './utils';
 
 const RealtimeSyncPage = () => {
+  const sourceHandoff = useMemo(
+    () => parseIntegrationSourceHandoff(history.location.search),
+    [],
+  );
   const {
     jobs,
     pagination,
@@ -37,6 +46,16 @@ const RealtimeSyncPage = () => {
     deleteTask,
     copyTaskId,
   } = useRealtimeSyncPage();
+
+  useEffect(() => {
+    if (!sourceHandoff) return;
+    setCreateOpen(true);
+    history.replace(
+      `${history.location.pathname}${stripIntegrationCreateHandoff(
+        history.location.search,
+      )}`,
+    );
+  }, [setCreateOpen, sourceHandoff]);
 
   return (
     <ConfigProvider theme={REALTIME_SYNC_PAGE_THEME}>
@@ -80,6 +99,7 @@ const RealtimeSyncPage = () => {
 
         <CreateRealtimeTaskDrawer
           open={createOpen}
+          initialSource={sourceHandoff}
           onClose={() => setCreateOpen(false)}
         />
 
