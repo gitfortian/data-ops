@@ -3,6 +3,7 @@ export default {
   'pages.dataDevelopment.authoring.draftNotSaved': 'Draft · 尚未保存',
   'pages.dataDevelopment.authoring.notPublished': '尚未发布',
   'pages.dataDevelopment.authoring.publishedRevision': 'Published v{revision}',
+  'pages.dataDevelopment.authoring.publishedLoading': '读取发布状态…',
   'pages.dataDevelopment.authoring.publishedUnknown': '发布状态暂不可用',
   'pages.dataDevelopment.authoring.saving': '保存中',
   'pages.dataDevelopment.authoring.unsavedChanges': '有未保存修改',
