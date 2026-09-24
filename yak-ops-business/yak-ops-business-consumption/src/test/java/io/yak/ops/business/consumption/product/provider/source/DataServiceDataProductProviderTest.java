@@ -66,6 +66,17 @@ class DataServiceDataProductProviderTest {
   }
 
   @Test
+  void projectionFailureIsUnavailableRatherThanNotFound() {
+    DataServiceDefinition definition = definition(true);
+    when(reader.require(88L)).thenReturn(definition);
+    when(viewFactory.view(definition)).thenThrow(new IllegalArgumentException("invalid runtime projection"));
+
+    var result = provider.get(new ProductKey(ProductType.DATA_SERVICE, "88"));
+
+    assertEquals(ProductLookupState.UNAVAILABLE, result.state());
+  }
+
+  @Test
   void ownerFilterDoesNotPretendToBeAnEmptySearch() {
     var result = provider.search(new ProductSearchCriteria(
         ProductType.DATA_SERVICE, null, "integration-team", null, null, null, null));
