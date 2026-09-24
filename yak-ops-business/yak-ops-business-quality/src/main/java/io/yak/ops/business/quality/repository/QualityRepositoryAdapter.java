@@ -277,8 +277,9 @@ public class QualityRepositoryAdapter implements
   }
 
   private TableMonitorSummary tableSummary(TableMonitorSummaryRow row) {
-    return new TableMonitorSummary(row.getTableName(), row.getMonitorId(), row.getMonitorName(), nvl(row.getMonitorCount()),
-        nvl(row.getRuleCount()), checkResult(row.getLastResult()), row.getLastRunTime());
+    return new TableMonitorSummary(row.getTableName(), row.getMonitorId(), row.getMonitorName(),
+        nvl(row.getMonitorCount()), nvl(row.getRuleCount()), nvl(row.getEnabledMonitorCount()),
+        row.getLastExecutionNo(), checkResult(row.getLastResult()), row.getLastRunTime());
   }
 
   private AlertEvent alertEvent(AlertEventRow row) {

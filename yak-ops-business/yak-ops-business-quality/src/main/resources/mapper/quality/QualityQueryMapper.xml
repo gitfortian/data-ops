@@ -144,7 +144,9 @@
       MIN(m.id) AS monitor_id,
       MIN(m.monitor_name) AS monitor_name,
       COUNT(DISTINCT m.id) AS monitor_count,
+      COUNT(DISTINCT CASE WHEN m.enabled = 1 THEN m.id END) AS enabled_monitor_count,
       COUNT(r.id) AS rule_count,
+      SUBSTRING_INDEX(GROUP_CONCAT(m.last_execution_no ORDER BY m.last_run_time DESC, m.id DESC), ',', 1) AS last_execution_no,
       SUBSTRING_INDEX(GROUP_CONCAT(m.last_result ORDER BY m.last_run_time DESC, m.id DESC), ',', 1) AS last_result,
       MAX(m.last_run_time) AS last_run_time
     FROM yak_quality_monitor m

@@ -27,6 +27,8 @@ Quality production 内部允许的 top-level 依赖：
 
 同一 top-level package 内部可以互相协作，但不会因此自动成为其他 package 的公共 API。声明图和实际源码图都必须无环。
 
+`asset` package 可实现 `yak-ops-spi` 的稳定 `SectionProvider` contract；该接口不构成 Quality 对 Asset module 的依赖。Quality Section 通过本模块既有 Reader 获取注册、Monitor 和 Execution 摘要。
+
 ## 2. Controller Corridors
 
 Controller 只能进入显式 Application role，不允许直接调用 Repository / DAO / Gateway / Schedule engine。

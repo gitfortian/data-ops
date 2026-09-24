@@ -74,6 +74,8 @@ public final class QualityQueryPO {
     private String monitorName;
     private Integer monitorCount;
     private Integer ruleCount;
+    private Integer enabledMonitorCount;
+    private String lastExecutionNo;
     private String lastResult;
     private LocalDateTime lastRunTime;
   }

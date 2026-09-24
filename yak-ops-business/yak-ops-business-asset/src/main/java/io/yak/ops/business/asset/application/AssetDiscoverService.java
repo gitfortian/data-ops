@@ -6,8 +6,6 @@ import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
 import io.yak.ops.business.lineage.query.LineageQueryService;
-import io.yak.ops.business.quality.domain.QualityDomain.TableMonitorSummary;
-import io.yak.ops.business.quality.monitor.QualityMonitorReader;
 import io.yak.ops.business.security.api.ClassificationView;
 import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.common.bean.po.asset.AssetItemPO;
@@ -18,7 +16,6 @@ import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.spi.section.SectionType;
 import io.yak.framework.security.service.RbacPermissionService;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,7 +44,6 @@ public class AssetDiscoverService {
   private final ObjectProvider<LineageQueryService> lineageQuery;
   private final ObjectProvider<SecurityClassificationQueryApi> securityQuery;
   private final ObjectProvider<RbacPermissionService> rbacPermissionServices;
-  private final ObjectProvider<QualityMonitorReader> qualityReader;
   private final ObjectProvider<AssetStatusTtlFacts> ttlFacts;
   private final ObjectProvider<SectionProvider> sectionProviders;
 
@@ -150,45 +146,29 @@ public class AssetDiscoverService {
   }
 
   private SectionView quality(AssetItemPO po) {
-    QualityMonitorReader reader = qualityReader.getIfAvailable();
-    if (reader == null) {
-      return SectionView.unavailable("质量读侧未装配");
-    }
     try {
-      String dataSourceId = null;
-      String database = null;
-      String schema = null;
-      String table = null;
       Optional<AssetDescriptor> descriptor = providerRegistry.find(AssetSourceType.METADATA)
           .flatMap(provider -> provider.refresh(po.getSourceId()));
-      if (descriptor.isPresent()) {
-        Map<String, String> extra = descriptor.get().extra();
-        dataSourceId = extra.get("dataSourceId");
-        database = extra.get("databaseName");
-        schema = extra.get("schemaName");
-        table = extra.get("tableName");
-      }
-      if (!org.springframework.util.StringUtils.hasText(dataSourceId)
-          || !org.springframework.util.StringUtils.hasText(database)
-          || !org.springframework.util.StringUtils.hasText(table)) {
+      if (descriptor.isEmpty()) {
         return SectionView.unavailable("物理表位置不完整，无法查询质量证据");
       }
-      String resolvedTable = table;
-      List<TableMonitorSummary> matches = reader.tableSummaries(
-              Long.parseLong(dataSourceId), database, schema).stream()
-          .filter(summary -> resolvedTable.equalsIgnoreCase(summary.tableName()))
-          .toList();
-      if (matches.isEmpty()) {
-        return SectionView.empty("该物理表尚未纳入质量监控");
+      Map<String, String> coordinates = descriptor.get().extra();
+      if (!org.springframework.util.StringUtils.hasText(coordinates.get("dataSourceId"))
+          || !org.springframework.util.StringUtils.hasText(coordinates.get("databaseName"))
+          || !org.springframework.util.StringUtils.hasText(coordinates.get("tableName"))) {
+        return SectionView.unavailable("物理表位置不完整，无法查询质量证据");
       }
-      return SectionView.ok(Map.of(
-          "monitorCount", matches.size(),
-          "monitors", matches.stream().map(summary -> Map.of(
-              "monitorId", summary.monitorId() == null ? "" : summary.monitorId(),
-              "monitorName", summary.monitorName() == null ? "" : summary.monitorName(),
-              "ruleCount", summary.ruleCount(),
-              "lastResult", summary.lastResult() == null ? "NOT_RUN" : summary.lastResult().name(),
-              "lastRunTime", summary.lastRunTime() == null ? "" : summary.lastRunTime())).toList()));
+      SectionContext context = new SectionContext(
+          po.getAssetKey(), po.getSourceType(), po.getSourceId(), coordinates);
+      Optional<SectionProvider> provider = sectionProviders.orderedStream()
+          .filter(candidate -> candidate.sectionType() == SectionType.QUALITY)
+          .filter(candidate -> candidate.supports(context))
+          .findFirst();
+      if (provider.isEmpty()) {
+        return SectionView.unavailable("质量分区读取提供方未装配");
+      }
+      SectionContract contract = provider.get().query(context);
+      return new SectionView(contract.status().name(), contract.reason(), contract);
     } catch (RuntimeException e) {
       return SectionView.unavailable("质量查询暂不可用，请稍后重试");
     }

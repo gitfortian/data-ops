@@ -109,11 +109,16 @@ public class AssetController {
       HttpServletRequest httpRequest) {
     String operator = currentUserProvider.getCurrentUser(httpRequest);
     AssetDiscoverService.SectionView view = discoverService.section(id, sectionType, operator);
-    if (view.data() instanceof AssetSectionResult sourceContract) {
-      return Result.success(sourceContract);
-    }
     SectionType type = SectionType.valueOf(sectionType.trim().toUpperCase());
     AssetView asset = assetService.get(id);
+    if (view.data() instanceof io.yak.ops.spi.section.SectionContract contract) {
+      Map<String, Object> values = contract.summary() == null
+          ? Map.of() : contract.summary().values();
+      return Result.success(new AssetSectionResult(
+          contract.sectionType(), contract.status(), contract.ownerDomain(),
+          new SectionMapSummary(values), contract.reason(), contract.updatedAt(),
+          contract.actions(), contract.evidence(), contract.provenance(), contract.capability()));
+    }
     return Result.success(toSectionResult(type, view, asset));
   }
 
