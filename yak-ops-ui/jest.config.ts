@@ -3,7 +3,8 @@
 // `configUmiAlias()` parses config/config.ts before Jest starts. That couples unit tests to
 // build-time plugins/OpenAPI/application config and makes focused tests fail before test
 // discovery when the app config cannot be evaluated in the Jest bootstrap process.
-// Data Development tests only need the stable source alias, so define it explicitly here.
+// Data Development tests only need the stable source alias and a small runtime history shim,
+// so define both explicitly here instead of loading Umi's build-time CLI entry in jsdom.
 import { createConfig } from '@umijs/max/test.js';
 
 export default (): any => {
@@ -15,6 +16,7 @@ export default (): any => {
     moduleNameMapper: {
       ...(config.moduleNameMapper || {}),
       '^@/(.*)$': '<rootDir>/src/$1',
+      '^umi$': '<rootDir>/tests/mocks/umi.ts',
     },
     testEnvironmentOptions: {
       ...(config?.testEnvironmentOptions || {}),
