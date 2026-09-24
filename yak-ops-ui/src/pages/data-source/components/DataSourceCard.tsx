@@ -1,11 +1,19 @@
+import DatabaseIcons from '@/components/data-source/icons/DatabaseIcons';
 import { YakButton } from '@/components/ui';
+import { buildBatchSourceOnboardingPath } from '@/features/integration/sourceOnboarding';
 import type { DataSourceRecord } from '@/services/data-source';
-import { history, useIntl } from '@umijs/max';
+import { history, useAccess, useIntl } from '@umijs/max';
 import { motion } from 'framer-motion';
-import { Clock3, Pencil, ScrollText, Trash2, Unplug } from 'lucide-react';
+import {
+  ArrowRightLeft,
+  Clock3,
+  Pencil,
+  ScrollText,
+  Trash2,
+  Unplug,
+} from 'lucide-react';
 
 import { getEnvironmentTagConfigMap, PAGE_ANIMATION } from '../constants';
-import DatabaseIcons from '@/components/data-source/icons/DatabaseIcons';
 import type { DataSourcePermissions, DataSourceViewMode } from '../types';
 import { dataSourceRecordKey } from '../types';
 import DataSourceStatus from './DataSourceStatus';
@@ -32,6 +40,7 @@ const DataSourceCard = ({
   onTestConnection,
 }: DataSourceCardProps) => {
   const intl = useIntl();
+  const access = useAccess();
   const environmentTagConfigMap = getEnvironmentTagConfigMap(intl);
   const environmentConfig = environmentTagConfigMap[
     record.environment || ''
@@ -44,7 +53,10 @@ const DataSourceCard = ({
     icon: null,
   };
   const currentId = dataSourceRecordKey(record.id);
+  const canCreateBatch =
+    Boolean(currentId) && access.hasPermission('task:batch:create');
   const actionAvailable =
+    canCreateBatch ||
     permissions.canTest ||
     permissions.canUpdate ||
     permissions.canDelete ||
@@ -115,6 +127,20 @@ const DataSourceCard = ({
 
         {actionAvailable ? (
           <div className="flex shrink-0 -translate-y-1 gap-1 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            {canCreateBatch ? (
+              <YakButton
+                type="text"
+                size="small"
+                iconOnly
+                title="从此数据源创建离线同步"
+                className="!h-[30px] !w-[30px] !rounded-[8px] !border !border-[#e9ebef] !bg-white/90 !p-0 !text-[#7e838d] !shadow-[0_1px_3px_rgba(31,35,41,0.035)] hover:!text-[#4058c8]"
+                icon={<ArrowRightLeft size={14} strokeWidth={1.9} />}
+                onClick={() =>
+                  history.push(buildBatchSourceOnboardingPath(currentId))
+                }
+              />
+            ) : null}
+
             {permissions.canTest ? (
               <YakButton
                 type="text"
@@ -131,7 +157,9 @@ const DataSourceCard = ({
               />
             ) : null}
 
-            {permissions.canReadSqlExecutions && record.id !== undefined && record.id !== null ? (
+            {permissions.canReadSqlExecutions &&
+            record.id !== undefined &&
+            record.id !== null ? (
               <YakButton
                 type="text"
                 size="small"
@@ -210,7 +238,11 @@ const DataSourceCard = ({
             {intl.formatMessage({ id: 'pages.datasource.card.lastUpdated' })}
           </span>
           <strong className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-medium leading-[18px] text-[#737882]">
-            <Clock3 size={11} strokeWidth={1.8} className="shrink-0 text-[#9ca0a9]" />
+            <Clock3
+              size={11}
+              strokeWidth={1.8}
+              className="shrink-0 text-[#9ca0a9]"
+            />
             <span className="truncate">{record.updateTime || '-'}</span>
           </strong>
         </div>
