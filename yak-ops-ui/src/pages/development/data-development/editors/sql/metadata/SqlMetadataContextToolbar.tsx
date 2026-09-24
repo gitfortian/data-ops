@@ -11,6 +11,7 @@ import {
 } from '../../../sqlDatabaseProfiles';
 import type { DevelopmentId } from '../../../types';
 import {
+  enrichSqlDataSourceContext,
   selectSqlDatabaseContext,
   selectSqlDataSourceContext,
   selectSqlSchemaContext,
@@ -18,9 +19,17 @@ import {
 } from './sqlMetadataContextStore';
 import {
   getSqlDataSourceBinding,
+  listSqlDatabases,
   listSqlDataSources,
+  listSqlSchemas,
+  type SqlDataSourceBinding,
   type SqlDataSourceOption,
 } from './sqlMetadataService';
+import {
+  resolveSqlEffectiveDatabase,
+  resolveSqlEffectiveSchema,
+  uniqueSqlContextValues,
+} from './sqlTaskContextConfig';
 
 interface SqlMetadataContextToolbarProps {
   nodeId: DevelopmentId;
@@ -42,6 +51,9 @@ interface ContextPickerProps {
   items: ContextPickerItem[];
   loading?: boolean;
   disabled?: boolean;
+  invalid?: boolean;
+  disabledReason?: string;
+  invalidReason?: string;
   popupWidth?: number;
   minWidthClassName?: string;
   onSelect: (value: string) => void;
@@ -59,6 +71,9 @@ const ContextPicker = ({
   items,
   loading = false,
   disabled = false,
+  invalid = false,
+  disabledReason,
+  invalidReason,
   popupWidth = 210,
   minWidthClassName = 'min-w-[108px]',
   onSelect,
@@ -149,34 +164,31 @@ const ContextPicker = ({
       <button
         type="button"
         aria-label={ariaLabel}
-        title={
-          disabled
-            ? intl.formatMessage(
-                { id: 'pages.dataDevelopment.editor.sqlMetadata.fixedByConnection' },
-                { label: ariaLabel },
-              )
-            : undefined
-        }
+        title={invalid ? invalidReason : disabled ? disabledReason : undefined}
         disabled={disabled}
         className={[
-          'flex h-6 max-w-[176px] items-center gap-1.5 rounded-[3px] px-1.5 text-[12px] outline-none transition-colors',
+          'flex h-6 max-w-[190px] items-center gap-1.5 rounded-[3px] border px-1.5 text-[12px] outline-none transition-colors',
           minWidthClassName,
-          disabled
-            ? 'cursor-not-allowed bg-[#f5f6f7] text-[#a4a9b2]'
-            : open || displayValue
-              ? 'bg-[#f1f2f4] text-[#161823]'
-              : 'text-[#30323b] hover:bg-[#f5f5f6]',
+          invalid
+            ? 'border-[#fda29b] bg-[#fff4f2] text-[#b42318]'
+            : disabled
+              ? 'cursor-not-allowed border-transparent bg-[#f5f6f7] text-[#a4a9b2]'
+              : open || displayValue
+                ? 'border-transparent bg-[#f1f2f4] text-[#161823]'
+                : 'border-transparent text-[#30323b] hover:bg-[#f5f5f6]',
         ].join(' ')}
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
         <span
           className={[
             'min-w-0 flex-1 truncate text-left',
-            disabled
-              ? 'text-[#8f959f]'
-              : displayValue
-                ? 'text-[#30323b]'
-                : 'text-[#7b808a]',
+            invalid
+              ? 'text-[#b42318]'
+              : disabled
+                ? 'text-[#8f959f]'
+                : displayValue
+                  ? 'text-[#30323b]'
+                  : 'text-[#7b808a]',
           ].join(' ')}
         >
           {displayValue || placeholder}
@@ -205,16 +217,25 @@ const SqlMetadataContextToolbar = ({
   const context = useSqlMetadataContext(nodeId);
   const [dataSources, setDataSources] = useState<SqlDataSourceOption[]>([]);
   const [dataSourceLoading, setDataSourceLoading] = useState(false);
+  const [dataSourceResolved, setDataSourceResolved] = useState(false);
+  const [binding, setBinding] = useState<SqlDataSourceBinding>({});
   const [bindingLoading, setBindingLoading] = useState(false);
+  const [databases, setDatabases] = useState<string[]>([]);
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [schemas, setSchemas] = useState<string[]>([]);
+  const [schemaLoading, setSchemaLoading] = useState(false);
 
   const text = (id: string) => intlRef.current.formatMessage({ id });
 
   useEffect(() => {
     let active = true;
     setDataSourceLoading(true);
+    setDataSourceResolved(false);
     listSqlDataSources()
       .then((values) => {
-        if (active) setDataSources(values || []);
+        if (!active) return;
+        setDataSources(values || []);
+        setDataSourceResolved(true);
       })
       .catch((error) => {
         if (active) {
@@ -243,33 +264,34 @@ const SqlMetadataContextToolbar = ({
     [context.dialect, dataSources],
   );
 
+  const selectedDataSource = useMemo(
+    () => dataSources.find((item) => item.value === context.dataSourceId),
+    [context.dataSourceId, dataSources],
+  );
+  const dataSourceInvalid = Boolean(
+    dataSourceResolved &&
+      context.dataSourceId &&
+      (!selectedDataSource ||
+        !sqlDialectMatchesDataSource(context.dialect, selectedDataSource.dbType)),
+  );
+
   useEffect(() => {
-    if (!context.dataSourceId || !dataSources.length) return;
-    const selected = dataSources.find((item) => item.value === context.dataSourceId);
-    if (!selected) return;
-
-    if (!sqlDialectMatchesDataSource(context.dialect, selected.dbType)) {
-      selectSqlDataSourceContext(nodeId, undefined);
-      return;
-    }
-
-    if (context.dataSourceName) return;
-    selectSqlDataSourceContext(nodeId, {
-      id: selected.value,
-      name: selected.label,
-      dbType: selected.dbType,
+    if (!context.dataSourceId || !selectedDataSource || dataSourceInvalid) return;
+    enrichSqlDataSourceContext(nodeId, {
+      id: selectedDataSource.value,
+      name: selectedDataSource.label,
     });
   }, [
     context.dataSourceId,
-    context.dataSourceName,
-    context.dialect,
-    dataSources,
+    dataSourceInvalid,
     nodeId,
+    selectedDataSource,
   ]);
 
   useEffect(() => {
     let active = true;
-    if (!context.dataSourceId) {
+    setBinding({});
+    if (!context.dataSourceId || dataSourceInvalid) {
       setBindingLoading(false);
       return () => {
         active = false;
@@ -278,14 +300,11 @@ const SqlMetadataContextToolbar = ({
 
     setBindingLoading(true);
     getSqlDataSourceBinding(context.dataSourceId)
-      .then((binding) => {
-        if (!active) return;
-        selectSqlDatabaseContext(nodeId, binding.database);
-        selectSqlSchemaContext(nodeId, binding.schema);
+      .then((value) => {
+        if (active) setBinding(value || {});
       })
       .catch((error) => {
         if (!active) return;
-        selectSqlDatabaseContext(nodeId, undefined);
         message.error(
           errorText(
             error,
@@ -300,7 +319,46 @@ const SqlMetadataContextToolbar = ({
     return () => {
       active = false;
     };
-  }, [context.dataSourceId, nodeId]);
+  }, [context.dataSourceId, dataSourceInvalid]);
+
+  useEffect(() => {
+    let active = true;
+    setDatabases([]);
+    if (!context.dataSourceId || dataSourceInvalid) {
+      setDatabaseLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setDatabaseLoading(true);
+    listSqlDatabases(context.dataSourceId)
+      .then((values) => {
+        if (active) setDatabases(values || []);
+      })
+      .catch((error) => {
+        if (!active) return;
+        message.error(
+          errorText(
+            error,
+            text('pages.dataDevelopment.editor.sqlMetadata.queryDatabaseFailed'),
+          ),
+        );
+      })
+      .finally(() => {
+        if (active) setDatabaseLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [context.dataSourceId, dataSourceInvalid]);
+
+  const effectiveDatabase = resolveSqlEffectiveDatabase(
+    context.database,
+    binding.database,
+  );
+  const effectiveSchema = resolveSqlEffectiveSchema(context.schema, binding.schema);
 
   const normalizedDbType = context.dbType?.trim().toUpperCase();
   const showSchemaPicker = Boolean(
@@ -310,6 +368,48 @@ const SqlMetadataContextToolbar = ({
         normalizedDbType,
       ),
   );
+
+  useEffect(() => {
+    let active = true;
+    setSchemas([]);
+    if (
+      !showSchemaPicker ||
+      !context.dataSourceId ||
+      dataSourceInvalid
+    ) {
+      setSchemaLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setSchemaLoading(true);
+    listSqlSchemas(context.dataSourceId, effectiveDatabase)
+      .then((values) => {
+        if (active) setSchemas(values || []);
+      })
+      .catch((error) => {
+        if (!active) return;
+        message.error(
+          errorText(
+            error,
+            text('pages.dataDevelopment.editor.sqlMetadata.querySchemaFailed'),
+          ),
+        );
+      })
+      .finally(() => {
+        if (active) setSchemaLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    context.dataSourceId,
+    dataSourceInvalid,
+    effectiveDatabase,
+    showSchemaPicker,
+  ]);
 
   const dataSourceItems = compatibleDataSources.map((item) => ({
     value: item.value,
@@ -324,18 +424,67 @@ const SqlMetadataContextToolbar = ({
     ),
   }));
 
+  const databaseItems = uniqueSqlContextValues([
+    context.database,
+    binding.database,
+    ...databases,
+  ]).map((value) => ({
+    value,
+    label:
+      !context.database && binding.database === value
+        ? intl.formatMessage(
+            { id: 'pages.dataDevelopment.editor.sqlMetadata.connectionDefault' },
+            { value },
+          )
+        : value,
+  }));
+
+  const schemaItems = uniqueSqlContextValues([
+    context.schema,
+    binding.schema,
+    ...schemas,
+  ]).map((value) => ({
+    value,
+    label:
+      !context.schema && binding.schema === value
+        ? intl.formatMessage(
+            { id: 'pages.dataDevelopment.editor.sqlMetadata.connectionDefault' },
+            { value },
+          )
+        : value,
+  }));
+
   const databasePlaceholder = !context.dataSourceId
     ? '<database>'
     : bindingLoading
       ? intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.loading' })
-      : intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.defaultDatabase' });
+      : intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.selectDatabase' });
   const schemaPlaceholder = bindingLoading
     ? intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.loading' })
-    : intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.defaultSchema' });
+    : intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.selectSchema' });
   const dataSourcePlaceholder =
     context.dialect === 'GENERIC'
       ? '@datasource'
       : `@${getDevelopmentSqlDialectLabel(context.dialect)}`;
+  const dataSourceDisplayValue = dataSourceInvalid
+    ? `@${context.dataSourceName || context.dataSourceId}`
+    : context.dataSourceName
+      ? `@${context.dataSourceName}`
+      : undefined;
+  const databaseDisplayValue =
+    !context.database && binding.database
+      ? intl.formatMessage(
+          { id: 'pages.dataDevelopment.editor.sqlMetadata.connectionDefault' },
+          { value: binding.database },
+        )
+      : effectiveDatabase;
+  const schemaDisplayValue =
+    !context.schema && binding.schema
+      ? intl.formatMessage(
+          { id: 'pages.dataDevelopment.editor.sqlMetadata.connectionDefault' },
+          { value: binding.schema },
+        )
+      : effectiveSchema;
 
   return (
     <>
@@ -346,8 +495,10 @@ const SqlMetadataContextToolbar = ({
         <ContextPicker
           ariaLabel={intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.selectDataSource' })}
           value={context.dataSourceId}
-          displayValue={context.dataSourceName ? `@${context.dataSourceName}` : undefined}
+          displayValue={dataSourceDisplayValue}
           placeholder={dataSourcePlaceholder}
+          invalid={dataSourceInvalid}
+          invalidReason={intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.dataSourceInvalid' })}
           icon={
             <Server
               size={13}
@@ -372,27 +523,39 @@ const SqlMetadataContextToolbar = ({
 
         <ContextPicker
           ariaLabel="Database"
-          value={context.database}
-          displayValue={bindingLoading ? undefined : context.database}
+          value={effectiveDatabase}
+          displayValue={bindingLoading ? undefined : databaseDisplayValue}
           placeholder={databasePlaceholder}
           icon={<Database size={13} strokeWidth={1.8} className="text-[#8f959f]" />}
-          items={[]}
-          disabled
+          items={databaseItems}
+          loading={databaseLoading || bindingLoading}
+          disabled={!context.dataSourceId || dataSourceInvalid}
+          disabledReason={intl.formatMessage({
+            id: dataSourceInvalid
+              ? 'pages.dataDevelopment.editor.sqlMetadata.dataSourceInvalid'
+              : 'pages.dataDevelopment.editor.sqlMetadata.selectDataSourceFirst',
+          })}
           minWidthClassName="min-w-[112px]"
-          onSelect={() => undefined}
+          onSelect={(value) => selectSqlDatabaseContext(nodeId, value)}
         />
 
         {showSchemaPicker ? (
           <ContextPicker
             ariaLabel="Schema"
-            value={context.schema}
-            displayValue={bindingLoading ? undefined : context.schema}
+            value={effectiveSchema}
+            displayValue={bindingLoading ? undefined : schemaDisplayValue}
             placeholder={schemaPlaceholder}
             icon={<Layers3 size={13} strokeWidth={1.8} className="text-[#8f959f]" />}
-            items={[]}
-            disabled
+            items={schemaItems}
+            loading={schemaLoading || bindingLoading}
+            disabled={!context.dataSourceId || dataSourceInvalid}
+            disabledReason={intl.formatMessage({
+              id: dataSourceInvalid
+                ? 'pages.dataDevelopment.editor.sqlMetadata.dataSourceInvalid'
+                : 'pages.dataDevelopment.editor.sqlMetadata.selectDataSourceFirst',
+            })}
             minWidthClassName="min-w-[104px]"
-            onSelect={() => undefined}
+            onSelect={(value) => selectSqlSchemaContext(nodeId, value)}
           />
         ) : null}
       </div>
