@@ -21,19 +21,65 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** 反向影响分析单测:METRIC 别名合并、同指标多类命中去重、缺失指标剔除。 */
+/** 指标影响分析单测:依赖健康语义、METRIC 别名合并、去重与缺失处理。 */
 class MetricImpactServiceTest {
 
+  private MetricCatalogService catalogService;
   private MetricDependencyRepository dependencyRepository;
+  private MetricUsageApi usageApi;
   private MetricReferenceResolver referenceResolver;
   private MetricImpactService service;
 
   @BeforeEach
   void setUp() {
+    catalogService = mock(MetricCatalogService.class);
     dependencyRepository = mock(MetricDependencyRepository.class);
+    usageApi = mock(MetricUsageApi.class);
     referenceResolver = mock(MetricReferenceResolver.class);
     service = new MetricImpactService(
-        mock(MetricCatalogService.class), dependencyRepository, mock(MetricUsageApi.class), referenceResolver);
+        catalogService, dependencyRepository, usageApi, referenceResolver);
+  }
+
+  @Test
+  void checkUpstreamChangesExposesStableDependencyHealthWithoutBreakingLegacyStatus() {
+    long metricId = 100L;
+    when(catalogService.get(metricId)).thenReturn(metric(metricId, 5));
+    when(dependencyRepository.listByMetric(metricId)).thenReturn(List.of(
+        upstreamDep(7L, "REF_METRIC", "metric_7", 3),
+        upstreamDep(8L, "COMPOSITION", "metric_8", 3),
+        upstreamDep(9L, "REF_METRIC", "metric_9", 3),
+        upstreamDep(10L, "CALIBER", "caliber_10", 3)));
+    when(referenceResolver.metricsById(any())).thenReturn(Map.of(
+        7L, metric(7L, 3),
+        8L, metric(8L, 4)));
+    when(referenceResolver.standardReference(10L))
+        .thenReturn(MetricReferenceResolver.Reference.EMPTY);
+    when(usageApi.summary(metricId))
+        .thenReturn(new MetricUsageApi.UsageSummary(metricId, 0, 0, 0, 0, 0, 0));
+
+    MetricImpactService.ImpactReport report = service.checkUpstreamChanges(metricId);
+
+    assertThat(report.changes()).hasSize(4);
+
+    MetricImpactService.DependencyChange upToDate = change(report, "metric_7");
+    assertThat(upToDate.dependencyHealth())
+        .isEqualTo(MetricImpactService.DependencyHealth.UP_TO_DATE);
+    assertThat(upToDate.changeStatus()).isEqualTo("UNCHANGED");
+
+    MetricImpactService.DependencyChange outdated = change(report, "metric_8");
+    assertThat(outdated.dependencyHealth())
+        .isEqualTo(MetricImpactService.DependencyHealth.OUTDATED);
+    assertThat(outdated.changeStatus()).isEqualTo("CHANGED");
+
+    MetricImpactService.DependencyChange removed = change(report, "metric_9");
+    assertThat(removed.dependencyHealth())
+        .isEqualTo(MetricImpactService.DependencyHealth.REMOVED);
+    assertThat(removed.changeStatus()).isEqualTo("MISSING");
+
+    MetricImpactService.DependencyChange unavailable = change(report, "caliber_10");
+    assertThat(unavailable.dependencyHealth())
+        .isEqualTo(MetricImpactService.DependencyHealth.UNAVAILABLE);
+    assertThat(unavailable.changeStatus()).isEqualTo("UNKNOWN");
   }
 
   @Test
@@ -70,6 +116,25 @@ class MetricImpactServiceTest {
     verify(dependencyRepository, never()).listByDependency(any(), any());
   }
 
+  private static MetricImpactService.DependencyChange change(
+      MetricImpactService.ImpactReport report, String dependencyCode) {
+    return report.changes().stream()
+        .filter(row -> dependencyCode.equals(row.dependencyCode()))
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private static MetricDependencyPO upstreamDep(
+      Long dependencyId, String type, String code, Integer version) {
+    MetricDependencyPO po = new MetricDependencyPO();
+    po.setMetricId(100L);
+    po.setDependencyType(type);
+    po.setDependencyId(dependencyId);
+    po.setDependencyCode(code);
+    po.setDependencyVersion(version);
+    return po;
+  }
+
   private static MetricDependencyPO dep(Long metricId, String type, Integer version) {
     MetricDependencyPO po = new MetricDependencyPO();
     po.setMetricId(metricId);
@@ -80,8 +145,12 @@ class MetricImpactServiceTest {
   }
 
   private static Metric metric(Long id) {
+    return metric(id, 1);
+  }
+
+  private static Metric metric(Long id, int version) {
     return new Metric(id, "M_" + id, "指标" + id, null, null, MetricType.DERIVED,
         null, null, null, null, null, null, null, null, null, null, null, null, null,
-        "tester", MetricStatus.ENABLED, 1, null, null, null, null);
+        "tester", MetricStatus.ENABLED, version, null, null, null, null);
   }
 }
