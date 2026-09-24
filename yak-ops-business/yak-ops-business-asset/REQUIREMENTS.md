@@ -59,8 +59,8 @@
 - Security、Metadata、Quality、Lifecycle 分区额外校验对应域权限；拒绝时不返回摘要或证据。质量摘要同时需要 `quality:monitor:read` 与 `quality:execution:read`。
 - Quality 仅适用于物理表，使用 Quality-owned `SectionProvider` 查询是否纳管、监控状态和最近执行摘要；Metadata 物理表复用 AssetProvider 的源域坐标。确认无监控为 EMPTY，定位失败或服务异常为 UNAVAILABLE。
 - Lifecycle 仅适用于 MODEL，复用 `AssetStatusTtlFacts`；未命中策略为 EMPTY，解析失败为 UNAVAILABLE。
-- Usage 先呈现 Asset 自有页面活动，并明确说明不代表业务消费；不新建 Usage Truth。
-- 记录分区查询状态、耗时和失败原因，日志不得包含治理摘要或敏感事实。
+- Usage 分别呈现 Asset 页面活动、Lineage 下游结构引用与消费域业务消费，标明来源、范围和状态；Metric 复用 MetricUsageApi，缺少其它对象稳定消费读侧时明确 UNAVAILABLE，不猜成 0，也不新建 Usage Truth。
+- Section 记录查询状态、总耗时、失败类别及 Provider 可用状态；日志不得包含治理摘要或敏感事实。
 
 ## Ticket 98：健康度 + 驾驶舱
 

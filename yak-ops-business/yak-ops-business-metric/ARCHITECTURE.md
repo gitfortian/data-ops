@@ -10,10 +10,11 @@ io.yak.ops.business.metric
 ├── repository/    MetricRepository(接口)+ MetricRepositoryAdapter(MyBatis 适配)
 ├── dao/mapper/    MetricMapper(BaseMapper)
 ├── api/           MetricQueryApi/MetricUsageApi/MetricLineageApi(SPI 接口;请求/响应 record)
+├── usage/         MetricUsageService + MetricAssetUsageSectionProvider（Metric-owned 统计与 Asset 只读投影）
 └── controller/v1/ MetricController + dto/ + vo/ + converter/
 ```
 
-后续包（按 ticket 增量）：`tag/`（49 标签）、`version/`（50 版本）、`lineage/`（51 血缘登记）、`usage/`（52 使用）、`impact/`（53 影响分析）、`service/`（54 元数据 API）。
+后续包（按 ticket 增量）：`tag/`（49 标签）、`version/`（50 版本）、`lineage/`（51 血缘登记）、`impact/`（53 影响分析）、`service/`（54 元数据 API）。
 
 ## 持久化
 
@@ -37,6 +38,8 @@ io.yak.ops.business.metric
 | `MetricQueryApi` | dataset/dashboard | 查询指标元数据、批量解析展示名 |
 | `MetricUsageApi` | dataset/dashboard/data-service | 消费方上报引用事件（异步容错） |
 | `MetricLineageApi` | 内部使用 | 指标 CRUD 时触发血缘注册 |
+| `SectionProvider(USAGE)` | Asset | 通过 `MetricUsageApi.summary` 读取消费引用数，不复制 Metric 使用真相 |
+| `SectionProvider(USAGE)` | Asset | 通过 `MetricUsageApi` 读取消费引用数；不复制 Metric 使用真相 |
 
 **消费方只经这些接口消费，不直读本模块表。**
 

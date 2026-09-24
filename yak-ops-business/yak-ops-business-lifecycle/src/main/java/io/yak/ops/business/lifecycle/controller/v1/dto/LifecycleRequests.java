@@ -120,6 +120,9 @@ public final class LifecycleRequests {
 
     @Size(max = 128, message = "搜索关键词不能超过 128 个字符")
     private String keyword;
+
+    @Min(value = 1, message = "模型 ID 必须大于 0")
+    private Long modelId;
   }
 
   @Data

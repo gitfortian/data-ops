@@ -31,6 +31,7 @@ import type {
 import { getStandardOptions } from '@/services/semantic/api';
 import type { SemanticStandardOption } from '@/services/semantic/types';
 import {
+  Button,
   Form,
   Input,
   InputNumber,
@@ -46,6 +47,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { history, useSearchParams } from '@umijs/max';
 import { PageHeader, rankColor } from '../shared';
 
 type Option = { label: string; value: number };
@@ -718,10 +720,21 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
 /* ================= 页面 ================= */
 const DataSecurityClassificationPage = () => {
   const { levelOptions, categoryOptions, categoryCodeOptions, levels, categories } = useDsecOptions();
+  const [searchParams] = useSearchParams();
+  const returnAssetIdValue = searchParams.get('returnAssetId');
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
+    ? Number(returnAssetIdValue)
+    : undefined;
 
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <PageHeader title="分级分类" subtitle="安全等级与数据分类字典、资产分级标签、敏感数据发现" />
+      <PageHeader
+        title="分级分类"
+        subtitle="安全等级与数据分类字典、资产分级标签、敏感数据发现"
+        extra={returnAssetId ? (
+          <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>返回资产详情</Button>
+        ) : undefined}
+      />
       <div className="mt-4">
         <Tabs
           items={[

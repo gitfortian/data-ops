@@ -1,6 +1,7 @@
 import { Alert, Button, Input, message, Modal, Select, Space, Statistic, Table, Tabs, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { history, useSearchParams } from '@umijs/max';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import {
@@ -37,7 +38,10 @@ const DISPATCH_STATUS_OPTIONS = (Object.keys(DISPATCH_STATUS_LABELS) as Dispatch
   label: DISPATCH_STATUS_LABELS[value],
 }));
 
-const ModelStatusTab = ({ onOpenWizard }: { onOpenWizard: (modelIds: number[]) => void }) => {
+const ModelStatusTab = ({ onOpenWizard, modelId }: {
+  onOpenWizard: (modelIds: number[]) => void;
+  modelId?: number;
+}) => {
   const { can } = usePermissionAccess();
   const canUpdate = can('data-lifecycle:update');
   const [records, setRecords] = useState<MonitorModelView[]>([]);
@@ -56,6 +60,7 @@ const ModelStatusTab = ({ onOpenWizard }: { onOpenWizard: (modelIds: number[]) =
       const result = await pageMonitorModels({
         pageNo,
         pageSize,
+        modelId,
         state: state || undefined,
         layerCode: layerCode || undefined,
         keyword: keyword.trim() || undefined,
@@ -68,7 +73,7 @@ const ModelStatusTab = ({ onOpenWizard }: { onOpenWizard: (modelIds: number[]) =
     } finally {
       setLoading(false);
     }
-  }, [pageNo, pageSize, state, layerCode, keyword]);
+  }, [pageNo, pageSize, state, layerCode, keyword, modelId]);
 
   useEffect(() => {
     void load();
@@ -420,6 +425,13 @@ const DispatchRecordsTab = () => {
 };
 
 const MonitorPage = () => {
+  const [searchParams] = useSearchParams();
+  const returnAssetIdValue = searchParams.get('returnAssetId');
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
+    ? Number(returnAssetIdValue)
+    : undefined;
+  const modelIdValue = searchParams.get('modelId');
+  const modelId = modelIdValue && /^\d+$/.test(modelIdValue) ? Number(modelIdValue) : undefined;
   const [summary, setSummary] = useState<MonitorSummary | null>(null);
   const [tab, setTab] = useState<'models' | 'records'>('models');
   const [wizardModelIds, setWizardModelIds] = useState<number[] | null>(null);
@@ -441,6 +453,9 @@ const MonitorPage = () => {
             跟踪各模型 TTL 生效状态；「待下发」表示策略已更新但尚未同步到存储
           </div>
         </div>
+        {returnAssetId ? (
+          <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>返回资产详情</Button>
+        ) : null}
       </div>
 
       <div className="mt-4 grid grid-cols-5 gap-4">
@@ -487,7 +502,10 @@ const MonitorPage = () => {
           ]}
         />
         {tab === 'models' ? (
-          <ModelStatusTab onOpenWizard={(ids) => ids.length > 0 && setWizardModelIds(ids)} />
+          <ModelStatusTab
+            modelId={modelId}
+            onOpenWizard={(ids) => ids.length > 0 && setWizardModelIds(ids)}
+          />
         ) : (
           <DispatchRecordsTab key={recordsReloadToken} />
         )}

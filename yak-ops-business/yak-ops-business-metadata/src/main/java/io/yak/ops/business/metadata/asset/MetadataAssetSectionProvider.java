@@ -57,8 +57,11 @@ public class MetadataAssetSectionProvider implements SectionProvider {
     values.put("databaseName", table.databaseName());
     values.put("schemaName", table.schemaName());
     values.put("tableName", table.tableName());
+    values.put("entityStatus", value(table.facts(), "entityStatus", "UNKNOWN"));
+    values.put("entityId", table.id());
     values.put("attributes", table.attributes());
     values.put("columns", columns.stream().map(EntityDTO::facts).toList());
+    values.put("columnCount", columns.size());
     return response(context, SectionStatus.OK, values, null, List.of(
         new SectionAction("返回资产目录", "/data-asset/catalog", context.assetKey())));
   }

@@ -215,6 +215,7 @@ export interface MonitorModelView {
 export interface MonitorModelQueryParams {
   pageNo: number;
   pageSize: number;
+  modelId?: number;
   state?: ModelState | '';
   layerCode?: string;
   keyword?: string;

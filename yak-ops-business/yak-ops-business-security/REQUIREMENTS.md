@@ -58,3 +58,9 @@
 ## 79 总览聚合
 
 - `SecurityOverviewService.overview()`:拼装等级数、分类数、已分级总数/ACTIVE/CANDIDATE、等级分布(LevelCount)、启用策略数、脱敏策略数、拒绝/脱敏计数、热点主体、合规汇总;只读、独立容错("查不到"≠异常)。
+
+## Asset Security Section
+
+- Security 作为事实 Owner 实现只读 `SectionProvider`，通过既有 `SecurityClassificationQueryApi` 查询 Asset source identity 对应的分级证据；物理表按 database/table 坐标读取表及列级记录。
+- 未发现分级记录返回 `EMPTY`；读侧失败返回 `UNAVAILABLE`；输出标明来源、分类生命周期状态限制，以及当前接口未提供对象级访问策略/脱敏匹配摘要的边界。
+- 该摘要是治理证据，不代表访问许可，也不把 Asset 快照提升为 Security Truth。

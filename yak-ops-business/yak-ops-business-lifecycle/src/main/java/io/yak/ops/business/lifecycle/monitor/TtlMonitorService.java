@@ -75,6 +75,11 @@ public class TtlMonitorService {
   /** 监控列表:状态/分层/关键字过滤 + 内存分页(模型量级内可控)。 */
   public PageData<MonitorModelView> pageModels(int pageNo, int pageSize,
       String state, String layerCode, String keyword) {
+    return pageModels(pageNo, pageSize, state, layerCode, keyword, null);
+  }
+
+  public PageData<MonitorModelView> pageModels(int pageNo, int pageSize,
+      String state, String layerCode, String keyword, Long modelId) {
     List<MonitorModelView> rows = bindingService.resolveAll().stream()
         .map(this::toView)
         .sorted(Comparator.comparing((MonitorModelView v) -> order(v.state()))
@@ -82,6 +87,7 @@ public class TtlMonitorService {
         .filter(v -> !StringUtils.hasText(state) || state.equalsIgnoreCase(v.state()))
         .filter(v -> !StringUtils.hasText(layerCode)
             || layerCode.equalsIgnoreCase(v.layerCode()))
+        .filter(v -> modelId == null || modelId.equals(v.modelId()))
         .filter(v -> !StringUtils.hasText(keyword)
             || contains(v.modelCode(), keyword) || contains(v.modelName(), keyword))
         .toList();
