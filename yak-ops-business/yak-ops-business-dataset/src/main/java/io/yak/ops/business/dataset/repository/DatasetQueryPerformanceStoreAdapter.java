@@ -61,6 +61,8 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
     row.setDataSourceId(trace.dataSourceId());
     row.setSqlPreview(trace.sql());
     row.setSqlHash(trace.sqlHash());
+    row.setActorType(trace.actorType());
+    row.setActorId(trace.actorId());
     row.setStatus(trace.status().name());
     row.setFailureStage(trace.failureStage());
     row.setErrorType(trace.errorType());
@@ -88,6 +90,8 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
         row.getDataSourceId(),
         row.getSqlPreview(),
         row.getSqlHash(),
+        row.getActorType(),
+        row.getActorId(),
         DatasetQueryStatus.valueOf(row.getStatus()),
         row.getFailureStage(),
         row.getErrorType(),
