@@ -22,6 +22,7 @@ public class DatasetQueryPerformanceRecorder {
 
   private final DatasetQueryPerformanceBuffer buffer;
   private final ObjectProvider<DatasetQueryPerformanceStore> storeProvider;
+  private final ObjectProvider<DatasetQueryActorResolver> actorResolverProvider;
   private final CurrentProject currentProject;
   private final DatasetQuerySqlEvidence sqlEvidence;
   private final DatasetQueryObservabilityProperties properties;
@@ -31,11 +32,13 @@ public class DatasetQueryPerformanceRecorder {
   public DatasetQueryPerformanceRecorder(
       DatasetQueryPerformanceBuffer buffer,
       ObjectProvider<DatasetQueryPerformanceStore> storeProvider,
+      ObjectProvider<DatasetQueryActorResolver> actorResolverProvider,
       CurrentProject currentProject,
       DatasetQuerySqlEvidence sqlEvidence,
       DatasetQueryObservabilityProperties properties) {
     this.buffer = buffer;
     this.storeProvider = storeProvider;
+    this.actorResolverProvider = actorResolverProvider;
     this.currentProject = currentProject;
     this.sqlEvidence = sqlEvidence;
     this.properties = properties;
@@ -45,6 +48,7 @@ public class DatasetQueryPerformanceRecorder {
   public DatasetQueryPerformanceRecorder(DatasetQueryPerformanceBuffer buffer) {
     this(
         buffer,
+        null,
         null,
         Optional::<ProjectContext>empty,
         new DatasetQuerySqlEvidence(),
@@ -74,6 +78,7 @@ public class DatasetQueryPerformanceRecorder {
       LOG.warn("Sanitizing Dataset query diagnostics failed; retaining no SQL evidence", exception);
       safeTrace = withoutSensitiveText(trace);
     }
+    safeTrace = withCurrentActor(safeTrace);
 
     DatasetQueryPerformanceStore store = storeProvider == null ? null : storeProvider.getIfAvailable();
     if (store == null) {
@@ -90,6 +95,21 @@ public class DatasetQueryPerformanceRecorder {
     }
 
     cleanupIfDue(store);
+  }
+
+  private DatasetQueryPerformance withCurrentActor(DatasetQueryPerformance trace) {
+    if (trace.actorId() != null) return trace;
+    DatasetQueryActorResolver resolver =
+        actorResolverProvider == null ? null : actorResolverProvider.getIfAvailable();
+    if (resolver == null) return trace;
+    try {
+      return resolver.currentActor()
+          .map(actor -> trace.withActor(actor.actorType(), actor.actorId()))
+          .orElse(trace);
+    } catch (RuntimeException exception) {
+      LOG.warn("Resolving Dataset query actor failed; retaining unattributed evidence", exception);
+      return trace;
+    }
   }
 
   private void cleanupIfDue(DatasetQueryPerformanceStore store) {
@@ -112,8 +132,8 @@ public class DatasetQueryPerformanceRecorder {
     return new DatasetQueryPerformance(
         trace.queryId(), trace.datasetId(), trace.datasetName(), trace.datasetVersionId(),
         trace.datasetVersionNo(), trace.sourceType(), trace.dataSourceId(), null, null,
-        trace.status(), trace.failureStage(), trace.errorType(), null, trace.waitMillis(),
-        trace.prepareMillis(), trace.executeMillis(), trace.transferMillis(), trace.totalMillis(),
-        trace.returnedRows(), trace.truncated(), trace.startedAt(), trace.finishedAt());
+        trace.actorType(), trace.actorId(), trace.status(), trace.failureStage(), trace.errorType(),
+        null, trace.waitMillis(), trace.prepareMillis(), trace.executeMillis(), trace.transferMillis(),
+        trace.totalMillis(), trace.returnedRows(), trace.truncated(), trace.startedAt(), trace.finishedAt());
   }
 }
