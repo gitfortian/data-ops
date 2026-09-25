@@ -30,12 +30,12 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Run Phase 4 consumption contract, provider, discovery, detail and subscription tests
+      - name: Run Phase 4 consumption contract, provider, discovery, detail, subscription and usage tests
         run: >-
           mvn -B
           -pl yak-ops-business/yak-ops-business-consumption
           -am
-          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest
+          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
       - name: Verify executable Boot assembly contains Consumption
