@@ -1,0 +1,30 @@
+package io.yak.ops.business.consumption.relationship.source;
+
+import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
+import io.yak.ops.business.dataservice.observability.DataServiceCallLogReader;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+/** Retryable projection from persistent source invocation audit into Consumption Usage Evidence. */
+@Service
+@RequiredArgsConstructor
+public class DataServiceUsageEvidenceSynchronizer {
+
+  private final DataServiceCallLogReader callLogReader;
+  private final DataServiceUsageEvidenceNormalizer normalizer;
+
+  public List<UsageNormalizationResult> synchronizeRecent(int limit) {
+    int boundedLimit = Math.max(1, Math.min(200, limit));
+    return callLogReader.recent().stream()
+        .limit(boundedLimit)
+        .map(normalizer::normalize)
+        .toList();
+  }
+
+  public List<UsageNormalizationResult> synchronizeRecentByProduct(Long apiId, int limit) {
+    return callLogReader.recentByApi(apiId, Math.max(1, Math.min(200, limit))).stream()
+        .map(normalizer::normalize)
+        .toList();
+  }
+}
