@@ -27,6 +27,10 @@ public class DatasetQueryPerformancePO {
   private String failureStage;
   private String errorType;
   private String errorMessage;
+  private String subjectType;
+  private String subjectSourceDomain;
+  private String subjectSourceIdentity;
+  private String subjectDisplayHint;
   private Long waitMillis;
   private Long prepareMillis;
   private Long executeMillis;
