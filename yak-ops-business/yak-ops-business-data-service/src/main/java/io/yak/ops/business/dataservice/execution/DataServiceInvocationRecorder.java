@@ -3,6 +3,7 @@ package io.yak.ops.business.dataservice.execution;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.dataservice.domain.DataServiceDefinition;
 import io.yak.ops.business.dataservice.domain.InvocationRecord;
+import io.yak.ops.business.dataservice.domain.SourceReference;
 import io.yak.ops.business.dataservice.domain.access.AccessContext;
 import io.yak.ops.business.dataservice.repository.DataServiceCallLogRepository;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
@@ -30,6 +31,7 @@ public class DataServiceInvocationRecorder {
       String errorMessage,
       AccessContext access) {
     AccessContext caller = access == null ? AccessContext.publicAccess() : access;
+    SourceReference source = definition.sourceReference();
     Map<String, String> safeParameters = sanitizer.sanitize(parameters);
     repository.save(new InvocationRecord(
         null,
@@ -39,8 +41,11 @@ public class DataServiceInvocationRecorder {
         definition.settings().path(),
         caller.callerType(),
         caller.apiKeyId(),
+        caller.consumerId(),
         caller.apiKeyName(),
         caller.apiKeyPrefix(),
+        source == null ? null : source.sourceRevisionId(),
+        source == null ? null : source.sourceRevisionNo(),
         limit(json(safeParameters), 4_000),
         success,
         durationMs,
