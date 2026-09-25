@@ -23,6 +23,8 @@ public class DatasetQueryPerformancePO {
   private String dataSourceId;
   private String sqlPreview;
   private String sqlHash;
+  private String actorType;
+  private String actorId;
   private String status;
   private String failureStage;
   private String errorType;
