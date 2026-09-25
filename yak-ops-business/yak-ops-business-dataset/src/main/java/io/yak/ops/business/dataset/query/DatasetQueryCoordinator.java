@@ -83,7 +83,7 @@ public class DatasetQueryCoordinator {
       long totalMillis = elapsedMillis(queryStartedAt);
       DatasetQueryResult result = execution.result().withQueryId(queryId);
       performanceRecorder.record(trace(
-          queryId, dataset, version, execution.dataSourceId(), execution.sql(),
+          queryId, datasetId, dataset, version, execution.dataSourceId(), execution.sql(),
           DatasetQueryStatus.SUCCESS, null, null, null, subject,
           execution.waitMillis(), servicePrepareMillis + execution.prepareMillis(),
           execution.executeMillis(), execution.transferMillis(), totalMillis,
@@ -92,7 +92,7 @@ public class DatasetQueryCoordinator {
     } catch (RuntimeException exception) {
       long totalMillis = elapsedMillis(queryStartedAt);
       performanceRecorder.record(trace(
-          queryId, dataset, version, dataSourceId, sql, classify(exception), stage,
+          queryId, datasetId, dataset, version, dataSourceId, sql, classify(exception), stage,
           exception.getClass().getSimpleName(), exception.getMessage(), subject,
           0L, servicePrepareMillis, 0L, 0L, totalMillis, 0, false, startedAt));
       throw exception;
@@ -101,6 +101,7 @@ public class DatasetQueryCoordinator {
 
   private DatasetQueryPerformance trace(
       String queryId,
+      long requestedDatasetId,
       Dataset dataset,
       DatasetVersion version,
       String dataSourceId,
@@ -120,7 +121,7 @@ public class DatasetQueryCoordinator {
       Instant startedAt) {
     return new DatasetQueryPerformance(
         queryId,
-        dataset == null ? 0L : dataset.id(),
+        dataset == null ? requestedDatasetId : dataset.id(),
         dataset == null ? null : dataset.name(),
         version == null ? null : version.id(),
         version == null ? null : version.versionNo(),
