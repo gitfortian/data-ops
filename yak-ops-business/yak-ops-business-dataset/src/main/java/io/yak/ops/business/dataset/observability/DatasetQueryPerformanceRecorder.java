@@ -112,8 +112,10 @@ public class DatasetQueryPerformanceRecorder {
     return new DatasetQueryPerformance(
         trace.queryId(), trace.datasetId(), trace.datasetName(), trace.datasetVersionId(),
         trace.datasetVersionNo(), trace.sourceType(), trace.dataSourceId(), null, null,
-        trace.status(), trace.failureStage(), trace.errorType(), null, trace.waitMillis(),
-        trace.prepareMillis(), trace.executeMillis(), trace.transferMillis(), trace.totalMillis(),
-        trace.returnedRows(), trace.truncated(), trace.startedAt(), trace.finishedAt());
+        trace.status(), trace.failureStage(), trace.errorType(), null,
+        trace.subjectType(), trace.subjectSourceDomain(), trace.subjectSourceIdentity(),
+        trace.subjectDisplayHint(), trace.waitMillis(), trace.prepareMillis(), trace.executeMillis(),
+        trace.transferMillis(), trace.totalMillis(), trace.returnedRows(), trace.truncated(),
+        trace.startedAt(), trace.finishedAt());
   }
 }

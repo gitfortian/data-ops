@@ -6,6 +6,7 @@ import io.yak.ops.business.dataset.DatasetQueryPerformance;
 import io.yak.ops.business.dataset.DatasetQueryRequest;
 import io.yak.ops.business.dataset.DatasetQueryResult;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetQuerySubject;
 import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceRecorder;
@@ -39,6 +40,11 @@ public class DatasetQueryCoordinator {
   }
 
   public DatasetQueryResult query(long datasetId, DatasetQueryRequest request) {
+    return query(datasetId, request, null);
+  }
+
+  public DatasetQueryResult query(
+      long datasetId, DatasetQueryRequest request, DatasetQuerySubject subject) {
     String queryId = UUID.randomUUID().toString().replace("-", "");
     Instant startedAt = Instant.now();
     long queryStartedAt = System.nanoTime();
@@ -76,60 +82,70 @@ public class DatasetQueryCoordinator {
       ExecutionResult execution = adapter.execute(dataset, version, fields, request);
       long totalMillis = elapsedMillis(queryStartedAt);
       DatasetQueryResult result = execution.result().withQueryId(queryId);
-      performanceRecorder.record(
-          new DatasetQueryPerformance(
-              queryId,
-              dataset.id(),
-              dataset.name(),
-              version.id(),
-              version.versionNo(),
-              version.sourceType().name(),
-              execution.dataSourceId(),
-              execution.sql(),
-              null,
-              DatasetQueryStatus.SUCCESS,
-              null,
-              null,
-              null,
-              execution.waitMillis(),
-              servicePrepareMillis + execution.prepareMillis(),
-              execution.executeMillis(),
-              execution.transferMillis(),
-              totalMillis,
-              result.returnedRows(),
-              result.truncated(),
-              startedAt,
-              Instant.now()));
+      performanceRecorder.record(trace(
+          queryId, datasetId, dataset, version, execution.dataSourceId(), execution.sql(),
+          DatasetQueryStatus.SUCCESS, null, null, null, subject,
+          execution.waitMillis(), servicePrepareMillis + execution.prepareMillis(),
+          execution.executeMillis(), execution.transferMillis(), totalMillis,
+          result.returnedRows(), result.truncated(), startedAt));
       return result;
     } catch (RuntimeException exception) {
       long totalMillis = elapsedMillis(queryStartedAt);
-      DatasetQueryStatus status = classify(exception);
-      performanceRecorder.record(
-          new DatasetQueryPerformance(
-              queryId,
-              datasetId,
-              dataset == null ? null : dataset.name(),
-              version == null ? null : version.id(),
-              version == null ? null : version.versionNo(),
-              version == null ? null : version.sourceType().name(),
-              dataSourceId,
-              sql,
-              null,
-              status,
-              stage,
-              exception.getClass().getSimpleName(),
-              exception.getMessage(),
-              0L,
-              servicePrepareMillis,
-              0L,
-              0L,
-              totalMillis,
-              0,
-              false,
-              startedAt,
-              Instant.now()));
+      performanceRecorder.record(trace(
+          queryId, datasetId, dataset, version, dataSourceId, sql, classify(exception), stage,
+          exception.getClass().getSimpleName(), exception.getMessage(), subject,
+          0L, servicePrepareMillis, 0L, 0L, totalMillis, 0, false, startedAt));
       throw exception;
     }
+  }
+
+  private DatasetQueryPerformance trace(
+      String queryId,
+      long requestedDatasetId,
+      Dataset dataset,
+      DatasetVersion version,
+      String dataSourceId,
+      String sql,
+      DatasetQueryStatus status,
+      String failureStage,
+      String errorType,
+      String errorMessage,
+      DatasetQuerySubject subject,
+      long waitMillis,
+      long prepareMillis,
+      long executeMillis,
+      long transferMillis,
+      long totalMillis,
+      int returnedRows,
+      boolean truncated,
+      Instant startedAt) {
+    return new DatasetQueryPerformance(
+        queryId,
+        dataset == null ? requestedDatasetId : dataset.id(),
+        dataset == null ? null : dataset.name(),
+        version == null ? null : version.id(),
+        version == null ? null : version.versionNo(),
+        version == null ? null : version.sourceType().name(),
+        dataSourceId,
+        sql,
+        null,
+        status,
+        failureStage,
+        errorType,
+        errorMessage,
+        subject == null ? null : subject.subjectType(),
+        subject == null ? null : subject.sourceDomain(),
+        subject == null ? null : subject.sourceIdentity(),
+        subject == null ? null : subject.displayHint(),
+        waitMillis,
+        prepareMillis,
+        executeMillis,
+        transferMillis,
+        totalMillis,
+        returnedRows,
+        truncated,
+        startedAt,
+        Instant.now());
   }
 
   private DatasetVersion resolveVersion(Dataset dataset, Integer versionNo) {

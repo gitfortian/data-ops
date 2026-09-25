@@ -65,6 +65,10 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
     row.setFailureStage(trace.failureStage());
     row.setErrorType(trace.errorType());
     row.setErrorMessage(trace.errorMessage());
+    row.setSubjectType(trace.subjectType());
+    row.setSubjectSourceDomain(trace.subjectSourceDomain());
+    row.setSubjectSourceIdentity(trace.subjectSourceIdentity());
+    row.setSubjectDisplayHint(trace.subjectDisplayHint());
     row.setWaitMillis(trace.waitMillis());
     row.setPrepareMillis(trace.prepareMillis());
     row.setExecuteMillis(trace.executeMillis());
@@ -92,6 +96,10 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
         row.getFailureStage(),
         row.getErrorType(),
         row.getErrorMessage(),
+        row.getSubjectType(),
+        row.getSubjectSourceDomain(),
+        row.getSubjectSourceIdentity(),
+        row.getSubjectDisplayHint(),
         value(row.getWaitMillis()),
         value(row.getPrepareMillis()),
         value(row.getExecuteMillis()),

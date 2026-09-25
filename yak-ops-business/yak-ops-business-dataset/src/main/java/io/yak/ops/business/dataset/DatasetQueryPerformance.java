@@ -17,6 +17,10 @@ public record DatasetQueryPerformance(
     String failureStage,
     String errorType,
     String errorMessage,
+    String subjectType,
+    String subjectSourceDomain,
+    String subjectSourceIdentity,
+    String subjectDisplayHint,
     long waitMillis,
     long prepareMillis,
     long executeMillis,
@@ -26,6 +30,37 @@ public record DatasetQueryPerformance(
     boolean truncated,
     Instant startedAt,
     Instant finishedAt) {
+
+  /** Compatibility constructor for existing callers that predate execution attribution. */
+  public DatasetQueryPerformance(
+      String queryId,
+      long datasetId,
+      String datasetName,
+      Long datasetVersionId,
+      Integer datasetVersionNo,
+      String sourceType,
+      String dataSourceId,
+      String sql,
+      String sqlHash,
+      DatasetQueryStatus status,
+      String failureStage,
+      String errorType,
+      String errorMessage,
+      long waitMillis,
+      long prepareMillis,
+      long executeMillis,
+      long transferMillis,
+      long totalMillis,
+      int returnedRows,
+      boolean truncated,
+      Instant startedAt,
+      Instant finishedAt) {
+    this(queryId, datasetId, datasetName, datasetVersionId, datasetVersionNo, sourceType,
+        dataSourceId, sql, sqlHash, status, failureStage, errorType, errorMessage,
+        null, null, null, null,
+        waitMillis, prepareMillis, executeMillis, transferMillis, totalMillis,
+        returnedRows, truncated, startedAt, finishedAt);
+  }
 
   /** Compatibility constructor for existing SUCCESS-only callers and tests. */
   public DatasetQueryPerformance(
@@ -59,6 +94,10 @@ public record DatasetQueryPerformance(
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
         waitMillis,
         prepareMillis,
         executeMillis,
@@ -79,5 +118,13 @@ public record DatasetQueryPerformance(
     finishedAt = finishedAt == null
         ? startedAt.plusMillis(Math.max(0L, totalMillis))
         : finishedAt;
+  }
+
+  public DatasetQuerySubject subject() {
+    if (subjectType == null || subjectSourceDomain == null || subjectSourceIdentity == null) {
+      return null;
+    }
+    return new DatasetQuerySubject(
+        subjectType, subjectSourceDomain, subjectSourceIdentity, subjectDisplayHint);
   }
 }
