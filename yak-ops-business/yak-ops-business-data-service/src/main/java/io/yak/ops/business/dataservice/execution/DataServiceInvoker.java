@@ -14,6 +14,8 @@ import io.yak.ops.business.dataservice.runtime.LocalDataServiceRuntime;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
+import io.yak.ops.core.security.ActionAuthorization;
+import io.yak.ops.core.security.ActionPermissionCodes;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,8 +39,10 @@ public class DataServiceInvoker {
   private final LocalDataServiceRuntime runtime;
   private final DataServiceInvocationRecorder recorder;
   private final ProjectContextScope projectContextScope;
+  private final ActionAuthorization actionAuthorization;
 
   public DataServiceQueryResponse test(Long id, Map<String, String> parameters) {
+    actionAuthorization.requirePermission(ActionPermissionCodes.DATA_SERVICE_INVOKE);
     return execute(reader.require(id), parameters, AccessContext.console(), false);
   }
 
@@ -51,6 +55,7 @@ public class DataServiceInvoker {
       Map<String, String> parameters,
       String rawApiKey,
       String clientIp) {
+    actionAuthorization.requirePermissionIfAuthenticated(ActionPermissionCodes.DATA_SERVICE_INVOKE);
     DataServiceDefinition definition = reader.requireByPath(normalizePath(servicePath));
     ProjectContext projectContext = requireProjectContext(definition);
     return projectContextScope.call(
@@ -118,52 +123,26 @@ public class DataServiceInvoker {
   }
 
   /** Invocation audit is evidence, not the business result. */
-  private void audit(
-      DataServiceDefinition definition,
-      Map<String, String> parameters,
-      boolean success,
-      long durationMs,
-      int rowCount,
-      String errorMessage,
-      AccessContext access) {
+  private void audit(DataServiceDefinition definition, Map<String, String> parameters, boolean success,
+      long durationMs, int rowCount, String errorMessage, AccessContext access) {
     try {
       recorder.record(definition, parameters, success, durationMs, rowCount, errorMessage, access);
     } catch (RuntimeException auditFailure) {
-      LOGGER.warn(
-          "Data Service invocation audit failed: apiId={}, success={}, cause={}",
-          definition == null ? null : definition.id(),
-          success,
-          safeMessage(auditFailure));
+      LOGGER.warn("Data Service invocation audit failed: apiId={}, success={}, cause={}",
+          definition == null ? null : definition.id(), success, safeMessage(auditFailure));
     }
   }
 
-  /** Persisted generation and runtime shape form the node-local cache namespace. */
   String runtimeNamespace(DataServiceDefinition definition) {
     SourceReference source = definition.sourceReference();
     RuntimePolicy policy = definition.runtimePolicy();
-    return new StringBuilder("api=")
-        .append(definition.id())
-        .append("|source=")
-        .append(source.sourceType())
-        .append(':')
-        .append(source.sourceRef())
-        .append("|revision=")
-        .append(source.sourceRevisionId())
-        .append(':')
-        .append(source.sourceRevisionNo())
-        .append("|generation=")
-        .append(definition.runtimeGeneration())
-        .append("|maxRows=")
-        .append(definition.settings().maxRows())
-        .append("|pagination=")
-        .append(definition.settings().paginationEnabled())
-        .append("|cache=")
-        .append(policy.cacheEnabled())
-        .append(':')
-        .append(policy.cacheTtlSeconds())
-        .append(':')
-        .append(policy.cacheMaxEntries())
-        .toString();
+    return new StringBuilder("api=").append(definition.id()).append("|source=")
+        .append(source.sourceType()).append(':').append(source.sourceRef()).append("|revision=")
+        .append(source.sourceRevisionId()).append(':').append(source.sourceRevisionNo()).append("|generation=")
+        .append(definition.runtimeGeneration()).append("|maxRows=").append(definition.settings().maxRows())
+        .append("|pagination=").append(definition.settings().paginationEnabled()).append("|cache=")
+        .append(policy.cacheEnabled()).append(':').append(policy.cacheTtlSeconds()).append(':')
+        .append(policy.cacheMaxEntries()).toString();
   }
 
   private DataServicePagination pagination(DataServiceDefinition definition, Map<String, String> parameters) {
@@ -182,9 +161,7 @@ public class DataServiceInvoker {
     if (parameters == null || parameters.isEmpty()) return Map.of();
     if (!paginationEnabled) return parameters;
     Map<String, String> result = new LinkedHashMap<>(parameters);
-    result.remove("pageNum");
-    result.remove("pageSize");
-    result.remove("returnTotalNum");
+    result.remove("pageNum"); result.remove("pageSize"); result.remove("returnTotalNum");
     return result;
   }
 
@@ -212,16 +189,11 @@ public class DataServiceInvoker {
     if (!value.startsWith("/")) value = "/" + value;
     value = value.replaceAll("/{2,}", "/");
     if (value.length() > 1 && value.endsWith("/")) value = value.substring(0, value.length() - 1);
-    if (!value.matches("/[A-Za-z0-9._~/-]+")) {
-      throw new IllegalArgumentException("服务路径仅支持字母、数字、-、_、. 和 /：" + value);
-    }
+    if (!value.matches("/[A-Za-z0-9._~/-]+")) throw new IllegalArgumentException("服务路径仅支持字母、数字、-、_、. 和 /：" + value);
     return value;
   }
 
-  private long elapsedMs(long started) {
-    return Math.max(0L, (System.nanoTime() - started) / 1_000_000L);
-  }
-
+  private long elapsedMs(long started) { return Math.max(0L, (System.nanoTime() - started) / 1_000_000L); }
   private String safeMessage(Throwable throwable) {
     String message = throwable == null ? null : throwable.getMessage();
     return StringUtils.hasText(message) ? message : "数据服务调用失败";
