@@ -19,8 +19,11 @@ public class DataServiceCallLogPO {
   private String servicePath;
   private String callerType;
   private Long apiKeyId;
+  private Long consumerId;
   private String apiKeyName;
   private String apiKeyPrefix;
+  private Long sourceRevisionId;
+  private Integer sourceRevisionNo;
   private String paramsJson;
   private Boolean success;
   private Long durationMs;
