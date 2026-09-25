@@ -31,13 +31,10 @@ public class DataServiceAuthorizer {
   public AccessContext authorize(DataServiceDefinition definition, String rawKey, String clientIp) {
     ipAccessAuthorizer.authorize(definition.id(), clientIp);
 
-    // Presence of a consumer grant is the primary access model. Disabled consumers still keep the
-    // API protected (fail closed); they simply cannot authenticate.
     if (consumerRepository.hasConfiguredAccess(definition.projectId(), definition.id())) {
       return authorizeConsumer(definition, rawKey, clientIp);
     }
 
-    // Compatibility corridor for APIs that have not been moved into the consumer model yet.
     if (definition.authMode() == AuthMode.NONE) return AccessContext.publicAccess();
     return authorizeLegacy(definition, rawKey);
   }
@@ -50,8 +47,6 @@ public class DataServiceAuthorizer {
     DataServiceApiKey key = repository.findByHash(secrets.hash(rawKey.trim()))
         .orElseThrow(this::invalidConsumerKey);
 
-    // A legacy API-scoped key created through the compatibility endpoints remains valid for its
-    // own API even after consumer management has been enabled for the same service.
     if (key.consumerId() == null) {
       if (definition.id().equals(key.apiId())) return admitLegacyKey(key);
       throw invalidConsumerKey();
@@ -69,8 +64,8 @@ public class DataServiceAuthorizer {
     validateKey(key, now);
     consumerIpAccessAuthorizer.authorize(consumer.id(), clientIp);
     admit(key, now);
-    // Keep the existing audit schema: apiKeyName now records the stable caller name.
-    return new AccessContext("API_KEY", key.id(), consumer.name(), key.keyPrefix());
+    return new AccessContext(
+        "API_KEY", key.id(), consumer.id(), consumer.name(), key.keyPrefix());
   }
 
   private AccessContext authorizeLegacy(DataServiceDefinition definition, String rawKey) {
@@ -86,7 +81,7 @@ public class DataServiceAuthorizer {
     LocalDateTime now = LocalDateTime.now();
     validateKey(key, now);
     admit(key, now);
-    return new AccessContext("API_KEY", key.id(), key.name(), key.keyPrefix());
+    return new AccessContext("API_KEY", key.id(), null, key.name(), key.keyPrefix());
   }
 
   private void validateKey(DataServiceApiKey key, LocalDateTime now) {
