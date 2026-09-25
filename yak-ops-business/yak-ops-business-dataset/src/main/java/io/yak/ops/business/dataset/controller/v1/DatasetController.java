@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.yak.framework.common.Result;
 import io.yak.ops.business.dataset.DatasetQueryService;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetQuerySubject;
 import io.yak.ops.business.dataset.DatasetService;
 import io.yak.ops.business.dataset.controller.v1.converter.DatasetRequestConverter;
 import io.yak.ops.business.dataset.controller.v1.converter.DatasetViewConverter;
@@ -19,6 +20,7 @@ import io.yak.ops.business.dataset.controller.v1.vo.DatasetViews.DatasetVO;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import jakarta.validation.Valid;
+import java.security.Principal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -102,9 +104,14 @@ public class DatasetController {
   @PostMapping("/{datasetId}/query")
   public Result<DatasetQueryResultVO> query(
       @PathVariable("datasetId") long datasetId,
-      @Valid @RequestBody(required = false) QueryDatasetRequest request) {
+      @Valid @RequestBody(required = false) QueryDatasetRequest request,
+      Principal principal) {
+    DatasetQuerySubject subject = principal == null || principal.getName() == null
+        || principal.getName().isBlank()
+        ? null
+        : DatasetQuerySubject.authenticatedUser(principal.getName());
     return Result.success(viewConverter.queryResult(
-        queryService.query(datasetId, requestConverter.query(request))));
+        queryService.query(datasetId, requestConverter.query(request), subject)));
   }
 
   @Operation(summary = "上线 Dataset")
