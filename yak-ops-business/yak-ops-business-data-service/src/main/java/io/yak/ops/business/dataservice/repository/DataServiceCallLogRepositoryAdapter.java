@@ -78,10 +78,24 @@ public class DataServiceCallLogRepositoryAdapter implements DataServiceCallLogRe
 
   private InvocationRecord toDomain(DataServiceCallLogPO po) {
     return new InvocationRecord(
-        po.getId(), po.getProjectId(), po.getApiId(), po.getServiceName(), po.getServicePath(),
-        po.getCallerType(), po.getApiKeyId(), po.getApiKeyName(), po.getApiKeyPrefix(), po.getParamsJson(),
-        Boolean.TRUE.equals(po.getSuccess()), value(po.getDurationMs()), value(po.getRowCount()),
-        po.getErrorMessage(), po.getCreateTime());
+        po.getId(),
+        po.getProjectId(),
+        po.getApiId(),
+        po.getServiceName(),
+        po.getServicePath(),
+        po.getCallerType(),
+        po.getApiKeyId(),
+        po.getConsumerId(),
+        po.getApiKeyName(),
+        po.getApiKeyPrefix(),
+        po.getSourceRevisionId(),
+        po.getSourceRevisionNo(),
+        po.getParamsJson(),
+        Boolean.TRUE.equals(po.getSuccess()),
+        value(po.getDurationMs()),
+        value(po.getRowCount()),
+        po.getErrorMessage(),
+        po.getCreateTime());
   }
 
   private DataServiceCallLogPO toPo(InvocationRecord record) {
@@ -93,8 +107,11 @@ public class DataServiceCallLogRepositoryAdapter implements DataServiceCallLogRe
     po.setServicePath(record.servicePath());
     po.setCallerType(record.callerType());
     po.setApiKeyId(record.apiKeyId());
+    po.setConsumerId(record.consumerId());
     po.setApiKeyName(record.apiKeyName());
     po.setApiKeyPrefix(record.apiKeyPrefix());
+    po.setSourceRevisionId(record.sourceRevisionId());
+    po.setSourceRevisionNo(record.sourceRevisionNo());
     po.setParamsJson(record.paramsJson());
     po.setSuccess(record.success());
     po.setDurationMs(record.durationMs());
