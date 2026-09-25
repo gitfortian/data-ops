@@ -43,6 +43,11 @@ public class DatasetQueryService {
     return coordinator.query(datasetId, request);
   }
 
+  public DatasetQueryResult query(
+      long datasetId, DatasetQueryRequest request, DatasetQuerySubject subject) {
+    return coordinator.query(datasetId, request, subject);
+  }
+
   public List<DatasetQueryPerformance> recentPerformance(Set<Long> datasetIds, int limit) {
     return recentPerformance(datasetIds, Set.of(), Set.of(), null, limit);
   }
