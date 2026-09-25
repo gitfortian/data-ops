@@ -9,6 +9,8 @@ on:
       - 'yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/execution/**'
       - 'yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/repository/**'
       - 'yak-ops-business/yak-ops-business-data-service/src/main/resources/db/migration/yak-data-service/**'
+      - 'yak-ops-business/yak-ops-business-dataset/src/main/java/io/yak/ops/business/dataset/**'
+      - 'yak-ops-business/yak-ops-business-dataset/src/main/resources/db/migration/yak-dataset/**'
       - 'yak-ops-bom/pom.xml'
       - 'yak-ops-boot/pom.xml'
       - 'yak-ops-boot/src/test/java/io/yak/ops/boot/architecture/ConsumptionRuntimeAssemblyTest.java'
@@ -40,7 +42,7 @@ jobs:
           mvn -B
           -pl yak-ops-business/yak-ops-business-consumption
           -am
-          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,DataServiceUsageEvidenceNormalizerTest
+          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,DataServiceUsageEvidenceNormalizerTest,DatasetUsageEvidenceNormalizerTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
       - name: Verify executable Boot assembly contains Consumption
