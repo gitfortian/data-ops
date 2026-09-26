@@ -104,7 +104,7 @@ class DatasetGoldenDiscoveryTest {
     assertEquals(discoveredKey, detail.product().productKey());
     assertEquals("42", detail.product().sourceRef().sourceIdentity());
     assertEquals("101", detail.product().activeVersion().identity());
-    assertEquals("v3", detail.product().activeVersion().label());
+    assertEquals("v3", detail.product().activeVersion().displayVersion());
     assertEquals("/dataset/42", detail.navigation().sourceHref());
 
     CanonicalProductDetail.GovernanceEvidence sourceGovernance = detail.governanceEvidence().stream()
