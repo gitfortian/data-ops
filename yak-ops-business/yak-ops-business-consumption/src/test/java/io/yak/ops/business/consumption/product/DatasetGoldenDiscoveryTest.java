@@ -2,6 +2,7 @@ package io.yak.ops.business.consumption.product;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -102,5 +103,70 @@ class DatasetGoldenDiscoveryTest {
     assertEquals("101", detail.product().activeVersion().identity());
     assertEquals("v3", detail.product().activeVersion().label());
     assertEquals("/dataset/42", detail.navigation().sourceHref());
+  }
+
+  @Test
+  void offlineDatasetIsNotDiscoverableAndDoesNotProduceCanonicalProduct() {
+    DatasetReader reader = mock(DatasetReader.class);
+    AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
+    AssetAppService assetAppService = mock(AssetAppService.class);
+
+    Dataset dataset = new Dataset(
+        43L,
+        7L,
+        "Offline orders",
+        "Not published",
+        DatasetStatus.OFFLINE,
+        102L,
+        Instant.parse("2026-09-26T01:00:00Z"),
+        Instant.parse("2026-09-26T01:00:00Z"));
+    DatasetVersion version = new DatasetVersion(
+        102L,
+        43L,
+        1,
+        DatasetSourceType.QUERY_REVISION,
+        502L,
+        602L,
+        1,
+        "ds-1",
+        "select 1",
+        "{}",
+        Instant.parse("2026-09-26T01:00:00Z"));
+    DatasetCatalogEntry entry = new DatasetCatalogEntry(dataset, version, List.of());
+
+    when(reader.catalog(List.of(), true)).thenReturn(List.of());
+    when(reader.catalog(List.of(43L), false)).thenReturn(List.of(entry));
+
+    DatasetDataProductProvider provider = new DatasetDataProductProvider(reader, assetLookup);
+    ProductDiscoveryService discoveryService =
+        new ProductDiscoveryService(new DataProductRegistry(List.of(provider)));
+    CanonicalProductService canonicalService =
+        new CanonicalProductService(discoveryService, assetAppService);
+
+    ProductDiscoveryResult discovery = discoveryService.search(new ProductSearchCriteria(
+        ProductType.DATASET,
+        "offline",
+        null,
+        7L,
+        null,
+        SourceLifecycleState.PUBLISHED,
+        null));
+
+    assertEquals(ProductSearchState.READY, discovery.providerStates().get(ProductType.DATASET));
+    assertEquals(0L, discovery.total());
+    assertEquals(List.of(), discovery.products());
+
+    ProductKey productKey = new ProductKey(ProductType.DATASET, "43");
+    CanonicalProductService.NavigationResolution shortcut =
+        canonicalService.fromSource(ProductType.DATASET, "43");
+    assertEquals("NOT_DISCOVERABLE", shortcut.state());
+    assertEquals(productKey, shortcut.productKey());
+    assertNull(shortcut.canonicalHref());
+
+    CanonicalProductDetail detail = canonicalService.detail(productKey);
+    assertEquals(ProductLookupState.NOT_DISCOVERABLE, detail.state());
+    assertNull(detail.product());
+    assertNull(detail.navigation());
+    assertEquals(List.of(), detail.governanceEvidence());
   }
 }
