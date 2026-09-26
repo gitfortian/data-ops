@@ -75,4 +75,54 @@ class DataServiceGoldenConsumerImpactTest {
     assertTrue(known.providerEvidenceRefs()
         .contains("DATA_SERVICE_INVOCATION:invocation:501"));
   }
+
+  @Test
+  void observedConsumerRemainsKnownWhenLiveConsumerOrDeclarationIsNoLongerAvailable() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject currentProject = mock(CurrentProject.class);
+    when(currentProject.requireProjectId()).thenReturn(3L);
+
+    ProductKey product = ProductKey.parse("DATA_SERVICE:7");
+    ConsumerRef historicalConsumer = new ConsumerRef(
+        ConsumerType.DATA_SERVICE,
+        "DATA_SERVICE_CONSUMER",
+        "21",
+        "Golden BI Consumer");
+    LocalDateTime observedAt = LocalDateTime.of(2026, 9, 26, 9, 10);
+
+    // The live declaration/target may already be removed or unavailable. Impact is evidence-driven:
+    // historical successful Usage Evidence keeps the stable ConsumerRef instead of becoming fake zero usage.
+    when(subscriptions.list(3L, product, null)).thenReturn(List.of());
+    when(usage.list(3L, product, null, 200)).thenReturn(List.of(new UsageEvidence(
+        601L,
+        3L,
+        product,
+        new SourceVersionRef("101", "r4"),
+        historicalConsumer,
+        observedAt,
+        ConsumptionMode.API_INVOKE,
+        UsageOutcome.SUCCESS,
+        "DATA_SERVICE_INVOCATION",
+        "invocation:501",
+        "DATA_SERVICE_INVOCATION:501",
+        observedAt)));
+
+    ConsumerImpactView view =
+        new ConsumerImpactService(subscriptions, usage, currentProject).view(product, 200);
+
+    assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.subscriptionState());
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals(1, view.consumers().size());
+
+    ConsumerImpactView.KnownConsumer known = view.consumers().getFirst();
+    assertEquals("DATA_SERVICE:DATA_SERVICE_CONSUMER:21", known.consumerRef().identityKey());
+    assertEquals(List.of(), known.declaredModes());
+    assertEquals(List.of(ConsumptionMode.API_INVOKE), known.observedModes());
+    assertEquals(0, known.activeSubscriptionCount());
+    assertEquals(1, known.successfulUsageCount());
+    assertEquals(observedAt, known.lastObservedAt());
+    assertTrue(known.providerEvidenceRefs()
+        .contains("DATA_SERVICE_INVOCATION:invocation:501"));
+  }
 }
