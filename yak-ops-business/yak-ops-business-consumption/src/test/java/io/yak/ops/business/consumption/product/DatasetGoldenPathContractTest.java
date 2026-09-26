@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.asset.application.AssetAppService;
@@ -52,6 +55,7 @@ import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResu
 import io.yak.ops.business.dataset.query.DatasetSourceQueryRegistry;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.core.security.ActionAuthorization;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -208,6 +212,53 @@ class DatasetGoldenPathContractTest {
     assertEquals(
         List.of(usage.provider() + ":" + usage.providerEvidenceRef()),
         knownConsumer.providerEvidenceRefs());
+  }
+
+  @Test
+  void deniedDatasetQueryStopsBeforeResolutionAndRemainsDiagnosticOnly() {
+    DatasetRepository repository = mock(DatasetRepository.class);
+    DatasetSourceQueryRegistry registry = mock(DatasetSourceQueryRegistry.class);
+    DatasetSourceQueryAdapter adapter = mock(DatasetSourceQueryAdapter.class);
+    DatasetQueryPerformanceRecorder recorder = mock(DatasetQueryPerformanceRecorder.class);
+    ActionAuthorization authorization = mock(ActionAuthorization.class);
+    doThrow(new ActionAccessDeniedException("dataset:query"))
+        .when(authorization).requirePermission("dataset:query");
+
+    DatasetQueryCoordinator coordinator =
+        new DatasetQueryCoordinator(repository, registry, recorder, authorization);
+    DatasetQuerySubject subject = DatasetQuerySubject.authenticatedUser("alice");
+
+    ActionAccessDeniedException denied = assertThrows(
+        ActionAccessDeniedException.class,
+        () -> coordinator.query(42L, null, subject));
+
+    assertEquals("dataset:query", denied.getPermissionCode());
+    verify(authorization).requirePermission("dataset:query");
+    verifyNoInteractions(repository, registry, adapter);
+
+    ArgumentCaptor<DatasetQueryPerformance> evidence =
+        ArgumentCaptor.forClass(DatasetQueryPerformance.class);
+    verify(recorder).record(evidence.capture());
+    DatasetQueryPerformance trace = evidence.getValue();
+    assertNotNull(trace.queryId());
+    assertEquals(42L, trace.datasetId());
+    assertNull(trace.datasetVersionId());
+    assertNull(trace.datasetVersionNo());
+    assertEquals(DatasetQueryStatus.REJECTED, trace.status());
+    assertEquals("AUTHORIZE_ACTION", trace.failureStage());
+    assertEquals("ActionAccessDeniedException", trace.errorType());
+    assertEquals("USER", trace.subjectType());
+    assertEquals("SECURITY_PRINCIPAL", trace.subjectSourceDomain());
+    assertEquals("alice", trace.subjectSourceIdentity());
+
+    InMemoryUsageEvidenceRepository usageRepository = new InMemoryUsageEvidenceRepository();
+    var normalization = new DatasetUsageEvidenceNormalizer(new UsageEvidenceService(usageRepository))
+        .normalize(7L, trace);
+
+    assertEquals(UsageNormalizationState.IGNORED, normalization.state());
+    assertNull(normalization.evidence());
+    assertEquals("query:" + trace.queryId(), normalization.providerEvidenceRef());
+    assertEquals(0, usageRepository.values.size());
   }
 
   private DatasetCatalogEntry publishedDataset() {
