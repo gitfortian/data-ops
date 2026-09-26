@@ -91,7 +91,7 @@ class DatasetGoldenQueryExecutionTest {
     CanonicalProductDetail detail = canonical.detail(new ProductKey(ProductType.DATASET, "42"));
     assertNotNull(detail.product());
     assertEquals("101", detail.product().activeVersion().identity());
-    assertEquals("v3", detail.product().activeVersion().label());
+    assertEquals("v3", detail.product().activeVersion().displayVersion());
 
     DatasetRepository repository = mock(DatasetRepository.class);
     DatasetSourceQueryRegistry registry = mock(DatasetSourceQueryRegistry.class);
@@ -149,7 +149,7 @@ class DatasetGoldenQueryExecutionTest {
     assertNotNull(usage);
     assertEquals(detail.product().productKey(), usage.productKey());
     assertEquals(detail.product().activeVersion().identity(), usage.sourceVersion().identity());
-    assertEquals(detail.product().activeVersion().label(), usage.sourceVersion().displayVersion());
+    assertEquals(detail.product().activeVersion().displayVersion(), usage.sourceVersion().displayVersion());
     assertEquals(ConsumerType.USER, usage.consumerRef().consumerType());
     assertEquals("SECURITY_PRINCIPAL", usage.consumerRef().sourceDomain());
     assertEquals("alice", usage.consumerRef().sourceIdentity());
