@@ -23,6 +23,7 @@ import io.yak.ops.business.dataservice.query.DataServiceReader;
 import io.yak.ops.business.dataservice.query.DataServiceView;
 import io.yak.ops.business.dataservice.query.DataServiceViewFactory;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
@@ -115,6 +116,7 @@ public class DataServiceDataProductProvider implements DataProductProvider {
     SourceReference source = definition.sourceReference();
     AssetProjection asset = assetProjection(definition.id());
     List<ProductSectionState> sections = List.of(
+        sourceGovernanceSection(definition),
         unavailableSection("ownership", "DATA_SERVICE", "Data Service owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Data Service visibility policy is not exposed yet"),
         asset.section());
@@ -146,6 +148,19 @@ public class DataServiceDataProductProvider implements DataProductProvider {
             source.sourceRevisionId(),
             source.sourceRevisionNo(),
             definition.runtimeGeneration()));
+  }
+
+  private ProductSectionState sourceGovernanceSection(DataServiceDefinition definition) {
+    if (definition.updateTime() == null) {
+      return unavailableSection(
+          "source-governance", "DATA_SERVICE", "Data Service source governance observation time is unavailable");
+    }
+    return new ProductSectionState(
+        "source-governance",
+        ProviderEvidenceState.READY,
+        "DATA_SERVICE",
+        definition.updateTime().toInstant(ZoneOffset.UTC),
+        null);
   }
 
   private SourceVersionRef activeVersion(DataServiceDefinition definition) {
