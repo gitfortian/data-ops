@@ -16,7 +16,6 @@ import io.yak.ops.core.execution.sql.SqlExecutionPolicyViolationException;
 import io.yak.ops.core.project.ProjectContextException;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.core.security.ActionAuthorization;
-import io.yak.ops.core.security.ActionPermissionCodes;
 import java.net.SocketTimeoutException;
 import java.sql.SQLTimeoutException;
 import java.time.Instant;
@@ -62,7 +61,7 @@ public class DatasetQueryCoordinator {
     long servicePrepareMillis = 0L;
 
     try {
-      actionAuthorization.requirePermission(ActionPermissionCodes.DATASET_QUERY);
+      actionAuthorization.requirePermission("dataset:query");
 
       stage = "VALIDATE_REQUEST";
       if (datasetId <= 0L) {
