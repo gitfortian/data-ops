@@ -22,6 +22,12 @@ import io.yak.ops.business.consumption.product.provider.DataProductProvider;
 import io.yak.ops.business.consumption.product.provider.ProductLookupState;
 import io.yak.ops.business.consumption.product.provider.ProductSearchCriteria;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
+import io.yak.ops.business.consumption.relationship.ConsumerRef;
+import io.yak.ops.business.consumption.relationship.UsageEvidence;
+import io.yak.ops.business.consumption.relationship.UsageEvidenceRepository;
+import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
+import io.yak.ops.business.consumption.relationship.UsageNormalizationState;
+import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceNormalizer;
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
 import io.yak.ops.business.dataset.DatasetField;
@@ -43,16 +49,19 @@ import io.yak.ops.business.dataset.query.DatasetSourceQueryRegistry;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
 import io.yak.ops.core.security.ActionAuthorization;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 /**
  * Phase 4 Golden Path A acceptance slices.
  *
- * <p>The path starts from the real Dataset owning projection and now reaches the real Dataset query
- * coordinator boundary. Usage Evidence normalization and Consumer/Impact remain later #104 slices.
+ * <p>The path starts from the real Dataset owning projection, crosses the real Dataset query
+ * coordinator boundary, and normalizes its successful source evidence into Consumption Usage
+ * Evidence. Consumer/Impact remains a later #104 slice.
  */
 class DatasetGoldenPathContractTest {
 
@@ -105,7 +114,7 @@ class DatasetGoldenPathContractTest {
   }
 
   @Test
-  void publishedDatasetQueryCrossesActionGateAndRecordsExactVersionEvidence() {
+  void publishedDatasetQueryCrossesActionGateAndNormalizesStableUsageEvidence() {
     DatasetCatalogEntry sourceEntry = publishedDataset();
     Dataset dataset = sourceEntry.dataset();
     DatasetVersion version = sourceEntry.currentVersion();
@@ -154,6 +163,21 @@ class DatasetGoldenPathContractTest {
     assertEquals("USER", trace.subjectType());
     assertEquals("SECURITY_PRINCIPAL", trace.subjectSourceDomain());
     assertEquals("alice", trace.subjectSourceIdentity());
+
+    InMemoryUsageEvidenceRepository usageRepository = new InMemoryUsageEvidenceRepository();
+    var normalization = new DatasetUsageEvidenceNormalizer(new UsageEvidenceService(usageRepository))
+        .normalize(7L, trace);
+
+    assertEquals(UsageNormalizationState.NORMALIZED, normalization.state());
+    UsageEvidence usage = normalization.evidence();
+    assertNotNull(usage);
+    assertEquals(new ProductKey(ProductType.DATASET, "42"), usage.productKey());
+    assertEquals("101", usage.sourceVersion().identity());
+    assertEquals("v3", usage.sourceVersion().displayVersion());
+    assertEquals("USER:SECURITY_PRINCIPAL:alice", usage.consumerRef().identityKey());
+    assertEquals("query:" + result.queryId(), usage.providerEvidenceRef());
+    assertEquals("DATASET_QUERY_PERFORMANCE:" + result.queryId(), usage.deduplicationId());
+    assertEquals(1, usageRepository.values.size());
   }
 
   private DatasetCatalogEntry publishedDataset() {
@@ -171,5 +195,48 @@ class DatasetGoldenPathContractTest {
             "amount", 101L, "amount", "Amount", DatasetFieldDataType.NUMBER,
             true, "Order amount", DatasetFieldRole.MEASURE, 2));
     return new DatasetCatalogEntry(dataset, version, fields);
+  }
+
+  private static final class InMemoryUsageEvidenceRepository implements UsageEvidenceRepository {
+    private final AtomicLong sequence = new AtomicLong(1);
+    private final List<UsageEvidence> values = new ArrayList<>();
+
+    @Override
+    public Optional<UsageEvidence> findByDeduplicationId(Long projectId, String deduplicationId) {
+      return values.stream()
+          .filter(value -> value.projectId().equals(projectId)
+              && value.deduplicationId().equals(deduplicationId))
+          .findFirst();
+    }
+
+    @Override
+    public UsageEvidence save(UsageEvidence evidence) {
+      UsageEvidence saved = new UsageEvidence(
+          sequence.getAndIncrement(),
+          evidence.projectId(),
+          evidence.productKey(),
+          evidence.sourceVersion(),
+          evidence.consumerRef(),
+          evidence.observedAt(),
+          evidence.consumptionMode(),
+          evidence.outcome(),
+          evidence.provider(),
+          evidence.providerEvidenceRef(),
+          evidence.deduplicationId(),
+          evidence.normalizedAt());
+      values.add(saved);
+      return saved;
+    }
+
+    @Override
+    public List<UsageEvidence> list(
+        Long projectId, ProductKey productKey, ConsumerRef consumerRef, int limit) {
+      return values.stream()
+          .filter(value -> value.projectId().equals(projectId))
+          .filter(value -> productKey == null || value.productKey().equals(productKey))
+          .filter(value -> consumerRef == null || value.consumerRef().equals(consumerRef))
+          .limit(limit)
+          .toList();
+    }
   }
 }
