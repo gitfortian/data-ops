@@ -22,7 +22,11 @@ import io.yak.ops.business.consumption.product.provider.DataProductProvider;
 import io.yak.ops.business.consumption.product.provider.ProductLookupState;
 import io.yak.ops.business.consumption.product.provider.ProductSearchCriteria;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
+import io.yak.ops.business.consumption.relationship.ConsumerImpactService;
+import io.yak.ops.business.consumption.relationship.ConsumerImpactView;
 import io.yak.ops.business.consumption.relationship.ConsumerRef;
+import io.yak.ops.business.consumption.relationship.ConsumptionMode;
+import io.yak.ops.business.consumption.relationship.SubscriptionRepository;
 import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceRepository;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
@@ -47,6 +51,7 @@ import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResult;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryRegistry;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
+import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.security.ActionAuthorization;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -60,8 +65,8 @@ import org.mockito.ArgumentCaptor;
  * Phase 4 Golden Path A acceptance slices.
  *
  * <p>The path starts from the real Dataset owning projection, crosses the real Dataset query
- * coordinator boundary, and normalizes its successful source evidence into Consumption Usage
- * Evidence. Consumer/Impact remains a later #104 slice.
+ * coordinator boundary, normalizes successful source evidence into Consumption Usage Evidence,
+ * and exposes the same stable consumer through the known Consumer/Impact projection.
  */
 class DatasetGoldenPathContractTest {
 
@@ -178,6 +183,31 @@ class DatasetGoldenPathContractTest {
     assertEquals("query:" + result.queryId(), usage.providerEvidenceRef());
     assertEquals("DATASET_QUERY_PERFORMANCE:" + result.queryId(), usage.deduplicationId());
     assertEquals(1, usageRepository.values.size());
+
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    CurrentProject currentProject = mock(CurrentProject.class);
+    when(currentProject.requireProjectId()).thenReturn(7L);
+    when(subscriptions.list(7L, usage.productKey(), null)).thenReturn(List.of());
+
+    ConsumerImpactView impact =
+        new ConsumerImpactService(subscriptions, usageRepository, currentProject)
+            .view(usage.productKey(), 100);
+
+    assertEquals(usage.productKey(), impact.productKey());
+    assertEquals(ConsumerImpactView.EvidenceState.EMPTY, impact.subscriptionState());
+    assertEquals(ConsumerImpactView.EvidenceState.READY, impact.usageState());
+    assertEquals(1, impact.consumers().size());
+    ConsumerImpactView.KnownConsumer knownConsumer = impact.consumers().get(0);
+    assertEquals("USER:SECURITY_PRINCIPAL:alice", knownConsumer.consumerRef().identityKey());
+    assertEquals(List.of(), knownConsumer.declaredModes());
+    assertEquals(List.of(ConsumptionMode.QUERY), knownConsumer.observedModes());
+    assertEquals(0, knownConsumer.activeSubscriptionCount());
+    assertEquals(1, knownConsumer.successfulUsageCount());
+    assertNull(knownConsumer.lastDeclaredAt());
+    assertEquals(usage.observedAt(), knownConsumer.lastObservedAt());
+    assertEquals(
+        List.of(usage.provider() + ":" + usage.providerEvidenceRef()),
+        knownConsumer.providerEvidenceRefs());
   }
 
   private DatasetCatalogEntry publishedDataset() {
