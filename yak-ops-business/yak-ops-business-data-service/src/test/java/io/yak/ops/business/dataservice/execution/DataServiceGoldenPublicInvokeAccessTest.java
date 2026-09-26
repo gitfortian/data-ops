@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import io.yak.ops.business.dataservice.access.ApiKeySecretGenerator;
 import io.yak.ops.business.dataservice.access.DataServiceAuthorizer;
 import io.yak.ops.business.dataservice.access.DataServiceConsumerIpAccessAuthorizer;
+import io.yak.ops.business.dataservice.access.DataServiceForbiddenException;
 import io.yak.ops.business.dataservice.access.DataServiceIpAccessAuthorizer;
 import io.yak.ops.business.dataservice.access.DataServiceRateLimiter;
 import io.yak.ops.business.dataservice.access.DataServiceUnauthorizedException;
@@ -79,6 +81,9 @@ class DataServiceGoldenPublicInvokeAccessTest {
     when(consumerRepository.findByIdForProject(21L, 3L)).thenReturn(Optional.of(consumer));
     when(consumerRepository.hasAccess(21L, 3L, 7L)).thenReturn(true);
     when(keyRepository.save(key)).thenReturn(key);
+    doThrow(new DataServiceForbiddenException("当前来源 IP 不在调用方白名单中"))
+        .when(consumerIpAccessAuthorizer)
+        .authorize(21L, "10.0.0.9");
 
     DataServiceQueryResponse response = new DataServiceQueryResponse(
         List.of("id"), List.of(Map.of("id", 1L)), false, 1, 8L);
@@ -109,14 +114,21 @@ class DataServiceGoldenPublicInvokeAccessTest {
         .isInstanceOf(DataServiceUnauthorizedException.class)
         .hasMessageContaining("API Key 无效或无权访问当前 API");
 
+    assertThatThrownBy(() -> invoker.invoke("/orders", Map.of("id", "1"), "yak-key", "10.0.0.9"))
+        .isInstanceOf(DataServiceForbiddenException.class)
+        .hasMessageContaining("IP");
+    verify(executor, org.mockito.Mockito.never()).execute(any(), any(), any());
+
     DataServiceQueryResponse result =
         invoker.invoke("/orders", Map.of("id", "1"), "yak-key", "10.0.0.8");
 
     assertThat(result.rows()).containsExactly(Map.of("id", 1L));
-    verify(actionAuthorization, org.mockito.Mockito.times(3))
+    verify(actionAuthorization, org.mockito.Mockito.times(4))
         .requirePermissionIfAuthenticated("data-service:invoke");
+    verify(consumerIpAccessAuthorizer).authorize(21L, "10.0.0.9");
     verify(consumerIpAccessAuthorizer).authorize(21L, "10.0.0.8");
     verify(rateLimiter).acquire(key);
+    verify(executor).execute(eq(definition), any(), isNull());
 
     ArgumentCaptor<AccessContext> accessCaptor = ArgumentCaptor.forClass(AccessContext.class);
     verify(recorder).record(
