@@ -1,6 +1,7 @@
 package io.yak.ops.business.consumption.product;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -13,11 +14,13 @@ import io.yak.ops.business.asset.application.AssetSourceLookupService;
 import io.yak.ops.business.consumption.product.discovery.CanonicalProductDetail;
 import io.yak.ops.business.consumption.product.discovery.CanonicalProductService;
 import io.yak.ops.business.consumption.product.discovery.DataProductRegistry;
+import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryResult;
 import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService;
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.product.provider.DataProductProvider;
 import io.yak.ops.business.consumption.product.provider.ProductLookupState;
+import io.yak.ops.business.consumption.product.provider.ProductSearchCriteria;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
@@ -89,6 +92,34 @@ class DatasetViewConsumeSeparationContractTest {
     assertEquals(key, detailAfterDenial.product().productKey());
   }
 
+  @Test
+  void offlineDatasetIsExcludedFromDiscoveryAndReportedAsNotDiscoverableByStableId() {
+    ProductKey key = new ProductKey(ProductType.DATASET, "42");
+    DatasetReader reader = mock(DatasetReader.class);
+    AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
+    DatasetCatalogEntry sourceEntry = offlineDataset();
+    when(reader.catalog(List.of(), true)).thenReturn(List.of(sourceEntry));
+    when(reader.catalog(List.of(42L), false)).thenReturn(List.of(sourceEntry));
+
+    DataProductProvider provider = new DatasetDataProductProvider(reader, assetLookup);
+    ProductDiscoveryService discovery =
+        new ProductDiscoveryService(new DataProductRegistry(List.of(provider)));
+    CanonicalProductService canonical =
+        new CanonicalProductService(discovery, mock(AssetAppService.class));
+
+    ProductDiscoveryResult discovered = discovery.search(new ProductSearchCriteria(
+        ProductType.DATASET, null, null, null, null, null, null));
+    CanonicalProductDetail detail = canonical.detail(key);
+
+    assertEquals(0, discovered.products().size());
+    assertEquals(ProductLookupState.NOT_DISCOVERABLE, detail.state());
+    assertNull(detail.product());
+    assertNull(detail.navigation());
+    verify(reader).catalog(List.of(), true);
+    verify(reader).catalog(List.of(42L), false);
+    verifyNoInteractions(assetLookup);
+  }
+
   private DatasetCatalogEntry publishedDataset() {
     Instant now = Instant.now();
     Dataset dataset = new Dataset(
@@ -104,5 +135,20 @@ class DatasetViewConsumeSeparationContractTest {
             "amount", 101L, "amount", "Amount", DatasetFieldDataType.NUMBER,
             true, "Order amount", DatasetFieldRole.MEASURE, 2));
     return new DatasetCatalogEntry(dataset, version, fields);
+  }
+
+  private DatasetCatalogEntry offlineDataset() {
+    DatasetCatalogEntry published = publishedDataset();
+    Dataset source = published.dataset();
+    Dataset offline = new Dataset(
+        source.id(),
+        source.projectId(),
+        source.name(),
+        source.description(),
+        DatasetStatus.OFFLINE,
+        source.currentVersionId(),
+        source.createTime(),
+        source.updateTime());
+    return new DatasetCatalogEntry(offline, published.currentVersion(), published.fields());
   }
 }
