@@ -78,6 +78,27 @@ class DatasetUsageEvidenceNormalizerTest {
     assertEquals(first.evidence().id(), second.evidence().id());
   }
 
+  @Test
+  void normalizationFailureIsUnavailableAndRetrySucceeds() {
+    InMemoryRepository repository = new InMemoryRepository(1);
+    DatasetUsageEvidenceNormalizer normalizer = normalizer(repository);
+    DatasetQueryPerformance source = query("q-5", DatasetQueryStatus.SUCCESS, "alice", 9003L, 14);
+
+    var failed = normalizer.normalize(7L, source);
+
+    assertEquals(UsageNormalizationState.UNAVAILABLE, failed.state());
+    assertEquals("query:q-5", failed.providerEvidenceRef());
+    assertEquals("usage store temporarily unavailable", failed.message());
+    assertEquals(0, repository.values.size());
+
+    var retried = normalizer.normalize(7L, source);
+
+    assertEquals(UsageNormalizationState.NORMALIZED, retried.state());
+    assertNotNull(retried.evidence());
+    assertEquals("DATASET_QUERY_PERFORMANCE:q-5", retried.evidence().deduplicationId());
+    assertEquals(1, repository.values.size());
+  }
+
   private DatasetUsageEvidenceNormalizer normalizer(InMemoryRepository repository) {
     return new DatasetUsageEvidenceNormalizer(new UsageEvidenceService(repository));
   }
@@ -120,6 +141,15 @@ class DatasetUsageEvidenceNormalizerTest {
   private static final class InMemoryRepository implements UsageEvidenceRepository {
     private final AtomicLong sequence = new AtomicLong(1);
     private final List<UsageEvidence> values = new ArrayList<>();
+    private int failuresRemaining;
+
+    private InMemoryRepository() {
+      this(0);
+    }
+
+    private InMemoryRepository(int failuresRemaining) {
+      this.failuresRemaining = failuresRemaining;
+    }
 
     @Override
     public Optional<UsageEvidence> findByDeduplicationId(Long projectId, String deduplicationId) {
@@ -131,6 +161,10 @@ class DatasetUsageEvidenceNormalizerTest {
 
     @Override
     public UsageEvidence save(UsageEvidence evidence) {
+      if (failuresRemaining > 0) {
+        failuresRemaining--;
+        throw new IllegalStateException("usage store temporarily unavailable");
+      }
       UsageEvidence saved = new UsageEvidence(
           sequence.getAndIncrement(),
           evidence.projectId(),
