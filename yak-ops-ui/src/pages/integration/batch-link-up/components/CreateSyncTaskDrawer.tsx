@@ -4,9 +4,15 @@ import EmojiIconPicker, {
 } from '@/components/EmojiIconPicker';
 import { YakButton } from '@/components/ui';
 import {
+  bindOfflineDraftSource,
+  findReadableSourceDataSource,
+} from '@/features/integration/sourceOnboarding';
+import {
   createOfflineSyncDraft,
   getOfflineSyncUniqueId,
 } from '@/services/batch-link-up';
+import type { DataSourceRecord } from '@/services/data-source';
+import { fetchDataSourceAll } from '@/services/data-source/legacy';
 import {
   ArrowRightOutlined,
   DatabaseOutlined,
@@ -23,6 +29,7 @@ import {
   message,
 } from 'antd';
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -47,6 +54,8 @@ import {
 } from '../connectorProfiles';
 import {
   buildCreatePayload,
+  isApiSuccess,
+  responseMessage,
   type CreateSyncEndpoint,
   type CreateSyncTaskValues,
   type SyncMode,
@@ -54,6 +63,7 @@ import {
 
 interface CreateSyncTaskDrawerProps {
   open: boolean;
+  sourceDataSourceId?: string;
   onCancel: () => void;
   onCreated: (taskId: string, mode: SyncMode) => void;
 }
@@ -78,6 +88,9 @@ const brandCssVariables = {
   '--yak-brand-color-soft-hover': BRAND_COLOR_SOFT_HOVER,
 } as CSSProperties;
 
+const normalizeDbType = (value: unknown) =>
+  String(value || '').trim().toUpperCase();
+
 const resolveEndpoint = (
   dbType: string,
   options: ConnectorOption[],
@@ -94,6 +107,7 @@ const resolveEndpoint = (
 
 export default function CreateSyncTaskDrawer({
   open,
+  sourceDataSourceId,
   onCancel,
   onCreated,
 }: CreateSyncTaskDrawerProps) {
@@ -104,6 +118,10 @@ export default function CreateSyncTaskDrawer({
   const [form] = Form.useForm<CreateSyncTaskFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [icon, setIcon] = useState<EmojiIconValue>(DEFAULT_EMOJI_ICON);
+  const [onboardingSource, setOnboardingSource] =
+    useState<DataSourceRecord>();
+  const [onboardingSourceLoading, setOnboardingSourceLoading] =
+    useState(false);
   const autoJobNameRef = useRef('');
 
   const connectorOptions = useMemo(
@@ -145,13 +163,16 @@ export default function CreateSyncTaskDrawer({
     },
   ];
 
-  const createDefaultJobName = (source: string, target: string) =>
-    intlRef.current
-      .formatMessage(
-        { id: 'pages.batchLinkUp.create.defaultJobName' },
-        { source, target },
-      )
-      .slice(0, 64);
+  const createDefaultJobName = useCallback(
+    (source: string, target: string) =>
+      intlRef.current
+        .formatMessage(
+          { id: 'pages.batchLinkUp.create.defaultJobName' },
+          { source, target },
+        )
+        .slice(0, 64),
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -160,15 +181,11 @@ export default function CreateSyncTaskDrawer({
       connectorOptions.find((item) => item.value === DEFAULT_DB_TYPE)?.value ||
       connectorOptions[0]?.value ||
       '';
-    const defaultJobName = intlRef.current
-      .formatMessage(
-        { id: 'pages.batchLinkUp.create.defaultJobName' },
-        { source: defaultDbType, target: defaultDbType },
-      )
-      .slice(0, 64);
+    const defaultJobName = createDefaultJobName(defaultDbType, defaultDbType);
 
     autoJobNameRef.current = defaultJobName;
     setIcon(DEFAULT_EMOJI_ICON);
+    setOnboardingSource(undefined);
     form.setFieldsValue({
       sourceDbType: defaultDbType,
       targetDbType: defaultDbType,
@@ -176,7 +193,98 @@ export default function CreateSyncTaskDrawer({
       jobDesc: undefined,
       mode: 'GUIDE_SINGLE',
     });
-  }, [connectorOptions, form, open]);
+  }, [connectorOptions, createDefaultJobName, form, open]);
+
+  useEffect(() => {
+    if (!open || !sourceDataSourceId) {
+      setOnboardingSource(undefined);
+      setOnboardingSourceLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+
+    const resolveSourceContext = async () => {
+      setOnboardingSourceLoading(true);
+      try {
+        const response = await fetchDataSourceAll();
+        if (!active) return;
+
+        if (!isApiSuccess(response)) {
+          setOnboardingSource(undefined);
+          message.warning(
+            responseMessage(
+              response,
+              '来源数据源暂时无法确认，请手动选择 Source',
+            ),
+          );
+          return;
+        }
+
+        const readableSource = findReadableSourceDataSource(
+          response?.data?.bizData || [],
+          sourceDataSourceId,
+        );
+        if (!readableSource) {
+          setOnboardingSource(undefined);
+          message.warning(
+            '来源数据源在当前 Project 中不可见或已不存在，请手动选择 Source',
+          );
+          return;
+        }
+
+        const sourceOption = connectorOptions.find(
+          (item) =>
+            normalizeDbType(item.value) ===
+            normalizeDbType(readableSource.dbType),
+        );
+        if (!sourceOption) {
+          setOnboardingSource(undefined);
+          message.warning(
+            `数据源 ${readableSource.name || readableSource.id} 当前不支持离线同步创建，请手动选择 Source 类型`,
+          );
+          return;
+        }
+
+        setOnboardingSource(readableSource);
+        form.setFieldValue('sourceDbType', sourceOption.value);
+
+        const targetType = String(form.getFieldValue('targetDbType') || '');
+        if (targetType) {
+          const currentJobName = String(form.getFieldValue('jobName') || '').trim();
+          const nextJobName = createDefaultJobName(
+            sourceOption.value,
+            targetType,
+          );
+          if (!currentJobName || currentJobName === autoJobNameRef.current) {
+            form.setFieldValue('jobName', nextJobName);
+          }
+          autoJobNameRef.current = nextJobName;
+        }
+      } catch (error) {
+        if (!active) return;
+        setOnboardingSource(undefined);
+        message.warning(
+          error instanceof Error
+            ? error.message
+            : '来源数据源暂时无法确认，请手动选择 Source',
+        );
+      } finally {
+        if (active) setOnboardingSourceLoading(false);
+      }
+    };
+
+    void resolveSourceContext();
+    return () => {
+      active = false;
+    };
+  }, [
+    connectorOptions,
+    createDefaultJobName,
+    form,
+    open,
+    sourceDataSourceId,
+  ]);
 
   useEffect(() => {
     if (!guideMultiEnabled && form.getFieldValue('mode') === 'GUIDE_MULTI') {
@@ -204,11 +312,22 @@ export default function CreateSyncTaskDrawer({
     autoJobNameRef.current = nextJobName;
   };
 
+  const handleSourceDbTypeChange = (value: string) => {
+    if (
+      onboardingSource &&
+      normalizeDbType(onboardingSource.dbType) !== normalizeDbType(value)
+    ) {
+      setOnboardingSource(undefined);
+    }
+    updateAutoJobName('source', value);
+  };
+
   const handleCancel = () => {
     if (submitting) return;
 
     form.resetFields();
     setIcon(DEFAULT_EMOJI_ICON);
+    setOnboardingSource(undefined);
     autoJobNameRef.current = '';
     onCancel();
   };
@@ -238,8 +357,20 @@ export default function CreateSyncTaskDrawer({
 
       setSubmitting(true);
       const taskId = String(await getOfflineSyncUniqueId());
+      const draftPayload = buildCreatePayload(
+        taskId,
+        normalizedValues,
+        source,
+        sink,
+      );
+      const sourceStillMatches =
+        onboardingSource &&
+        normalizeDbType(onboardingSource.dbType) ===
+          normalizeDbType(values.sourceDbType);
       const payload = {
-        ...buildCreatePayload(taskId, normalizedValues, source, sink),
+        ...(sourceStillMatches
+          ? bindOfflineDraftSource(draftPayload, onboardingSource)
+          : draftPayload),
         editorMeta: { icon },
       };
       const savedId = await createOfflineSyncDraft(payload);
@@ -251,6 +382,7 @@ export default function CreateSyncTaskDrawer({
 
       form.resetFields();
       setIcon(DEFAULT_EMOJI_ICON);
+      setOnboardingSource(undefined);
       autoJobNameRef.current = '';
       message.success(
         intl.formatMessage({ id: 'pages.batchLinkUp.create.success' }),
@@ -301,8 +433,10 @@ export default function CreateSyncTaskDrawer({
 
             <YakButton
               type="primary"
-              loading={submitting}
-              disabled={!sourceDbType || !targetDbType}
+              loading={submitting || onboardingSourceLoading}
+              disabled={
+                onboardingSourceLoading || !sourceDbType || !targetDbType
+              }
               onClick={handleSubmit}
               className="!h-9 !rounded-lg !px-5 !font-medium !text-white"
             >
@@ -355,7 +489,7 @@ export default function CreateSyncTaskDrawer({
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  onChange={(value) => updateAutoJobName('source', value)}
+                  onChange={handleSourceDbTypeChange}
                 />
               </Form.Item>
 
@@ -395,6 +529,20 @@ export default function CreateSyncTaskDrawer({
                 />
               </Form.Item>
             </div>
+
+            {onboardingSourceLoading ? (
+              <div className="mt-3 rounded-lg border border-[#e4e7ec] bg-[#f9fafb] px-3 py-2 text-[12px] text-[#667085]">
+                正在确认来源数据源是否仍属于当前 Project…
+              </div>
+            ) : onboardingSource ? (
+              <div className="mt-3 rounded-lg border border-[#d1e9ff] bg-[#f5fbff] px-3 py-2 text-[12px] leading-5 text-[#475467]">
+                已从数据源
+                <strong className="mx-1 text-[#175cd3]">
+                  {onboardingSource.name || onboardingSource.id}
+                </strong>
+                发起创建。创建 Draft 时会将其稳定 ID 绑定为 Source；你仍可手动切换 Source 类型取消预绑定。
+              </div>
+            ) : null}
           </div>
 
           <Form.Item

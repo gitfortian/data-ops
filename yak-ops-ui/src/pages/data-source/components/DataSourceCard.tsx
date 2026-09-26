@@ -3,6 +3,7 @@ import type { DataSourceRecord } from '@/services/data-source';
 import { history, useAccess, useIntl } from '@umijs/max';
 import { motion } from 'framer-motion';
 import {
+  ArrowRightLeft,
   Clock3,
   Pencil,
   ScrollText,
@@ -53,6 +54,8 @@ const DataSourceCard = ({
     icon: null,
   };
   const currentId = dataSourceRecordKey(record.id);
+  const canCreateBatch =
+    Boolean(currentId) && access.hasPermission('task:batch:create');
   const canCreateRealtime =
     Boolean(currentId) &&
     String(record.dbType || '').toUpperCase() === 'MYSQL' &&
@@ -62,8 +65,19 @@ const DataSourceCard = ({
     permissions.canUpdate ||
     permissions.canDelete ||
     permissions.canReadSqlExecutions ||
+    canCreateBatch ||
     canCreateRealtime;
   const isListView = viewMode === 'list';
+
+  const openBatchCreate = () => {
+    if (!currentId) return;
+    history.push(
+      buildIntegrationCreatePath('batch', {
+        dataSourceId: currentId,
+        dbType: record.dbType ? String(record.dbType) : undefined,
+      }),
+    );
+  };
 
   const openRealtimeCreate = () => {
     if (!currentId) return;
@@ -139,6 +153,18 @@ const DataSourceCard = ({
 
         {actionAvailable ? (
           <div className="flex shrink-0 -translate-y-1 gap-1 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            {canCreateBatch ? (
+              <YakButton
+                type="text"
+                size="small"
+                iconOnly
+                title={intl.formatMessage({ id: 'pages.batchLinkUp.page.create' })}
+                className="!h-[30px] !w-[30px] !rounded-[8px] !border !border-[#e9ebef] !bg-white/90 !p-0 !text-[#7e838d] !shadow-[0_1px_3px_rgba(31,35,41,0.035)] hover:!text-[#4058c8]"
+                icon={<ArrowRightLeft size={14} strokeWidth={1.9} />}
+                onClick={openBatchCreate}
+              />
+            ) : null}
+
             {canCreateRealtime ? (
               <YakButton
                 type="text"

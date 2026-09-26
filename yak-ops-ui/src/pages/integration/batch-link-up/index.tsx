@@ -1,10 +1,11 @@
+import { parseBatchSourceOnboardingContext } from '@/features/integration/sourceOnboarding';
 import type {
   BatchLinkUpId,
   OfflineJobDefinitionVO,
 } from '@/services/batch-link-up';
-import { history, useIntl } from '@umijs/max';
+import { history, useIntl, useLocation } from '@umijs/max';
 import { ConfigProvider, Divider, message } from 'antd';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import CreateSyncTaskDrawer from './components/CreateSyncTaskDrawer';
 import OfflineSyncFilterBar from './components/OfflineSyncFilterBar';
@@ -18,9 +19,14 @@ import { getOfflineSyncEditPath } from './utils';
 
 const OfflineSyncPage = () => {
   const intl = useIntl();
+  const location = useLocation();
   const connectorOptions = useMemo(
     () => generateDataSourceOptions() as OfflineSyncConnectorOption[],
     [],
+  );
+  const onboardingContext = useMemo(
+    () => parseBatchSourceOnboardingContext(location.search),
+    [location.search],
   );
   const {
     records,
@@ -45,6 +51,26 @@ const OfflineSyncPage = () => {
     refresh,
   } = useOfflineSyncTasks();
 
+  useEffect(() => {
+    if (onboardingContext.createRequested) {
+      setCreateOpen(true);
+    }
+  }, [onboardingContext.createRequested, setCreateOpen]);
+
+  const handleCreate = () => {
+    if (onboardingContext.createRequested) {
+      history.replace('/sync/batch-link-up');
+    }
+    setCreateOpen(true);
+  };
+
+  const handleCreateCancel = () => {
+    setCreateOpen(false);
+    if (onboardingContext.createRequested) {
+      history.replace('/sync/batch-link-up');
+    }
+  };
+
   const handleEdit = (
     id: BatchLinkUpId,
     record: OfflineJobDefinitionVO,
@@ -67,7 +93,7 @@ const OfflineSyncPage = () => {
     <ConfigProvider theme={OFFLINE_SYNC_PAGE_THEME}>
       <div className="flex min-h-[calc(100vh-64px)] flex-col bg-white px-5 pt-4">
         <div className="mx-auto flex w-full max-w-full flex-1 flex-col">
-          <OfflineSyncPageHeader onCreate={() => setCreateOpen(true)} />
+          <OfflineSyncPageHeader onCreate={handleCreate} />
 
           <div className="mt-3">
             <OfflineSyncFilterBar
@@ -103,7 +129,12 @@ const OfflineSyncPage = () => {
 
         <CreateSyncTaskDrawer
           open={createOpen}
-          onCancel={() => setCreateOpen(false)}
+          sourceDataSourceId={
+            onboardingContext.createRequested
+              ? onboardingContext.sourceDataSourceId
+              : undefined
+          }
+          onCancel={handleCreateCancel}
           onCreated={handleCreated}
         />
       </div>
