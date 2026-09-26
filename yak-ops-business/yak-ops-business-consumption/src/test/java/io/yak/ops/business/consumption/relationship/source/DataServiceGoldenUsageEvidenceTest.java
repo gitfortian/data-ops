@@ -140,6 +140,46 @@ class DataServiceGoldenUsageEvidenceTest {
         usages.list(3L, ProductKey.parse("DATA_SERVICE:7"), null, 200));
   }
 
+  @Test
+  void normalizationProviderFailureIsUnavailableAndSameSourceCanBeRetried() {
+    InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
+    DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+
+    recorder.record(
+        definition(),
+        Map.of("id", "1"),
+        true,
+        8L,
+        1,
+        null,
+        new AccessContext("API_KEY", 5L, 21L, "Golden BI Consumer", "yak_gold"));
+
+    InvocationRecord source = callLogs.last();
+    InMemoryUsageRepository usages = new InMemoryUsageRepository();
+    usages.failNextSave();
+    DataServiceUsageEvidenceNormalizer normalizer =
+        new DataServiceUsageEvidenceNormalizer(new UsageEvidenceService(usages));
+
+    var failed = normalizer.normalize(source);
+
+    assertEquals(UsageNormalizationState.UNAVAILABLE, failed.state());
+    assertNull(failed.evidence());
+    assertEquals("invocation:501", failed.providerEvidenceRef());
+    assertEquals(
+        List.of(),
+        usages.list(3L, ProductKey.parse("DATA_SERVICE:7"), null, 200));
+
+    var retried = normalizer.normalize(source);
+
+    assertEquals(UsageNormalizationState.NORMALIZED, retried.state());
+    assertNotNull(retried.evidence());
+    assertEquals("DATA_SERVICE_INVOCATION:501", retried.evidence().deduplicationId());
+    assertEquals(
+        1,
+        usages.list(3L, ProductKey.parse("DATA_SERVICE:7"), null, 200).size());
+  }
+
   private DataServiceDefinition definition() {
     LocalDateTime publishedAt = LocalDateTime.of(2026, 9, 26, 9, 0);
     return DataServiceDefinition.restore(
@@ -205,6 +245,11 @@ class DataServiceGoldenUsageEvidenceTest {
   private static final class InMemoryUsageRepository implements UsageEvidenceRepository {
     private final AtomicLong sequence = new AtomicLong(601L);
     private final List<UsageEvidence> values = new ArrayList<>();
+    private boolean failNextSave;
+
+    void failNextSave() {
+      failNextSave = true;
+    }
 
     @Override
     public Optional<UsageEvidence> findByDeduplicationId(Long projectId, String deduplicationId) {
@@ -216,6 +261,10 @@ class DataServiceGoldenUsageEvidenceTest {
 
     @Override
     public UsageEvidence save(UsageEvidence evidence) {
+      if (failNextSave) {
+        failNextSave = false;
+        throw new IllegalStateException("usage store unavailable");
+      }
       UsageEvidence saved = new UsageEvidence(
           sequence.getAndIncrement(),
           evidence.projectId(),
