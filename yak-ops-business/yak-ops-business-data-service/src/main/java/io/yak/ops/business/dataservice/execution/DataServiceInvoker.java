@@ -15,7 +15,6 @@ import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import io.yak.ops.core.security.ActionAuthorization;
-import io.yak.ops.core.security.ActionPermissionCodes;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,7 +41,7 @@ public class DataServiceInvoker {
   private final ActionAuthorization actionAuthorization;
 
   public DataServiceQueryResponse test(Long id, Map<String, String> parameters) {
-    actionAuthorization.requirePermission(ActionPermissionCodes.DATA_SERVICE_INVOKE);
+    actionAuthorization.requirePermission("data-service:invoke");
     return execute(reader.require(id), parameters, AccessContext.console(), false);
   }
 
@@ -55,7 +54,7 @@ public class DataServiceInvoker {
       Map<String, String> parameters,
       String rawApiKey,
       String clientIp) {
-    actionAuthorization.requirePermissionIfAuthenticated(ActionPermissionCodes.DATA_SERVICE_INVOKE);
+    actionAuthorization.requirePermissionIfAuthenticated("data-service:invoke");
     DataServiceDefinition definition = reader.requireByPath(normalizePath(servicePath));
     ProjectContext projectContext = requireProjectContext(definition);
     return projectContextScope.call(
