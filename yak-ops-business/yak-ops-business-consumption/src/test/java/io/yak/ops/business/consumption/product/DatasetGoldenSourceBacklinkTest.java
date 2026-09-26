@@ -116,8 +116,8 @@ class DatasetGoldenSourceBacklinkTest {
         afterRenameAndPublish.navigation().canonicalHref());
 
     assertEquals("101", first.product().activeVersion().identity());
-    assertEquals("v3", first.product().activeVersion().label());
+    assertEquals("v3", first.product().activeVersion().displayVersion());
     assertEquals("102", afterRenameAndPublish.product().activeVersion().identity());
-    assertEquals("v4", afterRenameAndPublish.product().activeVersion().label());
+    assertEquals("v4", afterRenameAndPublish.product().activeVersion().displayVersion());
   }
 }
