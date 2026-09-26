@@ -21,6 +21,9 @@ import io.yak.ops.business.consumption.product.provider.ProductSearchCriteria;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
+import io.yak.ops.business.dataset.DatasetField;
+import io.yak.ops.business.dataset.DatasetFieldDataType;
+import io.yak.ops.business.dataset.DatasetFieldRole;
 import io.yak.ops.business.dataset.DatasetSourceType;
 import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetVersion;
@@ -67,10 +70,20 @@ class DatasetGoldenPathContractTest {
         DatasetContractPayload.class, discovered.products().get(0).contractPayload());
     assertEquals(101L, discoveredContract.versionId());
     assertEquals(3, discoveredContract.versionNo());
+    assertEquals(2, discoveredContract.columns().size());
+    assertEquals(new DatasetContractPayload.DatasetColumnContract(
+        "order_id", "order_id", "Order ID", "NUMBER", false,
+        "Stable order identifier", "DIMENSION", 1), discoveredContract.columns().get(0));
+    assertEquals(new DatasetContractPayload.DatasetColumnContract(
+        "amount", "amount", "Amount", "NUMBER", true,
+        "Order amount", "MEASURE", 2), discoveredContract.columns().get(1));
 
     assertEquals(ProductLookupState.FOUND, detail.state());
     assertEquals(key, detail.product().productKey());
     assertEquals("101", detail.product().activeVersion().identity());
+    DatasetContractPayload canonicalContract = assertInstanceOf(
+        DatasetContractPayload.class, detail.product().contractPayload());
+    assertEquals(discoveredContract, canonicalContract);
     assertEquals("/data-analysis/consumption/DATASET%3A42", detail.navigation().canonicalHref());
     assertEquals("/dataset/42", detail.navigation().sourceHref());
   }
@@ -82,6 +95,13 @@ class DatasetGoldenPathContractTest {
     DatasetVersion version = new DatasetVersion(
         101L, 42L, 3, DatasetSourceType.QUERY_REVISION,
         501L, 601L, 9, "ds-1", "select 1", "{}", now);
-    return new DatasetCatalogEntry(dataset, version, List.of());
+    List<DatasetField> fields = List.of(
+        new DatasetField(
+            "order_id", 101L, "order_id", "Order ID", DatasetFieldDataType.NUMBER,
+            false, "Stable order identifier", DatasetFieldRole.DIMENSION, 1),
+        new DatasetField(
+            "amount", 101L, "amount", "Amount", DatasetFieldDataType.NUMBER,
+            true, "Order amount", DatasetFieldRole.MEASURE, 2));
+    return new DatasetCatalogEntry(dataset, version, fields);
   }
 }
