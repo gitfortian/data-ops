@@ -20,6 +20,8 @@ import io.yak.ops.business.consumption.product.provider.ProductLookupState;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
+import io.yak.ops.business.dataset.DatasetQueryPerformance;
+import io.yak.ops.business.dataset.DatasetQueryStatus;
 import io.yak.ops.business.dataset.DatasetQuerySubject;
 import io.yak.ops.business.dataset.DatasetSourceType;
 import io.yak.ops.business.dataset.DatasetStatus;
@@ -34,6 +36,7 @@ import io.yak.ops.core.security.ActionAuthorization;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /** Phase 4 #104 Golden Path A, slice 2: view and consume remain independent decisions. */
 class DatasetViewConsumeSeparationTest {
@@ -100,6 +103,18 @@ class DatasetViewConsumeSeparationTest {
     assertEquals("dataset:query", denied.getPermissionCode());
     verify(authorization).requirePermission("dataset:query");
     verifyNoInteractions(repository, registry);
+
+    ArgumentCaptor<DatasetQueryPerformance> rejectedEvidence =
+        ArgumentCaptor.forClass(DatasetQueryPerformance.class);
+    verify(recorder).record(rejectedEvidence.capture());
+    DatasetQueryPerformance trace = rejectedEvidence.getValue();
+    assertEquals(42L, trace.datasetId());
+    assertEquals(DatasetQueryStatus.REJECTED, trace.status());
+    assertEquals("AUTHORIZE_ACTION", trace.failureStage());
+    assertEquals("ActionAccessDeniedException", trace.errorType());
+    assertEquals("USER", trace.subjectType());
+    assertEquals("SECURITY_PRINCIPAL", trace.subjectSourceDomain());
+    assertEquals("alice", trace.subjectSourceIdentity());
 
     CanonicalProductDetail afterConsumeDenied = canonical.detail(key);
     assertEquals(ProductLookupState.FOUND, afterConsumeDenied.state());
