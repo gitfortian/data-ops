@@ -1,11 +1,19 @@
 import { YakButton } from '@/components/ui';
 import type { DataSourceRecord } from '@/services/data-source';
-import { history, useIntl } from '@umijs/max';
+import { history, useAccess, useIntl } from '@umijs/max';
 import { motion } from 'framer-motion';
-import { Clock3, Pencil, ScrollText, Trash2, Unplug } from 'lucide-react';
+import {
+  Clock3,
+  Pencil,
+  ScrollText,
+  Trash2,
+  Unplug,
+  Waypoints,
+} from 'lucide-react';
 
-import { getEnvironmentTagConfigMap, PAGE_ANIMATION } from '../constants';
 import DatabaseIcons from '@/components/data-source/icons/DatabaseIcons';
+import { buildIntegrationCreatePath } from '@/pages/integration/sourceHandoff';
+import { getEnvironmentTagConfigMap, PAGE_ANIMATION } from '../constants';
 import type { DataSourcePermissions, DataSourceViewMode } from '../types';
 import { dataSourceRecordKey } from '../types';
 import DataSourceStatus from './DataSourceStatus';
@@ -32,6 +40,7 @@ const DataSourceCard = ({
   onTestConnection,
 }: DataSourceCardProps) => {
   const intl = useIntl();
+  const access = useAccess();
   const environmentTagConfigMap = getEnvironmentTagConfigMap(intl);
   const environmentConfig = environmentTagConfigMap[
     record.environment || ''
@@ -44,12 +53,27 @@ const DataSourceCard = ({
     icon: null,
   };
   const currentId = dataSourceRecordKey(record.id);
+  const canCreateRealtime =
+    Boolean(currentId) &&
+    String(record.dbType || '').toUpperCase() === 'MYSQL' &&
+    access.hasPermission('task:realtime:create');
   const actionAvailable =
     permissions.canTest ||
     permissions.canUpdate ||
     permissions.canDelete ||
-    permissions.canReadSqlExecutions;
+    permissions.canReadSqlExecutions ||
+    canCreateRealtime;
   const isListView = viewMode === 'list';
+
+  const openRealtimeCreate = () => {
+    if (!currentId) return;
+    history.push(
+      buildIntegrationCreatePath('realtime', {
+        dataSourceId: currentId,
+        dbType: record.dbType ? String(record.dbType) : undefined,
+      }),
+    );
+  };
 
   return (
     <motion.article
@@ -115,6 +139,18 @@ const DataSourceCard = ({
 
         {actionAvailable ? (
           <div className="flex shrink-0 -translate-y-1 gap-1 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            {canCreateRealtime ? (
+              <YakButton
+                type="text"
+                size="small"
+                iconOnly
+                title={intl.formatMessage({ id: 'pages.realtimeSync.page.create' })}
+                className="!h-[30px] !w-[30px] !rounded-[8px] !border !border-[#e9ebef] !bg-white/90 !p-0 !text-[#7e838d] !shadow-[0_1px_3px_rgba(31,35,41,0.035)] hover:!text-[#4058c8]"
+                icon={<Waypoints size={14} strokeWidth={1.9} />}
+                onClick={openRealtimeCreate}
+              />
+            ) : null}
+
             {permissions.canTest ? (
               <YakButton
                 type="text"

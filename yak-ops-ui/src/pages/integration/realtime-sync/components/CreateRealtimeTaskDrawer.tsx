@@ -1,4 +1,5 @@
 import { YakButton } from '@/components/ui';
+import type { IntegrationSourceHandoff } from '@/pages/integration/sourceHandoff';
 import {
   createRealtimeSyncBasicTask,
   listRealtimeComputeEnvironments,
@@ -20,10 +21,15 @@ interface CreateRealtimeTaskValues {
 
 interface CreateRealtimeTaskDrawerProps {
   open: boolean;
+  initialSource?: IntegrationSourceHandoff;
   onClose: () => void;
 }
 
-const CreateRealtimeTaskDrawer = ({ open, onClose }: CreateRealtimeTaskDrawerProps) => {
+const CreateRealtimeTaskDrawer = ({
+  open,
+  initialSource,
+  onClose,
+}: CreateRealtimeTaskDrawerProps) => {
   const intl = useIntl();
   const intlRef = useRef(intl);
   intlRef.current = intl;
@@ -136,7 +142,18 @@ const CreateRealtimeTaskDrawer = ({ open, onClose }: CreateRealtimeTaskDrawerPro
 
       message.success(intl.formatMessage({ id: 'pages.realtimeSync.create.success' }));
       form.resetFields();
-      history.push(`/sync/realtime/${taskId}/detail?scene=create&editor=${editorMode}`);
+
+      const params = new URLSearchParams({
+        scene: 'create',
+        editor: editorMode,
+      });
+      if (initialSource?.dataSourceId) {
+        params.set('sourceDataSourceId', initialSource.dataSourceId);
+      }
+      if (initialSource?.dbType) {
+        params.set('sourceDbType', initialSource.dbType);
+      }
+      history.push(`/sync/realtime/${taskId}/detail?${params.toString()}`);
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) return;
       message.error(
@@ -221,6 +238,13 @@ const CreateRealtimeTaskDrawer = ({ open, onClose }: CreateRealtimeTaskDrawerPro
             );
           })}
         </div>
+
+        {initialSource?.dataSourceId ? (
+          <div className="mb-5 rounded-lg border border-[#e4e7ec] bg-[#f9fafb] px-4 py-3 text-[12px] leading-5 text-[#667085]">
+            Source DataSource #{initialSource.dataSourceId}
+            {initialSource.dbType ? ` · ${initialSource.dbType}` : ''} will be carried into the realtime authoring context.
+          </div>
+        ) : null}
 
         <Form.Item
           name="runtimeEnvironmentId"
