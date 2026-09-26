@@ -103,6 +103,12 @@ public class DatasetDataProductProvider implements DataProductProvider {
     DatasetVersion version = entry.currentVersion();
     AssetProjection asset = assetProjection(dataset.id());
     List<ProductSectionState> sections = List.of(
+        new ProductSectionState(
+            "source-governance",
+            ProviderEvidenceState.READY,
+            "DATASET",
+            dataset.updateTime(),
+            null),
         unavailableSection("ownership", "DATASET", "Dataset owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Dataset visibility policy is not exposed yet"),
         asset.section());
