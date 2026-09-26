@@ -77,6 +77,52 @@ class DataServiceGoldenConsumerImpactTest {
   }
 
   @Test
+  void subscriptionWithoutObservedInvokeRemainsDeclaredOnlyEvidence() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject currentProject = mock(CurrentProject.class);
+    when(currentProject.requireProjectId()).thenReturn(3L);
+
+    ProductKey product = ProductKey.parse("DATA_SERVICE:7");
+    ConsumerRef consumer = new ConsumerRef(
+        ConsumerType.DATA_SERVICE,
+        "DATA_SERVICE_CONSUMER",
+        "21",
+        "Golden BI Consumer");
+    LocalDateTime subscribedAt = LocalDateTime.of(2026, 9, 26, 9, 5);
+
+    when(subscriptions.list(3L, product, null)).thenReturn(List.of(new Subscription(
+        701L,
+        3L,
+        product,
+        consumer,
+        ConsumptionMode.API_INVOKE,
+        SubscriptionStatus.ACTIVE,
+        "owner",
+        subscribedAt,
+        "owner",
+        subscribedAt)));
+    when(usage.list(3L, product, null, 200)).thenReturn(List.of());
+
+    ConsumerImpactView view =
+        new ConsumerImpactService(subscriptions, usage, currentProject).view(product, 200);
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.subscriptionState());
+    assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.usageState());
+    assertEquals(1, view.consumers().size());
+
+    ConsumerImpactView.KnownConsumer known = view.consumers().getFirst();
+    assertEquals("DATA_SERVICE:DATA_SERVICE_CONSUMER:21", known.consumerRef().identityKey());
+    assertEquals(List.of(ConsumptionMode.API_INVOKE), known.declaredModes());
+    assertEquals(List.of(), known.observedModes());
+    assertEquals(1, known.activeSubscriptionCount());
+    assertEquals(0, known.successfulUsageCount());
+    assertEquals(subscribedAt, known.lastDeclaredAt());
+    assertEquals(null, known.lastObservedAt());
+    assertEquals(List.of(), known.providerEvidenceRefs());
+  }
+
+  @Test
   void observedConsumerRemainsKnownWhenLiveConsumerOrDeclarationIsNoLongerAvailable() {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
