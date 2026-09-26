@@ -1,6 +1,6 @@
 # PD-003 — Business Semantic & Metric Product Contract
 
-Status: PROPOSED  
+Status: ACCEPTED  
 Implementation: NOT_STARTED  
 Date: 2026-09-24  
 Owner: Product  
