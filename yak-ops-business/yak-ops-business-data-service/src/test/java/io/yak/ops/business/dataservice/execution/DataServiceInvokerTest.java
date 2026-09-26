@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +28,6 @@ import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.core.security.ActionAuthorization;
-import io.yak.ops.core.security.ActionPermissionCodes;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -73,15 +73,28 @@ class DataServiceInvokerTest {
 
     invoker.invoke("orders", Map.of("id", "1"), null);
 
-    verify(actionAuthorization).requirePermissionIfAuthenticated(ActionPermissionCodes.DATA_SERVICE_INVOKE);
+    verify(actionAuthorization).requirePermissionIfAuthenticated("data-service:invoke");
+  }
+
+  @Test
+  void authenticatedPublicInvocationDenialStopsBeforeServiceResolution() {
+    ActionAccessDeniedException denied = new ActionAccessDeniedException("data-service:invoke");
+    doThrow(denied).when(actionAuthorization).requirePermissionIfAuthenticated("data-service:invoke");
+
+    assertThatThrownBy(() -> invoker.invoke("orders", Map.of("id", "1"), null)).isSameAs(denied);
+
+    verify(reader, never()).requireByPath(any());
+    verify(authorizer, never()).authorize(any(), any(), any());
   }
 
   @Test
   void consoleTestRequiresInvokePermission() {
-    ActionAccessDeniedException denied = new ActionAccessDeniedException(ActionPermissionCodes.DATA_SERVICE_INVOKE);
-    doThrow(denied).when(actionAuthorization).requirePermission(ActionPermissionCodes.DATA_SERVICE_INVOKE);
+    ActionAccessDeniedException denied = new ActionAccessDeniedException("data-service:invoke");
+    doThrow(denied).when(actionAuthorization).requirePermission("data-service:invoke");
 
     assertThatThrownBy(() -> invoker.test(7L, Map.of())).isSameAs(denied);
+
+    verify(reader, never()).require(anyLong());
   }
 
   @Test
