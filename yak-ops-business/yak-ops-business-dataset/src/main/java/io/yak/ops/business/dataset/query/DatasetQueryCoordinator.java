@@ -14,6 +14,8 @@ import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResu
 import io.yak.ops.business.dataset.repository.DatasetRepository;
 import io.yak.ops.core.execution.sql.SqlExecutionPolicyViolationException;
 import io.yak.ops.core.project.ProjectContextException;
+import io.yak.ops.core.security.ActionAccessDeniedException;
+import io.yak.ops.core.security.ActionAuthorization;
 import java.net.SocketTimeoutException;
 import java.sql.SQLTimeoutException;
 import java.time.Instant;
@@ -29,14 +31,17 @@ public class DatasetQueryCoordinator {
   private final DatasetRepository repository;
   private final DatasetSourceQueryRegistry sourceRegistry;
   private final DatasetQueryPerformanceRecorder performanceRecorder;
+  private final ActionAuthorization actionAuthorization;
 
   public DatasetQueryCoordinator(
       DatasetRepository repository,
       DatasetSourceQueryRegistry sourceRegistry,
-      DatasetQueryPerformanceRecorder performanceRecorder) {
+      DatasetQueryPerformanceRecorder performanceRecorder,
+      ActionAuthorization actionAuthorization) {
     this.repository = repository;
     this.sourceRegistry = sourceRegistry;
     this.performanceRecorder = performanceRecorder;
+    this.actionAuthorization = actionAuthorization;
   }
 
   public DatasetQueryResult query(long datasetId, DatasetQueryRequest request) {
@@ -48,7 +53,7 @@ public class DatasetQueryCoordinator {
     String queryId = UUID.randomUUID().toString().replace("-", "");
     Instant startedAt = Instant.now();
     long queryStartedAt = System.nanoTime();
-    String stage = "VALIDATE_REQUEST";
+    String stage = "AUTHORIZE_ACTION";
     Dataset dataset = null;
     DatasetVersion version = null;
     String dataSourceId = null;
@@ -56,6 +61,9 @@ public class DatasetQueryCoordinator {
     long servicePrepareMillis = 0L;
 
     try {
+      actionAuthorization.requirePermission("dataset:query");
+
+      stage = "VALIDATE_REQUEST";
       if (datasetId <= 0L) {
         throw new IllegalArgumentException("datasetId 必须大于 0");
       }
@@ -169,7 +177,8 @@ public class DatasetQueryCoordinator {
     if (isTimeout(exception)) return DatasetQueryStatus.TIMEOUT;
     if (exception instanceof IllegalArgumentException
         || exception instanceof SqlExecutionPolicyViolationException
-        || exception instanceof ProjectContextException) {
+        || exception instanceof ProjectContextException
+        || exception instanceof ActionAccessDeniedException) {
       return DatasetQueryStatus.REJECTED;
     }
     return DatasetQueryStatus.FAILED;
