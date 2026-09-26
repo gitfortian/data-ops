@@ -16,7 +16,10 @@ import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
+import io.yak.ops.business.consumption.relationship.ConsumerImpactService;
+import io.yak.ops.business.consumption.relationship.ConsumerImpactView;
 import io.yak.ops.business.consumption.relationship.ConsumerType;
+import io.yak.ops.business.consumption.relationship.SubscriptionRepository;
 import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceRepository;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
@@ -38,6 +41,7 @@ import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResult;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryRegistry;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
+import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.security.ActionAuthorization;
 import java.time.Instant;
 import java.util.List;
@@ -45,7 +49,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-/** Phase 4 #104 Golden Path A, slice 3: authorized query executes and normalizes stable usage evidence. */
+/** Phase 4 #104 Golden Path A: authorized Dataset query through normalized consumer impact. */
 class DatasetGoldenQueryExecutionTest {
 
   @Test
@@ -151,5 +155,26 @@ class DatasetGoldenQueryExecutionTest {
     assertEquals("alice", usage.consumerRef().sourceIdentity());
     assertEquals("USER:SECURITY_PRINCIPAL:alice", usage.consumerRef().identityKey());
     assertEquals("query:" + result.queryId(), usage.providerEvidenceRef());
+
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    CurrentProject currentProject = mock(CurrentProject.class);
+    when(currentProject.requireProjectId()).thenReturn(7L);
+    when(subscriptions.list(7L, detail.product().productKey(), null)).thenReturn(List.of());
+    when(usageRepository.list(7L, detail.product().productKey(), null, 200))
+        .thenReturn(List.of(usage));
+
+    ConsumerImpactView impact =
+        new ConsumerImpactService(subscriptions, usageRepository, currentProject)
+            .view(detail.product().productKey(), 200);
+
+    assertEquals(ConsumerImpactView.EvidenceState.EMPTY, impact.subscriptionState());
+    assertEquals(ConsumerImpactView.EvidenceState.READY, impact.usageState());
+    assertEquals(1, impact.consumers().size());
+    assertEquals("USER:SECURITY_PRINCIPAL:alice",
+        impact.consumers().getFirst().consumerRef().identityKey());
+    assertEquals(0, impact.consumers().getFirst().activeSubscriptionCount());
+    assertEquals(1, impact.consumers().getFirst().successfulUsageCount());
+    assertEquals(List.of("DATASET_QUERY:query:" + result.queryId()),
+        impact.consumers().getFirst().providerEvidenceRefs());
   }
 }
