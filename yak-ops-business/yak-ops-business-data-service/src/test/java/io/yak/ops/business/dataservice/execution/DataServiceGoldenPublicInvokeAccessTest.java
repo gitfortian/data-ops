@@ -65,7 +65,9 @@ class DataServiceGoldenPublicInvokeAccessTest {
       return action.get();
     });
     when(consumerRepository.hasConfiguredAccess(3L, 7L)).thenReturn(true);
+    when(secrets.hash("bad-key")).thenReturn("bad-hash");
     when(secrets.hash("yak-key")).thenReturn("hash");
+    when(keyRepository.findByHash("bad-hash")).thenReturn(Optional.empty());
 
     LocalDateTime now = LocalDateTime.of(2026, 9, 26, 10, 0);
     DataServiceApiKey key = new DataServiceApiKey(
@@ -103,11 +105,15 @@ class DataServiceGoldenPublicInvokeAccessTest {
         .isInstanceOf(DataServiceUnauthorizedException.class)
         .hasMessageContaining("X-API-Key");
 
+    assertThatThrownBy(() -> invoker.invoke("/orders", Map.of("id", "1"), "bad-key", "10.0.0.8"))
+        .isInstanceOf(DataServiceUnauthorizedException.class)
+        .hasMessageContaining("API Key 无效或无权访问当前 API");
+
     DataServiceQueryResponse result =
         invoker.invoke("/orders", Map.of("id", "1"), "yak-key", "10.0.0.8");
 
     assertThat(result.rows()).containsExactly(Map.of("id", 1L));
-    verify(actionAuthorization, org.mockito.Mockito.times(2))
+    verify(actionAuthorization, org.mockito.Mockito.times(3))
         .requirePermissionIfAuthenticated("data-service:invoke");
     verify(consumerIpAccessAuthorizer).authorize(21L, "10.0.0.8");
     verify(rateLimiter).acquire(key);
