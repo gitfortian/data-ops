@@ -103,12 +103,7 @@ public class DatasetDataProductProvider implements DataProductProvider {
     DatasetVersion version = entry.currentVersion();
     AssetProjection asset = assetProjection(dataset.id());
     List<ProductSectionState> sections = List.of(
-        new ProductSectionState(
-            "source-governance",
-            ProviderEvidenceState.READY,
-            "DATASET",
-            dataset.updateTime(),
-            null),
+        sourceGovernanceSection(dataset),
         unavailableSection("ownership", "DATASET", "Dataset owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Dataset visibility policy is not exposed yet"),
         asset.section());
@@ -132,6 +127,19 @@ public class DatasetDataProductProvider implements DataProductProvider {
             version.versionNo(),
             entry.fields().stream().map(this::column).toList(),
             List.of("QUERY", "PREVIEW")));
+  }
+
+  private ProductSectionState sourceGovernanceSection(Dataset dataset) {
+    if (dataset.updateTime() == null) {
+      return unavailableSection(
+          "source-governance", "DATASET", "Dataset source governance observation time is unavailable");
+    }
+    return new ProductSectionState(
+        "source-governance",
+        ProviderEvidenceState.READY,
+        "DATASET",
+        dataset.updateTime(),
+        null);
   }
 
   private DatasetColumnContract column(DatasetField field) {
