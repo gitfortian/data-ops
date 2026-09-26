@@ -107,6 +107,39 @@ class DataServiceGoldenUsageEvidenceTest {
         usages.list(3L, ProductKey.parse("DATA_SERVICE:7"), null, 200));
   }
 
+  @Test
+  void successfulInvocationWithoutManagedConsumerIsExplicitGapAndCreatesNoUsage() {
+    InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
+    DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+
+    recorder.record(
+        definition(),
+        Map.of("id", "1"),
+        true,
+        6L,
+        1,
+        null,
+        AccessContext.publicAccess());
+
+    InvocationRecord source = callLogs.last();
+    assertNotNull(source);
+    assertNull(source.consumerId());
+    assertEquals(101L, source.sourceRevisionId());
+
+    InMemoryUsageRepository usages = new InMemoryUsageRepository();
+    DataServiceUsageEvidenceNormalizer normalizer =
+        new DataServiceUsageEvidenceNormalizer(new UsageEvidenceService(usages));
+
+    var result = normalizer.normalize(source);
+
+    assertEquals(UsageNormalizationState.GAP, result.state());
+    assertNull(result.evidence());
+    assertEquals(
+        List.of(),
+        usages.list(3L, ProductKey.parse("DATA_SERVICE:7"), null, 200));
+  }
+
   private DataServiceDefinition definition() {
     LocalDateTime publishedAt = LocalDateTime.of(2026, 9, 26, 9, 0);
     return DataServiceDefinition.restore(
