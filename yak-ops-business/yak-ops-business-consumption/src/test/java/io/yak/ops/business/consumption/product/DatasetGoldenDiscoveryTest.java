@@ -3,6 +3,7 @@ package io.yak.ops.business.consumption.product;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +16,7 @@ import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryResult;
 import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService;
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.model.ProductType;
+import io.yak.ops.business.consumption.product.model.ProviderEvidenceState;
 import io.yak.ops.business.consumption.product.model.SourceLifecycleState;
 import io.yak.ops.business.consumption.product.provider.ProductLookupState;
 import io.yak.ops.business.consumption.product.provider.ProductSearchCriteria;
@@ -39,6 +41,7 @@ class DatasetGoldenDiscoveryTest {
     AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
     AssetAppService assetAppService = mock(AssetAppService.class);
 
+    Instant observedAt = Instant.parse("2026-09-26T01:00:00Z");
     Dataset dataset = new Dataset(
         42L,
         7L,
@@ -46,8 +49,8 @@ class DatasetGoldenDiscoveryTest {
         "Published orders",
         DatasetStatus.ONLINE,
         101L,
-        Instant.parse("2026-09-26T01:00:00Z"),
-        Instant.parse("2026-09-26T01:00:00Z"));
+        observedAt,
+        observedAt);
     DatasetVersion version = new DatasetVersion(
         101L,
         42L,
@@ -59,7 +62,7 @@ class DatasetGoldenDiscoveryTest {
         "ds-1",
         "select 1",
         "{}",
-        Instant.parse("2026-09-26T01:00:00Z"));
+        observedAt);
     DatasetCatalogEntry entry = new DatasetCatalogEntry(dataset, version, List.of());
 
     when(reader.catalog(List.of(), true)).thenReturn(List.of(entry));
@@ -103,6 +106,16 @@ class DatasetGoldenDiscoveryTest {
     assertEquals("101", detail.product().activeVersion().identity());
     assertEquals("v3", detail.product().activeVersion().label());
     assertEquals("/dataset/42", detail.navigation().sourceHref());
+
+    CanonicalProductDetail.GovernanceEvidence sourceGovernance = detail.governanceEvidence().stream()
+        .filter(evidence -> "source-governance".equals(evidence.sectionKey()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals(ProviderEvidenceState.READY, sourceGovernance.state());
+    assertEquals("DATASET", sourceGovernance.ownerDomain());
+    assertEquals(observedAt, sourceGovernance.observedAt());
+    assertTrue(detail.governanceEvidence().stream().anyMatch(evidence ->
+        evidence.state() == ProviderEvidenceState.READY && evidence.observedAt() != null));
   }
 
   @Test
