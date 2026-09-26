@@ -2,6 +2,7 @@ package io.yak.ops.business.consumption.relationship.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.consumption.product.identity.ProductKey;
@@ -70,6 +71,40 @@ class DataServiceGoldenUsageEvidenceTest {
     assertEquals(ConsumptionMode.API_INVOKE, evidence.consumptionMode());
     assertEquals("invocation:501", evidence.providerEvidenceRef());
     assertEquals("DATA_SERVICE_INVOCATION:501", evidence.deduplicationId());
+  }
+
+  @Test
+  void failedInvocationRemainsAuditEvidenceAndDoesNotCreateUsage() {
+    InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
+    DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+
+    recorder.record(
+        definition(),
+        Map.of("id", "1"),
+        false,
+        4L,
+        0,
+        "source execution failed",
+        new AccessContext("API_KEY", 5L, 21L, "Golden BI Consumer", "yak_gold"));
+
+    InvocationRecord source = callLogs.last();
+    assertNotNull(source);
+    assertEquals(false, source.success());
+    assertEquals(21L, source.consumerId());
+    assertEquals(101L, source.sourceRevisionId());
+
+    InMemoryUsageRepository usages = new InMemoryUsageRepository();
+    DataServiceUsageEvidenceNormalizer normalizer =
+        new DataServiceUsageEvidenceNormalizer(new UsageEvidenceService(usages));
+
+    var result = normalizer.normalize(source);
+
+    assertEquals(UsageNormalizationState.IGNORED, result.state());
+    assertNull(result.evidence());
+    assertEquals(
+        List.of(),
+        usages.list(3L, ProductKey.parse("DATA_SERVICE:7"), null, 200));
   }
 
   private DataServiceDefinition definition() {
