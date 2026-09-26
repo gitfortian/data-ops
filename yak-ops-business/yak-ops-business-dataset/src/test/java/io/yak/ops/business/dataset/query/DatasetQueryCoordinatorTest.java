@@ -26,7 +26,6 @@ import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResu
 import io.yak.ops.business.dataset.repository.DatasetRepository;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.core.security.ActionAuthorization;
-import io.yak.ops.core.security.ActionPermissionCodes;
 import java.sql.SQLTimeoutException;
 import java.time.Instant;
 import java.util.List;
@@ -51,7 +50,7 @@ class DatasetQueryCoordinatorTest {
 
     DatasetQueryResult result = fixture.coordinator().query(21L, null);
 
-    verify(fixture.authorization()).requirePermission(ActionPermissionCodes.DATASET_QUERY);
+    verify(fixture.authorization()).requirePermission("dataset:query");
     assertNotNull(result.queryId());
     assertEquals(32L, result.datasetVersionId());
     ArgumentCaptor<DatasetQueryPerformance> trace = trace(fixture.recorder());
@@ -64,8 +63,8 @@ class DatasetQueryCoordinatorTest {
   @Test
   void deniedActionStopsBeforeDatasetResolutionAndRecordsRejectedTrace() {
     Fixture fixture = fixture();
-    ActionAccessDeniedException denied = new ActionAccessDeniedException(ActionPermissionCodes.DATASET_QUERY);
-    doThrow(denied).when(fixture.authorization()).requirePermission(ActionPermissionCodes.DATASET_QUERY);
+    ActionAccessDeniedException denied = new ActionAccessDeniedException("dataset:query");
+    doThrow(denied).when(fixture.authorization()).requirePermission("dataset:query");
 
     assertSame(denied, assertThrows(ActionAccessDeniedException.class, () -> fixture.coordinator().query(21L, null)));
 
