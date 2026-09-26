@@ -120,7 +120,7 @@ class DataServiceGoldenDiscoveryTest {
     assertEquals(discoveredKey, detail.product().productKey());
     assertEquals("88", detail.product().sourceRef().sourceIdentity());
     assertEquals("9001", detail.product().activeVersion().identity());
-    assertEquals("v12", detail.product().activeVersion().label());
+    assertEquals("v12", detail.product().activeVersion().displayVersion());
     assertEquals("/data-service/api/88", detail.navigation().sourceHref());
 
     DataServiceContractPayload contract = assertInstanceOf(
