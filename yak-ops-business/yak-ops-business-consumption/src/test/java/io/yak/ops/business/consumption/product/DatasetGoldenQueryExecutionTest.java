@@ -2,6 +2,7 @@ package io.yak.ops.business.consumption.product;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,6 +16,12 @@ import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.product.provider.source.DatasetDataProductProvider;
+import io.yak.ops.business.consumption.relationship.ConsumerType;
+import io.yak.ops.business.consumption.relationship.UsageEvidence;
+import io.yak.ops.business.consumption.relationship.UsageEvidenceRepository;
+import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
+import io.yak.ops.business.consumption.relationship.UsageNormalizationState;
+import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceNormalizer;
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
@@ -38,7 +45,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-/** Phase 4 #104 Golden Path A, slice 3: authorized query executes the canonical current version. */
+/** Phase 4 #104 Golden Path A, slice 3: authorized query executes and normalizes stable usage evidence. */
 class DatasetGoldenQueryExecutionTest {
 
   @Test
@@ -115,11 +122,34 @@ class DatasetGoldenQueryExecutionTest {
     ArgumentCaptor<DatasetQueryPerformance> evidence =
         ArgumentCaptor.forClass(DatasetQueryPerformance.class);
     verify(recorder).record(evidence.capture());
-    assertEquals(DatasetQueryStatus.SUCCESS, evidence.getValue().status());
-    assertEquals(101L, evidence.getValue().datasetVersionId());
-    assertEquals(3, evidence.getValue().datasetVersionNo());
-    assertEquals("USER", evidence.getValue().subjectType());
-    assertEquals("SECURITY_PRINCIPAL", evidence.getValue().subjectSourceDomain());
-    assertEquals("alice", evidence.getValue().subjectSourceIdentity());
+    DatasetQueryPerformance trace = evidence.getValue();
+    assertEquals(DatasetQueryStatus.SUCCESS, trace.status());
+    assertEquals(101L, trace.datasetVersionId());
+    assertEquals(3, trace.datasetVersionNo());
+    assertEquals("USER", trace.subjectType());
+    assertEquals("SECURITY_PRINCIPAL", trace.subjectSourceDomain());
+    assertEquals("alice", trace.subjectSourceIdentity());
+
+    UsageEvidenceRepository usageRepository = mock(UsageEvidenceRepository.class);
+    when(usageRepository.findByDeduplicationId(
+        7L, "DATASET_QUERY_PERFORMANCE:" + trace.queryId()))
+        .thenReturn(Optional.empty());
+    when(usageRepository.save(any(UsageEvidence.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    var normalization = new DatasetUsageEvidenceNormalizer(new UsageEvidenceService(usageRepository))
+        .normalize(7L, trace);
+
+    assertEquals(UsageNormalizationState.NORMALIZED, normalization.state());
+    UsageEvidence usage = normalization.evidence();
+    assertNotNull(usage);
+    assertEquals(detail.product().productKey(), usage.productKey());
+    assertEquals(detail.product().activeVersion().identity(), usage.sourceVersion().identity());
+    assertEquals(detail.product().activeVersion().label(), usage.sourceVersion().displayVersion());
+    assertEquals(ConsumerType.USER, usage.consumerRef().consumerType());
+    assertEquals("SECURITY_PRINCIPAL", usage.consumerRef().sourceDomain());
+    assertEquals("alice", usage.consumerRef().sourceIdentity());
+    assertEquals("USER:SECURITY_PRINCIPAL:alice", usage.consumerRef().identityKey());
+    assertEquals("query:" + result.queryId(), usage.providerEvidenceRef());
   }
 }
