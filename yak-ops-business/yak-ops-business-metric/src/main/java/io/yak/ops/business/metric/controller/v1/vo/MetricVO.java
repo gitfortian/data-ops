@@ -1,6 +1,7 @@
 package io.yak.ops.business.metric.controller.v1.vo;
 
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.impact.MetricImpactService;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
@@ -43,6 +44,14 @@ public class MetricVO {
   private LocalDateTime updateTime;
   private List<CompositionVO> compositions;
 
+  /** The mutable owning Metric definition; historical versions are immutable snapshots. */
+  private DefinitionViewType definitionViewType;
+  private boolean editable;
+
+  /** Detail-only Phase 5 context; list/create/update responses may leave these fields unset. */
+  private List<MetricImpactService.DependencyChange> dependencyChanges;
+  private MetricImpactService.AuthoringNextStep authoringNextStep;
+
   public static MetricVO from(Metric m) {
     MetricVO vo = new MetricVO();
     vo.setId(m.id());
@@ -71,7 +80,13 @@ public class MetricVO {
     vo.setUpdatedBy(m.updatedBy());
     vo.setCreateTime(m.createTime());
     vo.setUpdateTime(m.updateTime());
+    vo.setDefinitionViewType(DefinitionViewType.CURRENT_EDITABLE);
+    vo.setEditable(true);
     return vo;
+  }
+
+  public enum DefinitionViewType {
+    CURRENT_EDITABLE
   }
 
   @Data

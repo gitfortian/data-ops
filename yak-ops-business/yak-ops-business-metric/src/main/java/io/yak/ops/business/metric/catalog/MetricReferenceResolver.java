@@ -4,10 +4,10 @@ import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.repository.MetricRepository;
 import io.yak.ops.business.modeling.api.ModelQueryApi;
 import io.yak.ops.business.modeling.api.ModelQueryApi.ModelBrief;
-import io.yak.ops.business.semantic.api.ProcessApi;
-import io.yak.ops.business.semantic.api.StandardQueryApi;
 import io.yak.ops.business.semantic.api.BusinessDomain;
 import io.yak.ops.business.semantic.api.BusinessProcess;
+import io.yak.ops.business.semantic.api.ProcessApi;
+import io.yak.ops.business.semantic.api.StandardQueryApi;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -26,9 +26,9 @@ import org.springframework.stereotype.Component;
  * Resolves cross-module references (domain/process/caliber/unit/model) and
  * in-module display names through SPI interfaces only.
  *
- * <p>All lookups are best-effort: an unavailable or failing provider degrades
- * to an empty result and never blocks the caller. Direct imports of other
- * modules' dao layers are forbidden by the module contract (REVIEW #2).
+ * <p>Legacy display lookups remain best-effort. Product-facing dependency resolution additionally
+ * preserves whether a reference is confirmed missing or could not be resolved because its provider
+ * is unavailable, so REMOVED and UNAVAILABLE never collapse into the same null value.
  */
 @Component
 @Slf4j
@@ -37,6 +37,26 @@ public class MetricReferenceResolver {
   /** 上游引用在登记时刻的快照(编码 + 版本号);解析不到时为空项。 */
   public record Reference(String code, Integer version) {
     public static final Reference EMPTY = new Reference(null, null);
+  }
+
+  public enum ResolutionStatus {
+    READY,
+    REMOVED,
+    UNAVAILABLE
+  }
+
+  public record ReferenceResolution(Reference reference, ResolutionStatus status) {
+    public static ReferenceResolution ready(Reference reference) {
+      return new ReferenceResolution(reference, ResolutionStatus.READY);
+    }
+
+    public static ReferenceResolution removed() {
+      return new ReferenceResolution(Reference.EMPTY, ResolutionStatus.REMOVED);
+    }
+
+    public static ReferenceResolution unavailable() {
+      return new ReferenceResolution(Reference.EMPTY, ResolutionStatus.UNAVAILABLE);
+    }
   }
 
   private final MetricRepository repository;
@@ -112,32 +132,60 @@ public class MetricReferenceResolver {
         .collect(Collectors.toMap(Metric::id, Function.identity(), (a, b) -> a));
   }
 
-  /** 口径/单位引用的 code+version 快照(写路径单条解析,best-effort)。 */
+  /** Legacy snapshot lookup retained for existing callers. */
   public Reference standardReference(Long standardId) {
-    if (standardId == null || standardId <= 0) {
-      return Reference.EMPTY;
-    }
-    return safeValue("standard:" + standardId,
-        () -> {
-          var standard = standardQueryApi.getIfAvailable().get(standardId);
-          return standard == null
-              ? Reference.EMPTY
-              : new Reference(standard.code(), standard.version());
-        },
-        Reference.EMPTY);
+    return standardReferenceResolution(standardId).reference();
   }
 
-  /** 模型引用的 code+version 快照(写路径单条解析,best-effort)。 */
-  public Reference modelReference(Long modelId) {
-    if (modelId == null || modelId <= 0) {
-      return Reference.EMPTY;
+  /**
+   * Product-facing standard dependency lookup.
+   * A normal null response means the referenced object is confirmed removed; missing provider or
+   * provider failure means UNAVAILABLE and must not be rendered as removed.
+   */
+  public ReferenceResolution standardReferenceResolution(Long standardId) {
+    if (standardId == null || standardId <= 0) {
+      return ReferenceResolution.unavailable();
     }
-    return safeValue("model:" + modelId,
-        () -> {
-          var brief = modelQueryApi.getIfAvailable().resolve(List.of(modelId)).get(modelId);
-          return brief == null ? Reference.EMPTY : new Reference(brief.code(), brief.latestVersionNo());
-        },
-        Reference.EMPTY);
+    StandardQueryApi api = standardQueryApi.getIfAvailable();
+    if (api == null) {
+      return ReferenceResolution.unavailable();
+    }
+    try {
+      var standard = api.get(standardId);
+      if (standard == null) {
+        return ReferenceResolution.removed();
+      }
+      return ReferenceResolution.ready(new Reference(standard.code(), standard.version()));
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for standard:{} (unavailable): {}", standardId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
+  }
+
+  /** Legacy snapshot lookup retained for existing callers. */
+  public Reference modelReference(Long modelId) {
+    return modelReferenceResolution(modelId).reference();
+  }
+
+  /** Product-facing model dependency lookup preserving REMOVED vs UNAVAILABLE. */
+  public ReferenceResolution modelReferenceResolution(Long modelId) {
+    if (modelId == null || modelId <= 0) {
+      return ReferenceResolution.unavailable();
+    }
+    ModelQueryApi api = modelQueryApi.getIfAvailable();
+    if (api == null) {
+      return ReferenceResolution.unavailable();
+    }
+    try {
+      ModelBrief brief = api.resolve(List.of(modelId)).get(modelId);
+      if (brief == null) {
+        return ReferenceResolution.removed();
+      }
+      return ReferenceResolution.ready(new Reference(brief.code(), brief.latestVersionNo()));
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for model:{} (unavailable): {}", modelId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
   }
 
   private static Collection<Long> distinctIds(Collection<Long> ids) {

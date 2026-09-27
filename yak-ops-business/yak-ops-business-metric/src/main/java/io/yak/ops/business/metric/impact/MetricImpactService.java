@@ -3,6 +3,8 @@ package io.yak.ops.business.metric.impact;
 import io.yak.ops.business.metric.api.MetricUsageApi;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.catalog.MetricReferenceResolver;
+import io.yak.ops.business.metric.catalog.MetricReferenceResolver.ReferenceResolution;
+import io.yak.ops.business.metric.catalog.MetricReferenceResolver.ResolutionStatus;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
 import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
@@ -20,10 +22,9 @@ import org.springframework.stereotype.Component;
  * Impact analysis service (T53): user-triggered comparison of
  * metric_dependency.dependency_version against current upstream versions.
  *
- * <p>Upstream current versions are resolved through the same SPI paths as
- * dependency registration: metrics in-module, models via ModelQueryApi,
- * caliber/unit via StandardQueryApi. Unresolvable upstreams surface as
- * UNKNOWN (无法获取当前版本) instead of a fake "pending" state.
+ * <p>Upstream current versions are resolved through the same SPI paths as dependency registration.
+ * Product-facing dependency health preserves four distinct states: UP_TO_DATE, OUTDATED, REMOVED
+ * and UNAVAILABLE. Provider failure is never converted into a fake missing/removed dependency.
  */
 @Component
 @Slf4j
@@ -49,6 +50,32 @@ public class MetricImpactService {
 
   public ImpactReport checkUpstreamChanges(Long metricId) {
     Metric metric = catalogService.get(metricId);
+    DependencyContext context = resolveDependencyContext(metricId);
+    MetricUsageApi.UsageSummary usage = usageApi.summary(metricId);
+    return new ImpactReport(
+        metricId,
+        metric.metricCode(),
+        metric.metricName(),
+        context.changes(),
+        usage.totalCount(),
+        context.authoringNextStep());
+  }
+
+  /**
+   * Dependency-only product context for canonical Metric detail.
+   *
+   * <p>It deliberately does not read Metric Usage so a usage-provider failure cannot take down the
+   * authoring detail page. The caller already owns the Metric instance and therefore avoids a second
+   * catalog lookup as well.
+   */
+  public DependencyContext dependencyContext(Metric metric) {
+    if (metric == null || metric.id() == null) {
+      throw new IllegalArgumentException("Metric identity is required");
+    }
+    return resolveDependencyContext(metric.id());
+  }
+
+  private DependencyContext resolveDependencyContext(Long metricId) {
     List<MetricDependencyPO> deps = dependencyRepository.listByMetric(metricId);
 
     List<Long> metricRefIds = deps.stream()
@@ -60,53 +87,80 @@ public class MetricImpactService {
 
     List<DependencyChange> changes = new ArrayList<>();
     for (MetricDependencyPO dep : deps) {
-      Integer currentVersion = resolveCurrentVersion(dep, currentMetrics);
-      boolean removed = isRemoved(dep, currentMetrics);
+      DependencyResolution resolution = resolveDependency(dep, currentMetrics);
       changes.add(new DependencyChange(
           dep.getDependencyType(),
           dep.getDependencyId(),
           dep.getDependencyCode(),
           dep.getDependencyVersion(),
-          currentVersion,
-          changeStatus(dep.getDependencyVersion(), currentVersion, removed)));
+          resolution.currentVersion(),
+          legacyChangeStatus(resolution.health()),
+          resolution.health()));
     }
-
-    MetricUsageApi.UsageSummary usage = usageApi.summary(metricId);
-    return new ImpactReport(metricId, metric.metricCode(), metric.metricName(),
-        changes, usage.totalCount());
+    return new DependencyContext(List.copyOf(changes), authoringNextStep(changes));
   }
 
-  /** 上游当前版本;解析不到(SPI 缺失/字段为空)时返回 null。 */
-  private Integer resolveCurrentVersion(MetricDependencyPO dep, Map<Long, Metric> currentMetrics) {
+  private DependencyResolution resolveDependency(
+      MetricDependencyPO dep, Map<Long, Metric> currentMetrics) {
     String type = dep.getDependencyType();
     Long depId = dep.getDependencyId();
+    Integer registeredVersion = dep.getDependencyVersion();
     if (depId == null) {
-      return null;
+      return new DependencyResolution(null, DependencyHealth.UNAVAILABLE);
     }
+
     if (METRIC_DEPENDENCY_TYPES.contains(type)) {
       Metric upstream = currentMetrics.get(depId);
-      return upstream == null ? null : upstream.version();
+      if (upstream == null) {
+        return new DependencyResolution(null, DependencyHealth.REMOVED);
+      }
+      return new DependencyResolution(
+          upstream.version(), dependencyHealth(registeredVersion, upstream.version()));
     }
-    MetricReferenceResolver.Reference reference = "MODEL".equals(type)
-        ? referenceResolver.modelReference(depId)
-        : "CALIBER".equals(type) || "UNIT".equals(type)
-            ? referenceResolver.standardReference(depId)
-            : MetricReferenceResolver.Reference.EMPTY;
-    return reference.code() == null ? null : reference.version();
+
+    ReferenceResolution resolution = switch (type) {
+      case "MODEL" -> referenceResolver.modelReferenceResolution(depId);
+      case "CALIBER", "UNIT" -> referenceResolver.standardReferenceResolution(depId);
+      default -> ReferenceResolution.unavailable();
+    };
+    if (resolution.status() == ResolutionStatus.REMOVED) {
+      return new DependencyResolution(null, DependencyHealth.REMOVED);
+    }
+    if (resolution.status() == ResolutionStatus.UNAVAILABLE) {
+      return new DependencyResolution(null, DependencyHealth.UNAVAILABLE);
+    }
+    Integer currentVersion = resolution.reference().version();
+    return new DependencyResolution(
+        currentVersion, dependencyHealth(registeredVersion, currentVersion));
   }
 
-  /** 指标类上游已从目录消失 → 缺失;其他类型 SPI 解析失败按 UNKNOWN 处理而非缺失。 */
-  private boolean isRemoved(MetricDependencyPO dep, Map<Long, Metric> currentMetrics) {
-    return dep.getDependencyId() != null
-        && METRIC_DEPENDENCY_TYPES.contains(dep.getDependencyType())
-        && !currentMetrics.containsKey(dep.getDependencyId());
+  private static DependencyHealth dependencyHealth(Integer registered, Integer current) {
+    if (registered == null || current == null) return DependencyHealth.UNAVAILABLE;
+    return registered.equals(current)
+        ? DependencyHealth.UP_TO_DATE
+        : DependencyHealth.OUTDATED;
   }
 
-  private static String changeStatus(Integer registered, Integer current, boolean removed) {
-    if (removed) return "MISSING";
-    if (current == null) return "UNKNOWN";
-    if (registered == null) return "UNKNOWN";
-    return registered.equals(current) ? "UNCHANGED" : "CHANGED";
+  private static String legacyChangeStatus(DependencyHealth health) {
+    return switch (health) {
+      case UP_TO_DATE -> "UNCHANGED";
+      case OUTDATED -> "CHANGED";
+      case REMOVED -> "MISSING";
+      case UNAVAILABLE -> "UNKNOWN";
+    };
+  }
+
+  private static AuthoringNextStep authoringNextStep(List<DependencyChange> changes) {
+    if (changes.stream().anyMatch(change -> change.dependencyHealth() == DependencyHealth.REMOVED)) {
+      return AuthoringNextStep.RESOLVE_REMOVED_DEPENDENCY;
+    }
+    if (changes.stream().anyMatch(change -> change.dependencyHealth() == DependencyHealth.UNAVAILABLE)) {
+      return AuthoringNextStep.RETRY_DEPENDENCY_PROVIDER;
+    }
+    if (changes.stream().anyMatch(change -> change.dependencyHealth() == DependencyHealth.OUTDATED)) {
+      return AuthoringNextStep.REVIEW_OUTDATED_DEPENDENCY;
+    }
+    return AuthoringNextStep.VALIDATE;
   }
 
   /**
@@ -157,14 +211,42 @@ public class MetricImpactService {
     return Math.min(a, b);
   }
 
+  private record DependencyResolution(Integer currentVersion, DependencyHealth health) {}
+
+  public enum DependencyHealth {
+    UP_TO_DATE,
+    OUTDATED,
+    REMOVED,
+    UNAVAILABLE
+  }
+
+  public enum AuthoringNextStep {
+    VALIDATE,
+    REVIEW_OUTDATED_DEPENDENCY,
+    RESOLVE_REMOVED_DEPENDENCY,
+    RETRY_DEPENDENCY_PROVIDER
+  }
+
+  public record DependencyContext(
+      List<DependencyChange> changes,
+      AuthoringNextStep authoringNextStep) {}
+
   public record ImpactReport(
-      Long metricId, String metricCode, String metricName,
-      List<DependencyChange> changes, long usageCount) {}
+      Long metricId,
+      String metricCode,
+      String metricName,
+      List<DependencyChange> changes,
+      long usageCount,
+      AuthoringNextStep authoringNextStep) {}
 
   public record DependencyChange(
-      String dependencyType, Long dependencyId, String dependencyCode,
-      Integer registeredVersion, Integer currentVersion,
-      String changeStatus) {}
+      String dependencyType,
+      Long dependencyId,
+      String dependencyCode,
+      Integer registeredVersion,
+      Integer currentVersion,
+      String changeStatus,
+      DependencyHealth dependencyHealth) {}
 
   public record AffectedMetric(
       Long metricId, String metricCode, String metricName,
