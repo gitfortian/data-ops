@@ -10,6 +10,7 @@ import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.metric.api.MetricApi;
 import io.yak.ops.business.metric.catalog.MetricAuthoringQueryService;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
+import io.yak.ops.business.metric.catalog.MetricLifecycleService;
 import io.yak.ops.business.metric.catalog.MetricReferenceResolver;
 import io.yak.ops.business.metric.controller.v1.dto.MetricQueryDTO;
 import io.yak.ops.business.metric.controller.v1.vo.MetricVO;
@@ -48,6 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MetricController {
 
   private final MetricCatalogService service;
+  private final MetricLifecycleService lifecycleService;
   private final MetricAuthoringQueryService authoringQueryService;
   private final MetricCompositionRepository compositionRepository;
   private final CurrentUserProvider currentUserProvider;
@@ -125,7 +127,7 @@ public class MetricController {
       @Valid @RequestBody MetricApi.StatusRequest request,
       HttpServletRequest httpRequest) {
     String operator = currentUserProvider.getCurrentUser(httpRequest);
-    MetricVO vo = MetricVO.from(service.changeStatus(id, request.status(), operator));
+    MetricVO vo = MetricVO.from(lifecycleService.changeStatus(id, request.status(), operator));
     enrichNames(List.of(vo));
     return Result.success(vo);
   }
@@ -134,7 +136,7 @@ public class MetricController {
   @RequiresPermission(MetricPermissionCode.DELETE)
   @DeleteMapping("/{id}")
   public Result<Boolean> delete(@PathVariable("id") Long id) {
-    service.delete(id);
+    lifecycleService.delete(id);
     return Result.success(Boolean.TRUE);
   }
 
