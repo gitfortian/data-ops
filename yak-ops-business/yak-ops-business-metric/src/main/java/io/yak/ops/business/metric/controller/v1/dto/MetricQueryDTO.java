@@ -18,6 +18,9 @@ public class MetricQueryDTO {
 
   private Long domainId;
 
+  /** Stable business-process context for Phase 5 Domain/Process → Metric authoring navigation. */
+  private Long processId;
+
   @Size(max = 16, message = "指标类型不能超过 16 个字符")
   private String metricType;
 
