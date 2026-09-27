@@ -5,9 +5,10 @@ import java.util.List;
 /**
  * Publication prerequisite contract.
  *
- * <p>Each gate evaluates an immutable MetricVersion subject and returns explicit
- * evidence. Publication orchestration must fail closed when a required provider is
- * unavailable; it must never reinterpret MetricStatus.ENABLED as publication approval.
+ * <p>Each gate evaluates an immutable MetricVersion subject and returns explicit evidence.
+ * Publication orchestration must fail closed when a required provider is unavailable/forbidden;
+ * NOT_APPLICABLE is a first-class truthful outcome for validation capabilities that do not exist
+ * for this product/version. MetricStatus.ENABLED is never publication approval.
  */
 public interface MetricPublicationGate {
 
@@ -18,7 +19,9 @@ public interface MetricPublicationGate {
   enum GateStatus {
     READY,
     BLOCKED,
-    UNAVAILABLE
+    UNAVAILABLE,
+    FORBIDDEN,
+    NOT_APPLICABLE
   }
 
   record PublicationSubject(
@@ -47,9 +50,21 @@ public interface MetricPublicationGate {
     }
 
     public static GateEvidence unavailable(String provider, String reason) {
+      return failure(provider, GateStatus.UNAVAILABLE, reason);
+    }
+
+    public static GateEvidence forbidden(String provider, String reason) {
+      return failure(provider, GateStatus.FORBIDDEN, reason);
+    }
+
+    public static GateEvidence notApplicable(String provider, String reason) {
+      return failure(provider, GateStatus.NOT_APPLICABLE, reason);
+    }
+
+    private static GateEvidence failure(String provider, GateStatus status, String reason) {
       return new GateEvidence(
           provider,
-          GateStatus.UNAVAILABLE,
+          status,
           null,
           reason == null || reason.isBlank() ? List.of() : List.of(reason));
     }
