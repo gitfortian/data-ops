@@ -20,6 +20,12 @@ import {
 } from '../constants';
 import MetricEditModal from './components/MetricEditModal';
 
+const positiveId = (value: string | null): number | null => {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
 const MetricManagePage = () => {
   const navigate = useNavigate();
   const { initialState } = useModel('@@initialState');
@@ -29,6 +35,8 @@ const MetricManagePage = () => {
     .split(',')
     .map((v) => Number(v))
     .filter((v) => Number.isInteger(v) && v > 0);
+  const initialDomainId = positiveId(entryParams.get('domainId'));
+  const initialProcessId = positiveId(entryParams.get('processId'));
   const [records, setRecords] = useState<MetricRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -36,7 +44,8 @@ const MetricManagePage = () => {
   const [keyword, setKeyword] = useState('');
   const [metricType, setMetricType] = useState<MetricType | ''>('');
   const [status, setStatus] = useState<MetricStatus | ''>('');
-  const [domainId, setDomainId] = useState<number | null>(null);
+  const [domainId, setDomainId] = useState<number | null>(initialDomainId);
+  const [processId, setProcessId] = useState<number | null>(initialProcessId);
   const [owner, setOwner] = useState('');
   const [ownerDraft, setOwnerDraft] = useState('');
   const [tagIds, setTagIds] = useState<number[]>(initialTagIds);
@@ -58,6 +67,7 @@ const MetricManagePage = () => {
           metricType: metricType || undefined,
           status: status || undefined,
           domainId: domainId ?? undefined,
+          processId: processId ?? undefined,
           owner: owner.trim() || undefined,
           tagIds: tagIds.length ? tagIds : undefined,
         });
@@ -71,7 +81,7 @@ const MetricManagePage = () => {
         setLoading(false);
       }
     },
-    [keyword, metricType, status, domainId, owner, tagIds],
+    [keyword, metricType, status, domainId, processId, owner, tagIds],
   );
 
   useEffect(() => {
@@ -257,7 +267,7 @@ const MetricManagePage = () => {
     },
   ];
 
-  const hasFilter = Boolean(keyword || metricType || status || domainId || owner || tagIds.length);
+  const hasFilter = Boolean(keyword || metricType || status || domainId || processId || owner || tagIds.length);
 
   return (
     <div className="flex min-h-[calc(100dvh-64px)] flex-col bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
@@ -324,6 +334,18 @@ const MetricManagePage = () => {
             setPageNo(1);
           }}
         />
+        {processId ? (
+          <Tag
+            closable
+            onClose={(event) => {
+              event.preventDefault();
+              setProcessId(null);
+              setPageNo(1);
+            }}
+          >
+            业务过程 #{processId}
+          </Tag>
+        ) : null}
         <Select
           allowClear
           mode="multiple"
