@@ -11,6 +11,7 @@ export type AuthoringNextStep =
   | 'REVIEW_OUTDATED_DEPENDENCY'
   | 'RESOLVE_REMOVED_DEPENDENCY'
   | 'RETRY_DEPENDENCY_PROVIDER';
+export type ImpactCoverageStatus = 'READY' | 'EMPTY' | 'UNAVAILABLE' | 'FORBIDDEN' | 'NOT_APPLICABLE';
 
 /** 派生指标结构化限定条件(02):与后端 MetricQualifier 契约一致。 */
 export interface MetricQualifier {
@@ -215,6 +216,42 @@ export interface DependencyChange {
   currentVersion?: number;
   changeStatus: string;
   dependencyHealth?: DependencyHealth;
+}
+
+export interface MetricReferenceUsageEvidence {
+  referenceId: number;
+  usageType: string;
+  usageId: number;
+  usageName?: string;
+  recordedAt?: string;
+}
+
+export interface MetricObservedUsageEvidence {
+  evidenceId?: string;
+  productKey?: string;
+  consumerRef?: string;
+  action?: string;
+  outcome?: string;
+  observedAt?: string;
+}
+
+export interface MetricObservedUsageCoverage {
+  provider: string;
+  status: ImpactCoverageStatus;
+  evidence: MetricObservedUsageEvidence[];
+  reason?: string;
+}
+
+/** Phase 5 impact context keeps declaration/reference usage separate from runtime observations. */
+export interface MetricImpactContext {
+  metricId: number;
+  metricCode: string;
+  metricName: string;
+  metricVersion: number;
+  dependencies: DependencyChange[];
+  referenceUsage: MetricReferenceUsageEvidence[];
+  observedUsage: MetricObservedUsageCoverage[];
+  generatedAt: string;
 }
 
 /** 反向影响分析:引用了上游对象的指标行(dependencyTypes 为命中的登记类型)。 */
