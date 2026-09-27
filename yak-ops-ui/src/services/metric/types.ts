@@ -242,13 +242,36 @@ export interface MetricObservedUsageCoverage {
   reason?: string;
 }
 
-/** Phase 5 impact context keeps declaration/reference usage separate from runtime observations. */
+export interface MetricLineageEvidence {
+  relationId: number;
+  direction: 'UPSTREAM' | 'DOWNSTREAM' | 'RELATED';
+  relationType?: string;
+  sourceAssetKey: string;
+  targetAssetKey: string;
+  sourceType?: string;
+  sourceId?: string;
+  version?: string;
+  observedAt?: string;
+}
+
+export interface MetricLineageCoverage {
+  provider: string;
+  status: ImpactCoverageStatus;
+  rootAssetId?: number;
+  rootAssetKey: string;
+  evidence: MetricLineageEvidence[];
+  observedAt?: string;
+  reason?: string;
+}
+
+/** Phase 5 impact context keeps each evidence class and owning source explicit. */
 export interface MetricImpactContext {
   metricId: number;
   metricCode: string;
   metricName: string;
   metricVersion: number;
   dependencies: DependencyChange[];
+  lineage: MetricLineageCoverage;
   referenceUsage: MetricReferenceUsageEvidence[];
   observedUsage: MetricObservedUsageCoverage[];
   generatedAt: string;
