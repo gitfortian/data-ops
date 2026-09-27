@@ -61,6 +61,8 @@ export interface MetricPageParams {
   pageNo: number;
   pageSize: number;
   domainId?: number;
+  /** Stable Semantic Business Process id; display truth remains owned by Semantic. */
+  processId?: number;
   metricType?: string;
   status?: string;
   keyword?: string;
