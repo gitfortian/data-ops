@@ -48,7 +48,7 @@ class MetricPublicationReadinessServiceTest {
   }
 
   @Test
-  void allRegisteredGatesMustBeReady() {
+  void allRegisteredRequiredGatesMustBeReady() {
     when(versionRepository.findByMetricAndVersion(10L, 3)).thenReturn(version(301L, 3));
     MetricPublicationGate definition = gate(
         "definition-validation",
@@ -62,6 +62,26 @@ class MetricPublicationReadinessServiceTest {
 
     assertThat(readiness.status()).isEqualTo(ReadinessStatus.READY);
     assertThat(readiness.gates()).hasSize(2).allMatch(g -> g.status() == GateStatus.READY);
+  }
+
+  @Test
+  void explicitNotApplicableGateDoesNotFabricateReadyButDoesNotBlockPublication() {
+    when(versionRepository.findByMetricAndVersion(10L, 3)).thenReturn(version(301L, 3));
+    MetricPublicationGate definition = gate(
+        "definition-validation",
+        GateEvidence.ready("definition-validation", "metric-validation:9001"));
+    MetricPublicationGate execution = gate(
+        "metric-execution-validation/v1",
+        GateEvidence.notApplicable(
+            "metric-execution-validation/v1",
+            "No standalone Metric execution runtime"));
+    when(gateProvider.orderedStream()).thenReturn(Stream.of(definition, execution));
+
+    var readiness = service().check(10L, 3);
+
+    assertThat(readiness.status()).isEqualTo(ReadinessStatus.READY);
+    assertThat(readiness.gates()).extracting(GateEvidence::status)
+        .containsExactly(GateStatus.READY, GateStatus.NOT_APPLICABLE);
   }
 
   @Test
@@ -83,6 +103,24 @@ class MetricPublicationReadinessServiceTest {
     assertThat(readiness.status()).isEqualTo(ReadinessStatus.BLOCKED);
     assertThat(readiness.gates()).extracting(GateEvidence::status)
         .containsExactly(GateStatus.READY, GateStatus.BLOCKED);
+  }
+
+  @Test
+  void forbiddenGateRemainsDistinctAndFailsClosed() {
+    when(versionRepository.findByMetricAndVersion(10L, 3)).thenReturn(version(301L, 3));
+    MetricPublicationGate definition = gate(
+        "definition-validation",
+        GateEvidence.ready("definition-validation", "metric-validation:9001"));
+    MetricPublicationGate governedTarget = gate(
+        "governed-target",
+        GateEvidence.forbidden("governed-target", "Current subject cannot inspect target"));
+    when(gateProvider.orderedStream()).thenReturn(Stream.of(definition, governedTarget));
+
+    var readiness = service().check(10L, 3);
+
+    assertThat(readiness.status()).isEqualTo(ReadinessStatus.BLOCKED);
+    assertThat(readiness.gates()).extracting(GateEvidence::status)
+        .containsExactly(GateStatus.READY, GateStatus.FORBIDDEN);
   }
 
   @Test
