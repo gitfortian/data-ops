@@ -25,7 +25,10 @@ public enum MetricErrorCode implements ErrorCode {
   TAG_NOT_FOUND(44014, "标签不存在"),
   TAG_DUPLICATE(44015, "标签编码已存在"),
   TAG_REFERENCED(44016, "标签已被指标使用,无法删除"),
-  UNIT_INVALID(44017, "单位引用不合法");
+  UNIT_INVALID(44017, "单位引用不合法"),
+  PUBLICATION_NOT_READY(44018, "指标版本尚未满足发布条件"),
+  PUBLICATION_CONFLICT(44019, "指标发布状态冲突,请刷新后重试"),
+  ACTIVE_PUBLICATION_EXISTS(44020, "指标存在生效中的发布合同,请先撤回");
 
   private final Integer code;
   private final String message;
