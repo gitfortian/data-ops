@@ -85,6 +85,23 @@ class MetricImpactServiceTest {
   }
 
   @Test
+  void dependencyContextDoesNotDependOnUsageOrReloadMetric() {
+    long metricId = 100L;
+    Metric current = metric(metricId, 5);
+    when(dependencyRepository.listByMetric(metricId))
+        .thenReturn(List.of(upstreamDep(7L, "REF_METRIC", "metric_7", 3)));
+    when(referenceResolver.metricsById(any())).thenReturn(Map.of(7L, metric(7L, 3)));
+
+    MetricImpactService.DependencyContext context = service.dependencyContext(current);
+
+    assertThat(context.changes()).hasSize(1);
+    assertThat(context.authoringNextStep())
+        .isEqualTo(MetricImpactService.AuthoringNextStep.VALIDATE);
+    verify(usageApi, never()).summary(any());
+    verify(catalogService, never()).get(any());
+  }
+
+  @Test
   void removedCrossDomainDependencyIsDistinctFromProviderUnavailable() {
     long metricId = 100L;
     when(catalogService.get(metricId)).thenReturn(metric(metricId, 5));
