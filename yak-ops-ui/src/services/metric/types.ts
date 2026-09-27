@@ -75,6 +75,7 @@ export interface MetricPageParams {
   pageNo: number;
   pageSize: number;
   domainId?: number;
+  processId?: number;
   metricType?: string;
   status?: string;
   keyword?: string;
