@@ -7,6 +7,11 @@ on:
         description: GitHub Environment holding Phase 5 acceptance credentials
         required: true
         type: environment
+      runner_label:
+        description: Runner label; use self-hosted when the deployment is private-network only
+        required: true
+        default: ubuntu-latest
+        type: string
       base_url:
         description: Reachable Yak Ops deployment base URL
         required: true
@@ -58,7 +63,7 @@ permissions:
 jobs:
   golden-metric:
     name: Golden Metric evidence
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_label }}
     environment: ${{ inputs.target_environment }}
     env:
       YAK_OPS_BASE_URL: ${{ inputs.base_url }}
@@ -84,6 +89,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Validate acceptance runner syntax
+        run: node --check scripts/product/phase5-real-env-acceptance.mjs
 
       - name: Validate acceptance inputs
         shell: bash
