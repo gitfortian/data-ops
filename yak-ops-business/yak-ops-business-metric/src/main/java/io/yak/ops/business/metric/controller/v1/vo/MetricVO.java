@@ -1,6 +1,7 @@
 package io.yak.ops.business.metric.controller.v1.vo;
 
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.impact.MetricImpactService;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
@@ -42,6 +43,10 @@ public class MetricVO {
   private LocalDateTime createTime;
   private LocalDateTime updateTime;
   private List<CompositionVO> compositions;
+
+  /** Detail-only Phase 5 context; list/create/update responses may leave these fields unset. */
+  private List<MetricImpactService.DependencyChange> dependencyChanges;
+  private MetricImpactService.AuthoringNextStep authoringNextStep;
 
   public static MetricVO from(Metric m) {
     MetricVO vo = new MetricVO();
