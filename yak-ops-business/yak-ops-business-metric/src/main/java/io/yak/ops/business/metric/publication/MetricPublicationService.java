@@ -11,7 +11,11 @@ import io.yak.ops.common.bean.po.metric.MetricActivePublicationPO;
 import io.yak.ops.common.bean.po.metric.MetricPublicationEventPO;
 import io.yak.ops.common.bean.po.metric.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -78,6 +82,7 @@ public class MetricPublicationService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public PublishedMetricContract publish(Long metricId, int version, String operator) {
+    String actor = requireOperator(operator);
     Integer currentVersion = publicationRepository.lockCurrentMetricVersion(metricId);
     if (currentVersion == null) {
       throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
@@ -88,36 +93,39 @@ public class MetricPublicationService {
           "只能发布当前 immutable version；请求 v" + version + "，当前 v" + currentVersion);
     }
 
+    MetricVersionPO metricVersion = versionRepository.findByMetricAndVersion(metricId, version);
+    if (metricVersion == null) {
+      throw new MetricException(MetricErrorCode.NOT_FOUND,
+          "指标 " + metricId + " 的版本 v" + version + " 不存在");
+    }
+    String immutableDigest = sha256(metricVersion.getSnapshot());
+
+    MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
+    if (active != null
+        && Objects.equals(active.getMetricVersionId(), metricVersion.getId())
+        && Objects.equals(active.getSnapshotDigest(), immutableDigest)) {
+      // A retry of an already active exact contract is idempotent. Do not re-run today's gates and
+      // accidentally make historical publication availability depend on a later provider outage.
+      return requireActiveContract(active);
+    }
+
     MetricPublicationReadinessService.PublicationReadiness readiness = readinessService.check(metricId, version);
     if (readiness.status() != MetricPublicationReadinessService.ReadinessStatus.READY) {
       throw new MetricException(
           MetricErrorCode.PUBLICATION_NOT_READY,
           blockingSummary(readiness.gates()));
     }
-
-    MetricVersionPO metricVersion = versionRepository.findByMetricAndVersion(metricId, version);
-    if (metricVersion == null) {
-      throw new MetricException(MetricErrorCode.NOT_FOUND,
-          "指标 " + metricId + " 的版本 v" + version + " 不存在");
-    }
-    requireSameSubject(metricVersion, readiness.subject());
-
-    MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
-    if (active != null
-        && Objects.equals(active.getMetricVersionId(), metricVersion.getId())
-        && Objects.equals(active.getSnapshotDigest(), readiness.subject().snapshotDigest())) {
-      return requireActiveContract(active);
-    }
+    requireSameSubject(metricVersion, immutableDigest, readiness.subject());
 
     LocalDateTime now = LocalDateTime.now();
     MetricPublicationEventPO event = new MetricPublicationEventPO();
     event.setMetricId(metricId);
     event.setMetricVersionId(metricVersion.getId());
     event.setMetricVersion(version);
-    event.setSnapshotDigest(readiness.subject().snapshotDigest());
+    event.setSnapshotDigest(immutableDigest);
     event.setEventType(EVENT_PUBLISHED);
     event.setReadinessJson(writeEvidence(readiness.gates()));
-    event.setActedBy(normalizeOperator(operator));
+    event.setActedBy(actor);
     event.setActedAt(now);
     publicationRepository.appendEvent(event);
 
@@ -126,8 +134,8 @@ public class MetricPublicationService {
     pointer.setPublicationEventId(event.getId());
     pointer.setMetricVersionId(metricVersion.getId());
     pointer.setMetricVersion(version);
-    pointer.setSnapshotDigest(readiness.subject().snapshotDigest());
-    pointer.setPublishedBy(event.getActedBy());
+    pointer.setSnapshotDigest(immutableDigest);
+    pointer.setPublishedBy(actor);
     pointer.setPublishedAt(now);
     publicationRepository.replaceActive(pointer);
 
@@ -136,6 +144,7 @@ public class MetricPublicationService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public WithdrawalResult withdraw(Long metricId, String operator) {
+    String actor = requireOperator(operator);
     Integer currentVersion = publicationRepository.lockCurrentMetricVersion(metricId);
     if (currentVersion == null) {
       throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
@@ -160,7 +169,7 @@ public class MetricPublicationService {
     withdrawn.setSnapshotDigest(active.getSnapshotDigest());
     withdrawn.setEventType(EVENT_WITHDRAWN);
     withdrawn.setSubjectPublicationId(active.getPublicationEventId());
-    withdrawn.setActedBy(normalizeOperator(operator));
+    withdrawn.setActedBy(actor);
     withdrawn.setActedAt(LocalDateTime.now());
     publicationRepository.appendEvent(withdrawn);
 
@@ -190,7 +199,8 @@ public class MetricPublicationService {
     if (event == null || version == null
         || !Objects.equals(version.getId(), active.getMetricVersionId())
         || !Objects.equals(event.getMetricVersionId(), active.getMetricVersionId())
-        || !Objects.equals(event.getSnapshotDigest(), active.getSnapshotDigest())) {
+        || !Objects.equals(event.getSnapshotDigest(), active.getSnapshotDigest())
+        || !Objects.equals(active.getSnapshotDigest(), sha256(version.getSnapshot()))) {
       throw new MetricException(
           MetricErrorCode.PUBLICATION_CONFLICT,
           "当前 Published Metric Contract 的 ledger/version identity 不完整");
@@ -227,10 +237,13 @@ public class MetricPublicationService {
   }
 
   private static void requireSameSubject(
-      MetricVersionPO version, MetricPublicationGate.PublicationSubject subject) {
+      MetricVersionPO version,
+      String immutableDigest,
+      MetricPublicationGate.PublicationSubject subject) {
     if (!Objects.equals(version.getId(), subject.metricVersionId())
         || version.getVersion() == null
-        || version.getVersion() != subject.metricVersion()) {
+        || version.getVersion() != subject.metricVersion()
+        || !Objects.equals(immutableDigest, subject.snapshotDigest())) {
       throw new MetricException(
           MetricErrorCode.PUBLICATION_CONFLICT,
           "publication readiness 与 immutable MetricVersion 身份不一致");
@@ -247,8 +260,23 @@ public class MetricPublicationService {
     return summary.isBlank() ? "publication readiness 未通过" : summary;
   }
 
-  private static String normalizeOperator(String operator) {
-    return operator == null || operator.isBlank() ? "system" : operator.trim();
+  private static String requireOperator(String operator) {
+    if (operator == null || operator.isBlank()) {
+      throw new MetricException(
+          MetricErrorCode.PUBLICATION_CONFLICT,
+          "无法解析当前登录用户，拒绝写入发布账本");
+    }
+    return operator.trim();
+  }
+
+  private static String sha256(String value) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      return HexFormat.of().formatHex(
+          digest.digest((value == null ? "" : value).getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException exception) {
+      throw new IllegalStateException("SHA-256 is unavailable", exception);
+    }
   }
 
   private static String writeEvidence(List<GateEvidence> gates) {
