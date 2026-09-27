@@ -12,6 +12,13 @@ export type AuthoringNextStep =
   | 'RESOLVE_REMOVED_DEPENDENCY'
   | 'RETRY_DEPENDENCY_PROVIDER';
 export type ImpactCoverageStatus = 'READY' | 'EMPTY' | 'UNAVAILABLE' | 'FORBIDDEN' | 'NOT_APPLICABLE';
+export type ConsumptionTargetStatus =
+  | 'FOUND'
+  | 'NOT_FOUND'
+  | 'NOT_DISCOVERABLE'
+  | 'FORBIDDEN'
+  | 'UNAVAILABLE'
+  | 'NOT_APPLICABLE';
 
 /** 派生指标结构化限定条件(02):与后端 MetricQualifier 契约一致。 */
 export interface MetricQualifier {
@@ -242,14 +249,61 @@ export interface MetricObservedUsageCoverage {
   reason?: string;
 }
 
-/** Phase 5 impact context keeps declaration/reference usage separate from runtime observations. */
+export interface MetricLineageImpactNode {
+  assetId: number;
+  assetKey: string;
+  assetType?: string;
+  name?: string;
+  sourceType?: string;
+  sourceId?: string;
+  observedAt?: string;
+}
+
+export interface MetricLineageImpactEdge {
+  relationId: number;
+  sourceAssetId: number;
+  targetAssetId: number;
+  relationType?: string;
+  sourceType?: string;
+  sourceId?: string;
+  version?: string;
+  observedAt?: string;
+}
+
+export interface MetricLineageImpactCoverage {
+  provider: string;
+  status: ImpactCoverageStatus;
+  rootAssetKey: string;
+  rootAssetId?: number;
+  upstream: MetricLineageImpactNode[];
+  downstream: MetricLineageImpactNode[];
+  relations: MetricLineageImpactEdge[];
+  observedAt?: string;
+  reason?: string;
+}
+
+export interface MetricConsumptionTargetResolution {
+  provider: string;
+  referenceId?: number;
+  referenceType?: string;
+  referenceObjectId?: number;
+  status: ConsumptionTargetStatus;
+  productKey?: string;
+  canonicalHref?: string;
+  reason?: string;
+  resolvedAt?: string;
+}
+
+/** Phase 5 impact context keeps each evidence class and owning provider explicit. */
 export interface MetricImpactContext {
   metricId: number;
   metricCode: string;
   metricName: string;
   metricVersion: number;
   dependencies: DependencyChange[];
+  lineage: MetricLineageImpactCoverage[];
   referenceUsage: MetricReferenceUsageEvidence[];
+  consumptionTargets: MetricConsumptionTargetResolution[];
   observedUsage: MetricObservedUsageCoverage[];
   generatedAt: string;
 }
