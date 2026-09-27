@@ -1,3 +1,4 @@
+import { history, useSearchParams } from '@umijs/max';
 import { Button, Card, Form, Input, Modal, message, Space, Tree, Typography } from 'antd';
 import type { DataNode, TreeProps } from 'antd/es/tree';
 import { useCallback, useEffect, useState } from 'react';
@@ -18,6 +19,12 @@ interface DomainFormValues {
   description?: string;
   sortOrder?: number;
 }
+
+const positiveId = (value: string | null): number | undefined => {
+  if (!value || !/^\d+$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+};
 
 /** 找节点及其父链(用于环提示与建子域)。 */
 const findNode = (
@@ -57,6 +64,8 @@ const collectBranchKeys = (nodes: SemanticDomainNode[]): number[] =>
   );
 
 const BusinessDomainsPage = () => {
+  const [entryParams] = useSearchParams();
+  const initialDomainId = positiveId(entryParams.get('domainId'));
   const [tree, setTree] = useState<SemanticDomainNode[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,17 +83,17 @@ const BusinessDomainsPage = () => {
       setTree(data ?? []);
       setExpandedKeys(collectBranchKeys(data ?? []));
       setSelected((current) => {
-        if (!current) {
-          return null;
+        if (current) {
+          return findNode(data ?? [], current.id)?.node ?? null;
         }
-        return findNode(data ?? [], current.id)?.node ?? null;
+        return initialDomainId ? findNode(data ?? [], initialDomainId)?.node ?? null : null;
       });
     } catch {
       message.error('加载业务域失败，请稍后重试');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialDomainId]);
 
   useEffect(() => {
     void loadTree();
@@ -107,6 +116,10 @@ const BusinessDomainsPage = () => {
       description: node.description,
       sortOrder: node.sortOrder,
     });
+  };
+
+  const openMetrics = (node: SemanticDomainNode) => {
+    history.push(`/metric/manage?domainId=${node.id}`);
   };
 
   const submitEditor = async () => {
@@ -234,13 +247,16 @@ const BusinessDomainsPage = () => {
                     {selected.name}
                   </Typography.Text>
                   <Typography.Paragraph type="secondary" className="!mb-2 !text-[12px]">
-                    {selected.code}
+                    {selected.code} · #{selected.id}
                   </Typography.Paragraph>
                   <Typography.Paragraph className="!text-[13px]">
                     {selected.description || '暂无描述'}
                   </Typography.Paragraph>
                   <Typography.Paragraph className="!text-[13px]">负责人：{selected.owner || '-'}</Typography.Paragraph>
                   <Space>
+                    <Button type="link" size="small" onClick={() => openMetrics(selected)}>
+                      查看指标
+                    </Button>
                     <Button type="link" size="small" onClick={() => openEdit(selected)}>
                       编辑
                     </Button>
