@@ -18,6 +18,8 @@ public class MetricQueryDTO {
 
   private Long domainId;
 
+  private Long processId;
+
   @Size(max = 16, message = "指标类型不能超过 16 个字符")
   private String metricType;
 
