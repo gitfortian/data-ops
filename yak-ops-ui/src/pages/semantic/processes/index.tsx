@@ -1,4 +1,4 @@
-import { history } from '@umijs/max';
+import { history, useSearchParams } from '@umijs/max';
 import { Button, Form, Input, Modal, message, Select, Space, Table, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -7,6 +7,7 @@ import {
   createSemanticProcess,
   deleteSemanticProcess,
   getSemanticDomainTree,
+  getSemanticProcess,
   listSemanticProcessFieldCounts,
   pageSemanticProcesses,
 } from '@/services/semantic/api';
@@ -15,6 +16,12 @@ import type { SemanticDomainNode, SemanticProcessRecord } from '@/services/seman
 const BIZ_TYPE_LABELS: Record<string, string> = {
   FACT: '事实',
   DIMENSION: '维度',
+};
+
+const positiveId = (value: string | null): number | undefined => {
+  if (!value || !/^\d+$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
 const flattenDomains = (nodes: SemanticDomainNode[]): { id: number; path: string }[] => {
@@ -31,12 +38,15 @@ const flattenDomains = (nodes: SemanticDomainNode[]): { id: number; path: string
 };
 
 const SemanticProcessesPage = () => {
+  const [entryParams] = useSearchParams();
+  const initialDomainId = positiveId(entryParams.get('domainId'));
+  const focusProcessId = positiveId(entryParams.get('processId'));
   const [records, setRecords] = useState<SemanticProcessRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
-  const [domainId, setDomainId] = useState<number | undefined>(undefined);
+  const [domainId, setDomainId] = useState<number | undefined>(initialDomainId);
   const [bizType, setBizType] = useState<'FACT' | 'DIMENSION' | ''>('');
   const [loading, setLoading] = useState(false);
   const [domains, setDomains] = useState<SemanticDomainNode[]>([]);
@@ -46,6 +56,7 @@ const SemanticProcessesPage = () => {
   const [saving, setSaving] = useState(false);
   const [fieldCounts, setFieldCounts] = useState<Record<number, number>>({});
   const [modelCounts, setModelCounts] = useState<Record<number, number>>({});
+  const [focusedProcess, setFocusedProcess] = useState<SemanticProcessRecord | null>(null);
 
   const loadData = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
@@ -89,6 +100,20 @@ const SemanticProcessesPage = () => {
       .catch(() => setModelCounts({}));
   }, []);
 
+  useEffect(() => {
+    if (!focusProcessId) {
+      setFocusedProcess(null);
+      return;
+    }
+    getSemanticProcess(focusProcessId)
+      .then((process) => {
+        setFocusedProcess(process);
+        setDomainId(process.domainId);
+        setPageNo(1);
+      })
+      .catch(() => setFocusedProcess(null));
+  }, [focusProcessId]);
+
   const domainOptions = flattenDomains(domains);
 
   const domainNameOf = (id: number) => domainOptions.find((option) => option.id === id)?.path ?? String(id);
@@ -102,6 +127,10 @@ const SemanticProcessesPage = () => {
 
   const openEdit = (record: SemanticProcessRecord) => {
     history.push(`/semantic/processes/${record.id}/edit`);
+  };
+
+  const openMetrics = (record: SemanticProcessRecord) => {
+    history.push(`/metric/manage?domainId=${record.domainId}&processId=${record.id}`);
   };
 
   const submitEditor = async () => {
@@ -179,13 +208,15 @@ const SemanticProcessesPage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 190,
+      width: 240,
       render: (_: unknown, record: SemanticProcessRecord) => (
         <Space size={0}>
+          <Button type="link" size="small" onClick={() => openMetrics(record)}>
+            查看指标
+          </Button>
           <Button type="link" size="small" onClick={() => openEdit(record)}>
             编辑
           </Button>
-
           <Button type="link" size="small" danger onClick={() => removeProcess(record)}>
             删除
           </Button>
@@ -252,12 +283,27 @@ const SemanticProcessesPage = () => {
         </Space>
       </div>
 
+      {focusedProcess ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[#d0d5dd] bg-[#f9fafb] px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[14px] font-semibold text-[#344054]">
+              当前业务过程：{focusedProcess.name}（{focusedProcess.code}）
+            </div>
+            <div className="mt-0.5 text-[13px] text-[#667085]">
+              稳定 ID #{focusedProcess.id} · 业务域 {domainNameOf(focusedProcess.domainId)}
+            </div>
+          </div>
+          <YakButton onClick={() => openMetrics(focusedProcess)}>查看相关指标</YakButton>
+        </div>
+      ) : null}
+
       <Table<SemanticProcessRecord>
         className="mt-4"
         rowKey="id"
         loading={loading}
         columns={columns}
         dataSource={records}
+        rowClassName={(record) => (record.id === focusProcessId ? 'bg-[#eff8ff]' : '')}
         locale={{
           emptyText: (
             <YakEmpty
