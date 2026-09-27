@@ -28,7 +28,8 @@ public enum MetricErrorCode implements ErrorCode {
   UNIT_INVALID(44017, "单位引用不合法"),
   PUBLICATION_NOT_READY(44018, "指标版本尚未满足发布条件"),
   PUBLICATION_CONFLICT(44019, "指标发布状态冲突,请刷新后重试"),
-  ACTIVE_PUBLICATION_EXISTS(44020, "指标存在生效中的发布合同,请先撤回");
+  ACTIVE_PUBLICATION_EXISTS(44020, "指标存在生效中的发布合同,请先撤回"),
+  PUBLICATION_HISTORY_EXISTS(44021, "指标存在不可删除的发布历史");
 
   private final Integer code;
   private final String message;
