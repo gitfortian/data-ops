@@ -112,9 +112,23 @@ class MetricExternalApiCompatibilityTest {
 
   private static Set<String> beanGetterProperties(Class<?> type) {
     return Arrays.stream(type.getMethods())
-        .map(Method::getName)
-        .filter(name -> name.startsWith("get") && name.length() > 3 && !name.equals("getClass"))
-        .map(name -> Character.toLowerCase(name.charAt(3)) + name.substring(4))
+        .filter(method -> !method.getName().equals("getClass"))
+        .map(MetricExternalApiCompatibilityTest::beanProperty)
+        .filter(property -> property != null)
         .collect(Collectors.toSet());
+  }
+
+  private static String beanProperty(Method method) {
+    String name = method.getName();
+    if (method.getParameterCount() == 0 && name.startsWith("get") && name.length() > 3) {
+      return Character.toLowerCase(name.charAt(3)) + name.substring(4);
+    }
+    if (method.getParameterCount() == 0
+        && method.getReturnType() == boolean.class
+        && name.startsWith("is")
+        && name.length() > 2) {
+      return Character.toLowerCase(name.charAt(2)) + name.substring(3);
+    }
+    return null;
   }
 }
