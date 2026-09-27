@@ -1,12 +1,12 @@
 # F-005 — Business Semantic & Metric Productization
 
-Status: DRAFT  
-状态说明：Phase 5 产品方案草案；仅用于 #121 Product Review，PD-003 ACCEPTED 前不得指导主体实现  
+Status: APPROVED  
+状态说明：Phase 5 产品方案已通过 #121 Product Review；作为 #122/#123/#124 主体实现的已批准产品契约  
 Feature ID: F-005  
 负责人：Product  
 目标版本：Phase 5  
 创建日期：2026-09-24  
-关联产品决策：`PD-003-business-semantic-metric-contract.md`（PROPOSED）  
+关联产品决策：`PD-003-business-semantic-metric-contract.md`（ACCEPTED）  
 关联 Epic / Issues：#120、#121、#122、#123、#124
 
 > 本 Feature 的目标不是重做 Semantic / Modeling / Metric，也不是建设新的语义查询引擎，而是把已有标准、业务域、模型、指标、版本、血缘和使用事实组织成一条可验证、可发布、可稳定引用、可追踪影响的业务语义产品闭环。
@@ -114,11 +114,11 @@ Business Domain / Process
 
 | 假设 | 为什么这样判断 | 如何验证 | 当前结果 |
 |---|---|---|---|
-| 现有 Semantic / Modeling / Metric Domain 足以承载 Phase 5 owning Truth | 三个模块已有稳定身份、版本、依赖和 SPI 边界 | Domain / schema review | 已有代码证据，待 #121 正式确认 |
+| 现有 Semantic / Modeling / Metric Domain 足以承载 Phase 5 owning Truth | 三个模块已有稳定身份、版本、依赖和 SPI 边界 | Domain / schema review | 已有代码证据，已由 #121 Product Review 正式确认 |
 | Phase 5 不需要新建 Semantic Query Runtime 就能交付核心价值 | J2 当前最大缺口是稳定契约、发布和影响闭环 | Golden Journey 不依赖新查询引擎完成 | 待 #124 验证 |
-| Metric 不应默认成为 Phase 4 Data Product source type | Metric 是业务定义，当前不天然拥有 runtime endpoint | Product Review + consumption handoff prototype | 待 #121 决策 |
+| Metric 不应默认成为 Phase 4 Data Product source type | Metric 是业务定义，当前不天然拥有 runtime endpoint | Product Review + consumption handoff prototype | 已由 PD-003 / #121 冻结为默认不新增 |
 | exact MetricVersion 对稳定下游引用是必要的 | 当前 MetricVersion 已存在，Draft 可持续编辑 | 发布后编辑 Draft 的稳定性测试 | 待 #123 验证 |
-| MetricUsage 更适合作为 Reference Usage 而非 runtime usage | 当前 record 由下游保存引用时触发 | 对照 PD-002 Usage Evidence | 已有合同证据，待产品命名确认 |
+| MetricUsage 更适合作为 Reference Usage 而非 runtime usage | 当前 record 由下游保存引用时触发 | 对照 PD-002 Usage Evidence | 已由 PD-003 冻结为 Reference Usage |
 
 ## 5. 事实归属与所有权
 
@@ -131,8 +131,8 @@ Business Domain / Process
 | Logical / Physical Model / ModelVersion | Modeling |
 | Metric definition / type / composition | Metric |
 | MetricVersion | Metric |
-| Metric Validation | Metric（PD-003 proposed） |
-| Metric Publication | Metric（PD-003 proposed） |
+| Metric Validation | Metric（PD-003 ACCEPTED） |
+| Metric Publication | Metric（PD-003 ACCEPTED） |
 | Metric Reference Usage | Metric |
 | Lineage | Lineage |
 | Asset governance context | Asset |
@@ -150,7 +150,7 @@ Business Domain / Process
 
 ## 6. 方案与范围
 
-### 已选择方案（待 PD-003 ACCEPTED）
+### 已选择方案（PD-003 ACCEPTED）
 
 采用：
 
@@ -421,14 +421,14 @@ Authoring status、Publication state、dependency health 分离，禁止一个 s
 
 | 问题 | 是否阻断 | 负责人 | 决策 / 答案 | 日期 |
 |---|---|---|---|---|
-| Metric 是否新增 Phase 4 ProductType | 是 | Product | PD-003 当前建议“不新增”；待 #121 Product Review | 2026-09-24 |
-| Publication 的最小 lifecycle 名称 | 是 | Product | PD-003 提议 UNPUBLISHED / PUBLISHED / WITHDRAWN | 2026-09-24 |
-| MetricValidation 的持久化形态 | 否（产品语义已定义） | Architecture | Product Review 后技术设计决定 | 2026-09-24 |
-| MetricPublication 的持久化形态 | 否（产品语义已定义） | Architecture | Product Review 后技术设计决定 | 2026-09-24 |
+| Metric 是否新增 Phase 4 ProductType | 是 | Product | PD-003 已冻结：Phase 5 默认不新增 Metric ProductType | 2026-09-24 |
+| Publication 的最小 lifecycle 名称 | 是 | Product | PD-003 已冻结：UNPUBLISHED / PUBLISHED / WITHDRAWN | 2026-09-24 |
+| MetricValidation 的持久化形态 | 否（产品语义已定义） | Architecture | #123 技术设计决定 | 2026-09-24 |
+| MetricPublication 的持久化形态 | 否（产品语义已定义） | Architecture | #123 技术设计决定 | 2026-09-24 |
 | legacy MetricUsage 如何表达 version unknown | 否 | Metric owner | #123/#124 migration design | 2026-09-24 |
 | 哪个真实 Golden Metric 用于 #124 | 否 | Product / QA | 实施前选择 ATOMIC + DERIVED/COMPOSITE 场景 | 2026-09-24 |
 
-Status 升为 APPROVED 前，以上阻断问题必须在 #121 中正式关闭。
+上述阻断问题已由 PD-003 / #121 正式关闭；剩余非阻断技术问题进入 #123/#124 设计与验收。
 
 ## 11. 支撑证据
 
@@ -446,7 +446,7 @@ Status 升为 APPROVED 前，以上阻断问题必须在 #121 中正式关闭。
 
 ## 12. 架构影响
 
-本节只记录当前 proposed product shape 对未来实现的约束；在 PD-003 ACCEPTED 前不得把它解释为最终技术设计。
+本节记录已批准 product shape 对未来实现的约束；具体 endpoint、DTO、持久化与事件机制仍由后续 Architecture / Implementation Review 决定。
 
 ### API
 
