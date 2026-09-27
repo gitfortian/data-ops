@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false
+  },
+  "include": [
+    "src/pages/metric/**/*.ts",
+    "src/pages/metric/**/*.tsx",
+    "src/pages/semantic/**/*.ts",
+    "src/pages/semantic/**/*.tsx",
+    "src/services/metric/**/*.ts",
+    "src/services/semantic/**/*.ts",
+    "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}
