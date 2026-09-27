@@ -3,9 +3,10 @@
 /**
  * Phase4 #104 one-command real-environment acceptance bundle.
  *
- * Reuses the source-owned Dataset/Data Service evidence runners, then captures
- * canonical Consumption Detail, stable source navigation and known Consumer/Impact
- * for both products. The output is a single reviewable JSON bundle.
+ * Reuses the source-owned Dataset/Data Service evidence runners, captures safe
+ * negative-path evidence, then reads canonical Consumption Detail, stable source
+ * navigation and known Consumer/Impact for both products. The output is one
+ * reviewable JSON bundle.
  *
  * Required environment variables are the union of the two existing runners:
  *   YAK_OPS_USERNAME
@@ -19,7 +20,9 @@
  *   YAK_OPS_BASE_URL (default: http://localhost:9001)
  *   YAK_OPS_PUBLIC_BASE_URL
  *   YAK_OPS_ACCEPTANCE_COMMIT
- *   plus all optional variables supported by the two child evidence runners.
+ *   YAK_OPS_CROSS_PROJECT_ID
+ *   YAK_OPS_DENIED_USERNAME / YAK_OPS_DENIED_PASSWORD
+ *   plus all optional variables supported by the child evidence runners.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -202,6 +205,7 @@ async function captureConsumption(productType, sourceId, expectedKey) {
 async function main() {
   const datasetGolden = runJsonScript('phase4-real-env-dataset-evidence.mjs');
   const dataServiceGolden = runJsonScript('phase4-real-env-data-service-evidence.mjs');
+  const negativeEvidence = runJsonScript('phase4-real-env-negative-evidence.mjs');
 
   const datasetKey = `DATASET:${DATASET_ID}`;
   const dataServiceKey = `DATA_SERVICE:${DATA_SERVICE_ID}`;
@@ -213,6 +217,8 @@ async function main() {
     'Data Service public invoke must not send Project header');
   assert(dataServiceGolden.usageNormalization?.state === 'NORMALIZED',
     'Data Service InvocationRecord must normalize to Usage Evidence');
+  assert(negativeEvidence.invalidApiKey?.state === 'PASSED',
+    'invalid Data Service API Key must be rejected');
 
   await request('/yak-security/api/v1/account/login', {
     method: 'POST',
@@ -242,15 +248,26 @@ async function main() {
       golden: dataServiceGolden,
       consumption: dataServiceConsumption,
     },
+    negativeEvidence,
     assertions: {
       datasetRealQueryEvidence: true,
       dataServicePublicInvokeEvidence: true,
       dataServiceExternalAuthorizationBoundary: true,
+      dataServiceInvalidApiKeyRejected: true,
       dataServiceUsageNormalized: true,
       canonicalProductIdentityStable: true,
       sourceNavigationResolved: true,
       consumerImpactCaptured: true,
+      crossProjectChecked: negativeEvidence.crossProject?.state === 'PASSED',
+      forbiddenDatasetConsumeChecked: negativeEvidence.forbiddenDataset?.state === 'PASSED',
     },
+    remainingManualFaultInjection: [
+      'access provider unavailable',
+      'Data Service runtime unavailable and recovery',
+      'Usage Evidence normalization failure and retry',
+      'source evidence gap / provider unavailable',
+      'Consumer target removed or unavailable',
+    ],
     capturedAt: new Date().toISOString(),
   };
 
