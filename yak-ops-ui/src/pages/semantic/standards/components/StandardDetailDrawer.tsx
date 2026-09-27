@@ -31,7 +31,10 @@ interface StandardDetailDrawerProps {
   onClose: () => void;
 }
 
-const STANDARD_CONTEXT_COPY: Record<Extract<StandardContextState, 'EMPTY' | 'FORBIDDEN' | 'UNAVAILABLE'>, { title: string; description: string }> = {
+const STANDARD_CONTEXT_COPY: Record<
+  Extract<StandardContextState, 'EMPTY' | 'FORBIDDEN' | 'UNAVAILABLE'>,
+  { title: string; description: string }
+> = {
   EMPTY: {
     title: '目标标准在当前项目空间不可见',
     description: '该稳定 ID 在当前 Project Space 中没有可读取对象。不会据此推断其他项目空间是否存在同 ID 对象。',
@@ -61,6 +64,7 @@ const StandardDetailDrawer = ({
   const [linkedStandard, setLinkedStandard] = useState<SemanticStandardRecord | null>(null);
   const [linkedUsageSummary, setLinkedUsageSummary] = useState<SemanticStandardUsageSummary | null>(null);
   const [contextState, setContextState] = useState<StandardContextState>('IDLE');
+  const [retryNonce, setRetryNonce] = useState(0);
   const [affectedMetrics, setAffectedMetrics] = useState<AffectedMetricRecord[] | null>(null);
   const [affectedMetricsUnavailable, setAffectedMetricsUnavailable] = useState(false);
 
@@ -112,7 +116,7 @@ const StandardDetailDrawer = ({
     return () => {
       cancelled = true;
     };
-  }, [deepLinkStandardId, open, standard?.id]);
+  }, [deepLinkStandardId, open, retryNonce, standard?.id]);
 
   const effectiveStandard = open && standard ? standard : linkedStandard;
   const effectiveUsageSummary = open && standard ? usageSummary : linkedUsageSummary;
@@ -175,14 +179,6 @@ const StandardDetailDrawer = ({
     onClose();
   };
 
-  const retryDeepLink = () => {
-    if (!deepLinkStandardId) return;
-    // Toggle the stable query parameter to retrigger the exact same owning read without fabricating data.
-    const cleared = withStandardContext(entryParams, null);
-    setEntryParams(cleared, { replace: true });
-    queueMicrotask(() => setEntryParams(withStandardContext(cleared, deepLinkStandardId), { replace: true }));
-  };
-
   const contextFailure =
     contextState === 'EMPTY' || contextState === 'FORBIDDEN' || contextState === 'UNAVAILABLE'
       ? STANDARD_CONTEXT_COPY[contextState]
@@ -206,7 +202,7 @@ const StandardDetailDrawer = ({
           action={
             <Space direction="vertical" size={4}>
               {contextState === 'UNAVAILABLE' ? (
-                <Button size="small" onClick={retryDeepLink}>
+                <Button size="small" onClick={() => setRetryNonce((value) => value + 1)}>
                   重试
                 </Button>
               ) : null}
