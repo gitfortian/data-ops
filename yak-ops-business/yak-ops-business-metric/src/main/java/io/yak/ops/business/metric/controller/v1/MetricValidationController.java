@@ -12,7 +12,6 @@ import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 /** Version-scoped Definition Validation evidence API. */
 @Tag(name = "指标定义校验接口")
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/metrics")
 @ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)
 @RequiresPermission(MetricPermissionCode.READ)
@@ -30,6 +28,13 @@ public class MetricValidationController {
 
   private final MetricDefinitionValidationService validationService;
   private final CurrentUserProvider currentUserProvider;
+
+  public MetricValidationController(
+      MetricDefinitionValidationService validationService,
+      CurrentUserProvider currentUserProvider) {
+    this.validationService = validationService;
+    this.currentUserProvider = currentUserProvider;
+  }
 
   @Operation(summary = "校验指定指标版本并生成不可变证据")
   @RequiresPermission(MetricPermissionCode.UPDATE)
