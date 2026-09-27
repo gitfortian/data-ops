@@ -21,7 +21,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** 指标影响分析单测:依赖健康语义、METRIC 别名合并、去重与缺失处理。 */
+/** 指标影响分析单测:依赖健康语义、Authoring next step、METRIC 别名合并与缺失处理。 */
 class MetricImpactServiceTest {
 
   private MetricCatalogService catalogService;
@@ -52,10 +52,9 @@ class MetricImpactServiceTest {
     when(referenceResolver.metricsById(any())).thenReturn(Map.of(
         7L, metric(7L, 3),
         8L, metric(8L, 4)));
-    when(referenceResolver.standardReference(10L))
-        .thenReturn(MetricReferenceResolver.Reference.EMPTY);
-    when(usageApi.summary(metricId))
-        .thenReturn(new MetricUsageApi.UsageSummary(metricId, 0, 0, 0, 0, 0, 0));
+    when(referenceResolver.standardReferenceResolution(10L))
+        .thenReturn(MetricReferenceResolver.ReferenceResolution.unavailable());
+    stubUsage(metricId);
 
     MetricImpactService.ImpactReport report = service.checkUpstreamChanges(metricId);
 
@@ -80,6 +79,80 @@ class MetricImpactServiceTest {
     assertThat(unavailable.dependencyHealth())
         .isEqualTo(MetricImpactService.DependencyHealth.UNAVAILABLE);
     assertThat(unavailable.changeStatus()).isEqualTo("UNKNOWN");
+
+    assertThat(report.authoringNextStep())
+        .isEqualTo(MetricImpactService.AuthoringNextStep.RESOLVE_REMOVED_DEPENDENCY);
+  }
+
+  @Test
+  void removedCrossDomainDependencyIsDistinctFromProviderUnavailable() {
+    long metricId = 100L;
+    when(catalogService.get(metricId)).thenReturn(metric(metricId, 5));
+    when(dependencyRepository.listByMetric(metricId)).thenReturn(List.of(
+        upstreamDep(20L, "MODEL", "model_20", 3),
+        upstreamDep(30L, "UNIT", "unit_30", 1)));
+    when(referenceResolver.metricsById(any())).thenReturn(Map.of());
+    when(referenceResolver.modelReferenceResolution(20L))
+        .thenReturn(MetricReferenceResolver.ReferenceResolution.removed());
+    when(referenceResolver.standardReferenceResolution(30L))
+        .thenReturn(MetricReferenceResolver.ReferenceResolution.unavailable());
+    stubUsage(metricId);
+
+    MetricImpactService.ImpactReport report = service.checkUpstreamChanges(metricId);
+
+    assertThat(change(report, "model_20").dependencyHealth())
+        .isEqualTo(MetricImpactService.DependencyHealth.REMOVED);
+    assertThat(change(report, "unit_30").dependencyHealth())
+        .isEqualTo(MetricImpactService.DependencyHealth.UNAVAILABLE);
+    assertThat(report.authoringNextStep())
+        .isEqualTo(MetricImpactService.AuthoringNextStep.RESOLVE_REMOVED_DEPENDENCY);
+  }
+
+  @Test
+  void healthyDependenciesDirectAuthoringToValidation() {
+    long metricId = 100L;
+    when(catalogService.get(metricId)).thenReturn(metric(metricId, 5));
+    when(dependencyRepository.listByMetric(metricId))
+        .thenReturn(List.of(upstreamDep(7L, "REF_METRIC", "metric_7", 3)));
+    when(referenceResolver.metricsById(any())).thenReturn(Map.of(7L, metric(7L, 3)));
+    stubUsage(metricId);
+
+    MetricImpactService.ImpactReport report = service.checkUpstreamChanges(metricId);
+
+    assertThat(report.authoringNextStep())
+        .isEqualTo(MetricImpactService.AuthoringNextStep.VALIDATE);
+  }
+
+  @Test
+  void outdatedDependencyMustBeReviewedBeforeValidation() {
+    long metricId = 100L;
+    when(catalogService.get(metricId)).thenReturn(metric(metricId, 5));
+    when(dependencyRepository.listByMetric(metricId))
+        .thenReturn(List.of(upstreamDep(7L, "REF_METRIC", "metric_7", 2)));
+    when(referenceResolver.metricsById(any())).thenReturn(Map.of(7L, metric(7L, 3)));
+    stubUsage(metricId);
+
+    MetricImpactService.ImpactReport report = service.checkUpstreamChanges(metricId);
+
+    assertThat(report.authoringNextStep())
+        .isEqualTo(MetricImpactService.AuthoringNextStep.REVIEW_OUTDATED_DEPENDENCY);
+  }
+
+  @Test
+  void unavailableDependencyProviderDirectsUserToRetryInsteadOfValidation() {
+    long metricId = 100L;
+    when(catalogService.get(metricId)).thenReturn(metric(metricId, 5));
+    when(dependencyRepository.listByMetric(metricId))
+        .thenReturn(List.of(upstreamDep(20L, "MODEL", "model_20", 2)));
+    when(referenceResolver.metricsById(any())).thenReturn(Map.of());
+    when(referenceResolver.modelReferenceResolution(20L))
+        .thenReturn(MetricReferenceResolver.ReferenceResolution.unavailable());
+    stubUsage(metricId);
+
+    MetricImpactService.ImpactReport report = service.checkUpstreamChanges(metricId);
+
+    assertThat(report.authoringNextStep())
+        .isEqualTo(MetricImpactService.AuthoringNextStep.RETRY_DEPENDENCY_PROVIDER);
   }
 
   @Test
@@ -114,6 +187,11 @@ class MetricImpactServiceTest {
     assertThat(service.findAffectedMetrics("  ", 1L)).isEmpty();
     assertThat(service.findAffectedMetrics("MODEL", null)).isEmpty();
     verify(dependencyRepository, never()).listByDependency(any(), any());
+  }
+
+  private void stubUsage(long metricId) {
+    when(usageApi.summary(metricId))
+        .thenReturn(new MetricUsageApi.UsageSummary(metricId, 0, 0, 0, 0, 0, 0));
   }
 
   private static MetricImpactService.DependencyChange change(
