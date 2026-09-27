@@ -3,6 +3,11 @@ package io.yak.ops.business.metric.publication;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.yak.ops.business.audit.AuditEventType;
+import io.yak.ops.business.audit.AuditOperationHandle;
+import io.yak.ops.business.audit.AuditOperationRequest;
+import io.yak.ops.business.audit.AuditTransactions;
+import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
@@ -17,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -42,14 +48,17 @@ public class MetricPublicationService {
   private final MetricPublicationRepository publicationRepository;
   private final MetricVersionRepository versionRepository;
   private final MetricPublicationReadinessService readinessService;
+  private final BusinessAuditService auditService;
 
   public MetricPublicationService(
       MetricPublicationRepository publicationRepository,
       MetricVersionRepository versionRepository,
-      MetricPublicationReadinessService readinessService) {
+      MetricPublicationReadinessService readinessService,
+      BusinessAuditService auditService) {
     this.publicationRepository = publicationRepository;
     this.versionRepository = versionRepository;
     this.readinessService = readinessService;
+    this.auditService = auditService;
   }
 
   public record PublishedMetricContract(
@@ -83,102 +92,168 @@ public class MetricPublicationService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public PublishedMetricContract publish(Long metricId, int version, String operator) {
     String actor = requireOperator(operator);
-    Integer currentVersion = publicationRepository.lockCurrentMetricVersion(metricId);
-    if (currentVersion == null) {
-      throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
+    AuditOperationHandle audit = auditService.start(new AuditOperationRequest(
+        "METRIC_PUBLISH",
+        "Publish immutable MetricVersion",
+        "METRIC",
+        String.valueOf(metricId),
+        metricId == null ? null : "Metric#" + metricId,
+        "APPLICATION",
+        Map.of("metricVersion", version)));
+    try {
+      Integer currentVersion = publicationRepository.lockCurrentMetricVersion(metricId);
+      if (currentVersion == null) {
+        throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
+      }
+      if (version <= 0 || currentVersion != version) {
+        throw new MetricException(
+            MetricErrorCode.PUBLICATION_CONFLICT,
+            "只能发布当前 immutable version；请求 v" + version + "，当前 v" + currentVersion);
+      }
+
+      MetricVersionPO metricVersion = versionRepository.findByMetricAndVersion(metricId, version);
+      if (metricVersion == null) {
+        throw new MetricException(MetricErrorCode.NOT_FOUND,
+            "指标 " + metricId + " 的版本 v" + version + " 不存在");
+      }
+      String immutableDigest = sha256(metricVersion.getSnapshot());
+
+      MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
+      if (active != null
+          && Objects.equals(active.getMetricVersionId(), metricVersion.getId())
+          && Objects.equals(active.getSnapshotDigest(), immutableDigest)) {
+        PublishedMetricContract contract = requireActiveContract(active);
+        AuditTransactions.completeOnCommit(
+            audit,
+            AuditEventType.RESOURCE_UPDATED,
+            "Metric publish command resolved idempotently",
+            Map.of(
+                "metricVersion", version,
+                "metricVersionId", metricVersion.getId(),
+                "publicationEventId", contract.publicationEventId(),
+                "idempotent", true),
+            "Metric publication already active");
+        return contract;
+      }
+
+      MetricPublicationReadinessService.PublicationReadiness readiness = readinessService.check(metricId, version);
+      if (readiness.status() != MetricPublicationReadinessService.ReadinessStatus.READY) {
+        throw new MetricException(
+            MetricErrorCode.PUBLICATION_NOT_READY,
+            blockingSummary(readiness.gates()));
+      }
+      requireSameSubject(metricVersion, immutableDigest, readiness.subject());
+
+      LocalDateTime now = LocalDateTime.now();
+      MetricPublicationEventPO event = new MetricPublicationEventPO();
+      event.setMetricId(metricId);
+      event.setMetricVersionId(metricVersion.getId());
+      event.setMetricVersion(version);
+      event.setSnapshotDigest(immutableDigest);
+      event.setEventType(EVENT_PUBLISHED);
+      event.setReadinessJson(writeEvidence(readiness.gates()));
+      event.setActedBy(actor);
+      event.setActedAt(now);
+      publicationRepository.appendEvent(event);
+
+      MetricActivePublicationPO pointer = new MetricActivePublicationPO();
+      pointer.setMetricId(metricId);
+      pointer.setPublicationEventId(event.getId());
+      pointer.setMetricVersionId(metricVersion.getId());
+      pointer.setMetricVersion(version);
+      pointer.setSnapshotDigest(immutableDigest);
+      pointer.setPublishedBy(actor);
+      pointer.setPublishedAt(now);
+      publicationRepository.replaceActive(pointer);
+
+      PublishedMetricContract contract = contract(event, metricVersion, readiness.gates());
+      AuditTransactions.completeOnCommit(
+          audit,
+          AuditEventType.RESOURCE_UPDATED,
+          "Metric immutable version published",
+          Map.of(
+              "metricVersion", version,
+              "metricVersionId", metricVersion.getId(),
+              "publicationEventId", event.getId(),
+              "snapshotDigest", immutableDigest,
+              "gateCount", readiness.gates().size(),
+              "idempotent", false),
+          "Metric v" + version + " published");
+      return contract;
+    } catch (RuntimeException exception) {
+      audit.failure("METRIC_PUBLISH_FAILED", exception);
+      throw exception;
     }
-    if (version <= 0 || currentVersion != version) {
-      throw new MetricException(
-          MetricErrorCode.PUBLICATION_CONFLICT,
-          "只能发布当前 immutable version；请求 v" + version + "，当前 v" + currentVersion);
-    }
-
-    MetricVersionPO metricVersion = versionRepository.findByMetricAndVersion(metricId, version);
-    if (metricVersion == null) {
-      throw new MetricException(MetricErrorCode.NOT_FOUND,
-          "指标 " + metricId + " 的版本 v" + version + " 不存在");
-    }
-    String immutableDigest = sha256(metricVersion.getSnapshot());
-
-    MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
-    if (active != null
-        && Objects.equals(active.getMetricVersionId(), metricVersion.getId())
-        && Objects.equals(active.getSnapshotDigest(), immutableDigest)) {
-      // A retry of an already active exact contract is idempotent. Do not re-run today's gates and
-      // accidentally make historical publication availability depend on a later provider outage.
-      return requireActiveContract(active);
-    }
-
-    MetricPublicationReadinessService.PublicationReadiness readiness = readinessService.check(metricId, version);
-    if (readiness.status() != MetricPublicationReadinessService.ReadinessStatus.READY) {
-      throw new MetricException(
-          MetricErrorCode.PUBLICATION_NOT_READY,
-          blockingSummary(readiness.gates()));
-    }
-    requireSameSubject(metricVersion, immutableDigest, readiness.subject());
-
-    LocalDateTime now = LocalDateTime.now();
-    MetricPublicationEventPO event = new MetricPublicationEventPO();
-    event.setMetricId(metricId);
-    event.setMetricVersionId(metricVersion.getId());
-    event.setMetricVersion(version);
-    event.setSnapshotDigest(immutableDigest);
-    event.setEventType(EVENT_PUBLISHED);
-    event.setReadinessJson(writeEvidence(readiness.gates()));
-    event.setActedBy(actor);
-    event.setActedAt(now);
-    publicationRepository.appendEvent(event);
-
-    MetricActivePublicationPO pointer = new MetricActivePublicationPO();
-    pointer.setMetricId(metricId);
-    pointer.setPublicationEventId(event.getId());
-    pointer.setMetricVersionId(metricVersion.getId());
-    pointer.setMetricVersion(version);
-    pointer.setSnapshotDigest(immutableDigest);
-    pointer.setPublishedBy(actor);
-    pointer.setPublishedAt(now);
-    publicationRepository.replaceActive(pointer);
-
-    return contract(event, metricVersion, readiness.gates());
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public WithdrawalResult withdraw(Long metricId, String operator) {
     String actor = requireOperator(operator);
-    Integer currentVersion = publicationRepository.lockCurrentMetricVersion(metricId);
-    if (currentVersion == null) {
-      throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
-    }
+    AuditOperationHandle audit = auditService.start(new AuditOperationRequest(
+        "METRIC_WITHDRAW",
+        "Withdraw active Published Metric Contract",
+        "METRIC",
+        String.valueOf(metricId),
+        metricId == null ? null : "Metric#" + metricId,
+        "APPLICATION",
+        Map.of()));
+    try {
+      Integer currentVersion = publicationRepository.lockCurrentMetricVersion(metricId);
+      if (currentVersion == null) {
+        throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
+      }
 
-    MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
-    if (active == null) {
-      return new WithdrawalResult(false, null);
-    }
+      MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
+      if (active == null) {
+        AuditTransactions.completeOnCommit(
+            audit,
+            AuditEventType.RESOURCE_UPDATED,
+            "Metric withdraw command resolved idempotently",
+            Map.of("withdrawn", false, "idempotent", true),
+            "Metric has no active publication");
+        return new WithdrawalResult(false, null);
+      }
 
-    MetricPublicationEventPO published = publicationRepository.findEvent(active.getPublicationEventId());
-    if (published == null || !EVENT_PUBLISHED.equals(published.getEventType())) {
-      throw new MetricException(
-          MetricErrorCode.PUBLICATION_CONFLICT,
-          "当前发布指针缺少对应的 PUBLISHED ledger event");
-    }
+      MetricPublicationEventPO published = publicationRepository.findEvent(active.getPublicationEventId());
+      if (published == null || !EVENT_PUBLISHED.equals(published.getEventType())) {
+        throw new MetricException(
+            MetricErrorCode.PUBLICATION_CONFLICT,
+            "当前发布指针缺少对应的 PUBLISHED ledger event");
+      }
 
-    MetricPublicationEventPO withdrawn = new MetricPublicationEventPO();
-    withdrawn.setMetricId(metricId);
-    withdrawn.setMetricVersionId(active.getMetricVersionId());
-    withdrawn.setMetricVersion(active.getMetricVersion());
-    withdrawn.setSnapshotDigest(active.getSnapshotDigest());
-    withdrawn.setEventType(EVENT_WITHDRAWN);
-    withdrawn.setSubjectPublicationId(active.getPublicationEventId());
-    withdrawn.setActedBy(actor);
-    withdrawn.setActedAt(LocalDateTime.now());
-    publicationRepository.appendEvent(withdrawn);
+      MetricPublicationEventPO withdrawn = new MetricPublicationEventPO();
+      withdrawn.setMetricId(metricId);
+      withdrawn.setMetricVersionId(active.getMetricVersionId());
+      withdrawn.setMetricVersion(active.getMetricVersion());
+      withdrawn.setSnapshotDigest(active.getSnapshotDigest());
+      withdrawn.setEventType(EVENT_WITHDRAWN);
+      withdrawn.setSubjectPublicationId(active.getPublicationEventId());
+      withdrawn.setActedBy(actor);
+      withdrawn.setActedAt(LocalDateTime.now());
+      publicationRepository.appendEvent(withdrawn);
 
-    if (!publicationRepository.clearActive(metricId, active.getPublicationEventId())) {
-      throw new MetricException(
-          MetricErrorCode.PUBLICATION_CONFLICT,
-          "发布状态已变化，请刷新后重试撤回");
+      if (!publicationRepository.clearActive(metricId, active.getPublicationEventId())) {
+        throw new MetricException(
+            MetricErrorCode.PUBLICATION_CONFLICT,
+            "发布状态已变化，请刷新后重试撤回");
+      }
+      WithdrawalResult result = new WithdrawalResult(true, eventView(withdrawn));
+      AuditTransactions.completeOnCommit(
+          audit,
+          AuditEventType.RESOURCE_UPDATED,
+          "Published Metric Contract withdrawn",
+          Map.of(
+              "withdrawn", true,
+              "withdrawalEventId", withdrawn.getId(),
+              "subjectPublicationId", active.getPublicationEventId(),
+              "metricVersion", active.getMetricVersion(),
+              "metricVersionId", active.getMetricVersionId()),
+          "Metric publication withdrawn");
+      return result;
+    } catch (RuntimeException exception) {
+      audit.failure("METRIC_WITHDRAW_FAILED", exception);
+      throw exception;
     }
-    return new WithdrawalResult(true, eventView(withdrawn));
   }
 
   public PublishedMetricContract active(Long metricId) {

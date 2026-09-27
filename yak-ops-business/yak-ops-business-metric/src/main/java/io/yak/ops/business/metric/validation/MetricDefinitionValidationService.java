@@ -3,6 +3,11 @@ package io.yak.ops.business.metric.validation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.yak.ops.business.audit.AuditEventType;
+import io.yak.ops.business.audit.AuditOperationHandle;
+import io.yak.ops.business.audit.AuditOperationRequest;
+import io.yak.ops.business.audit.AuditTransactions;
+import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.repository.MetricValidationEvidenceRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
@@ -16,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,12 +42,15 @@ public class MetricDefinitionValidationService {
 
   private final MetricVersionRepository versionRepository;
   private final MetricValidationEvidenceRepository evidenceRepository;
+  private final BusinessAuditService auditService;
 
   public MetricDefinitionValidationService(
       MetricVersionRepository versionRepository,
-      MetricValidationEvidenceRepository evidenceRepository) {
+      MetricValidationEvidenceRepository evidenceRepository,
+      BusinessAuditService auditService) {
     this.versionRepository = versionRepository;
     this.evidenceRepository = evidenceRepository;
+    this.auditService = auditService;
   }
 
   public enum ValidationResult {
@@ -76,26 +85,50 @@ public class MetricDefinitionValidationService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public ValidationEvidence validate(Long metricId, int version, String operator) {
-    MetricVersionPO subject = requireVersion(metricId, version);
-    List<ValidationIssue> issues = validateSnapshot(subject.getSnapshot());
-    ValidationResult result = issues.stream().anyMatch(issue -> issue.severity() == Severity.BLOCKER)
-        ? ValidationResult.BLOCKED
-        : ValidationResult.READY;
+    AuditOperationHandle audit = auditService.start(new AuditOperationRequest(
+        "METRIC_DEFINITION_VALIDATE",
+        "Validate immutable MetricVersion definition",
+        "METRIC",
+        String.valueOf(metricId),
+        metricId == null ? null : "Metric#" + metricId,
+        "APPLICATION",
+        Map.of("metricVersion", version, "provider", PROVIDER)));
+    try {
+      MetricVersionPO subject = requireVersion(metricId, version);
+      List<ValidationIssue> issues = validateSnapshot(subject.getSnapshot());
+      ValidationResult result = issues.stream().anyMatch(issue -> issue.severity() == Severity.BLOCKER)
+          ? ValidationResult.BLOCKED
+          : ValidationResult.READY;
 
-    LocalDateTime checkedAt = LocalDateTime.now();
-    MetricValidationEvidencePO po = new MetricValidationEvidencePO();
-    po.setMetricId(metricId);
-    po.setMetricVersionId(subject.getId());
-    po.setMetricVersion(version);
-    po.setResult(result.name());
-    po.setIssuesJson(writeIssues(issues));
-    po.setProvider(PROVIDER);
-    po.setSnapshotDigest(sha256(subject.getSnapshot()));
-    po.setCheckedBy(StringUtils.hasText(operator) ? operator : "system");
-    po.setCheckedAt(checkedAt);
-    evidenceRepository.append(po);
+      LocalDateTime checkedAt = LocalDateTime.now();
+      MetricValidationEvidencePO po = new MetricValidationEvidencePO();
+      po.setMetricId(metricId);
+      po.setMetricVersionId(subject.getId());
+      po.setMetricVersion(version);
+      po.setResult(result.name());
+      po.setIssuesJson(writeIssues(issues));
+      po.setProvider(PROVIDER);
+      po.setSnapshotDigest(sha256(subject.getSnapshot()));
+      po.setCheckedBy(StringUtils.hasText(operator) ? operator : "system");
+      po.setCheckedAt(checkedAt);
+      evidenceRepository.append(po);
 
-    return toEvidence(po, issues);
+      AuditTransactions.completeOnCommit(
+          audit,
+          AuditEventType.RESOURCE_UPDATED,
+          "Metric definition validation evidence recorded",
+          Map.of(
+              "metricVersion", version,
+              "metricVersionId", subject.getId(),
+              "validationResult", result.name(),
+              "provider", PROVIDER,
+              "issueCount", issues.size()),
+          "Metric definition validation " + result.name());
+      return toEvidence(po, issues);
+    } catch (RuntimeException exception) {
+      audit.failure("METRIC_DEFINITION_VALIDATION_FAILED", exception);
+      throw exception;
+    }
   }
 
   public List<ValidationEvidence> history(Long metricId, int version) {
@@ -155,8 +188,6 @@ public class MetricDefinitionValidationService {
       requirePositive(root, "refMetricId", "REF_METRIC_REQUIRED", "派生指标必须引用原子指标", issues);
       requireText(root, "measureExpr", "MEASURE_EXPR_REQUIRED", "派生指标必须具有可执行度量表达式", issues);
     } else if ("COMPOSITE".equals(metricType)) {
-      // Current MetricVersion snapshot does not include composition operands. Blocking instead of
-      // pretending READY keeps Publication from consuming incomplete version evidence.
       issues.add(blocker(
           "COMPOSITION_VERSION_EVIDENCE_REQUIRED",
           "compositions",
