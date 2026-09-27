@@ -13,6 +13,7 @@ import io.yak.ops.business.metric.catalog.MetricReferenceResolver;
 import io.yak.ops.business.metric.controller.v1.dto.MetricQueryDTO;
 import io.yak.ops.business.metric.controller.v1.vo.MetricVO;
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.impact.MetricImpactService;
 import io.yak.ops.business.metric.repository.MetricCompositionRepository;
 import io.yak.ops.business.modeling.api.ModelQueryApi;
 import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
@@ -49,6 +50,7 @@ public class MetricController {
   private final MetricCompositionRepository compositionRepository;
   private final CurrentUserProvider currentUserProvider;
   private final MetricReferenceResolver referenceResolver;
+  private final MetricImpactService impactService;
 
   @Operation(summary = "创建指标")
   @RequiresPermission(MetricPermissionCode.CREATE)
@@ -77,6 +79,10 @@ public class MetricController {
           .map(po -> toCompositionVO(po, subs)).toList());
     }
     enrichNames(List.of(vo));
+
+    MetricImpactService.ImpactReport dependencyContext = impactService.checkUpstreamChanges(id);
+    vo.setDependencyChanges(dependencyContext.changes());
+    vo.setAuthoringNextStep(dependencyContext.authoringNextStep());
     return Result.success(vo);
   }
 
