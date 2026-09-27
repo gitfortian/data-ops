@@ -12,8 +12,9 @@
  * Optional:
  *   YAK_OPS_BASE_URL (default: http://localhost:9001)
  *   YAK_OPS_PHASE5_METRIC_VERSION (default: current Metric version)
- *   YAK_OPS_PHASE5_VALIDATE=true   -> append real Definition Validation evidence
+ *   YAK_OPS_PHASE5_VALIDATE=true   -> append real Definition Validation evidence before asserting Golden state
  *   YAK_OPS_PHASE5_PUBLISH=true    -> publish exact current version, only when readiness=READY
+ *   YAK_OPS_PHASE5_REQUIRE_OBSERVED_USAGE=true|false (default: true)
  *   YAK_OPS_CROSS_PROJECT_ID       -> safe read-isolation probe
  *   YAK_OPS_DENIED_USERNAME / YAK_OPS_DENIED_PASSWORD -> safe metric:read denial probe
  *   YAK_OPS_PHASE5_RUN_DATASET_EVIDENCE=true -> reuse Phase4 Dataset evidence runner when its env is supplied
@@ -36,6 +37,7 @@ const PROJECT_ID = positiveId('YAK_OPS_PROJECT_ID');
 const METRIC_ID = positiveId('YAK_OPS_METRIC_ID');
 const VALIDATE = boolEnv('YAK_OPS_PHASE5_VALIDATE');
 const PUBLISH = boolEnv('YAK_OPS_PHASE5_PUBLISH');
+const REQUIRE_OBSERVED_USAGE = boolEnv('YAK_OPS_PHASE5_REQUIRE_OBSERVED_USAGE', true);
 const RUN_DATASET_EVIDENCE = boolEnv('YAK_OPS_PHASE5_RUN_DATASET_EVIDENCE');
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
@@ -55,9 +57,9 @@ function positiveId(name, optional = false) {
   return value;
 }
 
-function boolEnv(name) {
+function boolEnv(name, defaultValue = false) {
   const value = process.env[name]?.trim().toLowerCase();
-  if (!value) return false;
+  if (!value) return defaultValue;
   if (['1', 'true', 'yes', 'on'].includes(value)) return true;
   if (['0', 'false', 'no', 'off'].includes(value)) return false;
   throw new Error(`${name} must be true/false`);
@@ -268,6 +270,7 @@ function runPhase4DatasetEvidence() {
 
 async function main() {
   const { session, currentUser } = await login(USERNAME, PASSWORD);
+  assert(currentUser != null, 'logged-in current user must resolve');
 
   const metricResponse = await request(session, `/api/v1/metrics/${METRIC_ID}`);
   const metric = metricResponse.data;
@@ -284,6 +287,8 @@ async function main() {
   assert(exactVersion != null, `MetricVersion v${version} must resolve`);
   assert(Number(exactVersion.version) === version, 'MetricVersion identity mismatch');
   assert(exactVersion.editable === false, 'Historical MetricVersion must be immutable/read-only');
+  assert(typeof exactVersion.snapshot === 'string' && exactVersion.snapshot.length > 0,
+    'MetricVersion must carry immutable snapshot evidence');
 
   let validationAction = null;
   if (VALIDATE) {
@@ -303,16 +308,23 @@ async function main() {
     `/api/v1/metrics/${METRIC_ID}/versions/${version}/validation/latest-ready`,
     { allowFailure: true },
   )).data ?? null;
+  assert(latestReady?.result === 'READY',
+    'Golden Metric requires latest READY validation evidence for the exact version');
+  assert(Number(latestReady.metricVersion) === version,
+    'latest READY validation evidence must bind the exact MetricVersion');
+
   const readiness = (await request(
     session, `/api/v1/metrics/${METRIC_ID}/versions/${version}/publication-readiness`,
   )).data;
+  assert(readiness?.status === 'READY',
+    `Golden Metric publication readiness must be READY, got ${readiness?.status ?? 'null'}`);
+  assert(Number(readiness?.subject?.metricVersion) === version,
+    'publication readiness subject must bind the exact MetricVersion');
 
   let publishAction = null;
   if (PUBLISH) {
     assert(Number(metric.version) === version,
       'Publish opt-in only accepts the current Metric version; use a dedicated Golden Metric fixture');
-    assert(readiness?.status === 'READY',
-      `Publish opt-in requires readiness READY, got ${readiness?.status ?? 'null'}`);
     publishAction = (await request(
       session,
       `/api/v1/metrics/${METRIC_ID}/versions/${version}/publish`,
@@ -327,6 +339,19 @@ async function main() {
   const publicationHistory = (await request(
     session, `/api/v1/metrics/${METRIC_ID}/publication-history`,
   )).data ?? [];
+  assert(activePublication != null, 'Golden Metric requires an active Published Metric Contract');
+  assert(Number(activePublication.metricId) === Number(METRIC_ID),
+    'Active publication must preserve Metric identity');
+  assert(Number(activePublication.metricVersion) === version,
+    'Active Published Metric Contract must bind the accepted exact version');
+  assert(activePublication.metricVersionId != null,
+    'Active publication must preserve immutable MetricVersion id');
+  assert(activePublication.snapshotDigest,
+    'Active publication must preserve immutable snapshot digest');
+  assert(publicationHistory.some((event) => event.eventType === 'PUBLISHED'
+      && Number(event.metricVersion) === version),
+    'Publication ledger must contain a PUBLISHED event for the exact version');
+
   const usageSummary = (await request(
     session, `/api/v1/metrics/${METRIC_ID}/usage/summary`,
   )).data;
@@ -337,18 +362,22 @@ async function main() {
     session, `/api/v1/metrics/impact/${METRIC_ID}/context`,
   )).data;
 
+  assert(referenceUsage.length > 0,
+    'Golden Metric requires at least one real downstream Reference Usage');
   assert(Number(impact?.metricId) === Number(METRIC_ID), 'Impact Context must preserve Metric identity');
   assert(Number(impact?.metricVersion) === Number(metric.version),
     'Impact Context must report current Metric version');
   assert(impact?.lineage != null, 'Impact Context must expose Lineage coverage');
+  assert(impact.lineage.status === 'READY',
+    `Golden Metric requires readable Lineage evidence, got ${impact.lineage.status ?? 'null'}`);
   assert(Array.isArray(impact?.referenceUsage), 'Impact Context must expose Reference Usage separately');
+  assert(impact.referenceUsage.length > 0,
+    'Impact Context must preserve real downstream Reference Usage');
   assert(Array.isArray(impact?.observedUsage), 'Impact Context must expose Observed Runtime Usage separately');
-
-  if (activePublication) {
-    assert(Number(activePublication.metricId) === Number(METRIC_ID),
-      'Active publication must preserve Metric identity');
-    assert(activePublication.metricVersionId != null, 'Active publication must preserve immutable MetricVersion id');
-    assert(activePublication.snapshotDigest, 'Active publication must preserve immutable snapshot digest');
+  const readyObservedProviders = impact.observedUsage.filter((coverage) => coverage.status === 'READY');
+  if (REQUIRE_OBSERVED_USAGE) {
+    assert(readyObservedProviders.some((coverage) => Array.isArray(coverage.evidence) && coverage.evidence.length > 0),
+      'Golden Metric requires at least one provider with real Observed Runtime Usage evidence');
   }
 
   const crossProjectId = positiveId('YAK_OPS_CROSS_PROJECT_ID', true);
@@ -390,11 +419,11 @@ async function main() {
   if (RUN_DATASET_EVIDENCE) {
     datasetGolden = runPhase4DatasetEvidence();
     const datasetRefs = (impact.referenceUsage ?? []).filter((item) => item.usageType === 'DATASET');
-    if (datasetRefs.length > 0 && datasetGolden?.productKey) {
-      const expectedKeys = datasetRefs.map((item) => `DATASET:${item.usageId}`);
-      assert(expectedKeys.includes(datasetGolden.productKey),
-        'Phase4 Dataset evidence must correspond to a Dataset realization referenced by this Metric');
-    }
+    assert(datasetRefs.length > 0,
+      'Phase4 Dataset runtime evidence was requested but this Metric has no DATASET Reference Usage');
+    const expectedKeys = datasetRefs.map((item) => `DATASET:${item.usageId}`);
+    assert(expectedKeys.includes(datasetGolden?.productKey),
+      'Phase4 Dataset evidence must correspond to a Dataset realization referenced by this Metric');
   }
 
   const bundle = {
@@ -447,18 +476,21 @@ async function main() {
       forbiddenRead,
     },
     assertions: {
-      loggedInRealUser: Boolean(currentUser),
+      loggedInRealUser: true,
       canonicalMetricResolved: true,
       exactImmutableMetricVersionResolved: true,
-      immutableVersionReadOnly: exactVersion.editable === false,
-      validationEvidenceCaptured: Boolean(latestReady || validationAction || validationHistory.length),
-      readinessCaptured: Boolean(readiness),
-      activePublicationCaptured: Boolean(activePublication),
-      publicationHistoryCaptured: Array.isArray(publicationHistory),
-      referenceUsageCaptured: Array.isArray(referenceUsage),
-      lineageCoverageCaptured: Boolean(impact?.lineage),
-      observedUsageCoverageCaptured: Array.isArray(impact?.observedUsage),
-      impactIdentityStable: Number(impact?.metricId) === Number(METRIC_ID),
+      immutableVersionReadOnly: true,
+      latestReadyValidationExactVersion: true,
+      publicationReadinessReady: true,
+      activePublicationExactVersion: true,
+      publicationLedgerCaptured: true,
+      referenceUsagePresent: true,
+      lineageCoverageReady: true,
+      observedUsageCoverageCaptured: true,
+      observedRuntimeEvidenceRequired: REQUIRE_OBSERVED_USAGE,
+      observedRuntimeEvidencePresent: readyObservedProviders.some(
+        (coverage) => Array.isArray(coverage.evidence) && coverage.evidence.length > 0),
+      impactIdentityStable: true,
       crossProjectChecked: crossProject.state === 'PASSED',
       forbiddenReadChecked: forbiddenRead.state === 'PASSED',
       phase4DatasetRuntimeChecked: Boolean(datasetGolden),
