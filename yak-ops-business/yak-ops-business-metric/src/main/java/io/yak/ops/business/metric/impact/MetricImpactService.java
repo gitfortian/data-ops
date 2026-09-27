@@ -50,6 +50,32 @@ public class MetricImpactService {
 
   public ImpactReport checkUpstreamChanges(Long metricId) {
     Metric metric = catalogService.get(metricId);
+    DependencyContext context = resolveDependencyContext(metricId);
+    MetricUsageApi.UsageSummary usage = usageApi.summary(metricId);
+    return new ImpactReport(
+        metricId,
+        metric.metricCode(),
+        metric.metricName(),
+        context.changes(),
+        usage.totalCount(),
+        context.authoringNextStep());
+  }
+
+  /**
+   * Dependency-only product context for canonical Metric detail.
+   *
+   * <p>It deliberately does not read Metric Usage so a usage-provider failure cannot take down the
+   * authoring detail page. The caller already owns the Metric instance and therefore avoids a second
+   * catalog lookup as well.
+   */
+  public DependencyContext dependencyContext(Metric metric) {
+    if (metric == null || metric.id() == null) {
+      throw new IllegalArgumentException("Metric identity is required");
+    }
+    return resolveDependencyContext(metric.id());
+  }
+
+  private DependencyContext resolveDependencyContext(Long metricId) {
     List<MetricDependencyPO> deps = dependencyRepository.listByMetric(metricId);
 
     List<Long> metricRefIds = deps.stream()
@@ -71,15 +97,7 @@ public class MetricImpactService {
           legacyChangeStatus(resolution.health()),
           resolution.health()));
     }
-
-    MetricUsageApi.UsageSummary usage = usageApi.summary(metricId);
-    return new ImpactReport(
-        metricId,
-        metric.metricCode(),
-        metric.metricName(),
-        changes,
-        usage.totalCount(),
-        authoringNextStep(changes));
+    return new DependencyContext(List.copyOf(changes), authoringNextStep(changes));
   }
 
   private DependencyResolution resolveDependency(
@@ -208,6 +226,10 @@ public class MetricImpactService {
     RESOLVE_REMOVED_DEPENDENCY,
     RETRY_DEPENDENCY_PROVIDER
   }
+
+  public record DependencyContext(
+      List<DependencyChange> changes,
+      AuthoringNextStep authoringNextStep) {}
 
   public record ImpactReport(
       Long metricId,
