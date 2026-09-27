@@ -9,16 +9,18 @@ import { getModelingModel } from '@/services/modeling/api';
 import {
   assignMetricTags,
   getMetric,
-  getMetricLineage,
   getMetricTags,
   getMetricUsageList,
   getMetricUsageSummary,
+  getMetricVersion,
   listMetricTags,
   listMetricVersions,
   removeMetricTag,
 } from '@/services/metric/api';
 import type {
-  MetricDependencyRecord,
+  AuthoringNextStep,
+  DependencyChange,
+  DependencyHealth,
   MetricRecord,
   MetricTagRecord,
   MetricUsageRecord,
@@ -50,6 +52,42 @@ const USAGE_TYPE_LABELS: Record<string, string> = {
   DASHBOARD: '仪表盘',
   API: 'API',
   SCREEN: '大屏',
+};
+
+const DEPENDENCY_HEALTH_META: Record<DependencyHealth, { label: string; color: string; description: string }> = {
+  UP_TO_DATE: { label: '最新', color: 'green', description: '登记版本与当前上游版本一致' },
+  OUTDATED: { label: '已过期', color: 'orange', description: '上游已产生新版本，需要复核定义' },
+  REMOVED: { label: '已删除', color: 'red', description: '登记的上游对象已不存在，需要重新绑定' },
+  UNAVAILABLE: { label: '暂不可用', color: 'default', description: '上游 provider 当前不可读，不能视为已删除' },
+};
+
+const AUTHORING_NEXT_STEP_META: Record<
+  AuthoringNextStep,
+  { title: string; description: string; tone: string; action?: 'impact' | 'retry' }
+> = {
+  VALIDATE: {
+    title: '下一步：Validation',
+    description: '当前依赖检查通过。保存或启用并不等于发布；下一阶段应对精确 MetricVersion 执行验证。',
+    tone: 'border-[#abefc6] bg-[#ecfdf3]',
+  },
+  REVIEW_OUTDATED_DEPENDENCY: {
+    title: '先复核已过期依赖',
+    description: '上游版本已经变化。先检查影响并确认定义是否仍成立，再进入 Validation。',
+    tone: 'border-[#fedf89] bg-[#fffaeb]',
+    action: 'impact',
+  },
+  RESOLVE_REMOVED_DEPENDENCY: {
+    title: '先处理已删除依赖',
+    description: '至少一个上游对象已被删除。当前定义不能直接进入 Validation，需要重新绑定或调整定义。',
+    tone: 'border-[#fecdca] bg-[#fef3f2]',
+    action: 'impact',
+  },
+  RETRY_DEPENDENCY_PROVIDER: {
+    title: '依赖 provider 暂不可用',
+    description: '无法确认部分上游当前状态。该状态不是“已删除”，恢复读取后应重新检查。',
+    tone: 'border-[#eaecf0] bg-[#f9fafb]',
+    action: 'retry',
+  },
 };
 
 /** stat_dimensions 为 JSON 列：展示时数组统一转顿号文本，存量自由文本原样。 */
@@ -120,7 +158,6 @@ const MetricDetailPage = () => {
   const [metric, setMetric] = useState<MetricRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [versions, setVersions] = useState<MetricVersionRecord[]>([]);
-  const [dependencies, setDependencies] = useState<MetricDependencyRecord[]>([]);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
   const [usageList, setUsageList] = useState<MetricUsageRecord[]>([]);
   const [tagIds, setTagIds] = useState<number[]>([]);
@@ -130,6 +167,9 @@ const MetricDetailPage = () => {
   const [tagSaving, setTagSaving] = useState(false);
   const [lineageSummary, setLineageSummary] = useState<AssetLineageSummary | null>(null);
   const [dimModelNames, setDimModelNames] = useState<Record<number, string>>({});
+  const [historicalVersion, setHistoricalVersion] = useState<MetricVersionRecord | null>(null);
+  const [historicalDrawerOpen, setHistoricalDrawerOpen] = useState(false);
+  const [historicalLoading, setHistoricalLoading] = useState(false);
 
   const loadMetric = useCallback(async () => {
     if (!metricId) return;
@@ -177,9 +217,6 @@ const MetricDetailPage = () => {
     listMetricVersions(metricId)
       .then(setVersions)
       .catch(() => setVersions([]));
-    getMetricLineage(metricId)
-      .then(setDependencies)
-      .catch(() => setDependencies([]));
     getMetricUsageSummary(metricId)
       .then(setUsageSummary)
       .catch(() => setUsageSummary(null));
@@ -199,6 +236,9 @@ const MetricDetailPage = () => {
   }, [metricId]);
 
   const assignedTags = allTags.filter((tag) => tagIds.includes(tag.id));
+  const dependencyChanges = metric?.dependencyChanges ?? [];
+  const authoringNextStep = metric?.authoringNextStep;
+  const authoringMeta = authoringNextStep ? AUTHORING_NEXT_STEP_META[authoringNextStep] : undefined;
 
   const openTagDrawer = () => {
     setTagDraftIds([...tagIds]);
@@ -227,6 +267,19 @@ const MetricDetailPage = () => {
     }
   };
 
+  const openHistoricalVersion = async (version: number) => {
+    setHistoricalDrawerOpen(true);
+    setHistoricalLoading(true);
+    setHistoricalVersion(null);
+    try {
+      setHistoricalVersion(await getMetricVersion(metricId, version));
+    } catch {
+      message.error('加载历史版本失败');
+    } finally {
+      setHistoricalLoading(false);
+    }
+  };
+
   /** 引用类字段:有展示名即可点击跳转(仅跳已存在页面),缺失如实显示 '-'。 */
   const refLink = (label?: string | null, to?: string) =>
     label ? (
@@ -239,7 +292,7 @@ const MetricDetailPage = () => {
       '-'
     );
 
-  const dependencyColumns: ColumnsType<MetricDependencyRecord> = [
+  const dependencyColumns: ColumnsType<DependencyChange> = [
     {
       title: '依赖类型',
       dataIndex: 'dependencyType',
@@ -248,16 +301,30 @@ const MetricDetailPage = () => {
     },
     { title: '依赖编码', dataIndex: 'dependencyCode', width: 160, render: (v?: string) => v || '-' },
     {
-      title: '依赖版本',
-      dataIndex: 'dependencyVersion',
+      title: '登记版本',
+      dataIndex: 'registeredVersion',
       width: 100,
       render: (v?: number) => (v != null ? `v${v}` : '-'),
     },
     {
-      title: '绑定时间',
-      dataIndex: 'createTime',
-      width: 170,
-      render: (v?: string) => formatMetricTime(v),
+      title: '当前版本',
+      dataIndex: 'currentVersion',
+      width: 100,
+      render: (v?: number) => (v != null ? `v${v}` : '-'),
+    },
+    {
+      title: '依赖状态',
+      dataIndex: 'dependencyHealth',
+      width: 150,
+      render: (health?: DependencyHealth) => {
+        if (!health) return <Tag>未知</Tag>;
+        const meta = DEPENDENCY_HEALTH_META[health];
+        return (
+          <span title={meta.description}>
+            <Tag color={meta.color}>{meta.label}</Tag>
+          </span>
+        );
+      },
     },
   ];
 
@@ -270,6 +337,19 @@ const MetricDetailPage = () => {
       dataIndex: 'createTime',
       width: 170,
       render: (v?: string) => formatMetricTime(v),
+    },
+    {
+      title: '视图',
+      key: 'viewType',
+      width: 170,
+      render: (_: unknown, record) => (
+        <span className="flex items-center gap-1">
+          <Tag>历史快照 · 只读</Tag>
+          <Button type="link" size="small" onClick={() => void openHistoricalVersion(record.version)}>
+            查看
+          </Button>
+        </span>
+      ),
     },
   ];
 
@@ -293,19 +373,34 @@ const MetricDetailPage = () => {
     },
   ];
 
+  const historicalSnapshotText = (() => {
+    const snapshot = historicalVersion?.snapshot;
+    if (!snapshot) return '';
+    try {
+      return JSON.stringify(JSON.parse(snapshot), null, 2);
+    } catch {
+      return snapshot;
+    }
+  })();
+
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Typography.Link onClick={() => navigate('/metric/manage')}>指标管理</Typography.Link>
             <span className="text-[#c4c9d1]">/</span>
             <div className="text-[20px] font-semibold leading-7">
               {metric ? `${metric.metricName}（${metric.metricCode}）` : '指标详情'}
             </div>
+            {metric ? (
+              <Tag color={metric.editable === false ? 'default' : 'blue'}>
+                {metric.definitionViewType === 'CURRENT_EDITABLE' ? '当前定义 · 可编辑' : '当前定义'}
+              </Tag>
+            ) : null}
           </div>
-          <div className="mt-1 text-[13px] text-[#667085]">指标的完整信息：属性、依赖、标签、版本与使用情况</div>
+          <div className="mt-1 text-[13px] text-[#667085]">指标的完整信息：业务定义、依赖健康、版本、血缘与使用情况</div>
         </div>
         {returnAssetId ? (
           <Button onClick={() => navigate(`/data-asset/detail/${returnAssetId}`)}>返回资产详情</Button>
@@ -354,10 +449,40 @@ const MetricDetailPage = () => {
                   label: '更新时间',
                   children: formatMetricTime(metric.updateTime),
                 },
-                { key: 'domainName', label: '业务域', children: refLink(metric.domainName, '/semantic/domains') },
-                { key: 'processName', label: '业务过程', children: refLink(metric.processName, '/semantic/processes') },
-                { key: 'caliberName', label: '口径标准', children: refLink(metric.caliberName, '/semantic/standards') },
-                { key: 'unitName', label: '度量单位', children: refLink(metric.unitName, '/semantic/standards') },
+                {
+                  key: 'domainName',
+                  label: '业务域',
+                  children: refLink(
+                    metric.domainName,
+                    metric.domainId ? `/semantic/domains?domainId=${metric.domainId}` : undefined,
+                  ),
+                },
+                {
+                  key: 'processName',
+                  label: '业务过程',
+                  children: refLink(
+                    metric.processName,
+                    metric.processId
+                      ? `/semantic/processes?processId=${metric.processId}${metric.domainId ? `&domainId=${metric.domainId}` : ''}`
+                      : undefined,
+                  ),
+                },
+                {
+                  key: 'caliberName',
+                  label: '口径标准',
+                  children: refLink(
+                    metric.caliberName,
+                    metric.caliberId ? `/semantic/standards?standardId=${metric.caliberId}` : undefined,
+                  ),
+                },
+                {
+                  key: 'unitName',
+                  label: '度量单位',
+                  children: refLink(
+                    metric.unitName,
+                    metric.unitId ? `/semantic/standards?standardId=${metric.unitId}` : undefined,
+                  ),
+                },
                 {
                   key: 'modelName',
                   label: '来源模型',
@@ -416,6 +541,24 @@ const MetricDetailPage = () => {
               ]}
             />
 
+            {/* Phase 5 authoring next step: Save/Enable != Validation/Publication. */}
+            {authoringMeta ? (
+              <div className={`mt-4 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 ${authoringMeta.tone}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold text-[#344054]">{authoringMeta.title}</div>
+                  <div className="mt-0.5 text-[13px] text-[#667085]">{authoringMeta.description}</div>
+                </div>
+                {authoringMeta.action === 'impact' ? (
+                  <YakButton onClick={() => navigate(`/metric/impact?metricId=${metricId}`)}>检查依赖影响</YakButton>
+                ) : null}
+                {authoringMeta.action === 'retry' ? (
+                  <YakButton loading={loading} onClick={() => void loadMetric()}>
+                    重新检查
+                  </YakButton>
+                ) : null}
+              </div>
+            ) : null}
+
             {/* M2-3 跨域引用摘要:只引用血缘/质量既有事实,不可用时如实说明,不伪造 0 */}
             {lineageSummary ? (
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[#e5e7eb] bg-[#fafbfc] px-4 py-2.5 text-[13px]">
@@ -457,13 +600,13 @@ const MetricDetailPage = () => {
                 items={[
                   {
                     key: 'dependencies',
-                    label: `依赖 (${dependencies.length})`,
+                    label: `依赖 (${dependencyChanges.length})`,
                     children:
-                      dependencies.length > 0 ? (
-                        <Table<MetricDependencyRecord>
-                          rowKey="id"
+                      dependencyChanges.length > 0 ? (
+                        <Table<DependencyChange>
+                          rowKey={(row) => `${row.dependencyType}-${row.dependencyId}`}
                           columns={dependencyColumns}
-                          dataSource={dependencies}
+                          dataSource={dependencyChanges}
                           pagination={false}
                           size="small"
                         />
@@ -580,6 +723,35 @@ const MetricDetailPage = () => {
           )
         )}
       </Spin>
+
+      <Drawer
+        title={historicalVersion ? `历史版本 v${historicalVersion.version}（只读）` : '历史版本（只读）'}
+        open={historicalDrawerOpen}
+        onClose={() => setHistoricalDrawerOpen(false)}
+        width={720}
+      >
+        <Spin spinning={historicalLoading}>
+          {historicalVersion ? (
+            <div>
+              <div className="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-[#667085]">
+                <Tag>HISTORICAL_SNAPSHOT</Tag>
+                <span>不可编辑</span>
+                <span>·</span>
+                <span>{historicalVersion.changeDesc || '无变更说明'}</span>
+                <span>·</span>
+                <span>{historicalVersion.changedBy || '-'}</span>
+                <span>·</span>
+                <span>{formatMetricTime(historicalVersion.createTime)}</span>
+              </div>
+              <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[#f8fafc] p-4 text-[12px] leading-5 text-[#344054]">
+                {historicalSnapshotText}
+              </pre>
+            </div>
+          ) : historicalLoading ? null : (
+            <YakEmpty compact title="历史版本不可读" description="关闭后可重新尝试加载" />
+          )}
+        </Spin>
+      </Drawer>
 
       <Drawer title="管理标签" open={tagDrawerOpen} onClose={() => setTagDrawerOpen(false)} width={360}>
         <div className="text-[13px] text-[#667085]">选择该指标挂载的标签(标签本体在指标服务页创建)</div>

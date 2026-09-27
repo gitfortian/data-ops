@@ -3,6 +3,14 @@
 export type MetricType = 'ATOMIC' | 'DERIVED' | 'COMPOSITE';
 export type MetricStatus = 'ENABLED' | 'DISABLED';
 export type StatPeriod = 'DAY' | 'WEEK' | 'MONTH';
+export type MetricDefinitionViewType = 'CURRENT_EDITABLE';
+export type MetricVersionViewType = 'HISTORICAL_SNAPSHOT';
+export type DependencyHealth = 'UP_TO_DATE' | 'OUTDATED' | 'REMOVED' | 'UNAVAILABLE';
+export type AuthoringNextStep =
+  | 'VALIDATE'
+  | 'REVIEW_OUTDATED_DEPENDENCY'
+  | 'RESOLVE_REMOVED_DEPENDENCY'
+  | 'RETRY_DEPENDENCY_PROVIDER';
 
 /** 派生指标结构化限定条件(02):与后端 MetricQualifier 契约一致。 */
 export interface MetricQualifier {
@@ -45,6 +53,12 @@ export interface MetricRecord {
   createTime?: string;
   updateTime?: string;
   compositions?: CompositionItem[];
+  /** Phase 5: current mutable definition vs immutable historical snapshot. */
+  definitionViewType?: MetricDefinitionViewType;
+  editable?: boolean;
+  /** Detail-only dependency truth resolved by the backend through owning-domain SPI. */
+  dependencyChanges?: DependencyChange[];
+  authoringNextStep?: AuthoringNextStep;
 }
 
 export interface CompositionItem {
@@ -125,6 +139,9 @@ export interface MetricVersionRecord {
   changeDesc?: string;
   changedBy: string;
   createTime: string;
+  /** Phase 5 backend marks historical versions immutable and non-editable. */
+  versionViewType?: MetricVersionViewType;
+  editable?: boolean;
 }
 
 export interface MetricDependencyRecord {
@@ -185,6 +202,7 @@ export interface ImpactReport {
   metricName: string;
   changes: DependencyChange[];
   usageCount: number;
+  authoringNextStep?: AuthoringNextStep;
 }
 
 export interface DependencyChange {
@@ -194,6 +212,7 @@ export interface DependencyChange {
   registeredVersion?: number;
   currentVersion?: number;
   changeStatus: string;
+  dependencyHealth?: DependencyHealth;
 }
 
 /** 反向影响分析:引用了上游对象的指标行(dependencyTypes 为命中的登记类型)。 */
