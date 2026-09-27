@@ -26,6 +26,10 @@ import org.mockito.ArgumentCaptor;
 
 class MetricPublicationServiceTest {
 
+  private static final String SNAPSHOT = "{\"metricCode\":\"gmv\"}";
+  private static final String SNAPSHOT_DIGEST =
+      "ed18bd58d1f3f17c3899425aa20a02c50359dc5da7414086bd975da165467f3a";
+
   private MetricPublicationRepository publicationRepository;
   private MetricVersionRepository versionRepository;
   private MetricPublicationReadinessService readinessService;
@@ -54,7 +58,10 @@ class MetricPublicationServiceTest {
 
   @Test
   void refusesPublishWhenAnyRequiredGateFailsClosed() {
+    MetricVersionPO version = version(91L, 7L, 4, SNAPSHOT);
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(4);
+    when(versionRepository.findByMetricAndVersion(7L, 4)).thenReturn(version);
+    when(publicationRepository.findActiveForUpdate(7L)).thenReturn(null);
     when(readinessService.check(7L, 4)).thenReturn(readiness(
         MetricPublicationReadinessService.ReadinessStatus.BLOCKED,
         GateEvidence.unavailable("semantic-provider", "provider unavailable")));
@@ -70,14 +77,14 @@ class MetricPublicationServiceTest {
 
   @Test
   void publishesExactImmutableVersionAndFreezesGateEvidence() {
-    MetricVersionPO version = version(91L, 7L, 4, "{\"metricCode\":\"gmv\"}");
+    MetricVersionPO version = version(91L, 7L, 4, SNAPSHOT);
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(4);
+    when(versionRepository.findByMetricAndVersion(7L, 4)).thenReturn(version);
+    when(publicationRepository.findActiveForUpdate(7L)).thenReturn(null);
     when(readinessService.check(7L, 4)).thenReturn(readiness(
         MetricPublicationReadinessService.ReadinessStatus.READY,
         GateEvidence.ready("definition", "VALIDATION:301"),
         GateEvidence.notApplicable("execution", "no Metric runtime")));
-    when(versionRepository.findByMetricAndVersion(7L, 4)).thenReturn(version);
-    when(publicationRepository.findActiveForUpdate(7L)).thenReturn(null);
     when(publicationRepository.appendEvent(any())).thenAnswer(invocation -> {
       MetricPublicationEventPO event = invocation.getArgument(0);
       event.setId(501L);
@@ -89,7 +96,8 @@ class MetricPublicationServiceTest {
     assertThat(contract.publicationEventId()).isEqualTo(501L);
     assertThat(contract.metricVersionId()).isEqualTo(91L);
     assertThat(contract.metricVersion()).isEqualTo(4);
-    assertThat(contract.snapshot()).isEqualTo("{\"metricCode\":\"gmv\"}");
+    assertThat(contract.snapshotDigest()).isEqualTo(SNAPSHOT_DIGEST);
+    assertThat(contract.snapshot()).isEqualTo(SNAPSHOT);
     assertThat(contract.publicationEvidence()).extracting(GateEvidence::provider)
         .containsExactly("definition", "execution");
 
@@ -97,6 +105,7 @@ class MetricPublicationServiceTest {
         ArgumentCaptor.forClass(MetricPublicationEventPO.class);
     verify(publicationRepository).appendEvent(eventCaptor.capture());
     assertThat(eventCaptor.getValue().getEventType()).isEqualTo("PUBLISHED");
+    assertThat(eventCaptor.getValue().getSnapshotDigest()).isEqualTo(SNAPSHOT_DIGEST);
     assertThat(eventCaptor.getValue().getReadinessJson()).contains("VALIDATION:301");
 
     ArgumentCaptor<MetricActivePublicationPO> pointerCaptor =
@@ -107,15 +116,13 @@ class MetricPublicationServiceTest {
   }
 
   @Test
-  void repeatedPublishOfSameActiveImmutableVersionIsIdempotent() {
-    MetricVersionPO version = version(91L, 7L, 4, "{\"metricCode\":\"gmv\"}");
-    MetricActivePublicationPO active = active(501L, 91L, 7L, 4, digest());
-    MetricPublicationEventPO event = publishedEvent(501L, 91L, 7L, 4, digest());
+  void repeatedPublishOfSameActiveImmutableVersionIsIdempotentWithoutRecheckingTodaysGates() {
+    MetricVersionPO version = version(91L, 7L, 4, SNAPSHOT);
+    MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
+    MetricPublicationEventPO event = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     event.setReadinessJson("[]");
 
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(4);
-    when(readinessService.check(7L, 4)).thenReturn(readiness(
-        MetricPublicationReadinessService.ReadinessStatus.READY));
     when(versionRepository.findByMetricAndVersion(7L, 4)).thenReturn(version);
     when(publicationRepository.findActiveForUpdate(7L)).thenReturn(active);
     when(publicationRepository.findEvent(501L)).thenReturn(event);
@@ -123,14 +130,15 @@ class MetricPublicationServiceTest {
     MetricPublicationService.PublishedMetricContract contract = service.publish(7L, 4, "alice");
 
     assertThat(contract.publicationEventId()).isEqualTo(501L);
+    verify(readinessService, never()).check(any(), anyInt());
     verify(publicationRepository, never()).appendEvent(any());
     verify(publicationRepository, never()).replaceActive(any());
   }
 
   @Test
   void withdrawAppendsLifecycleEventThenClearsOnlyExpectedPointer() {
-    MetricActivePublicationPO active = active(501L, 91L, 7L, 4, digest());
-    MetricPublicationEventPO published = publishedEvent(501L, 91L, 7L, 4, digest());
+    MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
+    MetricPublicationEventPO published = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(5);
     when(publicationRepository.findActiveForUpdate(7L)).thenReturn(active);
     when(publicationRepository.findEvent(501L)).thenReturn(published);
@@ -160,12 +168,22 @@ class MetricPublicationServiceTest {
     verify(publicationRepository, never()).appendEvent(any());
   }
 
+  @Test
+  void refusesToInventPublicationActorWhenAuthenticationIdentityIsMissing() {
+    assertThatThrownBy(() -> service.publish(7L, 4, " "))
+        .isInstanceOf(MetricException.class)
+        .satisfies(error -> assertThat(((MetricException) error).getErrorCode())
+            .isEqualTo(MetricErrorCode.PUBLICATION_CONFLICT));
+
+    verify(publicationRepository, never()).lockCurrentMetricVersion(any());
+  }
+
   private static MetricPublicationReadinessService.PublicationReadiness readiness(
       MetricPublicationReadinessService.ReadinessStatus status,
       GateEvidence... gates) {
     return new MetricPublicationReadinessService.PublicationReadiness(
         status,
-        new PublicationSubject(7L, 91L, 4, digest()),
+        new PublicationSubject(7L, 91L, 4, SNAPSHOT_DIGEST),
         List.of(gates));
   }
 
@@ -204,9 +222,5 @@ class MetricPublicationServiceTest {
     po.setActedBy("alice");
     po.setActedAt(LocalDateTime.now());
     return po;
-  }
-
-  private static String digest() {
-    return "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   }
 }
