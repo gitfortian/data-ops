@@ -80,7 +80,7 @@ public class MetricController {
     }
     enrichNames(List.of(vo));
 
-    MetricImpactService.ImpactReport dependencyContext = impactService.checkUpstreamChanges(id);
+    MetricImpactService.DependencyContext dependencyContext = impactService.dependencyContext(metric);
     vo.setDependencyChanges(dependencyContext.changes());
     vo.setAuthoringNextStep(dependencyContext.authoringNextStep());
     return Result.success(vo);
