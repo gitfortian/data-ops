@@ -3,11 +3,17 @@ import { message, Select, Spin, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
-import { getAffectedMetrics, getMetricImpact, pageMetrics } from '@/services/metric/api';
+import { getAffectedMetrics, getMetricImpactContext, pageMetrics } from '@/services/metric/api';
 import { pageSemanticStandards } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
-import type { AffectedMetricRecord, DependencyChange, ImpactReport, MetricRecord } from '@/services/metric/types';
+import type {
+  AffectedMetricRecord,
+  DependencyChange,
+  MetricImpactContext,
+  MetricRecord,
+} from '@/services/metric/types';
 import { METRIC_STATUS_COLORS, METRIC_STATUS_LABELS, METRIC_TYPE_COLORS, METRIC_TYPE_LABELS } from '../constants';
+import ImpactUsageContext from './components/ImpactUsageContext';
 
 const CHANGE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   CHANGED: { label: '已变更', color: 'orange' },
@@ -22,12 +28,12 @@ interface Option {
   value: number;
 }
 
-/** 正向:我的上游变了没(依赖快照 vs SPI 现值)。 */
+/** 正向:依赖健康 + Reference Usage + Observed Runtime Usage coverage。 */
 const UpstreamChangesView = () => {
   const [metricId, setMetricId] = useState<number | null>(null);
   const [metricOptions, setMetricOptions] = useState<Option[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [report, setReport] = useState<ImpactReport | null>(null);
+  const [context, setContext] = useState<MetricImpactContext | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -50,11 +56,10 @@ const UpstreamChangesView = () => {
   const analyzeImpact = async (id: number) => {
     setLoading(true);
     try {
-      const result = await getMetricImpact(id);
-      setReport(result);
+      setContext(await getMetricImpactContext(id));
     } catch {
-      message.error('影响分析失败，请稍后重试');
-      setReport(null);
+      message.error('影响上下文加载失败，请稍后重试');
+      setContext(null);
     } finally {
       setLoading(false);
     }
@@ -97,7 +102,7 @@ const UpstreamChangesView = () => {
   ];
 
   const changedCount =
-    report?.changes.filter((c) => c.changeStatus === 'CHANGED' || c.changeStatus === 'MISSING').length ?? 0;
+    context?.dependencies.filter((c) => c.changeStatus === 'CHANGED' || c.changeStatus === 'MISSING').length ?? 0;
 
   return (
     <div>
@@ -110,7 +115,7 @@ const UpstreamChangesView = () => {
           value={metricId ?? undefined}
           onChange={(value) => {
             setMetricId(value);
-            setReport(null);
+            setContext(null);
           }}
           options={metricOptions}
           filterOption={(input, option) =>
@@ -129,42 +134,54 @@ const UpstreamChangesView = () => {
       </div>
 
       <Spin spinning={loading}>
-        {report ? (
-          <div className="mt-4 space-y-4">
-            {/* Summary */}
+        {context ? (
+          <div className="mt-4 space-y-5">
+            <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
+              <div className="text-[15px] font-semibold">
+                {context.metricName}（{context.metricCode}） · v{context.metricVersion}
+              </div>
+              <div className="mt-1 text-[12px] text-[#667085]">
+                Impact Context 生成于 {context.generatedAt}；Reference Usage 与 Observed Runtime Usage 保持独立事实来源
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-                <div className="text-[22px] font-semibold">{report.changes.length}</div>
+                <div className="text-[22px] font-semibold">{context.dependencies.length}</div>
                 <div className="mt-1 text-[13px] text-[#667085]">依赖总数</div>
               </div>
               <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
                 <div className={`text-[22px] font-semibold ${changedCount > 0 ? 'text-[#fa8c16]' : ''}`}>
                   {changedCount}
                 </div>
-                <div className="mt-1 text-[13px] text-[#667085]">有变更</div>
+                <div className="mt-1 text-[13px] text-[#667085]">依赖变更 / 缺失</div>
               </div>
               <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-                <div className="text-[22px] font-semibold">{report.usageCount}</div>
-                <div className="mt-1 text-[13px] text-[#667085]">使用引用数</div>
+                <div className="text-[22px] font-semibold">{context.referenceUsage.length}</div>
+                <div className="mt-1 text-[13px] text-[#667085]">Reference Usage</div>
               </div>
             </div>
 
-            {/* Changes table */}
-            {report.changes.length > 0 ? (
-              <Table<DependencyChange>
-                rowKey={(row) => `${row.dependencyType}-${row.dependencyId}`}
-                columns={changeColumns}
-                dataSource={report.changes}
-                pagination={false}
-                size="small"
-              />
-            ) : (
-              <YakEmpty compact title="无依赖项" description="该指标暂未配置依赖" />
-            )}
+            <div>
+              <div className="mb-2 font-medium">Dependency Evidence</div>
+              {context.dependencies.length > 0 ? (
+                <Table<DependencyChange>
+                  rowKey={(row) => `${row.dependencyType}-${row.dependencyId}`}
+                  columns={changeColumns}
+                  dataSource={context.dependencies}
+                  pagination={false}
+                  size="small"
+                />
+              ) : (
+                <YakEmpty compact title="无依赖项" description="该指标暂未配置依赖" />
+              )}
+            </div>
+
+            <ImpactUsageContext context={context} />
           </div>
         ) : metricId ? (
           <div className="mt-8">
-            <YakEmpty title="点击「执行分析」" description="选择指标后点击按钮，检查上游依赖的变更情况" />
+            <YakEmpty title="点击「执行分析」" description="检查依赖、Reference Usage 与可得的 Observed Runtime Usage" />
           </div>
         ) : (
           <div className="mt-8">
@@ -366,7 +383,7 @@ const MetricImpactPage = () => (
       <div>
         <div className="text-[20px] font-semibold leading-7">影响分析</div>
         <div className="mt-1 text-[13px] text-[#667085]">
-          正向检查指标上游依赖的变更情况；反向查看上游对象（模型/指标/标准）变更波及的指标清单
+          正向组合依赖、Reference Usage 与可得的运行证据；反向查看上游对象变更波及的指标清单
         </div>
       </div>
     </div>
@@ -375,7 +392,7 @@ const MetricImpactPage = () => (
       className="mt-2"
       defaultActiveKey="upstream"
       items={[
-        { key: 'upstream', label: '正向：我的上游变了没', children: <UpstreamChangesView /> },
+        { key: 'upstream', label: '正向：指标影响上下文', children: <UpstreamChangesView /> },
         { key: 'affected', label: '反向：谁引用了它', children: <AffectedMetricsView /> },
       ]}
     />
