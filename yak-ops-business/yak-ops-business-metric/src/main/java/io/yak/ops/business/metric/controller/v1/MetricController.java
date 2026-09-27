@@ -8,6 +8,7 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.metric.api.MetricApi;
+import io.yak.ops.business.metric.catalog.MetricAuthoringQueryService;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.catalog.MetricReferenceResolver;
 import io.yak.ops.business.metric.controller.v1.dto.MetricQueryDTO;
@@ -47,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MetricController {
 
   private final MetricCatalogService service;
+  private final MetricAuthoringQueryService authoringQueryService;
   private final MetricCompositionRepository compositionRepository;
   private final CurrentUserProvider currentUserProvider;
   private final MetricReferenceResolver referenceResolver;
@@ -89,11 +91,10 @@ public class MetricController {
   @Operation(summary = "分页查询指标")
   @PostMapping("/page")
   public Result<PagingData<MetricVO>> page(@Valid @RequestBody MetricQueryDTO query) {
-    PageData<Metric> page = service.page(
+    PageData<Metric> page = authoringQueryService.page(
         query.getPageNo(), query.getPageSize(),
-        query.getDomainId(), query.getMetricType(),
-        query.getStatus(), query.getKeyword(),
-        query.getOwner(), query.getTagIds());
+        query.getDomainId(), query.getProcessId(), query.getMetricType(),
+        query.getStatus(), query.getKeyword(), query.getOwner(), query.getTagIds());
     List<MetricVO> records = page.records().stream()
         .map(MetricVO::from).toList();
     enrichNames(records);

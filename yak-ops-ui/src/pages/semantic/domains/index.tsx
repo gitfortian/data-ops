@@ -1,6 +1,7 @@
 import { Button, Card, Form, Input, Modal, message, Space, Tree, Typography } from 'antd';
 import type { DataNode, TreeProps } from 'antd/es/tree';
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from '@umijs/max';
 import { YakButton, YakEmpty } from '@/components/ui';
 import {
   createSemanticDomain,
@@ -18,6 +19,12 @@ interface DomainFormValues {
   description?: string;
   sortOrder?: number;
 }
+
+const parsePositiveId = (value: string | null): number | null => {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
 
 /** 找节点及其父链(用于环提示与建子域)。 */
 const findNode = (
@@ -57,6 +64,9 @@ const collectBranchKeys = (nodes: SemanticDomainNode[]): number[] =>
   );
 
 const BusinessDomainsPage = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedDomainId = parsePositiveId(searchParams.get('domainId'));
   const [tree, setTree] = useState<SemanticDomainNode[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,21 +84,27 @@ const BusinessDomainsPage = () => {
       setTree(data ?? []);
       setExpandedKeys(collectBranchKeys(data ?? []));
       setSelected((current) => {
-        if (!current) {
-          return null;
-        }
-        return findNode(data ?? [], current.id)?.node ?? null;
+        const targetId = requestedDomainId ?? current?.id;
+        return targetId ? findNode(data ?? [], targetId)?.node ?? null : null;
       });
     } catch {
       message.error('加载业务域失败，请稍后重试');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [requestedDomainId]);
 
   useEffect(() => {
     void loadTree();
   }, [loadTree]);
+
+  const selectDomain = (node: SemanticDomainNode | null) => {
+    setSelected(node);
+    const next = new URLSearchParams(searchParams);
+    if (node) next.set('domainId', String(node.id));
+    else next.delete('domainId');
+    setSearchParams(next, { replace: true });
+  };
 
   const openCreate = (parent: SemanticDomainNode | null) => {
     setEditing(null);
@@ -146,7 +162,7 @@ const BusinessDomainsPage = () => {
         try {
           await deleteSemanticDomain(node.id);
           message.success('已删除');
-          setSelected(null);
+          selectDomain(null);
           await loadTree();
         } catch {
           message.error('删除失败（可能存在子域或业务过程）');
@@ -222,7 +238,7 @@ const BusinessDomainsPage = () => {
                 onSelect={(keys) => {
                   const id = Number(keys[0]);
                   const hit = findNode(tree, id);
-                  setSelected(hit?.node ?? null);
+                  selectDomain(hit?.node ?? null);
                 }}
                 onDrop={handleDrop}
               />
@@ -241,6 +257,13 @@ const BusinessDomainsPage = () => {
                   </Typography.Paragraph>
                   <Typography.Paragraph className="!text-[13px]">负责人：{selected.owner || '-'}</Typography.Paragraph>
                   <Space>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => navigate(`/metric/manage?domainId=${selected.id}`)}
+                    >
+                      查看相关指标
+                    </Button>
                     <Button type="link" size="small" onClick={() => openEdit(selected)}>
                       编辑
                     </Button>

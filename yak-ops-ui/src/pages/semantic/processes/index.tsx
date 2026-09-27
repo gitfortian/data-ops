@@ -1,4 +1,4 @@
-import { history } from '@umijs/max';
+import { history, useSearchParams } from '@umijs/max';
 import { Button, Form, Input, Modal, message, Select, Space, Table, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -7,6 +7,7 @@ import {
   createSemanticProcess,
   deleteSemanticProcess,
   getSemanticDomainTree,
+  getSemanticProcess,
   listSemanticProcessFieldCounts,
   pageSemanticProcesses,
 } from '@/services/semantic/api';
@@ -15,6 +16,12 @@ import type { SemanticDomainNode, SemanticProcessRecord } from '@/services/seman
 const BIZ_TYPE_LABELS: Record<string, string> = {
   FACT: '事实',
   DIMENSION: '维度',
+};
+
+const parsePositiveId = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
 const flattenDomains = (nodes: SemanticDomainNode[]): { id: number; path: string }[] => {
@@ -31,12 +38,15 @@ const flattenDomains = (nodes: SemanticDomainNode[]): { id: number; path: string
 };
 
 const SemanticProcessesPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedProcessId = parsePositiveId(searchParams.get('processId'));
+  const requestedDomainId = parsePositiveId(searchParams.get('domainId'));
   const [records, setRecords] = useState<SemanticProcessRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
-  const [domainId, setDomainId] = useState<number | undefined>(undefined);
+  const [domainId, setDomainId] = useState<number | undefined>(requestedDomainId);
   const [bizType, setBizType] = useState<'FACT' | 'DIMENSION' | ''>('');
   const [loading, setLoading] = useState(false);
   const [domains, setDomains] = useState<SemanticDomainNode[]>([]);
@@ -51,6 +61,17 @@ const SemanticProcessesPage = () => {
     async (targetPageNo: number, targetPageSize: number) => {
       setLoading(true);
       try {
+        if (requestedProcessId) {
+          const exact = await getSemanticProcess(requestedProcessId);
+          if (domainId && exact.domainId !== domainId) {
+            setRecords([]);
+            setTotal(0);
+          } else {
+            setRecords([exact]);
+            setTotal(1);
+          }
+          return;
+        }
         const result = await pageSemanticProcesses({
           pageNo: targetPageNo,
           pageSize: targetPageSize,
@@ -61,12 +82,14 @@ const SemanticProcessesPage = () => {
         setRecords(result.bizData ?? []);
         setTotal(result.pagination?.total ?? 0);
       } catch {
+        setRecords([]);
+        setTotal(0);
         message.error('加载业务过程失败，请稍后重试');
       } finally {
         setLoading(false);
       }
     },
-    [domainId, keyword, bizType],
+    [requestedProcessId, domainId, keyword, bizType],
   );
 
   useEffect(() => {
@@ -92,6 +115,21 @@ const SemanticProcessesPage = () => {
   const domainOptions = flattenDomains(domains);
 
   const domainNameOf = (id: number) => domainOptions.find((option) => option.id === id)?.path ?? String(id);
+
+  const syncDomainContext = (nextDomainId?: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextDomainId) next.set('domainId', String(nextDomainId));
+    else next.delete('domainId');
+    next.delete('processId');
+    setSearchParams(next, { replace: true });
+  };
+
+  const clearProcessContext = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('processId');
+    setSearchParams(next, { replace: true });
+    setPageNo(1);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -130,6 +168,7 @@ const SemanticProcessesPage = () => {
         try {
           await deleteSemanticProcess(record.id);
           message.success('已删除');
+          if (requestedProcessId === record.id) clearProcessContext();
           await loadData(pageNo, pageSize);
         } catch {
           message.error('删除失败，请稍后重试');
@@ -179,13 +218,19 @@ const SemanticProcessesPage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 190,
+      width: 250,
       render: (_: unknown, record: SemanticProcessRecord) => (
         <Space size={0}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => history.push(`/metric/manage?domainId=${record.domainId}&processId=${record.id}`)}
+          >
+            查看指标
+          </Button>
           <Button type="link" size="small" onClick={() => openEdit(record)}>
             编辑
           </Button>
-
           <Button type="link" size="small" danger onClick={() => removeProcess(record)}>
             删除
           </Button>
@@ -198,7 +243,14 @@ const SemanticProcessesPage = () => {
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-[20px] font-semibold leading-7">业务过程</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[20px] font-semibold leading-7">业务过程</div>
+            {requestedProcessId ? (
+              <Tag closable onClose={clearProcessContext}>
+                定位过程 #{requestedProcessId}
+              </Tag>
+            ) : null}
+          </div>
           <div className="mt-1 text-[13px] text-[#667085]">
             挂在业务域下的业务动作，是标准字段集与按过程派生建模的锚点
           </div>
@@ -213,6 +265,7 @@ const SemanticProcessesPage = () => {
             value={domainId}
             onChange={(value) => {
               setDomainId(value);
+              syncDomainContext(value);
               setPageNo(1);
             }}
             options={domainOptions.map((item) => ({ label: item.path, value: item.id }))}
@@ -258,13 +311,14 @@ const SemanticProcessesPage = () => {
         loading={loading}
         columns={columns}
         dataSource={records}
+        rowClassName={(record) => (requestedProcessId === record.id ? 'bg-[#f0f9ff]' : '')}
         locale={{
           emptyText: (
             <YakEmpty
               compact
-              title={keyword || domainId || bizType ? '没有符合筛选条件的业务过程' : '还没有业务过程'}
+              title={keyword || domainId || bizType || requestedProcessId ? '没有符合筛选条件的业务过程' : '还没有业务过程'}
               description={
-                keyword || domainId || bizType
+                keyword || domainId || bizType || requestedProcessId
                   ? '调整筛选条件或重置后再试'
                   : '先在「业务域」页搭建域树，再在此创建业务过程'
               }

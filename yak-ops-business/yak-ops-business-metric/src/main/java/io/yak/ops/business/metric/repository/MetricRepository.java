@@ -20,7 +20,16 @@ public interface MetricRepository {
 
   boolean deleteById(Long id);
 
-  PageData<Metric> page(int pageNo, int pageSize, Long domainId, String metricType,
+  /**
+   * Backward-compatible catalog query. Existing callers that do not carry Business Process context
+   * keep their original behavior while Phase 5 authoring can opt into the stable process filter.
+   */
+  default PageData<Metric> page(int pageNo, int pageSize, Long domainId, String metricType,
+      String status, String keyword, String owner, List<Long> tagIds) {
+    return page(pageNo, pageSize, domainId, null, metricType, status, keyword, owner, tagIds);
+  }
+
+  PageData<Metric> page(int pageNo, int pageSize, Long domainId, Long processId, String metricType,
       String status, String keyword, String owner, List<Long> tagIds);
 
   long count();

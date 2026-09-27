@@ -20,15 +20,23 @@ import {
 } from '../constants';
 import MetricEditModal from './components/MetricEditModal';
 
+const parsePositiveId = (value: string | null): number | null => {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
 const MetricManagePage = () => {
   const navigate = useNavigate();
   const { initialState } = useModel('@@initialState');
   const currentUserName = initialState?.currentUser?.userName;
-  const [entryParams] = useSearchParams();
+  const [entryParams, setEntryParams] = useSearchParams();
   const initialTagIds = (entryParams.get('tagIds') ?? '')
     .split(',')
     .map((v) => Number(v))
     .filter((v) => Number.isInteger(v) && v > 0);
+  const initialDomainId = parsePositiveId(entryParams.get('domainId'));
+  const initialProcessId = parsePositiveId(entryParams.get('processId'));
   const [records, setRecords] = useState<MetricRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -36,7 +44,8 @@ const MetricManagePage = () => {
   const [keyword, setKeyword] = useState('');
   const [metricType, setMetricType] = useState<MetricType | ''>('');
   const [status, setStatus] = useState<MetricStatus | ''>('');
-  const [domainId, setDomainId] = useState<number | null>(null);
+  const [domainId, setDomainId] = useState<number | null>(initialDomainId);
+  const [processId, setProcessId] = useState<number | null>(initialProcessId);
   const [owner, setOwner] = useState('');
   const [ownerDraft, setOwnerDraft] = useState('');
   const [tagIds, setTagIds] = useState<number[]>(initialTagIds);
@@ -46,6 +55,15 @@ const MetricManagePage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editing, setEditing] = useState<MetricRecord | null>(null);
   const [stats, setStats] = useState({ total: 0, atomic: 0, derived: 0, composite: 0 });
+
+  const syncBusinessContext = (nextDomainId: number | null, nextProcessId: number | null) => {
+    const next = new URLSearchParams(entryParams);
+    if (nextDomainId) next.set('domainId', String(nextDomainId));
+    else next.delete('domainId');
+    if (nextProcessId) next.set('processId', String(nextProcessId));
+    else next.delete('processId');
+    setEntryParams(next, { replace: true });
+  };
 
   const loadMetrics = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
@@ -58,6 +76,7 @@ const MetricManagePage = () => {
           metricType: metricType || undefined,
           status: status || undefined,
           domainId: domainId ?? undefined,
+          processId: processId ?? undefined,
           owner: owner.trim() || undefined,
           tagIds: tagIds.length ? tagIds : undefined,
         });
@@ -71,7 +90,7 @@ const MetricManagePage = () => {
         setLoading(false);
       }
     },
-    [keyword, metricType, status, domainId, owner, tagIds],
+    [keyword, metricType, status, domainId, processId, owner, tagIds],
   );
 
   useEffect(() => {
@@ -257,7 +276,7 @@ const MetricManagePage = () => {
     },
   ];
 
-  const hasFilter = Boolean(keyword || metricType || status || domainId || owner || tagIds.length);
+  const hasFilter = Boolean(keyword || metricType || status || domainId || processId || owner || tagIds.length);
 
   return (
     <div className="flex min-h-[calc(100dvh-64px)] flex-col bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
@@ -320,10 +339,25 @@ const MetricManagePage = () => {
           value={domainId ?? undefined}
           treeData={toDomainTreeData(domainTree)}
           onChange={(value) => {
-            setDomainId(typeof value === 'number' ? value : null);
+            const nextDomainId = typeof value === 'number' ? value : null;
+            setDomainId(nextDomainId);
+            setProcessId(null);
+            syncBusinessContext(nextDomainId, null);
             setPageNo(1);
           }}
         />
+        {processId ? (
+          <Tag
+            closable
+            onClose={() => {
+              setProcessId(null);
+              syncBusinessContext(domainId, null);
+              setPageNo(1);
+            }}
+          >
+            业务过程 #{processId}
+          </Tag>
+        ) : null}
         <Select
           allowClear
           mode="multiple"
