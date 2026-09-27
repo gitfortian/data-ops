@@ -3,10 +3,13 @@ package io.yak.ops.business.metric.validation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.yak.ops.business.audit.AuditOperationHandle;
+import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.repository.MetricValidationEvidenceRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
@@ -21,13 +24,18 @@ class MetricDefinitionValidationServiceTest {
 
   private MetricVersionRepository versionRepository;
   private MetricValidationEvidenceRepository evidenceRepository;
+  private BusinessAuditService auditService;
+  private AuditOperationHandle auditHandle;
   private MetricDefinitionValidationService service;
 
   @BeforeEach
   void setUp() {
     versionRepository = mock(MetricVersionRepository.class);
     evidenceRepository = mock(MetricValidationEvidenceRepository.class);
-    service = new MetricDefinitionValidationService(versionRepository, evidenceRepository);
+    auditService = mock(BusinessAuditService.class);
+    auditHandle = mock(AuditOperationHandle.class);
+    when(auditService.start(any())).thenReturn(auditHandle);
+    service = new MetricDefinitionValidationService(versionRepository, evidenceRepository, auditService);
     when(evidenceRepository.append(any())).thenAnswer(invocation -> {
       MetricValidationEvidencePO po = invocation.getArgument(0);
       po.setId(9001L);
@@ -36,7 +44,7 @@ class MetricDefinitionValidationServiceTest {
   }
 
   @Test
-  void validationBindsEvidenceToImmutableMetricVersion() {
+  void validationBindsEvidenceToImmutableMetricVersionAndAuditsReadyOutcome() {
     MetricVersionPO version = version(
         101L,
         7,
@@ -63,10 +71,12 @@ class MetricDefinitionValidationServiceTest {
     assertThat(captor.getValue().getMetricVersion()).isEqualTo(7);
     assertThat(captor.getValue().getResult()).isEqualTo("READY");
     assertThat(captor.getValue().getCheckedBy()).isEqualTo("alice");
+    verify(auditService).start(any());
+    verify(auditHandle).success("Metric definition validation READY");
   }
 
   @Test
-  void semanticCompletenessFailuresProduceBlockedEvidence() {
+  void semanticCompletenessFailuresProduceBlockedEvidenceAndAuditedOutcome() {
     MetricVersionPO version = version(
         102L,
         3,
@@ -89,6 +99,7 @@ class MetricDefinitionValidationServiceTest {
             "PROCESS_REQUIRED",
             "MODEL_REQUIRED",
             "MEASURE_EXPR_REQUIRED");
+    verify(auditHandle).success("Metric definition validation BLOCKED");
   }
 
   @Test
@@ -124,12 +135,14 @@ class MetricDefinitionValidationServiceTest {
   }
 
   @Test
-  void missingVersionCannotProduceEvidence() {
+  void missingVersionCannotProduceEvidenceAndAuditsFailure() {
     when(versionRepository.findByMetricAndVersion(404L, 1)).thenReturn(null);
 
     assertThatThrownBy(() -> service.validate(404L, 1, "alice"))
         .isInstanceOf(MetricException.class)
         .hasMessageContaining("版本 v1 不存在");
+
+    verify(auditHandle).failure(eq("METRIC_DEFINITION_VALIDATION_FAILED"), any(RuntimeException.class));
   }
 
   private static MetricVersionPO version(Long versionId, int version, String snapshot) {
