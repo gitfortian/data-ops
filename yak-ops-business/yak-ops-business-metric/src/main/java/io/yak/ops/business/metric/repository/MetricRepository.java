@@ -20,7 +20,7 @@ public interface MetricRepository {
 
   boolean deleteById(Long id);
 
-  PageData<Metric> page(int pageNo, int pageSize, Long domainId, String metricType,
+  PageData<Metric> page(int pageNo, int pageSize, Long domainId, Long processId, String metricType,
       String status, String keyword, String owner, List<Long> tagIds);
 
   long count();
