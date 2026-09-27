@@ -30,12 +30,18 @@ public class MetricVersionController {
 
   private final MetricVersionRepository versionRepository;
 
+  public enum VersionViewType {
+    HISTORICAL_SNAPSHOT
+  }
+
   public record VersionView(
       Long id, int version, String snapshot, String changeDesc,
-      String changedBy, LocalDateTime createTime) {
+      String changedBy, LocalDateTime createTime,
+      VersionViewType versionViewType, boolean editable) {
     public static VersionView from(MetricVersionPO po) {
       return new VersionView(po.getId(), po.getVersion(), po.getSnapshot(),
-          po.getChangeDesc(), po.getChangedBy(), po.getCreateTime());
+          po.getChangeDesc(), po.getChangedBy(), po.getCreateTime(),
+          VersionViewType.HISTORICAL_SNAPSHOT, false);
     }
   }
 
