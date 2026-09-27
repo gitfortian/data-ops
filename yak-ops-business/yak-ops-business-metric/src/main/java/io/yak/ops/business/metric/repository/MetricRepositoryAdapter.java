@@ -100,8 +100,8 @@ public class MetricRepositoryAdapter implements MetricRepository {
   }
 
   @Override
-  public PageData<Metric> page(int pageNo, int pageSize, Long domainId, String metricType,
-      String status, String keyword, String owner, List<Long> tagIds) {
+  public PageData<Metric> page(int pageNo, int pageSize, Long domainId, Long processId,
+      String metricType, String status, String keyword, String owner, List<Long> tagIds) {
     Long projectId = requiredProjectId();
     List<Long> tagMetricIds = null;
     if (tagIds != null && !tagIds.isEmpty()) {
@@ -116,6 +116,7 @@ public class MetricRepositoryAdapter implements MetricRepository {
     LambdaQueryWrapper<MetricPO> wrapper = new LambdaQueryWrapper<MetricPO>()
         .eq(MetricPO::getProjectId, projectId)
         .eq(domainId != null, MetricPO::getDomainId, domainId)
+        .eq(processId != null, MetricPO::getProcessId, processId)
         .eq(StringUtils.hasText(metricType), MetricPO::getMetricType, metricType)
         .eq(StringUtils.hasText(status), MetricPO::getStatus, status)
         .eq(StringUtils.hasText(owner), MetricPO::getOwner, owner)
