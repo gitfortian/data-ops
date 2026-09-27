@@ -44,6 +44,10 @@ public class MetricVO {
   private LocalDateTime updateTime;
   private List<CompositionVO> compositions;
 
+  /** The mutable owning Metric definition; historical versions are immutable snapshots. */
+  private DefinitionViewType definitionViewType;
+  private boolean editable;
+
   /** Detail-only Phase 5 context; list/create/update responses may leave these fields unset. */
   private List<MetricImpactService.DependencyChange> dependencyChanges;
   private MetricImpactService.AuthoringNextStep authoringNextStep;
@@ -76,7 +80,13 @@ public class MetricVO {
     vo.setUpdatedBy(m.updatedBy());
     vo.setCreateTime(m.createTime());
     vo.setUpdateTime(m.updateTime());
+    vo.setDefinitionViewType(DefinitionViewType.CURRENT_EDITABLE);
+    vo.setEditable(true);
     return vo;
+  }
+
+  public enum DefinitionViewType {
+    CURRENT_EDITABLE
   }
 
   @Data
