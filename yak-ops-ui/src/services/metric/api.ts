@@ -7,6 +7,7 @@ import type {
   LineageGraphView,
   MetricCreatePayload,
   MetricDependencyRecord,
+  MetricImpactContext,
   MetricPageParams,
   MetricPageResult,
   MetricRecord,
@@ -118,6 +119,9 @@ export const getMetricUsageList = (id: number): Promise<MetricUsageRecord[]> =>
 
 export const getMetricImpact = (metricId: number): Promise<ImpactReport> =>
   HttpUtils.getData<ImpactReport>(`${METRIC_API_PREFIX}/impact/${metricId}/upstream-changes`);
+
+export const getMetricImpactContext = (metricId: number): Promise<MetricImpactContext> =>
+  HttpUtils.getData<MetricImpactContext>(`${METRIC_API_PREFIX}/impact/${metricId}/context`);
 
 /** 反向影响分析:上游对象(MODEL/METRIC/CALIBER/UNIT)被哪些指标引用。 */
 export const getAffectedMetrics = (dependencyType: string, dependencyId: number): Promise<AffectedMetricRecord[]> =>
