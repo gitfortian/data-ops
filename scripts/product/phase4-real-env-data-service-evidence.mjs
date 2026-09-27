@@ -3,10 +3,10 @@
 /**
  * Phase4 #104 real-environment Data Service Golden evidence runner.
  *
- * This runner authenticates to the console only to read the selected Data Service
- * definition and source-owned InvocationRecord evidence. The actual invocation is
- * performed through the public runtime plane with X-API-Key and deliberately sends
- * neither Yak login cookies nor the Project Space header.
+ * Console authentication is used only for source definition, observability and
+ * Consumption-owned Usage Evidence synchronization. The actual Data Service call
+ * is executed through the public runtime plane with X-API-Key and deliberately
+ * sends neither Yak login cookies nor the Project Space header.
  *
  * Required environment variables:
  *   YAK_OPS_USERNAME
@@ -246,6 +246,29 @@ function invocationRecordSummary(record) {
   };
 }
 
+function usageNormalizationSummary(result) {
+  const usage = result?.evidence ?? null;
+  return {
+    state: result?.state ?? null,
+    providerEvidenceRef: result?.providerEvidenceRef ?? null,
+    message: result?.message ?? null,
+    evidence: usage ? {
+      id: usage.id ?? null,
+      projectId: usage.projectId ?? null,
+      productKey: usage.productKey ?? null,
+      sourceVersion: usage.sourceVersion ?? null,
+      consumerRef: usage.consumerRef ?? null,
+      observedAt: usage.observedAt ?? null,
+      consumptionMode: usage.consumptionMode ?? null,
+      outcome: usage.outcome ?? null,
+      provider: usage.provider ?? null,
+      providerEvidenceRef: usage.providerEvidenceRef ?? null,
+      deduplicationId: usage.deduplicationId ?? null,
+      normalizedAt: usage.normalizedAt ?? null,
+    } : null,
+  };
+}
+
 function maxRecordId(records) {
   return records.reduce((max, record) => {
     const id = Number(record?.id);
@@ -264,6 +287,11 @@ function findNewInvocation(records, previousMaxId, service) {
     String(record?.sourceRevisionId ?? '') === String(service.sourceRevisionId ?? '')
       && String(record?.sourceRevisionNo ?? '') === String(service.sourceRevisionNo ?? ''));
   return exactRevision ?? candidates[0] ?? null;
+}
+
+function findUsageNormalization(results, invocationRecord) {
+  const expectedRef = `invocation:${invocationRecord.id}`;
+  return results.find((result) => result?.providerEvidenceRef === expectedRef) ?? null;
 }
 
 function publicRequestSummary(service) {
@@ -336,6 +364,22 @@ async function main() {
     );
   }
 
+  const normalizationResults = rowsOf(await consoleRequest(
+    `/api/v1/consumption/usage-evidence/data-service/synchronize?apiId=${encodeURIComponent(DATA_SERVICE_ID)}&limit=${LOG_LIMIT}`,
+    { method: 'POST', projectScoped: true },
+  ), 'Data Service Usage Evidence normalization');
+  const usageNormalization = findUsageNormalization(normalizationResults, invocationRecord);
+  if (!usageNormalization) {
+    throw new Error(
+      `No Usage Evidence normalization result was returned for InvocationRecord ${invocationRecord.id}`,
+    );
+  }
+  if (usageNormalization.state !== 'NORMALIZED' || !usageNormalization.evidence) {
+    throw new Error(
+      `InvocationRecord ${invocationRecord.id} did not normalize to Usage Evidence: state=${usageNormalization.state ?? '<unknown>'}, message=${usageNormalization.message ?? '<none>'}`,
+    );
+  }
+
   const evidence = {
     probe: 'phase4-real-env-data-service-golden',
     acceptanceIssue: 104,
@@ -354,6 +398,7 @@ async function main() {
       result: invocationResultSummary(invocationResult),
     },
     invocationRecord: invocationRecordSummary(invocationRecord),
+    usageNormalization: usageNormalizationSummary(usageNormalization),
     capturedAt: new Date().toISOString(),
   };
 
