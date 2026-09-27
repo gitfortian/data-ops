@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.yak.ops.business.audit.AuditOperationHandle;
+import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.PublicationSubject;
@@ -33,6 +36,8 @@ class MetricPublicationServiceTest {
   private MetricPublicationRepository publicationRepository;
   private MetricVersionRepository versionRepository;
   private MetricPublicationReadinessService readinessService;
+  private BusinessAuditService auditService;
+  private AuditOperationHandle auditHandle;
   private MetricPublicationService service;
 
   @BeforeEach
@@ -40,11 +45,15 @@ class MetricPublicationServiceTest {
     publicationRepository = mock(MetricPublicationRepository.class);
     versionRepository = mock(MetricVersionRepository.class);
     readinessService = mock(MetricPublicationReadinessService.class);
-    service = new MetricPublicationService(publicationRepository, versionRepository, readinessService);
+    auditService = mock(BusinessAuditService.class);
+    auditHandle = mock(AuditOperationHandle.class);
+    when(auditService.start(any())).thenReturn(auditHandle);
+    service = new MetricPublicationService(
+        publicationRepository, versionRepository, readinessService, auditService);
   }
 
   @Test
-  void rejectsStaleVersionBeforePublicationReadinessCanRaceWithDraftEdit() {
+  void rejectsStaleVersionBeforePublicationReadinessCanRaceWithDraftEditAndAuditsFailure() {
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(4);
 
     assertThatThrownBy(() -> service.publish(7L, 3, "alice"))
@@ -54,6 +63,7 @@ class MetricPublicationServiceTest {
 
     verify(readinessService, never()).check(any(), anyInt());
     verify(publicationRepository, never()).appendEvent(any());
+    verify(auditHandle).failure(eq("METRIC_PUBLISH_FAILED"), any(RuntimeException.class));
   }
 
   @Test
@@ -73,10 +83,11 @@ class MetricPublicationServiceTest {
 
     verify(publicationRepository, never()).appendEvent(any());
     verify(publicationRepository, never()).replaceActive(any());
+    verify(auditHandle).failure(eq("METRIC_PUBLISH_FAILED"), any(RuntimeException.class));
   }
 
   @Test
-  void publishesExactImmutableVersionAndFreezesGateEvidence() {
+  void publishesExactImmutableVersionFreezesGateEvidenceAndAuditsSuccess() {
     MetricVersionPO version = version(91L, 7L, 4, SNAPSHOT);
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(4);
     when(versionRepository.findByMetricAndVersion(7L, 4)).thenReturn(version);
@@ -113,10 +124,11 @@ class MetricPublicationServiceTest {
     verify(publicationRepository).replaceActive(pointerCaptor.capture());
     assertThat(pointerCaptor.getValue().getPublicationEventId()).isEqualTo(501L);
     assertThat(pointerCaptor.getValue().getMetricVersionId()).isEqualTo(91L);
+    verify(auditHandle).success("Metric v4 published");
   }
 
   @Test
-  void repeatedPublishOfSameActiveImmutableVersionIsIdempotentWithoutRecheckingTodaysGates() {
+  void repeatedPublishOfSameActiveImmutableVersionIsIdempotentAuditedAndSkipsTodaysGates() {
     MetricVersionPO version = version(91L, 7L, 4, SNAPSHOT);
     MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     MetricPublicationEventPO event = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
@@ -133,10 +145,11 @@ class MetricPublicationServiceTest {
     verify(readinessService, never()).check(any(), anyInt());
     verify(publicationRepository, never()).appendEvent(any());
     verify(publicationRepository, never()).replaceActive(any());
+    verify(auditHandle).success("Metric publication already active");
   }
 
   @Test
-  void withdrawAppendsLifecycleEventThenClearsOnlyExpectedPointer() {
+  void withdrawAppendsLifecycleEventClearsExpectedPointerAndAuditsSuccess() {
     MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     MetricPublicationEventPO published = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(5);
@@ -155,10 +168,11 @@ class MetricPublicationServiceTest {
     assertThat(result.event().eventType()).isEqualTo("WITHDRAWN");
     assertThat(result.event().subjectPublicationId()).isEqualTo(501L);
     verify(publicationRepository).clearActive(7L, 501L);
+    verify(auditHandle).success("Metric publication withdrawn");
   }
 
   @Test
-  void withdrawWithoutActivePublicationIsIdempotent() {
+  void withdrawWithoutActivePublicationIsIdempotentAndAudited() {
     when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(5);
     when(publicationRepository.findActiveForUpdate(7L)).thenReturn(null);
 
@@ -166,6 +180,7 @@ class MetricPublicationServiceTest {
 
     assertThat(result.withdrawn()).isFalse();
     verify(publicationRepository, never()).appendEvent(any());
+    verify(auditHandle).success("Metric has no active publication");
   }
 
   @Test
@@ -176,6 +191,7 @@ class MetricPublicationServiceTest {
             .isEqualTo(MetricErrorCode.PUBLICATION_CONFLICT));
 
     verify(publicationRepository, never()).lockCurrentMetricVersion(any());
+    verify(auditService, never()).start(any());
   }
 
   private static MetricPublicationReadinessService.PublicationReadiness readiness(
