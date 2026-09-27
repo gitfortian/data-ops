@@ -19,9 +19,10 @@ import org.springframework.stereotype.Service;
 /**
  * Fail-closed publication readiness coordinator.
  *
- * <p>This service only decides whether an immutable MetricVersion is ready for a
- * future publication command. It does not mutate Metric status and does not persist
- * publication state/event yet.
+ * <p>This service only decides whether an immutable MetricVersion is ready for a future publication
+ * command. It does not mutate Metric status and does not persist publication state/event yet.
+ * READY and an explicit NOT_APPLICABLE are the only non-blocking gate outcomes; BLOCKED,
+ * UNAVAILABLE and FORBIDDEN all fail closed.
  */
 @Service
 public class MetricPublicationReadinessService {
@@ -71,10 +72,15 @@ public class MetricPublicationReadinessService {
     for (MetricPublicationGate gate : providers) {
       evidence.add(evaluateSafely(gate, subject));
     }
-    ReadinessStatus status = evidence.stream().allMatch(item -> item.status() == GateStatus.READY)
+    ReadinessStatus status = evidence.stream().allMatch(MetricPublicationReadinessService::satisfied)
         ? ReadinessStatus.READY
         : ReadinessStatus.BLOCKED;
     return new PublicationReadiness(status, subject, List.copyOf(evidence));
+  }
+
+  private static boolean satisfied(GateEvidence evidence) {
+    return evidence.status() == GateStatus.READY
+        || evidence.status() == GateStatus.NOT_APPLICABLE;
   }
 
   private static GateEvidence evaluateSafely(
