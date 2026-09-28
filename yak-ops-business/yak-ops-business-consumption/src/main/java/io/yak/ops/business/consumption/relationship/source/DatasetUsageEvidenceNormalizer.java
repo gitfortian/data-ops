@@ -11,6 +11,7 @@ import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryEvent;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,49 @@ public class DatasetUsageEvidenceNormalizer {
     if (trace.status() != DatasetQueryStatus.SUCCESS) {
       return UsageNormalizationResult.ignored(ref, "Failed or rejected query is diagnostic evidence, not usage");
     }
-    String gap = attributionGap(projectId, trace);
+    return normalize(
+        projectId,
+        trace.queryId(),
+        trace.datasetId(),
+        trace.datasetVersionId(),
+        trace.datasetVersionNo(),
+        trace.subjectType(),
+        trace.subjectSourceDomain(),
+        trace.subjectSourceIdentity(),
+        trace.subjectDisplayHint(),
+        trace.startedAt());
+  }
+
+  public UsageNormalizationResult normalize(Long projectId, DatasetSuccessfulQueryEvent event) {
+    if (event == null) return UsageNormalizationResult.gap(null, "Dataset query evidence is missing");
+    return normalize(
+        projectId == null ? event.projectId() : projectId,
+        event.queryId(),
+        event.datasetId(),
+        event.datasetVersionId(),
+        event.datasetVersionNo(),
+        event.subjectType(),
+        event.subjectSourceDomain(),
+        event.subjectSourceIdentity(),
+        event.subjectDisplayHint(),
+        event.startedAt());
+  }
+
+  private UsageNormalizationResult normalize(
+      Long projectId,
+      String queryId,
+      long datasetId,
+      Long datasetVersionId,
+      Integer datasetVersionNo,
+      String subjectType,
+      String subjectSourceDomain,
+      String subjectSourceIdentity,
+      String subjectDisplayHint,
+      java.time.Instant startedAt) {
+    String ref = queryId == null ? null : "query:" + queryId;
+    String gap = attributionGap(
+        projectId, queryId, datasetId, datasetVersionId, subjectType,
+        subjectSourceDomain, subjectSourceIdentity, startedAt);
     if (gap != null) {
       return UsageNormalizationResult.gap(ref, gap);
     }
@@ -40,20 +83,20 @@ public class DatasetUsageEvidenceNormalizer {
       UsageEvidence evidence = usageEvidenceService.normalize(
           new UsageEvidenceService.UsageEvidenceCommand(
               projectId,
-              new ProductKey(ProductType.DATASET, Long.toString(trace.datasetId())),
+              new ProductKey(ProductType.DATASET, Long.toString(datasetId)),
               new SourceVersionRef(
-                  trace.datasetVersionId().toString(),
-                  trace.datasetVersionNo() == null ? null : "v" + trace.datasetVersionNo()),
+                  datasetVersionId.toString(),
+                  datasetVersionNo == null ? null : "v" + datasetVersionNo),
               new ConsumerRef(
                   ConsumerType.USER,
-                  trace.subjectSourceDomain(),
-                  trace.subjectSourceIdentity(),
-                  trace.subjectDisplayHint()),
-              LocalDateTime.ofInstant(trace.startedAt(), ZoneOffset.UTC),
+                  subjectSourceDomain,
+                  subjectSourceIdentity,
+                  subjectDisplayHint),
+              LocalDateTime.ofInstant(startedAt, ZoneOffset.UTC),
               ConsumptionMode.QUERY,
               PROVIDER,
               ref,
-              PROVIDER + ":" + trace.queryId()));
+              PROVIDER + ":" + queryId));
       return UsageNormalizationResult.normalized(evidence);
     } catch (RuntimeException failure) {
       return UsageNormalizationResult.unavailable(
@@ -62,21 +105,29 @@ public class DatasetUsageEvidenceNormalizer {
     }
   }
 
-  private String attributionGap(Long projectId, DatasetQueryPerformance trace) {
+  private String attributionGap(
+      Long projectId,
+      String queryId,
+      long datasetId,
+      Long datasetVersionId,
+      String subjectType,
+      String subjectSourceDomain,
+      String subjectSourceIdentity,
+      java.time.Instant startedAt) {
     if (projectId == null || projectId <= 0L) return "Dataset query evidence has no Project Space";
-    if (trace.queryId() == null || trace.queryId().isBlank()) return "Dataset query has no stable evidence id";
-    if (trace.datasetId() <= 0L) return "Dataset query has no Dataset identity";
-    if (trace.datasetVersionId() == null || trace.datasetVersionId() <= 0L) {
+    if (queryId == null || queryId.isBlank()) return "Dataset query has no stable evidence id";
+    if (datasetId <= 0L) return "Dataset query has no Dataset identity";
+    if (datasetVersionId == null || datasetVersionId <= 0L) {
       return "Dataset query has no exact immutable DatasetVersion";
     }
-    if (!"USER".equals(trace.subjectType())) return "Dataset query has no supported USER subject";
-    if (trace.subjectSourceDomain() == null || trace.subjectSourceDomain().isBlank()) {
+    if (!"USER".equals(subjectType)) return "Dataset query has no supported USER subject";
+    if (subjectSourceDomain == null || subjectSourceDomain.isBlank()) {
       return "Dataset query has no subject source domain";
     }
-    if (trace.subjectSourceIdentity() == null || trace.subjectSourceIdentity().isBlank()) {
+    if (subjectSourceIdentity == null || subjectSourceIdentity.isBlank()) {
       return "Dataset query has no stable execution-time subject identity";
     }
-    if (trace.startedAt() == null) return "Dataset query has no observation time";
+    if (startedAt == null) return "Dataset query has no observation time";
     return null;
   }
 

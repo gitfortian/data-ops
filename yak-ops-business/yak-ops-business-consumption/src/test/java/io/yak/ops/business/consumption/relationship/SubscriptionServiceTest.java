@@ -12,6 +12,7 @@ import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.model.DataProductView;
 import io.yak.ops.business.consumption.product.provider.ProductLookupResult;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.core.security.ActionAccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,14 +41,14 @@ class SubscriptionServiceTest {
   @Test
   void duplicateSubscribeReturnsSameActiveRelationship() {
     ProductKey product = ProductKey.parse("DATASET:101");
-    ConsumerRef firstRef = new ConsumerRef(ConsumerType.DASHBOARD, "DASHBOARD", "9001", "Revenue v1");
+    ConsumerRef firstRef = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice");
 
     Subscription first = service.subscribe(product, firstRef, ConsumptionMode.QUERY, "alice");
     Subscription duplicate = service.subscribe(
         product,
-        new ConsumerRef(ConsumerType.DASHBOARD, "DASHBOARD", "9001", "Renamed dashboard"),
+        new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Renamed label"),
         ConsumptionMode.QUERY,
-        "bob");
+        "alice");
 
     assertEquals(1, repository.rows.size());
     assertEquals(first.id(), duplicate.id());
@@ -59,40 +60,39 @@ class SubscriptionServiceTest {
   void duplicateCancelIsIdempotent() {
     Subscription created = service.subscribe(
         ProductKey.parse("DATA_SERVICE:7"),
-        new ConsumerRef(ConsumerType.DATA_SERVICE, "DATA_SERVICE_CONSUMER", "33", "risk-engine"),
+        new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice"),
         ConsumptionMode.API_INVOKE,
         "alice");
 
     Subscription cancelled = service.cancel(created.id(), "alice");
-    Subscription duplicate = service.cancel(created.id(), "bob");
+    Subscription duplicate = service.cancel(created.id(), "alice");
 
-    assertEquals(SubscriptionStatus.CANCELLED, duplicate.status());
+    assertEquals(SubscriptionStatus.REVOKED, duplicate.status());
     assertEquals(cancelled.updatedBy(), duplicate.updatedBy());
     assertEquals(cancelled.updatedAt(), duplicate.updatedAt());
     assertEquals(1, repository.rows.size());
   }
 
   @Test
-  void resubscribeReactivatesSameRelationshipIdentity() {
+  void suspendedRelationshipResumesWithSameIdentityAndRevokedRelationshipStaysTerminal() {
     Subscription created = service.subscribe(
         ProductKey.parse("DATASET:202"),
-        new ConsumerRef(ConsumerType.JOB, "WORKFLOW_JOB", "job-12", "nightly"),
+        new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "nightly"),
         ConsumptionMode.DOWNSTREAM,
         "alice");
-    service.cancel(created.id(), "alice");
+    service.suspend(created.id(), "alice");
 
-    Subscription reactivated = service.subscribe(
-        created.productKey(),
-        new ConsumerRef(ConsumerType.JOB, "WORKFLOW_JOB", "job-12", "nightly-v2"),
-        ConsumptionMode.DOWNSTREAM,
-        "carol");
+    Subscription reactivated = service.resume(created.id(), "alice");
 
     assertEquals(created.id(), reactivated.id());
     assertEquals(created.createdAt(), reactivated.createdAt());
     assertEquals(SubscriptionStatus.ACTIVE, reactivated.status());
-    assertEquals("carol", reactivated.updatedBy());
-    assertEquals("nightly-v2", reactivated.consumerRef().displayHint());
+    assertEquals("alice", reactivated.updatedBy());
+    assertEquals("nightly", reactivated.consumerRef().displayHint());
     assertEquals(1, repository.rows.size());
+
+    service.cancel(created.id(), "alice");
+    assertThrows(IllegalStateException.class, () -> service.resume(created.id(), "alice"));
   }
 
   @Test
@@ -101,9 +101,31 @@ class SubscriptionServiceTest {
 
     assertThrows(IllegalStateException.class, () -> service.subscribe(
         ProductKey.parse("DATASET:303"),
-        new ConsumerRef(ConsumerType.USER, "SECURITY_USER", "u-1", "Alice"),
+        new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice"),
         ConsumptionMode.QUERY,
         "alice"));
+    assertEquals(0, repository.rows.size());
+  }
+
+  @Test
+  void userCannotDeclareAnotherPrincipalsConsumer() {
+    assertThrows(ActionAccessDeniedException.class, () -> service.subscribe(
+        ProductKey.parse("DATASET:303"),
+        new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice"),
+        ConsumptionMode.QUERY,
+        "mallory"));
+
+    assertEquals(0, repository.rows.size());
+  }
+
+  @Test
+  void callerCannotFabricateExternalConsumerWithoutOwningDomainAuthorization() {
+    assertThrows(ActionAccessDeniedException.class, () -> service.subscribe(
+        ProductKey.parse("DATA_SERVICE:7"),
+        new ConsumerRef(ConsumerType.DATA_SERVICE, "DATA_SERVICE_CONSUMER", "999", "Unknown"),
+        ConsumptionMode.API_INVOKE,
+        "alice"));
+
     assertEquals(0, repository.rows.size());
   }
 

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.identity.SourceVersionRef;
+import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceSynchronizer;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,6 +21,8 @@ class DatasetGoldenConsumerTargetUnavailableTest {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
     CurrentProject currentProject = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(synchronizer.synchronizeRecentByProduct(101L, 200)).thenReturn(List.of());
     when(currentProject.requireProjectId()).thenReturn(42L);
 
     ProductKey product = ProductKey.parse("DATASET:101");
@@ -40,13 +43,13 @@ class DatasetGoldenConsumerTargetUnavailableTest {
         observedAt,
         ConsumptionMode.QUERY,
         UsageOutcome.SUCCESS,
-        "DATASET_QUERY",
+        "DATASET_QUERY_PERFORMANCE",
         "query-77",
         "dataset-101-query-77",
         observedAt)));
 
     ConsumerImpactView view =
-        new ConsumerImpactService(subscriptions, usage, currentProject).view(product, 200);
+        new ConsumerImpactService(subscriptions, usage, currentProject, synchronizer, null).view(product, 200);
 
     assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.subscriptionState());
     assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
@@ -58,6 +61,6 @@ class DatasetGoldenConsumerTargetUnavailableTest {
     assertEquals(0, known.activeSubscriptionCount());
     assertEquals(1, known.successfulUsageCount());
     assertEquals(observedAt, known.lastObservedAt());
-    assertTrue(known.providerEvidenceRefs().contains("DATASET_QUERY:query-77"));
+    assertTrue(known.providerEvidenceRefs().contains("DATASET_QUERY_PERFORMANCE:query-77"));
   }
 }

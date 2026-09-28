@@ -6,6 +6,10 @@ import type {
   ProductDiscoveryQuery,
   ProductDiscoveryResult,
   ProductLookupResult,
+  ConsumerRef,
+  ConsumerImpact,
+  Subscription,
+  ConsumptionMode,
   ProductType,
 } from './types';
 
@@ -19,7 +23,7 @@ const unwrap = <T,>(response: ApiResponse<T>, fallback: string): T => {
   return response.data;
 };
 
-const queryString = (query: ProductDiscoveryQuery = {}) => {
+const queryString = (query: object = {}) => {
   const params = new URLSearchParams();
   Object.entries(query).forEach(([key, value]) => {
     if (value != null && String(value).trim()) params.set(key, String(value).trim());
@@ -38,6 +42,37 @@ export const discoverProducts = async (
 export const getProduct = async (productKey: string): Promise<ProductLookupResult> => unwrap(
   await HttpUtils.get<ProductLookupResult>(`${PRODUCT_API}/${encodeURIComponent(productKey)}`),
   '加载数据产品详情失败',
+);
+
+export const getConsumerImpact = async (productKey: string): Promise<ConsumerImpact> => unwrap(
+  await HttpUtils.get<ConsumerImpact>(`${CONSUMPTION_API}/impact${queryString({ productKey, usageLimit: 200 })}`),
+  '加载消费影响失败',
+);
+
+export const listSubscriptions = async (productKey: string): Promise<Subscription[]> => unwrap(
+  await HttpUtils.get<Subscription[]>(`${CONSUMPTION_API}/subscriptions${queryString({ productKey })}`),
+  '加载消费订阅失败',
+);
+
+export const subscribeToProduct = async (
+  productKey: string,
+  consumerRef: ConsumerRef,
+  consumptionMode: ConsumptionMode,
+): Promise<Subscription> => unwrap(
+  await HttpUtils.post<Subscription>(`${CONSUMPTION_API}/subscriptions`, {
+    productKey,
+    consumerType: consumerRef.consumerType,
+    sourceDomain: consumerRef.sourceDomain,
+    sourceIdentity: consumerRef.sourceIdentity,
+    displayHint: consumerRef.displayHint,
+    consumptionMode,
+  }),
+  '声明消费依赖失败',
+);
+
+export const cancelSubscription = async (subscriptionId: number): Promise<Subscription> => unwrap(
+  await HttpUtils.post<Subscription>(`${CONSUMPTION_API}/subscriptions/${subscriptionId}/cancel`),
+  '取消消费订阅失败',
 );
 
 export const resolveProductFromSource = async (

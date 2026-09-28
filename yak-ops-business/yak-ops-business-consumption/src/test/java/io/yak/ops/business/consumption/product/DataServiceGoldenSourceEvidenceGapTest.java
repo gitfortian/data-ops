@@ -58,7 +58,7 @@ class DataServiceGoldenSourceEvidenceGapTest {
     assertEquals(ProductLookupState.FOUND, detail.state());
     assertNotNull(detail.product());
     assertEquals(key, detail.product().productKey());
-    assertEquals("/data-service/88", detail.navigation().sourceHref());
+    assertEquals("/data-service/api/88", detail.navigation().sourceHref());
 
     CanonicalProductDetail.GovernanceEvidence sourceEvidence = detail.governanceEvidence().stream()
         .filter(evidence -> "source-governance".equals(evidence.sectionKey()))
@@ -68,7 +68,7 @@ class DataServiceGoldenSourceEvidenceGapTest {
     assertEquals("DATA_SERVICE", sourceEvidence.ownerDomain());
     assertNull(sourceEvidence.observedAt());
     assertEquals(
-        "Data Service source governance observation time is unavailable",
+        "Data Service source contract exposes update time but no governed evidence projection",
         sourceEvidence.reason());
 
     CanonicalProductDetail.GovernanceEvidence assetEvidence = detail.governanceEvidence().stream()

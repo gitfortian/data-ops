@@ -84,7 +84,7 @@ class DatasetGoldenSourceEvidenceGapTest {
     assertEquals("DATASET", sourceEvidence.ownerDomain());
     assertNull(sourceEvidence.observedAt());
     assertEquals(
-        "Dataset source governance observation time is unavailable",
+        "Dataset source contract exposes update time but no governed evidence projection",
         sourceEvidence.reason());
 
     CanonicalProductDetail.GovernanceEvidence assetEvidence = detail.governanceEvidence().stream()

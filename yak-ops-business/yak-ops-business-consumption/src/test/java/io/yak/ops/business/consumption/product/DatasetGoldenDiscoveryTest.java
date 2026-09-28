@@ -3,7 +3,6 @@ package io.yak.ops.business.consumption.product;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +14,7 @@ import io.yak.ops.business.consumption.product.discovery.DataProductRegistry;
 import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryResult;
 import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService;
 import io.yak.ops.business.consumption.product.identity.ProductKey;
+import io.yak.ops.business.consumption.product.model.AvailabilityState;
 import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.product.model.ProviderEvidenceState;
 import io.yak.ops.business.consumption.product.model.SourceLifecycleState;
@@ -65,7 +65,7 @@ class DatasetGoldenDiscoveryTest {
         observedAt);
     DatasetCatalogEntry entry = new DatasetCatalogEntry(dataset, version, List.of());
 
-    when(reader.catalog(List.of(), true)).thenReturn(List.of(entry));
+    when(reader.catalog(List.of(), false)).thenReturn(List.of(entry));
     when(reader.catalog(List.of(42L), false)).thenReturn(List.of(entry));
     when(assetLookup.lookup("DATASET", "42")).thenReturn(new AssetSourceLookupService.SourceLookup(
         "NOT_INDEXED", "DATASET", "42", null, null, null, null));
@@ -111,15 +111,14 @@ class DatasetGoldenDiscoveryTest {
         .filter(evidence -> "source-governance".equals(evidence.sectionKey()))
         .findFirst()
         .orElseThrow();
-    assertEquals(ProviderEvidenceState.READY, sourceGovernance.state());
+    assertEquals(ProviderEvidenceState.UNAVAILABLE, sourceGovernance.state());
     assertEquals("DATASET", sourceGovernance.ownerDomain());
-    assertEquals(observedAt, sourceGovernance.observedAt());
-    assertTrue(detail.governanceEvidence().stream().anyMatch(evidence ->
-        evidence.state() == ProviderEvidenceState.READY && evidence.observedAt() != null));
+    assertNull(sourceGovernance.observedAt());
+    assertNotNull(sourceGovernance.reason());
   }
 
   @Test
-  void offlineDatasetIsNotDiscoverableAndDoesNotProduceCanonicalProduct() {
+  void offlinePublishedDatasetRemainsDiscoverableWithUnavailableRuntime() {
     DatasetReader reader = mock(DatasetReader.class);
     AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
     AssetAppService assetAppService = mock(AssetAppService.class);
@@ -147,7 +146,7 @@ class DatasetGoldenDiscoveryTest {
         Instant.parse("2026-09-26T01:00:00Z"));
     DatasetCatalogEntry entry = new DatasetCatalogEntry(dataset, version, List.of());
 
-    when(reader.catalog(List.of(), true)).thenReturn(List.of());
+    when(reader.catalog(List.of(), false)).thenReturn(List.of(entry));
     when(reader.catalog(List.of(43L), false)).thenReturn(List.of(entry));
 
     DatasetDataProductProvider provider = new DatasetDataProductProvider(reader, assetLookup);
@@ -166,20 +165,20 @@ class DatasetGoldenDiscoveryTest {
         null));
 
     assertEquals(ProductSearchState.READY, discovery.providerStates().get(ProductType.DATASET));
-    assertEquals(0L, discovery.total());
-    assertEquals(List.of(), discovery.products());
+    assertEquals(1L, discovery.total());
+    assertEquals(1, discovery.products().size());
 
     ProductKey productKey = new ProductKey(ProductType.DATASET, "43");
     CanonicalProductService.NavigationResolution shortcut =
         canonicalService.fromSource(ProductType.DATASET, "43");
-    assertEquals("NOT_DISCOVERABLE", shortcut.state());
+    assertEquals("FOUND", shortcut.state());
     assertEquals(productKey, shortcut.productKey());
-    assertNull(shortcut.canonicalHref());
+    assertEquals("/data-analysis/consumption/DATASET%3A43", shortcut.canonicalHref());
 
     CanonicalProductDetail detail = canonicalService.detail(productKey);
-    assertEquals(ProductLookupState.NOT_DISCOVERABLE, detail.state());
-    assertNull(detail.product());
-    assertNull(detail.navigation());
-    assertEquals(List.of(), detail.governanceEvidence());
+    assertEquals(ProductLookupState.FOUND, detail.state());
+    assertEquals(SourceLifecycleState.PUBLISHED, detail.product().lifecycle());
+    assertEquals(AvailabilityState.UNAVAILABLE, detail.product().availability());
+    assertNotNull(detail.navigation());
   }
 }

@@ -1,6 +1,9 @@
 package io.yak.ops.business.consumption.relationship;
 
 import io.yak.ops.business.consumption.product.identity.ProductKey;
+import io.yak.ops.business.consumption.product.model.ProductType;
+import io.yak.ops.business.consumption.relationship.source.DataServiceUsageEvidenceSynchronizer;
+import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceSynchronizer;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -10,17 +13,40 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** Aggregates declared Subscription and observed Usage without conflating either with lineage. */
 @Service
-@RequiredArgsConstructor
 public class ConsumerImpactService {
 
   private final SubscriptionRepository subscriptions;
   private final UsageEvidenceRepository usage;
   private final CurrentProject currentProject;
+  private final DatasetUsageEvidenceSynchronizer datasetSynchronizer;
+  private final DataServiceUsageEvidenceSynchronizer dataServiceSynchronizer;
+
+  @Autowired
+  public ConsumerImpactService(
+      SubscriptionRepository subscriptions,
+      UsageEvidenceRepository usage,
+      CurrentProject currentProject,
+      DatasetUsageEvidenceSynchronizer datasetSynchronizer,
+      DataServiceUsageEvidenceSynchronizer dataServiceSynchronizer) {
+    this.subscriptions = subscriptions;
+    this.usage = usage;
+    this.currentProject = currentProject;
+    this.datasetSynchronizer = datasetSynchronizer;
+    this.dataServiceSynchronizer = dataServiceSynchronizer;
+  }
+
+  /** Compatibility constructor for focused tests without source adapters. */
+  public ConsumerImpactService(
+      SubscriptionRepository subscriptions,
+      UsageEvidenceRepository usage,
+      CurrentProject currentProject) {
+    this(subscriptions, usage, currentProject, null, null);
+  }
 
   public ConsumerImpactView view(ProductKey productKey, int usageLimit) {
     Long projectId = currentProject.requireProjectId();
@@ -28,6 +54,7 @@ public class ConsumerImpactService {
     List<UsageEvidence> observed;
     ConsumerImpactView.EvidenceState subscriptionState;
     ConsumerImpactView.EvidenceState usageState;
+    boolean sourceCoverageComplete = synchronizeSource(productKey, usageLimit);
 
     try {
       declared = subscriptions.list(projectId, productKey, null);
@@ -40,8 +67,10 @@ public class ConsumerImpactService {
     }
 
     try {
-      observed = usage.list(projectId, productKey, null, Math.max(1, Math.min(1000, usageLimit)));
-      usageState = observed.isEmpty()
+      observed = usage.list(projectId, productKey, null, Math.max(1, Math.min(200, usageLimit)));
+      usageState = !sourceCoverageComplete
+          ? ConsumerImpactView.EvidenceState.UNAVAILABLE
+          : observed.isEmpty()
           ? ConsumerImpactView.EvidenceState.EMPTY
           : ConsumerImpactView.EvidenceState.READY;
     } catch (RuntimeException failure) {
@@ -74,9 +103,41 @@ public class ConsumerImpactService {
 
     String coverage = subscriptionState == ConsumerImpactView.EvidenceState.UNAVAILABLE
         || usageState == ConsumerImpactView.EvidenceState.UNAVAILABLE
-        ? "Known consumers are partial because one or more evidence providers are unavailable."
-        : "Known consumers include declared subscriptions and normalized successful usage only; external consumers outside available evidence are not claimed complete.";
+        ? "Known consumers are partial because source reconciliation is incomplete or one or more evidence providers are unavailable."
+        : "Known consumers include declared subscriptions and normalized successful usage in the reconciled source window only; external consumers outside available evidence are not claimed complete.";
     return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage);
+  }
+
+  private boolean synchronizeSource(ProductKey productKey, int requestedLimit) {
+    int limit = Math.max(1, Math.min(200, requestedLimit));
+    try {
+      List<UsageNormalizationResult> results;
+      if (productKey.productType() == ProductType.DATASET && datasetSynchronizer != null) {
+        Long datasetId = parseProductId(productKey);
+        if (datasetId == null) return false;
+        results = datasetSynchronizer.synchronizeRecentByProduct(datasetId, limit);
+      } else if (productKey.productType() == ProductType.DATA_SERVICE && dataServiceSynchronizer != null) {
+        Long apiId = parseProductId(productKey);
+        if (apiId == null) return false;
+        results = dataServiceSynchronizer.synchronizeRecentByProduct(apiId, limit);
+      } else {
+        return false;
+      }
+      return results.size() < limit && results.stream().noneMatch(result ->
+          result.state() == UsageNormalizationState.GAP
+              || result.state() == UsageNormalizationState.UNAVAILABLE);
+    } catch (RuntimeException unavailable) {
+      return false;
+    }
+  }
+
+  private Long parseProductId(ProductKey productKey) {
+    try {
+      long id = Long.parseLong(productKey.sourceIdentity());
+      return id > 0 ? id : null;
+    } catch (RuntimeException invalid) {
+      return null;
+    }
   }
 
   private static LocalDateTime later(LocalDateTime current, LocalDateTime candidate) {

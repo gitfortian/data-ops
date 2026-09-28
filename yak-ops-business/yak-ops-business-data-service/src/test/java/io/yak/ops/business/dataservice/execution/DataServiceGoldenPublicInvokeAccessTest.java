@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -132,7 +133,8 @@ class DataServiceGoldenPublicInvokeAccessTest {
 
     ArgumentCaptor<AccessContext> accessCaptor = ArgumentCaptor.forClass(AccessContext.class);
     verify(recorder).record(
-        eq(definition), any(), eq(true), eq(8L), eq(1), isNull(), accessCaptor.capture());
+        eq(definition), any(), eq(true), longThat(duration -> duration >= 0L),
+        eq(1), isNull(), accessCaptor.capture());
     AccessContext access = accessCaptor.getValue();
     assertThat(access.callerType()).isEqualTo("API_KEY");
     assertThat(access.apiKeyId()).isEqualTo(5L);

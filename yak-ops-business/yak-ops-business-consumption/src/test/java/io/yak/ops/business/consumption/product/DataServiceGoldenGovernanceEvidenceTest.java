@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 class DataServiceGoldenGovernanceEvidenceTest {
 
   @Test
-  void canonicalProductCarriesTimedSourceGovernanceEvidenceFromOwningDefinition() {
+  void owningUpdateTimeAloneDoesNotMasqueradeAsGovernanceEvidence() {
     DataServiceReader reader = mock(DataServiceReader.class);
     DataServiceViewFactory viewFactory = mock(DataServiceViewFactory.class);
     AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
@@ -55,10 +55,10 @@ class DataServiceGoldenGovernanceEvidenceTest {
         .filter(section -> "source-governance".equals(section.sectionKey()))
         .findFirst()
         .orElseThrow();
-    assertEquals(ProviderEvidenceState.READY, governance.state());
+    assertEquals(ProviderEvidenceState.UNAVAILABLE, governance.state());
     assertEquals("DATA_SERVICE", governance.ownerDomain());
-    assertEquals(Instant.parse("2026-09-26T14:30:00Z"), governance.observedAt());
-    assertEquals(null, governance.reason());
+    assertEquals(null, governance.observedAt());
+    assertNotNull(governance.reason());
   }
 
   @Test

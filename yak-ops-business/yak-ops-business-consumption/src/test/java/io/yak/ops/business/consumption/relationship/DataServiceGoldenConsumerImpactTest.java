@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.identity.SourceVersionRef;
+import io.yak.ops.business.consumption.relationship.source.DataServiceUsageEvidenceSynchronizer;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,6 +21,8 @@ class DataServiceGoldenConsumerImpactTest {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
     CurrentProject currentProject = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer synchronizer = mock(DataServiceUsageEvidenceSynchronizer.class);
+    when(synchronizer.synchronizeRecentByProduct(7L, 200)).thenReturn(List.of());
     when(currentProject.requireProjectId()).thenReturn(3L);
 
     ProductKey product = ProductKey.parse("DATA_SERVICE:7");
@@ -57,7 +60,7 @@ class DataServiceGoldenConsumerImpactTest {
         observedAt)));
 
     ConsumerImpactView view =
-        new ConsumerImpactService(subscriptions, usage, currentProject).view(product, 200);
+        new ConsumerImpactService(subscriptions, usage, currentProject, null, synchronizer).view(product, 200);
 
     assertEquals(product, view.productKey());
     assertEquals(ConsumerImpactView.EvidenceState.READY, view.subscriptionState());
@@ -81,6 +84,8 @@ class DataServiceGoldenConsumerImpactTest {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
     CurrentProject currentProject = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer synchronizer = mock(DataServiceUsageEvidenceSynchronizer.class);
+    when(synchronizer.synchronizeRecentByProduct(7L, 200)).thenReturn(List.of());
     when(currentProject.requireProjectId()).thenReturn(3L);
 
     ProductKey product = ProductKey.parse("DATA_SERVICE:7");
@@ -105,7 +110,7 @@ class DataServiceGoldenConsumerImpactTest {
     when(usage.list(3L, product, null, 200)).thenReturn(List.of());
 
     ConsumerImpactView view =
-        new ConsumerImpactService(subscriptions, usage, currentProject).view(product, 200);
+        new ConsumerImpactService(subscriptions, usage, currentProject, null, synchronizer).view(product, 200);
 
     assertEquals(ConsumerImpactView.EvidenceState.READY, view.subscriptionState());
     assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.usageState());
@@ -127,6 +132,8 @@ class DataServiceGoldenConsumerImpactTest {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
     CurrentProject currentProject = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer synchronizer = mock(DataServiceUsageEvidenceSynchronizer.class);
+    when(synchronizer.synchronizeRecentByProduct(7L, 200)).thenReturn(List.of());
     when(currentProject.requireProjectId()).thenReturn(3L);
 
     ProductKey product = ProductKey.parse("DATA_SERVICE:7");
@@ -155,7 +162,7 @@ class DataServiceGoldenConsumerImpactTest {
         observedAt)));
 
     ConsumerImpactView view =
-        new ConsumerImpactService(subscriptions, usage, currentProject).view(product, 200);
+        new ConsumerImpactService(subscriptions, usage, currentProject, null, synchronizer).view(product, 200);
 
     assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.subscriptionState());
     assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());

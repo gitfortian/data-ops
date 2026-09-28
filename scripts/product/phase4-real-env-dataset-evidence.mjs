@@ -116,9 +116,12 @@ function safeSummary(payload, raw) {
 }
 
 function dataOf(payload) {
-  if (payload && typeof payload === 'object' && !Array.isArray(payload)
-      && Object.prototype.hasOwnProperty.call(payload, 'data')) {
-    return payload.data;
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    if (Object.prototype.hasOwnProperty.call(payload, 'code') && Number(payload.code) !== 200) {
+      throw new Error(`API returned application error code ${payload.code}`);
+    }
+    if (payload.success === false) throw new Error('API reported an unsuccessful response');
+    if (Object.prototype.hasOwnProperty.call(payload, 'data')) return payload.data;
   }
   return payload;
 }

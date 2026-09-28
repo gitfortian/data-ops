@@ -11,7 +11,10 @@ import io.yak.ops.business.consumption.product.discovery.ProductDiscoveryService
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.model.DataProductView;
 import io.yak.ops.business.consumption.product.provider.ProductLookupResult;
+import io.yak.ops.business.dataservice.access.ConsumerView;
+import io.yak.ops.business.dataservice.access.DataServiceConsumerManager;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.core.security.ActionAuthorization;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -31,9 +34,12 @@ class DataServiceGoldenSubscriptionIdempotencyTest {
     SubscriptionRepository repository = mock(SubscriptionRepository.class);
     ProductDiscoveryService discovery = mock(ProductDiscoveryService.class);
     CurrentProject currentProject = mock(CurrentProject.class);
+    DataServiceConsumerManager dataServiceConsumers = mock(DataServiceConsumerManager.class);
+    ActionAuthorization actionAuthorization = mock(ActionAuthorization.class);
     AtomicReference<Subscription> stored = new AtomicReference<>();
 
     when(currentProject.requireProjectId()).thenReturn(3L);
+    when(dataServiceConsumers.get(21L)).thenReturn(mock(ConsumerView.class));
     when(discovery.get(product)).thenReturn(ProductLookupResult.found(mock(DataProductView.class)));
     when(repository.find(3L, product, consumer, ConsumptionMode.API_INVOKE))
         .thenAnswer(invocation -> Optional.ofNullable(stored.get()));
@@ -58,7 +64,8 @@ class DataServiceGoldenSubscriptionIdempotencyTest {
       return saved;
     });
 
-    SubscriptionService service = new SubscriptionService(repository, discovery, currentProject);
+    SubscriptionService service = new SubscriptionService(
+        repository, discovery, currentProject, dataServiceConsumers, actionAuthorization);
 
     Subscription created = service.subscribe(product, consumer, ConsumptionMode.API_INVOKE, "alice");
     Subscription duplicate = service.subscribe(product, consumer, ConsumptionMode.API_INVOKE, "bob");
@@ -75,7 +82,7 @@ class DataServiceGoldenSubscriptionIdempotencyTest {
 
     assertEquals(created.id(), cancelled.id());
     assertEquals(cancelled.id(), duplicateCancel.id());
-    assertEquals(SubscriptionStatus.CANCELLED, duplicateCancel.status());
+    assertEquals(SubscriptionStatus.REVOKED, duplicateCancel.status());
     assertEquals("alice", duplicateCancel.updatedBy());
     assertEquals(cancelled.updatedAt(), duplicateCancel.updatedAt());
     verify(repository, times(2)).save(any());

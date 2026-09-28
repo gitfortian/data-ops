@@ -45,7 +45,7 @@ class DataServiceGoldenBacklinkTest {
         new DataServiceSettings(
             "Orders API", "/orders", 500, 30, true, "Published orders service", true),
         new PublishedRuntimeSnapshot(3L, "select * from orders where tenant_id=:tenantId"),
-        new SourceReference("DEVELOPMENT_TASK", "task-55", 9001L, 12),
+        new SourceReference("DATA_DEVELOPMENT_DATA_SERVICE", "55", 9001L, 12),
         RuntimePolicy.defaults(true),
         AuthMode.API_KEY,
         observedAt,
@@ -63,8 +63,8 @@ class DataServiceGoldenBacklinkTest {
         true,
         "API_KEY",
         "Published orders service",
-        "DEVELOPMENT_TASK",
-        "task-55",
+        "DATA_DEVELOPMENT_DATA_SERVICE",
+        "55",
         9001L,
         12,
         observedAt,
@@ -117,7 +117,7 @@ class DataServiceGoldenBacklinkTest {
     assertEquals("/data-analysis/consumption/DATA_SERVICE%3A88", detail.navigation().canonicalHref());
     assertEquals("/data-service/api/88", detail.navigation().sourceHref());
     assertEquals("/data-asset/detail/701", detail.navigation().assetHref());
-    assertEquals("/data-development/task/task-55", detail.navigation().producerHref());
+    assertEquals("/data-development?nodeId=55", detail.navigation().producerHref());
 
     CanonicalProductService.NavigationResolution assetShortcut = canonicalService.fromAsset(701L);
     assertEquals("FOUND", assetShortcut.state());

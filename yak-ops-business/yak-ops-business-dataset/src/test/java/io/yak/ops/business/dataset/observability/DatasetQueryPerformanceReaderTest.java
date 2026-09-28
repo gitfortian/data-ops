@@ -100,6 +100,7 @@ class DatasetQueryPerformanceReaderTest {
   private DatasetQueryPerformanceReader scopedReader(
       DatasetQueryPerformanceBuffer buffer, long projectId) {
     CurrentProject currentProject = mock(CurrentProject.class);
+    when(currentProject.requireProjectId()).thenReturn(projectId);
     when(currentProject.current())
         .thenReturn(Optional.of(new ProjectContext(projectId, "p" + projectId)));
     return new DatasetQueryPerformanceReader(buffer, null, currentProject);

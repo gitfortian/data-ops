@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS yak_ops_consumption_subscription (
     source_identity VARCHAR(255) NOT NULL COMMENT 'Stable consumer identity in owning domain',
     display_hint VARCHAR(255) DEFAULT NULL COMMENT 'Presentation-only consumer label',
     consumption_mode VARCHAR(32) NOT NULL COMMENT 'QUERY/PREVIEW/EXPORT/API_INVOKE/DOWNSTREAM',
-    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/CANCELLED',
+    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/SUSPENDED/REVOKED',
     created_by VARCHAR(128) NOT NULL COMMENT 'Subscription creator principal',
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_by VARCHAR(128) NOT NULL COMMENT 'Last mutation principal',

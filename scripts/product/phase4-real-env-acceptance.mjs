@@ -133,9 +133,14 @@ function safeSummary(payload, raw) {
 }
 
 function dataOf(payload) {
-  if (payload && typeof payload === 'object' && !Array.isArray(payload)
-      && Object.prototype.hasOwnProperty.call(payload, 'data')) {
-    return payload.data;
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    if (Object.prototype.hasOwnProperty.call(payload, 'code') && Number(payload.code) !== 200) {
+      throw new Error(`API returned application error code ${payload.code}: ${safeSummary(payload, '')}`);
+    }
+    if (payload.success === false) {
+      throw new Error(`API reported unsuccessful response: ${safeSummary(payload, '')}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, 'data')) return payload.data;
   }
   return payload;
 }
@@ -178,7 +183,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(`acceptance assertion failed: ${message}`);
 }
 
-async function captureConsumption(productType, sourceId, expectedKey) {
+async function captureConsumption(productType, sourceId, expectedKey, expectedUsageEvidenceRef) {
   const detail = dataOf(await request(
     `/api/v1/consumption/products/${encodeURIComponent(expectedKey)}`,
     { projectScoped: true },
@@ -197,7 +202,40 @@ async function captureConsumption(productType, sourceId, expectedKey) {
   assert(canonical.state === 'FOUND', `${expectedKey} canonical detail state must be FOUND`);
   assert(canonical.productKey === expectedKey, `${expectedKey} canonical detail must preserve ProductKey`);
   assert(impactView.productKey === expectedKey, `${expectedKey} impact must preserve ProductKey`);
-  assert(navigation != null, `${expectedKey} source navigation must resolve`);
+  const expectedCanonicalHref = `/data-analysis/consumption/${encodeURIComponent(expectedKey)}`;
+  assert(navigation?.state === 'FOUND', `${expectedKey} source navigation state must be FOUND`);
+  assert(navigation?.canonicalHref === expectedCanonicalHref,
+    `${expectedKey} source navigation must resolve to its canonical detail`);
+  assert(canonical.navigation?.canonicalHref === expectedCanonicalHref,
+    `${expectedKey} detail must expose its canonical href`);
+  assert(canonical.activeVersion?.identity, `${expectedKey} must expose an immutable active version`);
+  assert(impactView.usageState === 'READY', `${expectedKey} must have reconciled successful Usage Evidence`);
+  const evidenceRefs = impactView.consumers.flatMap((consumer) => consumer.providerEvidenceRefs || []);
+  assert(evidenceRefs.includes(expectedUsageEvidenceRef),
+    `${expectedKey} Impact must include the exact Usage Evidence reference ${expectedUsageEvidenceRef}`);
+  assert(canonical.access?.subject && canonical.access?.action && canonical.access?.plane,
+    `${expectedKey} Access projection must identify subject, action, and plane`);
+  if (productType === 'DATASET') {
+    assert(canonical.access.providerState === 'READY' && canonical.access.decision === 'ALLOWED',
+      `${expectedKey} Dataset query access must be allowed for the authenticated runner subject`);
+  } else {
+    assert(canonical.access.action === 'INVOKE' && canonical.access.plane === 'PUBLIC_API_KEY',
+      `${expectedKey} Data Service Access must identify the public API-key plane`);
+    assert(canonical.access.providerState === 'UNAVAILABLE' && canonical.access.decision == null,
+      `${expectedKey} detail must not fabricate a subject-specific API-key decision`);
+  }
+  const requiredSections = ['ownership', 'visibility', 'quality', 'security', 'lineage'];
+  for (const sectionKey of requiredSections) {
+    const section = canonical.governanceEvidence.find((item) => item.sectionKey === sectionKey);
+    assert(section, `${expectedKey} must expose ${sectionKey} evidence state`);
+    assert(!['UNAVAILABLE', 'FORBIDDEN'].includes(section.state),
+      `${expectedKey} ${sectionKey} evidence is ${section.state}`);
+  }
+  const concreteGovernance = canonical.governanceEvidence.some((item) =>
+    item.sectionKey !== 'source-governance'
+      && item.state === 'READY'
+      && Object.keys(item.facts || {}).length > 0);
+  assert(concreteGovernance, `${expectedKey} must include concrete non-source governance facts`);
 
   return { canonical, sourceNavigation: navigation, impact: impactView };
 }
@@ -226,8 +264,14 @@ async function main() {
   });
   const currentUser = dataOf(await request('/yak-security/api/v1/account/current'));
 
-  const datasetConsumption = await captureConsumption('DATASET', DATASET_ID, datasetKey);
-  const dataServiceConsumption = await captureConsumption('DATA_SERVICE', DATA_SERVICE_ID, dataServiceKey);
+  const datasetQueryId = datasetGolden.queryPerformance?.queryId;
+  const invocationId = dataServiceGolden.invocationRecord?.id;
+  assert(datasetQueryId, 'Dataset Query evidence must include its stable queryId');
+  assert(invocationId, 'Data Service InvocationRecord must include its stable id');
+  const datasetConsumption = await captureConsumption(
+    'DATASET', DATASET_ID, datasetKey, `DATASET_QUERY_PERFORMANCE:query:${datasetQueryId}`);
+  const dataServiceConsumption = await captureConsumption(
+    'DATA_SERVICE', DATA_SERVICE_ID, dataServiceKey, `DATA_SERVICE_INVOCATION:invocation:${invocationId}`);
 
   const bundle = {
     probe: 'phase4-real-env-acceptance',
@@ -250,14 +294,18 @@ async function main() {
     },
     negativeEvidence,
     assertions: {
-      datasetRealQueryEvidence: true,
-      dataServicePublicInvokeEvidence: true,
-      dataServiceExternalAuthorizationBoundary: true,
-      dataServiceInvalidApiKeyRejected: true,
-      dataServiceUsageNormalized: true,
-      canonicalProductIdentityStable: true,
-      sourceNavigationResolved: true,
-      consumerImpactCaptured: true,
+      datasetRealQueryEvidence: !!datasetQueryId,
+      dataServicePublicInvokeEvidence: !!invocationId,
+      dataServiceExternalAuthorizationBoundary: dataServiceGolden.invocationRecord?.consumerId != null
+        && dataServiceGolden.invocationRecord?.apiKeyId != null,
+      dataServiceInvalidApiKeyRejected: negativeEvidence.invalidApiKey?.state === 'PASSED',
+      dataServiceUsageNormalized: dataServiceGolden.usageNormalization?.state === 'NORMALIZED',
+      canonicalProductIdentityStable: datasetConsumption.canonical.productKey === datasetKey
+        && dataServiceConsumption.canonical.productKey === dataServiceKey,
+      sourceNavigationResolved: datasetConsumption.sourceNavigation?.state === 'FOUND'
+        && dataServiceConsumption.sourceNavigation?.state === 'FOUND',
+      consumerImpactCaptured: datasetConsumption.impact.usageState === 'READY'
+        && dataServiceConsumption.impact.usageState === 'READY',
       crossProjectChecked: negativeEvidence.crossProject?.state === 'PASSED',
       forbiddenDatasetConsumeChecked: negativeEvidence.forbiddenDataset?.state === 'PASSED',
     },

@@ -4,7 +4,16 @@ package io.yak.ops.business.consumption.product.model;
 public record AccessProjection(
     AccessDecision decision,
     ProviderEvidenceState providerState,
-    String reason) {
+    String reason,
+    String subject,
+    String action,
+    String plane,
+    String nextStep) {
+
+  public AccessProjection(
+      AccessDecision decision, ProviderEvidenceState providerState, String reason) {
+    this(decision, providerState, reason, null, null, null, null);
+  }
 
   public AccessProjection {
     if (providerState == null) {
@@ -24,5 +33,11 @@ public record AccessProjection(
 
   public static AccessProjection unavailable(String reason) {
     return new AccessProjection(null, ProviderEvidenceState.UNAVAILABLE, reason);
+  }
+
+  public static AccessProjection unavailable(
+      String reason, String subject, String action, String plane, String nextStep) {
+    return new AccessProjection(
+        null, ProviderEvidenceState.UNAVAILABLE, reason, subject, action, plane, nextStep);
   }
 }
