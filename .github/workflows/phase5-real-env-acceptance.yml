@@ -1,0 +1,136 @@
+name: Phase 5 Real Environment Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: GitHub Environment holding the trusted target URL and Phase 5 acceptance credentials
+        required: true
+        type: environment
+      execution_target:
+        description: Execution network for the trusted deployment target
+        required: true
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - phase5-self-hosted
+      project_id:
+        description: Project containing the Golden Metric
+        required: true
+        type: string
+      metric_id:
+        description: Golden Metric id
+        required: true
+        type: string
+      metric_version:
+        description: Exact Metric version (blank = current)
+        required: false
+        type: string
+      validate:
+        description: Execute real Definition Validation before evidence capture
+        required: true
+        default: false
+        type: boolean
+      publish:
+        description: Publish the exact current version when readiness is READY
+        required: true
+        default: false
+        type: boolean
+      require_observed_usage:
+        description: Require at least one real Observed Runtime Usage evidence item
+        required: true
+        default: true
+        type: boolean
+      cross_project_id:
+        description: Optional different Project id for isolation probe
+        required: false
+        type: string
+      dataset_id:
+        description: Optional Phase 4 Dataset realization id
+        required: false
+        type: string
+      run_dataset_evidence:
+        description: Run Phase 4 Dataset runtime evidence and bind it to Metric usage
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  golden-metric:
+    name: Golden Metric evidence
+    runs-on: ${{ inputs.execution_target == 'phase5-self-hosted' && 'phase5-acceptance' || 'ubuntu-latest' }}
+    environment: ${{ inputs.target_environment }}
+    env:
+      # The deployment target is bound to the selected GitHub Environment so dispatch users
+      # cannot redirect environment credentials to an arbitrary URL.
+      YAK_OPS_BASE_URL: ${{ vars.YAK_OPS_PHASE5_BASE_URL }}
+      YAK_OPS_PROJECT_ID: ${{ inputs.project_id }}
+      YAK_OPS_METRIC_ID: ${{ inputs.metric_id }}
+      YAK_OPS_PHASE5_METRIC_VERSION: ${{ inputs.metric_version }}
+      YAK_OPS_PHASE5_VALIDATE: ${{ inputs.validate }}
+      YAK_OPS_PHASE5_PUBLISH: ${{ inputs.publish }}
+      YAK_OPS_PHASE5_REQUIRE_OBSERVED_USAGE: ${{ inputs.require_observed_usage }}
+      YAK_OPS_CROSS_PROJECT_ID: ${{ inputs.cross_project_id }}
+      YAK_OPS_DATASET_ID: ${{ inputs.dataset_id }}
+      YAK_OPS_PHASE5_RUN_DATASET_EVIDENCE: ${{ inputs.run_dataset_evidence }}
+      YAK_OPS_ACCEPTANCE_COMMIT: ${{ github.sha }}
+      YAK_OPS_USERNAME: ${{ secrets.YAK_OPS_PHASE5_ACCEPTANCE_USERNAME }}
+      YAK_OPS_PASSWORD: ${{ secrets.YAK_OPS_PHASE5_ACCEPTANCE_PASSWORD }}
+      YAK_OPS_DENIED_USERNAME: ${{ secrets.YAK_OPS_PHASE5_DENIED_USERNAME }}
+      YAK_OPS_DENIED_PASSWORD: ${{ secrets.YAK_OPS_PHASE5_DENIED_PASSWORD }}
+    steps:
+      - name: Checkout selected release ref
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate acceptance runner syntax
+        run: node --check scripts/product/phase5-real-env-acceptance.mjs
+
+      - name: Validate acceptance inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${YAK_OPS_BASE_URL}" || { echo 'Missing environment variable YAK_OPS_PHASE5_BASE_URL' >&2; exit 1; }
+          test -n "${YAK_OPS_USERNAME}" || { echo 'Missing environment secret YAK_OPS_PHASE5_ACCEPTANCE_USERNAME' >&2; exit 1; }
+          test -n "${YAK_OPS_PASSWORD}" || { echo 'Missing environment secret YAK_OPS_PHASE5_ACCEPTANCE_PASSWORD' >&2; exit 1; }
+          if [[ "${YAK_OPS_PHASE5_RUN_DATASET_EVIDENCE}" == "true" && -z "${YAK_OPS_DATASET_ID}" ]]; then
+            echo 'dataset_id is required when run_dataset_evidence=true' >&2
+            exit 1
+          fi
+
+      - name: Capture logged-in Phase 5 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-evidence
+          node scripts/product/phase5-real-env-acceptance.mjs \
+            > "acceptance-evidence/phase5-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+
+      - name: Publish safe acceptance summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="acceptance-evidence/phase5-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          {
+            echo '## Phase 5 real-environment acceptance'
+            echo
+            jq -r '"- Commit: `\(.commit // "unknown")`\n- Project: `\(.projectId)`\n- Metric: `\(.subject.metric.id)` / `\(.subject.metric.metricCode)` / version `\(.subject.exactVersion.version)`\n- Validation READY: `\(.assertions.latestReadyValidationExactVersion)`\n- Publication exact version: `\(.assertions.activePublicationExactVersion)`\n- Reference usage present: `\(.assertions.referenceUsagePresent)`\n- Observed runtime evidence present: `\(.assertions.observedRuntimeEvidencePresent)`\n- Lineage READY: `\(.assertions.lineageCoverageReady)`\n- Cross-project checked: `\(.assertions.crossProjectChecked)`\n- Forbidden read checked: `\(.assertions.forbiddenReadChecked)`\n- Captured at: `\(.capturedAt)`"' "${evidence}"
+            echo
+            echo '> The JSON artifact is the evidence source. Remaining destructive/provider fault injection stays explicit and manual; this workflow does not fabricate those results.'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase5-real-env-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: acceptance-evidence/*.json
+          if-no-files-found: error
+          retention-days: 30
