@@ -92,7 +92,9 @@ jobs:
           node-version: '20'
 
       - name: Validate acceptance runner syntax
-        run: node --check scripts/product/phase5-real-env-acceptance.mjs
+        run: |
+          node --check scripts/product/phase5-real-env-acceptance.mjs
+          node --check scripts/product/phase5-legacy-metric-api-smoke.mjs
 
       - name: Validate acceptance inputs
         shell: bash
@@ -114,17 +116,27 @@ jobs:
           node scripts/product/phase5-real-env-acceptance.mjs \
             > "acceptance-evidence/phase5-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
 
+      - name: Capture live legacy Metric API smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/product/phase5-legacy-metric-api-smoke.mjs \
+            > "acceptance-evidence/phase5-legacy-metric-api-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+
       - name: Publish safe acceptance summary
         shell: bash
         run: |
           set -euo pipefail
           evidence="acceptance-evidence/phase5-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          legacy_evidence="acceptance-evidence/phase5-legacy-metric-api-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
           {
             echo '## Phase 5 real-environment acceptance'
             echo
             jq -r '"- Commit: `\(.commit // "unknown")`\n- Project: `\(.projectId)`\n- Metric: `\(.subject.metric.id)` / `\(.subject.metric.metricCode)` / version `\(.subject.exactVersion.version)`\n- Validation READY: `\(.assertions.latestReadyValidationExactVersion)`\n- Publication exact version: `\(.assertions.activePublicationExactVersion)`\n- Reference usage present: `\(.assertions.referenceUsagePresent)`\n- Observed runtime evidence present: `\(.assertions.observedRuntimeEvidencePresent)`\n- Lineage READY: `\(.assertions.lineageCoverageReady)`\n- Cross-project checked: `\(.assertions.crossProjectChecked)`\n- Forbidden read checked: `\(.assertions.forbiddenReadChecked)`\n- Captured at: `\(.capturedAt)`"' "${evidence}"
             echo
-            echo '> The JSON artifact is the evidence source. Remaining destructive/provider fault injection stays explicit and manual; this workflow does not fabricate those results.'
+            jq -r '"### Legacy Metric API live smoke\n\n- Detail GET: HTTP `\(.endpoints.detail.httpStatus)`\n- Page POST: HTTP `\(.endpoints.page.httpStatus)`, Golden Metric matched: `\(.endpoints.page.matchedMetric)`\n- Stats GET: HTTP `\(.endpoints.stats.httpStatus)`, total: `\(.endpoints.stats.total)`\n- Read-only smoke: `\(.assertions.readOnlySmoke)`"' "${legacy_evidence}"
+            echo
+            echo '> The JSON artifacts are the evidence source. Remaining destructive/provider fault injection stays explicit and manual; this workflow does not fabricate those results.'
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload acceptance evidence
