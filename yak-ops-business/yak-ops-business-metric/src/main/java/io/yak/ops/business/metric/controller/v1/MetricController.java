@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +41,6 @@ import org.springframework.web.bind.annotation.RestController;
 /** 指标管理 REST API。 */
 @Tag(name = "指标管理接口")
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/metrics")
 @ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)
 @RequiresPermission(MetricPermissionCode.READ)
@@ -55,6 +53,23 @@ public class MetricController {
   private final CurrentUserProvider currentUserProvider;
   private final MetricReferenceResolver referenceResolver;
   private final MetricImpactService impactService;
+
+  public MetricController(
+      MetricCatalogService service,
+      MetricLifecycleService lifecycleService,
+      MetricAuthoringQueryService authoringQueryService,
+      MetricCompositionRepository compositionRepository,
+      CurrentUserProvider currentUserProvider,
+      MetricReferenceResolver referenceResolver,
+      MetricImpactService impactService) {
+    this.service = service;
+    this.lifecycleService = lifecycleService;
+    this.authoringQueryService = authoringQueryService;
+    this.compositionRepository = compositionRepository;
+    this.currentUserProvider = currentUserProvider;
+    this.referenceResolver = referenceResolver;
+    this.impactService = impactService;
+  }
 
   @Operation(summary = "创建指标")
   @RequiresPermission(MetricPermissionCode.CREATE)

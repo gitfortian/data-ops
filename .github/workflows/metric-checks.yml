@@ -1,0 +1,91 @@
+name: Metric Checks
+
+on:
+  pull_request:
+    paths:
+      - 'yak-ops-business/yak-ops-business-metric/**'
+      - 'yak-ops-boot/**'
+      - 'yak-ops-ui/src/pages/metric/**'
+      - 'yak-ops-ui/src/pages/semantic/**'
+      - 'yak-ops-ui/src/services/metric/**'
+      - 'yak-ops-ui/src/services/semantic/**'
+      - 'scripts/db/phase5-metric-*.sql'
+      - 'scripts/product/phase5-real-env-acceptance.mjs'
+      - '.github/workflows/metric-checks.yml'
+
+jobs:
+  backend-metric:
+    name: Backend Metric tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build backend dependencies without unrelated tests
+        run: >-
+          mvn -B
+          -pl yak-ops-boot
+          -am
+          -DskipTests
+          install
+      - name: Run Metric module tests
+        run: >-
+          mvn -B
+          -pl yak-ops-business/yak-ops-business-metric
+          test
+      - name: Run Phase 5 Boot observed-usage adapter tests
+        run: >-
+          mvn -B
+          -pl yak-ops-boot
+          -Dtest=ConsumptionMetricObservedUsageProviderTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+          test
+
+  frontend-metric:
+    name: Frontend Metric and Semantic tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: yak-ops-ui
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Set up Yarn classic
+        run: npm install --global yarn@1.22.22
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+      - name: Run Metric and Semantic tests
+        run: >-
+          yarn jest
+          src/pages/metric
+          src/pages/semantic
+          --runInBand
+      - name: Type-check Metric and Semantic source paths
+        shell: bash
+        run: |
+          set -uo pipefail
+          diagnostics="$(mktemp)"
+          set +e
+          yarn tsc --noEmit --pretty false 2>&1 | tee "${diagnostics}"
+          tsc_status=${PIPESTATUS[0]}
+          set -e
+
+          phase5_errors="$(grep -E '^src/(pages|services)/(metric|semantic)/.*: error TS[0-9]+:' "${diagnostics}" || true)"
+          if [[ -n "${phase5_errors}" ]]; then
+            echo '::error::TypeScript errors detected in Metric/Semantic source paths.'
+            printf '%s\n' "${phase5_errors}"
+            exit 1
+          fi
+
+          if [[ "${tsc_status}" -ne 0 ]]; then
+            echo '::warning::Repository-wide TypeScript diagnostics exist outside Metric/Semantic paths; they are reported above but do not block the Phase 5 Metric gate.'
+          fi
