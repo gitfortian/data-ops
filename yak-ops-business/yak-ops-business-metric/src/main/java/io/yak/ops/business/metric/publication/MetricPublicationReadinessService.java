@@ -5,13 +5,10 @@ import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateStatus;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.PublicationSubject;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
+import io.yak.ops.business.metric.support.MetricSnapshotDigest;
 import io.yak.ops.common.bean.po.metric.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -56,7 +53,7 @@ public class MetricPublicationReadinessService {
         metricId,
         metricVersion.getId(),
         version,
-        sha256(metricVersion.getSnapshot()));
+        MetricSnapshotDigest.sha256(metricVersion.getSnapshot()));
 
     List<MetricPublicationGate> providers = gates.orderedStream().toList();
     if (providers.isEmpty()) {
@@ -116,13 +113,4 @@ public class MetricPublicationReadinessService {
     return subject;
   }
 
-  private static String sha256(String value) {
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      return HexFormat.of().formatHex(
-          digest.digest((value == null ? "" : value).getBytes(StandardCharsets.UTF_8)));
-    } catch (NoSuchAlgorithmException exception) {
-      throw new IllegalStateException("SHA-256 is unavailable", exception);
-    }
-  }
 }

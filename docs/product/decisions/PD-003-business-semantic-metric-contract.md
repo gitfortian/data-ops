@@ -1,7 +1,7 @@
 # PD-003 — Business Semantic & Metric Product Contract
 
 Status: ACCEPTED  
-Implementation: NOT_STARTED  
+Implementation: IMPLEMENTING
 Date: 2026-09-24  
 Owner: Product  
 Related Feature: F-005  

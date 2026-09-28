@@ -1,7 +1,8 @@
-import { useNavigate } from '@umijs/max';
+import { useNavigate, useSearchParams } from '@umijs/max';
 import { message, Select, Spin, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { getAffectedMetrics, getMetricImpactContext, pageMetrics } from '@/services/metric/api';
 import { pageSemanticStandards } from '@/services/semantic/api';
@@ -30,7 +31,12 @@ interface Option {
 
 /** 正向:依赖健康 + Reference Usage + Observed Runtime Usage coverage。 */
 const UpstreamChangesView = () => {
-  const [metricId, setMetricId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const queryMetricIdValue = searchParams.get('metricId');
+  const queryMetricId = queryMetricIdValue && /^\d+$/.test(queryMetricIdValue)
+    ? Number(queryMetricIdValue)
+    : null;
+  const [metricId, setMetricId] = useState<number | null>(queryMetricId);
   const [metricOptions, setMetricOptions] = useState<Option[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [context, setContext] = useState<MetricImpactContext | null>(null);
@@ -53,7 +59,7 @@ const UpstreamChangesView = () => {
       .finally(() => setSearchLoading(false));
   }, []);
 
-  const analyzeImpact = async (id: number) => {
+  const analyzeImpact = useCallback(async (id: number) => {
     setLoading(true);
     try {
       setContext(await getMetricImpactContext(id));
@@ -63,7 +69,13 @@ const UpstreamChangesView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (queryMetricId == null) return;
+    setMetricId(queryMetricId);
+    void analyzeImpact(queryMetricId);
+  }, [analyzeImpact, queryMetricId]);
 
   const changeColumns: ColumnsType<DependencyChange> = [
     {
@@ -103,6 +115,12 @@ const UpstreamChangesView = () => {
 
   const changedCount =
     context?.dependencies.filter((c) => c.changeStatus === 'CHANGED' || c.changeStatus === 'MISSING').length ?? 0;
+  const unavailableDependencyCount =
+    context?.dependencies.filter((change) => change.dependencyHealth === 'UNAVAILABLE').length ?? 0;
+  const referenceUsageCount = context
+    && (context.referenceUsageCoverage?.status === 'READY' || context.referenceUsageCoverage?.status === 'EMPTY')
+    ? context.referenceUsage.length
+    : '—';
 
   return (
     <div>
@@ -151,13 +169,13 @@ const UpstreamChangesView = () => {
                 <div className="mt-1 text-[13px] text-[#667085]">依赖总数</div>
               </div>
               <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-                <div className={`text-[22px] font-semibold ${changedCount > 0 ? 'text-[#fa8c16]' : ''}`}>
-                  {changedCount}
+                <div className={`text-[22px] font-semibold ${changedCount > 0 || unavailableDependencyCount > 0 ? 'text-[#fa8c16]' : ''}`}>
+                  {unavailableDependencyCount > 0 ? `${changedCount} · ${unavailableDependencyCount} 项待确认` : changedCount}
                 </div>
                 <div className="mt-1 text-[13px] text-[#667085]">依赖变更 / 缺失</div>
               </div>
               <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-                <div className="text-[22px] font-semibold">{context.referenceUsage.length}</div>
+                <div className="text-[22px] font-semibold">{referenceUsageCount}</div>
                 <div className="mt-1 text-[13px] text-[#667085]">Reference Usage</div>
               </div>
             </div>

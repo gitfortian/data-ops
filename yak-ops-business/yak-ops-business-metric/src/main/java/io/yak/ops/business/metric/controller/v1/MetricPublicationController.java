@@ -45,7 +45,7 @@ public class MetricPublicationController {
   }
 
   @Operation(summary = "显式发布一个满足 Gate 的 immutable MetricVersion")
-  @RequiresPermission(MetricPermissionCode.UPDATE)
+  @RequiresPermission(MetricPermissionCode.PUBLISH)
   @PostMapping("/{id}/versions/{version}/publish")
   public Result<PublishedMetricContract> publish(
       @PathVariable("id") Long id,
@@ -61,6 +61,12 @@ public class MetricPublicationController {
     return Result.success(publicationService.active(id));
   }
 
+  @Operation(summary = "读取当前项目全部 Published Metric Contract")
+  @GetMapping("/publications/active")
+  public Result<List<PublishedMetricContract>> activeContracts() {
+    return Result.success(publicationService.listActive());
+  }
+
   @Operation(summary = "读取指标发布生命周期账本")
   @GetMapping("/{id}/publication-history")
   public Result<List<PublicationEventView>> history(@PathVariable("id") Long id) {
@@ -68,7 +74,7 @@ public class MetricPublicationController {
   }
 
   @Operation(summary = "显式撤回当前 Published Metric Contract")
-  @RequiresPermission(MetricPermissionCode.UPDATE)
+  @RequiresPermission(MetricPermissionCode.PUBLISH)
   @PostMapping("/{id}/publication/withdraw")
   public Result<WithdrawalResult> withdraw(
       @PathVariable("id") Long id,

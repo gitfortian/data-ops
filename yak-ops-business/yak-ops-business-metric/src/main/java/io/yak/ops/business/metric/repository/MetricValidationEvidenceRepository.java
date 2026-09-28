@@ -1,15 +1,17 @@
 package io.yak.ops.business.metric.repository;
 
-import io.yak.ops.common.bean.po.metric.MetricValidationEvidencePO;
+import io.yak.ops.business.metric.domain.MetricValidationEvidence;
 import java.util.List;
 
 /** 指标定义校验证据仓储。证据只追加，不更新历史记录。 */
 public interface MetricValidationEvidenceRepository {
 
-  MetricValidationEvidencePO append(MetricValidationEvidencePO evidence);
+  MetricValidationEvidence append(MetricValidationEvidence evidence);
 
-  List<MetricValidationEvidencePO> listByVersion(Long metricId, int metricVersion);
+  List<MetricValidationEvidence> listByVersion(Long metricId, int metricVersion);
 
-  /** Publication 等后续 Gate 可消费的最近 READY evidence。 */
-  MetricValidationEvidencePO findLatestReady(Long metricId, int metricVersion);
+  /** Latest PASSED evidence from a READY provider for the exact MetricVersion. */
+  MetricValidationEvidence findLatestReady(Long metricId, int metricVersion);
+
+  boolean hasEvidence(Long metricId);
 }

@@ -6,19 +6,23 @@
 io.yak.ops.business.metric
 ├── config/        ConditionalOnMetricPersistence + MetricPersistenceConfiguration(Flyway/MapperScan)
 ├── catalog/       Metric/MetricStatus/MetricType(域对象)/MetricCatalogService
+├── validation/    exact-version definition validation and append-only evidence
+├── publication/   fail-closed gates, explicit publication ledger and active pointer
+├── impact/        dependency, Reference Usage, Lineage and Observed Usage projection
+├── usage/         MetricUsageService + project-scoped MetricUsageRepository
 ├── exception/     MetricException(BusinessException)
 ├── repository/    MetricRepository(接口)+ MetricRepositoryAdapter(MyBatis 适配)
 ├── dao/mapper/    MetricMapper(BaseMapper)
 ├── api/           MetricQueryApi/MetricUsageApi/MetricLineageApi(SPI 接口;请求/响应 record)
-├── usage/         MetricUsageService + MetricAssetUsageSectionProvider（Metric-owned 统计与 Asset 只读投影）
 └── controller/v1/ MetricController + dto/ + vo/ + converter/
 ```
 
-后续包（按 ticket 增量）：`tag/`（49 标签）、`version/`（50 版本）、`lineage/`（51 血缘登记）、`impact/`（53 影响分析）、`service/`（54 元数据 API）。
+Existing tag/version/lineage packages retain their ownership; the Phase 5 packages extend the existing Metric aggregate and do not introduce a second Semantic, Modeling, Lineage or Consumption truth.
 
 ## 持久化
 
 - 自持 Flyway：`classpath:db/migration/yak-metric`，历史表 `flyway_schema_history_metric`，baseline 0。
+- Metric Flyway 在 Dataset Flyway 之后运行；V6 需以 `yak_dataset.id` 归一历史 Dataset Reference Usage 的消费方标识。
 - 共享数据源：`@Import(BusinessDatabaseConfiguration.class)`（datasource 模块提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager），与 semantic/modeling 同池。
 - 事务：`@Transactional(transactionManager = "yakBusinessTransactionManager")`。
 - PO 位于 `yak-ops-common` 的 `io.yak.ops.common.bean.po.metric`（平台惯例）。
@@ -54,5 +58,12 @@ io.yak.ops.business.metric
 | yak_metric_dependency | V1 | 45 |
 | yak_metric_composition | V1 | 45 |
 | yak_metric_usage | V1 | 45 |
+| yak_metric_validation_evidence | V4 | F-005 |
+| yak_metric_publication_event | V5 | F-005 |
+| yak_metric_active_publication | V5 | F-005 |
+| yak_metric_usage.metric_version | V6 | F-005 |
+| yak_metric_validation_evidence.provider_state | V7 | F-005 |
 
 迁移合入后**不可再编辑**（对齐 modeling/semantic 纪律）。
+
+`scripts/db/phase5-metric-productization-upgrade.sql` 是不运行 Flyway 时的手动等价路径；手动脚本和模块 Flyway 迁移只能选择一条。配套 verify 脚本依据 Flyway 最终列与索引形状检查，不使用手工脚本私有的列名或索引顺序。

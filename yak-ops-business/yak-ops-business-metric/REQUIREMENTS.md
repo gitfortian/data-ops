@@ -57,6 +57,16 @@
 
 - 比对 `dependency_version` 与上游当前版本：UP_TO_DATE/OUTDATED/REMOVED；上游版本经 SPI 批量解析。
 
+## Phase 5：Definition Validation / Publication / governed references / Impact
+
+- Definition Validation 对 immutable MetricVersion 快照校验 Metric 必填项、Domain / Process / Caliber / Unit / Model 引用，以及 ATOMIC / DERIVED / COMPOSITE 类型约束；复合公式必须固化 token、精确上游版本并拒绝环。
+- Validation evidence 必须绑定精确 `metric_version_id` 与 snapshot digest；结果为 PASSED / FAILED / NOT_APPLICABLE，provider coverage 为 READY / UNAVAILABLE / FORBIDDEN。Unavailable / Forbidden 不得降级成通过、删除或空结果。
+- Published Metric Contract 必须由有 `metric:publish` 权限的用户显式发布精确当前 MetricVersion。Draft 编辑不移动 active publication；Withdraw 追加账本事件并清除 active pointer。
+- 新下游 governed reference 默认选择 active Published Metric，并保存 `(metricId, metricVersion)`；legacy null version 明确表示未知，不得伪造历史版本。
+- Reference Usage、Lineage 与 Consumption Observed Usage 分开呈现。Reference Usage / Observed Usage provider 均提供 coverage 状态；Unavailable / Forbidden 不是 EMPTY 或 0。
+- 删除存在 Validation evidence 或 Publication ledger 的 Metric 必须阻断；校验、发布、撤回、停用与删除围绕 Metric 行锁定，避免并发产生孤立证据或越过状态检查。
+- Canonical detail 展示当前 active publication、当前 Draft drift、validation evidence、readiness gate 与受权限控制的 Validate / Publish / Withdraw 操作。
+
 ---
 
 ## 决策记录（2026-09-18 深度评审）

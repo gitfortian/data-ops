@@ -25,16 +25,16 @@ class MetricPublicationControllerSecurityContractTest {
   }
 
   @Test
-  void publishAndWithdrawReuseExistingMetricUpdatePermission() throws Exception {
+  void publishAndWithdrawRequireDedicatedPublicationPermission() throws Exception {
     Method publish = MetricPublicationController.class.getMethod(
         "publish", Long.class, int.class, jakarta.servlet.http.HttpServletRequest.class);
     Method withdraw = MetricPublicationController.class.getMethod(
         "withdraw", Long.class, jakarta.servlet.http.HttpServletRequest.class);
 
     assertThat(permissionValues(publish.getAnnotation(RequiresPermission.class)))
-        .contains(MetricPermissionCode.UPDATE);
+        .contains(MetricPermissionCode.PUBLISH);
     assertThat(permissionValues(withdraw.getAnnotation(RequiresPermission.class)))
-        .contains(MetricPermissionCode.UPDATE);
+        .contains(MetricPermissionCode.PUBLISH);
   }
 
   private static String[] permissionValues(RequiresPermission permission) throws Exception {

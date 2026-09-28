@@ -8,6 +8,7 @@ import io.yak.ops.business.semantic.api.BusinessDomain;
 import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.api.ProcessApi;
 import io.yak.ops.business.semantic.api.StandardQueryApi;
+import io.yak.ops.business.semantic.api.StandardKind;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -42,7 +43,8 @@ public class MetricReferenceResolver {
   public enum ResolutionStatus {
     READY,
     REMOVED,
-    UNAVAILABLE
+    UNAVAILABLE,
+    FORBIDDEN
   }
 
   public record ReferenceResolution(Reference reference, ResolutionStatus status) {
@@ -56,6 +58,10 @@ public class MetricReferenceResolver {
 
     public static ReferenceResolution unavailable() {
       return new ReferenceResolution(Reference.EMPTY, ResolutionStatus.UNAVAILABLE);
+    }
+
+    public static ReferenceResolution forbidden() {
+      return new ReferenceResolution(Reference.EMPTY, ResolutionStatus.FORBIDDEN);
     }
   }
 
@@ -156,8 +162,61 @@ public class MetricReferenceResolver {
         return ReferenceResolution.removed();
       }
       return ReferenceResolution.ready(new Reference(standard.code(), standard.version()));
+    } catch (SecurityException e) {
+      return ReferenceResolution.forbidden();
     } catch (RuntimeException e) {
       log.warn("Reference resolution failed for standard:{} (unavailable): {}", standardId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
+  }
+
+  public ReferenceResolution standardReferenceResolution(Long standardId, StandardKind expectedKind) {
+    if (standardId == null || standardId <= 0) return ReferenceResolution.removed();
+    StandardQueryApi api = standardQueryApi.getIfAvailable();
+    if (api == null) return ReferenceResolution.unavailable();
+    try {
+      var standard = api.get(standardId);
+      if (standard == null || standard.kind() != expectedKind) return ReferenceResolution.removed();
+      return ReferenceResolution.ready(new Reference(standard.code(), standard.version()));
+    } catch (SecurityException e) {
+      return ReferenceResolution.forbidden();
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for standard:{} (unavailable): {}", standardId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
+  }
+
+  public ReferenceResolution domainResolution(Long domainId) {
+    if (domainId == null || domainId <= 0) return ReferenceResolution.removed();
+    ProcessApi api = processApi.getIfAvailable();
+    if (api == null) return ReferenceResolution.unavailable();
+    try {
+      return api.listDomains().stream().filter(domain -> domainId.equals(domain.id())).findFirst()
+          .map(domain -> ReferenceResolution.ready(new Reference(domain.code(), null)))
+          .orElseGet(ReferenceResolution::removed);
+    } catch (SecurityException e) {
+      return ReferenceResolution.forbidden();
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for domain:{} (unavailable): {}", domainId, e.getMessage());
+      return ReferenceResolution.unavailable();
+    }
+  }
+
+  public ReferenceResolution processResolution(Long processId, Long domainId) {
+    if (processId == null || processId <= 0) return ReferenceResolution.removed();
+    ProcessApi api = processApi.getIfAvailable();
+    if (api == null) return ReferenceResolution.unavailable();
+    try {
+      return api.listProcesses(domainId).stream()
+          .filter(process -> processId.equals(process.id())
+              && (domainId == null || domainId.equals(process.domainId())))
+          .findFirst()
+          .map(process -> ReferenceResolution.ready(new Reference(process.code(), null)))
+          .orElseGet(ReferenceResolution::removed);
+    } catch (SecurityException e) {
+      return ReferenceResolution.forbidden();
+    } catch (RuntimeException e) {
+      log.warn("Reference resolution failed for process:{} (unavailable): {}", processId, e.getMessage());
       return ReferenceResolution.unavailable();
     }
   }
@@ -182,6 +241,8 @@ public class MetricReferenceResolver {
         return ReferenceResolution.removed();
       }
       return ReferenceResolution.ready(new Reference(brief.code(), brief.latestVersionNo()));
+    } catch (SecurityException e) {
+      return ReferenceResolution.forbidden();
     } catch (RuntimeException e) {
       log.warn("Reference resolution failed for model:{} (unavailable): {}", modelId, e.getMessage());
       return ReferenceResolution.unavailable();

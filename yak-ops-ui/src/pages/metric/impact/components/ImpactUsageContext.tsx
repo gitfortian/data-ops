@@ -26,6 +26,12 @@ const referenceColumns: ColumnsType<MetricReferenceUsageEvidence> = [
   },
   { title: '稳定 ID', dataIndex: 'usageId', width: 110, render: (value: number) => `#${value}` },
   {
+    title: '引用版本',
+    dataIndex: 'metricVersion',
+    width: 120,
+    render: (value?: number | null) => value == null ? '历史版本未知' : `Metric v${value}`,
+  },
+  {
     title: '登记时间',
     dataIndex: 'recordedAt',
     width: 190,
@@ -93,6 +99,7 @@ const ObservedCoverage = ({ coverage }: { coverage: MetricObservedUsageCoverage 
 const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
   const navigate = useNavigate();
   const lineageMeta = COVERAGE_META[context.lineage.status] ?? { label: context.lineage.status };
+  const referenceUsageStatus = context.referenceUsageCoverage?.status ?? 'UNAVAILABLE';
 
   return (
     <div className="space-y-5">
@@ -128,19 +135,29 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
             title="Lineage Evidence 暂不可读"
             description="Provider 不可用或无权限不能解释为没有影响；恢复后可重新执行分析"
           />
-        ) : (
+        ) : context.lineage.status === 'EMPTY' ? (
           <YakEmpty compact title="暂无直接血缘关系" description="Lineage Provider 正常，但当前未记录 direct relation" />
+        ) : (
+          <YakEmpty compact title="Lineage 覆盖状态未知" description="当前无法确认是否存在直接血缘关系" />
         )}
       </div>
 
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <Typography.Text strong>Reference Usage</Typography.Text>
-          <Tag>{context.referenceUsage.length}</Tag>
+          <Tag color={COVERAGE_META[referenceUsageStatus]?.color}>
+            {COVERAGE_META[referenceUsageStatus]?.label ?? '状态未知'}
+          </Tag>
+          {referenceUsageStatus === 'READY' || referenceUsageStatus === 'EMPTY'
+            ? <Tag>{context.referenceUsage.length}</Tag>
+            : null}
           <Typography.Text type="secondary" className="!text-[12px]">
             表示哪些下游对象声明/保存了对该 Metric 定义的引用，不代表真实调用次数
           </Typography.Text>
         </div>
+        {context.referenceUsageCoverage?.reason ? (
+          <div className="mb-2 text-[13px] text-[#667085]">{context.referenceUsageCoverage.reason}</div>
+        ) : null}
         {context.referenceUsage.length > 0 ? (
           <Table<MetricReferenceUsageEvidence>
             rowKey="referenceId"
@@ -149,8 +166,10 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
             columns={referenceColumns}
             dataSource={context.referenceUsage}
           />
+        ) : referenceUsageStatus === 'EMPTY' ? (
+          <YakEmpty compact title="暂无 Reference Usage" description="Metric Usage Provider 正常，但当前没有已登记引用" />
         ) : (
-          <YakEmpty compact title="暂无 Reference Usage" description="当前没有下游对象登记对该指标的稳定引用" />
+          <YakEmpty compact title="Reference Usage 暂不可读" description="Provider 不可用或无权限不能解释为没有引用记录" />
         )}
       </div>
 

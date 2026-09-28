@@ -10,8 +10,6 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.api.MetricApi;
 import io.yak.ops.business.metric.dao.mapper.MetricTagRelMapper;
-import io.yak.ops.business.metric.dao.mapper.MetricUsageMapper;
-import io.yak.ops.business.metric.dao.mapper.MetricVersionMapper;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.domain.MetricQualifier;
 import io.yak.ops.business.metric.domain.MetricStatus;
@@ -23,14 +21,12 @@ import io.yak.ops.business.metric.repository.MetricCompositionRepository;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
 import io.yak.ops.business.metric.repository.MetricRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
+import io.yak.ops.business.metric.repository.MetricUsageRepository;
 import io.yak.ops.business.metric.support.CodeGenerator;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
 import io.yak.ops.common.bean.po.metric.MetricTagRelPO;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
-import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -66,9 +62,7 @@ public class MetricCatalogService {
   private final MetricDependencyRepository dependencyRepository;
   private final MetricVersionRepository versionRepository;
   private final MetricTagRelMapper tagRelMapper;
-  private final MetricUsageMapper usageMapper;
-  private final MetricVersionMapper versionMapper;
-  private final CurrentProject currentProject;
+  private final MetricUsageRepository usageRepository;
   private final BusinessAuditService auditService;
   private final MetricLineageRegistrationService lineageRegistrationService;
   private final MetricReferenceResolver referenceResolver;
@@ -80,9 +74,7 @@ public class MetricCatalogService {
       MetricDependencyRepository dependencyRepository,
       MetricVersionRepository versionRepository,
       MetricTagRelMapper tagRelMapper,
-      MetricUsageMapper usageMapper,
-      MetricVersionMapper versionMapper,
-      CurrentProject currentProject,
+      MetricUsageRepository usageRepository,
       BusinessAuditService auditService,
       MetricLineageRegistrationService lineageRegistrationService,
       MetricReferenceResolver referenceResolver,
@@ -92,9 +84,7 @@ public class MetricCatalogService {
     this.dependencyRepository = dependencyRepository;
     this.versionRepository = versionRepository;
     this.tagRelMapper = tagRelMapper;
-    this.usageMapper = usageMapper;
-    this.versionMapper = versionMapper;
-    this.currentProject = currentProject;
+    this.usageRepository = usageRepository;
     this.auditService = auditService;
     this.lineageRegistrationService = lineageRegistrationService;
     this.referenceResolver = referenceResolver;
@@ -284,7 +274,7 @@ public class MetricCatalogService {
             "指标被派生指标引用（" + referring.stream().map(Metric::metricCode).limit(3).toList()
                 + "），无法删除");
       }
-      long usageCount = usageMapper.countByMetric(currentProject.requireProjectId(), id);
+      long usageCount = usageRepository.countByMetric(id);
       if (usageCount > 0) {
         throw new MetricException(MetricErrorCode.METRIC_REFERENCED,
             "指标已被 " + usageCount + " 处使用（报表/看板/API），无法删除");
@@ -296,13 +286,8 @@ public class MetricCatalogService {
       dependencyRepository.deleteByMetric(id);
       tagRelMapper.delete(new LambdaQueryWrapper<MetricTagRelPO>()
           .eq(MetricTagRelPO::getMetricId, id));
-      Long projectId = currentProject.requireProjectId();
-      usageMapper.delete(new LambdaQueryWrapper<MetricUsagePO>()
-          .eq(MetricUsagePO::getProjectId, projectId)
-          .eq(MetricUsagePO::getMetricId, id));
-      versionMapper.delete(new LambdaQueryWrapper<MetricVersionPO>()
-          .eq(MetricVersionPO::getProjectId, projectId)
-          .eq(MetricVersionPO::getMetricId, id));
+      usageRepository.deleteByMetric(id);
+      versionRepository.deleteByMetric(id);
 
       // Remove from global lineage graph — after commit (see create()).
       scheduleAfterCommit(() -> lineageRegistrationService.removeMetric(id));
@@ -598,6 +583,14 @@ public class MetricCatalogService {
 
   /** 序列化指标快照为 JSON（版本记录用）。 */
   public static String toJsonSnapshot(Metric metric) {
+    return toJsonSnapshot(metric, List.of(), Map.of());
+  }
+
+  /** 序列化指标与其版本化组成依赖；下游 MetricVersion 不读取可变组成表。 */
+  public static String toJsonSnapshot(
+      Metric metric,
+      List<MetricCompositionPO> compositions,
+      Map<Long, Integer> compositionVersions) {
     try {
       Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
       snapshot.put("metricCode", nullSafe(metric.metricCode()));
@@ -611,6 +604,8 @@ public class MetricCatalogService {
       snapshot.put("filterExpr", nullSafe(metric.filterExpr()));
       snapshot.put("dimModelIds", nullSafe(metric.dimModelIds()));
       snapshot.put("refMetricId", metric.refMetricId() != null ? metric.refMetricId() : 0);
+      snapshot.put("refMetricVersion", metric.refMetricId() == null
+          ? 0 : compositionVersions.getOrDefault(metric.refMetricId(), 0));
       snapshot.put("dimConstraint", nullSafe(metric.dimConstraint()));
       snapshot.put("qualifiersJson", nullSafe(metric.qualifiersJson()));
       snapshot.put("modelId", metric.modelId() != null ? metric.modelId() : 0);
@@ -620,6 +615,18 @@ public class MetricCatalogService {
       snapshot.put("businessDesc", nullSafe(metric.businessDesc()));
       snapshot.put("owner", nullSafe(metric.owner()));
       snapshot.put("status", metric.status() != null ? metric.status().name() : "ENABLED");
+      snapshot.put("compositions", (compositions == null ? List.<MetricCompositionPO>of() : compositions)
+          .stream()
+          .sorted(java.util.Comparator.comparing(
+              row -> row.getSortOrder() == null ? Integer.MAX_VALUE : row.getSortOrder()))
+          .map(row -> Map.of(
+              "subMetricId", row.getSubMetricId() == null ? 0 : row.getSubMetricId(),
+              "subMetricVersion", row.getSubMetricId() == null
+                  ? 0 : compositionVersions.getOrDefault(row.getSubMetricId(), 0),
+              "operator", nullSafe(row.getOperator()),
+              "expression", nullSafe(row.getExpression()),
+              "sortOrder", row.getSortOrder() == null ? 0 : row.getSortOrder()))
+          .toList());
       return OBJECT_MAPPER.writeValueAsString(snapshot);
     } catch (JsonProcessingException e) {
       log.warn("Failed to serialize metric snapshot for metric {}: {}",

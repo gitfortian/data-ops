@@ -12,15 +12,12 @@ import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
+import io.yak.ops.business.metric.support.MetricSnapshotDigest;
 import io.yak.ops.common.bean.po.metric.MetricActivePublicationPO;
 import io.yak.ops.common.bean.po.metric.MetricPublicationEventPO;
 import io.yak.ops.common.bean.po.metric.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -116,7 +113,7 @@ public class MetricPublicationService {
         throw new MetricException(MetricErrorCode.NOT_FOUND,
             "指标 " + metricId + " 的版本 v" + version + " 不存在");
       }
-      String immutableDigest = sha256(metricVersion.getSnapshot());
+      String immutableDigest = MetricSnapshotDigest.sha256(metricVersion.getSnapshot());
 
       MetricActivePublicationPO active = publicationRepository.findActiveForUpdate(metricId);
       if (active != null
@@ -261,6 +258,25 @@ public class MetricPublicationService {
     return active == null ? null : requireActiveContract(active);
   }
 
+  /**
+   * Resolves a binding target while holding the same Metric row lock used by publish and withdraw.
+   * Callers must keep their transaction open until the consumer reference is persisted.
+   */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public PublishedMetricContract activeForBinding(Long metricId) {
+    if (metricId == null || metricId <= 0
+        || publicationRepository.lockCurrentMetricVersion(metricId) == null) {
+      return null;
+    }
+    return active(metricId);
+  }
+
+  public List<PublishedMetricContract> listActive() {
+    return publicationRepository.listActive().stream()
+        .map(this::requireActiveContract)
+        .toList();
+  }
+
   public List<PublicationEventView> history(Long metricId) {
     return publicationRepository.listEvents(metricId).stream()
         .map(this::eventView)
@@ -275,7 +291,7 @@ public class MetricPublicationService {
         || !Objects.equals(version.getId(), active.getMetricVersionId())
         || !Objects.equals(event.getMetricVersionId(), active.getMetricVersionId())
         || !Objects.equals(event.getSnapshotDigest(), active.getSnapshotDigest())
-        || !Objects.equals(active.getSnapshotDigest(), sha256(version.getSnapshot()))) {
+        || !Objects.equals(active.getSnapshotDigest(), MetricSnapshotDigest.sha256(version.getSnapshot()))) {
       throw new MetricException(
           MetricErrorCode.PUBLICATION_CONFLICT,
           "当前 Published Metric Contract 的 ledger/version identity 不完整");
@@ -342,16 +358,6 @@ public class MetricPublicationService {
           "无法解析当前登录用户，拒绝写入发布账本");
     }
     return operator.trim();
-  }
-
-  private static String sha256(String value) {
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      return HexFormat.of().formatHex(
-          digest.digest((value == null ? "" : value).getBytes(StandardCharsets.UTF_8)));
-    } catch (NoSuchAlgorithmException exception) {
-      throw new IllegalStateException("SHA-256 is unavailable", exception);
-    }
   }
 
   private static String writeEvidence(List<GateEvidence> gates) {

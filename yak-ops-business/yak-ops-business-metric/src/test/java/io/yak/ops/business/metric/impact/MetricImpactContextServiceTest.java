@@ -13,8 +13,8 @@ import io.yak.ops.business.lineage.domain.LineageRelationType;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.domain.MetricUsage;
 import io.yak.ops.business.metric.usage.MetricUsageService;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,12 +29,8 @@ class MetricImpactContextServiceTest {
   void keepsReferenceUsageSeparateWhenNoObservedProviderExists() {
     Fixture fixture = fixture();
 
-    MetricUsagePO reference = new MetricUsagePO();
-    reference.setId(7L);
-    reference.setUsageType("DATASET");
-    reference.setUsageId(21L);
-    reference.setUsageName("sales_dataset");
-    reference.setCreateTime(LocalDateTime.of(2026, 9, 27, 12, 0));
+    MetricUsage reference = new MetricUsage(
+        7L, 9L, 4, "DATASET", 21L, "sales_dataset", LocalDateTime.of(2026, 9, 27, 12, 0));
     when(fixture.usage.listByMetric(9L)).thenReturn(List.of(reference));
     when(fixture.observedProviders.orderedStream()).thenAnswer(ignored -> Stream.empty());
     when(fixture.lineageProvider.getIfAvailable()).thenReturn(null);
@@ -43,6 +39,7 @@ class MetricImpactContextServiceTest {
 
     assertThat(result.referenceUsage()).hasSize(1);
     assertThat(result.referenceUsage().getFirst().usageType()).isEqualTo("DATASET");
+    assertThat(result.referenceUsage().getFirst().metricVersion()).isEqualTo(4);
     assertThat(result.observedUsage()).hasSize(1);
     assertThat(result.observedUsage().getFirst().status())
         .isEqualTo(MetricObservedUsageProvider.CoverageStatus.NOT_APPLICABLE);

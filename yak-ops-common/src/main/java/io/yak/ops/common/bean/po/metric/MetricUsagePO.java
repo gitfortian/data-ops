@@ -18,6 +18,9 @@ public class MetricUsagePO {
 
   private Long metricId;
 
+  /** Exact published definition used by a governed downstream reference; null means legacy. */
+  private Integer metricVersion;
+
   /** 类型:REPORT/DATASET/DASHBOARD/API/SCREEN(DATASET 为 01 消费接线新增)。 */
   private String usageType;
 

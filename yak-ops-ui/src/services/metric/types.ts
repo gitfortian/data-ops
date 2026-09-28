@@ -172,7 +172,55 @@ export interface MetricUsageRecord {
   usageType: string;
   usageId: number;
   usageName?: string;
+  metricVersion?: number | null;
   createTime?: string;
+}
+
+export type MetricValidationResult = 'PASSED' | 'FAILED' | 'NOT_APPLICABLE';
+export type MetricProviderState = 'READY' | 'UNAVAILABLE' | 'FORBIDDEN';
+
+export interface MetricValidationEvidence {
+  evidenceId?: number;
+  metricId: number;
+  metricVersionId: number;
+  metricVersion: number;
+  result: MetricValidationResult;
+  providerState: MetricProviderState;
+  issues: Array<{ code: string; field: string; message: string; severity: 'BLOCKER' | 'WARNING' }>;
+  provider: string;
+  snapshotDigest: string;
+  checkedBy?: string;
+  checkedAt?: string;
+}
+
+export interface MetricPublicationGateEvidence {
+  provider: string;
+  status: 'READY' | 'BLOCKED' | 'UNAVAILABLE' | 'FORBIDDEN' | 'NOT_APPLICABLE';
+  evidenceRef?: string;
+  issues: string[];
+}
+
+export interface MetricPublicationReadiness {
+  status: 'READY' | 'BLOCKED' | 'UNAVAILABLE' | 'FORBIDDEN';
+  subject: { metricId: number; metricVersionId: number; metricVersion: number; snapshotDigest: string };
+  gates: MetricPublicationGateEvidence[];
+}
+
+export interface PublishedMetricContract {
+  publicationEventId: number;
+  metricId: number;
+  metricVersionId: number;
+  metricVersion: number;
+  snapshotDigest: string;
+  publicationEvidence: MetricPublicationGateEvidence[];
+  publishedBy?: string;
+  publishedAt?: string;
+  snapshot?: string;
+}
+
+export interface MetricVersionRef {
+  metricId: number;
+  versionNo: number | null;
 }
 
 export interface LineageGraphNode {
@@ -223,6 +271,7 @@ export interface MetricReferenceUsageEvidence {
   usageType: string;
   usageId: number;
   usageName?: string;
+  metricVersion?: number | null;
   recordedAt?: string;
 }
 
@@ -273,6 +322,11 @@ export interface MetricImpactContext {
   dependencies: DependencyChange[];
   lineage: MetricLineageCoverage;
   referenceUsage: MetricReferenceUsageEvidence[];
+  referenceUsageCoverage?: {
+    provider: string;
+    status: ImpactCoverageStatus;
+    reason?: string;
+  };
   observedUsage: MetricObservedUsageCoverage[];
   generatedAt: string;
 }

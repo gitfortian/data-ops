@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
+import io.yak.ops.business.metric.repository.MetricValidationEvidenceRepository;
 import io.yak.ops.common.bean.po.metric.MetricActivePublicationPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,13 +18,16 @@ class MetricLifecycleServiceTest {
 
   private MetricCatalogService catalogService;
   private MetricPublicationRepository publicationRepository;
+  private MetricValidationEvidenceRepository validationEvidenceRepository;
   private MetricLifecycleService service;
 
   @BeforeEach
   void setUp() {
     catalogService = mock(MetricCatalogService.class);
     publicationRepository = mock(MetricPublicationRepository.class);
-    service = new MetricLifecycleService(catalogService, publicationRepository);
+    validationEvidenceRepository = mock(MetricValidationEvidenceRepository.class);
+    when(publicationRepository.lockCurrentMetricVersion(7L)).thenReturn(1);
+    service = new MetricLifecycleService(catalogService, publicationRepository, validationEvidenceRepository);
   }
 
   @Test
@@ -65,6 +69,19 @@ class MetricLifecycleServiceTest {
         .satisfies(error -> org.assertj.core.api.Assertions.assertThat(
                 ((MetricException) error).getErrorCode())
             .isEqualTo(MetricErrorCode.PUBLICATION_HISTORY_EXISTS));
+
+    verify(catalogService, never()).delete(7L);
+  }
+
+  @Test
+  void validationEvidencePreventsPhysicalMetricDeletion() {
+    when(validationEvidenceRepository.hasEvidence(7L)).thenReturn(true);
+
+    assertThatThrownBy(() -> service.delete(7L))
+        .isInstanceOf(MetricException.class)
+        .satisfies(error -> org.assertj.core.api.Assertions.assertThat(
+                ((MetricException) error).getErrorCode())
+            .isEqualTo(MetricErrorCode.GOVERNANCE_EVIDENCE_EXISTS));
 
     verify(catalogService, never()).delete(7L);
   }

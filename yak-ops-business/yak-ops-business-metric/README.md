@@ -4,8 +4,10 @@
 
 ## 模块边界
 
-- **拥有**：指标定义（原子/派生/复合）、指标标签、指标版本快照、指标血缘登记、复合指标组成、指标使用记录。
-- **不拥有**：数据标准/业务域/字段库（归 semantic）；模型/字段/血缘（归 modeling）；血缘可视化（归 lineage）；API 鉴权/调用记录（归 data-service）。
+- **拥有**：指标定义（原子/派生/复合）、指标标签、指标版本快照、定义校验证据、显式发布账本、指标血缘登记、复合指标组成、Reference Usage。
+- **不拥有**：数据标准/业务域/字段库（归 semantic）；模型/字段/血缘（归 modeling）；Observed Usage / Consumption Evidence（归 consumption）；血缘可视化（归 lineage）；API 鉴权/调用记录（归 data-service）。
+
+显式发布绑定一个 immutable `MetricVersion`；后续 Draft 不移动 active publication。下游 Reference Usage 可记录精确版本，历史仅有 Metric ID 的记录保留为版本未知。Reference Usage 不代表真实运行消费。
 
 ## 依赖方向（强制）
 
