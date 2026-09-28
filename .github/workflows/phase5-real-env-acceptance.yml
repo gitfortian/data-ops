@@ -4,18 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       target_environment:
-        description: GitHub Environment holding Phase 5 acceptance credentials
+        description: GitHub Environment holding the trusted target URL and Phase 5 acceptance credentials
         required: true
         type: environment
-      runner_label:
-        description: Runner label; use self-hosted when the deployment is private-network only
+      execution_target:
+        description: Execution network for the trusted deployment target
         required: true
-        default: ubuntu-latest
-        type: string
-      base_url:
-        description: Reachable Yak Ops deployment base URL
-        required: true
-        type: string
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - phase5-self-hosted
       project_id:
         description: Project containing the Golden Metric
         required: true
@@ -63,10 +62,12 @@ permissions:
 jobs:
   golden-metric:
     name: Golden Metric evidence
-    runs-on: ${{ inputs.runner_label }}
+    runs-on: ${{ inputs.execution_target == 'phase5-self-hosted' && 'phase5-acceptance' || 'ubuntu-latest' }}
     environment: ${{ inputs.target_environment }}
     env:
-      YAK_OPS_BASE_URL: ${{ inputs.base_url }}
+      # The deployment target is bound to the selected GitHub Environment so dispatch users
+      # cannot redirect environment credentials to an arbitrary URL.
+      YAK_OPS_BASE_URL: ${{ vars.YAK_OPS_PHASE5_BASE_URL }}
       YAK_OPS_PROJECT_ID: ${{ inputs.project_id }}
       YAK_OPS_METRIC_ID: ${{ inputs.metric_id }}
       YAK_OPS_PHASE5_METRIC_VERSION: ${{ inputs.metric_version }}
@@ -97,6 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -n "${YAK_OPS_BASE_URL}" || { echo 'Missing environment variable YAK_OPS_PHASE5_BASE_URL' >&2; exit 1; }
           test -n "${YAK_OPS_USERNAME}" || { echo 'Missing environment secret YAK_OPS_PHASE5_ACCEPTANCE_USERNAME' >&2; exit 1; }
           test -n "${YAK_OPS_PASSWORD}" || { echo 'Missing environment secret YAK_OPS_PHASE5_ACCEPTANCE_PASSWORD' >&2; exit 1; }
           if [[ "${YAK_OPS_PHASE5_RUN_DATASET_EVIDENCE}" == "true" && -z "${YAK_OPS_DATASET_ID}" ]]; then
