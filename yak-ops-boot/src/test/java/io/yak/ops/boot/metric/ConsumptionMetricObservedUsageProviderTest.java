@@ -14,9 +14,9 @@ import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.consumption.relationship.UsageOutcome;
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.domain.MetricUsage;
 import io.yak.ops.business.metric.impact.MetricObservedUsageProvider.CoverageStatus;
 import io.yak.ops.business.metric.usage.MetricUsageService;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -92,11 +92,8 @@ class ConsumptionMetricObservedUsageProviderTest {
     return metric;
   }
 
-  private static MetricUsagePO datasetUsage(Long datasetId) {
-    MetricUsagePO usage = new MetricUsagePO();
-    usage.setUsageType("DATASET");
-    usage.setUsageId(datasetId);
-    return usage;
+  private static MetricUsage datasetUsage(Long datasetId) {
+    return new MetricUsage(null, 9L, null, "DATASET", datasetId, null, null);
   }
 
   @SuppressWarnings("unchecked")

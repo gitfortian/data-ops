@@ -6,9 +6,9 @@ import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.metric.api.MetricUsageApi;
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.domain.MetricUsage;
 import io.yak.ops.business.metric.impact.MetricObservedUsageProvider;
 import io.yak.ops.business.metric.usage.MetricUsageService;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -81,11 +81,11 @@ public class ConsumptionMetricObservedUsageProvider implements MetricObservedUsa
 
   private Set<Long> datasetRealizations(Long metricId) {
     Set<Long> ids = new LinkedHashSet<>();
-    for (MetricUsagePO usage : metricUsageService.listByMetric(metricId)) {
-      if (!MetricUsageApi.USAGE_TYPE_DATASET.equals(usage.getUsageType())) {
+    for (MetricUsage usage : metricUsageService.listByMetric(metricId)) {
+      if (!MetricUsageApi.USAGE_TYPE_DATASET.equals(usage.usageType())) {
         continue;
       }
-      Long id = usage.getUsageId();
+      Long id = usage.usageId();
       if (id != null && id > 0) {
         ids.add(id);
       }
