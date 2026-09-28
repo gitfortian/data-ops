@@ -3,8 +3,10 @@ package io.yak.ops.business.metric.catalog;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
+import io.yak.ops.business.metric.repository.MetricValidationEvidenceRepository;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Canonical lifecycle command boundary for Metric status/delete mutations.
@@ -19,15 +21,22 @@ public class MetricLifecycleService {
 
   private final MetricCatalogService catalogService;
   private final MetricPublicationRepository publicationRepository;
+  private final MetricValidationEvidenceRepository validationEvidenceRepository;
 
   public MetricLifecycleService(
       MetricCatalogService catalogService,
-      MetricPublicationRepository publicationRepository) {
+      MetricPublicationRepository publicationRepository,
+      MetricValidationEvidenceRepository validationEvidenceRepository) {
     this.catalogService = catalogService;
     this.publicationRepository = publicationRepository;
+    this.validationEvidenceRepository = validationEvidenceRepository;
   }
 
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Metric changeStatus(Long metricId, String status, String operator) {
+    if (publicationRepository.lockCurrentMetricVersion(metricId) == null) {
+      throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
+    }
     if (status != null
         && "DISABLED".equalsIgnoreCase(status.trim())
         && publicationRepository.findActive(metricId) != null) {
@@ -38,11 +47,20 @@ public class MetricLifecycleService {
     return catalogService.changeStatus(metricId, status, operator);
   }
 
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long metricId) {
+    if (publicationRepository.lockCurrentMetricVersion(metricId) == null) {
+      throw new MetricException(MetricErrorCode.NOT_FOUND, String.valueOf(metricId));
+    }
     if (publicationRepository.hasEvents(metricId)) {
       throw new MetricException(
           MetricErrorCode.PUBLICATION_HISTORY_EXISTS,
           "Publication ledger 为审计事实，不能随 Metric 物理删除");
+    }
+    if (validationEvidenceRepository.hasEvidence(metricId)) {
+      throw new MetricException(
+          MetricErrorCode.GOVERNANCE_EVIDENCE_EXISTS,
+          "Validation evidence 为审计事实，不能随 Metric 物理删除");
     }
     catalogService.delete(metricId);
   }

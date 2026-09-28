@@ -11,13 +11,13 @@ WHERE table_schema = DATABASE()
     'yak_metric_active_publication'
   );
 
-SELECT 'validation_columns' AS check_name, 11 AS expected_count, COUNT(*) AS actual_count
+SELECT 'validation_columns' AS check_name, 12 AS expected_count, COUNT(*) AS actual_count
 FROM information_schema.columns
 WHERE table_schema = DATABASE()
   AND table_name = 'yak_metric_validation_evidence'
   AND column_name IN (
     'id', 'project_id', 'metric_id', 'metric_version_id', 'metric_version',
-    'result', 'issues_json', 'provider', 'snapshot_digest', 'checked_by', 'checked_at'
+    'result', 'provider_state', 'issues_json', 'provider', 'snapshot_digest', 'checked_by', 'checked_at'
   );
 
 SELECT 'publication_event_columns' AS check_name, 11 AS expected_count, COUNT(*) AS actual_count
@@ -38,6 +38,20 @@ WHERE table_schema = DATABASE()
     'id', 'project_id', 'metric_id', 'publication_event_id', 'metric_version_id',
     'metric_version', 'snapshot_digest', 'published_by', 'published_at', 'update_time'
   );
+
+SELECT 'metric_usage_version_column' AS check_name, 1 AS expected_count, COUNT(*) AS actual_count
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'yak_metric_usage'
+  AND column_name = 'metric_version';
+
+SELECT 'validation_invalid_result_count' AS check_name, 0 AS expected_count, COUNT(*) AS actual_count
+FROM yak_metric_validation_evidence
+WHERE result NOT IN ('PASSED', 'FAILED', 'NOT_APPLICABLE');
+
+SELECT 'validation_invalid_provider_state_count' AS check_name, 0 AS expected_count, COUNT(*) AS actual_count
+FROM yak_metric_validation_evidence
+WHERE provider_state NOT IN ('READY', 'UNAVAILABLE', 'FORBIDDEN');
 
 -- This unique key is a runtime correctness requirement: MetricActivePublicationMapper.upsert()
 -- uses ON DUPLICATE KEY UPDATE and relies on one active pointer per Project + Metric.
@@ -60,7 +74,7 @@ FROM (
     AND table_name = 'yak_metric_validation_evidence'
   GROUP BY index_name
   HAVING GROUP_CONCAT(column_name ORDER BY seq_in_index SEPARATOR ',')
-      = 'project_id,metric_id,metric_version,result,checked_at,id'
+      = 'project_id,metric_id,metric_version,result,checked_at'
 ) AS required_index;
 
 SELECT 'publication_metric_history_index' AS check_name, 1 AS expected_count, COUNT(*) AS actual_count
@@ -71,5 +85,5 @@ FROM (
     AND table_name = 'yak_metric_publication_event'
   GROUP BY index_name
   HAVING GROUP_CONCAT(column_name ORDER BY seq_in_index SEPARATOR ',')
-      = 'project_id,metric_id,acted_at,id'
+      = 'project_id,metric_id,acted_at'
 ) AS required_index;

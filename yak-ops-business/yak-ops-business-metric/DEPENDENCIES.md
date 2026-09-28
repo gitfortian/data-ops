@@ -14,6 +14,8 @@
 | `yak-ops-business-asset` | 编译 | 实现 AssetProvider，并向 Asset Usage Section 提供 Metric-owned 消费引用摘要 |
 | `yak-ops-spi` | 编译 | 实现 SectionProvider，供 Asset 聚合 Metric Usage Truth |
 
+`yak-ops-business-data-development` 只能通过 `MetricUsageApi` 读写 Dataset Reference Usage；消费方不依赖 Metric mapper、PO 或数据库表。
+
 ## 被依赖（入向，规划）
 
 | 模块 | 方式 | ticket |

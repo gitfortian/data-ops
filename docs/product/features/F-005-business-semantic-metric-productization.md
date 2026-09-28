@@ -1,7 +1,8 @@
 # F-005 — Business Semantic & Metric Productization
 
-Status: APPROVED  
-状态说明：Phase 5 产品方案已通过 #121 Product Review；作为 #122/#123/#124 主体实现的已批准产品契约  
+Status: APPROVED
+Implementation: IMPLEMENTING
+状态说明：Phase 5 产品方案已通过 #121 Product Review；作为 #122/#123/#124 主体实现的已批准产品契约
 Feature ID: F-005  
 负责人：Product  
 目标版本：Phase 5  

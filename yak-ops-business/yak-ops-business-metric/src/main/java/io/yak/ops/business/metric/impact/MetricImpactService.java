@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Impact analysis service (T53): user-triggered comparison of
+ * Impact analysis service: user-triggered comparison of
  * metric_dependency.dependency_version against current upstream versions.
  *
  * <p>Upstream current versions are resolved through the same SPI paths as dependency registration.

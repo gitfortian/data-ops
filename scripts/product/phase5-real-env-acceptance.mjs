@@ -12,6 +12,7 @@
  * Optional:
  *   YAK_OPS_BASE_URL (default: http://localhost:9001)
  *   YAK_OPS_PHASE5_METRIC_VERSION (default: current Metric version)
+ *   YAK_OPS_PHASE5_RELATED_METRIC_ID (required for the ATOMIC + DERIVED/COMPOSITE evidence check)
  *   YAK_OPS_PHASE5_VALIDATE=true   -> append real Definition Validation evidence before asserting Golden state
  *   YAK_OPS_PHASE5_PUBLISH=true    -> publish exact current version, only when readiness=READY
  *   YAK_OPS_PHASE5_REQUIRE_OBSERVED_USAGE=true|false (default: true)
@@ -204,6 +205,7 @@ function compactValidation(evidence) {
     metricVersionId: evidence.metricVersionId ?? null,
     metricVersion: evidence.metricVersion ?? null,
     result: evidence.result ?? null,
+    providerState: evidence.providerState ?? null,
     provider: evidence.provider ?? null,
     snapshotDigest: evidence.snapshotDigest ?? null,
     issues: evidence.issues ?? [],
@@ -277,6 +279,27 @@ async function main() {
   assert(metric != null, 'Metric canonical detail must resolve');
   assert(String(metric.id) === String(METRIC_ID), 'Metric canonical identity mismatch');
 
+  const relatedMetricId = positiveId('YAK_OPS_PHASE5_RELATED_METRIC_ID', true);
+  let metricTypeScenario = { state: 'SKIPPED', reason: 'YAK_OPS_PHASE5_RELATED_METRIC_ID not supplied' };
+  if (relatedMetricId) {
+    const relatedMetric = (await request(session, `/api/v1/metrics/${relatedMetricId}`)).data;
+    assert(relatedMetric != null, 'Related Metric must resolve');
+    const atomic = metric.metricType === 'ATOMIC' ? metric : relatedMetric;
+    const dependent = atomic === metric ? relatedMetric : metric;
+    const relationshipExists = atomic.metricType === 'ATOMIC'
+      && (dependent.metricType === 'DERIVED'
+        ? String(dependent.refMetricId) === String(atomic.id)
+        : dependent.metricType === 'COMPOSITE'
+          && (dependent.compositions ?? []).some((item) => String(item.subMetricId) === String(atomic.id)));
+    assert(relationshipExists, 'Golden pair must contain ATOMIC + DERIVED or COMPOSITE relationship evidence');
+    metricTypeScenario = {
+      state: 'PASSED',
+      atomicMetricId: atomic.id,
+      dependentMetricId: dependent.id,
+      dependentType: dependent.metricType,
+    };
+  }
+
   const configuredVersion = positiveId('YAK_OPS_PHASE5_METRIC_VERSION', true);
   const version = configuredVersion ? Number(configuredVersion) : Number(metric.version);
   assert(Number.isSafeInteger(version) && version > 0, 'Metric current/exact version must be positive');
@@ -308,8 +331,8 @@ async function main() {
     `/api/v1/metrics/${METRIC_ID}/versions/${version}/validation/latest-ready`,
     { allowFailure: true },
   )).data ?? null;
-  assert(latestReady?.result === 'READY',
-    'Golden Metric requires latest READY validation evidence for the exact version');
+  assert(latestReady?.result === 'PASSED' && latestReady?.providerState === 'READY',
+    'Golden Metric requires latest PASSED validation evidence from a READY provider for the exact version');
   assert(Number(latestReady.metricVersion) === version,
     'latest READY validation evidence must bind the exact MetricVersion');
 
@@ -351,6 +374,9 @@ async function main() {
   assert(publicationHistory.some((event) => event.eventType === 'PUBLISHED'
       && Number(event.metricVersion) === version),
     'Publication ledger must contain a PUBLISHED event for the exact version');
+  const draftStability = Number(metric.version) > Number(activePublication.metricVersion)
+    ? { state: 'PASSED', activePublishedVersion: activePublication.metricVersion, currentDraftVersion: metric.version }
+    : { state: 'SKIPPED', reason: 'No newer Draft exists after the active Published MetricVersion' };
 
   const usageSummary = (await request(
     session, `/api/v1/metrics/${METRIC_ID}/usage/summary`,
@@ -364,6 +390,10 @@ async function main() {
 
   assert(referenceUsage.length > 0,
     'Golden Metric requires at least one real downstream Reference Usage');
+  const exactVersionReferenceUsage = referenceUsage.filter(
+    (item) => Number(item.metricVersion) === Number(activePublication.metricVersion));
+  assert(exactVersionReferenceUsage.length > 0,
+    'Golden Metric requires a downstream Reference Usage bound to the active exact MetricVersion');
   assert(Number(impact?.metricId) === Number(METRIC_ID), 'Impact Context must preserve Metric identity');
   assert(Number(impact?.metricVersion) === Number(metric.version),
     'Impact Context must report current Metric version');
@@ -375,10 +405,15 @@ async function main() {
     'Impact Context must preserve real downstream Reference Usage');
   assert(Array.isArray(impact?.observedUsage), 'Impact Context must expose Observed Runtime Usage separately');
   const readyObservedProviders = impact.observedUsage.filter((coverage) => coverage.status === 'READY');
+  const observedRuntimeEvidencePresent = readyObservedProviders.some(
+    (coverage) => Array.isArray(coverage.evidence) && coverage.evidence.length > 0);
   if (REQUIRE_OBSERVED_USAGE) {
-    assert(readyObservedProviders.some((coverage) => Array.isArray(coverage.evidence) && coverage.evidence.length > 0),
+    assert(observedRuntimeEvidencePresent,
       'Golden Metric requires at least one provider with real Observed Runtime Usage evidence');
   }
+  const coverageStates = new Set(['READY', 'EMPTY', 'UNAVAILABLE', 'FORBIDDEN', 'NOT_APPLICABLE']);
+  assert(impact.observedUsage.every((coverage) => coverageStates.has(coverage.status)),
+    'Observed Usage providers must report explicit coverage states');
 
   const crossProjectId = positiveId('YAK_OPS_CROSS_PROJECT_ID', true);
   let crossProject = { state: 'SKIPPED', reason: 'YAK_OPS_CROSS_PROJECT_ID not supplied' };
@@ -426,6 +461,32 @@ async function main() {
       'Phase4 Dataset evidence must correspond to a Dataset realization referenced by this Metric');
   }
 
+  const datasetReferenceCount = (impact.referenceUsage ?? [])
+    .filter((item) => item.usageType === 'DATASET').length;
+  const datasetEvidenceState = datasetGolden
+    ? 'PASSED'
+    : datasetReferenceCount === 0
+      ? 'NOT_APPLICABLE'
+      : 'SKIPPED';
+  const requiredChecks = [
+    { id: 'atomic-derived-or-composite', state: metricTypeScenario.state },
+    { id: 'exact-version-validation', state: 'PASSED' },
+    { id: 'explicit-publication-ledger', state: 'PASSED' },
+    { id: 'published-version-stability-after-draft-edit', state: draftStability.state },
+    { id: 'downstream-exact-version-reference', state: 'PASSED' },
+    {
+      id: 'reference-and-observed-usage-coverage',
+      state: observedRuntimeEvidencePresent ? 'PASSED' : REQUIRE_OBSERVED_USAGE ? 'FAILED' : 'SKIPPED',
+    },
+    { id: 'cross-project-isolation', state: crossProject.state },
+    { id: 'forbidden-read', state: forbiddenRead.state },
+    { id: 'dataset-consumption-evidence', state: datasetEvidenceState },
+    { id: 'dependency-and-provider-failure-injection', state: 'MANUAL_REQUIRED' },
+  ];
+  const acceptanceStatus = requiredChecks.every((check) => ['PASSED', 'NOT_APPLICABLE'].includes(check.state))
+    ? 'PASSED'
+    : 'INCOMPLETE';
+
   const bundle = {
     probe: 'phase5-real-env-acceptance',
     acceptanceIssue: 124,
@@ -464,6 +525,7 @@ async function main() {
       action: compactPublication(publishAction),
       active: compactPublication(activePublication),
       history: publicationHistory,
+        draftStability,
     },
     usageAndImpact: {
       usageSummary,
@@ -488,13 +550,15 @@ async function main() {
       lineageCoverageReady: true,
       observedUsageCoverageCaptured: true,
       observedRuntimeEvidenceRequired: REQUIRE_OBSERVED_USAGE,
-      observedRuntimeEvidencePresent: readyObservedProviders.some(
-        (coverage) => Array.isArray(coverage.evidence) && coverage.evidence.length > 0),
+      observedRuntimeEvidencePresent,
       impactIdentityStable: true,
       crossProjectChecked: crossProject.state === 'PASSED',
       forbiddenReadChecked: forbiddenRead.state === 'PASSED',
       phase4DatasetRuntimeChecked: Boolean(datasetGolden),
     },
+    metricTypeScenario,
+    requiredChecks,
+    acceptanceStatus,
     remainingManualFaultInjection: [
       'remove/outdate a dependency and capture BLOCKED authoring/publication evidence',
       'make validation/publication gate provider unavailable and capture fail-closed UNAVAILABLE evidence',
@@ -519,6 +583,7 @@ async function main() {
   };
 
   console.log(JSON.stringify(bundle, null, 2));
+  if (acceptanceStatus !== 'PASSED') process.exitCode = 2;
 }
 
 main().catch((error) => {

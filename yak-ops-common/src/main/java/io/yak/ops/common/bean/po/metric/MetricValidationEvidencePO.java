@@ -24,8 +24,10 @@ public class MetricValidationEvidencePO {
   /** 冗余版本号，便于查询与审计展示。 */
   private Integer metricVersion;
 
-  /** READY / BLOCKED。 */
+  /** PASSED / FAILED / NOT_APPLICABLE. */
   private String result;
+
+  private String providerState;
 
   /** 结构化 ValidationIssue 数组 JSON。 */
   private String issuesJson;

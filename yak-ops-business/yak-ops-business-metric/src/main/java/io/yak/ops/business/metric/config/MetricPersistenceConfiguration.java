@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Import;
 
 /** Metric persistence and Flyway configuration (self-owned migration chain). */
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Import;
 public class MetricPersistenceConfiguration {
 
   @Bean(name = "yakMetricFlyway", initMethod = "migrate")
+  @DependsOn("yakDatasetFlyway")
   public Flyway metricFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)

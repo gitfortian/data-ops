@@ -6,7 +6,7 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.metric.validation.MetricDefinitionValidationService;
-import io.yak.ops.business.metric.validation.MetricDefinitionValidationService.ValidationEvidence;
+import io.yak.ops.business.metric.domain.MetricValidationEvidence;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -39,7 +39,7 @@ public class MetricValidationController {
   @Operation(summary = "校验指定指标版本并生成不可变证据")
   @RequiresPermission(MetricPermissionCode.UPDATE)
   @PostMapping("/{id}/versions/{version}/validation")
-  public Result<ValidationEvidence> validate(
+  public Result<MetricValidationEvidence> validate(
       @PathVariable("id") Long id,
       @PathVariable("version") int version,
       HttpServletRequest request) {
@@ -49,15 +49,15 @@ public class MetricValidationController {
 
   @Operation(summary = "查询指定指标版本的校验证据历史")
   @GetMapping("/{id}/versions/{version}/validations")
-  public Result<List<ValidationEvidence>> history(
+  public Result<List<MetricValidationEvidence>> history(
       @PathVariable("id") Long id,
       @PathVariable("version") int version) {
     return Result.success(validationService.history(id, version));
   }
 
-  @Operation(summary = "查询指定指标版本最近一次 READY 校验证据")
+  @Operation(summary = "查询指定指标版本最近一次 PASSED 且 provider READY 的校验证据")
   @GetMapping("/{id}/versions/{version}/validation/latest-ready")
-  public Result<ValidationEvidence> latestReady(
+  public Result<MetricValidationEvidence> latestReady(
       @PathVariable("id") Long id,
       @PathVariable("version") int version) {
     return Result.success(validationService.latestReady(id, version));

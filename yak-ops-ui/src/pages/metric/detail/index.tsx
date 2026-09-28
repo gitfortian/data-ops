@@ -1,5 +1,5 @@
 import { useNavigate, useParams, useSearchParams } from '@umijs/max';
-import { Button, Descriptions, Drawer, message, Select, Spin, Table, Tabs, Tag, Timeline, Typography } from 'antd';
+import { Descriptions, Drawer, message, Select, Spin, Table, Tabs, Tag, Timeline, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -27,6 +27,7 @@ import type {
   MetricVersionRecord,
   UsageSummary,
 } from '@/services/metric/types';
+import MetricGovernancePanel from './MetricGovernancePanel';
 import {
   formatMetricTime,
   METRIC_STATUS_COLORS,
@@ -45,7 +46,13 @@ const COMPOSITE_SYMBOLS: Record<string, string> = {
   RPAREN: ')',
 };
 
-/** 与 yak_metric_usage.usage_type 对齐(DATASET 为 01 消费接线新增)。 */
+const readFailureState = (error: unknown): 'UNAVAILABLE' | 'FORBIDDEN' => {
+  const response = error as { status?: number; response?: { status?: number } } | null;
+  const status = response?.status ?? response?.response?.status;
+  return status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE';
+};
+
+/** 与 yak_metric_usage.usage_type 对齐。 */
 const USAGE_TYPE_LABELS: Record<string, string> = {
   DATASET: '数据集',
   REPORT: '报表',
@@ -160,6 +167,8 @@ const MetricDetailPage = () => {
   const [versions, setVersions] = useState<MetricVersionRecord[]>([]);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
   const [usageList, setUsageList] = useState<MetricUsageRecord[]>([]);
+  const [usageSummaryState, setUsageSummaryState] = useState<'LOADING' | 'READY' | 'UNAVAILABLE' | 'FORBIDDEN'>('LOADING');
+  const [usageListState, setUsageListState] = useState<'LOADING' | 'READY' | 'UNAVAILABLE' | 'FORBIDDEN'>('LOADING');
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [allTags, setAllTags] = useState<MetricTagRecord[]>([]);
   const [tagDrawerOpen, setTagDrawerOpen] = useState(false);
@@ -217,12 +226,26 @@ const MetricDetailPage = () => {
     listMetricVersions(metricId)
       .then(setVersions)
       .catch(() => setVersions([]));
+    setUsageSummaryState('LOADING');
+    setUsageListState('LOADING');
     getMetricUsageSummary(metricId)
-      .then(setUsageSummary)
-      .catch(() => setUsageSummary(null));
+      .then((summary) => {
+        setUsageSummary(summary);
+        setUsageSummaryState('READY');
+      })
+      .catch((error) => {
+        setUsageSummary(null);
+        setUsageSummaryState(readFailureState(error));
+      });
     getMetricUsageList(metricId)
-      .then(setUsageList)
-      .catch(() => setUsageList([]));
+      .then((usages) => {
+        setUsageList(usages);
+        setUsageListState('READY');
+      })
+      .catch((error) => {
+        setUsageList([]);
+        setUsageListState(readFailureState(error));
+      });
     getMetricTags(metricId)
       .then(setTagIds)
       .catch(() => setTagIds([]));
@@ -345,9 +368,9 @@ const MetricDetailPage = () => {
       render: (_: unknown, record) => (
         <span className="flex items-center gap-1">
           <Tag>历史快照 · 只读</Tag>
-          <Button type="link" size="small" onClick={() => void openHistoricalVersion(record.version)}>
+          <Typography.Link onClick={() => void openHistoricalVersion(record.version)}>
             查看
-          </Button>
+          </Typography.Link>
         </span>
       ),
     },
@@ -364,6 +387,12 @@ const MetricDetailPage = () => {
       title: '使用方',
       dataIndex: 'usageName',
       render: (v: string | undefined, record) => v || `#${record.usageId}`,
+    },
+    {
+      title: '引用版本',
+      dataIndex: 'metricVersion',
+      width: 130,
+      render: (value?: number | null) => value == null ? '历史版本未知' : `Metric v${value}`,
     },
     {
       title: '上报时间',
@@ -403,13 +432,14 @@ const MetricDetailPage = () => {
           <div className="mt-1 text-[13px] text-[#667085]">指标的完整信息：业务定义、依赖健康、版本、血缘与使用情况</div>
         </div>
         {returnAssetId ? (
-          <Button onClick={() => navigate(`/data-asset/detail/${returnAssetId}`)}>返回资产详情</Button>
+          <YakButton onClick={() => navigate(`/data-asset/detail/${returnAssetId}`)}>返回资产详情</YakButton>
         ) : null}
       </div>
 
       <Spin spinning={loading}>
         {metric ? (
           <div className="mt-5">
+            <MetricGovernancePanel metricId={metric.id} currentVersion={metric.version} />
             {/* Descriptions */}
             <Descriptions
               column={3}
@@ -657,7 +687,12 @@ const MetricDetailPage = () => {
                   {
                     key: 'usage',
                     label: '使用情况',
-                    children: usageSummary ? (
+                    children: usageSummaryState === 'FORBIDDEN' || usageSummaryState === 'UNAVAILABLE' ? (
+                      <YakEmpty compact
+                        title={usageSummaryState === 'FORBIDDEN' ? '无权读取使用汇总' : '使用汇总暂不可用'}
+                        description="当前无法判断引用数量；请恢复读取后重试"
+                      />
+                    ) : usageSummary ? (
                       <div>
                         <div className="grid grid-cols-6 gap-4">
                           <UsageCard title="总引用" value={usageSummary.totalCount} />
@@ -667,7 +702,11 @@ const MetricDetailPage = () => {
                           <UsageCard title="API" value={usageSummary.apiCount} />
                           <UsageCard title="大屏" value={usageSummary.screenCount} />
                         </div>
-                        {usageList.length > 0 ? (
+                        {usageListState === 'FORBIDDEN' || usageListState === 'UNAVAILABLE' ? (
+                          <div className="mt-4 text-[13px] text-[#b54708]">
+                            {usageListState === 'FORBIDDEN' ? '无权读取 Reference Usage 明细。' : 'Reference Usage 明细暂不可用，不能据此判断为无引用。'}
+                          </div>
+                        ) : usageList.length > 0 ? (
                           <Table<MetricUsageRecord>
                             className="mt-4"
                             rowKey="id"
@@ -682,6 +721,8 @@ const MetricDetailPage = () => {
                           </div>
                         )}
                       </div>
+                    ) : usageSummaryState === 'LOADING' ? (
+                      <Spin size="small" />
                     ) : (
                       <YakEmpty compact title="暂无使用记录" description="指标被引用后自动统计使用数据" />
                     ),

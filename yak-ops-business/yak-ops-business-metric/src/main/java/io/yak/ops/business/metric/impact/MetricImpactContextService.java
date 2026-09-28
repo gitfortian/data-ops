@@ -6,9 +6,9 @@ import io.yak.ops.business.lineage.domain.LineageRelation;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.domain.MetricUsage;
 import io.yak.ops.business.metric.lineage.MetricLineageRegistrationService;
 import io.yak.ops.business.metric.usage.MetricUsageService;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -58,9 +58,8 @@ public class MetricImpactContextService {
     MetricImpactService.DependencyContext dependencies = impactService.dependencyContext(metric);
     LineageCoverage lineage = lineageCoverage(metric);
 
-    List<ReferenceUsage> referenceUsage = usageService.listByMetric(metricId).stream()
-        .map(MetricImpactContextService::toReferenceUsage)
-        .toList();
+    ReferenceUsageCoverage referenceUsageCoverage = referenceUsageCoverage(metricId);
+    List<ReferenceUsage> referenceUsage = referenceUsageCoverage.evidence();
 
     List<MetricObservedUsageProvider> providers = observedUsageProviders.orderedStream().toList();
     List<MetricObservedUsageProvider.Coverage> observedUsage = new ArrayList<>();
@@ -82,8 +81,37 @@ public class MetricImpactContextService {
         dependencies.changes(),
         lineage,
         referenceUsage,
+        referenceUsageCoverage,
         List.copyOf(observedUsage),
         LocalDateTime.now());
+  }
+
+  private ReferenceUsageCoverage referenceUsageCoverage(Long metricId) {
+    try {
+      List<ReferenceUsage> evidence = usageService.listByMetric(metricId).stream()
+          .map(MetricImpactContextService::toReferenceUsage)
+          .toList();
+      return new ReferenceUsageCoverage(
+          "metric-reference-usage",
+          evidence.isEmpty()
+              ? MetricObservedUsageProvider.CoverageStatus.EMPTY
+              : MetricObservedUsageProvider.CoverageStatus.READY,
+          evidence,
+          null);
+    } catch (SecurityException exception) {
+      return new ReferenceUsageCoverage(
+          "metric-reference-usage",
+          MetricObservedUsageProvider.CoverageStatus.FORBIDDEN,
+          List.of(),
+          "Reference Usage is not visible to the current user");
+    } catch (RuntimeException exception) {
+      log.warn("Reference usage coverage failed: metricId={}, error={}", metricId, exception.getMessage());
+      return new ReferenceUsageCoverage(
+          "metric-reference-usage",
+          MetricObservedUsageProvider.CoverageStatus.UNAVAILABLE,
+          List.of(),
+          exception.getMessage() == null ? "Reference Usage provider is unavailable" : exception.getMessage());
+    }
   }
 
   private LineageCoverage lineageCoverage(Metric metric) {
@@ -194,13 +222,14 @@ public class MetricImpactContextService {
     }
   }
 
-  private static ReferenceUsage toReferenceUsage(MetricUsagePO po) {
+  private static ReferenceUsage toReferenceUsage(MetricUsage usage) {
     return new ReferenceUsage(
-        po.getId(),
-        po.getUsageType(),
-        po.getUsageId(),
-        po.getUsageName(),
-        po.getCreateTime());
+        usage.id(),
+        usage.usageType(),
+        usage.usageId(),
+        usage.usageName(),
+        usage.metricVersion(),
+        usage.createdAt());
   }
 
   public record ImpactContext(
@@ -211,8 +240,19 @@ public class MetricImpactContextService {
       List<MetricImpactService.DependencyChange> dependencies,
       LineageCoverage lineage,
       List<ReferenceUsage> referenceUsage,
+      ReferenceUsageCoverage referenceUsageCoverage,
       List<MetricObservedUsageProvider.Coverage> observedUsage,
       LocalDateTime generatedAt) {}
+
+  public record ReferenceUsageCoverage(
+      String provider,
+      MetricObservedUsageProvider.CoverageStatus status,
+      List<ReferenceUsage> evidence,
+      String reason) {
+    public ReferenceUsageCoverage {
+      evidence = evidence == null ? List.of() : List.copyOf(evidence);
+    }
+  }
 
   public record LineageCoverage(
       String provider,
@@ -267,5 +307,6 @@ public class MetricImpactContextService {
       String usageType,
       Long usageId,
       String usageName,
+      Integer metricVersion,
       LocalDateTime recordedAt) {}
 }

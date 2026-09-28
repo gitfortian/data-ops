@@ -1,6 +1,5 @@
 import { BRAND_CSS_VARIABLES } from '@/styles/brand';
 import {
-  Button,
   Input,
   Select,
   Spin,
@@ -9,6 +8,7 @@ import {
   message,
   type TableColumnsType,
 } from 'antd';
+import { YakButton } from '@/components/ui';
 import {
   FileStack,
   LoaderCircle,
@@ -37,7 +37,8 @@ import {
   type DevelopmentDatasetFieldRole,
   type DevelopmentDatasetNodeContext,
 } from '../../dataset-service';
-import { pageMetrics } from '@/services/metric/api';
+import { listPublishedMetrics } from '@/services/metric/api';
+import type { MetricVersionRef } from '@/services/metric/types';
 import {
   executeSqlEditorCommand,
   type SqlEditorCommand,
@@ -199,8 +200,10 @@ export default function DatasetNodeEditor({
   const [resultHeight, setResultHeight] = useState(initialResultHeight);
   const [resultResizing, setResultResizing] = useState(false);
   const [position, setPosition] = useState<SqlEditorPosition>(defaultPosition);
-  const [metricRefIds, setMetricRefIds] = useState<number[]>([]);
-  const [metricOptions, setMetricOptions] = useState<{ label: string; value: number }[]>([]);
+  const [metricRefs, setMetricRefs] = useState<MetricVersionRef[]>([]);
+  const [metricOptions, setMetricOptions] = useState<{ label: string; value: string }[]>([]);
+  const [metricRefsState, setMetricRefsState] = useState<'LOADING' | 'READY' | 'UNAVAILABLE' | 'FORBIDDEN'>('LOADING');
+  const [publishedMetricsState, setPublishedMetricsState] = useState<'LOADING' | 'READY' | 'UNAVAILABLE' | 'FORBIDDEN'>('LOADING');
 
   useEffect(() => {
     dirtyChangeRef.current = onDirtyChange;
@@ -238,11 +241,19 @@ export default function DatasetNodeEditor({
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(undefined);
+    setMetricRefsState('LOADING');
     try {
       applyContext(await getDevelopmentDatasetNode(node.id));
       getDevelopmentDatasetMetricRefs(node.id)
-        .then((ids) => setMetricRefIds((ids ?? []).map(Number)))
-        .catch(() => setMetricRefIds([]));
+        .then((references) => {
+          setMetricRefs(references ?? []);
+          setMetricRefsState('READY');
+        })
+        .catch((error) => {
+          const response = error as { status?: number; response?: { status?: number } } | null;
+          const status = response?.status ?? response?.response?.status;
+          setMetricRefsState(status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE');
+        });
     } catch (error) {
       const text = error instanceof Error ? error.message : '加载 Dataset Node 失败';
       setLoadError(text);
@@ -258,16 +269,29 @@ export default function DatasetNodeEditor({
   }, [load]);
 
   useEffect(() => {
-    pageMetrics({ pageNo: 1, pageSize: 200 })
-      .then((result) =>
-        setMetricOptions(
-          (result.records ?? []).map((metric) => ({
-            label: `${metric.metricName}（${metric.metricCode}）`,
-            value: metric.id,
-          })),
-        ),
-      )
-      .catch(() => setMetricOptions([]));
+    listPublishedMetrics()
+      .then((publications) => {
+        setMetricOptions(publications.map((published) => {
+          let snapshot: { metricName?: string; metricCode?: string } = {};
+          try {
+            snapshot = JSON.parse(published.snapshot || '{}');
+          } catch {
+            // The stable Metric id and version still provide a usable option label.
+          }
+          const metricName = snapshot.metricName || `指标 #${published.metricId}`;
+          const metricCode = snapshot.metricCode || String(published.metricId);
+          return {
+            label: `${metricName}（${metricCode}） · 已发布 v${published.metricVersion}`,
+            value: `${published.metricId}:${published.metricVersion}`,
+          };
+        }));
+        setPublishedMetricsState('READY');
+      })
+      .catch((error) => {
+        const response = error as { status?: number; response?: { status?: number } } | null;
+        const status = response?.status ?? response?.response?.status;
+        setPublishedMetricsState(status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE');
+      });
   }, []);
 
   useEffect(() => {
@@ -277,12 +301,22 @@ export default function DatasetNodeEditor({
     markDirty();
   }, [context, loading, markDirty, metadataContext.dataSourceId]);
 
-  const currentVersion = context?.dataset?.currentVersion;
   const deliveryState = datasetDeliveryState(context, dirty);
   const versions = useMemo(
     () => [...(context?.dataset?.versions || [])].sort((a, b) => b.versionNo - a.versionNo),
     [context?.dataset?.versions],
   );
+  const activeMetricRefValues = useMemo(
+    () => new Set(metricOptions.map((option) => option.value)),
+    [metricOptions],
+  );
+  const historicalMetricRefOptions = metricRefs
+    .filter((reference) => reference.versionNo != null
+      && !activeMetricRefValues.has(`${reference.metricId}:${reference.versionNo}`))
+    .map((reference) => ({
+      label: `指标 #${reference.metricId} · 已引用 v${reference.versionNo}（当前未发布）`,
+      value: `${reference.metricId}:${reference.versionNo}`,
+    }));
   const metadataPath = useMemo(
     () => [
       metadataContext.dataSourceName
@@ -469,11 +503,18 @@ export default function DatasetNodeEditor({
       });
       applyContext(next);
       await onSaved?.();
-      // 指标引用同步 fail-open:失败只提示，不吞掉 Draft 保存成功
-      try {
-        await syncDevelopmentDatasetMetricRefs(node.id, node.name, metricRefIds);
-      } catch {
-        message.warning('指标引用上报失败，Dataset Draft 已保存；可重新保存同步');
+      // Never replace references from an incomplete or unavailable read.
+      if (metricRefsState !== 'READY' || publishedMetricsState !== 'READY') {
+        message.warning('指标引用或发布状态暂不可读；Dataset Draft 已保存，原有引用保持不变');
+      } else if (metricRefs.every((reference) => reference.versionNo != null
+        && activeMetricRefValues.has(`${reference.metricId}:${reference.versionNo}`))) {
+        try {
+          await syncDevelopmentDatasetMetricRefs(node.id, node.name, metricRefs);
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '指标引用同步失败；Dataset Draft 已保存');
+        }
+      } else {
+        message.warning('仍有历史版本未知或当前未发布的指标引用；请移除或重新选择已发布版本后再同步');
       }
       message.success(
         `Dataset Draft 已保存 · Dataset #${next.dataset?.datasetId || '-'}`,
@@ -549,14 +590,34 @@ export default function DatasetNodeEditor({
           size="small"
           maxTagCount="responsive"
           placeholder="从指标中心选择该数据集服务的指标"
-          value={metricRefIds}
-          options={metricOptions}
+          disabled={metricRefsState !== 'READY' || publishedMetricsState !== 'READY'}
+          value={metricRefs.map((reference) => reference.versionNo == null
+            ? `legacy:${reference.metricId}`
+            : `${reference.metricId}:${reference.versionNo}`)}
+          options={[
+            ...metricRefs.filter((reference) => reference.versionNo == null).map((reference) => ({
+              label: `指标 #${reference.metricId}（历史引用版本未知）`,
+              value: `legacy:${reference.metricId}`,
+            })),
+            ...historicalMetricRefOptions,
+            ...metricOptions,
+          ]}
           optionFilterProp="label"
-          onChange={(value: number[]) => {
-            setMetricRefIds(value ?? []);
+          onChange={(values: string[]) => {
+            const next = (values ?? []).map((value) => {
+              const [id, version] = value.split(':');
+              return { metricId: Number(value.startsWith('legacy:') ? version : id),
+                versionNo: value.startsWith('legacy:') ? null : Number(version) };
+            });
+            setMetricRefs(next);
             markDirty();
           }}
         />
+        {(metricRefsState === 'UNAVAILABLE' || publishedMetricsState === 'UNAVAILABLE') ? (
+          <div className="col-span-2 -mt-2 text-[12px] text-[#b54708]">指标引用或当前发布状态暂不可读；保存 Dataset Draft 时会保留原有引用。</div>
+        ) : (metricRefsState === 'FORBIDDEN' || publishedMetricsState === 'FORBIDDEN') ? (
+          <div className="col-span-2 -mt-2 text-[12px] text-[#b54708]">无权读取指标引用或发布状态；保存 Dataset Draft 时会保留原有引用。</div>
+        ) : null}
       </div>
       <dl className="m-0 mt-5 grid grid-cols-[88px_minmax(0,1fr)] gap-x-4 gap-y-3 border-t border-[#eef0f2] pt-4">
         <dt className="text-[#667085]">Dataset ID：</dt>
@@ -717,14 +778,14 @@ export default function DatasetNodeEditor({
           <div className="mt-2 text-[12px] leading-5 text-[#98a2b3]">
             {loadError || '未返回有效编辑上下文'}
           </div>
-          <Button
+          <YakButton
             className="mt-4"
             size="small"
             icon={<RefreshCw size={13} />}
             onClick={() => void load()}
           >
             重新加载
-          </Button>
+          </YakButton>
         </div>
       </div>
     );

@@ -2,7 +2,6 @@ import HttpUtils from '@/utils/HttpUtils';
 
 import type {
   AffectedMetricRecord,
-  DependencyChange,
   ImpactReport,
   LineageGraphView,
   MetricCreatePayload,
@@ -16,6 +15,9 @@ import type {
   MetricUpdatePayload,
   MetricUsageRecord,
   MetricVersionRecord,
+  MetricValidationEvidence,
+  MetricPublicationReadiness,
+  PublishedMetricContract,
   UsageSummary,
 } from './types';
 
@@ -85,6 +87,37 @@ export const listMetricVersions = (id: number): Promise<MetricVersionRecord[]> =
 
 export const getMetricVersion = (id: number, version: number): Promise<MetricVersionRecord> =>
   HttpUtils.getData<MetricVersionRecord>(`${METRIC_API_PREFIX}/${id}/versions/${version}`);
+
+export const validateMetricVersion = (id: number, version: number): Promise<MetricValidationEvidence> =>
+  HttpUtils.postData<MetricValidationEvidence>(`${METRIC_API_PREFIX}/${id}/versions/${version}/validation`, {});
+
+export const getLatestMetricValidation = (id: number, version: number): Promise<MetricValidationEvidence | null> =>
+  HttpUtils.getData<MetricValidationEvidence | null>(
+    `${METRIC_API_PREFIX}/${id}/versions/${version}/validation/latest-ready`,
+  );
+
+export const getMetricValidationHistory = (id: number, version: number): Promise<MetricValidationEvidence[]> =>
+  HttpUtils.getData<MetricValidationEvidence[]>(`${METRIC_API_PREFIX}/${id}/versions/${version}/validations`);
+
+export const getMetricPublicationReadiness = (id: number, version: number): Promise<MetricPublicationReadiness> =>
+  HttpUtils.getData<MetricPublicationReadiness>(
+    `${METRIC_API_PREFIX}/${id}/versions/${version}/publication-readiness`,
+  );
+
+export const getMetricPublication = (id: number): Promise<PublishedMetricContract | null> =>
+  HttpUtils.getData<PublishedMetricContract | null>(`${METRIC_API_PREFIX}/${id}/publication`);
+
+export const listPublishedMetrics = (): Promise<PublishedMetricContract[]> =>
+  HttpUtils.getData<PublishedMetricContract[]>(`${METRIC_API_PREFIX}/publications/active`);
+
+export const getMetricPublicationHistory = (id: number): Promise<Array<Record<string, unknown>>> =>
+  HttpUtils.getData<Array<Record<string, unknown>>>(`${METRIC_API_PREFIX}/${id}/publication-history`);
+
+export const publishMetricVersion = (id: number, version: number): Promise<PublishedMetricContract> =>
+  HttpUtils.postData<PublishedMetricContract>(`${METRIC_API_PREFIX}/${id}/versions/${version}/publish`, {});
+
+export const withdrawMetricPublication = (id: number): Promise<unknown> =>
+  HttpUtils.postData<unknown>(`${METRIC_API_PREFIX}/${id}/publication/withdraw`, {});
 
 // ── Lineage ──
 

@@ -1,18 +1,21 @@
 package io.yak.ops.business.metric.usage;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.metric.api.MetricUsageApi;
-import io.yak.ops.business.metric.dao.mapper.MetricUsageMapper;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
+import io.yak.ops.business.metric.api.MetricUsageApi.MetricVersionRef;
+import io.yak.ops.business.metric.domain.MetricUsage;
+import io.yak.ops.business.metric.publication.MetricPublicationService;
+import io.yak.ops.business.metric.publication.MetricPublicationService.PublishedMetricContract;
+import io.yak.ops.business.metric.repository.MetricUsageRepository;
+import io.yak.ops.business.metric.repository.MetricUsageRepository.UsageTypeCount;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Default usage SPI implementation (T52): project-scoped event inserts
+ * Default usage SPI implementation: project-scoped reference writes
  * plus server-side count aggregation. Fail-open: record() catches all
  * exceptions and logs them instead of propagating.
  */
@@ -20,28 +23,32 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class MetricUsageService implements MetricUsageApi {
 
-  private final MetricUsageMapper mapper;
+  private final MetricUsageRepository repository;
   private final CurrentProject currentProject;
+  private final MetricPublicationService publicationService;
 
-  public MetricUsageService(MetricUsageMapper mapper, CurrentProject currentProject) {
-    this.mapper = mapper;
+  public MetricUsageService(
+      MetricUsageRepository repository,
+      CurrentProject currentProject,
+      MetricPublicationService publicationService) {
+    this.repository = repository;
     this.currentProject = currentProject;
+    this.publicationService = publicationService;
   }
 
   @Override
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void record(MetricUsageEvent event) {
     try {
-      Long projectId = event.projectId() != null
-          ? event.projectId()
-          : currentProject.requireProjectId();
-      MetricUsagePO po = new MetricUsagePO();
-      po.setProjectId(projectId);
-      po.setMetricId(event.metricId());
-      po.setUsageType(event.usageType());
-      po.setUsageId(event.usageId());
-      po.setUsageName(event.usageName());
-      po.setCreateTime(LocalDateTime.now());
-      mapper.insert(po);
+      PublishedMetricContract active = publicationService.activeForBinding(event.metricId());
+      if (active == null) return;
+      Long projectId = currentProject.requireProjectId();
+      if (event.projectId() != null && !event.projectId().equals(projectId)) {
+        throw new IllegalArgumentException("Metric usage project does not match the current project");
+      }
+      repository.append(projectId, new MetricUsage(
+          null, event.metricId(), active.metricVersion(), event.usageType(), event.usageId(), event.usageName(),
+          LocalDateTime.now()));
     } catch (RuntimeException e) {
       log.warn("Metric usage record failed (fail-open): metricId={}, usageType={}, error={}",
           event.metricId(), event.usageType(), e.getMessage());
@@ -51,7 +58,7 @@ public class MetricUsageService implements MetricUsageApi {
   @Override
   public void revoke(String usageType, Long usageId) {
     try {
-      mapper.delete(consumerScope(usageType, usageId));
+      repository.deleteForConsumer(usageType, usageId);
     } catch (RuntimeException e) {
       log.warn("Metric usage revoke failed (fail-open): usageType={}, usageId={}, error={}",
           usageType, usageId, e.getMessage());
@@ -59,23 +66,28 @@ public class MetricUsageService implements MetricUsageApi {
   }
 
   @Override
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void syncBindings(String usageType, Long usageId, String usageName, List<Long> metricIds) {
     try {
       Long projectId = currentProject.requireProjectId();
-      mapper.delete(consumerScope(usageType, usageId));
+      List<MetricVersionRef> references = (metricIds == null ? List.<Long>of() : metricIds).stream()
+          .filter(java.util.Objects::nonNull)
+          .distinct()
+          .sorted()
+          .map(metricId -> {
+            PublishedMetricContract active = publicationService.activeForBinding(metricId);
+            if (active == null) {
+              throw new IllegalArgumentException(
+                  "Metric " + metricId + " has no active Published Metric Contract");
+            }
+            return new MetricVersionRef(metricId, active.metricVersion());
+          })
+          .toList();
+      repository.deleteForConsumer(usageType, usageId);
       LocalDateTime now = LocalDateTime.now();
-      for (Long metricId : metricIds == null ? List.<Long>of() : metricIds) {
-        if (metricId == null) {
-          continue;
-        }
-        MetricUsagePO po = new MetricUsagePO();
-        po.setProjectId(projectId);
-        po.setMetricId(metricId);
-        po.setUsageType(usageType);
-        po.setUsageId(usageId);
-        po.setUsageName(usageName);
-        po.setCreateTime(now);
-        mapper.insert(po);
+      for (MetricVersionRef reference : references) {
+        repository.append(projectId, new MetricUsage(
+            null, reference.metricId(), reference.versionNo(), usageType, usageId, usageName, now));
       }
     } catch (RuntimeException e) {
       log.warn("Metric usage syncBindings failed (fail-open): usageType={}, usageId={}, error={}",
@@ -84,23 +96,66 @@ public class MetricUsageService implements MetricUsageApi {
   }
 
   @Override
-  public List<Long> boundMetricIds(String usageType, Long usageId) {
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public void syncPublishedBindings(
+      String usageType, Long usageId, String usageName, List<MetricVersionRef> references) {
+    if (usageType == null || usageType.isBlank() || usageId == null || usageId <= 0) {
+      throw new IllegalArgumentException("usageType and usageId are required");
+    }
+    List<MetricVersionRef> normalized = references == null ? List.of() : references.stream()
+        .filter(java.util.Objects::nonNull)
+        .distinct()
+        .toList();
+    for (MetricVersionRef reference : normalized.stream()
+        .sorted(java.util.Comparator.comparing(
+            MetricVersionRef::metricId,
+            java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())))
+        .toList()) {
+      if (reference.metricId() == null || reference.metricId() <= 0
+          || reference.versionNo() == null || reference.versionNo() <= 0) {
+        throw new IllegalArgumentException("A governed Metric reference requires a positive id and version");
+      }
+      PublishedMetricContract active = publicationService.activeForBinding(reference.metricId());
+      if (active == null || !reference.versionNo().equals(active.metricVersion())) {
+        throw new IllegalArgumentException(
+            "Metric " + reference.metricId() + " version " + reference.versionNo()
+                + " is not the active Published Metric Contract");
+      }
+    }
+
     Long projectId = currentProject.requireProjectId();
-    return mapper.selectList(consumerScope(usageType, usageId)).stream()
-        .map(MetricUsagePO::getMetricId)
+    repository.deleteForConsumer(usageType, usageId);
+    LocalDateTime now = LocalDateTime.now();
+    for (MetricVersionRef reference : normalized) {
+      repository.append(projectId, new MetricUsage(
+          null, reference.metricId(), reference.versionNo(), usageType, usageId, usageName, now));
+    }
+  }
+
+  @Override
+  public List<Long> boundMetricIds(String usageType, Long usageId) {
+    return repository.listForConsumer(usageType, usageId).stream()
+        .map(MetricUsage::metricId)
+        .distinct()
+        .toList();
+  }
+
+  @Override
+  public List<MetricVersionRef> boundMetricVersionRefs(String usageType, Long usageId) {
+    return repository.listForConsumer(usageType, usageId).stream()
+        .map(row -> new MetricVersionRef(row.metricId(), row.metricVersion()))
         .distinct()
         .toList();
   }
 
   @Override
   public UsageSummary summary(Long metricId) {
-    Long projectId = currentProject.requireProjectId();
-    long total = mapper.countByMetric(projectId, metricId);
-    List<Map<String, Object>> rows = mapper.countGroupByType(projectId, metricId);
+    long total = repository.countByMetric(metricId);
+    List<UsageTypeCount> rows = repository.countGroupByType(metricId);
     long report = 0, dataset = 0, dashboard = 0, api = 0, screen = 0;
-    for (Map<String, Object> row : rows) {
-      String type = String.valueOf(row.get("usageType"));
-      long cnt = ((Number) row.get("cnt")).longValue();
+    for (UsageTypeCount row : rows) {
+      String type = row.usageType();
+      long cnt = row.count();
       switch (type) {
         case "REPORT" -> report = cnt;
         case "DATASET" -> dataset = cnt;
@@ -113,20 +168,7 @@ public class MetricUsageService implements MetricUsageApi {
     return new UsageSummary(metricId, total, report, dataset, dashboard, api, screen);
   }
 
-  public List<MetricUsagePO> listByMetric(Long metricId) {
-    Long projectId = currentProject.requireProjectId();
-    return mapper.selectList(
-        new LambdaQueryWrapper<MetricUsagePO>()
-            .eq(MetricUsagePO::getProjectId, projectId)
-            .eq(MetricUsagePO::getMetricId, metricId)
-            .orderByDesc(MetricUsagePO::getCreateTime));
-  }
-
-  private LambdaQueryWrapper<MetricUsagePO> consumerScope(String usageType, Long usageId) {
-    Long projectId = currentProject.requireProjectId();
-    return new LambdaQueryWrapper<MetricUsagePO>()
-        .eq(MetricUsagePO::getProjectId, projectId)
-        .eq(MetricUsagePO::getUsageType, usageType)
-        .eq(MetricUsagePO::getUsageId, usageId);
+  public List<MetricUsage> listByMetric(Long metricId) {
+    return repository.listByMetric(metricId);
   }
 }

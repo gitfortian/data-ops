@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Impact analysis REST API (T53 / Phase 5 F-005-D). */
+/** Phase 5 Metric Impact REST API. */
 @Tag(name = "指标影响分析接口")
 @RestController
 @RequiredArgsConstructor

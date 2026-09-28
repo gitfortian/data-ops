@@ -15,8 +15,6 @@ import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.api.MetricApi;
 import io.yak.ops.business.metric.dao.mapper.MetricTagRelMapper;
-import io.yak.ops.business.metric.dao.mapper.MetricUsageMapper;
-import io.yak.ops.business.metric.dao.mapper.MetricVersionMapper;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.domain.MetricStatus;
 import io.yak.ops.business.metric.domain.MetricType;
@@ -27,10 +25,10 @@ import io.yak.ops.business.metric.repository.MetricCompositionRepository;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
 import io.yak.ops.business.metric.repository.MetricRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
+import io.yak.ops.business.metric.repository.MetricUsageRepository;
 import io.yak.ops.business.metric.support.CodeGenerator;
 import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
-import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -44,8 +42,7 @@ class MetricCatalogServiceTest {
   private MetricCompositionRepository compositionRepository;
   private MetricDependencyRepository dependencyRepository;
   private MetricVersionRepository versionRepository;
-  private MetricUsageMapper usageMapper;
-  private CurrentProject currentProject;
+  private MetricUsageRepository usageRepository;
   private MetricReferenceResolver referenceResolver;
   private MetricLineageRegistrationService lineageRegistrationService;
   private MetricCatalogService service;
@@ -56,14 +53,12 @@ class MetricCatalogServiceTest {
     compositionRepository = mock(MetricCompositionRepository.class);
     dependencyRepository = mock(MetricDependencyRepository.class);
     versionRepository = mock(MetricVersionRepository.class);
-    usageMapper = mock(MetricUsageMapper.class);
-    currentProject = mock(CurrentProject.class);
+    usageRepository = mock(MetricUsageRepository.class);
     referenceResolver = mock(MetricReferenceResolver.class);
     lineageRegistrationService = mock(MetricLineageRegistrationService.class);
     AuditOperationHandle auditHandle = mock(AuditOperationHandle.class);
     BusinessAuditService auditService = mock(BusinessAuditService.class);
     when(auditService.start(any())).thenReturn(auditHandle);
-    when(currentProject.requireProjectId()).thenReturn(1L);
     when(referenceResolver.modelReference(anyLong()))
         .thenReturn(MetricReferenceResolver.Reference.EMPTY);
     when(referenceResolver.standardReference(anyLong()))
@@ -71,8 +66,8 @@ class MetricCatalogServiceTest {
     when(referenceResolver.metricsById(any())).thenReturn(java.util.Map.of());
     service = new MetricCatalogService(
         repository, compositionRepository, dependencyRepository, versionRepository,
-        mock(MetricTagRelMapper.class), usageMapper, mock(MetricVersionMapper.class),
-        currentProject, auditService, lineageRegistrationService, referenceResolver,
+        mock(MetricTagRelMapper.class), usageRepository,
+        auditService, lineageRegistrationService, referenceResolver,
         new DerivedMetricAssembler());
   }
 
@@ -304,7 +299,7 @@ class MetricCatalogServiceTest {
     when(repository.findById(10L)).thenReturn(Optional.of(existing));
     when(compositionRepository.countBySubMetric(10L)).thenReturn(0L);
     when(repository.listReferring(10L)).thenReturn(List.of());
-    when(usageMapper.countByMetric(1L, 10L)).thenReturn(3L);
+    when(usageRepository.countByMetric(10L)).thenReturn(3L);
 
     assertThatThrownBy(() -> service.delete(10L))
         .isInstanceOf(MetricException.class)

@@ -14,7 +14,6 @@ import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -93,8 +92,11 @@ public class DevelopmentDatasetNodeController {
 
   @Operation(summary = "查询 Dataset 节点引用的指标(编辑回显)")
   @GetMapping("/{nodeId}/dataset/metric-refs")
-  public Result<List<Long>> metricRefs(@PathVariable("nodeId") long nodeId) {
-    return Result.success(metricUsageApi.boundMetricIds(MetricUsageApi.USAGE_TYPE_DATASET, nodeId));
+  public Result<List<MetricUsageApi.MetricVersionRef>> metricRefs(@PathVariable("nodeId") long nodeId) {
+    DatasetNodeContext context = service.get(nodeId);
+    if (context.dataset() == null) return Result.success(List.of());
+    return Result.success(metricUsageApi.boundMetricVersionRefs(
+        MetricUsageApi.USAGE_TYPE_DATASET, Long.parseLong(context.dataset().datasetId())));
   }
 
   @Operation(summary = "同步 Dataset 节点的指标引用(fail-open，不阻断保存)")
@@ -103,8 +105,15 @@ public class DevelopmentDatasetNodeController {
   public Result<Boolean> syncMetricRefs(
       @PathVariable("nodeId") long nodeId,
       @Valid @RequestBody MetricRefsRequest request) {
-    metricUsageApi.syncBindings(
-        MetricUsageApi.USAGE_TYPE_DATASET, nodeId, request.usageName(), request.metricIds());
+    DatasetNodeContext context = service.get(nodeId);
+    if (context.dataset() == null) {
+      throw new IllegalStateException("请先保存 Dataset，再绑定已发布的指标版本");
+    }
+    metricUsageApi.syncPublishedBindings(
+        MetricUsageApi.USAGE_TYPE_DATASET,
+        Long.parseLong(context.dataset().datasetId()),
+        request.usageName(),
+        request.references());
     return Result.success(Boolean.TRUE);
   }
 
@@ -128,7 +137,7 @@ public class DevelopmentDatasetNodeController {
 
   public record MetricRefsRequest(
       @Size(max = 128) String usageName,
-      @Size(max = 50) List<@NotNull Long> metricIds) {
+      @Size(max = 50) List<MetricUsageApi.MetricVersionRef> references) {
   }
 
   public record DatasetFieldRequest(

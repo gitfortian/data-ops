@@ -12,4 +12,6 @@ public interface MetricVersionRepository {
   List<MetricVersionPO> listByMetric(Long metricId);
 
   MetricVersionPO findByMetricAndVersion(Long metricId, int version);
+
+  void deleteByMetric(Long metricId);
 }

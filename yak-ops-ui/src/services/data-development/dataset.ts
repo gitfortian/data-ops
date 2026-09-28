@@ -1,6 +1,7 @@
 import HttpUtils from '@/utils/HttpUtils';
 
 import type { DevelopmentId, DevelopmentSqlResultColumn } from './types';
+import type { MetricVersionRef } from '@/services/metric/types';
 
 const NODE_API = '/api/v1/data-development/nodes';
 
@@ -130,12 +131,12 @@ export const publishDevelopmentDatasetNode = (
 
 // ── 指标中心引用(01 消费接线；服务端经 MetricUsageApi SPI 落 yak_metric_usage) ──
 
-export const getDevelopmentDatasetMetricRefs = (nodeId: DevelopmentId): Promise<number[]> =>
-  HttpUtils.getData<number[]>(`${nodePath(nodeId)}/metric-refs`);
+export const getDevelopmentDatasetMetricRefs = (nodeId: DevelopmentId): Promise<MetricVersionRef[]> =>
+  HttpUtils.getData<MetricVersionRef[]>(`${nodePath(nodeId)}/metric-refs`);
 
 export const syncDevelopmentDatasetMetricRefs = (
   nodeId: DevelopmentId,
   usageName: string,
-  metricIds: number[],
+  references: MetricVersionRef[],
 ): Promise<boolean> =>
-  HttpUtils.putData<boolean>(`${nodePath(nodeId)}/metric-refs`, { usageName, metricIds });
+  HttpUtils.putData<boolean>(`${nodePath(nodeId)}/metric-refs`, { usageName, references });

@@ -5,8 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.metric.api.MetricUsageApi;
+import io.yak.ops.business.metric.domain.MetricUsage;
 import io.yak.ops.business.metric.usage.MetricUsageService;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 指标使用情况 REST API (T52)。 */
+/** Metric Reference Usage REST API. */
 @Tag(name = "指标使用统计接口")
 @RestController
 @RequiredArgsConstructor
@@ -31,11 +31,11 @@ public class MetricUsageController {
   private final MetricUsageService usageService;
 
   public record UsageItemView(
-      Long id, String usageType, Long usageId,
+      Long id, String usageType, Long usageId, Integer metricVersion,
       String usageName, LocalDateTime createTime) {
-    public static UsageItemView from(MetricUsagePO po) {
-      return new UsageItemView(po.getId(), po.getUsageType(),
-          po.getUsageId(), po.getUsageName(), po.getCreateTime());
+    public static UsageItemView from(MetricUsage usage) {
+      return new UsageItemView(usage.id(), usage.usageType(), usage.usageId(),
+          usage.metricVersion(), usage.usageName(), usage.createdAt());
     }
   }
 

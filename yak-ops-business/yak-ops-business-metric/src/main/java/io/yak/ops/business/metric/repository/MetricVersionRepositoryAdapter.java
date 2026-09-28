@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.dao.mapper.MetricVersionMapper;
 import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
 import io.yak.ops.common.bean.po.metric.MetricVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
@@ -16,11 +17,18 @@ public class MetricVersionRepositoryAdapter implements MetricVersionRepository {
 
   private final MetricVersionMapper mapper;
   private final CurrentProject currentProject;
+  private final MetricCompositionRepository compositionRepository;
+  private final MetricDependencyRepository dependencyRepository;
 
   public MetricVersionRepositoryAdapter(
-      MetricVersionMapper mapper, CurrentProject currentProject) {
+      MetricVersionMapper mapper,
+      CurrentProject currentProject,
+      MetricCompositionRepository compositionRepository,
+      MetricDependencyRepository dependencyRepository) {
     this.mapper = mapper;
     this.currentProject = currentProject;
+    this.compositionRepository = compositionRepository;
+    this.dependencyRepository = dependencyRepository;
   }
 
   @Override
@@ -30,7 +38,18 @@ public class MetricVersionRepositoryAdapter implements MetricVersionRepository {
     po.setProjectId(projectId);
     po.setMetricId(metric.id());
     po.setVersion(metric.version());
-    po.setSnapshot(MetricCatalogService.toJsonSnapshot(metric));
+    List<MetricCompositionPO> compositions = compositionRepository.listByMetric(metric.id());
+    java.util.Map<Long, Integer> dependencyVersions = dependencyRepository.listByMetric(metric.id())
+        .stream()
+        .filter(dependency -> "REF_METRIC".equals(dependency.getDependencyType())
+            || "COMPOSITION".equals(dependency.getDependencyType()))
+        .filter(dependency -> dependency.getDependencyId() != null
+            && dependency.getDependencyVersion() != null)
+        .collect(java.util.stream.Collectors.toMap(
+            io.yak.ops.common.bean.po.metric.MetricDependencyPO::getDependencyId,
+            io.yak.ops.common.bean.po.metric.MetricDependencyPO::getDependencyVersion,
+            (left, right) -> left));
+    po.setSnapshot(MetricCatalogService.toJsonSnapshot(metric, compositions, dependencyVersions));
     po.setChangeDesc(changeDesc);
     po.setChangedBy(operator);
     po.setCreateTime(LocalDateTime.now());
@@ -53,5 +72,13 @@ public class MetricVersionRepositoryAdapter implements MetricVersionRepository {
         .eq(MetricVersionPO::getProjectId, projectId)
         .eq(MetricVersionPO::getMetricId, metricId)
         .eq(MetricVersionPO::getVersion, version));
+  }
+
+  @Override
+  public void deleteByMetric(Long metricId) {
+    Long projectId = currentProject.requireProjectId();
+    mapper.delete(new LambdaQueryWrapper<MetricVersionPO>()
+        .eq(MetricVersionPO::getProjectId, projectId)
+        .eq(MetricVersionPO::getMetricId, metricId));
   }
 }

@@ -6,9 +6,10 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateStatus;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.PublicationSubject;
+import io.yak.ops.business.metric.domain.MetricValidationEvidence;
+import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationResult;
+import io.yak.ops.business.metric.domain.MetricValidationEvidence.ProviderState;
 import io.yak.ops.business.metric.validation.MetricDefinitionValidationService;
-import io.yak.ops.business.metric.validation.MetricDefinitionValidationService.ValidationEvidence;
-import io.yak.ops.business.metric.validation.MetricDefinitionValidationService.ValidationResult;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class MetricDefinitionValidationPublicationGateTest {
     var evidence = gate.evaluate(subject);
 
     assertThat(evidence.status()).isEqualTo(GateStatus.BLOCKED);
-    assertThat(evidence.issues()).containsExactly("DEFINITION_VALIDATION_READY_EVIDENCE_REQUIRED");
+    assertThat(evidence.issues()).containsExactly("DEFINITION_VALIDATION_PASSED_EVIDENCE_REQUIRED");
   }
 
   @Test
@@ -40,7 +41,7 @@ class MetricDefinitionValidationPublicationGateTest {
     var evidence = gate.evaluate(subject);
 
     assertThat(evidence.status()).isEqualTo(GateStatus.BLOCKED);
-    assertThat(evidence.issues()).containsExactly("DEFINITION_VALIDATION_READY_EVIDENCE_REQUIRED");
+    assertThat(evidence.issues()).containsExactly("DEFINITION_VALIDATION_PASSED_EVIDENCE_REQUIRED");
   }
 
   @Test
@@ -73,14 +74,15 @@ class MetricDefinitionValidationPublicationGateTest {
     return new PublicationSubject(7L, 31L, 3, "sha-3");
   }
 
-  private static ValidationEvidence readyEvidence(
+  private static MetricValidationEvidence readyEvidence(
       Long evidenceId, Long versionId, String digest, String provider) {
-    return new ValidationEvidence(
+    return new MetricValidationEvidence(
         evidenceId,
         7L,
         versionId,
         3,
-        ValidationResult.READY,
+        ValidationResult.PASSED,
+        ProviderState.READY,
         List.of(),
         provider,
         digest,
