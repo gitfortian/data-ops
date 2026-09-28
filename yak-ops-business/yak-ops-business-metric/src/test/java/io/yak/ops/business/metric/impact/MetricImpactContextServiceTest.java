@@ -36,7 +36,7 @@ class MetricImpactContextServiceTest {
     reference.setUsageName("sales_dataset");
     reference.setCreateTime(LocalDateTime.of(2026, 9, 27, 12, 0));
     when(fixture.usage.listByMetric(9L)).thenReturn(List.of(reference));
-    when(fixture.observedProviders.orderedStream()).thenReturn(Stream.empty());
+    when(fixture.observedProviders.orderedStream()).thenAnswer(ignored -> Stream.empty());
     when(fixture.lineageProvider.getIfAvailable()).thenReturn(null);
 
     MetricImpactContextService.ImpactContext result = fixture.service().get(9L);
@@ -58,7 +58,7 @@ class MetricImpactContextServiceTest {
     when(fixture.usage.listByMetric(9L)).thenReturn(List.of());
     when(provider.providerId()).thenReturn("phase4-consumption");
     when(provider.observe(fixture.metric)).thenThrow(new IllegalStateException("provider offline"));
-    when(fixture.observedProviders.orderedStream()).thenReturn(Stream.of(provider));
+    when(fixture.observedProviders.orderedStream()).thenAnswer(ignored -> Stream.of(provider));
     when(fixture.lineageProvider.getIfAvailable()).thenReturn(null);
 
     MetricImpactContextService.ImpactContext result = fixture.service().get(9L);
@@ -94,7 +94,7 @@ class MetricImpactContextServiceTest {
         observedAt);
 
     when(fixture.usage.listByMetric(9L)).thenReturn(List.of());
-    when(fixture.observedProviders.orderedStream()).thenReturn(Stream.empty());
+    when(fixture.observedProviders.orderedStream()).thenAnswer(ignored -> Stream.empty());
     when(fixture.lineageProvider.getIfAvailable()).thenReturn(lineage);
     when(lineage.findAssetByKey("metric:9")).thenReturn(Optional.of(root));
     when(lineage.upstream(root.id(), 1)).thenReturn(new LineageGraph(
@@ -122,7 +122,7 @@ class MetricImpactContextServiceTest {
     LineageQueryService lineage = mock(LineageQueryService.class);
 
     when(fixture.usage.listByMetric(9L)).thenReturn(List.of());
-    when(fixture.observedProviders.orderedStream()).thenReturn(Stream.empty());
+    when(fixture.observedProviders.orderedStream()).thenAnswer(ignored -> Stream.empty());
     when(fixture.lineageProvider.getIfAvailable()).thenReturn(lineage);
     when(lineage.findAssetByKey("metric:9")).thenReturn(Optional.empty());
 
