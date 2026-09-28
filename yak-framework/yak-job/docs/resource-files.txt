@@ -1,0 +1,8 @@
+src/main/resources/META-INF/spring.factories
+src/main/resources/yak-job.sql
+src/main/resources/mapper/yak-job/YakJobLogMapper.xml
+src/main/resources/mapper/yak-job/YakJobMapper.xml
+src/main/resources/mapper/yak-job/YakTaskLockMapper.xml
+src/main/resources/mapper/yak-job/YakTaskMapper.xml
+src/main/resources/mapper/yak-job/YakWorkerBlacklistMapper.xml
+src/main/resources/mapper/yak-job/YakWorkerMapper.xml
