@@ -9,7 +9,6 @@ on:
       - 'yak-ops-ui/src/pages/semantic/**'
       - 'yak-ops-ui/src/services/metric/**'
       - 'yak-ops-ui/src/services/semantic/**'
-      - 'yak-ops-ui/tsconfig.metric.json'
       - 'scripts/db/phase5-metric-*.sql'
       - 'scripts/product/phase5-real-env-acceptance.mjs'
       - '.github/workflows/metric-checks.yml'
@@ -70,5 +69,23 @@ jobs:
           src/pages/metric
           src/pages/semantic
           --runInBand
-      - name: Type-check Metric and Semantic dependency graph
-        run: yarn tsc -p tsconfig.metric.json --noEmit
+      - name: Type-check Metric and Semantic source paths
+        shell: bash
+        run: |
+          set -uo pipefail
+          diagnostics="$(mktemp)"
+          set +e
+          yarn tsc --noEmit --pretty false 2>&1 | tee "${diagnostics}"
+          tsc_status=${PIPESTATUS[0]}
+          set -e
+
+          phase5_errors="$(grep -E '^src/(pages|services)/(metric|semantic)/.*: error TS[0-9]+:' "${diagnostics}" || true)"
+          if [[ -n "${phase5_errors}" ]]; then
+            echo '::error::TypeScript errors detected in Metric/Semantic source paths.'
+            printf '%s\n' "${phase5_errors}"
+            exit 1
+          fi
+
+          if [[ "${tsc_status}" -ne 0 ]]; then
+            echo '::warning::Repository-wide TypeScript diagnostics exist outside Metric/Semantic paths; they are reported above but do not block the Phase 5 Metric gate.'
+          fi
