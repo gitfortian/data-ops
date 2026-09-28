@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 /** Golden Path B contract from source-owned invocation evidence to normalized Usage Evidence. */
 class DataServiceGoldenUsageEvidenceTest {
@@ -38,7 +39,7 @@ class DataServiceGoldenUsageEvidenceTest {
   void successfulManagedInvocationKeepsConsumerAndPinnedRevisionThroughNormalization() {
     InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
     DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
-        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer(), noEvents());
 
     recorder.record(
         definition(),
@@ -77,7 +78,7 @@ class DataServiceGoldenUsageEvidenceTest {
   void failedInvocationRemainsAuditEvidenceAndDoesNotCreateUsage() {
     InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
     DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
-        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer(), noEvents());
 
     recorder.record(
         definition(),
@@ -111,7 +112,7 @@ class DataServiceGoldenUsageEvidenceTest {
   void successfulInvocationWithoutManagedConsumerIsExplicitGapAndCreatesNoUsage() {
     InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
     DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
-        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer(), noEvents());
 
     recorder.record(
         definition(),
@@ -144,7 +145,7 @@ class DataServiceGoldenUsageEvidenceTest {
   void normalizationProviderFailureIsUnavailableAndSameSourceCanBeRetried() {
     InMemoryCallLogRepository callLogs = new InMemoryCallLogRepository();
     DataServiceInvocationRecorder recorder = new DataServiceInvocationRecorder(
-        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer());
+        callLogs, new ObjectMapper(), new DataServiceAuditSanitizer(), noEvents());
 
     recorder.record(
         definition(),
@@ -193,6 +194,10 @@ class DataServiceGoldenUsageEvidenceTest {
         AuthMode.NONE,
         publishedAt,
         publishedAt);
+  }
+
+  private ApplicationEventPublisher noEvents() {
+    return event -> {};
   }
 
   private static final class InMemoryCallLogRepository implements DataServiceCallLogRepository {

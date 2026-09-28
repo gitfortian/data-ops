@@ -22,6 +22,7 @@ on:
       - 'yak-ops-ui/src/pages/home/**'
       - 'yak-ops-ui/config/routes.ts'
       - 'yak-ops-ui/scripts/check-consumption-type-errors.mjs'
+      - 'scripts/product/phase4-real-env-*.mjs'
       - '.github/workflows/consumption-checks.yml'
 
 jobs:
@@ -42,7 +43,7 @@ jobs:
           mvn -B
           -pl yak-ops-business/yak-ops-business-consumption
           -am
-          -Dtest=ConsumptionContractFoundationTest,DatasetDataProductProviderTest,DataServiceDataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,DataServiceUsageEvidenceNormalizerTest,DatasetUsageEvidenceNormalizerTest,ConsumerImpactServiceTest
+          -Dtest=*Golden*,*QueryPerformance*Test,ConsumptionContractFoundationTest,*DataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,*UsageEvidenceNormalizerTest,ConsumerImpactServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
       - name: Verify executable Boot assembly contains Consumption
@@ -79,7 +80,7 @@ jobs:
           tsc_status=$?
           set -e
           cat /tmp/consumption-tsc.log
-          node scripts/check-consumption-type-errors.mjs /tmp/consumption-tsc.log
+          node scripts/check-consumption-type-errors.mjs /tmp/consumption-tsc.log "$tsc_status"
           if [ "$tsc_status" -ne 0 ]; then
             echo "Full repository TypeScript baseline still has diagnostics; no diagnostics are attributed to the Phase 4 consumption surfaces."
           fi

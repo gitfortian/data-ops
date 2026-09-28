@@ -5,6 +5,7 @@ import io.yak.ops.business.consumption.product.identity.DomainRef;
 import io.yak.ops.business.consumption.product.identity.ProductKey;
 import io.yak.ops.business.consumption.product.identity.SourceRef;
 import io.yak.ops.business.consumption.product.identity.SourceVersionRef;
+import io.yak.ops.business.consumption.product.model.AccessDecision;
 import io.yak.ops.business.consumption.product.model.AccessProjection;
 import io.yak.ops.business.consumption.product.model.AvailabilityState;
 import io.yak.ops.business.consumption.product.model.DataProductView;
@@ -22,11 +23,16 @@ import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
 import io.yak.ops.business.dataset.DatasetField;
 import io.yak.ops.business.dataset.DatasetStatus;
+import io.yak.ops.business.dataset.DatasetSourceType;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.definition.DatasetReader;
+import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
+import io.yak.ops.core.security.ActionAccessDeniedException;
+import io.yak.ops.core.security.ActionAuthorization;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Projects the Dataset owning contract into the governed Consumption contract without persisting a copy. */
@@ -36,10 +42,31 @@ public class DatasetDataProductProvider implements DataProductProvider {
 
   private final DatasetReader datasetReader;
   private final AssetSourceLookupService assetLookup;
+  private final DatasetTaskCatalogGateway taskCatalog;
+  private final ActionAuthorization actionAuthorization;
 
-  public DatasetDataProductProvider(DatasetReader datasetReader, AssetSourceLookupService assetLookup) {
+  @Autowired
+  public DatasetDataProductProvider(
+      DatasetReader datasetReader,
+      AssetSourceLookupService assetLookup,
+      DatasetTaskCatalogGateway taskCatalog,
+      ActionAuthorization actionAuthorization) {
     this.datasetReader = datasetReader;
     this.assetLookup = assetLookup;
+    this.taskCatalog = taskCatalog;
+    this.actionAuthorization = actionAuthorization;
+  }
+
+  public DatasetDataProductProvider(
+      DatasetReader datasetReader,
+      AssetSourceLookupService assetLookup,
+      DatasetTaskCatalogGateway taskCatalog) {
+    this(datasetReader, assetLookup, taskCatalog, null);
+  }
+
+  /** Compatibility constructor for focused tests without the Task Catalog adapter. */
+  public DatasetDataProductProvider(DatasetReader datasetReader, AssetSourceLookupService assetLookup) {
+    this(datasetReader, assetLookup, null, null);
   }
 
   @Override
@@ -59,7 +86,7 @@ public class DatasetDataProductProvider implements DataProductProvider {
       if (entries.isEmpty()) return ProductLookupResult.notFound();
       DatasetCatalogEntry entry = entries.get(0);
       if (!isPublished(entry)) return ProductLookupResult.notDiscoverable();
-      return ProductLookupResult.found(project(entry));
+      return ProductLookupResult.found(project(entry, actionAccess()));
     } catch (RuntimeException exception) {
       return ProductLookupResult.unavailable(exception.getMessage());
     }
@@ -76,10 +103,11 @@ public class DatasetDataProductProvider implements DataProductProvider {
           "Dataset owner/visibility owning evidence is not exposed yet");
     }
     try {
-      List<DataProductView> products = datasetReader.catalog(List.of(), true).stream()
+      AccessProjection access = actionAccess();
+      List<DataProductView> products = datasetReader.catalog(List.of(), false).stream()
           .filter(this::isPublished)
           .filter(entry -> matches(entry, criteria))
-          .map(this::project)
+          .map(entry -> project(entry, access))
           .toList();
       return ProductSearchResult.ready(products, products.size());
     } catch (RuntimeException exception) {
@@ -92,25 +120,30 @@ public class DatasetDataProductProvider implements DataProductProvider {
     Dataset dataset = entry.dataset();
     if (criteria.projectId() != null && !criteria.projectId().equals(dataset.projectId())) return false;
     if (criteria.lifecycle() != null && criteria.lifecycle() != SourceLifecycleState.PUBLISHED) return false;
-    if (criteria.availability() != null && criteria.availability() != AvailabilityState.UNKNOWN) return false;
+    if (criteria.availability() != null && criteria.availability() != availability(dataset)) return false;
     String keyword = normalize(criteria.keyword());
     if (keyword == null) return true;
     return contains(dataset.name(), keyword) || contains(dataset.description(), keyword);
   }
 
-  private DataProductView project(DatasetCatalogEntry entry) {
+  private DataProductView project(DatasetCatalogEntry entry, AccessProjection access) {
     Dataset dataset = entry.dataset();
     DatasetVersion version = entry.currentVersion();
     AssetProjection asset = assetProjection(dataset.id());
+    ProducerProjection producer = producerProjection(version);
     List<ProductSectionState> sections = List.of(
         sourceGovernanceSection(dataset),
         unavailableSection("ownership", "DATASET", "Dataset owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Dataset visibility policy is not exposed yet"),
+        producer.section(),
+        unavailableSection("quality", "QUALITY", "Dataset Quality section reader is not connected to Consumption"),
+        unavailableSection("security", "SECURITY", "Dataset Security classification evidence is not connected to Consumption"),
+        unavailableSection("lineage", "LINEAGE", "Dataset lineage evidence is not connected to Consumption"),
         asset.section());
     return new DataProductView(
         new ProductKey(ProductType.DATASET, String.valueOf(dataset.id())),
         new SourceRef(ProductType.DATASET, String.valueOf(dataset.id())),
-        new DomainRef("TASK_ASSET", String.valueOf(version.sourceTaskAssetId())),
+        producer.ref(),
         asset.ref(),
         dataset.name(),
         dataset.description(),
@@ -119,8 +152,8 @@ public class DatasetDataProductProvider implements DataProductProvider {
         null,
         new SourceVersionRef(String.valueOf(version.id()), "v" + version.versionNo()),
         SourceLifecycleState.PUBLISHED,
-        AvailabilityState.UNKNOWN,
-        AccessProjection.unavailable("Dataset action access is delivered by #103"),
+        availability(dataset),
+        access,
         sections,
         new DatasetContractPayload(
             version.id(),
@@ -130,16 +163,10 @@ public class DatasetDataProductProvider implements DataProductProvider {
   }
 
   private ProductSectionState sourceGovernanceSection(Dataset dataset) {
-    if (dataset.updateTime() == null) {
-      return unavailableSection(
-          "source-governance", "DATASET", "Dataset source governance observation time is unavailable");
-    }
-    return new ProductSectionState(
+    return unavailableSection(
         "source-governance",
-        ProviderEvidenceState.READY,
         "DATASET",
-        dataset.updateTime(),
-        null);
+        "Dataset source contract exposes update time but no governed evidence projection");
   }
 
   private DatasetColumnContract column(DatasetField field) {
@@ -150,7 +177,59 @@ public class DatasetDataProductProvider implements DataProductProvider {
   }
 
   private boolean isPublished(DatasetCatalogEntry entry) {
-    return entry.dataset().status() == DatasetStatus.ONLINE && entry.currentVersion() != null;
+    return entry.currentVersion() != null;
+  }
+
+  private AccessProjection actionAccess() {
+    if (actionAuthorization == null) {
+      return AccessProjection.unavailable(
+          "Dataset action access provider is not available",
+          "Current authenticated user", "QUERY", "LOGGED_IN_DATASET_QUERY",
+          "Open the Dataset query page; the execution gate makes the final decision");
+    }
+    try {
+      actionAuthorization.requirePermission("dataset:query");
+      return AccessProjection.ready(AccessDecision.ALLOWED);
+    } catch (ActionAccessDeniedException denied) {
+      return AccessProjection.ready(AccessDecision.FORBIDDEN);
+    } catch (RuntimeException unavailable) {
+      return AccessProjection.unavailable(
+          "Dataset query authorization provider is unavailable",
+          "Current authenticated user", "QUERY", "LOGGED_IN_DATASET_QUERY",
+          "Retry from the Dataset query page; the execution gate makes the final decision");
+    }
+  }
+
+  private ProducerProjection producerProjection(DatasetVersion version) {
+    if (version.sourceType() != DatasetSourceType.QUERY_REVISION || version.sourceTaskAssetId() <= 0L) {
+      return new ProducerProjection(null, new ProductSectionState(
+          "producer", ProviderEvidenceState.EMPTY, "DATA_DEVELOPMENT", null,
+          "This Dataset version has no linked development producer identity"));
+    }
+    if (taskCatalog == null) {
+      return new ProducerProjection(null, unavailableSection(
+          "producer", "DATA_DEVELOPMENT", "Task Catalog producer lookup is unavailable"));
+    }
+    try {
+      DatasetTaskCatalogGateway.DatasetTaskAssetSnapshot source = taskCatalog.get(version.sourceTaskAssetId());
+      if (source.sourceOrigin() != DatasetTaskCatalogGateway.SourceOrigin.DATA_DEVELOPMENT
+          || source.sourceRef() == null || source.sourceRef().isBlank()) {
+        return new ProducerProjection(null, new ProductSectionState(
+            "producer", ProviderEvidenceState.EMPTY, "DATA_DEVELOPMENT", null,
+            "Source task asset is not linked to a Data Development node"));
+      }
+      return new ProducerProjection(
+          new DomainRef("DATA_DEVELOPMENT_NODE", source.sourceRef()),
+          new ProductSectionState("producer", ProviderEvidenceState.READY, "DATA_DEVELOPMENT", null, null));
+    } catch (RuntimeException failure) {
+      return new ProducerProjection(null, unavailableSection("producer", "DATA_DEVELOPMENT", failure.getMessage()));
+    }
+  }
+
+  private AvailabilityState availability(Dataset dataset) {
+    return dataset.status() == DatasetStatus.ONLINE
+        ? AvailabilityState.UNKNOWN
+        : AvailabilityState.UNAVAILABLE;
   }
 
   private boolean requiresUnavailableGovernanceFilter(ProductSearchCriteria criteria) {
@@ -195,4 +274,5 @@ public class DatasetDataProductProvider implements DataProductProvider {
   }
 
   private record AssetProjection(DomainRef ref, ProductSectionState section) {}
+  private record ProducerProjection(DomainRef ref, ProductSectionState section) {}
 }

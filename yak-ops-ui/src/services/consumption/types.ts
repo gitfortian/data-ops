@@ -2,8 +2,8 @@ export type ProductType = 'DATASET' | 'DATA_SERVICE';
 export type ProductSearchState = 'READY' | 'FORBIDDEN' | 'UNAVAILABLE';
 export type ProductLookupState = 'FOUND' | 'NOT_FOUND' | 'NOT_DISCOVERABLE' | 'FORBIDDEN' | 'UNAVAILABLE';
 export type AvailabilityState = 'AVAILABLE' | 'UNAVAILABLE' | 'UNKNOWN';
-export type SourceLifecycleState = 'DRAFT' | 'PUBLISHED' | 'OFFLINE' | 'DEPRECATED';
-export type ProviderEvidenceState = 'READY' | 'EMPTY' | 'FORBIDDEN' | 'UNAVAILABLE' | 'STALE';
+export type SourceLifecycleState = 'NOT_PUBLISHED' | 'PUBLISHED' | 'DEPRECATED' | 'RETIRED';
+export type ProviderEvidenceState = 'READY' | 'EMPTY' | 'FORBIDDEN' | 'UNAVAILABLE' | 'NOT_APPLICABLE';
 
 export interface ProductKeyRef {
   productType: ProductType;
@@ -32,6 +32,10 @@ export interface AccessProjection {
   decision?: string | null;
   providerState: ProviderEvidenceState;
   reason?: string | null;
+  subject?: string | null;
+  action?: string | null;
+  plane?: string | null;
+  nextStep?: string | null;
 }
 
 export interface DataProductView {
@@ -50,6 +54,50 @@ export interface DataProductView {
   access: AccessProjection;
   sections: ProductSectionState[];
   contractPayload: Record<string, unknown> & { productType?: ProductType };
+}
+
+export type ConsumptionMode = 'QUERY' | 'PREVIEW' | 'EXPORT' | 'API_INVOKE' | 'DOWNSTREAM';
+export type SubscriptionStatus = 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
+
+export interface ConsumerRef {
+  consumerType: 'USER' | 'TEAM' | 'DASHBOARD' | 'DATA_SERVICE' | 'JOB';
+  sourceDomain: string;
+  sourceIdentity: string;
+  displayHint?: string | null;
+}
+
+export interface Subscription {
+  id: number;
+  projectId: number;
+  productKey: string;
+  consumerRef: ConsumerRef;
+  consumptionMode: ConsumptionMode;
+  status: SubscriptionStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export type EvidenceState = 'READY' | 'EMPTY' | 'UNAVAILABLE' | 'FORBIDDEN';
+
+export interface KnownConsumer {
+  consumerRef: ConsumerRef;
+  declaredModes: ConsumptionMode[];
+  observedModes: ConsumptionMode[];
+  activeSubscriptionCount: number;
+  successfulUsageCount: number;
+  lastDeclaredAt?: string | null;
+  lastObservedAt?: string | null;
+  providerEvidenceRefs: string[];
+}
+
+export interface ConsumerImpact {
+  productKey: { productType: ProductType; sourceIdentity: string };
+  subscriptionState: EvidenceState;
+  usageState: EvidenceState;
+  consumers: KnownConsumer[];
+  coverageNote: string;
 }
 
 export interface ProductDiscoveryResult {

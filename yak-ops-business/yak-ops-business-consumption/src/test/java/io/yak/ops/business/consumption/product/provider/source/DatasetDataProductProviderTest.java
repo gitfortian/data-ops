@@ -48,11 +48,11 @@ class DatasetDataProductProviderTest {
   }
 
   @Test
-  void unpublishedDatasetDoesNotLeakIntoCanonicalConsumption() {
+  void offlineDatasetWithPublishedVersionRemainsDiscoverableAsUnavailable() {
     when(reader.catalog(List.of(42L), false)).thenReturn(List.of(entry(DatasetStatus.OFFLINE, 101L)));
-    assertEquals(
-        ProductLookupState.NOT_DISCOVERABLE,
-        provider.get(new ProductKey(ProductType.DATASET, "42")).state());
+    var result = provider.get(new ProductKey(ProductType.DATASET, "42"));
+    assertEquals(ProductLookupState.FOUND, result.state());
+    assertEquals(AvailabilityState.UNAVAILABLE, result.product().availability());
   }
 
   @Test
@@ -64,7 +64,7 @@ class DatasetDataProductProviderTest {
 
   @Test
   void confirmedEmptySearchStaysReady() {
-    when(reader.catalog(any(), org.mockito.ArgumentMatchers.eq(true))).thenReturn(List.of());
+    when(reader.catalog(any(), org.mockito.ArgumentMatchers.eq(false))).thenReturn(List.of());
     var result = provider.search(new ProductSearchCriteria(
         ProductType.DATASET, "missing", null, null, null, null, null));
     assertEquals(ProductSearchState.READY, result.state());

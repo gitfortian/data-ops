@@ -82,10 +82,9 @@ public class CanonicalProductService {
 
   private String producerHref(DomainRef producerRef) {
     if (producerRef == null) return null;
-    if ("TASK".equalsIgnoreCase(producerRef.domain())
-        || "TASK_ASSET".equalsIgnoreCase(producerRef.domain())
-        || "DEVELOPMENT_TASK".equalsIgnoreCase(producerRef.domain())) {
-      return "/data-development/task/" + encode(producerRef.identity());
+    if ("DATA_DEVELOPMENT_NODE".equalsIgnoreCase(producerRef.domain())
+        || "DATA_DEVELOPMENT_DATA_SERVICE".equalsIgnoreCase(producerRef.domain())) {
+      return "/data-development?nodeId=" + encode(producerRef.identity());
     }
     return null;
   }

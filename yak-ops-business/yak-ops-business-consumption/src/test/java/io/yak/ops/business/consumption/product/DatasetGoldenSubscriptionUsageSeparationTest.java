@@ -24,6 +24,7 @@ import io.yak.ops.business.consumption.relationship.SubscriptionStatus;
 import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceRepository;
 import io.yak.ops.business.consumption.relationship.UsageOutcome;
+import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceSynchronizer;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -99,15 +100,18 @@ class DatasetGoldenSubscriptionUsageSeparationTest {
         observedAt,
         ConsumptionMode.QUERY,
         UsageOutcome.SUCCESS,
-        "DATASET_QUERY",
+        "DATASET_QUERY_PERFORMANCE",
         "query:q-1",
         "DATASET_QUERY_PERFORMANCE:q-1",
         observedAt);
 
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(synchronizer.synchronizeRecentByProduct(42L, 200)).thenReturn(List.of());
     when(usage.list(projectId, productKey, null, 200)).thenReturn(List.of(observedUsage));
 
-    ConsumerImpactService impactService = new ConsumerImpactService(subscriptions, usage, currentProject);
+    ConsumerImpactService impactService = new ConsumerImpactService(
+        subscriptions, usage, currentProject, synchronizer, null);
     ConsumerImpactView beforeCancel = impactService.view(productKey, 200);
 
     assertEquals(ConsumerImpactView.EvidenceState.READY, beforeCancel.subscriptionState());
@@ -127,11 +131,11 @@ class DatasetGoldenSubscriptionUsageSeparationTest {
         .orElseThrow();
     assertEquals(0, bob.activeSubscriptionCount());
     assertEquals(1, bob.successfulUsageCount());
-    assertEquals(List.of("DATASET_QUERY:query:q-1"), bob.providerEvidenceRefs());
+    assertEquals(List.of("DATASET_QUERY_PERFORMANCE:query:q-1"), bob.providerEvidenceRefs());
 
     Subscription cancelled = service.cancel(900L, "alice");
     Subscription cancelledAgain = service.cancel(900L, "alice");
-    assertEquals(SubscriptionStatus.CANCELLED, cancelled.status());
+    assertEquals(SubscriptionStatus.REVOKED, cancelled.status());
     assertSame(cancelled, cancelledAgain);
 
     ConsumerImpactView afterCancel = impactService.view(productKey, 200);

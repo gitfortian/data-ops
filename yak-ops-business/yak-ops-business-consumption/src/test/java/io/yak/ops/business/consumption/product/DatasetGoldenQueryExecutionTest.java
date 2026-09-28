@@ -25,6 +25,7 @@ import io.yak.ops.business.consumption.relationship.UsageEvidenceRepository;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.consumption.relationship.UsageNormalizationState;
 import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceNormalizer;
+import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceSynchronizer;
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetCatalogEntry;
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
@@ -163,8 +164,10 @@ class DatasetGoldenQueryExecutionTest {
     when(usageRepository.list(7L, detail.product().productKey(), null, 200))
         .thenReturn(List.of(usage));
 
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(synchronizer.synchronizeRecentByProduct(42L, 200)).thenReturn(List.of());
     ConsumerImpactView impact =
-        new ConsumerImpactService(subscriptions, usageRepository, currentProject)
+        new ConsumerImpactService(subscriptions, usageRepository, currentProject, synchronizer, null)
             .view(detail.product().productKey(), 200);
 
     assertEquals(ConsumerImpactView.EvidenceState.EMPTY, impact.subscriptionState());
@@ -174,7 +177,7 @@ class DatasetGoldenQueryExecutionTest {
         impact.consumers().getFirst().consumerRef().identityKey());
     assertEquals(0, impact.consumers().getFirst().activeSubscriptionCount());
     assertEquals(1, impact.consumers().getFirst().successfulUsageCount());
-    assertEquals(List.of("DATASET_QUERY:query:" + result.queryId()),
+    assertEquals(List.of("DATASET_QUERY_PERFORMANCE:query:" + result.queryId()),
         impact.consumers().getFirst().providerEvidenceRefs());
   }
 }

@@ -7,6 +7,7 @@ import io.yak.ops.business.dataset.DatasetQueryRequest;
 import io.yak.ops.business.dataset.DatasetQueryResult;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
 import io.yak.ops.business.dataset.DatasetQuerySubject;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryEvent;
 import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceRecorder;
@@ -22,26 +23,45 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /** Resolves the exact DatasetVersion and records one terminal diagnostic trace per attempt. */
 @Component
 public class DatasetQueryCoordinator {
 
+  private static final Logger LOG = LoggerFactory.getLogger(DatasetQueryCoordinator.class);
+
   private final DatasetRepository repository;
   private final DatasetSourceQueryRegistry sourceRegistry;
   private final DatasetQueryPerformanceRecorder performanceRecorder;
   private final ActionAuthorization actionAuthorization;
+  private final ApplicationEventPublisher eventPublisher;
 
+  @Autowired
+  public DatasetQueryCoordinator(
+      DatasetRepository repository,
+      DatasetSourceQueryRegistry sourceRegistry,
+      DatasetQueryPerformanceRecorder performanceRecorder,
+      ActionAuthorization actionAuthorization,
+      ApplicationEventPublisher eventPublisher) {
+    this.repository = repository;
+    this.sourceRegistry = sourceRegistry;
+    this.performanceRecorder = performanceRecorder;
+    this.actionAuthorization = actionAuthorization;
+    this.eventPublisher = eventPublisher;
+  }
+
+  /** Compatibility constructor for focused tests and non-Spring callers. */
   public DatasetQueryCoordinator(
       DatasetRepository repository,
       DatasetSourceQueryRegistry sourceRegistry,
       DatasetQueryPerformanceRecorder performanceRecorder,
       ActionAuthorization actionAuthorization) {
-    this.repository = repository;
-    this.sourceRegistry = sourceRegistry;
-    this.performanceRecorder = performanceRecorder;
-    this.actionAuthorization = actionAuthorization;
+    this(repository, sourceRegistry, performanceRecorder, actionAuthorization, null);
   }
 
   public DatasetQueryResult query(long datasetId, DatasetQueryRequest request) {
@@ -90,12 +110,14 @@ public class DatasetQueryCoordinator {
       ExecutionResult execution = adapter.execute(dataset, version, fields, request);
       long totalMillis = elapsedMillis(queryStartedAt);
       DatasetQueryResult result = execution.result().withQueryId(queryId);
-      performanceRecorder.record(trace(
+      DatasetQueryPerformance completed = trace(
           queryId, datasetId, dataset, version, execution.dataSourceId(), execution.sql(),
           DatasetQueryStatus.SUCCESS, null, null, null, subject,
           execution.waitMillis(), servicePrepareMillis + execution.prepareMillis(),
           execution.executeMillis(), execution.transferMillis(), totalMillis,
-          result.returnedRows(), result.truncated(), startedAt));
+          result.returnedRows(), result.truncated(), startedAt);
+      performanceRecorder.record(completed);
+      publishSuccessfulQuery(dataset, version, completed);
       return result;
     } catch (RuntimeException exception) {
       long totalMillis = elapsedMillis(queryStartedAt);
@@ -104,6 +126,26 @@ public class DatasetQueryCoordinator {
           exception.getClass().getSimpleName(), exception.getMessage(), subject,
           0L, servicePrepareMillis, 0L, 0L, totalMillis, 0, false, startedAt));
       throw exception;
+    }
+  }
+
+  private void publishSuccessfulQuery(
+      Dataset dataset, DatasetVersion version, DatasetQueryPerformance trace) {
+    if (eventPublisher == null) return;
+    try {
+      eventPublisher.publishEvent(new DatasetSuccessfulQueryEvent(
+          dataset.requireProjectId(),
+          trace.queryId(),
+          dataset.id(),
+          version.id(),
+          version.versionNo(),
+          trace.subjectType(),
+          trace.subjectSourceDomain(),
+          trace.subjectSourceIdentity(),
+          trace.subjectDisplayHint(),
+          trace.startedAt()));
+    } catch (RuntimeException failure) {
+      LOG.warn("Publishing successful Dataset query evidence failed; query result remains successful", failure);
     }
   }
 

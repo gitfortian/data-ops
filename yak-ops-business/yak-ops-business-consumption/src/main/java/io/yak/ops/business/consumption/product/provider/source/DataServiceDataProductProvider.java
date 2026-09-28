@@ -9,6 +9,8 @@ import io.yak.ops.business.consumption.product.model.AccessProjection;
 import io.yak.ops.business.consumption.product.model.AvailabilityState;
 import io.yak.ops.business.consumption.product.model.DataProductView;
 import io.yak.ops.business.consumption.product.model.DataServiceContractPayload;
+import io.yak.ops.business.consumption.product.model.DataServiceContractPayload.ParameterContract;
+import io.yak.ops.business.consumption.product.model.DataServiceContractPayload.ResponseFieldContract;
 import io.yak.ops.business.consumption.product.model.ProductSectionState;
 import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.product.model.ProviderEvidenceState;
@@ -19,13 +21,15 @@ import io.yak.ops.business.consumption.product.provider.ProductSearchCriteria;
 import io.yak.ops.business.consumption.product.provider.ProductSearchResult;
 import io.yak.ops.business.dataservice.domain.DataServiceDefinition;
 import io.yak.ops.business.dataservice.domain.SourceReference;
+import io.yak.ops.business.dataservice.documentation.ApiDocumentation;
+import io.yak.ops.business.dataservice.documentation.DataServiceDocumentationReader;
 import io.yak.ops.business.dataservice.query.DataServiceReader;
 import io.yak.ops.business.dataservice.query.DataServiceView;
 import io.yak.ops.business.dataservice.query.DataServiceViewFactory;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Projects published Data Service definitions/runtime bindings into Consumption without owning them. */
@@ -36,14 +40,26 @@ public class DataServiceDataProductProvider implements DataProductProvider {
   private final DataServiceReader reader;
   private final DataServiceViewFactory viewFactory;
   private final AssetSourceLookupService assetLookup;
+  private final DataServiceDocumentationReader documentationReader;
 
+  @Autowired
+  public DataServiceDataProductProvider(
+      DataServiceReader reader,
+      DataServiceViewFactory viewFactory,
+      AssetSourceLookupService assetLookup,
+      DataServiceDocumentationReader documentationReader) {
+    this.reader = reader;
+    this.viewFactory = viewFactory;
+    this.assetLookup = assetLookup;
+    this.documentationReader = documentationReader;
+  }
+
+  /** Compatibility constructor for focused tests without the documentation adapter. */
   public DataServiceDataProductProvider(
       DataServiceReader reader,
       DataServiceViewFactory viewFactory,
       AssetSourceLookupService assetLookup) {
-    this.reader = reader;
-    this.viewFactory = viewFactory;
-    this.assetLookup = assetLookup;
+    this(reader, viewFactory, assetLookup, null);
   }
 
   @Override
@@ -115,10 +131,15 @@ public class DataServiceDataProductProvider implements DataProductProvider {
     DataServiceView view = viewFactory.view(definition);
     SourceReference source = definition.sourceReference();
     AssetProjection asset = assetProjection(definition.id());
+    DocumentationProjection documentation = documentation(definition.id());
     List<ProductSectionState> sections = List.of(
         sourceGovernanceSection(definition),
         unavailableSection("ownership", "DATA_SERVICE", "Data Service owning contract does not expose owner"),
         unavailableSection("visibility", "SECURITY", "Data Service visibility policy is not exposed yet"),
+        documentation.section(),
+        unavailableSection("quality", "QUALITY", "Data Service Quality section reader is not connected to Consumption"),
+        unavailableSection("security", "SECURITY", "Data Service Security classification evidence is not connected to Consumption"),
+        unavailableSection("lineage", "LINEAGE", "Data Service lineage evidence is not connected to Consumption"),
         asset.section());
     return new DataProductView(
         new ProductKey(ProductType.DATA_SERVICE, String.valueOf(definition.id())),
@@ -133,7 +154,12 @@ public class DataServiceDataProductProvider implements DataProductProvider {
         activeVersion(definition),
         SourceLifecycleState.PUBLISHED,
         availability(definition),
-        AccessProjection.unavailable("Data Service subject/plane access is delivered by #103"),
+        AccessProjection.unavailable(
+            "A logged-in user's permissions do not determine public API-key invocation access",
+            "Registered Data Service Consumer/API Key",
+            "INVOKE",
+            "PUBLIC_API_KEY",
+            "Use the service's configured Consumer/API Key and public invocation endpoint"),
         sections,
         new DataServiceContractPayload(
             view.runtimePath(),
@@ -147,20 +173,46 @@ public class DataServiceDataProductProvider implements DataProductProvider {
             source.sourceRef(),
             source.sourceRevisionId(),
             source.sourceRevisionNo(),
-            definition.runtimeGeneration()));
+            definition.runtimeGeneration(),
+            documentation.parameters(),
+            documentation.responseFields(),
+            documentation.documented(),
+            documentation.schemaStale(),
+            documentation.updatedAt()));
+  }
+
+  private DocumentationProjection documentation(Long apiId) {
+    if (documentationReader == null) {
+      return DocumentationProjection.unavailable("Data Service documentation reader is unavailable");
+    }
+    try {
+      ApiDocumentation documentation = documentationReader.get(apiId);
+      List<ParameterContract> parameters = documentation.parameters().stream()
+          .map(item -> new ParameterContract(
+              item.name(), item.type(), item.required(), item.description(), item.example()))
+          .toList();
+      List<ResponseFieldContract> responseFields = documentation.responseFields().stream()
+          .map(item -> new ResponseFieldContract(
+              item.name(), item.type(), item.nullable(), item.description(), item.example()))
+          .toList();
+      ProviderEvidenceState state = documentation.schemaStale()
+          ? ProviderEvidenceState.UNAVAILABLE
+          : ProviderEvidenceState.READY;
+      String reason = documentation.schemaStale() ? "Documented schema is stale for the current runtime SQL" : null;
+      return new DocumentationProjection(
+          parameters, responseFields, documentation.documented(), documentation.schemaStale(),
+          documentation.updateTime(), new ProductSectionState(
+              "service-interface", state, "DATA_SERVICE", null, reason));
+    } catch (RuntimeException failure) {
+      return DocumentationProjection.unavailable(failure.getMessage());
+    }
   }
 
   private ProductSectionState sourceGovernanceSection(DataServiceDefinition definition) {
-    if (definition.updateTime() == null) {
-      return unavailableSection(
-          "source-governance", "DATA_SERVICE", "Data Service source governance observation time is unavailable");
-    }
-    return new ProductSectionState(
+    return unavailableSection(
         "source-governance",
-        ProviderEvidenceState.READY,
         "DATA_SERVICE",
-        definition.updateTime().toInstant(ZoneOffset.UTC),
-        null);
+        "Data Service source contract exposes update time but no governed evidence projection");
   }
 
   private SourceVersionRef activeVersion(DataServiceDefinition definition) {
@@ -228,4 +280,24 @@ public class DataServiceDataProductProvider implements DataProductProvider {
   }
 
   private record AssetProjection(DomainRef ref, ProductSectionState section) {}
+
+  private record DocumentationProjection(
+      List<ParameterContract> parameters,
+      List<ResponseFieldContract> responseFields,
+      boolean documented,
+      boolean schemaStale,
+      java.time.LocalDateTime updatedAt,
+      ProductSectionState section) {
+    private DocumentationProjection {
+      parameters = List.copyOf(parameters);
+      responseFields = List.copyOf(responseFields);
+    }
+
+    private static DocumentationProjection unavailable(String reason) {
+      return new DocumentationProjection(
+          List.of(), List.of(), false, false, null,
+          new ProductSectionState("service-interface", ProviderEvidenceState.UNAVAILABLE,
+              "DATA_SERVICE", null, reason));
+    }
+  }
 }

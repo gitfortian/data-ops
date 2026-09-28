@@ -20,6 +20,7 @@ import io.yak.ops.business.dataset.DatasetSourceType;
 import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.definition.DatasetReader;
+import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -46,16 +47,20 @@ class DatasetGoldenProducerBacklinkTest {
 
     DatasetReader reader = mock(DatasetReader.class);
     AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
+    DatasetTaskCatalogGateway taskCatalog = mock(DatasetTaskCatalogGateway.class);
     AssetAppService assetAppService = mock(AssetAppService.class);
     when(reader.catalog(List.of(42L), false)).thenReturn(
         List.of(new DatasetCatalogEntry(firstDataset, firstVersion, List.of())),
         List.of(new DatasetCatalogEntry(nextDataset, nextVersion, List.of())));
     when(assetLookup.lookup("DATASET", "42")).thenReturn(new AssetSourceLookupService.SourceLookup(
         "NOT_INDEXED", "DATASET", "42", null, null, null, null));
+    when(taskCatalog.get(501L)).thenReturn(new DatasetTaskCatalogGateway.DatasetTaskAssetSnapshot(
+        501L, "Orders SQL", "202", DatasetTaskCatalogGateway.SourceOrigin.DATA_DEVELOPMENT,
+        DatasetTaskCatalogGateway.SourceAvailability.ONLINE, "SQL", 602L, 10));
 
     CanonicalProductService canonical = new CanonicalProductService(
         new ProductDiscoveryService(new DataProductRegistry(List.of(
-            new DatasetDataProductProvider(reader, assetLookup)))),
+            new DatasetDataProductProvider(reader, assetLookup, taskCatalog)))),
         assetAppService);
     ProductKey productKey = new ProductKey(ProductType.DATASET, "42");
 
@@ -64,10 +69,10 @@ class DatasetGoldenProducerBacklinkTest {
 
     assertNotNull(first.product());
     assertNotNull(next.product());
-    assertEquals("TASK_ASSET", first.product().producerRef().domain());
-    assertEquals("501", first.product().producerRef().identity());
+    assertEquals("DATA_DEVELOPMENT_NODE", first.product().producerRef().domain());
+    assertEquals("202", first.product().producerRef().identity());
     assertEquals(first.product().producerRef(), next.product().producerRef());
-    assertEquals("/data-development/task/501", first.navigation().producerHref());
+    assertEquals("/data-development?nodeId=202", first.navigation().producerHref());
     assertEquals(first.navigation().producerHref(), next.navigation().producerHref());
     assertEquals(productKey, next.product().productKey());
     assertEquals("102", next.product().activeVersion().identity());

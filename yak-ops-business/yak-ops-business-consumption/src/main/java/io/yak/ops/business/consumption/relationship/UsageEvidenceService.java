@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 /** Idempotently persists normalized successful usage; source audit remains owned by source domains. */
@@ -17,8 +18,11 @@ public class UsageEvidenceService {
 
   public UsageEvidence normalize(UsageEvidenceCommand command) {
     Objects.requireNonNull(command, "command");
-    return repository.findByDeduplicationId(command.projectId(), command.deduplicationId())
-        .orElseGet(() -> repository.save(new UsageEvidence(
+    UsageEvidence existing = repository.findByDeduplicationId(
+        command.projectId(), command.deduplicationId()).orElse(null);
+    if (existing != null) return existing;
+
+    UsageEvidence candidate = new UsageEvidence(
             null,
             command.projectId(),
             command.productKey(),
@@ -30,7 +34,14 @@ public class UsageEvidenceService {
             command.provider(),
             command.providerEvidenceRef(),
             command.deduplicationId(),
-            LocalDateTime.now())));
+            LocalDateTime.now());
+    try {
+      return repository.save(candidate);
+    } catch (DuplicateKeyException duplicateDelivery) {
+      // The unique key is the linearization point when two workers normalize the same event.
+      return repository.findByDeduplicationId(command.projectId(), command.deduplicationId())
+          .orElseThrow(() -> duplicateDelivery);
+    }
   }
 
   public List<UsageEvidence> list(

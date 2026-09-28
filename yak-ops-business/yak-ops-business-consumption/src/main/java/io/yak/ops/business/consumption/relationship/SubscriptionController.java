@@ -26,13 +26,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/consumption/subscriptions")
 @ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)
-@RequiresPermission(AssetPermissionCode.READ)
 public class SubscriptionController {
 
   private final SubscriptionService service;
 
   @Operation(summary = "声明一个稳定的数据产品消费依赖")
   @PostMapping
+  @RequiresPermission(AssetPermissionCode.UPDATE)
   public Result<Subscription> subscribe(@RequestBody SubscribeRequest request, Principal principal) {
     if (request == null) throw new IllegalArgumentException("subscription request is required");
     ConsumerRef consumerRef = new ConsumerRef(
@@ -49,14 +49,30 @@ public class SubscriptionController {
 
   @Operation(summary = "幂等取消消费订阅")
   @PostMapping("/{subscriptionId}/cancel")
+  @RequiresPermission(AssetPermissionCode.UPDATE)
   public Result<Subscription> cancel(
       @PathVariable Long subscriptionId,
       Principal principal) {
     return Result.success(service.cancel(subscriptionId, actor(principal)));
   }
 
+  @Operation(summary = "暂停消费订阅")
+  @PostMapping("/{subscriptionId}/suspend")
+  @RequiresPermission(AssetPermissionCode.UPDATE)
+  public Result<Subscription> suspend(@PathVariable Long subscriptionId, Principal principal) {
+    return Result.success(service.suspend(subscriptionId, actor(principal)));
+  }
+
+  @Operation(summary = "恢复已暂停的消费订阅")
+  @PostMapping("/{subscriptionId}/resume")
+  @RequiresPermission(AssetPermissionCode.UPDATE)
+  public Result<Subscription> resume(@PathVariable Long subscriptionId, Principal principal) {
+    return Result.success(service.resume(subscriptionId, actor(principal)));
+  }
+
   @Operation(summary = "查询项目内消费订阅")
   @GetMapping
+  @RequiresPermission(AssetPermissionCode.READ)
   public Result<List<Subscription>> list(
       @RequestParam(required = false) String productKey,
       @RequestParam(required = false) ConsumerType consumerType,

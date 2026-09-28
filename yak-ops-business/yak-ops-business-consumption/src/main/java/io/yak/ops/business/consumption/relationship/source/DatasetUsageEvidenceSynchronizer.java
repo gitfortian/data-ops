@@ -2,6 +2,7 @@ package io.yak.ops.business.consumption.relationship.source;
 
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceReader;
+import io.yak.ops.business.dataset.DatasetQueryStatus;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +29,8 @@ public class DatasetUsageEvidenceSynchronizer {
   private List<UsageNormalizationResult> synchronizeRecent(Set<Long> datasetIds, int limit) {
     Long projectId = currentProject.requireProjectId();
     int boundedLimit = Math.max(1, Math.min(200, limit));
-    return performanceReader.recent(datasetIds, boundedLimit).stream()
+    return performanceReader.recent(
+            datasetIds, Set.of(), Set.of(DatasetQueryStatus.SUCCESS), null, boundedLimit).stream()
         .map(trace -> normalizer.normalize(projectId, trace))
         .toList();
   }

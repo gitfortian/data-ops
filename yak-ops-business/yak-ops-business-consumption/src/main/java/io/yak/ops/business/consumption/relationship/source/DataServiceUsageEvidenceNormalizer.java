@@ -10,6 +10,7 @@ import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataservice.domain.InvocationRecord;
+import io.yak.ops.business.dataservice.domain.DataServiceSuccessfulInvocationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -29,28 +30,52 @@ public class DataServiceUsageEvidenceNormalizer {
     if (!record.success()) {
       return UsageNormalizationResult.ignored(ref, "Failed invocation is audit evidence, not usage");
     }
-    String gap = attributionGap(record);
+    return normalize(
+        record.id(), record.projectId(), record.apiId(), record.consumerId(),
+        record.apiKeyName(), record.sourceRevisionId(), record.sourceRevisionNo(), record.createTime());
+  }
+
+  public UsageNormalizationResult normalize(DataServiceSuccessfulInvocationEvent event) {
+    if (event == null) {
+      return UsageNormalizationResult.gap(null, "Data Service invocation evidence is missing");
+    }
+    return normalize(
+        event.id(), event.projectId(), event.apiId(), event.consumerId(), event.consumerName(),
+        event.sourceRevisionId(), event.sourceRevisionNo(), event.observedAt());
+  }
+
+  private UsageNormalizationResult normalize(
+      Long id,
+      Long projectId,
+      Long apiId,
+      Long consumerId,
+      String consumerName,
+      Long sourceRevisionId,
+      Integer sourceRevisionNo,
+      java.time.LocalDateTime observedAt) {
+    String ref = id == null ? null : "invocation:" + id;
+    String gap = attributionGap(id, projectId, apiId, consumerId, sourceRevisionId, observedAt);
     if (gap != null) {
       return UsageNormalizationResult.gap(ref, gap);
     }
     try {
       UsageEvidence evidence = usageEvidenceService.normalize(
           new UsageEvidenceService.UsageEvidenceCommand(
-              record.projectId(),
-              new ProductKey(ProductType.DATA_SERVICE, record.apiId().toString()),
+              projectId,
+              new ProductKey(ProductType.DATA_SERVICE, apiId.toString()),
               new SourceVersionRef(
-                  record.sourceRevisionId().toString(),
-                  record.sourceRevisionNo() == null ? null : "r" + record.sourceRevisionNo()),
+                  sourceRevisionId.toString(),
+                  sourceRevisionNo == null ? null : "r" + sourceRevisionNo),
               new ConsumerRef(
                   ConsumerType.DATA_SERVICE,
                   "DATA_SERVICE_CONSUMER",
-                  record.consumerId().toString(),
-                  record.apiKeyName()),
-              record.createTime(),
+                  consumerId.toString(),
+                  consumerName),
+              observedAt,
               ConsumptionMode.API_INVOKE,
               PROVIDER,
               ref,
-              PROVIDER + ":" + record.id()));
+              PROVIDER + ":" + id));
       return UsageNormalizationResult.normalized(evidence);
     } catch (RuntimeException failure) {
       return UsageNormalizationResult.unavailable(
@@ -59,13 +84,15 @@ public class DataServiceUsageEvidenceNormalizer {
     }
   }
 
-  private String attributionGap(InvocationRecord record) {
-    if (record.id() == null) return "Invocation audit has no stable evidence id";
-    if (record.projectId() == null || record.projectId() <= 0L) return "Invocation audit has no Project Space";
-    if (record.apiId() == null || record.apiId() <= 0L) return "Invocation audit has no Data Service identity";
-    if (record.consumerId() == null || record.consumerId() <= 0L) return "Invocation audit has no stable managed consumer identity";
-    if (record.sourceRevisionId() == null || record.sourceRevisionId() <= 0L) return "Invocation audit has no pinned source revision";
-    if (record.createTime() == null) return "Invocation audit has no observation time";
+  private String attributionGap(
+      Long id, Long projectId, Long apiId, Long consumerId, Long sourceRevisionId,
+      java.time.LocalDateTime observedAt) {
+    if (id == null) return "Invocation audit has no stable evidence id";
+    if (projectId == null || projectId <= 0L) return "Invocation audit has no Project Space";
+    if (apiId == null || apiId <= 0L) return "Invocation audit has no Data Service identity";
+    if (consumerId == null || consumerId <= 0L) return "Invocation audit has no stable managed consumer identity";
+    if (sourceRevisionId == null || sourceRevisionId <= 0L) return "Invocation audit has no pinned source revision";
+    if (observedAt == null) return "Invocation audit has no observation time";
     return null;
   }
 
