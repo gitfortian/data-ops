@@ -12,7 +12,7 @@ import {
   type ProductNavigation,
   type Subscription,
 } from '@/services/consumption';
-import { history, useModel, useParams } from '@umijs/max';
+import { history, useModel, useParams, useSearchParams } from '@umijs/max';
 import { listDataServiceConsumers, type DataServiceConsumer } from '@/services/data-service/consumer';
 import {
   Alert,
@@ -84,9 +84,11 @@ const factText = (facts: Record<string, unknown>) => {
 
 export default function ConsumptionDetailPage() {
   const params = useParams<{ productKey: string }>();
+  const [searchParams] = useSearchParams();
   const { initialState } = useModel('@@initialState');
   const actor = initialState?.currentUser?.userName || '';
   const productKey = decodeURIComponent(params.productKey || '');
+  const returnAssetId = searchParams.get('returnAssetId');
   const [product, setProduct] = useState<DataProductView | null>(null);
   const [navigation, setNavigation] = useState<ProductNavigation | null>(null);
   const [governanceEvidence, setGovernanceEvidence] = useState<GovernanceEvidence[]>([]);
@@ -257,7 +259,15 @@ export default function ConsumptionDetailPage() {
     <div style={{ padding: 24 }}>
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Space wrap>
-          <Button onClick={() => history.push('/data-analysis/consumption')}>返回数据消费</Button>
+          <Button
+            onClick={() => history.push(
+              returnAssetId && /^\d+$/.test(returnAssetId)
+                ? `/data-asset/detail/${returnAssetId}`
+                : '/data-analysis/consumption',
+            )}
+          >
+            {returnAssetId && /^\d+$/.test(returnAssetId) ? '返回资产详情' : '返回数据消费'}
+          </Button>
           {navigation?.sourceHref ? (
             <Button
               type="primary"

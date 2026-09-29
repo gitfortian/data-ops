@@ -121,7 +121,9 @@ public class AssetDiscoverService {
   public record BusinessConsumption(
       UsageOwnerDomain ownerDomain, SectionStatus status, String scope, Integer totalCount,
       Integer reportCount, Integer datasetCount, Integer dashboardCount, Integer apiCount,
-      Integer screenCount, String reason) {}
+      Integer screenCount, Integer consumerCount, Integer userCount, Integer teamCount,
+      Integer dataServiceCount, Integer jobCount, Integer successfulUsageCount,
+      Integer activeSubscriptionCount, String lastObservedAt, String coverageNote, String reason) {}
 
   public record UsageSummary(
       PageActivityUsage pageActivity,
@@ -408,11 +410,18 @@ public class AssetDiscoverService {
             stringValue(values.get("scope")), integerValue(values.get("totalCount")),
             integerValue(values.get("reportCount")), integerValue(values.get("datasetCount")),
             integerValue(values.get("dashboardCount")), integerValue(values.get("apiCount")),
-            integerValue(values.get("screenCount")), contract.reason());
+            integerValue(values.get("screenCount")), integerValue(values.get("consumerCount")),
+            integerValue(values.get("userCount")), integerValue(values.get("teamCount")),
+            integerValue(values.get("dataServiceCount")), integerValue(values.get("jobCount")),
+            integerValue(values.get("successfulUsageCount")),
+            integerValue(values.get("activeSubscriptionCount")),
+            stringValue(values.get("lastObservedAt")), stringValue(values.get("coverageNote")),
+            contract.reason());
         actions.addAll(contract.actions());
     } else {
       businessConsumption = new BusinessConsumption(UsageOwnerDomain.CONSUMING_DOMAINS,
           SectionStatus.UNAVAILABLE, null, null, null, null, null, null, null,
+          null, null, null, null, null, null, null, null, null,
           "当前资产类型尚未接入消费域读侧");
     }
     UsageSummary summary = new UsageSummary(pageActivity, structuralUsage, businessConsumption);
