@@ -17,6 +17,9 @@ DATASET_FIELD
 CHART
 DASHBOARD
 METRIC
+DATABASE_SERVICE
+DATABASE
+DOMAIN
 ```
 
 `assetKey` 是业务可稳定寻址的键；`id` 是持久化标识。`sourceType/sourceId` 表达资产的来源或 ownership 线索，不等价于通用 Asset identity。

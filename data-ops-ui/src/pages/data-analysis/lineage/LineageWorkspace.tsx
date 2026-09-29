@@ -160,6 +160,9 @@ const businessLink = (asset: LineageAsset): { label: string; path: string } | un
   if (asset.assetType === 'TABLE' || asset.assetType === 'COLUMN') {
     return { label: '打开数据源', path: '/data-source' };
   }
+  if (asset.assetType === 'DATABASE_SERVICE' || asset.assetType === 'DATABASE') {
+    return { label: '打开数据源', path: '/data-source' };
+  }
   if (asset.assetType === 'METRIC') {
     const metricId = asset.sourceId || asset.assetKey.replace(/^metric:/, '');
     return metricId ? { label: '打开指标', path: `/metric/manage/${encodeURIComponent(metricId)}` } : undefined;
@@ -1041,6 +1044,9 @@ export default function LineagePage() {
                           <ImpactValue label="图表" value={impact.byType.CHART} />
                           <ImpactValue label="仪表盘" value={impact.byType.DASHBOARD} />
                           <ImpactValue label="数据表" value={impact.byType.TABLE} />
+                          <ImpactValue label="数据库服务" value={impact.byType.DATABASE_SERVICE} />
+                          <ImpactValue label="数据库" value={impact.byType.DATABASE} />
+                          <ImpactValue label="业务域" value={impact.byType.DOMAIN} />
                         </div>
                       </div>
                     ) : null}

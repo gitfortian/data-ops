@@ -4,7 +4,9 @@ import {
   Database,
   FileCode2,
   LayoutDashboard,
+  Network,
   Rows3,
+  Server,
   Sigma,
   TableProperties,
 } from 'lucide-react';
@@ -26,6 +28,9 @@ const iconByType = {
   CHART: BarChart3,
   DASHBOARD: LayoutDashboard,
   METRIC: Sigma,
+  DATABASE_SERVICE: Server,
+  DATABASE: Database,
+  DOMAIN: Network,
 };
 
 const subtitle = (asset: LineageAsset) => {
@@ -42,6 +47,9 @@ const subtitle = (asset: LineageAsset) => {
   if (asset.assetType === 'CHART') return 'Analysis';
   if (asset.assetType === 'DASHBOARD') return '数据消费';
   if (asset.assetType === 'METRIC') return asset.sourceType || '指标中心';
+  if (asset.assetType === 'DATABASE_SERVICE') return asset.sourceType || '数据源服务';
+  if (asset.assetType === 'DATABASE') return asset.databaseName || asset.sourceType || '数据库';
+  if (asset.assetType === 'DOMAIN') return asset.sourceType || '业务域';
   return asset.sourceType || assetTypeLabel[asset.assetType];
 };
 

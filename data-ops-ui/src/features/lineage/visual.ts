@@ -70,6 +70,27 @@ export const lineageAssetVisual: Record<LineageAssetType, LineageAssetVisual> = 
     border: '#D0D5DD',
     glow: 'transparent',
   },
+  DATABASE_SERVICE: {
+    accent: '#175CD3',
+    soft: '#F8F9FB',
+    softStrong: '#F2F4F7',
+    border: '#D0D5DD',
+    glow: 'transparent',
+  },
+  DATABASE: {
+    accent: '#027A48',
+    soft: '#F8F9FB',
+    softStrong: '#F2F4F7',
+    border: '#D0D5DD',
+    glow: 'transparent',
+  },
+  DOMAIN: {
+    accent: '#6941C6',
+    soft: '#F8F9FB',
+    softStrong: '#F2F4F7',
+    border: '#D0D5DD',
+    glow: 'transparent',
+  },
 };
 
 // Relations deliberately share one neutral blue-gray so the graph does not
