@@ -36,7 +36,8 @@ public record LogicalEntity(
         null);
   }
 
-  public LogicalEntity withPersisted(Long id, String owner, LocalDateTime createTime, LocalDateTime updateTime) {
+  public LogicalEntity withPersisted(
+      Long id, String owner, LocalDateTime createTime, LocalDateTime updateTime) {
     return new LogicalEntity(id, logicalModelId, code, name, businessName, description,
         owner, status, createTime, updateTime);
   }
