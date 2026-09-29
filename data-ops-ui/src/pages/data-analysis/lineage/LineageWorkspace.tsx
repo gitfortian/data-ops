@@ -1037,6 +1037,7 @@ export default function LineagePage() {
                           <ImpactValue label="全部下游" value={impact.total} />
                           <ImpactValue label="SQL 任务" value={impact.byType.SQL_TASK} />
                           <ImpactValue label="Dataset" value={impact.byType.DATASET} />
+                          <ImpactValue label="指标" value={impact.byType.METRIC} />
                           <ImpactValue label="图表" value={impact.byType.CHART} />
                           <ImpactValue label="仪表盘" value={impact.byType.DASHBOARD} />
                           <ImpactValue label="数据表" value={impact.byType.TABLE} />

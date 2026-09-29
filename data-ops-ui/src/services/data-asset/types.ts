@@ -157,8 +157,18 @@ export interface ClassificationData {
   categoryCode?: string;
   categoryName?: string;
   status?: string;
+  maskingConfigured?: boolean | null;
   classificationCount?: number;
   classifications?: ClassificationData[];
+  applicableReadPolicyCount?: number | null;
+  accessPolicySummaryStatus?: string;
+  accessPolicySummaryReason?: string;
+  maskingConfiguredCount?: number | null;
+  unmaskedClassifiedCount?: number | null;
+  maskingSummaryStatus?: string;
+  maskingSummaryReason?: string;
+  complianceSummaryStatus?: string;
+  complianceSummaryReason?: string;
   strategySummaryStatus?: string;
   strategySummaryReason?: string;
 }

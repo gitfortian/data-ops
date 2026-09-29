@@ -8,12 +8,17 @@ import type {
   MetadataChangeRecord,
   MetadataEntityDetail,
   MetadataEntityDto,
+  MetadataOverviewData,
   MetadataPageResult,
   MetadataSearchParams,
   MetadataSearchResult,
 } from './types';
 
 const METADATA_API_PREFIX = '/api/v1/metadata';
+
+/** Metadata specialist workbench overview: catalog inventory, collection and open tasks. */
+export const getMetadataOverview = () =>
+  HttpUtils.getData<MetadataOverviewData>(`${METADATA_API_PREFIX}/overview`);
 
 type RawPage<T> = {
   bizData?: T[];

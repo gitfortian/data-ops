@@ -84,6 +84,59 @@ export interface CollectRunRecord {
   createdBy?: string;
 }
 
+export interface MetadataOverviewEntityType {
+  typeName: string;
+  displayName: string;
+  status: string;
+  collectible: boolean;
+  entityCount: number;
+}
+
+export interface MetadataOverviewJobSummary {
+  providerType: CollectProviderType;
+  totalCount: number;
+  enabledCount: number;
+  dryRunRequiredCount: number;
+}
+
+export interface MetadataOverviewRecentRun {
+  runId: number;
+  jobId: number;
+  jobCode?: string | null;
+  jobName?: string | null;
+  providerType: CollectProviderType;
+  triggerType: CollectTriggerType;
+  dryRun: boolean;
+  status: CollectRunStatus;
+  totalCount: number;
+  newCount: number;
+  changedCount: number;
+  unchangedCount: number;
+  goneCount: number;
+  partialFailedCount: number;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  durationMs?: number | null;
+}
+
+export interface MetadataOverviewOpenTask {
+  taskType: string;
+  openCount: number;
+}
+
+export interface MetadataOverviewData {
+  catalogEntityCount: number;
+  entityTypes: MetadataOverviewEntityType[];
+  totalJobCount: number;
+  enabledJobCount: number;
+  dryRunRequiredJobCount: number;
+  jobsByProvider: MetadataOverviewJobSummary[];
+  recentRunLimit: number;
+  recentRuns: MetadataOverviewRecentRun[];
+  openTaskCount: number;
+  openTasks: MetadataOverviewOpenTask[];
+}
+
 /** 元模型类型（GET /metadata/types 的子集；平台全局,不随项目变化）。 */
 export interface EntityTypeView {
   id: number;

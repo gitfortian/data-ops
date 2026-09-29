@@ -715,13 +715,42 @@ const AssetDetailPage = () => {
                   {(() => {
                     const data = detail?.sections.security?.data;
                     const classifications = Array.isArray(data?.classifications)
-                      ? data.classifications as Record<string, unknown>[]
+                      ? data.classifications
                       : [];
                     return (
                       <Space direction="vertical" className="w-full">
                         <div className="text-[12px] text-[#667085]">
-                          安全分级证据：{classifications.length} 条。仅展示当前生效的分级记录；访问/脱敏策略需在 Security 工作台核对，此摘要不代表访问许可。
+                          安全分级证据：{classifications.length} 条。访问策略数量仅统计已审批 READ 规则，不代表当前用户的最终访问许可；合规结果按批次归属。
                         </div>
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            {
+                              key: 'access', label: '匹配的已审批 READ 规则',
+                              children: data?.accessPolicySummaryStatus === 'OK'
+                                ? `${data.applicableReadPolicyCount ?? 0} 条 · ${data.accessPolicySummaryReason ?? ''}`
+                                : data?.accessPolicySummaryReason ?? '不可用',
+                            },
+                            {
+                              key: 'masking', label: '脱敏策略匹配',
+                              children: data?.maskingSummaryStatus === 'NOT_APPLICABLE'
+                                ? data.maskingSummaryReason ?? '无分级对象'
+                                : data?.maskingSummaryStatus === 'UNAVAILABLE'
+                                  ? data.maskingSummaryReason ?? '不可用'
+                                  : `已匹配 ${data?.maskingConfiguredCount ?? 0} 个，未匹配 ${data?.unmaskedClassifiedCount ?? 0} 个`,
+                            },
+                            {
+                              key: 'compliance', label: '对象级合规状态',
+                              children: data?.complianceSummaryReason ?? '合规检查结果按批次归属，无法归结为单个对象状态',
+                            },
+                          ]}
+                        />
+                        <Space size="small" wrap>
+                          <Button type="link" onClick={() => history.push('/data-security/access')}>访问策略工作台</Button>
+                          <Button type="link" onClick={() => history.push('/data-security/masking')}>脱敏策略工作台</Button>
+                          <Button type="link" onClick={() => history.push('/data-security/compliance')}>批次合规检查</Button>
+                        </Space>
                         {classifications.map((item, index) => (
                           <Descriptions
                             key={String(item.objectKey ?? index)}
@@ -731,6 +760,7 @@ const AssetDetailPage = () => {
                               { key: 'level', label: '等级', children: String(item.levelName ?? item.levelCode ?? '-') },
                               { key: 'category', label: '分类', children: String(item.categoryName ?? item.categoryCode ?? '-') },
                               { key: 'object', label: '对象', children: String(item.objectKey ?? '-') },
+                              { key: 'masking', label: '脱敏匹配', children: item.maskingConfigured == null ? '不可用' : item.maskingConfigured ? '已匹配可用算法' : '未匹配' },
                             ]}
                           />
                         ))}

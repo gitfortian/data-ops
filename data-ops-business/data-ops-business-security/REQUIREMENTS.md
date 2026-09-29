@@ -62,5 +62,7 @@
 ## Asset Security Section
 
 - Security 作为事实 Owner 实现只读 `SectionProvider`，通过既有 `SecurityClassificationQueryApi` 查询 Asset source identity 对应的分级证据；物理表按 database/table 坐标读取表及列级记录。
-- 未发现分级记录返回 `EMPTY`；读侧失败返回 `UNAVAILABLE`；输出标明来源、分类生命周期状态限制，以及当前接口未提供对象级访问策略/脱敏匹配摘要的边界。
+- 输出当前活动分级证据、匹配对象坐标或分级的已审批 READ 规则数，以及逐个分级对象是否匹配启用且算法可用的脱敏策略。READ 规则数是策略配置摘要，不计算主体、拒绝优先级等最终访问裁决。
+- 合规检查结论按批次归属；本分区明确返回对象级合规状态 `UNAVAILABLE`，不得将项目或批次结果解释为单对象合规结论。
+- 缺少准确对象坐标或摘要读失败时，访问策略摘要标记 `UNAVAILABLE`；脱敏摘要独立标记状态。未发现分级记录返回 `EMPTY`；分类读侧失败返回 `UNAVAILABLE`。输出保留来源与分类生命周期状态限制。
 - 该摘要是治理证据，不代表访问许可，也不把 Asset 快照提升为 Security Truth。

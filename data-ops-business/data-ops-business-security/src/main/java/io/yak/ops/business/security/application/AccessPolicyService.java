@@ -12,6 +12,7 @@ import io.yak.ops.common.bean.po.security.DsecAccessPolicyPO;
 import io.yak.ops.common.enums.security.SecurityErrorCode;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -175,6 +176,62 @@ public class AccessPolicyService {
             .eq(DsecAccessPolicyPO::getProjectId, currentProject.requireProjectId())
             .eq(DsecAccessPolicyPO::getStatus, "APPROVED"));
     return c == null ? 0L : c;
+  }
+
+  /**
+   * Counts approved READ policy rules whose scopes include the supplied asset coordinates.
+   * This is a configuration summary only; it does not evaluate a user, role, DENY precedence, or access decision.
+   */
+  public long countApplicableReadPolicies(
+      Long datasourceId, String dbName, String tableName, Collection<Long> levelIds) {
+    Long projectId = currentProject.requireProjectId();
+    LocalDateTime now = LocalDateTime.now();
+    LambdaQueryWrapper<DsecAccessPolicyPO> query =
+        new LambdaQueryWrapper<DsecAccessPolicyPO>()
+            .eq(DsecAccessPolicyPO::getProjectId, projectId)
+            .eq(DsecAccessPolicyPO::getStatus, "APPROVED")
+            .eq(DsecAccessPolicyPO::getAccessType, "READ")
+            .and(
+                scope -> {
+                  scope.eq(DsecAccessPolicyPO::getScopeType, "ALL");
+                  if (datasourceId != null) {
+                    scope.or(
+                        rule ->
+                            rule.eq(DsecAccessPolicyPO::getScopeType, "DATASOURCE")
+                                .eq(DsecAccessPolicyPO::getDatasourceId, datasourceId));
+                  }
+                  if (StringUtils.hasText(dbName)) {
+                    scope.or(
+                        rule ->
+                            rule.eq(DsecAccessPolicyPO::getScopeType, "DATABASE")
+                                .eq(DsecAccessPolicyPO::getDbName, dbName));
+                  }
+                  if (StringUtils.hasText(dbName) && StringUtils.hasText(tableName)) {
+                    scope.or(
+                        rule ->
+                            rule.eq(DsecAccessPolicyPO::getScopeType, "TABLE")
+                                .eq(DsecAccessPolicyPO::getDbName, dbName)
+                                .eq(DsecAccessPolicyPO::getTableName, tableName));
+                  }
+                  if (levelIds != null && !levelIds.isEmpty()) {
+                    scope.or(
+                        rule ->
+                            rule.eq(DsecAccessPolicyPO::getScopeType, "LEVEL")
+                                .in(DsecAccessPolicyPO::getLevelId, levelIds));
+                  }
+                })
+            .and(
+                validity ->
+                    validity.isNull(DsecAccessPolicyPO::getValidFrom)
+                        .or()
+                        .le(DsecAccessPolicyPO::getValidFrom, now))
+            .and(
+                validity ->
+                    validity.isNull(DsecAccessPolicyPO::getValidTo)
+                        .or()
+                        .ge(DsecAccessPolicyPO::getValidTo, now));
+    Long count = mapper.selectCount(query);
+    return count == null ? 0L : count;
   }
 
   private void validate(DsecAccessPolicyPO po) {
