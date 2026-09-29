@@ -4,6 +4,7 @@ import io.yak.framework.security.common.constant.SecurityPermissionCode;
 import io.yak.framework.security.common.vo.project.ProjectBriefVO;
 import io.yak.framework.security.common.vo.role.RoleBriefVO;
 import io.yak.framework.security.common.vo.user.CurrentUserVO;
+import io.yak.framework.security.common.vo.user.UserBriefVO;
 import io.yak.framework.security.context.CurrentUser;
 import io.yak.framework.security.service.LoginService;
 import io.yak.framework.security.service.RoleService;
@@ -14,8 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,12 +38,6 @@ class LoginControllerCurrentUserTest {
     ObjectProvider<UserMenuGrantService> menuGrantProvider =
             mock(ObjectProvider.class);
 
-    CurrentUserVO identity = new CurrentUserVO();
-    identity.setId(7L);
-    identity.setUserName("root");
-    identity.setPermissionCodes(
-            List.of(SecurityPermissionCode.ROOT));
-
     RoleBriefVO role = new RoleBriefVO();
     role.setId(1L);
     role.setRoleName("系统管理员");
@@ -51,11 +49,19 @@ class LoginControllerCurrentUserTest {
 
     when(currentUser.isAuthenticated()).thenReturn(true);
     when(currentUser.getUsername()).thenReturn("root");
-    when(userService.getCurrentUserByUsername("root"))
-            .thenReturn(identity);
+    UserBriefVO brief = new UserBriefVO();
+    brief.setId(7L);
+    brief.setUserName("root");
+    when(userService.getUserBriefByUsername("root"))
+            .thenReturn(brief);
     when(roleService.getRoleBriefListByUserId(7L))
             .thenReturn(List.of(role));
-    when(projectResolver.resolve(identity))
+    when(currentUser.getPermissionCodes()).thenReturn(Set.of(
+            SecurityPermissionCode.ROOT));
+    when(currentUser.getMenuCodes()).thenReturn(List.of());
+    when(currentUser.getProjectIds()).thenReturn(Set.of(9L));
+    when(projectResolver.resolve(
+            any(CurrentUserVO.class), eq(Set.of(9L))))
             .thenReturn(List.of(project));
     when(menuGrantProvider.getIfAvailable()).thenReturn(null);
 
@@ -67,14 +73,16 @@ class LoginControllerCurrentUserTest {
             menuGrantProvider,
             projectResolver);
 
-    controller.current();
+    CurrentUserVO actual = controller.current().getData();
 
-    assertThat(identity.getRoleList())
+    assertThat(actual.getRoleList())
             .extracting(RoleBriefVO::getRoleName)
             .containsExactly("系统管理员");
-    assertThat(identity.getProjectList())
+    assertThat(actual.getProjectList())
             .extracting(ProjectBriefVO::getProjectName)
             .containsExactly("默认空间");
-    verify(projectResolver).resolve(identity);
+    assertThat(actual.getPermissionCodes())
+            .containsExactly(SecurityPermissionCode.ROOT);
+    verify(projectResolver).resolve(actual, Set.of(9L));
   }
 }

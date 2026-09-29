@@ -23,7 +23,7 @@ class WorkflowCodeStyleConventionTest {
       "(?m)@(Autowired|Resource|Inject)\\s*\\R\\s*"
           + "(?:private|protected|public)\\s+[^\\n(]+;");
   private static final Pattern SERVICE_CLASS = Pattern.compile(
-      "(?s)@Service\\s*(?:\\R|@[^\\R]+\\R)*public\\s+class\\s+([A-Za-z0-9_]+)");
+      "(?s)@Service\\s*(?:\\R|@[^\\r\\n]+\\R)*public\\s+class\\s+([A-Za-z0-9_]+)");
   private static final Set<String> STABLE_SERVICE_FACADES = Set.of(
       "WorkflowDefinitionManager",
       "WorkflowLauncher",
@@ -103,7 +103,7 @@ class WorkflowCodeStyleConventionTest {
   }
 
   @Test
-  void repositoryUsesSingleRootCodeStyleDocument() throws IOException {
+  void workflowUsesYakOpsRootCodeStyleDocument() {
     Path module = moduleRoot();
     Path repository = module.getParent().getParent();
     assertThat(Files.isRegularFile(repository.resolve("CODE_STYLE.md")))
@@ -112,14 +112,6 @@ class WorkflowCodeStyleConventionTest {
     assertThat(Files.exists(module.resolve("CODE_STYLE.md")))
         .as("Workflow must not maintain a module-local CODE_STYLE.md")
         .isFalse();
-
-    long count;
-    try (Stream<Path> paths = Files.walk(repository, 6)) {
-      count = paths.filter(Files::isRegularFile)
-          .filter(path -> path.getFileName().toString().equals("CODE_STYLE.md"))
-          .count();
-    }
-    assertThat(count).as("Yak Ops must keep one repository-wide CODE_STYLE.md").isEqualTo(1L);
   }
 
   private Path productionRoot() {

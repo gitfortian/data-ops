@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
-/** Locks the Stage 5B Data Development x Dataset integration and physical Project contract. */
+/** Locks the Data Development x Dataset integration and physical Project contract. */
 class DataDevelopmentStage5BProjectSpaceContractTest {
 
   @Test
@@ -31,22 +31,31 @@ class DataDevelopmentStage5BProjectSpaceContractTest {
     String contract = Files.readString(
         moduleRoot()
             .resolve("src/main/resources/db/migration/yak-data-development")
-            .resolve("V2__contract_project_scope.sql"));
+            .resolve("V1__baseline_data_development.sql"));
 
-    assertThat(contract)
-        .contains("ALTER TABLE yak_dev_directory")
-        .contains("ALTER TABLE yak_dev_node")
-        .contains("ALTER TABLE yak_dev_task_execution")
-        .contains("ALTER TABLE yak_dev_lineage_outbox")
-        .doesNotContain("yak_dev_task_draft")
-        .doesNotContain("yak_dev_task_revision");
-
-    assertThat(contract.split("MODIFY COLUMN project_id BIGINT NOT NULL", -1).length - 1)
-        .isEqualTo(4);
+    assertThat(tableDefinition(contract, "yak_dev_directory"))
+        .contains("project_id BIGINT NOT NULL");
+    assertThat(tableDefinition(contract, "yak_dev_node"))
+        .contains("project_id BIGINT NOT NULL");
+    assertThat(tableDefinition(contract, "yak_dev_task_execution"))
+        .contains("project_id BIGINT NOT NULL");
+    assertThat(tableDefinition(contract, "yak_dev_lineage_outbox"))
+        .contains("project_id BIGINT NOT NULL");
+    assertThat(tableDefinition(contract, "yak_dev_task_draft")).doesNotContain("project_id");
+    assertThat(tableDefinition(contract, "yak_dev_task_revision")).doesNotContain("project_id");
     assertThat(contract.toUpperCase())
         .doesNotContain("UPDATE YAK_DEV_")
         .doesNotContain("PROJECT_ID = 1")
         .doesNotContain("PROJECT_ID = 0");
+  }
+
+  private String tableDefinition(String migration, String table) {
+    String start = "CREATE TABLE IF NOT EXISTS " + table + " (";
+    int definitionStart = migration.indexOf(start);
+    if (definitionStart < 0) throw new AssertionError("Missing baseline table: " + table);
+    int definitionEnd = migration.indexOf(") ENGINE=", definitionStart);
+    if (definitionEnd < 0) throw new AssertionError("Unterminated baseline table: " + table);
+    return migration.substring(definitionStart, definitionEnd);
   }
 
   private String developmentSource(String relative) throws IOException {

@@ -4,8 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
-import io.yak.ops.business.dataset.development.DatasetDevelopmentSourceService;
-import io.yak.ops.business.dataset.development.DatasetDevelopmentSourceService.DevelopmentSource;
+import io.yak.ops.business.dataset.DevelopmentDatasetFacade;
 import io.yak.ops.common.constant.development.DataDevelopmentPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -24,11 +23,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiresPermission(DataDevelopmentPermissionCode.READ)
 public class DatasetDevelopmentSourceController {
 
-  private final DatasetDevelopmentSourceService service;
+  private final DevelopmentDatasetFacade facade;
 
   @Operation(summary = "查询 Dataset 对应的数据开发节点")
   @GetMapping("/{datasetId}/development-source")
-  public Result<DevelopmentSource> developmentSource(@PathVariable("datasetId") long datasetId) {
-    return Result.success(service.require(datasetId));
+  public Result<DevelopmentDatasetFacade.DevelopmentSource> developmentSource(
+      @PathVariable("datasetId") long datasetId) {
+    return Result.success(facade.developmentSource(datasetId));
   }
 }

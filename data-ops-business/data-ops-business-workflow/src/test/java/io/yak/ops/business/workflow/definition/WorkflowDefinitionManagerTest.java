@@ -102,8 +102,6 @@ class WorkflowDefinitionManagerTest {
     when(taskRegistry.snapshot("sync-2")).thenReturn(snapshot("sync-2", "同步明细", 12));
     WorkflowDefinitionVO published = service.online(created.id());
 
-    when(taskRegistry.snapshot("sync-1")).thenReturn(snapshot("sync-1", "同步订单", 99));
-    when(taskRegistry.snapshot("sync-2")).thenReturn(snapshot("sync-2", "同步明细", 99));
     WorkflowInstanceVO prepared = instance("exec-v1", "CREATED");
     WorkflowInstanceVO completed = instance("exec-v1", "SUCCESS");
     when(runtimeService.run(any(), any(), any(), any(), anyBoolean())).thenReturn(prepared);

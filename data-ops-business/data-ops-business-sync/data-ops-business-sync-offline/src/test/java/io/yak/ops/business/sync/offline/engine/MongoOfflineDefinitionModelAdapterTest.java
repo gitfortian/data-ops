@@ -24,13 +24,13 @@ class MongoOfflineDefinitionModelAdapterTest {
                     "options": {
                       "uri":"mongodb://user:secret@mongo/app",
                       "password":"secret",
-                      "filter":"{\"active\":true}"
+                      "filter":"{\\\"active\\\":true}"
                     },
                     "config": {
                       "connectorOptions": {
                         "uri":"mongodb://user:secret@mongo/app",
                         "password":"secret",
-                        "filter":"{\"active\":true}"
+                        "filter":"{\\\"active\\\":true}"
                       }
                     }
                   },

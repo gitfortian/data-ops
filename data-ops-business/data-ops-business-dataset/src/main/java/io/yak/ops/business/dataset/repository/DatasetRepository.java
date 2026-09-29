@@ -2,10 +2,11 @@ package io.yak.ops.business.dataset.repository;
 
 import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetField;
+import io.yak.ops.business.dataset.DatasetFieldDataType;
+import io.yak.ops.business.dataset.DatasetFieldRole;
 import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.DatasetVersionDraft;
-import io.yak.ops.business.dataset.schema.DatasetFieldSpec;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,9 @@ public interface DatasetRepository {
 
   Optional<Dataset> findDataset(long datasetId);
 
+  /** Returns the persisted Development provenance needed by the Dataset development read API. */
+  Optional<DevelopmentSourceDetails> findDevelopmentSource(long datasetId);
+
   Optional<Dataset> findDatasetBySourceTaskAssetId(long sourceTaskAssetId);
 
   Optional<Dataset> findDatasetByDevelopmentNodeId(long developmentNodeId);
@@ -61,9 +65,21 @@ public interface DatasetRepository {
   /** Returns the draft dataSourceId and sql saved by the editor, or nulls if never saved. */
   DraftSource loadDraftSource(long datasetId);
 
-  void saveDraftFields(long datasetId, List<DatasetFieldSpec> fields);
+  void saveDraftFields(long datasetId, List<DraftField> fields);
 
-  List<DatasetFieldSpec> loadDraftFields(long datasetId);
+  List<DraftField> loadDraftFields(long datasetId);
 
   record DraftSource(String dataSourceId, String sql) {}
+
+  record DevelopmentSourceDetails(
+      long datasetId, Long developmentNodeId, Integer currentDatasetVersionNo) {}
+
+  record DraftField(
+      String fieldId,
+      String physicalName,
+      String displayName,
+      DatasetFieldDataType dataType,
+      boolean nullable,
+      String description,
+      DatasetFieldRole defaultRole) {}
 }

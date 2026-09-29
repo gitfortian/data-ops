@@ -37,7 +37,7 @@ class WorkflowDependencyBoundaryTest {
               Set.of("dao", "definition", "domain", "execution", "repository", "schedule")),
           Map.entry("schedule", Set.of("dao", "definition", "domain", "execution", "repository")),
           Map.entry("execution", Set.of("dao", "domain", "repository", "runtime")),
-          Map.entry("definition", Set.of("dao", "domain", "repository", "runtime")),
+          Map.entry("definition", Set.of("dao", "domain", "execution", "repository", "runtime")),
           Map.entry("runtime", Set.of("domain", "observability", "repository")),
           Map.entry("observability", Set.of()),
           Map.entry("repository", Set.of("dao", "domain")),
@@ -89,6 +89,10 @@ class WorkflowDependencyBoundaryTest {
         "definition",
         "runtime",
         Set.of(BASE + ".runtime.WorkflowRuntime"));
+    assertExactCorridor(
+        "definition",
+        "execution",
+        Set.of(BASE + ".execution.WorkflowLaunchDefinitionGateway"));
     assertExactCorridor(
         "backfill",
         "execution",

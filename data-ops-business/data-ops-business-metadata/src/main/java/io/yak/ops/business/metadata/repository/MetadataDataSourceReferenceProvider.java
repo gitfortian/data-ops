@@ -1,4 +1,4 @@
-package io.yak.ops.business.metadata.api;
+package io.yak.ops.business.metadata.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.datasource.api.DataSourceReferenceProvider;

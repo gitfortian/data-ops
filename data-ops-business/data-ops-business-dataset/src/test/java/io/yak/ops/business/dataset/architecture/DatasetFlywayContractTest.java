@@ -8,12 +8,16 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Locks the consolidated first-release Dataset Flyway baseline. */
+/** Locks the first-release Dataset baseline and its additive contract migrations. */
 class DatasetFlywayContractTest {
 
     @Test
-    void datasetNamespaceShouldContainOnlyTheConsolidatedBaseline() throws IOException {
-        assertThat(sqlFiles(migrationRoot())).containsExactly("V1__baseline_dataset.sql");
+    void datasetNamespaceContainsTheBaselineAndAdditiveContractMigrations() throws IOException {
+        assertThat(sqlFiles(migrationRoot()))
+                .containsExactly(
+                        "V1__baseline_dataset.sql",
+                        "V2__dataset_source_publication_lock.sql",
+                        "V3__dataset_query_subject_attribution.sql");
     }
 
     @Test

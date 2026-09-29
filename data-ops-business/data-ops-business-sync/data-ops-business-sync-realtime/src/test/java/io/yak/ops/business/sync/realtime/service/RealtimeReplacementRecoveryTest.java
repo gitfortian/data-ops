@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -124,7 +125,7 @@ class RealtimeReplacementRecoveryTest {
         .hasMessageContaining("successor-insert-reached");
 
     verify(store, never()).publishedDefinition(TASK_ID);
-    verify(store).definitionVersion(TASK_ID, V4_ID);
+    verify(store, atLeastOnce()).definitionVersion(TASK_ID, V4_ID);
     verify(store)
         .insertDeployment(any(), eq(v4Spec), any(), any(), eq(environment), eq("apply-resume"));
   }

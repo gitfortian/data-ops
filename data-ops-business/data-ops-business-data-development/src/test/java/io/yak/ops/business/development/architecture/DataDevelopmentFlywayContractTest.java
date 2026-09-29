@@ -50,7 +50,7 @@ class DataDevelopmentFlywayContractTest {
         .contains("CREATE TABLE IF NOT EXISTS yak_dev_data_service_revision")
         .contains("CREATE TABLE IF NOT EXISTS yak_dev_lineage_outbox")
         .contains("CREATE TABLE IF NOT EXISTS yak_system_env_var")
-        .contains("project_id BIGINT NULL")
+        .contains("project_id BIGINT NOT NULL")
         .contains("updated_by VARCHAR(128) NULL")
         .contains("schema_version INT NOT NULL DEFAULT 1")
         .contains("retry_of_execution_id BIGINT NULL")

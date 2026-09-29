@@ -180,7 +180,8 @@ docker compose down
 - Yarn Classic
 - Maven，或项目自带的 Maven Wrapper
 - 本地运行时使用 MySQL 8.0
-- 在同一个 Maven 本地仓库中安装 `data-ops-framework:1.0.0-SNAPSHOT`
+
+Yak Framework 源码已纳入本仓库 Maven Reactor，无需单独安装框架。
 
 先构建前端：
 
@@ -194,13 +195,13 @@ cd ..
 再构建完整 Maven Reactor 和发行包：
 
 ```bash
-./mvnw clean package -DskipTests
+./mvnw clean verify
 ```
 
 Windows：
 
 ```cmd
-mvnw.cmd clean package -DskipTests
+mvnw.cmd clean verify
 ```
 
 最终发行包生成在：

@@ -14,7 +14,7 @@ Workflow production 内部允许的 top-level 依赖：
 | `backfill` | `dao`, `definition`, `domain`, `execution`, `repository`, `schedule` |
 | `schedule` | `dao`, `definition`, `domain`, `execution`, `repository` |
 | `execution` | `dao`, `domain`, `repository`, `runtime` |
-| `definition` | `dao`, `domain`, `repository`, `runtime` |
+| `definition` | `dao`, `domain`, `execution`, `repository`, `runtime` |
 | `runtime` | `domain`, `observability`, `repository` |
 | `observability` | none |
 | `repository` | `dao`, `domain` |
@@ -22,6 +22,8 @@ Workflow production 内部允许的 top-level 依赖：
 | `domain` | none |
 
 同一 top-level package 内部可以协作，但不会因此自动成为其他 package 的公共 API。声明图和实际源码图都必须无环。
+
+`execution.WorkflowLaunchDefinitionGateway` 是 Launcher 所需的窄 Definition 能力接口，由 `WorkflowDefinitionManager` 实现。Definition 只依赖该接口，不暴露 Manager 实现给 Execution；这条单向依赖避免 `execution -> definition -> execution` 环。
 
 ## 2. Controller Corridors
 
@@ -74,6 +76,8 @@ WorkflowLauncher
     -> WorkflowExecutionDao
     -> yak_workflow_execution.audit_carrier_json
 ```
+
+Launcher 通过 execution-owned `WorkflowLaunchDefinitionGateway` 请求当前发布版本启动、并发发布版本启动、定义读取和草稿测试；Definition Manager 适配这些能力并继续拥有发布/草稿语义。
 
 Runtime 不直接依赖 Audit。终态继续由既有 durable truth 发布：
 

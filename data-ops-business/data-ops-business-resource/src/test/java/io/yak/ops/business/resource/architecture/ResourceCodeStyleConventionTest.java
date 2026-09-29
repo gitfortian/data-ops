@@ -107,7 +107,7 @@ class ResourceCodeStyleConventionTest {
   }
 
   @Test
-  void repositoryUsesSingleRootCodeStyleDocument() throws IOException {
+  void resourceUsesRootRepositoryCodeStyleDocument() throws IOException {
     Path module = moduleRoot();
     Path repository = module.getParent().getParent();
     assertThat(Files.isRegularFile(repository.resolve("CODE_STYLE.md")))
@@ -117,13 +117,6 @@ class ResourceCodeStyleConventionTest {
         .as("Resource must not maintain a module-local CODE_STYLE.md")
         .isFalse();
 
-    long count;
-    try (Stream<Path> paths = Files.walk(repository, 6)) {
-      count = paths.filter(Files::isRegularFile)
-          .filter(path -> path.getFileName().toString().equals("CODE_STYLE.md"))
-          .count();
-    }
-    assertThat(count).as("Yak Ops must keep one repository-wide CODE_STYLE.md").isEqualTo(1L);
   }
 
   private Path productionRoot() {

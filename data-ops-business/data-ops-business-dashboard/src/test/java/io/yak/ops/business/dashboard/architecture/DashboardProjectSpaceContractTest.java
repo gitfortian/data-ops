@@ -42,22 +42,31 @@ class DashboardProjectSpaceContractTest {
   }
 
   @Test
-  void migrationRequiresCompleteSingleProjectEvidenceThenContracts() throws IOException {
-    String expand = read(
-        "src/main/resources/db/migration/yak-dashboard/V2__expand_and_backfill_project_scope.sql");
-    String contract = read(
-        "src/main/resources/db/migration/yak-dashboard/V3__contract_project_scope.sql");
+  void baselineRequiresProjectOwnershipOnlyOnTheDashboardRoot() throws IOException {
+    String baseline = read(
+        "src/main/resources/db/migration/yak-dashboard/V1__baseline_dashboard.sql");
 
-    assertThat(expand)
-        .contains("ADD COLUMN project_id BIGINT NULL")
-        .contains("tmp_yak_dashboard_project_evidence")
-        .contains("COUNT(*) = COUNT(project_id)")
-        .contains("MIN(project_id) = MAX(project_id)")
-        .doesNotContain("project_id = 1")
-        .doesNotContain("DEFAULT 0");
-    assertThat(contract)
+    assertThat(tableDefinition(baseline, "yak_dashboard"))
         .contains("project_id BIGINT NOT NULL")
-        .doesNotContainIgnoringCase("UPDATE");
+        .doesNotContain("project_id BIGINT NOT NULL DEFAULT");
+    for (String childTable : new String[] {
+      "yak_dashboard_version",
+      "yak_dashboard_widget",
+      "yak_dashboard_filter",
+      "yak_dashboard_filter_binding",
+      "yak_dashboard_interaction"
+    }) {
+      assertThat(tableDefinition(baseline, childTable)).doesNotContain("project_id");
+    }
+  }
+
+  private String tableDefinition(String migration, String table) {
+    String start = "CREATE TABLE IF NOT EXISTS " + table + " (";
+    int definitionStart = migration.indexOf(start);
+    if (definitionStart < 0) throw new AssertionError("Missing baseline table: " + table);
+    int definitionEnd = migration.indexOf(") ENGINE=", definitionStart);
+    if (definitionEnd < 0) throw new AssertionError("Unterminated baseline table: " + table);
+    return migration.substring(definitionStart, definitionEnd);
   }
 
   @Test

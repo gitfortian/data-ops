@@ -1,4 +1,4 @@
-package io.yak.ops.business.sync.realtime.controller.v1.mapper;
+package io.yak.ops.business.sync.realtime.controller.v1.converter;
 
 import io.yak.ops.business.sync.realtime.controller.v1.vo.ComputeEnvironmentViews;
 import io.yak.ops.business.sync.realtime.controller.v1.vo.RealtimeViews;
@@ -15,7 +15,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RealtimeViewMapper {
+public class RealtimeViewConverter {
   public RealtimeViews.Job toView(RealtimeJobView value) {
     if (value == null) return null;
     return new RealtimeViews.Job(value.id(), value.name(), value.description(), toView(value.spec()), value.runtimeEnvironmentId(), value.releaseState(), value.desiredState(), value.observedState(), value.draftRevision(), value.publishedDraftRevision(), value.sourceConfigDigest(), value.lastError(), value.createTime(), value.updateTime(), value.publishedUpdateAvailable(), toView(value.latestDeployment()));

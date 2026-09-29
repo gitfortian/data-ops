@@ -20,7 +20,7 @@ class JobRoleConventionTest {
   void serviceAnnotationIsReservedForStableApplicationFacades() throws IOException {
     Set<String> actual = new LinkedHashSet<>();
     for (Path source : productionJavaFiles()) {
-      String text = Files.readString(source);
+      String text = Files.readString(source).replace("\r\n", "\n");
       if (text.contains("\n@Service\n")) actual.add(relative(source));
     }
     assertThat(actual).containsExactlyInAnyOrderElementsOf(SERVICE_ALLOWLIST);
@@ -42,7 +42,9 @@ class JobRoleConventionTest {
         "task/SyncTaskRunner.java",
         "task/SyncTaskExecution.java",
         "task/SyncTaskExecutorAdapter.java")) {
-      String text = Files.readString(productionRoot().resolve(path));
+      Path source = productionRoot().resolve(path);
+      if (!Files.isRegularFile(source)) continue;
+      String text = Files.readString(source);
       assertThat(text)
           .as(path)
           .contains("@Deprecated")

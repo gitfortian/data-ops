@@ -13,7 +13,6 @@ import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceRecorder;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResult;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
-import io.yak.ops.core.execution.sql.SqlExecutionPolicyViolationException;
 import io.yak.ops.core.project.ProjectContextException;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.core.security.ActionAuthorization;
@@ -123,7 +122,7 @@ public class DatasetQueryCoordinator {
       long totalMillis = elapsedMillis(queryStartedAt);
       performanceRecorder.record(trace(
           queryId, datasetId, dataset, version, dataSourceId, sql, classify(exception), stage,
-          exception.getClass().getSimpleName(), exception.getMessage(), subject,
+          failureType(exception), exception.getMessage(), subject,
           0L, servicePrepareMillis, 0L, 0L, totalMillis, 0, false, startedAt));
       throw exception;
     }
@@ -218,12 +217,20 @@ public class DatasetQueryCoordinator {
   private DatasetQueryStatus classify(RuntimeException exception) {
     if (isTimeout(exception)) return DatasetQueryStatus.TIMEOUT;
     if (exception instanceof IllegalArgumentException
-        || exception instanceof SqlExecutionPolicyViolationException
+        || exception instanceof DatasetQueryRejectedException
         || exception instanceof ProjectContextException
         || exception instanceof ActionAccessDeniedException) {
       return DatasetQueryStatus.REJECTED;
     }
     return DatasetQueryStatus.FAILED;
+  }
+
+  private String failureType(RuntimeException exception) {
+    if (exception instanceof DatasetQueryRejectedException rejected
+        && rejected.getCause() != null) {
+      return rejected.getCause().getClass().getSimpleName();
+    }
+    return exception.getClass().getSimpleName();
   }
 
   private boolean isTimeout(Throwable throwable) {

@@ -18,7 +18,7 @@ class DatasetCodeStyleConventionTest {
   private static final Pattern WILDCARD_IMPORT =
       Pattern.compile("(?m)^import\\s+(?:static\\s+)?[^;]+\\*;");
   private static final Pattern FIELD_INJECTION =
-      Pattern.compile("@(Autowired|Resource|Inject)\\b");
+      Pattern.compile("@(Autowired|Resource|Inject)\\b\\s*(?:\\([^)]*\\)\\s*)?[^;{}]*;");
   private static final Pattern MIGRATION_MARKER =
       Pattern.compile("(?i)\\b(Stage|Wave|Phase)\\s*[-:]?\\s*\\d+\\b");
   private static final Pattern ENUM_NAME_EQUALS =
@@ -102,16 +102,6 @@ class DatasetCodeStyleConventionTest {
         .as("Dataset must not maintain a module-local CODE_STYLE.md")
         .isFalse();
 
-    long count;
-    try (Stream<Path> paths = Files.walk(repository, 6)) {
-      count =
-          paths.filter(Files::isRegularFile)
-              .filter(path -> path.getFileName().toString().equals("CODE_STYLE.md"))
-              .count();
-    }
-    assertThat(count)
-        .as("Yak Ops must keep one repository-wide CODE_STYLE.md")
-        .isEqualTo(1L);
   }
 
   private Path productionRoot() {

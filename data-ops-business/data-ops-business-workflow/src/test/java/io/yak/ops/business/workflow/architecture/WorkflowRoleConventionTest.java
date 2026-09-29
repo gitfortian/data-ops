@@ -19,6 +19,7 @@ import io.yak.ops.business.workflow.execution.WorkflowLauncher;
 import io.yak.ops.business.workflow.execution.WorkflowPublishedVersionRunner;
 import io.yak.ops.business.workflow.observability.WorkflowEventStream;
 import io.yak.ops.business.workflow.runtime.WorkflowRuntime;
+import io.yak.ops.business.workflow.runtime.WorkflowInstanceQueryService;
 import io.yak.ops.business.workflow.runtime.WorkflowRuntimeRecovery;
 import io.yak.ops.business.workflow.schedule.WorkflowDefinitionScheduleGuard;
 import io.yak.ops.business.workflow.schedule.WorkflowScheduleAuditCoordinator;
@@ -74,7 +75,8 @@ class WorkflowRoleConventionTest {
         WorkflowScheduleEngineBridge.class,
         WorkflowScheduleTriggerAdmission.class,
         WorkflowScheduleTriggerCoordinator.class,
-        WorkflowScheduleTriggerHandler.class)) {
+        WorkflowScheduleTriggerHandler.class,
+        WorkflowInstanceQueryService.class)) {
       assertThat(role.getAnnotation(Component.class))
           .as("%s must remain an explicit internal component role", role.getSimpleName())
           .isNotNull();

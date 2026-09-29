@@ -17,7 +17,7 @@ class DataServiceCodeStyleConventionTest {
   private static final Pattern WILDCARD_IMPORT =
       Pattern.compile("(?m)^\\s*import\\s+(?:static\\s+)?[^;]+\\.\\*;\\s*$");
   private static final Pattern FIELD_INJECTION =
-      Pattern.compile("@(Autowired|Resource|Inject)\\b");
+      Pattern.compile("@(Autowired|Resource|Inject)\\b\\s*(?:\\([^)]*\\)\\s*)?[^;{}]*;");
   private static final Pattern HISTORICAL_MIGRATION_MARKER =
       Pattern.compile("(?i)\\b(stage|phase|wave)[ -]?\\d+\\b");
 

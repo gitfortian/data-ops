@@ -147,11 +147,12 @@ Source-managed definition 的 owner-context permission 由上游 authoring conte
 
 ```text
 io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled
+io.yak.ops.business.datasource.api.DataSourceReferenceProvider
 io.yak.ops.core.execution.sql.*
 io.yak.ops.core.project.*
 ```
 
-物理 SQL 通过 core execution contract；Project type 只承担受信 Management scope。
+`DataSourceReferenceProvider` 只允许由 `repository` package 内的适配器实现；该适配器通过本模块 DAO 检查 Data Service 引用。物理 SQL 通过 core execution contract；Project type 只承担受信 Management scope。
 
 禁止 Data Service 生产代码依赖 Datasource DAO/Repository/Gateway implementation 或 Data Development implementation。
 

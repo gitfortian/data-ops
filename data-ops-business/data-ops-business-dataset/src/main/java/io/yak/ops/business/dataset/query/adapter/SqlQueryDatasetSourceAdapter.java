@@ -7,9 +7,11 @@ import io.yak.ops.business.dataset.DatasetQueryResult;
 import io.yak.ops.business.dataset.DatasetSourceType;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.query.DatasetQueryCompiler;
+import io.yak.ops.business.dataset.query.DatasetQueryRejectedException;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter;
 import io.yak.ops.core.execution.sql.SqlExecutionCaller;
 import io.yak.ops.core.execution.sql.SqlExecutionContext;
+import io.yak.ops.core.execution.sql.SqlExecutionPolicyViolationException;
 import io.yak.ops.core.execution.sql.SqlExecutionRequest;
 import io.yak.ops.core.execution.sql.SqlExecutionResult;
 import io.yak.ops.core.execution.sql.SqlExecutionRuntime;
@@ -56,8 +58,9 @@ public class SqlQueryDatasetSourceAdapter implements DatasetSourceQueryAdapter {
     long prepareMillis = elapsedMillis(prepareStartedAt);
     long runtimeStartedAt = System.nanoTime();
 
-    SqlExecutionResult result =
-        sqlExecutionRuntime.execute(
+    SqlExecutionResult result;
+    try {
+      result = sqlExecutionRuntime.execute(
             new SqlExecutionRequest(
                 version.dataSourceId(),
                 compiled.sql(),
@@ -65,6 +68,9 @@ public class SqlQueryDatasetSourceAdapter implements DatasetSourceQueryAdapter {
                 timeoutSeconds,
                 SqlExecutionContext.of(
                     SqlExecutionCaller.DATASET, String.valueOf(dataset.id()))));
+    } catch (SqlExecutionPolicyViolationException exception) {
+      throw new DatasetQueryRejectedException(exception.getMessage(), exception);
+    }
     long waitMillis = result.timing().openMillis();
     long executeMillis = result.timing().executeMillis();
 

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Import;
 
 /** Modeling persistence and Flyway configuration. */
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Import;
 public class ModelingPersistenceConfiguration {
 
   @Bean(name = "yakModelingFlyway", initMethod = "migrate")
+  @DependsOn("yakSemanticFlyway")
   public Flyway modelingFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)

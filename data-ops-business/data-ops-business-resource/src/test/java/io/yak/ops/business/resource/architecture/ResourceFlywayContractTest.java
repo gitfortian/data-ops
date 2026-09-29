@@ -11,27 +11,18 @@ import org.junit.jupiter.api.Test;
 class ResourceFlywayContractTest {
 
   @Test
-  void resourceNamespaceContainsExpandAndContractProjectScopeMigrations() throws IOException {
+  void resourceNamespaceUsesItsProjectScopedBaseline() throws IOException {
     assertThat(sqlFiles(migrationRoot()))
-        .containsExactly(
-            "V1__init_resource_management.sql",
-            "V2__expand_project_scope.sql",
-            "V3__contract_project_scope.sql");
+        .containsExactly("V1__init_resource_management.sql");
 
-    String expand = Files.readString(migrationRoot().resolve("V2__expand_project_scope.sql"));
-    assertThat(expand)
-        .contains("ADD COLUMN project_id BIGINT NULL")
+    String baseline = Files.readString(
+        migrationRoot().resolve("V1__init_resource_management.sql"));
+    assertThat(baseline)
+        .contains("project_id BIGINT NOT NULL")
         .contains("uk_yak_resource_project_parent_name")
         .contains("idx_yak_resource_project_path")
-        .contains("idx_yak_resource_project_parent_type");
-
-    String contract = Files.readString(migrationRoot().resolve("V3__contract_project_scope.sql"));
-    assertThat(contract)
-        .contains("ALTER TABLE yak_ops_resource")
-        .contains("MODIFY COLUMN project_id BIGINT NOT NULL")
-        .contains("performs no implicit backfill")
-        .doesNotContain("UPDATE yak_ops_resource")
-        .doesNotContain("project_id = 1");
+        .contains("idx_yak_resource_project_parent_type")
+        .doesNotContain("project_id BIGINT NOT NULL DEFAULT");
   }
 
   private List<String> sqlFiles(Path root) throws IOException {

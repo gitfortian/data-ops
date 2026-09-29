@@ -156,7 +156,7 @@ class OfflineExistingBatchClaimManagerTest {
     assertThatThrownBy(() -> manager.claimRetry(99L))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("未绑定 Batch")
-        .hasMessageContaining("历史查询");
+        .hasMessageContaining("仅支持查询");
   }
 
   private OfflineJobExecution failedAttempt(Long id, Long batchId, int attemptNo) {

@@ -12,17 +12,18 @@ import org.junit.jupiter.api.Test;
 class QualityProjectScopeContractTest {
 
   @Test
-  void migrationDerivesProjectWithoutGuessingDefaultId() throws IOException {
+  void baselineMigrationDeclaresProjectScopeWithoutGuessingDefaultId() throws IOException {
     String migration = read(
-        "src/main/resources/db/migration/yak-quality/V6__add_quality_project_scope.sql");
+        "src/main/resources/db/migration/yak-quality/V1__create_quality_mvp.sql");
 
     assertThat(migration)
         .contains(
-            "ADD COLUMN project_id BIGINT NULL",
-            "INNER JOIN yak_ops_data_source",
-            "MODIFY COLUMN project_id BIGINT NOT NULL",
+            "CREATE TABLE IF NOT EXISTS yak_quality_table_asset (",
+            "CREATE TABLE IF NOT EXISTS yak_quality_monitor (",
+            "CREATE TABLE IF NOT EXISTS yak_quality_execution (",
+            "project_id BIGINT NOT NULL COMMENT 'Yak Security Project ID'",
             "(project_id, data_source_id, database_name, schema_name, table_name)")
-        .doesNotContain("project_id = 1", "DEFAULT 1", "VALUES (1");
+        .doesNotContain("project_id BIGINT NOT NULL DEFAULT");
   }
 
   @Test

@@ -176,7 +176,8 @@ Source builds currently require:
 - Yarn Classic
 - Maven, or the included Maven Wrapper
 - MySQL 8.0 for a local runtime
-- `data-ops-framework:1.0.0-SNAPSHOT` installed in the same local Maven repository
+
+Yak Framework source is included in this repository's Maven reactor. No separate Framework installation is required.
 
 Build the frontend first:
 
@@ -190,13 +191,13 @@ cd ..
 Then build the full reactor and distribution:
 
 ```bash
-./mvnw clean package -DskipTests
+./mvnw clean verify
 ```
 
 On Windows:
 
 ```cmd
-mvnw.cmd clean package -DskipTests
+mvnw.cmd clean verify
 ```
 
 The assembled distribution is generated under:

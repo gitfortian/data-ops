@@ -1,5 +1,7 @@
 package io.yak.framework.security.service.impl;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -8,14 +10,25 @@ import static org.mockito.Mockito.when;
 import io.yak.framework.security.authentication.AuthenticationManager;
 import io.yak.framework.security.common.dto.user.UserPasswordResetDTO;
 import io.yak.framework.security.common.entity.user.User;
+import io.yak.framework.security.common.po.UserPO;
 import io.yak.framework.security.dao.UserDao;
 import io.yak.framework.security.dao.mapper.UserMapper;
 import io.yak.framework.security.extend.PasswordEncoder;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.springframework.beans.factory.ObjectProvider;
 
 class UserAdministrationServiceTest {
+
+  @BeforeAll
+  static void initializeMybatisMetadata() {
+    TableInfoHelper.initTableInfo(
+            new MapperBuilderAssistant(
+                    new MybatisConfiguration(), "test"),
+            UserPO.class);
+  }
 
   private UserDao userDao;
   private UserMapper userMapper;

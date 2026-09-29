@@ -8,17 +8,28 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.yak.ops.business.sync.realtime.dao.mapper.RealtimeJobCommandMapper;
 import io.yak.ops.business.sync.realtime.dao.mapper.RealtimeJobDefinitionMapper;
 import io.yak.ops.business.sync.realtime.dao.mapper.RealtimeJobDeploymentMapper;
 import io.yak.ops.business.sync.realtime.dao.mapper.RealtimeJobEventMapper;
 import io.yak.ops.business.sync.realtime.dao.mapper.RealtimeJobQueryMapper;
+import io.yak.ops.business.sync.realtime.dao.model.RealtimeJobDeploymentPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import java.util.Optional;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class RealtimeJobDaoImplExecutionIsolationTest {
+
+  @BeforeEach
+  void initializeMybatisMetadata() {
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new MybatisConfiguration(), ""), RealtimeJobDeploymentPO.class);
+  }
 
   @Test
   void executionLifecycleNeverDualWritesTaskRuntimeProjection() {

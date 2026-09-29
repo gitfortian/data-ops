@@ -89,7 +89,7 @@ class LinkUpJobSpecFactoryAdapterDelegationTest {
 
     @Override
     public boolean supports(String connectorId, Role role) {
-      return "native-demo".equals(connectorId);
+      return "native_demo".equals(connectorId);
     }
 
     @Override

@@ -39,6 +39,7 @@ class MetadataLayeringConventionTest {
               Set.of("metamodel", "exception", "harvest", "query", "detail", "governance", "api")),
           Map.entry("dao", Set.of()),
           Map.entry("exception", Set.of()),
+          Map.entry("repository", Set.of("dao")),
           // api 是源域唯一允许 import 的包（plan §0.3 的"本模块 api"）：它反向什么都不读，
           // 否则"接口零依赖"当场失效——RegisterCommand 必须是个谁都敢 new 的裸 DTO。
           Map.entry("api", Set.of()),
@@ -66,9 +67,9 @@ class MetadataLayeringConventionTest {
               Set.of("api", "exception", "governance", "metamodel", "query")),
           // 治理侧表（yak_md_change / yak_md_label）的读侧：只向下经 dao，谁都不反向读。
           Map.entry("governance", Set.of("dao")),
-          // 资产供给（M2-2 B 直挂表入台账）：provider 只经 dao 读共表的表级行、只借 config 的
-          // 持久化开关注解装配自己，跨模块方向由下面 asset.api 的点名放行守。
-          Map.entry("asset", Set.of("config", "dao")),
+          // 资产供给与技术元数据分区：经 dao/config 装配，并通过本模块 api 读取目录事实。
+          // 跨模块 asset.api 依赖由下面的点名放行守。
+          Map.entry("asset", Set.of("config", "dao", "api")),
           // schedule→harvest 是 handler 调那一轮触发入口，schedule→dao 是启动时按业务表补齐闹钟。
           // 内存存储重启即空，业务表才是事实源，所以这条读边是它的核心职责，不是顺手查一下。
           Map.entry("schedule", Set.of("harvest", "dao")));
@@ -91,6 +92,10 @@ class MetadataLayeringConventionTest {
           "datasource.config.ConditionalOnDataSourceEnabled",
           "datasource.config.BusinessDatabaseConfiguration",
           "datasource.config.DataSourceProperties");
+
+  /** Repository adapter for the datasource deletion-guard SPI. */
+  private static final Set<String> ALLOWED_INTEGRATION_SPI_IMPORTS =
+      Set.of("datasource.api.DataSourceReferenceProvider");
 
   /**
    * 物理采集端口所需的五个数据源模块类型（plan §3.1"进程内直采、不引新组件"）。
@@ -154,6 +159,7 @@ class MetadataLayeringConventionTest {
                 path -> assertThat(path).startsWith("lineage.api."),
                 path -> assertThat(path).startsWith(ALLOWED_ASSET_API_PREFIX),
                 path -> assertThat(ALLOWED_PLUMBING_IMPORTS).contains(path),
+                path -> assertThat(ALLOWED_INTEGRATION_SPI_IMPORTS).contains(path),
                 path -> assertThat(ALLOWED_CATALOG_IMPORTS).contains(path));
       }
     }

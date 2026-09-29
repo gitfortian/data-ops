@@ -17,12 +17,11 @@ export default {
       changeOrigin: true,
       pathRewrite: { '^/api': '/api' },
     },
-    // Keep security calls same-origin in development. The prefix is an ingress
-    // concern, so the local backend receives (for example) /api/v1/account.
-    '/data-security/': {
+    // Keep security calls same-origin in development and preserve the API's
+    // /yak-security prefix expected by the backend controllers.
+    '/yak-security/': {
       target: 'http://localhost:8080',
       // changeOrigin: true,
-      // pathRewrite: { '^/yak-security': '' },
       // Do not leak an upstream Domain, and scope its session to this ingress.
       // The backend remains responsible for HttpOnly/Secure and SameSite=Lax.
       cookieDomainRewrite: '',

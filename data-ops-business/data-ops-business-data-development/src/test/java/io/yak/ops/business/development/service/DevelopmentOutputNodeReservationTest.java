@@ -29,11 +29,11 @@ class DevelopmentOutputNodeReservationTest {
     DevelopmentNodeService service = new DevelopmentNodeService(nodes, directories, catalog);
 
     when(nodes.existsByName(any(), any())).thenReturn(false);
-    when(nodes.insert(any(), any(), any(), any(), anyBoolean())).thenAnswer(invocation ->
+    when(nodes.insert(any(), any(), any(), anyBoolean())).thenAnswer(invocation ->
         node(10L,
             invocation.getArgument(0),
             invocation.getArgument(1),
-            invocation.getArgument(2)));
+            7L));
 
     DevelopmentNode dataset = service.create("订单数据集", "dataset", 7L, null);
     DevelopmentNode dataService = service.create("订单查询 API", "data_service", 7L, null);

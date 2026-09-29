@@ -52,7 +52,7 @@ class FlinkCdcEngineGatewayTest {
             + JOB_ID
             + "'\n",
         StandardCharsets.UTF_8);
-    Files.setPosixFilePermissions(cli, PosixFilePermissions.fromString("rwx------"));
+    PosixTestSupport.makeOwnerExecutable(cli);
 
     RealtimeSyncProperties properties = new RealtimeSyncProperties();
     properties.setWorkDirectory(temp.resolve("work").toString());
@@ -114,7 +114,7 @@ class FlinkCdcEngineGatewayTest {
         cli,
         "#!/bin/sh\necho 'password=source-secret connector rejected configuration'\nexit 7\n",
         StandardCharsets.UTF_8);
-    Files.setPosixFilePermissions(cli, PosixFilePermissions.fromString("rwx------"));
+    PosixTestSupport.makeOwnerExecutable(cli);
 
     try (RealtimeDeployRequest request = request(pipelineYaml(), "failed-key")) {
       assertThatThrownBy(() -> gateway.deploy(environment, request))
@@ -142,7 +142,7 @@ class FlinkCdcEngineGatewayTest {
         cli,
         "#!/bin/sh\ncat \"$1\"\necho \"connector rejected password=source''secret\"\nexit 7\n",
         StandardCharsets.UTF_8);
-    Files.setPosixFilePermissions(cli, PosixFilePermissions.fromString("rwx------"));
+    PosixTestSupport.makeOwnerExecutable(cli);
 
     try (RealtimeDeployRequest request =
         request(pipelineYaml(), "escaped-secret", "source'secret", "sink'secret")) {

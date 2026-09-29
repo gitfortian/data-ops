@@ -12,6 +12,7 @@ import io.yak.ops.business.dataset.publication.DatasetPublishCommand;
 import io.yak.ops.business.dataset.publication.DatasetPublisher;
 import io.yak.ops.business.dataset.publication.DatasetVersionWriter;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
+import io.yak.ops.business.dataset.repository.DatasetRepository.DraftField;
 import io.yak.ops.business.dataset.schema.DatasetFieldNormalizer;
 import io.yak.ops.business.dataset.schema.DatasetFieldSpec;
 import io.yak.ops.business.dataset.schema.DatasetSchemaDiscovery;
@@ -67,7 +68,9 @@ public class DevelopmentDatasetManager {
   /** Load the current draft context (dataSourceId, SQL, draft fields) for the editor. */
   public DraftContext loadDraftContext(long datasetId) {
     DatasetRepository.DraftSource source = repository.loadDraftSource(datasetId);
-    List<DatasetFieldSpec> fields = repository.loadDraftFields(datasetId);
+    List<DatasetFieldSpec> fields = repository.loadDraftFields(datasetId).stream()
+        .map(DevelopmentDatasetManager::toFieldSpec)
+        .toList();
     return new DraftContext(
         source != null ? source.dataSourceId() : null,
         source != null ? source.sql() : null,
@@ -117,7 +120,9 @@ public class DevelopmentDatasetManager {
 
     // Save draft: only persist draft columns and draft fields, do NOT create a version.
     repository.updateDraft(datasetId, sourceId, sourceSql);
-    repository.saveDraftFields(datasetId, fields);
+    repository.saveDraftFields(datasetId, fields.stream()
+        .map(DevelopmentDatasetManager::toDraftField)
+        .toList());
     lineagePublisher.request(datasetId);
     return reader.require(datasetId);
   }
@@ -132,7 +137,9 @@ public class DevelopmentDatasetManager {
     long datasetId = current.dataset().id();
 
     // Read draft fields as the field contract for the new version.
-    List<DatasetFieldSpec> fields = repository.loadDraftFields(datasetId);
+    List<DatasetFieldSpec> fields = repository.loadDraftFields(datasetId).stream()
+        .map(DevelopmentDatasetManager::toFieldSpec)
+        .toList();
     if (fields.isEmpty()) {
       fields = current.fields().stream()
           .map(f -> new DatasetFieldSpec(
@@ -231,6 +238,28 @@ public class DevelopmentDatasetManager {
       return fieldNormalizer.normalize(datasetId, requestedFields);
     }
     return fieldNormalizer.normalize(datasetId, discovery.discover(datasetId, asset));
+  }
+
+  private static DatasetFieldSpec toFieldSpec(DraftField field) {
+    return new DatasetFieldSpec(
+        field.fieldId(),
+        field.physicalName(),
+        field.displayName(),
+        field.dataType(),
+        field.nullable(),
+        field.description(),
+        field.defaultRole());
+  }
+
+  private static DraftField toDraftField(DatasetFieldSpec field) {
+    return new DraftField(
+        field.fieldId(),
+        field.physicalName(),
+        field.displayName(),
+        field.dataType(),
+        field.nullable(),
+        field.description(),
+        field.defaultRole());
   }
 
   private void requireDevelopmentNodeId(long developmentNodeId) {

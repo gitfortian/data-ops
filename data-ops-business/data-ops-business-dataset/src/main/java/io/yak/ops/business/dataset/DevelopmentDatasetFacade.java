@@ -2,6 +2,7 @@ package io.yak.ops.business.dataset;
 
 import io.yak.ops.business.dataset.development.DevelopmentDatasetManager;
 import io.yak.ops.business.dataset.development.DevelopmentDatasetManager.DraftContext;
+import io.yak.ops.business.dataset.development.DatasetDevelopmentSourceService;
 import io.yak.ops.business.dataset.publication.DatasetPublishCommand;
 import io.yak.ops.business.dataset.schema.DatasetFieldSpec;
 import io.yak.ops.business.dataset.schema.DatasetSchemaDiscovery;
@@ -9,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** Stable public boundary used by Data Development Dataset nodes. */
@@ -16,9 +18,27 @@ import org.springframework.stereotype.Service;
 public class DevelopmentDatasetFacade {
 
   private final DevelopmentDatasetManager manager;
+  private final DatasetDevelopmentSourceService sourceService;
 
   public DevelopmentDatasetFacade(DevelopmentDatasetManager manager) {
+    this(manager, null);
+  }
+
+  @Autowired
+  public DevelopmentDatasetFacade(
+      DevelopmentDatasetManager manager, DatasetDevelopmentSourceService sourceService) {
     this.manager = manager;
+    this.sourceService = sourceService;
+  }
+
+  public DevelopmentSource developmentSource(long datasetId) {
+    DatasetDevelopmentSourceService.DevelopmentSource source =
+        java.util.Objects.requireNonNull(sourceService, "sourceService").require(datasetId);
+    return new DevelopmentSource(
+        source.datasetId(),
+        source.developmentNodeId(),
+        source.currentDatasetVersionNo(),
+        source.state());
   }
 
   public Optional<NodeDataset> findByDevelopmentNodeId(long developmentNodeId) {
@@ -317,6 +337,12 @@ public class DevelopmentDatasetFacade {
 
   public record PreviewColumn(
       String name, String label, String typeName, int jdbcType, boolean nullable) {}
+
+  public record DevelopmentSource(
+      long datasetId,
+      Long developmentNodeId,
+      Integer currentDatasetVersionNo,
+      String state) {}
 
   public record PreviewResult(
       List<FieldDraft> fields,

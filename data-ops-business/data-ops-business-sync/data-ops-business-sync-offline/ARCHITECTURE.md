@@ -23,8 +23,10 @@ io.yak.ops.business.sync.offline
 │   ├── query           # execution read model
 │   └── adapter         # execution-boundary projection
 ├── backfill            # backfill planning / dispatch
+├── incremental         # incremental upper-bound planning
 ├── cursor              # incremental cursor lifecycle
 ├── schedule            # schedule lifecycle / callback boundary
+├── notification        # notification policy and event delivery boundary
 ├── reconcile           # background state convergence
 ├── engine              # Link-Up outbound boundary
 ├── mapping             # transport / view mapping

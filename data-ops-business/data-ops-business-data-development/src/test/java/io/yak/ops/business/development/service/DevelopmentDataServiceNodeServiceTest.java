@@ -67,11 +67,13 @@ class DevelopmentDataServiceNodeServiceTest {
     String sql = "select id, status from orders where status = :status";
     when(sqlCompiler.parameterNames(sql)).thenReturn(List.of("status"));
 
-    DevelopmentDataServiceDefinition persisted = standaloneDefinition(42L, sql);
-    DevelopmentDataServiceDraft saved = new DevelopmentDataServiceDraft(
-        100L, persisted, 1L, Instant.EPOCH, Instant.EPOCH);
     when(draftRepository.save(eq(100L), org.mockito.ArgumentMatchers.any(), eq(0L)))
-        .thenReturn(Optional.of(saved));
+        .thenAnswer(invocation -> Optional.of(new DevelopmentDataServiceDraft(
+            100L,
+            invocation.getArgument(1),
+            1L,
+            Instant.EPOCH,
+            Instant.EPOCH)));
     when(revisionRepository.listByNodeId(100L)).thenReturn(List.of());
 
     DevelopmentDataServiceNodeService.DataServiceNodeContext context = service.saveDraft(

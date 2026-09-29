@@ -3,7 +3,7 @@ package io.yak.ops.business.sync.realtime.controller;
 import io.yak.framework.common.Result;
 import io.yak.ops.business.sync.realtime.controller.v1.ComputeEnvironmentController;
 import io.yak.ops.business.sync.realtime.controller.v1.RealtimeJobController;
-import io.yak.ops.business.sync.realtime.engine.RealtimeEngineException;
+import io.yak.ops.business.sync.realtime.domain.RealtimeOperationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -34,8 +34,8 @@ public class RealtimeExceptionHandler {
     return response(HttpStatus.BAD_REQUEST, message);
   }
 
-  @ExceptionHandler(RealtimeEngineException.class)
-  ResponseEntity<Result<Void>> gateway(RealtimeEngineException exception) {
+  @ExceptionHandler(RealtimeOperationException.class)
+  ResponseEntity<Result<Void>> gateway(RealtimeOperationException exception) {
     HttpStatus status = exception.uncertain() ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.BAD_GATEWAY;
     return response(status, exception.getMessage());
   }

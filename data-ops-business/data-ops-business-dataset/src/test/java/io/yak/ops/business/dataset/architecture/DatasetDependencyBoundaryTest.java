@@ -150,6 +150,8 @@ class DatasetDependencyBoundaryTest {
                 "config/DatasetPersistenceConfiguration.java",
                 "dao/impl/DatasetDaoImpl.java",
                 "asset/DatasetAssetProvider.java");
+      } else if (type.equals("io.yak.ops.business.datasource.api.DataSourceReferenceProvider")) {
+        assertThat(path).isEqualTo("repository/DatasetDataSourceReferenceProvider.java");
       } else if (type.startsWith("io.yak.ops.spi.datasource.execution.")) {
         assertThat(path).isEqualTo("gateway/datasource/DataSourceSchemaSqlAdapter.java");
       } else if (type.startsWith("io.yak.ops.business.lineage.")) {
@@ -160,6 +162,7 @@ class DatasetDependencyBoundaryTest {
       } else if (type.startsWith("io.yak.ops.core.execution.sql.")) {
         assertThat(path)
             .isIn(
+                "DatasetQueryResult.java",
                 "query/adapter/QueryRevisionDatasetSourceAdapter.java",
                 "query/adapter/SqlQueryDatasetSourceAdapter.java");
       }

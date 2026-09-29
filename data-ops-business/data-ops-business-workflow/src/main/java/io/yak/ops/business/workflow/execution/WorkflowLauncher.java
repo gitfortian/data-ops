@@ -1,7 +1,6 @@
 package io.yak.ops.business.workflow.execution;
 
 import io.yak.ops.common.enums.PublishState;
-import io.yak.ops.business.workflow.definition.WorkflowDefinitionManager;
 import io.yak.ops.business.workflow.runtime.WorkflowRuntime;
 
 import io.yak.ops.business.workflow.domain.WorkflowRunInputScope;
@@ -25,7 +24,7 @@ import org.springframework.stereotype.Service;
 public class WorkflowLauncher {
   private static final Logger log = LoggerFactory.getLogger(WorkflowLauncher.class);
 
-  private final WorkflowDefinitionManager definitionService;
+  private final WorkflowLaunchDefinitionGateway definitionGateway;
   private final WorkflowRuntime runtimeService;
   private final WorkflowExecutionTriggerRecorder triggerRecorder;
   private final WorkflowPublishedVersionRunner publishedVersionRunner;
@@ -33,12 +32,12 @@ public class WorkflowLauncher {
 
   @Autowired
   public WorkflowLauncher(
-      WorkflowDefinitionManager definitionService,
+      WorkflowLaunchDefinitionGateway definitionGateway,
       WorkflowRuntime runtimeService,
       WorkflowExecutionTriggerRecorder triggerRecorder,
       WorkflowPublishedVersionRunner publishedVersionRunner,
       WorkflowExecutionAuditBridge auditBridge) {
-    this.definitionService = definitionService;
+    this.definitionGateway = definitionGateway;
     this.runtimeService = runtimeService;
     this.triggerRecorder = triggerRecorder;
     this.publishedVersionRunner = publishedVersionRunner;
@@ -47,19 +46,19 @@ public class WorkflowLauncher {
 
   /** Focused tests retain the previous constructor without Audit wiring. */
   public WorkflowLauncher(
-      WorkflowDefinitionManager definitionService,
+      WorkflowLaunchDefinitionGateway definitionGateway,
       WorkflowRuntime runtimeService,
       WorkflowExecutionTriggerRecorder triggerRecorder,
       WorkflowPublishedVersionRunner publishedVersionRunner) {
-    this(definitionService, runtimeService, triggerRecorder, publishedVersionRunner, null);
+    this(definitionGateway, runtimeService, triggerRecorder, publishedVersionRunner, null);
   }
 
   /** Focused tests retain the lightweight constructor without pinned-version wiring. */
   public WorkflowLauncher(
-      WorkflowDefinitionManager definitionService,
+      WorkflowLaunchDefinitionGateway definitionGateway,
       WorkflowRuntime runtimeService,
       WorkflowExecutionTriggerRecorder triggerRecorder) {
-    this(definitionService, runtimeService, triggerRecorder, null, null);
+    this(definitionGateway, runtimeService, triggerRecorder, null, null);
   }
 
   /** 正式执行当前启用的已发布版本；手工/API 启动仍保持单实例安全默认。 */
@@ -71,7 +70,7 @@ public class WorkflowLauncher {
         "PUBLISHED",
         id,
         triggerContext,
-        () -> definitionService.run(id),
+        () -> definitionGateway.runPublishedDefinition(id),
         WorkflowDefinitionVO::latestExecutionId,
         WorkflowDefinitionVO::name);
   }
@@ -94,7 +93,7 @@ public class WorkflowLauncher {
           "SCHEDULED_PUBLISHED",
           id,
           triggerContext,
-          () -> definitionService.runConcurrent(id),
+          () -> definitionGateway.runConcurrentPublishedDefinition(id),
           WorkflowDefinitionVO::latestExecutionId,
           WorkflowDefinitionVO::name);
     }
@@ -111,7 +110,7 @@ public class WorkflowLauncher {
       Map<String, Object> runtimeInput) {
     String id = required(workflowId, "工作流 ID 不能为空");
     String versionId = required(workflowVersionId, "Backfill workflowVersionId 不能为空");
-    WorkflowDefinitionVO current = definitionService.get(id);
+    WorkflowDefinitionVO current = definitionGateway.currentDefinition(id);
     if (!PublishState.PUBLISHED.matches(current.status())) {
       throw new IllegalStateException("工作流已下线，不能启动新的 Backfill 实例");
     }
@@ -162,7 +161,7 @@ public class WorkflowLauncher {
         "DRAFT_TEST",
         id,
         triggerContext,
-        () -> definitionService.testRun(id),
+        () -> definitionGateway.testRunDraft(id),
         WorkflowDefinitionVO::latestExecutionId,
         WorkflowDefinitionVO::name);
   }

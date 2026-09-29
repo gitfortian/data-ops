@@ -70,7 +70,8 @@ class OfflineStage7_1ProjectSpaceContractTest {
         .contains("findPendingBackfillsForDispatch")
         .contains("new ProjectContext(candidate.projectId(), null)")
         .contains("projectScope.run(")
-        .contains("batchRepository.findById(candidate.batchId())");
+        .contains("dispatchInProject(candidate.batchId())")
+        .contains("batchRepository.findById(batchId)");
 
     assertThat(source("reconcile/OfflineExecutionReconciler.java"))
         .contains("findActiveExecutionsForReconciliation")

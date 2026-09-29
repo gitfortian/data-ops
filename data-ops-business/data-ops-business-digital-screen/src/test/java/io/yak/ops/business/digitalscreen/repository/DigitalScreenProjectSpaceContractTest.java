@@ -39,20 +39,24 @@ class DigitalScreenProjectSpaceContractTest {
   }
 
   @Test
-  void migrationNeverGuessesHistoricalOwnershipAndThenContracts() throws IOException {
-    String expand = read(
-        "src/main/resources/db/migration/yak-digital-screen/V3__expand_project_scope.sql");
-    String contract = read(
-        "src/main/resources/db/migration/yak-digital-screen/V4__contract_project_scope.sql");
+  void baselineRequiresProjectOwnershipOnlyOnTheScreenRoot() throws IOException {
+    String baseline = read(
+        "src/main/resources/db/migration/yak-digital-screen/V1__baseline_digital_screen.sql");
 
-    assertThat(expand)
-        .contains("ADD COLUMN project_id BIGINT NULL")
-        .doesNotContainIgnoringCase("UPDATE")
-        .doesNotContain("project_id = 1")
-        .doesNotContain("DEFAULT 0");
-    assertThat(contract)
+    assertThat(tableDefinition(baseline, "yak_digital_screen"))
         .contains("project_id BIGINT NOT NULL")
-        .doesNotContainIgnoringCase("UPDATE");
+        .doesNotContain("project_id BIGINT NOT NULL DEFAULT");
+    assertThat(tableDefinition(baseline, "yak_digital_screen_version"))
+        .doesNotContain("project_id");
+  }
+
+  private String tableDefinition(String migration, String table) {
+    String start = "CREATE TABLE IF NOT EXISTS " + table + " (";
+    int definitionStart = migration.indexOf(start);
+    if (definitionStart < 0) throw new AssertionError("Missing baseline table: " + table);
+    int definitionEnd = migration.indexOf(") ENGINE=", definitionStart);
+    if (definitionEnd < 0) throw new AssertionError("Unterminated baseline table: " + table);
+    return migration.substring(definitionStart, definitionEnd);
   }
 
   private String read(String relative) throws IOException {

@@ -238,13 +238,15 @@ class AssetDiscoverServiceTest {
     AssetItemPO physicalTable = modelItem();
     physicalTable.setSourceType(AssetSourceType.METADATA.name());
     when(assetAppService.requireItem(1L)).thenReturn(physicalTable);
+    when(registry.find(AssetSourceType.METADATA)).thenReturn(Optional.of(metadataProvider()));
 
     AssetDiscoverService.SectionView result = service.section(1L, "TECHNICAL_METADATA", "alice");
 
     assertEquals(SectionStatus.UNAVAILABLE, result.status());
     assertEquals("TECHNICAL_METADATA 分区读取提供方未装配或暂不可用", result.note());
     assertNull(result.data());
-    verify(registry, never()).find(AssetSourceType.METADATA);
+    verify(registry).find(AssetSourceType.METADATA);
+    verify(sectionProviders).orderedStream();
   }
 
   @Test

@@ -5,6 +5,7 @@ import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.relationship.UsageEvidence;
 import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.metric.api.MetricUsageApi;
+import io.yak.ops.business.metric.config.ConditionalOnMetricPersistence;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.domain.MetricUsage;
 import io.yak.ops.business.metric.impact.MetricObservedUsageProvider;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
  * Metric ProductKey is introduced and no UsageEvidence is copied into Metric persistence.
  */
 @Component
+@ConditionalOnMetricPersistence
 public class ConsumptionMetricObservedUsageProvider implements MetricObservedUsageProvider {
 
   private static final int EVIDENCE_LIMIT_PER_PRODUCT = 100;

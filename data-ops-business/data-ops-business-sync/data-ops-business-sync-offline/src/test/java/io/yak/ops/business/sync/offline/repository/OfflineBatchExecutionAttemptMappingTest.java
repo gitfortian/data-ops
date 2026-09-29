@@ -36,7 +36,7 @@ class OfflineBatchExecutionAttemptMappingTest {
             .idempotencyKey("idem-20")
             .workerInstanceId("worker-a")
             .status("LOST")
-            .attemptNo(2)
+            .attemptNo(1)
             .triggerType("RETRY")
             .retryFromExecutionId(10L)
             .sourceRecordCount(100L)
@@ -53,7 +53,7 @@ class OfflineBatchExecutionAttemptMappingTest {
     ExecutionAttempt attempt = repository.findById(77L).orElseThrow().attempts().get(0);
 
     assertThat(attempt.id()).isEqualTo(20L);
-    assertThat(attempt.attemptNo()).isEqualTo(2);
+    assertThat(attempt.attemptNo()).isEqualTo(1);
     assertThat(attempt.reason()).isEqualTo(AttemptReason.RETRY);
     assertThat(attempt.status()).isEqualTo(AttemptStatus.UNKNOWN);
     assertThat(attempt.engineExecutionRef().jobId()).isEqualTo("engine-job-20");

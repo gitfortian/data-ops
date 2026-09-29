@@ -16,22 +16,30 @@ import java.util.List;
 public final class DorisJdbcCatalog extends GenericJdbcCatalog {
 
   private final JdbcConnectionProperties connection;
-  private final int timeoutSeconds;
+  private final int connectionTimeoutSeconds;
   private final JdbcConnectionProvider connectionProvider;
 
   public DorisJdbcCatalog(
       JdbcConnectionProperties connection,
       int timeoutSeconds,
       JdbcConnectionProvider connectionProvider) {
-    super(connection, timeoutSeconds);
+    this(connection, timeoutSeconds, timeoutSeconds, connectionProvider);
+  }
+
+  public DorisJdbcCatalog(
+      JdbcConnectionProperties connection,
+      int connectionTimeoutSeconds,
+      int queryTimeoutSeconds,
+      JdbcConnectionProvider connectionProvider) {
+    super(connection, connectionTimeoutSeconds, queryTimeoutSeconds);
     this.connection = connection;
-    this.timeoutSeconds = Math.max(1, timeoutSeconds);
+    this.connectionTimeoutSeconds = Math.max(1, connectionTimeoutSeconds);
     this.connectionProvider = connectionProvider;
   }
 
   @Override
   protected Connection openConnection() throws Exception {
-    return connectionProvider.open(connection, timeoutSeconds);
+    return connectionProvider.open(connection, connectionTimeoutSeconds);
   }
 
   @Override

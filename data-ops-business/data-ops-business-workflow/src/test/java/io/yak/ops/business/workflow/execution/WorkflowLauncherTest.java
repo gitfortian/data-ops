@@ -1,6 +1,5 @@
 package io.yak.ops.business.workflow.execution;
 
-import io.yak.ops.business.workflow.definition.WorkflowDefinitionManager;
 import io.yak.ops.business.workflow.runtime.WorkflowRuntime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class WorkflowLauncherTest {
 
-  @Mock private WorkflowDefinitionManager definitionService;
+  @Mock private WorkflowLaunchDefinitionGateway definitionGateway;
   @Mock private WorkflowRuntime runtimeService;
   @Mock private WorkflowExecutionTriggerRecorder triggerRecorder;
   @Mock private WorkflowPublishedVersionRunner publishedVersionRunner;
@@ -38,7 +37,7 @@ class WorkflowLauncherTest {
   @BeforeEach
   void setUp() {
     service = new WorkflowLauncher(
-        definitionService, runtimeService, triggerRecorder, publishedVersionRunner);
+        definitionGateway, runtimeService, triggerRecorder, publishedVersionRunner);
   }
 
   @Test
@@ -49,12 +48,12 @@ class WorkflowLauncherTest {
         "schedule-1",
         Instant.parse("2026-08-14T02:00:00Z"));
     WorkflowDefinitionVO expected = definition("execution-1", "workflow-version-1", 1);
-    when(definitionService.run("workflow-1")).thenReturn(expected);
+    when(definitionGateway.runPublishedDefinition("workflow-1")).thenReturn(expected);
 
     WorkflowDefinitionVO actual = service.runPublished("workflow-1", trigger);
 
     assertThat(actual).isSameAs(expected);
-    verify(definitionService).run("workflow-1");
+    verify(definitionGateway).runPublishedDefinition("workflow-1");
     verify(triggerRecorder).record("execution-1", trigger);
   }
 
@@ -65,12 +64,12 @@ class WorkflowLauncherTest {
         "schedule-1",
         Instant.parse("2026-08-14T02:00:00Z"));
     WorkflowDefinitionVO expected = definition("execution-parallel", "workflow-version-1", 1);
-    when(definitionService.runConcurrent("workflow-1")).thenReturn(expected);
+    when(definitionGateway.runConcurrentPublishedDefinition("workflow-1")).thenReturn(expected);
 
     WorkflowDefinitionVO actual = service.runScheduledPublished("workflow-1", trigger);
 
     assertThat(actual).isSameAs(expected);
-    verify(definitionService).runConcurrent("workflow-1");
+    verify(definitionGateway).runConcurrentPublishedDefinition("workflow-1");
     verify(triggerRecorder).record("execution-parallel", trigger);
   }
 
@@ -84,7 +83,7 @@ class WorkflowLauncherTest {
         "Asia/Shanghai");
     WorkflowDefinitionVO current = definition("latest-normal", "workflow-version-6", 6);
     WorkflowInstanceVO expected = instance("execution-v5", "RUNNING");
-    when(definitionService.get("workflow-1")).thenReturn(current);
+    when(definitionGateway.currentDefinition("workflow-1")).thenReturn(current);
     when(publishedVersionRunner.run("workflow-1", "workflow-version-5")).thenReturn(expected);
 
     WorkflowInstanceVO actual = service.runBackfillPublished(

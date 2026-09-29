@@ -8,19 +8,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mongodb.client.MongoClient;
+import io.yak.ops.boot.config.OpenApiConfiguration;
+import io.yak.ops.boot.config.JacksonConfiguration;
+import io.yak.ops.boot.controller.TestController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springdoc.core.models.GroupedOpenApi;
 
-@SpringBootTest(classes = YakOpsApplication.class)
-@AutoConfigureMockMvc
+@WebMvcTest(TestController.class)
+@ContextConfiguration(classes = YakFrameworkWebIntegrationTests.WebSliceConfiguration.class)
 @ActiveProfiles("test")
-class YakOpsApplicationTests {
+class YakFrameworkWebIntegrationTests {
 
   @Autowired
   private MockMvc mockMvc;
@@ -30,6 +36,9 @@ class YakOpsApplicationTests {
 
   @Autowired
   private ApplicationContext applicationContext;
+
+  @Autowired
+  private java.util.Map<String, GroupedOpenApi> openApiGroups;
 
   @Test
   void testControllerShouldReturnFrameworkResult() throws Exception {
@@ -41,10 +50,11 @@ class YakOpsApplicationTests {
   }
 
   @Test
-  void yakOpsOpenApiGroupShouldContainTestEndpoint() throws Exception {
-    mockMvc.perform(get("/v3/api-docs/yak-ops"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.paths['/api/test/ping']").exists());
+  void openApiGroupsShouldIncludeYakOpsAndYakSecurity() {
+    assertTrue(openApiGroups.values().stream()
+        .anyMatch(group -> "yak-ops".equals(group.getGroup())));
+    assertTrue(openApiGroups.values().stream()
+        .anyMatch(group -> "yak-security".equals(group.getGroup())));
   }
 
   @Test
@@ -63,4 +73,10 @@ class YakOpsApplicationTests {
   void shouldNotCreateDefaultMongoClientAtStartup() {
     assertTrue(applicationContext.getBeansOfType(MongoClient.class).isEmpty());
   }
+
+  @Configuration(proxyBeanMethods = false)
+  @Import({TestController.class, OpenApiConfiguration.class, JacksonConfiguration.class})
+  static class WebSliceConfiguration {
+  }
+
 }

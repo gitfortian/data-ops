@@ -183,6 +183,19 @@ query/adapter/SqlQueryDatasetSourceAdapter.java
  -> io.yak.ops.core.execution.sql.*
 ```
 
+`DatasetQueryResult.java` 复用 JDBC 中立的 `SqlExecutionColumn` 值类型，供 Dashboard、Chart 与 Agent 共用列元数据形状；该值类型不包含查询运行时能力。
+
+Source adapters 将 Core 的执行策略拒绝映射为 Dataset-owned `DatasetQueryRejectedException`；Coordinator 不依赖 Core SQL 异常类型。
+
+### Datasource Deletion Guard
+
+```text
+repository/DatasetDataSourceReferenceProvider.java
+ -> io.yak.ops.business.datasource.api.DataSourceReferenceProvider
+```
+
+该适配器在删除数据源前统计 Dataset 引用；Mapper 访问留在 Repository 层，`api` 包不依赖 DAO 类型。
+
 ### Infrastructure Config
 
 ```text
@@ -222,6 +235,8 @@ Repository contract 不暴露：
 - MyBatis 类型；
 - 外部 TaskCatalog/Datasource/Lineage 对象；
 - stable facade 类型。
+
+草稿字段持久化使用 `DatasetRepository.DraftField`；Schema 在应用接缝处转换为既有 `DatasetFieldSpec` 契约。
 
 ## 11. No Cycles
 

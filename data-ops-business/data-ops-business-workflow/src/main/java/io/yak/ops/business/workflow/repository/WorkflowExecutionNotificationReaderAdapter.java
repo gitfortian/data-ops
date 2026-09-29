@@ -1,7 +1,6 @@
 package io.yak.ops.business.workflow.repository;
 
 import io.yak.ops.business.workflow.dao.WorkflowExecutionDao;
-import io.yak.ops.business.workflow.execution.WorkflowExecutionNotificationReader;
 import io.yak.ops.common.bean.po.workflow.WorkflowExecutionPO;
 import io.yak.ops.common.bean.po.workflow.WorkflowNodeExecutionPO;
 import java.util.Optional;

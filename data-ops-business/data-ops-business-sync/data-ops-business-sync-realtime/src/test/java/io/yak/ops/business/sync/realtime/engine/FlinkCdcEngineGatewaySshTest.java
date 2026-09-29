@@ -194,7 +194,7 @@ class FlinkCdcEngineGatewaySshTest {
             + submitExitCode
             + "\n";
     Files.writeString(script, content, StandardCharsets.UTF_8);
-    Files.setPosixFilePermissions(script, PosixFilePermissions.fromString("rwx------"));
+    PosixTestSupport.makeOwnerExecutable(script);
     return script;
   }
 

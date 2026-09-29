@@ -9,10 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 /** Read-side enrichment for Workflow instance list views. */
-@Service
+@Component
 public class WorkflowInstanceQueryService {
 
   private static final Logger log = LoggerFactory.getLogger(WorkflowInstanceQueryService.class);

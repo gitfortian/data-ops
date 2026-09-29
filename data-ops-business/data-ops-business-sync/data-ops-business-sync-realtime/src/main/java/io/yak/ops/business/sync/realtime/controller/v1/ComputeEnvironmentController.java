@@ -6,8 +6,8 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.sync.realtime.controller.RealtimePermissionCode;
 import io.yak.ops.business.sync.realtime.controller.v1.dto.ComputeEnvironmentRequests;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeRequestMapper;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeViewMapper;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeRequestConverter;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeViewConverter;
 import io.yak.ops.business.sync.realtime.controller.v1.vo.ComputeEnvironmentViews;
 import io.yak.ops.business.sync.realtime.environment.ComputeEnvironmentService;
 import io.yak.ops.core.project.ProjectMigrationMode;
@@ -30,13 +30,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ComputeEnvironmentController {
 
   private final ComputeEnvironmentService service;
-  private final RealtimeRequestMapper requestMapper;
-  private final RealtimeViewMapper viewMapper;
+  private final RealtimeRequestConverter requestMapper;
+  private final RealtimeViewConverter viewMapper;
 
   public ComputeEnvironmentController(
       ComputeEnvironmentService service,
-      RealtimeRequestMapper requestMapper,
-      RealtimeViewMapper viewMapper) {
+      RealtimeRequestConverter requestMapper,
+      RealtimeViewConverter viewMapper) {
     this.service = service;
     this.requestMapper = requestMapper;
     this.viewMapper = viewMapper;

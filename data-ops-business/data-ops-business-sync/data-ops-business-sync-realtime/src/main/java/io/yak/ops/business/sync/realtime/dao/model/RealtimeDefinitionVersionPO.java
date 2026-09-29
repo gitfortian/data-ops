@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
 import lombok.Data;
 
-/** Immutable published definition persistence record introduced by Stage 6 Wave 1. */
+/** Persistence row for one immutable published Realtime Sync definition version. */
 @Data
 @TableName("yak_realtime_definition_version")
 public class RealtimeDefinitionVersionPO {

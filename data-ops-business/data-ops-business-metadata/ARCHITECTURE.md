@@ -25,6 +25,7 @@ io.yak.ops.business.metadata
 ├── detail/       EntityDetailService(分区容错 fan-out：一块一个来源，本包一条 SQL 都不写) · SectionState(OK/EMPTY/UNAVAILABLE)
 ├── governance/   MetadataGovernanceQueryService(变更历史 + 标签的读侧，118)
 │                 · LabelService(溯源/继承) · GovernanceTaskService(open_marker) · CertificationScanner —— 写侧仍归 124
+├── repository/   MetadataDataSourceReferenceProvider(数据源删除守卫 SPI 适配器)
 ├── stat/         MetadataOverviewService(≤8 查询预算) · WatchdogQueries(共表在场行断言)
 ├── schedule/     MetadataScheduleEngineBridge + MetadataCollectScheduleHandler
 ├── exception/    MetadataException + MetadataExceptionHandler(49001~49099)
