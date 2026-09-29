@@ -79,6 +79,19 @@ export default [
         hideInMenu: true,
       },
       {
+        // Phase 7 的 Metadata Explorer 深链复用 Asset 的统一元数据实体检索视图。
+        path: '/metadata/explorer',
+        redirect: '/data-asset/catalog?view=entity',
+        hideInMenu: true,
+      },
+      {
+        // Metadata 实体详情深链复用同一实体抽屉，避免复制一份画像事实。
+        path: '/metadata/detail/:id',
+        component: './data-metadata/detail-redirect',
+        hideInMenu: true,
+        hideInBreadcrumb: true,
+      },
+      {
         path: '/data-metadata/search',
         redirect: '/data-asset/catalog?view=entity',
         hideInMenu: true,

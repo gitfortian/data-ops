@@ -66,5 +66,40 @@ public class AssetViewRecordService {
     return result;
   }
 
+  /** 近 N 天页面访问摘要；独立访问者按平台用户标识去重。 */
+  public ActivitySummary summary(Long assetId, int days) {
+    Long projectId = currentProject.requireProjectId();
+    List<Map<String, Object>> rows = viewMapper.selectMaps(new QueryWrapper<AssetViewRecordPO>()
+        .select("COUNT(*) AS view_count", "COUNT(DISTINCT viewer) AS viewer_count",
+            "MAX(view_time) AS last_viewed_at")
+        .eq("project_id", projectId)
+        .eq("asset_id", assetId)
+        .ge("view_time", LocalDateTime.now().minusDays(days)));
+    if (rows.isEmpty()) {
+      return new ActivitySummary(0L, 0L, null);
+    }
+    Map<String, Object> row = rows.get(0);
+    return new ActivitySummary(
+        numberValue(row.get("view_count")),
+        numberValue(row.get("viewer_count")),
+        dateTimeValue(row.get("last_viewed_at")));
+  }
+
+  private static long numberValue(Object value) {
+    return value instanceof Number number ? number.longValue() : 0L;
+  }
+
+  private static LocalDateTime dateTimeValue(Object value) {
+    if (value instanceof LocalDateTime dateTime) {
+      return dateTime;
+    }
+    if (value instanceof java.sql.Timestamp timestamp) {
+      return timestamp.toLocalDateTime();
+    }
+    return null;
+  }
+
   public record DailyView(String date, long count) {}
+
+  public record ActivitySummary(long viewCount, long distinctViewerCount, LocalDateTime lastViewedAt) {}
 }

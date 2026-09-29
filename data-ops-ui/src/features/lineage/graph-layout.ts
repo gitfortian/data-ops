@@ -35,6 +35,9 @@ const emptyTypeCounts = (): Record<LineageAssetType, number> => ({
   CHART: 0,
   DASHBOARD: 0,
   METRIC: 0,
+  DATABASE_SERVICE: 0,
+  DATABASE: 0,
+  DOMAIN: 0,
 });
 
 const distances = (

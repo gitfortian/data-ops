@@ -17,6 +17,7 @@ import io.yak.ops.spi.section.SectionStatus;
 import io.yak.ops.spi.section.SectionSummary;
 import io.yak.ops.spi.section.SectionType;
 import io.yak.framework.security.service.RbacPermissionService;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -110,6 +111,7 @@ public class AssetDiscoverService {
 
   public record PageActivityUsage(
       UsageOwnerDomain ownerDomain, SectionStatus status, int windowDays, String meaning,
+      Long viewCount, Long distinctViewerCount, LocalDateTime lastViewedAt,
       List<AssetViewRecordService.DailyView> views, String reason) {}
 
   public record StructuralUsage(
@@ -119,7 +121,9 @@ public class AssetDiscoverService {
   public record BusinessConsumption(
       UsageOwnerDomain ownerDomain, SectionStatus status, String scope, Integer totalCount,
       Integer reportCount, Integer datasetCount, Integer dashboardCount, Integer apiCount,
-      Integer screenCount, String reason) {}
+      Integer screenCount, Integer consumerCount, Integer userCount, Integer teamCount,
+      Integer dataServiceCount, Integer jobCount, Integer successfulUsageCount,
+      Integer activeSubscriptionCount, String lastObservedAt, String coverageNote, String reason) {}
 
   public record UsageSummary(
       PageActivityUsage pageActivity,
@@ -358,11 +362,16 @@ public class AssetDiscoverService {
   private SectionView usage(AssetItemPO po) {
     PageActivityUsage pageActivity;
     try {
+      AssetViewRecordService.ActivitySummary activity =
+          viewRecordService.summary(po.getId(), TREND_DAYS);
       pageActivity = new PageActivityUsage(UsageOwnerDomain.ASSET, SectionStatus.OK, TREND_DAYS,
-          "资产详情页访问活动，不代表业务消费", viewRecordService.trend(po.getId(), TREND_DAYS), null);
+          "资产详情页访问活动，不代表业务消费", activity.viewCount(),
+          activity.distinctViewerCount(), activity.lastViewedAt(),
+          viewRecordService.trend(po.getId(), TREND_DAYS), null);
     } catch (RuntimeException e) {
       pageActivity = new PageActivityUsage(UsageOwnerDomain.ASSET, SectionStatus.UNAVAILABLE,
-          TREND_DAYS, "资产详情页访问活动，不代表业务消费", List.of(), "资产页活动暂不可用");
+          TREND_DAYS, "资产详情页访问活动，不代表业务消费", null, null, null,
+          List.of(), "资产页活动暂不可用");
     }
 
     StructuralUsage structuralUsage;
@@ -401,11 +410,18 @@ public class AssetDiscoverService {
             stringValue(values.get("scope")), integerValue(values.get("totalCount")),
             integerValue(values.get("reportCount")), integerValue(values.get("datasetCount")),
             integerValue(values.get("dashboardCount")), integerValue(values.get("apiCount")),
-            integerValue(values.get("screenCount")), contract.reason());
+            integerValue(values.get("screenCount")), integerValue(values.get("consumerCount")),
+            integerValue(values.get("userCount")), integerValue(values.get("teamCount")),
+            integerValue(values.get("dataServiceCount")), integerValue(values.get("jobCount")),
+            integerValue(values.get("successfulUsageCount")),
+            integerValue(values.get("activeSubscriptionCount")),
+            stringValue(values.get("lastObservedAt")), stringValue(values.get("coverageNote")),
+            contract.reason());
         actions.addAll(contract.actions());
     } else {
       businessConsumption = new BusinessConsumption(UsageOwnerDomain.CONSUMING_DOMAINS,
           SectionStatus.UNAVAILABLE, null, null, null, null, null, null, null,
+          null, null, null, null, null, null, null, null, null,
           "当前资产类型尚未接入消费域读侧");
     }
     UsageSummary summary = new UsageSummary(pageActivity, structuralUsage, businessConsumption);

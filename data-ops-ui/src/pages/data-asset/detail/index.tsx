@@ -636,7 +636,16 @@ const AssetDetailPage = () => {
                 {(() => {
                   const rawUsage = detail?.sections.trend?.data as
                     | {
-                        pageActivity?: { status?: string; windowDays?: number; meaning?: string; views?: { date: string; count: number }[]; reason?: string };
+                        pageActivity?: {
+                          status?: string;
+                          windowDays?: number;
+                          meaning?: string;
+                          viewCount?: number;
+                          distinctViewerCount?: number;
+                          lastViewedAt?: string;
+                          views?: { date: string; count: number }[];
+                          reason?: string;
+                        };
                         structuralUsage?: { status?: string; hop?: number; direction?: string; downstreamReferenceCount?: number; reason?: string };
                         businessConsumption?: {
                           status?: string;
@@ -648,6 +657,15 @@ const AssetDetailPage = () => {
                           reportCount?: number;
                           apiCount?: number;
                           screenCount?: number;
+                          consumerCount?: number;
+                          userCount?: number;
+                          teamCount?: number;
+                          dataServiceCount?: number;
+                          jobCount?: number;
+                          successfulUsageCount?: number;
+                          activeSubscriptionCount?: number;
+                          lastObservedAt?: string;
+                          coverageNote?: string;
                         };
                       }
                     | { date: string; count: number }[]
@@ -667,7 +685,7 @@ const AssetDetailPage = () => {
                               key: 'activity',
                               label: '资产页访问活动（Asset）',
                               children: rawUsage.pageActivity?.status === 'OK'
-                                ? `近 ${rawUsage.pageActivity.windowDays ?? 30} 天；不代表业务消费`
+                                ? `近 ${rawUsage.pageActivity.windowDays ?? 30} 天 ${rawUsage.pageActivity.viewCount ?? 0} 次，${rawUsage.pageActivity.distinctViewerCount ?? 0} 位访问者；最近访问 ${formatAssetTime(rawUsage.pageActivity.lastViewedAt)}；不代表业务消费`
                                 : rawUsage.pageActivity?.reason ?? '暂不可用',
                             },
                             {
@@ -681,7 +699,23 @@ const AssetDetailPage = () => {
                               key: 'business',
                               label: '业务消费',
                               children: rawUsage.businessConsumption?.status === 'OK'
-                                ? `已记录 ${rawUsage.businessConsumption.totalCount ?? 0} 次引用（数据集 ${rawUsage.businessConsumption.datasetCount ?? 0}、仪表盘 ${rawUsage.businessConsumption.dashboardCount ?? 0}、报表 ${rawUsage.businessConsumption.reportCount ?? 0}、API ${rawUsage.businessConsumption.apiCount ?? 0}、大屏 ${rawUsage.businessConsumption.screenCount ?? 0}）`
+                                ? rawUsage.businessConsumption.consumerCount != null
+                                  ? (
+                                      <Space direction="vertical" size={2}>
+                                        <span>
+                                          已知 {rawUsage.businessConsumption.consumerCount} 个消费者（用户 {rawUsage.businessConsumption.userCount ?? 0}、团队 {rawUsage.businessConsumption.teamCount ?? 0}、仪表盘 {rawUsage.businessConsumption.dashboardCount ?? 0}、服务 {rawUsage.businessConsumption.dataServiceCount ?? 0}、任务 {rawUsage.businessConsumption.jobCount ?? 0}）
+                                        </span>
+                                        <span>
+                                          成功使用 {rawUsage.businessConsumption.successfulUsageCount ?? 0} 次，活动订阅 {rawUsage.businessConsumption.activeSubscriptionCount ?? 0} 个；最近业务消费 {formatAssetTime(rawUsage.businessConsumption.lastObservedAt)}
+                                        </span>
+                                        {rawUsage.businessConsumption.coverageNote ? (
+                                          <span className="text-[12px] text-[#98a2b3]">
+                                            {rawUsage.businessConsumption.coverageNote}
+                                          </span>
+                                        ) : null}
+                                      </Space>
+                                    )
+                                  : `已记录 ${rawUsage.businessConsumption.totalCount ?? 0} 次引用（数据集 ${rawUsage.businessConsumption.datasetCount ?? 0}、仪表盘 ${rawUsage.businessConsumption.dashboardCount ?? 0}、报表 ${rawUsage.businessConsumption.reportCount ?? 0}、API ${rawUsage.businessConsumption.apiCount ?? 0}、大屏 ${rawUsage.businessConsumption.screenCount ?? 0}）`
                                 : rawUsage.businessConsumption?.status === 'EMPTY'
                                   ? rawUsage.businessConsumption.reason ?? '当前无已记录引用'
                                   : rawUsage.businessConsumption?.reason ?? '尚未接入消费域读侧',
@@ -715,13 +749,42 @@ const AssetDetailPage = () => {
                   {(() => {
                     const data = detail?.sections.security?.data;
                     const classifications = Array.isArray(data?.classifications)
-                      ? data.classifications as Record<string, unknown>[]
+                      ? data.classifications
                       : [];
                     return (
                       <Space direction="vertical" className="w-full">
                         <div className="text-[12px] text-[#667085]">
-                          安全分级证据：{classifications.length} 条。仅展示当前生效的分级记录；访问/脱敏策略需在 Security 工作台核对，此摘要不代表访问许可。
+                          安全分级证据：{classifications.length} 条。访问策略数量仅统计已审批 READ 规则，不代表当前用户的最终访问许可；合规结果按批次归属。
                         </div>
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            {
+                              key: 'access', label: '匹配的已审批 READ 规则',
+                              children: data?.accessPolicySummaryStatus === 'OK'
+                                ? `${data.applicableReadPolicyCount ?? 0} 条 · ${data.accessPolicySummaryReason ?? ''}`
+                                : data?.accessPolicySummaryReason ?? '不可用',
+                            },
+                            {
+                              key: 'masking', label: '脱敏策略匹配',
+                              children: data?.maskingSummaryStatus === 'NOT_APPLICABLE'
+                                ? data.maskingSummaryReason ?? '无分级对象'
+                                : data?.maskingSummaryStatus === 'UNAVAILABLE'
+                                  ? data.maskingSummaryReason ?? '不可用'
+                                  : `已匹配 ${data?.maskingConfiguredCount ?? 0} 个，未匹配 ${data?.unmaskedClassifiedCount ?? 0} 个`,
+                            },
+                            {
+                              key: 'compliance', label: '对象级合规状态',
+                              children: data?.complianceSummaryReason ?? '合规检查结果按批次归属，无法归结为单个对象状态',
+                            },
+                          ]}
+                        />
+                        <Space size="small" wrap>
+                          <Button type="link" onClick={() => history.push('/data-security/access')}>访问策略工作台</Button>
+                          <Button type="link" onClick={() => history.push('/data-security/masking')}>脱敏策略工作台</Button>
+                          <Button type="link" onClick={() => history.push('/data-security/compliance')}>批次合规检查</Button>
+                        </Space>
                         {classifications.map((item, index) => (
                           <Descriptions
                             key={String(item.objectKey ?? index)}
@@ -731,6 +794,7 @@ const AssetDetailPage = () => {
                               { key: 'level', label: '等级', children: String(item.levelName ?? item.levelCode ?? '-') },
                               { key: 'category', label: '分类', children: String(item.categoryName ?? item.categoryCode ?? '-') },
                               { key: 'object', label: '对象', children: String(item.objectKey ?? '-') },
+                              { key: 'masking', label: '脱敏匹配', children: item.maskingConfigured == null ? '不可用' : item.maskingConfigured ? '已匹配可用算法' : '未匹配' },
                             ]}
                           />
                         ))}

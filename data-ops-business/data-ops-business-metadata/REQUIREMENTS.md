@@ -170,6 +170,15 @@
   modeling **147 全绿**（新增 `ModelEntityProviderTest` 4 条分袋契约）、lifecycle **43 全绿**（按表快照端点）。
   端到端**待用户重启后端**后随工单 123 的详情页走查一并验。
 
+## Phase 7 / Issue #194：Metadata 技术运维总览
+
+- `GET /api/v1/metadata/overview` 只服务元数据采集与技术目录运维，不提供与 Asset 平级的通用发现入口；用户从这里查看采集配置并进入已有 Asset 目录发现资产。
+- 所有目录、任务、运行统计按 `CurrentProject.requireProjectId()` 过滤。目录统计只读 Metadata steward 的目录列；不访问 `yak_metadata_asset.properties`、其他治理域表或源端系统视图。
+- 返回实体类型与当前目录实体数、物理采集/源域对账任务数及启用/待预演数、最近 5 次运行的状态/计数/耗时、未办结 Metadata 待办数（含待补注释、待确认标签等任务分类）。`SUSPECT` 明确展示为熔断的疑似坍塌运行。
+- 目录实体数量是已登记实体的事实计数，不具备源端全量对象分母时不展示为覆盖率百分比。
+- 服务最多执行 4 次有界查询，运行记录固定限制为最近 5 条；读权限沿用 `MetadataPermissionCode.READ`，路由使用 `PROJECT_REQUIRED`。
+- 前端区分接口不可用、暂无运行记录、未配置任务和无待办；只有实际读取到 `EMPTY` 的数据才展示为空，不用空响应掩盖服务错误。
+
 ---
 
 ## 待补（后续 ticket 开工第一步追加）

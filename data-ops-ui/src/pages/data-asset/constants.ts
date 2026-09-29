@@ -162,8 +162,8 @@ export const sourceObjectPath = (
       path = `/metric/manage/${sourceId}`;
       break;
     case 'METADATA':
-      // sourceId 是目录行 id，实体视图暂不支持按 id 定位，先跳视图本身
-      path = '/data-asset/catalog?view=entity';
+      // Metadata Asset sourceId is the catalog entity row id; the explorer opens it directly.
+      path = `/data-asset/catalog?view=entity&entityId=${encodeURIComponent(sourceId)}`;
       break;
     case 'DATASET':
       // Asset Registry keeps stable Dataset identity only. Data Development resolves
@@ -179,7 +179,7 @@ export const sourceObjectPath = (
     default:
       return undefined;
   }
-  if (!returnAssetId || !['MODEL', 'DATASET'].includes(String(sourceType))) return path;
+  if (!returnAssetId || !['MODEL', 'METRIC', 'DATASET'].includes(String(sourceType))) return path;
   return `${path}${path.includes('?') ? '&' : '?'}returnAssetId=${returnAssetId}`;
 };
 

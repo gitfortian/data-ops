@@ -73,6 +73,9 @@ export const LINEAGE_ASSET_TYPES = [
   'CHART',
   'DASHBOARD',
   'METRIC',
+  'DATABASE_SERVICE',
+  'DATABASE',
+  'DOMAIN',
 ] as const;
 
 export type LineageAssetType = (typeof LINEAGE_ASSET_TYPES)[number];
@@ -135,6 +138,9 @@ export const assetTypeLabel: Record<LineageAssetType, string> = {
   CHART: '图表',
   DASHBOARD: '仪表盘',
   METRIC: '指标',
+  DATABASE_SERVICE: '数据库服务',
+  DATABASE: '数据库',
+  DOMAIN: '业务域',
 };
 
 export const relationTypeLabel: Record<LineageRelationType, string> = {

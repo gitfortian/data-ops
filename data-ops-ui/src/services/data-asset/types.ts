@@ -7,6 +7,16 @@ export type AssetSourceType = 'MODEL' | 'METRIC' | 'METADATA' | 'DATASET' | 'DAS
 /** 展示类型(与 LineageAssetType 命名对齐;DOC 仅 MANUAL 用)。 */
 export type AssetType = 'TABLE' | 'METRIC' | 'DATASET' | 'DASHBOARD' | 'CHART' | 'TASK' | 'DOC';
 
+export interface AssetSourceLookup {
+  state: 'FOUND' | 'NOT_INDEXED';
+  sourceType: AssetSourceType;
+  sourceId: string;
+  assetId?: number | null;
+  assetKey?: string | null;
+  assetType?: AssetType | null;
+  assetStatus?: AssetStatus | null;
+}
+
 export type HealthGrade = 'A' | 'B' | 'C' | 'D';
 
 export interface AssetRecord {
@@ -157,8 +167,18 @@ export interface ClassificationData {
   categoryCode?: string;
   categoryName?: string;
   status?: string;
+  maskingConfigured?: boolean | null;
   classificationCount?: number;
   classifications?: ClassificationData[];
+  applicableReadPolicyCount?: number | null;
+  accessPolicySummaryStatus?: string;
+  accessPolicySummaryReason?: string;
+  maskingConfiguredCount?: number | null;
+  unmaskedClassifiedCount?: number | null;
+  maskingSummaryStatus?: string;
+  maskingSummaryReason?: string;
+  complianceSummaryStatus?: string;
+  complianceSummaryReason?: string;
   strategySummaryStatus?: string;
   strategySummaryReason?: string;
 }

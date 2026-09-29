@@ -18,7 +18,11 @@ import io.yak.ops.common.enums.security.SecurityErrorCode;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -72,6 +76,38 @@ public class MaskingService implements SecurityMaskingApi {
       return MaskingDirective.none();
     }
     return new MaskingDirective(true, algo.getAlgoCode(), algo.getParams());
+  }
+
+  /** Returns whether each existing classification has a matching enabled masking policy. */
+  public Map<String, Boolean> maskingCoverage(List<ClassificationView> classifications) {
+    if (classifications == null || classifications.isEmpty()) {
+      return Map.of();
+    }
+    Long projectId = currentProject.requireProjectId();
+    List<DsecMaskingPolicyPO> policies = policyMapper.selectList(
+        new LambdaQueryWrapper<DsecMaskingPolicyPO>()
+            .eq(DsecMaskingPolicyPO::getProjectId, projectId)
+            .eq(DsecMaskingPolicyPO::getEnabled, 1));
+    Set<Long> algorithmIds = new HashSet<>(
+        algorithmMapper.selectList(
+                new LambdaQueryWrapper<DsecMaskingAlgorithmPO>()
+                    .eq(DsecMaskingAlgorithmPO::getProjectId, projectId))
+            .stream()
+            .map(DsecMaskingAlgorithmPO::getId)
+            .toList());
+
+    Map<String, Boolean> result = new HashMap<>();
+    for (ClassificationView classification : classifications) {
+      String columnName = lastSegment(classification.objectKey());
+      DsecMaskingPolicyPO matched = policies.stream()
+          .filter(policy -> matches(policy, classification, columnName))
+          .max(Comparator.comparingInt(policy -> policy.getPriority() == null ? 0 : policy.getPriority()))
+          .orElse(null);
+      result.put(
+          classification.objectKey(),
+          matched != null && matched.getAlgoId() != null && algorithmIds.contains(matched.getAlgoId()));
+    }
+    return Map.copyOf(result);
   }
 
   @Override

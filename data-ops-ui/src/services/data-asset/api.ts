@@ -7,6 +7,7 @@ import type {
   AssetSectionContract,
   AssetSection,
   AssetSourceAttrs,
+  AssetSourceLookup,
   AssetPageParams,
   AssetPageResult,
   AssetRecord,
@@ -83,6 +84,12 @@ export const pageAssets = async (params: AssetPageParams): Promise<AssetPageResu
 
 export const getAssetDetail = (id: number) =>
   HttpUtils.getData<AssetDetailView>(`${ASSET_API_PREFIX}/${id}`);
+
+/** Exact, read-only lookup from a source domain identity into Asset Registry. */
+export const lookupAssetBySource = (sourceType: AssetSourceLookup['sourceType'], sourceId: string) => {
+  const search = new URLSearchParams({ sourceType, sourceId });
+  return HttpUtils.getData<AssetSourceLookup>(`${ASSET_API_PREFIX}/source-lookup?${search.toString()}`);
+};
 
 export const getAssetSourceAttributes = (id: number) =>
   HttpUtils.getData<AssetSection<AssetSourceAttrs>>(`${ASSET_API_PREFIX}/${id}/source-attributes`);
