@@ -17,7 +17,18 @@ public record LogicalAttribute(
     if (code == null || code.isBlank()) {
       throw new IllegalArgumentException("Attribute code must not be blank");
     }
-    return new LogicalAttribute(entityId == null ? null : null, entityId, code, name,
-        logicalType, null, false, true, 0);
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("Attribute name must not be blank");
+    }
+    return new LogicalAttribute(
+        null,
+        entityId,
+        code,
+        name.trim(),
+        logicalType,
+        null,
+        false,
+        true,
+        0);
   }
 }
