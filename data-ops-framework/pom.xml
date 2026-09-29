@@ -155,6 +155,7 @@
                 <version>${flatten-maven-plugin.version}</version>
                 <configuration>
                     <updatePomFile>true</updatePomFile>
+                    <outputDirectory>${project.build.directory}</outputDirectory>
                     <flattenMode>resolveCiFriendliesOnly</flattenMode>
                 </configuration>
                 <executions>

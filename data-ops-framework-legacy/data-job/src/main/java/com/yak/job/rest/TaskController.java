@@ -47,7 +47,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(value = {"v1/data-job/task"})
+@RequestMapping(value = {"v1/yak-job/task"})
 @Api(tags = {"yak-job \u7684\u4efb\u52a1\u76f8\u5173\u63a5\u53e3"})
 public class TaskController {
     @Autowired

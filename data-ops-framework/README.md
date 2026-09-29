@@ -6,8 +6,19 @@ Yak Framework 使用小型 Maven 模块保持能力边界清晰：
 - `data-common`：跨模块共享的响应、分页、错误码与业务异常契约；
 - `data-security`：用户、认证、角色、权限和操作审计能力，依赖 `data-common`；
 - `data-schedule`：插件化统一调度能力，提供稳定 API、核心路由、Quartz 与 XXL-JOB 插件，以及聚合全部插件的 Starter；
-- `yak-notification`：Java 8 兼容的通知核心，提供站内信、邮件、Webhook 的统一发送入口、模板和发送记录扩展点；
+- `data-workflow/data-workflow-engine`：纯 Java DAG 工作流执行内核；
 - `data-file`：兼容 Java 8 的本地、MinIO、OSS 统一文件服务。
+
+模块目录表达维护和聚合位置，artifactId 表达发布角色，因此两者按角色区分：
+
+| 目录 | Maven 模块角色 | artifactId 规则 |
+| --- | --- | --- |
+| `data-common`、`data-file` | 独立库 | 与目录同名 |
+| `data-security` | Spring Boot Starter | 保留 `data-security-spring-boot-starter` |
+| `data-schedule`、`data-workflow` | 子模块聚合父 POM | 使用 `*-parent`；可发布制品位于各自子目录 |
+
+历史兼容模块 `data-job` 使用 Spring Boot 2 和 Java 8，单独放在同级的
+[`data-ops-framework-legacy/data-job`](../data-ops-framework-legacy/data-job/README.md)，不属于当前 Boot 3 Maven Reactor。它的 POM、Java 包、制品坐标和 `/v1/yak-job/**` 接口保持兼容。
 
 `data-common` 不接收业务 DTO、实体或领域工具，新增内容前应确认它确实是所有业务模块共享的稳定契约。
 

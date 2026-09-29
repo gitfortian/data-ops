@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(value = {"v1/data-job/taskLock"})
+@RequestMapping(value = {"v1/yak-job/taskLock"})
 @Api(tags = {"yak-job \u7684\u4efb\u52a1\u9501\u76f8\u5173\u63a5\u53e3"})
 public class TaskLockController {
     @Autowired
