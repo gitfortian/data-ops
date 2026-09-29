@@ -165,9 +165,12 @@ const MetadataOverviewPage = () => {
         title="元数据概览"
         subtitle="查看当前项目的技术目录、采集与对账运行状态，以及元数据治理待办。"
         extra={
-          <Button type="primary" onClick={() => history.push('/data-metadata/collect')}>
-            管理采集与对账
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => history.push('/metadata/explorer')}>浏览元数据实体</Button>
+            <Button type="primary" onClick={() => history.push('/data-metadata/collect')}>
+              管理采集与对账
+            </Button>
+          </div>
         }
       />
 

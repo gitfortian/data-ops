@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { YakEmpty } from '@/components/ui';
+import { lookupAssetBySource } from '@/services/data-asset/api';
+import type { AssetSourceLookup } from '@/services/data-asset/types';
 import { getTableStorage } from '@/services/data-lifecycle/api';
 import type { TableStorage } from '@/services/data-lifecycle/types';
 import { getEntityDetail } from '@/services/metadata/api';
@@ -77,6 +79,7 @@ const AssetDetailDrawer = ({
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
   const [storage, setStorage] = useState<TableStorage | null>(null);
+  const [assetLookup, setAssetLookup] = useState<AssetSourceLookup | null>(null);
 
   const entityTypeName = detail?.entity.typeName ?? item?.typeName ?? '';
   const registered = (fact(detail, 'providerType') ?? item?.providerType) === 'REGISTERED';
@@ -88,10 +91,18 @@ const AssetDetailDrawer = ({
     setError(null);
     setDetail(null);
     setStorage(null);
+    setAssetLookup(null);
     getEntityDetail(item.id)
       .then((result) => {
         if (!alive) return;
         setDetail(result);
+        // Physical Metadata tables are indexed in Asset with the Metadata entity id as sourceId.
+        // Registered projections have their own owning-domain identity and are not looked up as METADATA.
+        if (result.entity.typeName === 'table' && result.entity.facts.providerType === 'HARVESTED') {
+          lookupAssetBySource('METADATA', String(result.entity.id))
+            .then((lookup) => alive && setAssetLookup(lookup))
+            .catch(() => alive && setAssetLookup(null));
+        }
         const { databaseName, tableName, dataSourceId } = result.entity.facts;
         // 只有表级实体有存储量可问；列与投影实体问了也是白问。
         if (databaseName && tableName && result.entity.typeName === 'table') {
@@ -278,6 +289,16 @@ const AssetDetailDrawer = ({
               打开源域详情
             </Button>
           ) : null}
+          {assetLookup?.state === 'FOUND' && assetLookup.assetId ? (
+            <Button
+              size="small"
+              icon={<ExternalLink size={13} />}
+              onClick={() => history.push(`/data-asset/detail/${assetLookup.assetId}`)}
+            >
+              查看统一资产治理
+            </Button>
+          ) : null}
+          {assetLookup?.state === 'NOT_INDEXED' ? <Tag>尚未纳入资产台账</Tag> : null}
           {(item.matchedColumnCount ?? 0) > 0 && onDrillColumns ? (
             <Button size="small" onClick={() => onDrillColumns(item)}>
               查看命中的 {item.matchedColumnCount} 列
