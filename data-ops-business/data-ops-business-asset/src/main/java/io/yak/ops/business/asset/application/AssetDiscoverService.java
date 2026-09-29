@@ -17,6 +17,7 @@ import io.yak.ops.spi.section.SectionStatus;
 import io.yak.ops.spi.section.SectionSummary;
 import io.yak.ops.spi.section.SectionType;
 import io.yak.framework.security.service.RbacPermissionService;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -110,6 +111,7 @@ public class AssetDiscoverService {
 
   public record PageActivityUsage(
       UsageOwnerDomain ownerDomain, SectionStatus status, int windowDays, String meaning,
+      Long viewCount, Long distinctViewerCount, LocalDateTime lastViewedAt,
       List<AssetViewRecordService.DailyView> views, String reason) {}
 
   public record StructuralUsage(
@@ -358,11 +360,16 @@ public class AssetDiscoverService {
   private SectionView usage(AssetItemPO po) {
     PageActivityUsage pageActivity;
     try {
+      AssetViewRecordService.ActivitySummary activity =
+          viewRecordService.summary(po.getId(), TREND_DAYS);
       pageActivity = new PageActivityUsage(UsageOwnerDomain.ASSET, SectionStatus.OK, TREND_DAYS,
-          "资产详情页访问活动，不代表业务消费", viewRecordService.trend(po.getId(), TREND_DAYS), null);
+          "资产详情页访问活动，不代表业务消费", activity.viewCount(),
+          activity.distinctViewerCount(), activity.lastViewedAt(),
+          viewRecordService.trend(po.getId(), TREND_DAYS), null);
     } catch (RuntimeException e) {
       pageActivity = new PageActivityUsage(UsageOwnerDomain.ASSET, SectionStatus.UNAVAILABLE,
-          TREND_DAYS, "资产详情页访问活动，不代表业务消费", List.of(), "资产页活动暂不可用");
+          TREND_DAYS, "资产详情页访问活动，不代表业务消费", null, null, null,
+          List.of(), "资产页活动暂不可用");
     }
 
     StructuralUsage structuralUsage;

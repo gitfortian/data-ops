@@ -636,7 +636,16 @@ const AssetDetailPage = () => {
                 {(() => {
                   const rawUsage = detail?.sections.trend?.data as
                     | {
-                        pageActivity?: { status?: string; windowDays?: number; meaning?: string; views?: { date: string; count: number }[]; reason?: string };
+                        pageActivity?: {
+                          status?: string;
+                          windowDays?: number;
+                          meaning?: string;
+                          viewCount?: number;
+                          distinctViewerCount?: number;
+                          lastViewedAt?: string;
+                          views?: { date: string; count: number }[];
+                          reason?: string;
+                        };
                         structuralUsage?: { status?: string; hop?: number; direction?: string; downstreamReferenceCount?: number; reason?: string };
                         businessConsumption?: {
                           status?: string;
@@ -667,7 +676,7 @@ const AssetDetailPage = () => {
                               key: 'activity',
                               label: '资产页访问活动（Asset）',
                               children: rawUsage.pageActivity?.status === 'OK'
-                                ? `近 ${rawUsage.pageActivity.windowDays ?? 30} 天；不代表业务消费`
+                                ? `近 ${rawUsage.pageActivity.windowDays ?? 30} 天 ${rawUsage.pageActivity.viewCount ?? 0} 次，${rawUsage.pageActivity.distinctViewerCount ?? 0} 位访问者；最近访问 ${formatAssetTime(rawUsage.pageActivity.lastViewedAt)}；不代表业务消费`
                                 : rawUsage.pageActivity?.reason ?? '暂不可用',
                             },
                             {
