@@ -37,10 +37,11 @@ final class OfflineFanOutSnapshotAggregator {
     response.setEndTimeMillis(maxPositive(states, "endTimeMillis"));
     Long start = response.getStartTimeMillis();
     Long end = response.getEndTimeMillis();
-    response.setDurationMillis(
-        start != null && end != null && end >= start
-            ? end - start
-            : maxPositive(states, "durationMillis"));
+    Long duration = maxPositive(states, "durationMillis");
+    if (start != null && end != null && end >= start) {
+      duration = end - start;
+    }
+    response.setDurationMillis(duration);
     response.setMetrics(aggregateMetrics(states));
     response.setCommitSummary(aggregateCommitSummary(states));
     response.setPipelines(aggregatePipelines(states));

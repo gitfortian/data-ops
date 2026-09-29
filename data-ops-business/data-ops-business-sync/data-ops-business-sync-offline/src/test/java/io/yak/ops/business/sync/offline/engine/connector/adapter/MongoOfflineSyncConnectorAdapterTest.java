@@ -28,7 +28,7 @@ class MongoOfflineSyncConnectorAdapterTest {
                   "table":"users",
                   "fields":["_id","name","address.city"],
                   "connectorOptions":{
-                    "filter":"{\"status\":\"ACTIVE\"}",
+                    "filter":"{\\\"status\\\":\\\"ACTIVE\\\"}",
                     "uri":"mongodb://must-not-persist",
                     "password":"must-not-persist"
                   }
@@ -41,7 +41,7 @@ class MongoOfflineSyncConnectorAdapterTest {
     assertThat(result.options().path("collection").asText()).isEqualTo("users");
     assertThat(result.options().path("fields")).hasSize(3);
     assertThat(result.options().path("filter").asText()).contains("ACTIVE");
-    assertThat(result.options().path("fetch_size").asInt()).isEqualTo(1000);
+    assertThat(result.options().path("fetch_size").asInt()).isEqualTo(500);
     assertThat(result.options().has("uri")).isFalse();
     assertThat(result.options().has("password")).isFalse();
 

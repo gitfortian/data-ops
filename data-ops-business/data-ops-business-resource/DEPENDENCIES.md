@@ -17,7 +17,7 @@
 | `repository` | `config`, `dao`, `domain` |
 | `domain` | none inside Resource |
 | `exception` | none inside Resource |
-| `dao` | none inside Resource |
+| `dao` | `config` (only `ConditionalOnResourceEnabled`) |
 | `config` | none inside Resource |
 
 `controller/v1/mapper` 属于 `controller` top-level package。
@@ -56,8 +56,11 @@ storage
 sync
    +-> domain
 
-domain / exception / dao / config
+domain / exception / config
    -> no higher Resource package
+
+dao
+   +-> config.ConditionalOnResourceEnabled only (conditional bean assembly)
 ```
 
 实际图必须保持无环。

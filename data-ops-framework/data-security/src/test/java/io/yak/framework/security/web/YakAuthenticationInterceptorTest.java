@@ -115,7 +115,7 @@ class YakAuthenticationInterceptorTest {
 
     assertFalse(interceptor.preHandle(request, response, handler));
     assertEquals(403, response.getStatus());
-    assertEquals("application/json", response.getContentType());
+    assertTrue(response.getContentType().startsWith("application/json"));
     assertTrue(response.getContentAsString().contains("\"code\":3001"));
   }
 

@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeViewMapper;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeViewConverter;
 import io.yak.ops.business.sync.realtime.domain.RealtimeJobView;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
-class RealtimeViewMapperTest {
+class RealtimeViewConverterTest {
 
   @Test
   void keepsExistingNumericIdContract() throws Exception {
@@ -34,7 +34,7 @@ class RealtimeViewMapperTest {
     JsonNode json =
         new ObjectMapper()
             .findAndRegisterModules()
-            .valueToTree(new RealtimeViewMapper().toView(value));
+            .valueToTree(new RealtimeViewConverter().toView(value));
 
     assertThat(json.path("id").isIntegralNumber()).isTrue();
     assertThat(json.path("id").asLong()).isEqualTo(largeId);

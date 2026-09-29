@@ -55,11 +55,11 @@ class DevelopmentTaskServiceTest {
 
     Instant now = Instant.parse("2026-08-12T00:00:00Z");
     when(nodeRepository.findById(1L)).thenReturn(Optional.of(
-        new DevelopmentNode(1L, "今天统计", "SQL", null, null, false, now, now)));
+        new DevelopmentNode(1L, "今天统计", "SQL", 7L, null, false, now, now)));
     when(nodeRepository.findById(2L)).thenReturn(Optional.of(
-        new DevelopmentNode(2L, "销售数据集", "DATASET", null, null, false, now, now)));
+        new DevelopmentNode(2L, "销售数据集", "DATASET", 7L, null, false, now, now)));
     when(nodeRepository.findById(3L)).thenReturn(Optional.of(
-        new DevelopmentNode(3L, "订单查询 API", "DATA_SERVICE", null, null, false, now, now)));
+        new DevelopmentNode(3L, "订单查询 API", "DATA_SERVICE", 7L, null, false, now, now)));
   }
 
   @Test
@@ -111,13 +111,14 @@ class DevelopmentTaskServiceTest {
     when(draftRepository.findByNodeIdForUpdate(1L)).thenReturn(Optional.of(draft));
     when(revisionRepository.findLatestByNodeId(1L)).thenReturn(Optional.empty());
     when(revisionRepository.nextRevisionNo(1L)).thenReturn(1);
-    when(revisionRepository.insert(eq(1L), eq(1), eq(3L), eq(definition), any(String.class)))
+    when(revisionRepository.insert(
+            eq(1L), eq(1), eq(3L), any(TaskDefinition.class), any(String.class)))
         .thenAnswer(invocation -> new DevelopmentTaskRevision(
             100L,
             1L,
             1,
             3L,
-            definition,
+            invocation.getArgument(3),
             invocation.getArgument(4),
             Instant.now()));
 
@@ -130,7 +131,7 @@ class DevelopmentTaskServiceTest {
     verify(taskCatalogService).publish(
         TaskAssetSource.DATA_DEVELOPMENT,
         "1",
-        null,
+        7L,
         "今天统计",
         "SQL",
         100L,
@@ -141,11 +142,11 @@ class DevelopmentTaskServiceTest {
     DevelopmentTaskRevision repeated = service.publish(1L, 3L);
     assertEquals(published, repeated);
     verify(revisionRepository, times(1))
-        .insert(eq(1L), eq(1), eq(3L), eq(definition), any(String.class));
+        .insert(eq(1L), eq(1), eq(3L), any(TaskDefinition.class), any(String.class));
     verify(taskCatalogService, times(2)).publish(
         TaskAssetSource.DATA_DEVELOPMENT,
         "1",
-        null,
+        7L,
         "今天统计",
         "SQL",
         100L,

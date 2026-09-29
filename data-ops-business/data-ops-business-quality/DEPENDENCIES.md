@@ -17,11 +17,11 @@ Quality production 内部允许的 top-level 依赖：
 | `schedule` | `config`, `domain`, `execution`, `repository` |
 | `execution` | `alert`, `config`, `domain`, `gateway`, `repository` |
 | `alert` | `config`, `domain`, `repository` |
-| `asset` | `config`, `domain`, `gateway`, `repository` |
+| `asset` | `config`, `domain`, `execution`, `gateway`, `monitor`, `repository` |
 | `template` | `config`, `domain`, `repository` |
 | `gateway` | `config` |
 | `repository` | `config`, `dao`, `domain` |
-| `dao` | none |
+| `dao` | `config` (only `ConditionalOnQualityEnabled`) |
 | `domain` | none |
 | `config` | none |
 
@@ -159,6 +159,10 @@ gateway/datasource/DataSourceQualityCatalogAdapter
     -> datasource.catalog.DataSourceCatalogReader
     -> datasource.domain.catalog.CatalogReadRequest
        # typed Catalog capability only
+
+repository/QualityDataSourceReferenceProvider
+    -> datasource.api.DataSourceReferenceProvider
+       # deletion-reference SPI; counts this module's references via its DAO
 ```
 
 不得扩大为 Quality business package 直接依赖 Datasource implementation。
@@ -192,7 +196,7 @@ Manager / Reader / Worker / Policy owner
 
 ```text
 Domain     -> no Quality upper-layer dependency
-DAO        -> no Quality business dependency
+DAO        -> no Quality business dependency; feature condition is the only config import
 Repository -> config + dao + domain only
 ```
 

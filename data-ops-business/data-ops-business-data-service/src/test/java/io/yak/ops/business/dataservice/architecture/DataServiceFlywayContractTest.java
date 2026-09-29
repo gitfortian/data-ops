@@ -22,12 +22,13 @@ class DataServiceFlywayContractTest {
   }
 
   @Test
-  void dedicatedNamespaceContainsForwardOnlyAccessMigrations() throws IOException {
+  void dedicatedNamespaceContainsForwardOnlyMigrations() throws IOException {
     assertThat(sqlFiles(dedicatedMigrationRoot()))
         .containsExactly(
             "V1__baseline_data_service.sql",
             "V2__ip_access_policy.sql",
-            "V3__consumer_access_model.sql");
+            "V3__consumer_access_model.sql",
+            "V4__usage_evidence_source.sql");
 
     String baseline = Files.readString(
         dedicatedMigrationRoot().resolve("V1__baseline_data_service.sql"));
@@ -61,6 +62,16 @@ class DataServiceFlywayContractTest {
         .contains("ADD COLUMN consumer_id")
         .contains("legacy-")
         .contains("MODIFY COLUMN api_id")
+        .doesNotContain("DROP TABLE");
+
+    String usageEvidenceSource = Files.readString(
+        dedicatedMigrationRoot().resolve("V4__usage_evidence_source.sql"));
+    assertThat(usageEvidenceSource)
+        .contains("ADD COLUMN consumer_id")
+        .contains("ADD COLUMN source_revision_id")
+        .contains("ADD COLUMN source_revision_no")
+        .contains("idx_data_service_call_log_consumer_time")
+        .contains("idx_data_service_call_log_api_revision_time")
         .doesNotContain("DROP TABLE");
   }
 

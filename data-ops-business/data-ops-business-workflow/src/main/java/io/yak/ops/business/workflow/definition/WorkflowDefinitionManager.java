@@ -10,6 +10,7 @@ import io.yak.ops.business.workflow.definition.WorkflowTaskBindingResolver.Bindi
 import io.yak.ops.business.workflow.domain.WorkflowEdgeSpec;
 import io.yak.ops.business.workflow.domain.WorkflowNodeSpec;
 import io.yak.ops.business.workflow.domain.WorkflowRunSpec;
+import io.yak.ops.business.workflow.execution.WorkflowLaunchDefinitionGateway;
 import io.yak.ops.business.workflow.domain.WorkflowVersion;
 import io.yak.ops.business.workflow.repository.NoopWorkflowDefinitionRepository;
 import io.yak.ops.business.workflow.repository.WorkflowDefinitionRepository;
@@ -50,7 +51,7 @@ import org.springframework.util.StringUtils;
 
 /** 工作流草稿、不可变发布版本和运行入口。数据库是生产环境事实来源。 */
 @Service
-public class WorkflowDefinitionManager {
+public class WorkflowDefinitionManager implements WorkflowLaunchDefinitionGateway {
   private static final Set<String> ACTIVE = Set.of(
       "CREATED", "WAITING", "READY", "SUBMITTED", "RUNNING", "PAUSING", "PAUSED", "RESUMING");
 
@@ -363,6 +364,21 @@ public class WorkflowDefinitionManager {
     return runPublished(id, true);
   }
 
+  @Override
+  public WorkflowDefinitionVO runPublishedDefinition(String workflowId) {
+    return run(workflowId);
+  }
+
+  @Override
+  public WorkflowDefinitionVO runConcurrentPublishedDefinition(String workflowId) {
+    return runConcurrent(workflowId);
+  }
+
+  @Override
+  public WorkflowDefinitionVO currentDefinition(String workflowId) {
+    return get(workflowId);
+  }
+
   private WorkflowDefinitionVO runPublished(String id, boolean allowConcurrent) {
     WorkflowDefinitionAggregate state = require(id);
     synchronized (state) {
@@ -390,6 +406,11 @@ public class WorkflowDefinitionManager {
       PreparedDraft draft = prepare(state);
       return activate(state, runtimeService.run(draft.spec(), draft.tasks(), null, null, true));
     }
+  }
+
+  @Override
+  public WorkflowDefinitionVO testRunDraft(String workflowId) {
+    return testRun(workflowId);
   }
 
   public List<WorkflowVersionVO> versions(String id) {

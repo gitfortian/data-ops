@@ -84,6 +84,8 @@ dataset.DevelopmentDatasetNodeService
 dataservice.DevelopmentDataServicePublicationService
 release.DevelopmentReleaseService
 editor.DevelopmentEditorSettingsService
+lineage.DevelopmentLineageEvidenceService
+lineage.DevelopmentSqlLineagePreviewService
 ```
 
 Controller 只依赖这些入口和 `lineage.DevelopmentSqlLineagePreviewService` read facade，不直接进入 Repository / DAO。

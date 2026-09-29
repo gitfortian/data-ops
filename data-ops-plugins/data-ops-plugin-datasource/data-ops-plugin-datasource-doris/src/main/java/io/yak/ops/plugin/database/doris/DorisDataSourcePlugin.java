@@ -70,6 +70,18 @@ public final class DorisDataSourcePlugin extends AbstractJdbcDataSourcePlugin {
   }
 
   @Override
+  protected DataSourceCatalog createJdbcCatalog(
+      JdbcConnectionProperties connection,
+      int connectionTimeoutSeconds,
+      int queryTimeoutSeconds) {
+    return new DorisJdbcCatalog(
+        connection,
+        connectionTimeoutSeconds,
+        queryTimeoutSeconds,
+        this::openJdbcConnection);
+  }
+
+  @Override
   public boolean acceptsUrl(String jdbcUrl) {
     return jdbcUrl != null && jdbcUrl.startsWith("jdbc:mysql:");
   }

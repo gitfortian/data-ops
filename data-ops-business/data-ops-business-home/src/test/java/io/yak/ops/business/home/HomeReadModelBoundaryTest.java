@@ -1,4 +1,4 @@
-package io.yak.ops.boot.architecture;
+package io.yak.ops.business.home;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,7 +12,7 @@ class HomeReadModelBoundaryTest {
 
   @Test
   void dataCenterMustComposeDomainReadersInsteadOfPersistenceInternals() throws IOException {
-    String source = readHomeSource("HomeDataCenterService.java");
+    String source = readHomeSource("datacenter", "HomeDataCenterReader.java");
 
     assertThat(source)
         .contains(
@@ -28,19 +28,14 @@ class HomeReadModelBoundaryTest {
 
   @Test
   void cockpitMustComposeStableDomainReadSidesInsteadOfPersistenceInternals() throws IOException {
-    String source = readHomeSource("HomeCockpitService.java");
+    String source = readHomeSource("cockpit", "HomeCockpitReader.java");
 
     assertThat(source)
         .contains(
             "DataSourceReader",
             "OfflineExecutionOverviewReader",
-            "DevelopmentNodeService",
             "WorkflowExecutionOverviewReader",
-            "QualityOverviewReader",
-            "QualityExecutionOverviewReader",
-            "DataServiceReader",
-            "DashboardService",
-            "DigitalScreenApplicationService")
+            "QualityExecutionOverviewReader")
         .doesNotContain(
             ".dao.mapper.",
             ".bean.po.",
@@ -49,8 +44,8 @@ class HomeReadModelBoundaryTest {
   }
 
   @Test
-  void cockpitBackendMustNotOwnFrontendRoutes() throws IOException {
-    String source = readHomeSource("HomeCockpitService.java");
+  void cockpitReaderMustNotOwnFrontendRoutes() throws IOException {
+    String source = readHomeSource("cockpit", "HomeCockpitReader.java");
 
     assertThat(source)
         .doesNotContain(
@@ -64,26 +59,27 @@ class HomeReadModelBoundaryTest {
             "\"/dashboard\"");
   }
 
-  private String readHomeSource(String fileName) throws IOException {
-    Path local = Path.of("src/main/java/io/yak/ops/boot/home", fileName);
-    if (Files.isRegularFile(local)) {
-      return Files.readString(local, StandardCharsets.UTF_8);
+  private String readHomeSource(String rolePackage, String fileName) throws IOException {
+    Path relative = Path.of(
+        "src/main/java/io/yak/ops/business/home", rolePackage, fileName);
+    if (!Files.isRegularFile(relative)) {
+      relative = Path.of(
+          "data-ops-business",
+          "data-ops-business-home",
+          "src",
+          "main",
+          "java",
+          "io",
+          "yak",
+          "ops",
+          "business",
+          "home",
+          rolePackage,
+          fileName);
     }
-
-    Path repositoryRelative = Path.of(
-        "data-ops-boot",
-        "src",
-        "main",
-        "java",
-        "io",
-        "yak",
-        "ops",
-        "boot",
-        "home",
-        fileName);
-    assertThat(Files.isRegularFile(repositoryRelative))
-        .as(fileName + " source must be available")
+    assertThat(Files.isRegularFile(relative))
+        .as(fileName + " source must be available at " + relative)
         .isTrue();
-    return Files.readString(repositoryRelative, StandardCharsets.UTF_8);
+    return Files.readString(relative, StandardCharsets.UTF_8);
   }
 }

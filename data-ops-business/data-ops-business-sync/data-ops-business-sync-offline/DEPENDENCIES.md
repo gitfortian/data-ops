@@ -9,10 +9,12 @@
 | `controller` | `config`, `definition`, `execution`, `backfill` |
 | `backfill` | `config`, `cursor`, `definition`, `domain`, `execution`, `repository` |
 | `reconcile` | `config`, `domain`, `engine`, `execution`, `repository` |
-| `execution` | `config`, `cursor`, `definition`, `domain`, `engine`, `mapping`, `repository`, `schedule` |
-| `definition` | `config`, `domain`, `engine`, `mapping`, `repository`, `schedule` |
+| `execution` | `config`, `cursor`, `definition`, `domain`, `engine`, `incremental`, `mapping`, `repository`, `schedule` |
+| `definition` | `config`, `domain`, `engine`, `mapping`, `notification`, `repository`, `schedule` |
+| `notification` | `config`, `dao` |
 | `schedule` | `config`, `domain`, `repository` |
 | `cursor` | `config`, `domain`, `repository` |
+| `incremental` | `config`, `cursor`, `domain` |
 | `mapping` | `domain`, `engine` |
 | `repository` | `config`, `dao`, `domain` |
 | `dao` | `config` |

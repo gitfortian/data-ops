@@ -105,6 +105,7 @@ class WorkflowScheduleTriggerAdmissionTest {
   void shouldSkipSerialDiscardWhenWorkflowIsBusy() {
     WorkflowSchedulePO schedule = schedule("SERIAL_DISCARD");
     WorkflowScheduleTriggerPO trigger = trigger("RECEIVED");
+    trigger.setExecutionStrategy("SERIAL_DISCARD");
     when(ledger.claim(trigger)).thenReturn(trigger);
     when(ledger.countActiveExecutions("workflow-1")).thenReturn(1L);
     when(ledger.countLaunchingTriggers("workflow-1")).thenReturn(0L);
@@ -122,6 +123,7 @@ class WorkflowScheduleTriggerAdmissionTest {
   void shouldReserveParallelLaunchEvenWhenWorkflowIsBusy() {
     WorkflowSchedulePO schedule = schedule("PARALLEL");
     WorkflowScheduleTriggerPO trigger = trigger("RECEIVED");
+    trigger.setExecutionStrategy("PARALLEL");
     when(ledger.claim(trigger)).thenReturn(trigger);
     when(ledger.countActiveExecutions("workflow-1")).thenReturn(3L);
     when(ledger.countLaunchingTriggers("workflow-1")).thenReturn(2L);

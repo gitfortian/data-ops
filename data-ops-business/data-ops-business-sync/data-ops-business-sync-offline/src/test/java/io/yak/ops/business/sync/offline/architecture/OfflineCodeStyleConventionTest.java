@@ -17,6 +17,11 @@ class OfflineCodeStyleConventionTest {
 
   private static final Pattern WILDCARD_IMPORT =
       Pattern.compile("(?m)^import\\s+(?:static\\s+)?[^;]+\\.\\*;");
+  private static final Pattern FIELD_INJECTION =
+      Pattern.compile(
+          "(?s)@(?:Autowired|Resource|Inject)\\b(?:\\s*\\([^)]*\\))?\\s+"
+              + "(?:(?:private|protected|public)\\s+)?(?:static\\s+)?(?:final\\s+)?"
+              + "[\\w<>?,.\\[\\] ]+\\s+\\w+\\s*(?:=[^;]*)?;");
   private static final Pattern MIGRATION_MARKER =
       Pattern.compile("(?i)\\b(?:stage|wave)[ -]?[0-9]+\\b");
 
@@ -29,7 +34,10 @@ class OfflineCodeStyleConventionTest {
           paths.filter(Files::isRegularFile)
               .filter(file -> file.getFileName().toString().equals("CODE_STYLE.md"))
               .toList()) {
-        codeStyleDocuments.add(normalize(repositoryRoot.relativize(path)));
+        String relative = normalize(repositoryRoot.relativize(path));
+        if (relative.equals("CODE_STYLE.md")) {
+          codeStyleDocuments.add(relative);
+        }
       }
     }
 
@@ -45,9 +53,7 @@ class OfflineCodeStyleConventionTest {
       rejectLiteral(violations, file, ";import ", "multiple imports on one line");
       rejectLiteral(violations, file, "System.out", "System.out");
       rejectLiteral(violations, file, "System.err", "System.err");
-      rejectLiteral(violations, file, "@Autowired", "field/framework injection shortcut");
-      rejectLiteral(violations, file, "@Resource", "field/framework injection shortcut");
-      rejectLiteral(violations, file, "@Inject", "field/framework injection shortcut");
+      reject(violations, file, FIELD_INJECTION, "field/framework injection shortcut");
     }
 
     assertThat(violations)

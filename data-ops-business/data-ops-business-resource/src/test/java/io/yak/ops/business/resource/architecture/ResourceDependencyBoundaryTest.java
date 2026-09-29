@@ -44,7 +44,7 @@ class ResourceDependencyBoundaryTest {
           Map.entry("repository", Set.of("config", "dao", "domain")),
           Map.entry("domain", Set.of()),
           Map.entry("exception", Set.of()),
-          Map.entry("dao", Set.of()),
+          Map.entry("dao", Set.of("config")),
           Map.entry("config", Set.of()));
 
   @Test
@@ -146,8 +146,13 @@ class ResourceDependencyBoundaryTest {
   @Test
   void lowerPackagesNeverPointBackToApplicationRoles() throws IOException {
     for (Dependency dependency : resourceDependencies()) {
-      if (Set.of("domain", "exception", "dao", "config")
-          .contains(dependency.sourcePackage())) {
+      if (dependency.sourcePackage().equals("dao")) {
+        assertThat(dependency.importedType())
+            .as("DAO may only depend on the resource-enabled assembly marker: %s", dependency)
+            .isEqualTo(BASE + ".config.ConditionalOnResourceEnabled");
+        continue;
+      }
+      if (Set.of("domain", "exception", "config").contains(dependency.sourcePackage())) {
         throw new AssertionError(
             "Bottom Resource package must not import application package: " + dependency);
       }

@@ -15,7 +15,7 @@ import io.yak.ops.business.dataset.dao.model.DatasetFieldPO;
 import io.yak.ops.business.dataset.dao.model.DatasetPO;
 import io.yak.ops.business.dataset.dao.model.DatasetVersionPO;
 import io.yak.ops.business.dataset.repository.support.DatasetJsonCodec;
-import io.yak.ops.business.dataset.schema.DatasetFieldSpec;
+import io.yak.ops.business.dataset.repository.DatasetRepository.DraftField;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContextError;
 import io.yak.ops.core.project.ProjectContextException;
@@ -166,6 +166,23 @@ public class DatasetRepositoryAdapter implements DatasetRepository {
   }
 
   @Override
+  public Optional<DevelopmentSourceDetails> findDevelopmentSource(long datasetId) {
+    Long projectId = requiredProjectId();
+    DatasetPO dataset = datasetDao.selectDataset(projectId, datasetId);
+    if (dataset == null) return Optional.empty();
+
+    Long developmentNodeId = dataset.getDevelopmentNodeId();
+    Long currentVersionId = dataset.getCurrentVersionId();
+    Integer versionNo = null;
+    if (developmentNodeId != null && developmentNodeId > 0L && currentVersionId != null) {
+      DatasetVersionPO currentVersion = datasetDao.selectVersion(projectId, currentVersionId);
+      versionNo = currentVersion == null ? null : currentVersion.getVersionNo();
+    }
+    return Optional.of(
+        new DevelopmentSourceDetails(datasetId, developmentNodeId, versionNo));
+  }
+
+  @Override
   public Optional<Dataset> findDatasetBySourceTaskAssetId(long sourceTaskAssetId) {
     return Optional.ofNullable(
             datasetDao.selectDatasetBySourceTaskAssetId(requiredProjectId(), sourceTaskAssetId))
@@ -253,13 +270,13 @@ public class DatasetRepositoryAdapter implements DatasetRepository {
   }
 
   @Override
-  public void saveDraftFields(long datasetId, List<DatasetFieldSpec> fields) {
+  public void saveDraftFields(long datasetId, List<DraftField> fields) {
     Long projectId = requiredProjectId();
     datasetDao.deleteDraftFields(projectId, datasetId);
     if (fields == null || fields.isEmpty()) return;
     List<DatasetDraftFieldPO> rows = new ArrayList<>(fields.size());
     for (int index = 0; index < fields.size(); index++) {
-      DatasetFieldSpec spec = fields.get(index);
+      DraftField spec = fields.get(index);
       DatasetDraftFieldPO po = new DatasetDraftFieldPO();
       po.setFieldId(spec.fieldId());
       po.setDatasetId(datasetId);
@@ -280,15 +297,15 @@ public class DatasetRepositoryAdapter implements DatasetRepository {
   }
 
   @Override
-  public List<DatasetFieldSpec> loadDraftFields(long datasetId) {
+  public List<DraftField> loadDraftFields(long datasetId) {
     Long projectId = requiredProjectId();
     return datasetDao.selectDraftFields(projectId, datasetId).stream()
-        .map(this::toFieldSpec)
+        .map(this::toDraftField)
         .toList();
   }
 
-  private DatasetFieldSpec toFieldSpec(DatasetDraftFieldPO po) {
-    return new DatasetFieldSpec(
+  private DraftField toDraftField(DatasetDraftFieldPO po) {
+    return new DraftField(
         po.getFieldId(),
         po.getPhysicalName(),
         po.getDisplayName(),

@@ -122,7 +122,7 @@ class OfflineNotificationPolicyCodecTest {
 
     assertThatThrownBy(() -> codec.encode(config))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("至少选择一个用户");
+        .hasMessageContaining("指定用户通知至少需要选择一个用户");
   }
 
   @Test

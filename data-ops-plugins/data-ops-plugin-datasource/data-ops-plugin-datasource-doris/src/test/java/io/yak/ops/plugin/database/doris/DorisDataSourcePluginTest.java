@@ -21,7 +21,10 @@ class DorisDataSourcePluginTest {
     assertThat(connection.jdbcUrl()).isEqualTo("jdbc:mysql://doris-fe:9030/warehouse");
     assertThat(connection.driverClassName()).isEqualTo("com.mysql.cj.jdbc.Driver");
     assertThat(connection.normalizedJson()).contains("\"fenodes\":\"doris-fe:8030\"");
-    assertThat(new DorisDataSourcePlugin().createCatalog(connection, 5))
+    DorisDataSourcePlugin plugin = new DorisDataSourcePlugin();
+    assertThat(plugin.createCatalog(connection, 5))
+        .isInstanceOf(DorisJdbcCatalog.class);
+    assertThat(plugin.createCatalog(connection, 3, 7))
         .isInstanceOf(DorisJdbcCatalog.class);
   }
 

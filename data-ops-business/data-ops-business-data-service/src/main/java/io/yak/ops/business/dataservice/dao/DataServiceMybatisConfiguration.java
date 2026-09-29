@@ -1,4 +1,4 @@
-package io.yak.ops.business.dataservice.config;
+package io.yak.ops.business.dataservice.dao;
 
 import io.yak.ops.business.dataservice.dao.mapper.DataServiceApiMapper;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;

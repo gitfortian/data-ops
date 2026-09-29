@@ -24,21 +24,16 @@ class AnalysisProjectSpaceContractTest {
   }
 
   @Test
-  void migrationBackfillsOnlyFromDatasetAndThenContracts() throws IOException {
-    String expand = read(
-        "src/main/resources/db/migration/yak-analysis/V2__expand_and_backfill_project_scope.sql");
-    String contract = read(
-        "src/main/resources/db/migration/yak-analysis/V3__contract_project_scope.sql");
+  void baselineRequiresProjectOwnershipWithoutFallbackOrBackfill() throws IOException {
+    String baseline = read(
+        "src/main/resources/db/migration/yak-analysis/V1__baseline_analysis.sql");
 
-    assertThat(expand)
-        .contains("ADD COLUMN project_id BIGINT NULL")
-        .contains("JOIN yak_dataset")
-        .contains("d.project_id")
-        .doesNotContain("project_id = 1")
-        .doesNotContain("DEFAULT 0");
-    assertThat(contract)
+    assertThat(baseline)
+        .contains("CREATE TABLE IF NOT EXISTS yak_analysis")
         .contains("project_id BIGINT NOT NULL")
-        .doesNotContainIgnoringCase("UPDATE");
+        .doesNotContain("project_id = 1")
+        .doesNotContain("DEFAULT 0")
+        .doesNotContain("JOIN yak_dataset");
   }
 
   @Test

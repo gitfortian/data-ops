@@ -2,11 +2,13 @@ package io.yak.ops.business.sync.realtime.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration;
+import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.sync.realtime.domain.SyncExecutionStateMachine;
 import java.net.http.HttpClient;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -20,6 +22,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties(RealtimeSyncProperties.class)
 @Import(BusinessDatabaseConfiguration.class)
 @ConditionalOnProperty(prefix = "yak.sync.realtime", name = "enabled", matchIfMissing = true)
+@ConditionalOnDataSourceEnabled
+@MapperScan(
+    basePackages = "io.yak.ops.business.sync.realtime.dao.mapper",
+    sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")
 public class RealtimeSyncConfiguration {
 
   @Bean

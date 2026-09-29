@@ -1,7 +1,8 @@
 package io.yak.ops.business.workflow.execution;
 
 import io.yak.ops.business.workflow.domain.WorkflowExecutionTerminalEvent;
-import io.yak.ops.business.workflow.execution.WorkflowExecutionNotificationReader.Snapshot;
+import io.yak.ops.business.workflow.repository.WorkflowExecutionNotificationReader;
+import io.yak.ops.business.workflow.repository.WorkflowExecutionNotificationReader.Snapshot;
 import io.yak.ops.core.notification.NotificationIntent;
 import io.yak.ops.core.notification.NotificationRouter;
 import org.slf4j.Logger;

@@ -44,6 +44,7 @@ class AllDataSourcePluginsTest {
             DataSourceDbType.STARROCKS,
             DataSourceDbType.CLICKHOUSE,
             DataSourceDbType.ELASTICSEARCH7,
-            DataSourceDbType.ELASTICSEARCH8);
+            DataSourceDbType.ELASTICSEARCH8,
+            DataSourceDbType.MONGODB);
   }
 }

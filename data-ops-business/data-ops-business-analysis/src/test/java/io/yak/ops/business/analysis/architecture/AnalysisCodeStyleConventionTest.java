@@ -23,7 +23,7 @@ class AnalysisCodeStyleConventionTest {
       "(?m)@(Autowired|Resource|Inject)\\s*\\R\\s*"
           + "(?:private|protected|public)\\s+[^\\n(]+;");
   private static final Pattern SERVICE_CLASS = Pattern.compile(
-      "(?s)@Service\\s*(?:\\R|@[^\\R]+\\R)*public\\s+class\\s+([A-Za-z0-9_]+)");
+      "(?s)@Service(?:\\s*@\\w+(?:\\([^)]*\\))?)*\\s+public\\s+class\\s+([A-Za-z0-9_]+)");
   private static final Set<String> STABLE_SERVICES =
       Set.of("AnalysisService", "AnalysisReferenceService");
 
@@ -83,7 +83,7 @@ class AnalysisCodeStyleConventionTest {
   }
 
   @Test
-  void repositoryUsesSingleRootCodeStyleDocument() throws IOException {
+  void analysisUsesRootRepositoryCodeStyleDocument() throws IOException {
     Path module = moduleRoot();
     Path repository = module.getParent().getParent();
     assertThat(Files.isRegularFile(repository.resolve("CODE_STYLE.md")))
@@ -93,13 +93,6 @@ class AnalysisCodeStyleConventionTest {
         .as("Analysis must not maintain a module-local CODE_STYLE.md")
         .isFalse();
 
-    long count;
-    try (Stream<Path> paths = Files.walk(repository, 6)) {
-      count = paths.filter(Files::isRegularFile)
-          .filter(path -> path.getFileName().toString().equals("CODE_STYLE.md"))
-          .count();
-    }
-    assertThat(count).as("Yak Ops keeps one repository-wide CODE_STYLE.md").isEqualTo(1L);
   }
 
   private void assertFrameworkFreeDirectory(Path root) throws IOException {

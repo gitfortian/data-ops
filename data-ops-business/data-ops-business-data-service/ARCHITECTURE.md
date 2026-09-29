@@ -354,6 +354,8 @@ Business Role
 
 禁止：Controller/Access/Execution/Runtime/Observability 业务角色直接拥有 JdbcTemplate/Mapper/PO。
 
+Datasource 的 `DataSourceReferenceProvider` 是删除保护用的公开扩展 contract；其实现保留在 `repository` adapter 内，并通过本模块 DAO 读取引用。
+
 ## 16. Cross-module Boundary
 
 上游模块只依赖：

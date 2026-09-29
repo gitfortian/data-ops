@@ -7,15 +7,27 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import io.yak.framework.security.common.po.MessagePO;
 import io.yak.framework.security.dao.mapper.MessageMapper;
 import java.util.List;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 /** 锁定消息中心以 project_id 作为 Project 安全边界。 */
 class MessageDaoProjectVisibilityTest {
+
+  @BeforeAll
+  static void initializeMybatisMetadata() {
+    TableInfoHelper.initTableInfo(
+            new MapperBuilderAssistant(
+                    new MybatisConfiguration(), "test"),
+            MessagePO.class);
+  }
 
   @Test
   @SuppressWarnings({"rawtypes", "unchecked"})

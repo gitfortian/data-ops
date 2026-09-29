@@ -1,4 +1,4 @@
-package io.yak.ops.business.quality.api;
+package io.yak.ops.business.quality.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

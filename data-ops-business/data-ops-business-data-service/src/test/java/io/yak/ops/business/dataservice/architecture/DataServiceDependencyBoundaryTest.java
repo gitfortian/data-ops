@@ -24,6 +24,8 @@ class DataServiceDependencyBoundaryTest {
       Path.of("src/main/java/io/yak/ops/business/dataservice");
   private static final String INTERNAL_PREFIX = "io.yak.ops.business.dataservice.";
   private static final String DATASOURCE_PREFIX = "io.yak.ops.business.datasource.";
+  private static final String DATASOURCE_REFERENCE_PROVIDER =
+      DATASOURCE_PREFIX + "api.DataSourceReferenceProvider";
   private static final String DEVELOPMENT_PREFIX = "io.yak.ops.business.development.";
   private static final String CORE_SQL_PREFIX = "io.yak.ops.core.execution.sql.";
 
@@ -199,11 +201,17 @@ class DataServiceDependencyBoundaryTest {
   }
 
   @Test
-  void datasourceDependencyIsLimitedToTheEnablementCondition() throws IOException {
+  void datasourceDependencyIsLimitedToConfigurationAndReferenceContracts() throws IOException {
     String allowed = DATASOURCE_PREFIX + "config.ConditionalOnDataSourceEnabled";
     for (SourceFile source : sources()) {
       for (String imported : imports(source.content())) {
         if (!imported.startsWith(DATASOURCE_PREFIX)) continue;
+        if (imported.equals(DATASOURCE_REFERENCE_PROVIDER)) {
+          assertThat(source.topLevelPackage())
+              .as("Datasource reference SPI must be implemented at the repository boundary")
+              .isEqualTo("repository");
+          continue;
+        }
         assertThat(imported)
             .as("Datasource implementation leaked into %s", source.relativePath())
             .isEqualTo(allowed);

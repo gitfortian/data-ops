@@ -7,8 +7,8 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.sync.realtime.controller.RealtimePermissionCode;
 import io.yak.ops.business.sync.realtime.controller.v1.dto.RealtimeJobRequests;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeRequestMapper;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeViewMapper;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeRequestConverter;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeViewConverter;
 import io.yak.ops.business.sync.realtime.controller.v1.vo.RealtimeViews;
 import io.yak.ops.business.sync.realtime.definition.RealtimeJobDefinitionService;
 import io.yak.ops.business.sync.realtime.domain.CdcPipelineSpec;
@@ -42,16 +42,16 @@ public class RealtimeJobController {
   private final RealtimeJobExecutionService executionService;
   private final RealtimeJobQueryService queryService;
   private final RealtimeObservabilityService observabilityService;
-  private final RealtimeRequestMapper requestMapper;
-  private final RealtimeViewMapper viewMapper;
+  private final RealtimeRequestConverter requestMapper;
+  private final RealtimeViewConverter viewMapper;
 
   public RealtimeJobController(
       RealtimeJobDefinitionService definitionService,
       RealtimeJobExecutionService executionService,
       RealtimeJobQueryService queryService,
       RealtimeObservabilityService observabilityService,
-      RealtimeRequestMapper requestMapper,
-      RealtimeViewMapper viewMapper) {
+      RealtimeRequestConverter requestMapper,
+      RealtimeViewConverter viewMapper) {
     this.definitionService = definitionService;
     this.executionService = executionService;
     this.queryService = queryService;

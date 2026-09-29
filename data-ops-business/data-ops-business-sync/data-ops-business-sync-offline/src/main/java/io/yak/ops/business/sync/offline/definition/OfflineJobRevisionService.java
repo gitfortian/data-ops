@@ -1,6 +1,5 @@
 package io.yak.ops.business.sync.offline.definition;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.audit.AuditActor;
 import io.yak.ops.business.audit.AuditActorResolver;
@@ -10,9 +9,9 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
-import io.yak.ops.business.sync.offline.dao.mapper.OfflineJobRevisionMapper;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.repository.OfflineJobDefinitionRepository;
+import io.yak.ops.business.sync.offline.repository.OfflineJobRevisionRepository;
 import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
 import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.core.project.CurrentProject;
@@ -44,7 +43,7 @@ public class OfflineJobRevisionService {
 
   private final CurrentProject currentProject;
   private final OfflineJobDefinitionRepository definitionRepository;
-  private final OfflineJobRevisionMapper revisionMapper;
+  private final OfflineJobRevisionRepository revisionRepository;
   private final BusinessAuditService auditService;
   private final AuditActorResolver auditActorResolver;
 
@@ -76,10 +75,8 @@ public class OfflineJobRevisionService {
 
   public List<VersionSummary> versions(Long id) {
     OfflineJobDefinition definition = requireDefinition(id);
-    List<OfflineJobRevisionPO> rows = revisionMapper.selectList(
-        new LambdaQueryWrapper<OfflineJobRevisionPO>()
-            .eq(OfflineJobRevisionPO::getJobDefinitionId, definition.getId())
-            .orderByDesc(OfflineJobRevisionPO::getVersionNo));
+    List<OfflineJobRevisionPO> rows =
+        revisionRepository.findAllByJobDefinitionId(definition.getId());
     return rows.stream()
         .map(row -> toSummary(row, definition.getPublishedRevisionId()))
         .toList();
@@ -87,10 +84,10 @@ public class OfflineJobRevisionService {
 
   public RevisionDetailView versionDetail(Long id, int versionNo) {
     OfflineJobDefinition definition = requireDefinition(id);
-    OfflineJobRevisionPO row = revisionMapper.selectOne(
-        new LambdaQueryWrapper<OfflineJobRevisionPO>()
-            .eq(OfflineJobRevisionPO::getJobDefinitionId, definition.getId())
-            .eq(OfflineJobRevisionPO::getVersionNo, versionNo));
+    OfflineJobRevisionPO row =
+        revisionRepository
+            .findByJobDefinitionIdAndVersionNo(definition.getId(), versionNo)
+            .orElse(null);
     if (row == null) {
       throw new IllegalArgumentException(
           "发布版本不存在：job=" + id + ", versionNo=" + versionNo);
@@ -106,10 +103,10 @@ public class OfflineJobRevisionService {
   @Transactional(transactionManager = "offlineSyncTransactionManager", rollbackFor = Exception.class)
   public PublishResult rollback(Long id, int versionNo) {
     OfflineJobDefinition definition = requireDefinition(id);
-    OfflineJobRevisionPO target = revisionMapper.selectOne(
-        new LambdaQueryWrapper<OfflineJobRevisionPO>()
-            .eq(OfflineJobRevisionPO::getJobDefinitionId, definition.getId())
-            .eq(OfflineJobRevisionPO::getVersionNo, versionNo));
+    OfflineJobRevisionPO target =
+        revisionRepository
+            .findByJobDefinitionIdAndVersionNo(definition.getId(), versionNo)
+            .orElse(null);
     if (target == null) {
       throw new IllegalArgumentException(
           "发布版本不存在：job=" + id + ", versionNo=" + versionNo);
@@ -140,7 +137,8 @@ public class OfflineJobRevisionService {
     if (definition == null || definition.getPublishedRevisionId() == null) {
       return null;
     }
-    OfflineJobRevisionPO row = revisionMapper.selectById(definition.getPublishedRevisionId());
+    OfflineJobRevisionPO row =
+        revisionRepository.findById(definition.getPublishedRevisionId()).orElse(null);
     if (row == null || !Objects.equals(row.getJobDefinitionId(), definition.getId())) {
       return null;
     }
@@ -153,17 +151,9 @@ public class OfflineJobRevisionService {
     List<Long> ids = definitions.stream()
         .map(OfflineJobDefinition::getId).filter(Objects::nonNull).toList();
     if (ids.isEmpty()) return flags;
-    List<Long> latestRowIds = revisionMapper
-        .selectList(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<OfflineJobRevisionPO>()
-            .select("job_definition_id", "MAX(id) AS id")
-            .in("job_definition_id", ids)
-            .groupBy("job_definition_id"))
-        .stream().map(OfflineJobRevisionPO::getId).filter(Objects::nonNull).toList();
     Map<Long, OfflineJobRevisionPO> latestByDefinitionId = new HashMap<>();
-    if (!latestRowIds.isEmpty()) {
-      revisionMapper.selectBatchIds(latestRowIds).forEach(row ->
-          latestByDefinitionId.put(row.getJobDefinitionId(), row));
-    }
+    revisionRepository.findLatestByJobDefinitionIds(ids).forEach(row ->
+        latestByDefinitionId.put(row.getJobDefinitionId(), row));
     for (OfflineJobDefinition definition : definitions) {
       OfflineJobRevisionPO latest = latestByDefinitionId.get(definition.getId());
       flags.put(definition.getId(), latest == null
@@ -181,11 +171,8 @@ public class OfflineJobRevisionService {
       throw new IllegalStateException("任务仍是草稿，请先完成配置并保存后再发布");
     }
     long projectId = currentProject.requireProjectId();
-    OfflineJobRevisionPO latest = revisionMapper.selectOne(
-        new LambdaQueryWrapper<OfflineJobRevisionPO>()
-            .eq(OfflineJobRevisionPO::getJobDefinitionId, definition.getId())
-            .orderByDesc(OfflineJobRevisionPO::getVersionNo)
-            .last("LIMIT 1"));
+    OfflineJobRevisionPO latest =
+        revisionRepository.findLatestByJobDefinitionId(definition.getId()).orElse(null);
 
     OfflineJobRevisionPO revision;
     boolean appended = false;
@@ -195,7 +182,7 @@ public class OfflineJobRevisionService {
       revision = new OfflineJobRevisionPO();
       revision.setProjectId(projectId);
       revision.setJobDefinitionId(definition.getId());
-      revision.setVersionNo(revisionMapper.nextVersionNo(definition.getId()));
+      revision.setVersionNo(revisionRepository.nextVersionNo(definition.getId()));
       revision.setDefinitionJson(definition.getDefinitionJson());
       revision.setJobSpecJson(definition.getJobSpecJson());
       revision.setConfigDigest(definition.getConfigDigest());
@@ -203,7 +190,7 @@ public class OfflineJobRevisionService {
           definition.getDefinitionJson(), definition.getJobSpecJson()));
       revision.setSourceVersion(definition.getVersion());
       revision.setCreatedBy(operator);
-      revisionMapper.insert(revision);
+      revisionRepository.insert(revision);
       appended = true;
     }
 

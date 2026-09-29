@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.yak.ops.business.sync.realtime.controller.v1.ComputeEnvironmentController;
 import io.yak.ops.business.sync.realtime.controller.v1.RealtimeJobController;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeRequestMapper;
-import io.yak.ops.business.sync.realtime.controller.v1.mapper.RealtimeViewMapper;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeRequestConverter;
+import io.yak.ops.business.sync.realtime.controller.v1.converter.RealtimeViewConverter;
 import io.yak.ops.business.sync.realtime.definition.RealtimeDefinitionManager;
 import io.yak.ops.business.sync.realtime.definition.RealtimeDefinitionPublisher;
 import io.yak.ops.business.sync.realtime.definition.RealtimeDefinitionValidator;
@@ -82,12 +82,12 @@ class RealtimeArchitectureTest {
             RealtimeJobExecutionService.class,
             io.yak.ops.business.sync.realtime.execution.query.RealtimeJobQueryService.class,
             io.yak.ops.business.sync.realtime.observability.RealtimeObservabilityService.class,
-            RealtimeRequestMapper.class,
-            RealtimeViewMapper.class));
+            RealtimeRequestConverter.class,
+            RealtimeViewConverter.class));
 
     assertFieldTypesIn(
         ComputeEnvironmentController.class,
-        Set.of(ComputeEnvironmentService.class, RealtimeRequestMapper.class, RealtimeViewMapper.class));
+        Set.of(ComputeEnvironmentService.class, RealtimeRequestConverter.class, RealtimeViewConverter.class));
   }
 
   @Test

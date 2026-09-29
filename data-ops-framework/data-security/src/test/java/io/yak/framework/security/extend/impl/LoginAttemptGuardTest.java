@@ -22,9 +22,10 @@ class LoginAttemptGuardTest {
     guard.recordFailure(" Alice ", "192.0.2.1");
     assertFalse(guard.isBlocked("alice", "192.0.2.2"));
     guard.recordFailure("ALICE", "192.0.2.2");
+    guard.recordFailure("bob", "192.0.2.2");
 
     assertTrue(guard.isBlocked("alice", "192.0.2.3"));
-    assertTrue(guard.isBlocked("bob", "192.0.2.2"));
+    assertTrue(guard.isBlocked("charlie", "192.0.2.2"));
   }
 
   @Test

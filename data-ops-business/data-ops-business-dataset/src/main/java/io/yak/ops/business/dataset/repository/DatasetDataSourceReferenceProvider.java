@@ -1,4 +1,4 @@
-package io.yak.ops.business.dataset.api;
+package io.yak.ops.business.dataset.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.dataset.dao.mapper.DatasetMapper;

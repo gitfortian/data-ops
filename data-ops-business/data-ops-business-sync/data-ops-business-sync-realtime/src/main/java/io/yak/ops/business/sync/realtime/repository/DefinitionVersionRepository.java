@@ -9,9 +9,8 @@ import java.util.Optional;
 /**
  * Persistence boundary for immutable published definition versions.
  *
- * <p>The compatibility CdcPipelineSpec snapshot is intentionally retained during migration waves so
- * future Wave 2 can start old versions without reading the mutable Task draft. It is a persistence
- * representation, not a second Core Domain truth model.
+ * <p>The compatibility CdcPipelineSpec snapshot remains a persistence representation for existing
+ * published versions. It is not a second editable Definition truth model.
  */
 public interface DefinitionVersionRepository {
 

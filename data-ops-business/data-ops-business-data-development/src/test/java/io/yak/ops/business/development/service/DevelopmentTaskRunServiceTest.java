@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -83,7 +84,8 @@ class DevelopmentTaskRunServiceTest {
 
     assertEquals(TaskExecutionStatus.SUCCESS, result.status());
     verify(executionService).attachRuntime(99L, "manual-1", "SUCCESS");
-    verify(executionService).complete(eq(99L), eq("SUCCESS"), anyLong(), eq(null), any());
+    verify(executionService)
+        .complete(eq(99L), eq("SUCCESS"), anyLong(), eq(null), eq(null), anyMap());
   }
 
   private static final class RecordingRuntimeExecutor implements TaskExecutor {

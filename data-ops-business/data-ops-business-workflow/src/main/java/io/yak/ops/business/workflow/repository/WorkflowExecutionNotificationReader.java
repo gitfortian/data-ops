@@ -1,4 +1,4 @@
-package io.yak.ops.business.workflow.execution;
+package io.yak.ops.business.workflow.repository;
 
 import java.util.Optional;
 

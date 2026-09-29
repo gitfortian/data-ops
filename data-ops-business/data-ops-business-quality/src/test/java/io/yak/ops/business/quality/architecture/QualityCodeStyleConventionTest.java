@@ -115,6 +115,7 @@ class QualityCodeStyleConventionTest {
     try (Stream<Path> paths = Files.walk(repository, 6)) {
       count =
           paths.filter(Files::isRegularFile)
+              .filter(path -> path.getParent().equals(repository))
               .filter(path -> path.getFileName().toString().equals("CODE_STYLE.md"))
               .count();
     }

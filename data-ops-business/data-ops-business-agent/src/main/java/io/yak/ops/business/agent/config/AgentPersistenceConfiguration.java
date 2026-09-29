@@ -5,6 +5,7 @@ import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +18,9 @@ import org.springframework.context.annotation.Import;
 @ConditionalOnDataSourceEnabled
 @EnableConfigurationProperties(AgentProperties.class)
 @Import(BusinessDatabaseConfiguration.class)
+@MapperScan(
+    basePackages = "io.yak.ops.business.agent.dao.mapper",
+    sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")
 public class AgentPersistenceConfiguration {
 
   @Bean(name = "yakAgentFlyway", initMethod = "migrate")

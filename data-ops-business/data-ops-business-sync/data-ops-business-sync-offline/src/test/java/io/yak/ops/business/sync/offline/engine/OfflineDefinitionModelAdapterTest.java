@@ -181,7 +181,7 @@ class OfflineDefinitionModelAdapterTest {
             "options": {
               "hosts": ["http://es-a:9200"],
               "password": "option-secret",
-              "query": "{\"match_all\":{}}",
+              "query": "{\\\"match_all\\\":{}}",
               "scroll_size": 500
             },
             "config": {

@@ -1,4 +1,4 @@
-package io.yak.ops.business.sync.realtime.controller.v1.mapper;
+package io.yak.ops.business.sync.realtime.controller.v1.converter;
 
 import io.yak.ops.business.sync.realtime.controller.v1.dto.ComputeEnvironmentRequests;
 import io.yak.ops.business.sync.realtime.controller.v1.dto.RealtimeJobRequests;
@@ -8,7 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RealtimeRequestMapper {
+public class RealtimeRequestConverter {
 
   public CdcPipelineSpec toSpec(RealtimeJobRequests.PipelineSpec value) {
     if (value == null) return null;

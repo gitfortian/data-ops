@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 class QualityDependencyBoundaryTest {
 
   private static final String BASE = "io.yak.ops.business.quality";
+  private static final String FEATURE_CONDITION = BASE + ".config.ConditionalOnQualityEnabled";
   private static final Pattern QUALITY_IMPORT =
       Pattern.compile(
           "(?m)^import\\s+(?:static\\s+)?("
@@ -42,11 +43,13 @@ class QualityDependencyBoundaryTest {
           Map.entry("schedule", Set.of("config", "domain", "execution", "repository")),
           Map.entry("execution", Set.of("alert", "config", "domain", "gateway", "repository")),
           Map.entry("alert", Set.of("config", "domain", "repository")),
-          Map.entry("asset", Set.of("config", "domain", "gateway", "repository")),
+          Map.entry(
+              "asset",
+              Set.of("config", "domain", "execution", "gateway", "monitor", "repository")),
           Map.entry("template", Set.of("config", "domain", "repository")),
           Map.entry("gateway", Set.of("config")),
           Map.entry("repository", Set.of("config", "dao", "domain")),
-          Map.entry("dao", Set.of()),
+          Map.entry("dao", Set.of("config")),
           Map.entry("domain", Set.of()),
           Map.entry("config", Set.of()));
 
@@ -125,7 +128,9 @@ class QualityDependencyBoundaryTest {
             Set.of(
                 "io.yak.ops.business.datasource.catalog.DataSourceCatalogReader",
                 "io.yak.ops.business.datasource.domain.catalog.CatalogReadRequest",
-                "io.yak.ops.business.datasource.domain.catalog.CatalogReadRequest.ReadMode"));
+                "io.yak.ops.business.datasource.domain.catalog.CatalogReadRequest.ReadMode"),
+            "repository/QualityDataSourceReferenceProvider.java",
+            Set.of("io.yak.ops.business.datasource.api.DataSourceReferenceProvider"));
 
     for (ExternalDependency dependency : datasourceDependencies()) {
       assertThat(allowed)
@@ -144,7 +149,9 @@ class QualityDependencyBoundaryTest {
         throw new AssertionError("Quality Domain must not import upper Quality packages: " + dependency);
       }
       if (dependency.sourcePackage().equals("dao")) {
-        throw new AssertionError("Quality DAO must not import Quality business packages: " + dependency);
+        assertThat(dependency.importedType())
+            .as("Quality DAO may import only the feature condition from config: %s", dependency)
+            .isEqualTo(FEATURE_CONDITION);
       }
       if (dependency.sourcePackage().equals("repository")) {
         assertThat(dependency.targetPackage())

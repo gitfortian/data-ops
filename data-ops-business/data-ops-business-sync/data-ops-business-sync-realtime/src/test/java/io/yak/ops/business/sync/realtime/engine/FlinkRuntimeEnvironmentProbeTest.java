@@ -114,6 +114,6 @@ class FlinkRuntimeEnvironmentProbeTest {
 
   private void executable(Path path, String content) throws Exception {
     Files.writeString(path, content, StandardCharsets.UTF_8);
-    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rwx------"));
+    PosixTestSupport.makeOwnerExecutable(path);
   }
 }

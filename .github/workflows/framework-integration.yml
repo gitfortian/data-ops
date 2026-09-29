@@ -1,0 +1,64 @@
+name: Framework Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pom.xml'
+      - 'data-ops-bom/**'
+      - 'data-ops-framework/**'
+      - 'scripts/release/**'
+      - '.github/workflows/framework-integration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pom.xml'
+      - 'data-ops-bom/**'
+      - 'data-ops-framework/**'
+      - 'scripts/release/**'
+      - '.github/workflows/framework-integration.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: framework-integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-build:
+    name: Build and test complete application
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: data-ops-ui/yarn.lock
+
+      - name: Set up Yarn Classic
+        run: npm install --global yarn@1.22.22
+
+      - name: Install frontend dependencies
+        working-directory: data-ops-ui
+        run: yarn install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: data-ops-ui
+        run: yarn build
+
+      - name: Verify complete Maven reactor
+        run: bash ./mvnw -B -ntp clean verify

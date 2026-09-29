@@ -239,7 +239,7 @@ Workspace 只做查询与 projection，不能出现 Monitor save/delete、Execut
 
 ## 12. Datasource Boundary
 
-Quality 与 Datasource 的唯一实现级连接点：
+Quality 与 Datasource 保持两个窄连接点：
 
 ```text
 QualityDataCatalogGateway
@@ -250,6 +250,8 @@ DataSourceQualityCatalogAdapter
         v
 Datasource DataSourceCatalogReader
 ```
+
+Datasource 删除守卫通过 `repository.QualityDataSourceReferenceProvider` 实现公开的 `DataSourceReferenceProvider` SPI；该适配器只在当前 Project 内统计 Quality 自有 DAO 中的引用。
 
 Asset / Execution 不允许为了方便直接调用 Datasource Reader、Repository、DAO、Plugin 或 Controller。
 
@@ -264,6 +266,8 @@ Application role
 ```
 
 Repository port 不暴露 DTO/VO/PO/MyBatis。
+
+`DataSourceReferenceProvider` 是 Datasource 的删除守卫 SPI；Quality 在 `repository` adapter 中实现它，不把 Datasource API 或 Quality Mapper 上移到业务角色。
 
 `yak_quality_monitor_revision` 保存 Workflow 可固定的 immutable execution definition；`yak_quality_execution.idempotency_key` 只用于外部编排重复提交去重。
 

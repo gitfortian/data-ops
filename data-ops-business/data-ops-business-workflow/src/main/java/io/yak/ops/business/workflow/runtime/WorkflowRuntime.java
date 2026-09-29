@@ -1084,6 +1084,9 @@ public class WorkflowRuntime {
         : node.attempts().get(node.attempts().size() - 1);
     ConcurrentMap<String, NodeDispatch> dispatches = latestDispatches.get(executionId);
     NodeDispatch dispatch = dispatches == null ? null : dispatches.get(node.nodeId());
+    Map<String, Object> resolvedInput = dispatch == null
+        ? receivedInput(node.output())
+        : dispatch.nodeInput();
     return new NodeInstanceVO(
         node.nodeId(),
         task == null ? null : task.taskId(),
@@ -1105,10 +1108,21 @@ public class WorkflowRuntime {
         nodeMetadata == null ? 0L : nodeMetadata.dispatchTimeoutSeconds(),
         nodeMetadata == null ? 0L : nodeMetadata.executionTimeoutSeconds(),
         nodeMetadata == null ? Map.of() : nodeMetadata.inputMapping(),
-        dispatch == null ? Map.of() : dispatch.nodeInput(),
+        resolvedInput,
         dispatch == null ? Map.of() : dispatch.predecessorOutputs(),
         node.output(),
         attempts);
+  }
+
+  private Map<String, Object> receivedInput(Map<String, Object> output) {
+    if (output == null || !(output.get("receivedInput") instanceof Map<?, ?> values)) {
+      return Map.of();
+    }
+    Map<String, Object> result = new LinkedHashMap<>();
+    values.forEach((key, value) -> {
+      if (key instanceof String name) result.put(name, value);
+    });
+    return Map.copyOf(result);
   }
 
   private AttemptVO toAttemptView(NodeAttempt attempt) {

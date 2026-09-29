@@ -24,6 +24,7 @@ import io.yak.ops.business.sync.realtime.domain.ComputeEnvironment.RuntimeConfig
 import io.yak.ops.business.sync.realtime.domain.ComputeEnvironmentSnapshot;
 import io.yak.ops.business.sync.realtime.domain.RealtimeJobState.DesiredState;
 import io.yak.ops.business.sync.realtime.domain.RealtimeJobState.ObservedState;
+import io.yak.ops.business.sync.realtime.domain.RealtimeJobView;
 import io.yak.ops.business.sync.realtime.domain.SyncExecutionStateMachine;
 import io.yak.ops.business.sync.realtime.engine.PipelineYamlCompiler;
 import io.yak.ops.business.sync.realtime.engine.PipelineYamlCompiler.CompiledPipeline;
@@ -131,6 +132,7 @@ class RealtimeExecutionCommandSafetyBaselineTest {
             null,
             null);
     when(store.deploymentByIdempotencyKey("same-key")).thenReturn(Optional.of(existing));
+    when(store.deploymentView(existing)).thenReturn(mock(RealtimeJobView.Deployment.class));
 
     assertThatCode(() -> service.start(TASK_ID, "same-key")).doesNotThrowAnyException();
 

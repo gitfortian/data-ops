@@ -21,7 +21,8 @@ class DataDevelopmentStage5AProjectSpaceContractTest {
     assertThat(controller)
         .contains("@ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)")
         .doesNotContain("request.projectId()")
-        .contains("service.create(\n        request.name(),\n        request.type(),\n        request.directoryId())");
+        .satisfies(source -> assertThat(source.replaceAll("\\s+", ""))
+            .contains("service.create(request.name(),request.type(),request.directoryId())"));
   }
 
   @Test

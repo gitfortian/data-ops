@@ -81,8 +81,8 @@ class RealtimeYamlCodecTest {
         .contains(
             "version: 1",
             "dataSourceRef: 11",
-            "sinkTable: public.ods_orders",
-            "startupMode: latest-offset",
+            "sinkTable: \"public.ods_orders\"",
+            "startupMode: \"latest-offset\"",
             "parallelism: 4");
     assertThat(reparsed).isEqualTo(spec);
   }

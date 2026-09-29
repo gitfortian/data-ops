@@ -9,14 +9,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import io.yak.ops.business.audit.AuditActor;
 import io.yak.ops.business.audit.AuditActorResolver;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.BusinessAuditService;
-import io.yak.ops.business.sync.offline.dao.mapper.OfflineJobRevisionMapper;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.repository.OfflineJobDefinitionRepository;
+import io.yak.ops.business.sync.offline.repository.OfflineJobRevisionRepository;
 import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
@@ -37,7 +36,7 @@ class OfflineJobRevisionServiceTest {
 
   @Mock private CurrentProject currentProject;
   @Mock private OfflineJobDefinitionRepository definitionRepository;
-  @Mock private OfflineJobRevisionMapper revisionMapper;
+  @Mock private OfflineJobRevisionRepository revisionRepository;
   @Mock private BusinessAuditService auditService;
   @Mock private AuditActorResolver auditActorResolver;
 
@@ -46,7 +45,7 @@ class OfflineJobRevisionServiceTest {
   @BeforeEach
   void setUp() {
     service = new OfflineJobRevisionService(
-        currentProject, definitionRepository, revisionMapper, auditService, auditActorResolver);
+        currentProject, definitionRepository, revisionRepository, auditService, auditActorResolver);
     when(currentProject.requireProjectId()).thenReturn(7L);
     when(auditService.start(any())).thenReturn(AuditOperationHandle.noop(null));
     when(auditActorResolver.currentActor())
@@ -58,11 +57,12 @@ class OfflineJobRevisionServiceTest {
   void firstPublishAppendsV1AndMovesPointer() {
     OfflineJobDefinition definition = draft("digest-1", "{\"a\":1}");
     stubDefinition(definition);
-    when(revisionMapper.selectOne(any())).thenReturn(null);
-    when(revisionMapper.nextVersionNo(10L)).thenReturn(1);
-    when(revisionMapper.insert(any(OfflineJobRevisionPO.class))).thenAnswer(invocation -> {
-      invocation.getArgument(0, OfflineJobRevisionPO.class).setId(500L);
-      return 1;
+    when(revisionRepository.findLatestByJobDefinitionId(10L)).thenReturn(Optional.empty());
+    when(revisionRepository.nextVersionNo(10L)).thenReturn(1);
+    when(revisionRepository.insert(any(OfflineJobRevisionPO.class))).thenAnswer(invocation -> {
+      OfflineJobRevisionPO revision = invocation.getArgument(0, OfflineJobRevisionPO.class);
+      revision.setId(500L);
+      return revision;
     });
 
     OfflineJobRevisionService.PublishResult result = service.publish(10L);
@@ -74,7 +74,7 @@ class OfflineJobRevisionServiceTest {
 
     ArgumentCaptor<OfflineJobRevisionPO> inserted =
         ArgumentCaptor.forClass(OfflineJobRevisionPO.class);
-    verify(revisionMapper).insert(inserted.capture());
+    verify(revisionRepository).insert(inserted.capture());
     assertThat(inserted.getValue().getProjectId()).isEqualTo(7L);
     assertThat(inserted.getValue().getJobDefinitionId()).isEqualTo(10L);
     assertThat(inserted.getValue().getJobSpecJson()).isEqualTo("{\"job\":\"spec\"}");
@@ -88,14 +88,14 @@ class OfflineJobRevisionServiceTest {
     OfflineJobDefinition definition = draft("digest-1", "{\"a\":1}");
     stubDefinition(definition);
     OfflineJobRevisionPO latest = revision(501L, 3, "digest-1", "{\"a\":1}");
-    when(revisionMapper.selectOne(any())).thenReturn(latest);
+    when(revisionRepository.findLatestByJobDefinitionId(10L)).thenReturn(Optional.of(latest));
 
     OfflineJobRevisionService.PublishResult result = service.publish(10L);
 
     assertThat(result.appended()).isFalse();
     assertThat(result.version().id()).isEqualTo(501L);
-    verify(revisionMapper, never()).insert(any(OfflineJobRevisionPO.class));
-    verify(revisionMapper, never()).nextVersionNo(anyLong());
+    verify(revisionRepository, never()).insert(any(OfflineJobRevisionPO.class));
+    verify(revisionRepository, never()).nextVersionNo(anyLong());
     assertThat(definition.getPublishedRevisionId()).isEqualTo(501L);
     assertThat(definition.getLatestVersionNo()).isEqualTo(3);
   }
@@ -104,15 +104,15 @@ class OfflineJobRevisionServiceTest {
   void editedDraftPublishAppendsNextVersion() {
     OfflineJobDefinition definition = draft("digest-9", "{\"a\":9}");
     stubDefinition(definition);
-    when(revisionMapper.selectOne(any()))
-        .thenReturn(revision(501L, 3, "digest-1", "{\"a\":1}"));
-    when(revisionMapper.nextVersionNo(10L)).thenReturn(4);
+    when(revisionRepository.findLatestByJobDefinitionId(10L))
+        .thenReturn(Optional.of(revision(501L, 3, "digest-1", "{\"a\":1}")));
+    when(revisionRepository.nextVersionNo(10L)).thenReturn(4);
 
     OfflineJobRevisionService.PublishResult result = service.publish(10L);
 
     assertThat(result.appended()).isTrue();
     assertThat(result.version().versionNo()).isEqualTo(4);
-    verify(revisionMapper).insert(any(OfflineJobRevisionPO.class));
+    verify(revisionRepository).insert(any(OfflineJobRevisionPO.class));
   }
 
   @Test
@@ -124,7 +124,7 @@ class OfflineJobRevisionServiceTest {
     assertThatThrownBy(() -> service.publish(10L))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("发布");
-    verify(revisionMapper, never()).insert(any(OfflineJobRevisionPO.class));
+    verify(revisionRepository, never()).insert(any(OfflineJobRevisionPO.class));
   }
 
   @Test
@@ -134,13 +134,15 @@ class OfflineJobRevisionServiceTest {
     assertThat(service.publishedRevision(definition)).isNull();
 
     definition.setPublishedRevisionId(500L);
-    when(revisionMapper.selectById(500L)).thenReturn(null);
+    when(revisionRepository.findById(500L)).thenReturn(Optional.empty());
     assertThat(service.publishedRevision(definition)).isNull();
 
-    when(revisionMapper.selectById(500L)).thenReturn(revision(500L, 10L, 1, "d", "{}"));
+    when(revisionRepository.findById(500L))
+        .thenReturn(Optional.of(revision(500L, 10L, 1, "d", "{}")));
     assertThat(service.publishedRevision(definition)).isNotNull();
 
-    when(revisionMapper.selectById(500L)).thenReturn(revision(500L, 999L, 1, "d", "{}"));
+    when(revisionRepository.findById(500L))
+        .thenReturn(Optional.of(revision(500L, 999L, 1, "d", "{}")));
     assertThat(service.publishedRevision(definition)).isNull();
   }
 
@@ -149,11 +151,10 @@ class OfflineJobRevisionServiceTest {
     OfflineJobDefinition same = draft(10L, "digest-1", "{\"a\":1}");
     OfflineJobDefinition edited = draft(11L, "digest-2", "{\"a\":2}");
     OfflineJobDefinition neverPublished = draft(12L, "digest-3", "{\"a\":3}");
-    when(revisionMapper.selectList(any(Wrapper.class))).thenReturn(List.of(
-        idOnly(501L, 10L), idOnly(502L, 11L)));
-    when(revisionMapper.selectBatchIds(any())).thenReturn(List.of(
-        revision(501L, 10L, 1, "digest-1", "{\"a\":1}"),
-        revision(502L, 11L, 2, "digest-1", "{\"a\":1}")));
+    when(revisionRepository.findLatestByJobDefinitionIds(any()))
+        .thenReturn(List.of(
+            revision(501L, 10L, 1, "digest-1", "{\"a\":1}"),
+            revision(502L, 11L, 2, "digest-1", "{\"a\":1}")));
 
     Map<Long, Boolean> flags =
         service.pendingDraftFlags(List.of(same, edited, neverPublished));
@@ -171,11 +172,14 @@ class OfflineJobRevisionServiceTest {
     stubDefinition(definition);
     OfflineJobRevisionPO target = revision(501L, 1, "digest-1", "{\"a\":1}");
     OfflineJobRevisionPO latest = revision(503L, 3, "digest-3", "{\"a\":3}");
-    when(revisionMapper.selectOne(any())).thenReturn(target, latest);
-    when(revisionMapper.nextVersionNo(10L)).thenReturn(4);
-    when(revisionMapper.insert(any(OfflineJobRevisionPO.class))).thenAnswer(invocation -> {
-      invocation.getArgument(0, OfflineJobRevisionPO.class).setId(504L);
-      return 1;
+    when(revisionRepository.findByJobDefinitionIdAndVersionNo(10L, 1))
+        .thenReturn(Optional.of(target));
+    when(revisionRepository.findLatestByJobDefinitionId(10L)).thenReturn(Optional.of(latest));
+    when(revisionRepository.nextVersionNo(10L)).thenReturn(4);
+    when(revisionRepository.insert(any(OfflineJobRevisionPO.class))).thenAnswer(invocation -> {
+      OfflineJobRevisionPO revision = invocation.getArgument(0, OfflineJobRevisionPO.class);
+      revision.setId(504L);
+      return revision;
     });
 
     OfflineJobRevisionService.PublishResult result = service.rollback(10L, 1);
@@ -194,7 +198,7 @@ class OfflineJobRevisionServiceTest {
     OfflineJobDefinition definition = draft("digest-1", "{\"a\":1}");
     definition.setPublishedRevisionId(501L);
     stubDefinition(definition);
-    when(revisionMapper.selectList(any(Wrapper.class))).thenReturn(List.of(
+    when(revisionRepository.findAllByJobDefinitionId(10L)).thenReturn(List.of(
         revision(502L, 2, "digest-2", "{\"a\":2}"),
         revision(501L, 1, "digest-1", "{\"a\":1}")));
 
@@ -243,10 +247,4 @@ class OfflineJobRevisionServiceTest {
     return row;
   }
 
-  private OfflineJobRevisionPO idOnly(Long id, Long jobDefinitionId) {
-    OfflineJobRevisionPO row = new OfflineJobRevisionPO();
-    row.setId(id);
-    row.setJobDefinitionId(jobDefinitionId);
-    return row;
-  }
 }

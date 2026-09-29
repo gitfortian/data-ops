@@ -93,6 +93,8 @@ Restart / Rerun
   WorkflowRuntime
 ```
 
+Launcher 通过 execution-owned `WorkflowLaunchDefinitionGateway` 调用 Definition 能力。`WorkflowDefinitionManager` 实现该窄接口；Definition 保留发布与草稿规则，Execution 不依赖其具体实现，包依赖保持单向无环。
+
 `WorkflowExecutionReactivator` 处理同一个 Execution 的 retry/continue。它只依赖 execution-owned `WorkflowExecutionReactivationGuard`；Schedule Trigger Coordinator 实现该 Port，从而能施加 Ledger 串行槽位规则而不制造 execution -> schedule package cycle。
 
 `WorkflowExecutionManager` 负责实例运维 read/use-case。businessDate rerun 通过 execution-owned `WorkflowBusinessDateRerunGateway` 进入 `WorkflowBackfillAuditCoordinator`，而不是直接认识 Backfill business implementation。

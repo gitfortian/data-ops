@@ -31,7 +31,7 @@ io.yak.ops.business.dataset
 │   ├── taskcatalog
 │   ├── datasource
 │   └── lineage
-├── repository
+├── repository  DatasetRepository / persistence adapters · DatasetDataSourceReferenceProvider(deletion-guard SPI)
 ├── dao
 ├── config
 └── root public API / domain values
@@ -54,6 +54,7 @@ DevelopmentDatasetFacade
 `DatasetQueryService` 面向 Dashboard/Chart 等查询消费者；内部委托 Query Coordinator 和 Observability Reader。
 
 `DevelopmentDatasetFacade` 是 Data Development Dataset Node 的稳定跨模块 API。
+Dataset 自有的来源追溯端点也经此 Facade 读取 DevelopmentNode 归属，Controller 不接触 development 内部角色。
 
 Facade 不直接依赖 Repository / DAO / TaskCatalogService / Datasource implementation / LineageService。
 
@@ -114,6 +115,8 @@ FieldNormalizer 负责稳定 field contract；FieldIdentity 集中 deterministic
 
 Preview 不写持久化 field identity。
 
+`DatasetFieldSpec` 继续作为 Schema、Publication、Development 与稳定 Facade 共用的输入契约。草稿持久化通过 Repository 自有的 `DraftField` 值进入 Repository，保持依赖图无环且不改变 Facade 类型。
+
 ## 7. Query Runtime
 
 ```text
@@ -133,6 +136,8 @@ SQL_QUERY      -> SqlQueryDatasetSourceAdapter
 ```
 
 Query adapters 本身就是 Runtime boundary，可以直接调用 `io.yak.ops.core.execution.sql.*`；业务 Coordinator 不直接依赖 Core SQL Runtime。
+`DatasetQueryResult` 复用 Core 中 JDBC 中立的 `SqlExecutionColumn` 值类型，让查询消费方共用稳定的列元数据形状；它不暴露执行运行时。
+Source Adapter 将 Core SQL policy violation 转成 Dataset-owned `DatasetQueryRejectedException`，Coordinator 只按 Dataset 查询状态分类，并保留原始异常类型用于诊断。
 
 每次 Query attempt 在进入业务校验前生成 `queryId`，并最终形成以下一种终态：
 
@@ -300,6 +305,8 @@ Repository contract 只暴露 Dataset-owned domain/value，不暴露 Controller 
 ## 13. Config
 
 `DatasetPersistenceConfiguration` 只负责 Dataset Flyway 和共享业务数据库 wiring。
+
+Dataset Flyway 按增量方式维护，当前依次为 `V1__baseline_dataset.sql`、`V2__dataset_source_publication_lock.sql` 与 `V3__dataset_query_subject_attribution.sql`。
 
 它可以复用 Datasource 模块的 `BusinessDatabaseConfiguration / ConditionalOnDataSourceEnabled / DataSourceProperties`；`DatasetDaoImpl` 沿用同一 datasource-enabled 条件，但业务角色不直接依赖 Datasource 配置能力。
 

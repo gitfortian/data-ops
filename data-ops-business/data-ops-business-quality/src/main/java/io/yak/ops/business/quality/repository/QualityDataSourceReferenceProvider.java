@@ -1,4 +1,4 @@
-package io.yak.ops.business.quality.api;
+package io.yak.ops.business.quality.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.datasource.api.DataSourceReferenceProvider;

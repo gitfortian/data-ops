@@ -39,7 +39,7 @@ public record RealtimeJobView(
     return configDigest;
   }
 
-  /** Compatibility constructor for callers created before Wave 5 added the derived capability. */
+  /** Compatibility constructor for callers that do not supply the derived capability. */
   public RealtimeJobView(
       long id,
       String name,

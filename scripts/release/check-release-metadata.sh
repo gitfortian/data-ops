@@ -32,6 +32,8 @@ check "Yak Ops version uses SemVer" \
     bash -c '[[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]' _ "$YAK_OPS_VERSION"
 check "Maven framework dependency matches release metadata" \
     grep -Fq "<data-ops-framework.version>${YAK_FRAMEWORK_VERSION}</data-ops-framework.version>" data-ops-bom/pom.xml
+check "Framework source revision matches release metadata" \
+    grep -Fq "<revision>${YAK_FRAMEWORK_VERSION}</revision>" data-ops-framework/pom.xml
 check "Frontend package version matches release metadata" \
     grep -Fq "\"version\": \"${YAK_OPS_VERSION}\"" data-ops-ui/package.json
 check "Frontend Docker example tag matches release metadata" \

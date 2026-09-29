@@ -103,6 +103,29 @@ class DatasetQueryCoordinatorTest {
   }
 
   @Test
+  void sourcePolicyRejectionUsesDatasetStatusAndKeepsOriginTypeInTrace() {
+    Fixture fixture = fixture();
+    Dataset dataset = dataset(21L, 32L);
+    DatasetVersion current = version(32L, 21L, 2, DatasetSourceType.SQL_QUERY);
+    DatasetQueryRejectedException rejection =
+        new DatasetQueryRejectedException("SQL execution rejected", new IllegalStateException("policy"));
+    when(fixture.repository().findDataset(21L)).thenReturn(Optional.of(dataset));
+    when(fixture.repository().findVersion(32L)).thenReturn(Optional.of(current));
+    when(fixture.repository().listFields(32L)).thenReturn(List.of());
+    when(fixture.registry().require(DatasetSourceType.SQL_QUERY)).thenReturn(fixture.adapter());
+    when(fixture.adapter().execute(dataset, current, List.of(), null)).thenThrow(rejection);
+
+    assertSame(
+        rejection,
+        assertThrows(RuntimeException.class, () -> fixture.coordinator().query(21L, null)));
+
+    ArgumentCaptor<DatasetQueryPerformance> trace = trace(fixture.recorder());
+    assertEquals(DatasetQueryStatus.REJECTED, trace.getValue().status());
+    assertEquals("IllegalStateException", trace.getValue().errorType());
+    assertEquals("EXECUTE_SOURCE", trace.getValue().failureStage());
+  }
+
+  @Test
   void sqlTimeoutRecordsTimeoutAndRethrowsOriginalFailure() {
     Fixture fixture = fixture();
     Dataset dataset = dataset(21L, 32L);

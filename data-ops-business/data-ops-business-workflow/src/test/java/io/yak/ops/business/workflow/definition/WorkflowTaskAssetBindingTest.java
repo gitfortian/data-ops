@@ -150,9 +150,9 @@ class WorkflowTaskAssetBindingTest {
 
     WorkflowDefinitionVO created = service.create(
         new WorkflowDefinitionCreateDTO("跨 Project 工作流", "验证绑定隔离"));
-    service.update(created.id(), updateRequest(101L, 1));
-
-    assertThrows(ProjectContextException.class, () -> service.online(created.id()));
+    assertThrows(
+        ProjectContextException.class,
+        () -> service.update(created.id(), updateRequest(101L, 1)));
   }
 
   private static WorkflowDefinitionManager projectAwareService(

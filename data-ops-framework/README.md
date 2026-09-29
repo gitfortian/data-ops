@@ -38,10 +38,24 @@ Maven Central 发布坐标统一使用 GitHub Namespace `io.github.weifuwan`。J
 </parent>
 ```
 
-## 安装到本地
+## 独立构建
 
 ```shell
-D:\baize-works\baize-tools\apache-maven-3.9.16\bin\mvn clean install -DskipTests -Dspotless.check.skip=true
+mvn clean verify
+```
+
+需要把制品提供给仓库外部的 Maven 项目时，再执行 `mvn clean install`。
+
+在 Yak Ops 仓库中，`data-ops-framework` 已作为根 Maven Reactor 的子工程。直接从 Yak Ops 根目录构建即可，无需先在本目录执行 `install`：
+
+```shell
+./mvnw clean verify
+```
+
+如需仅构建框架，在 Yak Ops 根目录执行：
+
+```shell
+./mvnw -f data-ops-framework/pom.xml clean verify
 ```
 
 ## 发布到 Maven Central

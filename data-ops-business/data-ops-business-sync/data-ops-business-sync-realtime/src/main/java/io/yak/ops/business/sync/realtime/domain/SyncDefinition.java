@@ -8,8 +8,8 @@ import java.util.Set;
 /**
  * Engine-neutral realtime synchronization definition.
  *
- * <p>This is the target Core Domain value object introduced by Stage 6 Wave 0. Existing REST/YAML
- * compatibility continues to use {@link CdcPipelineSpec} until later migration waves.
+ * <p>Transport and persistence adapters translate the established REST/YAML representation to this
+ * engine-neutral domain model.
  */
 public record SyncDefinition(
     SourceEndpoint source,

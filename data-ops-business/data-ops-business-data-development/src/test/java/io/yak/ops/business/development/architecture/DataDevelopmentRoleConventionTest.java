@@ -21,6 +21,8 @@ class DataDevelopmentRoleConventionTest {
           "execution/DevelopmentTaskExecutionControlService.java",
           "execution/DevelopmentTaskExecutionService.java",
           "execution/DevelopmentTaskRunService.java",
+          "lineage/DevelopmentLineageEvidenceService.java",
+          "lineage/DevelopmentSqlLineagePreviewService.java",
           "node/DevelopmentNodeService.java",
           "release/DevelopmentReleaseService.java",
           "standard/DevelopmentStandardCheckService.java",

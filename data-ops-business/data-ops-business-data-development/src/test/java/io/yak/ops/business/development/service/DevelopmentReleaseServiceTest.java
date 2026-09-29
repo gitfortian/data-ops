@@ -103,7 +103,7 @@ class DevelopmentReleaseServiceTest {
       TaskAssetStatus status,
       long revisionId,
       int revisionNo) {
-    Instant now = Instant.parse("2026-08-13T06:00:00Z").plusSeconds(assetId);
+    Instant now = Instant.parse("2026-08-13T06:00:00Z").minusSeconds(assetId);
     return new TaskAsset(
         assetId,
         TaskAssetSource.DATA_DEVELOPMENT,

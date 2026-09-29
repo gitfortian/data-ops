@@ -10,9 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import io.yak.ops.business.quality.asset.QualityAssetSectionProvider;
-import io.yak.ops.business.quality.asset.QualityTableAssetReader;
-import io.yak.ops.business.quality.execution.QualityExecutionReader;
-import io.yak.ops.business.quality.monitor.QualityMonitorReader;
+import io.yak.ops.business.quality.asset.QualityAssetSectionSummaryReader;
 import io.yak.ops.spi.section.SectionProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -26,9 +24,8 @@ class QualitySectionProviderUniquenessTest {
     new ApplicationContextRunner()
         .withUserConfiguration(QualityProviderConfiguration.class)
         .withPropertyValues("yak.quality.enabled=true")
-        .withBean(QualityTableAssetReader.class, () -> mock(QualityTableAssetReader.class))
-        .withBean(QualityMonitorReader.class, () -> mock(QualityMonitorReader.class))
-        .withBean(QualityExecutionReader.class, () -> mock(QualityExecutionReader.class))
+        .withBean(QualityAssetSectionSummaryReader.class,
+            () -> mock(QualityAssetSectionSummaryReader.class))
         .run(context -> {
           assertThat(context.getBeansOfType(SectionProvider.class)).hasSize(1);
           assertThat(context.getBean(SectionProvider.class))
