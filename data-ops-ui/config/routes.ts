@@ -85,6 +85,13 @@ export default [
         hideInMenu: true,
       },
       {
+        // Metadata 实体详情深链复用同一实体抽屉，避免复制一份画像事实。
+        path: '/metadata/detail/:id',
+        component: './data-metadata/detail-redirect',
+        hideInMenu: true,
+        hideInBreadcrumb: true,
+      },
+      {
         path: '/data-metadata/search',
         redirect: '/data-asset/catalog?view=entity',
         hideInMenu: true,
