@@ -437,10 +437,10 @@ Authoring status、Publication state、dependency health 分离，禁止一个 s
 - Capability Map：`docs/product/CAPABILITY_MAP.md`
 - User Journey J2：`docs/product/USER_JOURNEYS.md`
 - Product Decision：`docs/product/decisions/PD-003-business-semantic-metric-contract.md`
-- Semantic Domain：`yak-ops-business/yak-ops-business-semantic/DOMAIN.md`
-- Modeling Domain：`yak-ops-business/yak-ops-business-modeling/DOMAIN.md`
-- Metric Domain：`yak-ops-business/yak-ops-business-metric/DOMAIN.md`
-- Metric Requirements：`yak-ops-business/yak-ops-business-metric/REQUIREMENTS.md`
+- Semantic Domain：`data-ops-business/data-ops-business-semantic/DOMAIN.md`
+- Modeling Domain：`data-ops-business/data-ops-business-modeling/DOMAIN.md`
+- Metric Domain：`data-ops-business/data-ops-business-metric/DOMAIN.md`
+- Metric Requirements：`data-ops-business/data-ops-business-metric/REQUIREMENTS.md`
 - Phase 4 contract：`docs/product/decisions/PD-002-governed-consumption-contract.md`
 - Phase 4 Feature：`docs/product/features/F-004-governed-data-consumption.md`
 - Epic / Issues：#120 / #121 / #122 / #123 / #124

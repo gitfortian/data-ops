@@ -1,6 +1,6 @@
 # Ticket 03：连接健康定时巡检（P1）
 
-**对应需求：** 数据源缺失能力盘点 §6 第 3 行 | **优先级：** P1 | **模块：** yak-ops-business-datasource
+**对应需求：** 数据源缺失能力盘点 §6 第 3 行 | **优先级：** P1 | **模块：** data-ops-business-datasource
 
 **What to build：** `conn_status` 目前只有手动 `testSaved` 会写（`DataSourceConnectionTester.java:27-45`），summary 卡/首页数字长期失真。模块内新增低频探活 worker，按项目轮转回写状态。
 
@@ -14,7 +14,7 @@
 - [x] `@EnableScheduling` 模块内开关类 + Worker，properties 挂 `DataSourceProperties`
 - [x] DAO `selectDistinctProjectIds()`；探针循环不因单个源失败中断
 - [x] 单测：mock Tester 抛异常仍继续、disabled 时不跑、重入跳过
-- [x] `./mvnw -q -o -pl yak-ops-business/yak-ops-business-datasource -am test` 绿
+- [x] `./mvnw -q -o -pl data-ops-business/data-ops-business-datasource -am test` 绿
 
 > 2026-09-22 落地：`DataSourceSchedulingConfiguration` + `connection/DataSourceHealthProbeWorker`（`interval-ms`/`initial-delay-ms` 占位符直读 Environment，`enabled` 走 properties 绑定可动态关）；`DataSourceRepository#distinctProjectIds()` 为唯一跨项目读取口，只回 project_id。worker 单测 5/5、模块 131/131 绿。
 

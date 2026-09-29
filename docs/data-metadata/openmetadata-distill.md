@@ -208,7 +208,7 @@ fqnHash varchar(256) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,            
 
 ### 2.3 与 yak-ops 既有表的对照（关键：不要建第三套真相）
 
-我们已经有一张边表了。`yak-ops-business-lineage` 的基线
+我们已经有一张边表了。`data-ops-business-lineage` 的基线
 （`.../db/migration/yak-lineage/V1__baseline_lineage.sql`）：
 
 | OM | yak-ops lineage | 差异 |
@@ -252,7 +252,7 @@ OM 每个数据库连接器都要自己实现反射（`ingestion/src/metadata/in
 ### 3.2 判定：方言层的适用范围要重新划
 
 **✅ 我们不需要为"结构采集"写方言层。** 证据在 SPI 本身——
-`yak-ops-plugins/yak-ops-plugin-datasource/*/src/main/java/io/yak/ops/spi/datasource/DataSourceCatalog.java`：
+`data-ops-plugins/data-ops-plugin-datasource/*/src/main/java/io/yak/ops/spi/datasource/DataSourceCatalog.java`：
 
 ```java
 List<String> listDatabases();
@@ -269,7 +269,7 @@ List<DataSourceColumn> listColumns(DataSourceTablePath tablePath);
 
 **❌ 但 SPI 覆盖不到的部分必须自己开方言口。** `DataSourceCatalog` 里**没有**：行数、存储字节量、
 分区、最后 DDL 时间、热点/倾斜。**这些只能按方言写 SQL。** yak-ops 已经付过一次这笔钱并踩过坑：
-`yak-ops-business-lifecycle/…/stats/StorageSnapshotService.java` 的 `statementsFor()`
+`data-ops-business-lifecycle/…/stats/StorageSnapshotService.java` 的 `statementsFor()`
 先试 `SHOW DATA FROM \`db\``（Doris 系，因为 `information_schema.TABLES` 在 Doris 上
 `DATA_LENGTH` 恒为 0），语法报错再回落到标准 `information_schema` 查询。
 这条"候选语句按序尝试、首个可用即采纳 + 库名过 `SAFE_DB` 白名单才拼 SQL"的模式
@@ -338,7 +338,7 @@ plan 里以"同表同键、后续加 claim 列"的方式留出。
 `openmetadata-service/…/apps/scheduler/AppScheduler.java` —— OM 的后端内调度器。
 （注意：这跟 §0 说的"连接器不在 JVM"不矛盾——JVM 里跑的是"触发"，被触发的采集进程是 Python。）
 
-**✅ yak-ops 完全同构且已有实现**，不必参考 OM：`yak-ops-business-lifecycle/…/schedule/`
+**✅ yak-ops 完全同构且已有实现**，不必参考 OM：`data-ops-business-lifecycle/…/schedule/`
 的 Bridge + Handler 两段式——`LifecycleScheduleEngineBridge` 用 `YakScheduleGateway` 按项目登记
 幂等 cron（`ensure()` 先 `gateway.snapshot(name).isPresent()` 短路），
 `LifecycleTtlScheduleHandler` 实现 `ScheduleHandler`，从 payload 取 `projectId` 后用

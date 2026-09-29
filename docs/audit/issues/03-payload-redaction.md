@@ -1,6 +1,6 @@
 # Ticket 03：敏感脱敏 + 可选请求体留痕（P1）
 
-**对应需求：** 全量审计方案 M1 | **优先级：** P1 | **阻塞于：** 02 | **模块：** yak-ops-business-audit
+**对应需求：** 全量审计方案 M1 | **优先级：** P1 | **阻塞于：** 02 | **模块：** data-ops-business-audit
 
 **What to build：** 对显式声明 `@Auditable(recordPayload=true)` 的接口，把（脱敏后的）请求体写入 `yak_audit_operation.metadata_json.payload`，让审计能回答"改成了什么"；未声明的接口维持 02 的 method+path 底账不记 body。
 

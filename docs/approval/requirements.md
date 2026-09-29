@@ -85,7 +85,7 @@ Yak Ops 数据平台多个治理动作需要"先审后生效"：数据标准发�
 4. 错误码段 **49001~49099**;权限码 `data-approval:read/create/approve/manage`。
 5. 一切列表分页;待办角标等聚合走固定查询预算,失败不伪造 0(home-overview-contract)。
 6. 回调异常必须能回滚审批动作 → 同事务;禁止在回调里做跨进程 HTTP。
-7. 前端 `yak-ops-ui` 下 `.md` 只读;新菜单码登记 `securityMenuCodes.ts` 并过契约测试。
+7. 前端 `data-ops-ui` 下 `.md` 只读;新菜单码登记 `securityMenuCodes.ts` 并过契约测试。
 
 ## 七、预期效果
 

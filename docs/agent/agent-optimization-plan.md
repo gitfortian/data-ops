@@ -3,7 +3,7 @@
 > **状态：已被取代（superseded）**——本文的稳定性/可观测性/体验项目已并入《[data-agent-development-plan.md](data-agent-development-plan.md)》统一排期（含本体语义线合并与工作量修正），执行以新文档为准；本文保留为历史设计论证，不再单独维护。
 >
 > 日期：2026-08-27
-> 适用对象：`yak-ops-business-agent`（AgentScope ReActAgent · NL2Query · SSE 对话）+ `yak-ops-ui` ai-agent 页面
+> 适用对象：`data-ops-business-agent`（AgentScope ReActAgent · NL2Query · SSE 对话）+ `data-ops-ui` ai-agent 页面
 > 背景：内部使用，单模型 OpenAI 协议，不涉及计费与多租户。聚焦**可观测性**与**稳定性**。
 > 依据：AutoGPT 平台蒸馏、AutoGPT 前端体验蒸馏、Open WebUI 全栈蒸馏（详见 `knowledge-docs/agent/`）
 
@@ -195,7 +195,7 @@
 
 ---
 
-## 六、体验层详细设计（yak-ops-ui）
+## 六、体验层详细设计（data-ops-ui）
 
 ### 6.1 SSE 渲染管线（P1）
 

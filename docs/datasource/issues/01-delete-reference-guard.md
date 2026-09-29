@@ -1,6 +1,6 @@
 # Ticket 01：数据源删除/变更引用守卫（P0）
 
-**对应需求：** 数据源模块缺失能力盘点（docs/v1/modules/数据源-现状与能力分析.md §6 第 1 行） | **优先级：** P0 | **模块：** yak-ops-business-datasource + 各下游模块
+**对应需求：** 数据源模块缺失能力盘点（docs/v1/modules/数据源-现状与能力分析.md §6 第 1 行） | **优先级：** P0 | **模块：** data-ops-business-datasource + 各下游模块
 
 **What to build：** 删除数据源前先跨模块查询「谁在引用这个 ID」，被引用则拒绝删除并在错误信息里返回引用清单（模块 + 条数）。新增 `GET /api/v1/data-source/{id}/references` 只读接口供前端主动展示。
 
@@ -28,6 +28,6 @@
 - [x] 8 个下游模块各出 1 个 `@Component` Provider（QueryWrapper selectCount，零 pom 改动）
 - [x] 单测：Manager 守卫 3 例 + references 清单 1 例 + 每 Provider 至少 1 例；架构矩阵加 api 桶
 - [ ] 前端：删除失败时引用清单经全局错误通知透出（`businessErrorMode reject` 链路已具备，无需改造；如消息过长在 DataSourceCard 删除确认文案处补提示）
-- [x] `./mvnw -q -o -pl yak-ops-business/yak-ops-business-datasource -am test` 绿（common 先 `install -DskipTests`，见项目记忆）
+- [x] `./mvnw -q -o -pl data-ops-business/data-ops-business-datasource -am test` 绿（common 先 `install -DskipTests`，见项目记忆）
 
 **验证边界：** 新 Java 类不由 Agent 重启验证；真机删除拦截待用户 IntelliJ 重启后确认。

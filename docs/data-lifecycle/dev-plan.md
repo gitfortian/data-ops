@@ -4,9 +4,9 @@
 
 > 与 [model dev-plan.md《硬性开发约束》](../model/dev-plan.md) 一致，本节为生命周期模块适用的硬性要求；与任何交付进度冲突时以约束为准。
 
-1. **契约先行**：`yak-ops-business-lifecycle` 根目录维护契约文件集（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW）；每个 ticket 开工第一步更新契约文件集，契约 diff 先于代码 diff。
-2. **前端契约文件只读**：`yak-ops-ui/` 下所有 `.md` 绝不修改；新菜单 menuCode 需同步登记 `src/constants/securityMenuCodes.ts` 并过 `navigationMenuContract.test.ts`。
-3. **项目全局规范**：`CODE_STYLE.md`、`yak-ops-ui/FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`（project_id 只取服务端可信上下文、不建物理外键）、`docs/home-overview-contract.md`、菜单授权契约。
+1. **契约先行**：`data-ops-business-lifecycle` 根目录维护契约文件集（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW）；每个 ticket 开工第一步更新契约文件集，契约 diff 先于代码 diff。
+2. **前端契约文件只读**：`data-ops-ui/` 下所有 `.md` 绝不修改；新菜单 menuCode 需同步登记 `src/constants/securityMenuCodes.ts` 并过 `navigationMenuContract.test.ts`。
+3. **项目全局规范**：`CODE_STYLE.md`、`data-ops-ui/FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`（project_id 只取服务端可信上下文、不建物理外键）、`docs/home-overview-contract.md`、菜单授权契约。
 4. **交互原则**：`docs/INTERACTION_PRINCIPLES.md`——能默认就默认（粒度=日、end=3、prefix=p）、能带出就不填（三段值随分层预填、编码自动生成）、危险操作必过预览确认。
 5. **数据库迁移**：自持 `db/migration/yak-lifecycle` V1 起编，历史表 `flyway_schema_history_lifecycle`；菜单注册进 yak-security 链，取 **V2031**。
 6. **错误码段**：47001~47099。权限码 `data-lifecycle:read/create/update/delete`。

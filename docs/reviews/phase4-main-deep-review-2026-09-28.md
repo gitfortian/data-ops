@@ -42,7 +42,7 @@ CODE_STYLE §14 要求保护领域行为、幂等/恢复和架构边界。这里
 
 ### S-02 [P2] TypeScript 未正常启动也能被报告为通过
 
-**位置**：[consumption-checks.yml:79](D:/tianxy/code/data-ops/.github/workflows/consumption-checks.yml:79)、[check-consumption-type-errors.mjs:23](D:/tianxy/code/data-ops/yak-ops-ui/scripts/check-consumption-type-errors.mjs:23)。
+**位置**：[consumption-checks.yml:79](D:/tianxy/code/data-ops/.github/workflows/consumption-checks.yml:79)、[check-consumption-type-errors.mjs:23](D:/tianxy/code/data-ops/data-ops-ui/scripts/check-consumption-type-errors.mjs:23)。
 
 工作流容忍 tsc 非零退出，checker 只识别 `error TS数字` 行。因此 `error Command "tsc" not found.` 这样的启动失败既没有业务文件诊断，也被输出为 PASS、退出 0。已用合成失败日志实际复现。
 
@@ -52,7 +52,7 @@ CODE_STYLE §14 要求验证规则可执行；“没有解析到诊断”不能�
 
 ### S-03 [P2] 并发重复 Usage 投递被误报为 Provider 不可用
 
-**位置**：[UsageEvidenceService.java:20](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/UsageEvidenceService.java:20)、[MybatisUsageEvidenceRepository.java:37](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/persistence/MybatisUsageEvidenceRepository.java:37)、[V2__usage_evidence_truth.sql:19](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/resources/db/migration/yak-consumption/V2__usage_evidence_truth.sql:19)。
+**位置**：[UsageEvidenceService.java:20](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/UsageEvidenceService.java:20)、[MybatisUsageEvidenceRepository.java:37](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/persistence/MybatisUsageEvidenceRepository.java:37)、[V2__usage_evidence_truth.sql:19](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/resources/db/migration/yak-consumption/V2__usage_evidence_truth.sql:19)。
 
 `findByDeduplicationId → insert` 没有处理两实例同时读到不存在的竞争。唯一键保证不产生第二行，但输者收到 `DuplicateKeyException`；两个 Normalizer 捕获后返回 `UNAVAILABLE`，把正常重复投递解释成证据服务故障。临时 Java probe 已验证异常外溢路径。
 
@@ -64,7 +64,7 @@ CODE_STYLE §14 要求验证规则可执行；“没有解析到诊断”不能�
 
 ### F-01 [P1] 真实生产者回链不能返回实际 Development 对象
 
-**位置**：[DatasetDataProductProvider.java:113](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:113)、[CanonicalProductService.java:83](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/discovery/CanonicalProductService.java:83)、[task/index.tsx:10](D:/tianxy/code/data-ops/yak-ops-ui/src/pages/development/data-development/task/index.tsx:10)。
+**位置**：[DatasetDataProductProvider.java:113](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:113)、[CanonicalProductService.java:83](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/discovery/CanonicalProductService.java:83)、[task/index.tsx:10](D:/tianxy/code/data-ops/data-ops-ui/src/pages/development/data-development/task/index.tsx:10)。
 
 SQL_QUERY Dataset 的版本没有 TaskAsset 来源，实际字段值为 0，Provider 仍创建 `TASK_ASSET:0`，链接为 `/data-development/task/0`。QUERY_REVISION 的 TaskAsset ID 也不能直接当作 Development Node ID。该前端路由还会无条件重定向 `/data-development`，丢失定位对象。
 
@@ -74,7 +74,7 @@ SQL_QUERY Dataset 的版本没有 TaskAsset 来源，实际字段值为 0，Prov
 
 ### F-02 [P1] 必填 Quality/Security/Lineage 分区缺失，READY 空事实不足以构成治理证据
 
-**位置**：[DatasetDataProductProvider.java:105](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:105)、[DataServiceDataProductProvider.java:118](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DataServiceDataProductProvider.java:118)、[CanonicalProductService.java:98](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/discovery/CanonicalProductService.java:98)。
+**位置**：[DatasetDataProductProvider.java:105](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:105)、[DataServiceDataProductProvider.java:118](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DataServiceDataProductProvider.java:118)、[CanonicalProductService.java:98](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/discovery/CanonicalProductService.java:98)。
 
 两 Provider 只提供 source-governance、ownership、visibility、asset 四类 section。quality、security、lineage/provenance 连明确状态也没有。Canonical 把 section 复制为 `facts={}`，有 Asset 时补几项 Asset 摘要，并未组合 Quality/Security/Lineage 的来源证据。
 
@@ -84,7 +84,7 @@ SQL_QUERY Dataset 的版本没有 TaskAsset 来源，实际字段值为 0，Prov
 
 ### F-03 [P2] Data Service interface 没有完整请求和响应 schema
 
-**位置**：[DataServiceContractPayload.java:6](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/model/DataServiceContractPayload.java:6)、[DataServicePublisher.java:145](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/publication/DataServicePublisher.java:145)、[DataServiceDocumentationReader.java:31](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/documentation/DataServiceDocumentationReader.java:31)。
+**位置**：[DataServiceContractPayload.java:6](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/model/DataServiceContractPayload.java:6)、[DataServicePublisher.java:145](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/publication/DataServicePublisher.java:145)、[DataServiceDocumentationReader.java:31](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/documentation/DataServiceDocumentationReader.java:31)。
 
 canonical payload 只有 runtimePath、参数名及运行设置，没有 method/protocol、参数类型/必填约束或响应 schema。发布器已经保存 ParameterDoc/ResponseFieldDoc，当前投影未复用这份真实契约，集成用户仍需离开规范详情拼接接口定义。
 
@@ -92,7 +92,7 @@ canonical payload 只有 runtimePath、参数名及运行设置，没有 method/
 
 ### F-04 [P1] 已发布 Dataset 的停用被混入不可发现状态
 
-**位置**：[DatasetDataProductProvider.java:61](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:61)、[DatasetDataProductProvider.java:152](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:152)。
+**位置**：[DatasetDataProductProvider.java:61](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:61)、[DatasetDataProductProvider.java:152](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:152)。
 
 已有 immutable version 的 Dataset 转 OFFLINE 后，get 返回 NOT_DISCOVERABLE，search 也排除它。Dataset 来源契约规定下线只改变身份状态，不修改已发布版本，只禁止 Query；F-004 又要求停用不能改写发布 lifecycle。当前 canonical 上下文随运行停用消失，用户无法从这里理解停用原因或进入既有证据。Impact API 本身仍可读关系记录，不能把此问题写成“历史证据已删除”。
 
@@ -110,7 +110,7 @@ captureConsumption 只检查 FOUND、ProductKey 和 navigation 非 null。返回
 
 ### F-06 [P1] 通用只读用户能够冒充 Consumer 创建和取消订阅
 
-**位置**：[SubscriptionController.java:29](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/SubscriptionController.java:29)、[SubscriptionService.java:35](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/SubscriptionService.java:35)、[SubscriptionService.java:82](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/SubscriptionService.java:82)。
+**位置**：[SubscriptionController.java:29](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/SubscriptionController.java:29)、[SubscriptionService.java:35](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/SubscriptionService.java:35)、[SubscriptionService.java:82](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/SubscriptionService.java:82)。
 
 创建/取消入口仅继承 asset:read。ConsumerRef 完全来自请求；service 只检查 actor 非空、当前 Project 和产品可发现性，不验证操作者能否代表该 User/Team/Dashboard/Job/Service，也不验证 consumer 是否真实存在、属于哪个 Project。取消时仅按 Project+subscriptionId 定位，任意同项目读者可撤销他人的声明依赖。
 
@@ -120,7 +120,7 @@ captureConsumption 只检查 FOUND、ProductKey 和 navigation 非 null。返回
 
 ### F-07 [P1] 实际 Query/Invoke 到 Usage 的生产链路没有闭合，最近 200 条回放也不足以保证恢复
 
-**位置**：[DatasetUsageEvidenceSynchronizer.java:20](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/source/DatasetUsageEvidenceSynchronizer.java:20)、[DataServiceUsageEvidenceSynchronizer.java:25](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/source/DataServiceUsageEvidenceSynchronizer.java:25)、[DataServiceUsageEvidenceController.java:38](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/source/DataServiceUsageEvidenceController.java:38)。
+**位置**：[DatasetUsageEvidenceSynchronizer.java:20](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/source/DatasetUsageEvidenceSynchronizer.java:20)、[DataServiceUsageEvidenceSynchronizer.java:25](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/source/DataServiceUsageEvidenceSynchronizer.java:25)、[DataServiceUsageEvidenceController.java:38](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/source/DataServiceUsageEvidenceController.java:38)。
 
 全仓生产调用检索确认 Dataset 同步器只有定义和内部重载调用，没有 Controller、事件、后台任务或实际执行入口调用它。成功 Query 只记录 QueryPerformance，normalized 表不会因这次 Query 自动产生证据。Golden 单测由测试代码显式调用 normalizer，不能证明生产接线。
 
@@ -130,7 +130,7 @@ Data Service 也没有自动交付调用者，只有人工 POST synchronize 和�
 
 ### F-08 [P1] Impact 把未归一化、未归属和来源写入缺口显示为 EMPTY
 
-**位置**：[ConsumerImpactService.java:43](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/ConsumerImpactService.java:43)、[DatasetQueryPerformanceRecorder.java:94](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-dataset/src/main/java/io/yak/ops/business/dataset/observability/DatasetQueryPerformanceRecorder.java:94)、[DataServiceInvoker.java:126](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/execution/DataServiceInvoker.java:126)。
+**位置**：[ConsumerImpactService.java:43](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/relationship/ConsumerImpactService.java:43)、[DatasetQueryPerformanceRecorder.java:94](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-dataset/src/main/java/io/yak/ops/business/dataset/observability/DatasetQueryPerformanceRecorder.java:94)、[DataServiceInvoker.java:126](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/execution/DataServiceInvoker.java:126)。
 
 Impact 只读 normalized repository，列表为空就 EMPTY。它没有来源 provider 健康、来源写入缺口、待归一化积压、anonymous/legacy 未归属结果等输入。Normalizer 的 GAP/UNAVAILABLE 结果没有持久状态供 Impact 读取；来源写入失败只留 fallback/日志，进程重启后本地记录可能消失。于是“成功调用已发生但证据尚未投递/无法归属/已丢失”与“已确认没有 Usage”呈相同状态。
 
@@ -140,7 +140,7 @@ Impact 只读 normalized repository，列表为空就 EMPTY。它没有来源 pr
 
 ### F-09 [P1] Access 永久硬编码 UNAVAILABLE，未表达主体、动作和调用平面
 
-**位置**：[DatasetDataProductProvider.java:123](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:123)、[DataServiceDataProductProvider.java:136](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DataServiceDataProductProvider.java:136)、[AccessProjection.java:4](D:/tianxy/code/data-ops/yak-ops-business/yak-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/model/AccessProjection.java:4)。
+**位置**：[DatasetDataProductProvider.java:123](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DatasetDataProductProvider.java:123)、[DataServiceDataProductProvider.java:136](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/provider/source/DataServiceDataProductProvider.java:136)、[AccessProjection.java:4](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-consumption/src/main/java/io/yak/ops/business/consumption/product/model/AccessProjection.java:4)。
 
 两 Provider 对每个产品都返回“由 #103 交付”的 UNAVAILABLE，Discovery/Canonical 没有后续 enrichment；AccessProjection 只有 decision/state/reason，没有主体、动作、plane 或可执行下一步。生产里真实 RBAC/API Key/IP gate 已部分实现，但规范详情无法解释谁能看、谁能 Query/Invoke，也无法区分 provider 真故障和能力尚未接入。前端仍显示“待 #103 接入”，而 #103 已关闭。
 
@@ -150,7 +150,7 @@ Dataset Query 当前只调用通用 dataset:query RBAC。未发现 Security owne
 
 ### F-10 [P1] 规范消费页面尚未接入订阅、Usage、Consumer/Impact 或明确消费动作
 
-**位置**：[detail.tsx:72](D:/tianxy/code/data-ops/yak-ops-ui/src/pages/data-analysis/consumption/detail.tsx:72)、[detail.tsx:123](D:/tianxy/code/data-ops/yak-ops-ui/src/pages/data-analysis/consumption/detail.tsx:123)、[api.ts:32](D:/tianxy/code/data-ops/yak-ops-ui/src/services/consumption/api.ts:32)。
+**位置**：[detail.tsx:72](D:/tianxy/code/data-ops/data-ops-ui/src/pages/data-analysis/consumption/detail.tsx:72)、[detail.tsx:123](D:/tianxy/code/data-ops/data-ops-ui/src/pages/data-analysis/consumption/detail.tsx:123)、[api.ts:32](D:/tianxy/code/data-ops/data-ops-ui/src/services/consumption/api.ts:32)。
 
 页面只请求 getProduct，展示来源管理入口、契约、治理和字段/参数。services/consumption 没有订阅创建/撤销、Usage 或 Impact 客户端；页面没有消费动作 CTA、声明依赖操作、成功消费证据、Known Consumer 或其稳定目标链接。DataProductView 也没有 usage/subscription section。后端有关系接口不能替代用户 Journey。
 
@@ -173,7 +173,7 @@ GitHub #100–#104 均为 closed。#104 最后评论明确记录“administrativ
 ### 已执行的后端检查
 
 ```powershell
-mvn -B -pl yak-ops-business/yak-ops-business-consumption -am '-Dtest=*Golden*,ConsumptionContractFoundationTest,*DataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,*UsageEvidenceNormalizerTest,ConsumerImpactServiceTest,DatasetQueryPerformanceRecorderTest,DatasetQueryPerformanceReaderTest,DatasetQueryPerformanceStoreAdapterTest' '-Dsurefire.failIfNoSpecifiedTests=false' test
+mvn -B -pl data-ops-business/data-ops-business-consumption -am '-Dtest=*Golden*,ConsumptionContractFoundationTest,*DataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,*UsageEvidenceNormalizerTest,ConsumerImpactServiceTest,DatasetQueryPerformanceRecorderTest,DatasetQueryPerformanceReaderTest,DatasetQueryPerformanceStoreAdapterTest' '-Dsurefire.failIfNoSpecifiedTests=false' test
 ```
 
 首次执行被 Data Service 失败阻断。为收集所有模块结果，第二次加 `-Dmaven.test.failure.ignore=true`；**第二次日志中的 BUILD SUCCESS 不代表测试通过**。
@@ -200,7 +200,7 @@ mvn -B -pl yak-ops-business/yak-ops-business-consumption -am '-Dtest=*Golden*,Co
 - 独立来源 probe：SQL_QUERY task:0、真实 Data Service producer 空链、OFFLINE→NOT_DISCOVERABLE、四类 section 无完整治理、interface 字段不完整。
 - 直接取原验收脚本函数做 Node vm probe：坏导航、缺治理、Access unavailable、Usage empty、0 Consumer 的响应仍被接受。
 - 合成 tsc 启动失败日志被 checker 返回 PASS。
-- Boot 定向 assembly 检查：`mvn -B -pl yak-ops-boot -am '-Dtest=ConsumptionRuntimeAssemblyTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`，1 项通过、60 个 reactor 项编译成功。该测试只校验 Controller 在 classpath 及 component scan root 内；没有启动完整 Spring context，更不是 HTTP/E2E 验收。
+- Boot 定向 assembly 检查：`mvn -B -pl data-ops-boot -am '-Dtest=ConsumptionRuntimeAssemblyTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`，1 项通过、60 个 reactor 项编译成功。该测试只校验 Controller 在 classpath 及 component scan root 内；没有启动完整 Spring context，更不是 HTTP/E2E 验收。
 
 所有 probe 在系统临时目录运行，没有改动生产代码，也没有创建/修改真实外部订阅或调用生产数据。未执行真实部署 Golden E2E、MySQL 多实例竞争/retention 集成或受控故障注入；本报告不将其标为通过。
 
@@ -233,9 +233,9 @@ mvn -B -pl yak-ops-business/yak-ops-business-consumption -am '-Dtest=*Golden*,Co
 
 ## 修复分支非人工验证
 
-- `mvn -B -pl yak-ops-boot -am -DskipTests compile`：通过（60 个 reactor 模块）。
+- `mvn -B -pl data-ops-boot -am -DskipTests compile`：通过（60 个 reactor 模块）。
 - 扩展后的 CI 后端选择通过：Consumption 69 项、Dataset 查询诊断 8 项、Data Service Golden 2 项，合计 79 项；初次运行中暴露的 fixture/断言问题已同步修正。
-- Boot assembly 门禁通过：`mvn -B -pl yak-ops-boot -am '-Dtest=ConsumptionRuntimeAssemblyTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`，1 项测试通过，60 个 reactor 模块成功。
+- Boot assembly 门禁通过：`mvn -B -pl data-ops-boot -am '-Dtest=ConsumptionRuntimeAssemblyTest' '-Dsurefire.failIfNoSpecifiedTests=false' test`，1 项测试通过，60 个 reactor 模块成功。
 - 全仓 `yarn tsc --noEmit --pretty false` 仍有 184 条历史诊断；修复后的 changed-surface checker 通过，Phase 4 消费面无诊断。
 - `git diff --check` 及修改的 Node 脚本 `node --check` 均通过。
 - 真实环境 Golden E2E、人工权限/失败/恢复场景和真实环境脚本未运行，按本次要求留待人工测试；因此这里的自动化通过不代表 F-011 的产品验收完成。

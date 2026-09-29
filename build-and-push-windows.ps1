@@ -183,9 +183,9 @@ Distribution build   : skipped (uses existing tar.gz)
 "@
 
 Write-Step "Checking prebuilt Yak Ops distribution"
-$DistFiles = @(Get-ChildItem ".\yak-ops-dist\target\yak-ops-*.tar.gz" -File -ErrorAction SilentlyContinue)
+$DistFiles = @(Get-ChildItem ".\data-ops-dist\target\yak-ops-*.tar.gz" -File -ErrorAction SilentlyContinue)
 if ($DistFiles.Count -eq 0) {
-    throw "No distribution archive found at yak-ops-dist\target\yak-ops-*.tar.gz"
+    throw "No distribution archive found at data-ops-dist\target\yak-ops-*.tar.gz"
 }
 if ($DistFiles.Count -gt 1) {
     throw "Multiple distribution archives were found. Keep only the archive that should be published."

@@ -1,6 +1,6 @@
 # 数据资产（Asset Center）—— 菜单与权限契约
 
-> 注册迁移：`yak-ops-boot/src/main/resources/yak-security/db/migration/V2032__register_data_asset_menu.sql`（幂等，模板=V2031 lifecycle 单组式，5 步结构：权限根 → 页面权限 → 菜单目录 → 授予 root 角色 → 子菜单隐含父组）。
+> 注册迁移：`data-ops-boot/src/main/resources/yak-security/db/migration/V2032__register_data_asset_menu.sql`（幂等，模板=V2031 lifecycle 单组式，5 步结构：权限根 → 页面权限 → 菜单目录 → 授予 root 角色 → 子菜单隐含父组）。
 
 ## 组与页
 

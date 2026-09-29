@@ -1,6 +1,6 @@
 # yak-ops Agent 模块功能总结
 
-> 日期：2026-08-27 | 模块：`yak-ops-business-agent` + `yak-ops-ui` ai-agent 页面
+> 日期：2026-08-27 | 模块：`data-ops-business-agent` + `data-ops-ui` ai-agent 页面
 > 定位：Yak Ops 平台的**自然语言数据分析智能体**，业务人员用自然语言提问，Agent 在平台数据集与语义层上完成取数、统计与报告生成，以 SSE 流式对话返回结果与证据。
 
 ---
@@ -306,7 +306,7 @@ OFFLINE 数据集一律拒绝查询，无绕行开关。
 
 ---
 
-## 八、前端（yak-ops-ui）
+## 八、前端（data-ops-ui）
 
 ### 文件结构
 

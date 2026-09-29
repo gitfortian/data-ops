@@ -180,12 +180,12 @@ docker compose down
 - Yarn Classic
 - Maven，或项目自带的 Maven Wrapper
 - 本地运行时使用 MySQL 8.0
-- 在同一个 Maven 本地仓库中安装 `yak-framework:1.0.0-SNAPSHOT`
+- 在同一个 Maven 本地仓库中安装 `data-ops-framework:1.0.0-SNAPSHOT`
 
 先构建前端：
 
 ```bash
-cd yak-ops-ui
+cd data-ops-ui
 yarn install
 yarn build
 cd ..
@@ -206,7 +206,7 @@ mvnw.cmd clean package -DskipTests
 最终发行包生成在：
 
 ```text
-yak-ops-dist/target/
+data-ops-dist/target/
 ```
 
 更详细的环境配置与部署方式请查看 [Yak Ops 项目文档](https://doc.yak-ops.com/)。
@@ -217,13 +217,13 @@ Yak Ops 尽量把产品领域、运行时契约和具体集成分开，避免某
 
 ```text
 ┌─────────────────────────────────────────────────────┐
-│                    yak-ops-ui                       │
+│                    data-ops-ui                       │
 │              React / Umi / Ant Design               │
 └───────────────────────┬─────────────────────────────┘
                         │ HTTP / WebSocket
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│                   yak-ops-boot                      │
+│                   data-ops-boot                      │
 │                Spring Boot Runtime                  │
 └───────────────────────┬─────────────────────────────┘
                         │
@@ -251,18 +251,18 @@ Yak Ops 尽量把产品领域、运行时契约和具体集成分开，避免某
 
 ```text
 yak-ops
-├── yak-ops-bom           依赖版本对齐
-├── yak-ops-common        公共基础能力
-├── yak-ops-spi           扩展契约
-├── yak-ops-core          平台核心能力
-├── yak-ops-business      各产品业务域
-├── yak-ops-plugins       数据源 / 存储 / 任务 / 告警插件
-├── yak-ops-boot          Spring Boot 应用入口
-├── yak-ops-ui            Web 前端
-└── yak-ops-dist          发行包组装
+├── data-ops-bom           依赖版本对齐
+├── data-ops-common        公共基础能力
+├── data-ops-spi           扩展契约
+├── data-ops-core          平台核心能力
+├── data-ops-business      各产品业务域
+├── data-ops-plugins       数据源 / 存储 / 任务 / 告警插件
+├── data-ops-boot          Spring Boot 应用入口
+├── data-ops-ui            Web 前端
+└── data-ops-dist          发行包组装
 ```
 
-Yak Ops 同时基于 [yak-framework](https://github.com/weifuwan/yak-framework) 复用安全、调度、工作流运行时等通用基础设施。
+Yak Ops 同时基于 [data-ops-framework](https://github.com/weifuwan/yak-framework) 复用安全、调度、工作流运行时等通用基础设施。
 
 ## Project Space 与治理
 
@@ -312,7 +312,7 @@ Yak Ops 在 GitHub 上公开开发。Bug、产品建议、设计讨论、文档�
 3. Pull Request 尽量只解决一个清晰问题，并说明它改变了什么用户行为；
 4. 如果修改引入了新的契约，同步补充测试和文档。
 
-修改产品行为前，请先阅读 [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) 和 [`docs/product/`](docs/product/) 产品基线；AI / Coding Agent 统一从 [`AGENTS.md`](AGENTS.md) 进入仓库上下文。提交代码前还需阅读 [`CODE_STYLE.md`](CODE_STYLE.md)，前端修改应遵循 [`yak-ops-ui/FRONTEND_CODE_STYLE.md`](yak-ops-ui/FRONTEND_CODE_STYLE.md)。
+修改产品行为前，请先阅读 [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) 和 [`docs/product/`](docs/product/) 产品基线；AI / Coding Agent 统一从 [`AGENTS.md`](AGENTS.md) 进入仓库上下文。提交代码前还需阅读 [`CODE_STYLE.md`](CODE_STYLE.md)，前端修改应遵循 [`data-ops-ui/FRONTEND_CODE_STYLE.md`](data-ops-ui/FRONTEND_CODE_STYLE.md)。
 
 如果 Yak Ops 对你有帮助，一个 ⭐ 可以让更多人看到这个项目。
 

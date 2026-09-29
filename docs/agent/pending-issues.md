@@ -144,7 +144,7 @@
 
 ### 相关引用（不在本表重复跟踪）
 
-- Agent 模块自身"已知独立 Gap"（Python 沙箱化 / 数据集可见性授权 / 分组发现 / Skill / 报告分享）：见 `yak-ops-business-agent/REQUIREMENTS.md` 与 `DOMAIN.md` 对应小节。
+- Agent 模块自身"已知独立 Gap"（Python 沙箱化 / 数据集可见性授权 / 分组发现 / Skill / 报告分享）：见 `data-ops-business-agent/REQUIREMENTS.md` 与 `DOMAIN.md` 对应小节。
 
 ---
 

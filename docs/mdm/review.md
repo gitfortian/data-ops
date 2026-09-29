@@ -2,7 +2,7 @@
 
 > 评审日期：2026-09-19　分支：feature/harness
 > 口径基线：[requirement.md](./requirement.md) / [design.md](./design.md) / [menu.md](./menu.md) / [dev-plan.md](./dev-plan.md)（D-M1~D-M11）
-> 评审范围：`yak-ops-business-mdm`（后端 ticket 50~62 全部落地）+ `yak-ops-ui/src/pages/mdm`、`services/mdm`（前端仅 P0 落地）+ yak-security 菜单注册 V2024~V2028
+> 评审范围：`data-ops-business-mdm`（后端 ticket 50~62 全部落地）+ `data-ops-ui/src/pages/mdm`、`services/mdm`（前端仅 P0 落地）+ yak-security 菜单注册 V2024~V2028
 > 排序原则：**先业务流程实现通畅 → 再交互友好与业务闭环 → 最后 UI 高级感**
 
 ---
@@ -31,7 +31,7 @@
 
 ### 1.1 主数据审批菜单已注册但前端无页面 → 用户点菜单 404
 
-- V2028 已在 `yak-security` 注册 `mdm-approval`（route `/mdm/approval`，visible=1，`V2028__register_mdm_approval_menu.sql:48`），但 `navigation.ts` 无该路由、`securityMenuCodes.ts` 无 `mdmApproval`、页面目录不存在；`navigationMenuContract.test.ts` 的 `CATALOG_EXTENSION_MIGRATIONS` 只列到 V2027 → **契约漂移 + 线上可见菜单直接点开 404**。
+- V2028 已在 `data-security` 注册 `mdm-approval`（route `/mdm/approval`，visible=1，`V2028__register_mdm_approval_menu.sql:48`），但 `navigation.ts` 无该路由、`securityMenuCodes.ts` 无 `mdmApproval`、页面目录不存在；`navigationMenuContract.test.ts` 的 `CATALOG_EXTENSION_MIGRATIONS` 只列到 V2027 → **契约漂移 + 线上可见菜单直接点开 404**。
 - **建议**：ticket 60 前端落地为独立"主数据审批"页（待我审批 / 我发起的 / 全部三个分节 + 变更内容 diff 视图 + 通过/拒绝/撤回），并把 V2028 加入契约清单。这是审批闭环（D5）唯一入口。
 
 ### 1.2 加工 SQL 无法执行——"采集→记录"是全模块第一卡死点

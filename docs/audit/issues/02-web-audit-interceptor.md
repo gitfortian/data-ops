@@ -1,6 +1,6 @@
 # Ticket 02：HTTP 写接口审计兜底拦截器 + 存量埋点合并（P0）
 
-**对应需求：** 全量审计方案 M1 核心票 | **优先级：** P0 | **模块：** yak-ops-boot + yak-ops-business-audit
+**对应需求：** 全量审计方案 M1 核心票 | **优先级：** P0 | **模块：** data-ops-boot + data-ops-business-audit
 
 **What to build：** 让全部 437 个写接口"裸奔也有底账"：新增一个 MVC 拦截器，凡未手工埋点的非 GET 请求自动落一条 `yak_audit_operation`（SUCCEEDED/FAILED、actor、project、耗时、method+path），同时保证已手工埋点的 129 个操作点**不双记、零改动**。上线即达成写接口留痕 100%（粗粒度）。
 

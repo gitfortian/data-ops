@@ -48,7 +48,7 @@ Data Development 的 Contract 不只覆盖 HTTP：
 - `lineage outbox.project_id` 在后台 Worker 中恢复为受信 `ProjectContext`；
 - Outbox 与 Node 的 project identity 不一致时直接失败，不能退化成 global read；
 - Data Development 来源的 Data Service Runtime mutation 必须从 Data Development authoring boundary 进入，通用 Data Service 管理接口不能绕过 `data-development:release`；
-- Data Service Runtime 本身仍按相邻消费投影处理，本阶段不把整个 `yak-ops-business-data-service` 偷渡成 Project Root。
+- Data Service Runtime 本身仍按相邻消费投影处理，本阶段不把整个 `data-ops-business-data-service` 偷渡成 Project Root。
 
 ## 验收门槛
 

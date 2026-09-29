@@ -1,6 +1,6 @@
 # 数仓建模业务逻辑完整方案（设计基线 v2.0）
 
-> 模块：yak-ops-business-modeling（消费 semantic / metric 只读 SPI）
+> 模块：data-ops-business-modeling（消费 semantic / metric 只读 SPI）
 > 版本：v2.0（2026-09-18，含最新决策）
 > 状态：设计基线
 > 覆盖：ODS / DIM / DWD / DWS / ADS 五层建模
@@ -13,7 +13,7 @@
 **本设计基线与 dev-plan.md《硬性开发约束》同等效力，五层建模相关所有 ticket 必须遵守。**
 
 1. 契约先行：本基线是五层建模的**权威设计来源**，ticket 的契约文件以本基线为准；
-2. `yak-ops-ui/` 下 .md 契约只读；
+2. `data-ops-ui/` 下 .md 契约只读；
 3. 不建物理外键；project_id 只取服务端可信上下文；
 4. 后端聚合用 SQL GROUP BY，不用内存聚合；
 5. ODS 轻治理、DWD 重治理（[ODS vs DWD 治理边界契约](../semantic/ods-dwd-governance-boundary.md)）；

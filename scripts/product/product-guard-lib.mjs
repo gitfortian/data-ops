@@ -45,7 +45,7 @@ export const parseYesNo = (value) => {
 
 export const extractBusinessModules = (pom) =>
   new Set(
-    [...(pom ?? "").matchAll(/<module>yak-ops-business-([^<]+)<\/module>/g)]
+    [...(pom ?? "").matchAll(/<module>(?:data|yak)-ops-business-([^<]+)<\/module>/g)]
       .map((match) => match[1].trim())
       .filter(Boolean),
   );

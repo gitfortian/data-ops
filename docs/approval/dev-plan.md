@@ -4,14 +4,14 @@
 
 ## 0. 硬性开发约束
 
-1. **契约先行**：`yak-ops-business-approval` 根目录六件套（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW）先于代码。
+1. **契约先行**：`data-ops-business-approval` 根目录六件套（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW）先于代码。
 2. **依赖方向单向**（D2）：审批中心只依赖 common/audit/datasource(可选)；业务模块依赖 approval 的 `api` 包实现 handler；审批不得 import 任何业务模块。
 3. `project_id` 只取服务端 `CurrentProject`；控制器 `@ProjectScope(PROJECT_REQUIRED)`。
 4. 无物理外键；Flyway 自持链 `db/migration/yak-approval`（历史表 `flyway_schema_history_approval`）；菜单注册 yak-security 链 **V2033**。
 5. 错误码 49001~49099；权限码 `data-approval:read/create/approve/manage`。
 6. 回调与审批动作同事务（D5）；handler 异常→整体回滚并回 49009。
 7. 在途唯一键 D6 不可放松；列表一律分页；终态清理规则（step 全 SKIPPED）保证待办查询免 join。
-8. 前端 `yak-ops-ui` 下 `.md` 只读；菜单码变更需同步 `securityMenuCodes.ts` + 契约测试（ticket 107 一起做）。
+8. 前端 `data-ops-ui` 下 `.md` 只读；菜单码变更需同步 `securityMenuCodes.ts` + 契约测试（ticket 107 一起做）。
 9. 不提交 git，除非明确要求；后端由用户 IntelliJ 重启后验证（Flyway 才生效）。
 
 ## 1. 里程碑
@@ -44,7 +44,7 @@
 
 ## 4. 验收口径
 
-- **101**：`mvnw -o -pl yak-ops-business/yak-ops-business-asset,../yak-ops-business-approval test` 绿；全 reactor compile 绿；重启后 3 张表 + 审批中心菜单可见。
+- **101**：`mvnw -o -pl data-ops-business/data-ops-business-asset,../data-ops-business-approval test` 绿；全 reactor compile 绿；重启后 3 张表 + 审批中心菜单可见。
 - **102**：流程 CRUD 单测过；停用流程发起 → 49002；软删后同码可重建。
 - **103**：两级流程全链路单测：发起→一级批→二级批→APPROVED；任一环节拒绝/撤销→终态+剩余步骤 SKIPPED；同人重复批 → 49004/49005；并发双击只成一单。
 - **104**：模型"提交审批"→ 待办出现该单 → 批准 → 模型真实 PUBLISHED（回调生效）；handler 抛错 → 审批动作失败且单据仍 PENDING（回滚可见）。

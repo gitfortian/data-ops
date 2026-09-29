@@ -4,7 +4,7 @@
 
 **What to build:** 统一主数据表 `mdm_record`(master_id 跨系统唯一、attributes 属性值、source_ids 各系统原始 ID、版本)由 **主数据加工任务**生成:MDM 按实体/属性/来源绑定**生成加工任务**(含 master_id 唯一、source_ids 多源关联的统一逻辑),交**数据开发**执行写入 mdm_record——参照 modeling 44"派生建模 → 生成加工任务 → 任务目录(task-catalog)"的成熟模式,MDM **不建执行引擎、不建采集**。采集执行与状态彻底复用 sync(离线+实时)标签任务,MDM 只查询展示。
 
-**模块归属:** yak-ops-business-mdm(+sync/数据开发/task-catalog)
+**模块归属:** data-ops-business-mdm(+sync/数据开发/task-catalog)
 
 **Blocked by:** [54 采集(复用 sync)](./54-collect-config.md), [53 识别](./53-identification.md), [22 加工任务接入数据开发](../model/issues/22-processing-task-integration.md)(机制参照)
 
@@ -21,9 +21,9 @@
 
 **验证记录(2026-09-16):**
 
-- 后端:`./mvnw -pl yak-ops-business/yak-ops-business-mdm -am test` 全绿 —— 新增 `MdmMasterSqlGeneratorTest` 6/6(master_id 口径/attributes JSON/source_ids(D4)/读取源表+UPSERT 递增/缺 PK 拒绝/缺源表拒绝);合计 31 项单测全绿;`./mvnw -pl yak-ops-boot -am validate` 通过。
+- 后端:`./mvnw -pl data-ops-business/data-ops-business-mdm -am test` 全绿 —— 新增 `MdmMasterSqlGeneratorTest` 6/6(master_id 口径/attributes JSON/source_ids(D4)/读取源表+UPSERT 递增/缺 PK 拒绝/缺源表拒绝);合计 31 项单测全绿;`./mvnw -pl data-ops-boot -am validate` 通过。
 - 前端:实体详情"记录"Tab(分页/状态筛选/master_id 搜索)+ 生成加工 SQL 弹窗(复制/跳数据开发 `/data-development/task/new`);tsc 中 mdm 相关文件零错误(总数与基线一致)。
 - 加工 SQL 仅生成文本不执行;执行引擎归数据开发(22/44 模式)。
 - 55b 依赖 sync 模块契约改动(任务标签字段 + 状态查询 API),未随本票实现,已记录为后续增量。
 - Flyway 运行时迁移效果(V6 记录表落库)需有数据库的联调环境启动应用确认。
-- 遵守硬性约束:契约文件先于代码;未修改 `yak-ops-ui` 下任何 `.md` 文件。
+- 遵守硬性约束:契约文件先于代码;未修改 `data-ops-ui` 下任何 `.md` 文件。

@@ -43,12 +43,12 @@ try {
 }
 
 const PRODUCT_PATHS = [
-  /^yak-ops-business\/[^/]+\/src\/main\//,
-  /^yak-ops-ui\/src\//,
-  /^yak-ops-core\/src\/main\//,
-  /^yak-ops-spi\/src\/main\//,
-  /^yak-ops-common\/src\/main\//,
-  /^yak-ops-boot\/src\/main\//,
+  /^(?:data|yak)-ops-business\/[^/]+\/src\/main\//,
+  /^(?:data|yak)-ops-ui\/src\//,
+  /^(?:data|yak)-ops-core\/src\/main\//,
+  /^(?:data|yak)-ops-spi\/src\/main\//,
+  /^(?:data|yak)-ops-common\/src\/main\//,
+  /^(?:data|yak)-ops-boot\/src\/main\//,
 ];
 
 const productFiles = changedFiles.filter((file) =>

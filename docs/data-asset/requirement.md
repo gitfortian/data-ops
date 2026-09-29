@@ -1,9 +1,9 @@
 # 数据资产（Asset Center）功能 —— 完整需求文档
 
-> 模块：`yak-ops-business-asset`（新建）
+> 模块：`data-ops-business-asset`（新建）
 > 版本：v1.0
 > 状态：需求基线（待评审）
-> 依赖：`modeling`（模型资产）、`metric`（指标资产）、`dataset`（数据集资产）、`dashboard`（图表/仪表盘资产）、`task-catalog`（任务资产）、`lineage`（血缘视图）、`quality`（质量摘要）、`security`（分级标签）、`lifecycle`（TTL 状态）、`audit`（操作审计）、`semantic`（分层/业务域字典）、`yak-schedule`（对账与健康度定时）
+> 依赖：`modeling`（模型资产）、`metric`（指标资产）、`dataset`（数据集资产）、`dashboard`（图表/仪表盘资产）、`task-catalog`（任务资产）、`lineage`（血缘视图）、`quality`（质量摘要）、`security`（分级标签）、`lifecycle`（TTL 状态）、`audit`（操作审计）、`semantic`（分层/业务域字典）、`data-schedule`（对账与健康度定时）
 > 被依赖：`home`（首页资产视角 KPI 可选消费）、`data-service`（资产引用展示）
 > 配套：[design.md](./design.md)（模块设计）、[information-map.md](./information-map.md)（信息来源矩阵与业务闭环）、[menu.md](./menu.md)（菜单契约）、[dev-plan.md](./dev-plan.md)（开发计划）、原型 `docs/prototypes/data-asset/`
 
@@ -215,7 +215,7 @@
 ## 1. 整体架构
 
 ```
- ┌─────────────────────────── yak-ops-business-asset ───────────────────────────┐
+ ┌─────────────────────────── data-ops-business-asset ───────────────────────────┐
  │  provider   AssetProvider SPI 聚合 + 每日/手动对账(分批游标)                   │
  │  item       台账 CRUD + 快照 upsert + 状态机(PENDING/PUBLISHED/OFFLINE/GONE)  │
  │  catalog    目录树 + 编目规则(条件→动作, dry-run) + 业务标签                    │

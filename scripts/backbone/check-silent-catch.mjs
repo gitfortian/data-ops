@@ -25,7 +25,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
-const SRC_DIRS = ['yak-ops-ui/src'];
+const SRC_DIRS = ['data-ops-ui/src'];
 const SKIP_DIRS = new Set(['node_modules', '.umi', '.umi-test', '.umi-production', 'dist', 'coverage']);
 const EXTENSIONS = ['.ts', '.tsx'];
 

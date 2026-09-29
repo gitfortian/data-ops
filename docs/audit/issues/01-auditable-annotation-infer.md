@@ -1,11 +1,11 @@
 # Ticket 01：@Auditable 注解 + 写接口操作类型推导工具（P0）
 
-**对应需求：** 全量审计方案 M1（docs/audit/issues/tickets.md） | **优先级：** P0 | **模块：** yak-ops-common + yak-ops-business-audit
+**对应需求：** 全量审计方案 M1（docs/audit/issues/tickets.md） | **优先级：** P0 | **模块：** data-ops-common + data-ops-business-audit
 
 **What to build：** 提供声明式审计语义的"词汇表"，本票**纯新增、不改任何行为**：注解被 02 的拦截器消费，也被 06–08 的语义补齐引用。
 
 **机制：**
-- 新注解 `io.yak.ops.common.audit.Auditable`（放 **common** 而非 audit 模块：全业务模块已直接/传递依赖 common，零 pom 改动；仅 yak-ops-business-job 无直依赖，届时补一行）：
+- 新注解 `io.yak.ops.common.audit.Auditable`（放 **common** 而非 audit 模块：全业务模块已直接/传递依赖 common，零 pom 改动；仅 data-ops-business-job 无直依赖，届时补一行）：
   - `String name()`（可读操作名，如"发布模型"）
   - `String type() default ""`（操作类型码，空则由 02 从路径推导）
   - `String resourceType() default ""` / `String resourceIdParam() default ""`（SpEL 或参数名，取资源标识）
@@ -20,5 +20,5 @@
 - [x] `AuditOperationTypes` 常量 + `AuditWebOperationInfer` 落在 audit 模块，仅依赖 JDK/Jackson
 - [x] 契约测试 44 例表驱动（含 /page、/test-connection、多级资源、无版本段、非法输入边界）
 - [x] 推导器为纯字符串函数（httpMethod + 路径模板入参），audit 模块零新增依赖
-- [x] `mvn -o -pl yak-ops-business/yak-ops-business-audit test` 绿
+- [x] `mvn -o -pl data-ops-business/data-ops-business-audit test` 绿
 - **验证边界：** 本票无运行时行为，无需重启验证。

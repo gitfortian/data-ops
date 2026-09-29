@@ -4,7 +4,7 @@
 > 定位：**唯一权威排期文档**。统一此前两条并行线——`docs/agent-optimization-plan.md`（Agent 生产化：稳定性/可观测性/体验）与 `knowledge-docs/ontology/06、07`（本体+语义层建设与 MVP）——并结合代码实际进度校正后的完整开发计划。
 > 输入材料：knowledge-docs 下 `agent/01-04`、`ontology/01-07` 全部蒸馏与方案；`docs/architecture/PROJECT_SCOPE.md` 项目空间契约。
 > 场景前提：**内部数据平台，单模型 OpenAI 协议，不计费、不多租户、不托管多模型**——文中一切取舍均以此为前提。
-> 适用对象：`yak-ops-business-agent` + `yak-ops-business-ontology` / `yak-ops-business-semantic` + `yak-ops-ui`（ai-agent 页面及待建本体页面）。
+> 适用对象：`data-ops-business-agent` + `data-ops-business-ontology` / `data-ops-business-semantic` + `data-ops-ui`（ai-agent 页面及待建本体页面）。
 
 ---
 

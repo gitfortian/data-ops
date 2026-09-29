@@ -1,6 +1,6 @@
 -- =====================================================================
 -- 订单域种子数据（语义层可行性验证专供）
--- 对应 yak-ops-business-ontology V1 迁移的真实列定义（无 created_by/updated_by 审计列）
+-- 对应 data-ops-business-ontology V1 迁移的真实列定义（无 created_by/updated_by 审计列）
 -- 对象/属性/关系/指标/术语 全部 PUBLISHED；物理绑定为占位（smoke_db.*），
 -- 供 SemanticSqlCompiler 的 dry-run SQL 快照编译；execute 前需替换为真实数据源映射。
 -- =====================================================================

@@ -4,8 +4,8 @@
 > 拆分：tracer-bullet 垂直切片，每票贯通 表结构 → API → 服务 → 可验收（后端）。Tickets：[./issues/](./issues/)
 
 ## 0. 硬性开发约束
-1. **契约先行**：先建 `yak-ops-business-security/` 契约文件集（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW），再写代码。
-2. **前端契约文件只读**：不改 `yak-ops-ui/**/*.md`。
+1. **契约先行**：先建 `data-ops-business-security/` 契约文件集（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW），再写代码。
+2. **前端契约文件只读**：不改 `data-ops-ui/**/*.md`。
 3. **全局规范**：CODE_STYLE.md、PROJECT_SCOPE（project_id 取可信上下文、无物理外键）、home-overview-contract（统计服务端聚合）、INTERACTION_PRINCIPLES。
 4. **迁移**：自建 `db/migration/yak-security`（V1 起，历史表 `flyway_schema_history_security`）；菜单注册取 yak-security 链 `V2030`。错误码段 **45001~45099**。
 5. **依赖单向**：security 依赖 semantic/audit/datasource（optional）；下游经 SPI 消费，禁止反向依赖。

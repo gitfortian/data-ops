@@ -20,4 +20,4 @@
 **批次共性提醒:**
 - 01/02/08/10 含**裁决项**(绑定形态/修饰词归属/是否过闸/外部消费必要性),验收第一项都是把结论落进 `docs/v1/04-主脉与模块交互图.md`、`docs/v1/05-模块交互与乱象清单.md` 与模块契约文档,禁止"文档说打通、代码没打通"的中间态;
 - 盘点 §7.9 风险提示:在 01 修复前,usage/影响面数据恒为零,不得据此误判指标资产价值——本批排序即按"先接线、再增数、后谈市场/AI";
-- 全部遵守硬性约束:契约先行、project_id 服务端可信、跨模块只经 api 包 SPI、Flyway 已应用文件(V1/V2)不可改且新迁移幂等(新列自 V3 起)、写操作落审计、血缘登记 afterCommit fail-open(见 `yak-ops-business-metric/REQUIREMENTS.md`)。
+- 全部遵守硬性约束:契约先行、project_id 服务端可信、跨模块只经 api 包 SPI、Flyway 已应用文件(V1/V2)不可改且新迁移幂等(新列自 V3 起)、写操作落审计、血缘登记 afterCommit fail-open(见 `data-ops-business-metric/REQUIREMENTS.md`)。

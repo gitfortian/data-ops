@@ -117,7 +117,7 @@ yak-ops 扩展：id:{eventId}          ← SSE 帧头，Last-Event-ID 断线续�
 
 ## 三、改动清单
 
-### 3.1 后端（`yak-ops-business-agent`）
+### 3.1 后端（`data-ops-business-agent`）
 
 | # | 文件 | 动作 | 说明 |
 | --- | --- | --- | --- |
@@ -129,7 +129,7 @@ yak-ops 扩展：id:{eventId}          ← SSE 帧头，Last-Event-ID 断线续�
 | B6 | **新增** `runtime/ChatTurnToAguiMapperTest.java` | 新建 | 10 种类型映射断言：官方类型/字段/rawEvent 透传/TOOL_RESULT 双帧/无 event: 名 |
 | B7 | `AgentStreamCoordinator` 相关测试 / E2E | 增补 | SSE 帧形状断言：`data` 内 `type` 为标准名、`id` 存在、`rawEvent` 扩展可读 |
 
-### 3.2 前端（`yak-ops-ui`）
+### 3.2 前端（`data-ops-ui`）
 
 | # | 文件 | 动作 | 说明 |
 | --- | --- | --- | --- |

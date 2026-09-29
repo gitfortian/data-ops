@@ -1,6 +1,6 @@
 # 对 02-产品功能与核心流程（v0.1）的 review（2026-09-21）
 
-方法：逐条事实声明对代码核对（navigation.ts 路由、ApprovalFlowCodes、semantic/layers 源码、MetricEditModal、home 组件、metadata/dataset/workflow 模块、DataSourceDbType 枚举、yak-ops-plugins 目录、docs/mdm/reuse-plan.md 实测记录）。
+方法：逐条事实声明对代码核对（navigation.ts 路由、ApprovalFlowCodes、semantic/layers 源码、MetricEditModal、home 组件、metadata/dataset/workflow 模块、DataSourceDbType 枚举、data-ops-plugins 目录、docs/mdm/reuse-plan.md 实测记录）。
 
 ## 必须修的事实错误（3 处，各一行改动）
 
@@ -22,7 +22,7 @@
 ## 核实通过项（抽查证据在案）
 
 - 22 个入口路由全部在 navigation.ts 真实存在（/data-source、/resource-management、/sync/batch-link-up 含单表/多表/脚本三种配置路由、/sync/realtime、/data-metadata 两页、/semantic 五页含 layers、/metric 四页、/modeling、/data-development 含发布中心/运行记录、/workflow/definitions+instances、/dataset、/dashboard、/digital-screen、/data-service 五页、/ai-agent、/data-quality 四页、/data-security 六页、/data-asset 四页、/approval/todo+flows、/data-analysis/lineage）。
-- "20+ 数据源、插件扩展"属实：DataSourceDbType 枚举 26 种；yak-ops-plugins 下 datasource(jdbc/elasticsearch/mongodb)、storage(local/minio/hdfs——L28 三种存储声明成立)、alert(dingtalk——L176 告警渠道成立)、task(sql/shell/python/java——L100 四类节点成立)。
+- "20+ 数据源、插件扩展"属实：DataSourceDbType 枚举 26 种；data-ops-plugins 下 datasource(jdbc/elasticsearch/mongodb)、storage(local/minio/hdfs——L28 三种存储声明成立)、alert(dingtalk——L176 告警渠道成立)、task(sql/shell/python/java——L100 四类节点成立)。
 - 任务目录"无独立页面、只存投影"：仅有 TaskCatalogController，无 UI 路由，口径准确。
 - 工作流 SSE/触发/补数：WorkflowEventStream、schedule/trigger、WorkflowBackfillManager 均在。
 - 数据集"查询性能诊断"：DatasetQueryPerformanceRecorder/Reader 在。

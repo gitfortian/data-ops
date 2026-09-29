@@ -2,7 +2,7 @@
 
 > ⚠️ **改的是 lineage 的包结构，不改它的行为。** 可与 128/129 并行，但必须排在 133 之后开工。
 
-**对应需求：** 元数据中心（依赖纪律） | **阶段：** P0 | **模块：** yak-ops-business-lineage
+**对应需求：** 元数据中心（依赖纪律） | **阶段：** P0 | **模块：** data-ops-business-lineage
 
 **What to build：** 元数据 GONE 时要"从血缘图撤销节点"（plan §3.4 末），必须走 lineage 的 api；而 `LineageRegistrationService` 现在在 `…/lineage/registration/` 包里**不在 `api`**。本票只做一次抽取重命名，让 §0.3"跨模块只走 `api`"对元数据成立。
 

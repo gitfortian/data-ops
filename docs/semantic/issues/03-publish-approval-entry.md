@@ -22,12 +22,12 @@
 
 **裁决口径:** 开闸后非 CODE 行的"启用"直接**替换**为"提交发布"(不留直发按钮)——本单的立项动因就是堵"绕过审批直发"的口子,若学 modeling 页保留"直接发布"双按钮,防护依旧形同虚设。停用(ENABLED→DISABLED)不拦:下线动作无发布风险。审批在途(PENDING)冻结该行编辑/删除/状态操作并提供"审批单"跳转。
 
-**前端(`yak-ops-ui`):**
+**前端(`data-ops-ui`):**
 - `src/services/semantic/api.ts`:新增 `submitStandardPublishApproval(id)` → `POST /api/v1/semantic/standards/{id}/publish-approval`(返回 `ApprovalInstance`);
 - `src/pages/semantic/standards/index.tsx`:照 modeling 详情页先例接"存量代码+开关"三件套——`listFlows('STANDARD_PUBLISH')` 探开关(不可用/未启用→关,维持直发)、加载当前页后对非 CODE 行逐个 `findByBiz` 取在途/最近单(每页 ≤10,fail-open)、状态列并挂 `ApprovalStatusTag`、操作列按开关态出"提交发布"/冻结、`/approval/instance/:id` 跳转、PENDING 15s 轮询终态:批准→`message.info`+列表刷新(回调查启用同事务)、驳回→`getApprovalDetail` 取 REJECTED 级次 comment 提示原因、撤销→提示;
 - `src/pages/semantic/standards/components/StandardDetailDrawer.tsx`:新增"发布审批"行(状态标签+查看审批单)与"提交发布"按钮(DISABLED 且非在途时)。
 
-**后端(`yak-ops-business-semantic` + `yak-ops-common`):**
+**后端(`data-ops-business-semantic` + `data-ops-common`):**
 - `SemanticErrorCode` 新增 `PUBLISH_ALREADY_ENABLED(42023)`;
 - `StandardPublishApprovalService.submit` 前置校验:已 ENABLED 的标准拒绝再提生效单(此前无任何状态前置,批准回调会重复走 changeStatus);新增单测 `submitRejectsAlreadyEnabled`,6/6 绿。
 

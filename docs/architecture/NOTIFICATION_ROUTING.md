@@ -100,7 +100,7 @@ EXPLICIT_USERS -> use policy.recipientUserIds directly
 Future sink:
 
 ```text
-ALERT -> yak-ops-business-alert -> AlertPluginRegistry -> DingTalk / Email / Webhook / ...
+ALERT -> data-ops-business-alert -> AlertPluginRegistry -> DingTalk / Email / Webhook / ...
 ```
 
 ## Transaction and failure semantics

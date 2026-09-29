@@ -1,6 +1,6 @@
 # 数据生命周期（TTL）—— 菜单与权限契约
 
-> 注册迁移：`yak-ops-boot/src/main/resources/yak-security/db/migration/V2031__register_data_lifecycle_menu.sql`（幂等，模板=V2029 metric 单组式）。
+> 注册迁移：`data-ops-boot/src/main/resources/yak-security/db/migration/V2031__register_data_lifecycle_menu.sql`（幂等，模板=V2029 metric 单组式）。
 
 ## 组与页
 

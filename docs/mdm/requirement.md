@@ -1,6 +1,6 @@
 # 主数据管理（MDM）—— 完整需求文档
 
-> 模块：`yak-ops-business-mdm`（建议）
+> 模块：`data-ops-business-mdm`（建议）
 > 版本：v1.0
 > 状态：需求基线
 > 依赖：`datasource`（业务库接入）、`quality`（质量检查）、`data-service`（对外服务）、`semantic`（数据标准）

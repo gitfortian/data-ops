@@ -60,7 +60,7 @@ M4「治理与验证」管理 API + 前端管理页 + 对照验收实验        
 
 | # | 任务 | 要点 |
 | --- | --- | --- |
-| 1 | Flyway 迁移 `yak_agent_memory` | 位置：`yak-ops-business-agent/src/main/resources/db/migration/yak-agent/V8__agent_memory.sql`（该目录当前最新为 V7）；字段按设计稿 §3.3/§七：scope/scope_key/memory_type/content/summary/keywords/confidence/source_turn_id/source_session_id/layer/hit_count/last_hit_at/status/merged_into/时间戳；索引 `(scope, scope_key, status, memory_type)`；keywords 前缀索引 |
+| 1 | Flyway 迁移 `yak_agent_memory` | 位置：`data-ops-business-agent/src/main/resources/db/migration/yak-agent/V8__agent_memory.sql`（该目录当前最新为 V7）；字段按设计稿 §3.3/§七：scope/scope_key/memory_type/content/summary/keywords/confidence/source_turn_id/source_session_id/layer/hit_count/last_hit_at/status/merged_into/时间戳；索引 `(scope, scope_key, status, memory_type)`；keywords 前缀索引 |
 | 2 | `memory` 包骨架 + 仓储 | PO/Mapper/Repository/Adapter 对齐现有分层纪律（REVIEW 约束：dao 不外泄）；`MemoryQuery` 检索查询（LIKE on keywords/content） |
 | 3 | `MemoryFlushService`（异步提取） | 轮终态 enqueue → 独立线程池 → 闸门（实质内容/THROTTLED 5min/开关）→ LLM 提取调用（数据域 prompt，设计稿 §4.2）→ JSON 解析（失败放弃）→ 内容校验 → LEDGER 入库；成功/失败/跳过全落 `KIND_MEMORY_FLUSH` step |
 | 4 | `LongTermMemoryPromptMiddleware` | 注册进 `SystemPromptAssemblyMiddleware` 管道（order 靠后）；查询构造（本轮+近 1 条用户历史）→ USER/PROJECT/GLOBAL 三层检索 → 排序截断（≤8 条/≤2000 字符）→ 段落模板注入；命中异步更新 hit_count/last_hit_at；`KIND_MEMORY_RECALL` step（hit 数/字符数/延迟） |

@@ -4,7 +4,7 @@
 
 **What to build:** 完整化"主数据总览"入口页(`mdm-overview`,menu.md 3.1):实体记录数分布、采集状态(跳数据集成)、质量概览(跳数据质量)、分发状态(跳数据服务)、变更概览(本月新增/变更/合并)、血缘概览(跳数据血缘)。分析统计(数据分布、变更统计、使用统计)服务端聚合,复用 dataset 统计能力。**无独立菜单**,总览即分析入口。
 
-**模块归属:** yak-ops-business-mdm(+dataset)
+**模块归属:** data-ops-business-mdm(+dataset)
 
 **Blocked by:** [55 采集执行](./55-collect-execution.md), [58 分发](./58-distribution.md), [59 服务](./59-service.md)
 

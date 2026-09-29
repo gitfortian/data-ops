@@ -19,7 +19,7 @@ bash ./mvnw -B -ntp \
 
 node <<'NODE'
 const fs = require('fs');
-const path = 'yak-ops-ui/package.json';
+const path = 'data-ops-ui/package.json';
 const packageJson = JSON.parse(fs.readFileSync(path, 'utf8'));
 packageJson.version = process.env.YAK_OPS_VERSION;
 fs.writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);

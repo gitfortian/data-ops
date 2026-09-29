@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.weifuwan</groupId>
+        <artifactId>data-ops-framework-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>data-schedule-parent</artifactId>
+    <packaging>pom</packaging>
+    <name>Data Schedule Parent</name>
+    <description>Data Ops Framework 调度插件聚合与统一依赖管理</description>
+
+    <properties>
+        <xxl-job.version>3.4.0</xxl-job.version>
+    </properties>
+
+    <modules>
+        <module>data-schedule-api</module>
+        <module>data-schedule-core</module>
+        <module>data-schedule-plugin-quartz</module>
+        <module>data-schedule-plugin-xxl-job</module>
+        <module>data-schedule-plugin-all</module>
+        <module>data-schedule-spring-boot-starter</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.xuxueli</groupId>
+                <artifactId>xxl-job-core</artifactId>
+                <version>${xxl-job.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.weifuwan</groupId>
+                <artifactId>data-schedule-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.weifuwan</groupId>
+                <artifactId>data-schedule-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.weifuwan</groupId>
+                <artifactId>data-schedule-plugin-quartz</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.weifuwan</groupId>
+                <artifactId>data-schedule-plugin-xxl-job</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.weifuwan</groupId>
+                <artifactId>data-schedule-plugin-all</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.weifuwan</groupId>
+                <artifactId>data-schedule-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

@@ -1,4 +1,4 @@
-# Semantic 模块设计(yak-ops-business-semantic)
+# Semantic 模块设计(data-ops-business-semantic)
 
 > 状态:v1.0(2026-09-14) | 决策来源:[m4-integration.md 第 8 节 决策 E](../model/m4-integration.md)
 > 定位:本文是 **ticket 30 契约文件集的直接输入**。模块创建后,契约以模块内 `README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW` 为准,本文降级为设计背景与索引。

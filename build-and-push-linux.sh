@@ -142,11 +142,11 @@ CONFIG
 
 write_step "Checking prebuilt Yak Ops distribution"
 shopt -s nullglob
-DIST_FILES=(./yak-ops-dist/target/yak-ops-*.tar.gz)
+DIST_FILES=(./data-ops-dist/target/yak-ops-*.tar.gz)
 shopt -u nullglob
 
 if (( ${#DIST_FILES[@]} == 0 )); then
-    printf 'No distribution archive found at yak-ops-dist/target/yak-ops-*.tar.gz\n' >&2
+    printf 'No distribution archive found at data-ops-dist/target/yak-ops-*.tar.gz\n' >&2
     exit 1
 fi
 

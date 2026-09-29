@@ -4,7 +4,7 @@
 
 **What to build:** 管理员在实体内维护主数据属性(客户名称、手机号、地址、等级等):属性角色(PK/ATTR/RELATION)、数据类型、必填、业务描述、排序。属性引用数据标准(类型/单位/码值/安全),不自由填写 —— 复用 semantic。
 
-**模块归属:** yak-ops-business-mdm(+semantic)
+**模块归属:** data-ops-business-mdm(+semantic)
 
 **Blocked by:** 51, [30 标准表结构](../../semantic/issues/30-standard-tables.md)
 
@@ -24,8 +24,8 @@
 **验证记录(2026-09-16):**
 
 - 跨模块:semantic `StandardQueryApi` 扩展 `labels(Collection<Long>)`(批量 `名称（编码）` 标签)与 `existsCodeSet(String)`(启用码集校验),MDM 只经 api 包消费,不直读 semantic 表;semantic ARCHITECTURE/REQUIREMENTS 契约已更新。
-- 后端:`./mvnw -pl yak-ops-business/yak-ops-business-mdm -am compile` 通过;`./mvnw -pl yak-ops-boot -am validate` 通过。
+- 后端:`./mvnw -pl data-ops-business/data-ops-business-mdm -am compile` 通过;`./mvnw -pl data-ops-boot -am validate` 通过。
 - 单测:`MdmAttributeServiceTest` 8/8 通过(重复编码/PK 唯一/类型标准 kind 不符/停用标准/码集不存在/合法引用落库/改 PK 阻断/不存在报错);`MdmEntityServiceTest` 7/7 仍全绿。
 - 前端:菜单契约测试 5/5 通过(52 无新菜单,无变更);tsc 中 mdm 相关文件零错误(总数与基线一致)。
 - Flyway 运行时迁移效果(属性表落库)需有数据库的联调环境启动应用确认。
-- 遵守硬性约束:契约文件先于代码;未修改 `yak-ops-ui` 下任何 `.md` 文件。
+- 遵守硬性约束:契约文件先于代码;未修改 `data-ops-ui` 下任何 `.md` 文件。

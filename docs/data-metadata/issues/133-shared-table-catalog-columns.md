@@ -2,7 +2,7 @@
 
 > ⚠️ **跨模块票：不得由元数据单方面提交。** 迁移落在 **lineage 的** `db/migration/yak-lineage`，须与 lineage owner 一起评审。
 
-**对应需求：** 元数据中心（存储） | **阶段：** P0 | **模块：** yak-ops-business-lineage（被改）+ metadata（steward）
+**对应需求：** 元数据中心（存储） | **阶段：** P0 | **模块：** data-ops-business-lineage（被改）+ metadata（steward）
 
 **What to build：** 统一实体表 = **就地扩展 lineage 既有的 `yak_metadata_asset`**（plan §11.1 第 5 条，A 案作废）。买到的核心一条：§0.2"不建第二套真相"自此**由表结构本身保证**，平台不出现第三张目录形状的表，也不用再写第四个 `*LineageSynchronizer`。
 

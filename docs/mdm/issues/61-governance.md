@@ -4,7 +4,7 @@
 
 **What to build:** 主数据治理视图:质量检查(完整性/格式/重复,复用 quality 模块,展示检查结果)、血缘(上游:主数据来自哪些源系统/source_ids;下游:被哪些系统分发/数仓维表引用,复用 lineage)、权限(谁能改/看主数据,复用 security RBAC + 实体 owner)。**无独立菜单**:入口在实体详情页 Tab(menu.md 五),质量/血缘跳平台模块,MDM 只做少量特有治理(如实体 owner 权限、来源血缘聚合展示)。
 
-**模块归属:** yak-ops-business-mdm(+quality/lineage/security)
+**模块归属:** data-ops-business-mdm(+quality/lineage/security)
 
 **Blocked by:** [55 采集执行](./55-collect-execution.md)
 

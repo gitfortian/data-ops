@@ -1,9 +1,9 @@
 # 数据生命周期（TTL）功能 —— 完整需求文档
 
-> 模块：`yak-ops-business-lifecycle`（新建）
+> 模块：`data-ops-business-lifecycle`（新建）
 > 版本：v1.1（2026-09-19 评审优化：D1~D8）
 > 状态：需求基线
-> 依赖：`semantic`（分层配置：库名/数据源/旧 lifecycle_days）、`modeling`（模型、表名、分区、方言）、`datasource`（SQL 执行通道）、`audit`（操作审计）、`yak-schedule`（失败重试 / 存储快照定时）
+> 依赖：`semantic`（分层配置：库名/数据源/旧 lifecycle_days）、`modeling`（模型、表名、分区、方言）、`datasource`（SQL 执行通道）、`audit`（操作审计）、`data-schedule`（失败重试 / 存储快照定时）
 > 设计来源：产品规划《数据生命周期管理（Doris + Paimon 路线）》，经数据治理评审后按本文决策修订。
 
 ---
@@ -164,7 +164,7 @@
 
 ```
                  ┌────────────────────────────────────────────┐
-                 │        yak-ops-business-lifecycle          │
+                 │        data-ops-business-lifecycle          │
   策略管理页 ───▶│  policy   CRUD + 分层默认初始化 + 引用保护   │
   模型Tab    ───▶│  binding  继承解析(层默认)/覆盖绑定          │
   预览/下发  ───▶│  generate TTL 语句生成器(纯函数,双方言)      │

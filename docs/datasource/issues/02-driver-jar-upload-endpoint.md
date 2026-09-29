@@ -1,6 +1,6 @@
 # Ticket 02：JDBC 驱动包上传后端端点（P1）
 
-**对应需求：** 数据源缺失能力盘点 §6 第 2 行 | **优先级：** P1 | **模块：** yak-ops-business-datasource
+**对应需求：** 数据源缺失能力盘点 §6 第 2 行 | **优先级：** P1 | **模块：** data-ops-business-datasource
 
 **What to build：** 补齐前端已在展示的断链功能：`POST /api/v1/data-source/plugin/driver/upload`。前端 `components/DriverManager/index.tsx` + `services/data-source/driver.ts:5` 已就绪（表单值期望拿到「驱动位置」字符串），后端全仓无此 Controller。
 
@@ -16,7 +16,7 @@
 - [x] `DriverJarRegistry` 注册与替换；`DataSourceErrorCode` 增 `DRIVER_UPLOAD_INVALID(41015)`、`DRIVER_UPLOAD_FAILED(41016)`
 - [x] `DataSourceProperties` 增 `driver.directory` 嵌套配置
 - [x] 单测：文件名清洗拒绝 `../`、非法 jar 报错、用 `java.util.jar.JarOutputStream` 现造含 `META-INF/services/java.sql.Driver` 的最小 jar 验证注册成功
-- [x] `./mvnw -q -o -pl yak-ops-business/yak-ops-business-datasource -am test -Dtest='*Driver*' -Dsurefire.failIfNoSpecifiedTests=false` 绿
+- [x] `./mvnw -q -o -pl data-ops-business/data-ops-business-datasource -am test -Dtest='*Driver*' -Dsurefire.failIfNoSpecifiedTests=false` 绿
 - [x] 追加：`JdbcDriverLoader` 修复 3 处 `Class.forName` 硬失败——外置驱动经 `DriverManager.getDriver(url)` 回退可见（jdbc plugin 42/42 绿）
 
 > 2026-09-22 落地：整模块 125/125 绿（含 Registry 3、Store 5、Manager 5、权限 3）；真机上传验证仍需用户重启后端后探活。

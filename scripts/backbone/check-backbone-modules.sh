@@ -19,7 +19,7 @@ printf 'LEGACY: docs/v1/01 is historical evidence, not current Product Truth.\n'
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-BUSINESS_POM="yak-ops-business/pom.xml"
+BUSINESS_POM="data-ops-business/pom.xml"
 BACKBONE_DOC="docs/v1/01-产品主心骨.md"
 
 if [[ ! -f "$BUSINESS_POM" || ! -f "$BACKBONE_DOC" ]]; then
@@ -28,7 +28,7 @@ if [[ ! -f "$BUSINESS_POM" || ! -f "$BACKBONE_DOC" ]]; then
 fi
 
 code_modules="$(
-    grep -o '<module>[^<]*</module>' "$BUSINESS_POM"         | sed 's/<[^>]*>//g; s/yak-ops-business-//'         | awk '{ if ($0 == "sync") { print "sync-offline"; print "sync-realtime" } else print }'         | sort -u
+    grep -o '<module>[^<]*</module>' "$BUSINESS_POM"         | sed 's/<[^>]*>//g; s/data-ops-business-//'         | awk '{ if ($0 == "sync") { print "sync-offline"; print "sync-realtime" } else print }'         | sort -u
 )"
 
 doc_modules="$(

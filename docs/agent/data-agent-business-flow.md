@@ -2,7 +2,7 @@
 
 > 定位：以代码为准的**整链路业务流**说明——从「本体建模」到「自然语言提问」到「最终结果输出」。
 > 技术实现细节看 `docs/agent/data-agent-technical-architecture.md`；历史演进看 `data-agent-development-plan.md`。
-> 适用对象：`yak-ops-business-ontology` / `yak-ops-business-semantic` / `yak-ops-business-dataset` / `yak-ops-business-agent` / `yak-ops-ui`（ai-agent、semantic-console、ontology 工作台）。
+> 适用对象：`data-ops-business-ontology` / `data-ops-business-semantic` / `data-ops-business-dataset` / `data-ops-business-agent` / `data-ops-ui`（ai-agent、semantic-console、ontology 工作台）。
 
 ## 0. 整链路总览
 
@@ -28,7 +28,7 @@ allowed_operators      只读审计             caliber 附尾           LLM→T
 
 ## ① 本体建模（ontology 模块）
 
-**入口**：前端「本体建模工作台」`/ontology`（`yak-ops-ui/pages/ontology/index.tsx`）；REST 前缀 `/api/v1/ontology`（建模/发布需 `ontology:model:manage`，读需 `ontology:model:read`，`ontology/OntologyPermissionCode`）。
+**入口**：前端「本体建模工作台」`/ontology`（`data-ops-ui/pages/ontology/index.tsx`）；REST 前缀 `/api/v1/ontology`（建模/发布需 `ontology:model:manage`，读需 `ontology:model:read`，`ontology/OntologyPermissionCode`）。
 
 ### 1.1 建模对象（八张表，对应 8 类实体）
 
@@ -116,7 +116,7 @@ SemanticQuery(objectCode, dimensions[], metrics[{code, timeGrain?}], filters[{lo
 
 ### 4.1 用户交互入口
 
-前端 `yak-ops-ui/pages/ai-agent/index.tsx`（Tabs：对话 / 查询审计 / 配置 / 分析报告）→ `POST /api/v1/agent/chat/turns`（`{sessionId, message, toolResults?}`，需 `agent:chat:run`）→ 返回 `turnId` 立即应答；SSE 订阅同轮 `GET /chat/turns/{turnId}/events`。
+前端 `data-ops-ui/pages/ai-agent/index.tsx`（Tabs：对话 / 查询审计 / 配置 / 分析报告）→ `POST /api/v1/agent/chat/turns`（`{sessionId, message, toolResults?}`，需 `agent:chat:run`）→ 返回 `turnId` 立即应答；SSE 订阅同轮 `GET /chat/turns/{turnId}/events`。
 
 ### 4.2 提交侧（HTTP 线程绝不推理）
 

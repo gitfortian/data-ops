@@ -63,5 +63,5 @@ DataSourceSemanticExecutionAdapter：A 路线的执行信道（run_function 另�
 ## 4. 关联
 
 - 业务流：`data-agent-business-flow.md` §③；架构：`data-agent-technical-architecture.md` §2/§8；
-- 契约：`yak-ops-business-yak-ops-business-semantic/REQUIREMENTS.md`（B 路线节 FR-3.8）、`DEPENDENCIES.md`（Dataset corridor）；
+- 契约：`data-ops-business-yak-ops-business-semantic/REQUIREMENTS.md`（B 路线节 FR-3.8）、`DEPENDENCIES.md`（Dataset corridor）；
 - 代码：`gateway/dataset/DatasetAnchoredQueryGateway.java`、`query/SemanticQueryManager.java`（分流不变）、`compile/`（T2~T5 冻结/删除）。

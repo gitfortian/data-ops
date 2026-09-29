@@ -1,6 +1,6 @@
 # ODS vs DWD 治理边界契约
 
-> 模块：yak-ops-business-modeling、yak-ops-business-semantic
+> 模块：data-ops-business-modeling、data-ops-business-semantic
 > 版本：v1.0
 > 状态：契约基线
 > 适用：ticket 38（标准套用 ODS）、ticket 39（标准套用 DWD）、ticket 44（按过程派生）

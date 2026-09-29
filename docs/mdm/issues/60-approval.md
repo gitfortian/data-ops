@@ -4,7 +4,7 @@
 
 **What to build:** 管理员进入"主数据管理 → 主数据审批"(menuCode `mdm-approval`):主数据变更申请(CREATE/UPDATE/MERGE/DELETE,含变更内容对比)→ 审批流(一级数据管理员、二级数据治理负责人,可配置)→ 通过后生效(改 mdm_record + version 递增)/拒绝;版本管理(记录变更历史,可回溯)。审批是主数据特有的核心能力(design.md 3.5 复用率 0%,全部新建)。
 
-**模块归属:** yak-ops-business-mdm
+**模块归属:** data-ops-business-mdm
 
 **Blocked by:** [55 采集执行](./55-collect-execution.md)
 

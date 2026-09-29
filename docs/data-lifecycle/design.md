@@ -1,7 +1,7 @@
 # 数据生命周期（TTL）—— 模块设计说明
 
 > 配套：[requirement.md](./requirement.md)（需求基线）、[dev-plan.md](./dev-plan.md)（硬性约束）、[menu.md](./menu.md)（菜单契约）
-> 模块：`yak-ops-business-lifecycle`，包根 `io.yak.ops.business.lifecycle`，表前缀 `yak_lc_`
+> 模块：`data-ops-business-lifecycle`，包根 `io.yak.ops.business.lifecycle`，表前缀 `yak_lc_`
 > Flyway：自持 `db/migration/yak-lifecycle`（V1 起编，历史表 `flyway_schema_history_lifecycle`）；菜单注册 yak-security 链 `V2031`
 > 错误码段：47001~47099
 
@@ -69,7 +69,7 @@
 
 `project_id, setting_key('cost_price_per_gb_month'), setting_value` —— 成本单价（元/GB/月），未配置成本列显示"—"。
 
-## 二、包结构（模板 = yak-ops-business-metric）
+## 二、包结构（模板 = data-ops-business-metric）
 
 ```
 io.yak.ops.business.lifecycle
@@ -149,4 +149,4 @@ dispatch(modelIds, operator):
 
 ## 五、依赖方向
 
-`lifecycle → semantic / modeling / datasource(plugin-api) / audit`，均经 SPI，禁止反向与直读他模块表。`yak-schedule-api` 仅 lifecycle 消费（经 common 的 YakScheduleGateway）。
+`lifecycle → semantic / modeling / datasource(plugin-api) / audit`，均经 SPI，禁止反向与直读他模块表。`data-schedule-api` 仅 lifecycle 消费（经 common 的 YakScheduleGateway）。

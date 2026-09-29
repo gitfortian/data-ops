@@ -1,6 +1,6 @@
 # Ticket 70：数据安全模块骨架与菜单权限接入
 
-**目标**：新建 `yak-ops-business-security`，贯通 契约 → Maven 装配 → Flyway 链 → 菜单注册。
+**目标**：新建 `data-ops-business-security`，贯通 契约 → Maven 装配 → Flyway 链 → 菜单注册。
 
 **交付**：
 - 模块根契约文件集 README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW。

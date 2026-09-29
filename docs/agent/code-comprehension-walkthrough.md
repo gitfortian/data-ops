@@ -3,7 +3,7 @@
 > 定位：面向「代码开始失控、需要重新掌握全貌」的开发者的**按业务流代码梳理**。
 > 本文档与 `docs/agent/data-agent-business-flow.md`（业务流）、`data-agent-technical-architecture.md`（架构）互补：
 > 那两篇是"现状说明"，本篇是**带你读代码的路线图**——每一步给出：业务是什么、代码在哪、怎么读、关键机制、业务案例。
-> 适用范围：`yak-ops-business-ontology` / `yak-ops-business-dataset` / `yak-ops-business-semantic` / `yak-ops-business-agent`。
+> 适用范围：`data-ops-business-ontology` / `data-ops-business-dataset` / `data-ops-business-semantic` / `data-ops-business-agent`。
 
 ---
 
@@ -24,10 +24,10 @@
 
 | 模块 | 目录 | 角色 | 一句话职责 |
 | --- | --- | --- | --- |
-| 本体 | `yak-ops-business-ontology` | 地基（truth 面） | 业务世界的"字典"：对象/属性/指标/关系/术语建模，能力物化，发布即承诺，变更单。**不执行数据** |
-| 数据集 | `yak-ops-business-dataset` | 闸门（执行面） | 冻结上游 SQL 为不可变版本快照，提供字段 schema + 只读查询运行时。**唯一 SQL 生产面** |
-| 语义 | `yak-ops-business-semantic` | 翻译官 | 把结构化 `SemanticQuery` 守卫校验后，**结构翻译**为 dataset 请求；返回结果+口径。**不碰物理列名** |
-| 智能体 | `yak-ops-business-agent` | 调度者 | 自然语言入口：提交/执行分离、ReAct 推理、12 个工具、SSE 流式、HITL 澄清、证据留痕 |
+| 本体 | `data-ops-business-ontology` | 地基（truth 面） | 业务世界的"字典"：对象/属性/指标/关系/术语建模，能力物化，发布即承诺，变更单。**不执行数据** |
+| 数据集 | `data-ops-business-dataset` | 闸门（执行面） | 冻结上游 SQL 为不可变版本快照，提供字段 schema + 只读查询运行时。**唯一 SQL 生产面** |
+| 语义 | `data-ops-business-semantic` | 翻译官 | 把结构化 `SemanticQuery` 守卫校验后，**结构翻译**为 dataset 请求；返回结果+口径。**不碰物理列名** |
+| 智能体 | `data-ops-business-agent` | 调度者 | 自然语言入口：提交/执行分离、ReAct 推理、12 个工具、SSE 流式、HITL 澄清、证据留痕 |
 
 依赖方向（单向、由架构测试强制）：
 
