@@ -1,9 +1,9 @@
 package io.yak.ops.business.modeling.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.business.modeling.domain.LogicalEntityMapping;
+import io.yak.ops.common.bean.po.modeling.LogicalEntityMappingPO;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface ModelingLogicalEntityMappingMapper extends BaseMapper<LogicalEntityMapping> {
+public interface ModelingLogicalEntityMappingMapper extends BaseMapper<LogicalEntityMappingPO> {
 }
