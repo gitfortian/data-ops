@@ -61,4 +61,4 @@ jobs:
         run: yarn build
 
       - name: Verify complete Maven reactor
-        run: ./mvnw -B -ntp clean verify
+        run: bash ./mvnw -B -ntp clean verify
