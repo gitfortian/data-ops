@@ -21,12 +21,6 @@ public record EntityRelation(
     if (relationType == null || relationType.isBlank()) {
       throw new IllegalArgumentException("Relation type must not be blank");
     }
-    return new EntityRelation(
-        null,
-        sourceEntityId,
-        targetEntityId,
-        relationType,
-        cardinality,
-        description);
+    return new EntityRelation(null, sourceEntityId, targetEntityId, relationType, cardinality, description);
   }
 }
