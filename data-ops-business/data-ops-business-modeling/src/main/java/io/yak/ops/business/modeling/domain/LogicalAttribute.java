@@ -20,15 +20,6 @@ public record LogicalAttribute(
     if (name == null || name.isBlank()) {
       throw new IllegalArgumentException("Attribute name must not be blank");
     }
-    return new LogicalAttribute(
-        null,
-        entityId,
-        code,
-        name.trim(),
-        logicalType,
-        null,
-        false,
-        true,
-        0);
+    return new LogicalAttribute(null, entityId, code, name.trim(), logicalType, null, false, true, 0);
   }
 }
