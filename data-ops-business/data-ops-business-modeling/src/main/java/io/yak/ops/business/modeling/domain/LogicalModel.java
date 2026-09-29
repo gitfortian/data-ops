@@ -23,4 +23,8 @@ public record LogicalModel(
     }
     return new LogicalModel(null, code, name.trim(), description, domainId, null, ModelStatus.DRAFT, null, null);
   }
+
+  public LogicalModel withPersisted(Long id, String owner, LocalDateTime createTime, LocalDateTime updateTime) {
+    return new LogicalModel(id, code, name, description, domainId, owner, status, createTime, updateTime);
+  }
 }
