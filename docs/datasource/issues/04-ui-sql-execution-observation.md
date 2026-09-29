@@ -1,13 +1,13 @@
 # Ticket 04：SQL 执行审计观测页面（P1）
 
-**对应需求：** 数据源缺失能力盘点 §6 第 4 行 | **优先级：** P1 | **模块：** yak-ops-ui +（仅菜单迁移）yak-ops-boot
+**对应需求：** 数据源缺失能力盘点 §6 第 4 行 | **优先级：** P1 | **模块：** data-ops-ui +（仅菜单迁移）data-ops-boot
 
 **What to build：** 后端三接口已就绪且数据持续写入（`SqlExecutionAuditController`：`POST /api/v1/sql-executions/page`、`GET /{executionId}`、`POST /summary`，权限 `resource:sql-execution:read`，`/api/v1/sql-executions` 已注册进 `PROJECT_REQUEST_RULES`），前端零消费。补一个只读观测页。
 
 **设计：**
 - 菜单位置：数据接入组下、与「数据源管理」并列的新页面「SQL 执行审计」（menuCode `sql-execution-audit`，route `/sql-execution-audit`，required_permission_code `resource:sql-execution:read`）。
 - 页面结构模板：`pages/data-security/audit/index.tsx`（单文件：summary 卡 + 过滤 + antd Table + 行点开详情抽屉）。详情展示语句明细（`SqlExecutionAuditDetailVO` 的 statement 列表：SQL 预览/耗时/行数/截断标记）。
-- 服务层：新建 `services/sql-execution/{api.ts,types.ts}`，VO/DTO 字段照抄 `yak-ops-common .../bean/vo/observability/` 与 `bean/dto/observability/`。
+- 服务层：新建 `services/sql-execution/{api.ts,types.ts}`，VO/DTO 字段照抄 `data-ops-common .../bean/vo/observability/` 与 `bean/dto/observability/`。
 - 过滤条件以 `SqlExecutionAuditQueryDTO` 实际字段为准（caller、dataSourceId、时间范围等，实现时先读 DTO）。
 - 数据源页联动：`DataSourceCard` 增加「执行记录」跳转 `/sql-execution-audit?dataSourceId=…`（可选加分项）。
 

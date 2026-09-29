@@ -49,7 +49,7 @@ Acceptance 的模板标签本身不算内容。
 
 如果 PR 新增：
 
-- `yak-ops-business-*` Maven module；或
+- `data-ops-business-*` Maven module；或
 - 一级导航域；
 
 必须提供 Product Surface Change：

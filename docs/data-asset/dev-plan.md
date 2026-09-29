@@ -4,8 +4,8 @@
 
 > 与 [lifecycle dev-plan.md《硬性开发约束》](../data-lifecycle/dev-plan.md) 一致，本节为资产模块适用的硬性要求；与任何交付进度冲突时以约束为准。
 
-1. **契约先行**：`yak-ops-business-asset` 根目录维护契约文件集（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW）；每个 ticket 开工第一步更新契约文件集，契约 diff 先于代码 diff。
-2. **前端契约文件只读**：`yak-ops-ui/` 下所有 `.md` 绝不修改；新菜单 menuCode 同步登记 `src/constants/securityMenuCodes.ts` 并过 `navigationMenuContract.test.ts`。
+1. **契约先行**：`data-ops-business-asset` 根目录维护契约文件集（README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW）；每个 ticket 开工第一步更新契约文件集，契约 diff 先于代码 diff。
+2. **前端契约文件只读**：`data-ops-ui/` 下所有 `.md` 绝不修改；新菜单 menuCode 同步登记 `src/constants/securityMenuCodes.ts` 并过 `navigationMenuContract.test.ts`。
 3. **项目全局规范**：`CODE_STYLE.md`、`FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`（project_id 只取服务端可信上下文、不建物理外键）、`docs/home-overview-contract.md`（所有聚合固定查询预算、失败不伪造 0）、菜单授权契约。
 4. **交互原则**：`docs/INTERACTION_PRINCIPLES.md`——asset_key/目录编码/标签编码自动生成、登记信息全量从源域带出、上架缺口支持一键补默认、规则必须试跑后才可启用、批量危险操作必经预览确认。
 5. **数据库迁移**：自持 `db/migration/yak-asset` V1 起编，历史表 `flyway_schema_history_asset`；菜单注册进 yak-security 链，取 **V2032**。

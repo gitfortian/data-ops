@@ -12,9 +12,9 @@
 
 > 与 [数仓建模开发计划与跟踪](../model/dev-plan.md) 第 0 节一致,本节为语义主线适用的硬性要求,与任何交付进度冲突时以约束为准。
 
-1. **契约先行(Contract-First)**:每个 `yak-ops-business-*` 模块根目录维护契约文件集(README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW);语义相关 ticket 开工第一步更新 `yak-ops-business-semantic/` 契约文件集(及涉及的其他模块:modeling/datasource/agent),契约 diff 先于代码 diff 被审阅。
-2. **前端契约文件只读**:`yak-ops-ui/` 下所有 `.md` 只阅读遵守、绝不修改;路由 menuCode 过契约测试;与前端契约冲突时上报,由契约维护方更新。
-3. **项目全局规范强制适用**:`CODE_STYLE.md`、`yak-ops-ui/FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`(project_id 只取服务端可信上下文、不建物理外键)、`docs/home-overview-contract.md`、菜单授权契约。
+1. **契约先行(Contract-First)**:每个 `data-ops-business-*` 模块根目录维护契约文件集(README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW);语义相关 ticket 开工第一步更新 `data-ops-business-semantic/` 契约文件集(及涉及的其他模块:modeling/datasource/agent),契约 diff 先于代码 diff 被审阅。
+2. **前端契约文件只读**:`data-ops-ui/` 下所有 `.md` 只阅读遵守、绝不修改;路由 menuCode 过契约测试;与前端契约冲突时上报,由契约维护方更新。
+3. **项目全局规范强制适用**:`CODE_STYLE.md`、`data-ops-ui/FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`(project_id 只取服务端可信上下文、不建物理外键)、`docs/home-overview-contract.md`、菜单授权契约。
 4. **交互原则(2026-09-17)**:`docs/INTERACTION_PRINCIPLES.md` —— 能默认就默认,能选择就不填写,能引用就不重复,能自动就手动;表单设计逐字段自问四句话。
 5. **数据库迁移**:semantic 自建 `db/migration/yak-semantic`(V1 起编);菜单注册追加 yak-security 时 semantic 取 ≥V2019。
 
@@ -51,7 +51,7 @@
 | --- | --- | --- |
 | A7 | M4 语义主线按 [m4-integration.md](./m4-integration.md) 整合:业务过程字段集是逻辑建模的语义来源(决策 A);映射是派生的自动记录(决策 D);预置只做骨架、沉淀为主力(决策 B);界面随消费者开放(决策 C,2026-09-14 修正:六类标准管理界面全量开放) | M4 评审(2026-09-10) |
 | A8 | semantic 全部业务表项目级(project_id,PROJECT_REQUIRED,与平台一致);"全局规范层"= 模块级全局;预置 = 平台模板表 + 幂等项目初始化(31) | 模块拆分评审(2026-09-14) |
-| A9 | 新建 yak-ops-business-semantic(决策 E):依赖仅 modeling→semantic 单向;跨模块数据只存松散 ID(无物理外键,展示名经 SPI 解析);42 推送式上报;46/47 后端归 modeling,semantic 侧前端跳转 | 模块拆分评审(2026-09-14) |
+| A9 | 新建 data-ops-business-semantic(决策 E):依赖仅 modeling→semantic 单向;跨模块数据只存松散 ID(无物理外键,展示名经 SPI 解析);42 推送式上报;46/47 后端归 modeling,semantic 侧前端跳转 | 模块拆分评审(2026-09-14) |
 
 ## 4. 跟踪约定
 

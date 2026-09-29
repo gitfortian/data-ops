@@ -511,8 +511,8 @@ F-001 不改变现有 PENDING / PUBLISHED / OFFLINE / IGNORED / SOURCE_GONE 语�
 
 ### Asset evidence
 
-- `yak-ops-business/yak-ops-business-asset/DOMAIN.md`
-- `yak-ops-business/yak-ops-business-asset/REQUIREMENTS.md`
+- `data-ops-business/data-ops-business-asset/DOMAIN.md`
+- `data-ops-business/data-ops-business-asset/REQUIREMENTS.md`
 - `AssetProvider`
 - `AssetDiscoverService`
 - `AssetLifecycleService`

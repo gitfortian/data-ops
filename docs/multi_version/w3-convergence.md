@@ -26,7 +26,7 @@
 
 ## W3-3 ｜P2｜版本 PO 归属约定落地（按 Q7）
 
-**现状**：PO 一半在 `yak-ops-common/bean/po/{模块}`（dev-task/modeling/workflow/semantic/quality/metric/mdm），一半在模块内 `dao/model`（digital-screen/dashboard/realtime-sync）。
+**现状**：PO 一半在 `data-ops-common/bean/po/{模块}`（dev-task/modeling/workflow/semantic/quality/metric/mdm），一半在模块内 `dao/model`（digital-screen/dashboard/realtime-sync）。
 
 **改动点**：按 Q7 拍板结果执行——推荐「新对象一律模块内 dao/model，存量不搬家」；在 scaffold-checklist.md 固化；若反向拍板（全部进 common），只迁 W1/W2 新建的 4-5 张版本表 PO，不碰历史 PO。
 

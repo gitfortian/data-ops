@@ -12,12 +12,12 @@
     </parent>
 
     <groupId>io.yak.ops</groupId>
-    <artifactId>yak-ops</artifactId>
+    <artifactId>data-ops</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
-    <name>Yak Ops</name>
-    <description>Yak Ops unified parent and reactor build</description>
+    <name>Data Ops</name>
+    <description>Data Ops unified parent and reactor build</description>
 
     <properties>
         <java.version>21</java.version>
@@ -32,25 +32,26 @@
     </properties>
 
     <modules>
-        <module>yak-ops-bom</module>
-        <module>yak-ops-common</module>
-        <module>yak-ops-spi</module>
-        <module>yak-ops-core</module>
-        <module>yak-ops-business</module>
-        <module>yak-ops-plugins/yak-ops-plugin-datasource</module>
-        <module>yak-ops-plugins/yak-ops-plugin-storage</module>
-        <module>yak-ops-plugins/yak-ops-plugin-task</module>
-        <module>yak-ops-plugins/yak-ops-plugin-alert</module>
-        <module>yak-ops-boot</module>
-        <module>yak-ops-ui</module>
-        <module>yak-ops-dist</module>
+        <module>data-ops-framework</module>
+        <module>data-ops-bom</module>
+        <module>data-ops-common</module>
+        <module>data-ops-spi</module>
+        <module>data-ops-core</module>
+        <module>data-ops-business</module>
+        <module>data-ops-plugins/data-ops-plugin-datasource</module>
+        <module>data-ops-plugins/data-ops-plugin-storage</module>
+        <module>data-ops-plugins/data-ops-plugin-task</module>
+        <module>data-ops-plugins/data-ops-plugin-alert</module>
+        <module>data-ops-boot</module>
+        <module>data-ops-ui</module>
+        <module>data-ops-dist</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>io.yak.ops</groupId>
-                <artifactId>yak-ops-bom</artifactId>
+                <artifactId>data-ops-bom</artifactId>
                 <version>${project.version}</version>
                 <type>pom</type>
                 <scope>import</scope>

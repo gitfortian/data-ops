@@ -4,7 +4,7 @@
 
 **What to build:** 管理员进入"主数据管理 → 主数据清洗"(menuCode `mdm-cleansing`),配置去重规则(如手机号相同 + 姓名相似)发现重复组,对重复组执行合并/保留:合并后保留主记录(master_id 不变,source_ids 合并,其他记录标记 MERGED,version 递增)。质量检查(完整性/格式)跳数据质量,清洗只管去重、合并、标准化(57)。
 
-**模块归属:** yak-ops-business-mdm(+quality 参照)
+**模块归属:** data-ops-business-mdm(+quality 参照)
 
 **Blocked by:** [55 采集执行](./55-collect-execution.md)
 
@@ -24,7 +24,7 @@
 **验证记录(2026-09-17):**
 
 - MDM 模块 `-am test` 通过:新增 `MdmCleanServiceTest` 11 例(规则校验/去重聚合/合并预览与执行/越界校验),合计 42 例全绿。
-- `yak-ops-boot -am compile` 通过;菜单契约测试 `navigationMenuContract.test.ts` 5/5 通过(V2027 已登记)。
+- `data-ops-boot -am compile` 通过;菜单契约测试 `navigationMenuContract.test.ts` 5/5 通过(V2027 已登记)。
 - 前端 tsc 基线 199 个既有错误保持 0 新增(mdm/cleansing 与 services/mdm 无新增错误)。
 - 错误码追加 44022 去重规则不存在/44023 去重规则不合法/44024 合并请求不合法(REQUIREMENTS Ticket 56 段同步)。
 - 去重发现为 DB 侧 GROUP BY(JSON_EXTRACT 匹配键 + CHAR(1) 拼接 AND 键),属性编码经 `[A-Za-z0-9_]` 校验后嵌入 SQL,防注入。

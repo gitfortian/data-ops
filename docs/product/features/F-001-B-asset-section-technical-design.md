@@ -23,7 +23,7 @@ Feature ID: F-001-B
 
 ## 3. Query 契约
 
-Quality 通过既有 `yak-ops-spi` `SectionProvider` 提供只读对象级 Section，Asset 将 Metadata Provider 的物理坐标放入 `SectionContext.attributes`。Quality 按当前 `CurrentProject` 隔离查询。输出包含：
+Quality 通过既有 `data-ops-spi` `SectionProvider` 提供只读对象级 Section，Asset 将 Metadata Provider 的物理坐标放入 `SectionContext.attributes`。Quality 按当前 `CurrentProject` 隔离查询。输出包含：
 
 - 是否已登记为 Quality TableAsset；
 - Monitor 总数与启用数；
@@ -59,7 +59,7 @@ Asset controller -> AssetDiscoverService -> SectionProvider (Quality-owned imple
 Quality SectionProvider -> Quality TableAsset / Monitor / Execution Readers -> repositories -> DAO
 ```
 
-稳定跨域类型由 `yak-ops-spi` 的 `SectionProvider`、`SectionContext` 和 `SectionContract` 承载；Quality 实现放在 owning module 内。Asset 只注入 SPI，不直接依赖 Quality 内部 Reader、Repository、DAO 或 Mapper；Asset 对 endpoint 输出统一映射为自己的 `AssetSectionResult`。
+稳定跨域类型由 `data-ops-spi` 的 `SectionProvider`、`SectionContext` 和 `SectionContract` 承载；Quality 实现放在 owning module 内。Asset 只注入 SPI，不直接依赖 Quality 内部 Reader、Repository、DAO 或 Mapper；Asset 对 endpoint 输出统一映射为自己的 `AssetSectionResult`。
 
 ## 6. 容错、身份与性能
 

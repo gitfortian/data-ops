@@ -4,7 +4,7 @@
 
 **What to build:** 配置主数据分发(目标系统、分发内容、分发方式 API/MESSAGE/FILE、分发频率),执行分发(增量/全量,复用 data-service API 能力),监控分发状态(最近分发时间、成功/失败条数、重试)。**无独立菜单**:配置与监控界面位于实体详情页"分发配置"Tab(menu.md 五),总览"分发状态"卡片展示订阅/分发概览并跳数据服务。
 
-**模块归属:** yak-ops-business-mdm(+data-service)
+**模块归属:** data-ops-business-mdm(+data-service)
 
 **Blocked by:** [55 采集执行](./55-collect-execution.md)
 

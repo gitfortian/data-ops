@@ -65,8 +65,8 @@ F-001 已有可审阅的 Section 读取骨架、五态契约、独立查询 API�
 
 - D01 运行环境与登录态验收：前后端不可用、没有真实 DataOps 应用会话；数据库只读核对不等于页面验收。页面和登录态一律记为未执行。具体样本、权限、证据要求见 `asset-understanding-user-info.md` 的 D01 执行记录及页面测试移交清单。
 - D02-B 干净基线复现：在未修改 worktree `C:\Users\tianxy105\AppData\Local\Temp\yak-ops-d02b-baseline`（HEAD=`84f979a2b48068dbe6807468635a11f808591404`，执行前 `git status` 干净）分别运行以下定向命令，均复现失败：
-  - `./mvnw -pl yak-ops-business/yak-ops-business-lineage -Dtest=LineageMavenDependencyBoundaryTest test`：`LineageMavenDependencyBoundaryTest.sharedDatabaseModuleOwnsMybatisAndFlywayRuntimeAdapters` 失败。断言 `yak-ops-business-datasource` 中 `mybatis-plus-jsqlparser-4.9` 应为 `runtime`，实际为 `compile`；同类其余 2 项通过。
-  - `./mvnw -pl yak-ops-business/yak-ops-business-lineage -Dtest=LineagePublicApiBoundaryTest test`：`LineagePublicApiBoundaryTest.neighboringProductionModulesUseOnlyDeclaredPublicTypes` 失败。报告 Modeling 的 `ModelingLineageController.java` 导入 `io.yak.ops.business.lineage.controller.v1.converter.LineageViewConverter`，越过 Lineage 公开 API 边界；同类其余 2 项通过。
+  - `./mvnw -pl data-ops-business/data-ops-business-lineage -Dtest=LineageMavenDependencyBoundaryTest test`：`LineageMavenDependencyBoundaryTest.sharedDatabaseModuleOwnsMybatisAndFlywayRuntimeAdapters` 失败。断言 `data-ops-business-datasource` 中 `mybatis-plus-jsqlparser-4.9` 应为 `runtime`，实际为 `compile`；同类其余 2 项通过。
+  - `./mvnw -pl data-ops-business/data-ops-business-lineage -Dtest=LineagePublicApiBoundaryTest test`：`LineagePublicApiBoundaryTest.neighboringProductionModulesUseOnlyDeclaredPublicTypes` 失败。报告 Modeling 的 `ModelingLineageController.java` 导入 `io.yak.ops.business.lineage.controller.v1.converter.LineageViewConverter`，越过 Lineage 公开 API 边界；同类其余 2 项通过。
   复现发生在 #39/#40 合入后的目标基线上，但失败断言针对既有 datasource Maven scope 与 Modeling→Lineage 包边界，不是 #39 的 nullable Metadata facts 或 #40 的“缺失节点 vs 查询失败”改动；因此不能归因于 #39/#40。该复现只运行 lineage 架构单测，没有执行页面测试。
 - #39 仅修复 Metadata catalog nullable facts 的保留语义及相应定向单测，不涵盖 Model 来源字段产品契约；D04 该契约问题保持独立跟踪，不纳入 D03 实现或差距“已修复”结论。
 

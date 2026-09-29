@@ -68,7 +68,7 @@ V1 明确保留为 `GLOBAL`：
 | 告警渠道 | `yak_ops_alert_channel` | 当前模型按渠道类型全局唯一，V1 继续全局共享 |
 | 质量内置模板 | `yak_quality_rule_template` 中 `builtin=1` | 平台级规则能力 |
 | 质量自定义模板库 | `yak_quality_rule_template` / `yak_quality_template_folder` | V1 暂按全局模板库处理，项目私有模板延后 |
-| Job Registry / Runtime 能力 | `yak-ops-business-job` | Job 是任务发现、快照和执行路由基础设施，不拥有业务 Task Source Truth |
+| Job Registry / Runtime 能力 | `data-ops-business-job` | Job 是任务发现、快照和执行路由基础设施，不拥有业务 Task Source Truth |
 | 数据源插件/连接器元数据 | 插件注册和字段定义 | 平台能力，不属于项目业务数据 |
 | Yak Security 操作日志 | 系统管理审计 | V1 仍作为系统级审计；业务执行记录单独保存项目 |
 

@@ -2,7 +2,7 @@
 
 > **状态：已归档（superseded）**。本报告的方法论与差距分析已由 agent-observability-system-design.md（体系设计）与 agent-observability-development-plan.md（执行排期）承接并实现（O1~O4，2026-08-29）；I1~I7 见 optimization-issues，I8/I9 已收编落地。本文保留作历史设计论证，不再更新。
 
-> 日期：2026-08-27 | 范围：`yak-ops-business-agent` 现状 vs `D:\tianxy\code\bkn-foundry` 可观测性设计
+> 日期：2026-08-27 | 范围：`data-ops-business-agent` 现状 vs `D:\tianxy\code\bkn-foundry` 可观测性设计
 > 背景：Agent 已实现事件级观测（思考/工具调用可见），但用户感知不到思考用时、工具调用结果与用时，且链路混乱、无法溯源。
 > 结论：**不是没记数据，而是记了没人读、没有结构。**
 

@@ -10,7 +10,7 @@
 **现状问题**：状态词汇五套并存——DRAFT/PUBLISHED（大屏 `DigitalScreenStatus.java`、modeling `ModelStatus.java:9-13` 另带 DISABLED）、字符串 `"DRAFT/ONLINE/OFFLINE"`（workflow `WorkflowDefinitionManager.java:204,343,368`）、ONLINE/OFFLINE（dataset `DatasetStatus.java:3-6`）、ENABLED/DISABLED（semantic/metric/quality 与发布态混用）。`common/enums/workflow/DefinitionState.java:4-8` 取值恰好是 DRAFT/PUBLISHED/OFFLINE，但全仓零引用（唯一命中是测试方法名），是现成的死枚举。
 
 **改动点**：
-- 新建 `yak-ops-common` → `io.yak.ops.common.enums.PublishState { DRAFT, PUBLISHED, OFFLINE }`（Q6 建议：不迁 DefinitionState 而是新建，避免 workflow 包语义绑架；DefinitionState 直接删除）。
+- 新建 `data-ops-common` → `io.yak.ops.common.enums.PublishState { DRAFT, PUBLISHED, OFFLINE }`（Q6 建议：不迁 DefinitionState 而是新建，避免 workflow 包语义绑架；DefinitionState 直接删除）。
 - PO 的 `status` 列仍为 VARCHAR，模块内以 `PublishState.name()` 读写；提供 `PublishState.of(String)` 宽松解析（存量脏值回退 DRAFT 并 warn）。
 - 本工单**只落枚举与工具**，各模块替换字符串字面量在 W1 各工单内做（workflow=W1-4、sync-offline=W1-2、realtime=W2-4）。
 - 明确：ENABLED/DISABLED 类开关（metric/semantic/quality）**保留**，语义=可用性开关，与发布态正交（契约 C1）。
@@ -24,7 +24,7 @@
 **现状问题**：规范化 JSON→SHA-256 至少 3 份独立实现（dev-task `TaskDefinitionDigestCalculator.java:16-21`、quality `QualityTaskPublisher.java:92`、modeling `ModelVersionService.java:63,105-106`），规范化口径未对齐（key 排序/空值处理各自约定）→ 未来 diff/幂等跨模块比对会翻车。版本号分配 4 种手段：SQL `MAX+1`（screen/dev-task/realtime/dataset）、`selectCount+1`（modeling `ModelVersionRepositoryAdapter.java:85-95`，**有删除计数风险**）、内存聚合 counter（workflow）、主表 version 直落（metric/semantic）。
 
 **改动点**：
-- `yak-ops-common` 新增 `io.yak.ops.common.version` 包（≤2 个类）：
+- `data-ops-common` 新增 `io.yak.ops.common.version` 包（≤2 个类）：
   - `VersionDigests.canonicalJson(Object) / sha256(String)`：统一 Jackson `ORDER_MAP_ENTRIES_BY_KEYS` + 非空序化，收编三处旧实现的**最优口径**（以 dev-task 为准，其有 checksum 幂等索引验证）。
   - `nextVersionNo` SQL 模板约定：mapper 注解统一 `SELECT COALESCE(MAX(version_no),0)+1 FROM <t> WHERE <biz>_id=#{id}`（供 W 系列复制，不做强基类）。
 - 旧三处 Digest 实现本 wave 内替换为公共件（调用点行为不变，测试兜底）。
@@ -38,7 +38,7 @@
 **现状问题**：`AuditTransactions.java` 被逐字复制 **8 份**（approval/asset/lifecycle/mdm/metric/modeling/security/semantic 各自 `support/audit/`），实现同一"事务提交后落审计"规则；审计写入口 `AuditOperationRequest` 现约定传 before/after，但全项目大量传 `Map.of()`（`TtlPolicyService.java:200`、`MdmChangeEffectService.java:71-72`、`MdmEntityService.java:113,120`）。`AuditCarrier.java:4-17` 无 diff 字段（该由调用方塞 payload，不动 carrier）。
 
 **改动点**：
-- 公共实现落 `yak-ops-common`（依赖 audit SPI 的最小接口，注意 common 不能反向依赖 business-audit——如存在循环，落 `yak-ops-core`，实现时以依赖图为准）。
+- 公共实现落 `data-ops-common`（依赖 audit SPI 的最小接口，注意 common 不能反向依赖 business-audit——如存在循环，落 `data-ops-core`，实现时以依赖图为准）。
 - 8 份复制删除，import 替换，行为不变。
 - 提供 `AuditDiffs.of(before, after)`：对两个 Map/PO 做浅层字段 diff 并按密钥字段脱敏（password/secret/token 类键名掩码），供 W 系列直接使用。
 

@@ -4,7 +4,7 @@
 
 **What to build:** 提供主数据查询 API(按 master_id 查询、按条件搜索),订阅管理(系统订阅实体变更,变更时通知订阅方),缓存(复用 data-service 缓存能力)。**无独立菜单**:API 管理/缓存复用 data-service,主数据订阅为 MDM 特有;查询/订阅界面位于实体详情页与总览(menu.md 五),对外 API 经 data-service 暴露。
 
-**模块归属:** yak-ops-business-mdm(+data-service)
+**模块归属:** data-ops-business-mdm(+data-service)
 
 **Blocked by:** [55 采集执行](./55-collect-execution.md)
 

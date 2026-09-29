@@ -1,6 +1,6 @@
 # Ticket 09：异步/调度链 AuditContext 传播工具化（P2）
 
-**对应需求：** 全量审计方案 M2 | **优先级：** P2 | **阻塞于：** 02 | **模块：** yak-ops-business-audit + 调度/工作流/同步侧
+**对应需求：** 全量审计方案 M2 | **优先级：** P2 | **阻塞于：** 02 | **模块：** data-ops-business-audit + 调度/工作流/同步侧
 
 **What to build：** 目前全仓只有 2 处做跨线程传递（`WorkflowExecutionAuditBridge.java:84`、`OfflineExecutionCoordinator.java:411`），其余异步执行（各类线程池、事件监听、调度触发的二级任务）审计链断裂——操作事件丢失或 actor 退化 SYSTEM。本票把传递做成 SDK 能力并接入主要执行器。
 

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.yak.ops</groupId>
+        <artifactId>data-ops</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>data-ops-business</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Data Ops Business</name>
+    <description>Data Ops business-domain module aggregation</description>
+
+    <modules>
+        <module>data-ops-business-audit</module>
+        <module>data-ops-business-datasource</module>
+        <module>data-ops-business-data-service</module>
+        <module>data-ops-business-job</module>
+        <module>data-ops-business-task-catalog</module>
+        <module>data-ops-business-data-development</module>
+        <module>data-ops-business-lineage</module>
+        <module>data-ops-business-dataset</module>
+        <module>data-ops-business-analysis</module>
+        <module>data-ops-business-dashboard</module>
+        <module>data-ops-business-digital-screen</module>
+        <module>data-ops-business-resource</module>
+        <module>data-ops-business-sync</module>
+        <module>data-ops-business-quality</module>
+        <module>data-ops-business-workflow</module>
+        <module>data-ops-business-alert</module>
+        <module>data-ops-business-agent</module>
+        <module>data-ops-business-home</module>
+        <module>data-ops-business-modeling</module>
+        <module>data-ops-business-semantic</module>
+        <module>data-ops-business-mdm</module>
+        <module>data-ops-business-metric</module>
+        <module>data-ops-business-security</module>
+        <module>data-ops-business-lifecycle</module>
+        <module>data-ops-business-asset</module>
+        <module>data-ops-business-metadata</module>
+        <module>data-ops-business-approval</module>
+        <module>data-ops-business-consumption</module>
+    </modules>
+</project>

@@ -135,7 +135,7 @@ $mysql='C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 
 ### 可复现阻塞与完成边界
 
-登录态页面路径、六个独立 Section 的真实响应、页面截图、跨域权限拒绝、适用 Section 的实际 `EMPTY/UNAVAILABLE` 响应均未完成。要继续执行，需要启动与 `yak_security` 同一产品数据集连接的 DataOps 前后端（前端 9001、后端 9527），并提供可登录账号及其 Asset/Model/Metadata read 权限；仅数据库账户不能替代应用用户登录。现有 worktree 不含 Docker，也没有 `yak-ops-ui/node_modules`，且未发现运行中应用。本记录因此不宣称 D01 通过。
+登录态页面路径、六个独立 Section 的真实响应、页面截图、跨域权限拒绝、适用 Section 的实际 `EMPTY/UNAVAILABLE` 响应均未完成。要继续执行，需要启动与 `yak_security` 同一产品数据集连接的 DataOps 前后端（前端 9001、后端 9527），并提供可登录账号及其 Asset/Model/Metadata read 权限；仅数据库账户不能替代应用用户登录。现有 worktree 不含 Docker，也没有 `data-ops-ui/node_modules`，且未发现运行中应用。本记录因此不宣称 D01 通过。
 
 ## 明确不在本案例范围内
 

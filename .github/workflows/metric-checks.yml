@@ -3,12 +3,12 @@ name: Metric Checks
 on:
   pull_request:
     paths:
-      - 'yak-ops-business/yak-ops-business-metric/**'
-      - 'yak-ops-boot/**'
-      - 'yak-ops-ui/src/pages/metric/**'
-      - 'yak-ops-ui/src/pages/semantic/**'
-      - 'yak-ops-ui/src/services/metric/**'
-      - 'yak-ops-ui/src/services/semantic/**'
+      - 'data-ops-business/data-ops-business-metric/**'
+      - 'data-ops-boot/**'
+      - 'data-ops-ui/src/pages/metric/**'
+      - 'data-ops-ui/src/pages/semantic/**'
+      - 'data-ops-ui/src/services/metric/**'
+      - 'data-ops-ui/src/services/semantic/**'
       - 'scripts/db/phase5-metric-*.sql'
       - 'scripts/product/phase5-real-env-acceptance.mjs'
       - '.github/workflows/metric-checks.yml'
@@ -29,19 +29,19 @@ jobs:
       - name: Build backend dependencies without unrelated tests
         run: >-
           mvn -B
-          -pl yak-ops-boot
+          -pl data-ops-boot
           -am
           -DskipTests
           install
       - name: Run Metric module tests
         run: >-
           mvn -B
-          -pl yak-ops-business/yak-ops-business-metric
+          -pl data-ops-business/data-ops-business-metric
           test
       - name: Run Phase 5 Boot observed-usage adapter tests
         run: >-
           mvn -B
-          -pl yak-ops-boot
+          -pl data-ops-boot
           -Dtest=ConsumptionMetricObservedUsageProviderTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: yak-ops-ui
+        working-directory: data-ops-ui
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

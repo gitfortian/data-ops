@@ -176,12 +176,12 @@ Source builds currently require:
 - Yarn Classic
 - Maven, or the included Maven Wrapper
 - MySQL 8.0 for a local runtime
-- `yak-framework:1.0.0-SNAPSHOT` installed in the same local Maven repository
+- `data-ops-framework:1.0.0-SNAPSHOT` installed in the same local Maven repository
 
 Build the frontend first:
 
 ```bash
-cd yak-ops-ui
+cd data-ops-ui
 yarn install
 yarn build
 cd ..
@@ -202,7 +202,7 @@ mvnw.cmd clean package -DskipTests
 The assembled distribution is generated under:
 
 ```text
-yak-ops-dist/target/
+data-ops-dist/target/
 ```
 
 See the [project documentation](https://doc.yak-ops.com/) for environment-specific configuration and deployment details.
@@ -213,13 +213,13 @@ Yak Ops separates product domains, runtime contracts, and integrations so that e
 
 ```text
 ┌─────────────────────────────────────────────────────┐
-│                    yak-ops-ui                       │
+│                    data-ops-ui                       │
 │              React / Umi / Ant Design               │
 └───────────────────────┬─────────────────────────────┘
                         │ HTTP / WebSocket
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│                   yak-ops-boot                      │
+│                   data-ops-boot                      │
 │                Spring Boot runtime                  │
 └───────────────────────┬─────────────────────────────┘
                         │
@@ -247,18 +247,18 @@ At repository level, the main modules are:
 
 ```text
 yak-ops
-├── yak-ops-bom           dependency alignment
-├── yak-ops-common        shared primitives
-├── yak-ops-spi           extension contracts
-├── yak-ops-core          core platform capabilities
-├── yak-ops-business      product business domains
-├── yak-ops-plugins       datasource / storage / task / alert plugins
-├── yak-ops-boot          Spring Boot application
-├── yak-ops-ui            web application
-└── yak-ops-dist          release distribution assembly
+├── data-ops-bom           dependency alignment
+├── data-ops-common        shared primitives
+├── data-ops-spi           extension contracts
+├── data-ops-core          core platform capabilities
+├── data-ops-business      product business domains
+├── data-ops-plugins       datasource / storage / task / alert plugins
+├── data-ops-boot          Spring Boot application
+├── data-ops-ui            web application
+└── data-ops-dist          release distribution assembly
 ```
 
-Yak Ops also builds on [yak-framework](https://github.com/weifuwan/yak-framework) for shared infrastructure such as security, scheduling and workflow runtime capabilities.
+Yak Ops also builds on [data-ops-framework](https://github.com/weifuwan/yak-framework) for shared infrastructure such as security, scheduling and workflow runtime capabilities.
 
 ## Project Space and governance
 
@@ -302,7 +302,7 @@ A good way to contribute is to:
 3. keep a pull request focused on one problem and explain the user-visible behavior it changes;
 4. add or update tests and documentation where the change introduces a new contract.
 
-Before changing product behavior, start with [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) and the [`docs/product/`](docs/product/) baseline. AI / coding agents should enter through [`AGENTS.md`](AGENTS.md). Before contributing code, also read [`CODE_STYLE.md`](CODE_STYLE.md); frontend changes should follow [`yak-ops-ui/FRONTEND_CODE_STYLE.md`](yak-ops-ui/FRONTEND_CODE_STYLE.md).
+Before changing product behavior, start with [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) and the [`docs/product/`](docs/product/) baseline. AI / coding agents should enter through [`AGENTS.md`](AGENTS.md). Before contributing code, also read [`CODE_STYLE.md`](CODE_STYLE.md); frontend changes should follow [`data-ops-ui/FRONTEND_CODE_STYLE.md`](data-ops-ui/FRONTEND_CODE_STYLE.md).
 
 If Yak Ops is useful to you, a ⭐ helps more people discover the project.
 

@@ -1,11 +1,11 @@
 # Ticket 07：权限编码统一对账迁移（P2）
 
-**对应需求：** 数据源缺失能力盘点 §6 第 7 行 + §3 E2 | **优先级：** P2 | **模块：** yak-ops-common + yak-ops-boot（迁移）+ yak-ops-ui
+**对应需求：** 数据源缺失能力盘点 §6 第 7 行 + §3 E2 | **优先级：** P2 | **模块：** data-ops-common + data-ops-boot（迁移）+ data-ops-ui
 
 **What to build：** 数据源模块三种命名风格并存：READ=`resource:data-source:read`（新式）、CREATE/UPDATE/DELETE/TEST=`datasource:*`（旧式）、SQL 执行观测=`resource:sql-execution:read`。统一到 `resource:data-source:*` 家族。
 
 **设计：**
-- `DataSourcePermissionCode`（yak-ops-common constant 包）四个写操作常量值改为 `resource:data-source:create|update|delete|test`；Java 引用点不动（都走常量）。
+- `DataSourcePermissionCode`（data-ops-common constant 包）四个写操作常量值改为 `resource:data-source:create|update|delete|test`；Java 引用点不动（都走常量）。
 - DB 侧对账迁移 `V20xx__reconcile_datasource_permission_codes.sql`（取号顺延，Ticket 04 会先占一个号）：**原地 UPDATE** `yak_security_permission.permission_code`（`datasource:create/update/delete/test` → 新值）——`permission_id` 不变，`yak_security_role_permission` 授权自然存活；旧 `datasource:view`、`datasource` 组行置 `active=0,is_delete=1` 退役（V1000 的退役姿势）。menu_code 绑定不变（`data-source`），页面 `required_permission_code` 不变。
 - 注意 `declared` 位：SQL 管理行为 `declared=0`，UPDATE 不碰该位，防止声明式注册器把改码后的行下线。
 - 前端 `yakOpsPermissions.ts` dataSource 块同步改字符串；grep 全仓（含测试/种子数据）确认无其它 `datasource:` 字面量残留。

@@ -1,6 +1,6 @@
 # 主数据管理（MDM）—— 模块设计说明
 
-> 模块：`yak-ops-business-mdm`
+> 模块：`data-ops-business-mdm`
 > 版本：v1.0
 > 状态：设计基线
 > 核心原则：**能复用就复用，只新建主数据特有的**
@@ -27,7 +27,7 @@
 ## 二、模块依赖
 
 ```
-yak-ops-business-mdm
+data-ops-business-mdm
 ├── 依赖 datasource（数据源接入）
 ├── 依赖 sync（数据采集）
 ├── 依赖 quality（质量规则）
@@ -189,7 +189,7 @@ modeling ──依赖──► mdm（引用主数据）
 ## 五、模块内部分层
 
 ```
-yak-ops-business-mdm
+data-ops-business-mdm
 ├── api/                  # 对外 API
 │   ├── EntityApi
 │   ├── RecordApi
@@ -232,7 +232,7 @@ yak-ops-business-mdm
 ## 六、契约文件集
 
 ```
-yak-ops-business-mdm/
+data-ops-business-mdm/
 ├── README.md
 ├── DOMAIN.md
 ├── ARCHITECTURE.md
@@ -260,7 +260,7 @@ yak-ops-business-mdm/
 ## 七、Flyway
 
 ```
-yak-ops-business-mdm/src/main/resources/db/migration/yak-mdm/
+data-ops-business-mdm/src/main/resources/db/migration/yak-mdm/
 ├── V1__init_mdm_tables.sql
 ├── V2__init_mdm_indexes.sql
 └── V3__preset_mdm_templates.sql

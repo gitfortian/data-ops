@@ -35,7 +35,7 @@ redirect 本身核实为真：路由表 `/data-metadata/catalog`、`/data-metada
 - **R-3 指标挂组**：metric 各页 menuGroup 归 data-analysis 系（上轮已核）。
 - **R-4**：诚实标"未核实"（D-7），不装懂，通过。
 - **R-5 "新建走真域"**：MetricEditModal 实测 domainId 用 semantic 域树（`toDomainTreeData`）、processId 独立字段且按域子树过滤——一词二义在新建路径上确实已拆，存量洗数仍等 D-2，与 01 M-6 口径一致。
-- **R-6**：agent pom 实测唯一业务依赖 = `yak-ops-business-dataset`，"只依赖 dataset"成立；176 文件数上轮已核。
+- **R-6**：agent pom 实测唯一业务依赖 = `data-ops-business-dataset`，"只依赖 dataset"成立；176 文件数上轮已核。
 - **R-8**：semantic 组标题实测"数仓标准体系"（parentGroupId=modeling）✓；血缘挂 `/data-analysis/lineage` ✓。顺带补一条同类：血缘的 **menuGroup 却是 data-asset**——路径前缀、菜单组、模块名三方各跨，是 R-3 同族问题，可并入 R-8 对照表。
 - **#4 指标↔建模"common 层 SPI 解耦"**：实测 modeling 引 `io.yak.ops.common.api.metric.MetricQueryApi`，两模块互 import 为零——表述精确。
 - **#2 标准引用"只读 SPI+编译期边界测试"**、**#10 Provider 投影对账**、**图一"唯一双向箭头对"=MOD↔MTR**、`主脉图.html` 存在——均核过。

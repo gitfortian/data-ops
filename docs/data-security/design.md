@@ -1,6 +1,6 @@
 # 数据安全（Data Security）—— 模块设计说明
 
-> 模块：`yak-ops-business-security`　根包：`io.yak.ops.business.security`
+> 模块：`data-ops-business-security`　根包：`io.yak.ops.business.security`
 > 版本：v1.0　状态：设计基线
 > 核心原则：**对齐而非重造（等级字典对齐 semantic）；分层而非越权（RBAC 管入口、本模块管数据对象）；以 SPI 出口让下游消费形成闭环**
 
@@ -12,7 +12,7 @@
 
 **不职责（复用 + 跳转）**：
 - 不定义"安全标准"字典本身 → 对齐 `semantic` 的 `SECURITY` 标准
-- 不做菜单/接口 RBAC → 用 `yak-security` 框架（`@RequiresPermission`）
+- 不做菜单/接口 RBAC → 用 `data-security` 框架（`@RequiresPermission`）
 - 不做操作审计存储 → 复用 `audit`（`BusinessAuditService`）
 - 不做查询 SQL 改写拦截 → 由下游在吐数处调用脱敏 SPI
 - 不做列级物理加密落库 → 仅算法占位

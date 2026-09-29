@@ -1,7 +1,7 @@
 # 数据生命周期（TTL）—— Ticket 清单
 
 > 状态：v1.0（2026-09-19）
-> 模块：`yak-ops-business-lifecycle`（新建）
+> 模块：`data-ops-business-lifecycle`（新建）
 > 编号接 data-security 的 79，从 **80** 开始；硬性约束见 [dev-plan.md](../dev-plan.md)
 
 ## 一、Ticket 总览

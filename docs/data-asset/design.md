@@ -1,7 +1,7 @@
 # 数据资产（Asset Center）—— 模块设计说明
 
 > 配套：[requirement.md](./requirement.md)（需求基线）、[information-map.md](./information-map.md)（信息来源矩阵与业务闭环，**读侧总账**）、[dev-plan.md](./dev-plan.md)（硬性约束）、[menu.md](./menu.md)（菜单契约）、原型 `docs/prototypes/data-asset/`
-> 模块：`yak-ops-business-asset`，包根 `io.yak.ops.business.asset`，表前缀 `yak_asset_`
+> 模块：`data-ops-business-asset`，包根 `io.yak.ops.business.asset`，表前缀 `yak_asset_`
 > Flyway：自持 `db/migration/yak-asset`（V1 起编，历史表 `flyway_schema_history_asset`）；菜单注册 yak-security 链 `V2032`
 > 错误码段：48001~48099
 > 核心原则：**管目录不管内容（D1）；对账复用 task-catalog 范式（D2）；一切统计服务端聚合（D11）**
@@ -144,7 +144,7 @@ modeling / metric / dataset / dashboard / task-catalog
 
 SOURCE_GONE 判定窗口天数（默认 7）、对账开关、概览单价类未来扩展位。
 
-## 五、包结构（模板 = yak-ops-business-lifecycle/metric）
+## 五、包结构（模板 = data-ops-business-lifecycle/metric）
 
 ```
 io.yak.ops.business.asset
@@ -300,7 +300,7 @@ public interface AssetProvider {
 | `asset-health-recompute` | 每日 03:00 | 全量健康度重算 + 浏览数聚合 + view_record 清理 |
 | `asset-health-snapshot` | 每日 04:00 | 概览级健康分布快照（P2） |
 
-## 十、前端结构（`yak-ops-ui/src/pages/data-asset/`）
+## 十、前端结构（`data-ops-ui/src/pages/data-asset/`）
 
 ```
 data-asset/

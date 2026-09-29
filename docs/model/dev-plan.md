@@ -14,7 +14,7 @@
 ### 0.1 契约先行(Contract-First)
 
 1. **所有功能开发必须先有契约文件,才有对应的代码。** 契约文件未更新(后端)或未确认(前端)之前,不允许编写任何业务代码。
-2. **后端**:每个 `yak-ops-business-*` 模块根目录维护契约文件集 —— `README.md`、`DOMAIN.md`、`ARCHITECTURE.md`、`DEPENDENCIES.md`、`REQUIREMENTS.md`、`REVIEW.md`。每个 ticket 开工的**第一步**是更新本次涉及的所有模块的契约文件:
+2. **后端**:每个 `data-ops-business-*` 模块根目录维护契约文件集 —— `README.md`、`DOMAIN.md`、`ARCHITECTURE.md`、`DEPENDENCIES.md`、`REQUIREMENTS.md`、`REVIEW.md`。每个 ticket 开工的**第一步**是更新本次涉及的所有模块的契约文件:
    - `DOMAIN.md`:领域概念、实体、不变量;
    - `ARCHITECTURE.md`:模块内结构与分层;
    - `DEPENDENCIES.md`:对其他模块的依赖方向与原因;
@@ -26,7 +26,7 @@
 
 ### 0.2 前端契约文件只读
 
-1. **`yak-ops-ui/` 下所有 `.md` 文件不允许修改,只允许阅读和遵守。** 包括但不限于:`docs/navigation-menu-contract.md`、`docs/security-contract-matrix.md`、`docs/business-security-contract-matrix.md`、`docs/bi-editor-engineering.md`、`FRONTEND_CODE_STYLE.md`,以及各页面目录下的 README。
+1. **`data-ops-ui/` 下所有 `.md` 文件不允许修改,只允许阅读和遵守。** 包括但不限于:`docs/navigation-menu-contract.md`、`docs/security-contract-matrix.md`、`docs/business-security-contract-matrix.md`、`docs/bi-editor-engineering.md`、`FRONTEND_CODE_STYLE.md`,以及各页面目录下的 README。
 2. 前端实现必须**符合契约并通过契约测试**(如 `navigationMenuContract.test.ts`):每个可见路由声明稳定 `menuCode`,业务菜单行进 Yak Ops 自有 Flyway,不得触碰 `system-*` 命名空间;权限编码不得在未取得后端证据前写入路由/菜单。
 3. **如新功能与现有前端契约冲突、或契约未覆盖新场景**:不得擅自修改契约文件,必须停下并在 ticket/评审中上报,由契约维护方更新契约后方可继续开发。
 
@@ -35,10 +35,10 @@
 | 规范 | 位置 | 关键要求 |
 | --- | --- | --- |
 | 后端代码风格 | `CODE_STYLE.md` | 全部 Java 代码遵守 |
-| 前端代码风格 | `yak-ops-ui/FRONTEND_CODE_STYLE.md` | 全部前端代码遵守 |
+| 前端代码风格 | `data-ops-ui/FRONTEND_CODE_STYLE.md` | 全部前端代码遵守 |
 | 项目空间数据边界 | `docs/architecture/PROJECT_SCOPE.md` | project_id 只取服务端可信上下文;异步任务必须能独立恢复项目上下文;不建物理外键 |
 | 首页/总览契约 | `docs/home-overview-contract.md` | 统计服务端聚合;禁止无界 list() 后内存统计;独立容错,"查不到"≠0 |
-| 菜单授权契约 | `yak-ops-ui/docs/navigation-menu-contract.md` | 稳定 menuCode;契约测试必须通过 |
+| 菜单授权契约 | `data-ops-ui/docs/navigation-menu-contract.md` | 稳定 menuCode;契约测试必须通过 |
 | 数据库迁移 | 各业务模块自持 Flyway | 建模自建 `db/migration/yak-modeling`、语义自建 `db/migration/yak-semantic`,均 V1 起编;菜单注册追加 yak-security 时建模取 ≥V2018、semantic 取 ≥V2019 |
 
 ---
@@ -196,6 +196,6 @@ flowchart LR
 | 2026-09-09 | v1.0 | 初版:29 个 ticket(P0×12 / P1×13 / P2×4)+ 硬性开发约束(契约先行、前端契约只读、全局规范) |
 | 2026-09-10 | v1.1 | 完成 01~05 并按双轴 review 修复:跨项目归属校验、恢复悬挂目录回退、编码唯一 DB 兜底(V6)、审计辅助类提取、分页批量装配、回收站原目录列、模型基础信息编辑端点 |
 | 2026-09-10 | v1.2 | 吸收 M4 需求(new_requirement/new_issue):评审结论固化于 m4-integration.md(四项整合决策),新增修订版 ticket 30~47 并更新里程碑(M4)与状态总表;后续完成 06/07/09 |
-| 2026-09-14 | v1.3 | 确认模块拆分(决策 E,固化于 m4-integration.md 第 8 节):新建独立 yak-ops-business-semantic(30~37 主体),modeling 经 SPI 消费(38/39/43/44/45),跨模块修正归属(40/41/42/46/47,42 改推送式、46/47 后端归 modeling);30~47 票据按归属重写;19/23/25 增补 std_* 预留验收项;新增假设 A8/A9;agent 模块 semantic 依赖已清零(`io.yak.ops.business.semantic` 包根空闲,命名无冲突) |
+| 2026-09-14 | v1.3 | 确认模块拆分(决策 E,固化于 m4-integration.md 第 8 节):新建独立 data-ops-business-semantic(30~37 主体),modeling 经 SPI 消费(38/39/43/44/45),跨模块修正归属(40/41/42/46/47,42 改推送式、46/47 后端归 modeling);30~47 票据按归属重写;19/23/25 增补 std_* 预留验收项;新增假设 A8/A9;agent 模块 semantic 依赖已清零(`io.yak.ops.business.semantic` 包根空闲,命名无冲突) |
 | 2026-09-15 | v1.6 | 字段库表结构优化落地:std_code_id→std_code_set_code(引用码集)、新增 data_type 快照/status/source/version、process_field 增加 is_required+created_by;REQUIREMENTS 补 data_type 提示刷新/码集停用处理/version 乐观锁/role×is_required 派生映射 4 条约束;ticket 44 验收补默认勾选映射;数据标准页面按 FRONTEND_CODE_STYLE review 修复(bug+规范) |
 | 2026-09-15 | v1.5 | semantic 消费链路全部实现:08 逆向导入(解锁)、39 标准套用 DWD、38 ODS 套用、40 沉淀双入口、41 推荐、42 推送统计、19 来源映射、43 分层映射、23 血缘登记、45 标准字段血缘、25 统一视图、47 主线视图、27 变更检测、46 影响分析、44 派生建模;至此 30~47 全部 in-review | semantic issues 复审(docs/semantic/issue-review-2026-09-14.md):12 处缺口补充进 30/31/32/33/35/37/40/43/44 验收项(审计/PROJECT_SCOPE/前端接线/模板对齐/版本快照/删除校验×2/分层预置/重名校验/layer 引用源/血缘联动);新增票 48(建模助手 agent 技能,P2 backlog);新增 docs/semantic/ 文档(README/module-design/复审记录) |

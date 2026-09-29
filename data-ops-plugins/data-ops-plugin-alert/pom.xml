@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.yak.ops</groupId>
+        <artifactId>data-ops</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>data-ops-plugin-alert</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Data Ops Alert Plugins</name>
+    <description>Data Ops alert-plugin module aggregation</description>
+
+    <modules>
+        <module>data-ops-plugin-alert-api</module>
+        <module>data-ops-plugin-alert-dingtalk</module>
+        <module>data-ops-plugin-alert-all</module>
+    </modules>
+</project>

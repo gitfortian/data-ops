@@ -3,13 +3,13 @@ name: Data Development Checks
 on:
   pull_request:
     paths:
-      - 'yak-ops-ui/src/pages/development/data-development/**'
-      - 'yak-ops-ui/src/pages/data-asset/**'
-      - 'yak-ops-ui/src/services/data-development/**'
-      - 'yak-ops-ui/src/locales/**/data-development-*.ts'
-      - 'yak-ops-business/yak-ops-business-data-development/**'
-      - 'yak-ops-business/yak-ops-business-dataset/**'
-      - 'yak-ops-business/yak-ops-business-asset/**'
+      - 'data-ops-ui/src/pages/development/data-development/**'
+      - 'data-ops-ui/src/pages/data-asset/**'
+      - 'data-ops-ui/src/services/data-development/**'
+      - 'data-ops-ui/src/locales/**/data-development-*.ts'
+      - 'data-ops-business/data-ops-business-data-development/**'
+      - 'data-ops-business/data-ops-business-dataset/**'
+      - 'data-ops-business/data-ops-business-asset/**'
       - '.github/workflows/data-development-checks.yml'
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: yak-ops-ui
+        working-directory: data-ops-ui
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
       - name: Run publish, execution and governance truth tests
         run: >-
           mvn -B
-          -pl yak-ops-business/yak-ops-business-data-development,yak-ops-business/yak-ops-business-dataset,yak-ops-business/yak-ops-business-asset
+          -pl data-ops-business/data-ops-business-data-development,data-ops-business/data-ops-business-dataset,data-ops-business/data-ops-business-asset
           -am
           -Dtest=DevelopmentTaskPublishValidationTest,DevelopmentTaskExecutionControlServiceTest,DevelopmentLineageEvidenceServiceTest,DevelopmentLineageWorkerTest,DevelopmentLineageWriteTransactionTest,DevelopmentSqlLineagePreviewServiceTest,DataDevelopmentDependencyBoundaryTest,DatasetPublisherTest,DatasetVersionWriterTest,DatasetDevelopmentSourceServiceTest,AssetSourceLookupServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false

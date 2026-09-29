@@ -19,7 +19,7 @@
 
 | # | 决策 | 理由 |
 |---|---|---|
-| D1 | 新模块 `yak-ops-business-approval`,表前缀 `yak_approval_*` | 与 asset/lifecycle 同构;命名空间隔离 |
+| D1 | 新模块 `data-ops-business-approval`,表前缀 `yak_approval_*` | 与 asset/lifecycle 同构;命名空间隔离 |
 | D2 | 依赖方向反转:审批中心零业务依赖,业务实现其 SPI `ApprovalFlowHandler` | 复用 `AssetProvider` 已验证范式;杜绝循环依赖 |
 | D3 | 三级单据模型:flow(定义) / instance(单) / step(级快照行) | 三表即可支撑 1~2 级顺序审批;step 行天然就是审批记录,不另设历史表 |
 | D4 | 发起时按 flow 配置**快照**审批人到 step 行 | 流程后续改配置不影响在途单(审批基准=发起时点) |
@@ -145,7 +145,7 @@ public record ApprovalDecision(Long instanceId, String flowCode, String bizType,
 
 审计(`BusinessAuditService`):SUBMIT/APPROVE/REJECT/CANCEL/FLOW_UPSERT/FLOW_TOGGLE 六类。
 
-## 七、界面设计（`yak-ops-ui/src/pages/approval/`）
+## 七、界面设计（`data-ops-ui/src/pages/approval/`）
 
 ```
 approval/
@@ -174,7 +174,7 @@ approval/
 
 | 项 | 值 |
 |---|---|
-| Maven | `yak-ops-business/yak-ops-business-approval`(依赖 common/audit;业务模块依赖**它**,方向单向) |
+| Maven | `data-ops-business/data-ops-business-approval`(依赖 common/audit;业务模块依赖**它**,方向单向) |
 | Flyway | 自持链 `db/migration/yak-approval`,V1 建三表;历史表 `flyway_schema_history_approval` |
 | 菜单 | boot yak-security 链 **V2033__register_data_approval_menu.sql** |
 | 权限码 | `data-approval:read/create/approve/manage`(常量类 `ApprovalPermissionCode`) |

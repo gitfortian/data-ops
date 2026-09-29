@@ -1,6 +1,6 @@
 # Ticket 05：数据源凭证静态加密（P1）
 
-**对应需求：** 数据源缺失能力盘点 §6 第 5 行 | **优先级：** P1 | **模块：** yak-ops-business-datasource（+common 配置约定）
+**对应需求：** 数据源缺失能力盘点 §6 第 5 行 | **优先级：** P1 | **模块：** data-ops-business-datasource（+common 配置约定）
 
 **What to build：** `connection_params` 与 `original_json` 两列 LONGTEXT 现为明文 JSON（库泄露=全量外部凭证泄露）。在仓储读写边界加对称加密，展示层脱敏链路（`DataSourceSecretCodec`）保持不变。
 
@@ -18,6 +18,6 @@
 - [x] 启动 backfill（幂等、可关）—— `CredentialMigrationRunnerTest` 4 项：无密钥/开关关闭时零交互、按项目轮转、单项目失败不阻断其它项目；`credentialBackfillStaysProjectScoped` 守住仓储侧项目窄化
 - [x] `DataSourceErrorCode` 增 41017/41018；`DataSourceProperties` 增 credential 嵌套配置（`secret-key` + `migrate-on-startup`）
 - [x] `.env.example`/application.yml 注释补 `YAK_DATASOURCE_CREDENTIAL_KEY` 说明（默认空=明文模式）
-- [x] 单测 + 模块 `mvn test` 绿 —— `./mvnw -o -pl yak-ops-business/yak-ops-business-datasource test`：Tests run 149, Failures 0, Errors 0
+- [x] 单测 + 模块 `mvn test` 绿 —— `./mvnw -o -pl data-ops-business/data-ops-business-datasource test`：Tests run 149, Failures 0, Errors 0
 
 **风险记录：** 密钥丢失=凭证不可恢复，`DataSourceProperties.Credential` 注释里写明；密钥轮换不做（后续票）。真机验证待后端重启后跑一次：建库→查库两列为 `ENC:` 前缀→页面/同步模块读取正常。

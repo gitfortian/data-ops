@@ -12,9 +12,9 @@
 
 > 与 [数仓建模开发计划与跟踪](../model/dev-plan.md) 第 0 节一致,本节为主数据管理适用的硬性要求,与任何交付进度冲突时以约束为准。
 
-1. **契约先行(Contract-First)**:每个 `yak-ops-business-*` 模块根目录维护契约文件集(README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW);MDM 相关 ticket 开工第一步更新 `yak-ops-business-mdm/` 契约文件集(及涉及的其他模块:datasource/sync/quality/data-service/semantic/lineage/dataset/modeling),契约 diff 先于代码 diff 被审阅。新建模块:契约文件集是 ticket 50 的**第一个交付物**。
-2. **前端契约文件只读**:`yak-ops-ui/` 下所有 `.md` 只阅读遵守、绝不修改;路由 menuCode 过契约测试;与前端契约冲突时上报,由契约维护方更新。
-3. **项目全局规范强制适用**:`CODE_STYLE.md`、`yak-ops-ui/FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`(project_id 只取服务端可信上下文、不建物理外键)、`docs/home-overview-contract.md`(统计服务端聚合,禁止无界 list() 后内存统计)、菜单授权契约。
+1. **契约先行(Contract-First)**:每个 `data-ops-business-*` 模块根目录维护契约文件集(README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW);MDM 相关 ticket 开工第一步更新 `data-ops-business-mdm/` 契约文件集(及涉及的其他模块:datasource/sync/quality/data-service/semantic/lineage/dataset/modeling),契约 diff 先于代码 diff 被审阅。新建模块:契约文件集是 ticket 50 的**第一个交付物**。
+2. **前端契约文件只读**:`data-ops-ui/` 下所有 `.md` 只阅读遵守、绝不修改;路由 menuCode 过契约测试;与前端契约冲突时上报,由契约维护方更新。
+3. **项目全局规范强制适用**:`CODE_STYLE.md`、`data-ops-ui/FRONTEND_CODE_STYLE.md`、`docs/architecture/PROJECT_SCOPE.md`(project_id 只取服务端可信上下文、不建物理外键)、`docs/home-overview-contract.md`(统计服务端聚合,禁止无界 list() 后内存统计)、菜单授权契约。
 4. **交互原则**:`docs/INTERACTION_PRINCIPLES.md` —— 能默认就默认,能选择就不填写,能引用就不重复,能自动就手动。
 5. **数据库迁移**:mdm 自建 `db/migration/yak-mdm`(V1 起编);业务表在所属 ticket 追加 V 版本,合入后禁止编辑(与 semantic/modeling 约定一致);菜单注册追加 yak-security 时 mdm 取 ≥V2024(当前最大值 V2023 之后)。
 

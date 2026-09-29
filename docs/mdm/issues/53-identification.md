@@ -4,7 +4,7 @@
 
 **What to build:** 管理员进入"主数据管理 → 主数据识别"(menuCode `mdm-identification`),选择数据源扫描其表结构,系统按识别规则(表名/字段名与业务实体语义匹配)给出候选主数据(如 `CRM.customer` → 可能是"客户"),用户确认为某实体的主数据来源(生成 `mdm_source` MAIN 角色绑定),或排除候选。
 
-**模块归属:** yak-ops-business-mdm(+datasource)
+**模块归属:** data-ops-business-mdm(+datasource)
 
 **Blocked by:** 51, [08 逆向导入(元数据读取能力落地)](../model/issues/08-reverse-import.md)
 
@@ -24,9 +24,9 @@
 **验证记录(2026-09-16):**
 
 - 复用:元数据读取/连通性经 datasource 公共契约(`DataSourceCatalogReader`/`DataSourceReader`),MDM 未重复造轮子;来源绑定为松散 ID,数据源/实体展示名经跨模块契约解析(fail-open 降级)。
-- 后端:`./mvnw -pl yak-ops-business/yak-ops-business-mdm -am compile` 通过;`./mvnw -pl yak-ops-boot -am validate` 通过。
+- 后端:`./mvnw -pl data-ops-business/data-ops-business-mdm -am compile` 通过;`./mvnw -pl data-ops-boot -am validate` 通过。
 - 单测:`CandidateMatcherTest` 5/5(前缀/纯表名/复数/驼峰/业务表不匹配/中文名不匹配)、`MdmSourceServiceTest` 5/5(扫描失败/重复绑定/表不存在/解绑不存在/扫描候选标注);既有 15 项(MdmEntityServiceTest 7 + MdmAttributeServiceTest 8)仍全绿,合计 25 项。
 - 前端:菜单契约测试 5/5 通过(V2026 对齐);tsc 中 mdm 相关文件零错误(总数与基线一致,曾因 iconKey 'search' 不在 NavigationIconKey 联合类型引入 1 处错误,已改为 'instance' 修复)。
 - 排除为前端会话态(不落库),识别规则先规则后 AI(AI 匹配属 P3 范围外)。
 - Flyway 运行时迁移效果(来源表落库、V2026 菜单注册生效)需有数据库的联调环境启动应用确认。
-- 遵守硬性约束:契约文件先于代码;未修改 `yak-ops-ui` 下任何 `.md` 文件。
+- 遵守硬性约束:契约文件先于代码;未修改 `data-ops-ui` 下任何 `.md` 文件。

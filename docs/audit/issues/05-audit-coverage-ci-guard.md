@@ -1,6 +1,6 @@
 # Ticket 05：审计覆盖 CI 守卫——基线棘轮防回归（P1）
 
-**对应需求：** 全量审计方案 M2（治本票：把"漏埋点"从静默变成显性） | **优先级：** P1 | **阻塞于：** 02 | **模块：** yak-ops-boot(test)
+**对应需求：** 全量审计方案 M2（治本票：把"漏埋点"从静默变成显性） | **优先级：** P1 | **阻塞于：** 02 | **模块：** data-ops-boot(test)
 
 **What to build：** 一个测试，扫描全部 `*Controller` 写 mapping（@PostMapping/@PutMapping/@DeleteMapping/@PatchMapping），统计**无语义留痕**（既无 `@Auditable` 也无手工 `start()` 支撑）的接口数，与基线文件比对：**只降不升**，升了红。
 

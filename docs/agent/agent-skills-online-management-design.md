@@ -1,6 +1,6 @@
 # Agent Skills 在线管理设计方案（SkillBox Integration）
 
-> 状态：方案设计（实现范围见 §7）｜日期：2026-08-30｜模块：yak-ops-business-agent
+> 状态：方案设计（实现范围见 §7）｜日期：2026-08-30｜模块：data-ops-business-agent
 > 定位：填补长期预留的缺口 —— `AgentDynamicConfigService` 登记注释已指明
 > "工具注册为静态 @ConditionalOnProperty，完全热切换需 SkillBox，见 PT-307"。
 > 本方案借 agentscope 框架 skill 能力（`io.agentscope.core.skill`）落地该缺口。
@@ -195,7 +195,7 @@ boot migration `V2013__register_agent_skill_permissions.sql`（对齐 V2004/V201
 | 运行时热生效 | **E2E：注册技能→推理（fake LLM 截获系统提示含技能）→停用→再推理（不含）** | 复用 AgentResumeIntegrationTest 的 fake OpenAI HttpServer 模式，从 LLM 请求体断言提示内容 |
 | Controller | 权限注解 + 参数校验（400/409/404） | MockMvc 或直接注解断言（对齐既有 controller 测试） |
 
-留痕：`yak-ops-business-agent/target/surefire-reports/*Skill*Test.txt`。
+留痕：`data-ops-business-agent/target/surefire-reports/*Skill*Test.txt`。
 
 ---
 
@@ -216,7 +216,7 @@ MVP 只做"提示注入型技能"：instructions 进 System Prompt，不开代�
 
 ## 8. 验收口径
 
-- `./mvnw -pl yak-ops-business/yak-ops-business-agent -am test -Dtest=*Skill*Test` 全绿；
+- `./mvnw -pl data-ops-business/data-ops-business-agent -am test -Dtest=*Skill*Test` 全绿；
 - 在线注册→下一问生效、在线停用→下一问消失（E2E 断言 LLM 提示）；
 - 重启后技能与启停状态保留（DB 持久化断言）；
 - 既有全部测试不受影响（AgentRuntime 构造未变）。

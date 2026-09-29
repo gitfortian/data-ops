@@ -33,22 +33,26 @@ const git = (...args) =>
   execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
 const showBase = (path) => {
-  try {
-    return git("show", `origin/${baseRef}:${path}`);
-  } catch {
-    return "";
+  const paths = new Set([path, path.replace(/^data-ops-/, "yak-ops-")]);
+  for (const candidate of paths) {
+    try {
+      return git("show", `origin/${baseRef}:${candidate}`);
+    } catch {
+      // The base branch can still use the previous module directory name.
+    }
   }
+  return "";
 };
 
-const currentBusinessPom = existsSync("yak-ops-business/pom.xml")
-  ? readFileSync("yak-ops-business/pom.xml", "utf8")
+const currentBusinessPom = existsSync("data-ops-business/pom.xml")
+  ? readFileSync("data-ops-business/pom.xml", "utf8")
   : "";
-const baseBusinessPom = showBase("yak-ops-business/pom.xml");
+const baseBusinessPom = showBase("data-ops-business/pom.xml");
 
-const currentNav = existsSync("yak-ops-ui/src/config/navigation.ts")
-  ? readFileSync("yak-ops-ui/src/config/navigation.ts", "utf8")
+const currentNav = existsSync("data-ops-ui/src/config/navigation.ts")
+  ? readFileSync("data-ops-ui/src/config/navigation.ts", "utf8")
   : "";
-const baseNav = showBase("yak-ops-ui/src/config/navigation.ts");
+const baseNav = showBase("data-ops-ui/src/config/navigation.ts");
 
 const baseModules = extractBusinessModules(baseBusinessPom);
 const currentModules = extractBusinessModules(currentBusinessPom);

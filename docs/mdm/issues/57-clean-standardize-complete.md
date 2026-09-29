@@ -4,7 +4,7 @@
 
 **What to build:** 在"主数据清洗"内(与 56 同菜单 `mdm-cleansing`)配置标准化与补全规则:标准化引用数据标准(码值映射 M/F → 1/2、单位、格式),补全规则可配(默认值补全、跨来源补全 —— A 源缺失从 B 源补)。规则执行后可预览变更。
 
-**模块归属:** yak-ops-business-mdm(+semantic)
+**模块归属:** data-ops-business-mdm(+semantic)
 
 **Blocked by:** [56 去重与合并](./56-clean-dedup-merge.md), [30 标准表结构](../../semantic/issues/30-standard-tables.md)
 

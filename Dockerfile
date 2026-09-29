@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # The Docker images package the release distribution produced by the normal
-# Yak Ops build. CI builds yak-framework, the frontend, and the Maven reactor
+# Yak Ops build. CI builds data-ops-framework, the frontend, and the Maven reactor
 # before invoking these runtime targets.
 
 # =========================
@@ -9,7 +9,7 @@
 # =========================
 FROM scratch AS dist-artifact
 
-COPY yak-ops-dist/target/yak-ops-*.tar.gz /yak-ops.tar.gz
+COPY data-ops-dist/target/yak-ops-*.tar.gz /yak-ops.tar.gz
 
 
 # =========================

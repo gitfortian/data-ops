@@ -8,7 +8,7 @@ Feature ID: F-002
 创建日期：2026-09-24  
 关联产品决策：沿用现有 Product Capability Map / User Journeys，不新增一级产品能力  
 关联 Issue：#75、#76、#77、#78、#79  
-关联领域契约：`yak-ops-business/yak-ops-business-data-development/REQUIREMENTS.md`、`DOMAIN.md`、`DEPENDENCIES.md`、`EXECUTION_CONTROL_PLANE.md`
+关联领域契约：`data-ops-business/data-ops-business-data-development/REQUIREMENTS.md`、`DOMAIN.md`、`DEPENDENCIES.md`、`EXECUTION_CONTROL_PLANE.md`
 
 > 本 Feature 的目标不是重写 Data Development，而是把现有开发、运行、发布、Dataset、Data Service、Lineage 能力收敛成一条用户可理解、可恢复、可追溯、可治理的数据开发产品闭环。  
 > Phase 2 验收以真实用户 Journey 为准，不以“已有页面 / 已有接口 / 某个 Provider 已完成”为完成标准。
@@ -474,10 +474,10 @@ Status 为 APPROVED 时不存在阻断实施的问题。
 - Product Capability Map：`docs/product/CAPABILITY_MAP.md`
 - Core User Journeys：`docs/product/USER_JOURNEYS.md`
 - Feature Spec Template：`docs/product/FEATURE_SPEC_TEMPLATE.md`
-- Data Development Requirements：`yak-ops-business/yak-ops-business-data-development/REQUIREMENTS.md`
-- Data Development Dependencies：`yak-ops-business/yak-ops-business-data-development/DEPENDENCIES.md`
-- Execution Control Plane：`yak-ops-business/yak-ops-business-data-development/EXECUTION_CONTROL_PLANE.md`
-- Stage 2 Project / RBAC rollout：`yak-ops-business/yak-ops-business-data-development/STAGE2_ROLLOUT.md`
+- Data Development Requirements：`data-ops-business/data-ops-business-data-development/REQUIREMENTS.md`
+- Data Development Dependencies：`data-ops-business/data-ops-business-data-development/DEPENDENCIES.md`
+- Execution Control Plane：`data-ops-business/data-ops-business-data-development/EXECUTION_CONTROL_PLANE.md`
+- Stage 2 Project / RBAC rollout：`data-ops-business/data-ops-business-data-development/STAGE2_ROLLOUT.md`
 - Epic：#75
 - Implementation slices：#76 / #77 / #78 / #79
 

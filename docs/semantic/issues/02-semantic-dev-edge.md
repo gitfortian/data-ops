@@ -23,7 +23,7 @@
 
 ## 落地记录（2026-09-22）
 
-- **依赖走廊**:DEV pom 增 `yak-ops-business-semantic` `<optional>true</optional>`(与 security/mdm 同款);`DEPENDENCIES.md` 双侧登记(DEV Cross-module Corridors + Package Matrix `standard` 行;semantic 入向表 DEV 行)。
+- **依赖走廊**:DEV pom 增 `data-ops-business-semantic` `<optional>true</optional>`(与 security/mdm 同款);`DEPENDENCIES.md` 双侧登记(DEV Cross-module Corridors + Package Matrix `standard` 行;semantic 入向表 DEV 行)。
 - **后端**:`standard/DevelopmentStandardCheckService`(新 `standard` 应用入口包,经 `DataDevelopmentRoleConventionTest` 白名单登记)——INSERT/CTAS/UPDATE 直接取 mapping 目标列;裸 SELECT 走合成 CTAS 包裹(同 `DevelopmentSqlProjectionLineageAnalyzer` 手法)取输出别名;大小写去重、上限 200 字段截断;每字段 `recommend(name,null,"UNKNOWN")`,任何异常/未评估降级 `evaluated=false`;解析失败整体降级为 `parseError` 报告而非 500。端点 `POST /api/v1/data-development/nodes/{nodeId}/standard-check`(类级 READ 权限,校验 SQL 节点存在,与 lineage/preview 同风格)。
 - **测试**:`DevelopmentStandardCheckServiceTest` 6/6 绿(写目标列序/裸 SELECT 别名/fail-open/parseError/截断/非 SQL 拒绝);`./mvnw -o -pl` 全模块 150 用例,失败集与 HEAD 基线 worktree 完全一致(10 红全部存量,无新增);tsc 183 基线不变,触达文件零新错。
 - **前端**:`api.ts checkDevelopmentSqlStandards` + types;`SqlToolbar` 血缘按钮后加 `ClipboardCheck` 按钮;报告经新 `StandardCheckModal`(符合/疑似不符/未评估 Tag + 建议标准 + 规则),zh/en 双语文案。

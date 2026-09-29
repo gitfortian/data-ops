@@ -1,6 +1,6 @@
 # 重要业务对象统一多版本 · 设计基线与实施方案
 
-> 日期：2026-09-21 范围：`yak-ops-business/*` 全部需版本化对象 + `yak-ops-ui`
+> 日期：2026-09-21 范围：`data-ops-business/*` 全部需版本化对象 + `data-ops-ui`
 > 定位：[multi_version.md](./multi_version.md)（2026-09-19 能力评审）的**立项落地版**。本文所有现状均已按 2026-09-21 代码重新核实（9-20/9-21 大量提交后），并修正了评审文档的两处表述错误。
 > 结构：一、对象分域 → 二、现状档案 → 三、统一契约 → 四、共享支撑 → 五、逐对象迁移方案 → 六、实施批次 → 七、待拍板裁决点。
 > 工单拆分：见 [multi_version/README.md](./multi_version/README.md)（2026-09-21 按 Wave 落为 S/W1/W2/W3 四卷可执行 issue）。
@@ -66,7 +66,7 @@
 以下五条为本项目多版本的**规范条款**，所有 A/B 域对象的改造与新增一律对齐；偏离需在 §七 立项裁决。
 
 ### C1 状态机
-- 共享枚举落 `yak-ops-common`：`PublishState { DRAFT, PUBLISHED, OFFLINE }`。现成候选：`DefinitionState.java`（已存在、零引用、取值恰好一致）→ 复活并全项目引用，禁字符串字面量。
+- 共享枚举落 `data-ops-common`：`PublishState { DRAFT, PUBLISHED, OFFLINE }`。现成候选：`DefinitionState.java`（已存在、零引用、取值恰好一致）→ 复活并全项目引用，禁字符串字面量。
 - ENABLED/DISABLED（semantic、metric、quality）保留为**可用性开关**，与发布态正交：状态机管"哪版生效"，开关管"整体是否可用"。
 - dataset 补 DRAFT 语义（当前仅 ONLINE/OFFLINE）。
 
@@ -105,7 +105,7 @@ POST /{id}/versions/{no}/rollback    回滚
 
 ### C5 审计
 - 所有 publish/offline/rollback 与 `*_UPDATE` 审计必须携带**脱敏 before/after diff**，禁 `Map.of()`（现状违规：lifecycle/datasource/mdm 配置侧）。
-- 复用 `AuditTransactions.completeOnCommit` 语义，但先收敛 8 份复制为 yak-ops-common 单实现（§四）。
+- 复用 `AuditTransactions.completeOnCommit` 语义，但先收敛 8 份复制为 data-ops-common 单实现（§四）。
 
 ### 前端契约
 - 公共组件 `VersionHistoryPanel`（列表 + 单版查看 + **diff** + 回滚 Popconfirm（含"将丢弃当前草稿/追加 v{n+1}"影响文案）+ 发布前未保存提示）。diff 为全库空白，`JsonDiffView` 一并沉淀；mdm `ChangeHistoryTab.tsx:67-83` 的属性级 diff 实现上浮为参照。
@@ -119,10 +119,10 @@ POST /{id}/versions/{no}/rollback    回滚
 
 | 件 | 内容 | 位置 |
 |---|---|---|
-| S1 共享枚举 | 复活 `DefinitionState`→`PublishState`（或新增同名），全模块引用 | yak-ops-common `enums` |
-| S2 版本工具 | `DigestCalculator`（规范化 JSON→SHA-256，收编 dev-task `TaskDefinitionDigestCalculator` 与 quality/metric 各自手写版）；`nextVersionNo` 查询式模板（SQL MAX+1 经 mapper 统一写法） | yak-ops-common 新增 `version` 包，≤2 个类 |
-| S3 审计收敛 | 合并 8 份 `AuditTransactions` 为 common 单实现，模块 import 替换；审计请求体加 before/after 槽位（`AuditCarrier` 现无 diff 字段） | yak-ops-common + audit 模块 |
-| S4 前端组件 | `VersionHistoryPanel` + `JsonDiffView`，放 `src/components/`（现 `components/ui` 仅 5 个 Yak* 件） | yak-ops-ui |
+| S1 共享枚举 | 复活 `DefinitionState`→`PublishState`（或新增同名），全模块引用 | data-ops-common `enums` |
+| S2 版本工具 | `DigestCalculator`（规范化 JSON→SHA-256，收编 dev-task `TaskDefinitionDigestCalculator` 与 quality/metric 各自手写版）；`nextVersionNo` 查询式模板（SQL MAX+1 经 mapper 统一写法） | data-ops-common 新增 `version` 包，≤2 个类 |
+| S3 审计收敛 | 合并 8 份 `AuditTransactions` 为 common 单实现，模块 import 替换；审计请求体加 before/after 槽位（`AuditCarrier` 现无 diff 字段） | data-ops-common + audit 模块 |
+| S4 前端组件 | `VersionHistoryPanel` + `JsonDiffView`，放 `src/components/`（现 `components/ui` 仅 5 个 Yak* 件） | data-ops-ui |
 | S5 实现模板 | 以 digital-screen（后端）+ modeling V16 迁移（DDL）+ dashboard 抽屉（前端）为「新对象版本化脚手架」，写成一页 checklist 附于本文档，不产码生成器 | docs |
 
 ## 五、逐对象迁移方案

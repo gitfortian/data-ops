@@ -3,25 +3,25 @@ name: Consumption Checks
 on:
   pull_request:
     paths:
-      - 'yak-ops-business/yak-ops-business-consumption/**'
-      - 'yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/access/**'
-      - 'yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/domain/**'
-      - 'yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/execution/**'
-      - 'yak-ops-business/yak-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/repository/**'
-      - 'yak-ops-business/yak-ops-business-data-service/src/main/resources/db/migration/yak-data-service/**'
-      - 'yak-ops-business/yak-ops-business-dataset/src/main/java/io/yak/ops/business/dataset/**'
-      - 'yak-ops-business/yak-ops-business-dataset/src/main/resources/db/migration/yak-dataset/**'
-      - 'yak-ops-bom/pom.xml'
-      - 'yak-ops-boot/pom.xml'
-      - 'yak-ops-boot/src/test/java/io/yak/ops/boot/architecture/ConsumptionRuntimeAssemblyTest.java'
-      - 'yak-ops-ui/src/services/consumption/**'
-      - 'yak-ops-ui/src/pages/data-analysis/consumption/**'
-      - 'yak-ops-ui/src/pages/data-analysis/data-catalog/**'
-      - 'yak-ops-ui/src/pages/data-analysis/dataset/components/DatasetRowActions.tsx'
-      - 'yak-ops-ui/src/pages/data-asset/components/StatusFlowStrip.tsx'
-      - 'yak-ops-ui/src/pages/home/**'
-      - 'yak-ops-ui/config/routes.ts'
-      - 'yak-ops-ui/scripts/check-consumption-type-errors.mjs'
+      - 'data-ops-business/data-ops-business-consumption/**'
+      - 'data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/access/**'
+      - 'data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/domain/**'
+      - 'data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/execution/**'
+      - 'data-ops-business/data-ops-business-data-service/src/main/java/io/yak/ops/business/dataservice/repository/**'
+      - 'data-ops-business/data-ops-business-data-service/src/main/resources/db/migration/yak-data-service/**'
+      - 'data-ops-business/data-ops-business-dataset/src/main/java/io/yak/ops/business/dataset/**'
+      - 'data-ops-business/data-ops-business-dataset/src/main/resources/db/migration/yak-dataset/**'
+      - 'data-ops-bom/pom.xml'
+      - 'data-ops-boot/pom.xml'
+      - 'data-ops-boot/src/test/java/io/yak/ops/boot/architecture/ConsumptionRuntimeAssemblyTest.java'
+      - 'data-ops-ui/src/services/consumption/**'
+      - 'data-ops-ui/src/pages/data-analysis/consumption/**'
+      - 'data-ops-ui/src/pages/data-analysis/data-catalog/**'
+      - 'data-ops-ui/src/pages/data-analysis/dataset/components/DatasetRowActions.tsx'
+      - 'data-ops-ui/src/pages/data-asset/components/StatusFlowStrip.tsx'
+      - 'data-ops-ui/src/pages/home/**'
+      - 'data-ops-ui/config/routes.ts'
+      - 'data-ops-ui/scripts/check-consumption-type-errors.mjs'
       - 'scripts/product/phase4-real-env-*.mjs'
       - '.github/workflows/consumption-checks.yml'
 
@@ -41,7 +41,7 @@ jobs:
       - name: Run Phase 4 consumption contract, provider, discovery, detail, subscription, usage and impact tests
         run: >-
           mvn -B
-          -pl yak-ops-business/yak-ops-business-consumption
+          -pl data-ops-business/data-ops-business-consumption
           -am
           -Dtest=*Golden*,*QueryPerformance*Test,ConsumptionContractFoundationTest,*DataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,*UsageEvidenceNormalizerTest,ConsumerImpactServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
@@ -49,7 +49,7 @@ jobs:
       - name: Verify executable Boot assembly contains Consumption
         run: >-
           mvn -B
-          -pl yak-ops-boot
+          -pl data-ops-boot
           -am
           -Dtest=ConsumptionRuntimeAssemblyTest
           -Dsurefire.failIfNoSpecifiedTests=false
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: yak-ops-ui
+        working-directory: data-ops-ui
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
         with:
           node-version: '20'
           cache: yarn
-          cache-dependency-path: yak-ops-ui/yarn.lock
+          cache-dependency-path: data-ops-ui/yarn.lock
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Typecheck and gate Phase 4 consumption surfaces

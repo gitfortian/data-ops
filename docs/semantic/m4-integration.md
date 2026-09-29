@@ -79,23 +79,23 @@ P1 合并批:13~18 逻辑建模 → 19/20 映射 → 44 派生(复用 17 落点)
 
 ## 8. 决策 E —— 模块拆分:semantic 独立模块(2026-09-14 已确认)
 
-数据标准不混入 modeling,新建独立模块 `yak-ops-business-semantic`。与第 2 节决策 A 的关系:决策 A 说的是**管道统一**(全系统一个编辑器/一套存储/一条血缘),不是模块打包;semantic 独立成模块不违背决策 A。理由:标准的消费方不止建模(集成/开发/质量/服务/资产),它是被依赖的全局上游;生命周期不同(标准全局版本化、建模按项目推进)。
+数据标准不混入 modeling,新建独立模块 `data-ops-business-semantic`。与第 2 节决策 A 的关系:决策 A 说的是**管道统一**(全系统一个编辑器/一套存储/一条血缘),不是模块打包;semantic 独立成模块不违背决策 A。理由:标准的消费方不止建模(集成/开发/质量/服务/资产),它是被依赖的全局上游;生命周期不同(标准全局版本化、建模按项目推进)。
 
 ### 8.1 模块边界与依赖
 
 | 模块 | 拥有 | 对外提供(SPI,全部只读或写自有数据) |
 | --- | --- | --- |
-| yak-ops-business-semantic(新建) | 六类数据标准、业务域/业务过程/标准字段集、业务过程↔源表关联、数仓分层配置 | StandardQueryApi / StandardRecommendApi / StandardCaptureApi / StandardUsageApi / ProcessApi / LayerConfigApi |
-| yak-ops-business-modeling(已有) | 模型/结构/映射/血缘/版本 + std_*、process_id 等松散引用 | 现有 API + 影响分析(46)/主线视图(47)聚合 |
+| data-ops-business-semantic(新建) | 六类数据标准、业务域/业务过程/标准字段集、业务过程↔源表关联、数仓分层配置 | StandardQueryApi / StandardRecommendApi / StandardCaptureApi / StandardUsageApi / ProcessApi / LayerConfigApi |
+| data-ops-business-modeling(已有) | 模型/结构/映射/血缘/版本 + std_*、process_id 等松散引用 | 现有 API + 影响分析(46)/主线视图(47)聚合 |
 
 ```mermaid
 flowchart LR
-  subgraph S["yak-ops-business-semantic(新建)"]
+  subgraph S["data-ops-business-semantic(新建)"]
     std["六类数据标准"]
     biz["业务域/业务过程/标准字段集"]
     layer["数仓分层配置"]
   end
-  subgraph M["yak-ops-business-modeling(已有)"]
+  subgraph M["data-ops-business-modeling(已有)"]
     model["模型/结构/映射/血缘"]
   end
   ds["datasource 公共契约"]

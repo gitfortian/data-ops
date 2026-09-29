@@ -271,7 +271,7 @@ PROJECT 晋升：巩固层发现同口径事实被 ≥3 个不同用户独立陈
 │  └──────────────────────────────────────────────────────────────┘        │
 ```
 
-模块归属：全部新代码落在 `yak-ops-business-agent`（新 `memory` 包：service/middleware/repository/dao/controller），不新增 Maven 模块，不动 semantic/ontology。
+模块归属：全部新代码落在 `data-ops-business-agent`（新 `memory` 包：service/middleware/repository/dao/controller），不新增 Maven 模块，不动 semantic/ontology。
 
 ---
 

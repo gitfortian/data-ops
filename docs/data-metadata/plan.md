@@ -20,7 +20,7 @@
 
 > 与 [asset dev-plan.md §0](../data-asset/dev-plan.md) 同等效力；与交付进度冲突时以约束为准。
 
-1. **契约先行**：`yak-ops-business-metadata` 根目录维护契约文件集
+1. **契约先行**：`data-ops-business-metadata` 根目录维护契约文件集
    （README/DOMAIN/ARCHITECTURE/DEPENDENCIES/REQUIREMENTS/REVIEW，参照 asset 模块同名 6 文件）；
    每个 ticket 开工第一步更新契约文件集，**契约 diff 先于代码 diff**。
 2. **不建第二套真相（最高优先）——判别式见 §1.3**：
@@ -53,15 +53,15 @@
    菜单注册进 yak-security 链，取 **V2033__register_data_metadata_menu.sql**
    （V2030 security / V2031 lifecycle / V2032 asset 已占用）。
 6. **错误码段 49001~49099**（44xxx mdm/metric、45xxx security、46xxx alert、47xxx lifecycle、
-   48xxx asset 已占）；载体 `yak-ops-common/…/enums/metadata/MetadataErrorCode.java`。
+   48xxx asset 已占）；载体 `data-ops-common/…/enums/metadata/MetadataErrorCode.java`。
    权限码 `data-metadata:read/create/update/delete`。
 7. **调度 namespace** `YakScheduleNamespaces.DATA_METADATA = "yak-ops-metadata"`
    （现有 5 个常量中无此项）。
-8. **表前缀 `yak_md_`**；PO 落 `yak-ops-common/…/bean/po/metadata/`；
+8. **表前缀 `yak_md_`**；PO 落 `data-ops-common/…/bean/po/metadata/`；
    枚举/常量落 `…/constant/metadata/`。
 9. **项目隔离**：所有列表/详情接口 `@ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)`；
    `project_id` 只取服务端可信上下文（`CurrentProject.requireProjectId()`，
-   `yak-ops-core/…/project/CurrentProject.java:19`），**永不接受前端传入的 projectId**；
+   `data-ops-core/…/project/CurrentProject.java:19`），**永不接受前端传入的 projectId**；
    不建物理外键（`docs/architecture/PROJECT_SCOPE.md`）。
 10. **分页统一**：Controller 返回 `Result<PagingData<VIEW>>`，值由
     `PagingData.from(pageData)` 产生。**直接返回裸 `PageData` 会被 Jackson 判
@@ -69,7 +69,7 @@
     这是本仓库已发生的真实事故形态，`MetadataLayeringConventionTest` 需守。
 11. **无界禁止**：采集游标分批 ≤500；概览查询 ≤8 次；列表一律分页；
     单库表数超阈值必须分页拉取而非一次 `listTables` 全载入内存。
-12. **前端契约文件只读**：`yak-ops-ui/**.md` 绝不修改；新菜单 menuCode 同步登记
+12. **前端契约文件只读**：`data-ops-ui/**.md` 绝不修改；新菜单 menuCode 同步登记
     `src/constants/securityMenuCodes.ts` 并过 `navigationMenuContract.test.ts`。
 13. **交互原则**（`docs/INTERACTION_PRINCIPLES.md`）：FQN/采集任务编码自动生成；
     采集范围默认从语义分层配置带出（能默认就不留空）；删除/忽略类批量操作必经预览确认；
@@ -458,8 +458,8 @@ CREATE TABLE IF NOT EXISTS yak_md_asset_extension (
    任何一个数字翻倍就是本条失败（§8 P1 注册、§10 测试 5）。
 7. **两处跨模块 Java 改动躲不掉，必须与 lineage/development 一起排期（ticket 134）。**
    - 物理键生成器 `TableIdentityResolver.PhysicalTableIdentity#assetKey()` 在
-     `yak-ops-business-data-development` 的 `…development.service` **内部包**里，
-     §0.3 禁止元数据 import 别模块内部包 → 必须把这段纯字符串逻辑**下沉到 `yak-ops-common`**
+     `data-ops-business-data-development` 的 `…development.service` **内部包**里，
+     §0.3 禁止元数据 import 别模块内部包 → 必须把这段纯字符串逻辑**下沉到 `data-ops-common`**
      （或 lineage 的 api 包），data-development 改为引用同一份，**行为逐字不变**并由其现有测试守护。
      这与 ticket 113 抽 `LineageRegistrationApi` 是同一类改造，但不是一件事：113 抽的是接口，这条抽的是键。
    - 元数据独有的三个类型（`databaseService` / `database` / `domain`）在 `LineageAssetType` 里**没有对应常量**，
@@ -630,7 +630,7 @@ lineage 现用 `project_scope_id GENERATED ALWAYS AS (COALESCE(project_id,0)) ST
 
 OM 的连接器在 JVM 外（Python 进程 + HTTP 回写，蒸馏 §0）。
 **我们不做这个选择，也没有理由做**：`DataSourceCatalog` SPI 已在进程内，
-调用即得（`yak-ops-plugins/yak-ops-plugin-datasource/*/…/DataSourceCatalog.java`）。
+调用即得（`data-ops-plugins/data-ops-plugin-datasource/*/…/DataSourceCatalog.java`）。
 因此以下三类 OM 机制**整体不采纳**：跨进程批量 HTTP 提交、HTTP 重试、连接器状态文件/水位续传。
 
 两条入口共用同一套落库、指纹、GONE 与熔断机制（§3.3~§3.4），区别只在 `provider_type`：
@@ -1349,12 +1349,12 @@ CREATE TABLE IF NOT EXISTS yak_md_task (
 
 | 编号 | Ticket | 阶段 | 关键产出 | 状态 |
 |---|---|---|---|---|
-| 110 | 模块骨架：pom/BOM/`yak-ops-business/pom.xml` 注册 + `MetadataPersistenceConfiguration`（`yakMetadataFlyway` / `flyway_schema_history_metadata`）+ 契约文件集 6 份 | P0 | 可编译可启动 | backlog |
+| 110 | 模块骨架：pom/BOM/`data-ops-business/pom.xml` 注册 + `MetadataPersistenceConfiguration`（`yakMetadataFlyway` / `flyway_schema_history_metadata`）+ 契约文件集 6 份 | P0 | 可编译可启动 | backlog |
 | 111 | 菜单权限 V2033（group `data-metadata` + 4 子页）+ `securityMenuCodes.ts` + `navigation.ts` + `navigationMenuContract.test.ts`（**并把 V2028/V2032 补进 `CATALOG_EXTENSION_MIGRATIONS`**） | P0 | 菜单可见且过契约测试 | backlog |
 | 112 | 存储层（本模块自持的 7 张）：`yak_md_asset_extension` / `_collect_job` / `_collect_run` / **`_register_retry`（§3.2c 的 outbox）** / `_change` / `_label` / `_task`（元模型 2 张在 128，共管的 `yak_metadata_asset` 在 133）+ PO + Mapper + `MetadataErrorCode`(49001~) + `DATA_METADATA` namespace | P0 | Flyway 可跑通；迁移落 `db/migration/yak-metadata` | backlog |
 | 133 | **共表改造（B 案专属）**：§2.3 的目录列 `ALTER` 以**新版本文件**落 `db/migration/yak-lineage`（绝不改 `V1__baseline_lineage.sql`）+ 7 个提槽生成列一次建齐（§2.4.1 实测只能 `ALGORITHM=COPY`）+ `ngram` FULLTEXT + **`type_id` 判别列与 `lineage_asset_type` 映射列成对出现**（后果 1：目录判别走 `type_id`，`asset_type` 只图表形状）+ **不新增唯一键**（`fqn_hash` 仅普通索引，理由见后果 4/§2.4.3）+ **列 steward 契约**写进两份 `ARCHITECTURE.md`（lineage 拥有图语义列 / metadata 拥有 `md_attributes`、`s_*` 与目录治理列，两侧都不得写对方列）+ **lineage 写入路径回归**：证明目录列在 `LineageWriteMapper` 的两种 upsert 下不被清空、`project_id` 不被覆写（§2.3 后果 2/5，T19） | P0 | 一张表两套语义，靠契约而非靠自觉 | backlog |
 | 113 | **前置改造**：抽 `LineageRegistrationApi` 到 `lineage/api`（§3.6）+ 既有引用全量迁移 + lineage 测试不破 | P0 | 跨模块只走 api | backlog |
-| 134 | **跨模块 Java 改动（§2.3 后果 7，B 案专属）**：① 把 `TableIdentityResolver.PhysicalTableIdentity#assetKey()` 的纯字符串逻辑**下沉到 `yak-ops-common`**，data-development 改为引用同一份、**行为逐字不变**并由其现有测试守护（元数据不得 import 别模块内部包，§0.3）；② 给 `LineageAssetType` 增加 `DATABASE_SERVICE` / `DATABASE` / `DOMAIN` 三个常量（`asset_type` NOT NULL 且被 `valueOf` 解析，后果 1）。**须与 lineage / data-development 一起排期，不由元数据单方面提交** | P0 | 目录与 lineage 共用一把键的物理前提；114/130 的前置 | backlog（待跨模块协商） |
+| 134 | **跨模块 Java 改动（§2.3 后果 7，B 案专属）**：① 把 `TableIdentityResolver.PhysicalTableIdentity#assetKey()` 的纯字符串逻辑**下沉到 `data-ops-common`**，data-development 改为引用同一份、**行为逐字不变**并由其现有测试守护（元数据不得 import 别模块内部包，§0.3）；② 给 `LineageAssetType` 增加 `DATABASE_SERVICE` / `DATABASE` / `DOMAIN` 三个常量（`asset_type` NOT NULL 且被 `valueOf` 解析，后果 1）。**须与 lineage / data-development 一起排期，不由元数据单方面提交** | P0 | 目录与 lineage 共用一把键的物理前提；114/130 的前置 | backlog（待跨模块协商） |
 | 128 | **元模型落地**：`yak_md_type_def`（含 §4.6 的 `search_default_weight` / `search_include_by_default` 两列，**随建表一起出，不留后补 ALTER**）+ `yak_md_field_def` V1 基线（含 §2.3 的 8 类实体 INSERT，`tableColumn` 默认不进检索面）+ `MetadataTypeRegistry`（类型/字段解析与失效缓存）+ `MetadataSlotRegistry`（7 槽集中登记，冲突即报错不静默复用，§2.4.1） | P0 | **"加一类元数据/一个字段不改表"的机制前提** | backlog |
 | 129 | `GET /api/v1/metadata/types` 类型自省接口 + **两处级联保存校验**：`type_def` 侧——`kind=ENTITY` 必填 `key_prefix`/`fqn_pattern`/`lineage_asset_type`，且 `lineage_asset_type` **必须是 `LineageAssetType.values()` 里的常量名**（否则别人 `valueOf` 读行时抛异常，后果 1）、`key_prefix` 与该类型登记的键格式自洽；`field_def` 侧——`searchable=1` 而无槽位 → 49xxx 直接拒、`base_type=ENTITY_REFERENCE` 校验 `entity_type_ref` 存在 | P0 | 前端渲染与检索配置的**唯一来源**；错配置进不了库 | backlog |
 | 114 | 采集核心：`MetadataHarvestService`（游标 ≤500）+ `content_hash` 规范化与指纹常量类 + NEW/CHANGED/UNCHANGED 判定 + upsert | P1 | 一轮采集落库 | backlog |
@@ -1401,8 +1401,8 @@ L7  127                                    守卫，任意时刻可做
 ## 8. 验收标准
 
 **P0（110~113, 133, 134）**
-- `./mvnw -q -o -pl yak-ops-business/yak-ops-business-metadata test` 通过；
-  `./mvnw -q -o -pl yak-ops-common install -DskipTests` 通过（PO/枚举在此）。
+- `./mvnw -q -o -pl data-ops-business/data-ops-business-metadata test` 通过；
+  `./mvnw -q -o -pl data-ops-common install -DskipTests` 通过（PO/枚举在此）。
 - 用户重启 IntelliJ 后，菜单出现"元数据"及其 4 个子页，未授权账号看不到。
 - `yak_metadata_asset` 行数**不因采集而改变**（P0 不采集）。
 - 全库无新增跨模块内部包 import（含 113 完成后的 lineage）。
@@ -1511,9 +1511,9 @@ L7  127                                    守卫，任意时刻可做
 | **T4** | 权限码字符串在 SQL / `securityMenuCodes.ts` / `navigation.ts` 三处不一致 | 菜单可见但接口 403，或反之 | 三处逐字节比对；`navigationMenuContract.test.ts` 是现成守卫 |
 | **T5** | **改动已应用的迁移** | `yakSecurityFlyway … Migration checksum mismatch`，应用整体启不来 | 永不编辑已应用文件；只加新版本号。恢复：`flyway repair` 或改 `flyway_schema_history.checksum`；**不要删 history 行**（菜单已插过会重复） |
 | **T6** | 跨模块 import 内部包 | 编译过、架构腐化 | 参照 `QualityLayeringConventionTest` 写 `MetadataLayeringConventionTest`；`ModelTtlQueryApi`/`ModelTtlQueryApiImpl` 是正例，`StandardFieldMatcher:3` 是反例 |
-| **T7** | `.m2` 里的 `yak-ops-common` 陈旧 | "程序包 io.yak.ops.common.bean.po.metadata 不存在" | 先 `./mvnw -q -o -pl yak-ops-common install -DskipTests`，再建模块 |
+| **T7** | `.m2` 里的 `data-ops-common` 陈旧 | "程序包 io.yak.ops.common.bean.po.metadata 不存在" | 先 `./mvnw -q -o -pl data-ops-common install -DskipTests`，再建模块 |
 | **T8** | `-am` 连带跑兄弟模块 | surefire "No tests matching pattern" | `-o -pl <module> test` 不带 `-am`；必须带时加 `-Dsurefire.failIfNoSpecifiedTests=false` |
-| **T9** | 离线全量构建 | `yak-ops-boot compile` 缺厂商 JDBC 驱动 jar（yashandb/highgo/xugu/duckdb…） | boot 运行归用户 IntelliJ；我们只做单模块隔离验证，**不承诺 boot 可编译** |
+| **T9** | 离线全量构建 | `data-ops-boot compile` 缺厂商 JDBC 驱动 jar（yashandb/highgo/xugu/duckdb…） | boot 运行归用户 IntelliJ；我们只做单模块隔离验证，**不承诺 boot 可编译** |
 | **T10** | 调度线程无请求头 | 采集全部 999 或 project_id 丢失 | §3.7 `projectScope.call(new ProjectContext(projectId, null), …)` + 单测（ticket 116） |
 | **T11** | 后端由用户 IntelliJ 启动 | Java 新类与新迁移不生效 → "明明改了"却验不到 | 任何后端契约变更都显式标注"待用户重启后验证"，**不得声称已验证** |
 | **T12** | Doris/Paimon 无本地实例，数仓五库 0 表 | 数仓侧路径无法端到端验 | 验收走九个业务库；Doris 特性路径标"环境受限"，禁止写成 verified |
@@ -1580,7 +1580,7 @@ L7  127                                    守卫，任意时刻可做
       `uk_yak_md_retry_change` 撞 1062，且代码把它 catch 成"已排队"而不是失败上抛
       （**注意键在"变更"上、不在 `status` 上**：键含 status 会让一条实体完成后再也无法重新登记，§3.2c）。
 
-**离线执行**：`./mvnw -q -o -pl yak-ops-business/yak-ops-business-metadata test`。
+**离线执行**：`./mvnw -q -o -pl data-ops-business/data-ops-business-metadata test`。
 
 ---
 
@@ -1596,7 +1596,7 @@ L7  127                                    守卫，任意时刻可做
    理由：采集任务/运行历史是运维心智，与资产台账的目录心智不同源；
    并入会让 asset 承接采集调度，违背其"管目录不管内容"的既有定位。
 3. **asset 的 `PROJECT_REQUEST_RULES` 缺口已当场修复**（原 T1b）：
-   `yak-ops-ui/src/utils/security/projectContext.ts` 补 `{ prefix: '/api/v1/assets', mode: 'PROJECT_REQUIRED' }`，
+   `data-ops-ui/src/utils/security/projectContext.ts` 补 `{ prefix: '/api/v1/assets', mode: 'PROJECT_REQUIRED' }`，
    `projectContext.test.ts` 加 3 条断言（含 `/api/v1/assetsx` 不被误命中的反向用例）。
    实测：纯函数转译执行 8 例全 PASS；`npx tsc --noEmit` 保持 199 基线、被改文件零错误。
    **资产侧 5 个 controller 全部在 `/api/v1/assets*` 且全部 `PROJECT_REQUIRED`，
@@ -1678,7 +1678,7 @@ L7  127                                    守卫，任意时刻可做
 
 - **`navigationMenuContract.test.ts` 的 `CATALOG_EXTENSION_MIGRATIONS` 缺 V2028（mdm 审批）
   与 V2032（数据资产）**——菜单注册契约测试对这两个模块不设防。ticket 111 顺带补齐。
-- **`yak-ops-ui` 的 jest 在当前环境跑不起来**：`jest.config.ts` 里
+- **`data-ops-ui` 的 jest 在当前环境跑不起来**：`jest.config.ts` 里
   `from '@umijs/max/test'`（无扩展名）在 Node v24 的 ESM 解析下报
   `ERR_MODULE_NOT_FOUND`，提示应为 `@umijs/max/test.js`。
   属仓库级/环境级既有问题，**不由元数据模块引入**，故本 ticket 内不擅动配置；
@@ -1699,4 +1699,4 @@ L7  127                                    守卫，任意时刻可做
 - `docs/data-asset/information-map.md` — 复用/禁自建口径的出处
 - `docs/architecture/PROJECT_SCOPE.md` — 项目隔离与"无物理外键"
 - `docs/INTERACTION_PRINCIPLES.md` — 交互硬约束
-- `yak-ops-business/yak-ops-business-lineage/src/main/resources/db/migration/yak-lineage/V1__baseline_lineage.sql` — 图节点真相
+- `data-ops-business/data-ops-business-lineage/src/main/resources/db/migration/yak-lineage/V1__baseline_lineage.sql` — 图节点真相

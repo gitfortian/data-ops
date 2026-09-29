@@ -1,6 +1,6 @@
 # 菜单与信息架构重设计（产品经理视角）
 
-> 基线：`yak-ops-ui/src/config/navigation.ts` @ feature/harness（2026-09-20）。
+> 基线：`data-ops-ui/src/config/navigation.ts` @ feature/harness（2026-09-20）。
 > 现状：**3 个 section、17 个一级组、约 60 个可见页面**；另有 alarm / ai-agent / metrics 三个已开发页面**未接入菜单**。
 
 ---

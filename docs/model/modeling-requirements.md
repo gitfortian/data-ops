@@ -123,13 +123,13 @@
 | 数据源元数据读取(databases/schemas/tables/columns/searchTables) | `DataSourceCatalogController`、SPI `DataSourceCatalog` | FR-08 逆向建模、FR-15 变更比对的数据来源 |
 | 任务生命周期(草稿→发布 revision→执行)+ TaskPlugin SPI | data-development 模块、`DevelopmentNodeType`、`TaskPlugin` | FR-03 版本模式对齐、FR-13 模型加工任务的挂接点 |
 | 血缘存储与登记(`yak_metadata_asset` / `yak_metadata_relation`,evidence 机制)+ SQL 解析血缘 | lineage 模块 | FR-14 模型血缘(引导式登记) |
-| reactflow 画布(血缘工作台、工作流编辑器已用) | yak-ops-ui | FR-05 ER 画布、FR-12 映射可视化 |
+| reactflow 画布(血缘工作台、工作流编辑器已用) | data-ops-ui | FR-05 ER 画布、FR-12 映射可视化 |
 | 通知/告警基础设施 | alert 模块 | FR-16 变更提示 |
 | 项目空间规范 | docs/architecture/PROJECT_SCOPE.md | 模型表 project_id 归属设计(D8) |
 
 ### 能力缺口(需新建)
 
-1. **建模域本体**:模型/实体/属性/关系/映射的存储与管理(新后端模块,建议 `yak-ops-business-modeling`,自持 Flyway,从 V1 起编)。
+1. **建模域本体**:模型/实体/属性/关系/映射的存储与管理(新后端模块,建议 `data-ops-business-modeling`,自持 Flyway,从 V1 起编)。
 2. **逻辑 → 物理的类型映射**:逻辑类型到各方言类型的映射规则(单库单方言场景,一次生成一个目标)。
 3. **DDL 生成器**:模型 → 多方言建库脚本(与现有 `buildSqlTemplate` 方向相反;仅生成不执行)。
 4. **源端结构变更感知**:数据源模块目前只有配置变更时的缓存失效,无 DDL diff 机制,需建模模块自建定时比对(仅覆盖模型引用的源表,快照范围可控)。
@@ -166,6 +166,6 @@
 
 ## 9. 技术落点建议(供评审,不属于需求)
 
-- 后端:新建 `yak-ops-business-modeling` 模块,自持 Flyway(`db/migration/yak-modeling`,V1 起);变更感知用定时任务 + catalog 比对(仅模型引用的源表),不依赖源端 DDL 监听。
+- 后端:新建 `data-ops-business-modeling` 模块,自持 Flyway(`db/migration/yak-modeling`,V1 起);变更感知用定时任务 + catalog 比对(仅模型引用的源表),不依赖源端 DDL 监听。
 - 加工任务:`DevelopmentNodeType` 登记新节点类型 + 实现 `TaskPlugin`(ServiceLoader SPI),复用 data-development 的发布/执行/调度。
 - 前端:`pages/modeling/`,画布沿用 reactflow;菜单注册到 `navigation.ts`(带 menuCode)并通过契约测试。

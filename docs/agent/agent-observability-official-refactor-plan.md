@@ -145,7 +145,7 @@
 
 ### Phase 1 — OTel 追踪（后端）
 
-- **依赖**：`yak-ops-business-agent/pom.xml` 增加：
+- **依赖**：`data-ops-business-agent/pom.xml` 增加：
   - `io.opentelemetry:opentelemetry-sdk`（1.61.0）
   - `io.opentelemetry:opentelemetry-exporter-otlp`（1.61.0）
 - **配置类**：`config/AgentObservabilityOtelConfiguration`（`@ConditionalOnProperty(prefix="yak.agent.observability.otel", name="enabled", havingValue="true", matchIfMissing=false)`）：

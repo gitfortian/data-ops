@@ -51,7 +51,7 @@ assert.deepEqual(acceptanceFromPrBody(filled), {
   evidence: "API result plus persisted binding and audit event.",
 });
 
-const navigation = readFileSync("yak-ops-ui/src/config/navigation.ts", "utf8");
+const navigation = readFileSync("data-ops-ui/src/config/navigation.ts", "utf8");
 const topGroups = extractTopLevelNavigationGroups(navigation);
 assert(topGroups.has("integration"));
 assert(topGroups.has("development"));
@@ -65,12 +65,22 @@ assert(!topGroups.has("resources"));
 assert(!topGroups.has("workflow"));
 assert(!topGroups.has("semantic"));
 
-const businessPom = readFileSync("yak-ops-business/pom.xml", "utf8");
+const businessPom = readFileSync("data-ops-business/pom.xml", "utf8");
 const modules = extractBusinessModules(businessPom);
 assert(modules.has("datasource"));
 assert(modules.has("workflow"));
 assert(modules.has("dataset"));
 assert(modules.has("metadata"));
+
+const previousModules = extractBusinessModules(
+  businessPom.replaceAll("data-ops-business-", "yak-ops-business-"),
+);
+assert.deepEqual(previousModules, modules);
+const expandedModules = extractBusinessModules(
+  `${businessPom}<module>data-ops-business-new-capability</module>`,
+);
+assert.deepEqual([...expandedModules].filter((name) => !previousModules.has(name)), ["new-capability"]);
+
 
 assert.equal(parseDecisionStatus("Status: ACCEPTED\nImplementation: PARTIAL"), "ACCEPTED");
 assert.equal(parseDecisionImplementation("Status: ACCEPTED\nImplementation: PARTIAL"), "PARTIAL");

@@ -1,6 +1,6 @@
 # 数据安全（Data Security）—— 最终菜单设计
 
-> 模块：`yak-ops-business-security`　菜单组：`data-security`　权限前缀：`data-security:`
+> 模块：`data-ops-business-security`　菜单组：`data-security`　权限前缀：`data-security:`
 > 原则：**只建数据安全特有的菜单；数据资产浏览/模型查看通过跳转进入；对外能力走 SPI 不设菜单。**
 
 ## 一、菜单结构（收敛为 1 组 + 6 页）
@@ -32,7 +32,7 @@
 
 ## 三、注册迁移
 
-`yak-ops-boot/src/main/resources/yak-security/db/migration/V2030__register_data_security_menu.sql`（当前最大 V2029 之后），5 步幂等结构（权限根 → 页面权限 → 菜单目录 → 授予 root 角色 → 子菜单隐含父组），对齐 mdm V2024 范式。
+`data-ops-boot/src/main/resources/yak-security/db/migration/V2030__register_data_security_menu.sql`（当前最大 V2029 之后），5 步幂等结构（权限根 → 页面权限 → 菜单目录 → 授予 root 角色 → 子菜单隐含父组），对齐 mdm V2024 范式。
 
 ## 四、跳转（不建独立菜单）
 

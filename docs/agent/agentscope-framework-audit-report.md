@@ -2,7 +2,7 @@
 
 > **审计时间**：2026-08-27  
 > **框架版本**：agentscope-java v2.0.2  
-> **审计范围**：`yak-ops-business/yak-ops-business-agent` 全部 82 个 Java 源文件 vs `agentscope-java` 全模块
+> **审计范围**：`data-ops-business/data-ops-business-agent` 全部 82 个 Java 源文件 vs `agentscope-java` 全模块
 
 ---
 
