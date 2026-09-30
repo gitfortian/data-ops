@@ -177,6 +177,15 @@ public class ApprovalService implements ApprovalApi {
     return latest.isEmpty() ? null : toView(latest.get(0));
   }
 
+  @Override
+  public boolean isFlowEnabled(String flowCode) {
+    ApprovalFlowPO flow = flowMapper.selectOne(new LambdaQueryWrapper<ApprovalFlowPO>()
+        .eq(ApprovalFlowPO::getProjectId, currentProject.requireProjectId())
+        .eq(ApprovalFlowPO::getFlowCode, flowCode)
+        .eq(ApprovalFlowPO::getDeleted, false));
+    return flow != null && Boolean.TRUE.equals(flow.getEnabled());
+  }
+
   public ApprovalDetailView detail(Long instanceId, String operator, boolean manage) {
     ApprovalInstancePO instance = requireInstance(currentProject.requireProjectId(), instanceId);
     List<ApprovalStepPO> steps = stepMapper.selectList(new LambdaQueryWrapper<ApprovalStepPO>()

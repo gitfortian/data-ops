@@ -20,6 +20,8 @@ public interface MetricDependencyRepository {
   /** 反查登记了该上游(MODEL/CALIBER/UNIT/REF_METRIC/COMPOSITION)的依赖行,供影响分析反向视图。 */
   List<MetricDependencyPO> listByDependency(String dependencyType, Long dependencyId);
 
+  long countByDependency(String dependencyType, Long dependencyId);
+
   /**
    * 一条血缘登记。
    *

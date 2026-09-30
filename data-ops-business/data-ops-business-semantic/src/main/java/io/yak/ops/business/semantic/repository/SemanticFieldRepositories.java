@@ -7,6 +7,7 @@ import io.yak.framework.common.PageData;
 import io.yak.ops.business.semantic.dao.mapper.SemanticFieldMapper;
 import io.yak.ops.business.semantic.dao.mapper.SemanticProcessFieldMapper;
 import io.yak.ops.business.semantic.api.StandardField;
+import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.common.bean.po.semantic.SemanticFieldPO;
 import io.yak.ops.common.bean.po.semantic.SemanticProcessFieldPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -160,6 +161,20 @@ public class SemanticFieldRepositories implements SemanticFieldRepository, Seman
         new LambdaQueryWrapper<SemanticFieldPO>()
             .eq(SemanticFieldPO::getProjectId, projectId)
             .eq(SemanticFieldPO::getStdCodeSetCode, codeSetCode));
+  }
+
+  @Override
+  public long countByStandard(StandardKind kind, Long standardId) {
+    LambdaQueryWrapper<SemanticFieldPO> query = new LambdaQueryWrapper<SemanticFieldPO>()
+        .eq(SemanticFieldPO::getProjectId, requiredProjectId());
+    switch (kind) {
+      case TYPE -> query.eq(SemanticFieldPO::getStdTypeId, standardId);
+      case UNIT -> query.eq(SemanticFieldPO::getStdUnitId, standardId);
+      case CALIBER -> query.eq(SemanticFieldPO::getStdCaliberId, standardId);
+      case SECURITY -> query.eq(SemanticFieldPO::getStdSecurityId, standardId);
+      default -> { return 0; }
+    }
+    return fieldMapper.selectCount(query);
   }
 
   // ---------- process-field references ----------

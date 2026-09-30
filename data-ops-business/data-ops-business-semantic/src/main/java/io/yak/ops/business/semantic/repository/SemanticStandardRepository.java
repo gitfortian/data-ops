@@ -41,8 +41,13 @@ public interface SemanticStandardRepository {
   /** 40 决策一:项目内是否存在 ENABLED 且 code_set_code 匹配的 CODE 行。 */
   boolean existsEnabledByCodeSet(String codeSetCode);
 
-  /** Full editable-fields update; bumps nothing itself (version owned by the service). */
-  Standard update(Standard standard, String operator);
+  /** Full editable-fields update, conditional on the version read by the caller. */
+  Standard update(Standard standard, Integer expectedVersion, String operator);
+
+  /** Code-set row update uses its immutable pre-state version as the expected version. */
+  default Standard update(Standard standard, String operator) {
+    return update(standard, standard.version() - 1, operator);
+  }
 
   boolean updateStatus(Long id, StandardStatus status, String operator);
 

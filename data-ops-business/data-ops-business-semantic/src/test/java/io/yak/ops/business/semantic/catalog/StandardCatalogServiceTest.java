@@ -130,7 +130,8 @@ class StandardCatalogServiceTest {
   void updateBumpsVersion() {
     Standard existing = existingStandard();
     when(repository.findById(9L)).thenReturn(java.util.Optional.of(existing));
-    when(repository.update(any(), eq("tester"))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(repository.update(any(), eq(existing.version()), eq("tester")))
+        .thenAnswer(invocation -> invocation.getArgument(0));
     Standard updated = service.update(9L, updateRequest(), "tester");
     assertEquals(existing.version() + 1, updated.version());
     assertEquals("改名后的标准", updated.name());
@@ -348,7 +349,7 @@ class StandardCatalogServiceTest {
 
   private SemanticStandardApi.UpdateRequest updateRequest() {
     return new SemanticStandardApi.UpdateRequest(
-        "改名后的标准", null, null,
+        3, "改名后的标准", null, null,
         "TABLE", null, "^ods_", null,
         null, null, null,
         null, null, null,

@@ -9,6 +9,9 @@ public interface ApprovalApi {
   /** 该业务对象的在途单;无在途则返回最近一单;从未发起返回 null。 */
   ApprovalInstanceView find(String flowCode, String bizType, String bizId);
 
+  /** Whether this project has an enabled approval flow with the given code. */
+  boolean isFlowEnabled(String flowCode);
+
   /** 撤销,仅发起人可操作;终态回调 onCanceled 同事务执行。 */
   void cancel(Long instanceId, String operator, String reason);
 }

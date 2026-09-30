@@ -14,7 +14,8 @@
 
 | 模块 | 方式 | ticket |
 | --- | --- | --- |
-| `data-ops-business-modeling` | **仅经 `api` 包 SPI**(StandardQuery/Recommend/Capture/Usage、ProcessApi、LayerConfigApi),禁止直读本模块表 | 38/39/40/41/42/43/44/45/46/47 |
+| `data-ops-business-modeling` | **仅经 `api` 包 SPI**(StandardQuery/Recommend/Capture/Usage、ProcessApi、LayerConfigApi);并实现 `StandardReferenceReader` 供标准生命周期校验引用数,禁止直读本模块表 | 38/39/40/41/42/43/44/45/46/47 |
+| `data-ops-business-metric` | 实现 `StandardReferenceReader`,向标准生命周期提供 UNIT/CALIBER 当前指标依赖计数 | 指标标准依赖保护 |
 | `data-ops-business-security` | 仅经 `api` 包 SPI(StandardQueryApi):等级 `std_security_id` 引用 SECURITY 标准并校验,松散 ID | 语义缺口单 01 |
 | `data-ops-business-data-development` | 仅经 `api` 包 SPI(StandardRecommendApi):SQL 编辑器输出字段命名符合度检查,只读提示不阻断 | 语义缺口单 02 |
 | `data-ops-business-agent`(后续) | 同上,经 gateway 包(单一 import 点) | 48 |

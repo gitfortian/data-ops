@@ -3,6 +3,7 @@ package io.yak.ops.business.semantic.api;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -45,6 +46,7 @@ public final class SemanticStandardApi {
 
   /** 更新标准请求:编码/类别不可改,其余可编辑;每次修改 version 自增。 */
   public record UpdateRequest(
+      @NotNull(message = "标准版本不能为空") Integer version,
       @NotBlank(message = "标准名称不能为空") @Size(max = 128, message = "标准名称不能超过 128 个字符")
           String name,
       @Size(max = 512, message = "描述不能超过 512 个字符") String description,

@@ -87,7 +87,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
     try {
       if (editing) {
         const { kind: _ignoredKind, code: _ignoredCode, ...rest } = values;
-        await updateSemanticStandard(editing.id, rest);
+        await updateSemanticStandard(editing.id, { ...rest, version: editing.version });
         message.success('标准已更新');
       } else {
         await createSemanticStandard(values);
@@ -291,9 +291,10 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
               name="maskRule"
               label="脱敏规则"
               preserve={false}
+              rules={[{ required: true, message: '安全标准必须提供脱敏规则' }]}
               tooltip="参考文案：标注该字段类别人期望的脱敏方式；实际执行由数据安全模块的脱敏算法负责，等级字典真源亦在数据安全模块"
             >
-              <Input maxLength={512} placeholder="如 保留前 3 后 4（可选）" />
+              <Input maxLength={512} placeholder="如 保留前 3 后 4" />
             </Form.Item>
           </div>
         ) : null}

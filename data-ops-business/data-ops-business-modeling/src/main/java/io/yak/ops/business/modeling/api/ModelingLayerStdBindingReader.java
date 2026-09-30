@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelColumnMapper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader;
+import io.yak.ops.business.semantic.api.StandardKind;
+import io.yak.ops.business.semantic.api.StandardReferenceReader;
 import io.yak.ops.common.bean.po.modeling.ModelingModelColumnPO;
 import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -21,7 +23,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-public class ModelingLayerStdBindingReader implements LayerStdBindingReader {
+public class ModelingLayerStdBindingReader implements LayerStdBindingReader, StandardReferenceReader {
 
   private final ModelingModelMapper modelMapper;
   private final ModelingModelColumnMapper columnMapper;
@@ -68,6 +70,22 @@ public class ModelingLayerStdBindingReader implements LayerStdBindingReader {
     totals.forEach(
         (layer, acc) -> stats.put(layer, new StdBindingStats(acc[0], acc[1])));
     return Map.copyOf(stats);
+  }
+
+  @Override
+  public long countReferences(StandardKind kind, Long standardId, String codeSetCode) {
+    LambdaQueryWrapper<ModelingModelColumnPO> query =
+        new LambdaQueryWrapper<ModelingModelColumnPO>()
+            .eq(ModelingModelColumnPO::getProjectId, currentProject.requireProjectId());
+    switch (kind) {
+      case NAMING -> query.eq(ModelingModelColumnPO::getStdNamingId, standardId);
+      case TYPE -> query.eq(ModelingModelColumnPO::getStdTypeId, standardId);
+      case CODE -> query.eq(ModelingModelColumnPO::getStdCodeSetCode, codeSetCode);
+      case UNIT -> query.eq(ModelingModelColumnPO::getStdUnitId, standardId);
+      case CALIBER -> query.eq(ModelingModelColumnPO::getStdCaliberId, standardId);
+      case SECURITY -> query.eq(ModelingModelColumnPO::getStdSecurityId, standardId);
+    }
+    return columnMapper.selectCount(query);
   }
 
   private static long numberOrZero(Object value) {

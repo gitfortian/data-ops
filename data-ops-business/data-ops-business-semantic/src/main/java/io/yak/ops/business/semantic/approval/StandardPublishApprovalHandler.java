@@ -6,7 +6,6 @@ import io.yak.ops.business.approval.api.ApprovalDecision;
 import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.approval.api.ApprovalFlowHandler;
 import io.yak.ops.business.semantic.catalog.StandardCatalogService;
-import io.yak.ops.business.semantic.api.StandardStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,7 +28,7 @@ public class StandardPublishApprovalHandler implements ApprovalFlowHandler {
   @Override
   public void onApproved(ApprovalDecision decision) {
     long standardId = readStandardId(decision.payloadJson());
-    catalogService.changeStatus(standardId, StandardStatus.ENABLED.name(), decision.applicant());
+    catalogService.enableAfterApproval(standardId, decision.applicant());
     log.info("标准生效审批通过即启用: standardId={}, applicant={}", standardId,
         decision.applicant());
   }
