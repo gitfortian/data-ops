@@ -45,6 +45,7 @@
         <module>data-ops-boot</module>
         <module>data-ops-ui</module>
         <module>data-ops-dist</module>
+        <module>dataops-governance-rule</module>
     </modules>
 
     <dependencyManagement>
