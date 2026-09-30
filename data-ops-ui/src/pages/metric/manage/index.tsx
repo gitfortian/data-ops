@@ -33,6 +33,12 @@ const parsePositiveId = (value: string | null): number | null => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+const publicationReadFailureState = (error: unknown): 'FORBIDDEN' | 'UNAVAILABLE' => {
+  const response = error as { status?: number; response?: { status?: number } } | null;
+  const status = response?.status ?? response?.response?.status;
+  return status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE';
+};
+
 const MetricManagePage = () => {
   const navigate = useNavigate();
   const { initialState } = useModel('@@initialState');
@@ -63,7 +69,9 @@ const MetricManagePage = () => {
   const [editing, setEditing] = useState<MetricRecord | null>(null);
   const [stats, setStats] = useState({ total: 0, atomic: 0, derived: 0, composite: 0 });
   const [publicationVersions, setPublicationVersions] = useState<Record<number, number>>({});
-  const [publicationState, setPublicationState] = useState<'LOADING' | 'READY' | 'UNAVAILABLE'>('LOADING');
+  const [publicationState, setPublicationState] = useState<
+    'LOADING' | 'READY' | 'UNAVAILABLE' | 'FORBIDDEN'
+  >('LOADING');
 
   const syncBusinessContext = (nextDomainId: number | null, nextProcessId: number | null) => {
     const next = new URLSearchParams(entryParams);
@@ -103,9 +111,9 @@ const MetricManagePage = () => {
               summaries.map((summary) => [summary.metricId, summary.metricVersion]),
             ));
             setPublicationState('READY');
-          } catch {
+          } catch (error) {
             setPublicationVersions({});
-            setPublicationState('UNAVAILABLE');
+            setPublicationState(publicationReadFailureState(error));
           }
         }
       } catch {
@@ -278,6 +286,7 @@ const MetricManagePage = () => {
       width: 220,
       render: (_: unknown, record: MetricRecord) => {
         if (publicationState === 'LOADING') return <Tag>发布状态读取中</Tag>;
+        if (publicationState === 'FORBIDDEN') return <Tag color="orange">无权读取发布状态</Tag>;
         if (publicationState === 'UNAVAILABLE') return <Tag color="orange">发布状态暂不可用</Tag>;
         const publishedVersion = publicationVersions[record.id];
         if (publishedVersion == null) return <Tag>未发布</Tag>;
