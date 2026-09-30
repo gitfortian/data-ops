@@ -95,10 +95,15 @@ Query Coordinator：
 DatasetQueryCoordinator
  -> DatasetRepository
  -> DatasetSourceQueryRegistry
+ -> DatasetQuerySecurityGate
+      -> DatasetProjectionAnalyzerGateway
+      -> DatasetSecurityGateway
  -> DatasetQueryPerformanceRecorder
 ```
 
 Query 的 TaskCatalog 访问只允许 `QueryRevisionDatasetSourceAdapter -> DatasetTaskCatalogGateway`。
+
+`DatasetQuerySecurityGate` 必须在执行前解析物理列并调用 `DatasetSecurityGateway`;外部 Security API 仅可由 `gateway/security/SecurityDatasetAdapter` 适配,Dataset 查询代码不直依赖 Security application 或持久化实现。
 
 Source adapters 可直接依赖 `io.yak.ops.core.execution.sql.*`；它们本身就是 Dataset Query Runtime adapter 边界。Coordinator / Registry / Compiler 不允许直接依赖 Core SQL Runtime。
 
@@ -173,6 +178,13 @@ gateway/lineage/LineageProjectionAnalyzerAdapter.java
 gateway/lineage/LineageGraphDatasetAdapter.java
  -> io.yak.ops.business.lineage.domain.*
  -> io.yak.ops.business.lineage.service.*
+```
+
+### Security
+
+```text
+gateway/security/SecurityDatasetAdapter.java
+ -> io.yak.ops.business.security.api.*
 ```
 
 ### Core SQL Runtime

@@ -6,6 +6,7 @@ import io.yak.framework.common.PageData;
 import io.yak.ops.business.audit.AuditEventType;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.security.api.ClassificationView;
+import io.yak.ops.business.security.api.SecurityObjectKey;
 import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
 import io.yak.ops.business.security.domain.LevelCount;
 import io.yak.ops.business.security.dao.mapper.ClassificationMapper;
@@ -55,6 +56,10 @@ public class ClassificationService implements SecurityClassificationQueryApi {
   /** 规范化对象自然键: {@code type:dsId:db.table.column},缺段以 - 占位。 */
   public static String objectKey(
       String objectType, Long datasourceId, String dbName, String tableName, String columnName) {
+    if ("COLUMN".equalsIgnoreCase(safe(objectType))) {
+      return SecurityObjectKey.column(
+          datasourceId == null ? null : String.valueOf(datasourceId), dbName, tableName, columnName);
+    }
     return String.join(
         ":",
         safe(objectType),
@@ -96,8 +101,17 @@ public class ClassificationService implements SecurityClassificationQueryApi {
     }
     String key = objectKey(objectType, datasourceId, dbName, tableName, columnName);
     String resolvedStatus = StringUtils.hasText(status) ? status : "ACTIVE";
+    if (!List.of("CANDIDATE", "ACTIVE").contains(resolvedStatus)) {
+      throw new SecurityException(SecurityErrorCode.CLASSIFICATION_INVALID_STATUS, resolvedStatus);
+    }
     LocalDateTime now = LocalDateTime.now();
     DsecClassificationPO existing = findByKey(key);
+    // Discovery is evidence for review, never an authority to rewrite a human decision.
+    if ("DISCOVERED".equalsIgnoreCase(source)
+        && existing != null
+        && !"CANDIDATE".equals(existing.getStatus())) {
+      return existing;
+    }
     return SecurityAudit.tx(
         auditService,
         existing == null ? AuditEventType.RESOURCE_CREATED : AuditEventType.RESOURCE_UPDATED,

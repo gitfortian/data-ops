@@ -14,7 +14,8 @@ modeling / metric / data-service ──► security ──► datasource / seman
 ```
 
 - 本模块**禁止 import** 其他业务模块的内部实现类型(compile-time 纪律,见 DEPENDENCIES.md)。
-- 下游经 `api` 包 SPI 消费分级/脱敏/裁决(`SecurityClassificationQueryApi`/`SecurityMaskingApi`/`SecurityAccessDecisionApi`),不直读本模块表。
+- Dataset 查询经 Dataset-owned Security Gateway 消费分级/脱敏/裁决 SPI,不直读本模块表;访问裁决试算不写访问流水,实际消费方在执行后显式记录 outcome。
+- Data Service 目前使用 API Key/consumer 自身授权上下文,没有经产品批准的 USER/ROLE 映射,不得把 consumer 身份伪装成用户或角色。
 - 跨模块引用 = 松散 ID(无物理外键);等级/分类展示名经 SPI 解析。
 
 ## 文档

@@ -26,6 +26,7 @@ import org.springframework.util.StringUtils;
 @Component
 public class DiscoveryService {
 
+  // CONTENT remains readable for existing rules, but it only scans column metadata; it never reads row values.
   private static final List<String> MATCH_TYPES = List.of("NAME", "COMMENT", "CONTENT", "REGEX");
 
   private final DiscoveryRuleMapper mapper;
@@ -183,7 +184,7 @@ public class DiscoveryService {
     }
     int produced = 0;
     for (DiscoverableField field : fields) {
-      DsecDiscoveryRulePO best = bestMatch(rules, field);
+      DsecDiscoveryRulePO best = bestMatch(rules, field, projectId);
       if (best == null) {
         continue;
       }
@@ -213,14 +214,15 @@ public class DiscoveryService {
     };
   }
 
-  private DsecDiscoveryRulePO bestMatch(List<DsecDiscoveryRulePO> rules, DiscoverableField field) {
+  private DsecDiscoveryRulePO bestMatch(
+      List<DsecDiscoveryRulePO> rules, DiscoverableField field, Long projectId) {
     DsecDiscoveryRulePO best = null;
     int bestRank = -1;
     for (DsecDiscoveryRulePO rule : rules) {
       if (!matches(rule, field)) {
         continue;
       }
-      int rank = rankOf(rule.getLevelId());
+      int rank = rankOf(projectId, rule.getLevelId());
       if (rank > bestRank) {
         bestRank = rank;
         best = rule;
@@ -229,8 +231,8 @@ public class DiscoveryService {
     return best;
   }
 
-  private int rankOf(Long levelId) {
-    DsecSecurityLevelPO level = levelMapper.selectById(levelId);
+  private int rankOf(Long projectId, Long levelId) {
+    DsecSecurityLevelPO level = levelMapper.selectOne(scopedLevel(projectId, levelId));
     return level == null || level.getRankNo() == null ? 0 : level.getRankNo();
   }
 

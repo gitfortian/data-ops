@@ -12,25 +12,25 @@
 
 ### 资产分级标签(Classification)—— 对象↔等级/分类
 
-把某个数据对象(列/表)绑定到等级与分类,是模块的核心事实表。对象自然键 `objectKey = type:dsId:db.table.column`(缺段以 `-` 占位,规范化后可幂等 upsert)。`status` ∈ CANDIDATE(机器发现待确认)/ACTIVE(人工确认)/DISABLED。`source` 标注来源(MANUAL/DISCOVERY),`confidence` 0~100,`discovery_rule_id` 回溯命中规则。
+把某个数据对象(列/表)绑定到等级与分类,是模块的核心事实表。物理列自然键为 `COLUMN:datasourceId:database:table:column`(缺段以 `-` 占位,规范化后可幂等 upsert)。`status` ∈ CANDIDATE(机器发现待确认)/ACTIVE(人工确认)/REJECTED(人工驳回)。`source` 使用 MANUAL/DISCOVERED,`confidence` 0~100,`discovery_rule_id` 回溯命中规则。自动发现只能新建或更新 CANDIDATE,不得覆盖 ACTIVE 或 REJECTED。
 
 ### 敏感发现(Discovery Rule)
 
-从数据源目录字段自动识别候选标签的规则:`match_type` ∈ NAME/COMMENT/CONTENT/REGEX,`pattern` 匹配列名/注释(REGEX 需可编译)。扫描 `scan(fields)` 命中后经 ClassificationService 幂等落 CANDIDATE,多规则命中取等级 rank 最高者为最佳匹配。发现只产生候选,不自动生效。
+从数据源目录字段元数据识别候选标签的规则:`match_type` ∈ NAME/COMMENT/CONTENT/REGEX,`pattern` 匹配列名/注释(REGEX 需可编译)。CONTENT 是历史名称,实际也只匹配列名或注释,不读取数据行。扫描 `scan(fields)` 命中后经 ClassificationService 幂等落 CANDIDATE,多规则命中取等级 rank 最高者为最佳匹配。发现只产生候选,不自动生效。
 
 ### 访问策略与裁决(Access Policy / Decision)
 
-- 策略:主体(USER/ROLE)对范围(SCOPE:table/column/level)的动作(READ/EXPORT/WRITE),`effect` ALLOW/DENY/NEED_APPROVAL;新建即 PENDING,审批通过 APPROVED 后参与裁决;DENY 优先。
-- 裁决 `decide(actor, roles, objectKey, action)`:按项目+动作取 APPROVED 策略 → DENY 短路 → 命中 ALLOW → 否则默认(对象敏感 rank≥3 转 NEED_APPROVAL,不然 ALLOW)。放行且为 READ 时经 `SecurityMaskingApi.resolve` 决定是否脱敏,并写访问日志。
+- 策略:主体(USER/ROLE)对范围(DATASOURCE/DATABASE/TABLE/COLUMN/LEVEL/ALL)的动作(READ/EXPORT/WRITE),`effect` 仅 ALLOW/DENY;新建即 PENDING,必须提交既有 ACCESS_GRANT 审批流程,批准后 APPROVED 才参与裁决;DENY 优先。DATABASE/TABLE/COLUMN 必须绑定 datasourceId。
+- 裁决 `decide(actor, roles, objectKey, action)`:按项目+动作取 APPROVED 策略 → DENY 短路 → CANDIDATE 需人工确认 → 命中 ALLOW → 否则默认(已确认敏感 rank≥3 转 NEED_APPROVAL,不然 ALLOW)。READ 放行时返回 `maskingRequired` 与算法编码;裁决本身不写消费审计,真实消费方在得到执行结果后显式记录。
 
 ### 脱敏(Algorithm / Policy)
 
-- 算法:内置 MASK_PARTIAL/HASH/FULL_MASK/NULLIFY/REPLACE/KEEP_FORMAT(可加自定义),参数 JSON。执行引擎 `MaskingEngine.mask` 为纯函数。
+- 算法:当前引擎仅支持 MASK_PARTIAL/HASH/FULL_MASK/NULLIFY/REPLACE/KEEP_FORMAT,参数 JSON。不能执行的算法编码或非法参数必须报错,禁止回退明文。
 - 策略:按 levelId/categoryId/columnPattern(`*` 通配)匹配对象,`priority` 最大者优先,解析出 `MaskingDirective(mask, algoCode, algoParams)`。内置算法只读不可删。
 
 ### 访问审计(Access Log)
 
-每次裁决/敏感访问落一行(actor、resourceKey、action、levelCode、decision、masked、algoCode、accessTime),只追加不回改。是热点分析与合规取证的来源。
+消费方明确记录一次真实访问尝试或已完成消费(actor、resourceKey、action、levelCode、decision、masked、algoCode、accessTime),只追加不回改。`masked` 表示消费结果已实际执行脱敏;访问裁决试算不写此流水。Dataset 查询按已解析的物理投影逐列裁决、对返回值执行脱敏并记录完成态。Data Service 当前保留 API Key/consumer 授权上下文,尚未与 USER/ROLE 策略建立已批准的映射。
 
 ### 合规(Compliance Rule / Finding)
 
@@ -49,5 +49,5 @@
 
 ## 对外引用契约(消费方视角)
 
-- modeling/metric/data-service 经 `api` 包消费:`SecurityClassificationQueryApi.find/findMany/findByTable`、`SecurityMaskingApi.resolve/mask`、`SecurityAccessDecisionApi.decide`。
+- Dataset 查询经 Dataset-owned Security Gateway 消费 Security SPI,并以投影血缘映射到物理列键;消费方不直读 `yak_dsec_*` 表。Data Service 的 API Key/consumer 身份不可伪装成 USER/ROLE,待其身份映射经产品决策后再接入。
 - 展示名与等级 rank 由本模块 SPI 解析,消费方不直读 `yak_dsec_*` 表。

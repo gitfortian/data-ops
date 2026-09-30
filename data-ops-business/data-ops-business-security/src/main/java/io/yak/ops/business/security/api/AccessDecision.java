@@ -5,8 +5,14 @@ public record AccessDecision(
     boolean allowed,
     String decision,
     Long matchedPolicyId,
-    boolean masked,
+    boolean maskingRequired,
     String algoCode) {
+
+  /** Compatibility alias: true means a directive exists; it does not mean masking was executed. */
+  @Deprecated
+  public boolean masked() {
+    return maskingRequired;
+  }
 
   public static final String ALLOW = "ALLOW";
   public static final String DENY = "DENY";

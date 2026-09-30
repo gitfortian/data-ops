@@ -12,6 +12,7 @@ import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceRecorder;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.ExecutionResult;
+import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.SourceDescriptor;
 import io.yak.ops.business.dataset.repository.DatasetRepository;
 import io.yak.ops.core.project.ProjectContextException;
 import io.yak.ops.core.security.ActionAccessDeniedException;
@@ -39,6 +40,7 @@ public class DatasetQueryCoordinator {
   private final DatasetQueryPerformanceRecorder performanceRecorder;
   private final ActionAuthorization actionAuthorization;
   private final ApplicationEventPublisher eventPublisher;
+  private final DatasetQuerySecurityGate securityGate;
 
   @Autowired
   public DatasetQueryCoordinator(
@@ -46,12 +48,23 @@ public class DatasetQueryCoordinator {
       DatasetSourceQueryRegistry sourceRegistry,
       DatasetQueryPerformanceRecorder performanceRecorder,
       ActionAuthorization actionAuthorization,
-      ApplicationEventPublisher eventPublisher) {
+      ApplicationEventPublisher eventPublisher,
+      DatasetQuerySecurityGate securityGate) {
     this.repository = repository;
     this.sourceRegistry = sourceRegistry;
     this.performanceRecorder = performanceRecorder;
     this.actionAuthorization = actionAuthorization;
     this.eventPublisher = eventPublisher;
+    this.securityGate = securityGate;
+  }
+
+  public DatasetQueryCoordinator(
+      DatasetRepository repository,
+      DatasetSourceQueryRegistry sourceRegistry,
+      DatasetQueryPerformanceRecorder performanceRecorder,
+      ActionAuthorization actionAuthorization,
+      ApplicationEventPublisher eventPublisher) {
+    this(repository, sourceRegistry, performanceRecorder, actionAuthorization, eventPublisher, null);
   }
 
   /** Compatibility constructor for focused tests and non-Spring callers. */
@@ -60,7 +73,7 @@ public class DatasetQueryCoordinator {
       DatasetSourceQueryRegistry sourceRegistry,
       DatasetQueryPerformanceRecorder performanceRecorder,
       ActionAuthorization actionAuthorization) {
-    this(repository, sourceRegistry, performanceRecorder, actionAuthorization, null);
+    this(repository, sourceRegistry, performanceRecorder, actionAuthorization, null, null);
   }
 
   public DatasetQueryResult query(long datasetId, DatasetQueryRequest request) {
@@ -103,12 +116,27 @@ public class DatasetQueryCoordinator {
       List<DatasetField> fields = repository.listFields(version.id());
       stage = "RESOLVE_ADAPTER";
       DatasetSourceQueryAdapter adapter = sourceRegistry.require(version.sourceType());
+      SourceDescriptor source = adapter.resolveSource(dataset, version);
+      if (source == null) {
+        source = new SourceDescriptor(version.dataSourceId(), version.sql());
+      }
+      dataSourceId = source.dataSourceId();
+      sql = source.sql();
       servicePrepareMillis = elapsedMillis(queryStartedAt);
+
+      DatasetQuerySecurityGate.AccessPlan accessPlan = null;
+      if (securityGate != null) {
+        stage = "SECURITY_GATE";
+        accessPlan = securityGate.authorize(source, fields, request, subject);
+      }
 
       stage = "EXECUTE_SOURCE";
       ExecutionResult execution = adapter.execute(dataset, version, fields, request);
       long totalMillis = elapsedMillis(queryStartedAt);
-      DatasetQueryResult result = execution.result().withQueryId(queryId);
+      DatasetQueryResult securedResult = accessPlan == null
+          ? execution.result()
+          : securityGate.applyAndRecord(accessPlan, execution.result());
+      DatasetQueryResult result = securedResult.withQueryId(queryId);
       DatasetQueryPerformance completed = trace(
           queryId, datasetId, dataset, version, execution.dataSourceId(), execution.sql(),
           DatasetQueryStatus.SUCCESS, null, null, null, subject,

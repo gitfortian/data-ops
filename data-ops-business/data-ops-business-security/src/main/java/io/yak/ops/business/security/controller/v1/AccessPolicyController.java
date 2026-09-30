@@ -68,15 +68,6 @@ public class AccessPolicyController {
     return Result.success(service.update(id, patch));
   }
 
-  @Operation(summary = "审批通过/驳回")
-  @RequiresPermission(SecurityPermissionCode.UPDATE)
-  @PostMapping("/{id}/approval")
-  public Result<DsecAccessPolicyPO> approve(@PathVariable("id") Long id,
-      @Valid @RequestBody ApprovalRequest body, HttpServletRequest httpRequest) {
-    String approver = currentUserProvider.getCurrentUser(httpRequest);
-    return Result.success(service.decideApproval(id, body.approve(), approver, body.reason()));
-  }
-
   @Operation(summary = "提交权限申请审批(需已配置 ACCESS_GRANT 流程;批准后自动授权)")
   @RequiresPermission(SecurityPermissionCode.UPDATE)
   @PostMapping("/{id}/apply-approval")
@@ -104,5 +95,4 @@ public class AccessPolicyController {
 
   public record PageQuery(int pageNo, int pageSize, String keyword, String status) {}
 
-  public record ApprovalRequest(boolean approve, String reason) {}
 }

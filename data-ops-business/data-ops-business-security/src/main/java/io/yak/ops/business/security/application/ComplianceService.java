@@ -168,6 +168,10 @@ public class ComplianceService {
     for (DsecComplianceRulePO rule : rules) {
       List<DsecComplianceFindingPO> findings =
           evaluate(rule, classifications, rankById, batchId, projectId);
+      if (findings.isEmpty()) {
+        // Persist one successful row per checked rule so a clean run remains distinguishable from no run.
+        findings.add(finding(rule, batchId, projectId, true, null, "检查通过：未发现合规缺口"));
+      }
       checked++;
       int ruleFailed = 0;
       for (DsecComplianceFindingPO finding : findings) {
@@ -259,8 +263,11 @@ public class ComplianceService {
             .last("limit 1"));
     Map<String, Object> map = new HashMap<>();
     if (last == null) {
+      map.put("status", "UNKNOWN");
+      map.put("hasRun", null);
       map.put("batchId", null);
-      map.put("openGaps", 0L);
+      map.put("openGaps", null);
+      map.put("message", "当前没有可验证的体检批次；旧版无缺口批次无法从历史表中识别");
       return map;
     }
     Long open = findingMapper.selectCount(
@@ -268,6 +275,8 @@ public class ComplianceService {
             .eq(DsecComplianceFindingPO::getProjectId, projectId)
             .eq(DsecComplianceFindingPO::getBatchId, last.getBatchId())
             .eq(DsecComplianceFindingPO::getPassed, 0));
+    map.put("status", "COMPLETED");
+    map.put("hasRun", Boolean.TRUE);
     map.put("batchId", last.getBatchId());
     map.put("openGaps", open == null ? 0L : open);
     return map;

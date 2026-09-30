@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 数据级访问裁决(票据 75/77),供查询/开发链路调用。 */
+/** 数据级访问裁决试算;试算结果不代表消费执行,也不会写入访问流水。 */
 @Tag(name = "数据安全-访问裁决接口")
 @RestController
 @RequiredArgsConstructor
@@ -29,7 +29,7 @@ public class AccessDecisionController {
 
   private final AccessDecisionService service;
 
-  @Operation(summary = "访问裁决(返回是否放行/是否脱敏)")
+  @Operation(summary = "访问裁决试算(不执行访问、不写访问流水)")
   @PostMapping("/decide")
   public Result<AccessDecision> decide(@Valid @RequestBody DecideRequest body) {
     return Result.success(

@@ -13,6 +13,11 @@ public interface DatasetSourceQueryAdapter {
 
   DatasetSourceType sourceType();
 
+  /** Resolves the immutable physical SQL source needed for a pre-execution security check. */
+  default SourceDescriptor resolveSource(Dataset dataset, DatasetVersion version) {
+    return new SourceDescriptor(version.dataSourceId(), version.sql());
+  }
+
   ExecutionResult execute(
       Dataset dataset,
       DatasetVersion version,
@@ -27,4 +32,6 @@ public interface DatasetSourceQueryAdapter {
       long waitMillis,
       long executeMillis,
       long transferMillis) {}
+
+  record SourceDescriptor(String dataSourceId, String sql) {}
 }

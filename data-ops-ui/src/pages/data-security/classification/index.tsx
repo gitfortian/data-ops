@@ -403,7 +403,7 @@ const CategoryTab = ({ categoryCodeOptions }: { categoryCodeOptions: { label: st
 const CLASSIFICATION_STATUS: Record<string, { label: string; color: string }> = {
   ACTIVE: { label: '生效', color: 'green' },
   CANDIDATE: { label: '候选', color: 'gold' },
-  DISABLED: { label: '停用', color: 'default' },
+  REJECTED: { label: '已驳回', color: 'default' },
 };
 
 const ClassificationTab = ({ levelOptions, categoryOptions, levels, categories }: {
@@ -488,7 +488,7 @@ const ClassificationTab = ({ levelOptions, categoryOptions, levels, categories }
     { title: '对象', dataIndex: 'objectName', render: (v: string, r) => v || r.objectKey || `${r.dbName ?? ''}.${r.tableName ?? ''}.${r.columnName ?? ''}` },
     { title: '等级', dataIndex: 'levelId', width: 120, render: (v?: number) => levelNameById(levels, v) },
     { title: '分类', dataIndex: 'categoryId', width: 120, render: (v?: number) => categoryNameById(categories, v) },
-    { title: '来源', dataIndex: 'source', width: 100, render: (v?: string) => (v === 'DISCOVERY' ? '自动发现' : v === 'MANUAL' ? '人工' : v || '-') },
+    { title: '来源', dataIndex: 'source', width: 100, render: (v?: string) => (v === 'DISCOVERED' || v === 'DISCOVERY' ? '自动发现' : v === 'MANUAL' ? '人工' : v || '-') },
     { title: '置信度', dataIndex: 'confidence', width: 90, render: (v?: number) => (v == null ? '-' : `${v}%`) },
     {
       title: '状态', dataIndex: 'status', width: 90,
@@ -498,8 +498,9 @@ const ClassificationTab = ({ levelOptions, categoryOptions, levels, categories }
       title: '操作', key: 'action', width: 200,
       render: (_, record) => (
         <Space size={4}>
-          {record.status !== 'ACTIVE' ? <Typography.Link onClick={() => changeStatus(record, 'ACTIVE')}>确认</Typography.Link> : null}
-          {record.status !== 'DISABLED' ? <Typography.Link onClick={() => changeStatus(record, 'DISABLED')}>停用</Typography.Link> : null}
+          {record.status === 'CANDIDATE' ? <Typography.Link onClick={() => changeStatus(record, 'ACTIVE')}>确认</Typography.Link> : null}
+          {record.status === 'CANDIDATE' ? <Typography.Link type="danger" onClick={() => changeStatus(record, 'REJECTED')}>驳回</Typography.Link> : null}
+          {record.status === 'REJECTED' ? <Typography.Link onClick={() => changeStatus(record, 'ACTIVE')}>重新确认</Typography.Link> : null}
           <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>
         </Space>
       ),
@@ -542,10 +543,10 @@ const ClassificationTab = ({ levelOptions, categoryOptions, levels, categories }
 
 /* ================= 敏感发现 ================= */
 const MATCH_TYPES = [
-  { label: '正则 REGEX', value: 'REGEX' },
-  { label: '前缀 PREFIX', value: 'PREFIX' },
-  { label: '包含 CONTAINS', value: 'CONTAINS' },
-  { label: '精确 EQUALS', value: 'EQUALS' },
+  { label: '名称 NAME', value: 'NAME' },
+  { label: '注释 COMMENT', value: 'COMMENT' },
+  { label: '名称或注释（元数据） CONTENT', value: 'CONTENT' },
+  { label: '正则 REGEX（匹配名称/注释）', value: 'REGEX' },
 ];
 
 const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
@@ -583,7 +584,7 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
     void load(pageNo, pageSize);
   }, [pageNo, pageSize, keyword, load]);
 
-  const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ matchType: 'CONTAINS', enabled: true }); setOpen(true); };
+  const openCreate = () => { setEditing(null); form.resetFields(); form.setFieldsValue({ matchType: 'NAME', enabled: true }); setOpen(true); };
   const openEdit = (record: DiscoveryRule) => {
     setEditing(record);
     form.setFieldsValue({
@@ -693,7 +694,7 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
       </Modal>
 
       <Modal title="扫描字段生成候选" open={scanOpen} onOk={runScan} confirmLoading={scanning} onCancel={() => setScanOpen(false)} destroyOnClose okText="开始扫描" width={640}>
-        <div className="mb-2 text-[12px] text-[#98a2b3]">填写待扫描字段，命中已启用规则后生成「候选」分级标签，再到「资产分级」确认。</div>
+        <div className="mb-2 text-[12px] text-[#98a2b3]">填写待扫描字段元数据，规则只匹配列名和注释，不读取数据行；命中后生成「候选」分级标签，再到「资产分级」确认。</div>
         <Form form={scanForm} layout="vertical" preserve={false} initialValues={{ fields: [{}] }}>
           <Form.List name="fields">
             {(fieldsList, { add, remove: removeRow }) => (

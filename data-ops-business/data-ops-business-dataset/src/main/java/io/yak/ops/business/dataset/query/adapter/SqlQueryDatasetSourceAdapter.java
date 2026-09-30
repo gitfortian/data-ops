@@ -9,6 +9,7 @@ import io.yak.ops.business.dataset.DatasetVersion;
 import io.yak.ops.business.dataset.query.DatasetQueryCompiler;
 import io.yak.ops.business.dataset.query.DatasetQueryRejectedException;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter;
+import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.SourceDescriptor;
 import io.yak.ops.core.execution.sql.SqlExecutionCaller;
 import io.yak.ops.core.execution.sql.SqlExecutionContext;
 import io.yak.ops.core.execution.sql.SqlExecutionPolicyViolationException;
@@ -37,6 +38,11 @@ public class SqlQueryDatasetSourceAdapter implements DatasetSourceQueryAdapter {
   @Override
   public DatasetSourceType sourceType() {
     return DatasetSourceType.SQL_QUERY;
+  }
+
+  @Override
+  public SourceDescriptor resolveSource(Dataset dataset, DatasetVersion version) {
+    return new SourceDescriptor(version.dataSourceId(), version.sql());
   }
 
   @Override

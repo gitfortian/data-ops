@@ -29,10 +29,11 @@ public final class MaskingEngine {
     if (value == null) {
       return null;
     }
-    if (algoCode == null || algoCode.isBlank()) {
-      return value;
+    if (algoCode == null || !supported().contains(algoCode)) {
+      throw new IllegalArgumentException("Unsupported masking algorithm: " + algoCode);
     }
     JsonNode params = readParams(paramsJson);
+    validateParams(algoCode, params);
     char maskChar = charParam(params, "maskChar", '*');
     return switch (algoCode) {
       case FULL_MASK -> repeat(maskChar, Math.min(value.length(), 6));
@@ -42,8 +43,15 @@ public final class MaskingEngine {
       case HASH -> hash(value, intParam(params, "length", 16));
       case MASK_PARTIAL -> maskPartial(value, maskChar,
           intParam(params, "keepLeft", 1), intParam(params, "keepRight", 1));
-      default -> value;
+      default -> throw new IllegalArgumentException("Unsupported masking algorithm: " + algoCode);
     };
+  }
+
+  public static void validate(String algoCode, String paramsJson) {
+    if (algoCode == null || !supported().contains(algoCode)) {
+      throw new IllegalArgumentException("Unsupported masking algorithm: " + algoCode);
+    }
+    validateParams(algoCode, readParams(paramsJson));
   }
 
   private static String maskPartial(String value, char maskChar, int keepLeft, int keepRight) {
@@ -90,9 +98,42 @@ public final class MaskingEngine {
     }
     try {
       JsonNode node = MAPPER.readTree(paramsJson);
-      return node != null && node.isObject() ? node : MAPPER.createObjectNode();
+      if (node == null || !node.isObject()) {
+        throw new IllegalArgumentException("Masking parameters must be a JSON object");
+      }
+      return node;
     } catch (Exception exception) {
-      return MAPPER.createObjectNode();
+      if (exception instanceof IllegalArgumentException illegalArgumentException) {
+        throw illegalArgumentException;
+      }
+      throw new IllegalArgumentException("Masking parameters are invalid JSON", exception);
+    }
+  }
+
+  private static void validateParams(String algoCode, JsonNode params) {
+    validateMaskChar(params, "maskChar");
+    if (REPLACE.equals(algoCode)) {
+      validateMaskChar(params, "replacement");
+    }
+    if (HASH.equals(algoCode)) {
+      int length = intParam(params, "length", 16);
+      if (length < 1 || length > 64) {
+        throw new IllegalArgumentException("HASH length must be between 1 and 64");
+      }
+    }
+    if (MASK_PARTIAL.equals(algoCode)) {
+      int keepLeft = intParam(params, "keepLeft", 1);
+      int keepRight = intParam(params, "keepRight", 1);
+      if (keepLeft < 0 || keepRight < 0) {
+        throw new IllegalArgumentException("MASK_PARTIAL keepLeft/keepRight must not be negative");
+      }
+    }
+  }
+
+  private static void validateMaskChar(JsonNode params, String key) {
+    JsonNode node = params.get(key);
+    if (node != null && (!node.isTextual() || node.asText().length() != 1)) {
+      throw new IllegalArgumentException(key + " must contain exactly one character");
     }
   }
 

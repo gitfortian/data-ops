@@ -25,6 +25,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -109,9 +111,23 @@ public class DatasetController {
     DatasetQuerySubject subject = principal == null || principal.getName() == null
         || principal.getName().isBlank()
         ? null
-        : DatasetQuerySubject.authenticatedUser(principal.getName());
+        : DatasetQuerySubject.authenticatedUser(principal.getName(), authorityNames(principal));
     return Result.success(viewConverter.queryResult(
         queryService.query(datasetId, requestConverter.query(request), subject)));
+  }
+
+  private List<String> authorityNames(Principal principal) {
+    if (!(principal instanceof Authentication authentication)) {
+      return List.of();
+    }
+    return authentication.getAuthorities().stream()
+        .map(GrantedAuthority::getAuthority)
+        .filter(authority -> authority != null && !authority.isBlank())
+        .flatMap(authority -> authority.startsWith("ROLE_")
+            ? java.util.stream.Stream.of(authority, authority.substring("ROLE_".length()))
+            : java.util.stream.Stream.of(authority))
+        .distinct()
+        .toList();
   }
 
   @Operation(summary = "上线 Dataset")

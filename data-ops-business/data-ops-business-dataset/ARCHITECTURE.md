@@ -124,9 +124,14 @@ DatasetQueryService @Service
  -> DatasetQueryCoordinator
       -> DatasetRepository
       -> DatasetSourceQueryRegistry
+      -> DatasetQuerySecurityGate
+           -> DatasetProjectionAnalyzerGateway
+           -> DatasetSecurityGateway
       -> exact source adapter
       -> DatasetQueryPerformanceRecorder
 ```
+
+查询执行前按 SQL 投影血缘构造物理列自然键并执行 Security 决策。结果返回前执行所需脱敏;成功消费后记录实际访问结果。血缘不可用或映射不完整时拒绝查询。
 
 Adapters：
 
