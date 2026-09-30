@@ -1,0 +1,4 @@
+package io.yak.ops.business.governance.rule.model;
+
+public record RuleVersion(Integer major, Integer minor) {
+}

@@ -37,6 +37,7 @@
         <module>data-ops-business-agent</module>
         <module>data-ops-business-home</module>
         <module>data-ops-business-modeling</module>
+        <module>data-ops-business-governance</module>
         <module>data-ops-business-semantic</module>
         <module>data-ops-business-mdm</module>
         <module>data-ops-business-metric</module>

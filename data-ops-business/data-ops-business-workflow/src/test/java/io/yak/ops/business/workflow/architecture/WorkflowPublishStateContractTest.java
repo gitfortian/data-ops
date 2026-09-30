@@ -47,7 +47,11 @@ class WorkflowPublishStateContractTest {
     Path root = migrationRoot();
     List<String> files;
     try (Stream<Path> paths = Files.list(root)) {
-      files = paths.map(path -> path.getFileName().toString()).sorted().toList();
+      files = paths
+          .map(path -> path.getFileName().toString())
+          .filter(name -> name.startsWith("V"))
+          .sorted()
+          .toList();
     }
 
     assertThat(files)
@@ -55,6 +59,7 @@ class WorkflowPublishStateContractTest {
             "V1__baseline_workflow.sql",
             "V2__add_execution_audit_carrier.sql",
             "V3__workflow_publish_state.sql");
+    assertThat(root.resolve("B3__workflow_baseline.sql")).isRegularFile();
     assertThat(Files.readString(root.resolve("V3__workflow_publish_state.sql")))
         .contains("UPDATE yak_workflow_definition SET status = 'PUBLISHED' WHERE status = 'ONLINE'");
   }

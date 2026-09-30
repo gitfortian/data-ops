@@ -13,7 +13,8 @@ class OfflineSyncFlywayContractTest {
 
   @Test
   void offlineSyncOwnsOrderedMigrationSequence() throws IOException {
-    assertThat(sqlFiles(migrationRoot()))
+    List<String> migrations = sqlFiles(migrationRoot());
+    assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
         .containsExactly(
             "V1__baseline_offline_sync.sql",
             "V2__add_offline_notification_config.sql",
@@ -21,6 +22,7 @@ class OfflineSyncFlywayContractTest {
             "V4__add_batch_audit_carrier.sql",
             "V5__bind_offline_cursor_source_route.sql",
             "V6__offline_job_revision_versioning.sql");
+    assertThat(migrations).contains("B6__offline_sync_baseline.sql");
 
     String baseline = Files.readString(migrationRoot().resolve("V1__baseline_offline_sync.sql"));
     assertThat(baseline)
