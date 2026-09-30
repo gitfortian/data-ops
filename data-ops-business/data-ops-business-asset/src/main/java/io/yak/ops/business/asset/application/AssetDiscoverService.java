@@ -384,7 +384,7 @@ public class AssetDiscoverService {
         LineageAsset root = service.getAssetByKey(po.getAssetKey());
         if (root == null) {
           structuralUsage = new StructuralUsage(UsageOwnerDomain.LINEAGE,
-              SectionStatus.UNAVAILABLE, "DOWNSTREAM", LINEAGE_HOP, null,
+              SectionStatus.EMPTY, "DOWNSTREAM", LINEAGE_HOP, 0,
               "血缘域尚无该资产登记");
         } else {
           int downstreamCount =

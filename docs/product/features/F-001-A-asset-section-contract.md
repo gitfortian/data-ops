@@ -7,7 +7,9 @@ Feature ID: F-001-A
 关联产品决策：PD-001 — Asset Governance Hub（已接受）  
 负责人：Product  
 创建日期：2026-09-22  
-实施状态：未开始
+实施状态：进行中
+
+实施证据（2026-09-30）：默认分支已有独立 Asset Section API、五态映射、权限隔离、按分区渐进加载，以及 Metadata、Quality、Security、Lineage、Lifecycle 和联邦 Usage 的读取实现。完整资产类型矩阵、运行态登录页面验收与跨域 E2E 尚未全部形成证据；状态保持进行中，不能据此标记 SHIPPED。当前收尾记录见 `docs/product/acceptance/phase7-closeout.md`。
 
 > 本 Feature 只定义 Asset Detail 的产品契约，不直接规定最终 Java 类名、数据库表或前端组件结构。  
 > 后续技术设计必须遵守这里的事实归属、适用矩阵和状态语义。
