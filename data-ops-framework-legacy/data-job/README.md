@@ -6,12 +6,13 @@
 
 - `src/main/java`：从字节码恢复的 Java 源码，共 97 个顶层 Java 文件。
 - `src/main/resources`：JAR 中原有的 6 个 MyBatis Mapper XML、`yak-job.sql` 和 Spring 自动配置文件。
-- `pom.xml`：JAR 内置的原始 Maven POM。
+- `pom.xml`：此目录用于独立构建的 Maven POM。
 - `docs`：原始 JAR 清单、源码目录、资源目录和反编译摘要。
 
 ## 基本信息
 
-- Maven 坐标：`io.github.zqrferrari:data-job-spring-boot-starter:1.0.31`
+- 当前模块 Maven 坐标：`io.yak:data-job-spring-boot-starter:1.0.31`（以本目录 `pom.xml` 为准）。
+- 来源 JAR 的内嵌 Maven 元数据路径为 `io.github.zqrferrari/logi-job-spring-boot-starter`，记录在 `docs/original-jar-entries.txt`。
 - 原始编译目标：Java 8
 - 源码恢复工具：CFR 0.153-SNAPSHOT
 

@@ -13,11 +13,13 @@ class DatasetFlywayContractTest {
 
     @Test
     void datasetNamespaceContainsTheBaselineAndAdditiveContractMigrations() throws IOException {
-        assertThat(sqlFiles(migrationRoot()))
+        List<String> migrations = sqlFiles(migrationRoot());
+        assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
                 .containsExactly(
                         "V1__baseline_dataset.sql",
                         "V2__dataset_source_publication_lock.sql",
                         "V3__dataset_query_subject_attribution.sql");
+        assertThat(migrations).contains("B3__dataset_baseline.sql");
     }
 
     @Test

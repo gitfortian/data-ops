@@ -8,7 +8,7 @@
 
 **Blocked by:** 无；**阻塞 05**（diff 基线需要完整快照）
 
-**Status:** in progress（工作区已在落 `V22__model_version_meta_snapshot.sql` + `ModelPublishedStructureReader`，见 untracked 文件——确认在途改动即本单主体，避免重复开工）
+**Status:** in progress（历史库若已执行 V22 元数据快照，保留原 V22 脚本；未执行时在 impact-analysis 历史中使用 V25、在 logical-modeling 历史中使用 V27 补齐）
 
 **硬性约束(不可打破):** 遵守 [dev-plan.md《硬性开发约束》](../dev-plan.md)；Flyway 已应用文件不可改，扩展走新版本文件且幂等（V22 已立）；历史版本快照缺字段时回滚降级策略要明确（缺=不动该部分并提示，禁静默清空）；乐观锁 version 语义不变。
 

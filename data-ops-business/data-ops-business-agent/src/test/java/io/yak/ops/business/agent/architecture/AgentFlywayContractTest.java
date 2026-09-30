@@ -8,14 +8,16 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Locks the consolidated single-file Agent Flyway baseline (main fold convention). */
+/** Locks Agent's versioned upgrade history and cumulative baseline migration. */
 class AgentFlywayContractTest {
 
     @Test
-    void agentSchemaShouldContainOnlyTheConsolidatedBaseline() throws IOException {
-        // V1 = 折叠 baseline（单文件）；V2 = 项目空间隔离增量（project_id 列，独立迁移文件）
-        assertThat(sqlFiles(migrationRoot()))
+    void agentSchemaShouldContainVersionedHistoryAndCumulativeBaseline() throws IOException {
+        // V1/V2 remain the upgrade history; B2 is the cumulative baseline for new schemas.
+        List<String> migrations = sqlFiles(migrationRoot());
+        assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
                 .containsExactly("V1__baseline_agent.sql", "V2__agent_add_project_id.sql");
+        assertThat(migrations).contains("B2__agent_baseline.sql");
     }
 
     @Test

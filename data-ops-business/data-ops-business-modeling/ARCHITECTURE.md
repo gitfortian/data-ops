@@ -59,3 +59,15 @@ overview/     项目空间全域视图(服务端聚合,ticket 29)
 4. **写路径必须携带项目空间上下文**;projectId 只取服务端可信上下文,异步任务必须能独立恢复项目上下文,不建物理外键(PROJECT_SCOPE)。
 5. **统计/总览只做服务端聚合**,禁止无界 list() 后内存统计(home-overview-contract)。
 6. Flyway migration 只增不改:已合入的 migration 文件不可修改。
+
+## Flyway 历史兼容
+
+`yak-modeling` 保存公共迁移和累计基线。V22 和 V24 均存在不同的历史脚本，启动时读取
+`flyway_schema_history_modeling` 的 V22、V24 `script`，再加载相应历史目录：
+
+- `V22__model_version_meta_snapshot.sql` → `yak-modeling-history-v22-meta`
+- `V22__model_version_foundation.sql` → `yak-modeling-history-v22-foundation`
+- `V24__model_impact_analysis.sql` → `yak-modeling-history-impact`
+- `V24__logical_modeling_foundation.sql` → `yak-modeling-history-logical`
+
+若 V22 已执行元数据快照迁移，跳过 impact 历史的 V25 或 logical 历史的 V27 快照迁移；若 V22 已创建逻辑模型版本表，跳过后续同表的建表迁移。其余历史按对应的 `snapshot`、`foundation` 目录补齐。各目录中的既有迁移按原历史保留版本号和脚本名。不要重命名或编辑已应用脚本；新增空库基线继续放在公共 `yak-modeling` 目录。

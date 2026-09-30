@@ -23,12 +23,14 @@ class DataServiceFlywayContractTest {
 
   @Test
   void dedicatedNamespaceContainsForwardOnlyMigrations() throws IOException {
-    assertThat(sqlFiles(dedicatedMigrationRoot()))
+    List<String> migrations = sqlFiles(dedicatedMigrationRoot());
+    assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
         .containsExactly(
             "V1__baseline_data_service.sql",
             "V2__ip_access_policy.sql",
             "V3__consumer_access_model.sql",
             "V4__usage_evidence_source.sql");
+    assertThat(migrations).contains("B4__data_service_baseline.sql");
 
     String baseline = Files.readString(
         dedicatedMigrationRoot().resolve("V1__baseline_data_service.sql"));
