@@ -21,6 +21,7 @@ import type {
 interface MetricGovernancePanelProps {
   metricId: number;
   currentVersion: number;
+  onCompareVersions?: (publishedVersion: number, currentVersion: number) => void;
 }
 
 type ReadState = 'LOADING' | 'READY' | 'EMPTY' | 'UNAVAILABLE' | 'FORBIDDEN';
@@ -31,7 +32,7 @@ function failedReadState(error: unknown): ReadState {
   return status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE';
 }
 
-export default function MetricGovernancePanel({ metricId, currentVersion }: MetricGovernancePanelProps) {
+export default function MetricGovernancePanel({ metricId, currentVersion, onCompareVersions }: MetricGovernancePanelProps) {
   const access = useAccess();
   const canValidate = access.hasPermission('metric:update');
   const canPublish = access.hasPermission('metric:publish');
@@ -168,6 +169,11 @@ export default function MetricGovernancePanel({ metricId, currentVersion }: Metr
       ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <YakButton loading={loading} onClick={() => void load()}>刷新证据</YakButton>
+        {drifted && active && onCompareVersions ? (
+          <YakButton onClick={() => onCompareVersions(active.metricVersion, currentVersion)}>
+            对比草稿与已发布版本
+          </YakButton>
+        ) : null}
         {canValidate ? <YakButton loading={acting} onClick={() => void validate()}>验证当前版本 v{currentVersion}</YakButton> : null}
         {canPublish && !loading && readinessState === 'READY' && readiness?.status === 'READY' && !isCurrentPublished ? (
           <YakButton type="primary" loading={acting} onClick={() => void publish()}>发布 v{currentVersion}</YakButton>

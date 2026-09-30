@@ -9,6 +9,7 @@ import type {
   MetricImpactContext,
   MetricPageParams,
   MetricPageResult,
+  MetricPublicationSummary,
   MetricRecord,
   MetricStats,
   MetricTagRecord,
@@ -109,6 +110,14 @@ export const getMetricPublication = (id: number): Promise<PublishedMetricContrac
 
 export const listPublishedMetrics = (): Promise<PublishedMetricContract[]> =>
   HttpUtils.getData<PublishedMetricContract[]>(`${METRIC_API_PREFIX}/publications/active`);
+
+export const getMetricPublicationSummaries = (metricIds: number[]): Promise<MetricPublicationSummary[]> => {
+  if (!metricIds.length) return Promise.resolve([]);
+  const params = new URLSearchParams({ metricIds: metricIds.join(',') });
+  return HttpUtils.getData<MetricPublicationSummary[]>(
+    `${METRIC_API_PREFIX}/publications/active/summaries?${params.toString()}`,
+  );
+};
 
 export const getMetricPublicationHistory = (id: number): Promise<Array<Record<string, unknown>>> =>
   HttpUtils.getData<Array<Record<string, unknown>>>(`${METRIC_API_PREFIX}/${id}/publication-history`);

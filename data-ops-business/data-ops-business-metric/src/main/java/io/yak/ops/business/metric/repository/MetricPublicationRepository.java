@@ -22,6 +22,8 @@ public interface MetricPublicationRepository {
 
   List<MetricActivePublicationPO> listActive();
 
+  List<MetricActivePublicationPO> listActiveByMetricIds(List<Long> metricIds);
+
   /** Locks the active pointer so withdrawal cannot race with a replacement publish. */
   MetricActivePublicationPO findActiveForUpdate(Long metricId);
 

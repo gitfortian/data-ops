@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Metric publication readiness and explicit publication lifecycle API. */
@@ -65,6 +66,13 @@ public class MetricPublicationController {
   @GetMapping("/publications/active")
   public Result<List<PublishedMetricContract>> activeContracts() {
     return Result.success(publicationService.listActive());
+  }
+
+  @Operation(summary = "按指标 ID 批量读取当前发布版本摘要")
+  @GetMapping("/publications/active/summaries")
+  public Result<List<MetricPublicationService.MetricPublicationSummary>> activeSummaries(
+      @RequestParam("metricIds") List<Long> metricIds) {
+    return Result.success(publicationService.listActiveSummaries(metricIds));
   }
 
   @Operation(summary = "读取指标发布生命周期账本")

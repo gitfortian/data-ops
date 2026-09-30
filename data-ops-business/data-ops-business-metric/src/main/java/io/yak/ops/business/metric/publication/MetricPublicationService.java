@@ -86,6 +86,9 @@ public class MetricPublicationService {
   public record WithdrawalResult(boolean withdrawn, PublicationEventView event) {
   }
 
+  public record MetricPublicationSummary(Long metricId, int metricVersion) {
+  }
+
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public PublishedMetricContract publish(Long metricId, int version, String operator) {
     String actor = requireOperator(operator);
@@ -274,6 +277,18 @@ public class MetricPublicationService {
   public List<PublishedMetricContract> listActive() {
     return publicationRepository.listActive().stream()
         .map(this::requireActiveContract)
+        .toList();
+  }
+
+  /** Returns only the active version pointers needed to decorate a page of Metric rows. */
+  public List<MetricPublicationSummary> listActiveSummaries(List<Long> metricIds) {
+    if (metricIds == null || metricIds.isEmpty()) return List.of();
+    return publicationRepository.listActiveByMetricIds(metricIds.stream()
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList())
+        .stream()
+        .map(active -> new MetricPublicationSummary(active.getMetricId(), active.getMetricVersion()))
         .toList();
   }
 

@@ -28,6 +28,7 @@ import type {
   UsageSummary,
 } from '@/services/metric/types';
 import MetricGovernancePanel from './MetricGovernancePanel';
+import MetricVersionComparisonDrawer from './MetricVersionComparisonDrawer';
 import {
   formatMetricTime,
   METRIC_STATUS_COLORS,
@@ -179,6 +180,8 @@ const MetricDetailPage = () => {
   const [historicalVersion, setHistoricalVersion] = useState<MetricVersionRecord | null>(null);
   const [historicalDrawerOpen, setHistoricalDrawerOpen] = useState(false);
   const [historicalLoading, setHistoricalLoading] = useState(false);
+  const [versionCompareOpen, setVersionCompareOpen] = useState(false);
+  const [comparisonVersions, setComparisonVersions] = useState<[number, number] | null>(null);
 
   const loadMetric = useCallback(async () => {
     if (!metricId) return;
@@ -303,6 +306,11 @@ const MetricDetailPage = () => {
     }
   };
 
+  const openVersionComparison = (leftVersion: number, rightVersion: number) => {
+    setComparisonVersions([leftVersion, rightVersion]);
+    setVersionCompareOpen(true);
+  };
+
   /** 引用类字段:有展示名即可点击跳转(仅跳已存在页面),缺失如实显示 '-'。 */
   const refLink = (label?: string | null, to?: string) =>
     label ? (
@@ -364,12 +372,23 @@ const MetricDetailPage = () => {
     {
       title: '视图',
       key: 'viewType',
-      width: 170,
+      width: 220,
       render: (_: unknown, record) => (
         <span className="flex items-center gap-1">
           <Tag>历史快照 · 只读</Tag>
           <Typography.Link onClick={() => void openHistoricalVersion(record.version)}>
             查看
+          </Typography.Link>
+          <Typography.Link
+            onClick={() => {
+              const otherVersion = versions
+                .map((version) => version.version)
+                .filter((version) => version !== record.version)
+                .sort((left, right) => right - left)[0] ?? metric?.version ?? record.version;
+              openVersionComparison(record.version, otherVersion);
+            }}
+          >
+            对比
           </Typography.Link>
         </span>
       ),
@@ -439,7 +458,13 @@ const MetricDetailPage = () => {
       <Spin spinning={loading}>
         {metric ? (
           <div className="mt-5">
-            <MetricGovernancePanel metricId={metric.id} currentVersion={metric.version} />
+            <MetricGovernancePanel
+              metricId={metric.id}
+              currentVersion={metric.version}
+              onCompareVersions={(publishedVersion, currentVersion) =>
+                openVersionComparison(publishedVersion, currentVersion)
+              }
+            />
             {/* Descriptions */}
             <Descriptions
               column={3}
@@ -793,6 +818,17 @@ const MetricDetailPage = () => {
           )}
         </Spin>
       </Drawer>
+
+      {metric ? (
+        <MetricVersionComparisonDrawer
+          metricId={metric.id}
+          metricVersion={metric.version}
+          versions={versions}
+          open={versionCompareOpen}
+          initialVersions={comparisonVersions}
+          onClose={() => setVersionCompareOpen(false)}
+        />
+      ) : null}
 
       <Drawer title="管理标签" open={tagDrawerOpen} onClose={() => setTagDrawerOpen(false)} width={360}>
         <div className="text-[13px] text-[#667085]">选择该指标挂载的标签(标签本体在指标服务页创建)</div>
