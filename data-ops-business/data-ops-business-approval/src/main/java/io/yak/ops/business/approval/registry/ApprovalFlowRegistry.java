@@ -3,9 +3,9 @@ package io.yak.ops.business.approval.registry;
 import io.yak.ops.business.approval.api.ApprovalFlowHandler;
 import io.yak.ops.business.approval.exception.ApprovalException;
 import io.yak.ops.common.enums.approval.ApprovalErrorCode;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
@@ -16,25 +16,44 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApprovalFlowRegistry {
 
-  private final Map<String, ApprovalFlowHandler> handlers = new ConcurrentHashMap<>();
+  private final ObjectProvider<ApprovalFlowHandler> discovered;
+  /** Built on first lookup so callback implementations cannot form a startup bean cycle. */
+  private volatile Map<String, ApprovalFlowHandler> handlers;
 
   public ApprovalFlowRegistry(ObjectProvider<ApprovalFlowHandler> discovered) {
-    discovered.stream().forEach(h -> {
-      ApprovalFlowHandler previous = handlers.putIfAbsent(h.flowCode(), h);
-      if (previous != null) {
-        throw new IllegalStateException("Duplicate ApprovalFlowHandler for " + h.flowCode()
-            + ": " + previous.getClass().getName() + " / " + h.getClass().getName());
-      }
-    });
+    this.discovered = discovered;
   }
 
   public Optional<ApprovalFlowHandler> find(String flowCode) {
-    return Optional.ofNullable(handlers.get(flowCode));
+    return Optional.ofNullable(handlers().get(flowCode));
   }
 
   /** 发起时校验:无 handler 的流程批完也没人生效 → 49007. */
   public ApprovalFlowHandler require(String flowCode) {
     return find(flowCode).orElseThrow(() ->
         new ApprovalException(ApprovalErrorCode.HANDLER_NOT_REGISTERED, flowCode));
+  }
+
+  private Map<String, ApprovalFlowHandler> handlers() {
+    Map<String, ApprovalFlowHandler> current = handlers;
+    if (current != null) {
+      return current;
+    }
+    synchronized (this) {
+      current = handlers;
+      if (current == null) {
+        Map<String, ApprovalFlowHandler> discoveredHandlers = new HashMap<>();
+        discovered.stream().forEach(handler -> {
+          ApprovalFlowHandler previous = discoveredHandlers.putIfAbsent(handler.flowCode(), handler);
+          if (previous != null) {
+            throw new IllegalStateException("Duplicate ApprovalFlowHandler for " + handler.flowCode()
+                + ": " + previous.getClass().getName() + " / " + handler.getClass().getName());
+          }
+        });
+        current = Map.copyOf(discoveredHandlers);
+        handlers = current;
+      }
+    }
+    return current;
   }
 }
