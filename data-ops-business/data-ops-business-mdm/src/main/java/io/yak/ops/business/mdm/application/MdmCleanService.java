@@ -7,6 +7,7 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
 import io.yak.ops.business.mdm.domain.attribute.MdmAttribute;
+import io.yak.ops.business.mdm.domain.attribute.MdmAttributeType;
 import io.yak.ops.business.mdm.domain.clean.CleanJson;
 import io.yak.ops.business.mdm.domain.clean.CompleteExpr;
 import io.yak.ops.business.mdm.domain.clean.MdmCleanRule;
@@ -288,7 +289,7 @@ public class MdmCleanService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id) {
     MdmCleanRule existing = get(id);
-    // 引用校验挂点:合并日志引用后并入(本期校验为空实现)。
+    // Merge logs are append-only evidence and keep the rule ID as their provenance.
     if (isReferenced(existing.id())) {
       throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "规则已被合并日志引用,无法删除");
     }
@@ -585,9 +586,12 @@ public class MdmCleanService {
     List<RecordView> views = new ArrayList<>();
     views.add(toRecordView(target.master()));
     target.merged().forEach(record -> views.add(toRecordView(record)));
+    Map<String, Object> mergedAttributes =
+        computeMergedAttributes(target.master(), target.merged());
+    validatePkPreserved(target.master(), mergedAttributes);
     return new MergePreview(
         views,
-        computeMergedAttributes(target.master(), target.merged()),
+        mergedAttributes,
         computeMergedSourceIds(target.master(), target.merged()));
   }
 
@@ -606,6 +610,7 @@ public class MdmCleanService {
     MergeTarget target = resolveMergeTargets(entityId, masterRecordId, mergedRecordIds);
     Map<String, Object> mergedAttributes =
         computeMergedAttributes(target.master(), target.merged());
+    validatePkPreserved(target.master(), mergedAttributes);
     Map<String, Object> mergedSourceIds =
         computeMergedSourceIds(target.master(), target.merged());
     AuditOperationHandle audit =
@@ -629,7 +634,8 @@ public class MdmCleanService {
           target
               .master()
               .mergedAsMaster(
-                  CleanJson.write(mergedAttributes), CleanJson.write(mergedSourceIds));
+                  CleanJson.write(mergedAttributes), CleanJson.write(mergedSourceIds),
+                  CleanJson.write(mergeOverrides(target.master(), mergedAttributes)));
       if (!recordRepository.update(master)) {
         throw new MdmException(MdmErrorCode.MERGE_INVALID, "主记录更新失败");
       }
@@ -733,6 +739,33 @@ public class MdmCleanService {
     return sourceIds;
   }
 
+  private Map<String, Object> mergeOverrides(
+      MdmRecord master, Map<String, Object> mergedAttributes) {
+    Map<String, Object> overrides = safeObject(master.attributeOverrides());
+    Map<String, Object> original = safeObject(master.attributes());
+    for (Map.Entry<String, Object> entry : mergedAttributes.entrySet()) {
+      if (!Objects.equals(original.get(entry.getKey()), entry.getValue())) {
+        overrides.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return overrides;
+  }
+
+  private void validatePkPreserved(MdmRecord master, Map<String, Object> mergedAttributes) {
+    Map<String, Object> original = safeObject(master.attributes());
+    Set<String> pkCodes = attributeRepository.listByEntity(master.entityId()).stream()
+        .filter(attribute -> attribute.type() == MdmAttributeType.PK)
+        .map(MdmAttribute::code)
+        .collect(Collectors.toSet());
+    for (String pkCode : pkCodes) {
+      if (!Objects.equals(original.get(pkCode), mergedAttributes.get(pkCode))) {
+        throw new MdmException(
+            MdmErrorCode.MERGE_INVALID,
+            "合并不能修改 PK 属性 " + pkCode + "，该值参与 master_id 身份计算");
+      }
+    }
+  }
+
   private Map<String, Object> safeObject(String json) {
     try {
       return new LinkedHashMap<>(CleanJson.readObject(json));
@@ -768,9 +801,9 @@ public class MdmCleanService {
     return new PageData<>(groups, total, pages, (long) pageNo, (long) pageSize);
   }
 
-  /** 引用校验挂点:合并日志引用后并入(本期恒 false)。 */
+  /** A rule used by a completed merge is retained for audit and cannot be deleted. */
   private boolean isReferenced(Long ruleId) {
-    return false;
+    return mergeLogRepository.existsByRuleId(ruleId);
   }
 
   // ==== 标准化/补全 预览与执行(ticket 57) ====
@@ -785,6 +818,7 @@ public class MdmCleanService {
       throw new MdmException(
           MdmErrorCode.INVALID_CLEAN_RULE, "规则类型 " + rule.ruleType() + " 不支持标准化/补全预览");
     }
+    validateGenericRule(rule.entityId(), rule.ruleType(), rule.ruleName(), rule.ruleExpr());
     List<MdmRecord> records = recordRepository.listActiveByEntity(entityId);
     List<ChangeItem> changes = new ArrayList<>();
     int affected = 0;
@@ -822,6 +856,7 @@ public class MdmCleanService {
           MdmErrorCode.INVALID_CLEAN_RULE,
           "规则类型 " + rule.ruleType() + " 不支持标准化/补全执行");
     }
+    validateGenericRule(rule.entityId(), rule.ruleType(), rule.ruleName(), rule.ruleExpr());
     List<MdmRecord> records = recordRepository.listActiveByEntity(entityId);
     AuditOperationHandle audit =
         auditService.start(
@@ -841,7 +876,14 @@ public class MdmCleanService {
         Map<String, Object> attrs = safeObject(record.attributes());
         Map<String, Object> transformed = applyTransformExpr(rule, attrs);
         if (transformed != null) {
-          if (!recordRepository.update(record.cleaned(CleanJson.write(transformed)))) {
+          Map<String, Object> overrides = safeObject(record.attributeOverrides());
+          for (Map.Entry<String, Object> entry : transformed.entrySet()) {
+            if (!Objects.equals(attrs.get(entry.getKey()), entry.getValue())) {
+              overrides.put(entry.getKey(), entry.getValue());
+            }
+          }
+          if (!recordRepository.update(record.cleaned(
+              CleanJson.write(transformed), CleanJson.write(overrides)))) {
             throw new MdmException(
                 MdmErrorCode.RECORD_NOT_FOUND, "记录更新失败: " + record.masterId());
           }
@@ -898,14 +940,18 @@ public class MdmCleanService {
     if (!StringUtils.hasText(ruleExprJson)) {
       throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "规则表达式不能为空");
     }
-    Set<String> validCodes =
-        attributeRepository.listByEntity(entityId).stream()
-            .map(MdmAttribute::code)
-            .collect(Collectors.toSet());
+    List<MdmAttribute> attributes = attributeRepository.listByEntity(entityId);
+    Set<String> validCodes = attributes.stream()
+        .map(MdmAttribute::code)
+        .collect(Collectors.toSet());
+    Set<String> pkCodes = attributes.stream()
+        .filter(attribute -> attribute.type() == MdmAttributeType.PK)
+        .map(MdmAttribute::code)
+        .collect(Collectors.toSet());
     switch (ruleType) {
       case DEDUP -> validateDedupExpr(ruleExprJson, validCodes);
-      case STANDARDIZE -> validateStandardizeExpr(ruleExprJson, validCodes);
-      case COMPLETE -> validateCompleteExpr(ruleExprJson, validCodes);
+      case STANDARDIZE -> validateStandardizeExpr(ruleExprJson, validCodes, pkCodes);
+      case COMPLETE -> validateCompleteExpr(ruleExprJson, validCodes, pkCodes);
     }
   }
 
@@ -941,7 +987,8 @@ public class MdmCleanService {
     }
   }
 
-  private void validateStandardizeExpr(String json, Set<String> validCodes) {
+  private void validateStandardizeExpr(
+      String json, Set<String> validCodes, Set<String> pkCodes) {
     StandardizeExpr expr;
     try {
       expr = CleanJson.parseStandardizeExpr(json);
@@ -956,6 +1003,7 @@ public class MdmCleanService {
         throw new MdmException(
             MdmErrorCode.INVALID_CLEAN_RULE, "字段必须是实体已定义属性: " + entry.getKey());
       }
+      rejectPkTransform(entry.getKey(), pkCodes);
       if (!DedupSql.isValidAttrCode(entry.getKey())) {
         throw new MdmException(
             MdmErrorCode.INVALID_CLEAN_RULE, "非法属性编码: " + entry.getKey());
@@ -967,7 +1015,8 @@ public class MdmCleanService {
     }
   }
 
-  private void validateCompleteExpr(String json, Set<String> validCodes) {
+  private void validateCompleteExpr(
+      String json, Set<String> validCodes, Set<String> pkCodes) {
     CompleteExpr expr;
     try {
       expr = CleanJson.parseCompleteExpr(json);
@@ -982,6 +1031,7 @@ public class MdmCleanService {
         throw new MdmException(
             MdmErrorCode.INVALID_CLEAN_RULE, "字段必须是实体已定义属性: " + entry.getKey());
       }
+      rejectPkTransform(entry.getKey(), pkCodes);
       if (!DedupSql.isValidAttrCode(entry.getKey())) {
         throw new MdmException(
             MdmErrorCode.INVALID_CLEAN_RULE, "非法属性编码: " + entry.getKey());
@@ -990,6 +1040,14 @@ public class MdmCleanService {
         throw new MdmException(
             MdmErrorCode.INVALID_CLEAN_RULE, "字段 " + entry.getKey() + " 的默认值不能为空");
       }
+    }
+  }
+
+  private static void rejectPkTransform(String attributeCode, Set<String> pkCodes) {
+    if (pkCodes.contains(attributeCode)) {
+      throw new MdmException(
+          MdmErrorCode.INVALID_CLEAN_RULE,
+          "PK 属性参与 master_id 身份计算，不能通过清洗规则修改: " + attributeCode);
     }
   }
 

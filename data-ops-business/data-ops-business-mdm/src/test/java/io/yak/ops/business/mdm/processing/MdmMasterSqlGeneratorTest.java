@@ -41,10 +41,10 @@ class MdmMasterSqlGeneratorTest {
     // R2:目标表按平台库限定(执行数据源默认库可能不同),表名 yak_mdm_record(P0-1.2)
     assertTrue(sql.contains("INSERT INTO `yak_security`.`yak_mdm_record`"));
     assertTrue(sql.contains("ON DUPLICATE KEY UPDATE"));
-    assertTrue(sql.contains("`yak_security`.`yak_mdm_record`.version + 1"));
-    assertTrue(
-        sql.contains(
-            "JSON_MERGE_PRESERVE(`yak_security`.`yak_mdm_record`.source_ids, VALUES(source_ids))"));
+    assertTrue(sql.contains("version = version + IF("));
+    assertTrue(sql.contains("JSON_SET(COALESCE(source_ids, JSON_OBJECT())"));
+    assertTrue(sql.contains("JSON_CONTAINS_PATH(COALESCE(attribute_overrides, JSON_OBJECT())"));
+    assertTrue(sql.contains("ELSE JSON_EXTRACT(VALUES(attributes)"));
     assertTrue(!sql.contains("`mdm_record`"));
   }
 

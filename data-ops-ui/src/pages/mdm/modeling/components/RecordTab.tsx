@@ -1,7 +1,7 @@
-import { Button, Form, Input, Modal, Select, Table, Tag, Tooltip, Typography, message } from 'antd';
+import { history } from '@umijs/max';
+import { Button, Form, Input, Modal, message, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { history } from '@umijs/max';
 import { YakButton, YakEmpty } from '@/components/ui';
 import {
   generateMdmMasterSql,
@@ -164,6 +164,29 @@ const RecordTab = ({ entityId }: { entityId: number }) => {
     }
   };
 
+  const restoreSourceValue = (record: MdmRecord, attributeCode: string) => {
+    Modal.confirm({
+      title: '恢复来源值',
+      content: `提交审批后，${attributeCode} 将在下一次主数据加工时恢复为来源数据。`,
+      okText: '提交审批',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await submitMdmChange({
+            entityId,
+            masterId: record.masterId,
+            changeType: 'UPDATE',
+            changeContent: JSON.stringify({ $useSource: [attributeCode] }),
+          });
+          message.success('来源恢复申请已提交');
+          void loadRecords();
+        } catch {
+          // The shared request layer displays the approval or concurrency failure.
+        }
+      },
+    });
+  };
+
   const registerTask = async () => {
     setRegistering(true);
     try {
@@ -210,10 +233,15 @@ const RecordTab = ({ entityId }: { entityId: number }) => {
     render: (_: unknown, record: MdmRecord) => {
       const value = parseJson(record.attributes)[attribute.code];
       const text = value === undefined || value === null ? '-' : String(value);
+      const overridden = Object.prototype.hasOwnProperty.call(
+        parseJson(record.attributeOverrides),
+        attribute.code,
+      );
       return (
         <Tooltip title={text}>
           <span>
             {attribute.type === 'PK' && text !== '-' && <Tag className="!mr-1">PK</Tag>}
+            {overridden && <Tag color="gold" className="!mr-1">人工修正</Tag>}
             {text}
           </span>
         </Tooltip>
@@ -275,12 +303,32 @@ const RecordTab = ({ entityId }: { entityId: number }) => {
       key: 'actions',
       width: 110,
       fixed: 'right',
-      render: (_: unknown, record: MdmRecord) =>
-        record.status === 'ACTIVE' && editableAttributes.length ? (
-          <Button type="link" size="small" onClick={() => openChange(record)}>
-            变更申请
-          </Button>
-        ) : null,
+      render: (_: unknown, record: MdmRecord) => {
+        if (record.status !== 'ACTIVE') return null;
+        const overrides = parseJson(record.attributeOverrides);
+        const resettable = editableAttributes.filter((attribute) =>
+          Object.prototype.hasOwnProperty.call(overrides, attribute.code),
+        );
+        return (
+          <Space size={0} wrap>
+            {editableAttributes.length > 0 && (
+              <Button type="link" size="small" onClick={() => openChange(record)}>
+                变更申请
+              </Button>
+            )}
+            {resettable.map((attribute) => (
+              <Button
+                key={attribute.code}
+                type="link"
+                size="small"
+                onClick={() => restoreSourceValue(record, attribute.code)}
+              >
+                恢复来源
+              </Button>
+            ))}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -288,7 +336,7 @@ const RecordTab = ({ entityId }: { entityId: number }) => {
     <div>
       <div className="mb-3 rounded-lg bg-[#f6f7f8] px-3 py-2 text-[13px] text-[#667085]">
         统一主数据表（yak_mdm_record）由「主数据加工任务」写入（数据开发对平台库执行落地表
-        UPSERT）；此处只读查询。点击「生成主数据加工任务」自动注册数据开发 SQL
+        UPSERT）；审批/清洗产生的「人工修正」字段会在后续加工中保留，可逐字段申请恢复来源值。点击「生成主数据加工任务」自动注册数据开发 SQL
         草稿（数据源已预填为落地目标库），在数据开发中运行后回到本页检索记录。
       </div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

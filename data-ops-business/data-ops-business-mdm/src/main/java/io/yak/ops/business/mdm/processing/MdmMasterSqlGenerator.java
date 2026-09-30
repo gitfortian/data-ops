@@ -17,7 +17,8 @@ import java.util.regex.Pattern;
  *   <li><b>attributes</b> = JSON_OBJECT(属性编码, 落地列) —— 落地列取来源 field_mapping
  *       (属性编码→源列名,落地表按源列名建列),未配置的属性编码回退同名;
  *   <li>来源表与目标表均按平台库名限定(执行数据源的默认库可能不同库);
- *   <li>UPSERT 到 yak_mdm_record(唯一键 project_id+entity_id+master_id),version 递增。
+ *   <li>UPSERT 到 yak_mdm_record(唯一键 project_id+entity_id+master_id);来源 ID 按数据源键覆盖写,
+ *       不重复累积;有效属性保留已审批/清洗的属性覆盖值,无实际变化时不递增 version。
  * </ul>
  *
  * <p>仅生成 SQL 文本,不执行;执行引擎归数据开发(22/44 模式)。
@@ -51,6 +52,9 @@ public final class MdmMasterSqlGenerator {
     for (AttributeSpec attribute : attributes) {
       requireSafe(attribute.code(), "属性编码");
     }
+    if (attributes.stream().map(AttributeSpec::code).distinct().count() != attributes.size()) {
+      throw new IllegalArgumentException("实体属性编码不能重复");
+    }
     AttributeSpec pk =
         attributes.stream().filter(AttributeSpec::pk).findFirst().orElseThrow(
             () -> new IllegalArgumentException("实体必须包含 PK 属性"));
@@ -73,7 +77,7 @@ public final class MdmMasterSqlGenerator {
         projectId, entityId, entityCode,
         quote(landing.database()) + "." + quote(RECORD_TABLE),
         quote(landing.database()) + "." + quote(landing.table()),
-        pkColumn, attrJson.toString(), landing.datasourceId());
+        pkColumn, attrJson.toString(), landing.datasourceId(), attributes);
   }
 
   /** 属性编码对应源列:field_mapping 优先,未配置/空值回退同名(约定口径;落地表按源列名建列)。 */
@@ -84,7 +88,16 @@ public final class MdmMasterSqlGenerator {
 
   private static String buildSql(
       Long projectId, Long entityId, String entityCode, String targetTable, String sourceTable,
-      String pkColumn, String attributesJson, Long datasourceId) {
+      String pkColumn, String attributesJson, Long datasourceId, List<AttributeSpec> attributes) {
+    String sourcePath = literal("$.\"" + datasourceId + "\"");
+    String incomingSourceId = "JSON_EXTRACT(VALUES(source_ids), " + sourcePath + ")";
+    String existingSourceIds = "COALESCE(source_ids, JSON_OBJECT())";
+    String effectiveAttributes = effectiveAttributes(attributes);
+    String sourceChanged = "NOT (JSON_EXTRACT(" + existingSourceIds + ", " + sourcePath
+        + ") <=> " + incomingSourceId + ")";
+    String changed = "NOT (attributes <=> " + effectiveAttributes + ") OR " + sourceChanged;
+    String sourceIdsUpdate = "JSON_SET(" + existingSourceIds + ", " + sourcePath + ", "
+        + incomingSourceId + ")";
     return """
         -- 主数据加工任务: 实体 %2$s ← 落地表 %3$s
         -- 同库写入统一主数据表 %1$s;在数据开发对平台业务库连接执行(MDM 零执行引擎,D-M11)。
@@ -100,9 +113,9 @@ public final class MdmMasterSqlGenerator {
           1
         FROM %3$s
         ON DUPLICATE KEY UPDATE
-          attributes = VALUES(attributes),
-          source_ids = JSON_MERGE_PRESERVE(%1$s.source_ids, VALUES(source_ids)),
-          version = %1$s.version + 1;
+          version = version + IF(%9$s, 1, 0),
+          attributes = %10$s,
+          source_ids = %11$s;
         """
         .formatted(
             targetTable,
@@ -112,7 +125,24 @@ public final class MdmMasterSqlGenerator {
             entityId,
             pkColumn,
             attributesJson,
-            datasourceId);
+            datasourceId,
+            changed,
+            effectiveAttributes,
+            sourceIdsUpdate);
+  }
+
+  /** Source values refresh normally; explicit MDM corrections override only their own fields. */
+  private static String effectiveAttributes(List<AttributeSpec> attributes) {
+    StringJoiner set = new StringJoiner(", ", "JSON_SET(VALUES(attributes), ", ")");
+    for (AttributeSpec attribute : attributes) {
+      String path = literal("$.\"" + attribute.code() + "\"");
+      String overrides = "COALESCE(attribute_overrides, JSON_OBJECT())";
+      set.add(path);
+      set.add("CASE WHEN JSON_CONTAINS_PATH(" + overrides + ", 'one', " + path + ")"
+          + " THEN JSON_EXTRACT(" + overrides + ", " + path + ")"
+          + " ELSE JSON_EXTRACT(VALUES(attributes), " + path + ") END");
+    }
+    return set.toString();
   }
 
   private static void requireSafe(String value, String label) {

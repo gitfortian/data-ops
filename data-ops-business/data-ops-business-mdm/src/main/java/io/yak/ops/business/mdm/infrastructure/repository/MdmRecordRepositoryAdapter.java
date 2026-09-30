@@ -109,8 +109,10 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
             new LambdaUpdateWrapper<MdmRecordPO>()
                 .eq(MdmRecordPO::getId, record.id())
                 .eq(MdmRecordPO::getProjectId, projectId)
+                .eq(MdmRecordPO::getVersion, record.version() - 1)
                 .set(MdmRecordPO::getAttributes, record.attributes())
                 .set(MdmRecordPO::getSourceIds, record.sourceIds())
+                .set(MdmRecordPO::getAttributeOverrides, record.attributeOverrides())
                 .set(MdmRecordPO::getStatus, record.status().name())
                 .set(MdmRecordPO::getVersion, record.version()))
         > 0;
@@ -180,6 +182,7 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
         po.getStatus() == null ? null : MdmRecordStatus.valueOf(po.getStatus()),
         po.getVersion() == null ? 1 : po.getVersion(),
         po.getCreateTime(),
-        po.getUpdateTime());
+        po.getUpdateTime(),
+        po.getAttributeOverrides() == null ? "{}" : po.getAttributeOverrides());
   }
 }

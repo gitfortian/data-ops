@@ -14,6 +14,8 @@ import io.yak.framework.common.PageData;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
+import io.yak.ops.business.mdm.domain.entity.MdmEntity;
+import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
 import io.yak.ops.business.mdm.domain.record.MdmRecord;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import io.yak.ops.business.mdm.domain.subscription.MdmSubscription;
@@ -48,7 +50,10 @@ class MdmServiceServiceTest {
     userDirectory = Mockito.mock(MdmUserDirectory.class);
     AuditOperationHandle audit = Mockito.mock(AuditOperationHandle.class);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(audit);
-    lenient().when(entityService.get(any())).thenReturn(null);
+    lenient().when(entityService.get(any())).thenReturn(
+        new MdmEntity(
+            1L, "customer", "客户", MdmEntityStatus.ACTIVE, "root", null,
+            "root", null, null));
     service = new MdmServiceService(
         recordRepository, subscriptionRepository, entityService, auditService, userDirectory);
   }

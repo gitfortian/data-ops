@@ -50,6 +50,11 @@ public class MdmMergeLogRepositoryAdapter implements MdmMergeLogRepository {
         .toList();
   }
 
+  @Override
+  public boolean existsByRuleId(Long ruleId) {
+    return mapper.existsByRuleId(requiredProjectId(), ruleId);
+  }
+
   private Long requiredProjectId() {
     return currentProject.requireProjectId();
   }

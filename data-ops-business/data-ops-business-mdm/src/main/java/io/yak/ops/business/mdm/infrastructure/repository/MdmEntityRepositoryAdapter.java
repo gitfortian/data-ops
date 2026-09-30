@@ -121,6 +121,11 @@ public class MdmEntityRepositoryAdapter implements MdmEntityRepository {
   }
 
   @Override
+  public boolean hasReferences(Long id) {
+    return mapper.hasReferences(requiredProjectId(), id);
+  }
+
+  @Override
   public boolean deleteById(Long id) {
     Long projectId = requiredProjectId();
     return mapper.delete(baseQuery(projectId, id)) > 0;

@@ -21,6 +21,7 @@ import io.yak.ops.business.mdm.domain.record.MdmRecord;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import io.yak.ops.business.mdm.domain.record.MdmRecordVersion;
 import io.yak.ops.business.mdm.exception.MdmException;
+import io.yak.ops.business.mdm.infrastructure.repository.MdmAttributeRepository;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmChangeRepository;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmRecordRepository;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmRecordVersionRepository;
@@ -47,6 +48,7 @@ class MdmChangeEffectServiceTest {
   void setUp() {
     changeRepository = Mockito.mock(MdmChangeRepository.class);
     recordRepository = Mockito.mock(MdmRecordRepository.class);
+    MdmAttributeRepository attributeRepository = Mockito.mock(MdmAttributeRepository.class);
     versionRepository = Mockito.mock(MdmRecordVersionRepository.class);
     auditService = Mockito.mock(BusinessAuditService.class);
     notifier = Mockito.mock(MdmNotifier.class);
@@ -54,7 +56,8 @@ class MdmChangeEffectServiceTest {
     Mockito.lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(audit);
     Mockito.lenient().when(changeRepository.update(any())).thenReturn(true);
     service = new MdmChangeEffectService(
-        changeRepository, recordRepository, versionRepository, auditService, notifier);
+        changeRepository, recordRepository, attributeRepository, versionRepository,
+        auditService, notifier);
   }
 
   private static MdmChange change(

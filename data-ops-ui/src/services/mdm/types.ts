@@ -175,6 +175,8 @@ export interface MdmRecord {
   masterId: string;
   attributes: string;
   sourceIds: string;
+  /** JSON map of values maintained by MDM approvals/cleansing and preserved on source refresh. */
+  attributeOverrides?: string;
   status: MdmRecordStatus;
   version: number;
   createTime?: string;

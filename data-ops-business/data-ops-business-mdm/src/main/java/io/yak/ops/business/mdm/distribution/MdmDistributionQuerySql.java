@@ -15,6 +15,7 @@ public final class MdmDistributionQuerySql {
 
   private static final Pattern SAFE_IDENTIFIER = Pattern.compile("[A-Za-z0-9_]{1,64}");
   private static final String RECORD_TABLE = "yak_mdm_record";
+  private static final String ENTITY_TABLE = "yak_mdm_entity";
 
   private MdmDistributionQuerySql() {}
 
@@ -45,6 +46,12 @@ public final class MdmDistributionQuerySql {
         .append(" AND r.entity_id = ")
         .append(entityId)
         .append(" AND r.status = 'ACTIVE'\n")
+        .append("  AND EXISTS (SELECT 1 FROM `")
+        .append(database)
+        .append("`.`")
+        .append(ENTITY_TABLE)
+        .append("` e WHERE e.project_id = r.project_id")
+        .append(" AND e.id = r.entity_id AND e.status = 'ACTIVE')\n")
         .append("ORDER BY r.id");
     return sql.toString();
   }

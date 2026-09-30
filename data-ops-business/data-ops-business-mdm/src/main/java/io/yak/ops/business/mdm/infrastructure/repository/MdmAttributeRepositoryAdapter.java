@@ -85,6 +85,11 @@ public class MdmAttributeRepositoryAdapter implements MdmAttributeRepository {
   }
 
   @Override
+  public boolean hasReferences(Long entityId, String attributeCode) {
+    return mapper.hasReferences(requiredProjectId(), entityId, attributeCode);
+  }
+
+  @Override
   public boolean update(MdmAttribute attribute) {
     Long projectId = requiredProjectId();
     MdmAttributePO po = new MdmAttributePO();

@@ -17,6 +17,8 @@ public interface MdmAttributeRepository {
 
   boolean existsPk(Long entityId);
 
+  boolean hasReferences(Long entityId, String attributeCode);
+
   boolean update(MdmAttribute attribute);
 
   boolean deleteById(Long id);

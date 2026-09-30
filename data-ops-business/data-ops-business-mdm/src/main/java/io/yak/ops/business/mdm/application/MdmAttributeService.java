@@ -28,7 +28,7 @@ import org.springframework.util.StringUtils;
  * entity, single PK, and standard-reference validation via the semantic SPI
  * (type/unit/security by id, code-set by code). Delete reference checks for
  * collection mapping (54) / clean rules (56) arrive with their owning tickets
- * (empty hook today).
+ * (source field mappings, cleansing rules and materialized records).
  */
 @Component
 public class MdmAttributeService {
@@ -155,6 +155,13 @@ public class MdmAttributeService {
     validateName(name);
     validateType(type);
     validateRefs(stdTypeId, stdUnitId, stdCodeSetCode, stdSecurityId);
+    boolean changesPkRole =
+        (existing.type() == MdmAttributeType.PK) != (type == MdmAttributeType.PK);
+    if (changesPkRole && repository.hasReferences(existing.entityId(), existing.code())) {
+      throw new MdmException(
+          MdmErrorCode.ATTRIBUTE_REFERENCED,
+          "属性参与已有记录、来源映射或清洗规则，不能改变 PK 身份角色");
+    }
     if (type == MdmAttributeType.PK
         && existing.type() != MdmAttributeType.PK
         && repository.existsPk(existing.entityId())) {
@@ -220,7 +227,7 @@ public class MdmAttributeService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id) {
     MdmAttribute existing = get(id);
-    // 引用校验挂点:54 采集映射 / 56 清洗规则引用后并入(本期校验为空实现)。
+    // Records retain the entity's declared shape; mappings and rule JSON are loose references.
     if (isReferenced(existing.id())) {
       throw new MdmException(MdmErrorCode.ATTRIBUTE_REFERENCED, existing.code());
     }
@@ -250,9 +257,10 @@ public class MdmAttributeService {
     }
   }
 
-  /** 引用校验挂点:54 采集映射 / 56 清洗规则引用随 ticket 并入,本期恒 false。 */
+  /** Project-scoped check for source mappings, cleansing expressions and existing records. */
   private boolean isReferenced(Long attributeId) {
-    return false;
+    MdmAttribute attribute = get(attributeId);
+    return repository.hasReferences(attribute.entityId(), attribute.code());
   }
 
   private void validateRefs(

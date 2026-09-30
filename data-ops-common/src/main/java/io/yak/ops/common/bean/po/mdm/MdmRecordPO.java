@@ -30,6 +30,9 @@ public class MdmRecordPO {
   /** 各系统原始 ID:{datasourceId: 原始ID}。 */
   private String sourceIds;
 
+  /** 经审批或清洗明确修正、后续来源重跑不得覆盖的属性值。 */
+  private String attributeOverrides;
+
   /** 状态:ACTIVE/MERGED/DELETED。 */
   private String status;
 

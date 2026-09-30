@@ -63,7 +63,10 @@ class MdmApprovalServiceTest {
     AuditOperationHandle audit = mock(AuditOperationHandle.class);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(audit);
     lenient().when(entityService.get(anyLong())).thenReturn(entity());
-    lenient().when(attributeRepository.listByEntity(anyLong())).thenReturn(List.of());
+    lenient().when(attributeRepository.listByEntity(anyLong())).thenReturn(List.of(
+        attribute("cust_id", MdmAttributeType.PK),
+        attribute("member_level", MdmAttributeType.ATTR),
+        attribute("a", MdmAttributeType.ATTR)));
     lenient().when(changeRepository.listByMaster(anyLong(), anyString())).thenReturn(List.of());
     lenient().when(changeRepository.update(any())).thenReturn(true);
     service = new MdmApprovalService(

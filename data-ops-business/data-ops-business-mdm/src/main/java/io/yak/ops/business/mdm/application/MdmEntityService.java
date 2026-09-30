@@ -21,8 +21,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * Owns the master data entity rules: code format/uniqueness, status flow, and
- * delete blocking on references. Attribute (52) / source (53) reference checks
- * arrive with their owning tickets (empty hook today).
+ * delete blocking on every persisted MDM reference.
  */
 @Component
 public class MdmEntityService {
@@ -177,7 +176,7 @@ public class MdmEntityService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id) {
     MdmEntity existing = get(id);
-    // 引用校验挂点:52 属性 / 53 来源引用后并入(本期校验为空实现)。
+    // MDM tables intentionally use loose IDs, so deletion must check every owning-domain row.
     if (isReferenced(existing.id())) {
       throw new MdmException(MdmErrorCode.ENTITY_REFERENCED, existing.code());
     }
@@ -207,9 +206,9 @@ public class MdmEntityService {
     }
   }
 
-  /** 引用校验挂点:52 属性引用 / 53 来源引用随 ticket 并入,本期恒 false。 */
+  /** Cross-table reference check stays project-scoped in the persistence adapter. */
   private boolean isReferenced(Long entityId) {
-    return false;
+    return repository.hasReferences(entityId);
   }
 
   private static MdmEntityStatus resolveStatus(String status) {
