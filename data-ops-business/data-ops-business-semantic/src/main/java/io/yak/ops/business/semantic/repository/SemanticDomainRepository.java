@@ -15,6 +15,9 @@ public interface SemanticDomainRepository {
 
   List<BusinessDomain> findAll();
 
+  /** Serialize structural commands in a project before validating ancestry. */
+  default List<BusinessDomain> lockTree() { return findAll(); }
+
   boolean existsByParent(Long parentId);
 
   boolean update(BusinessDomain domain);

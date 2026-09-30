@@ -28,7 +28,7 @@ public class ProcessSourceRepositoryAdapter implements SemanticProcessSourceRepo
     po.setCreateTime(now);
     po.setUpdateTime(now);
     mapper.insert(po);
-    return binding;
+    return toDomain(po);
   }
 
   @Override

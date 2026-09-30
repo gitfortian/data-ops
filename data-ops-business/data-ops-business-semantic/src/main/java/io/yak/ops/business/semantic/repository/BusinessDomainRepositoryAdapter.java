@@ -72,6 +72,14 @@ public class BusinessDomainRepositoryAdapter implements SemanticDomainRepository
   }
 
   @Override
+  public List<BusinessDomain> lockTree() {
+    return mapper.selectList(new LambdaQueryWrapper<SemanticDomainPO>()
+        .eq(SemanticDomainPO::getProjectId, requiredProjectId())
+        .orderByAsc(SemanticDomainPO::getId).last("FOR UPDATE"))
+        .stream().map(BusinessDomainRepositoryAdapter::toDomain).toList();
+  }
+
+  @Override
   public boolean existsByParent(Long parentId) {
     Long projectId = requiredProjectId();
     return mapper.selectCount(

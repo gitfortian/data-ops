@@ -94,9 +94,10 @@ class BusinessDomainServiceTest {
     BusinessDomain node2 = new BusinessDomain(2L, "a", "A", 1L, null, null, 0, "t", null, null);
     BusinessDomain node3 = new BusinessDomain(3L, "b", "B", 2L, null, null, 0, "t", null, null);
     when(repository.findById(1L)).thenReturn(Optional.of(node1));
+    when(repository.findById(3L)).thenReturn(Optional.of(node3));
     when(repository.findAll()).thenReturn(List.of(node1, node2, node3));
     SemanticException exception =
-        assertThrows(SemanticException.class, () -> service.move(1L, 3L, null));
+        assertThrows(SemanticException.class, () -> service.move(1L, 3L, null, "tester"));
     assertEquals(SemanticErrorCode.INVALID_MOVE, exception.getErrorCode());
     verify(repository, never()).move(any(), any(), org.mockito.ArgumentMatchers.anyInt());
   }

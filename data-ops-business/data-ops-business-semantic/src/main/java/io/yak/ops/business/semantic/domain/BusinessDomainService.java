@@ -13,6 +13,8 @@ import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -144,17 +146,43 @@ public class BusinessDomainService {
 
   /** 拖拽改父/排序:目标父不能是自己或自己的子孙(环检测)。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public void move(Long id, Long targetParentId, Integer sortOrder) {
+  public void move(Long id, Long targetParentId, Integer sortOrder, String operator) {
+    repository.lockTree();
     BusinessDomain existing = get(id);
     Long resolvedParent = targetParentId == null ? BusinessDomain.ROOT_PARENT_ID : targetParentId;
     if (resolvedParent.equals(existing.id())) {
       throw new SemanticException(SemanticErrorCode.INVALID_MOVE, "不能移动到自身之下");
     }
-    if (resolvedParent != BusinessDomain.ROOT_PARENT_ID
+    if (!resolvedParent.equals(BusinessDomain.ROOT_PARENT_ID)) {
+      repository.findById(resolvedParent)
+          .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "父业务域不存在"));
+    }
+    if (!resolvedParent.equals(BusinessDomain.ROOT_PARENT_ID)
         && isDescendant(resolvedParent, existing.id())) {
       throw new SemanticException(SemanticErrorCode.INVALID_MOVE, "不能移动到自己的子孙节点之下");
     }
-    repository.move(id, resolvedParent, sortOrder == null ? existing.sortOrder() : sortOrder);
+    int resolvedSortOrder = sortOrder == null ? existing.sortOrder() : sortOrder;
+    if (resolvedParent.equals(existing.parentId()) && resolvedSortOrder == existing.sortOrder()) return;
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest(
+            "SEMANTIC_DOMAIN_MOVE", "Move business domain", "SEMANTIC_DOMAIN",
+            String.valueOf(id), existing.code(), "APPLICATION",
+            Map.of("fromParentId", String.valueOf(existing.parentId()),
+                "toParentId", String.valueOf(resolvedParent),
+                "fromSortOrder", String.valueOf(existing.sortOrder()),
+                "toSortOrder", String.valueOf(resolvedSortOrder))));
+    try {
+      if (!repository.move(id, resolvedParent, resolvedSortOrder)) {
+        throw new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id));
+      }
+      AuditTransactions.completeOnCommit(
+          audit, AuditEventType.RESOURCE_UPDATED, "Business domain moved",
+          Map.of("parentId", String.valueOf(resolvedParent), "sortOrder", String.valueOf(resolvedSortOrder)),
+          "Business domain moved");
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_DOMAIN_MOVE_FAILED", exception);
+      throw exception;
+    }
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -206,7 +234,11 @@ public class BusinessDomainService {
       parentById.put(domain.id(), domain.parentId());
     }
     Long cursor = candidateId;
-    while (cursor != null && cursor != BusinessDomain.ROOT_PARENT_ID) {
+    Set<Long> visited = new HashSet<>();
+    while (cursor != null && !cursor.equals(BusinessDomain.ROOT_PARENT_ID)) {
+      if (!visited.add(cursor)) {
+        throw new SemanticException(SemanticErrorCode.INVALID_MOVE, "现有业务域存在环，请先修复层级");
+      }
       if (cursor.equals(ancestorId)) {
         return true;
       }

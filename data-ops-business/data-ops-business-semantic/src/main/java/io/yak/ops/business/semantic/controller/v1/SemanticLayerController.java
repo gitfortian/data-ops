@@ -172,8 +172,9 @@ public class SemanticLayerController {
   @RequiresPermission(SemanticPermissionCode.UPDATE)
   @PostMapping("/{id}/status")
   public Result<Boolean> changeStatus(
-      @PathVariable("id") Long id, @Valid @RequestBody LayerStatusRequest request) {
-    service.changeStatus(id, request.getStatus());
+      @PathVariable("id") Long id, @Valid @RequestBody LayerStatusRequest request,
+      HttpServletRequest httpRequest) {
+    service.changeStatus(id, request.getStatus(), currentUserProvider.getCurrentUser(httpRequest));
     return Result.success(Boolean.TRUE);
   }
 

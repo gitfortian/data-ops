@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Badge, Button, Drawer, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { history } from '@umijs/max';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
@@ -25,7 +25,6 @@ import {
   deleteSemanticStandard,
   getCodeSet,
   getCodeSetVersions,
-  getSemanticPresetStatus,
   getSemanticStandard,
   getSemanticStandardUsage,
   isStandardPublishFlowEnabled,
@@ -70,6 +69,7 @@ async function findRejectReason(instanceId: number): Promise<string | undefined>
 }
 
 const SemanticStandardsPage = () => {
+  const [codeSetDetail, setCodeSetDetail] = useState<CodeSetDetailRecord | null>(null);
   const [records, setRecords] = useState<SemanticStandardRecord[]>([]);
   const [codeSetRecords, setCodeSetRecords] = useState<CodeSetRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -90,7 +90,6 @@ const SemanticStandardsPage = () => {
   const [versionsStandard, setVersionsStandard] = useState<SemanticStandardRecord | null>(null);
   const [versions, setVersions] = useState<SemanticStandardVersionRecord[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
-  const [isPresetInitialized, setIsPresetInitialized] = useState(true);
   const [publishFlowEnabled, setPublishFlowEnabled] = useState(false);
   const [approvals, setApprovals] = useState<Record<string, ApprovalInstance>>({});
   const { can } = usePermissionAccess();
@@ -186,26 +185,6 @@ const SemanticStandardsPage = () => {
     void loadStandards(pageNo, pageSize);
   }, [pageNo, pageSize, isCodeSetView, status, loadStandards]);
 
-  // 空列表且未筛选时查询预置初始化状态，决定是否展示一键初始化按钮（ticket 31）。
-  useEffect(() => {
-    if (loading || total > 0 || hasFilter) {
-      return;
-    }
-    let cancelled = false;
-    getSemanticPresetStatus()
-      .then((result) => {
-        if (!cancelled) {
-          setIsPresetInitialized(result.initialized);
-        }
-      })
-      .catch(() => {
-        // 状态查询失败按“已初始化”处理，不展示按钮
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, total, hasFilter]);
-
   const handleSearch = (value: string) => {
     setKeyword(value.trim());
     setPageNo(1);
@@ -280,6 +259,11 @@ const SemanticStandardsPage = () => {
   };
 
   const openDetail = async (record: SemanticStandardRecord) => {
+    if (record.kind === 'CODE') {
+      try { setCodeSetDetail(await getCodeSet(record.codeSetCode || record.code)); }
+      catch { message.error('码集详情暂不可读取，请重试'); }
+      return;
+    }
     setDetail(record);
     setUsageSummary(null);
     try {
@@ -510,7 +494,6 @@ const SemanticStandardsPage = () => {
     try {
       const created = await initializeSemanticPresets();
       message.success(`已初始化 ${created} 条预置标准`);
-      setIsPresetInitialized(true);
       setPageNo(1);
       await loadStandards(1, pageSize);
     } catch {
@@ -524,7 +507,10 @@ const SemanticStandardsPage = () => {
         title: '编码',
         dataIndex: 'codeSetCode',
         width: 200,
-        render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
+        render: (value: string) => <Typography.Link onClick={async () => {
+          try { setCodeSetDetail(await getCodeSet(value)); }
+          catch { message.error('码集详情暂不可读取，请重试'); }
+        }}>{value}</Typography.Link>,
       },
       { title: '名称', dataIndex: 'name', width: 180, ellipsis: true },
       {
@@ -590,7 +576,7 @@ const SemanticStandardsPage = () => {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [can],
+    [can, pageNo, pageSize, keyword, kind, status, loadStandards],
   );
 
   const columns = useMemo(
@@ -752,6 +738,12 @@ const SemanticStandardsPage = () => {
             options={STATUS_OPTIONS}
           />
           <Input.Search allowClear placeholder="按编码或名称搜索" className="!w-[240px]" onSearch={handleSearch} />
+          {can('semantic:create') && <YakButton
+            className="!h-9 !rounded-lg !px-4"
+            onClick={() => void handleInitializePresets()}
+          >
+            补齐预置标准
+          </YakButton>}
           {can('semantic:create') ? <YakButton
             type="primary"
             className="!h-9 !rounded-lg !px-4 !text-white"
@@ -825,22 +817,9 @@ const SemanticStandardsPage = () => {
                       ? '请点击上方“重试”重新加载。'
                       : hasFilter
                       ? '调整筛选条件或重置后再试'
-                      : isPresetInitialized
-                        ? '沉淀为标准的能力即将开放（ticket 40）'
-                        : '可一键初始化平台预置标准（命名/类型/码值/单位/口径/安全骨架）'
+                      : '可补齐缺少的平台预置标准；已有手工定义会保留。'
                   }
                 />
-                {!loadError && !hasFilter && !isPresetInitialized && can('semantic:create') ? (
-                  <YakButton
-                    type="primary"
-                    className="!mb-6 !h-9 !rounded-lg !px-4 !text-white"
-                    onClick={() => {
-                      void handleInitializePresets();
-                    }}
-                  >
-                    初始化预置标准
-                  </YakButton>
-                ) : null}
               </div>
             ),
           }}
@@ -881,6 +860,17 @@ const SemanticStandardsPage = () => {
         }}
       />
 
+      <Drawer open={Boolean(codeSetDetail)} onClose={() => setCodeSetDetail(null)}
+        width="min(720px, 100vw)" title={codeSetDetail ? `码集：${codeSetDetail.name}（${codeSetDetail.codeSetCode}）` : '码集详情'}>
+        {codeSetDetail ? <>
+          <Typography.Paragraph>整组状态：{SEMANTIC_STATUS_LABELS[codeSetDetail.status]}</Typography.Paragraph>
+          <Typography.Paragraph>{codeSetDetail.description || '暂无描述'}</Typography.Paragraph>
+          <Table rowKey="id" dataSource={codeSetDetail.values} pagination={false} columns={[
+            { title: '码值', dataIndex: 'codeValue' }, { title: '标签', dataIndex: 'codeLabel' }, { title: '排序', dataIndex: 'sortOrder' },
+          ]} />
+          <Button onClick={() => void openCodeSetVersions(codeSetDetail.codeSetCode, codeSetDetail.name)}>查看码值行修改历史</Button>
+        </> : null}
+      </Drawer>
       <CodeSetEditModal
         open={codeSetEditModalOpen}
         detail={codeSetEditing}

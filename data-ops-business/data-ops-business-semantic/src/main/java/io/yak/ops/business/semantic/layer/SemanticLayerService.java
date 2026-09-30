@@ -9,6 +9,7 @@ import io.yak.ops.business.semantic.api.LayerStdBindingReader.StdBindingStats;
 import io.yak.ops.business.semantic.api.LayerUsageReader;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardKind;
+import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticLayerRepository;
@@ -104,6 +105,7 @@ public class SemanticLayerService {
     validateName(name);
     validateCoreConfig(databaseName, datasourceId);
     validateNamingRef(stdNamingId);
+    validateLifecycleDays(lifecycleDays);
     validateStorageFormat(storageFormat);
     validatePartition(defaultPartition);
     AuditOperationHandle audit =
@@ -157,6 +159,7 @@ public class SemanticLayerService {
     validateName(name);
     validateCoreConfig(databaseName, datasourceId);
     validateNamingRef(stdNamingId);
+    validateLifecycleDays(lifecycleDays);
     validateStorageFormat(storageFormat);
     validatePartition(defaultPartition);
     AuditOperationHandle audit =
@@ -191,12 +194,26 @@ public class SemanticLayerService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public void changeStatus(Long id, String status) {
-    get(id);
+  public void changeStatus(Long id, String status, String operator) {
+    WarehouseLayer existing = get(id);
     if (!"ENABLED".equals(status) && !"DISABLED".equals(status)) {
       throw new SemanticException(SemanticErrorCode.INVALID_STATUS, status);
     }
-    repository.changeStatus(id, status);
+    if (status.equals(existing.status())) return;
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest("SEMANTIC_LAYER_STATUS", "Change warehouse layer status",
+            "SEMANTIC_LAYER", String.valueOf(id), existing.code(), "APPLICATION",
+            Map.of("from", existing.status(), "to", status, "operator", operator)));
+    try {
+      if (!repository.changeStatus(id, status)) {
+        throw new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id));
+      }
+      AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_UPDATED,
+          "Warehouse layer status changed", Map.of("status", status), "Warehouse layer status changed");
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_LAYER_STATUS_FAILED", exception);
+      throw exception;
+    }
   }
 
   /** 删除分层(2026-09-16 收紧):默认分层(is_preset)不可删;自定义分层被模型引用时阻断。 */
@@ -305,6 +322,16 @@ public class SemanticLayerService {
       throw new SemanticException(
           SemanticErrorCode.INVALID_KIND, "std_naming_id 必须引用 NAMING 类别标准");
     }
+    if (standard.status() != StandardStatus.ENABLED) {
+      throw new SemanticException(
+          SemanticErrorCode.LAYER_CONFIG_INVALID, "分层只能引用启用中的命名标准");
+    }
+  }
+
+  private void validateLifecycleDays(Integer lifecycleDays) {
+    if (lifecycleDays != null && lifecycleDays <= 0) {
+      throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID, "生命周期天数必须大于 0，留空表示永久");
+    }
   }
 
   /** 核心配置必填(2026-09-16):库名 + 数据源,选填等于没配,派生建模无法定位。 */
@@ -312,7 +339,7 @@ public class SemanticLayerService {
     if (!StringUtils.hasText(databaseName)) {
       throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID, "库名不能为空");
     }
-    if (datasourceId == null) {
+    if (datasourceId == null || datasourceId <= 0) {
       throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID, "数据源不能为空");
     }
   }

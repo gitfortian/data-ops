@@ -2,6 +2,9 @@ package io.yak.ops.business.semantic.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import io.yak.ops.business.semantic.exception.SemanticException;
+import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.semantic.dao.mapper.SemanticFieldMapper;
@@ -46,7 +49,7 @@ public class SemanticFieldRepositories implements SemanticFieldRepository, Seman
     po.setCreateTime(now);
     po.setUpdateTime(now);
     fieldMapper.insert(po);
-    return field;
+    return toDomain(po);
   }
 
   @Override
@@ -122,11 +125,25 @@ public class SemanticFieldRepositories implements SemanticFieldRepository, Seman
     Long projectId = requiredProjectId();
     SemanticFieldPO po = toPo(field);
     po.setUpdateTime(LocalDateTime.now());
-    fieldMapper.update(
-        po,
-        new LambdaQueryWrapper<SemanticFieldPO>()
+    int affected = fieldMapper.update(null,
+        new LambdaUpdateWrapper<SemanticFieldPO>()
             .eq(SemanticFieldPO::getId, field.id())
-            .eq(SemanticFieldPO::getProjectId, projectId));
+            .eq(SemanticFieldPO::getProjectId, projectId)
+            .eq(SemanticFieldPO::getVersion, field.version() - 1)
+            .set(SemanticFieldPO::getFieldName, field.name())
+            .set(SemanticFieldPO::getRole, field.role())
+            .set(SemanticFieldPO::getDataType, field.dataType())
+            .set(SemanticFieldPO::getStdTypeId, field.stdTypeId())
+            .set(SemanticFieldPO::getStdUnitId, field.stdUnitId())
+            .set(SemanticFieldPO::getStdCaliberId, field.stdCaliberId())
+            .set(SemanticFieldPO::getStdCodeSetCode, field.stdCodeSetCode())
+            .set(SemanticFieldPO::getStdSecurityId, field.stdSecurityId())
+            .set(SemanticFieldPO::getBusinessDesc, field.businessDesc())
+            .set(SemanticFieldPO::getVersion, field.version())
+            .set(SemanticFieldPO::getUpdateTime, po.getUpdateTime()));
+    if (affected != 1) {
+      throw new SemanticException(SemanticErrorCode.VERSION_CONFLICT, "字段已被修改，请重新加载后保存");
+    }
     return field.withUpdateTime(po.getUpdateTime());
   }
 
@@ -138,7 +155,8 @@ public class SemanticFieldRepositories implements SemanticFieldRepository, Seman
     po.setUpdateTime(LocalDateTime.now());
     return fieldMapper.update(
             po,
-            new LambdaQueryWrapper<SemanticFieldPO>()
+            new LambdaUpdateWrapper<SemanticFieldPO>()
+                .setSql("version = version + 1")
                 .eq(SemanticFieldPO::getId, id)
                 .eq(SemanticFieldPO::getProjectId, projectId))
         > 0;
@@ -251,6 +269,16 @@ public class SemanticFieldRepositories implements SemanticFieldRepository, Seman
                 .eq(SemanticProcessFieldPO::getProcessId, processId)
                 .eq(SemanticProcessFieldPO::getFieldId, fieldId))
         > 0;
+  }
+
+  @Override
+  public boolean updateRequired(Long processId, Long fieldId, boolean required) {
+    SemanticProcessFieldPO po = new SemanticProcessFieldPO();
+    po.setIsRequired(required);
+    return processFieldMapper.update(po, new LambdaUpdateWrapper<SemanticProcessFieldPO>()
+        .eq(SemanticProcessFieldPO::getProjectId, requiredProjectId())
+        .eq(SemanticProcessFieldPO::getProcessId, processId)
+        .eq(SemanticProcessFieldPO::getFieldId, fieldId)) == 1;
   }
 
   @Override

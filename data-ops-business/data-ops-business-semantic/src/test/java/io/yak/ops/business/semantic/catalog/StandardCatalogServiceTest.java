@@ -25,6 +25,8 @@ import io.yak.ops.business.semantic.repository.SemanticStandardRepository;
 import io.yak.ops.business.semantic.repository.SemanticStandardVersionRepository;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +50,8 @@ class StandardCatalogServiceTest {
     auditService = Mockito.mock(BusinessAuditService.class);
     audit = Mockito.mock(AuditOperationHandle.class);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(audit);
+    lenient().when(repository.findByIdForUpdate(any())).thenAnswer(invocation -> repository.findById(invocation.getArgument(0)));
+    lenient().when(repository.lockCodeSet(any())).thenAnswer(invocation -> repository.listByCodeSetCode(invocation.getArgument(0)));
     service = new StandardCatalogService(repository, versionRepository, fieldRepository, auditService);
   }
 
@@ -258,6 +262,22 @@ class StandardCatalogServiceTest {
   }
 
   @Test
+  void codeSetHistoryIncludesSnapshotsForDeletedValuesAndDeduplicatesLiveRows() {
+    Standard live = codeRow(1L, "order_status_1", "order_status", "1", 2);
+    StandardVersion liveSnapshot = new StandardVersion(1L, 1, "tester",
+        LocalDateTime.parse("2026-09-01T10:00:00"), Map.of("codeValue", "1"));
+    StandardVersion deletedSnapshot = new StandardVersion(2L, 3, "tester",
+        LocalDateTime.parse("2026-09-02T10:00:00"), Map.of("codeValue", "2", "codeSetCode", "order_status"));
+    when(repository.listByCodeSetCode("order_status")).thenReturn(List.of(live));
+    when(versionRepository.listByCodeSet("order_status")).thenReturn(List.of(deletedSnapshot, liveSnapshot));
+    when(versionRepository.listByStandard(1L)).thenReturn(List.of(liveSnapshot));
+
+    List<StandardVersion> history = service.listCodeSetVersions("order_status");
+
+    assertEquals(List.of(deletedSnapshot, liveSnapshot), history);
+  }
+
+  @Test
   void saveCodeSetRejectsAdoptIntoExistingSet() {
     Standard legacy = codeRow(5L, "legacy_row", null, "1", 1);
     when(repository.listByCodeSetCode("legacy_row")).thenReturn(List.of(legacy));
@@ -315,7 +335,8 @@ class StandardCatalogServiceTest {
 
   private SemanticStandardApi.CodeSetSaveRequest codeSetRequest(
       String setCode, String origin, SemanticStandardApi.CodeValueItem... items) {
-    return new SemanticStandardApi.CodeSetSaveRequest(setCode, origin, "订单状态", null, List.of(items));
+    return new SemanticStandardApi.CodeSetSaveRequest(setCode, origin, "订单状态", null, List.of(items),
+        CodeSetRevision.of(repository.listByCodeSetCode(origin == null ? setCode : origin)));
   }
 
   private Standard existingStandard() {

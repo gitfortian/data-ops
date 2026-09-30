@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.semantic.dao.mapper.SemanticProcessMapper;
@@ -35,7 +36,7 @@ public class BusinessProcessRepositoryAdapter implements SemanticProcessReposito
     po.setCreateTime(now);
     po.setUpdateTime(now);
     mapper.insert(po);
-    return process;
+    return toDomain(po);
   }
 
   @Override
@@ -120,7 +121,10 @@ public class BusinessProcessRepositoryAdapter implements SemanticProcessReposito
     po.setUpdateTime(LocalDateTime.now());
     return mapper.update(
             po,
-            new LambdaQueryWrapper<SemanticProcessPO>()
+            new LambdaUpdateWrapper<SemanticProcessPO>()
+                .set(SemanticProcessPO::getGrain, process.grain())
+                .set(SemanticProcessPO::getOwner, process.owner())
+                .set(SemanticProcessPO::getDescription, process.description())
                 .eq(SemanticProcessPO::getId, process.id())
                 .eq(SemanticProcessPO::getProjectId, projectId))
         > 0;

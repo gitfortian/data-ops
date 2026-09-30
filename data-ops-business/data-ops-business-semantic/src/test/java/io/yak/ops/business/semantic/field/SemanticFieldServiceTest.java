@@ -47,6 +47,10 @@ class SemanticFieldServiceTest {
     audit = Mockito.mock(AuditOperationHandle.class);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(audit);
     lenient().when(standardRepository.findById(TYPE_STANDARD_ID)).thenReturn(Optional.of(typeStandard()));
+    lenient().when(standardRepository.findById(11L)).thenReturn(Optional.of(
+        new Standard(11L, StandardKind.UNIT, "unit", "单位", StandardStatus.ENABLED, 1, 0, false, null, null, "tester", null, null)));
+    lenient().when(standardRepository.findById(21L)).thenReturn(Optional.of(
+        new Standard(21L, StandardKind.SECURITY, "security", "安全", StandardStatus.ENABLED, 1, 0, false, null, null, "tester", null, null)));
     lenient().when(standardRepository.findById(12L)).thenReturn(Optional.of(caliberStandard()));
     lenient().when(standardRepository.existsEnabledByCodeSet(any())).thenReturn(true);
     lenient().when(repository.existsByCode(any())).thenReturn(false);
@@ -61,22 +65,24 @@ class SemanticFieldServiceTest {
   }
 
   @Test
-  void createAllowsMissingTypeRefForEveryRole() {
-    // 2026-09-17:类型引用可空(40 沉淀为快照式创建,data_type 保留手填);提供时才校验类别。
+  void createRequiresTypeForEveryRole() {
     for (String role : new String[] {"PROCESS", "DIMENSION", "METRIC"}) {
-      service.create(createRequest(role, null, 11L, 12L, null, null), "tester");
+      SemanticException exception = assertThrows(SemanticException.class,
+          () -> service.create(createRequest(role, null, 11L, 12L, null, null), "tester"));
+      assertEquals(SemanticErrorCode.ROLE_FIELD_REQUIRED, exception.getErrorCode());
     }
-    verify(repository, Mockito.times(3)).insert(any(), any());
+    verify(repository, Mockito.never()).insert(any(), any());
   }
 
   @Test
-  void createMetricAllowsMissingUnitAndCaliberIsOptional() {
-    // 2026-09-17:单位/类型引用可空(沉淀快照);提供时校验类别(下方用例)。
-    service.create(createRequest("METRIC", TYPE_STANDARD_ID, null, 12L, null, null), "tester");
+  void createMetricRequiresUnitButCaliberIsOptional() {
+    assertThrows(SemanticException.class,
+        () -> service.create(createRequest("METRIC", TYPE_STANDARD_ID, null, 12L, null, null), "tester"));
+    service.create(createRequest("METRIC", TYPE_STANDARD_ID, 11L, null, null, null), "tester");
     ArgumentCaptor<StandardField> captor = ArgumentCaptor.forClass(StandardField.class);
     verify(repository).insert(captor.capture(), any());
-    assertNull(captor.getValue().stdUnitId());
-    assertEquals(12L, captor.getValue().stdCaliberId());
+    assertEquals(11L, captor.getValue().stdUnitId());
+    assertNull(captor.getValue().stdCaliberId());
   }
 
   @Test

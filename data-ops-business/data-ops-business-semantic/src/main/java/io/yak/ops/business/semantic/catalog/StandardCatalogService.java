@@ -161,6 +161,19 @@ public class StandardCatalogService {
         .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id)));
   }
 
+  public Standard lockDefinition(Long id) {
+    return repository.findByIdForUpdate(id)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id)));
+  }
+
+  private void assertNoPendingApproval(Long id) {
+    if (approvalApi == null) return;
+    var approval = approvalApi.find(ApprovalFlowCodes.STANDARD_PUBLISH, "STANDARD", String.valueOf(id));
+    if (approval != null && "PENDING".equals(approval.status())) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS, "标准正在审批，请撤销或等待审批结束后修改");
+    }
+  }
+
   /** 统一分页(32.1):五类原始行 + CODE 码集组行(SQL GROUP BY),全部视图/码值分类页均聚合。 */
   public PageData<StandardListRow> page(
       int pageNo, int pageSize, String kind, String keyword, String status) {
@@ -174,7 +187,8 @@ public class StandardCatalogService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Standard update(Long id, SemanticStandardApi.UpdateRequest request, String operator) {
-    Standard existing = get(id);
+    Standard existing = lockDefinition(id);
+    assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
       throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
           "码值标准必须通过码集整体编辑");
@@ -240,7 +254,8 @@ public class StandardCatalogService {
   }
 
   private Standard changeStatus(Long id, String status, String operator, boolean approved) {
-    Standard existing = get(id);
+    Standard existing = lockDefinition(id);
+    if (!approved) assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
       throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
           "码值标准必须通过码集整体启停");
@@ -285,7 +300,8 @@ public class StandardCatalogService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id, String operator) {
-    Standard existing = get(id);
+    Standard existing = lockDefinition(id);
+    assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
       throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
           "码值标准必须通过码集整体删除");
@@ -398,7 +414,11 @@ public class StandardCatalogService {
                 "APPLICATION",
                 Map.of("valueCount", String.valueOf(items.size()))));
     try {
-      List<Standard> existingRows = repository.listByCodeSetCode(originKey);
+      List<Standard> existingRows = repository.lockCodeSet(originKey);
+      if (!existingRows.isEmpty() && !CodeSetRevision.of(existingRows).equals(request.revision())) {
+        throw new SemanticException(SemanticErrorCode.VERSION_CONFLICT,
+            "码集已被修改，请保留输入并重新加载后合并");
+      }
       if (adopting && existingRows.isEmpty()) {
         throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, originKey);
       }
@@ -512,8 +532,14 @@ public class StandardCatalogService {
     if (rows.isEmpty()) {
       throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, codeSetCode);
     }
-    return rows.stream()
+    Map<String, StandardVersion> snapshots = new LinkedHashMap<>();
+    versionRepository.listByCodeSet(codeSetCode).forEach(version ->
+        snapshots.put(version.standardId() + ":" + version.version(), version));
+    // Live rows also cover legacy groups whose old snapshots have no code_set_code.
+    rows.stream()
         .flatMap(row -> versionRepository.listByStandard(row.id()).stream())
+        .forEach(version -> snapshots.putIfAbsent(version.standardId() + ":" + version.version(), version));
+    return snapshots.values().stream()
         .sorted(
             java.util.Comparator.comparing(
                 StandardVersion::createTime, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))

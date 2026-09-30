@@ -73,8 +73,9 @@ public class SemanticDomainController {
   @RequiresPermission(SemanticPermissionCode.UPDATE)
   @PostMapping("/{id}/move")
   public Result<Boolean> move(
-      @PathVariable("id") Long id, @RequestBody SemanticDomainApi.MoveRequest request) {
-    service.move(id, request.parentId(), request.sortOrder());
+      @PathVariable("id") Long id, @RequestBody SemanticDomainApi.MoveRequest request,
+      HttpServletRequest httpRequest) {
+    service.move(id, request.parentId(), request.sortOrder(), currentUserProvider.getCurrentUser(httpRequest));
     return Result.success(Boolean.TRUE);
   }
 
