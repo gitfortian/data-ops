@@ -5,6 +5,8 @@ import io.yak.ops.business.security.api.AccessDecision;
 import io.yak.ops.business.security.api.ClassificationView;
 import io.yak.ops.business.security.api.MaskingDirective;
 import io.yak.ops.business.security.api.SecurityAccessDecisionApi;
+import io.yak.ops.common.enums.security.SecurityErrorCode;
+import io.yak.ops.business.security.exception.SecurityException;
 import io.yak.ops.business.security.dao.mapper.AccessPolicyMapper;
 import io.yak.ops.common.bean.po.security.DsecAccessPolicyPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -16,7 +18,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * 数据级访问裁决服务:在平台 RBAC 之上按已审批策略判定 允许/拒绝/需审批,对读操作叠加脱敏裁决,
- * 并写入访问流水。
+ * 并返回待执行脱敏指令。调用方确认消费结果后才显式写入访问流水。
  */
 @Component
 public class AccessDecisionService implements SecurityAccessDecisionApi {
@@ -47,8 +49,16 @@ public class AccessDecisionService implements SecurityAccessDecisionApi {
 
   @Override
   public AccessDecision decide(String actor, List<String> roles, String objectKey, String action) {
-    String act = StringUtils.hasText(action) ? action : "READ";
+    String act = StringUtils.hasText(action) ? action.trim().toUpperCase(java.util.Locale.ROOT) : "READ";
+    if (!Set.of("READ", "WRITE", "EXPORT").contains(act)) {
+      throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_ACTION, action);
+    }
+    if (!StringUtils.hasText(objectKey)) {
+      throw new SecurityException(SecurityErrorCode.CLASSIFICATION_INVALID_OBJECT, "对象键不能为空");
+    }
     ClassificationView view = classificationService.find(objectKey);
+    boolean unconfirmed = view != null && "CANDIDATE".equals(view.status());
+    ClassificationView activeView = view != null && "ACTIVE".equals(view.status()) ? view : null;
     List<DsecAccessPolicyPO> policies = policyMapper.selectList(
         new LambdaQueryWrapper<DsecAccessPolicyPO>()
             .eq(DsecAccessPolicyPO::getProjectId, currentProject.requireProjectId())
@@ -59,7 +69,7 @@ public class AccessDecisionService implements SecurityAccessDecisionApi {
     DsecAccessPolicyPO matchedAllow = null;
     for (DsecAccessPolicyPO policy : policies) {
       if (!subjectMatched(policy, actor, roles)
-          || !scopeMatched(policy, objectKey, view)
+          || !scopeMatched(policy, objectKey, activeView)
           || !withinValidity(policy)) {
         continue;
       }
@@ -79,12 +89,16 @@ public class AccessDecisionService implements SecurityAccessDecisionApi {
       decision = AccessDecision.DENY;
       allowed = false;
       matchedId = matchedDeny.getId();
+    } else if (unconfirmed) {
+      decision = AccessDecision.NEED_APPROVAL;
+      allowed = false;
+      matchedId = null;
     } else if (matchedAllow != null) {
       decision = AccessDecision.ALLOW;
       allowed = true;
       matchedId = matchedAllow.getId();
     } else {
-      boolean sensitive = view != null && view.sensitive(SENSITIVE_RANK);
+      boolean sensitive = activeView != null && activeView.sensitive(SENSITIVE_RANK);
       decision = sensitive ? AccessDecision.NEED_APPROVAL : AccessDecision.ALLOW;
       allowed = !sensitive;
       matchedId = null;
@@ -93,23 +107,33 @@ public class AccessDecisionService implements SecurityAccessDecisionApi {
     boolean masked = false;
     String algoCode = null;
     if (allowed && "READ".equals(act)) {
-      MaskingDirective directive = maskingService.resolve(objectKey);
+      MaskingDirective directive = activeView == null ? MaskingDirective.none() : maskingService.resolve(objectKey);
       masked = directive.mask();
       algoCode = directive.algoCode();
     }
+    return new AccessDecision(allowed, decision, matchedId, masked, algoCode);
+  }
 
+  @Override
+  public void recordAccess(
+      String actor,
+      String objectKey,
+      String action,
+      AccessDecision decision,
+      boolean maskingApplied,
+      String source) {
+    ClassificationView view = classificationService.find(objectKey);
     accessLogService.record(
         actor,
         resourceTypeOf(objectKey),
         objectKey,
         view == null ? null : view.levelName(),
-        act,
+        action,
         view == null ? null : view.levelCode(),
-        decision,
-        masked,
-        algoCode,
-        "SECURITY");
-    return new AccessDecision(allowed, decision, matchedId, masked, algoCode);
+        decision.decision(),
+        maskingApplied,
+        maskingApplied ? decision.algoCode() : null,
+        StringUtils.hasText(source) ? source : "SECURITY");
   }
 
   private static boolean higher(DsecAccessPolicyPO a, DsecAccessPolicyPO b) {
@@ -143,9 +167,11 @@ public class AccessDecisionService implements SecurityAccessDecisionApi {
     return switch (policy.getScopeType()) {
       case "ALL" -> true;
       case "DATASOURCE" -> eqStr(policy.getDatasourceId(), dsId);
-      case "DATABASE" -> eqStr(policy.getDbName(), db);
-      case "TABLE" -> eqStr(policy.getDbName(), db) && eqStr(policy.getTableName(), table);
-      case "COLUMN" -> eqStr(policy.getDbName(), db) && eqStr(policy.getTableName(), table)
+      case "DATABASE" -> eqStr(policy.getDatasourceId(), dsId) && eqStr(policy.getDbName(), db);
+      case "TABLE" -> eqStr(policy.getDatasourceId(), dsId)
+          && eqStr(policy.getDbName(), db) && eqStr(policy.getTableName(), table);
+      case "COLUMN" -> eqStr(policy.getDatasourceId(), dsId)
+          && eqStr(policy.getDbName(), db) && eqStr(policy.getTableName(), table)
           && eqStr(policy.getColumnName(), column);
       case "LEVEL" -> view != null && policy.getLevelId() != null && policy.getLevelId().equals(view.levelId());
       default -> false;

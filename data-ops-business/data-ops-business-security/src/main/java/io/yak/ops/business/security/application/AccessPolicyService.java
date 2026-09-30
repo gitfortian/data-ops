@@ -200,16 +200,18 @@ public class AccessPolicyService {
                             rule.eq(DsecAccessPolicyPO::getScopeType, "DATASOURCE")
                                 .eq(DsecAccessPolicyPO::getDatasourceId, datasourceId));
                   }
-                  if (StringUtils.hasText(dbName)) {
+                  if (datasourceId != null && StringUtils.hasText(dbName)) {
                     scope.or(
                         rule ->
                             rule.eq(DsecAccessPolicyPO::getScopeType, "DATABASE")
+                                .eq(DsecAccessPolicyPO::getDatasourceId, datasourceId)
                                 .eq(DsecAccessPolicyPO::getDbName, dbName));
                   }
-                  if (StringUtils.hasText(dbName) && StringUtils.hasText(tableName)) {
+                  if (datasourceId != null && StringUtils.hasText(dbName) && StringUtils.hasText(tableName)) {
                     scope.or(
                         rule ->
                             rule.eq(DsecAccessPolicyPO::getScopeType, "TABLE")
+                                .eq(DsecAccessPolicyPO::getDatasourceId, datasourceId)
                                 .eq(DsecAccessPolicyPO::getDbName, dbName)
                                 .eq(DsecAccessPolicyPO::getTableName, tableName));
                   }
@@ -247,11 +249,47 @@ public class AccessPolicyService {
     if (po.getScopeType() == null || !SCOPES.contains(po.getScopeType())) {
       throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_SCOPE, po.getScopeType());
     }
+    switch (po.getScopeType()) {
+      case "DATASOURCE" -> requireDatasource(po);
+      case "DATABASE" -> {
+        requireDatasource(po);
+        requireText(po.getDbName(), "库名必填");
+      }
+      case "TABLE" -> {
+        requireDatasource(po);
+        requireText(po.getDbName(), "库名必填");
+        requireText(po.getTableName(), "表名必填");
+      }
+      case "COLUMN" -> {
+        requireDatasource(po);
+        requireText(po.getDbName(), "库名必填");
+        requireText(po.getTableName(), "表名必填");
+        requireText(po.getColumnName(), "字段名必填");
+      }
+      case "LEVEL" -> {
+        if (po.getLevelId() == null) {
+          throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_SCOPE, "安全等级必填");
+        }
+      }
+      default -> { }
+    }
     if (po.getAccessType() == null || !ACTIONS.contains(po.getAccessType())) {
       throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_ACTION, po.getAccessType());
     }
     if (po.getEffect() == null || !EFFECTS.contains(po.getEffect())) {
       throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_ACTION, po.getEffect());
+    }
+  }
+
+  private void requireDatasource(DsecAccessPolicyPO po) {
+    if (po.getDatasourceId() == null || po.getDatasourceId() <= 0) {
+      throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_SCOPE, "数据源ID必填且必须大于 0");
+    }
+  }
+
+  private void requireText(String value, String message) {
+    if (!StringUtils.hasText(value)) {
+      throw new SecurityException(SecurityErrorCode.ACCESS_INVALID_SCOPE, message);
     }
   }
 
@@ -285,4 +323,5 @@ public class AccessPolicyService {
     target.setValidFrom(patch.getValidFrom());
     target.setValidTo(patch.getValidTo());
   }
+
 }

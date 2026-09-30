@@ -1,12 +1,12 @@
 import { YakButton, YakEmpty } from '@/components/ui';
 import {
-  approveAccessPolicy,
   createAccessPolicy,
   decideAccess,
   deleteAccessPolicy,
   disableAccessPolicy,
   listActiveSecurityLevels,
   pageAccessPolicies,
+  submitAccessPolicyApproval,
   updateAccessPolicy,
 } from '@/services/data-security/api';
 import type {
@@ -45,18 +45,19 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
 const SUBJECT_TYPES = [
   { label: '用户 USER', value: 'USER' },
   { label: '角色 ROLE', value: 'ROLE' },
-  { label: '部门 DEPARTMENT', value: 'DEPARTMENT' },
 ];
 const SCOPE_TYPES = [
   { label: '数据源 DATASOURCE', value: 'DATASOURCE' },
-  { label: '库 DB', value: 'DB' },
+  { label: '库 DATABASE', value: 'DATABASE' },
   { label: '表 TABLE', value: 'TABLE' },
   { label: '字段 COLUMN', value: 'COLUMN' },
   { label: '等级 LEVEL', value: 'LEVEL' },
+  { label: '全部 ALL', value: 'ALL' },
 ];
 const ACCESS_TYPES = [
   { label: '读取 READ', value: 'READ' },
   { label: '写入 WRITE', value: 'WRITE' },
+  { label: '导出 EXPORT', value: 'EXPORT' },
 ];
 const EFFECTS = [
   { label: '允许 ALLOW', value: 'ALLOW' },
@@ -82,6 +83,11 @@ const DataSecurityAccessPage = () => {
   const [decideOpen, setDecideOpen] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const [decision, setDecision] = useState<AccessDecision | null>(null);
+  const selectedScope = Form.useWatch('scopeType', form);
+  const needsDatasource = ['DATASOURCE', 'DATABASE', 'TABLE', 'COLUMN'].includes(selectedScope);
+  const needsDatabase = ['DATABASE', 'TABLE', 'COLUMN'].includes(selectedScope);
+  const needsTable = ['TABLE', 'COLUMN'].includes(selectedScope);
+  const needsColumn = selectedScope === 'COLUMN';
 
   const levelOptions = levels.map((l) => ({ label: `${l.levelName}（${l.levelCode}）`, value: l.id }));
 
@@ -130,14 +136,16 @@ const DataSecurityAccessPage = () => {
     };
     setSaving(true);
     try {
-      if (editing) {
-        await updateAccessPolicy(editing.id, payload);
-        message.success('策略已更新');
-      } else {
-        await createAccessPolicy(payload);
-        message.success('策略申请已提交（待审批）');
-      }
+      const saved = editing
+        ? await updateAccessPolicy(editing.id, payload)
+        : await createAccessPolicy(payload);
       setOpen(false);
+      try {
+        await submitAccessPolicyApproval(saved.id);
+        message.success('策略申请已提交到审批中心');
+      } catch {
+        message.warning('策略已保存为待审批状态，请在列表中重试提交审批');
+      }
       await load(pageNo, pageSize);
     } catch {
       message.error('保存失败，请检查策略配置');
@@ -145,17 +153,16 @@ const DataSecurityAccessPage = () => {
       setSaving(false);
     }
   };
-  const approve = (record: AccessPolicy, ok: boolean) => {
+  const submitApproval = (record: AccessPolicy) => {
     Modal.confirm({
-      title: ok ? '审批通过' : '审批驳回',
-      content: `确定${ok ? '通过' : '驳回'}「${record.policyName}」？`,
+      title: '提交到审批中心',
+      content: `将「${record.policyName}」提交到已配置的 ACCESS_GRANT 审批流程？`,
       onOk: async () => {
         try {
-          await approveAccessPolicy(record.id, ok);
-          message.success(ok ? '已通过' : '已驳回');
-          await load(pageNo, pageSize);
+          await submitAccessPolicyApproval(record.id);
+          message.success('已提交到审批中心，请在审批中心完成审批');
         } catch {
-          message.error('审批失败');
+          message.error('提交失败，请检查 ACCESS_GRANT 审批流程配置');
         }
       },
     });
@@ -213,9 +220,9 @@ const DataSecurityAccessPage = () => {
       title: '资源范围', key: 'scope', ellipsis: true,
       render: (_, r) => r.scopeType === 'LEVEL'
         ? `等级：${levels.find((l) => l.id === r.levelId)?.levelName ?? '-'}`
-        : [r.dbName, r.tableName, r.columnName].filter(Boolean).join('.'),
+        : r.scopeType === 'ALL' ? '全部数据' : [r.datasourceId ? `数据源 ${r.datasourceId}` : null, r.dbName, r.tableName, r.columnName].filter(Boolean).join(' / '),
     },
-    { title: '操作', dataIndex: 'accessType', width: 80, render: (v?: string) => (v === 'WRITE' ? '写入' : '读取') },
+    { title: '操作', dataIndex: 'accessType', width: 80, render: (v?: string) => (v === 'WRITE' ? '写入' : v === 'EXPORT' ? '导出' : '读取') },
     {
       title: '效果', dataIndex: 'effect', width: 80,
       render: (v?: string) => <Tag color={v === 'DENY' ? 'red' : 'blue'}>{v === 'DENY' ? '拒绝' : '允许'}</Tag>,
@@ -231,10 +238,7 @@ const DataSecurityAccessPage = () => {
       render: (_, record) => (
         <Space size={4} wrap>
           {record.status === 'PENDING' ? (
-            <>
-              <Typography.Link onClick={() => approve(record, true)}>通过</Typography.Link>
-              <Typography.Link type="danger" onClick={() => approve(record, false)}>驳回</Typography.Link>
-            </>
+            <Typography.Link onClick={() => submitApproval(record)}>提交审批</Typography.Link>
           ) : null}
           {record.status === 'APPROVED' ? <Typography.Link onClick={() => disable(record)}>停用</Typography.Link> : null}
           {record.status !== 'PENDING' ? <Typography.Link onClick={() => openEdit(record)}>编辑</Typography.Link> : null}
@@ -265,7 +269,7 @@ const DataSecurityAccessPage = () => {
         locale={{ emptyText: <YakEmpty compact title="暂无访问策略" description="点击「新建策略」提交申请" /> }}
         pagination={{ current: pageNo, pageSize, total, showSizeChanger: true, showTotal: (c) => `共 ${c} 条`, onChange: (p, s) => { setPageNo(p); setPageSize(s); } }} />
 
-      <Modal title={editing ? '编辑访问策略' : '新建访问策略（提交后待审批）'} open={open} onOk={submit} confirmLoading={saving} onCancel={() => setOpen(false)} destroyOnClose okText={editing ? '保存' : '提交申请'} width={640}>
+      <Modal title={editing ? '编辑访问策略并重新提交审批' : '新建访问策略申请'} open={open} onOk={submit} confirmLoading={saving} onCancel={() => setOpen(false)} destroyOnClose okText={editing ? '保存并提交审批' : '提交审批'} width={640}>
         <Form form={form} layout="vertical" preserve={false}>
           <Form.Item name="policyName" label="策略名称" rules={[{ required: true, message: '请输入名称' }]}><Input placeholder="如 分析师可读客户表" /></Form.Item>
           <div className="grid grid-cols-2 gap-x-3">
@@ -273,12 +277,13 @@ const DataSecurityAccessPage = () => {
             <Form.Item name="subjectKey" label="主体标识" rules={[{ required: true, message: '请输入主体标识' }]}><Input placeholder="用户名/角色码/部门码" /></Form.Item>
             <Form.Item name="scopeType" label="范围类型"><Select options={SCOPE_TYPES} /></Form.Item>
             <Form.Item name="accessType" label="操作类型"><Select options={ACCESS_TYPES} /></Form.Item>
-            <Form.Item name="dbName" label="库名"><Input placeholder="范围含库时填写" /></Form.Item>
-            <Form.Item name="tableName" label="表名"><Input placeholder="范围含表时填写" /></Form.Item>
-            <Form.Item name="columnName" label="字段名"><Input placeholder="字段级时填写" /></Form.Item>
+            <Form.Item name="datasourceId" label="数据源 ID" rules={[{ required: needsDatasource, message: '此范围必须指定数据源 ID' }]}><InputNumber min={1} className="!w-full" placeholder="物理数据源 ID" /></Form.Item>
+            <Form.Item name="dbName" label="库名" rules={[{ required: needsDatabase, message: '此范围必须指定库名' }]}><Input placeholder="物理库名" /></Form.Item>
+            <Form.Item name="tableName" label="表名" rules={[{ required: needsTable, message: '此范围必须指定表名' }]}><Input placeholder="物理表名" /></Form.Item>
+            <Form.Item name="columnName" label="字段名" rules={[{ required: needsColumn, message: '字段范围必须指定字段名' }]}><Input placeholder="物理字段名" /></Form.Item>
             <Form.Item name="levelId" label="安全等级"><Select allowClear options={levelOptions} placeholder="按等级授权时选择" /></Form.Item>
             <Form.Item name="effect" label="策略效果"><Select options={EFFECTS} /></Form.Item>
-            <Form.Item name="priority" label="优先级（越小越优先）"><InputNumber min={0} className="!w-full" /></Form.Item>
+            <Form.Item name="priority" label="优先级（越大越优先）"><InputNumber min={0} className="!w-full" /></Form.Item>
           </div>
           <Form.Item name="validity" label="有效期（留空表示长期）">
             <RangePicker showTime className="!w-full" />
@@ -287,6 +292,7 @@ const DataSecurityAccessPage = () => {
       </Modal>
 
       <Drawer title="访问裁决试算" open={decideOpen} onClose={() => setDecideOpen(false)} width={480}>
+        <div className="mb-3 rounded-lg bg-[#fffbe6] p-3 text-[12px] text-[#8c6d1f]">试算仅展示当前策略结果，不执行数据访问，也不会写入访问审计。脱敏标记表示策略要求执行，实际是否完成以消费记录为准。</div>
         <Form form={decideForm} layout="vertical" initialValues={{ action: 'READ' }}>
           <Form.Item name="actor" label="访问主体" rules={[{ required: true, message: '请输入主体' }]}><Input placeholder="如 zhangsan" /></Form.Item>
           <Form.Item name="roles" label="角色（逗号分隔）"><Input placeholder="如 analyst,pm" /></Form.Item>
@@ -301,7 +307,7 @@ const DataSecurityAccessPage = () => {
               <Tag color={decision.decision === 'ALLOW' ? 'green' : decision.decision === 'DENY' ? 'red' : 'gold'}>
                 {decision.decision === 'ALLOW' ? '放行' : decision.decision === 'DENY' ? '拒绝' : '需审批'}
               </Tag>
-              {decision.masked ? <Tag color="orange">脱敏 · {decision.algoCode}</Tag> : <Tag>明文</Tag>}
+              {decision.maskingRequired ? <Tag color="orange">要求脱敏 · {decision.algoCode}</Tag> : <Tag>未配置脱敏指令</Tag>}
             </div>
             {decision.matchedPolicyId ? <div className="mt-2 text-[12px] text-[#98a2b3]">命中策略 #{decision.matchedPolicyId}</div> : null}
           </div>

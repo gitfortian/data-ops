@@ -55,7 +55,7 @@ public class MaskingService implements SecurityMaskingApi {
   @Override
   public MaskingDirective resolve(String objectKey) {
     ClassificationView view = classificationService.find(objectKey);
-    if (view == null) {
+    if (view == null || !"ACTIVE".equals(view.status())) {
       return MaskingDirective.none();
     }
     String columnName = lastSegment(objectKey);
@@ -71,10 +71,15 @@ public class MaskingService implements SecurityMaskingApi {
     if (hit == null) {
       return MaskingDirective.none();
     }
-    DsecMaskingAlgorithmPO algo = algorithmMapper.selectById(hit.getAlgoId());
-    if (algo == null) {
-      return MaskingDirective.none();
+    DsecMaskingAlgorithmPO algo = algorithmMapper.selectOne(new LambdaQueryWrapper<DsecMaskingAlgorithmPO>()
+        .eq(DsecMaskingAlgorithmPO::getId, hit.getAlgoId())
+        .eq(DsecMaskingAlgorithmPO::getProjectId, projectId)
+        .eq(DsecMaskingAlgorithmPO::getStatus, "ACTIVE"));
+    if (algo == null || !MaskingEngine.supported().contains(algo.getAlgoCode())) {
+      throw new SecurityException(SecurityErrorCode.MASKING_UNSUPPORTED_ALGO,
+          algo == null ? String.valueOf(hit.getAlgoId()) : algo.getAlgoCode());
     }
+    validateAlgorithm(algo.getAlgoCode(), algo.getParams());
     return new MaskingDirective(true, algo.getAlgoCode(), algo.getParams());
   }
 
@@ -91,8 +96,10 @@ public class MaskingService implements SecurityMaskingApi {
     Set<Long> algorithmIds = new HashSet<>(
         algorithmMapper.selectList(
                 new LambdaQueryWrapper<DsecMaskingAlgorithmPO>()
-                    .eq(DsecMaskingAlgorithmPO::getProjectId, projectId))
+                    .eq(DsecMaskingAlgorithmPO::getProjectId, projectId)
+                    .eq(DsecMaskingAlgorithmPO::getStatus, "ACTIVE"))
             .stream()
+            .filter(algo -> MaskingEngine.supported().contains(algo.getAlgoCode()))
             .map(DsecMaskingAlgorithmPO::getId)
             .toList());
 
@@ -105,7 +112,10 @@ public class MaskingService implements SecurityMaskingApi {
           .orElse(null);
       result.put(
           classification.objectKey(),
-          matched != null && matched.getAlgoId() != null && algorithmIds.contains(matched.getAlgoId()));
+          "ACTIVE".equals(classification.status())
+              && matched != null
+              && matched.getAlgoId() != null
+              && algorithmIds.contains(matched.getAlgoId()));
     }
     return Map.copyOf(result);
   }
@@ -152,22 +162,21 @@ public class MaskingService implements SecurityMaskingApi {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public DsecMaskingAlgorithmPO createAlgorithm(
       String code, String name, String params, String description, String operator) {
-    if (!StringUtils.hasText(code)) {
-      throw new SecurityException(SecurityErrorCode.MASKING_ALGO_DUPLICATE, "算法编码不能为空");
-    }
+    String normalizedCode = StringUtils.hasText(code) ? code.trim().toUpperCase(java.util.Locale.ROOT) : null;
+    validateAlgorithm(normalizedCode, params);
     Long projectId = currentProject.requireProjectId();
-    if (existsAlgorithm(code)) {
-      throw new SecurityException(SecurityErrorCode.MASKING_ALGO_DUPLICATE, code);
+    if (existsAlgorithm(normalizedCode)) {
+      throw new SecurityException(SecurityErrorCode.MASKING_ALGO_DUPLICATE, normalizedCode);
     }
     return SecurityAudit.tx(
         auditService,
         AuditEventType.RESOURCE_CREATED,
-        SecurityAudit.request("MASKING_ALGO_CREATE", "Create masking algorithm", "MASKING_ALGO", null, code),
+        SecurityAudit.request("MASKING_ALGO_CREATE", "Create masking algorithm", "MASKING_ALGO", null, normalizedCode),
         () -> {
           LocalDateTime now = LocalDateTime.now();
           DsecMaskingAlgorithmPO po = new DsecMaskingAlgorithmPO();
           po.setProjectId(projectId);
-          po.setAlgoCode(code);
+          po.setAlgoCode(normalizedCode);
           po.setAlgoName(name);
           po.setParams(params);
           po.setBuiltin(0);
@@ -227,11 +236,14 @@ public class MaskingService implements SecurityMaskingApi {
       throw new SecurityException(SecurityErrorCode.MASKING_INVALID_ALGO, "策略名与算法必填");
     }
     Long projectId = currentProject.requireProjectId();
-    if (algorithmMapper.selectOne(new LambdaQueryWrapper<DsecMaskingAlgorithmPO>()
+    DsecMaskingAlgorithmPO algorithm = algorithmMapper.selectOne(new LambdaQueryWrapper<DsecMaskingAlgorithmPO>()
         .eq(DsecMaskingAlgorithmPO::getId, algoId)
-        .eq(DsecMaskingAlgorithmPO::getProjectId, projectId)) == null) {
+        .eq(DsecMaskingAlgorithmPO::getProjectId, projectId));
+    if (algorithm == null || !"ACTIVE".equals(algorithm.getStatus())
+        || !MaskingEngine.supported().contains(algorithm.getAlgoCode())) {
       throw new SecurityException(SecurityErrorCode.MASKING_INVALID_ALGO, String.valueOf(algoId));
     }
+    validateAlgorithm(algorithm.getAlgoCode(), algorithm.getParams());
     return SecurityAudit.tx(
         auditService,
         AuditEventType.RESOURCE_CREATED,
@@ -308,5 +320,13 @@ public class MaskingService implements SecurityMaskingApi {
             .eq(DsecMaskingAlgorithmPO::getProjectId, currentProject.requireProjectId())
             .eq(DsecMaskingAlgorithmPO::getAlgoCode, code));
     return c != null && c > 0;
+  }
+
+  private void validateAlgorithm(String code, String params) {
+    try {
+      MaskingEngine.validate(code, params);
+    } catch (IllegalArgumentException exception) {
+      throw new SecurityException(SecurityErrorCode.MASKING_UNSUPPORTED_ALGO, code, exception);
+    }
   }
 }

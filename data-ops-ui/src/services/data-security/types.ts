@@ -188,7 +188,7 @@ export interface AccessDecision {
   allowed: boolean;
   decision: 'ALLOW' | 'DENY' | 'NEED_APPROVAL' | string;
   matchedPolicyId?: number;
-  masked: boolean;
+  maskingRequired: boolean;
   algoCode?: string;
 }
 

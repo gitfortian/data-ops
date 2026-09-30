@@ -13,6 +13,7 @@ import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway
 import io.yak.ops.business.dataset.query.DatasetQueryCompiler;
 import io.yak.ops.business.dataset.query.DatasetQueryRejectedException;
 import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter;
+import io.yak.ops.business.dataset.query.DatasetSourceQueryAdapter.SourceDescriptor;
 import io.yak.ops.core.execution.sql.SqlExecutionCaller;
 import io.yak.ops.core.execution.sql.SqlExecutionContext;
 import io.yak.ops.core.execution.sql.SqlExecutionPolicyViolationException;
@@ -48,6 +49,21 @@ public class QueryRevisionDatasetSourceAdapter implements DatasetSourceQueryAdap
   @Override
   public DatasetSourceType sourceType() {
     return DatasetSourceType.QUERY_REVISION;
+  }
+
+  @Override
+  public SourceDescriptor resolveSource(Dataset dataset, DatasetVersion version) {
+    DatasetTaskRevisionSnapshot revision =
+        taskCatalogGateway.resolveRevision(version.sourceTaskAssetId(), version.sourceTaskRevisionId());
+    if (revision.revisionId() != version.sourceTaskRevisionId()
+        || revision.revisionNo() != version.sourceTaskRevisionNo()) {
+      throw new IllegalStateException("DatasetVersion 与来源 TaskRevision 快照不一致");
+    }
+    if (!"SQL".equalsIgnoreCase(revision.taskType())) {
+      throw new IllegalStateException("QUERY_REVISION Dataset 来源必须是 SQL TaskRevision");
+    }
+    SourceConfig sourceConfig = sourceConfig(revision.configJson());
+    return new SourceDescriptor(sourceConfig.dataSourceId(), revision.content());
   }
 
   @Override

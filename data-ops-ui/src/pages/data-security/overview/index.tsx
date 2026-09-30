@@ -39,6 +39,8 @@ const DataSecurityOverviewPage = () => {
   const distribution = data?.levelDistribution ?? [];
   const maxCount = distribution.reduce((acc, item) => Math.max(acc, item.count), 0) || 1;
   const summary = (data?.complianceSummary ?? {}) as Record<string, unknown>;
+  const hasComplianceRun = summary.status === 'COMPLETED';
+  const openGaps = hasComplianceRun ? num(summary.openGaps) : null;
 
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
@@ -76,9 +78,9 @@ const DataSecurityOverviewPage = () => {
               <StatCard label="脱敏策略" value={data?.maskingPolicyCount ?? 0} onClick={() => navigate('/data-security/masking')} />
               <StatCard
                 label="合规缺口"
-                value={num(summary.openGaps)}
-                hint={num(summary.openGaps) > 0 ? `最近体检存在 ${num(summary.openGaps)} 项风险` : '暂无风险'}
-                accent={num(summary.openGaps) > 0 ? '#f5222d' : '#52c41a'}
+                value={openGaps ?? '—'}
+                hint={!hasComplianceRun ? '暂无可验证的体检结果' : openGaps! > 0 ? `最近体检存在 ${openGaps} 项风险` : '最近一次体检未发现缺口'}
+                accent={!hasComplianceRun ? '#faad14' : openGaps! > 0 ? '#f5222d' : '#52c41a'}
                 onClick={() => navigate('/data-security/compliance')}
               />
             </div>

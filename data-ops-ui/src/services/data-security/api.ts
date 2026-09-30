@@ -149,12 +149,8 @@ export const updateAccessPolicy = (
   payload: Partial<AccessPolicy>,
 ): Promise<AccessPolicy> => HttpUtils.putData(`${P}/access-policies/${id}`, payload);
 
-export const approveAccessPolicy = (
-  id: number,
-  approve: boolean,
-  reason?: string,
-): Promise<AccessPolicy> =>
-  HttpUtils.postData(`${P}/access-policies/${id}/approval`, { approve, reason });
+export const submitAccessPolicyApproval = (id: number): Promise<unknown> =>
+  HttpUtils.postData(`${P}/access-policies/${id}/apply-approval`, {});
 
 export const disableAccessPolicy = (id: number): Promise<boolean> =>
   HttpUtils.postData(`${P}/access-policies/${id}/disable`, {});

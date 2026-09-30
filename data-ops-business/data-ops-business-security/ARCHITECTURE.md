@@ -50,8 +50,8 @@ io.yak.ops.business.security
 
 | 接口 | 方法 | 消费方 |
 | --- | --- | --- |
-| SecurityClassificationQueryApi | find/findMany/findByTable | modeling/metric/lineage |
-| SecurityMaskingApi | resolve/mask | data-service/查询链路 |
-| SecurityAccessDecisionApi | decide | 数据服务/开发/BI 鉴权前置 |
+| SecurityClassificationQueryApi | find/findMany/findByTable | Asset 投影与 Dataset Security Gateway |
+| SecurityMaskingApi | resolve/mask | Dataset Security Gateway |
+| SecurityAccessDecisionApi | decide/recordAccess | Dataset Security Gateway;裁决与消费审计分离 |
 
-下游仅经这三接口消费,禁止直读 `yak_dsec_*` 表或 import `application`/`dao` 内部类型。
+Dataset 在执行 SQL 前通过 `DatasetProjectionAnalyzerGateway` 将输出字段映射为物理列键,再经 Dataset-owned Security Gateway 调用 Security SPI;缺少可验证血缘时拒绝返回结果。Data Service 仍使用 API Key/consumer 自身授权,不将该主体映射为 USER/ROLE。下游仅经 SPI 消费,禁止直读 `yak_dsec_*` 表或 import `application`/`dao` 内部类型。

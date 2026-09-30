@@ -233,13 +233,17 @@ const FindingTab = ({ batchId }: { batchId: string }) => {
 
 /* ================= 页面 ================= */
 const DataSecurityCompliancePage = () => {
-  const [summary, setSummary] = useState<{ batchId?: string; openGaps?: number }>({});
+  const [summary, setSummary] = useState<{ batchId?: string; openGaps?: number; status?: string }>({});
   const [activeBatch, setActiveBatch] = useState('');
 
   const loadSummary = useCallback(async () => {
     try {
       const s = await complianceSummary();
-      setSummary({ batchId: (s.batchId as string) ?? undefined, openGaps: Number(s.openGaps ?? 0) });
+      setSummary({
+        batchId: (s.batchId as string) ?? undefined,
+        openGaps: s.openGaps == null ? undefined : Number(s.openGaps),
+        status: s.status as string | undefined,
+      });
       setActiveBatch((prev) => prev || ((s.batchId as string) ?? ''));
     } catch {
       /* 汇总加载失败不阻断 */
@@ -250,7 +254,7 @@ const DataSecurityCompliancePage = () => {
     void loadSummary();
   }, [loadSummary]);
 
-  const openGaps = summary.openGaps ?? 0;
+  const openGaps = summary.openGaps;
 
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
@@ -260,8 +264,10 @@ const DataSecurityCompliancePage = () => {
         extra={
           <div className="flex items-center gap-4 rounded-lg bg-[#f7f8fa] px-4 py-2 text-[13px]">
             <span>最近批次：<span className="font-medium">{summary.batchId || '—'}</span></span>
-            <span>未闭环缺口：
-              <span className={`ml-1 font-semibold ${openGaps > 0 ? 'text-[#f5222d]' : 'text-[#52c41a]'}`}>{openGaps}</span>
+            <span>{summary.status === 'COMPLETED' ? '最近批次未闭环缺口：' : '体检状态：'}
+              <span className={`ml-1 font-semibold ${summary.status !== 'COMPLETED' ? 'text-[#ad6800]' : (openGaps ?? 0) > 0 ? 'text-[#f5222d]' : 'text-[#52c41a]'}`}>
+                {summary.status !== 'COMPLETED' ? '暂无可验证结果' : openGaps ?? 0}
+              </span>
             </span>
           </div>
         }

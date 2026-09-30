@@ -72,15 +72,19 @@ public class AccessPolicyApprovalService {
 
   private static String resourceOf(DsecAccessPolicyPO po) {
     StringBuilder resource = new StringBuilder();
+    if (po.getDatasourceId() != null) {
+      resource.append("数据源 ").append(po.getDatasourceId());
+    }
     if (po.getDbName() != null) {
-      resource.append(po.getDbName());
+      resource.append(resource.length() > 0 ? " / " : "").append(po.getDbName());
     }
     if (po.getTableName() != null) {
-      resource.append(resource.length() > 0 ? "." : "").append(po.getTableName());
+      resource.append(resource.length() > 0 ? " / " : "").append(po.getTableName());
     }
     if (po.getColumnName() != null) {
-      resource.append(resource.length() > 0 ? "." : "").append(po.getColumnName());
+      resource.append(resource.length() > 0 ? " / " : "").append(po.getColumnName());
     }
+    if ("ALL".equals(po.getScopeType())) return "全部数据";
     return resource.length() > 0 ? resource.toString() : po.getScopeType();
   }
 }
