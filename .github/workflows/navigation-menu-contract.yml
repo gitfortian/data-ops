@@ -1,0 +1,48 @@
+name: Navigation Menu Contract
+
+on:
+  pull_request:
+    paths:
+      - 'data-ops-ui/src/config/navigation*'
+      - 'data-ops-ui/src/config/systemNavigation.test.ts'
+      - 'data-ops-ui/src/constants/securityMenuCodes.ts'
+      - 'data-ops-ui/src/layouts/SiteLayout/**'
+      - 'data-ops-ui/config/routes.ts'
+      - 'data-ops-boot/src/main/resources/yak-security/db/migration/**'
+      - 'scripts/security/test-task-oriented-menu-migration.py'
+      - '.github/workflows/navigation-menu-contract.yml'
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data-ops-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: data-ops-ui/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn jest src/config/navigation.test.ts src/config/navigationMenuContract.test.ts src/config/systemNavigation.test.ts src/config/navigation.dataset.test.ts src/layouts/SiteLayout/SidebarNavigation.test.tsx --runInBand
+
+  migration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: navigation-test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pnavigation-test"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute migration and verify authorization boundaries
+        run: python3 scripts/security/test-task-oriented-menu-migration.py
+        env:
+          YAK_NAV_TEST_MYSQL_PASSWORD: navigation-test

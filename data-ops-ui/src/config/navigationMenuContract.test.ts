@@ -14,6 +14,8 @@ import {
 
 type MenuCatalogRow = {
   menuCode: string;
+  menuName: string;
+  sortOrder: number;
   parentCode: string | null;
   routePath: string | null;
   menuType: number;
@@ -123,22 +125,28 @@ const CATALOG_EXTENSION_MIGRATIONS = [
     SECURITY_MIGRATION_ROOT,
     'V2039__register_sql_execution_audit_menu.sql',
   ),
+  path.join(
+    SECURITY_MIGRATION_ROOT,
+    'V2042__task_oriented_navigation.sql',
+  ),
 ];
 
 const sqlValue = (token: string): string | null =>
   token === 'NULL' ? null : token.slice(1, -1);
 
 const parseMenuRows = (sql: string): MenuCatalogRow[] => {
-  const rowPattern = /\(\s*'([^']+)'\s*,\s*'[^']*'\s*,\s*(NULL|'[^']*')\s*,\s*(NULL|'[^']*')\s*,\s*'[^']*'\s*,\s*(\d+)\s*,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(NULL|'[^']*')\s*,\s*'[^']*'\s*,\s*'\$\{appName\}'\s*\)/g;
+  const rowPattern = /\(\s*'([^']+)'\s*,\s*'([^']*)'\s*,\s*(NULL|'[^']*')\s*,\s*(NULL|'[^']*')\s*,\s*'[^']*'\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(NULL|'[^']*')\s*,\s*'[^']*'\s*,\s*'\$\{appName\}'\s*\)/g;
 
   return [...sql.matchAll(rowPattern)].map((match) => ({
     menuCode: match[1],
-    parentCode: sqlValue(match[2]),
-    routePath: sqlValue(match[3]),
-    menuType: Number(match[4]),
-    visible: match[5] === '1',
-    active: match[6] === '1',
-    requiredPermissionCode: sqlValue(match[7]),
+    menuName: match[2],
+    parentCode: sqlValue(match[3]),
+    routePath: sqlValue(match[4]),
+    menuType: Number(match[5]),
+    sortOrder: Number(match[6]),
+    visible: match[7] === '1',
+    active: match[8] === '1',
+    requiredPermissionCode: sqlValue(match[9]),
   }));
 };
 
@@ -252,7 +260,7 @@ describe('Navigation ↔ Yak Security menu catalog contract', () => {
     const duplicateFrontendCodes = duplicateValues(
       frontendEntries.map((entry) => entry.code),
     );
-    const frontendCodes = new Set(frontendEntries.map((entry) => entry.code));
+    const frontendCodes = new Set<string>(frontendEntries.map((entry) => entry.code));
     const backendCodes = new Set(finalCatalog.map((row) => row.menuCode));
     const errors = [
       ...duplicateFrontendCodes.map((code) => `Duplicate frontend menuCode: ${code}`),
@@ -278,6 +286,10 @@ describe('Navigation ↔ Yak Security menu catalog contract', () => {
       const backend = catalogByCode.get(group.menuCode);
       if (!backend) continue;
 
+      if (backend.menuName !== group.title || backend.sortOrder !== group.order) {
+        errors.push(`Menu group label/order mismatch: ${group.menuCode}`);
+      }
+
       const expectedParentCode = group.parentGroupId
         ? navigationGroupById.get(group.parentGroupId)?.menuCode ?? null
         : null;
@@ -301,6 +313,10 @@ describe('Navigation ↔ Yak Security menu catalog contract', () => {
       if (!route.menuCode || !yakOpsCodeSet.has(route.menuCode)) continue;
       const backend = catalogByCode.get(route.menuCode);
       if (!backend) continue;
+
+      if (backend.menuName !== route.title || backend.sortOrder !== (route.order ?? 0)) {
+        errors.push(`Menu page label/order mismatch: ${route.menuCode}`);
+      }
 
       const parentCode = route.menuGroup
         ? navigationGroupById.get(route.menuGroup)?.menuCode ?? null

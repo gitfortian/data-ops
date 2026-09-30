@@ -5,6 +5,7 @@ import {
   getActiveNavigationGroupPath,
   getActiveNavigationId,
   getMainNavigationGroups,
+  getNavigationEntries,
   getQuickCreateRoutes,
   getStandaloneNavigationRoutes,
   resolveNavigationMenuCode,
@@ -66,7 +67,7 @@ describe('permission-aware navigation', () => {
   });
 
   it('keeps public groups while filtering permission-protected groups and quick-create independently', () => {
-    // 工作流(公开)挂在「数据开发与编排」域下、全局血缘(公开)挂在「数据资产」
+    // 工作流(公开)挂在「开发与运行」域下、全局血缘(公开)挂在「数据资产与治理」
     // 域下，因此无权限用户也能看到这三个域。
     expect(getMainNavigationGroups([]).map((group) => group.id)).toEqual([
       'development',
@@ -121,12 +122,10 @@ describe('permission-aware navigation', () => {
     const groups = getMainNavigationGroups(['security:root']);
     expect(groups.map((group) => group.id)).toEqual([
       'integration',
-      'development',
       'modeling',
-      'governance',
+      'development',
       'data-asset',
       'data-analysis',
-      'approval',
       'system',
     ]);
     expect(groups.map((group) => group.section)).toEqual([
@@ -135,24 +134,23 @@ describe('permission-aware navigation', () => {
       'business',
       'business',
       'business',
-      'business',
-      'business',
       'system',
     ]);
-    const governance = groups.find((group) => group.id === 'governance')!;
-    expect(governance.routes).toEqual([]);
+    const governance = groups.find((group) => group.id === 'data-asset')!;
     expect(governance.subGroups?.map((sub) => sub.id)).toEqual([
-      'mdm',
+      'asset-management',
+      'data-metadata',
       'data-quality',
       'data-security',
       'data-lifecycle',
+      'mdm',
     ]);
   });
 
   it('nests sub-group domains and expands the active route up to its domain', () => {
     expect(
       getActiveNavigationGroupPath('/data-quality/overview', ['quality:execution:read']),
-    ).toEqual(['data-quality', 'governance']);
+    ).toEqual(['data-quality', 'data-asset']);
     expect(
       getActiveNavigationGroupPath('/data-source', ['resource:data-source:read']),
     ).toEqual(['integration']);
@@ -167,20 +165,16 @@ describe('permission-aware navigation', () => {
     const dataConsumption = getMainNavigationGroups([]).find(
       (group) => group.id === 'data-analysis',
     );
-    expect(dataConsumption?.title).toBe('消费与服务');
+    expect(dataConsumption?.title).toBe('数据消费与服务');
     expect(dataConsumption?.routes.map((route) => route.id)).toEqual([
-      'dashboard',
       'dataset-management',
-      'digital-screen',
     ]);
     const assets = getMainNavigationGroups(['security:root']).find(
       (group) => group.id === 'data-asset',
     );
     expect(assets?.routes.map((route) => route.id)).toEqual([
-      'data-asset-overview',
       'data-asset-catalog',
-      'data-asset-inventory',
-      'data-asset-taxonomy',
+      'data-asset-overview',
       'data-analysis-lineage',
     ]);
     expect(getActiveNavigationId('/dashboard', [])).toBe('dashboard');
@@ -217,9 +211,10 @@ describe('permission-aware navigation', () => {
     expect(getActiveNavigationId('/data-service/logs', dataServiceAll)).toBe('data-service-logs');
   });
 
-  it('registers home as the only standalone navigation entry', () => {
+  it('registers home and authorized approval tasks as work entries', () => {
     expect(getStandaloneNavigationRoutes(['security:root']).map((route) => route.id)).toEqual([
       'home',
+      'approval-todo',
     ]);
     expect(getActiveNavigationId('/home', [])).toBe('home');
   });
@@ -313,5 +308,55 @@ describe('permission-aware navigation', () => {
       'mdm-approval',
     ]);
     expect(getActiveNavigationId('/mdm/approval', ['mdm:read'])).toBe('mdm-approval');
+  });
+
+  it('matches the five current capability domains and orders semantic work before models and metrics', () => {
+    const groups = getMainNavigationGroups(['security:root']);
+    expect(groups.filter((group) => group.section === 'business').map((group) => group.title)).toEqual([
+      '数据接入与集成', '标准、指标与建模', '开发与运行', '数据资产与治理', '数据消费与服务',
+    ]);
+    const modeling = groups.find((group) => group.id === 'modeling')!;
+    expect(getNavigationEntries(modeling).map((entry) => entry.kind === 'route' ? entry.route.id : entry.group.id))
+      .toEqual(['semantic', 'modeling-workspace', 'metric']);
+    expect(modeling.subGroups?.find((group) => group.id === 'semantic')?.routes.map((route) => route.title))
+      .toEqual(['业务域', '业务过程', '数据标准', '标准字段', '数仓分层']);
+  });
+
+  it('preserves isolated old leaf grants under their new owning groups without requiring new container grants', () => {
+    expect(getActiveNavigationGroupPath('/data-quality/monitor/42', ['quality:monitor:read'], [YAK_OPS_MENU_CODES.dataQualityTableConfig]))
+      .toEqual(['data-quality', 'data-asset']);
+    expect(getActiveNavigationGroupPath('/data-asset/inventory', ['data-asset:read'], [YAK_OPS_MENU_CODES.assetInventory]))
+      .toEqual(['asset-management', 'data-asset']);
+    expect(getActiveNavigationGroupPath('/resource-management', ['resource:view'], [YAK_OPS_MENU_CODES.resourceManagement]))
+      .toEqual(['integration']);
+    const assets = getMainNavigationGroups(['quality:monitor:read'], [YAK_OPS_MENU_CODES.dataQualityTableConfig])
+      .find((group) => group.id === 'data-asset')!;
+    expect(assets.subGroups?.map((group) => group.id)).toEqual(['data-quality']);
+  });
+
+  it('separates approval task reading from administrative flow management', () => {
+    const read = ['data-approval:read'];
+    expect(getStandaloneNavigationRoutes(read, [YAK_OPS_MENU_CODES.approvalTodo]).map((route) => route.id))
+      .toEqual(['home', 'approval-todo']);
+    expect(getActiveNavigationId('/approval/instance/42', read, [YAK_OPS_MENU_CODES.approvalTodo]))
+      .toBe('approval-todo');
+    expect(getMainNavigationGroups(read).find((group) => group.id === 'system')).toBeUndefined();
+    expect(getActiveNavigationId('/approval/flows', read)).toBeUndefined();
+    expect(getActiveNavigationGroupPath('/approval/flows', ['data-approval:manage'], [YAK_OPS_MENU_CODES.approvalFlows]))
+      .toEqual(['system']);
+  });
+
+  it('requires the existing discovery permission and the new menu grant for both consumption routes', () => {
+    const catalog = appRoutes.find((route) => route.id === 'consumption-catalog')!;
+    const detail = appRoutes.find((route) => route.id === 'consumption-detail')!;
+    for (const route of [catalog, detail]) {
+      expect(canAccessNavigationRoute(route, [], [YAK_OPS_MENU_CODES.consumptionCatalog])).toBe(false);
+      expect(canAccessNavigationRoute(route, ['data-asset:read'], [])).toBe(false);
+      expect(canAccessNavigationRoute(route, ['data-asset:read'], [YAK_OPS_MENU_CODES.consumptionCatalog])).toBe(true);
+    }
+    expect(getActiveNavigationId('/data-analysis/consumption/DATASET%3A42?from=asset', ['data-asset:read'], [YAK_OPS_MENU_CODES.consumptionCatalog]))
+      .toBe('consumption-catalog');
+    expect(getActiveNavigationGroupPath('/data-analysis/consumption/DATA_SERVICE%3A42', ['data-asset:read']))
+      .toEqual(['data-analysis']);
   });
 });

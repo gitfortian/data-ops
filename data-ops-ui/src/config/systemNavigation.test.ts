@@ -19,17 +19,17 @@ describe('system management rollout', () => {
     );
 
     expect(systemGroup?.routes.map((route) => route.id)).toEqual([
+      'system-security-projects',
       'system-users',
       'system-departments',
       'system-roles',
-      'system-security-projects',
       'system-operation-logs',
     ]);
     expect(systemGroup?.routes.map((route) => route.title)).toEqual([
+      '项目空间',
       '用户管理',
       '部门管理',
       '角色与权限',
-      '项目空间',
       '操作日志',
     ]);
   });
