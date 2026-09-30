@@ -2,7 +2,7 @@ import { Form, Modal, message } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 
 import CodeSetFormItems from '@/pages/semantic/standards/components/CodeSetFormItems';
-import { saveCodeSet } from '@/services/semantic/api';
+import { saveCodeSet, updateCodeSet } from '@/services/semantic/api';
 import type { CodeSetDetailRecord, CodeValueItem } from '@/services/semantic/types';
 
 interface CodeSetEditModalProps {
@@ -56,7 +56,7 @@ const CodeSetEditModal = ({ open, detail, onClose, onSaved, onExists }: CodeSetE
     const values = await form.validateFields();
     setSaving(true);
     try {
-      await saveCodeSet({
+      const payload = {
         codeSetCode: values.codeSetCode,
         // 存量空码集行补全编码:携带原组键,后端据此把旧行采纳进新码集
         originCodeSetCode: isLegacy ? detail?.codeSetCode : undefined,
@@ -67,7 +67,12 @@ const CodeSetEditModal = ({ open, detail, onClose, onSaved, onExists }: CodeSetE
           codeLabel: row.codeLabel || undefined,
           sortOrder: row.sortOrder ?? index,
         })),
-      });
+      };
+      if (detail) {
+        await updateCodeSet(values.codeSetCode, payload);
+      } else {
+        await saveCodeSet(payload);
+      }
       message.success(isEdit ? '码集已更新' : '码集已创建');
       onSaved();
       onClose();

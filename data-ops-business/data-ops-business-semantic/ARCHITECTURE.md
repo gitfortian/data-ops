@@ -30,7 +30,7 @@ io.yak.ops.business.semantic
 
 ## SPI 面(消费方边界,按 ticket 增量实现)
 
-`api` 包对 modeling 暴露:StandardQueryApi(30 后随需;52 扩展 labels/existsCodeSet,MDM 属性引用校验与列表标签解析消费)、StandardCaptureApi(40)、StandardUsageApi(42)、StandardRecommendApi(41)、ProcessApi(34/35)、LayerConfigApi(37)。**modeling/mdm 只经这些接口消费,不直读本模块表。**
+`api` 包对消费者暴露:StandardQueryApi(30 后随需;52 扩展 labels/existsCodeSet,MDM 属性引用校验与列表标签解析消费)、StandardCaptureApi(40)、StandardUsageApi(42)、StandardRecommendApi(41)、ProcessApi(34/35)、LayerConfigApi(37)。`StandardReferenceReader` 由 modeling/metric 实现,向目录生命周期返回项目内引用数,用于拦截被引用标准的停用与删除。**消费者只经这些接口与本模块交互,不直读本模块表。**
 
 ## 迁移所有权
 

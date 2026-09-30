@@ -1,12 +1,11 @@
 package io.yak.ops.business.semantic.usage;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.semantic.api.StandardUsageApi;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardUsageMapper;
 import io.yak.ops.common.bean.po.semantic.SemanticStandardUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,14 +43,14 @@ public class StandardUsageService implements StandardUsageApi {
   @Override
   public UsageSummary summary(Long standardId) {
     Long projectId = currentProject.requireProjectId();
-    List<SemanticStandardUsagePO> rows =
-        mapper.selectList(
-            new LambdaQueryWrapper<SemanticStandardUsagePO>()
-                .eq(SemanticStandardUsagePO::getProjectId, projectId)
-                .eq(SemanticStandardUsagePO::getStandardId, standardId));
-    long apply = rows.stream().filter(row -> "APPLY".equals(row.getUsageType())).count();
-    long bypass = rows.stream().filter(row -> "BYPASS".equals(row.getUsageType())).count();
+    Map<String, Object> counts = mapper.selectSummary(projectId, standardId);
+    long apply = count(counts.get("applyCount"));
+    long bypass = count(counts.get("bypassCount"));
     return new UsageSummary(standardId, apply, bypass);
+  }
+
+  private static long count(Object value) {
+    return value instanceof Number number ? number.longValue() : 0L;
   }
 
   /** 供上报方的安全包装:吞异常并告警(推送式 fail-open 语义)。 */

@@ -71,7 +71,7 @@ export const createSemanticStandard = (payload: SemanticStandardSavePayload): Pr
 
 export const updateSemanticStandard = (
   id: SemanticStandardId,
-  payload: Omit<SemanticStandardSavePayload, 'kind' | 'code'>,
+  payload: Omit<SemanticStandardSavePayload, 'kind' | 'code'> & { version: number },
 ): Promise<SemanticStandardRecord> =>
   HttpUtils.putData<SemanticStandardRecord>(`${SEMANTIC_API_PREFIX}/standards/${id}`, payload);
 
@@ -84,6 +84,9 @@ export const changeSemanticStandardStatus = (
 /** 提交标准生效审批(STANDARD_PUBLISH):批准后回调自动启用;流程未配置 49007、在途重复 49003 由后端拒绝。 */
 export const submitStandardPublishApproval = (id: SemanticStandardId): Promise<ApprovalInstance> =>
   HttpUtils.postData<ApprovalInstance>(`${SEMANTIC_API_PREFIX}/standards/${id}/publish-approval`, {});
+
+export const isStandardPublishFlowEnabled = (): Promise<boolean> =>
+  HttpUtils.getData<boolean>(`${SEMANTIC_API_PREFIX}/standards/publish-flow-enabled`);
 
 export const deleteSemanticStandard = (id: SemanticStandardId): Promise<boolean> =>
   HttpUtils.deleteData<boolean>(`${SEMANTIC_API_PREFIX}/standards/${id}`);
@@ -284,6 +287,12 @@ export interface CodeSetSavePayload {
 
 export const saveCodeSet = (payload: CodeSetSavePayload): Promise<SemanticStandardRecord[]> =>
   HttpUtils.postData<SemanticStandardRecord[]>(`${SEMANTIC_API_PREFIX}/standards/code-set`, payload);
+
+export const updateCodeSet = (codeSetCode: string, payload: CodeSetSavePayload): Promise<SemanticStandardRecord[]> =>
+  HttpUtils.putData<SemanticStandardRecord[]>(
+    `${SEMANTIC_API_PREFIX}/standards/code-set/${encodeURIComponent(codeSetCode)}`,
+    payload,
+  );
 
 export interface CodeSetPageParams {
   pageNo: number;

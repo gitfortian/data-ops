@@ -90,6 +90,7 @@ public interface SemanticStandardMapper extends BaseMapper<SemanticStandardPO> {
           + " WHERE project_id = #{projectId} AND kind = 'CODE' AND status = 'ENABLED'"
           + "   AND code_set_code IS NOT NULL AND code_set_code != ''"
           + " GROUP BY COALESCE(NULLIF(code_set_code, ''), std_code)"
+          + " HAVING SUM(CASE WHEN status = 'DISABLED' THEN 1 ELSE 0 END) = 0"
           + " ORDER BY name ASC")
   List<StandardListRow> selectEnabledCodeSetOptions(@Param("projectId") Long projectId);
 }

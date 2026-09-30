@@ -58,6 +58,11 @@ public class SemanticStandardController {
   public Result<StandardVO> create(
       @Valid @RequestBody SemanticStandardApi.CreateRequest request,
       HttpServletRequest httpRequest) {
+    if ("CODE".equals(request.kind())) {
+      throw new io.yak.ops.business.semantic.exception.SemanticException(
+          io.yak.ops.common.enums.semantic.SemanticErrorCode.INVALID_KIND,
+          "码值标准请通过码集整体创建");
+    }
     String operator = currentUserProvider.getCurrentUser(httpRequest);
     return Result.success(viewConverter.toView(service.create(request, operator)));
   }
@@ -77,6 +82,12 @@ public class SemanticStandardController {
   @GetMapping("/{id}")
   public Result<StandardVO> get(@PathVariable("id") Long id) {
     return Result.success(viewConverter.toView(service.get(id)));
+  }
+
+  @Operation(summary = "查询当前项目是否启用了标准发布审批流程")
+  @GetMapping("/publish-flow-enabled")
+  public Result<Boolean> publishFlowEnabled() {
+    return Result.success(service.publishFlowEnabled());
   }
 
   @Operation(summary = "标准历史版本（修改前快照，最新在前）")
@@ -135,7 +146,24 @@ public class SemanticStandardController {
       @Valid @RequestBody SemanticStandardApi.CodeSetSaveRequest request,
       HttpServletRequest httpRequest) {
     String operator = currentUserProvider.getCurrentUser(httpRequest);
-    List<Standard> saved = service.saveCodeSet(request, operator);
+    List<Standard> saved = service.createCodeSet(request, operator);
+    return Result.success(saved.stream().map(viewConverter::toView).toList());
+  }
+
+  @Operation(summary = "更新码集")
+  @RequiresPermission(SemanticPermissionCode.UPDATE)
+  @PutMapping("/code-set/{codeSetCode}")
+  public Result<List<StandardVO>> updateCodeSet(
+      @PathVariable("codeSetCode") String codeSetCode,
+      @Valid @RequestBody SemanticStandardApi.CodeSetSaveRequest request,
+      HttpServletRequest httpRequest) {
+    if (!codeSetCode.equals(request.codeSetCode())) {
+      throw new io.yak.ops.business.semantic.exception.SemanticException(
+          io.yak.ops.common.enums.semantic.SemanticErrorCode.INVALID_CODE,
+          "路径码集编码与请求码集编码不一致");
+    }
+    String operator = currentUserProvider.getCurrentUser(httpRequest);
+    List<Standard> saved = service.updateCodeSet(request, operator);
     return Result.success(saved.stream().map(viewConverter::toView).toList());
   }
 

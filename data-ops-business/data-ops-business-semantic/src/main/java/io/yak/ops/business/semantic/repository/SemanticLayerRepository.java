@@ -23,4 +23,7 @@ public interface SemanticLayerRepository {
   boolean changeStatus(Long id, String status);
 
   boolean deleteById(Long id);
+
+  /** Number of project layers bound to the given naming standard. */
+  long countByNamingStandard(Long standardId);
 }

@@ -73,4 +73,13 @@ public class MetricDependencyRepositoryAdapter implements MetricDependencyReposi
         .eq(MetricDependencyPO::getDependencyType, dependencyType)
         .eq(MetricDependencyPO::getDependencyId, dependencyId));
   }
+
+  @Override
+  public long countByDependency(String dependencyType, Long dependencyId) {
+    Long projectId = currentProject.requireProjectId();
+    return mapper.selectCount(new LambdaQueryWrapper<MetricDependencyPO>()
+        .eq(MetricDependencyPO::getProjectId, projectId)
+        .eq(MetricDependencyPO::getDependencyType, dependencyType)
+        .eq(MetricDependencyPO::getDependencyId, dependencyId));
+  }
 }

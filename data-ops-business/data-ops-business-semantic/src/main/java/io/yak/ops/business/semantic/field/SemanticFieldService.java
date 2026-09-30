@@ -61,14 +61,15 @@ public class SemanticFieldService {
     validateCode(request.code());
     validateName(request.name());
     validateRole(request.role());
-    // 按角色适配(2026-09-16):类型引用三类必填;METRIC 必填单位+口径;归零当前角色无意义引用。
-    // 类型引用可空(40 沉淀为快照式轻量创建,data_type 保留手填);提供时校验类别(39 表单必填由 UI 承担)
+    // 按角色适配(2026-09-16):三类字段都必须引用启用的类型标准;METRIC 必填单位、口径选填。
     Standard typeStandard = validateTypeRef(request.stdTypeId());
     RoleRefs refs =
         normalizeRoleRefs(
             request.role(), request.stdUnitId(), request.stdCaliberId(),
             request.stdCodeSetCode(), request.stdSecurityId());
     validateCaliberRef(refs.stdCaliberId());
+    validateUnitRef(refs.stdUnitId(), request.role());
+    validateSecurityRef(refs.stdSecurityId());
     validateCodeSet(refs.stdCodeSetCode());
     // 收紧 1:引用类型标准时 data_type 以标准为准(服务端覆盖)。
     String dataType = resolveDataType(typeStandard, request.dataType());
@@ -148,6 +149,8 @@ public class SemanticFieldService {
             request.role(), request.stdUnitId(), request.stdCaliberId(),
             request.stdCodeSetCode(), request.stdSecurityId());
     validateCaliberRef(refs.stdCaliberId());
+    validateUnitRef(refs.stdUnitId(), request.role());
+    validateSecurityRef(refs.stdSecurityId());
     validateCodeSet(refs.stdCodeSetCode());
     // 约束 3:乐观锁,版本冲突拒绝。
     if (request.version() == null || request.version() != existing.version()) {
@@ -288,10 +291,10 @@ public class SemanticFieldService {
     }
   }
 
-  /** 收紧 1:类型引用非空时返回标准(供 data_type 覆盖);空时返回 null。 */
+  /** Required enabled TYPE standard reference; its std_type supplies the data type snapshot. */
   private Standard validateTypeRef(Long stdTypeId) {
     if (stdTypeId == null) {
-      return null;
+      throw new SemanticException(SemanticErrorCode.ROLE_FIELD_REQUIRED, "std_type_id");
     }
     Standard standard =
         standardRepository
@@ -302,6 +305,9 @@ public class SemanticFieldService {
     if (standard.kind() != StandardKind.TYPE) {
       throw new SemanticException(
           SemanticErrorCode.INVALID_KIND, "std_type_id 必须引用 TYPE 类别标准");
+    }
+    if (standard.status() != StandardStatus.ENABLED) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS, "类型标准已停用");
     }
     return standard;
   }
@@ -381,6 +387,33 @@ public class SemanticFieldService {
     if (standard.status() != StandardStatus.ENABLED) {
       throw new SemanticException(
           SemanticErrorCode.NOT_FOUND, "口径标准不存在或已停用");
+    }
+  }
+
+  private void validateUnitRef(Long stdUnitId, String role) {
+    if ("METRIC".equals(role) && stdUnitId == null) {
+      throw new SemanticException(SemanticErrorCode.ROLE_FIELD_REQUIRED, "std_unit_id");
+    }
+    if (stdUnitId == null) return;
+    Standard standard = standardRepository.findById(stdUnitId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "单位标准不存在或已停用"));
+    if (standard.kind() != StandardKind.UNIT) {
+      throw new SemanticException(SemanticErrorCode.INVALID_KIND, "std_unit_id 必须引用 UNIT 类别标准");
+    }
+    if (standard.status() != StandardStatus.ENABLED) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS, "单位标准已停用");
+    }
+  }
+
+  private void validateSecurityRef(Long stdSecurityId) {
+    if (stdSecurityId == null) return;
+    Standard standard = standardRepository.findById(stdSecurityId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "安全标准不存在或已停用"));
+    if (standard.kind() != StandardKind.SECURITY) {
+      throw new SemanticException(SemanticErrorCode.INVALID_KIND, "std_security_id 必须引用 SECURITY 类别标准");
+    }
+    if (standard.status() != StandardStatus.ENABLED) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS, "安全标准已停用");
     }
   }
 }

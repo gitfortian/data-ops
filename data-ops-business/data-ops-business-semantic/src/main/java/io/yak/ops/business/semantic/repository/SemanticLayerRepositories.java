@@ -110,6 +110,14 @@ public class SemanticLayerRepositories implements SemanticLayerRepository, Seman
   }
 
   @Override
+  public long countByNamingStandard(Long standardId) {
+    return layerMapper.selectCount(
+        new LambdaQueryWrapper<SemanticLayerPO>()
+            .eq(SemanticLayerPO::getProjectId, currentProject.requireProjectId())
+            .eq(SemanticLayerPO::getStdNamingId, standardId));
+  }
+
+  @Override
   public int maxSortOrder() {
     Long projectId = currentProject.requireProjectId();
     List<Object> max =

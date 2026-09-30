@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
@@ -137,32 +138,57 @@ public class StandardRepositoryAdapter implements SemanticStandardRepository {
   @Override
   public boolean existsEnabledByCodeSet(String codeSetCode) {
     Long projectId = requiredProjectId();
-    return mapper.selectCount(
-            new LambdaQueryWrapper<SemanticStandardPO>()
-                .eq(SemanticStandardPO::getProjectId, projectId)
-                .eq(SemanticStandardPO::getKind, StandardKind.CODE.name())
-                .eq(SemanticStandardPO::getStatus, StandardStatus.ENABLED.name())
-                .eq(SemanticStandardPO::getCodeSetCode, codeSetCode))
-        > 0;
+    long total = mapper.selectCount(new LambdaQueryWrapper<SemanticStandardPO>()
+        .eq(SemanticStandardPO::getProjectId, projectId)
+        .eq(SemanticStandardPO::getKind, StandardKind.CODE.name())
+        .eq(SemanticStandardPO::getCodeSetCode, codeSetCode));
+    if (total == 0) return false;
+    long enabled = mapper.selectCount(new LambdaQueryWrapper<SemanticStandardPO>()
+        .eq(SemanticStandardPO::getProjectId, projectId)
+        .eq(SemanticStandardPO::getKind, StandardKind.CODE.name())
+        .eq(SemanticStandardPO::getCodeSetCode, codeSetCode)
+        .eq(SemanticStandardPO::getStatus, StandardStatus.ENABLED.name()));
+    return total == enabled;
   }
 
   @Override
-  public Standard update(Standard standard, String operator) {
+  public Standard update(Standard standard, Integer expectedVersion, String operator) {
     Long projectId = requiredProjectId();
     LocalDateTime now = LocalDateTime.now();
     SemanticStandardPO po = toPo(standard);
-    po.setProjectId(projectId);
-    po.setUpdateTime(now);
-    SemanticStandardPO persisted = mapper.selectOne(
-        new LambdaQueryWrapper<SemanticStandardPO>()
-            .eq(SemanticStandardPO::getId, standard.id())
-            .eq(SemanticStandardPO::getProjectId, projectId));
-    if (persisted == null) {
-      return standard;
+    LambdaUpdateWrapper<SemanticStandardPO> update = new LambdaUpdateWrapper<SemanticStandardPO>()
+        .set(SemanticStandardPO::getStdName, po.getStdName())
+        .set(SemanticStandardPO::getStatus, po.getStatus())
+        .set(SemanticStandardPO::getVersion, po.getVersion())
+        .set(SemanticStandardPO::getSortOrder, po.getSortOrder())
+        .set(SemanticStandardPO::getDescription, po.getDescription())
+        .set(SemanticStandardPO::getScope, po.getScope())
+        .set(SemanticStandardPO::getLayer, po.getLayer())
+        .set(SemanticStandardPO::getRuleExpr, po.getRuleExpr())
+        .set(SemanticStandardPO::getExample, po.getExample())
+        .set(SemanticStandardPO::getTypeCode, po.getTypeCode())
+        .set(SemanticStandardPO::getStdType, po.getStdType())
+        .set(SemanticStandardPO::getSourceMapping, po.getSourceMapping())
+        .set(SemanticStandardPO::getCodeSetCode, po.getCodeSetCode())
+        .set(SemanticStandardPO::getCodeValue, po.getCodeValue())
+        .set(SemanticStandardPO::getCodeLabel, po.getCodeLabel())
+        .set(SemanticStandardPO::getUnitCode, po.getUnitCode())
+        .set(SemanticStandardPO::getUnitType, po.getUnitType())
+        .set(SemanticStandardPO::getCaliberCode, po.getCaliberCode())
+        .set(SemanticStandardPO::getCalRule, po.getCalRule())
+        .set(SemanticStandardPO::getBusinessDesc, po.getBusinessDesc())
+        .set(SemanticStandardPO::getLevelCode, po.getLevelCode())
+        .set(SemanticStandardPO::getMaskRule, po.getMaskRule())
+        .set(SemanticStandardPO::getUpdateTime, now)
+        .eq(SemanticStandardPO::getId, standard.id())
+        .eq(SemanticStandardPO::getProjectId, projectId)
+        .eq(SemanticStandardPO::getVersion, expectedVersion);
+    int updated = mapper.update(null, update);
+    if (updated == 0) {
+      throw new io.yak.ops.business.semantic.exception.SemanticException(
+          io.yak.ops.common.enums.semantic.SemanticErrorCode.VERSION_CONFLICT,
+          "标准已被他人修改，请刷新后重试");
     }
-    po.setCreatedBy(persisted.getCreatedBy());
-    po.setCreateTime(persisted.getCreateTime());
-    mapper.update(po, new LambdaQueryWrapper<SemanticStandardPO>().eq(SemanticStandardPO::getId, po.getId()));
     return standard.withVersion(standard.version(), now);
   }
 
@@ -213,8 +239,9 @@ public class StandardRepositoryAdapter implements SemanticStandardRepository {
                     .or(
                         legacy ->
                             legacy
-                                .isNull(SemanticStandardPO::getCodeSetCode)
-                                .eq(SemanticStandardPO::getStdCode, groupKey)));
+                            .eq(SemanticStandardPO::getStdCode, groupKey)
+                            .and(noSet -> noSet.isNull(SemanticStandardPO::getCodeSetCode)
+                                .or().eq(SemanticStandardPO::getCodeSetCode, ""))));
   }
 
   @Override

@@ -43,7 +43,10 @@ public enum StandardKind {
       }
       case UNIT -> requireText(fields.unitCode(), "unit_code");
       case CALIBER -> requireText(fields.calRule(), "cal_rule");
-      case SECURITY -> requireText(fields.levelCode(), "level_code");
+      case SECURITY -> {
+        requireText(fields.levelCode(), "level_code");
+        requireText(fields.maskRule(), "mask_rule");
+      }
     }
   }
 

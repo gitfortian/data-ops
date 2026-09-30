@@ -5,6 +5,7 @@ import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.semantic.api.StandardKind;
 
 import io.yak.ops.business.semantic.api.Standard;
+import io.yak.ops.business.semantic.api.StandardReferenceReader;
 
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.audit.AuditEventType;
@@ -17,6 +18,9 @@ import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticFieldRepository;
 import io.yak.ops.business.semantic.repository.SemanticStandardRepository;
 import io.yak.ops.business.semantic.repository.SemanticStandardVersionRepository;
+import io.yak.ops.business.semantic.repository.SemanticLayerRepository;
+import io.yak.ops.business.approval.api.ApprovalApi;
+import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import java.util.ArrayList;
@@ -29,15 +33,16 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
  * Owns the standard catalog lifecycle (create/get/page/update/status/delete).
  * The single home of catalog rules; persistence stays project-scoped in the
- * repository. Reference checks before status/delete are the service's duty —
- * code-set delete blocks on field-library references (35); other kinds stay
- * open until their consumers register here.
+ * repository. Status/delete reference checks use the local field/layer records
+ * and read-only consumer SPIs, keeping the semantic module independent of its consumers.
  */
 @Component
 public class StandardCatalogService {
@@ -55,16 +60,47 @@ public class StandardCatalogService {
   private final SemanticStandardVersionRepository versionRepository;
   private final SemanticFieldRepository fieldRepository;
   private final BusinessAuditService auditService;
+  private final SemanticLayerRepository layerRepository;
+  private final List<StandardReferenceReader> referenceReaders;
+  private final ApprovalApi approvalApi;
 
+  @Autowired
+  public StandardCatalogService(
+      SemanticStandardRepository repository,
+      SemanticStandardVersionRepository versionRepository,
+      SemanticFieldRepository fieldRepository,
+      BusinessAuditService auditService,
+      SemanticLayerRepository layerRepository,
+      ObjectProvider<StandardReferenceReader> referenceReaders,
+      ObjectProvider<ApprovalApi> approvalApi) {
+    this(repository, versionRepository, fieldRepository, auditService, layerRepository,
+        referenceReaders.orderedStream().toList(), approvalApi.getIfAvailable());
+  }
+
+  /** Compatibility constructor for focused service tests without consumer modules. */
   public StandardCatalogService(
       SemanticStandardRepository repository,
       SemanticStandardVersionRepository versionRepository,
       SemanticFieldRepository fieldRepository,
       BusinessAuditService auditService) {
+    this(repository, versionRepository, fieldRepository, auditService, null, List.of(), null);
+  }
+
+  private StandardCatalogService(
+      SemanticStandardRepository repository,
+      SemanticStandardVersionRepository versionRepository,
+      SemanticFieldRepository fieldRepository,
+      BusinessAuditService auditService,
+      SemanticLayerRepository layerRepository,
+      List<StandardReferenceReader> referenceReaders,
+      ApprovalApi approvalApi) {
     this.repository = repository;
     this.versionRepository = versionRepository;
     this.fieldRepository = fieldRepository;
     this.auditService = auditService;
+    this.layerRepository = layerRepository;
+    this.referenceReaders = referenceReaders;
+    this.approvalApi = approvalApi;
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -95,7 +131,8 @@ public class StandardCatalogService {
                   kind,
                   request.code(),
                   request.name(),
-                  StandardStatus.ENABLED,
+                  kind != StandardKind.CODE && publishFlowEnabled()
+                      ? StandardStatus.DISABLED : StandardStatus.ENABLED,
                   1,
                   request.sortOrder() == null ? 0 : request.sortOrder(),
                   false,
@@ -138,6 +175,14 @@ public class StandardCatalogService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Standard update(Long id, SemanticStandardApi.UpdateRequest request, String operator) {
     Standard existing = get(id);
+    if (existing.kind() == StandardKind.CODE) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
+          "码值标准必须通过码集整体编辑");
+    }
+    if (request.version() == null || !request.version().equals(existing.version())) {
+      throw new SemanticException(SemanticErrorCode.VERSION_CONFLICT,
+          "当前版本 " + existing.version() + "，请求版本 " + request.version());
+    }
     validateName(request.name());
     Standard.KindFields fields = toFields(request);
     existing.kind().validateRequired(fields);
@@ -169,7 +214,7 @@ public class StandardCatalogService {
               existing.createdBy(),
               existing.createTime(),
               existing.updateTime());
-      Standard saved = repository.update(updated, operator);
+      Standard saved = repository.update(updated, request.version(), operator);
       AuditTransactions.completeOnCommit(
           audit,
           AuditEventType.RESOURCE_UPDATED,
@@ -185,9 +230,31 @@ public class StandardCatalogService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Standard changeStatus(Long id, String status, String operator) {
+    return changeStatus(id, status, operator, false);
+  }
+
+  /** Approval terminal callback; regular status changes cannot bypass an enabled flow. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public Standard enableAfterApproval(Long id, String operator) {
+    return changeStatus(id, StandardStatus.ENABLED.name(), operator, true);
+  }
+
+  private Standard changeStatus(Long id, String status, String operator, boolean approved) {
     Standard existing = get(id);
+    if (existing.kind() == StandardKind.CODE) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
+          "码值标准必须通过码集整体启停");
+    }
     StandardStatus target = parseStatus(status);
-    // 引用校验挂点:35(模块内过程字段引用)与 42(modeling 引用统计)落地后在此阻断。
+    if (target == StandardStatus.DISABLED && countReferences(existing) > 0) {
+      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED,
+          "该标准仍被字段库、分层、建模或指标引用");
+    }
+    if (target == StandardStatus.ENABLED && existing.kind() != StandardKind.CODE
+        && !approved && publishFlowEnabled()) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
+          "当前项目已启用 STANDARD_PUBLISH 流程，请通过发布审批启用标准");
+    }
     AuditOperationHandle audit =
         auditService.start(
             new AuditOperationRequest(
@@ -199,7 +266,9 @@ public class StandardCatalogService {
                 "APPLICATION",
                 Map.of("status", target.name())));
     try {
-      repository.updateStatus(id, target, operator);
+      if (target != existing.status() && !repository.updateStatus(id, target, operator)) {
+        throw new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id));
+      }
       Standard updated = existing.withStatus(target, null);
       AuditTransactions.completeOnCommit(
           audit,
@@ -217,10 +286,17 @@ public class StandardCatalogService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id, String operator) {
     Standard existing = get(id);
+    if (existing.kind() == StandardKind.CODE) {
+      throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
+          "码值标准必须通过码集整体删除");
+    }
     if (existing.preset()) {
       throw new SemanticException(SemanticErrorCode.PRESET_DELETE_BLOCKED, existing.code());
     }
-    // 引用校验挂点:同 changeStatus,35/42 落地后阻断被引用删除。
+    if (countReferences(existing) > 0) {
+      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED,
+          "该标准仍被字段库、分层、建模或指标引用");
+    }
     AuditOperationHandle audit =
         auditService.start(
             new AuditOperationRequest(
@@ -258,6 +334,32 @@ public class StandardCatalogService {
     return versionRepository.listByStandard(id);
   }
 
+  /** Create-only path used by the CREATE-authorized endpoint. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public List<Standard> createCodeSet(
+      SemanticStandardApi.CodeSetSaveRequest request, String operator) {
+    if (StringUtils.hasText(request.originCodeSetCode())) {
+      throw new SemanticException(SemanticErrorCode.INVALID_CODE,
+          "新建码集不能携带存量迁移组键");
+    }
+    if (repository.existsByCodeSetCode(request.codeSetCode())
+        || !repository.listByCodeSetCode(request.codeSetCode()).isEmpty()) {
+      throw new SemanticException(SemanticErrorCode.CODE_SET_DUPLICATE, request.codeSetCode());
+    }
+    return saveCodeSet(request, operator);
+  }
+
+  /** Update-only path used by the UPDATE-authorized endpoint. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public List<Standard> updateCodeSet(
+      SemanticStandardApi.CodeSetSaveRequest request, String operator) {
+    if (!StringUtils.hasText(request.originCodeSetCode())
+        && !repository.existsByCodeSetCode(request.codeSetCode())) {
+      throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, request.codeSetCode());
+    }
+    return saveCodeSet(request, operator);
+  }
+
   // ── 码集方法(32.1:码值类聚合交互) ──
 
   /**
@@ -275,8 +377,13 @@ public class StandardCatalogService {
         StringUtils.hasText(request.originCodeSetCode())
             ? request.originCodeSetCode().trim()
             : codeSetCode;
-    boolean adopting = !originKey.equals(codeSetCode);
-    if (adopting && repository.existsByCodeSetCode(codeSetCode)) {
+    boolean adopting = StringUtils.hasText(request.originCodeSetCode());
+    if (adopting && originKey.equals(codeSetCode)) {
+      throw new SemanticException(SemanticErrorCode.INVALID_CODE,
+          "原组键仅用于采纳存量未编码的码值行");
+    }
+    if (adopting && (repository.existsByCodeSetCode(codeSetCode)
+        || !repository.listByCodeSetCode(codeSetCode).isEmpty())) {
       throw new SemanticException(SemanticErrorCode.CODE_SET_DUPLICATE, codeSetCode);
     }
 
@@ -292,6 +399,14 @@ public class StandardCatalogService {
                 Map.of("valueCount", String.valueOf(items.size()))));
     try {
       List<Standard> existingRows = repository.listByCodeSetCode(originKey);
+      if (adopting && existingRows.isEmpty()) {
+        throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, originKey);
+      }
+      if (adopting && existingRows.stream().anyMatch(
+          row -> StringUtils.hasText(row.fields().codeSetCode()))) {
+        throw new SemanticException(SemanticErrorCode.INVALID_CODE,
+            "仅允许迁移 code_set_code 为空的存量码值行");
+      }
       boolean creating = existingRows.isEmpty();
       if (creating && repository.existsByCodeSetCode(codeSetCode)) {
         throw new SemanticException(SemanticErrorCode.CODE_SET_DUPLICATE, codeSetCode);
@@ -301,8 +416,17 @@ public class StandardCatalogService {
               .collect(
                   Collectors.toMap(
                       row -> row.fields().codeValue(), Function.identity(), (first, second) -> first));
+      StandardStatus groupStatus = existingRows.stream()
+          .anyMatch(row -> row.status() == StandardStatus.DISABLED)
+          ? StandardStatus.DISABLED : StandardStatus.ENABLED;
       Set<String> submittedValues =
           items.stream().map(SemanticStandardApi.CodeValueItem::codeValue).collect(Collectors.toSet());
+      boolean removesValues = existingRows.stream()
+          .anyMatch(row -> !submittedValues.contains(row.fields().codeValue()));
+      if (removesValues && countCodeSetReferences(codeSetCode) > 0) {
+        throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED,
+            "该码集已有字段或模型引用，不能移除其中的码值");
+      }
       // 提交中不存在的既有码值 = 删除(与单行删除一致,不落快照)
       for (Standard existing : existingRows) {
         if (!submittedValues.contains(existing.fields().codeValue())) {
@@ -315,7 +439,8 @@ public class StandardCatalogService {
         if (existing != null) {
           // 版本快照:先落"修改前"的完整状态,再应用更新(32)
           versionRepository.recordSnapshot(existing, operator);
-          result.add(repository.update(codeSetRow(existing, codeSetCode, request, item), operator));
+          result.add(repository.update(
+              codeSetRow(existing, codeSetCode, request, item, groupStatus), operator));
         } else {
           result.add(
               repository.insert(
@@ -324,7 +449,7 @@ public class StandardCatalogService {
                       StandardKind.CODE,
                       generateUniqueRowCode(codeSetCode, item.codeValue()),
                       request.name(),
-                      StandardStatus.ENABLED,
+                      groupStatus,
                       1,
                       item.sortOrder() == null ? 0 : item.sortOrder(),
                       false,
@@ -417,6 +542,9 @@ public class StandardCatalogService {
       throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, codeSetCode);
     }
     StandardStatus target = parseStatus(status);
+    if (target == StandardStatus.DISABLED && countCodeSetReferences(codeSetCode) > 0) {
+      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, codeSetCode);
+    }
     AuditOperationHandle audit =
         auditService.start(
             new AuditOperationRequest(
@@ -463,7 +591,7 @@ public class StandardCatalogService {
                 "APPLICATION",
                 Map.of()));
     try {
-      if (fieldRepository.countByCodeSet(codeSetCode) > 0) {
+      if (countCodeSetReferences(codeSetCode) > 0) {
         throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, codeSetCode);
       }
       int count = repository.deleteByCodeSetCode(codeSetCode);
@@ -529,13 +657,14 @@ public class StandardCatalogService {
       Standard existing,
       String codeSetCode,
       SemanticStandardApi.CodeSetSaveRequest request,
-      SemanticStandardApi.CodeValueItem item) {
+      SemanticStandardApi.CodeValueItem item,
+      StandardStatus status) {
     return new Standard(
         existing.id(),
         StandardKind.CODE,
         existing.code(),
         request.name(),
-        existing.status(),
+        status,
         existing.version() + 1,
         item.sortOrder() == null ? existing.sortOrder() : item.sortOrder(),
         existing.preset(),
@@ -544,6 +673,32 @@ public class StandardCatalogService {
         existing.createdBy(),
         existing.createTime(),
         existing.updateTime());
+  }
+
+  public boolean publishFlowEnabled() {
+    return approvalApi != null && approvalApi.isFlowEnabled(ApprovalFlowCodes.STANDARD_PUBLISH);
+  }
+
+  private long countCodeSetReferences(String codeSetCode) {
+    long count = fieldRepository.countByCodeSet(codeSetCode);
+    for (StandardReferenceReader reader : referenceReaders) {
+      count += reader.countReferences(StandardKind.CODE, null, codeSetCode);
+    }
+    return count;
+  }
+
+  private long countReferences(Standard standard) {
+    if (standard.kind() == StandardKind.CODE) {
+      return countCodeSetReferences(standard.fields().codeSetCode());
+    }
+    long count = fieldRepository.countByStandard(standard.kind(), standard.id());
+    if (standard.kind() == StandardKind.NAMING && layerRepository != null) {
+      count += layerRepository.countByNamingStandard(standard.id());
+    }
+    for (StandardReferenceReader reader : referenceReaders) {
+      count += reader.countReferences(standard.kind(), standard.id(), null);
+    }
+    return count;
   }
 
   private static Standard.KindFields toFields(SemanticStandardApi.CreateRequest request) {

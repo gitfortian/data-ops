@@ -2,6 +2,7 @@ package io.yak.ops.business.semantic.repository;
 
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.semantic.api.StandardField;
+import io.yak.ops.business.semantic.api.StandardKind;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,4 +30,7 @@ public interface SemanticFieldRepository {
 
   /** 引用计数:绑定指定码集(std_code_set_code)的字段数;码集删除阻断用(32.1)。 */
   long countByCodeSet(String codeSetCode);
+
+  /** References from this project's standard field library. */
+  long countByStandard(StandardKind kind, Long standardId);
 }

@@ -1,9 +1,10 @@
-import { Badge, Button, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Badge, Button, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { history } from '@umijs/max';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { YakButton, YakEmpty } from '@/components/ui';
-import { findByBiz, getApprovalDetail, listFlows } from '@/services/approval/api';
+import { findByBiz, getApprovalDetail } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
 import {
   formatSemanticTime,
@@ -27,6 +28,7 @@ import {
   getSemanticPresetStatus,
   getSemanticStandard,
   getSemanticStandardUsage,
+  isStandardPublishFlowEnabled,
   initializeSemanticPresets,
   listSemanticStandardVersions,
   pageCodeSets,
@@ -77,6 +79,7 @@ const SemanticStandardsPage = () => {
   const [kind, setKind] = useState<SemanticStandardKind | ''>('');
   const [status, setStatus] = useState<'ENABLED' | 'DISABLED' | ''>('');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [detail, setDetail] = useState<SemanticStandardRecord | null>(null);
   const [usageSummary, setUsageSummary] = useState<SemanticStandardUsageSummary | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -90,6 +93,7 @@ const SemanticStandardsPage = () => {
   const [isPresetInitialized, setIsPresetInitialized] = useState(true);
   const [publishFlowEnabled, setPublishFlowEnabled] = useState(false);
   const [approvals, setApprovals] = useState<Record<string, ApprovalInstance>>({});
+  const { can } = usePermissionAccess();
 
   const isCodeSetView = kind === 'CODE';
   const hasFilter = Boolean(keyword || kind || status);
@@ -97,16 +101,15 @@ const SemanticStandardsPage = () => {
   // 发布审批开关(缺口单03):STANDARD_PUBLISH 流未配置/未启用时按关闭处理,维持现状直发。
   useEffect(() => {
     let alive = true;
-    listFlows(STANDARD_PUBLISH_FLOW_CODE)
-      .then((flows) => {
+    isStandardPublishFlowEnabled()
+      .then((enabled) => {
         if (alive) {
-          setPublishFlowEnabled(
-            (flows ?? []).some((flow) => flow.flowCode === STANDARD_PUBLISH_FLOW_CODE && flow.enabled),
-          );
+          setPublishFlowEnabled(enabled);
         }
       })
       .catch(() => {
-        /* 审批中心不可用/无 data-approval:read:保持开关关闭 */
+        // 配置查询不可用时按审批开启处理,避免 UI 展示可绕过的直启用入口。
+        if (alive) setPublishFlowEnabled(true);
       });
     return () => {
       alive = false;
@@ -136,6 +139,7 @@ const SemanticStandardsPage = () => {
   const loadStandards = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
       setLoading(true);
+      setLoadError(false);
       try {
         if (isCodeSetView) {
           const result = await pageCodeSets({
@@ -166,7 +170,11 @@ const SemanticStandardsPage = () => {
           }
         }
       } catch {
-        message.error('加载标准列表失败，请稍后重试');
+        setRecords([]);
+        setCodeSetRecords([]);
+        setTotal(0);
+        setApprovals({});
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -556,13 +564,15 @@ const SemanticStandardsPage = () => {
         width: 180,
         render: (_: unknown, record: CodeSetRecord) => (
           <Space size={0}>
-            <Button type="link" size="small" onClick={() => void openCodeSetEdit(record.codeSetCode)}>
-              编辑
-            </Button>
-            <Button type="link" size="small" onClick={() => toggleCodeSetStatus(record)}>
-              {record.status === 'ENABLED' ? '停用' : '启用'}
-            </Button>
-            {record.preset ? (
+            {can('semantic:update') ? <>
+              <Button type="link" size="small" onClick={() => void openCodeSetEdit(record.codeSetCode)}>
+                编辑
+              </Button>
+              <Button type="link" size="small" onClick={() => toggleCodeSetStatus(record)}>
+                {record.status === 'ENABLED' ? '停用' : '启用'}
+              </Button>
+            </> : null}
+            {can('semantic:delete') && record.preset ? (
               <Tooltip title="平台预置码集不可删除">
                 <span>
                   <Button type="link" size="small" danger disabled>
@@ -570,17 +580,17 @@ const SemanticStandardsPage = () => {
                   </Button>
                 </span>
               </Tooltip>
-            ) : (
+            ) : can('semantic:delete') ? (
               <Button type="link" size="small" danger onClick={() => removeCodeSet(record)}>
                 删除
               </Button>
-            )}
+            ) : null}
           </Space>
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [can],
   );
 
   const columns = useMemo(
@@ -651,10 +661,10 @@ const SemanticStandardsPage = () => {
           const gated = publishFlowEnabled && record.kind !== 'CODE';
           return (
             <Space size={0}>
-              <Button type="link" size="small" disabled={approvalPending} onClick={() => openEdit(record)}>
+              {can('semantic:update') ? <Button type="link" size="small" disabled={approvalPending} onClick={() => openEdit(record)}>
                 编辑
-              </Button>
-              {gated && record.status === 'DISABLED' ? (
+              </Button> : null}
+              {can('semantic:update') && gated && record.status === 'DISABLED' ? (
                 <Tooltip
                   title={approvalPending ? '已有在途生效审批单，禁止重复提交' : '启用需经审批，批准后自动生效'}
                 >
@@ -662,11 +672,11 @@ const SemanticStandardsPage = () => {
                     提交发布
                   </Button>
                 </Tooltip>
-              ) : (
+              ) : can('semantic:update') ? (
                 <Button type="link" size="small" disabled={approvalPending} onClick={() => toggleStatus(record)}>
                   {record.status === 'ENABLED' ? '停用' : '启用'}
                 </Button>
-              )}
+              ) : null}
               {instance ? (
                 <Button
                   type="link"
@@ -679,7 +689,7 @@ const SemanticStandardsPage = () => {
               <Button type="link" size="small" onClick={() => void openVersions(record)}>
                 版本
               </Button>
-              {record.preset ? (
+              {can('semantic:delete') && record.preset ? (
                 <Tooltip title="平台预置标准不可删除">
                   <span>
                     <Button type="link" size="small" danger disabled>
@@ -687,7 +697,7 @@ const SemanticStandardsPage = () => {
                     </Button>
                   </span>
                 </Tooltip>
-              ) : (
+              ) : can('semantic:delete') ? (
                 <Tooltip title={approvalPending ? '发布审批在途，行操作已冻结' : undefined}>
                   <span>
                     <Button
@@ -701,7 +711,7 @@ const SemanticStandardsPage = () => {
                     </Button>
                   </span>
                 </Tooltip>
-              )}
+              ) : null}
             </Space>
           );
         },
@@ -709,7 +719,7 @@ const SemanticStandardsPage = () => {
     ],
     // 行内操作为按行回调;仅审批开关与在途快照参与渲染,需随其重建列。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [approvals, publishFlowEnabled],
+    [approvals, can, publishFlowEnabled],
   );
 
   return (
@@ -742,7 +752,7 @@ const SemanticStandardsPage = () => {
             options={STATUS_OPTIONS}
           />
           <Input.Search allowClear placeholder="按编码或名称搜索" className="!w-[240px]" onSearch={handleSearch} />
-          <YakButton
+          {can('semantic:create') ? <YakButton
             type="primary"
             className="!h-9 !rounded-lg !px-4 !text-white"
             onClick={() => {
@@ -754,9 +764,20 @@ const SemanticStandardsPage = () => {
             }}
           >
             {isCodeSetView ? '新建码集' : '新建标准'}
-          </YakButton>
+          </YakButton> : null}
         </Space>
       </div>
+
+      {loadError ? (
+        <Alert
+          className="mt-4"
+          type="error"
+          showIcon
+          message="数据标准加载失败"
+          description="请检查网络连接后重试。"
+          action={<Button size="small" onClick={() => void loadStandards(pageNo, pageSize)}>重试</Button>}
+        />
+      ) : null}
 
       {isCodeSetView ? (
         <Table<CodeSetRecord>
@@ -769,8 +790,8 @@ const SemanticStandardsPage = () => {
             emptyText: (
               <YakEmpty
                 compact
-                title={hasFilter ? '没有符合筛选条件的码集' : '还没有码值标准'}
-                description={hasFilter ? '调整筛选条件或重置后再试' : '点击"新建码集"创建码值标准'}
+                title={loadError ? '码集加载失败' : hasFilter ? '没有符合筛选条件的码集' : '还没有码值标准'}
+                description={loadError ? '请点击上方“重试”重新加载。' : hasFilter ? '调整筛选条件或重置后再试' : '点击"新建码集"创建码值标准'}
               />
             ),
           }}
@@ -798,16 +819,18 @@ const SemanticStandardsPage = () => {
               <div>
                 <YakEmpty
                   compact
-                  title={hasFilter ? '没有符合筛选条件的标准' : '还没有数据标准'}
+                  title={loadError ? '数据标准加载失败' : hasFilter ? '没有符合筛选条件的标准' : '还没有数据标准'}
                   description={
-                    hasFilter
+                    loadError
+                      ? '请点击上方“重试”重新加载。'
+                      : hasFilter
                       ? '调整筛选条件或重置后再试'
                       : isPresetInitialized
                         ? '沉淀为标准的能力即将开放（ticket 40）'
                         : '可一键初始化平台预置标准（命名/类型/码值/单位/口径/安全骨架）'
                   }
                 />
-                {!hasFilter && !isPresetInitialized ? (
+                {!loadError && !hasFilter && !isPresetInitialized && can('semantic:create') ? (
                   <YakButton
                     type="primary"
                     className="!mb-6 !h-9 !rounded-lg !px-4 !text-white"
@@ -870,7 +893,7 @@ const SemanticStandardsPage = () => {
         }}
         onExists={(codeSetCode) => {
           // 新建时码集已存在 → 转入编辑既有码集
-          void openCodeSetEdit(codeSetCode);
+          if (can('semantic:update')) void openCodeSetEdit(codeSetCode);
         }}
       />
 
