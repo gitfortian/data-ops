@@ -1,6 +1,7 @@
 import { Alert, Button, Descriptions, Drawer, Space, Spin, Typography } from 'antd';
 import { history, useSearchParams } from '@umijs/max';
 import { useEffect, useMemo, useState } from 'react';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
 import type { ApprovalInstance } from '@/services/approval/types';
 import { getAffectedMetrics } from '@/services/metric/api';
@@ -49,7 +50,7 @@ const STANDARD_CONTEXT_COPY: Record<
   },
 };
 
-/** 标准详情抽屉(ticket 32):全量字段 + 引用/绕过统计与反哺建议。 */
+/** 标准详情抽屉(ticket 32):全量字段 + 累计采纳/绕过事件统计与反哺建议。 */
 const StandardDetailDrawer = ({
   open,
   standard,
@@ -59,6 +60,7 @@ const StandardDetailDrawer = ({
   onSubmitPublish,
   onClose,
 }: StandardDetailDrawerProps) => {
+  const { can } = usePermissionAccess();
   const [entryParams, setEntryParams] = useSearchParams();
   const deepLinkStandardId = parseStandardId(entryParams.get('standardId'));
   const [linkedStandard, setLinkedStandard] = useState<SemanticStandardRecord | null>(null);
@@ -164,9 +166,9 @@ const StandardDetailDrawer = ({
 
   const usageAdvice =
     effectiveUsageSummary && effectiveUsageSummary.applyCount + effectiveUsageSummary.bypassCount > 0
-      ? effectiveUsageSummary.bypassCount >= effectiveUsageSummary.applyCount
+      ? effectiveUsageSummary.bypassCount >= 3 && effectiveUsageSummary.bypassCount >= effectiveUsageSummary.applyCount
         ? '（⚠ 绕过偏高，建议复核该标准：修改或废弃）'
-        : '（引用健康）'
+        : '（采纳事件多于绕过事件）'
       : '';
 
   const closeDetail = () => {
@@ -249,7 +251,7 @@ const StandardDetailDrawer = ({
               ? [
                   {
                     key: 'usage',
-                    label: '引用/绕过',
+                    label: '累计采纳/绕过事件（非当前引用数）',
                     children: `${effectiveUsageSummary.applyCount} / ${effectiveUsageSummary.bypassCount}${usageAdvice}`,
                   },
                 ]
@@ -301,7 +303,7 @@ const StandardDetailDrawer = ({
                   },
                 ]
               : []),
-            ...(publishFlowEnabled &&
+            ...(can('semantic:update') && publishFlowEnabled &&
             effectiveStandard.kind !== 'CODE' &&
             effectiveStandard.status === 'DISABLED' &&
             onSubmitPublish &&

@@ -135,7 +135,7 @@ public class SemanticProcessController {
   @GetMapping("/{id}/fields")
   public Result<java.util.List<StandardFieldVO>> listFields(@PathVariable("id") Long id) {
     return Result.success(
-        fieldService.fieldsOfProcess(id).stream().map(fieldViewConverter::toView).toList());
+        fieldService.managedFieldsOfProcess(id).stream().map(fieldViewConverter::toView).toList());
   }
 
   public record BindFieldRequest(@NotNull(message = "是否必需不能为空") Boolean isRequired) {}
@@ -146,8 +146,22 @@ public class SemanticProcessController {
   public Result<Boolean> bindField(
       @PathVariable("id") Long processId,
       @PathVariable("fieldId") Long fieldId,
-      @org.springframework.web.bind.annotation.RequestBody @Valid BindFieldRequest request) {
-    fieldService.bindToProcess(processId, fieldId, Boolean.TRUE.equals(request.isRequired()));
+      @org.springframework.web.bind.annotation.RequestBody @Valid BindFieldRequest request,
+      HttpServletRequest httpRequest) {
+    fieldService.bindToProcess(processId, fieldId, Boolean.TRUE.equals(request.isRequired()),
+        currentUserProvider.getCurrentUser(httpRequest));
+    return Result.success(Boolean.TRUE);
+  }
+
+  @Operation(summary = "更新过程字段必需标记")
+  @RequiresPermission(SemanticPermissionCode.UPDATE)
+  @PutMapping("/{id}/fields/{fieldId}")
+  public Result<Boolean> updateFieldRequired(
+      @PathVariable("id") Long processId, @PathVariable("fieldId") Long fieldId,
+      @org.springframework.web.bind.annotation.RequestBody @Valid BindFieldRequest request,
+      HttpServletRequest httpRequest) {
+    fieldService.updateRequired(processId, fieldId, Boolean.TRUE.equals(request.isRequired()),
+        currentUserProvider.getCurrentUser(httpRequest));
     return Result.success(Boolean.TRUE);
   }
 
@@ -155,8 +169,9 @@ public class SemanticProcessController {
   @RequiresPermission(SemanticPermissionCode.UPDATE)
   @DeleteMapping("/{id}/fields/{fieldId}")
   public Result<Boolean> unbindField(
-      @PathVariable("id") Long processId, @PathVariable("fieldId") Long fieldId) {
-    fieldService.unbindFromProcess(processId, fieldId);
+      @PathVariable("id") Long processId, @PathVariable("fieldId") Long fieldId,
+      HttpServletRequest httpRequest) {
+    fieldService.unbindFromProcess(processId, fieldId, currentUserProvider.getCurrentUser(httpRequest));
     return Result.success(Boolean.TRUE);
   }
 
@@ -164,8 +179,9 @@ public class SemanticProcessController {
   @RequiresPermission(SemanticPermissionCode.UPDATE)
   @PostMapping("/{id}/fields/reorder")
   public Result<Boolean> reorderFields(
-      @PathVariable("id") Long id, @Valid @RequestBody SemanticFieldApi.ReorderRequest request) {
-    fieldService.reorderProcessFields(id, request.orderedFieldIds());
+      @PathVariable("id") Long id, @Valid @RequestBody SemanticFieldApi.ReorderRequest request,
+      HttpServletRequest httpRequest) {
+    fieldService.reorderProcessFields(id, request.orderedFieldIds(), currentUserProvider.getCurrentUser(httpRequest));
     return Result.success(Boolean.TRUE);
   }
 }

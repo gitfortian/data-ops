@@ -12,4 +12,7 @@ public interface SemanticStandardVersionRepository {
 
   /** All snapshots of one standard, newest id first. */
   List<StandardVersion> listByStandard(Long standardId);
+
+  /** All historical value snapshots that belong to a code set, including deleted values. */
+  List<StandardVersion> listByCodeSet(String codeSetCode);
 }

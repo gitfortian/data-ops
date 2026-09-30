@@ -28,6 +28,18 @@ public class StandardPublishApprovalHandler implements ApprovalFlowHandler {
   @Override
   public void onApproved(ApprovalDecision decision) {
     long standardId = readStandardId(decision.payloadJson());
+    try {
+      JsonNode payload = MAPPER.readTree(decision.payloadJson());
+      var current = catalogService.lockDefinition(standardId);
+      if (!payload.path("standardVersion").isInt()
+          || payload.path("standardVersion").asInt() != current.version()) {
+        throw new io.yak.ops.business.semantic.exception.SemanticException(
+            io.yak.ops.common.enums.semantic.SemanticErrorCode.VERSION_CONFLICT,
+            "送审版本已失效，请撤销后重新提交");
+      }
+    } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+      throw new IllegalStateException("审批定义快照解析失败", exception);
+    }
     catalogService.enableAfterApproval(standardId, decision.applicant());
     log.info("标准生效审批通过即启用: standardId={}, applicant={}", standardId,
         decision.applicant());

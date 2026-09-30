@@ -59,6 +59,14 @@ public class StandardRepositoryAdapter implements SemanticStandardRepository {
   }
 
   @Override
+  public Optional<Standard> findByIdForUpdate(Long id) {
+    return Optional.ofNullable(mapper.selectOne(new LambdaQueryWrapper<SemanticStandardPO>()
+        .eq(SemanticStandardPO::getId, id)
+        .eq(SemanticStandardPO::getProjectId, requiredProjectId()).last("FOR UPDATE")))
+        .map(StandardRepositoryAdapter::toDomain);
+  }
+
+  @Override
   public boolean existsByCode(StandardKind kind, String code) {
     Long projectId = requiredProjectId();
     return mapper.selectCount(
@@ -254,6 +262,13 @@ public class StandardRepositoryAdapter implements SemanticStandardRepository {
         .stream()
         .map(StandardRepositoryAdapter::toDomain)
         .toList();
+  }
+
+  @Override
+  public List<Standard> lockCodeSet(String codeSetCode) {
+    return mapper.selectList(codeSetGroupWrapper(requiredProjectId(), codeSetCode)
+        .orderByAsc(SemanticStandardPO::getId).last("FOR UPDATE")).stream()
+        .map(StandardRepositoryAdapter::toDomain).toList();
   }
 
   /** 严格按 code_set_code 匹配(不含存量空码集行);创建判重与存在性检查用。 */

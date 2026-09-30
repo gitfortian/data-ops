@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.semantic.api.Standard;
@@ -46,6 +47,19 @@ public class StandardVersionRepositoryAdapter implements SemanticStandardVersion
                 .eq(SemanticStandardVersionPO::getProjectId, projectId)
                 .eq(SemanticStandardVersionPO::getStandardId, standardId)
                 .orderByDesc(SemanticStandardVersionPO::getId))
+        .stream()
+        .map(StandardVersionRepositoryAdapter::toDomain)
+        .toList();
+  }
+
+  @Override
+  public List<StandardVersion> listByCodeSet(String codeSetCode) {
+    Long projectId = requiredProjectId();
+    return mapper.selectList(new QueryWrapper<SemanticStandardVersionPO>()
+            .select("id", "project_id", "standard_id", "version", "payload_json", "operated_by", "create_time")
+            .eq("project_id", projectId)
+            .eq("code_set_code", codeSetCode)
+            .orderByDesc("id"))
         .stream()
         .map(StandardVersionRepositoryAdapter::toDomain)
         .toList();

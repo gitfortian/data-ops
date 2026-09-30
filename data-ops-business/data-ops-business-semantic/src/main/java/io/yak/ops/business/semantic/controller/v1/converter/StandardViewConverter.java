@@ -122,6 +122,7 @@ public class StandardViewConverter {
     CodeSetDetailVO vo = new CodeSetDetailVO();
     vo.setCodeSetCode(codeSetCode);
     vo.setLegacy(legacy);
+    vo.setRevision(io.yak.ops.business.semantic.catalog.CodeSetRevision.of(values));
     vo.setValueCount(values.size());
     vo.setValues(values.stream().map(this::toView).toList());
     if (!values.isEmpty()) {
@@ -129,8 +130,9 @@ public class StandardViewConverter {
       vo.setName(head.name());
       vo.setDescription(head.description());
       vo.setSortOrder(head.sortOrder());
-      vo.setStatus(head.status().name());
-      vo.setPreset(head.preset());
+      vo.setStatus(values.stream().anyMatch(value -> value.status() == io.yak.ops.business.semantic.api.StandardStatus.DISABLED)
+          ? "DISABLED" : "ENABLED");
+      vo.setPreset(values.stream().anyMatch(Standard::preset));
       vo.setUpdateTime(
           values.stream().map(Standard::updateTime).max(java.time.LocalDateTime::compareTo).orElse(null));
     }

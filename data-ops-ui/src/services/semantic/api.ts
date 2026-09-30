@@ -26,8 +26,8 @@ import type {
 
 const SEMANTIC_API_PREFIX = '/api/v1/semantic';
 
-/** 32 首期开放完整管理的类别(决策 C):命名+类型。 */
-export const MANAGED_STANDARD_KINDS: readonly SemanticStandardRecord['kind'][] = ['NAMING', 'TYPE'];
+/** 六类数据标准均支持管理。 */
+export const MANAGED_STANDARD_KINDS: readonly SemanticStandardRecord['kind'][] = ['NAMING', 'TYPE', 'CODE', 'UNIT', 'CALIBER', 'SECURITY'];
 
 export const pageSemanticStandards = (params: SemanticStandardPageParams): Promise<SemanticPageResult> =>
   HttpUtils.postData<SemanticPageResult>(`${SEMANTIC_API_PREFIX}/standards/page`, params);
@@ -189,6 +189,9 @@ export const createSemanticField = (payload: SemanticFieldSavePayload): Promise<
 export const updateSemanticField = (id: number, payload: SemanticFieldUpdatePayload): Promise<SemanticFieldRecord> =>
   HttpUtils.putData<SemanticFieldRecord>(`${SEMANTIC_API_PREFIX}/fields/${id}`, payload);
 
+export const changeSemanticFieldStatus = (id: number, status: 'ENABLED' | 'DISABLED'): Promise<SemanticFieldRecord> =>
+  HttpUtils.postData<SemanticFieldRecord>(`${SEMANTIC_API_PREFIX}/fields/${id}/status`, { status });
+
 export const deleteSemanticField = (id: number): Promise<boolean> =>
   HttpUtils.deleteData<boolean>(`${SEMANTIC_API_PREFIX}/fields/${id}`);
 
@@ -196,7 +199,13 @@ export const listSemanticProcessFields = (processId: number): Promise<SemanticFi
   HttpUtils.getData<SemanticFieldRecord[]>(`${SEMANTIC_API_PREFIX}/processes/${processId}/fields`);
 
 export const bindSemanticProcessField = (processId: number, fieldId: number, isRequired: boolean): Promise<boolean> =>
-  HttpUtils.postData<boolean>(`${SEMANTIC_API_PREFIX}/processes/${processId}/fields/${fieldId}`, { isRequired });
+  HttpUtils.postData<boolean>(`${SEMANTIC_API_PREFIX}/processes/${processId}/fields/${fieldId}`, { isRequired: isRequired ?? false });
+
+export const updateSemanticProcessFieldRequired = (processId: number, fieldId: number, isRequired: boolean): Promise<boolean> =>
+  HttpUtils.putData<boolean>(`${SEMANTIC_API_PREFIX}/processes/${processId}/fields/${fieldId}`, { isRequired });
+
+export const reorderSemanticProcessFields = (processId: number, orderedFieldIds: number[]): Promise<boolean> =>
+  HttpUtils.postData<boolean>(`${SEMANTIC_API_PREFIX}/processes/${processId}/fields/reorder`, { orderedFieldIds });
 
 export const unbindSemanticProcessField = (processId: number, fieldId: number): Promise<boolean> =>
   HttpUtils.deleteData<boolean>(`${SEMANTIC_API_PREFIX}/processes/${processId}/fields/${fieldId}`);
@@ -277,6 +286,7 @@ export const listSemanticProcessFieldCounts = (): Promise<{ processId: number; f
 /** 码集(ticket 32.1 码值类聚合交互:一次保存"码集+多行码值")。 */
 
 export interface CodeSetSavePayload {
+  revision?: string;
   codeSetCode: string;
   /** 存量空码集行补全编码时传原组键(std_code),其余不传。 */
   originCodeSetCode?: string;
