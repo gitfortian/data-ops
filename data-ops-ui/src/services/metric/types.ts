@@ -218,6 +218,11 @@ export interface PublishedMetricContract {
   snapshot?: string;
 }
 
+export interface MetricPublicationSummary {
+  metricId: number;
+  metricVersion: number;
+}
+
 export interface MetricVersionRef {
   metricId: number;
   versionNo: number | null;

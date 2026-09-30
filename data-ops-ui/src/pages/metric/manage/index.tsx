@@ -3,7 +3,14 @@ import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { useModel, useNavigate, useSearchParams } from '@umijs/max';
 import { YakButton, YakEmpty } from '@/components/ui';
-import { changeMetricStatus, deleteMetric, getMetricStats, listMetricTags, pageMetrics } from '@/services/metric/api';
+import {
+  changeMetricStatus,
+  deleteMetric,
+  getMetricPublicationSummaries,
+  getMetricStats,
+  listMetricTags,
+  pageMetrics,
+} from '@/services/metric/api';
 import type { MetricRecord, MetricStatus, MetricTagRecord, MetricType } from '@/services/metric/types';
 import { getSemanticDomainTree } from '@/services/semantic/api';
 import { toDomainTreeData } from '@/services/semantic/domainTree';
@@ -24,6 +31,12 @@ const parsePositiveId = (value: string | null): number | null => {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const publicationReadFailureState = (error: unknown): 'FORBIDDEN' | 'UNAVAILABLE' => {
+  const response = error as { status?: number; response?: { status?: number } } | null;
+  const status = response?.status ?? response?.response?.status;
+  return status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE';
 };
 
 const MetricManagePage = () => {
@@ -55,6 +68,10 @@ const MetricManagePage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editing, setEditing] = useState<MetricRecord | null>(null);
   const [stats, setStats] = useState({ total: 0, atomic: 0, derived: 0, composite: 0 });
+  const [publicationVersions, setPublicationVersions] = useState<Record<number, number>>({});
+  const [publicationState, setPublicationState] = useState<
+    'LOADING' | 'READY' | 'UNAVAILABLE' | 'FORBIDDEN'
+  >('LOADING');
 
   const syncBusinessContext = (nextDomainId: number | null, nextProcessId: number | null) => {
     const next = new URLSearchParams(entryParams);
@@ -68,6 +85,7 @@ const MetricManagePage = () => {
   const loadMetrics = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
       setLoading(true);
+      setPublicationState('LOADING');
       try {
         const result = await pageMetrics({
           pageNo: targetPageNo,
@@ -80,11 +98,29 @@ const MetricManagePage = () => {
           owner: owner.trim() || undefined,
           tagIds: tagIds.length ? tagIds : undefined,
         });
-        setRecords(result.records ?? []);
+        const nextRecords = result.records ?? [];
+        setRecords(nextRecords);
         setTotal(result.total ?? 0);
+        if (!nextRecords.length) {
+          setPublicationVersions({});
+          setPublicationState('READY');
+        } else {
+          try {
+            const summaries = await getMetricPublicationSummaries(nextRecords.map((record) => record.id));
+            setPublicationVersions(Object.fromEntries(
+              summaries.map((summary) => [summary.metricId, summary.metricVersion]),
+            ));
+            setPublicationState('READY');
+          } catch (error) {
+            setPublicationVersions({});
+            setPublicationState(publicationReadFailureState(error));
+          }
+        }
       } catch {
         setRecords([]);
         setTotal(0);
+        setPublicationVersions({});
+        setPublicationState('UNAVAILABLE');
         message.error('加载指标列表失败');
       } finally {
         setLoading(false);
@@ -244,7 +280,27 @@ const MetricManagePage = () => {
       width: 70,
       render: (value: MetricStatus) => <Tag color={METRIC_STATUS_COLORS[value]}>{METRIC_STATUS_LABELS[value]}</Tag>,
     },
-    { title: '版本', dataIndex: 'version', width: 55, align: 'right' as const },
+    {
+      title: '发布版本',
+      key: 'publicationVersion',
+      width: 220,
+      render: (_: unknown, record: MetricRecord) => {
+        if (publicationState === 'LOADING') return <Tag>发布状态读取中</Tag>;
+        if (publicationState === 'FORBIDDEN') return <Tag color="orange">无权读取发布状态</Tag>;
+        if (publicationState === 'UNAVAILABLE') return <Tag color="orange">发布状态暂不可用</Tag>;
+        const publishedVersion = publicationVersions[record.id];
+        if (publishedVersion == null) return <Tag>未发布</Tag>;
+        return (
+          <Space size={2} wrap>
+            <Tag color="green">Published v{publishedVersion}</Tag>
+            {publishedVersion === record.version
+              ? <Tag color="green">草稿与发布版一致</Tag>
+              : <Tag color="orange">草稿 v{record.version} 已偏离发布版</Tag>}
+          </Space>
+        );
+      },
+    },
+    { title: '当前版本', dataIndex: 'version', width: 75, align: 'right' as const },
     { title: '负责人', dataIndex: 'owner', width: 80, ellipsis: true, render: (value?: string) => value || '-' },
     {
       title: '更新时间',

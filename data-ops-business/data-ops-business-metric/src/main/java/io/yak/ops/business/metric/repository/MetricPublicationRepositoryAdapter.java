@@ -96,6 +96,16 @@ public class MetricPublicationRepositoryAdapter implements MetricPublicationRepo
   }
 
   @Override
+  public List<MetricActivePublicationPO> listActiveByMetricIds(List<Long> metricIds) {
+    if (metricIds == null || metricIds.isEmpty()) return List.of();
+    Long projectId = currentProject.requireProjectId();
+    return activeMapper.selectList(new LambdaQueryWrapper<MetricActivePublicationPO>()
+        .eq(MetricActivePublicationPO::getProjectId, projectId)
+        .in(MetricActivePublicationPO::getMetricId, metricIds)
+        .orderByAsc(MetricActivePublicationPO::getMetricId));
+  }
+
+  @Override
   public MetricActivePublicationPO findActiveForUpdate(Long metricId) {
     Long projectId = currentProject.requireProjectId();
     return activeMapper.selectOne(new LambdaQueryWrapper<MetricActivePublicationPO>()
