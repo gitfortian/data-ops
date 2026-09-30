@@ -10,6 +10,7 @@ import io.yak.ops.business.mdm.domain.attribute.MdmAttribute;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionMode;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionStatus;
 import io.yak.ops.business.mdm.domain.entity.MdmEntity;
+import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
 import io.yak.ops.business.mdm.exception.MdmException;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmAttributeRepository;
 import io.yak.ops.business.mdm.processing.DedupSql;
@@ -114,7 +115,7 @@ public class MdmDataServiceSourceProvider implements DataServiceSourceProvider {
             String.valueOf(config.getId()),
             apiName(entity, config),
             "MDM_RECORD",
-            publishable(config) ? "ONLINE" : "OFFLINE",
+            publishable(config, entity) ? "ONLINE" : "OFFLINE",
             revision,
             (int) Math.floorMod(revision, Integer.MAX_VALUE - 1L) + 1,
             datasourceId(entity.id()),
@@ -168,9 +169,10 @@ public class MdmDataServiceSourceProvider implements DataServiceSourceProvider {
                     "实体尚未生成采集落地任务,无法确定平台库数据源,不能发布分发 API"));
   }
 
-  private static boolean publishable(MdmDistributionPO config) {
+  private static boolean publishable(MdmDistributionPO config, MdmEntity entity) {
     return MdmDistributionMode.API.name().equals(config.getDistributeMode())
-        && MdmDistributionStatus.ACTIVE.name().equals(config.getStatus());
+        && MdmDistributionStatus.ACTIVE.name().equals(config.getStatus())
+        && entity.status() == MdmEntityStatus.ACTIVE;
   }
 
   /** 只有 API 模板变了才翻转 revision(updateAvailable 语义);执行结果回写不触发重发布。 */

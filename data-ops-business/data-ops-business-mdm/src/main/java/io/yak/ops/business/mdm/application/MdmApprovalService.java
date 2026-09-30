@@ -51,6 +51,8 @@ public class MdmApprovalService {
   static final String PAYLOAD_ENTITY_CODE = "entityCode";
   static final String PAYLOAD_MASTER_ID = "masterId";
   static final String PAYLOAD_CHANGE_TYPE = "changeType";
+  /** Clear reviewed overrides and resume source refresh for the listed fields. */
+  public static final String USE_SOURCE_FIELDS = "$useSource";
 
   /** 中心 payload 上限 64KB,留出包装字段余量。 */
   private static final int MAX_CHANGE_CONTENT_LENGTH = 60_000;
@@ -174,7 +176,7 @@ public class MdmApprovalService {
     if (changeContent.length() > MAX_CHANGE_CONTENT_LENGTH) {
       throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "变更内容超长");
     }
-    rejectPkModification(entityId, changeType, changeContent);
+    validateUpdateFields(entityId, changeType, changeContent);
     boolean inFlight = changeRepository.listByMaster(entityId, masterId).stream()
         .anyMatch(c -> c.approvalStatus() == MdmApprovalStatus.PENDING);
     if (inFlight) {
@@ -182,17 +184,49 @@ public class MdmApprovalService {
     }
   }
 
-  /** PK 是 master_id 的哈希原料,改 PK 会让属性与主键分叉,提交侧直接拒绝(review P0)。 */
-  private void rejectPkModification(Long entityId, MdmChangeType changeType, String changeContent) {
+  /** Only declared non-PK attributes may change; PK edits would split the row from master_id. */
+  private void validateUpdateFields(Long entityId, MdmChangeType changeType, String changeContent) {
     if (changeType != MdmChangeType.UPDATE) {
       return;
     }
-    Set<String> pkCodes = attributeRepository.listByEntity(entityId).stream()
+    Map<String, Object> content = CleanJson.readObject(changeContent);
+    Object resetValue = content.get(USE_SOURCE_FIELDS);
+    Set<String> resetFields;
+    if (!content.containsKey(USE_SOURCE_FIELDS)) {
+      resetFields = Set.of();
+    } else if (resetValue instanceof List<?> values
+        && values.stream().allMatch(String.class::isInstance)) {
+      resetFields = values.stream().map(String.class::cast).collect(Collectors.toSet());
+      if (resetFields.size() != values.size()) {
+        throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "$useSource 属性不能重复");
+      }
+    } else {
+      throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "$useSource 必须是属性编码数组");
+    }
+    Set<String> patchFields = content.keySet().stream()
+        .filter(key -> !USE_SOURCE_FIELDS.equals(key)).collect(Collectors.toSet());
+    if (patchFields.stream().anyMatch(resetFields::contains)) {
+      throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "同一属性不能同时修改并恢复来源");
+    }
+    if (patchFields.isEmpty() && resetFields.isEmpty()) {
+      throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "变更内容至少包含一个属性修改或来源恢复");
+    }
+    List<io.yak.ops.business.mdm.domain.attribute.MdmAttribute> attributes =
+        attributeRepository.listByEntity(entityId);
+    Set<String> allowed = attributes.stream().map(attribute -> attribute.code())
+        .collect(Collectors.toSet());
+    Set<String> requested = new java.util.HashSet<>(patchFields);
+    requested.addAll(resetFields);
+    if (!allowed.containsAll(requested)) {
+      requested.removeAll(allowed);
+      throw new MdmException(MdmErrorCode.APPROVAL_FAILED,
+          "变更引用了未定义属性: " + String.join(", ", requested));
+    }
+    Set<String> pkCodes = attributes.stream()
         .filter(attribute -> attribute.type() == MdmAttributeType.PK)
         .map(attribute -> attribute.code())
         .collect(Collectors.toSet());
-    Set<String> patchKeys = CleanJson.readObject(changeContent).keySet();
-    for (String key : patchKeys) {
+    for (String key : requested) {
       if (pkCodes.contains(key)) {
         throw new MdmException(
             MdmErrorCode.PK_CHANGE_FORBIDDEN,

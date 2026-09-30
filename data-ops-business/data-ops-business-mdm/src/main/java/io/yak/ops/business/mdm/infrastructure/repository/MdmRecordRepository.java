@@ -39,7 +39,7 @@ public interface MdmRecordRepository {
   /** 按 ID 批量取 ACTIVE 记录(合并预览/执行的目标记录)。 */
   List<MdmRecord> listActiveByIds(Long entityId, List<Long> ids);
 
-  /** 合并执行后更新记录(attributes/source_ids/status/version)。 */
+  /** 以 record.version()-1 做 compare-and-set;并发更新只能有一个写入成功。 */
   boolean update(MdmRecord record);
 
   /** 列出实体全部 ACTIVE 记录(清洗预览/执行用,有安全上限防止无界查询)。 */

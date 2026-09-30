@@ -6,19 +6,24 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.mdm.domain.approval.MdmApprovalStatus;
 import io.yak.ops.business.mdm.domain.approval.MdmChange;
+import io.yak.ops.business.mdm.domain.attribute.MdmAttributeType;
 import io.yak.ops.business.mdm.domain.clean.CleanJson;
 import io.yak.ops.business.mdm.domain.record.MdmRecord;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import io.yak.ops.business.mdm.domain.record.MdmRecordVersion;
 import io.yak.ops.business.mdm.exception.MdmException;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmChangeRepository;
+import io.yak.ops.business.mdm.infrastructure.repository.MdmAttributeRepository;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmRecordRepository;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmRecordVersionRepository;
 import io.yak.ops.business.mdm.notification.MdmNotifier;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.enums.mdm.MdmErrorCode;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +43,7 @@ public class MdmChangeEffectService {
 
   private final MdmChangeRepository changeRepository;
   private final MdmRecordRepository recordRepository;
+  private final MdmAttributeRepository attributeRepository;
   private final MdmRecordVersionRepository versionRepository;
   private final BusinessAuditService auditService;
   private final MdmNotifier notifier;
@@ -135,8 +141,19 @@ public class MdmChangeEffectService {
       case UPDATE -> {
         MdmRecord record = requireRecord(change);
         snapshot(record, null, change.applicant());
+        Map<String, Object> content = CleanJson.readObject(change.changeContent());
+        validateUpdatePkFields(change.entityId(), content);
+        Map<String, Object> patch = new HashMap<>(content);
+        Object resetValue = patch.remove(MdmApprovalService.USE_SOURCE_FIELDS);
+        Set<String> useSource = resetValue instanceof Iterable<?> values
+            ? toStringSet(values) : Set.of();
+        Map<String, Object> overrides = new HashMap<>(
+            CleanJson.readObject(record.attributeOverrides()));
+        overrides.putAll(patch);
+        useSource.forEach(overrides::remove);
         MdmRecord updated = record.appliedChange(
-            mergeAttributes(record.attributes(), change.changeContent()), MdmRecordStatus.ACTIVE);
+            mergeAttributes(record.attributes(), patch), MdmRecordStatus.ACTIVE,
+            CleanJson.write(overrides));
         persist(updated, change.id(), approved.approver());
         yield updated;
       }
@@ -173,11 +190,54 @@ public class MdmChangeEffectService {
         record.attributes(), record.status(), changeId, operator, null));
   }
 
+  /** Approval callbacks also enforce stable identity for pending requests created before rollout. */
+  private void validateUpdatePkFields(Long entityId, Map<String, Object> content) {
+    Set<String> patchFields = new HashSet<>(content.keySet());
+    boolean hasResetFields = patchFields.remove(MdmApprovalService.USE_SOURCE_FIELDS);
+    Set<String> requested = new HashSet<>(patchFields);
+    Object resetValue = content.get(MdmApprovalService.USE_SOURCE_FIELDS);
+    Set<String> resetFields = new HashSet<>();
+    if (hasResetFields) {
+      if (!(resetValue instanceof Iterable<?> values)) {
+        throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "$useSource 必须是属性编码数组");
+      }
+      for (Object value : values) {
+        if (!(value instanceof String field)) {
+          throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "$useSource 必须是属性编码数组");
+        }
+        resetFields.add(field);
+      }
+    }
+    if (patchFields.stream().anyMatch(resetFields::contains)) {
+      throw new MdmException(MdmErrorCode.APPROVAL_FAILED, "同一属性不能同时修改并恢复来源");
+    }
+    requested.addAll(resetFields);
+    Set<String> pkCodes = attributeRepository.listByEntity(entityId).stream()
+        .filter(attribute -> attribute.type() == MdmAttributeType.PK)
+        .map(attribute -> attribute.code())
+        .collect(java.util.stream.Collectors.toSet());
+    requested.retainAll(pkCodes);
+    if (!requested.isEmpty()) {
+      throw new MdmException(
+          MdmErrorCode.PK_CHANGE_FORBIDDEN,
+          "审批回调包含 PK 属性，拒绝破坏 master_id 身份: " + String.join(", ", requested));
+    }
+  }
+
   /** 合并变更内容到现有 attributes(JSON patch 模式)。 */
-  private String mergeAttributes(String existingAttributes, String changeContent) {
+  private String mergeAttributes(String existingAttributes, Map<String, Object> patch) {
     Map<String, Object> existing = CleanJson.readObject(existingAttributes);
-    Map<String, Object> patch = CleanJson.readObject(changeContent);
     existing.putAll(patch);
     return CleanJson.write(existing);
+  }
+
+  private static Set<String> toStringSet(Iterable<?> values) {
+    Set<String> result = new HashSet<>();
+    for (Object value : values) {
+      if (value instanceof String field) {
+        result.add(field);
+      }
+    }
+    return result;
   }
 }

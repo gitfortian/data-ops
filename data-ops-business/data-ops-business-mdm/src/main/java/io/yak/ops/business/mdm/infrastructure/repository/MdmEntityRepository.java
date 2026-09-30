@@ -23,5 +23,7 @@ public interface MdmEntityRepository {
 
   boolean changeStatus(Long id, MdmEntityStatus status);
 
+  boolean hasReferences(Long id);
+
   boolean deleteById(Long id);
 }

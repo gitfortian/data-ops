@@ -9,6 +9,7 @@ import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistribution;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionMode;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionStatus;
+import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import io.yak.ops.business.mdm.exception.MdmException;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmDistributionRepository;
@@ -229,6 +230,9 @@ public class MdmDistributionService {
     MdmDistribution config = get(id);
     if (config.status() != MdmDistributionStatus.ACTIVE) {
       throw new MdmException(MdmErrorCode.DISTRIBUTE_FAILED, "仅生效状态的分发配置可执行");
+    }
+    if (entityService.get(config.entityId()).status() != MdmEntityStatus.ACTIVE) {
+      throw new MdmException(MdmErrorCode.DISTRIBUTE_FAILED, "主数据实体未生效，不能发布或刷新供数 API");
     }
     if (config.mode() != MdmDistributionMode.API) {
       throw new MdmException(

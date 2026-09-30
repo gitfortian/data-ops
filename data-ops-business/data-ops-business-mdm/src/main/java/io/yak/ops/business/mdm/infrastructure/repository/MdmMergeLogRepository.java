@@ -9,4 +9,6 @@ public interface MdmMergeLogRepository {
   MdmMergeLog insert(MdmMergeLog log, String operator);
 
   List<MdmMergeLog> listByEntity(Long entityId);
+
+  boolean existsByRuleId(Long ruleId);
 }

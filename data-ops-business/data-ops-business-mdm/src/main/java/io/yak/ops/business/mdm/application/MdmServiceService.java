@@ -6,6 +6,7 @@ import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.mdm.domain.clean.CleanJson;
+import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
 import io.yak.ops.business.mdm.domain.record.MdmRecord;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import io.yak.ops.business.mdm.domain.subscription.MdmSubscription;
@@ -59,6 +60,9 @@ public class MdmServiceService {
 
   /** 按 master_id 查询单条 ACTIVE 记录。 */
   public RecordView getRecordByMasterId(Long entityId, String masterId) {
+    if (entityService.get(entityId).status() != MdmEntityStatus.ACTIVE) {
+      throw new MdmException(MdmErrorCode.RECORD_NOT_FOUND, "主数据实体未生效");
+    }
     if (!StringUtils.hasText(masterId)) {
       throw new MdmException(MdmErrorCode.RECORD_NOT_FOUND, "master_id 不能为空");
     }
@@ -71,6 +75,9 @@ public class MdmServiceService {
   /** 条件搜索:分页,仅 ACTIVE 记录。 */
   public PageData<RecordView> searchRecords(
       Long entityId, String keyword, int pageNo, int pageSize) {
+    if (entityService.get(entityId).status() != MdmEntityStatus.ACTIVE) {
+      throw new MdmException(MdmErrorCode.RECORD_NOT_FOUND, "主数据实体未生效");
+    }
     PageData<MdmRecord> page = recordRepository.page(
         entityId, pageNo, Math.min(pageSize, 200), keyword, MdmRecordStatus.ACTIVE, List.of());
     return page.map(MdmServiceService::toRecordView);

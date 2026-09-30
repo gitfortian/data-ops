@@ -60,6 +60,9 @@ io.yak.ops.business.mdm
 | yak_mdm_subscription | V10 | 59 |
 | yak_mdm_change | V11 | 60 |
 | (61/62 复用现有表,无新迁移,仅服务端聚合) | — | 61/62 |
+| yak_mdm_record.attribute_overrides | V17 | #281 数据正确性收口 |
+
+记录治理写入由 Repository 以 `(project_id, record_id, expected_version)` compare-and-set 更新。来源加工 SQL 的生成器是来源值优先级、source_ids 幂等和无效变化不增版规则的唯一归属地；已注册的数据开发任务在逻辑变更后需重新生成 SQL。
 
 ## 菜单注册
 
