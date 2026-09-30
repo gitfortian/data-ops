@@ -831,7 +831,7 @@ const MetricDetailPage = () => {
       ) : null}
 
       <Drawer title="管理标签" open={tagDrawerOpen} onClose={() => setTagDrawerOpen(false)} width={360}>
-        <div className="text-[13px] text-[#667085]">选择该指标挂载的标签(标签本体在指标服务页创建)</div>
+        <div className="text-[13px] text-[#667085]">选择该指标挂载的标签(标签本体在指标标签与统计页创建)</div>
         <Select
           className="mt-3 !w-full"
           mode="multiple"

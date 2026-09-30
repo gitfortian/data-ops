@@ -5,9 +5,7 @@ import {
   getQuickCreateRoutes,
   getRouteMetadata,
   getStandaloneNavigationRoutes,
-  type NavigationGroupWithRoutes,
   type NavigationIconKey,
-  type NavigationRoute,
 } from "@/config/navigation";
 import { RouteAccessBoundary } from "@/components/security";
 import SecurityProjectSwitcher from "@/components/security/SecurityProjectSwitcher";
@@ -49,8 +47,10 @@ import {
 } from "@/services/security/messages";
 import { recordRecentVisit } from "@/utils/recent-visits";
 
+import SidebarNavigation from './SidebarNavigation';
+
 const HEADER_HEIGHT = 48;
-const SIDEBAR_WIDTH = 200;
+const SIDEBAR_WIDTH = 240;
 const COLLAPSED_SIDEBAR_WIDTH = 64;
 
 const NAVIGATION_ICON_SIZE = 17;
@@ -275,11 +275,6 @@ function SiteLayoutContent() {
     }),
     [permissionCodes, menuCodes],
   );
-  const homeRoutes = standaloneRoutes.filter((route) => route.id === "home");
-  const businessStandaloneRoutes = standaloneRoutes.filter(
-    (route) => route.id !== "home"
-  );
-
   const quickCreateRef = useRef<HTMLDivElement>(null);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -350,56 +345,6 @@ function SiteLayoutContent() {
     },
   ];
 
-  const renderStandaloneItem = (route: NavigationRoute) => {
-    const active = activeNavigationId === route.id;
-
-    return (
-      <Link
-        key={route.id}
-        to={route.path}
-        title={compact ? route.title : undefined}
-        aria-label={compact ? route.title : undefined}
-        aria-current={active ? "page" : undefined}
-        className={[
-          "group relative flex h-10 w-full items-center border-0 bg-transparent",
-          "text-left transition-colors duration-150",
-          compact ? "justify-center px-0" : "gap-3 px-0",
-          active
-            ? "font-semibold text-[#161823]"
-            : "font-medium text-[rgba(22,24,35,0.55)] hover:text-[#161823]",
-        ].join(" ")}
-      >
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[16px]">
-          {route.iconKey && navigationIcons[route.iconKey]}
-        </span>
-
-        {!compact && (
-          <span className="min-w-0 flex-1 truncate text-[14px]">
-            {route.title}
-          </span>
-        )}
-
-        {compact && active && (
-          <span className="absolute right-0 h-4 w-[2px] rounded-full bg-[#161823]" />
-        )}
-      </Link>
-    );
-  };
-
-  /**
-   * 抖音菜单允许多个分组同时展开，
-   * 因此这里不再使用单个 openGroupId。
-   */
-  const [openGroupIds, setOpenGroupIds] = useState<Set<string>>(() =>
-    new Set(
-      getActiveNavigationGroupPath(
-        location.pathname,
-        permissionCodes,
-        menuCodes,
-      )
-    )
-  );
-
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 1080px)");
 
@@ -415,29 +360,6 @@ function SiteLayoutContent() {
       mediaQuery.removeEventListener("change", syncViewport);
     };
   }, []);
-
-  useEffect(() => {
-    const activeGroupPath = getActiveNavigationGroupPath(
-      location.pathname,
-      permissionCodes,
-      menuCodes,
-    );
-
-    if (activeGroupPath.length === 0) {
-      return;
-    }
-
-    setOpenGroupIds((current) => {
-      if (activeGroupPath.every((groupId) => current.has(groupId))) {
-        return current;
-      }
-
-      const next = new Set(current);
-      activeGroupPath.forEach((groupId) => next.add(groupId));
-
-      return next;
-    });
-  }, [location.pathname, permissionCodes, menuCodes]);
 
   useEffect(() => {
     setQuickCreateOpen(false);
@@ -489,168 +411,6 @@ function SiteLayoutContent() {
   const userInitial = useMemo(() => {
     return currentUser?.name?.trim().slice(0, 1).toUpperCase() || "Y";
   }, [currentUser?.name]);
-
-  const toggleGroup = (groupId: string) => {
-    setOpenGroupIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(groupId)) {
-        next.delete(groupId);
-      } else {
-        next.add(groupId);
-      }
-
-      return next;
-    });
-  };
-
-  /**
-   * 二级菜单参考抖音：
-   *
-   * 1. 不显示图标；
-   * 2. 不使用大面积选中背景；
-   * 3. 当前菜单使用深色和加粗表示；
-   * 4. 菜单项保持较宽松的垂直间距。
-   */
-  const renderNavigationItem = (route: NavigationRoute, depth = 1) => {
-    const active = activeNavigationId === route.id;
-
-    return (
-      <Link
-        key={route.id}
-        to={route.path}
-        title={compact ? route.title : undefined}
-        aria-label={compact ? route.title : undefined}
-        aria-current={active ? "page" : undefined}
-        className={[
-          "group relative flex w-full items-center border-0",
-          "bg-transparent text-left",
-          "transition-colors duration-150",
-          compact
-            ? "h-10 justify-center px-0"
-            : `h-9 justify-start pr-1 ${depth >= 2 ? "pl-11" : "pl-8"}`,
-          active
-            ? "font-semibold text-[#161823]"
-            : [
-                "font-normal",
-                "text-[rgba(37,38,50,.6)]",
-                "hover:text-[#161823]",
-              ].join(" "),
-        ].join(" ")}
-      >
-        {compact ? (
-          <>
-            <span
-              className={[
-                "flex h-8 w-8 items-center",
-                "justify-center rounded-lg",
-                "text-[15px]",
-                active
-                  ? [
-                      "bg-white",
-                      "text-[#161823]",
-                      "shadow-[0_1px_4px_rgba(0,0,0,0.06)]",
-                    ].join(" ")
-                  : [
-                      "text-[rgba(22,24,35,0.5)]",
-                      "group-hover:bg-white/70",
-                    ].join(" "),
-              ].join(" ")}
-            >
-              {route.iconKey
-                ? navigationIcons[route.iconKey]
-                : route.title.slice(0, 1)}
-            </span>
-
-            {active && (
-              <span
-                className="
-                  absolute right-0 top-1/2 h-4
-                  w-[2px] -translate-y-1/2
-                  rounded-full bg-[#161823]
-                "
-              />
-            )}
-          </>
-        ) : (
-          <span
-            className="
-              min-w-0 flex-1 truncate
-              text-[14px] leading-5
-            "
-          >
-            {route.title}
-          </span>
-        )}
-      </Link>
-    );
-  };
-
-  /**
-   * 三级分组：域内的子域标题行，展开后是缩进两级的页面项。
-   * 与一级组共用 openGroupIds 展开状态。
-   */
-  const renderSubGroup = (subGroup: NavigationGroupWithRoutes) => {
-    const open = openGroupIds.has(subGroup.id);
-    const active = subGroup.routes.some(
-      (route) => route.id === activeNavigationId
-    );
-
-    return (
-      <div key={subGroup.id}>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => toggleGroup(subGroup.id)}
-          className={[
-            "flex h-9 w-full items-center justify-start gap-1 border-0",
-            "bg-transparent pl-8 pr-1 text-left",
-            "transition-colors duration-150",
-            active || open
-              ? "font-semibold text-[#161823]"
-              : [
-                  "font-medium",
-                  "text-[rgba(37,38,50,.6)]",
-                  "hover:text-[#161823]",
-                ].join(" "),
-          ].join(" ")}
-        >
-          <span className="min-w-0 flex-1 truncate text-[14px]">
-            {subGroup.title}
-          </span>
-
-          <ChevronDown
-            className={[
-              "h-3 w-3 shrink-0",
-              "text-[rgba(22,24,35,0.35)]",
-              "transition-transform duration-200",
-              open ? "rotate-180" : "rotate-0",
-            ].join(" ")}
-          />
-        </button>
-
-        <div
-          className={[
-            "grid overflow-hidden",
-            "transition-[grid-template-rows,opacity]",
-            "duration-200",
-            "ease-[cubic-bezier(0.62,0.05,0.36,0.95)]",
-            open
-              ? ["grid-rows-[1fr]", "opacity-100"].join(" ")
-              : ["grid-rows-[0fr]", "opacity-0"].join(" "),
-          ].join(" ")}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="space-y-0.5 pb-0.5">
-              {subGroup.routes.map((route) =>
-                renderNavigationItem(route, 2)
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div
@@ -786,172 +546,18 @@ function SiteLayoutContent() {
           )}
         </div>
 
-        <nav
-          className={[
-            "min-h-0 flex-1 overflow-y-auto",
-            "pb-5",
-            compact ? "px-3" : "px-6",
-          ].join(" ")}
-          style={{
-            scrollbarWidth: "none",
-          }}
-        >
-          <div>
-            {homeRoutes.length > 0 && (
-              <div
-                className={[
-                  "mb-3 border-b pb-3",
-                  "border-[rgba(37,38,50,0.10)]",
-                ].join(" ")}
-              >
-                {homeRoutes.map(renderStandaloneItem)}
-              </div>
-            )}
-
-            {businessStandaloneRoutes.length > 0 && (
-              <div className="mb-1">
-                {businessStandaloneRoutes.map(renderStandaloneItem)}
-              </div>
-            )}
-
-            {navigationGroups.map((group, groupIndex) => {
-              const open = openGroupIds.has(group.id);
-
-              const descendantRoutes = [
-                ...group.routes,
-                ...(group.subGroups ?? []).flatMap((sub) => sub.routes),
-              ];
-
-              const active = descendantRoutes.some(
-                (route) => route.id === activeNavigationId
-              );
-
-              const previousGroup = navigationGroups[groupIndex - 1];
-
-              const showSectionDivider =
-                previousGroup && previousGroup.section !== group.section;
-
-              return (
-                <section
-                  key={group.id}
-                  className={[
-                    "mb-3",
-                    showSectionDivider
-                      ? [
-                          "mt-3 border-t pt-3",
-                          "border-[rgba(37,38,50,0.10)]",
-                        ].join(" ")
-                      : "",
-                  ].join(" ")}
-                >
-                  <button
-                    type="button"
-                    title={compact ? group.title : undefined}
-                    aria-label={compact ? group.title : undefined}
-                    aria-expanded={open}
-                    onClick={() => toggleGroup(group.id)}
-                    className={[
-                      "group relative flex w-full",
-                      "items-center border-0",
-                      "bg-transparent text-left",
-                      "transition-colors duration-150",
-                      compact
-                        ? ["h-10", "justify-center", "px-0"].join(" ")
-                        : ["h-10", "justify-start", "px-0"].join(" "),
-                      active || open
-                        ? ["font-semibold", "text-[#161823]"].join(" ")
-                        : [
-                            "font-medium",
-                            "text-[rgba(22,24,35,0.55)]",
-                            "hover:text-[#161823]",
-                          ].join(" "),
-                    ].join(" ")}
-                  >
-                    <span
-                      className={[
-                        "flex h-5 w-5 shrink-0",
-                        "items-center justify-center",
-                        "text-[16px]",
-                        active
-                          ? "text-[#161823]"
-                          : [
-                              "text-[rgba(22,24,35,0.5)]",
-                              "group-hover:text-[#161823]",
-                            ].join(" "),
-                      ].join(" ")}
-                    >
-                      {navigationIcons[group.iconKey]}
-                    </span>
-
-                    {!compact && (
-                      <>
-                        <span
-                          className="
-                              ml-3 min-w-0 flex-1
-                              truncate text-[14px]
-                            "
-                        >
-                          {group.title}
-                        </span>
-
-                        <ChevronDown
-                          className={[
-                            "h-3 w-3 shrink-0",
-                            "text-[rgba(22,24,35,0.35)]",
-                            "transition-transform",
-                            "duration-200",
-                            open ? "rotate-180" : "rotate-0",
-                          ].join(" ")}
-                        />
-                      </>
-                    )}
-
-                    {compact && active && (
-                      <span
-                        className="
-                              absolute right-0 top-1/2
-                              h-4 w-[2px]
-                              -translate-y-1/2
-                              rounded-full bg-[#161823]
-                            "
-                      />
-                    )}
-                  </button>
-
-                  <div
-                    className={[
-                      "grid overflow-hidden",
-                      "transition-[grid-template-rows,opacity]",
-                      "duration-200",
-                      "ease-[cubic-bezier(0.62,0.05,0.36,0.95)]",
-                      open
-                        ? ["grid-rows-[1fr]", "opacity-100"].join(" ")
-                        : ["grid-rows-[0fr]", "opacity-0"].join(" "),
-                    ].join(" ")}
-                  >
-                    <div className="min-h-0 overflow-hidden">
-                      <div
-                        className={[
-                          "space-y-0.5",
-                          compact ? "pt-1" : "pt-1.5",
-                        ].join(" ")}
-                      >
-                        {(compact
-                          ? descendantRoutes
-                          : group.routes
-                        ).map((route) => renderNavigationItem(route))}
-
-                        {!compact &&
-                          group.subGroups?.map((subGroup) =>
-                            renderSubGroup(subGroup)
-                          )}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+        <nav aria-label="主导航" className={[
+          'min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-2',
+          compact ? 'px-3' : 'px-4',
+        ].join(' ')}>
+          <SidebarNavigation
+            groups={navigationGroups}
+            standaloneRoutes={standaloneRoutes}
+            icons={navigationIcons}
+            compact={compact}
+            activeId={activeNavigationId}
+            activeGroupPath={getActiveNavigationGroupPath(location.pathname, permissionCodes, menuCodes)}
+          />
         </nav>
 
         <div

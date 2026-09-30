@@ -177,7 +177,7 @@ const MetricServicePage = () => {
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-[20px] font-semibold leading-7">指标服务</div>
+          <div className="text-[20px] font-semibold leading-7">指标标签与统计</div>
           <div className="mt-1 text-[13px] text-[#667085]">标签管理、指标统计与元数据服务概览</div>
         </div>
       </div>

@@ -80,7 +80,7 @@ export default function DataServiceAccessPage() {
       setRecords(nextConsumers || []);
       setApis(nextApis || []);
     } catch (error: any) {
-      message.error(error?.message || '加载 API 调用配置失败');
+      message.error(error?.message || '加载调用方与密钥配置失败');
     } finally {
       setLoading(false);
     }
@@ -295,7 +295,7 @@ export default function DataServiceAccessPage() {
     <div className="h-full overflow-y-auto bg-[#f6f7f8] p-3">
       <div className="min-h-full rounded-[10px] bg-white px-5 pb-5 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="m-0 text-[17px] font-semibold text-[#161823]">API 调用</h1>
+          <h1 className="m-0 text-[17px] font-semibold text-[#161823]">调用方与密钥</h1>
           <div className="flex gap-2">
             <YakButton
               type="text"
@@ -371,7 +371,7 @@ export default function DataServiceAccessPage() {
         onClose={() => setSelected(undefined)}
         title={selected ? (
           <div className="truncate text-[14px] font-semibold text-[#161823]">{selected.name}</div>
-        ) : 'API 调用'}
+        ) : '调用方与密钥'}
         styles={{
           body: {
             padding: 0,
