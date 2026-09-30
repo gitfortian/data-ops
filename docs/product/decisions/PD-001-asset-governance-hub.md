@@ -1,9 +1,11 @@
 # PD-001 — Asset Governance Hub
 
 Status: ACCEPTED  
-Implementation: NOT_STARTED  
+Implementation: PARTIAL
 Date: 2026-09-22  
 Owner: Product
+
+Implementation evidence (2026-09-30): the default branch contains the Asset catalog entry, Metadata entity browsing/deep links, Asset Detail Sections, and source-owned Metadata, Quality, Security, Lineage, Lifecycle, and Usage read paths. The Phase 7 closeout audit records remaining coverage and acceptance gaps in `docs/product/acceptance/phase7-closeout.md`. The accepted decision is not DONE until the complete F-001 acceptance evidence passes.
 
 ## Context
 

@@ -371,6 +371,25 @@ class AssetDiscoverServiceTest {
     assertNull(result.data());
   }
 
+  @Test
+  void usageDistinguishesMissingLineageRegistrationFromQueryFailure() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+    LineageQueryService lineage = mock(LineageQueryService.class);
+    when(lineageProvider.getIfAvailable()).thenReturn(lineage);
+    when(lineage.getAssetByKey("modeling:model:42")).thenReturn(null);
+    when(viewRecordService.summary(1L, 30))
+        .thenReturn(new AssetViewRecordService.ActivitySummary(2L, 1L, null));
+
+    AssetDiscoverService.SectionView result = service.section(1L, "USAGE", "alice");
+
+    assertEquals(SectionStatus.OK, result.status());
+    AssetDiscoverService.UsageSummary usage =
+        (AssetDiscoverService.UsageSummary) result.data();
+    assertEquals(SectionStatus.EMPTY, usage.structuralUsage().status());
+    assertEquals(0, usage.structuralUsage().downstreamReferenceCount());
+    assertEquals("血缘域尚无该资产登记", usage.structuralUsage().reason());
+  }
+
   // ---------- fixtures ----------
 
   private static AssetDiscoverService.SectionView section(
