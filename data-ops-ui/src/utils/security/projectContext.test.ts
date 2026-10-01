@@ -33,6 +33,7 @@ describe('Project Space request context', () => {
     expect(resolveProjectRequestMode('/api/v1/data-service')).toBe('PROJECT_REQUIRED');
     expect(resolveProjectRequestMode('/api/v1/data-service/7')).toBe('PROJECT_REQUIRED');
     expect(resolveProjectRequestMode('/api/v1/data-service/overview')).toBe('PROJECT_REQUIRED');
+    expect(resolveProjectRequestMode('/api/v1/consumption/products')).toBe('PROJECT_REQUIRED');
     expect(resolveProjectRequestMode('/api/v1/task-catalog/assets')).toBe('PROJECT_OPTIONAL');
     expect(resolveProjectRequestMode('/api/v1/tasks')).toBe('PROJECT_REQUIRED');
     expect(resolveProjectRequestMode('/api/v1/job/batch-definition/page')).toBe('PROJECT_REQUIRED');
@@ -127,6 +128,7 @@ describe('Project Space request context', () => {
       '/api/v1/home/cockpit',
       '/api/v1/data-development/nodes',
       '/api/v1/data-service/7',
+      '/api/v1/consumption/products',
       '/api/v1/tasks',
       '/api/v1/job/batch-definition/page',
       '/api/v1/job/batch-instance/42',
