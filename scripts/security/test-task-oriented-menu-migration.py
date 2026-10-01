@@ -1,4 +1,4 @@
-"""Execute V2042 twice on an isolated MySQL database and verify grant safety.
+"""Execute V2045 twice on an isolated MySQL database and verify grant safety.
 
 Requires mysql CLI and an account allowed to create a temporary database.
 YAK_NAV_TEST_MYSQL_HOST/PORT/USER/PASSWORD configure the connection.
@@ -91,7 +91,7 @@ INSERT INTO yak_security_role_permission (role_id,permission_id,app_name,is_dele
             run(f"INSERT INTO yak_security_role_menu SELECT {role},id,app_name,{deleted} FROM yak_security_menu WHERE app_name='{app}' AND menu_code='{code}';")
         before = snapshot()
         prior_leaves = run(f"SELECT id,menu_code,route_path,COALESCE(required_permission_code,'NULL') FROM yak_security_menu WHERE app_name='{app}' AND menu_type=2 AND active=1 ORDER BY id;")
-        sql = (migrations / 'V2042__task_oriented_navigation.sql').read_text(encoding='utf-8').replace('${appName}', app)
+        sql = (migrations / 'V2045__task_oriented_navigation.sql').read_text(encoding='utf-8').replace('${appName}', app)
         run(sql)
         first = snapshot()
         run(sql)
@@ -117,7 +117,7 @@ INSERT INTO yak_security_role_permission (role_id,permission_id,app_name,is_dele
             '5\tdata-approval-todo', '6\tdata-approval-flows', '7\tresource-management'}, 'Sibling page privileges added'
         assert run(f"SELECT menu_code FROM yak_security_menu WHERE app_name='{app}' AND menu_type=1 AND parent_code IS NULL AND active=1 AND menu_code<>'system' ORDER BY sort_order;") == [
             'integration', 'modeling', 'development', 'data-asset', 'data-analysis']
-        print('PASS: MySQL V2042 replay, idempotence, leaf identity, role preservation, least privilege and app isolation')
+        print('PASS: MySQL V2045 replay, idempotence, leaf identity, role preservation, least privilege and app isolation')
     finally:
         run(f'DROP DATABASE `{database}`;', selected=False)
         print('Temporary migration database removed.')
