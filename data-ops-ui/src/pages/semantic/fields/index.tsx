@@ -1,9 +1,11 @@
-import { Button, Form, Input, Modal, message, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { Alert, Button, Form, Input, Modal, message, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import {
   bindSemanticProcessField,
   createSemanticField,
+  changeSemanticFieldStatus,
   deleteSemanticField,
   getCodeSetOptions,
   getStandardOptions,
@@ -78,6 +80,7 @@ const TYPE_CODE_TO_UNIT_TYPE: Record<string, string> = {
 };
 
 const FieldsPage = () => {
+  const { can } = usePermissionAccess();
   const [activeTab, setActiveTab] = useState('library');
   // 字段库
   const [records, setRecords] = useState<SemanticFieldRecord[]>([]);
@@ -95,6 +98,7 @@ const FieldsPage = () => {
   // 码值标准引用按码集聚合(32.1):value = code_set_code,与字段表存储语义对齐
   const [codeSetOptions, setCodeSetOptions] = useState<SemanticCodeSetOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsError, setOptionsError] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   // 收紧 1:引用类型标准时生效类型只读,以标准定义为准
@@ -103,12 +107,22 @@ const FieldsPage = () => {
   const editorRole = Form.useWatch('role', form) as SemanticFieldRole | undefined;
   // 过程引用
   const [processes, setProcesses] = useState<SemanticProcessRecord[]>([]);
+  const [processesLoading, setProcessesLoading] = useState(false);
   const [processId, setProcessId] = useState<number | undefined>(undefined);
   const [boundFields, setBoundFields] = useState<SemanticFieldRecord[]>([]);
+  const [boundFieldsError, setBoundFieldsError] = useState(false);
+  const [candidateFields, setCandidateFields] = useState<SemanticFieldRecord[]>([]);
+  const [candidateTotal, setCandidateTotal] = useState(0);
+  const [candidatePageNo, setCandidatePageNo] = useState(1);
+  const [candidateKeyword, setCandidateKeyword] = useState('');
+  const [candidateLoading, setCandidateLoading] = useState(false);
+  const candidateSearchRevision = useRef(0);
+  const processSearchRevision = useRef(0);
 
   /** 编辑弹窗打开时按需加载引用选项(35):列表页不预载全量标准。 */
   const loadEditorOptions = useCallback(async () => {
     setOptionsLoading(true);
+    setOptionsError(false);
     try {
       const [standards, codeSets] = await Promise.all([
         getStandardOptions(['TYPE', 'UNIT', 'CALIBER', 'SECURITY']),
@@ -117,8 +131,8 @@ const FieldsPage = () => {
       setStandardOptions(standards ?? {});
       setCodeSetOptions(codeSets ?? []);
     } catch {
-      setStandardOptions({});
-      setCodeSetOptions([]);
+      setOptionsError(true);
+      message.error('标准引用候选暂不可读，请重试');
     } finally {
       setOptionsLoading(false);
     }
@@ -145,22 +159,53 @@ const FieldsPage = () => {
     [role, keyword],
   );
 
-  const loadProcesses = useCallback(async () => {
+  const loadProcesses = useCallback(async (searchText: string) => {
+    const revision = ++processSearchRevision.current;
+    setProcessesLoading(true);
     try {
-      const result = await pageSemanticProcesses({ pageNo: 1, pageSize: 200 });
-      setProcesses(result.bizData ?? []);
+      const result = await pageSemanticProcesses({ pageNo: 1, pageSize: 20, keyword: searchText.trim() || undefined });
+      if (revision === processSearchRevision.current) setProcesses(result.bizData ?? []);
     } catch {
-      setProcesses([]);
+      if (revision === processSearchRevision.current) message.error('业务过程候选加载失败，请重试');
+    } finally {
+      if (revision === processSearchRevision.current) setProcessesLoading(false);
+    }
+  }, []);
+
+  const loadCandidateFields = useCallback(async (targetPageNo: number, searchText: string) => {
+    const revision = ++candidateSearchRevision.current;
+    setCandidateLoading(true);
+    try {
+      const result = await pageSemanticFields({
+        pageNo: targetPageNo,
+        pageSize: 10,
+        keyword: searchText.trim() || undefined,
+      });
+      if (revision === candidateSearchRevision.current) {
+        setCandidateFields(result.bizData ?? []);
+        setCandidateTotal(result.pagination?.total ?? 0);
+      }
+    } catch {
+      if (revision === candidateSearchRevision.current) {
+        setCandidateFields([]);
+        setCandidateTotal(0);
+        message.error('字段候选加载失败，请重试');
+      }
+    } finally {
+      if (revision === candidateSearchRevision.current) setCandidateLoading(false);
     }
   }, []);
 
   const loadBoundFields = useCallback(async (targetProcessId: number) => {
     setBoundFields([]);
+    setBoundFieldsError(false);
     try {
       const list = await listSemanticProcessFields(targetProcessId);
       setBoundFields(list ?? []);
     } catch {
       setBoundFields([]);
+      setBoundFieldsError(true);
+      message.error('过程字段引用加载失败，可重试');
     }
   }, []);
 
@@ -169,8 +214,12 @@ const FieldsPage = () => {
   }, [pageNo, pageSize, role, loadFields]);
 
   useEffect(() => {
-    void loadProcesses();
+    void loadProcesses('');
   }, [loadProcesses]);
+
+  useEffect(() => {
+    void loadCandidateFields(candidatePageNo, candidateKeyword);
+  }, [candidatePageNo, candidateKeyword, loadCandidateFields]);
 
   useEffect(() => {
     if (processId) {
@@ -325,12 +374,20 @@ const FieldsPage = () => {
       width: 140,
       render: (_: unknown, record: SemanticFieldRecord) => (
         <Space size={0}>
-          <Button type="link" size="small" onClick={() => openEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger onClick={() => removeField(record)}>
-            删除
-          </Button>
+          {can('semantic:update') && <>
+            <Button type="link" size="small" onClick={async () => {
+              try {
+                await changeSemanticFieldStatus(record.id, record.status === 'DISABLED' ? 'ENABLED' : 'DISABLED');
+                message.success(record.status === 'DISABLED' ? '字段已恢复' : '字段已停用');
+                await loadFields(pageNo, pageSize);
+                if (processId) await loadBoundFields(processId);
+              } catch {
+                message.error('状态更新失败，请刷新后检查字段引用和权限');
+              }
+            }}>{record.status === 'DISABLED' ? '恢复' : '停用'}</Button>
+            <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>
+          </>}
+          {can('semantic:delete') && <Button type="link" size="small" danger onClick={() => removeField(record)}>删除</Button>}
         </Space>
       ),
     },
@@ -361,15 +418,15 @@ const FieldsPage = () => {
             }}
           />
         </Space>
-        <YakButton
+        {can('semantic:create') && <YakButton
           type="primary"
           className="!h-9 !rounded-lg !px-4 !text-white"
           onClick={() => {
-            openCreate();
+          openCreate();
           }}
         >
           新建标准字段
-        </YakButton>
+        </YakButton>}
       </div>
       <Table<SemanticFieldRecord>
         className="mt-4"
@@ -403,10 +460,15 @@ const FieldsPage = () => {
         <Typography.Text>选择业务过程：</Typography.Text>
         <Select
           showSearch
-          optionFilterProp="label"
+          filterOption={false}
           placeholder="选择业务过程"
           style={{ width: 320 }}
+          loading={processesLoading}
           value={processId}
+          onSearch={(value) => void loadProcesses(value)}
+          onFocus={() => {
+            if (processes.length === 0) void loadProcesses('');
+          }}
           onChange={(value) => setProcessId(value)}
           options={processes.map((item) => ({
             label: `${item.name}（${item.code}）`,
@@ -418,8 +480,15 @@ const FieldsPage = () => {
         <div className="grid grid-cols-2 gap-6 max-md:grid-cols-1">
           <div>
             <Typography.Text strong>已引用字段（按顺序）</Typography.Text>
+            {boundFieldsError && (
+              <div className="mt-2">
+                <Button size="small" onClick={() => void loadBoundFields(processId)}>重试加载引用</Button>
+              </div>
+            )}
             <div className="mt-2 flex flex-col gap-2">
-              {boundFields.length === 0 ? (
+              {boundFieldsError ? (
+                <Typography.Text type="secondary">引用暂不可用，重试前不会按空列表处理</Typography.Text>
+              ) : boundFields.length === 0 ? (
                 <Typography.Text type="secondary">尚未引用字段，从右侧字段库绑定</Typography.Text>
               ) : (
                 boundFields.map((field) => (
@@ -434,16 +503,12 @@ const FieldsPage = () => {
                         {field.code}
                       </Typography.Text>
                     </Space>
-                    <Button
-                      type="link"
-                      size="small"
-                      danger
+                    {can('semantic:update') && <Button
+                      type="link" size="small" danger
                       onClick={() => {
                         void unbindField(field.id);
                       }}
-                    >
-                      解绑
-                    </Button>
+                    >解绑</Button>}
                   </div>
                 ))
               )}
@@ -452,31 +517,60 @@ const FieldsPage = () => {
           <div>
             <Typography.Text strong>从字段库绑定</Typography.Text>
             <div className="mt-2 flex max-h-[420px] flex-col gap-2 overflow-auto">
-              {records
-                .filter((field) => !boundFields.some((bound) => bound.id === field.id))
-                .map((field) => (
-                  <div
-                    key={field.id}
-                    className="flex items-center justify-between rounded border border-[#f0f0f0] px-3 py-2"
-                  >
-                    <Space size={8}>
+            <Input.Search
+              allowClear
+              placeholder="按字段名称或编码搜索"
+              enterButton="搜索"
+              onSearch={(value) => {
+                setCandidatePageNo(1);
+                setCandidateKeyword(value);
+              }}
+            />
+            <Table<SemanticFieldRecord>
+              className="mt-2"
+              size="small"
+              rowKey="id"
+              loading={candidateLoading}
+              dataSource={candidateFields}
+              pagination={{
+                current: candidatePageNo,
+                pageSize: 10,
+                total: candidateTotal,
+                showSizeChanger: false,
+                showTotal: (count) => `共 ${count} 个字段`,
+                onChange: (page) => setCandidatePageNo(page),
+              }}
+              columns={[
+                {
+                  title: '标准字段',
+                  render: (_: unknown, field: SemanticFieldRecord) => (
+                    <Space size={6}>
                       <Tag color={ROLE_COLORS[field.role]}>{ROLE_LABELS[field.role]}</Tag>
-                      <Typography.Text className="!text-[13px]">{field.name}</Typography.Text>
+                      <Typography.Text>{field.name}</Typography.Text>
+                      <Typography.Text type="secondary" code>{field.code}</Typography.Text>
+                      {field.status === 'DISABLED' && <Tag>停用</Tag>}
                     </Space>
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => {
-                        void bindField(field.id);
-                      }}
-                    >
-                      绑定
-                    </Button>
-                  </div>
-                ))}
-              {records.filter((field) => !boundFields.some((bound) => bound.id === field.id)).length === 0 ? (
-                <Typography.Text type="secondary">字段库中暂无可绑定的字段</Typography.Text>
-              ) : null}
+                  ),
+                },
+                {
+                  title: '操作',
+                  width: 90,
+                  render: (_: unknown, field: SemanticFieldRecord) => {
+                    const alreadyBound = boundFields.some((bound) => bound.id === field.id);
+                    return (
+                      <Button
+                        type="link"
+                        size="small"
+                        disabled={!can('semantic:update') || alreadyBound || field.status === 'DISABLED'}
+                        onClick={() => void bindField(field.id)}
+                      >
+                        {alreadyBound ? '已引用' : '引用'}
+                      </Button>
+                    );
+                  },
+                },
+              ]}
+            />
             </div>
           </div>
         </div>
@@ -516,6 +610,7 @@ const FieldsPage = () => {
         }}
       >
         <Form form={form} layout="vertical" className="pt-2">
+          {optionsError && <Alert className="mb-3" type="warning" showIcon message="标准引用选项未能加载" action={<Button size="small" onClick={() => void loadEditorOptions()}>重试</Button>} />}
           <div className="grid grid-cols-2 gap-x-4">
             <Form.Item
               name="code"
@@ -573,12 +668,12 @@ const FieldsPage = () => {
             <Form.Item
               name="dataType"
               label="生效类型"
-              extra={typeRefId ? '已引用类型标准，以标准定义为准' : '未引用类型标准时可手填'}
+              extra="必需的类型标准决定字段生效类型"
             >
               <Input
-                disabled={Boolean(typeRefId)}
+                disabled={!typeRefId}
                 maxLength={64}
-                placeholder={typeRefId ? '跟随类型标准' : '如 DECIMAL(18,2)'}
+                placeholder={typeRefId ? '跟随类型标准' : '请先选择类型标准'}
               />
             </Form.Item>
             {REF_SELECTS.filter((item) => editorRole !== undefined && item.roles.includes(editorRole)).map((item) => {

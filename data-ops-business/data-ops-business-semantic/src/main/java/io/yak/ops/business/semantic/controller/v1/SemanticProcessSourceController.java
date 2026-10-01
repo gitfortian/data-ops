@@ -83,8 +83,9 @@ public class SemanticProcessSourceController {
   @Operation(summary = "解绑源表")
   @RequiresPermission(SemanticPermissionCode.UPDATE)
   @DeleteMapping("/{bindingId}")
-  public Result<Boolean> unbind(@PathVariable("bindingId") Long bindingId) {
-    bindingService.unbind(bindingId);
+  public Result<Boolean> unbind(
+      @PathVariable("processId") Long processId, @PathVariable("bindingId") Long bindingId) {
+    bindingService.unbind(processId, bindingId);
     return Result.success(Boolean.TRUE);
   }
 

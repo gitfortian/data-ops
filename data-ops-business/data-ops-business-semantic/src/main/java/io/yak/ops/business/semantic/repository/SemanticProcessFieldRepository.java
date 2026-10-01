@@ -21,6 +21,8 @@ public interface SemanticProcessFieldRepository {
   /** 移除引用。 */
   void unbind(Long processId, Long fieldId);
 
+  boolean updateRequired(Long processId, Long fieldId, boolean required);
+
   /** 是否已被某过程引用。 */
   boolean existsByProcessAndField(Long processId, Long fieldId);
 

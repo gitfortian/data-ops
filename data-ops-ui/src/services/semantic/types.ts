@@ -167,8 +167,8 @@ export interface SemanticFieldRecord {
   businessDesc?: string;
   source?: 'PRESET' | 'MANUAL' | 'CAPTURE';
   version?: number;
-  /** 过程装配上下文（ticket 44 派生默认勾选）。 */
-  isRequired?: boolean;
+  /** 过程内装配标记，派生建模时用于默认勾选。 */
+  required?: boolean;
   createdBy?: string;
   createTime?: string;
   updateTime?: string;
@@ -231,6 +231,7 @@ export interface SemanticStandardOption {
 
 /** 码集详情记录(编辑用,含码集下全部码值行)。 */
 export interface CodeSetDetailRecord extends CodeSetRecord {
+  revision: string;
   values: SemanticStandardRecord[];
   /** 存量空码集行按 std_code 独立成组:码集编码可补全(采纳进新码集)。 */
   legacy?: boolean;

@@ -16,6 +16,9 @@ public interface SemanticStandardRepository {
   /** Finds one standard by id within the current project. */
   Optional<Standard> findById(Long id);
 
+  /** Lock the definition while submitting, editing, deleting or approving. */
+  default Optional<Standard> findByIdForUpdate(Long id) { return findById(id); }
+
   /** Uniqueness of (kind, code) among project rows. */
   boolean existsByCode(StandardKind kind, String code);
 
@@ -59,6 +62,8 @@ public interface SemanticStandardRepository {
 
   /** 码集(32.1):按组键列出全部码值行——常规码集=code_set_code;存量空码集行=std_code 独立成组。 */
   List<Standard> listByCodeSetCode(String codeSetCode);
+
+  default List<Standard> lockCodeSet(String codeSetCode) { return listByCodeSetCode(codeSetCode); }
 
   /** 码集:code_set_code 是否已存在(严格匹配,不含存量空码集行);创建判重用。 */
   boolean existsByCodeSetCode(String codeSetCode);

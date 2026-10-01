@@ -86,7 +86,13 @@ public final class SemanticStandardApi {
           @Size(max = 128, message = "码集名称不能超过 128 个字符")
           String name,
       @Size(max = 512, message = "描述不能超过 512 个字符") String description,
-      @NotEmpty(message = "码值列表不能为空") @Valid List<CodeValueItem> values) {}
+      @NotEmpty(message = "码值列表不能为空") @Valid List<CodeValueItem> values,
+      String revision) {
+    public CodeSetSaveRequest(String codeSetCode, String originCodeSetCode, String name,
+        String description, List<CodeValueItem> values) {
+      this(codeSetCode, originCodeSetCode, name, description, values, null);
+    }
+  }
 
   /** 码集内单个码值条目。 */
   public record CodeValueItem(

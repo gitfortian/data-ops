@@ -9,8 +9,7 @@ import io.yak.ops.business.semantic.dao.mapper.SemanticStandardUsageMapper;
 import io.yak.ops.common.bean.po.semantic.SemanticStandardUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
-import io.yak.ops.core.project.ProjectContext;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,7 @@ class StandardUsageServiceTest {
     mapper = Mockito.mock(SemanticStandardUsageMapper.class);
     CurrentProject currentProject = () -> Optional.of(new ProjectContext(1L, "p"));
     service = new StandardUsageService(mapper, currentProject);
-    Mockito.when(mapper.selectList(Mockito.any())).thenAnswer(invocation -> List.of());
+    Mockito.when(mapper.selectSummary(Mockito.anyLong(), Mockito.anyLong())).thenReturn(Map.of());
   }
 
   @Test
@@ -50,7 +49,7 @@ class StandardUsageServiceTest {
     bypass.setUsageType("BYPASS");
     SemanticStandardUsagePO bypass2 = new SemanticStandardUsagePO();
     bypass2.setUsageType("BYPASS");
-    Mockito.when(mapper.selectList(Mockito.any())).thenReturn(List.of(apply, bypass, bypass2));
+    Mockito.when(mapper.selectSummary(1L, 5L)).thenReturn(Map.of("applyCount", 1L, "bypassCount", 2L));
 
     StandardUsageApi.UsageSummary summary = service.summary(5L);
     assertEquals(1, summary.applyCount());
@@ -68,7 +67,7 @@ class StandardUsageServiceTest {
     bypass3.setUsageType("BYPASS");
     SemanticStandardUsagePO apply = new SemanticStandardUsagePO();
     apply.setUsageType("APPLY");
-    Mockito.when(mapper.selectList(Mockito.any())).thenReturn(List.of(bypass1, bypass2, bypass3, apply));
+    Mockito.when(mapper.selectSummary(1L, 5L)).thenReturn(Map.of("applyCount", 1L, "bypassCount", 3L));
 
     assertTrue(service.summary(5L).suspicious());
   }

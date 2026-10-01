@@ -194,16 +194,28 @@ public class SemanticFieldService {
 
   /** 启用/停用(约束 4 部分):停用字段不出现在字段集/绑定/派生。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public StandardField changeStatus(Long id, String status) {
+  public StandardField changeStatus(Long id, String status, String operator) {
     StandardField existing = get(id);
     if (!StandardField.STATUS_ENABLED.equals(status)
         && !StandardField.STATUS_DISABLED.equals(status)) {
       throw new SemanticException(SemanticErrorCode.INVALID_STATUS, status);
     }
-    if (!status.equals(existing.status())) {
-      repository.changeStatus(id, status);
+    if (status.equals(existing.status())) return existing;
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest("SEMANTIC_FIELD_STATUS", "Change standard field status",
+            "SEMANTIC_FIELD", String.valueOf(id), existing.code(), "APPLICATION",
+            Map.of("from", existing.status(), "to", status)));
+    try {
+      if (!repository.changeStatus(id, status)) {
+        throw new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id));
+      }
+      AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_UPDATED,
+          "Standard field status changed", Map.of("status", status), "Standard field status changed");
+      return get(id);
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_FIELD_STATUS_FAILED", exception);
+      throw exception;
     }
-    return existing.withStatus(status);
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -240,8 +252,8 @@ public class SemanticFieldService {
 
   /** 过程绑定字段(is_required 驱动 44 默认勾选);停用字段拒绝绑定。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public void bindToProcess(Long processId, Long fieldId, boolean isRequired) {
-    processRepository
+  public void bindToProcess(Long processId, Long fieldId, boolean isRequired, String operator) {
+    var process = processRepository
         .findById(processId)
         .orElseThrow(
             () -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
@@ -252,13 +264,43 @@ public class SemanticFieldService {
     if (processFieldRepository.existsByProcessAndField(processId, fieldId)) {
       throw new SemanticException(SemanticErrorCode.DUPLICATE_CODE, "该字段已被此业务过程引用");
     }
-    processFieldRepository.bind(processId, fieldId, isRequired, null);
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest("SEMANTIC_PROCESS_FIELD_BIND", "Bind field to business process",
+            "SEMANTIC_PROCESS_FIELD", processId + ":" + fieldId, field.code(), "APPLICATION",
+            Map.of("processCode", process.code(), "required", String.valueOf(isRequired),
+                "operator", operator)));
+    try {
+      processFieldRepository.bind(processId, fieldId, isRequired, operator);
+      AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_CREATED,
+          "Business process field bound", Map.of("required", String.valueOf(isRequired)),
+          "Business process field bound");
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_PROCESS_FIELD_BIND_FAILED", exception);
+      throw exception;
+    }
   }
 
   /** 过程移除字段引用。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public void unbindFromProcess(Long processId, Long fieldId) {
-    processFieldRepository.unbind(processId, fieldId);
+  public void unbindFromProcess(Long processId, Long fieldId, String operator) {
+    var process = processRepository.findById(processId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
+    StandardField field = get(fieldId);
+    if (!processFieldRepository.existsByProcessAndField(processId, fieldId)) {
+      throw new SemanticException(SemanticErrorCode.NOT_FOUND, "此过程未引用该字段");
+    }
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest("SEMANTIC_PROCESS_FIELD_UNBIND", "Unbind field from business process",
+            "SEMANTIC_PROCESS_FIELD", processId + ":" + fieldId, field.code(), "APPLICATION",
+            Map.of("processCode", process.code(), "operator", operator)));
+    try {
+      processFieldRepository.unbind(processId, fieldId);
+      AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_DELETED,
+          "Business process field unbound", Map.of(), "Business process field unbound");
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_PROCESS_FIELD_UNBIND_FAILED", exception);
+      throw exception;
+    }
   }
 
   /** 过程字段集(按过程内顺序;停用字段剔除;required 随装配标记)。 */
@@ -278,10 +320,68 @@ public class SemanticFieldService {
     return result;
   }
 
+  /** 管理查询保留停用引用，消费查询继续仅返回启用字段。 */
+  public List<StandardField> managedFieldsOfProcess(Long processId) {
+    processRepository.findById(processId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
+    return processFieldRepository.bindingsByProcess(processId).stream()
+        .map(binding -> get(binding.fieldId()).withRequired(binding.required())).toList();
+  }
+
+  /** 更新过程字段是否必需。 */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public void updateRequired(Long processId, Long fieldId, boolean required, String operator) {
+    var process = processRepository.findById(processId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
+    var binding = processFieldRepository.bindingsByProcess(processId).stream()
+        .filter(candidate -> candidate.fieldId().equals(fieldId)).findFirst()
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "此过程未引用该字段"));
+    if (binding.required() == required) return;
+    StandardField field = get(fieldId);
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest("SEMANTIC_PROCESS_FIELD_REQUIRED", "Update required field flag",
+            "SEMANTIC_PROCESS_FIELD", processId + ":" + fieldId, field.code(), "APPLICATION",
+            Map.of("processCode", process.code(), "from", String.valueOf(binding.required()),
+                "to", String.valueOf(required), "operator", operator)));
+    try {
+      if (!processFieldRepository.updateRequired(processId, fieldId, required)) {
+        throw new SemanticException(SemanticErrorCode.NOT_FOUND, "此过程未引用该字段");
+      }
+      AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_UPDATED,
+          "Business process field requirement changed", Map.of("required", String.valueOf(required)),
+          "Business process field requirement changed");
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_PROCESS_FIELD_REQUIRED_FAILED", exception);
+      throw exception;
+    }
+  }
+
   /** 过程字段重排序。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public void reorderProcessFields(Long processId, List<Long> orderedFieldIds) {
-    processFieldRepository.reorder(processId, orderedFieldIds);
+  public void reorderProcessFields(Long processId, List<Long> orderedFieldIds, String operator) {
+    var process = processRepository.findById(processId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
+    List<Long> currentIds = processFieldRepository.bindingsByProcess(processId).stream()
+        .map(SemanticProcessFieldRepository.ProcessFieldBinding::fieldId).toList();
+    if (orderedFieldIds == null || orderedFieldIds.size() != currentIds.size()
+        || new java.util.HashSet<>(orderedFieldIds).size() != currentIds.size()
+        || !new java.util.HashSet<>(orderedFieldIds).equals(new java.util.HashSet<>(currentIds))) {
+      throw new SemanticException(SemanticErrorCode.INVALID_SEARCH, "排序必须包含该过程当前全部已引用字段");
+    }
+    if (orderedFieldIds.equals(currentIds)) return;
+    AuditOperationHandle audit = auditService.start(
+        new AuditOperationRequest("SEMANTIC_PROCESS_FIELD_REORDER", "Reorder business process fields",
+            "SEMANTIC_PROCESS", String.valueOf(processId), process.code(), "APPLICATION",
+            Map.of("from", currentIds.toString(), "to", orderedFieldIds.toString(), "operator", operator)));
+    try {
+      processFieldRepository.reorder(processId, orderedFieldIds);
+      AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_UPDATED,
+          "Business process fields reordered", Map.of("fieldIds", orderedFieldIds.toString()),
+          "Business process fields reordered");
+    } catch (RuntimeException exception) {
+      audit.failure("SEMANTIC_PROCESS_FIELD_REORDER_FAILED", exception);
+      throw exception;
+    }
   }
 
   /** 34 挂点:业务过程删除前校验存在字段引用。 */

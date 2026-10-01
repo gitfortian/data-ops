@@ -1,3 +1,4 @@
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { history, useSearchParams } from '@umijs/max';
 import { Button, Form, Input, Modal, message, Select, Space, Table, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
@@ -38,6 +39,7 @@ const flattenDomains = (nodes: SemanticDomainNode[]): { id: number; path: string
 };
 
 const SemanticProcessesPage = () => {
+  const { can } = usePermissionAccess();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProcessId = parsePositiveId(searchParams.get('processId'));
   const requestedDomainId = parsePositiveId(searchParams.get('domainId'));
@@ -134,7 +136,7 @@ const SemanticProcessesPage = () => {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ bizType: 'FACT' });
+    form.setFieldsValue({ bizType: 'FACT', domainId });
     setEditorOpen(true);
   };
 
@@ -146,10 +148,10 @@ const SemanticProcessesPage = () => {
     const values = await form.validateFields();
     setSaving(true);
     try {
-      await createSemanticProcess({ ...values, code: values.code });
+      const created = await createSemanticProcess({ ...values, code: values.code });
       message.success('业务过程已创建');
       setEditorOpen(false);
-      await loadData(pageNo, pageSize);
+      history.push(`/semantic/processes/${created.id}/edit`);
     } catch {
       message.error('保存失败（编码可能已存在），请检查后重试');
     } finally {
@@ -228,12 +230,8 @@ const SemanticProcessesPage = () => {
           >
             查看指标
           </Button>
-          <Button type="link" size="small" onClick={() => openEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger onClick={() => removeProcess(record)}>
-            删除
-          </Button>
+          {can('semantic:update') && <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>}
+          {can('semantic:delete') && <Button type="link" size="small" danger onClick={() => removeProcess(record)}>删除</Button>}
         </Space>
       ),
     },
@@ -293,15 +291,15 @@ const SemanticProcessesPage = () => {
               setPageNo(1);
             }}
           />
-          <YakButton
+          {can('semantic:create') && <YakButton
             type="primary"
             className="!h-9 !rounded-lg !px-4 !text-white"
             onClick={() => {
-              openCreate();
+          openCreate();
             }}
           >
             新建业务过程
-          </YakButton>
+          </YakButton>}
         </Space>
       </div>
 

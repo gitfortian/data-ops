@@ -107,8 +107,10 @@ public class SemanticFieldController {
   @RequiresPermission(SemanticPermissionCode.UPDATE)
   @PostMapping("/{id}/status")
   public Result<StandardFieldVO> changeStatus(
-      @PathVariable("id") Long id, @Valid @RequestBody SemanticFieldApi.StatusRequest request) {
-    return Result.success(viewConverter.toView(service.changeStatus(id, request.status())));
+      @PathVariable("id") Long id, @Valid @RequestBody SemanticFieldApi.StatusRequest request,
+      HttpServletRequest httpRequest) {
+    return Result.success(viewConverter.toView(
+        service.changeStatus(id, request.status(), currentUserProvider.getCurrentUser(httpRequest))));
   }
 
   @Operation(summary = "删除标准字段（被过程引用时阻断）")

@@ -28,13 +28,17 @@ public class StandardPublishApprovalService {
   static final String PAYLOAD_STANDARD_CODE = "standardCode";
   static final String PAYLOAD_STANDARD_NAME = "standardName";
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
 
   private final ApprovalApi approvalApi;
   private final StandardCatalogService catalogService;
 
+  @org.springframework.transaction.annotation.Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public ApprovalInstanceView submit(Long standardId, String operator) {
-    Standard standard = catalogService.get(standardId);
+    Standard standard = catalogService.lockDefinition(standardId);
+    if (standard.kind() == io.yak.ops.business.semantic.api.StandardKind.CODE) {
+      throw new SemanticException(SemanticErrorCode.INVALID_KIND, "码集不支持单标准发布审批");
+    }
     if (standard.status() == StandardStatus.ENABLED) {
       // 生效审批只服务 DISABLED→ENABLED;已启用标准再提一单会在批准后重复走 changeStatus。
       throw new SemanticException(SemanticErrorCode.PUBLISH_ALREADY_ENABLED, standard.code());
@@ -44,7 +48,9 @@ public class StandardPublishApprovalService {
       payload = MAPPER.writeValueAsString(Map.of(
           PAYLOAD_STANDARD_ID, standardId,
           PAYLOAD_STANDARD_CODE, standard.code() == null ? "" : standard.code(),
-          PAYLOAD_STANDARD_NAME, standard.name() == null ? "" : standard.name()));
+          PAYLOAD_STANDARD_NAME, standard.name() == null ? "" : standard.name(),
+          "standardVersion", standard.version(),
+          "definition", standard));
     } catch (JsonProcessingException e) {
       throw new IllegalStateException("审批 payload 序列化失败", e);
     }

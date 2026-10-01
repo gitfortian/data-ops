@@ -102,7 +102,10 @@ public class SemanticProcessBindingService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public void unbind(Long bindingId) {
+  public void unbind(Long processId, Long bindingId) {
+    if (listByProcess(processId).stream().noneMatch(binding -> binding.id().equals(bindingId))) {
+      throw new SemanticException(SemanticErrorCode.NOT_FOUND, "此业务过程不存在该源表关联");
+    }
     AuditOperationHandle audit =
         auditService.start(
             new AuditOperationRequest(

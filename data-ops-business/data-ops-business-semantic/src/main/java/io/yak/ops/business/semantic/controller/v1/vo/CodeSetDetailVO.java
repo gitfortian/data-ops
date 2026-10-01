@@ -12,6 +12,9 @@ public class CodeSetDetailVO extends CodeSetVO {
   /** 存量空码集行按 std_code 独立成组:编码可补全(采纳进新码集)。 */
   private boolean legacy;
 
+  /** 整组编辑内容版本，保存时必须原样回传。 */
+  private String revision;
+
   /** 组内行 std_name 不一致(历史数据):编辑保存后统一为码集名称。 */
   private boolean nameInconsistent;
 

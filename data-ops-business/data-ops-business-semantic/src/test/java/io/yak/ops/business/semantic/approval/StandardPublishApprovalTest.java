@@ -45,7 +45,7 @@ class StandardPublishApprovalTest {
 
   @Test
   void submitBuildsCommandWithSnapshot() {
-    when(catalogService.get(88L)).thenReturn(standard(88L, "order_status", "订单状态"));
+    when(catalogService.lockDefinition(88L)).thenReturn(standard(88L, "order_status", "订单状态"));
     when(approvalApi.submit(any())).thenReturn(new ApprovalInstanceView(
         7L, ApprovalFlowCodes.STANDARD_PUBLISH, "标准发布", "STANDARD", "88", "t", null,
         "tom", "PENDING", 1, LocalDateTime.now(), null));
@@ -62,11 +62,13 @@ class StandardPublishApprovalTest {
     assertTrue(cmd.title().contains("订单状态"));
     assertTrue(cmd.payloadJson().contains("\"standardId\":88"));
     assertEquals("tom", cmd.applicant());
+    assertTrue(cmd.payloadJson().contains("\"standardVersion\":1"));
+    assertTrue(cmd.payloadJson().contains("\"definition\":"));
   }
 
   @Test
   void submitPropagatesNotFoundFromCatalog() {
-    when(catalogService.get(404L))
+    when(catalogService.lockDefinition(404L))
         .thenThrow(new SemanticException(SemanticErrorCode.NOT_FOUND, "404"));
     assertThrows(SemanticException.class, () -> service.submit(404L, "tom"));
     verify(approvalApi, never()).submit(any());
@@ -74,7 +76,7 @@ class StandardPublishApprovalTest {
 
   @Test
   void submitRejectsAlreadyEnabledStandard() {
-    when(catalogService.get(88L)).thenReturn(standard(88L, StandardStatus.ENABLED));
+    when(catalogService.lockDefinition(88L)).thenReturn(standard(88L, StandardStatus.ENABLED));
     SemanticException exception = assertThrows(SemanticException.class, () -> service.submit(88L, "tom"));
     assertEquals(SemanticErrorCode.PUBLISH_ALREADY_ENABLED, exception.getErrorCode());
     verify(approvalApi, never()).submit(any());
@@ -82,8 +84,9 @@ class StandardPublishApprovalTest {
 
   @Test
   void approvedEnablesAsOriginalApplicant() {
-    handler.onApproved(decision("{\"standardId\":88,\"standardCode\":\"order_status\"}"));
-    verify(catalogService).changeStatus(88L, "ENABLED", "tom");
+    when(catalogService.lockDefinition(88L)).thenReturn(standard(88L, StandardStatus.DISABLED));
+    handler.onApproved(decision("{\"standardId\":88,\"standardVersion\":1}"));
+    verify(catalogService).enableAfterApproval(88L, "tom");
     assertEquals(ApprovalFlowCodes.STANDARD_PUBLISH, handler.flowCode());
   }
 
@@ -102,12 +105,12 @@ class StandardPublishApprovalTest {
   }
 
   private static Standard standard(Long id, String code, String name) {
-    return new Standard(id, StandardKind.CODE, code, name, StandardStatus.DISABLED, 1, 0,
+    return new Standard(id, StandardKind.UNIT, code, name, StandardStatus.DISABLED, 1, 0,
         false, null, null, "tester", null, null);
   }
 
   private static Standard standard(Long id, StandardStatus status) {
-    return new Standard(id, StandardKind.CODE, "order_status", "订单状态", status, 1, 0,
+    return new Standard(id, StandardKind.UNIT, "order_status", "订单状态", status, 1, 0,
         false, null, null, "tester", null, null);
   }
 

@@ -58,6 +58,7 @@ const CodeSetEditModal = ({ open, detail, onClose, onSaved, onExists }: CodeSetE
     try {
       const payload = {
         codeSetCode: values.codeSetCode,
+        revision: detail?.revision,
         // 存量空码集行补全编码:携带原组键,后端据此把旧行采纳进新码集
         originCodeSetCode: isLegacy ? detail?.codeSetCode : undefined,
         name: values.name,

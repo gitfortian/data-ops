@@ -1,3 +1,4 @@
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { Button, Card, Form, Input, Modal, message, Space, Tree, Typography } from 'antd';
 import type { DataNode, TreeProps } from 'antd/es/tree';
 import { useCallback, useEffect, useState } from 'react';
@@ -64,6 +65,7 @@ const collectBranchKeys = (nodes: SemanticDomainNode[]): number[] =>
   );
 
 const BusinessDomainsPage = () => {
+  const { can } = usePermissionAccess();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedDomainId = parsePositiveId(searchParams.get('domainId'));
@@ -184,10 +186,7 @@ const BusinessDomainsPage = () => {
         .catch(() => message.error('移动失败（不能移到自己的子孙之下）'));
       return;
     }
-    // 落在节点前后间隙:保持同父,仅提示排序可在编辑表单内调整。
-    message.info('已按同级处理；如需微调排序，请在编辑表单中修改排序值');
-    void moveSemanticDomain(dragId, undefined).catch(() => undefined);
-    void loadTree();
+    message.info('暂不支持间隙拖拽排序，请在编辑表单中修改排序值；拖入节点可调整父域');
   };
 
   return (
@@ -200,24 +199,14 @@ const BusinessDomainsPage = () => {
           </div>
         </div>
         <Space>
-          <YakButton
-            type="primary"
-            className="!h-9 !rounded-lg !px-4 !text-white"
-            onClick={() => {
-              openCreate(null);
-            }}
-          >
-            新建根域
-          </YakButton>
-          <YakButton
-            className="!h-9 !rounded-lg !px-4"
-            disabled={!selected}
-            onClick={() => {
-              openCreate(selected);
-            }}
-          >
-            新建子域
-          </YakButton>
+          {can('semantic:create') && <>
+            <YakButton type="primary" className="!h-9 !rounded-lg !px-4 !text-white" onClick={() => openCreate(null)}>
+              新建根域
+            </YakButton>
+            <YakButton className="!h-9 !rounded-lg !px-4" disabled={!selected} onClick={() => openCreate(selected)}>
+              新建子域
+            </YakButton>
+          </>}
         </Space>
       </div>
 
@@ -229,7 +218,7 @@ const BusinessDomainsPage = () => {
             <div className="min-w-[320px] flex-1">
               <Tree
                 blockNode
-                draggable
+                draggable={can('semantic:update')}
                 showLine
                 expandedKeys={expandedKeys}
                 onExpand={(keys) => setExpandedKeys(keys as number[])}
@@ -257,6 +246,7 @@ const BusinessDomainsPage = () => {
                   </Typography.Paragraph>
                   <Typography.Paragraph className="!text-[13px]">负责人：{selected.owner || '-'}</Typography.Paragraph>
                   <Space>
+                    <Button type="link" size="small" onClick={() => navigate(`/semantic/processes?domainId=${selected.id}`)}>查看业务过程</Button>
                     <Button
                       type="link"
                       size="small"
@@ -264,12 +254,12 @@ const BusinessDomainsPage = () => {
                     >
                       查看相关指标
                     </Button>
-                    <Button type="link" size="small" onClick={() => openEdit(selected)}>
+                    {can('semantic:update') && <Button type="link" size="small" onClick={() => openEdit(selected)}>
                       编辑
-                    </Button>
-                    <Button type="link" size="small" danger onClick={() => removeNode(selected)}>
+                    </Button>}
+                    {can('semantic:delete') && <Button type="link" size="small" danger onClick={() => removeNode(selected)}>
                       删除
-                    </Button>
+                    </Button>}
                   </Space>
                 </div>
               ) : (

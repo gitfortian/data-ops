@@ -1,5 +1,6 @@
-import { Button, Form, Input, InputNumber, Modal, message, Select, Space, Switch, Table, Tag, Typography } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { Alert, Button, Form, Input, InputNumber, Modal, message, Select, Space, Switch, Table, Tag, Typography } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
@@ -24,15 +25,35 @@ const STORAGE_FORMAT_OPTIONS = ['Parquet', 'ORC', 'TextFile', 'CSV', 'JSON'].map
 const PARTITION_PATTERN = /^[a-z_]+=[A-Za-z-]+$/;
 
 const LayersPage = () => {
+  const { can } = usePermissionAccess();
   const [records, setRecords] = useState<SemanticLayerRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<SemanticLayerRecord | null>(null);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
+  const [datasourceLoading, setDatasourceLoading] = useState(false);
   const [namingStandards, setNamingStandards] = useState<SemanticStandardOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsError, setOptionsError] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const datasourceSearchRevision = useRef(0);
+  const selectedDatasourceId = Form.useWatch('datasourceId', form) as number | undefined;
+
+  const searchDatasources = useCallback(async (searchText: string) => {
+    const revision = ++datasourceSearchRevision.current;
+    setDatasourceLoading(true);
+    try {
+      const result = await listDataSources({ pageNo: 1, pageSize: 20, keyword: searchText.trim() || undefined });
+      if (revision === datasourceSearchRevision.current) {
+        setDatasources(result.bizData ?? []);
+      }
+    } catch {
+      if (revision === datasourceSearchRevision.current) message.error('数据源候选加载失败，可修改关键词后重试');
+    } finally {
+      if (revision === datasourceSearchRevision.current) setDatasourceLoading(false);
+    }
+  }, []);
 
   const loadLayers = useCallback(async () => {
     setLoading(true);
@@ -47,17 +68,22 @@ const LayersPage = () => {
 
   /** 引用选项字典(数据源 + NAMING 标准):列表需展示名称,弹窗打开时刷新一次。 */
   const loadOptions = useCallback(async () => {
+    const revision = ++datasourceSearchRevision.current;
     setOptionsLoading(true);
+    setOptionsError(false);
     try {
-      const [datasourcePage, namingOptions] = await Promise.all([
-        listDataSources({ pageNo: 1, pageSize: 200 }),
+      const [datasourceResult, namingResult] = await Promise.allSettled([
+        listDataSources({ pageNo: 1, pageSize: 20 }),
         getStandardOptions(['NAMING']),
       ]);
-      setDatasources(datasourcePage.bizData ?? []);
-      setNamingStandards(namingOptions.NAMING ?? []);
-    } catch {
-      setDatasources([]);
-      setNamingStandards([]);
+      let failed = false;
+      if (datasourceResult.status === 'fulfilled') {
+        if (revision === datasourceSearchRevision.current) setDatasources(datasourceResult.value.bizData ?? []);
+      } else failed = true;
+      if (namingResult.status === 'fulfilled') setNamingStandards(namingResult.value.NAMING ?? []);
+      else failed = true;
+      setOptionsError(failed);
+      if (failed) message.error('部分引用选项暂不可用，可重试加载');
     } finally {
       setOptionsLoading(false);
     }
@@ -243,17 +269,17 @@ const LayersPage = () => {
       width: 150,
       render: (_: unknown, record: SemanticLayerRecord) => (
         <>
-          <Button type="link" size="small" onClick={() => openEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" onClick={() => toggleStatus(record)}>
-            {record.status === 'ENABLED' ? '停用' : '启用'}
-          </Button>
+          {can('semantic:update') && <>
+            <Button type="link" size="small" onClick={() => openEdit(record)}>编辑</Button>
+            <Button type="link" size="small" onClick={() => toggleStatus(record)}>
+              {record.status === 'ENABLED' ? '停用' : '启用'}
+            </Button>
+          </>}
           {/* 默认分层(ODS/DWD/DWS/ADS)不可删除,只可停用 */}
           {record.preset ? null : (
-            <Button type="link" size="small" danger onClick={() => removeLayer(record)}>
+            can('semantic:delete') ? <Button type="link" size="small" danger onClick={() => removeLayer(record)}>
               删除
-            </Button>
+            </Button> : null
           )}
         </>
       ),
@@ -270,6 +296,7 @@ const LayersPage = () => {
           </div>
         </div>
         <Space>
+          {can('semantic:create') && <>
           <YakButton
             className="!h-9 !rounded-lg !px-4"
             onClick={() => {
@@ -282,11 +309,12 @@ const LayersPage = () => {
             type="primary"
             className="!h-9 !rounded-lg !px-4 !text-white"
             onClick={() => {
-              openCreate();
+          openCreate();
             }}
           >
             新建分层
           </YakButton>
+          </>}
         </Space>
       </div>
 
@@ -322,6 +350,7 @@ const LayersPage = () => {
         }}
       >
         <Form form={form} layout="vertical" className="pt-2">
+          {optionsError && <Alert className="mb-3" type="warning" showIcon message="引用选项未能完整加载" action={<Button size="small" onClick={() => void loadOptions()}>重试</Button>} />}
           <div className="grid grid-cols-2 gap-x-4">
             <Form.Item
               name="code"
@@ -351,10 +380,16 @@ const LayersPage = () => {
               <Select
                 allowClear
                 showSearch
-                loading={optionsLoading}
-                optionFilterProp="label"
+                loading={optionsLoading || datasourceLoading}
+                filterOption={false}
                 placeholder="选择数据源"
-                options={datasources.map((item) => ({
+                onSearch={(value) => void searchDatasources(value)}
+                onFocus={() => {
+                  if (datasources.length === 0) void searchDatasources('');
+                }}
+                options={[...datasources, ...(selectedDatasourceId && !datasources.some((item) => Number(item.id) === selectedDatasourceId)
+                  ? [{ id: selectedDatasourceId, name: `数据源 #${selectedDatasourceId}` }]
+                  : [])].map((item) => ({
                   label: item.name ?? `数据源 #${item.id}`,
                   value: item.id as number,
                 }))}

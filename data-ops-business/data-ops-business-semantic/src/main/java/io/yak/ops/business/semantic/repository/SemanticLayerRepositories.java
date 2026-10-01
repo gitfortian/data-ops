@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
 import io.yak.ops.common.bean.po.semantic.SemanticLayerPO;
 import io.yak.ops.common.bean.po.semantic.SemanticLayerTemplatePO;
@@ -32,7 +33,7 @@ public class SemanticLayerRepositories implements SemanticLayerRepository, Seman
     po.setCreateTime(now);
     po.setUpdateTime(now);
     layerMapper.insert(po);
-    return layer;
+    return toDomain(po);
   }
 
   @Override
@@ -79,7 +80,12 @@ public class SemanticLayerRepositories implements SemanticLayerRepository, Seman
     po.setUpdateTime(LocalDateTime.now());
     return layerMapper.update(
             po,
-            new LambdaQueryWrapper<SemanticLayerPO>()
+            new LambdaUpdateWrapper<SemanticLayerPO>()
+                .set(SemanticLayerPO::getStdNamingId, layer.stdNamingId())
+                .set(SemanticLayerPO::getLifecycleDays, layer.lifecycleDays())
+                .set(SemanticLayerPO::getDefaultPartition, layer.defaultPartition())
+                .set(SemanticLayerPO::getStorageFormat, layer.storageFormat())
+                .set(SemanticLayerPO::getDescription, layer.description())
                 .eq(SemanticLayerPO::getId, layer.id())
                 .eq(SemanticLayerPO::getProjectId, projectId))
         > 0;

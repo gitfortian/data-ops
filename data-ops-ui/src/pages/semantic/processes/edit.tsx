@@ -1,6 +1,8 @@
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { history, useParams } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
 import {
+  Alert,
   Button,
   Checkbox,
   Drawer,
@@ -15,7 +17,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceCatalogColumn, DataSourceCatalogTable } from '@/services/data-source/catalog';
@@ -32,6 +34,8 @@ import {
   listSemanticProcessSources,
   pageSemanticFields,
   unbindSemanticProcessField,
+  updateSemanticProcessFieldRequired,
+  reorderSemanticProcessFields,
   unbindSemanticProcessSource,
   updateSemanticProcess,
 } from '@/services/semantic/api';
@@ -78,6 +82,7 @@ interface FieldBindFormValues {
 
 /** 业务过程编辑工作台(ticket 34 交互重构):多 Tab 整页 + 子操作抽屉。 */
 const ProcessEditPage: React.FC = () => {
+  const { can } = usePermissionAccess();
   const params = useParams<{ id?: string }>();
   const processId = params.id ? Number(params.id) : undefined;
   const [process, setProcess] = useState<SemanticProcessRecord | null>(null);
@@ -90,6 +95,11 @@ const ProcessEditPage: React.FC = () => {
   // Tab2 关联源表
   const [sources, setSources] = useState<SemanticProcessSourceRecord[]>([]);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
+  const [datasourceCandidates, setDatasourceCandidates] = useState<DataSourceRecord[]>([]);
+  const [datasourceSearchLoading, setDatasourceSearchLoading] = useState(false);
+  const [datasourceSearchError, setDatasourceSearchError] = useState(false);
+  const [datasourceLabelsError, setDatasourceLabelsError] = useState(false);
+  const datasourceSearchRevision = useRef(0);
   const [sourceBindOpen, setSourceBindOpen] = useState(false);
   const [sourceBindForm] = Form.useForm<SourceBindFormValues>();
   const [bindingSource, setBindingSource] = useState(false);
@@ -105,12 +115,17 @@ const ProcessEditPage: React.FC = () => {
   // Tab3 引用标准字段
   const [boundFields, setBoundFields] = useState<SemanticFieldRecord[]>([]);
   const [fieldLibrary, setFieldLibrary] = useState<SemanticFieldRecord[]>([]);
+  const [fieldLibraryLoading, setFieldLibraryLoading] = useState(false);
+  const [fieldLibraryError, setFieldLibraryError] = useState(false);
+  const [boundFieldsError, setBoundFieldsError] = useState(false);
+  const fieldSearchRevision = useRef(0);
   const [fieldBindOpen, setFieldBindOpen] = useState(false);
   const [fieldBindForm] = Form.useForm<FieldBindFormValues>();
   const [bindingField, setBindingField] = useState(false);
   const [addFieldRoleFilter, setAddFieldRoleFilter] = useState<string | undefined>();
 
   // Tab4 关联模型
+  const [sectionErrors, setSectionErrors] = useState<string[]>([]);
   const [mainline, setMainline] = useState<ModelingMainlineCoverage | null>(null);
 
   const loadProcess = useCallback(async () => {
@@ -118,12 +133,20 @@ const ProcessEditPage: React.FC = () => {
       return;
     }
     try {
-      const [detail, sources, fields, mainline] = await Promise.all([
-        getSemanticProcess(processId),
+      const detail = await getSemanticProcess(processId);
+      setLoadError(false);
+      setProcess(detail);
+      const results = await Promise.allSettled([
         listSemanticProcessSources(processId),
         listSemanticProcessFields(processId),
-        getModelingMainlineCoverage(processId).catch(() => null),
+        getModelingMainlineCoverage(processId),
       ]);
+      const [sourceResult, fieldResult, modelResult] = results;
+      setSectionErrors(results.flatMap((result, index) =>
+        result.status === 'rejected' ? [['源表', '标准字段', '模型'][index]] : []));
+      const sources = sourceResult.status === 'fulfilled' ? sourceResult.value : [];
+      const fields = fieldResult.status === 'fulfilled' ? fieldResult.value : [];
+      const mainline = modelResult.status === 'fulfilled' ? modelResult.value : null;
       setProcess(detail);
       basicForm.setFieldsValue({
         name: detail.name,
@@ -143,14 +166,42 @@ const ProcessEditPage: React.FC = () => {
     }
   }, [processId, basicForm]);
 
+  const loadDatasourceLabels = useCallback(async () => {
+    try {
+      const result = await listDataSources({ pageNo: 1, pageSize: 200 });
+      setDatasources(result.bizData ?? []);
+      setDatasourceLabelsError(false);
+    } catch {
+      setDatasourceLabelsError(true);
+      message.error('数据源名称暂不可读取；源表绑定仍可按关键词查找数据源');
+    }
+  }, []);
+
   useEffect(() => {
     void loadProcess();
-    listDataSources({ pageNo: 1, pageSize: 200 })
-      .then((result) => setDatasources(result.bizData ?? []))
-      .catch(() => setDatasources([]));
-  }, [loadProcess]);
+    void loadDatasourceLabels();
+  }, [loadProcess, loadDatasourceLabels]);
 
   const datasourceNameOf = (id: number) => datasources.find((item) => Number(item.id) === id)?.name ?? `数据源 #${id}`;
+
+  const searchDatasourceCandidates = useCallback(async (searchText: string) => {
+    const revision = ++datasourceSearchRevision.current;
+    setDatasourceSearchLoading(true);
+    try {
+      const result = await listDataSources({ pageNo: 1, pageSize: 20, keyword: searchText.trim() || undefined });
+      if (revision === datasourceSearchRevision.current) {
+        setDatasourceCandidates(result.bizData ?? []);
+        setDatasourceSearchError(false);
+      }
+    } catch {
+      if (revision === datasourceSearchRevision.current) {
+        setDatasourceSearchError(true);
+        message.error('数据源候选加载失败，可修改关键词后重试');
+      }
+    } finally {
+      if (revision === datasourceSearchRevision.current) setDatasourceSearchLoading(false);
+    }
+  }, []);
 
   // ============ Tab1: 基本信息 ============
   const saveBasic = async () => {
@@ -171,7 +222,7 @@ const ProcessEditPage: React.FC = () => {
   };
 
   const basicTab = (
-    <Form form={basicForm} layout="vertical" className="max-w-[720px] pt-2">
+    <Form disabled={!can('semantic:update')} form={basicForm} layout="vertical" className="max-w-[720px] pt-2">
       <Form.Item label="业务过程编码">
         <Input value={process?.code} disabled />
       </Form.Item>
@@ -203,7 +254,7 @@ const ProcessEditPage: React.FC = () => {
       <Form.Item name="description" label="描述">
         <Input.TextArea rows={2} maxLength={512} />
       </Form.Item>
-      <YakButton
+      {can('semantic:update') && <YakButton
         type="primary"
         className="!h-9 !rounded-lg !px-5 !text-white"
         loading={savingBasic}
@@ -212,7 +263,7 @@ const ProcessEditPage: React.FC = () => {
         }}
       >
         保存基本信息
-      </YakButton>
+      </YakButton>}
     </Form>
   );
 
@@ -309,17 +360,18 @@ const ProcessEditPage: React.FC = () => {
       key: 'actions',
       width: 90,
       render: (_: unknown, record: SemanticProcessSourceRecord) => (
-        <Button type="link" size="small" danger onClick={() => removeSource(record)}>
+        can('semantic:update') ? <Button type="link" size="small" danger onClick={() => removeSource(record)}>
           解绑
-        </Button>
+        </Button> : null
       ),
     },
   ];
 
   const sourcesTab = (
     <div>
+      {datasourceLabelsError && <Alert className="mb-3" type="warning" showIcon message="数据源名称暂不可读" action={<Button size="small" onClick={() => void loadDatasourceLabels()}>重试</Button>} />}
       <div className="mb-3 flex justify-end">
-        <YakButton
+        {can('semantic:update') && <YakButton
           type="primary"
           className="!h-9 !rounded-lg !px-4 !text-white"
           onClick={() => {
@@ -327,7 +379,7 @@ const ProcessEditPage: React.FC = () => {
           }}
         >
           新增绑定
-        </YakButton>
+        </YakButton>}
       </div>
       {sources.length === 0 ? (
         <YakEmpty compact title="尚未绑定源表" description="点击「新增绑定」关联源表（连通性校验通过后生效）" />
@@ -370,11 +422,17 @@ const ProcessEditPage: React.FC = () => {
         cancelText="取消"
       >
         <Form form={sourceBindForm} layout="vertical" className="pt-2">
+          {datasourceSearchError && <Alert className="mb-3" type="warning" showIcon message="数据源候选暂不可读" action={<Button size="small" onClick={() => void searchDatasourceCandidates('')}>重试</Button>} />}
           <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
             <Select
               showSearch
-              optionFilterProp="label"
+              filterOption={false}
+              loading={datasourceSearchLoading}
               placeholder="选择数据源"
+              onSearch={(value) => void searchDatasourceCandidates(value)}
+              onFocus={() => {
+                if (datasourceCandidates.length === 0) void searchDatasourceCandidates('');
+              }}
               onChange={(value) => {
                 setBindDatasourceId(value);
                 sourceBindForm.setFieldValue('sourceTable', undefined);
@@ -382,7 +440,9 @@ const ProcessEditPage: React.FC = () => {
                 setThisColumns([]);
                 void loadTablesForDatasource(value);
               }}
-              options={datasources.map((item) => ({
+              options={[...datasourceCandidates, ...(bindDatasourceId && !datasourceCandidates.some((item) => Number(item.id) === bindDatasourceId)
+                ? [{ id: bindDatasourceId, name: datasourceNameOf(bindDatasourceId) }]
+                : [])].map((item) => ({
                 label: item.name ?? `数据源 #${item.id}`,
                 value: Number(item.id),
               }))}
@@ -497,21 +557,45 @@ const ProcessEditPage: React.FC = () => {
     if (!processId) {
       return;
     }
+    setBoundFieldsError(false);
     try {
       setBoundFields((await listSemanticProcessFields(processId)) ?? []);
     } catch {
-      setBoundFields([]);
+      setBoundFieldsError(true);
+      message.error('标准字段引用加载失败，可重试');
     }
   }, [processId]);
+
+  const loadFieldLibrary = useCallback(async (searchText: string) => {
+    const revision = ++fieldSearchRevision.current;
+    setFieldLibraryLoading(true);
+    try {
+      const result = await pageSemanticFields({
+        pageNo: 1,
+        pageSize: 20,
+        keyword: searchText.trim() || undefined,
+        role: addFieldRoleFilter as SemanticFieldRecord['role'] | undefined,
+      });
+      if (revision === fieldSearchRevision.current) {
+        setFieldLibrary(result.bizData ?? []);
+        setFieldLibraryError(false);
+      }
+    } catch {
+      if (revision === fieldSearchRevision.current) {
+        setFieldLibraryError(true);
+        message.error('字段候选加载失败，可修改关键词后重试');
+      }
+    } finally {
+      if (revision === fieldSearchRevision.current) setFieldLibraryLoading(false);
+    }
+  }, [addFieldRoleFilter]);
 
   useEffect(() => {
     if (processId) {
       void loadBoundFields();
-      pageSemanticFields({ pageNo: 1, pageSize: 200 })
-        .then((result) => setFieldLibrary(result.bizData ?? []))
-        .catch(() => setFieldLibrary([]));
+      void loadFieldLibrary('');
     }
-  }, [processId, loadBoundFields]);
+  }, [processId, loadBoundFields, loadFieldLibrary]);
 
   const submitFieldBind = async () => {
     if (!processId) {
@@ -548,6 +632,21 @@ const ProcessEditPage: React.FC = () => {
     });
   };
 
+  const moveField = async (index: number, offset: -1 | 1) => {
+    if (!processId || !can('semantic:update')) return;
+    const destination = index + offset;
+    if (destination < 0 || destination >= boundFields.length) return;
+    const ordered = [...boundFields];
+    [ordered[index], ordered[destination]] = [ordered[destination], ordered[index]];
+    try {
+      await reorderSemanticProcessFields(processId, ordered.map((field) => field.id));
+      message.success('字段顺序已更新');
+      await loadBoundFields();
+    } catch {
+      message.error('字段排序失败，引用可能已变化，请重新加载后再试');
+    }
+  };
+
   const fieldColumns: TableColumnsType<SemanticFieldRecord> = [
     {
       title: '字段名',
@@ -572,18 +671,29 @@ const ProcessEditPage: React.FC = () => {
       title: '是否必填',
       key: 'required',
       width: 100,
-      render: (_: unknown, record: SemanticFieldRecord) =>
-        record.isRequired ? <Tag color="orange">必需</Tag> : <Tag>可选</Tag>,
+      render: (_: unknown, record: SemanticFieldRecord) => can('semantic:update') ? (
+        <Button type="link" size="small" onClick={async () => {
+          try {
+            await updateSemanticProcessFieldRequired(processId!, record.id, !record.required);
+            message.success('必需标记已更新');
+            await loadBoundFields();
+          } catch {
+            message.error('必需标记更新失败，请刷新后重试');
+          }
+        }}>{record.required ? '必需（点击改可选）' : '可选（点击改必需）'}</Button>
+      ) : record.required ? <Tag color="orange">必需</Tag> : <Tag>可选</Tag>,
     },
     { title: '生效类型', dataIndex: 'dataType', width: 140, render: (v?: string) => v || '-' },
     {
       title: '操作',
       key: 'actions',
-      width: 90,
-      render: (_: unknown, record: SemanticFieldRecord) => (
-        <Button type="link" size="small" danger onClick={() => unbindField(record)}>
-          移除
-        </Button>
+      width: 170,
+      render: (_: unknown, record: SemanticFieldRecord, index: number) => (
+        can('semantic:update') ? <Space size={0}>
+          <Button disabled={index === 0} type="link" size="small" onClick={() => void moveField(index, -1)}>上移</Button>
+          <Button disabled={index === boundFields.length - 1} type="link" size="small" onClick={() => void moveField(index, 1)}>下移</Button>
+          <Button type="link" size="small" danger onClick={() => unbindField(record)}>移除</Button>
+        </Space> : null
       ),
     },
   ];
@@ -591,7 +701,7 @@ const ProcessEditPage: React.FC = () => {
   const fieldsTab = (
     <div>
       <div className="mb-3 flex justify-end">
-        <YakButton
+        {can('semantic:update') && <YakButton
           type="primary"
           className="!h-9 !rounded-lg !px-4 !text-white"
           onClick={() => {
@@ -600,9 +710,13 @@ const ProcessEditPage: React.FC = () => {
           }}
         >
           添加字段
-        </YakButton>
+        </YakButton>}
       </div>
-      {boundFields.length === 0 ? (
+      {boundFieldsError ? (
+        <div role="alert" className="py-4 text-[#667085]">
+          字段引用暂不可读取，当前结果不会按“尚未引用”处理。<Button type="link" onClick={() => void loadBoundFields()}>重试</Button>
+        </div>
+      ) : boundFields.length === 0 ? (
         <YakEmpty compact title="尚未引用标准字段" description="点击「添加字段」从字段库选择" />
       ) : (
         <Table<SemanticFieldRecord>
@@ -623,12 +737,16 @@ const ProcessEditPage: React.FC = () => {
         footer={null}
       >
         <Form form={fieldBindForm} layout="vertical" className="pt-2">
+          {fieldLibraryError && <Alert className="mb-3" type="warning" showIcon message="字段候选暂不可读" action={<Button size="small" onClick={() => void loadFieldLibrary('')}>重试</Button>} />}
           <Form.Item label="按角色筛选">
             <Select
               allowClear
               placeholder="全部角色"
               value={addFieldRoleFilter}
-              onChange={setAddFieldRoleFilter}
+              onChange={(value) => {
+                setAddFieldRoleFilter(value);
+                fieldBindForm.setFieldValue('fieldId', undefined);
+              }}
               options={[
                 { label: '业务过程', value: 'PROCESS' },
                 { label: '维度', value: 'DIMENSION' },
@@ -639,8 +757,10 @@ const ProcessEditPage: React.FC = () => {
           <Form.Item name="fieldId" label="标准字段" rules={[{ required: true, message: '请选择标准字段' }]}>
             <Select
               showSearch
-              optionFilterProp="label"
+              filterOption={false}
+              loading={fieldLibraryLoading}
               placeholder="从字段库选择（已绑定字段自动排除）"
+              onSearch={(value) => void loadFieldLibrary(value)}
               options={fieldLibrary
                 .filter(
                   (field) =>
@@ -654,10 +774,10 @@ const ProcessEditPage: React.FC = () => {
                 }))}
             />
           </Form.Item>
-          <Form.Item name="isRequired" label="是否必需" valuePropName="checked">
+          <Form.Item name="isRequired" label="是否必需" valuePropName="checked" initialValue={false}>
             <Checkbox>必需字段（派生建模默认勾选）</Checkbox>
           </Form.Item>
-          <YakButton
+          {can('semantic:update') && <YakButton
             type="primary"
             className="!h-9 !rounded-lg !px-5 !text-white"
             loading={bindingField}
@@ -666,7 +786,7 @@ const ProcessEditPage: React.FC = () => {
             }}
           >
             引用字段
-          </YakButton>
+          </YakButton>}
         </Form>
       </Drawer>
     </div>
@@ -679,7 +799,7 @@ const ProcessEditPage: React.FC = () => {
         <YakEmpty
           compact
           title="该业务过程还没有已建模型"
-          description="通过「按业务过程派生建模」（ticket 44）生成后自动展示"
+          description="在建模中按业务过程派生模型后自动展示"
         />
       ) : (
         (mainline.layers ?? []).map((layer) => (
@@ -711,7 +831,8 @@ const ProcessEditPage: React.FC = () => {
       )}
     </div>
   ) : (
-    <YakEmpty compact title="加载中…" />
+    <div><YakEmpty compact title={sectionErrors.includes('模型') ? '模型信息暂不可读取' : '加载中…'} />
+      {sectionErrors.includes('模型') ? <Button onClick={() => void loadProcess()}>重试</Button> : null}</div>
   );
 
   if (loadError) {
@@ -748,6 +869,7 @@ const ProcessEditPage: React.FC = () => {
         </YakButton>
       </div>
 
+      {sectionErrors.length ? <div role="alert">{sectionErrors.join('、')}暂不可读取，当前显示不能作为无引用证据。<Button onClick={() => void loadProcess()}>重试</Button></div> : null}
       <Tabs
         className="mt-3"
         defaultActiveKey="basic"
