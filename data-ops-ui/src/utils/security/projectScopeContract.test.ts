@@ -72,7 +72,7 @@ const controllerSources = (): string[] =>
   allJavaFiles.filter((file) => {
     if (!file.startsWith(BUSINESS_ROOT)) return false;
     const relative = file.slice(BUSINESS_ROOT.length).replace(/\\/g, '/');
-    return relative.includes('/controller/') && relative.endsWith('Controller.java');
+    return relative.endsWith('Controller.java');
   });
 
 const constantCache = new Map<string, string | undefined>();
@@ -112,6 +112,24 @@ const splitTopLevel = (input: string): string[] => {
   return segments.map((segment) => segment.trim()).filter(Boolean);
 };
 
+const splitStringConcatenation = (input: string): string[] => {
+  const segments: string[] = [];
+  let current = '';
+  let inQuote = false;
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    if (char === '"' && input[index - 1] !== '\\') inQuote = !inQuote;
+    if (!inQuote && char === '+') {
+      segments.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  segments.push(current);
+  return segments;
+};
+
 const literalOf = (token: string): string | undefined => {
   if (!token.startsWith('"')) return undefined;
   const closing = token.lastIndexOf('"');
@@ -140,7 +158,7 @@ const pathsFromArgs = (args: string, owner: string, unresolved: string[]): strin
     for (const candidate of candidates) {
       let url = '';
       let broken = false;
-      for (const token of candidate.split('+')) {
+      for (const token of splitStringConcatenation(candidate)) {
         const trimmed = token.trim();
         if (!trimmed) continue;
         const literal = literalOf(trimmed);

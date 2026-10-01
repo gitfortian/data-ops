@@ -35,6 +35,7 @@ export const PROJECT_REQUEST_RULES: readonly ProjectRequestRule[] = [
   // global and protected by the published NONE/API_KEY contract rather than Yak console headers.
   { prefix: '/api/v1/data-service/runtime', mode: 'LEGACY_GLOBAL' },
   { prefix: '/api/v1/data-service', mode: 'PROJECT_REQUIRED' },
+  { prefix: '/api/v1/consumption', mode: 'PROJECT_REQUIRED' },
   { prefix: '/api/v1/task-catalog', mode: 'PROJECT_OPTIONAL' },
   // Generic workflow task discovery includes Project-owned providers such as Offline Sync.
   { prefix: '/api/v1/tasks', mode: 'PROJECT_REQUIRED' },
