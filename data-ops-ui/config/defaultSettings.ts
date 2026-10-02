@@ -15,7 +15,7 @@ const Settings: ProLayoutProps & {
   fixedHeader: false,
   fixSiderbar: true,
   colorWeak: false,
-  title: 'Yak Ops',
+  title: 'Data Ops',
   pwa: true,
   logo: '/logo.png',
   iconfontUrl: '',

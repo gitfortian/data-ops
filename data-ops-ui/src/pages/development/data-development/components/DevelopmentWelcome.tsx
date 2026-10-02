@@ -66,7 +66,7 @@ const DevelopmentWelcome = (_: DevelopmentWelcomeProps) => {
           </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 flex h-6 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[10px] text-[#98a2b3]">
-          <span>Yak Ops · Data Development</span>
+          <span>Data Ops · Data Development</span>
           <span>{intl.formatMessage({ id: 'pages.dataDevelopment.welcome.ready' })}</span>
         </div>
       </div>

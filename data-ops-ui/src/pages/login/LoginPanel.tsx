@@ -152,7 +152,7 @@ export default function LoginPanel() {
           id: "pages.login.success",
           defaultMessage: "登录成功！",
         }),
-        description: "正在进入 Yak Ops",
+        description: "正在进入 Data Ops",
         meta: "身份验证完成",
         duration: 2,
       });

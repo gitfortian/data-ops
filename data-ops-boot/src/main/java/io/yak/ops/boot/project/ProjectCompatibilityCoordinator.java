@@ -115,7 +115,7 @@ public class ProjectCompatibilityCoordinator {
 
     ProjectSaveDTO input = new ProjectSaveDTO();
     input.setProjectName(normalizedProjectName());
-    input.setDescription("Yak Ops Project Space compatibility default project");
+    input.setDescription("Data Ops Project Space compatibility default project");
     input.setRunning(Boolean.TRUE);
     input.setDeptId(resolveCompatibilityDepartmentId(owner));
     input.setOwnerIdList(Collections.singletonList(ownerId));
@@ -148,7 +148,7 @@ public class ProjectCompatibilityCoordinator {
 
     DeptSaveDTO input = new DeptSaveDTO();
     input.setDeptName(departmentName);
-    input.setDescription("Yak Ops Project Space compatibility default department");
+    input.setDescription("Data Ops Project Space compatibility default department");
     input.setParentId(ROOT_DEPARTMENT_ID);
 
     try {

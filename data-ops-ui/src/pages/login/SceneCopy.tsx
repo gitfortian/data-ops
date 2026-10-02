@@ -7,7 +7,7 @@ const SceneCopy = React.memo(() => {
       <div className="scene-copy__badge">
         <TextType
           text={[
-            "Welcome To Yak Ops 🌊",
+            "Welcome To Data Ops 🌊",
             "让数据优雅的流动起来 💫",
             "让流动更轻一点 ✨",
           ]}

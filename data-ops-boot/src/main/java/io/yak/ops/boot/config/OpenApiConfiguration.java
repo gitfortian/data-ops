@@ -16,8 +16,8 @@ public class OpenApiConfiguration {
   public OpenAPI yakOpsOpenApi() {
     return new OpenAPI()
         .info(new Info()
-            .title("Yak Ops API")
-            .description("Yak Ops APIs and integrated Yak Framework capabilities")
+            .title("Data Ops API")
+            .description("Data Ops APIs and integrated Yak Framework capabilities")
             .version("1.0.0"));
   }
 

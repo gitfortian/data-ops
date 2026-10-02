@@ -42,7 +42,7 @@ export const commandCenterTemplate: ScreenTemplate = {
       y: 28,
       width: 410,
       height: 32,
-      data: { content: 'YAK OPS  /  DATA OBSERVABILITY GRID' },
+      data: { content: 'DATA OPS  /  DATA OBSERVABILITY GRID' },
       style: { fontSize: 12, fontWeight: 600, letterSpacing: 2.4, color: '#6f9bb2' },
     },
     {

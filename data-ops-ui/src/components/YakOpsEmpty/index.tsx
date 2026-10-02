@@ -28,7 +28,7 @@ const YakOpsEmpty: React.FC<YakOpsEmptyProps> = ({
   width = 220,
   height = 150,
   primaryColor: _primaryColor,
-  title = 'Yak Ops 暂无数据',
+  title = 'Data Ops 暂无数据',
   description,
   showCaption,
   style,
