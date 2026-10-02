@@ -190,10 +190,10 @@ public class BusinessDomainService {
     BusinessDomain existing = get(id);
     // 引用校验:子域(33)+业务过程(34)。
     if (repository.existsByParent(id)) {
-      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, "存在子业务域");
+      throw new SemanticException(SemanticErrorCode.DOMAIN_REFERENCED, "存在子业务域");
     }
     if (processRepository.existsByDomain(id)) {
-      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, "存在业务过程引用");
+      throw new SemanticException(SemanticErrorCode.DOMAIN_REFERENCED, "存在业务过程引用");
     }
     AuditOperationHandle audit =
         auditService.start(

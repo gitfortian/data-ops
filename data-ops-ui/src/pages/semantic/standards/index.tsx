@@ -547,6 +547,8 @@ const SemanticStandardsPage = () => {
       {
         title: '操作',
         key: 'actions',
+        // 宽表在 1280px 下会把操作列挤出可视区,钉在右侧保证始终可操作。
+        fixed: 'right' as const,
         width: 180,
         render: (_: unknown, record: CodeSetRecord) => (
           <Space size={0}>
@@ -558,6 +560,10 @@ const SemanticStandardsPage = () => {
                 {record.status === 'ENABLED' ? '停用' : '启用'}
               </Button>
             </> : null}
+            {/* 码集也有版本历史;此前只有标准行有入口,v1 码集完全看不到初始版本。 */}
+            <Button type="link" size="small" onClick={() => void openCodeSetVersions(record.codeSetCode, record.name)}>
+              版本
+            </Button>
             {can('semantic:delete') && record.preset ? (
               <Tooltip title="平台预置码集不可删除">
                 <span>
@@ -639,6 +645,8 @@ const SemanticStandardsPage = () => {
       {
         title: '操作',
         key: 'actions',
+        // 宽表在 1280px 下会把操作列挤出可视区,钉在右侧保证始终可操作。
+        fixed: 'right' as const,
         width: 260,
         render: (_: unknown, record: SemanticStandardRecord) => {
           const instance = record.id == null ? undefined : approvals[String(record.id)];
@@ -776,6 +784,8 @@ const SemanticStandardsPage = () => {
           className="mt-4"
           rowKey="codeSetCode"
           loading={loading}
+          // 让宽表在表格内部横向滚动,而不是溢出后被外层 overflow-hidden 裁掉。
+          scroll={{ x: 'max-content' }}
           columns={codeSetColumns}
           dataSource={codeSetRecords}
           locale={{
@@ -804,6 +814,8 @@ const SemanticStandardsPage = () => {
           className="mt-4"
           rowKey={(row) => (row.id == null ? `set:${row.code}` : String(row.id))}
           loading={loading}
+          // 让宽表在表格内部横向滚动,而不是溢出后被外层 overflow-hidden 裁掉。
+          scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={records}
           locale={{

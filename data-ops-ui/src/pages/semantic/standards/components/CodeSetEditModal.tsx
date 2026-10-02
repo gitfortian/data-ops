@@ -89,6 +89,8 @@ const CodeSetEditModal = ({ open, detail, onClose, onSaved, onExists }: CodeSetE
       open={open}
       title={isEdit ? '编辑码值标准' : '新建码值标准'}
       width={720}
+      // 码值标准可加多行码值,720p 下正文会顶到底部按钮;正文内滚,页脚始终可见。
+      styles={{ body: { maxHeight: 'calc(100dvh - 260px)', overflowY: 'auto' } }}
       okText="保存"
       cancelText="取消"
       confirmLoading={saving}
@@ -101,6 +103,7 @@ const CodeSetEditModal = ({ open, detail, onClose, onSaved, onExists }: CodeSetE
       <Form form={form} layout="vertical" className="pt-2">
         <CodeSetFormItems
           confirmRemove={isEdit}
+          persistedValues={(detail?.values ?? []).map((row) => row.codeValue ?? '').filter(Boolean)}
           codeDisabled={isEdit && !isLegacy}
           legacy={isLegacy}
           nameInconsistent={Boolean(detail?.nameInconsistent)}

@@ -182,6 +182,7 @@ const ModelVersionPanel: React.FC = () => {
                     <Tooltip title={approvalPending ? '发布审批在途，回滚已冻结' : '回滚到此版本（恢复为草稿）'}>
                       <button
                         type="button"
+                        aria-label={`回滚到 V${version.versionNo}（恢复为草稿）`}
                         className="rounded-[4px] border border-[#d0d5dd] p-1 text-[#667085] transition-colors hover:bg-[#f2f4f7]"
                         disabled={rollbackVersionNo !== null || approvalPending}
                       >
@@ -199,6 +200,7 @@ const ModelVersionPanel: React.FC = () => {
                     <Tooltip title={approvalPending ? '发布审批在途，回滚已冻结' : '回滚并发布（直接生效）'}>
                       <button
                         type="button"
+                        aria-label={`回滚并发布 V${version.versionNo}`}
                         className="rounded-[4px] border border-[#91caff] bg-[#e6f4ff] p-1 text-[#1677ff] transition-colors hover:bg-[#bae0ff]"
                         disabled={rollbackVersionNo !== null || approvalPending}
                       >

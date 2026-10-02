@@ -128,7 +128,13 @@ const BusinessDomainsPage = () => {
   };
 
   const submitEditor = async () => {
-    const values = await form.validateFields();
+    let values: DomainFormValues;
+    try {
+      values = await form.validateFields();
+    } catch {
+      // 校验失败时字段级错误已由 Form 渲染;这里只需吞掉 rejection,避免未处理拒绝。
+      return;
+    }
     setSaving(true);
     try {
       if (editing) {
@@ -146,8 +152,9 @@ const BusinessDomainsPage = () => {
       }
       setEditorOpen(false);
       await loadTree();
-    } catch {
-      message.error('保存失败（编码可能已存在），请检查后重试');
+    } catch (error: any) {
+      // 失败原因由服务端决定(编码重复/名称为空/…),硬编码文案会把用户带偏。
+      message.error(error?.message ?? '保存失败，请稍后重试');
     } finally {
       setSaving(false);
     }
@@ -296,7 +303,12 @@ const BusinessDomainsPage = () => {
               <Input maxLength={64} placeholder="如 trade" />
             </Form.Item>
           ) : null}
-          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+          <Form.Item
+            name="name"
+            label="名称"
+            // whitespace:纯空格等同为空,与服务端 @NotBlank 保持一致,不用等一次往返才报错。
+            rules={[{ required: true, whitespace: true, message: '请输入名称' }]}
+          >
             <Input maxLength={128} placeholder="业务域名称" />
           </Form.Item>
           <Form.Item name="owner" label="负责人">

@@ -135,7 +135,7 @@ public class SemanticProcessBindingService {
   /** 34 挂点:业务过程删除前校验存在源表关联。 */
   public void assertProcessDeletable(Long processId) {
     if (repository.existsByProcess(processId)) {
-      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, "存在源表关联");
+      throw new SemanticException(SemanticErrorCode.PROCESS_REFERENCED, "存在源表关联");
     }
   }
 }

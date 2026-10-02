@@ -31,7 +31,12 @@ public enum SemanticErrorCode implements ErrorCode {
   LAYER_REFERENCED(42020, "分层已被模型引用,无法删除"),
   LAYER_PRESET_DELETE_BLOCKED(42021, "默认分层不可删除"),
   PRESET_DELETE_BLOCKED(42022, "平台预置标准不可删除"),
-  PUBLISH_ALREADY_ENABLED(42023, "标准已启用,无需提交生效审批");
+  PUBLISH_ALREADY_ENABLED(42023, "标准已启用,无需提交生效审批"),
+  // 删除拦截文案必须点明被删对象:复用 STANDARD_REFERENCED 会让删业务域/业务过程时
+  // 提示"标准已被引用",术语错误且把用户引向错误的排查方向。
+  DOMAIN_REFERENCED(42024, "业务域已被引用,无法删除"),
+  PROCESS_REFERENCED(42025, "业务过程已被引用,无法删除"),
+  FIELD_REFERENCED(42026, "标准字段已被引用,无法删除");
 
   private final Integer code;
   private final String message;

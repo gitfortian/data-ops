@@ -1,4 +1,4 @@
-import { Form, Input, Modal, message, Space, Table, Typography } from 'antd';
+import { Button, Form, Input, Modal, message, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'umi';
@@ -19,6 +19,11 @@ interface TagFormValues {
   sortOrder?: number;
 }
 
+const TAG_STATUS_LABELS: Record<string, string> = {
+  ENABLED: '启用',
+  DISABLED: '停用',
+};
+
 const MetricServicePage = () => {
   const navigate = useNavigate();
   const [tags, setTags] = useState<MetricTagRecord[]>([]);
@@ -31,6 +36,22 @@ const MetricServicePage = () => {
   const [stats, setStats] = useState<MetricStats | null>(null);
   const [metrics, setMetrics] = useState<MetricRecord[]>([]);
   const [metricsTotal, setMetricsTotal] = useState(0);
+  const [catalogKeyword, setCatalogKeyword] = useState('');
+  const [catalogLoading, setCatalogLoading] = useState(false);
+
+  const loadCatalog = useCallback(async (keyword: string) => {
+    setCatalogLoading(true);
+    try {
+      const result = await pageMetrics({ pageNo: 1, pageSize: 50, keyword: keyword || undefined });
+      setMetrics(result.records ?? []);
+      setMetricsTotal(result.total ?? 0);
+    } catch {
+      setMetrics([]);
+      setMetricsTotal(0);
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
 
   const loadTags = useCallback(async () => {
     setTagsLoading(true);
@@ -62,16 +83,8 @@ const MetricServicePage = () => {
     getMetricStats()
       .then(setStats)
       .catch(() => setStats(null));
-    pageMetrics({ pageNo: 1, pageSize: 20 })
-      .then((result) => {
-        setMetrics(result.records ?? []);
-        setMetricsTotal(result.total ?? 0);
-      })
-      .catch(() => {
-        setMetrics([]);
-        setMetricsTotal(0);
-      });
-  }, [loadTags]);
+    void loadCatalog('');
+  }, [loadTags, loadCatalog]);
 
   const openCreateTag = () => {
     setEditingTag(null);
@@ -145,24 +158,45 @@ const MetricServicePage = () => {
         return <Typography.Link onClick={() => navigate(`/metric/manage?tagIds=${record.id}`)}>{count}</Typography.Link>;
       },
     },
-    { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => v || '-' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 80,
+      // 其余页面状态列都是中文,这里不能直出 ENABLED。
+      render: (v: string) => (
+        <Tag color={v === 'ENABLED' ? 'green' : 'default'}>{TAG_STATUS_LABELS[v] ?? v ?? '-'}</Tag>
+      ),
+    },
     {
       title: '操作',
       key: 'actions',
       width: 140,
+      // 纯文本不是按钮:键盘不可达、读屏也读不出"可点击"。
       render: (_, record) => (
         <Space size={0}>
-          <Typography.Link onClick={() => openEditTag(record)}>编辑</Typography.Link>
-          <Typography.Link type="danger" onClick={() => removeTag(record)}>
+          <Button type="link" size="small" onClick={() => openEditTag(record)}>
+            编辑
+          </Button>
+          <Button type="link" size="small" danger onClick={() => removeTag(record)}>
             删除
-          </Typography.Link>
+          </Button>
         </Space>
       ),
     },
   ];
 
   const metricColumns: ColumnsType<MetricRecord> = [
-    { title: '指标编码', dataIndex: 'metricCode', width: 160 },
+    {
+      title: '指标编码',
+      dataIndex: 'metricCode',
+      width: 160,
+      // 只读清单没有出口,看到问题指标也点不进去,等于把人堵在这里。
+      render: (v: string, record) => (
+        <Button type="link" size="small" className="!px-0" onClick={() => navigate(`/metric/manage/${record.id}`)}>
+          {v}
+        </Button>
+      ),
+    },
     { title: '指标名称', dataIndex: 'metricName', width: 180 },
     { title: '版本', dataIndex: 'version', width: 60, align: 'right' as const, render: (v: number) => `v${v}` },
     {
@@ -214,11 +248,23 @@ const MetricServicePage = () => {
               key: 'stats',
               label: '指标统计',
               children: stats ? (
-                <div className="grid grid-cols-4 gap-4">
-                  <StatCard title="指标总数" value={stats.total} />
-                  <StatCard title="原子指标" value={stats.atomic} color="#1677ff" />
-                  <StatCard title="派生指标" value={stats.derived} color="#fa8c16" />
-                  <StatCard title="复合指标" value={stats.composite} color="#722ed1" />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-4 gap-4">
+                    <StatCard title="指标总数" value={stats.total} />
+                    <StatCard title="原子指标" value={stats.atomic} color="#1677ff" />
+                    <StatCard title="派生指标" value={stats.derived} color="#fa8c16" />
+                    <StatCard title="复合指标" value={stats.composite} color="#722ed1" />
+                  </div>
+                  {/* 只有四个数字看不出结构;补一条占比条,顺带给出进入明细的出口。 */}
+                  <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[13px] font-medium text-[#344054]">类型构成</div>
+                      <Button type="link" size="small" onClick={() => navigate('/metric/manage')}>
+                        去指标管理查看明细
+                      </Button>
+                    </div>
+                    <TypeCompositionBar stats={stats} />
+                  </div>
                 </div>
               ) : (
                 <YakEmpty compact title="暂无统计数据" description="指标创建后自动统计" />
@@ -228,16 +274,35 @@ const MetricServicePage = () => {
               key: 'catalog',
               label: `指标目录 (${metricsTotal})`,
               children: (
-                <Table<MetricRecord>
-                  rowKey="id"
-                  columns={metricColumns}
-                  dataSource={metrics}
-                  pagination={false}
-                  size="small"
-                  locale={{
-                    emptyText: <YakEmpty compact title="暂无指标" description="在指标管理页创建指标" />,
-                  }}
-                />
+                <div>
+                  <div className="mb-3 flex justify-end">
+                    <Input.Search
+                      allowClear
+                      placeholder="按编码或名称搜索"
+                      className="!w-[240px]"
+                      value={catalogKeyword}
+                      onChange={(event) => setCatalogKeyword(event.target.value)}
+                      onSearch={(value) => void loadCatalog(value.trim())}
+                    />
+                  </div>
+                  <Table<MetricRecord>
+                    rowKey="id"
+                    columns={metricColumns}
+                    dataSource={metrics}
+                    loading={catalogLoading}
+                    pagination={false}
+                    size="small"
+                    locale={{
+                      emptyText: (
+                        <YakEmpty
+                          compact
+                          title={catalogKeyword ? '没有符合搜索条件的指标' : '暂无指标'}
+                          description={catalogKeyword ? '换个关键词再试' : '在指标管理页创建指标'}
+                        />
+                      ),
+                    }}
+                  />
+                </div>
               ),
             },
           ]}
@@ -272,6 +337,40 @@ const MetricServicePage = () => {
           ) : null}
         </Form>
       </Modal>
+    </div>
+  );
+};
+
+/** 用已有的四类计数画占比条,不新增数据来源。 */
+const TypeCompositionBar = ({ stats }: { stats: MetricStats }) => {
+  const segments = [
+    { label: '原子', value: stats.atomic, color: '#1677ff' },
+    { label: '派生', value: stats.derived, color: '#fa8c16' },
+    { label: '复合', value: stats.composite, color: '#722ed1' },
+  ].filter((segment) => segment.value > 0);
+  const sum = segments.reduce((acc, segment) => acc + segment.value, 0);
+  if (!sum) {
+    return <div className="mt-2 text-[12px] text-[#667085]">暂无可分类的指标</div>;
+  }
+  return (
+    <div className="mt-2">
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-[#f2f4f7]">
+        {segments.map((segment) => (
+          <div
+            key={segment.label}
+            style={{ width: `${(segment.value / sum) * 100}%`, background: segment.color }}
+            title={`${segment.label} ${segment.value}`}
+          />
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[#667085]">
+        {segments.map((segment) => (
+          <span key={segment.label}>
+            <span className="mr-1 inline-block h-[8px] w-[8px] rounded-sm align-middle" style={{ background: segment.color }} />
+            {segment.label} {segment.value}（{Math.round((segment.value / sum) * 100)}%）
+          </span>
+        ))}
+      </div>
     </div>
   );
 };

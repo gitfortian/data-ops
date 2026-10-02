@@ -688,6 +688,16 @@ const ModelingWorkspace: React.FC = () => {
           loading={loading}
           columns={columns}
           dataSource={records}
+          rowClassName={() => 'cursor-pointer'}
+          // 点行即进详情(与资产目录一致);行内链接/按钮自己处理点击,不重复跳转。
+          onRow={(record) => ({
+            onClick: (event) => {
+              const target = event.target as HTMLElement;
+              if (target.closest('a, button, input, .ant-checkbox-wrapper, .ant-dropdown-trigger')) return;
+              if (window.getSelection()?.toString()) return;
+              history.push(`/modeling/models/${record.id}`);
+            },
+          })}
           locale={{
             emptyText: (
               <YakEmpty
