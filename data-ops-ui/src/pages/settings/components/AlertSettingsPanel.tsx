@@ -490,7 +490,7 @@ const AlertSettingsPanel = () => {
                         noStyle
                         rules={[{ required: true, message: '关键词模式下关键词不能为空' }]}
                       >
-                        <Input variant="filled" placeholder="多个以逗号分隔，如 Yak Ops,告警" />
+                        <Input variant="filled" placeholder="多个以逗号分隔，如 Data Ops,告警" />
                       </Form.Item>
                     </div>
                   )}

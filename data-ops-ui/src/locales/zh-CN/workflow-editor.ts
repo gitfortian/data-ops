@@ -203,7 +203,7 @@ export default {
   'pages.workflow.editor.startInspector.variables': '工作流变量',
   'pages.workflow.editor.startInspector.variablesHint': '整个工作流共享，后续节点通过 vars.* 引用',
   'pages.workflow.editor.startInspector.systemVariables': '系统变量',
-  'pages.workflow.editor.startInspector.systemVariablesHint': 'Yak Ops 自动提供，只读，通过 sys.* 引用',
+  'pages.workflow.editor.startInspector.systemVariablesHint': 'Data Ops 自动提供，只读，通过 sys.* 引用',
   'pages.workflow.editor.startInspector.readonly': '只读',
   'pages.workflow.editor.startInspector.nextNodes': '下一步',
   'pages.workflow.editor.startInspector.addInput': '添加输入字段',

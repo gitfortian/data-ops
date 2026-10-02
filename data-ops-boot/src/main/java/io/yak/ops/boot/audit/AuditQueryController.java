@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Administrator-facing read API for end-to-end business audit operations. */
-@Tag(name = "Yak Ops 审计中心")
+@Tag(name = "Data Ops 审计中心")
 @RestController
 @RequestMapping("/api/v1/audit")
 @RequiresPermission(SecurityPermissionCode.OperationLog.READ)

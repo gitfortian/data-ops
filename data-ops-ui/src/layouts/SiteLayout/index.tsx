@@ -234,7 +234,7 @@ function BrandLogo({ compact }: { compact: boolean }) {
         <span className="relative block h-9 w-9 shrink-0 overflow-hidden">
           <img
             src="/logo.png"
-            alt="Yak Ops"
+            alt="Data Ops"
             draggable={false}
             className="
               absolute left-[-3px] top-1/2
@@ -246,7 +246,7 @@ function BrandLogo({ compact }: { compact: boolean }) {
       ) : (
         <img
           src="/logo.png"
-          alt="Yak Ops 一体化数字平台"
+          alt="Data Ops 一体化数字平台"
           draggable={false}
           className="
             block h-8 w-auto max-w-full
@@ -393,7 +393,7 @@ function SiteLayoutContent() {
 
   const routeMetadata = getRouteMetadata(location.pathname);
 
-  const pageTitle = routeMetadata?.title ?? "Yak Ops";
+  const pageTitle = routeMetadata?.title ?? "Data Ops";
 
   useEffect(() => {
     if (!routeMetadata || routeMetadata.id === "home") return;

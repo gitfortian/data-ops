@@ -110,7 +110,7 @@ public final class DingTalkAlertPlugin implements AlertPlugin {
 
       default -> {
         // markdown
-        String title = message.title() != null ? message.title() : "Yak Ops Alert";
+        String title = message.title() != null ? message.title() : "Data Ops Alert";
         String text =
             "### "
                 + levelPrefix

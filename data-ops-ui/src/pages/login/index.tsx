@@ -7,7 +7,7 @@ export default function LoginPage() {
         <header className="flex h-11 shrink-0 items-center">
           <img
             src="/logo1.png"
-            alt="Yak Ops 一体化"
+            alt="Data Ops 一体化"
             className="h-9 w-auto select-none object-contain sm:h-9"
             draggable={false}
           />

@@ -48,7 +48,7 @@ export function HomeHeader({ stats }: HomeHeaderProps) {
         <div className="ml-4 min-w-0">
           <div className="flex min-h-[22px] items-center">
             <span className="whitespace-nowrap text-sm font-medium leading-[22px] text-[#252830]">
-              Yak Ops
+              Data Ops
             </span>
             <span className="mx-3 h-[14px] w-px shrink-0 bg-black/[0.14]" />
             <span className="whitespace-nowrap text-sm font-normal leading-[22px] text-[#777b84]">

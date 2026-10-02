@@ -145,7 +145,7 @@ export default function SyncTaskEditor({
           type="info"
           showIcon
           message="正在读取 Link-Up Connector 能力"
-          description="能力确认完成前继续使用 Yak Ops 标准配置，保存时会校验当前 Connector 能力。"
+          description="能力确认完成前继续使用 Data Ops 标准配置，保存时会校验当前 Connector 能力。"
         />
       );
     }
@@ -156,7 +156,7 @@ export default function SyncTaskEditor({
           type="warning"
           showIcon
           message="暂时无法读取 Link-Up Connector 能力"
-          description={`${connectorRuntime.error}。编辑器保留 Yak Ops 标准配置，保存时会再次校验。`}
+          description={`${connectorRuntime.error}。编辑器保留 Data Ops 标准配置，保存时会再次校验。`}
         />
       );
     }
@@ -169,7 +169,7 @@ export default function SyncTaskEditor({
           message="Link-Up Worker 当前不可达"
           description={
             connectorRuntime.snapshot.errorMessage ||
-            '当前仅展示 Yak Ops 标准配置；Worker 恢复后会重新确认 Connector 能力。'
+            '当前仅展示 Data Ops 标准配置；Worker 恢复后会重新确认 Connector 能力。'
           }
         />
       );

@@ -203,7 +203,7 @@ export default {
   'pages.workflow.editor.startInspector.variables': 'Workflow Variables',
   'pages.workflow.editor.startInspector.variablesHint': 'Shared across the workflow; downstream nodes reference them through vars.*',
   'pages.workflow.editor.startInspector.systemVariables': 'System Variables',
-  'pages.workflow.editor.startInspector.systemVariablesHint': 'Provided automatically by Yak Ops, read-only, referenced through sys.*',
+  'pages.workflow.editor.startInspector.systemVariablesHint': 'Provided automatically by Data Ops, read-only, referenced through sys.*',
   'pages.workflow.editor.startInspector.readonly': 'Read-only',
   'pages.workflow.editor.startInspector.nextNodes': 'Next Step',
   'pages.workflow.editor.startInspector.addInput': 'Add Input Field',

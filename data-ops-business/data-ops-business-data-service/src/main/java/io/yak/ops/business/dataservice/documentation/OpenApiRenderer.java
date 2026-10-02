@@ -16,7 +16,7 @@ public class OpenApiRenderer {
     root.put("openapi", "3.0.3");
     root.put("info", map(
         "title", doc.name(), "version", "1.0.0", "description",
-        hasText(doc.description()) ? doc.description() : "Yak Ops Data Service"));
+        hasText(doc.description()) ? doc.description() : "Data Ops Data Service"));
     root.put("x-yak-documented", doc.documented());
     root.put("x-yak-schema-stale", doc.schemaStale());
 

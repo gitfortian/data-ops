@@ -664,7 +664,7 @@ export default function DataServiceApiCallPanel({
             label="每分钟调用上限"
             name="rateLimitPerMinute"
             rules={[{ required: true, message: '请输入每分钟调用上限' }]}
-            extra="限额在整个 Yak Ops 集群内按 Key 共享，范围 1 ~ 100000。"
+            extra="限额在整个 Data Ops 集群内按 Key 共享，范围 1 ~ 100000。"
           >
             <InputNumber
               min={1}

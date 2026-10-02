@@ -25,7 +25,7 @@ export const dataCenterTemplate: ScreenTemplate = {
       y: 28,
       width: 1000,
       height: 58,
-      data: { content: 'Yak Ops · 数据中心' },
+      data: { content: 'Data Ops · 数据中心' },
       style: { fontSize: 30, fontWeight: 600, letterSpacing: 0.5 },
     },
     {
