@@ -50,6 +50,7 @@ import type {
   MdmTransformChange,
   MdmTransformPreview,
 } from '@/services/mdm/types';
+import { formatBackendDateTime } from '@/utils/date';
 
 /** 去重的一行匹配字段：属性未选时留空，提交前由表单校验拦住。 */
 interface MatchFieldRow {
@@ -389,6 +390,11 @@ const MdmCleansingPage = () => {
   );
 
   const openCreateRule = () => {
+    if (!entityId) {
+      // 引导块已说明流程，这里兜底拦截：没有实体上下文时规则落不下去。
+      message.warning('请先在右上角选择主数据实体');
+      return;
+    }
     setEditingRule(null);
     form.resetFields();
     // 当前筛选是哪一类，新建就默认落在哪一类，省一次点选。
@@ -805,163 +811,207 @@ const MdmCleansingPage = () => {
         />
       </div>
 
-      <div className="mt-5">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-[15px] font-semibold">清洗规则</div>
-          <Space size={8} wrap>
-            <Segmented
-              size="small"
-              options={RULE_TYPE_FILTERS}
-              value={ruleTypeFilter}
-              onChange={(value) => setRuleTypeFilter(value as RuleTypeFilter)}
+      {!entityId ? (
+        // 未选实体时不再让四个区块各自空转（MD4-01）：先讲清楚流程，再让人去选实体。
+        <div className="mt-5 flex min-h-[460px] items-center justify-center rounded-lg border border-dashed border-[#e5e7eb]">
+          <div className="max-w-[520px] px-6 text-center">
+            <YakEmpty
+              title="先在右上角选择主数据实体"
+              description="清洗按实体组织：规则、去重发现与合并日志都挂在实体下；选择后即可开始"
             />
-            <YakButton
-              type="primary"
-              className="!h-8 !rounded-lg !px-3 !text-white"
-              onClick={openCreateRule}
-            >
-              新建清洗规则
-            </YakButton>
-          </Space>
+            <div className="mx-auto mt-2 max-w-[440px] space-y-2 text-left text-[13px] leading-6 text-[#667085]">
+              <div>
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[11px] font-semibold text-[#475467]">
+                  1
+                </span>
+                在上方「清洗规则」新建去重 / 标准化 / 补全规则
+              </div>
+              <div>
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[11px] font-semibold text-[#475467]">
+                  2
+                </span>
+                去重规则执行「去重发现」，重复组由人工合并；标准化 / 补全规则先预览影响再批量执行
+              </div>
+              <div>
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[11px] font-semibold text-[#475467]">
+                  3
+                </span>
+                质量检查（完整性 / 格式）在「数据质量」模块完成
+              </div>
+            </div>
+          </div>
         </div>
-        <Table<MdmCleanRuleRecord>
-          rowKey="id"
-          columns={ruleColumns}
-          dataSource={rules}
-          size="middle"
-          pagination={false}
-          locale={{
-            emptyText: (
-              <YakEmpty
-                compact
-                title="暂无清洗规则"
-                description="去重规则找重复、标准化规则改码值、补全规则填空值，三类都在「新建清洗规则」里配置"
-              />
-            ),
-          }}
-        />
-      </div>
+      ) : (
+        <>
+          <div className="mt-5">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[15px] font-semibold">清洗规则</div>
+              <Space size={8} wrap>
+                <Segmented
+                  size="small"
+                  options={RULE_TYPE_FILTERS}
+                  value={ruleTypeFilter}
+                  onChange={(value) => setRuleTypeFilter(value as RuleTypeFilter)}
+                />
+                <YakButton
+                  type="primary"
+                  className="!h-8 !rounded-lg !px-3 !text-white"
+                  onClick={openCreateRule}
+                >
+                  新建清洗规则
+                </YakButton>
+              </Space>
+            </div>
+            <Table<MdmCleanRuleRecord>
+              rowKey="id"
+              columns={ruleColumns}
+              dataSource={rules}
+              size="middle"
+              pagination={false}
+              locale={{
+                emptyText: (
+                  <YakEmpty
+                    compact
+                    title="暂无清洗规则"
+                    description="去重规则找重复、标准化规则改码值、补全规则填空值，三类都在「新建清洗规则」里配置"
+                  />
+                ),
+              }}
+            />
+          </div>
 
-      <div className="mt-6">
-        <div className="mb-2 flex flex-wrap items-center gap-3">
-          <div className="text-[15px] font-semibold">去重发现</div>
-          <Select
-            className="!w-64"
-            placeholder={dedupSelectPlaceholder}
-            value={discoverRuleId}
-            onChange={setDiscoverRuleId}
-            options={dedupRules.map((rule) => ({ label: rule.ruleName, value: rule.id }))}
-          />
-          <YakButton
-            type="primary"
-            className="!h-8 !rounded-lg !px-3 !text-white"
-            loading={discovering}
-            onClick={() => runDiscover(1)}
-          >
-            执行去重发现
-          </YakButton>
-        </div>
-        <Table<MdmDedupGroup>
-          rowKey={(group) => `${group.matchKey}#${group.matchBasis}`}
-          columns={groupColumns}
-          dataSource={groups}
-          loading={discovering}
-          size="middle"
-          locale={{
-            emptyText: (
-              <YakEmpty
-                compact
-                title="暂无重复组"
-                description="选择规则后点击「执行去重发现」，重复组按匹配键服务端聚合"
+          <div className="mt-6">
+            <div className="mb-2 flex flex-wrap items-center gap-3">
+              <div className="text-[15px] font-semibold">去重发现</div>
+              <Select
+                className="!w-64"
+                placeholder={dedupSelectPlaceholder}
+                value={discoverRuleId}
+                onChange={setDiscoverRuleId}
+                options={dedupRules.map((rule) => ({ label: rule.ruleName, value: rule.id }))}
               />
-            ),
-          }}
-          pagination={{
-            current: groupPageNo,
-            pageSize: 10,
-            total: groupTotal,
-            showTotal: (count) => `共 ${count} 个重复组`,
-            onChange: (page) => runDiscover(page),
-          }}
-        />
-      </div>
+              <YakButton
+                type="primary"
+                className="!h-8 !rounded-lg !px-3 !text-white"
+                loading={discovering}
+                onClick={() => runDiscover(1)}
+              >
+                执行去重发现
+              </YakButton>
+            </div>
+            <Table<MdmDedupGroup>
+              rowKey={(group) => `${group.matchKey}#${group.matchBasis}`}
+              columns={groupColumns}
+              dataSource={groups}
+              loading={discovering}
+              size="middle"
+              locale={{
+                emptyText: (
+                  <YakEmpty
+                    compact
+                    title="暂无重复组"
+                    description="选择规则后点击「执行去重发现」，重复组按匹配键服务端聚合"
+                  />
+                ),
+              }}
+              pagination={{
+                current: groupPageNo,
+                pageSize: 10,
+                total: groupTotal,
+                showTotal: (count) => `共 ${count} 个重复组`,
+                onChange: (page) => runDiscover(page),
+              }}
+            />
+          </div>
 
-      <div className="mt-6">
-        <div className="mb-2 flex flex-wrap items-center gap-3">
-          <div className="text-[15px] font-semibold">已忽略组</div>
-          <Typography.Text type="secondary" className="text-[13px]">
-            忽略只对当前规则生效：换规则即重新出现，撤销后立即回到待处理列表
-          </Typography.Text>
-        </div>
-        <Table<MdmDedupIgnoreRecord>
-          rowKey="id"
-          size="middle"
-          pagination={false}
-          dataSource={ignored}
-          locale={{
-            emptyText: (
-              <YakEmpty
-                compact
-                title={discoverRuleId ? '该规则下暂无忽略组' : '暂无忽略组'}
-                description={
-                  discoverRuleId
-                    ? '在重复组行内点「忽略」即可登记已知非重复'
-                    : '先在上方选择去重规则'
-                }
-              />
-            ),
-          }}
-          columns={[
-            {
-              title: '匹配依据',
-              dataIndex: 'matchBasis',
-              ellipsis: true,
-              // 存量忽略记录可能没带展示用依据，退回原始组键，至少能认出被静音的是哪一组。
-              render: (value: string | undefined, row) => value || row.matchKey,
-            },
-            { title: '忽略原因', dataIndex: 'reason', render: (value?: string) => value || '-' },
-            {
-              title: '忽略人',
-              dataIndex: 'createdBy',
-              width: 120,
-              render: (value?: string) => value || '-',
-            },
-            { title: '忽略时间', dataIndex: 'createTime', width: 180 },
-            {
-              title: '操作',
-              key: 'action',
-              width: 100,
-              render: (_, row) => (
-                <Typography.Link onClick={() => revokeIgnore(row)}>
-                  撤销忽略
-                </Typography.Link>
-              ),
-            },
-          ]}
-        />
-      </div>
+          <div className="mt-6">
+            <div className="mb-2 flex flex-wrap items-center gap-3">
+              <div className="text-[15px] font-semibold">已忽略组</div>
+              <Typography.Text type="secondary" className="text-[13px]">
+                忽略只对当前规则生效：换规则即重新出现，撤销后立即回到待处理列表
+              </Typography.Text>
+            </div>
+            <Table<MdmDedupIgnoreRecord>
+              rowKey="id"
+              size="middle"
+              pagination={false}
+              dataSource={ignored}
+              locale={{
+                emptyText: (
+                  <YakEmpty
+                    compact
+                    title={discoverRuleId ? '该规则下暂无忽略组' : '暂无忽略组'}
+                    description={
+                      discoverRuleId
+                        ? '在重复组行内点「忽略」即可登记已知非重复'
+                        : '先在上方选择去重规则'
+                    }
+                  />
+                ),
+              }}
+              columns={[
+                {
+                  title: '匹配依据',
+                  dataIndex: 'matchBasis',
+                  ellipsis: true,
+                  // 存量忽略记录可能没带展示用依据，退回原始组键，至少能认出被静音的是哪一组。
+                  render: (value: string | undefined, row) => value || row.matchKey,
+                },
+                { title: '忽略原因', dataIndex: 'reason', render: (value?: string) => value || '-' },
+                {
+                  title: '忽略人',
+                  dataIndex: 'createdBy',
+                  width: 120,
+                  render: (value?: string) => value || '-',
+                },
+                {
+                  title: '忽略时间',
+                  dataIndex: 'createTime',
+                  width: 180,
+                  render: (value?: string) => (value ? formatBackendDateTime(value) : '-'),
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 100,
+                  render: (_, row) => (
+                    <Typography.Link onClick={() => revokeIgnore(row)}>
+                      撤销忽略
+                    </Typography.Link>
+                  ),
+                },
+              ]}
+            />
+          </div>
 
-      <div className="mt-6">
-        <div className="mb-2 text-[15px] font-semibold">合并日志</div>
-        <Table<MdmMergeLogRecord>
-          rowKey="id"
-          size="middle"
-          pagination={false}
-          dataSource={mergeLogs}
-          locale={{ emptyText: <YakEmpty compact title="暂无合并记录" /> }}
-          columns={[
-            { title: '主记录', dataIndex: 'masterRecordId', width: 110 },
-            { title: '结果摘要', dataIndex: 'result' },
-            {
-              title: '操作人',
-              dataIndex: 'createdBy',
-              width: 120,
-              render: (value?: string) => value || '-',
-            },
-            { title: '时间', dataIndex: 'createTime', width: 180 },
-          ]}
-        />
-      </div>
+          <div className="mt-6">
+            <div className="mb-2 text-[15px] font-semibold">合并日志</div>
+            <Table<MdmMergeLogRecord>
+              rowKey="id"
+              size="middle"
+              pagination={false}
+              dataSource={mergeLogs}
+              locale={{ emptyText: <YakEmpty compact title="暂无合并记录" /> }}
+              columns={[
+                { title: '主记录', dataIndex: 'masterRecordId', width: 110 },
+                { title: '结果摘要', dataIndex: 'result' },
+                {
+                  title: '操作人',
+                  dataIndex: 'createdBy',
+                  width: 120,
+                  render: (value?: string) => value || '-',
+                },
+                {
+                  title: '时间',
+                  dataIndex: 'createTime',
+                  width: 180,
+                  render: (value?: string) => (value ? formatBackendDateTime(value) : '-'),
+                },
+              ]}
+            />
+          </div>
+        </>
+      )}
 
       <Modal
         title={editingRule ? '编辑清洗规则' : '新建清洗规则'}

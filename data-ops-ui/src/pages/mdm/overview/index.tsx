@@ -75,6 +75,8 @@ const PipelineStrip = ({ nodes }: { nodes: MdmOverviewPipelineNode[] }) => (
   <div className="flex flex-wrap items-stretch gap-2">
     {nodes.map((node, index) => {
       const meta = ATTENTION_META[node.key];
+      // 加工真相在数据开发域(契约不伪造):显示「跨域」而不是伪装成 0 或「-」。
+      const crossDomain = node.count < 0;
       return (
         <div key={node.key} className="flex items-center gap-2">
           {index > 0 && <span className="text-[16px] text-[#d0d5dd]">›</span>}
@@ -93,7 +95,11 @@ const PipelineStrip = ({ nodes }: { nodes: MdmOverviewPipelineNode[] }) => (
                 )}
               </div>
               <div className="mt-0.5 text-[20px] font-semibold leading-7">
-                {count(node.count)}
+                {crossDomain ? (
+                  <span className="text-[14px] font-medium text-[#98a2b3]">跨域</span>
+                ) : (
+                  count(node.count)
+                )}
                 {meta && node.attention > 0 && (
                   <span
                     className="ml-1 text-[12px] font-normal"
@@ -169,7 +175,7 @@ const MdmOverviewPage = () => {
         <div>
           <div className="text-[20px] font-semibold leading-7">主数据总览</div>
           <div className="mt-1 text-[13px] text-[#667085]">
-            采集 → 加工 → 清洗 → 审批 → 分发 的单一入口：计数全部服务端聚合，「-」表示查询失败而非 0
+            采集 → 加工 → 清洗 → 审批 → 分发 的单一入口：计数全部服务端聚合；「-」表示查询失败而非 0，加工真相在数据开发域（显示「跨域」）
           </div>
         </div>
         <Space>

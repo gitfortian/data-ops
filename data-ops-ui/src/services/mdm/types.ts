@@ -380,6 +380,9 @@ export type MdmApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN
 export interface MdmChangeRecord {
   id: number;
   entityId: number;
+  /** 实体名/编码由列表接口补齐;实体已删除时为空,前端回退 #id。 */
+  entityName?: string;
+  entityCode?: string;
   masterId: string;
   changeType: MdmChangeType;
   changeContent: string;

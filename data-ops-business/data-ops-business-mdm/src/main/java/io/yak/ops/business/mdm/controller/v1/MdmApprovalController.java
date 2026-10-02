@@ -9,15 +9,20 @@ import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.mdm.api.MdmApprovalApi;
 import io.yak.ops.business.mdm.application.MdmApprovalService;
+import io.yak.ops.business.mdm.application.MdmEntityService;
 import io.yak.ops.business.mdm.domain.approval.MdmApprovalStatus;
 import io.yak.ops.business.mdm.domain.approval.MdmChange;
 import io.yak.ops.business.mdm.domain.approval.MdmChangeType;
+import io.yak.ops.business.mdm.domain.entity.MdmEntity;
 import io.yak.ops.business.mdm.domain.record.MdmRecordVersion;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,10 +44,15 @@ public class MdmApprovalController {
 
   private final MdmApprovalService service;
   private final CurrentUserProvider currentUserProvider;
+  private final MdmEntityService entityService;
 
-  public MdmApprovalController(MdmApprovalService service, CurrentUserProvider currentUserProvider) {
+  public MdmApprovalController(
+      MdmApprovalService service,
+      CurrentUserProvider currentUserProvider,
+      MdmEntityService entityService) {
     this.service = service;
     this.currentUserProvider = currentUserProvider;
+    this.entityService = entityService;
   }
 
   @Operation(summary = "提交变更申请(自动生成审批中心 MDM_CHANGE 单)")
@@ -88,7 +98,31 @@ public class MdmApprovalController {
     MdmApprovalStatus parsedStatus =
         status != null ? MdmApprovalStatus.valueOf(status) : null;
     PageData<MdmChange> page = service.page(entityId, applicant, parsedStatus, pageNo, pageSize);
-    return Result.success(PagingData.from(page.map(ChangeVO::from)));
+    // 变更单只存 entityId;批量补一次实体名,列表不再显示裸 #id(MD5-01)。
+    Map<Long, MdmEntity> entitiesById =
+        page.records().stream()
+            .map(MdmChange::entityId)
+            .distinct()
+            .collect(Collectors.toUnmodifiableMap(
+                Function.identity(), this::findEntityOrNull));
+    return Result.success(
+        PagingData.from(
+            page.map(change -> {
+              MdmEntity entity = entitiesById.get(change.entityId());
+              return ChangeVO.from(
+                  change,
+                  entity == null ? null : entity.name(),
+                  entity == null ? null : entity.code());
+            })));
+  }
+
+  /** 实体可能已被删除,查不到时名字留空,由前端回退 #id。 */
+  private MdmEntity findEntityOrNull(Long entityId) {
+    try {
+      return entityService.get(entityId);
+    } catch (RuntimeException ignored) {
+      return null;
+    }
   }
 
   @Operation(summary = "版本快照历史(按 master_id,全量属性快照供 v(n-1)/v(n) diff)")
@@ -116,6 +150,8 @@ public class MdmApprovalController {
   public record ChangeVO(
       Long id,
       Long entityId,
+      String entityName,
+      String entityCode,
       String masterId,
       String changeType,
       String changeContent,
@@ -129,8 +165,12 @@ public class MdmApprovalController {
       LocalDateTime createTime) {
 
     public static ChangeVO from(MdmChange c) {
+      return from(c, null, null);
+    }
+
+    public static ChangeVO from(MdmChange c, String entityName, String entityCode) {
       return new ChangeVO(
-          c.id(), c.entityId(), c.masterId(),
+          c.id(), c.entityId(), entityName, entityCode, c.masterId(),
           c.changeType().name(), c.changeContent(), c.approvalLevel(),
           c.approvalStatus().name(),
           c.applicant(), c.approver(), c.approvalComment(),
