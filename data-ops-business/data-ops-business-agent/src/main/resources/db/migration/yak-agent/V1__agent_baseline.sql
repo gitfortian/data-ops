@@ -1,0 +1,218 @@
+-- 本文件由 scripts/db/consolidate-flyway-migrations.py 生成,请勿手改;要改结构请改脚本后重新生成。
+-- 合并了 2 个版本化迁移(SQL 原文按版本号升序,未做逻辑改写)。
+-- 被合并的文件:
+--   V1__ [.] V1__baseline_agent.sql
+--   V2__ [.] V2__agent_add_project_id.sql
+
+-- Source: data-ops-business/data-ops-business-agent/src/main/resources/db/migration/yak-agent/V1__baseline_agent.sql
+-- =====================================================================
+-- yak-agent 折叠版 baseline（单文件；禁止再拆分，见 AgentFlywayContractTest）
+-- 原迁移链 V1→V2→V4→V5→V6→V7→V8→V9→V12→V13 的全部最终表结构折叠在此。
+-- 所有增量变更已并入最终 CREATE TABLE（不含独立变更语句），
+-- 折叠映射：
+--   V2  rename      : yak_agent_query_log.elapsed_ms → elapsed_millis（直接建最终列名）
+--   V4  yak_agent_step（步骤级执行记录）
+--   V5  yak_agent_message（消息树）
+--   V6  yak_agent_turn / yak_agent_turn_event；step 增 turn_id
+--   V7  step 增 parent_step_id / tool_call_id（trace 关联键）
+--   V8  yak_agent_memory（长期记忆）
+--   V9  step 增 started_at / ended_at / attempt（span 计时升列）
+--   V12 yak_config（运行时动态配置）
+--   V13 yak_agent_skill（技能在线管理持久化）
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS `yak_agent_session` (
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `session_id`  VARCHAR(64)     NOT NULL COMMENT '会话ID（与 StateStore 会话标识一致）',
+    `user_id`     BIGINT UNSIGNED NOT NULL COMMENT '归属用户ID',
+    `title`       VARCHAR(200)    NULL COMMENT '会话标题',
+    `create_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `update_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_agent_session_id` (`session_id`),
+    KEY `idx_agent_session_user` (`user_id`, `update_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT ='AI 分析会话元数据';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_report` (
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `session_id`  VARCHAR(64)     NOT NULL COMMENT '来源会话ID',
+    `user_id`     BIGINT UNSIGNED NOT NULL COMMENT '归属用户ID',
+    `title`       VARCHAR(500)    NOT NULL COMMENT '报告标题',
+    `content`     LONGTEXT        NOT NULL COMMENT '报告正文（Markdown + ECharts 配置块）',
+    `is_deleted`  TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
+    `create_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `update_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_agent_report_session` (`session_id`),
+    KEY `idx_agent_report_user` (`user_id`, `is_deleted`, `id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT ='AI 分析报告';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_query_log` (
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `session_id`     VARCHAR(64)  NOT NULL COMMENT '会话ID',
+    `dataset_id`     BIGINT UNSIGNED NOT NULL COMMENT '目标数据集ID',
+    `query_id`       VARCHAR(64)  NULL COMMENT 'Dataset 查询运行时返回的 queryId',
+    `request_json`   TEXT         NULL COMMENT '结构化查询参数投影（dimensions/metrics/filters/sorts/limit）',
+    `status`         VARCHAR(20)  NOT NULL COMMENT 'SUCCESS / FAILED / REJECTED',
+    `error_message`  VARCHAR(1000) NULL COMMENT '失败原因摘要',
+    `returned_rows`  INT          NULL COMMENT '返回行数',
+    `truncated`      TINYINT      NULL COMMENT '是否被截断',
+    `elapsed_millis` BIGINT       NULL COMMENT '耗时毫秒（最终列名，与 PO 驼峰映射一致）',
+    `create_time`    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_agent_query_log_session` (`session_id`, `id`),
+    KEY `idx_agent_query_log_dataset` (`dataset_id`, `id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT ='Agent 数据集查询证据留痕';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_step` (
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `session_id`     VARCHAR(64)  NOT NULL COMMENT '会话ID',
+    `turn_id`        VARCHAR(64)  NULL COMMENT '轮次ID（V6 归属链路）',
+    `parent_step_id` BIGINT UNSIGNED NULL COMMENT '父步骤ID：TOOL_CALL 指向触发它的 LLM_CALL（V7 trace 链）',
+    `kind`           VARCHAR(24)  NOT NULL COMMENT '步骤类型：LLM_CALL/TOOL_CALL/GUARD/COMPILE/CLARIFY/TURN_SUMMARY',
+    `name`           VARCHAR(128) NOT NULL COMMENT '模型名或工具名',
+    `tool_call_id`   VARCHAR(64)  NULL COMMENT '工具调用ID：与事件帧 TOOL_CALL/TOOL_RESULT 的 toolCallId 关联（V7）',
+    `status`         VARCHAR(16)  NOT NULL COMMENT '状态：RUNNING/COMPLETED/FAILED/CANCELLED/REJECTED',
+    `request_json`   TEXT         NULL COMMENT '请求摘要（超长截断）',
+    `response_json`  TEXT         NULL COMMENT '响应摘要（超长截断）',
+    `error_code`     VARCHAR(48)  NULL COMMENT '分类错误码：TIMEOUT/USER_ERROR/PROVIDER_ERROR/GUARD_REJECTED...',
+    `error_message`  VARCHAR(1000) NULL COMMENT '失败原因摘要',
+    `stats_json`     JSON         NULL COMMENT '计量统计：{promptTokens,completionTokens,latencyMs,retryCount}',
+    `started_at`     DATETIME(3)  NULL COMMENT 'span 开始时刻（服务端权威，V9）',
+    `ended_at`       DATETIME(3)  NULL COMMENT 'span 结束时刻（V9）',
+    `attempt`        INT          NULL COMMENT '尝试序：重试/并行批内序号，1 起（V9）',
+    `create_time`    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_agent_step_session` (`session_id`, `id`),
+    KEY `idx_agent_step_kind_status` (`kind`, `status`, `id`),
+    KEY `idx_agent_step_turn` (`turn_id`, `id`),
+    KEY `idx_agent_step_tool_call` (`tool_call_id`),
+    KEY `idx_agent_step_turn_kind` (`turn_id`, `kind`, `id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Agent 步骤级执行记录';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_message` (
+    `id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `session_id`   VARCHAR(64)  NOT NULL COMMENT '会话ID',
+    `message_id`   VARCHAR(64)  NOT NULL COMMENT '消息ID（uuid）',
+    `parent_id`    VARCHAR(64)  NULL COMMENT '父消息ID，根为 NULL',
+    `role`         VARCHAR(16)  NOT NULL COMMENT '角色：user/assistant',
+    `content`      LONGTEXT     NULL COMMENT '正文',
+    `model_name`   VARCHAR(128) NULL COMMENT 'assistant 消息的模型名',
+    `total_tokens` BIGINT       NULL COMMENT '该回复消耗 token 总量',
+    `done`         TINYINT      NOT NULL DEFAULT 1 COMMENT '生成完成标记：0-流式中 1-终态',
+    `is_deleted`   TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `create_time`  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `update_time`  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_agent_msg` (`session_id`, `message_id`),
+    KEY `idx_agent_msg_parent` (`session_id`, `parent_id`),
+    KEY `idx_agent_msg_session_ct` (`session_id`, `create_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Agent 消息树';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_turn` (
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键（入队 FIFO 序）',
+    `turn_id`        VARCHAR(64)  NOT NULL COMMENT '轮次ID',
+    `session_id`     VARCHAR(64)  NOT NULL COMMENT '会话ID',
+    `user_id`        BIGINT       NOT NULL COMMENT '归属用户（提交时冻结，归属校验依据）',
+    `kind`           VARCHAR(16)  NOT NULL COMMENT '类型：START/RESUME',
+    `payload_json`   TEXT         NULL COMMENT '输入投影：START=message；RESUME=tool feedbacks',
+    `status`         VARCHAR(24)  NOT NULL COMMENT '状态：QUEUED/RUNNING/WAITING_INPUT/COMPLETED/FAILED/CANCELLED/INTERRUPTED',
+    `error_code`     VARCHAR(48)  NULL COMMENT '分类错误码：TIMEOUT/USER_ERROR/PROVIDER_ERROR/GENERIC/ORPHANED_INTERRUPTED...',
+    `error_message`  VARCHAR(1000) NULL COMMENT '失败原因摘要',
+    `project_id`     BIGINT       NULL COMMENT '项目空间预留（PROJECT_RUNTIME，异步上下文恢复通道）',
+    `create_time`    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `start_time`     DATETIME(3)  NULL COMMENT '开始执行时间',
+    `end_time`       DATETIME(3)  NULL COMMENT '终态时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_agent_turn_id` (`turn_id`),
+    KEY `idx_agent_turn_session` (`session_id`, `id`),
+    KEY `idx_agent_turn_status` (`status`, `id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Agent 推理轮次生命周期';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_turn_event` (
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '递增 event_id（SSE Last-Event-ID 游标）',
+    `turn_id`       VARCHAR(64)  NOT NULL COMMENT '轮次ID',
+    `event_type`    VARCHAR(32)  NOT NULL COMMENT '帧类型：TEXT_DELTA/TOOL_CALL/.../TURN_FINISHED/ERROR',
+    `payload_json`  TEXT         NULL COMMENT '帧投影 JSON',
+    `create_time`   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_turn_event_cursor` (`turn_id`, `id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Agent 轮次事件投递日志';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_memory` (
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `scope`          VARCHAR(16)  NOT NULL COMMENT '归属范围：USER/PROJECT/GLOBAL',
+    `scope_key`      VARCHAR(64)  NOT NULL COMMENT '作用域键：userId / projectId / -（global）',
+    `memory_type`    VARCHAR(16)  NOT NULL COMMENT '类型：PREFERENCE/FACT/GLOSSARY/LESSON/TEMPLATE/EXAMPLE',
+    `layer`          VARCHAR(8)   NOT NULL DEFAULT 'LEDGER' COMMENT '层：LEDGER/CURATED',
+    `content`        VARCHAR(2000) NOT NULL COMMENT '记忆正文（自包含、可独立检索；不含查询结果明细）',
+    `keywords`       VARCHAR(255) NULL COMMENT '检索关键词（提取时生成，空格分隔）',
+    `confidence`     DECIMAL(3,2) NOT NULL DEFAULT 0.60 COMMENT '置信度 0~1',
+    `hit_count`      INT          NOT NULL DEFAULT 0 COMMENT '命中次数（巩固层参考）',
+    `last_hit_at`    DATETIME(3)  NULL COMMENT '最后命中时刻',
+    `source_turn_id` VARCHAR(64)  NULL COMMENT '来源轮次',
+    `source_session` VARCHAR(64)  NULL COMMENT '来源会话',
+    `status`         VARCHAR(16)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态：ACTIVE/MERGED/ARCHIVED/DISABLED',
+    `merged_into`    BIGINT UNSIGNED NULL COMMENT 'MERGED 时指向主条目',
+    `create_time`    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `update_time`    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_agent_memory_scope` (`scope`, `scope_key`, `status`, `memory_type`),
+    KEY `idx_agent_memory_turn` (`source_turn_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Agent 长期记忆（两层：LEDGER/CURATED）';
+
+CREATE TABLE IF NOT EXISTS `yak_config` (
+    `id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `config_key`   VARCHAR(128) NOT NULL COMMENT '配置键（全局唯一）',
+    `config_value` VARCHAR(512) NOT NULL COMMENT '配置值',
+    `description`  VARCHAR(255) NULL COMMENT '说明',
+    `update_time`  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_config_key` (`config_key`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Agent 运行时动态配置（per-key，热更新）';
+
+CREATE TABLE IF NOT EXISTS `yak_agent_skill` (
+    `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `skill_id`      VARCHAR(64)  NOT NULL COMMENT '技能标识（全局唯一，逻辑名；SkillBox 按此启停）',
+    `name`          VARCHAR(128) NOT NULL COMMENT '技能名（展示名）',
+    `description`   VARCHAR(512) NOT NULL COMMENT '技能一句话描述（注入提示用）',
+    `metadata_json` TEXT         NULL COMMENT '技能元数据（能力标签等，JSON）',
+    `content`       LONGTEXT     NOT NULL COMMENT '技能正文（instructions 等，注入 System Prompt）',
+    `status`        VARCHAR(16)  NOT NULL DEFAULT 'ENABLED' COMMENT 'ENABLED/DISABLED（在线启停持久态）',
+    `version`       INT          NOT NULL DEFAULT 1 COMMENT '乐观版本（并发编辑防覆盖）',
+    `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_skill_id` (`skill_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '智能体技能（skills 在线管理持久化）';
+
+-- Source: data-ops-business/data-ops-business-agent/src/main/resources/db/migration/yak-agent/V2__agent_add_project_id.sql
+-- =====================================================================
+-- V2: Agent 项目空间隔离：yak_agent_session / yak_agent_report / yak_agent_skill
+-- 增加 project_id 列，实现项目级数据隔离。
+-- yak_agent_turn 已有 project_id 预留列（V1），此处改为 NOT NULL。
+-- =====================================================================
+
+ALTER TABLE `yak_agent_session`
+    ADD COLUMN `project_id` BIGINT NOT NULL DEFAULT 0 COMMENT '项目空间ID' AFTER `user_id`,
+    ADD KEY `idx_agent_session_project` (`project_id`, `update_time`);
+
+ALTER TABLE `yak_agent_report`
+    ADD COLUMN `project_id` BIGINT NOT NULL DEFAULT 0 COMMENT '项目空间ID' AFTER `user_id`,
+    ADD KEY `idx_agent_report_project` (`project_id`, `is_deleted`, `id`);
+
+ALTER TABLE `yak_agent_skill`
+    ADD COLUMN `project_id` BIGINT NOT NULL DEFAULT 0 COMMENT '项目空间ID' AFTER `skill_id`,
+    ADD KEY `idx_agent_skill_project` (`project_id`);
+
+-- yak_agent_turn.project_id 已在 V1 预留（nullable），先回填存量 NULL，再改为 NOT NULL 以强制项目隔离。
+UPDATE `yak_agent_turn` SET `project_id` = 0 WHERE `project_id` IS NULL;
+ALTER TABLE `yak_agent_turn`
+    MODIFY COLUMN `project_id` BIGINT NOT NULL DEFAULT 0 COMMENT '项目空间ID（PROJECT_RUNTIME，异步上下文恢复通道）',
+    ADD KEY `idx_agent_turn_project` (`project_id`, `id`);
+
+-- yak_agent_query_log 增加 project_id + user_id 列，实现项目级审计隔离。
+ALTER TABLE `yak_agent_query_log`
+    ADD COLUMN `project_id` BIGINT NOT NULL DEFAULT 0 COMMENT '项目空间ID' AFTER `id`,
+    ADD COLUMN `user_id` BIGINT NOT NULL DEFAULT 0 COMMENT '归属用户ID' AFTER `project_id`,
+    ADD KEY `idx_agent_query_log_project` (`project_id`, `user_id`, `id`);

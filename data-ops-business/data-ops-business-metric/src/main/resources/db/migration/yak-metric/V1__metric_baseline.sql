@@ -1,0 +1,240 @@
+-- 本文件由 scripts/db/consolidate-flyway-migrations.py 生成,请勿手改;要改结构请改脚本后重新生成。
+-- 合并了 7 个版本化迁移(SQL 原文按版本号升序,未做逻辑改写)。
+-- 被合并的文件:
+--   V1__ [.] V1__create_metric_tables.sql
+--   V2__ [.] V2__metric_definition_fields.sql
+--   V3__ [.] V3__metric_derived_qualifiers.sql
+--   V4__ [.] V4__metric_validation_evidence.sql
+--   V5__ [.] V5__metric_publication_ledger.sql
+--   V6__ [.] V6__metric_usage_published_version.sql
+--   V7__ [.] V7__metric_validation_provider_state.sql
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V1__create_metric_tables.sql
+-- Metric module V1 (ticket 45): all 7 tables created in a single migration.
+-- Tables: yak_metric, yak_metric_tag, yak_metric_tag_rel, yak_metric_version,
+--         yak_metric_dependency, yak_metric_composition, yak_metric_usage.
+
+CREATE TABLE IF NOT EXISTS yak_metric (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_code VARCHAR(64) NOT NULL COMMENT '指标编码,项目内唯一,创建后不可改',
+    metric_name VARCHAR(128) NOT NULL COMMENT '指标名称',
+    domain_id BIGINT NULL COMMENT '业务域(引用 semantic,松散 ID)',
+    metric_type VARCHAR(16) NOT NULL COMMENT '类型:ATOMIC/DERIVED/COMPOSITE',
+    caliber_id BIGINT NULL COMMENT '口径标准引用(引用 semantic,松散 ID,可空)',
+    cal_rule VARCHAR(1024) NULL COMMENT '计算规则(从口径标准带出或手填)',
+    model_id BIGINT NULL COMMENT '依赖模型(引用 modeling,松散 ID)',
+    stat_dimensions JSON NULL COMMENT '统计维度(JSON 数组,如 ["order_date","order_city"])',
+    stat_period VARCHAR(16) NOT NULL DEFAULT 'DAY' COMMENT '统计周期:DAY/WEEK/MONTH',
+    unit_id BIGINT NULL COMMENT '单位标准引用(引用 semantic,松散 ID)',
+    business_desc VARCHAR(512) NULL COMMENT '业务口径描述',
+    owner VARCHAR(64) NULL COMMENT '负责人',
+    status VARCHAR(16) NOT NULL DEFAULT 'ENABLED' COMMENT '状态:ENABLED/DISABLED',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by VARCHAR(64) NOT NULL COMMENT '创建人',
+    updated_by VARCHAR(64) NULL COMMENT '最后修改人',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    update_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_yak_metric_code (project_id, metric_code),
+    KEY idx_yak_metric_domain (project_id, domain_id),
+    KEY idx_yak_metric_type (project_id, metric_type),
+    KEY idx_yak_metric_status (project_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标主表';
+
+CREATE TABLE IF NOT EXISTS yak_metric_tag (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    tag_code VARCHAR(64) NOT NULL COMMENT '标签编码,项目内唯一',
+    tag_name VARCHAR(128) NOT NULL COMMENT '标签名称',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序,小在前',
+    status VARCHAR(16) NOT NULL DEFAULT 'ENABLED' COMMENT '状态:ENABLED/DISABLED',
+    created_by VARCHAR(64) NOT NULL COMMENT '创建人',
+    updated_by VARCHAR(64) NULL COMMENT '最后修改人',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    update_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_yak_metric_tag_code (project_id, tag_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标标签';
+
+CREATE TABLE IF NOT EXISTS yak_metric_tag_rel (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标',
+    tag_id BIGINT NOT NULL COMMENT '标签',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_yak_metric_tag_rel (project_id, metric_id, tag_id),
+    KEY idx_yak_metric_tag_rel_tag (project_id, tag_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标标签关联';
+
+CREATE TABLE IF NOT EXISTS yak_metric_version (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标',
+    version INT NOT NULL COMMENT '版本号',
+    snapshot JSON NOT NULL COMMENT '版本快照',
+    change_desc VARCHAR(512) NULL COMMENT '变更说明',
+    changed_by VARCHAR(64) NOT NULL COMMENT '变更人',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '变更时间',
+    PRIMARY KEY (id),
+    KEY idx_yak_metric_version_metric (project_id, metric_id),
+    UNIQUE KEY uk_yak_metric_version (metric_id, version)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标版本历史';
+
+CREATE TABLE IF NOT EXISTS yak_metric_dependency (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标',
+    dependency_type VARCHAR(16) NOT NULL COMMENT '类型:MODEL/FIELD/CALIBER/UNIT/COMPOSITION',
+    dependency_id BIGINT NOT NULL COMMENT '依赖对象 ID(松散引用)',
+    dependency_code VARCHAR(64) NULL COMMENT '依赖对象编码(冗余快照,供展示)',
+    dependency_version INT NULL COMMENT '依赖对象版本号(用于影响分析比对)',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_yak_metric_dep_metric (project_id, metric_id),
+    KEY idx_yak_metric_dep_target (dependency_type, dependency_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标血缘登记(服务层自动写入)';
+
+CREATE TABLE IF NOT EXISTS yak_metric_composition (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '复合指标 ID',
+    sub_metric_id BIGINT NOT NULL COMMENT '子指标 ID',
+    operator VARCHAR(8) NOT NULL COMMENT '运算方式:ADD/SUB/MUL/DIV',
+    expression VARCHAR(512) NULL COMMENT '完整表达式(可选)',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '操作数顺序',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_yak_metric_comp_metric (project_id, metric_id),
+    KEY idx_yak_metric_comp_sub (project_id, sub_metric_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='复合指标组成';
+
+CREATE TABLE IF NOT EXISTS yak_metric_usage (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标',
+    usage_type VARCHAR(16) NOT NULL COMMENT '类型:REPORT/DASHBOARD/API/SCREEN',
+    usage_id BIGINT NOT NULL COMMENT '使用方 ID',
+    usage_name VARCHAR(128) NULL COMMENT '使用方名称(冗余快照)',
+    create_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_yak_metric_usage_metric (project_id, metric_id),
+    KEY idx_yak_metric_usage_consumer (usage_type, usage_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标使用记录';
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V2__metric_definition_fields.sql
+-- Metric definition enhancement: add fields for atomic/derived/composite differentiation.
+-- process_id: business process reference (atomic=required, derived=optional)
+-- measure_expr: measure expression for atomic metrics, e.g. SUM(order_amount)
+-- filter_expr: filter condition for atomic metrics
+-- dim_model_ids: DIM model references (JSON array) for atomic metrics
+-- ref_metric_id: referenced atomic metric ID (derived metrics only)
+-- dim_constraint: dimension constraint expression (derived metrics only)
+
+ALTER TABLE yak_metric
+  ADD COLUMN process_id BIGINT NULL COMMENT '业务过程引用(原子必填,派生可选)' AFTER domain_id,
+  ADD COLUMN measure_expr VARCHAR(512) NULL COMMENT '度量表达式,如 SUM(order_amount)' AFTER cal_rule,
+  ADD COLUMN filter_expr VARCHAR(1024) NULL COMMENT '过滤条件,如 order_status != 已取消' AFTER measure_expr,
+  ADD COLUMN dim_model_ids JSON NULL COMMENT 'DIM模型引用(JSON数组)' AFTER filter_expr,
+  ADD COLUMN ref_metric_id BIGINT NULL COMMENT '引用的原子指标ID(仅派生指标)' AFTER dim_model_ids,
+  ADD COLUMN dim_constraint VARCHAR(1024) NULL COMMENT '维度限定(仅派生指标)' AFTER ref_metric_id;
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V3__metric_derived_qualifiers.sql
+-- 02 派生指标结构化生成:限定条件(修饰词)升格为 metric 内结构化条件(裁决见 docs/v1/05 乱象清单 R-11)。
+-- qualifiers_json: 结构化限定条件数组 [{"field","op","value"}],派生保存时由
+-- DerivedMetricAssembler 编译进 filter_expr(原子 filter AND 限定条件),并继承原子
+-- measure_expr/model_id/口径/单位。可空:存量派生指标(自由文本 dim_constraint)不迁移不组装。
+
+ALTER TABLE yak_metric
+  ADD COLUMN qualifiers_json JSON NULL COMMENT '结构化限定条件(JSON数组,仅派生指标)' AFTER dim_constraint;
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V4__metric_validation_evidence.sql
+-- F-005 / S2: append-only Definition Validation evidence bound to immutable MetricVersion.
+
+CREATE TABLE IF NOT EXISTS yak_metric_validation_evidence (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '证据主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标 ID',
+    metric_version_id BIGINT NOT NULL COMMENT 'yak_metric_version.id,不可变版本身份',
+    metric_version INT NOT NULL COMMENT '指标版本号(审计展示冗余)',
+    result VARCHAR(16) NOT NULL COMMENT '校验结果:READY/BLOCKED',
+    issues_json JSON NOT NULL COMMENT '结构化校验问题数组',
+    provider VARCHAR(128) NOT NULL COMMENT '校验 Provider 身份',
+    snapshot_digest VARCHAR(64) NOT NULL COMMENT '被校验版本 snapshot 的 SHA-256',
+    checked_by VARCHAR(64) NOT NULL COMMENT '校验执行人',
+    checked_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '校验时间',
+    PRIMARY KEY (id),
+    KEY idx_metric_validation_subject (project_id, metric_id, metric_version, checked_at),
+    KEY idx_metric_validation_version_id (project_id, metric_version_id),
+    KEY idx_metric_validation_ready (project_id, metric_id, metric_version, result, checked_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标定义校验证据';
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V5__metric_publication_ledger.sql
+-- F-005-C: durable Metric publication truth.
+-- Publication events are append-only. The active pointer is mutable current-state only and never
+-- replaces immutable MetricVersion or the publication ledger.
+
+CREATE TABLE IF NOT EXISTS yak_metric_publication_event (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '发布事件主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标 ID',
+    metric_version_id BIGINT NOT NULL COMMENT 'yak_metric_version.id,不可变版本身份',
+    metric_version INT NOT NULL COMMENT '发布绑定的版本号',
+    snapshot_digest VARCHAR(64) NOT NULL COMMENT '发布时 immutable snapshot 的 SHA-256',
+    event_type VARCHAR(16) NOT NULL COMMENT '事件:PUBLISHED/WITHDRAWN',
+    subject_publication_id BIGINT NULL COMMENT 'WITHDRAWN 所撤回的 PUBLISHED 事件 ID',
+    readiness_json JSON NULL COMMENT 'PUBLISHED 时冻结的 publication gate evidence',
+    acted_by VARCHAR(64) NOT NULL COMMENT '执行人',
+    acted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '事件时间',
+    PRIMARY KEY (id),
+    KEY idx_metric_publication_metric (project_id, metric_id, acted_at),
+    KEY idx_metric_publication_version (project_id, metric_version_id),
+    KEY idx_metric_publication_subject (project_id, subject_publication_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标发布事件账本';
+
+CREATE TABLE IF NOT EXISTS yak_metric_active_publication (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '当前发布指针主键',
+    project_id BIGINT NOT NULL COMMENT '所属项目空间',
+    metric_id BIGINT NOT NULL COMMENT '指标 ID',
+    publication_event_id BIGINT NOT NULL COMMENT '当前生效的 PUBLISHED 事件 ID',
+    metric_version_id BIGINT NOT NULL COMMENT '当前生效的 immutable MetricVersion ID',
+    metric_version INT NOT NULL COMMENT '当前生效版本号',
+    snapshot_digest VARCHAR(64) NOT NULL COMMENT '当前生效 snapshot SHA-256',
+    published_by VARCHAR(64) NOT NULL COMMENT '最近显式发布人',
+    published_at DATETIME(6) NOT NULL COMMENT '最近显式发布时间',
+    update_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_metric_active_publication (project_id, metric_id),
+    KEY idx_metric_active_publication_event (project_id, publication_event_id),
+    KEY idx_metric_active_publication_version (project_id, metric_version_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='指标当前生效发布指针';
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V6__metric_usage_published_version.sql
+ALTER TABLE yak_metric_usage
+    ADD COLUMN metric_version INT NULL COMMENT '引用的 Published MetricVersion；NULL 表示历史引用版本未知'
+    AFTER metric_id;
+
+-- Earlier Dataset bindings used a development node id. Normalize them to the owning Dataset id
+-- so Phase 4 evidence lookup uses the canonical ProductKey identity.
+UPDATE yak_metric_usage usage_row
+JOIN yak_dataset dataset_row
+  ON dataset_row.project_id = usage_row.project_id
+ AND dataset_row.development_node_id = usage_row.usage_id
+SET usage_row.usage_id = dataset_row.id
+WHERE usage_row.usage_type = 'DATASET'
+  AND usage_row.metric_version IS NULL;
+
+-- Source: data-ops-business/data-ops-business-metric/src/main/resources/db/migration/yak-metric/V7__metric_validation_provider_state.sql
+ALTER TABLE yak_metric_validation_evidence
+    ADD COLUMN provider_state VARCHAR(16) NOT NULL DEFAULT 'READY'
+    COMMENT '证据覆盖状态:READY/UNAVAILABLE/FORBIDDEN'
+    AFTER result;
+
+UPDATE yak_metric_validation_evidence
+SET result = CASE result
+      WHEN 'READY' THEN 'PASSED'
+      WHEN 'BLOCKED' THEN 'FAILED'
+      ELSE 'NOT_APPLICABLE'
+    END,
+    provider_state = 'READY';
