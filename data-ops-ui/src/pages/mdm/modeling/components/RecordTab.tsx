@@ -254,11 +254,17 @@ const RecordTab = ({ entityId }: { entityId: number }) => {
       title: 'master_id',
       dataIndex: 'masterId',
       width: 240,
-      ellipsis: true,
+      // 不用列级 ellipsis:它会连复制图标一起裁掉,导致图标看着像不存在。
       render: (value: string) => (
-        <Typography.Text copyable={{ text: value }} style={{ fontSize: 12 }}>
-          {value}
-        </Typography.Text>
+        <div className="flex min-w-0 items-center gap-1">
+          <Tooltip title={value}>
+            <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{value}</span>
+          </Tooltip>
+          <Typography.Text
+            copyable={{ text: value, tooltips: ['复制 master_id', '已复制'] }}
+            className="shrink-0 !text-[12px]"
+          />
+        </div>
       ),
     },
     ...attributes.map(attrColumn),

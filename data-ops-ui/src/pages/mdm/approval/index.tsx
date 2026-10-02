@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from '@umijs/max';
-import { Button, Modal, Select, Space, Table, Tag, message } from 'antd';
+import { Button, Modal, Select, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
@@ -86,8 +86,40 @@ const MdmApprovalPage = () => {
 
   const columns: ColumnsType<MdmChangeRecord> = [
     { title: 'ID', dataIndex: 'id', width: 70 },
-    { title: '实体', dataIndex: 'entityId', width: 80, render: (value) => `#${value}` },
-    { title: 'master_id', dataIndex: 'masterId', width: 200, ellipsis: true },
+    {
+      title: '实体',
+      dataIndex: 'entityName',
+      width: 150,
+      ellipsis: true,
+      // 实体名由列表接口补齐;实体已删除时回退 #id,避免整列显示无意义的内部编号。
+      render: (_, row) =>
+        row.entityName ? (
+          <Tooltip title={row.entityCode ? `${row.entityName}（${row.entityCode}）` : row.entityName}>
+            <span>{row.entityName}</span>
+          </Tooltip>
+        ) : (
+          <Tooltip title="实体已删除或不可见">
+            <span className="text-[#98a2b3]">#{row.entityId}</span>
+          </Tooltip>
+        ),
+    },
+    {
+      title: 'master_id',
+      dataIndex: 'masterId',
+      width: 230,
+      // 不用列级 ellipsis:它会连复制图标一起裁掉,导致图标看着像不存在。
+      render: (value: string) => (
+        <div className="flex min-w-0 items-center gap-1">
+          <Tooltip title={value}>
+            <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{value}</span>
+          </Tooltip>
+          <Typography.Text
+            copyable={{ text: value, tooltips: ['复制 master_id', '已复制'] }}
+            className="shrink-0 !text-[12px]"
+          />
+        </div>
+      ),
+    },
     {
       title: '类型',
       dataIndex: 'changeType',
