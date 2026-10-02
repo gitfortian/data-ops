@@ -1,0 +1,141 @@
+-- 本文件由 scripts/db/consolidate-flyway-migrations.py 生成,请勿手改;要改结构请改脚本后重新生成。
+-- 合并了 2 个版本化迁移(SQL 原文按版本号升序,未做逻辑改写)。
+-- 被合并的文件:
+--   V1__ [.] V1__baseline_lineage.sql
+--   V2__ [.] V2__add_metadata_catalog_columns.sql
+
+-- Source: data-ops-business/data-ops-business-lineage/src/main/resources/db/migration/yak-lineage/V1__baseline_lineage.sql
+-- Consolidated Lineage schema baseline.
+-- Parent/edge integrity is enforced by lineage services; no physical FK constraints are created.
+CREATE TABLE IF NOT EXISTS yak_metadata_asset (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    project_id BIGINT NULL COMMENT 'Yak Security Project ID from source truth',
+    project_scope_id BIGINT
+        GENERATED ALWAYS AS (COALESCE(project_id, 0)) STORED
+        COMMENT 'Transitional project identity key for nullable Project migration',
+    asset_key VARCHAR(512) NOT NULL,
+    asset_type VARCHAR(32) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    source_type VARCHAR(64) NOT NULL DEFAULT '',
+    source_id VARCHAR(200) NOT NULL DEFAULT '',
+    parent_asset_id BIGINT NULL,
+    data_source_id VARCHAR(64) NULL,
+    database_name VARCHAR(256) NULL,
+    schema_name VARCHAR(256) NULL,
+    table_name VARCHAR(256) NULL,
+    column_name VARCHAR(256) NULL,
+    properties JSON NULL,
+    create_time DATETIME(6) NOT NULL,
+    update_time DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_yak_metadata_asset_project_key (project_scope_id, asset_key),
+    KEY idx_yak_metadata_asset_type (asset_type),
+    KEY idx_yak_metadata_asset_source (source_type, source_id),
+    KEY idx_yak_metadata_asset_parent (parent_asset_id),
+    KEY idx_yak_metadata_asset_datasource (data_source_id),
+    KEY idx_yak_metadata_asset_project_type (project_id, asset_type, update_time),
+    KEY idx_yak_metadata_asset_project_source (project_id, source_type, source_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS yak_metadata_relation (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    project_id BIGINT NULL COMMENT 'Project ID shared by source/target assets',
+    source_asset_id BIGINT NOT NULL,
+    target_asset_id BIGINT NOT NULL,
+    relation_type VARCHAR(32) NOT NULL,
+    source_type VARCHAR(64) NOT NULL DEFAULT '',
+    source_id VARCHAR(200) NOT NULL DEFAULT '',
+    expression TEXT NULL,
+    confidence DECIMAL(5,4) NOT NULL DEFAULT 1.0000,
+    version VARCHAR(128) NOT NULL DEFAULT '',
+    observed_at DATETIME(6) NOT NULL,
+    properties JSON NULL,
+    create_time DATETIME(6) NOT NULL,
+    update_time DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_yak_metadata_relation_identity
+        (source_asset_id, target_asset_id, relation_type, source_type, source_id, version),
+    KEY idx_yak_metadata_relation_source (source_asset_id, relation_type),
+    KEY idx_yak_metadata_relation_target (target_asset_id, relation_type),
+    KEY idx_yak_metadata_relation_evidence (source_type, source_id),
+    KEY idx_yak_metadata_relation_project_source (project_id, source_asset_id, relation_type),
+    KEY idx_yak_metadata_relation_project_target (project_id, target_asset_id, relation_type),
+    KEY idx_yak_metadata_relation_project_evidence (project_id, source_type, source_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Source: data-ops-business/data-ops-business-lineage/src/main/resources/db/migration/yak-lineage/V2__add_metadata_catalog_columns.sql
+-- Metadata center V2 (ticket 133, plan §2.3)：把 lineage 的 yak_metadata_asset 就地扩成统一实体目录。
+--
+-- 为什么是"改别人的表"而不是"再建一张"：B 案（§11.1 第 5 条）要求平台不出现第三张目录形状的表，
+-- 否则同一个模型在图里一个节点、在目录里又一个节点，§0.2 的"不建第二套真相"就成了空话。
+--
+-- 谁 owns 哪些列（steward 契约，完整条文在两份 ARCHITECTURE.md，plan §2.5）：
+--   lineage 拥有 asset_key / asset_type / parent_asset_id / properties 的既有语义；
+--   metadata 拥有本文件新增的全部目录列，尤其 md_attributes 与 s_*；
+--   两侧都不写对方的列，目录读侧永不使用 properties。
+--
+-- ⚠️ 运维窗口（plan §2.4.1 实测，本机 MySQL 8.0.46）：
+--   同一条 ALTER 里 ADD COLUMN … GENERATED … STORED 只能 ALGORITHM=COPY——
+--   INSTANT 与 INPLACE 都报 1845。COPY = 整表复制，期间禁止并发 DML（读不受影响，故 LOCK=SHARED）。
+--   7 个槽位因此必须一次建齐：现在 234 行是毫秒级，日后加第 8 个槽位就得再开一次窗口。
+--   显式写出 ALGORITHM/LOCK 是为了让"这不是免费迁移"在失败时立刻说话，而不是悄悄退化成锁全表。
+--   失败可整体回滚：MySQL 8 的 DDL 是原子的，本文件无需幂等包装。
+--
+-- 三个"不"，都是实测换来的：
+--   不新增唯一键——身份只有 lineage 那把 uk (project_scope_id, asset_key)；fqn_hash 只建普通索引。
+--     早先 fqn_hash NOT NULL DEFAULT '' + UNIQUE(project_id, fqn_hash) 的版本在 234 行真表副本上直接 1062
+--     （全部历史行回填成同一个 ''），见 plan §2.3 后果 4。
+--   不填假值——fully_qualified_name / fqn_hash / entity_status / content_hash 连同 type_id、provider_type、
+--     first_seen_at 一律可空，遗留行用 NULL 承载"早于目录机制存在"，不是"未采集"（后果 3）。
+--     概览类指标（ticket 126）统计覆盖率时必须排除 provider_type IS NULL。
+--   不碰 V1__baseline_lineage.sql——已应用的迁移永不修改（plan §9 T5）。
+
+ALTER TABLE yak_metadata_asset
+    -- ① 元模型挂钩：目录判别走 type_id，asset_type 只图表形状（后果 1）
+    ADD COLUMN type_id        BIGINT NULL COMMENT '→ yak_md_type_def.id；NULL=本方案之前的遗留图节点',
+    -- ② 可展示 / 可检索面
+    ADD COLUMN display_name   VARCHAR(256) NULL,
+    ADD COLUMN fully_qualified_name VARCHAR(768) NULL
+        COMMENT '按 type_def 的键生成器产出；遗留行为 NULL（= 未纳入目录语义）',
+    ADD COLUMN fqn_hash       CHAR(32)     NULL COMMENT 'md5(lower(asset_key))；NULL=遗留行。只建普通索引，不建唯一键（后果 4）',
+    ADD COLUMN summary        VARCHAR(2048) NULL COMMENT '描述/注释，中文检索主力（ngram）',
+    -- ③ 治理与归属
+    ADD COLUMN owner_user     VARCHAR(64)  NULL,
+    ADD COLUMN domain_ids     VARCHAR(512) NULL COMMENT '业务域 id 逗号串，让 facet 查询免扫侧表',
+    ADD COLUMN tier_label     VARCHAR(32)  NULL,
+    ADD COLUMN layer_code     VARCHAR(32)  NULL COMMENT '命中 semantic 分层库时回填 ODS/DWD/…',
+    ADD COLUMN entity_status  VARCHAR(24)  NULL COMMENT '7 值，蒸馏 §1.1；NULL=遗留行（不用假值污染，后果 3）',
+    -- ④ 两条入口与指纹（§1.3、§3.3）
+    ADD COLUMN provider_type  VARCHAR(16)  NULL COMMENT 'HARVESTED|REGISTERED；NULL=遗留行',
+    ADD COLUMN collect_job_id BIGINT       NULL COMMENT 'yak_md_collect_job.id（原名 provider_id，避免与 provider bean 混）',
+    ADD COLUMN content_hash   CHAR(32)     NULL COMMENT '物理结构指纹，§3.3',
+    ADD COLUMN source_hash    CHAR(32)     NULL COMMENT '投影指纹，由 provider 产出',
+    ADD COLUMN source_updated_at DATETIME(6) NULL COMMENT '源侧最后变更时间，不是本行 update_time',
+    -- ⑤ 在场性与版本
+    ADD COLUMN first_seen_at  DATETIME(6)  NULL COMMENT '遗留行为 NULL（含义="早于目录机制"），不填假值',
+    ADD COLUMN last_collect_at DATETIME(6) NULL,
+    ADD COLUMN last_change_at DATETIME(6)  NULL,
+    ADD COLUMN gone_at        DATETIME(6)  NULL COMMENT '软删；连续两轮缺失才置值（§3.4）',
+    ADD COLUMN catalog_version INT NOT NULL DEFAULT 1 COMMENT '目录侧版本；不复用别的语义的 version 列',
+    ADD COLUMN updated_by     VARCHAR(64)  NOT NULL DEFAULT 'system',
+    -- ⑥ 属性袋：**新开一列，不复用 properties**（后果 2：lineage 的 upsert 是 properties = VALUES(properties)
+    --    整包覆写，目录塞进去的键会在下一次血缘写入时静默消失，提槽生成列跟着变 NULL）
+    ADD COLUMN md_attributes  JSON NULL COMMENT '按 type_def/field_def 校验的属性袋；不查，只展示',
+    -- ⑦ 属性提槽：被 field_def.storage_slot 指定的热字段固化为生成列（列数封顶 7，§2.4.1）
+    ADD COLUMN s_str_1  VARCHAR(256) GENERATED ALWAYS AS (json_unquote(json_extract(md_attributes,'$."s_str_1"')))  STORED,
+    ADD COLUMN s_str_2  VARCHAR(256) GENERATED ALWAYS AS (json_unquote(json_extract(md_attributes,'$."s_str_2"')))  STORED,
+    ADD COLUMN s_str_3  VARCHAR(256) GENERATED ALWAYS AS (json_unquote(json_extract(md_attributes,'$."s_str_3"')))  STORED,
+    ADD COLUMN s_num_1  BIGINT       GENERATED ALWAYS AS (json_extract(md_attributes,'$."s_num_1"'))                 STORED,
+    ADD COLUMN s_num_2  BIGINT       GENERATED ALWAYS AS (json_extract(md_attributes,'$."s_num_2"'))                 STORED,
+    ADD COLUMN s_bool_1 TINYINT      GENERATED ALWAYS AS (json_extract(md_attributes,'$."s_bool_1"'))                STORED,
+    ADD COLUMN s_date_1 DATETIME(6)  GENERATED ALWAYS AS (json_extract(md_attributes,'$."s_date_1"'))                STORED,
+    -- ⑧ 键与索引（**不新增唯一键**，后果 4）
+    ADD KEY idx_yak_md_asset_fqn (fqn_hash),          -- 按 FQN 反查用；唯一性由 asset_key 那把既有键保证
+    ADD KEY idx_yak_md_asset_type (project_id, type_id, gone_at),
+    ADD KEY idx_yak_md_asset_collect (project_id, provider_type, last_collect_at),
+    ADD KEY idx_yak_md_asset_status (project_id, entity_status),
+    ADD KEY idx_yak_md_asset_domain (project_id, domain_ids(64)),
+    ADD KEY idx_yak_md_asset_slot_str (s_str_1),
+    ADD KEY idx_yak_md_asset_slot_num (s_num_1),
+    ADD FULLTEXT KEY ft_yak_md_asset (name, display_name, summary) WITH PARSER ngram,
+    ALGORITHM=COPY, LOCK=SHARED;
