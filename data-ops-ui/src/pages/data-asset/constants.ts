@@ -28,6 +28,15 @@ export const ASSET_STATUS_COLORS: Record<AssetStatus, string> = {
   SOURCE_GONE: 'red',
 };
 
+/** 概览分布条形图配色:状态用语义色,与 ASSET_STATUS_COLORS 标签口径一致。 */
+export const ASSET_STATUS_BAR_COLORS: Record<AssetStatus, string> = {
+  PENDING: '#fa8c16',
+  PUBLISHED: '#52c41a',
+  OFFLINE: '#98a2b3',
+  IGNORED: '#d9d9d9',
+  SOURCE_GONE: '#f5222d',
+};
+
 export const ASSET_SOURCE_TYPE_LABELS: Record<AssetSourceType, string> = {
   MODEL: '模型',
   METRIC: '指标',
@@ -125,6 +134,62 @@ export const HANDLE_STATUS_COLORS: Record<ChangeHandleStatus, string> = {
   OPEN: 'orange',
   CONFIRMED: 'green',
   IGNORED: 'default',
+};
+
+/** 变更差异字段的中文标签(后端 displayDiff 输出的字段名)。 */
+export const CHANGE_DIFF_FIELD_LABELS: Record<string, string> = {
+  name: '名称',
+  description: '描述',
+  layerCode: '分层',
+  domainCode: '业务域',
+  previousStatus: '消失前状态',
+  goneAt: '消失时间',
+};
+
+const formatDiffValue = (field: string, value: unknown): string => {
+  if (value === null || value === undefined || value === '') {
+    return '空';
+  }
+  if (field === 'previousStatus') {
+    return ASSET_STATUS_LABELS[value as AssetStatus] ?? String(value);
+  }
+  if (field === 'goneAt') {
+    return formatAssetTime(String(value));
+  }
+  return String(value);
+};
+
+/**
+ * 变更流水的差异摘要:把后端字段级 diff 归一成可读文本。
+ * 无 diff 时按变更类型给出语义说明(NEW/REAPPEARED 无对比基线,后端不落 diff)。
+ */
+export const formatChangeDiff = (
+  changeType: ChangeType,
+  diff?: Record<string, unknown> | null,
+): string => {
+  const entries = Object.entries(diff ?? {});
+  if (entries.length === 0) {
+    switch (changeType) {
+      case 'NEW':
+        return '首次登记，无对比基线';
+      case 'REAPPEARED':
+        return '源重新出现，恢复原状态';
+      case 'SOURCE_GONE':
+        return '源域对象已消失';
+      default:
+        return '内容指纹变化，展示字段无差异';
+    }
+  }
+  return entries
+    .map(([field, value]) => {
+      const label = CHANGE_DIFF_FIELD_LABELS[field] ?? field;
+      if (Array.isArray(value) && value.length === 2) {
+        const [before, after] = value;
+        return `${label}: ${formatDiffValue(field, before)} → ${formatDiffValue(field, after)}`;
+      }
+      return `${label}: ${formatDiffValue(field, value)}`;
+    })
+    .join('；');
 };
 
 export const RULE_TYPE_LABELS: Record<RuleType, string> = {

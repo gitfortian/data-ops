@@ -54,6 +54,12 @@ import AssetExplorer from '@/pages/data-metadata/components/AssetExplorer';
 const PUBLISHABLE: AssetStatus[] = ['PENDING', 'OFFLINE', 'IGNORED'];
 const IGNORABLE: AssetStatus[] = ['PENDING', 'OFFLINE'];
 const DELETABLE: AssetStatus[] = ['OFFLINE', 'SOURCE_GONE'];
+/** 手工登记无源域对象:未上架可直接撤销登记(与后端 48003 规则一致)。 */
+const MANUAL_DELETABLE: AssetStatus[] = ['PENDING', 'OFFLINE', 'IGNORED'];
+
+const isDeletable = (record: AssetRecord) =>
+  DELETABLE.includes(record.status) ||
+  (record.sourceType === 'MANUAL' && MANUAL_DELETABLE.includes(record.status));
 
 type CatalogView = '台账资产' | '元数据实体';
 
@@ -212,6 +218,25 @@ const AssetCatalogPage = () => {
     });
   };
 
+  const runDelete = (record: AssetRecord) => {
+    Modal.confirm({
+      title: '删除台账行',
+      content: `确定删除「${record.name}」？删除后该资产不再出现在台账中，且不可通过界面恢复。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteAsset(record.id);
+          message.success('已删除台账行');
+          refresh();
+        } catch {
+          // 状态不满足(48003)提示已由全局展示
+        }
+      },
+    });
+  };
+
   const columns: ColumnsType<AssetRecord> = [
     {
       title: '资产',
@@ -285,19 +310,12 @@ const AssetCatalogPage = () => {
           <Button type="link" size="small" disabled={!canUpdate || !IGNORABLE.includes(record.status)} onClick={() => runIgnore([record])}>
             忽略
           </Button>
-          {canDelete && DELETABLE.includes(record.status) ? (
-            <Button type="link" size="small" danger onClick={() => {
-              deleteAsset(record.id)
-                .then(() => {
-                  message.success('已删除台账行');
-                  refresh();
-                })
-                .catch(() => undefined);
-            }}>
+          {canDelete && isDeletable(record) ? (
+            <Button type="link" size="small" danger onClick={() => runDelete(record)}>
               删除
             </Button>
           ) : (
-            <Tooltip title="仅已下架/源已消失的资产可删除">
+            <Tooltip title="仅已下架/源已消失的资产可删除；手工登记未上架可直接删除">
               <Button type="link" size="small" disabled>删除</Button>
             </Tooltip>
           )}
@@ -474,6 +492,20 @@ const AssetCatalogPage = () => {
               dataSource={records}
               loading={loading}
               scroll={{ x: 1240 }}
+              rowClassName={() => 'cursor-pointer'}
+              onRow={(record) => ({
+                onClick: (event) => {
+                  const target = event.target as HTMLElement;
+                  // 行内链接/按钮/勾选框已有自身行为,不触发行跳转
+                  if (target.closest('a, button, input, .ant-checkbox-wrapper')) {
+                    return;
+                  }
+                  if (window.getSelection()?.toString()) {
+                    return;
+                  }
+                  history.push(`/data-asset/detail/${record.id}`);
+                },
+              })}
               rowSelection={{
                 selectedRowKeys: selectedIds,
                 onChange: (keys, rows) => {

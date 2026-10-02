@@ -852,7 +852,7 @@ export default function LineagePage() {
                     edges={flowEdges}
                     nodeTypes={nodeTypes}
                     fitView
-                    fitViewOptions={{ padding: 0.22, minZoom: 0.5, maxZoom: 1.08 }}
+                    fitViewOptions={{ padding: 0.22, minZoom: 0.22, maxZoom: 1.08 }}
                     minZoom={0.22}
                     maxZoom={1.6}
                     nodesDraggable={false}

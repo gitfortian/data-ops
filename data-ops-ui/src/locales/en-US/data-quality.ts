@@ -68,6 +68,10 @@ export default {
   'pages.dataQuality.overview.noExecutionData': 'No execution data',
   'pages.dataQuality.overview.currentPassRate': 'Current pass rate',
   'pages.dataQuality.overview.healthBoundary': '100% health boundary',
+  'pages.dataQuality.overview.partialRadarHint':
+    'Only {covered}/{total} dimensions have execution data; the radar area appears once all five are covered',
+  'pages.dataQuality.overview.noDimensionDataHint':
+    'No dimension has execution data yet; configure and run quality rules to populate the radar',
   'pages.dataQuality.overview.analysis': 'Quality Analysis',
   'pages.dataQuality.overview.viewExecutions': 'View Executions',
   'pages.dataQuality.overview.issueCount': '{count}',
@@ -160,6 +164,8 @@ export default {
   'pages.dataQuality.tableConfig.createMonitor': 'Add Monitor',
   'pages.dataQuality.tableConfig.ruleManagement': 'Manage Rules',
   'pages.dataQuality.tableConfig.ruleManagementDisabled': 'Add a monitor before managing rules',
+  'pages.dataQuality.tableConfig.unregister': 'Unregister',
+  'pages.dataQuality.tableConfig.unregisterBlocked': 'This table has {count} monitor(s); delete the monitors before unregistering',
   'pages.dataQuality.tableConfig.totalRegistered': '{count} registered tables',
   'pages.dataQuality.tableConfig.drawer.available': 'Available Tables',
   'pages.dataQuality.tableConfig.drawer.availableTotal': '{count} tables',
@@ -183,6 +189,8 @@ export default {
   'pages.dataQuality.tableConfig.message.registered': 'Registered {count} tables',
   'pages.dataQuality.tableConfig.message.registerFailed': 'Failed to register tables',
   'pages.dataQuality.tableConfig.message.noMonitor': 'This table has no monitor yet. Add a monitor first.',
+  'pages.dataQuality.tableConfig.message.unregistered': 'Unregistered "{name}"',
+  'pages.dataQuality.tableConfig.message.unregisterFailed': 'Failed to unregister the table',
 
   'pages.dataQuality.execution.title': 'Execution History',
   'pages.dataQuality.execution.view.rule': 'Rule View',

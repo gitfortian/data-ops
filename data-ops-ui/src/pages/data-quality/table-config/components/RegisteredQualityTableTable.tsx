@@ -16,6 +16,7 @@ interface RegisteredQualityTableTableProps {
   onCurrentChange: (current: number) => void;
   onOpenRuleManagement: (record: TableAssetView) => void;
   onCreateMonitor: (record: TableAssetView) => void;
+  onUnregister: (record: TableAssetView) => void;
 }
 
 const RegisteredQualityTableTable = ({
@@ -26,6 +27,7 @@ const RegisteredQualityTableTable = ({
   onCurrentChange,
   onOpenRuleManagement,
   onCreateMonitor,
+  onUnregister,
 }: RegisteredQualityTableTableProps) => {
   const intl = useIntl();
   return (
@@ -156,7 +158,7 @@ const RegisteredQualityTableTable = ({
                 title: intl.formatMessage({
                   id: 'pages.dataQuality.tableConfig.column.actions',
                 }),
-                width: 210,
+                width: 290,
                 fixed: 'right',
                 render: (_, record) => (
                   <div
@@ -192,6 +194,32 @@ const RegisteredQualityTableTable = ({
                         >
                           {intl.formatMessage({
                             id: 'pages.dataQuality.tableConfig.ruleManagement',
+                          })}
+                        </YakButton>
+                      </span>
+                    </Tooltip>
+
+                    <Tooltip
+                      title={
+                        record.monitorCount > 0
+                          ? intl.formatMessage(
+                              {
+                                id: 'pages.dataQuality.tableConfig.unregisterBlocked',
+                              },
+                              { count: record.monitorCount },
+                            )
+                          : undefined
+                      }
+                    >
+                      <span>
+                        <YakButton
+                          size="small"
+                          danger
+                          className="!h-7 !rounded-md !px-2.5 !text-xs"
+                          onClick={() => onUnregister(record)}
+                        >
+                          {intl.formatMessage({
+                            id: 'pages.dataQuality.tableConfig.unregister',
                           })}
                         </YakButton>
                       </span>

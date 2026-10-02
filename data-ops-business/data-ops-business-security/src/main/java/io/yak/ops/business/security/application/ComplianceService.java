@@ -278,6 +278,8 @@ public class ComplianceService {
     map.put("status", "COMPLETED");
     map.put("hasRun", Boolean.TRUE);
     map.put("batchId", last.getBatchId());
+    // 批次号是无语义 UUID;给界面补一个可读的体检时间(S6-01)
+    map.put("checkedTime", last.getCheckedTime());
     map.put("openGaps", open == null ? 0L : open);
     return map;
   }

@@ -139,6 +139,42 @@ class AssetAppServiceTest {
   }
 
   @Test
+  void deleteManualPendingRevokesRegistration() {
+    when(mapper.selectOne(any()))
+        .thenReturn(item(1L, "manual:a1", AssetStatus.PENDING.name(), "MANUAL"));
+    service.delete(1L, "root");
+    ArgumentCaptor<AssetItemPO> captor = ArgumentCaptor.forClass(AssetItemPO.class);
+    verify(mapper).updateById(captor.capture());
+    assertTrue(captor.getValue().getDeleted());
+  }
+
+  @Test
+  void deleteManualIgnoredRevokesRegistration() {
+    when(mapper.selectOne(any()))
+        .thenReturn(item(1L, "manual:a1", AssetStatus.IGNORED.name(), "MANUAL"));
+    service.delete(1L, "root");
+    verify(mapper).updateById(any(AssetItemPO.class));
+  }
+
+  @Test
+  void deleteManualPublishedStillRequiresOffline() {
+    when(mapper.selectOne(any()))
+        .thenReturn(item(1L, "manual:a1", AssetStatus.PUBLISHED.name(), "MANUAL"));
+    AssetException ex = assertThrows(AssetException.class, () -> service.delete(1L, "root"));
+    assertEquals(AssetErrorCode.ILLEGAL_STATE_OPERATION, ex.getErrorCode());
+    verify(mapper, never()).updateById(any(AssetItemPO.class));
+  }
+
+  @Test
+  void deleteSourcedPendingStaysBlocked() {
+    when(mapper.selectOne(any()))
+        .thenReturn(item(1L, "table:3:crm_db.crm_customer", AssetStatus.PENDING.name(), "METADATA"));
+    AssetException ex = assertThrows(AssetException.class, () -> service.delete(1L, "root"));
+    assertEquals(AssetErrorCode.ILLEGAL_STATE_OPERATION, ex.getErrorCode());
+    verify(mapper, never()).updateById(any(AssetItemPO.class));
+  }
+
+  @Test
   void changeOwnerPersistsTrimsAndAudits() {
     when(mapper.selectOne(any())).thenReturn(item(2L, "manual:a2", AssetStatus.PENDING.name()));
     AssetAppService.AssetView view = service.changeOwner(2L, " lucas ", "root");
@@ -211,11 +247,15 @@ class AssetAppServiceTest {
   }
 
   private static AssetItemPO item(Long id, String key, String status) {
+    return item(id, key, status, "MANUAL");
+  }
+
+  private static AssetItemPO item(Long id, String key, String status, String sourceType) {
     AssetItemPO po = new AssetItemPO();
     po.setId(id);
     po.setProjectId(1L);
     po.setAssetKey(key);
-    po.setSourceType("MANUAL");
+    po.setSourceType(sourceType);
     po.setSourceId(key.substring(key.indexOf(':') + 1));
     po.setAssetType("DOC");
     po.setName("资产");

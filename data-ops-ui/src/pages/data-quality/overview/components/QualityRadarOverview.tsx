@@ -113,7 +113,6 @@ const QualityRadar = ({
         })
         .join(' ')
     : '';
-
   return (
     <svg
       viewBox="0 0 260 260"
@@ -182,9 +181,9 @@ const QualityRadar = ({
             <circle
               cx={targetX}
               cy={targetY}
-              r={4}
-              fill="#fff"
-              stroke="#d9dde4"
+              r={hasRate ? 4.5 : 4}
+              fill={hasRate ? 'var(--yak-brand-color)' : '#fff'}
+              stroke={hasRate ? 'var(--yak-brand-color)' : '#d9dde4'}
               strokeWidth={1.5}
             />
             {hasRate ? (
@@ -284,6 +283,21 @@ export default function QualityRadarOverview({
   const activeMetric =
     metrics.find((metric) => metric.key === activeKey) ?? metrics[0];
   const contributors = overview?.issueContributors ?? [];
+  const coveredDimensions = metrics.filter(
+    (metric) => metric.passRate !== undefined && metric.passRate !== null,
+  ).length;
+  // 五维未齐全时不画面积(缺维度按 0 会误读成"质量差"),改为说明缺哪些数据。
+  const radarHint =
+    coveredDimensions === metrics.length
+      ? undefined
+      : coveredDimensions === 0
+        ? intl.formatMessage({
+            id: 'pages.dataQuality.overview.noDimensionDataHint',
+          })
+        : intl.formatMessage(
+            { id: 'pages.dataQuality.overview.partialRadarHint' },
+            { covered: coveredDimensions, total: metrics.length },
+          );
 
   return (
     <section
@@ -314,19 +328,26 @@ export default function QualityRadarOverview({
                   onActivate={() => setActiveKey(metric.key)}
                 />
               ))}
-              <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center gap-4 whitespace-nowrap text-[11px] text-[#667085]">
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--yak-brand-color)]" />
-                  {intl.formatMessage({
-                    id: 'pages.dataQuality.overview.currentPassRate',
-                  })}
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-sm border border-solid border-[#d8dce3]" />
-                  {intl.formatMessage({
-                    id: 'pages.dataQuality.overview.healthBoundary',
-                  })}
-                </span>
+              <div className="absolute bottom-0 left-1/2 flex w-full -translate-x-1/2 flex-col items-center gap-1 text-[11px] text-[#667085]">
+                <div className="flex items-center gap-4 whitespace-nowrap">
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--yak-brand-color)]" />
+                    {intl.formatMessage({
+                      id: 'pages.dataQuality.overview.currentPassRate',
+                    })}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-sm border border-solid border-[#d8dce3]" />
+                    {intl.formatMessage({
+                      id: 'pages.dataQuality.overview.healthBoundary',
+                    })}
+                  </span>
+                </div>
+                {radarHint ? (
+                  <div className="max-w-[420px] text-center leading-4 text-[#98a2b3]">
+                    {radarHint}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

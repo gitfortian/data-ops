@@ -39,6 +39,16 @@ type Option = { label: string; value: number };
 
 const fmt = (value?: string) => (value ? String(value).replace('T', ' ').slice(0, 19) : '-');
 
+/** 内置引擎的中文名(与后端 MaskingEngine 语义一致;字典里用户自定义的重名时优先用字典名)。 */
+const BUILTIN_ALGO_LABELS: Record<string, string> = {
+  FULL_MASK: '全遮蔽',
+  NULLIFY: '置空',
+  REPLACE: '整串替换',
+  KEEP_FORMAT: '保留格式遮蔽',
+  HASH: '哈希摘要',
+  MASK_PARTIAL: '部分遮蔽',
+};
+
 /* ================= 算法字典 ================= */
 const AlgorithmTab = () => {
   const [form] = Form.useForm();
@@ -111,7 +121,12 @@ const AlgorithmTab = () => {
   };
 
   const algoCodeOptions = [
-    ...supported.map((code) => ({ label: `内置 · ${code}`, value: code })),
+    ...supported.map((code) => {
+      // 字典里同名算法(如用户为 MASK_PARTIAL 配了"部分遮蔽")优先用字典中文名
+      const dictName = records.find((r) => r.algoCode === code)?.algoName;
+      const name = dictName || BUILTIN_ALGO_LABELS[code] || code;
+      return { label: `${name}（${code}）`, value: code };
+    }),
     ...records.filter((r) => !supported.includes(r.algoCode)).map((r) => ({ label: `${r.algoName} · ${r.algoCode}`, value: r.algoCode })),
   ];
 

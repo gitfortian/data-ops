@@ -95,7 +95,6 @@ export const QualityRuleEditor = ({
   const [expandedTemplateKeys, setExpandedTemplateKeys] = useState<Key[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<string>();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   const editingRule = useMemo(
     () => rules.find((rule) => rule.key === editingKey),
@@ -269,10 +268,6 @@ export const QualityRuleEditor = ({
 
   const removeRule = (key: string) => {
     onChange(rules.filter((rule) => rule.key !== key));
-
-    setSelectedRowKeys((keys) =>
-      keys.filter((selectedKey) => selectedKey !== key)
-    );
   };
 
   const handleEdit = (rule: EditorRule) => {
@@ -519,9 +514,12 @@ export const QualityRuleEditor = ({
               添加已有规则
             </Button>
 
-            <span className="ml-2 text-xs font-medium text-[#344054]">
-              已选择
-              <span className="mx-0.5">{selectedRowKeys.length}</span>条
+            <span className="ml-2 text-xs text-[#667085]">
+              共
+              <span className="mx-0.5 font-medium text-[#344054]">
+                {rules.length}
+              </span>
+              条规则
             </span>
           </div>
 
@@ -534,11 +532,6 @@ export const QualityRuleEditor = ({
             className={dataQualityTableClassName()}
             scroll={{
               x: 1350,
-            }}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-              columnWidth: 46,
             }}
             locale={{
               emptyText: (
@@ -678,6 +671,7 @@ export const QualityRuleEditor = ({
                     )
                   }
                   className="
+                    !select-none
                     !bg-transparent
                     [&_.ant-tree-list-holder-inner]:!gap-0
                     [&_.ant-tree-treenode]:!w-full
@@ -698,6 +692,7 @@ export const QualityRuleEditor = ({
                     [&_.ant-tree-node-content-wrapper]:!rounded-[4px]
                     [&_.ant-tree-node-content-wrapper]:!px-1.5
                     [&_.ant-tree-node-content-wrapper]:!py-0
+                    [&_.ant-tree-node-content-wrapper]:!select-none
                     [&_.ant-tree-node-content-wrapper:hover]:!bg-[#f3f4f6]
                     [&_.ant-tree-node-content-wrapper.ant-tree-node-selected]:!bg-transparent
                     [&_.ant-tree-title]:!min-w-0

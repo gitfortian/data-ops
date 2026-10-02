@@ -9,6 +9,7 @@ import {
 } from '@/services/data-security/api';
 import type { ComplianceFinding, ComplianceRule } from '@/services/data-security/types';
 import {
+  Button,
   Form,
   Input,
   Modal,
@@ -18,7 +19,7 @@ import {
   Table,
   Tabs,
   Tag,
-  Typography,
+  Tooltip,
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -135,8 +136,11 @@ const RuleTab = ({ onBatch }: { onBatch: (batchId: string) => void }) => {
       title: '操作', key: 'action', width: 160,
       render: (_, record) => (
         <Space size={4}>
-          <Typography.Link onClick={() => run(record)}>{runningId === record.id ? '体检中…' : '体检'}</Typography.Link>
-          <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>
+          <Button type="link" size="small" className="!px-1" loading={runningId === record.id}
+            onClick={() => run(record)}>
+            {runningId === record.id ? '体检中…' : '体检'}
+          </Button>
+          <Button type="link" size="small" danger className="!px-1" onClick={() => remove(record)}>删除</Button>
         </Space>
       ),
     },
@@ -233,7 +237,12 @@ const FindingTab = ({ batchId }: { batchId: string }) => {
 
 /* ================= 页面 ================= */
 const DataSecurityCompliancePage = () => {
-  const [summary, setSummary] = useState<{ batchId?: string; openGaps?: number; status?: string }>({});
+  const [summary, setSummary] = useState<{
+    batchId?: string;
+    openGaps?: number;
+    status?: string;
+    checkedTime?: string;
+  }>({});
   const [activeBatch, setActiveBatch] = useState('');
 
   const loadSummary = useCallback(async () => {
@@ -243,6 +252,7 @@ const DataSecurityCompliancePage = () => {
         batchId: (s.batchId as string) ?? undefined,
         openGaps: s.openGaps == null ? undefined : Number(s.openGaps),
         status: s.status as string | undefined,
+        checkedTime: (s.checkedTime as string) ?? undefined,
       });
       setActiveBatch((prev) => prev || ((s.batchId as string) ?? ''));
     } catch {
@@ -255,6 +265,11 @@ const DataSecurityCompliancePage = () => {
   }, [loadSummary]);
 
   const openGaps = summary.openGaps;
+  // 批次号是无语义 UUID;以体检时间为主、短批次号为辅(S6-01)
+  const batchLabel = summary.batchId ? summary.batchId.slice(0, 8) : '—';
+  const batchText = summary.checkedTime
+    ? `${String(summary.checkedTime).replace('T', ' ').slice(0, 19)} · 批次 ${batchLabel}`
+    : summary.batchId || '—';
 
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
@@ -263,7 +278,9 @@ const DataSecurityCompliancePage = () => {
         subtitle="配置合规体检规则、执行体检并查看缺口明细"
         extra={
           <div className="flex items-center gap-4 rounded-lg bg-[#f7f8fa] px-4 py-2 text-[13px]">
-            <span>最近批次：<span className="font-medium">{summary.batchId || '—'}</span></span>
+            <Tooltip title={summary.batchId ? `完整批次号：${summary.batchId}` : undefined}>
+              <span>最近体检：<span className="font-medium">{batchText}</span></span>
+            </Tooltip>
             <span>{summary.status === 'COMPLETED' ? '最近批次未闭环缺口：' : '体检状态：'}
               <span className={`ml-1 font-semibold ${summary.status !== 'COMPLETED' ? 'text-[#ad6800]' : (openGaps ?? 0) > 0 ? 'text-[#f5222d]' : 'text-[#52c41a]'}`}>
                 {summary.status !== 'COMPLETED' ? '暂无可验证结果' : openGaps ?? 0}

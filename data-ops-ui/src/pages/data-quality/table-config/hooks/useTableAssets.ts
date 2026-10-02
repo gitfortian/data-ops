@@ -1,5 +1,6 @@
 import type { DataSourceRecord } from '@/services/data-source';
 import {
+  deleteQualityTableAsset,
   listQualityTableAssets,
   listQualityTableCandidates,
   registerQualityTables,
@@ -327,6 +328,45 @@ export const useTableAssets = ({
     history.push(path);
   }, []);
 
+  /**
+   * 取消注册:领域规则是"已被监控使用的数据表不能直接取消注册",
+   * 因此监控数 >0 时先提示去删监控,而不是让后端抛错。
+   */
+  const unregisterTableAsset = useCallback(
+    async (record: TableAssetView) => {
+      if (record.monitorCount > 0) {
+        message.warning(
+          intlRef.current.formatMessage(
+            { id: 'pages.dataQuality.tableConfig.unregisterBlocked' },
+            { count: record.monitorCount },
+          ),
+        );
+        return;
+      }
+      try {
+        await deleteQualityTableAsset(record.id);
+        message.success(
+          intlRef.current.formatMessage(
+            { id: 'pages.dataQuality.tableConfig.message.unregistered' },
+            { name: record.tableName },
+          ),
+        );
+        if (dataSourceId) {
+          await requestAssets(dataSourceId, assetCurrent, queryKeyword);
+        }
+      } catch (error) {
+        message.error(
+          error instanceof Error
+            ? error.message
+            : intlRef.current.formatMessage({
+                id: 'pages.dataQuality.tableConfig.message.unregisterFailed',
+              }),
+        );
+      }
+    },
+    [assetCurrent, dataSourceId, queryKeyword, requestAssets],
+  );
+
   const createMonitor = useCallback((record: TableAssetView) => {
     history.push(getQualityMonitorCreatePath(record));
   }, []);
@@ -361,6 +401,7 @@ export const useTableAssets = ({
     clearCandidateSelection,
     handleRegister,
     openRuleManagement,
+    unregisterTableAsset,
     createMonitor,
   };
 };

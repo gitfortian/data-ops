@@ -68,6 +68,10 @@ export default {
   'pages.dataQuality.overview.noExecutionData': '暂无执行数据',
   'pages.dataQuality.overview.currentPassRate': '当前通过率',
   'pages.dataQuality.overview.healthBoundary': '100% 健康边界',
+  'pages.dataQuality.overview.partialRadarHint':
+    '仅 {covered}/{total} 个维度有检测数据，五维齐全后展示雷达面积',
+  'pages.dataQuality.overview.noDimensionDataHint':
+    '暂无任何维度的检测数据，配置并执行质量规则后展示雷达面积',
   'pages.dataQuality.overview.analysis': '质量分析',
   'pages.dataQuality.overview.viewExecutions': '查看运行记录',
   'pages.dataQuality.overview.issueCount': '{count} 条',
@@ -160,6 +164,8 @@ export default {
   'pages.dataQuality.tableConfig.createMonitor': '新增监控',
   'pages.dataQuality.tableConfig.ruleManagement': '规则管理',
   'pages.dataQuality.tableConfig.ruleManagementDisabled': '请先新增监控，再进行规则管理',
+  'pages.dataQuality.tableConfig.unregister': '取消注册',
+  'pages.dataQuality.tableConfig.unregisterBlocked': '该表已配置 {count} 个监控，请先删除监控后再取消注册',
   'pages.dataQuality.tableConfig.totalRegistered': '共 {count} 张已注册表',
   'pages.dataQuality.tableConfig.drawer.available': '可注册的数据表',
   'pages.dataQuality.tableConfig.drawer.availableTotal': '共 {count} 张',
@@ -183,6 +189,8 @@ export default {
   'pages.dataQuality.tableConfig.message.registered': '已注册 {count} 张数据表',
   'pages.dataQuality.tableConfig.message.registerFailed': '数据表注册失败',
   'pages.dataQuality.tableConfig.message.noMonitor': '当前数据表暂无监控配置，请先新增监控',
+  'pages.dataQuality.tableConfig.message.unregistered': '已取消注册「{name}」',
+  'pages.dataQuality.tableConfig.message.unregisterFailed': '取消注册失败',
 
   'pages.dataQuality.execution.title': '运行记录',
   'pages.dataQuality.execution.view.rule': '规则视角',
