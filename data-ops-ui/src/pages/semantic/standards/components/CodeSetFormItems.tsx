@@ -1,11 +1,16 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Form, Input, InputNumber, Modal } from 'antd';
+import { Button, Form, Input, InputNumber, Modal, Tooltip } from 'antd';
 
 import { existsCodeSet } from '@/services/semantic/api';
 
 interface CodeSetFormItemsProps {
-  /** 编辑模式:删除码值行前二次确认(可能有字段引用)。 */
+  /** 编辑模式:删除已保存的码值行前二次确认(可能有字段引用)。 */
   confirmRemove?: boolean;
+  /**
+   * 进入表单时已存在的码值。只有删这些才值得确认:
+   * 表单内新加的行还没落库,再弹一次确认纯属打断(且确认文案说的"保存后移除"尚未发生)。
+   */
+  persistedValues?: string[];
   /** 码集编码锁定(编辑常规码集不可改)。 */
   codeDisabled?: boolean;
   /** 存量空码集行:编码可补全,保存后并入新码集。 */
@@ -30,12 +35,40 @@ const CODE_PATTERN = /^[A-Za-z0-9_]{1,64}$/;
  */
 const CodeSetFormItems = ({
   confirmRemove = false,
+  persistedValues = [],
   codeDisabled = false,
   legacy = false,
   nameInconsistent = false,
   onExists,
 }: CodeSetFormItemsProps) => {
   const form = Form.useFormInstance();
+
+  /** 该行是否已在库中(按其码值判断)。表单内新加的行码值为空或不在初始集合里。 */
+  const isPersistedRow = (index: number): boolean => {
+    if (!confirmRemove) {
+      return false;
+    }
+    const rows = (form.getFieldValue('codeValues') ?? []) as CodeValueRow[];
+    const value = rows[index]?.codeValue;
+    return Boolean(value) && persistedValues.includes(value as string);
+  };
+
+  const removeRow = (index: number) => {
+    if (!isPersistedRow(index)) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve, reject) => {
+      Modal.confirm({
+        title: '删除码值',
+        content: '保存后该码值将从码集中移除，引用此码集的字段将不再展示该码值。',
+        okText: '删除',
+        okType: 'danger',
+        cancelText: '取消',
+        onOk: () => resolve(),
+        onCancel: () => reject(new Error('cancelled')),
+      });
+    });
+  };
 
   const checkCodeExists = async (raw?: string) => {
     if (!onExists || codeDisabled) {
@@ -136,30 +169,24 @@ const CodeSetFormItems = ({
                     <InputNumber min={0} placeholder="0" className="!w-full" />
                   </Form.Item>
                   <Form.Item>
-                    {fields.length > 1 ? (
-                      <Button
-                        type="text"
-                        danger
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          if (!confirmRemove) {
-                            remove(index);
-                            return;
-                          }
-                          Modal.confirm({
-                            title: '删除码值',
-                            content: '保存后该码值将从码集中移除，引用此码集的字段将不再展示该码值。',
-                            okText: '删除',
-                            okType: 'danger',
-                            cancelText: '取消',
-                            onOk: () => {
-                              remove(index);
-                            },
-                          });
-                        }}
-                      />
-                    ) : null}
+                    {/* 只剩一行时按钮仍要在场:直接消失会让人以为界面坏了。 */}
+                    <Tooltip title={fields.length > 1 ? undefined : '码集至少保留一个码值'}>
+                      <span>
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          aria-label="删除该码值"
+                          disabled={fields.length <= 1}
+                          onClick={() => {
+                            removeRow(index)
+                              .then(() => remove(index))
+                              .catch(() => undefined);
+                          }}
+                        />
+                      </span>
+                    </Tooltip>
                   </Form.Item>
                 </div>
               ))}

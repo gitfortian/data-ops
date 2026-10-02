@@ -267,6 +267,8 @@ const LayersPage = () => {
       title: '操作',
       key: 'actions',
       width: 150,
+      // 宽表在 1280px 下会把操作列挤出可视区,钉在右侧保证始终可操作。
+      fixed: 'right' as const,
       render: (_: unknown, record: SemanticLayerRecord) => (
         <>
           {can('semantic:update') && <>
@@ -322,6 +324,8 @@ const LayersPage = () => {
         className="mt-4"
         rowKey="id"
         loading={loading}
+        // 让宽表在表格内部横向滚动,而不是溢出后被外层 overflow-hidden 裁掉。
+        scroll={{ x: 'max-content' }}
         columns={columns}
         dataSource={records}
         locale={{

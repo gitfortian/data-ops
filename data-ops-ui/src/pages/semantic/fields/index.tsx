@@ -89,6 +89,10 @@ const FieldsPage = () => {
   const [pageSize, setPageSize] = useState(10);
   const [role, setRole] = useState<SemanticFieldRole | ''>('');
   const [keyword, setKeyword] = useState('');
+  /** 输入框的即时值;keyword 只在提交搜索或新建定位时更新,避免每敲一个字就发一次请求。 */
+  const [keywordInput, setKeywordInput] = useState('');
+  /** 新建成功后高亮的那一行,让用户一眼看到刚创建的记录。 */
+  const [highlightCode, setHighlightCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<SemanticFieldRecord | null>(null);
@@ -139,14 +143,14 @@ const FieldsPage = () => {
   }, []);
 
   const loadFields = useCallback(
-    async (targetPageNo: number, targetPageSize: number) => {
+    async (targetPageNo: number, targetPageSize: number, keywordOverride?: string) => {
       setLoading(true);
       try {
         const result = await pageSemanticFields({
           pageNo: targetPageNo,
           pageSize: targetPageSize,
           role: role || undefined,
-          keyword: keyword || undefined,
+          keyword: (keywordOverride ?? keyword) || undefined,
         });
         setRecords(result.bizData ?? []);
         setTotal(result.pagination?.total ?? 0);
@@ -256,14 +260,22 @@ const FieldsPage = () => {
         const { code: _ignored, ...rest } = values;
         await updateSemanticField(editing.id, { ...rest, id: editing.id, version: editing.version });
         message.success('标准字段已更新');
+        setEditorOpen(false);
+        await loadFields(pageNo, pageSize);
       } else {
-        await createSemanticField(values);
+        const created = await createSemanticField(values);
         message.success('标准字段已创建');
+        setEditorOpen(false);
+        // 字段库有上百条,新建后不定位就只能靠用户自己翻页或搜索找回来。
+        const createdCode = created?.code ?? values.code;
+        setKeyword(createdCode);
+        setKeywordInput(createdCode);
+        setPageNo(1);
+        setHighlightCode(createdCode);
+        await loadFields(1, pageSize, createdCode);
       }
-      setEditorOpen(false);
-      await loadFields(pageNo, pageSize);
-    } catch {
-      message.error('保存失败（数据可能已被他人修改，或标准引用不合法），请刷新后重试');
+    } catch (error: any) {
+      message.error(error?.message ?? '保存失败，请刷新后重试');
     } finally {
       setSaving(false);
     }
@@ -281,8 +293,9 @@ const FieldsPage = () => {
           await deleteSemanticField(record.id);
           message.success('已删除');
           await loadFields(pageNo, pageSize);
-        } catch {
-          message.error('删除失败，请稍后重试');
+        } catch (error: any) {
+          // 被引用阻断的原因由服务端给出,通用文案会丢掉修复线索。
+          message.error(error?.message ?? '删除失败，请稍后重试');
         }
       },
     });
@@ -371,6 +384,8 @@ const FieldsPage = () => {
     {
       title: '操作',
       key: 'actions',
+      // 宽表在 1280px 下会把操作列挤出可视区,钉在右侧保证始终可操作。
+      fixed: 'right' as const,
       width: 140,
       render: (_: unknown, record: SemanticFieldRecord) => (
         <Space size={0}>
@@ -412,8 +427,11 @@ const FieldsPage = () => {
             allowClear
             placeholder="按编码或名称搜索"
             className="!w-[220px]"
+            value={keywordInput}
+            onChange={(event) => setKeywordInput(event.target.value)}
             onSearch={(value) => {
               setKeyword(value.trim());
+              setKeywordInput(value.trim());
               setPageNo(1);
             }}
           />
@@ -432,8 +450,11 @@ const FieldsPage = () => {
         className="mt-4"
         rowKey="id"
         loading={loading}
+        // 让宽表在表格内部横向滚动,而不是溢出后被外层 overflow-hidden 裁掉。
+        scroll={{ x: 'max-content' }}
         columns={fieldColumns}
         dataSource={records}
+        rowClassName={(record) => (record.code === highlightCode ? 'bg-[#f0f9ff]' : '')}
         locale={{
           emptyText: (
             <YakEmpty compact title="还没有标准字段" description="点击右上角「新建标准字段」开始沉淀字段定义" />

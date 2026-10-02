@@ -2,6 +2,7 @@ import { useNavigate } from '@umijs/max';
 import { Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { YakButton, YakEmpty } from '@/components/ui';
+import { formatBackendDateTime } from '@/utils/date';
 import type {
   MetricImpactContext,
   MetricLineageEvidence,
@@ -12,10 +13,18 @@ import type {
 const COVERAGE_META: Record<string, { label: string; color?: string }> = {
   READY: { label: '证据可读', color: 'green' },
   EMPTY: { label: '暂无证据' },
-  UNAVAILABLE: { label: 'Provider 不可用', color: 'orange' },
+  UNAVAILABLE: { label: '数据源不可用', color: 'orange' },
   FORBIDDEN: { label: '无权限', color: 'red' },
   NOT_APPLICABLE: { label: '不适用' },
 };
+
+/** 证据 reason 由后端契约直出,个别为英文说明;这里逐条转中文,未知文案原样保留。 */
+const REASON_LABELS: Record<string, string> = {
+  'Direct depth=1 lineage only; use the canonical Lineage view for deeper traversal':
+    '血缘证据只取直接一层；更深层关系请到「数据血缘」页查看',
+};
+
+const localizeReason = (reason: string): string => REASON_LABELS[reason] ?? reason;
 
 const referenceColumns: ColumnsType<MetricReferenceUsageEvidence> = [
   { title: '引用类型', dataIndex: 'usageType', width: 120, render: (value: string) => <Tag>{value}</Tag> },
@@ -35,7 +44,7 @@ const referenceColumns: ColumnsType<MetricReferenceUsageEvidence> = [
     title: '登记时间',
     dataIndex: 'recordedAt',
     width: 190,
-    render: (value?: string) => value || '-',
+    render: (value?: string) => (value ? formatBackendDateTime(value) : '-'),
   },
 ];
 
@@ -58,7 +67,13 @@ const lineageColumns: ColumnsType<MetricLineageEvidence> = [
     render: (_: unknown, row) => `${row.sourceType || '-'}${row.sourceId ? `:${row.sourceId}` : ''}`,
   },
   { title: '版本', dataIndex: 'version', width: 90, render: (value?: string) => value || '-' },
-  { title: '观测时间', dataIndex: 'observedAt', width: 190, render: (value?: string) => value || '-' },
+  {
+    title: '观测时间',
+    dataIndex: 'observedAt',
+    width: 190,
+    // 后端给的是 ISO 串(带 Z/毫秒),直接渲染既不统一也不可读。
+    render: (value?: string) => (value ? formatBackendDateTime(value) : '-'),
+  },
 ];
 
 const ObservedCoverage = ({ coverage }: { coverage: MetricObservedUsageCoverage }) => {
@@ -72,7 +87,7 @@ const ObservedCoverage = ({ coverage }: { coverage: MetricObservedUsageCoverage 
           运行事实仍由该 Provider / Phase 4 owning contract 持有
         </Typography.Text>
       </div>
-      {coverage.reason ? <div className="mt-2 text-[13px] text-[#667085]">{coverage.reason}</div> : null}
+      {coverage.reason ? <div className="mt-2 text-[13px] text-[#667085]">{localizeReason(coverage.reason)}</div> : null}
       {coverage.evidence.length > 0 ? (
         <div className="mt-3 space-y-2">
           {coverage.evidence.map((evidence, index) => (
@@ -105,10 +120,10 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
     <div className="space-y-5">
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Typography.Text strong>Lineage Evidence</Typography.Text>
+          <Typography.Text strong>血缘证据</Typography.Text>
           <Tag color={lineageMeta.color}>{lineageMeta.label}</Tag>
           <Typography.Text type="secondary" className="!text-[12px]">
-            来源：{context.lineage.provider} · Root {context.lineage.rootAssetKey} · 此处仅展示 direct depth=1，不推断为 Consumer
+            来源：{context.lineage.provider} · Root {context.lineage.rootAssetKey} · 此处仅展示直接一层关系，不推断为消费方
           </Typography.Text>
           <YakButton
             size="small"
@@ -119,7 +134,7 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
           </YakButton>
         </div>
         {context.lineage.reason ? (
-          <div className="mb-2 text-[13px] text-[#667085]">{context.lineage.reason}</div>
+          <div className="mb-2 text-[13px] text-[#667085]">{localizeReason(context.lineage.reason)}</div>
         ) : null}
         {context.lineage.evidence.length > 0 ? (
           <Table<MetricLineageEvidence>
@@ -132,19 +147,19 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
         ) : context.lineage.status === 'UNAVAILABLE' || context.lineage.status === 'FORBIDDEN' ? (
           <YakEmpty
             compact
-            title="Lineage Evidence 暂不可读"
-            description="Provider 不可用或无权限不能解释为没有影响；恢复后可重新执行分析"
+            title="血缘证据暂不可读"
+            description="数据源不可用或无权限，不能据此认定没有影响；恢复后可重新执行分析"
           />
         ) : context.lineage.status === 'EMPTY' ? (
-          <YakEmpty compact title="暂无直接血缘关系" description="Lineage Provider 正常，但当前未记录 direct relation" />
+          <YakEmpty compact title="暂无直接血缘关系" description="血缘数据源正常，但当前未记录直接关系" />
         ) : (
-          <YakEmpty compact title="Lineage 覆盖状态未知" description="当前无法确认是否存在直接血缘关系" />
+          <YakEmpty compact title="血缘覆盖状态未知" description="当前无法确认是否存在直接血缘关系" />
         )}
       </div>
 
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Typography.Text strong>Reference Usage</Typography.Text>
+          <Typography.Text strong>引用登记</Typography.Text>
           <Tag color={COVERAGE_META[referenceUsageStatus]?.color}>
             {COVERAGE_META[referenceUsageStatus]?.label ?? '状态未知'}
           </Tag>
@@ -156,7 +171,7 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
           </Typography.Text>
         </div>
         {context.referenceUsageCoverage?.reason ? (
-          <div className="mb-2 text-[13px] text-[#667085]">{context.referenceUsageCoverage.reason}</div>
+          <div className="mb-2 text-[13px] text-[#667085]">{localizeReason(context.referenceUsageCoverage.reason)}</div>
         ) : null}
         {context.referenceUsage.length > 0 ? (
           <Table<MetricReferenceUsageEvidence>
@@ -167,17 +182,17 @@ const ImpactUsageContext = ({ context }: { context: MetricImpactContext }) => {
             dataSource={context.referenceUsage}
           />
         ) : referenceUsageStatus === 'EMPTY' ? (
-          <YakEmpty compact title="暂无 Reference Usage" description="Metric Usage Provider 正常，但当前没有已登记引用" />
+          <YakEmpty compact title="暂无引用登记" description="指标使用数据源正常，但当前没有已登记引用" />
         ) : (
-          <YakEmpty compact title="Reference Usage 暂不可读" description="Provider 不可用或无权限不能解释为没有引用记录" />
+          <YakEmpty compact title="引用登记暂不可读" description="数据源不可用或无权限，不能据此认定没有引用记录" />
         )}
       </div>
 
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Typography.Text strong>Observed Runtime Usage</Typography.Text>
+          <Typography.Text strong>运行期观测使用</Typography.Text>
           <Typography.Text type="secondary" className="!text-[12px]">
-            来自 Phase 4 / source owning domain 的真实 Query / Preview / Export / Invoke evidence；不会由 Metric 推断
+            来自所属源域的真实查询 / 预览 / 导出 / 调用证据，不由指标推断
           </Typography.Text>
         </div>
         <div className="space-y-2">

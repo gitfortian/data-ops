@@ -49,7 +49,9 @@ const MainlinePage: React.FC = () => {
     {
       title: '编码',
       dataIndex: 'processCode',
-      width: 140,
+      // 140 装不下 order_create 这类编码会折行,放宽到 180 并允许省略。
+      width: 180,
+      ellipsis: true,
       render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
     },
     ...layers.map((code) => ({
@@ -93,6 +95,12 @@ const MainlinePage: React.FC = () => {
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
+          <div className="flex items-center gap-2">
+            {/* 主线视图是独立路由,没有返回入口就只能绕左侧导航,这里给一条直达列表的退路。 */}
+            <Button type="link" size="small" className="!px-0" onClick={() => history.push('/modeling')}>
+              ← 返回模型列表
+            </Button>
+          </div>
           <div className="text-[20px] font-semibold leading-7">业务过程主线视图</div>
           <div className="mt-1 text-[13px] text-[#667085]">
             按业务过程盘点各层模型覆盖与状态，支撑资产盘点（哪些过程未建 DWS/ADS）

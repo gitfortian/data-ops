@@ -107,6 +107,8 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
       open={open}
       title={isEdit ? '编辑数据标准' : '新建数据标准'}
       width={640}
+      // 码值标准可加多行码值,720p 下正文会顶到底部按钮;正文内滚,页脚始终可见。
+      styles={{ body: { maxHeight: 'calc(100dvh - 260px)', overflowY: 'auto' } }}
       okText="保存"
       cancelText="取消"
       confirmLoading={saving}

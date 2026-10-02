@@ -72,7 +72,7 @@ class BusinessDomainServiceTest {
     when(repository.existsByParent(5L)).thenReturn(true);
     SemanticException exception =
         assertThrows(SemanticException.class, () -> service.delete(5L));
-    assertEquals(SemanticErrorCode.STANDARD_REFERENCED, exception.getErrorCode());
+    assertEquals(SemanticErrorCode.DOMAIN_REFERENCED, exception.getErrorCode());
     verify(repository, never()).deleteById(eq(5L));
   }
 
@@ -83,7 +83,7 @@ class BusinessDomainServiceTest {
     when(processRepository.existsByDomain(5L)).thenReturn(true);
     SemanticException exception =
         assertThrows(SemanticException.class, () -> service.delete(5L));
-    assertEquals(SemanticErrorCode.STANDARD_REFERENCED, exception.getErrorCode());
+    assertEquals(SemanticErrorCode.DOMAIN_REFERENCED, exception.getErrorCode());
     verify(repository, never()).deleteById(eq(5L));
   }
 

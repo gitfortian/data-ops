@@ -222,7 +222,7 @@ public class SemanticFieldService {
   public void delete(Long id) {
     StandardField existing = get(id);
     if (processFieldRepository.countByField(id) > 0) {
-      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, "存在业务过程引用");
+      throw new SemanticException(SemanticErrorCode.FIELD_REFERENCED, "存在业务过程引用");
     }
     AuditOperationHandle audit =
         auditService.start(
@@ -387,7 +387,7 @@ public class SemanticFieldService {
   /** 34 挂点:业务过程删除前校验存在字段引用。 */
   public void assertProcessDeletable(Long processId) {
     if (processFieldRepository.countByProcess(processId) > 0) {
-      throw new SemanticException(SemanticErrorCode.STANDARD_REFERENCED, "存在标准字段引用");
+      throw new SemanticException(SemanticErrorCode.PROCESS_REFERENCED, "存在标准字段引用");
     }
   }
 

@@ -159,7 +159,7 @@ const UpstreamChangesView = () => {
                 {context.metricName}（{context.metricCode}） · v{context.metricVersion}
               </div>
               <div className="mt-1 text-[12px] text-[#667085]">
-                Impact Context 生成于 {context.generatedAt}；Reference Usage 与 Observed Runtime Usage 保持独立事实来源
+                影响上下文生成于 {context.generatedAt}；引用登记与运行期观测使用是两个独立事实来源
               </div>
             </div>
 
@@ -176,12 +176,12 @@ const UpstreamChangesView = () => {
               </div>
               <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
                 <div className="text-[22px] font-semibold">{referenceUsageCount}</div>
-                <div className="mt-1 text-[13px] text-[#667085]">Reference Usage</div>
+                <div className="mt-1 text-[13px] text-[#667085]">引用登记</div>
               </div>
             </div>
 
             <div>
-              <div className="mb-2 font-medium">Dependency Evidence</div>
+              <div className="mb-2 font-medium">依赖证据</div>
               {context.dependencies.length > 0 ? (
                 <Table<DependencyChange>
                   rowKey={(row) => `${row.dependencyType}-${row.dependencyId}`}
@@ -199,7 +199,7 @@ const UpstreamChangesView = () => {
           </div>
         ) : metricId ? (
           <div className="mt-8">
-            <YakEmpty title="点击「执行分析」" description="检查依赖、Reference Usage 与可得的 Observed Runtime Usage" />
+            <YakEmpty title="点击「执行分析」" description="检查依赖、引用登记与可得的运行期观测使用" />
           </div>
         ) : (
           <div className="mt-8">
@@ -401,7 +401,7 @@ const MetricImpactPage = () => (
       <div>
         <div className="text-[20px] font-semibold leading-7">影响分析</div>
         <div className="mt-1 text-[13px] text-[#667085]">
-          正向组合依赖、Reference Usage 与可得的运行证据；反向查看上游对象变更波及的指标清单
+          正向组合依赖、引用登记与可得的运行证据；反向查看上游对象变更波及的指标清单
         </div>
       </div>
     </div>

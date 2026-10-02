@@ -172,8 +172,9 @@ const SemanticProcessesPage = () => {
           message.success('已删除');
           if (requestedProcessId === record.id) clearProcessContext();
           await loadData(pageNo, pageSize);
-        } catch {
-          message.error('删除失败，请稍后重试');
+        } catch (error: any) {
+          // 被引用阻断的原因(源表关联/字段引用)由服务端给出,通用文案会丢掉修复线索。
+          message.error(error?.message ?? '删除失败，请稍后重试');
         }
       },
     });
@@ -221,6 +222,8 @@ const SemanticProcessesPage = () => {
       title: '操作',
       key: 'actions',
       width: 250,
+      // 宽表在 1280px 下会把操作列挤出可视区,钉在右侧保证始终可操作。
+      fixed: 'right' as const,
       render: (_: unknown, record: SemanticProcessRecord) => (
         <Space size={0}>
           <Button
@@ -308,6 +311,8 @@ const SemanticProcessesPage = () => {
         rowKey="id"
         loading={loading}
         columns={columns}
+        // 让宽表在表格内部横向滚动,而不是溢出后被外层 overflow-hidden 裁掉。
+        scroll={{ x: 'max-content' }}
         dataSource={records}
         rowClassName={(record) => (requestedProcessId === record.id ? 'bg-[#f0f9ff]' : '')}
         locale={{
