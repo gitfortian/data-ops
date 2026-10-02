@@ -58,6 +58,7 @@ const QualityTableRegistryPage = () => {
             onOpenRegister={table.openRegisterDrawer}
             onOpenRuleManagement={table.openRuleManagement}
             onCreateMonitor={table.createMonitor}
+            onUnregister={(record) => void table.unregisterTableAsset(record)}
           />
         </div>
       </div>

@@ -21,6 +21,7 @@ interface RegisteredTablePanelProps {
   onOpenRegister: () => void;
   onOpenRuleManagement: (record: TableAssetView) => void;
   onCreateMonitor: (record: TableAssetView) => void;
+  onUnregister: (record: TableAssetView) => void;
 }
 
 const RegisteredTablePanel = ({
@@ -36,6 +37,7 @@ const RegisteredTablePanel = ({
   onOpenRegister,
   onOpenRuleManagement,
   onCreateMonitor,
+  onUnregister,
 }: RegisteredTablePanelProps) => {
   const intl = useIntl();
   return (
@@ -110,6 +112,7 @@ const RegisteredTablePanel = ({
             onCurrentChange={onAssetCurrentChange}
             onOpenRuleManagement={onOpenRuleManagement}
             onCreateMonitor={onCreateMonitor}
+            onUnregister={onUnregister}
           />
         )}
       </div>

@@ -39,6 +39,13 @@ public class AssetAppService {
   private static final Set<String> DELETABLE_STATUS =
       Set.of(AssetStatus.OFFLINE.name(), AssetStatus.SOURCE_GONE.name());
 
+  /**
+   * 手工登记无源域对象(MANUAL 不参与对账),不存在"源域仍存在"的误删风险;未上架即可撤销登记。
+   * 已上架仍须先下架(保留下架原因留痕)。
+   */
+  private static final Set<String> MANUAL_DELETABLE_STATUS =
+      Set.of(AssetStatus.PENDING.name(), AssetStatus.OFFLINE.name(), AssetStatus.IGNORED.name());
+
   private final CurrentProject currentProject;
   private final AssetItemMapper itemMapper;
   private final BusinessAuditService auditService;
@@ -235,13 +242,15 @@ public class AssetAppService {
     return toView(po);
   }
 
-  /** 软删:仅 OFFLINE/SOURCE_GONE 可删(48003)。 */
+  /**
+   * 软删(48003):OFFLINE/SOURCE_GONE 可删;手工登记未上架(PENDING/OFFLINE/IGNORED)可撤销登记。
+   */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id, String operator) {
     AssetItemPO po = requireItem(id);
-    if (!DELETABLE_STATUS.contains(po.getStatus())) {
+    if (!isDeletable(po)) {
       throw new AssetException(AssetErrorCode.ILLEGAL_STATE_OPERATION,
-          "仅已下架/源已消失的资产可删除,当前状态 " + po.getStatus());
+          "仅已下架/源已消失(或未上架的手工登记)资产可删除,当前状态 " + po.getStatus());
     }
     po.setDeleted(true);
     po.setUpdatedBy(operator);
@@ -256,6 +265,14 @@ public class AssetAppService {
   }
 
   // ---------- internal ----------
+
+  static boolean isDeletable(AssetItemPO po) {
+    if (DELETABLE_STATUS.contains(po.getStatus())) {
+      return true;
+    }
+    return AssetSourceType.MANUAL.name().equals(po.getSourceType())
+        && MANUAL_DELETABLE_STATUS.contains(po.getStatus());
+  }
 
   AssetItemPO requireItem(Long id) {
     AssetItemPO po = itemMapper.selectOne(new LambdaQueryWrapper<AssetItemPO>()

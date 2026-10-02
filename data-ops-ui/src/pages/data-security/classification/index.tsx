@@ -42,7 +42,6 @@ import {
   Table,
   Tabs,
   Tag,
-  Typography,
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -53,12 +52,19 @@ import { PageHeader, rankColor } from '../shared';
 type Option = { label: string; value: number };
 
 const useDsecOptions = () => {
+  // 下拉用启用中的等级;名称解析用全量字典(停用等级的历史分级标签也要能显示名称,S2-01)
   const [levels, setLevels] = useState<SecurityLevel[]>([]);
+  const [allLevels, setAllLevels] = useState<SecurityLevel[]>([]);
   const [categories, setCategories] = useState<DataCategory[]>([]);
   const refresh = useCallback(async () => {
     try {
-      const [ls, cs] = await Promise.all([listActiveSecurityLevels(), listAllDataCategories()]);
+      const [ls, all, cs] = await Promise.all([
+        listActiveSecurityLevels(),
+        pageSecurityLevels({ pageNo: 1, pageSize: 200 }).then((res) => res.bizData ?? []),
+        listAllDataCategories(),
+      ]);
       setLevels(ls ?? []);
+      setAllLevels(all);
       setCategories(cs ?? []);
     } catch {
       /* 下拉加载失败不阻断列表 */
@@ -70,7 +76,15 @@ const useDsecOptions = () => {
   const levelOptions: Option[] = levels.map((l) => ({ label: `${l.levelName}（${l.levelCode}）`, value: l.id }));
   const categoryOptions: Option[] = categories.map((c) => ({ label: c.categoryName, value: c.id }));
   const categoryCodeOptions = categories.map((c) => ({ label: c.categoryName, value: c.categoryCode }));
-  return { levels, categories, levelOptions, categoryOptions, categoryCodeOptions, refreshCategories: refresh };
+  return {
+    levels,
+    allLevels,
+    categories,
+    levelOptions,
+    categoryOptions,
+    categoryCodeOptions,
+    refreshCategories: refresh,
+  };
 };
 
 const levelNameById = (levels: SecurityLevel[], id?: number) =>
@@ -226,9 +240,9 @@ const LevelTab = () => {
       width: 200,
       render: (_, record) => (
         <Space size={4}>
-          <Typography.Link onClick={() => openEdit(record)}>编辑</Typography.Link>
-          <Typography.Link onClick={() => toggleStatus(record)}>{record.status === 'ACTIVE' ? '停用' : '启用'}</Typography.Link>
-          <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>
+          <Button type="link" size="small" className="!px-1" onClick={() => openEdit(record)}>编辑</Button>
+          <Button type="link" size="small" className="!px-1" onClick={() => toggleStatus(record)}>{record.status === 'ACTIVE' ? '停用' : '启用'}</Button>
+          <Button type="link" size="small" danger className="!px-1" onClick={() => remove(record)}>删除</Button>
         </Space>
       ),
     },
@@ -356,8 +370,8 @@ const CategoryTab = ({ categoryCodeOptions }: { categoryCodeOptions: { label: st
       title: '操作', key: 'action', width: 140,
       render: (_, record) => (
         <Space size={4}>
-          <Typography.Link onClick={() => openEdit(record)}>编辑</Typography.Link>
-          <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>
+          <Button type="link" size="small" className="!px-1" onClick={() => openEdit(record)}>编辑</Button>
+          <Button type="link" size="small" danger className="!px-1" onClick={() => remove(record)}>删除</Button>
         </Space>
       ),
     },
@@ -498,10 +512,10 @@ const ClassificationTab = ({ levelOptions, categoryOptions, levels, categories }
       title: '操作', key: 'action', width: 200,
       render: (_, record) => (
         <Space size={4}>
-          {record.status === 'CANDIDATE' ? <Typography.Link onClick={() => changeStatus(record, 'ACTIVE')}>确认</Typography.Link> : null}
-          {record.status === 'CANDIDATE' ? <Typography.Link type="danger" onClick={() => changeStatus(record, 'REJECTED')}>驳回</Typography.Link> : null}
-          {record.status === 'REJECTED' ? <Typography.Link onClick={() => changeStatus(record, 'ACTIVE')}>重新确认</Typography.Link> : null}
-          <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>
+          {record.status === 'CANDIDATE' ? <Button type="link" size="small" className="!px-1" onClick={() => changeStatus(record, 'ACTIVE')}>确认</Button> : null}
+          {record.status === 'CANDIDATE' ? <Button type="link" size="small" danger className="!px-1" onClick={() => changeStatus(record, 'REJECTED')}>驳回</Button> : null}
+          {record.status === 'REJECTED' ? <Button type="link" size="small" className="!px-1" onClick={() => changeStatus(record, 'ACTIVE')}>重新确认</Button> : null}
+          <Button type="link" size="small" danger className="!px-1" onClick={() => remove(record)}>删除</Button>
         </Space>
       ),
     },
@@ -656,8 +670,8 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
       title: '操作', key: 'action', width: 140,
       render: (_, record) => (
         <Space size={4}>
-          <Typography.Link onClick={() => openEdit(record)}>编辑</Typography.Link>
-          <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>
+          <Button type="link" size="small" className="!px-1" onClick={() => openEdit(record)}>编辑</Button>
+          <Button type="link" size="small" danger className="!px-1" onClick={() => remove(record)}>删除</Button>
         </Space>
       ),
     },
@@ -705,7 +719,7 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
                     <Form.Item {...rest} name={[name, 'tableName']} className="mb-0"><Input placeholder="表名" /></Form.Item>
                     <Form.Item {...rest} name={[name, 'columnName']} className="mb-0"><Input placeholder="列名" /></Form.Item>
                     <Form.Item {...rest} name={[name, 'comment']} className="mb-0"><Input placeholder="列注释" /></Form.Item>
-                    <Typography.Link type="danger" onClick={() => removeRow(name)}>删除</Typography.Link>
+                    <Button type="link" size="small" danger className="!px-1" onClick={() => removeRow(name)}>删除</Button>
                   </Space>
                 ))}
                 <YakButton size="small" onClick={() => add()}>+ 添加字段</YakButton>
@@ -720,7 +734,7 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
 
 /* ================= 页面 ================= */
 const DataSecurityClassificationPage = () => {
-  const { levelOptions, categoryOptions, categoryCodeOptions, levels, categories } = useDsecOptions();
+  const { levelOptions, categoryOptions, categoryCodeOptions, allLevels, categories } = useDsecOptions();
   const [searchParams] = useSearchParams();
   const returnAssetIdValue = searchParams.get('returnAssetId');
   const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
@@ -743,8 +757,8 @@ const DataSecurityClassificationPage = () => {
           items={[
             { key: 'level', label: '安全等级', children: <LevelTab /> },
             { key: 'category', label: '数据分类', children: <CategoryTab categoryCodeOptions={categoryCodeOptions} /> },
-            { key: 'classification', label: '资产分级', children: <ClassificationTab levelOptions={levelOptions} categoryOptions={categoryOptions} levels={levels} categories={categories} /> },
-            { key: 'discovery', label: '敏感发现', children: <DiscoveryTab levelOptions={levelOptions} categoryOptions={categoryOptions} levels={levels} categories={categories} /> },
+            { key: 'classification', label: '资产分级', children: <ClassificationTab levelOptions={levelOptions} categoryOptions={categoryOptions} levels={allLevels} categories={categories} /> },
+            { key: 'discovery', label: '敏感发现', children: <DiscoveryTab levelOptions={levelOptions} categoryOptions={categoryOptions} levels={allLevels} categories={categories} /> },
           ]}
         />
       </div>

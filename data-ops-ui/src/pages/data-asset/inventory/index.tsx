@@ -25,6 +25,7 @@ import {
   CHANGE_TYPE_COLORS,
   CHANGE_TYPE_LABELS,
   formatAssetTime,
+  formatChangeDiff,
   HANDLE_STATUS_COLORS,
   HANDLE_STATUS_LABELS,
 } from '../constants';
@@ -309,14 +310,12 @@ const ChangeConfirm = () => {
       title: '差异摘要',
       dataIndex: 'diff',
       ellipsis: true,
-      render: (diff?: Record<string, unknown> | null) => {
-        const text = diff ? JSON.stringify(diff) : '';
-        return text ? (
-          <Tooltip title={<pre className="max-h-[240px] overflow-auto text-[12px]">{text}</pre>}>
-            <span className="text-[12px] text-[#667085]">{text.slice(0, 80)}</span>
+      render: (_: unknown, record) => {
+        const summary = formatChangeDiff(record.changeType, record.diff);
+        return (
+          <Tooltip title={summary}>
+            <span className="text-[12px] text-[#667085]">{summary}</span>
           </Tooltip>
-        ) : (
-          '-'
         );
       },
     },

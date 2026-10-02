@@ -6,10 +6,11 @@ import { YakButton, YakEmpty } from '@/components/ui';
 import { getAssetOverview } from '@/services/data-asset/api';
 import type { AssetOverviewData, DistributionRow } from '@/services/data-asset/types';
 import {
+  ASSET_SOURCE_TYPE_LABELS,
+  ASSET_STATUS_BAR_COLORS,
   distributionLabel,
   formatAssetTime,
   healthGradeColor,
-  ASSET_SOURCE_TYPE_LABELS,
 } from '../constants';
 
 const KPI_CARDS: {
@@ -51,6 +52,15 @@ const DistributionCard = ({
   rows: DistributionRow[];
 }) => {
   const max = Math.max(1, ...rows.map((row) => row.c));
+  const barColor = (key: string) => {
+    if (group === 'grade') {
+      return healthGradeColor(key);
+    }
+    if (group === 'status') {
+      return ASSET_STATUS_BAR_COLORS[key as keyof typeof ASSET_STATUS_BAR_COLORS] ?? '#FE2C55';
+    }
+    return '#FE2C55';
+  };
   return (
     <Card title={title} size="small" className="!mb-4">
       {rows.length === 0 ? (
@@ -67,7 +77,7 @@ const DistributionCard = ({
                   className="h-full rounded-full"
                   style={{
                     width: `${Math.max(4, (row.c / max) * 100)}%`,
-                    background: group === 'grade' ? healthGradeColor(row.k) : '#FE2C55',
+                    background: barColor(row.k),
                   }}
                 />
               </div>
