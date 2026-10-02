@@ -90,7 +90,10 @@ public class WorkflowCatalogDaoImpl implements WorkflowCatalogDao {
 
   @Override
   public WorkflowVersionPO selectVersionById(String versionId) {
-    return versionMapper.selectByIdAndProject(versionId, currentProjectId());
+    return versionMapper.selectOne(
+        Wrappers.<WorkflowVersionPO>lambdaQuery()
+            .eq(WorkflowVersionPO::getId, versionId)
+            .eq(WorkflowVersionPO::getProjectId, currentProjectId()));
   }
 
   @Override
@@ -157,13 +160,25 @@ public class WorkflowCatalogDaoImpl implements WorkflowCatalogDao {
   @Override
   public int initializeEngineDefinition(String versionId, String engineDefinitionJson) {
     long projectId = currentProjectId();
-    return versionMapper.initializeEngineDefinition(versionId, projectId, engineDefinitionJson);
+    return versionMapper.update(
+        null,
+        Wrappers.<WorkflowVersionPO>lambdaUpdate()
+            .set(WorkflowVersionPO::getEngineDefinitionJson, engineDefinitionJson)
+            .eq(WorkflowVersionPO::getId, versionId)
+            .eq(WorkflowVersionPO::getProjectId, projectId)
+            .isNull(WorkflowVersionPO::getEngineDefinitionJson));
   }
 
   @Override
   public int initializeRuntimeMetadata(String versionId, String runtimeMetadataJson) {
     long projectId = currentProjectId();
-    return versionMapper.initializeRuntimeMetadata(versionId, projectId, runtimeMetadataJson);
+    return versionMapper.update(
+        null,
+        Wrappers.<WorkflowVersionPO>lambdaUpdate()
+            .set(WorkflowVersionPO::getRuntimeMetadataJson, runtimeMetadataJson)
+            .eq(WorkflowVersionPO::getId, versionId)
+            .eq(WorkflowVersionPO::getProjectId, projectId)
+            .isNull(WorkflowVersionPO::getRuntimeMetadataJson));
   }
 
   private long currentProjectId() {

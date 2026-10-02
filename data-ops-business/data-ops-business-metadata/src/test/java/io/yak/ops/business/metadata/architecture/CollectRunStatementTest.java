@@ -202,7 +202,10 @@ class CollectRunStatementTest {
 
   /** maven 与 IDE 的工作目录不同：从几个候选根依次找元数据模块根（与同包其它守卫同一口径）。 */
   private Path moduleRoot() {
-    Path probe = Path.of("src", "main", "resources", "mapper", "metadata", "LineageCatalogRowMapper.xml");
+    Path probe =
+        Path.of(
+            "src", "main", "java", "io", "yak", "ops", "business", "metadata", "dao", "mapper",
+            "LineageCatalogRowMapper.java");
     List<Path> candidates =
         List.of(
             Path.of("").toAbsolutePath().normalize(),

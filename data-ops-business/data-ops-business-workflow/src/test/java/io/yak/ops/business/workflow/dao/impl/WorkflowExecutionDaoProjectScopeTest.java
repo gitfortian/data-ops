@@ -37,7 +37,7 @@ class WorkflowExecutionDaoProjectScopeTest {
     WorkflowVersionPO version = new WorkflowVersionPO();
     version.setId("workflow-runtime-1");
     version.setProjectId(7L);
-    when(versionMapper.selectByIdAndProject("workflow-runtime-1", 7L)).thenReturn(version);
+    when(versionMapper.selectOne(any())).thenReturn(version);
     when(executionMapper.upsert(any(WorkflowExecutionPO.class))).thenReturn(1);
     WorkflowExecutionPO execution = new WorkflowExecutionPO();
     execution.setId("execution-1");
@@ -54,7 +54,7 @@ class WorkflowExecutionDaoProjectScopeTest {
   @Test
   void upsertRejectsDefinitionOutsideCurrentProject() {
     WorkflowExecutionDaoImpl dao = dao(7L);
-    when(versionMapper.selectByIdAndProject("workflow-runtime-9", 7L)).thenReturn(null);
+    when(versionMapper.selectOne(any())).thenReturn(null);
     WorkflowExecutionPO execution = new WorkflowExecutionPO();
     execution.setId("execution-1");
     execution.setDefinitionId("workflow-runtime-9");

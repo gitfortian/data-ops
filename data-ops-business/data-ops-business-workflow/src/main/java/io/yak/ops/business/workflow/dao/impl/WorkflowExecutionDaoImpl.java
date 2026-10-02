@@ -11,6 +11,7 @@ import io.yak.ops.common.bean.po.workflow.WorkflowDefinitionPO;
 import io.yak.ops.common.bean.po.workflow.WorkflowExecutionPO;
 import io.yak.ops.common.bean.po.workflow.WorkflowNodeAttemptPO;
 import io.yak.ops.common.bean.po.workflow.WorkflowNodeExecutionPO;
+import io.yak.ops.common.bean.po.workflow.WorkflowVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContextError;
 import io.yak.ops.core.project.ProjectContextException;
@@ -30,6 +31,10 @@ import org.springframework.stereotype.Repository;
     havingValue = "true",
     matchIfMissing = true)
 public class WorkflowExecutionDaoImpl implements WorkflowExecutionDao {
+
+  /** 调度可恢复的执行状态；与 V1 基线状态机一致。 */
+  private static final List<String> RECOVERABLE_STATUSES =
+      List.of("CREATED", "RUNNING", "PAUSING", "PAUSED", "RESUMING");
 
   private final WorkflowExecutionMapper executionMapper;
   private final WorkflowNodeExecutionMapper nodeExecutionMapper;
@@ -110,7 +115,11 @@ public class WorkflowExecutionDaoImpl implements WorkflowExecutionDao {
     if (execution.getDefinitionId() == null
         || execution.getDefinitionId().isBlank()
         || versionMapper == null
-        || versionMapper.selectByIdAndProject(execution.getDefinitionId(), projectId) == null) {
+        || versionMapper.selectOne(
+                Wrappers.<WorkflowVersionPO>lambdaQuery()
+                    .eq(WorkflowVersionPO::getId, execution.getDefinitionId())
+                    .eq(WorkflowVersionPO::getProjectId, projectId))
+            == null) {
       throw new ProjectContextException(ProjectContextError.PROJECT_NOT_FOUND);
     }
     if (execution.getSourceExecutionId() != null
@@ -150,17 +159,42 @@ public class WorkflowExecutionDaoImpl implements WorkflowExecutionDao {
 
   @Override
   public List<String> selectExecutionIds() {
-    return executionMapper.selectExecutionIds(currentProjectId());
+    return executionMapper
+        .selectList(
+            Wrappers.<WorkflowExecutionPO>lambdaQuery()
+                .select(WorkflowExecutionPO::getId)
+                .eq(WorkflowExecutionPO::getProjectId, currentProjectId())
+                .orderByDesc(WorkflowExecutionPO::getCreatedAt))
+        .stream()
+        .map(WorkflowExecutionPO::getId)
+        .toList();
   }
 
   @Override
   public List<String> selectRecoverableExecutionIds() {
-    return executionMapper.selectRecoverableExecutionIds(currentProjectId());
+    return executionMapper
+        .selectList(
+            Wrappers.<WorkflowExecutionPO>lambdaQuery()
+                .select(WorkflowExecutionPO::getId)
+                .eq(WorkflowExecutionPO::getProjectId, currentProjectId())
+                .in(WorkflowExecutionPO::getStatus, RECOVERABLE_STATUSES)
+                .orderByAsc(WorkflowExecutionPO::getCreatedAt))
+        .stream()
+        .map(WorkflowExecutionPO::getId)
+        .toList();
   }
 
   @Override
   public List<ProjectExecutionRef> selectRecoverableExecutionsForDispatch() {
-    return executionMapper.selectRecoverableExecutionsForDispatch().stream()
+    return executionMapper
+        .selectList(
+            Wrappers.<WorkflowExecutionPO>lambdaQuery()
+                .select(WorkflowExecutionPO::getId, WorkflowExecutionPO::getProjectId)
+                .in(WorkflowExecutionPO::getStatus, RECOVERABLE_STATUSES)
+                .isNotNull(WorkflowExecutionPO::getProjectId)
+                .orderByAsc(WorkflowExecutionPO::getProjectId)
+                .orderByAsc(WorkflowExecutionPO::getCreatedAt))
+        .stream()
         .filter(value -> value.getProjectId() != null && value.getProjectId() > 0L)
         .map(value -> new ProjectExecutionRef(value.getProjectId(), value.getId()))
         .toList();
@@ -199,7 +233,17 @@ public class WorkflowExecutionDaoImpl implements WorkflowExecutionDao {
   @Override
   public int bindExternalExecution(String attemptId, String externalExecutionId) {
     if (selectAttempt(attemptId) == null) return 0;
-    return nodeAttemptMapper.bindExternalExecution(attemptId, externalExecutionId);
+    return nodeAttemptMapper.update(
+        null,
+        Wrappers.<WorkflowNodeAttemptPO>lambdaUpdate()
+            .set(WorkflowNodeAttemptPO::getExternalExecutionId, externalExecutionId)
+            .eq(WorkflowNodeAttemptPO::getId, attemptId)
+            .and(
+                scope ->
+                    scope
+                        .isNull(WorkflowNodeAttemptPO::getExternalExecutionId)
+                        .or()
+                        .eq(WorkflowNodeAttemptPO::getExternalExecutionId, externalExecutionId)));
   }
 
   private long currentProjectId() {
