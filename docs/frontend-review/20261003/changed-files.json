@@ -5,6 +5,8 @@
   "data-ops-ui/src/components/security/ForbiddenPage.tsx",
   "data-ops-ui/src/components/security/SecurityProjectSwitcher/index.tsx",
   "data-ops-ui/src/components/security/SecurityQueryTable/index.tsx",
+  "data-ops-ui/src/components/table/useColumnVisibility.tsx",
+  "data-ops-ui/src/config/navigationMenuContract.test.ts",
   "data-ops-ui/src/global.less",
   "data-ops-ui/src/layouts/SiteLayout/index.tsx",
   "data-ops-ui/src/pages/404.tsx",
@@ -12,6 +14,7 @@
   "data-ops-ui/src/pages/create/index.tsx",
   "data-ops-ui/src/pages/data-analysis/consumption/detail.tsx",
   "data-ops-ui/src/pages/data-analysis/consumption/index.tsx",
+  "data-ops-ui/src/pages/data-analysis/consumption/presentation.ts",
   "data-ops-ui/src/pages/data-analysis/dashboard/calculated-field-editor.tsx",
   "data-ops-ui/src/pages/data-analysis/dashboard/chart-data-column.tsx",
   "data-ops-ui/src/pages/data-analysis/dashboard/chart-editor.tsx",
@@ -163,6 +166,7 @@
   "data-ops-ui/src/pages/home/components/HomeHeader.tsx",
   "data-ops-ui/src/pages/home/components/HomeResourceCenter.tsx",
   "data-ops-ui/src/pages/home/components/HomeWorkbench.tsx",
+  "data-ops-ui/src/pages/home/components/NotificationCenter.test.tsx",
   "data-ops-ui/src/pages/home/components/NotificationCenter.tsx",
   "data-ops-ui/src/pages/home/components/ScheduleCenter.tsx",
   "data-ops-ui/src/pages/integration/batch-link-up/components/CreateSyncTaskDrawer.tsx",
@@ -274,5 +278,12 @@
   "data-ops-ui/src/pages/workflow/schedules/components/BackfillDrawer.tsx",
   "data-ops-ui/src/pages/workflow/schedules/components/BackfillHistoryDrawer.tsx",
   "data-ops-ui/src/pages/workflow/schedules/components/TriggerLedgerDrawer.tsx",
-  "data-ops-ui/src/pages/workflow/schedules/components/WorkflowScheduleConfig.tsx"
+  "data-ops-ui/src/pages/workflow/schedules/components/WorkflowScheduleConfig.tsx",
+  "docs/frontend-review/20261003/changed-files.json",
+  "docs/frontend-review/20261003/commercial-ui-upgrade-plan.md",
+  "docs/frontend-review/20261003/implementation.md",
+  "docs/frontend-review/20261003/typecheck-comparison.json",
+  "docs/frontend-review/20261003/verify-types.cjs",
+  "scripts/product/test-product-guard.mjs",
+  "scripts/security/test-task-oriented-menu-migration.py"
 ]
