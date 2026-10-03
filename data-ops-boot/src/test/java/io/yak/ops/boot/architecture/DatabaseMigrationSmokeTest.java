@@ -29,6 +29,9 @@ class DatabaseMigrationSmokeTest {
         Map.entry("yak.database.password", System.getenv().getOrDefault("ARCHITECTURE_MYSQL_PASSWORD", "")),
         Map.entry("yak.datasource.enabled", String.valueOf(datasourceEnabled)),
         Map.entry("yak.security.database-enabled", "true"),
+        Map.entry("yak.security.datasource.url", System.getenv("ARCHITECTURE_MYSQL_URL")),
+        Map.entry("yak.security.datasource.username", System.getenv().getOrDefault("ARCHITECTURE_MYSQL_USERNAME", "root")),
+        Map.entry("yak.security.datasource.password", System.getenv().getOrDefault("ARCHITECTURE_MYSQL_PASSWORD", "")),
         Map.entry("yak.security.permission-registration.enabled", "false"),
         Map.entry("yak.security.bootstrap.enabled", "false"),
         Map.entry("spring.quartz.auto-startup", "false"));

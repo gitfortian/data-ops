@@ -1,6 +1,8 @@
 package io.yak.ops.business.modeling.derive;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.yak.ops.business.modeling.derive.ModelDeriveService.DerivedField;
 import io.yak.ops.business.modeling.exception.ModelingException;
