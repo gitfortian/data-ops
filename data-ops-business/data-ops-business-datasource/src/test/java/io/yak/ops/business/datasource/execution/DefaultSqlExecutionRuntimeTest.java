@@ -243,6 +243,40 @@ class DefaultSqlExecutionRuntimeTest {
   }
 
   @Test
+  void awaitIncludesTransactionSessionCleanup() throws Exception {
+    TransactionExecutor executor = new TransactionExecutor(-1);
+    CountDownLatch closing = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    executor.beforeClose = () -> {
+      closing.countDown();
+      try {
+        if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("cleanup timed out");
+      } catch (InterruptedException interrupted) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException(interrupted);
+      }
+    };
+    DefaultSqlExecutionRuntime runtime = runtime(dataSourceId -> executor);
+    try {
+      var started = runtime.start(new SqlExecutionPlan("42",
+          List.of(new SqlStatementRequest("update orders set status = 'DONE'", 10, 30)),
+          SqlExecutionContext.of(SqlExecutionCaller.SQL_TASK, "cleanup"),
+          SqlTransactionMode.SINGLE_TRANSACTION));
+      assertTrue(closing.await(2, TimeUnit.SECONDS));
+      var awaited = java.util.concurrent.CompletableFuture.supplyAsync(
+          () -> runtime.await(started.executionId()));
+      assertThrows(java.util.concurrent.TimeoutException.class,
+          () -> awaited.get(100, TimeUnit.MILLISECONDS));
+      release.countDown();
+      assertEquals(SqlExecutionStatus.SUCCEEDED, awaited.get(2, TimeUnit.SECONDS).status());
+      assertTrue(executor.closed.get());
+    } finally {
+      release.countDown();
+      runtime.shutdown();
+    }
+  }
+
+  @Test
   void rollsBackSingleTransactionAndSkipsRemainingStatementOnFailure() {
     TransactionExecutor executor = new TransactionExecutor(2);
     DefaultSqlExecutionRuntime runtime = runtime(dataSourceId -> executor);
@@ -380,6 +414,7 @@ class DefaultSqlExecutionRuntimeTest {
   }
 
   private static final class TransactionExecutor implements DataSourceSqlExecutor {
+    private Runnable beforeClose = () -> {};
     private final int failOnCall;
     private final AtomicInteger calls = new AtomicInteger();
     private final AtomicBoolean begun = new AtomicBoolean(false);
@@ -422,6 +457,7 @@ class DefaultSqlExecutionRuntimeTest {
 
     @Override
     public void close() {
+      beforeClose.run();
       closed.set(true);
     }
   }

@@ -1,6 +1,5 @@
 package io.yak.ops.business.home.cockpit;
 
-import io.yak.ops.business.datasource.domain.DataSourceSummary;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.quality.workspace.QualityExecutionOverviewReader;
 import io.yak.ops.business.sync.offline.execution.query.OfflineExecutionOverviewReader;

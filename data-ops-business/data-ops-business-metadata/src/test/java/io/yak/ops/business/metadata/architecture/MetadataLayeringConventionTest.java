@@ -82,12 +82,10 @@ class MetadataLayeringConventionTest {
           "(?m)^import\\s+(?:static\\s+)?io\\.yak\\.ops\\.business\\.([a-z]+)\\.([A-Za-z0-9_.]+);");
 
   /**
-   * 除 {@code *.api.*} 之外唯一被点名的跨模块引用：本仓库的"每模块一份持久化装配"缝。
+   * 既有功能开关标记的精确跨模块引用。
    *
-   * <p>数据源开关注解、共享的 {@code BusinessDatabaseConfiguration} 与其属性类被每个业务模块的
-   * {@code *PersistenceConfiguration} 引用（asset / dashboard / analysis 同款），它们是装配机制
-   * 而不是对方的业务内部实现。允许这三条，但<b>逐条点名</b>——守卫留一条写得出理由的通道，
-   * 胜过被人"顺手"放宽成"datasource 整包随便引"（plan §9 T6）。
+   * <p>共享数据库装配由 Boot 拥有；这里只保留现有 Datasource 功能开关标记，
+   * 不允许 Metadata 导入其他领域的持久化装配或属性类。
    */
   private static final Set<String> ALLOWED_PLUMBING_IMPORTS =
       Set.of(

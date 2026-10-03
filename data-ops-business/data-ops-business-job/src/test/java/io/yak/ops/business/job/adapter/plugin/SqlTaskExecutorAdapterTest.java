@@ -108,6 +108,11 @@ class SqlTaskExecutorAdapterTest {
     assertEquals(first.executionId(), adapter.status(first.executionId()).executionId());
     assertEquals(first.executionId(), adapter.start(snapshot, "first-key", Map.of()).executionId());
     assertEquals(2, plugin.createCount.get());
+    adapter.shutdown();
+    adapter = new SqlTaskExecutorAdapter(
+        TaskPluginRegistry.from(List.of(plugin)), emptyDataSourceProvider(), mapper, factory);
+    assertEquals(first.executionId(), adapter.start(snapshot, "first-key", Map.of()).executionId());
+    assertEquals(2, plugin.createCount.get(), "a restarted adapter must reuse retained terminal evidence");
   }
 
   @Test

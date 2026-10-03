@@ -192,6 +192,8 @@ public final class DefaultSqlExecutionRuntime implements SqlExecutionRuntime {
       if (!execution.snapshot().terminal()) {
         execution.finishUnexpectedFailure("SQL execution ended without a terminal state");
       }
+      // Await includes resource cleanup, not just the aggregate state transition.
+      execution.completeIfTerminal();
       retainCompleted(execution.executionId());
     }
   }
@@ -559,27 +561,22 @@ public final class DefaultSqlExecutionRuntime implements SqlExecutionRuntime {
 
     void finishSucceeded() {
       aggregate.finishSucceeded();
-      completeIfTerminal();
     }
 
     void finishFailed(int skipFrom, String message) {
       aggregate.finishFailed(skipFrom, message);
-      completeIfTerminal();
     }
 
     void finishTimedOut(int skipFrom, String message) {
       aggregate.finishTimedOut(skipFrom, message);
-      completeIfTerminal();
     }
 
     void finishCancelled(int skipFrom, String message) {
       aggregate.finishCancelled(skipFrom, message);
-      completeIfTerminal();
     }
 
     void finishUnexpectedFailure(String message) {
       aggregate.finishUnexpectedFailure(message);
-      completeIfTerminal();
     }
 
     void failBeforeStart(Throwable throwable) {
