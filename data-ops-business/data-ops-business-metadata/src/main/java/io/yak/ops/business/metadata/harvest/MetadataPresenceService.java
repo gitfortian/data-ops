@@ -6,7 +6,7 @@ import io.yak.ops.business.metadata.dao.model.CatalogPresenceRow;
 import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.GoneCommand;
 import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.GoneRow;
 import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.PresenceScan;
-import io.yak.ops.common.bean.po.metadata.MdCollectRunPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectRunPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.RunStatus;
 import java.time.LocalDateTime;

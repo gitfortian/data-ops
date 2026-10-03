@@ -2,7 +2,7 @@ package io.yak.ops.business.asset.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.asset.dao.mapper.AssetViewRecordMapper;
-import io.yak.ops.common.bean.po.asset.AssetViewRecordPO;
+import io.yak.ops.business.asset.dao.model.AssetViewRecordPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

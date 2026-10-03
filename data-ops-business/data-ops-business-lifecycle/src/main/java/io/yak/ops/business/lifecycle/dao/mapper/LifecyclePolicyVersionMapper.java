@@ -1,7 +1,7 @@
 package io.yak.ops.business.lifecycle.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.lifecycle.LifecyclePolicyVersionPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecyclePolicyVersionPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

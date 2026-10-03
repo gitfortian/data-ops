@@ -13,7 +13,7 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.yak.ops.business.asset.dao.mapper.AssetChangeRecordMapper;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.HashMap;

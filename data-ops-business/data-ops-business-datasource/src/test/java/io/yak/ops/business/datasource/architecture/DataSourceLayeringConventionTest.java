@@ -18,7 +18,7 @@ import io.yak.ops.business.datasource.management.DataSourceManager;
 import io.yak.ops.business.datasource.query.DataSourcePluginReader;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.datasource.repository.DataSourceRepository;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;

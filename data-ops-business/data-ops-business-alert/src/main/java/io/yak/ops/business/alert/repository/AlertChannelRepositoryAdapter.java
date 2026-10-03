@@ -2,7 +2,7 @@ package io.yak.ops.business.alert.repository;
 
 import io.yak.ops.business.alert.dao.AlertChannelDao;
 import io.yak.ops.business.alert.domain.AlertChannelDefinition;
-import io.yak.ops.common.bean.po.alert.AlertChannelPO;
+import io.yak.ops.business.alert.dao.model.AlertChannelPO;
 import io.yak.ops.common.enums.alert.AlertChannelStatus;
 import java.util.List;
 import java.util.Optional;

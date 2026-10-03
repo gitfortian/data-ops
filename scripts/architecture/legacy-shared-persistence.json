@@ -1,0 +1,5 @@
+{
+  "purpose": "All domain persistence types now live with their owner. Shared PO types/imports are prohibited.",
+  "files": [],
+  "imports": []
+}

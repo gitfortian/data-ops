@@ -5,14 +5,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
+import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapterRegistry;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,26 +42,26 @@ public class LinkUpJobSpecFactory {
   private static final String API_VERSION = "link-up/v1";
   private static final String KIND = "BatchSyncJob";
 
-  private final DataSourceDao dataSourceDao;
+  private final DataSourceReader dataSourceReader;
   private final ObjectMapper objectMapper;
   private final OfflineSyncConnectorAdapterRegistry adapterRegistry;
 
   @Autowired
   public LinkUpJobSpecFactory(
-      DataSourceDao dataSourceDao,
+      DataSourceReader dataSourceReader,
       @Qualifier("offlineSyncJsonMapper") ObjectMapper objectMapper,
       OfflineSyncConnectorAdapterRegistry adapterRegistry) {
-    this.dataSourceDao = dataSourceDao;
+    this.dataSourceReader = dataSourceReader;
     this.objectMapper = objectMapper;
     this.adapterRegistry = adapterRegistry;
   }
 
   /** Keeps focused unit tests and historical direct construction source-compatible. */
   public LinkUpJobSpecFactory(
-      DataSourceDao dataSourceDao,
+      DataSourceReader dataSourceReader,
       ObjectMapper objectMapper) {
     this(
-        dataSourceDao,
+        dataSourceReader,
         objectMapper,
         OfflineSyncConnectorAdapterRegistry.standard(objectMapper));
   }
@@ -101,8 +102,8 @@ public class LinkUpJobSpecFactory {
             false,
             sinkAdapter.requiresDataSource(sinkConnectorId, Role.SINK));
 
-    DataSourcePO sourceDataSource = dataSource(sourceDataSourceId, "来源端");
-    DataSourcePO sinkDataSource = dataSource(sinkDataSourceId, "目标端");
+    DataSourceReference sourceDataSource = dataSourceReference(sourceDataSourceId, "来源端");
+    DataSourceReference sinkDataSource = dataSourceReference(sinkDataSourceId, "目标端");
 
     int parallelism =
         Math.max(
@@ -221,7 +222,7 @@ public class LinkUpJobSpecFactory {
     endpoint.put("connectorId", connectorId);
 
     OfflineSyncConnectorAdapter adapter = adapterRegistry.resolve(connectorId, role);
-    DataSourcePO dataSource = null;
+    DataSourceDefinition dataSource = null;
     if (adapter.requiresDataSource(connectorId, role)) {
       long dataSourceId = endpoint.path("dataSourceRef").path("id").asLong(0L);
       if (dataSourceId <= 0L) {
@@ -386,11 +387,16 @@ public class LinkUpJobSpecFactory {
     return id <= 0L ? null : id;
   }
 
-  private DataSourcePO dataSource(Long id, String endpointName) {
+  private DataSourceReference dataSourceReference(Long id, String endpointName) {
+    if (id == null) return null;
+    return dataSourceReader.requireReference(id);
+  }
+
+  private DataSourceDefinition dataSource(Long id, String endpointName) {
     if (id == null) {
       return null;
     }
-    DataSourcePO dataSource = dataSourceDao.selectById(id);
+    DataSourceDefinition dataSource = dataSourceReader.require(id);
     if (dataSource == null) {
       throw new IllegalArgumentException(endpointName + "数据源不存在：" + id);
     }
@@ -464,8 +470,8 @@ public class LinkUpJobSpecFactory {
   public static final class BuildResult {
     private final JsonNode jobSpec;
     private final String jobSpecJson;
-    private final DataSourcePO sourceDataSource;
-    private final DataSourcePO sinkDataSource;
+    private final DataSourceReference sourceDataSource;
+    private final DataSourceReference sinkDataSource;
     private final String sourceConnectorId;
     private final String sinkConnectorId;
     private final String sourceTable;
@@ -474,8 +480,8 @@ public class LinkUpJobSpecFactory {
     BuildResult(
         JsonNode jobSpec,
         String jobSpecJson,
-        DataSourcePO sourceDataSource,
-        DataSourcePO sinkDataSource,
+        DataSourceReference sourceDataSource,
+        DataSourceReference sinkDataSource,
         String sourceConnectorId,
         String sinkConnectorId,
         String sourceTable,
@@ -498,11 +504,11 @@ public class LinkUpJobSpecFactory {
       return jobSpecJson;
     }
 
-    public DataSourcePO getSourceDataSource() {
+    public DataSourceReference getSourceDataSource() {
       return sourceDataSource;
     }
 
-    public DataSourcePO getSinkDataSource() {
+    public DataSourceReference getSinkDataSource() {
       return sinkDataSource;
     }
 

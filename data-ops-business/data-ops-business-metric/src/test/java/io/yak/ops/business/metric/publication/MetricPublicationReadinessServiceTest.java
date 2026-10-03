@@ -10,7 +10,7 @@ import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateStatus;
 import io.yak.ops.business.metric.publication.MetricPublicationReadinessService.ReadinessStatus;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;

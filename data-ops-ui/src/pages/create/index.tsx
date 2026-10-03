@@ -15,7 +15,8 @@ import {
   ExclamationCircleOutlined,
   TableOutlined,
 } from '@ant-design/icons';
-import { history, request, useLocation } from '@umijs/max';
+import request from '@/utils/request';
+import { history, useLocation } from '@umijs/max';
 import {
   ConfigProvider,
   Form,

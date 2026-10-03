@@ -81,7 +81,7 @@ class QualityProjectScopeContractTest {
     String[] lines = sql.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
     int start = -1;
     for (int i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("-- Source:") && lines[i].endsWith(sourceFileName)) {
+      if (lines[i].startsWith("-- Source:") && lines[i].trim().endsWith(sourceFileName)) {
         start = i + 1;
         break;
       }

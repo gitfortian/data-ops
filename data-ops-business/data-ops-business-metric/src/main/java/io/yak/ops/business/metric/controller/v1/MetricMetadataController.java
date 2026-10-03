@@ -9,7 +9,7 @@ import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.controller.v1.vo.MetricVO;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
-import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
+import io.yak.ops.business.metric.dao.model.MetricDependencyPO;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

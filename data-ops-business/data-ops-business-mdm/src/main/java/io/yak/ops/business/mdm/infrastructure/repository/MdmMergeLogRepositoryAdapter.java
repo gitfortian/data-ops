@@ -3,7 +3,7 @@ package io.yak.ops.business.mdm.infrastructure.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmMergeLogMapper;
 import io.yak.ops.business.mdm.domain.clean.MdmMergeLog;
-import io.yak.ops.common.bean.po.mdm.MdmMergeLogPO;
+import io.yak.ops.business.mdm.dao.model.MdmMergeLogPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

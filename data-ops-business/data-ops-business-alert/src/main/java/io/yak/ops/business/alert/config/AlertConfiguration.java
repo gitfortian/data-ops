@@ -7,11 +7,9 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 /** 告警管理模块基础设施配置。 */
 @Configuration(proxyBeanMethods = false)
-@Import(io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration.class)
 @MapperScan(
     basePackages = "io.yak.ops.business.alert.dao.mapper",
     sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")

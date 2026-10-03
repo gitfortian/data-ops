@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.development.dao.mapper.DevelopmentTaskRevisionMapper;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevision;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevisionSummary;
-import io.yak.ops.common.bean.po.development.DevelopmentTaskRevisionPO;
+import io.yak.ops.business.development.dao.model.DevelopmentTaskRevisionPO;
 import io.yak.ops.spi.task.model.TaskDefinition;
 import java.time.Instant;
 import java.util.List;

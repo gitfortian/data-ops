@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -24,9 +25,9 @@ class MaskingEngineTest {
   }
 
   @Test
-  void blankAlgoKeepsOriginal() {
-    assertEquals("13800000000", MaskingEngine.mask("13800000000", "  ", null));
-    assertEquals("abc", MaskingEngine.mask("abc", "UNKNOWN_ALGO", null));
+  void blankOrUnknownAlgorithmRejectsInsteadOfReturningPlaintext() {
+    assertThrows(IllegalArgumentException.class, () -> MaskingEngine.mask("13800000000", "  ", null));
+    assertThrows(IllegalArgumentException.class, () -> MaskingEngine.mask("abc", "UNKNOWN_ALGO", null));
   }
 
   @Test
@@ -67,8 +68,8 @@ class MaskingEngineTest {
   }
 
   @Test
-  void malformedParamsFallBackToDefaults() {
-    assertEquals("******", MaskingEngine.mask("abcdefghijkl", "FULL_MASK", "not-json"));
+  void malformedParamsRejectInsteadOfFallingBack() {
+    assertThrows(IllegalArgumentException.class, () -> MaskingEngine.mask("abcdefghijkl", "FULL_MASK", "not-json"));
     assertTrue(MaskingEngine.supported().contains("HASH"));
   }
 }

@@ -1049,122 +1049,14 @@ public class WorkflowRuntime {
         || "TIMED_OUT".equals(status);
   }
 
-  private WorkflowInstanceVO toView(WorkflowExecution execution, WorkflowExecutionMetadata runMetadata) {
-    List<NodeInstanceVO> nodes = execution.nodes().values().stream()
-        .map(node -> toNodeView(execution.id(), node, runMetadata.nodes().get(node.nodeId())))
-        .toList();
-    return new WorkflowInstanceVO(
-        execution.id(),
-        execution.definitionId(),
-        execution.sourceExecutionId(),
-        runMetadata.name(),
-        execution.status().name(),
-        runMetadata.failureStrategy(),
-        execution.createdAt(),
-        execution.runStartedAt(),
-        execution.endedAt(),
-        runMetadata.workflowTimeoutSeconds(),
-        execution.input(),
-        nodes.size(),
-        runMetadata.edgeCount(),
-        nodes,
-        runMetadata.workflowVersionId(),
-        runMetadata.workflowVersionNo(),
-        runMetadata.testRun());
-  }
-
-  private NodeInstanceVO toNodeView(
-      String executionId,
-      NodeExecution node,
-      NodeMetadata nodeMetadata) {
-    TaskVersionSnapshot task = nodeMetadata == null ? null : nodeMetadata.task();
-    List<AttemptVO> attempts = node.attempts().stream().map(this::toAttemptView).toList();
-    NodeAttempt attempt = node.attempts().isEmpty()
-        ? null
-        : node.attempts().get(node.attempts().size() - 1);
-    ConcurrentMap<String, NodeDispatch> dispatches = latestDispatches.get(executionId);
-    NodeDispatch dispatch = dispatches == null ? null : dispatches.get(node.nodeId());
-    Map<String, Object> resolvedInput = dispatch == null
-        ? receivedInput(node.output())
-        : dispatch.nodeInput();
-    return new NodeInstanceVO(
-        node.nodeId(),
-        task == null ? null : task.taskId(),
-        task == null ? node.nodeId() : task.name(),
-        task == null ? "UNKNOWN" : task.type(),
-        node.status().name(),
-        nodeMetadata == null ? TriggerRule.ALL_SUCCESS.name() : nodeMetadata.triggerRule(),
-        nodeMetadata == null ? NodeFailurePolicy.FAIL_WORKFLOW.name() : nodeMetadata.failurePolicy(),
-        node.errorMessage(),
-        attempt == null || attempt.failureReason() == null
-            ? null
-            : attempt.failureReason().name(),
-        node.downstreamContinuationAllowed(),
-        attempts.size(),
-        attempt == null ? null : attempt.id(),
-        attempt == null ? null : attempt.attemptNumber(),
-        nodeMetadata == null ? 1 : nodeMetadata.maxAttempts(),
-        nodeMetadata == null ? 0L : nodeMetadata.retryDelaySeconds(),
-        nodeMetadata == null ? 0L : nodeMetadata.dispatchTimeoutSeconds(),
-        nodeMetadata == null ? 0L : nodeMetadata.executionTimeoutSeconds(),
-        nodeMetadata == null ? Map.of() : nodeMetadata.inputMapping(),
-        resolvedInput,
-        dispatch == null ? Map.of() : dispatch.predecessorOutputs(),
-        node.output(),
-        attempts);
-  }
-
-  private Map<String, Object> receivedInput(Map<String, Object> output) {
-    if (output == null || !(output.get("receivedInput") instanceof Map<?, ?> values)) {
-      return Map.of();
-    }
-    Map<String, Object> result = new LinkedHashMap<>();
-    values.forEach((key, value) -> {
-      if (key instanceof String name) result.put(name, value);
-    });
-    return Map.copyOf(result);
-  }
-
-  private AttemptVO toAttemptView(NodeAttempt attempt) {
-    return new AttemptVO(
-        attempt.id(),
-        attempt.attemptNumber(),
-        attempt.status().name(),
-        attempt.failureReason() == null ? null : attempt.failureReason().name(),
-        attempt.errorMessage(),
-        attempt.availableAt(),
-        attempt.startedAt(),
-        attempt.pausedAt(),
-        attempt.pausedDuration().toMillis(),
-        attempt.endedAt());
+  private WorkflowInstanceVO toView(WorkflowExecution execution, WorkflowExecutionMetadata metadata) {
+    return WorkflowExecutionProjection.toView(execution, metadata, latestDispatches.get(execution.id()));
   }
 
   @PreDestroy
   void shutdown() {
     runtimeScheduler.shutdownNow();
     ioExecutor.shutdownNow();
-  }
-
-  private record WorkflowExecutionMetadata(
-      String name,
-      int edgeCount,
-      long workflowTimeoutSeconds,
-      String failureStrategy,
-      String workflowVersionId,
-      Integer workflowVersionNo,
-      boolean testRun,
-      Map<String, NodeMetadata> nodes) {
-  }
-
-  private record NodeMetadata(
-      TaskVersionSnapshot task,
-      String triggerRule,
-      String failurePolicy,
-      int maxAttempts,
-      long retryDelaySeconds,
-      long dispatchTimeoutSeconds,
-      long executionTimeoutSeconds,
-      Map<String, String> inputMapping) {
   }
 
   private final class RuntimeNodeExecutor implements NodeExecutor {

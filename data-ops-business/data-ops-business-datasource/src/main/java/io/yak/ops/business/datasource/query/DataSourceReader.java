@@ -3,6 +3,7 @@ package io.yak.ops.business.datasource.query;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.datasource.domain.DataSourceDefinition;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import io.yak.ops.business.datasource.domain.DataSourceQuery;
 import io.yak.ops.business.datasource.domain.DataSourceSummary;
 import io.yak.ops.business.datasource.exception.DataSourceException;
@@ -27,12 +28,22 @@ public class DataSourceReader {
         .orElseThrow(() -> new DataSourceException(DataSourceErrorCode.NOT_FOUND));
   }
 
+  public DataSourceReference requireReference(Long id) {
+    return findReferences(List.of(requireId(id))).stream().findFirst()
+        .orElseThrow(() -> new DataSourceException(DataSourceErrorCode.NOT_FOUND));
+  }
+
   public PageData<DataSourceDefinition> page(DataSourceQuery query) {
     return repository.page(query);
   }
 
   public DataSourceSummary summary() {
     return repository.summary();
+  }
+
+  /** Project-scoped batch projection for consumers; no DAO or persistence model escapes. */
+  public List<DataSourceReference> findReferences(List<Long> ids) {
+    return repository.findReferences(ids);
   }
 
   public List<DataSourceDefinition> findAll(DataSourceDbType dbType) {

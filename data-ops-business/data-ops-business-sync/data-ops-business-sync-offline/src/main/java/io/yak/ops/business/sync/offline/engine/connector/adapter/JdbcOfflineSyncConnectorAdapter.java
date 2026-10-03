@@ -10,7 +10,7 @@ import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConn
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildResult;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import io.yak.ops.common.enums.datasource.DataSourceDbType;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -224,7 +224,7 @@ public class JdbcOfflineSyncConnectorAdapter implements OfflineSyncConnectorAdap
     }
   }
 
-  private ConnectionDetails connection(DataSourcePO dataSource) {
+  private ConnectionDetails connection(DataSourceDefinition dataSource) {
     JsonNode parameters = parseJson(dataSource.getConnectionParams());
     String url = firstText(parameters, "url", "jdbcUrl", "jdbc_url", "jdbc-url");
     if (!StringUtils.hasText(url)) {

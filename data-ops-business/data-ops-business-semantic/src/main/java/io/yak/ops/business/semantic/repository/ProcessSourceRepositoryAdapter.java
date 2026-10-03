@@ -3,7 +3,7 @@ package io.yak.ops.business.semantic.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.semantic.binding.ProcessSourceBinding;
 import io.yak.ops.business.semantic.dao.mapper.SemanticProcessSourceMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticProcessSourcePO;
+import io.yak.ops.business.semantic.dao.model.SemanticProcessSourcePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

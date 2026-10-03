@@ -6,7 +6,7 @@ import io.yak.framework.common.PagingData;
 import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.security.application.AccessLogService;
-import io.yak.ops.common.bean.po.security.DsecAccessLogPO;
+import io.yak.ops.business.security.dao.model.DsecAccessLogPO;
 import io.yak.ops.common.constant.security.SecurityPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

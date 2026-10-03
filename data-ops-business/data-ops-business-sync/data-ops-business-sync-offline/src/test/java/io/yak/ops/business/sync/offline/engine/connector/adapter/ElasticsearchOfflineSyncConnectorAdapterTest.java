@@ -1,5 +1,6 @@
 package io.yak.ops.business.sync.offline.engine.connector.adapter;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,7 +10,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +56,7 @@ class ElasticsearchOfflineSyncConnectorAdapterTest {
             + "\"connect_timeout_ms\":12000}");
     adapter.resolveForExecution(
         new ExecutionContext(
-            "elasticsearch7", Role.SOURCE, "source", dataSource, result.options()));
+            "elasticsearch7", Role.SOURCE, "source", DataSourceFixtures.definition(dataSource), result.options()));
 
     assertThat(result.options().path("hosts")).hasSize(2);
     assertThat(result.options().path("username").asText()).isEqualTo("elastic");

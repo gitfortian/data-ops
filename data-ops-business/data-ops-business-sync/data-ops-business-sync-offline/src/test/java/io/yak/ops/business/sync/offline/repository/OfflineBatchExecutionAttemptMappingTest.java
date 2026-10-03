@@ -11,7 +11,7 @@ import io.yak.ops.business.sync.offline.domain.core.AttemptReason;
 import io.yak.ops.business.sync.offline.domain.core.AttemptStatus;
 import io.yak.ops.business.sync.offline.domain.core.BatchScope;
 import io.yak.ops.business.sync.offline.domain.core.ExecutionAttempt;
-import io.yak.ops.common.bean.po.sync.offline.OfflineBatchExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineBatchExecutionPO;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;

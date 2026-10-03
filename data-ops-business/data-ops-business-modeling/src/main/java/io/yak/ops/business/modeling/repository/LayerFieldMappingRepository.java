@@ -1,6 +1,6 @@
 package io.yak.ops.business.modeling.repository;
 
-import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO;
 import java.util.List;
 
 /** Project-scoped persistence boundary for layer-field mappings. */

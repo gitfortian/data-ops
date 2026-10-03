@@ -1,7 +1,7 @@
 package io.yak.ops.business.job.environment;
 
 import io.yak.ops.business.job.dao.SystemEnvVarDao;
-import io.yak.ops.common.bean.po.job.SystemEnvVarPO;
+import io.yak.ops.business.job.dao.model.SystemEnvVarPO;
 import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.Collections;

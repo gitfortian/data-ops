@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.yak.ops.business.quality.config.ConditionalOnQualityEnabled;
 import io.yak.ops.business.quality.dao.mapper.QualityTaskRevisionMapper;
 import io.yak.ops.business.quality.domain.QualityTaskRevision;
-import io.yak.ops.common.bean.po.quality.QualityTaskRevisionPO;
+import io.yak.ops.business.quality.dao.model.QualityTaskRevisionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.Optional;

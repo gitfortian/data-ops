@@ -116,7 +116,9 @@ class LineagePublicApiBoundaryTest {
     String normalized = normalize(path);
     return normalized.endsWith(".java")
         && normalized.contains("/src/main/java/")
-        && !normalized.contains("/target/");
+        && !normalized.contains("/target/")
+        && !normalized.contains("/.git/")
+        && !normalized.contains("/data/");
   }
 
   private Path repositoryRoot() {

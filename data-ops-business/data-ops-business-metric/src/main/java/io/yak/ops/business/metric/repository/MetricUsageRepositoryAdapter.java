@@ -3,7 +3,7 @@ package io.yak.ops.business.metric.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.metric.dao.mapper.MetricUsageMapper;
 import io.yak.ops.business.metric.domain.MetricUsage;
-import io.yak.ops.common.bean.po.metric.MetricUsagePO;
+import io.yak.ops.business.metric.dao.model.MetricUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

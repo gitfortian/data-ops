@@ -2,7 +2,7 @@ package io.yak.ops.business.semantic.usage;
 
 import io.yak.ops.business.semantic.api.StandardUsageApi;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardUsageMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticStandardUsagePO;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.Map;

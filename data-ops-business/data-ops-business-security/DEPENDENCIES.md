@@ -4,11 +4,11 @@
 
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | 编译 | PO(`bean.po.security`)、错误码(`enums.security`)、权限码(`constant.security`)——平台惯例 |
+| `data-ops-common` | 编译 | 、错误码(`enums.security`)、权限码(`constant.security`)——平台惯例 |
 | `data-security-spring-boot-starter` | 编译 | `Result`/`PageData`/`BusinessException`/`ErrorCode`/`@RequiresPermission`/`CurrentUserProvider` |
 | `data-ops-core`(经 common/boot) | 编译 | `CurrentProject`/`@ProjectScope`(项目空间上下文) |
 | `data-ops-business-audit` | 编译 | `BusinessAuditService`/`AuditEventType`/`AuditOperationRequest` 审计门面(fail-open) |
-| `data-ops-business-datasource` | 编译(optional) | **仅基础设施**:`BusinessDatabaseConfiguration`(共享数据源/SqlSessionFactory/事务管理器);发现扫描的字段目录由数据源侧以 `DiscoverableField` 传入,不反向依赖其实现类型 |
+| `data-ops-business-datasource` | 编译(optional) | 既有数据源功能开关注解；共享持久化由 Boot 装配；发现扫描的字段目录由数据源侧以 `DiscoverableField` 传入,不反向依赖其实现类型 |
 | `data-ops-business-semantic` | 编译(optional) | **已接线(语义缺口单 01)**:等级字典真源在本模块;`SecurityLevelService` 经 `StandardQueryApi` 校验 `std_security_id` 引用(存在+SECURITY+ENABLED)。语义 SECURITY 标准=字段级分级/脱敏模板(mask_rule 仅参考文案,不参与脱敏执行),松散 ID,不直读语义表 |
 | spring-web / validation / tx / mybatis-plus / flyway-core / lombok | 编译 | Web 层、事务、ORM、迁移、样板 |
 | spring-boot-starter-test(JUnit5+Mockito+AssertJ) | test | 单元测试 |

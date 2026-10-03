@@ -38,10 +38,10 @@ import io.yak.ops.business.sync.offline.repository.OfflineJobExecutionRepository
 import io.yak.ops.business.sync.offline.repository.OfflineScheduleRepository;
 import io.yak.ops.business.sync.offline.schedule.OfflineScheduleExecutionGateway;
 import io.yak.ops.business.sync.offline.schedule.OfflineScheduleHandler;
-import io.yak.ops.common.bean.po.sync.offline.OfflineBatchExecutionPO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineExecutionEventPO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineBatchExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineExecutionEventPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobExecutionPO;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

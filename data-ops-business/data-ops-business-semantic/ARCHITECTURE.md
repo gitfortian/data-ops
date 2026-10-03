@@ -18,9 +18,9 @@ io.yak.ops.business.semantic
 ## 持久化
 
 - 自持 Flyway:`classpath:db/migration/yak-semantic`,历史表 `flyway_schema_history_semantic`,baseline 0。
-- 共享数据源:`@Import(BusinessDatabaseConfiguration.class)`(datasource 模块提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager),与 modeling 同池。
+- 共享数据源:Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配(Boot 应用装配提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager),与 modeling 同池。
 - 事务:`@Transactional(transactionManager = "yakBusinessTransactionManager")`。
-- PO 位于 `data-ops-common` 的 `io.yak.ops.common.bean.po.semantic`(平台惯例)。
+- PO 位于本模块 `io.yak.ops.business.semantic.dao.model`，只供本模块持久化适配器使用。
 
 ## 分层规则
 

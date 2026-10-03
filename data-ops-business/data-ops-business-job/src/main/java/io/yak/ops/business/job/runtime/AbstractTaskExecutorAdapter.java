@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.job.task.TaskExecution;
 import io.yak.ops.business.job.task.TaskExecutor;
 import io.yak.ops.business.job.task.TaskVersionSnapshot;
+import io.yak.ops.business.job.config.TaskRuntimeProperties;
+import io.yak.ops.business.job.repository.TaskExecutionJournal;
 import io.yak.ops.core.plugin.task.TaskPluginRegistry;
 import io.yak.ops.plugin.task.api.DefaultTaskExecutionContext;
 import io.yak.ops.plugin.task.api.TaskExecutionContext;
@@ -29,6 +31,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +49,11 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
   private final ObjectMapper objectMapper;
   private final TaskExecutionContextFactory contextFactory;
   private final ExecutorService workerExecutor;
+  private final TaskRuntimeProperties runtimeProperties;
+  private final TaskExecutionJournal journal;
+  private final Semaphore activeSlots;
+  private final Semaphore retainedSlots;
+  private final AtomicLong lastRetentionRetry = new AtomicLong();
   private final ConcurrentMap<String, ExecutionHandle> executions = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, String> idempotencyIndex = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, CompletableFuture<String>> idempotencyStarts =
@@ -59,6 +69,10 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
     this.objectMapper = objectMapper;
     this.contextFactory = contextFactory;
     this.workerExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    this.runtimeProperties = contextFactory.runtimeProperties();
+    this.journal = contextFactory.journal();
+    this.activeSlots = new Semaphore(Math.max(1, runtimeProperties.getMaxConcurrent()));
+    this.retainedSlots = new Semaphore(Math.max(1, runtimeProperties.getMaxRetainedHandles()));
   }
 
   @Override
@@ -122,12 +136,18 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
       String idempotencyKey,
       Map<String, Object> input) {
     requireSnapshot(snapshot);
+    contextFactory.projectIdentity(); // Fail closed before allocating plugin resources.
 
     TaskExecutionTrigger safeTrigger =
         trigger == null ? TaskExecutionTrigger.WORKFLOW : trigger;
-    String safeKey = normalizeKey(idempotencyKey);
+    String safeKey = contextFactory.projectKey(normalizeKey(idempotencyKey));
     if (safeKey == null) {
       return startNewExecution(snapshot, safeTrigger, null, input);
+    }
+
+    if (journal != null) {
+      TaskExecution retained = journal.findByKey(taskType(), safeKey).orElse(null);
+      if (retained != null) return retained;
     }
 
     String existing = idempotencyIndex.get(safeKey);
@@ -145,6 +165,13 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
     }
 
     try {
+      if (journal != null) {
+        TaskExecution retained = journal.findByKey(taskType(), safeKey).orElse(null);
+        if (retained != null) {
+          owner.complete(retained.executionId());
+          return retained;
+        }
+      }
       existing = idempotencyIndex.get(safeKey);
       if (existing != null) {
         owner.complete(existing);
@@ -163,11 +190,18 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
 
   @Override
   public TaskExecution status(String executionId) {
-    return requireHandle(executionId).snapshot().get();
+    ExecutionHandle handle = executions.get(executionId);
+    if (handle != null) return requireHandle(executionId).snapshot().get();
+    if (journal != null) {
+      TaskExecution retained = journal.findById(executionId).orElse(null);
+      if (retained != null) return retained;
+    }
+    throw new IllegalArgumentException(executionNotFoundMessage(executionId));
   }
 
   @Override
   public void cancel(String executionId) {
+    if (status(executionId).terminal()) return;
     ExecutionHandle handle = requireHandle(executionId);
     TaskExecution current = handle.snapshot().get();
     if (current.terminal()) return;
@@ -196,6 +230,14 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
       TaskExecutionTrigger trigger,
       String idempotencyKey,
       Map<String, Object> input) {
+    purgePersistedTerminals();
+    if (!activeSlots.tryAcquire()) throw new IllegalStateException("Task execution concurrency budget exhausted");
+    if (!retainedSlots.tryAcquire()) {
+      activeSlots.release();
+      throw new IllegalStateException("Task handle budget exhausted; terminal evidence must be retained before eviction");
+    }
+    boolean registered = false;
+    boolean submitted = false;
     long startedAtNanos = System.nanoTime();
     try {
       logStartupStage("definition", snapshot, idempotencyKey, startedAtNanos);
@@ -215,14 +257,20 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
 
       String executionId = executionIdPrefix() + "-" + UUID.randomUUID();
       TaskExecution initial = new TaskExecution(executionId, "RUNNING", null, Map.of());
-      ExecutionHandle handle = new ExecutionHandle(pluginExecutor, new AtomicReference<>(initial));
+      AtomicReference<TaskExecution> view = new AtomicReference<>(initial);
+      Runnable retain = journal == null ? null : contextFactory.captureProjectContext(
+          () -> journal.save(taskType(), idempotencyKey, view.get()));
+      ExecutionHandle handle = new ExecutionHandle(pluginExecutor, view, idempotencyKey,
+          contextFactory.projectIdentity(), new AtomicLong(), new AtomicBoolean(), retain);
       executions.put(executionId, handle);
+      registered = true;
       if (idempotencyKey != null) idempotencyIndex.put(idempotencyKey, executionId);
 
       logStartupStage("worker-submit", snapshot, idempotencyKey, startedAtNanos);
       try {
         workerExecutor.submit(
             contextFactory.captureProjectContext(() -> runExecution(executionId, handle)));
+        submitted = true;
       } catch (VirtualMachineError | ThreadDeath fatal) {
         throw fatal;
       } catch (Throwable throwable) {
@@ -232,6 +280,7 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
             executionFailureMessage(throwable),
             Map.of());
         handle.snapshot().set(failed);
+        retainTerminal(handle);
         log.error(
             "{} task worker submission failed [{}]",
             displayName(),
@@ -247,6 +296,9 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
       throw exception;
     } catch (Throwable throwable) {
       throw new IllegalStateException(executionFailureMessage(throwable), throwable);
+    } finally {
+      if (!submitted) activeSlots.release();
+      if (!registered) retainedSlots.release();
     }
   }
 
@@ -279,6 +331,45 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
           executionFailureMessage(throwable),
           Map.of());
       handle.snapshot().updateAndGet(current -> current.terminal() ? current : failed);
+    } finally {
+      try { retainTerminal(handle); }
+      finally { activeSlots.release(); }
+    }
+  }
+
+  private void retainTerminal(ExecutionHandle handle) {
+    if (!handle.snapshot().get().terminal()) return;
+    handle.completedAt().compareAndSet(0L, System.currentTimeMillis());
+    if (handle.retain() == null || handle.persisted().get()) return;
+    try {
+      handle.retain().run();
+      handle.persisted().set(true);
+    } catch (RuntimeException failure) {
+      // Retain the live view on persistence failure; never forget an idempotency key and replay it.
+      log.error("Task terminal evidence retention failed execution={}",
+          handle.snapshot().get().executionId(), failure);
+    }
+  }
+
+  private synchronized void purgePersistedTerminals() {
+    long now = System.currentTimeMillis();
+    // An unavailable database must not be retried once per retained handle on every start.
+    boolean retryRetention = now - lastRetentionRetry.get() >= 10000L;
+    if (retryRetention) lastRetentionRetry.set(now);
+    for (Map.Entry<String, ExecutionHandle> entry : executions.entrySet()) {
+      ExecutionHandle handle = entry.getValue();
+      if (handle.completedAt().get() == 0L) continue;
+      if (!handle.persisted().get() && retryRetention) {
+        retainTerminal(handle);
+        if (!handle.persisted().get()) retryRetention = false;
+      }
+      if (!handle.persisted().get()) continue;
+      boolean expired = now - handle.completedAt().get() >= Math.max(0L, runtimeProperties.getTerminalRetentionMillis());
+      if (!expired && retainedSlots.availablePermits() > 0) continue;
+      if (executions.remove(entry.getKey(), handle)) {
+        if (handle.idempotencyKey() != null) idempotencyIndex.remove(handle.idempotencyKey(), entry.getKey());
+        retainedSlots.release();
+      }
     }
   }
 
@@ -338,7 +429,9 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
 
   private ExecutionHandle requireHandle(String executionId) {
     ExecutionHandle handle = executions.get(executionId);
-    if (handle == null) throw new IllegalArgumentException(executionNotFoundMessage(executionId));
+    if (handle == null || !handle.project().equals(contextFactory.projectIdentity())) {
+      throw new IllegalArgumentException(executionNotFoundMessage(executionId));
+    }
     return handle;
   }
 
@@ -376,5 +469,10 @@ public abstract class AbstractTaskExecutorAdapter implements TaskExecutor {
 
   protected record ExecutionHandle(
       io.yak.ops.plugin.task.api.TaskExecutor executor,
-      AtomicReference<TaskExecution> snapshot) {}
+      AtomicReference<TaskExecution> snapshot,
+      String idempotencyKey,
+      String project,
+      AtomicLong completedAt,
+      AtomicBoolean persisted,
+      Runnable retain) {}
 }

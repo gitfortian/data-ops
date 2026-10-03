@@ -2,7 +2,6 @@ package io.yak.ops.business.sync.offline.config;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration;
 import java.net.http.HttpClient;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -12,7 +11,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /** 离线同步一期基础设施配置。 */
@@ -20,7 +18,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
 @EnableConfigurationProperties(OfflineSyncProperties.class)
-@Import(BusinessDatabaseConfiguration.class)
 @MapperScan(
     basePackages = "io.yak.ops.business.sync.offline.dao.mapper",
     sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")

@@ -18,7 +18,7 @@ import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.impact.MetricImpactService;
 import io.yak.ops.business.metric.repository.MetricCompositionRepository;
 import io.yak.ops.business.modeling.api.ModelQueryApi;
-import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
+import io.yak.ops.business.metric.dao.model.MetricCompositionPO;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

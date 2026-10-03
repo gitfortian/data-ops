@@ -91,6 +91,8 @@ public class AgentProperties {
   public static class Turn {
     /** 后台执行线程池大小。 */
     private int workerPoolSize = 2;
+    /** In-memory waiting tasks; the durable QUEUED row remains the retry source. */
+    private int queueCapacity = 16;
     /** 排队扫描周期（毫秒）。提交侧另有即时唤醒，无需调小。 */
     private long queuePollMillis = 2000L;
     /** SSE 订阅端尾随轮询周期（毫秒）：事件帧先落库再被拉取，天然断线可续播。 */

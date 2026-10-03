@@ -22,7 +22,7 @@ import io.yak.ops.business.semantic.api.StandardRecommendApi;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
-import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO;
 import io.yak.ops.common.api.metric.MetricQueryApi;
 import io.yak.ops.common.api.metric.MetricQueryView;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
@@ -31,8 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.springframework.beans.factory.ObjectProvider;
 import java.util.List;
 import java.util.Locale;
@@ -84,13 +82,13 @@ public class ModelDeriveService {
       Set.of("process_time", "event_time");
 
   /** 目标层技术列(按该层规则单独补;顺序即落地顺序)。 */
-  private static final Map<String, TechnicalDef> TARGET_TECHNICALS = new LinkedHashMap<>();
+  private static final Map<String, DeriveTechnicalColumn> TARGET_TECHNICALS = new LinkedHashMap<>();
 
   static {
     TARGET_TECHNICALS.put(
-        "process_time", new TechnicalDef("process_time", "DATETIME", null, "数据处理时间"));
+        "process_time", new DeriveTechnicalColumn("process_time", "DATETIME", null, "数据处理时间"));
     TARGET_TECHNICALS.put(
-        "event_time", new TechnicalDef("event_time", "DATETIME", null, "业务事件时间"));
+        "event_time", new DeriveTechnicalColumn("event_time", "DATETIME", null, "业务事件时间"));
   }
 
   private final ProcessApi processApi;
@@ -280,95 +278,6 @@ public class ModelDeriveService {
   public record UpstreamModelView(
       Long modelId, String code, String name, String layerCode, boolean selected, int fieldCount) {}
 
-  /**
-   * 内部:一条解析后的字段。
-   * {@code odsColumn} 为空表示"仅目标层技术列"(没有继承来源,类型取 {@code technicalDef});
-   * 标准字段关联优先继承 ODS 列,缺失时按过程字段集匹配。
-   */
-  private record ResolvedField(
-      String sourceTable,
-      String tableRole,
-      Long odsModelId,
-      String odsTableName,
-      StructureView.ColumnView odsColumn,
-      String overrideDataType,
-      Long stdFieldId,
-      StandardField stdField,
-      String matchedBy,
-      String landingField,
-      String transformExpr,
-      boolean include,
-      TechnicalDef technicalDef,
-      String conflictWith,
-      StandardFieldMatcher.Match suggestion,
-      DimConventions.ConventionField convention,
-      AggregateSpec aggregate) {
-
-    String columnName() {
-      if (technicalDef != null) {
-        return technicalDef.name();
-      }
-      return odsColumn != null ? odsColumn.columnName() : landingField;
-    }
-
-    String dataType() {
-      if (overrideDataType != null) {
-        return overrideDataType;
-      }
-      return odsColumn != null ? odsColumn.dataType() : technicalDef.dataType();
-    }
-
-    Integer length() {
-      if (odsColumn != null) {
-        return odsColumn.length();
-      }
-      return technicalDef != null ? technicalDef.length() : convention.length();
-    }
-
-    Integer scale() {
-      return odsColumn == null ? null : odsColumn.scale();
-    }
-
-    Boolean nullable() {
-      return odsColumn == null ? Boolean.TRUE : odsColumn.nullable();
-    }
-
-    String comment() {
-      if (odsColumn != null) {
-        return odsColumn.comment();
-      }
-      return technicalDef != null ? technicalDef.note() : convention.note();
-    }
-
-    boolean technical() {
-      return technicalDef != null;
-    }
-
-    boolean isConvention() {
-      return convention != null;
-    }
-
-    boolean isMeasure() {
-      return aggregate != null && FIELD_ROLE_MEASURE.equals(aggregate.fieldRole());
-    }
-
-    /** 业务字段:既非管道技术列,也非维表约定列(治理率只统计业务字段)。 */
-    boolean business() {
-      return technicalDef == null && convention == null;
-    }
-
-    /** 同名列冲突标注:记录该字段在哪些表里重复出现。 */
-    ResolvedField withConflict(String duplicateSourceTable) {
-      return new ResolvedField(
-          sourceTable, tableRole, odsModelId, odsTableName, odsColumn, overrideDataType,
-          stdFieldId, stdField, matchedBy, landingField, transformExpr, include, technicalDef,
-          duplicateSourceTable, suggestion, convention, aggregate);
-    }
-  }
-
-  /** 目标层技术列定义(名称/类型/长度/注释)。 */
-  private record TechnicalDef(String name, String dataType, Integer length, String note) {}
-
   // ------------------------------------------------------------------ preview
 
   /** 只读预览:源表就绪情况 + 字段继承清单 + 治理率 + 防重提示;dialect/scdType 决定约定列与类型。 */
@@ -417,16 +326,16 @@ public class ModelDeriveService {
         resolve(
             processId, layer, processCode, targetDialect, scdType, mode, upstream,
             upstreamModelIds);
-    List<ResolvedField> included = resolution.fields().stream().filter(ResolvedField::include).toList();
+    List<ResolvedDeriveField> included = resolution.fields().stream().filter(ResolvedDeriveField::include).toList();
     // 治理率只统计业务字段(排除管道技术列与维表约定列)
-    List<ResolvedField> business =
-        included.stream().filter(ResolvedField::business).toList();
+    List<ResolvedDeriveField> business =
+        included.stream().filter(ResolvedDeriveField::business).toList();
     int matched = (int) business.stream().filter(field -> field.stdFieldId() != null).count();
     int conflicts = (int) resolution.fields().stream()
         .filter(field -> field.conflictWith() != null)
         .count();
-    int technicals = (int) resolution.fields().stream().filter(ResolvedField::technical).count();
-    int conventions = (int) resolution.fields().stream().filter(ResolvedField::isConvention).count();
+    int technicals = (int) resolution.fields().stream().filter(ResolvedDeriveField::technical).count();
+    int conventions = (int) resolution.fields().stream().filter(ResolvedDeriveField::isConvention).count();
     return new PreviewView(
         processId,
         layer.code(),
@@ -507,18 +416,18 @@ public class ModelDeriveService {
           "该业务过程在 " + layer.code() + " 层已有模型：" + resolution.existingModel().code()
               + "（同一过程同一层只保留一个模型）");
     }
-    List<ResolvedField> selection = mergeSelection(request, resolution, mode);
+    List<ResolvedDeriveField> selection = mergeSelection(request, resolution, mode);
     if (selection.isEmpty()) {
       throw new ModelingException(ModelingErrorCode.INVALID_SEARCH, "派生至少需要勾选一个字段");
     }
 
     List<ModelingStructureApi.ColumnInput> columns = new ArrayList<>();
-    List<ResolvedField> governed = new ArrayList<>();
+    List<ResolvedDeriveField> governed = new ArrayList<>();
     // 43 落库范围:INHERIT 只落已治理字段(44 规则);聚合/应用层落**全部业务字段**——
     // 维度/度量与聚合函数是建模语义(粒度与口径),未治理字段也必须落库,否则加工无法生成(51)。
-    List<ResolvedField> mappingRows = new ArrayList<>();
+    List<ResolvedDeriveField> mappingRows = new ArrayList<>();
     int businessCount = 0;
-    for (ResolvedField field : selection) {
+    for (ResolvedDeriveField field : selection) {
       columns.add(toColumnInput(field, dialect));
       if (!field.business()) {
         continue;
@@ -542,12 +451,12 @@ public class ModelDeriveService {
           case INHERIT ->
               selection.stream()
                   .filter(field -> field.convention() != null && field.convention().surrogateKey())
-                  .map(ResolvedField::landingField)
+                  .map(ResolvedDeriveField::landingField)
                   .toList();
           case AGGREGATE ->
               selection.stream()
                   .filter(field -> field.aggregate() != null && !field.isMeasure())
-                  .map(ResolvedField::landingField)
+                  .map(ResolvedDeriveField::landingField)
                   .toList();
           case APPLICATION -> List.<String>of();
         };
@@ -567,7 +476,7 @@ public class ModelDeriveService {
     modelRepository.assignImportLineage(model.id(), "BUSINESS_PROCESS", null, operator);
 
     // 43 分层映射:process_field_id 由继承的标准字段派生(未治理字段没有这一行)。
-    for (ResolvedField field : mappingRows) {
+    for (ResolvedDeriveField field : mappingRows) {
       ModelingLayerFieldMappingPO po = new ModelingLayerFieldMappingPO();
       po.setModelId(model.id());
       po.setProcessFieldId(field.stdFieldId());
@@ -589,7 +498,7 @@ public class ModelDeriveService {
     // source_field(<上游模型编码>.<列>)承载,故不写 19 并回报条数(见 51/52 契约)。
     int sourceMappingSkipped =
         DeriveLayerPolicy.isAggregateMode(mode)
-            ? (int) selection.stream().filter(ResolvedField::business).count()
+            ? (int) selection.stream().filter(ResolvedDeriveField::business).count()
             : writeSourceMappings(model.id(), selection, operator);
     // 治理回填:只对 INHERIT(上游是 ODS 模型)生效;聚合层的上游 DWD 字段已在自身派生时治理。
     int backfilled =
@@ -624,7 +533,7 @@ public class ModelDeriveService {
   /** 解析结果:源表视图 + 继承字段 + 防重模型 + 警告。 */
   private record Resolution(
       List<SourceView> sources,
-      List<ResolvedField> fields,
+      List<ResolvedDeriveField> fields,
       ExistingModel existingModel,
       List<String> warnings) {}
 
@@ -656,7 +565,7 @@ public class ModelDeriveService {
     List<StandardField> processFields = processApi.getFieldSets(processId);
 
     List<SourceView> sourceViews = new ArrayList<>();
-    Map<String, ResolvedField> merged = new LinkedHashMap<>();
+    Map<String, ResolvedDeriveField> merged = new LinkedHashMap<>();
     for (String role : List.of(ROLE_MAIN, ROLE_DETAIL, ROLE_DIM)) {
       for (ProcessApi.ProcessSourceView binding : bindings) {
         if (!role.equals(binding.tableRole())) {
@@ -681,7 +590,7 @@ public class ModelDeriveService {
           if (INHERITANCE_EXCLUDED.contains(key)) {
             continue;
           }
-          ResolvedField previous = merged.get(key);
+          ResolvedDeriveField previous = merged.get(key);
           if (previous != null) {
             // 先到先得(MAIN 优先):后出现的同名列只标注冲突来源,不覆盖先到的字段。
             merged.put(key, previous.withConflict(binding.sourceTable()));
@@ -699,7 +608,7 @@ public class ModelDeriveService {
                   : authoritative ? safeGetField(suggestion.stdFieldId()) : null;
           merged.put(
               key,
-              new ResolvedField(
+              new ResolvedDeriveField(
                   binding.sourceTable(),
                   binding.tableRole(),
                   odsModel.id(),
@@ -733,13 +642,13 @@ public class ModelDeriveService {
                 fieldCount, null));
       }
     }
-    for (TechnicalDef technical : TARGET_TECHNICALS.values()) {
+    for (DeriveTechnicalColumn technical : TARGET_TECHNICALS.values()) {
       if (merged.containsKey(technical.name())) {
         continue;
       }
       merged.put(
           technical.name(),
-          new ResolvedField(
+          new ResolvedDeriveField(
               null, TARGET_ROLE, null, null, null, null, null, null, null, technical.name(),
               null, true, technical, null, null, null, null));
     }
@@ -752,7 +661,7 @@ public class ModelDeriveService {
         }
         merged.put(
             convention.name().toLowerCase(Locale.ROOT),
-            new ResolvedField(
+            new ResolvedDeriveField(
                 null, TARGET_ROLE, null, null, null, convention.dataType(), null, null, null,
                 convention.name(), null, true, null, null, null, convention, null));
       }
@@ -791,7 +700,7 @@ public class ModelDeriveService {
     List<StandardField> processFields = processApi.getFieldSets(processId);
     List<SourceView> sourceViews = new ArrayList<>();
     List<UpstreamModelView> upstreamViews = new ArrayList<>();
-    Map<String, ResolvedField> merged = new LinkedHashMap<>();
+    Map<String, ResolvedDeriveField> merged = new LinkedHashMap<>();
     for (Model upstream : candidates) {
       StructureView structure = structureReader.publishedStructure(upstream.id());
       boolean isSelected = selected.contains(upstream);
@@ -802,7 +711,7 @@ public class ModelDeriveService {
           if (INHERITANCE_EXCLUDED.contains(key)) {
             continue;
           }
-          ResolvedField previous = merged.get(key);
+          ResolvedDeriveField previous = merged.get(key);
           if (previous != null) {
             merged.put(key, previous.withConflict(upstream.code()));
             continue;
@@ -821,7 +730,7 @@ public class ModelDeriveService {
                   : authoritative ? safeGetField(suggestion.stdFieldId()) : null;
           merged.put(
               key,
-              new ResolvedField(
+              new ResolvedDeriveField(
                   upstream.code(),
                   upstream.layerCode(),
                   upstream.id(),
@@ -856,13 +765,13 @@ public class ModelDeriveService {
               upstream.id(), upstream.code(), upstream.name(), upstream.layerCode(), isSelected,
               structure.columns().size()));
     }
-    for (TechnicalDef technical : TARGET_TECHNICALS.values()) {
+    for (DeriveTechnicalColumn technical : TARGET_TECHNICALS.values()) {
       if (merged.containsKey(technical.name())) {
         continue;
       }
       merged.put(
           technical.name(),
-          new ResolvedField(
+          new ResolvedDeriveField(
               null, TARGET_ROLE, null, null, null, null, null, null, null, technical.name(),
               null, true, technical, null, null, null, null));
     }
@@ -919,23 +828,12 @@ public class ModelDeriveService {
     if (!fromAggregated && upstreamModelIds.isEmpty()) {
       warnings.add("所选指标未绑定依赖模型,无法反推上游,请在指标中心补齐指标的模型引用");
     }
-    String statPeriod = normalizeStatPeriod(
-        metrics.stream()
-            .map(MetricQueryView::statPeriod)
-            .filter(StringUtils::hasText)
-            .findFirst()
-            .orElse(null));
-    List<DraftMeasure> measures = new ArrayList<>();
-    Set<String> dimensions = new LinkedHashSet<>();
-    for (MetricQueryView metric : metrics) {
-      DraftMeasure measure = parseMeasure(metric);
-      if (measure != null) {
-        measures.add(measure);
-      }
-      dimensions.addAll(parseJsonStringArray(metric.statDimensions()));
-    }
+    MetricDraftPlanner.Plan plan = MetricDraftPlanner.plan(metrics);
+    List<DraftMeasure> measures = plan.measures().stream()
+        .map(value -> new DraftMeasure(value.sourceColumn(), value.aggregateFunc(), value.landingName()))
+        .toList();
     return new MetricDraftView(
-        processIds, upstreamModelIds, statPeriod, measures, List.copyOf(dimensions), warnings);
+        processIds, upstreamModelIds, plan.statPeriod(), measures, plan.dimensions(), warnings);
   }
 
   /** 指标依赖模型(DWD 明细取数):按指标 modelId 去重。 */
@@ -958,60 +856,6 @@ public class ModelDeriveService {
     }
     return List.copyOf(ids);
   }
-
-  /** 指标统计周期(DAY/WEEK/MONTH)→ 建模周期约定(1d/1w/1m);无法识别时交回用户选择。 */
-  private static String normalizeStatPeriod(String metricPeriod) {
-    if (!StringUtils.hasText(metricPeriod)) {
-      return null;
-    }
-    return switch (metricPeriod.trim().toUpperCase(Locale.ROOT)) {
-      case "HOUR", "1h" -> "1h";
-      case "DAY", "1d" -> "1d";
-      case "WEEK", "1w" -> "1w";
-      case "MONTH", "1m" -> "1m";
-      default -> null;
-    };
-  }
-
-  /** 度量表达式解析:SUM(order_amount) / COUNT(DISTINCT order_id) / AVG(x) 等。 */
-  private static DraftMeasure parseMeasure(MetricQueryView metric) {
-    if (!StringUtils.hasText(metric.measureExpr())) {
-      return null;
-    }
-    Matcher matcher = MEASURE_PATTERN.matcher(metric.measureExpr().trim());
-    if (!matcher.matches()) {
-      return null;
-    }
-    String rawFunc = matcher.group(1).toUpperCase(Locale.ROOT);
-    boolean distinct = matcher.group(2) != null;
-    String field = matcher.group(3);
-    String func = rawFunc.equals("COUNT") && distinct ? "COUNT_DISTINCT" : rawFunc;
-    if (!AGGREGATE_FUNCS.contains(func)) {
-      func = "SUM";
-    }
-    return new DraftMeasure(field, func, func.toLowerCase(Locale.ROOT) + "_" + field.toLowerCase(Locale.ROOT));
-  }
-
-  /** JSON 字符串数组(如 ["order_date","order_city"]) → 元素列表;非 JSON 原样按逗号拆。 */
-  private static List<String> parseJsonStringArray(String raw) {
-    if (!StringUtils.hasText(raw)) {
-      return List.of();
-    }
-    Matcher matcher = JSON_STRING_ARRAY_PATTERN.matcher(raw.trim());
-    List<String> values = new ArrayList<>();
-    while (matcher.find()) {
-      values.add(matcher.group(1));
-    }
-    if (!values.isEmpty()) {
-      return values;
-    }
-    return List.of(raw.split(",")).stream().map(String::trim).filter(StringUtils::hasText).toList();
-  }
-
-  private static final Pattern MEASURE_PATTERN =
-      Pattern.compile("^([A-Za-z_]+)\\s*\\(\\s*(DISTINCT\\s+)?([A-Za-z0-9_.]+)\\s*\\)\\s*$");
-
-  private static final Pattern JSON_STRING_ARRAY_PATTERN = Pattern.compile("\"([^\"]*)\"");
 
   /** 60:指标反推草稿视图(业务过程 + 上游模型 + 统计周期 + 度量/维度建议)。 */
   public record MetricDraftView(
@@ -1068,24 +912,14 @@ public class ModelDeriveService {
    * 合并用户选择与继承信息:落地名/标准字段/转换表达式取用户值,列元数据取继承值;
    * 请求未携带的目标层技术列按该层规则补齐(技术列由分层规则拥有,不随勾选移除)。
    */
-  private List<ResolvedField> mergeSelection(
+  private List<ResolvedDeriveField> mergeSelection(
       DeriveRequest request, Resolution resolution, DeriveLayerPolicy.DeriveMode mode) {
-    Map<String, ResolvedField> inherited = new LinkedHashMap<>();
-    for (ResolvedField field : resolution.fields()) {
-      inherited.put(field.columnName().toLowerCase(Locale.ROOT), field);
-    }
-    List<ResolvedField> selection = new ArrayList<>();
-    if (request.fields() != null) {
-      for (DerivedField chosen : request.fields()) {
-        if (!chosen.include() || !StringUtils.hasText(chosen.sourceColumn())) {
-          continue;
-        }
-        ResolvedField base = inherited.get(chosen.sourceColumn().toLowerCase(Locale.ROOT));
-        if (base == null) {
-          throw new ModelingException(
-              ModelingErrorCode.INVALID_COLUMN,
-              "字段不在继承范围内：" + chosen.sourceTable() + "." + chosen.sourceColumn());
-        }
+    DeriveFieldSelection.Plan plan = DeriveFieldSelection.plan(
+        request.fields(), resolution.fields(), List.copyOf(TARGET_TECHNICALS.values()));
+    List<ResolvedDeriveField> selection = new ArrayList<>();
+    for (DeriveFieldSelection.Choice choice : plan.choices()) {
+        DerivedField chosen = choice.chosen();
+        ResolvedDeriveField base = choice.base();
         Long stdFieldId = chosen.stdFieldId() != null ? chosen.stdFieldId() : base.stdFieldId();
         StandardField stdField =
             stdFieldId == null
@@ -1094,7 +928,7 @@ public class ModelDeriveService {
                     ? base.stdField()
                     : safeGetField(stdFieldId);
         selection.add(
-            new ResolvedField(
+            new ResolvedDeriveField(
                 base.sourceTable(), base.tableRole(), base.odsModelId(), base.odsTableName(),
                 base.odsColumn(), base.overrideDataType(), stdFieldId, stdField, base.matchedBy(),
                 StringUtils.hasText(chosen.landingField())
@@ -1103,16 +937,10 @@ public class ModelDeriveService {
                 chosen.transformExpr(), true, base.technicalDef(), base.conflictWith(),
                 base.suggestion(), base.convention(),
                 resolveAggregateSpec(chosen, base, mode)));
-      }
     }
-    Set<String> present = new HashSet<>();
-    selection.forEach(field -> present.add(field.columnName().toLowerCase(Locale.ROOT)));
-    for (TechnicalDef technical : TARGET_TECHNICALS.values()) {
-      if (present.contains(technical.name())) {
-        continue;
-      }
+    for (DeriveTechnicalColumn technical : plan.missingTechnicals()) {
       selection.add(
-          new ResolvedField(
+          new ResolvedDeriveField(
               null, TARGET_ROLE, null, null, null, null, null, null, null, technical.name(),
               null, true, technical, null, null, null, null));
     }
@@ -1120,7 +948,7 @@ public class ModelDeriveService {
   }
 
   /** 字段 → 列输入:类型按目标方言校验;标准字段关联优先,六类标准引用逐项回退到 ODS 列。 */
-  private ModelingStructureApi.ColumnInput toColumnInput(ResolvedField field, ModelDialect dialect) {
+  private ModelingStructureApi.ColumnInput toColumnInput(ResolvedDeriveField field, ModelDialect dialect) {
     StandardField stdField = field.stdField();
     StructureView.ColumnView odsColumn = field.odsColumn();
     return new ModelingStructureApi.ColumnInput(
@@ -1173,7 +1001,7 @@ public class ModelDeriveService {
    * 类型解析:目标方言目录包含该类型即原样使用;否则经类型标准(41 推荐 + 30 类型标准 std_type)
    * 做兼容映射;仍不可用则阻断并指明字段(不静默降级生成不可用 DDL)。
    */
-  private String resolveDataType(ResolvedField field, ModelDialect dialect) {
+  private String resolveDataType(ResolvedDeriveField field, ModelDialect dialect) {
     String dataType = field.dataType();
     if (!StringUtils.hasText(dataType)) {
       return null;
@@ -1215,10 +1043,10 @@ public class ModelDeriveService {
 
   /** 19 来源映射:源列可校验才写;不可校验(源表元数据取不到)计数跳过。 */
   private int writeSourceMappings(
-      Long modelId, List<ResolvedField> selection, String operator) {
+      Long modelId, List<ResolvedDeriveField> selection, String operator) {
     Map<String, Set<String>> sourceColumns = new HashMap<>();
     int skipped = 0;
-    for (ResolvedField field : selection) {
+    for (ResolvedDeriveField field : selection) {
       if (field.odsModelId() == null) {
         continue;
       }
@@ -1264,10 +1092,10 @@ public class ModelDeriveService {
   }
 
   /** 治理回填:本次已确定而 ODS 列上还空着的标准字段关联写回 ODS(治理沉淀在 ODS 层)。 */
-  private int backfillOdsStdField(List<ResolvedField> selection, String operator) {
+  private int backfillOdsStdField(List<ResolvedDeriveField> selection, String operator) {
     int backfilled = 0;
     Map<Long, StructureView> structures = new HashMap<>();
-    for (ResolvedField field : selection) {
+    for (ResolvedDeriveField field : selection) {
       if (field.stdFieldId() == null || field.odsModelId() == null) {
         continue;
       }
@@ -1290,7 +1118,7 @@ public class ModelDeriveService {
     return backfilled;
   }
 
-  private static FieldView toFieldView(ResolvedField field) {
+  private static FieldView toFieldView(ResolvedDeriveField field) {
     return new FieldView(
         field.sourceTable(),
         field.tableRole(),
@@ -1322,7 +1150,7 @@ public class ModelDeriveService {
    * 维度不得携带聚合函数(归一为空)。非聚合层一律不带角色与函数。
    */
   private AggregateSpec resolveAggregateSpec(
-      DerivedField chosen, ResolvedField base, DeriveLayerPolicy.DeriveMode mode) {
+      DerivedField chosen, ResolvedDeriveField base, DeriveLayerPolicy.DeriveMode mode) {
     if (!DeriveLayerPolicy.isAggregateMode(mode)) {
       return null;
     }

@@ -14,7 +14,7 @@ import io.yak.ops.business.workflow.dao.WorkflowExecutionDao;
 import io.yak.ops.business.workflow.dao.WorkflowScheduleTriggerDao;
 import io.yak.ops.business.workflow.domain.WorkflowScheduleLaunchBindingScope;
 import io.yak.ops.business.workflow.repository.support.WorkflowJsonCodec;
-import io.yak.ops.common.bean.po.workflow.WorkflowExecutionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowExecutionPO;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;

@@ -5,7 +5,7 @@ import io.yak.ops.business.lifecycle.dao.mapper.LifecycleStorageSnapshotMapper;
 import io.yak.ops.business.lifecycle.dispatch.TtlSqlGateway;
 import io.yak.ops.business.semantic.api.LayerConfigApi;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
-import io.yak.ops.common.bean.po.lifecycle.LifecycleStorageSnapshotPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecycleStorageSnapshotPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

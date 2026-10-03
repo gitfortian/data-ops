@@ -7,7 +7,7 @@ import io.yak.ops.business.semantic.api.LayerConfigApi;
 import io.yak.ops.business.semantic.api.ProcessApi;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
 import io.yak.ops.business.semantic.api.StandardField;
-import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import java.util.ArrayList;
 import java.util.List;

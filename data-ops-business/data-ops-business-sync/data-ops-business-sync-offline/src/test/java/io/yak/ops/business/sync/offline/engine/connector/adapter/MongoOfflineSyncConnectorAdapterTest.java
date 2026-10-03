@@ -1,5 +1,6 @@
 package io.yak.ops.business.sync.offline.engine.connector.adapter;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -8,7 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +52,7 @@ class MongoOfflineSyncConnectorAdapterTest {
             + "\"database\":\"business\",\"username\":\"yak user\","
             + "\"password\":\"s ecret\",\"authSource\":\"admin\"}");
     adapter.resolveForExecution(
-        new ExecutionContext("mongodb", Role.SOURCE, "source", dataSource, result.options()));
+        new ExecutionContext("mongodb", Role.SOURCE, "source", DataSourceFixtures.definition(dataSource), result.options()));
 
     assertThat(result.options().path("database").asText()).isEqualTo("business");
     assertThat(result.options().path("uri").asText())

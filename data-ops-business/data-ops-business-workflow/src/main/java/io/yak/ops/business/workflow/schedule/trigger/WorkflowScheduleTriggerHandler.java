@@ -10,7 +10,7 @@ import io.yak.ops.business.workflow.schedule.WorkflowScheduleLifecycle;
 import io.yak.ops.business.workflow.schedule.WorkflowScheduleQuery;
 import io.yak.ops.business.workflow.schedule.WorkflowScheduleRuntimeState;
 import io.yak.ops.business.workflow.schedule.engine.WorkflowScheduleEngineBridge;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import io.yak.ops.common.bean.vo.workflow.WorkflowDefinitionVO;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;

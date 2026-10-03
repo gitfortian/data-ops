@@ -13,8 +13,13 @@ export default (): any => {
   });
   return {
     ...config,
+    transform: {
+      '^.+\\.[cm]?[jt]sx?$': '<rootDir>/tests/transform.cjs',
+    },
+    transformIgnorePatterns: ['/node_modules/(?!marked/)'],
     moduleNameMapper: {
       ...(config.moduleNameMapper || {}),
+      '\\.(webp|png|gif|jpe?g|svg)$': '<rootDir>/tests/mocks/file.cjs',
       '^@/(.*)$': '<rootDir>/src/$1',
       '^umi$': '<rootDir>/tests/mocks/umi.ts',
     },
@@ -23,6 +28,7 @@ export default (): any => {
       url: 'http://localhost:8000',
     },
     setupFiles: [...(config.setupFiles || []), './tests/setupTests.jsx'],
+    setupFilesAfterEnv: [...(config.setupFilesAfterEnv || []), '@testing-library/jest-dom'],
     globals: {
       ...config.globals,
       localStorage: null,

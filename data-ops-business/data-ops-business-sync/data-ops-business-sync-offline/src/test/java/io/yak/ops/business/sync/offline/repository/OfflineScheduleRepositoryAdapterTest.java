@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.sync.offline.dao.OfflineJobDefinitionDao;
 import io.yak.ops.business.sync.offline.domain.OfflineSchedule;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

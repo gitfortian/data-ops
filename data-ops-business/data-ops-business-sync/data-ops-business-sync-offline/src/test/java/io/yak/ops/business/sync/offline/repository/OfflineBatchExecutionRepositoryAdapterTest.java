@@ -17,7 +17,7 @@ import io.yak.ops.business.sync.offline.domain.core.BatchStatus;
 import io.yak.ops.business.sync.offline.domain.core.BatchTrigger;
 import io.yak.ops.business.sync.offline.domain.core.ExecutionSnapshot;
 import io.yak.ops.business.sync.offline.domain.core.RetryPolicySnapshot;
-import io.yak.ops.common.bean.po.sync.offline.OfflineBatchExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineBatchExecutionPO;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;

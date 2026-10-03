@@ -1,5 +1,5 @@
 import { YakEmpty } from '@/components/ui';
-import { PageHeader, StatCard } from '@/pages/data-security/shared';
+import { PageHeader, StatCard } from '@/components/ui/PagePresentation';
 import { listDataSourceOptions } from '@/services/data-source/api';
 import {
   getSqlExecutionDetail,

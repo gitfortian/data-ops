@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import {
   CheckResultTag,
   ExecutionStatusTag,
-} from '../../../components/QualityStatus';
+} from '@/components/quality/QualityStatus';
 import { dataQualityTableClassName } from '../../../components/tableStyle';
 import {
   formatExecutionDuration,

@@ -121,9 +121,6 @@ class QualityDependencyBoundaryTest {
   void datasourceDependencyIsIsolatedBehindDeclaredBoundaries() throws IOException {
     Map<String, Set<String>> allowed =
         Map.of(
-            "config/QualityConfiguration.java",
-            Set.of(
-                "io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration"),
             "gateway/datasource/DataSourceQualityCatalogAdapter.java",
             Set.of(
                 "io.yak.ops.business.datasource.catalog.DataSourceCatalogReader",

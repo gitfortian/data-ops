@@ -1,8 +1,8 @@
 package io.yak.ops.business.mdm.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
-import io.yak.ops.common.bean.po.mdm.MdmRecordPO;
+import io.yak.ops.business.mdm.domain.clean.MdmDedupKey;
+import io.yak.ops.business.mdm.dao.model.MdmRecordPO;
 import java.util.List;
 import org.apache.ibatis.annotations.Arg;
 import org.apache.ibatis.annotations.ConstructorArgs;
@@ -40,7 +40,7 @@ public interface MdmRecordMapper extends BaseMapper<MdmRecordPO> {
     @Arg(column = "match_key", javaType = String.class),
     @Arg(column = "match_count", javaType = long.class)
   })
-  List<MdmDedupKeyRow> countDedupKeys(
+  List<MdmDedupKey> countDedupKeys(
       @Param("projectId") Long projectId,
       @Param("entityId") Long entityId,
       @Param("ruleId") Long ruleId,

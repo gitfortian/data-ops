@@ -1,6 +1,6 @@
 package io.yak.ops.business.workflow.dao;
 
-import io.yak.ops.common.bean.po.workflow.WorkflowScheduleTriggerPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowScheduleTriggerPO;
 import java.time.Instant;
 import java.util.List;
 

@@ -9,7 +9,7 @@ import io.yak.ops.business.modeling.exception.ModelingException;
 import io.yak.ops.business.semantic.api.ProcessApi;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.semantic.api.BusinessProcess;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Optional;

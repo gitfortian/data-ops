@@ -13,6 +13,7 @@ io.yak.ops.business.job
 ├── adapter
 │   └── plugin       # SQL / Python / Java / Shell capability adapters
 ├── environment      # env CRUD facade + runtime resolver
+├── repository       # project-scoped terminal runtime evidence journal
 ├── dao              # persistence primitives
 └── config           # module configuration
 ```
@@ -71,6 +72,10 @@ TaskPlugin
 ```
 
 `runtime` 拥有幂等、ExecutionHandle、虚拟线程、状态/取消和结果转换；Adapter 只贡献 Capability。
+
+运行容量由 `yak.job.runtime` 配置：每类型 `max-concurrent=32`、`max-retained-handles=4096`、`terminal-retention-millis=300000`。限制在创建插件执行器前生效。活跃句柄不可淘汰；终态成功写入 `TaskExecutionJournal` 后才允许淘汰。写入失败保留句柄与幂等键，容量耗尽时拒绝新执行，不静默重复执行。
+
+Journal 由本模块拥有，使用独立 `flyway_schema_history_job_runtime`；它保存公共运行视图的终态证据，不拥有任务发布、业务批次或 Workflow 状态。查询和幂等键均绑定可信项目上下文。数据库停用时没有可持久化账本，句柄达到上限后需要重启/恢复存储，不能宣称提供跨重启幂等。
 
 ## Environment
 

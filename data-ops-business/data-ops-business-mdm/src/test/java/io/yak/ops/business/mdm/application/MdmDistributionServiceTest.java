@@ -14,6 +14,8 @@ import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.dataservice.query.DataServiceView;
+import io.yak.ops.business.mdm.domain.entity.MdmEntity;
+import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistribution;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionMode;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionStatus;
@@ -54,7 +56,9 @@ class MdmDistributionServiceTest {
     notifier = Mockito.mock(MdmNotifier.class);
     AuditOperationHandle audit = Mockito.mock(AuditOperationHandle.class);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(audit);
-    lenient().when(entityService.get(any())).thenReturn(null);
+    MdmEntity activeEntity = Mockito.mock(MdmEntity.class);
+    when(activeEntity.status()).thenReturn(MdmEntityStatus.ACTIVE);
+    lenient().when(entityService.get(any())).thenReturn(activeEntity);
     service =
         new MdmDistributionService(
             repository, entityService, auditService, publishService, recordRepository,

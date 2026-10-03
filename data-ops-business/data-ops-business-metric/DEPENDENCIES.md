@@ -4,10 +4,10 @@
 
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | 编译 | PO（`bean.po.metric`）、权限码（`constant.metric`）、错误码（`enums.metric`）——平台惯例 |
+| `data-ops-common` | 编译 | 、权限码（`constant.metric`）、错误码（`enums.metric`）——平台惯例 |
 | `data-security-spring-boot-starter` | 编译 | `Result`/`PagingData`/`BusinessException`/`@RequiresPermission`/`CurrentUserProvider` |
 | `data-ops-business-audit` | 编译 | `BusinessAuditService`/`AuditTransactions` 审计门面（fail-open） |
-| `data-ops-business-datasource` | 编译（optional） | **仅基础设施**：`BusinessDatabaseConfiguration`（共享数据源/SqlSessionFactory/事务管理器） |
+| `data-ops-business-datasource` | 编译（optional） | 现有持久化开关注解；共享数据库由 Boot 装配 |
 | `data-ops-business-semantic` | 编译 | **仅经 `api` 包 SPI**（`StandardQueryApi`/`ProcessApi`），引用口径标准、业务域、字段库 |
 | `data-ops-business-modeling` | 编译 | **仅经 `api` 包 SPI**（`ModelingModelApi`），引用 DWS/ADS 模型 |
 | `data-ops-business-lineage` | 编译 | 调用 `LineageAssetRegistrar`/`LineageRelationRegistrar`/`LineageGraphReader`，血缘注册与可视化 |

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import DatabaseIcons from '@/components/data-source/icons/DatabaseIcons';
-import { buildIntegrationCreatePath } from '@/pages/integration/sourceHandoff';
+import { buildIntegrationCreatePath } from '@/services/integration/sourceHandoff';
 import { getEnvironmentTagConfigMap, PAGE_ANIMATION } from '../constants';
 import type { DataSourcePermissions, DataSourceViewMode } from '../types';
 import { dataSourceRecordKey } from '../types';

@@ -8,7 +8,7 @@ import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.security.application.DiscoveryService;
 import io.yak.ops.business.security.domain.DiscoverableField;
-import io.yak.ops.common.bean.po.security.DsecDiscoveryRulePO;
+import io.yak.ops.business.security.dao.model.DsecDiscoveryRulePO;
 import io.yak.ops.common.constant.security.SecurityPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

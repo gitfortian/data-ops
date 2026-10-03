@@ -5,7 +5,7 @@
 ```
 io.yak.ops.business.security
 ├── config/         ConditionalOnSecurityPersistence + SecurityPersistenceConfiguration
-│                   (@Import(BusinessDatabaseConfiguration) + @MapperScan + Flyway "yakDataSecurityFlyway")
+│                   (Boot 共享持久化装配 + @MapperScan + Flyway "yakDataSecurityFlyway")
 ├── api/            对外 SPI 与跨模块契约
 │                   SecurityClassificationQueryApi / SecurityMaskingApi / SecurityAccessDecisionApi
 │                   契约 record:ClassificationView / MaskingDirective / AccessDecision
@@ -21,12 +21,12 @@ io.yak.ops.business.security
 └── controller/v1/  11 个 REST Controller(请求体用嵌套 record)
 ```
 
-> PO/枚举/权限码位于 `data-ops-common`(平台惯例):`bean.po.security`(10 个 `Dsec*PO`)、`enums.security.SecurityErrorCode`(45xxx 段)、`constant.security.SecurityPermissionCode`(`data-security:read/create/update/delete`)。
+> PO 由本模块 `dao.model` 拥有；共享枚举/权限码保留 common：`enums.security.SecurityErrorCode`(45xxx 段)、`constant.security.SecurityPermissionCode`(`data-security:read/create/update/delete`)。
 
 ## 持久化
 
 - 自持 Flyway:`classpath:db/migration/yak-security`,历史表 `flyway_schema_history_security`,bean `yakDataSecurityFlyway`(`initMethod="migrate"`),V1 基线(`SELECT 1`)+ V2 建 10 张 `yak_dsec_*` 表。
-- 共享数据源:`@Import(BusinessDatabaseConfiguration.class)`(datasource 模块提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager),与 modeling/mdm 同池。
+- 共享数据源:Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配(Boot 应用装配提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager),与 modeling/mdm 同池。
 - 事务:`@Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)`。
 - 表清单:security_level / data_category / classification / discovery_rule / access_policy / masking_algorithm / masking_policy / access_log / compliance_rule / compliance_finding。
 

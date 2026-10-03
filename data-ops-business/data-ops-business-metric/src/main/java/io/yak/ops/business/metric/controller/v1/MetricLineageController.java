@@ -11,7 +11,7 @@ import io.yak.ops.business.lineage.domain.LineageRelation;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.metric.lineage.MetricLineageRegistrationService;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
-import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
+import io.yak.ops.business.metric.dao.model.MetricDependencyPO;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

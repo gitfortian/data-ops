@@ -19,7 +19,7 @@ import io.yak.ops.business.asset.exception.AssetException;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetErrorCode;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.core.project.CurrentProject;

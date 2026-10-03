@@ -1,23 +1,19 @@
-import { permissionTreeNodes, retainMatchedAncestors } from './tree';
+import { filterPermissionTree, getDirectChildren, retainMatchedAncestors } from './tree';
 import type { PermissionVO } from '@/services/security/permissions';
 
-const tree: PermissionVO[] = [
-  {
-    id: 1,
-    name: '系统',
-    code: 'system',
-    type: 'MENU',
-    children: [{ id: '2', name: '查看权限', code: 'system:permission:read', type: 'API' }],
-  },
-];
+const tree: PermissionVO[] = [{ id: 1, permissionName: '系统', permissionCode: 'system', childList: [{ id: 2, permissionName: '查看权限', permissionCode: 'system:permission:read' }] }];
 
-test('search result keeps its ancestor chain and supports mixed id types', () => {
-  expect(retainMatchedAncestors(tree, [tree[0].children![0]])).toEqual(tree);
-  expect(permissionTreeNodes(tree)[0].children?.[0].searchText).toContain('system:permission:read');
+test('permission search retains the ancestor chain using the backend childList contract', () => {
+  expect(filterPermissionTree(tree, 'system:permission:read', 'all')).toEqual([{ ...tree[0], childList: [{ ...tree[0].childList![0], childList: [] }] }]);
+  expect(getDirectChildren(tree[0])).toEqual(tree[0].childList);
 });
 
-test('cycle-like duplicate node in a path is ignored', () => {
-  const cyclic: any = { id: 1, name: 'A', code: 'a', type: 'MENU', children: [] };
+test('department compatibility search supports mixed identifiers and ignores cycles', () => {
+  interface Department { id: string | number; children: Department[] }
+  const child: Department = { id: '2', children: [] };
+  const parent: Department = { id: 1, children: [child] };
+  expect(retainMatchedAncestors([parent], [child])).toEqual([{ ...parent, children: [{ ...child, children: [] }] }]);
+  const cyclic: { id: number; children: any[] } = { id: 1, children: [] };
   cyclic.children.push(cyclic);
-  expect(permissionTreeNodes([cyclic])[0].children).toEqual([]);
+  expect(retainMatchedAncestors([cyclic], [cyclic])).toEqual([{ id: 1, children: [] }]);
 });

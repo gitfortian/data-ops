@@ -4,7 +4,7 @@ import { Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo } from 'react';
 
-import { CheckResultTag } from '../../../components/QualityStatus';
+import { CheckResultTag } from '@/components/quality/QualityStatus';
 import { dataQualityTableClassName } from '../../../components/tableStyle';
 import {
   formatExecutionDuration,

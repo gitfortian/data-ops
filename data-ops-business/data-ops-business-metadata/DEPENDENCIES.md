@@ -4,10 +4,10 @@
 
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | 编译 | PO（`bean.po.metadata`）、错误码（`enums.metadata`）、权限码/枚举（`constant.metadata`）——平台惯例 |
+| `data-ops-common` | 编译 | 、错误码（`enums.metadata`）、权限码/枚举（`constant.metadata`）——平台惯例 |
 | `data-security-spring-boot-starter` | 编译 | `Result`/`PagingData`/`@RequiresPermission`/`CurrentUserProvider` |
 | `data-ops-core` | 编译 | `CurrentProject`（接口，注入使用）、`@ProjectScope` |
-| `data-ops-business-datasource` | 编译（optional） | `BusinessDatabaseConfiguration`（共享数据源/开关）；`DataSourceReferenceProvider`（删除数据源前检查采集作业引用） |
+| `data-ops-business-datasource` | 编译（optional） | 持久化开关注解；`DataSourceReferenceProvider`（删除数据源前检查采集作业引用） |
 | `data-ops-plugins/…/DataSourceCatalog` | 编译（SPI） | **物理采集唯一入口**：`listDatabases/listSchemas/listTables/listColumns`，进程内调用（无连接器进程） |
 | `data-ops-business-lineage` | 编译（optional） | `api/LineageRegistrationApi`（GONE 时撤销图节点）+ `LineageAssetType` 枚举（`type_def.lineage_asset_type` 映射校验） |
 | `data-ops-business-lifecycle` | 编译（optional，只读） | `api` 包读 `yak_lc_storage_snapshot` 展示存储量（**本模块不建 mapper 查 `yak_lc_*`**） |

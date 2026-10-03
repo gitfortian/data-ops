@@ -17,7 +17,7 @@ import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.approval.api.ApprovalSubmitCommand;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
 import io.yak.ops.business.asset.exception.AssetException;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;

@@ -5,7 +5,7 @@ import { useEffect, useMemo } from 'react';
 import {
   parseIntegrationSourceHandoff,
   stripIntegrationCreateHandoff,
-} from '../sourceHandoff';
+} from '@/services/integration/sourceHandoff';
 import CreateRealtimeTaskDrawer from './components/CreateRealtimeTaskDrawer';
 import RealtimeSyncFilterBar from './components/RealtimeSyncFilterBar';
 import RealtimeSyncPageHeader from './components/RealtimeSyncPageHeader';

@@ -5,7 +5,7 @@ import io.yak.ops.business.lifecycle.binding.ModelTtlBindingService;
 import io.yak.ops.business.lifecycle.binding.ModelTtlResolution;
 import io.yak.ops.business.lifecycle.dispatch.TtlDispatchService;
 import io.yak.ops.business.lifecycle.dispatch.TtlDispatchService.DispatchOutcome;
-import io.yak.ops.common.bean.po.lifecycle.LifecycleDispatchRecordPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecycleDispatchRecordPO;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.BindingSource;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.ModelState;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.TriggerType;

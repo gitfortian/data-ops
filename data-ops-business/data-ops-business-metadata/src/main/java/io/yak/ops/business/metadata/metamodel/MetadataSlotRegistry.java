@@ -1,6 +1,6 @@
 package io.yak.ops.business.metadata.metamodel;
 
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.BaseType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.SlotName;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;

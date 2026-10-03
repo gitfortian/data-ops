@@ -10,7 +10,7 @@ import io.yak.ops.business.sync.offline.engine.LinkUpJobSpecFactory;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapterRegistry;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -295,8 +295,8 @@ public class OfflineExecutionPlanFactory {
   public static final class BuildResult {
     private final JsonNode logicalSpec;
     private final String logicalSpecJson;
-    private final DataSourcePO sourceDataSource;
-    private final DataSourcePO sinkDataSource;
+    private final DataSourceReference sourceDataSource;
+    private final DataSourceReference sinkDataSource;
     private final String sourceConnectorId;
     private final String sinkConnectorId;
     private final String sourceTable;
@@ -306,8 +306,8 @@ public class OfflineExecutionPlanFactory {
     BuildResult(
         JsonNode logicalSpec,
         String logicalSpecJson,
-        DataSourcePO sourceDataSource,
-        DataSourcePO sinkDataSource,
+        DataSourceReference sourceDataSource,
+        DataSourceReference sinkDataSource,
         String sourceConnectorId,
         String sinkConnectorId,
         String sourceTable,
@@ -332,11 +332,11 @@ public class OfflineExecutionPlanFactory {
       return logicalSpecJson;
     }
 
-    public DataSourcePO getSourceDataSource() {
+    public DataSourceReference getSourceDataSource() {
       return sourceDataSource;
     }
 
-    public DataSourcePO getSinkDataSource() {
+    public DataSourceReference getSinkDataSource() {
       return sinkDataSource;
     }
 

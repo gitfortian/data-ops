@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.asset.dao.mapper.AssetViewRecordMapper;
-import io.yak.ops.common.bean.po.asset.AssetViewRecordPO;
+import io.yak.ops.business.asset.dao.model.AssetViewRecordPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.sql.Date;
 import java.util.List;

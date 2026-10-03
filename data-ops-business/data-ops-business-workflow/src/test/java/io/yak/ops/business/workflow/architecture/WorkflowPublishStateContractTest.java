@@ -55,15 +55,35 @@ class WorkflowPublishStateContractTest {
     }
 
     assertThat(files)
-        .containsExactlyInAnyOrder(
-            "V1__baseline_workflow.sql",
-            "V2__add_execution_audit_carrier.sql",
-            "V3__workflow_publish_state.sql");
-    assertThat(root.resolve("B3__workflow_baseline.sql")).isRegularFile();
-    assertThat(Files.readString(root.resolve("V3__workflow_publish_state.sql")))
+        .containsExactlyInAnyOrder("V1__workflow_baseline.sql");
+    assertThat(
+            section(
+                Files.readString(root.resolve("V1__workflow_baseline.sql")),
+                "V3__workflow_publish_state.sql"))
         .contains("UPDATE yak_workflow_definition SET status = 'PUBLISHED' WHERE status = 'ONLINE'");
   }
 
+  /**
+   * 合并后的单文件按 {@code -- Source: <原路径>} 分段;按文件名取回原迁移的正文,
+   * 使原先针对单个文件的断言继续有效。
+   */
+  private static String section(String sql, String sourceFileName) {
+    String[] lines = sql.split("\n");
+    int start = -1;
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:") && lines[i].trim().endsWith(sourceFileName)) {
+        start = i + 1;
+        break;
+      }
+    }
+    if (start < 0) throw new IllegalStateException("missing source section: " + sourceFileName);
+    StringBuilder body = new StringBuilder();
+    for (int i = start; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:")) break;
+      body.append(lines[i]).append('\n');
+    }
+    return body.toString();
+  }
   private List<SourceFile> productionSources() throws IOException {
     Path root = productionRoot();
     List<SourceFile> result = new ArrayList<>();

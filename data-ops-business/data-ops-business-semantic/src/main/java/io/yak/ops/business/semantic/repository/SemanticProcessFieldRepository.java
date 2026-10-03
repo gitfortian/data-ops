@@ -1,6 +1,5 @@
 package io.yak.ops.business.semantic.repository;
 
-import io.yak.ops.common.bean.po.modeling.ModelingColumnMappingPO;
 import java.util.List;
 
 /** Project-scoped persistence boundary for process-field references. */

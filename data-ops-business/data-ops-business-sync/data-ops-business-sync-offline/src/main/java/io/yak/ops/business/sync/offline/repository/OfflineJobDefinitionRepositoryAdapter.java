@@ -2,14 +2,14 @@ package io.yak.ops.business.sync.offline.repository;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.yak.framework.common.PageData;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
+import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.dao.OfflineJobDefinitionDao;
 import io.yak.ops.business.sync.offline.dao.OfflineJobDefinitionDao.PageQuery;
 import io.yak.ops.business.sync.offline.domain.OfflineDefinitionQuery;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContextError;
 import io.yak.ops.core.project.ProjectContextException;
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class OfflineJobDefinitionRepositoryAdapter implements OfflineJobDefinitionRepository {
   private final OfflineJobDefinitionDao dao;
-  private final DataSourceDao dataSourceDao;
+  private final DataSourceReader dataSourceReader;
   private final CurrentProject currentProject;
 
   @Override
@@ -161,9 +161,9 @@ public class OfflineJobDefinitionRepositoryAdapter implements OfflineJobDefiniti
     if (ids.isEmpty()) return Map.of();
 
     Map<Long, String> names = new LinkedHashMap<>();
-    for (DataSourcePO dataSource : dataSourceDao.selectByIds(List.copyOf(ids))) {
-      if (dataSource != null && dataSource.getId() != null) {
-        names.put(dataSource.getId(), dataSource.getName());
+    for (DataSourceReference dataSource : dataSourceReader.findReferences(List.copyOf(ids))) {
+      if (dataSource != null && dataSource.id() != null) {
+        names.put(dataSource.id(), dataSource.name());
       }
     }
     return names;

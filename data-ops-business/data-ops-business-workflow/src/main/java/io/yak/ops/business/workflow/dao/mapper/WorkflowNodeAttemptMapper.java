@@ -1,7 +1,7 @@
 package io.yak.ops.business.workflow.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.workflow.WorkflowNodeAttemptPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowNodeAttemptPO;
 import org.apache.ibatis.annotations.Insert;
 
 /** 工作流节点 Attempt Mapper。 */

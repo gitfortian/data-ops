@@ -15,7 +15,7 @@ import io.yak.ops.business.security.api.AccessDecision;
 import io.yak.ops.business.security.api.ClassificationView;
 import io.yak.ops.business.security.api.MaskingDirective;
 import io.yak.ops.business.security.dao.mapper.AccessPolicyMapper;
-import io.yak.ops.common.bean.po.security.DsecAccessPolicyPO;
+import io.yak.ops.business.security.dao.model.DsecAccessPolicyPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +59,8 @@ class AccessDecisionServiceTest {
   @Test
   void allowReadAppliesMaskingDirective() {
     when(policyMapper.selectList(any())).thenReturn(List.of(policy("ALLOW", 5)));
-    when(classificationService.find(KEY)).thenReturn(null);
+    when(classificationService.find(KEY)).thenReturn(
+        new ClassificationView(KEY, 2L, "L2", "内部", 2, null, null, null, "ACTIVE"));
     when(maskingService.resolve(KEY))
         .thenReturn(new MaskingDirective(true, "MASK_PARTIAL", "{\"keepLeft\":1}"));
     AccessDecision d = service.decide("alice", List.of(), KEY, "READ");
@@ -67,6 +68,8 @@ class AccessDecisionServiceTest {
     assertTrue(d.allowed());
     assertTrue(d.masked());
     assertEquals("MASK_PARTIAL", d.algoCode());
+    verify(accessLogService, never()).record(any(), any(), any(), any(), any(), any(), any(), anyBoolean(), any(), any());
+    service.recordAccess("alice", KEY, "READ", d, true, "TEST");
     verify(accessLogService)
         .record(eq("alice"), any(), eq(KEY), any(), eq("READ"), any(),
             eq(AccessDecision.ALLOW), eq(true), eq("MASK_PARTIAL"), any());
@@ -76,7 +79,7 @@ class AccessDecisionServiceTest {
   void noPolicySensitiveFallsToNeedApproval() {
     when(policyMapper.selectList(any())).thenReturn(List.of());
     when(classificationService.find(KEY))
-        .thenReturn(new ClassificationView(KEY, 4L, "L4", "核心", 4, null, null, null));
+        .thenReturn(new ClassificationView(KEY, 4L, "L4", "核心", 4, null, null, null, "ACTIVE"));
     AccessDecision d = service.decide("alice", List.of(), KEY, "READ");
     assertEquals(AccessDecision.NEED_APPROVAL, d.decision());
     assertFalse(d.allowed());

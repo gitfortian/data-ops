@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.dao.OfflineBatchExecutionDao;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineBatchExecutionMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineBatchExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineBatchExecutionPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContextError;
 import io.yak.ops.core.project.ProjectContextException;

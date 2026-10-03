@@ -8,7 +8,7 @@ import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelDialect;
 import io.yak.ops.business.modeling.domain.ModelStatus;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

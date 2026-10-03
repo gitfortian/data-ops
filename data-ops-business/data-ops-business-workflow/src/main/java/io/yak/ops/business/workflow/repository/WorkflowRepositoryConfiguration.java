@@ -2,7 +2,6 @@ package io.yak.ops.business.workflow.repository;
 
 import io.yak.framework.workflow.engine.spi.ExecutionRepository;
 import io.yak.framework.workflow.engine.support.CachingExecutionRepository;
-import io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -11,7 +10,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 
 /** Workflow persistence shares the Yak Ops business database and MyBatis infrastructure. */
@@ -21,7 +19,6 @@ import org.springframework.context.annotation.Primary;
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@Import(BusinessDatabaseConfiguration.class)
 @MapperScan(
     basePackages = "io.yak.ops.business.workflow.dao.mapper",
     sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")

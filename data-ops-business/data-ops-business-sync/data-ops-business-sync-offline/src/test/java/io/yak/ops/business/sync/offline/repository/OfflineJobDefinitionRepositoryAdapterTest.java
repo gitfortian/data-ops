@@ -1,5 +1,7 @@
 package io.yak.ops.business.sync.offline.repository;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import static io.yak.ops.business.sync.offline.OfflineProjectTestContext.PROJECT_ID;
 import static io.yak.ops.business.sync.offline.OfflineProjectTestContext.currentProject;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,11 +12,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
+import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.sync.offline.dao.OfflineJobDefinitionDao;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
 import io.yak.ops.core.project.ProjectContextException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class OfflineJobDefinitionRepositoryAdapterTest {
 
   @Mock private OfflineJobDefinitionDao dao;
-  @Mock private DataSourceDao dataSourceDao;
+  @Mock private DataSourceReader dataSourceReader;
 
   @Test
   void runtimeReadDoesNotLoadDatasourceDisplayMetadata() {
@@ -39,22 +41,22 @@ class OfflineJobDefinitionRepositoryAdapterTest {
     assertThat(result.getProjectId()).isEqualTo(PROJECT_ID);
     assertThat(result.getSourceDatasourceName()).isNull();
     assertThat(result.getSinkDatasourceName()).isNull();
-    verifyNoInteractions(dataSourceDao);
+    verifyNoInteractions(dataSourceReader);
   }
 
   @Test
   void displayReadEnrichesDatasourceNames() {
     OfflineJobDefinitionPO po = definition();
-    DataSourcePO source = dataSource(1L, "source-mysql");
-    DataSourcePO sink = dataSource(2L, "sink-mysql");
+    DataSourceReference source = dataSource(1L, "source-mysql");
+    DataSourceReference sink = dataSource(2L, "sink-mysql");
     when(dao.selectById(42L)).thenReturn(po);
-    when(dataSourceDao.selectByIds(List.of(1L, 2L))).thenReturn(List.of(source, sink));
+    when(dataSourceReader.findReferences(List.of(1L, 2L))).thenReturn(List.of(source, sink));
 
     OfflineJobDefinition result = repository().findForViewById(42L).orElseThrow();
 
     assertThat(result.getSourceDatasourceName()).isEqualTo("source-mysql");
     assertThat(result.getSinkDatasourceName()).isEqualTo("sink-mysql");
-    verify(dataSourceDao).selectByIds(List.of(1L, 2L));
+    verify(dataSourceReader).findReferences(List.of(1L, 2L));
   }
 
   @Test
@@ -68,7 +70,7 @@ class OfflineJobDefinitionRepositoryAdapterTest {
     page.setRecords(List.of(first, second));
     page.setTotal(2L);
     when(dao.selectPage(any())).thenReturn(page);
-    when(dataSourceDao.selectByIds(List.of(1L, 2L, 3L)))
+    when(dataSourceReader.findReferences(List.of(1L, 2L, 3L)))
         .thenReturn(
             List.of(
                 dataSource(1L, "source-mysql"),
@@ -77,7 +79,7 @@ class OfflineJobDefinitionRepositoryAdapterTest {
 
     repository().pageForView(null);
 
-    verify(dataSourceDao).selectByIds(List.of(1L, 2L, 3L));
+    verify(dataSourceReader).findReferences(List.of(1L, 2L, 3L));
   }
 
   @Test
@@ -92,11 +94,11 @@ class OfflineJobDefinitionRepositoryAdapterTest {
 
     assertThatThrownBy(() -> repository().pageForView(null))
         .isInstanceOf(ProjectContextException.class);
-    verifyNoInteractions(dataSourceDao);
+    verifyNoInteractions(dataSourceReader);
   }
 
   private OfflineJobDefinitionRepositoryAdapter repository() {
-    return new OfflineJobDefinitionRepositoryAdapter(dao, dataSourceDao, currentProject());
+    return new OfflineJobDefinitionRepositoryAdapter(dao, dataSourceReader, currentProject());
   }
 
   private OfflineJobDefinitionPO definition() {
@@ -109,10 +111,10 @@ class OfflineJobDefinitionRepositoryAdapterTest {
     return po;
   }
 
-  private DataSourcePO dataSource(Long id, String name) {
+  private DataSourceReference dataSource(Long id, String name) {
     DataSourcePO dataSource = new DataSourcePO();
     dataSource.setId(id);
     dataSource.setName(name);
-    return dataSource;
+    return new DataSourceReference(id, PROJECT_ID, name, null);
   }
 }

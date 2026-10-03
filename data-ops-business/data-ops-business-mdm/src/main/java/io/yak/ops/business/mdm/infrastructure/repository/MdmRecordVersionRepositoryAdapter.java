@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmRecordVersionMapper;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import io.yak.ops.business.mdm.domain.record.MdmRecordVersion;
-import io.yak.ops.common.bean.po.mdm.MdmRecordVersionPO;
+import io.yak.ops.business.mdm.dao.model.MdmRecordVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

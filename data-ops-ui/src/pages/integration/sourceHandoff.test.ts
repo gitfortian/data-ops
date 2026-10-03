@@ -2,7 +2,7 @@ import {
   buildIntegrationCreatePath,
   parseIntegrationSourceHandoff,
   stripIntegrationCreateHandoff,
-} from './sourceHandoff';
+} from '@/services/integration/sourceHandoff';
 
 describe('source integration handoff', () => {
   it('round-trips a stable source identity into batch creation', () => {

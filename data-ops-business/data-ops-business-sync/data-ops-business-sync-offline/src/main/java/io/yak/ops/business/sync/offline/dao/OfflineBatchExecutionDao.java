@@ -1,6 +1,6 @@
 package io.yak.ops.business.sync.offline.dao;
 
-import io.yak.ops.common.bean.po.sync.offline.OfflineBatchExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineBatchExecutionPO;
 import java.time.LocalDateTime;
 import java.util.List;
 

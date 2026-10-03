@@ -76,12 +76,12 @@ public class MainlineViewService {
     // 按层聚合(服务端查询已项目绑定;分组在内存中仅针对该过程的模型行)。
     Map<String, List<ModelBrief>> byLayer = new LinkedHashMap<>();
     for (Long modelId : modelIds) {
-      io.yak.ops.common.bean.po.modeling.ModelingModelPO po =
+      io.yak.ops.business.modeling.dao.model.ModelingModelPO po =
           modelMapper
               .selectList(
                   new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
-                      io.yak.ops.common.bean.po.modeling.ModelingModelPO>()
-                      .eq(io.yak.ops.common.bean.po.modeling.ModelingModelPO::getId, modelId))
+                      io.yak.ops.business.modeling.dao.model.ModelingModelPO>()
+                      .eq(io.yak.ops.business.modeling.dao.model.ModelingModelPO::getId, modelId))
                   .stream()
                   .findFirst()
                   .orElse(null);

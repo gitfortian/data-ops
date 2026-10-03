@@ -105,8 +105,7 @@ export interface DataServiceSourcePresentation {
   muted?: boolean;
 }
 
-export const dataServiceDetailUrl = (serviceId: number | string) =>
-  `/data-service/api/${encodeURIComponent(String(serviceId))}`;
+export { dataServiceDetailUrl } from '@/services/data-service/navigation';
 
 export const dataServiceDevelopmentSourceUrl = (
   service: Pick<DataServiceApi, 'sourceType' | 'sourceRef'>,

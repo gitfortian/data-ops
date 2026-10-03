@@ -89,7 +89,7 @@ public class OfflineSyncTaskProvider implements TaskProvider {
     }
     definition.requireProjectId();
     // W1-2 契约 C4：工作流快照同样取自已发布 revision，未发布任务不可被发现。
-    io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO revision =
+    io.yak.ops.business.sync.offline.domain.OfflineJobRevision revision =
         service().publishedRevision(definition);
     if (revision == null) {
       throw new IllegalStateException("离线同步任务尚未发布：" + definition.getId());

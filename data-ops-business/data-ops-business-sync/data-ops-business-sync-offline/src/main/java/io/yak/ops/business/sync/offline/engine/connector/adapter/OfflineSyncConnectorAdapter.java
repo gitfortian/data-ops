@@ -2,7 +2,7 @@ package io.yak.ops.business.sync.offline.engine.connector.adapter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import java.util.List;
 import java.util.Objects;
 
@@ -10,7 +10,7 @@ import java.util.Objects;
  * Connector-specific boundary between Yak Ops offline definitions and Link-Up endpoint options.
  *
  * <p>The factory owns job-level orchestration. Implementations own connector option semantics and
- * execution-time datasource translation. Logical JobSpec construction cannot access DataSourcePO;
+ * execution-time datasource translation. Logical JobSpec construction cannot access DataSourceDefinition;
  * datasource credentials are only available during {@link #resolveForExecution(ExecutionContext)}.</p>
  */
 public interface OfflineSyncConnectorAdapter {
@@ -78,7 +78,7 @@ public interface OfflineSyncConnectorAdapter {
       String connectorId,
       Role role,
       String endpointLabel,
-      DataSourcePO dataSource,
+      DataSourceDefinition dataSource,
       ObjectNode options) {
 
     public ExecutionContext {

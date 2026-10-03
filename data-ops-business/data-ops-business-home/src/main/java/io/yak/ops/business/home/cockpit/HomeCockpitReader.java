@@ -6,6 +6,8 @@ import io.yak.ops.business.quality.workspace.QualityExecutionOverviewReader;
 import io.yak.ops.business.sync.offline.execution.query.OfflineExecutionOverviewReader;
 import io.yak.ops.business.workflow.execution.WorkflowExecutionOverviewReader;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.function.ToLongFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -38,60 +40,33 @@ public class HomeCockpitReader {
     LocalDateTime end = LocalDateTime.now().plusNanos(1);
     LocalDateTime start = end.minusDays(RANGE_DAYS);
 
-    HeaderStats header = new HeaderStats(
-        dataSourceCount(),
-        offlineRunningCount(start, end)
-            + workflowRunningCount(start, end)
-            + qualityRunningCount(start, end));
+    CountObservation datasource = observe(dataSourceReaderProvider, reader -> reader.summary().total(), "datasource");
+    CountObservation offline = observe(offlineReaderProvider, reader -> reader.metrics(start, end).runningCount(), "offline");
+    CountObservation workflow = observe(workflowReaderProvider, reader -> reader.metrics(start, end).runningCount(), "workflow");
+    CountObservation quality = observe(qualityExecutionReaderProvider, reader -> reader.metrics(start, end).runningCount(), "quality");
+    HeaderStats header = new HeaderStats(datasource.value(), offline.value() + workflow.value() + quality.value(),
+        datasource.available(), offline.available() && workflow.available() && quality.available(), end,
+        Map.of("datasource", datasource, "offline", offline, "workflow", workflow, "quality", quality));
     return new CockpitResponse(header);
   }
 
-  private long dataSourceCount() {
-    DataSourceReader reader = dataSourceReaderProvider.getIfAvailable();
-    if (reader == null) return 0L;
+  private <T> CountObservation observe(ObjectProvider<T> provider, ToLongFunction<T> query, String source) {
     try {
-      DataSourceSummary summary = reader.summary();
-      return summary.total();
+      T reader = provider.getIfAvailable();
+      if (reader == null) return new CountObservation(0L, false, "MODULE_DISABLED");
+      return new CountObservation(query.applyAsLong(reader), true, null);
     } catch (RuntimeException exception) {
-      LOG.warn("加载首页头部数据源摘要失败", exception);
-      return 0L;
-    }
-  }
-
-  private long offlineRunningCount(LocalDateTime start, LocalDateTime end) {
-    OfflineExecutionOverviewReader reader = offlineReaderProvider.getIfAvailable();
-    if (reader == null) return 0L;
-    try {
-      return reader.metrics(start, end).runningCount();
-    } catch (RuntimeException exception) {
-      LOG.warn("加载首页头部离线同步摘要失败", exception);
-      return 0L;
-    }
-  }
-
-  private long workflowRunningCount(LocalDateTime start, LocalDateTime end) {
-    WorkflowExecutionOverviewReader reader = workflowReaderProvider.getIfAvailable();
-    if (reader == null) return 0L;
-    try {
-      return reader.metrics(start, end).runningCount();
-    } catch (RuntimeException exception) {
-      LOG.warn("加载首页头部工作流摘要失败", exception);
-      return 0L;
-    }
-  }
-
-  private long qualityRunningCount(LocalDateTime start, LocalDateTime end) {
-    QualityExecutionOverviewReader reader = qualityExecutionReaderProvider.getIfAvailable();
-    if (reader == null) return 0L;
-    try {
-      return reader.metrics(start, end).runningCount();
-    } catch (RuntimeException exception) {
-      LOG.warn("加载首页头部质量运行摘要失败", exception);
-      return 0L;
+      LOG.warn("Home cockpit source unavailable: {}", source, exception);
+      return new CountObservation(0L, false, "QUERY_UNAVAILABLE");
     }
   }
 
   public record CockpitResponse(HeaderStats header) {}
 
-  public record HeaderStats(long dataSourceCount, long runningCount) {}
+  /** Legacy numeric fields retain their fallback; consumers must use availability to interpret them. */
+  public record HeaderStats(long dataSourceCount, long runningCount,
+      boolean dataSourceAvailable, boolean runningAvailable, LocalDateTime observedAt,
+      Map<String, CountObservation> sources) {}
+
+  public record CountObservation(long value, boolean available, String unavailableReason) {}
 }

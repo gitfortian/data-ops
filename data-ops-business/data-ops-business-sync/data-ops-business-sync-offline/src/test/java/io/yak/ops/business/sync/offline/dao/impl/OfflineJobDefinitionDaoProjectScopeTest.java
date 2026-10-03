@@ -14,7 +14,7 @@ import io.yak.ops.business.sync.offline.dao.mapper.OfflineExecutionEventMapper;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineJobDefinitionMapper;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineJobExecutionMapper;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineWriteMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import java.util.Optional;

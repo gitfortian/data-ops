@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component;
  * 启动不强制存在(允许流程先行配置),发起时才要求。
  */
 @Component
-public class ApprovalFlowRegistry {
+public class ApprovalFlowRegistry implements SmartInitializingSingleton {
 
   private final ObjectProvider<ApprovalFlowHandler> discovered;
   /** Built on first lookup so callback implementations cannot form a startup bean cycle. */
@@ -22,6 +23,12 @@ public class ApprovalFlowRegistry {
 
   public ApprovalFlowRegistry(ObjectProvider<ApprovalFlowHandler> discovered) {
     this.discovered = discovered;
+  }
+
+  /** Validate registrations once collaborators exist, without constructor-time bean cycles. */
+  @Override
+  public void afterSingletonsInstantiated() {
+    handlers();
   }
 
   public Optional<ApprovalFlowHandler> find(String flowCode) {

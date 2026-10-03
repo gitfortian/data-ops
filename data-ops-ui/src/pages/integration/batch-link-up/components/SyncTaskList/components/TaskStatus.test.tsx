@@ -28,7 +28,6 @@ describe('offline sync TaskStatus', () => {
     ['CREATED', 'pending', '已创建', 'false'],
     ['SUBMITTED', 'pending', '提交中', 'true'],
     ['QUEUED', 'pending', '排队中', 'true'],
-    ['RUNNING', 'running', '运行中', 'true'],
     ['SUCCEEDED', 'success', '已完成', 'false'],
     ['FAILED', 'failed', '失败', 'false'],
     ['PAUSED', 'paused', '已暂停', 'false'],
@@ -50,6 +49,12 @@ describe('offline sync TaskStatus', () => {
       );
     },
   );
+
+  it('renders the running illustration with the localized status title', () => {
+    const { container } = render(<TaskStatus status="RUNNING" />);
+    expect(screen.getByTitle('运行中')).toHaveAttribute('data-offline-sync-status', 'RUNNING');
+    expect(container.querySelector('img')).toHaveAttribute('src', 'test-file');
+  });
 
   it.each([
     ['COMPLETED', 'success', '已完成'],

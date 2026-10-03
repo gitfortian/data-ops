@@ -1,8 +1,8 @@
 package io.yak.ops.business.datasource.gateway.adapter;
 
+import io.yak.ops.business.datasource.config.DataSourceProperties;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.datasource.config.CredentialCipher;
-import io.yak.ops.business.datasource.config.DataSourceProperties;
 import io.yak.ops.business.datasource.exception.DataSourceException;
 import io.yak.ops.common.enums.datasource.DataSourceErrorCode;
 import java.nio.charset.StandardCharsets;

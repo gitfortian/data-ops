@@ -1,7 +1,7 @@
 package io.yak.ops.business.datasource.connection;
 
-import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.datasource.config.DataSourceProperties;
+import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.datasource.connection.DataSourceConnectionResolver.ResolvedConnection;
 import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import io.yak.ops.business.datasource.exception.DataSourceException;

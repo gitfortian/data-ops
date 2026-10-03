@@ -2,7 +2,7 @@ package io.yak.ops.business.asset.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import io.yak.ops.core.project.CurrentProject;
 import lombok.RequiredArgsConstructor;

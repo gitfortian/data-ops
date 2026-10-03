@@ -7,7 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.asset.dao.mapper.AssetSettingMapper;
-import io.yak.ops.common.bean.po.asset.AssetSettingPO;
+import io.yak.ops.business.asset.dao.model.AssetSettingPO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

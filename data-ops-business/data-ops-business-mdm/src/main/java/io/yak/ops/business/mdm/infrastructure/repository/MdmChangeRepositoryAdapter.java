@@ -8,7 +8,7 @@ import io.yak.ops.business.mdm.dao.mapper.MdmChangeMapper;
 import io.yak.ops.business.mdm.domain.approval.MdmApprovalStatus;
 import io.yak.ops.business.mdm.domain.approval.MdmChange;
 import io.yak.ops.business.mdm.domain.approval.MdmChangeType;
-import io.yak.ops.common.bean.po.mdm.MdmChangePO;
+import io.yak.ops.business.mdm.dao.model.MdmChangePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

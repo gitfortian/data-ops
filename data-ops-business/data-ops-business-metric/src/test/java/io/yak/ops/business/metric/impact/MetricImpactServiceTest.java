@@ -15,7 +15,7 @@ import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.domain.MetricStatus;
 import io.yak.ops.business.metric.domain.MetricType;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
-import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
+import io.yak.ops.business.metric.dao.model.MetricDependencyPO;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

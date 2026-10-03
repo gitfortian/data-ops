@@ -1,3 +1,6 @@
+import { toFieldDrafts } from './datasetDraftModel';
+import { useLatestOperation } from '@/hooks/useLatestOperation';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { BRAND_CSS_VARIABLES } from '@/styles/brand';
 import {
   Input,
@@ -156,24 +159,17 @@ const formatTime = (value?: string | null) => {
     : date.toLocaleString('zh-CN', { hour12: false });
 };
 
-const toFieldDrafts = (
-  context?: DevelopmentDatasetNodeContext,
-): DevelopmentDatasetFieldDraft[] =>
-  (context?.dataset?.fields || []).map((field) => ({
-    fieldId: field.fieldId,
-    physicalName: field.physicalName,
-    displayName: field.displayName,
-    dataType: field.dataType,
-    nullable: field.nullable,
-    description: field.description,
-    defaultRole: field.defaultRole,
-  }));
-
 export default function DatasetNodeEditor({
   node,
   onSaved,
   onDirtyChange,
 }: DatasetNodeEditorProps) {
+  const { currentProject } = useSecurityProject();
+  const beginLoad = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginQuery = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginSave = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginPublish = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginOnline = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
   const metadataContext = useSqlMetadataContext(node.id);
   const requestedVersionNo = typeof window === 'undefined'
     ? undefined
@@ -239,38 +235,51 @@ export default function DatasetNodeEditor({
   }, [node.id, setDirtyState]);
 
   const load = useCallback(async () => {
+    const isCurrent = beginLoad();
     setLoading(true);
+    setRunning(false);
+    setSaving(false);
+    setPublishing(false);
     setLoadError(undefined);
     setMetricRefsState('LOADING');
     try {
-      applyContext(await getDevelopmentDatasetNode(node.id));
+      const raw = await getDevelopmentDatasetNode(node.id);
+      if (!isCurrent()) return;
+      applyContext(raw);
       getDevelopmentDatasetMetricRefs(node.id)
         .then((references) => {
+          if (!isCurrent()) return;
           setMetricRefs(references ?? []);
           setMetricRefsState('READY');
         })
         .catch((error) => {
+          if (!isCurrent()) return;
           const response = error as { status?: number; response?: { status?: number } } | null;
           const status = response?.status ?? response?.response?.status;
           setMetricRefsState(status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE');
         });
     } catch (error) {
+      if (!isCurrent()) return;
       const text = error instanceof Error ? error.message : '加载 Dataset Node 失败';
       setLoadError(text);
       setContext(undefined);
       message.error(text);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [applyContext, node.id]);
+  }, [applyContext, node.id, currentProject?.id, beginLoad]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
+    let active = true;
+    setMetricOptions([]);
+    setPublishedMetricsState('LOADING');
     listPublishedMetrics()
       .then((publications) => {
+        if (!active) return;
         setMetricOptions(publications.map((published) => {
           let snapshot: { metricName?: string; metricCode?: string } = {};
           try {
@@ -288,11 +297,13 @@ export default function DatasetNodeEditor({
         setPublishedMetricsState('READY');
       })
       .catch((error) => {
+        if (!active) return;
         const response = error as { status?: number; response?: { status?: number } } | null;
         const status = response?.status ?? response?.response?.status;
         setPublishedMetricsState(status === 401 || status === 403 ? 'FORBIDDEN' : 'UNAVAILABLE');
       });
-  }, []);
+    return () => { active = false; };
+  }, [currentProject?.id]);
 
   useEffect(() => {
     if (!context || loading || metadataContext.dataSourceId === savedDataSourceIdRef.current) return;
@@ -427,6 +438,7 @@ export default function DatasetNodeEditor({
     const dataSourceId = metadataContext.dataSourceId;
     if (!dataSourceId || !sqlText.trim() || running) return;
 
+    const isCurrent = beginQuery();
     setRunning(true);
     setQueryResult({
       status: 'RUNNING',
@@ -440,6 +452,7 @@ export default function DatasetNodeEditor({
         fields.map((field) => [field.physicalName.toLowerCase(), field]),
       );
       const result = await runDevelopmentDatasetNode(node.id, dataSourceId, sqlText);
+      if (!isCurrent()) return;
       const discovered = result?.fields || [];
 
       setFields(discovered.map((field) => {
@@ -473,6 +486,7 @@ export default function DatasetNodeEditor({
         `查询完成 · ${Number(result?.returnedRows || 0)} 行 / ${discovered.length} 个字段`,
       );
     } catch (error) {
+      if (!isCurrent()) return;
       const text = error instanceof Error ? error.message : '运行 Dataset 查询失败';
       setQueryResult({
         status: 'FAILED',
@@ -482,13 +496,14 @@ export default function DatasetNodeEditor({
       });
       message.error(text);
     } finally {
-      setRunning(false);
+      if (isCurrent()) setRunning(false);
     }
   };
 
   const save = async () => {
     const dataSourceId = metadataContext.dataSourceId;
     if (!dataSourceId || !sqlText.trim() || !fields.length || saving) return;
+    const isCurrent = beginSave();
     setSaving(true);
     try {
       const next = await saveDevelopmentDatasetNode(node.id, {
@@ -501,8 +516,10 @@ export default function DatasetNodeEditor({
           description: field.description?.trim() || undefined,
         })),
       });
+      if (!isCurrent()) return;
       applyContext(next);
       await onSaved?.();
+      if (!isCurrent()) return;
       // Never replace references from an incomplete or unavailable read.
       if (metricRefsState !== 'READY' || publishedMetricsState !== 'READY') {
         message.warning('指标引用或发布状态暂不可读；Dataset Draft 已保存，原有引用保持不变');
@@ -510,7 +527,9 @@ export default function DatasetNodeEditor({
         && activeMetricRefValues.has(`${reference.metricId}:${reference.versionNo}`))) {
         try {
           await syncDevelopmentDatasetMetricRefs(node.id, node.name, metricRefs);
+      if (!isCurrent()) return;
         } catch (error) {
+      if (!isCurrent()) return;
           message.error(error instanceof Error ? error.message : '指标引用同步失败；Dataset Draft 已保存');
         }
       } else {
@@ -520,9 +539,10 @@ export default function DatasetNodeEditor({
         `Dataset Draft 已保存 · Dataset #${next.dataset?.datasetId || '-'}`,
       );
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '保存 Dataset Draft 失败');
     } finally {
-      setSaving(false);
+      if (isCurrent()) setSaving(false);
     }
   };
 
@@ -533,15 +553,18 @@ export default function DatasetNodeEditor({
       return;
     }
     const beforeVersionNo = context.dataset.currentVersion?.versionNo;
+    const isCurrent = beginPublish();
     setPublishing(true);
     try {
       const next = await publishDevelopmentDatasetNode(node.id);
+      if (!isCurrent()) return;
       const outcome = datasetPublishOutcome(
         beforeVersionNo,
         next.dataset?.currentVersion?.versionNo,
       );
       applyContext(next);
       await onSaved?.();
+      if (!isCurrent()) return;
       setActivePanel('versions');
       if (outcome.kind === 'PUBLISHED') {
         message.success(`已发布 immutable DatasetVersion · DV${outcome.versionNo}`);
@@ -551,9 +574,10 @@ export default function DatasetNodeEditor({
         message.warning('发布请求已完成，但未返回可识别的 DatasetVersion');
       }
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '发布 DatasetVersion 失败');
     } finally {
-      setPublishing(false);
+      if (isCurrent()) setPublishing(false);
     }
   };
 

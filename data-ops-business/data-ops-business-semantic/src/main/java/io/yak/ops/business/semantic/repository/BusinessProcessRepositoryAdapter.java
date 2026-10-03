@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.semantic.dao.mapper.SemanticProcessMapper;
 import io.yak.ops.business.semantic.api.BusinessProcess;
-import io.yak.ops.common.bean.po.semantic.SemanticProcessPO;
+import io.yak.ops.business.semantic.dao.model.SemanticProcessPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

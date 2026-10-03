@@ -6,7 +6,7 @@ import io.yak.ops.business.metric.publication.MetricPublicationGate.GateStatus;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.PublicationSubject;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
 import io.yak.ops.business.metric.support.MetricSnapshotDigest;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import java.util.ArrayList;
 import java.util.List;

@@ -2,6 +2,7 @@ package io.yak.ops.business.datasource.repository;
 
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.datasource.domain.DataSourceDefinition;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import io.yak.ops.business.datasource.domain.DataSourceQuery;
 import io.yak.ops.business.datasource.domain.DataSourceSummary;
 import io.yak.ops.common.enums.datasource.DataSourceConnStatus;
@@ -12,6 +13,9 @@ import java.util.Optional;
 /** 数据源领域仓储。 */
 public interface DataSourceRepository {
   Optional<DataSourceDefinition> findById(Long id);
+
+  /** Bounded batch lookup; missing or foreign-project identities are not returned. */
+  List<DataSourceReference> findReferences(List<Long> ids);
 
   /** 落库并把数据库生成的主键回填到聚合，便于创建命令发布对外事件。 */
   boolean insert(DataSourceDefinition definition);

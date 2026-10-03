@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.metric.catalog.MetricCatalogService;
 import io.yak.ops.business.metric.dao.mapper.MetricVersionMapper;
 import io.yak.ops.business.metric.domain.Metric;
-import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricCompositionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,8 +46,8 @@ public class MetricVersionRepositoryAdapter implements MetricVersionRepository {
         .filter(dependency -> dependency.getDependencyId() != null
             && dependency.getDependencyVersion() != null)
         .collect(java.util.stream.Collectors.toMap(
-            io.yak.ops.common.bean.po.metric.MetricDependencyPO::getDependencyId,
-            io.yak.ops.common.bean.po.metric.MetricDependencyPO::getDependencyVersion,
+            io.yak.ops.business.metric.dao.model.MetricDependencyPO::getDependencyId,
+            io.yak.ops.business.metric.dao.model.MetricDependencyPO::getDependencyVersion,
             (left, right) -> left));
     po.setSnapshot(MetricCatalogService.toJsonSnapshot(metric, compositions, dependencyVersions));
     po.setChangeDesc(changeDesc);

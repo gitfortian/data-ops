@@ -27,7 +27,7 @@ import io.yak.ops.business.metric.repository.MetricRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
 import io.yak.ops.business.metric.repository.MetricUsageRepository;
 import io.yak.ops.business.metric.support.CodeGenerator;
-import io.yak.ops.common.bean.po.metric.MetricCompositionPO;
+import io.yak.ops.business.metric.dao.model.MetricCompositionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import java.time.LocalDateTime;
 import java.util.List;

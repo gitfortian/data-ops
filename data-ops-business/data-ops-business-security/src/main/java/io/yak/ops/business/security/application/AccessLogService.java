@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.security.dao.mapper.AccessLogMapper;
-import io.yak.ops.common.bean.po.security.DsecAccessLogPO;
+import io.yak.ops.business.security.dao.model.DsecAccessLogPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

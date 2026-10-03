@@ -3,7 +3,7 @@ package io.yak.ops.business.modeling.catalog;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.modeling.api.ModelQueryApi;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.Collection;
 import java.util.LinkedHashMap;

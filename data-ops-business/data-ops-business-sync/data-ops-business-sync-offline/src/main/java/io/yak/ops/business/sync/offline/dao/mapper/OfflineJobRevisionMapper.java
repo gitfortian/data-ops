@@ -1,7 +1,7 @@
 package io.yak.ops.business.sync.offline.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobRevisionPO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 

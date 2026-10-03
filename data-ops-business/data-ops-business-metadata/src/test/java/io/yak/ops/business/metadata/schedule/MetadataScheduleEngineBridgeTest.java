@@ -17,7 +17,7 @@ import io.yak.framework.schedule.api.ScheduleSnapshot;
 import io.yak.framework.schedule.api.ScheduleStatus;
 import io.yak.ops.business.metadata.dao.mapper.MdCollectJobMapper;
 import io.yak.ops.business.metadata.exception.MetadataException;
-import io.yak.ops.common.bean.po.metadata.MdCollectJobPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectJobPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import java.time.Instant;

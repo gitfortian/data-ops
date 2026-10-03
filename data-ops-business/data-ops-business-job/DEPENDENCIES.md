@@ -8,10 +8,12 @@
 controller  -> task / environment
 discovery   -> task
 adapter     -> runtime / task
-runtime     -> task / environment
+runtime     -> task / environment / config / repository
+repository  -> task
 environment -> dao
 task        -> no Job implementation package
 dao         -> persistence primitives only
+config      -> persistence assembly contracts
 ```
 
 依赖图必须保持无环。

@@ -9,7 +9,7 @@ import io.yak.framework.schedule.api.SchedulePolicy;
 import io.yak.framework.schedule.api.ScheduleSnapshot;
 import io.yak.framework.schedule.api.ScheduleTarget;
 import io.yak.framework.schedule.api.ScheduleTrigger;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import io.yak.ops.common.schedule.YakScheduleGateway;
 import io.yak.ops.common.schedule.YakScheduleNamespaces;
 import java.time.ZoneId;

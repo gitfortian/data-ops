@@ -50,11 +50,7 @@ class LineageDependencyBoundaryTest {
   private static final Map<String, Set<String>> EXTERNAL_BUSINESS_CORRIDORS =
       Map.of(
           "config/ConditionalOnLineagePersistence.java",
-          Set.of("io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled"),
-          "config/LineagePersistenceConfiguration.java",
-          Set.of(
-              "io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration",
-              "io.yak.ops.business.datasource.config.DataSourceProperties"));
+          Set.of("io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled"));
 
   private static final Pattern ROOT_TYPE_REFERENCE =
       Pattern.compile("\\bio\\.yak\\.ops\\.business\\.lineage\\.[A-Z][A-Za-z0-9_$]*");

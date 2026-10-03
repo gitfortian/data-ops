@@ -19,7 +19,7 @@ import io.yak.framework.schedule.api.ScheduleStatus;
 import io.yak.ops.business.mdm.dao.mapper.MdmDistributionMapper;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionMode;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionStatus;
-import io.yak.ops.common.bean.po.mdm.MdmDistributionPO;
+import io.yak.ops.business.mdm.dao.model.MdmDistributionPO;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;

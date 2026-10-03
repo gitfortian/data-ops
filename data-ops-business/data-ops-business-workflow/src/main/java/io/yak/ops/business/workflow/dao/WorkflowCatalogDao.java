@@ -1,7 +1,7 @@
 package io.yak.ops.business.workflow.dao;
 
-import io.yak.ops.common.bean.po.workflow.WorkflowDefinitionPO;
-import io.yak.ops.common.bean.po.workflow.WorkflowVersionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowDefinitionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowVersionPO;
 import java.util.List;
 
 /** 工作流定义与版本数据访问接口。 */

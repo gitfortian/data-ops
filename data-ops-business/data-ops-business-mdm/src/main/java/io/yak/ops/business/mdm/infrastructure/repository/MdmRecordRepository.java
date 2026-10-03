@@ -1,7 +1,7 @@
 package io.yak.ops.business.mdm.infrastructure.repository;
 
 import io.yak.framework.common.PageData;
-import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
+import io.yak.ops.business.mdm.domain.clean.MdmDedupKey;
 import io.yak.ops.business.mdm.domain.record.MdmRecord;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
 import java.util.List;
@@ -30,7 +30,7 @@ public interface MdmRecordRepository {
    * 去重发现 DB 聚合:按匹配键 GROUP BY,返回重复键(组内 ≥2)。
    * 该规则下已忽略的组键在 SQL 侧排除,ruleId 为空时不排除(无规则即无忽略语义)。
    */
-  List<MdmDedupKeyRow> countDedupKeys(
+  List<MdmDedupKey> countDedupKeys(
       Long entityId, Long ruleId, String keyExpr, String valueCondition);
 
   /** 重复组内成员(ACTIVE,按 id 升序,limit 截断组内展示)。 */

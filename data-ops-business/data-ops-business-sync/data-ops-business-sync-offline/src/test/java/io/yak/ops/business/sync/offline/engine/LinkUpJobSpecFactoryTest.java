@@ -1,13 +1,15 @@
 package io.yak.ops.business.sync.offline.engine;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import org.junit.jupiter.api.Test;
 
 class LinkUpJobSpecFactoryTest {
@@ -16,9 +18,11 @@ class LinkUpJobSpecFactoryTest {
 
   @Test
   void shouldBuildLogicalJdbcJobSpecFromFlatDefinition() throws Exception {
-    DataSourceDao dao = mock(DataSourceDao.class);
-    when(dao.selectById(1L)).thenReturn(dataSource(1L, "source", "source-secret"));
-    when(dao.selectById(2L)).thenReturn(dataSource(2L, "sink", "sink-secret"));
+    DataSourceReader dao = mock(DataSourceReader.class);
+    when(dao.require(1L)).thenReturn(dataSource(1L, "source", "source-secret"));
+    when(dao.requireReference(1L)).thenReturn(reference(dataSource(1L, "source", "source-secret")));
+    when(dao.require(2L)).thenReturn(dataSource(2L, "sink", "sink-secret"));
+    when(dao.requireReference(2L)).thenReturn(reference(dataSource(2L, "sink", "sink-secret")));
 
     JsonNode definition = mapper.readTree("""
         {
@@ -94,9 +98,11 @@ class LinkUpJobSpecFactoryTest {
 
   @Test
   void shouldBuildMultiTableJobSpecFromPublicPayload() throws Exception {
-    DataSourceDao dao = mock(DataSourceDao.class);
-    when(dao.selectById(1001L)).thenReturn(dataSource(1001L, "source", "source-secret"));
-    when(dao.selectById(1002L)).thenReturn(dataSource(1002L, "sink", "sink-secret"));
+    DataSourceReader dao = mock(DataSourceReader.class);
+    when(dao.require(1001L)).thenReturn(dataSource(1001L, "source", "source-secret"));
+    when(dao.requireReference(1001L)).thenReturn(reference(dataSource(1001L, "source", "source-secret")));
+    when(dao.require(1002L)).thenReturn(dataSource(1002L, "sink", "sink-secret"));
+    when(dao.requireReference(1002L)).thenReturn(reference(dataSource(1002L, "sink", "sink-secret")));
 
     JsonNode definition = mapper.readTree("""
         {
@@ -165,7 +171,7 @@ class LinkUpJobSpecFactoryTest {
 
   @Test
   void shouldPassThroughFutureConnectorOptionsWithoutDedicatedBuilder() throws Exception {
-    DataSourceDao dao = mock(DataSourceDao.class);
+    DataSourceReader dao = mock(DataSourceReader.class);
     JsonNode definition = mapper.readTree("""
         {
           "basic": {"jobName": "http-file", "mode": "GUIDE_SINGLE"},
@@ -209,9 +215,11 @@ class LinkUpJobSpecFactoryTest {
 
   @Test
   void shouldStillBuildHistoricalWorkflowDefinition() throws Exception {
-    DataSourceDao dao = mock(DataSourceDao.class);
-    when(dao.selectById(1L)).thenReturn(dataSource(1L, "source", "source-secret"));
-    when(dao.selectById(2L)).thenReturn(dataSource(2L, "sink", "sink-secret"));
+    DataSourceReader dao = mock(DataSourceReader.class);
+    when(dao.require(1L)).thenReturn(dataSource(1L, "source", "source-secret"));
+    when(dao.requireReference(1L)).thenReturn(reference(dataSource(1L, "source", "source-secret")));
+    when(dao.require(2L)).thenReturn(dataSource(2L, "sink", "sink-secret"));
+    when(dao.requireReference(2L)).thenReturn(reference(dataSource(2L, "sink", "sink-secret")));
     JsonNode definition = mapper.readTree("""
         {
           "basic": {"jobName": "legacy", "mode": "GUIDE_SINGLE"},
@@ -236,13 +244,18 @@ class LinkUpJobSpecFactoryTest {
         .isEqualTo("a.orders");
   }
 
-  private DataSourcePO dataSource(Long id, String name, String password) {
+  private io.yak.ops.business.datasource.domain.DataSourceReference reference(DataSourceDefinition definition) {
+    return new io.yak.ops.business.datasource.domain.DataSourceReference(
+        definition.getId(), definition.getProjectId(), definition.getName(), definition.getDbType());
+  }
+
+  private DataSourceDefinition dataSource(Long id, String name, String password) {
     DataSourcePO value = new DataSourcePO();
     value.setId(id);
     value.setName(name);
     value.setJdbcUrl("jdbc:mysql://127.0.0.1:3306/demo");
     value.setConnectionParams("{\"driver\":\"com.mysql.cj.jdbc.Driver\","
         + "\"username\":\"root\",\"password\":\"" + password + "\"}");
-    return value;
+    return DataSourceFixtures.definition(value);
   }
 }

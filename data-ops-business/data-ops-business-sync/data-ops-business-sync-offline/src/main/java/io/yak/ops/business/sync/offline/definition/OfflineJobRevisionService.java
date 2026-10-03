@@ -12,7 +12,7 @@ import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.repository.OfflineJobDefinitionRepository;
 import io.yak.ops.business.sync.offline.repository.OfflineJobRevisionRepository;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
+import io.yak.ops.business.sync.offline.domain.OfflineJobRevision;
 import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
@@ -75,7 +75,7 @@ public class OfflineJobRevisionService {
 
   public List<VersionSummary> versions(Long id) {
     OfflineJobDefinition definition = requireDefinition(id);
-    List<OfflineJobRevisionPO> rows =
+    List<OfflineJobRevision> rows =
         revisionRepository.findAllByJobDefinitionId(definition.getId());
     return rows.stream()
         .map(row -> toSummary(row, definition.getPublishedRevisionId()))
@@ -84,7 +84,7 @@ public class OfflineJobRevisionService {
 
   public RevisionDetailView versionDetail(Long id, int versionNo) {
     OfflineJobDefinition definition = requireDefinition(id);
-    OfflineJobRevisionPO row =
+    OfflineJobRevision row =
         revisionRepository
             .findByJobDefinitionIdAndVersionNo(definition.getId(), versionNo)
             .orElse(null);
@@ -103,7 +103,7 @@ public class OfflineJobRevisionService {
   @Transactional(transactionManager = "offlineSyncTransactionManager", rollbackFor = Exception.class)
   public PublishResult rollback(Long id, int versionNo) {
     OfflineJobDefinition definition = requireDefinition(id);
-    OfflineJobRevisionPO target =
+    OfflineJobRevision target =
         revisionRepository
             .findByJobDefinitionIdAndVersionNo(definition.getId(), versionNo)
             .orElse(null);
@@ -133,11 +133,11 @@ public class OfflineJobRevisionService {
   }
 
   /** 执行/调度/工作流读路径：当前发布快照；未发布返回 null。 */
-  public OfflineJobRevisionPO publishedRevision(OfflineJobDefinition definition) {
+  public OfflineJobRevision publishedRevision(OfflineJobDefinition definition) {
     if (definition == null || definition.getPublishedRevisionId() == null) {
       return null;
     }
-    OfflineJobRevisionPO row =
+    OfflineJobRevision row =
         revisionRepository.findById(definition.getPublishedRevisionId()).orElse(null);
     if (row == null || !Objects.equals(row.getJobDefinitionId(), definition.getId())) {
       return null;
@@ -151,11 +151,11 @@ public class OfflineJobRevisionService {
     List<Long> ids = definitions.stream()
         .map(OfflineJobDefinition::getId).filter(Objects::nonNull).toList();
     if (ids.isEmpty()) return flags;
-    Map<Long, OfflineJobRevisionPO> latestByDefinitionId = new HashMap<>();
+    Map<Long, OfflineJobRevision> latestByDefinitionId = new HashMap<>();
     revisionRepository.findLatestByJobDefinitionIds(ids).forEach(row ->
         latestByDefinitionId.put(row.getJobDefinitionId(), row));
     for (OfflineJobDefinition definition : definitions) {
-      OfflineJobRevisionPO latest = latestByDefinitionId.get(definition.getId());
+      OfflineJobRevision latest = latestByDefinitionId.get(definition.getId());
       flags.put(definition.getId(), latest == null
           ? StringUtils.hasText(definition.getJobSpecJson()) || definition.getDefinitionJson() != null
           : !contentEquals(latest, definition));
@@ -171,15 +171,15 @@ public class OfflineJobRevisionService {
       throw new IllegalStateException("任务仍是草稿，请先完成配置并保存后再发布");
     }
     long projectId = currentProject.requireProjectId();
-    OfflineJobRevisionPO latest =
+    OfflineJobRevision latest =
         revisionRepository.findLatestByJobDefinitionId(definition.getId()).orElse(null);
 
-    OfflineJobRevisionPO revision;
+    OfflineJobRevision revision;
     boolean appended = false;
     if (latest != null && contentEquals(latest, definition)) {
       revision = latest; // 幂等：内容未变不追加版本，仅移动发布指针
     } else {
-      revision = new OfflineJobRevisionPO();
+      revision = new OfflineJobRevision();
       revision.setProjectId(projectId);
       revision.setJobDefinitionId(definition.getId());
       revision.setVersionNo(revisionRepository.nextVersionNo(definition.getId()));
@@ -213,7 +213,7 @@ public class OfflineJobRevisionService {
   }
 
   /** 内容等值=定义草稿与快照的 (configDigest, definitionJson) 双一致。 */
-  static boolean contentEquals(OfflineJobRevisionPO revision, OfflineJobDefinition definition) {
+  static boolean contentEquals(OfflineJobRevision revision, OfflineJobDefinition definition) {
     return Objects.equals(revision.getConfigDigest(), definition.getConfigDigest())
         && Objects.equals(revision.getDefinitionJson(), definition.getDefinitionJson());
   }
@@ -251,7 +251,7 @@ public class OfflineJobRevisionService {
     }
   }
 
-  private static VersionSummary toSummary(OfflineJobRevisionPO row, Long publishedRevisionId) {
+  private static VersionSummary toSummary(OfflineJobRevision row, Long publishedRevisionId) {
     return new VersionSummary(row.getId(), row.getVersionNo(), row.getChecksum(),
         row.getCreatedBy(), row.getCreateTime(), Objects.equals(row.getId(), publishedRevisionId));
   }

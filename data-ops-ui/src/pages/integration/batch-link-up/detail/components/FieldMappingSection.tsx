@@ -1,3 +1,4 @@
+import { FieldMappingValue, FieldMappingRow, normalizeFieldName, getColumnLabel, getFieldType, parseManualFields, rowsToMappingValue, mappingValueSignature, mappingValueToRows as planRows, buildSameNameMappings as planSameNames, buildPositionMappings as planPositions } from './fieldMappingModel';
 import {
   FilterOutlined,
   PlusOutlined,
@@ -28,10 +29,7 @@ import {
 import type { DataSourceColumnOption } from '../hooks/useDataSourceColumns';
 import EditorSection from './EditorSection';
 
-export interface FieldMappingValue {
-  source: string;
-  target: string;
-}
+export type { FieldMappingValue } from "./fieldMappingModel";
 
 interface FieldMappingSectionProps {
   value: FieldMappingValue[];
@@ -45,11 +43,7 @@ interface FieldMappingSectionProps {
   targetDerived?: boolean;
 }
 
-interface FieldMappingRow {
-  key: string;
-  sourceField?: string;
-  targetField?: string;
-}
+
 
 interface MappingGeometry {
   key: string;
@@ -103,119 +97,6 @@ const TABLE_HEADER_HEIGHT = 32;
 const TABLE_ROW_HEIGHT = 32;
 
 const DRAG_START_DISTANCE = 4;
-
-let mappingRowSeed = 0;
-
-const normalizeFieldName = (value: string) =>
-  value.trim().toLowerCase();
-
-const createMappingKey = (index: number) => {
-  mappingRowSeed += 1;
-
-  return `mapping-${mappingRowSeed}-${index}`;
-};
-
-const getColumnLabel = (
-  column: DataSourceColumnOption,
-) => String(column.label || column.value);
-
-const getFieldType = (
-  column?: DataSourceColumnOption,
-) => {
-  if (!column?.description) {
-    return '-';
-  }
-
-  return column.description.split(' · ')[0] || '-';
-};
-
-const parseManualFields = (value: string) =>
-  value
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-const rowsToMappingValue = (
-  rows: FieldMappingRow[],
-): FieldMappingValue[] =>
-  rows
-    .filter(
-      (row) =>
-        Boolean(row.sourceField) &&
-        Boolean(row.targetField),
-    )
-    .map((row) => ({
-      source: row.sourceField as string,
-      target: row.targetField as string,
-    }));
-
-const mappingValueToRows = (
-  value: FieldMappingValue[],
-): FieldMappingRow[] =>
-  value.map((item, index) => ({
-    key: createMappingKey(index),
-    sourceField: item.source,
-    targetField: item.target,
-  }));
-
-const mappingValueSignature = (
-  value: FieldMappingValue[],
-) =>
-  value
-    .map(
-      (item) =>
-        `${item.source}\u0000${item.target}`,
-    )
-    .join('\u0001');
-
-const buildSameNameMappings = (
-  sourceColumns: DataSourceColumnOption[],
-  targetColumns: DataSourceColumnOption[],
-): FieldMappingRow[] => {
-  const targetFieldMap = new Map(
-    targetColumns.map((column) => [
-      normalizeFieldName(column.value),
-      column.value,
-    ]),
-  );
-
-  return sourceColumns
-    .map((column, index) => {
-      const targetField = targetFieldMap.get(
-        normalizeFieldName(column.value),
-      );
-
-      if (!targetField) {
-        return null;
-      }
-
-      return {
-        key: createMappingKey(index),
-        sourceField: column.value,
-        targetField,
-      };
-    })
-    .filter(Boolean) as FieldMappingRow[];
-};
-
-const buildPositionMappings = (
-  sourceColumns: DataSourceColumnOption[],
-  targetColumns: DataSourceColumnOption[],
-): FieldMappingRow[] => {
-  const mappingSize = Math.min(
-    sourceColumns.length,
-    targetColumns.length,
-  );
-
-  return Array.from(
-    { length: mappingSize },
-    (_, index) => ({
-      key: createMappingKey(index),
-      sourceField: sourceColumns[index]?.value,
-      targetField: targetColumns[index]?.value,
-    }),
-  );
-};
 
 const ManualFieldEditor = ({
   value,
@@ -282,6 +163,13 @@ export default function FieldMappingSection({
   targetReady,
   targetDerived = false,
 }: FieldMappingSectionProps) {
+  const rowSequence = useRef(0);
+  const rowPrefix = useId();
+  const createMappingKey = useCallback((index: number) => `${rowPrefix}-${++rowSequence.current}-${index}`, [rowPrefix]);
+  const mappingValueToRows = useCallback((value: FieldMappingValue[]) => planRows(value, createMappingKey), [createMappingKey]);
+  const buildSameNameMappings = useCallback((source: DataSourceColumnOption[], target: DataSourceColumnOption[]) => planSameNames(source, target, createMappingKey), [createMappingKey]);
+  const buildPositionMappings = useCallback((source: DataSourceColumnOption[], target: DataSourceColumnOption[]) => planPositions(source, target, createMappingKey), [createMappingKey]);
+
   const [rows, setRows] = useState<FieldMappingRow[]>(
     () => mappingValueToRows(value),
   );

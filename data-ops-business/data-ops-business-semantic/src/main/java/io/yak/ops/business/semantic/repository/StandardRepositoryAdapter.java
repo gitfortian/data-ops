@@ -10,7 +10,7 @@ import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.semantic.dao.StandardListRow;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticStandardPO;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

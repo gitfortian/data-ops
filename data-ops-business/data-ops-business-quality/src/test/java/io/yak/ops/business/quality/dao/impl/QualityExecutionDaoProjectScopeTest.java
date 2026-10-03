@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 import io.yak.ops.business.quality.dao.mapper.QualityExecutionMapper;
 import io.yak.ops.business.quality.dao.mapper.QualityQueryMapper;
 import io.yak.ops.business.quality.dao.mapper.QualityRuleExecutionMapper;
-import io.yak.ops.common.bean.po.quality.QualityExecutionPO;
+import io.yak.ops.business.quality.dao.model.QualityExecutionPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextException;

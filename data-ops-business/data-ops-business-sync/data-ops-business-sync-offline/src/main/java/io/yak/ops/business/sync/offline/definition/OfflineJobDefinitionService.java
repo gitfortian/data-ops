@@ -18,7 +18,7 @@ import io.yak.ops.business.sync.offline.schedule.OfflineScheduleLifecycle;
 import io.yak.ops.business.sync.offline.schedule.OfflineScheduleSupport;
 import io.yak.ops.common.bean.dto.sync.offline.OfflineJobDefinitionDTO;
 import io.yak.ops.common.bean.dto.sync.offline.OfflineJobDefinitionQueryDTO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
+import io.yak.ops.business.sync.offline.domain.OfflineJobRevision;
 import io.yak.ops.common.bean.vo.sync.offline.OfflineJobDefinitionVO;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -120,7 +120,7 @@ public class OfflineJobDefinitionService {
   }
 
   /** 执行/调度/工作流读路径：当前发布快照；未发布返回 null——消费方只读已发布内容。 */
-  public OfflineJobRevisionPO publishedRevision(OfflineJobDefinition definition) {
+  public OfflineJobRevision publishedRevision(OfflineJobDefinition definition) {
     return revisionService.publishedRevision(definition);
   }
 

@@ -1,3 +1,7 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { useLatestOperation } from '@/hooks/useLatestOperation';
+import { useModelStructureDraft } from './editor/useModelStructureDraft';
+import { ColumnDraft, IndexDraft, PropertyDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
 import { history, useParams } from '@umijs/max';
 import { ApartmentOutlined, CloudDownloadOutlined, CopyOutlined, ExclamationCircleOutlined, FundOutlined, ReloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import {
@@ -20,7 +24,7 @@ import {
   message,
 } from 'antd';
 import type { Key as ReactKey } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -55,145 +59,7 @@ import type { DataSourceRecord, DataSourceCatalogTable } from '@/services/data-s
 import { pageMetrics } from '@/services/metric/api';
 import type { MetricRecord } from '@/services/metric/types';
 
-interface ColumnDraft {
-  key: number;
-  columnName: string;
-  dataType: string;
-  length?: number | null;
-  scale?: number | null;
-  nullable: boolean;
-  defaultValue?: string;
-  comment?: string;
-  businessDescription?: string;
-  /** 数据标准松散引用(ticket 30 预留 / 39 套用写入)。 */
-  stdTypeId?: number | null;
-  stdNamingId?: number | null;
-  stdCodeSetCode?: string | null;
-  stdUnitId?: number | null;
-  stdCaliberId?: number | null;
-  stdSecurityId?: number | null;
-  /** 标准字段关联(38/44 写入;保存时必须回传,否则整表替换会抹掉治理结果)。 */
-  stdFieldId?: number | null;
-  /** 聚合层字段角色(DWS/ADS):DIMENSION 分组键 / MEASURE 度量;非聚合层不展示。 */
-  fieldRole?: 'DIMENSION' | 'MEASURE' | null;
-  /** 聚合函数(MEASURE 必填;SUM/COUNT/COUNT_DISTINCT/MAX/MIN/AVG)。 */
-  aggregateFunc?: string | null;
-  /** 口径/转换表达式(度量口径)。 */
-  transformExpr?: string | null;
-}
-
-interface IndexDraft {
-  key: number;
-  indexName: string;
-  uniqueIndex: boolean;
-  indexType?: string;
-  columns: string[];
-}
-
-interface PropertyDraft {
-  key: number;
-  propKey: string;
-  propValue: string;
-}
-
-const CODE_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_$]{0,127}$/;
-
-/** 发布审批(01):flowCode/bizType 与后端 ApprovalFlowCodes.MODEL_PUBLISH、ModelPublishApprovalService.BIZ_TYPE 同源。 */
-const MODEL_PUBLISH_FLOW_CODE = 'MODEL_PUBLISH';
-const MODEL_PUBLISH_BIZ_TYPE = 'MODEL';
-/** 审批中页面对象冻结(保存/发布/回滚禁用)，在途单终态轮询间隔。 */
-const PUBLISH_APPROVAL_POLL_MS = 15_000;
-
-/** C5(2026-09-17):类型选择后自动带出的长度/精度默认值(用户可改)。 */
-const TYPE_DEFAULTS: Record<string, { length?: number; scale?: number }> = {
-  VARCHAR: { length: 128 },
-  CHAR: { length: 32 },
-  DECIMAL: { length: 18, scale: 2 },
-  NUMERIC: { length: 18, scale: 2 },
-  TINYINT: { length: 4 },
-  SMALLINT: { length: 6 },
-  INT: { length: 11 },
-  INTEGER: { length: 11 },
-  BIGINT: { length: 20 },
-  DATE: {},
-  DATETIME: {},
-  TIMESTAMP: {},
-};
-
-/**
- * 标准字段里的逻辑类型名 → 物理类型候选,取该方言类型目录里第一个支持的。
- * 只收录「目录里大概率没有同名物理类型」的逻辑名;同名即可命中的走原样查询。
- */
-const LOGICAL_TYPE_ALIASES: Record<string, string[]> = {
-  STRING: ['VARCHAR', 'TEXT', 'CHAR'],
-  INT: ['INT', 'INTEGER'],
-  INTEGER: ['INTEGER', 'INT'],
-  DATETIME: ['DATETIME', 'TIMESTAMP'],
-};
-
-/** 取某类型在该方言目录里的约束;目录未下发约束时返回 undefined(按未知处理,不做破坏性清空)。 */
-const typeSpecOf = (
-  catalog: ModelingTypeOption[],
-  name: string | undefined | null,
-): ModelingTypeOption | undefined => {
-  const normalized = (name ?? '').trim().toUpperCase();
-  if (!normalized) return undefined;
-  return catalog.find((item) => (item.name ?? '').toUpperCase() === normalized);
-};
-
-/** 由标准字段的类型名(可带精度,如 decimal(18,2))推出该方言可用的类型与长度精度;推不出返回 null。 */
-const resolveColumnType = (
-  raw: string | undefined | null,
-  catalog: ModelingTypeOption[],
-): { dataType: string; length: number | null; scale: number | null } | null => {
-  const matched = /^([A-Za-z0-9_]+)\s*(?:\(\s*(\d+)\s*(?:,\s*(\d+)\s*)?\))?$/.exec(
-    (raw ?? '').trim(),
-  );
-  if (!matched) return null;
-  const supported = new Map(
-    catalog.map((item) => [(item.name ?? '').toUpperCase(), item.name!] as const),
-  );
-  const logical = matched[1].toUpperCase();
-  const dataType =
-    supported.get(logical) ??
-    (LOGICAL_TYPE_ALIASES[logical] ?? [])
-      .map((name) => supported.get(name))
-      .find((name): name is string => !!name);
-  if (!dataType) return null;
-  const spec = typeSpecOf(catalog, dataType);
-  const defaults = TYPE_DEFAULTS[dataType.toUpperCase()] ?? {};
-  return {
-    dataType,
-    length: matched[2] ? Number(matched[2]) : defaults.length ?? null,
-    // 该方言类型不支持小数位时硬塞一个,保存会被后端 ERROR 阻断
-    scale:
-      spec?.scaleAllowed === false
-        ? null
-        : matched[3]
-          ? Number(matched[3])
-          : defaults.scale ?? null,
-  };
-};
-
-/** 各方言支持的分区类型;未列出的方言视为不支持分区(AC:按方言标注)。 */
-const PARTITION_TYPES_BY_DIALECT: Record<string, string[]> = {
-  MYSQL: ['RANGE', 'LIST', 'HASH', 'KEY'],
-  POSTGRESQL: ['RANGE', 'LIST', 'HASH'],
-  ORACLE: ['RANGE', 'LIST', 'HASH'],
-  DORIS: ['RANGE', 'LIST', 'HASH'],
-  STARROCKS: ['RANGE', 'LIST'],
-};
-
-/** 聚合函数白名单(与后端 ModelStructureService.AGGREGATE_FUNCS 对齐)。 */
-const AGGREGATE_FUNC_OPTIONS = ['SUM', 'COUNT', 'COUNT_DISTINCT', 'MAX', 'MIN', 'AVG'];
-/** 具备聚合语义的分层:仅这些分层展示 角色/聚合函数/口径 列。 */
-const AGGREGATE_LAYERS = new Set(['DWS', 'ADS']);
-
-/** 当前高亮行 key(模块级引用,供 SortableRow 读取以避免重渲染)。 */
-let _highlightRowKey: number | undefined;
-/** 当前是否正在多选拖拽(模块级引用,供 SortableRow 读取)。 */
-let _multiDragActive = false;
-let _multiDragSelectedKeys = new Set<number>();
+const RowInteractionContext = createContext<{ highlight?: number; dragging: ReadonlySet<number> }>({ dragging: new Set() });
 
 /** 可拖拽排序行。 */
 const SortableRow = (
@@ -202,13 +68,14 @@ const SortableRow = (
   },
 ) => {
   const { className, style, ...restProps } = props;
+  const interaction = useContext(RowInteractionContext);
   const rowKey = props['data-row-key'];
   const numericKey = Number(rowKey);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: numericKey,
   });
-  const isHighlighted = rowKey !== undefined && numericKey === _highlightRowKey;
-  const isInMultiDrag = _multiDragActive && _multiDragSelectedKeys.has(numericKey);
+  const isHighlighted = rowKey !== undefined && numericKey === interaction.highlight;
+  const isInMultiDrag = interaction.dragging.has(numericKey);
   const combinedStyle: React.CSSProperties = {
     ...style,
     transform: CSS.Translate.toString(transform),
@@ -236,10 +103,12 @@ const SortableRow = (
   );
 };
 
-let draftSeq = 0;
+/** 模型详情：表结构在线编辑器（表基础信息 + 字段 + 主键/索引/分区/表属性全量保存）。 */
+const ModelingModelDetail: React.FC = () => {
+const draftSeq = useRef(0);
 const nextDraftKey = () => {
-  draftSeq += 1;
-  return draftSeq;
+  draftSeq.current += 1;
+  return draftSeq.current;
 };
 
 const emptyColumnDraft = (): ColumnDraft => ({
@@ -250,10 +119,12 @@ const emptyColumnDraft = (): ColumnDraft => ({
   nullable: false,
 });
 
-/** 模型详情：表结构在线编辑器（表基础信息 + 字段 + 主键/索引/分区/表属性全量保存）。 */
-const ModelingModelDetail: React.FC = () => {
+
+  const { tableName, setTableName, tableComment, setTableComment, rows, setRows, primaryKey, setPrimaryKey, indexes, setIndexes, partitionEnabled, setPartitionEnabled, partitionType, setPartitionType, partitionColumns, setPartitionColumns, partitionExpression, setPartitionExpression, properties, setProperties, dirty, setDirty } = useModelStructureDraft();
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const { currentProject } = useSecurityProject();
+  const beginStructureLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
   const returnAssetIdValue = new URLSearchParams(window.location.search).get('returnAssetId');
   const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
     ? Number(returnAssetIdValue)
@@ -272,23 +143,16 @@ const ModelingModelDetail: React.FC = () => {
   const [publishFlowEnabled, setPublishFlowEnabled] = useState(false);
   const [publishApproval, setPublishApproval] = useState<ApprovalInstance | null>(null);
   const [approvalSubmitting, setApprovalSubmitting] = useState(false);
-  const [tableName, setTableName] = useState('');
-  const [tableComment, setTableComment] = useState('');
-  const [rows, setRows] = useState<ColumnDraft[]>([]);
-  const [primaryKey, setPrimaryKey] = useState<string[]>([]);
-  const [indexes, setIndexes] = useState<IndexDraft[]>([]);
-  const [partitionEnabled, setPartitionEnabled] = useState(false);
-  const [partitionType, setPartitionType] = useState<string | undefined>();
-  const [partitionColumns, setPartitionColumns] = useState<string[]>([]);
-  const [partitionExpression, setPartitionExpression] = useState('');
   const [assistantRowKey, setAssistantRowKey] = useState<number | null>(null);
-  const [properties, setProperties] = useState<PropertyDraft[]>([]);
-  const [dirty, setDirty] = useState(false);
   const [typeCatalog, setTypeCatalog] = useState<ModelingTypeOption[]>([]);
   /** 同一份目录的引用版:供不便把 typeCatalog 加进依赖的回调（如 discoverStandards）读取。 */
   const typeCatalogRef = useRef<ModelingTypeOption[]>([]);
   const [validationIssues, setValidationIssues] = useState<ModelingValidationIssue[]>([]);
+  const editorRootRef = useRef<HTMLDivElement>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => { clearTimeout(highlightTimerRef.current); }, []);
   const [highlightRowKey, setHighlightRowKey] = useState<number>();
+  const [draggingKeys, setDraggingKeys] = useState<ReadonlySet<number>>(new Set());
   const [ddlOpen, setDdlOpen] = useState(false);
   const [ddlLoading, setDdlLoading] = useState(false);
   const [ddlScript, setDdlScript] = useState('');
@@ -401,6 +265,7 @@ const ModelingModelDetail: React.FC = () => {
 
   const loadStructure = useCallback(async () => {
     if (!modelId) return;
+    const isCurrent = beginStructureLoad();
     setLoading(true);
     try {
       // 并行加载模型信息和结构信息
@@ -408,6 +273,7 @@ const ModelingModelDetail: React.FC = () => {
         getModelingModel(modelId).catch(() => null),
         getModelingStructure(modelId),
       ]);
+      if (!isCurrent()) return;
       setStructure(data);
       setModelInfo(modelData);
       // B4(2026-09-17):物理表名默认为模型编码
@@ -474,6 +340,7 @@ const ModelingModelDetail: React.FC = () => {
           setImportConfig({ datasourceId: dsId, database: db, table: tbl });
           try {
             const columns = await previewModelingImportColumns(dsId, db, tbl);
+            if (!isCurrent()) return;
             if (columns?.length) {
               // 构建初始字段列表
               const initialRows: ColumnDraft[] = columns.map((column) => ({
@@ -502,12 +369,14 @@ const ModelingModelDetail: React.FC = () => {
               // 自动触发标准发现
               try {
                 const discovered = await discoverStandards(initialRows);
+                if (!isCurrent()) return;
                 setRows(discovered.rows);
                 if (discovered.matchCount > 0) {
                   message.success(`标准发现:匹配到 ${discovered.matchCount} 个字段的标准绑定`);
                 }
               } catch {
                 // 标准发现失败不影响字段导入,降级为空
+                if (!isCurrent()) return;
                 setRows(initialRows);
               }
               setDirty(true);
@@ -530,6 +399,7 @@ const ModelingModelDetail: React.FC = () => {
           setImportConfig(config);
           try {
             const columns = await previewModelingImportColumns(config.datasourceId, config.database, config.table);
+            if (!isCurrent()) return;
             if (columns?.length) {
               const initialRows: ColumnDraft[] = columns.map((column) => ({
                 key: nextDraftKey(),
@@ -555,11 +425,13 @@ const ModelingModelDetail: React.FC = () => {
               if (tableRemarks) setTableComment(tableRemarks);
               try {
                 const discovered = await discoverStandards(initialRows);
+                if (!isCurrent()) return;
                 setRows(discovered.rows);
                 if (discovered.matchCount > 0) {
                   message.success(`自动导入:匹配到 ${discovered.matchCount} 个字段的标准绑定`);
                 }
               } catch {
+                if (!isCurrent()) return;
                 setRows(initialRows);
               }
               setDirty(true);
@@ -595,6 +467,7 @@ const ModelingModelDetail: React.FC = () => {
             }));
             const discovered = await discoverStandards(currentRows);
             if (discovered.matchCount > 0) {
+              if (!isCurrent()) return;
               setRows(discovered.rows);
               setDirty(true);
               message.success(`标准发现:匹配到 ${discovered.matchCount} 个字段的标准绑定`);
@@ -605,11 +478,12 @@ const ModelingModelDetail: React.FC = () => {
         }
       }
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '表结构加载失败');
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [modelId, discoverStandards]);
+  }, [modelId, currentProject?.id, discoverStandards, beginStructureLoad]);
 
   /** 重新导入:用保存的 importConfig 重新拉取源表字段并覆盖当前字段列表。 */
   const handleReimport = useCallback(async () => {
@@ -1297,8 +1171,7 @@ const ModelingModelDetail: React.FC = () => {
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     // 清除多选拖拽标记与浮层
-    _multiDragActive = false;
-    _multiDragSelectedKeys = new Set<number>();
+    setDraggingKeys(new Set());
     setDragOverlayRows([]);
     if (!over || active.id === over.id) return;
     markDirty();
@@ -1365,8 +1238,7 @@ const ModelingModelDetail: React.FC = () => {
       selectedRowKeysRef.current.map((k) => Number(k)),
     );
     if (selectedKeys.has(activeNum) && selectedKeys.size > 1) {
-      _multiDragActive = true;
-      _multiDragSelectedKeys = selectedKeys;
+      setDraggingKeys(selectedKeys);
       setDragOverlayRows(rowsRef.current.filter((r) => selectedKeys.has(r.key)));
     } else {
       const row = rowsRef.current.find((r) => r.key === activeNum);
@@ -1701,11 +1573,10 @@ const ModelingModelDetail: React.FC = () => {
     const row = rows.find((item) => item.columnName.trim().toLowerCase() === issue.target!.toLowerCase());
     if (!row) return;
     setHighlightRowKey(row.key);
-    _highlightRowKey = row.key;
-    document.querySelector(`tr[data-row-key="${row.key}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    window.setTimeout(() => {
+    editorRootRef.current?.querySelector(`tr[data-row-key="${row.key}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => {
       setHighlightRowKey(undefined);
-      _highlightRowKey = undefined;
     }, 2000);
   };
 
@@ -2282,7 +2153,9 @@ const ModelingModelDetail: React.FC = () => {
               </div>
             ) : null}
             {rows.length ? (
-              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div ref={editorRootRef}>
+              <RowInteractionContext.Provider value={{ highlight: highlightRowKey, dragging: draggingKeys }}>
+              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => { setDraggingKeys(new Set()); setDragOverlayRows([]); }}>
                 <SortableContext items={rows.map((r) => r.key)} strategy={verticalListSortingStrategy}>
                   <Table<ColumnDraft>
                     rowKey="key"
@@ -2326,6 +2199,8 @@ const ModelingModelDetail: React.FC = () => {
                   ) : null}
                 </DragOverlay>
               </DndContext>
+              </RowInteractionContext.Provider>
+              </div>
             ) : (
               /* B7(2026-09-17):空字段时轻量空态,不渲染表头 */
               <YakEmpty

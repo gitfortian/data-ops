@@ -10,7 +10,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader.StdBindingStats;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelColumnMapper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.HashMap;
 import java.util.List;

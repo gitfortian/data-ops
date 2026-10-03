@@ -6,8 +6,8 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.metadata.dao.mapper.MdFieldDefMapper;
 import io.yak.ops.business.metadata.dao.mapper.MdTypeDefMapper;
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
-import io.yak.ops.common.bean.po.metadata.MdTypeDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdTypeDefPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.TypeCategory;
 import io.yak.ops.common.enums.metadata.MetadataEnums.TypeStatus;
 import java.util.List;

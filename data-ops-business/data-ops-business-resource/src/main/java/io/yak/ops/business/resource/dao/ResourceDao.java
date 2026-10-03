@@ -1,7 +1,7 @@
 package io.yak.ops.business.resource.dao;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import io.yak.ops.common.bean.po.resource.ResourcePO;
+import io.yak.ops.business.resource.dao.model.ResourcePO;
 import io.yak.ops.common.enums.resource.ResourceNodeType;
 import java.util.List;
 

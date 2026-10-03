@@ -5,7 +5,7 @@ import io.yak.ops.business.metadata.api.EntityDTO;
 import io.yak.ops.business.metadata.metamodel.MetadataFieldLocations;
 import io.yak.ops.business.metadata.metamodel.MetadataTypeRegistry;
 import io.yak.ops.business.metadata.metamodel.MetadataTypeRegistry.TypeDefinition;
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.sql.ResultSet;
 import java.util.Arrays;

@@ -1,6 +1,6 @@
 package io.yak.ops.business.metadata.metamodel;
 
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
 import java.util.Map;
 import java.util.Optional;
 

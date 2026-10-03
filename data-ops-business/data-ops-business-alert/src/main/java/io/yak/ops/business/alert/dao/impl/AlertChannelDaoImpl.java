@@ -3,7 +3,7 @@ package io.yak.ops.business.alert.dao.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.yak.ops.business.alert.dao.AlertChannelDao;
 import io.yak.ops.business.alert.dao.mapper.AlertChannelMapper;
-import io.yak.ops.common.bean.po.alert.AlertChannelPO;
+import io.yak.ops.business.alert.dao.model.AlertChannelPO;
 import io.yak.ops.common.enums.alert.AlertChannelStatus;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

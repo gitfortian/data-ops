@@ -20,7 +20,7 @@ import io.yak.ops.business.modeling.version.ModelPublishedStructureReader;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.business.semantic.api.ProcessApi;
 import io.yak.ops.business.semantic.api.StandardField;
-import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import java.time.Instant;
 import java.util.HashMap;

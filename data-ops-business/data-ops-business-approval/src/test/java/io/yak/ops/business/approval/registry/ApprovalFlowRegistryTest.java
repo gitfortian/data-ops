@@ -47,8 +47,9 @@ class ApprovalFlowRegistryTest {
 
   @Test
   void duplicateFlowCodeFailsAtStartup() {
-    assertThrows(IllegalStateException.class, () -> new ApprovalFlowRegistry(
-        providerOf(handler("MODEL_PUBLISH"), handler("MODEL_PUBLISH"))));
+    ApprovalFlowRegistry registry = new ApprovalFlowRegistry(
+        providerOf(handler("MODEL_PUBLISH"), handler("MODEL_PUBLISH")));
+    assertThrows(IllegalStateException.class, registry::afterSingletonsInstantiated);
   }
 
   @Test

@@ -3,7 +3,7 @@ package io.yak.ops.business.mdm.infrastructure.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmCollectLinkMapper;
 import io.yak.ops.business.mdm.domain.collect.MdmCollectLink;
-import io.yak.ops.common.bean.po.mdm.MdmCollectLinkPO;
+import io.yak.ops.business.mdm.dao.model.MdmCollectLinkPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

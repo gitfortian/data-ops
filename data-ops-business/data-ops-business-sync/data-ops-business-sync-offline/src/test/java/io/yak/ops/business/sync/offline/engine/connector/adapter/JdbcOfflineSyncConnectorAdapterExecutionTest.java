@@ -1,5 +1,6 @@
 package io.yak.ops.business.sync.offline.engine.connector.adapter;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -7,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import io.yak.ops.common.enums.datasource.DataSourceDbType;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +32,7 @@ class JdbcOfflineSyncConnectorAdapterExecutionTest {
     ObjectNode options = mapper.createObjectNode();
     options.put("table_path", "APP.ORDERS");
     adapter.resolveForExecution(
-        new ExecutionContext("jdbc", Role.SOURCE, "来源端", dataSource, options));
+        new ExecutionContext("jdbc", Role.SOURCE, "来源端", DataSourceFixtures.definition(dataSource), options));
 
     assertThat(options.path("url").asText())
         .isEqualTo("jdbc:oceanbase://127.0.0.1:2881/app");
@@ -58,7 +59,7 @@ class JdbcOfflineSyncConnectorAdapterExecutionTest {
     options.put("dialect", "mysql");
     options.put("table_path", "app.orders");
     adapter.resolveForExecution(
-        new ExecutionContext("jdbc", Role.SOURCE, "来源端", dataSource, options));
+        new ExecutionContext("jdbc", Role.SOURCE, "来源端", DataSourceFixtures.definition(dataSource), options));
 
     assertThat(options.path("url").asText())
         .isEqualTo("jdbc:mysql://127.0.0.1:4000/app");
@@ -85,7 +86,7 @@ class JdbcOfflineSyncConnectorAdapterExecutionTest {
     options.put("schema_save_mode", "CREATE_SCHEMA_WHEN_NOT_EXIST");
     options.put("table_path", "archive.orders");
     adapter.resolveForExecution(
-        new ExecutionContext("jdbc", Role.SINK, "目标端", dataSource, options));
+        new ExecutionContext("jdbc", Role.SINK, "目标端", DataSourceFixtures.definition(dataSource), options));
 
     assertThat(options.path("url").asText())
         .isEqualTo("jdbc:mysql://127.0.0.1:1111/archive");
@@ -135,7 +136,7 @@ class JdbcOfflineSyncConnectorAdapterExecutionTest {
     assertThatThrownBy(
             () ->
                 adapter.resolveForExecution(
-                    new ExecutionContext("jdbc", Role.SINK, "目标端", dataSource, options)))
+                    new ExecutionContext("jdbc", Role.SINK, "目标端", DataSourceFixtures.definition(dataSource), options)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("GBase 8c")
         .hasMessageContaining("Upsert/MERGE");
@@ -160,7 +161,7 @@ class JdbcOfflineSyncConnectorAdapterExecutionTest {
     options.put("dialect", "mysql");
     options.put("table_path", "SALES.ORDERS");
     adapter.resolveForExecution(
-        new ExecutionContext("jdbc", Role.SINK, "目标端", dataSource, options));
+        new ExecutionContext("jdbc", Role.SINK, "目标端", DataSourceFixtures.definition(dataSource), options));
 
     assertThat(options.path("url").asText())
         .isEqualTo("jdbc:sap://127.0.0.1:30013/?databaseName=HXE");
@@ -189,7 +190,7 @@ class JdbcOfflineSyncConnectorAdapterExecutionTest {
     ObjectNode options = mapper.createObjectNode();
     options.put("table_path", "orders");
     adapter.resolveForExecution(
-        new ExecutionContext("jdbc", Role.SOURCE, "来源端", dataSource, options));
+        new ExecutionContext("jdbc", Role.SOURCE, "来源端", DataSourceFixtures.definition(dataSource), options));
 
     assertThat(options.path("url").asText()).isEqualTo(jdbcUrl);
     assertThat(options.path("driver").asText()).isEqualTo(expectedDriver);

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmAttributeMapper;
 import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.api.StandardReferenceReader;
-import io.yak.ops.common.bean.po.mdm.MdmAttributePO;
+import io.yak.ops.business.mdm.dao.model.MdmAttributePO;
 import io.yak.ops.core.project.CurrentProject;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

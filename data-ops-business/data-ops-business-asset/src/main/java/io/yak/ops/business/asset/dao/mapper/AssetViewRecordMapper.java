@@ -1,7 +1,7 @@
 package io.yak.ops.business.asset.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.asset.AssetViewRecordPO;
+import io.yak.ops.business.asset.dao.model.AssetViewRecordPO;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper

@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.yak.ops.business.metadata.exception.MetadataException;
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
-import io.yak.ops.common.bean.po.metadata.MdTypeDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdTypeDefPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.TypeStatus;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import java.util.List;

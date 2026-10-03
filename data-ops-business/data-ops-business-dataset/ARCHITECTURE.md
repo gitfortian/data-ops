@@ -313,7 +313,7 @@ Repository contract 只暴露 Dataset-owned domain/value，不暴露 Controller 
 
 Dataset Flyway 按增量方式维护，当前依次为 `V1__baseline_dataset.sql`、`V2__dataset_source_publication_lock.sql` 与 `V3__dataset_query_subject_attribution.sql`。
 
-它可以复用 Datasource 模块的 `BusinessDatabaseConfiguration / ConditionalOnDataSourceEnabled / DataSourceProperties`；`DatasetDaoImpl` 沿用同一 datasource-enabled 条件，但业务角色不直接依赖 Datasource 配置能力。
+共享业务数据库、会话工厂与事务管理器由 Boot 装配；本模块只声明 Mapper/Flyway 和既有持久化条件，不导入 sibling 的数据库配置。
 
 ## 14. Change Rule
 

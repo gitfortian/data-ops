@@ -1,7 +1,7 @@
 package io.yak.ops.business.metric.repository;
 
 import io.yak.ops.business.metric.domain.Metric;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import java.util.List;
 
 /** 指标版本历史仓储接口。 */

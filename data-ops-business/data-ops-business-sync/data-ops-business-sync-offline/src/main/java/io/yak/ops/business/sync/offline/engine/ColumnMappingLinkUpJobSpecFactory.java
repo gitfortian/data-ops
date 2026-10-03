@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
+import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapterRegistry;
 import java.util.HashSet;
@@ -33,18 +33,18 @@ public class ColumnMappingLinkUpJobSpecFactory extends LinkUpJobSpecFactory {
 
   @Autowired
   public ColumnMappingLinkUpJobSpecFactory(
-      DataSourceDao dataSourceDao,
+      DataSourceReader dataSourceReader,
       @Qualifier("offlineSyncJsonMapper") ObjectMapper objectMapper,
       OfflineSyncConnectorAdapterRegistry adapterRegistry) {
-    super(dataSourceDao, objectMapper, adapterRegistry);
+    super(dataSourceReader, objectMapper, adapterRegistry);
     this.objectMapper = objectMapper;
   }
 
   /** Keeps focused unit tests and historical direct construction source-compatible. */
   public ColumnMappingLinkUpJobSpecFactory(
-      DataSourceDao dataSourceDao,
+      DataSourceReader dataSourceReader,
       ObjectMapper objectMapper) {
-    super(dataSourceDao, objectMapper);
+    super(dataSourceReader, objectMapper);
     this.objectMapper = objectMapper;
   }
 

@@ -33,6 +33,8 @@ class MetadataLayeringConventionTest {
   private static final Map<String, Set<String>> ALLOWED_INTERNAL =
       Map.ofEntries(
           Map.entry("config", Set.of()),
+          // Existing read-only overview assembly depends only on its persistence condition.
+          Map.entry("stat", Set.of("config")),
           // ticket 116 起 controller 还读采集任务的读写服务（它们与守护的执行体同住 harvest）。
           // ticket 117 起还读 query：搜索的应用服务住在 query 自己包里，controller 只做参数拆装。
           Map.entry("controller",
@@ -89,9 +91,7 @@ class MetadataLayeringConventionTest {
    */
   private static final Set<String> ALLOWED_PLUMBING_IMPORTS =
       Set.of(
-          "datasource.config.ConditionalOnDataSourceEnabled",
-          "datasource.config.BusinessDatabaseConfiguration",
-          "datasource.config.DataSourceProperties");
+          "datasource.config.ConditionalOnDataSourceEnabled");
 
   /** Repository adapter for the datasource deletion-guard SPI. */
   private static final Set<String> ALLOWED_INTEGRATION_SPI_IMPORTS =
@@ -323,6 +323,18 @@ class MetadataLayeringConventionTest {
         continue;
       }
       String imported = trimmed.substring("import ".length()).replace(";", "").trim();
+      // Registry currently returns its owning immutable-by-convention type metadata row.
+      // This exception permits that type only, never a mapper or DAO operation in detail.
+      if (file.relativePath().equals("detail/EntityDetailService.java")
+          && imported.equals(MODULE_PACKAGE + ".dao.model.MdTypeDefPO")) continue;
+      if (file.relativePath().equals("query/CatalogQueryService.java")
+          && imported.equals(MODULE_PACKAGE + ".dao.model.MdFieldDefPO")) continue;
+      if (file.relativePath().equals("controller/v1/MetadataOverviewController.java")
+          && Set.of(MODULE_PACKAGE + ".config.ConditionalOnMetadataPersistence",
+              MODULE_PACKAGE + ".stat.MetadataOverviewService",
+              MODULE_PACKAGE + ".stat.MetadataOverviewService.Overview").contains(imported)) {
+        continue; // Exact infrastructure annotation/read projection corridor, not a whole package allowance.
+      }
       if (!imported.startsWith(MODULE_PACKAGE + ".")) {
         continue;
       }

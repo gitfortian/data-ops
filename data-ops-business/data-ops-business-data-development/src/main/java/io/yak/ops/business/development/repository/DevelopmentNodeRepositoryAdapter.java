@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.development.dao.mapper.DevelopmentNodeMapper;
 import io.yak.ops.business.development.domain.DevelopmentNode;
-import io.yak.ops.common.bean.po.development.DevelopmentNodePO;
+import io.yak.ops.business.development.dao.model.DevelopmentNodePO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.spi.task.model.SqlDialect;
 import java.time.Instant;

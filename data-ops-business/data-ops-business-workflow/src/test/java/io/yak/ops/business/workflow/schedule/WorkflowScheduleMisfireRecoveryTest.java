@@ -7,8 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.workflow.dao.WorkflowScheduleTriggerDao;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
-import io.yak.ops.common.bean.po.workflow.WorkflowScheduleTriggerPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowScheduleTriggerPO;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;

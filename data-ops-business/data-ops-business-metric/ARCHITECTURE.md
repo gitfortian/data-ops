@@ -23,9 +23,9 @@ Existing tag/version/lineage packages retain their ownership; the Phase 5 packag
 
 - 自持 Flyway：`classpath:db/migration/yak-metric`，历史表 `flyway_schema_history_metric`，baseline 0。
 - Metric Flyway 在 Dataset Flyway 之后运行；V6 需以 `yak_dataset.id` 归一历史 Dataset Reference Usage 的消费方标识。
-- 共享数据源：`@Import(BusinessDatabaseConfiguration.class)`（datasource 模块提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager），与 semantic/modeling 同池。
+- 共享数据源：Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配（Boot 应用装配提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager），与 semantic/modeling 同池。
 - 事务：`@Transactional(transactionManager = "yakBusinessTransactionManager")`。
-- PO 位于 `data-ops-common` 的 `io.yak.ops.common.bean.po.metric`（平台惯例）。
+- PO 位于本模块 `io.yak.ops.business.metric.dao.model`；common 保留稳定共享契约。
 
 ## 分层规则
 

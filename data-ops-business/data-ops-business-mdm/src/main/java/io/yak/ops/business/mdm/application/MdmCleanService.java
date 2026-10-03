@@ -5,7 +5,7 @@ import io.yak.ops.business.audit.AuditEventType;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
-import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
+import io.yak.ops.business.mdm.domain.clean.MdmDedupKey;
 import io.yak.ops.business.mdm.domain.attribute.MdmAttribute;
 import io.yak.ops.business.mdm.domain.attribute.MdmAttributeType;
 import io.yak.ops.business.mdm.domain.clean.CleanJson;
@@ -388,15 +388,15 @@ public class MdmCleanService {
       int pageSize) {
     String keyExpr = DedupSql.combinedKeyExpr(expr.fields());
     String valueCondition = DedupSql.combinedValueCondition(expr.fields());
-    List<MdmDedupKeyRow> hits =
+    List<MdmDedupKey> hits =
         new ArrayList<>(
             recordRepository.countDedupKeys(entityId, ruleId, keyExpr, valueCondition));
     hits.sort(
-        Comparator.comparingLong(MdmDedupKeyRow::matchCount)
+        Comparator.comparingLong(MdmDedupKey::matchCount)
             .reversed()
-            .thenComparing(MdmDedupKeyRow::matchKey));
+            .thenComparing(MdmDedupKey::matchKey));
     List<DedupGroup> groups = new ArrayList<>();
-    for (MdmDedupKeyRow hit : slice(hits, pageNo, pageSize)) {
+    for (MdmDedupKey hit : slice(hits, pageNo, pageSize)) {
       List<MdmRecord> members =
           recordRepository.listByDedupKey(entityId, keyExpr, hit.matchKey(), GROUP_MEMBER_LIMIT);
       groups.add(buildGroup(expr, attrNames, members, hit.matchCount(), hit.matchKey()));
@@ -416,7 +416,7 @@ public class MdmCleanService {
     for (MdmMatchField field : expr.fields()) {
       String keyExpr = DedupSql.fieldKeyExpr(field);
       String valueCondition = DedupSql.fieldValueCondition(field);
-      for (MdmDedupKeyRow row :
+      for (MdmDedupKey row :
           recordRepository.countDedupKeys(entityId, ruleId, keyExpr, valueCondition)) {
         hits.add(new FieldHit(field, keyExpr, row));
       }
@@ -824,7 +824,7 @@ public class MdmCleanService {
     int affected = 0;
     for (MdmRecord record : records) {
       Map<String, Object> attrs = safeObject(record.attributes());
-      Map<String, Object> transformed = applyTransformExpr(rule, attrs);
+      Map<String, Object> transformed = CleanRulePolicy.apply(rule, attrs);
       if (transformed == null) {
         continue;
       }
@@ -874,7 +874,7 @@ public class MdmCleanService {
       int count = 0;
       for (MdmRecord record : records) {
         Map<String, Object> attrs = safeObject(record.attributes());
-        Map<String, Object> transformed = applyTransformExpr(rule, attrs);
+        Map<String, Object> transformed = CleanRulePolicy.apply(rule, attrs);
         if (transformed != null) {
           Map<String, Object> overrides = safeObject(record.attributeOverrides());
           for (Map.Entry<String, Object> entry : transformed.entrySet()) {
@@ -902,33 +902,6 @@ public class MdmCleanService {
     }
   }
 
-  /** 按规则类型分发表达式解析与执行;未知类型抛异常。 */
-  private Map<String, Object> applyTransformExpr(MdmCleanRule rule, Map<String, Object> attrs) {
-    return switch (rule.ruleType()) {
-      case STANDARDIZE -> {
-        StandardizeExpr expr;
-        try {
-          expr = CleanJson.parseStandardizeExpr(rule.ruleExpr());
-        } catch (IllegalArgumentException exception) {
-          throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
-        }
-        yield expr.apply(attrs);
-      }
-      case COMPLETE -> {
-        CompleteExpr expr;
-        try {
-          expr = CleanJson.parseCompleteExpr(rule.ruleExpr());
-        } catch (IllegalArgumentException exception) {
-          throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
-        }
-        yield expr.apply(attrs);
-      }
-      default -> throw new MdmException(
-          MdmErrorCode.INVALID_CLEAN_RULE,
-          "规则类型 " + rule.ruleType() + " 不支持标准化/补全执行");
-    };
-  }
-
   // ==== 通用规则校验(ticket 57) ====
 
   private void validateGenericRule(
@@ -948,107 +921,7 @@ public class MdmCleanService {
         .filter(attribute -> attribute.type() == MdmAttributeType.PK)
         .map(MdmAttribute::code)
         .collect(Collectors.toSet());
-    switch (ruleType) {
-      case DEDUP -> validateDedupExpr(ruleExprJson, validCodes);
-      case STANDARDIZE -> validateStandardizeExpr(ruleExprJson, validCodes, pkCodes);
-      case COMPLETE -> validateCompleteExpr(ruleExprJson, validCodes, pkCodes);
-    }
-  }
-
-  private void validateDedupExpr(String json, Set<String> validCodes) {
-    MdmCleanRuleExpr expr;
-    try {
-      expr = CleanJson.parseExpr(json);
-    } catch (IllegalArgumentException exception) {
-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
-    }
-    if (expr.fields() == null || expr.fields().isEmpty()) {
-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "至少配置一个匹配字段");
-    }
-    Set<String> seen = new HashSet<>();
-    for (MdmMatchField field : expr.fields()) {
-      if (field == null || field.attrCode() == null || field.attrCode().isBlank()) {
-        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "匹配字段编码不能为空");
-      }
-      if (!DedupSql.isValidAttrCode(field.attrCode())) {
-        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "非法属性编码: " + field.attrCode());
-      }
-      if (!validCodes.contains(field.attrCode())) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "匹配字段必须是实体已定义属性: " + field.attrCode());
-      }
-      if (!seen.add(field.attrCode())) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "同一字段仅允许出现一次: " + field.attrCode());
-      }
-      if (field.matchType() == null) {
-        throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "匹配方式不能为空");
-      }
-    }
-  }
-
-  private void validateStandardizeExpr(
-      String json, Set<String> validCodes, Set<String> pkCodes) {
-    StandardizeExpr expr;
-    try {
-      expr = CleanJson.parseStandardizeExpr(json);
-    } catch (IllegalArgumentException exception) {
-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
-    }
-    if (expr.fields() == null || expr.fields().isEmpty()) {
-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "至少配置一个标准化字段");
-    }
-    for (Map.Entry<String, Map<String, String>> entry : expr.fields().entrySet()) {
-      if (!validCodes.contains(entry.getKey())) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "字段必须是实体已定义属性: " + entry.getKey());
-      }
-      rejectPkTransform(entry.getKey(), pkCodes);
-      if (!DedupSql.isValidAttrCode(entry.getKey())) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "非法属性编码: " + entry.getKey());
-      }
-      if (entry.getValue() == null || entry.getValue().isEmpty()) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "字段 " + entry.getKey() + " 的值映射不能为空");
-      }
-    }
-  }
-
-  private void validateCompleteExpr(
-      String json, Set<String> validCodes, Set<String> pkCodes) {
-    CompleteExpr expr;
-    try {
-      expr = CleanJson.parseCompleteExpr(json);
-    } catch (IllegalArgumentException exception) {
-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, exception.getMessage());
-    }
-    if (expr.defaults() == null || expr.defaults().isEmpty()) {
-      throw new MdmException(MdmErrorCode.INVALID_CLEAN_RULE, "至少配置一个补全默认值");
-    }
-    for (Map.Entry<String, String> entry : expr.defaults().entrySet()) {
-      if (!validCodes.contains(entry.getKey())) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "字段必须是实体已定义属性: " + entry.getKey());
-      }
-      rejectPkTransform(entry.getKey(), pkCodes);
-      if (!DedupSql.isValidAttrCode(entry.getKey())) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "非法属性编码: " + entry.getKey());
-      }
-      if (entry.getValue() == null) {
-        throw new MdmException(
-            MdmErrorCode.INVALID_CLEAN_RULE, "字段 " + entry.getKey() + " 的默认值不能为空");
-      }
-    }
-  }
-
-  private static void rejectPkTransform(String attributeCode, Set<String> pkCodes) {
-    if (pkCodes.contains(attributeCode)) {
-      throw new MdmException(
-          MdmErrorCode.INVALID_CLEAN_RULE,
-          "PK 属性参与 master_id 身份计算，不能通过清洗规则修改: " + attributeCode);
-    }
+    CleanRulePolicy.validate(ruleType, ruleExprJson, validCodes, pkCodes);
   }
 
   /**
@@ -1085,5 +958,5 @@ public class MdmCleanService {
 
   private record MergeTarget(MdmRecord master, List<MdmRecord> merged) {}
 
-  private record FieldHit(MdmMatchField field, String keyExpr, MdmDedupKeyRow row) {}
+  private record FieldHit(MdmMatchField field, String keyExpr, MdmDedupKey row) {}
 }

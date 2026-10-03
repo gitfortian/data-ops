@@ -1,8 +1,8 @@
 package io.yak.ops.business.metadata.metamodel;
 
 import io.yak.ops.business.metadata.exception.MetadataException;
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
-import io.yak.ops.common.bean.po.metadata.MdTypeDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdTypeDefPO;
 import io.yak.ops.common.constant.metadata.MetadataLineageAssetTypes;
 import io.yak.ops.common.enums.metadata.MetadataEnums.BaseType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.MatchType;

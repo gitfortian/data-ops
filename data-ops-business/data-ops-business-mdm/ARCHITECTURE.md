@@ -33,9 +33,9 @@ io.yak.ops.business.mdm
 ## 持久化
 
 - 自持 Flyway:`classpath:db/migration/yak-mdm`,历史表 `flyway_schema_history_mdm`,baseline 0。
-- 共享数据源:`@Import(BusinessDatabaseConfiguration.class)`(datasource 模块提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager),与 modeling/semantic 同池。
+- 共享数据源:Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配(Boot 应用装配提供 yakBusinessDataSource / yakBusinessSqlSessionFactory / yakBusinessTransactionManager),与 modeling/semantic 同池。
 - 事务:`@Transactional(transactionManager = "yakBusinessTransactionManager")`。
-- PO 位于 `data-ops-common` 的 `io.yak.ops.common.bean.po.mdm`(平台惯例)。
+- PO 位于本模块 `io.yak.ops.business.mdm.dao.model`；common 保留稳定共享契约。
 
 ## 分层规则
 
@@ -44,7 +44,9 @@ io.yak.ops.business.mdm
 - Repository:项目空间绑定(每次读写绑定 `CurrentProject`),live-row 语义,无业务规则。
 - Infrastructure 适配层:对 datasource/sync/quality/data-service/semantic/lineage/security/dataset 的**唯一** import 点,业务层不直接依赖被复用模块内部类型。
 
-## 迁移所有权(规划,合入后不可再编辑)
+## 迁移所有权
+
+当前可执行迁移为 `V1__mdm_baseline.sql`。下表版本号是合并文件 `-- Source:` 段的历史出处，不是独立迁移文件。新的结构变化使用前向增量迁移，不再重新生成已发布基线。
 
 | 表 | 迁移 | ticket |
 | --- | --- | --- |

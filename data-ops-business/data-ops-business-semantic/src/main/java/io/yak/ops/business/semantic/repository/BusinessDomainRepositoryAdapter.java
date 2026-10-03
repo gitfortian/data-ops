@@ -3,7 +3,7 @@ package io.yak.ops.business.semantic.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.semantic.dao.mapper.SemanticDomainMapper;
 import io.yak.ops.business.semantic.api.BusinessDomain;
-import io.yak.ops.common.bean.po.semantic.SemanticDomainPO;
+import io.yak.ops.business.semantic.dao.model.SemanticDomainPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

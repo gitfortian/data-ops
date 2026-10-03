@@ -7,7 +7,7 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.security.application.DataCategoryService;
-import io.yak.ops.common.bean.po.security.DsecDataCategoryPO;
+import io.yak.ops.business.security.dao.model.DsecDataCategoryPO;
 import io.yak.ops.common.constant.security.SecurityPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

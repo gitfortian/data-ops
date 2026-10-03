@@ -85,6 +85,8 @@ public class UserResourceServiceImpl
 
   private final ResourceExtend resourceExtend;
 
+  private final ResourceGrantPolicy grantPolicy;
+
   /**
    * 创建用户资源权限服务。
    *
@@ -109,6 +111,7 @@ public class UserResourceServiceImpl
     this.projectService = projectService;
     this.resourceTypeService = resourceTypeService;
     this.resourceExtend = resourceExtend;
+    this.grantPolicy = new ResourceGrantPolicy(projectService, resourceTypeService);
   }
 
   /**
@@ -158,7 +161,7 @@ public class UserResourceServiceImpl
   public List<MByUDataVO> getManagerByUserDataList(
           MByUDataQueryDTO queryDTO) {
 
-    checkParam(queryDTO);
+    grantPolicy.validate(queryDTO);
 
     Long projectId = queryDTO.getProjectId();
     Long resourceTypeId =
@@ -226,7 +229,7 @@ public class UserResourceServiceImpl
   getManagerByResourceDataList(
           MByRDataQueryDTO queryDTO) {
 
-    checkParam(queryDTO);
+    grantPolicy.validate(queryDTO);
 
     List<UserBriefVO> userList =
             userService
@@ -391,7 +394,7 @@ public class UserResourceServiceImpl
   public void assignResourcePermission(
           AssignToOneUserDTO assignDTO) {
 
-    checkParam(assignDTO);
+    grantPolicy.validate(assignDTO);
 
     Long userId = assignDTO.getUserId();
     Long projectId = assignDTO.getProjectId();
@@ -462,7 +465,7 @@ public class UserResourceServiceImpl
   public void assignResourcePermission(
           AssignToManyUserDTO assignDTO) {
 
-    checkParam(assignDTO);
+    grantPolicy.validate(assignDTO);
 
     List<Long> userIdList =
             normalizeIds(
@@ -542,7 +545,7 @@ public class UserResourceServiceImpl
   public void batchAssignResourcePermission(
           BatchAssignDTO assignDTO) {
 
-    checkParam(assignDTO);
+    grantPolicy.validate(assignDTO);
 
     List<Long> userIdList =
             normalizeIds(
@@ -678,7 +681,7 @@ public class UserResourceServiceImpl
   public PagingData<MByRVO> getManageByResourcePage(
           MByRQueryDTO queryDTO) {
 
-    checkParam(queryDTO);
+    grantPolicy.validate(queryDTO);
 
     boolean viewControlEnabled =
             getViewPermissionControlStatus();
@@ -1384,256 +1387,6 @@ public class UserResourceServiceImpl
     return new PagingData<>(
             resultList,
             resourcePage.getPagination());
-  }
-
-  /**
-   * 校验资源控制层级参数。
-   */
-  private void checkParam(
-          Integer controlLevel,
-          Long projectId,
-          Long resourceTypeId,
-          Long resourceId) {
-
-    if (projectId == null) {
-      throw new YakSecurityException(
-              ResultCode.PROJECT_ID_CANNOT_BE_NULL);
-    }
-
-    if (resourceTypeId == null
-            && resourceId != null) {
-
-      throw new YakSecurityException(
-              ResultCode.RESOURCE_ASSIGN_ERROR);
-    }
-
-    if (controlLevel == null
-            || ControlLevelCode.getByType(
-            controlLevel) == null) {
-
-      throw new YakSecurityException(
-              ResultCode
-                      .RESOURCE_INVALID_CONTROL_LEVEL);
-    }
-  }
-
-  /**
-   * 校验按资源查询参数。
-   */
-  private void checkParam(
-          MByRDataQueryDTO queryDTO) {
-
-    if (queryDTO == null) {
-      throw new IllegalArgumentException(
-              "按资源查询条件不能为空");
-    }
-
-    checkParam(
-            queryDTO.getControlLevel(),
-            queryDTO.getProjectId(),
-            queryDTO.getResourceTypeId(),
-            queryDTO.getResourceId());
-  }
-
-  /**
-   * 校验按用户查询参数。
-   */
-  private void checkParam(
-          MByUDataQueryDTO queryDTO) {
-
-    if (queryDTO == null) {
-      throw new IllegalArgumentException(
-              "按用户查询条件不能为空");
-    }
-
-    if (queryDTO.getUserId() == null) {
-      throw new YakSecurityException(
-              ResultCode.USER_ID_CANNOT_BE_NULL);
-    }
-
-    if (ControlLevelCode.getByType(
-            queryDTO.getControlLevel()) == null) {
-
-      throw new YakSecurityException(
-              ResultCode
-                      .RESOURCE_INVALID_CONTROL_LEVEL);
-    }
-
-    checkParam(
-            queryDTO.getShowLevel(),
-            queryDTO.getProjectId(),
-            queryDTO.getResourceTypeId());
-  }
-
-  /**
-   * 校验单用户分配参数。
-   */
-  private void checkParam(
-          AssignToOneUserDTO assignDTO) {
-
-    if (assignDTO == null) {
-      throw new IllegalArgumentException(
-              "单用户资源分配参数不能为空");
-    }
-
-    if (assignDTO.getUserId() == null) {
-      throw new YakSecurityException(
-              ResultCode.USER_ID_CANNOT_BE_NULL);
-    }
-
-    if (ControlLevelCode.getByType(
-            assignDTO.getControlLevel()) == null) {
-
-      throw new YakSecurityException(
-              ResultCode
-                      .RESOURCE_INVALID_CONTROL_LEVEL);
-    }
-
-    if (assignDTO.getProjectId() == null
-            && assignDTO.getResourceTypeId()
-            != null) {
-
-      throw new YakSecurityException(
-              ResultCode.RESOURCE_ASSIGN_ERROR_2);
-    }
-  }
-
-  /**
-   * 校验多用户分配参数。
-   */
-  private void checkParam(
-          AssignToManyUserDTO assignDTO) {
-
-    if (assignDTO == null) {
-      throw new IllegalArgumentException(
-              "多用户资源分配参数不能为空");
-    }
-
-    checkParam(
-            assignDTO.getControlLevel(),
-            assignDTO.getProjectId(),
-            assignDTO.getResourceTypeId(),
-            assignDTO.getResourceId());
-  }
-
-  /**
-   * 校验批量分配参数。
-   */
-  private void checkParam(
-          BatchAssignDTO assignDTO) {
-
-    if (assignDTO == null) {
-      throw new IllegalArgumentException(
-              "批量资源分配参数不能为空");
-    }
-
-    if (assignDTO.getUserIdList() == null) {
-      throw new YakSecurityException(
-              ResultCode.USER_ID_CANNOT_BE_NULL);
-    }
-
-    if (assignDTO.getAssignFlag() == null) {
-      throw new YakSecurityException(
-              ResultCode
-                      .RESOURCE_ASSIGN_BATCH_FLAG_CANNOT_BE_NULL);
-    }
-
-    if (assignDTO.getProjectId() == null
-            && assignDTO.getResourceTypeId()
-            != null) {
-
-      throw new YakSecurityException(
-              ResultCode.RESOURCE_ASSIGN_ERROR_2);
-    }
-
-    if (ControlLevelCode.getByType(
-            assignDTO.getControlLevel()) == null) {
-
-      throw new YakSecurityException(
-              ResultCode
-                      .RESOURCE_INVALID_CONTROL_LEVEL);
-    }
-  }
-
-  /**
-   * 校验按资源分页查询参数。
-   */
-  private void checkParam(
-          MByRQueryDTO queryDTO) {
-
-    if (queryDTO == null) {
-      throw new IllegalArgumentException(
-              "资源权限分页查询条件不能为空");
-    }
-
-    checkParam(
-            queryDTO.getShowLevel(),
-            queryDTO.getProjectId(),
-            queryDTO.getResourceTypeId());
-  }
-
-  /**
-   * 校验资源展示层级。
-   */
-  private void checkParam(
-          Integer showLevel,
-          Long projectId,
-          Long resourceTypeId) {
-
-    ShowLevelCode showLevelCode =
-            ShowLevelCode.getByType(
-                    showLevel);
-
-    if (showLevelCode == null) {
-      throw new YakSecurityException(
-              ResultCode
-                      .RESOURCE_INVALID_SHOW_LEVEL);
-    }
-
-    if (showLevel
-            >= ShowLevelCode
-            .RESOURCE_TYPE
-            .getType()) {
-
-      if (projectId == null) {
-        throw new YakSecurityException(
-                ResultCode
-                        .RESOURCE_SHOW_LEVEL_ERROR);
-      }
-
-      ProjectBriefVO project =
-              projectService
-                      .getProjectBriefByProjectId(
-                              projectId);
-
-      if (project == null) {
-        throw new YakSecurityException(
-                ResultCode.PROJECT_NOT_EXISTS);
-      }
-    }
-
-    if (showLevel
-            >= ShowLevelCode
-            .RESOURCE
-            .getType()) {
-
-      if (resourceTypeId == null) {
-        throw new YakSecurityException(
-                ResultCode
-                        .RESOURCE_SHOW_LEVEL_ERROR_2);
-      }
-
-      ResourceTypeVO resourceType =
-              resourceTypeService
-                      .getResourceTypeByResourceTypeId(
-                              resourceTypeId);
-
-      if (resourceType == null) {
-        throw new YakSecurityException(
-                ResultCode
-                        .RESOURCE_TYPE_NOT_EXISTS);
-      }
-    }
   }
 
   /**

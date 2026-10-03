@@ -1,8 +1,8 @@
 package io.yak.ops.business.workflow.repository;
 
 import io.yak.ops.business.workflow.dao.WorkflowExecutionDao;
-import io.yak.ops.common.bean.po.workflow.WorkflowExecutionPO;
-import io.yak.ops.common.bean.po.workflow.WorkflowNodeExecutionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowExecutionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowNodeExecutionPO;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;

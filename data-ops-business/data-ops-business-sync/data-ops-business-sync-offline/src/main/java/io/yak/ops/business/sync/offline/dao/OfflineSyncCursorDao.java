@@ -1,6 +1,6 @@
 package io.yak.ops.business.sync.offline.dao;
 
-import io.yak.ops.common.bean.po.sync.offline.OfflineSyncCursorPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineSyncCursorPO;
 import java.time.LocalDateTime;
 
 /** 离线同步 Cursor 数据访问接口。 */

@@ -5,7 +5,7 @@ import io.yak.ops.business.metadata.dao.mapper.MdChangeMapper;
 import io.yak.ops.business.metadata.dao.model.CatalogAssetRow;
 import io.yak.ops.business.metadata.dao.model.CatalogAssetState;
 import io.yak.ops.business.metadata.dao.model.CatalogPresenceRow;
-import io.yak.ops.common.bean.po.metadata.MdChangePO;
+import io.yak.ops.business.metadata.dao.model.MdChangePO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ChangeType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import java.time.LocalDateTime;

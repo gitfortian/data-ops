@@ -4,8 +4,8 @@ import io.yak.ops.business.workflow.schedule.trigger.WorkflowScheduleTriggerCoor
 
 import io.yak.ops.business.workflow.dao.WorkflowScheduleTriggerDao;
 import io.yak.ops.business.workflow.domain.WorkflowScheduleTriggerIdentity;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
-import io.yak.ops.common.bean.po.workflow.WorkflowScheduleTriggerPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowScheduleTriggerPO;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.UUID;

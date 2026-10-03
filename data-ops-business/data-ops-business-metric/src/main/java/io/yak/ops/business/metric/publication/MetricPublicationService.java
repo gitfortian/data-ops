@@ -13,9 +13,9 @@ import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
 import io.yak.ops.business.metric.support.MetricSnapshotDigest;
-import io.yak.ops.common.bean.po.metric.MetricActivePublicationPO;
-import io.yak.ops.common.bean.po.metric.MetricPublicationEventPO;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricActivePublicationPO;
+import io.yak.ops.business.metric.dao.model.MetricPublicationEventPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import java.time.LocalDateTime;
 import java.util.List;

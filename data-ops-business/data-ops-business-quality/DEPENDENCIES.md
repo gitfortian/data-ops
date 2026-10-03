@@ -152,7 +152,7 @@ Quality 对 Datasource 模块只有两个明确入口：
 
 ```text
 config/QualityConfiguration
-    -> datasource.config.BusinessDatabaseConfiguration
+    -> Boot config.persistence.BusinessDatabaseConfiguration (应用装配，无 business import)
        # infrastructure wiring only
 
 gateway/datasource/DataSourceQualityCatalogAdapter

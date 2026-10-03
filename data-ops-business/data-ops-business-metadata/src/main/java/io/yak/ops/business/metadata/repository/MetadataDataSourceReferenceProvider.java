@@ -3,7 +3,7 @@ package io.yak.ops.business.metadata.repository;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.datasource.api.DataSourceReferenceProvider;
 import io.yak.ops.business.metadata.dao.mapper.MdCollectJobMapper;
-import io.yak.ops.common.bean.po.metadata.MdCollectJobPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectJobPO;
 import io.yak.ops.core.project.CurrentProject;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

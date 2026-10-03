@@ -8,7 +8,7 @@ import io.yak.ops.business.metric.domain.MetricValidationEvidence;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ProviderState;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationIssue;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationResult;
-import io.yak.ops.common.bean.po.metric.MetricValidationEvidencePO;
+import io.yak.ops.business.metric.dao.model.MetricValidationEvidencePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import org.springframework.stereotype.Repository;

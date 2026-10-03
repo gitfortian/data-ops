@@ -4,11 +4,11 @@
 
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | 编译 | PO(`bean.po.semantic`)、权限码(`constant.semantic`)、错误码(`enums.semantic`)——平台惯例 |
+| `data-ops-common` | 编译 | 、权限码(`constant.semantic`)、错误码(`enums.semantic`)——平台惯例 |
 | `data-security-spring-boot-starter` | 编译 | `Result`/`PagingData`/`BusinessException`/`@RequiresPermission`/`CurrentUserProvider` |
 | `data-ops-business-audit` | 编译 | `BusinessAuditService`/`AuditTransactions` 审计门面(fail-open) |
 | `data-ops-business-approval` | 编译 | 标准生效审批:`approval` 包经 `ApprovalApi` 发起 STANDARD_PUBLISH 单 + `ApprovalFlowHandler` 回调批准即启用(同事务);前端发起入口见语义缺口单 03 |
-| `data-ops-business-datasource` | 编译(optional) | **仅基础设施**:`BusinessDatabaseConfiguration`(共享数据源/SqlSessionFactory/事务管理器)与 `ConditionalOnDataSourceEnabled`;36 起按其公共契约做连通性校验。禁止使用其内部实现类型 |
+| `data-ops-business-datasource` | 编译(optional) | `ConditionalOnDataSourceEnabled` 持久化条件;36 起按其公共契约做连通性校验。禁止使用其内部实现类型 |
 
 ## 被依赖(入向,规划)
 

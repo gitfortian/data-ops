@@ -7,7 +7,7 @@ import io.yak.ops.business.metric.catalog.MetricReferenceResolver.ReferenceResol
 import io.yak.ops.business.metric.catalog.MetricReferenceResolver.ResolutionStatus;
 import io.yak.ops.business.metric.domain.Metric;
 import io.yak.ops.business.metric.repository.MetricDependencyRepository;
-import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
+import io.yak.ops.business.metric.dao.model.MetricDependencyPO;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;

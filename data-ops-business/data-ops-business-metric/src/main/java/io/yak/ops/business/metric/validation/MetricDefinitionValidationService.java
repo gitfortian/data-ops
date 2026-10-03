@@ -21,7 +21,7 @@ import io.yak.ops.business.metric.domain.MetricValidationEvidence.Severity;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationIssue;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationResult;
 import io.yak.ops.business.semantic.api.StandardKind;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

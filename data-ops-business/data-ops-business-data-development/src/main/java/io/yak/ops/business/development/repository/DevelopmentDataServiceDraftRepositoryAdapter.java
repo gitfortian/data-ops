@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.development.dao.mapper.DevelopmentDataServiceDraftMapper;
 import io.yak.ops.business.development.domain.DevelopmentDataServiceDefinition;
 import io.yak.ops.business.development.domain.DevelopmentDataServiceDraft;
-import io.yak.ops.common.bean.po.development.DevelopmentDataServiceDraftPO;
+import io.yak.ops.business.development.dao.model.DevelopmentDataServiceDraftPO;
 import java.time.Instant;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;

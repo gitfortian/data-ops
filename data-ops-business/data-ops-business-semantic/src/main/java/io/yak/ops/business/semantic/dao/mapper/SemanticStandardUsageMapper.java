@@ -1,7 +1,7 @@
 package io.yak.ops.business.semantic.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticStandardUsagePO;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardUsagePO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

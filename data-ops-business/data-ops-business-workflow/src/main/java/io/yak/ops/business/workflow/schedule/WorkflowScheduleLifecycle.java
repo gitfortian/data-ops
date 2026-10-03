@@ -7,7 +7,7 @@ import io.yak.ops.business.workflow.schedule.trigger.WorkflowSchedulePendingTrig
 
 import io.yak.framework.schedule.api.ScheduleSnapshot;
 import io.yak.ops.business.workflow.dao.WorkflowScheduleDao;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import io.yak.ops.common.bean.vo.workflow.WorkflowScheduleVO;
 import java.time.Instant;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

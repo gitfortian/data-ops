@@ -36,8 +36,7 @@ export const TRIGGER_LABELS: Record<CollectTriggerType, string> = {
 };
 
 /** 后端 LocalDateTime 的 ISO 串 → 'YYYY-MM-DD HH:mm:ss'（与 lifecycle 同法，不引新依赖）。 */
-export const formatMetadataTime = (value?: string | null): string =>
-  value ? String(value).replace('T', ' ').slice(0, 19) : '-';
+export { formatMetadataTime } from '@/services/metadata/presentation';
 
 export const formatDuration = (ms?: number | null): string => {
   if (ms == null) return '-';

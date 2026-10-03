@@ -7,9 +7,10 @@ import io.yak.ops.business.datasource.dao.DataSourceDao;
 import io.yak.ops.business.datasource.dao.DataSourceDao.PageQuery;
 import io.yak.ops.business.datasource.dao.model.DataSourceSummaryRow;
 import io.yak.ops.business.datasource.domain.DataSourceDefinition;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import io.yak.ops.business.datasource.domain.DataSourceQuery;
 import io.yak.ops.business.datasource.domain.DataSourceSummary;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import io.yak.ops.common.enums.datasource.DataSourceConnStatus;
 import io.yak.ops.common.enums.datasource.DataSourceDbType;
 import io.yak.ops.core.project.CurrentProject;
@@ -102,6 +103,16 @@ public class DataSourceRepositoryAdapter implements DataSourceRepository {
   @Override
   public List<DataSourceDefinition> findAll(DataSourceDbType dbType) {
     return dao.selectAll(currentProjectId(), dbType).stream().map(this::toDomain).toList();
+  }
+
+  @Override
+  public List<DataSourceReference> findReferences(List<Long> ids) {
+    long projectId = currentProjectId();
+    if (ids == null || ids.isEmpty()) return List.of();
+    if (ids.size() > 1000) throw new IllegalArgumentException("最多批量读取 1000 个数据源");
+    return dao.selectReferences(projectId, ids).stream()
+        .map(row -> new DataSourceReference(row.getId(), row.getProjectId(), row.getName(), row.getDbType()))
+        .toList();
   }
 
   @Override

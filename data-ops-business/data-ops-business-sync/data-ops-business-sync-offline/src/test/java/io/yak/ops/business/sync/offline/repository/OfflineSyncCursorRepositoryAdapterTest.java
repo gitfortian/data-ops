@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 import io.yak.ops.business.sync.offline.dao.OfflineSyncCursorDao;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.domain.OfflineSyncCursor;
-import io.yak.ops.common.bean.po.sync.offline.OfflineSyncCursorPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineSyncCursorPO;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 

@@ -1,8 +1,8 @@
 package io.yak.ops.business.workflow.dao;
 
-import io.yak.ops.common.bean.po.workflow.WorkflowExecutionPO;
-import io.yak.ops.common.bean.po.workflow.WorkflowNodeAttemptPO;
-import io.yak.ops.common.bean.po.workflow.WorkflowNodeExecutionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowExecutionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowNodeAttemptPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowNodeExecutionPO;
 import java.util.List;
 
 /** 工作流执行聚合与运行索引数据访问接口。 */

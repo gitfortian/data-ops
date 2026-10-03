@@ -21,7 +21,7 @@ import io.yak.ops.business.metric.domain.MetricValidationEvidence;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationIssue;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ValidationResult;
 import io.yak.ops.business.metric.domain.MetricValidationEvidence.ProviderState;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import io.yak.ops.business.semantic.api.StandardKind;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
