@@ -2,13 +2,18 @@ package io.yak.ops.business.metadata.architecture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.yak.ops.business.metadata.dao.mapper.LineageCatalogRowMapper;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -19,14 +24,16 @@ import org.junit.jupiter.api.Test;
  * {@code SharedTableWritePathContractTest} 守 lineage 那一侧，本类守自己这一侧：
  * 目录<b>永远只有软删</b>，且软删不许顺手碰别人的列。
  *
- * <p>{@code MetadataPresenceService} 的四道闸里，"上一轮"那一条完全写在查询条件上
+ * <p>语句正文原来在 XML 里；XML 已移除，形状改由 Mapper 注解承载，本类经反射读注解 SQL，
+ * 断言口径不变。{@code MetadataPresenceService} 的四道闸里，"上一轮"那一条完全写在查询条件上
  * （排除 dry-run/FAILED、按开始时刻倒序取一条），SQL 与 Java 两侧都无断言可依，只能在文本上钉住。
  */
 class CatalogPresenceStatementTest {
 
   private static final String TABLE = "yak_metadata_asset";
-  private static final Path MAPPER_XML =
-      Path.of("src", "main", "resources", "mapper", "metadata", "LineageCatalogRowMapper.xml");
+  private static final Path MAPPER_DIR =
+      Path.of("src", "main", "java", "io", "yak", "ops", "business", "metadata", "dao", "mapper");
+  private static final Path CATALOG_MAPPER = MAPPER_DIR.resolve("LineageCatalogRowMapper.java");
   private static final Path PRESENCE_SERVICE =
       Path.of("src", "main", "java", "io", "yak", "ops", "business", "metadata", "harvest",
           "MetadataPresenceService.java");
@@ -39,16 +46,16 @@ class CatalogPresenceStatementTest {
     // 实体消失不代表它从未存在：治理历史、标签、人工状态都挂在这一行上（plan §2.4.5）。
     // 真要从库里抹掉，那是 ticket 119 之后一次显式的归档工单，不是采集的副作用。
     // 本模块的 mapper 只碰共表，所以整目录一条 DELETE 都不该有。
-    for (Path xml : mapperXmls()) {
-      String sql = stripComments(Files.readString(xml, StandardCharsets.UTF_8)).toLowerCase();
+    for (Path mapper : mapperSources()) {
+      String sql = stripComments(Files.readString(mapper, StandardCharsets.UTF_8)).toLowerCase();
       assertThat(Pattern.compile("delete\\s+from").matcher(sql).find())
-          .as("%s 里出现了物理删除", xml.getFileName())
+          .as("%s 里出现了物理删除", mapper.getFileName())
           .isFalse();
     }
   }
 
   @Test
-  void thePresenceScanCarriesAllFourHardBoundaries() throws IOException {
+  void thePresenceScanCarriesAllFourHardBoundaries() throws Exception {
     String select = statement("selectPresenceRows");
     // 少一条就会去软删别人的实体：lineage 用同一个数字当它 DATASOURCE 行的 source_id。
     assertThat(select)
@@ -61,7 +68,7 @@ class CatalogPresenceStatementTest {
   }
 
   @Test
-  void thePresenceScanReadsOnlyTheColumnsJudgingNeeds() throws IOException {
+  void thePresenceScanReadsOnlyTheColumnsJudgingNeeds() throws Exception {
     String select = statement("selectPresenceRows");
     // md_attributes / properties 一旦被带回来，一轮采集就把整库治理信息搬进内存；
     // 而 properties 是 lineage 的整包覆写列，读它等于埋一个静默丢数据的坑。
@@ -75,13 +82,13 @@ class CatalogPresenceStatementTest {
   }
 
   @Test
-  void theSoftDeleteTouchesOnlyItsOwnTwoColumns() throws IOException {
+  void theSoftDeleteTouchesOnlyItsOwnTwoColumns() throws Exception {
     String update = statement("markGone");
-    String setClause = between(update, "set ", " where").substring("set ".length());
+    String setClause = between(update, "set ", "where").substring("set ".length());
     assertThat(splitAssignments(setClause))
         .as("GONE 只置 gone_at 与 update_time：first_seen_at / entity_status / 标签一律留在原地")
         .containsExactly("gone_at", "update_time");
-    assertThat(update.toLowerCase())
+    assertThat(update)
         // WHERE 重带 gone_at IS NULL：候选集是几轮判定拼出来的，重跑不该覆盖已软删行的时间戳。
         .contains("gone_at is null")
         // 也重带归属边界：id 是候选池里读出来的，但这条语句必须自成一体地只碰目录自己的行。
@@ -141,20 +148,51 @@ class CatalogPresenceStatementTest {
     assertThat(source).doesNotContain("markGone").doesNotContain("DELETE");
   }
 
-  private String statement(String id) throws IOException {
-    String xml = Files.readString(moduleFile(MAPPER_XML), StandardCharsets.UTF_8);
-    Matcher matcher =
-        Pattern.compile("<(select|update|insert) id=\"" + id + "\"[^>]*>(.*?)</\\1>", Pattern.DOTALL)
-            .matcher(xml);
-    assertThat(matcher.find()).as("mapper 里找不到语句 %s", id).isTrue();
-    return stripComments(matcher.group(2)).toLowerCase();
+  /** 语句正文已从 XML 迁到 Mapper 注解：按方法读注解 SQL，口径与原来的 XML 抽取一致。 */
+  private String statement(String id) throws ReflectiveOperationException {
+    return switch (id) {
+      case "selectPresenceRows" ->
+          sql(
+              LineageCatalogRowMapper.class,
+              "selectPresenceRows",
+              Select.class,
+              Long.class,
+              String.class,
+              int.class);
+      case "markGone" ->
+          sql(
+              LineageCatalogRowMapper.class,
+              "markGone",
+              Update.class,
+              Collection.class,
+              LocalDateTime.class);
+      default -> throw new IllegalArgumentException("未知语句 " + id);
+    };
   }
 
-  private List<Path> mapperXmls() throws IOException {
-    Path root = moduleFile(Path.of("src", "main", "resources", "mapper"));
+  private static String sql(
+      Class<?> mapper,
+      String methodName,
+      Class<? extends Annotation> annotationType,
+      Class<?>... parameterTypes)
+      throws NoSuchMethodException {
+    Annotation annotation = mapper.getMethod(methodName, parameterTypes).getAnnotation(annotationType);
+    assertThat(annotation)
+        .as("%s.%s 必须带 @%s", mapper.getSimpleName(), methodName, annotationType.getSimpleName())
+        .isNotNull();
+    try {
+      String[] value = (String[]) annotation.annotationType().getMethod("value").invoke(annotation);
+      return stripComments(String.join("\n", value)).toLowerCase();
+    } catch (ReflectiveOperationException exception) {
+      throw new IllegalStateException("无法读取注解 SQL: " + annotation, exception);
+    }
+  }
+
+  private List<Path> mapperSources() throws IOException {
+    Path root = moduleFile(MAPPER_DIR);
     try (var paths = Files.walk(root)) {
-      List<Path> files = paths.filter(path -> path.toString().endsWith(".xml")).toList();
-      assertThat(files).as("未扫到任何 mapper XML，守卫路径写错了").isNotEmpty();
+      List<Path> files = paths.filter(path -> path.toString().endsWith(".java")).toList();
+      assertThat(files).as("未扫到任何 mapper 源码，守卫路径写错了").isNotEmpty();
       return files;
     }
   }
@@ -194,7 +232,7 @@ class CatalogPresenceStatementTest {
             Path.of("..", "data-ops-business-metadata").toAbsolutePath().normalize(),
             Path.of("data-ops-business", "data-ops-business-metadata").toAbsolutePath().normalize());
     return candidates.stream()
-        .filter(path -> Files.isRegularFile(path.resolve(MAPPER_XML)))
+        .filter(path -> Files.isRegularFile(path.resolve(CATALOG_MAPPER)))
         .findFirst()
         .orElseThrow(() -> new AssertionError("找不到元数据模块根目录，尝试过：" + candidates));
   }
