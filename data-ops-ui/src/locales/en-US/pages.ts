@@ -1,4 +1,10 @@
 export default {
+  'pages.login.title': 'Data ops, simplified.',
+  'pages.login.subtitle': 'One workspace for your data.',
+  'pages.login.username': 'Username',
+  'pages.login.password': 'Password',
+  'pages.login.submit': 'Log in',
+  'pages.login.failure': 'Login failed. Check your account or try again later.',
   // DataSource - common
   'pages.datasource.common.title': 'Data Source',
 

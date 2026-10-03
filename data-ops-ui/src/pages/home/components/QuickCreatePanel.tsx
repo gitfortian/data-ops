@@ -112,7 +112,7 @@ function QuickCreateCard({ item }: { item: QuickCreateItem }) {
           {title}
         </div>
         <div className="mt-0.5 flex min-w-0 items-center text-[13px] font-normal leading-5 text-[#9498a1]">
-          <span className="min-w-0 truncate">{description}</span>
+          <span className="min-w-0 whitespace-normal">{description}</span>
           <ChevronRight
             size={13}
             strokeWidth={1.8}
@@ -132,7 +132,7 @@ export function QuickCreatePanel() {
       <h2 className="mb-5 text-xl font-semibold leading-7 tracking-[-0.35px] text-[#252832]">
         {intl.formatMessage({ id: 'pages.home.quickCreate.title' })}
       </h2>
-      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 min-[1280px]:grid-cols-4">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 min-[1536px]:grid-cols-4">
         {QUICK_CREATE_ITEMS.map((item) => (
           <QuickCreateCard key={item.key} item={item} />
         ))}

@@ -23,11 +23,11 @@ export function TrendChart({
       animationEasing: 'cubicOut',
       animationEasingUpdate: 'cubicOut',
       grid: {
-        left: 0,
-        right: 2,
+        left: 24,
+        right: 24,
         top: 18,
         bottom: 26,
-        containLabel: false,
+        containLabel: true,
       },
       tooltip: {
         trigger: 'axis',

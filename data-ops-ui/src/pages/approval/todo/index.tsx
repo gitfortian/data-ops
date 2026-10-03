@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApprovalStatusTag, STEP_STATUS_META } from '@/components/ApprovalStatusTag';
+import { ClipboardCheck } from 'lucide-react';
 import { YakEmpty } from '@/components/ui';
 import { cancelInstance, getTodoCount, pageHandled, pageMine, pageTodo } from '@/services/approval/api';
 import type {
@@ -70,7 +71,7 @@ const TodoTab = ({ onCountChange }: { onCountChange: (count: number) => void }) 
       loading={loading}
       columns={columns}
       dataSource={rows}
-      locale={{ emptyText: <YakEmpty description="暂无待办，去喝杯咖啡吧" /> }}
+      locale={{ emptyText: <YakEmpty title="暂无待办" icon={<ClipboardCheck size={24} strokeWidth={1.4} />} description="所有待办均已处理，可在其他标签查看审批记录。" /> }}
       pagination={{
         current: pageNo,
         pageSize: PAGE_SIZE,

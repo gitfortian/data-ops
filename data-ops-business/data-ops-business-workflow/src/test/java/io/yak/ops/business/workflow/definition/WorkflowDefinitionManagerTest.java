@@ -72,6 +72,15 @@ class WorkflowDefinitionManagerTest {
   }
 
   @Test
+  void shouldRejectEmptyDraftAsInvalidUserInputBeforeStartingRuntime() {
+    WorkflowDefinitionVO created = service.create(new WorkflowDefinitionCreateDTO("空图测试", null));
+    assertThatThrownBy(() -> service.testRun(created.id()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("任务节点");
+    org.mockito.Mockito.verifyNoInteractions(runtimeService, taskRegistry);
+  }
+
+  @Test
   void shouldTestCurrentDraftBeforePublish() {
     WorkflowDefinitionVO created = createConfigured("草稿测试");
     when(taskRegistry.snapshot("sync-1")).thenReturn(snapshot("sync-1", "同步订单", 7));

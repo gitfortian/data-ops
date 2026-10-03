@@ -136,6 +136,9 @@ export const useMonitorDetailPage = (monitorId?: string) => {
     try {
       const status = await waitForExecution(executionNo);
       await loadWorkspace();
+      const today = dayjs().format('YYYY-MM-DD');
+      setReportDate(today);
+      await loadReport(today);
       if (!status) {
         message.warning('质量检查仍在执行，可在运行记录中继续查看进度');
       }
@@ -145,7 +148,7 @@ export const useMonitorDetailPage = (monitorId?: string) => {
     } finally {
       setRunning(false);
     }
-  }, [loadWorkspace, monitorId]);
+  }, [loadWorkspace, loadReport, monitorId]);
 
   const removeMonitor = useCallback(() => {
     if (!monitorId) return;

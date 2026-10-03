@@ -1,12 +1,12 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import YakButton from "@/components/YakButton";
 import { login } from "@/services/security/account";
+import { extractUnknownErrorMessage } from '@/services/http/response';
 import { notifyOnce } from "@/utils/notifyOnce";
 import { resetAuthenticationFailure } from "@/utils/request";
 import { getSafeReturnTo } from "@/utils/security/redirect";
 import { history, useIntl, useModel } from "@umijs/max";
-import { Form, Input, type InputProps } from "antd";
-import { useForm } from "antd/es/form/Form";
+import { Alert, Form, Input, type InputProps } from "antd";
 import { useState } from "react";
 import { flushSync } from "react-dom";
 
@@ -94,7 +94,8 @@ function ValidationMessage({ children }: { children: string }) {
 
 export default function LoginPanel() {
   const [loading, setLoading] = useState(false);
-  const [form] = useForm();
+  const [loginError, setLoginError] = useState<string>();
+  const [form] = Form.useForm();
 
   const { initialState, setInitialState } = useModel("@@initialState");
   const intl = useIntl();
@@ -128,6 +129,7 @@ export default function LoginPanel() {
   }) => {
     try {
       setLoading(true);
+      setLoginError(undefined);
 
       await login({
         userName: values.userName,
@@ -136,6 +138,7 @@ export default function LoginPanel() {
 
       const userInfo = await fetchUserInfo();
       if (!userInfo) {
+        setLoginError("未能加载当前用户信息，请稍后重试。");
         notifyOnce("login-current-user-missing", {
           type: "error",
           title: "登录未完成",
@@ -157,8 +160,11 @@ export default function LoginPanel() {
         duration: 2,
       });
       redirectAfterLogin();
-    } catch (_error) {
-      // Global request handling surfaces HTTP, business and network failures once.
+    } catch (error) {
+      const payload = error && typeof error === 'object'
+        ? ('data' in error ? error.data : 'response' in error ? error.response : undefined)
+        : undefined;
+      setLoginError(extractUnknownErrorMessage(payload, intl.formatMessage({ id: 'pages.login.failure', defaultMessage: '登录失败，请检查账号或稍后重试。' })));
     } finally {
       setLoading(false);
     }
@@ -171,7 +177,9 @@ export default function LoginPanel() {
         form={form}
         requiredMark={false}
         onFinish={handleAccountLogin}
+        onValuesChange={() => setLoginError(undefined)}
       >
+        {loginError ? <Alert className="!mb-5" type="error" showIcon message={loginError} /> : null}
         <Form.Item
           className={FORM_ITEM_CLASS_NAME}
           name="userName"
@@ -182,7 +190,7 @@ export default function LoginPanel() {
             },
           ]}
         >
-          <FloatingInput label="Username" autoComplete="username" />
+          <FloatingInput label={intl.formatMessage({ id: 'pages.login.username', defaultMessage: '用户名' })} autoComplete="username" />
         </Form.Item>
 
         <Form.Item
@@ -196,7 +204,7 @@ export default function LoginPanel() {
           ]}
         >
           <FloatingInput
-            label="Password"
+            label={intl.formatMessage({ id: 'pages.login.password', defaultMessage: '密码' })}
             password
             autoComplete="current-password"
           />
@@ -210,7 +218,7 @@ export default function LoginPanel() {
           loading={loading}
           className="!h-11 !rounded-full !border-[#171717] !bg-[#171717] !font-medium !text-white !shadow-none hover:!border-[#292929] hover:!bg-[#292929]"
         >
-          Log in
+          {intl.formatMessage({ id: 'pages.login.submit', defaultMessage: '登录' })}
         </YakButton>
       </Form>
     </div>

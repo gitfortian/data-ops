@@ -908,6 +908,10 @@ const WorkflowDefinitionContent = () => {
 
   const handleTestRun = async () => {
     if (testing || statusAction) return;
+    if (!nodes.length) {
+      message.warning('请先添加至少一个任务节点');
+      return;
+    }
     setTesting(true);
     setTestRunSnapshot(undefined);
     focusedRuntimeNodeRef.current = undefined;

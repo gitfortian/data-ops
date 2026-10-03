@@ -30,7 +30,8 @@ interface QualityReportTabProps {
 const percentText = (value: number) => `${Number(value || 0).toFixed(1)}%`;
 
 const Sparkline = ({ values }: { values: number[] }) => {
-  const normalized = values.length ? values : [0, 0];
+  if (!values.length) return <span className="text-[#98a2b3]">--</span>;
+  const normalized = values;
   const width = 150;
   const height = 34;
   const points = normalized
@@ -201,7 +202,7 @@ const QualityReportTab = ({
       title: '通过率',
       dataIndex: 'passRate',
       width: 150,
-      render: (value) => (
+      render: (value, record) => (
         <div className="flex items-center gap-2">
           <Progress
             percent={Number(value || 0)}
@@ -210,7 +211,7 @@ const QualityReportTab = ({
             showInfo={false}
             size="small"
           />
-          <span className="w-12 text-right text-xs">{percentText(value)}</span>
+          <span className="w-12 text-right text-xs">{record.total ? percentText(value) : '--'}</span>
         </div>
       ),
     },
@@ -277,11 +278,12 @@ const QualityReportTab = ({
                   format={(value) => (
                     <div>
                       <div className="text-[30px] font-medium text-[#172033]">
-                        {Number(value || 0).toFixed(0)}%
+                        {overview?.executedRules ? `${Number(value || 0).toFixed(0)}%` : '--'}
                       </div>
                       <div className="mt-2 text-xs text-[#667085]">
                         表质量通过率
                       </div>
+                      {overview && !overview.executedRules && <div className="mt-2 text-xs text-[#667085]">当日未执行</div>}
                     </div>
                   )}
                 />
@@ -302,7 +304,7 @@ const QualityReportTab = ({
                         size="small"
                       />
                       <span className="text-right text-[#667085]">
-                        {percentText(item.passRate)}
+                        {item.total ? percentText(item.passRate) : '--'}
                       </span>
                     </div>
                   ))

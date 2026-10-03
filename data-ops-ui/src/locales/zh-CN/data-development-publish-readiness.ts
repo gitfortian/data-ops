@@ -1,4 +1,5 @@
 export default {
+  'pages.dataDevelopment.publishReadiness.empty': '先填写任务内容',
   'pages.dataDevelopment.publishReadiness.needsSave': '保存后校验',
   'pages.dataDevelopment.publishReadiness.needsSaveHint': '当前编辑器内容尚未形成可校验的已保存 Draft。先保存 Draft，再进行发布校验。',
   'pages.dataDevelopment.publishReadiness.loading': '校验 Draft #{revision}',
@@ -13,7 +14,7 @@ export default {
   'pages.dataDevelopment.publishReadiness.exactDraft': '本次发布绑定 Draft #{revision}。确认期间如果 Draft 再次变化，服务端会拒绝发布。',
   'pages.dataDevelopment.publishReadiness.passed': '发布前校验已通过。',
   'pages.dataDevelopment.publishReadiness.blocked': '发布前校验未通过，请先修正下面的问题。',
-  'pages.dataDevelopment.publishReadiness.resultHint': '确认后会创建或复用一个 immutable Revision，并同步 Task Catalog 的 Release 投影；不会覆盖历史 Revision，也不会把后续 Draft 修改写回该 Revision。',
+  'pages.dataDevelopment.publishReadiness.resultHint': '发布后将保存当前内容为可追溯的版本，并在发布中心展示。历史版本会保留，后续编辑不会影响本次发布。',
   'pages.dataDevelopment.publishReadiness.confirmPublish': '发布这个 Draft',
   'pages.dataDevelopment.publishReadiness.close': '关闭',
   'pages.dataDevelopment.publishReadiness.cancelled': '发布已取消：没有创建新的 Revision，也没有改变 Release 状态。',

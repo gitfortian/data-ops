@@ -1,7 +1,8 @@
+import Table from '@/components/ReadableTable';
 
 import YakEmpty from '@/components/YakEmpty';
 import {
-  Table,
+
   type SpinProps,
   type TableProps,
 } from 'antd';

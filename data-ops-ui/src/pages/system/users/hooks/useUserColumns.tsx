@@ -116,12 +116,9 @@ export function useUserColumns({
         width: 220,
         render: (_, row) => (
           <div className="min-w-0">
-            <div className="truncate text-sm text-slate-700">
-              {row.email || '—'}
-            </div>
-            <div className="mt-1 truncate text-xs text-slate-400">
-              {row.phone || '—'}
-            </div>
+            {row.email ? <div className="truncate text-sm text-slate-700" title={row.email}>{row.email}</div> : null}
+            {row.phone ? <div className="mt-1 truncate text-xs text-slate-400" title={row.phone}>{row.phone}</div> : null}
+            {!row.email && !row.phone ? <span className="text-slate-400">未填写</span> : null}
           </div>
         ),
       },
@@ -176,13 +173,13 @@ export function useUserColumns({
         title: '最近更新',
         dataIndex: 'updateTime',
         key: 'updateTime',
-        width: 190,
+        width: 250,
         render: (_, row) => (
           <div>
-            <div className="text-sm text-slate-700">
+            <div className="whitespace-nowrap text-sm text-slate-700">
               {formatSystemDateTime(row.updateTime || row.createTime)}
             </div>
-            <div className="mt-1 text-xs text-slate-400">
+            <div className="mt-1 whitespace-nowrap text-xs text-slate-400">
               创建于 {formatSystemDateTime(row.createTime)}
             </div>
           </div>

@@ -93,9 +93,6 @@ const ExecutionRecordTable = ({
         fixed: 'left',
         render: (_, record) => (
           <div className="min-w-0 py-0.5">
-            <div className="truncate text-[12px] text-[#667085]">
-              {record.executionNo}
-            </div>
             <YakButton
               type="text"
               htmlType="button"
@@ -107,6 +104,9 @@ const ExecutionRecordTable = ({
             >
               {record.monitorName}
             </YakButton>
+            <div className="truncate text-[12px] text-[#667085]">
+              {record.executionNo}
+            </div>
           </div>
         ),
       },
@@ -268,9 +268,6 @@ const ExecutionRecordTable = ({
         fixed: 'left',
         render: (_, record) => (
           <div className="min-w-0 py-0.5">
-            <div className="truncate text-[12px] text-[#667085]">
-              {record.ruleId} · {record.executionNo}
-            </div>
             <YakButton
               type="text"
               htmlType="button"
@@ -282,6 +279,9 @@ const ExecutionRecordTable = ({
             >
               {record.ruleName}
             </YakButton>
+            <div className="truncate text-[12px] text-[#667085]">
+              {record.ruleId} · {record.executionNo}
+            </div>
           </div>
         ),
       },

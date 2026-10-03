@@ -578,7 +578,7 @@ public class WorkflowDefinitionManager implements WorkflowLaunchDefinitionGatewa
   }
 
   private void validateGraph(WorkflowDefinitionAggregate state) {
-    if (state.nodes.isEmpty()) throw new IllegalStateException("请先配置至少一个任务节点");
+    if (state.nodes.isEmpty()) throw new WorkflowDefinitionInputException("请先配置至少一个任务节点");
     Set<String> ids = new HashSet<>();
     for (WorkflowNodeSpec node : state.nodes) {
       if (!ids.add(node.id())) {

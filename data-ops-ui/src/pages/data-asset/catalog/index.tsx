@@ -1,3 +1,4 @@
+import Table from '@/components/ReadableTable';
 import {
   Button,
   Alert,
@@ -10,7 +11,6 @@ import {
   Segmented,
   Select,
   Space,
-  Table,
   Tag,
   Tooltip,
   Tree,

@@ -1,3 +1,5 @@
+import Table from '@/components/ReadableTable';
+import YakButton from '@/components/YakButton';
 import { getMetadataOverview } from '@/services/metadata';
 import type {
   MetadataOverviewData,
@@ -15,7 +17,6 @@ import {
   Row,
   Spin,
   Statistic,
-  Table,
   Tag,
   Typography,
 } from 'antd';
@@ -167,9 +168,9 @@ const MetadataOverviewPage = () => {
         extra={
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => history.push('/metadata/explorer')}>浏览元数据实体</Button>
-            <Button type="primary" onClick={() => history.push('/data-metadata/collect')}>
+            <YakButton type="primary" onClick={() => history.push('/data-metadata/collect')}>
               管理采集与对账
-            </Button>
+            </YakButton>
           </div>
         }
       />

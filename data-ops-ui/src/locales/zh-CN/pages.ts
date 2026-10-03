@@ -1,4 +1,10 @@
 export default {
+  'pages.login.title': '让数据工作更简单',
+  'pages.login.subtitle': '在一个工作空间中完成数据开发、治理与消费。',
+  'pages.login.username': '用户名',
+  'pages.login.password': '密码',
+  'pages.login.submit': '登录',
+  'pages.login.failure': '登录失败，请检查账号或稍后重试。',
   'pages.datasource.header.title': '数据源列表',
   'pages.datasource.header.desc': '一个统一的数据源治理系统，用于管理连接、访问权限和安全策略',
 

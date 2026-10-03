@@ -1,4 +1,5 @@
-import { Alert, Badge, Button, Drawer, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import Table from '@/components/ReadableTable';
+import { Alert, Badge, Button, Drawer, Input, Modal, message, Segmented, Select, Space,  Tag, Tooltip, Typography } from 'antd';
 import { history } from '@umijs/max';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';

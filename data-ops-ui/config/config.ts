@@ -169,6 +169,7 @@ antd: {
 
   //================ pro 插件配置 =================
   presets: ["umi-presets-pro"],
+  plugins: ['./plugins/tailwind'],
   // API contracts are maintained in services beside the owning backend domain.
 
   mock: {
@@ -184,5 +185,4 @@ antd: {
   requestRecord: {},
    // 当前使用 Nginx SPA 部署，不启用静态路由导出
 //   exportStatic: {},
-  tailwindcss: {},
 });

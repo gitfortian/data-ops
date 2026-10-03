@@ -1,6 +1,9 @@
 import { LoadingOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import type { BubbleItemType, ConversationsProps, ThoughtChainItemType } from '@ant-design/x';
-import { Bubble, Conversations, Sender, ThoughtChain } from '@ant-design/x';
+import Bubble from '@ant-design/x/lib/bubble';
+import Conversations from '@ant-design/x/lib/conversations';
+import Sender from '@ant-design/x/lib/sender';
+import ThoughtChain from '@ant-design/x/lib/thought-chain';
 import { Alert, Button, Collapse, Input, Layout, message, Space, Tabs, Tag, Typography } from 'antd';
 import React from 'react';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';

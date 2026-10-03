@@ -1,3 +1,5 @@
+import YakButton from '@/components/YakButton';
+import Table from '@/components/ReadableTable';
 import { YakFilterSwitch } from '@/components/ui';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { history, useIntl } from '@umijs/max';
@@ -9,7 +11,6 @@ import {
   Input,
   Pagination,
   Select,
-  Table,
   Tooltip,
 } from 'antd';
 import moment from 'moment';
@@ -355,9 +356,9 @@ const ExecutionHistoryPage = () => {
                   setPageNo(1);
                 }}
               />
-              <Button type="primary" onClick={search}>
+              <YakButton type="primary" onClick={search}>
                 {intl.formatMessage({ id: 'pages.dataDevelopment.common.search' })}
-              </Button>
+              </YakButton>
               <Button onClick={reset}>
                 {intl.formatMessage({ id: 'pages.dataDevelopment.common.reset' })}
               </Button>

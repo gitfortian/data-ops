@@ -59,7 +59,7 @@ export default function DatasetManagementPage() {
       setDatasets(await listDatasetsForManagement());
     } catch (error) {
       setDatasets([]);
-      setLoadError(error instanceof Error ? error.message : '加载 Dataset 失败');
+      setLoadError(error instanceof Error ? error.message : '加载数据集 失败');
     } finally {
       setLoading(false);
     }
@@ -113,15 +113,15 @@ export default function DatasetManagementPage() {
       try {
         if (dataset.status === 'ONLINE') {
           await offlineDataset(dataset.id);
-          message.success(`Dataset「${dataset.name}」已下线`);
+          message.success(`数据集「${dataset.name}」已下线`);
         } else {
           await onlineDataset(dataset.id);
-          message.success(`Dataset「${dataset.name}」已上线`);
+          message.success(`数据集「${dataset.name}」已上线`);
         }
         await loadDatasets();
       } catch (error) {
         message.error(
-          error instanceof Error ? error.message : '更新 Dataset 状态失败',
+          error instanceof Error ? error.message : '更新数据集状态失败',
         );
       } finally {
         setStatusUpdatingId('');
@@ -133,7 +133,7 @@ export default function DatasetManagementPage() {
   const columns = useMemo<ColumnsType<DatasetManagementItem>>(
     () => [
       {
-        title: 'Dataset',
+        title: '数据集',
         dataIndex: 'name',
         minWidth: 280,
         render: (_value, record) => (
@@ -248,7 +248,7 @@ export default function DatasetManagementPage() {
                   <YakOpsEmpty
                     width={180}
                     height={120}
-                    title={loadError ? 'Dataset 加载失败' : '暂无 Dataset'}
+                    title={loadError ? '数据集加载失败' : '暂无数据集'}
                     description={
                       loadError || '请先从数据开发发布中心发布可消费的数据集。'
                     }

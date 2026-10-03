@@ -75,7 +75,7 @@ export default function DatasetFilterBar({
           allowClear
           value={keyword}
           variant="filled"
-          placeholder="搜索 Dataset、字段、来源"
+          placeholder="搜索数据集、字段、来源"
           suffix={
             <SearchOutlined
               className="cursor-pointer text-slate-400 transition-colors hover:text-slate-700"
