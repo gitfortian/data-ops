@@ -7,7 +7,7 @@ import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
 import io.yak.ops.business.modeling.lineage.ModelingLineageRegistrationService;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureView;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;

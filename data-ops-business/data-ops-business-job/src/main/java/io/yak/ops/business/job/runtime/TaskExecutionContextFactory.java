@@ -1,6 +1,8 @@
 package io.yak.ops.business.job.runtime;
 
 import io.yak.ops.business.job.environment.TaskEnvironmentResolver;
+import io.yak.ops.business.job.config.TaskRuntimeProperties;
+import io.yak.ops.business.job.repository.TaskExecutionJournal;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
@@ -10,6 +12,7 @@ import io.yak.ops.spi.task.model.TaskExecutionTrigger;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /** Creates runtime contexts without depending on environment-management CRUD. */
@@ -19,20 +22,42 @@ public class TaskExecutionContextFactory {
   private final TaskEnvironmentResolver environmentResolver;
   private final CurrentProject currentProject;
   private final ProjectContextScope projectScope;
+  private final TaskRuntimeProperties runtimeProperties;
+  private final TaskExecutionJournal journal;
 
   /** Keeps focused tests and existing non-Spring callers source compatible. */
   public TaskExecutionContextFactory(TaskEnvironmentResolver environmentResolver) {
     this(environmentResolver, null, null);
   }
 
-  @Autowired
   public TaskExecutionContextFactory(
       TaskEnvironmentResolver environmentResolver,
       CurrentProject currentProject,
       ProjectContextScope projectScope) {
+    this(environmentResolver, currentProject, projectScope, new TaskRuntimeProperties(), null);
+  }
+
+  @Autowired
+  public TaskExecutionContextFactory(TaskEnvironmentResolver environmentResolver,
+      CurrentProject currentProject, ProjectContextScope projectScope,
+      TaskRuntimeProperties runtimeProperties, ObjectProvider<TaskExecutionJournal> journal) {
     this.environmentResolver = environmentResolver;
     this.currentProject = currentProject;
     this.projectScope = projectScope;
+    this.runtimeProperties = runtimeProperties;
+    this.journal = journal == null ? null : journal.getIfAvailable();
+  }
+
+  TaskRuntimeProperties runtimeProperties() { return runtimeProperties; }
+  TaskExecutionJournal journal() { return journal; }
+
+  String projectKey(String key) {
+    if (key == null || currentProject == null) return key;
+    return currentProject.requireProjectId() + ":" + key;
+  }
+
+  String projectIdentity() {
+    return currentProject == null ? "" : String.valueOf(currentProject.requireProjectId());
   }
 
   public TaskExecutionContext create(

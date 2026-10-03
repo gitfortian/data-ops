@@ -1,14 +1,14 @@
 package io.yak.ops.business.quality.dao;
 
-import io.yak.ops.common.bean.po.quality.QualityAlertEventPO;
-import io.yak.ops.common.bean.po.quality.QualityMonitorPO;
-import io.yak.ops.common.bean.po.quality.QualityMonitorSettingPO;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.AlertEventRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.MonitorRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.TableAssetRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.TableMonitorSummaryRow;
-import io.yak.ops.common.bean.po.quality.QualityRulePO;
-import io.yak.ops.common.bean.po.quality.QualityTableAssetPO;
+import io.yak.ops.business.quality.dao.model.QualityAlertEventPO;
+import io.yak.ops.business.quality.dao.model.QualityMonitorPO;
+import io.yak.ops.business.quality.dao.model.QualityMonitorSettingPO;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.AlertEventRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.MonitorRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.TableAssetRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.TableMonitorSummaryRow;
+import io.yak.ops.business.quality.dao.model.QualityRulePO;
+import io.yak.ops.business.quality.dao.model.QualityTableAssetPO;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

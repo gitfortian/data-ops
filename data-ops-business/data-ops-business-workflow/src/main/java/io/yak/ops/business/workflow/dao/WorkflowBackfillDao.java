@@ -1,6 +1,6 @@
 package io.yak.ops.business.workflow.dao;
 
-import io.yak.ops.common.bean.po.workflow.WorkflowBackfillPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowBackfillPO;
 import java.util.List;
 
 /** 工作流 Backfill 批次数据访问接口。 */

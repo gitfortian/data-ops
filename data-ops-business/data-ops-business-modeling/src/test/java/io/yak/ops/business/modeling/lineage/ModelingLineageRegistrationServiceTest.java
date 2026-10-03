@@ -75,8 +75,8 @@ class ModelingLineageRegistrationServiceTest {
                 new ColumnDefinition(2L, "user_phone", "VARCHAR", 32, null, true, null, null,
                     null, 1, null, null, null, null, null, 6L)));
     // 43 映射:落地字段 user_phone → 标准字段 9
-    io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO mapping =
-        new io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO();
+    io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO mapping =
+        new io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO();
     mapping.setLayerFieldName("user_phone");
     mapping.setProcessFieldId(9L);
     when(layerFieldMappingRepository.listByModel(1L)).thenReturn(List.of(mapping));

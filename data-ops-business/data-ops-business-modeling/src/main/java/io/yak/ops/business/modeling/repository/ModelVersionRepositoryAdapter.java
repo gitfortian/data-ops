@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelVersionMapper;
 import io.yak.ops.business.modeling.domain.ModelVersion;
 import io.yak.ops.business.modeling.domain.ModelVersionSummary;
-import io.yak.ops.common.bean.po.modeling.ModelingModelVersionPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

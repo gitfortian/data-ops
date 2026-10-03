@@ -19,7 +19,7 @@ import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.approval.api.ApprovalSubmitCommand;
 import io.yak.ops.business.security.application.AccessPolicyService;
 import io.yak.ops.business.security.exception.SecurityException;
-import io.yak.ops.common.bean.po.security.DsecAccessPolicyPO;
+import io.yak.ops.business.security.dao.model.DsecAccessPolicyPO;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

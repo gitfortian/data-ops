@@ -99,7 +99,7 @@ describe('API response protocols', () => {
 
   it('routes only security endpoints to the security protocol', () => {
     expect(isApiResponse({ data: { code: 200 } })).toBe(false);
-    expect(protocolForUrl('/yak-security/api/v1/account/current')).toBe(
+    expect(protocolForUrl('/data-security/api/v1/account/current')).toBe(
       'security',
     );
     expect(protocolForUrl('/api/v1/workflows')).toBe('yak-ops');

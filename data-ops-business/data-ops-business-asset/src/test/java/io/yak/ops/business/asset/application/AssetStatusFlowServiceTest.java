@@ -24,7 +24,7 @@ import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.quality.domain.QualityDomain.TableMonitorSummary;
 import io.yak.ops.business.quality.monitor.QualityMonitorReader;
 import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetEnums.AssetType;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.common.enums.asset.AssetSourceType;

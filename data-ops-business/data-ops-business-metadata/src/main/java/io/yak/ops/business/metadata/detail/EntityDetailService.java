@@ -9,7 +9,7 @@ import io.yak.ops.business.metadata.exception.MetadataException;
 import io.yak.ops.business.metadata.governance.MetadataGovernanceQueryService;
 import io.yak.ops.business.metadata.metamodel.MetadataTypeRegistry;
 import io.yak.ops.business.metadata.query.CatalogQueryService;
-import io.yak.ops.common.bean.po.metadata.MdTypeDefPO;
+import io.yak.ops.business.metadata.dao.model.MdTypeDefPO;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

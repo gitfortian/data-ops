@@ -143,12 +143,10 @@ public class AgentChatService {
   public void cancel(String sessionId) {
     long userId = requireUserId();
     ownerValidator.assertOwner(sessionId, userId);
-    if (turnRegistry.runningTurnId(sessionId).isPresent()) {
-      turnRegistry.cancelBySession(sessionId);
-      return;
-    }
-    int cancelled = turnRepository.cancelQueuedBySession(sessionId);
-    log.info("queued turns cancelled: sessionId={}, count={}", sessionId, cancelled);
+    turnRegistry.cancelBySession(sessionId, () -> {
+      int cancelled = turnRepository.cancelQueuedBySession(sessionId);
+      log.info("queued turns cancelled: sessionId={}, count={}", sessionId, cancelled);
+    });
   }
 
   /** 重命名会话：仅元数据标题，消息真相不受影响。 */

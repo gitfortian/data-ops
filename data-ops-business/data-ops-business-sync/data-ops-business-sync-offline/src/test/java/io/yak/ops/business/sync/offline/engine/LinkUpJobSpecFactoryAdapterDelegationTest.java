@@ -1,19 +1,21 @@
 package io.yak.ops.business.sync.offline.engine;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
+import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildResult;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapterRegistry;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -23,9 +25,11 @@ class LinkUpJobSpecFactoryAdapterDelegationTest {
 
   @Test
   void dedicatedAdapterOwnsBuildAndExecutionDatasourceTranslation() throws Exception {
-    DataSourceDao dao = mock(DataSourceDao.class);
-    when(dao.selectById(7L)).thenReturn(dataSource(7L, "native-source"));
-    when(dao.selectById(8L)).thenReturn(dataSource(8L, "native-sink"));
+    DataSourceReader dao = mock(DataSourceReader.class);
+    when(dao.require(7L)).thenReturn(dataSource(7L, "native-source"));
+    when(dao.requireReference(7L)).thenReturn(reference(dataSource(7L, "native-source")));
+    when(dao.require(8L)).thenReturn(dataSource(8L, "native-sink"));
+    when(dao.requireReference(8L)).thenReturn(reference(dataSource(8L, "native-sink")));
 
     OfflineSyncConnectorAdapter adapter = new NativeDemoAdapter();
     OfflineSyncConnectorAdapterRegistry registry =
@@ -78,11 +82,16 @@ class LinkUpJobSpecFactoryAdapterDelegationTest {
         .isEqualTo("native-sink");
   }
 
-  private DataSourcePO dataSource(Long id, String name) {
+  private io.yak.ops.business.datasource.domain.DataSourceReference reference(DataSourceDefinition definition) {
+    return new io.yak.ops.business.datasource.domain.DataSourceReference(
+        definition.getId(), definition.getProjectId(), definition.getName(), definition.getDbType());
+  }
+
+  private DataSourceDefinition dataSource(Long id, String name) {
     DataSourcePO value = new DataSourcePO();
     value.setId(id);
     value.setName(name);
-    return value;
+    return DataSourceFixtures.definition(value);
   }
 
   private static final class NativeDemoAdapter implements OfflineSyncConnectorAdapter {

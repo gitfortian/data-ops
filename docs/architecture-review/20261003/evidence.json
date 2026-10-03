@@ -1,0 +1,560 @@
+{
+  "method": "Tracked static source only. Request-client counts are import heuristics; page imports are not all cross-domain; named guards are not equivalent to behavioral coverage. Missing migration literals are compared with owning-module resources; tests have not been executed.",
+  "commonPersistenceObjects": 118,
+  "crossBusinessPersistenceImports": [
+    {
+      "from": "data-ops-business-sync-offline",
+      "to": "data-ops-business-datasource",
+      "file": "data-ops-business/data-ops-business-sync/data-ops-business-sync-offline/src/main/java/io/yak/ops/business/sync/offline/engine/ColumnMappingLinkUpJobSpecFactory.java",
+      "imported": "io.yak.ops.business.datasource.dao.DataSourceDao"
+    },
+    {
+      "from": "data-ops-business-sync-offline",
+      "to": "data-ops-business-datasource",
+      "file": "data-ops-business/data-ops-business-sync/data-ops-business-sync-offline/src/main/java/io/yak/ops/business/sync/offline/engine/LinkUpJobSpecFactory.java",
+      "imported": "io.yak.ops.business.datasource.dao.DataSourceDao"
+    },
+    {
+      "from": "data-ops-business-sync-offline",
+      "to": "data-ops-business-datasource",
+      "file": "data-ops-business/data-ops-business-sync/data-ops-business-sync-offline/src/main/java/io/yak/ops/business/sync/offline/repository/OfflineJobDefinitionRepositoryAdapter.java",
+      "imported": "io.yak.ops.business.datasource.dao.DataSourceDao"
+    }
+  ],
+  "businessTestCounts": [
+    {
+      "module": "data-ops-business-audit",
+      "javaFiles": 32,
+      "testFiles": 10,
+      "guardNamedFiles": 2
+    },
+    {
+      "module": "data-ops-business-datasource",
+      "javaFiles": 94,
+      "testFiles": 41,
+      "guardNamedFiles": 4
+    },
+    {
+      "module": "data-ops-business-data-service",
+      "javaFiles": 136,
+      "testFiles": 30,
+      "guardNamedFiles": 4
+    },
+    {
+      "module": "data-ops-business-job",
+      "javaFiles": 24,
+      "testFiles": 8,
+      "guardNamedFiles": 2
+    },
+    {
+      "module": "data-ops-business-task-catalog",
+      "javaFiles": 10,
+      "testFiles": 2,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-data-development",
+      "javaFiles": 107,
+      "testFiles": 44,
+      "guardNamedFiles": 7
+    },
+    {
+      "module": "data-ops-business-lineage",
+      "javaFiles": 40,
+      "testFiles": 11,
+      "guardNamedFiles": 5
+    },
+    {
+      "module": "data-ops-business-dataset",
+      "javaFiles": 105,
+      "testFiles": 31,
+      "guardNamedFiles": 6
+    },
+    {
+      "module": "data-ops-business-analysis",
+      "javaFiles": 45,
+      "testFiles": 14,
+      "guardNamedFiles": 4
+    },
+    {
+      "module": "data-ops-business-dashboard",
+      "javaFiles": 78,
+      "testFiles": 15,
+      "guardNamedFiles": 4
+    },
+    {
+      "module": "data-ops-business-digital-screen",
+      "javaFiles": 23,
+      "testFiles": 4,
+      "guardNamedFiles": 2
+    },
+    {
+      "module": "data-ops-business-resource",
+      "javaFiles": 44,
+      "testFiles": 13,
+      "guardNamedFiles": 4
+    },
+    {
+      "module": "data-ops-business-sync-offline",
+      "javaFiles": 134,
+      "testFiles": 71,
+      "guardNamedFiles": 7
+    },
+    {
+      "module": "data-ops-business-sync-realtime",
+      "javaFiles": 113,
+      "testFiles": 53,
+      "guardNamedFiles": 3
+    },
+    {
+      "module": "data-ops-business-quality",
+      "javaFiles": 118,
+      "testFiles": 33,
+      "guardNamedFiles": 2
+    },
+    {
+      "module": "data-ops-business-workflow",
+      "javaFiles": 99,
+      "testFiles": 58,
+      "guardNamedFiles": 5
+    },
+    {
+      "module": "data-ops-business-alert",
+      "javaFiles": 15,
+      "testFiles": 2,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-agent",
+      "javaFiles": 141,
+      "testFiles": 35,
+      "guardNamedFiles": 5
+    },
+    {
+      "module": "data-ops-business-home",
+      "javaFiles": 12,
+      "testFiles": 8,
+      "guardNamedFiles": 2
+    },
+    {
+      "module": "data-ops-business-modeling",
+      "javaFiles": 165,
+      "testFiles": 41,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-governance",
+      "javaFiles": 28,
+      "testFiles": 11,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-semantic",
+      "javaFiles": 97,
+      "testFiles": 14,
+      "guardNamedFiles": 1
+    },
+    {
+      "module": "data-ops-business-mdm",
+      "javaFiles": 132,
+      "testFiles": 30,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-metric",
+      "javaFiles": 72,
+      "testFiles": 19,
+      "guardNamedFiles": 3
+    },
+    {
+      "module": "data-ops-business-security",
+      "javaFiles": 52,
+      "testFiles": 5,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-lifecycle",
+      "javaFiles": 35,
+      "testFiles": 7,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-asset",
+      "javaFiles": 49,
+      "testFiles": 20,
+      "guardNamedFiles": 1
+    },
+    {
+      "module": "data-ops-business-metadata",
+      "javaFiles": 81,
+      "testFiles": 36,
+      "guardNamedFiles": 1
+    },
+    {
+      "module": "data-ops-business-approval",
+      "javaFiles": 22,
+      "testFiles": 5,
+      "guardNamedFiles": 0
+    },
+    {
+      "module": "data-ops-business-consumption",
+      "javaFiles": 62,
+      "testFiles": 35,
+      "guardNamedFiles": 1
+    }
+  ],
+  "requestClientCandidateCounts": {
+    "@umijs/max": 19,
+    "@/utils/request": 7,
+    "umi-request": 1
+  },
+  "pageImports": [
+    {
+      "file": "data-ops-ui/src/pages/data-asset/catalog/index.tsx",
+      "imported": "@/pages/data-metadata/components/AssetExplorer"
+    },
+    {
+      "file": "data-ops-ui/src/pages/data-source/components/DataSourceCard.tsx",
+      "imported": "@/pages/integration/sourceHandoff"
+    },
+    {
+      "file": "data-ops-ui/src/pages/data-source/sql-executions/index.tsx",
+      "imported": "@/pages/data-security/shared"
+    },
+    {
+      "file": "data-ops-ui/src/pages/development/data-development/components/data-service/DataServiceNodeEditor.tsx",
+      "imported": "@/pages/data-service/utils"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/components/SyncTaskList/components/RunLogDrawer.tsx",
+      "imported": "@/pages/integration/batch-link-up/type"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/components/TaskHistoryPanel/components/HistoryList.tsx",
+      "imported": "@/pages/integration/batch-link-up/type"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/components/TaskHistoryPanel/components/HistoryListItem.tsx",
+      "imported": "@/pages/integration/batch-link-up/type"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/components/TaskHistoryPanel/hooks/useTaskHistory.ts",
+      "imported": "@/pages/integration/batch-link-up/api"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/components/TaskHistoryPanel/hooks/useTaskHistory.ts",
+      "imported": "@/pages/integration/batch-link-up/type"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/config/multi/hooks/useMultiWorkflowState.tsx",
+      "imported": "@/pages/integration/batch-link-up/api"
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/realtime-sync/components/CreateRealtimeTaskDrawer.tsx",
+      "imported": "@/pages/integration/sourceHandoff"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/identification/index.tsx",
+      "imported": "@/pages/mdm/components/CollectLanding"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/components/CollectStatusTab.tsx",
+      "imported": "@/pages/mdm/components/CollectLanding"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/components/QualityTab.tsx",
+      "imported": "@/pages/data-quality/components/QualityStatus"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/AttributeTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/ChangeHistoryTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/CollectStatusTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/DistributionTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/LineageTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/QualityTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/RecordTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/modeling/detail.tsx",
+      "imported": "@/pages/mdm/modeling/components/SubscriptionTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/components/ModelAssignModals.tsx",
+      "imported": "@/pages/modeling/components/directoryTreeData"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/components/ModelCreateWizardDrawer.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/components/ModelEditModal.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/components/ModelVersionPanel.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/components/RecycleBinDrawer.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/components/ReverseImportDrawer.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/detail.tsx",
+      "imported": "@/pages/modeling/components/StandardAssistantDrawer"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/detail.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/ModelAssignModals"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/ModelCreateWizardDrawer"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/ModelEditModal"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/ModelTreePane"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/RecycleBinDrawer"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/TagManageModal"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/index.tsx",
+      "imported": "@/pages/modeling/components/ModelCreateWizardDrawer"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/modeling/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/modeling/components/ModelLineagePanel"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/modeling/components/ModelVersionPanel"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/modeling/detail"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/data-lifecycle/components/ModelLifecycleTab"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/modeling/layer-mapping"
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/unified/index.tsx",
+      "imported": "@/pages/modeling/mapping"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/components/CodeSetEditModal.tsx",
+      "imported": "@/pages/semantic/standards/components/CodeSetFormItems"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/components/StandardDetailDrawer.tsx",
+      "imported": "@/pages/semantic/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/components/StandardDetailDrawer.tsx",
+      "imported": "@/pages/semantic/standards/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/components/StandardEditModal.tsx",
+      "imported": "@/pages/semantic/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/components/StandardVersionsDrawer.tsx",
+      "imported": "@/pages/semantic/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/index.tsx",
+      "imported": "@/pages/semantic/constants"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/index.tsx",
+      "imported": "@/pages/semantic/standards/components/CodeSetEditModal"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/index.tsx",
+      "imported": "@/pages/semantic/standards/components/StandardDetailDrawer"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/index.tsx",
+      "imported": "@/pages/semantic/standards/components/StandardEditModal"
+    },
+    {
+      "file": "data-ops-ui/src/pages/semantic/standards/index.tsx",
+      "imported": "@/pages/semantic/standards/components/StandardVersionsDrawer"
+    }
+  ],
+  "largestUiHooks": [
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/detail/components/FieldMappingSection.tsx",
+      "lines": 2931,
+      "useStateCalls": 12,
+      "useEffectCalls": 5
+    },
+    {
+      "file": "data-ops-ui/src/pages/modeling/detail.tsx",
+      "lines": 2901,
+      "useStateCalls": 60,
+      "useEffectCalls": 8
+    },
+    {
+      "file": "data-ops-ui/src/pages/create/index.tsx",
+      "lines": 1722,
+      "useStateCalls": 9,
+      "useEffectCalls": 2
+    },
+    {
+      "file": "data-ops-ui/src/pages/mdm/cleansing/index.tsx",
+      "lines": 1481,
+      "useStateCalls": 30,
+      "useEffectCalls": 3
+    },
+    {
+      "file": "data-ops-ui/src/pages/development/data-development/components/data-service/DataServiceNodeEditor.tsx",
+      "lines": 1309,
+      "useStateCalls": 28,
+      "useEffectCalls": 4
+    },
+    {
+      "file": "data-ops-ui/src/pages/integration/batch-link-up/detail/redesigned.tsx",
+      "lines": 1305,
+      "useStateCalls": 11,
+      "useEffectCalls": 6
+    },
+    {
+      "file": "data-ops-ui/src/pages/workflow/definition/components/WorkflowDefinitionEditor.tsx",
+      "lines": 1190,
+      "useStateCalls": 20,
+      "useEffectCalls": 4
+    },
+    {
+      "file": "data-ops-ui/src/pages/data-analysis/lineage/LineageWorkspace.tsx",
+      "lines": 1146,
+      "useStateCalls": 19,
+      "useEffectCalls": 2
+    },
+    {
+      "file": "data-ops-ui/src/pages/data-quality/monitor/editor/RuleEditor.tsx",
+      "lines": 1028,
+      "useStateCalls": 7,
+      "useEffectCalls": 0
+    },
+    {
+      "file": "data-ops-ui/src/pages/development/data-development/components/dataset/DatasetNodeEditor.tsx",
+      "lines": 1018,
+      "useStateCalls": 20,
+      "useEffectCalls": 5
+    },
+    {
+      "file": "data-ops-ui/src/pages/metric/manage/components/MetricEditModal.tsx",
+      "lines": 1003,
+      "useStateCalls": 10,
+      "useEffectCalls": 6
+    },
+    {
+      "file": "data-ops-ui/src/pages/resources/resource-management/index.tsx",
+      "lines": 996,
+      "useStateCalls": 15,
+      "useEffectCalls": 4
+    }
+  ],
+  "flywayMissingLiterals": [
+    {
+      "test": "data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/architecture/AgentFlywayContractTest.java",
+      "missing": [
+        "V1__baseline_agent.sql",
+        "V2__agent_add_project_id.sql",
+        "B2__agent_baseline.sql"
+      ],
+      "present": [
+        "V1__agent_baseline.sql"
+      ]
+    },
+    {
+      "test": "data-ops-business/data-ops-business-data-service/src/test/java/io/yak/ops/business/dataservice/architecture/DataServiceFlywayContractTest.java",
+      "missing": [
+        "V1__baseline_data_service.sql",
+        "V2__ip_access_policy.sql",
+        "V3__consumer_access_model.sql",
+        "V4__usage_evidence_source.sql",
+        "B4__data_service_baseline.sql"
+      ],
+      "present": [
+        "V1__data_service_baseline.sql"
+      ]
+    },
+    {
+      "test": "data-ops-business/data-ops-business-dataset/src/test/java/io/yak/ops/business/dataset/architecture/DatasetFlywayContractTest.java",
+      "missing": [
+        "V1__baseline_dataset.sql",
+        "V2__dataset_source_publication_lock.sql",
+        "V3__dataset_query_subject_attribution.sql",
+        "B3__dataset_baseline.sql"
+      ],
+      "present": [
+        "V1__dataset_baseline.sql"
+      ]
+    },
+    {
+      "test": "data-ops-business/data-ops-business-sync/data-ops-business-sync-offline/src/test/java/io/yak/ops/business/sync/offline/architecture/OfflineSyncFlywayContractTest.java",
+      "missing": [
+        "V1__baseline_offline_sync.sql",
+        "V2__add_offline_notification_config.sql",
+        "V3__add_offline_editor_meta.sql",
+        "V4__add_batch_audit_carrier.sql",
+        "V5__bind_offline_cursor_source_route.sql",
+        "V6__offline_job_revision_versioning.sql",
+        "B6__offline_sync_baseline.sql"
+      ],
+      "present": [
+        "V1__offline_sync_baseline.sql"
+      ]
+    }
+  ]
+}

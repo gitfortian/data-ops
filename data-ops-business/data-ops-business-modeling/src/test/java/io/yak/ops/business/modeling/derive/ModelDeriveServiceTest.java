@@ -34,7 +34,7 @@ import io.yak.ops.business.semantic.api.StandardRecommendApi;
 import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.api.WarehouseLayer;
 import io.yak.ops.business.semantic.api.BusinessProcess;
-import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO;
 import io.yak.ops.common.api.metric.MetricQueryApi;
 import io.yak.ops.common.api.metric.MetricQueryView;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
@@ -747,12 +747,12 @@ class ModelDeriveServiceTest {
     // 主键 = 全部维度字段(order_id、order_city)
     assertEquals(List.of("order_id", "order_city"), saved.getValue().primaryKey());
     // 43 落角色 + 聚合函数;pay_amount 是度量 SUM
-    ArgumentCaptor<io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO> mapping =
-        ArgumentCaptor.forClass(io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO.class);
+    ArgumentCaptor<io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO> mapping =
+        ArgumentCaptor.forClass(io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO.class);
     // 聚合层:全部业务字段都落 43(order_id/pay_amount/order_city),未治理字段 process_field_id 为空
     verify(layerFieldMappingRepository, org.mockito.Mockito.times(3))
         .upsert(mapping.capture(), eq("tester"));
-    Map<String, io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO> byName =
+    Map<String, io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO> byName =
         new LinkedHashMap<>();
     mapping.getAllValues().forEach(row -> byName.put(row.getLayerFieldName(), row));
     // 度量:pay_amount 落 MEASURE + SUM,来源 = <上游模型编码>.<列>

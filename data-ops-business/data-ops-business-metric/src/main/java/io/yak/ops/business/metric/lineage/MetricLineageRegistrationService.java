@@ -9,7 +9,7 @@ import io.yak.ops.business.lineage.maintenance.LineageMaintenanceService;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.lineage.registration.LineageRegistrationService;
 import io.yak.ops.business.metric.domain.Metric;
-import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
+import io.yak.ops.business.metric.dao.model.MetricDependencyPO;
 import java.time.Instant;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

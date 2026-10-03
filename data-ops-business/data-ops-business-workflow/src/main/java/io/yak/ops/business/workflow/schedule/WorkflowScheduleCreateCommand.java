@@ -5,7 +5,7 @@ import io.yak.ops.business.workflow.definition.WorkflowDefinitionManager;
 import io.yak.ops.business.workflow.dao.WorkflowScheduleDao;
 import io.yak.ops.business.workflow.repository.support.WorkflowJsonCodec;
 import io.yak.ops.common.bean.dto.workflow.WorkflowScheduleCreateDTO;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import io.yak.ops.common.bean.vo.workflow.WorkflowScheduleVO;
 import java.time.Instant;
 import java.util.UUID;

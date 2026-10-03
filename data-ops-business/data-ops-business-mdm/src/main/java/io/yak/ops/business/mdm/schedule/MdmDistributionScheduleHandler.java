@@ -6,7 +6,7 @@ import io.yak.framework.schedule.api.ScheduleHandler;
 import io.yak.ops.business.mdm.application.MdmDistributionService;
 import io.yak.ops.business.mdm.dao.mapper.MdmDistributionMapper;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistribution;
-import io.yak.ops.common.bean.po.mdm.MdmDistributionPO;
+import io.yak.ops.business.mdm.dao.model.MdmDistributionPO;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import lombok.extern.slf4j.Slf4j;

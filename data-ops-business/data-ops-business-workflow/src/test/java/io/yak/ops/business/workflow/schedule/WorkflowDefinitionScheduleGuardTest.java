@@ -6,7 +6,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.workflow.dao.WorkflowScheduleDao;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;

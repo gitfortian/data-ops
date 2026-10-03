@@ -42,6 +42,8 @@ class HomeCockpitReaderTest {
 
     assertThat(response.header().dataSourceCount()).isEqualTo(12);
     assertThat(response.header().runningCount()).isEqualTo(4);
+    assertThat(response.header().dataSourceAvailable()).isTrue();
+    assertThat(response.header().runningAvailable()).isTrue();
   }
 
   @Test
@@ -56,6 +58,24 @@ class HomeCockpitReaderTest {
 
     assertThat(response.header().dataSourceCount()).isZero();
     assertThat(response.header().runningCount()).isZero();
+    assertThat(response.header().dataSourceAvailable()).isFalse();
+    assertThat(response.header().runningAvailable()).isFalse();
+    assertThat(response.header().sources().get("workflow").unavailableReason()).isEqualTo("MODULE_DISABLED");
+  }
+
+  @Test
+  void aFailedSourceDoesNotHideAnotherSourcesRealZero() {
+    DataSourceReader datasource = mock(DataSourceReader.class);
+    when(datasource.summary()).thenReturn(new DataSourceSummary(0, 0, 0, 0, 0));
+    WorkflowExecutionOverviewReader workflow = mock(WorkflowExecutionOverviewReader.class);
+    when(workflow.metrics(any(), any())).thenThrow(new IllegalStateException("unavailable"));
+    HomeCockpitReader.HeaderStats header = new HomeCockpitReader(
+        provider(datasource), provider(null), provider(workflow), provider(null)).cockpit().header();
+    assertThat(header.dataSourceCount()).isZero();
+    assertThat(header.dataSourceAvailable()).isTrue();
+    assertThat(header.runningAvailable()).isFalse();
+    assertThat(header.sources().get("workflow").unavailableReason()).isEqualTo("QUERY_UNAVAILABLE");
+    assertThat(header.observedAt()).isNotNull();
   }
 
   @SuppressWarnings("unchecked")

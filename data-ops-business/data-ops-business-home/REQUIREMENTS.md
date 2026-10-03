@@ -28,7 +28,7 @@ GET /api/v1/home/schedule-center/calendar?month=...
 - 首页“今日”按应用所在时区的自然日窗口计算。
 - 最近列表和关系图必须有明确上限。
 
-> Cockpit 当前历史 contract 对部分运行计数仍使用 `0` 作为降级值。本次 module extraction 保持现有响应行为，不在结构重构中改变外部语义；后续若统一 unavailable semantics，应单独提交行为 PR。
+> Cockpit 的历史 numeric 字段继续使用 `0` 降级以兼容旧消费者。2026-10-03 用户批准架构方案 A09 后新增 `dataSourceAvailable`、`runningAvailable`、`observedAt` 和逐来源 `sources`。真实零值必须 available=true；部分失败时聚合 runningAvailable=false，来源观测只表示读取可用性，不成为业务状态或新 Truth Owner。新前端在不可用时展示占位，不把部分合计展示成完整数量。
 
 ## Query budget
 

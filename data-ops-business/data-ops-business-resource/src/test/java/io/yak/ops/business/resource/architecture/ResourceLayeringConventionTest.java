@@ -13,7 +13,7 @@ import io.yak.ops.business.resource.domain.ResourceQuery;
 import io.yak.ops.business.resource.namespace.ResourceNamespaceManager;
 import io.yak.ops.business.resource.repository.ResourceRepository;
 import io.yak.ops.business.resource.storage.ResourceStorageGateway;
-import io.yak.ops.common.bean.po.resource.ResourcePO;
+import io.yak.ops.business.resource.dao.model.ResourcePO;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;

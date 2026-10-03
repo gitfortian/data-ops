@@ -20,8 +20,8 @@ import io.yak.ops.business.asset.dao.mapper.AssetTagRelMapper;
 import io.yak.ops.business.asset.dao.mapper.AssetViewRecordMapper;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.security.api.SecurityClassificationQueryApi;
-import io.yak.ops.common.bean.po.asset.AssetHealthSnapshotPO;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetHealthSnapshotPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -47,11 +47,11 @@ class HealthRecomputeServiceTest {
   void setUp() {
     MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
     TableInfoHelper.initTableInfo(assistant, AssetItemPO.class);
-    TableInfoHelper.initTableInfo(assistant, io.yak.ops.common.bean.po.asset.AssetTagRelPO.class);
+    TableInfoHelper.initTableInfo(assistant, io.yak.ops.business.asset.dao.model.AssetTagRelPO.class);
     TableInfoHelper.initTableInfo(assistant,
-        io.yak.ops.common.bean.po.asset.AssetChangeRecordPO.class);
+        io.yak.ops.business.asset.dao.model.AssetChangeRecordPO.class);
     TableInfoHelper.initTableInfo(assistant,
-        io.yak.ops.common.bean.po.asset.AssetViewRecordPO.class);
+        io.yak.ops.business.asset.dao.model.AssetViewRecordPO.class);
     TableInfoHelper.initTableInfo(assistant, AssetHealthSnapshotPO.class);
     itemMapper = mock(AssetItemMapper.class);
     changeMapper = mock(AssetChangeRecordMapper.class);

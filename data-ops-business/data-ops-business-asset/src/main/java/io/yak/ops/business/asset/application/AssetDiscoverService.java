@@ -5,7 +5,7 @@ import io.yak.ops.business.asset.reconcile.AssetProviderRegistry;
 import io.yak.ops.business.lineage.domain.LineageAsset;
 import io.yak.ops.business.lineage.domain.LineageDirection;
 import io.yak.ops.business.lineage.query.LineageQueryService;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;

@@ -13,7 +13,7 @@ import io.yak.framework.schedule.api.ScheduleDefinition;
 import io.yak.framework.schedule.api.ScheduleManager;
 import io.yak.framework.schedule.api.ScheduleSnapshot;
 import io.yak.framework.schedule.api.ScheduleStatus;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

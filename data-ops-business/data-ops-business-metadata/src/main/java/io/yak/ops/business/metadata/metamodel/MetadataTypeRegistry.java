@@ -2,8 +2,8 @@ package io.yak.ops.business.metadata.metamodel;
 
 import io.yak.ops.business.metadata.dao.mapper.MdFieldDefMapper;
 import io.yak.ops.business.metadata.dao.mapper.MdTypeDefMapper;
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
-import io.yak.ops.common.bean.po.metadata.MdTypeDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdTypeDefPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.MatchType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.TypeCategory;
 import io.yak.ops.common.enums.metadata.MetadataEnums.TypeStatus;

@@ -1,7 +1,7 @@
 package io.yak.ops.business.modeling.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.modeling.ModelingModelVersionPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelVersionPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

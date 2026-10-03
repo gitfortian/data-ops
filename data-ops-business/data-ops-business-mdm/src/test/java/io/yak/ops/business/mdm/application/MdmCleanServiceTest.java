@@ -15,7 +15,7 @@ import io.yak.framework.common.PageData;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
-import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
+import io.yak.ops.business.mdm.domain.clean.MdmDedupKey;
 import io.yak.ops.business.mdm.domain.attribute.MdmAttribute;
 import io.yak.ops.business.mdm.domain.attribute.MdmAttributeType;
 import io.yak.ops.business.mdm.domain.clean.MdmCleanRule;
@@ -174,7 +174,7 @@ class MdmCleanServiceTest {
             true, 0, "tester", LocalDateTime.now(), LocalDateTime.now());
     when(ruleRepository.findById(10L)).thenReturn(Optional.of(rule));
     when(recordRepository.countDedupKeys(anyLong(), anyLong(), any(), any()))
-        .thenReturn(List.of(new MdmDedupKeyRow("13800138000", 3)));
+        .thenReturn(List.of(new MdmDedupKey("13800138000", 3)));
     when(recordRepository.listByDedupKey(anyLong(), any(), any(), anyInt()))
         .thenReturn(
             List.of(
@@ -212,7 +212,7 @@ class MdmCleanServiceTest {
     MdmCleanRule rule = dedupRule(10L, 1L);
     when(ruleRepository.findById(10L)).thenReturn(Optional.of(rule));
     when(recordRepository.countDedupKeys(anyLong(), anyLong(), any(), any()))
-        .thenReturn(List.of(new MdmDedupKeyRow("13800138000", 2)));
+        .thenReturn(List.of(new MdmDedupKey("13800138000", 2)));
     when(recordRepository.listByDedupKey(anyLong(), any(), any(), anyInt())).thenReturn(List.of());
 
     MdmCleanService.DedupGroup group =

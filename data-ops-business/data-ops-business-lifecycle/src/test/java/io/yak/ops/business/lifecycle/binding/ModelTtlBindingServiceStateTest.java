@@ -2,8 +2,8 @@ package io.yak.ops.business.lifecycle.binding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.yak.ops.common.bean.po.lifecycle.LifecycleDispatchRecordPO;
-import io.yak.ops.common.bean.po.lifecycle.LifecyclePolicyPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecycleDispatchRecordPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecyclePolicyPO;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.ModelState;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;

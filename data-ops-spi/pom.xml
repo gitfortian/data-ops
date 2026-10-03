@@ -13,6 +13,10 @@
     <description>Stable extension contracts for Data Ops plugins</description>
     <dependencies>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.yak.ops</groupId>
             <artifactId>data-ops-common</artifactId>
         </dependency>

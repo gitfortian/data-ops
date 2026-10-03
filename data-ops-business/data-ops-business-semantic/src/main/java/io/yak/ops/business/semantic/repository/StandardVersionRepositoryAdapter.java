@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.catalog.StandardVersion;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardVersionMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticStandardVersionPO;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardVersionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;

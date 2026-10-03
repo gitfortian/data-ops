@@ -1,7 +1,7 @@
 package io.yak.ops.business.mdm.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.mdm.MdmEntityPO;
+import io.yak.ops.business.mdm.dao.model.MdmEntityPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

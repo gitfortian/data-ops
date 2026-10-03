@@ -3,7 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { history } from '@umijs/max';
 import { YakButton, YakEmpty } from '@/components/ui';
-import { CheckResultTag } from '@/pages/data-quality/components/QualityStatus';
+import { CheckResultTag } from '@/components/quality/QualityStatus';
 import type { CheckResult } from '@/services/data-quality';
 import { getMdmQualityStatus, runMdmQualityCheck } from '@/services/mdm/api';
 import type { MdmLandingQualityStatus } from '@/services/mdm/types';

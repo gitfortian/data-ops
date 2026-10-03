@@ -2,7 +2,7 @@ package io.yak.ops.business.workflow.schedule;
 
 import io.yak.ops.business.workflow.dao.WorkflowScheduleDao;
 import io.yak.ops.business.workflow.repository.support.WorkflowJsonCodec;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import io.yak.ops.common.bean.vo.workflow.WorkflowScheduleVO;
 import java.util.List;
 import java.util.Locale;

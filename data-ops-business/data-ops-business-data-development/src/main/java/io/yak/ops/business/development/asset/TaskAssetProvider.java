@@ -9,7 +9,7 @@ import io.yak.ops.business.asset.api.AssetProvider;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.development.dao.mapper.DevelopmentNodeMapper;
 import io.yak.ops.business.development.service.DevelopmentSqlLineageService;
-import io.yak.ops.common.bean.po.development.DevelopmentNodePO;
+import io.yak.ops.business.development.dao.model.DevelopmentNodePO;
 import io.yak.ops.common.enums.asset.AssetEnums.AssetType;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import java.time.Instant;

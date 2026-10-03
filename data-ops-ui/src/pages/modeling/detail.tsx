@@ -1,3 +1,7 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
+import { useModelStructureDraft } from './editor/useModelStructureDraft';
+import { ColumnDraft, IndexDraft, PropertyDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
 import { history, useParams } from '@umijs/max';
 import { ApartmentOutlined, CloudDownloadOutlined, CopyOutlined, ExclamationCircleOutlined, FundOutlined, ReloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import {
@@ -20,7 +24,7 @@ import {
   message,
 } from 'antd';
 import type { Key as ReactKey } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -55,145 +59,7 @@ import type { DataSourceRecord, DataSourceCatalogTable } from '@/services/data-s
 import { pageMetrics } from '@/services/metric/api';
 import type { MetricRecord } from '@/services/metric/types';
 
-interface ColumnDraft {
-  key: number;
-  columnName: string;
-  dataType: string;
-  length?: number | null;
-  scale?: number | null;
-  nullable: boolean;
-  defaultValue?: string;
-  comment?: string;
-  businessDescription?: string;
-  /** 数据标准松散引用(ticket 30 预留 / 39 套用写入)。 */
-  stdTypeId?: number | null;
-  stdNamingId?: number | null;
-  stdCodeSetCode?: string | null;
-  stdUnitId?: number | null;
-  stdCaliberId?: number | null;
-  stdSecurityId?: number | null;
-  /** 标准字段关联(38/44 写入;保存时必须回传,否则整表替换会抹掉治理结果)。 */
-  stdFieldId?: number | null;
-  /** 聚合层字段角色(DWS/ADS):DIMENSION 分组键 / MEASURE 度量;非聚合层不展示。 */
-  fieldRole?: 'DIMENSION' | 'MEASURE' | null;
-  /** 聚合函数(MEASURE 必填;SUM/COUNT/COUNT_DISTINCT/MAX/MIN/AVG)。 */
-  aggregateFunc?: string | null;
-  /** 口径/转换表达式(度量口径)。 */
-  transformExpr?: string | null;
-}
-
-interface IndexDraft {
-  key: number;
-  indexName: string;
-  uniqueIndex: boolean;
-  indexType?: string;
-  columns: string[];
-}
-
-interface PropertyDraft {
-  key: number;
-  propKey: string;
-  propValue: string;
-}
-
-const CODE_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_$]{0,127}$/;
-
-/** 发布审批(01):flowCode/bizType 与后端 ApprovalFlowCodes.MODEL_PUBLISH、ModelPublishApprovalService.BIZ_TYPE 同源。 */
-const MODEL_PUBLISH_FLOW_CODE = 'MODEL_PUBLISH';
-const MODEL_PUBLISH_BIZ_TYPE = 'MODEL';
-/** 审批中页面对象冻结(保存/发布/回滚禁用)，在途单终态轮询间隔。 */
-const PUBLISH_APPROVAL_POLL_MS = 15_000;
-
-/** C5(2026-09-17):类型选择后自动带出的长度/精度默认值(用户可改)。 */
-const TYPE_DEFAULTS: Record<string, { length?: number; scale?: number }> = {
-  VARCHAR: { length: 128 },
-  CHAR: { length: 32 },
-  DECIMAL: { length: 18, scale: 2 },
-  NUMERIC: { length: 18, scale: 2 },
-  TINYINT: { length: 4 },
-  SMALLINT: { length: 6 },
-  INT: { length: 11 },
-  INTEGER: { length: 11 },
-  BIGINT: { length: 20 },
-  DATE: {},
-  DATETIME: {},
-  TIMESTAMP: {},
-};
-
-/**
- * 标准字段里的逻辑类型名 → 物理类型候选,取该方言类型目录里第一个支持的。
- * 只收录「目录里大概率没有同名物理类型」的逻辑名;同名即可命中的走原样查询。
- */
-const LOGICAL_TYPE_ALIASES: Record<string, string[]> = {
-  STRING: ['VARCHAR', 'TEXT', 'CHAR'],
-  INT: ['INT', 'INTEGER'],
-  INTEGER: ['INTEGER', 'INT'],
-  DATETIME: ['DATETIME', 'TIMESTAMP'],
-};
-
-/** 取某类型在该方言目录里的约束;目录未下发约束时返回 undefined(按未知处理,不做破坏性清空)。 */
-const typeSpecOf = (
-  catalog: ModelingTypeOption[],
-  name: string | undefined | null,
-): ModelingTypeOption | undefined => {
-  const normalized = (name ?? '').trim().toUpperCase();
-  if (!normalized) return undefined;
-  return catalog.find((item) => (item.name ?? '').toUpperCase() === normalized);
-};
-
-/** 由标准字段的类型名(可带精度,如 decimal(18,2))推出该方言可用的类型与长度精度;推不出返回 null。 */
-const resolveColumnType = (
-  raw: string | undefined | null,
-  catalog: ModelingTypeOption[],
-): { dataType: string; length: number | null; scale: number | null } | null => {
-  const matched = /^([A-Za-z0-9_]+)\s*(?:\(\s*(\d+)\s*(?:,\s*(\d+)\s*)?\))?$/.exec(
-    (raw ?? '').trim(),
-  );
-  if (!matched) return null;
-  const supported = new Map(
-    catalog.map((item) => [(item.name ?? '').toUpperCase(), item.name!] as const),
-  );
-  const logical = matched[1].toUpperCase();
-  const dataType =
-    supported.get(logical) ??
-    (LOGICAL_TYPE_ALIASES[logical] ?? [])
-      .map((name) => supported.get(name))
-      .find((name): name is string => !!name);
-  if (!dataType) return null;
-  const spec = typeSpecOf(catalog, dataType);
-  const defaults = TYPE_DEFAULTS[dataType.toUpperCase()] ?? {};
-  return {
-    dataType,
-    length: matched[2] ? Number(matched[2]) : defaults.length ?? null,
-    // 该方言类型不支持小数位时硬塞一个,保存会被后端 ERROR 阻断
-    scale:
-      spec?.scaleAllowed === false
-        ? null
-        : matched[3]
-          ? Number(matched[3])
-          : defaults.scale ?? null,
-  };
-};
-
-/** 各方言支持的分区类型;未列出的方言视为不支持分区(AC:按方言标注)。 */
-const PARTITION_TYPES_BY_DIALECT: Record<string, string[]> = {
-  MYSQL: ['RANGE', 'LIST', 'HASH', 'KEY'],
-  POSTGRESQL: ['RANGE', 'LIST', 'HASH'],
-  ORACLE: ['RANGE', 'LIST', 'HASH'],
-  DORIS: ['RANGE', 'LIST', 'HASH'],
-  STARROCKS: ['RANGE', 'LIST'],
-};
-
-/** 聚合函数白名单(与后端 ModelStructureService.AGGREGATE_FUNCS 对齐)。 */
-const AGGREGATE_FUNC_OPTIONS = ['SUM', 'COUNT', 'COUNT_DISTINCT', 'MAX', 'MIN', 'AVG'];
-/** 具备聚合语义的分层:仅这些分层展示 角色/聚合函数/口径 列。 */
-const AGGREGATE_LAYERS = new Set(['DWS', 'ADS']);
-
-/** 当前高亮行 key(模块级引用,供 SortableRow 读取以避免重渲染)。 */
-let _highlightRowKey: number | undefined;
-/** 当前是否正在多选拖拽(模块级引用,供 SortableRow 读取)。 */
-let _multiDragActive = false;
-let _multiDragSelectedKeys = new Set<number>();
+const RowInteractionContext = createContext<{ highlight?: number; dragging: ReadonlySet<number> }>({ dragging: new Set() });
 
 /** 可拖拽排序行。 */
 const SortableRow = (
@@ -202,13 +68,14 @@ const SortableRow = (
   },
 ) => {
   const { className, style, ...restProps } = props;
+  const interaction = useContext(RowInteractionContext);
   const rowKey = props['data-row-key'];
   const numericKey = Number(rowKey);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: numericKey,
   });
-  const isHighlighted = rowKey !== undefined && numericKey === _highlightRowKey;
-  const isInMultiDrag = _multiDragActive && _multiDragSelectedKeys.has(numericKey);
+  const isHighlighted = rowKey !== undefined && numericKey === interaction.highlight;
+  const isInMultiDrag = interaction.dragging.has(numericKey);
   const combinedStyle: React.CSSProperties = {
     ...style,
     transform: CSS.Translate.toString(transform),
@@ -236,10 +103,12 @@ const SortableRow = (
   );
 };
 
-let draftSeq = 0;
+/** 模型详情：表结构在线编辑器（表基础信息 + 字段 + 主键/索引/分区/表属性全量保存）。 */
+const ModelingModelDetail: React.FC = () => {
+const draftSeq = useRef(0);
 const nextDraftKey = () => {
-  draftSeq += 1;
-  return draftSeq;
+  draftSeq.current += 1;
+  return draftSeq.current;
 };
 
 const emptyColumnDraft = (): ColumnDraft => ({
@@ -250,10 +119,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
   nullable: false,
 });
 
-/** 模型详情：表结构在线编辑器（表基础信息 + 字段 + 主键/索引/分区/表属性全量保存）。 */
-const ModelingModelDetail: React.FC = () => {
+
+  const { captureDraft, resetDraft, tableName, setTableName, tableComment, setTableComment, rows, setRows, primaryKey, setPrimaryKey, indexes, setIndexes, partitionEnabled, setPartitionEnabled, partitionType, setPartitionType, partitionColumns, setPartitionColumns, partitionExpression, setPartitionExpression, properties, setProperties, dirty, setDirty } = useModelStructureDraft();
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const { currentProject } = useSecurityProject();
+  const captureEditorResource = useResourceScope(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
+  const beginStandardSearch = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
+  const beginImportTableLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
+  const beginStructureLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
   const returnAssetIdValue = new URLSearchParams(window.location.search).get('returnAssetId');
   const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
     ? Number(returnAssetIdValue)
@@ -272,23 +146,16 @@ const ModelingModelDetail: React.FC = () => {
   const [publishFlowEnabled, setPublishFlowEnabled] = useState(false);
   const [publishApproval, setPublishApproval] = useState<ApprovalInstance | null>(null);
   const [approvalSubmitting, setApprovalSubmitting] = useState(false);
-  const [tableName, setTableName] = useState('');
-  const [tableComment, setTableComment] = useState('');
-  const [rows, setRows] = useState<ColumnDraft[]>([]);
-  const [primaryKey, setPrimaryKey] = useState<string[]>([]);
-  const [indexes, setIndexes] = useState<IndexDraft[]>([]);
-  const [partitionEnabled, setPartitionEnabled] = useState(false);
-  const [partitionType, setPartitionType] = useState<string | undefined>();
-  const [partitionColumns, setPartitionColumns] = useState<string[]>([]);
-  const [partitionExpression, setPartitionExpression] = useState('');
   const [assistantRowKey, setAssistantRowKey] = useState<number | null>(null);
-  const [properties, setProperties] = useState<PropertyDraft[]>([]);
-  const [dirty, setDirty] = useState(false);
   const [typeCatalog, setTypeCatalog] = useState<ModelingTypeOption[]>([]);
   /** 同一份目录的引用版:供不便把 typeCatalog 加进依赖的回调（如 discoverStandards）读取。 */
   const typeCatalogRef = useRef<ModelingTypeOption[]>([]);
   const [validationIssues, setValidationIssues] = useState<ModelingValidationIssue[]>([]);
+  const editorRootRef = useRef<HTMLDivElement>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => { clearTimeout(highlightTimerRef.current); }, []);
   const [highlightRowKey, setHighlightRowKey] = useState<number>();
+  const [draggingKeys, setDraggingKeys] = useState<ReadonlySet<number>>(new Set());
   const [ddlOpen, setDdlOpen] = useState(false);
   const [ddlLoading, setDdlLoading] = useState(false);
   const [ddlScript, setDdlScript] = useState('');
@@ -351,6 +218,7 @@ const ModelingModelDetail: React.FC = () => {
     async (
       targetRows: ColumnDraft[],
     ): Promise<{ rows: ColumnDraft[]; matchCount: number }> => {
+      const isCurrent = captureEditorResource();
       // 分页加载全部标准字段(后端限制 pageSize <= 200)
       const allFields: SemanticFieldRecord[] = [];
       let pageNo = 1;
@@ -358,6 +226,7 @@ const ModelingModelDetail: React.FC = () => {
       let hasMore = true;
       while (hasMore) {
         const result = await pageSemanticFields({ pageNo, pageSize });
+        if (!isCurrent()) return { rows: targetRows, matchCount: 0 };
         const batch = result?.bizData ?? [];
         allFields.push(...batch);
         hasMore = batch.length === pageSize;
@@ -396,11 +265,12 @@ const ModelingModelDetail: React.FC = () => {
       });
       return { rows: newRows, matchCount };
     },
-    [],
+    [captureEditorResource],
   );
 
-  const loadStructure = useCallback(async () => {
+  const loadStructure = useCallback(async (canApply: () => boolean = () => true) => {
     if (!modelId) return;
+    const isCurrent = beginStructureLoad();
     setLoading(true);
     try {
       // 并行加载模型信息和结构信息
@@ -408,6 +278,8 @@ const ModelingModelDetail: React.FC = () => {
         getModelingModel(modelId).catch(() => null),
         getModelingStructure(modelId),
       ]);
+      if (!isCurrent()) return;
+      if (!canApply()) return;
       setStructure(data);
       setModelInfo(modelData);
       // B4(2026-09-17):物理表名默认为模型编码
@@ -474,6 +346,7 @@ const ModelingModelDetail: React.FC = () => {
           setImportConfig({ datasourceId: dsId, database: db, table: tbl });
           try {
             const columns = await previewModelingImportColumns(dsId, db, tbl);
+            if (!isCurrent()) return;
             if (columns?.length) {
               // 构建初始字段列表
               const initialRows: ColumnDraft[] = columns.map((column) => ({
@@ -502,12 +375,14 @@ const ModelingModelDetail: React.FC = () => {
               // 自动触发标准发现
               try {
                 const discovered = await discoverStandards(initialRows);
+                if (!isCurrent()) return;
                 setRows(discovered.rows);
                 if (discovered.matchCount > 0) {
                   message.success(`标准发现:匹配到 ${discovered.matchCount} 个字段的标准绑定`);
                 }
               } catch {
                 // 标准发现失败不影响字段导入,降级为空
+                if (!isCurrent()) return;
                 setRows(initialRows);
               }
               setDirty(true);
@@ -530,6 +405,7 @@ const ModelingModelDetail: React.FC = () => {
           setImportConfig(config);
           try {
             const columns = await previewModelingImportColumns(config.datasourceId, config.database, config.table);
+            if (!isCurrent()) return;
             if (columns?.length) {
               const initialRows: ColumnDraft[] = columns.map((column) => ({
                 key: nextDraftKey(),
@@ -555,11 +431,13 @@ const ModelingModelDetail: React.FC = () => {
               if (tableRemarks) setTableComment(tableRemarks);
               try {
                 const discovered = await discoverStandards(initialRows);
+                if (!isCurrent()) return;
                 setRows(discovered.rows);
                 if (discovered.matchCount > 0) {
                   message.success(`自动导入:匹配到 ${discovered.matchCount} 个字段的标准绑定`);
                 }
               } catch {
+                if (!isCurrent()) return;
                 setRows(initialRows);
               }
               setDirty(true);
@@ -595,6 +473,7 @@ const ModelingModelDetail: React.FC = () => {
             }));
             const discovered = await discoverStandards(currentRows);
             if (discovered.matchCount > 0) {
+              if (!isCurrent()) return;
               setRows(discovered.rows);
               setDirty(true);
               message.success(`标准发现:匹配到 ${discovered.matchCount} 个字段的标准绑定`);
@@ -605,19 +484,23 @@ const ModelingModelDetail: React.FC = () => {
         }
       }
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '表结构加载失败');
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [modelId, discoverStandards]);
+  }, [modelId, currentProject?.id, discoverStandards, beginStructureLoad]);
 
   /** 重新导入:用保存的 importConfig 重新拉取源表字段并覆盖当前字段列表。 */
   const handleReimport = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!importConfig) return;
     const { datasourceId, database, table } = importConfig;
     setReimportLoading(true);
     try {
       const columns = await previewModelingImportColumns(datasourceId, database, table);
+      if (!isCurrent()) return;
       if (columns?.length) {
         setRows(
           columns.map((column) => ({
@@ -649,22 +532,32 @@ const ModelingModelDetail: React.FC = () => {
         message.warning('源表无字段信息');
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`重新导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setReimportLoading(false);
     }
-  }, [importConfig]);
+  }, [importConfig, captureEditorResource]);
 
   /** 标准发现:按字段名匹配标准字段集,匹配到的自动回填标准绑定。 */
   const handleStandardDiscover = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!rows.length) {
       message.warning('当前无字段可匹配');
       return;
     }
+    const draftUnchanged = captureDraft();
     setDiscoverLoading(true);
     try {
       const result = await discoverStandards(rows);
+      if (!isCurrent()) return;
+      if (!draftUnchanged()) {
+        message.info('草稿已修改，请重新执行标准发现');
+        return;
+      }
       if (!result) return;
       if (result.rows.length && !result.matchCount) {
         message.info('暂无标准字段集,请先在数据标准中维护');
@@ -678,12 +571,14 @@ const ModelingModelDetail: React.FC = () => {
         message.info('未匹配到标准字段,请检查字段名是否与标准字段编码一致');
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`标准发现失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setDiscoverLoading(false);
     }
-  }, [rows, discoverStandards]);
+  }, [rows, discoverStandards, captureEditorResource, captureDraft]);
 
   /** 从 jdbcUrl 解析数据库名。 */
   const extractDatabaseFromUrl = useCallback((url?: string): string => {
@@ -701,6 +596,8 @@ const ModelingModelDetail: React.FC = () => {
 
   /** 打开导入字段弹窗。 */
   const openImportModal = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     setImportModalOpen(true);
     setImportDatasourceId(undefined);
     setImportTables([]);
@@ -708,15 +605,21 @@ const ModelingModelDetail: React.FC = () => {
     setImportDatabase('');
     try {
       const result = await listAllDataSources();
+      if (!isCurrent()) return;
       setDatasources(result.bizData ?? []);
     } catch {
+      if (!isCurrent()) return;
       setDatasources([]);
     }
-  }, []);
+  }, [captureEditorResource]);
 
   /** 加载数据源对应的表列表。 */
   const loadImportTables = useCallback(
     async (datasourceId: number) => {
+      const resourceCurrent = captureEditorResource();
+      const tableRequestCurrent = beginImportTableLoad();
+      const isCurrent = () => resourceCurrent() && tableRequestCurrent();
+      if (!isCurrent()) return;
       if (!datasourceId) {
         setImportTables([]);
         setImportDatabase('');
@@ -728,22 +631,28 @@ const ModelingModelDetail: React.FC = () => {
       setImportTablesLoading(true);
       try {
         const result = await listDataSourceTables(datasourceId, db);
+        if (!isCurrent()) return;
         setImportTables(result ?? []);
       } catch {
+        if (!isCurrent()) return;
         setImportTables([]);
       } finally {
+        if (!isCurrent()) return;
         setImportTablesLoading(false);
       }
     },
-    [datasources, extractDatabaseFromUrl],
+    [datasources, extractDatabaseFromUrl, captureEditorResource, beginImportTableLoad],
   );
 
   /** 确认导入:从源表加载字段并自动标准发现。 */
   const handleImportConfirm = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!importDatasourceId || !importTable) return;
     setImportModalLoading(true);
     try {
       const columns = await previewModelingImportColumns(importDatasourceId, importDatabase, importTable);
+      if (!isCurrent()) return;
       if (columns?.length) {
         const initialRows: ColumnDraft[] = columns.map((column) => ({
           key: nextDraftKey(),
@@ -770,6 +679,7 @@ const ModelingModelDetail: React.FC = () => {
         // 自动标准发现
         try {
           const discovered = await discoverStandards(initialRows);
+          if (!isCurrent()) return;
           setRows(discovered.rows);
           if (discovered.matchCount > 0) {
             message.success(`导入成功，标准发现匹配到 ${discovered.matchCount} 个字段`);
@@ -777,6 +687,7 @@ const ModelingModelDetail: React.FC = () => {
             message.success(`导入成功，共 ${columns.length} 个字段`);
           }
         } catch {
+          if (!isCurrent()) return;
           setRows(initialRows);
           message.success(`导入成功，共 ${columns.length} 个字段`);
         }
@@ -792,33 +703,42 @@ const ModelingModelDetail: React.FC = () => {
         message.warning('源表无字段信息');
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setImportModalLoading(false);
     }
-  }, [importDatasourceId, importTable, importDatabase, discoverStandards]);
+  }, [importDatasourceId, importTable, importDatabase, discoverStandards, captureEditorResource]);
 
   /** 打开从模型导入字段弹窗。 */
   const handleOpenImportFromModel = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     setImportFromModelOpen(true);
     setSelectedModelIds([]);
     setModelListLoading(true);
     try {
       const result = await pageModelingModels({ pageNo: 1, pageSize: 200 });
+      if (!isCurrent()) return;
       const list = result.bizData ?? [];
       // 排除当前模型
       const currentId = modelId ? Number(modelId) : undefined;
       setModelList(list.filter((m) => m.id !== currentId));
     } catch {
+      if (!isCurrent()) return;
       setModelList([]);
     } finally {
+      if (!isCurrent()) return;
       setModelListLoading(false);
     }
-  }, [modelId]);
+  }, [modelId, captureEditorResource]);
 
   /** 确认从模型导入字段:合并选中模型的字段到当前模型。 */
   const handleImportFromModel = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!selectedModelIds.length) {
       message.warning('请选择至少一个模型');
       return;
@@ -831,6 +751,7 @@ const ModelingModelDetail: React.FC = () => {
       const newRows: ColumnDraft[] = [];
       for (const modelId of selectedModelIds) {
         const structure = await getModelingStructure(modelId);
+        if (!isCurrent()) return;
         const cols = structure.columns ?? [];
         for (const col of cols) {
           const colName = col.columnName?.trim() ?? '';
@@ -872,6 +793,7 @@ const ModelingModelDetail: React.FC = () => {
       let finalRows = newRows;
       try {
         const discovered = await discoverStandards(newRows);
+        if (!isCurrent()) return;
         finalRows = discovered.rows;
         if (discovered.matchCount > 0) {
           message.success(`已从模型导入 ${importedCount} 个字段，标准发现匹配到 ${discovered.matchCount} 个`);
@@ -879,6 +801,7 @@ const ModelingModelDetail: React.FC = () => {
           message.success(`已从 ${selectedModelIds.length} 个模型导入 ${importedCount} 个字段`);
         }
       } catch {
+        if (!isCurrent()) return;
         message.success(`已从 ${selectedModelIds.length} 个模型导入 ${importedCount} 个字段`);
       }
       setRows((prev) => [...prev, ...finalRows]);
@@ -891,30 +814,39 @@ const ModelingModelDetail: React.FC = () => {
         assignImportLineage(Number(modelId), 'MODEL', firstSourceId).catch(() => undefined);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`从模型导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setImportFromModelLoading(false);
     }
-  }, [selectedModelIds, rows, primaryKey, discoverStandards]);
+  }, [selectedModelIds, rows, primaryKey, discoverStandards, captureEditorResource]);
 
   /** 打开从业务过程导入字段弹窗。 */
   const handleOpenImportFromProcess = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     setImportFromProcessOpen(true);
     setSelectedProcessId(undefined);
     setProcessListLoading(true);
     try {
       const result = await pageSemanticProcesses({ pageNo: 1, pageSize: 200 });
+      if (!isCurrent()) return;
       setProcessList(result.bizData ?? []);
     } catch {
+      if (!isCurrent()) return;
       setProcessList([]);
     } finally {
+      if (!isCurrent()) return;
       setProcessListLoading(false);
     }
-  }, []);
+  }, [captureEditorResource]);
 
   /** 确认从业务过程导入字段。 */
   const handleImportFromProcess = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!selectedProcessId) {
       message.warning('请选择业务过程');
       return;
@@ -931,6 +863,7 @@ const ModelingModelDetail: React.FC = () => {
         layerCode,
         structure?.dialect,
       );
+      if (!isCurrent()) return;
       if (!preview.supported) {
         message.warning(preview.unsupportedReason || '该分层暂不支持从业务过程导入');
         return;
@@ -977,6 +910,7 @@ const ModelingModelDetail: React.FC = () => {
       let finalProcessRows = newRows;
       try {
         const discovered = await discoverStandards(newRows);
+        if (!isCurrent()) return;
         finalProcessRows = discovered.rows;
         if (discovered.matchCount > 0) {
           message.success(`已从业务过程导入 ${importedCount} 个字段，标准发现匹配到 ${discovered.matchCount} 个`);
@@ -984,6 +918,7 @@ const ModelingModelDetail: React.FC = () => {
           message.success(`已从业务过程导入 ${importedCount} 个字段`);
         }
       } catch {
+        if (!isCurrent()) return;
         message.success(`已从业务过程导入 ${importedCount} 个字段`);
       }
       setRows((prev) => [...prev, ...finalProcessRows]);
@@ -994,15 +929,19 @@ const ModelingModelDetail: React.FC = () => {
         assignImportLineage(Number(modelId), 'BUSINESS_PROCESS').catch(() => undefined);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`从业务过程导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setImportFromProcessLoading(false);
     }
-  }, [selectedProcessId, modelInfo, structure?.dialect, rows, discoverStandards]);
+  }, [selectedProcessId, modelInfo, structure?.dialect, rows, discoverStandards, captureEditorResource]);
 
   /** 打开"按指标反推"弹窗(仅 DWS/ADS):加载启用指标供选择。 */
   const handleOpenMetricDraft = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     const layerCode = modelInfo?.layerCode;
     if (!layerCode || !AGGREGATE_LAYERS.has(layerCode)) {
       message.warning('仅 DWS/ADS 分层支持按指标反推');
@@ -1014,16 +953,21 @@ const ModelingModelDetail: React.FC = () => {
     setMetricListLoading(true);
     try {
       const result = await pageMetrics({ pageNo: 1, pageSize: 200, status: 'ENABLED' });
+      if (!isCurrent()) return;
       setMetricList(result.records ?? []);
     } catch {
+      if (!isCurrent()) return;
       setMetricList([]);
     } finally {
+      if (!isCurrent()) return;
       setMetricListLoading(false);
     }
-  }, [modelInfo]);
+  }, [modelInfo, captureEditorResource]);
 
   /** 确认按指标反推:指标 → 反推草稿 → 派生预览 → 并入表结构(携带角色/聚合函数)。 */
   const handleApplyMetricDraft = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!selectedMetricIds.length) {
       message.warning('请至少选择一个指标');
       return;
@@ -1038,6 +982,7 @@ const ModelingModelDetail: React.FC = () => {
     setMetricDraftLoading(true);
     try {
       const draft = await getModelingMetricDraft(selectedMetricIds, structure?.dialect, upstreamLayer);
+      if (!isCurrent()) return;
       const processId = draft.processIds?.[0];
       if (!processId) {
         message.warning('所选指标未关联业务过程，无法反推');
@@ -1057,6 +1002,7 @@ const ModelingModelDetail: React.FC = () => {
         undefined,
         upstreamLayer,
       );
+      if (!isCurrent()) return;
       if (!preview.supported) {
         message.warning(preview.unsupportedReason || '该分层暂不支持按指标反推');
         return;
@@ -1112,12 +1058,64 @@ const ModelingModelDetail: React.FC = () => {
         assignImportLineage(Number(modelId), 'BUSINESS_PROCESS').catch(() => undefined);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`按指标反推失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setMetricDraftLoading(false);
     }
-  }, [selectedMetricIds, adsSourceLayer, modelInfo, structure?.dialect, rows, modelId]);
+  }, [selectedMetricIds, adsSourceLayer, modelInfo, structure?.dialect, rows, modelId, captureEditorResource]);
+
+  useEffect(() => {
+    resetDraft();
+    setModelInfo(null);
+    setStructure(undefined);
+    setImportConfig(null);
+    setDatasources([]);
+    setImportTables([]);
+    setModelList([]);
+    setProcessList([]);
+    setMetricList([]);
+    setImportDatasourceId(undefined);
+    setImportTable(undefined);
+    setImportDatabase('');
+    setSelectedModelIds([]);
+    setSelectedProcessId(undefined);
+    setSelectedMetricIds([]);
+    setSelectedRowKeys([]);
+    setAssistantRowKey(null);
+    setValidationIssues([]);
+    setPublishPreview(null);
+    setPublishApproval(null);
+    setPublishFlowEnabled(false);
+    setSaving(false);
+    setPublishing(false);
+    setApprovalSubmitting(false);
+    setReimportLoading(false);
+    setDiscoverLoading(false);
+    setImportModalLoading(false);
+    setImportTablesLoading(false);
+    setImportFromModelLoading(false);
+    setModelListLoading(false);
+    setImportFromProcessLoading(false);
+    setProcessListLoading(false);
+    setMetricDraftLoading(false);
+    setMetricListLoading(false);
+    setImportModalOpen(false);
+    setImportFromModelOpen(false);
+    setImportFromProcessOpen(false);
+    setMetricDraftOpen(false);
+    setDdlOpen(false);
+    setDdlLoading(false);
+    setDdlScript("");
+    setStandardFieldChoices([]);
+    setStandardNameById({});
+    standardFieldByCodeRef.current.clear();
+    stdBoundCodeByRowRef.current.clear();
+    clearTimeout(standardFieldSearchTimerRef.current);
+    return () => clearTimeout(standardFieldSearchTimerRef.current);
+  }, [currentProject?.id, modelId, resetDraft]);
 
   useEffect(() => {
     void loadStructure();
@@ -1125,9 +1123,11 @@ const ModelingModelDetail: React.FC = () => {
 
   // 发布审批开关(01):MODEL_PUBLISH 流未配置/未启用或无审批读权限时按关闭处理，维持现状直发
   useEffect(() => {
+    const isCurrent = captureEditorResource();
     let alive = true;
     listFlows(MODEL_PUBLISH_FLOW_CODE)
       .then((flows) => {
+        if (!isCurrent()) return;
         if (alive) {
           setPublishFlowEnabled(
             (flows ?? []).some((flow) => flow.flowCode === MODEL_PUBLISH_FLOW_CODE && flow.enabled),
@@ -1135,23 +1135,27 @@ const ModelingModelDetail: React.FC = () => {
         }
       })
       .catch(() => {
+        if (!isCurrent()) return;
         /* 审批中心不可用/无 data-approval:read：保持开关关闭 */
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [captureEditorResource]);
 
   const refreshPublishApproval = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     try {
-      setPublishApproval(
-        (await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId)) ?? null,
-      );
+      const latest = (await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId)) ?? null;
+      if (!isCurrent()) return;
+      setPublishApproval(latest);
     } catch {
+      if (!isCurrent()) return;
       /* 查询失败不阻塞业务页 */
     }
-  }, [modelId]);
+  }, [modelId, captureEditorResource]);
 
   useEffect(() => {
     void refreshPublishApproval();
@@ -1162,10 +1166,14 @@ const ModelingModelDetail: React.FC = () => {
     if (!modelId || publishApproval?.status !== 'PENDING') return undefined;
     const pendingId = publishApproval.id;
     const timer = setInterval(async () => {
+      const isCurrent = captureEditorResource();
+      if (!isCurrent()) return;
       let latest: ApprovalInstance | null = null;
       try {
         latest = (await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId)) ?? null;
+        if (!isCurrent()) return;
       } catch {
+        if (!isCurrent()) return;
         return; // 轮询失败等下一轮
       }
       if (!latest || latest.status === 'PENDING') return;
@@ -1174,6 +1182,7 @@ const ModelingModelDetail: React.FC = () => {
       if (latest.status === 'APPROVED') {
         message.info('发布审批已通过，已自动发布为新版本');
         const info = await getModelingModel(modelId).catch(() => null);
+        if (!isCurrent()) return;
         if (info) setModelInfo(info);
         window.dispatchEvent(new CustomEvent(MODELING_PUBLISHED_EVENT, { detail: { modelId } }));
       } else if (latest.status === 'REJECTED') {
@@ -1181,10 +1190,11 @@ const ModelingModelDetail: React.FC = () => {
       }
     }, PUBLISH_APPROVAL_POLL_MS);
     return () => clearInterval(timer);
-  }, [modelId, publishApproval?.id, publishApproval?.status]);
+  }, [modelId, publishApproval?.id, publishApproval?.status, captureEditorResource]);
 
   // 类型下拉与后端方言目录同源（ticket 07）
   useEffect(() => {
+    const isCurrent = captureEditorResource();
     if (!modelId || !structure?.dialect) {
       typeCatalogRef.current = [];
       setTypeCatalog([]);
@@ -1192,22 +1202,26 @@ const ModelingModelDetail: React.FC = () => {
     }
     getModelingTypeCatalog(modelId)
       .then((catalog) => {
+        if (!isCurrent()) return;
         typeCatalogRef.current = catalog || [];
         setTypeCatalog(typeCatalogRef.current);
       })
       .catch(() => {
+        if (!isCurrent()) return;
         typeCatalogRef.current = [];
         setTypeCatalog([]);
       });
-  }, [modelId, structure?.dialect]);
+  }, [modelId, structure?.dialect, captureEditorResource]);
 
   // C2(2026-09-17):"数据标准"列把类型标准 ID 解析为"名称（编码）";失败降级为空
   useEffect(() => {
+    const isCurrent = captureEditorResource();
     if (!modelId) {
       return;
     }
     getStandardOptions(['TYPE', 'UNIT', 'CALIBER', 'SECURITY'])
       .then((standards) => {
+        if (!isCurrent()) return;
         const nameById: Record<number, string> = {};
         Object.values(standards ?? {}).forEach((list) =>
           (list ?? []).forEach((item) => {
@@ -1217,7 +1231,7 @@ const ModelingModelDetail: React.FC = () => {
         setStandardNameById(nameById);
       })
       .catch(() => undefined);
-  }, [modelId]);
+  }, [modelId, captureEditorResource]);
 
   const updateRow = (key: number, patch: Partial<ColumnDraft>) => {
     markDirty();
@@ -1226,6 +1240,7 @@ const ModelingModelDetail: React.FC = () => {
 
   /** 字段名下拉检索:按关键字远端查标准字段集,空关键字不展示候选,自定义填写不受影响。 */
   const searchStandardFields = (keyword: string) => {
+    const isCurrent = beginStandardSearch();
     const text = keyword.trim();
     clearTimeout(standardFieldSearchTimerRef.current);
     if (!text) {
@@ -1233,20 +1248,24 @@ const ModelingModelDetail: React.FC = () => {
       return;
     }
     standardFieldSearchTimerRef.current = setTimeout(() => {
+      if (!isCurrent()) return;
       void pageSemanticFields({ pageNo: 1, pageSize: 30, keyword: text })
         .then((result) => {
+          if (!isCurrent()) return;
           const batch = result?.bizData ?? [];
           batch.forEach((field) => {
             if (field.code) standardFieldByCodeRef.current.set(field.code.toLowerCase(), field);
           });
           setStandardFieldChoices(batch);
         })
-        .catch(() => setStandardFieldChoices([]));
+        .catch(() => { if (isCurrent()) setStandardFieldChoices([]); });
     }, 260);
   };
 
   /** 选中标准字段:回填字段名并带出该字段的标准引用,与「标准发现」保持一致。 */
   const bindStandardField = (row: ColumnDraft, code: string) => {
+    clearTimeout(standardFieldSearchTimerRef.current);
+    beginStandardSearch();
     const field = standardFieldByCodeRef.current.get(code.trim().toLowerCase());
     if (!field) {
       updateRow(row.key, { columnName: code });
@@ -1297,8 +1316,7 @@ const ModelingModelDetail: React.FC = () => {
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     // 清除多选拖拽标记与浮层
-    _multiDragActive = false;
-    _multiDragSelectedKeys = new Set<number>();
+    setDraggingKeys(new Set());
     setDragOverlayRows([]);
     if (!over || active.id === over.id) return;
     markDirty();
@@ -1365,8 +1383,7 @@ const ModelingModelDetail: React.FC = () => {
       selectedRowKeysRef.current.map((k) => Number(k)),
     );
     if (selectedKeys.has(activeNum) && selectedKeys.size > 1) {
-      _multiDragActive = true;
-      _multiDragSelectedKeys = selectedKeys;
+      setDraggingKeys(selectedKeys);
       setDragOverlayRows(rowsRef.current.filter((r) => selectedKeys.has(r.key)));
     } else {
       const row = rowsRef.current.find((r) => r.key === activeNum);
@@ -1440,6 +1457,8 @@ const ModelingModelDetail: React.FC = () => {
   };
 
   const handleSave = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     const seen = new Set<string>();
     for (const row of rows) {
@@ -1558,9 +1577,15 @@ const ModelingModelDetail: React.FC = () => {
       tableProperties: Object.keys(propertyMap).length ? propertyMap : undefined,
     };
 
+    const draftUnchanged = captureDraft();
     setSaving(true);
     try {
       const issues = await validateModelingStructure(modelId, payload);
+      if (!isCurrent()) return;
+      if (!draftUnchanged()) {
+        message.info('草稿已修改，请重新保存');
+        return;
+      }
       const list = issues || [];
       setValidationIssues(list);
       if (list.some((issue) => issue.severity === 'ERROR')) {
@@ -1568,11 +1593,19 @@ const ModelingModelDetail: React.FC = () => {
         return;
       }
       await saveModelingStructure(modelId, payload);
+      if (!isCurrent()) return;
       message.success('表结构已保存');
-      await loadStructure();
+      if (!draftUnchanged()) {
+        message.info('已保存提交时的草稿，后续编辑已保留');
+        return;
+      }
+      await loadStructure(draftUnchanged);
+      if (!isCurrent()) return;
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '表结构保存失败');
     } finally {
+      if (!isCurrent()) return;
       setSaving(false);
     }
   };
@@ -1593,6 +1626,8 @@ const ModelingModelDetail: React.FC = () => {
 
   /** 发布:先做「未保存守卫 + 草稿 vs 上次发布 diff」，确认后才固化快照。 */
   const handlePublish = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     if (guardUnsavedBeforePublish()) return;
     setPublishing(true);
@@ -1601,6 +1636,7 @@ const ModelingModelDetail: React.FC = () => {
       const published = publishedNo
         ? await getModelingVersion(modelId, publishedNo)
         : null;
+      if (!isCurrent()) return;
       // 行主键 id 是保存时重建的易变字段，diff 与内容等值判断都应剔除（与后端语义投影口径一致）。
       const stripVolatile = (view: unknown) => {
         if (!view || typeof view !== 'object') return view;
@@ -1621,66 +1657,88 @@ const ModelingModelDetail: React.FC = () => {
         publishedVersionNo: publishedNo ?? null,
       });
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '加载发布对比失败');
     } finally {
+      if (!isCurrent()) return;
       setPublishing(false);
     }
   };
 
   const doPublish = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     setPublishing(true);
     try {
       const version = await publishModelingModel(modelId);
+      if (!isCurrent()) return;
       message.success(`已发布 V${version.versionNo}，${version.columnCount} 个字段`);
       // 刷新模型信息(状态变为 PUBLISHED)
       const info = await getModelingModel(modelId);
+      if (!isCurrent()) return;
       setModelInfo(info);
       // 发布成功联动(01):统一视图头部/版本面板刷新
       window.dispatchEvent(new CustomEvent(MODELING_PUBLISHED_EVENT, { detail: { modelId } }));
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '发布失败');
     } finally {
+      if (!isCurrent()) return;
       setPublishing(false);
     }
   };
 
   /** 发布审批(01):提交后由审批中心回调发布"批准时点的最新保存结构"，在途单唯一由后端 uk 保证。 */
   const handleSubmitPublishApproval = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     if (guardUnsavedBeforePublish()) return;
     setApprovalSubmitting(true);
     try {
       const instance = await submitModelingPublishApproval(modelId);
+      if (!isCurrent()) return;
       setPublishApproval(instance);
       message.success(`已提交发布审批（单 #${instance.id}），批准后自动发布为新版本`);
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '提交发布审批失败');
     } finally {
+      if (!isCurrent()) return;
       setApprovalSubmitting(false);
     }
   };
 
   const handleGenerateDdl = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     setDdlOpen(true);
     setDdlLoading(true);
     try {
       const data = await generateModelingDdl(modelId);
+      if (!isCurrent()) return;
       setDdlScript(data?.script || '');
       setDdlDialect(data?.dialect || '');
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '建库脚本生成失败');
     } finally {
+      if (!isCurrent()) return;
       setDdlLoading(false);
     }
   };
 
   const handleCopyDdl = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     try {
       await navigator.clipboard.writeText(ddlScript);
+      if (!isCurrent()) return;
       message.success('脚本已复制到剪贴板');
     } catch {
+      if (!isCurrent()) return;
       message.error('复制失败，请手动选择脚本复制');
     }
   };
@@ -1701,11 +1759,10 @@ const ModelingModelDetail: React.FC = () => {
     const row = rows.find((item) => item.columnName.trim().toLowerCase() === issue.target!.toLowerCase());
     if (!row) return;
     setHighlightRowKey(row.key);
-    _highlightRowKey = row.key;
-    document.querySelector(`tr[data-row-key="${row.key}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    window.setTimeout(() => {
+    editorRootRef.current?.querySelector(`tr[data-row-key="${row.key}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => {
       setHighlightRowKey(undefined);
-      _highlightRowKey = undefined;
     }, 2000);
   };
 
@@ -2282,7 +2339,9 @@ const ModelingModelDetail: React.FC = () => {
               </div>
             ) : null}
             {rows.length ? (
-              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div ref={editorRootRef}>
+              <RowInteractionContext.Provider value={{ highlight: highlightRowKey, dragging: draggingKeys }}>
+              <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => { setDraggingKeys(new Set()); setDragOverlayRows([]); }}>
                 <SortableContext items={rows.map((r) => r.key)} strategy={verticalListSortingStrategy}>
                   <Table<ColumnDraft>
                     rowKey="key"
@@ -2326,6 +2385,8 @@ const ModelingModelDetail: React.FC = () => {
                   ) : null}
                 </DragOverlay>
               </DndContext>
+              </RowInteractionContext.Provider>
+              </div>
             ) : (
               /* B7(2026-09-17):空字段时轻量空态,不渲染表头 */
               <YakEmpty
@@ -2824,7 +2885,10 @@ const ModelingModelDetail: React.FC = () => {
         cancelText="取消"
         confirmLoading={publishing}
         onOk={async () => {
+          const isCurrent = captureEditorResource();
+          if (!isCurrent()) return;
           await doPublish();
+          if (!isCurrent()) return;
           setPublishPreview(null);
         }}
         onCancel={() => setPublishPreview(null)}

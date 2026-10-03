@@ -4,7 +4,7 @@ import type { TableAssetView } from '@/services/data-quality';
 import { useIntl } from '@umijs/max';
 import { Pagination, Spin, Table, Tag, Tooltip } from 'antd';
 
-import { CheckResultTag } from '../../components/QualityStatus';
+import { CheckResultTag } from '@/components/quality/QualityStatus';
 import { dataQualityTableClassName } from '../../components/tableStyle';
 import { QUALITY_TABLE_PAGE_SIZE } from '../constants';
 

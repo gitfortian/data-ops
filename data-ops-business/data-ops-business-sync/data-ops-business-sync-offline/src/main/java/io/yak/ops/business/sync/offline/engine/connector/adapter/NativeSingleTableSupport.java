@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildContext;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -56,7 +56,7 @@ final class NativeSingleTableSupport {
     throw new IllegalArgumentException("Native Connector 表路径仅支持 table 或 database.table：" + value);
   }
 
-  static JsonNode dataSource(ObjectMapper objectMapper, DataSourcePO dataSource) {
+  static JsonNode dataSource(ObjectMapper objectMapper, DataSourceDefinition dataSource) {
     if (dataSource == null) {
       throw new IllegalArgumentException("Native Connector 必须选择数据源");
     }

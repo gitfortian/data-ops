@@ -5,7 +5,7 @@ import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.dao.mapper.SemanticPresetTemplateMapper;
 import io.yak.ops.business.semantic.preset.PresetTemplate;
-import io.yak.ops.common.bean.po.semantic.SemanticPresetTemplatePO;
+import io.yak.ops.business.semantic.dao.model.SemanticPresetTemplatePO;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

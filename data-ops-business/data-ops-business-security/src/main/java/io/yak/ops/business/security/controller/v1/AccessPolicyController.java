@@ -9,7 +9,7 @@ import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.security.approval.AccessPolicyApprovalService;
 import io.yak.ops.business.security.application.AccessPolicyService;
-import io.yak.ops.common.bean.po.security.DsecAccessPolicyPO;
+import io.yak.ops.business.security.dao.model.DsecAccessPolicyPO;
 import io.yak.ops.common.constant.security.SecurityPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;

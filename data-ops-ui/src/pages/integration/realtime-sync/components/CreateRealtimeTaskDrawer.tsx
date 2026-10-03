@@ -1,5 +1,5 @@
 import { YakButton } from '@/components/ui';
-import type { IntegrationSourceHandoff } from '@/pages/integration/sourceHandoff';
+import type { IntegrationSourceHandoff } from '@/services/integration/sourceHandoff';
 import {
   createRealtimeSyncBasicTask,
   listRealtimeComputeEnvironments,

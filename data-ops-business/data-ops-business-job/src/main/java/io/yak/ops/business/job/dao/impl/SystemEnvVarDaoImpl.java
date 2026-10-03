@@ -3,7 +3,7 @@ package io.yak.ops.business.job.dao.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.yak.ops.business.job.dao.SystemEnvVarDao;
 import io.yak.ops.business.job.dao.mapper.SystemEnvVarMapper;
-import io.yak.ops.common.bean.po.job.SystemEnvVarPO;
+import io.yak.ops.business.job.dao.model.SystemEnvVarPO;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 

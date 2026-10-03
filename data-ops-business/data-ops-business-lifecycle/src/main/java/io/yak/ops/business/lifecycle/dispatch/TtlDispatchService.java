@@ -14,7 +14,7 @@ import io.yak.ops.business.lifecycle.exception.LifecycleException;
 import io.yak.ops.business.lifecycle.preview.ConfirmTokenService;
 import io.yak.ops.business.lifecycle.schedule.LifecycleScheduleEngineBridge;
 import io.yak.ops.business.audit.AuditTransactions;
-import io.yak.ops.common.bean.po.lifecycle.LifecycleDispatchRecordPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecycleDispatchRecordPO;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.DispatchStatus;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.TriggerType;
 import io.yak.ops.common.enums.lifecycle.LifecycleErrorCode;

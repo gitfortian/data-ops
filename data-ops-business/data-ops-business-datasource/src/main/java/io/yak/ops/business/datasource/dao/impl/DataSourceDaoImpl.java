@@ -10,7 +10,7 @@ import io.yak.ops.business.datasource.config.CredentialCipher;
 import io.yak.ops.business.datasource.dao.DataSourceDao;
 import io.yak.ops.business.datasource.dao.mapper.DataSourceMapper;
 import io.yak.ops.business.datasource.dao.model.DataSourceSummaryRow;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import io.yak.ops.common.enums.datasource.DataSourceConnStatus;
 import io.yak.ops.common.enums.datasource.DataSourceDbType;
 import io.yak.ops.common.enums.datasource.DataSourceEnvironment;
@@ -105,6 +105,18 @@ public class DataSourceDaoImpl implements DataSourceDao {
                 .in(DataSourcePO::getId, normalizedIds));
     decryptCredentials(rows);
     return rows;
+  }
+
+  @Override
+  public List<DataSourcePO> selectReferences(Long projectId, List<Long> ids) {
+    long trustedProjectId = requireCurrentProject(projectId);
+    if (ids == null || ids.isEmpty()) return List.of();
+    if (ids.size() > 1000) throw new IllegalArgumentException("最多批量读取 1000 个数据源");
+    List<Long> normalizedIds = ids.stream().filter(id -> id != null && id > 0).distinct().toList();
+    if (normalizedIds.isEmpty()) return List.of();
+    return dataSourceMapper.selectList(Wrappers.<DataSourcePO>lambdaQuery()
+        .select(DataSourcePO::getId, DataSourcePO::getProjectId, DataSourcePO::getName, DataSourcePO::getDbType)
+        .eq(DataSourcePO::getProjectId, trustedProjectId).in(DataSourcePO::getId, normalizedIds));
   }
 
   @Override

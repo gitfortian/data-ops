@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.yak.ops.business.metadata.exception.MetadataException;
 import io.yak.ops.business.metadata.metamodel.MetadataTypeRegistry;
 import io.yak.ops.business.metadata.metamodel.MetadataTypeRegistry.TypeDefinition;
-import io.yak.ops.common.bean.po.metadata.MdFieldDefPO;
+import io.yak.ops.business.metadata.dao.model.MdFieldDefPO;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import java.time.LocalDateTime;
 import java.util.HashMap;

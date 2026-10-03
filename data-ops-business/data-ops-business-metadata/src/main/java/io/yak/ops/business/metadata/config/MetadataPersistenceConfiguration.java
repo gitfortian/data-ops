@@ -1,16 +1,12 @@
 package io.yak.ops.business.metadata.config;
 
-import io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration;
-import io.yak.ops.business.datasource.config.DataSourceProperties;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 /**
  * Metadata persistence and Flyway configuration (self-owned migration chain).
@@ -20,8 +16,6 @@ import org.springframework.context.annotation.Import;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnMetadataPersistence
-@EnableConfigurationProperties(DataSourceProperties.class)
-@Import(BusinessDatabaseConfiguration.class)
 @MapperScan(
     basePackages = "io.yak.ops.business.metadata.dao.mapper",
     sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")

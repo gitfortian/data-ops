@@ -16,7 +16,7 @@ import io.yak.ops.business.sync.offline.domain.core.EngineExecutionRef;
 import io.yak.ops.business.sync.offline.domain.core.ExecutionAttempt;
 import io.yak.ops.business.sync.offline.domain.core.ExecutionSnapshot;
 import io.yak.ops.business.sync.offline.domain.core.RetryPolicySnapshot;
-import io.yak.ops.common.bean.po.sync.offline.OfflineBatchExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineBatchExecutionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;

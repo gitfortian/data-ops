@@ -18,7 +18,7 @@ import io.yak.ops.business.mdm.dao.mapper.MdmDistributionMapper;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionMode;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionStatus;
 import io.yak.ops.business.mdm.exception.MdmException;
-import io.yak.ops.common.bean.po.mdm.MdmDistributionPO;
+import io.yak.ops.business.mdm.dao.model.MdmDistributionPO;
 import io.yak.ops.common.enums.mdm.MdmErrorCode;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;

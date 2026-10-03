@@ -4,11 +4,11 @@
 
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | 编译 | PO（`bean.po.asset`）、权限码（`constant.asset`）、错误码/枚举（`enums.asset`）——平台惯例 |
+| `data-ops-common` | 编译 | 、权限码（`constant.asset`）、错误码/枚举（`enums.asset`）——平台惯例 |
 | `data-ops-spi` | 编译 | `SectionContract` / `SectionStatus` 与跨域只读分区数据契约 |
 | `data-security-spring-boot-starter` | 编译 | `Result`/`PagingData`/`@RequiresPermission`/`CurrentUserProvider` |
 | `data-ops-core` | 编译 | `CurrentProject`（接口，注入使用）、`@ProjectScope` |
-| `data-ops-business-datasource` | 编译（optional） | 基础设施 `BusinessDatabaseConfiguration`（数据源开关/Flyway 共享） |
+| `data-ops-business-datasource` | 编译（optional） | 仅保留已有数据源功能开关注解；共享持久化由 Boot 装配 |
 | `data-ops-business-semantic` | 编译 | **仅经 `api` 包 SPI**（`LayerConfigApi` 分层/域字典，目录模板与健康度输入） |
 | `data-ops-business-audit` | 编译 | `BusinessAuditService` 审计门面（fail-open），事件 `ASSET_*` |
 | `data-ops-business-security` | 编译（ticket 96+） | **仅 `SecurityClassificationQueryApi`**（定级快照刷新与详情安全块） |

@@ -1,0 +1,313 @@
+{
+  "AttemptVO": {
+    "properties": {
+      "attemptNumber": {
+        "format": "int32",
+        "type": "integer"
+      },
+      "availableAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "endedAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "errorMessage": {
+        "type": "string"
+      },
+      "failureReason": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "pausedAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "pausedMillis": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "startedAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "EdgeDTO": {
+    "properties": {
+      "source": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "source",
+      "target"
+    ],
+    "type": "object"
+  },
+  "NodeDTO": {
+    "properties": {
+      "dispatchTimeoutSeconds": {
+        "format": "int64",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "executionTimeoutSeconds": {
+        "format": "int64",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "failurePolicy": {
+        "pattern": "FAIL_WORKFLOW|BLOCK_BRANCH|IGNORE_FAILURE",
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "inputMapping": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "maxAttempts": {
+        "format": "int32",
+        "minimum": 1,
+        "type": "integer"
+      },
+      "retryDelaySeconds": {
+        "format": "int64",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "taskId": {
+        "type": "string"
+      },
+      "triggerRule": {
+        "pattern": "ALL_SUCCESS|ALL_DONE|NONE_FAILED|ONE_SUCCESS|ALWAYS",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "taskId"
+    ],
+    "type": "object"
+  },
+  "NodeInstanceVO": {
+    "properties": {
+      "attemptCount": {
+        "format": "int32",
+        "type": "integer"
+      },
+      "attempts": {
+        "items": {
+          "$ref": "#/components/schemas/AttemptVO"
+        },
+        "type": "array"
+      },
+      "continuedAfterFailure": {
+        "type": "boolean"
+      },
+      "currentAttemptId": {
+        "type": "string"
+      },
+      "currentAttemptNumber": {
+        "format": "int32",
+        "type": "integer"
+      },
+      "dispatchTimeoutSeconds": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "errorMessage": {
+        "type": "string"
+      },
+      "executionTimeoutSeconds": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "failurePolicy": {
+        "type": "string"
+      },
+      "failureReason": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "input": {
+        "additionalProperties": {
+          "type": "object"
+        },
+        "type": "object"
+      },
+      "inputMapping": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "name": {
+        "type": "string"
+      },
+      "output": {
+        "additionalProperties": {
+          "type": "object"
+        },
+        "type": "object"
+      },
+      "predecessorOutputs": {
+        "additionalProperties": {
+          "additionalProperties": {
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "type": "object"
+      },
+      "retryDelaySeconds": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "retryMaxAttempts": {
+        "format": "int32",
+        "type": "integer"
+      },
+      "status": {
+        "type": "string"
+      },
+      "taskId": {
+        "type": "string"
+      },
+      "triggerRule": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "WorkflowInstanceVO": {
+    "properties": {
+      "creatorName": {
+        "type": "string"
+      },
+      "definitionId": {
+        "type": "string"
+      },
+      "edgeCount": {
+        "format": "int32",
+        "type": "integer"
+      },
+      "endedAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "failureStrategy": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "input": {
+        "additionalProperties": {
+          "type": "object"
+        },
+        "type": "object"
+      },
+      "name": {
+        "type": "string"
+      },
+      "nodeCount": {
+        "format": "int32",
+        "type": "integer"
+      },
+      "nodes": {
+        "items": {
+          "$ref": "#/components/schemas/NodeInstanceVO"
+        },
+        "type": "array"
+      },
+      "runStartedAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "sourceExecutionId": {
+        "type": "string"
+      },
+      "startedAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "testRun": {
+        "type": "boolean"
+      },
+      "workflowTimeoutSeconds": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "workflowVersionId": {
+        "type": "string"
+      },
+      "workflowVersionNo": {
+        "format": "int32",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "WorkflowRunDTO": {
+    "properties": {
+      "edges": {
+        "items": {
+          "$ref": "#/components/schemas/EdgeDTO"
+        },
+        "type": "array"
+      },
+      "failureStrategy": {
+        "pattern": "FAIL_FAST|CONTINUE_INDEPENDENT_BRANCHES|TERMINATE_ALL",
+        "type": "string"
+      },
+      "input": {
+        "additionalProperties": {
+          "type": "object"
+        },
+        "type": "object"
+      },
+      "name": {
+        "type": "string"
+      },
+      "nodes": {
+        "items": {
+          "$ref": "#/components/schemas/NodeDTO"
+        },
+        "type": "array"
+      },
+      "workflowTimeoutSeconds": {
+        "format": "int64",
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "name",
+      "nodes"
+    ],
+    "type": "object"
+  }
+}

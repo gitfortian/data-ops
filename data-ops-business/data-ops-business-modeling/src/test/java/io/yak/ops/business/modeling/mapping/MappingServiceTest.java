@@ -17,7 +17,7 @@ import io.yak.ops.business.modeling.exception.ModelingException;
 import io.yak.ops.business.modeling.repository.MappingRepository;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.structure.ModelStructureRepository;
-import io.yak.ops.common.bean.po.modeling.ModelingColumnMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingColumnMappingPO;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import java.util.List;
 import java.util.Optional;

@@ -13,16 +13,15 @@ class AgentFlywayContractTest {
 
     @Test
     void agentSchemaShouldContainVersionedHistoryAndCumulativeBaseline() throws IOException {
-        // V1/V2 remain the upgrade history; B2 is the cumulative baseline for new schemas.
-        List<String> migrations = sqlFiles(migrationRoot());
-        assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
-                .containsExactly("V1__baseline_agent.sql", "V2__agent_add_project_id.sql");
-        assertThat(migrations).contains("B2__agent_baseline.sql");
+        // 模块迁移已合并为单文件;历史版本以 -- Source: 段的形式保留在文件内。
+        assertThat(sqlFiles(migrationRoot())).containsExactly("V1__agent_baseline.sql");
     }
 
     @Test
     void baselineShouldContainFinalSchemaWithoutAlterOrUpdate() throws IOException {
-        String baseline = Files.readString(migrationRoot().resolve("V1__baseline_agent.sql"));
+        String baseline = section(
+            Files.readString(migrationRoot().resolve("V1__agent_baseline.sql")),
+            "V1__baseline_agent.sql");
 
         assertThat(baseline)
                 .contains("CREATE TABLE IF NOT EXISTS `yak_agent_session`")
@@ -44,6 +43,27 @@ class AgentFlywayContractTest {
                 .doesNotContain("CHANGE COLUMN");
     }
 
+  /**
+   * 合并后的单文件按 {@code -- Source: <原路径>} 分段;按文件名取回原迁移的正文,
+   * 使原先针对单个文件的断言继续有效。
+   */
+  private static String section(String sql, String sourceFileName) {
+    String[] lines = sql.split("\n");
+    int start = -1;
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:") && lines[i].trim().endsWith(sourceFileName)) {
+        start = i + 1;
+        break;
+      }
+    }
+    if (start < 0) throw new IllegalStateException("missing source section: " + sourceFileName);
+    StringBuilder body = new StringBuilder();
+    for (int i = start; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:")) break;
+      body.append(lines[i]).append('\n');
+    }
+    return body.toString();
+  }
     private List<String> sqlFiles(Path root) throws IOException {
         try (var paths = Files.list(root)) {
             return paths

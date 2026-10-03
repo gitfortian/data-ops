@@ -1,7 +1,7 @@
 package io.yak.ops.business.sync.offline.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
 
 /**
  * 离线同步任务定义 Mapper。

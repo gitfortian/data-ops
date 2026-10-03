@@ -14,7 +14,7 @@ import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
 import io.yak.ops.business.mdm.exception.MdmException;
 import io.yak.ops.business.mdm.infrastructure.repository.MdmAttributeRepository;
 import io.yak.ops.business.mdm.processing.DedupSql;
-import io.yak.ops.common.bean.po.mdm.MdmDistributionPO;
+import io.yak.ops.business.mdm.dao.model.MdmDistributionPO;
 import io.yak.ops.common.enums.mdm.MdmErrorCode;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.ZoneId;

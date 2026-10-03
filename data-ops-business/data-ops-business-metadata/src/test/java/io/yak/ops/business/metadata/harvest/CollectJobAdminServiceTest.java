@@ -14,7 +14,7 @@ import io.yak.ops.business.metadata.exception.MetadataException;
 import io.yak.ops.business.metadata.harvest.CollectJobAdminService.JobView;
 import io.yak.ops.business.metadata.harvest.CollectJobAdminService.UpsertCommand;
 import io.yak.ops.business.metadata.schedule.MetadataScheduleEngineBridge;
-import io.yak.ops.common.bean.po.metadata.MdCollectJobPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectJobPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import io.yak.ops.core.project.CurrentProject;

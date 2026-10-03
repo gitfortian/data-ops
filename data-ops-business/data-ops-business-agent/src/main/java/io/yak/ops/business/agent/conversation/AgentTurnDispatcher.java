@@ -9,6 +9,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -29,10 +34,16 @@ public class AgentTurnDispatcher {
   private final AgentTurnExecutor executor;
   private final AgentProperties properties;
 
-  /** 已投递给 worker、尚未完成认领的轮次：周期重叠时避免重复提交任务（认领本身仍由 CAS 兜底）。 */
+  /** 已投递、尚未完成或挂起的轮次；持久化认领仍由 CAS 兜底。 */
   private final Set<String> dispatched = ConcurrentHashMap.newKeySet();
 
   private final ExecutorService workers;
+  private final ExecutorService wakeups = Executors.newSingleThreadExecutor(runnable -> {
+    Thread thread = new Thread(runnable, "yak-agent-queue-wakeup");
+    thread.setDaemon(true);
+    return thread;
+  });
+  private final AtomicBoolean wakeupPending = new AtomicBoolean();
 
   public AgentTurnDispatcher(
       AgentTurnRepository turnRepository, AgentTurnExecutor executor, AgentProperties properties) {
@@ -40,8 +51,11 @@ public class AgentTurnDispatcher {
     this.executor = executor;
     this.properties = properties;
     this.workers =
-        Executors.newFixedThreadPool(
+        new ThreadPoolExecutor(
             Math.max(1, properties.getTurn().getWorkerPoolSize()),
+            Math.max(1, properties.getTurn().getWorkerPoolSize()),
+            0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(Math.max(1, properties.getTurn().getQueueCapacity())),
             runnable -> {
               Thread thread = new Thread(runnable, "yak-agent-turn-worker");
               thread.setDaemon(true);
@@ -60,7 +74,17 @@ public class AgentTurnDispatcher {
 
   /** 提交侧即时唤醒：把扫描挪到 worker 线程外执行，HTTP 线程不做任何推理准备。 */
   public void kick() {
-    workers.execute(this::sweep);
+    if (!wakeupPending.compareAndSet(false, true)) return;
+    try {
+      wakeups.execute(() -> {
+        try { sweep(); }
+        finally { wakeupPending.set(false); }
+      });
+    } catch (RejectedExecutionException rejected) {
+      wakeupPending.set(false);
+      // Durable queue and periodic scanner retain the work during shutdown or saturation.
+      log.debug("Agent queue wakeup deferred");
+    }
   }
 
   @Scheduled(
@@ -72,19 +96,34 @@ public class AgentTurnDispatcher {
       if (!dispatched.add(record.turnId())) {
         continue;
       }
-      workers.execute(
+      try {
+        workers.execute(
           () -> {
             try {
-              executor.execute(record);
+              executor.executeAndAwait(record);
             } finally {
               dispatched.remove(record.turnId());
             }
           });
+      } catch (RejectedExecutionException rejected) {
+        dispatched.remove(record.turnId());
+        // No claim has occurred; leave QUEUED truth untouched for the next sweep.
+        log.debug("Agent turn delivery deferred turn={}", record.turnId());
+        break;
+      }
     }
   }
 
   @PreDestroy
   void shutdown() {
+    wakeups.shutdownNow();
     workers.shutdownNow();
+    try {
+      if (!workers.awaitTermination(5, TimeUnit.SECONDS)) {
+        log.warn("Agent workers did not finish resource cleanup within the shutdown budget");
+      }
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 }

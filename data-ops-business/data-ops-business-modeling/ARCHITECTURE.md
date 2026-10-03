@@ -19,7 +19,7 @@ io.yak.ops.business.modeling
   └── exception                               // ModelingException + 模块内 RestControllerAdvice
 ```
 
-持久化对象 `ModelingModelPO` 与权限码/错误码常量按平台惯例放在 `data-ops-common`(`bean/po/modeling`、`constant/modeling`、`enums/modeling`)。
+持久化对象归属本模块的 `dao.model`；权限码与错误码继续使用 `data-ops-common` 的稳定共享契约。
 
 ## Target Layering(后续 ticket 按此演进)
 

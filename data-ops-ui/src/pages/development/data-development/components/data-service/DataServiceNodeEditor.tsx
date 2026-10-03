@@ -1,5 +1,8 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { normalizeId, safeArray, parseNamedParameters, mergeParameters, normalizeContext } from './dataServiceDraftModel';
+import { useLatestOperation } from '@/hooks/useLatestOperation';
 import { BRAND_CSS_VARIABLES } from '@/styles/brand';
-import { dataServiceDetailUrl } from '@/pages/data-service/utils';
+import { dataServiceDetailUrl } from '@/services/data-service/navigation';
 import { history } from '@umijs/max';
 import {
   Button,
@@ -170,99 +173,18 @@ const formatTime = (value?: string | null) => {
     : date.toLocaleString('zh-CN', { hour12: false });
 };
 
-const normalizeId = (value: unknown): DevelopmentId => {
-  if (value === undefined || value === null || String(value).trim() === '') return '0';
-  return String(value);
-};
-
-const safeArray = <T,>(value: T[] | null | undefined): T[] =>
-  Array.isArray(value) ? value.filter(Boolean) : [];
-
-const parseNamedParameters = (sql: string) => {
-  const names: string[] = [];
-  const seen = new Set<string>();
-  const matcher = /(^|[^:]):([A-Za-z_][A-Za-z0-9_]*)/g;
-  let match: RegExpExecArray | null;
-  while ((match = matcher.exec(sql)) !== null) {
-    const name = match[2];
-    const key = name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    names.push(name);
-  }
-  return names;
-};
-
-const mergeParameters = (
-  names: string[],
-  current: DevelopmentDataServiceParameter[],
-) => {
-  const previous = new Map(
-    current.filter((item) => item?.name).map((item) => [item.name.toLowerCase(), item]),
-  );
-  return names.map((name) => {
-    const item = previous.get(name.toLowerCase());
-    return item
-      ? {
-          ...item,
-          name,
-          type: item.type === 'OBJECT' ? 'STRING' as const : item.type,
-          required: true,
-        }
-      : {
-          name,
-          type: 'STRING' as const,
-          required: true,
-        };
-  });
-};
-
-const normalizeContext = (
-  raw: DevelopmentDataServiceNodeContext,
-  node: DevelopmentResourceNode,
-): DevelopmentDataServiceNodeContext => {
-  const rawDraft = raw?.draft;
-  const rawDefinition = rawDraft?.definition;
-  const nodeId = normalizeId(raw?.nodeId || node.id);
-  const definition: DevelopmentDataServiceDefinition = {
-    sourceTaskAssetId: rawDefinition?.sourceTaskAssetId,
-    sourceTaskRevisionId: rawDefinition?.sourceTaskRevisionId,
-    sourceTaskRevisionNo: Number(rawDefinition?.sourceTaskRevisionNo || 0),
-    dataSourceId: normalizeId(rawDefinition?.dataSourceId),
-    sql: rawDefinition?.sql || '',
-    serviceName: rawDefinition?.serviceName || raw?.nodeName || node.name,
-    path: rawDefinition?.path || `/query/${nodeId}`,
-    method: 'GET',
-    parameters: safeArray(rawDefinition?.parameters),
-    responseFields: safeArray(rawDefinition?.responseFields),
-    maxRows: Number(rawDefinition?.maxRows || 1000),
-    timeoutSeconds: Number(rawDefinition?.timeoutSeconds || 30),
-    description: rawDefinition?.description || undefined,
-    paginationEnabled: Boolean(rawDefinition?.paginationEnabled),
-    autoParseParameters: rawDefinition?.autoParseParameters !== false,
-  };
-
-  return {
-    nodeId,
-    nodeName: raw?.nodeName || node.name,
-    configured: Boolean(raw?.configured),
-    draft: {
-      nodeId: normalizeId(rawDraft?.nodeId || nodeId),
-      definition,
-      draftRevision: Number(rawDraft?.draftRevision || 0),
-      createTime: rawDraft?.createTime,
-      updateTime: rawDraft?.updateTime,
-    },
-    latestPublishedRevision: raw?.latestPublishedRevision || null,
-    revisions: safeArray(raw?.revisions),
-  };
-};
-
 export default function DataServiceNodeEditor({
   node,
   onSaved,
   onDirtyChange,
 }: DataServiceNodeEditorProps) {
+  const { currentProject } = useSecurityProject();
+  const beginLoad = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginPublication = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginQuery = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginSave = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginPublish = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
+  const beginOnline = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);
   const metadataContext = useSqlMetadataContext(node.id);
   const dirtyChangeRef = useRef(onDirtyChange);
   const savedDataSourceIdRef = useRef<DevelopmentId>();
@@ -341,6 +263,7 @@ export default function DataServiceNodeEditor({
     hasPublishedRevision: boolean,
     notifyOnError = false,
   ) => {
+    const isCurrent = beginPublication();
     if (!hasPublishedRevision) {
       setPublicationState(undefined);
       setPublicationError(undefined);
@@ -350,34 +273,43 @@ export default function DataServiceNodeEditor({
     setPublicationLoading(true);
     setPublicationError(undefined);
     try {
-      setPublicationState(await fetchDataServicePublicationState(node.id));
+      const state = await fetchDataServicePublicationState(node.id);
+      if (isCurrent()) setPublicationState(state);
     } catch (error) {
+      if (!isCurrent()) return;
       const text = error instanceof Error ? error.message : '查询服务状态失败';
       setPublicationState(undefined);
       setPublicationError(text);
       if (notifyOnError) message.error(text);
     } finally {
-      setPublicationLoading(false);
+      if (isCurrent()) setPublicationLoading(false);
     }
-  }, [node.id]);
+  }, [node.id, currentProject?.id, beginPublication]);
 
   const load = useCallback(async () => {
+    const isCurrent = beginLoad();
     setLoading(true);
+    setRunning(false);
+    setSaving(false);
+    setPublishing(false);
     setLoadError(undefined);
     setPublicationState(undefined);
     setPublicationError(undefined);
     try {
-      const next = applyContext(await getDevelopmentDataServiceNode(node.id));
+      const raw = await getDevelopmentDataServiceNode(node.id);
+      if (!isCurrent()) return;
+      const next = applyContext(raw);
       await loadPublicationState(Boolean(next.latestPublishedRevision));
     } catch (error) {
+      if (!isCurrent()) return;
       const text = error instanceof Error ? error.message : '加载 Data Service Node 失败';
       setLoadError(text);
       setContext(undefined);
       message.error(text);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [applyContext, loadPublicationState, node.id]);
+  }, [applyContext, loadPublicationState, node.id, currentProject?.id, beginLoad]);
 
   useEffect(() => {
     void load();
@@ -425,6 +357,7 @@ export default function DataServiceNodeEditor({
     const dataSourceId = metadataContext.dataSourceId;
     if (!dataSourceId || !sqlText.trim() || running) return;
 
+    const isCurrent = beginQuery();
     setRunning(true);
     setQueryResult({
       status: 'RUNNING',
@@ -446,6 +379,7 @@ export default function DataServiceNodeEditor({
         timeoutSeconds,
         parameterValues,
       );
+      if (!isCurrent()) return;
       const nextParameters = safeArray(result?.parameters);
       const nextResponses = safeArray(result?.responseFields);
 
@@ -500,6 +434,7 @@ export default function DataServiceNodeEditor({
         `查询完成 · ${Number(result?.result?.returnedRows || 0)} 行 / ${nextResponses.length} 个字段`,
       );
     } catch (error) {
+      if (!isCurrent()) return;
       const text = error instanceof Error ? error.message : '运行 Data Service 查询失败';
       setQueryResult({
         status: 'FAILED',
@@ -509,7 +444,7 @@ export default function DataServiceNodeEditor({
       });
       message.error(text);
     } finally {
-      setRunning(false);
+      if (isCurrent()) setRunning(false);
     }
   };
 
@@ -517,6 +452,7 @@ export default function DataServiceNodeEditor({
     const dataSourceId = metadataContext.dataSourceId;
     if (!dataSourceId || !sqlText.trim() || saving) return;
 
+    const isCurrent = beginSave();
     setSaving(true);
     try {
       const next = await saveDevelopmentDataServiceDraft(node.id, {
@@ -543,13 +479,16 @@ export default function DataServiceNodeEditor({
         autoParseParameters,
         baseRevision: context?.draft?.draftRevision || 0,
       });
+      if (!isCurrent()) return;
       applyContext(next);
       await onSaved?.();
+      if (!isCurrent()) return;
       message.success(`草稿已保存 · Draft #${next?.draft?.draftRevision || '-'}`);
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '保存 Data Service Node 草稿失败');
     } finally {
-      setSaving(false);
+      if (isCurrent()) setSaving(false);
     }
   };
 
@@ -561,17 +500,22 @@ export default function DataServiceNodeEditor({
       return;
     }
 
+    const isCurrent = beginPublish();
     setPublishing(true);
     try {
       const revision = await publishDevelopmentDataServiceNode(node.id, draftRevision);
+      if (!isCurrent()) return;
       await load();
+      if (!isCurrent()) return;
       await onSaved?.();
+      if (!isCurrent()) return;
       setActivePanel('online');
       message.success(`已发布 DS R${revision.revisionNo} · 可继续上线 API`);
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '发布 Data Service Node 失败');
     } finally {
-      setPublishing(false);
+      if (isCurrent()) setPublishing(false);
     }
   };
 
@@ -613,19 +557,23 @@ export default function DataServiceNodeEditor({
     if (!latestPublished || goingOnline || publicationError) return;
 
     const updating = Boolean(publicationState?.published && publicationState.updateAvailable);
+    const isCurrent = beginOnline();
     setGoingOnline(true);
     try {
       await bringDataServiceOnline(node.id, publicationState);
+      if (!isCurrent()) return;
       await loadPublicationState(true, true);
+      if (!isCurrent()) return;
       message.success(
         updating
           ? `DS R${latestPublished.revisionNo} 已更新上线`
           : `API 已上线 · DS R${latestPublished.revisionNo}`,
       );
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : 'Data Service API 上线失败');
     } finally {
-      setGoingOnline(false);
+      if (isCurrent()) setGoingOnline(false);
     }
   };
 

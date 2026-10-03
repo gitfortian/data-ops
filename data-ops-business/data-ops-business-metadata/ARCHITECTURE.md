@@ -44,8 +44,8 @@ io.yak.ops.business.metadata
 - **共管 1 张**：`yak_metadata_asset` —— 表基线与既有列归 lineage，目录列由本方案追加。
   **目录列的 `ALTER` 落在 `db/migration/yak-lineage` 的*新版本*文件**（绝不改 `V1__baseline_lineage.sql`，
   改已应用文件 = checksum mismatch 启不来）。
-- 共享数据源 `@Import(BusinessDatabaseConfiguration.class)`；事务 `@Transactional(transactionManager = "yakBusinessTransactionManager")`。
-- PO/错误码/权限码/枚举在 `data-ops-common`（`bean.po.metadata` / `enums.metadata` / `constant.metadata`）——平台惯例。
+- 共享数据源 Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配；事务 `@Transactional(transactionManager = "yakBusinessTransactionManager")`。
+- PO 由本模块 `dao.model` 拥有；错误码、权限码和枚举保留 common 的稳定共享契约。
 - 菜单注册在 data-ops-boot 的 yak-security 迁移 `V2033__register_data_metadata_menu.sql`。
 - 调度 namespace `YakScheduleNamespaces.DATA_METADATA = "yak-ops-metadata"`。
 

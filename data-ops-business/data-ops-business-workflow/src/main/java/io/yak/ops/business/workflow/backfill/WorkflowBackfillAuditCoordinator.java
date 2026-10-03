@@ -7,7 +7,7 @@ import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.workflow.execution.WorkflowBusinessDateRerunGateway;
 import io.yak.ops.common.bean.dto.workflow.WorkflowBackfillCreateDTO;
 import io.yak.ops.common.bean.dto.workflow.WorkflowBusinessDateRerunDTO;
-import io.yak.ops.common.bean.po.workflow.WorkflowBackfillPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowBackfillPO;
 import io.yak.ops.common.bean.vo.workflow.WorkflowBackfillVO;
 import io.yak.ops.common.bean.vo.workflow.WorkflowInstanceVO;
 import java.util.LinkedHashMap;

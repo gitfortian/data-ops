@@ -9,7 +9,7 @@ import { useMemo, type MouseEvent } from 'react';
 import {
   CheckResultTag,
   ExecutionStatusTag,
-} from '../../components/QualityStatus';
+} from '@/components/quality/QualityStatus';
 import { formatQualityDimension } from '../../i18n';
 import type {
   ExecutionWorkspaceListItem,

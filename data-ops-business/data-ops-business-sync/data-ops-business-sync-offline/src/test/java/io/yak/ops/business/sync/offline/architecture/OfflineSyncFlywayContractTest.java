@@ -13,18 +13,11 @@ class OfflineSyncFlywayContractTest {
 
   @Test
   void offlineSyncOwnsOrderedMigrationSequence() throws IOException {
-    List<String> migrations = sqlFiles(migrationRoot());
-    assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
-        .containsExactly(
-            "V1__baseline_offline_sync.sql",
-            "V2__add_offline_notification_config.sql",
-            "V3__add_offline_editor_meta.sql",
-            "V4__add_batch_audit_carrier.sql",
-            "V5__bind_offline_cursor_source_route.sql",
-            "V6__offline_job_revision_versioning.sql");
-    assertThat(migrations).contains("B6__offline_sync_baseline.sql");
+    assertThat(sqlFiles(migrationRoot())).containsExactly("V1__offline_sync_baseline.sql");
 
-    String baseline = Files.readString(migrationRoot().resolve("V1__baseline_offline_sync.sql"));
+    String baseline = section(
+        Files.readString(migrationRoot().resolve("V1__offline_sync_baseline.sql")),
+        "V1__baseline_offline_sync.sql");
     assertThat(baseline)
         .contains("CREATE TABLE IF NOT EXISTS yak_offline_job_definition")
         .contains("CREATE TABLE IF NOT EXISTS yak_offline_batch_execution")
@@ -38,7 +31,8 @@ class OfflineSyncFlywayContractTest {
   @Test
   void auditCarrierIsAnAdditiveNullableBatchCorrelationField() throws IOException {
     String migration =
-        Files.readString(migrationRoot().resolve("V4__add_batch_audit_carrier.sql"));
+        section(Files.readString(migrationRoot().resolve("V1__offline_sync_baseline.sql")),
+                "V4__add_batch_audit_carrier.sql");
 
     assertThat(migration)
         .contains("ALTER TABLE yak_offline_batch_execution")
@@ -49,7 +43,9 @@ class OfflineSyncFlywayContractTest {
 
   @Test
   void onlyProjectRootAndRuntimeFactsPersistProjectDirectly() throws IOException {
-    String sql = Files.readString(migrationRoot().resolve("V1__baseline_offline_sync.sql"));
+    String sql =
+        section(Files.readString(migrationRoot().resolve("V1__offline_sync_baseline.sql")),
+                "V1__baseline_offline_sync.sql");
 
     assertThat(table(sql, "yak_offline_job_definition"))
         .contains("project_id BIGINT NOT NULL")
@@ -67,6 +63,27 @@ class OfflineSyncFlywayContractTest {
         .doesNotContain("project_id");
   }
 
+  /**
+   * 合并后的单文件按 {@code -- Source: <原路径>} 分段;按文件名取回原迁移的正文,
+   * 使原先针对单个文件的断言继续有效。
+   */
+  private static String section(String sql, String sourceFileName) {
+    String[] lines = sql.split("\n");
+    int start = -1;
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:") && lines[i].trim().endsWith(sourceFileName)) {
+        start = i + 1;
+        break;
+      }
+    }
+    if (start < 0) throw new IllegalStateException("missing source section: " + sourceFileName);
+    StringBuilder body = new StringBuilder();
+    for (int i = start; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:")) break;
+      body.append(lines[i]).append('\n');
+    }
+    return body.toString();
+  }
   private String table(String sql, String table) {
     String marker = "CREATE TABLE IF NOT EXISTS " + table;
     int start = sql.indexOf(marker);

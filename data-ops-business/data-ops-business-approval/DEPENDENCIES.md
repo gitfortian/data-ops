@@ -4,9 +4,9 @@
 
 | 依赖 | 用途 | 约束 |
 |---|---|---|
-| data-ops-common | PO/枚举/权限码/CurrentProject | 只读 |
+| data-ops-common | 共享枚举/权限码 | 只读；PO 由本模块拥有，CurrentProject 由 core 拥有 |
 | data-ops-business-audit | BusinessAuditService 留痕 | 强依赖 |
-| data-ops-business-datasource | BusinessDatabaseConfiguration | optional（持久化条件装配） |
+| data-ops-business-datasource | 既有功能开关注解 | optional；共享持久化由 Boot 装配 |
 | yak-security starter | @RequiresPermission / CurrentUserProvider | 注解式 |
 | mybatis-plus / flyway / web / validation / tx / lombok | 基座 | 版本走 bom |
 

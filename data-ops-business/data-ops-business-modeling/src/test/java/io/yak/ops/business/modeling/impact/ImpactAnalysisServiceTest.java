@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.yak.ops.common.bean.po.modeling.ModelingColumnMappingPO;
-import io.yak.ops.common.bean.po.modeling.ModelingLayerFieldMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingColumnMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingLayerFieldMappingPO;
 import io.yak.ops.business.modeling.repository.LayerFieldMappingRepository;
 import io.yak.ops.business.modeling.repository.MappingRepository;
 import java.util.List;

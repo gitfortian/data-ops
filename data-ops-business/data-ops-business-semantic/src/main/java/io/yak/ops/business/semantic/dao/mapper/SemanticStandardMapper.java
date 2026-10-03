@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.ops.business.semantic.dao.StandardListRow;
-import io.yak.ops.common.bean.po.semantic.SemanticStandardPO;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardPO;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

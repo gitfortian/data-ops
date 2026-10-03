@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.yak.ops.business.semantic.api.StandardUsageApi;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardUsageMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticStandardUsagePO;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardUsagePO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import java.util.Map;

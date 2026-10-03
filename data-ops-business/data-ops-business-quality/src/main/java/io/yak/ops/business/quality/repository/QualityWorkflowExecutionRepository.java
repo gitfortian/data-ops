@@ -5,7 +5,7 @@ import io.yak.ops.business.quality.config.ConditionalOnQualityEnabled;
 import io.yak.ops.business.quality.dao.mapper.QualityExecutionMapper;
 import io.yak.ops.business.quality.domain.execution.QualityExecutionDefinition;
 import io.yak.ops.business.quality.domain.execution.QualityExecutionPlan.MonitorSnapshot;
-import io.yak.ops.common.bean.po.quality.QualityExecutionPO;
+import io.yak.ops.business.quality.dao.model.QualityExecutionPO;
 import io.yak.ops.common.enums.quality.QualityEnums.TriggerType;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContextError;

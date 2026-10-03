@@ -1,6 +1,6 @@
 package io.yak.ops.business.modeling.repository;
 
-import io.yak.ops.common.bean.po.modeling.ModelingColumnMappingPO;
+import io.yak.ops.business.modeling.dao.model.ModelingColumnMappingPO;
 import java.util.List;
 import java.util.Optional;
 

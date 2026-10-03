@@ -10,7 +10,7 @@ import io.yak.ops.business.sync.offline.engine.LinkUpJobSpecFactory;
 import io.yak.ops.business.sync.offline.engine.OfflineDefinitionModelAdapter;
 import io.yak.ops.business.sync.offline.engine.plan.OfflineExecutionPlanFactory;
 import io.yak.ops.common.bean.dto.sync.offline.OfflineJobDefinitionDTO;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -57,8 +57,8 @@ public class OfflineDefinitionSupport {
 
     JsonNode buildRequest = OfflineDefinitionModelAdapter.forJobSpec(request, objectMapper);
     OfflineExecutionPlanFactory.BuildResult result = executionPlanFactory.build(buildRequest);
-    DataSourcePO source = result.getSourceDataSource();
-    DataSourcePO sink = result.getSinkDataSource();
+    DataSourceReference source = result.getSourceDataSource();
+    DataSourceReference sink = result.getSinkDataSource();
 
     return new PreparedDefinition(
         request,
@@ -282,13 +282,13 @@ public class OfflineDefinitionSupport {
     return StringUtils.hasText(value) ? value.trim() : null;
   }
 
-  private Long id(DataSourcePO dataSource) {
-    return dataSource == null ? null : dataSource.getId();
+  private Long id(DataSourceReference dataSource) {
+    return dataSource == null ? null : dataSource.id();
   }
 
-  private String displayType(DataSourcePO dataSource, String connectorId) {
-    return dataSource != null && dataSource.getDbType() != null
-        ? dataSource.getDbType().name()
+  private String displayType(DataSourceReference dataSource, String connectorId) {
+    return dataSource != null && dataSource.dbType() != null
+        ? dataSource.dbType().name()
         : connectorId;
   }
 

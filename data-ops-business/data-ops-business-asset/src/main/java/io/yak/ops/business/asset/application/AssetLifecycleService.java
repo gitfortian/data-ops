@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
 import io.yak.ops.business.asset.exception.AssetException;
 import io.yak.ops.business.asset.health.HealthRecomputeService;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetErrorCode;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.core.project.CurrentProject;

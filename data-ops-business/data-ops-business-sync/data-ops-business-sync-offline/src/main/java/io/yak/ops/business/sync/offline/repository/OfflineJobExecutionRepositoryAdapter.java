@@ -7,7 +7,7 @@ import io.yak.ops.business.sync.offline.dao.OfflineJobExecutionDao;
 import io.yak.ops.business.sync.offline.dao.OfflineJobExecutionDao.PageQuery;
 import io.yak.ops.business.sync.offline.domain.OfflineExecutionQuery;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobExecutionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

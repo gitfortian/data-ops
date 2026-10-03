@@ -2,8 +2,8 @@ package io.yak.ops.business.workflow.schedule;
 
 import io.yak.ops.business.workflow.domain.WorkflowTriggerContext;
 import io.yak.ops.business.workflow.repository.support.WorkflowJsonCodec;
-import io.yak.ops.common.bean.po.workflow.WorkflowBackfillPO;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowBackfillPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;

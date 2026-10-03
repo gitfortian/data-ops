@@ -1,5 +1,7 @@
 package io.yak.ops.business.sync.offline.engine.connector.adapter;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -13,7 +15,7 @@ import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConn
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.BuildResult;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.ExecutionContext;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.OfflineSyncConnectorAdapter.Role;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import io.yak.ops.common.enums.datasource.DataSourceDbType;
 import java.sql.Types;
 import java.util.List;
@@ -44,7 +46,7 @@ class NativeOlapConnectorAdapterTest {
             2000,
             List.of()));
 
-    DataSourcePO dataSource = dataSource(
+    DataSourceDefinition dataSource = dataSource(
         10L,
         DataSourceDbType.CLICKHOUSE,
         "{\"host\":\"clickhouse.internal\",\"port\":8123,\"database\":\"analytics\","
@@ -89,7 +91,7 @@ class NativeOlapConnectorAdapterTest {
             4096,
             List.of()));
 
-    DataSourcePO dataSource = dataSource(
+    DataSourceDefinition dataSource = dataSource(
         20L,
         DataSourceDbType.STARROCKS,
         "{\"database\":\"analytics\",\"username\":\"root\",\"password\":\"secret\","
@@ -128,12 +130,12 @@ class NativeOlapConnectorAdapterTest {
         .hasMessageContaining("仅支持单表离线同步");
   }
 
-  private DataSourcePO dataSource(Long id, DataSourceDbType dbType, String connectionParams) {
+  private DataSourceDefinition dataSource(Long id, DataSourceDbType dbType, String connectionParams) {
     DataSourcePO dataSource = new DataSourcePO();
     dataSource.setId(id);
     dataSource.setName(dbType.getDisplayName());
     dataSource.setDbType(dbType);
     dataSource.setConnectionParams(connectionParams);
-    return dataSource;
+    return DataSourceFixtures.definition(dataSource);
   }
 }

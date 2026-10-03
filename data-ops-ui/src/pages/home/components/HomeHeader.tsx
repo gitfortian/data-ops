@@ -35,8 +35,8 @@ function ProfileStat({ label, value, arrow = false, onClick }: ProfileStatProps)
 
 export function HomeHeader({ stats }: HomeHeaderProps) {
   const intl = useIntl();
-  const dataSourceCount = stats?.dataSourceCount ?? '--';
-  const runningCount = stats?.runningCount ?? '--';
+  const dataSourceCount = stats?.dataSourceAvailable === false ? '--' : stats?.dataSourceCount ?? '--';
+  const runningCount = stats?.runningAvailable === false ? '--' : stats?.runningCount ?? '--';
 
   return (
     <header className="flex min-h-[100px] items-center px-4 py-4">
@@ -60,6 +60,7 @@ export function HomeHeader({ stats }: HomeHeaderProps) {
             </span>
           </div>
 
+          {(stats?.dataSourceAvailable === false || stats?.runningAvailable === false) && <span role="status" className="text-xs text-gray-500">部分统计暂不可用</span>}
           <div className="mt-2.5 flex flex-wrap items-center gap-x-6 gap-y-2">
             <ProfileStat
               label={intl.formatMessage({ id: 'pages.home.header.dataSources' })}

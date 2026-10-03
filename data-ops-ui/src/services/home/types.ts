@@ -219,6 +219,10 @@ export interface HomeResourceCenterOverview {
 
 export interface HomeCockpitHeaderStats {
   dataSourceCount: number;
+  dataSourceAvailable?: boolean;
+  runningAvailable?: boolean;
+  observedAt?: string;
+  sources?: Record<string, { value: number; available: boolean; unavailableReason?: string }>;
   runningCount: number;
 }
 

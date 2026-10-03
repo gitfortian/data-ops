@@ -3,7 +3,9 @@ package io.yak.ops.business.sync.offline.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineJobRevisionMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobRevisionPO;
+import io.yak.ops.business.sync.offline.domain.OfflineJobRevision;
+import org.springframework.beans.BeanUtils;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -18,30 +20,30 @@ public class OfflineJobRevisionRepositoryAdapter implements OfflineJobRevisionRe
   private final OfflineJobRevisionMapper revisionMapper;
 
   @Override
-  public List<OfflineJobRevisionPO> findAllByJobDefinitionId(Long jobDefinitionId) {
+  public List<OfflineJobRevision> findAllByJobDefinitionId(Long jobDefinitionId) {
     return revisionMapper.selectList(
         new LambdaQueryWrapper<OfflineJobRevisionPO>()
             .eq(OfflineJobRevisionPO::getJobDefinitionId, jobDefinitionId)
-            .orderByDesc(OfflineJobRevisionPO::getVersionNo));
+            .orderByDesc(OfflineJobRevisionPO::getVersionNo)).stream().map(this::toDomain).toList();
   }
 
   @Override
-  public Optional<OfflineJobRevisionPO> findByJobDefinitionIdAndVersionNo(
+  public Optional<OfflineJobRevision> findByJobDefinitionIdAndVersionNo(
       Long jobDefinitionId, int versionNo) {
     return Optional.ofNullable(
         revisionMapper.selectOne(
             new LambdaQueryWrapper<OfflineJobRevisionPO>()
                 .eq(OfflineJobRevisionPO::getJobDefinitionId, jobDefinitionId)
-                .eq(OfflineJobRevisionPO::getVersionNo, versionNo)));
+                .eq(OfflineJobRevisionPO::getVersionNo, versionNo))).map(this::toDomain);
   }
 
   @Override
-  public Optional<OfflineJobRevisionPO> findById(Long revisionId) {
-    return Optional.ofNullable(revisionMapper.selectById(revisionId));
+  public Optional<OfflineJobRevision> findById(Long revisionId) {
+    return Optional.ofNullable(revisionMapper.selectById(revisionId)).map(this::toDomain);
   }
 
   @Override
-  public List<OfflineJobRevisionPO> findLatestByJobDefinitionIds(
+  public List<OfflineJobRevision> findLatestByJobDefinitionIds(
       Collection<Long> jobDefinitionIds) {
     if (jobDefinitionIds == null || jobDefinitionIds.isEmpty()) {
       return List.of();
@@ -57,17 +59,17 @@ public class OfflineJobRevisionRepositoryAdapter implements OfflineJobRevisionRe
             .map(OfflineJobRevisionPO::getId)
             .filter(id -> id != null)
             .toList();
-    return latestRowIds.isEmpty() ? List.of() : revisionMapper.selectBatchIds(latestRowIds);
+    return latestRowIds.isEmpty() ? List.of() : revisionMapper.selectBatchIds(latestRowIds).stream().map(this::toDomain).toList();
   }
 
   @Override
-  public Optional<OfflineJobRevisionPO> findLatestByJobDefinitionId(Long jobDefinitionId) {
+  public Optional<OfflineJobRevision> findLatestByJobDefinitionId(Long jobDefinitionId) {
     return Optional.ofNullable(
         revisionMapper.selectOne(
             new LambdaQueryWrapper<OfflineJobRevisionPO>()
                 .eq(OfflineJobRevisionPO::getJobDefinitionId, jobDefinitionId)
                 .orderByDesc(OfflineJobRevisionPO::getVersionNo)
-                .last("LIMIT 1")));
+                .last("LIMIT 1"))).map(this::toDomain);
   }
 
   @Override
@@ -75,9 +77,19 @@ public class OfflineJobRevisionRepositoryAdapter implements OfflineJobRevisionRe
     return revisionMapper.nextVersionNo(jobDefinitionId);
   }
 
+  private OfflineJobRevision toDomain(OfflineJobRevisionPO row) {
+    OfflineJobRevision revision = new OfflineJobRevision();
+    BeanUtils.copyProperties(row, revision);
+    return revision;
+  }
+
   @Override
-  public OfflineJobRevisionPO insert(OfflineJobRevisionPO revision) {
-    revisionMapper.insert(revision);
+  public OfflineJobRevision insert(OfflineJobRevision revision) {
+    OfflineJobRevisionPO row = new OfflineJobRevisionPO();
+    BeanUtils.copyProperties(revision, row);
+    revisionMapper.insert(row);
+    revision.setId(row.getId());
+    revision.setCreateTime(row.getCreateTime());
     return revision;
   }
 }

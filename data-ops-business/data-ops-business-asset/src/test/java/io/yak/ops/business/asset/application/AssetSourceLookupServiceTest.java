@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
-import io.yak.ops.common.bean.po.asset.AssetItemPO;
+import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.core.project.CurrentProject;
 import org.junit.jupiter.api.Test;
 

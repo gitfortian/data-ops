@@ -18,6 +18,7 @@ jest.mock('@/services/batch-link-up', () => ({
 
 jest.mock('@umijs/max', () => ({
   history: { replace: jest.fn() },
+  useIntl: () => ({ formatMessage: ({ id }: { id: string }) => id }),
 }));
 
 const deferred = <T,>() => {

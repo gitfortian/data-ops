@@ -16,7 +16,7 @@ import io.yak.ops.business.datasource.config.DataSourceProperties.Credential;
 import io.yak.ops.business.datasource.dao.DataSourceDao;
 import io.yak.ops.business.datasource.dao.mapper.DataSourceMapper;
 import io.yak.ops.business.datasource.gateway.adapter.AesGcmCredentialCipher;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import java.nio.charset.StandardCharsets;
@@ -50,6 +50,18 @@ class DataSourceDaoImplCredentialTest {
     // 纯单元测试无 MyBatis 运行时：lambdaWrapper 需要 TableInfo 缓存才能解析 PO 列名
     TableInfoHelper.initTableInfo(
         new MapperBuilderAssistant(new MybatisConfiguration(), ""), DataSourcePO.class);
+  }
+
+  @Test
+  void referenceReadSelectsOnlyIdentityColumnsWithoutDecryptingCredentials() {
+    // Deliberately invalid ciphertext would throw if this path tried to decrypt a credential.
+    DataSourcePO projected = row(42L, "ENC:invalid", "ENC:invalid");
+    when(mapper.selectList(any(Wrapper.class))).thenReturn(List.of(projected));
+    assertThat(dao(BASE64_KEY).selectReferences(7L, List.of(42L))).containsExactly(projected);
+    ArgumentCaptor<Wrapper> query = ArgumentCaptor.forClass(Wrapper.class);
+    verify(mapper).selectList(query.capture());
+    assertThat(query.getValue().getSqlSelect()).isEqualTo("id,project_id,name,db_type");
+    assertThat(query.getValue().getSqlSegment()).contains("project_id", "id IN");
   }
 
   @Test

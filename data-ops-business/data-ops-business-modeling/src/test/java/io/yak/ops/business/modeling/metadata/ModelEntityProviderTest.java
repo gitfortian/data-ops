@@ -16,7 +16,7 @@ import io.yak.ops.business.modeling.version.ModelPublishedStructureReader;
 import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.modeling.structure.StructureView.ColumnView;
 import io.yak.ops.business.modeling.structure.StructureView.PartitionView;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

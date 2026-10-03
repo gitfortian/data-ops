@@ -6,8 +6,8 @@
 
 | 依赖 | scope/optional | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | compile | 平台公共件(含本模块 PO/权限码/错误码常量) |
-| `data-ops-business-datasource` | optional | 共享业务数据源配置(`BusinessDatabaseConfiguration`/`DataSourceProperties`)与后续 catalog 元数据读取;建模不反向提供任何能力给数据源 |
+| `data-ops-common` | compile | 平台共享契约、权限码与错误码；PO 由本模块 dao.model 拥有 |
+| `data-ops-business-datasource` | optional | 现有持久化条件与 catalog 元数据读取;建模不反向提供任何能力给数据源 |
 | `data-ops-business-audit` | compile | `BusinessAuditService` 审计门面(fail-open);建模不反向提供任何能力给审计 |
 | `data-security-spring-boot-starter` | compile | 框架集成:`Result`/`PagingData`/`BusinessException`、`@RequiresPermission`、`CurrentUserProvider` |
 | Spring Boot Web/Validation、MyBatis-Plus、Flyway、Lombok | compile | 与 lineage 等业务模块一致的技术底座 |
@@ -39,4 +39,4 @@ modeling ──> data-development  加工任务创建(生成 SQL 任务草稿),�
 3. **执行引擎外包**:建模不持有任务执行/调度能力(决策 D2),加工执行一律交数据开发。
 4. **权限与菜单**:建模的菜单/权限目录行在 yak-security migration(`data-ops-boot`)中登记,本模块 Java 代码不操作 `yak_security_*` 表。
 5. **审计与通知**:操作审计走平台审计设施;变更通知走通知/告警基础设施,不自建通知通道。
-6. **初始化顺序**:建模 V18 迁移保留了一次性历史回填,会读取语义中心的 `yak_semantic_process`;因此建模 Flyway 必须在语义中心 Flyway 成功后运行。该顺序只保障已有迁移链的初始化,不授权新增运行时代码直读语义中心表。
+6. **初始化顺序**:建模 `V1__modeling_baseline.sql` 中历史 V18 Source 段保留了一次性历史回填,会读取语义中心的 `yak_semantic_process`;因此建模 Flyway 必须在语义中心 Flyway 成功后运行。该顺序只保障已有迁移链的初始化,不授权新增运行时代码直读语义中心表。

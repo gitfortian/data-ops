@@ -9,7 +9,7 @@ import io.yak.ops.business.workflow.backfill.WorkflowBackfillPlanner.Plan;
 import io.yak.ops.business.workflow.dao.WorkflowBackfillDao;
 import io.yak.ops.business.workflow.dao.WorkflowBackfillDao.ProjectBackfillRef;
 import io.yak.ops.business.workflow.schedule.trigger.WorkflowScheduleTriggerCoordinator;
-import io.yak.ops.common.bean.po.workflow.WorkflowBackfillPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowBackfillPO;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import java.time.Instant;

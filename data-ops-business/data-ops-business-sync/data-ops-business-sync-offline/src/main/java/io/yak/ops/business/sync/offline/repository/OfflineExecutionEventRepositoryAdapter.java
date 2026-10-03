@@ -5,7 +5,7 @@ import io.yak.ops.business.sync.offline.dao.OfflineExecutionEventDao;
 import io.yak.ops.business.sync.offline.domain.OfflineExecutionEvent;
 import io.yak.ops.business.sync.offline.domain.OfflineExecutionFinalFailureEvent;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
-import io.yak.ops.common.bean.po.sync.offline.OfflineExecutionEventPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineExecutionEventPO;
 import java.util.List;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationEventPublisher;

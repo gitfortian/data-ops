@@ -5,6 +5,7 @@ import io.yak.ops.business.agent.runtime.TurnSubscription;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,6 +31,15 @@ public class AgentTurnRegistry {
     sessionIndex.put(sessionId, turnId);
   }
 
+  /** Publish the cancellation handle atomically with QUEUED -> RUNNING. */
+  synchronized boolean claimAndRegister(
+      String sessionId, String turnId, TurnSubscription subscription,
+      Runnable cancelFinalizer, BooleanSupplier claim) {
+    if (!claim.getAsBoolean()) return false;
+    register(sessionId, turnId, subscription, cancelFinalizer);
+    return true;
+  }
+
   /** 正常终态清理：收尾责任在 Executor，这里只移除登记。 */
   public void unregister(String turnId) {
     Handle handle = running.remove(turnId);
@@ -42,18 +52,33 @@ public class AgentTurnRegistry {
     return Optional.ofNullable(sessionIndex.get(sessionId));
   }
 
-  /** 停止生成：dispose 上游 + 执行取消收尾。无登记时静默（排队轮次走存储侧取消）。 */
-  public void cancelBySession(String sessionId) {
-    String turnId = sessionIndex.remove(sessionId);
-    if (turnId == null) {
-      return;
-    }
+  /** Process shutdown releases inference resources; persistent orphan recovery owns the outcome. */
+  void detach(String turnId) {
     Handle handle = running.remove(turnId);
+    sessionIndex.values().removeIf(turnId::equals);
+    if (handle != null) handle.subscription().dispose();
+  }
+
+  /** 停止生成：先确认取消事实，再 dispose 上游，避免 dispose 回调抢占正常完成。 */
+  public void cancelBySession(String sessionId) {
+    cancelBySession(sessionId, () -> {});
+  }
+
+  void cancelBySession(String sessionId, Runnable cancelQueued) {
+    Handle handle;
+    synchronized (this) {
+      String turnId = sessionIndex.remove(sessionId);
+      if (turnId == null) {
+        cancelQueued.run();
+        return;
+      }
+      handle = running.remove(turnId);
+    }
     if (handle != null) {
       try {
-        handle.subscription().dispose();
-      } finally {
         handle.cancelFinalizer().run();
+      } finally {
+        handle.subscription().dispose();
       }
     }
   }

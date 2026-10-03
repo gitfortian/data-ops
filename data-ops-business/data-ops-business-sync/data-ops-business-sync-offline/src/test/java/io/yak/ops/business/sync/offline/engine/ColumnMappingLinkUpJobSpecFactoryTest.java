@@ -1,5 +1,7 @@
 package io.yak.ops.business.sync.offline.engine;
 
+import io.yak.ops.business.sync.offline.engine.DataSourceFixtures;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -7,9 +9,9 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.yak.ops.business.datasource.dao.DataSourceDao;
+import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.common.bean.dto.sync.offline.OfflineJobDefinitionDTO;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import org.junit.jupiter.api.Test;
 
 class ColumnMappingLinkUpJobSpecFactoryTest {
@@ -126,19 +128,26 @@ class ColumnMappingLinkUpJobSpecFactoryTest {
   }
 
   private ColumnMappingLinkUpJobSpecFactory factory() {
-    DataSourceDao dao = mock(DataSourceDao.class);
-    when(dao.selectById(1L)).thenReturn(dataSource(1L, "source"));
-    when(dao.selectById(2L)).thenReturn(dataSource(2L, "sink"));
+    DataSourceReader dao = mock(DataSourceReader.class);
+    when(dao.require(1L)).thenReturn(dataSource(1L, "source"));
+    when(dao.requireReference(1L)).thenReturn(reference(dataSource(1L, "source")));
+    when(dao.require(2L)).thenReturn(dataSource(2L, "sink"));
+    when(dao.requireReference(2L)).thenReturn(reference(dataSource(2L, "sink")));
     return new ColumnMappingLinkUpJobSpecFactory(dao, mapper);
   }
 
-  private DataSourcePO dataSource(Long id, String name) {
+  private io.yak.ops.business.datasource.domain.DataSourceReference reference(DataSourceDefinition definition) {
+    return new io.yak.ops.business.datasource.domain.DataSourceReference(
+        definition.getId(), definition.getProjectId(), definition.getName(), definition.getDbType());
+  }
+
+  private DataSourceDefinition dataSource(Long id, String name) {
     DataSourcePO value = new DataSourcePO();
     value.setId(id);
     value.setName(name);
     value.setJdbcUrl("jdbc:mysql://127.0.0.1:3306/demo");
     value.setConnectionParams("{\"driver\":\"com.mysql.cj.jdbc.Driver\","
         + "\"username\":\"root\",\"password\":\"secret\"}");
-    return value;
+    return DataSourceFixtures.definition(value);
   }
 }

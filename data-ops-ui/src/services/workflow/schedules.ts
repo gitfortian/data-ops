@@ -1,5 +1,5 @@
 import type { ApiResponse } from '@/services/http/response';
-import { request } from '@umijs/max';
+import request from '@/utils/request';
 
 export type WorkflowScheduleStatus = 'ONLINE' | 'OFFLINE';
 export type WorkflowScheduleExecutionStrategy =

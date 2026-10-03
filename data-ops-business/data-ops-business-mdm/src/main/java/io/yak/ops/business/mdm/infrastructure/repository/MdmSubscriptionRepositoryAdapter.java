@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmSubscriptionMapper;
 import io.yak.ops.business.mdm.domain.subscription.MdmSubscription;
-import io.yak.ops.common.bean.po.mdm.MdmSubscriptionPO;
+import io.yak.ops.business.mdm.dao.model.MdmSubscriptionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

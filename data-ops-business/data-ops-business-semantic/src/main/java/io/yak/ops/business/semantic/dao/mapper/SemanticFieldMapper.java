@@ -1,7 +1,7 @@
 package io.yak.ops.business.semantic.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.semantic.SemanticFieldPO;
+import io.yak.ops.business.semantic.dao.model.SemanticFieldPO;
 import org.apache.ibatis.annotations.Mapper;
 
 /** MyBatis mapper for the standard field library. */

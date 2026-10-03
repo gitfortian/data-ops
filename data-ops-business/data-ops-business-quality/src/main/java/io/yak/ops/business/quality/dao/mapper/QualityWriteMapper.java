@@ -1,7 +1,7 @@
 package io.yak.ops.business.quality.dao.mapper;
 
-import io.yak.ops.common.bean.po.quality.QualityMonitorSettingPO;
-import io.yak.ops.common.bean.po.quality.QualityTableAssetPO;
+import io.yak.ops.business.quality.dao.model.QualityMonitorSettingPO;
+import io.yak.ops.business.quality.dao.model.QualityTableAssetPO;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

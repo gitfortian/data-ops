@@ -8,7 +8,7 @@ import io.yak.ops.business.security.api.SecurityAccessDecisionApi;
 import io.yak.ops.common.enums.security.SecurityErrorCode;
 import io.yak.ops.business.security.exception.SecurityException;
 import io.yak.ops.business.security.dao.mapper.AccessPolicyMapper;
-import io.yak.ops.common.bean.po.security.DsecAccessPolicyPO;
+import io.yak.ops.business.security.dao.model.DsecAccessPolicyPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

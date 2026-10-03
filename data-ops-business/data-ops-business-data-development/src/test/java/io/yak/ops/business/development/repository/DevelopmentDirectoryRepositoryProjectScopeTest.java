@@ -6,7 +6,7 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.development.dao.mapper.DevelopmentDirectoryMapper;
 import io.yak.ops.business.development.domain.DevelopmentDirectory;
-import io.yak.ops.common.bean.po.development.DevelopmentDirectoryPO;
+import io.yak.ops.business.development.dao.model.DevelopmentDirectoryPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import java.util.Optional;

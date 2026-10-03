@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.yak.ops.business.security.domain.DiscoverableField;
-import io.yak.ops.common.bean.po.security.DsecDiscoveryRulePO;
+import io.yak.ops.business.security.dao.model.DsecDiscoveryRulePO;
 import org.junit.jupiter.api.Test;
 
 /** 敏感发现规则匹配纯函数单测:NAME/COMMENT/CONTENT/REGEX 匹配。 */

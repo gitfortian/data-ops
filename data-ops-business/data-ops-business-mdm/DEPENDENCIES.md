@@ -4,10 +4,10 @@
 
 | 依赖 | 范围 | 原因 |
 | --- | --- | --- |
-| `data-ops-common` | 编译 | PO(`bean.po.mdm`)、错误码(`enums.mdm`)、权限码(`constant.mdm`)——平台惯例 |
+| `data-ops-common` | 编译 | 、错误码(`enums.mdm`)、权限码(`constant.mdm`)——平台惯例 |
 | `data-security-spring-boot-starter` | 编译 | `Result`/`PagingData`/`BusinessException`/`@RequiresPermission`/`CurrentUserProvider` |
 | `data-ops-business-audit` | 编译 | `BusinessAuditService`/`AuditTransactions` 审计门面(fail-open) |
-| `data-ops-business-datasource` | 编译(optional) | **仅基础设施**:`BusinessDatabaseConfiguration`(共享数据源/SqlSessionFactory/事务管理器)与 `ConditionalOnDataSourceEnabled`;识别/采集经其公共契约读元数据。禁止使用其内部实现类型 |
+| `data-ops-business-datasource` | 编译(optional) | `ConditionalOnDataSourceEnabled` 持久化条件;识别/采集经其公共契约读元数据。禁止使用其内部实现类型 |
 | `data-ops-business-semantic` | 编译(optional,52 起) | 主数据属性类型/单位/码值/安全引用数据标准;经其公共契约(SPI/options)消费,不直读表 |
 | `data-ops-business-sync` | 编译(optional,54/55 起) | 采集执行/调度/字段映射复用 sync;MDM 只查询「主数据」标签任务执行状态(离线+实时,D-M11),不建采集 |
 | `data-ops-business-task-catalog`(数据开发任务目录) | 编译(optional,55 起) | 主数据加工任务生成与注册:MDM 按实体/属性/来源绑定生成加工任务,经任务目录交数据开发执行(参照 modeling 44 模式,D-M11) |

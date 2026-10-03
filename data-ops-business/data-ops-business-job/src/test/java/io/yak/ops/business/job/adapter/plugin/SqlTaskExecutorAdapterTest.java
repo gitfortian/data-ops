@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.job.environment.SystemEnvVarService;
+import io.yak.ops.business.job.config.TaskRuntimeProperties;
+import io.yak.ops.business.job.repository.TaskExecutionJournal;
 import io.yak.ops.business.job.runtime.TaskExecutionContextFactory;
 import io.yak.ops.business.job.task.TaskExecution;
 import io.yak.ops.business.job.task.TaskVersionSnapshot;
@@ -46,6 +48,107 @@ import org.springframework.beans.factory.ObjectProvider;
 class SqlTaskExecutorAdapterTest {
 
   private SqlTaskExecutorAdapter adapter;
+
+  @Test
+  void failedJournalKeepsIdempotencyAndBlocksRetentionOverflow() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    RecordingSqlPlugin plugin = new RecordingSqlPlugin(TaskExecutionResult.success(Map.of()));
+    CountDownLatch attempted = new CountDownLatch(1);
+    TaskExecutionJournal journal = new TaskExecutionJournal() {
+      public void save(String type, String key, TaskExecution execution) {
+        attempted.countDown();
+        throw new IllegalStateException("journal unavailable");
+      }
+      public Optional<TaskExecution> findById(String id) { return Optional.empty(); }
+      public Optional<TaskExecution> findByKey(String type, String key) { return Optional.empty(); }
+    };
+    TaskRuntimeProperties properties = new TaskRuntimeProperties();
+    properties.setMaxRetainedHandles(1);
+    properties.setTerminalRetentionMillis(0);
+    ObjectProvider<TaskExecutionJournal> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(journal);
+    var factory = new TaskExecutionContextFactory(() -> Map.of(), null, null, properties, provider);
+    adapter = new SqlTaskExecutorAdapter(
+        TaskPluginRegistry.from(List.of(plugin)), emptyDataSourceProvider(), mapper, factory);
+    var snapshot = snapshot(mapper, "unpersisted-task", "select 1");
+    var first = adapter.start(snapshot, "first-key", Map.of());
+    assertTrue(attempted.await(2, TimeUnit.SECONDS));
+    assertEquals(first.executionId(), adapter.start(snapshot, "first-key", Map.of()).executionId());
+    assertThrows(IllegalStateException.class, () -> adapter.start(snapshot, "new-key", Map.of()));
+    assertEquals(1, plugin.createCount.get());
+  }
+
+  @Test
+  void persistedTerminalSurvivesHandleEvictionWithoutReexecutingItsKey() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    RecordingSqlPlugin plugin = new RecordingSqlPlugin(TaskExecutionResult.success(Map.of("rows", 1)));
+    Map<String, TaskExecution> byId = new java.util.concurrent.ConcurrentHashMap<>();
+    Map<String, TaskExecution> byKey = new java.util.concurrent.ConcurrentHashMap<>();
+    CountDownLatch firstPersisted = new CountDownLatch(1);
+    TaskExecutionJournal journal = new TaskExecutionJournal() {
+      public void save(String type, String key, TaskExecution execution) {
+        byId.putIfAbsent(execution.executionId(), execution);
+        byKey.putIfAbsent(key, execution);
+        firstPersisted.countDown();
+      }
+      public Optional<TaskExecution> findById(String id) { return Optional.ofNullable(byId.get(id)); }
+      public Optional<TaskExecution> findByKey(String type, String key) { return Optional.ofNullable(byKey.get(key)); }
+    };
+    TaskRuntimeProperties properties = new TaskRuntimeProperties();
+    properties.setMaxRetainedHandles(1);
+    properties.setTerminalRetentionMillis(0);
+    ObjectProvider<TaskExecutionJournal> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(journal);
+    TaskExecutionContextFactory factory = new TaskExecutionContextFactory(() -> Map.of(), null, null, properties, provider);
+    adapter = new SqlTaskExecutorAdapter(TaskPluginRegistry.from(List.of(plugin)), emptyDataSourceProvider(), mapper, factory);
+    TaskVersionSnapshot snapshot = snapshot(mapper, "retained-task", "select 1");
+    TaskExecution first = adapter.start(snapshot, "first-key", Map.of());
+    assertTrue(firstPersisted.await(2, TimeUnit.SECONDS));
+    // The journal callback returns before the worker publishes retention eligibility.
+    // Admission is allowed to reject briefly while that terminal transition finishes.
+    Instant admissionDeadline = Instant.now().plusSeconds(2);
+    while (true) {
+      try {
+        adapter.start(snapshot, "second-key", Map.of());
+        break;
+      } catch (IllegalStateException pendingRetention) {
+        if (!pendingRetention.getMessage().startsWith("Task handle budget exhausted")
+            || !Instant.now().isBefore(admissionDeadline)) throw pendingRetention;
+        Thread.sleep(5);
+      }
+    }
+    assertEquals(first.executionId(), adapter.status(first.executionId()).executionId());
+    assertEquals(first.executionId(), adapter.start(snapshot, "first-key", Map.of()).executionId());
+    assertEquals(2, plugin.createCount.get());
+    adapter.shutdown();
+    adapter = new SqlTaskExecutorAdapter(
+        TaskPluginRegistry.from(List.of(plugin)), emptyDataSourceProvider(), mapper, factory);
+    assertEquals(first.executionId(), adapter.start(snapshot, "first-key", Map.of()).executionId());
+    assertEquals(2, plugin.createCount.get(), "a restarted adapter must reuse retained terminal evidence");
+  }
+
+  @Test
+  void saturatedConcurrencyDoesNotCreateAnotherPluginExecution() throws Exception {
+    CountDownLatch entered = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    RecordingSqlPlugin plugin = new RecordingSqlPlugin(() -> {
+      entered.countDown();
+      awaitLatch(release, "release test execution");
+      return TaskExecutionResult.success(Map.of());
+    });
+    TaskRuntimeProperties properties = new TaskRuntimeProperties();
+    properties.setMaxConcurrent(1);
+    ObjectMapper mapper = new ObjectMapper();
+    TaskExecutionContextFactory factory = new TaskExecutionContextFactory(() -> Map.of(), null, null, properties, null);
+    adapter = new SqlTaskExecutorAdapter(TaskPluginRegistry.from(List.of(plugin)), emptyDataSourceProvider(), mapper, factory);
+    TaskVersionSnapshot snapshot = snapshot(mapper, "budget-task", "select 1");
+    try {
+      adapter.start(snapshot, "running", Map.of());
+      assertTrue(entered.await(2, TimeUnit.SECONDS));
+      assertThrows(IllegalStateException.class, () -> adapter.start(snapshot, "over-budget", Map.of()));
+      assertEquals(1, plugin.createCount.get());
+    } finally { release.countDown(); }
+  }
 
   @AfterEach
   void tearDown() {
@@ -171,7 +274,13 @@ class SqlTaskExecutorAdapterTest {
     } finally {
       projectHolder.remove();
     }
-    TaskExecution completed = awaitTerminal(started.executionId());
+    TaskExecution completed;
+    projectHolder.set(new ProjectContext(42L, "Project A"));
+    try {
+      completed = awaitTerminal(started.executionId());
+    } finally {
+      projectHolder.remove();
+    }
 
     assertTrue(completed.successful());
     assertEquals(42L, executedProjectId.get());

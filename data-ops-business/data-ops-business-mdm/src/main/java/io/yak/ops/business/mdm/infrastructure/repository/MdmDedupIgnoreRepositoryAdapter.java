@@ -3,7 +3,7 @@ package io.yak.ops.business.mdm.infrastructure.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmDedupIgnoreMapper;
 import io.yak.ops.business.mdm.domain.clean.MdmDedupIgnore;
-import io.yak.ops.common.bean.po.mdm.MdmDedupIgnorePO;
+import io.yak.ops.business.mdm.dao.model.MdmDedupIgnorePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

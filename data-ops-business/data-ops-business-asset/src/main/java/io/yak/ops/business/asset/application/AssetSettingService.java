@@ -2,7 +2,7 @@ package io.yak.ops.business.asset.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.asset.dao.mapper.AssetSettingMapper;
-import io.yak.ops.common.bean.po.asset.AssetSettingPO;
+import io.yak.ops.business.asset.dao.model.AssetSettingPO;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

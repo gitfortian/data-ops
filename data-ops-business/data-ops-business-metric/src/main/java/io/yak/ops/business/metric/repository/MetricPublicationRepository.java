@@ -1,7 +1,7 @@
 package io.yak.ops.business.metric.repository;
 
-import io.yak.ops.common.bean.po.metric.MetricActivePublicationPO;
-import io.yak.ops.common.bean.po.metric.MetricPublicationEventPO;
+import io.yak.ops.business.metric.dao.model.MetricActivePublicationPO;
+import io.yak.ops.business.metric.dao.model.MetricPublicationEventPO;
 import java.util.List;
 
 /** Publication truth boundary: append-only lifecycle ledger plus one current active pointer. */

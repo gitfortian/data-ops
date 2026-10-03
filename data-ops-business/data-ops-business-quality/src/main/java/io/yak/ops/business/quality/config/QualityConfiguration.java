@@ -1,6 +1,5 @@
 package io.yak.ops.business.quality.config;
 
-import io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -10,13 +9,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
-import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnQualityEnabled
 @EnableConfigurationProperties(QualityProperties.class)
-@Import(BusinessDatabaseConfiguration.class)
 @MapperScan(
     basePackages = "io.yak.ops.business.quality.dao.mapper",
     sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")

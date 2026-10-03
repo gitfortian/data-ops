@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.ops.business.resource.config.ConditionalOnResourceEnabled;
 import io.yak.ops.business.resource.dao.ResourceDao;
 import io.yak.ops.business.resource.dao.mapper.ResourceMapper;
-import io.yak.ops.common.bean.po.resource.ResourcePO;
+import io.yak.ops.business.resource.dao.model.ResourcePO;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.stereotype.Repository;

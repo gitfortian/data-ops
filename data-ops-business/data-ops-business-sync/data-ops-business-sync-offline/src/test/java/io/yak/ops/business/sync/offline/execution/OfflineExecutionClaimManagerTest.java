@@ -216,9 +216,9 @@ class OfflineExecutionClaimManagerTest {
     return definition;
   }
 
-  private io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO publishedRevision() {
-    io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO revision =
-        new io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO();
+  private io.yak.ops.business.sync.offline.domain.OfflineJobRevision publishedRevision() {
+    io.yak.ops.business.sync.offline.domain.OfflineJobRevision revision =
+        new io.yak.ops.business.sync.offline.domain.OfflineJobRevision();
     revision.setId(500L);
     revision.setJobDefinitionId(10L);
     revision.setVersionNo(3);

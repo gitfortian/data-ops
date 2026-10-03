@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.engine.connector.adapter.NativeSingleTableSupport.TableRef;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -114,7 +114,7 @@ public class DorisOfflineSyncConnectorAdapter implements OfflineSyncConnectorAda
     }
   }
 
-  private void verifyExistingTarget(DataSourcePO dataSource, ObjectNode options) {
+  private void verifyExistingTarget(DataSourceDefinition dataSource, ObjectNode options) {
     DataSourceCatalogReader catalogReader = catalogReaderProvider.getIfAvailable();
     if (catalogReader == null) {
       throw new IllegalStateException("Doris Native Sink 无法校验目标表是否存在：DataSource Catalog 未启用");

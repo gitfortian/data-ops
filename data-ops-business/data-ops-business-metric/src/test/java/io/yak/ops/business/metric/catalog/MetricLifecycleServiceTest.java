@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
 import io.yak.ops.business.metric.repository.MetricValidationEvidenceRepository;
-import io.yak.ops.common.bean.po.metric.MetricActivePublicationPO;
+import io.yak.ops.business.metric.dao.model.MetricActivePublicationPO;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

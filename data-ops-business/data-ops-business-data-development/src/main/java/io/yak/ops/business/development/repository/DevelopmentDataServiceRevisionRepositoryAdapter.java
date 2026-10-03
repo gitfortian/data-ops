@@ -7,7 +7,7 @@ import io.yak.ops.business.development.dao.mapper.DevelopmentDataServiceRevision
 import io.yak.ops.business.development.domain.DevelopmentDataServiceDefinition;
 import io.yak.ops.business.development.domain.DevelopmentDataServiceRevision;
 import io.yak.ops.business.development.domain.DevelopmentDataServiceRevisionSummary;
-import io.yak.ops.common.bean.po.development.DevelopmentDataServiceRevisionPO;
+import io.yak.ops.business.development.dao.model.DevelopmentDataServiceRevisionPO;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

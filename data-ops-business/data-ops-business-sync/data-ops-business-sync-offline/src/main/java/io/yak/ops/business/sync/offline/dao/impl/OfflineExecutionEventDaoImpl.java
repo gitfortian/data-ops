@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.dao.OfflineExecutionEventDao;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineExecutionEventMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineExecutionEventPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineExecutionEventPO;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

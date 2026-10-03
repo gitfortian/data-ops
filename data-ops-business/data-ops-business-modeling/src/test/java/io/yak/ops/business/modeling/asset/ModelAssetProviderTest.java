@@ -11,7 +11,7 @@ import io.yak.ops.business.asset.api.AssetDescriptor;
 import io.yak.ops.business.asset.api.AssetPage;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
 import io.yak.ops.business.modeling.lineage.ModelingLineageRegistrationService;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import io.yak.ops.common.enums.asset.AssetEnums.AssetType;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import java.time.LocalDateTime;

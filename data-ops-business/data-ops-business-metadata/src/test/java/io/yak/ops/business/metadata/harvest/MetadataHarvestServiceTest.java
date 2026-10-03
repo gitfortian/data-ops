@@ -27,8 +27,8 @@ import io.yak.ops.business.metadata.harvest.MetadataHarvestService.HarvestSummar
 import io.yak.ops.business.metadata.harvest.MetadataHarvestService.ScopeOutcome;
 import io.yak.ops.business.metadata.harvest.stats.MetadataStatsRegistry;
 import io.yak.ops.business.metadata.harvest.stats.MetadataStatsProvider.TableStats;
-import io.yak.ops.common.bean.po.metadata.MdCollectJobPO;
-import io.yak.ops.common.bean.po.metadata.MdCollectRunPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectJobPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectRunPO;
 import io.yak.ops.common.enums.metadata.MetadataEntityStatus;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.RunStatus;

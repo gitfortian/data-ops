@@ -53,7 +53,7 @@ import ManualRegisterModal from '../components/ManualRegisterModal';
 import OfflineModal from '../components/OfflineModal';
 import PublishPrecheckModal from '../components/PublishPrecheckModal';
 // 元数据实体检索核(M2-2 目录三合一:目录浏览/统一搜索并入本账,docs/PLATFORM_CORE_FLOW.md)
-import AssetExplorer from '@/pages/data-metadata/components/AssetExplorer';
+import AssetExplorer from '@/components/metadata/AssetExplorer';
 
 const PUBLISHABLE: AssetStatus[] = ['PENDING', 'OFFLINE', 'IGNORED'];
 const IGNORABLE: AssetStatus[] = ['PENDING', 'OFFLINE'];

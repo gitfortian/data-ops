@@ -18,7 +18,7 @@ import io.yak.ops.business.semantic.api.StandardQueryApi;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.api.StandardStatus;
-import io.yak.ops.common.bean.po.security.DsecSecurityLevelPO;
+import io.yak.ops.business.security.dao.model.DsecSecurityLevelPO;
 import io.yak.ops.common.enums.security.SecurityErrorCode;
 import io.yak.ops.core.project.CurrentProject;
 import org.junit.jupiter.api.BeforeEach;

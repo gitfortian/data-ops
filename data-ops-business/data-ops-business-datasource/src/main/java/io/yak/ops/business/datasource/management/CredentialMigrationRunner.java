@@ -1,8 +1,8 @@
 package io.yak.ops.business.datasource.management;
 
+import io.yak.ops.business.datasource.config.DataSourceProperties;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.datasource.config.CredentialCipher;
-import io.yak.ops.business.datasource.config.DataSourceProperties;
 import io.yak.ops.business.datasource.repository.DataSourceRepository;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;

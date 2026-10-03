@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.modeling.api.ModelTtlQueryApi;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
 import io.yak.ops.business.modeling.exception.ModelingException;
-import io.yak.ops.common.bean.po.modeling.ModelingModelPO;
+import io.yak.ops.business.modeling.dao.model.ModelingModelPO;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;

@@ -23,17 +23,12 @@ class DataServiceFlywayContractTest {
 
   @Test
   void dedicatedNamespaceContainsForwardOnlyMigrations() throws IOException {
-    List<String> migrations = sqlFiles(dedicatedMigrationRoot());
-    assertThat(migrations.stream().filter(name -> name.startsWith("V")).toList())
-        .containsExactly(
-            "V1__baseline_data_service.sql",
-            "V2__ip_access_policy.sql",
-            "V3__consumer_access_model.sql",
-            "V4__usage_evidence_source.sql");
-    assertThat(migrations).contains("B4__data_service_baseline.sql");
+    assertThat(sqlFiles(dedicatedMigrationRoot()))
+        .containsExactly("V1__data_service_baseline.sql");
 
-    String baseline = Files.readString(
-        dedicatedMigrationRoot().resolve("V1__baseline_data_service.sql"));
+    String baseline = section(
+        Files.readString(dedicatedMigrationRoot().resolve("V1__data_service_baseline.sql")),
+        "V1__baseline_data_service.sql");
     assertThat(baseline)
         .contains("CREATE TABLE IF NOT EXISTS yak_ops_data_service_api")
         .contains("CREATE TABLE IF NOT EXISTS yak_ops_data_service_api_key")
@@ -45,8 +40,9 @@ class DataServiceFlywayContractTest {
         .contains("runtime_generation")
         .doesNotContain("ALTER TABLE");
 
-    String accessPolicy = Files.readString(
-        dedicatedMigrationRoot().resolve("V2__ip_access_policy.sql"));
+    String accessPolicy = section(
+        Files.readString(dedicatedMigrationRoot().resolve("V1__data_service_baseline.sql")),
+        "V2__ip_access_policy.sql");
     assertThat(accessPolicy)
         .contains("CREATE TABLE IF NOT EXISTS yak_ops_data_service_ip_access_policy")
         .contains("CREATE TABLE IF NOT EXISTS yak_ops_data_service_ip_access_rule")
@@ -54,8 +50,9 @@ class DataServiceFlywayContractTest {
         .contains("DENYLIST")
         .doesNotContain("ALTER TABLE yak_ops_data_service_api");
 
-    String consumerAccess = Files.readString(
-        dedicatedMigrationRoot().resolve("V3__consumer_access_model.sql"));
+    String consumerAccess = section(
+        Files.readString(dedicatedMigrationRoot().resolve("V1__data_service_baseline.sql")),
+        "V3__consumer_access_model.sql");
     assertThat(consumerAccess)
         .contains("CREATE TABLE IF NOT EXISTS yak_ops_data_service_consumer")
         .contains("CREATE TABLE IF NOT EXISTS yak_ops_data_service_consumer_api_grant")
@@ -66,8 +63,9 @@ class DataServiceFlywayContractTest {
         .contains("MODIFY COLUMN api_id")
         .doesNotContain("DROP TABLE");
 
-    String usageEvidenceSource = Files.readString(
-        dedicatedMigrationRoot().resolve("V4__usage_evidence_source.sql"));
+    String usageEvidenceSource = section(
+        Files.readString(dedicatedMigrationRoot().resolve("V1__data_service_baseline.sql")),
+        "V4__usage_evidence_source.sql");
     assertThat(usageEvidenceSource)
         .contains("ADD COLUMN consumer_id")
         .contains("ADD COLUMN source_revision_id")
@@ -82,6 +80,27 @@ class DataServiceFlywayContractTest {
     assertThat(sqlFiles(legacyDatasourceMigrationRoot())).isEmpty();
   }
 
+  /**
+   * 合并后的单文件按 {@code -- Source: <原路径>} 分段;按文件名取回原迁移的正文,
+   * 使原先针对单个文件的断言继续有效。
+   */
+  private static String section(String sql, String sourceFileName) {
+    String[] lines = sql.split("\n");
+    int start = -1;
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:") && lines[i].trim().endsWith(sourceFileName)) {
+        start = i + 1;
+        break;
+      }
+    }
+    if (start < 0) throw new IllegalStateException("missing source section: " + sourceFileName);
+    StringBuilder body = new StringBuilder();
+    for (int i = start; i < lines.length; i++) {
+      if (lines[i].startsWith("-- Source:")) break;
+      body.append(lines[i]).append('\n');
+    }
+    return body.toString();
+  }
   private List<String> sqlFiles(Path root) throws IOException {
     if (!Files.isDirectory(root)) return List.of();
     try (var paths = Files.list(root)) {

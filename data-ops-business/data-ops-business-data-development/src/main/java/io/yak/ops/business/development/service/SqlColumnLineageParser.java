@@ -1,5 +1,7 @@
 package io.yak.ops.business.development.service;
 
+import io.yak.ops.business.development.domain.SqlExpressionClassification;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -42,9 +44,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class SqlColumnLineageParser {
 
-  private static final Set<String> AGGREGATE_FUNCTIONS = Set.of(
-      "AVG", "COUNT", "GROUP_CONCAT", "MAX", "MIN", "SUM",
-      "STDDEV", "STDDEV_POP", "STDDEV_SAMP", "VAR_POP", "VAR_SAMP", "VARIANCE");
 
   public ParseResult parse(String sql) {
     return parse(sql, SchemaProvider.none());
@@ -456,7 +455,7 @@ public class SqlColumnLineageParser {
       @Override
       public void visit(Function function) {
         String name = function.getName();
-        if (name != null && AGGREGATE_FUNCTIONS.contains(name.toUpperCase(Locale.ROOT))) {
+        if (SqlExpressionClassification.aggregate(name)) {
           aggregate[0] = true;
         }
         super.visit(function);

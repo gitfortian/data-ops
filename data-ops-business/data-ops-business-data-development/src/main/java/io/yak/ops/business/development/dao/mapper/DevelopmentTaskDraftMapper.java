@@ -1,7 +1,7 @@
 package io.yak.ops.business.development.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.development.DevelopmentTaskDraftPO;
+import io.yak.ops.business.development.dao.model.DevelopmentTaskDraftPO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 

@@ -1,7 +1,7 @@
 package io.yak.ops.business.workflow.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.workflow.WorkflowVersionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowVersionPO;
 
 /**
  * Workflow versions persist Project directly because RUNTIME versions may not have a parent Workflow.

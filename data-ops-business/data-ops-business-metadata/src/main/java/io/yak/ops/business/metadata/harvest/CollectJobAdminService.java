@@ -6,7 +6,7 @@ import io.yak.framework.common.PageData;
 import io.yak.ops.business.metadata.dao.mapper.MdCollectJobMapper;
 import io.yak.ops.business.metadata.exception.MetadataException;
 import io.yak.ops.business.metadata.schedule.MetadataScheduleEngineBridge;
-import io.yak.ops.common.bean.po.metadata.MdCollectJobPO;
+import io.yak.ops.business.metadata.dao.model.MdCollectJobPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import io.yak.ops.core.project.CurrentProject;

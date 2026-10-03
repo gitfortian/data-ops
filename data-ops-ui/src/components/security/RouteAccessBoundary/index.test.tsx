@@ -14,7 +14,7 @@ describe('RouteAccessBoundary', () => {
         <div>secret page</div>
       </RouteAccessBoundary>,
     );
-    expect(screen.getByText('403')).toBeTruthy();
+    expect(screen.getByText('无权访问此页面')).toBeTruthy();
     expect(screen.queryByText('secret page')).toBeNull();
   });
 
@@ -38,7 +38,7 @@ describe('RouteAccessBoundary', () => {
         <div>granted page</div>
       </RouteAccessBoundary>,
     );
-    expect(screen.getByText('403')).toBeTruthy();
+    expect(screen.getByText('无权访问此页面')).toBeTruthy();
 
     rerender(
       <RouteAccessBoundary

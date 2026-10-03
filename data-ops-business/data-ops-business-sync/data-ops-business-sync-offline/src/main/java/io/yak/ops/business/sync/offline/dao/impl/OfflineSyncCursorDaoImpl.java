@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.dao.OfflineSyncCursorDao;
 import io.yak.ops.business.sync.offline.dao.mapper.OfflineSyncCursorMapper;
-import io.yak.ops.common.bean.po.sync.offline.OfflineSyncCursorPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineSyncCursorPO;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

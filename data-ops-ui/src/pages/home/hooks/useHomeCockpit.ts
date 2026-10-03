@@ -1,3 +1,4 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { homeCockpitApi, type HomeCockpitOverview } from '@/services/home';
 import { useEffect, useState } from 'react';
 
@@ -8,6 +9,7 @@ interface HomeCockpitState {
 }
 
 export function useHomeCockpit(): HomeCockpitState {
+  const { currentProject } = useSecurityProject();
   const [state, setState] = useState<HomeCockpitState>({
     loading: true,
     failed: false,
@@ -15,6 +17,7 @@ export function useHomeCockpit(): HomeCockpitState {
 
   useEffect(() => {
     let active = true;
+    setState({ loading: true, failed: false });
     void homeCockpitApi
       .overview()
       .then((response) => {
@@ -29,7 +32,7 @@ export function useHomeCockpit(): HomeCockpitState {
     return () => {
       active = false;
     };
-  }, []);
+  }, [currentProject?.id]);
 
   return state;
 }

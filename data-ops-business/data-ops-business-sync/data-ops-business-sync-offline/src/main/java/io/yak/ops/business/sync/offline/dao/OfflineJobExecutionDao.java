@@ -1,7 +1,7 @@
 package io.yak.ops.business.sync.offline.dao;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobExecutionPO;
 import java.time.LocalDateTime;
 import java.util.List;
 

@@ -33,6 +33,8 @@ class MetadataLayeringConventionTest {
   private static final Map<String, Set<String>> ALLOWED_INTERNAL =
       Map.ofEntries(
           Map.entry("config", Set.of()),
+          // Existing read-only overview assembly depends only on its persistence condition.
+          Map.entry("stat", Set.of("config")),
           // ticket 116 起 controller 还读采集任务的读写服务（它们与守护的执行体同住 harvest）。
           // ticket 117 起还读 query：搜索的应用服务住在 query 自己包里，controller 只做参数拆装。
           Map.entry("controller",
@@ -80,18 +82,14 @@ class MetadataLayeringConventionTest {
           "(?m)^import\\s+(?:static\\s+)?io\\.yak\\.ops\\.business\\.([a-z]+)\\.([A-Za-z0-9_.]+);");
 
   /**
-   * 除 {@code *.api.*} 之外唯一被点名的跨模块引用：本仓库的"每模块一份持久化装配"缝。
+   * 既有功能开关标记的精确跨模块引用。
    *
-   * <p>数据源开关注解、共享的 {@code BusinessDatabaseConfiguration} 与其属性类被每个业务模块的
-   * {@code *PersistenceConfiguration} 引用（asset / dashboard / analysis 同款），它们是装配机制
-   * 而不是对方的业务内部实现。允许这三条，但<b>逐条点名</b>——守卫留一条写得出理由的通道，
-   * 胜过被人"顺手"放宽成"datasource 整包随便引"（plan §9 T6）。
+   * <p>共享数据库装配由 Boot 拥有；这里只保留现有 Datasource 功能开关标记，
+   * 不允许 Metadata 导入其他领域的持久化装配或属性类。
    */
   private static final Set<String> ALLOWED_PLUMBING_IMPORTS =
       Set.of(
-          "datasource.config.ConditionalOnDataSourceEnabled",
-          "datasource.config.BusinessDatabaseConfiguration",
-          "datasource.config.DataSourceProperties");
+          "datasource.config.ConditionalOnDataSourceEnabled");
 
   /** Repository adapter for the datasource deletion-guard SPI. */
   private static final Set<String> ALLOWED_INTEGRATION_SPI_IMPORTS =
@@ -323,6 +321,18 @@ class MetadataLayeringConventionTest {
         continue;
       }
       String imported = trimmed.substring("import ".length()).replace(";", "").trim();
+      // Registry currently returns its owning immutable-by-convention type metadata row.
+      // This exception permits that type only, never a mapper or DAO operation in detail.
+      if (file.relativePath().equals("detail/EntityDetailService.java")
+          && imported.equals(MODULE_PACKAGE + ".dao.model.MdTypeDefPO")) continue;
+      if (file.relativePath().equals("query/CatalogQueryService.java")
+          && imported.equals(MODULE_PACKAGE + ".dao.model.MdFieldDefPO")) continue;
+      if (file.relativePath().equals("controller/v1/MetadataOverviewController.java")
+          && Set.of(MODULE_PACKAGE + ".config.ConditionalOnMetadataPersistence",
+              MODULE_PACKAGE + ".stat.MetadataOverviewService",
+              MODULE_PACKAGE + ".stat.MetadataOverviewService.Overview").contains(imported)) {
+        continue; // Exact infrastructure annotation/read projection corridor, not a whole package allowance.
+      }
       if (!imported.startsWith(MODULE_PACKAGE + ".")) {
         continue;
       }

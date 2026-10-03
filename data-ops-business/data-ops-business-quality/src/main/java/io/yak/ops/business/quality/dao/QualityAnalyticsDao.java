@@ -5,12 +5,12 @@ import io.yak.ops.business.quality.dao.model.QualityOverviewPO.DimensionRow;
 import io.yak.ops.business.quality.dao.model.QualityOverviewPO.IssueRow;
 import io.yak.ops.business.quality.dao.model.QualityOverviewPO.StatsRow;
 import io.yak.ops.business.quality.dao.model.QualityOverviewPO.TrendRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.ColumnReportRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.DimensionReportRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.OperationLogRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.ReportOverviewRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.TrendPointRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.WorkspaceStatsRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.ColumnReportRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.DimensionReportRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.OperationLogRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.ReportOverviewRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.TrendPointRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.WorkspaceStatsRow;
 import java.util.List;
 import java.util.Map;
 

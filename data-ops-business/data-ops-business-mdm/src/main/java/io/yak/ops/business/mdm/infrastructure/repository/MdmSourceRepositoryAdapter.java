@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.mdm.dao.mapper.MdmSourceMapper;
 import io.yak.ops.business.mdm.domain.source.MdmSource;
 import io.yak.ops.business.mdm.domain.source.MdmSourceRole;
-import io.yak.ops.common.bean.po.mdm.MdmSourcePO;
+import io.yak.ops.business.mdm.dao.model.MdmSourcePO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,3 +1,6 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { useLatestOperation } from '@/hooks/useLatestOperation';
+import { formatTime, formatValue, assetLocation, businessLink, assetPropertyEntries, relationPropertyEntries } from './workspaceProjection';
 import YakButton from '@/components/YakButton';
 import YakOpsEmpty from '@/components/YakOpsEmpty';
 import { BRAND_THEME } from '@/styles/brand';
@@ -105,79 +108,6 @@ const initialLeftPanelWidth = () => {
 
 const nodeTypes = { lineage: LineageNode };
 
-const formatTime = (value?: string) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(date).replaceAll('/', '-');
-};
-
-const formatValue = (value: unknown) => {
-  if (value == null) return '-';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-};
-
-const assetLocation = (asset: LineageAsset) => [
-  asset.databaseName,
-  asset.schemaName,
-  asset.tableName,
-  asset.columnName,
-].filter(Boolean).join('.') || '-';
-
-const businessLink = (asset: LineageAsset): { label: string; path: string } | undefined => {
-  if (asset.assetType === 'SQL_TASK' && asset.sourceId) {
-    return {
-      label: '打开开发任务',
-      path: `/data-development/task/${encodeURIComponent(asset.sourceId)}`,
-    };
-  }
-  if (asset.assetType === 'DASHBOARD' && asset.sourceId) {
-    return {
-      label: '打开仪表盘',
-      path: `/dashboard/${encodeURIComponent(asset.sourceId)}`,
-    };
-  }
-  if (asset.assetType === 'DATASET' || asset.assetType === 'DATASET_FIELD') {
-    return { label: '打开数据目录', path: '/data-analysis/data-catalog' };
-  }
-  if (asset.assetType === 'CHART') {
-    return { label: '打开仪表盘', path: '/dashboard' };
-  }
-  if (asset.assetType === 'TABLE' || asset.assetType === 'COLUMN') {
-    return { label: '打开数据源', path: '/data-source' };
-  }
-  if (asset.assetType === 'DATABASE_SERVICE' || asset.assetType === 'DATABASE') {
-    return { label: '打开数据源', path: '/data-source' };
-  }
-  if (asset.assetType === 'METRIC') {
-    const metricId = asset.sourceId || asset.assetKey.replace(/^metric:/, '');
-    return metricId ? { label: '打开指标', path: `/metric/manage/${encodeURIComponent(metricId)}` } : undefined;
-  }
-  return undefined;
-};
-
-const assetPropertyEntries = (asset?: LineageAsset) => Object.entries(asset?.properties || {})
-  .filter(([, value]) => value !== undefined && value !== null)
-  .slice(0, 18);
-
-const relationPropertyEntries = (relation?: LineageRelation) => Object.entries(relation?.properties || {})
-  .filter(([, value]) => value !== undefined && value !== null)
-  .slice(0, 18);
-
 const AssetTypeLabel = ({ type }: { type: LineageAssetType }) => {
   const visual = lineageAssetVisual[type];
   return (
@@ -219,6 +149,10 @@ const LineageEmptyState = () => (
 );
 
 export default function LineagePage() {
+  const { currentProject } = useSecurityProject();
+  const beginRootLoad = useLatestOperation(currentProject?.id);
+  const beginSearch = useLatestOperation(currentProject?.id);
+
   const [searchParams] = useSearchParams();
   const urlAssetKey = assetKeyFromParams(searchParams);
   const returnAssetIdValue = searchParams.get('returnAssetId');
@@ -272,19 +206,31 @@ export default function LineagePage() {
   }, [returnAssetId]);
 
   const loadAssetByKey = useCallback(async (assetKey: string, syncUrl = true) => {
+    const isCurrent = beginRootLoad();
     setLoading(true);
     setLoadError('');
     try {
       const asset = await fetchLineageAssetByKey(assetKey);
-      selectRoot(asset, syncUrl);
+      if (isCurrent()) selectRoot(asset, syncUrl);
     } catch (error) {
+      if (!isCurrent()) return;
       const text = error instanceof Error ? error.message : '查询血缘资产失败';
       setLoadError(text);
       message.error(text);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [selectRoot]);
+  }, [selectRoot, beginRootLoad, currentProject?.id]);
+
+  useEffect(() => {
+    setRootAsset(undefined);
+    setGraph(undefined);
+    setSelectedAsset(undefined);
+    setSelectedRelation(undefined);
+    setSearchResults([]);
+    setHasSearched(false);
+    setSearching(false);
+  }, [currentProject?.id]);
 
   useEffect(() => {
     // URL 是入口事实:外部深链(资产/指标/数据集跳转)变化即跟随,同键不重复拉取。
@@ -324,9 +270,10 @@ export default function LineagePage() {
     return () => {
       cancelled = true;
     };
-  }, [depth, direction, rootAsset]);
+  }, [depth, direction, rootAsset, currentProject?.id]);
 
   const runAssetSearch = useCallback(async () => {
+    const isCurrent = beginSearch();
     const keyword = searchKeyword.trim();
     if (!keyword && searchType === 'ALL') {
       setSearchResults([]);
@@ -342,13 +289,13 @@ export default function LineagePage() {
         assetType: searchType === 'ALL' ? undefined : searchType,
         limit: SEARCH_LIMIT,
       });
-      setSearchResults(values);
+      if (isCurrent()) setSearchResults(values);
     } catch {
-      setSearchResults([]);
+      if (isCurrent()) setSearchResults([]);
     } finally {
-      setSearching(false);
+      if (isCurrent()) setSearching(false);
     }
-  }, [searchKeyword, searchType]);
+  }, [searchKeyword, searchType, beginSearch, currentProject?.id]);
 
   const view = useMemo(() => {
     if (!graph) return undefined;

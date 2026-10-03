@@ -24,9 +24,9 @@ io.yak.ops.business.asset
 
 - 自持 Flyway：`classpath:db/migration/yak-asset`，历史表 `flyway_schema_history_asset`，bean `yakAssetFlyway`。
 - 表：`yak_asset_item` / `_directory` / `_tag` / `_tag_rel` / `_assign_rule` / `_change_record` / `_view_record` / `_health_snapshot` / `_setting`。
-- 共享数据源：`@Import(BusinessDatabaseConfiguration.class)`；事务 `@Transactional(transactionManager = "yakBusinessTransactionManager")`。
-- PO/权限码/错误码/枚举位于 `data-ops-common`（`bean.po.asset` / `constant.asset` / `enums.asset`）——平台惯例。
-- 菜单注册在 data-ops-boot 的 yak-security 迁移 `V2032__register_data_asset_menu.sql`。
+- 共享数据源：Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配；事务 `@Transactional(transactionManager = "yakBusinessTransactionManager")`。
+- PO 由本模块 `dao.model` 拥有；权限码、错误码和枚举保留 common 的稳定共享契约。
+- 菜单注册在 data-ops-boot 的 yak-security 迁移 `V2__boot_security_baseline.sql（Source: V2032__register_data_asset_menu.sql）`。
 
 ## 关键设计
 

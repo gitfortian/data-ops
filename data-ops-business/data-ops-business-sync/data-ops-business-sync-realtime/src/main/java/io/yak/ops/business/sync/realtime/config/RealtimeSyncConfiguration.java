@@ -1,7 +1,6 @@
 package io.yak.ops.business.sync.realtime.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.yak.ops.business.datasource.config.BusinessDatabaseConfiguration;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.sync.realtime.domain.SyncExecutionStateMachine;
 import java.net.http.HttpClient;
@@ -14,13 +13,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
 @EnableConfigurationProperties(RealtimeSyncProperties.class)
-@Import(BusinessDatabaseConfiguration.class)
 @ConditionalOnProperty(prefix = "yak.sync.realtime", name = "enabled", matchIfMissing = true)
 @ConditionalOnDataSourceEnabled
 @MapperScan(

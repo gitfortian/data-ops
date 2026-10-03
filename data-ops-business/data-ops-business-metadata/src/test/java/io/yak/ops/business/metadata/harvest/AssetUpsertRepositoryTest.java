@@ -19,7 +19,7 @@ import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.BatchCommand;
 import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.GoneCommand;
 import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.GoneRow;
 import io.yak.ops.business.metadata.harvest.AssetUpsertRepository.HarvestBatchResult;
-import io.yak.ops.common.bean.po.metadata.MdChangePO;
+import io.yak.ops.business.metadata.dao.model.MdChangePO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ChangeType;
 import io.yak.ops.common.enums.metadata.MetadataEnums.ProviderType;
 import java.time.LocalDateTime;

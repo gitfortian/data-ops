@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.yak.ops.business.development.dao.mapper.DevelopmentDirectoryMapper;
 import io.yak.ops.business.development.domain.DevelopmentDirectory;
-import io.yak.ops.common.bean.po.development.DevelopmentDirectoryPO;
+import io.yak.ops.business.development.dao.model.DevelopmentDirectoryPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.Instant;
 import java.util.List;

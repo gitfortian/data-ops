@@ -13,7 +13,7 @@ import io.yak.framework.workflow.engine.definition.WorkflowTimeoutPolicy;
 import io.yak.framework.workflow.engine.spi.WorkflowDefinitionRepository;
 import io.yak.ops.business.workflow.dao.WorkflowCatalogDao;
 import io.yak.ops.business.workflow.repository.support.WorkflowJsonCodec;
-import io.yak.ops.common.bean.po.workflow.WorkflowVersionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowVersionPO;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;

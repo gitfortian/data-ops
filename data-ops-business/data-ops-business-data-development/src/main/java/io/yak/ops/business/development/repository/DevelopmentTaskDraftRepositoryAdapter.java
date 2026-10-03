@@ -3,7 +3,7 @@ package io.yak.ops.business.development.repository;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.yak.ops.business.development.dao.mapper.DevelopmentTaskDraftMapper;
 import io.yak.ops.business.development.domain.DevelopmentTaskDraft;
-import io.yak.ops.common.bean.po.development.DevelopmentTaskDraftPO;
+import io.yak.ops.business.development.dao.model.DevelopmentTaskDraftPO;
 import io.yak.ops.spi.task.model.TaskDefinition;
 import java.time.Instant;
 import java.util.Optional;

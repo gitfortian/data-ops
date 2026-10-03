@@ -6,7 +6,7 @@ import io.yak.framework.common.PageData;
 import io.yak.ops.business.mdm.dao.mapper.MdmEntityMapper;
 import io.yak.ops.business.mdm.domain.entity.MdmEntity;
 import io.yak.ops.business.mdm.domain.entity.MdmEntityStatus;
-import io.yak.ops.common.bean.po.mdm.MdmEntityPO;
+import io.yak.ops.business.mdm.dao.model.MdmEntityPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.yak.framework.common.PagingData;
 import io.yak.framework.common.Result;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobDefinitionPO;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobExecutionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobDefinitionPO;
+import io.yak.ops.business.sync.offline.dao.model.OfflineJobExecutionPO;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 
@@ -29,10 +29,10 @@ class OfflineSyncContractTest {
   }
 
   @Test
-  void persistenceObjectsBelongToCommonModulePackage() {
+  void persistenceObjectsBelongToOwningModulePackage() {
     assertThat(OfflineJobDefinitionPO.class.getPackageName())
-        .isEqualTo("io.yak.ops.common.bean.po.sync.offline");
+        .isEqualTo("io.yak.ops.business.sync.offline.dao.model");
     assertThat(OfflineJobExecutionPO.class.getPackageName())
-        .isEqualTo("io.yak.ops.common.bean.po.sync.offline");
+        .isEqualTo("io.yak.ops.business.sync.offline.dao.model");
   }
 }

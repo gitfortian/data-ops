@@ -1,9 +1,9 @@
 package io.yak.ops.business.quality.dao;
 
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.FolderRow;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.TemplateRow;
-import io.yak.ops.common.bean.po.quality.QualityRuleTemplatePO;
-import io.yak.ops.common.bean.po.quality.QualityTemplateFolderPO;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.FolderRow;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.TemplateRow;
+import io.yak.ops.business.quality.dao.model.QualityRuleTemplatePO;
+import io.yak.ops.business.quality.dao.model.QualityTemplateFolderPO;
 import java.util.List;
 import java.util.Map;
 

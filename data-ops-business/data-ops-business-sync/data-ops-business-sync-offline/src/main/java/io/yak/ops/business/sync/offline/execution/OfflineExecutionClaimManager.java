@@ -85,7 +85,7 @@ public class OfflineExecutionClaimManager {
     }
 
     // W1-2 契约 C4：执行读已发布快照而非草稿列——改草稿不发布,跑的还是上一发布版。
-    io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO revision =
+    io.yak.ops.business.sync.offline.domain.OfflineJobRevision revision =
         definitionService.publishedRevision(definition);
     if (revision == null) {
       throw new IllegalStateException("任务定义尚未发布，请先发布后再执行");

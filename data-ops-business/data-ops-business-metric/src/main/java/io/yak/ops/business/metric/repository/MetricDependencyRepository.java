@@ -1,7 +1,7 @@
 package io.yak.ops.business.metric.repository;
 
 import io.yak.ops.business.metric.domain.Metric;
-import io.yak.ops.common.bean.po.metric.MetricDependencyPO;
+import io.yak.ops.business.metric.dao.model.MetricDependencyPO;
 import java.util.List;
 
 /** 指标血缘登记仓储接口。 */

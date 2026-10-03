@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useMemo } from 'react';
 
-import { CheckResultTag, ExecutionStatusTag } from '../../../components/QualityStatus';
+import { CheckResultTag, ExecutionStatusTag } from '@/components/quality/QualityStatus';
 import {
   formatExecutionTime,
   qualityExecutionTriggerLabel,

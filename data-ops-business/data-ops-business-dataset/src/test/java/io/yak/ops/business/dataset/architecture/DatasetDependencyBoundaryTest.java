@@ -164,7 +164,9 @@ class DatasetDependencyBoundaryTest {
             .isIn(
                 "DatasetQueryResult.java",
                 "query/adapter/QueryRevisionDatasetSourceAdapter.java",
-                "query/adapter/SqlQueryDatasetSourceAdapter.java");
+                "query/adapter/SqlQueryDatasetSourceAdapter.java",
+                // Query security gate consumes the shared enforcement context, not another domain DAO.
+                "query/DatasetQuerySecurityGate.java");
       }
     }
   }

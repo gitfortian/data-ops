@@ -6,7 +6,7 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
-import io.yak.ops.common.bean.po.metric.MetricVersionPO;
+import io.yak.ops.business.metric.dao.model.MetricVersionPO;
 import io.yak.ops.common.constant.metric.MetricPermissionCode;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import io.yak.ops.core.project.ProjectMigrationMode;

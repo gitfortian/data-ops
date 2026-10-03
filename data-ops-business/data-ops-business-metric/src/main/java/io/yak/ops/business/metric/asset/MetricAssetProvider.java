@@ -11,7 +11,7 @@ import io.yak.ops.business.metric.dao.mapper.MetricMapper;
 import io.yak.ops.business.metric.lineage.MetricLineageRegistrationService;
 import io.yak.ops.business.semantic.api.ProcessApi;
 import io.yak.ops.business.semantic.api.BusinessDomain;
-import io.yak.ops.common.bean.po.metric.MetricPO;
+import io.yak.ops.business.metric.dao.model.MetricPO;
 import io.yak.ops.common.enums.asset.AssetEnums.AssetType;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import java.util.LinkedHashMap;

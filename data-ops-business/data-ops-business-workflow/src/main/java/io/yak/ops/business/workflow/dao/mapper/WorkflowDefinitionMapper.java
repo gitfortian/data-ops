@@ -1,7 +1,7 @@
 package io.yak.ops.business.workflow.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import io.yak.ops.common.bean.po.workflow.WorkflowDefinitionPO;
+import io.yak.ops.business.workflow.dao.model.WorkflowDefinitionPO;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

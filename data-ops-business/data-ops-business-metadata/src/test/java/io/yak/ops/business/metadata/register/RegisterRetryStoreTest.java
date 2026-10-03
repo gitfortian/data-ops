@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.yak.ops.business.metadata.api.RegisterCommand;
 import io.yak.ops.business.metadata.dao.mapper.MdRegisterRetryMapper;
-import io.yak.ops.common.bean.po.metadata.MdRegisterRetryPO;
+import io.yak.ops.business.metadata.dao.model.MdRegisterRetryPO;
 import io.yak.ops.common.enums.metadata.MetadataEnums.RetryOperation;
 import io.yak.ops.common.enums.metadata.MetadataEnums.RetryStatus;
 import java.time.LocalDateTime;

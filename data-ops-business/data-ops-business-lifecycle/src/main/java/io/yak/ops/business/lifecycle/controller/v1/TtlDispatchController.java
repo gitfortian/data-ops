@@ -10,7 +10,7 @@ import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.lifecycle.controller.v1.dto.LifecycleRequests.RecordQueryDTO;
 import io.yak.ops.business.lifecycle.dispatch.TtlDispatchService;
 import io.yak.ops.business.lifecycle.dispatch.TtlDispatchService.DispatchOutcome;
-import io.yak.ops.common.bean.po.lifecycle.LifecycleDispatchRecordPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecycleDispatchRecordPO;
 import io.yak.ops.common.constant.lifecycle.LifecyclePermissionCode;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.TriggerType;
 import io.yak.ops.core.project.ProjectMigrationMode;

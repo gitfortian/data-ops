@@ -2,7 +2,7 @@ package io.yak.ops.business.datasource.dao;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.yak.ops.business.datasource.dao.model.DataSourceSummaryRow;
-import io.yak.ops.common.bean.po.datasource.DataSourcePO;
+import io.yak.ops.business.datasource.dao.model.DataSourcePO;
 import io.yak.ops.common.enums.datasource.DataSourceConnStatus;
 import io.yak.ops.common.enums.datasource.DataSourceDbType;
 import io.yak.ops.common.enums.datasource.DataSourceEnvironment;
@@ -20,6 +20,8 @@ public interface DataSourceDao {
   DataSourcePO selectById(Long projectId, Long id);
 
   List<DataSourcePO> selectByIds(List<Long> ids);
+
+  List<DataSourcePO> selectReferences(Long projectId, List<Long> ids);
 
   IPage<DataSourcePO> selectPage(PageQuery query);
 

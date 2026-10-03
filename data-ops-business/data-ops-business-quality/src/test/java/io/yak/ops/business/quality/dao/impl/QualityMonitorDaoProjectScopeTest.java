@@ -15,7 +15,7 @@ import io.yak.ops.business.quality.dao.mapper.QualityQueryMapper;
 import io.yak.ops.business.quality.dao.mapper.QualityRuleMapper;
 import io.yak.ops.business.quality.dao.mapper.QualityTableAssetMapper;
 import io.yak.ops.business.quality.dao.mapper.QualityWriteMapper;
-import io.yak.ops.common.bean.po.quality.QualityMonitorPO;
+import io.yak.ops.business.quality.dao.model.QualityMonitorPO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextException;

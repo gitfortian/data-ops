@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
-import io.yak.ops.business.mdm.dao.MdmDedupKeyRow;
+import io.yak.ops.business.mdm.domain.clean.MdmDedupKey;
 import io.yak.ops.business.mdm.dao.mapper.MdmRecordMapper;
 import io.yak.ops.business.mdm.domain.record.MdmRecord;
 import io.yak.ops.business.mdm.domain.record.MdmRecordStatus;
-import io.yak.ops.common.bean.po.mdm.MdmRecordPO;
+import io.yak.ops.business.mdm.dao.model.MdmRecordPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Optional;
@@ -71,7 +71,7 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
   }
 
   @Override
-  public List<MdmDedupKeyRow> countDedupKeys(
+  public List<MdmDedupKey> countDedupKeys(
       Long entityId, Long ruleId, String keyExpr, String valueCondition) {
     return mapper.countDedupKeys(requiredProjectId(), entityId, ruleId, keyExpr, valueCondition);
   }

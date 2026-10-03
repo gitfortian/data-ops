@@ -7,7 +7,7 @@ import io.yak.ops.business.resource.dao.ResourceDao;
 import io.yak.ops.business.resource.dao.ResourceDao.PageQuery;
 import io.yak.ops.business.resource.domain.ResourceNode;
 import io.yak.ops.business.resource.domain.ResourceQuery;
-import io.yak.ops.common.bean.po.resource.ResourcePO;
+import io.yak.ops.business.resource.dao.model.ResourcePO;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContextError;
 import io.yak.ops.core.project.ProjectContextException;

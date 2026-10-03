@@ -7,7 +7,7 @@ import io.yak.ops.business.workflow.dao.WorkflowScheduleTriggerDao;
 import io.yak.ops.business.workflow.definition.WorkflowDefinitionManager;
 import io.yak.ops.business.workflow.schedule.engine.WorkflowScheduleEngineBridge;
 import io.yak.ops.business.workflow.schedule.trigger.WorkflowScheduleTriggerCoordinator;
-import io.yak.ops.common.bean.po.workflow.WorkflowSchedulePO;
+import io.yak.ops.business.workflow.dao.model.WorkflowSchedulePO;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import java.time.Instant;

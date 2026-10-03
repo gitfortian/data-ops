@@ -1,6 +1,6 @@
 package io.yak.ops.business.lifecycle.generate;
 
-import io.yak.ops.common.bean.po.lifecycle.LifecyclePolicyPO;
+import io.yak.ops.business.lifecycle.dao.model.LifecyclePolicyPO;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.Granularity;
 import io.yak.ops.common.enums.lifecycle.LifecycleEnums.StorageType;
 import org.springframework.util.StringUtils;

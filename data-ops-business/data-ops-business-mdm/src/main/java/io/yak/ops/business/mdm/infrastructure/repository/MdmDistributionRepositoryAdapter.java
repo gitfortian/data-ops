@@ -6,7 +6,7 @@ import io.yak.ops.business.mdm.dao.mapper.MdmDistributionMapper;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistribution;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionMode;
 import io.yak.ops.business.mdm.domain.distribution.MdmDistributionStatus;
-import io.yak.ops.common.bean.po.mdm.MdmDistributionPO;
+import io.yak.ops.business.mdm.dao.model.MdmDistributionPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;

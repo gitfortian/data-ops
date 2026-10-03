@@ -1,8 +1,8 @@
 package io.yak.ops.business.quality.dao;
 
-import io.yak.ops.common.bean.po.quality.QualityExecutionPO;
-import io.yak.ops.common.bean.po.quality.QualityQueryPO.RuleExecutionWorkspaceRow;
-import io.yak.ops.common.bean.po.quality.QualityRuleExecutionPO;
+import io.yak.ops.business.quality.dao.model.QualityExecutionPO;
+import io.yak.ops.business.quality.dao.model.QualityQueryPO.RuleExecutionWorkspaceRow;
+import io.yak.ops.business.quality.dao.model.QualityRuleExecutionPO;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

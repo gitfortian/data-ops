@@ -23,9 +23,9 @@ io.yak.ops.business.lifecycle
 
 - 自持 Flyway：`classpath:db/migration/yak-lifecycle`，历史表 `flyway_schema_history_lifecycle`，bean `yakLifecycleFlyway`。
 - 表：`yak_lc_policy` / `yak_lc_model_binding` / `yak_lc_dispatch_record` / `yak_lc_storage_snapshot` / `yak_lc_setting`。
-- 共享数据源：`@Import(BusinessDatabaseConfiguration.class)`；事务 `@Transactional(transactionManager = "yakBusinessTransactionManager")`。
-- PO/权限码/错误码位于 `data-ops-common`（`bean.po.lifecycle` / `constant.lifecycle` / `enums.lifecycle`）——平台惯例。
-- 菜单注册在 data-ops-boot 的 yak-security 迁移 `V2031__register_lifecycle_menu.sql`。
+- 共享数据源：Boot 的 `config.persistence.BusinessDatabaseConfiguration` 应用装配；事务 `@Transactional(transactionManager = "yakBusinessTransactionManager")`。
+- PO 位于本模块 `dao.model`；权限码/错误码保持 common 的稳定共享契约。
+- 菜单注册在 data-ops-boot 的 yak-security 迁移 `V2__boot_security_baseline.sql（Source: V2031__register_lifecycle_menu.sql）`。
 
 ## 关键设计
 

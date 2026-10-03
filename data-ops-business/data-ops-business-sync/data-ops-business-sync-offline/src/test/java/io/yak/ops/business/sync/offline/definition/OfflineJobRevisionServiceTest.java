@@ -16,7 +16,7 @@ import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.repository.OfflineJobDefinitionRepository;
 import io.yak.ops.business.sync.offline.repository.OfflineJobRevisionRepository;
-import io.yak.ops.common.bean.po.sync.offline.OfflineJobRevisionPO;
+import io.yak.ops.business.sync.offline.domain.OfflineJobRevision;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Map;
@@ -59,8 +59,8 @@ class OfflineJobRevisionServiceTest {
     stubDefinition(definition);
     when(revisionRepository.findLatestByJobDefinitionId(10L)).thenReturn(Optional.empty());
     when(revisionRepository.nextVersionNo(10L)).thenReturn(1);
-    when(revisionRepository.insert(any(OfflineJobRevisionPO.class))).thenAnswer(invocation -> {
-      OfflineJobRevisionPO revision = invocation.getArgument(0, OfflineJobRevisionPO.class);
+    when(revisionRepository.insert(any(OfflineJobRevision.class))).thenAnswer(invocation -> {
+      OfflineJobRevision revision = invocation.getArgument(0, OfflineJobRevision.class);
       revision.setId(500L);
       return revision;
     });
@@ -72,8 +72,8 @@ class OfflineJobRevisionServiceTest {
     assertThat(result.version().checksum()).hasSize(64).matches("[0-9a-f]+");
     assertThat(result.version().createdBy()).isEqualTo("lucas");
 
-    ArgumentCaptor<OfflineJobRevisionPO> inserted =
-        ArgumentCaptor.forClass(OfflineJobRevisionPO.class);
+    ArgumentCaptor<OfflineJobRevision> inserted =
+        ArgumentCaptor.forClass(OfflineJobRevision.class);
     verify(revisionRepository).insert(inserted.capture());
     assertThat(inserted.getValue().getProjectId()).isEqualTo(7L);
     assertThat(inserted.getValue().getJobDefinitionId()).isEqualTo(10L);
@@ -87,14 +87,14 @@ class OfflineJobRevisionServiceTest {
   void publishIsIdempotentWhenDraftMatchesLatestRevision() {
     OfflineJobDefinition definition = draft("digest-1", "{\"a\":1}");
     stubDefinition(definition);
-    OfflineJobRevisionPO latest = revision(501L, 3, "digest-1", "{\"a\":1}");
+    OfflineJobRevision latest = revision(501L, 3, "digest-1", "{\"a\":1}");
     when(revisionRepository.findLatestByJobDefinitionId(10L)).thenReturn(Optional.of(latest));
 
     OfflineJobRevisionService.PublishResult result = service.publish(10L);
 
     assertThat(result.appended()).isFalse();
     assertThat(result.version().id()).isEqualTo(501L);
-    verify(revisionRepository, never()).insert(any(OfflineJobRevisionPO.class));
+    verify(revisionRepository, never()).insert(any(OfflineJobRevision.class));
     verify(revisionRepository, never()).nextVersionNo(anyLong());
     assertThat(definition.getPublishedRevisionId()).isEqualTo(501L);
     assertThat(definition.getLatestVersionNo()).isEqualTo(3);
@@ -112,7 +112,7 @@ class OfflineJobRevisionServiceTest {
 
     assertThat(result.appended()).isTrue();
     assertThat(result.version().versionNo()).isEqualTo(4);
-    verify(revisionRepository).insert(any(OfflineJobRevisionPO.class));
+    verify(revisionRepository).insert(any(OfflineJobRevision.class));
   }
 
   @Test
@@ -124,7 +124,7 @@ class OfflineJobRevisionServiceTest {
     assertThatThrownBy(() -> service.publish(10L))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("发布");
-    verify(revisionRepository, never()).insert(any(OfflineJobRevisionPO.class));
+    verify(revisionRepository, never()).insert(any(OfflineJobRevision.class));
   }
 
   @Test
@@ -170,14 +170,14 @@ class OfflineJobRevisionServiceTest {
     definition.setVersion(4);
     definition.setPublishedRevisionId(503L);
     stubDefinition(definition);
-    OfflineJobRevisionPO target = revision(501L, 1, "digest-1", "{\"a\":1}");
-    OfflineJobRevisionPO latest = revision(503L, 3, "digest-3", "{\"a\":3}");
+    OfflineJobRevision target = revision(501L, 1, "digest-1", "{\"a\":1}");
+    OfflineJobRevision latest = revision(503L, 3, "digest-3", "{\"a\":3}");
     when(revisionRepository.findByJobDefinitionIdAndVersionNo(10L, 1))
         .thenReturn(Optional.of(target));
     when(revisionRepository.findLatestByJobDefinitionId(10L)).thenReturn(Optional.of(latest));
     when(revisionRepository.nextVersionNo(10L)).thenReturn(4);
-    when(revisionRepository.insert(any(OfflineJobRevisionPO.class))).thenAnswer(invocation -> {
-      OfflineJobRevisionPO revision = invocation.getArgument(0, OfflineJobRevisionPO.class);
+    when(revisionRepository.insert(any(OfflineJobRevision.class))).thenAnswer(invocation -> {
+      OfflineJobRevision revision = invocation.getArgument(0, OfflineJobRevision.class);
       revision.setId(504L);
       return revision;
     });
@@ -230,14 +230,14 @@ class OfflineJobRevisionServiceTest {
     return definition;
   }
 
-  private OfflineJobRevisionPO revision(
+  private OfflineJobRevision revision(
       Long id, int versionNo, String digest, String definitionJson) {
     return revision(id, 10L, versionNo, digest, definitionJson);
   }
 
-  private OfflineJobRevisionPO revision(
+  private OfflineJobRevision revision(
       Long id, Long jobDefinitionId, int versionNo, String digest, String definitionJson) {
-    OfflineJobRevisionPO row = new OfflineJobRevisionPO();
+    OfflineJobRevision row = new OfflineJobRevision();
     row.setId(id);
     row.setJobDefinitionId(jobDefinitionId);
     row.setVersionNo(versionNo);
