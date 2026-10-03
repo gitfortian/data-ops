@@ -104,7 +104,19 @@ class SqlTaskExecutorAdapterTest {
     TaskVersionSnapshot snapshot = snapshot(mapper, "retained-task", "select 1");
     TaskExecution first = adapter.start(snapshot, "first-key", Map.of());
     assertTrue(firstPersisted.await(2, TimeUnit.SECONDS));
-    adapter.start(snapshot, "second-key", Map.of());
+    // The journal callback returns before the worker publishes retention eligibility.
+    // Admission is allowed to reject briefly while that terminal transition finishes.
+    Instant admissionDeadline = Instant.now().plusSeconds(2);
+    while (true) {
+      try {
+        adapter.start(snapshot, "second-key", Map.of());
+        break;
+      } catch (IllegalStateException pendingRetention) {
+        if (!pendingRetention.getMessage().startsWith("Task handle budget exhausted")
+            || !Instant.now().isBefore(admissionDeadline)) throw pendingRetention;
+        Thread.sleep(5);
+      }
+    }
     assertEquals(first.executionId(), adapter.status(first.executionId()).executionId());
     assertEquals(first.executionId(), adapter.start(snapshot, "first-key", Map.of()).executionId());
     assertEquals(2, plugin.createCount.get());
