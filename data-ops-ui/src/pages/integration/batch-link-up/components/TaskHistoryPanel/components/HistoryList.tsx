@@ -63,7 +63,7 @@ const PixelEmptyMan: React.FC = () => {
       </svg>
 
       <div className="text-xs font-medium text-slate-400">No run history</div>
-      <div className="mt-1 text-[11px] text-slate-300">
+      <div className="mt-1 text-[12px] text-slate-300">
         Waiting for the first run
       </div>
     </div>

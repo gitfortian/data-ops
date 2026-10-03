@@ -118,7 +118,7 @@ export function CalculatedFieldEditor({
     >
       <div className="space-y-4 pt-2">
         <div>
-          <div className="mb-1.5 text-[11px] font-medium text-[#475467]">
+          <div className="mb-1.5 text-[12px] font-medium text-[#475467]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.calculated.name' })}
           </div>
           <Input
@@ -128,15 +128,15 @@ export function CalculatedFieldEditor({
             status={nameError ? 'error' : undefined}
             onChange={(event) => setName(event.target.value)}
           />
-          {nameError ? <div className="mt-1 text-[10px] text-[#b42318]">{nameError}</div> : null}
+          {nameError ? <div className="mt-1 text-[12px] text-[#b42318]">{nameError}</div> : null}
         </div>
 
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-3">
-            <span className="text-[11px] font-medium text-[#475467]">
+            <span className="text-[12px] font-medium text-[#475467]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.calculated.expression' })}
             </span>
-            <span className="text-[9px] text-[#98a2b3]">
+            <span className="text-[9px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.calculated.safeAst' })}
             </span>
           </div>
@@ -150,7 +150,7 @@ export function CalculatedFieldEditor({
             status={'error' in parsed ? 'error' : undefined}
             onChange={(event) => setExpression(event.target.value)}
           />
-          <div className={`mt-1 text-[10px] ${'error' in parsed ? 'text-[#b42318]' : 'text-[#667085]'}`}>
+          <div className={`mt-1 text-[12px] ${'error' in parsed ? 'text-[#b42318]' : 'text-[#667085]'}`}>
             {'error' in parsed
               ? parsed.error
               : intl.formatMessage(
@@ -161,7 +161,7 @@ export function CalculatedFieldEditor({
         </div>
 
         <div className="rounded-[9px] border border-[#e8eaee] bg-[#fafbfc] p-3">
-          <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-[#667085]">
+          <div className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-[#667085]">
             <Braces size={12} />
             {intl.formatMessage({ id: 'pages.dashboard.editor.calculated.insertAggregateField' })}
           </div>
@@ -193,12 +193,12 @@ export function CalculatedFieldEditor({
               <Button key={item.label} size="small" onClick={() => append(item.value)}>{item.label}</Button>
             ))}
           </div>
-          <div className="mt-2 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-2 text-[9px] leading-4 text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.calculated.supportHint' })}
           </div>
         </div>
 
-        <div className="rounded-[7px] bg-[#f7f8fa] px-3 py-2 text-[10px] leading-5 text-[#667085]">
+        <div className="rounded-[7px] bg-[#f7f8fa] px-3 py-2 text-[12px] leading-5 text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.calculated.example' })}
         </div>
       </div>

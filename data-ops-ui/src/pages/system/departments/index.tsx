@@ -73,7 +73,7 @@ export default function DepartmentsPage() {
     <SystemManagementPage
       title="部门管理"
       titleId="system-departments-title"
-      className="h-[calc(100vh-64px)] min-h-[640px] overflow-hidden"
+      className="h-[calc(100vh-64px)] min-h-[640px] overflow-hidden max-lg:h-auto max-lg:overflow-visible"
     >
       <DepartmentFilterBar
         scope={scope}
@@ -87,7 +87,7 @@ export default function DepartmentsPage() {
         onCreate={() => openCreate(0)}
       />
 
-      <div className="grid min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white lg:grid-cols-[390px_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white lg:grid-cols-[280px_minmax(0,1fr)]">
         <DepartmentTreePane
           departments={visibleDepartments}
           selectedId={selectedId}

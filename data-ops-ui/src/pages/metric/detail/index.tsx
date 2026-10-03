@@ -74,24 +74,24 @@ const AUTHORING_NEXT_STEP_META: Record<
   { title: string; description: string; tone: string; action?: 'impact' | 'retry' }
 > = {
   VALIDATE: {
-    title: '下一步：Validation',
-    description: '当前依赖检查通过。保存或启用并不等于发布；下一阶段应对精确 MetricVersion 执行验证。',
+    title: '下一步：验证当前版本',
+    description: '当前依赖检查通过，可验证当前版本。保存或启用后仍需单独发布，才能形成稳定的引用版本。',
     tone: 'border-[#abefc6] bg-[#ecfdf3]',
   },
   REVIEW_OUTDATED_DEPENDENCY: {
     title: '先复核已过期依赖',
-    description: '上游版本已经变化。先检查影响并确认定义是否仍成立，再进入 Validation。',
+    description: '上游版本已经变化。检查影响并确认定义仍成立后，再验证当前版本。',
     tone: 'border-[#fedf89] bg-[#fffaeb]',
     action: 'impact',
   },
   RESOLVE_REMOVED_DEPENDENCY: {
     title: '先处理已删除依赖',
-    description: '至少一个上游对象已被删除。当前定义不能直接进入 Validation，需要重新绑定或调整定义。',
+    description: '至少一个上游对象已被删除。重新绑定或调整定义后，再进行版本验证。',
     tone: 'border-[#fecdca] bg-[#fef3f2]',
     action: 'impact',
   },
   RETRY_DEPENDENCY_PROVIDER: {
-    title: '依赖 provider 暂不可用',
+    title: '依赖事实暂不可用',
     description: '无法确认部分上游当前状态。该状态不是“已删除”，恢复读取后应重新检查。',
     tone: 'border-[#eaecf0] bg-[#f9fafb]',
     action: 'retry',

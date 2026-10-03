@@ -72,7 +72,7 @@ const titleOf = (node: PermissionTreeNode): ReactNode => {
       <span className="truncate">{name}</span>
       <span
         className={[
-          'shrink-0 rounded border px-1.5 py-0.5 text-[10px] leading-4',
+          'shrink-0 rounded border px-1.5 py-0.5 text-[12px] leading-4',
           nodeTypeClass[type],
         ].join(' ')}
       >

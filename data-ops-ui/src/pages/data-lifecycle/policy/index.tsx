@@ -218,7 +218,7 @@ const PolicyPage = () => {
             <span className="truncate">{name}</span>
             {record.builtin && <Tag color="blue">内置</Tag>}
           </div>
-          <div className="text-[12px] text-[#98a2b3]">{record.policyCode}</div>
+          <div className="text-[12px] text-[#667085]">{record.policyCode}</div>
         </div>
       ),
     },

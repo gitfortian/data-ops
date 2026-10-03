@@ -87,17 +87,17 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                 运行结果
               </span>
               {nodeName ? (
-                <span className="truncate text-[11px] text-[#98a2b3]">
+                <span className="truncate text-[12px] text-[#667085]">
                   当前节点：{nodeName}
                 </span>
               ) : null}
               {result?.status === 'RUNNING' ? (
-                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#667085]">
+                <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-[#667085]">
                   <LoaderCircle size={12} className="animate-spin" />
                   运行中
                 </span>
               ) : statusText(result) ? (
-                <span className="shrink-0 text-[11px] text-[#667085]">
+                <span className="shrink-0 text-[12px] text-[#667085]">
                   {statusText(result)}
                 </span>
               ) : null}

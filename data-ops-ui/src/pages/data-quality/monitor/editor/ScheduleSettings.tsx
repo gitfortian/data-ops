@@ -40,7 +40,7 @@ export const ScheduleSettings = ({
       title="调度配置"
       extra={
         nextRunTime && value.scheduleEnabled ? (
-          <span className="text-[11px] text-[#8a8f99]">
+          <span className="text-[12px] text-[#8a8f99]">
             下次运行：{nextRunTime}
           </span>
         ) : undefined

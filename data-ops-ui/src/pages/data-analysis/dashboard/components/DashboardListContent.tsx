@@ -44,7 +44,7 @@ const DashboardListContent = ({
 
   if (loading && totalDashboards === 0) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center text-[13px] text-[#98a2b3]">
+      <div className="flex min-h-[420px] items-center justify-center text-[13px] text-[#667085]">
         {intl.formatMessage({ id: 'pages.dashboard.list.loading' })}
       </div>
     );

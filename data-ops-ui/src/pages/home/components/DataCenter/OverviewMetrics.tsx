@@ -19,7 +19,7 @@ export function OverviewMetrics({
             <strong className="text-[20px] font-semibold leading-7 tracking-[-0.4px] text-[#272a33]">
               {metric.value}
             </strong>
-            <span className="text-[11px] text-[#989ca4]">
+            <span className="text-[12px] text-[#989ca4]">
               {metric.compareLabel}
               <span
                 className={`ml-0.5 font-medium ${

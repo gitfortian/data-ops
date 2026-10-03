@@ -359,7 +359,7 @@ export default function CreateSyncTaskDrawer({
                 />
               </Form.Item>
 
-              <div className="flex h-8 items-center justify-center text-[#98a2b3]">
+              <div className="flex h-8 items-center justify-center text-[#667085]">
                 <ArrowRightOutlined />
               </div>
 
@@ -516,7 +516,7 @@ export default function CreateSyncTaskDrawer({
                         {option.title}
                       </div>
 
-                      <div className="mt-0.5 text-[11px] leading-[18px] text-[#667085]">
+                      <div className="mt-0.5 text-[12px] leading-[18px] text-[#667085]">
                         {option.description}
                       </div>
                     </div>

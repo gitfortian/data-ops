@@ -264,7 +264,7 @@ const StandardDetailDrawer = ({
                     children: affectedMetricsUnavailable ? (
                       <span className="text-[#d46b08]">反向依赖暂不可读，不按 0 个引用处理</span>
                     ) : affectedMetrics == null ? (
-                      <span className="text-[#98a2b3]">读取中…</span>
+                      <span className="text-[#667085]">读取中…</span>
                     ) : affectedMetrics.length === 0 ? (
                       '当前项目空间暂无指标登记该依赖'
                     ) : (
@@ -317,7 +317,7 @@ const StandardDetailDrawer = ({
                         <Button type="primary" size="small" onClick={() => onSubmitPublish(effectiveStandard)}>
                           提交发布
                         </Button>
-                        <span className="text-[12px] text-[#98a2b3]">启用需经审批，批准后自动生效</span>
+                        <span className="text-[12px] text-[#667085]">启用需经审批，批准后自动生效</span>
                       </Space>
                     ),
                   },

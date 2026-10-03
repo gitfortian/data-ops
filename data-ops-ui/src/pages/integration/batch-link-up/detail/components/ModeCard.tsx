@@ -31,7 +31,7 @@ const ModeCard: React.FC<Props> = ({
       ].join(" ")}
     >
       {tag ? (
-        <div className="mb-2 inline-flex rounded-full bg-[#EFF8FF] px-2 py-0.5 text-[11px] font-medium text-[#175CD3]">
+        <div className="mb-2 inline-flex rounded-full bg-[#EFF8FF] px-2 py-0.5 text-[12px] font-medium text-[#175CD3]">
           {tag}
         </div>
       ) : null}

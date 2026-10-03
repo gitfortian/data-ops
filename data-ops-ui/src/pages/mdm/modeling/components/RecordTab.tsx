@@ -427,13 +427,13 @@ const RecordTab = ({ entityId }: { entityId: number }) => {
         }
       >
         {sqlLoading ? (
-          <div className="py-10 text-center text-[#98a2b3]">生成中…</div>
+          <div className="py-10 text-center text-[#667085]">生成中…</div>
         ) : (
           <>
             <pre className="max-h-[420px] overflow-auto rounded-lg bg-[#1d1f21] p-4 text-[12px] leading-5 text-[#c9d1d9]">
               {sqlText}
             </pre>
-            <div className="mt-2 text-[12px] text-[#98a2b3]">
+            <div className="mt-2 text-[12px] text-[#667085]">
               master_id = MD5(实体编码 + PK 属性值)：多来源 PK 值一致即统一；source_ids
               记录各系统原始 ID；来源须先生成采集落地任务。
             </div>

@@ -53,7 +53,7 @@ const WorkflowNextStep = ({
             className="group flex h-9 items-center rounded-lg border border-[#e4e7ec] bg-white px-2 shadow-[0_1px_2px_rgba(16,24,40,.04)] transition-colors hover:bg-[#fafafa]"
           >
             <WorkflowNodeIcon taskType={item.taskType} size="sm" />
-            <div className="ml-1.5 min-w-0 flex-1 truncate text-[11px] font-medium text-[#475467]">
+            <div className="ml-1.5 min-w-0 flex-1 truncate text-[12px] font-medium text-[#475467]">
               {item.label}
             </div>
           </div>
@@ -69,10 +69,10 @@ const WorkflowNextStep = ({
               type="button"
               className="flex h-9 w-full items-center rounded-lg border border-dashed border-[#d0d5dd] bg-[rgba(255,255,255,.42)] px-2 text-left transition-colors hover:bg-white"
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] bg-[#e9eaec] text-[#98a2b3]">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] bg-[#e9eaec] text-[#667085]">
                 <Plus size={12} />
               </span>
-              <span className="ml-1.5 text-[11px] font-medium text-[#98a2b3]">
+              <span className="ml-1.5 text-[12px] font-medium text-[#667085]">
                 {addLabel}
               </span>
             </button>
@@ -80,7 +80,7 @@ const WorkflowNextStep = ({
         ) : null}
 
         {!nextNodes.length && !canAppend ? (
-          <div className="flex h-9 items-center rounded-lg border border-dashed border-[#d0d5dd] px-2 text-[11px] text-[#98a2b3]">
+          <div className="flex h-9 items-center rounded-lg border border-dashed border-[#d0d5dd] px-2 text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.nextStep.empty' })}
           </div>
         ) : null}

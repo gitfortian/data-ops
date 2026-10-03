@@ -153,7 +153,7 @@ const ApprovalDetailPage = () => {
           <span className="text-[20px] font-semibold leading-7">{instance.title}</span>
           <ApprovalStatusTag status={instance.status} />
         </div>
-        <Space>
+        <Space wrap>
           {myTurn && canApprove ? (
             <>
               <Button onClick={() => openDecision('reject')}>拒绝</Button>
@@ -169,7 +169,7 @@ const ApprovalDetailPage = () => {
       <Row gutter={16}>
         <Col xs={24} lg={14}>
           <Card title="审批依据" size="small">
-            <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-2 text-[13px] md:grid-cols-3">
+            <div className="mb-3 grid grid-cols-1 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-2 xl:grid-cols-3">
               <div><span className="text-[#667085]">流程：</span>{instance.flowName}</div>
               <div><span className="text-[#667085]">发起人：</span>{instance.applicant}</div>
               <div><span className="text-[#667085]">发起时间：</span>{fmt(instance.createTime)}</div>
@@ -182,7 +182,7 @@ const ApprovalDetailPage = () => {
                 <tbody>
                   {Object.entries(payload).map(([key, value]) => (
                     <tr key={key} className="border-b border-solid border-[#f0f0f0] last:border-b-0">
-                      <th className="w-40 bg-[#fafafa] px-3 py-2 text-left font-normal text-[#667085]">
+                      <th className="w-40 bg-[#fafafa] px-3 py-2 text-left font-normal text-[#667085] max-sm:w-24">
                         {key}
                       </th>
                       <td className="px-3 py-2 break-all">
@@ -212,7 +212,7 @@ const ApprovalDetailPage = () => {
                         {meta ? <Tag color={meta.color}>{meta.label}</Tag> : null}
                       </div>
                       {step.comment ? <div className="mt-1 text-[#4d5769]">{step.comment}</div> : null}
-                      <div className="mt-1 text-[#98a2b3]">{fmt(step.handledTime)}</div>
+                      <div className="mt-1 text-[#667085]">{fmt(step.handledTime)}</div>
                     </div>
                   ),
                 };

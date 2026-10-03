@@ -821,19 +821,19 @@ const MdmCleansingPage = () => {
             />
             <div className="mx-auto mt-2 max-w-[440px] space-y-2 text-left text-[13px] leading-6 text-[#667085]">
               <div>
-                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[11px] font-semibold text-[#475467]">
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[12px] font-semibold text-[#475467]">
                   1
                 </span>
                 在上方「清洗规则」新建去重 / 标准化 / 补全规则
               </div>
               <div>
-                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[11px] font-semibold text-[#475467]">
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[12px] font-semibold text-[#475467]">
                   2
                 </span>
                 去重规则执行「去重发现」，重复组由人工合并；标准化 / 补全规则先预览影响再批量执行
               </div>
               <div>
-                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[11px] font-semibold text-[#475467]">
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f2f4f7] text-[12px] font-semibold text-[#475467]">
                   3
                 </span>
                 质量检查（完整性 / 格式）在「数据质量」模块完成

@@ -33,7 +33,7 @@ export function MetricTile({
         {value}
       </div>
       {hint ? (
-        <div className="mt-1 text-[11px] text-[#9aa0aa]">{hint}</div>
+        <div className="mt-1 text-[12px] text-[#9aa0aa]">{hint}</div>
       ) : null}
     </div>
   );

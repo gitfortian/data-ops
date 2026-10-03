@@ -133,7 +133,7 @@ export default function DataServiceDeliveryTruthBar({
   const canOffline = Boolean(publication?.published && publication.detail?.enabled);
 
   return (
-    <div className="flex min-h-9 shrink-0 items-center justify-between gap-3 border-b border-[#e8e9ec] bg-[#fafafa] px-3 text-[11px] text-[#667085]">
+    <div className="flex min-h-9 shrink-0 items-center justify-between gap-3 border-b border-[#e8e9ec] bg-[#fafafa] px-3 text-[12px] text-[#667085]">
       <div className="flex min-w-0 items-center gap-3 overflow-hidden">
         <span className="shrink-0 font-medium text-[#475467]">Delivery Truth</span>
         {loading ? <Spin size="small" /> : null}
@@ -207,7 +207,7 @@ export default function DataServiceDeliveryTruthBar({
           </Button>
         ) : null}
         {!canRelease && state.latestPublishedRevisionNo ? (
-          <span className="ml-1 shrink-0 text-[#98a2b3]">Release 只读</span>
+          <span className="ml-1 shrink-0 text-[#667085]">Release 只读</span>
         ) : null}
       </div>
     </div>

@@ -221,8 +221,8 @@ const BusinessDomainsPage = () => {
         {tree.length === 0 && !loading ? (
           <YakEmpty compact title="还没有业务域" description="点击右上角「新建根域」开始搭建业务语义主线" />
         ) : (
-          <div className="flex gap-6">
-            <div className="min-w-[320px] flex-1">
+          <div className="flex gap-6 max-md:flex-col">
+            <div className="w-[280px] min-w-0 shrink-0 max-md:w-full">
               <Tree
                 blockNode
                 draggable={can('semantic:update')}
@@ -239,7 +239,7 @@ const BusinessDomainsPage = () => {
                 onDrop={handleDrop}
               />
             </div>
-            <div className="w-[320px] border-l border-l-[#f0f0f0] pl-6">
+            <div className="min-w-0 flex-1 border-l border-l-[#f0f0f0] pl-6 max-md:border-l-0 max-md:border-t max-md:pl-0 max-md:pt-4">
               {selected ? (
                 <div>
                   <Typography.Text strong className="!text-[15px]">

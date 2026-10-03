@@ -55,7 +55,7 @@ const WorkflowTaskLibrary = ({
           'flex h-9 w-9 items-center justify-center rounded-lg border-0 transition-colors',
           active
             ? 'bg-[#f2f4f7] text-[#161823]'
-            : 'bg-transparent text-[#98a2b3] hover:bg-[#f7f8fa] hover:text-[#475467]',
+            : 'bg-transparent text-[#667085] hover:bg-[#f7f8fa] hover:text-[#475467]',
         ].join(' ')}
         onClick={onClick}
       >
@@ -112,7 +112,7 @@ const WorkflowTaskLibrary = ({
                 allowClear
                 variant="filled"
                 value={keyword}
-                prefix={<Search size={13} className="text-[#98a2b3]" />}
+                prefix={<Search size={13} className="text-[#667085]" />}
                 placeholder={intl.formatMessage({ id: 'pages.workflow.editor.library.searchNodes' })}
                 className="!h-8 !rounded-lg !text-[12px]"
                 onChange={(event) => setKeyword(event.target.value)}
@@ -120,7 +120,7 @@ const WorkflowTaskLibrary = ({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-              <div className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#98a2b3]">
+              <div className="mb-2 px-1 text-[12px] font-medium uppercase tracking-[0.08em] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.library.taskNodes' })}
               </div>
 
@@ -154,7 +154,7 @@ const WorkflowTaskLibrary = ({
                   ))}
                 </div>
               ) : (
-                <div className="px-3 py-10 text-center text-[11px] text-[#98a2b3]">
+                <div className="px-3 py-10 text-center text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.library.noMatchNodes' })}
                 </div>
               )}
@@ -162,10 +162,10 @@ const WorkflowTaskLibrary = ({
           </>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col px-3 pb-4">
-            <div className="rounded-lg bg-[#f7f8fa] px-3 py-3 text-[11px] leading-5 text-[#667085]">
+            <div className="rounded-lg bg-[#f7f8fa] px-3 py-3 text-[12px] leading-5 text-[#667085]">
               {intl.formatMessage({ id: 'pages.workflow.editor.library.resourceHint' })}
             </div>
-            <div className="flex flex-1 items-center justify-center text-[11px] text-[#b0b4bc]">
+            <div className="flex flex-1 items-center justify-center text-[12px] text-[#b0b4bc]">
               {intl.formatMessage({ id: 'pages.workflow.editor.library.noResources' })}
             </div>
           </div>

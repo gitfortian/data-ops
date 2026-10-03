@@ -240,7 +240,7 @@ const StandardAssistantDrawer = ({
             二、沉淀为标准（把当前字段纳入标准库，下次自动推荐）
           </Typography.Text>
           <Form form={captureForm} layout="vertical">
-            <div className="grid grid-cols-2 gap-x-4">
+            <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
               <Form.Item name="kind" label="类别" className="!mb-2">
                 <Select
                   options={[

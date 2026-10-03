@@ -193,7 +193,7 @@ const PanelSection = ({
       <div className="min-w-0">
         <div className="text-[15px] font-semibold text-[#161823]">{title}</div>
         {description ? (
-          <div className="mt-1 text-[11px] leading-5 text-[#8a8f98]">
+          <div className="mt-1 text-[12px] leading-5 text-[#8a8f98]">
             {description}
           </div>
         ) : null}
@@ -407,7 +407,7 @@ export default function DataServiceApiCallPanel({
           <div>
             <div className="mb-2 text-[12px] font-medium text-[#475467]">调用地址</div>
             <div className="flex min-h-11 items-center gap-3 rounded-md bg-[#f6f6f7] px-3 py-2">
-              <span className="shrink-0 rounded bg-white px-2 py-1 font-mono text-[11px] font-semibold text-[#475467]">
+              <span className="shrink-0 rounded bg-white px-2 py-1 font-mono text-[12px] font-semibold text-[#475467]">
                 GET
               </span>
               <span className="min-w-0 flex-1 break-all font-mono text-[12px] text-[#30343b]">
@@ -423,7 +423,7 @@ export default function DataServiceApiCallPanel({
               </Tooltip>
             </div>
             {!service.enabled ? (
-              <div className="mt-2 rounded-md bg-[#f7f7f8] px-3 py-2 text-[11px] leading-5 text-[#667085]">
+              <div className="mt-2 rounded-md bg-[#f7f7f8] px-3 py-2 text-[12px] leading-5 text-[#667085]">
                 当前数据服务已停用，外部调用会被拒绝。启用服务后再交付给调用方。
               </div>
             ) : null}
@@ -443,7 +443,7 @@ export default function DataServiceApiCallPanel({
               ]}
               onChange={(mode) => void handleAuthModeChange(mode)}
             />
-            <div className="mt-2 flex items-start gap-2 text-[11px] leading-5 text-[#8a8f98]">
+            <div className="mt-2 flex items-start gap-2 text-[12px] leading-5 text-[#8a8f98]">
               <ShieldCheck size={13} className="mt-1 shrink-0" />
               <span>
                 {service.authMode === 'API_KEY'
@@ -473,21 +473,21 @@ export default function DataServiceApiCallPanel({
             <div className="px-5 pb-5">
               <div className="mb-3 grid grid-cols-3 gap-3 rounded-md bg-[#f7f7f8] px-4 py-3 sm:grid-cols-4">
                 <div>
-                  <div className="text-[10px] text-[#98a2b3]">全部 Key</div>
+                  <div className="text-[12px] text-[#667085]">全部 Key</div>
                   <div className="mt-1 text-[16px] font-semibold text-[#30343b]">{keys.length}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-[#98a2b3]">有效 Key</div>
+                  <div className="text-[12px] text-[#667085]">有效 Key</div>
                   <div className="mt-1 text-[16px] font-semibold text-[#30343b]">{validKeyCount}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-[#98a2b3]">认证状态</div>
+                  <div className="text-[12px] text-[#667085]">认证状态</div>
                   <div className="mt-1 text-[12px] font-medium text-[#30343b]">
                     {service.authMode === 'API_KEY' ? '已启用' : '未启用'}
                   </div>
                 </div>
                 <div className="hidden sm:block">
-                  <div className="text-[10px] text-[#98a2b3]">限流粒度</div>
+                  <div className="text-[12px] text-[#667085]">限流粒度</div>
                   <div className="mt-1 text-[12px] font-medium text-[#30343b]">每 Key / 分钟</div>
                 </div>
               </div>
@@ -509,7 +509,7 @@ export default function DataServiceApiCallPanel({
                             <div className="truncate text-[13px] font-semibold text-[#30343b]">
                               {key.name}
                             </div>
-                            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[#8a8f98]">
+                            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-[#8a8f98]">
                               <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
                               <span>{status.label}</span>
                               <span>·</span>
@@ -519,21 +519,21 @@ export default function DataServiceApiCallPanel({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4 text-[11px]">
+                      <div className="grid grid-cols-3 gap-4 text-[12px]">
                         <div>
-                          <div className="text-[#98a2b3]">调用上限</div>
+                          <div className="text-[#667085]">调用上限</div>
                           <div className="mt-1 font-medium text-[#475467]">
                             {key.rateLimitPerMinute} 次/分钟
                           </div>
                         </div>
                         <div>
-                          <div className="text-[#98a2b3]">过期时间</div>
+                          <div className="text-[#667085]">过期时间</div>
                           <div className="mt-1 font-medium text-[#475467]">
                             {formatTime(key.expiresAt)}
                           </div>
                         </div>
                         <div>
-                          <div className="text-[#98a2b3]">最近使用</div>
+                          <div className="text-[#667085]">最近使用</div>
                           <div className="mt-1 font-medium text-[#475467]">
                             {key.lastUsedAt ? formatTime(key.lastUsedAt) : '从未使用'}
                           </div>

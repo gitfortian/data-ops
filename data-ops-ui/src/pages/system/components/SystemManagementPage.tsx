@@ -25,7 +25,7 @@ export default function SystemManagementPage({
     <section
       aria-labelledby={titleId}
       className={[
-        'box-border flex flex-col bg-slate-50/50 p-6',
+        'box-border flex min-w-0 flex-col bg-slate-50/50 p-6 max-md:p-4',
         className,
       ]
         .filter(Boolean)
@@ -35,7 +35,7 @@ export default function SystemManagementPage({
         {icon}
         <h1
           id={titleId}
-          className="m-0 text-[18px] font-semibold text-[#282828]"
+          className="m-0 text-[20px] font-semibold text-[#282828]"
         >
           {title}
         </h1>

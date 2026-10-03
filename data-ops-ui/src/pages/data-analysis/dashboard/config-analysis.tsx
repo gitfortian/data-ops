@@ -93,9 +93,9 @@ export function ChartAnalysisConfig({
   };
 
   return (
-    <div className="space-y-4 pb-1 text-[11px] text-[#475467]">
+    <div className="space-y-4 pb-1 text-[12px] text-[#475467]">
       <div>
-        <div className="mb-2.5 text-[10px] font-semibold text-[#667085]">
+        <div className="mb-2.5 text-[12px] font-semibold text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.metricCalculation' })}
         </div>
         <div className="space-y-2.5">
@@ -108,10 +108,10 @@ export function ChartAnalysisConfig({
               <div key={metric.field} className="rounded-[8px] border border-[#e8eaee] bg-[#fafbfc] p-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="truncate text-[10px] font-medium text-[#344054]">
+                    <div className="truncate text-[12px] font-medium text-[#344054]">
                       {calculated?.name ?? field?.label ?? metric.field}
                     </div>
-                    <div className="mt-0.5 text-[9px] text-[#98a2b3]">
+                    <div className="mt-0.5 text-[9px] text-[#667085]">
                       {calculated
                         ? intl.formatMessage({ id: 'pages.dashboard.editor.analysis.calculatedField' })
                         : aggregationLabels[metric.aggregation] ?? metric.aggregation}
@@ -127,7 +127,7 @@ export function ChartAnalysisConfig({
                         patchMetric(metric.field, { quickCalculation })}
                     />
                   ) : (
-                    <span className="text-[9px] text-[#98a2b3]">
+                    <span className="text-[9px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.singleValue' })}
                     </span>
                   )}
@@ -164,7 +164,7 @@ export function ChartAnalysisConfig({
                   />
                 </div>
                 <label className="mt-2.5 flex items-center justify-between">
-                  <span className="text-[10px] text-[#667085]">
+                  <span className="text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.grouping' })}
                   </span>
                   <Switch
@@ -174,7 +174,7 @@ export function ChartAnalysisConfig({
                   />
                 </label>
                 {calculated ? (
-                  <div className="mt-2 truncate rounded-[5px] bg-white px-2 py-1 font-mono text-[8px] text-[#98a2b3]" title={calculated.expression}>
+                  <div className="mt-2 truncate rounded-[5px] bg-white px-2 py-1 font-mono text-[8px] text-[#667085]" title={calculated.expression}>
                     {calculated.expression}
                   </div>
                 ) : null}
@@ -182,7 +182,7 @@ export function ChartAnalysisConfig({
             );
           })}
         </div>
-        <div className="mt-2 text-[9px] leading-4 text-[#98a2b3]">
+        <div className="mt-2 text-[9px] leading-4 text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.calculationHint' })}
         </div>
       </div>
@@ -191,8 +191,8 @@ export function ChartAnalysisConfig({
         <div className="border-t border-[#f0f1f3] pt-4">
           <div className="mb-2.5 flex items-center justify-between">
             <div>
-              <div className="text-[10px] font-semibold text-[#667085]">Top / Bottom N</div>
-              <div className="mt-0.5 text-[9px] text-[#98a2b3]">
+              <div className="text-[12px] font-semibold text-[#667085]">Top / Bottom N</div>
+              <div className="mt-0.5 text-[9px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.topNPhysicalOnly' })}
               </div>
             </div>
@@ -239,7 +239,7 @@ export function ChartAnalysisConfig({
                 />
               </div>
               {!topNMetricActive ? (
-                <div className="text-[9px] leading-4 text-[#98a2b3]">
+                <div className="text-[9px] leading-4 text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.topNMetricInvalid' })}
                 </div>
               ) : null}
@@ -247,7 +247,7 @@ export function ChartAnalysisConfig({
           ) : null}
 
           {colorActive ? (
-            <div className="mt-2 rounded-[6px] bg-[#f7f8fa] px-2 py-1.5 text-[9px] leading-4 text-[#98a2b3]">
+            <div className="mt-2 rounded-[6px] bg-[#f7f8fa] px-2 py-1.5 text-[9px] leading-4 text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.analysis.topNColorHint' })}
             </div>
           ) : null}

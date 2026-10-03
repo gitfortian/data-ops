@@ -231,7 +231,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
             <div className={index <= step ? 'text-[13px] font-medium text-[#101828]' : 'text-[13px] text-[#667085]'}>
               {s.title}
             </div>
-            <div className="text-[11px] text-[#98a2b3]">{s.description}</div>
+            <div className="text-[12px] text-[#667085]">{s.description}</div>
           </div>
           {index < steps.length - 1 ? <div className="mx-2 h-px w-8 bg-[#eaecf0]" /> : null}
         </div>
@@ -498,7 +498,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
                           <Typography.Text className="!text-[12px] !text-[#475467]">
                             {field.columnName}
                           </Typography.Text>
-                          <span className="text-[#98a2b3]">{field.dataType}</span>
+                          <span className="text-[#667085]">{field.dataType}</span>
                           {field.technical ? (
                             <Tag className="!mr-0">技术列</Tag>
                           ) : field.stdFieldId ? (
@@ -512,13 +512,13 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
                             </Tag>
                           )}
                           {field.stdTypeName ? (
-                            <span className="text-[#98a2b3]">类型标准：{field.stdTypeName}</span>
+                            <span className="text-[#667085]">类型标准：{field.stdTypeName}</span>
                           ) : null}
                           {!field.stdFieldId && field.suggestedStdFieldName ? (
-                            <span className="text-[#98a2b3]">建议：{field.suggestedStdFieldName}（名称相似）</span>
+                            <span className="text-[#667085]">建议：{field.suggestedStdFieldName}（名称相似）</span>
                           ) : null}
                           {field.degradedReason ? (
-                            <span className="text-[#98a2b3]">{field.degradedReason}</span>
+                            <span className="text-[#667085]">{field.degradedReason}</span>
                           ) : null}
                         </div>
                       ))}

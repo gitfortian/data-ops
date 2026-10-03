@@ -139,7 +139,7 @@ const ModelLifecycleTab = ({ modelId }: ModelLifecycleTabProps) => {
           {statement?.statement && (
             <div className="mt-4 rounded-lg bg-[#0b1021] p-3">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[12px] text-[#98a2b3]">
+                <span className="text-[12px] text-[#667085]">
                   TTL 语句
                   {!statement.writable && (
                     <Tooltip title={statement.note ?? '该存储方言暂不支持平台下发，仅可复制手工执行'}>

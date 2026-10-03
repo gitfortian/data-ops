@@ -57,12 +57,12 @@ function LanguageSwitcher() {
         type="button"
         aria-label="切换语言 / Switch language"
         title="切换语言 / Switch language"
-        className="order-[-1] flex h-12 min-w-11 flex-col items-center justify-center border-0 bg-transparent px-2 text-[12px] text-[rgba(35,35,35,0.6)] transition-colors duration-150 hover:text-[rgba(35,35,35,0.9)]"
+        className="order-[-1] flex h-12 min-w-11 max-md:h-9 max-md:min-w-8 flex-col items-center justify-center border-0 bg-transparent px-2 max-md:px-1 text-[12px] text-[rgba(35,35,35,0.6)] transition-colors duration-150 hover:text-[rgba(35,35,35,0.9)]"
       >
         <span className="flex h-6 w-6 items-center justify-center text-[17px]">
           <Languages className="h-[17px] w-[17px]" strokeWidth={1.8} />
         </span>
-        <span className="mt-0.5 whitespace-nowrap text-[10px] leading-3">
+        <span className="mt-0.5 whitespace-nowrap text-[12px] leading-3 max-md:hidden">
           {currentLocale === 'zh-CN' ? '中文' : 'EN'}
         </span>
       </button>
@@ -147,7 +147,7 @@ function ProjectSwitcher() {
         type="button"
         aria-label="切换工作空间"
         title="切换工作空间"
-        className="mx-1 flex h-8 max-w-[220px] items-center gap-2 rounded-lg border border-[rgba(28,31,35,0.08)] bg-white px-2.5 text-[13px] text-[#1c1f23] transition-colors hover:bg-[#f7f7f8]"
+        className="mx-1 flex h-9 max-w-[220px] max-md:max-w-[110px] items-center gap-2 rounded-lg border border-[rgba(28,31,35,0.08)] bg-white px-2.5 text-[13px] text-[#1c1f23] transition-colors hover:bg-[#f7f7f8]"
       >
         <FolderKanban
           className="h-4 w-4 shrink-0 text-[rgba(22,24,35,0.55)]"

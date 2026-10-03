@@ -42,7 +42,7 @@ export default function ExecutionAdvancedFilter({
             value={value.objectKeyword}
             onChange={(event) => patch({ objectKeyword: event.target.value })}
             onPressEnter={onApply}
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             placeholder={intl.formatMessage({
               id: 'pages.dataQuality.execution.objectPlaceholder',
             })}

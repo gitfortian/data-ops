@@ -154,7 +154,7 @@ const JdbcUrlField = ({
                 id: 'pages.datasource.jdbc.linkageTooltip',
               })}
             >
-              <Link2 size={14} className="text-[#98a2b3]" />
+              <Link2 size={14} className="text-[#667085]" />
             </Tooltip>
           ) : undefined
         }

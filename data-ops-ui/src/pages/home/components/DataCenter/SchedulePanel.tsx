@@ -84,7 +84,7 @@ export function SchedulePanel({
                 <div className="truncate text-[12px] font-medium text-[#363a43]">
                   {item.taskName}
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-[11px] text-[#969aa3]">
+                <div className="mt-1 flex items-center gap-1 text-[12px] text-[#969aa3]">
                   <Clock3 size={11} strokeWidth={1.8} />
                   {taskTypeLabel(item.taskType, resolveTaskType)}
                 </div>
@@ -116,7 +116,7 @@ export function SchedulePanel({
               ],
             ].map(([label, value]) => (
               <div key={label} className="min-w-0">
-                <span className="text-[11px] text-[#969aa3]">{label}</span>
+                <span className="text-[12px] text-[#969aa3]">{label}</span>
                 <strong className="ml-2 truncate text-[12px] font-semibold text-[#3b3f48]">
                   {value}
                 </strong>
@@ -125,7 +125,7 @@ export function SchedulePanel({
 
             <div className="flex items-center justify-end gap-4">
               <span
-                className={`text-[11px] font-medium ${statusClassName(item.status)}`}
+                className={`text-[12px] font-medium ${statusClassName(item.status)}`}
               >
                 {localizedStatus}
               </span>

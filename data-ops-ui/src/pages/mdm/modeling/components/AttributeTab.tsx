@@ -1,6 +1,7 @@
 import { Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { useColumnVisibility } from '@/components/table/useColumnVisibility';
 import { YakButton, YakEmpty } from '@/components/ui';
 import {
   createMdmAttribute,
@@ -228,16 +229,20 @@ const AttributeTab = ({ entityId }: { entityId: number }) => {
     },
   ];
 
+  const columnView = useColumnVisibility(columns, ['code', 'name', 'type', 'dataType', 'stdTypeName', 'required', 'action']);
+
   return (
     <div>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        {columnView.control}
         <YakButton type="primary" className="!h-8 !rounded-lg !px-3 !text-white" onClick={openCreate}>
           新建属性
         </YakButton>
       </div>
       <Table<MdmAttributeRecord>
         rowKey="id"
-        columns={columns}
+        columns={columnView.columns}
+        scroll={{ x: columnView.scrollWidth }}
         dataSource={attributes}
         loading={loading}
         size="middle"
@@ -265,7 +270,7 @@ const AttributeTab = ({ entityId }: { entityId: number }) => {
         width={640}
       >
         <Form form={form} layout="vertical" preserve={false} initialValues={{ required: false, sortOrder: 0 }}>
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             {!editing ? (
               <Form.Item
                 name="code"

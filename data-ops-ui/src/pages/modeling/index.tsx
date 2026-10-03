@@ -376,7 +376,7 @@ const ModelingWorkspace: React.FC = () => {
               dataIndex: 'domainId',
               width: 150,
               render: (value?: number) =>
-                value ? domainNameById.get(value) || '-' : <span className="text-[#98a2b3]">未分类</span>,
+                value ? domainNameById.get(value) || '-' : <span className="text-[#667085]">未分类</span>,
             },
           ]),
       ...(hiddenColumns.includes('tags')
@@ -394,7 +394,7 @@ const ModelingWorkspace: React.FC = () => {
                     ))}
                   </Space>
                 ) : (
-                  <span className="text-[#98a2b3]">-</span>
+                  <span className="text-[#667085]">-</span>
                 ),
             },
           ]),

@@ -286,7 +286,7 @@ const MappingPanel: React.FC = () => {
         }}
       >
         <Form form={form} layout="vertical" className="pt-2">
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item name="sourceDatasourceId" label="源数据源" rules={[{ required: true, message: '请选择数据源' }]}>
               <Select
                 showSearch

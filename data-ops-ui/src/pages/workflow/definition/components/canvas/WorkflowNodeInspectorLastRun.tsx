@@ -66,7 +66,7 @@ const JsonBlock = ({ title, value }: { title: string; value: unknown }) => (
   <section>
     <div className="mb-2 text-[12px] font-semibold text-[#344054]">{title}</div>
     <div className="max-h-[210px] overflow-auto rounded-xl bg-[#f5f6f7] px-3 py-3">
-      <pre className="m-0 whitespace-pre-wrap break-words font-mono text-[11px] leading-[18px] text-[#344054]">
+      <pre className="m-0 whitespace-pre-wrap break-words font-mono text-[12px] leading-[18px] text-[#344054]">
         {jsonText(value)}
       </pre>
     </div>
@@ -74,7 +74,7 @@ const JsonBlock = ({ title, value }: { title: string; value: unknown }) => (
 );
 
 const MetaRow = ({ label, value }: { label: string; value?: string | number }) => (
-  <div className="flex min-h-7 items-center justify-between gap-4 text-[11px]">
+  <div className="flex min-h-7 items-center justify-between gap-4 text-[12px]">
     <span className="shrink-0 text-[rgba(22,24,35,.42)]">{label}</span>
     <span className="min-w-0 truncate text-right font-medium text-[#475467]">{value ?? '--'}</span>
   </div>
@@ -153,18 +153,18 @@ const WorkflowNodeInspectorLastRun = ({
   if (!nodeRun) {
     return (
       <div className="flex h-full min-h-[360px] flex-col items-center justify-center px-8 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5f6f7] text-[#98a2b3]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5f6f7] text-[#667085]">
           <RefreshCw size={17} />
         </div>
         <div className="mt-3 text-[13px] font-semibold text-[#344054]">
           {intl.formatMessage({ id: 'pages.workflow.editor.lastRun.empty' })}
         </div>
-        <div className="mt-1 text-[11px] leading-5 text-[rgba(22,24,35,.42)]">
+        <div className="mt-1 text-[12px] leading-5 text-[rgba(22,24,35,.42)]">
           {loadError || intl.formatMessage({ id: 'pages.workflow.editor.lastRun.emptyHint' })}
         </div>
         <button
           type="button"
-          className="mt-4 rounded-lg border border-[#e4e7ec] bg-white px-3 py-1.5 text-[11px] font-medium text-[#475467] shadow-sm hover:bg-[#f7f7f8]"
+          className="mt-4 rounded-lg border border-[#e4e7ec] bg-white px-3 py-1.5 text-[12px] font-medium text-[#475467] shadow-sm hover:bg-[#f7f7f8]"
           onClick={() => void load()}
         >
           {intl.formatMessage({ id: 'pages.workflow.editor.lastRun.reload' })}
@@ -183,7 +183,7 @@ const WorkflowNodeInspectorLastRun = ({
         </div>
         <button
           type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#98a2b3] hover:bg-[#f2f4f7] hover:text-[#475467]"
+          className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#667085] hover:bg-[#f2f4f7] hover:text-[#475467]"
           onClick={() => void load()}
           aria-label={intl.formatMessage({ id: 'pages.workflow.editor.lastRun.refreshAria' })}
         >
@@ -193,23 +193,23 @@ const WorkflowNodeInspectorLastRun = ({
 
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-[#e4e7ec] bg-[#fafafa]">
         <div className="px-3 py-2.5">
-          <div className="text-[9px] text-[#98a2b3]">
+          <div className="text-[9px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.lastRun.status' })}
           </div>
-          <div className={`mt-1 flex items-center gap-1.5 text-[11px] font-semibold ${statusMeta.textClassName}`}>
+          <div className={`mt-1 flex items-center gap-1.5 text-[12px] font-semibold ${statusMeta.textClassName}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${statusMeta.dotClassName}`} />
             {statusMeta.label}
           </div>
         </div>
         <div className="border-l border-[#e4e7ec] px-3 py-2.5">
-          <div className="text-[9px] text-[#98a2b3]">
+          <div className="text-[9px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.lastRun.elapsed' })}
           </div>
-          <div className="mt-1 text-[11px] font-semibold text-[#475467]">{formatElapsed(nodeRun)}</div>
+          <div className="mt-1 text-[12px] font-semibold text-[#475467]">{formatElapsed(nodeRun)}</div>
         </div>
         <div className="border-l border-[#e4e7ec] px-3 py-2.5">
-          <div className="text-[9px] text-[#98a2b3]">Attempt</div>
-          <div className="mt-1 text-[11px] font-semibold text-[#475467]">{nodeRun.attemptCount || nodeRun.attempts?.length || 0}</div>
+          <div className="text-[9px] text-[#667085]">Attempt</div>
+          <div className="mt-1 text-[12px] font-semibold text-[#475467]">{nodeRun.attemptCount || nodeRun.attempts?.length || 0}</div>
         </div>
       </div>
 
@@ -221,7 +221,7 @@ const WorkflowNodeInspectorLastRun = ({
           <div className="mb-2 text-[12px] font-semibold text-[#344054]">
             {intl.formatMessage({ id: 'pages.workflow.editor.lastRun.error' })}
           </div>
-          <div className="flex items-start gap-2 rounded-xl border border-[#e4e7ec] bg-[#fafafa] px-3 py-2.5 text-[11px] leading-5 text-[#475467]">
+          <div className="flex items-start gap-2 rounded-xl border border-[#e4e7ec] bg-[#fafafa] px-3 py-2.5 text-[12px] leading-5 text-[#475467]">
             <CircleAlert size={14} className="mt-0.5 shrink-0 text-[#d92d50]" />
             <span className="min-w-0 break-words">{nodeRun.errorMessage || nodeRun.failureReason}</span>
           </div>

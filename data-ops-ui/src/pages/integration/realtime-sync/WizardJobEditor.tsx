@@ -450,9 +450,9 @@ export default function WizardJobEditor({
                   options={sourceOptions}
                   onChange={handleSourceChange}
                 />
-                <div className="mt-2 text-[12px] text-[#98a2b3]">一期 Source 仅支持 MySQL CDC。</div>
+                <div className="mt-2 text-[12px] text-[#667085]">一期 Source 仅支持 MySQL CDC。</div>
               </div>
-              <div className="flex h-8 items-center justify-center text-[#98a2b3] max-md:hidden">
+              <div className="flex h-8 items-center justify-center text-[#667085] max-md:hidden">
                 <ArrowRightOutlined />
               </div>
               <div>
@@ -466,7 +466,7 @@ export default function WizardJobEditor({
                   options={sinkOptions}
                   onChange={setSinkId}
                 />
-                <div className="mt-2 text-[12px] text-[#98a2b3]">Source 与 Sink 不能引用同一个数据源。</div>
+                <div className="mt-2 text-[12px] text-[#667085]">Source 与 Sink 不能引用同一个数据源。</div>
               </div>
             </div>
           </section>
@@ -478,7 +478,7 @@ export default function WizardJobEditor({
                   <TableOutlined className="text-[var(--yak-brand-color)]" />
                   <h2 className="m-0 text-[16px] font-semibold text-[#101828]">同步表与目标映射</h2>
                 </div>
-                <div className="mt-1 text-[12px] text-[#98a2b3]">目标表默认同名，可按需修改。</div>
+                <div className="mt-1 text-[12px] text-[#667085]">目标表默认同名，可按需修改。</div>
               </div>
               <div className="flex items-center gap-2">
                 <Tag>{selectedTables.length} 张已选</Tag>
@@ -504,7 +504,7 @@ export default function WizardJobEditor({
                     <Input
                       allowClear
                       value={search}
-                      prefix={<SearchOutlined className="text-[#98a2b3]" />}
+                      prefix={<SearchOutlined className="text-[#667085]" />}
                       placeholder="搜索表名或表备注"
                       onChange={(event) => setSearch(event.target.value)}
                     />
@@ -523,7 +523,7 @@ export default function WizardJobEditor({
                           />
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-[13px] font-medium text-[#344054]">{table.name}</div>
-                            <div className="mt-0.5 truncate text-[11px] text-[#98a2b3]">{table.remarks || table.type || 'TABLE'}</div>
+                            <div className="mt-0.5 truncate text-[12px] text-[#667085]">{table.remarks || table.type || 'TABLE'}</div>
                           </div>
                         </label>
                       ))
@@ -534,7 +534,7 @@ export default function WizardJobEditor({
                 <div className="overflow-hidden rounded-xl border border-[#e4e7ec]">
                   <div className="border-b border-[#eaecf0] bg-[#fcfcfd] px-4 py-3">
                     <div className="text-[13px] font-medium text-[#344054]">表映射与主键</div>
-                    <div className="mt-0.5 text-[11px] text-[#98a2b3]">主键自动识别；目标表名可修改。</div>
+                    <div className="mt-0.5 text-[12px] text-[#667085]">主键自动识别；目标表名可修改。</div>
                   </div>
                   <div className="max-h-[480px] overflow-y-auto">
                     {selectedTables.length === 0 ? (
@@ -546,15 +546,15 @@ export default function WizardJobEditor({
                             <div className="min-w-0">
                               <div className="truncate text-[13px] font-medium text-[#344054]">{selected.table.name}</div>
                               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                {selected.status === 'loading' && <span className="text-[11px] text-[#667085]"><Spin size="small" /> 正在识别主键</span>}
+                                {selected.status === 'loading' && <span className="text-[12px] text-[#667085]"><Spin size="small" /> 正在识别主键</span>}
                                 {selected.status === 'ready' && (
                                   <>
                                     <CheckCircleOutlined className="text-[#12b76a]" />
                                     {selected.route.keyColumns.map((column) => <Tag key={column} icon={<KeyOutlined />}>{column}</Tag>)}
                                   </>
                                 )}
-                                {selected.status === 'missing' && <span className="text-[11px] text-[#b54708]"><WarningOutlined /> 未检测到主键</span>}
-                                {selected.status === 'error' && <span className="text-[11px] text-[#b42318]">{selected.error || '主键识别失败'}</span>}
+                                {selected.status === 'missing' && <span className="text-[12px] text-[#b54708]"><WarningOutlined /> 未检测到主键</span>}
+                                {selected.status === 'error' && <span className="text-[12px] text-[#b42318]">{selected.error || '主键识别失败'}</span>}
                               </div>
                             </div>
                             {selected.status === 'error' && sourceId && (
@@ -563,7 +563,7 @@ export default function WizardJobEditor({
                           </div>
                           <div className="grid grid-cols-[minmax(0,1fr)_24px_minmax(0,1fr)] items-center gap-2">
                             <Input value={selected.table.name} disabled />
-                            <ArrowRightOutlined className="text-[#98a2b3]" />
+                            <ArrowRightOutlined className="text-[#667085]" />
                             <Input
                               value={selected.route.sinkTable}
                               status={!selected.route.sinkTable.trim() ? 'error' : undefined}
@@ -593,7 +593,7 @@ export default function WizardJobEditor({
               <SyncOutlined className="text-[var(--yak-brand-color)]" />
               <div>
                 <h2 className="m-0 text-[16px] font-semibold text-[#101828]">同步方式</h2>
-                <div className="mt-1 text-[12px] text-[#98a2b3]">选择任务第一次启动时如何读取 Source。</div>
+                <div className="mt-1 text-[12px] text-[#667085]">选择任务第一次启动时如何读取 Source。</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-1">
@@ -621,7 +621,7 @@ export default function WizardJobEditor({
               })}
               <div className="min-h-[120px] rounded-xl border border-dashed border-[#d0d5dd] bg-[#f9fafb] p-4 opacity-75">
                 <div className="flex items-center justify-between gap-2"><div className="text-[14px] font-semibold text-[#667085]">仅初始化数据</div><Tag>后续</Tag></div>
-                <div className="mt-2 text-[12px] leading-5 text-[#98a2b3]">需先补齐 FINISHED 正常完成态语义，本期暂不开放。</div>
+                <div className="mt-2 text-[12px] leading-5 text-[#667085]">需先补齐 FINISHED 正常完成态语义，本期暂不开放。</div>
               </div>
             </div>
           </section>
@@ -630,7 +630,7 @@ export default function WizardJobEditor({
             <button type="button" className="flex w-full items-center justify-between border-0 bg-transparent p-0 text-left" onClick={() => setAdvancedOpen((value) => !value)}>
               <div className="flex items-center gap-2">
                 <SettingOutlined className="text-[var(--yak-brand-color)]" />
-                <div><h2 className="m-0 text-[16px] font-semibold text-[#101828]">高级配置</h2><div className="mt-1 text-[12px] text-[#98a2b3]">普通场景保持默认值即可。</div></div>
+                <div><h2 className="m-0 text-[16px] font-semibold text-[#101828]">高级配置</h2><div className="mt-1 text-[12px] text-[#667085]">普通场景保持默认值即可。</div></div>
               </div>
               {advancedOpen ? <UpOutlined /> : <DownOutlined />}
             </button>

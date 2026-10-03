@@ -150,7 +150,7 @@ function AssetList({
                   className={[
                     'absolute left-0 top-0 flex h-[17px] min-w-[17px]',
                     'items-center justify-center px-1',
-                    'rounded-br-[5px] text-[10px] font-semibold leading-none',
+                    'rounded-br-[5px] text-[12px] font-semibold leading-none',
                     getRankClassName(index),
                   ].join(' ')}
                 >

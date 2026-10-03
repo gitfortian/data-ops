@@ -181,7 +181,7 @@ const relationPropertyEntries = (relation?: LineageRelation) => Object.entries(r
 const AssetTypeLabel = ({ type }: { type: LineageAssetType }) => {
   const visual = lineageAssetVisual[type];
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-[#667085]">
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-[#667085]">
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: visual.accent }} />
       {assetTypeLabel[type]}
     </span>
@@ -201,7 +201,7 @@ const SectionTitle = ({ children }: { children: string }) => (
 
 const ImpactValue = ({ label, value }: { label: string; value: number }) => (
   <div className="px-3 py-2.5">
-    <div className="text-[11px] text-[#8A94A3]">{label}</div>
+    <div className="text-[12px] text-[#8A94A3]">{label}</div>
     <div className="mt-0.5 text-[17px] font-semibold text-[#344054]">{value}</div>
   </div>
 );
@@ -536,7 +536,7 @@ export default function LineagePage() {
               allowClear
               variant="filled"
               value={searchKeyword}
-              prefix={<Search size={14} className="text-[#98A2B3]" />}
+              prefix={<Search size={14} className="text-[#667085]" />}
               placeholder="搜索资产"
               className="!h-9 !w-[250px] !min-w-[210px]"
               onChange={(event) => {
@@ -673,7 +673,7 @@ export default function LineagePage() {
               >
                 筛选
                 {advancedFilterCount > 0 ? (
-                  <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4D4F] px-1 text-[10px] leading-[18px] text-white">
+                  <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4D4F] px-1 text-[12px] leading-[18px] text-white">
                     {advancedFilterCount}
                   </span>
                 ) : null}
@@ -707,7 +707,7 @@ export default function LineagePage() {
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="text-[13px] font-semibold text-[#344054]">资产</span>
                   {hasSearched && !searching ? (
-                    <span className="text-[10px] text-[#98A2B3]">{searchResults.length} 项</span>
+                    <span className="text-[12px] text-[#667085]">{searchResults.length} 项</span>
                   ) : null}
                 </div>
               </div>
@@ -715,7 +715,7 @@ export default function LineagePage() {
               {rootAsset ? (
                 <div className="shrink-0 border-b border-[#F0F1F3] px-3 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-[#F1F5FB] px-2 text-[10px] font-medium text-[#4C78C9]">
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-[#F1F5FB] px-2 text-[12px] font-medium text-[#4C78C9]">
                       中心
                     </span>
                     <span
@@ -762,7 +762,7 @@ export default function LineagePage() {
                           </div>
 
                           <div
-                            className="mt-1 truncate text-[10px] text-[#98A2B3]"
+                            className="mt-1 truncate text-[12px] text-[#667085]"
                             title={assetLocation(asset)}
                           >
                             {assetLocation(asset)}
@@ -883,7 +883,7 @@ export default function LineagePage() {
             )}
 
             {loading && graph ? (
-              <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 border border-[#E4E7EC] bg-white px-2.5 py-1.5 text-[11px] text-[#667085]">
+              <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 border border-[#E4E7EC] bg-white px-2.5 py-1.5 text-[12px] text-[#667085]">
                 <Spin size="small" />
                 更新
               </div>
@@ -908,7 +908,7 @@ export default function LineagePage() {
                   <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E5E7EB] bg-white px-4 py-3">
                     <div>
                       <div className="text-[13px] font-semibold text-[#344054]">关系详情</div>
-                      <div className="mt-0.5 text-[11px] text-[#98A2B3]">
+                      <div className="mt-0.5 text-[12px] text-[#667085]">
                         {relationTypeLabel[selectedRelation.relationType]}
                       </div>
                     </div>
@@ -928,7 +928,7 @@ export default function LineagePage() {
                       <div className="truncate text-[12px] font-medium text-[#344054]">
                         {selectedRelationSource?.name || selectedRelation.sourceAssetId}
                       </div>
-                      <div className="my-2 flex items-center gap-1.5 text-[11px] text-[#667085]">
+                      <div className="my-2 flex items-center gap-1.5 text-[12px] text-[#667085]">
                         <GitBranch size={11} className="text-[#4C78C9]" />
                         <span>{relationTypeLabel[selectedRelation.relationType]}</span>
                         <ChevronRight size={11} />
@@ -953,7 +953,7 @@ export default function LineagePage() {
                     {selectedRelation.expression ? (
                       <div className="mt-5">
                         <SectionTitle>表达式 / SQL</SectionTitle>
-                        <pre className="max-h-[220px] overflow-auto whitespace-pre-wrap break-words border border-[#E4E7EC] bg-[#F8F9FB] p-3 text-[11px] leading-5 text-[#475467]">
+                        <pre className="max-h-[220px] overflow-auto whitespace-pre-wrap break-words border border-[#E4E7EC] bg-[#F8F9FB] p-3 text-[12px] leading-5 text-[#475467]">
                           {selectedRelation.expression}
                         </pre>
                       </div>
@@ -979,7 +979,7 @@ export default function LineagePage() {
                         <div className="flex items-center gap-2">
                           <AssetTypeLabel type={selectedAsset.assetType} />
                           {selectedAsset.id === graph?.root.id ? (
-                            <span className="text-[10px] font-medium text-[#4C78C9]">中心资产</span>
+                            <span className="text-[12px] font-medium text-[#4C78C9]">中心资产</span>
                           ) : null}
                         </div>
                         <div
@@ -988,7 +988,7 @@ export default function LineagePage() {
                         >
                           {selectedAsset.name}
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-[10px] text-[#98A2B3]">
+                        <div className="mt-0.5 truncate font-mono text-[12px] text-[#667085]">
                           {selectedAsset.assetKey}
                         </div>
                       </div>
@@ -1034,7 +1034,7 @@ export default function LineagePage() {
                       <div className="mt-5">
                         <div className="mb-2 flex items-center justify-between">
                           <SectionTitle>下游影响</SectionTitle>
-                          <span className="mb-2 text-[10px] text-[#98A2B3]">当前 {depth} 跳</span>
+                          <span className="mb-2 text-[12px] text-[#667085]">当前 {depth} 跳</span>
                         </div>
                         <div className="grid grid-cols-3 border border-[#E5E7EB] bg-white">
                           <ImpactValue label="全部下游" value={impact.total} />

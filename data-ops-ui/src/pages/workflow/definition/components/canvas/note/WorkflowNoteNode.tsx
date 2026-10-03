@@ -208,7 +208,7 @@ const WorkflowNoteNode = ({ id, data, selected }: NodeProps<WorkflowNoteData>) =
 
       <div className="relative min-h-0 flex-1 overflow-auto px-3 py-2.5">
         {!visibleText && !resolvedHtml ? (
-          <div className="pointer-events-none absolute left-3 top-2.5 text-[12px] leading-5 text-[#98a2b3]">
+          <div className="pointer-events-none absolute left-3 top-2.5 text-[12px] leading-5 text-[#667085]">
             输入注释...
           </div>
         ) : null}

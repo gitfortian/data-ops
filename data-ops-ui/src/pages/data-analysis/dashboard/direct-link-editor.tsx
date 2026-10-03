@@ -107,11 +107,11 @@ export function DashboardDirectCrossFilterEditor({
     <div>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#667085]">
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#667085]">
             <Link2 size={12} />
             {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.title' })}
           </div>
-          <div className="mt-1 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-1 text-[9px] leading-4 text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.hint' })}
           </div>
         </div>
@@ -127,11 +127,11 @@ export function DashboardDirectCrossFilterEditor({
       </div>
 
       {!sourceOptions.length ? (
-        <div className="mt-2 rounded-[6px] bg-[#fafbfc] px-2.5 py-2 text-[10px] text-[#98a2b3]">
+        <div className="mt-2 rounded-[6px] bg-[#fafbfc] px-2.5 py-2 text-[12px] text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.noSource' })}
         </div>
       ) : !targetOptions.length ? (
-        <div className="mt-2 rounded-[6px] bg-[#fafbfc] px-2.5 py-2 text-[10px] text-[#98a2b3]">
+        <div className="mt-2 rounded-[6px] bg-[#fafbfc] px-2.5 py-2 text-[12px] text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.noTarget' })}
         </div>
       ) : rules.length ? (
@@ -147,7 +147,7 @@ export function DashboardDirectCrossFilterEditor({
               <div key={rule.id} className="rounded-[7px] border border-[#edf0f3] bg-[#fafbfc] p-2.5">
                 <div className="grid grid-cols-[1fr_28px] items-end gap-2">
                   <div>
-                    <div className="mb-1 text-[9px] text-[#98a2b3]">
+                    <div className="mb-1 text-[9px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.sourceField' })}
                     </div>
                     <Select
@@ -172,7 +172,7 @@ export function DashboardDirectCrossFilterEditor({
 
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <div>
-                    <div className="mb-1 text-[9px] text-[#98a2b3]">
+                    <div className="mb-1 text-[9px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.targetChart' })}
                     </div>
                     <Select
@@ -197,7 +197,7 @@ export function DashboardDirectCrossFilterEditor({
                     />
                   </div>
                   <div>
-                    <div className="mb-1 text-[9px] text-[#98a2b3]">
+                    <div className="mb-1 text-[9px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.targetField' })}
                     </div>
                     <Select
@@ -215,7 +215,7 @@ export function DashboardDirectCrossFilterEditor({
           })}
         </div>
       ) : (
-        <div className="mt-2 rounded-[6px] bg-[#fafbfc] px-2.5 py-2 text-[10px] leading-4 text-[#98a2b3]">
+        <div className="mt-2 rounded-[6px] bg-[#fafbfc] px-2.5 py-2 text-[12px] leading-4 text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.directLink.empty' })}
         </div>
       )}

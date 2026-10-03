@@ -97,7 +97,7 @@ export function DashboardGlobalFilterConfig({
           <div className="text-[13px] font-semibold text-[#344054]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.globalTitle' })}
           </div>
-          <div className="mt-0.5 text-[10px] font-normal text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] font-normal text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.mappingHint' })}
           </div>
         </div>
@@ -121,7 +121,7 @@ export function DashboardGlobalFilterConfig({
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={(
-              <div className="text-[11px] text-[#98a2b3]">
+              <div className="text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.configEmpty' })}
               </div>
             )}
@@ -149,13 +149,13 @@ export function DashboardGlobalFilterConfig({
                       {dateFilter ? <CalendarDays size={13} /> : <SlidersHorizontal size={13} />}
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate text-[11px] font-medium text-[#344054]">
+                      <div className="truncate text-[12px] font-medium text-[#344054]">
                         {filter.name || intl.formatMessage(
                           { id: 'pages.dashboard.editor.globalFilter.fallbackName' },
                           { index: index + 1 },
                         )}
                       </div>
-                      <div className="mt-0.5 text-[9px] text-[#98a2b3]">
+                      <div className="mt-0.5 text-[9px] text-[#667085]">
                         {intl.formatMessage(
                           { id: dateFilter
                             ? 'pages.dashboard.editor.globalFilter.dateSummary'
@@ -178,7 +178,7 @@ export function DashboardGlobalFilterConfig({
 
                 <div className="mt-3 grid grid-cols-[1fr_132px] gap-2">
                   <div>
-                    <div className="mb-1 text-[10px] text-[#667085]">
+                    <div className="mb-1 text-[12px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.name' })}
                     </div>
                     <Input
@@ -189,7 +189,7 @@ export function DashboardGlobalFilterConfig({
                     />
                   </div>
                   <div>
-                    <div className="mb-1 text-[10px] text-[#667085]">
+                    <div className="mb-1 text-[12px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.condition' })}
                     </div>
                     <Select
@@ -203,7 +203,7 @@ export function DashboardGlobalFilterConfig({
                 </div>
 
                 <div className="mt-2">
-                  <div className="mb-1 text-[10px] text-[#667085]">
+                  <div className="mb-1 text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.defaultValue' })}
                   </div>
                   {dateFilter ? (
@@ -238,16 +238,16 @@ export function DashboardGlobalFilterConfig({
 
                 <div className="mt-3 border-t border-[#edf0f3] pt-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[10px] font-medium text-[#667085]">
+                    <span className="text-[12px] font-medium text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.targetCharts' })}
                     </span>
-                    <span className="text-[9px] text-[#98a2b3]">
+                    <span className="text-[9px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.targetHint' })}
                     </span>
                   </div>
 
                   {!widgetContext.length ? (
-                    <div className="rounded-[5px] bg-[#fafbfc] px-2.5 py-2 text-[10px] text-[#98a2b3]">
+                    <div className="rounded-[5px] bg-[#fafbfc] px-2.5 py-2 text-[12px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.addChartFirst' })}
                     </div>
                   ) : (
@@ -288,7 +288,7 @@ export function DashboardGlobalFilterConfig({
                                 });
                               }}
                             />
-                            <div className="min-w-0 flex-1 truncate text-[10px] text-[#475467]">
+                            <div className="min-w-0 flex-1 truncate text-[12px] text-[#475467]">
                               {widget.title || intl.formatMessage({ id: 'pages.dashboard.editor.unnamedChart' })}
                             </div>
                             <Select

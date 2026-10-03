@@ -264,7 +264,7 @@ const ChangeHistoryTab = ({ entityId }: { entityId: number }) => {
           onChange={(value?: string) => setMasterId(value)}
         />
         {masterId && records.length ? (
-          <span className="text-[12px] text-[#98a2b3]">
+          <span className="text-[12px] text-[#667085]">
             共 {records.length} 条生效记录（下拉取前 200 条）
           </span>
         ) : null}
@@ -332,12 +332,12 @@ const ChangeHistoryTab = ({ entityId }: { entityId: number }) => {
             {
               title: `变更前${diffPair?.previous ? `（v${diffPair.previous.version}）` : '（无快照）'}`,
               dataIndex: 'before',
-              render: (value: string) => value || <span className="text-[#98a2b3]">-</span>,
+              render: (value: string) => value || <span className="text-[#667085]">-</span>,
             },
             {
               title: `变更后（v${diffPair?.current.version ?? ''}）`,
               dataIndex: 'after',
-              render: (value: string) => value || <span className="text-[#98a2b3]">-</span>,
+              render: (value: string) => value || <span className="text-[#667085]">-</span>,
             },
             {
               title: '变化',

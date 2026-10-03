@@ -527,7 +527,7 @@ export default function DashboardEditorPage() {
                         })}
                       </div>
                       <div
-                        className="mt-1 text-[11px] leading-5"
+                        className="mt-1 text-[12px] leading-5"
                         style={{ color: resolvedTheme.component.mutedTextColor }}
                       >
                         {intl.formatMessage({

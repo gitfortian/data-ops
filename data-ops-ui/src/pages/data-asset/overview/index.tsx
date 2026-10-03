@@ -139,7 +139,7 @@ const AssetOverviewPage = () => {
         <div>
           <div className="text-[20px] font-semibold leading-7">资产概览</div>
           <div className="mt-1 text-[13px] text-[#667085]">
-            治理驾驶舱：KPI + 分布 + 待办 + 最近动态，服务端固定 ≤8 次查询聚合{data?.generatedAt ? `，生成于 ${formatAssetTime(data.generatedAt)}` : ''}
+            了解资产覆盖、治理待办与最近变化。{data?.generatedAt ? ` 更新于 ${formatAssetTime(data.generatedAt)}` : ''}
           </div>
         </div>
         <Space>
@@ -177,8 +177,8 @@ const AssetOverviewPage = () => {
               <Button
                 key={item.key}
                 size="small"
-                danger={count > 0}
-                type={count > 0 ? 'primary' : 'default'}
+                danger={count > 0 && (item.key === 'gradeD' || item.key === 'sourceGone')}
+                type="default"
                 onClick={() => history.push(item.to)}
               >
                 {item.label} {count}

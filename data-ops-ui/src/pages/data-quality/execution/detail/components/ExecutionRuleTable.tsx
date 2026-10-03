@@ -30,7 +30,7 @@ export const ExecutionRuleTable = ({
             <div className="truncate font-medium text-[#30343b]">
               {record.ruleName}
             </div>
-            <div className="mt-1 truncate text-[11px] text-[#98a2b3]">
+            <div className="mt-1 truncate text-[12px] text-[#667085]">
               {record.templateCode}
             </div>
           </div>
@@ -41,7 +41,7 @@ export const ExecutionRuleTable = ({
         dataIndex: 'scope',
         width: 100,
         render: (value) => (
-          <Tag className="!m-0 !border-0 !bg-[#fff0f3] !text-[11px] !text-[#fe2c55]">
+          <Tag className="!m-0 !border-0 !bg-[#fff0f3] !text-[12px] !text-[#fe2c55]">
             {qualityRuleScopeLabel(value)}
           </Tag>
         ),
@@ -71,7 +71,7 @@ export const ExecutionRuleTable = ({
             <div className="text-[#344054]">
               实际：{record.metricValue || '--'}
             </div>
-            <div className="text-[#98a2b3]">
+            <div className="text-[#667085]">
               期望：{record.expectedValue || '--'}
             </div>
           </div>
@@ -122,7 +122,7 @@ export const ExecutionRuleTable = ({
               </div>
             )}
             <div>
-              <div className="mb-2 text-[11px] font-medium text-[#8a8f98]">
+              <div className="mb-2 text-[12px] font-medium text-[#8a8f98]">
                 执行 SQL
               </div>
               <Typography.Paragraph

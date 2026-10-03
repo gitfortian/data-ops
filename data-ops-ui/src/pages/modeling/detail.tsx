@@ -1743,7 +1743,7 @@ const ModelingModelDetail: React.FC = () => {
               label: (
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="truncate">{field.code}</span>
-                  <span className="shrink-0 text-[11px] text-[#98a2b3]">{field.name}</span>
+                  <span className="shrink-0 text-[12px] text-[#667085]">{field.name}</span>
                 </div>
               ),
             }))}
@@ -1920,7 +1920,7 @@ const ModelingModelDetail: React.FC = () => {
           ) : modelInfo?.layerCode && modelInfo.layerCode !== 'ODS' ? (
             // 非 ODS 层未绑定标准字段显示治理警告
             <Tooltip title="该字段未绑定数据标准，建议治理" placement="topLeft">
-              <Tag color="warning" className="!text-[11px]">
+              <Tag color="warning" className="!text-[12px]">
                 <ExclamationCircleOutlined className="mr-1" />
                 未治理
               </Tag>
@@ -1934,7 +1934,7 @@ const ModelingModelDetail: React.FC = () => {
               <span className="min-w-0 flex-1">{stdNode}</span>
               <Tooltip title="按绑定的标准字段反查各层落地，预览变更影响范围">
                 <Typography.Link
-                  className="!shrink-0 !text-[11px]"
+                  className="!shrink-0 !text-[12px]"
                   onClick={() => history.push(`/modeling/impact?processFieldId=${record.stdFieldId}`)}
                 >
                   影响
@@ -2034,7 +2034,7 @@ const ModelingModelDetail: React.FC = () => {
             </Tag>
           ) : null}
           {modelInfo?.latestVersionNo ? (
-            <span className="text-[12px] text-[#98a2b3]">V{modelInfo.latestVersionNo}</span>
+            <span className="text-[12px] text-[#667085]">V{modelInfo.latestVersionNo}</span>
           ) : null}
           {publishApproval ? (
             <Tooltip
@@ -2555,7 +2555,7 @@ const ModelingModelDetail: React.FC = () => {
                     ]}
                     optionType="button"
                   />
-                  <div className="mt-1 text-[12px] text-[#98a2b3]">
+                  <div className="mt-1 text-[12px] text-[#667085]">
                     DWS 取已聚合的汇总表;DWD 直接下探明细实时聚合。
                   </div>
                 </div>

@@ -397,7 +397,7 @@ const ActionColumn = ({ record, cbk, goDetail }: ActionColumnProps) => {
               icon={<PlayCircleOutlined />}
               className={[
                 '!h-7 !rounded-md !px-2.5 !text-xs !text-[#667085]',
-                !canRun ? '!cursor-not-allowed !text-[#98a2b3]' : '',
+                !canRun ? '!cursor-not-allowed !text-[#667085]' : '',
               ].join(' ')}
               onClick={stopPropagation}
             >

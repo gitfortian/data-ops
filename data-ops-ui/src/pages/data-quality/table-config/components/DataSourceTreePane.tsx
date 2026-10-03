@@ -78,7 +78,7 @@ const DataSourceTreePane = ({
           <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#30323b]">
             {node.dataSourceType}
           </span>
-          <span className="text-xs font-normal text-[#98a2b3]">
+          <span className="text-xs font-normal text-[#667085]">
             {node.count || 0}
           </span>
         </div>
@@ -108,7 +108,7 @@ const DataSourceTreePane = ({
             strokeWidth={1.7}
             className={[
               'shrink-0',
-              active ? 'text-[#fe2c55]' : 'text-[#98a2b3]',
+              active ? 'text-[#fe2c55]' : 'text-[#667085]',
             ].join(' ')}
           />
           <span

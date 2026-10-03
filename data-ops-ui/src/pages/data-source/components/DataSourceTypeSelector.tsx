@@ -137,7 +137,7 @@ const DataSourceTypeSelector = ({
           <Input
             allowClear
             variant="filled"
-            prefix={<SearchOutlined className="text-[#98A2B3]" />}
+            prefix={<SearchOutlined className="text-[#667085]" />}
             placeholder={intl.formatMessage({
               id: 'pages.datasource.typeSelector.searchPlaceholder',
             })}
@@ -164,7 +164,7 @@ const DataSourceTypeSelector = ({
           <div className="mb-2 text-xs font-semibold text-[#161823]">
             {intl.formatMessage({ id: 'pages.datasource.typeSelector.common' })}
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 max-sm:grid-cols-1">
             {suggestedDataSources.map((item) => (
               <YakButton
                 key={item.dbType}
@@ -195,7 +195,7 @@ const DataSourceTypeSelector = ({
               id: 'pages.datasource.typeSelector.allDataSources',
             })}
           </span>
-          <span className="text-[11px] text-[#98A2B3]">
+          <span className="text-[12px] text-[#667085]">
             {filteredDataSources.length}
           </span>
         </div>
@@ -215,10 +215,10 @@ const DataSourceTypeSelector = ({
               {groupedDataSources.map((group) => (
                 <section key={group.groupKey}>
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-[#667085]">
+                    <span className="text-[12px] font-medium text-[#667085]">
                       {group.groupName}
                     </span>
-                    <span className="text-[10px] text-[#B0B7C3]">
+                    <span className="text-[12px] text-[#667085]">
                       {group.items.length}
                     </span>
                   </div>

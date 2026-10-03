@@ -194,7 +194,7 @@ const MonitorListTab = ({
             {record.name}
           </div>
 
-          <div className="mt-1 text-[11px] text-[#98a2b3]">
+          <div className="mt-1 text-[12px] text-[#667085]">
             ID：{record.id}
           </div>
 
@@ -212,7 +212,7 @@ const MonitorListTab = ({
       render: (_, record) => (
         <div>
           <div className="text-[13px] text-[#344054]">{record.trigger}</div>
-          <div className="mt-1 text-[11px] text-[#98a2b3]">
+          <div className="mt-1 text-[12px] text-[#667085]">
             {settings.nextRunTime
               ? `下次：${settings.nextRunTime}`
               : '未配置下次运行'}
@@ -228,7 +228,7 @@ const MonitorListTab = ({
           <span className="font-medium text-[#344054]">
             {stats.enabledRuleCount}
           </span>
-          <span className="text-[#98a2b3]">/</span>
+          <span className="text-[#667085]">/</span>
           <span className="text-[#667085]">{stats.ruleCount}</span>
         </div>
       ),
@@ -372,7 +372,7 @@ const MonitorListTab = ({
             }
             onPressEnter={applyFilters}
             placeholder="搜索监控名称或 ID"
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             className="w-[220px]"
           />
 

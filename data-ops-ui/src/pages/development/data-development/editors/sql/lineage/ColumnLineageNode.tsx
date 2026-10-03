@@ -56,7 +56,7 @@ export default function ColumnLineageNode({ data }: NodeProps<ColumnLineageNodeD
             >
               {index === 0 ? <KeyRound size={13} className="text-[#e0a400]" /> : <span className="w-[13px]" />}
               <span className="min-w-0 flex-1 truncate text-[12px] text-[#344054]">{field.name}</span>
-              <span className="text-[9px] font-medium text-[#98a2b3]">{field.dataType || 'UNKNOWN'}</span>
+              <span className="text-[9px] font-medium text-[#667085]">{field.dataType || 'UNKNOWN'}</span>
               {field.transformed ? <FunctionSquare size={13} className="text-[#7f56d9]" /> : null}
               {data.role === 'target' ? (
                 <Handle
@@ -78,8 +78,8 @@ export default function ColumnLineageNode({ data }: NodeProps<ColumnLineageNodeD
         })}
       </div>
       {data.fields.some((field) => field.expression) ? (
-        <div className="border-t border-[#eef0f2] bg-[#fcfcfd] px-3 py-2 text-[10px] text-[#667085]">
-          <div className="mb-1 font-medium uppercase tracking-wide text-[#98a2b3]">Transformation</div>
+        <div className="border-t border-[#eef0f2] bg-[#fcfcfd] px-3 py-2 text-[12px] text-[#667085]">
+          <div className="mb-1 font-medium uppercase tracking-wide text-[#667085]">Transformation</div>
           <code className="block truncate">{data.fields.find((field) => field.expression)?.expression}</code>
         </div>
       ) : null}

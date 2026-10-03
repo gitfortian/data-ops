@@ -59,7 +59,7 @@ const Panel = ({
     <div className="flex min-h-[48px] items-center justify-between border-b border-[#f3f4f5] px-4">
       <div className="min-w-0">
         <div className="text-[13px] font-semibold text-[#30323b]">{title}</div>
-        {subtitle ? <div className="mt-0.5 text-[10px] text-[#a0a5ad]">{subtitle}</div> : null}
+        {subtitle ? <div className="mt-0.5 text-[12px] text-[#667085]">{subtitle}</div> : null}
       </div>
     </div>
     {children}
@@ -113,12 +113,12 @@ const DonutPanel = ({
           <ReactECharts option={option} style={{ height: 148 }} notMerge lazyUpdate />
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-1">
             <div className="text-[22px] font-semibold tracking-[-.02em] text-[#161823]">{formatNumber(total)}</div>
-            <div className="mt-0.5 text-[10px] text-[#98a2b3]">总计</div>
+            <div className="mt-0.5 text-[12px] text-[#667085]">总计</div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 border-t border-[#f3f4f5] pt-3">
           {items.map((item) => (
-            <div key={item.name} className="flex min-w-0 items-center justify-between gap-2 text-[11px]">
+            <div key={item.name} className="flex min-w-0 items-center justify-between gap-2 text-[12px]">
               <div className="flex min-w-0 items-center gap-1.5 text-[#667085]">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
                 <span className="truncate">{item.name}</span>
@@ -134,9 +134,9 @@ const DonutPanel = ({
 
 const MetricCell = ({ label, value, note }: { label: string; value: string; note: string }) => (
   <div className="min-w-0 px-4 py-4">
-    <div className="text-[10px] text-[#98a2b3]">{label}</div>
+    <div className="text-[12px] text-[#667085]">{label}</div>
     <div className="mt-1.5 truncate text-[22px] font-semibold tracking-[-.02em] text-[#161823]">{value}</div>
-    <div className="mt-1 truncate text-[10px] text-[#a0a5ad]">{note}</div>
+    <div className="mt-1 truncate text-[12px] text-[#667085]">{note}</div>
   </div>
 );
 
@@ -292,7 +292,7 @@ export default function DataServiceOverviewPage() {
       render: (_, record) => (
         <div className="min-w-0 py-0.5">
           <div className="truncate text-[12px] font-medium text-[#344054]">{record.serviceName}</div>
-          <div className="mt-0.5 truncate font-mono text-[10px] text-[#98a2b3]">{record.servicePath}</div>
+          <div className="mt-0.5 truncate font-mono text-[12px] text-[#667085]">{record.servicePath}</div>
         </div>
       ),
     },
@@ -301,20 +301,20 @@ export default function DataServiceOverviewPage() {
       dataIndex: 'errorMessage',
       ellipsis: true,
       render: (value?: string | null) => value
-        ? <Tooltip title={value}><span className="text-[11px] text-[#b42318]">{value}</span></Tooltip>
-        : <span className="text-[11px] text-[#98a2b3]">未知错误</span>,
+        ? <Tooltip title={value}><span className="text-[12px] text-[#b42318]">{value}</span></Tooltip>
+        : <span className="text-[12px] text-[#667085]">未知错误</span>,
     },
     {
       title: '耗时',
       dataIndex: 'durationMs',
       width: 82,
-      render: (value: number) => <span className="text-[11px] text-[#667085]">{value || 0} ms</span>,
+      render: (value: number) => <span className="text-[12px] text-[#667085]">{value || 0} ms</span>,
     },
     {
       title: '时间',
       dataIndex: 'createTime',
       width: 150,
-      render: (value?: string | null) => <span className="text-[10px] text-[#98a2b3]">{formatTime(value)}</span>,
+      render: (value?: string | null) => <span className="text-[12px] text-[#667085]">{formatTime(value)}</span>,
     },
   ];
 
@@ -324,7 +324,7 @@ export default function DataServiceOverviewPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="m-0 text-[17px] font-semibold text-[#161823]">运行概览</h1>
-            <div className="mt-1 text-[12px] text-[#98a2b3]">
+            <div className="mt-1 text-[12px] text-[#667085]">
               API 运行状态、调用趋势与近期异常
             </div>
           </div>
@@ -387,8 +387,8 @@ export default function DataServiceOverviewPage() {
           <Panel title="总体指标" subtitle="当前时间范围内的调用汇总">
             <div className="grid grid-cols-2 divide-x divide-y divide-[#f3f4f5]">
               <MetricCell label="调用次数" value={formatNumber(overview.totalCalls)} note="全部 API 调用" />
-              <MetricCell label="成功率" value={`${overview.successRate}%`} note={`${overview.failureCalls} 次失败`} />
-              <MetricCell label="平均耗时" value={`${formatNumber(overview.averageDurationMs)} ms`} note="按全部调用计算" />
+              <MetricCell label="成功率" value={overview.totalCalls > 0 ? `${overview.successRate}%` : '—'} note={overview.totalCalls > 0 ? `${overview.failureCalls} 次失败 / ${overview.totalCalls} 次调用` : '无调用，尚未计算'} />
+              <MetricCell label="平均耗时" value={overview.totalCalls > 0 ? `${formatNumber(overview.averageDurationMs)} ms` : '—'} note={overview.totalCalls > 0 ? '按全部调用计算' : '无调用，尚未计算'} />
               <MetricCell label="返回行数" value={formatNumber(overview.totalRows)} note="成功查询返回数据量" />
             </div>
           </Panel>

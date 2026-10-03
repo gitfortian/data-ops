@@ -135,7 +135,7 @@ const RightPanel = ({
           <dt className="text-[#667085]">{intl.formatMessage({ id: 'pages.dataDevelopment.right.type' })}</dt>
           <dd className="m-0 text-[#344054]">{definition.label}</dd>
           <dt className="text-[#667085]">ID:</dt>
-          <dd className="m-0 break-all font-mono text-[11px] text-[#98a2b3]">{node.id}</dd>
+          <dd className="m-0 break-all font-mono text-[12px] text-[#667085]">{node.id}</dd>
           <dt className="text-[#667085]">{intl.formatMessage({ id: 'pages.dataDevelopment.right.directory' })}</dt>
           <dd className="m-0 break-all text-[#344054]">{directory?.path || '/'}</dd>
           <dt className="text-[#667085]">{intl.formatMessage({ id: 'pages.dataDevelopment.right.configStatus' })}</dt>
@@ -154,10 +154,10 @@ const RightPanel = ({
   };
 
   return (
-    <aside className="flex shrink-0 bg-white" style={BRAND_CSS_VARIABLES}>
+    <aside className="flex shrink-0 bg-white max-md:relative max-md:h-[360px] max-md:max-w-full" style={BRAND_CSS_VARIABLES}>
       <div
         className={[
-          'relative h-full shrink-0',
+          'relative h-full shrink-0 max-md:max-w-[calc(100vw-100px)]',
           resizing ? 'transition-none' : 'transition-[width] duration-200 ease-out',
         ].join(' ')}
         style={{ width: activeTab ? width : 0 }}
@@ -175,7 +175,7 @@ const RightPanel = ({
         ) : null}
 
         <div className="h-full overflow-hidden">
-          <div className="flex h-full flex-col bg-white" style={{ width }}>
+          <div className="flex h-full max-w-full flex-col bg-white" style={{ width }}>
             <div className="flex h-11 shrink-0 items-center justify-between border-b border-[#e5e7eb] px-4">
               <span className="text-[13px] font-semibold text-[#30323b]">{activeItem?.label}</span>
               <div className="flex items-center gap-1">
@@ -184,7 +184,7 @@ const RightPanel = ({
                     type="button"
                     title={intl.formatMessage({ id: 'pages.dataDevelopment.common.refresh' })}
                     onClick={() => setManualRefreshKey((current) => current + 1)}
-                    className="flex h-7 items-center gap-1 rounded-[3px] px-2 text-[11px] text-[#475467] transition-colors hover:bg-[#f5f5f6]"
+                    className="flex h-7 items-center gap-1 rounded-[3px] px-2 text-[12px] text-[#475467] transition-colors hover:bg-[#f5f5f6]"
                   >
                     <RefreshCw size={13} strokeWidth={1.8} />
                     {intl.formatMessage({ id: 'pages.dataDevelopment.common.refresh' })}

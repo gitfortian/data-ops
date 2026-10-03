@@ -291,10 +291,10 @@ export default function ConsumerIpAccessPanel({
                 >
                   <div className="min-w-0">
                     <div className="truncate font-mono text-[12px] font-medium text-[#161823]">{rule.networkCidr}</div>
-                    <div className="mt-1 text-[10px] text-[#98a2b3]">{status(rule)}</div>
+                    <div className="mt-1 text-[12px] text-[#667085]">{status(rule)}</div>
                   </div>
                   <div className="truncate text-[12px] text-[#667085]">{rule.description || '—'}</div>
-                  <div className="text-[11px] text-[#667085]">{formatTime(rule.expiresAt)}</div>
+                  <div className="text-[12px] text-[#667085]">{formatTime(rule.expiresAt)}</div>
                   <Switch
                     size="small"
                     checked={rule.enabled}

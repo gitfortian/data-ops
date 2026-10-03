@@ -140,11 +140,11 @@ export function DashboardWidgetActionEditor({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#667085]">
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#667085]">
         <MousePointerClick size={12} />
         点击行为
       </div>
-      <div className="mt-1 text-[9px] leading-4 text-[#98a2b3]">
+      <div className="mt-1 text-[9px] leading-4 text-[#667085]">
         这是图表的主要点击动作；直接图表联动和筛选器联动仍可同时执行。
       </div>
 
@@ -158,7 +158,7 @@ export function DashboardWidgetActionEditor({
 
       {action === 'drill' ? (
         <div className="mt-2 rounded-[6px] border border-[#edf0f3] bg-[#fafbfc] p-2.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-medium text-[#475467]">
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#475467]">
             <GitBranch size={11} />
             下钻层级
           </div>
@@ -177,7 +177,7 @@ export function DashboardWidgetActionEditor({
               patch({ drillFields: next });
             }}
           />
-          <div className="mt-2 flex items-start gap-1.5 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-2 flex items-start gap-1.5 text-[9px] leading-4 text-[#667085]">
             <ArrowRight size={10} className="mt-[3px] shrink-0" />
             第一层固定为当前图表主维度，后续按选择顺序进入下一层。至少配置 2 个维度才会触发下钻。
           </div>
@@ -186,7 +186,7 @@ export function DashboardWidgetActionEditor({
 
       {action === 'dashboard' ? (
         <div className="mt-2 rounded-[6px] border border-[#edf0f3] bg-[#fafbfc] p-2.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-medium text-[#475467]">
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#475467]">
             <LayoutDashboard size={11} />
             目标仪表盘
           </div>
@@ -200,7 +200,7 @@ export function DashboardWidgetActionEditor({
             options={dashboardOptions}
             onChange={(targetDashboardId) => patch({ targetDashboardId })}
           />
-          <div className="mt-2 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-2 text-[9px] leading-4 text-[#667085]">
             跳转时会携带当前点击字段和值；目标仪表盘中绑定同名字段的全局筛选器会自动接收该值。
           </div>
         </div>
@@ -208,7 +208,7 @@ export function DashboardWidgetActionEditor({
 
       {action === 'yak' ? (
         <div className="mt-2 rounded-[6px] border border-[#edf0f3] bg-[#fafbfc] p-2.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-medium text-[#475467]">
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#475467]">
             <Workflow size={11} />
             Yak 内部页面
           </div>
@@ -231,7 +231,7 @@ export function DashboardWidgetActionEditor({
             placeholder="留空时使用当前字段名"
             onChange={(event) => patch({ queryParam: event.target.value || undefined })}
           />
-          <div className="mt-2 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-2 text-[9px] leading-4 text-[#667085]">
             例如点击 FAILED 后跳转工作流实例，可将参数名配置为 status，最终进入 /workflow/instances?status=FAILED。
           </div>
         </div>

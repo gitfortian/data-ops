@@ -89,7 +89,7 @@ const CodeSetFormItems = ({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-x-4">
+      <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
         <Form.Item
           name="codeSetCode"
           label="码集编码"
@@ -133,7 +133,7 @@ const CodeSetFormItems = ({
         <Form.List name="codeValues">
           {(fields, { add, remove }) => (
             <>
-              <div className="mb-2 grid grid-cols-[1fr_1fr_80px_32px] gap-x-2 text-xs font-medium text-[#98a2b3]">
+              <div className="mb-2 grid grid-cols-[1fr_1fr_80px_32px] gap-x-2 text-xs font-medium text-[#667085]">
                 <span>码值 *</span>
                 <span>码值标签</span>
                 <span>排序</span>

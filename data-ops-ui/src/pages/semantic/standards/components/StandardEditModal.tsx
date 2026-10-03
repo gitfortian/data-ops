@@ -119,7 +119,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
       }}
     >
       <Form form={form} layout="vertical" className="pt-2">
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
           <Form.Item
             name="kind"
             label="类别"
@@ -156,7 +156,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
             <Input disabled={isEdit} maxLength={64} placeholder="如 ods_table_prefix" />
           </Form.Item>
         </div>
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
             <Input maxLength={128} placeholder="标准名称" />
           </Form.Item>
@@ -197,7 +197,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
         ) : null}
 
         {kind === 'TYPE' ? (
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="typeCode"
               label="类型编码"
@@ -243,7 +243,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
         {/* CODE 类已拆分到 CodeSetEditModal,此处不再渲染 */}
 
         {kind === 'UNIT' ? (
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="unitCode"
               label="单位编码"
@@ -260,7 +260,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
 
         {kind === 'CALIBER' ? (
           <>
-            <div className="grid grid-cols-2 gap-x-4">
+            <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
               <Form.Item name="caliberCode" label="口径编码" preserve={false}>
                 <Input maxLength={64} placeholder="如 active_user_cnt（可选）" />
               </Form.Item>
@@ -280,7 +280,7 @@ const StandardEditModal = ({ open, editing, onClose, onSaved, onSwitchToCodeSet 
         ) : null}
 
         {kind === 'SECURITY' ? (
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="levelCode"
               label="等级编码"

@@ -319,7 +319,7 @@ const WorkflowInstancesPage = () => {
                 { nodes: record.nodeCount, edges: record.edgeCount },
               )}
             </div>
-            <div className="text-[#98a2b3]">
+            <div className="text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.workflow.instance.duration' },
                 { duration: formatDuration(record) },
@@ -369,7 +369,7 @@ const WorkflowInstancesPage = () => {
         <div className="text-[14px] font-semibold text-[#101828]">
           {intl.formatMessage({ id: 'pages.workflow.instance.advanced' })}
         </div>
-        <div className="mt-1 text-[12px] text-[#98a2b3]">
+        <div className="mt-1 text-[12px] text-[#667085]">
           {intl.formatMessage({ id: 'pages.workflow.instance.advancedHint' })}
         </div>
       </div>
@@ -471,7 +471,7 @@ const WorkflowInstancesPage = () => {
               <Input
                 allowClear
                 variant="filled"
-                prefix={<SearchOutlined className="text-[#98a2b3]" />}
+                prefix={<SearchOutlined className="text-[#667085]" />}
                 placeholder={intl.formatMessage({ id: 'pages.workflow.instance.searchPlaceholder' })}
                 className="!h-9 !w-[220px] !min-w-[190px]"
                 value={keywordDraft}
@@ -519,7 +519,7 @@ const WorkflowInstancesPage = () => {
                 >
                   {intl.formatMessage({ id: 'pages.workflow.instance.advanced' })}
                   {advancedFilterCount > 0 ? (
-                    <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff4d4f] px-1 text-[10px] leading-[18px] text-white">
+                    <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff4d4f] px-1 text-[12px] leading-[18px] text-white">
                       {advancedFilterCount}
                     </span>
                   ) : null}
@@ -578,7 +578,7 @@ const WorkflowInstancesPage = () => {
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={
-                      <span className="text-[12px] text-[#98a2b3]">
+                      <span className="text-[12px] text-[#667085]">
                         {intl.formatMessage({ id: 'pages.workflow.instance.empty' })}
                       </span>
                     }
@@ -590,7 +590,7 @@ const WorkflowInstancesPage = () => {
           </div>
 
           <div className="sticky bottom-0 z-20 mt-auto flex min-h-[56px] shrink-0 items-center justify-between border border-t-0 border-[#e5e7eb] bg-white px-5 py-3 shadow-[0_-4px_12px_rgba(16,24,40,0.04)]">
-            <div className="text-[12px] text-[#98a2b3]">
+            <div className="text-[12px] text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.workflow.instance.total' },
                 { count: filtered.length },

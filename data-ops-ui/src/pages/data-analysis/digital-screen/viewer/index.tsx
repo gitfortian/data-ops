@@ -55,18 +55,18 @@ export default function DigitalScreenViewerPage() {
       </div>
 
       {runtime.loadingCount ? (
-        <div className="absolute right-4 top-4 rounded-[4px] bg-black/40 px-2.5 py-1.5 text-[10px] text-white/55 backdrop-blur">
+        <div className="absolute right-4 top-4 rounded-[4px] bg-black/40 px-2.5 py-1.5 text-[12px] text-white/55 backdrop-blur">
           正在刷新 {runtime.loadingCount} 个组件的数据...
         </div>
       ) : null}
 
       {dataError || runtimeErrors.length ? (
-        <div className="absolute bottom-4 left-1/2 max-w-[560px] -translate-x-1/2 rounded-[6px] bg-black/55 px-3 py-2 text-[10px] leading-5 text-white/65 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
+        <div className="absolute bottom-4 left-1/2 max-w-[560px] -translate-x-1/2 rounded-[6px] bg-black/55 px-3 py-2 text-[12px] leading-5 text-white/65 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
           {dataError || `${runtimeErrors.length} 个组件的数据查询失败：${runtimeErrors[0]}`}
         </div>
       ) : null}
 
-      <div className="absolute bottom-3 right-4 rounded-[4px] bg-black/35 px-2 py-1 text-[10px] text-white/35 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute bottom-3 right-4 rounded-[4px] bg-black/35 px-2 py-1 text-[12px] text-white/35 opacity-0 transition-opacity group-hover:opacity-100">
         {screen.name} · V{screen.publishedVersionNo}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
+import { useColumnVisibility } from '@/components/table/useColumnVisibility';
 import {
   changeSemanticLayerStatus,
   createSemanticLayer,
@@ -185,10 +186,13 @@ const LayersPage = () => {
 
   const columns = [
     {
-      title: '编码',
+      title: '分层',
       dataIndex: 'code',
-      width: 110,
-      render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
+      width: 160,
+      render: (value: string, record: SemanticLayerRecord) => <div>
+        <div className="font-medium">{record.name}</div>
+        <Typography.Text type="secondary" className="!text-[12px]">{value}</Typography.Text>
+      </div>,
     },
     { title: '名称', dataIndex: 'name', width: 120 },
     { title: '库名', dataIndex: 'databaseName', width: 140, render: (v?: string) => v || '-' },
@@ -288,6 +292,8 @@ const LayersPage = () => {
     },
   ];
 
+  const columnView = useColumnVisibility(columns, ['code', 'databaseName', 'datasourceId', 'stdBinding', 'status', 'actions']);
+
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -297,7 +303,8 @@ const LayersPage = () => {
             各层定位库、数据源与命名标准（只存引用）；默认分层不可删，自定义分层被模型引用时阻断删除
           </div>
         </div>
-        <Space>
+        <Space wrap>
+          {columnView.control}
           {can('semantic:create') && <>
           <YakButton
             className="!h-9 !rounded-lg !px-4"
@@ -325,8 +332,8 @@ const LayersPage = () => {
         rowKey="id"
         loading={loading}
         // 让宽表在表格内部横向滚动,而不是溢出后被外层 overflow-hidden 裁掉。
-        scroll={{ x: 'max-content' }}
-        columns={columns}
+        scroll={{ x: columnView.scrollWidth }}
+        columns={columnView.columns}
         dataSource={records}
         locale={{
           emptyText: (
@@ -355,7 +362,7 @@ const LayersPage = () => {
       >
         <Form form={form} layout="vertical" className="pt-2">
           {optionsError && <Alert className="mb-3" type="warning" showIcon message="引用选项未能完整加载" action={<Button size="small" onClick={() => void loadOptions()}>重试</Button>} />}
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="code"
               label="编码"

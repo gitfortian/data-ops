@@ -12,15 +12,15 @@ const SIZE_STYLES = {
   small: {
     iconBox: 'h-8 w-8 rounded-[9px]',
     iconSize: 15,
-    title: 'text-[10px] leading-4',
+    title: 'text-[12px] leading-4',
     description: 'text-[9px] leading-4',
     gap: 'gap-2',
   },
   medium: {
     iconBox: 'h-9 w-9 rounded-[10px]',
     iconSize: 17,
-    title: 'text-[11px] leading-5',
-    description: 'text-[10px] leading-4',
+    title: 'text-[12px] leading-5',
+    description: 'text-[12px] leading-4',
     gap: 'gap-2.5',
   },
 } as const;

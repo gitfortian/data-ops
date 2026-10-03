@@ -71,7 +71,7 @@ const DataSecurityAuditPage = () => {
     },
     {
       title: '脱敏', dataIndex: 'masked', width: 110,
-      render: (v: number, r) => (v === 1 ? <Tag color="orange">{r.algoCode || '已脱敏'}</Tag> : <span className="text-[#98a2b3]">明文</span>),
+      render: (v: number, r) => (v === 1 ? <Tag color="orange">{r.algoCode || '已脱敏'}</Tag> : <span className="text-[#667085]">明文</span>),
     },
     { title: '来源', dataIndex: 'source', width: 110, render: (v?: string) => v || '-' },
   ];
@@ -94,7 +94,7 @@ const DataSecurityAuditPage = () => {
           pagination={{ current: pageNo, pageSize, total, showSizeChanger: true, showTotal: (c) => `共 ${c} 条`, onChange: (p, s) => { setPageNo(p); setPageSize(s); } }} />
         <Card title="访问热点主体" size="small">
           {actors.length === 0 ? (
-            <div className="text-[13px] text-[#98a2b3]">暂无统计数据</div>
+            <div className="text-[13px] text-[#667085]">暂无统计数据</div>
           ) : (
             <Space direction="vertical" style={{ width: '100%' }} size={8}>
               {actors.slice(0, 12).map((a, i) => (

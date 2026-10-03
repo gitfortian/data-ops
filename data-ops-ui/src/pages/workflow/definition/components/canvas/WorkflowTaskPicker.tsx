@@ -132,7 +132,7 @@ const WorkflowTaskPicker = ({
           allowClear
           value={searchText[activeCategory]}
           variant="filled"
-          prefix={<Search size={14} className="text-[#98a2b3]" />}
+          prefix={<Search size={14} className="text-[#667085]" />}
           placeholder={intl.formatMessage(
             { id: 'pages.workflow.editor.library.searchCategory' },
             { category: activeLabel },
@@ -164,11 +164,11 @@ const WorkflowTaskPicker = ({
                 {option.label}
               </span>
               {option.meta ? (
-                <span className="ml-3 shrink-0 text-[10px] font-medium text-[#98a2b3]">{option.meta}</span>
+                <span className="ml-3 shrink-0 text-[12px] font-medium text-[#667085]">{option.meta}</span>
               ) : null}
             </button>
           )) : (
-            <div className="flex h-16 items-center justify-center text-[11px] text-[#98a2b3]">
+            <div className="flex h-16 items-center justify-center text-[12px] text-[#667085]">
               {keyword
                 ? intl.formatMessage({ id: 'pages.workflow.editor.library.noMatch' })
                 : intl.formatMessage(

@@ -254,7 +254,7 @@ export default function MetricGovernancePanel({ metricId, currentVersion, onComp
           {latestAttempt.issues.map((issue, index) => (
             <li key={`${issue.code}-${index}`}>
               {issue.message}
-              <span className="ml-1 text-[#98a2b3]">（{issue.code} · {issue.field}）</span>
+              <span className="ml-1 text-[#667085]">（{issue.code} · {issue.field}）</span>
             </li>
           ))}
         </ul>

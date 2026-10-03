@@ -68,7 +68,7 @@ const MenuItem = ({
       {icon}
     </span>
     <span className="min-w-0 flex-1 truncate">{label}</span>
-    {arrow ? <ChevronRight size={13} strokeWidth={1.8} className="shrink-0 text-[#98a2b3]" /> : null}
+    {arrow ? <ChevronRight size={13} strokeWidth={1.8} className="shrink-0 text-[#667085]" /> : null}
   </button>
 );
 

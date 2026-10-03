@@ -56,7 +56,7 @@ const WorkflowEmptyState = ({ filtered, onReset, onCreate }: WorkflowEmptyStateP
               : 'pages.workflow.definition.empty',
           })}
         </h3>
-        <p className="mb-0 mt-1 text-center text-[11px] leading-5 text-[#969ba5]">
+        <p className="mb-0 mt-1 text-center text-[12px] leading-5 text-[#969ba5]">
           {intl.formatMessage({
             id: filtered
               ? 'pages.workflow.definition.emptyFilteredHint'

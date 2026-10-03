@@ -213,7 +213,7 @@ export default function SyncTaskEditor({
         optionFilterProp="label"
         onChange={(fields) => updateSource({ fields })}
       />
-      <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">
         MongoDB 字段类型由 Catalog 自动采样推断，只选择字段名即可；嵌套字段可直接选择 address.city 这类路径。
       </div>
     </div>

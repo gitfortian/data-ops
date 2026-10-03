@@ -35,7 +35,7 @@ const DashboardPreview = ({ dashboard }: { dashboard: DashboardSummary }) => (
       <div className="mt-2 h-[4px] w-[48%] rounded-full bg-[#e1e4e8]" />
     </div>
 
-    <div className="absolute right-2 top-2 flex h-[18px] min-w-[24px] items-center justify-center rounded-[3px] bg-[rgba(22,24,35,0.62)] px-1.5 text-[10px] font-medium text-white">
+    <div className="absolute right-2 top-2 flex h-[18px] min-w-[24px] items-center justify-center rounded-[3px] bg-[rgba(22,24,35,0.62)] px-1.5 text-[12px] font-medium text-white">
       V{dashboard.currentVersionNo || 0}
     </div>
   </div>

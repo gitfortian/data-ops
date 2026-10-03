@@ -693,7 +693,7 @@ const DevelopmentWorkbench = ({
           <div className="text-[14px] font-medium text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.workbench.selectNode' })}
           </div>
-          <div className="mt-1 text-[12px] text-[#98a2b3]">
+          <div className="mt-1 text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.workbench.selectNodeHint' })}
           </div>
         </div>
@@ -745,7 +745,7 @@ const DevelopmentWorkbench = ({
             />
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="flex min-h-0 flex-1 overflow-hidden">
+              <div className="flex min-h-0 flex-1 overflow-hidden max-md:flex-col max-md:overflow-y-auto max-md:[&>main]:min-h-[360px]">
                 <EditorHost
                   node={activeTaskNode}
                   directory={activeDirectory}

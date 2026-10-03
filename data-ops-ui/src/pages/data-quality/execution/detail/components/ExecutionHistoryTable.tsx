@@ -38,7 +38,7 @@ export const ExecutionHistoryTable = ({
             <div className="text-[12px] font-medium text-[#344054]">
               {formatExecutionTime(record.startedAt || record.queuedAt)}
             </div>
-            <div className="mt-1 max-w-[240px] truncate text-[11px] text-[#98a2b3]">
+            <div className="mt-1 max-w-[240px] truncate text-[12px] text-[#667085]">
               {record.executionNo}
             </div>
           </div>

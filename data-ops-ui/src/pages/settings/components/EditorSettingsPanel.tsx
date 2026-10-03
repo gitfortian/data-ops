@@ -33,7 +33,10 @@ const EditorSettingsPanel = () => {
   const [settings, setSettings] = useState<YakEditorSettings>(DEFAULT_YAK_EDITOR_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [syncState, setSyncState] = useState<'PENDING' | 'SAVED' | 'ERROR'>('PENDING');
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const editGeneration = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -43,8 +46,9 @@ const EditorSettingsPanel = () => {
         const next = { ...DEFAULT_YAK_EDITOR_SETTINGS, ...(response.data || {}) };
         setSettings(next);
         setYakEditorSettings(next);
+        setSyncState('SAVED');
       })
-      .catch(() => message.warning('编辑器设置读取失败，已使用默认设置'))
+      .catch(() => { if (active) { setSyncState('ERROR'); setLoadFailed(true); message.warning('编辑器设置读取失败，请重试读取'); } })
       .finally(() => active && setLoading(false));
 
     return () => {
@@ -54,6 +58,9 @@ const EditorSettingsPanel = () => {
   }, []);
 
   const persist = (next: YakEditorSettings) => {
+    if (loadFailed) return;
+    const generation = ++editGeneration.current;
+    setSyncState('PENDING');
     setSettings(next);
     setYakEditorSettings(next);
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -62,13 +69,17 @@ const EditorSettingsPanel = () => {
       setSaving(true);
       try {
         const response = await saveDevelopmentEditorSettings(next);
+        if (generation !== editGeneration.current) return;
         const saved = { ...DEFAULT_YAK_EDITOR_SETTINGS, ...(response.data || next) };
         setSettings(saved);
         setYakEditorSettings(saved);
+        setSyncState('SAVED');
       } catch {
+        if (generation !== editGeneration.current) return;
+        setSyncState('ERROR');
         message.error('编辑器设置保存失败');
       } finally {
-        setSaving(false);
+        if (generation === editGeneration.current) setSaving(false);
       }
     }, 450);
   };
@@ -102,9 +113,10 @@ const EditorSettingsPanel = () => {
     <div className="text-[13px] text-[#344054]">
       <div className="mb-6 flex items-center justify-between gap-6">
         <div className="text-[17px] font-semibold text-[#161823]">编辑器设置</div>
-        <span className="shrink-0 text-[11px] text-[#98a2b3]">
-          {saving ? '保存中…' : '已同步'}
-        </span>
+        <div role="status" className="flex shrink-0 items-center gap-2 text-[12px] text-[#667085]">
+          {loadFailed ? '读取失败' : saving ? '保存中…' : syncState === 'PENDING' ? '等待保存…' : syncState === 'SAVED' ? '已保存' : '未同步，请重试'}
+          {syncState === 'ERROR' && <Button size="small" onClick={() => loadFailed ? window.location.reload() : persist(settings)}>{loadFailed ? '重试读取' : '重试保存'}</Button>}
+        </div>
       </div>
 
       <SettingSection title="外观">

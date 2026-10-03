@@ -142,7 +142,7 @@ const AlgorithmTab = () => {
     {
       title: '操作', key: 'action', width: 100,
       render: (_, record) =>
-        record.builtin === 1 ? <span className="text-[#98a2b3]">受保护</span> : <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>,
+        record.builtin === 1 ? <span className="text-[#667085]">受保护</span> : <Typography.Link type="danger" onClick={() => remove(record)}>删除</Typography.Link>,
     },
   ];
 

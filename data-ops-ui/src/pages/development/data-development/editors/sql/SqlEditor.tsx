@@ -64,7 +64,7 @@ export const SqlEditor = ({
         />
       </div>
 
-      <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[10px] text-[#7b808a]">
+      <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[12px] text-[#7b808a]">
         <div className="flex min-w-0 items-center gap-3">
           <span className="font-medium text-[#667085]">{dialectLabel}</span>
           <span className="truncate">{node.name}</span>
@@ -107,13 +107,13 @@ export const SqlRunConfig = ({ node }: DevelopmentEditorContext) => {
       <div className="font-medium text-[#344054]">
         {intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlRunConfig' })}
       </div>
-      <div className="mt-2 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mt-2 text-[12px] leading-5 text-[#667085]">
         {intl.formatMessage(
           { id: 'pages.dataDevelopment.editor.sqlRunConfigHint' },
           { name: node.name },
         )}
       </div>
-      <div className="mt-3 border-t border-[#eef0f2] pt-3 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mt-3 border-t border-[#eef0f2] pt-3 text-[12px] leading-5 text-[#667085]">
         {intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlRunLimitHint' })}
       </div>
     </div>

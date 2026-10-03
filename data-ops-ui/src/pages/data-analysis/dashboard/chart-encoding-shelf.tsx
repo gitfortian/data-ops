@@ -59,7 +59,7 @@ export function ChartEncodingShelf({
   const intl = useIntl();
   if (!spec || !dataset) {
     return (
-      <div className="shrink-0 border-b border-[#e4e7ec] bg-white px-4 py-2 text-[10px] text-[#98a2b3]">
+      <div className="shrink-0 border-b border-[#e4e7ec] bg-white px-4 py-2 text-[12px] text-[#667085]">
         {intl.formatMessage({ id: 'pages.dashboard.editor.encoding.selectDataset' })}
       </div>
     );
@@ -284,7 +284,7 @@ function ShelfRow({
         onAdd(payload.field, payload.role);
       }}
     >
-      <div className="w-12 shrink-0 text-[10px] font-medium text-[#667085]">{label}</div>
+      <div className="w-12 shrink-0 text-[12px] font-medium text-[#667085]">{label}</div>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-1">
         {bindings.map((binding) => {
           const metric = binding.role === 'metric';
@@ -293,7 +293,7 @@ function ShelfRow({
             <div
               key={binding.field}
               className={[
-                'flex h-7 max-w-[220px] items-center gap-1 rounded-[5px] px-2 text-[10px]',
+                'flex h-7 max-w-[220px] items-center gap-1 rounded-[5px] px-2 text-[12px]',
                 metric
                   ? 'bg-[#e4f5f0] text-[#2f7568]'
                   : 'bg-[#e8f0fd] text-[#486b9d]',

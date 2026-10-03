@@ -20,7 +20,7 @@ export default function LoginPage() {
                 className="mb-10 text-center"
                 style={{ fontFamily: "'YakOps', Inter, sans-serif" }}
               >
-                <h1 className="m-0 text-[46px] font-normal leading-[1.01] tracking-[-0.045em] text-[#171717] sm:text-[60px] lg:text-[64px]">
+                <h1 className="m-0 text-[36px] font-normal leading-[1.1] tracking-[-0.045em] text-[#171717] sm:text-[60px] lg:text-[64px]">
                   Data ops,  &nbsp; simplified.
                 </h1>
 

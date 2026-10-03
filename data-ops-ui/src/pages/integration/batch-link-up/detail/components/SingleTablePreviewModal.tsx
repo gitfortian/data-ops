@@ -68,7 +68,7 @@ const normalizeRequest = (sourceConfig: Record<string, any>) => {
 
 const renderCellValue = (value: unknown) => {
   if (value === null || value === undefined) {
-    return <span className="text-[#98a2b3]">NULL</span>;
+    return <span className="text-[#667085]">NULL</span>;
   }
 
   if (typeof value === 'object') {

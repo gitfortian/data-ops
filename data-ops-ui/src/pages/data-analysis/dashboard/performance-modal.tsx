@@ -158,7 +158,7 @@ export function DashboardPerformanceModal({
       dataIndex: 'queryId',
       width: 150,
       render: (value: string, record) => (
-        <Button type="link" className="!h-auto !p-0 !text-[11px]" onClick={() => setDetail(record)}>
+        <Button type="link" className="!h-auto !p-0 !text-[12px]" onClick={() => setDetail(record)}>
           {value.slice(0, 12)}…
         </Button>
       ),
@@ -235,7 +235,7 @@ export function DashboardPerformanceModal({
             <div className="text-[12px] font-semibold text-[#344054]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.performance.coreInfo' })}
             </div>
-            <div className="mt-0.5 text-[10px] text-[#98a2b3]">
+            <div className="mt-0.5 text-[12px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.performance.hint' })}
             </div>
           </div>
@@ -344,10 +344,10 @@ export function DashboardPerformanceModal({
             <div className="mt-4 text-[12px] font-semibold text-[#344054]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.performance.sql' })}
             </div>
-            <pre className="mt-2 max-h-[320px] overflow-auto whitespace-pre-wrap break-all border border-[#e4e7ec] bg-[#f7f8fa] p-3 font-mono text-[11px] leading-5 text-[#344054]">
+            <pre className="mt-2 max-h-[320px] overflow-auto whitespace-pre-wrap break-all border border-[#e4e7ec] bg-[#f7f8fa] p-3 font-mono text-[12px] leading-5 text-[#344054]">
               {detail.sql || intl.formatMessage({ id: 'pages.dashboard.editor.performance.sqlUnavailable' })}
             </pre>
-            <div className="mt-2 text-[10px] leading-5 text-[#98a2b3]">
+            <div className="mt-2 text-[12px] leading-5 text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.performance.sqlHint' })}
             </div>
           </div>

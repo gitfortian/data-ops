@@ -302,12 +302,12 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
               </span>
               {inspectedCell.column.typeName ? (
                 <span
-                  className={`ml-2 text-[10px] font-medium ${typeTone(inspectedCell.column.typeName)}`}
+                  className={`ml-2 text-[12px] font-medium ${typeTone(inspectedCell.column.typeName)}`}
                 >
                   {inspectedCell.column.typeName}
                 </span>
               ) : null}
-              <span className="ml-3 text-[10px] text-[#98a2b3]">
+              <span className="ml-3 text-[12px] text-[#667085]">
                 第 {inspectedCell.rowIndex + 1} 行
               </span>
             </div>
@@ -331,7 +331,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                 await copyText(display);
                 flashCopied();
               }}
-              className="inline-flex h-7 items-center gap-1.5 rounded-[4px] border border-[#dfe4ec] bg-white px-2.5 text-[11px] text-[#475467] hover:bg-[#f7f9fc]"
+              className="inline-flex h-7 items-center gap-1.5 rounded-[4px] border border-[#dfe4ec] bg-white px-2.5 text-[12px] text-[#475467] hover:bg-[#f7f9fc]"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? '已复制' : '复制内容'}
@@ -356,7 +356,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
               <div className="text-[13px] font-medium text-[#475467]">
                 SQL 运行结果
               </div>
-              <div className="mt-1 text-[11px] text-[#98a2b3]">
+              <div className="mt-1 text-[12px] text-[#667085]">
                 点击顶部运行按钮执行当前编辑器中的 SQL
               </div>
             </div>
@@ -395,10 +395,10 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                     ? 'SQL 执行超时'
                     : 'SQL 执行失败'}
               </div>
-              <div className="mt-2 break-words text-[11px] leading-5 text-[#667085]">
+              <div className="mt-2 break-words text-[12px] leading-5 text-[#667085]">
                 {result.message || '数据库未返回更多错误信息'}
               </div>
-              <div className="mt-3 flex items-center justify-center gap-3 text-[10px] text-[#98a2b3]">
+              <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-[#667085]">
                 <span>耗时 {result.durationMs} ms</span>
                 {result.message ? (
                   <button
@@ -438,12 +438,12 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
               <div className="flex items-center justify-center gap-2 text-[13px] font-medium text-[#067647]">
                 <CheckCircle2 size={15} /> SQL 执行完成
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-left text-[11px]">
-                <span className="text-[#98a2b3]">影响行数</span>
+              <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-left text-[12px]">
+                <span className="text-[#667085]">影响行数</span>
                 <span className="text-right font-medium text-[#344054]">
                   {affectedRows}
                 </span>
-                <span className="text-[#98a2b3]">执行耗时</span>
+                <span className="text-[#667085]">执行耗时</span>
                 <span className="text-right text-[#475467]">
                   {result.durationMs} ms
                 </span>
@@ -452,7 +452,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                 <button
                   type="button"
                   onClick={() => setExpanded(false)}
-                  className="mt-4 inline-flex items-center gap-1 text-[10px] text-[#667085] hover:text-[#344054]"
+                  className="mt-4 inline-flex items-center gap-1 text-[12px] text-[#667085] hover:text-[#344054]"
                 >
                   <Shrink size={11} /> 退出全屏
                 </button>
@@ -469,7 +469,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
     return (
       <div className={frameClassName}>
         <div className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-[#e7eaf0] bg-white px-3">
-          <div className="flex min-w-0 items-center gap-3 text-[10px]">
+          <div className="flex min-w-0 items-center gap-3 text-[12px]">
             <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-[#067647]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#12b76a]" />
               查询成功
@@ -492,20 +492,20 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
           <div className="flex shrink-0 items-center gap-1">
             {searchOpen ? (
               <div className="mr-1 flex h-7 w-[190px] items-center rounded-[4px] border border-[#d8deea] bg-white px-2 focus-within:border-[#a9c5ee]">
-                <Search size={12} className="shrink-0 text-[#98a2b3]" />
+                <Search size={12} className="shrink-0 text-[#667085]" />
                 <input
                   autoFocus
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="搜索当前结果"
-                  className="min-w-0 flex-1 border-0 bg-transparent px-1.5 text-[11px] text-[#344054] outline-none placeholder:text-[#b0b7c3]"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-1.5 text-[12px] text-[#344054] outline-none placeholder:text-[#b0b7c3]"
                 />
                 {query ? (
                   <button
                     type="button"
                     title="清空搜索"
                     onClick={() => setQuery('')}
-                    className="text-[#98a2b3] hover:text-[#667085]"
+                    className="text-[#667085] hover:text-[#667085]"
                   >
                     <X size={11} />
                   </button>
@@ -543,7 +543,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
               </ToolbarButton>
               {columnMenuOpen ? (
                 <div className="absolute right-0 top-8 z-50 max-h-[260px] w-[230px] overflow-auto rounded-[5px] border border-[#dfe4ec] bg-white py-1.5">
-                  <div className="flex items-center justify-between border-b border-[#eef0f4] px-2.5 pb-1.5 text-[10px] text-[#98a2b3]">
+                  <div className="flex items-center justify-between border-b border-[#eef0f4] px-2.5 pb-1.5 text-[12px] text-[#667085]">
                     <span>显示列</span>
                     {hiddenColumnKeys.size ? (
                       <button
@@ -563,7 +563,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                         type="button"
                         key={key}
                         onClick={() => toggleColumn(key)}
-                        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-[#475467] hover:bg-[#f7f9fc]"
+                        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] text-[#475467] hover:bg-[#f7f9fc]"
                       >
                         <span
                           className={[
@@ -602,18 +602,18 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                 <Info size={13} />
               </ToolbarButton>
               {detailOpen ? (
-                <div className="absolute right-0 top-8 z-50 w-[230px] rounded-[5px] border border-[#dfe4ec] bg-white p-3 text-[10px]">
+                <div className="absolute right-0 top-8 z-50 w-[230px] rounded-[5px] border border-[#dfe4ec] bg-white p-3 text-[12px]">
                   <div className="font-medium text-[#344054]">结果详情</div>
                   <div className="mt-2 grid grid-cols-[72px_1fr] gap-y-1.5 text-[#667085]">
-                    <span className="text-[#98a2b3]">返回行数</span>
+                    <span className="text-[#667085]">返回行数</span>
                     <span className="text-right">{returnedRows}</span>
-                    <span className="text-[#98a2b3]">字段数量</span>
+                    <span className="text-[#667085]">字段数量</span>
                     <span className="text-right">{columns.length}</span>
-                    <span className="text-[#98a2b3]">执行耗时</span>
+                    <span className="text-[#667085]">执行耗时</span>
                     <span className="text-right">{result.durationMs} ms</span>
                     {output?.dataSourceId ? (
                       <>
-                        <span className="text-[#98a2b3]">数据源</span>
+                        <span className="text-[#667085]">数据源</span>
                         <span
                           className="truncate text-right"
                           title={output.dataSourceId}
@@ -622,7 +622,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                         </span>
                       </>
                     ) : null}
-                    <span className="text-[#98a2b3]">结果状态</span>
+                    <span className="text-[#667085]">结果状态</span>
                     <span className="text-right">
                       {output?.truncated ? '已截断' : '完整返回'}
                     </span>
@@ -642,11 +642,11 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
 
         <div className="min-h-0 flex-1 overflow-auto bg-white">
           {visibleColumns.length ? (
-            <table className="min-w-full table-fixed border-separate border-spacing-0 whitespace-nowrap text-[11px]">
+            <table className="min-w-full table-fixed border-separate border-spacing-0 whitespace-nowrap text-[12px]">
               <thead className="sticky top-0 z-20 bg-[#f7f9fc] text-[#344054]">
                 <tr>
                   <th
-                    className="sticky left-0 z-30 w-12 border-b border-r border-[#dfe4ec] bg-[#f3f6fa] px-2 py-2 text-right text-[10px] font-medium text-[#98a2b3]"
+                    className="sticky left-0 z-30 w-12 border-b border-r border-[#dfe4ec] bg-[#f3f6fa] px-2 py-2 text-right text-[12px] font-medium text-[#667085]"
                     style={{ width: 48 }}
                   >
                     #
@@ -692,7 +692,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
                     key={rowIndex}
                     className="odd:bg-white even:bg-[#fcfdff] hover:!bg-[#f4f8ff]"
                   >
-                    <td className="sticky left-0 z-10 border-b border-r border-[#e9edf3] bg-[#fafbfd] px-2 py-1.5 text-right text-[10px] text-[#98a2b3]">
+                    <td className="sticky left-0 z-10 border-b border-r border-[#e9edf3] bg-[#fafbfd] px-2 py-1.5 text-right text-[12px] text-[#667085]">
                       {rowIndex + 1}
                     </td>
                     {visibleColumns.map(({ column, index, key }) => {
@@ -726,7 +726,7 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
               </tbody>
             </table>
           ) : columns.length ? (
-            <div className="flex h-full items-center justify-center text-center text-[11px] text-[#98a2b3]">
+            <div className="flex h-full items-center justify-center text-center text-[12px] text-[#667085]">
               <div>
                 <div>所有字段都已隐藏</div>
                 <button
@@ -739,13 +739,13 @@ const SqlResultWorkspace = ({ result }: SqlResultWorkspaceProps) => {
               </div>
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center text-[11px] text-[#98a2b3]">
+            <div className="flex h-full items-center justify-center text-[12px] text-[#667085]">
               SQL 执行成功，结果集没有可展示的字段
             </div>
           )}
 
           {visibleColumns.length && searchActive && !filteredRows.length ? (
-            <div className="absolute inset-x-0 top-20 text-center text-[11px] text-[#98a2b3]">
+            <div className="absolute inset-x-0 top-20 text-center text-[12px] text-[#667085]">
               当前结果中没有匹配 “{query.trim()}” 的数据
             </div>
           ) : null}

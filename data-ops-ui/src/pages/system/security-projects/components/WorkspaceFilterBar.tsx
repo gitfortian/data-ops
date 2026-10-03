@@ -74,7 +74,7 @@ export default function WorkspaceFilterBar({
     <div className="mb-4 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="inline-flex h-8 w-fit items-center rounded-[8px] bg-[#f2f3f5] px-3.5 text-[13px] font-semibold text-[#242731]">
         全部工作空间
-        <span className="ml-1.5 text-xs font-medium text-[#98a2b3]">
+        <span className="ml-1.5 text-xs font-medium text-[#667085]">
           {total}
         </span>
       </div>

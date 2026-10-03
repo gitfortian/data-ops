@@ -708,7 +708,7 @@ const DiscoveryTab = ({ levelOptions, categoryOptions, levels, categories }: {
       </Modal>
 
       <Modal title="扫描字段生成候选" open={scanOpen} onOk={runScan} confirmLoading={scanning} onCancel={() => setScanOpen(false)} destroyOnClose okText="开始扫描" width={640}>
-        <div className="mb-2 text-[12px] text-[#98a2b3]">填写待扫描字段元数据，规则只匹配列名和注释，不读取数据行；命中后生成「候选」分级标签，再到「资产分级」确认。</div>
+        <div className="mb-2 text-[12px] text-[#667085]">填写待扫描字段元数据，规则只匹配列名和注释，不读取数据行；命中后生成「候选」分级标签，再到「资产分级」确认。</div>
         <Form form={scanForm} layout="vertical" preserve={false} initialValues={{ fields: [{}] }}>
           <Form.List name="fields">
             {(fieldsList, { add, remove: removeRow }) => (

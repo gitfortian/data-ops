@@ -170,7 +170,7 @@ export default function TaskBasicSection({
                 <span className="text-[12px] font-medium text-[#667085]">
                   Source 来源端
                 </span>
-                <Tag className="!m-0 !border-[#ffd1da] !bg-[#fff4f6] !text-[11px] !text-[var(--yak-brand-color)]">
+                <Tag className="!m-0 !border-[#ffd1da] !bg-[#fff4f6] !text-[12px] !text-[var(--yak-brand-color)]">
                   {editor.source.dbType || 'SOURCE'}
                 </Tag>
               </div>
@@ -188,7 +188,7 @@ export default function TaskBasicSection({
               />
             </div>
 
-            <div className="flex items-center justify-center text-[18px] text-[#98a2b3] max-md:rotate-90">
+            <div className="flex items-center justify-center text-[18px] text-[#667085] max-md:rotate-90">
               <ArrowRightOutlined />
             </div>
 
@@ -197,7 +197,7 @@ export default function TaskBasicSection({
                 <span className="text-[12px] font-medium text-[#667085]">
                   Sink 目标端
                 </span>
-                <Tag className="!m-0 !border-[#ffd1da] !bg-[#fff4f6] !text-[11px] !text-[var(--yak-brand-color)]">
+                <Tag className="!m-0 !border-[#ffd1da] !bg-[#fff4f6] !text-[12px] !text-[var(--yak-brand-color)]">
                   {editor.sink.dbType || 'SINK'}
                 </Tag>
               </div>
@@ -231,7 +231,7 @@ export default function TaskBasicSection({
             <span className="text-[13px] font-medium text-[#344054]">
               {modeLabel[editor.mode]}
             </span>
-            <span className="text-[11px] text-[#98a2b3]">
+            <span className="text-[12px] text-[#667085]">
               创建后不可切换类型
             </span>
           </div>

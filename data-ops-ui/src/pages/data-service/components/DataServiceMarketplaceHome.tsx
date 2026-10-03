@@ -42,13 +42,13 @@ const DataServiceMarketplaceHome = ({
   return (
     <div className="flex min-h-[calc(100vh-64px)] flex-col bg-white">
       <section
-        className="relative overflow-hidden px-5 py-9"
+        className="relative overflow-hidden px-5 py-5"
         style={{
           background:
             'linear-gradient(180deg, #f7f9fc 0%, #fbfcfd 66%, #ffffff 100%)',
         }}
       >
-        <div className="pointer-events-none absolute left-[4.5%] top-1/2 hidden -translate-y-1/2 opacity-90 lg:block">
+        <div className="pointer-events-none absolute left-[4.5%] top-1/2 hidden -translate-y-1/2 opacity-30 xl:block">
           <DataServiceMarketplaceIllustration />
         </div>
         <div className="pointer-events-none absolute -left-14 bottom-[-92px] h-[190px] w-[190px] rounded-full bg-[rgba(254,44,85,.025)]" />
@@ -75,13 +75,13 @@ const DataServiceMarketplaceHome = ({
                 <h2 className="m-0 text-[15px] font-semibold text-[#161823]">
                   {intl.formatMessage({ id: 'pages.dataService.marketplace.recommended' })}
                 </h2>
-                <div className="mt-1 text-[11px] text-[#98a2b3]">
+                <div className="mt-1 text-[12px] text-[#667085]">
                   {intl.formatMessage({
                     id: 'pages.dataService.marketplace.recommendedDescription',
                   })}
                 </div>
               </div>
-              <span className="text-[11px] text-[#98a2b3]">
+              <span className="text-[12px] text-[#667085]">
                 {intl.formatMessage(
                   { id: 'pages.dataService.marketplace.count' },
                   { count: recommendedServices.length },
@@ -119,7 +119,7 @@ const DataServiceMarketplaceHome = ({
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <div className="rounded-lg bg-white px-3 py-3">
-                  <div className="text-[10px] text-[#98a2b3]">
+                  <div className="text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dataService.marketplace.totalApis' })}
                   </div>
                   <div className="mt-1 text-[21px] font-semibold tabular-nums text-[#161823]">
@@ -127,7 +127,7 @@ const DataServiceMarketplaceHome = ({
                   </div>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-3">
-                  <div className="text-[10px] text-[#98a2b3]">
+                  <div className="text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dataService.marketplace.running' })}
                   </div>
                   <div className="mt-1 text-[21px] font-semibold tabular-nums text-[#161823]">
@@ -135,7 +135,7 @@ const DataServiceMarketplaceHome = ({
                   </div>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-3">
-                  <div className="text-[10px] text-[#98a2b3]">
+                  <div className="text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dataService.marketplace.recentCalls' })}
                   </div>
                   <div className="mt-1 text-[21px] font-semibold tabular-nums text-[#161823]">
@@ -151,13 +151,13 @@ const DataServiceMarketplaceHome = ({
                   <div className="text-[13px] font-semibold text-[#30323b]">
                     {intl.formatMessage({ id: 'pages.dataService.marketplace.hotCalls' })}
                   </div>
-                  <div className="mt-1 text-[10px] text-[#98a2b3]">
+                  <div className="mt-1 text-[12px] text-[#667085]">
                     {intl.formatMessage({
                       id: 'pages.dataService.marketplace.hotCallsDescription',
                     })}
                   </div>
                 </div>
-                <span className="text-[10px] text-[#98a2b3]">
+                <span className="text-[12px] text-[#667085]">
                   Top {hotServices.length}
                 </span>
               </div>

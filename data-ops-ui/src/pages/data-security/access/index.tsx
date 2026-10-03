@@ -215,14 +215,14 @@ const DataSecurityAccessPage = () => {
 
   const columns: ColumnsType<AccessPolicy> = [
     { title: '策略名称', dataIndex: 'policyName', width: 180 },
-    { title: '主体', key: 'subject', width: 160, render: (_, r) => `${r.subjectType ?? '-'}：${r.subjectKey ?? '-'}` },
+    { title: '主体', key: 'subject', width: 160, render: (_, r) => `${r.subjectType === 'USER' ? '用户' : r.subjectType === 'ROLE' ? '角色' : r.subjectType ?? '-'}：${r.subjectKey ?? '-'}` },
     {
       title: '资源范围', key: 'scope', ellipsis: true,
       render: (_, r) => r.scopeType === 'LEVEL'
         ? `等级：${levels.find((l) => l.id === r.levelId)?.levelName ?? '-'}`
         : r.scopeType === 'ALL' ? '全部数据' : [r.datasourceId ? `数据源 ${r.datasourceId}` : null, r.dbName, r.tableName, r.columnName].filter(Boolean).join(' / '),
     },
-    { title: '操作', dataIndex: 'accessType', width: 80, render: (v?: string) => (v === 'WRITE' ? '写入' : v === 'EXPORT' ? '导出' : '读取') },
+    { title: '访问动作', dataIndex: 'accessType', width: 90, render: (v?: string) => (v === 'WRITE' ? '写入' : v === 'EXPORT' ? '导出' : v === 'READ' ? '读取' : v || '-') },
     {
       title: '效果', dataIndex: 'effect', width: 80,
       render: (v?: string) => <Tag color={v === 'DENY' ? 'red' : 'blue'}>{v === 'DENY' ? '拒绝' : '允许'}</Tag>,
@@ -251,7 +251,7 @@ const DataSecurityAccessPage = () => {
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
       <PageHeader
-        title="权限管理"
+        title="数据访问策略"
         subtitle="数据级访问策略的申请、审批与裁决试算"
         extra={<YakButton className="!h-9 !rounded-lg" onClick={() => { setDecision(null); setDecideOpen(true); }}>裁决试算</YakButton>}
       />
@@ -309,7 +309,7 @@ const DataSecurityAccessPage = () => {
               </Tag>
               {decision.maskingRequired ? <Tag color="orange">要求脱敏 · {decision.algoCode}</Tag> : <Tag>未配置脱敏指令</Tag>}
             </div>
-            {decision.matchedPolicyId ? <div className="mt-2 text-[12px] text-[#98a2b3]">命中策略 #{decision.matchedPolicyId}</div> : null}
+            {decision.matchedPolicyId ? <div className="mt-2 text-[12px] text-[#667085]">命中策略 #{decision.matchedPolicyId}</div> : null}
           </div>
         ) : null}
       </Drawer>

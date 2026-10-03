@@ -26,7 +26,7 @@ const OperationLogDrawer = ({
       render: (_, record) => (
         <div className="space-y-1 py-0.5">
           <div className="font-medium text-[#172033]">{record.operator}</div>
-          <div className="text-[11px] text-[#98a2b3]">
+          <div className="text-[12px] text-[#667085]">
             {record.operationTime}
           </div>
         </div>

@@ -54,7 +54,7 @@ export function DataBindingPanel({
     return (
       <div className="rounded-[7px] border border-dashed border-[#dfe2e6] px-4 py-5 text-center">
         <div className="text-[12px] font-medium text-[#667085]">请选择一个组件</div>
-        <div className="mt-1 text-[11px] leading-[18px] text-[#a3a8b0]">
+        <div className="mt-1 text-[12px] leading-[18px] text-[#a3a8b0]">
           点击左侧大屏中的图表或指标卡进行数据绑定。
         </div>
       </div>
@@ -137,7 +137,7 @@ export function DataBindingPanel({
             <div className="truncate text-[12px] font-medium text-[#444950]">
               {component.title || component.id}
             </div>
-            <div className="mt-1 text-[11px] text-[#98a2b3]">
+            <div className="mt-1 text-[12px] text-[#667085]">
               {COMPONENT_LABELS[component.type]} · {component.id}
             </div>
           </div>
@@ -168,7 +168,7 @@ export function DataBindingPanel({
       </label>
 
       {datasetsError ? (
-        <div className="mt-2 rounded-[6px] bg-[#fff4f4] px-3 py-2 text-[11px] leading-5 text-[#c93b3b]">
+        <div className="mt-2 rounded-[6px] bg-[#fff4f4] px-3 py-2 text-[12px] leading-5 text-[#c93b3b]">
           {datasetsError}
         </div>
       ) : null}
@@ -202,7 +202,7 @@ export function DataBindingPanel({
                 icon={<Plus size={13} />}
                 disabled={!fields.length || binding.metrics.length >= metricLimit}
                 onClick={addMetric}
-                className="px-1 text-[11px]"
+                className="px-1 text-[12px]"
               >
                 添加
               </YakButton>
@@ -246,7 +246,7 @@ export function DataBindingPanel({
                       onChange={(aggregation: ScreenAggregation) => updateMetric(index, { aggregation })}
                     />
                     {currentField && currentField.dataType !== 'number' && metric.aggregation !== 'COUNT' && metric.aggregation !== 'COUNT_DISTINCT' ? (
-                      <div className="mt-1 text-[10px] leading-4 text-[#c27b2b]">
+                      <div className="mt-1 text-[12px] leading-4 text-[#c27b2b]">
                         非数值字段建议使用计数或去重计数。
                       </div>
                     ) : null}
@@ -258,7 +258,7 @@ export function DataBindingPanel({
                 <button
                   type="button"
                   onClick={addMetric}
-                  className="flex w-full items-center justify-center gap-1 rounded-[7px] border border-dashed border-[#dfe2e6] bg-white py-3 text-[11px] text-[#8a9099] hover:bg-[#fafafa]"
+                  className="flex w-full items-center justify-center gap-1 rounded-[7px] border border-dashed border-[#dfe2e6] bg-white py-3 text-[12px] text-[#8a9099] hover:bg-[#fafafa]"
                 >
                   <Plus size={13} /> 添加指标
                 </button>
@@ -267,7 +267,7 @@ export function DataBindingPanel({
           </div>
 
           <div className="mt-4 flex items-center justify-between rounded-[7px] bg-[#f8f9fa] px-3 py-2.5">
-            <div className="flex min-w-0 items-center gap-2 text-[11px] text-[#667085]">
+            <div className="flex min-w-0 items-center gap-2 text-[12px] text-[#667085]">
               <Database size={13} />
               <span className="truncate">{dataset.name}</span>
             </div>
@@ -275,7 +275,7 @@ export function DataBindingPanel({
               type="text"
               size="small"
               icon={<Unlink size={12} />}
-              className="px-1 text-[11px] text-[#8a9099]"
+              className="px-1 text-[12px] text-[#8a9099]"
               onClick={() => onChange(undefined)}
             >
               清除
@@ -283,7 +283,7 @@ export function DataBindingPanel({
           </div>
 
           {queryError ? (
-            <div className="mt-2 rounded-[6px] bg-[#fff4f4] px-3 py-2 text-[11px] leading-5 text-[#c93b3b]">
+            <div className="mt-2 rounded-[6px] bg-[#fff4f4] px-3 py-2 text-[12px] leading-5 text-[#c93b3b]">
               {queryError}
             </div>
           ) : null}
@@ -291,7 +291,7 @@ export function DataBindingPanel({
       ) : null}
 
       {binding && !dataset && !datasetsLoading ? (
-        <div className="mt-3 rounded-[6px] bg-[#fff8eb] px-3 py-2 text-[11px] leading-5 text-[#a66a16]">
+        <div className="mt-3 rounded-[6px] bg-[#fff8eb] px-3 py-2 text-[12px] leading-5 text-[#a66a16]">
           原绑定的数据集已下线或不存在，请重新选择数据集。
         </div>
       ) : null}

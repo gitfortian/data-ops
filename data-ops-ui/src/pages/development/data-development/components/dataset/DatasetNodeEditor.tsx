@@ -359,7 +359,7 @@ export default function DatasetNodeEditor({
       dataIndex: 'physicalName',
       width: 150,
       render: (value: string) => (
-        <span className="font-mono text-[11px] text-[#344054]">{value}</span>
+        <span className="font-mono text-[12px] text-[#344054]">{value}</span>
       ),
     },
     {
@@ -380,7 +380,7 @@ export default function DatasetNodeEditor({
       dataIndex: 'dataType',
       width: 92,
       render: (value: string) => (
-        <span className="font-mono text-[10px] text-[#667085]">{value}</span>
+        <span className="font-mono text-[12px] text-[#667085]">{value}</span>
       ),
     },
     {
@@ -404,7 +404,7 @@ export default function DatasetNodeEditor({
       dataIndex: 'nullable',
       width: 54,
       render: (value: boolean) => (
-        <span className="text-[11px] text-[#667085]">{value ? '是' : '否'}</span>
+        <span className="text-[12px] text-[#667085]">{value ? '是' : '否'}</span>
       ),
     },
     {
@@ -644,7 +644,7 @@ export default function DatasetNodeEditor({
 
   const fieldsPanel = (
     <div>
-      <div className="mb-3 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mb-3 text-[12px] leading-5 text-[#667085]">
         字段来自当前 SQL 输出结构。运行查询后会同步字段，再调整显示名称、角色和描述。
       </div>
       <Table<DevelopmentDatasetFieldDraft>
@@ -677,12 +677,12 @@ export default function DatasetNodeEditor({
             <div className="flex items-center gap-2">
               <span className="font-medium text-[#344054]">DV{version.versionNo}</span>
               {index === 0 ? (
-                <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[10px] text-[#667085]">
+                <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[12px] text-[#667085]">
                   当前发布
                 </span>
               ) : null}
             </div>
-            <div className="mt-0.5 truncate text-[10px] text-[#98a2b3]">
+            <div className="mt-0.5 truncate text-[12px] text-[#667085]">
               {version.sourceType === 'SQL_QUERY' ? '独立 SQL' : version.sourceType}
               {' · '}
               {formatTime(version.createTime)}
@@ -690,7 +690,7 @@ export default function DatasetNodeEditor({
           </div>
         </div>
       )) : (
-        <div className="py-8 text-center text-[11px] text-[#98a2b3]">暂无已发布 DatasetVersion</div>
+        <div className="py-8 text-center text-[12px] text-[#667085]">暂无已发布 DatasetVersion</div>
       )}
     </div>
   );
@@ -775,7 +775,7 @@ export default function DatasetNodeEditor({
       <div className="flex min-h-0 flex-1 items-center justify-center bg-white px-6">
         <div className="max-w-[520px] text-center">
           <div className="text-[14px] font-semibold text-[#344054]">Dataset Node 加载失败</div>
-          <div className="mt-2 text-[12px] leading-5 text-[#98a2b3]">
+          <div className="mt-2 text-[12px] leading-5 text-[#667085]">
             {loadError || '未返回有效编辑上下文'}
           </div>
           <YakButton
@@ -865,7 +865,7 @@ export default function DatasetNodeEditor({
             />
           </div>
 
-          <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[10px] text-[#7b808a]">
+          <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[12px] text-[#7b808a]">
             <div className="flex min-w-0 items-center gap-3">
               <span className="font-medium text-[#667085]">DATASET</span>
               <span className="truncate">{node.name}</span>
@@ -960,7 +960,7 @@ export default function DatasetNodeEditor({
                         }
                         void load();
                       }}
-                      className="flex h-7 items-center gap-1 rounded-[3px] px-2 text-[11px] text-[#475467] transition-colors hover:bg-[#f5f5f6]"
+                      className="flex h-7 items-center gap-1 rounded-[3px] px-2 text-[12px] text-[#475467] transition-colors hover:bg-[#f5f5f6]"
                     >
                       <RefreshCw size={13} strokeWidth={1.8} />
                       刷新

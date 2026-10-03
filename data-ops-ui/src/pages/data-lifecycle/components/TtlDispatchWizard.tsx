@@ -87,7 +87,7 @@ const PreviewCard = ({
             </Tag>
           ))}
           {split.deletedCount > split.deletedPartitions.length && (
-            <span className="text-[12px] text-[#98a2b3]">… 仅展示前 {split.deletedPartitions.length} 个</span>
+            <span className="text-[12px] text-[#667085]">… 仅展示前 {split.deletedPartitions.length} 个</span>
           )}
         </div>
       )}
@@ -95,7 +95,7 @@ const PreviewCard = ({
       {preview.statement && (
         <div className="mt-3 rounded-lg bg-[#0b1021] p-3">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[12px] text-[#98a2b3]">将下发的 TTL 语句</span>
+            <span className="text-[12px] text-[#667085]">将下发的 TTL 语句</span>
             <YakButton size="small" className="!h-6 !px-2 !text-[12px]" onClick={() => void copyText(preview.statement ?? '')}>
               复制
             </YakButton>
@@ -229,7 +229,7 @@ const TtlDispatchWizard = ({ open, modelIds, onClose, onDone }: TtlDispatchWizar
               </Tag>
             </div>
           ))}
-          <div className="mt-2 text-[12px] text-[#98a2b3]">
+          <div className="mt-2 text-[12px] text-[#667085]">
             成功 {successCount}/{outcomes.length}；失败记录可在「TTL 监控 → 下发记录」中重试。
           </div>
         </div>

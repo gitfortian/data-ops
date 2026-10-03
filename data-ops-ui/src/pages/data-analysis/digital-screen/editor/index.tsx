@@ -9,7 +9,7 @@ export default function DigitalScreenEditorPage() {
 
   if (editor.isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f5f6] text-[13px] text-[#98a2b3]">
+      <div className="flex h-screen items-center justify-center bg-[#f4f5f6] text-[13px] text-[#667085]">
         正在加载数字化大屏...
       </div>
     );

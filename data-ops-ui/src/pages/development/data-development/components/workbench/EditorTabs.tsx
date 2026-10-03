@@ -99,7 +99,7 @@ const EditorTabs = ({
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="max-w-[200px] truncate">{node?.name || nodeId}</span>
                   {appearance ? (
-                    <span className="shrink-0 text-[10px] text-[#98a2b3]">
+                    <span className="shrink-0 text-[12px] text-[#667085]">
                       {appearance.label}
                     </span>
                   ) : null}
@@ -190,7 +190,7 @@ const EditorTabs = ({
                     {node.name}
                   </span>
                   {node.type === 'SQL' ? (
-                    <span className="shrink-0 text-[9px] text-[#98a2b3]">
+                    <span className="shrink-0 text-[9px] text-[#667085]">
                       {appearance.label}
                     </span>
                   ) : null}
@@ -211,7 +211,7 @@ const EditorTabs = ({
                   title={intl.formatMessage({ id: 'pages.dataDevelopment.tabs.close' })}
                   onClick={() => onClose(nodeId)}
                   className={[
-                    'mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-[3px] text-[#98a2b3] transition-all',
+                    'mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-[3px] text-[#667085] transition-all',
                     active
                       ? 'opacity-100 hover:bg-[#f2f4f7] hover:text-[#475467]'
                       : 'opacity-0 group-hover:opacity-100 hover:bg-[#e4e7ec] hover:text-[#475467]',

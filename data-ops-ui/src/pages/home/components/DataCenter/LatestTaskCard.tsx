@@ -27,9 +27,9 @@ interface TaskMetricRowProps {
 function TaskMetricRow({ label, value, danger = false }: TaskMetricRowProps) {
   return (
     <div className="flex h-6 items-center justify-between">
-      <span className="text-[11px] font-medium text-white/90">{label}</span>
+      <span className="text-[12px] font-medium text-white/90">{label}</span>
       <span
-        className={`max-w-[84px] truncate text-[11px] font-semibold ${
+        className={`max-w-[84px] truncate text-[12px] font-semibold ${
           danger ? "text-[#ff8993]" : "text-white"
         }`}
         title={typeof value === "string" ? value : undefined}
@@ -148,7 +148,7 @@ function LatestTaskContent({ task }: { task: HomeLatestTask }) {
       {/* 顶部任务信息 */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-3 pt-3">
         <div className="min-w-0 pr-2 text-white">
-          <div className="truncate text-[11px] font-semibold leading-[16px]">
+          <div className="truncate text-[12px] font-semibold leading-[16px]">
             {taskTypeLabel(task.taskType, resolveTaskType)}
           </div>
 
@@ -161,7 +161,7 @@ function LatestTaskContent({ task }: { task: HomeLatestTask }) {
               mt-[1px]
               max-w-[118px]
               truncate
-              text-[10px]
+              text-[12px]
               font-medium
               leading-[14px]
               text-white/90
@@ -262,7 +262,7 @@ function LatestTaskContent({ task }: { task: HomeLatestTask }) {
                 h-[24px]
                 items-center
                 gap-[2px]
-                text-[11px]
+                text-[12px]
                 font-semibold
                 text-white
               "
@@ -311,7 +311,7 @@ function TaskLoadingCard() {
     <div className="flex h-[262px] w-full items-center justify-center overflow-hidden rounded-[8px] bg-[#f4f5f6] lg:w-[176px]">
       <div className="flex flex-col items-center gap-2">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#d9dce1] border-t-[#8b8f97]" />
-        <span className="text-[11px] text-[#8b8f97]">
+        <span className="text-[12px] text-[#8b8f97]">
           {intl.formatMessage({ id: "pages.home.dataCenter.latest.loading" })}
         </span>
       </div>
@@ -323,7 +323,7 @@ function TaskFailedCard() {
   const intl = useIntl();
   return (
     <div className="flex h-[240px] w-full items-center justify-center rounded-[8px] bg-[#f7f8fa] px-4 text-center lg:w-[176px]">
-      <span className="text-[11px] text-[#9ca0a8]">
+      <span className="text-[12px] text-[#9ca0a8]">
         {intl.formatMessage({ id: "pages.home.dataCenter.latest.failed" })}
       </span>
     </div>

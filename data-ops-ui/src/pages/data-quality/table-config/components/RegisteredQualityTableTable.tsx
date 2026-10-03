@@ -75,7 +75,7 @@ const RegisteredQualityTableTable = ({
                         {record.remarks}
                       </div>
                     ) : null}
-                    <div className="mt-1 truncate text-[11px] text-[#98a2b3]">
+                    <div className="mt-1 truncate text-[12px] text-[#667085]">
                       {[record.databaseName, record.schemaName, record.tableName]
                         .filter(Boolean)
                         .join(' / ')}
@@ -93,7 +93,7 @@ const RegisteredQualityTableTable = ({
                     <div className="truncate text-[#344054]">
                       {record.dataSourceName}
                     </div>
-                    <Tag className="!m-0 !border-0 !bg-[#f2f4f7] !text-[11px] !text-[#667085]">
+                    <Tag className="!m-0 !border-0 !bg-[#f2f4f7] !text-[12px] !text-[#667085]">
                       {record.tableType || 'TABLE'}
                     </Tag>
                   </div>
@@ -106,7 +106,7 @@ const RegisteredQualityTableTable = ({
                 width: 170,
                 render: (_, record) => (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <span className="text-[#98a2b3]">
+                    <span className="text-[#667085]">
                       {intl.formatMessage({
                         id: 'pages.dataQuality.tableConfig.monitorCount',
                       })}
@@ -114,7 +114,7 @@ const RegisteredQualityTableTable = ({
                     <span className="font-medium text-[#344054]">
                       {record.monitorCount}
                     </span>
-                    <span className="text-[#98a2b3]">
+                    <span className="text-[#667085]">
                       {intl.formatMessage({
                         id: 'pages.dataQuality.tableConfig.ruleCount',
                       })}
@@ -133,7 +133,7 @@ const RegisteredQualityTableTable = ({
                 render: (_, record) => (
                   <div className="space-y-1.5 py-0.5">
                     <CheckResultTag value={record.lastResult} />
-                    <div className="text-[11px] text-[#98a2b3]">
+                    <div className="text-[12px] text-[#667085]">
                       {record.lastRunTime ||
                         intl.formatMessage({
                           id: 'pages.dataQuality.tableConfig.noRunRecord',
@@ -150,7 +150,7 @@ const RegisteredQualityTableTable = ({
                 render: (_, record) => (
                   <div className="space-y-1 text-xs">
                     <div className="text-[#344054]">{record.registeredBy}</div>
-                    <div className="text-[#98a2b3]">{record.registeredAt}</div>
+                    <div className="text-[#667085]">{record.registeredAt}</div>
                   </div>
                 ),
               },

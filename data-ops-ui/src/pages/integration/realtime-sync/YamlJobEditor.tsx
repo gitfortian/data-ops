@@ -191,7 +191,7 @@ export default function YamlJobEditor({
                 实时同步编辑器 · Yak Realtime YAML v1
               </div>
               <h1 className="mb-0 mt-1 text-[20px] font-semibold text-[#101828]">{job.name}</h1>
-              <div className="mt-1 text-[12px] text-[#98a2b3]">
+              <div className="mt-1 text-[12px] text-[#667085]">
                 任务 ID：{job.id} · 运行环境 #{job.runtimeEnvironmentId}
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function YamlJobEditor({
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eaecf0] px-5 py-4">
                 <div>
                   <div className="text-[14px] font-semibold text-[#101828]">任务 YAML</div>
-                  <div className="mt-1 text-[11px] text-[#98a2b3]">
+                  <div className="mt-1 text-[12px] text-[#667085]">
                     YAML 只描述逻辑 Spec；数据源密码、主机地址和 JDBC URL 不进入配置文件。
                   </div>
                 </div>

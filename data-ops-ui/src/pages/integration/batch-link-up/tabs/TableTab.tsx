@@ -106,7 +106,7 @@ const TableNode: React.FC<{
           <span className="block truncate text-sm font-medium text-slate-800">
             {item.table}
           </span>
-          <span className="mt-0.5 block text-[11px] text-slate-400">
+          <span className="mt-0.5 block text-[12px] text-slate-400">
             {isSource ? "来源表" : "目标表"}
           </span>
         </span>

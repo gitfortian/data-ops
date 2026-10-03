@@ -104,11 +104,11 @@ const RegisterTableDrawer = ({
         },
         body: {
           padding: 0,
-          overflow: 'hidden',
+          overflowY: 'auto',
         },
       }}
     >
-      <div className="grid h-full min-h-[580px] grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
+      <div className="grid min-h-[580px] grid-cols-1 md:h-full md:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
         <div className="flex min-w-0 flex-col border-r border-[#e8e9ec] p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-semibold text-[#161823]">
@@ -128,7 +128,7 @@ const RegisterTableDrawer = ({
             allowClear
             variant="filled"
             value={candidateKeyword}
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             placeholder={intl.formatMessage({
               id: 'pages.dataQuality.tableConfig.drawer.search',
             })}
@@ -182,7 +182,7 @@ const RegisterTableDrawer = ({
                             {record.remarks}
                           </div>
                         ) : null}
-                        <div className="mt-1 truncate text-[11px] text-[#98a2b3]">
+                        <div className="mt-1 truncate text-[12px] text-[#667085]">
                           {intl.formatMessage({
                             id: 'pages.dataQuality.tableConfig.drawer.path',
                           })}{' '}
@@ -264,7 +264,7 @@ const RegisterTableDrawer = ({
                       <div className="truncate text-[13px] font-medium text-[#161823]">
                         {record.tableName}
                       </div>
-                      <div className="mt-0.5 truncate text-xs text-[#98a2b3]">
+                      <div className="mt-0.5 truncate text-xs text-[#667085]">
                         {[record.databaseName, record.schemaName, record.tableName]
                           .filter(Boolean)
                           .join(' / ')}

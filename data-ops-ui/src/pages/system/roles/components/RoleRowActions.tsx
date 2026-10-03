@@ -101,7 +101,7 @@ export default function RoleRowActions({
             className="!px-1.5 !text-slate-600 hover:!text-slate-900"
           >
             更多
-            <DownOutlined className="ml-1 text-[10px]" />
+            <DownOutlined className="ml-1 text-[12px]" />
           </YakButton>
         </Dropdown>
       )}

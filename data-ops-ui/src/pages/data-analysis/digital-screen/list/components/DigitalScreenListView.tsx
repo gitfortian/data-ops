@@ -153,7 +153,7 @@ function DigitalScreenEmptyState() {
 function DigitalScreenFilterEmptyState({ onReset }: { onReset: () => void }) {
   return (
     <div className="flex min-h-[420px] flex-col items-center justify-center pb-8 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#F5F6F7] text-[#98A2B3]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#F5F6F7] text-[#667085]">
         <Monitor size={22} strokeWidth={1.7} />
       </div>
       <div className="mt-3 text-[13px] font-medium text-[#667085]">没有匹配的大屏</div>
@@ -206,7 +206,7 @@ export function DigitalScreenListView({
                   ].join(' ')}
                 >
                   {item.label}
-                  <span className="ml-1 text-[11px] font-normal text-[#a3a8b0]">{item.count}</span>
+                  <span className="ml-1 text-[12px] font-normal text-[#a3a8b0]">{item.count}</span>
                 </button>
               );
             })}
@@ -215,7 +215,7 @@ export function DigitalScreenListView({
             allowClear
             value={keyword}
             onChange={(event) => onKeywordChange(event.target.value)}
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             placeholder="搜索大屏"
             className="w-[220px]"
             variant="filled"
@@ -223,7 +223,7 @@ export function DigitalScreenListView({
         </div>
 
         {isLoading && screens.length === 0 ? (
-          <div className="flex min-h-[470px] items-center justify-center text-[13px] text-[#98A2B3]">正在加载数字化大屏...</div>
+          <div className="flex min-h-[470px] items-center justify-center text-[13px] text-[#667085]">正在加载数字化大屏...</div>
         ) : filteredScreens.length === 0 ? (
           keyword.trim() || status !== 'all'
             ? <DigitalScreenFilterEmptyState onReset={onResetFilters} />
@@ -253,14 +253,14 @@ export function DigitalScreenListView({
                         <button type="button" onClick={() => onEdit(screen)} className="max-w-full truncate border-0 bg-transparent p-0 text-left text-[14px] font-semibold text-[#161823] hover:underline">
                           {screen.name}
                         </button>
-                        <div className="mt-1 flex items-center gap-2 text-[11px] text-[#98a2b3]">
+                        <div className="mt-1 flex items-center gap-2 text-[12px] text-[#667085]">
                           <span>{template?.name || '未知模板'}</span>
                           <span className="text-[#d7dade]">·</span>
                           <span>{formatDateTime(screen.updatedAt)}</span>
                         </div>
                       </div>
                       <span className={[
-                        'shrink-0 rounded-[4px] px-2 py-1 text-[11px] font-medium',
+                        'shrink-0 rounded-[4px] px-2 py-1 text-[12px] font-medium',
                         screen.status === 'published' ? 'bg-[#edf8f2] text-[#27845a]' : 'bg-[#f4f5f6] text-[#7b818a]',
                       ].join(' ')}>
                         {screen.status === 'published' ? '已发布' : '草稿'}

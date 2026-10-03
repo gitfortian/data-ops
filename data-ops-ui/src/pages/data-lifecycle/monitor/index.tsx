@@ -88,7 +88,7 @@ const ModelStatusTab = ({ onOpenWizard, modelId }: {
       render: (name: string, record) => (
         <div>
           <div className="truncate">{name}</div>
-          <div className="text-[12px] text-[#98a2b3]">{record.modelCode}</div>
+          <div className="text-[12px] text-[#667085]">{record.modelCode}</div>
         </div>
       ),
     },
@@ -114,7 +114,7 @@ const ModelStatusTab = ({ onOpenWizard, modelId }: {
         <div>
           <div className="truncate">{value || '-'}</div>
           {record.bindingSource && (
-            <div className="text-[12px] text-[#98a2b3]">{BINDING_SOURCE_LABELS[record.bindingSource]}</div>
+            <div className="text-[12px] text-[#667085]">{BINDING_SOURCE_LABELS[record.bindingSource]}</div>
           )}
         </div>
       ),
@@ -458,7 +458,7 @@ const MonitorPage = () => {
         ) : null}
       </div>
 
-      <div className="mt-4 grid grid-cols-5 gap-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { title: '模型总数', value: summary?.total ?? 0 },
           { title: '已生效', value: summary?.applied ?? 0, color: '#12833f' },

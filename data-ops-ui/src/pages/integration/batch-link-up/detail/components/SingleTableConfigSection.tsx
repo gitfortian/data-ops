@@ -208,7 +208,7 @@ export default function SingleTableConfigSection({
                 onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onSourceChange({ sql: event.target.value })}
               />
               {!supportsCustomSql ? (
-                <div className="mt-1.5 text-[11px] leading-5 text-[#b54708]">
+                <div className="mt-1.5 text-[12px] leading-5 text-[#b54708]">
                   当前 Source Connector 未声明 CUSTOM_SQL，请切换为数据表读取后再保存。
                 </div>
               ) : null}
@@ -266,7 +266,7 @@ export default function SingleTableConfigSection({
                 />
               </div>
               {!supportsAutoCreate && sinkConfig.autoCreateTable ? (
-                <div className="mt-2 text-[11px] leading-5 text-[#b54708]">
+                <div className="mt-2 text-[12px] leading-5 text-[#b54708]">
                   {autoCreateTableEnabled
                     ? '当前 Sink Connector 未声明 AUTO_CREATE_TABLE，请关闭后选择已有目标表。'
                     : '当前目标数据源 Stage 1 仅支持写入已有表，请关闭自动建表后选择目标表。'}
@@ -298,7 +298,7 @@ export default function SingleTableConfigSection({
                   onSinkChange({ table: event.target.value, primaryKey: '' })
                 }
               />
-              <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">
+              <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">
                 MongoDB 会在首次成功 INSERT 时自然创建不存在的 Collection；这里不启用 Link-Up AUTO_CREATE_TABLE 语义。
               </div>
             </div>
@@ -340,13 +340,13 @@ export default function SingleTableConfigSection({
               }
             />
             {!supportsOverwrite && currentWriteMode === 'overwrite' ? (
-              <div className="mt-1.5 text-[11px] leading-5 text-[#b54708]">
+              <div className="mt-1.5 text-[12px] leading-5 text-[#b54708]">
                 当前 Native Sink 不支持覆盖写入，请选择 Append
                 {supportsUpsert ? ' 或 Upsert' : ''}。
               </div>
             ) : null}
             {!supportsUpsert && currentWriteMode === 'upsert' ? (
-              <div className="mt-1.5 text-[11px] leading-5 text-[#b54708]">
+              <div className="mt-1.5 text-[12px] leading-5 text-[#b54708]">
                 {upsertEnabled
                   ? '当前 Sink Connector 未声明 UPSERT，请选择其他写入模式。'
                   : '当前目标数据源不支持 Upsert/MERGE，请选择 Append 或 Overwrite。'}
@@ -416,7 +416,7 @@ export default function SingleTableConfigSection({
           />
         </div>
         {!supportsIncremental ? (
-          <div className="mt-3 text-[11px] leading-5 text-[#b54708]">
+          <div className="mt-3 text-[12px] leading-5 text-[#b54708]">
             该能力要求 JDBC 单表来源，以及支持 Upsert 的目标 Connector。
           </div>
         ) : null}
@@ -440,7 +440,7 @@ export default function SingleTableConfigSection({
               placeholder="选择日期、时间戳或 ISO 字符时间字段"
               onChange={(column) => onIncrementalChange({ column })}
             />
-            <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">
+            <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">
               字符字段必须使用可按字典序排序的 ISO 时间格式；目标端须选择 Upsert 并配置主键。
             </div>
           </div>

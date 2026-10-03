@@ -3,6 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { useModel, useNavigate, useSearchParams } from '@umijs/max';
 import { YakButton, YakEmpty } from '@/components/ui';
+import { useColumnVisibility } from '@/components/table/useColumnVisibility';
 import {
   changeMetricStatus,
   deleteMetric,
@@ -212,12 +213,15 @@ const MetricManagePage = () => {
 
   const columns: ColumnsType<MetricRecord> = [
     {
-      title: '指标编码',
+      title: '指标',
       dataIndex: 'metricCode',
-      width: 140,
+      width: 240,
       render: (code: string, record) => (
-        <Button type="link" size="small" onClick={() => navigate(`/metric/manage/${record.id}`)}>
-          {code}
+        <Button type="link" size="small" className="!h-auto !max-w-full !whitespace-normal !py-1" onClick={() => navigate(`/metric/manage/${record.id}`)}>
+          <span className="flex flex-col items-start gap-1 text-left">
+            <span className="font-medium">{record.metricName}</span>
+            <span className="text-[12px] text-[#667085]">{code}</span>
+          </span>
         </Button>
       ),
     },
@@ -334,6 +338,8 @@ const MetricManagePage = () => {
 
   const hasFilter = Boolean(keyword || metricType || status || domainId || processId || owner || tagIds.length);
 
+  const columnView = useColumnVisibility(columns, ['metricCode', 'domainName', 'metricType', 'status', 'publicationVersion', 'owner', 'action']);
+
   return (
     <div className="flex min-h-[calc(100dvh-64px)] flex-col bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       {/* Header */}
@@ -348,7 +354,7 @@ const MetricManagePage = () => {
       </div>
 
       {/* Stats cards */}
-      <div className="mt-4 grid grid-cols-4 gap-4">
+      <div className="mt-4 grid grid-cols-4 gap-4 max-md:grid-cols-2">
         <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
           <Statistic title="指标总数" value={stats.total} valueStyle={{ fontSize: 22 }} />
         </div>
@@ -462,12 +468,13 @@ const MetricManagePage = () => {
 
       {/* Table */}
       <div className="mt-4 flex-1">
+        <div className="mb-3 flex justify-end">{columnView.control}</div>
         <Table<MetricRecord>
           rowKey="id"
-          columns={columns}
+          columns={columnView.columns}
           dataSource={records}
           loading={loading}
-          scroll={{ x: 1400 }}
+          scroll={{ x: columnView.scrollWidth }}
           locale={{
             emptyText: (
               <YakEmpty

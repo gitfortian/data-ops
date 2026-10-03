@@ -654,7 +654,7 @@ export default function DataServiceNodeEditor({
       title: '参数名称',
       dataIndex: 'name',
       width: 130,
-      render: (value: string) => <span className="font-mono text-[11px] text-[#344054]">{value}</span>,
+      render: (value: string) => <span className="font-mono text-[12px] text-[#344054]">{value}</span>,
     },
     {
       title: '类型',
@@ -709,7 +709,7 @@ export default function DataServiceNodeEditor({
       title: '字段',
       dataIndex: 'name',
       width: 130,
-      render: (value: string) => <span className="font-mono text-[11px] text-[#344054]">{value}</span>,
+      render: (value: string) => <span className="font-mono text-[12px] text-[#344054]">{value}</span>,
     },
     {
       title: '类型',
@@ -825,11 +825,11 @@ export default function DataServiceNodeEditor({
 
   const requestPanel = (
     <div>
-      <div className="mb-4 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mb-4 text-[12px] leading-5 text-[#667085]">
         SQL 中的 <span className="font-mono">:name</span> 命名参数作为请求参数；示例值同时用于顶部“运行查询”。
       </div>
       {paginationEnabled ? (
-        <div className="mb-4 rounded-[4px] border border-[#e6e9ef] bg-[#fafbfc] px-3 py-2 text-[11px] leading-5 text-[#667085]">
+        <div className="mb-4 rounded-[4px] border border-[#e6e9ef] bg-[#fafbfc] px-3 py-2 text-[12px] leading-5 text-[#667085]">
           <span className="font-medium text-[#475467]">分页系统参数</span>
           <span className="ml-2 font-mono">returnTotalNum</span>
           <span className="mx-1 text-[#c0c5ce]">·</span>
@@ -852,11 +852,11 @@ export default function DataServiceNodeEditor({
 
   const responsePanel = (
     <div>
-      <div className="mb-4 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mb-4 text-[12px] leading-5 text-[#667085]">
         运行当前 SQL 后从真实结果集发现字段类型，可补充描述与示例后固化到 DS Revision。
       </div>
       {paginationEnabled ? (
-        <div className="mb-4 rounded-[4px] border border-[#e6e9ef] bg-[#fafbfc] px-3 py-2 text-[11px] leading-5 text-[#667085]">
+        <div className="mb-4 rounded-[4px] border border-[#e6e9ef] bg-[#fafbfc] px-3 py-2 text-[12px] leading-5 text-[#667085]">
           <span className="font-medium text-[#475467]">分页返回信息</span>
           <span className="ml-2 font-mono">totalNum</span>
           <span className="mx-1 text-[#c0c5ce]">·</span>
@@ -891,10 +891,10 @@ export default function DataServiceNodeEditor({
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-[#344054]">DS R{revision.revisionNo}</span>
                   {index === 0 ? (
-                    <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[10px] text-[#667085]">最新</span>
+                    <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[12px] text-[#667085]">最新</span>
                   ) : null}
                 </div>
-                <div className="mt-0.5 truncate text-[10px] text-[#98a2b3]">
+                <div className="mt-0.5 truncate text-[12px] text-[#667085]">
                   {formatTime(revision.createTime)} · Draft #{revision.sourceDraftRevision}
                 </div>
               </div>
@@ -902,7 +902,7 @@ export default function DataServiceNodeEditor({
           ))}
         </div>
       ) : (
-        <div className="py-8 text-center text-[11px] leading-5 text-[#98a2b3]">
+        <div className="py-8 text-center text-[12px] leading-5 text-[#667085]">
           暂无已发布版本
           <div className="mt-1">保存草稿后点击顶部发布按钮生成 DS R1。</div>
         </div>
@@ -912,7 +912,7 @@ export default function DataServiceNodeEditor({
 
   const onlinePanel = (
     <div className="text-[12px] leading-5">
-      <div className="mb-4 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mb-4 text-[12px] leading-5 text-[#667085]">
         发布用于生成稳定版本；需要对外提供服务时点击“上线”。后续发布新版本后使用“更新上线”。
       </div>
 
@@ -926,7 +926,7 @@ export default function DataServiceNodeEditor({
         <dt className="text-[#667085]">服务状态：</dt>
         <dd className="m-0 text-[#344054]">{serviceStatus}</dd>
         <dt className="text-[#667085]">Endpoint：</dt>
-        <dd className="m-0 break-all font-mono text-[11px] text-[#344054]">
+        <dd className="m-0 break-all font-mono text-[12px] text-[#344054]">
           {publicationState?.detail?.runtimePath || '-'}
         </dd>
       </dl>
@@ -953,7 +953,7 @@ export default function DataServiceNodeEditor({
           </Button>
         ) : null}
         {publicationError ? (
-          <div className="mt-3 text-[11px] leading-5 text-[#b42318]">{publicationError}</div>
+          <div className="mt-3 text-[12px] leading-5 text-[#b42318]">{publicationError}</div>
         ) : null}
       </div>
     </div>
@@ -1055,7 +1055,7 @@ export default function DataServiceNodeEditor({
       <div className="flex min-h-0 flex-1 items-center justify-center bg-white px-6">
         <div className="max-w-[520px] text-center">
           <div className="text-[14px] font-semibold text-[#344054]">Data Service Node 加载失败</div>
-          <div className="mt-2 text-[12px] leading-5 text-[#98a2b3]">{loadError || '未返回有效编辑上下文'}</div>
+          <div className="mt-2 text-[12px] leading-5 text-[#667085]">{loadError || '未返回有效编辑上下文'}</div>
           <Button className="mt-4" size="small" icon={<RefreshCw size={13} />} onClick={() => void load()}>
             重新加载
           </Button>
@@ -1118,7 +1118,7 @@ export default function DataServiceNodeEditor({
               title="开启后，发布的数据服务使用分页请求参数 pageNum / pageSize / returnTotalNum，并返回分页信息。"
               mouseEnterDelay={0.3}
             >
-              <label className="flex cursor-pointer items-center gap-2 text-[11px] text-[#475467]">
+              <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#475467]">
                 <span>返回结果分页</span>
                 <Switch
                   size="small"
@@ -1134,7 +1134,7 @@ export default function DataServiceNodeEditor({
               title="开启后，运行查询会根据 SQL 命名参数和真实结果集同步请求参数、返回字段。"
               mouseEnterDelay={0.3}
             >
-              <label className="flex cursor-pointer items-center gap-2 text-[11px] text-[#475467]">
+              <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#475467]">
                 <span>自动解析参数</span>
                 <Switch
                   size="small"
@@ -1169,7 +1169,7 @@ export default function DataServiceNodeEditor({
             />
           </div>
 
-          <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[10px] text-[#7b808a]">
+          <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[12px] text-[#7b808a]">
             <div className="flex min-w-0 items-center gap-3">
               <span className="font-medium text-[#667085]">DATA SERVICE</span>
               <span className="truncate">{node.name}</span>
@@ -1253,7 +1253,7 @@ export default function DataServiceNodeEditor({
                       type="button"
                       title="刷新"
                       onClick={refreshActivePanel}
-                      className="flex h-7 items-center gap-1 rounded-[3px] px-2 text-[11px] text-[#475467] transition-colors hover:bg-[#f5f5f6]"
+                      className="flex h-7 items-center gap-1 rounded-[3px] px-2 text-[12px] text-[#475467] transition-colors hover:bg-[#f5f5f6]"
                     >
                       <RefreshCw size={13} strokeWidth={1.8} />
                       刷新

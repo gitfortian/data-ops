@@ -594,7 +594,7 @@ function ChoiceGrid<T extends string>({
 
                 {!compact &&
                 item.description ? (
-                  <span className="mt-1 block text-[11px] leading-[17px] text-[#999994]">
+                  <span className="mt-1 block text-[12px] leading-[17px] text-[#999994]">
                     {
                       item.description
                     }
@@ -890,7 +890,7 @@ function CreateGuide({
                   {item.title}
                 </div>
 
-                <div className="mt-1 max-w-[240px] text-[11px] font-normal leading-[17px] text-[#8a9099]">
+                <div className="mt-1 max-w-[240px] text-[12px] font-normal leading-[17px] text-[#8a9099]">
                   {
                     item.description
                   }

@@ -112,7 +112,7 @@ const DriverManager = ({
         </Upload>
       </div>
 
-      <div className="mt-1.5 text-[11px] leading-4 text-[#98a2b3]">
+      <div className="mt-1.5 text-[12px] leading-4 text-[#667085]">
         {intl.formatMessage(
           { id: 'pages.datasource.driver.hint' },
           { maxSizeMB },

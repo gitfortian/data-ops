@@ -58,7 +58,7 @@ const WorkflowStartNode = ({ id, data, selected }: NodeProps<WorkflowStartNodeDa
   return (
     <div className="group w-60 rounded-2xl bg-[#f2f4f7] px-0 pb-0 pt-0.5">
       <div className="mb-0.5 flex h-5 items-center px-2.5 pt-0.5">
-        <span className="text-[10px] font-semibold uppercase leading-4 text-[#667085]">
+        <span className="text-[12px] font-semibold uppercase leading-4 text-[#667085]">
           开始
         </span>
       </div>
@@ -104,24 +104,24 @@ const WorkflowStartNode = ({ id, data, selected }: NodeProps<WorkflowStartNodeDa
                 {visibleInputs.map((field) => (
                   <div
                     key={field.id}
-                    className="flex h-6 items-center gap-1 rounded-md bg-[#f2f4f7] px-1 text-[10px]"
+                    className="flex h-6 items-center gap-1 rounded-md bg-[#f2f4f7] px-1 text-[12px]"
                   >
                     <Variable size={14} className="shrink-0 text-[#155eef]" />
                     <span className="min-w-0 flex-1 truncate text-[#475467]">
                       {field.name}
                     </span>
                     {field.required ? (
-                      <span className="shrink-0 text-[9px] font-medium uppercase text-[#98a2b3]">
+                      <span className="shrink-0 text-[9px] font-medium uppercase text-[#667085]">
                         必填
                       </span>
                     ) : null}
-                    <span className="shrink-0 text-[9px] text-[#98a2b3]">
+                    <span className="shrink-0 text-[9px] text-[#667085]">
                       {TYPE_LABEL[field.type] || field.type}
                     </span>
                   </div>
                 ))}
                 {moreCount ? (
-                  <div className="px-1 text-[9px] text-[#98a2b3]">
+                  <div className="px-1 text-[9px] text-[#667085]">
                     还有 {moreCount} 个输入字段
                   </div>
                 ) : null}

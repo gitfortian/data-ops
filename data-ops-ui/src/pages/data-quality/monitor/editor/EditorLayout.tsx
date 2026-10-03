@@ -55,7 +55,7 @@ export const EditorField = ({
     </div>
     <div className="min-w-0">
       {children}
-      {hint ? <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">{hint}</div> : null}
+      {hint ? <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">{hint}</div> : null}
     </div>
   </div>
 );

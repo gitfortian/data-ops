@@ -65,7 +65,7 @@ const UnsavedChangesModal = ({
 
           {dirtyCount > 1 ? (
             <div
-              className="mt-2 max-w-[360px] truncate text-[12px] text-[#98a2b3]"
+              className="mt-2 max-w-[360px] truncate text-[12px] text-[#667085]"
               title={dirtyNames.join(' · ')}
             >
               {dirtyNames.join(' · ')}

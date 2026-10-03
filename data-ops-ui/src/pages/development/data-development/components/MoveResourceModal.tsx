@@ -166,7 +166,7 @@ const MoveResourceModal = ({
           }`}
           onClick={() => setSelectedKey(null)}
         >
-          <span className="mr-1.5 text-[#98a2b3]">/</span>
+          <span className="mr-1.5 text-[#667085]">/</span>
           {intl.formatMessage({ id: 'pages.dataDevelopment.common.root' })}
         </YakButton>
       </div>
@@ -183,7 +183,7 @@ const MoveResourceModal = ({
           />
         </div>
       ) : (
-        <div className="py-6 text-center text-[12px] text-[#98a2b3]">
+        <div className="py-6 text-center text-[12px] text-[#667085]">
           {intl.formatMessage({ id: 'pages.dataDevelopment.modal.move.empty' })}
         </div>
       )}

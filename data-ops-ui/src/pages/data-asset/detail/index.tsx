@@ -100,6 +100,16 @@ const SectionBlock = ({
     </Space>
   );
 
+  const evidencePanel = contractFacts && (
+    <details className="mt-3 rounded-lg border border-[#eaecf0] px-3 py-2">
+      <summary className="cursor-pointer text-[13px] text-[#667085]">
+        事实来源与证据{section?.ownerDomain ? ` · ${section.ownerDomain}` : ''}
+        {section?.updatedAt ? ` · ${formatAssetTime(section.updatedAt)}` : ''}
+      </summary>
+      <div className="mt-3">{contractFacts}</div>
+    </details>
+  );
+
   if (!section || section.status !== 'OK') {
     const state = section?.status;
     const stateTitle = state === 'EMPTY'
@@ -111,12 +121,11 @@ const SectionBlock = ({
           : '暂不可用';
     return (
       <Card title={title} size="small" className="!mb-4">
-        <YakEmpty
-          compact
-          title={stateTitle}
-          description={section?.note ?? '依赖域尚未提供数据,不伪造为空'}
-        />
-        {contractFacts}
+        <div className="rounded-lg bg-[#f9fafb] px-3 py-3">
+          <div className="text-[14px] font-medium text-[#344054]">{stateTitle}</div>
+          <div className="mt-1 text-[13px] leading-5 text-[#667085]">{section?.note ?? '当前无法获取该分区的事实，请稍后重试。'}</div>
+        </div>
+        {evidencePanel}
         {state === 'EMPTY' && section?.actions && section.actions.length > 0 && (
           <Space>
             {section.actions.map((action) => (
@@ -131,8 +140,8 @@ const SectionBlock = ({
   }
   return (
     <Card title={title} size="small" className="!mb-4">
-      {contractFacts}
       {children}
+      {evidencePanel}
       {section?.actions && section.actions.length > 0 && (
         <Space className="!mt-3">
           {section.actions.map((action) => (

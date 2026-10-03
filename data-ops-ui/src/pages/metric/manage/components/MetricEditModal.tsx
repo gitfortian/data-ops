@@ -653,7 +653,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
         initialValues={{ metricType: 'ATOMIC', statPeriod: 'DAY' }}
       >
         {/* ── Common fields ── */}
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
           {!isEditing ? (
             <Form.Item
               name="metricCode"
@@ -695,7 +695,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
         {isAtomic ? (
           <>
             <div className="mb-2 text-[13px] font-medium text-[#344054]">口径定义</div>
-            <div className="grid grid-cols-2 gap-x-4">
+            <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
               <Form.Item name="processId" label="业务过程" rules={[{ required: true, message: '请选择业务过程' }]}>
                 <Select
                   showSearch
@@ -770,7 +770,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
         {isDerived ? (
           <>
             <div className="mb-2 text-[13px] font-medium text-[#344054]">派生定义</div>
-            <div className="grid grid-cols-2 gap-x-4">
+            <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
               {/* Process: read-only when atomic selected, hidden field to store inherited value */}
               <Form.Item label="业务过程">
                 <Input
@@ -805,24 +805,24 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
                 <div className="mb-1.5 text-[12px] font-medium text-[#667085]">继承信息（保存时自动组装，只读）</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   <div className="col-span-2">
-                    <span className="text-[12px] text-[#98a2b3]">度量表达式（继承原子）：</span>
+                    <span className="text-[12px] text-[#667085]">度量表达式（继承原子）：</span>
                     <span className="text-[13px] text-[#344054]">{selectedAtomic.measureExpr || '-'}</span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[12px] text-[#98a2b3]">过滤条件（原子 + 限定条件 AND 合并）：</span>
+                    <span className="text-[12px] text-[#667085]">过滤条件（原子 + 限定条件 AND 合并）：</span>
                     <span className="text-[13px] text-[#344054]">
                       {[selectedAtomic.filterExpr, compileQualifierText(qualifiers)].filter(Boolean).join(' AND ') ||
                         '（添加限定条件后自动组装）'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[12px] text-[#98a2b3]">单位：</span>
+                    <span className="text-[12px] text-[#667085]">单位：</span>
                     <span className="text-[13px] text-[#344054]">
                       {selectedAtomic.unitId ? (units.find((u) => u.id === selectedAtomic.unitId)?.name ?? '-') : '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[12px] text-[#98a2b3]">口径引用：</span>
+                    <span className="text-[12px] text-[#667085]">口径引用：</span>
                     <span className="text-[13px] text-[#344054]">
                       {selectedAtomic.caliberId
                         ? (calibers.find((c) => c.id === selectedAtomic.caliberId)?.name ?? '-')
@@ -858,7 +858,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
                       <Form.Item name={[field.name, 'value']} noStyle>
                         <Input placeholder="值（IN 用逗号分隔，BETWEEN 用「下界 AND 上界」）" className="!w-[240px]" />
                       </Form.Item>
-                      <MinusCircleOutlined className="text-[#98a2b3]" onClick={() => remove(field.name)} />
+                      <MinusCircleOutlined className="text-[#667085]" onClick={() => remove(field.name)} />
                     </Space>
                   ))}
                   <YakButton size="small" onClick={() => add({ field: '', op: '=', value: '' })}>
@@ -888,7 +888,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
                 <div className="mb-1 text-[12px] text-[#667085]">可用子指标（点击插入）</div>
                 <div className="flex flex-wrap gap-1.5">
                   {availableMetrics.length === 0 ? (
-                    <span className="text-[12px] text-[#98a2b3]">暂无可用指标，请先创建原子/派生指标</span>
+                    <span className="text-[12px] text-[#667085]">暂无可用指标，请先创建原子/派生指标</span>
                   ) : (
                     availableMetrics.map((m) => (
                       <Tag
@@ -974,7 +974,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
         ) : null}
 
         {/* ── Bottom common fields ── */}
-        <div className="mt-3 grid grid-cols-2 gap-x-4">
+        <div className="mt-3 grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
           <Form.Item name="statPeriod" label="统计周期" rules={[{ required: true, message: '请选择统计周期' }]}>
             <Select options={STAT_PERIOD_OPTIONS} />
           </Form.Item>

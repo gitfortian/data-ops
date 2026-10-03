@@ -139,7 +139,7 @@ const ContextPicker = ({
             );
           })
         ) : (
-          <div className="flex h-10 items-center justify-center px-3 text-center text-[11px] text-[#98a2b3]">
+          <div className="flex h-10 items-center justify-center px-3 text-center text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.editor.sqlMetadata.noMatch' })}
           </div>
         )}

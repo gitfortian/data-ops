@@ -101,7 +101,7 @@ export const NotificationSettings = ({
               onChange={(event) => update({ notifyTarget: event.target.value })}
             />
             {missingTarget ? (
-              <div className="mt-1.5 text-[11px] text-[#d92d20]">
+              <div className="mt-1.5 text-[12px] text-[#d92d20]">
                 {value.notifyChannel === 'EMAIL'
                   ? '请输入告警接收邮箱'
                   : '请输入 Webhook 地址'}

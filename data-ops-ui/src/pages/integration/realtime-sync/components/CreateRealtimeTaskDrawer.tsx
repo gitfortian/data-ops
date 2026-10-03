@@ -223,7 +223,7 @@ const CreateRealtimeTaskDrawer = ({
                     {mode.icon}
                   </span>
                   {mode.badge ? (
-                    <span className="rounded-full bg-[#fff1f0] px-2 py-0.5 text-[11px] font-medium text-[#ff4d4f]">
+                    <span className="rounded-full bg-[#fff1f0] px-2 py-0.5 text-[12px] font-medium text-[#ff4d4f]">
                       {mode.badge}
                     </span>
                   ) : null}

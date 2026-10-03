@@ -123,7 +123,7 @@ const WorkflowDagView = ({ instance, operations, selectedNodeId, onSelectNode }:
 
   if (!instance.nodes.length) {
     return (
-      <div className="py-10 text-center text-[12px] text-[#98a2b3]">
+      <div className="py-10 text-center text-[12px] text-[#667085]">
         {intl.formatMessage({ id: 'pages.workflow.instanceDetail.dagEmpty' })}
       </div>
     );
@@ -183,16 +183,16 @@ const WorkflowDagView = ({ instance, operations, selectedNodeId, onSelectNode }:
               <div className="truncate text-[12px] font-medium text-[#344054]" title={node.name}>
                 {node.name || node.id}
               </div>
-              <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
+              <div className="mt-1 flex items-center justify-between gap-2 text-[12px]">
                 <span className={statusTextClassName(node.status)}>{statusText}</span>
-                <span className="text-[#98a2b3]">
+                <span className="text-[#667085]">
                   {intl.formatMessage(
                     { id: 'pages.workflow.instanceDetail.attemptLabel' },
                     { count: node.attemptCount },
                   )}
                 </span>
               </div>
-              <div className="mt-1 truncate font-mono text-[10px] text-[#b0b7c3]" title={node.id}>
+              <div className="mt-1 truncate font-mono text-[12px] text-[#b0b7c3]" title={node.id}>
                 {node.id}
               </div>
             </button>

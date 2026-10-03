@@ -60,9 +60,9 @@ class ResourceEditorBoundary extends Component<
     return (
       <div className="flex flex-1 items-center justify-center bg-white">
         <div className="text-center">
-          <Boxes className="mx-auto text-[#98a2b3]" />
+          <Boxes className="mx-auto text-[#667085]" />
           <div className="mt-3 text-sm">{this.props.loadErrorText}</div>
-          <div className="mt-2 text-xs text-[#98a2b3]">
+          <div className="mt-2 text-xs text-[#667085]">
             {this.state.error || this.props.unknownErrorText}
           </div>
           <YakButton

@@ -62,7 +62,7 @@ const tabClassName = (active: boolean) => [
 ].join(' ');
 
 const actionClassName =
-  'inline-flex h-7 items-center gap-1 rounded-[3px] px-2 text-[11px] text-[#667085] transition-colors hover:bg-[#f5f5f6] hover:text-[#344054] disabled:cursor-not-allowed disabled:opacity-45';
+  'inline-flex h-7 items-center gap-1 rounded-[3px] px-2 text-[12px] text-[#667085] transition-colors hover:bg-[#f5f5f6] hover:text-[#344054] disabled:cursor-not-allowed disabled:opacity-45';
 
 const RunResultPanel = ({
   open,
@@ -198,29 +198,29 @@ const RunResultPanel = ({
                   </button>
                 ) : null}
                 <span className="mx-1 h-4 w-px bg-[#e5e7eb]" />
-                <span className="max-w-[240px] truncate text-[11px] text-[#98a2b3]">
+                <span className="max-w-[240px] truncate text-[12px] text-[#667085]">
                   {intl.formatMessage(
                     { id: 'pages.dataDevelopment.result.currentNode' },
                     { name: node.name },
                   )}
                 </span>
                 {actualView === 'result' && executionLabel ? (
-                  <span className="shrink-0 font-mono text-[10px] text-[#98a2b3]">
+                  <span className="shrink-0 font-mono text-[12px] text-[#667085]">
                     {executionLabel}
                   </span>
                 ) : null}
                 {actualView === 'result'
                   && (result?.status === 'RUNNING' || result?.status === 'PENDING') ? (
-                  <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#667085]">
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-[#667085]">
                     <LoaderCircle size={12} className="animate-spin" />
                     {statusText(result)}
                   </span>
                 ) : actualView === 'result' && statusText(result) ? (
-                  <span className="shrink-0 text-[11px] text-[#667085]">
+                  <span className="shrink-0 text-[12px] text-[#667085]">
                     {statusText(result)}
                   </span>
                 ) : actualView === 'lineage' ? (
-                  <span className="shrink-0 text-[11px] text-[#667085]">
+                  <span className="shrink-0 text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dataDevelopment.result.sqlLineage' })}
                   </span>
                 ) : null}
@@ -266,7 +266,7 @@ const RunResultPanel = ({
                     <div className="text-[13px] font-medium text-[#475467]">
                       {intl.formatMessage({ id: 'pages.dataDevelopment.result.area' })}
                     </div>
-                    <div className="mt-1 text-[11px] text-[#98a2b3]">
+                    <div className="mt-1 text-[12px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.dataDevelopment.result.unsupported' })}
                     </div>
                   </div>

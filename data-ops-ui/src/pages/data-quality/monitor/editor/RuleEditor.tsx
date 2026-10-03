@@ -178,7 +178,7 @@ export const QualityRuleEditor = ({
             <span className="min-w-0 truncate text-[12px] text-[#30323b]">
               {group.label}
             </span>
-            <span className="shrink-0 text-[11px] text-[#8a8f99]">
+            <span className="shrink-0 text-[12px] text-[#8a8f99]">
               ({group.templates.length})
             </span>
           </div>
@@ -202,14 +202,14 @@ export const QualityRuleEditor = ({
                     {template.name}
                   </span>
                   {template.code ? (
-                    <span className="block truncate text-[10px] leading-4 text-[#a1a5ad]">
+                    <span className="block truncate text-[12px] leading-4 text-[#a1a5ad]">
                       {template.code}
                     </span>
                   ) : null}
                 </span>
 
                 {selectedCount ? (
-                  <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(254,44,85,.08)] px-1.5 text-[10px] font-medium text-[var(--yak-brand-color)]">
+                  <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(254,44,85,.08)] px-1.5 text-[12px] font-medium text-[var(--yak-brand-color)]">
                     {selectedCount}
                   </span>
                 ) : (
@@ -367,7 +367,7 @@ export const QualityRuleEditor = ({
 
           {rule.operator === "BETWEEN" && rule.thresholdEnd !== undefined ? (
             <>
-              <span className="text-[#98a2b3]">~</span>
+              <span className="text-[#667085]">~</span>
               <span>{rule.thresholdEnd}</span>
             </>
           ) : null}
@@ -387,7 +387,7 @@ export const QualityRuleEditor = ({
             {rule.name || "未命名规则"}
           </div>
 
-          <div className="mt-1 truncate text-[11px] text-[#98a2b3]">
+          <div className="mt-1 truncate text-[12px] text-[#667085]">
             {rule.key}
           </div>
         </div>
@@ -409,10 +409,10 @@ export const QualityRuleEditor = ({
       width: 160,
       render: (value, rule) => {
         if (rule.scope === "TABLE" && !value) {
-          return <span className="text-[#98a2b3]">整表</span>;
+          return <span className="text-[#667085]">整表</span>;
         }
 
-        return value || <span className="text-[#98a2b3]">--</span>;
+        return value || <span className="text-[#667085]">--</span>;
       },
     },
     {
@@ -454,7 +454,7 @@ export const QualityRuleEditor = ({
             }
           />
 
-          <span className={rule.enabled ? "text-[#344054]" : "text-[#98a2b3]"}>
+          <span className={rule.enabled ? "text-[#344054]" : "text-[#667085]"}>
             {rule.enabled ? "启用" : "停用"}
           </span>
         </div>
@@ -647,7 +647,7 @@ export const QualityRuleEditor = ({
                 size="small"
                 variant="filled"
                 value={templateKeyword}
-                prefix={<Search size={13} className="text-[#98a2b3]" />}
+                prefix={<Search size={13} className="text-[#667085]" />}
                 placeholder="搜索模板名称、编码或描述"
                 onChange={(event) => setTemplateKeyword(event.target.value)}
                 className="mt-2.5"
@@ -665,9 +665,9 @@ export const QualityRuleEditor = ({
                   onSelect={handleTemplateTreeSelect}
                   switcherIcon={({ expanded }) =>
                     expanded ? (
-                      <ChevronDown size={13} className="text-[#98a2b3]" />
+                      <ChevronDown size={13} className="text-[#667085]" />
                     ) : (
-                      <ChevronRight size={13} className="text-[#98a2b3]" />
+                      <ChevronRight size={13} className="text-[#667085]" />
                     )
                   }
                   className="
@@ -715,7 +715,7 @@ export const QualityRuleEditor = ({
                 <span className="text-[13px] font-semibold text-[#161823]">
                   已选择规则
                 </span>
-                <span className="ml-2 text-xs text-[#98a2b3]">
+                <span className="ml-2 text-xs text-[#667085]">
                   点击左侧模板可连续添加，多次点击同一模板可配置不同字段
                 </span>
               </div>
@@ -746,7 +746,7 @@ export const QualityRuleEditor = ({
                               {rule.scope === "TABLE" ? "表级" : "字段级"}
                             </Tag>
                           </div>
-                          <div className="mt-0.5 truncate text-[11px] text-[#98a2b3]">
+                          <div className="mt-0.5 truncate text-[12px] text-[#667085]">
                             {template?.name || renderRuleTemplate(rule)} ·{" "}
                             {template?.code || rule.templateCode}
                           </div>
@@ -787,7 +787,7 @@ export const QualityRuleEditor = ({
                       <div className="text-[13px] text-[#667085]">
                         从左侧规则模板库选择规则
                       </div>
-                      <div className="mt-1 text-xs text-[#98a2b3]">
+                      <div className="mt-1 text-xs text-[#667085]">
                         选择后可在这里配置字段、阈值和启用状态
                       </div>
                     </div>

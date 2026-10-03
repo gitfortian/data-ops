@@ -153,7 +153,7 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
 
   if (!versions.length) {
     return (
-      <div className="py-8 text-center text-[11px] leading-5 text-[#98a2b3]">
+      <div className="py-8 text-center text-[12px] leading-5 text-[#667085]">
         {intl.formatMessage({ id: 'pages.dataDevelopment.versions.empty' })}
         <div className="mt-1">
           {intl.formatMessage({ id: 'pages.dataDevelopment.versions.emptyHint' })}
@@ -177,12 +177,12 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
               <div className="flex items-center gap-2">
                 <span className="font-medium text-[#344054]">v{version.revisionNo}</span>
                 {index === 0 ? (
-                  <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[10px] text-[#667085]">
+                  <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.dataDevelopment.versions.latest' })}
                   </span>
                 ) : null}
               </div>
-              <div className="mt-0.5 truncate text-[10px] text-[#98a2b3]">
+              <div className="mt-0.5 truncate text-[12px] text-[#667085]">
                 {formatTime(version.createTime)} · {version.checksum.slice(0, 10)}
               </div>
             </div>
@@ -203,11 +203,11 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
                 { revision: detail.revisionNo },
               )}
             </span>
-            <span className="text-[10px] text-[#98a2b3]">
+            <span className="text-[12px] text-[#667085]">
               Draft #{detail.sourceDraftRevision}
             </span>
           </div>
-          <pre className="mt-2 max-h-[300px] overflow-auto whitespace-pre-wrap break-words rounded-[3px] bg-[#f8f9fa] p-2.5 font-mono text-[11px] leading-5 text-[#475467]">
+          <pre className="mt-2 max-h-[300px] overflow-auto whitespace-pre-wrap break-words rounded-[3px] bg-[#f8f9fa] p-2.5 font-mono text-[12px] leading-5 text-[#475467]">
             {detail.definition.content ||
               intl.formatMessage({ id: 'pages.dataDevelopment.common.emptyContent' })}
           </pre>
@@ -233,18 +233,18 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
                 <Spin size="small" />
               </div>
             ) : lineageFailure ? (
-              <div className="mt-2 rounded-[3px] bg-[#fff6ed] px-2.5 py-2 text-[11px] leading-5 text-[#b54708]">
+              <div className="mt-2 rounded-[3px] bg-[#fff6ed] px-2.5 py-2 text-[12px] leading-5 text-[#b54708]">
                 <div className="font-medium">Lineage Evidence 不可用</div>
                 <div>{lineageFailure}</div>
                 <div className="mt-1 text-[#667085]">读取失败不能解释为“没有血缘”。</div>
               </div>
             ) : lineageEvidence ? (
-              <div className="mt-2 space-y-1.5 rounded-[3px] bg-[#f8f9fa] px-2.5 py-2 text-[11px] leading-5 text-[#475467]">
+              <div className="mt-2 space-y-1.5 rounded-[3px] bg-[#f8f9fa] px-2.5 py-2 text-[12px] leading-5 text-[#475467]">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-[#344054]">
                     {lineageEvidenceStatusLabel(lineageEvidence.status)}
                   </span>
-                  <span className="font-mono text-[10px] text-[#98a2b3]">
+                  <span className="font-mono text-[12px] text-[#667085]">
                     Node {lineageEvidence.nodeId} · Revision {lineageEvidence.revisionNo}
                   </span>
                 </div>
@@ -263,12 +263,12 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
                   </div>
                 ) : null}
                 {lineageEvidence.lastError ? (
-                  <div className="break-words rounded bg-white px-2 py-1 font-mono text-[10px] text-[#b42318]">
+                  <div className="break-words rounded bg-white px-2 py-1 font-mono text-[12px] text-[#b42318]">
                     {lineageEvidence.lastError}
                   </div>
                 ) : null}
                 {lineageEvidence.lineageAssetKey ? (
-                  <div className="break-all font-mono text-[9px] text-[#98a2b3]">
+                  <div className="break-all font-mono text-[9px] text-[#667085]">
                     {lineageEvidence.lineageAssetKey}
                   </div>
                 ) : null}

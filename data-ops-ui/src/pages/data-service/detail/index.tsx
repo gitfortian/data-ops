@@ -210,7 +210,7 @@ export default function DataServiceDetailPage() {
         <div>
           <div className="text-[12px] text-[#475467]">{callerLabel(record)}</div>
           {record.apiKeyPrefix ? (
-            <div className="mt-0.5 font-mono text-[10px] text-[#98a2b3]">
+            <div className="mt-0.5 font-mono text-[12px] text-[#667085]">
               {record.apiKeyPrefix}••••
             </div>
           ) : null}
@@ -423,28 +423,27 @@ export default function DataServiceDetailPage() {
           </div>
 
           <section className="rounded-lg bg-white">
-            <div className="grid min-h-[176px] gap-6 px-5 py-6 lg:px-6 xl:grid-cols-[116px_minmax(0,1fr)_180px] xl:items-center">
-              <ApiIllustration />
+            <div className="grid gap-4 px-4 py-4 lg:px-6 xl:grid-cols-[minmax(0,1fr)_180px] xl:items-center">
               <div className="min-w-0">
-                <div className="max-w-[620px] truncate text-[14px] font-medium leading-5 text-[#161823]">
+                <div className="break-words text-[20px] font-semibold leading-7 text-[#161823]">
                   {service.name}
                 </div>
                 <div className="mt-1 text-[12px] leading-4 text-[#8a8f98]">
                   {formatTime(service.updateTime || service.createTime)}
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-[11px] leading-4 text-[#667085]">
+                <div className="mt-1 flex items-center gap-1 text-[12px] leading-4 text-[#667085]">
                   <span className={[
                     'inline-block h-[10px] w-[10px] rounded-full',
                     service.enabled ? 'bg-[#20c77a]' : 'bg-[#b0b5bd]',
                   ].join(' ')} />
                   <span>{service.enabled ? '运行中' : '已停用'}</span>
                 </div>
-                <div className="mt-2 flex min-w-0 items-center gap-2 text-[11px] leading-4 text-[#8a8f98]">
+                <div className="mt-2 flex min-w-0 items-center gap-2 text-[12px] leading-4 text-[#8a8f98]">
                   <span className="font-mono">GET</span>
                   <span className="text-[#d0d5dd]">·</span>
                   <span className="truncate font-mono">{service.runtimePath}</span>
                 </div>
-                <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-[#8a8f98]">
+                <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-[#8a8f98]">
                   <span>{sourceTypeLabel}</span>
                   <span className="text-[#d0d5dd]">·</span>
                   <span>{sourceRevisionLabel}</span>

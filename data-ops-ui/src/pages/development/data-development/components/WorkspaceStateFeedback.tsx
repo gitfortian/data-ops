@@ -42,7 +42,7 @@ export const WorkspaceLoadFailureState = ({
           })}
         </div>
         {detail ? (
-          <div className="mt-2 break-words text-[11px] text-[#98a2b3]">{detail}</div>
+          <div className="mt-2 break-words text-[12px] text-[#667085]">{detail}</div>
         ) : null}
         {!permissionDenied ? (
           <YakButton

@@ -1,7 +1,6 @@
 
-import YakOpsEmpty from '@/components/YakOpsEmpty';
+import YakEmpty from '@/components/YakEmpty';
 import {
-  Empty,
   Table,
   type SpinProps,
   type TableProps,
@@ -55,23 +54,7 @@ export default function SecurityQueryTable<T extends object>({
     locale?.emptyText !== undefined ? (
       locale.emptyText
     ) : (
-      <Empty
-        image={
-          <YakOpsEmpty
-            width={220}
-            height={174}
-            className="mx-auto"
-          />
-        }
-        imageStyle={{
-          height: 174,
-        }}
-        description={
-          <span className="text-sm text-slate-400">
-            暂无数据
-          </span>
-        }
-      />
+      <YakEmpty compact title="暂无数据" description="当前范围内没有记录，可调整筛选条件后重试。" />
     );
 
   return (

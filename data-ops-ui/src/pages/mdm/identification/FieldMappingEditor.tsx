@@ -124,7 +124,7 @@ const FieldMappingEditor = ({
           <div key={attribute.code} className="flex items-center gap-2 py-1">
             <div className="w-40 shrink-0 truncate text-[13px]" title={`${attribute.name}（${attribute.code}）`}>
               {attribute.name || attribute.code}
-              <span className="text-[#98a2b3]">（{attribute.code}）</span>
+              <span className="text-[#667085]">（{attribute.code}）</span>
             </div>
             {attribute.type === 'PK' && (
               <Tag color="purple" className="!mr-0 shrink-0">

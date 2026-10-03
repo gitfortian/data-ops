@@ -8,7 +8,7 @@ import {
 } from '@/services/security/messages';
 import { history, useIntl } from '@umijs/max';
 import { Bell, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import React from 'react';
 
 import { HomeEmptyState } from './HomeEmptyState';
 
@@ -96,13 +96,13 @@ export default function NotificationCenter() {
   const intl = useIntl();
   const { projects, currentProject } = useSecurityProject();
 
-  const [state, setState] = useState<NotificationState>({
+  const [state, setState] = React.useState<NotificationState>({
     items: [],
     loading: true,
     failed: false,
   });
 
-  useEffect(() => {
+  React.useEffect(() => {
     let active = true;
 
     if (projects.length > 0 && !currentProject) {
@@ -214,7 +214,7 @@ export default function NotificationCenter() {
             ))}
           </div>
         ) : state.loading || state.failed ? (
-          <div className="flex min-h-[120px] items-center justify-center text-[11px] text-[#9da1a8]">
+          <div className="flex min-h-[120px] items-center justify-center text-[12px] text-[#9da1a8]">
             {intl.formatMessage({
               id: state.loading
                 ? 'pages.home.notification.loading'

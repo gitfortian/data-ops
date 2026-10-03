@@ -77,7 +77,7 @@ export default function DataServiceLogsPage() {
         <div>
           <div className="text-black/65">{callerLabel(record)}</div>
           {record.apiKeyPrefix ? (
-            <div className="mt-1 font-mono text-[11px] text-black/35">
+            <div className="mt-1 font-mono text-[12px] text-black/35">
               {record.apiKeyPrefix}••••
             </div>
           ) : null}

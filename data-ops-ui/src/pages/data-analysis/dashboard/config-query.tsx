@@ -55,7 +55,7 @@ export function QueryControls({
   return (
     <div className="space-y-4">
       <div>
-        <div className="mb-1 text-[11px] text-[#667085]">
+        <div className="mb-1 text-[12px] text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.query.sort' })}
         </div>
         <div className="flex gap-2">
@@ -85,17 +85,17 @@ export function QueryControls({
       <div className="border-t border-[#edf0f3] pt-4">
         <div className="mb-2 flex items-center justify-between">
           <div>
-            <div className="text-[11px] text-[#667085]">
+            <div className="text-[12px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.query.filters' })}
             </div>
-            <div className="mt-0.5 text-[9px] text-[#98a2b3]">
+            <div className="mt-0.5 text-[9px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.query.andHint' })}
             </div>
           </div>
           <Button
             size="small"
             type="text"
-            className="!h-6 !px-1.5 !text-[10px]"
+            className="!h-6 !px-1.5 !text-[12px]"
             icon={<Plus size={11} />}
             disabled={!filterOptions.length || filters.length >= 8}
             onClick={addFilter}
@@ -123,7 +123,7 @@ export function QueryControls({
                   />
                   <button
                     type="button"
-                    className="flex h-6 w-6 items-center justify-center rounded-[5px] text-[#98a2b3] hover:bg-[#f0f1f3] hover:text-[#475467]"
+                    className="flex h-6 w-6 items-center justify-center rounded-[5px] text-[#667085] hover:bg-[#f0f1f3] hover:text-[#475467]"
                     aria-label={intl.formatMessage({ id: 'pages.dashboard.editor.query.deleteFilter' })}
                     onClick={() => removeFilter(filter.id)}
                   >

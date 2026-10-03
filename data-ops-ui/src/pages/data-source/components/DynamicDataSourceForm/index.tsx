@@ -386,7 +386,7 @@ const DynamicDataSourceForm = ({
                   : 'pages.datasource.plugin.loadFailedTitle',
               })}
             </div>
-            <div className="mt-1 text-xs leading-5 text-[#98a2b3]">
+            <div className="mt-1 text-xs leading-5 text-[#667085]">
               {pluginMessage ||
                 intl.formatMessage({
                   id: installRequired
@@ -482,7 +482,7 @@ const DynamicDataSourceForm = ({
                       id: 'pages.datasource.form.envTooltip',
                     })}
                   >
-                    <InfoCircleOutlined className="ml-1 text-[#98a2b3]" />
+                    <InfoCircleOutlined className="ml-1 text-[#667085]" />
                   </Tooltip>
                 </span>
               }

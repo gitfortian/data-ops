@@ -41,7 +41,7 @@ const runtimeVisual = (status?: string): RuntimeVisual | undefined => {
     case 'WAITING':
       return {
         borderClassName: 'border-[#e4e7ec]',
-        badgeClassName: 'bg-[#f5f6f7] text-[#98a2b3]',
+        badgeClassName: 'bg-[#f5f6f7] text-[#667085]',
         icon: <Clock3 size={11} />,
       };
     case 'READY':
@@ -155,7 +155,7 @@ const WorkflowNode = ({ id, data, selected }: NodeProps<WorkflowNodeData>) => {
             <span
               className={[
                 'inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5',
-                'text-[10px] font-medium leading-none',
+                'text-[12px] font-medium leading-none',
                 visual.badgeClassName,
               ].join(' ')}
             >
@@ -168,7 +168,7 @@ const WorkflowNode = ({ id, data, selected }: NodeProps<WorkflowNodeData>) => {
         <WorkflowNodeRetry data={data} />
 
         {runtime && visual ? (
-          <div className="mt-2 flex min-h-5 items-center justify-between border-t border-[#f1f2f4] pt-2 text-[9px] text-[#98a2b3]">
+          <div className="mt-2 flex min-h-5 items-center justify-between border-t border-[#f1f2f4] pt-2 text-[9px] text-[#667085]">
             <div className="min-w-0 flex-1 truncate">
               {runtime.errorMessage
                 ? runtime.errorMessage

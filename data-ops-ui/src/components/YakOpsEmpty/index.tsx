@@ -13,9 +13,9 @@ export interface YakOpsEmptyProps
   primaryColor?: string;
   /** 空状态文案，同时作为图片无障碍标题。 */
   title?: string;
-  /** 空状态补充说明，仅用于无障碍描述。 */
+  /** 空状态补充说明，同时用于可见文案和无障碍描述。 */
   description?: string;
-  /** 是否展示插画下方的空状态文案，默认在传入 description 时开启。 */
+  /** 是否展示插画下方的空状态文案，默认开启。 */
   showCaption?: boolean;
 }
 
@@ -35,7 +35,7 @@ const YakOpsEmpty: React.FC<YakOpsEmptyProps> = ({
   ...props
 }) => {
   const alt = description ? `${title}，${description}` : title;
-  const shouldShowCaption = showCaption ?? description !== undefined;
+  const shouldShowCaption = showCaption ?? true;
 
   return (
     <div className="inline-flex flex-col items-center justify-center text-center">
@@ -52,6 +52,7 @@ const YakOpsEmpty: React.FC<YakOpsEmptyProps> = ({
       {shouldShowCaption ? (
         <div className="mt-2 max-w-[320px] px-3 text-[13px] leading-5 text-[#667085]">
           {title}
+          {description && <div className="mt-1 text-[13px] text-[#667085]">{description}</div>}
         </div>
       ) : null}
     </div>

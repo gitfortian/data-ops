@@ -43,17 +43,16 @@ const compactRangeText = (range: OverviewDateRange) =>
   `${dayjs(range.startDate).format('MM.DD')}-${dayjs(range.endDate).format('MM.DD')}`;
 
 const MetricStrip = ({ metrics }: { metrics: ReturnType<typeof buildMetrics> }) => (
-  <div className="overflow-x-auto border border-solid border-[#eceef2]">
+  <div className="border border-solid border-[#eceef2] bg-[#eceef2]">
     <div
-      className="grid min-w-max"
-      style={{ gridTemplateColumns: `repeat(${metrics.length}, minmax(150px, 1fr))` }}
+      className="grid gap-px"
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))' }}
     >
-      {metrics.map((metric, index) => (
+      {metrics.map((metric) => (
         <div
           key={metric.label}
           className={[
             'min-h-[86px] bg-[#fafafa] px-4 py-3 transition-colors',
-            index ? 'border-l border-solid border-[#eceef2]' : '',
           ].join(' ')}
         >
           <div className="flex items-center gap-1 text-[12px] font-medium text-[#4b5563]">
@@ -174,7 +173,7 @@ export default function QualityMetricSection({
             <h2 className="m-0 shrink-0 text-[18px] font-semibold text-[#161823]">
               {title}
             </h2>
-            <span className="whitespace-nowrap text-[11px] text-[#98a2b3]">
+            <span className="whitespace-nowrap text-[12px] text-[#667085]">
               {formatPeriodText(range, intl)}
             </span>
           </div>

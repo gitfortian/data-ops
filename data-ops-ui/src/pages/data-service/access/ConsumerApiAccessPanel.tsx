@@ -87,7 +87,7 @@ export default function ConsumerApiAccessPanel({
                   />
                   {item.title}
                 </div>
-                <span className="text-[10px] text-[#98a2b3]">{item.meta}</span>
+                <span className="text-[12px] text-[#667085]">{item.meta}</span>
               </div>
             </button>
           ))}

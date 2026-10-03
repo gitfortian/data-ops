@@ -256,7 +256,7 @@ export default function DatasetLineageTab({ dataset }: DatasetLineageTabProps) {
         <span className="text-[#c1c5cc]">→</span>
         <Tag
           bordered={false}
-          className="m-0 bg-[rgba(254,44,85,.06)] text-[11px]"
+          className="m-0 bg-[rgba(254,44,85,.06)] text-[12px]"
           style={{ color: BRAND_COLOR }}
         >
           当前 Dataset

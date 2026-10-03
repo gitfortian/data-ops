@@ -242,7 +242,7 @@ export default function DataServiceAccessControlPanel({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[15px] font-semibold text-[#161823]">来源访问策略</div>
-            <div className="mt-1 text-[11px] leading-5 text-[#8a8f98]">
+            <div className="mt-1 text-[12px] leading-5 text-[#8a8f98]">
               在 API Key 鉴权和限流之前按客户端 IP/CIDR 拦截请求。
             </div>
           </div>
@@ -271,7 +271,7 @@ export default function DataServiceAccessControlPanel({
                 />
                 {item.title}
               </div>
-              <div className="mt-1.5 text-[11px] leading-5 text-[#8a8f98]">
+              <div className="mt-1.5 text-[12px] leading-5 text-[#8a8f98]">
                 {item.description}
               </div>
             </button>
@@ -283,7 +283,7 @@ export default function DataServiceAccessControlPanel({
         <div className="flex items-center justify-between gap-4 px-5 pt-4">
           <div>
             <div className="text-[15px] font-semibold text-[#161823]">黑白名单</div>
-            <div className="mt-1 text-[11px] text-[#8a8f98]">
+            <div className="mt-1 text-[12px] text-[#8a8f98]">
               支持单 IP 与 IPv4/IPv6 CIDR；规则可单独停用或设置有效期。
             </div>
           </div>
@@ -324,12 +324,12 @@ export default function DataServiceAccessControlPanel({
                     <div className="truncate font-mono text-[12px] font-medium text-[#161823]">
                       {rule.networkCidr}
                     </div>
-                    <div className="mt-1 text-[10px] text-[#98a2b3]">{ruleStatus(rule)}</div>
+                    <div className="mt-1 text-[12px] text-[#667085]">{ruleStatus(rule)}</div>
                   </div>
                   <div className="truncate text-[12px] text-[#667085]">
                     {rule.description || '—'}
                   </div>
-                  <div className="text-[11px] text-[#667085]">
+                  <div className="text-[12px] text-[#667085]">
                     {formatTime(rule.expiresAt)}
                   </div>
                   <Switch
@@ -369,9 +369,9 @@ export default function DataServiceAccessControlPanel({
 
       <section className="rounded-lg bg-white px-5 py-4">
         <div className="text-[12px] font-medium text-[#344054]">反向代理与真实 IP</div>
-        <div className="mt-1 text-[11px] leading-5 text-[#8a8f98]">
+        <div className="mt-1 text-[12px] leading-5 text-[#8a8f98]">
           默认不信任 X-Forwarded-For / X-Real-IP。只有直接上游命中
-          <code className="mx-1 rounded bg-[#f5f6f8] px-1.5 py-0.5 text-[10px] text-[#475467]">
+          <code className="mx-1 rounded bg-[#f5f6f8] px-1.5 py-0.5 text-[12px] text-[#475467]">
             yak.data-service.access.trusted-proxies
           </code>
           配置后，才会从可信代理链解析真实客户端 IP；否则始终以 TCP 对端地址为准。

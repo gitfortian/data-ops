@@ -58,7 +58,7 @@ const CustomKVList = ({ intl, field }: any) => {
           {field.label}
         </div>
         {field.placeholder && (
-          <div className="mt-0.5 text-[11px] leading-4 text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] leading-4 text-[#667085]">
             {field.placeholder}
           </div>
         )}
@@ -69,7 +69,7 @@ const CustomKVList = ({ intl, field }: any) => {
           const canAdd = fields.length < maxRows;
           return (
             <div className="overflow-hidden rounded-lg border border-[#e7e9ed] bg-white">
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] items-center gap-2 border-b border-[#eef0f3] bg-[#fafbfc] px-3 py-2 text-[11px] font-medium text-[#667085]">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] items-center gap-2 border-b border-[#eef0f3] bg-[#fafbfc] px-3 py-2 text-[12px] font-medium text-[#667085]">
                 <span>
                   {intl.formatMessage({ id: 'pages.datasource.customKv.key' })}
                 </span>
@@ -129,7 +129,7 @@ const CustomKVList = ({ intl, field }: any) => {
                   ))}
                 </div>
               ) : (
-                <div className="px-3 py-5 text-center text-xs text-[#98a2b3]">
+                <div className="px-3 py-5 text-center text-xs text-[#667085]">
                   {intl.formatMessage({ id: 'pages.datasource.customKv.empty' })}
                 </div>
               )}

@@ -151,7 +151,7 @@ const DirectoryTab = () => {
     }
     try {
       await moveDirectory(moving.id, moveTarget);
-      message.success('已移动，子树路径已级联刷新');
+      message.success('目录已移动');
       setMoving(null);
       setMoveTarget(undefined);
       void load();
@@ -244,7 +244,7 @@ const DirectoryTab = () => {
         <YakButton size="small" onClick={load}>
           刷新
         </YakButton>
-        <span className="text-[12px] text-[#98a2b3]">目录编码自动生成；移动会级联改写子树路径并防环</span>
+        <span className="text-[13px] text-[#667085]">目录编码自动生成，移动时会同步更新子目录的位置。</span>
       </div>
       <Card size="small" loading={loading}>
         {tree.length === 0 ? (
@@ -300,7 +300,7 @@ const DirectoryTab = () => {
           value={moveTarget}
           onChange={setMoveTarget}
         />
-        <div className="mt-2 text-[12px] text-[#98a2b3]">不可移入自身或子孙目录（服务端防环）</div>
+        <div className="mt-2 text-[13px] text-[#667085]">不能移动到当前目录或其子目录中。</div>
       </Modal>
     </div>
   );
@@ -899,7 +899,7 @@ const AssetTaxonomyPage = () => {
         <div>
           <div className="text-[20px] font-semibold leading-7">目录与标签</div>
           <div className="mt-1 text-[13px] text-[#667085]">
-            目录树 / 编目规则 / 标签字典：自动编目的三条腿，规则先试跑后启用
+            组织资产目录、设置编目规则与业务标签。规则需试跑通过后才能启用。
           </div>
         </div>
         <Segmented

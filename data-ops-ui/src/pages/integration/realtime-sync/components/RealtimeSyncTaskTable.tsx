@@ -67,7 +67,7 @@ const RealtimeSyncTaskTable = ({
             >
               {value || '-'}
             </button>
-            <div className="mt-0.5 flex h-5 items-center gap-1 text-[11px] leading-5 text-[#98a2b3]">
+            <div className="mt-0.5 flex h-5 items-center gap-1 text-[12px] leading-5 text-[#667085]">
               <span className="truncate">
                 ID：{job.id} · v{job.definitionVersion}
               </span>
@@ -80,8 +80,8 @@ const RealtimeSyncTaskTable = ({
                   type="text"
                   size="small"
                   iconOnly
-                  icon={<CopyOutlined className="text-[11px]" />}
-                  className="!h-5 !w-5 !min-w-0 !p-0 !text-[#98a2b3] hover:!bg-[#f2f4f7] hover:!text-[#475467]"
+                  icon={<CopyOutlined className="text-[12px]" />}
+                  className="!h-5 !w-5 !min-w-0 !p-0 !text-[#667085] hover:!bg-[#f2f4f7] hover:!text-[#475467]"
                   onClick={(event) => {
                     event.stopPropagation();
                     onCopyTaskId(job.id);
@@ -121,7 +121,7 @@ const RealtimeSyncTaskTable = ({
                 >
                   {sourceLabel}
                 </span>
-                <span className="text-[#98a2b3]">→</span>
+                <span className="text-[#667085]">→</span>
                 <span
                   className="max-w-[118px] truncate font-medium text-[#475467]"
                   title={sinkLabel}
@@ -129,7 +129,7 @@ const RealtimeSyncTaskTable = ({
                   {sinkLabel}
                 </span>
               </div>
-              <div className="mt-0.5 text-[11px] text-[#98a2b3]">
+              <div className="mt-0.5 text-[12px] text-[#667085]">
                 {source?.dbType || '-'} → {sink?.dbType || '-'} ·{' '}
                 {intl.formatMessage(
                   { id: 'pages.realtimeSync.table.tableCount' },
@@ -152,7 +152,7 @@ const RealtimeSyncTaskTable = ({
               label={releaseStateLabels[value] || value}
             />
             {job.publishedUpdateAvailable ? (
-              <span className="text-[10px] leading-4 text-[#b54708]">
+              <span className="text-[12px] leading-4 text-[#b54708]">
                 {intl.formatMessage({ id: 'pages.realtimeSync.table.updateAvailable' })}
               </span>
             ) : null}
@@ -169,7 +169,7 @@ const RealtimeSyncTaskTable = ({
               state={value}
               label={observedStateLabels[value] || value}
             />
-            <span className="text-[10px] leading-4 text-[#98a2b3]">
+            <span className="text-[12px] leading-4 text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.realtimeSync.table.desired' },
                 {
@@ -210,14 +210,14 @@ const RealtimeSyncTaskTable = ({
                   )}
               </div>
               <div
-                className="truncate text-[11px] text-[#98a2b3]"
+                className="truncate text-[12px] text-[#667085]"
                 title={job.latestDeployment?.runtimeRevision}
               >
                 {job.latestDeployment?.runtimeRevision ||
                   intl.formatMessage({ id: 'pages.realtimeSync.table.notDeployed' })}
               </div>
               {job.latestDeployment?.engineJobId ? (
-                <div className="truncate text-[10px] text-[#b0b7c3]">
+                <div className="truncate text-[12px] text-[#b0b7c3]">
                   Job {job.latestDeployment.engineJobId}
                 </div>
               ) : null}
@@ -230,7 +230,7 @@ const RealtimeSyncTaskTable = ({
         dataIndex: 'updateTime',
         width: 170,
         render: (value?: string) => (
-          <span className="whitespace-nowrap text-[12px] leading-5 text-[#98a2b3]">
+          <span className="whitespace-nowrap text-[12px] leading-5 text-[#667085]">
             {value || '-'}
           </span>
         ),
@@ -305,7 +305,7 @@ const RealtimeSyncTaskTable = ({
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <span className="text-[12px] text-[#98a2b3]">
+                  <span className="text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.realtimeSync.table.empty' })}
                   </span>
                 }
