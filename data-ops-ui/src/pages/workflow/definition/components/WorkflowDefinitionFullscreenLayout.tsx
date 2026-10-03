@@ -142,7 +142,7 @@ export default function WorkflowDefinitionFullscreenPage() {
           display: none !important;
         }
 
-        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside details div[class*="mt-1"][class*="text-[9px]"][class*="text-[#98a2b3]"] {
+        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside details div[class*="mt-1"][class*="text-[9px]"][class*="text-[#667085]"] {
           display: none !important;
         }
 
@@ -151,11 +151,11 @@ export default function WorkflowDefinitionFullscreenPage() {
           font-size: 13px !important;
         }
 
-        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside [class*="text-[11px]"] {
+        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside [class*="text-[12px]"] {
           font-size: 12px !important;
         }
 
-        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside [class*="text-[10px]"] {
+        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside [class*="text-[12px]"] {
           font-size: 11px !important;
         }
 
@@ -171,7 +171,7 @@ export default function WorkflowDefinitionFullscreenPage() {
           color: #475467 !important;
         }
 
-        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside [class*="text-[#98a2b3]"] {
+        .workflow-definition-fullscreen-shell section > div:has(> aside) > aside [class*="text-[#667085]"] {
           color: #667085 !important;
         }
 

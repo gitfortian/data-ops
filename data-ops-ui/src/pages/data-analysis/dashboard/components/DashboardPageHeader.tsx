@@ -75,7 +75,7 @@ const DashboardPageHeader = ({
                 <span className="inline-flex items-baseline gap-1">
                   <span>{intl.formatMessage({ id: item.messageId })}</span>
                   {item.key !== 'all' && statusCount(item.key) > 0 ? (
-                    <span className="text-[10px] font-normal text-[#b0b5bd]">
+                    <span className="text-[12px] font-normal text-[#b0b5bd]">
                       {statusCount(item.key)}
                     </span>
                   ) : null}

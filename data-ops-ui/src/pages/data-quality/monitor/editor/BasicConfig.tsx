@@ -59,11 +59,11 @@ export const BasicConfig = ({
                   <div className="truncate text-[13px] font-medium text-[#344054]">
                     {tableName}
                   </div>
-                  <div className="mt-1 truncate text-[11px] text-[#8a8f99]">
+                  <div className="mt-1 truncate text-[12px] text-[#8a8f99]">
                     {objectPath || `数据源 ID：${dataSourceId}`}
                   </div>
                 </div>
-                <span className="shrink-0 rounded bg-white px-2 py-0.5 text-[11px] text-[#667085]">
+                <span className="shrink-0 rounded bg-white px-2 py-0.5 text-[12px] text-[#667085]">
                   已固定
                 </span>
               </div>
@@ -106,7 +106,7 @@ export const BasicConfig = ({
               <div className="text-[13px] font-medium text-[#344054]">
                 创建后立即启用
               </div>
-              <div className="mt-0.5 text-[11px] text-[#98a2b3]">
+              <div className="mt-0.5 text-[12px] text-[#667085]">
                 停用后调度不会运行，仍可保留全部配置。
               </div>
             </div>

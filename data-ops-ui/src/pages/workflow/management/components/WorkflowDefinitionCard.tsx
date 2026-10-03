@@ -284,7 +284,7 @@ const WorkflowDefinitionCard = ({
               </button>
               <span
                 className={[
-                  'inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-[7px] text-[10px] font-semibold',
+                  'inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full px-[7px] text-[12px] font-semibold',
                   definitionMeta.textClassName,
                   definitionMeta.backgroundClassName,
                 ].join(' ')}
@@ -292,14 +292,14 @@ const WorkflowDefinitionCard = ({
                 {definitionLabel}
               </span>
               {showDraftChanged ? (
-                <span className="inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full bg-[#fff7e9] px-[7px] text-[10px] font-semibold text-[#b77a22]">
+                <span className="inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full bg-[#fff7e9] px-[7px] text-[12px] font-semibold text-[#b77a22]">
                   {intl.formatMessage({ id: 'pages.workflow.definition.card.draftChanged' })}
                 </span>
               ) : null}
             </div>
             <p
               title={record.description || ''}
-              className="mb-0 mt-1.5 max-w-full truncate rounded-[7px] bg-[#f7f8fa]/90 px-2 py-1 text-[11px] leading-[18px] text-[#858a94]"
+              className="mb-0 mt-1.5 max-w-full truncate rounded-[7px] bg-[#f7f8fa]/90 px-2 py-1 text-[12px] leading-[18px] text-[#858a94]"
             >
               {record.description || intl.formatMessage({ id: 'pages.workflow.definition.card.noDescription' })}
             </p>
@@ -354,21 +354,21 @@ const WorkflowDefinitionCard = ({
         ].filter(Boolean).join(' ')}
       >
         <div className="flex min-w-0 flex-col gap-1.5 pr-2.5">
-          <span className="text-[10px] leading-4 text-[#a0a4ad]">
+          <span className="text-[12px] leading-4 text-[#a0a4ad]">
             {intl.formatMessage({ id: 'pages.workflow.definition.card.publishVersion' })}
           </span>
-          <strong className="truncate text-[11px] font-semibold leading-[18px] text-[#5c616b]">
+          <strong className="truncate text-[12px] font-semibold leading-[18px] text-[#5c616b]">
             {publishedVersionText}
           </strong>
         </div>
         <div className="flex min-w-0 flex-col gap-1.5 border-l border-[#eff0f2] px-2.5">
-          <span className="text-[10px] leading-4 text-[#a0a4ad]">
+          <span className="text-[12px] leading-4 text-[#a0a4ad]">
             {intl.formatMessage({ id: 'pages.workflow.definition.card.latestExecution' })}
           </span>
           <div className="flex min-w-0 items-center">
             <span
               className={[
-                'inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 truncate rounded-full px-[7px] text-[10px] font-semibold',
+                'inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 truncate rounded-full px-[7px] text-[12px] font-semibold',
                 runtimeMeta.textClassName,
                 runtimeMeta.backgroundClassName,
               ].join(' ')}
@@ -379,10 +379,10 @@ const WorkflowDefinitionCard = ({
           </div>
         </div>
         <div className="flex min-w-0 flex-col gap-1.5 border-l border-[#eff0f2] pl-2.5">
-          <span className="text-[10px] leading-4 text-[#a0a4ad]">
+          <span className="text-[12px] leading-4 text-[#a0a4ad]">
             {intl.formatMessage({ id: 'pages.workflow.definition.card.updatedAt' })}
           </span>
-          <strong className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-medium leading-[18px] text-[#737882]">
+          <strong className="flex min-w-0 items-center gap-1.5 truncate text-[12px] font-medium leading-[18px] text-[#737882]">
             <Clock3 size={11} strokeWidth={1.8} className="shrink-0 text-[#9ca0a9]" />
             <span className="truncate">{formatWorkflowTime(record.updateTime, intl.locale)}</span>
           </strong>

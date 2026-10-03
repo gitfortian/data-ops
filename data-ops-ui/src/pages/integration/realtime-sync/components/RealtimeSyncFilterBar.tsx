@@ -65,12 +65,12 @@ const RealtimeSyncFilterBar = ({
         onChange={onStateGroupChange}
       />
 
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-2 overflow-x-auto">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
         <Input
           allowClear
           variant="filled"
           value={filterDraft.keyword}
-          prefix={<SearchOutlined className="text-[#98a2b3]" />}
+          prefix={<SearchOutlined className="text-[#667085]" />}
           placeholder={intl.formatMessage({
             id: 'pages.realtimeSync.filter.searchPlaceholder',
           })}
@@ -117,7 +117,7 @@ const RealtimeSyncFilterBar = ({
               <div className="text-[14px] font-semibold text-[#101828]">
                 {intl.formatMessage({ id: 'pages.realtimeSync.filter.advanced' })}
               </div>
-              <div className="mt-1 text-[12px] text-[#98a2b3]">
+              <div className="mt-1 text-[12px] text-[#667085]">
                 {intl.formatMessage({
                   id: 'pages.realtimeSync.filter.advancedDescription',
                 })}
@@ -168,7 +168,7 @@ const RealtimeSyncFilterBar = ({
           >
             {intl.formatMessage({ id: 'pages.realtimeSync.filter.advanced' })}
             {advancedFilterCount > 0 ? (
-              <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff4d4f] px-1 text-[10px] leading-[18px] text-white">
+              <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff4d4f] px-1 text-[12px] leading-[18px] text-white">
                 {advancedFilterCount}
               </span>
             ) : null}

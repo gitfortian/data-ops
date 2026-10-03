@@ -51,7 +51,7 @@ const ipModeLabel = {
 
 const Metric = ({ label, value }: { label: string; value: number }) => (
   <div className="min-w-0 px-4 py-3">
-    <div className="text-[11px] text-[#98a2b3]">{label}</div>
+    <div className="text-[12px] text-[#667085]">{label}</div>
     <div className="mt-1 text-[20px] font-semibold tracking-[-.02em] text-[#161823]">
       {value}
     </div>
@@ -209,7 +209,7 @@ export default function DataServiceAccessPage() {
         <div className="min-w-0 py-0.5">
           <div className="truncate text-[12px] font-medium text-[#344054]">{record.name}</div>
           {record.description ? (
-            <div className="mt-0.5 truncate text-[10px] text-[#98a2b3]">{record.description}</div>
+            <div className="mt-0.5 truncate text-[12px] text-[#667085]">{record.description}</div>
           ) : null}
         </div>
       ),
@@ -219,7 +219,7 @@ export default function DataServiceAccessPage() {
       key: 'apis',
       width: 150,
       render: (_, record) => (
-        <div className="text-[11px] font-medium text-[#475467]">
+        <div className="text-[12px] font-medium text-[#475467]">
           {record.accessScope === 'ALL' ? '所有 API' : `${record.apiCount} 个 API`}
         </div>
       ),
@@ -230,10 +230,10 @@ export default function DataServiceAccessPage() {
       width: 150,
       render: (_, record) => (
         <div>
-          <div className="text-[11px] font-medium text-[#475467]">
+          <div className="text-[12px] font-medium text-[#475467]">
             {record.activeKeyCount}/{record.keyCount} 个有效 Key
           </div>
-          <div className="mt-0.5 text-[10px] text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] text-[#667085]">
             默认 {record.defaultRateLimitPerMinute}/min
           </div>
         </div>
@@ -245,11 +245,11 @@ export default function DataServiceAccessPage() {
       width: 140,
       render: (_, record) => (
         <div>
-          <div className="text-[11px] font-medium text-[#475467]">
+          <div className="text-[12px] font-medium text-[#475467]">
             {ipModeLabel[record.ipAccessMode]}
           </div>
           {record.ipRuleCount > 0 ? (
-            <div className="mt-0.5 text-[10px] text-[#98a2b3]">{record.ipRuleCount} 条规则</div>
+            <div className="mt-0.5 text-[12px] text-[#667085]">{record.ipRuleCount} 条规则</div>
           ) : null}
         </div>
       ),
@@ -259,7 +259,7 @@ export default function DataServiceAccessPage() {
       dataIndex: 'enabled',
       width: 92,
       render: (enabled: boolean) => (
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-[#667085]">
+        <span className="inline-flex items-center gap-1.5 text-[12px] text-[#667085]">
           <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-[#20c77a]' : 'bg-[#b0b5bd]'}`} />
           {enabled ? '可调用' : '已停用'}
         </span>
@@ -270,7 +270,7 @@ export default function DataServiceAccessPage() {
       dataIndex: 'updateTime',
       width: 150,
       render: (value?: string | null) => (
-        <span className="text-[10px] text-[#98a2b3]">{formatTime(value)}</span>
+        <span className="text-[12px] text-[#667085]">{formatTime(value)}</span>
       ),
     },
     {
@@ -327,7 +327,7 @@ export default function DataServiceAccessPage() {
             onChange={(event) => setKeyword(event.target.value)}
             allowClear
             variant="filled"
-            prefix={<Search size={13} className="text-[#98a2b3]" />}
+            prefix={<Search size={13} className="text-[#667085]" />}
             placeholder="搜索调用方"
             className="w-[300px]"
           />
@@ -342,7 +342,7 @@ export default function DataServiceAccessPage() {
               { value: 'DISABLED', label: '已停用' },
             ]}
           />
-          <div className="ml-auto text-[11px] text-[#98a2b3]">共 {filtered.length} 个调用方</div>
+          <div className="ml-auto text-[12px] text-[#667085]">共 {filtered.length} 个调用方</div>
         </div>
 
         <div className="mt-3">
@@ -360,7 +360,7 @@ export default function DataServiceAccessPage() {
               showTotal: (total) => `共 ${total} 条`,
             }}
             locale={{ emptyText: <YakEmpty compact title="暂无调用方" /> }}
-            className="[&_.ant-table-container]:!border-t [&_.ant-table-container]:!border-[#f0f0f0] [&_.ant-table-thead>tr>th]:!bg-[#fafafa] [&_.ant-table-thead>tr>th]:!text-[11px] [&_.ant-table-tbody>tr>td]:!py-3"
+            className="[&_.ant-table-container]:!border-t [&_.ant-table-container]:!border-[#f0f0f0] [&_.ant-table-thead>tr>th]:!bg-[#fafafa] [&_.ant-table-thead>tr>th]:!text-[12px] [&_.ant-table-tbody>tr>td]:!py-3"
           />
         </div>
       </div>

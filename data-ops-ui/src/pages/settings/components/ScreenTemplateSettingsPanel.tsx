@@ -198,7 +198,7 @@ export default function ScreenTemplateSettingsPanel() {
                   : 'bg-transparent text-[#8a9099] hover:bg-[#f7f8f9] hover:text-[#444950]',
               ].join(' ')}
             >
-              {label}<span className="ml-1 text-[11px] font-normal text-[#a3a8b0]">{total}</span>
+              {label}<span className="ml-1 text-[12px] font-normal text-[#a3a8b0]">{total}</span>
             </button>
           ))}
         </div>
@@ -214,7 +214,7 @@ export default function ScreenTemplateSettingsPanel() {
             allowClear
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             placeholder="搜索模板"
             className="w-[200px]"
             variant="filled"
@@ -223,12 +223,12 @@ export default function ScreenTemplateSettingsPanel() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex h-[320px] items-center justify-center text-[13px] text-[#98a2b3]">
+        <div className="flex h-[320px] items-center justify-center text-[13px] text-[#667085]">
           没有匹配的大屏模板
         </div>
       ) : (
-        <div className="mt-4 overflow-hidden rounded-[8px] border border-[#e7e9ec]">
-          <div className="grid grid-cols-[minmax(280px,1fr)_110px_90px_90px_210px] items-center bg-[#fafafa] px-4 py-2.5 text-[11px] font-medium text-[#8a9099]">
+        <div className="mt-4 overflow-x-auto rounded-[8px] border border-[#e7e9ec]">
+          <div className="grid min-w-[812px] grid-cols-[minmax(280px,1fr)_110px_90px_90px_210px] items-center bg-[#fafafa] px-4 py-2.5 text-[12px] font-medium text-[#667085]">
             <div>模板</div>
             <div>分类</div>
             <div>来源</div>
@@ -238,7 +238,7 @@ export default function ScreenTemplateSettingsPanel() {
           {filtered.map((record) => (
             <div
               key={record.id}
-              className="grid min-h-[96px] grid-cols-[minmax(280px,1fr)_110px_90px_90px_210px] items-center border-t border-[#eef0f2] px-4 py-3"
+              className="grid min-w-[812px] min-h-[96px] grid-cols-[minmax(280px,1fr)_110px_90px_90px_210px] items-center border-t border-[#eef0f2] px-4 py-3"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <button
@@ -250,7 +250,7 @@ export default function ScreenTemplateSettingsPanel() {
                 </button>
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-semibold text-[#161823]">{record.template.name}</div>
-                  <div className="mt-1 line-clamp-2 text-[11px] leading-[17px] text-[#98a2b3]">
+                  <div className="mt-1 line-clamp-2 text-[12px] leading-[17px] text-[#667085]">
                     {record.template.description || `${record.template.width} × ${record.template.height}`}
                   </div>
                 </div>
@@ -258,7 +258,7 @@ export default function ScreenTemplateSettingsPanel() {
               <div className="truncate text-[12px] text-[#667085]">{record.template.category}</div>
               <div className="text-[12px] text-[#667085]">{record.source === 'builtin' ? '官方' : '自定义'}</div>
               <div>
-                <span className={`rounded-[4px] px-2 py-1 text-[11px] font-medium ${statusClass[record.status]}`}>
+                <span className={`rounded-[4px] px-2 py-1 text-[12px] font-medium ${statusClass[record.status]}`}>
                   {statusLabel[record.status]}
                 </span>
               </div>

@@ -84,7 +84,7 @@ export default function DatasetGovernanceTruthBar({
   const detailUrl = datasetAssetDetailUrl(view.asset);
 
   return (
-    <div className="flex h-8 shrink-0 items-center justify-between border-b border-[#e8e9ec] bg-[#fafbfc] px-3 text-[11px] text-[#475467]">
+    <div className="flex h-8 shrink-0 items-center justify-between border-b border-[#e8e9ec] bg-[#fafbfc] px-3 text-[12px] text-[#475467]">
       <div className="flex min-w-0 items-center gap-2">
         <span className="font-medium text-[#344054]">Governance</span>
         {view.datasetId ? (
@@ -94,7 +94,7 @@ export default function DatasetGovernanceTruthBar({
           {datasetAssetGovernanceLabel(view.state)}
         </Tag>
         {view.asset?.assetKey ? (
-          <span className="max-w-[320px] truncate font-mono text-[10px] text-[#98a2b3]">
+          <span className="max-w-[320px] truncate font-mono text-[12px] text-[#667085]">
             {view.asset.assetKey}
           </span>
         ) : null}

@@ -415,7 +415,7 @@ export default function WorkflowScheduleConfigPage() {
                           <h1 className="m-0 truncate text-[18px] font-semibold leading-8 text-[#161823]">
                             {intl.formatMessage({ id: 'pages.workflow.schedule.title' })}
                           </h1>
-                          <span className="rounded-md bg-[#f2f4f7] px-2 py-1 text-[11px] font-medium text-[#667085]">
+                          <span className="rounded-md bg-[#f2f4f7] px-2 py-1 text-[12px] font-medium text-[#667085]">
                             {workflowStatusLabel}
                           </span>
                         </div>
@@ -499,7 +499,7 @@ export default function WorkflowScheduleConfigPage() {
                           <CronSchedulerInput disabled={!canEdit} />
                         </Form.Item>
                         <div className="-mt-3 mb-5 flex flex-wrap items-center gap-1.5">
-                          <span className="mr-1 text-[11px] text-[#98a2b3]">
+                          <span className="mr-1 text-[12px] text-[#667085]">
                             {intl.formatMessage({ id: 'pages.workflow.schedule.quickSet' })}
                           </span>
                           {CRON_PRESETS.map((preset) => (
@@ -508,7 +508,7 @@ export default function WorkflowScheduleConfigPage() {
                               size="small"
                               type="text"
                               disabled={!canEdit}
-                              className="!h-7 !bg-[#f7f8fa] !px-2.5 !text-[11px] !text-[#667085] hover:!bg-[#eef0f3]"
+                              className="!h-7 !bg-[#f7f8fa] !px-2.5 !text-[12px] !text-[#667085] hover:!bg-[#eef0f3]"
                               onClick={() => form.setFieldValue('cronExpression', preset.value)}
                             >
                               {intl.formatMessage({ id: preset.messageId })}

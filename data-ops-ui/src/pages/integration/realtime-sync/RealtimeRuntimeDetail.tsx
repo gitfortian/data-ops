@@ -76,7 +76,7 @@ function MetricCard({
       <div className="mt-1 text-[22px] font-semibold leading-8 text-[#101828]">
         {value}
       </div>
-      {hint && <div className="mt-1 text-[11px] text-[#98a2b3]">{hint}</div>}
+      {hint && <div className="mt-1 text-[12px] text-[#667085]">{hint}</div>}
     </Card>
   );
 }
@@ -233,7 +233,7 @@ export default function RealtimeRuntimeDetail({ job, events }: Props) {
     <Spin spinning={observabilityLoading && !observability}>
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <div className="flex items-center justify-between gap-3">
-          <div className="text-[12px] text-[#98a2b3]">
+          <div className="text-[12px] text-[#667085]">
             {observability?.sampledAt
               ? intl.formatMessage(
                   { id: 'pages.realtimeSync.runtime.sampledAt' },
@@ -448,12 +448,12 @@ export default function RealtimeRuntimeDetail({ job, events }: Props) {
                         <div className="font-medium text-[#344054]">
                           {item.exceptionName || 'Runtime Exception'}
                         </div>
-                        <div className="mt-0.5 text-[11px] text-[#98a2b3]">
+                        <div className="mt-0.5 text-[12px] text-[#667085]">
                           {formatTime(item.timestamp, locale)} · {item.taskName || '-'} ·{' '}
                           {item.taskManagerId || '-'}
                         </div>
                         {item.stacktrace && (
-                          <pre className="mt-2 max-h-[220px] overflow-auto whitespace-pre-wrap rounded bg-[#f8f9fb] p-3 text-[11px] text-[#475467]">
+                          <pre className="mt-2 max-h-[220px] overflow-auto whitespace-pre-wrap rounded bg-[#f8f9fb] p-3 text-[12px] text-[#475467]">
                             {item.stacktrace}
                           </pre>
                         )}
@@ -666,7 +666,7 @@ export default function RealtimeRuntimeDetail({ job, events }: Props) {
                 showInfo={false}
               />
             </div>
-            <Typography.Text type="secondary" className="text-[11px]">
+            <Typography.Text type="secondary" className="text-[12px]">
               {intl.formatMessage(
                 { id: 'pages.realtimeSync.runtime.vertexCount' },
                 { count: metrics?.vertexCount || 0 },

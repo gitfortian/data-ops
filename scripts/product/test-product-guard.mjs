@@ -56,14 +56,15 @@ const topGroups = extractTopLevelNavigationGroups(navigation);
 assert(topGroups.has("integration"));
 assert(topGroups.has("development"));
 assert(topGroups.has("modeling"));
-assert(topGroups.has("governance"));
 assert(topGroups.has("data-asset"));
 assert(topGroups.has("data-analysis"));
-assert(topGroups.has("approval"));
 assert(topGroups.has("system"));
 assert(!topGroups.has("resources"));
 assert(!topGroups.has("workflow"));
 assert(!topGroups.has("semantic"));
+assert(!topGroups.has("governance"));
+assert(!topGroups.has("approval"));
+assert.equal(topGroups.size, 6);
 
 const businessPom = readFileSync("data-ops-business/pom.xml", "utf8");
 const modules = extractBusinessModules(businessPom);

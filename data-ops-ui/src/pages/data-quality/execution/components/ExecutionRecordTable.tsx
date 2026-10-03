@@ -1,5 +1,6 @@
 import YakButton from '@/components/YakButton';
 import YakOpsEmpty from '@/components/YakOpsEmpty';
+import { useColumnVisibility } from '@/components/table/useColumnVisibility';
 import { useIntl } from '@umijs/max';
 import { Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -84,6 +85,7 @@ const ExecutionRecordTable = ({
   const executionColumns = useMemo<ColumnsType<ExecutionWorkspaceListItem>>(
     () => [
       {
+        key: 'execution',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.execution',
         }),
@@ -91,7 +93,7 @@ const ExecutionRecordTable = ({
         fixed: 'left',
         render: (_, record) => (
           <div className="min-w-0 py-0.5">
-            <div className="truncate text-[11px] text-[#98a2b3]">
+            <div className="truncate text-[12px] text-[#667085]">
               {record.executionNo}
             </div>
             <YakButton
@@ -109,6 +111,7 @@ const ExecutionRecordTable = ({
         ),
       },
       {
+        key: 'object',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.object',
         }),
@@ -118,7 +121,7 @@ const ExecutionRecordTable = ({
             <div className="truncate font-medium text-[#344054]">
               {record.objectName}
             </div>
-            <div className="mt-1 truncate text-[11px] text-[#98a2b3]">
+            <div className="mt-1 truncate text-[12px] text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.dataQuality.execution.sourcePrefix' },
                 { name: record.dataSourceName },
@@ -144,6 +147,7 @@ const ExecutionRecordTable = ({
         render: (value) => <CheckResultTag value={value} />,
       },
       {
+        key: 'issueCount',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.issueCount',
         }),
@@ -154,10 +158,11 @@ const ExecutionRecordTable = ({
               {issueCount(record)}
             </Tag>
           ) : (
-            <span className="text-[#98a2b3]">0</span>
+            <span className="text-[#667085]">0</span>
           ),
       },
       {
+        key: 'ruleSummary',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.ruleSummary',
         }),
@@ -192,6 +197,7 @@ const ExecutionRecordTable = ({
         ),
       },
       {
+        key: 'trigger',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.trigger',
         }),
@@ -201,7 +207,7 @@ const ExecutionRecordTable = ({
             <div className="text-[#344054]">
               {triggerLabel(record.triggerType)} · {record.operator || 'system'}
             </div>
-            <div className="text-[#98a2b3]">
+            <div className="text-[#667085]">
               {formatTime(record.startedAt || record.queuedAt)}
             </div>
           </div>
@@ -216,6 +222,7 @@ const ExecutionRecordTable = ({
         render: formatTime,
       },
       {
+        key: 'actions',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.actions',
         }),
@@ -255,12 +262,13 @@ const ExecutionRecordTable = ({
   const ruleColumns = useMemo<ColumnsType<RuleExecutionWorkspaceListItem>>(
     () => [
       {
+        key: 'rule',
         title: intl.formatMessage({ id: 'pages.dataQuality.execution.column.rule' }),
         width: 270,
         fixed: 'left',
         render: (_, record) => (
           <div className="min-w-0 py-0.5">
-            <div className="truncate text-[11px] text-[#98a2b3]">
+            <div className="truncate text-[12px] text-[#667085]">
               {record.ruleId} · {record.executionNo}
             </div>
             <YakButton
@@ -294,6 +302,7 @@ const ExecutionRecordTable = ({
         render: (value) => <ExecutionStatusTag value={value} />,
       },
       {
+        key: 'issueHandling',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.issueHandling',
         }),
@@ -304,7 +313,7 @@ const ExecutionRecordTable = ({
               {intl.formatMessage({ id: 'pages.dataQuality.execution.issueExists' })}
             </span>
           ) : (
-            <span className="text-[#98a2b3]">-</span>
+            <span className="text-[#667085]">-</span>
           ),
       },
       {
@@ -316,6 +325,7 @@ const ExecutionRecordTable = ({
         render: formatTime,
       },
       {
+        key: 'tableName',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.tableName',
         }),
@@ -323,7 +333,7 @@ const ExecutionRecordTable = ({
         render: (_, record) => (
           <div className="min-w-0">
             <div className="truncate text-[#344054]">{record.tableName}</div>
-            <div className="mt-1 truncate text-[11px] text-[#98a2b3]">
+            <div className="mt-1 truncate text-[12px] text-[#667085]">
               {record.dataSourceName}
             </div>
           </div>
@@ -347,11 +357,12 @@ const ExecutionRecordTable = ({
         width: 170,
       },
       {
+        key: 'importance',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.importance',
         }),
         width: 110,
-        render: () => <span className="text-[#98a2b3]">--</span>,
+        render: () => <span className="text-[#667085]">--</span>,
       },
       {
         title: intl.formatMessage({
@@ -378,6 +389,7 @@ const ExecutionRecordTable = ({
         render: (value) => <CheckResultTag value={value} />,
       },
       {
+        key: 'actions',
         title: intl.formatMessage({
           id: 'pages.dataQuality.execution.column.actions',
         }),
@@ -427,44 +439,47 @@ const ExecutionRecordTable = ({
     </div>
   );
 
+  const executionView = useColumnVisibility(executionColumns, ['execution', 'object', 'executionStatus', 'checkResult', 'issueCount', 'finishedAt', 'actions']);
+  const ruleView = useColumnVisibility(ruleColumns, ['rule', 'dimension', 'executionStatus', 'expectedValue', 'metricValue', 'checkResult', 'finishedAt', 'actions']);
+
   if (mode === 'RULE') {
     return (
-      <Table<RuleExecutionWorkspaceListItem>
+      <><div className="mb-2 flex justify-end">{ruleView.control}</div><Table<RuleExecutionWorkspaceListItem>
         rowKey={(record) => `${record.executionNo}-${record.id}`}
         size="small"
         bordered
         loading={loading}
         pagination={false}
-        scroll={{ x: 1900 }}
+        scroll={{ x: ruleView.scrollWidth }}
         dataSource={ruleRecords}
-        columns={ruleColumns}
+        columns={ruleView.columns}
         locale={{ emptyText }}
         className={TABLE_CLASS_NAME}
         onRow={(record) => ({
           onClick: () => onOpenExecution(record.executionNo),
           className: 'cursor-pointer',
         })}
-      />
+      /></>
     );
   }
 
   return (
-    <Table<ExecutionWorkspaceListItem>
+    <><div className="mb-2 flex justify-end">{executionView.control}</div><Table<ExecutionWorkspaceListItem>
       rowKey="executionNo"
       size="small"
       bordered
       loading={loading}
       pagination={false}
       className={TABLE_CLASS_NAME}
-      scroll={{ x: 1460 }}
+      scroll={{ x: executionView.scrollWidth }}
       dataSource={executionRecords}
-      columns={executionColumns}
+      columns={executionView.columns}
       locale={{ emptyText }}
       onRow={(record) => ({
         onClick: () => onOpenExecution(record.executionNo),
         className: 'cursor-pointer',
       })}
-    />
+    /></>
   );
 };
 

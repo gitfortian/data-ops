@@ -314,7 +314,7 @@ const ReleaseCenterPage = () => {
             >
               {record.taskName || '-'}
             </button>
-            <div className="mt-0.5 truncate text-[11px] text-[#98a2b3]">
+            <div className="mt-0.5 truncate text-[12px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.common.nodeId' })}:{' '}
               <button
                 type="button"
@@ -354,14 +354,14 @@ const ReleaseCenterPage = () => {
                 V{state.activeRevisionNo}
               </div>
               {state.hasNewerPublishedRevision ? (
-                <div className="mt-0.5 text-[11px] text-[#b54708]">
+                <div className="mt-0.5 text-[12px] text-[#b54708]">
                   {intl.formatMessage(
                     { id: 'pages.dataDevelopment.release.latestRevision' },
                     { revision: state.latestPublishedRevisionNo },
                   )}
                 </div>
               ) : (
-                <div className="mt-0.5 text-[11px] text-[#98a2b3]">
+                <div className="mt-0.5 text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.release.latestCurrent' })}
                 </div>
               )}
@@ -375,7 +375,7 @@ const ReleaseCenterPage = () => {
         width: 180,
         render: (value?: string) => (
           <Tooltip title={value || undefined}>
-            <span className="font-mono text-[11px] text-[#667085]">
+            <span className="font-mono text-[12px] text-[#667085]">
               {value ? value.slice(0, 12) : '-'}
             </span>
           </Tooltip>
@@ -396,7 +396,7 @@ const ReleaseCenterPage = () => {
         dataIndex: 'updateTime',
         width: 170,
         render: (value?: string | null) => (
-          <span className="whitespace-nowrap text-[12px] text-[#98a2b3]">
+          <span className="whitespace-nowrap text-[12px] text-[#667085]">
             {value ? moment(value).format('YYYY-MM-DD HH:mm:ss') : '-'}
           </span>
         ),
@@ -454,7 +454,7 @@ const ReleaseCenterPage = () => {
                 </Button>
               </Popconfirm>
             ) : !canRelease && isReleaseMutableStatus(record.status) ? (
-              <span className="text-[11px] text-[#98a2b3]">
+              <span className="text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.releaseExperience.readOnly' })}
               </span>
             ) : null}
@@ -485,7 +485,7 @@ const ReleaseCenterPage = () => {
             <h1 className="m-0 text-[17px] font-semibold text-[#161823]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.release.title' })}
             </h1>
-            <div className="mt-1 text-[12px] text-[#98a2b3]">
+            <div className="mt-1 text-[12px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.release.description' })}
             </div>
           </div>
@@ -495,7 +495,7 @@ const ReleaseCenterPage = () => {
         </div>
 
         {!canRelease ? (
-          <div className="mt-3 rounded-md border border-[#eaecf0] bg-[#f9fafb] px-3 py-2 text-[11px] text-[#667085]">
+          <div className="mt-3 rounded-md border border-[#eaecf0] bg-[#f9fafb] px-3 py-2 text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.releaseExperience.permissionHint' })}
           </div>
         ) : null}
@@ -509,7 +509,7 @@ const ReleaseCenterPage = () => {
                 label: (
                   <span className="inline-flex items-baseline gap-1">
                     <span>{item.label}</span>
-                    <span className="text-[11px] opacity-60">{tabCount(item.value)}</span>
+                    <span className="text-[12px] opacity-60">{tabCount(item.value)}</span>
                   </span>
                 ),
               }))}
@@ -519,12 +519,12 @@ const ReleaseCenterPage = () => {
               }}
             />
 
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2 overflow-x-auto">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
               <Input
                 allowClear
                 variant="filled"
                 value={keywordDraft}
-                prefix={<SearchOutlined className="text-[#98a2b3]" />}
+                prefix={<SearchOutlined className="text-[#667085]" />}
                 placeholder={intl.formatMessage({ id: 'pages.dataDevelopment.release.searchPlaceholder' })}
                 className="!h-9 !w-[240px] !min-w-[200px]"
                 onChange={(event) => setKeywordDraft(event.target.value)}
@@ -585,7 +585,7 @@ const ReleaseCenterPage = () => {
 
         {!loadFailure ? (
           <div className="flex h-16 shrink-0 items-center justify-between border-t border-[#f0f0f0]">
-            <span className="text-[12px] text-[#98a2b3]">
+            <span className="text-[12px] text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.dataDevelopment.release.total' },
                 { count: total },
@@ -670,7 +670,7 @@ const ReleaseCenterPage = () => {
                   : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Checksum" span={2}>
-                <span className="break-all font-mono text-[11px] text-[#667085]">
+                <span className="break-all font-mono text-[12px] text-[#667085]">
                   {detail.release.checksum || '-'}
                 </span>
               </Descriptions.Item>
@@ -730,7 +730,7 @@ const ReleaseCenterPage = () => {
                 <div className="text-[13px] font-medium text-[#344054]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.release.history' })}
                 </div>
-                <div className="text-[11px] text-[#98a2b3]">
+                <div className="text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.release.historyHint' })}
                 </div>
               </div>
@@ -765,7 +765,7 @@ const ReleaseCenterPage = () => {
                     ellipsis: true,
                     render: (value?: string) => (
                       <Tooltip title={value || undefined}>
-                        <span className="font-mono text-[11px] text-[#98a2b3]">
+                        <span className="font-mono text-[12px] text-[#667085]">
                           {value ? value.slice(0, 14) : '-'}
                         </span>
                       </Tooltip>
@@ -785,7 +785,7 @@ const ReleaseCenterPage = () => {
                       }
                       if (!canRelease) {
                         return (
-                          <span className="text-[11px] text-[#98a2b3]">
+                          <span className="text-[12px] text-[#667085]">
                             {intl.formatMessage({ id: 'pages.dataDevelopment.releaseExperience.readOnly' })}
                           </span>
                         );

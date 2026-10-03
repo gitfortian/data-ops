@@ -88,7 +88,7 @@ const DataSecurityOverviewPage = () => {
             <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
               <section className="rounded-xl border border-solid border-[#eceef2] bg-white p-4">
                 <div className="text-[15px] font-semibold">定级分布</div>
-                <div className="mt-1 text-[12px] text-[#98a2b3]">各安全等级已定级的资产数量</div>
+                <div className="mt-1 text-[12px] text-[#667085]">各安全等级已定级的资产数量</div>
                 <div className="mt-4 space-y-3">
                   {distribution.length === 0 ? (
                     <YakEmpty compact title="暂无定级数据" description="到「分级分类」为资产打级后展示" />
@@ -118,7 +118,7 @@ const DataSecurityOverviewPage = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-[15px] font-semibold">近期访问动态</div>
-                    <div className="mt-1 text-[12px] text-[#98a2b3]">拒绝与脱敏命中趋势、访问热点</div>
+                    <div className="mt-1 text-[12px] text-[#667085]">拒绝与脱敏命中趋势、访问热点</div>
                   </div>
                   <YakButton type="link" size="small" onClick={() => navigate('/data-security/audit')}>
                     查看审计
@@ -132,7 +132,7 @@ const DataSecurityOverviewPage = () => {
                   <div className="text-[13px] text-[#667085]">访问热点主体</div>
                   <div className="mt-2 space-y-2">
                     {(data?.topActors ?? []).length === 0 ? (
-                      <div className="text-[13px] text-[#98a2b3]">暂无访问记录</div>
+                      <div className="text-[13px] text-[#667085]">暂无访问记录</div>
                     ) : (
                       (data?.topActors ?? []).slice(0, 6).map((actor, index) => (
                         <div

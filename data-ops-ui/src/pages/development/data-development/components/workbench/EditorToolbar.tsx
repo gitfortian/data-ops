@@ -52,7 +52,7 @@ const EditorToolbar = ({
 
   return (
     <>
-      <div className="flex h-9 shrink-0 items-center justify-between border-b border-[#e8e9ec] bg-white px-2">
+      <div className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#e8e9ec] bg-white px-2 py-1">
         {Toolbar ? (
           <div className="flex h-full min-w-0 flex-1 items-center">
             <Toolbar
@@ -151,7 +151,7 @@ const EditorToolbar = ({
               </div>
             </div>
 
-            <div className="min-w-0 truncate pl-4 text-[11px] text-[#98a2b3]">
+            <div className="min-w-0 truncate pl-4 text-[12px] text-[#667085]">
               {directory?.path || '/'} / {node.name}
             </div>
           </>

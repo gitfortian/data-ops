@@ -12,7 +12,8 @@ import SecurityProjectSwitcher from "@/components/security/SecurityProjectSwitch
 import { SecurityProjectProvider, useSecurityProject } from "@/contexts/SecurityProjectContext";
 import { logout } from "@/services/security/account";
 import { history, Link, Outlet, useLocation, useModel } from "@umijs/max";
-import { Badge, Dropdown, type MenuProps } from "antd";
+import { Badge, ConfigProvider, Drawer, Dropdown, type MenuProps } from "antd";
+import { MotionConfig } from "framer-motion";
 import {
   Activity,
   ArrowLeftRight,
@@ -179,9 +180,11 @@ function HeaderAction({
   return (
     <button
       type="button"
+      aria-label={label}
+      title={label}
       onClick={onClick}
       className="
-        group relative flex h-12 min-w-11 flex-col
+        group relative flex h-12 min-w-11 max-md:h-9 max-md:min-w-8 flex-col
         items-center justify-center border-0 bg-transparent
         px-2 text-[12px] text-[rgba(35,35,35,0.6)]
         transition-colors duration-150
@@ -209,7 +212,7 @@ function HeaderAction({
 
       <span
         className="
-          mt-0.5 whitespace-nowrap text-[10px]
+          mt-0.5 whitespace-nowrap text-[12px] max-md:hidden
           leading-3
         "
       >
@@ -280,6 +283,15 @@ function SiteLayoutContent() {
   const [collapsed, setCollapsed] = useState(false);
 
   const [viewportCompact, setViewportCompact] = useState(false);
+  const [viewportMobile, setViewportMobile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const commercialUi = !location.pathname.startsWith('/ai-agent');
+
+  useEffect(() => {
+    if (commercialUi) document.body.dataset.yakWorkspace = 'commercial';
+    else delete document.body.dataset.yakWorkspace;
+    return () => { delete document.body.dataset.yakWorkspace; };
+  }, [commercialUi]);
 
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -347,22 +359,27 @@ function SiteLayoutContent() {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 1080px)");
+    const mobileQuery = window.matchMedia("(max-width: 767px)");
 
     const syncViewport = () => {
       setViewportCompact(mediaQuery.matches);
+      setViewportMobile(mobileQuery.matches);
     };
 
     syncViewport();
 
     mediaQuery.addEventListener("change", syncViewport);
+    mobileQuery.addEventListener("change", syncViewport);
 
     return () => {
       mediaQuery.removeEventListener("change", syncViewport);
+      mobileQuery.removeEventListener("change", syncViewport);
     };
   }, []);
 
   useEffect(() => {
     setQuickCreateOpen(false);
+    setMobileMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -383,7 +400,7 @@ function SiteLayoutContent() {
 
   const compact = collapsed || viewportCompact;
 
-  const sidebarWidth = compact ? COLLAPSED_SIDEBAR_WIDTH : SIDEBAR_WIDTH;
+  const sidebarWidth = viewportMobile ? 0 : compact ? COLLAPSED_SIDEBAR_WIDTH : SIDEBAR_WIDTH;
 
   const activeNavigationId = getActiveNavigationId(
     location.pathname,
@@ -413,7 +430,10 @@ function SiteLayoutContent() {
   }, [currentUser?.name]);
 
   return (
+    <ConfigProvider theme={commercialUi ? { token: { colorPrimary: '#292c35', colorLink: '#344054', colorInfo: '#175cd3', borderRadius: 8, controlHeight: 36, fontSize: 14 } } : undefined}>
+    <MotionConfig reducedMotion={commercialUi ? 'user' : 'never'}>
     <div
+      data-yak-workspace={commercialUi ? 'commercial' : undefined}
       className="
         h-screen overflow-hidden
         bg-[#f7f8f9] text-[#161823]
@@ -422,7 +442,7 @@ function SiteLayoutContent() {
       <aside
         className="
           fixed inset-y-0 left-0 z-40
-          flex flex-col overflow-hidden
+          hidden md:flex flex-col overflow-hidden
           bg-[linear-gradient(180deg,#f2f2f7_0%,#f5f5f5_100%)]
           transition-[width] duration-200
           ease-[cubic-bezier(0.62,0.05,0.36,0.95)]
@@ -593,10 +613,20 @@ function SiteLayoutContent() {
         </div>
       </aside>
 
+      <Drawer title="导航" placement="left" width={300} open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} rootClassName="yak-mobile-navigation">
+        <nav aria-label="手机主导航">
+          <SidebarNavigation groups={navigationGroups} standaloneRoutes={standaloneRoutes} icons={navigationIcons} compact={false} activeId={activeNavigationId} activeGroupPath={getActiveNavigationGroupPath(location.pathname, permissionCodes, menuCodes)} />
+        </nav>
+        {quickCreateRoutes.length > 0 && <div className="mt-5 border-t border-[#eaecf0] pt-4">
+          <div className="mb-2 text-xs font-medium text-[#667085]">快速创建</div>
+          {quickCreateRoutes.map(route => <Link key={route.id} to={route.path} className="block rounded-md px-3 py-2 text-sm text-[#344054]">{route.quickCreateLabel ?? route.title}</Link>)}
+        </div>}
+      </Drawer>
+
       <header
         className="
           fixed right-0 top-0 z-30
-          flex items-center 
+          flex items-center
           transition-[left] duration-200
           ease-[cubic-bezier(0.62,0.05,0.36,0.95)]
         "
@@ -614,9 +644,10 @@ function SiteLayoutContent() {
           <button
             type="button"
             aria-label={compact ? "展开菜单" : "收起菜单"}
-            onClick={() => setCollapsed((current) => !current)}
+            aria-expanded={viewportMobile ? mobileMenuOpen : !compact}
+            onClick={() => viewportMobile ? setMobileMenuOpen(true) : setCollapsed((current) => !current)}
             className="
-              hidden h-8 w-8 items-center
+              flex h-9 w-9 shrink-0 items-center
               justify-center rounded-md
               border-0 bg-transparent
               text-[16px]
@@ -656,7 +687,7 @@ function SiteLayoutContent() {
         <div
           className="
             flex h-full shrink-0
-            items-center pr-5
+            items-center pr-2 md:pr-5
           "
         >
           <HeaderAction
@@ -677,9 +708,9 @@ function SiteLayoutContent() {
 
           <div
             className="
-              ml-4 flex items-center
+              ml-1 md:ml-4 flex items-center
               border-l border-[rgba(28,31,35,0.08)]
-              pl-4
+              pl-1 md:pl-4
             "
           >
             <Dropdown menu={{ items: userMenuItems }} trigger={["click"]}>
@@ -726,7 +757,7 @@ function SiteLayoutContent() {
         >
           <div
             className="
-              min-h-full min-w-[912px]
+              min-h-full min-w-0 w-full
               overflow-hidden rounded-md
               bg-white
             "
@@ -741,6 +772,8 @@ function SiteLayoutContent() {
         </div>
       </main>
     </div>
+    </MotionConfig>
+    </ConfigProvider>
   );
 }
 

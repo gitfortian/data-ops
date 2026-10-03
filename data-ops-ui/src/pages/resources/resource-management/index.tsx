@@ -567,7 +567,7 @@ const ResourceManagementPage = () => {
               {resource.name}
             </strong>
             <small
-              className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[#98a2b3]"
+              className="overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-[#667085]"
               title={resource.description || resource.fullPath}
             >
               {resource.description || resource.fullPath}
@@ -723,7 +723,7 @@ const ResourceManagementPage = () => {
               <Files size={20} />
             </span>
             <div className="min-w-0">
-              <small className="mb-0.5 block text-[11px] leading-[18px] text-[rgba(22,24,35,0.45)]">
+              <small className="mb-0.5 block text-[12px] leading-[18px] text-[rgba(22,24,35,0.45)]">
                 文件数量
               </small>
               <strong className="block overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold leading-6 text-[#161823]">
@@ -737,7 +737,7 @@ const ResourceManagementPage = () => {
               <FolderTree size={20} />
             </span>
             <div className="min-w-0">
-              <small className="mb-0.5 block text-[11px] leading-[18px] text-[rgba(22,24,35,0.45)]">
+              <small className="mb-0.5 block text-[12px] leading-[18px] text-[rgba(22,24,35,0.45)]">
                 文件夹
               </small>
               <strong className="block overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold leading-6 text-[#161823]">
@@ -751,7 +751,7 @@ const ResourceManagementPage = () => {
               <HardDrive size={20} />
             </span>
             <div className="min-w-0">
-              <small className="mb-0.5 block text-[11px] leading-[18px] text-[rgba(22,24,35,0.45)]">
+              <small className="mb-0.5 block text-[12px] leading-[18px] text-[rgba(22,24,35,0.45)]">
                 资源容量
               </small>
               <strong className="block overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold leading-6 text-[#161823]">
@@ -766,7 +766,7 @@ const ResourceManagementPage = () => {
             </span>
 
             <div className="min-w-0">
-              <small className="mb-0.5 block text-[11px] leading-[18px] text-[rgba(22,24,35,0.45)]">
+              <small className="mb-0.5 block text-[12px] leading-[18px] text-[rgba(22,24,35,0.45)]">
                 存储插件
               </small>
 
@@ -848,7 +848,7 @@ const ResourceManagementPage = () => {
             <div className="flex min-h-[50px] items-center justify-between gap-4 border-b border-[#eaecf0] py-[7px] pl-4 pr-3 max-[860px]:items-stretch max-[860px]:flex-col">
               <div className="flex min-w-0 items-center gap-2.5">
                 <Breadcrumb items={breadcrumbItems} />
-                <span className="shrink-0 border-l border-[#e4e7ec] pl-2.5 text-xs text-[#98a2b3]">
+                <span className="shrink-0 border-l border-[#e4e7ec] pl-2.5 text-xs text-[#667085]">
                   {resourceList.length} 项
                 </span>
               </div>
@@ -905,7 +905,7 @@ const ResourceManagementPage = () => {
                       </div>
 
                       {!debouncedKeyword && (
-                        <div className="mt-1 text-[11px] leading-[18px] text-[#b0b6c0]">
+                        <div className="mt-1 text-[12px] leading-[18px] text-[#b0b6c0]">
                           上传文件或在线创建一个资源
                         </div>
                       )}

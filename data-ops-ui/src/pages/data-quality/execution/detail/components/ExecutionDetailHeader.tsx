@@ -68,9 +68,9 @@ export const ExecutionDetailHeader = ({
       </div>
 
       <section className="overflow-hidden rounded-lg bg-white">
-        <div className="grid min-h-[172px] gap-6 px-5 py-6 lg:px-6 xl:grid-cols-[104px_minmax(0,1fr)_330px] xl:items-center">
-          <div className="flex h-[104px] w-[104px] items-center justify-center rounded-xl bg-[#f7f7f8] text-[#fe2c55]">
-            <ShieldCheck size={42} strokeWidth={1.5} />
+        <div className="grid gap-4 px-5 py-4 lg:px-6 xl:grid-cols-[48px_minmax(0,1fr)_330px] xl:items-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#f2f4f7] text-[#475467] max-xl:hidden">
+            <ShieldCheck size={24} strokeWidth={1.5} />
           </div>
 
           <div className="min-w-0">
@@ -82,7 +82,7 @@ export const ExecutionDetailHeader = ({
               <CheckResultTag value={detail.checkResult} />
             </div>
 
-            <div className="mt-1 truncate text-[12px] leading-5 text-[#98a2b3]">
+            <div className="mt-1 truncate text-[12px] leading-5 text-[#667085]">
               {detail.executionNo}
             </div>
 
@@ -94,19 +94,19 @@ export const ExecutionDetailHeader = ({
 
             <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-[12px] text-[#667085]">
               <span className="flex max-w-[280px] items-center gap-1.5 truncate">
-                <Database size={13} className="shrink-0 text-[#98a2b3]" />
+                <Database size={13} className="shrink-0 text-[#667085]" />
                 <span className="truncate">{detail.dataSourceName || '数据源'}</span>
               </span>
               <ArrowRight size={13} className="shrink-0 text-[#c0c4cc]" />
               <span className="flex max-w-[420px] items-center gap-1.5 truncate">
-                <Table2 size={13} className="shrink-0 text-[#98a2b3]" />
+                <Table2 size={13} className="shrink-0 text-[#667085]" />
                 <span className="truncate">{detail.objectName || detail.tableName || '监控对象'}</span>
               </span>
             </div>
           </div>
 
           <div className="min-w-0 xl:justify-self-end">
-            <div className="mb-2 text-[11px] leading-4 text-[#98a2b3]">
+            <div className="mb-2 text-[12px] leading-4 text-[#667085]">
               切换同一监控的运行记录
             </div>
             <div className="flex gap-2">

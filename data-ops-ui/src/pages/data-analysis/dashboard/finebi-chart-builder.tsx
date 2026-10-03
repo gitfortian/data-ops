@@ -192,14 +192,14 @@ export function FineBiChartBuilderPanel({
       <section className="flex w-[272px] shrink-0 flex-col border-r border-[#e3e6ea] bg-white 2xl:w-[288px]">
         <div className="p-3.5">
           <div className="rounded-[7px] bg-[#f6f7f8] p-3">
-            <div className="truncate text-[11px] font-semibold text-[#344054]">
+            <div className="truncate text-[12px] font-semibold text-[#344054]">
               {analysis?.name ?? intl.formatMessage({ id: 'pages.dashboard.editor.historicalChart' })}
             </div>
-            <div className="mt-1 truncate text-[9px] text-[#98a2b3]">
+            <div className="mt-1 truncate text-[9px] text-[#667085]">
               {dataset?.name ?? intl.formatMessage({ id: 'pages.dashboard.editor.builder.dataUnavailable' })}
             </div>
           </div>
-          <div className="mt-3 text-[10px] leading-5 text-[#667085]">
+          <div className="mt-3 text-[12px] leading-5 text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.builder.sharedReadonly' })}
           </div>
           <Button
@@ -303,7 +303,7 @@ export function FineBiChartBuilderPanel({
   return (
     <section className="flex w-[272px] shrink-0 flex-col border-r border-[#e3e6ea] bg-white 2xl:w-[288px]">
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3.5">
-        <div className="text-[11px] font-semibold text-[#161823]">
+        <div className="text-[12px] font-semibold text-[#161823]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.builder.chartType' })}
         </div>
         <div className="mt-2.5 grid grid-cols-5 gap-x-1 gap-y-1.5">
@@ -329,7 +329,7 @@ export function FineBiChartBuilderPanel({
                 </span>
                 <span
                   className={[
-                    'w-full truncate text-center text-[10px] leading-4 text-[#161823]',
+                    'w-full truncate text-center text-[12px] leading-4 text-[#161823]',
                     active ? 'font-semibold' : 'font-medium',
                   ].join(' ')}
                 >
@@ -342,7 +342,7 @@ export function FineBiChartBuilderPanel({
 
         {secondaryRules.length ? (
           <div className="mt-4 border-t border-[#eceef1] pt-3.5">
-            <div className="mb-2 text-[10px] font-semibold text-[#667085]">
+            <div className="mb-2 text-[12px] font-semibold text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.builder.visualProperties' })}
             </div>
             <div className="space-y-1.5">
@@ -384,7 +384,7 @@ export function FineBiChartBuilderPanel({
             {
               key: 'analysis',
               label: (
-                <span className="flex items-center gap-1.5 text-[10px] font-medium text-[#667085]">
+                <span className="flex items-center gap-1.5 text-[12px] font-medium text-[#667085]">
                   <Calculator size={11} />
                   {intl.formatMessage({ id: 'pages.dashboard.editor.builder.analysisSettings' })}
                 </span>
@@ -400,7 +400,7 @@ export function FineBiChartBuilderPanel({
             {
               key: 'query',
               label: (
-                <span className="flex items-center gap-1.5 text-[10px] font-medium text-[#667085]">
+                <span className="flex items-center gap-1.5 text-[12px] font-medium text-[#667085]">
                   <SlidersHorizontal size={11} />
                   {intl.formatMessage({ id: 'pages.dashboard.editor.builder.sortFilter' })}
                 </span>

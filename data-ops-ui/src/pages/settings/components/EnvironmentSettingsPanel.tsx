@@ -13,7 +13,7 @@ const KV_ROW = 'flex items-center gap-2 rounded-md border border-[#eaecf0] px-3 
 const KEY_CLS = 'shrink-0 font-mono text-[13px] font-semibold text-[#161823]';
 const EQ_CLS = 'text-[#d1d5db] select-none';
 const VAL_CLS = 'min-w-0 flex-1 truncate font-mono text-[13px] text-[#475569]';
-const ICON_BTN = 'shrink-0 flex items-center justify-center w-6 h-6 rounded hover:bg-[#f5f5f5] cursor-pointer text-[#98a2b3] hover:text-[#475569] transition-colors';
+const ICON_BTN = 'shrink-0 flex items-center justify-center w-6 h-6 rounded hover:bg-[#f5f5f5] cursor-pointer text-[#667085] hover:text-[#475569] transition-colors';
 
 const EnvironmentSettingsPanel = () => {
   const [entries, setEntries] = useState<EnvVarEntry[]>([]);
@@ -141,7 +141,7 @@ const EnvironmentSettingsPanel = () => {
     <div className="text-[13px] text-[#344054]">
       <div className="mb-4 flex items-center justify-between">
         <div className="text-[17px] font-semibold text-[#161823]">环境变量</div>
-        <span className="text-[11px] text-[#98a2b3]">
+        <span className="text-[12px] text-[#667085]">
           {saving ? '保存中…' : `${appEntries.length} 项`}
         </span>
       </div>
@@ -245,7 +245,7 @@ const EnvironmentSettingsPanel = () => {
 
         {/* Empty state */}
         {appEntries.length === 0 && !adding && (
-          <div className="rounded-md border border-dashed border-[#d1d5db] px-4 py-6 text-center text-[12px] text-[#98a2b3]">
+          <div className="rounded-md border border-dashed border-[#d1d5db] px-4 py-6 text-center text-[12px] text-[#667085]">
             暂无环境变量
           </div>
         )}
@@ -278,7 +278,7 @@ const EnvironmentSettingsPanel = () => {
                   {entry.key}
                 </span>
                 <span className={EQ_CLS}>=</span>
-                <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[#98a2b3]">
+                <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[#667085]">
                   {entry.value}
                 </span>
               </div>

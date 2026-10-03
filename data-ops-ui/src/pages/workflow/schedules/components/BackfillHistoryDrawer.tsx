@@ -108,7 +108,7 @@ const BackfillHistoryDrawer = ({
             <History size={15} />
             {intl.formatMessage({ id: 'pages.workflow.scheduleHistory.title' })}
           </div>
-          <div className="mt-0.5 text-[11px] font-normal text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] font-normal text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.scheduleHistory.subtitle' })}
           </div>
         </div>
@@ -156,7 +156,7 @@ const BackfillHistoryDrawer = ({
             render: (value: string, record: WorkflowBackfill) => (
               <div>
                 <div className="font-medium text-[#344054]">{value}</div>
-                <div className="mt-1 text-[10px] text-[#98a2b3]">{record.id}</div>
+                <div className="mt-1 text-[12px] text-[#667085]">{record.id}</div>
               </div>
             ),
           },
@@ -173,7 +173,7 @@ const BackfillHistoryDrawer = ({
                       : record.operationType}
                   </div>
                   <div
-                    className="mt-1 max-w-[190px] truncate font-mono text-[10px] text-[#98a2b3]"
+                    className="mt-1 max-w-[190px] truncate font-mono text-[12px] text-[#667085]"
                     title={record.sourceExecutionId}
                   >
                     {record.sourceExecutionId
@@ -201,7 +201,7 @@ const BackfillHistoryDrawer = ({
             title: intl.formatMessage({ id: 'pages.workflow.scheduleHistory.businessDate' }),
             width: 190,
             render: (_: unknown, record: WorkflowBackfill) => (
-              <div className="text-[11px] text-[#667085]">
+              <div className="text-[12px] text-[#667085]">
                 {record.startBusinessDate} ~ {record.endBusinessDate}
               </div>
             ),
@@ -213,7 +213,7 @@ const BackfillHistoryDrawer = ({
             render: (value: number, record: WorkflowBackfill) => (
               <div>
                 <div className="text-[12px] text-[#475467]">V{value}</div>
-                <div className="mt-1 max-w-[105px] truncate text-[10px] text-[#98a2b3]" title={record.workflowVersionId}>
+                <div className="mt-1 max-w-[105px] truncate text-[12px] text-[#667085]" title={record.workflowVersionId}>
                   {record.workflowVersionId}
                 </div>
               </div>
@@ -223,13 +223,13 @@ const BackfillHistoryDrawer = ({
             title: intl.formatMessage({ id: 'pages.workflow.scheduleHistory.strategy' }),
             dataIndex: 'executionStrategy',
             width: 115,
-            render: (value: string) => <code className="text-[11px] text-[#475467]">{value}</code>,
+            render: (value: string) => <code className="text-[12px] text-[#475467]">{value}</code>,
           },
           {
             title: intl.formatMessage({ id: 'pages.workflow.scheduleHistory.progress' }),
             width: 250,
             render: (_: unknown, record: WorkflowBackfill) => (
-              <div className="text-[11px] leading-5 text-[#667085]">
+              <div className="text-[12px] leading-5 text-[#667085]">
                 <div>
                   {intl.formatMessage(
                     { id: 'pages.workflow.scheduleHistory.progressLine1' },
@@ -258,8 +258,8 @@ const BackfillHistoryDrawer = ({
             width: 180,
             render: (_: unknown, record: WorkflowBackfill) => (
               <div>
-                <code className="text-[11px] text-[#475467]">{record.cronExpression}</code>
-                <div className="mt-1 text-[10px] text-[#98a2b3]">{record.timezone}</div>
+                <code className="text-[12px] text-[#475467]">{record.cronExpression}</code>
+                <div className="mt-1 text-[12px] text-[#667085]">{record.timezone}</div>
               </div>
             ),
           },
@@ -268,7 +268,7 @@ const BackfillHistoryDrawer = ({
             dataIndex: 'createTime',
             width: 165,
             render: (value: string) => (
-              <span className="text-[11px] text-[#98a2b3]">{formatTime(value, intl.locale)}</span>
+              <span className="text-[12px] text-[#667085]">{formatTime(value, intl.locale)}</span>
             ),
           },
           {

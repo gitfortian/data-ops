@@ -216,7 +216,7 @@ export default function UserRowActions({
             className="!px-1.5 !text-[#667085]"
           >
             更多
-            <DownOutlined className="ml-1 text-[10px]" />
+            <DownOutlined className="ml-1 text-[12px]" />
           </YakButton>
         </Dropdown>
       )}

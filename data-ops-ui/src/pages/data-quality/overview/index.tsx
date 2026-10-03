@@ -34,7 +34,7 @@ const MetricExplanationPanel = () => {
           <div className="text-[14px] font-semibold text-[#161823]">
             {intl.formatMessage({ id: 'pages.dataQuality.overview.metricExplanation' })}
           </div>
-          <div className="mt-0.5 text-[11px] text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] text-[#667085]">
             {intl.formatMessage({
               id: 'pages.dataQuality.overview.metricExplanationSubtitle',
             })}
@@ -43,7 +43,7 @@ const MetricExplanationPanel = () => {
       </div>
 
       <div className="max-h-[min(560px,68vh)] overflow-y-auto p-4">
-        <div className="rounded-lg bg-[#f7f8fa] px-3.5 py-3 text-[11px] leading-5 text-[#667085]">
+        <div className="rounded-lg bg-[#f7f8fa] px-3.5 py-3 text-[12px] leading-5 text-[#667085]">
           {intl.formatMessage({
             id: 'pages.dataQuality.overview.metricExplanationIntro',
           })}
@@ -58,14 +58,14 @@ const MetricExplanationPanel = () => {
               <div className="text-[12px] font-semibold text-[#30343b]">
                 {intl.formatMessage({ id: labelId })}
               </div>
-              <div className="mt-1 text-[11px] leading-[18px] text-[#8a9099]">
+              <div className="mt-1 text-[12px] leading-[18px] text-[#8a9099]">
                 {intl.formatMessage({ id: descriptionId })}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-3 rounded-lg border border-solid border-[#eceef2] px-3.5 py-3 text-[11px] leading-5 text-[#98a2b3]">
+        <div className="mt-3 rounded-lg border border-solid border-[#eceef2] px-3.5 py-3 text-[12px] leading-5 text-[#667085]">
           {intl.formatMessage({
             id: 'pages.dataQuality.overview.metricExplanationRadar',
           })}
@@ -159,7 +159,7 @@ export default function DataQualityOverviewPage() {
             aria-label={intl.formatMessage({
               id: 'pages.dataQuality.overview.aria.metricExplanation',
             })}
-            className="fixed right-0 top-[42%] z-30 hidden -translate-y-1/2 flex-col items-center gap-1.5 rounded-l-lg border border-r-0 border-solid border-[#eceef2] bg-white px-2 py-3 text-[11px] font-medium text-[#667085] shadow-[0_4px_16px_rgba(16,24,40,0.05)] transition-[border-color,color,background-color] hover:border-[var(--yak-brand-color-border)] hover:bg-[#fffafb] hover:text-[var(--yak-brand-color)] 2xl:flex"
+            className="fixed right-0 top-[42%] z-30 hidden -translate-y-1/2 flex-col items-center gap-1.5 rounded-l-lg border border-r-0 border-solid border-[#eceef2] bg-white px-2 py-3 text-[12px] font-medium text-[#667085] shadow-[0_4px_16px_rgba(16,24,40,0.05)] transition-[border-color,color,background-color] hover:border-[var(--yak-brand-color-border)] hover:bg-[#fffafb] hover:text-[var(--yak-brand-color)] 2xl:flex"
           >
             <Info size={13} />
             <span style={{ writingMode: 'vertical-rl' }} className="tracking-[0.12em]">

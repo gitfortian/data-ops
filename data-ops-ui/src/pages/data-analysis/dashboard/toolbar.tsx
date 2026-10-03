@@ -118,7 +118,7 @@ export function DashboardToolbar({
           <Button
             type="text"
             size="small"
-            className="!h-8 !rounded-[7px] !border !border-white/20 !bg-[rgba(17,24,39,.72)] !px-2.5 !text-[11px] !font-medium !text-white !shadow-[0_4px_16px_rgba(15,23,42,.16)] backdrop-blur-sm hover:!bg-[rgba(17,24,39,.86)] hover:!text-white"
+            className="!h-8 !rounded-[7px] !border !border-white/20 !bg-[rgba(17,24,39,.72)] !px-2.5 !text-[12px] !font-medium !text-white !shadow-[0_4px_16px_rgba(15,23,42,.16)] backdrop-blur-sm hover:!bg-[rgba(17,24,39,.86)] hover:!text-white"
             icon={<X size={13} />}
             onClick={onPreview}
           >
@@ -185,7 +185,7 @@ export function DashboardToolbar({
               onChange={(event) => onName(event.target.value)}
               className="!h-6 !w-[250px] !bg-transparent !px-0 !text-[13px] !font-semibold !leading-6 !text-[#172033]"
             />
-            <div className="hidden items-center gap-2 whitespace-nowrap text-[10px] text-[#6f7d91] lg:flex">
+            <div className="hidden items-center gap-2 whitespace-nowrap text-[12px] text-[#6f7d91] lg:flex">
               <span>{lifecycleText}</span>
               {dirty ? (
                 <>

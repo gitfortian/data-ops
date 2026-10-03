@@ -49,7 +49,7 @@ const RegisteredTablePanel = ({
               allowClear
               variant="filled"
               value={keyword}
-              prefix={<Search size={14} className="text-[#98a2b3]" />}
+              prefix={<Search size={14} className="text-[#667085]" />}
               placeholder={intl.formatMessage({
                 id: 'pages.dataQuality.tableConfig.searchPlaceholder',
               })}

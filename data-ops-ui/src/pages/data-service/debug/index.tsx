@@ -194,14 +194,14 @@ export default function DataServiceDebugPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] overflow-hidden bg-white text-[#161823]">
+    <div className="bg-white text-[#161823] xl:h-[calc(100vh-64px)] xl:overflow-hidden">
       <div className="flex h-12 items-center px-5">
         <div className="text-[17px] font-semibold text-[#161823]">API 测试</div>
       </div>
 
-      <div className="h-[calc(100%-48px)] px-5 pb-5">
-        <div className="grid h-full min-h-0 overflow-hidden lg:grid-cols-[minmax(380px,0.86fr)_minmax(520px,1.14fr)]">
-          <section className="flex min-h-0 flex-col pr-5">
+      <div className="px-4 pb-5 xl:h-[calc(100%-48px)] xl:px-5">
+        <div className="grid min-h-0 gap-6 xl:h-full xl:gap-0 xl:overflow-hidden xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)]">
+          <section className="flex min-w-0 min-h-0 flex-col xl:pr-5">
             <div className="flex min-h-[44px] items-center border-b border-[#eef0f2] text-[14px] font-semibold">
               请求配置
             </div>
@@ -220,7 +220,7 @@ export default function DataServiceDebugPage() {
               />
 
               {selectedService ? (
-                <div className="mt-3 flex items-center gap-2 text-[11px] text-[#8a8f98]">
+                <div className="mt-3 flex items-center gap-2 text-[12px] text-[#8a8f98]">
                   <span
                     className={[
                       'inline-block h-2 w-2 rounded-full',
@@ -246,9 +246,9 @@ export default function DataServiceDebugPage() {
                       <div key={parameter.name}>
                         <div className="mb-1.5 flex items-center gap-2 text-[12px]">
                           <span className="font-medium text-[#344054]">{parameter.name}</span>
-                          <span className="text-[#98a2b3]">{typeLabel[parameter.type] || parameter.type}</span>
+                          <span className="text-[#667085]">{typeLabel[parameter.type] || parameter.type}</span>
                           {parameter.required ? (
-                            <span className="text-[10px] text-[var(--yak-brand-color)]">必填</span>
+                            <span className="text-[12px] text-[var(--yak-brand-color)]">必填</span>
                           ) : null}
                         </div>
                         <Input
@@ -260,7 +260,7 @@ export default function DataServiceDebugPage() {
                           }))}
                         />
                         {parameter.description ? (
-                          <div className="mt-1 text-[11px] text-[#98a2b3]">
+                          <div className="mt-1 text-[12px] text-[#667085]">
                             {parameter.description}
                           </div>
                         ) : null}
@@ -290,7 +290,7 @@ export default function DataServiceDebugPage() {
             </div>
           </section>
 
-          <section className="grid min-h-0 border-l border-[#eef0f2] pl-5 lg:grid-rows-[minmax(220px,0.42fr)_minmax(280px,0.58fr)]">
+          <section className="grid min-w-0 min-h-[500px] border-t border-[#eef0f2] grid-rows-[minmax(220px,0.42fr)_minmax(280px,0.58fr)] xl:min-h-0 xl:border-t-0 xl:border-l xl:pl-5">
             <div className="flex min-h-0 flex-col border-b border-[#eef0f2]">
               <div className="flex min-h-[44px] items-center border-b border-[#f2f3f5] text-[13px] font-semibold">
                 请求详情
@@ -312,7 +312,7 @@ export default function DataServiceDebugPage() {
               <div className="flex min-h-[44px] items-center justify-between border-b border-[#f2f3f5]">
                 <div className="text-[13px] font-semibold">返回内容</div>
                 {testResult ? (
-                  <div className="flex items-center gap-4 text-[11px] text-[#667085]">
+                  <div className="flex items-center gap-4 text-[12px] text-[#667085]">
                     <span className="font-medium text-[#20a66a]">200 OK</span>
                     <span>{testResult.durationMs} ms</span>
                     <span>{testResult.rowCount} 行</span>

@@ -88,6 +88,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
   const [q, setQ] = useState('');
   const [index, setIndex] = useState<string[]>([]);
   const [filter, setFilter] = useState<MetadataFilter>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [sortField, setSortField] = useState<SortOption>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [explain, setExplain] = useState(false);
@@ -287,14 +288,18 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
             </>
           ) : null}
           <div className="ml-auto flex items-center gap-3">
+            <Button size="small" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
+              高级筛选{Object.keys(filter).length > 0 ? ` (${Object.keys(filter).length})` : ''}
+            </Button>
             <Checkbox
+              className={advancedOpen ? '' : 'hidden'}
               checked={explain}
               onChange={(event) => {
                 setExplain(event.target.checked);
                 resetPage();
               }}
             >
-              <span className="text-[12px] text-[#667085]">explain</span>
+              <span className="text-[12px] text-[#667085]">查询诊断</span>
             </Checkbox>
             <Button size="small" onClick={resetAll}>
               重置
@@ -341,7 +346,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
           })}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-end gap-3 border-0 border-t border-solid border-[#f2f4f7] pt-3">
+        <div className={advancedOpen ? 'mt-3 flex flex-wrap items-end gap-3 border-0 border-t border-solid border-[#f2f4f7] pt-3' : 'hidden'}>
           <Space size={8} wrap>
             <FieldSlot label="来源通道">
               <Select
@@ -481,7 +486,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
 
         {drill ? (
           <div className="mt-3 flex items-center gap-2 rounded-[8px] bg-[#eff8ff] px-3 py-2 text-[12px] text-[#1570cd]">
-            <span>正在看「{drill.label}」的列视图（index=tableColumn + parentAssetId 收窄）</span>
+            <span>正在查看「{drill.label}」命中的字段</span>
             <button type="button" className="ml-auto flex items-center" onClick={clearDrill}>
               <X size={13} /> 退出列视图
             </button>
@@ -491,7 +496,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
 
       {q && result?.explanation?.degradedToLike ? (
         <div className="rounded-[8px] bg-[#fffaeb] px-3 py-2 text-[12px] text-[#b54708]">
-          单个字符短于 ngram 分词单位，本次已降级为模糊匹配（LIKE），结果可能偏宽。
+          关键词较短，本次使用模糊匹配。增加关键词可缩小结果范围。
         </div>
       ) : null}
 
@@ -515,7 +520,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
                 </div>
               }
             >
-              <span className="cursor-help text-[#98a2b3]">explain 明细</span>
+              <span className="cursor-help text-[#667085]">查询诊断明细</span>
             </Tooltip>
           ) : null}
         </div>
@@ -533,8 +538,8 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
               title={q ? '没有命中的实体' : '目录里还没有数据'}
               description={
                 q
-                  ? '换个关键词，或放宽筛选；类型筛选只影响 index 参数，不需要重新搜索别的入口'
-                  : '先到「采集任务」建一个采集/对账任务并运行，目录行由那一轮写进来'
+                  ? '调整关键词或筛选条件后重试。'
+                  : '到「采集与对账」创建并运行任务，或等待源域完成登记。'
               }
             />
           )
@@ -561,11 +566,11 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
                       <div className="mt-1 line-clamp-1 text-[12px] text-[#667085]">{item.summary}</div>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="flex shrink-0 flex-col items-end gap-1 max-sm:max-w-[100px]">
                     <Tag color={item.providerType === 'REGISTERED' ? 'purple' : 'geekblue'}>
                       {item.providerType === 'REGISTERED' ? '投影' : '采集'}
                     </Tag>
-                    <span className="text-[11px] text-[#98a2b3]">{formatMetadataTime(item.updateTime)}</span>
+                    <span className="text-[12px] text-[#667085]">{formatMetadataTime(item.updateTime)}</span>
                     {(item.matchedColumnCount ?? 0) > 0 ? (
                       <Button
                         size="small"

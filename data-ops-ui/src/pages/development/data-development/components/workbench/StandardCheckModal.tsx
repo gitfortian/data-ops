@@ -95,7 +95,7 @@ const StandardCheckModal = ({ open, report, onClose }: StandardCheckModalProps) 
         scroll={items.length > 12 ? { y: 360 } : undefined}
         locale={{ emptyText: text('pages.dataDevelopment.standardCheck.empty') }}
       />
-      <div className="mt-3 text-[12px] text-[#98a2b3]">
+      <div className="mt-3 text-[12px] text-[#667085]">
         {text('pages.dataDevelopment.standardCheck.hint')}
       </div>
     </Modal>

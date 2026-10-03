@@ -45,7 +45,7 @@ export const CheckResultTag = ({ value }: { value?: CheckResult }) => {
   const intl = useIntl();
   const meta = CHECK_META[value ?? 'NOT_RUN'];
   return (
-    <Tag color={meta.color} className="!m-0 !border-0 !text-[11px]">
+    <Tag color={meta.color} className="!m-0 !border-0 !text-[12px]">
       {intl.formatMessage({ id: meta.messageId })}
     </Tag>
   );
@@ -55,7 +55,7 @@ export const ExecutionStatusTag = ({ value }: { value: ExecutionStatus }) => {
   const intl = useIntl();
   const meta = EXECUTION_META[value];
   return (
-    <Tag className="!m-0 !border-0 !bg-[#f2f4f7] !text-[11px] !text-[#667085]">
+    <Tag className="!m-0 !border-0 !bg-[#f2f4f7] !text-[12px] !text-[#667085]">
       {intl.formatMessage({ id: meta.messageId })}
     </Tag>
   );

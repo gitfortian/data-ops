@@ -104,7 +104,7 @@ function CalendarWeek({
                               }).format(cell.date)
                             : ''}
                         </strong>
-                        <span className="text-[11px] text-[#8f949d]">
+                        <span className="text-[12px] text-[#8f949d]">
                           {intl.formatMessage(
                             { id: 'pages.home.scheduleCenter.taskCount' },
                             { count: schedule.count },
@@ -118,13 +118,13 @@ function CalendarWeek({
                             key={`${item.taskType}-${item.taskId}`}
                             className="flex min-w-0 items-center gap-2"
                           >
-                            <span className="w-[36px] shrink-0 text-[10px] font-medium text-[#6e7480]">
+                            <span className="w-[36px] shrink-0 text-[12px] font-medium text-[#6e7480]">
                               {item.time}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-[11px] text-[#454a54]">
+                            <span className="min-w-0 flex-1 truncate text-[12px] text-[#454a54]">
                               {item.taskName}
                             </span>
-                            <span className="shrink-0 text-[10px] text-[#969ba4]">
+                            <span className="shrink-0 text-[12px] text-[#969ba4]">
                               {intl.formatMessage({
                                 id: taskTypeMessageId(item.taskType),
                               })}
@@ -134,7 +134,7 @@ function CalendarWeek({
                       </div>
 
                       {schedule.count > schedule.items.length && (
-                        <div className="mt-2 border-t border-[#f0f1f3] pt-2 text-[10px] text-[#9ca1a9]">
+                        <div className="mt-2 border-t border-[#f0f1f3] pt-2 text-[12px] text-[#9ca1a9]">
                           {intl.formatMessage(
                             { id: 'pages.home.scheduleCenter.moreTasks' },
                             { count: schedule.count - schedule.items.length },
@@ -223,7 +223,7 @@ export default function ScheduleCenter() {
             {intl.formatMessage({ id: 'pages.home.common.viewMore' })}
             <ChevronRight size={14} strokeWidth={1.8} />
           </button>
-          <span className="flex items-center gap-1.5 text-[11px] text-[#8b9099]">
+          <span className="flex items-center gap-1.5 text-[12px] text-[#8b9099]">
             <span className="h-2 w-2 rounded-full bg-[#5b8cff]" />
             {intl.formatMessage({ id: 'pages.home.scheduleCenter.configured' })}
           </span>
@@ -259,7 +259,7 @@ export default function ScheduleCenter() {
           </button>
         </div>
 
-        <div className="mt-2 grid grid-cols-7 text-center text-[11px] text-[#6d727c]">
+        <div className="mt-2 grid grid-cols-7 text-center text-[12px] text-[#6d727c]">
           {weekdays.map((day) => (
             <span key={day}>{day}</span>
           ))}
@@ -280,7 +280,7 @@ export default function ScheduleCenter() {
               { month: monthOnlyLabel },
             )}
           </strong>
-          <span className="text-[11px] text-[#999da5]">
+          <span className="text-[12px] text-[#999da5]">
             {intl.formatMessage(
               { id: 'pages.home.scheduleCenter.totalConfigs' },
               { count: calendar?.totalSchedules ?? 0 },
@@ -300,10 +300,10 @@ export default function ScheduleCenter() {
               <span className="min-w-0 flex-1 truncate text-[12px] text-[#464a53] transition-colors group-hover:text-[#252832]">
                 {item.taskName}
               </span>
-              <span className="shrink-0 rounded border border-[#eceef2] px-1.5 py-0.5 text-[10px] leading-4 text-[#8d929a]">
+              <span className="shrink-0 rounded border border-[#eceef2] px-1.5 py-0.5 text-[12px] leading-4 text-[#8d929a]">
                 {intl.formatMessage({ id: taskTypeMessageId(item.taskType) })}
               </span>
-              <span className="w-[74px] shrink-0 text-right text-[10px] text-[#9da1a8]">
+              <span className="w-[74px] shrink-0 text-right text-[12px] text-[#9da1a8]">
                 {item.nextRunDate.slice(5)} {item.nextRunTime}
               </span>
             </button>

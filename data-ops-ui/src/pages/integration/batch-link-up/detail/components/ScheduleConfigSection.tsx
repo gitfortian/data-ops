@@ -26,7 +26,7 @@ function Field({
       </div>
       {children}
       {hint ? (
-        <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">
+        <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">
           {hint}
         </div>
       ) : null}

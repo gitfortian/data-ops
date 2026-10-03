@@ -162,13 +162,13 @@ const ModelVersionPanel: React.FC = () => {
                     {formatDateTime(version.publishTime)}
                   </span>
                   {version.publishedBy ? (
-                    <span className="text-[12px] text-[#98a2b3]">{version.publishedBy}</span>
+                    <span className="text-[12px] text-[#667085]">{version.publishedBy}</span>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-[12px] text-[#98a2b3]">{version.columnCount} 字段</span>
+                  <span className="text-[12px] text-[#667085]">{version.columnCount} 字段</span>
                   <Tooltip title={version.checksum}>
-                    <span className="font-mono text-[11px] text-[#98a2b3]">
+                    <span className="font-mono text-[12px] text-[#667085]">
                       {version.checksum?.slice(0, 8)}
                     </span>
                   </Tooltip>
@@ -214,7 +214,7 @@ const ModelVersionPanel: React.FC = () => {
               {isExpanded && (
                 <div className="mt-3 border-t border-[#eaecf0] pt-3">
                   {detailLoading ? (
-                    <div className="py-4 text-center text-[12px] text-[#98a2b3]">加载中…</div>
+                    <div className="py-4 text-center text-[12px] text-[#667085]">加载中…</div>
                   ) : detail ? (
                     <Table
                       size="small"
@@ -233,7 +233,7 @@ const ModelVersionPanel: React.FC = () => {
                       ]}
                     />
                   ) : (
-                    <div className="py-4 text-center text-[12px] text-[#98a2b3]">
+                    <div className="py-4 text-center text-[12px] text-[#667085]">
                       未能加载结构详情
                     </div>
                   )}

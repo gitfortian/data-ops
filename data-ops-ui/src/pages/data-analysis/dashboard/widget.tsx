@@ -247,7 +247,7 @@ export function WidgetShell({
                 event.stopPropagation();
                 onDelete();
               }}
-              className="flex h-8 w-8 items-center justify-center border-0 bg-transparent text-[#98a2b3] transition-colors hover:bg-[rgba(254,44,85,.06)] hover:text-[var(--yak-brand-color)]"
+              className="flex h-8 w-8 items-center justify-center border-0 bg-transparent text-[#667085] transition-colors hover:bg-[rgba(254,44,85,.06)] hover:text-[var(--yak-brand-color)]"
             >
               <Trash2 size={14} />
             </button>

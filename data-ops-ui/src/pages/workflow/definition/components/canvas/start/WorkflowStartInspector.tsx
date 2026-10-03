@@ -314,7 +314,7 @@ const WorkflowStartInspector = ({
           onClick={() => openEditor(scope, index, item)}
         >
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[11px] font-medium text-[#344054]">
+            <span className="truncate text-[12px] font-medium text-[#344054]">
               {displayLabel}
             </span>
             {inputField?.required ? (
@@ -323,7 +323,7 @@ const WorkflowStartInspector = ({
               </span>
             ) : null}
           </div>
-          <div className="mt-0.5 truncate font-mono text-[9px] text-[#98a2b3]">
+          <div className="mt-0.5 truncate font-mono text-[9px] text-[#667085]">
             {referenceScope(scope)}.{item.name} · {item.type}
             {currentValue !== undefined ? ` · ${defaultValueText(currentValue)}` : ''}
           </div>
@@ -415,7 +415,7 @@ const WorkflowStartInspector = ({
                   !locked ? (
                     <button
                       type="button"
-                      className="flex h-7 items-center gap-1 rounded-md border-0 bg-[#f5f6f7] px-2 text-[10px] font-medium text-[#475467] hover:bg-[#eceef2]"
+                      className="flex h-7 items-center gap-1 rounded-md border-0 bg-[#f5f6f7] px-2 text-[12px] font-medium text-[#475467] hover:bg-[#eceef2]"
                       onClick={() => openEditor('inputs')}
                     >
                       <Plus size={12} />
@@ -437,7 +437,7 @@ const WorkflowStartInspector = ({
                   !locked ? (
                     <button
                       type="button"
-                      className="flex h-7 items-center gap-1 rounded-md border-0 bg-[#f5f6f7] px-2 text-[10px] font-medium text-[#475467] hover:bg-[#eceef2]"
+                      className="flex h-7 items-center gap-1 rounded-md border-0 bg-[#f5f6f7] px-2 text-[12px] font-medium text-[#475467] hover:bg-[#eceef2]"
                       onClick={() => openEditor('variables')}
                     >
                       <Plus size={12} />
@@ -458,12 +458,12 @@ const WorkflowStartInspector = ({
               >
                 {systemVariables.map((item) => (
                   <div key={item.name} className="flex min-h-[44px] items-center gap-2 border-b border-[#f0f1f3] px-1 py-2 last:border-b-0">
-                    <GitBranch size={13} className="shrink-0 text-[#98a2b3]" />
+                    <GitBranch size={13} className="shrink-0 text-[#667085]" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[11px] font-medium text-[#475467]">sys.{item.name}</div>
-                      <div className="mt-0.5 truncate font-mono text-[9px] text-[#98a2b3]">{item.value} · {item.type}</div>
+                      <div className="truncate text-[12px] font-medium text-[#475467]">sys.{item.name}</div>
+                      <div className="mt-0.5 truncate font-mono text-[9px] text-[#667085]">{item.value} · {item.type}</div>
                     </div>
-                    <span className="rounded bg-[#f5f6f7] px-1.5 py-0.5 text-[8px] text-[#98a2b3]">
+                    <span className="rounded bg-[#f5f6f7] px-1.5 py-0.5 text-[8px] text-[#667085]">
                       {intl.formatMessage({ id: 'pages.workflow.editor.startInspector.readonly' })}
                     </span>
                   </div>
@@ -489,25 +489,25 @@ const WorkflowStartInspector = ({
                 <button
                   type="button"
                   aria-label={intl.formatMessage({ id: 'pages.workflow.editor.common.refresh' })}
-                  className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#98a2b3] hover:bg-[#f2f4f7] hover:text-[#475467]"
+                  className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-transparent text-[#667085] hover:bg-[#f2f4f7] hover:text-[#475467]"
                   onClick={() => void loadLastRun()}
                 >
                   <RefreshCw size={14} className={lastRunLoading ? 'animate-spin' : undefined} />
                 </button>
               </div>
               {lastRunLoading ? (
-                <div className="py-12 text-center text-[11px] text-[#98a2b3]">
+                <div className="py-12 text-center text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.startInspector.lastRunLoading' })}
                 </div>
               ) : lastRunInput ? (
                 <>
-                  <div className="mb-2 text-[9px] text-[#98a2b3]">{formatTime(lastRunTime)}</div>
-                  <pre className="m-0 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#f5f6f7] p-3 font-mono text-[11px] leading-5 text-[#344054]">
+                  <div className="mb-2 text-[9px] text-[#667085]">{formatTime(lastRunTime)}</div>
+                  <pre className="m-0 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[#f5f6f7] p-3 font-mono text-[12px] leading-5 text-[#344054]">
                     {JSON.stringify(lastRunInput, null, 2)}
                   </pre>
                 </>
               ) : (
-                <div className="py-12 text-center text-[11px] text-[#98a2b3]">
+                <div className="py-12 text-center text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.startInspector.lastRunEmpty' })}
                 </div>
               )}
@@ -542,7 +542,7 @@ const WorkflowStartInspector = ({
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
             />
             {draft.name.trim() && modalScope ? (
-              <div className="mt-1 text-[9px] text-[#98a2b3]">
+              <div className="mt-1 text-[9px] text-[#667085]">
                 {intl.formatMessage(
                   { id: 'pages.workflow.editor.startInspector.reference' },
                   { scope: referenceScope(modalScope), name: draft.name.trim() },
@@ -593,7 +593,7 @@ const WorkflowStartInspector = ({
           ) : null}
           <EditorField label={intl.formatMessage({ id: 'pages.workflow.editor.startInspector.defaultValue' })}>
             {draft.type === 'FILE' ? (
-              <div className="rounded-lg bg-[#f7f8fa] px-3 py-2 text-[10px] leading-5 text-[#667085]">
+              <div className="rounded-lg bg-[#f7f8fa] px-3 py-2 text-[12px] leading-5 text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.startInspector.fileDefaultHint' })}
               </div>
             ) : draft.type === 'BOOLEAN' ? (
@@ -688,7 +688,7 @@ const StartSection = ({
 );
 
 const EmptySection = ({ text }: { text: string }) => (
-  <div className="whitespace-pre-line rounded-lg border border-dashed border-[#e4e7ec] px-3 py-4 text-center text-[10px] leading-5 text-[#98a2b3]">
+  <div className="whitespace-pre-line rounded-lg border border-dashed border-[#e4e7ec] px-3 py-4 text-center text-[12px] leading-5 text-[#667085]">
     {text}
   </div>
 );
@@ -703,7 +703,7 @@ const EditorField = ({
   children: React.ReactNode;
 }) => (
   <div>
-    <div className="mb-1.5 text-[11px] font-medium text-[#475467]">
+    <div className="mb-1.5 text-[12px] font-medium text-[#475467]">
       {label}
       {required ? <span className="ml-1 text-[#d92d50]">*</span> : null}
     </div>

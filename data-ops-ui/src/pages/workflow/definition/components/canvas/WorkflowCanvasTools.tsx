@@ -244,7 +244,7 @@ const WorkflowCanvasTools = <T,>({
       </div>
       <div className="max-h-[360px] overflow-y-auto px-2 pb-2">
         {historyEntries.length <= 1 ? (
-          <div className="py-10 text-center text-[12px] text-[#98a2b3]">
+          <div className="py-10 text-center text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.canvas.noHistory' })}
           </div>
         ) : (
@@ -282,7 +282,7 @@ const WorkflowCanvasTools = <T,>({
                     <div className="truncate text-[12px] font-medium text-[#475467]">
                       {entry.label}
                     </div>
-                    <div className="mt-0.5 text-[10px] text-[#98a2b3]">{stepText}</div>
+                    <div className="mt-0.5 text-[12px] text-[#667085]">{stepText}</div>
                   </div>
                 </button>
               );
@@ -303,7 +303,7 @@ const WorkflowCanvasTools = <T,>({
           </button>
         </div>
       ) : null}
-      <div className="border-t border-[#f0f1f3] px-3.5 py-3 text-[10px] leading-[18px] text-[#98a2b3]">
+      <div className="border-t border-[#f0f1f3] px-3.5 py-3 text-[12px] leading-[18px] text-[#667085]">
         <div className="mb-1 font-medium text-[#667085]">
           {intl.formatMessage({ id: 'pages.workflow.editor.canvas.tip' })}
         </div>

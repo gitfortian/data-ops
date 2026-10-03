@@ -19,6 +19,11 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     migrations = root / 'data-ops-boot/src/main/resources/yak-security/db/migration'
+    baseline = (migrations / 'V2__boot_security_baseline.sql').read_text(encoding='utf-8')
+    # Consolidation preserves source boundaries and execution order.
+    sections = re.split(r'^-- Source: .*?/V(\d+)__[^\r\n]+\r?\n', baseline, flags=re.MULTILINE)
+    sources = [(int(sections[index]), sections[index + 1])
+               for index in range(1, len(sections) - 1, 2)]
     database = 'yak_nav_test_' + uuid.uuid4().hex
     assert re.fullmatch(r'yak_nav_test_[a-f0-9]{32}', database)
     app = 'navigation-test'
@@ -64,11 +69,10 @@ CREATE TABLE yak_security_role_menu (
         # Seed the real preceding catalog values, including retired containers.
         pattern = re.compile(r"\(\s*'([^']+)'\s*,\s*'[^']*'\s*,\s*(?:NULL|'[^']*')\s*,\s*(?:NULL|'[^']*')\s*,\s*'[^']*'\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(?:NULL|'[^']*')\s*,\s*'[^']*'\s*,\s*'\$\{appName\}'\s*\)")
         rows = {}
-        for file in sorted(migrations.glob('V*.sql'), key=lambda p: int(p.name.split('__')[0][1:])):
-            version = int(file.name.split('__')[0][1:])
-            if not 2006 <= version < 2042:
+        for version, source in sources:
+            if not 2006 <= version < 2045:
                 continue
-            for match in pattern.finditer(file.read_text(encoding='utf-8')):
+            for match in pattern.finditer(source):
                 rows[match[1]] = match[0]
         assert rows and 'data-asset-catalog' in rows
         columns = 'menu_code,menu_name,parent_code,route_path,icon_key,menu_type,sort_order,visible,active,required_permission_code,description,app_name'
@@ -91,7 +95,7 @@ INSERT INTO yak_security_role_permission (role_id,permission_id,app_name,is_dele
             run(f"INSERT INTO yak_security_role_menu SELECT {role},id,app_name,{deleted} FROM yak_security_menu WHERE app_name='{app}' AND menu_code='{code}';")
         before = snapshot()
         prior_leaves = run(f"SELECT id,menu_code,route_path,COALESCE(required_permission_code,'NULL') FROM yak_security_menu WHERE app_name='{app}' AND menu_type=2 AND active=1 ORDER BY id;")
-        sql = (migrations / 'V2045__task_oriented_navigation.sql').read_text(encoding='utf-8').replace('${appName}', app)
+        sql = next(source for version, source in sources if version == 2045).replace('${appName}', app)
         run(sql)
         first = snapshot()
         run(sql)

@@ -28,108 +28,7 @@ const SECURITY_MIGRATION_ROOT = path.resolve(
   __dirname,
   '../../../data-ops-boot/src/main/resources/yak-security/db/migration',
 );
-const BASE_CATALOG_MIGRATION = path.join(
-  SECURITY_MIGRATION_ROOT,
-  'V2006__reconcile_menu_permission_catalog.sql',
-);
-const CATALOG_EXTENSION_MIGRATIONS = [
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2007__register_data_service_access_page.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2018__register_modeling_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2019__register_semantic_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2020__register_semantic_domain_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2021__register_semantic_process_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2022__register_semantic_field_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2023__register_semantic_layer_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2024__register_mdm_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2025__register_mdm_modeling_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2026__register_mdm_identification_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2027__register_mdm_cleansing_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2028__register_mdm_approval_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2029__register_metric_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2030__register_data_security_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2031__register_data_lifecycle_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2032__register_data_asset_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2033__register_data_approval_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2034__register_data_metadata_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2035__fix_metric_menu_group.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2036__domain_navigation_regroup.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2037__retire_metadata_catalog_menus.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2038__reinstate_mdm_change_ledger_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2039__register_sql_execution_audit_menu.sql',
-  ),
-  path.join(
-    SECURITY_MIGRATION_ROOT,
-    'V2042__task_oriented_navigation.sql',
-  ),
-];
+const BASE_CATALOG_MIGRATION = path.join(SECURITY_MIGRATION_ROOT, 'V2__boot_security_baseline.sql');
 
 const sqlValue = (token: string): string | null =>
   token === 'NULL' ? null : token.slice(1, -1);
@@ -151,37 +50,12 @@ const parseMenuRows = (sql: string): MenuCatalogRow[] => {
 };
 
 const parseFinalYakOpsMenuCatalog = (): MenuCatalogRow[] => {
-  const sql = readFileSync(BASE_CATALOG_MIGRATION, 'utf8');
-  const sectionStart = sql.indexOf(
-    '-- 3. Upsert the complete set of current visible Yak Ops menus.',
-  );
-  const sectionEnd = sql.indexOf('ON DUPLICATE KEY UPDATE', sectionStart);
-
-  if (sectionStart < 0 || sectionEnd < 0) {
-    throw new Error(
-      'Cannot locate the baseline Yak Ops menu catalog in V2006__reconcile_menu_permission_catalog.sql',
-    );
-  }
-
-  let rows = parseMenuRows(sql.slice(sectionStart, sectionEnd));
-  if (rows.length === 0) {
-    throw new Error('Parsed zero rows from the V2006 Yak Ops menu catalog');
-  }
-
-  for (const migrationPath of CATALOG_EXTENSION_MIGRATIONS) {
-    const extensionRows = parseMenuRows(readFileSync(migrationPath, 'utf8'));
-    for (const extension of extensionRows) {
-      rows = [
-        ...rows.filter((row) => row.menuCode !== extension.menuCode),
-        extension,
-      ];
-    }
-  }
-
-  // Retired menus (visible/active = 0, e.g. the two metadata catalog pages via
-  // V2037) drop out of the effective catalog: the frontend must not declare
-  // them, and their old upsert rows must not be reported as orphans.
-  return rows.filter((row) => row.visible && row.active);
+  // The consolidated baseline retains the original migrations in execution order.
+  // Later upserts replace earlier projections of the same menu identity.
+  const rows = parseMenuRows(readFileSync(BASE_CATALOG_MIGRATION, 'utf8'));
+  if (rows.length === 0) throw new Error('Parsed zero rows from the security baseline');
+  const finalRows = new Map(rows.map(row => [row.menuCode, row]));
+  return [...finalRows.values()].filter(row => row.visible && row.active);
 };
 
 const duplicateValues = (values: readonly string[]) =>

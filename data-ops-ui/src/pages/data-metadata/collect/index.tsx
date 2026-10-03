@@ -294,7 +294,7 @@ const MetadataCollectPage = () => {
     <div className="flex min-h-[calc(100dvh-64px)] flex-col bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
       <PageHeader
         title="采集与对账"
-        subtitle="物理采集任务与投影对账任务共用一套调度与运行历史，区别只在通道"
+        subtitle="管理采集范围、执行计划与对账结果，跟踪技术目录的变化。"
         extra={
           canCreate ? (
             <YakButton

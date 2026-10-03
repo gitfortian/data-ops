@@ -99,7 +99,7 @@ const MdmApprovalPage = () => {
           </Tooltip>
         ) : (
           <Tooltip title="实体已删除或不可见">
-            <span className="text-[#98a2b3]">#{row.entityId}</span>
+            <span className="text-[#667085]">#{row.entityId}</span>
           </Tooltip>
         ),
     },

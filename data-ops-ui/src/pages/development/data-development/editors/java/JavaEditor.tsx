@@ -132,7 +132,7 @@ export const JavaEditor = ({ node }: DevelopmentEditorContext) => {
           <span className="mr-1 text-[rgba(254,44,85,1)]">*</span>
           {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.referenceJar' })}
         </Typography.Text>
-        <Typography.Paragraph className="mb-3 text-[12px] text-[#98a2b3]">
+        <Typography.Paragraph className="mb-3 text-[12px] text-[#667085]">
           {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.jarDescription' })}
         </Typography.Paragraph>
 
@@ -150,7 +150,7 @@ export const JavaEditor = ({ node }: DevelopmentEditorContext) => {
                   <div className="truncate text-[13px] font-medium text-[#344054]">
                     {resource.name}
                   </div>
-                  <div className="text-[11px] text-[#98a2b3]">
+                  <div className="text-[12px] text-[#667085]">
                     {resource.version
                       ? `v${resource.version}`
                       : intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.versionLocked' })}
@@ -255,7 +255,7 @@ export const JavaRunConfig = ({ node }: DevelopmentEditorContext) => {
           { name: node.name },
         )}
       </div>
-      <div className="mt-3 border-t border-[#eef0f2] pt-3 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mt-3 border-t border-[#eef0f2] pt-3 text-[12px] leading-5 text-[#667085]">
         <div>{intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.runtimeHint' })}</div>
         <div className="mt-2">
           {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.configHint' })}
@@ -274,7 +274,7 @@ export const JavaRunResult = ({ result }: DevelopmentEditorRunResultContext) => 
           <div className="text-[13px] font-medium text-[#475467]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.runResult' })}
           </div>
-          <div className="mt-1 text-[11px] text-[#98a2b3]">
+          <div className="mt-1 text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.runHint' })}
           </div>
         </div>
@@ -303,15 +303,15 @@ export const JavaRunResult = ({ result }: DevelopmentEditorRunResultContext) => 
           <div className="text-[13px] font-medium text-[#b42318]">
             {intl.formatMessage({ id: statusId })}
           </div>
-          <div className="mt-2 break-words text-[11px] leading-5 text-[#667085]">
+          <div className="mt-2 break-words text-[12px] leading-5 text-[#667085]">
             {result.message || intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.noError' })}
           </div>
           {result.output?.stderr ? (
-            <pre className="mt-3 max-h-[240px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 text-left font-mono text-[11px] text-[#344054]">
+            <pre className="mt-3 max-h-[240px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 text-left font-mono text-[12px] text-[#344054]">
               {String(result.output.stderr)}
             </pre>
           ) : null}
-          <div className="mt-2 text-[10px] text-[#98a2b3]">
+          <div className="mt-2 text-[12px] text-[#667085]">
             {intl.formatMessage(
               { id: 'pages.dataDevelopment.editor.java.duration' },
               { duration: result.durationMs },
@@ -333,7 +333,7 @@ export const JavaRunResult = ({ result }: DevelopmentEditorRunResultContext) => 
         <span className="text-[12px] font-medium text-[#344054]">
           {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.completed' })}
         </span>
-        <span className="text-[10px] text-[#98a2b3]">
+        <span className="text-[12px] text-[#667085]">
           {intl.formatMessage(
             { id: 'pages.dataDevelopment.editor.java.exitDuration' },
             { exitCode, duration: result.durationMs },
@@ -343,22 +343,22 @@ export const JavaRunResult = ({ result }: DevelopmentEditorRunResultContext) => 
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {stdout ? (
           <div className="mb-3">
-            <div className="mb-1 text-[11px] font-medium text-[#475467]">stdout</div>
-            <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 font-mono text-[11px] leading-5 text-[#344054]">
+            <div className="mb-1 text-[12px] font-medium text-[#475467]">stdout</div>
+            <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 font-mono text-[12px] leading-5 text-[#344054]">
               {stdout}
             </pre>
           </div>
         ) : null}
         {stderr ? (
           <div>
-            <div className="mb-1 text-[11px] font-medium text-[#475467]">stderr</div>
-            <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#fef3f2] p-3 font-mono text-[11px] leading-5 text-[#b42318]">
+            <div className="mb-1 text-[12px] font-medium text-[#475467]">stderr</div>
+            <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#fef3f2] p-3 font-mono text-[12px] leading-5 text-[#b42318]">
               {stderr}
             </pre>
           </div>
         ) : null}
         {!stdout && !stderr ? (
-          <div className="text-[12px] text-[#98a2b3]">
+          <div className="text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.editor.java.noOutput' })}
           </div>
         ) : null}

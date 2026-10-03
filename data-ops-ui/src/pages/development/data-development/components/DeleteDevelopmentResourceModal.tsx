@@ -46,7 +46,7 @@ const DeleteDevelopmentResourceModal = ({
           { name: target?.title || '' },
         )}
         {target?.nodeType === 'directory' ? (
-          <div className="mt-1 text-[#98a2b3]">
+          <div className="mt-1 text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.modal.delete.directoryHint' })}
           </div>
         ) : null}

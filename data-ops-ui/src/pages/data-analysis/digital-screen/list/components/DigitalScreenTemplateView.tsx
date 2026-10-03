@@ -48,7 +48,7 @@ export function DigitalScreenTemplateView({
     <div className="min-h-[calc(100vh-48px)] bg-[#f6f7f8]">
       <div className="min-h-[calc(100vh-64px)] rounded-[10px] bg-white px-6 py-5">
         <div className="flex items-center gap-3">
-          <YakButton type="text" icon={<ArrowLeft size={16} />} onClick={onBack} />
+          <YakButton type="text" aria-label="返回大屏列表" icon={<ArrowLeft size={16} />} onClick={onBack} />
           <div>
             <div className="text-[18px] font-semibold leading-7 text-[#161823]">选择大屏模板</div>
             <div className="mt-0.5 text-[12px] text-[#8a9099]">模板已预设布局与视觉样式，创建后直接进入配置</div>
@@ -80,7 +80,7 @@ export function DigitalScreenTemplateView({
             allowClear
             value={keyword}
             onChange={(event) => onKeywordChange(event.target.value)}
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             placeholder="搜索模板"
             className="w-[220px]"
             variant="filled"
@@ -88,14 +88,15 @@ export function DigitalScreenTemplateView({
         </div>
 
         {templates.length === 0 ? (
-          <div className="flex h-[380px] items-center justify-center text-[13px] text-[#98a2b3]">没有可用的大屏模板</div>
+          <div className="flex h-[380px] items-center justify-center text-[13px] text-[#667085]">没有可用的大屏模板</div>
         ) : (
           <div className="grid grid-cols-1 gap-x-5 gap-y-6 pt-5 xl:grid-cols-2 2xl:grid-cols-3">
             {templates.map((template) => (
               <article key={template.id} className="group overflow-hidden rounded-[8px] border border-[#e7e9ec] bg-white transition-colors hover:border-[#cfd4da]">
                 <div className="relative overflow-hidden bg-[#111827]">
                   <ScreenRenderer template={template} className="pointer-events-none" />
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all group-hover:bg-black/25 group-hover:opacity-100">
+                  <span className="absolute right-2 top-2 rounded bg-black/60 px-2 py-1 text-[12px] text-white">示例数据</span>
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all group-hover:bg-black/25 group-hover:opacity-100 group-focus-within:bg-black/25 group-focus-within:opacity-100 max-md:bg-black/25 max-md:opacity-100">
                     <YakButton size="small" icon={<Eye size={13} />} onClick={() => onPreviewChange(template)}>预览</YakButton>
                     <YakButton type="primary" size="small" onClick={() => onOpenCreate(template)}>使用模板</YakButton>
                   </div>
@@ -106,7 +107,7 @@ export function DigitalScreenTemplateView({
                     <div className="mt-1 line-clamp-2 min-h-[36px] text-[12px] leading-[18px] text-[#8a9099]">
                       {template.description || '预设数字化大屏模板'}
                     </div>
-                    <div className="mt-2 flex items-center gap-2 text-[11px] text-[#a3a8b0]">
+                    <div className="mt-2 flex items-center gap-2 text-[12px] text-[#a3a8b0]">
                       <span>{template.category}</span><span>·</span>
                       <span>{template.width} × {template.height}</span><span>·</span>
                       <span>{template.components.length} 个组件</span>

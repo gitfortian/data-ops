@@ -193,7 +193,7 @@ const AuthoringStatusBar = ({
             : undefined;
 
   return (
-    <div className="flex h-8 shrink-0 items-center justify-between gap-4 border-b border-[#eef0f2] bg-[#fbfcfd] px-3 text-[11px] text-[#667085]">
+    <div className="flex h-8 shrink-0 items-center justify-between gap-4 border-b border-[#eef0f2] bg-[#fbfcfd] px-3 text-[12px] text-[#667085]">
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
         <span className="inline-flex shrink-0 items-center gap-1 rounded-[3px] border border-[#e4e7ec] bg-white px-1.5 py-0.5 font-medium text-[#475467]">
           <FilePenLine size={11} strokeWidth={1.8} />
@@ -274,7 +274,7 @@ const AuthoringStatusBar = ({
         ) : null}
       </div>
 
-      <span className="inline-flex shrink-0 items-center gap-1 text-[#98a2b3]">
+      <span className="inline-flex shrink-0 items-center gap-1 text-[#667085]">
         <Play size={10} strokeWidth={1.8} />
         {intl.formatMessage({ id: 'pages.dataDevelopment.authoring.runCurrentEditor' })}
       </span>

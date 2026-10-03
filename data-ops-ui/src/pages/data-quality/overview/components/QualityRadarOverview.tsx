@@ -77,7 +77,7 @@ const QualityMetricCard = ({
       <div className="text-[12px] font-semibold text-[#252a34]">
         {metric.label} {formatRate(metric.passRate)}
       </div>
-      <div className="mt-1 text-[11px] leading-4 text-[#98a2b3]">
+      <div className="mt-1 text-[12px] leading-4 text-[#667085]">
         {metric.total > 0
           ? intl.formatMessage(
               { id: 'pages.dataQuality.overview.executionsAndIssues' },
@@ -308,7 +308,7 @@ export default function QualityRadarOverview({
         <h1 className="m-0 text-[18px] font-semibold text-[#161823]">
           {intl.formatMessage({ id: 'pages.dataQuality.overview.title' })}
         </h1>
-        <span className="inline-flex items-center gap-1 text-[11px] text-[#98a2b3]">
+        <span className="inline-flex items-center gap-1 text-[12px] text-[#667085]">
           <CircleHelp size={13} />
           {periodText}
         </span>
@@ -316,19 +316,19 @@ export default function QualityRadarOverview({
 
       <Spin spinning={loading}>
         <div className="mt-4 grid gap-8 xl:grid-cols-[520px_minmax(0,1fr)]">
-          <div className="min-w-0 overflow-x-auto">
-            <div className="relative mx-auto h-[350px] min-w-[500px] max-w-[520px]">
+          <div className="min-w-0">
+            <div className="relative mx-auto h-[350px] max-w-[520px] max-sm:h-[300px]">
               <QualityRadar metrics={metrics} onActivate={setActiveKey} />
               {metrics.map((metric, index) => (
                 <QualityMetricCard
                   key={metric.key}
                   metric={metric}
                   active={metric.key === activeKey}
-                  position={metricPositionClass[index] ?? ''}
+                  position={`${metricPositionClass[index] ?? ''} max-sm:hidden`}
                   onActivate={() => setActiveKey(metric.key)}
                 />
               ))}
-              <div className="absolute bottom-0 left-1/2 flex w-full -translate-x-1/2 flex-col items-center gap-1 text-[11px] text-[#667085]">
+              <div className="absolute bottom-0 left-1/2 flex w-full -translate-x-1/2 flex-col items-center gap-1 text-[12px] text-[#667085]">
                 <div className="flex items-center gap-4 whitespace-nowrap">
                   <span className="flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--yak-brand-color)]" />
@@ -344,11 +344,14 @@ export default function QualityRadarOverview({
                   </span>
                 </div>
                 {radarHint ? (
-                  <div className="max-w-[420px] text-center leading-4 text-[#98a2b3]">
+                  <div className="max-w-[420px] text-center leading-4 text-[#667085]">
                     {radarHint}
                   </div>
                 ) : null}
               </div>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:hidden">
+              {metrics.map(metric => <QualityMetricCard key={metric.key} metric={metric} active={metric.key === activeKey} position="!relative !min-w-0 !w-full" onActivate={() => setActiveKey(metric.key)} />)}
             </div>
           </div>
 
@@ -390,7 +393,7 @@ export default function QualityRadarOverview({
                       onClick={() => history.push('/data-quality/execution')}
                       className="grid w-full grid-cols-[28px_minmax(0,1fr)_76px] items-center gap-3 rounded-md border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white"
                     >
-                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-[11px] font-semibold text-[#667085] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-[12px] font-semibold text-[#667085] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                         {index + 1}
                       </span>
                       <span className="min-w-0">
@@ -398,7 +401,7 @@ export default function QualityRadarOverview({
                           <strong className="truncate font-medium text-[#30343b]">
                             {formatQualityDimension(intl, item.dimension)}
                           </strong>
-                          <span className="shrink-0 text-[#98a2b3]">
+                          <span className="shrink-0 text-[#667085]">
                             {formatRate(item.ratio)}
                           </span>
                         </span>
@@ -428,6 +431,7 @@ export default function QualityRadarOverview({
                   <YakOpsEmpty
                     width={146}
                     height={106}
+                    showCaption={false}
                     primaryColor="var(--yak-brand-color)"
                     title={intl.formatMessage({
                       id: 'pages.dataQuality.overview.noIssues7d',

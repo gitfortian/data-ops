@@ -177,7 +177,7 @@ export default function DatasetQueryDiagnostics({
       width: 270,
       render: (_, record) =>
         record.status === 'SUCCESS' ? (
-          <span className="text-[#98a2b3]">-</span>
+          <span className="text-[#667085]">-</span>
         ) : (
           <Tooltip
             title={

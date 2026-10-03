@@ -193,7 +193,7 @@ const ExecutionHistoryPage = () => {
           >
             {record.taskName || '-'}
           </button>
-          <div className="mt-0.5 truncate text-[11px] text-[#98a2b3]">
+          <div className="mt-0.5 truncate text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.common.nodeId' })}: {record.nodeId}
           </div>
         </div>
@@ -227,7 +227,7 @@ const ExecutionHistoryPage = () => {
       ellipsis: true,
       render: (value?: string | null) => (
         <Tooltip title={value || undefined}>
-          <span className="font-mono text-[11px] text-[#667085]">{value || '-'}</span>
+          <span className="font-mono text-[12px] text-[#667085]">{value || '-'}</span>
         </Tooltip>
       ),
     },
@@ -250,7 +250,7 @@ const ExecutionHistoryPage = () => {
       dataIndex: 'startTime',
       width: 170,
       render: (value?: string | null) => (
-        <span className="whitespace-nowrap text-[12px] text-[#98a2b3]">
+        <span className="whitespace-nowrap text-[12px] text-[#667085]">
           {value ? moment(value).format('YYYY-MM-DD HH:mm:ss') : '-'}
         </span>
       ),
@@ -305,12 +305,12 @@ const ExecutionHistoryPage = () => {
               }
             />
 
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2 overflow-x-auto">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
               <Input
                 allowClear
                 variant="filled"
                 value={keywordDraft}
-                prefix={<SearchOutlined className="text-[#98a2b3]" />}
+                prefix={<SearchOutlined className="text-[#667085]" />}
                 placeholder={intl.formatMessage({ id: 'pages.dataDevelopment.execution.searchPlaceholder' })}
                 className="!h-9 !w-[230px] !min-w-[190px]"
                 onChange={(event) => setKeywordDraft(event.target.value)}
@@ -398,7 +398,7 @@ const ExecutionHistoryPage = () => {
 
         {!loadFailure ? (
           <div className="flex h-16 shrink-0 items-center justify-between border-t border-[#f0f0f0]">
-            <span className="text-[12px] text-[#98a2b3]">
+            <span className="text-[12px] text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.dataDevelopment.execution.total' },
                 { count: total },

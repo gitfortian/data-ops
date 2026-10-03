@@ -395,7 +395,7 @@ export default function DatasetDetailPage() {
       render: (value: string, record) => (
         <div>
           <div className="font-medium text-[#30343b]">{value}</div>
-          <div className="mt-0.5 text-[11px] text-[#9aa0aa]">
+          <div className="mt-0.5 text-[12px] text-[#9aa0aa]">
             {record.physicalName}
           </div>
         </div>
@@ -667,7 +667,7 @@ export default function DatasetDetailPage() {
               <div className="relative flex h-[116px] w-[116px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f7f7f8]">
                 <div className="absolute h-[78px] w-[78px] rounded-full bg-white shadow-[0_8px_22px_rgba(22,24,35,0.05)]" />
                 <DatabaseOutlined className="relative z-10 text-[38px] text-[#5d6470]" />
-                <span className="absolute bottom-3 z-10 rounded-md bg-white px-2 py-1 text-[10px] font-medium text-[#667085] shadow-sm">
+                <span className="absolute bottom-3 z-10 rounded-md bg-white px-2 py-1 text-[12px] font-medium text-[#667085] shadow-sm">
                   {currentVersion ? `DV${currentVersion.versionNo}` : 'Dataset'}
                 </span>
               </div>
@@ -680,7 +680,7 @@ export default function DatasetDetailPage() {
                   {dataset.description || '暂无描述'}
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] leading-4 text-[#667085]">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] leading-4 text-[#667085]">
                   <span
                     className={`inline-block h-[10px] w-[10px] rounded-full ${
                       online ? 'bg-[#20c77a]' : 'bg-[#98a2b3]'
@@ -695,11 +695,11 @@ export default function DatasetDetailPage() {
                   </span>
                 </div>
 
-                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] leading-4 text-[#8a8f98]">
+                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] leading-4 text-[#8a8f98]">
                   <span className="max-w-[220px] truncate">
                     {currentSourceLabel}
                   </span>
-                  <span className="text-[10px] text-[#b0b5bd]">→</span>
+                  <span className="text-[12px] text-[#b0b5bd]">→</span>
                   <span className="max-w-[420px] truncate">
                     {sourceSummary(currentVersion)}
                   </span>

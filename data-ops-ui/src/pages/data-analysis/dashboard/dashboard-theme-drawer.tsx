@@ -113,7 +113,7 @@ const ColorSetting = ({
         value={value}
         onChange={(color) => onChange(color.toHexString())}
       />
-      <span className="w-[68px] font-mono text-[10px] uppercase text-[#667085]">{value}</span>
+      <span className="w-[68px] font-mono text-[12px] uppercase text-[#667085]">{value}</span>
     </div>
   </div>
 );
@@ -216,7 +216,7 @@ export function DashboardThemeDrawer({
   const customContent = (
     <div className="pt-1">
       <div className="mb-3 flex h-9 items-center justify-between bg-[#f7f8fa] px-3">
-        <div className="flex items-center gap-2 text-[11px] text-[#667085]">
+        <div className="flex items-center gap-2 text-[12px] text-[#667085]">
           <span>{intl.formatMessage({ id: 'pages.dashboard.editor.theme.basedOn' })}</span>
           <span className="font-medium text-[#344054]">
             {presetName({ presetId: resolved.presetId, name: resolved.name })}
@@ -230,7 +230,7 @@ export function DashboardThemeDrawer({
         <Button
           type="text"
           size="small"
-          className="!h-7 !px-1.5 !text-[10px] !text-[#667085] hover:!text-[#344054]"
+          className="!h-7 !px-1.5 !text-[12px] !text-[#667085] hover:!text-[#344054]"
           icon={<RotateCcw size={11} />}
           onClick={() => onChange(themeFromPreset(selectedId))}
         >

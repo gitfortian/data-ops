@@ -74,7 +74,7 @@ function FloatingInput({
         className={`pointer-events-none absolute left-4 z-10 bg-white px-1 transition-all duration-200 ease-out ${
           floating
             ? "top-0 -translate-y-1/2 text-[12px] font-medium text-[#333]"
-            : "top-1/2 -translate-y-1/2 text-[15px] text-[#aaa]"
+            : "top-1/2 -translate-y-1/2 text-[15px] text-[#667085]"
         }`}
       >
         {label}

@@ -131,8 +131,8 @@ const AssetDetailDrawer = ({
   const attributeKeys = Object.keys(attributes);
   const fieldLabel = (fieldName: string): string => {
     const field = types
-      .flatMap((type) => type.fields ?? [])
-      .find((candidate) => candidate.fieldName === fieldName);
+      .find((type) => type.typeName === (entityTypeName || item.typeName))?.fields
+      ?.find((candidate) => candidate.fieldName === fieldName || candidate.storageSlot === fieldName);
     return field?.displayName || fieldName;
   };
 
@@ -204,7 +204,7 @@ const AssetDetailDrawer = ({
             <div className="space-y-1 rounded-[8px] border border-solid border-[#eaecf0] p-3">
               {attributeKeys.map((key) => (
                 <div key={key} className="flex gap-3 text-[13px]">
-                  <span className="w-[160px] shrink-0 truncate text-[#667085]">
+                  <span className="w-[160px] max-sm:w-[110px] shrink-0 truncate text-[#667085]">
                     <Tooltip title={key}>{fieldLabel(key)}</Tooltip>
                   </span>
                   <span className="break-all">{describeAttributeValue(attributes[key])}</span>
@@ -331,9 +331,9 @@ const SectionBlock = ({
         {title ?? SECTION_TITLES[name] ?? name}
       </span>
       {section.status === 'UNAVAILABLE' ? (
-        <Tag color="orange">读不到</Tag>
+        <Tag color="orange">暂不可用</Tag>
       ) : section.status === 'EMPTY' ? (
-        <Tag>无</Tag>
+        <Tag>暂无数据</Tag>
       ) : null}
     </div>
     {section.status === 'UNAVAILABLE' ? (
@@ -342,7 +342,7 @@ const SectionBlock = ({
         {section.message || '该块读取失败'}
       </div>
     ) : section.status === 'EMPTY' ? (
-      <YakEmpty compact title={section.message || '这一块目前没有内容'} />
+      <div className="rounded-lg border border-[#eaecf0] bg-[#f9fafb] px-3 py-3 text-[13px] text-[#667085]">{section.message || '当前范围暂无数据'}</div>
     ) : (
       children
     )}
@@ -409,7 +409,7 @@ const renderSectionContent = (
         ))}
         {/* 详情只给一屏；完整时间线走 /entities/{id}/changes，翻页不在抽屉里堆状态。 */}
         <div className="text-[12px] text-[#98a2b3]">
-          最新 {records.length} 条变更，更多走变更历史分页接口
+          最近 {records.length} 条变更
         </div>
       </div>
     );

@@ -27,21 +27,23 @@ const iconButtonClassName =
 
 interface ToolbarButtonProps {
   title: string;
+  label?: string;
   onClick: () => void;
   disabled?: boolean;
   children: ReactNode;
 }
 
-const ToolbarButton = ({ title, onClick, disabled, children }: ToolbarButtonProps) => (
+const ToolbarButton = ({ title, label, onClick, disabled, children }: ToolbarButtonProps) => (
   <Tooltip title={title} mouseEnterDelay={0.35}>
     <button
       type="button"
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className={iconButtonClassName}
+      className={label ? `${iconButtonClassName} !w-auto gap-1.5 px-2 text-[12px]` : iconButtonClassName}
     >
       {children}
+      {label && <span>{label}</span>}
     </button>
   </Tooltip>
 );
@@ -75,9 +77,10 @@ const SqlToolbar = ({
   };
 
   return (
-    <div className="flex h-full w-full min-w-0 items-center justify-between gap-3">
-      <div className="flex shrink-0 items-center gap-0.5">
+    <div className="flex h-full w-full min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-0.5">
         <ToolbarButton
+          label={text('pages.dataDevelopment.toolbar.run')}
           title={
             !canExecute
               ? text('pages.dataDevelopment.toolbar.noExecutePermission')
@@ -93,6 +96,7 @@ const SqlToolbar = ({
         <ToolbarDivider />
         <ToolbarButton
           title={!canEdit ? text('pages.dataDevelopment.toolbar.noEditPermission') : text('pages.dataDevelopment.toolbar.saveDraft')}
+          label={text('pages.dataDevelopment.toolbar.saveDraft')}
           disabled={saving || publishing || running || !canEdit}
           onClick={onSave}
         >
@@ -100,6 +104,7 @@ const SqlToolbar = ({
         </ToolbarButton>
         <ToolbarButton
           title={!canPublish ? text('pages.dataDevelopment.toolbar.noPublishPermission') : text('pages.dataDevelopment.toolbar.publish')}
+          label={text('pages.dataDevelopment.toolbar.publish')}
           disabled={saving || publishing || running || !canPublish}
           onClick={onPublish}
         >

@@ -88,7 +88,7 @@ const DataServiceSearchResults = ({
               </button>
               <DataServiceMethodBadge />
             </div>
-            <div className="mt-0.5 line-clamp-1 text-[11px] text-[#98a2b3]">
+            <div className="mt-0.5 line-clamp-1 text-[12px] text-[#667085]">
               {service.description ||
                 intl.formatMessage({ id: 'pages.dataService.api.noDescription' })}
             </div>
@@ -101,7 +101,7 @@ const DataServiceSearchResults = ({
         minWidth: 280,
         render: (value: string) => (
           <div className="flex items-center gap-1">
-            <span className="truncate font-mono text-[11px] text-[#667085]">
+            <span className="truncate font-mono text-[12px] text-[#667085]">
               {value}
             </span>
             <Tooltip
@@ -143,7 +143,7 @@ const DataServiceSearchResults = ({
                 {source.primary}
               </div>
               {source.secondary ? (
-                <div className="mt-0.5 text-[11px] text-[#98a2b3]">
+                <div className="mt-0.5 text-[12px] text-[#667085]">
                   {source.secondary}
                 </div>
               ) : null}
@@ -177,7 +177,7 @@ const DataServiceSearchResults = ({
               className={
                 enabled
                   ? 'text-[12px] text-[#344054]'
-                  : 'text-[12px] text-[#98a2b3]'
+                  : 'text-[12px] text-[#667085]'
               }
             >
               {intl.formatMessage({
@@ -263,7 +263,7 @@ const DataServiceSearchResults = ({
           <h1 className="m-0 text-[17px] font-semibold text-[#161823]">
             {intl.formatMessage({ id: 'pages.dataService.marketplace.title' })}
           </h1>
-          <div className="mt-1 truncate text-[12px] text-[#98a2b3]">
+          <div className="mt-1 truncate text-[12px] text-[#667085]">
             {intl.formatMessage(
               { id: 'pages.dataService.search.keyword' },
               { keyword: submittedKeyword },
@@ -282,7 +282,7 @@ const DataServiceSearchResults = ({
             onSearch={onSearch}
           />
         </div>
-        <span className="shrink-0 text-[12px] text-[#98a2b3]">
+        <span className="shrink-0 text-[12px] text-[#667085]">
           {intl.formatMessage(
             { id: 'pages.dataService.search.resultCount' },
             { count: records.length },

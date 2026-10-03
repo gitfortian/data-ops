@@ -119,7 +119,7 @@ export function DigitalScreenEditorView({
             maxLength={80}
           />
           <span className={[
-            'ml-1 rounded-[4px] px-2 py-1 text-[11px] font-medium',
+            'ml-1 rounded-[4px] px-2 py-1 text-[12px] font-medium',
             isPublished
               ? hasPendingPublish
                 ? 'bg-[#fff7e8] text-[#ad6800]'
@@ -128,11 +128,11 @@ export function DigitalScreenEditorView({
           ].join(' ')}>
             {statusLabel}
           </span>
-          <span className="ml-1 text-[11px] text-[#98a2b3]">
+          <span className="ml-1 text-[12px] text-[#667085]">
             已绑定 {runtime.boundCount}/{bindableCount}
           </span>
           {runtime.loadingCount ? (
-            <span className="text-[11px] text-[#8a9099]">正在刷新数据...</span>
+            <span className="text-[12px] text-[#8a9099]">正在刷新数据...</span>
           ) : null}
         </div>
 
@@ -182,7 +182,7 @@ export function DigitalScreenEditorView({
                 />
               </div>
             ) : (
-              <div className="flex h-[420px] w-full items-center justify-center border border-[#e0e3e7] bg-white text-[13px] text-[#98a2b3]">
+              <div className="flex h-[420px] w-full items-center justify-center border border-[#e0e3e7] bg-white text-[13px] text-[#667085]">
                 当前模板不存在
               </div>
             )}
@@ -220,11 +220,11 @@ export function DigitalScreenEditorView({
             <div className="text-[13px] font-semibold text-[#161823]">模板</div>
             <div className="mt-4 rounded-[7px] bg-[#f6f7f8] p-3">
               <div className="text-[13px] font-medium text-[#444950]">{template?.name || '未知模板'}</div>
-              <div className="mt-1 text-[11px] text-[#98a2b3]">
+              <div className="mt-1 text-[12px] text-[#667085]">
                 {template ? `${template.category} · ${template.width} × ${template.height}` : screen.templateId}
               </div>
             </div>
-            <div className="mt-2 text-[11px] leading-[18px] text-[#a3a8b0]">
+            <div className="mt-2 text-[12px] leading-[18px] text-[#a3a8b0]">
               布局由模板固定。编辑内容只写入 Draft，只有点击发布后才会生成新的线上快照。
             </div>
           </section>
@@ -234,7 +234,7 @@ export function DigitalScreenEditorView({
               <div className="flex items-center gap-2 text-[13px] font-semibold text-[#161823]">
                 <Database size={14} /> 数据绑定
               </div>
-              <span className="text-[10px] text-[#a3a8b0]">{datasets.length} 个可用 Dataset</span>
+              <span className="text-[12px] text-[#a3a8b0]">{datasets.length} 个可用 Dataset</span>
             </div>
             <div className="mt-4">
               <DataBindingPanel

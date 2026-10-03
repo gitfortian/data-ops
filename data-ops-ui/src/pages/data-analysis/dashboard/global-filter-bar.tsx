@@ -58,7 +58,7 @@ export function DashboardGlobalFilterBar({
       }}
     >
       <div
-        className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium"
+        className="flex shrink-0 items-center gap-1.5 text-[12px] font-medium"
         style={{ color: 'var(--dashboard-component-text, #475467)' }}
       >
         <SlidersHorizontal size={13} />
@@ -112,7 +112,7 @@ export function DashboardGlobalFilterBar({
               }}
             >
               <span
-                className="mr-1.5 max-w-[120px] truncate text-[10px] font-medium"
+                className="mr-1.5 max-w-[120px] truncate text-[12px] font-medium"
                 style={{ color: 'var(--dashboard-component-text, #475467)' }}
               >
                 {filter.name}
@@ -130,7 +130,7 @@ export function DashboardGlobalFilterBar({
                   allowClear
                   showTime={dateTime ? { format: 'HH:mm:ss' } : false}
                   format={dateTime ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'}
-                  className="!h-7 w-[158px] text-[10px]"
+                  className="!h-7 w-[158px] text-[12px]"
                   placeholder={intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.all' })}
                   value={dateValue?.isValid() ? dateValue : null}
                   onChange={(value) => onRuntimeValue(
@@ -145,7 +145,7 @@ export function DashboardGlobalFilterBar({
                   variant="borderless"
                   size="small"
                   allowClear
-                  className="!h-7 w-[116px] text-[10px]"
+                  className="!h-7 w-[116px] text-[12px]"
                   placeholder={intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.all' })}
                   value={current === undefined || current === null ? '' : String(current)}
                   onChange={(event) => onRuntimeValue(filter.id, event.target.value || undefined)}
@@ -155,7 +155,7 @@ export function DashboardGlobalFilterBar({
           );
         }) : (
           <span
-            className="text-[10px]"
+            className="text-[12px]"
             style={{ color: 'var(--dashboard-component-muted, #a0a6af)' }}
           >
             {intl.formatMessage({ id: 'pages.dashboard.editor.globalFilter.emptyHint' })}
@@ -178,7 +178,7 @@ export function DashboardGlobalFilterBar({
       {editable ? (
         <Button
           size="small"
-          className="!h-7 !rounded-[6px] !px-2.5 !text-[11px]"
+          className="!h-7 !rounded-[6px] !px-2.5 !text-[12px]"
           style={{ borderColor: 'var(--dashboard-component-border, #e4e7ec)' }}
           icon={filters.length ? <Settings2 size={12} /> : <Plus size={12} />}
           onClick={onManage}

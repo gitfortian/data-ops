@@ -303,7 +303,7 @@ const MetricTile = ({
       {value}
     </div>
     {hint ? (
-      <div className="mt-1 text-[11px] text-[#9aa0aa]">{hint}</div>
+      <div className="mt-1 text-[12px] text-[#9aa0aa]">{hint}</div>
     ) : null}
   </div>
 );
@@ -737,7 +737,7 @@ export default function BatchLinkUpExecutionDetailPage() {
             <div className="truncate text-[13px] font-medium text-[#30343b]">
               {firstValue(record?.sourceTable, record?.sourceTableName, "-")}
             </div>
-            <div className="mt-0.5 text-[11px] text-[#9aa0aa]">来源</div>
+            <div className="mt-0.5 text-[12px] text-[#9aa0aa]">来源</div>
           </div>
         ),
       },
@@ -755,7 +755,7 @@ export default function BatchLinkUpExecutionDetailPage() {
                 "-"
               )}
             </div>
-            <div className="mt-0.5 text-[11px] text-[#9aa0aa]">目标</div>
+            <div className="mt-0.5 text-[12px] text-[#9aa0aa]">目标</div>
           </div>
         ),
       },
@@ -1035,7 +1035,7 @@ export default function BatchLinkUpExecutionDetailPage() {
                           {item.title}
                         </span>
                         {item.tableName ? (
-                          <span className="ml-2 text-[11px] text-[#9aa0aa]">
+                          <span className="ml-2 text-[12px] text-[#9aa0aa]">
                             {item.tableName}
                           </span>
                         ) : null}
@@ -1199,7 +1199,7 @@ export default function BatchLinkUpExecutionDetailPage() {
 
   {/* 状态 */}
   {currentInstance ? (
-    <div className="mt-1 flex items-center gap-1 text-[11px] leading-4 text-[#667085]">
+    <div className="mt-1 flex items-center gap-1 text-[12px] leading-4 text-[#667085]">
       <span
         className={[
           'inline-block h-[10px] w-[10px] rounded-full',
@@ -1216,7 +1216,7 @@ export default function BatchLinkUpExecutionDetailPage() {
   ) : null}
 
   {/* 数据源流向：降级为辅助信息 */}
-  <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-[#8a8f98]">
+  <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-[#8a8f98]">
     <span className="max-w-[220px] truncate">
       {firstValue(
         definition?.sourceDatasourceName,
@@ -1226,7 +1226,7 @@ export default function BatchLinkUpExecutionDetailPage() {
       {sourceTable ? ` / ${sourceTable}` : ''}
     </span>
 
-    <SyncOutlined className="shrink-0 text-[10px] text-[#b0b5bd]" />
+    <SyncOutlined className="shrink-0 text-[12px] text-[#b0b5bd]" />
 
     <span className="max-w-[220px] truncate">
       {firstValue(

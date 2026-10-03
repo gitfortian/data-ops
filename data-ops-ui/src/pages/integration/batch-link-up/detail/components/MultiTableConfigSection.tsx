@@ -67,7 +67,7 @@ function EndpointPanel({
           </div>
 
           {description ? (
-            <div className="mt-0.5 text-[11px] leading-5 text-[#667085]">
+            <div className="mt-0.5 text-[12px] leading-5 text-[#667085]">
               {description}
             </div>
           ) : null}
@@ -181,7 +181,7 @@ export default function MultiTableConfigSection({
                 onSourceChange({ database: event.target.value })
               }
             />
-            <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">
+            <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">
               用于补全未携带库名前缀的来源表。
             </div>
           </div>
@@ -193,7 +193,7 @@ export default function MultiTableConfigSection({
                 <span className="ml-1 text-[var(--yak-brand-color)]">*</span>
               </div>
 
-              <span className="text-[11px] text-[#98a2b3]">
+              <span className="text-[12px] text-[#667085]">
                 已选择 {selectedTables.length} 张表
               </span>
             </div>
@@ -262,7 +262,7 @@ export default function MultiTableConfigSection({
               }
             />
 
-            <div className="mt-1.5 text-[11px] leading-5 text-[#98a2b3]">
+            <div className="mt-1.5 text-[12px] leading-5 text-[#667085]">
               用于记录筛选规则；当前仍需在上方确认实际同步表。
             </div>
           </div>
@@ -303,7 +303,7 @@ export default function MultiTableConfigSection({
                 />
               </div>
               {!supportsAutoCreate && sinkConfig.autoCreateTable ? (
-                <div className="mt-2 text-[11px] leading-5 text-[#b54708]">
+                <div className="mt-2 text-[12px] leading-5 text-[#b54708]">
                   {autoCreateTableEnabled
                     ? '当前 Sink Connector 未声明 AUTO_CREATE_TABLE，请关闭后再保存。'
                     : '当前目标数据源 Stage 1 仅支持写入已有表，请关闭自动建表后再保存。'}
@@ -375,7 +375,7 @@ export default function MultiTableConfigSection({
               }
             />
             {!supportsUpsert && currentWriteMode === 'upsert' ? (
-              <div className="mt-1.5 text-[11px] leading-5 text-[#b54708]">
+              <div className="mt-1.5 text-[12px] leading-5 text-[#b54708]">
                 {upsertEnabled
                   ? '当前 Sink Connector 未声明 UPSERT，请选择其他写入模式。'
                   : '当前目标数据源不支持 Upsert/MERGE，请选择 Append 或 Overwrite。'}

@@ -72,7 +72,7 @@ const ModelTreePane = ({
   return (
     <>
       <aside
-        className="group relative shrink-0 overflow-hidden bg-white transition-[width] duration-200 ease-out"
+        className="group relative shrink-0 overflow-hidden bg-white transition-[width] duration-200 ease-out max-md:hidden"
         style={{ width: collapsed ? 0 : width }}
       >
         <div className="flex h-full flex-col overflow-hidden" style={{ width }}>
@@ -85,7 +85,7 @@ const ModelTreePane = ({
               allowClear
               size="small"
               variant="filled"
-              prefix={<Search size={13} className="text-[#98a2b3]" />}
+              prefix={<Search size={13} className="text-[#667085]" />}
               placeholder="搜索业务域"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
@@ -142,7 +142,7 @@ const ModelTreePane = ({
         aria-orientation="vertical"
         onPointerDown={collapsed ? undefined : onResizeStart}
         className={[
-          'group relative z-20 w-px shrink-0 touch-none',
+          'group relative z-20 w-px shrink-0 touch-none max-md:hidden',
           collapsed ? 'cursor-default' : 'cursor-col-resize',
         ].join(' ')}
       >

@@ -53,7 +53,7 @@ const RetentionRow = ({
   <div className="mb-3 flex items-center gap-3">
     <div className="w-[110px] shrink-0">
       <div className="text-[13px] font-medium text-[#101828]">{label}</div>
-      <div className="text-[11px] text-[#98a2b3]">{hint}</div>
+      <div className="text-[12px] text-[#667085]">{hint}</div>
     </div>
     <div className="flex-1">{permanent ? null : children}</div>
     <Switch checked={permanent} onChange={onPermanentChange} size="small" />
@@ -325,7 +325,7 @@ const PolicyEditDrawer = ({ open, editing, onClose, onSaved }: PolicyEditDrawerP
               />
             </Form.Item>
           </RetentionRow>
-          <div className="mt-1 text-[12px] text-[#98a2b3]">要求：热 ≤ 冷 ≤ 销毁；「不限」表示该段不设期限。</div>
+          <div className="mt-1 text-[12px] text-[#667085]">要求：热 ≤ 冷 ≤ 销毁；「不限」表示该段不设期限。</div>
         </div>
 
         <Form.Item name="remark" label="备注" rules={[{ max: 512, message: '备注不能超过 512 个字符' }]}>

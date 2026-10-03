@@ -194,7 +194,7 @@ const ExecutionDetailDrawer = ({
         ellipsis: true,
         render: (value: unknown) => (
           <Tooltip title={outputCell(value)}>
-            <span className="font-mono text-[11px] text-[#344054]">
+            <span className="font-mono text-[12px] text-[#344054]">
               {outputCell(value)}
             </span>
           </Tooltip>
@@ -276,7 +276,7 @@ const ExecutionDetailDrawer = ({
     if (detail.taskType === 'SQL' && sqlOutput?.kind === 'RESULT_SET') {
       return (
         <div>
-          <div className="mb-2 flex items-center gap-3 text-[11px] text-[#667085]">
+          <div className="mb-2 flex items-center gap-3 text-[12px] text-[#667085]">
             <span>
               {intl.formatMessage(
                 { id: 'pages.dataDevelopment.execution.returnedRows' },
@@ -393,7 +393,7 @@ const ExecutionDetailDrawer = ({
               {detail.schemaVersion}
             </Descriptions.Item>
             <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.runtimeExecution' })} span={2}>
-              <span className="break-all font-mono text-[11px]">{detail.runtimeExecutionId || '-'}</span>
+              <span className="break-all font-mono text-[12px]">{detail.runtimeExecutionId || '-'}</span>
             </Descriptions.Item>
           </Descriptions>
 
@@ -413,11 +413,11 @@ const ExecutionDetailDrawer = ({
                 {intl.formatMessage({ id: 'pages.dataDevelopment.execution.retryChain' })}
               </div>
               {detail.retryOfExecutionId ? (
-                <span className="text-[11px] text-[#98a2b3]">
+                <span className="text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.execution.retrySource' })} #{detail.retryOfExecutionId}
                 </span>
               ) : (
-                <span className="text-[11px] text-[#98a2b3]">
+                <span className="text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.execution.originalExecution' })}
                 </span>
               )}
@@ -451,7 +451,7 @@ const ExecutionDetailDrawer = ({
                       ? intl.formatMessage({ id: failureMessageId })
                       : detail.failureReason}
                   </div>
-                  <div className="mt-1 font-mono text-[10px] text-[#b54708]">
+                  <div className="mt-1 font-mono text-[12px] text-[#b54708]">
                     {detail.failureReason}
                   </div>
                 </div>
@@ -476,7 +476,7 @@ const ExecutionDetailDrawer = ({
               {intl.formatMessage({ id: 'pages.dataDevelopment.execution.logs' })}
             </div>
             {logText ? (
-              <pre className="max-h-[280px] overflow-auto whitespace-pre-wrap rounded-md border border-[#eaecf0] bg-[#101828] p-3 text-[11px] leading-5 text-[#f2f4f7]">{logText}</pre>
+              <pre className="max-h-[280px] overflow-auto whitespace-pre-wrap rounded-md border border-[#eaecf0] bg-[#101828] p-3 text-[12px] leading-5 text-[#f2f4f7]">{logText}</pre>
             ) : (
               <div className="rounded-md border border-[#eaecf0] bg-[#fafafa] px-3 py-3 text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.execution.noLogs' })}
@@ -489,7 +489,7 @@ const ExecutionDetailDrawer = ({
               {intl.formatMessage({ id: 'pages.dataDevelopment.execution.rawOutput' })}
             </div>
             {hasExecutionOutput(detail.output) ? (
-              <pre className="max-h-[320px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[11px] leading-5 text-[#344054]">{JSON.stringify(detail.output, null, 2)}</pre>
+              <pre className="max-h-[320px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[12px] leading-5 text-[#344054]">{JSON.stringify(detail.output, null, 2)}</pre>
             ) : (
               <div className="rounded-md border border-[#eaecf0] bg-[#fafafa] px-3 py-3 text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.execution.noOutput' })}
@@ -501,14 +501,14 @@ const ExecutionDetailDrawer = ({
             <div className="mb-2 text-[13px] font-semibold text-[#344054]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.execution.definitionSnapshot' })}
             </div>
-            <div className="mb-2 rounded-md border border-[#b2ddff] bg-[#eff8ff] px-3 py-2 text-[11px] leading-5 text-[#175cd3]">
+            <div className="mb-2 rounded-md border border-[#b2ddff] bg-[#eff8ff] px-3 py-2 text-[12px] leading-5 text-[#175cd3]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.execution.definitionSnapshotHint' })}
             </div>
-            <div className="mb-1 text-[11px] font-medium text-[#667085]">
+            <div className="mb-1 text-[12px] font-medium text-[#667085]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.execution.content' })}
             </div>
             <pre className="max-h-[280px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[12px] leading-5 text-[#344054]">{detail.content || '-'}</pre>
-            <div className="mb-1 mt-3 text-[11px] font-medium text-[#667085]">
+            <div className="mb-1 mt-3 text-[12px] font-medium text-[#667085]">
               {intl.formatMessage({ id: 'pages.dataDevelopment.execution.config' })}
             </div>
             <pre className="max-h-[220px] overflow-auto rounded-md border border-[#eaecf0] bg-[#fafafa] p-3 text-[12px] leading-5 text-[#344054]">{detail.configJson || '{}'}</pre>

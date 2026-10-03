@@ -207,7 +207,7 @@ const AddOrEditDataSourceModal = forwardRef<DataSourceModalRef>((_, ref) => {
     }
 
     return (
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {isCreateMode && !hideBackButton ? (
             <YakButton disabled={busy} onClick={handleBackToTypeSelection}>

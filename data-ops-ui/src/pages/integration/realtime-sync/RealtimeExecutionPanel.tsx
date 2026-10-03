@@ -211,7 +211,7 @@ export default function RealtimeExecutionPanel({
                 配置已保存 · 版本与运行显式解耦
               </div>
               <h1 className="mb-0 mt-1 text-[20px] font-semibold text-[#101828]">{current.name}</h1>
-              <div className="mt-1 text-[12px] text-[#98a2b3]">
+              <div className="mt-1 text-[12px] text-[#667085]">
                 任务 ID：{current.id} · 当前草稿 v{current.definitionVersion}
                 {hasPublishedVersion ? ` · 已发布 v${current.publishedVersion}` : ''}
               </div>

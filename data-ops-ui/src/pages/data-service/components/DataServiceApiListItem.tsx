@@ -27,7 +27,7 @@ const DataServiceApiListItem = ({
       className="group flex min-h-[82px] w-full items-center gap-3 rounded-lg border-0 bg-[#fafbfc] px-3 py-3 text-left transition-colors hover:bg-[#f5f6f7]"
     >
       {rank ? (
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white font-mono text-[10px] font-medium text-[#98a2b3] shadow-[0_0_0_1px_rgba(16,24,40,.04)]">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white font-mono text-[12px] font-medium text-[#667085] shadow-[0_0_0_1px_rgba(16,24,40,.04)]">
           {String(rank).padStart(2, '0')}
         </span>
       ) : null}
@@ -39,17 +39,17 @@ const DataServiceApiListItem = ({
           </span>
           <DataServiceMethodBadge />
           {!service.enabled ? (
-            <span className="text-[10px] text-[#98a2b3]">
+            <span className="text-[12px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dataService.api.disabled' })}
             </span>
           ) : null}
         </div>
-        <div className="mt-1 truncate text-[11px] leading-5 text-[#8a9099]">
+        <div className="mt-1 truncate text-[12px] leading-5 text-[#8a9099]">
           {service.description ||
             intl.formatMessage({ id: 'pages.dataService.api.noDescription' })}
         </div>
         <div
-          className="mt-0.5 truncate font-mono text-[10px] text-[#a3a8b0]"
+          className="mt-0.5 truncate font-mono text-[12px] text-[#a3a8b0]"
           title={service.runtimePath}
         >
           {service.runtimePath}
@@ -63,7 +63,7 @@ const DataServiceApiListItem = ({
             : 'w-[118px] shrink-0 text-right'
         }
       >
-        <div className="truncate text-[11px] font-medium text-[#667085]">
+        <div className="truncate text-[12px] font-medium text-[#667085]">
           {calls !== undefined
             ? intl.formatMessage(
                 { id: 'pages.dataService.api.callCount' },
@@ -71,7 +71,7 @@ const DataServiceApiListItem = ({
               )
             : dataSourceName}
         </div>
-        <div className="mt-1 text-[10px] text-[#b0b5bd]">
+        <div className="mt-1 text-[12px] text-[#b0b5bd]">
           {calls !== undefined
             ? intl.formatMessage({ id: 'pages.dataService.api.recentCalls' })
             : intl.formatMessage({

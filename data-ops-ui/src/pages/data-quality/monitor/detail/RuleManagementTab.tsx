@@ -128,11 +128,11 @@ const RuleManagementTab = ({ workspace, running, onRun, onOpenLog, onRefresh, on
   };
 
   const columns: TableColumnsType<RuleView> = [
-    { title: '规则名称 / ID', dataIndex: 'name', minWidth: 300, render: (_, rule) => <div className="min-w-0 py-1"><div className="truncate text-[13px] font-medium text-[#172033]">{rule.name}</div><div className="mt-1 text-[11px] text-[#98a2b3]">ID：{rule.id}{rule.columnName ? ` · 字段：${rule.columnName}` : ' · 表级规则'}</div></div> },
+    { title: '规则名称 / ID', dataIndex: 'name', minWidth: 300, render: (_, rule) => <div className="min-w-0 py-1"><div className="truncate text-[13px] font-medium text-[#172033]">{rule.name}</div><div className="mt-1 text-[12px] text-[#667085]">ID：{rule.id}{rule.columnName ? ` · 字段：${rule.columnName}` : ' · 表级规则'}</div></div> },
     { title: '重要程度', width: 110, render: () => <Tag className="!m-0 !border-0 !bg-[#f2f4f7] !text-[#667085]">弱规则</Tag> },
     { title: '关联范围', width: 120, render: (_, rule) => scopeLabel(rule) },
     { title: '规则模板', dataIndex: 'templateCode', width: 180, render: (value) => <span className="text-[#344054]">{value}</span> },
-    { title: '监控阈值', width: 190, render: (_, rule) => <div><div className="font-medium text-[#344054]">{ruleParameter(rule)}</div><div className="mt-1 flex items-center gap-1.5 text-[11px]"><span className="h-1.5 w-1.5 rounded-full bg-[#ff4d4f]" /><span className="text-[#ff4d4f]">异常</span><span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#12a150]" /><span className="text-[#12a150]">正常</span></div></div> },
+    { title: '监控阈值', width: 190, render: (_, rule) => <div><div className="font-medium text-[#344054]">{ruleParameter(rule)}</div><div className="mt-1 flex items-center gap-1.5 text-[12px]"><span className="h-1.5 w-1.5 rounded-full bg-[#ff4d4f]" /><span className="text-[#ff4d4f]">异常</span><span className="ml-1 h-1.5 w-1.5 rounded-full bg-[#12a150]" /><span className="text-[#12a150]">正常</span></div></div> },
     { title: '质量维度', dataIndex: 'dimension', width: 110, render: (value) => <span className="text-[#344054]">{value}</span> },
     {
       title: '状态',
@@ -186,8 +186,8 @@ const RuleManagementTab = ({ workspace, running, onRun, onOpenLog, onRefresh, on
           <div className="flex items-center justify-between px-3 py-2 text-[#43506a]"><span>已停用规则</span><span>{stats.ruleCount - stats.enabledRuleCount}</span></div>
         </div>
         <div className="mt-7 flex items-center justify-between"><div className="text-[14px] font-semibold text-[#172033]">质量监控信息</div><RefreshCw size={14} className="cursor-pointer text-[#667085]" onClick={onRefresh} /></div>
-        <Input variant="filled" allowClear value={monitorKeyword} onChange={(event) => setMonitorKeyword(event.target.value)} placeholder="请输入关键字搜索" prefix={<Search size={14} className="text-[#98a2b3]" />} className="mt-3" />
-        {monitorVisible ? <div className="mt-3 rounded-md border border-[#cfdaf8] bg-[#eef3ff] px-3 py-3"><div className="text-xs text-[#7583a1]">ID: {monitor.id}</div><div className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#172033]">{monitor.name}</div><div className="mt-2 space-y-1 text-xs text-[#667085]"><div>数据范围：{monitor.whereClause || '全表'}</div><div>触发方式：{RUN_MODE_LABEL[settings.runMode]}</div><div>规则数：启用{stats.enabledRuleCount} / 总数{stats.ruleCount}</div><div>配置来源：数据质量</div></div></div> : <div className="mt-8 text-center text-xs text-[#98a2b3]">未找到匹配的监控配置</div>}
+        <Input variant="filled" allowClear value={monitorKeyword} onChange={(event) => setMonitorKeyword(event.target.value)} placeholder="请输入关键字搜索" prefix={<Search size={14} className="text-[#667085]" />} className="mt-3" />
+        {monitorVisible ? <div className="mt-3 rounded-md border border-[#cfdaf8] bg-[#eef3ff] px-3 py-3"><div className="text-xs text-[#7583a1]">ID: {monitor.id}</div><div className="mt-1 line-clamp-2 text-[13px] font-semibold leading-5 text-[#172033]">{monitor.name}</div><div className="mt-2 space-y-1 text-xs text-[#667085]"><div>数据范围：{monitor.whereClause || '全表'}</div><div>触发方式：{RUN_MODE_LABEL[settings.runMode]}</div><div>规则数：启用{stats.enabledRuleCount} / 总数{stats.ruleCount}</div><div>配置来源：数据质量</div></div></div> : <div className="mt-8 text-center text-xs text-[#667085]">未找到匹配的监控配置</div>}
       </aside>
       <div role="separator" aria-orientation="vertical" aria-label="调整左侧规则详情宽度" onPointerDown={onResizeStart} className={['group relative w-2 shrink-0 cursor-col-resize touch-none select-none self-stretch', resizing ? 'z-10' : ''].join(' ')}>
         <div className={['absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors', resizing ? 'bg-[#98a2b3]' : 'bg-[#e5e7eb] group-hover:bg-[#b8c0cc]'].join(' ')} />
@@ -195,7 +195,7 @@ const RuleManagementTab = ({ workspace, running, onRun, onOpenLog, onRefresh, on
       </div>
       <main className="min-w-0 flex-1 overflow-auto px-4 py-4">
         <div className="flex min-h-10 items-center justify-between gap-4 border-b border-[#edf0f3] pb-3">
-          <div className="flex min-w-0 items-center gap-2"><span className="truncate text-[15px] font-semibold text-[#161823]">{monitor.name}</span><span className="shrink-0 text-xs text-[#98a2b3]">ID: {monitor.id}</span></div>
+          <div className="flex min-w-0 items-center gap-2"><span className="truncate text-[15px] font-semibold text-[#161823]">{monitor.name}</span><span className="shrink-0 text-xs text-[#667085]">ID: {monitor.id}</span></div>
           <div className="flex shrink-0 items-center gap-2">
             {settings.runMode === 'MANUAL' ? <Tag color="orange" bordered={false} className="!m-0">未开启调度</Tag> : null}
             <YakButton type="primary" icon={<Play size={14} />} loading={running} onClick={onRun} className="!h-8 !px-3 !shadow-none">测试运行</YakButton>
@@ -205,7 +205,7 @@ const RuleManagementTab = ({ workspace, running, onRun, onOpenLog, onRefresh, on
         <div className="flex flex-wrap items-center justify-between gap-3 py-3">
           <Segmented<RuleStatusFilter> value={statusFilter} options={[{ label: '全部规则', value: 'ALL' }, { label: '已启用', value: 'ENABLED' }, { label: '已停用', value: 'DISABLED' }]} onChange={changeStatusFilter} />
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <Input allowClear variant="filled" value={draftFilters.keyword} onChange={(event) => setDraftFilters((current) => ({ ...current, keyword: event.target.value }))} onPressEnter={applyFilters} placeholder="搜索规则名称或 ID" prefix={<Search size={14} className="text-[#98a2b3]" />} className="w-[220px]" />
+            <Input allowClear variant="filled" value={draftFilters.keyword} onChange={(event) => setDraftFilters((current) => ({ ...current, keyword: event.target.value }))} onPressEnter={applyFilters} placeholder="搜索规则名称或 ID" prefix={<Search size={14} className="text-[#667085]" />} className="w-[220px]" />
             <Select allowClear variant="filled" value={draftFilters.template} placeholder="规则模板" options={templates} onChange={(value) => setDraftFilters((current) => ({ ...current, template: value }))} className="w-[160px]" />
             <YakButton type="text" className="!text-[#667085]" onClick={applyFilters}>查询</YakButton>
             <Popover trigger="click" placement="bottomRight" open={advancedOpen} onOpenChange={setAdvancedOpen} content={advancedSearchContent}><YakButton type="text" className="!text-[#667085]" icon={<ListFilter size={14} />}>高级搜索</YakButton></Popover>

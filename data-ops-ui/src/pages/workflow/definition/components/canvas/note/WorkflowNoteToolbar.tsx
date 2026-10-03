@@ -152,7 +152,7 @@ const WorkflowNoteToolbar = ({
                 }}
               >
                 <span style={{ fontSize }}>{label}</span>
-                {currentFontSize === value ? <span className="text-[11px] text-[#fe2c55]">✓</span> : null}
+                {currentFontSize === value ? <span className="text-[12px] text-[#fe2c55]">✓</span> : null}
               </button>
             ))}
           </div>

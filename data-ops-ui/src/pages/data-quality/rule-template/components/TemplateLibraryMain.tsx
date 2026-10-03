@@ -81,7 +81,7 @@ export default function TemplateLibraryMain({
                 variant="filled"
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
-                prefix={<Search size={14} className="text-[#98a2b3]" />}
+                prefix={<Search size={14} className="text-[#667085]" />}
                 placeholder={intl.formatMessage({
                   id: 'pages.dataQuality.template.searchPlaceholder',
                 })}

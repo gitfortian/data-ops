@@ -110,7 +110,7 @@ const Endpoint = ({
 
     return (
       <div className="w-[280px]">
-        <div className="mb-2 text-xs text-[#98a2b3]">
+        <div className="mb-2 text-xs text-[#667085]">
           {intl.formatMessage(
             { id: 'pages.batchLinkUp.plan.tableCount' },
             { count: tables.length },
@@ -144,7 +144,7 @@ const Endpoint = ({
         <span
           className={[
             'max-w-[100px] cursor-help truncate',
-            tables.length ? 'text-[#475467]' : 'text-[#98a2b3]',
+            tables.length ? 'text-[#475467]' : 'text-[#667085]',
           ].join(' ')}
         >
           {tables.length
@@ -171,7 +171,7 @@ const Endpoint = ({
           <DatabaseIcons dbType={type} width="20" height="20" />
         </span>
       ) : (
-        <span className="text-[#98a2b3]">-</span>
+        <span className="text-[#667085]">-</span>
       )}
 
       <span
@@ -202,7 +202,7 @@ const DataSourceSyncPlan = ({ record }: DataSourceSyncPlanProps) => {
 
   return (
     <div className="flex min-w-0 flex-col items-start gap-1.5 text-xs">
-      <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[11px] font-medium leading-5 text-[#667085]">
+      <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[12px] font-medium leading-5 text-[#667085]">
         {planTitle}
       </span>
 
@@ -217,7 +217,7 @@ const DataSourceSyncPlan = ({ record }: DataSourceSyncPlanProps) => {
           })}
         />
 
-        <DoubleRightOutlined className="shrink-0 text-[10px] text-[#98a2b3]" />
+        <DoubleRightOutlined className="shrink-0 text-[12px] text-[#667085]" />
 
         <Endpoint
           type={record?.sinkType}

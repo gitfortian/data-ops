@@ -1,6 +1,6 @@
 .yak-button.ant-btn {
-  --yak-button-height: 34px;
-  --yak-button-radius: 10px;
+  --yak-button-height: 36px;
+  --yak-button-radius: 8px;
 
   display: inline-flex;
   height: var(--yak-button-height);
@@ -29,8 +29,8 @@
   }
 
   &:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 3px rgba(37, 40, 50, 0.12);
+    outline: 2px solid #475467;
+    outline-offset: 2px;
   }
 
   &:not(:disabled):not(.ant-btn-disabled):active {
@@ -38,7 +38,7 @@
   }
 
   &.ant-btn-sm {
-    --yak-button-height: 28px;
+    --yak-button-height: 32px;
     --yak-button-radius: 8px;
 
     gap: 6px;

@@ -149,7 +149,7 @@ export default function ChannelConfigSection({
             }
           />
           {!supportsDirtyDataHandling && currentDirtyPolicy === 'skip' ? (
-            <div className="mt-1.5 text-[11px] leading-5 text-[#b54708]">
+            <div className="mt-1.5 text-[12px] leading-5 text-[#b54708]">
               当前 Sink Connector 未声明 DIRTY_DATA_HANDLING，请改为遇错停止。
             </div>
           ) : null}

@@ -30,6 +30,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useMemo, useState } from 'react';
+import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -256,7 +257,7 @@ export default function ConsumptionDetailPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="bg-white p-6 max-md:p-4">
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Space wrap>
           <Button
@@ -287,31 +288,33 @@ export default function ConsumptionDetailPage() {
 
         <div>
           <Space wrap align="center">
-            <Title level={2} style={{ margin: 0 }}>{product.name}</Title>
-            <Tag>{product.productKey.productType}</Tag>
-            <Tag color="blue">{product.lifecycle}</Tag>
-            <Tag color={product.availability === 'UNAVAILABLE' ? 'error' : undefined}>{product.availability}</Tag>
+            <Title level={2} style={{ margin: 0, fontSize: 20 }}>{product.name}</Title>
+            <Tag>{PRODUCT_TYPE_LABEL[product.productKey.productType] || product.productKey.productType}</Tag>
+            <Tag color="blue">{LIFECYCLE_LABEL[product.lifecycle] || product.lifecycle}</Tag>
+            <Tag color={product.availability === 'UNAVAILABLE' ? 'error' : undefined}>{AVAILABILITY_LABEL[product.availability] || product.availability}</Tag>
           </Space>
           <Paragraph type="secondary" style={{ marginTop: 8 }}>{product.description || '暂无描述'}</Paragraph>
           <Text type="secondary">{key}</Text>
         </div>
 
-        {providerIssues.map((section) => (
+        {providerIssues.length > 0 && <details className="rounded-lg border border-[#fedf89] bg-[#fffaeb] p-3">
+          <summary className="cursor-pointer text-[13px] font-medium text-[#93370d]">{providerIssues.length} 项治理证据未就绪 · 展开查看原因</summary>
+          <div className="mt-3 space-y-2">{providerIssues.map((section) => (
           <Alert
             key={section.sectionKey}
             type={section.state === 'FORBIDDEN' ? 'error' : 'warning'}
             showIcon
-            message={`${section.sectionKey}: ${section.state}`}
+            message={`${section.sectionKey}: ${EVIDENCE_LABEL[section.state] || section.state}`}
             description={`${section.ownerDomain}${section.reason ? ` · ${section.reason}` : ''}`}
           />
-        ))}
+        ))}</div></details>}
 
         <Card title="消费契约">
           <Descriptions column={{ xs: 1, sm: 2, lg: 3 }} bordered size="small">
-            <Descriptions.Item label="Owner">{product.owner || '待治理证据'}</Descriptions.Item>
-            <Descriptions.Item label="Visibility">{product.visibility || '待安全证据'}</Descriptions.Item>
-            <Descriptions.Item label="Project">{product.projectId}</Descriptions.Item>
-            <Descriptions.Item label="Active Version">{product.activeVersion?.displayVersion || product.activeVersion?.identity || '-'}</Descriptions.Item>
+            <Descriptions.Item label="负责人">{product.owner || '待治理证据'}</Descriptions.Item>
+            <Descriptions.Item label="可见范围">{product.visibility || '待安全证据'}</Descriptions.Item>
+            <Descriptions.Item label="工作空间">{product.projectId}</Descriptions.Item>
+            <Descriptions.Item label="当前生效版本">{product.activeVersion?.displayVersion || product.activeVersion?.identity || '-'}</Descriptions.Item>
             <Descriptions.Item label="Access Provider">{product.access.providerState}</Descriptions.Item>
             <Descriptions.Item label="Access Decision">
               {product.access.decision || product.access.reason || '当前访问主体与调用平面尚未获得裁决'}
@@ -339,7 +342,7 @@ export default function ConsumptionDetailPage() {
                   <Space wrap>
                     <Text strong>{evidence.sectionKey}</Text>
                     <Tag color={evidence.state === 'READY' ? 'success' : evidence.state === 'FORBIDDEN' ? 'error' : 'warning'}>
-                      {evidence.state}
+                      {EVIDENCE_LABEL[evidence.state] || evidence.state}
                     </Tag>
                     <Text type="secondary">{evidence.ownerDomain}</Text>
                   </Space>

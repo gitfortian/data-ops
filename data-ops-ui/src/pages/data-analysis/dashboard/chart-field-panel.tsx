@@ -142,7 +142,7 @@ export function ChartFieldPanel({
           <div className="text-[13px] font-semibold text-[#344054]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.fields.title' })}
           </div>
-          <div className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-[#7a818c]">
+          <div className="mt-0.5 flex items-center gap-1 text-[12px] font-medium text-[#7a818c]">
             <Database size={10} className="shrink-0" />
             <span className="truncate">
               {dataset?.name ?? intl.formatMessage({ id: 'pages.dashboard.editor.fields.sourceUnavailable' })}
@@ -158,11 +158,11 @@ export function ChartFieldPanel({
           value={keyword}
           prefix={<Search size={13} className="text-[#7a818c]" />}
           placeholder={intl.formatMessage({ id: 'pages.dashboard.editor.fields.search' })}
-          className="!h-9 !rounded-[7px] !text-[11px]"
+          className="!h-9 !rounded-[7px] !text-[12px]"
           onChange={(event) => setKeyword(event.target.value)}
         />
         <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="text-[10px] leading-4 text-[#8b929c]">
+          <div className="text-[12px] leading-4 text-[#8b929c]">
             {intl.formatMessage({
               id: editable
                 ? 'pages.dashboard.editor.fields.dragHint'
@@ -173,7 +173,7 @@ export function ChartFieldPanel({
             <Button
               type="text"
               size="small"
-              className="!h-7 !px-1.5 !text-[10px]"
+              className="!h-7 !px-1.5 !text-[12px]"
               icon={<Plus size={11} />}
               onClick={() => {
                 setEditingField(undefined);
@@ -188,7 +188,7 @@ export function ChartFieldPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3.5">
         {!dataset ? (
-          <div className="px-2 py-6 text-center text-[11px] text-[#8b929c]">
+          <div className="px-2 py-6 text-center text-[12px] text-[#8b929c]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.fields.empty' })}
           </div>
         ) : (
@@ -271,7 +271,7 @@ function FieldGroup({
           >
             {dimension ? <Type size={10} /> : <Hash size={10} />}
           </span>
-          <span className="text-[11px] font-semibold text-[#344054]">{title}</span>
+          <span className="text-[12px] font-semibold text-[#344054]">{title}</span>
         </div>
         <span className="rounded-[4px] bg-[#f2f4f7] px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-[#667085]">
           {fields.length}
@@ -292,7 +292,7 @@ function FieldGroup({
                 )
                 : field.label}
               className={[
-                'group flex h-9 items-center gap-2 rounded-[6px] px-1.5 text-[11px] transition-colors',
+                'group flex h-9 items-center gap-2 rounded-[6px] px-1.5 text-[12px] transition-colors',
                 editable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
                 selected
                   ? isDimension
@@ -327,7 +327,7 @@ function FieldGroup({
           );
         })}
         {!fields.length ? (
-          <div className="px-1.5 py-2.5 text-[10px] text-[#98a2b3]">
+          <div className="px-1.5 py-2.5 text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.fields.noMatch' })}
           </div>
         ) : null}
@@ -359,7 +359,7 @@ function CalculatedFieldGroup({
           <span className="flex h-5 w-5 items-center justify-center rounded-[5px] border border-[#fee1c7] bg-[#fff6ed] text-[#f79009]">
             <Braces size={10} />
           </span>
-          <span className="text-[11px] font-semibold text-[#344054]">
+          <span className="text-[12px] font-semibold text-[#344054]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.fields.calculated' })}
           </span>
         </div>
@@ -377,7 +377,7 @@ function CalculatedFieldGroup({
               draggable={editable}
               title={`${field.name} · ${field.expression}`}
               className={[
-                'group flex min-h-9 items-center gap-2 rounded-[6px] px-1.5 text-[11px] transition-colors',
+                'group flex min-h-9 items-center gap-2 rounded-[6px] px-1.5 text-[12px] transition-colors',
                 editable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
                 selected
                   ? 'bg-[#fff8f0] font-medium text-[#263244]'
@@ -433,7 +433,7 @@ function CalculatedFieldGroup({
           );
         })}
         {!fields.length ? (
-          <div className="px-1.5 py-2.5 text-[10px] text-[#98a2b3]">
+          <div className="px-1.5 py-2.5 text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.fields.noCalculatedMatch' })}
           </div>
         ) : null}

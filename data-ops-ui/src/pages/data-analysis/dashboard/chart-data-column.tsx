@@ -38,7 +38,7 @@ export function ChartDataColumn({
           options={datasets.map((item) => ({ label: item.name, value: item.id }))}
           onChange={onDatasetChange}
         />
-        <div className="mt-2 truncate px-0.5 text-[10px] font-medium text-[#7a818c]">
+        <div className="mt-2 truncate px-0.5 text-[12px] font-medium text-[#7a818c]">
           {dataset
             ? intl.formatMessage(
               { id: 'pages.dashboard.editor.fields.catalog' },

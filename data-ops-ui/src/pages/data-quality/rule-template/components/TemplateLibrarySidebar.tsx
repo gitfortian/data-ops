@@ -120,7 +120,7 @@ export default function TemplateLibrarySidebar({
               size="small"
               value={folderKeyword}
               onChange={(event) => setFolderKeyword(event.target.value)}
-              prefix={<Search size={13} className="text-[#98a2b3]" />}
+              prefix={<Search size={13} className="text-[#667085]" />}
               placeholder={intl.formatMessage({
                 id: 'pages.dataQuality.template.searchCategory',
               })}
@@ -228,7 +228,7 @@ export default function TemplateLibrarySidebar({
                 ))}
               </div>
             </Spin>
-            <div className="mt-2 text-[11px] leading-5 text-[#98a2b3]">
+            <div className="mt-2 text-[12px] leading-5 text-[#667085]">
               {intl.formatMessage({ id: 'pages.dataQuality.template.folderHint' })}
             </div>
           </div>

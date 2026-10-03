@@ -77,7 +77,7 @@ const FocusCard = ({
   <div className="min-h-[116px] bg-[#f7f8fa] px-4 py-3">
     <div className="flex items-center gap-1 text-xs text-[#667085]">
       {title}
-      <Info size={12} className="text-[#98a2b3]" />
+      <Info size={12} className="text-[#667085]" />
     </div>
     <div className="mt-4 text-[24px] font-semibold leading-none text-[#172033]">
       {value}

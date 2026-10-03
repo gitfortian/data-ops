@@ -632,7 +632,7 @@ const FieldsPage = () => {
       >
         <Form form={form} layout="vertical" className="pt-2">
           {optionsError && <Alert className="mb-3" type="warning" showIcon message="标准引用选项未能加载" action={<Button size="small" onClick={() => void loadEditorOptions()}>重试</Button>} />}
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="code"
               label="编码"
@@ -654,7 +654,7 @@ const FieldsPage = () => {
             <Select options={FIELD_ROLE_OPTIONS} placeholder="选择字段角色（决定引用项）" />
           </Form.Item>
           {/* 按角色适配(2026-09-16):角色决定引用项显隐;preserve=false 切换即清空隐藏项 */}
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="stdTypeId"
               label="类型标准引用"

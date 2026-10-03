@@ -67,19 +67,19 @@ const OfflineJobVersionsDrawer = ({
     return (
       <div className="space-y-3">
         {snapshot.configDigest ? (
-          <div className="font-mono text-[11px] text-[#98a2b3]">
+          <div className="font-mono text-[12px] text-[#667085]">
             configDigest: {snapshot.configDigest}
           </div>
         ) : null}
         <div>
           <div className="mb-1 text-[12px] font-medium text-[#344054]">任务定义</div>
-          <pre className="max-h-[260px] overflow-auto rounded-[6px] bg-[#f9fafb] p-3 font-mono text-[11px] leading-5 text-[#344054]">
+          <pre className="max-h-[260px] overflow-auto rounded-[6px] bg-[#f9fafb] p-3 font-mono text-[12px] leading-5 text-[#344054]">
             {JSON.stringify(snapshot.definition ?? null, null, 2)}
           </pre>
         </div>
         <div>
           <div className="mb-1 text-[12px] font-medium text-[#344054]">JobSpec</div>
-          <pre className="max-h-[260px] overflow-auto rounded-[6px] bg-[#f9fafb] p-3 font-mono text-[11px] leading-5 text-[#344054]">
+          <pre className="max-h-[260px] overflow-auto rounded-[6px] bg-[#f9fafb] p-3 font-mono text-[12px] leading-5 text-[#344054]">
             {JSON.stringify(snapshot.jobSpec ?? null, null, 2)}
           </pre>
         </div>

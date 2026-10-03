@@ -48,7 +48,7 @@ export default function ExecutionToolbar({
   const intl = useIntl();
   return (
     <div className="shrink-0 border-b border-[#eceef0] pb-2">
-      <div className="flex min-w-0 flex-nowrap items-center gap-3 overflow-x-auto">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Segmented<ExecutionViewMode>
           value={viewMode}
           options={[
@@ -69,14 +69,14 @@ export default function ExecutionToolbar({
           className="shrink-0"
         />
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2 max-sm:ml-0 max-sm:w-full">
           <Input
             allowClear
             variant="filled"
             value={keywordDraft}
             onChange={(event) => onKeywordDraftChange(event.target.value)}
             onPressEnter={onSearch}
-            prefix={<Search size={14} className="text-[#98a2b3]" />}
+            prefix={<Search size={14} className="text-[#667085]" />}
             placeholder={intl.formatMessage({
               id: 'pages.dataQuality.execution.searchPlaceholder',
             })}

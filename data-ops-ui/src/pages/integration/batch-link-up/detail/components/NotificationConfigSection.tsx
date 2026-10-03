@@ -54,7 +54,7 @@ function HelpTitle({
         <button
           type="button"
           aria-label={`${label}说明`}
-          className="inline-flex cursor-help items-center border-0 bg-transparent p-0 text-[#98a2b3] outline-none transition-colors hover:text-[#667085] focus:text-[#667085]"
+          className="inline-flex cursor-help items-center border-0 bg-transparent p-0 text-[#667085] outline-none transition-colors hover:text-[#667085] focus:text-[#667085]"
         >
           <QuestionCircleOutlined className="text-[13px]" />
         </button>
@@ -291,7 +291,7 @@ export default function NotificationConfigSection({
               {missingAlertChannel ? (
                 <Typography.Text
                   type="danger"
-                  className="mt-1.5 block !text-[11px]"
+                  className="mt-1.5 block !text-[12px]"
                 >
                   开启外部告警后至少选择一个已配置渠道
                 </Typography.Text>
@@ -349,7 +349,7 @@ export default function NotificationConfigSection({
               {missingRecipient ? (
                 <Typography.Text
                   type="danger"
-                  className="mt-1.5 block !text-[11px]"
+                  className="mt-1.5 block !text-[12px]"
                 >
                   指定用户模式至少选择一个当前项目成员
                 </Typography.Text>

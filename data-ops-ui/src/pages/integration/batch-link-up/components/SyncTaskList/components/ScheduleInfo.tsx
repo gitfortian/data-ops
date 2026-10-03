@@ -24,7 +24,7 @@ interface ScheduleTimeRowProps {
 
 const ScheduleTimeRow = ({ label, value }: ScheduleTimeRowProps) => (
   <div className="grid min-w-0 grid-cols-[58px_minmax(0,1fr)] items-center gap-2 leading-5">
-    <span className="whitespace-nowrap text-[12px] text-[#98a2b3]">
+    <span className="whitespace-nowrap text-[12px] text-[#667085]">
       {label}
     </span>
 
@@ -117,7 +117,7 @@ const ScheduleInfo = ({ record }: ScheduleInfoProps) => {
       <div className="flex min-w-0 items-center gap-2">
         <span
           className={[
-            'inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[11px] font-medium',
+            'inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[12px] font-medium',
             isNormal
               ? 'bg-[#eef4ff] text-[#315efb]'
               : 'bg-[#fff1f0] text-[#cf1322]',
@@ -149,7 +149,7 @@ const ScheduleInfo = ({ record }: ScheduleInfoProps) => {
           <button
             type="button"
             title={record?.cronExpression || '-'}
-            className="inline-flex min-w-0 max-w-[150px] cursor-pointer items-center rounded bg-[#f2f4f7] px-2 py-0.5 font-mono text-[11px] leading-5 text-[#344054] transition-colors hover:bg-[#e9eef8] hover:text-[#315efb]"
+            className="inline-flex min-w-0 max-w-[150px] cursor-pointer items-center rounded bg-[#f2f4f7] px-2 py-0.5 font-mono text-[12px] leading-5 text-[#344054] transition-colors hover:bg-[#e9eef8] hover:text-[#315efb]"
           >
             <span className="truncate">
               {record?.cronExpression ||

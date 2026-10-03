@@ -306,7 +306,7 @@ export function DashboardSheetBar({
       label: (
         <div className="flex min-w-[150px] items-center justify-between gap-4">
           <span className="max-w-[190px] truncate">{sheet.title}</span>
-          <span className="text-[10px] text-[#98a2b3]">
+          <span className="text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dashboard.editor.common.restore' })}
           </span>
         </div>
@@ -330,7 +330,7 @@ export function DashboardSheetBar({
             role="tab"
             aria-selected={dashboardActive}
             className={[
-              'relative mb-0 flex h-7 min-w-[110px] shrink-0 items-center justify-center gap-1.5 rounded-t-[4px] border px-4 text-[11px] outline-none transition-colors',
+              'relative mb-0 flex h-7 min-w-[110px] shrink-0 items-center justify-center gap-1.5 rounded-t-[4px] border px-4 text-[12px] outline-none transition-colors',
               'focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--yak-brand-color)]',
               dashboardActive
                 ? 'z-10 border-[#d7dce3] border-b-white bg-white font-medium text-[#161823] after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-[var(--yak-brand-color)]'
@@ -390,7 +390,7 @@ export function DashboardSheetBar({
                 onDragEnd={() => setDraggingId(undefined)}
               >
                 {renaming ? (
-                  <div className="flex min-w-0 flex-1 items-center gap-1.5 bg-transparent py-0 pl-3.5 pr-1 text-left text-[11px]">
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5 bg-transparent py-0 pl-3.5 pr-1 text-left text-[12px]">
                     <BarChart3 size={12} className="shrink-0 text-[#344054]" />
                     <input
                       autoFocus
@@ -400,7 +400,7 @@ export function DashboardSheetBar({
                         { id: 'pages.dashboard.editor.sheet.renameAria' },
                         { title: sheet.title },
                       )}
-                      className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[11px] font-medium text-[#161823] outline-none shadow-none [appearance:none] focus:border-0 focus:outline-none focus:ring-0"
+                      className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[12px] font-medium text-[#161823] outline-none shadow-none [appearance:none] focus:border-0 focus:outline-none focus:ring-0"
                       onFocus={(event) => event.currentTarget.select()}
                       onMouseDown={(event) => event.stopPropagation()}
                       onClick={(event) => event.stopPropagation()}
@@ -427,7 +427,7 @@ export function DashboardSheetBar({
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 bg-transparent py-0 pl-3.5 pr-1 text-left text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--yak-brand-color)]"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 bg-transparent py-0 pl-3.5 pr-1 text-left text-[12px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--yak-brand-color)]"
                     onClick={() => onChart(sheet.id)}
                     onDoubleClick={() => openRename(sheet)}
                     onKeyDown={(event) => handleNavigation(event, sheet.id)}
@@ -469,7 +469,7 @@ export function DashboardSheetBar({
               </div>
             );
           }) : (
-            <div className="flex h-7 items-center px-3 text-[10px] text-[#98a2b3]">
+            <div className="flex h-7 items-center px-3 text-[12px] text-[#667085]">
               {intl.formatMessage({ id: 'pages.dashboard.editor.sheet.empty' })}
             </div>
           )}
@@ -562,7 +562,7 @@ export function DashboardSheetBar({
           placeholder={intl.formatMessage({ id: 'pages.dashboard.editor.sheet.notePlaceholder' })}
           onChange={(event) => setNoteDraft(event.target.value)}
         />
-        <div className="mt-2 text-[11px] leading-5 text-[#98a2b3]">
+        <div className="mt-2 text-[12px] leading-5 text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.editor.sheet.noteHint' })}
         </div>
       </Modal>

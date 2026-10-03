@@ -118,7 +118,7 @@ const BackfillDrawer = ({ open, schedule, onClose, onCreated }: BackfillDrawerPr
           <div className="text-[14px] font-semibold text-[#344054]">
             {intl.formatMessage({ id: 'pages.workflow.schedule.backfill.title' })}
           </div>
-          <div className="mt-0.5 text-[11px] font-normal text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] font-normal text-[#667085]">
             {schedule?.name || '-'} · {schedule?.cronExpression || '-'} · {schedule?.timezone || '-'}
           </div>
         </div>
@@ -135,7 +135,7 @@ const BackfillDrawer = ({ open, schedule, onClose, onCreated }: BackfillDrawerPr
         </div>
       }
     >
-      <div className="mb-4 rounded-md border border-[#eaecf0] bg-[#f8f9fb] px-3 py-2 text-[11px] leading-5 text-[#667085]">
+      <div className="mb-4 rounded-md border border-[#eaecf0] bg-[#f8f9fb] px-3 py-2 text-[12px] leading-5 text-[#667085]">
         {intl.formatMessage({ id: 'pages.workflow.schedule.backfill.description' })}
       </div>
 
@@ -199,7 +199,7 @@ const BackfillDrawer = ({ open, schedule, onClose, onCreated }: BackfillDrawerPr
             <div className="text-[12px] font-medium text-[#344054]">
               {intl.formatMessage({ id: 'pages.workflow.schedule.backfill.planPreview' })}
             </div>
-            <div className="text-[11px] text-[#667085]">
+            <div className="text-[12px] text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.workflow.schedule.backfill.planCount' },
                 { count: preview.totalCount },
@@ -226,10 +226,10 @@ const BackfillDrawer = ({ open, schedule, onClose, onCreated }: BackfillDrawerPr
               {
                 title: 'scheduleTime',
                 dataIndex: 'scheduleTime',
-                render: (value: string) => <code className="text-[11px] text-[#667085]">{value}</code>,
+                render: (value: string) => <code className="text-[12px] text-[#667085]">{value}</code>,
               },
             ]}
-            className="[&_.ant-table-thead>tr>th]:!bg-[#f8f9fb] [&_.ant-table-thead>tr>th]:!text-[11px]"
+            className="[&_.ant-table-thead>tr>th]:!bg-[#f8f9fb] [&_.ant-table-thead>tr>th]:!text-[12px]"
           />
         </div>
       ) : null}

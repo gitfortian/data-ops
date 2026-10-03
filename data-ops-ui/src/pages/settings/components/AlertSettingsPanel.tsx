@@ -306,11 +306,11 @@ const AlertSettingsPanel = () => {
                 >
                   {channelIcon(ch.type, enabled)}
                   <div className="min-w-0 flex-1">
-                    <p className={['m-0 truncate text-sm font-semibold', enabled ? 'text-[#1d2939]' : 'text-[#98a2b3]'].join(' ')}>
+                    <p className={['m-0 truncate text-sm font-semibold', enabled ? 'text-[#1d2939]' : 'text-[#667085]'].join(' ')}>
                       {channelTypeLabel[ch.type] || ch.name}
                     </p>
                     <div className="mt-1.5 flex items-center gap-2">
-                      <span className="text-xs text-[#98a2b3]">v{ch.version}</span>
+                      <span className="text-xs text-[#667085]">v{ch.version}</span>
                       {connStatusTag(ch.connStatus)}
                     </div>
                   </div>
@@ -321,7 +321,7 @@ const AlertSettingsPanel = () => {
                       disabled={!!testingChannel || !enabled}
                       className={[
                         'shrink-0 inline-flex h-8 w-8 items-center justify-center',
-                        'rounded-lg text-[#98a2b3]',
+                        'rounded-lg text-[#667085]',
                         'transition-all duration-200',
                         'hover:bg-[#f5f5f6] hover:text-[#475569]',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d1d5db]',

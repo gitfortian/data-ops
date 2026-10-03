@@ -103,7 +103,7 @@ const formatTime = (value?: string) =>
 const formatScheduleTime = (value?: string) => (value ? value.replace('T', ' ') : '-');
 
 const JsonBlock = ({ value }: { value?: unknown }) => (
-  <pre className="m-0 max-h-[420px] overflow-auto rounded-md bg-[#f7f7f8] p-3 text-[11px] leading-5 text-[rgba(22,24,35,.72)]">
+  <pre className="m-0 max-h-[420px] overflow-auto rounded-md bg-[#f7f7f8] p-3 text-[12px] leading-5 text-[rgba(22,24,35,.72)]">
     {JSON.stringify(value ?? {}, null, 2)}
   </pre>
 );
@@ -139,7 +139,7 @@ const SectionCard = ({ title, extra, children, className = '' }: {
   <section className={`min-w-0 rounded-lg bg-white ${className}`}>
     <div className="flex min-h-[52px] items-center justify-between gap-4 px-5">
       <div className="text-[15px] font-semibold text-[#161823]">{title}</div>
-      {extra ? <div className="text-[11px] text-[#98a2b3]">{extra}</div> : null}
+      {extra ? <div className="text-[12px] text-[#667085]">{extra}</div> : null}
     </div>
     {children}
   </section>
@@ -413,7 +413,7 @@ export default function WorkflowInstanceDetailPage() {
         title: 'Attempt ID',
         dataIndex: 'id',
         render: (value: string) => (
-          <span className="font-mono text-[10px] text-[#667085]">{value}</span>
+          <span className="font-mono text-[12px] text-[#667085]">{value}</span>
         ),
       },
       {
@@ -435,11 +435,11 @@ export default function WorkflowInstanceDetailPage() {
   const renderNodeDetail = (record: WorkflowNodeInstance) => (
     <div className="space-y-4 bg-[#fafafa] p-3">
       {record.errorMessage ? (
-        <div className="rounded-md border border-[#fecdca] bg-[#fff6f5] px-3 py-2 text-[11px] text-[#b42318]">
+        <div className="rounded-md border border-[#fecdca] bg-[#fff6f5] px-3 py-2 text-[12px] text-[#b42318]">
           {record.errorMessage}
         </div>
       ) : null}
-      <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-[11px] text-[#667085] sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-[12px] text-[#667085] sm:grid-cols-2">
         <div>
           {intl.formatMessage({ id: 'pages.workflow.instanceDetail.currentAttempt' })}
           <span className="font-mono">{record.currentAttemptId || '-'}</span>
@@ -464,13 +464,13 @@ export default function WorkflowInstanceDetailPage() {
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div><div className="mb-1.5 text-[11px] font-medium text-[#344054]">Input Mapping</div><JsonBlock value={record.inputMapping} /></div>
-        <div><div className="mb-1.5 text-[11px] font-medium text-[#344054]">Resolved Node Input</div><JsonBlock value={record.input} /></div>
-        <div><div className="mb-1.5 text-[11px] font-medium text-[#344054]">Predecessor Outputs</div><JsonBlock value={record.predecessorOutputs} /></div>
-        <div><div className="mb-1.5 text-[11px] font-medium text-[#344054]">Node Output</div><JsonBlock value={record.output} /></div>
+        <div><div className="mb-1.5 text-[12px] font-medium text-[#344054]">Input Mapping</div><JsonBlock value={record.inputMapping} /></div>
+        <div><div className="mb-1.5 text-[12px] font-medium text-[#344054]">Resolved Node Input</div><JsonBlock value={record.input} /></div>
+        <div><div className="mb-1.5 text-[12px] font-medium text-[#344054]">Predecessor Outputs</div><JsonBlock value={record.predecessorOutputs} /></div>
+        <div><div className="mb-1.5 text-[12px] font-medium text-[#344054]">Node Output</div><JsonBlock value={record.output} /></div>
       </div>
       <div>
-        <div className="mb-1.5 text-[11px] font-medium text-[#344054]">
+        <div className="mb-1.5 text-[12px] font-medium text-[#344054]">
           {intl.formatMessage({ id: 'pages.workflow.instanceDetail.attemptHistory' })}
         </div>
         <Table<WorkflowAttempt>
@@ -494,7 +494,7 @@ export default function WorkflowInstanceDetailPage() {
         render: (_: unknown, record) => (
           <div>
             <div className="font-medium text-[#344054]">{record.name}</div>
-            <div className="mt-0.5 text-[11px] text-[#98a2b3]">{record.type} · {record.id}</div>
+            <div className="mt-0.5 text-[12px] text-[#667085]">{record.type} · {record.id}</div>
           </div>
         ),
       },
@@ -723,16 +723,16 @@ export default function WorkflowInstanceDetailPage() {
                   {detail.name || intl.formatMessage({ id: 'pages.workflow.instanceDetail.unnamed' })}
                 </div>
                 <div className="mt-1 text-[12px] leading-4 text-[#8a8f98]">{formatTime(detail.startedAt)}</div>
-                <div className="mt-1 flex items-center gap-1 text-[11px] leading-4 text-[#667085]">
+                <div className="mt-1 flex items-center gap-1 text-[12px] leading-4 text-[#667085]">
                   <span className={`inline-block h-[10px] w-[10px] rounded-full ${statusDotClassName(detail.status)}`} />
                   <span>{statusText(detail.status)}</span>
                 </div>
-                <div className="mt-2 flex min-w-0 items-center gap-2 text-[11px] leading-4 text-[#8a8f98]">
+                <div className="mt-2 flex min-w-0 items-center gap-2 text-[12px] leading-4 text-[#8a8f98]">
                   <span>{intl.formatMessage({ id: 'pages.workflow.instanceDetail.instance' })}</span>
                   <span className="text-[#d0d5dd]">·</span>
                   <span className="truncate font-mono">{detail.id}</span>
                 </div>
-                <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-[#8a8f98]">
+                <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-[#8a8f98]">
                   <span className="truncate">{detail.definitionId || 'Workflow'}</span>
                   <span className="text-[#d0d5dd]">·</span>
                   <span>{detail.workflowVersionNo ? `V${detail.workflowVersionNo}` : 'V-'}</span>
@@ -856,7 +856,7 @@ export default function WorkflowInstanceDetailPage() {
         onCancel={() => setRerunOpen(false)}
         onOk={() => void handleBusinessDateRerun()}
       >
-        <div className="mb-4 rounded-md bg-[#f8f9fb] px-3 py-2 text-[11px] leading-5 text-[#667085]">
+        <div className="mb-4 rounded-md bg-[#f8f9fb] px-3 py-2 text-[12px] leading-5 text-[#667085]">
           {intl.formatMessage({ id: 'pages.workflow.instanceDetail.rerunModal.description' })}
         </div>
         <div className="space-y-4">

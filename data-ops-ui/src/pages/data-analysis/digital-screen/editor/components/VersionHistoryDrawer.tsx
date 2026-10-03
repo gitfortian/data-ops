@@ -44,13 +44,13 @@ export function VersionHistoryDrawer({
                   <div className="flex items-center gap-2">
                     <span className="text-[13px] font-semibold text-[#161823]">V{version.versionNo}</span>
                     {version.current ? (
-                      <span className="inline-flex items-center gap-1 rounded-[4px] bg-[#edf8f2] px-1.5 py-0.5 text-[10px] font-medium text-[#27845a]">
+                      <span className="inline-flex items-center gap-1 rounded-[4px] bg-[#edf8f2] px-1.5 py-0.5 text-[12px] font-medium text-[#27845a]">
                         <CheckCircle2 size={10} /> 当前线上
                       </span>
                     ) : null}
                   </div>
                   <div className="mt-1 truncate text-[12px] text-[#555b64]">{version.name}</div>
-                  <div className="mt-2 text-[10px] leading-5 text-[#98a2b3]">
+                  <div className="mt-2 text-[12px] leading-5 text-[#667085]">
                     发布于 {formatDateTime(version.publishedAt)} · Draft R{version.sourceRevision}
                   </div>
                 </div>

@@ -44,7 +44,7 @@ const BaseConfigSection: React.FC<Props> = ({
               width="48%"
             />
 
-            <div className="text-[#98A2B3]">
+            <div className="text-[#667085]">
               <IconRightArrow/>
             </div>
 

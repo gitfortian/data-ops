@@ -20,7 +20,7 @@ interface MetricItemProps {
 
 const MetricItem = ({ label, value }: MetricItemProps) => (
   <div className="min-w-0">
-    <div className="mb-0.5 whitespace-nowrap text-[11px] leading-4 text-[#98a2b3]">
+    <div className="mb-0.5 whitespace-nowrap text-[12px] leading-4 text-[#667085]">
       {label}
     </div>
 
@@ -47,7 +47,7 @@ const ExecutionStatus = ({ record }: ExecutionStatusProps) => {
     <div className="min-w-[190px]">
       <div className="mb-2 flex items-center gap-2">
         <span className="inline-flex items-center gap-1 text-[13px] font-medium text-[#344054]">
-          <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[11px] font-medium leading-5 text-[#667085]">
+          <span className="rounded bg-[#f2f4f7] px-1.5 py-0.5 text-[12px] font-medium leading-5 text-[#667085]">
             {intl.formatMessage({
               id: isManual
                 ? 'pages.batchLinkUp.execution.manual'

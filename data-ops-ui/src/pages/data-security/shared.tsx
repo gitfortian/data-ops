@@ -43,7 +43,7 @@ export const StatCard = ({
     <div className="mt-1.5 text-[26px] font-semibold leading-8" style={{ color: accent }}>
       {value}
     </div>
-    {hint ? <div className="mt-1 text-[12px] text-[#98a2b3]">{hint}</div> : null}
+    {hint ? <div className="mt-1 text-[12px] text-[#667085]">{hint}</div> : null}
   </div>
 );
 

@@ -332,7 +332,7 @@ const DevelopmentTreePane = ({
         >
           {isNode && node.pendingPublish ? (
             <Tooltip title={intl.formatMessage({ id: 'pages.dataDevelopment.workspace.pendingPublish' })}>
-              <span className="inline-flex shrink-0 items-center text-[#98a2b3]">
+              <span className="inline-flex shrink-0 items-center text-[#667085]">
                 <Upload size={12} strokeWidth={1.8} />
               </span>
             </Tooltip>
@@ -351,10 +351,10 @@ const DevelopmentTreePane = ({
             {node.title}
           </span>
           {isNode && updateMeta ? (
-            <span className="min-w-0 flex-1 truncate text-[11px] text-[#98a2b3]">{updateMeta}</span>
+            <span className="min-w-0 flex-1 truncate text-[12px] text-[#667085]">{updateMeta}</span>
           ) : null}
           {isNode && displayType ? (
-            <span className="shrink-0 text-[10px] text-[#98a2b3]">{displayType}</span>
+            <span className="shrink-0 text-[12px] text-[#667085]">{displayType}</span>
           ) : null}
         </div>
       </Dropdown>
@@ -398,7 +398,7 @@ const DevelopmentTreePane = ({
               size="small"
               variant="filled"
               value={searchValue}
-              prefix={<Search size={13} className="text-[#98a2b3]" />}
+              prefix={<Search size={13} className="text-[#667085]" />}
               placeholder={intl.formatMessage({ id: 'pages.dataDevelopment.workspace.searchPlaceholder' })}
               onChange={(event) => onSearchChange(event.target.value)}
               className="!h-7"

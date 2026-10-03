@@ -116,7 +116,7 @@ const DataSourceCard = ({
               </h3>
 
               <span
-                className="inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-[7px] text-[10px] font-semibold"
+                className="inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-[7px] text-[12px] font-semibold"
                 style={{
                   color: environmentConfig.color,
                   background: environmentConfig.backgroundColor,
@@ -129,7 +129,7 @@ const DataSourceCard = ({
 
             <p
               title={record.jdbcUrl}
-              className="mb-0 mt-2 max-w-[460px] truncate rounded-[7px] bg-[#f7f8fa]/90 px-2 py-1 text-[11px] leading-[18px] text-[#858a94]"
+              className="mb-0 mt-2 max-w-[460px] truncate rounded-[7px] bg-[#f7f8fa]/90 px-2 py-1 text-[12px] leading-[18px] text-[#858a94]"
             >
               {record.jdbcUrl ||
                 intl.formatMessage({ id: 'pages.datasource.card.noJdbcUrl' })}
@@ -226,26 +226,26 @@ const DataSourceCard = ({
           .join(' ')}
       >
         <div className="flex min-w-0 flex-col gap-1.5 pr-3">
-          <span className="text-[10px] leading-4 text-[#a0a4ad]">
+          <span className="text-[12px] leading-4 text-[#a0a4ad]">
             {intl.formatMessage({ id: 'pages.datasource.card.connectionStatus' })}
           </span>
           <DataSourceStatus status={record.connStatus} />
         </div>
 
         <div className="flex min-w-0 flex-col gap-1.5 border-l border-[#eff0f2] px-3">
-          <span className="text-[10px] leading-4 text-[#a0a4ad]">
+          <span className="text-[12px] leading-4 text-[#a0a4ad]">
             {intl.formatMessage({ id: 'pages.datasource.card.type' })}
           </span>
-          <strong className="truncate text-[11px] font-semibold leading-[18px] text-[#5c616b]">
+          <strong className="truncate text-[12px] font-semibold leading-[18px] text-[#5c616b]">
             {String(record.dbType || '-')}
           </strong>
         </div>
 
         <div className="flex min-w-0 flex-col gap-1.5 border-l border-[#eff0f2] pl-3">
-          <span className="text-[10px] leading-4 text-[#a0a4ad]">
+          <span className="text-[12px] leading-4 text-[#a0a4ad]">
             {intl.formatMessage({ id: 'pages.datasource.card.lastUpdated' })}
           </span>
-          <strong className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-medium leading-[18px] text-[#737882]">
+          <strong className="flex min-w-0 items-center gap-1.5 truncate text-[12px] font-medium leading-[18px] text-[#737882]">
             <Clock3 size={11} strokeWidth={1.8} className="shrink-0 text-[#9ca0a9]" />
             <span className="truncate">{record.updateTime || '-'}</span>
           </strong>

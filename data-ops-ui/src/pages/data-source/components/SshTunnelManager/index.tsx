@@ -90,7 +90,7 @@ const SshTunnelManager = ({
             <div className="text-[13px] font-medium leading-5 text-[#344054]">
               {intl.formatMessage({ id: 'pages.datasource.ssh.enable' })}
             </div>
-            <div className="text-[11px] leading-4 text-[#98a2b3]">
+            <div className="text-[12px] leading-4 text-[#667085]">
               {intl.formatMessage({ id: 'pages.datasource.ssh.description' })}
             </div>
           </div>
@@ -241,7 +241,7 @@ const SshTunnelManager = ({
                       id: 'pages.datasource.ssh.strictHostKeyChecking',
                     })}
                   </div>
-                  <div className="text-[11px] leading-4 text-[#98a2b3]">
+                  <div className="text-[12px] leading-4 text-[#667085]">
                     {intl.formatMessage({
                       id: 'pages.datasource.ssh.strictHostKeyCheckingDescription',
                     })}

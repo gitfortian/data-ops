@@ -226,13 +226,13 @@ const ProcessEditPage: React.FC = () => {
       <Form.Item label="业务过程编码">
         <Input value={process?.code} disabled />
       </Form.Item>
-      <div className="grid grid-cols-2 gap-x-4">
+      <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
         <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
           <Input maxLength={128} />
         </Form.Item>
       </div>
       <ProcessEditDomainsFormItems />
-      <div className="grid grid-cols-2 gap-x-4">
+      <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
         <Form.Item name="grain" label="粒度">
           <Input maxLength={64} placeholder="如 单据/明细/天" />
         </Form.Item>

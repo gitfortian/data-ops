@@ -44,7 +44,7 @@ const RenameDashboardModal = ({
       />
 
       {dashboard?.publishedVersionNo ? (
-        <div className="mt-2 text-[11px] leading-5 text-[#98a2b3]">
+        <div className="mt-2 text-[12px] leading-5 text-[#667085]">
           {intl.formatMessage({ id: 'pages.dashboard.list.rename.publishedHint' })}
         </div>
       ) : null}

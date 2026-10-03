@@ -103,8 +103,8 @@ export function DashboardVersionHistoryDrawer({
                     ) : null}
                   </div>
                 </div>
-                <div className="mt-1 truncate text-[10px] text-[#667085]">{item.name}</div>
-                <div className="mt-1 text-[9px] text-[#98a2b3]">{formatTime(item.createTime)}</div>
+                <div className="mt-1 truncate text-[12px] text-[#667085]">{item.name}</div>
+                <div className="mt-1 text-[9px] text-[#667085]">{formatTime(item.createTime)}</div>
               </button>
             );
           })}
@@ -122,13 +122,13 @@ export function DashboardVersionHistoryDrawer({
                   <div className="flex items-center gap-2">
                     <span className="text-[15px] font-semibold text-[#161823]">V{selectedVersion.versionNo}</span>
                     {selectedVersion.versionNo === publishedVersionNo ? (
-                      <span className="rounded-[3px] bg-[#ecfdf3] px-2 py-0.5 text-[10px] text-[#1d7a4b]">
+                      <span className="rounded-[3px] bg-[#ecfdf3] px-2 py-0.5 text-[12px] text-[#1d7a4b]">
                         {intl.formatMessage({ id: 'pages.dashboard.editor.version.published' })}
                       </span>
                     ) : null}
                   </div>
                   <div className="mt-1 truncate text-[12px] text-[#475467]">{detail.version.name}</div>
-                  <div className="mt-1 text-[10px] text-[#98a2b3]">
+                  <div className="mt-1 text-[12px] text-[#667085]">
                     {intl.formatMessage(
                       { id: 'pages.dashboard.editor.version.createdAt' },
                       { time: formatTime(detail.version.createTime) },
@@ -167,7 +167,7 @@ export function DashboardVersionHistoryDrawer({
               </div>
 
               <div className="mt-5">
-                <div className="mb-2 text-[11px] font-medium text-[#667085]">
+                <div className="mb-2 text-[12px] font-medium text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dashboard.editor.version.layout' })}
                 </div>
                 <div
@@ -199,10 +199,10 @@ export function DashboardVersionHistoryDrawer({
               </div>
 
               <div className="mt-5 border-t border-[#edf0f3] pt-4">
-                <div className="text-[11px] font-medium text-[#667085]">
+                <div className="text-[12px] font-medium text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dashboard.editor.version.descriptionTitle' })}
                 </div>
-                <div className="mt-1 text-[11px] leading-5 text-[#98a2b3]">
+                <div className="mt-1 text-[12px] leading-5 text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dashboard.editor.version.description' })}
                 </div>
               </div>
@@ -224,7 +224,7 @@ export function DashboardVersionHistoryDrawer({
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-[6px] border border-[#edf0f3] bg-white px-3 py-2.5">
-      <div className="text-[9px] text-[#98a2b3]">{label}</div>
+      <div className="text-[9px] text-[#667085]">{label}</div>
       <div className="mt-1 truncate text-[12px] font-semibold text-[#344054]" title={String(value)}>{value}</div>
     </div>
   );

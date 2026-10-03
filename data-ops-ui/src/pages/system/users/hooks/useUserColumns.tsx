@@ -103,9 +103,7 @@ export function useUserColumns({
                   ID {row.id}
                 </div>
 
-                <div className="mt-1 max-w-64 truncate text-xs text-slate-400">
-                  {motto || '暂无个性签名'}
-                </div>
+                {motto && <div className="mt-1 max-w-64 truncate text-xs text-slate-500">{motto}</div>}
               </div>
             </div>
           );
@@ -119,10 +117,10 @@ export function useUserColumns({
         render: (_, row) => (
           <div className="min-w-0">
             <div className="truncate text-sm text-slate-700">
-              {row.email || '未设置邮箱'}
+              {row.email || '—'}
             </div>
             <div className="mt-1 truncate text-xs text-slate-400">
-              {row.phone || '未设置手机号'}
+              {row.phone || '—'}
             </div>
           </div>
         ),

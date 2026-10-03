@@ -20,7 +20,7 @@ export default function AuditCenterPage() {
 
   return (
     <SystemManagementPage
-      title="审计中心"
+      title="操作日志"
       titleId="system-operation-logs-title"
       icon={<SafetyCertificateOutlined className="text-slate-500" />}
       className="h-[calc(100vh-64px)] min-h-0 overflow-hidden"
@@ -38,7 +38,7 @@ export default function AuditCenterPage() {
             },
             {
               key: 'security',
-              label: 'Security 操作日志',
+              label: '账号与权限日志',
               children: <SecurityOperationLogsPanel />,
             },
           ]}

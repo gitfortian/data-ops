@@ -24,7 +24,7 @@ const RealtimeSyncPageHeader = ({
           {intl.formatMessage({ id: 'pages.realtimeSync.page.title' })}
         </h1>
 
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-5 text-[#98a2b3]">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-5 text-[#667085]">
           <span>
             {intl.formatMessage({ id: 'pages.realtimeSync.page.description' })}
           </span>

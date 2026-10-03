@@ -170,7 +170,7 @@ const WorkflowNodeInspectorSettings = ({
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <SectionTitle>{intl.formatMessage({ id: 'pages.workflow.editor.inspector.taskVersion' })}</SectionTitle>
-                <div className="text-[10px] text-[rgba(22,24,35,.42)]">
+                <div className="text-[12px] text-[rgba(22,24,35,.42)]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.inspector.revisionHint' })}
                 </div>
               </div>
@@ -187,7 +187,7 @@ const WorkflowNodeInspectorSettings = ({
             </div>
 
             <div className="rounded-lg border border-[#e4e7ec] bg-[#fafafa] px-3 py-2.5">
-              <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center justify-between text-[12px]">
                 <span className="text-[#667085]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.inspector.pinned' })}
                 </span>
@@ -197,7 +197,7 @@ const WorkflowNodeInspectorSettings = ({
                     : intl.formatMessage({ id: 'pages.workflow.editor.inspector.pinnedAfterSave' })}
                 </span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex items-center justify-between text-[12px]">
                 <span className="text-[#667085]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.inspector.assetLatest' })}
                 </span>
@@ -206,7 +206,7 @@ const WorkflowNodeInspectorSettings = ({
                 </span>
               </div>
               {boundNode?.taskAssetStatus ? (
-                <div className="mt-2 flex items-center justify-between text-[11px]">
+                <div className="mt-2 flex items-center justify-between text-[12px]">
                   <span className="text-[#667085]">
                     {intl.formatMessage({ id: 'pages.workflow.editor.inspector.assetStatus' })}
                   </span>
@@ -234,7 +234,7 @@ const WorkflowNodeInspectorSettings = ({
                 )}
               </Button>
             ) : boundNode?.taskRevisionNo ? (
-              <div className="mt-2 text-center text-[10px] text-[#98a2b3]">
+              <div className="mt-2 text-center text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.latestPinned' })}
               </div>
             ) : null}
@@ -257,25 +257,25 @@ const WorkflowNodeInspectorSettings = ({
         {retryEnabled ? (
           <div className="space-y-3 px-4 pb-4 pt-1">
             <div className="flex items-center gap-3">
-              <div className="w-[88px] shrink-0 text-[11px] font-medium text-[#667085]">
+              <div className="w-[88px] shrink-0 text-[12px] font-medium text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.retryCount' })}
               </div>
               <Slider className="m-0 min-w-0 flex-1" min={1} max={MAX_RETRY_TIMES} tooltip={{ open: false }} disabled={locked} value={retryTimes} onChange={(value) => handleRetryTimesChange(value)} />
               <div className="flex w-[82px] shrink-0 items-center gap-1">
                 <InputNumber size="small" controls={false} disabled={locked} min={1} max={MAX_RETRY_TIMES} value={retryTimes} className="!w-[58px]" onChange={handleRetryTimesChange} />
-                <span className="text-[10px] text-[rgba(22,24,35,.42)]">
+                <span className="text-[12px] text-[rgba(22,24,35,.42)]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.common.times' })}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-[88px] shrink-0 text-[11px] font-medium text-[#667085]">
+              <div className="w-[88px] shrink-0 text-[12px] font-medium text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.retryDelay' })}
               </div>
               <Slider className="m-0 min-w-0 flex-1" min={0} max={MAX_RETRY_DELAY_SECONDS} tooltip={{ open: false }} disabled={locked} value={Math.min(node.data.retryDelaySeconds || 0, MAX_RETRY_DELAY_SECONDS)} onChange={(value) => onChange({ retryDelaySeconds: value })} />
               <div className="flex w-[82px] shrink-0 items-center gap-1">
                 <InputNumber size="small" controls={false} disabled={locked} min={0} max={MAX_RETRY_DELAY_SECONDS} value={node.data.retryDelaySeconds} className="!w-[58px]" onChange={(value) => onChange({ retryDelaySeconds: Number(value || 0) })} />
-                <span className="text-[10px] text-[rgba(22,24,35,.42)]">
+                <span className="text-[12px] text-[rgba(22,24,35,.42)]">
                   {intl.formatMessage({ id: 'pages.workflow.editor.common.seconds' })}
                 </span>
               </div>
@@ -308,11 +308,11 @@ const WorkflowNodeInspectorSettings = ({
               </span>
             ) : null}
           </div>
-          <ChevronDown size={14} className="text-[#98a2b3] transition-transform group-open:rotate-180" />
+          <ChevronDown size={14} className="text-[#667085] transition-transform group-open:rotate-180" />
         </summary>
         <div className="mt-3 space-y-4 rounded-lg bg-[#fafafa] p-3">
           <div>
-            <div className="mb-1.5 flex items-center text-[11px] font-medium text-[#667085]">
+            <div className="mb-1.5 flex items-center text-[12px] font-medium text-[#667085]">
               {intl.formatMessage({ id: 'pages.workflow.editor.inspector.triggerRule' })}
               <HelpTip title={intl.formatMessage({ id: 'pages.workflow.editor.inspector.triggerHelp' })} />
             </div>
@@ -320,26 +320,26 @@ const WorkflowNodeInspectorSettings = ({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="mb-1.5 text-[11px] font-medium text-[#667085]">
+              <div className="mb-1.5 text-[12px] font-medium text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.dispatchTimeout' })}
               </div>
               <InputNumber size="small" controls={false} disabled={locked} min={0} max={MAX_TIMEOUT_SECONDS} value={node.data.dispatchTimeoutSeconds} className="!w-full" addonAfter={intl.formatMessage({ id: 'pages.workflow.editor.common.seconds' })} onChange={(value) => onChange({ dispatchTimeoutSeconds: Number(value || 0) })} />
-              <div className="mt-1 text-[9px] text-[#98a2b3]">
+              <div className="mt-1 text-[9px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.dispatchNoLimit' })}
               </div>
             </div>
             <div>
-              <div className="mb-1.5 text-[11px] font-medium text-[#667085]">
+              <div className="mb-1.5 text-[12px] font-medium text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.executionTimeout' })}
               </div>
               <InputNumber size="small" controls={false} disabled={locked} min={0} max={MAX_TIMEOUT_SECONDS} value={node.data.executionTimeoutSeconds} className="!w-full" addonAfter={intl.formatMessage({ id: 'pages.workflow.editor.common.seconds' })} onChange={(value) => onChange({ executionTimeoutSeconds: Number(value || 0) })} />
-              <div className="mt-1 text-[9px] text-[#98a2b3]">
+              <div className="mt-1 text-[9px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.workflow.editor.inspector.executionNoLimit' })}
               </div>
             </div>
           </div>
           <div>
-            <div className="mb-1.5 flex items-center text-[11px] font-medium text-[#667085]">
+            <div className="mb-1.5 flex items-center text-[12px] font-medium text-[#667085]">
               {intl.formatMessage({ id: 'pages.workflow.editor.inspector.inputMapping' })}
               <HelpTip title={intl.formatMessage({ id: 'pages.workflow.editor.inspector.inputMappingHelp' })} />
             </div>
@@ -349,7 +349,7 @@ const WorkflowNodeInspectorSettings = ({
               spellCheck={false}
               value={node.data.inputMappingText}
               placeholder={'{\n  "requestId": "$workflow.requestId"\n}'}
-              className="font-mono !text-[10px]"
+              className="font-mono !text-[12px]"
               onChange={(event) => onChange({ inputMappingText: event.target.value })}
             />
           </div>
@@ -360,7 +360,7 @@ const WorkflowNodeInspectorSettings = ({
 
       <section className="px-4 py-4">
         <SectionTitle>{intl.formatMessage({ id: 'pages.workflow.editor.inspector.nextStep' })}</SectionTitle>
-        <div className="mb-3 text-[10px] leading-4 text-[rgba(22,24,35,.38)]">
+        <div className="mb-3 text-[12px] leading-4 text-[rgba(22,24,35,.38)]">
           {intl.formatMessage({ id: 'pages.workflow.editor.inspector.nextStepHint' })}
         </div>
         <WorkflowNextStep

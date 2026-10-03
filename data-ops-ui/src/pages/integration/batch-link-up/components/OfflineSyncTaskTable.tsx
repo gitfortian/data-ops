@@ -62,17 +62,17 @@ const OfflineSyncTaskTable = ({
                 {record.jobName || '-'}
               </div>
               {record.latestVersionNo ? (
-                <span className="shrink-0 rounded-[4px] bg-[#e6f4ff] px-1.5 text-[11px] leading-5 text-[#1677ff]">
+                <span className="shrink-0 rounded-[4px] bg-[#e6f4ff] px-1.5 text-[12px] leading-5 text-[#1677ff]">
                   V{record.latestVersionNo}
                 </span>
               ) : (
-                <span className="shrink-0 rounded-[4px] bg-[#f2f4f7] px-1.5 text-[11px] leading-5 text-[#98a2b3]">
+                <span className="shrink-0 rounded-[4px] bg-[#f2f4f7] px-1.5 text-[12px] leading-5 text-[#667085]">
                   {intl.formatMessage({ id: 'pages.batchLinkUp.table.neverPublished' })}
                 </span>
               )}
               {record.hasPendingDraft ? (
                 <span
-                  className="shrink-0 rounded-[4px] bg-[#fff7e6] px-1.5 text-[11px] leading-5 text-[#d46b08]"
+                  className="shrink-0 rounded-[4px] bg-[#fff7e6] px-1.5 text-[12px] leading-5 text-[#d46b08]"
                   title={intl.formatMessage({
                     id: 'pages.batchLinkUp.table.pendingDraftHint',
                   })}
@@ -82,7 +82,7 @@ const OfflineSyncTaskTable = ({
               ) : null}
             </div>
 
-            <div className="mt-0.5 flex h-5 items-center gap-1 text-[11px] leading-5 text-[#98a2b3]">
+            <div className="mt-0.5 flex h-5 items-center gap-1 text-[12px] leading-5 text-[#667085]">
               <span className="truncate">ID：{record.id ?? '-'}</span>
               {record.id !== undefined && record.id !== null ? (
                 <Tooltip
@@ -94,8 +94,8 @@ const OfflineSyncTaskTable = ({
                     type="text"
                     size="small"
                     iconOnly
-                    icon={<CopyOutlined className="text-[11px]" />}
-                    className="!h-5 !w-5 !min-w-0 !p-0 !text-[#98a2b3] hover:!bg-[#f2f4f7] hover:!text-[#475467]"
+                    icon={<CopyOutlined className="text-[12px]" />}
+                    className="!h-5 !w-5 !min-w-0 !p-0 !text-[#667085] hover:!bg-[#f2f4f7] hover:!text-[#475467]"
                     onClick={(event) => {
                       event.stopPropagation();
                       onCopyTaskId(record.id as BatchLinkUpId);
@@ -156,7 +156,7 @@ const OfflineSyncTaskTable = ({
         dataIndex: 'createTime',
         width: 165,
         render: (value?: string) => (
-          <span className="whitespace-nowrap text-[12px] leading-5 text-[#98a2b3]">
+          <span className="whitespace-nowrap text-[12px] leading-5 text-[#667085]">
             {value || '-'}
           </span>
         ),
@@ -229,7 +229,7 @@ const OfflineSyncTaskTable = ({
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <span className="text-[12px] text-[#98a2b3]">
+                  <span className="text-[12px] text-[#667085]">
                     {intl.formatMessage({ id: 'pages.batchLinkUp.table.empty' })}
                   </span>
                 }

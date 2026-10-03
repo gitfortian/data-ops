@@ -50,8 +50,8 @@ export function ChartAppearanceConfigPanel({
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center">
           <div>
             <Palette size={18} className="mx-auto text-[#b0b5bd]" />
-            <div className="mt-2 text-[11px] font-medium text-[#667085]">共享图表为只读状态</div>
-            <div className="mt-1 text-[9px] leading-4 text-[#98a2b3]">
+            <div className="mt-2 text-[12px] font-medium text-[#667085]">共享图表为只读状态</div>
+            <div className="mt-1 text-[9px] leading-4 text-[#667085]">
               {analysis ? '先在左侧复制为可编辑图表，再调整渲染样式与交互。' : '当前共享图表已不可用。'}
             </div>
           </div>
@@ -71,7 +71,7 @@ export function ChartAppearanceConfigPanel({
 
   const styleContent = (
     <div className="px-4 pb-5 pt-1">
-      <div className="mb-3 rounded-[7px] bg-[#f8f9fa] px-2.5 py-2 text-[9px] leading-4 text-[#98a2b3]">
+      <div className="mb-3 rounded-[7px] bg-[#f8f9fa] px-2.5 py-2 text-[9px] leading-4 text-[#667085]">
         这里只控制当前图表的视觉表现；字段、图表类型与分析逻辑统一在左侧完成。
       </div>
       <ChartStyleConfig spec={spec} onChange={updateStyle} />
@@ -123,7 +123,7 @@ export function ChartAppearanceConfigPanel({
             {
               key: 'style',
               label: (
-                <span className="flex items-center gap-1.5 text-[11px]">
+                <span className="flex items-center gap-1.5 text-[12px]">
                   <Palette size={12} />
                   样式
                 </span>
@@ -133,7 +133,7 @@ export function ChartAppearanceConfigPanel({
             {
               key: 'interaction',
               label: (
-                <span className="flex items-center gap-1.5 text-[11px]">
+                <span className="flex items-center gap-1.5 text-[12px]">
                   <MousePointerClick size={12} />
                   交互
                 </span>
@@ -153,7 +153,7 @@ function InspectorHeader() {
     <div className="flex h-14 shrink-0 items-center border-b border-[#eceef1] px-4">
       <div>
         <div className="text-[13px] font-semibold text-[#344054]">渲染设置</div>
-        <div className="mt-0.5 text-[9px] text-[#98a2b3]">外观样式与图表交互</div>
+        <div className="mt-0.5 text-[9px] text-[#667085]">外观样式与图表交互</div>
       </div>
     </div>
   );

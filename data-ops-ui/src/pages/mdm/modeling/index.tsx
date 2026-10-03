@@ -231,7 +231,7 @@ const MdmModelingPage = () => {
         <div>
           <div className="text-[20px] font-semibold leading-7">主数据建模</div>
           <div className="mt-1 text-[13px] text-[#667085]">
-            定义主数据实体（客户、商品、供应商等），属性与来源随后续能力接入
+            定义客户、商品、供应商等主数据实体，进入详情管理属性、来源与记录。
           </div>
         </div>
         <YakButton

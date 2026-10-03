@@ -388,7 +388,7 @@ const ComputeEngineSettingsPanel = () => {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="text-[12px] text-[#98a2b3]">启用</span>
+                    <span className="text-[12px] text-[#667085]">启用</span>
                     <Tooltip
                       title={
                         environment.defaultEnvironment
@@ -409,7 +409,7 @@ const ComputeEngineSettingsPanel = () => {
 
                 <div className="mt-5 grid gap-x-8 gap-y-3 border-t border-[#f2f4f7] pt-4 md:grid-cols-2">
                   <div>
-                    <div className="text-[11px] text-[#98a2b3]">Flink REST</div>
+                    <div className="text-[12px] text-[#667085]">Flink REST</div>
                     <div
                       className="mt-1 truncate font-mono text-[12px] text-[#344054]"
                       title={environment.config.restUrl}
@@ -418,13 +418,13 @@ const ComputeEngineSettingsPanel = () => {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-[#98a2b3]">运行版本</div>
+                    <div className="text-[12px] text-[#667085]">运行版本</div>
                     <div className="mt-1 text-[12px] text-[#344054]">
                       Flink {environment.config.flinkVersion} · CDC {environment.config.flinkCdcVersion}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-[#98a2b3]">
+                    <div className="text-[12px] text-[#667085]">
                       {environment.submitterType === 'SSH' ? '远端 Flink Home' : 'Flink Home'}
                     </div>
                     <div
@@ -435,7 +435,7 @@ const ComputeEngineSettingsPanel = () => {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-[#98a2b3]">
+                    <div className="text-[12px] text-[#667085]">
                       {environment.submitterType === 'SSH' ? 'SSH 提交节点' : 'Flink CDC Home'}
                     </div>
                     <div
@@ -454,7 +454,7 @@ const ComputeEngineSettingsPanel = () => {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f2f4f7] pt-3">
-                  <div className="min-w-0 text-[11px] text-[#98a2b3]">
+                  <div className="min-w-0 text-[12px] text-[#667085]">
                     <span>{formatTime(environment.lastCheckTime)}</span>
                     {environment.lastCheckMessage && (
                       <span className="ml-2">· {environment.lastCheckMessage}</span>
@@ -592,11 +592,11 @@ const ComputeEngineSettingsPanel = () => {
             <div className="mb-3 text-[13px] font-semibold text-[#1d2939]">运行方式</div>
             <div className="mb-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg bg-[#f9fafb] px-3 py-3">
-                <div className="text-[11px] text-[#98a2b3]">引擎</div>
+                <div className="text-[12px] text-[#667085]">引擎</div>
                 <div className="mt-1 font-medium text-[#344054]">Flink CDC</div>
               </div>
               <div className="rounded-lg bg-[#f9fafb] px-3 py-3">
-                <div className="text-[11px] text-[#98a2b3]">部署模式</div>
+                <div className="text-[12px] text-[#667085]">部署模式</div>
                 <div className="mt-1 font-medium text-[#344054]">Remote Cluster</div>
               </div>
             </div>
@@ -773,19 +773,19 @@ const ComputeEngineSettingsPanel = () => {
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-[#f9fafb] px-3 py-3">
-                <div className="text-[11px] text-[#98a2b3]">Flink</div>
+                <div className="text-[12px] text-[#667085]">Flink</div>
                 <div className="mt-1 font-medium text-[#344054]">
                   {diagnosis.detectedFlinkVersion || '未识别'}
                 </div>
               </div>
               <div className="rounded-lg bg-[#f9fafb] px-3 py-3">
-                <div className="text-[11px] text-[#98a2b3]">Flink CDC</div>
+                <div className="text-[12px] text-[#667085]">Flink CDC</div>
                 <div className="mt-1 font-medium text-[#344054]">
                   {diagnosis.detectedFlinkCdcVersion || '未识别'}
                 </div>
               </div>
               <div className="rounded-lg bg-[#f9fafb] px-3 py-3">
-                <div className="text-[11px] text-[#98a2b3]">Java</div>
+                <div className="text-[12px] text-[#667085]">Java</div>
                 <div className="mt-1 font-medium text-[#344054]">
                   {diagnosis.detectedJavaVersion || '未识别'}
                 </div>
@@ -804,7 +804,7 @@ const ComputeEngineSettingsPanel = () => {
                   <span className="mt-0.5 text-[15px]">{checkIcon(check)}</span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[12px] font-medium text-[#344054]">{check.label}</div>
-                    <div className="mt-0.5 break-all text-[11px] leading-5 text-[#667085]">
+                    <div className="mt-0.5 break-all text-[12px] leading-5 text-[#667085]">
                       {check.message}
                     </div>
                   </div>

@@ -74,7 +74,7 @@ const InteractiveEdge = ({
         }}
       />
       {data?.defaultLabel ? (
-        <text x={labelX} y={labelY} textAnchor="middle" className="fill-[#6941c6] text-[10px]">
+        <text x={labelX} y={labelY} textAnchor="middle" className="fill-[#6941c6] text-[12px]">
           {data.defaultLabel}
         </text>
       ) : null}
@@ -106,7 +106,7 @@ const statusClassName = {
   FAILED: 'bg-[#fef3f2] text-[#b42318]',
 } as const;
 const Metric = ({ label, value }: { label: string; value: number }) => (
-  <span className="inline-flex items-center gap-1 text-[11px] text-[#8a8f99]">
+  <span className="inline-flex items-center gap-1 text-[12px] text-[#8a8f99]">
     <span>{label}</span>
     <b className="font-medium tabular-nums text-[#475467]">{value}</b>
   </span>
@@ -329,7 +329,7 @@ export default function SqlLineagePreviewPanel({ nodeId, preview, loading, onRef
               <div className="text-[13px] font-medium">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.emptyTitle' })}
               </div>
-              <div className="mt-1 text-[11px] text-[#98a2b3]">
+              <div className="mt-1 text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.emptyDescription' })}
               </div>
             </>
@@ -351,7 +351,7 @@ export default function SqlLineagePreviewPanel({ nodeId, preview, loading, onRef
               <div className="font-medium text-[#b42318]">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.failed' })}
               </div>
-              <div className="text-[11px] text-[#8a8f99]">
+              <div className="text-[12px] text-[#8a8f99]">
                 {preview.parseError ||
                   intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.checkSyntax' })}
               </div>
@@ -374,7 +374,7 @@ export default function SqlLineagePreviewPanel({ nodeId, preview, loading, onRef
       }`}
     >
       <div className="flex h-11 shrink-0 items-center gap-3 border-b border-[#eef0f2] px-3">
-        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${statusClassName[preview.status]}`}>
+        <span className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${statusClassName[preview.status]}`}>
           {intl.formatMessage({ id: statusMessageIds[preview.status] })}
         </span>
         <Segmented
@@ -412,7 +412,7 @@ export default function SqlLineagePreviewPanel({ nodeId, preview, loading, onRef
           label={intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.unresolved' })}
           value={preview.unresolvedColumnReferenceCount}
         />
-        <span className="min-w-0 flex-1 truncate text-[11px] text-[#b54708]">
+        <span className="min-w-0 flex-1 truncate text-[12px] text-[#b54708]">
           {preview.columnParseError
             ? intl.formatMessage(
                 { id: 'pages.dataDevelopment.editor.lineage.degraded' },
@@ -496,7 +496,7 @@ export default function SqlLineagePreviewPanel({ nodeId, preview, loading, onRef
         {selection ? (
           <div>
             <div className="rounded-lg bg-[#f8fafc] p-3">
-              <div className="text-[11px] text-[#667085]">
+              <div className="text-[12px] text-[#667085]">
                 {intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.currentField' })}
               </div>
               <div className="mt-1 font-mono text-[13px] font-semibold text-[#1d2939]">
@@ -512,19 +512,19 @@ export default function SqlLineagePreviewPanel({ nodeId, preview, loading, onRef
                   <code>
                     {item.sourceTable}.{item.sourceColumn}
                   </code>
-                  <span className="text-[#98a2b3]">→</span>
+                  <span className="text-[#667085]">→</span>
                   <code>
                     {item.targetTable ||
                       intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.targetTable' })}.{item.targetColumn}
                   </code>
                 </div>
-                <div className="mt-2 inline-flex rounded bg-[#f4f0ff] px-2 py-1 text-[10px] font-medium text-[#6941c6]">
+                <div className="mt-2 inline-flex rounded bg-[#f4f0ff] px-2 py-1 text-[12px] font-medium text-[#6941c6]">
                   {item.mappingKind}
                 </div>
-                <div className="mt-3 text-[11px] text-[#667085]">
+                <div className="mt-3 text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.editor.lineage.transformLogic' })}
                 </div>
-                <pre className="mt-1 whitespace-pre-wrap rounded bg-[#101828] p-3 text-[11px] leading-5 text-[#eaecf0]">
+                <pre className="mt-1 whitespace-pre-wrap rounded bg-[#101828] p-3 text-[12px] leading-5 text-[#eaecf0]">
                   {item.expression ||
                     (item.mappingKind === 'IDENTITY'
                       ? item.sourceColumn

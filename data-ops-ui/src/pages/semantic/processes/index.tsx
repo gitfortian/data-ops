@@ -370,7 +370,7 @@ const SemanticProcessesPage = () => {
               <Input maxLength={64} placeholder="如 place_order" />
             </Form.Item>
           ) : null}
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
               <Input maxLength={128} placeholder="业务过程名称" />
             </Form.Item>

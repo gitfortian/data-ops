@@ -258,7 +258,7 @@ const DistributionTab = ({ entityId }: { entityId: number }) => {
             </span>
           </Tooltip>
         ) : (
-          <span className="text-[12px] text-[#98a2b3]">尚未执行</span>
+          <span className="text-[12px] text-[#667085]">尚未执行</span>
         ),
     },
     {

@@ -82,7 +82,7 @@ const OfflineSyncFilterBar = ({
           allowClear
           variant="filled"
           value={filterDraft.jobName}
-          prefix={<SearchOutlined className="text-[#98a2b3]" />}
+          prefix={<SearchOutlined className="text-[#667085]" />}
           placeholder={intl.formatMessage({
             id: 'pages.batchLinkUp.filter.jobNamePlaceholder',
           })}
@@ -145,7 +145,7 @@ const OfflineSyncFilterBar = ({
                 <div className="text-[14px] font-semibold text-[#101828]">
                   {intl.formatMessage({ id: 'pages.batchLinkUp.filter.advanced' })}
                 </div>
-                <div className="mt-1 text-[12px] text-[#98a2b3]">
+                <div className="mt-1 text-[12px] text-[#667085]">
                   {intl.formatMessage({
                     id: 'pages.batchLinkUp.filter.advancedDescription',
                   })}
@@ -266,7 +266,7 @@ const OfflineSyncFilterBar = ({
           >
             {intl.formatMessage({ id: 'pages.batchLinkUp.filter.advanced' })}
             {advancedFilterCount > 0 ? (
-              <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff4d4f] px-1 text-[10px] leading-[18px] text-white">
+              <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ff4d4f] px-1 text-[12px] leading-[18px] text-white">
                 {advancedFilterCount}
               </span>
             ) : null}

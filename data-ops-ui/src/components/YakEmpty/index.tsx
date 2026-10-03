@@ -19,7 +19,7 @@ const YakEmpty = ({
   <div
     className={[
       'flex w-full flex-col items-center justify-center px-5 text-center',
-      compact ? 'min-h-[180px] py-8' : 'min-h-[320px] py-12',
+      compact ? 'min-h-[140px] py-6' : 'min-h-[240px] py-10',
       className,
     ].join(' ')}
   >
@@ -31,9 +31,9 @@ const YakEmpty = ({
     >
       <Folder size={compact ? 20 : 24} strokeWidth={1.4} />
     </div>
-    <div className="mt-3 text-[13px] font-medium text-[#667085]">{title}</div>
+    <div className="mt-3 text-[14px] font-medium text-[#344054]">{title}</div>
     {description ? (
-      <div className="mt-1 max-w-[240px] text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mt-1 max-w-[360px] text-[13px] leading-5 text-[#667085]">
         {description}
       </div>
     ) : null}

@@ -201,7 +201,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         </div>
 
         <div
-          className="mb-1 inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-500">
+          className="mb-1 inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[12px] font-medium text-slate-500">
           <TrendingUp size={12} strokeWidth={1.8}/>
           {hint}
         </div>
@@ -327,7 +327,7 @@ const MetricsTab: React.FC<MetricsTabProps> = ({instanceItem}) => {
                 <div className="truncate text-xs font-medium text-slate-800">
                   {getShortTableName(value)}
                 </div>
-                <div className="truncate text-[11px] text-slate-400">
+                <div className="truncate text-[12px] text-slate-400">
                   {value || "-"}
                 </div>
               </div>
@@ -363,7 +363,7 @@ const MetricsTab: React.FC<MetricsTabProps> = ({instanceItem}) => {
                 <div className="truncate text-xs font-medium text-slate-800">
                   {getShortTableName(value)}
                 </div>
-                <div className="truncate text-[11px] text-slate-400">
+                <div className="truncate text-[12px] text-slate-400">
                   {value || "-"}
                 </div>
               </div>

@@ -96,7 +96,7 @@ const PipelineStrip = ({ nodes }: { nodes: MdmOverviewPipelineNode[] }) => (
               </div>
               <div className="mt-0.5 text-[20px] font-semibold leading-7">
                 {crossDomain ? (
-                  <span className="text-[14px] font-medium text-[#98a2b3]">跨域</span>
+                  <span className="text-[14px] font-medium text-[#667085]">跨域</span>
                 ) : (
                   count(node.count)
                 )}
@@ -126,7 +126,7 @@ const EntityCardView = ({ card }: { card: MdmOverviewEntityCard }) => (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="truncate text-[14px] font-semibold">{card.entityName}</div>
-        <div className="mt-0.5 truncate text-[12px] text-[#98a2b3]">{card.entityCode}</div>
+        <div className="mt-0.5 truncate text-[12px] text-[#667085]">{card.entityCode}</div>
       </div>
       {card.pendingChanges > 0 && <Tag color="processing">{count(card.pendingChanges)} 待审批</Tag>}
     </div>

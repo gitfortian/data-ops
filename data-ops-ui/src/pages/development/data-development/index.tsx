@@ -80,7 +80,7 @@ export default function DataDevelopmentPage() {
 
   return (
     <ConfigProvider theme={BRAND_THEME}>
-      <div className="flex h-[calc(100vh-64px)] min-h-[640px] flex-col overflow-hidden bg-[#f5f5f6]">
+      <div className="flex min-h-[640px] flex-col bg-[#f5f5f6] md:h-[calc(100vh-64px)] md:overflow-hidden">
         {page.invalidatedResource && !page.treeFailure ? (
           <ResourceInvalidatedNotice
             resourceType={page.invalidatedResource.resourceType}
@@ -89,7 +89,7 @@ export default function DataDevelopmentPage() {
           />
         ) : null}
 
-        <div className="flex min-h-0 flex-1 overflow-hidden border border-[#e4e7ec] bg-white">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[#e4e7ec] bg-white md:flex-row">
           {page.treeFailure ? (
             <WorkspaceLoadFailureState
               failure={page.treeFailure}
@@ -98,6 +98,7 @@ export default function DataDevelopmentPage() {
             />
           ) : (
             <>
+              <div className="flex h-[240px] shrink-0 overflow-hidden md:h-full max-md:[&>aside]:!w-full max-md:[&>aside>div]:!w-full max-md:[&>[role=separator]]:hidden">
               <DevelopmentTreePane
                 treeData={page.treeData}
                 treeLoading={page.treeLoading}
@@ -113,7 +114,9 @@ export default function DataDevelopmentPage() {
                 onCollapsedChange={page.setTreeCollapsed}
                 onSelect={page.selectTreeNodes}
               />
+              </div>
 
+              <div className="flex min-h-[600px] min-w-0 flex-1 md:min-h-0">
               <DevelopmentEditorWorkspace
                 nodes={page.nodes}
                 directories={page.directories}
@@ -122,6 +125,7 @@ export default function DataDevelopmentPage() {
                 onCreateNode={page.openCreateNode}
                 onNodesChanged={page.loadTree}
               />
+              </div>
             </>
           )}
         </div>

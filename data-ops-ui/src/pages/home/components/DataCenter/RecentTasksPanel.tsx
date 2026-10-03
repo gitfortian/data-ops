@@ -76,7 +76,7 @@ export function RecentTasksPanel({
               <div className="truncate text-[12px] font-medium text-[#363a43]">
                 {item.taskName}
               </div>
-              <div className="mt-1 flex items-center gap-1 text-[11px] text-[#969aa3]">
+              <div className="mt-1 flex items-center gap-1 text-[12px] text-[#969aa3]">
                 <Clock3 size={11} strokeWidth={1.8} />
                 {formatRunTime(item.lastRunTime, {
                   locale: intl.locale,
@@ -93,7 +93,7 @@ export function RecentTasksPanel({
             [metricLabels[3], formatDuration(item.lastDurationMs)],
           ].map(([label, value]) => (
             <div key={label} className="min-w-0">
-              <span className="text-[11px] text-[#969aa3]">{label}</span>
+              <span className="text-[12px] text-[#969aa3]">{label}</span>
               <strong className="ml-2 text-[12px] font-semibold text-[#3b3f48]">
                 {value}
               </strong>
@@ -102,7 +102,7 @@ export function RecentTasksPanel({
 
           <div className="flex items-center justify-end gap-4">
             <span
-              className={`text-[11px] font-medium ${statusClassName(item.lastStatus)}`}
+              className={`text-[12px] font-medium ${statusClassName(item.lastStatus)}`}
             >
               {statusLabel(item.lastStatus, resolveStatus)}
             </span>

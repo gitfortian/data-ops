@@ -27,7 +27,7 @@ const DataServiceSearchBar = ({
           allowClear
           variant="borderless"
           value={keyword}
-          prefix={<Search size={15} className="text-[#98a2b3]" />}
+          prefix={<Search size={15} className="text-[#667085]" />}
           placeholder={intl.formatMessage({
             id: 'pages.dataService.search.compactPlaceholder',
           })}
@@ -50,7 +50,7 @@ const DataServiceSearchBar = ({
   return (
     <div className="w-full max-w-[720px] rounded-xl bg-white p-2 shadow-[0_10px_30px_rgba(16,24,40,.04)] ring-1 ring-[#e4e7ec] [&_.ant-input-affix-wrapper]:!bg-white [&_.ant-input-affix-wrapper>.ant-input]:!bg-white">
       <div className="flex items-center gap-2">
-        <Search size={17} className="ml-2 shrink-0 text-[#98a2b3]" />
+        <Search size={17} className="ml-2 shrink-0 text-[#667085]" />
         <Input
           allowClear
           variant="borderless"
@@ -71,7 +71,7 @@ const DataServiceSearchBar = ({
           {intl.formatMessage({ id: 'pages.dataService.search.button' })}
         </YakButton>
       </div>
-      <div className="px-3 pb-1 pt-1 text-[10px] text-[#a0a6af]">
+      <div className="px-3 pb-1 pt-1 text-[12px] text-[#a0a6af]">
         {intl.formatMessage({ id: 'pages.dataService.search.supportHint' })}
       </div>
     </div>

@@ -1,5 +1,9 @@
 import {
   Button,
+  Alert,
+  Dropdown,
+  Grid,
+  Pagination,
   Input,
   Modal,
   message,
@@ -64,6 +68,7 @@ const isDeletable = (record: AssetRecord) =>
 type CatalogView = '台账资产' | '元数据实体';
 
 const AssetCatalogPage = () => {
+  const screens = Grid.useBreakpoint();
   const { can } = usePermissionAccess();
   const canUpdate = can('data-asset:update');
   const canCreate = can('data-asset:create');
@@ -93,6 +98,10 @@ const AssetCatalogPage = () => {
   const [records, setRecords] = useState<AssetRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -124,6 +133,7 @@ const AssetCatalogPage = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const result = await pageAssets({
         pageNo,
@@ -140,8 +150,7 @@ const AssetCatalogPage = () => {
       setRecords(result.records);
       setTotal(result.total);
     } catch {
-      setRecords([]);
-      setTotal(0);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -244,13 +253,13 @@ const AssetCatalogPage = () => {
       ellipsis: true,
       render: (name: string, record) => (
         <div>
-          <a
+          <a href={`/data-asset/detail/${record.id}`}
             className="font-medium text-[#161823] hover:text-[#FE2C55]"
-            onClick={() => history.push(`/data-asset/detail/${record.id}`)}
+            onClick={(event) => { event.preventDefault(); history.push(`/data-asset/detail/${record.id}`); }}
           >
             {name}
           </a>
-          <div className="text-[12px] text-[#98a2b3]">{record.assetKey}</div>
+          <div className="truncate text-[12px] text-[#667085]" title={record.assetKey}>{record.assetKey}</div>
         </div>
       ),
     },
@@ -259,14 +268,11 @@ const AssetCatalogPage = () => {
       dataIndex: 'assetType',
       width: 110,
       render: (type: string, record) => (
-        <Tag>{ASSET_TYPE_LABELS[type as keyof typeof ASSET_TYPE_LABELS] ?? ASSET_SOURCE_TYPE_LABELS[record.sourceType as keyof typeof ASSET_SOURCE_TYPE_LABELS] ?? type}</Tag>
+        <div className="flex flex-wrap gap-1">
+          <Tag>{ASSET_TYPE_LABELS[type as keyof typeof ASSET_TYPE_LABELS] ?? ASSET_SOURCE_TYPE_LABELS[record.sourceType as keyof typeof ASSET_SOURCE_TYPE_LABELS] ?? type}</Tag>
+          {record.layerCode && <Tag color="geekblue">{record.layerCode}</Tag>}
+        </div>
       ),
-    },
-    {
-      title: '分层',
-      dataIndex: 'layerCode',
-      width: 90,
-      render: (value?: string) => (value ? <Tag color="geekblue">{value}</Tag> : '-'),
     },
     { title: '负责人', dataIndex: 'owner', width: 110, render: (value?: string) => value || '-' },
     {
@@ -297,28 +303,19 @@ const AssetCatalogPage = () => {
     {
       title: '操作',
       key: 'action',
-      width: 210,
+      width: 120,
       fixed: 'right' as const,
       render: (_, record) => (
-        <Space size={2}>
-          <Button type="link" size="small" disabled={!canUpdate || !PUBLISHABLE.includes(record.status)} onClick={() => openWizard([record])}>
-            上架
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate || record.status !== 'PUBLISHED'} onClick={() => setOfflineTarget([record])}>
-            下架
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate || !IGNORABLE.includes(record.status)} onClick={() => runIgnore([record])}>
-            忽略
-          </Button>
-          {canDelete && isDeletable(record) ? (
-            <Button type="link" size="small" danger onClick={() => runDelete(record)}>
-              删除
-            </Button>
-          ) : (
-            <Tooltip title="仅已下架/源已消失的资产可删除；手工登记未上架可直接删除">
-              <Button type="link" size="small" disabled>删除</Button>
-            </Tooltip>
-          )}
+        <Space size={4}>
+          <Button type="link" size="small" onClick={() => history.push(`/data-asset/detail/${record.id}`)}>详情</Button>
+          <Dropdown trigger={['click']} menu={{ items: [
+            { key: 'publish', label: '上架', disabled: !canUpdate || !PUBLISHABLE.includes(record.status), onClick: () => openWizard([record]) },
+            { key: 'offline', label: '下架', disabled: !canUpdate || record.status !== 'PUBLISHED', onClick: () => setOfflineTarget([record]) },
+            { key: 'ignore', label: '忽略', disabled: !canUpdate || !IGNORABLE.includes(record.status), onClick: () => runIgnore([record]) },
+            { key: 'delete', label: '删除', danger: true, disabled: !canDelete || !isDeletable(record), onClick: () => runDelete(record) },
+          ] }}>
+            <Button type="text" size="small" aria-label={`更多操作：${record.name}`}>更多</Button>
+          </Dropdown>
         </Space>
       ),
     },
@@ -333,11 +330,11 @@ const AssetCatalogPage = () => {
           <div className="text-[20px] font-semibold leading-7">资产目录</div>
           <div className="mt-1 text-[13px] text-[#667085]">
             {view === '台账资产'
-              ? '跨域统一台账：搜索、过滤、上下架与治理，详情实时读源域「管目录不管内容」'
-              : '元数据实体统一检索：类型下钻 + 跨类型搜索（数据由元数据模块采集提供；原「目录浏览」「统一搜索」已并入本账）'}
+              ? '查找数据对象，了解负责人、来源与治理状态。'
+              : '检索已登记的技术实体，查看结构、属性与采集证据。'}
           </div>
         </div>
-        <Space size={12}>
+        <Space size={12} wrap>
           {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
             <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>
               返回资产详情
@@ -363,6 +360,10 @@ const AssetCatalogPage = () => {
       ) : (
       <div className="mt-4 flex min-h-0 flex-1 gap-4 max-md:flex-col">
       <div className="w-[240px] shrink-0 max-md:w-full">
+        <Button className="mb-2 md:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
+          {directoryId ? '目录筛选 · 已选择' : '选择目录'}
+        </Button>
+        <div className={directoryOpen ? '' : 'hidden md:block'}>
         <div className="mb-2 text-[13px] font-medium text-[#667085]">资产目录</div>
         {treeData.length === 0 ? (
           <YakEmpty compact title="暂无目录" description="到「目录与标签」页按分层+业务域一键初始化" />
@@ -383,6 +384,7 @@ const AssetCatalogPage = () => {
             清除目录筛选
           </Button>
         )}
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -390,7 +392,9 @@ const AssetCatalogPage = () => {
           <Input.Search
             allowClear
             placeholder="名称 / 描述 / 负责人 / 标签"
-            className="!w-[240px]"
+            className="!w-[240px] max-sm:!w-full"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
             onSearch={(value) => {
               setKeyword(value.trim());
               setPageNo(1);
@@ -402,7 +406,7 @@ const AssetCatalogPage = () => {
             placeholder="类型"
             className="min-w-[120px] max-w-[220px]"
             value={assetTypes}
-            onChange={setAssetTypes}
+            onChange={(value) => { setAssetTypes(value); setPageNo(1); }}
             options={Object.entries(ASSET_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
             maxTagCount="responsive"
           />
@@ -410,9 +414,9 @@ const AssetCatalogPage = () => {
             mode="multiple"
             allowClear
             placeholder="分层"
-            className="min-w-[110px] max-w-[200px]"
+            className={advancedOpen ? 'min-w-[110px] max-w-[200px]' : 'hidden'}
             value={layerCodes}
-            onChange={setLayerCodes}
+            onChange={(value) => { setLayerCodes(value); setPageNo(1); }}
             options={layers.map((layer) => ({ value: layer.code, label: layer.name }))}
             maxTagCount="responsive"
           />
@@ -422,7 +426,7 @@ const AssetCatalogPage = () => {
             placeholder="状态"
             className="min-w-[110px] max-w-[200px]"
             value={statuses}
-            onChange={setStatuses}
+            onChange={(value) => { setStatuses(value); setPageNo(1); }}
             options={Object.entries({ PENDING: '待上架', PUBLISHED: '已上架', OFFLINE: '已下架', IGNORED: '已忽略', SOURCE_GONE: '源已消失' }).map(([value, label]) => ({ value, label }))}
             maxTagCount="responsive"
           />
@@ -430,9 +434,9 @@ const AssetCatalogPage = () => {
             mode="multiple"
             allowClear
             placeholder="健康度"
-            className="min-w-[100px] max-w-[160px]"
+            className={advancedOpen ? 'min-w-[100px] max-w-[160px]' : 'hidden'}
             value={grades}
-            onChange={setGrades}
+            onChange={(value) => { setGrades(value); setPageNo(1); }}
             options={['A', 'B', 'C', 'D'].map((grade) => ({
               value: grade,
               label: <span style={{ color: healthGradeColor(grade) }}>{grade} 级</span>,
@@ -443,9 +447,9 @@ const AssetCatalogPage = () => {
             mode="multiple"
             allowClear
             placeholder="标签"
-            className="min-w-[110px] max-w-[200px]"
+            className={advancedOpen ? 'min-w-[110px] max-w-[200px]' : 'hidden'}
             value={tagIds}
-            onChange={setTagIds}
+            onChange={(value) => { setTagIds(value); setPageNo(1); }}
             options={tags.map((tag) => ({ value: tag.id, label: tag.tagName }))}
             maxTagCount="responsive"
           />
@@ -460,13 +464,21 @@ const AssetCatalogPage = () => {
           />
           <Segmented
             options={['列表', '卡片']}
+            className="max-sm:!hidden"
             value={viewMode}
             onChange={(value) => setViewMode(value as '列表' | '卡片')}
           />
+          <Button aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
+            高级筛选{layerCodes.length + grades.length + tagIds.length > 0 ? ` (${layerCodes.length + grades.length + tagIds.length})` : ''}
+          </Button>
+          <Button onClick={() => {
+            setKeyword(''); setSearchText(''); setAssetTypes([]); setLayerCodes([]);
+            setStatuses([]); setGrades([]); setTagIds([]); setDirectoryId(undefined); setSortBy(''); setPageNo(1);
+          }}>重置</Button>
         </div>
 
-        {canUpdate && (
-          <div className={`mt-3 flex items-center gap-2 rounded-lg bg-[#f8f9fa] px-3 py-2 ${hasSelection ? '' : 'invisible'}`}>
+        {canUpdate && hasSelection && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-[#f8f9fa] px-3 py-2">
             <span className="text-[13px]">已选 {selectedIds.length} 项</span>
             <YakButton size="small" onClick={() => openWizard(selectedRows)}>
               批量上架
@@ -485,13 +497,14 @@ const AssetCatalogPage = () => {
         )}
 
         <div className="mt-4 flex-1">
-          {viewMode === '列表' ? (
+          {loadError && <Alert className="mb-3" type="error" showIcon message="资产列表读取失败" description="请重试；下方保留上次读取的结果。" action={<Button onClick={load}>重试</Button>} />}
+          {viewMode === '列表' && screens.sm !== false ? (
             <Table<AssetRecord>
               rowKey="id"
               columns={columns}
               dataSource={records}
               loading={loading}
-              scroll={{ x: 1240 }}
+              scroll={{ x: 1030 }}
               rowClassName={() => 'cursor-pointer'}
               onRow={(record) => ({
                 onClick: (event) => {
@@ -535,11 +548,14 @@ const AssetCatalogPage = () => {
               }}
             />
           ) : (
-            <AssetCardGrid
+            <><AssetCardGrid
               records={records}
               loading={loading}
               onOpen={(record) => history.push(`/data-asset/detail/${record.id}`)}
             />
+            <Pagination className="mt-4" size="small" current={pageNo} pageSize={pageSize} total={total}
+              showTotal={(count) => `共 ${count} 条`} onChange={(next, size) => { setPageNo(next); setPageSize(size); }} />
+            </>
           )}
         </div>
       </div>
@@ -587,9 +603,9 @@ const AssetCardGrid = ({
 }) => (
   <div className="grid grid-cols-3 gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
     {records.map((record) => (
-      <div
+      <button type="button"
         key={record.id}
-        className="cursor-pointer rounded-xl border border-[#e5e7eb] p-4 transition hover:border-[#FE2C55] hover:shadow-sm"
+        className="cursor-pointer rounded-xl border border-solid border-[#e5e7eb] bg-white p-4 text-left transition hover:border-[#667085] hover:shadow-sm"
         onClick={() => onOpen(record)}
       >
         <div className="flex items-start justify-between gap-2">
@@ -609,7 +625,7 @@ const AssetCardGrid = ({
           <AssetStatusTag status={record.status} />
           <span>浏览 {record.viewCount30d ?? 0}</span>
         </div>
-      </div>
+      </button>
     ))}
     {!loading && records.length === 0 && (
       <YakEmpty compact title="没有符合条件的资产" description="调整筛选后再试" />

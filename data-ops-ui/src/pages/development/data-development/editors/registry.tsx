@@ -37,7 +37,7 @@ const UnsupportedEditor = ({ node }: DevelopmentEditorContext) => (
   <div className="flex h-full min-h-0 items-center justify-center overflow-auto bg-white">
     <div className="text-center">
       <div className="mt-3 text-[15px] font-semibold text-[#344054]">{node.type} 编辑器区域</div>
-      <div className="mt-1 text-[12px] text-[#98a2b3]">当前节点：{node.name}</div>
+      <div className="mt-1 text-[12px] text-[#667085]">当前节点：{node.name}</div>
     </div>
   </div>
 );

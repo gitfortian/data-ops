@@ -13,7 +13,7 @@ const RealtimeSyncStatusBadge = ({
 
   return (
     <span
-      className="inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[11px] font-medium"
+      className="inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[12px] font-medium"
       style={{
         color: style.text,
         background: style.background,

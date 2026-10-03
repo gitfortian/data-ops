@@ -129,7 +129,7 @@ export default function ResourcePicker({
               className="flex cursor-pointer items-center gap-2 text-[#344054] hover:text-[#1570ef]"
               onClick={() => handleEnterDirectory(record)}
             >
-              <Folder size={16} className="shrink-0 text-[#98a2b3]" />
+              <Folder size={16} className="shrink-0 text-[#667085]" />
               <span>{name}</span>
             </div>
           );
@@ -152,7 +152,7 @@ export default function ResourcePicker({
       key: 'suffix',
       width: 80,
       render: (suffix: string | undefined, record) =>
-        record.nodeType === 'FILE' && suffix ? <Tag className="text-[10px]">{suffix}</Tag> : '—',
+        record.nodeType === 'FILE' && suffix ? <Tag className="text-[12px]">{suffix}</Tag> : '—',
     },
     {
       title: intl.formatMessage({ id: 'pages.dataDevelopment.editor.resourcePicker.size' }),
@@ -186,7 +186,7 @@ export default function ResourcePicker({
     >
       <div className="mb-3 flex items-center gap-2">
         <Input
-          prefix={<Search size={14} className="text-[#98a2b3]" />}
+          prefix={<Search size={14} className="text-[#667085]" />}
           placeholder={intl.formatMessage({ id: 'pages.dataDevelopment.editor.resourcePicker.search' })}
           allowClear
           value={keyword}
@@ -194,7 +194,7 @@ export default function ResourcePicker({
           className="flex-1"
         />
         {acceptSuffixes && acceptSuffixes.length > 0 ? (
-          <Typography.Text className="shrink-0 text-[11px] text-[#98a2b3]">
+          <Typography.Text className="shrink-0 text-[12px] text-[#667085]">
             {intl.formatMessage(
               { id: 'pages.dataDevelopment.editor.resourcePicker.type' },
               { types: acceptSuffixes.join(' / ') },
@@ -215,7 +215,7 @@ export default function ResourcePicker({
         </YakButton>
         {breadcrumbs.map((breadcrumb, index) => (
           <span key={String(breadcrumb.id)} className="flex items-center gap-1">
-            <span className="text-[#98a2b3]">/</span>
+            <span className="text-[#667085]">/</span>
             <YakButton
               type="text"
               size="small"
@@ -251,9 +251,9 @@ export default function ResourcePicker({
         <div className="mt-3 rounded-md border border-[#e4e7ec] bg-[#f9fafb] px-3 py-2 text-[12px] text-[#475467]">
           {intl.formatMessage({ id: 'pages.dataDevelopment.editor.resourcePicker.selected' })}{' '}
           <span className="font-medium text-[#344054]">{selectedFile.name}</span>
-          {selectedFile.suffix ? <span className="ml-2 text-[#98a2b3]">.{selectedFile.suffix}</span> : null}
-          <span className="ml-2 text-[#98a2b3]">{formatFileSize(selectedFile.fileSize)}</span>
-          {selectedFile.version != null ? <span className="ml-2 text-[#98a2b3]">v{selectedFile.version}</span> : null}
+          {selectedFile.suffix ? <span className="ml-2 text-[#667085]">.{selectedFile.suffix}</span> : null}
+          <span className="ml-2 text-[#667085]">{formatFileSize(selectedFile.fileSize)}</span>
+          {selectedFile.version != null ? <span className="ml-2 text-[#667085]">v{selectedFile.version}</span> : null}
         </div>
       ) : null}
     </Modal>

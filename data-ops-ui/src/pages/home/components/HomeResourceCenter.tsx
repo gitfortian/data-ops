@@ -291,7 +291,7 @@ export default function HomeResourceCenter() {
                 key={item.key}
                 className="min-w-0 rounded-[14px] border border-[#f0f1f3] bg-[#fbfbfc] px-4 py-3"
               >
-                <div className="truncate text-[10px] text-[#9398a1]">
+                <div className="truncate text-[12px] text-[#9398a1]">
                   {item.label}
                 </div>
 
@@ -316,7 +316,7 @@ export default function HomeResourceCenter() {
                 })}
               </strong>
 
-              <span className="text-[10px] text-[#9a9fa8]">
+              <span className="text-[12px] text-[#9a9fa8]">
                 {intl.formatMessage({
                   id: 'pages.home.resourceCenter.recentRange',
                 })}
@@ -338,7 +338,7 @@ export default function HomeResourceCenter() {
                   onClick={() =>
                     void loadOverview()
                   }
-                  className="mt-2 border-0 bg-transparent p-0 text-[10px] font-medium text-[#6f7681] hover:text-[#252832]"
+                  className="mt-2 border-0 bg-transparent p-0 text-[12px] font-medium text-[#6f7681] hover:text-[#252832]"
                 >
                   {intl.formatMessage({
                     id: 'pages.home.resourceCenter.retry',
@@ -371,7 +371,7 @@ export default function HomeResourceCenter() {
                         {resource.name}
                       </div>
 
-                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-[#9a9fa8]">
+                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[12px] text-[#9a9fa8]">
                         <span className="shrink-0">
                           {formatFileSize(
                             resource.fileSize,

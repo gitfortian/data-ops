@@ -239,14 +239,14 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
                 >
                   <div className="min-w-0">
                     <div className="truncate text-[12px] font-medium text-[#161823]">{key.name}</div>
-                    <div className="mt-1 font-mono text-[10px] text-[#98a2b3]">{key.keyPrefix}••••••••</div>
+                    <div className="mt-1 font-mono text-[12px] text-[#667085]">{key.keyPrefix}••••••••</div>
                   </div>
-                  <div className="text-[11px] text-[#667085]">{key.rateLimitPerMinute}/min</div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#667085]">
+                  <div className="text-[12px] text-[#667085]">{key.rateLimitPerMinute}/min</div>
+                  <div className="flex items-center gap-1.5 text-[12px] text-[#667085]">
                     <span className={`h-1.5 w-1.5 rounded-full ${currentStatus.dot}`} />
                     {currentStatus.label}
                   </div>
-                  <div className="text-[10px] text-[#667085]">{formatTime(key.lastUsedAt)}</div>
+                  <div className="text-[12px] text-[#667085]">{formatTime(key.lastUsedAt)}</div>
                   <Switch
                     size="small"
                     checked={key.enabled}

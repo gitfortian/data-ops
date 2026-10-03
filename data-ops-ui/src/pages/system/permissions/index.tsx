@@ -88,7 +88,7 @@ const toTreeData = (
               </span>
 
               {permission.active === false && (
-                <Tag className="!m-0 !border-slate-200 !bg-slate-100 !text-[10px] !leading-4 !text-slate-500">
+                <Tag className="!m-0 !border-slate-200 !bg-slate-100 !text-[12px] !leading-4 !text-slate-500">
                   停用
                 </Tag>
               )}

@@ -213,7 +213,7 @@ const WorkflowToolbar = (props: WorkflowToolbarProps) => {
           <div className="text-[12px] font-semibold text-[#344054]">
             {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.versions' })}
           </div>
-          <span className="text-[9px] text-[#98a2b3]">
+          <span className="text-[9px] text-[#667085]">
             {hasPublished
               ? intl.formatMessage(
                   { id: 'pages.workflow.editor.toolbar.currentVersion' },
@@ -256,13 +256,13 @@ const WorkflowToolbar = (props: WorkflowToolbarProps) => {
         <div className="text-[12px] font-semibold text-[#344054]">
           {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.runtimeSettings' })}
         </div>
-        <div className="mt-1 text-[9px] leading-4 text-[#98a2b3]">
+        <div className="mt-1 text-[9px] leading-4 text-[#667085]">
           {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.runtimeSettingsHint' })}
         </div>
       </div>
       <div className="space-y-4 p-4">
         <div>
-          <div className="mb-1.5 text-[10px] font-medium text-[#667085]">
+          <div className="mb-1.5 text-[12px] font-medium text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.failureStrategy' })}
           </div>
           <Select
@@ -276,12 +276,12 @@ const WorkflowToolbar = (props: WorkflowToolbarProps) => {
             }))}
             onChange={(value) => onFailureStrategyChange(value as WorkflowFailureStrategy)}
           />
-          <div className="mt-1 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-1 text-[9px] leading-4 text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.failureHint' })}
           </div>
         </div>
         <div>
-          <div className="mb-1.5 text-[10px] font-medium text-[#667085]">
+          <div className="mb-1.5 text-[12px] font-medium text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.workflowTimeout' })}
           </div>
           <InputNumber
@@ -295,7 +295,7 @@ const WorkflowToolbar = (props: WorkflowToolbarProps) => {
             className="!w-full"
             onChange={(value) => onWorkflowTimeoutChange(Number(value || 0))}
           />
-          <div className="mt-1 text-[9px] leading-4 text-[#98a2b3]">
+          <div className="mt-1 text-[9px] leading-4 text-[#667085]">
             {intl.formatMessage({ id: 'pages.workflow.editor.toolbar.timeoutHint' })}
           </div>
         </div>
@@ -329,7 +329,7 @@ const WorkflowToolbar = (props: WorkflowToolbarProps) => {
         >
           {name || fallbackName}
         </div>
-        <div className="mt-0.5 flex h-4 items-center gap-2 text-[9px] leading-4 text-[#98a2b3]">
+        <div className="mt-0.5 flex h-4 items-center gap-2 text-[9px] leading-4 text-[#667085]">
           <span>{lifecycleText}</span>
           <span className="h-1 w-1 rounded-full bg-[#d0d5dd]" />
           <span>

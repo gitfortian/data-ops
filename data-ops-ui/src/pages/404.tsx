@@ -13,13 +13,13 @@ const NoFoundPage: React.FC = () => {
 
         <div className="pl-4">
           <p className="m-0 text-[16px] font-normal">
-            Not Found
+            页面不存在
           </p>
 
           <button
             type="button"
-            onClick={() => history.push('/')}
-            className="mt-2 border-0 bg-transparent p-0 text-[12px] text-[#9aa3ad] transition-colors hover:text-[#5f6975]"
+            onClick={() => history.push('/home')}
+            className="mt-3 rounded border border-[#d0d5dd] bg-white px-3 py-2 text-[13px] text-[#344054] transition-colors hover:bg-[#f2f4f7] focus-visible:outline-2 focus-visible:outline-[#475467]"
           >
             返回首页
           </button>

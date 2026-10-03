@@ -100,7 +100,7 @@ const TriggerLedgerDrawer = ({
                 : 'pages.workflow.trigger.title',
             })}
           </div>
-          <div className="mt-0.5 text-[11px] font-normal text-[#98a2b3]">
+          <div className="mt-0.5 text-[12px] font-normal text-[#667085]">
             {backfillName || schedule?.name || '-'} ·{' '}
             {intl.formatMessage({
               id: backfillId
@@ -129,7 +129,7 @@ const TriggerLedgerDrawer = ({
         </div>
       }
     >
-      <div className="mb-3 rounded-sm bg-[#f8f9fb] px-3 py-2 text-[11px] leading-5 text-[#667085]">
+      <div className="mb-3 rounded-sm bg-[#f8f9fb] px-3 py-2 text-[12px] leading-5 text-[#667085]">
         {intl.formatMessage({
           id: backfillId
             ? 'pages.workflow.trigger.batchHint'
@@ -166,14 +166,14 @@ const TriggerLedgerDrawer = ({
             dataIndex: 'businessDate',
             width: 115,
             render: (value?: string) => (
-              <code className="text-[11px] text-[#475467]">{value || '-'}</code>
+              <code className="text-[12px] text-[#475467]">{value || '-'}</code>
             ),
           },
           {
             title: intl.formatMessage({ id: 'pages.workflow.trigger.planActual' }),
             width: 205,
             render: (_: unknown, record: WorkflowScheduleTrigger) => (
-              <div className="text-[11px] leading-5 text-[#667085]">
+              <div className="text-[12px] leading-5 text-[#667085]">
                 <div>
                   {intl.formatMessage(
                     { id: 'pages.workflow.trigger.planned' },
@@ -206,7 +206,7 @@ const TriggerLedgerDrawer = ({
             title: intl.formatMessage({ id: 'pages.workflow.trigger.strategy' }),
             dataIndex: 'executionStrategy',
             width: 120,
-            render: (value: string) => <code className="text-[11px] text-[#475467]">{value}</code>,
+            render: (value: string) => <code className="text-[12px] text-[#475467]">{value}</code>,
           },
           {
             title: 'WorkflowExecution',
@@ -215,13 +215,13 @@ const TriggerLedgerDrawer = ({
             render: (value?: string, record?: WorkflowScheduleTrigger) =>
               value ? (
                 <div>
-                  <code className="text-[11px] text-[#475467]">{value}</code>
-                  <div className="mt-1 text-[11px] text-[#98a2b3]">
+                  <code className="text-[12px] text-[#475467]">{value}</code>
+                  <div className="mt-1 text-[12px] text-[#667085]">
                     {record?.executionStatus || '-'}
                   </div>
                 </div>
               ) : (
-                <span className="text-[11px] text-[#98a2b3]">
+                <span className="text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.workflow.trigger.notCreated' })}
                 </span>
               ),
@@ -231,7 +231,7 @@ const TriggerLedgerDrawer = ({
             dataIndex: 'message',
             width: 280,
             render: (value?: string, record?: WorkflowScheduleTrigger) => (
-              <div className="text-[11px] leading-5 text-[#667085]">
+              <div className="text-[12px] leading-5 text-[#667085]">
                 <div>{value || '-'}</div>
                 {record?.errorMessage ? (
                   <div className="mt-1 text-[#b42318]">{record.errorMessage}</div>
@@ -244,7 +244,7 @@ const TriggerLedgerDrawer = ({
             dataIndex: 'completedAt',
             width: 165,
             render: (value?: string) => (
-              <span className="text-[11px] text-[#98a2b3]">{formatTime(value, intl.locale)}</span>
+              <span className="text-[12px] text-[#667085]">{formatTime(value, intl.locale)}</span>
             ),
           },
         ]}

@@ -235,7 +235,7 @@ const ManualFieldEditor = ({
           border-r border-[#eef0f2]
           bg-[#f7f8fa] py-2
           text-right text-[12px]
-          leading-7 text-[#98a2b3]
+          leading-7 text-[#667085]
         "
       >
         {Array.from(
@@ -1893,7 +1893,7 @@ export default function FieldMappingSection({
 
       if (loading) {
         return (
-          <div className="flex min-h-[120px] items-center justify-center border border-[#e5e7eb] text-xs text-[#98a2b3]">
+          <div className="flex min-h-[120px] items-center justify-center border border-[#e5e7eb] text-xs text-[#667085]">
             正在加载字段信息...
           </div>
         );
@@ -2045,7 +2045,7 @@ export default function FieldMappingSection({
                     <div className="flex items-center gap-1 border-l border-[#e5e7eb] px-3">
                       类型
 
-                      <FilterOutlined className="text-[10px] text-[#667085]" />
+                      <FilterOutlined className="text-[12px] text-[#667085]" />
                     </div>
                   </div>
 
@@ -2217,7 +2217,7 @@ export default function FieldMappingSection({
                                 <PlusOutlined
                                   className="
                                     relative z-10
-                                    text-[10px]
+                                    text-[12px]
                                     opacity-0
                                     transition-opacity
                                     group-hover/source-handle:opacity-100
@@ -2256,7 +2256,7 @@ export default function FieldMappingSection({
                     <div className="flex items-center gap-1 border-l border-[#e5e7eb] px-3">
                       类型
 
-                      <FilterOutlined className="text-[10px] text-[#667085]" />
+                      <FilterOutlined className="text-[12px] text-[#667085]" />
                     </div>
                   </div>
 
@@ -2581,7 +2581,7 @@ export default function FieldMappingSection({
                             !rounded-full
                             !bg-white
                             !px-2
-                            !text-[11px]
+                            !text-[12px]
                             !shadow-sm
                           "
                           onClick={() =>
@@ -2683,7 +2683,7 @@ export default function FieldMappingSection({
                               !rounded-full
                               !bg-white
                               !px-2
-                              !text-[11px]
+                              !text-[12px]
                               !shadow-sm
                             "
                           >
@@ -2904,7 +2904,7 @@ export default function FieldMappingSection({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-[12px] text-[#98a2b3]">
+        <div className="mt-3 flex items-center justify-between text-[12px] text-[#667085]">
           <span>
             两侧字段按照行号一一建立映射关系
           </span>

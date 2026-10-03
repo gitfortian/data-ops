@@ -67,7 +67,7 @@ export const LandingStatusCell = ({ status }: { status?: MdmCollectStatus }) => 
       <Space size={4}>
         {job ? <Tag color={job.color}>{job.text}</Tag> : <Tag>已生成</Tag>}
         {status.lastJobStatus === 'FAILED' && status.jobName ? (
-          <span className="text-[12px] text-[#98a2b3]">可查看任务日志</span>
+          <span className="text-[12px] text-[#667085]">可查看任务日志</span>
         ) : null}
       </Space>
     </Tooltip>

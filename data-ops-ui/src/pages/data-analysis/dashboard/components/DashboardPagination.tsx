@@ -28,7 +28,7 @@ const DashboardPagination = ({
 
   return (
     <div className="flex items-center justify-between border-t border-[#f0f1f2] py-4">
-      <span className="text-[12px] text-[#98a2b3]">
+      <span className="text-[12px] text-[#667085]">
         {intl.formatMessage(
           { id: 'pages.dashboard.list.total' },
           { count: total },

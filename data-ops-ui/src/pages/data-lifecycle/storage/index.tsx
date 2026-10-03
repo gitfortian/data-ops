@@ -19,14 +19,17 @@ const StoragePage = () => {
   const [priceOpen, setPriceOpen] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
   const [savingPrice, setSavingPrice] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const [statsResult, priceResult] = await Promise.all([getStorageStats(), getStoragePrice()]);
       setStats(statsResult);
       if (priceResult?.pricePerGbMonth != null) setPrice(Number(priceResult.pricePerGbMonth));
     } catch {
+      setLoadError(true);
       message.error('加载存储统计失败');
     } finally {
       setLoading(false);
@@ -86,6 +89,8 @@ const StoragePage = () => {
   const hot = stats?.hotCold?.hotBytes ?? 0;
   const cold = stats?.hotCold?.coldBytes ?? 0;
   const total = hot + cold > 0 ? hot + cold : (stats?.totalBytes ?? 0);
+  const hasSnapshot = Boolean(stats?.snapshotDate);
+  const unknownValue = loading ? '读取中' : '—';
 
   const savePrice = async () => {
     if (price == null || price <= 0) {
@@ -127,34 +132,35 @@ const StoragePage = () => {
         </div>
       </div>
 
-      {(stats?.byLayer.length ?? 0) === 0 && !loading && (
+      {loadError && <Alert className="mt-4" type="error" showIcon message="存储统计读取失败" description="请刷新重试；已读取的数据仍保留在下方。" />}
+      {!hasSnapshot && !loading && !loadError && (
         <Alert
           className="mt-4"
           type="info"
           showIcon
           message="尚无存储快照"
-          description="平台每日定时采集各层表大小（也可在「任务中心」手动触发采集任务），采集完成后这里将展示存储量、冷热分布与成本。"
+          description="采集完成后将展示存储量、冷热分布与成本。尚无快照时，这些指标未计算。"
         />
       )}
 
-      <div className="mt-4 grid grid-cols-4 gap-4">
+      <div className="mt-4 grid grid-cols-4 gap-4 max-md:grid-cols-2 max-sm:grid-cols-1">
         <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-          <Statistic title="总存储量" value={formatBytes(stats?.totalBytes ?? 0)} valueStyle={{ fontSize: 22 }} />
+          <Statistic title="总存储量" value={hasSnapshot ? formatBytes(stats?.totalBytes ?? 0) : unknownValue} valueStyle={{ fontSize: 22 }} />
         </div>
         <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-          <Statistic title="热存储" value={formatBytes(hot)} valueStyle={{ fontSize: 22, color: '#d97706' }} />
-          {stats?.hotCold.estimated && <div className="text-[11px] text-[#98a2b3]">按保留期估算</div>}
+          <Statistic title="热存储" value={hasSnapshot ? formatBytes(hot) : unknownValue} valueStyle={{ fontSize: 22, color: hasSnapshot ? '#b54708' : '#667085' }} />
+          {stats?.hotCold.estimated && <div className="text-[12px] text-[#667085]">按保留期估算</div>}
         </div>
         <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
-          <Statistic title="冷存储" value={formatBytes(cold)} valueStyle={{ fontSize: 22, color: '#1677ff' }} />
+          <Statistic title="冷存储" value={hasSnapshot ? formatBytes(cold) : unknownValue} valueStyle={{ fontSize: 22, color: hasSnapshot ? '#175cd3' : '#667085' }} />
         </div>
         <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
           <Statistic
             title="本月估算成本"
-            value={stats?.monthlyCost != null ? `¥ ${Number(stats.monthlyCost).toFixed(2)}` : '-'}
-            valueStyle={{ fontSize: 22, color: '#12833f' }}
+            value={hasSnapshot && stats?.monthlyCost != null ? `¥ ${Number(stats.monthlyCost).toFixed(2)}` : unknownValue}
+            valueStyle={{ fontSize: 22, color: '#344054' }}
           />
-          <div className="text-[11px] text-[#98a2b3]">
+          <div className="text-[12px] text-[#667085]">
             {stats?.pricePerGbMonth ? `单价 ¥${stats.pricePerGbMonth} / GB / 月` : '未设置单价'}
           </div>
         </div>
@@ -165,7 +171,7 @@ const StoragePage = () => {
           {total > 0 ? (
             <ReactECharts option={layerOption} style={{ height: 280 }} notMerge />
           ) : (
-            <div className="flex h-[280px] items-center justify-center text-[13px] text-[#98a2b3]">暂无数据</div>
+            <div className="flex h-[280px] items-center justify-center text-[13px] text-[#667085]">暂无数据</div>
           )}
         </Card>
         <Card
@@ -188,7 +194,7 @@ const StoragePage = () => {
           {trend.length > 0 ? (
             <ReactECharts option={trendOption} style={{ height: 280 }} notMerge />
           ) : (
-            <div className="flex h-[280px] items-center justify-center text-[13px] text-[#98a2b3]">
+            <div className="flex h-[280px] items-center justify-center text-[13px] text-[#667085]">
               趋势需要连续多日快照
             </div>
           )}

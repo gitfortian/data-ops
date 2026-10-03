@@ -406,7 +406,7 @@ function QualityRadar({ state }: { state: QualityOverviewState }) {
           </div>
 
           <div
-            className={`mt-1 flex items-center gap-1.5 text-[10px] font-medium ${health.textClass}`}
+            className={`mt-1 flex items-center gap-1.5 text-[12px] font-medium ${health.textClass}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${health.dotClass}`} />
             {intl.formatMessage({
@@ -426,7 +426,7 @@ function QualityRadar({ state }: { state: QualityOverviewState }) {
 
       <div className="mt-1 min-h-[235px]">
         {state.failed ? (
-          <div className="flex h-[235px] items-center justify-center text-[11px] text-[#9a9fa7]">
+          <div className="flex h-[235px] items-center justify-center text-[12px] text-[#9a9fa7]">
             {intl.formatMessage({
               id: 'pages.home.quality.dimensionUnavailable',
             })}
@@ -510,7 +510,7 @@ function IssueRow({ issue }: { issue: HomeQualityIssue }) {
           </span>
         </span>
 
-        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] leading-4 text-[#9499a2]">
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-[#9499a2]">
           <span className="truncate">{getObjectLabel(issue)}</span>
           {issue.columnName ? (
             <>
@@ -521,7 +521,7 @@ function IssueRow({ issue }: { issue: HomeQualityIssue }) {
         </span>
       </span>
 
-      <span className="shrink-0 text-[9px] text-[#a0a5ad]">
+      <span className="shrink-0 text-[9px] text-[#667085]">
         {relativeTime(issue.queuedAt, intl.locale)}
       </span>
       <span className="shrink-0 translate-x-[-2px] text-[17px] font-light leading-none text-[#c3c7cd] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
@@ -553,7 +553,7 @@ function RecentIssues({ state }: { state: QualityOverviewState }) {
 
         <div className="flex shrink-0 gap-6">
           <div className="text-right">
-            <div className="text-[12px] leading-4 text-[#a0a5ad]">
+            <div className="text-[12px] leading-4 text-[#667085]">
               {intl.formatMessage({
                 id: 'pages.home.quality.metric.todayIssueTables',
               })}
@@ -570,7 +570,7 @@ function RecentIssues({ state }: { state: QualityOverviewState }) {
           </div>
 
           <div className="text-right">
-            <div className="text-[12px] leading-4 text-[#a0a5ad]">
+            <div className="text-[12px] leading-4 text-[#667085]">
               {intl.formatMessage({ id: 'pages.home.quality.issues7d' })}
             </div>
             <strong
@@ -743,12 +743,12 @@ function TodoRow({ row }: { row: ApprovalTodoRow }) {
             {instance.flowName || instance.flowCode}
           </span>
         </span>
-        <span className="mt-0.5 block truncate text-[10px] leading-4 text-[#9499a2]">
+        <span className="mt-0.5 block truncate text-[12px] leading-4 text-[#9499a2]">
           {instance.applicant}
         </span>
       </span>
 
-      <span className="shrink-0 text-[9px] text-[#a0a5ad]">
+      <span className="shrink-0 text-[9px] text-[#667085]">
         {relativeTime(instance.createTime, intl.locale)}
       </span>
       <span className="shrink-0 translate-x-[-2px] text-[17px] font-light leading-none text-[#c3c7cd] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
@@ -878,7 +878,7 @@ function AlertRow({ event }: { event: QualityAlertEvent }) {
               : (event.alertLevel ?? '--')}
           </span>
         </span>
-        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] leading-4 text-[#9499a2]">
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-[#9499a2]">
           <span className="truncate">
             {event.alertMessage || event.executionNo || '--'}
           </span>
@@ -891,7 +891,7 @@ function AlertRow({ event }: { event: QualityAlertEvent }) {
         </span>
       </span>
 
-      <span className="shrink-0 text-[9px] text-[#a0a5ad]">
+      <span className="shrink-0 text-[9px] text-[#667085]">
         {relativeTime(event.createdAt, intl.locale)}
       </span>
       {target ? (

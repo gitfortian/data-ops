@@ -114,7 +114,7 @@ const RecycleBinDrawer = ({ open, onClose, onChanged }: RecycleBinDrawerProps) =
       dataIndex: 'directoryId',
       width: 120,
       render: (value?: number) =>
-        value ? directoryNameById.get(value) || '-' : <span className="text-[#98a2b3]">未分类</span>,
+        value ? directoryNameById.get(value) || '-' : <span className="text-[#667085]">未分类</span>,
     },
     {
       title: '更新人',

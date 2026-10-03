@@ -167,7 +167,7 @@ export const ShellEditor = ({
                 { language },
               )}
             </Typography.Text>
-            <Typography.Paragraph className="mb-3 text-[12px] text-[#98a2b3]">
+            <Typography.Paragraph className="mb-3 text-[12px] text-[#667085]">
               {intl.formatMessage(
                 { id: 'pages.dataDevelopment.editor.script.resourceDescription' },
                 { language },
@@ -183,7 +183,7 @@ export const ShellEditor = ({
                   <div className="truncate text-[13px] font-medium text-[#344054]">
                     {config.resourceName || config.resourceId}
                   </div>
-                  <div className="text-[11px] text-[#98a2b3]">
+                  <div className="text-[12px] text-[#667085]">
                     {config.checksum
                       ? `SHA-256: ${config.checksum.substring(0, 16)}...`
                       : intl.formatMessage({ id: 'pages.dataDevelopment.editor.script.versionLocked' })}
@@ -211,14 +211,14 @@ export const ShellEditor = ({
                 className="flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[#d0d5dd] bg-[#f9fafb] px-4 py-8 transition-colors hover:border-[#1570ef] hover:bg-[#eff8ff]"
                 onClick={() => setPickerOpen(true)}
               >
-                <Upload size={24} className="text-[#98a2b3]" />
+                <Upload size={24} className="text-[#667085]" />
                 <div className="mt-2 text-[13px] text-[#475467]">
                   {intl.formatMessage(
                     { id: 'pages.dataDevelopment.editor.script.selectFile' },
                     { language },
                   )}
                 </div>
-                <div className="mt-1 text-[11px] text-[#98a2b3]">
+                <div className="mt-1 text-[12px] text-[#667085]">
                   {intl.formatMessage({ id: 'pages.dataDevelopment.editor.script.selectUploaded' })}
                 </div>
               </button>
@@ -235,7 +235,7 @@ export const ShellEditor = ({
         </div>
       )}
 
-      <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[10px] text-[#7b808a]">
+      <div className="flex h-6 shrink-0 items-center justify-between border-t border-[#eef0f2] bg-[#fafafa] px-2.5 text-[12px] text-[#7b808a]">
         <div className="flex min-w-0 items-center gap-3">
           <span className="font-medium text-[#667085]">Shell</span>
           <span className="truncate">{node.name}</span>
@@ -282,7 +282,7 @@ export const ShellRunConfig = ({ node }: DevelopmentEditorContext) => {
           { name: node.name },
         )}
       </div>
-      <div className="mt-3 border-t border-[#eef0f2] pt-3 text-[11px] leading-5 text-[#98a2b3]">
+      <div className="mt-3 border-t border-[#eef0f2] pt-3 text-[12px] leading-5 text-[#667085]">
         <div>{intl.formatMessage({ id: 'pages.dataDevelopment.editor.script.shellRuntimeHint' })}</div>
         <div className="mt-2">
           {intl.formatMessage({ id: 'pages.dataDevelopment.editor.script.configHint' })}
@@ -305,7 +305,7 @@ export const ShellRunResult = ({ result }: DevelopmentEditorRunResultContext) =>
               { language },
             )}
           </div>
-          <div className="mt-1 text-[11px] text-[#98a2b3]">
+          <div className="mt-1 text-[12px] text-[#667085]">
             {intl.formatMessage(
               { id: 'pages.dataDevelopment.editor.script.runHint' },
               { language },
@@ -341,15 +341,15 @@ export const ShellRunResult = ({ result }: DevelopmentEditorRunResultContext) =>
           <div className="text-[13px] font-medium text-[#b42318]">
             {intl.formatMessage({ id: statusId }, { language })}
           </div>
-          <div className="mt-2 break-words text-[11px] leading-5 text-[#667085]">
+          <div className="mt-2 break-words text-[12px] leading-5 text-[#667085]">
             {result.message || intl.formatMessage({ id: 'pages.dataDevelopment.editor.script.noError' })}
           </div>
           {result.output?.stderr ? (
-            <pre className="mt-3 max-h-[240px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 text-left font-mono text-[11px] text-[#344054]">
+            <pre className="mt-3 max-h-[240px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 text-left font-mono text-[12px] text-[#344054]">
               {String(result.output.stderr)}
             </pre>
           ) : null}
-          <div className="mt-2 text-[10px] text-[#98a2b3]">
+          <div className="mt-2 text-[12px] text-[#667085]">
             {intl.formatMessage(
               { id: 'pages.dataDevelopment.editor.script.duration' },
               { duration: result.durationMs },
@@ -374,7 +374,7 @@ export const ShellRunResult = ({ result }: DevelopmentEditorRunResultContext) =>
             { language },
           )}
         </span>
-        <span className="text-[10px] text-[#98a2b3]">
+        <span className="text-[12px] text-[#667085]">
           {intl.formatMessage(
             { id: 'pages.dataDevelopment.editor.script.exitDuration' },
             { exitCode: String(exitCode), duration: result.durationMs },
@@ -384,22 +384,22 @@ export const ShellRunResult = ({ result }: DevelopmentEditorRunResultContext) =>
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {stdout ? (
           <div className="mb-3">
-            <div className="mb-1 text-[11px] font-medium text-[#475467]">stdout</div>
-            <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 font-mono text-[11px] leading-5 text-[#344054]">
+            <div className="mb-1 text-[12px] font-medium text-[#475467]">stdout</div>
+            <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#f9fafb] p-3 font-mono text-[12px] leading-5 text-[#344054]">
               {stdout}
             </pre>
           </div>
         ) : null}
         {stderr ? (
           <div>
-            <div className="mb-1 text-[11px] font-medium text-[#475467]">stderr</div>
-            <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#fef3f2] p-3 font-mono text-[11px] leading-5 text-[#b42318]">
+            <div className="mb-1 text-[12px] font-medium text-[#475467]">stderr</div>
+            <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#fef3f2] p-3 font-mono text-[12px] leading-5 text-[#b42318]">
               {stderr}
             </pre>
           </div>
         ) : null}
         {!stdout && !stderr ? (
-          <div className="text-[12px] text-[#98a2b3]">
+          <div className="text-[12px] text-[#667085]">
             {intl.formatMessage({ id: 'pages.dataDevelopment.editor.script.noOutput' })}
           </div>
         ) : null}

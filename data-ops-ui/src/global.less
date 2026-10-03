@@ -155,24 +155,43 @@ ol {
   list-style: none;
 }
 
-@media (max-width: 768px) {
-  .ant-table {
-    width: 100%;
-    overflow-x: auto;
+// Table overflow belongs to Ant Design's table content, never the whole page.
+[data-yak-workspace='commercial'] {
+  --yak-surface: #fff;
+  --yak-text: #101828;
+  --yak-text-secondary: #667085;
+  --yak-border: #eaecf0;
 
-    &-thead>tr,
-    &-tbody>tr {
+  .ant-table-wrapper { min-width: 0; max-width: 100%; }
+  .ant-table-thead > tr > th { color: #475467; font-weight: 500; }
+  .ant-table-tbody > tr > td { overflow-wrap: anywhere; }
+  :is(button, a, input, [role='button']):focus-visible {
+    outline: 2px solid #475467;
+    outline-offset: 3px;
+  }
+}
 
-      >th,
-      >td {
-        white-space: pre;
+body[data-yak-workspace='commercial'] {
+  .ant-drawer-content-wrapper { max-width: 100vw; }
+  .ant-drawer-body { min-width: 0; }
+  @media (max-width: 767px) {
+    .ant-drawer-content-wrapper { width: 100vw !important; }
+    .yak-mobile-navigation .ant-drawer-content-wrapper { width: min(300px, 100vw) !important; }
+    .ant-drawer-body { padding: 16px; }
+    .ant-modal { max-width: calc(100vw - 24px); margin: 12px auto; }
+  }
+}
 
-        >span {
-          display: block;
-        }
-      }
+@media (prefers-reduced-motion: reduce) {
+  [data-yak-workspace='commercial'], body[data-yak-workspace='commercial'] .ant-drawer {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
+  [data-yak-workspace='commercial'] .yak-button.ant-btn { transform: none !important; }
 }
 
 .ant-input-textarea-affix-wrapper.ant-input-affix-wrapper>textarea.ant-input {
