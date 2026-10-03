@@ -1,5 +1,5 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import { useLatestOperation } from '@/hooks/useLatestOperation';
+import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
 import { useModelStructureDraft } from './editor/useModelStructureDraft';
 import { ColumnDraft, IndexDraft, PropertyDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
 import { history, useParams } from '@umijs/max';
@@ -120,10 +120,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
 });
 
 
-  const { tableName, setTableName, tableComment, setTableComment, rows, setRows, primaryKey, setPrimaryKey, indexes, setIndexes, partitionEnabled, setPartitionEnabled, partitionType, setPartitionType, partitionColumns, setPartitionColumns, partitionExpression, setPartitionExpression, properties, setProperties, dirty, setDirty } = useModelStructureDraft();
+  const { captureDraft, resetDraft, tableName, setTableName, tableComment, setTableComment, rows, setRows, primaryKey, setPrimaryKey, indexes, setIndexes, partitionEnabled, setPartitionEnabled, partitionType, setPartitionType, partitionColumns, setPartitionColumns, partitionExpression, setPartitionExpression, properties, setProperties, dirty, setDirty } = useModelStructureDraft();
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
   const { currentProject } = useSecurityProject();
+  const captureEditorResource = useResourceScope(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
+  const beginStandardSearch = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
+  const beginImportTableLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
   const beginStructureLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
   const returnAssetIdValue = new URLSearchParams(window.location.search).get('returnAssetId');
   const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
@@ -215,6 +218,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     async (
       targetRows: ColumnDraft[],
     ): Promise<{ rows: ColumnDraft[]; matchCount: number }> => {
+      const isCurrent = captureEditorResource();
       // 分页加载全部标准字段(后端限制 pageSize <= 200)
       const allFields: SemanticFieldRecord[] = [];
       let pageNo = 1;
@@ -222,6 +226,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       let hasMore = true;
       while (hasMore) {
         const result = await pageSemanticFields({ pageNo, pageSize });
+        if (!isCurrent()) return { rows: targetRows, matchCount: 0 };
         const batch = result?.bizData ?? [];
         allFields.push(...batch);
         hasMore = batch.length === pageSize;
@@ -260,10 +265,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
       });
       return { rows: newRows, matchCount };
     },
-    [],
+    [captureEditorResource],
   );
 
-  const loadStructure = useCallback(async () => {
+  const loadStructure = useCallback(async (canApply: () => boolean = () => true) => {
     if (!modelId) return;
     const isCurrent = beginStructureLoad();
     setLoading(true);
@@ -274,6 +279,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         getModelingStructure(modelId),
       ]);
       if (!isCurrent()) return;
+      if (!canApply()) return;
       setStructure(data);
       setModelInfo(modelData);
       // B4(2026-09-17):物理表名默认为模型编码
@@ -487,11 +493,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   /** 重新导入:用保存的 importConfig 重新拉取源表字段并覆盖当前字段列表。 */
   const handleReimport = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!importConfig) return;
     const { datasourceId, database, table } = importConfig;
     setReimportLoading(true);
     try {
       const columns = await previewModelingImportColumns(datasourceId, database, table);
+      if (!isCurrent()) return;
       if (columns?.length) {
         setRows(
           columns.map((column) => ({
@@ -523,22 +532,32 @@ const emptyColumnDraft = (): ColumnDraft => ({
         message.warning('源表无字段信息');
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`重新导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setReimportLoading(false);
     }
-  }, [importConfig]);
+  }, [importConfig, captureEditorResource]);
 
   /** 标准发现:按字段名匹配标准字段集,匹配到的自动回填标准绑定。 */
   const handleStandardDiscover = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!rows.length) {
       message.warning('当前无字段可匹配');
       return;
     }
+    const draftUnchanged = captureDraft();
     setDiscoverLoading(true);
     try {
       const result = await discoverStandards(rows);
+      if (!isCurrent()) return;
+      if (!draftUnchanged()) {
+        message.info('草稿已修改，请重新执行标准发现');
+        return;
+      }
       if (!result) return;
       if (result.rows.length && !result.matchCount) {
         message.info('暂无标准字段集,请先在数据标准中维护');
@@ -552,12 +571,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
         message.info('未匹配到标准字段,请检查字段名是否与标准字段编码一致');
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`标准发现失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setDiscoverLoading(false);
     }
-  }, [rows, discoverStandards]);
+  }, [rows, discoverStandards, captureEditorResource, captureDraft]);
 
   /** 从 jdbcUrl 解析数据库名。 */
   const extractDatabaseFromUrl = useCallback((url?: string): string => {
@@ -575,6 +596,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   /** 打开导入字段弹窗。 */
   const openImportModal = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     setImportModalOpen(true);
     setImportDatasourceId(undefined);
     setImportTables([]);
@@ -582,15 +605,21 @@ const emptyColumnDraft = (): ColumnDraft => ({
     setImportDatabase('');
     try {
       const result = await listAllDataSources();
+      if (!isCurrent()) return;
       setDatasources(result.bizData ?? []);
     } catch {
+      if (!isCurrent()) return;
       setDatasources([]);
     }
-  }, []);
+  }, [captureEditorResource]);
 
   /** 加载数据源对应的表列表。 */
   const loadImportTables = useCallback(
     async (datasourceId: number) => {
+      const resourceCurrent = captureEditorResource();
+      const tableRequestCurrent = beginImportTableLoad();
+      const isCurrent = () => resourceCurrent() && tableRequestCurrent();
+      if (!isCurrent()) return;
       if (!datasourceId) {
         setImportTables([]);
         setImportDatabase('');
@@ -602,22 +631,28 @@ const emptyColumnDraft = (): ColumnDraft => ({
       setImportTablesLoading(true);
       try {
         const result = await listDataSourceTables(datasourceId, db);
+        if (!isCurrent()) return;
         setImportTables(result ?? []);
       } catch {
+        if (!isCurrent()) return;
         setImportTables([]);
       } finally {
+        if (!isCurrent()) return;
         setImportTablesLoading(false);
       }
     },
-    [datasources, extractDatabaseFromUrl],
+    [datasources, extractDatabaseFromUrl, captureEditorResource, beginImportTableLoad],
   );
 
   /** 确认导入:从源表加载字段并自动标准发现。 */
   const handleImportConfirm = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!importDatasourceId || !importTable) return;
     setImportModalLoading(true);
     try {
       const columns = await previewModelingImportColumns(importDatasourceId, importDatabase, importTable);
+      if (!isCurrent()) return;
       if (columns?.length) {
         const initialRows: ColumnDraft[] = columns.map((column) => ({
           key: nextDraftKey(),
@@ -644,6 +679,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         // 自动标准发现
         try {
           const discovered = await discoverStandards(initialRows);
+          if (!isCurrent()) return;
           setRows(discovered.rows);
           if (discovered.matchCount > 0) {
             message.success(`导入成功，标准发现匹配到 ${discovered.matchCount} 个字段`);
@@ -651,6 +687,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
             message.success(`导入成功，共 ${columns.length} 个字段`);
           }
         } catch {
+          if (!isCurrent()) return;
           setRows(initialRows);
           message.success(`导入成功，共 ${columns.length} 个字段`);
         }
@@ -666,33 +703,42 @@ const emptyColumnDraft = (): ColumnDraft => ({
         message.warning('源表无字段信息');
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setImportModalLoading(false);
     }
-  }, [importDatasourceId, importTable, importDatabase, discoverStandards]);
+  }, [importDatasourceId, importTable, importDatabase, discoverStandards, captureEditorResource]);
 
   /** 打开从模型导入字段弹窗。 */
   const handleOpenImportFromModel = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     setImportFromModelOpen(true);
     setSelectedModelIds([]);
     setModelListLoading(true);
     try {
       const result = await pageModelingModels({ pageNo: 1, pageSize: 200 });
+      if (!isCurrent()) return;
       const list = result.bizData ?? [];
       // 排除当前模型
       const currentId = modelId ? Number(modelId) : undefined;
       setModelList(list.filter((m) => m.id !== currentId));
     } catch {
+      if (!isCurrent()) return;
       setModelList([]);
     } finally {
+      if (!isCurrent()) return;
       setModelListLoading(false);
     }
-  }, [modelId]);
+  }, [modelId, captureEditorResource]);
 
   /** 确认从模型导入字段:合并选中模型的字段到当前模型。 */
   const handleImportFromModel = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!selectedModelIds.length) {
       message.warning('请选择至少一个模型');
       return;
@@ -705,6 +751,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       const newRows: ColumnDraft[] = [];
       for (const modelId of selectedModelIds) {
         const structure = await getModelingStructure(modelId);
+        if (!isCurrent()) return;
         const cols = structure.columns ?? [];
         for (const col of cols) {
           const colName = col.columnName?.trim() ?? '';
@@ -746,6 +793,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       let finalRows = newRows;
       try {
         const discovered = await discoverStandards(newRows);
+        if (!isCurrent()) return;
         finalRows = discovered.rows;
         if (discovered.matchCount > 0) {
           message.success(`已从模型导入 ${importedCount} 个字段，标准发现匹配到 ${discovered.matchCount} 个`);
@@ -753,6 +801,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           message.success(`已从 ${selectedModelIds.length} 个模型导入 ${importedCount} 个字段`);
         }
       } catch {
+        if (!isCurrent()) return;
         message.success(`已从 ${selectedModelIds.length} 个模型导入 ${importedCount} 个字段`);
       }
       setRows((prev) => [...prev, ...finalRows]);
@@ -765,30 +814,39 @@ const emptyColumnDraft = (): ColumnDraft => ({
         assignImportLineage(Number(modelId), 'MODEL', firstSourceId).catch(() => undefined);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`从模型导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setImportFromModelLoading(false);
     }
-  }, [selectedModelIds, rows, primaryKey, discoverStandards]);
+  }, [selectedModelIds, rows, primaryKey, discoverStandards, captureEditorResource]);
 
   /** 打开从业务过程导入字段弹窗。 */
   const handleOpenImportFromProcess = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     setImportFromProcessOpen(true);
     setSelectedProcessId(undefined);
     setProcessListLoading(true);
     try {
       const result = await pageSemanticProcesses({ pageNo: 1, pageSize: 200 });
+      if (!isCurrent()) return;
       setProcessList(result.bizData ?? []);
     } catch {
+      if (!isCurrent()) return;
       setProcessList([]);
     } finally {
+      if (!isCurrent()) return;
       setProcessListLoading(false);
     }
-  }, []);
+  }, [captureEditorResource]);
 
   /** 确认从业务过程导入字段。 */
   const handleImportFromProcess = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!selectedProcessId) {
       message.warning('请选择业务过程');
       return;
@@ -805,6 +863,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         layerCode,
         structure?.dialect,
       );
+      if (!isCurrent()) return;
       if (!preview.supported) {
         message.warning(preview.unsupportedReason || '该分层暂不支持从业务过程导入');
         return;
@@ -851,6 +910,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       let finalProcessRows = newRows;
       try {
         const discovered = await discoverStandards(newRows);
+        if (!isCurrent()) return;
         finalProcessRows = discovered.rows;
         if (discovered.matchCount > 0) {
           message.success(`已从业务过程导入 ${importedCount} 个字段，标准发现匹配到 ${discovered.matchCount} 个`);
@@ -858,6 +918,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           message.success(`已从业务过程导入 ${importedCount} 个字段`);
         }
       } catch {
+        if (!isCurrent()) return;
         message.success(`已从业务过程导入 ${importedCount} 个字段`);
       }
       setRows((prev) => [...prev, ...finalProcessRows]);
@@ -868,15 +929,19 @@ const emptyColumnDraft = (): ColumnDraft => ({
         assignImportLineage(Number(modelId), 'BUSINESS_PROCESS').catch(() => undefined);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`从业务过程导入失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setImportFromProcessLoading(false);
     }
-  }, [selectedProcessId, modelInfo, structure?.dialect, rows, discoverStandards]);
+  }, [selectedProcessId, modelInfo, structure?.dialect, rows, discoverStandards, captureEditorResource]);
 
   /** 打开"按指标反推"弹窗(仅 DWS/ADS):加载启用指标供选择。 */
   const handleOpenMetricDraft = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     const layerCode = modelInfo?.layerCode;
     if (!layerCode || !AGGREGATE_LAYERS.has(layerCode)) {
       message.warning('仅 DWS/ADS 分层支持按指标反推');
@@ -888,16 +953,21 @@ const emptyColumnDraft = (): ColumnDraft => ({
     setMetricListLoading(true);
     try {
       const result = await pageMetrics({ pageNo: 1, pageSize: 200, status: 'ENABLED' });
+      if (!isCurrent()) return;
       setMetricList(result.records ?? []);
     } catch {
+      if (!isCurrent()) return;
       setMetricList([]);
     } finally {
+      if (!isCurrent()) return;
       setMetricListLoading(false);
     }
-  }, [modelInfo]);
+  }, [modelInfo, captureEditorResource]);
 
   /** 确认按指标反推:指标 → 反推草稿 → 派生预览 → 并入表结构(携带角色/聚合函数)。 */
   const handleApplyMetricDraft = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!selectedMetricIds.length) {
       message.warning('请至少选择一个指标');
       return;
@@ -912,6 +982,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     setMetricDraftLoading(true);
     try {
       const draft = await getModelingMetricDraft(selectedMetricIds, structure?.dialect, upstreamLayer);
+      if (!isCurrent()) return;
       const processId = draft.processIds?.[0];
       if (!processId) {
         message.warning('所选指标未关联业务过程，无法反推');
@@ -931,6 +1002,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         undefined,
         upstreamLayer,
       );
+      if (!isCurrent()) return;
       if (!preview.supported) {
         message.warning(preview.unsupportedReason || '该分层暂不支持按指标反推');
         return;
@@ -986,12 +1058,64 @@ const emptyColumnDraft = (): ColumnDraft => ({
         assignImportLineage(Number(modelId), 'BUSINESS_PROCESS').catch(() => undefined);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       message.error(`按指标反推失败(${errorMsg})`);
     } finally {
+      if (!isCurrent()) return;
       setMetricDraftLoading(false);
     }
-  }, [selectedMetricIds, adsSourceLayer, modelInfo, structure?.dialect, rows, modelId]);
+  }, [selectedMetricIds, adsSourceLayer, modelInfo, structure?.dialect, rows, modelId, captureEditorResource]);
+
+  useEffect(() => {
+    resetDraft();
+    setModelInfo(null);
+    setStructure(undefined);
+    setImportConfig(null);
+    setDatasources([]);
+    setImportTables([]);
+    setModelList([]);
+    setProcessList([]);
+    setMetricList([]);
+    setImportDatasourceId(undefined);
+    setImportTable(undefined);
+    setImportDatabase('');
+    setSelectedModelIds([]);
+    setSelectedProcessId(undefined);
+    setSelectedMetricIds([]);
+    setSelectedRowKeys([]);
+    setAssistantRowKey(null);
+    setValidationIssues([]);
+    setPublishPreview(null);
+    setPublishApproval(null);
+    setPublishFlowEnabled(false);
+    setSaving(false);
+    setPublishing(false);
+    setApprovalSubmitting(false);
+    setReimportLoading(false);
+    setDiscoverLoading(false);
+    setImportModalLoading(false);
+    setImportTablesLoading(false);
+    setImportFromModelLoading(false);
+    setModelListLoading(false);
+    setImportFromProcessLoading(false);
+    setProcessListLoading(false);
+    setMetricDraftLoading(false);
+    setMetricListLoading(false);
+    setImportModalOpen(false);
+    setImportFromModelOpen(false);
+    setImportFromProcessOpen(false);
+    setMetricDraftOpen(false);
+    setDdlOpen(false);
+    setDdlLoading(false);
+    setDdlScript("");
+    setStandardFieldChoices([]);
+    setStandardNameById({});
+    standardFieldByCodeRef.current.clear();
+    stdBoundCodeByRowRef.current.clear();
+    clearTimeout(standardFieldSearchTimerRef.current);
+    return () => clearTimeout(standardFieldSearchTimerRef.current);
+  }, [currentProject?.id, modelId, resetDraft]);
 
   useEffect(() => {
     void loadStructure();
@@ -999,9 +1123,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   // 发布审批开关(01):MODEL_PUBLISH 流未配置/未启用或无审批读权限时按关闭处理，维持现状直发
   useEffect(() => {
+    const isCurrent = captureEditorResource();
     let alive = true;
     listFlows(MODEL_PUBLISH_FLOW_CODE)
       .then((flows) => {
+        if (!isCurrent()) return;
         if (alive) {
           setPublishFlowEnabled(
             (flows ?? []).some((flow) => flow.flowCode === MODEL_PUBLISH_FLOW_CODE && flow.enabled),
@@ -1009,23 +1135,27 @@ const emptyColumnDraft = (): ColumnDraft => ({
         }
       })
       .catch(() => {
+        if (!isCurrent()) return;
         /* 审批中心不可用/无 data-approval:read：保持开关关闭 */
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [captureEditorResource]);
 
   const refreshPublishApproval = useCallback(async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     try {
-      setPublishApproval(
-        (await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId)) ?? null,
-      );
+      const latest = (await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId)) ?? null;
+      if (!isCurrent()) return;
+      setPublishApproval(latest);
     } catch {
+      if (!isCurrent()) return;
       /* 查询失败不阻塞业务页 */
     }
-  }, [modelId]);
+  }, [modelId, captureEditorResource]);
 
   useEffect(() => {
     void refreshPublishApproval();
@@ -1036,10 +1166,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
     if (!modelId || publishApproval?.status !== 'PENDING') return undefined;
     const pendingId = publishApproval.id;
     const timer = setInterval(async () => {
+      const isCurrent = captureEditorResource();
+      if (!isCurrent()) return;
       let latest: ApprovalInstance | null = null;
       try {
         latest = (await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId)) ?? null;
+        if (!isCurrent()) return;
       } catch {
+        if (!isCurrent()) return;
         return; // 轮询失败等下一轮
       }
       if (!latest || latest.status === 'PENDING') return;
@@ -1048,6 +1182,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       if (latest.status === 'APPROVED') {
         message.info('发布审批已通过，已自动发布为新版本');
         const info = await getModelingModel(modelId).catch(() => null);
+        if (!isCurrent()) return;
         if (info) setModelInfo(info);
         window.dispatchEvent(new CustomEvent(MODELING_PUBLISHED_EVENT, { detail: { modelId } }));
       } else if (latest.status === 'REJECTED') {
@@ -1055,10 +1190,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
       }
     }, PUBLISH_APPROVAL_POLL_MS);
     return () => clearInterval(timer);
-  }, [modelId, publishApproval?.id, publishApproval?.status]);
+  }, [modelId, publishApproval?.id, publishApproval?.status, captureEditorResource]);
 
   // 类型下拉与后端方言目录同源（ticket 07）
   useEffect(() => {
+    const isCurrent = captureEditorResource();
     if (!modelId || !structure?.dialect) {
       typeCatalogRef.current = [];
       setTypeCatalog([]);
@@ -1066,22 +1202,26 @@ const emptyColumnDraft = (): ColumnDraft => ({
     }
     getModelingTypeCatalog(modelId)
       .then((catalog) => {
+        if (!isCurrent()) return;
         typeCatalogRef.current = catalog || [];
         setTypeCatalog(typeCatalogRef.current);
       })
       .catch(() => {
+        if (!isCurrent()) return;
         typeCatalogRef.current = [];
         setTypeCatalog([]);
       });
-  }, [modelId, structure?.dialect]);
+  }, [modelId, structure?.dialect, captureEditorResource]);
 
   // C2(2026-09-17):"数据标准"列把类型标准 ID 解析为"名称（编码）";失败降级为空
   useEffect(() => {
+    const isCurrent = captureEditorResource();
     if (!modelId) {
       return;
     }
     getStandardOptions(['TYPE', 'UNIT', 'CALIBER', 'SECURITY'])
       .then((standards) => {
+        if (!isCurrent()) return;
         const nameById: Record<number, string> = {};
         Object.values(standards ?? {}).forEach((list) =>
           (list ?? []).forEach((item) => {
@@ -1091,7 +1231,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         setStandardNameById(nameById);
       })
       .catch(() => undefined);
-  }, [modelId]);
+  }, [modelId, captureEditorResource]);
 
   const updateRow = (key: number, patch: Partial<ColumnDraft>) => {
     markDirty();
@@ -1100,6 +1240,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   /** 字段名下拉检索:按关键字远端查标准字段集,空关键字不展示候选,自定义填写不受影响。 */
   const searchStandardFields = (keyword: string) => {
+    const isCurrent = beginStandardSearch();
     const text = keyword.trim();
     clearTimeout(standardFieldSearchTimerRef.current);
     if (!text) {
@@ -1107,20 +1248,24 @@ const emptyColumnDraft = (): ColumnDraft => ({
       return;
     }
     standardFieldSearchTimerRef.current = setTimeout(() => {
+      if (!isCurrent()) return;
       void pageSemanticFields({ pageNo: 1, pageSize: 30, keyword: text })
         .then((result) => {
+          if (!isCurrent()) return;
           const batch = result?.bizData ?? [];
           batch.forEach((field) => {
             if (field.code) standardFieldByCodeRef.current.set(field.code.toLowerCase(), field);
           });
           setStandardFieldChoices(batch);
         })
-        .catch(() => setStandardFieldChoices([]));
+        .catch(() => { if (isCurrent()) setStandardFieldChoices([]); });
     }, 260);
   };
 
   /** 选中标准字段:回填字段名并带出该字段的标准引用,与「标准发现」保持一致。 */
   const bindStandardField = (row: ColumnDraft, code: string) => {
+    clearTimeout(standardFieldSearchTimerRef.current);
+    beginStandardSearch();
     const field = standardFieldByCodeRef.current.get(code.trim().toLowerCase());
     if (!field) {
       updateRow(row.key, { columnName: code });
@@ -1312,6 +1457,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
   };
 
   const handleSave = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     const seen = new Set<string>();
     for (const row of rows) {
@@ -1430,9 +1577,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
       tableProperties: Object.keys(propertyMap).length ? propertyMap : undefined,
     };
 
+    const draftUnchanged = captureDraft();
     setSaving(true);
     try {
       const issues = await validateModelingStructure(modelId, payload);
+      if (!isCurrent()) return;
+      if (!draftUnchanged()) {
+        message.info('草稿已修改，请重新保存');
+        return;
+      }
       const list = issues || [];
       setValidationIssues(list);
       if (list.some((issue) => issue.severity === 'ERROR')) {
@@ -1440,11 +1593,19 @@ const emptyColumnDraft = (): ColumnDraft => ({
         return;
       }
       await saveModelingStructure(modelId, payload);
+      if (!isCurrent()) return;
       message.success('表结构已保存');
-      await loadStructure();
+      if (!draftUnchanged()) {
+        message.info('已保存提交时的草稿，后续编辑已保留');
+        return;
+      }
+      await loadStructure(draftUnchanged);
+      if (!isCurrent()) return;
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '表结构保存失败');
     } finally {
+      if (!isCurrent()) return;
       setSaving(false);
     }
   };
@@ -1465,6 +1626,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   /** 发布:先做「未保存守卫 + 草稿 vs 上次发布 diff」，确认后才固化快照。 */
   const handlePublish = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     if (guardUnsavedBeforePublish()) return;
     setPublishing(true);
@@ -1473,6 +1636,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       const published = publishedNo
         ? await getModelingVersion(modelId, publishedNo)
         : null;
+      if (!isCurrent()) return;
       // 行主键 id 是保存时重建的易变字段，diff 与内容等值判断都应剔除（与后端语义投影口径一致）。
       const stripVolatile = (view: unknown) => {
         if (!view || typeof view !== 'object') return view;
@@ -1493,66 +1657,88 @@ const emptyColumnDraft = (): ColumnDraft => ({
         publishedVersionNo: publishedNo ?? null,
       });
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '加载发布对比失败');
     } finally {
+      if (!isCurrent()) return;
       setPublishing(false);
     }
   };
 
   const doPublish = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     setPublishing(true);
     try {
       const version = await publishModelingModel(modelId);
+      if (!isCurrent()) return;
       message.success(`已发布 V${version.versionNo}，${version.columnCount} 个字段`);
       // 刷新模型信息(状态变为 PUBLISHED)
       const info = await getModelingModel(modelId);
+      if (!isCurrent()) return;
       setModelInfo(info);
       // 发布成功联动(01):统一视图头部/版本面板刷新
       window.dispatchEvent(new CustomEvent(MODELING_PUBLISHED_EVENT, { detail: { modelId } }));
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '发布失败');
     } finally {
+      if (!isCurrent()) return;
       setPublishing(false);
     }
   };
 
   /** 发布审批(01):提交后由审批中心回调发布"批准时点的最新保存结构"，在途单唯一由后端 uk 保证。 */
   const handleSubmitPublishApproval = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     if (guardUnsavedBeforePublish()) return;
     setApprovalSubmitting(true);
     try {
       const instance = await submitModelingPublishApproval(modelId);
+      if (!isCurrent()) return;
       setPublishApproval(instance);
       message.success(`已提交发布审批（单 #${instance.id}），批准后自动发布为新版本`);
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '提交发布审批失败');
     } finally {
+      if (!isCurrent()) return;
       setApprovalSubmitting(false);
     }
   };
 
   const handleGenerateDdl = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     if (!modelId) return;
     setDdlOpen(true);
     setDdlLoading(true);
     try {
       const data = await generateModelingDdl(modelId);
+      if (!isCurrent()) return;
       setDdlScript(data?.script || '');
       setDdlDialect(data?.dialect || '');
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(error instanceof Error ? error.message : '建库脚本生成失败');
     } finally {
+      if (!isCurrent()) return;
       setDdlLoading(false);
     }
   };
 
   const handleCopyDdl = async () => {
+    const isCurrent = captureEditorResource();
+    if (!isCurrent()) return;
     try {
       await navigator.clipboard.writeText(ddlScript);
+      if (!isCurrent()) return;
       message.success('脚本已复制到剪贴板');
     } catch {
+      if (!isCurrent()) return;
       message.error('复制失败，请手动选择脚本复制');
     }
   };
@@ -2699,7 +2885,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
         cancelText="取消"
         confirmLoading={publishing}
         onOk={async () => {
+          const isCurrent = captureEditorResource();
+          if (!isCurrent()) return;
           await doPublish();
+          if (!isCurrent()) return;
           setPublishPreview(null);
         }}
         onCancel={() => setPublishPreview(null)}

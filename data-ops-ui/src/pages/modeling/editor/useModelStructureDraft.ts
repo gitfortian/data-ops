@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, useRef } from "react";
 import type { ColumnDraft, IndexDraft, PropertyDraft } from "./structureRules";
 
 export interface StructureDraft {
@@ -29,17 +29,20 @@ const initialDraft: StructureDraft = {
   dirty: false,
 };
 
-export type DraftAction = {
-  [K in keyof StructureDraft]: {
-    field: K;
-    value: SetStateAction<StructureDraft[K]>;
-  };
-}[keyof StructureDraft];
+export type DraftAction =
+  | { reset: true }
+  | {
+      [K in keyof StructureDraft]: {
+        field: K;
+        value: SetStateAction<StructureDraft[K]>;
+      };
+    }[keyof StructureDraft];
 
 export function structureDraftReducer(
   state: StructureDraft,
   action: DraftAction
 ): StructureDraft {
+  if ("reset" in action) return initialDraft;
   const previous = state[action.field];
   const value =
     typeof action.value === "function"
@@ -53,6 +56,13 @@ export function structureDraftReducer(
 /** Structure draft is local to one editor; publication and remote snapshots remain separate. */
 export function useModelStructureDraft() {
   const [draft, dispatch] = useReducer(structureDraftReducer, initialDraft);
+  const currentDraft = useRef(draft);
+  currentDraft.current = draft;
+  const captureDraft = useCallback(() => {
+    const captured = currentDraft.current;
+    return () => captured === currentDraft.current;
+  }, []);
+  const resetDraft = useCallback(() => dispatch({ reset: true }), []);
   const setTableName: Dispatch<SetStateAction<string>> = useCallback(
     (value) => dispatch({ field: "tableName", value }),
     []
@@ -97,6 +107,8 @@ export function useModelStructureDraft() {
   );
   return {
     ...draft,
+    captureDraft,
+    resetDraft,
     setTableName,
     setTableComment,
     setRows,
