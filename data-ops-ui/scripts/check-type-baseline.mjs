@@ -24,7 +24,9 @@ for (const diagnostic of result.stdout.split(
   const key = diagnostic
     .replace(/\(\d+,\d+\): error /, ": error ")
     .trim()
-    .replace(/\r/g, "");
+    .replace(/\r/g, "")
+    .replaceAll("\\", "/")
+    .replaceAll(root.replaceAll("\\", "/"), "<ui>/");
   actual[key] = (actual[key] ?? 0) + 1;
 }
 const regressions = Object.entries(actual).filter(

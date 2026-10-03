@@ -82,7 +82,6 @@
   "src/pages/integration/batch-link-up/useTaskGenerator.tsx: error TS7006: Parameter 'sourceType' implicitly has an 'any' type.": 1,
   "src/pages/integration/batch-link-up/useTaskGenerator.tsx: error TS7006: Parameter 'targetType' implicitly has an 'any' type.": 1,
   "src/pages/login/components/GoogleLoginButton.tsx: error TS2554: Expected 1 arguments, but got 0.": 1,
-  "src/pages/login/WebGLMouseTrail.tsx: error TS7016: Could not find a declaration file for module 'legendary-cursor'. 'D:/tianxy/code/data-ops/data-ops-ui/node_modules/legendary-cursor/src/index.js' implicitly has an 'any' type.\n  Try `npm i --save-dev @types/legendary-cursor` if it exists or add a new declaration (.d.ts) file containing `declare module 'legendary-cursor';`": 1,
   "src/pages/resources/resource-management/utils.ts: error TS7023: 'hasResourceInSubtree' implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.": 1,
   "src/pages/resources/resource-management/utils.ts: error TS7024: Function implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.": 1,
   "src/pages/settings/components/EnvironmentSettingsPanel.tsx: error TS2749: 'Input' refers to a value, but is being used as a type here. Did you mean 'typeof Input'?": 1,

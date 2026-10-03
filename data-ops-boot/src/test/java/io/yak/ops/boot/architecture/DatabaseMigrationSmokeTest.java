@@ -32,8 +32,12 @@ class DatabaseMigrationSmokeTest {
         Map.entry("yak.security.datasource.url", System.getenv("ARCHITECTURE_MYSQL_URL")),
         Map.entry("yak.security.datasource.username", System.getenv().getOrDefault("ARCHITECTURE_MYSQL_USERNAME", "root")),
         Map.entry("yak.security.datasource.password", System.getenv().getOrDefault("ARCHITECTURE_MYSQL_PASSWORD", "")),
-        Map.entry("yak.security.permission-registration.enabled", "false"),
-        Map.entry("yak.security.bootstrap.enabled", "false"),
+        Map.entry("yak.security.permission-registration.enabled", "true"),
+        Map.entry("yak.security.bootstrap.enabled", "true"),
+        Map.entry("yak.security.bootstrap.username", "architecture_ci_owner"),
+        Map.entry("yak.security.bootstrap.password", java.util.UUID.randomUUID().toString()),
+        Map.entry("yak.security.bootstrap.real-name", "Architecture CI"),
+        Map.entry("yak.project-space.compatibility.default-owner-username", "architecture_ci_owner"),
         Map.entry("spring.quartz.auto-startup", "false"));
     try (var context = new SpringApplicationBuilder(YakOpsApplication.class)
         .initializers(application -> application.getEnvironment().getPropertySources()
