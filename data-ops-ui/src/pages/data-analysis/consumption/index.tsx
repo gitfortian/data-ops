@@ -111,7 +111,7 @@ export default function ConsumptionDiscoveryPage() {
 
         <Spin spinning={loading}>
           {!loading && products.length === 0 ? (
-            <YakOpsEmpty description="当前筛选条件下没有可发现的数据产品" />
+            <YakOpsEmpty title="暂无数据产品" description="当前筛选条件下没有可发现的数据产品" />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
               {products.map((product) => {

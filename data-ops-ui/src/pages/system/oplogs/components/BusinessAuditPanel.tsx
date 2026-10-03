@@ -1,5 +1,6 @@
 import {
   FilterOutlined,
+  EyeOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -58,6 +59,25 @@ const EMPTY_OPTIONS: AuditFilterOptions = {
   statuses: [],
   sources: [],
 };
+
+const resourceLabels: Record<string, string> = {
+  PROJECT: '工作空间',
+  DATA_QUALITY_MONITOR: '质量监控',
+  DATA_QUALITY_RULE: '质量规则',
+  DATA_DEVELOPMENT_NODE: '开发任务',
+  DATA_DEVELOPMENT_NODES: '开发任务',
+  WORKFLOW_DEFINITION: '工作流定义',
+  WORKFLOW_EXECUTION: '工作流执行',
+  WORKFLOW_SCHEDULE: '工作流调度',
+  WORKFLOW_BACKFILL: '工作流补数',
+  MODELING_MODELS: '数据模型',
+  METRIC_METRICS: '指标',
+  SEMANTIC_LAYERS: '数仓分层',
+  MDM_OBJECTS: '主数据对象',
+  DATA_SERVICE_API_DEFS: 'API 服务',
+};
+
+const resourceLabel = (value?: string) => value ? resourceLabels[value] || '其他资源' : '资源';
 
 const statusMeta = (status?: string) => {
   if (status === 'FAILED') return { label: '失败', color: 'error' as const };
@@ -217,10 +237,12 @@ export default function BusinessAuditPanel() {
         render: (_, record) => (
           <div className="min-w-0">
             <div className="truncate">
-              {record.resourceName || record.resourceId || '-'}
+              {record.resourceName || resourceLabel(record.resourceType)}
             </div>
             {record.resourceType ? (
-              <div className="text-xs text-slate-400">{record.resourceType}</div>
+              <div className="truncate text-xs text-slate-400" title={record.resourceType}>
+                {resourceLabel(record.resourceType)}{record.resourceId ? ` · ID ${record.resourceId}` : ''}
+              </div>
             ) : null}
           </div>
         ),
@@ -258,6 +280,7 @@ export default function BusinessAuditPanel() {
           <YakButton
             type="link"
             size="small"
+            icon={<EyeOutlined />}
             onClick={() => setSelectedOperationId(record.operationId)}
           >
             查看

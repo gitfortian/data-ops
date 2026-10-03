@@ -1,6 +1,7 @@
+import Table from '@/components/ReadableTable';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { history, useSearchParams } from '@umijs/max';
-import { Button, Form, Input, Modal, message, Select, Space, Table, Tag, Typography } from 'antd';
+import { Button, Form, Input, Modal, message, Select, Space,  Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { getModelingMainline } from '@/services/modeling/view';

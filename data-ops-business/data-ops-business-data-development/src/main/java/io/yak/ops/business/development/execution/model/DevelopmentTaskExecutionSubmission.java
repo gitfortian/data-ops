@@ -1,12 +1,14 @@
 package io.yak.ops.business.development.execution.model;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.yak.ops.spi.task.model.TaskExecutionStatus;
 import java.util.Objects;
 
 /** Immediate acknowledgement returned after a manual editor execution is accepted by Task Runtime. */
 public record DevelopmentTaskExecutionSubmission(
-    Long id,
-    Long nodeId,
+    @JsonSerialize(using = ToStringSerializer.class) Long id,
+    @JsonSerialize(using = ToStringSerializer.class) Long nodeId,
     String taskType,
     String runtimeExecutionId,
     TaskExecutionStatus status) {

@@ -1,4 +1,5 @@
-import { Button, Input, message, Modal, Select, Space, Table, Tag, Tooltip } from 'antd';
+import Table from '@/components/ReadableTable';
+import { Button, Input, message, Modal, Select, Space,  Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 

@@ -117,7 +117,7 @@ export default {
   'pages.dataDevelopment.workbench.lineagePartial': '血缘解析完成，部分字段暂未能解析',
   'pages.dataDevelopment.workbench.saveBeforePublish': '发布前请先保存草稿',
   'pages.dataDevelopment.workbench.publishFailed': '发布任务失败',
-  'pages.dataDevelopment.workbench.published': '已发布 v{revision}',
+  'pages.dataDevelopment.workbench.published': '已发布 V{revision}',
   'pages.dataDevelopment.workbench.resourceFallback': '资源',
   'pages.dataDevelopment.workbench.resourceUnsaved': '「{name}」有未保存修改，请先保存后再关闭',
   'pages.dataDevelopment.workbench.resourcesUnsaved': '有 {count} 个资源编辑器尚未保存，请先保存后再关闭',

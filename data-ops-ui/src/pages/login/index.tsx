@@ -1,6 +1,8 @@
 import LoginPanel from "./LoginPanel";
+import { useIntl } from '@umijs/max';
 
 export default function LoginPage() {
+  const intl = useIntl();
   return (
     <main className="yak-login-page h-screen overflow-y-auto bg-[#fbfbfa] text-[#171717]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1540px] flex-col px-6 py-4 sm:px-10 lg:px-12 lg:pb-6 lg:pt-5 xl:px-16">
@@ -21,11 +23,11 @@ export default function LoginPage() {
                 style={{ fontFamily: "'YakOps', Inter, sans-serif" }}
               >
                 <h1 className="m-0 text-[36px] font-normal leading-[1.1] tracking-[-0.045em] text-[#171717] sm:text-[60px] lg:text-[64px]">
-                  Data ops,  &nbsp; simplified.
+                  {intl.formatMessage({ id: 'pages.login.title', defaultMessage: '让数据工作更简单' })}
                 </h1>
 
                 <p className="mt-5 text-[16px] leading-7 text-[#555] sm:text-[17px]">
-                  One workspace for your data.
+                  {intl.formatMessage({ id: 'pages.login.subtitle', defaultMessage: '在一个工作空间中完成数据开发、治理与消费。' })}
                 </p>
               </div>
 

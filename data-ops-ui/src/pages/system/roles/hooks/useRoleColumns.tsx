@@ -82,13 +82,13 @@ export function useRoleColumns({
       {
         title: '最近更新',
         key: 'updateTime',
-        width: 220,
+        width: 250,
         render: (_, role) => (
           <div>
-            <div className="text-sm text-slate-700">
+            <div className="whitespace-nowrap text-sm text-slate-700">
               {formatSystemDateTime(role.updateTime || role.createTime)}
             </div>
-            <div className="mt-1 text-xs text-slate-400">
+            <div className="mt-1 truncate text-xs text-slate-400" title={role.lastReviser}>
               {role.lastReviser
                 ? `修改人：${role.lastReviser}`
                 : `创建于 ${formatSystemDateTime(role.createTime)}`}

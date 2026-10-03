@@ -1,4 +1,5 @@
 export default {
+  'pages.dataDevelopment.publishReadiness.empty': 'Start by writing the task content',
   'pages.dataDevelopment.publishReadiness.needsSave': 'Save to validate',
   'pages.dataDevelopment.publishReadiness.needsSaveHint': 'The current editor content is not a saved Draft yet. Save the Draft before publish validation.',
   'pages.dataDevelopment.publishReadiness.loading': 'Validating Draft #{revision}',

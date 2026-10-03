@@ -58,7 +58,9 @@ export function OverviewPanel({
   );
   const trendLabels = overview?.trend?.labels || [];
   const trendValues = overview?.trend?.values || [];
-  const hasTrendData = trendLabels.length > 0 && trendValues.length > 0;
+  const executionCount = (overview?.metrics.successCount || 0)
+    + (overview?.metrics.runningCount || 0) + (overview?.metrics.failedCount || 0);
+  const hasTrendData = trendLabels.length > 0 && (executionCount > 0 || trendValues.some((value) => value > 0));
   const runsLabel = intl.formatMessage({
     id: 'pages.home.dataCenter.overview.runs',
   });
@@ -92,7 +94,7 @@ export function OverviewPanel({
   }
 
   return (
-    <div className="lg:h-[240px]">
+    <div>
       <div className="mt-2 flex items-center justify-end gap-1.5 text-[12px] text-[#7f848e]">
         <span className="h-2 w-2 rounded-full bg-[#5b8cff]" />
         {runsLabel}

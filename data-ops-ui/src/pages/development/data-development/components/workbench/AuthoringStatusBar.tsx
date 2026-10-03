@@ -39,6 +39,7 @@ type PublishedRevisionState =
 
 type PublishReadinessState =
   | { status: 'hidden' }
+  | { status: 'empty' }
   | { status: 'needs-save' }
   | { status: 'loading'; revision: number }
   | { status: 'valid'; validation: DevelopmentTaskPublishValidation }
@@ -59,6 +60,7 @@ const AuthoringStatusBar = ({
   const [publishReadiness, setPublishReadiness] =
     useState<PublishReadinessState>({ status: 'hidden' });
   const session = getEditorSession(node.id);
+  const emptySqlDraft = node.type === 'SQL' && session && !session.content.trim();
   const state = deriveAuthoringState({
     draftRevision: session?.draftRevision,
     dirty: session?.dirty,
@@ -99,6 +101,10 @@ const AuthoringStatusBar = ({
       };
     }
 
+    if (node.type === 'SQL' && session && !session.content.trim()) {
+      setPublishReadiness({ status: 'empty' });
+      return () => { active = false; };
+    }
     const draftRevision = state.draftRevision;
     if (!draftRevision || state.saveState !== 'saved') {
       setPublishReadiness({ status: 'needs-save' });
@@ -129,7 +135,7 @@ const AuthoringStatusBar = ({
     return () => {
       active = false;
     };
-  }, [canPublish, node.id, state.draftRevision, state.saveState]);
+  }, [canPublish, node.id, node.type, session?.content, state.draftRevision, state.saveState]);
 
   const saveLabel =
     state.saveState === 'saving'
@@ -151,7 +157,9 @@ const AuthoringStatusBar = ({
             );
 
   const readinessLabel =
-    publishReadiness.status === 'needs-save'
+    publishReadiness.status === 'empty'
+      ? intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.empty', defaultMessage: '先填写任务内容' })
+      : publishReadiness.status === 'needs-save'
       ? intl.formatMessage({ id: 'pages.dataDevelopment.publishReadiness.needsSave' })
       : publishReadiness.status === 'loading'
         ? intl.formatMessage(
@@ -214,7 +222,7 @@ const AuthoringStatusBar = ({
           {publishedLabel}
         </span>
 
-        <span
+        {!emptySqlDraft ? <span
           className={[
             'inline-flex shrink-0 items-center gap-1 rounded-[3px] px-1.5 py-0.5',
             state.saveState === 'unsaved'
@@ -230,7 +238,7 @@ const AuthoringStatusBar = ({
             <Check size={11} strokeWidth={1.8} />
           )}
           {saveLabel}
-        </span>
+        </span> : null}
 
         {publishReadiness.status !== 'hidden' ? (
           <span
@@ -257,7 +265,7 @@ const AuthoringStatusBar = ({
           </span>
         ) : null}
 
-        {state.publishState === 'pending' || state.publishState === 'publishing' ? (
+        {!emptySqlDraft && (state.publishState === 'pending' || state.publishState === 'publishing') ? (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-[3px] bg-[#eff8ff] px-1.5 py-0.5 text-[#175cd3]">
             {state.publishState === 'publishing' ? (
               <LoaderCircle size={11} className="animate-spin" />

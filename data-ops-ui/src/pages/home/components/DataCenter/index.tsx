@@ -46,7 +46,7 @@ export default function DataCenter() {
     : formatDate(fallbackPeriod.end);
 
   return (
-    <section className="flex min-w-0 flex-col rounded-[22px] border border-[#f0f1f3] bg-white px-6 pb-5 pt-5 lg:min-h-[400px]">
+    <section className="flex min-w-0 flex-col rounded-[22px] border border-[#f0f1f3] bg-white px-6 pb-5 pt-5">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <h2 className="shrink-0 text-xl font-semibold tracking-[-0.35px] text-[#252832]">
@@ -98,7 +98,7 @@ export default function DataCenter() {
             }
           />
 
-          <div className="h-[263px] overflow-auto pr-1">
+          <div className={activeTab === 'overview' ? 'min-h-[240px] pr-1' : 'h-[263px] overflow-auto pr-1'}>
             {activeTab === 'overview' && (
               <OverviewPanel
                 overview={overview}

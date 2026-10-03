@@ -833,12 +833,9 @@ const RuleFields = ({
 
     <div>
       <div className="mb-1.5 text-xs font-medium text-[#475467]">规则模板</div>
-      <Input
-        variant="filled"
-        bordered={false}
-        disabled
-        value={template?.name || rule.templateCode || rule.ruleType}
-      />
+      <div className="py-1.5 text-sm text-[#344054]">
+        {template?.name || rule.templateCode || rule.ruleType}
+      </div>
     </div>
 
     <div>

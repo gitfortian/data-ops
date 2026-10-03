@@ -1,3 +1,5 @@
+import YakButton from '@/components/YakButton';
+import Table from '@/components/ReadableTable';
 import { YakFilterSwitch } from '@/components/ui';
 import { API_SUCCESS_CODE } from '@/services/http/response';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
@@ -13,7 +15,6 @@ import {
   Popconfirm,
   Select,
   Spin,
-  Table,
   Tooltip,
   message,
 } from 'antd';
@@ -542,9 +543,9 @@ const ReleaseCenterPage = () => {
                   setPageNo(1);
                 }}
               />
-              <Button type="primary" onClick={search}>
+              <YakButton type="primary" onClick={search}>
                 {intl.formatMessage({ id: 'pages.dataDevelopment.common.search' })}
-              </Button>
+              </YakButton>
               <Button onClick={reset}>
                 {intl.formatMessage({ id: 'pages.dataDevelopment.common.reset' })}
               </Button>

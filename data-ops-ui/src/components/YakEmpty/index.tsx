@@ -7,6 +7,7 @@ interface YakEmptyProps {
   compact?: boolean;
   className?: string;
   children?: ReactNode;
+  icon?: ReactNode;
 }
 
 const YakEmpty = ({
@@ -15,6 +16,7 @@ const YakEmpty = ({
   compact = false,
   className = '',
   children,
+  icon,
 }: YakEmptyProps) => (
   <div
     className={[
@@ -29,7 +31,7 @@ const YakEmpty = ({
         compact ? 'h-10 w-10' : 'h-12 w-12',
       ].join(' ')}
     >
-      <Folder size={compact ? 20 : 24} strokeWidth={1.4} />
+      {icon ?? <Folder size={compact ? 20 : 24} strokeWidth={1.4} />}
     </div>
     <div className="mt-3 text-[14px] font-medium text-[#344054]">{title}</div>
     {description ? (

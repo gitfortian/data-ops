@@ -382,15 +382,12 @@ export default function SecurityProjectsPage() {
         render: (_, row) => (
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate font-medium text-slate-800">
+              <span className="truncate font-medium text-slate-800" title={row.projectCode ? `编码：${row.projectCode}` : undefined}>
                 {row.projectName}
               </span>
               {currentProject?.id === row.id ? (
                 <Tag color="processing">当前</Tag>
               ) : null}
-            </div>
-            <div className="mt-1 text-xs text-slate-400">
-              {row.projectCode || '-'}
             </div>
           </div>
         ),
@@ -445,9 +442,9 @@ export default function SecurityProjectsPage() {
       {
         title: '创建时间',
         dataIndex: 'createTime',
-        width: 168,
+        width: 210,
         render: (value) =>
-          formatSystemDateTime(value as string | undefined),
+          <span className="whitespace-nowrap">{formatSystemDateTime(value as string | undefined)}</span>,
       },
       {
         title: '操作',

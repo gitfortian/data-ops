@@ -1,4 +1,5 @@
-import { Button, Input, Modal, message, Select, Space, Table, Tag, Tooltip } from 'antd';
+import Table from '@/components/ReadableTable';
+import { Button, Input, Modal, message, Select, Space,  Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -365,7 +366,7 @@ const PolicyPage = () => {
           </div>
         </div>
         <Space>
-          {canCreate && (
+          {canCreate && (records.length > 0 || hasFilter) && (
             <YakButton className="!h-9 !rounded-lg !px-4" onClick={runInitialize}>
               初始化分层默认策略
             </YakButton>
