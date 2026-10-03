@@ -2,6 +2,7 @@ package io.yak.ops.business.agent.conversation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,6 +29,10 @@ import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -51,9 +56,13 @@ class AgentTurnExecutorTest {
   private Runnable onComplete;
   private Consumer<Throwable> onError;
   private AgentTurnRegistry registry;
+  private CountDownLatch subscribed;
+  private CountDownLatch disposed;
 
   @BeforeEach
   void setUp() {
+    subscribed = new CountDownLatch(1);
+    disposed = new CountDownLatch(1);
     agentRuntime = mock(AgentRuntime.class);
     observationCollector = mock(io.yak.ops.business.agent.runtime.AgentObservationCollector.class);
     turnRepository = mock(AgentTurnRepository.class);
@@ -70,7 +79,8 @@ class AgentTurnExecutorTest {
               onEvent = inv.getArgument(5);
               onComplete = inv.getArgument(6);
               onError = inv.getArgument(7);
-              io.yak.ops.business.agent.runtime.TurnSubscription handle = () -> {};
+              io.yak.ops.business.agent.runtime.TurnSubscription handle = () -> disposed.countDown();
+              subscribed.countDown();
               return handle;
             });
     registry = new AgentTurnRegistry();
@@ -103,6 +113,38 @@ class AgentTurnExecutorTest {
         observationCollector,
         mock(io.yak.ops.business.agent.memory.MemoryFlushService.class),
         new PassthroughProjectContextScope());
+  }
+
+  @Test
+  void admissionRemainsOccupiedUntilAsynchronousCompletion() throws Exception {
+    var worker = Executors.newSingleThreadExecutor();
+    try {
+      var execution = worker.submit(() -> executor().executeAndAwait(startRecord()));
+      assertTrue(subscribed.await(2, TimeUnit.SECONDS));
+      assertThrows(TimeoutException.class, () -> execution.get(100, TimeUnit.MILLISECONDS));
+      onComplete.run();
+      execution.get(2, TimeUnit.SECONDS);
+      assertTrue(registry.runningTurnId("s1").isEmpty());
+    } finally {
+      worker.shutdownNow();
+    }
+  }
+
+  @Test
+  void shutdownDisposesInferenceWithoutInventingATerminalOutcome() throws Exception {
+    var worker = Executors.newSingleThreadExecutor();
+    try {
+      var execution = worker.submit(() -> executor().executeAndAwait(startRecord()));
+      assertTrue(subscribed.await(2, TimeUnit.SECONDS));
+      worker.shutdownNow();
+      execution.get(2, TimeUnit.SECONDS);
+      assertTrue(disposed.await(2, TimeUnit.SECONDS));
+      assertTrue(registry.runningTurnId("s1").isEmpty());
+      verify(turnRepository, never()).cancelRunning(anyString());
+      verify(turnRepository, never()).complete(anyString());
+    } finally {
+      worker.shutdownNow();
+    }
   }
 
   @Test

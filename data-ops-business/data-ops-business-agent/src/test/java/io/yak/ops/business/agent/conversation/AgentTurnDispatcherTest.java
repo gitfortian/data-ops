@@ -27,9 +27,9 @@ class AgentTurnDispatcherTest {
     AgentTurnRecord first = turn("first"), second = turn("second"), third = turn("third");
     CountDownLatch started = new CountDownLatch(1), release = new CountDownLatch(1);
     CountDownLatch queuedFinished = new CountDownLatch(1), retriedFinished = new CountDownLatch(1);
-    doAnswer(call -> { started.countDown(); assertTrue(release.await(2, TimeUnit.SECONDS)); return null; }).when(executor).execute(first);
-    doAnswer(call -> { queuedFinished.countDown(); return null; }).when(executor).execute(second);
-    doAnswer(call -> { retriedFinished.countDown(); return null; }).when(executor).execute(third);
+    doAnswer(call -> { started.countDown(); assertTrue(release.await(2, TimeUnit.SECONDS)); return null; }).when(executor).executeAndAwait(first);
+    doAnswer(call -> { queuedFinished.countDown(); return null; }).when(executor).executeAndAwait(second);
+    doAnswer(call -> { retriedFinished.countDown(); return null; }).when(executor).executeAndAwait(third);
     when(repository.listQueued(anyInt())).thenReturn(List.of(first), List.of(second, third), List.of(third));
     AgentTurnDispatcher dispatcher = new AgentTurnDispatcher(repository, executor, properties);
     try {
@@ -40,7 +40,7 @@ class AgentTurnDispatcherTest {
       assertTrue(queuedFinished.await(2, TimeUnit.SECONDS));
       dispatcher.sweep();
       assertTrue(retriedFinished.await(2, TimeUnit.SECONDS));
-      verify(executor, times(1)).execute(third);
+      verify(executor, times(1)).executeAndAwait(third);
     } finally {
       release.countDown();
       dispatcher.shutdown();

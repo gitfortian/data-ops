@@ -16,6 +16,7 @@ import io.yak.ops.business.agent.telemetry.AgentStepRecorder;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -46,6 +47,23 @@ public class AgentTurnExecutor {
   private final ProjectContextScope projectContextScope;
 
   public void execute(AgentTurnRecord record) {
+    startExecution(record, new CountDownLatch(1));
+  }
+
+  /** Dispatcher-only admission lease: keep a worker until inference settles or shutdown interrupts. */
+  void executeAndAwait(AgentTurnRecord record) {
+    CountDownLatch completed = new CountDownLatch(1);
+    startExecution(record, completed);
+    try {
+      completed.await();
+    } catch (InterruptedException shutdown) {
+      Thread.currentThread().interrupt();
+      // Leave durable RUNNING truth for the existing orphan -> INTERRUPTED recovery policy.
+      turnRegistry.detach(record.turnId());
+    }
+  }
+
+  private void startExecution(AgentTurnRecord record, CountDownLatch completed) {
     // PROJECT_RUNTIME：异步上下文恢复——从轮次持久化的 projectId 恢复项目空间，
     // 使工具调用内 CurrentProject.requireProjectId() 可用。
     long projectId = record.projectId();
@@ -53,18 +71,20 @@ public class AgentTurnExecutor {
       log.error("turn has no project binding, cannot execute: turnId={}", record.turnId());
       turnRepository.fail(record.turnId(), "NO_PROJECT", "会话未绑定项目空间，无法执行推理");
       appendQuietly(record.turnId(), ChatTurnEvent.error("会话未绑定项目空间，无法执行推理"));
+      completed.countDown();
       return;
     }
     projectContextScope.run(
         new ProjectContext(projectId, "agent-turn"),
-        () -> doExecute(record));
+        () -> doExecute(record, completed));
   }
 
-  private void doExecute(AgentTurnRecord record) {
+  private void doExecute(AgentTurnRecord record, CountDownLatch completed) {
     String turnId = record.turnId();
     String sessionId = record.sessionId();
     if (!turnRepository.claimForExecution(turnId)) {
       log.debug("turn skipped (not claimable): turnId={}, status={}", turnId, record.status());
+      completed.countDown();
       return;
     }
     TurnInput input;
@@ -73,6 +93,7 @@ public class AgentTurnExecutor {
     } catch (RuntimeException e) {
       turnRepository.fail(turnId, "GENERIC", "轮次输入投影损坏：" + e.getMessage());
       appendQuietly(turnId, ChatTurnEvent.error("轮次输入无效，已终止执行"));
+      completed.countDown();
       return;
     }
     if (record.kind() == io.yak.ops.business.agent.domain.TurnKind.RESUME
@@ -88,7 +109,7 @@ public class AgentTurnExecutor {
 
     // 单飞真相在提交侧（turn 状态机 + 提交 stripe 串行化），执行器不持有进程内锁
 
-    TurnState state = new TurnState();
+    TurnState state = new TurnState(completed);
     state.startMillis = System.currentTimeMillis();
     try {
       TurnSubscription subscription =
@@ -113,9 +134,12 @@ public class AgentTurnExecutor {
                   error -> finishFailed(record, input, state, error));
       // 停止生成收尾闭包：dispose 由 registry 触发，随后补取消终态与消息树落笔
       turnRegistry.register(sessionId, turnId, subscription, () -> finishCancelled(record, input, state));
+      // A synchronous completion may have settled before registration returned.
+      if (state.completed.getCount() == 0) turnRegistry.unregister(turnId);
     } catch (RuntimeException assembleError) {
       finishFailed(record, input, state, assembleError);
     }
+
   }
 
   private Consumer<ChatTurnEvent> consume(AgentTurnRecord record, TurnState state) {
@@ -194,7 +218,7 @@ public class AgentTurnExecutor {
       }
       completeAssistant(record, input, state);
     } finally {
-      settle(record.turnId());
+      settle(record.turnId(), state);
     }
   }
 
@@ -213,7 +237,7 @@ public class AgentTurnExecutor {
       appendQuietly(record.turnId(), ChatTurnEvent.error(preview, code));
       completeAssistant(record, input, state);
     } finally {
-      settle(record.turnId());
+      settle(record.turnId(), state);
     }
   }
 
@@ -229,7 +253,7 @@ public class AgentTurnExecutor {
       appendQuietly(record.turnId(), ChatTurnEvent.of(ChatTurnEvent.TurnEventType.TURN_CANCELLED));
       completeAssistant(record, input, state);
     } finally {
-      settle(record.turnId());
+      settle(record.turnId(), state);
     }
   }
 
@@ -252,10 +276,14 @@ public class AgentTurnExecutor {
     state.pendingTools.clear();
   }
 
-  private void settle(String turnId) {
-    turnRegistry.unregister(turnId);
-    // 轮次终态：清理 turn 级记账状态（工具父链映射），防长生命周期泄漏
-    observationCollector.clearTurn(turnId);
+  private void settle(String turnId, TurnState state) {
+    try {
+      turnRegistry.unregister(turnId);
+      // 轮次终态：清理 turn 级记账状态（工具父链映射），防长生命周期泄漏
+      observationCollector.clearTurn(turnId);
+    } finally {
+      state.completed.countDown();
+    }
   }
 
   private static String turnSummaryStats(TurnState state) {
@@ -327,6 +355,10 @@ public class AgentTurnExecutor {
 
   /** 一轮执行的运行时可变状态（事件驱动串行访问，无跨线程共享）。 */
   private static class TurnState {
+    final CountDownLatch completed;
+    TurnState(CountDownLatch completed) {
+      this.completed = completed;
+    }
     /** claim 成功时刻（服务端权威轮次耗时锚点，I2）。 */
     long startMillis;
     final StringBuilder answer = new StringBuilder();

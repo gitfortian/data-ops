@@ -42,6 +42,13 @@ public class AgentTurnRegistry {
     return Optional.ofNullable(sessionIndex.get(sessionId));
   }
 
+  /** Process shutdown releases inference resources; persistent orphan recovery owns the outcome. */
+  void detach(String turnId) {
+    Handle handle = running.remove(turnId);
+    sessionIndex.values().removeIf(turnId::equals);
+    if (handle != null) handle.subscription().dispose();
+  }
+
   /** 停止生成：dispose 上游 + 执行取消收尾。无登记时静默（排队轮次走存储侧取消）。 */
   public void cancelBySession(String sessionId) {
     String turnId = sessionIndex.remove(sessionId);

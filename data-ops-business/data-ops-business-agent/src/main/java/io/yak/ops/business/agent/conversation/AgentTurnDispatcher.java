@@ -34,7 +34,7 @@ public class AgentTurnDispatcher {
   private final AgentTurnExecutor executor;
   private final AgentProperties properties;
 
-  /** 已投递给 worker、尚未完成认领的轮次：周期重叠时避免重复提交任务（认领本身仍由 CAS 兜底）。 */
+  /** 已投递、尚未完成或挂起的轮次；持久化认领仍由 CAS 兜底。 */
   private final Set<String> dispatched = ConcurrentHashMap.newKeySet();
 
   private final ExecutorService workers;
@@ -100,7 +100,7 @@ public class AgentTurnDispatcher {
         workers.execute(
           () -> {
             try {
-              executor.execute(record);
+              executor.executeAndAwait(record);
             } finally {
               dispatched.remove(record.turnId());
             }
@@ -118,5 +118,12 @@ public class AgentTurnDispatcher {
   void shutdown() {
     wakeups.shutdownNow();
     workers.shutdownNow();
+    try {
+      if (!workers.awaitTermination(5, TimeUnit.SECONDS)) {
+        log.warn("Agent workers did not finish resource cleanup within the shutdown budget");
+      }
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 }

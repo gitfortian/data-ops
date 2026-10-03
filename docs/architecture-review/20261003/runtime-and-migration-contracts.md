@@ -15,7 +15,7 @@ Job 生产通用运行结果，Workflow/Development 等消费者读取该结果�
 | Python / Shell / Java | Job runtime / 对应 executionId | 每类型 32 个活跃执行，限制执行器和子进程数量 | 同上；进程内活跃 handle 不跨 JVM 恢复 | 不把取消请求转换为新业务状态；插件拥有外部取消动作 |
 | Offline Sync | Offline revision/batch/execution；向 Job 注册能力 | 使用其现有执行认领和 connector 预算 | 不可变 revision、checkpoint、批次与重试仍由 Offline 拥有 | 沿用其外部引擎证据与取消确认 |
 | Workflow | Workflow ledger / execution + attempt + dispatch | 沿用 dispatch、恢复、超时协调器 | 持久恢复仍由 Workflow owner 执行 | 不确定外部结果不伪造成功 |
-| Agent | 持久 turn 队列 / CAS claim | 固定工作池、有界队列（默认16）、独立合并唤醒 | 投递拒绝释放 dispatched；QUEUED 记录可由下一次扫描认领 | 沿用现有 conversation/turn 取消与 orphan 收敛 |
+| Agent | 持久 turn 队列 / CAS claim | 固定工作池占用直到异步推理完成或挂起；有界队列（默认16）、独立合并唤醒 | 投递拒绝释放 dispatched；QUEUED 记录可由下一次扫描认领 | 进程关闭释放上游订阅；持久 RUNNING 仍由下次启动的 orphan→INTERRUPTED 规则收敛 |
 | Asset reconcile / Alert | 既有 owner | 沿用单进程互斥和插件投递机制 | 不能据 JVM 互斥宣称分布式唯一认领 | 沿用 owner 的现有失败证据 |
 
 `yak.job.runtime.max-concurrent=32`、`max-retained-handles=4096`、`terminal-retention-millis=300000`。预算按执行类型、按 JVM 生效。
