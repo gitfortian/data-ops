@@ -82,20 +82,29 @@ public class AgentTurnExecutor {
   private void doExecute(AgentTurnRecord record, CountDownLatch completed) {
     String turnId = record.turnId();
     String sessionId = record.sessionId();
-    if (!turnRepository.claimForExecution(turnId)) {
-      log.debug("turn skipped (not claimable): turnId={}, status={}", turnId, record.status());
-      completed.countDown();
-      return;
-    }
     TurnInput input;
     try {
       input = TurnInputCodec.decode(record.payloadJson());
     } catch (RuntimeException e) {
+      if (!turnRepository.claimForExecution(turnId)) {
+        completed.countDown();
+        return;
+      }
       turnRepository.fail(turnId, "GENERIC", "轮次输入投影损坏：" + e.getMessage());
       appendQuietly(turnId, ChatTurnEvent.error("轮次输入无效，已终止执行"));
       completed.countDown();
       return;
     }
+    TurnState state = new TurnState(completed);
+    state.startMillis = System.currentTimeMillis();
+    DeferredSubscription deferred = new DeferredSubscription();
+    if (!turnRegistry.claimAndRegister(sessionId, turnId, deferred,
+        () -> finishCancelled(record, input, state),
+        () -> turnRepository.claimForExecution(turnId))) {
+      completed.countDown();
+      return;
+    }
+    if (state.completed.getCount() == 0) return;
     if (record.kind() == io.yak.ops.business.agent.domain.TurnKind.RESUME
         && input.feedbacks() != null) {
       // O3 HITL 观测：恢复事实落 span（载荷=用户应答原文，口径沉淀的一等来源）
@@ -107,10 +116,6 @@ public class AgentTurnExecutor {
       }
     }
 
-    // 单飞真相在提交侧（turn 状态机 + 提交 stripe 串行化），执行器不持有进程内锁
-
-    TurnState state = new TurnState(completed);
-    state.startMillis = System.currentTimeMillis();
     try {
       TurnSubscription subscription =
           record.kind() == io.yak.ops.business.agent.domain.TurnKind.START
@@ -132,9 +137,9 @@ public class AgentTurnExecutor {
                   consume(record, state),
                   () -> finishCompleted(record, input, state),
                   error -> finishFailed(record, input, state, error));
-      // 停止生成收尾闭包：dispose 由 registry 触发，随后补取消终态与消息树落笔
-      turnRegistry.register(sessionId, turnId, subscription, () -> finishCancelled(record, input, state));
-      // A synchronous completion may have settled before registration returned.
+      // Late cancellation handles are disposed immediately if construction was cancelled.
+      deferred.attach(subscription);
+      // A synchronous completion or cancellation may have settled during construction.
       if (state.completed.getCount() == 0) turnRegistry.unregister(turnId);
     } catch (RuntimeException assembleError) {
       finishFailed(record, input, state, assembleError);
@@ -144,6 +149,7 @@ public class AgentTurnExecutor {
 
   private Consumer<ChatTurnEvent> consume(AgentTurnRecord record, TurnState state) {
     return event -> {
+      if (state.completed.getCount() == 0) return;
       // 轮次终帧补服务端权威耗时（I2）：事件帧与 step 的计时都出自执行器，前端不再本地掐表
       if (event.type() == ChatTurnEvent.TurnEventType.TURN_FINISHED) {
         event = event.withElapsedMs(elapsed(state));
@@ -184,6 +190,7 @@ public class AgentTurnExecutor {
 
   private void finishCompleted(AgentTurnRecord record, TurnInput input, TurnState state) {
     try {
+      if (state.completed.getCount() == 0) return;
       if (state.clarified.get()) {
         // O3 HITL 观测：挂起事实落 span（toolCallId 与事件帧 join；载荷=澄清问题）
         observationCollector.event(record.sessionId(), record.turnId(),
@@ -225,6 +232,7 @@ public class AgentTurnExecutor {
   private void finishFailed(
       AgentTurnRecord record, TurnInput input, TurnState state, Throwable error) {
     try {
+      if (state.completed.getCount() == 0) return;
       String code = classify(error);
       String preview = safeMessage(error);
       // 终态收敛律：失败前先闭合全部未结算工具调用，前端不得残留运行中卡片
@@ -241,7 +249,7 @@ public class AgentTurnExecutor {
     }
   }
 
-  /** 停止生成终态：dispose 后由 registry 回调；CANECELLED 抢占失败说明恰好自然终态，仅兜底收尾。 */
+  /** 停止生成终态：registry 在 dispose 上游之前确认取消事实。 */
   private void finishCancelled(
       AgentTurnRecord record, TurnInput input, TurnState state) {
     try {
@@ -352,6 +360,26 @@ public class AgentTurnExecutor {
         : message;
   }
 
+
+  /** Cancellation can arrive while runtime.stream is still constructing its handle. */
+  private static final class DeferredSubscription implements TurnSubscription {
+    private TurnSubscription subscription;
+    private boolean disposed;
+
+    synchronized void attach(TurnSubscription subscription) {
+      if (disposed) subscription.dispose();
+      else this.subscription = subscription;
+    }
+
+    @Override
+    public synchronized void dispose() {
+      disposed = true;
+      if (subscription != null) {
+        subscription.dispose();
+        subscription = null;
+      }
+    }
+  }
 
   /** 一轮执行的运行时可变状态（事件驱动串行访问，无跨线程共享）。 */
   private static class TurnState {
