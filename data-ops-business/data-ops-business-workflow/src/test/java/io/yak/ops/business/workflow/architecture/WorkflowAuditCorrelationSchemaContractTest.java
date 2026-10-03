@@ -92,7 +92,8 @@ class WorkflowAuditCorrelationSchemaContractTest {
    * 使原先针对单个文件的断言继续有效。
    */
   private static String section(String sql, String sourceFileName) {
-    String[] lines = sql.split("\n");
+    // 合并后的单文件可能是 CRLF：先归一化换行，否则行尾 \r 会让 endsWith 失配。
+    String[] lines = sql.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
     int start = -1;
     for (int i = 0; i < lines.length; i++) {
       if (lines[i].startsWith("-- Source:") && lines[i].endsWith(sourceFileName)) {
