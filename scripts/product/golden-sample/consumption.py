@@ -150,6 +150,10 @@ def accept(api, samples, secret, control_project):
             "Invocation did not preserve stable Consumer identity")
     require(golden_service["usageNormalization"]["state"] == "NORMALIZED", "Invocation Usage missing")
     require(golden_service["invocationRecord"]["rowCount"] == 3, "API sample row count mismatch")
+    require(str(golden_dataset["queryPerformance"]["datasetVersionId"]) == samples["dataset"]["versionId"],
+            "Query Performance did not preserve the published Dataset version")
+    require(str(golden_service["invocationRecord"]["sourceRevisionId"]) == samples["dataService"]["revisionId"],
+            "Invocation did not preserve the published source revision")
     details = {}
     for kind, sample, consumer_type, domain, identity, mode in [
         ("DATASET", samples["dataset"], "USER", "SECURITY_PRINCIPAL", api.user["userName"], "QUERY"),
@@ -163,6 +167,12 @@ def accept(api, samples, secret, control_project):
         require(first["id"] == second["id"], "Duplicate subscription identity")
         detail = api.request("GET", f"/api/v1/consumption/products/{key}")
         require(detail["state"] == "FOUND", "Canonical source was not found")
+        version_id = sample["versionId"] if kind == "DATASET" else sample["revisionId"]
+        require(str(detail["product"]["activeVersion"]["identity"]) == version_id,
+                "Canonical did not preserve the published source version")
+        require(str(detail["product"]["producerRef"]["identity"]) == sample["nodeId"]
+                and str(detail["product"]["assetRef"]["identity"]) == sample["assetId"],
+                "Canonical source backlinks did not preserve stable identities")
         impact = api.request("GET", "/api/v1/consumption/impact", params={"productKey": key, "usageLimit": 200})
         require(impact["usageState"] == "READY", "Successful Usage Evidence missing")
         expected_ref = ("DATASET_QUERY_PERFORMANCE:query:" + golden_dataset["queryPerformance"]["queryId"]
@@ -188,6 +198,8 @@ def accept(api, samples, secret, control_project):
     denied = requests.get(api.base_url + samples["dataService"]["runtimePath"],
                           headers={"X-API-Key": "invalid-golden-sample-key"}, timeout=30)
     require(denied.status_code == 401, "Invalid API key was not rejected with HTTP 401")
+    management = requests.get(api.base_url + "/api/v1/data-service/consumers", timeout=30)
+    require(management.status_code == 401, "Anonymous service management was not rejected")
     # Disable only the dedicated source-managed sample through its owning authoring API.
     service_key = "DATA_SERVICE:" + samples["dataService"]["id"]
     source_path = f"{NODES}/{samples['dataService']['nodeId']}/data-service/publication"
@@ -219,7 +231,7 @@ def accept(api, samples, secret, control_project):
     finally:
         api.project_id = original_project
     return {"dataset": golden_dataset, "dataService": golden_service, "products": details,
-            "invalidPublicApiKey": "PASSED", "crossProject": "PASSED",
+            "invalidPublicApiKey": "PASSED", "anonymousManagement": "PASSED", "crossProject": "PASSED",
             "sourceDisableRecovery": {"state": "PASSED", "disabledInvocationHttpStatus": disabled_http_status,
                                       "recoveryHttpStatus": recovered.status_code}}
 

@@ -17,6 +17,10 @@ the physical-column query decision UNAVAILABLE with the exact-query next step. Q
 continues to use the Dataset-owned SQL projection, security policy, masking and audit gate.
 Access never creates successful Usage.
 
+Boot projects Yak CurrentUser into MVC Principal only for Dataset/Consumption console APIs.
+The role codes come from the owning RoleService; unavailable roles stop the request rather than
+dropping ROLE policies. Neither client identity headers nor a public Consumer key becomes a USER.
+
 Standalone SQL Dataset producer navigation uses DevelopmentDatasetFacade owning provenance;
 QUERY_REVISION uses the fixed Task Catalog source. Neither uses name matching.
 

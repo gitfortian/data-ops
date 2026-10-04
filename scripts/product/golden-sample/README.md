@@ -89,7 +89,8 @@ Asset 读/更新权限。YAK_OPS_NODE 可指定 Node 可执行路径。只使用
 secret 仅在本次进程内用于调用，不写清单/证据，不回显失败子进程输出。
 
 --accept 会实际 Query/Invoke、新增真实 Usage、验证 exact evidence 与 Consumer identity，
-并两次订阅核对幂等。还会用无效 Key 验证 401、在对照 Project 验证 NOT_FOUND，
+并两次订阅核对幂等。还会用无效 Key 和匿名管理请求验证 401、在对照 Project
+验证产品 NOT_FOUND 与 Asset NOT_INDEXED，
 通过来源工作台临时下线专用服务并 finally 恢复，核对版本保留、availability 与调用恢复。
 下线现有实现可能返回 HTTP 500；证据记录这个局限，不冒充完整 503 契约。
 
