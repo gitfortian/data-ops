@@ -40,11 +40,14 @@ if [[ -n "${APP_OPTS:-}" ]]; then
   read -r -a APP_ARGS <<< "${APP_OPTS}"
 fi
 
+if [[ -f "${CONF_DIR}/logback-spring.xml" ]]; then
+  JAVA_ARGS+=("-Dlogging.config=${CONF_DIR}/logback-spring.xml")
+fi
+
 exec "${JAVA_BIN}" \
   "${JAVA_ARGS[@]}" \
   -Dyak.ops.home="${YAK_OPS_HOME}" \
   -Dloader.path="${DRIVER_DIR}" \
-  -Dlogging.config="${CONF_DIR}/logback-spring.xml" \
   -jar "${YAK_OPS_HOME}/libs/yak-ops-api.jar" \
   --spring.config.location="${CONF_DIR}/application.yml" \
   "${APP_ARGS[@]}"
