@@ -5,10 +5,16 @@ import { execFileSync } from 'node:child_process';
 
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {encoding:'utf8'}).split('\0').filter(p => p && fs.existsSync(p));
 const read = p => fs.readFileSync(p, 'utf8');
+const legacyFramework = 'data-ops-framework/legacy';
+const violations = [];
 const modules = [];
 function reactor(pom) {
   const xml = read(pom);
   const directory = path.posix.dirname(pom);
+  if (directory === legacyFramework || directory.startsWith(legacyFramework + '/')) {
+    violations.push(`${pom}: legacy framework must remain outside the current Maven reactor`);
+    return;
+  }
   const artifact = xml.replace(/<parent>[\s\S]*?<\/parent>/g, '').match(/<artifactId>([^<]+)<\/artifactId>/)?.[1];
   const dependencies = [...xml.replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/g, '').replace(/<build>[\s\S]*?<\/build>/g, '').matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)].filter(m => !/<scope>test<\/scope>/.test(m[1])).map(m => m[1].match(/<artifactId>([^<]+)<\/artifactId>/)?.[1]);
   modules.push({directory, artifact, dependencies});
@@ -17,13 +23,17 @@ function reactor(pom) {
 reactor('pom.xml');
 modules.sort((a,b) => b.directory.length-a.directory.length);
 const owner = p => modules.find(m => m.directory !== '.' && p.startsWith(m.directory+'/'))?.artifact;
-const java = files.filter(p => p.includes('/src/main/java/') && p.endsWith('.java') && !p.startsWith('data-ops-framework-legacy/')).map(p => ({file:p, module:owner(p), text:read(p)}));
+const java = files.filter(p => p.includes('/src/main/java/') && p.endsWith('.java') && !p.startsWith(legacyFramework + '/')).map(p => ({file:p, module:owner(p), text:read(p)}));
 const classes = new Map(java.map(j => [j.text.match(/^package ([^;]+);/m)?.[1]+'.'+path.posix.basename(j.file,'.java'), j]));
-const violations = [];
 const baseline = JSON.parse(read('scripts/architecture/legacy-shared-persistence.json'));
+for (const m of modules) {
+  if (m.dependencies.includes('data-job-spring-boot-starter'))
+    violations.push(`${m.directory}/pom.xml: current application must not depend on legacy data-job-spring-boot-starter`);
+}
 for (const j of java) {
   for (const m of j.text.matchAll(/^import (?:static )?([^;]+);/gm)) {
     const name = m[1];
+    if (name.startsWith('com.yak.job.')) violations.push(`${j.file}: current application must not import legacy ${name}`);
     if ((j.file.startsWith('data-ops-common/') || j.file.startsWith('data-ops-core/') || j.file.startsWith('data-ops-spi/') || j.file.startsWith('data-ops-plugins/')) && name.startsWith('io.yak.ops.business.')) violations.push(`${j.file}: foundation/plugin imports business ${name}`);
     if (j.module?.startsWith('data-ops-business-') && name.includes('BusinessDatabaseConfiguration')) violations.push(`${j.file}: shared persistence assembly belongs to Boot`);
     if (crossesPersistenceBoundary(j, name, classes)) violations.push(`${j.file}: cross-domain persistence ${name}`);
