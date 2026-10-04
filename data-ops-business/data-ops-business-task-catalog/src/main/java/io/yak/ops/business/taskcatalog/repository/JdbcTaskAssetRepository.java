@@ -1,5 +1,6 @@
 package io.yak.ops.business.taskcatalog.repository;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.taskcatalog.domain.TaskAsset;
 import io.yak.ops.core.project.CurrentProject;
@@ -59,11 +60,24 @@ public class JdbcTaskAssetRepository implements TaskAssetRepository {
     Long effectiveProjectId = effectiveProjectId(projectId);
     claimLegacyProject(source, sourceRef, effectiveProjectId);
     jdbcTemplate.update(
-        """
+        (jdbcTemplate.getDataSource() != null && JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource())) ? """
         INSERT INTO yak_task_asset (
             source, source_ref, project_id, name, task_type, status,
             current_revision_id, current_revision_no, create_time, update_time)
-        VALUES (?, ?, ?, ?, ?, 'ONLINE', ?, ?, NOW(6), NOW(6))
+        VALUES (?, ?, ?, ?, ?, 'ONLINE', ?, ?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
+        ON CONFLICT (project_scope_id, source, source_ref) DO UPDATE SET
+          project_id = excluded.project_id,
+          name = excluded.name,
+          task_type = excluded.task_type,
+          status = 'ONLINE',
+          current_revision_id = excluded.current_revision_id,
+          current_revision_no = excluded.current_revision_no,
+          update_time = CURRENT_TIMESTAMP
+        """ : """
+        INSERT INTO yak_task_asset (
+            source, source_ref, project_id, name, task_type, status,
+            current_revision_id, current_revision_no, create_time, update_time)
+        VALUES (?, ?, ?, ?, ?, 'ONLINE', ?, ?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
         ON DUPLICATE KEY UPDATE
             project_id = VALUES(project_id),
             name = VALUES(name),
@@ -71,7 +85,7 @@ public class JdbcTaskAssetRepository implements TaskAssetRepository {
             status = 'ONLINE',
             current_revision_id = VALUES(current_revision_id),
             current_revision_no = VALUES(current_revision_no),
-            update_time = NOW(6)
+            update_time = CURRENT_TIMESTAMP(6)
         """,
         source.name(),
         sourceRef,
@@ -139,7 +153,7 @@ public class JdbcTaskAssetRepository implements TaskAssetRepository {
       String taskType) {
     Long effectiveProjectId = effectiveProjectId(projectId);
     claimLegacyProject(source, sourceRef, effectiveProjectId);
-    String sql = "UPDATE yak_task_asset SET project_id = ?, name = ?, task_type = ?, update_time = NOW(6) "
+    String sql = "UPDATE yak_task_asset SET project_id = ?, name = ?, task_type = ?, update_time = CURRENT_TIMESTAMP(6) "
         + "WHERE source = ? AND source_ref = ?"
         + (effectiveProjectId == null ? " AND project_id IS NULL" : " AND project_id = ?");
     List<Object> args = new ArrayList<>();
@@ -158,7 +172,7 @@ public class JdbcTaskAssetRepository implements TaskAssetRepository {
       String sourceRef,
       TaskAssetStatus status) {
     Long projectId = currentProjectId();
-    String sql = "UPDATE yak_task_asset SET status = ?, update_time = NOW(6) WHERE source = ? AND source_ref = ?"
+    String sql = "UPDATE yak_task_asset SET status = ?, update_time = CURRENT_TIMESTAMP(6) WHERE source = ? AND source_ref = ?"
         + (projectId == null ? " AND project_id IS NULL" : " AND project_id = ?");
     Object[] args = projectId == null
         ? new Object[] {status.name(), source.name(), sourceRef}
@@ -181,13 +195,19 @@ public class JdbcTaskAssetRepository implements TaskAssetRepository {
       TaskAssetSource source, String sourceRef, Long projectId) {
     if (projectId == null) return;
     jdbcTemplate.update(
-        """
+        (jdbcTemplate.getDataSource() != null && JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource())) ? """
+        UPDATE yak_task_asset AS legacy
+        SET project_id = ?, update_time = CURRENT_TIMESTAMP(6)
+        WHERE NOT EXISTS (SELECT 1 FROM yak_task_asset scoped
+          WHERE scoped.source = legacy.source AND scoped.source_ref = legacy.source_ref AND scoped.project_id = ?)
+          AND legacy.source = ? AND legacy.source_ref = ? AND legacy.project_id IS NULL
+        """ : """
         UPDATE yak_task_asset legacy
         LEFT JOIN yak_task_asset scoped
           ON scoped.source = legacy.source
          AND scoped.source_ref = legacy.source_ref
          AND scoped.project_id = ?
-        SET legacy.project_id = ?, legacy.update_time = NOW(6)
+        SET legacy.project_id = ?, legacy.update_time = CURRENT_TIMESTAMP(6)
         WHERE legacy.source = ?
           AND legacy.source_ref = ?
           AND legacy.project_id IS NULL

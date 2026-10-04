@@ -211,7 +211,7 @@ public class QualityExecutionOverviewRepositoryAdapter
       boolean hourly) {
     String occurredAt = "COALESCE(e.started_at, e.queued_at, e.created_at)";
     String bucketHour =
-        hourly ? "FLOOR(HOUR(" + occurredAt + ") / 4) * 4" : "0";
+        hourly ? "FLOOR(EXTRACT(HOUR FROM " + occurredAt + ") / 4) * 4" : "0";
     String sql =
         "SELECT DATE("
             + occurredAt

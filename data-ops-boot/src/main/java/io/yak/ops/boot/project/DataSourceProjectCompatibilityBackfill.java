@@ -1,5 +1,6 @@
 package io.yak.ops.boot.project;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -53,7 +54,12 @@ public class DataSourceProjectCompatibilityBackfill {
 
     int inferredAudits =
         jdbcTemplate.update(
-            "UPDATE yak_ops_sql_execution e "
+            JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_ops_sql_execution AS e
+        SET project_id = d.project_id
+        FROM yak_ops_data_source AS d
+        WHERE e.project_id IS NULL AND d.project_id IS NOT NULL AND (e.data_source_id ~ '^[0-9]+$' AND d.id = (CASE WHEN e.data_source_id ~ '^[0-9]+$' THEN CAST(e.data_source_id AS DECIMAL) END))
+        """ : "UPDATE yak_ops_sql_execution e "
                 + "JOIN yak_ops_data_source d "
                 + "  ON e.data_source_id REGEXP '^[0-9]+$' "
                 + " AND d.id = CAST(e.data_source_id AS UNSIGNED) "

@@ -55,7 +55,8 @@
         <dependency>
             <groupId>org.opengauss</groupId>
             <artifactId>opengauss-jdbc</artifactId>
-            <version>6.0.3</version>
+            <!-- The -og build uses org.opengauss and can coexist with the platform PostgreSQL driver. -->
+            <version>6.0.3-og</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>

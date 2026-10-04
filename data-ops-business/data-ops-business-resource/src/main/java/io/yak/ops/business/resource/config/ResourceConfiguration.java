@@ -1,5 +1,6 @@
 package io.yak.ops.business.resource.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -23,7 +24,7 @@ public class ResourceConfiguration {
       @Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-resource")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-resource"))
         .table("yak_resource_schema_history")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

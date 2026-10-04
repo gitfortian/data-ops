@@ -1,5 +1,6 @@
 package io.yak.ops.business.mdm.application;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.framework.common.PagingData;
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.datasource.domain.catalog.CatalogColumn;
@@ -229,15 +230,19 @@ public class MdmCollectService {
 
   void preCreateLandingTable(String database, String table, List<CatalogColumn> columns) {
     try {
-      businessJdbc.execute(LandingDdl.createTable(database, table, columns));
+      businessJdbc.execute(LandingDdl.createTable(database, table, columns, isPostgresql()));
     } catch (RuntimeException exception) {
       throw new MdmException(
           MdmErrorCode.LANDING_TASK_CREATE_FAILED, "落地表预建失败: " + table, exception);
     }
   }
 
+  public boolean isPostgresql() {
+    return businessJdbc.getDataSource() != null && JdbcDatabase.isPostgresql(businessJdbc.getDataSource());
+  }
+
   public String businessDatabase() {
-    String database = businessJdbc.queryForObject("SELECT DATABASE()", String.class);
+    String database = businessJdbc.queryForObject(isPostgresql() ? "SELECT current_schema()" : "SELECT DATABASE()", String.class);
     if (!LandingDdl.isSafeIdentifier(database)) {
       throw new MdmException(
           MdmErrorCode.LANDING_TASK_CREATE_FAILED, "无法确定平台业务库名: " + database);

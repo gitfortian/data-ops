@@ -1,5 +1,6 @@
 package io.yak.ops.business.sync.realtime.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.sync.realtime.domain.SyncExecutionStateMachine;
@@ -34,7 +35,7 @@ public class RealtimeSyncConfiguration {
   Flyway realtimeSyncFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-realtime-sync")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-realtime-sync"))
         .table("yak_realtime_schema_history")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

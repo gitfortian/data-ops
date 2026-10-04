@@ -1,5 +1,6 @@
 package io.yak.ops.business.taskcatalog.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -18,7 +19,7 @@ public class TaskCatalogPersistenceConfiguration {
       @Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-task-catalog")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-task-catalog"))
         .table("flyway_schema_history_task_catalog")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

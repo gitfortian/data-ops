@@ -23,5 +23,20 @@ public interface WorkflowNodeExecutionMapper extends BaseMapper<WorkflowNodeExec
         failure_handled = VALUES(failure_handled),
         downstream_continuation_allowed = VALUES(downstream_continuation_allowed)
       """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_workflow_node_execution
+        (id, workflow_execution_id, node_id, failure_policy, status, output_json, error_message,
+         failure_handled, downstream_continuation_allowed)
+      VALUES
+        (#{id}, #{workflowExecutionId}, #{nodeId}, #{failurePolicy}, #{status}, #{outputJson},
+         #{errorMessage}, #{failureHandled}, #{downstreamContinuationAllowed})
+      ON CONFLICT (id) DO UPDATE SET
+        failure_policy = excluded.failure_policy,
+        status = excluded.status,
+        output_json = excluded.output_json,
+        error_message = excluded.error_message,
+        failure_handled = excluded.failure_handled,
+        downstream_continuation_allowed = excluded.downstream_continuation_allowed
+      """)
   int upsert(WorkflowNodeExecutionPO nodeExecution);
 }

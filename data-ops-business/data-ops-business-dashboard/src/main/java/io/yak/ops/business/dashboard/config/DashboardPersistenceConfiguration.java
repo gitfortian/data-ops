@@ -1,5 +1,6 @@
 package io.yak.ops.business.dashboard.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -24,7 +25,7 @@ public class DashboardPersistenceConfiguration {
             @Qualifier("yakBusinessDataSource") DataSource dataSource) {
         return Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:db/migration/yak-dashboard")
+                .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-dashboard"))
                 .table("flyway_schema_history_dashboard")
                 .baselineVersion(MigrationVersion.fromVersion("0"))
                 .baselineOnMigrate(true)

@@ -1,0 +1,64 @@
+services:
+  postgresql:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-data_ops}
+      POSTGRES_USER: ${POSTGRES_USER:-data_ops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  yak-ops-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-runtime
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      SERVER_PORT: 9527
+      SPRING_PROFILES_ACTIVE: postgresql
+      YAK_DATABASE_URL: jdbc:postgresql://postgresql:5432/${POSTGRES_DB:-data_ops}
+      YAK_DATABASE_USERNAME: ${POSTGRES_USER:-data_ops}
+      YAK_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      YAK_SECURITY_BOOTSTRAP_USERNAME: ${YAK_SECURITY_BOOTSTRAP_USERNAME:-root}
+      YAK_SECURITY_BOOTSTRAP_PASSWORD: ${YAK_SECURITY_BOOTSTRAP_PASSWORD:?Set bootstrap password}
+      YAK_OPS_DATASOURCE_MASTER_KEY: ${YAK_OPS_DATASOURCE_MASTER_KEY:?Set credential encryption key}
+      YAK_RESOURCE_LOCAL_BASE_DIRECTORY: /opt/yak-ops/data/resources
+    expose:
+      - "9527"
+    volumes:
+      - yak-ops-data:/opt/yak-ops/data
+      - yak-ops-logs:/opt/yak-ops/logs
+      - yak-ops-jdbc-drivers:/opt/yak-ops/jdbc-drivers
+
+  yak-ops-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-runtime
+    restart: unless-stopped
+    depends_on:
+      yak-ops-backend:
+        condition: service_healthy
+    ports:
+      - "${YAK_OPS_PORT:-9001}:80"
+
+volumes:
+  postgresql-data:
+  yak-ops-data:
+  yak-ops-logs:
+  yak-ops-jdbc-drivers:

@@ -1,0 +1,22 @@
+# Fresh PostgreSQL deployment; credentials are supplied by the operator.
+yak:
+  database:
+    url: ${YAK_DATABASE_URL:jdbc:postgresql://127.0.0.1:5432/data_ops}
+    username: ${YAK_DATABASE_USERNAME:data_ops}
+    password: ${YAK_DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  security:
+    datasource:
+      url: ${YAK_SECURITY_DATASOURCE_URL:${yak.database.url}}
+      username: ${YAK_SECURITY_DATASOURCE_USERNAME:${yak.database.username}}
+      password: ${YAK_SECURITY_DATASOURCE_PASSWORD:${yak.database.password}}
+      driver-class-name: org.postgresql.Driver
+
+spring:
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.isClustered: false

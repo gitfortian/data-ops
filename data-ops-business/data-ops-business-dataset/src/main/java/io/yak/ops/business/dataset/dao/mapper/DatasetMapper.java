@@ -11,6 +11,10 @@ import org.apache.ibatis.annotations.Select;
 public interface DatasetMapper extends BaseMapper<DatasetPO> {
 
   @Insert("INSERT IGNORE INTO yak_dataset_source_publication_lock (project_id, source_task_asset_id) VALUES (#{projectId}, #{sourceTaskAssetId})")
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_dataset_source_publication_lock (project_id, source_task_asset_id) VALUES (#{projectId}, #{sourceTaskAssetId})
+      ON CONFLICT DO NOTHING
+      """)
   int insertSourcePublicationLock(
       @Param("projectId") Long projectId,
       @Param("sourceTaskAssetId") long sourceTaskAssetId);

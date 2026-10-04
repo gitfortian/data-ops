@@ -1,5 +1,6 @@
 package io.yak.ops.business.sync.offline.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.http.HttpClient;
@@ -28,7 +29,7 @@ public class OfflineSyncConfiguration {
       @Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-offline-sync")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-offline-sync"))
         .table("yak_offline_sync_schema_history")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

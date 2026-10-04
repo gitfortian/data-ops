@@ -20,6 +20,15 @@ public interface MetricActivePublicationMapper extends BaseMapper<MetricActivePu
       + "metric_version_id=VALUES(metric_version_id), metric_version=VALUES(metric_version), "
       + "snapshot_digest=VALUES(snapshot_digest), published_by=VALUES(published_by), "
       + "published_at=VALUES(published_at)")
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_metric_active_publication (project_id, metric_id, publication_event_id, metric_version_id, metric_version, snapshot_digest, published_by, published_at) VALUES (#{p.projectId}, #{p.metricId}, #{p.publicationEventId}, #{p.metricVersionId}, #{p.metricVersion}, #{p.snapshotDigest}, #{p.publishedBy}, #{p.publishedAt}) ON CONFLICT (project_id, metric_id) DO UPDATE SET
+        publication_event_id = excluded.publication_event_id,
+        metric_version_id = excluded.metric_version_id,
+        metric_version = excluded.metric_version,
+        snapshot_digest = excluded.snapshot_digest,
+        published_by = excluded.published_by,
+        published_at = excluded.published_at
+      """)
   int upsert(@Param("p") MetricActivePublicationPO pointer);
 
   @Delete("DELETE FROM yak_metric_active_publication "

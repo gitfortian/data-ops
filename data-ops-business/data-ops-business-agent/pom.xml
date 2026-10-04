@@ -94,6 +94,10 @@
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
             <artifactId>agentscope-harness</artifactId>
         </dependency>
         <!-- 官方可观测性：TelemetryTracer（OTel gen_ai.* 追踪）+ Studio 可视化（均随 studio 构件发布）。 -->

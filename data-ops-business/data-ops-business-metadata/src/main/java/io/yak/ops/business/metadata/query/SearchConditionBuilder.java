@@ -172,6 +172,7 @@ public final class SearchConditionBuilder {
       params.put("qFt", "");
     } else {
       params.put("qFt", BooleanModeEscaper.toBooleanQuery(trimmed));
+      params.put("qTerms", List.of(trimmed.split("\\s+")));
       fragment.append("MATCH(a.name, a.display_name, a.summary) AGAINST(:qFt IN BOOLEAN MODE)");
     }
     // 提槽 searchable 字段的 OR 追加（plan §4.2"再按 field_def.searchable=1 追加提槽列条件"）。
@@ -307,7 +308,7 @@ public final class SearchConditionBuilder {
     for (Object value : values) {
       String param = name(prefix, "domain");
       params.put(param, String.valueOf(value).trim());
-      ors.add("FIND_IN_SET(:" + param + ", a.domain_ids)");
+      ors.add("POSITION(CONCAT(',', COALESCE(:" + param + ", ''), ',') IN CONCAT(',', a.domain_ids, ',')) > 0");
     }
     return new SqlPredicate("(" + String.join(" OR ", ors) + ")", params);
   }

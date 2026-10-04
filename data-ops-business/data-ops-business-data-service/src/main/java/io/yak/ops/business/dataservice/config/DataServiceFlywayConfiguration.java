@@ -1,5 +1,6 @@
 package io.yak.ops.business.dataservice.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -20,7 +21,7 @@ public class DataServiceFlywayConfiguration {
       @Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-data-service")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-data-service"))
         .table("yak_data_service_schema_history")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

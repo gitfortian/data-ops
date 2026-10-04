@@ -90,7 +90,7 @@ toolset
 
 补充约束：
 
-- 官方扩展 `agentscope-extensions-mysql` 的 `MysqlAgentStateStore` 装配类位于 `runtime`（`AgentStateStoreWiring`），DataSource 注入来自平台共享数据源 Bean；
+- 官方 MySQL / PostgreSQL 扩展的 `MysqlAgentStateStore` / `PostgresAgentStateStore` 装配类位于 `runtime`（`AgentStateStoreWiring`），DataSource 注入来自平台共享数据源 Bean；消息历史继续由 SDK StateStore 单独拥有；
 - 模型 Provider 扩展（openai / dashscope 等）只被 runtime 引用；
 - **toolset 豁免**：工具注解 `io.agentscope.core.tool.Tool`、`ToolParam` 与上下文注入参数
   `io.agentscope.core.agent.RuntimeContext` 允许出现在 `toolset`——它们是框架注册工具与传递会话身份的声明式机制，

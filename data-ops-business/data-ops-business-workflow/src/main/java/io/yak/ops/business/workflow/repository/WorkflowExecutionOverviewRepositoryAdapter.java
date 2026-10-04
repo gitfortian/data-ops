@@ -1,6 +1,7 @@
 package io.yak.ops.business.workflow.repository;
 
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,7 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** MySQL-backed Workflow execution overview projection. */
+/** Platform database Workflow execution overview projection. */
 @Repository
 @ConditionalOnProperty(
     prefix = "yak.database",
@@ -58,13 +59,12 @@ public class WorkflowExecutionOverviewRepositoryAdapter
                COALESCE(e.run_started_at, e.created_at, e.updated_at) AS occurred_at,
                CASE
                  WHEN e.ended_at IS NULL THEN 0
-                 ELSE GREATEST(0, TIMESTAMPDIFF(MICROSECOND,
-                      COALESCE(e.run_started_at, e.created_at, e.updated_at), e.ended_at) / 1000)
+                 ELSE %s
                END AS duration_ms,
                e.id AS execution_id
           FROM yak_workflow_execution e
          WHERE e.created_at >= ? AND e.created_at < ?
-        """ + scope.sql()
+        """.formatted(durationSql()) + scope.sql()
         + " ORDER BY COALESCE(e.run_started_at, e.created_at, e.updated_at) DESC, e.id DESC LIMIT 1";
     List<Execution> rows = jdbc.query(sql, this::execution, args(scope, start, end));
     return rows.isEmpty() ? null : rows.get(0);
@@ -148,8 +148,7 @@ public class WorkflowExecutionOverviewRepositoryAdapter
   @Override
   public Metrics metrics(LocalDateTime start, LocalDateTime end) {
     Scope scope = scope("e");
-    String duration = "GREATEST(0, TIMESTAMPDIFF(MICROSECOND, "
-        + "COALESCE(e.run_started_at, e.created_at, e.updated_at), e.ended_at) / 1000)";
+    String duration = durationSql();
     String sql = ("""
         SELECT COALESCE(SUM(CASE WHEN UPPER(e.status) IN (%s) THEN 1 ELSE 0 END), 0) AS success_count,
                COALESCE(SUM(CASE WHEN UPPER(e.status) IN (%s) THEN 1 ELSE 0 END), 0) AS failed_count,
@@ -199,7 +198,7 @@ public class WorkflowExecutionOverviewRepositoryAdapter
   private List<TrendPoint> trend(LocalDateTime start, LocalDateTime end, boolean hourly) {
     Scope scope = scope("e");
     String occurredAt = "COALESCE(e.run_started_at, e.created_at, e.updated_at)";
-    String bucketHour = hourly ? "FLOOR(HOUR(" + occurredAt + ") / 4) * 4" : "0";
+    String bucketHour = hourly ? "FLOOR(EXTRACT(HOUR FROM " + occurredAt + ") / 4) * 4" : "0";
     String sql = "SELECT DATE(" + occurredAt + ") AS bucket_date, "
         + bucketHour + " AS bucket_hour, COUNT(*) AS total "
         + "FROM yak_workflow_execution e "
@@ -223,17 +222,22 @@ public class WorkflowExecutionOverviewRepositoryAdapter
                COALESCE(e.run_started_at, e.created_at, e.updated_at) AS occurred_at,
                CASE
                  WHEN e.ended_at IS NULL THEN 0
-                 ELSE GREATEST(0, TIMESTAMPDIFF(MICROSECOND,
-                      COALESCE(e.run_started_at, e.created_at, e.updated_at), e.ended_at) / 1000)
+                 ELSE %s
                END AS duration_ms,
                e.id AS execution_id
           FROM yak_workflow_execution e
          WHERE e.created_at >= ? AND e.created_at < ?
            AND COALESCE(NULLIF(e.definition_id, ''), e.id) = ?
-        """ + scope.sql()
+        """.formatted(durationSql()) + scope.sql()
         + " ORDER BY COALESCE(e.run_started_at, e.created_at, e.updated_at) DESC, e.id DESC LIMIT 1";
     List<Execution> rows = jdbc.query(sql, this::execution, args(scope, start, end, taskId));
     return rows.isEmpty() ? null : rows.get(0);
+  }
+
+  private String durationSql() {
+    return JdbcDatabase.isPostgresql(jdbc.getDataSource())
+        ? "GREATEST(0, EXTRACT(EPOCH FROM (e.ended_at - COALESCE(e.run_started_at, e.created_at, e.updated_at))) * 1000)"
+        : "GREATEST(0, TIMESTAMPDIFF(MICROSECOND, COALESCE(e.run_started_at, e.created_at, e.updated_at), e.ended_at) / 1000)";
   }
 
   private Execution execution(ResultSet rs, int rowNum) throws SQLException {

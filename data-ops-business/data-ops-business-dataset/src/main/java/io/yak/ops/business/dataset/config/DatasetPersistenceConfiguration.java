@@ -1,5 +1,6 @@
 package io.yak.ops.business.dataset.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -20,7 +21,7 @@ public class DatasetPersistenceConfiguration {
   public Flyway datasetFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-dataset")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-dataset"))
         .table("flyway_schema_history_dataset")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

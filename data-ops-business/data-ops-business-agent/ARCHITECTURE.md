@@ -124,7 +124,7 @@ ToolAuditMiddleware                      # onActing：全工具零侵入落 KIND
 SystemPromptAssemblyMiddleware           # onSystemPrompt：能力域提示词贡献者按序追加（失败静默降级）
 CompactionMiddleware(harness)            # onReasoning：跨轮上下文压缩，防长对话超窗静默失败
 TurnCorrelation                          # 会话 -> 活跃轮次关联（记账归因 turn_id）
-runtime.AgentStateStoreWiring            # 官方 MysqlAgentStateStore Bean 装配（复用平台共享数据源）
+runtime.AgentStateStoreWiring            # 官方 MySQL / PostgreSQL AgentStateStore 装配（复用平台共享数据源；PostgreSQL database 配置映射为 schema）
 AgentEventCodec                          # AgentScope 事件流 -> domain ChatStreamEvent（防腐层）
 TraceIdMiddleware                        # MDC traceId 传播
 DynamicPromptMiddleware                  # 当前日期 / 数据集上下文注入

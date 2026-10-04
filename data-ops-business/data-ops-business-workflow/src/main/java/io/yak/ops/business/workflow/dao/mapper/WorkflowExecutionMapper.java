@@ -36,6 +36,26 @@ public interface WorkflowExecutionMapper extends BaseMapper<WorkflowExecutionPO>
         updated_at = VALUES(updated_at),
         ended_at = VALUES(ended_at)
       """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_workflow_execution
+        (id, project_id, definition_id, source_execution_id, status, input_json, scheduling_stopped,
+         run_started_at, paused_at, paused_duration_ms, created_at, updated_at, ended_at)
+      VALUES
+        (#{id}, #{projectId}, #{definitionId}, #{sourceExecutionId}, #{status}, #{inputJson}, #{schedulingStopped},
+         #{runStartedAt}, #{pausedAt}, #{pausedDurationMs}, #{createdAt}, #{updatedAt}, #{endedAt})
+      ON CONFLICT (id) DO UPDATE SET
+        project_id = excluded.project_id,
+        definition_id = excluded.definition_id,
+        source_execution_id = excluded.source_execution_id,
+        status = excluded.status,
+        input_json = excluded.input_json,
+        scheduling_stopped = excluded.scheduling_stopped,
+        run_started_at = excluded.run_started_at,
+        paused_at = excluded.paused_at,
+        paused_duration_ms = excluded.paused_duration_ms,
+        updated_at = excluded.updated_at,
+        ended_at = excluded.ended_at
+      """)
   int upsert(WorkflowExecutionPO execution);
 
   /** 跨表统计：需要 LEFT JOIN 定义/版本表并按 workflow 归属聚合，Wrapper 无法表达。 */

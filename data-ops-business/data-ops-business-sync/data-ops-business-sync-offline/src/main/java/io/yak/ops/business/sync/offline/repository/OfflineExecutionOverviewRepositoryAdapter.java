@@ -188,7 +188,7 @@ public class OfflineExecutionOverviewRepositoryAdapter
   private List<TrendPoint> trend(LocalDateTime start, LocalDateTime end, boolean hourly) {
     Scope scope = scope("e");
     String bucketHour = hourly
-        ? "FLOOR(HOUR(COALESCE(e.start_time, e.create_time, e.update_time)) / 4) * 4"
+        ? "FLOOR(EXTRACT(HOUR FROM COALESCE(e.start_time, e.create_time, e.update_time)) / 4) * 4"
         : "0";
     String sql = "SELECT DATE(COALESCE(e.start_time, e.create_time, e.update_time)) AS bucket_date, "
         + bucketHour + " AS bucket_hour, COUNT(*) AS total "
