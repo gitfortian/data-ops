@@ -3,6 +3,7 @@ package io.yak.ops.business.dataservice.repository;
 import io.yak.ops.business.dataservice.domain.DataServiceDefinition;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 public interface DataServiceRepository {
 
@@ -20,6 +21,9 @@ public interface DataServiceRepository {
 
   /** Management-plane catalog scoped to the trusted CurrentProject. */
   List<DataServiceDefinition> findAll();
+
+  /** Bounded cursor read scoped to the trusted CurrentProject. */
+  List<DataServiceDefinition> findPageAfter(Long afterId, LocalDateTime updatedAfter, int limit);
 
   /**
    * Platform-wide aggregate count for the Home cockpit. This exposes only one scalar and must not

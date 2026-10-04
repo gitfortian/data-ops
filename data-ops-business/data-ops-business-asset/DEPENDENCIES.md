@@ -22,6 +22,9 @@
 
 ## 被依赖（入向）
 
+Consumption 的 Data Service source adapter 实现 api/AssetProvider；其业务读取只经
+Data Service Reader。Asset 不因此增加对 Consumption 或 Data Service 的依赖。
+
 | 消费方 | 通道 | 内容 |
 | --- | --- | --- |
 | modeling/metric/dataset/dashboard/task-catalog | `api/AssetProvider` 接口定义 | 实现只读 provider |

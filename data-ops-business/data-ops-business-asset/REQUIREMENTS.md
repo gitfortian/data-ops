@@ -64,6 +64,15 @@
 
 ## Ticket 98：健康度 + 驾驶舱
 
+F-004 Data Service 回链要求：
+
+- 支持 DATA_SERVICE source/type，sourceId 为 owning serviceId；对账单批上限 500。
+- 复用源域稳定 key，不按 path、展示名或 Revision 建第二个服务身份。
+- Consumption 适配器通过 Data Service 只读 Reader 接入，Asset 不依赖其 implementation。
+- 源属性需要 data-service:read，不暴露 SQL、凭证或连接配置。
+- Quality 当前物理表范围和 Model Lifecycle 范围不扩张；不推断服务质量。
+- 未配置 owning owner/visibility 时仍明确缺口，不以 Asset 联系人代替 source owner。
+
 - `HealthScorer` 纯函数：完整性 40（描述10/负责人10/目录5/标签5/注释覆盖率10）· 可信度 40（质量15/血缘10/定级10/变更确认5）· 活跃度 20（浏览10/新鲜度5/下游引用5）；N/A 剔分母；失败依赖记 0 并标注。
 - 每日 03:00 全量重算 + 上架/打标/确认后即时单资产重算；浏览聚合与 view_record 90 天清理同任务。
 - 驾驶舱 `/overview`：KPI + 类型/层×目录/健康度/状态漏斗分布 + 待办计数（可直达过滤）+ 最近动态；固定 ≤8 查询。

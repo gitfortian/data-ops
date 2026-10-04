@@ -332,9 +332,14 @@ async function main() {
     throw new Error(`Data Service ${DATA_SERVICE_ID} is not enabled`);
   }
   if (String(service.authMode ?? '').toUpperCase() !== 'API_KEY') {
-    throw new Error(
-      `Data Service ${DATA_SERVICE_ID} must use API_KEY auth for #104 Golden evidence (authMode=${service.authMode ?? '<unknown>'})`,
-    );
+    const consumers = rowsOf(await consoleRequest(
+      '/api/v1/data-service/consumers', { projectScoped: true }), 'Data Service Consumers');
+    const granted = consumers.some((consumer) => consumer.enabled === true
+      && (consumer.accessScope === 'ALL'
+        || consumer.apiIds?.some((id) => String(id) === DATA_SERVICE_ID)));
+    if (!granted) {
+      throw new Error(`Data Service ${DATA_SERVICE_ID} has neither API_KEY mode nor a managed Consumer grant`);
+    }
   }
   if (!service.runtimePath) {
     throw new Error(`Data Service ${DATA_SERVICE_ID} does not expose runtimePath`);

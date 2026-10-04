@@ -5,6 +5,7 @@ import io.yak.ops.business.dataservice.repository.DataServiceRepository;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,14 @@ public class DataServiceReader {
   /** Management-plane catalog: always scoped to the trusted CurrentProject. */
   public List<DataServiceDefinition> list() {
     return repository.findAll();
+  }
+
+  public List<DataServiceDefinition> cursorList(Long afterId, LocalDateTime updatedAfter, int limit) {
+    return repository.findPageAfter(afterId, updatedAfter, limit);
+  }
+
+  public Optional<DataServiceDefinition> find(Long id) {
+    return repository.findById(id);
   }
 
   /**

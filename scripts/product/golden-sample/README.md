@@ -65,6 +65,38 @@ python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
 
 输出清单不包含密码、Cookie 或连接参数。`*.local.json` 已忽略；提交证据时使用经检查的日期快照。当前成功结果仅为 `PHYSICAL_SAMPLE_PASSED`，Phase7 / PD-001 保持 PARTIAL。
 
+## R2：Dataset / Data Service 消费样本
+
+依据 ACCEPTED PD-002 / APPROVED F-004，consumption.py 通过来源工作台 API 保存草稿、
+发布不可变版本、上线服务、配置独立 Consumer grant，并完成两类 Asset 对账。
+真实查询复用 Dataset 物理列安全裁决；公网 Invoke 只发送 Consumer API Key，
+不发送 Console Cookie 或 Project Header。订阅不授予访问权限，也不代替 Usage。
+
+先完成物理样本 bootstrap，再执行：
+
+```powershell
+python scripts/product/golden-sample/consumption.py --manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json
+python scripts/product/golden-sample/consumption.py --apply --accept --manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json --output docs/product/acceptance/golden-sample/consumption-acceptance.local.json
+```
+
+需要现有 Data Development 编辑/发布/上线、Dataset 查询、Data Service 访问/观测及
+Asset 读/更新权限。YAK_OPS_NODE 可指定 Node 可执行路径。只使用专用标记项目和数据源；
+同名节点、Consumer grant 或草稿内容被修改后拒绝覆盖。新节点身份先写入本地进度文件，
+后续配置失败可恢复；不依据名称认领既有未配置节点。--apply 必须指定 --output。
+
+重复运行保留 Dataset/Service/Node/Consumer/Subscription 身份，发布遵循源域幂等规则。
+工具只轮换其专用 Consumer 的标记 API Key，旧演示 Key 失效；该 Key 不应供业务使用。
+secret 仅在本次进程内用于调用，不写清单/证据，不回显失败子进程输出。
+
+--accept 会实际 Query/Invoke、新增真实 Usage、验证 exact evidence 与 Consumer identity，
+并两次订阅核对幂等。还会用无效 Key 验证 401、在对照 Project 验证 NOT_FOUND，
+通过来源工作台临时下线专用服务并 finally 恢复，核对版本保留、availability 与调用恢复。
+下线现有实现可能返回 HTTP 500；证据记录这个局限，不冒充完整 503 契约。
+
+每个治理分区保留来源范围、Owner 与五态。Quality 对两类产品仍为 NOT_APPLICABLE，
+不继承物理表通过结果。源 owner/visibility 缺口、精确查询预裁决、受限角色、
+normalization 故障重试、废弃/退休及浏览器完整矩阵仍需验收，输出 F-004=PARTIAL。
+
 ## 后续批次
 
-补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
+补齐 Model、Metric 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。

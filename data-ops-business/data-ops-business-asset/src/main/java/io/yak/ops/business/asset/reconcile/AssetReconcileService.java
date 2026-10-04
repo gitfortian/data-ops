@@ -35,6 +35,8 @@ import io.yak.ops.common.enums.asset.AssetSourceType;
 import io.yak.ops.spi.section.SectionProvider;
 import io.yak.ops.spi.section.SectionType;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.core.project.ProjectContext;
+import io.yak.ops.core.project.ProjectContextScope;
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -76,6 +78,7 @@ public class AssetReconcileService {
       .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
   private final CurrentProject currentProject;
+  private final ProjectContextScope projectScope;
   private final AssetProviderRegistry registry;
   private final AssetItemMapper itemMapper;
   private final AssetChangeRecordMapper changeMapper;
@@ -113,7 +116,8 @@ public class AssetReconcileService {
     }
     executor.submit(() -> {
       try {
-        reconcileNow(projectId, types, operator, false);
+        projectScope.run(new ProjectContext(projectId, null),
+            () -> reconcileNow(projectId, types, operator, false));
       } catch (RuntimeException e) {
         log.error("Async asset reconcile failed for project {}", projectId, e);
       } finally {

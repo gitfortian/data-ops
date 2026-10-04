@@ -6,6 +6,7 @@ public enum AssetSourceType {
   METRIC,
   METADATA,
   DATASET,
+  DATA_SERVICE,
   DASHBOARD,
   CHART,
   TASK,
