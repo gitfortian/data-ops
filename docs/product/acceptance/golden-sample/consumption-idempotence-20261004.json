@@ -1,0 +1,36 @@
+{
+  "state": "PASSED",
+  "scope": "R2 source/version/Asset/Consumer/Subscription identity; real Usage appends",
+  "firstCapturedAt": "2026-10-04T07:35:06.876067+00:00",
+  "secondCapturedAt": "2026-10-04T07:36:36.858473+00:00",
+  "samples": {
+    "dataset": {
+      "nodeId": "2106611110803771394",
+      "id": "1",
+      "versionId": "1",
+      "assetId": "4"
+    },
+    "dataService": {
+      "nodeId": "2106611496155451393",
+      "id": "1",
+      "revisionId": "2106611498130968577",
+      "runtimePath": "/api/v1/data-service/runtime/yak-golden-sample-v1-orders",
+      "assetId": "5"
+    },
+    "consumerId": "1"
+  },
+  "subscriptionIds": {
+    "DATASET:1": 1,
+    "DATA_SERVICE:1": 2
+  },
+  "queryIds": [
+    "bfe6971b826c4cfdb7f515fcee79c650",
+    "90f93ce0d3ba4fcb80f7d3d716173228"
+  ],
+  "invocationIds": [
+    2,
+    5
+  ],
+  "dedicatedSampleApiKeyRerun": "ROTATED",
+  "deploymentArtifactSha256": "00B5076F3BC8E2B988141F10EB6F6E4F99A0690045613169833D760C6A03D89E"
+}

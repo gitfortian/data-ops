@@ -1,0 +1,1049 @@
+{
+  "marker": "yak-golden-sample-v1",
+  "repositoryCommit": "6f0bbbcd02af7941e16c37dbfe5d2b53cf384792",
+  "deploymentCommit": null,
+  "deploymentArtifactSha256": "00B5076F3BC8E2B988141F10EB6F6E4F99A0690045613169833D760C6A03D89E",
+  "projectId": "7",
+  "samples": {
+    "dataset": {
+      "nodeId": "2106611110803771394",
+      "id": "1",
+      "versionId": "1",
+      "assetId": "4"
+    },
+    "dataService": {
+      "nodeId": "2106611496155451393",
+      "id": "1",
+      "revisionId": "2106611498130968577",
+      "runtimePath": "/api/v1/data-service/runtime/yak-golden-sample-v1-orders",
+      "assetId": "5"
+    },
+    "consumerId": "1"
+  },
+  "f004Acceptance": "PARTIAL",
+  "capturedAt": "2026-10-04T07:35:06.876067+00:00",
+  "acceptance": {
+    "dataset": {
+      "probe": "phase4-real-env-dataset-golden",
+      "acceptanceIssue": 104,
+      "baseUrl": "http://localhost:18082",
+      "projectId": "7",
+      "authenticatedUser": {
+        "id": 1,
+        "username": "root",
+        "name": null
+      },
+      "productKey": "DATASET:1",
+      "sourceRef": {
+        "sourceDomain": "DATASET",
+        "sourceIdentity": "1"
+      },
+      "dataset": {
+        "id": "1",
+        "name": "Golden Sample Orders Dataset",
+        "status": "ONLINE",
+        "currentVersionId": "1",
+        "currentVersionNo": 1,
+        "sourceType": "SQL_QUERY",
+        "sourceTaskAssetId": "0",
+        "sourceTaskRevisionId": "0",
+        "sourceTaskRevisionNo": 0,
+        "dataSourceId": "2",
+        "fieldCount": 3
+      },
+      "query": {
+        "endpoint": "/api/v1/datasets/1/query",
+        "request": {
+          "versionNo": 1,
+          "limit": 10
+        },
+        "result": {
+          "queryId": "bfe6971b826c4cfdb7f515fcee79c650",
+          "datasetId": "1",
+          "datasetVersionId": "1",
+          "datasetVersionNo": 1,
+          "bindings": [],
+          "columns": [
+            {
+              "name": "order_id",
+              "label": "order_id",
+              "typeName": "BIGINT",
+              "jdbcType": -5,
+              "nullable": false
+            },
+            {
+              "name": "customer_code",
+              "label": "customer_code",
+              "typeName": "VARCHAR",
+              "jdbcType": 12,
+              "nullable": false
+            },
+            {
+              "name": "quantity",
+              "label": "quantity",
+              "typeName": "INT",
+              "jdbcType": 4,
+              "nullable": true
+            }
+          ],
+          "returnedRows": 3,
+          "truncated": false,
+          "elapsedMillis": 27,
+          "rowsCaptured": false
+        }
+      },
+      "queryPerformance": {
+        "queryId": "bfe6971b826c4cfdb7f515fcee79c650",
+        "datasetId": "1",
+        "datasetName": "Golden Sample Orders Dataset",
+        "datasetVersionId": "1",
+        "datasetVersionNo": 1,
+        "sourceType": "SQL_QUERY",
+        "dataSourceId": "2",
+        "sqlHash": "43d77508d47b0cf357d716f5c2c51193756adbcc98083becec3642aef79a0a35",
+        "status": "SUCCESS",
+        "failureStage": null,
+        "errorType": null,
+        "errorMessage": null,
+        "waitMillis": 1,
+        "prepareMillis": 4,
+        "executeMillis": 24,
+        "transferMillis": 0,
+        "totalMillis": 47,
+        "returnedRows": 3,
+        "truncated": false,
+        "startedAt": "2026-10-04T07:35:07.504546Z",
+        "finishedAt": "2026-10-04T07:35:07.566177Z"
+      },
+      "capturedAt": "2026-10-04T07:35:07.670Z"
+    },
+    "dataService": {
+      "probe": "phase4-real-env-data-service-golden",
+      "acceptanceIssue": 104,
+      "consoleBaseUrl": "http://localhost:18082",
+      "publicBaseUrl": "http://localhost:18082",
+      "projectId": "7",
+      "authenticatedConsoleUser": {
+        "id": 1,
+        "username": "root",
+        "name": null
+      },
+      "productKey": "DATA_SERVICE:1",
+      "sourceRef": {
+        "sourceDomain": "DATA_SERVICE",
+        "sourceIdentity": "1"
+      },
+      "dataService": {
+        "id": 1,
+        "name": "Golden Sample Orders API",
+        "path": "/yak-golden-sample-v1-orders",
+        "runtimePath": "/api/v1/data-service/runtime/yak-golden-sample-v1-orders",
+        "enabled": true,
+        "authMode": "API_KEY",
+        "parameterNames": [],
+        "paginationEnabled": false,
+        "sourceType": "DATA_DEVELOPMENT_DATA_SERVICE",
+        "sourceRef": "2106611496155451393",
+        "sourceRevisionId": "2106611498130968577",
+        "sourceRevisionNo": 1
+      },
+      "publicInvocation": {
+        "request": {
+          "endpoint": "/api/v1/data-service/runtime/yak-golden-sample-v1-orders",
+          "parameterNames": [],
+          "parametersCaptured": false,
+          "auth": {
+            "mode": "API_KEY",
+            "header": "X-API-Key",
+            "credentialCaptured": false,
+            "yakLoginCookieSent": false,
+            "projectHeaderSent": false
+          }
+        },
+        "result": {
+          "columns": [
+            "order_id",
+            "customer_code",
+            "quantity"
+          ],
+          "rowCount": 3,
+          "truncated": false,
+          "durationMs": 22,
+          "totalNum": null,
+          "pageNum": null,
+          "pageSize": null,
+          "rowsCaptured": false
+        }
+      },
+      "invocationRecord": {
+        "id": 2,
+        "projectId": 7,
+        "apiId": 1,
+        "serviceName": "Golden Sample Orders API",
+        "servicePath": "/yak-golden-sample-v1-orders",
+        "callerType": "API_KEY",
+        "apiKeyId": 1,
+        "consumerId": 1,
+        "apiKeyName": "Golden Sample Integration",
+        "apiKeyPrefix": "yak_ds_zDBsfsVTw",
+        "sourceRevisionId": "2106611498130968577",
+        "sourceRevisionNo": 1,
+        "success": true,
+        "durationMs": 22,
+        "rowCount": 3,
+        "errorMessage": null,
+        "createTime": "2026-10-04T15:35:08.229"
+      },
+      "usageNormalization": {
+        "state": "NORMALIZED",
+        "providerEvidenceRef": "invocation:2",
+        "message": null,
+        "evidence": {
+          "id": 5,
+          "projectId": 7,
+          "productKey": {
+            "productType": "DATA_SERVICE",
+            "sourceIdentity": "1"
+          },
+          "sourceVersion": {
+            "identity": "2106611498130968577",
+            "displayVersion": "r1"
+          },
+          "consumerRef": {
+            "consumerType": "DATA_SERVICE",
+            "sourceDomain": "DATA_SERVICE_CONSUMER",
+            "sourceIdentity": "1",
+            "displayHint": "Golden Sample Integration"
+          },
+          "observedAt": "2026-10-04T15:35:08.228756",
+          "consumptionMode": "API_INVOKE",
+          "outcome": "SUCCESS",
+          "provider": "DATA_SERVICE_INVOCATION",
+          "providerEvidenceRef": "invocation:2",
+          "deduplicationId": "DATA_SERVICE_INVOCATION:2",
+          "normalizedAt": "2026-10-04T15:35:08.234815"
+        }
+      },
+      "capturedAt": "2026-10-04T07:35:08.368Z"
+    },
+    "products": {
+      "DATASET:1": {
+        "detail": {
+          "state": "FOUND",
+          "product": {
+            "productKey": {
+              "productType": "DATASET",
+              "sourceIdentity": "1"
+            },
+            "sourceRef": {
+              "productType": "DATASET",
+              "sourceIdentity": "1"
+            },
+            "producerRef": {
+              "domain": "DATA_DEVELOPMENT_NODE",
+              "identity": "2106611110803771394"
+            },
+            "assetRef": {
+              "domain": "ASSET",
+              "identity": "4"
+            },
+            "name": "Golden Sample Orders Dataset",
+            "description": "yak-golden-sample-v1",
+            "projectId": 7,
+            "activeVersion": {
+              "identity": "1",
+              "displayVersion": "v1"
+            },
+            "lifecycle": "PUBLISHED",
+            "availability": "UNKNOWN",
+            "access": {
+              "providerState": "UNAVAILABLE",
+              "reason": "Dataset action permission is granted; physical-column authorization requires an exact query",
+              "subject": "Current authenticated user",
+              "action": "QUERY",
+              "plane": "LOGGED_IN_DATASET_QUERY",
+              "nextStep": "Open the Dataset query page to evaluate the physical-column access policy"
+            },
+            "sections": [
+              {
+                "sectionKey": "source-governance",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "DATASET",
+                "reason": "Dataset source contract exposes update time but no governed evidence projection"
+              },
+              {
+                "sectionKey": "ownership",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "DATASET",
+                "reason": "Dataset owning contract does not expose owner"
+              },
+              {
+                "sectionKey": "visibility",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "SECURITY",
+                "reason": "Dataset visibility policy is not exposed yet"
+              },
+              {
+                "sectionKey": "producer",
+                "state": "READY",
+                "ownerDomain": "DATA_DEVELOPMENT"
+              },
+              {
+                "sectionKey": "quality",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "QUALITY",
+                "reason": "Dataset Quality section reader is not connected to Consumption"
+              },
+              {
+                "sectionKey": "security",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "SECURITY",
+                "reason": "Dataset Security classification evidence is not connected to Consumption"
+              },
+              {
+                "sectionKey": "lineage",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "LINEAGE",
+                "reason": "Dataset lineage evidence is not connected to Consumption"
+              },
+              {
+                "sectionKey": "asset",
+                "state": "READY",
+                "ownerDomain": "ASSET"
+              }
+            ],
+            "contractPayload": {
+              "versionId": 1,
+              "versionNo": 1,
+              "columns": [
+                {
+                  "fieldId": "f40792fd-ab8e-38d3-998f-99296882e3d4",
+                  "physicalName": "order_id",
+                  "displayName": "order_id",
+                  "dataType": "NUMBER",
+                  "nullable": false,
+                  "defaultRole": "MEASURE",
+                  "sortOrder": 1
+                },
+                {
+                  "fieldId": "54419fdc-8a03-3d66-bd9a-299cea1825df",
+                  "physicalName": "customer_code",
+                  "displayName": "customer_code",
+                  "dataType": "STRING",
+                  "nullable": false,
+                  "defaultRole": "DIMENSION",
+                  "sortOrder": 2
+                },
+                {
+                  "fieldId": "f03dcb8c-4d2b-3bc5-a058-8ecd960468df",
+                  "physicalName": "quantity",
+                  "displayName": "quantity",
+                  "dataType": "NUMBER",
+                  "nullable": true,
+                  "defaultRole": "MEASURE",
+                  "sortOrder": 3
+                }
+              ],
+              "capabilities": [
+                "QUERY",
+                "PREVIEW"
+              ]
+            }
+          },
+          "navigation": {
+            "canonicalHref": "/data-analysis/consumption/DATASET%3A1",
+            "sourceHref": "/dataset/1",
+            "assetHref": "/data-asset/detail/4",
+            "producerHref": "/data-development?nodeId=2106611110803771394"
+          },
+          "governanceEvidence": [
+            {
+              "sectionKey": "source-governance",
+              "state": "UNAVAILABLE",
+              "ownerDomain": "DATASET",
+              "facts": {},
+              "reason": "Dataset source contract exposes update time but no governed evidence projection"
+            },
+            {
+              "sectionKey": "ownership",
+              "state": "UNAVAILABLE",
+              "ownerDomain": "DATASET",
+              "facts": {},
+              "reason": "Dataset owning contract does not expose owner"
+            },
+            {
+              "sectionKey": "visibility",
+              "state": "UNAVAILABLE",
+              "ownerDomain": "SECURITY",
+              "facts": {},
+              "reason": "Dataset visibility policy is not exposed yet"
+            },
+            {
+              "sectionKey": "producer",
+              "state": "READY",
+              "ownerDomain": "DATA_DEVELOPMENT",
+              "facts": {}
+            },
+            {
+              "sectionKey": "asset",
+              "state": "READY",
+              "ownerDomain": "ASSET",
+              "facts": {}
+            },
+            {
+              "sectionKey": "quality",
+              "state": "NOT_APPLICABLE",
+              "ownerDomain": "QUALITY",
+              "facts": {},
+              "reason": "当前 MVP 仅物理表接入质量治理"
+            },
+            {
+              "sectionKey": "security",
+              "state": "EMPTY",
+              "ownerDomain": "SECURITY",
+              "observedAt": "2026-10-04T07:35:08.695572200Z",
+              "facts": {
+                "complianceSummaryStatus": "UNAVAILABLE",
+                "classificationCount": 0,
+                "complianceSummaryReason": "合规检查结果按批次归属，当前没有该实体的最新检查结果",
+                "evidenceScope": "INDEXED_SOURCE_ASSET",
+                "accessPolicySummaryStatus": "UNAVAILABLE",
+                "accessPolicySummaryReason": "缺少完整数据源、数据库和表坐标，无法准确匹配对象级 READ 规则",
+                "evidence": [],
+                "classifications": [],
+                "maskingSummaryStatus": "NOT_APPLICABLE",
+                "strategySummaryStatus": "PARTIAL",
+                "maskingSummaryReason": "该对象没有活动分级记录，无需计算分级对象的脱敏策略匹配情况",
+                "strategySummaryReason": "分级、访问规则与脱敏匹配分别展示；访问规则数量不代表有效访问决策",
+                "provenance": {
+                  "sourceDomain": "SECURITY",
+                  "sourceId": "dataset:1",
+                  "observedAt": "2026-10-04T07:35:08.689918700Z"
+                },
+                "assetRef": {
+                  "domain": "ASSET",
+                  "identity": "4"
+                },
+                "sourceRef": {
+                  "productType": "DATASET",
+                  "sourceIdentity": "1"
+                }
+              },
+              "reason": "Security 域没有返回该对象的分级记录"
+            },
+            {
+              "sectionKey": "lineage",
+              "state": "READY",
+              "ownerDomain": "LINEAGE",
+              "observedAt": "2026-10-04T07:35:08.710904800Z",
+              "facts": {
+                "data": {
+                  "root": {
+                    "id": 80,
+                    "projectId": 7,
+                    "assetKey": "dataset:1",
+                    "assetType": "DATASET",
+                    "name": "Golden Sample Orders Dataset",
+                    "sourceType": "DATASET",
+                    "sourceId": "1",
+                    "dataSourceId": "2",
+                    "properties": {
+                      "status": "ONLINE",
+                      "sourceType": "SQL_QUERY",
+                      "dataSourceId": "2",
+                      "currentVersionId": "1",
+                      "datasetVersionId": "1",
+                      "datasetVersionNo": 1,
+                      "sourceTaskAssetId": "0",
+                      "columnMappingCount": 3,
+                      "lineageParseStatus": "SUCCESS",
+                      "sourceTaskRevisionId": "0",
+                      "sourceTaskRevisionNo": 0,
+                      "candidateOutputColumnCount": 3,
+                      "unmatchedOutputMappingCount": 0,
+                      "unresolvedColumnReferenceCount": 0
+                    },
+                    "createTime": "2026-10-04T05:03:22.780803Z",
+                    "updateTime": "2026-10-04T07:35:05.960238Z"
+                  },
+                  "direction": "BOTH",
+                  "depth": 1,
+                  "nodes": [
+                    {
+                      "id": 80,
+                      "projectId": 7,
+                      "assetKey": "dataset:1",
+                      "assetType": "DATASET",
+                      "name": "Golden Sample Orders Dataset",
+                      "sourceType": "DATASET",
+                      "sourceId": "1",
+                      "dataSourceId": "2",
+                      "properties": {
+                        "status": "ONLINE",
+                        "sourceType": "SQL_QUERY",
+                        "dataSourceId": "2",
+                        "currentVersionId": "1",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1,
+                        "sourceTaskAssetId": "0",
+                        "columnMappingCount": 3,
+                        "lineageParseStatus": "SUCCESS",
+                        "sourceTaskRevisionId": "0",
+                        "sourceTaskRevisionNo": 0,
+                        "candidateOutputColumnCount": 3,
+                        "unmatchedOutputMappingCount": 0,
+                        "unresolvedColumnReferenceCount": 0
+                      },
+                      "createTime": "2026-10-04T05:03:22.780803Z",
+                      "updateTime": "2026-10-04T07:35:05.960238Z"
+                    },
+                    {
+                      "id": 82,
+                      "projectId": 7,
+                      "assetKey": "dataset-field:1:f40792fd-ab8e-38d3-998f-99296882e3d4",
+                      "assetType": "DATASET_FIELD",
+                      "name": "order_id",
+                      "sourceType": "DATASET",
+                      "sourceId": "1:f40792fd-ab8e-38d3-998f-99296882e3d4",
+                      "parentAssetId": 80,
+                      "dataSourceId": "2",
+                      "properties": {
+                        "fieldId": "f40792fd-ab8e-38d3-998f-99296882e3d4",
+                        "dataType": "NUMBER",
+                        "nullable": false,
+                        "datasetId": "1",
+                        "sortOrder": 1,
+                        "defaultRole": "MEASURE",
+                        "displayName": "order_id",
+                        "physicalName": "order_id",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1
+                      },
+                      "createTime": "2026-10-04T05:03:22.953670Z",
+                      "updateTime": "2026-10-04T07:35:05.967617Z"
+                    },
+                    {
+                      "id": 83,
+                      "projectId": 7,
+                      "assetKey": "dataset-field:1:54419fdc-8a03-3d66-bd9a-299cea1825df",
+                      "assetType": "DATASET_FIELD",
+                      "name": "customer_code",
+                      "sourceType": "DATASET",
+                      "sourceId": "1:54419fdc-8a03-3d66-bd9a-299cea1825df",
+                      "parentAssetId": 80,
+                      "dataSourceId": "2",
+                      "properties": {
+                        "fieldId": "54419fdc-8a03-3d66-bd9a-299cea1825df",
+                        "dataType": "STRING",
+                        "nullable": false,
+                        "datasetId": "1",
+                        "sortOrder": 2,
+                        "defaultRole": "DIMENSION",
+                        "displayName": "customer_code",
+                        "physicalName": "customer_code",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1
+                      },
+                      "createTime": "2026-10-04T05:03:22.974313Z",
+                      "updateTime": "2026-10-04T07:35:05.978613Z"
+                    },
+                    {
+                      "id": 84,
+                      "projectId": 7,
+                      "assetKey": "dataset-field:1:f03dcb8c-4d2b-3bc5-a058-8ecd960468df",
+                      "assetType": "DATASET_FIELD",
+                      "name": "quantity",
+                      "sourceType": "DATASET",
+                      "sourceId": "1:f03dcb8c-4d2b-3bc5-a058-8ecd960468df",
+                      "parentAssetId": 80,
+                      "dataSourceId": "2",
+                      "properties": {
+                        "fieldId": "f03dcb8c-4d2b-3bc5-a058-8ecd960468df",
+                        "dataType": "NUMBER",
+                        "nullable": true,
+                        "datasetId": "1",
+                        "sortOrder": 3,
+                        "defaultRole": "MEASURE",
+                        "displayName": "quantity",
+                        "physicalName": "quantity",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1
+                      },
+                      "createTime": "2026-10-04T05:03:22.985664Z",
+                      "updateTime": "2026-10-04T07:35:05.994281Z"
+                    },
+                    {
+                      "id": 85,
+                      "projectId": 7,
+                      "assetKey": "table:2:yak_golden_sample.golden_orders",
+                      "assetType": "TABLE",
+                      "name": "yak_golden_sample.golden_orders",
+                      "sourceType": "DATASOURCE",
+                      "sourceId": "2",
+                      "dataSourceId": "2",
+                      "schemaName": "yak_golden_sample",
+                      "tableName": "golden_orders",
+                      "properties": {
+                        "qualifiedName": "yak_golden_sample.golden_orders"
+                      },
+                      "createTime": "2026-10-04T05:03:22.995557Z",
+                      "updateTime": "2026-10-04T07:35:06.003812Z"
+                    }
+                  ],
+                  "relations": [
+                    {
+                      "id": 57,
+                      "projectId": 7,
+                      "sourceAssetId": 82,
+                      "targetAssetId": 80,
+                      "relationType": "CONTAINS",
+                      "sourceType": "DATASET_SOURCE_PARSE",
+                      "sourceId": "1",
+                      "confidence": 1.0,
+                      "version": "dataset-v1:field:1",
+                      "observedAt": "2026-10-04T05:03:22.863204Z",
+                      "properties": {
+                        "fieldId": "f40792fd-ab8e-38d3-998f-99296882e3d4",
+                        "sourceType": "SQL_QUERY",
+                        "lineageLevel": "STRUCTURE",
+                        "physicalName": "order_id",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1,
+                        "sourceTaskAssetId": "0",
+                        "sourceTaskRevisionId": "0",
+                        "sourceTaskRevisionNo": 0
+                      },
+                      "createTime": "2026-10-04T07:35:05.973369Z",
+                      "updateTime": "2026-10-04T07:35:05.973369Z"
+                    },
+                    {
+                      "id": 58,
+                      "projectId": 7,
+                      "sourceAssetId": 83,
+                      "targetAssetId": 80,
+                      "relationType": "CONTAINS",
+                      "sourceType": "DATASET_SOURCE_PARSE",
+                      "sourceId": "1",
+                      "confidence": 1.0,
+                      "version": "dataset-v1:field:2",
+                      "observedAt": "2026-10-04T05:03:22.863204Z",
+                      "properties": {
+                        "fieldId": "54419fdc-8a03-3d66-bd9a-299cea1825df",
+                        "sourceType": "SQL_QUERY",
+                        "lineageLevel": "STRUCTURE",
+                        "physicalName": "customer_code",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1,
+                        "sourceTaskAssetId": "0",
+                        "sourceTaskRevisionId": "0",
+                        "sourceTaskRevisionNo": 0
+                      },
+                      "createTime": "2026-10-04T07:35:05.986066Z",
+                      "updateTime": "2026-10-04T07:35:05.986066Z"
+                    },
+                    {
+                      "id": 59,
+                      "projectId": 7,
+                      "sourceAssetId": 84,
+                      "targetAssetId": 80,
+                      "relationType": "CONTAINS",
+                      "sourceType": "DATASET_SOURCE_PARSE",
+                      "sourceId": "1",
+                      "confidence": 1.0,
+                      "version": "dataset-v1:field:3",
+                      "observedAt": "2026-10-04T05:03:22.863204Z",
+                      "properties": {
+                        "fieldId": "f03dcb8c-4d2b-3bc5-a058-8ecd960468df",
+                        "sourceType": "SQL_QUERY",
+                        "lineageLevel": "STRUCTURE",
+                        "physicalName": "quantity",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1,
+                        "sourceTaskAssetId": "0",
+                        "sourceTaskRevisionId": "0",
+                        "sourceTaskRevisionNo": 0
+                      },
+                      "createTime": "2026-10-04T07:35:06.000372Z",
+                      "updateTime": "2026-10-04T07:35:06.000372Z"
+                    },
+                    {
+                      "id": 60,
+                      "projectId": 7,
+                      "sourceAssetId": 85,
+                      "targetAssetId": 80,
+                      "relationType": "DERIVES_FROM",
+                      "sourceType": "DATASET_SOURCE_PARSE",
+                      "sourceId": "1",
+                      "confidence": 1.0,
+                      "version": "dataset-v1:table:1",
+                      "observedAt": "2026-10-04T05:03:22.863204Z",
+                      "properties": {
+                        "sourceKind": "SQL_QUERY",
+                        "sourceType": "SQL_QUERY",
+                        "sourceTable": "yak_golden_sample.golden_orders",
+                        "lineageLevel": "TABLE",
+                        "datasetVersionId": "1",
+                        "datasetVersionNo": 1,
+                        "sourceTaskAssetId": "0",
+                        "sourceTaskRevisionId": "0",
+                        "sourceTaskRevisionNo": 0
+                      },
+                      "createTime": "2026-10-04T07:35:06.012265Z",
+                      "updateTime": "2026-10-04T07:35:06.012265Z"
+                    }
+                  ]
+                },
+                "assetRef": {
+                  "domain": "ASSET",
+                  "identity": "4"
+                },
+                "evidenceScope": "INDEXED_SOURCE_ASSET",
+                "sourceRef": {
+                  "productType": "DATASET",
+                  "sourceIdentity": "1"
+                }
+              }
+            },
+            {
+              "sectionKey": "asset-governance",
+              "state": "READY",
+              "ownerDomain": "ASSET",
+              "observedAt": "2026-10-04T05:08:36.136881Z",
+              "facts": {
+                "status": "PENDING"
+              }
+            }
+          ]
+        },
+        "impact": {
+          "productKey": {
+            "productType": "DATASET",
+            "sourceIdentity": "1"
+          },
+          "subscriptionState": "READY",
+          "usageState": "READY",
+          "consumers": [
+            {
+              "consumerRef": {
+                "consumerType": "USER",
+                "sourceDomain": "SECURITY_PRINCIPAL",
+                "sourceIdentity": "root"
+              },
+              "declaredModes": [
+                "QUERY"
+              ],
+              "observedModes": [
+                "QUERY"
+              ],
+              "activeSubscriptionCount": 1,
+              "successfulUsageCount": 3,
+              "lastDeclaredAt": "2026-10-04T15:35:08.502",
+              "lastObservedAt": "2026-10-04T07:35:07.504546",
+              "providerEvidenceRefs": [
+                "DATASET_QUERY_PERFORMANCE:query:bfe6971b826c4cfdb7f515fcee79c650",
+                "DATASET_QUERY_PERFORMANCE:query:f55de0fb2d4b4d6b80ab7d4f6eaa8568",
+                "DATASET_QUERY_PERFORMANCE:query:79c38deeac4c4383b60d57c8dc2bda37"
+              ]
+            }
+          ],
+          "coverageNote": "Known consumers include declared subscriptions and normalized successful usage in the reconciled source window only; external consumers outside available evidence are not claimed complete."
+        },
+        "assetNavigation": {
+          "state": "FOUND",
+          "productKey": {
+            "productType": "DATASET",
+            "sourceIdentity": "1"
+          },
+          "canonicalHref": "/data-analysis/consumption/DATASET%3A1"
+        },
+        "subscriptionId": 1,
+        "duplicateSubscription": "PASSED"
+      },
+      "DATA_SERVICE:1": {
+        "detail": {
+          "state": "FOUND",
+          "product": {
+            "productKey": {
+              "productType": "DATA_SERVICE",
+              "sourceIdentity": "1"
+            },
+            "sourceRef": {
+              "productType": "DATA_SERVICE",
+              "sourceIdentity": "1"
+            },
+            "producerRef": {
+              "domain": "DATA_DEVELOPMENT_DATA_SERVICE",
+              "identity": "2106611496155451393"
+            },
+            "assetRef": {
+              "domain": "ASSET",
+              "identity": "5"
+            },
+            "name": "Golden Sample Orders API",
+            "description": "yak-golden-sample-v1",
+            "projectId": 7,
+            "activeVersion": {
+              "identity": "2106611498130968577",
+              "displayVersion": "v1"
+            },
+            "lifecycle": "PUBLISHED",
+            "availability": "UNKNOWN",
+            "access": {
+              "providerState": "UNAVAILABLE",
+              "reason": "A logged-in user's permissions do not determine public API-key invocation access",
+              "subject": "Registered Data Service Consumer/API Key",
+              "action": "INVOKE",
+              "plane": "PUBLIC_API_KEY",
+              "nextStep": "Use the service's configured Consumer/API Key and public invocation endpoint"
+            },
+            "sections": [
+              {
+                "sectionKey": "source-governance",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "DATA_SERVICE",
+                "reason": "Data Service source contract exposes update time but no governed evidence projection"
+              },
+              {
+                "sectionKey": "ownership",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "DATA_SERVICE",
+                "reason": "Data Service owning contract does not expose owner"
+              },
+              {
+                "sectionKey": "visibility",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "SECURITY",
+                "reason": "Data Service visibility policy is not exposed yet"
+              },
+              {
+                "sectionKey": "service-interface",
+                "state": "READY",
+                "ownerDomain": "DATA_SERVICE"
+              },
+              {
+                "sectionKey": "quality",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "QUALITY",
+                "reason": "Data Service Quality section reader is not connected to Consumption"
+              },
+              {
+                "sectionKey": "security",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "SECURITY",
+                "reason": "Data Service Security classification evidence is not connected to Consumption"
+              },
+              {
+                "sectionKey": "lineage",
+                "state": "UNAVAILABLE",
+                "ownerDomain": "LINEAGE",
+                "reason": "Data Service lineage evidence is not connected to Consumption"
+              },
+              {
+                "sectionKey": "asset",
+                "state": "READY",
+                "ownerDomain": "ASSET"
+              }
+            ],
+            "contractPayload": {
+              "runtimePath": "/api/v1/data-service/runtime/yak-golden-sample-v1-orders",
+              "parameterNames": [],
+              "authMode": "API_KEY",
+              "maxRows": 10,
+              "timeoutSeconds": 30,
+              "paginationEnabled": false,
+              "enabled": true,
+              "sourceType": "DATA_DEVELOPMENT_DATA_SERVICE",
+              "sourceRef": "2106611496155451393",
+              "sourceRevisionId": 2106611498130968577,
+              "sourceRevisionNo": 1,
+              "runtimeGeneration": 2,
+              "parameters": [],
+              "responseFields": [
+                {
+                  "name": "order_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "yak-golden-sample-v1"
+                },
+                {
+                  "name": "customer_code",
+                  "type": "STRING",
+                  "nullable": false,
+                  "description": "yak-golden-sample-v1"
+                },
+                {
+                  "name": "quantity",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "yak-golden-sample-v1"
+                }
+              ],
+              "documented": true,
+              "schemaStale": false,
+              "documentationUpdatedAt": "2026-10-04T13:04:54.89"
+            }
+          },
+          "navigation": {
+            "canonicalHref": "/data-analysis/consumption/DATA_SERVICE%3A1",
+            "sourceHref": "/data-service/api/1",
+            "assetHref": "/data-asset/detail/5",
+            "producerHref": "/data-development?nodeId=2106611496155451393"
+          },
+          "governanceEvidence": [
+            {
+              "sectionKey": "source-governance",
+              "state": "UNAVAILABLE",
+              "ownerDomain": "DATA_SERVICE",
+              "facts": {},
+              "reason": "Data Service source contract exposes update time but no governed evidence projection"
+            },
+            {
+              "sectionKey": "ownership",
+              "state": "UNAVAILABLE",
+              "ownerDomain": "DATA_SERVICE",
+              "facts": {},
+              "reason": "Data Service owning contract does not expose owner"
+            },
+            {
+              "sectionKey": "visibility",
+              "state": "UNAVAILABLE",
+              "ownerDomain": "SECURITY",
+              "facts": {},
+              "reason": "Data Service visibility policy is not exposed yet"
+            },
+            {
+              "sectionKey": "service-interface",
+              "state": "READY",
+              "ownerDomain": "DATA_SERVICE",
+              "facts": {}
+            },
+            {
+              "sectionKey": "asset",
+              "state": "READY",
+              "ownerDomain": "ASSET",
+              "facts": {}
+            },
+            {
+              "sectionKey": "quality",
+              "state": "NOT_APPLICABLE",
+              "ownerDomain": "QUALITY",
+              "facts": {},
+              "reason": "当前 MVP 仅物理表接入质量治理"
+            },
+            {
+              "sectionKey": "security",
+              "state": "EMPTY",
+              "ownerDomain": "SECURITY",
+              "observedAt": "2026-10-04T07:35:09.241613Z",
+              "facts": {
+                "complianceSummaryStatus": "UNAVAILABLE",
+                "classificationCount": 0,
+                "complianceSummaryReason": "合规检查结果按批次归属，当前没有该实体的最新检查结果",
+                "evidenceScope": "INDEXED_SOURCE_ASSET",
+                "accessPolicySummaryStatus": "UNAVAILABLE",
+                "accessPolicySummaryReason": "缺少完整数据源、数据库和表坐标，无法准确匹配对象级 READ 规则",
+                "evidence": [],
+                "classifications": [],
+                "maskingSummaryStatus": "NOT_APPLICABLE",
+                "strategySummaryStatus": "PARTIAL",
+                "maskingSummaryReason": "该对象没有活动分级记录，无需计算分级对象的脱敏策略匹配情况",
+                "strategySummaryReason": "分级、访问规则与脱敏匹配分别展示；访问规则数量不代表有效访问决策",
+                "provenance": {
+                  "sourceDomain": "SECURITY",
+                  "sourceId": "data_service:1",
+                  "observedAt": "2026-10-04T07:35:09.240584700Z"
+                },
+                "assetRef": {
+                  "domain": "ASSET",
+                  "identity": "5"
+                },
+                "sourceRef": {
+                  "productType": "DATA_SERVICE",
+                  "sourceIdentity": "1"
+                }
+              },
+              "reason": "Security 域没有返回该对象的分级记录"
+            },
+            {
+              "sectionKey": "lineage",
+              "state": "EMPTY",
+              "ownerDomain": "LINEAGE",
+              "observedAt": "2026-10-04T07:35:09.245638Z",
+              "facts": {
+                "evidenceScope": "INDEXED_SOURCE_ASSET",
+                "assetRef": {
+                  "domain": "ASSET",
+                  "identity": "5"
+                },
+                "sourceRef": {
+                  "productType": "DATA_SERVICE",
+                  "sourceIdentity": "1"
+                }
+              },
+              "reason": "该资产尚未登记血缘"
+            },
+            {
+              "sectionKey": "asset-governance",
+              "state": "READY",
+              "ownerDomain": "ASSET",
+              "observedAt": "2026-10-04T07:16:37.122574Z",
+              "facts": {
+                "status": "PENDING"
+              }
+            }
+          ]
+        },
+        "impact": {
+          "productKey": {
+            "productType": "DATA_SERVICE",
+            "sourceIdentity": "1"
+          },
+          "subscriptionState": "READY",
+          "usageState": "READY",
+          "consumers": [
+            {
+              "consumerRef": {
+                "consumerType": "DATA_SERVICE",
+                "sourceDomain": "DATA_SERVICE_CONSUMER",
+                "sourceIdentity": "1"
+              },
+              "declaredModes": [
+                "API_INVOKE"
+              ],
+              "observedModes": [
+                "API_INVOKE"
+              ],
+              "activeSubscriptionCount": 1,
+              "successfulUsageCount": 2,
+              "lastDeclaredAt": "2026-10-04T15:35:09.041",
+              "lastObservedAt": "2026-10-04T15:35:08.228756",
+              "providerEvidenceRefs": [
+                "DATA_SERVICE_INVOCATION:invocation:2",
+                "DATA_SERVICE_INVOCATION:invocation:1"
+              ]
+            }
+          ],
+          "coverageNote": "Known consumers include declared subscriptions and normalized successful usage in the reconciled source window only; external consumers outside available evidence are not claimed complete."
+        },
+        "assetNavigation": {
+          "state": "FOUND",
+          "productKey": {
+            "productType": "DATA_SERVICE",
+            "sourceIdentity": "1"
+          },
+          "canonicalHref": "/data-analysis/consumption/DATA_SERVICE%3A1"
+        },
+        "subscriptionId": 2,
+        "duplicateSubscription": "PASSED"
+      }
+    },
+    "invalidPublicApiKey": "PASSED",
+    "anonymousManagement": "PASSED",
+    "crossProject": "PASSED",
+    "sourceDisableRecovery": {
+      "state": "PASSED",
+      "disabledInvocationHttpStatus": 500,
+      "recoveryHttpStatus": 200
+    }
+  }
+}
