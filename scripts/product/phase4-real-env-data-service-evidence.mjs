@@ -24,6 +24,8 @@
  *   YAK_OPS_EVIDENCE_INCLUDE_PARAMS (default: false)
  */
 
+import { parseEvidenceJson } from './lossless-json.mjs';
+
 const PROJECT_HEADER = 'X-YAK-SECURITY-PROJECT-ID';
 const BASE_URL = (process.env.YAK_OPS_BASE_URL || 'http://localhost:9001').replace(/\/+$/, '');
 const PUBLIC_BASE_URL = (process.env.YAK_OPS_PUBLIC_BASE_URL || BASE_URL).replace(/\/+$/, '');
@@ -152,7 +154,7 @@ async function checkedPayload(response, method, path) {
 function parseJson(text) {
   if (!text) return null;
   try {
-    return JSON.parse(text);
+    return parseEvidenceJson(text);
   } catch {
     return null;
   }
@@ -332,9 +334,14 @@ async function main() {
     throw new Error(`Data Service ${DATA_SERVICE_ID} is not enabled`);
   }
   if (String(service.authMode ?? '').toUpperCase() !== 'API_KEY') {
-    throw new Error(
-      `Data Service ${DATA_SERVICE_ID} must use API_KEY auth for #104 Golden evidence (authMode=${service.authMode ?? '<unknown>'})`,
-    );
+    const consumers = rowsOf(await consoleRequest(
+      '/api/v1/data-service/consumers', { projectScoped: true }), 'Data Service Consumers');
+    const granted = consumers.some((consumer) => consumer.enabled === true
+      && (consumer.accessScope === 'ALL'
+        || consumer.apiIds?.some((id) => String(id) === DATA_SERVICE_ID)));
+    if (!granted) {
+      throw new Error(`Data Service ${DATA_SERVICE_ID} has neither API_KEY mode nor a managed Consumer grant`);
+    }
   }
   if (!service.runtimePath) {
     throw new Error(`Data Service ${DATA_SERVICE_ID} does not expose runtimePath`);

@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,10 +37,15 @@ import io.yak.ops.common.enums.asset.AssetErrorCode;
 import io.yak.ops.common.enums.asset.AssetStatus;
 import io.yak.ops.common.enums.asset.AssetSourceType;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.core.project.ProjectContext;
+import io.yak.ops.core.project.ProjectContextScope;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -56,6 +62,7 @@ class AssetReconcileServiceTest {
   private AssignRuleService ruleService;
   private AssetSettingService settingService;
   private AssetReconcileService service;
+  private ProjectContextScope projectScope;
 
   @BeforeEach
   void setUp() {
@@ -71,7 +78,8 @@ class AssetReconcileServiceTest {
         mock(io.yak.ops.business.audit.AuditOperationHandle.class);
     lenient().when(currentProject.requireProjectId()).thenReturn(1L);
     lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(handle);
-    service = new AssetReconcileService(mock(ObjectProvider.class), currentProject, registry, itemMapper, changeMapper,
+    projectScope = mock(ProjectContextScope.class);
+    service = new AssetReconcileService(mock(ObjectProvider.class), currentProject, projectScope, registry, itemMapper, changeMapper,
         tagRelMapper, ruleService, settingService, auditService,
         mock(io.yak.ops.business.asset.schedule.AssetScheduleEngineBridge.class),
         mock(io.yak.ops.business.asset.health.HealthRecomputeService.class));
@@ -206,6 +214,39 @@ class AssetReconcileServiceTest {
     assertNull(outcomes.get(1).error());
     verify(settingService).put(eq(1L),
         eq(AssetReconcileService.SETTING_LAST_PREFIX + "MODEL"), anyString());
+  }
+
+  @Test
+  void manualReconciliationRestoresTrustedProjectInBackgroundWorker() throws InterruptedException {
+    ThreadLocal<ProjectContext> workerContext = new ThreadLocal<>();
+    CountDownLatch entered = new CountDownLatch(1);
+    AtomicReference<Long> seenProject = new AtomicReference<>();
+    AtomicReference<Thread> seenThread = new AtomicReference<>();
+    doAnswer(invocation -> {
+      workerContext.set(invocation.getArgument(0));
+      try {
+        invocation.<Runnable>getArgument(1).run();
+      } finally {
+        workerContext.remove();
+      }
+      return null;
+    }).when(projectScope).run(any(), any());
+    AssetProvider provider = mock(AssetProvider.class);
+    when(provider.cursorList(any())).thenAnswer(invocation -> {
+      seenProject.set(workerContext.get() == null ? null : workerContext.get().projectId());
+      seenThread.set(Thread.currentThread());
+      entered.countDown();
+      return AssetPage.empty();
+    });
+    when(registry.registeredTypes()).thenReturn(List.of(AssetSourceType.DATA_SERVICE));
+    when(registry.find(AssetSourceType.DATA_SERVICE)).thenReturn(Optional.of(provider));
+    when(itemMapper.selectList(any())).thenReturn(List.of());
+
+    service.submit(List.of("DATA_SERVICE"), "rec");
+
+    assertTrue(entered.await(5, TimeUnit.SECONDS));
+    assertEquals(1L, seenProject.get());
+    assertTrue(seenThread.get() != Thread.currentThread());
   }
 
   @Test

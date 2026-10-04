@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import YakOpsEmpty from '@/components/YakOpsEmpty';
 import { YakButton, YakTab } from '@/components/ui';
+import { consumptionProductPath } from '@/services/consumption';
 import {
   createDatasetVersion,
   getDatasetForManagement,
@@ -651,7 +652,7 @@ export default function DatasetDetailPage() {
     <ConfigProvider theme={BRAND_THEME}>
       <div className="min-h-[calc(100vh-64px)] bg-[#f7f7f8] text-[#161823]">
         <div className="mx-auto w-full max-w-[1800px] px-4 pb-8 pt-0 lg:px-5">
-          <div className="mb-2 flex h-10 items-center">
+          <div className="mb-2 flex min-h-10 flex-wrap items-center justify-between gap-2">
             <Button
               type="text"
               icon={<ArrowLeftOutlined />}
@@ -659,6 +660,9 @@ export default function DatasetDetailPage() {
               onClick={() => history.push('/dataset')}
             >
               返回数据集列表
+            </Button>
+            <Button onClick={() => history.push(consumptionProductPath('DATASET', String(dataset.id)))}>
+              查看消费与治理
             </Button>
           </div>
 

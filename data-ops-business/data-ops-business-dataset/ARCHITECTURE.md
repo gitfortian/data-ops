@@ -1,5 +1,10 @@
 # Dataset Architecture
 
+Console transport identity is adapted in Boot from verified Yak CurrentUser to Servlet Principal.
+Role codes are read from the owning RoleService; incomplete identity/roles cannot enter a query.
+DatasetController retains its existing Principal-to-DatasetQuerySubject boundary and Security Gateway.
+This adds no Dataset-to-IAM persistence or authentication implementation dependency.
+
 本文件描述 Dataset 当前长期架构。需求看 `REQUIREMENTS.md`，领域事实看 `DOMAIN.md`，依赖矩阵看 `DEPENDENCIES.md`，统一规范看 [`../../CODE_STYLE.md`](../../CODE_STYLE.md)。
 
 ## 1. Principles

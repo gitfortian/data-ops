@@ -2,10 +2,10 @@
 
 export type AssetStatus = 'PENDING' | 'PUBLISHED' | 'OFFLINE' | 'IGNORED' | 'SOURCE_GONE';
 
-export type AssetSourceType = 'MODEL' | 'METRIC' | 'METADATA' | 'DATASET' | 'DASHBOARD' | 'CHART' | 'TASK' | 'MANUAL';
+export type AssetSourceType = 'MODEL' | 'METRIC' | 'METADATA' | 'DATASET' | 'DATA_SERVICE' | 'DASHBOARD' | 'CHART' | 'TASK' | 'MANUAL';
 
 /** 展示类型(与 LineageAssetType 命名对齐;DOC 仅 MANUAL 用)。 */
-export type AssetType = 'TABLE' | 'METRIC' | 'DATASET' | 'DASHBOARD' | 'CHART' | 'TASK' | 'DOC';
+export type AssetType = 'TABLE' | 'METRIC' | 'DATASET' | 'DATA_SERVICE' | 'DASHBOARD' | 'CHART' | 'TASK' | 'DOC';
 
 export interface AssetSourceLookup {
   state: 'FOUND' | 'NOT_INDEXED';

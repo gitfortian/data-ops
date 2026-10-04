@@ -42,6 +42,7 @@ export const ASSET_SOURCE_TYPE_LABELS: Record<AssetSourceType, string> = {
   METRIC: '指标',
   METADATA: '物理表',
   DATASET: '数据集',
+  DATA_SERVICE: '数据服务',
   DASHBOARD: '仪表盘',
   CHART: '图表',
   TASK: '任务',
@@ -52,6 +53,7 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   TABLE: '表',
   METRIC: '指标',
   DATASET: '数据集',
+  DATA_SERVICE: '数据服务',
   DASHBOARD: '仪表盘',
   CHART: '图表',
   TASK: '任务',
@@ -237,6 +239,9 @@ export const sourceObjectPath = (
       break;
     case 'DASHBOARD':
       path = `/dashboard/${sourceId}`;
+      break;
+    case 'DATA_SERVICE':
+      path = `/data-service/api/${encodeURIComponent(sourceId)}`;
       break;
     case 'TASK':
       path = `/data-development/task/${sourceId}`;

@@ -404,6 +404,10 @@ Guard 锁定：
 
 ## 19. 修改协议
 
+Governed catalog read 复用 DataServiceReader.cursorList/find -> DataServiceRepository，
+保持 query -> repository -> dao corridor。Consumption 的 AssetProvider 只读
+这个有界 Reader 和 source-owned DataServiceIdentity；Data Service 不依赖 Asset。
+
 ```text
 Architecture Impact
 - capability owner package:

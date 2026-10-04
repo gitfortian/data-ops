@@ -2,6 +2,8 @@ package io.yak.ops.business.consumption.product.discovery;
 
 import io.yak.ops.business.asset.application.AssetAppService;
 import io.yak.ops.business.asset.application.AssetAppService.AssetView;
+import io.yak.ops.business.asset.application.AssetDiscoverService;
+import io.yak.ops.business.asset.application.AssetDiscoverService.SectionView;
 import io.yak.ops.business.consumption.product.discovery.CanonicalProductDetail.GovernanceEvidence;
 import io.yak.ops.business.consumption.product.identity.DomainRef;
 import io.yak.ops.business.consumption.product.identity.ProductKey;
@@ -14,29 +16,50 @@ import io.yak.ops.business.consumption.product.provider.ProductLookupState;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
+import io.yak.ops.spi.section.SectionContract;
+import io.yak.ops.spi.section.SectionSummary;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** Builds the unique canonical detail without taking ownership of source or governance truth. */
 @Service
-@RequiredArgsConstructor
 public class CanonicalProductService {
 
   private final ProductDiscoveryService discoveryService;
   private final AssetAppService assetAppService;
+  private final AssetDiscoverService assetDiscoverService;
+
+  @Autowired
+  public CanonicalProductService(
+      ProductDiscoveryService discoveryService, AssetAppService assetAppService,
+      AssetDiscoverService assetDiscoverService) {
+    this.discoveryService = discoveryService;
+    this.assetAppService = assetAppService;
+    this.assetDiscoverService = assetDiscoverService;
+  }
+
+  public CanonicalProductService(
+      ProductDiscoveryService discoveryService, AssetAppService assetAppService) {
+    this(discoveryService, assetAppService, null);
+  }
 
   public CanonicalProductDetail detail(ProductKey key) {
+    return detail(key, null);
+  }
+
+  public CanonicalProductDetail detail(ProductKey key, String operator) {
     ProductLookupResult lookup = discoveryService.get(key);
     if (lookup.state() != ProductLookupState.FOUND) {
       return new CanonicalProductDetail(lookup.state(), null, null, List.of(), lookup.reason());
     }
     DataProductView product = lookup.product();
     return new CanonicalProductDetail(
-        lookup.state(), product, navigation(product), governanceEvidence(product), null);
+        lookup.state(), product, navigation(product), governanceEvidence(product, operator), null);
   }
 
   public NavigationResolution fromSource(ProductType productType, String sourceIdentity) {
@@ -94,7 +117,7 @@ public class CanonicalProductService {
     return prefix + encode(ref.identity());
   }
 
-  private List<GovernanceEvidence> governanceEvidence(DataProductView product) {
+  private List<GovernanceEvidence> governanceEvidence(DataProductView product, String operator) {
     List<GovernanceEvidence> evidence = new ArrayList<>();
     for (ProductSectionState section : product.sections()) {
       evidence.add(new GovernanceEvidence(
@@ -103,6 +126,13 @@ public class CanonicalProductService {
     }
     DomainRef assetRef = product.assetRef();
     if (assetRef == null || !"ASSET".equalsIgnoreCase(assetRef.domain())) return evidence;
+    if (assetDiscoverService != null) {
+      for (String key : List.of("quality", "security", "lineage")) {
+        // Asset governance is not source ownership. Replace only the section actually read.
+        evidence.removeIf(section -> key.equals(section.sectionKey()));
+        evidence.add(assetSection(product, assetRef, key, operator));
+      }
+    }
     try {
       AssetView asset = assetAppService.get(Long.parseLong(assetRef.identity()));
       Map<String, Object> facts = new LinkedHashMap<>();
@@ -126,6 +156,50 @@ public class CanonicalProductService {
           exception.getMessage()));
     }
     return evidence;
+  }
+
+  private GovernanceEvidence assetSection(
+      DataProductView product, DomainRef assetRef, String key, String operator) {
+    String owner = key.toUpperCase(java.util.Locale.ROOT);
+    try {
+      SectionView view = assetDiscoverService.section(
+          Long.parseLong(assetRef.identity()), owner, operator);
+      ProviderEvidenceState state = switch (view.status()) {
+        case OK -> ProviderEvidenceState.READY;
+        case EMPTY -> ProviderEvidenceState.EMPTY;
+        case UNAVAILABLE -> ProviderEvidenceState.UNAVAILABLE;
+        case PERMISSION_DENIED -> ProviderEvidenceState.FORBIDDEN;
+        case NOT_APPLICABLE -> ProviderEvidenceState.NOT_APPLICABLE;
+      };
+      Map<String, Object> facts = new LinkedHashMap<>();
+      Instant observedAt = null;
+      if (state == ProviderEvidenceState.READY || state == ProviderEvidenceState.EMPTY) {
+        SectionSummary summary = null;
+        if (view.data() instanceof SectionContract contract) {
+          owner = contract.ownerDomain();
+          summary = contract.summary();
+          put(facts, "updatedAt", contract.updatedAt());
+          put(facts, "provenance", contract.provenance());
+          put(facts, "evidence", contract.evidence());
+        } else if (view.data() instanceof SectionSummary typed) {
+          summary = typed;
+        }
+        if (summary != null) summary.values().forEach((name, value) -> put(facts, name, value));
+        else if (view.data() instanceof Map<?, ?> map) {
+          map.forEach((name, value) -> put(facts, String.valueOf(name), value));
+        } else if (view.data() != null) {
+          facts.put("data", view.data());
+        }
+        facts.put("assetRef", assetRef);
+        put(facts, "sourceRef", product.sourceRef());
+        facts.put("evidenceScope", "INDEXED_SOURCE_ASSET");
+        observedAt = Instant.now();
+      }
+      return new GovernanceEvidence(key, state, owner, observedAt, facts, view.note());
+    } catch (RuntimeException unavailable) {
+      return new GovernanceEvidence(key, ProviderEvidenceState.UNAVAILABLE, owner,
+          null, Map.of(), "Governance section could not be read");
+    }
   }
 
   private void put(Map<String, Object> facts, String key, Object value) {

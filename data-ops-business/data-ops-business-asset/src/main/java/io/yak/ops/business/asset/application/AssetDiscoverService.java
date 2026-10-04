@@ -285,6 +285,7 @@ public class AssetDiscoverService {
       case "METRIC" -> "metric:read";
       case "METADATA" -> "data-metadata:read";
       case "DATASET", "TASK" -> "data-development:read";
+      case "DATA_SERVICE" -> "data-service:read";
       default -> null;
     };
     return permission == null || hasPermission(operator, permission);

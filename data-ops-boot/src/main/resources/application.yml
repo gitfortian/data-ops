@@ -85,6 +85,8 @@ yak:
         database: ${YAK_SECURITY_REDIS_DATABASE:0}
         max-total: ${YAK_SECURITY_REDIS_MAX_TOTAL:64}
     public-paths:
+      # External invocation is authorized by Consumer/API Key/IP policy, not console login.
+      - /api/v1/data-service/runtime/**
       - /api/test/ping
       - /yak-security/api/v1/account/login
       - /yak-security/api/v1/common/heart

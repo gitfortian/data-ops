@@ -188,6 +188,10 @@ Domain 不依赖 Spring/MyBatis/Controller/Repository/DAO/Publication/Execution/
 
 ## 12. Dependency Change Protocol
 
+Consumption 的 Data Service AssetProvider 只读 query.DataServiceReader 和
+domain.DataServiceIdentity。Cursor read 保持 CurrentProject 管理面边界；
+不新增 top-level package edge，不扩大 Public Invocation 的 global-by-path corridor。
+
 ```text
 Dependency Impact
 - source package:
