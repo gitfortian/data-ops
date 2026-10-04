@@ -6,6 +6,8 @@
 
 本文记录当前证据和待验收项，不替代 ACCEPTED Product Decision 或 APPROVED Feature Spec，也不将未获批准的需求变成实现指令。
 
+2026-10-04 追加：[R1 首批实施记录](golden-sample/implementation-20261004.md)补充物理表登录态 API、八分区与 Asset 项目隔离证据。下文保留 2026-09-30 历史审计；新增证据未覆盖全部七场景，不能据此关闭 #185 或宣称 PD-001 DONE。
+
 ## 当前结论
 
 Phase 7 尚未完成总体验收。`main` 已包含 Asset 统一发现入口、Metadata 专业技术目录、Asset Section 及多个治理域只读摘要；完整的物理表、Model、Metric、Dataset 登录态用户路径，以及权限/故障隔离场景尚无一套统一、当前的 E2E 验收记录。

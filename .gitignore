@@ -69,3 +69,6 @@ spark-warehouse
 # stage completion notes, connector probes, sync markers, or other agent handoff files.
 .stage*
 docs/**/STAGE*.md
+
+# Machine-bound Golden Sample identities / local execution reports
+docs/product/acceptance/golden-sample/*.local.json

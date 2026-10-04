@@ -1,0 +1,17 @@
+{
+  "marker": "yak-golden-sample-v1",
+  "capturedAt": "2026-10-04T04:08:06.468721+00:00",
+  "identitiesStable": true,
+  "sourceCorrectionsPreserved": true,
+  "projectId": "7",
+  "dataSourceId": "2",
+  "rowCounts": {
+    "golden_orders": 3,
+    "golden_orders_bad": 3,
+    "golden_customers": 3
+  },
+  "secondHarvestRunId": "7",
+  "controlProjectId": "8",
+  "controlProjectIdentityStable": true,
+  "controlProjectReplayAt": "2026-10-04T04:18:56.235610+00:00"
+}
