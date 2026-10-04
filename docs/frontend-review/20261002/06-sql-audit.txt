@@ -1,0 +1,151 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成" [expanded]:
+      - generic "数据接入与集成"
+    - link "数据源":
+      - /url: /data-source
+      - generic "数据源"
+    - link "离线同步":
+      - /url: /sync/batch-link-up
+      - generic "离线同步"
+    - link "实时同步":
+      - /url: /sync/realtime
+      - generic "实时同步"
+    - link "文件资源":
+      - /url: /resource-management
+      - generic "文件资源"
+    - link "SQL 执行记录":
+      - /url: /sql-execution-audit
+      - generic "SQL 执行记录"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: SQL 执行记录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: SQL 执行审计
+  - generic: 数据源上执行过的 SQL 一本账：执行/语句两级留痕、耗时与失败原因
+  - generic: 执行总数
+  - generic: "3"
+  - generic: 成功率
+  - generic: 100%
+  - generic: 成功 3 / 失败 0
+  - generic: 取消/超时
+  - generic: 0 / 0
+  - generic: 平均耗时
+  - generic: 614 ms
+  - generic: P95 1011 ms · 最大 1011 ms
+  - generic: 返回行数
+  - generic: "1000"
+  - generic: 影响行数
+  - generic: "12240"
+  - generic: "INSERT: 2"
+  - generic: "SELECT: 1"
+  - textbox "按执行 ID 搜索"
+  - combobox
+  - generic: 按数据源
+  - textbox "按调用方搜索"
+  - combobox
+  - generic: 按状态
+  - textbox "开始日期"
+  - generic "to":
+    - img "swap-right":
+  - textbox "结束日期"
+  - img "calendar":
+  - table:
+    - rowgroup:
+      - row "开始时间 执行 ID 数据源 调用方 操作人 语句 行数(返回/影响) 状态 耗时":
+        - columnheader "开始时间"
+        - columnheader "执行 ID"
+        - columnheader "数据源"
+        - columnheader "调用方"
+        - columnheader "操作人"
+        - columnheader "语句"
+        - columnheader "行数(返回/影响)"
+        - columnheader "状态"
+        - columnheader "耗时":
+          - generic: 耗时
+    - rowgroup:
+      - row "2026-09-29 17:44:56 sql-1733d906-dfc6-4b2f-8110-f2e844151d6c 3 SQL_TASK - 1/1 0 / 6120 成功 549 ms":
+        - cell "2026-09-29 17:44:56"
+        - cell "sql-1733d906-dfc6-4b2f-8110-f2e844151d6c":
+          - button "sql-1733d906-dfc6-4b2f-8110-f2e844151d6c":
+            - generic: sql-1733d906-dfc6-4b2f-8110-f2e844151d6c
+        - cell "3"
+        - cell "SQL_TASK"
+        - cell "-"
+        - cell "1/1"
+        - cell "0 / 6120"
+        - cell "成功":
+          - generic: 成功
+        - cell "549 ms"
+      - row "2026-09-20 16:20:22 sql-sync-44b57690-7db1-4903-8cc8-c63154d339bd 3 DATA_SERVICE - 1/1 1000 / 0 成功 281 ms":
+        - cell "2026-09-20 16:20:22"
+        - cell "sql-sync-44b57690-7db1-4903-8cc8-c63154d339bd":
+          - button "sql-sync-44b57690-7db1-4903-8cc8-c63154d339bd":
+            - generic: sql-sync-44b57690-7db1-4903-8cc8-c63154d339bd
+        - cell "3"
+        - cell "DATA_SERVICE"
+        - cell "-"
+        - cell "1/1"
+        - cell "1000 / 0"
+        - cell "成功":
+          - generic: 成功
+        - cell "281 ms"
+      - row "2026-09-20 10:53:45 sql-7a5149c2-dff8-427d-b45d-3b46fa600dba 3 SQL_TASK - 1/1 0 / 6120 成功 1011 ms":
+        - cell "2026-09-20 10:53:45"
+        - cell "sql-7a5149c2-dff8-427d-b45d-3b46fa600dba":
+          - button "sql-7a5149c2-dff8-427d-b45d-3b46fa600dba":
+            - generic: sql-7a5149c2-dff8-427d-b45d-3b46fa600dba
+        - cell "3"
+        - cell "SQL_TASK"
+        - cell "-"
+        - cell "1/1"
+        - cell "0 / 6120"
+        - cell "成功":
+          - generic: 成功
+        - cell "1011 ms"
+  - list:
+    - listitem: 共 3 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "20 条/页"

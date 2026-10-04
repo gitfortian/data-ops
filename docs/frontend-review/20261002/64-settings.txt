@@ -1,0 +1,115 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 设置
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - complementary:
+    - generic: 设置
+    - button "编辑器设置":
+      - generic: 编辑器设置
+    - button "环境变量":
+      - generic: 环境变量
+    - button "计算引擎":
+      - generic: 计算引擎
+    - button "大屏模板":
+      - generic: 大屏模板
+    - button "告警设置":
+      - generic: 告警设置
+  - generic: 编辑器设置
+  - generic: 已同步
+  - generic: 外观
+  - generic: 编辑器主题
+  - combobox
+  - generic "Yak-Light"
+  - generic: 编辑器字体
+  - combobox
+  - generic "Monaco"
+  - generic: 自定义字体
+  - textbox "例如 Cascadia Code"
+  - generic: 字体大小
+  - button "Increase Value":
+    - img "up":
+  - button "Decrease Value":
+    - img "down":
+  - spinbutton: "14"
+  - generic: px
+  - generic: 行高
+  - button "Increase Value":
+    - img "up":
+  - button "Decrease Value":
+    - img "down":
+  - spinbutton: "1.6"
+  - generic: 编辑器行为
+  - generic: 显示行号
+  - radio "显示" [checked]
+  - generic: 显示
+  - radio "隐藏"
+  - generic: 隐藏
+  - generic: 显示缩略图
+  - radio "显示"
+  - generic: 显示
+  - radio "隐藏" [checked]
+  - generic: 隐藏
+  - generic: 自动换行
+  - radio "启用" [checked]
+  - generic: 启用
+  - radio "禁用"
+  - generic: 禁用
+  - generic: 代码折叠
+  - radio "显示" [checked]
+  - generic: 显示
+  - radio "隐藏"
+  - generic: 隐藏
+  - generic: 行高亮
+  - combobox
+  - generic "LINE"
+  - generic: 空白字符显示
+  - combobox
+  - generic "不显示"
+  - generic: SQL
+  - generic: 关键字大小写
+  - radio "大写"
+  - generic: 大写
+  - radio "小写" [checked]
+  - generic: 小写
+  - generic: 全限定补全
+  - combobox
+  - generic "不补全限定名"
+  - button "恢复默认设置":
+    - generic: 恢复默认设置

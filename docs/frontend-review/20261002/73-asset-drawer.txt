@@ -1,0 +1,194 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 资产详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - button "← 返回":
+    - generic: ← 返回
+  - generic: 用户信息表
+  - generic: 待上架
+  - generic: modeling:model:49
+  - button "查看源对象":
+    - generic: 查看源对象
+  - button "上 架":
+    - generic: 上 架
+  - button "申请上架审批":
+    - generic: 申请上架审批
+  - generic: 已发现
+  - generic: →
+  - generic: 已描述
+  - generic: →
+  - generic: 已定标
+  - generic: →
+  - generic: 已稽核
+  - generic: →
+  - generic: 已上架
+  - generic: →
+  - generic: 运营中
+  - generic: →
+  - generic: 归档策略
+  - tablist:
+    - tab "概览" [selected]
+    - tab "健康度"
+    - tab "血缘"
+    - tab "使用"
+    - tab "安全/质量/字段/生命周期"
+    - tab "治理"
+  - tabpanel "概览":
+    - generic: 台账信息
+    - table:
+      - rowgroup:
+        - 'row "资产类型 : 模型（展示类型：表） 来源域 : 模型 治理联系人（Asset 台账） : root"':
+          - 'cell "资产类型 : 模型（展示类型：表）"':
+            - generic: "资产类型 :"
+            - generic: 模型（展示类型：表）
+          - 'cell "来源域 : 模型"':
+            - generic: "来源域 :"
+            - generic: 模型
+          - 'cell "治理联系人（Asset 台账） : root"':
+            - generic: "治理联系人（Asset 台账） :"
+            - generic: root
+        - 'row "分层 : ODS 业务域 : - 目录 : 应用层(ADS)"':
+          - 'cell "分层 : ODS"':
+            - generic: "分层 :"
+            - generic: ODS
+          - 'cell "业务域 : -"':
+            - generic: "业务域 :"
+            - generic: "-"
+          - 'cell "目录 : 应用层(ADS)"':
+            - generic: "目录 :"
+            - generic: 应用层(ADS)
+        - 'row "安全等级(快照) : - 近30天浏览 : 0 最近对账 : 2026-10-01 19:04"':
+          - 'cell "安全等级(快照) : -"':
+            - generic: "安全等级(快照) :"
+            - generic: "-"
+          - 'cell "近30天浏览 : 0"':
+            - generic: "近30天浏览 :"
+            - generic: "0"
+          - 'cell "最近对账 : 2026-10-01 19:04"':
+            - generic: "最近对账 :"
+            - generic: 2026-10-01 19:04
+        - 'row "首次上架 : - 最近上架 : - 最近下架 : -"':
+          - 'cell "首次上架 : -"':
+            - generic: "首次上架 :"
+            - generic: "-"
+          - 'cell "最近上架 : -"':
+            - generic: "最近上架 :"
+            - generic: "-"
+          - 'cell "最近下架 : -"':
+            - generic: "最近下架 :"
+            - generic: "-"
+    - generic: 建模来源映射（Modeling 域）
+    - table:
+      - rowgroup:
+        - 'row "源名称 : 用户信息表 源描述 : -"':
+          - 'cell "源名称 : 用户信息表"':
+            - generic: "源名称 :"
+            - generic: 用户信息表
+          - 'cell "源描述 : -"':
+            - generic: "源描述 :"
+            - generic: "-"
+        - 'row "Model ID : 49 模型表名/编码 : ods_cust_info"':
+          - 'cell "Model ID : 49"':
+            - generic: "Model ID :"
+            - generic: "49"
+          - 'cell "模型表名/编码 : ods_cust_info"':
+            - generic: "模型表名/编码 :"
+            - generic: ods_cust_info
+        - 'row "Model 来源数据源 ID : 3 Model 来源数据库 : crm_db"':
+          - 'cell "Model 来源数据源 ID : 3"':
+            - generic: "Model 来源数据源 ID :"
+            - generic: "3"
+          - 'cell "Model 来源数据库 : crm_db"':
+            - generic: "Model 来源数据库 :"
+            - generic: crm_db
+        - 'row "Model 来源物理表 : crm_customer 源建议负责人 : root"':
+          - 'cell "Model 来源物理表 : crm_customer"':
+            - generic: "Model 来源物理表 :"
+            - generic: crm_customer
+          - 'cell "源建议负责人 : root"':
+            - generic: "源建议负责人 :"
+            - generic: root
+        - 'row "源更新时间 : 2026-09-18 14:59 dialect : MYSQL"':
+          - 'cell "源更新时间 : 2026-09-18 14:59"':
+            - generic: "源更新时间 :"
+            - generic: 2026-09-18 14:59
+          - 'cell "dialect : MYSQL"':
+            - generic: "dialect :"
+            - generic: MYSQL
+        - 'row "latestVersionNo : 0 status : DRAFT"':
+          - 'cell "latestVersionNo : 0"':
+            - generic: "latestVersionNo :"
+            - generic: "0"
+          - 'cell "status : DRAFT"':
+            - generic: "status :"
+            - generic: DRAFT
+    - generic: 技术元数据
+    - generic: 当前类型不适用
+    - generic: 当前 MVP 技术元数据分区仅适用于物理表
+    - table:
+      - rowgroup:
+        - 'row "事实归属域 : METADATA 能力状态 : 不适用"':
+          - 'cell "事实归属域 : METADATA"':
+            - generic: "事实归属域 :"
+            - generic: METADATA
+          - 'cell "能力状态 : 不适用"':
+            - generic: "能力状态 :"
+            - generic: 不适用

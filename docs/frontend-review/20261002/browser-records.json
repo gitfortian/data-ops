@@ -1,0 +1,448 @@
+[
+  {
+    "path": "/data-source",
+    "name": "02-data-source",
+    "url": "http://localhost:8000/data-source"
+  },
+  {
+    "path": "/sync/batch-link-up",
+    "name": "03-batch-sync",
+    "url": "http://localhost:8000/sync/batch-link-up?createTimeStart=2026-09-28+11%3A03%3A12&createTimeEnd=2026-10-03+11%3A03%3A12&current=1&pageSize=10"
+  },
+  {
+    "path": "/sync/realtime",
+    "name": "04-realtime-sync",
+    "url": "http://localhost:8000/sync/realtime"
+  },
+  {
+    "path": "/resource-management",
+    "name": "05-resources",
+    "url": "http://localhost:8000/resource-management"
+  },
+  {
+    "path": "/sql-execution-audit",
+    "name": "06-sql-audit",
+    "url": "http://localhost:8000/sql-execution-audit"
+  },
+  {
+    "path": "/semantic/domains",
+    "name": "07-business-domains",
+    "url": "http://localhost:8000/semantic/domains"
+  },
+  {
+    "path": "/semantic/processes",
+    "name": "08-business-processes",
+    "url": "http://localhost:8000/semantic/processes"
+  },
+  {
+    "path": "/semantic/standards",
+    "name": "09-data-standards",
+    "url": "http://localhost:8000/semantic/standards"
+  },
+  {
+    "path": "/semantic/fields",
+    "name": "10-standard-fields",
+    "url": "http://localhost:8000/semantic/fields"
+  },
+  {
+    "path": "/semantic/layers",
+    "name": "11-warehouse-layers",
+    "url": "http://localhost:8000/semantic/layers"
+  },
+  {
+    "path": "/modeling",
+    "name": "12-modeling",
+    "url": "http://localhost:8000/modeling"
+  },
+  {
+    "path": "/metric/manage",
+    "name": "13-metrics",
+    "url": "http://localhost:8000/metric/manage"
+  },
+  {
+    "path": "/metric/lineage",
+    "name": "14-metric-lineage",
+    "url": "http://localhost:8000/metric/lineage"
+  },
+  {
+    "path": "/metric/impact",
+    "name": "15-metric-impact",
+    "url": "http://localhost:8000/metric/impact"
+  },
+  {
+    "path": "/metric/service",
+    "name": "16-metric-statistics",
+    "url": "http://localhost:8000/metric/service"
+  },
+  {
+    "path": "/data-development",
+    "name": "17-development",
+    "url": "http://localhost:8000/data-development"
+  },
+  {
+    "path": "/data-development/releases",
+    "name": "18-releases",
+    "url": "http://localhost:8000/data-development/releases"
+  },
+  {
+    "path": "/data-development/executions",
+    "name": "19-development-runs",
+    "url": "http://localhost:8000/data-development/executions"
+  },
+  {
+    "path": "/workflow/definitions",
+    "name": "20-workflows",
+    "url": "http://localhost:8000/workflow/definitions"
+  },
+  {
+    "path": "/workflow/instances",
+    "name": "21-workflow-runs",
+    "url": "http://localhost:8000/workflow/instances"
+  },
+  {
+    "path": "/approval/todo",
+    "name": "22-approvals",
+    "url": "http://localhost:8000/approval/todo"
+  },
+  {
+    "path": "/approval/flows",
+    "name": "23-approval-flows",
+    "url": "http://localhost:8000/approval/flows"
+  },
+  {
+    "path": "/data-asset/overview",
+    "name": "24-asset-overview",
+    "url": "http://localhost:8000/data-asset/overview"
+  },
+  {
+    "path": "/data-asset/catalog",
+    "name": "25-asset-catalog",
+    "url": "http://localhost:8000/data-asset/catalog"
+  },
+  {
+    "path": "/data-asset/inventory",
+    "name": "26-asset-inventory",
+    "url": "http://localhost:8000/data-asset/inventory"
+  },
+  {
+    "path": "/data-asset/taxonomy",
+    "name": "27-taxonomy",
+    "url": "http://localhost:8000/data-asset/taxonomy"
+  },
+  {
+    "path": "/data-metadata/overview",
+    "name": "28-metadata-overview",
+    "url": "http://localhost:8000/data-metadata/overview"
+  },
+  {
+    "path": "/data-metadata/collect",
+    "name": "29-metadata-collection",
+    "url": "http://localhost:8000/data-metadata/collect"
+  },
+  {
+    "path": "/data-analysis/lineage",
+    "name": "30-lineage",
+    "url": "http://localhost:8000/data-analysis/lineage"
+  },
+  {
+    "path": "/data-quality/overview",
+    "name": "31-quality-overview",
+    "url": "http://localhost:8000/data-quality/overview"
+  },
+  {
+    "path": "/data-quality/table-config",
+    "name": "32-quality-tables",
+    "url": "http://localhost:8000/data-quality/table-config"
+  },
+  {
+    "path": "/data-quality/execution",
+    "name": "33-quality-runs",
+    "url": "http://localhost:8000/data-quality/execution"
+  },
+  {
+    "path": "/data-quality/rule-template",
+    "name": "34-rule-templates",
+    "url": "http://localhost:8000/data-quality/rule-template"
+  },
+  {
+    "path": "/data-security/overview",
+    "name": "35-security-overview",
+    "url": "http://localhost:8000/data-security/overview"
+  },
+  {
+    "path": "/data-security/classification",
+    "name": "36-classification",
+    "url": "http://localhost:8000/data-security/classification"
+  },
+  {
+    "path": "/data-security/access",
+    "name": "37-security-access",
+    "url": "http://localhost:8000/data-security/access"
+  },
+  {
+    "path": "/data-security/masking",
+    "name": "38-masking",
+    "url": "http://localhost:8000/data-security/masking"
+  },
+  {
+    "path": "/data-security/audit",
+    "name": "39-security-audit",
+    "url": "http://localhost:8000/data-security/audit"
+  },
+  {
+    "path": "/data-security/compliance",
+    "name": "40-compliance",
+    "url": "http://localhost:8000/data-security/compliance"
+  },
+  {
+    "path": "/data-lifecycle/policy",
+    "name": "41-lifecycle-policy",
+    "url": "http://localhost:8000/data-lifecycle/policy"
+  },
+  {
+    "path": "/data-lifecycle/monitor",
+    "name": "42-lifecycle-monitor",
+    "url": "http://localhost:8000/data-lifecycle/monitor"
+  },
+  {
+    "path": "/data-lifecycle/storage",
+    "name": "43-lifecycle-storage",
+    "url": "http://localhost:8000/data-lifecycle/storage"
+  },
+  {
+    "path": "/mdm/overview",
+    "name": "44-mdm-overview",
+    "url": "http://localhost:8000/mdm/overview"
+  },
+  {
+    "path": "/mdm/modeling",
+    "name": "45-mdm-modeling",
+    "url": "http://localhost:8000/mdm/modeling"
+  },
+  {
+    "path": "/mdm/identification",
+    "name": "46-mdm-identification",
+    "url": "http://localhost:8000/mdm/identification"
+  },
+  {
+    "path": "/mdm/cleansing",
+    "name": "47-mdm-cleansing",
+    "url": "http://localhost:8000/mdm/cleansing"
+  },
+  {
+    "path": "/mdm/approval",
+    "name": "48-mdm-approval",
+    "url": "http://localhost:8000/mdm/approval"
+  },
+  {
+    "path": "/data-analysis/consumption",
+    "name": "49-consumption",
+    "url": "http://localhost:8000/data-analysis/consumption"
+  },
+  {
+    "path": "/dataset",
+    "name": "50-datasets",
+    "url": "http://localhost:8000/dataset"
+  },
+  {
+    "path": "/data-service",
+    "name": "51-api-services",
+    "url": "http://localhost:8000/data-service"
+  },
+  {
+    "path": "/data-service/access",
+    "name": "52-api-access",
+    "url": "http://localhost:8000/data-service/access"
+  },
+  {
+    "path": "/data-service/debug",
+    "name": "53-api-debug",
+    "url": "http://localhost:8000/data-service/debug?apiId=1"
+  },
+  {
+    "path": "/data-service/overview",
+    "name": "54-api-overview",
+    "url": "http://localhost:8000/data-service/overview"
+  },
+  {
+    "path": "/data-service/logs",
+    "name": "55-api-logs",
+    "url": "http://localhost:8000/data-service/logs"
+  },
+  {
+    "path": "/dashboard",
+    "name": "56-dashboards",
+    "url": "http://localhost:8000/dashboard"
+  },
+  {
+    "path": "/digital-screen",
+    "name": "57-digital-screens",
+    "url": "http://localhost:8000/digital-screen"
+  },
+  {
+    "path": "/system/projects",
+    "name": "58-projects",
+    "url": "http://localhost:8000/system/projects"
+  },
+  {
+    "path": "/system/users",
+    "name": "59-users",
+    "url": "http://localhost:8000/system/users"
+  },
+  {
+    "path": "/system/departments",
+    "name": "60-departments",
+    "url": "http://localhost:8000/system/departments"
+  },
+  {
+    "path": "/system/roles",
+    "name": "61-roles",
+    "url": "http://localhost:8000/system/roles"
+  },
+  {
+    "path": "/system/oplogs",
+    "name": "62-operation-logs",
+    "url": "http://localhost:8000/system/oplogs"
+  },
+  {
+    "path": "/system/messages",
+    "name": "63-messages",
+    "url": "http://localhost:8000/system/messages"
+  },
+  {
+    "path": "/settings",
+    "name": "64-settings",
+    "url": "http://localhost:8000/settings"
+  },
+  {
+    "path": "/create",
+    "name": "65-create",
+    "url": "http://localhost:8000/create"
+  },
+  {
+    "path": "/ai-agent",
+    "name": "66-ai-agent",
+    "url": "http://localhost:8000/ai-agent"
+  },
+  {
+    "path": "/modeling/mainline",
+    "name": "67-modeling-mainline",
+    "url": "http://localhost:8000/modeling/mainline"
+  },
+  {
+    "path": "/modeling/impact",
+    "name": "68-modeling-impact",
+    "url": "http://localhost:8000/modeling/impact"
+  },
+  {
+    "path": "/digital-screen/new",
+    "name": "69-screen-create",
+    "url": "http://localhost:8000/digital-screen/new"
+  },
+  {
+    "path": "/dashboard/new",
+    "name": "70-dashboard-editor"
+  },
+  {
+    "path": "/data-service/api/1",
+    "name": "71-api-detail"
+  },
+  {
+    "path": "/mdm/modeling/1",
+    "name": "72-mdm-detail"
+  },
+  {
+    "path": "/data-asset/detail/8",
+    "name": "73-asset-drawer"
+  },
+  {
+    "path": "/data-asset/detail/8",
+    "name": "74-asset-sections"
+  },
+  {
+    "path": "/data-asset/catalog?view=entity",
+    "name": "75-metadata-entities",
+    "url": "http://localhost:8000/data-asset/catalog?view=entity"
+  },
+  {
+    "path": "/data-asset/catalog?view=entity",
+    "name": "76-metadata-detail"
+  },
+  {
+    "path": "/workflow/definition/workflow-c1756741-4765-4e37-ad1e-df9fbe1a5150?scene=edit",
+    "name": "77-workflow-editor"
+  },
+  {
+    "path": "/workflow/definition/workflow-c1756741-4765-4e37-ad1e-df9fbe1a5150?scene=edit",
+    "name": "78-workflow-node"
+  },
+  {
+    "path": "/data-development",
+    "name": "79-development-editor"
+  },
+  {
+    "path": "/data-source",
+    "name": "80-datasource-form"
+  },
+  {
+    "path": "/data-source",
+    "name": "81-datasource-fields"
+  },
+  {
+    "path": "/data-source",
+    "name": "88-drawer-mobile"
+  },
+  {
+    "path": "/data-source",
+    "name": "89-datasource-list"
+  },
+  {
+    "path": "/data-analysis/consumption/DATA_SERVICE%3A1",
+    "name": "90-consumption-detail"
+  },
+  {
+    "path": "/approval/instance/9",
+    "name": "91-approval-detail"
+  },
+  {
+    "path": "/metric/manage/26",
+    "name": "92-metric-detail"
+  },
+  {
+    "path": "/data-quality/execution/QM-20261001192621949-6193D9",
+    "name": "93-quality-detail"
+  },
+  {
+    "path": "/home",
+    "name": "01-home-desktop"
+  },
+  {
+    "path": "/data-asset/catalog",
+    "name": "82-asset-1280"
+  },
+  {
+    "path": "/data-asset/catalog",
+    "name": "83-asset-1024"
+  },
+  {
+    "path": "/data-asset/catalog",
+    "name": "84-asset-768"
+  },
+  {
+    "path": "/data-asset/catalog",
+    "name": "85-asset-mobile"
+  },
+  {
+    "path": "/home",
+    "name": "86-home-mobile"
+  },
+  {
+    "path": "/data-source",
+    "name": "87-datasource-mobile"
+  },
+  {
+    "path": "/data-quality/monitor/create",
+    "name": "94-quality-monitor-form",
+    "url": "http://localhost:8000/data-quality/monitor/create"
+  }
+]

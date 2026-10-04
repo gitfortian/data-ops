@@ -1,0 +1,329 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成" [expanded]:
+      - generic "数据接入与集成"
+    - link "数据源":
+      - /url: /data-source
+      - generic "数据源"
+    - link "离线同步":
+      - /url: /sync/batch-link-up
+      - generic "离线同步"
+    - link "实时同步":
+      - /url: /sync/realtime
+      - generic "实时同步"
+    - link "文件资源":
+      - /url: /resource-management
+      - generic "文件资源"
+    - link "SQL 执行记录":
+      - /url: /sql-execution-audit
+      - generic "SQL 执行记录"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据源
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - main:
+    - heading "数据源管理" [level=1]
+    - button "新建数据源":
+      - generic: 新建数据源
+    - generic: 全部数据源
+    - strong: "15"
+    - generic: 连接正常
+    - strong: "15"
+    - generic: 连接异常
+    - strong: "0"
+    - generic: 运行环境
+    - strong: "1"
+    - tablist:
+      - tab "全部" [selected]
+      - tab "开发"
+      - tab "测试"
+      - tab "生产"
+    - tabpanel "全部"
+    - combobox
+    - generic: 数据源类型
+    - textbox "搜索名称或连接地址"
+    - button "卡片视图":
+    - button "列表视图":
+    - article:
+      - heading "F1-CRM源" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/crm_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-29T17:49:23.217
+    - article:
+      - heading "数仓-ads" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/ads
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-19T11:09:02.165
+    - article:
+      - heading "数仓-dws" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/dws
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-19T11:09:02.157
+    - article:
+      - heading "数仓-dim" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/dim
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-16T14:12:55.043
+    - article:
+      - heading "数仓-dwd" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/dwd
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-16T14:04:51.701
+    - article:
+      - heading "数仓-ods" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/ods
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-16T14:04:27.492
+    - article:
+      - heading "评价库" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/review_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:32:34.457
+    - article:
+      - heading "售后库" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/aftersale_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:32:09.993
+    - article:
+      - heading "结算库" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/settle_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:32:08.666
+    - article:
+      - heading "物流库存" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/wms_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:30:37.474
+    - list:
+      - listitem: 第 1-10 条，共 15 条
+      - listitem "上一页":
+        - button "left" [disabled]:
+          - img "left":
+      - listitem "1":
+        - generic: "1"
+      - listitem "2":
+        - generic: "2"
+      - listitem "下一页":
+        - button "right":
+          - img "right":
+      - generic "页码":
+        - combobox "页码"
+        - generic "10 条/页"
+      - text: 跳至
+      - textbox "页"
+      - text: 页
+- dialog "新建数据源":
+  - button "关闭":
+    - img "close":
+  - generic: 新建数据源
+  - heading "基础信息" [level=3]
+  - generic: MYSQL
+  - generic "数据源名称": "* 数据源名称"
+  - textbox "* 数据源名称":
+    - /placeholder: 请输入数据源名称
+  - text: "*"
+  - text: 运行环境
+  - img "info-circle":
+  - combobox "* 运行环境 info-circle"
+  - generic: 开发环境
+  - generic "备注"
+  - textbox "备注":
+    - /placeholder: 请输入数据源备注
+  - heading "连接参数" [level=3]
+  - generic "主机地址": "* 主机地址"
+  - textbox "* 主机地址":
+    - /placeholder: 请输入数据库主机地址
+    - text: 127.0.0.1
+  - generic "端口": "* 端口"
+  - button "Increase Value":
+    - img "up":
+  - button "Decrease Value":
+    - img "down":
+  - spinbutton "* 端口": "3306"
+  - generic "数据库": "* 数据库"
+  - textbox "* 数据库":
+    - /placeholder: 请输入数据库名称
+  - generic "Schema"
+  - textbox "Schema":
+    - /placeholder: 可选；不填写时使用数据库默认 Schema
+  - generic "用户名": "* 用户名"
+  - textbox "* 用户名":
+    - /placeholder: 请输入数据库用户名
+  - generic "密码"
+  - textbox "密码":
+    - /placeholder: 请输入数据库密码
+  - img "eye-invisible":
+  - generic "JDBC 地址"
+  - textbox "根据主机、端口和数据库自动生成，也可以直接修改"
+  - button "expanded 驱动配置" [expanded]:
+    - img "expanded":
+    - heading "驱动配置" [level=3]
+  - generic "驱动类": "* 驱动类"
+  - textbox "* 驱动类":
+    - /placeholder: 请输入 JDBC Driver Class
+    - text: com.mysql.cj.jdbc.Driver
+  - button "collapsed SSH 隧道":
+    - img "collapsed":
+    - heading "SSH 隧道" [level=3]
+  - button "collapsed 高级配置":
+    - img "collapsed":
+    - heading "高级配置" [level=3]
+  - button "上一步":
+    - generic: 上一步
+  - button "连接测试":
+    - generic: 连接测试
+  - button "创建数据源":
+    - generic: 创建数据源

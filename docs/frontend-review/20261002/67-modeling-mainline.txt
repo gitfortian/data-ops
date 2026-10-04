@@ -1,0 +1,551 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 业务过程主线视图
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 业务过程主线视图
+  - generic: 按业务过程盘点各层模型覆盖与状态，支撑资产盘点（哪些过程未建 DWS/ADS）
+  - button "刷 新":
+    - generic: 刷 新
+  - table:
+    - rowgroup:
+      - row "业务过程 编码 ODS DWD DWS ADS DIM 合计 操作":
+        - columnheader "业务过程"
+        - columnheader "编码"
+        - columnheader "ODS"
+        - columnheader "DWD"
+        - columnheader "DWS"
+        - columnheader "ADS"
+        - columnheader "DIM"
+        - columnheader "合计"
+        - columnheader "操作"
+    - rowgroup:
+      - row "下单 order_create 未建 1 个模型 未建 未建 未建 1 覆盖详情 查看影响":
+        - cell "下单"
+        - cell "order_create":
+          - code: order_create
+        - cell "未建":
+          - generic: 未建
+        - cell "1 个模型":
+          - button "1 个模型":
+            - generic: 1 个模型
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "1":
+          - strong: "1"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "购买商品 purchase_item 未建 1 个模型 未建 未建 未建 1 覆盖详情 查看影响":
+        - cell "购买商品"
+        - cell "purchase_item":
+          - code: purchase_item
+        - cell "未建":
+          - generic: 未建
+        - cell "1 个模型":
+          - button "1 个模型":
+            - generic: 1 个模型
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "1":
+          - strong: "1"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "订单取消 order_cancel 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "订单取消"
+        - cell "order_cancel":
+          - code: order_cancel
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "订单完成 order_finish 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "订单完成"
+        - cell "order_finish":
+          - code: order_finish
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "订单支付 order_pay 未建 1 个模型 未建 未建 未建 1 覆盖详情 查看影响":
+        - cell "订单支付"
+        - cell "order_pay":
+          - code: order_pay
+        - cell "未建":
+          - generic: 未建
+        - cell "1 个模型":
+          - button "1 个模型":
+            - generic: 1 个模型
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "1":
+          - strong: "1"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "退款 refund_apply 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "退款"
+        - cell "refund_apply":
+          - code: refund_apply
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "商品维度 dim_item 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "商品维度"
+        - cell "dim_item":
+          - code: dim_item
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "客户注册 customer_register 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "客户注册"
+        - cell "customer_register":
+          - code: customer_register
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "客户维度 dim_customer 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "客户维度"
+        - cell "dim_customer":
+          - code: dim_customer
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "客户信息变更 customer_info_change 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "客户信息变更"
+        - cell "customer_info_change":
+          - code: customer_info_change
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "收货地址维度 dim_customer_address 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "收货地址维度"
+        - cell "dim_customer_address":
+          - code: dim_customer_address
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "活动投放 activity_launch 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "活动投放"
+        - cell "activity_launch":
+          - code: activity_launch
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "活动维度 dim_activity 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "活动维度"
+        - cell "dim_activity":
+          - code: dim_activity
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "领券 coupon_receive 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "领券"
+        - cell "coupon_receive":
+          - code: coupon_receive
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "用券 coupon_use 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "用券"
+        - cell "coupon_use":
+          - code: coupon_use
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "发货 delivery_send 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "发货"
+        - cell "delivery_send":
+          - code: delivery_send
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "签收 delivery_sign 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "签收"
+        - cell "delivery_sign":
+          - code: delivery_sign
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "库存变动 stock_change 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "库存变动"
+        - cell "stock_change":
+          - code: stock_change
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "库存快照 stock_snapshot 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "库存快照"
+        - cell "stock_snapshot":
+          - code: stock_snapshot
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "售后申请 aftersale_apply 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "售后申请"
+        - cell "aftersale_apply":
+          - code: aftersale_apply
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "售后完成 aftersale_finish 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "售后完成"
+        - cell "aftersale_finish":
+          - code: aftersale_finish
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "结算出账 settle_out 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "结算出账"
+        - cell "settle_out":
+          - code: settle_out
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响
+      - row "发表评价 review_publish 未建 未建 未建 未建 未建 0 覆盖详情 查看影响":
+        - cell "发表评价"
+        - cell "review_publish":
+          - code: review_publish
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "未建":
+          - generic: 未建
+        - cell "0":
+          - strong: "0"
+        - cell "覆盖详情 查看影响":
+          - button "覆盖详情":
+            - generic: 覆盖详情
+          - button "查看影响":
+            - generic: 查看影响

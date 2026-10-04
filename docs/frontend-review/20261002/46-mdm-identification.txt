@@ -1,0 +1,128 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理" [expanded]:
+      - generic "专业方案：主数据管理"
+    - link "主数据总览":
+      - /url: /mdm/overview
+      - generic "主数据总览"
+    - link "主数据建模":
+      - /url: /mdm/modeling
+      - generic "主数据建模"
+    - link "主数据识别":
+      - /url: /mdm/identification
+      - generic "主数据识别"
+    - link "主数据清洗":
+      - /url: /mdm/cleansing
+      - generic "主数据清洗"
+    - link "主数据变更":
+      - /url: /mdm/approval
+      - generic "主数据变更"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 主数据识别
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 主数据识别
+  - generic: 扫描数据源，按实体编码/名称匹配候选主数据，确认为来源绑定
+  - combobox
+  - generic: 选择数据源
+  - textbox "按表名搜索"
+  - button "扫 描":
+    - generic: 扫 描
+  - generic: 数据源表清单（候选标注）
+  - table:
+    - rowgroup:
+      - row "库 模式 表名 备注 候选实体 状态 操作":
+        - columnheader "库"
+        - columnheader "模式"
+        - columnheader "表名"
+        - columnheader "备注"
+        - columnheader "候选实体"
+        - columnheader "状态"
+        - columnheader "操作"
+    - rowgroup:
+      - row "暂无表数据 选择数据源后点击「扫描」，候选表按实体编码/名称自动标注":
+        - cell "暂无表数据 选择数据源后点击「扫描」，候选表按实体编码/名称自动标注":
+          - generic: 暂无表数据
+          - generic: 选择数据源后点击「扫描」，候选表按实体编码/名称自动标注
+  - generic: 已确认来源
+  - table:
+    - rowgroup:
+      - row "实体 数据源 库 表 映射 角色 落地采集 操作":
+        - columnheader "实体"
+        - columnheader "数据源"
+        - columnheader "库"
+        - columnheader "表"
+        - columnheader "映射"
+        - columnheader "角色"
+        - columnheader "落地采集"
+        - columnheader "操作"
+    - rowgroup:
+      - row "客户（customer） 客户库 crm_db crm_customer 1 项自定义 主来源 已采集 2026-09-19 20:20:09 · 3060 行 执行落地 解绑":
+        - cell "客户（customer）"
+        - cell "客户库"
+        - cell "crm_db"
+        - cell "crm_customer"
+        - cell "1 项自定义":
+          - generic: 1 项自定义
+        - cell "主来源":
+          - generic: 主来源
+        - cell "已采集 2026-09-19 20:20:09 · 3060 行":
+          - generic: 已采集
+          - generic: 2026-09-19 20:20:09 · 3060 行
+        - cell "执行落地 解绑":
+          - generic: 执行落地
+          - generic: 解绑

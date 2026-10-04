@@ -1,0 +1,175 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标" [expanded]:
+      - generic "指标"
+    - link "指标管理":
+      - /url: /metric/manage
+      - generic "指标管理"
+    - link "指标血缘":
+      - /url: /metric/lineage
+      - generic "指标血缘"
+    - link "影响分析":
+      - /url: /metric/impact
+      - generic "影响分析"
+    - link "指标标签与统计":
+      - /url: /metric/service
+      - generic "指标标签与统计"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 指标详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 指标管理
+  - generic: /
+  - generic: 优惠占比（discount_rate_1d）
+  - generic: 当前定义 · 可编辑
+  - generic: 指标的完整信息：业务定义、依赖健康、版本、血缘与使用情况
+  - region "指标验证与发布":
+    - heading "验证与发布" [level=2]
+    - generic: 未发布
+    - generic: 当前版本尚无验证证据
+    - generic: 发布历史 0 条
+    - generic: 保存或启用指标不会自动发布；下游只能引用显式发布的精确版本。
+    - generic "发布门禁结果":
+      - generic: "metric-definition-validation-gate/v1: BLOCKED (DEFINITION_VALIDATION_PASSED_EVIDENCE_REQUIRED)"
+      - generic: "metric-dependency-health-gate/v1: READY"
+      - generic: "metric-execution-validation/v1: NOT_APPLICABLE (No standalone Metric execution runtime is defined; governed execution remains owned by Dataset/Data Service consumption targets)"
+    - button "刷新证据":
+      - generic: 刷新证据
+    - button "验证当前版本 v3":
+      - generic: 验证当前版本 v3
+  - table:
+    - rowgroup:
+      - row "指标编码 discount_rate_1d 指标名称 优惠占比 指标类型 复合指标":
+        - rowheader "指标编码"
+        - cell "discount_rate_1d"
+        - rowheader "指标名称"
+        - cell "优惠占比"
+        - rowheader "指标类型"
+        - cell "复合指标":
+          - generic: 复合指标
+      - row "状态 启用 统计周期 日 当前版本 v3":
+        - rowheader "状态"
+        - cell "启用":
+          - generic: 启用
+        - rowheader "统计周期"
+        - cell "日"
+        - rowheader "当前版本"
+        - cell "v3"
+      - row "负责人 - 创建时间 2026-09-20 12:32:13 更新时间 2026-09-21 16:01:44":
+        - rowheader "负责人"
+        - cell "-"
+        - rowheader "创建时间"
+        - cell "2026-09-20 12:32:13"
+        - rowheader "更新时间"
+        - cell "2026-09-21 16:01:44"
+      - row "业务域 交易域/订单 业务过程 下单 口径标准 -":
+        - rowheader "业务域"
+        - cell "交易域/订单":
+          - generic: 交易域/订单
+        - rowheader "业务过程"
+        - cell "下单":
+          - generic: 下单
+        - rowheader "口径标准"
+        - cell "-"
+      - row "度量单位 - 来源模型 - DIM 模型 -":
+        - rowheader "度量单位"
+        - cell "-"
+        - rowheader "来源模型"
+        - cell "-"
+        - rowheader "DIM 模型"
+        - cell "-"
+      - row "引用原子指标 - 限定条件 - 统计维度 -":
+        - rowheader "引用原子指标"
+        - cell "-"
+        - rowheader "限定条件"
+        - cell "-"
+        - rowheader "统计维度"
+        - cell "-"
+      - row "计算规则 discount_amt_1d / ord_amt_1d":
+        - rowheader "计算规则"
+        - cell "discount_amt_1d / ord_amt_1d"
+      - row "口径规则 -":
+        - rowheader "口径规则"
+        - cell "-"
+      - row "业务口径 优惠金额 / 下单金额":
+        - rowheader "业务口径"
+        - cell "优惠金额 / 下单金额"
+  - generic: 下一步：Validation
+  - generic: 当前依赖检查通过。保存或启用并不等于发布；下一阶段应对精确 MetricVersion 执行验证。
+  - text: 上游 0 张表，其中
+  - generic: 0 张未稽核
+  - generic: 查看血缘
+  - tablist:
+    - tab "依赖 (2)" [selected]
+    - tab "标签 (0)"
+    - tab "版本历史 (3)"
+    - tab "使用情况"
+    - tab "组成项"
+  - tabpanel "依赖 (2)":
+    - table:
+      - rowgroup:
+        - row "依赖类型 依赖编码 登记版本 当前版本 依赖状态":
+          - columnheader "依赖类型"
+          - columnheader "依赖编码"
+          - columnheader "登记版本"
+          - columnheader "当前版本"
+          - columnheader "依赖状态"
+      - rowgroup:
+        - row "COMPOSITION ord_amt_1d v1 v1 最新":
+          - cell "COMPOSITION":
+            - generic: COMPOSITION
+          - cell "ord_amt_1d"
+          - cell "v1"
+          - cell "v1"
+          - cell "最新":
+            - generic "登记版本与当前上游版本一致":
+              - generic: 最新
+        - row "COMPOSITION discount_amt_1d v1 v1 最新":
+          - cell "COMPOSITION":
+            - generic: COMPOSITION
+          - cell "discount_amt_1d"
+          - cell "v1"
+          - cell "v1"
+          - cell "最新":
+            - generic "登记版本与当前上游版本一致":
+              - generic: 最新

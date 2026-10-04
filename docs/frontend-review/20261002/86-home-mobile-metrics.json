@@ -1,0 +1,35 @@
+{
+  "collapseButton": [
+    {
+      "display": "none",
+      "label": "展开菜单"
+    },
+    {
+      "display": "flex",
+      "label": "打开用户菜单"
+    }
+  ],
+  "mains": [
+    {
+      "class": "   h-screen overflow-hidden   bg-[#f7f8f9]   transition-[padding] duration-200   ease-[cubic-bezier(0.62,0.05,0.36,0.95)]   ",
+      "overflow": "hidden",
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "class": "px-4 pb-4",
+      "overflow": "visible",
+      "scrollWidth": 912,
+      "width": 912
+    }
+  ],
+  "overflowContainers": [
+    {
+      "class": "   h-full w-full overflow-auto   px-4  pt-4   ",
+      "scrollWidth": 944,
+      "width": 317
+    }
+  ],
+  "rootWidth": 390,
+  "viewWidth": 390
+}

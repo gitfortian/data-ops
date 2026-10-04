@@ -1,0 +1,361 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义" [expanded]:
+      - generic "业务语义"
+    - link "业务域":
+      - /url: /semantic/domains
+      - generic "业务域"
+    - link "业务过程":
+      - /url: /semantic/processes
+      - generic "业务过程"
+    - link "数据标准":
+      - /url: /semantic/standards
+      - generic "数据标准"
+    - link "标准字段":
+      - /url: /semantic/fields
+      - generic "标准字段"
+    - link "数仓分层":
+      - /url: /semantic/layers
+      - generic "数仓分层"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据标准
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 数据标准
+  - generic: 管理项目空间内的命名、类型、码值、单位、口径、安全六类标准，为业务过程与建模提供约束
+  - radiogroup "segmented control":
+    - radio "全部" [checked]
+    - generic "全部"
+    - radio "命名标准"
+    - generic "命名标准"
+    - radio "类型标准"
+    - generic "类型标准"
+    - radio "码值标准"
+    - generic "码值标准"
+    - radio "单位标准"
+    - generic "单位标准"
+    - radio "口径标准"
+    - generic "口径标准"
+    - radio "安全标准"
+    - generic "安全标准"
+  - combobox
+  - generic: 状态
+  - searchbox "按编码或名称搜索"
+  - button "search":
+    - img "search":
+  - button "补齐预置标准":
+    - generic: 补齐预置标准
+  - button "新建标准":
+    - generic: 新建标准
+  - table:
+    - rowgroup:
+      - row "编码 名称 类别 码值数 状态 预置 版本 描述 更新时间 操作":
+        - columnheader "编码"
+        - columnheader "名称"
+        - columnheader "类别"
+        - columnheader "码值数"
+        - columnheader "状态"
+        - columnheader "预置"
+        - columnheader "版本"
+        - columnheader "描述"
+        - columnheader "更新时间"
+        - columnheader "操作"
+    - rowgroup:
+      - row "order_status 订单状态 码值标准 4 启用 - 3 订单状态码集 2026-09-20 09:57:58 编辑 停用 版本 删除":
+        - cell "order_status":
+          - code: order_status
+        - cell "订单状态"
+        - cell "码值标准":
+          - generic: 码值标准
+        - cell "4"
+        - cell "启用":
+          - generic: 启用
+        - cell "-"
+        - cell "3"
+        - cell "订单状态码集"
+        - cell "2026-09-20 09:57:58"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除":
+            - generic: 删除
+      - row "yes_no 是否 码值标准 2 启用 预置 1 通用是否枚举 2026-09-21 09:01:27 编辑 停用 版本 删除":
+        - cell "yes_no":
+          - code: yes_no
+        - cell "是否"
+        - cell "码值标准":
+          - generic: 码值标准
+        - cell "2"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "通用是否枚举"
+        - cell "2026-09-21 09:01:27"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "gmv GMV 口径标准 - 启用 已通过 预置 1 成交总额口径 2026-09-19 19:37:53 编辑 停用 审批单 版本 删除":
+        - cell "gmv":
+          - code: gmv
+        - cell "GMV"
+        - cell "口径标准":
+          - generic: 口径标准
+        - cell "-"
+        - cell "启用 已通过":
+          - generic: 启用
+          - generic: 已通过
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "成交总额口径"
+        - cell "2026-09-19 19:37:53"
+        - cell "编辑 停用 审批单 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "审批单":
+            - generic: 审批单
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "naming_table_ods ODS表命名 命名标准 - 启用 预置 1 ODS层表命名规范 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "naming_table_ods":
+          - code: naming_table_ods
+        - cell "ODS表命名"
+        - cell "命名标准":
+          - generic: 命名标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "ODS层表命名规范"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "mobile 手机号 安全标准 - 启用 预置 1 手机号敏感分级与脱敏 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "mobile":
+          - code: mobile
+        - cell "手机号"
+        - cell "安全标准":
+          - generic: 安全标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "手机号敏感分级与脱敏"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "id 标识 类型标准 - 启用 预置 1 各类ID统一为字符串，避免精度丢失、join类型不一致 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "id":
+          - code: id
+        - cell "标识"
+        - cell "类型标准":
+          - generic: 类型标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "各类ID统一为字符串，避免精度丢失、join类型不一致"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "yuan 元 单位标准 - 启用 预置 1 金额单位 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "yuan":
+          - code: yuan
+        - cell "元"
+        - cell "单位标准":
+          - generic: 单位标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "金额单位"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "gmv_tax 含税GMV 口径标准 - 启用 预置 1 含税成交总额口径 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "gmv_tax":
+          - code: gmv_tax
+        - cell "含税GMV"
+        - cell "口径标准":
+          - generic: 口径标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "含税成交总额口径"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "naming_table_dwd DWD表命名 命名标准 - 启用 预置 1 DWD层表命名规范 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "naming_table_dwd":
+          - code: naming_table_dwd
+        - cell "DWD表命名"
+        - cell "命名标准":
+          - generic: 命名标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "DWD层表命名规范"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "idcard 身份证 安全标准 - 启用 预置 1 身份证敏感分级与脱敏 2026-09-15 15:21:01 编辑 停用 版本 删除":
+        - cell "idcard":
+          - code: idcard
+        - cell "身份证"
+        - cell "安全标准":
+          - generic: 安全标准
+        - cell "-"
+        - cell "启用":
+          - generic: 启用
+        - cell "预置":
+          - generic: 预置
+        - cell "1"
+        - cell "身份证敏感分级与脱敏"
+        - cell "2026-09-15 15:21:01"
+        - cell "编辑 停用 版本 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "版本":
+            - generic: 版本
+          - button "删除" [disabled]:
+            - generic: 删除
+  - list:
+    - listitem: 共 212 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "2":
+      - generic: "2"
+    - listitem "3":
+      - generic: "3"
+    - listitem "4":
+      - generic: "4"
+    - listitem "5":
+      - generic: "5"
+    - listitem "向后 5 页":
+      - img "double-right":
+      - generic: •••
+    - listitem "22":
+      - generic: "22"
+    - listitem "下一页":
+      - button "right":
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

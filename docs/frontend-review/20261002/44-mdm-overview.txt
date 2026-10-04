@@ -1,0 +1,119 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理" [expanded]:
+      - generic "专业方案：主数据管理"
+    - link "主数据总览":
+      - /url: /mdm/overview
+      - generic "主数据总览"
+    - link "主数据建模":
+      - /url: /mdm/modeling
+      - generic "主数据建模"
+    - link "主数据识别":
+      - /url: /mdm/identification
+      - generic "主数据识别"
+    - link "主数据清洗":
+      - /url: /mdm/cleansing
+      - generic "主数据清洗"
+    - link "主数据变更":
+      - /url: /mdm/approval
+      - generic "主数据变更"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 主数据总览
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 主数据总览
+  - generic: 采集 → 加工 → 清洗 → 审批 → 分发 的单一入口：计数全部服务端聚合；「-」表示查询失败而非 0，加工真相在数据开发域（显示「跨域」）
+  - button "loading 刷 新":
+    - img "loading"
+    - generic: 刷 新
+  - button "进入主数据建模":
+    - generic: 进入主数据建模
+  - generic: 主数据实体
+  - generic: "1"
+  - generic: 生效记录
+  - generic: 3,059
+  - generic: 待审批变更
+  - generic: "0"
+  - generic: 清洗规则
+  - generic: "1"
+  - generic: 分发目标
+  - generic: "1"
+  - generic: 订阅方
+  - generic: "1"
+  - generic: 主数据管线
+  - generic: 采集
+  - generic: "1"
+  - generic: ›
+  - generic: 加工
+  - generic: 跨域
+  - generic: ›
+  - generic: 清洗
+  - text: "1"
+  - generic: 已合并 1
+  - generic: ›
+  - generic: 审批
+  - generic: "0"
+  - generic: ›
+  - generic: 分发
+  - generic: "1"
+  - generic: 实体动线（最近更新）
+  - generic: 客户
+  - generic: customer
+  - generic: 记录 3,059
+  - generic: 分发 1
+  - generic: 订阅 1
+  - generic: 去清洗

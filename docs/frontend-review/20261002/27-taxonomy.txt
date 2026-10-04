@@ -1,0 +1,254 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理" [expanded]:
+      - generic "资产管理"
+    - link "盘点上架":
+      - /url: /data-asset/inventory
+      - generic "盘点上架"
+    - link "目录与标签":
+      - /url: /data-asset/taxonomy
+      - generic "目录与标签"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 目录与标签
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 目录与标签
+  - generic: 目录树 / 编目规则 / 标签字典：自动编目的三条腿，规则先试跑后启用
+  - radiogroup "segmented control":
+    - radio "目录树" [checked]
+    - generic "目录树"
+    - radio "编目规则"
+    - generic "编目规则"
+    - radio "标签字典"
+    - generic "标签字典"
+  - button "新建根目录":
+    - generic: 新建根目录
+  - button "按分层+业务域初始化":
+    - generic: 按分层+业务域初始化
+  - button "刷 新":
+    - generic: 刷 新
+  - generic: 目录编码自动生成；移动会级联改写子树路径并防环
+  - textbox "for screen reader"
+  - tree:
+    - treeitem "贴源层(ODS) 内置 ···":
+      - text: 贴源层(ODS)
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "明细层(DWD) 内置 ···":
+      - text: 明细层(DWD)
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "汇总层(DWS) 内置 ···":
+      - text: 汇总层(DWS)
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "应用层(ADS) 内置 ···":
+      - text: 应用层(ADS)
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "维度层(DIM) 内置 ···":
+      - text: 维度层(DIM)
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 交易域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 交易域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "订单 内置 ···":
+      - text: 订单
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "支付 内置 ···":
+      - text: 支付
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "退款 内置 ···":
+      - text: 退款
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "用户域 内置 ···":
+      - text: 用户域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "公共域 内置 ···":
+      - text: 公共域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 商品域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 商品域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "商品 内置 ···":
+      - text: 商品
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "商品类目 内置 ···":
+      - text: 商品类目
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 客户域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 客户域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "客户档案 内置 ···":
+      - text: 客户档案
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "客户历史 内置 ···":
+      - text: 客户历史
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "收货地址 内置 ···":
+      - text: 收货地址
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "会员域 内置 ···":
+      - text: 会员域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 营销域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 营销域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "营销活动 内置 ···":
+      - text: 营销活动
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "优惠券 内置 ···":
+      - text: 优惠券
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 履约域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 履约域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "发货配送 内置 ···":
+      - text: 发货配送
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "库存 内置 ···":
+      - text: 库存
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 售后域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 售后域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "售后工单 内置 ···":
+      - text: 售后工单
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 结算域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 结算域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "结算单 内置 ···":
+      - text: 结算单
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "caret-down 评价域 内置 ···" [expanded]:
+      - img "caret-down":
+      - text: 评价域
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "商品评价 内置 ···":
+      - text: 商品评价
+      - generic: 内置
+      - button "···":
+        - generic: ···
+    - treeitem "风控合规域 内置 ···":
+      - text: 风控合规域
+      - generic: 内置
+      - button "···":
+        - generic: ···

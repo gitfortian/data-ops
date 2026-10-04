@@ -1,0 +1,491 @@
+{
+  "schemaVersion": 1,
+  "marker": "yak-golden-sample-v1",
+  "result": "PHYSICAL_SAMPLE_PASSED",
+  "phase7": "PARTIAL",
+  "pd001": "PARTIAL",
+  "browserE2E": "NOT_EXECUTED",
+  "capturedAt": "2026-10-04T04:19:01.803195+00:00",
+  "repositoryCommit": "9cff2b15e5dc345745f957b2169c8416c8948d19",
+  "deploymentCommit": null,
+  "deploymentArtifactSha256": "20B8137ADD85B10EE428B62E7216E826BE28AA7D2BCEAC1B48BE2D8E40865C5B",
+  "projectId": "7",
+  "executions": {
+    "golden_orders": {
+      "monitorId": "2",
+      "executionNo": "QM-20261004121856493-B8DE69",
+      "executionStatus": "SUCCESS",
+      "checkResult": "PASSED"
+    },
+    "golden_orders_bad": {
+      "monitorId": "3",
+      "executionNo": "QM-20261004121857719-7ECA0F",
+      "executionStatus": "SUCCESS",
+      "checkResult": "NOT_PASSED"
+    }
+  },
+  "assets": [
+    {
+      "asset": {
+        "id": "2",
+        "assetKey": "table:2:yak_golden_sample..golden_orders",
+        "sourceType": "METADATA",
+        "sourceId": "7",
+        "table": "golden_orders"
+      },
+      "sourceLookup": {
+        "state": "FOUND",
+        "sourceType": "METADATA",
+        "sourceId": "7",
+        "assetId": 2,
+        "assetKey": "table:2:yak_golden_sample..golden_orders",
+        "assetType": "TABLE",
+        "assetStatus": "PENDING"
+      },
+      "qualitySummary": {
+        "registered": true,
+        "monitorId": 2,
+        "monitorCount": 1,
+        "enabledMonitorCount": 1,
+        "latestExecution": {
+          "executionNo": "QM-20261004121856493-B8DE69",
+          "lifecycleStatus": "SUCCESS",
+          "result": "PASSED",
+          "issueCount": 0,
+          "queuedAt": "2026-10-04T12:18:56.494",
+          "finishedAt": "2026-10-04T12:18:56.595"
+        }
+      },
+      "sections": {
+        "OVERVIEW": {
+          "sectionType": "OVERVIEW",
+          "status": "OK",
+          "ownerDomain": "ASSET",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        },
+        "TECHNICAL_METADATA": {
+          "sectionType": "TECHNICAL_METADATA",
+          "status": "OK",
+          "ownerDomain": "METADATA",
+          "reason": null,
+          "actions": [
+            {
+              "label": "打开 Metadata 实体",
+              "target": "/data-asset/catalog?view=entity&entityId=7&assetKey=table%3A2%3Ayak_golden_sample..golden_orders&returnAssetId=2",
+              "sourceId": "table:2:yak_golden_sample..golden_orders"
+            }
+          ],
+          "evidence": [
+            {
+              "sourceDomain": "METADATA",
+              "referenceId": "7",
+              "observedAt": "2026-10-04T04:18:59.043253400Z"
+            }
+          ]
+        },
+        "QUALITY": {
+          "sectionType": "QUALITY",
+          "status": "OK",
+          "ownerDomain": "QUALITY",
+          "reason": null,
+          "actions": [
+            {
+              "label": "查看质量监控",
+              "target": "/data-quality/monitor/2",
+              "sourceId": "2"
+            },
+            {
+              "label": "查看质量运行记录",
+              "target": "/data-quality/execution/QM-20261004121856493-B8DE69",
+              "sourceId": "QM-20261004121856493-B8DE69"
+            }
+          ],
+          "evidence": [
+            {
+              "sourceDomain": "QUALITY",
+              "referenceId": "QM-20261004121856493-B8DE69",
+              "observedAt": "2026-10-04T04:18:59.123806200Z"
+            }
+          ]
+        },
+        "SECURITY": {
+          "sectionType": "SECURITY",
+          "status": "EMPTY",
+          "ownerDomain": "SECURITY",
+          "reason": "Security 域没有返回该对象的分级记录",
+          "actions": [
+            {
+              "label": "打开安全分级分类",
+              "target": "/data-security/classification?activeTab=classification&keyword=yak_golden_sample.golden_orders&returnAssetId=2",
+              "sourceId": "table:2:yak_golden_sample..golden_orders"
+            },
+            {
+              "label": "打开访问策略",
+              "target": "/data-security/access",
+              "sourceId": "table:2:yak_golden_sample..golden_orders"
+            },
+            {
+              "label": "打开脱敏策略",
+              "target": "/data-security/masking",
+              "sourceId": "table:2:yak_golden_sample..golden_orders"
+            },
+            {
+              "label": "查看批次合规检查",
+              "target": "/data-security/compliance",
+              "sourceId": "table:2:yak_golden_sample..golden_orders"
+            }
+          ],
+          "evidence": []
+        },
+        "LINEAGE": {
+          "sectionType": "LINEAGE",
+          "status": "OK",
+          "ownerDomain": "LINEAGE",
+          "reason": null,
+          "actions": [
+            {
+              "label": "打开全屏血缘图谱",
+              "target": "/data-analysis/lineage?assetKey=table%3A2%3Ayak_golden_sample..golden_orders&returnAssetId=2",
+              "sourceId": "table:2:yak_golden_sample..golden_orders"
+            }
+          ],
+          "evidence": []
+        },
+        "USAGE": {
+          "sectionType": "USAGE",
+          "status": "OK",
+          "ownerDomain": "FEDERATED",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        },
+        "LIFECYCLE": {
+          "sectionType": "LIFECYCLE",
+          "status": "NOT_APPLICABLE",
+          "ownerDomain": "LIFECYCLE",
+          "reason": "当前 MVP 生命周期事实仅适用于 Model",
+          "actions": [],
+          "evidence": []
+        },
+        "GOVERNANCE": {
+          "sectionType": "GOVERNANCE",
+          "status": "OK",
+          "ownerDomain": "ASSET",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        }
+      }
+    },
+    {
+      "asset": {
+        "id": "3",
+        "assetKey": "table:2:yak_golden_sample..golden_orders_bad",
+        "sourceType": "METADATA",
+        "sourceId": "8",
+        "table": "golden_orders_bad"
+      },
+      "sourceLookup": {
+        "state": "FOUND",
+        "sourceType": "METADATA",
+        "sourceId": "8",
+        "assetId": 3,
+        "assetKey": "table:2:yak_golden_sample..golden_orders_bad",
+        "assetType": "TABLE",
+        "assetStatus": "PENDING"
+      },
+      "qualitySummary": {
+        "registered": true,
+        "monitorId": 3,
+        "monitorCount": 1,
+        "enabledMonitorCount": 1,
+        "latestExecution": {
+          "executionNo": "QM-20261004121857719-7ECA0F",
+          "lifecycleStatus": "SUCCESS",
+          "result": "NOT_PASSED",
+          "issueCount": 1,
+          "queuedAt": "2026-10-04T12:18:57.719",
+          "finishedAt": "2026-10-04T12:18:57.783"
+        }
+      },
+      "sections": {
+        "OVERVIEW": {
+          "sectionType": "OVERVIEW",
+          "status": "OK",
+          "ownerDomain": "ASSET",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        },
+        "TECHNICAL_METADATA": {
+          "sectionType": "TECHNICAL_METADATA",
+          "status": "OK",
+          "ownerDomain": "METADATA",
+          "reason": null,
+          "actions": [
+            {
+              "label": "打开 Metadata 实体",
+              "target": "/data-asset/catalog?view=entity&entityId=8&assetKey=table%3A2%3Ayak_golden_sample..golden_orders_bad&returnAssetId=3",
+              "sourceId": "table:2:yak_golden_sample..golden_orders_bad"
+            }
+          ],
+          "evidence": [
+            {
+              "sourceDomain": "METADATA",
+              "referenceId": "8",
+              "observedAt": "2026-10-04T04:18:59.645842200Z"
+            }
+          ]
+        },
+        "QUALITY": {
+          "sectionType": "QUALITY",
+          "status": "OK",
+          "ownerDomain": "QUALITY",
+          "reason": null,
+          "actions": [
+            {
+              "label": "查看质量监控",
+              "target": "/data-quality/monitor/3",
+              "sourceId": "3"
+            },
+            {
+              "label": "查看质量运行记录",
+              "target": "/data-quality/execution/QM-20261004121857719-7ECA0F",
+              "sourceId": "QM-20261004121857719-7ECA0F"
+            }
+          ],
+          "evidence": [
+            {
+              "sourceDomain": "QUALITY",
+              "referenceId": "QM-20261004121857719-7ECA0F",
+              "observedAt": "2026-10-04T04:18:59.724618400Z"
+            }
+          ]
+        },
+        "SECURITY": {
+          "sectionType": "SECURITY",
+          "status": "EMPTY",
+          "ownerDomain": "SECURITY",
+          "reason": "Security 域没有返回该对象的分级记录",
+          "actions": [
+            {
+              "label": "打开安全分级分类",
+              "target": "/data-security/classification?activeTab=classification&keyword=yak_golden_sample.golden_orders_bad&returnAssetId=3",
+              "sourceId": "table:2:yak_golden_sample..golden_orders_bad"
+            },
+            {
+              "label": "打开访问策略",
+              "target": "/data-security/access",
+              "sourceId": "table:2:yak_golden_sample..golden_orders_bad"
+            },
+            {
+              "label": "打开脱敏策略",
+              "target": "/data-security/masking",
+              "sourceId": "table:2:yak_golden_sample..golden_orders_bad"
+            },
+            {
+              "label": "查看批次合规检查",
+              "target": "/data-security/compliance",
+              "sourceId": "table:2:yak_golden_sample..golden_orders_bad"
+            }
+          ],
+          "evidence": []
+        },
+        "LINEAGE": {
+          "sectionType": "LINEAGE",
+          "status": "OK",
+          "ownerDomain": "LINEAGE",
+          "reason": null,
+          "actions": [
+            {
+              "label": "打开全屏血缘图谱",
+              "target": "/data-analysis/lineage?assetKey=table%3A2%3Ayak_golden_sample..golden_orders_bad&returnAssetId=3",
+              "sourceId": "table:2:yak_golden_sample..golden_orders_bad"
+            }
+          ],
+          "evidence": []
+        },
+        "USAGE": {
+          "sectionType": "USAGE",
+          "status": "OK",
+          "ownerDomain": "FEDERATED",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        },
+        "LIFECYCLE": {
+          "sectionType": "LIFECYCLE",
+          "status": "NOT_APPLICABLE",
+          "ownerDomain": "LIFECYCLE",
+          "reason": "当前 MVP 生命周期事实仅适用于 Model",
+          "actions": [],
+          "evidence": []
+        },
+        "GOVERNANCE": {
+          "sectionType": "GOVERNANCE",
+          "status": "OK",
+          "ownerDomain": "ASSET",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        }
+      }
+    },
+    {
+      "asset": {
+        "id": "1",
+        "assetKey": "table:2:yak_golden_sample..golden_customers",
+        "sourceType": "METADATA",
+        "sourceId": "6",
+        "table": "golden_customers"
+      },
+      "sourceLookup": {
+        "state": "FOUND",
+        "sourceType": "METADATA",
+        "sourceId": "6",
+        "assetId": 1,
+        "assetKey": "table:2:yak_golden_sample..golden_customers",
+        "assetType": "TABLE",
+        "assetStatus": "PENDING"
+      },
+      "qualitySummary": {
+        "registered": true,
+        "monitorCount": 0,
+        "enabledMonitorCount": 0
+      },
+      "sections": {
+        "OVERVIEW": {
+          "sectionType": "OVERVIEW",
+          "status": "OK",
+          "ownerDomain": "ASSET",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        },
+        "TECHNICAL_METADATA": {
+          "sectionType": "TECHNICAL_METADATA",
+          "status": "OK",
+          "ownerDomain": "METADATA",
+          "reason": null,
+          "actions": [
+            {
+              "label": "打开 Metadata 实体",
+              "target": "/data-asset/catalog?view=entity&entityId=6&assetKey=table%3A2%3Ayak_golden_sample..golden_customers&returnAssetId=1",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            }
+          ],
+          "evidence": [
+            {
+              "sourceDomain": "METADATA",
+              "referenceId": "6",
+              "observedAt": "2026-10-04T04:19:00.210303900Z"
+            }
+          ]
+        },
+        "QUALITY": {
+          "sectionType": "QUALITY",
+          "status": "EMPTY",
+          "ownerDomain": "QUALITY",
+          "reason": "该物理表已纳入质量管理，尚未配置监控",
+          "actions": [
+            {
+              "label": "查看质量监控",
+              "target": "/data-quality/table-config",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            },
+            {
+              "label": "查看质量运行记录",
+              "target": "/data-quality/execution",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            }
+          ],
+          "evidence": []
+        },
+        "SECURITY": {
+          "sectionType": "SECURITY",
+          "status": "EMPTY",
+          "ownerDomain": "SECURITY",
+          "reason": "Security 域没有返回该对象的分级记录",
+          "actions": [
+            {
+              "label": "打开安全分级分类",
+              "target": "/data-security/classification?activeTab=classification&keyword=yak_golden_sample.golden_customers&returnAssetId=1",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            },
+            {
+              "label": "打开访问策略",
+              "target": "/data-security/access",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            },
+            {
+              "label": "打开脱敏策略",
+              "target": "/data-security/masking",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            },
+            {
+              "label": "查看批次合规检查",
+              "target": "/data-security/compliance",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            }
+          ],
+          "evidence": []
+        },
+        "LINEAGE": {
+          "sectionType": "LINEAGE",
+          "status": "OK",
+          "ownerDomain": "LINEAGE",
+          "reason": null,
+          "actions": [
+            {
+              "label": "打开全屏血缘图谱",
+              "target": "/data-analysis/lineage?assetKey=table%3A2%3Ayak_golden_sample..golden_customers&returnAssetId=1",
+              "sourceId": "table:2:yak_golden_sample..golden_customers"
+            }
+          ],
+          "evidence": []
+        },
+        "USAGE": {
+          "sectionType": "USAGE",
+          "status": "OK",
+          "ownerDomain": "FEDERATED",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        },
+        "LIFECYCLE": {
+          "sectionType": "LIFECYCLE",
+          "status": "NOT_APPLICABLE",
+          "ownerDomain": "LIFECYCLE",
+          "reason": "当前 MVP 生命周期事实仅适用于 Model",
+          "actions": [],
+          "evidence": []
+        },
+        "GOVERNANCE": {
+          "sectionType": "GOVERNANCE",
+          "status": "OK",
+          "ownerDomain": "ASSET",
+          "reason": null,
+          "actions": [],
+          "evidence": []
+        }
+      }
+    }
+  ],
+  "projectIsolation": {
+    "status": "PASSED",
+    "controlProjectId": "8",
+    "assetCount": 3,
+    "detailAndSectionErrorCode": 48001,
+    "scope": "Asset source lookup/detail/eight sections under root; restricted RBAC remains untested"
+  },
+  "remaining": [
+    "MODEL/METRIC/DATASET real samples",
+    "F-007 MDM journey",
+    "restricted user RBAC",
+    "provider failure isolation",
+    "browser journeys",
+    "main/CI delivery confirmation"
+  ]
+}

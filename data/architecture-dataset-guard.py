@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('data-ops-business/data-ops-business-dataset/src/test/java/io/yak/ops/business/dataset/architecture/DatasetDependencyBoundaryTest.java');s=p.read_text(encoding='utf-8').replace('"query/adapter/SqlQueryDatasetSourceAdapter.java");','"query/adapter/SqlQueryDatasetSourceAdapter.java",\n                // Query security gate consumes the shared enforcement context, not another domain DAO.\n                "query/DatasetQuerySecurityGate.java");');p.write_text(s,encoding='utf-8')

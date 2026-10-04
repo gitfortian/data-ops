@@ -1,0 +1,144 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置" [expanded]:
+      - generic "平台设置"
+    - link "项目空间":
+      - /url: /system/projects
+      - generic "项目空间"
+    - link "用户管理":
+      - /url: /system/users
+      - generic "用户管理"
+    - link "部门管理":
+      - /url: /system/departments
+      - generic "部门管理"
+    - link "角色与权限":
+      - /url: /system/roles
+      - generic "角色与权限"
+    - link "审批流程配置":
+      - /url: /approval/flows
+      - generic "审批流程配置"
+    - link "操作日志":
+      - /url: /system/oplogs
+      - generic "操作日志"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 审批流程配置
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 流程配置
+  - generic: 定义审批级次与审批人；业务代码按流程编码发起审批
+  - searchbox "搜索编码/名称"
+  - button "search":
+    - img "search":
+  - button "新建流程":
+    - generic: 新建流程
+  - table:
+    - rowgroup:
+      - row "流程编码 流程名称 级次配置 说明 状态 操作":
+        - columnheader "流程编码"
+        - columnheader "流程名称"
+        - columnheader "级次配置"
+        - columnheader "说明"
+        - columnheader "状态"
+        - columnheader "操作"
+    - rowgroup:
+      - row "MDM_CHANGE 主数据变更审批 第 1 级 root 第 2 级 root - 启用 停用 编辑 删除":
+        - cell "MDM_CHANGE"
+        - cell "主数据变更审批"
+        - cell "第 1 级 root 第 2 级 root":
+          - generic: 第 1 级
+          - generic: root
+          - generic: 第 2 级
+          - generic: root
+        - cell "-"
+        - cell "启用 停用":
+          - switch "启用 停用" [checked]:
+            - generic: 启用
+            - generic: 停用
+        - cell "编辑 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "ACCESS_GRANT 权限申请审批 第 1 级 root - 启用 停用 编辑 删除":
+        - cell "ACCESS_GRANT"
+        - cell "权限申请审批"
+        - cell "第 1 级 root":
+          - generic: 第 1 级
+          - generic: root
+        - cell "-"
+        - cell "启用 停用":
+          - switch "启用 停用" [checked]:
+            - generic: 启用
+            - generic: 停用
+        - cell "编辑 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "STANDARD_PUBLISH 标准生效审批 第 1 级 root - 启用 停用 编辑 删除":
+        - cell "STANDARD_PUBLISH"
+        - cell "标准生效审批"
+        - cell "第 1 级 root":
+          - generic: 第 1 级
+          - generic: root
+        - cell "-"
+        - cell "启用 停用":
+          - switch "启用 停用" [checked]:
+            - generic: 启用
+            - generic: 停用
+        - cell "编辑 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "MODEL_PUBLISH 模型发布审批 第 1 级 root 第 2 级 root - 启用 停用 编辑 删除":
+        - cell "MODEL_PUBLISH"
+        - cell "模型发布审批"
+        - cell "第 1 级 root 第 2 级 root":
+          - generic: 第 1 级
+          - generic: root
+          - generic: 第 2 级
+          - generic: root
+        - cell "-"
+        - cell "启用 停用":
+          - switch "启用 停用" [checked]:
+            - generic: 启用
+            - generic: 停用
+        - cell "编辑 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除

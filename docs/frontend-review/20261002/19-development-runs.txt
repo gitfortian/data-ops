@@ -1,0 +1,133 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行" [expanded]:
+      - generic "开发与运行"
+    - link "开发工作台":
+      - /url: /data-development
+      - generic "开发工作台"
+    - link "发布中心":
+      - /url: /data-development/releases
+      - generic "发布中心"
+    - link "开发运行记录":
+      - /url: /data-development/executions
+      - generic "开发运行记录"
+    - button "工作流":
+      - generic "工作流"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 开发运行记录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "运行记录" [level=1]
+  - button "reload 刷新":
+    - img "reload":
+    - generic: 刷新
+  - button "全部记录" [pressed]
+  - button "运行中"
+  - button "成功"
+  - button "失败"
+  - img "search":
+  - textbox "搜索任务 / 实例 / 执行人"
+  - combobox
+  - generic: 任务类型
+  - combobox
+  - generic: 触发方式
+  - textbox "开始日期"
+  - generic "to":
+    - img "swap-right":
+  - textbox "结束日期"
+  - img "calendar":
+  - button "查 询":
+    - generic: 查 询
+  - button "重 置":
+    - generic: 重 置
+  - table:
+    - rowgroup:
+      - row "任务名称 / 节点 ID 类型 触发方式 状态 运行实例 执行人 耗时 开始时间 操作":
+        - columnheader "任务名称 / 节点 ID"
+        - columnheader "类型"
+        - columnheader "触发方式"
+        - columnheader "状态"
+        - columnheader "运行实例"
+        - columnheader "执行人"
+        - columnheader "耗时"
+        - columnheader "开始时间"
+        - columnheader "操作"
+        - columnheader
+  - table:
+    - rowgroup:
+      - 'row "MDM主数据加工-customer 节点 ID: 2101504415580672000 SQL 手动运行 成功 sql-092652d9-2b41-4073-949e-aaf4704fb3a4 root 1.15 s 2026-09-29 17:44:56 查看详情"':
+        - 'cell "MDM主数据加工-customer 节点 ID: 2101504415580672000"':
+          - button "MDM主数据加工-customer"
+          - generic: "节点 ID: 2101504415580672000"
+        - cell "SQL"
+        - cell "手动运行"
+        - cell "成功":
+          - generic: 成功
+        - cell "sql-092652d9-2b41-4073-949e-aaf4704fb3a4"
+        - cell "root"
+        - cell "1.15 s"
+        - cell "2026-09-29 17:44:56"
+        - cell "查看详情":
+          - button "查看详情":
+            - generic: 查看详情
+      - 'row "MDM主数据加工-customer 节点 ID: 2101504415580672000 SQL 手动运行 成功 sql-79d9f189-99de-44b8-9a46-9971ba5107ed root 1.34 s 2026-09-20 10:53:45 查看详情"':
+        - 'cell "MDM主数据加工-customer 节点 ID: 2101504415580672000"':
+          - button "MDM主数据加工-customer"
+          - generic: "节点 ID: 2101504415580672000"
+        - cell "SQL"
+        - cell "手动运行"
+        - cell "成功":
+          - generic: 成功
+        - cell "sql-79d9f189-99de-44b8-9a46-9971ba5107ed"
+        - cell "root"
+        - cell "1.34 s"
+        - cell "2026-09-20 10:53:45"
+        - cell "查看详情":
+          - button "查看详情":
+            - generic: 查看详情
+  - generic: 共 2 条运行记录
+  - list:
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "20 条/页"

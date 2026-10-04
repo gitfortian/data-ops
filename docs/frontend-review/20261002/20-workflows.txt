@@ -1,0 +1,104 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行" [expanded]:
+      - generic "开发与运行"
+    - link "开发工作台":
+      - /url: /data-development
+      - generic "开发工作台"
+    - link "发布中心":
+      - /url: /data-development/releases
+      - generic "发布中心"
+    - link "开发运行记录":
+      - /url: /data-development/executions
+      - generic "开发运行记录"
+    - button "工作流" [expanded]:
+      - generic "工作流"
+    - link "工作流定义":
+      - /url: /workflow/definitions
+      - generic "工作流定义"
+    - link "工作流实例":
+      - /url: /workflow/instances
+      - generic "工作流实例"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 工作流定义
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "工作流定义" [level=1]
+  - button "新建工作流":
+    - generic: 新建工作流
+  - generic: 全部工作流
+  - strong: "1"
+  - generic: 已上线
+  - strong: "1"
+  - generic: 待发布草稿
+  - strong: "0"
+  - generic: 活动执行
+  - strong: "0"
+  - tablist:
+    - tab "全部" [selected]
+    - tab "已上线"
+    - tab "草稿"
+    - tab "已下线"
+  - tabpanel "全部"
+  - textbox "搜索工作流名称或描述"
+  - button "卡片视图":
+  - button "列表视图":
+  - generic "测试图标": 🤖
+  - button "测试"
+  - generic: 已上线
+  - paragraph: 暂无工作流描述
+  - button "运行已上线 v3":
+  - button "更多操作":
+  - generic: 发布版本
+  - strong: 生效 v3
+  - generic: 最近执行
+  - generic: 尚未运行
+  - generic: 最近更新
+  - strong:
+    - generic: 2026/9/22 11:48:00
+  - list:
+    - listitem: 第 1-1 条，共 1 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

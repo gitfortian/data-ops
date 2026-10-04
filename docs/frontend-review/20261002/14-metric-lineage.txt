@@ -1,0 +1,84 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标" [expanded]:
+      - generic "指标"
+    - link "指标管理":
+      - /url: /metric/manage
+      - generic "指标管理"
+    - link "指标血缘":
+      - /url: /metric/lineage
+      - generic "指标血缘"
+    - link "影响分析":
+      - /url: /metric/impact
+      - generic "影响分析"
+    - link "指标标签与统计":
+      - /url: /metric/service
+      - generic "指标标签与统计"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 指标血缘
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 指标血缘
+  - generic: 查看指标的上下游血缘图谱：模型 → 原子指标 → 派生/复合指标 → 消费方
+  - combobox
+  - generic: 选择指标查看血缘
+  - radiogroup "segmented control":
+    - radio "全部" [checked]
+    - generic "全部"
+    - radio "上游"
+    - generic "上游"
+    - radio "下游"
+    - generic "下游"
+  - generic: 深度
+  - combobox
+  - generic "3 层"
+  - generic: 上游：来源模型 / 上游指标
+  - generic: →
+  - generic: 当前指标
+  - generic: →
+  - generic: 下游：派生/复合指标 / Dataset / 报表
+  - generic: 请选择指标
+  - generic: 从上方下拉选择一个指标查看其血缘图谱
+  - generic: 登记依赖（含引用时刻编码/版本快照）
+  - generic: 暂无依赖
+  - generic: 编辑指标保存后会自动登记模型、口径、单位等依赖快照

@@ -1,0 +1,316 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期" [expanded]:
+      - generic "数据生命周期"
+    - link "生命周期策略":
+      - /url: /data-lifecycle/policy
+      - generic "生命周期策略"
+    - link "TTL 运行监控":
+      - /url: /data-lifecycle/monitor
+      - generic "TTL 运行监控"
+    - link "存储统计":
+      - /url: /data-lifecycle/storage
+      - generic "存储统计"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: TTL 运行监控
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: TTL 监控
+  - generic: 跟踪各模型 TTL 生效状态；「待下发」表示策略已更新但尚未同步到存储
+  - generic: 模型总数
+  - generic: "16"
+  - generic: 已生效
+  - generic: "0"
+  - generic: 待下发
+  - generic: "16"
+  - generic: 下发失败
+  - generic: "0"
+  - generic: 未配置
+  - generic: "0"
+  - tablist:
+    - tab "模型 TTL 状态" [selected]
+    - tab "下发记录"
+  - tabpanel "模型 TTL 状态"
+  - searchbox "按模型名称或表名搜索"
+  - button "search":
+    - img "search":
+  - combobox
+  - generic: TTL 状态
+  - combobox
+  - generic: 分层
+  - button "批量预览并下发（0）" [disabled]:
+    - generic: 批量预览并下发（0）
+  - table:
+    - rowgroup:
+      - row "Select all 模型 分层 TTL 状态 生效策略 销毁周期 最近下发 说明 操作":
+        - columnheader "Select all":
+          - checkbox "Select all"
+        - columnheader "模型"
+        - columnheader "分层"
+        - columnheader "TTL 状态"
+        - columnheader "生效策略"
+        - columnheader "销毁周期"
+        - columnheader "最近下发"
+        - columnheader "说明"
+        - columnheader "操作"
+    - rowgroup:
+      - checkbox
+      - row "客户地址表 crm_customer_address ODS 贴源层 待下发 贴源层默认策略 继承分层默认 90 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "客户地址表 crm_customer_address":
+          - generic: 客户地址表
+          - generic: crm_customer_address
+        - cell "ODS 贴源层":
+          - generic: ODS 贴源层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "贴源层默认策略 继承分层默认":
+          - generic: 贴源层默认策略
+          - generic: 继承分层默认
+        - cell "90 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "客户历史维表（SCD Type 2） crm_customer_history ODS 贴源层 待下发 贴源层默认策略 继承分层默认 90 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "客户历史维表（SCD Type 2） crm_customer_history":
+          - generic: 客户历史维表（SCD Type 2）
+          - generic: crm_customer_history
+        - cell "ODS 贴源层":
+          - generic: ODS 贴源层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "贴源层默认策略 继承分层默认":
+          - generic: 贴源层默认策略
+          - generic: 继承分层默认
+        - cell "90 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "用户维度 dim_cust_info DIM 维度层 待下发 维度层默认策略 继承分层默认 永久 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "用户维度 dim_cust_info":
+          - generic: 用户维度
+          - generic: dim_cust_info
+        - cell "DIM 维度层":
+          - generic: DIM 维度层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "维度层默认策略 继承分层默认":
+          - generic: 维度层默认策略
+          - generic: 继承分层默认
+        - cell "永久"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "客户DWD dwd_crm_customer DWD 明细层 待下发 明细层默认策略 继承分层默认 730 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "客户DWD dwd_crm_customer":
+          - generic: 客户DWD
+          - generic: dwd_crm_customer
+        - cell "DWD 明细层":
+          - generic: DWD 明细层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "明细层默认策略 继承分层默认":
+          - generic: 明细层默认策略
+          - generic: 继承分层默认
+        - cell "730 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "订单明细表 dwd_order_detail DWD 明细层 待下发 明细层默认策略 继承分层默认 730 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "订单明细表 dwd_order_detail":
+          - generic: 订单明细表
+          - generic: dwd_order_detail
+        - cell "DWD 明细层":
+          - generic: DWD 明细层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "明细层默认策略 继承分层默认":
+          - generic: 明细层默认策略
+          - generic: 继承分层默认
+        - cell "730 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "下单表 dwd_orders_create DWD 明细层 待下发 明细层默认策略 继承分层默认 730 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "下单表 dwd_orders_create":
+          - generic: 下单表
+          - generic: dwd_orders_create
+        - cell "DWD 明细层":
+          - generic: DWD 明细层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "明细层默认策略 继承分层默认":
+          - generic: 明细层默认策略
+          - generic: 继承分层默认
+        - cell "730 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "订单支付表 dwd_orders_pay DWD 明细层 待下发 明细层默认策略 继承分层默认 730 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "订单支付表 dwd_orders_pay":
+          - generic: 订单支付表
+          - generic: dwd_orders_pay
+        - cell "DWD 明细层":
+          - generic: DWD 明细层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "明细层默认策略 继承分层默认":
+          - generic: 明细层默认策略
+          - generic: 继承分层默认
+        - cell "730 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "订单聚合天表 dws_orders_1d DWS 汇总层 待下发 汇总层默认策略 继承分层默认 1095 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "订单聚合天表 dws_orders_1d":
+          - generic: 订单聚合天表
+          - generic: dws_orders_1d
+        - cell "DWS 汇总层":
+          - generic: DWS 汇总层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "汇总层默认策略 继承分层默认":
+          - generic: 汇总层默认策略
+          - generic: 继承分层默认
+        - cell "1095 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "item_item item_item ODS 贴源层 待下发 贴源层默认策略 继承分层默认 90 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "item_item item_item":
+          - generic: item_item
+          - generic: item_item
+        - cell "ODS 贴源层":
+          - generic: ODS 贴源层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "贴源层默认策略 继承分层默认":
+          - generic: 贴源层默认策略
+          - generic: 继承分层默认
+        - cell "90 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+      - row "mkt_coupon mkt_coupon ODS 贴源层 待下发 贴源层默认策略 继承分层默认 90 天 - TTL 尚未下发到存储,请预览并下发 预览并下发":
+        - cell:
+          - checkbox
+        - cell "mkt_coupon mkt_coupon":
+          - generic: mkt_coupon
+          - generic: mkt_coupon
+        - cell "ODS 贴源层":
+          - generic: ODS 贴源层
+        - cell "待下发":
+          - generic: 待下发
+        - cell "贴源层默认策略 继承分层默认":
+          - generic: 贴源层默认策略
+          - generic: 继承分层默认
+        - cell "90 天"
+        - cell "-"
+        - cell "TTL 尚未下发到存储,请预览并下发"
+        - cell "预览并下发":
+          - button "预览并下发":
+            - generic: 预览并下发
+  - list:
+    - listitem: 共 16 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "2":
+      - generic: "2"
+    - listitem "下一页":
+      - button "right":
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

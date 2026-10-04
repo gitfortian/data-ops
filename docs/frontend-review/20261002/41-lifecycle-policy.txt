@@ -1,0 +1,278 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期" [expanded]:
+      - generic "数据生命周期"
+    - link "生命周期策略":
+      - /url: /data-lifecycle/policy
+      - generic "生命周期策略"
+    - link "TTL 运行监控":
+      - /url: /data-lifecycle/monitor
+      - generic "TTL 运行监控"
+    - link "存储统计":
+      - /url: /data-lifecycle/storage
+      - generic "存储统计"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 生命周期策略
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: TTL 策略管理
+  - generic: 定义热 / 冷 / 销毁三段保留周期，平台生成语句下发到 Doris / Paimon，由存储自动清理分区
+  - button "初始化分层默认策略":
+    - generic: 初始化分层默认策略
+  - button "新建策略":
+    - generic: 新建策略
+  - searchbox "按名称或编码搜索"
+  - button "search":
+    - img "search":
+  - combobox
+  - generic: 适用范围
+  - combobox
+  - generic: 分层
+  - table:
+    - rowgroup:
+      - row "策略名称 适用范围 保留周期 分区粒度 状态 发布态 引用模型 更新时间 备注 操作":
+        - columnheader "策略名称"
+        - columnheader "适用范围"
+        - columnheader "保留周期"
+        - columnheader "分区粒度"
+        - columnheader "状态"
+        - columnheader "发布态"
+        - columnheader "引用模型"
+        - columnheader "更新时间"
+        - columnheader "备注"
+        - columnheader "操作"
+    - rowgroup:
+      - row "贴源层默认策略 内置 ttl_ods_default ODS 贴源层 热 7 天 / 冷 30 天 / 销毁 90 天 日 启用 已发布 V3 - 2026-10-01 13:26:25 - 编辑 下线 版本 停用 删除":
+        - cell "贴源层默认策略 内置 ttl_ods_default":
+          - generic: 贴源层默认策略
+          - generic: 内置
+          - generic: ttl_ods_default
+        - cell "ODS 贴源层":
+          - generic: ODS 贴源层
+        - cell "热 7 天 / 冷 30 天 / 销毁 90 天"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "已发布 V3":
+          - generic: 已发布
+          - generic: V3
+        - cell "-"
+        - cell "2026-10-01 13:26:25"
+        - cell "-"
+        - cell "编辑 下线 版本 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "下线":
+            - generic: 下线
+          - button "版本":
+            - generic: 版本
+          - button "停用":
+            - generic: 停用
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "明细层默认策略 内置 ttl_dwd_default DWD 明细层 热 30 天 / 冷 180 天 / 销毁 730 天 日 启用 已发布 V1 - 2026-09-22 09:03:15 - 编辑 下线 版本 停用 删除":
+        - cell "明细层默认策略 内置 ttl_dwd_default":
+          - generic: 明细层默认策略
+          - generic: 内置
+          - generic: ttl_dwd_default
+        - cell "DWD 明细层":
+          - generic: DWD 明细层
+        - cell "热 30 天 / 冷 180 天 / 销毁 730 天"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "已发布 V1":
+          - generic: 已发布
+          - generic: V1
+        - cell "-"
+        - cell "2026-09-22 09:03:15"
+        - cell "-"
+        - cell "编辑 下线 版本 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "下线":
+            - generic: 下线
+          - button "版本":
+            - generic: 版本
+          - button "停用":
+            - generic: 停用
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "汇总层默认策略 内置 ttl_dws_default DWS 汇总层 热 90 天 / 冷 365 天 / 销毁 1095 天 日 启用 已发布 V1 - 2026-09-22 09:03:15 - 编辑 下线 版本 停用 删除":
+        - cell "汇总层默认策略 内置 ttl_dws_default":
+          - generic: 汇总层默认策略
+          - generic: 内置
+          - generic: ttl_dws_default
+        - cell "DWS 汇总层":
+          - generic: DWS 汇总层
+        - cell "热 90 天 / 冷 365 天 / 销毁 1095 天"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "已发布 V1":
+          - generic: 已发布
+          - generic: V1
+        - cell "-"
+        - cell "2026-09-22 09:03:15"
+        - cell "-"
+        - cell "编辑 下线 版本 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "下线":
+            - generic: 下线
+          - button "版本":
+            - generic: 版本
+          - button "停用":
+            - generic: 停用
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "应用层默认策略 内置 ttl_ads_default ADS 应用层 热 365 天 / 冷 730 天 / 销毁 永久 日 启用 已发布 V1 - 2026-09-22 09:03:15 - 编辑 下线 版本 停用 删除":
+        - cell "应用层默认策略 内置 ttl_ads_default":
+          - generic: 应用层默认策略
+          - generic: 内置
+          - generic: ttl_ads_default
+        - cell "ADS 应用层":
+          - generic: ADS 应用层
+        - cell "热 365 天 / 冷 730 天 / 销毁 永久"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "已发布 V1":
+          - generic: 已发布
+          - generic: V1
+        - cell "-"
+        - cell "2026-09-22 09:03:15"
+        - cell "-"
+        - cell "编辑 下线 版本 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "下线":
+            - generic: 下线
+          - button "版本":
+            - generic: 版本
+          - button "停用":
+            - generic: 停用
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "维度层默认策略 内置 ttl_dim_default DIM 维度层 热 不限 / 冷 不限 / 销毁 永久 日 启用 已发布 V1 - 2026-09-22 09:03:15 - 编辑 下线 版本 停用 删除":
+        - cell "维度层默认策略 内置 ttl_dim_default":
+          - generic: 维度层默认策略
+          - generic: 内置
+          - generic: ttl_dim_default
+        - cell "DIM 维度层":
+          - generic: DIM 维度层
+        - cell "热 不限 / 冷 不限 / 销毁 永久"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "已发布 V1":
+          - generic: 已发布
+          - generic: V1
+        - cell "-"
+        - cell "2026-09-22 09:03:15"
+        - cell "-"
+        - cell "编辑 下线 版本 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "下线":
+            - generic: 下线
+          - button "版本":
+            - generic: 版本
+          - button "停用":
+            - generic: 停用
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "E2E 自定义策略 ttl_custom_1789782961168 自定义 热 5 天 / 冷 60 天 / 销毁 永久 日 启用 已发布 V1 - 2026-09-22 09:03:15 - 编辑 下线 版本 停用 删除":
+        - cell "E2E 自定义策略 ttl_custom_1789782961168":
+          - generic: E2E 自定义策略
+          - generic: ttl_custom_1789782961168
+        - cell "自定义":
+          - generic: 自定义
+        - cell "热 5 天 / 冷 60 天 / 销毁 永久"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "已发布 V1":
+          - generic: 已发布
+          - generic: V1
+        - cell "-"
+        - cell "2026-09-22 09:03:15"
+        - cell "-"
+        - cell "编辑 下线 版本 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "下线":
+            - generic: 下线
+          - button "版本":
+            - generic: 版本
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+  - list:
+    - listitem: 共 6 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

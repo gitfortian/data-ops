@@ -1,0 +1,120 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行" [expanded]:
+      - generic "开发与运行"
+    - link "开发工作台":
+      - /url: /data-development
+      - generic "开发工作台"
+    - link "发布中心":
+      - /url: /data-development/releases
+      - generic "发布中心"
+    - link "开发运行记录":
+      - /url: /data-development/executions
+      - generic "开发运行记录"
+    - button "工作流":
+      - generic "工作流"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 发布中心
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "发布中心" [level=1]
+  - generic: 管理数据开发任务的线上状态、当前版本和历史不可变版本
+  - button "reload 刷新":
+    - img "reload":
+    - generic: 刷新
+  - button "全部任务 1" [pressed]:
+    - generic: 全部任务
+    - generic: "1"
+  - button "已上线 1":
+    - generic: 已上线
+    - generic: "1"
+  - button "已下线 0":
+    - generic: 已下线
+    - generic: "0"
+  - img "search":
+  - textbox "搜索任务名称 / 节点 ID"
+  - combobox
+  - generic: 任务类型
+  - button "查 询":
+    - generic: 查 询
+  - button "重 置":
+    - generic: 重 置
+  - table:
+    - rowgroup:
+      - row "任务名称 / 节点 ID 类型 状态 激活版本 版本校验 版本发布时间 状态更新时间 操作":
+        - columnheader "任务名称 / 节点 ID"
+        - columnheader "类型"
+        - columnheader "状态"
+        - columnheader "激活版本"
+        - columnheader "版本校验"
+        - columnheader "版本发布时间"
+        - columnheader "状态更新时间"
+        - columnheader "操作"
+        - columnheader
+  - table:
+    - rowgroup:
+      - 'row "MDM主数据加工-customer 节点 ID: 2101504415580672001 SQL 已上线 V1 当前为最新版本 3b002cb30e4a 2026-09-29 17:44:38 2026-09-29 17:44:50 版本详情 已下线"':
+        - 'cell "MDM主数据加工-customer 节点 ID: 2101504415580672001"':
+          - button "MDM主数据加工-customer"
+          - text: "节点 ID:"
+          - button "2101504415580672001"
+        - cell "SQL"
+        - cell "已上线":
+          - generic: 已上线
+        - cell "V1 当前为最新版本":
+          - generic: V1
+          - generic: 当前为最新版本
+        - cell "3b002cb30e4a"
+        - cell "2026-09-29 17:44:38"
+        - cell "2026-09-29 17:44:50"
+        - cell "版本详情 已下线":
+          - button "版本详情":
+            - generic: 版本详情
+          - button "已下线":
+            - generic: 已下线
+  - generic: 共 1 条发布任务
+  - list:
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "20 条/页"

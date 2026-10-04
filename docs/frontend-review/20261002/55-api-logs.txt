@@ -1,0 +1,112 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务" [expanded]:
+      - generic "API 服务"
+    - link "API 服务目录":
+      - /url: /data-service
+      - generic "API 服务目录"
+    - link "调用方与密钥":
+      - /url: /data-service/access
+      - generic "调用方与密钥"
+    - link "API 调试":
+      - /url: /data-service/debug
+      - generic "API 调试"
+    - link "运行概览":
+      - /url: /data-service/overview
+      - generic "运行概览"
+    - link "调用记录":
+      - /url: /data-service/logs
+      - generic "调用记录"
+    - button "分析展示":
+      - generic "分析展示"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 调用记录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "调用记录" [level=1]
+  - paragraph: 查看最近 200 次数据服务调用、调用方身份和执行结果。
+  - textbox "搜索服务、调用方、Key 前缀或错误信息"
+  - button "刷新":
+    - generic: 刷新
+  - table:
+    - rowgroup:
+      - row "API 服务 调用方 状态 耗时 返回行数 请求参数 错误信息 调用时间":
+        - columnheader "API 服务"
+        - columnheader "调用方"
+        - columnheader "状态"
+        - columnheader "耗时"
+        - columnheader "返回行数"
+        - columnheader "请求参数"
+        - columnheader "错误信息"
+        - columnheader "调用时间"
+        - columnheader
+  - table:
+    - rowgroup:
+      - 'row "主数据分发-customer-销售中台 /mdm/customer/1 API Key 失败 0 ms 0 {} 缺少 X-API-Key 请求头 2026-09-20 16:20:22"':
+        - cell "主数据分发-customer-销售中台 /mdm/customer/1":
+          - generic: 主数据分发-customer-销售中台
+          - generic: /mdm/customer/1
+        - cell "API Key":
+          - generic: API Key
+        - cell "失败":
+          - generic: 失败
+        - cell "0 ms"
+        - cell "0"
+        - 'cell "{}"'
+        - cell "缺少 X-API-Key 请求头"
+        - cell "2026-09-20 16:20:22"
+      - 'row "主数据分发-customer-销售中台 /mdm/customer/1 CRM 分发联调 yak_ds_UQ0JK1uGH•••• 成功 288 ms 1000 {\"limit\":\"3\"} - 2026-09-20 16:20:22"':
+        - cell "主数据分发-customer-销售中台 /mdm/customer/1":
+          - generic: 主数据分发-customer-销售中台
+          - generic: /mdm/customer/1
+        - cell "CRM 分发联调 yak_ds_UQ0JK1uGH••••":
+          - generic: CRM 分发联调
+          - generic: yak_ds_UQ0JK1uGH••••
+        - cell "成功":
+          - generic: 成功
+        - cell "288 ms"
+        - cell "1000"
+        - 'cell "{\"limit\":\"3\"}"'
+        - cell "-"
+        - cell "2026-09-20 16:20:22"

@@ -1,0 +1,689 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 资产目录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 资产目录
+  - generic: 跨域统一台账：搜索、过滤、上下架与治理，详情实时读源域「管目录不管内容」
+  - radiogroup "segmented control":
+    - radio "台账资产" [checked]
+    - generic "台账资产"
+    - radio "元数据实体"
+    - generic "元数据实体"
+  - button "手工登记":
+    - generic: 手工登记
+  - generic: 资产目录
+  - textbox "for screen reader"
+  - tree:
+    - treeitem "贴源层(ODS)":
+      - generic "贴源层(ODS)"
+    - treeitem "明细层(DWD)":
+      - generic "明细层(DWD)"
+    - treeitem "汇总层(DWS)":
+      - generic "汇总层(DWS)"
+    - treeitem "应用层(ADS)":
+      - generic "应用层(ADS)"
+    - treeitem "维度层(DIM)":
+      - generic "维度层(DIM)"
+    - treeitem "caret-down 交易域" [expanded]:
+      - img "caret-down":
+      - generic "交易域"
+    - treeitem "订单":
+      - generic "订单"
+    - treeitem "支付":
+      - generic "支付"
+    - treeitem "退款":
+      - generic "退款"
+    - treeitem "用户域":
+      - generic "用户域"
+    - treeitem "公共域":
+      - generic "公共域"
+    - treeitem "caret-down 商品域" [expanded]:
+      - img "caret-down":
+      - generic "商品域"
+    - treeitem "商品":
+      - generic "商品"
+    - treeitem "商品类目":
+      - generic "商品类目"
+    - treeitem "caret-down 客户域" [expanded]:
+      - img "caret-down":
+      - generic "客户域"
+    - treeitem "客户档案":
+      - generic "客户档案"
+    - treeitem "客户历史":
+      - generic "客户历史"
+    - treeitem "收货地址":
+      - generic "收货地址"
+    - treeitem "会员域":
+      - generic "会员域"
+    - treeitem "caret-down 营销域" [expanded]:
+      - img "caret-down":
+      - generic "营销域"
+    - treeitem "营销活动":
+      - generic "营销活动"
+    - treeitem "优惠券":
+      - generic "优惠券"
+    - treeitem "caret-down 履约域" [expanded]:
+      - img "caret-down":
+      - generic "履约域"
+    - treeitem "发货配送":
+      - generic "发货配送"
+    - treeitem "库存":
+      - generic "库存"
+    - treeitem "caret-down 售后域" [expanded]:
+      - img "caret-down":
+      - generic "售后域"
+    - treeitem "售后工单":
+      - generic "售后工单"
+    - treeitem "caret-down 结算域" [expanded]:
+      - img "caret-down":
+      - generic "结算域"
+    - treeitem "结算单":
+      - generic "结算单"
+    - treeitem "caret-down 评价域" [expanded]:
+      - img "caret-down":
+      - generic "评价域"
+    - treeitem "商品评价":
+      - generic "商品评价"
+    - treeitem "风控合规域":
+      - generic "风控合规域"
+  - searchbox "名称 / 描述 / 负责人 / 标签"
+  - button "search":
+    - img "search":
+  - combobox
+  - generic: 类型
+  - combobox
+  - generic: 分层
+  - combobox
+  - generic: 状态
+  - combobox
+  - generic: 健康度
+  - combobox
+  - generic: 标签
+  - combobox
+  - generic "推荐(健康×活跃度)"
+  - radiogroup "segmented control":
+    - radio "列表" [checked]
+    - generic "列表"
+    - radio "卡片"
+    - generic "卡片"
+  - table:
+    - rowgroup:
+      - row "Select all 资产 类型 分层 负责人 状态 健康度 近30天浏览 源更新 操作":
+        - columnheader "Select all":
+          - checkbox "Select all"
+        - columnheader "资产"
+        - columnheader "类型"
+        - columnheader "分层"
+        - columnheader "负责人"
+        - columnheader "状态"
+        - columnheader "健康度"
+        - columnheader "近30天浏览"
+        - columnheader "源更新"
+        - columnheader "操作"
+    - rowgroup:
+      - checkbox
+      - row "UI验证-客户主数据手册 manual:man_1789891922694 文档 - root 已上架 78 0 - 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "UI验证-客户主数据手册 manual:man_1789891922694":
+          - text: UI验证-客户主数据手册
+          - generic: manual:man_1789891922694
+        - cell "文档":
+          - generic: 文档
+        - cell "-"
+        - cell "root"
+        - cell "已上架":
+          - generic: 已上架
+        - cell "78":
+          - progressbar:
+            - generic: B
+        - cell "0"
+        - cell "-"
+        - cell "上架 下架 忽略 删除":
+          - button "上架" [disabled]:
+            - generic: 上架
+          - button "下架":
+            - generic: 下架
+          - button "忽略" [disabled]:
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "crm_customer_history table:3:crm_db..crm_customer_history 表 - - 已下架 38 0 2026-09-21 10:14 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "crm_customer_history table:3:crm_db..crm_customer_history":
+          - text: crm_customer_history
+          - generic: table:3:crm_db..crm_customer_history
+        - cell "表":
+          - generic: 表
+        - cell "-"
+        - cell "-"
+        - cell "已下架":
+          - generic: 已下架
+        - cell "38":
+          - progressbar:
+            - generic: D
+        - cell "0"
+        - cell "2026-09-21 10:14"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除":
+            - generic: 删除
+      - row "订单聚合天表 modeling:model:63 表 DWS root 已上架 20 0 2026-09-20 13:44 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "订单聚合天表 modeling:model:63":
+          - text: 订单聚合天表
+          - generic: modeling:model:63
+        - cell "表":
+          - generic: 表
+        - cell "DWS":
+          - generic: DWS
+        - cell "root"
+        - cell "已上架":
+          - generic: 已上架
+        - cell "20":
+          - progressbar:
+            - generic: D
+        - cell "0"
+        - cell "2026-09-20 13:44"
+        - cell "上架 下架 忽略 删除":
+          - button "上架" [disabled]:
+            - generic: 上架
+          - button "下架":
+            - generic: 下架
+          - button "忽略" [disabled]:
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "客户DWD modeling:model:66 表 DWD root 待上架 未评分 0 2026-09-24 11:40 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "客户DWD modeling:model:66":
+          - text: 客户DWD
+          - generic: modeling:model:66
+        - cell "表":
+          - generic: 表
+        - cell "DWD":
+          - generic: DWD
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-24 11:40"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "客户ODS modeling:model:65 表 ODS root 待上架 未评分 0 2026-09-24 11:38 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "客户ODS modeling:model:65":
+          - text: 客户ODS
+          - generic: modeling:model:65
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-24 11:38"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "crm_customer_address table:3:crm_db..crm_customer_address 表 - - 待上架 未评分 0 2026-09-21 10:14 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "crm_customer_address table:3:crm_db..crm_customer_address":
+          - text: crm_customer_address
+          - generic: table:3:crm_db..crm_customer_address
+        - cell "表":
+          - generic: 表
+        - cell "-"
+        - cell "-"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-21 10:14"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "订单支付表 modeling:model:61 表 DWD root 待上架 未评分 0 2026-09-20 10:32 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "订单支付表 modeling:model:61":
+          - text: 订单支付表
+          - generic: modeling:model:61
+        - cell "表":
+          - generic: 表
+        - cell "DWD":
+          - generic: DWD
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-20 10:32"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "下单表 modeling:model:60 表 DWD root 待上架 未评分 0 2026-09-22 11:55 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "下单表 modeling:model:60":
+          - text: 下单表
+          - generic: modeling:model:60
+        - cell "表":
+          - generic: 表
+        - cell "DWD":
+          - generic: DWD
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-22 11:55"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "订单明细表 modeling:model:57 表 DWD root 待上架 未评分 0 2026-09-20 16:14 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "订单明细表 modeling:model:57":
+          - text: 订单明细表
+          - generic: modeling:model:57
+        - cell "表":
+          - generic: 表
+        - cell "DWD":
+          - generic: DWD
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-20 16:14"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "订单表 modeling:model:54 表 ODS root 待上架 未评分 0 2026-09-22 14:51 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "订单表 modeling:model:54":
+          - text: 订单表
+          - generic: modeling:model:54
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-22 14:51"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "订单明细表 modeling:model:53 表 ODS root 待上架 未评分 0 2026-09-22 15:14 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "订单明细表 modeling:model:53":
+          - text: 订单明细表
+          - generic: modeling:model:53
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-22 15:14"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "用户维度 modeling:model:52 表 DIM root 待上架 未评分 0 2026-09-18 15:33 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "用户维度 modeling:model:52":
+          - text: 用户维度
+          - generic: modeling:model:52
+        - cell "表":
+          - generic: 表
+        - cell "DIM":
+          - generic: DIM
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-18 15:33"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "用户信息表 modeling:model:49 表 ODS root 待上架 未评分 0 2026-09-18 14:59 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "用户信息表 modeling:model:49":
+          - text: 用户信息表
+          - generic: modeling:model:49
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-18 14:59"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "mkt_coupon modeling:model:20 表 ODS root 待上架 未评分 0 2026-09-16 21:20 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "mkt_coupon modeling:model:20":
+          - text: mkt_coupon
+          - generic: modeling:model:20
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-16 21:20"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "item_item modeling:model:19 表 ODS root 待上架 未评分 0 2026-09-16 21:20 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "item_item modeling:model:19":
+          - text: item_item
+          - generic: modeling:model:19
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-16 21:20"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "trade_order_detail modeling:model:18 表 ODS root 待上架 未评分 0 2026-09-16 21:19 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "trade_order_detail modeling:model:18":
+          - text: trade_order_detail
+          - generic: modeling:model:18
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-16 21:19"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "trade_order modeling:model:17 表 ODS root 待上架 未评分 0 2026-09-16 21:19 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "trade_order modeling:model:17":
+          - text: trade_order
+          - generic: modeling:model:17
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-16 21:19"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "客户历史维表（SCD Type 2） modeling:model:7 表 ODS root 待上架 未评分 0 2026-09-16 20:09 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "客户历史维表（SCD Type 2） modeling:model:7":
+          - text: 客户历史维表（SCD Type 2）
+          - generic: modeling:model:7
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-16 20:09"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+      - row "客户地址表 modeling:model:6 表 ODS root 待上架 未评分 0 2026-09-16 21:13 上架 下架 忽略 删除":
+        - cell:
+          - checkbox
+        - cell "客户地址表 modeling:model:6":
+          - text: 客户地址表
+          - generic: modeling:model:6
+        - cell "表":
+          - generic: 表
+        - cell "ODS":
+          - generic: ODS
+        - cell "root"
+        - cell "待上架":
+          - generic: 待上架
+        - cell "未评分":
+          - generic: 未评分
+        - cell "0"
+        - cell "2026-09-16 21:13"
+        - cell "上架 下架 忽略 删除":
+          - button "上架":
+            - generic: 上架
+          - button "下架" [disabled]:
+            - generic: 下架
+          - button "忽略":
+            - generic: 忽略
+          - button "删除" [disabled]:
+            - generic: 删除
+  - list:
+    - listitem: 共 19 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "20 条/页"

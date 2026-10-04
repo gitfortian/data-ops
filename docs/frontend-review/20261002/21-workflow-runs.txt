@@ -1,0 +1,105 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行" [expanded]:
+      - generic "开发与运行"
+    - link "开发工作台":
+      - /url: /data-development
+      - generic "开发工作台"
+    - link "发布中心":
+      - /url: /data-development/releases
+      - generic "发布中心"
+    - link "开发运行记录":
+      - /url: /data-development/executions
+      - generic "开发运行记录"
+    - button "工作流" [expanded]:
+      - generic "工作流"
+    - link "工作流定义":
+      - /url: /workflow/definitions
+      - generic "工作流定义"
+    - link "工作流实例":
+      - /url: /workflow/instances
+      - generic "工作流实例"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 工作流实例
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "工作流实例" [level=1]
+  - button "全部实例" [pressed]
+  - button "运行中"
+  - button "已完成"
+  - button "失败"
+  - img "search":
+  - textbox "搜索实例名称"
+  - textbox "开始日期"
+  - generic "to":
+    - img "swap-right":
+  - textbox "结束日期"
+  - img "calendar":
+  - button "查 询":
+    - generic: 查 询
+  - button "filter 高级搜索":
+    - img "filter":
+    - generic: 高级搜索
+  - table:
+    - rowgroup:
+      - row "Select all 名称 创建用户 状态 执行概况 开始时间 结束时间 操作":
+        - columnheader "Select all":
+          - checkbox "Select all" [disabled]
+        - columnheader "名称"
+        - columnheader "创建用户"
+        - columnheader "状态"
+        - columnheader "执行概况"
+        - columnheader "开始时间"
+        - columnheader "结束时间"
+        - columnheader "操作"
+    - rowgroup:
+      - checkbox [disabled]
+      - row "暂无数据 暂无工作流实例":
+        - cell "暂无数据 暂无工作流实例":
+          - img "暂无数据"
+          - generic: 暂无工作流实例
+  - generic: 共 0 条
+  - list:
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+  - combobox
+  - generic "10 / 页"

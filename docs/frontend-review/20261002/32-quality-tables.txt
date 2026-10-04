@@ -1,0 +1,156 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量" [expanded]:
+      - generic "数据质量"
+    - link "质量总览":
+      - /url: /data-quality/overview
+      - generic "质量总览"
+    - link "数据表监控":
+      - /url: /data-quality/table-config
+      - generic "数据表监控"
+    - link "质量检查记录":
+      - /url: /data-quality/execution
+      - generic "质量检查记录"
+    - link "规则模板":
+      - /url: /data-quality/rule-template
+      - generic "规则模板"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据表监控
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "数据表监控" [level=1]
+  - button "刷新":
+    - generic: 刷新
+  - complementary:
+    - generic: 数据源
+    - textbox "for screen reader"
+    - tree:
+      - treeitem "MYSQL 15" [expanded]:
+        - generic "MYSQL":
+          - generic: MYSQL
+          - generic: "15"
+      - treeitem "订单库":
+        - generic "订单库":
+          - generic: 订单库
+      - treeitem "结算库":
+        - generic "结算库":
+          - generic: 结算库
+      - treeitem "客户库":
+        - generic "客户库":
+          - generic: 客户库
+      - treeitem "评价库":
+        - generic "评价库":
+          - generic: 评价库
+      - treeitem "商品库":
+        - generic "商品库":
+          - generic: 商品库
+      - treeitem "售后库":
+        - generic "售后库":
+          - generic: 售后库
+      - treeitem "数仓-ads":
+        - generic "数仓-ads":
+          - generic: 数仓-ads
+      - treeitem "数仓-dim":
+        - generic "数仓-dim":
+          - generic: 数仓-dim
+      - treeitem "数仓-dwd":
+        - generic "数仓-dwd":
+          - generic: 数仓-dwd
+      - treeitem "数仓-dws":
+        - generic "数仓-dws":
+          - generic: 数仓-dws
+      - treeitem "数仓-ods":
+        - generic "数仓-ods":
+          - generic: 数仓-ods
+      - treeitem "物流库存":
+        - generic "物流库存":
+          - generic: 物流库存
+      - treeitem "营销库":
+        - generic "营销库":
+          - generic: 营销库
+      - treeitem "支付库":
+        - generic "支付库":
+          - generic: 支付库
+      - treeitem "F1-CRM源":
+        - generic "F1-CRM源":
+          - generic: F1-CRM源
+  - separator "调整数据源面板宽度":
+    - button "收起数据源面板":
+  - main:
+    - textbox "请输入关键字查表"
+    - button "注册数据表":
+      - generic: 注册数据表
+    - text: 数据源类型：
+    - generic: MYSQL
+    - text: 数据源：
+    - generic: F1-CRM源
+    - table:
+      - rowgroup:
+        - row "表名 / 描述 / 路径 数据源 / 类型 监控 / 规则 最近状态 注册信息 操作":
+          - columnheader "表名 / 描述 / 路径"
+          - columnheader "数据源 / 类型"
+          - columnheader "监控 / 规则"
+          - columnheader "最近状态"
+          - columnheader "注册信息"
+          - columnheader "操作"
+          - columnheader
+    - table:
+      - rowgroup:
+        - row "暂无已注册数据表，点击右上角注册数据表后开始配置质量监控 暂无已注册数据表":
+          - cell "暂无已注册数据表，点击右上角注册数据表后开始配置质量监控 暂无已注册数据表":
+            - img "暂无已注册数据表，点击右上角注册数据表后开始配置质量监控"
+            - generic: 暂无已注册数据表

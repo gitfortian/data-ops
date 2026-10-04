@@ -1,0 +1,351 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理" [expanded]:
+      - generic "资产管理"
+    - link "盘点上架":
+      - /url: /data-asset/inventory
+      - generic "盘点上架"
+    - link "目录与标签":
+      - /url: /data-asset/taxonomy
+      - generic "目录与标签"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 盘点上架
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 盘点上架
+  - generic: 待上架池 / 变更确认 / 源接入三段闭环：对账发现 → 人工确认 → 向导上架
+  - radiogroup "segmented control":
+    - radio "待上架池" [checked]
+    - generic "待上架池"
+    - radio "变更确认"
+    - generic "变更确认"
+    - radio "源接入与对账"
+    - generic "源接入与对账"
+  - searchbox "名称 / 描述 / 负责人 / 标签"
+  - button "search":
+    - img "search":
+  - button "批量上架(0)" [disabled]:
+    - generic: 批量上架(0)
+  - button "手工登记":
+    - generic: 手工登记
+  - generic: 对账发现的源域对象自动落入这里；上架前必经预检
+  - table:
+    - rowgroup:
+      - row "Select all 资产 来源 类型 负责人 健康度 登记时间 操作":
+        - columnheader "Select all":
+          - checkbox "Select all"
+        - columnheader "资产"
+        - columnheader "来源"
+        - columnheader "类型"
+        - columnheader "负责人"
+        - columnheader "健康度"
+        - columnheader "登记时间"
+        - columnheader "操作"
+    - rowgroup:
+      - row "客户DWD modeling:model:66 模型 表 root 未评分 2026-10-01 19:04 上架":
+        - cell:
+          - checkbox
+        - cell "客户DWD modeling:model:66":
+          - text: 客户DWD
+          - generic: modeling:model:66
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-10-01 19:04"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "客户ODS modeling:model:65 模型 表 root 未评分 2026-10-01 19:04 上架":
+        - cell:
+          - checkbox
+        - cell "客户ODS modeling:model:65":
+          - text: 客户ODS
+          - generic: modeling:model:65
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-10-01 19:04"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "crm_customer_address table:3:crm_db..crm_customer_address 物理表 表 缺 未评分 2026-09-23 15:24 上架":
+        - cell:
+          - checkbox
+        - cell "crm_customer_address table:3:crm_db..crm_customer_address":
+          - text: crm_customer_address
+          - generic: table:3:crm_db..crm_customer_address
+        - cell "物理表"
+        - cell "表"
+        - cell "缺"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-23 15:24"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "订单支付表 modeling:model:61 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "订单支付表 modeling:model:61":
+          - text: 订单支付表
+          - generic: modeling:model:61
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "下单表 modeling:model:60 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "下单表 modeling:model:60":
+          - text: 下单表
+          - generic: modeling:model:60
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "订单明细表 modeling:model:57 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "订单明细表 modeling:model:57":
+          - text: 订单明细表
+          - generic: modeling:model:57
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "订单表 modeling:model:54 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "订单表 modeling:model:54":
+          - text: 订单表
+          - generic: modeling:model:54
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "订单明细表 modeling:model:53 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "订单明细表 modeling:model:53":
+          - text: 订单明细表
+          - generic: modeling:model:53
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "用户维度 modeling:model:52 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "用户维度 modeling:model:52":
+          - text: 用户维度
+          - generic: modeling:model:52
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "用户信息表 modeling:model:49 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "用户信息表 modeling:model:49":
+          - text: 用户信息表
+          - generic: modeling:model:49
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "mkt_coupon modeling:model:20 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "mkt_coupon modeling:model:20":
+          - text: mkt_coupon
+          - generic: modeling:model:20
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "item_item modeling:model:19 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "item_item modeling:model:19":
+          - text: item_item
+          - generic: modeling:model:19
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "trade_order_detail modeling:model:18 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "trade_order_detail modeling:model:18":
+          - text: trade_order_detail
+          - generic: modeling:model:18
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "trade_order modeling:model:17 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "trade_order modeling:model:17":
+          - text: trade_order
+          - generic: modeling:model:17
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "客户历史维表（SCD Type 2） modeling:model:7 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "客户历史维表（SCD Type 2） modeling:model:7":
+          - text: 客户历史维表（SCD Type 2）
+          - generic: modeling:model:7
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+      - row "客户地址表 modeling:model:6 模型 表 root 未评分 2026-09-20 17:00 上架":
+        - cell:
+          - checkbox
+        - cell "客户地址表 modeling:model:6":
+          - text: 客户地址表
+          - generic: modeling:model:6
+        - cell "模型"
+        - cell "表"
+        - cell "root"
+        - cell "未评分":
+          - generic: 未评分
+        - cell "2026-09-20 17:00"
+        - cell "上架":
+          - button "上架":
+            - generic: 上架
+  - list:
+    - listitem: 共 16 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "20 条/页"

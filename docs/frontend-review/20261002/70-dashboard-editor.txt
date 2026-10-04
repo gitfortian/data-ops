@@ -1,0 +1,27 @@
+- banner:
+  - button:
+  - textbox: 未命名仪表盘
+  - generic: 未保存
+  - button "保存草稿":
+    - generic: 保存草稿
+  - button "发布":
+    - generic: 发布
+  - button "添加图表" [disabled]:
+    - generic: 添加图表
+  - button [disabled]:
+  - button [disabled]:
+  - button "仪表盘样式":
+    - generic: 仪表盘样式
+  - button "性能分析" [disabled]:
+    - generic: 性能分析
+  - button "预览":
+    - generic: 预览
+- main
+- generic "仪表盘编辑 Sheet":
+  - tab "仪表盘" [selected]:
+    - generic: 仪表盘
+  - tablist:
+    - generic: 暂无图表 Sheet
+  - button "向左滚动图表 Sheet" [disabled]:
+  - button "向右滚动图表 Sheet" [disabled]:
+  - button "新建图表 Sheet" [disabled]:

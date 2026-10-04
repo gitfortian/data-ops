@@ -1,0 +1,9 @@
+from pathlib import Path
+import re
+p=Path('data-ops-ui/src/pages/modeling/detail.tsx');s=p.read_text(encoding='utf-8');s="import { useSecurityProject } from '@/contexts/SecurityProjectContext';\n"+s
+s=s.replace('  const beginStructureLoad = useLatestOperation(modelId);','  const { currentProject } = useSecurityProject();\n  const beginStructureLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);')
+s=s.replace('[modelId, discoverStandards, beginStructureLoad]', '[modelId, currentProject?.id, discoverStandards, beginStructureLoad]')
+s=re.sub(r'( +)if \(!isCurrent\(\)\) return;\n\s*if \(!isCurrent\(\)\) return;\n\s*setRows\(discovered.rows\);',r'\1if (!isCurrent()) return;\n\1setRows(discovered.rows);',s)
+p.write_text(s,encoding='utf-8')
+p=Path('data-ops-ui/src/pages/development/data-development/components/data-service/DataServiceNodeEditor.tsx');s=p.read_text(encoding='utf-8');s="import { useSecurityProject } from '@/contexts/SecurityProjectContext';\n"+s;s=s.replace('  const beginLoad = useLatestOperation(node.id);','  const { currentProject } = useSecurityProject();\n  const beginLoad = useLatestOperation(`${currentProject?.id ?? ""}:${node.id}`);');s=s.replace('[applyContext, loadPublicationState, node.id, beginLoad]', '[applyContext, loadPublicationState, node.id, currentProject?.id, beginLoad]');p.write_text(s,encoding='utf-8')
+p=Path('data-ops-ui/src/pages/home/hooks/useHomeCockpit.ts');s=p.read_text(encoding='utf-8');s="import { useSecurityProject } from '@/contexts/SecurityProjectContext';\n"+s;s=s.replace('  const [state,', '  const { currentProject } = useSecurityProject();\n  const [state,',1).replace('    let active = true;', '    let active = true;\n    setState({ loading: true, failed: false });').replace('  }, []);','  }, [currentProject?.id]);');p.write_text(s,encoding='utf-8')

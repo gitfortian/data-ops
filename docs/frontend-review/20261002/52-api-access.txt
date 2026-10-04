@@ -1,0 +1,124 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务" [expanded]:
+      - generic "API 服务"
+    - link "API 服务目录":
+      - /url: /data-service
+      - generic "API 服务目录"
+    - link "调用方与密钥":
+      - /url: /data-service/access
+      - generic "调用方与密钥"
+    - link "API 调试":
+      - /url: /data-service/debug
+      - generic "API 调试"
+    - link "运行概览":
+      - /url: /data-service/overview
+      - generic "运行概览"
+    - link "调用记录":
+      - /url: /data-service/logs
+      - generic "调用记录"
+    - button "分析展示":
+      - generic "分析展示"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 调用方与密钥
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "调用方与密钥" [level=1]
+  - button "刷新":
+    - generic: 刷新
+  - button "新建调用方":
+    - generic: 新建调用方
+  - generic: 调用方
+  - generic: "1"
+  - generic: 有效凭证
+  - generic: "1"
+  - generic: 全部 API
+  - generic: "0"
+  - generic: 来源限制
+  - generic: "0"
+  - textbox "搜索调用方"
+  - combobox
+  - generic "全部状态"
+  - generic: 共 1 个调用方
+  - table:
+    - rowgroup:
+      - row "调用方 API 权限 凭证 来源限制 状态 更新时间 操作":
+        - columnheader "调用方"
+        - columnheader "API 权限"
+        - columnheader "凭证"
+        - columnheader "来源限制"
+        - columnheader "状态"
+        - columnheader "更新时间"
+        - columnheader "操作"
+    - rowgroup:
+      - row "CRM 分发联调 R5 实测：外部调用方持 Key 拉取 ACTIVE 客户记录 1 个 API 1/1 个有效 Key 默认 60/min 不限制 可调用 2026-09-20 16:19:28 管理":
+        - cell "CRM 分发联调 R5 实测：外部调用方持 Key 拉取 ACTIVE 客户记录":
+          - generic: CRM 分发联调
+          - generic: R5 实测：外部调用方持 Key 拉取 ACTIVE 客户记录
+        - cell "1 个 API":
+          - generic: 1 个 API
+        - cell "1/1 个有效 Key 默认 60/min":
+          - generic: 1/1 个有效 Key
+          - generic: 默认 60/min
+        - cell "不限制":
+          - generic: 不限制
+        - cell "可调用":
+          - generic: 可调用
+        - cell "2026-09-20 16:19:28"
+        - cell "管理":
+          - button "管理":
+            - generic: 管理
+  - list:
+    - listitem: 共 1 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

@@ -1,0 +1,204 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理" [expanded]:
+      - generic "专业方案：主数据管理"
+    - link "主数据总览":
+      - /url: /mdm/overview
+      - generic "主数据总览"
+    - link "主数据建模":
+      - /url: /mdm/modeling
+      - generic "主数据建模"
+    - link "主数据识别":
+      - /url: /mdm/identification
+      - generic "主数据识别"
+    - link "主数据清洗":
+      - /url: /mdm/cleansing
+      - generic "主数据清洗"
+    - link "主数据变更":
+      - /url: /mdm/approval
+      - generic "主数据变更"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 主数据实体详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 主数据建模
+  - generic: /
+  - generic: 客户（customer）
+  - generic: 主数据实体的概览与配置；属性、记录与通用能力 Tab 随后续能力接入
+  - table:
+    - rowgroup:
+      - row "实体编码 customer 实体名称 客户 状态 草稿":
+        - rowheader "实体编码"
+        - cell "customer"
+        - rowheader "实体名称"
+        - cell "客户"
+        - rowheader "状态"
+        - cell "草稿":
+          - generic: 草稿
+      - row "负责人 root 创建时间 2026-09-19 13:11:35 更新时间 2026-09-19 13:11:35":
+        - rowheader "负责人"
+        - cell "root"
+        - rowheader "创建时间"
+        - cell "2026-09-19 13:11:35"
+        - rowheader "更新时间"
+        - cell "2026-09-19 13:11:35"
+      - row "描述 -":
+        - rowheader "描述"
+        - cell "-"
+  - tablist:
+    - tab "属性" [selected]
+    - tab "记录"
+    - tab "采集"
+    - tab "质量"
+    - tab "分发配置"
+    - tab "订阅"
+    - tab "血缘"
+    - tab "标准"
+    - tab "变更记录"
+  - tabpanel "属性":
+    - button "新建属性":
+      - generic: 新建属性
+    - table:
+      - rowgroup:
+        - row "属性编码 属性名称 角色 数据类型 类型标准 单位标准 码集 安全标准 必填 排序 操作":
+          - columnheader "属性编码"
+          - columnheader "属性名称"
+          - columnheader "角色"
+          - columnheader "数据类型"
+          - columnheader "类型标准"
+          - columnheader "单位标准"
+          - columnheader "码集"
+          - columnheader "安全标准"
+          - columnheader "必填"
+          - columnheader "排序"
+          - columnheader "操作"
+      - rowgroup:
+        - row "cust_id 瀹㈡埛ID PK（唯一标识） - - - - - 否 0 编辑 删除":
+          - cell "cust_id"
+          - cell "瀹㈡埛ID"
+          - cell "PK（唯一标识）":
+            - generic: PK（唯一标识）
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "否"
+          - cell "0"
+          - cell "编辑 删除":
+            - generic: 编辑
+            - generic: 删除
+        - row "cust_name 客户姓名 属性 - - - - - 否 0 编辑 删除":
+          - cell "cust_name"
+          - cell "客户姓名"
+          - cell "属性":
+            - generic: 属性
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "否"
+          - cell "0"
+          - cell "编辑 删除":
+            - generic: 编辑
+            - generic: 删除
+        - row "phone 手机号 属性 - - - - - 否 0 编辑 删除":
+          - cell "phone"
+          - cell "手机号"
+          - cell "属性":
+            - generic: 属性
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "否"
+          - cell "0"
+          - cell "编辑 删除":
+            - generic: 编辑
+            - generic: 删除
+        - row "city 城市 属性 - - - - - 否 0 编辑 删除":
+          - cell "city"
+          - cell "城市"
+          - cell "属性":
+            - generic: 属性
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "否"
+          - cell "0"
+          - cell "编辑 删除":
+            - generic: 编辑
+            - generic: 删除
+        - row "member_level 会员等级 属性 - - - - - 否 0 编辑 删除":
+          - cell "member_level"
+          - cell "会员等级"
+          - cell "属性":
+            - generic: 属性
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "-"
+          - cell "否"
+          - cell "0"
+          - cell "编辑 删除":
+            - generic: 编辑
+            - generic: 删除

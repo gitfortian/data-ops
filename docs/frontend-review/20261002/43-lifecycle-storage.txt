@@ -1,0 +1,100 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期" [expanded]:
+      - generic "数据生命周期"
+    - link "生命周期策略":
+      - /url: /data-lifecycle/policy
+      - generic "生命周期策略"
+    - link "TTL 运行监控":
+      - /url: /data-lifecycle/monitor
+      - generic "TTL 运行监控"
+    - link "存储统计":
+      - /url: /data-lifecycle/storage
+      - generic "存储统计"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 存储统计
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 存储统计
+  - generic: 各层存储量、冷热分布与成本估算
+  - button "设置存储单价":
+    - generic: 设置存储单价
+  - button "刷 新":
+    - generic: 刷 新
+  - alert:
+    - img "info-circle":
+    - generic: 尚无存储快照
+    - generic: 平台每日定时采集各层表大小（也可在「任务中心」手动触发采集任务），采集完成后这里将展示存储量、冷热分布与成本。
+  - generic: 总存储量
+  - generic: 0 B
+  - generic: 热存储
+  - generic: 0 B
+  - generic: 按保留期估算
+  - generic: 冷存储
+  - generic: 0 B
+  - generic: 本月估算成本
+  - generic: ¥ 0.00
+  - generic: 单价 ¥0.35 / GB / 月
+  - generic: 各层存储量
+  - generic: 暂无数据
+  - generic: 存储量趋势
+  - radio "近 7 天"
+  - text: 近 7 天
+  - radio "近 30 天" [checked]
+  - text: 近 30 天
+  - radio "近 90 天"
+  - text: 近 90 天

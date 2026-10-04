@@ -1,0 +1,71 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 变更影响分析
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 变更影响分析
+  - generic: 变更前预览影响范围：标准字段变更按分层映射反查落地；来源字段变更按来源映射反查模型。只读预览，不自动修改。
+  - textbox "标准字段 ID"
+  - button "按标准字段分析":
+    - generic: 按标准字段分析
+  - generic: 或
+  - textbox "数据源 ID"
+  - textbox "源库（可选）"
+  - textbox "源表（可选）"
+  - textbox "源字段（可选）"
+  - button "按来源分析":
+    - generic: 按来源分析
+  - table:
+    - rowgroup:
+      - row "影响维度 受影响模型 目标字段 分层 来源明细":
+        - columnheader "影响维度"
+        - columnheader "受影响模型"
+        - columnheader "目标字段"
+        - columnheader "分层"
+        - columnheader "来源明细"
+    - rowgroup:
+      - row "输入条件后预览影响范围；无结果说明当前没有受影响项":
+        - cell "输入条件后预览影响范围；无结果说明当前没有受影响项"

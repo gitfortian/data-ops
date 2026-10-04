@@ -1,0 +1,204 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量" [expanded]:
+      - generic "数据质量"
+    - link "质量总览":
+      - /url: /data-quality/overview
+      - generic "质量总览"
+    - link "数据表监控":
+      - /url: /data-quality/table-config
+      - generic "数据表监控"
+    - link "质量检查记录":
+      - /url: /data-quality/execution
+      - generic "质量检查记录"
+    - link "规则模板":
+      - /url: /data-quality/rule-template
+      - generic "规则模板"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 质量检查记录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "运行记录" [level=1]
+  - complementary:
+    - generic: 数据源
+    - textbox "for screen reader"
+    - tree:
+      - treeitem "MYSQL 15" [expanded]:
+        - generic "MYSQL":
+          - generic: MYSQL
+          - generic: "15"
+      - treeitem "订单库":
+        - generic "订单库":
+          - generic: 订单库
+      - treeitem "结算库":
+        - generic "结算库":
+          - generic: 结算库
+      - treeitem "客户库":
+        - generic "客户库":
+          - generic: 客户库
+      - treeitem "评价库":
+        - generic "评价库":
+          - generic: 评价库
+      - treeitem "商品库":
+        - generic "商品库":
+          - generic: 商品库
+      - treeitem "售后库":
+        - generic "售后库":
+          - generic: 售后库
+      - treeitem "数仓-ads":
+        - generic "数仓-ads":
+          - generic: 数仓-ads
+      - treeitem "数仓-dim":
+        - generic "数仓-dim":
+          - generic: 数仓-dim
+      - treeitem "数仓-dwd":
+        - generic "数仓-dwd":
+          - generic: 数仓-dwd
+      - treeitem "数仓-dws":
+        - generic "数仓-dws":
+          - generic: 数仓-dws
+      - treeitem "数仓-ods":
+        - generic "数仓-ods":
+          - generic: 数仓-ods
+      - treeitem "物流库存":
+        - generic "物流库存":
+          - generic: 物流库存
+      - treeitem "营销库":
+        - generic "营销库":
+          - generic: 营销库
+      - treeitem "支付库":
+        - generic "支付库":
+          - generic: 支付库
+      - treeitem "F1-CRM源":
+        - generic "F1-CRM源":
+          - generic: F1-CRM源
+  - separator "调整数据源面板宽度":
+    - button "收起数据源面板":
+  - main:
+    - radiogroup "segmented control":
+      - radio "规则视角" [checked]
+      - generic "规则视角"
+      - radio "监控视角"
+      - generic "监控视角"
+    - textbox "搜索规则或监控名称"
+    - textbox "开始日期": 2026-09-25
+    - generic "to":
+      - img "swap-right":
+    - textbox "结束日期": 2026-10-02
+    - img "calendar":
+    - button "close-circle":
+      - img "close-circle":
+    - button "查询":
+      - generic: 查询
+    - button "高级筛选":
+      - generic: 高级筛选
+    - button "刷新":
+    - table:
+      - rowgroup:
+        - row "ID / 规则名称 质量维度 校验状态 问题处置 结束时间 表名 关联范围 规则模板 重要程度 监控阈值 监控值 质量结果 操作":
+          - columnheader "ID / 规则名称"
+          - columnheader "质量维度"
+          - columnheader "校验状态"
+          - columnheader "问题处置"
+          - columnheader "结束时间"
+          - columnheader "表名"
+          - columnheader "关联范围"
+          - columnheader "规则模板"
+          - columnheader "重要程度"
+          - columnheader "监控阈值"
+          - columnheader "监控值"
+          - columnheader "质量结果"
+          - columnheader "操作"
+      - rowgroup:
+        - row "6 · QM-20261001192621949-6193D9 表行数 完整性 已完成 - 2026-10-01 19:26:22 crm_customer F1-CRM源 表级 TABLE_ROW_COUNT -- > 0行 3060行 通过 详情 规则":
+          - cell "6 · QM-20261001192621949-6193D9 表行数":
+            - generic: 6 · QM-20261001192621949-6193D9
+            - button "表行数"
+          - cell "完整性"
+          - cell "已完成":
+            - generic: 已完成
+          - cell "-"
+          - cell "2026-10-01 19:26:22"
+          - cell "crm_customer F1-CRM源":
+            - generic: crm_customer
+            - generic: F1-CRM源
+          - cell "表级":
+            - generic: 表级
+          - cell "TABLE_ROW_COUNT"
+          - cell "--"
+          - cell "> 0行"
+          - cell "3060行"
+          - cell "通过":
+            - generic: 通过
+          - cell "详情 规则":
+            - button "详情":
+              - generic: 详情
+            - button "规则":
+              - generic: 规则
+    - list:
+      - listitem: 共 1 条
+      - listitem "上一页":
+        - button "left" [disabled]:
+          - img "left":
+      - listitem "1":
+        - generic: "1"
+      - listitem "下一页":
+        - button "right" [disabled]:
+          - img "right":
+      - generic "页码":
+        - combobox "页码"
+        - generic "20 条/页"

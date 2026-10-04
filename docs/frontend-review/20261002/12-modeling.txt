@@ -1,0 +1,378 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 模型工作台
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - complementary:
+    - generic: 模型目录
+    - textbox "搜索业务域"
+    - textbox "for screen reader"
+    - tree:
+      - treeitem "风控合规域":
+        - generic "风控合规域":
+          - generic: 风控合规域
+      - treeitem "公共域":
+        - generic "公共域":
+          - generic: 公共域
+      - treeitem "会员域":
+        - generic "会员域":
+          - generic: 会员域
+      - treeitem "交易域" [expanded]:
+        - generic "交易域":
+          - generic: 交易域
+      - treeitem "订单":
+        - generic "订单":
+          - generic: 订单
+      - treeitem "退款":
+        - generic "退款":
+          - generic: 退款
+      - treeitem "支付":
+        - generic "支付":
+          - generic: 支付
+      - treeitem "结算域" [expanded]:
+        - generic "结算域":
+          - generic: 结算域
+      - treeitem "结算单":
+        - generic "结算单":
+          - generic: 结算单
+      - treeitem "客户域" [expanded]:
+        - generic "客户域":
+          - generic: 客户域
+      - treeitem "客户档案":
+        - generic "客户档案":
+          - generic: 客户档案
+      - treeitem "客户历史":
+        - generic "客户历史":
+          - generic: 客户历史
+      - treeitem "收货地址":
+        - generic "收货地址":
+          - generic: 收货地址
+      - treeitem "履约域" [expanded]:
+        - generic "履约域":
+          - generic: 履约域
+      - treeitem "发货配送":
+        - generic "发货配送":
+          - generic: 发货配送
+      - treeitem "库存":
+        - generic "库存":
+          - generic: 库存
+      - treeitem "评价域" [expanded]:
+        - generic "评价域":
+          - generic: 评价域
+      - treeitem "商品评价":
+        - generic "商品评价":
+          - generic: 商品评价
+      - treeitem "商品域" [expanded]:
+        - generic "商品域":
+          - generic: 商品域
+      - treeitem "商品":
+        - generic "商品":
+          - generic: 商品
+      - treeitem "商品类目":
+        - generic "商品类目":
+          - generic: 商品类目
+      - treeitem "售后域" [expanded]:
+        - generic "售后域":
+          - generic: 售后域
+      - treeitem "售后工单":
+        - generic "售后工单":
+          - generic: 售后工单
+      - treeitem "营销域" [expanded]:
+        - generic "营销域":
+          - generic: 营销域
+      - treeitem "营销活动":
+        - generic "营销活动":
+          - generic: 营销活动
+      - treeitem "优惠券":
+        - generic "优惠券":
+          - generic: 优惠券
+      - treeitem "用户域":
+        - generic "用户域":
+          - generic: 用户域
+  - separator "拖拽调整目录宽度":
+    - button "折叠目录":
+  - generic: 模型工作台
+  - generic: 管理项目空间内的数仓物理模型：表结构设计、来源映射与模型资产视图
+  - searchbox "按名称或编码搜索"
+  - button "search":
+    - img "search":
+  - radiogroup "segmented control":
+    - radio "列表" [checked]
+    - generic "列表"
+    - radio "主线视图"
+    - generic "主线视图"
+  - button "更多 down":
+    - generic: 更多
+    - img "down":
+  - button "新建模型":
+    - generic: 新建模型
+  - generic: 标签筛选
+  - combobox
+  - generic: 全部标签
+  - combobox
+  - generic: 全部分层
+  - combobox
+  - generic: 全部业务域
+  - combobox
+  - generic: 全部业务过程
+  - combobox
+  - generic: 全部状态
+  - combobox
+  - generic: 全部目标库
+  - button "列设置":
+    - generic: 列设置
+  - table:
+    - rowgroup:
+      - row "模型名称 模型编码 分层 业务过程 目标 业务域 标签 状态 更新时间 操作":
+        - columnheader "模型名称"
+        - columnheader "模型编码"
+        - columnheader "分层"
+        - columnheader "业务过程"
+        - columnheader "目标"
+        - columnheader "业务域"
+        - columnheader "标签"
+        - columnheader "状态"
+        - columnheader "更新时间"
+        - columnheader "操作"
+    - rowgroup:
+      - row "客户DWD dwd_crm_customer DWD - dwd（MySQL） 客户域 - 已发布 2026-09-24 11:40 编辑 更多 down":
+        - cell "客户DWD"
+        - cell "dwd_crm_customer"
+        - cell "DWD":
+          - generic: DWD
+        - cell "-"
+        - cell "dwd（MySQL）"
+        - cell "客户域"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-24 11:40"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "客户ODS ods_crm_customer ODS - ods（MySQL） 客户域 - 已发布 2026-09-24 11:38 编辑 更多 down":
+        - cell "客户ODS"
+        - cell "ods_crm_customer"
+        - cell "ODS":
+          - generic: ODS
+        - cell "-"
+        - cell "ods（MySQL）"
+        - cell "客户域"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-24 11:38"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "订单明细表 ods_order_detail ODS - ods（MySQL） 未分类 - 已发布 2026-09-22 15:14 编辑 更多 down":
+        - cell "订单明细表"
+        - cell "ods_order_detail"
+        - cell "ODS":
+          - generic: ODS
+        - cell "-"
+        - cell "ods（MySQL）"
+        - cell "未分类"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-22 15:14"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "订单表 ods_orders ODS - ods（MySQL） 未分类 - 已发布 2026-09-22 14:51 编辑 更多 down":
+        - cell "订单表"
+        - cell "ods_orders"
+        - cell "ODS":
+          - generic: ODS
+        - cell "-"
+        - cell "ods（MySQL）"
+        - cell "未分类"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-22 14:51"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "下单表 dwd_orders_create DWD 下单 dwd（MySQL） 订单 - 已发布 2026-09-22 11:55 编辑 更多 down":
+        - cell "下单表"
+        - cell "dwd_orders_create"
+        - cell "DWD":
+          - generic: DWD
+        - cell "下单"
+        - cell "dwd（MySQL）"
+        - cell "订单"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-22 11:55"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "订单明细表 dwd_order_detail DWD 购买商品 dwd（MySQL） 订单 - 已发布 2026-09-20 16:14 编辑 更多 down":
+        - cell "订单明细表"
+        - cell "dwd_order_detail"
+        - cell "DWD":
+          - generic: DWD
+        - cell "购买商品"
+        - cell "dwd（MySQL）"
+        - cell "订单"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-20 16:14"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "订单聚合天表 dws_orders_1d DWS - dws（MySQL） 订单 - 草稿 2026-09-20 13:44 编辑 更多 down":
+        - cell "订单聚合天表"
+        - cell "dws_orders_1d"
+        - cell "DWS":
+          - generic: DWS
+        - cell "-"
+        - cell "dws（MySQL）"
+        - cell "订单"
+        - cell "-"
+        - cell "草稿":
+          - generic: 草稿
+        - cell "2026-09-20 13:44"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "订单支付表 dwd_orders_pay DWD 订单支付 dwd（MySQL） 支付 - 已发布 2026-09-20 10:32 编辑 更多 down":
+        - cell "订单支付表"
+        - cell "dwd_orders_pay"
+        - cell "DWD":
+          - generic: DWD
+        - cell "订单支付"
+        - cell "dwd（MySQL）"
+        - cell "支付"
+        - cell "-"
+        - cell "已发布":
+          - generic: 已发布
+        - cell "2026-09-20 10:32"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "用户维度 dim_cust_info DIM - dim（MySQL） 未分类 - 草稿 2026-09-18 15:33 编辑 更多 down":
+        - cell "用户维度"
+        - cell "dim_cust_info"
+        - cell "DIM":
+          - generic: DIM
+        - cell "-"
+        - cell "dim（MySQL）"
+        - cell "未分类"
+        - cell "-"
+        - cell "草稿":
+          - generic: 草稿
+        - cell "2026-09-18 15:33"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+      - row "用户信息表 ods_cust_info ODS - ods（MySQL） 未分类 - 草稿 2026-09-18 14:59 编辑 更多 down":
+        - cell "用户信息表"
+        - cell "ods_cust_info"
+        - cell "ODS":
+          - generic: ODS
+        - cell "-"
+        - cell "ods（MySQL）"
+        - cell "未分类"
+        - cell "-"
+        - cell "草稿":
+          - generic: 草稿
+        - cell "2026-09-18 14:59"
+        - cell "编辑 更多 down":
+          - button "编辑":
+            - generic: 编辑
+          - button "更多 down":
+            - generic: 更多
+            - img "down":
+  - list:
+    - listitem: 第 1-10 条，共 16 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "2":
+      - generic: "2"
+    - listitem "下一页":
+      - button "right":
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"
+    - text: 跳至
+    - textbox "页"
+    - text: 页

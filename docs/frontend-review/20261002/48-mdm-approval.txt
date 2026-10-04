@@ -1,0 +1,166 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理" [expanded]:
+      - generic "专业方案：主数据管理"
+    - link "主数据总览":
+      - /url: /mdm/overview
+      - generic "主数据总览"
+    - link "主数据建模":
+      - /url: /mdm/modeling
+      - generic "主数据建模"
+    - link "主数据识别":
+      - /url: /mdm/identification
+      - generic "主数据识别"
+    - link "主数据清洗":
+      - /url: /mdm/cleansing
+      - generic "主数据清洗"
+    - link "主数据变更":
+      - /url: /mdm/approval
+      - generic "主数据变更"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 主数据变更
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 主数据变更
+  - generic: 变更申请在这里查进度、撤回在途申请；通过与拒绝请前往审批中心「待办中心」处理
+  - combobox
+  - generic: 状态筛选
+  - table:
+    - rowgroup:
+      - row "ID 实体 master_id 类型 变更内容 状态 申请人 审批人 审批意见 提交时间 操作":
+        - columnheader "ID"
+        - columnheader "实体"
+        - columnheader "master_id"
+        - columnheader "类型"
+        - columnheader "变更内容"
+        - columnheader "状态"
+        - columnheader "申请人"
+        - columnheader "审批人"
+        - columnheader "审批意见"
+        - columnheader "提交时间"
+        - columnheader "操作"
+    - rowgroup:
+      - 'row "4 #1 fb7be899500ea1559d81a9e14c4c9b21 修改 {\"city\":\"上海市-菜单接回验证\"} 已撤回 root - - 2026-09-21 13:26 审批单"':
+        - cell "4"
+        - cell "#1"
+        - cell "fb7be899500ea1559d81a9e14c4c9b21"
+        - cell "修改"
+        - 'cell "{\"city\":\"上海市-菜单接回验证\"}"'
+        - cell "已撤回":
+          - generic: 已撤回
+        - cell "root"
+        - cell "-"
+        - cell "-"
+        - cell "2026-09-21 13:26"
+        - cell "审批单":
+          - button "审批单":
+            - generic: 审批单
+      - 'row "3 #1 b4ccf6fab3d9c65b960975e6abca2e08 修改 {\"member_level\":\"diamond\"} 已生效 root root 二级同意 2026-09-21 09:21 审批单"':
+        - cell "3"
+        - cell "#1"
+        - cell "b4ccf6fab3d9c65b960975e6abca2e08"
+        - cell "修改"
+        - 'cell "{\"member_level\":\"diamond\"}"'
+        - cell "已生效":
+          - generic: 已生效
+        - cell "root"
+        - cell "root"
+        - cell "二级同意"
+        - cell "2026-09-21 09:21"
+        - cell "审批单":
+          - button "审批单":
+            - generic: 审批单
+      - 'row "2 #1 f918b8f3957a5aff300718490b51923c 修改 {\"city\":\"上海市-测试撤回\"} 已撤回 root - - 2026-09-20 14:53 审批单"':
+        - cell "2"
+        - cell "#1"
+        - cell "f918b8f3957a5aff300718490b51923c"
+        - cell "修改"
+        - 'cell "{\"city\":\"上海市-测试撤回\"}"'
+        - cell "已撤回":
+          - generic: 已撤回
+        - cell "root"
+        - cell "-"
+        - cell "-"
+        - cell "2026-09-20 14:53"
+        - cell "审批单":
+          - button "审批单":
+            - generic: 审批单
+      - 'row "1 #1 b4ccf6fab3d9c65b960975e6abca2e08 修改 {\"member_level\":\"gold\"} 已生效 root root 二级同意，生效 2026-09-20 14:48 审批单"':
+        - cell "1"
+        - cell "#1"
+        - cell "b4ccf6fab3d9c65b960975e6abca2e08"
+        - cell "修改"
+        - 'cell "{\"member_level\":\"gold\"}"'
+        - cell "已生效":
+          - generic: 已生效
+        - cell "root"
+        - cell "root"
+        - cell "二级同意，生效"
+        - cell "2026-09-20 14:48"
+        - cell "审批单":
+          - button "审批单":
+            - generic: 审批单
+  - list:
+    - listitem: 共 4 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":

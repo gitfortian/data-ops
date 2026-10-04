@@ -1,0 +1,243 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据" [expanded]:
+      - generic "技术元数据"
+    - link "元数据概览":
+      - /url: /data-metadata/overview
+      - generic "元数据概览"
+    - link "采集与对账":
+      - /url: /data-metadata/collect
+      - generic "采集与对账"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 元数据概览
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 元数据概览
+  - generic: 查看当前项目的技术目录、采集与对账运行状态，以及元数据治理待办。
+  - button "浏览元数据实体":
+    - generic: 浏览元数据实体
+  - button "管理采集与对账":
+    - generic: 管理采集与对账
+  - generic: 目录实体
+  - generic: "53"
+  - text: 当前项目中仍在目录的实体总数
+  - generic: 采集与对账任务
+  - generic: "2"
+  - generic: 已启用 0 个 · 待预演 0 个
+  - generic: 最近 5 次中的异常运行
+  - generic: "0"
+  - text: 包括失败和已熔断的疑似坍塌运行
+  - generic: 未办结治理待办
+  - generic: "0"
+  - text: 按待办类型汇总
+  - generic: 目录实体类型
+  - generic: 目录计数不代表源侧完整率
+  - table:
+    - rowgroup:
+      - row "实体类型 类型编码 来源方式 类型状态 目录实体数":
+        - columnheader "实体类型"
+        - columnheader "类型编码"
+        - columnheader "来源方式"
+        - columnheader "类型状态"
+        - columnheader "目录实体数"
+    - rowgroup:
+      - row "业务域 domain 源域登记 使用中 0":
+        - cell "业务域"
+        - cell "domain"
+        - cell "源域登记":
+          - generic: 源域登记
+        - cell "使用中":
+          - generic: 使用中
+        - cell "0"
+      - row "指标 metric 源域登记 使用中 0":
+        - cell "指标"
+        - cell "metric"
+        - cell "源域登记":
+          - generic: 源域登记
+        - cell "使用中":
+          - generic: 使用中
+        - cell "0"
+      - row "数据库 database 物理采集 使用中 2":
+        - cell "数据库"
+        - cell "database"
+        - cell "物理采集":
+          - generic: 物理采集
+        - cell "使用中":
+          - generic: 使用中
+        - cell "2"
+      - row "数据模型 dataModel 源域登记 使用中 0":
+        - cell "数据模型"
+        - cell "dataModel"
+        - cell "源域登记":
+          - generic: 源域登记
+        - cell "使用中":
+          - generic: 使用中
+        - cell "0"
+      - row "数据源服务 databaseService 物理采集 使用中 2":
+        - cell "数据源服务"
+        - cell "databaseService"
+        - cell "物理采集":
+          - generic: 物理采集
+        - cell "使用中":
+          - generic: 使用中
+        - cell "2"
+      - row "标准字段 standardField 源域登记 使用中 0":
+        - cell "标准字段"
+        - cell "standardField"
+        - cell "源域登记":
+          - generic: 源域登记
+        - cell "使用中":
+          - generic: 使用中
+        - cell "0"
+      - row "物理列 tableColumn 物理采集 使用中 45":
+        - cell "物理列"
+        - cell "tableColumn"
+        - cell "物理采集":
+          - generic: 物理采集
+        - cell "使用中":
+          - generic: 使用中
+        - cell "45"
+      - row "物理表 table 物理采集 使用中 4":
+        - cell "物理表"
+        - cell "table"
+        - cell "物理采集":
+          - generic: 物理采集
+        - cell "使用中":
+          - generic: 使用中
+        - cell "4"
+  - generic: 采集与对账任务
+  - table:
+    - rowgroup:
+      - row "任务通道 总数 已启用 待预演":
+        - columnheader "任务通道"
+        - columnheader "总数"
+        - columnheader "已启用"
+        - columnheader "待预演"
+    - rowgroup:
+      - row "物理采集 2 0 0":
+        - cell "物理采集"
+        - cell "2"
+        - cell "0"
+        - cell "0"
+  - generic: 最近运行记录
+  - table:
+    - rowgroup:
+      - row "运行状态 任务 通道 触发方式 对象计数 开始时间 耗时":
+        - columnheader "运行状态"
+        - columnheader "任务"
+        - columnheader "通道"
+        - columnheader "触发方式"
+        - columnheader "对象计数"
+        - columnheader "开始时间"
+        - columnheader "耗时"
+    - rowgroup:
+      - row "成功 CRM 物理采集（目录验证） 物理采集 预演 总 37 · 新增 0 · 变更 0 · 撤销 0 2026/10/1 19:13:56 188 ms":
+        - cell "成功":
+          - generic: 成功
+        - cell "CRM 物理采集（目录验证）"
+        - cell "物理采集"
+        - cell "预演"
+        - cell "总 37 · 新增 0 · 变更 0 · 撤销 0"
+        - cell "2026/10/1 19:13:56"
+        - cell "188 ms"
+      - row "成功 F1-ods采集 物理采集 手动 总 16 · 新增 0 · 变更 0 · 撤销 0 2026/10/1 12:31:12 309 ms":
+        - cell "成功":
+          - generic: 成功
+        - cell "F1-ods采集"
+        - cell "物理采集"
+        - cell "手动"
+        - cell "总 16 · 新增 0 · 变更 0 · 撤销 0"
+        - cell "2026/10/1 12:31:12"
+        - cell "309 ms"
+      - row "成功 F1-ods采集 物理采集 手动 总 16 · 新增 16 · 变更 0 · 撤销 0 2026/9/24 11:33:27 172 ms":
+        - cell "成功":
+          - generic: 成功
+        - cell "F1-ods采集"
+        - cell "物理采集"
+        - cell "手动"
+        - cell "总 16 · 新增 16 · 变更 0 · 撤销 0"
+        - cell "2026/9/24 11:33:27"
+        - cell "172 ms"
+      - row "成功 F1-ods采集 物理采集 预演 总 16 · 新增 16 · 变更 0 · 撤销 0 2026/9/24 11:33:08 326 ms":
+        - cell "成功":
+          - generic: 成功
+        - cell "F1-ods采集"
+        - cell "物理采集"
+        - cell "预演"
+        - cell "总 16 · 新增 16 · 变更 0 · 撤销 0"
+        - cell "2026/9/24 11:33:08"
+        - cell "326 ms"
+      - row "成功 CRM 物理采集（目录验证） 物理采集 手动 总 37 · 新增 0 · 变更 0 · 撤销 0 2026/9/21 10:30:08 631 ms":
+        - cell "成功":
+          - generic: 成功
+        - cell "CRM 物理采集（目录验证）"
+        - cell "物理采集"
+        - cell "手动"
+        - cell "总 37 · 新增 0 · 变更 0 · 撤销 0"
+        - cell "2026/9/21 10:30:08"
+        - cell "631 ms"
+  - generic: 治理待办
+  - table:
+    - rowgroup:
+      - row "待办类型 未办结数量":
+        - columnheader "待办类型"
+        - columnheader "未办结数量"
+    - rowgroup:
+      - row "暂无数据 暂无未办结治理待办":
+        - cell "暂无数据 暂无未办结治理待办":
+          - img "暂无数据"
+          - generic: 暂无未办结治理待办

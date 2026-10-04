@@ -1,0 +1,141 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行" [expanded]:
+      - generic "开发与运行"
+    - link "开发工作台":
+      - /url: /data-development
+      - generic "开发工作台"
+    - link "发布中心":
+      - /url: /data-development/releases
+      - generic "发布中心"
+    - link "开发运行记录":
+      - /url: /data-development/executions
+      - generic "开发运行记录"
+    - button "工作流":
+      - generic "工作流"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 开发工作台
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - complementary:
+    - generic: 开发目录
+    - button "新建目录或节点":
+    - textbox "搜索名称 / 节点"
+    - textbox "for screen reader"
+    - tree:
+      - treeitem "MDM主数据加工-customer root修改 2026-09-29 17:44:50 MySQL":
+        - generic "MDM主数据加工-customer":
+          - generic "MDM主数据加工-customer root修改 2026-09-29 17:44:50":
+            - generic: MDM主数据加工-customer
+            - generic: root修改 2026-09-29 17:44:50
+            - generic: MySQL
+  - separator "调整开发目录面板宽度":
+    - button "收起开发目录面板":
+  - main:
+    - button "MDM主数据加工-customer MySQL":
+      - generic: MDM主数据加工-customer
+      - generic: MySQL
+    - button "关闭 MDM主数据加工-customer":
+    - button "编辑器操作":
+    - button "运行当前 SQL":
+    - button "保存草稿":
+    - button "发布版本":
+    - button "解析当前 SQL 血缘":
+    - button "检查输出字段命名标准":
+    - button "撤销":
+    - button "重做":
+    - button "查找":
+    - button "格式化 SQL":
+    - button "触发智能提示":
+    - button "选择 SQL 数据源":
+      - generic: "@客户库"
+    - button "Database":
+      - generic: 加载中...
+    - text: "Draft #2"
+    - text: Published v1
+    - text: 当前内容已保存
+    - text: "校验 Draft #2"
+    - text: 运行 = 当前编辑器内容（不会隐式发布）
+    - code:
+      - generic: "1"
+      - generic: "2"
+      - generic: "3"
+      - generic: "4"
+      - generic: "5"
+      - generic: "6"
+      - generic: "7"
+      - generic: "8"
+      - generic: "9"
+      - generic: "10"
+      - generic: "11"
+      - generic: "12"
+      - generic: "13"
+      - generic: "14"
+      - generic: "15"
+      - generic: "16"
+      - generic: "17"
+      - generic: "18"
+      - generic: "-- 主数据加工任务: 实体 customer ← 落地表 `yak_security`.`mdm_landing_customer_1`"
+      - generic: "-- 同库写入统一主数据表 `yak_security`.`yak_mdm_record`;在数据开发对平台业务库连接执行(MDM 零执行引"
+      - generic: 擎,D-M11)。
+      - generic: "INSERT INTO `yak_security`.`yak_mdm_record`"
+      - generic: (project_id, entity_id, master_id, attributes, source_ids, status, version)
+      - generic: SELECT
+      - generic: 1,
+      - generic: 1,
+      - generic: "MD5(CONCAT('customer', ':', `cust_id`)),"
+      - generic: "JSON_OBJECT('cust_id', `cust_id`, 'cust_name', `cust_name`, 'phone', `cust_mobile`, 'city',"
+      - generic: "`city`, 'member_level', `member_level`),"
+      - generic: "JSON_OBJECT('3', `cust_id`),"
+      - generic: "'ACTIVE',"
+      - generic: "1"
+      - generic: "FROM `yak_security`.`mdm_landing_customer_1`"
+      - generic: ON DUPLICATE KEY UPDATE
+      - generic: attributes = VALUES(attributes),
+      - generic: "source_ids = JSON_MERGE_PRESERVE(`yak_security`.`yak_mdm_record`.source_ids, VALUES"
+      - generic: (source_ids)),
+      - generic: "version = `yak_security`.`yak_mdm_record`.version + 1;"
+      - textbox "Editor content"
+    - generic: MySQL
+    - generic: MDM主数据加工-customer
+    - generic "客户库"
+    - generic: Ln 18, Col 1
+    - complementary:
+      - button "关闭右侧面板":
+      - button "展开属性": 属性
+      - button "展开版本": 版本
+- alert
+- alert

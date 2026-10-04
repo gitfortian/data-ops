@@ -1,0 +1,168 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 资产详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - button "← 返回":
+    - generic: ← 返回
+  - generic: 用户信息表
+  - generic: 待上架
+  - generic: modeling:model:49
+  - button "查看源对象":
+    - generic: 查看源对象
+  - button "上 架":
+    - generic: 上 架
+  - button "申请上架审批":
+    - generic: 申请上架审批
+  - generic: 已发现
+  - generic: →
+  - generic: 已描述
+  - generic: →
+  - generic: 已定标
+  - generic: →
+  - generic: 已稽核
+  - generic: →
+  - generic: 已上架
+  - generic: →
+  - generic: 运营中
+  - generic: →
+  - generic: 归档策略
+  - tablist:
+    - tab "概览"
+    - tab "健康度"
+    - tab "血缘"
+    - tab "使用"
+    - tab "安全/质量/字段/生命周期" [active] [selected]
+    - tab "治理"
+  - text: ": : : : : : : : : : : : : : : : : : : : : : : : : :"
+  - tabpanel "安全/质量/字段/生命周期":
+    - generic: 安全分级(实时)
+    - generic: 确认无数据
+    - generic: Security 域没有返回该对象的分级记录
+    - table:
+      - rowgroup:
+        - 'row "事实归属域 : SECURITY 来源 : SECURITY · modeling:model:49"':
+          - 'cell "事实归属域 : SECURITY"':
+            - generic: "事实归属域 :"
+            - generic: SECURITY
+          - 'cell "来源 : SECURITY · modeling:model:49"':
+            - generic: "来源 :"
+            - generic: SECURITY · modeling:model:49
+        - 'row "读取时间 : 2026-10-02 11:16 能力状态 : 可用"':
+          - 'cell "读取时间 : 2026-10-02 11:16"':
+            - generic: "读取时间 :"
+            - generic: 2026-10-02 11:16
+          - 'cell "能力状态 : 可用"':
+            - generic: "能力状态 :"
+            - generic: 可用
+    - button "打开安全分级分类":
+      - generic: 打开安全分级分类
+    - button "打开访问策略":
+      - generic: 打开访问策略
+    - button "打开脱敏策略":
+      - generic: 打开脱敏策略
+    - button "查看批次合规检查":
+      - generic: 查看批次合规检查
+    - generic: 质量
+    - generic: 当前类型不适用
+    - generic: 当前 MVP 仅物理表接入质量治理
+    - table:
+      - rowgroup:
+        - 'row "事实归属域 : QUALITY 能力状态 : 不适用"':
+          - 'cell "事实归属域 : QUALITY"':
+            - generic: "事实归属域 :"
+            - generic: QUALITY
+          - 'cell "能力状态 : 不适用"':
+            - generic: "能力状态 :"
+            - generic: 不适用
+    - generic: 生命周期
+    - table:
+      - rowgroup:
+        - 'row "事实归属域 : LIFECYCLE 来源 : LIFECYCLE · 49"':
+          - 'cell "事实归属域 : LIFECYCLE"':
+            - generic: "事实归属域 :"
+            - generic: LIFECYCLE
+          - 'cell "来源 : LIFECYCLE · 49"':
+            - generic: "来源 :"
+            - generic: LIFECYCLE · 49
+        - 'row "读取时间 : 2026-10-02 11:16 能力状态 : 可用"':
+          - 'cell "读取时间 : 2026-10-02 11:16"':
+            - generic: "读取时间 :"
+            - generic: 2026-10-02 11:16
+          - 'cell "能力状态 : 可用"':
+            - generic: "能力状态 :"
+            - generic: 可用
+    - generic: 证据：LIFECYCLE · 49 · 2026-10-02 11:16
+    - table:
+      - rowgroup:
+        - 'row "策略 : ttl_ods_default"':
+          - 'cell "策略 : ttl_ods_default"':
+            - generic: "策略 :"
+            - generic: ttl_ods_default
+        - 'row "绑定来源 : LAYER_DEFAULT"':
+          - 'cell "绑定来源 : LAYER_DEFAULT"':
+            - generic: "绑定来源 :"
+            - generic: LAYER_DEFAULT
+        - 'row "下发状态 : DRIFT"':
+          - 'cell "下发状态 : DRIFT"':
+            - generic: "下发状态 :"
+            - generic: DRIFT
+    - button "查看生命周期监控":
+      - generic: 查看生命周期监控

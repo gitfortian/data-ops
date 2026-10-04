@@ -1,0 +1,155 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量" [expanded]:
+      - generic "数据质量"
+    - link "质量总览":
+      - /url: /data-quality/overview
+      - generic "质量总览"
+    - link "数据表监控":
+      - /url: /data-quality/table-config
+      - generic "数据表监控"
+    - link "质量检查记录":
+      - /url: /data-quality/execution
+      - generic "质量检查记录"
+    - link "规则模板":
+      - /url: /data-quality/rule-template
+      - generic "规则模板"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 质量检查详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - button "返回运行记录":
+    - generic: 返回运行记录
+  - heading "QA监控-客户表行数检查" [level=1]
+  - generic: 已完成
+  - generic: 通过
+  - generic: QM-20261001192621949-6193D9
+  - generic: 2026-10-01 19:26:21
+  - generic: 手动触发
+  - generic: system
+  - generic: F1-CRM源
+  - generic: crm_db.crm_customer
+  - generic: 切换同一监控的运行记录
+  - combobox
+  - generic "2026-10-01 19:26:21 · QA监控-客户表行数检查"
+  - button "刷新运行详情":
+  - tablist:
+    - tab "总览" [selected]
+    - tab "历史运行 (1)"
+    - tab "问题数据"
+    - tab "原始日志"
+  - tabpanel "总览"
+  - generic: 质量概览
+  - generic: 规则数量
+  - generic: "1"
+  - generic: 本次参与检测
+  - generic: 通过规则
+  - generic: "1"
+  - generic: 符合质量预期
+  - generic: 问题规则
+  - generic: "0"
+  - generic: 未通过 + 异常
+  - generic: 执行耗时
+  - generic: 61 ms
+  - generic: 端到端检测耗时
+  - generic: 执行情况
+  - generic: 数据源
+  - generic: F1-CRM源
+  - generic: 监控对象
+  - generic: crm_db.crm_customer
+  - generic: 触发方式
+  - generic: 手动触发
+  - generic: 触发人
+  - generic: system
+  - generic: 入队时间
+  - generic: 2026-10-01 19:26:21
+  - generic: 开始时间
+  - generic: 2026-10-01 19:26:21
+  - generic: 结束时间
+  - generic: 2026-10-01 19:26:22
+  - generic: 监控 ID
+  - generic: "4"
+  - generic: 规则检测结果
+  - generic: 共 1 条规则
+  - table:
+    - rowgroup:
+      - row "规则名称 / 模板 关联范围 质量维度 检查字段 检查结果 实际值 / 期望值 耗时":
+        - columnheader
+        - columnheader "规则名称 / 模板"
+        - columnheader "关联范围"
+        - columnheader "质量维度"
+        - columnheader "检查字段"
+        - columnheader "检查结果"
+        - columnheader "实际值 / 期望值"
+        - columnheader "耗时"
+    - rowgroup:
+      - row "展开行 表行数 TABLE_ROW_COUNT 表级 完整性 整表 通过 实际：3060行 期望：> 0行 51 ms":
+        - cell "展开行":
+          - button "展开行"
+        - cell "表行数 TABLE_ROW_COUNT":
+          - generic: 表行数
+          - generic: TABLE_ROW_COUNT
+        - cell "表级":
+          - generic: 表级
+        - cell "完整性"
+        - cell "整表"
+        - cell "通过":
+          - generic: 通过
+        - cell "实际：3060行 期望：> 0行":
+          - generic: 实际：3060行
+          - generic: 期望：> 0行
+        - cell "51 ms"

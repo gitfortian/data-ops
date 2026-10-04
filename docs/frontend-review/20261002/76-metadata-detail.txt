@@ -1,0 +1,286 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 资产目录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 资产目录
+  - generic: 元数据实体统一检索：类型下钻 + 跨类型搜索（数据由元数据模块采集提供；原「目录浏览」「统一搜索」已并入本账）
+  - radiogroup "segmented control":
+    - radio "台账资产"
+    - generic "台账资产"
+    - radio "元数据实体" [checked]
+    - generic "元数据实体"
+  - textbox "搜索表、列、模型、标准字段、业务域、指标——一次查询跨全部类型"
+  - button "搜 索":
+    - generic: 搜 索
+  - checkbox "explain"
+  - generic: explain
+  - button "重 置":
+    - generic: 重 置
+  - button "全部 (8)"
+  - button "数据模型"
+  - button "数据库 (2)"
+  - button "数据源服务 (2)"
+  - button "业务域"
+  - button "指标"
+  - button "标准字段"
+  - button "物理表 (4)"
+  - button "物理列"
+  - generic: 来源通道
+  - combobox "来源通道 全部"
+  - generic: 全部
+  - generic: 治理状态
+  - combobox "治理状态 全部"
+  - generic: 全部
+  - generic: 数据源
+  - combobox "数据源 全部"
+  - generic: 全部
+  - generic: 数据库
+  - textbox "数据库"
+  - generic: 负责人
+  - textbox "负责人"
+  - generic: 分层
+  - textbox "分层"
+  - generic: 只看有描述
+  - checkbox "只看有描述"
+  - generic: 标准类型
+  - textbox "标准类型"
+  - generic: 列数
+  - textbox "列数":
+    - /placeholder: 起
+  - textbox "止"
+  - generic: 行数(近似)
+  - textbox "行数(近似)":
+    - /placeholder: 起
+  - textbox "止"
+  - generic: 是否分区表
+  - textbox "是否分区表"
+  - generic: 最后 DDL 时间
+  - textbox "最后 DDL 时间":
+    - /placeholder: 起
+  - textbox "止"
+  - combobox
+  - generic "默认（有词按权重、无词按更新）"
+  - combobox [disabled]
+  - generic "降序"
+  - generic: 命中 8 个实体
+  - generic: 物理表
+  - generic: crm_customer
+  - generic: crm_db · crm_customer
+  - generic: 客户表（脏数据，逻辑外键无物理约束）
+  - generic: 采集
+  - generic: 2026-09-30 16:25:46
+  - button "命中 13 列":
+    - generic: 命中 13 列
+  - generic: 物理表
+  - generic: ods_crm_customer
+  - generic: ods · ods_crm_customer
+  - generic: 客户表（脏数据，逻辑外键无物理约束）
+  - generic: 采集
+  - generic: 2026-09-24 11:33:27
+  - button "命中 13 列":
+    - generic: 命中 13 列
+  - generic: 数据库
+  - generic: ods
+  - generic: ods
+  - generic: 采集
+  - generic: 2026-09-24 11:33:27
+  - generic: 数据源服务
+  - generic: 数仓-ods
+  - generic: 数仓-ods
+  - generic: 采集
+  - generic: 2026-09-24 11:33:27
+  - generic: 物理表
+  - generic: crm_customer_history
+  - generic: crm_db · crm_customer_history
+  - generic: 客户历史维表（SCD Type 2）
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - button "命中 13 列":
+    - generic: 命中 13 列
+  - generic: 物理表
+  - generic: crm_customer_address
+  - generic: crm_db · crm_customer_address
+  - generic: 客户地址表
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - button "命中 6 列":
+    - generic: 命中 6 列
+  - generic: 数据库
+  - generic: crm_db
+  - generic: crm_db
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - generic: 数据源服务
+  - generic: 客户库
+  - generic: 客户库
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - generic: 第 1 页 · 每页 20 条
+  - button "上一页" [disabled]:
+    - generic: 上一页
+  - button "下一页" [disabled]:
+    - generic: 下一页
+- dialog "物理表 crm_customer":
+  - button "关闭":
+    - img "close":
+  - generic: 物理表
+  - generic: crm_customer
+  - generic: 物理采集
+  - generic: 尚未纳入资产台账
+  - button "查看命中的 13 列":
+    - generic: 查看命中的 13 列
+  - table:
+    - rowgroup:
+      - 'row "全名 : crm_db.crm_customer"':
+        - 'cell "全名 : crm_db.crm_customer"':
+          - generic: "全名 :"
+          - generic: crm_db.crm_customer
+      - 'row "位置 : crm_db · crm_customer"':
+        - 'cell "位置 : crm_db · crm_customer"':
+          - generic: "位置 :"
+          - generic: crm_db · crm_customer
+      - 'row "描述 : 客户表（脏数据，逻辑外键无物理约束）"':
+        - 'cell "描述 : 客户表（脏数据，逻辑外键无物理约束）"':
+          - generic: "描述 :"
+          - generic: 客户表（脏数据，逻辑外键无物理约束）
+      - 'row "负责人 : - 业务域 : -"':
+        - 'cell "负责人 : -"':
+          - generic: "负责人 :"
+          - generic: "-"
+        - 'cell "业务域 : -"':
+          - generic: "业务域 :"
+          - generic: "-"
+      - 'row "来源 : MDM / mdm-collect-1 更新人 : root"':
+        - 'cell "来源 : MDM / mdm-collect-1"':
+          - generic: "来源 :"
+          - generic: MDM / mdm-collect-1
+        - 'cell "更新人 : root"':
+          - generic: "更新人 :"
+          - generic: root
+      - 'row "首次发现 : - 最近采集 : 2026-09-21 10:30:08"':
+        - 'cell "首次发现 : -"':
+          - generic: "首次发现 :"
+          - generic: "-"
+        - 'cell "最近采集 : 2026-09-21 10:30:08"':
+          - generic: "最近采集 :"
+          - generic: 2026-09-21 10:30:08
+  - generic: 属性
+  - generic: s_num_1
+  - generic: "13"
+  - generic: s_num_2
+  - generic: "3106"
+  - generic: s_str_2
+  - generic: crm_db
+  - generic: s_bool_1
+  - generic: "false"
+  - generic: s_date_1
+  - generic: 2026-09-18 14:45:15
+  - generic: 表名
+  - generic: crm_customer
+  - generic: 表类型
+  - generic: TABLE
+  - generic: 表注释
+  - generic: 客户表（脏数据，逻辑外键无物理约束）
+  - generic: 统计
+  - generic: 无
+  - generic: 最近一轮采集未取到统计（引擎不支持或读取失败按未知处理）
+  - generic: 子级实体
+  - generic: tableColumn
+  - generic: cust_id
+  - generic: tableColumn
+  - generic: cust_name
+  - generic: tableColumn
+  - generic: cust_mobile
+  - generic: tableColumn
+  - generic: cust_idcard
+  - generic: tableColumn
+  - generic: gender
+  - generic: tableColumn
+  - generic: birthday
+  - generic: tableColumn
+  - generic: reg_time
+  - generic: tableColumn
+  - generic: reg_source
+  - generic: tableColumn
+  - generic: member_level
+  - generic: tableColumn
+  - generic: city
+  - generic: tableColumn
+  - generic: province
+  - generic: tableColumn
+  - generic: status
+  - generic: tableColumn
+  - generic: etl_time
+  - generic: 变更历史
+  - generic: 2026-09-21 10:14:27
+  - generic: CHANGED
+  - generic: "-"
+  - generic: e0127cf986105592d4edf1a30690bdea
+  - generic: 最新 1 条变更，更多走变更历史分页接口
+  - generic: 标签
+  - generic: 无
+  - generic: 这一块目前没有内容
+  - generic: 血缘
+  - button "到血缘图查看":
+    - generic: 到血缘图查看
+  - generic: 存储量（每日快照）
+  - generic: 无
+  - generic: 该表还没有存储量快照，或本轮快照任务未跑到

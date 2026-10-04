@@ -1,0 +1,121 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理" [expanded]:
+      - generic "专业方案：主数据管理"
+    - link "主数据总览":
+      - /url: /mdm/overview
+      - generic "主数据总览"
+    - link "主数据建模":
+      - /url: /mdm/modeling
+      - generic "主数据建模"
+    - link "主数据识别":
+      - /url: /mdm/identification
+      - generic "主数据识别"
+    - link "主数据清洗":
+      - /url: /mdm/cleansing
+      - generic "主数据清洗"
+    - link "主数据变更":
+      - /url: /mdm/approval
+      - generic "主数据变更"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 主数据建模
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 主数据建模
+  - generic: 定义主数据实体（客户、商品、供应商等），属性与来源随后续能力接入
+  - button "新建实体":
+    - generic: 新建实体
+  - textbox "按编码/名称搜索"
+  - combobox
+  - generic "全部"
+  - table:
+    - rowgroup:
+      - row "实体编码 实体名称 状态 负责人 描述 更新时间 操作":
+        - columnheader "实体编码"
+        - columnheader "实体名称"
+        - columnheader "状态"
+        - columnheader "负责人"
+        - columnheader "描述"
+        - columnheader "更新时间"
+        - columnheader "操作"
+    - rowgroup:
+      - row "customer 客户 草稿 root - 2026-09-19 13:11:35 详情 编辑 生效 删除":
+        - cell "customer"
+        - cell "客户"
+        - cell "草稿":
+          - generic: 草稿
+        - cell "root"
+        - cell "-"
+        - cell "2026-09-19 13:11:35"
+        - cell "详情 编辑 生效 删除":
+          - generic: 详情
+          - generic: 编辑
+          - generic: 生效
+          - generic: 删除
+  - list:
+    - listitem: 共 1 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

@@ -1,0 +1,348 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成" [expanded]:
+      - generic "数据接入与集成"
+    - link "数据源":
+      - /url: /data-source
+      - generic "数据源"
+    - link "离线同步":
+      - /url: /sync/batch-link-up
+      - generic "离线同步"
+    - link "实时同步":
+      - /url: /sync/realtime
+      - generic "实时同步"
+    - link "文件资源":
+      - /url: /resource-management
+      - generic "文件资源"
+    - link "SQL 执行记录":
+      - /url: /sql-execution-audit
+      - generic "SQL 执行记录"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据源
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - main:
+    - heading "数据源管理" [level=1]
+    - button "新建数据源":
+      - generic: 新建数据源
+    - generic: 全部数据源
+    - strong: "15"
+    - generic: 连接正常
+    - strong: "15"
+    - generic: 连接异常
+    - strong: "0"
+    - generic: 运行环境
+    - strong: "1"
+    - tablist:
+      - tab "全部" [selected]
+      - tab "开发"
+      - tab "测试"
+      - tab "生产"
+    - tabpanel "全部"
+    - combobox
+    - generic: 数据源类型
+    - textbox "搜索名称或连接地址"
+    - button "卡片视图":
+    - button "列表视图":
+    - article:
+      - heading "F1-CRM源" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/crm_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-29T17:49:23.217
+    - article:
+      - heading "数仓-ads" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/ads
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-19T11:09:02.165
+    - article:
+      - heading "数仓-dws" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/dws
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-19T11:09:02.157
+    - article:
+      - heading "数仓-dim" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/dim
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-16T14:12:55.043
+    - article:
+      - heading "数仓-dwd" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/dwd
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-16T14:04:51.701
+    - article:
+      - heading "数仓-ods" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/ods
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-16T14:04:27.492
+    - article:
+      - heading "评价库" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/review_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:32:34.457
+    - article:
+      - heading "售后库" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/aftersale_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:32:09.993
+    - article:
+      - heading "结算库" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/settle_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:32:08.666
+    - article:
+      - heading "物流库存" [level=3]
+      - text: 开发
+      - paragraph: jdbc:mysql://127.0.0.1:3306/wms_db
+      - button "新建同步任务":
+      - button "测试连接":
+      - button "执行记录":
+      - button "编辑数据源":
+      - button "删除数据源":
+      - generic: 连接状态
+      - img "check-circle":
+      - text: 已连接
+      - generic: 数据源类型
+      - strong: MYSQL
+      - generic: 最近更新
+      - strong:
+        - generic: 2026-09-15T16:30:37.474
+    - list:
+      - listitem: 第 1-10 条，共 15 条
+      - listitem "上一页":
+        - button "left" [disabled]:
+          - img "left":
+      - listitem "1":
+        - generic: "1"
+      - listitem "2":
+        - generic: "2"
+      - listitem "下一页":
+        - button "right":
+          - img "right":
+      - generic "页码":
+        - combobox "页码"
+        - generic "10 条/页"
+      - text: 跳至
+      - textbox "页"
+      - text: 页
+- dialog "database 新建数据源":
+  - button "关闭":
+    - img "close":
+  - img "database":
+  - generic: 新建数据源
+  - generic: 选择数据源
+  - img "search":
+  - textbox "搜索数据源"
+  - combobox
+  - generic "全部分类"
+  - generic: 常用
+  - button "MYSQL":
+    - generic: MYSQL
+  - button "TIDB":
+    - generic: TIDB
+  - button "GOLDENDB":
+    - generic: GOLDENDB
+  - generic: 全部数据源
+  - generic: "26"
+  - generic: 关系型数据库
+  - generic: "19"
+  - button "MYSQL":
+    - generic "MYSQL"
+  - button "TIDB":
+    - generic "TIDB"
+  - button "GOLDENDB":
+    - generic "GOLDENDB"
+  - button "GBASE8C":
+    - generic "GBASE8C"
+  - button "GBASE8A":
+    - generic "GBASE8A"
+  - button "GBASE8S":
+    - generic "GBASE8S"
+  - button "HANA":
+    - generic "HANA"
+  - button "ORACLE":
+    - generic "ORACLE"
+  - button "POSTGRE_SQL":
+    - generic "POSTGRE_SQL"
+  - button "DB2":
+    - generic "DB2"
+  - button "OPEN_GAUSS":
+    - generic "OPEN_GAUSS"
+  - button "SQL_SERVER":
+    - generic "SQL_SERVER"
+  - button "OCEANBASE":
+    - generic "OCEANBASE"
+  - button "YASHAN_DB":
+    - generic "YASHAN_DB"
+  - button "HIGHGO":
+    - generic "HIGHGO"
+  - button "IRIS":
+    - generic "IRIS"
+  - button "XUGU":
+    - generic "XUGU"
+  - button "KINGBASE":
+    - generic "KINGBASE"
+  - button "DAMENG":
+    - generic "DAMENG"
+  - generic: OLAP 数据库
+  - generic: "4"
+  - button "DORIS":
+    - generic "DORIS"
+  - button "STARROCKS":
+    - generic "STARROCKS"
+  - button "CLICKHOUSE":
+    - generic "CLICKHOUSE"
+  - button "DUCKDB":
+    - generic "DUCKDB"
+  - generic: 文档数据库
+  - generic: "1"
+  - button "MONGODB":
+    - generic "MONGODB"
+  - generic: 搜索引擎
+  - generic: "2"
+  - button "ELASTICSEARCH7":
+    - generic "ELASTICSEARCH7"
+  - button "ELASTICSEARCH8":
+    - generic "ELASTICSEARCH8"
+  - button "取消":
+    - generic: 取消

@@ -1,0 +1,84 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 消息中心
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - button "首页":
+    - generic: 首页
+  - generic: /
+  - generic: 通知
+  - heading "通知" [level=1]
+  - tablist:
+    - tab "全部" [selected]
+    - tab "系统"
+    - tab "安全"
+    - tab "任务"
+    - tab "质量"
+    - combobox
+    - generic: 全部状态
+    - textbox "开始日期"
+    - generic "to":
+      - img "swap-right":
+    - textbox "结束日期"
+    - img "calendar":
+  - tabpanel "全部"
+  - button "主数据分发已发布 2026-09-21 10:13:51 「客户(customer)」 → CRM · 3059 条生效记录":
+    - generic: 主数据分发已发布
+    - time: 2026-09-21 10:13:51
+    - paragraph: 「客户(customer)」 → CRM · 3059 条生效记录
+  - button "主数据合并完成 2026-09-21 10:10:13 「客户(customer)」 · 主记录 fb7be899500ea1559d81a9e14c4c9b21 · 合并 1 条":
+    - generic: 主数据合并完成
+    - time: 2026-09-21 10:10:13
+    - paragraph: 「客户(customer)」 · 主记录 fb7be899500ea1559d81a9e14c4c9b21 · 合并 1 条
+  - button "主数据分发已发布 2026-09-21 09:30:27 「客户(customer)」 → CRM · 3060 条生效记录":
+    - generic: 主数据分发已发布
+    - time: 2026-09-21 09:30:27
+    - paragraph: 「客户(customer)」 → CRM · 3060 条生效记录
+  - button "主数据变更已生效 2026-09-21 09:23:52 「客户(customer)」 · 记录 b4ccf6fab3d9c65b960975e6abca2e08 · 版本 v5":
+    - generic: 主数据变更已生效
+    - time: 2026-09-21 09:23:52
+    - paragraph: 「客户(customer)」 · 记录 b4ccf6fab3d9c65b960975e6abca2e08 · 版本 v5
+  - button "离线同步任务执行失败 2026-09-20 10:48:07 mdm_collect_customer_1 · crm_db.crm_customer → yak_security.mdm_landing_customer_1":
+    - generic: 离线同步任务执行失败
+    - time: 2026-09-20 10:48:07
+    - paragraph: mdm_collect_customer_1 · crm_db.crm_customer → yak_security.mdm_landing_customer_1
+  - button "离线同步任务执行失败 2026-09-19 19:34:49 mdm_collect_customer_1 · crm_db.crm_customer → yak_security.mdm_landing_customer_1":
+    - generic: 离线同步任务执行失败
+    - time: 2026-09-19 19:34:49
+    - paragraph: mdm_collect_customer_1 · crm_db.crm_customer → yak_security.mdm_landing_customer_1

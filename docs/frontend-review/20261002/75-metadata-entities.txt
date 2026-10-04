@@ -1,0 +1,181 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 资产目录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 资产目录
+  - generic: 元数据实体统一检索：类型下钻 + 跨类型搜索（数据由元数据模块采集提供；原「目录浏览」「统一搜索」已并入本账）
+  - radiogroup "segmented control":
+    - radio "台账资产"
+    - generic "台账资产"
+    - radio "元数据实体" [checked]
+    - generic "元数据实体"
+  - textbox "搜索表、列、模型、标准字段、业务域、指标——一次查询跨全部类型"
+  - button "loading 搜 索":
+    - img "loading"
+    - generic: 搜 索
+  - checkbox "explain"
+  - generic: explain
+  - button "重 置":
+    - generic: 重 置
+  - button "全部 (8)"
+  - button "数据模型"
+  - button "数据库 (2)"
+  - button "数据源服务 (2)"
+  - button "业务域"
+  - button "指标"
+  - button "标准字段"
+  - button "物理表 (4)"
+  - button "物理列"
+  - generic: 来源通道
+  - combobox "来源通道 全部"
+  - generic: 全部
+  - generic: 治理状态
+  - combobox "治理状态 全部"
+  - generic: 全部
+  - generic: 数据源
+  - combobox "数据源 全部"
+  - generic: 全部
+  - generic: 数据库
+  - textbox "数据库"
+  - generic: 负责人
+  - textbox "负责人"
+  - generic: 分层
+  - textbox "分层"
+  - generic: 只看有描述
+  - checkbox "只看有描述"
+  - generic: 标准类型
+  - textbox "标准类型"
+  - generic: 列数
+  - textbox "列数":
+    - /placeholder: 起
+  - textbox "止"
+  - generic: 行数(近似)
+  - textbox "行数(近似)":
+    - /placeholder: 起
+  - textbox "止"
+  - generic: 是否分区表
+  - textbox "是否分区表"
+  - generic: 最后 DDL 时间
+  - textbox "最后 DDL 时间":
+    - /placeholder: 起
+  - textbox "止"
+  - combobox
+  - generic "默认（有词按权重、无词按更新）"
+  - combobox [disabled]
+  - generic "降序"
+  - generic: 命中 8 个实体
+  - generic: 物理表
+  - generic: crm_customer
+  - generic: crm_db · crm_customer
+  - generic: 客户表（脏数据，逻辑外键无物理约束）
+  - generic: 采集
+  - generic: 2026-09-30 16:25:46
+  - button "命中 13 列":
+    - generic: 命中 13 列
+  - generic: 物理表
+  - generic: ods_crm_customer
+  - generic: ods · ods_crm_customer
+  - generic: 客户表（脏数据，逻辑外键无物理约束）
+  - generic: 采集
+  - generic: 2026-09-24 11:33:27
+  - button "命中 13 列":
+    - generic: 命中 13 列
+  - generic: 数据库
+  - generic: ods
+  - generic: ods
+  - generic: 采集
+  - generic: 2026-09-24 11:33:27
+  - generic: 数据源服务
+  - generic: 数仓-ods
+  - generic: 数仓-ods
+  - generic: 采集
+  - generic: 2026-09-24 11:33:27
+  - generic: 物理表
+  - generic: crm_customer_history
+  - generic: crm_db · crm_customer_history
+  - generic: 客户历史维表（SCD Type 2）
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - button "命中 13 列":
+    - generic: 命中 13 列
+  - generic: 物理表
+  - generic: crm_customer_address
+  - generic: crm_db · crm_customer_address
+  - generic: 客户地址表
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - button "命中 6 列":
+    - generic: 命中 6 列
+  - generic: 数据库
+  - generic: crm_db
+  - generic: crm_db
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - generic: 数据源服务
+  - generic: 客户库
+  - generic: 客户库
+  - generic: 采集
+  - generic: 2026-09-21 10:14:27
+  - generic: 第 1 页 · 每页 20 条
+  - button "上一页" [disabled]:
+    - generic: 上一页
+  - button "下一页" [disabled]:
+    - generic: 下一页

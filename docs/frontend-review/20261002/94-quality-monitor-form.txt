@@ -1,0 +1,153 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量" [expanded]:
+      - generic "数据质量"
+    - link "质量总览":
+      - /url: /data-quality/overview
+      - generic "质量总览"
+    - link "数据表监控":
+      - /url: /data-quality/table-config
+      - generic "数据表监控"
+    - link "质量检查记录":
+      - /url: /data-quality/execution
+      - generic "质量检查记录"
+    - link "规则模板":
+      - /url: /data-quality/rule-template
+      - generic "规则模板"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 新增监控
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - main:
+    - heading "基本配置" [level=2]
+    - generic: 监控名称*
+    - textbox "例如：订单表每日质量检查"
+    - generic: 0 / 100
+    - generic: 负责人*
+    - textbox "请输入质量监控负责人": 系统管理员
+    - generic: 监控对象*
+    - generic: 数据范围
+    - 'textbox "例如：dt = ''${bizdate}'' AND status = 1"'
+    - generic: 0 / 4000
+    - generic: 仅填写 WHERE 后的条件；留空时检查整张表。
+    - generic: 监控描述
+    - textbox "请说明监控目的、质量要求和异常处理方式"
+    - generic: 0 / 500
+    - generic: 启用状态
+    - generic: 创建后立即启用
+    - generic: 停用后调度不会运行，仍可保留全部配置。
+    - switch [checked]
+    - heading "选择质量规则" [level=2]
+    - button "添加规则":
+      - generic: 添加规则
+    - button "添加已有规则":
+      - generic: 添加已有规则
+    - generic: 共0条规则
+    - table:
+      - rowgroup:
+        - row "ID / 规则名称 关联范围 检查字段 规则模板 监控阈值 维度 启用状态 操作项":
+          - columnheader "ID / 规则名称"
+          - columnheader "关联范围"
+          - columnheader "检查字段"
+          - columnheader "规则模板"
+          - columnheader "监控阈值"
+          - columnheader "维度"
+          - columnheader "启用状态"
+          - columnheader "操作项"
+      - rowgroup:
+        - row "暂无数据 暂无质量规则 添加规则":
+          - cell "暂无数据 暂无质量规则 添加规则":
+            - img "暂无数据"
+            - generic: 暂无质量规则
+            - button "添加规则":
+              - generic: 添加规则
+    - heading "调度配置" [level=2]
+    - generic: Cron 表达式
+    - textbox "0 0 9 * * ?"
+    - button "close-circle":
+      - img "close-circle":
+    - generic: 启用调度
+    - switch
+    - generic: 规则失败处理
+    - combobox
+    - generic "继续执行剩余规则"
+    - heading "通知设置" [level=2]
+    - generic: 开启质量通知
+    - switch
+    - generic: 触发条件
+    - generic: 质量检查未通过 / 执行异常
+    - generic: 通知方式
+    - combobox [disabled]
+    - generic "站内消息"
+    - generic: 告警级别
+    - combobox [disabled]
+    - generic "警告"
+  - button "保存配置" [disabled]:
+    - generic: 保存配置
+  - button "取 消":
+    - generic: 取 消
+  - complementary:
+    - navigation "配置区块定位":
+      - generic: 快速定位
+      - button "基本配置":
+        - generic: 基本配置
+      - button "选择质量规则":
+        - generic: 选择质量规则
+      - button "调度配置":
+        - generic: 调度配置
+      - button "通知设置":
+        - generic: 通知设置

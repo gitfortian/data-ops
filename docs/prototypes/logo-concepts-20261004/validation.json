@@ -1,0 +1,81 @@
+{
+  "assets": [
+    {
+      "file": "01-flow-d.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "transparent_pixels": 1019277,
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "02-do-monogram.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "transparent_pixels": 1168352,
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "03-asset-lattice.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "transparent_pixels": 942453,
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "04-governance-hub-v2.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "transparent_pixels": 1216746,
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "05-operation-loop.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "transparent_pixels": 955182,
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    }
+  ],
+  "browser": {
+    "defaultViewportWidth": 714,
+    "allImagesLoaded": true,
+    "horizontalOverflow": false,
+    "displayModes": [
+      "color",
+      "black",
+      "dark",
+      "alpha"
+    ],
+    "selectionToggle": "passed"
+  }
+}

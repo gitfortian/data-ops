@@ -1,0 +1,217 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops"
+  - button "快速创建":
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+    - link "我的待办":
+      - /url: /approval/todo
+    - button "数据接入与集成":
+    - button "标准、指标与建模":
+    - button "开发与运行":
+    - button "数据资产与治理":
+    - button "数据消费与服务":
+    - button "平台设置":
+  - button "帮助中心":
+- banner:
+  - generic: 首页
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: Yak Ops
+  - generic: 数据运营平台
+  - generic: 让数据接入、开发、编排、质量与消费变得更简单
+  - button "数据源 --":
+    - generic: 数据源
+    - strong: "--"
+  - button "运行中 --":
+    - generic: 运行中
+    - strong: "--"
+  - main:
+    - heading "快速创建" [level=2]
+    - button "离线同步 创建批量与定时离线同步任务":
+      - generic: 离线同步
+      - generic: 创建批量与定时离线同步任务
+    - button "实时同步 创建持续运行的实时同步任务":
+      - generic: 实时同步
+      - generic: 创建持续运行的实时同步任务
+    - button "数据开发 创建 SQL、Shell、Python 等开发节点":
+      - generic: 数据开发
+      - generic: 创建 SQL、Shell、Python 等开发节点
+    - button "工作流 创建并编排任务工作流与调度":
+      - generic: 工作流
+      - generic: 创建并编排任务工作流与调度
+    - heading "数据中心" [level=2]
+    - button "查看更多":
+      - text: 查看更多
+    - complementary:
+      - generic: 最新任务
+      - button "数据质量 0s QA监控-客户表行数检查 运行次数 1 异常次数 0 任务状态 成功 任务 ID 4 查看详情":
+        - generic: 数据质量
+        - generic: 0s
+        - generic "QA监控-客户表行数检查"
+        - generic: 运行次数
+        - generic: "1"
+        - generic: 异常次数
+        - generic: "0"
+        - generic: 任务状态
+        - generic "成功"
+        - generic: 任务 ID
+        - generic "4"
+        - generic: 查看详情
+    - tablist:
+      - tab "运行总览" [selected]
+      - tab "近期任务"
+      - tab "调度数据"
+      - button "时间 近7日":
+        - generic: 时间
+        - generic: 近7日
+    - tabpanel "运行总览"
+    - generic: 运行次数
+    - generic: 成功任务
+    - strong: "2"
+    - generic: 较前7日-3
+    - generic: 运行中
+    - strong: "0"
+    - generic: 较前7日0
+    - generic: 失败任务
+    - strong: "0"
+    - generic: 较前7日-2
+    - generic: 调度次数
+    - strong: "0"
+    - generic: 较前7日0
+    - generic: 处理记录
+    - strong: "0"
+    - generic: 较前7日-100.0%
+    - generic: 平均耗时
+    - strong: 0s
+    - generic: 较前7日-1s
+    - generic: 数据消费
+    - button "进入目录":
+      - generic: 进入目录
+    - strong: 从一个入口发现可消费 Dataset 与 Data Service
+    - generic: 搜索结果进入统一 ProductKey 详情，并可稳定回到来源对象与资产。
+    - heading "审批待办" [level=2]
+    - strong: "0"
+    - button "查看更多":
+      - text: 查看更多
+    - strong: 暂无待办审批
+    - heading "质量告警" [level=2]
+    - strong: "0"
+    - button "查看更多":
+      - text: 查看更多
+    - strong: 暂无质量告警事件
+    - heading "数据质量" [level=2]
+    - button "查看更多":
+      - text: 查看更多
+    - generic: 整体通过率
+    - strong: "100.0"
+    - generic: "%"
+    - generic: 整体质量健康
+    - generic: 近 7 日
+    - generic: 监控表
+    - strong: "2"
+    - generic: 今日检测
+    - strong: "0"
+    - generic: 启用规则
+    - strong: "3"
+    - heading "待处理问题" [level=3]
+    - generic: 今日问题表
+    - strong: "0"
+    - generic: 近 7 日问题
+    - strong: "0"
+    - strong: 近 7 日暂无质量问题
+    - heading "数据资产" [level=2]
+    - generic: 数据集
+    - generic: 暂无数据集预览
+    - button "查看更多 ›":
+      - text: 查看更多
+      - generic: ›
+    - tablist:
+      - tab "仪表盘" [selected]
+      - tab "大屏"
+    - tabpanel "仪表盘"
+    - generic: 数据加载中...
+    - button "查看更多 ›":
+      - text: 查看更多
+      - generic: ›
+    - generic: 数据服务
+    - generic: 数据加载中...
+    - button "查看更多 ›":
+      - text: 查看更多
+      - generic: ›
+    - complementary:
+      - heading "通知" [level=2]
+      - button "查看更多":
+        - text: 查看更多
+      - generic: 通知加载中...
+      - heading "调度中心" [level=2]
+      - button "查看更多":
+        - text: 查看更多
+      - generic: 已配置调度
+      - button "上个月":
+      - generic: 2026年10月
+      - button "下个月":
+      - generic: 日
+      - generic: 一
+      - generic: 二
+      - generic: 三
+      - generic: 四
+      - generic: 五
+      - generic: 六
+      - generic: "01"
+      - generic: "02"
+      - generic: "03"
+      - generic: "04"
+      - generic: "05"
+      - generic: "06"
+      - generic: "07"
+      - generic: "08"
+      - generic: "09"
+      - generic: "10"
+      - generic: "11"
+      - generic: "12"
+      - generic: "13"
+      - generic: "14"
+      - generic: "15"
+      - generic: "16"
+      - generic: "17"
+      - generic: "18"
+      - generic: "19"
+      - generic: "20"
+      - generic: "21"
+      - generic: "22"
+      - generic: "23"
+      - generic: "24"
+      - generic: "25"
+      - generic: "26"
+      - generic: "27"
+      - generic: "28"
+      - generic: "29"
+      - generic: "30"
+      - generic: "31"
+      - strong: 十月调度总览
+      - generic: 共0个调度配置
+      - heading "快捷导航" [level=2]
+      - generic: 查看更多
+      - button "去大屏":
+        - generic: 去大屏
+      - button "数据目录":
+        - generic: 数据目录
+      - button "仪表盘":
+        - generic: 仪表盘
+      - button "数据服务":
+        - generic: 数据服务
+      - heading "资源中心" [level=2]
+      - button "查看全部":
+        - text: 查看全部

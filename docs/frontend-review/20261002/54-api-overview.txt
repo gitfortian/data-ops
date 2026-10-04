@@ -1,0 +1,124 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务" [expanded]:
+      - generic "API 服务"
+    - link "API 服务目录":
+      - /url: /data-service
+      - generic "API 服务目录"
+    - link "调用方与密钥":
+      - /url: /data-service/access
+      - generic "调用方与密钥"
+    - link "API 调试":
+      - /url: /data-service/debug
+      - generic "API 调试"
+    - link "运行概览":
+      - /url: /data-service/overview
+      - generic "运行概览"
+    - link "调用记录":
+      - /url: /data-service/logs
+      - generic "调用记录"
+    - button "分析展示":
+      - generic "分析展示"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 运行概览
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "运行概览" [level=1]
+  - generic: API 运行状态、调用趋势与近期异常
+  - button "24 小时"
+  - button "7 天"
+  - button "30 天"
+  - button "刷新":
+    - generic: 刷新
+  - generic: API 状态分布
+  - generic: 当前已上线的数据服务
+  - generic: "1"
+  - generic: 总计
+  - generic: 运行中
+  - generic: "1"
+  - generic: 已停用
+  - generic: "0"
+  - generic: 调用结果分布
+  - generic: 统计范围：24 小时
+  - generic: "0"
+  - generic: 总计
+  - generic: 成功
+  - generic: "0"
+  - generic: 失败
+  - generic: "0"
+  - generic: 总体指标
+  - generic: 当前时间范围内的调用汇总
+  - generic: 调用次数
+  - generic: "0"
+  - generic: 全部 API 调用
+  - generic: 成功率
+  - generic: 0%
+  - generic: 0 次失败
+  - generic: 平均耗时
+  - generic: 0 ms
+  - generic: 按全部调用计算
+  - generic: 返回行数
+  - generic: "0"
+  - generic: 成功查询返回数据量
+  - generic: 调用趋势
+  - generic: 总调用、失败调用与平均耗时
+  - generic: 热门 API
+  - generic: 按当前时间范围内调用次数排序
+  - img "暂无数据"
+  - generic: 暂无调用数据
+  - generic: 最近失败
+  - generic: 优先关注最近的异常调用
+  - table:
+    - rowgroup:
+      - row "API 错误 耗时 时间":
+        - columnheader "API"
+        - columnheader "错误"
+        - columnheader "耗时"
+        - columnheader "时间"
+        - columnheader
+  - table:
+    - rowgroup:
+      - row "当前时间范围内没有失败调用":
+        - cell "当前时间范围内没有失败调用":
+          - generic: 当前时间范围内没有失败调用

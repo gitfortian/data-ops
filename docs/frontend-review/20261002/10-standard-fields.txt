@@ -1,0 +1,326 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义" [expanded]:
+      - generic "业务语义"
+    - link "业务域":
+      - /url: /semantic/domains
+      - generic "业务域"
+    - link "业务过程":
+      - /url: /semantic/processes
+      - generic "业务过程"
+    - link "数据标准":
+      - /url: /semantic/standards
+      - generic "数据标准"
+    - link "标准字段":
+      - /url: /semantic/fields
+      - generic "标准字段"
+    - link "数仓分层":
+      - /url: /semantic/layers
+      - generic "数仓分层"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 标准字段
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 标准字段
+  - generic: 全局字段库：字段引用数据标准（不自由填写），业务过程按引用组装；派生建模由此带出字段
+  - tablist:
+    - tab "字段库" [selected]
+    - tab "过程引用"
+  - tabpanel "字段库":
+    - combobox
+    - generic: 全部角色
+    - searchbox "按编码或名称搜索"
+    - button "search":
+      - img "search":
+    - button "新建标准字段":
+      - generic: 新建标准字段
+    - table:
+      - rowgroup:
+        - row "编码 名称 角色 状态 来源 类型标准 单位标准 默认口径 描述 操作":
+          - columnheader "编码"
+          - columnheader "名称"
+          - columnheader "角色"
+          - columnheader "状态"
+          - columnheader "来源"
+          - columnheader "类型标准"
+          - columnheader "单位标准"
+          - columnheader "默认口径"
+          - columnheader "描述"
+          - columnheader "操作"
+      - rowgroup:
+        - row "order_id 订单ID 业务过程 启用 手工 标识（id） - 未设置 订单 停用 编辑 删除":
+          - cell "order_id":
+            - code: order_id
+          - cell "订单ID"
+          - cell "业务过程":
+            - generic: 业务过程
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "标识（id）"
+          - cell "-"
+          - cell "未设置"
+          - cell "订单"
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "cust_id 客户ID 维度 启用 手工 标识（id） - 未设置 下单客户 停用 编辑 删除":
+          - cell "cust_id":
+            - code: cust_id
+          - cell "客户ID"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "标识（id）"
+          - cell "-"
+          - cell "未设置"
+          - cell "下单客户"
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "item_id 商品ID 维度 启用 手工 标识（id） - 未设置 售出的商品 停用 编辑 删除":
+          - cell "item_id":
+            - code: item_id
+          - cell "商品ID"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "标识（id）"
+          - cell "-"
+          - cell "未设置"
+          - cell "售出的商品"
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "order_time 下单时间 维度 启用 手工 日期时间（datetime） - 未设置 下单时间 停用 编辑 删除":
+          - cell "order_time":
+            - code: order_time
+          - cell "下单时间"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "日期时间（datetime）"
+          - cell "-"
+          - cell "未设置"
+          - cell "下单时间"
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "order_status 订单状态 维度 启用 手工 状态（status） - 未设置 订单状态 停用 编辑 删除":
+          - cell "order_status":
+            - code: order_status
+          - cell "订单状态"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "状态（status）"
+          - cell "-"
+          - cell "未设置"
+          - cell "订单状态"
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "order_amount 订单金额 度量 启用 手工 金额（amount） 元（yuan） GMV（gmv） 订单金额 停用 编辑 删除":
+          - cell "order_amount":
+            - code: order_amount
+          - cell "订单金额"
+          - cell "度量":
+            - generic: 度量
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "金额（amount）"
+          - cell "元（yuan）"
+          - cell "GMV（gmv）"
+          - cell "订单金额"
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "quantity 购买数量 度量 启用 手工 数量（quantity） 件（piece） 商品销量（item_sale_cnt） 停用 编辑 删除":
+          - cell "quantity":
+            - code: quantity
+          - cell "购买数量"
+          - cell "度量":
+            - generic: 度量
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "数量（quantity）"
+          - cell "件（piece）"
+          - cell "商品销量（item_sale_cnt）"
+          - cell
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "cust_name 客户名称 维度 启用 手工 名称（name） - 未设置 停用 编辑 删除":
+          - cell "cust_name":
+            - code: cust_name
+          - cell "客户名称"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "名称（name）"
+          - cell "-"
+          - cell "未设置"
+          - cell
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "cust_idcard 客户身份证号 维度 启用 手工 身份证（idcard） - 未设置 停用 编辑 删除":
+          - cell "cust_idcard":
+            - code: cust_idcard
+          - cell "客户身份证号"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "身份证（idcard）"
+          - cell "-"
+          - cell "未设置"
+          - cell
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+        - row "cust_mobile 客户手机号 维度 启用 手工 手机号（mobile） - 未设置 停用 编辑 删除":
+          - cell "cust_mobile":
+            - code: cust_mobile
+          - cell "客户手机号"
+          - cell "维度":
+            - generic: 维度
+          - cell "启用":
+            - generic: 启用
+          - cell "手工":
+            - generic: 手工
+          - cell "手机号（mobile）"
+          - cell "-"
+          - cell "未设置"
+          - cell
+          - cell "停用 编辑 删除":
+            - button "停用":
+              - generic: 停用
+            - button "编辑":
+              - generic: 编辑
+            - button "删除":
+              - generic: 删除
+    - list:
+      - listitem: 共 148 条
+      - listitem "上一页":
+        - button "left" [disabled]:
+          - img "left":
+      - listitem "1":
+        - generic: "1"
+      - listitem "2":
+        - generic: "2"
+      - listitem "3":
+        - generic: "3"
+      - listitem "4":
+        - generic: "4"
+      - listitem "5":
+        - generic: "5"
+      - listitem "向后 5 页":
+        - img "double-right":
+        - generic: •••
+      - listitem "15":
+        - generic: "15"
+      - listitem "下一页":
+        - button "right":
+          - img "right":
+      - generic "页码":
+        - combobox "页码"
+        - generic "10 条/页"

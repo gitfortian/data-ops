@@ -1,0 +1,83 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标" [expanded]:
+      - generic "指标"
+    - link "指标管理":
+      - /url: /metric/manage
+      - generic "指标管理"
+    - link "指标血缘":
+      - /url: /metric/lineage
+      - generic "指标血缘"
+    - link "影响分析":
+      - /url: /metric/impact
+      - generic "影响分析"
+    - link "指标标签与统计":
+      - /url: /metric/service
+      - generic "指标标签与统计"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 指标标签与统计
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 指标标签与统计
+  - generic: 标签管理、指标统计与元数据服务概览
+  - tablist:
+    - tab "标签管理 (0)" [selected]
+    - tab "指标统计"
+    - tab "指标目录 (20)"
+  - tabpanel "标签管理 (0)":
+    - button "新建标签":
+      - generic: 新建标签
+    - table:
+      - rowgroup:
+        - row "标签名 标签编码 排序 已挂载指标 状态 操作":
+          - columnheader "标签名"
+          - columnheader "标签编码"
+          - columnheader "排序"
+          - columnheader "已挂载指标"
+          - columnheader "状态"
+          - columnheader "操作"
+      - rowgroup:
+        - row "暂无标签 创建标签后可为指标分组标记":
+          - cell "暂无标签 创建标签后可为指标分组标记":
+            - generic: 暂无标签
+            - generic: 创建标签后可为指标分组标记

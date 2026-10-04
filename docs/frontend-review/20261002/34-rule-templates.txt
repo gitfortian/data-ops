@@ -1,0 +1,191 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量" [expanded]:
+      - generic "数据质量"
+    - link "质量总览":
+      - /url: /data-quality/overview
+      - generic "质量总览"
+    - link "数据表监控":
+      - /url: /data-quality/table-config
+      - generic "数据表监控"
+    - link "质量检查记录":
+      - /url: /data-quality/execution
+      - generic "质量检查记录"
+    - link "规则模板":
+      - /url: /data-quality/rule-template
+      - generic "规则模板"
+    - button "数据安全":
+      - generic "数据安全"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 规则模板
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "规则模板库" [level=1]
+  - complementary:
+    - generic: 质量维度
+    - button "全部 6":
+      - generic: 全部
+      - generic: "6"
+    - button "完整性 2":
+      - generic: 完整性
+      - generic: "2"
+    - button "唯一性 1":
+      - generic: 唯一性
+      - generic: "1"
+    - button "有效性 1":
+      - generic: 有效性
+      - generic: "1"
+    - button "准确性 1":
+      - generic: 准确性
+      - generic: "1"
+    - button "自定义 1":
+      - generic: 自定义
+      - generic: "1"
+    - generic: 自定义模板类目
+    - button:
+    - button:
+    - textbox "搜索模板类目"
+    - button "全部 0":
+      - generic: 全部
+      - generic: "0"
+    - button "未分类":
+      - generic: 未分类
+    - generic: 右键目录可新建子目录、重命名、移动或删除。
+  - separator:
+    - button:
+  - main:
+    - heading "全部" [level=2]
+    - generic: 汇总展示全部质量维度下的规则模板，可通过维度、模板类型和关键字快速定位。
+    - textbox "搜索模板名称、编码或描述"
+    - button:
+    - text: 维度类型：
+    - strong: 系统维度
+    - text: 关联模板数：
+    - strong: "6"
+    - text: 关联规则数：
+    - strong: "3"
+    - tablist:
+      - tab "系统模板 (6)" [selected]
+      - tab "自定义模板 (0)"
+    - tabpanel "系统模板 (6)"
+    - table:
+      - rowgroup:
+        - row "模板名称 / 编码 质量维度 关联范围 规则数 模板描述":
+          - columnheader "模板名称 / 编码"
+          - columnheader "质量维度"
+          - columnheader "关联范围"
+          - columnheader "规则数"
+          - columnheader "模板描述"
+      - rowgroup:
+        - row "表行数 完整性 表级 1 统计目标数据范围的总行数，并与阈值进行比较。":
+          - cell "表行数":
+            - button "表行数"
+          - cell "完整性":
+            - generic: 完整性
+          - cell "表级":
+            - generic: 表级
+          - cell "1"
+          - cell "统计目标数据范围的总行数，并与阈值进行比较。":
+            - generic: 统计目标数据范围的总行数，并与阈值进行比较。
+        - row "字段非空 完整性 字段级 1 统计字段非空率，空表按 100% 处理。":
+          - cell "字段非空":
+            - button "字段非空"
+          - cell "完整性":
+            - generic: 完整性
+          - cell "字段级":
+            - generic: 字段级
+          - cell "1"
+          - cell "统计字段非空率，空表按 100% 处理。":
+            - generic: 统计字段非空率，空表按 100% 处理。
+        - row "字段唯一 唯一性 字段级 1 统计字段非空值中的唯一率。":
+          - cell "字段唯一":
+            - button "字段唯一"
+          - cell "唯一性":
+            - generic: 唯一性
+          - cell "字段级":
+            - generic: 字段级
+          - cell "1"
+          - cell "统计字段非空值中的唯一率。":
+            - generic: 统计字段非空值中的唯一率。
+        - row "字段数值范围 有效性 字段级 0 检查字段值是否都位于指定的最小值和最大值之间。":
+          - cell "字段数值范围":
+            - button "字段数值范围"
+          - cell "有效性":
+            - generic: 有效性
+          - cell "字段级":
+            - generic: 字段级
+          - cell "0"
+          - cell "检查字段值是否都位于指定的最小值和最大值之间。":
+            - generic: 检查字段值是否都位于指定的最小值和最大值之间。
+        - row "字段枚举值 准确性 字段级 0 检查字段非空值是否都包含在允许的枚举集合内。":
+          - cell "字段枚举值":
+            - button "字段枚举值"
+          - cell "准确性":
+            - generic: 准确性
+          - cell "字段级":
+            - generic: 字段级
+          - cell "0"
+          - cell "检查字段非空值是否都包含在允许的枚举集合内。":
+            - generic: 检查字段非空值是否都包含在允许的枚举集合内。
+        - 'row "自定义 SQL 自定义 表级 0 执行只读 SELECT，并使用首行首列作为质量指标。支持 ${table}、${column} 和 ${where}。"':
+          - cell "自定义 SQL":
+            - button "自定义 SQL"
+          - cell "自定义":
+            - generic: 自定义
+          - cell "表级":
+            - generic: 表级
+          - cell "0"
+          - 'cell "执行只读 SELECT，并使用首行首列作为质量指标。支持 ${table}、${column} 和 ${where}。"':
+            - generic: "执行只读 SELECT，并使用首行首列作为质量指标。支持 ${table}、${column} 和 ${where}。"

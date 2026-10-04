@@ -1,0 +1,130 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置" [expanded]:
+      - generic "平台设置"
+    - link "项目空间":
+      - /url: /system/projects
+      - generic "项目空间"
+    - link "用户管理":
+      - /url: /system/users
+      - generic "用户管理"
+    - link "部门管理":
+      - /url: /system/departments
+      - generic "部门管理"
+    - link "角色与权限":
+      - /url: /system/roles
+      - generic "角色与权限"
+    - link "审批流程配置":
+      - /url: /approval/flows
+      - generic "审批流程配置"
+    - link "操作日志":
+      - /url: /system/oplogs
+      - generic "操作日志"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 部门管理
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - region "部门管理":
+    - heading "部门管理" [level=1]
+    - button "全部1" [pressed]:
+      - generic: 全部1
+    - button "部门分组0":
+      - generic: 部门分组0
+    - button "末级部门1":
+      - generic: 末级部门1
+    - img "search":
+    - textbox "搜索部门名称、描述或 ID"
+    - button "reload":
+      - img "reload":
+    - button "import 导入":
+      - img "import":
+      - generic: 导入
+    - button "plus 新增部门":
+      - img "plus":
+      - generic: 新增部门
+    - complementary:
+      - generic: 部门树
+      - generic: 当前显示 1 个节点
+      - button "plus-square":
+        - img "plus-square":
+      - button "minus-square":
+        - img "minus-square":
+      - textbox "for screen reader"
+      - tree:
+        - treeitem "默认部门 Yak Ops Project Space compatibility default department" [expanded]:
+          - generic: 默认部门
+          - generic: Yak Ops Project Space compatibility default department
+    - main:
+      - img "apartment":
+      - heading "默认部门" [level=5]
+      - generic: 末级部门
+      - generic: 部门 ID：1
+      - button "plus 新增子部门":
+        - img "plus":
+        - generic: 新增子部门
+      - button "edit 编辑":
+        - img "edit":
+        - generic: 编辑
+      - button "delete 删除":
+        - img "delete":
+        - generic: 删除
+      - generic: 部门路径
+      - button "默认部门"
+      - table:
+        - rowgroup:
+          - row "部门 ID 1 父部门 ID 根部门 部门层级 1":
+            - rowheader "部门 ID"
+            - cell "1"
+            - rowheader "父部门 ID"
+            - cell "根部门"
+            - rowheader "部门层级"
+            - cell "1"
+          - row "节点类型 末级部门 直属子部门 0 个 全部下级部门 0 个":
+            - rowheader "节点类型"
+            - cell "末级部门"
+            - rowheader "直属子部门"
+            - cell "0 个"
+            - rowheader "全部下级部门"
+            - cell "0 个"
+          - row "直属用户 0 人":
+            - rowheader "直属用户"
+            - cell "0 人"
+      - generic: 部门描述
+      - generic: Yak Ops Project Space compatibility default department
+      - generic: 直属子部门
+      - generic: 0 个
+      - generic: 当前节点没有子部门
+- generic: "* *"

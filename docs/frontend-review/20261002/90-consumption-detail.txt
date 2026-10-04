@@ -1,0 +1,282 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务":
+      - generic "API 服务"
+    - button "分析展示":
+      - generic "分析展示"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据产品详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - button "返回数据消费":
+    - generic: 返回数据消费
+  - button "打开服务配置":
+    - generic: 打开服务配置
+  - heading "主数据分发-customer-销售中台" [level=2]
+  - generic: DATA_SERVICE
+  - generic: PUBLISHED
+  - generic: UNKNOWN
+  - generic: MDM 自动发布:实体「客户」→ 目标系统「CRM」,读统一主数据表 ACTIVE 记录,数据实时查表。
+  - text: DATA_SERVICE:1
+  - alert:
+    - img "exclamation-circle":
+    - generic: "source-governance: UNAVAILABLE"
+    - generic: DATA_SERVICE · Data Service source contract exposes update time but no governed evidence projection
+  - alert:
+    - img "exclamation-circle":
+    - generic: "ownership: UNAVAILABLE"
+    - generic: DATA_SERVICE · Data Service owning contract does not expose owner
+  - alert:
+    - img "exclamation-circle":
+    - generic: "visibility: UNAVAILABLE"
+    - generic: SECURITY · Data Service visibility policy is not exposed yet
+  - alert:
+    - img "exclamation-circle":
+    - generic: "quality: UNAVAILABLE"
+    - generic: QUALITY · Data Service Quality section reader is not connected to Consumption
+  - alert:
+    - img "exclamation-circle":
+    - generic: "security: UNAVAILABLE"
+    - generic: SECURITY · Data Service Security classification evidence is not connected to Consumption
+  - alert:
+    - img "exclamation-circle":
+    - generic: "lineage: UNAVAILABLE"
+    - generic: LINEAGE · Data Service lineage evidence is not connected to Consumption
+  - alert:
+    - img "exclamation-circle":
+    - generic: "asset: UNAVAILABLE"
+    - generic: "ASSET · 未知 Asset sourceType: DATA_SERVICE"
+  - generic: 消费契约
+  - table:
+    - rowgroup:
+      - row "Owner 待治理证据 Visibility 待安全证据 Project 1":
+        - rowheader "Owner"
+        - cell "待治理证据"
+        - rowheader "Visibility"
+        - cell "待安全证据"
+        - rowheader "Project"
+        - cell "1"
+      - row "Active Version v1143747761 Access Provider UNAVAILABLE Access Decision A logged-in user's permissions do not determine public API-key invocation access":
+        - rowheader "Active Version"
+        - cell "v1143747761"
+        - rowheader "Access Provider"
+        - cell "UNAVAILABLE"
+        - rowheader "Access Decision"
+        - cell "A logged-in user's permissions do not determine public API-key invocation access"
+      - row "Access Subject Registered Data Service Consumer/API Key Access Action INVOKE Access Plane PUBLIC_API_KEY":
+        - rowheader "Access Subject"
+        - cell "Registered Data Service Consumer/API Key"
+        - rowheader "Access Action"
+        - cell "INVOKE"
+        - rowheader "Access Plane"
+        - cell "PUBLIC_API_KEY"
+      - row "下一步 Use the service's configured Consumer/API Key and public invocation endpoint Producer MDM_DISTRIBUTION:1":
+        - rowheader "下一步"
+        - cell "Use the service's configured Consumer/API Key and public invocation endpoint"
+        - rowheader "Producer"
+        - cell "MDM_DISTRIBUTION:1":
+          - generic: MDM_DISTRIBUTION:1
+  - generic: 治理证据
+  - strong: source-governance
+  - generic: UNAVAILABLE
+  - generic: DATA_SERVICE
+  - text: 无附加事实
+  - generic: · Data Service source contract exposes update time but no governed evidence projection
+  - strong: ownership
+  - generic: UNAVAILABLE
+  - generic: DATA_SERVICE
+  - text: 无附加事实
+  - generic: · Data Service owning contract does not expose owner
+  - strong: visibility
+  - generic: UNAVAILABLE
+  - generic: SECURITY
+  - text: 无附加事实
+  - generic: · Data Service visibility policy is not exposed yet
+  - strong: service-interface
+  - generic: READY
+  - generic: DATA_SERVICE
+  - generic: 无附加事实
+  - strong: quality
+  - generic: UNAVAILABLE
+  - generic: QUALITY
+  - text: 无附加事实
+  - generic: · Data Service Quality section reader is not connected to Consumption
+  - strong: security
+  - generic: UNAVAILABLE
+  - generic: SECURITY
+  - text: 无附加事实
+  - generic: · Data Service Security classification evidence is not connected to Consumption
+  - strong: lineage
+  - generic: UNAVAILABLE
+  - generic: LINEAGE
+  - text: 无附加事实
+  - generic: · Data Service lineage evidence is not connected to Consumption
+  - strong: asset
+  - generic: UNAVAILABLE
+  - generic: ASSET
+  - text: 无附加事实
+  - generic: "· 未知 Asset sourceType: DATA_SERVICE"
+  - generic: 消费关系与影响
+  - button "声明API_INVOKE依赖":
+    - generic: 声明API_INVOKE依赖
+  - generic "Data Service Consumer":
+    - combobox "Data Service Consumer"
+    - generic "CRM 分发联调 · 1 个有效 Key"
+  - generic: 订阅只声明依赖，不会授予 Dataset 或 Data Service 的访问权限。
+  - table:
+    - rowgroup:
+      - row "Subscription Evidence EMPTY Usage Evidence UNAVAILABLE":
+        - rowheader "Subscription Evidence"
+        - cell "EMPTY"
+        - rowheader "Usage Evidence"
+        - cell "UNAVAILABLE"
+  - alert:
+    - img "exclamation-circle":
+    - generic: 已知 Consumer 覆盖不完整
+    - generic: Known consumers are partial because source reconciliation is incomplete or one or more evidence providers are unavailable.
+  - generic: 没有可显示的完整 Consumer 清单；请查看上方覆盖状态和说明。
+  - generic: Known consumers are partial because source reconciliation is incomplete or one or more evidence providers are unavailable.
+  - generic: 服务接口契约
+  - table:
+    - rowgroup:
+      - row "Runtime Path /api/v1/data-service/runtime/mdm/customer/1 Auth Mode API_KEY Enabled 是":
+        - rowheader "Runtime Path"
+        - cell "/api/v1/data-service/runtime/mdm/customer/1"
+        - rowheader "Auth Mode"
+        - cell "API_KEY"
+        - rowheader "Enabled"
+        - cell "是"
+      - row "Max Rows 1000 Timeout(s) 30 Pagination 否":
+        - rowheader "Max Rows"
+        - cell "1000"
+        - rowheader "Timeout(s)"
+        - cell "30"
+        - rowheader "Pagination"
+        - cell "否"
+      - row "Source Revision 1143747761 Runtime Generation 4 Parameters -":
+        - rowheader "Source Revision"
+        - cell "1143747761"
+        - rowheader "Runtime Generation"
+        - cell "4"
+        - rowheader "Parameters"
+        - cell "-"
+      - row "Documentation 已维护":
+        - rowheader "Documentation"
+        - cell "已维护"
+  - heading "请求参数" [level=5]
+  - table:
+    - rowgroup:
+      - row "名称 类型 必填 说明 示例":
+        - columnheader "名称"
+        - columnheader "类型"
+        - columnheader "必填"
+        - columnheader "说明"
+        - columnheader "示例"
+    - rowgroup:
+      - row "暂无数据 暂无数据":
+        - cell "暂无数据 暂无数据":
+          - img "暂无数据"
+          - generic: 暂无数据
+  - heading "响应字段" [level=5]
+  - table:
+    - rowgroup:
+      - row "名称 类型 可空 说明 示例":
+        - columnheader "名称"
+        - columnheader "类型"
+        - columnheader "可空"
+        - columnheader "说明"
+        - columnheader "示例"
+    - rowgroup:
+      - row "master_id STRING 否 主数据统一标识(MD5)":
+        - cell "master_id"
+        - cell "STRING"
+        - cell "否"
+        - cell "主数据统一标识(MD5)"
+        - cell
+      - row "version INTEGER 否 记录版本号":
+        - cell "version"
+        - cell "INTEGER"
+        - cell "否"
+        - cell "记录版本号"
+        - cell
+      - row "cust_id STRING 是 客户ID":
+        - cell "cust_id"
+        - cell "STRING"
+        - cell "是"
+        - cell "客户ID"
+        - cell
+      - row "cust_name STRING 是 客户姓名":
+        - cell "cust_name"
+        - cell "STRING"
+        - cell "是"
+        - cell "客户姓名"
+        - cell
+      - row "phone STRING 是 手机号":
+        - cell "phone"
+        - cell "STRING"
+        - cell "是"
+        - cell "手机号"
+        - cell
+      - row "city STRING 是 城市":
+        - cell "city"
+        - cell "STRING"
+        - cell "是"
+        - cell "城市"
+        - cell
+      - row "member_level STRING 是 会员等级":
+        - cell "member_level"
+        - cell "STRING"
+        - cell "是"
+        - cell "会员等级"
+        - cell
+      - row "update_time DATETIME 是 记录更新时间":
+        - cell "update_time"
+        - cell "DATETIME"
+        - cell "是"
+        - cell "记录更新时间"
+        - cell
+  - alert:
+    - img "info-circle":
+    - generic: 调用需使用此服务配置的 Consumer/API Key
+    - generic: "Runtime endpoint: /api/v1/data-service/runtime/mdm/customer/1"

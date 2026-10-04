@@ -1,0 +1,20 @@
+[
+  {
+    "level": "error",
+    "message": "TypeError: Cannot read properties of undefined (reading 'setOptions')\n    at src/pages/ai-agent/components/MarkdownContent.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:61898:16)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at src/pages/ai-agent/components/ReportsTab.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:62014:65)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at src/pages/ai-agent/index.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:63449:60)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at http://localhost:8000/umi.js:481693:17",
+    "timestamp": "2026-10-02T03:13:16.100Z",
+    "url": "http://localhost:8000/umi.js"
+  },
+  {
+    "level": "error",
+    "message": "TypeError: Cannot read properties of undefined (reading 'setOptions')\n    at src/pages/ai-agent/components/MarkdownContent.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:61898:16)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at src/pages/ai-agent/components/ReportsTab.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:62014:65)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at src/pages/ai-agent/index.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:63449:60)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at http://localhost:8000/umi.js:481693:17",
+    "timestamp": "2026-10-02T03:13:16.106Z",
+    "url": "http://localhost:8000/umi.js"
+  },
+  {
+    "level": "error",
+    "message": "TypeError: Cannot read properties of undefined (reading 'setOptions')\n    at src/pages/ai-agent/components/MarkdownContent.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:61898:16)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at src/pages/ai-agent/components/ReportsTab.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:62014:65)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at src/pages/ai-agent/index.tsx (http://localhost:8000/src_pages_ai-agent_index_tsx-async.js:63449:60)\n    at requireModule (http://localhost:8000/umi.js:481634:27)\n    at fn (http://localhost:8000/umi.js:482111:14)\n    at http://localhost:8000/umi.js:481693:17",
+    "timestamp": "2026-10-02T03:13:16.107Z",
+    "url": "http://localhost:8000/umi.js"
+  }
+]

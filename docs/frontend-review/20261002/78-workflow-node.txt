@@ -1,0 +1,86 @@
+- complementary:
+  - button "返回工作流列表":
+  - button "节点":
+  - button "资源":
+  - generic: 节点
+  - textbox "搜索节点"
+  - generic: 任务节点
+  - generic "F1-crm_customer同步ods":
+    - generic: F1-crm_customer同步ods
+  - generic "mdm_collect_customer_1":
+    - generic: mdm_collect_customer_1
+  - generic "MDM落地体检-mdm_landing_customer_1":
+    - generic: MDM落地体检-mdm_landing_customer_1
+  - generic "Asset Governance Hub E2E - crm_customer_history":
+    - generic: Asset Governance Hub E2E - crm_customer_history
+  - generic "MDM主数据加工-customer":
+    - generic: SQL
+    - generic: MDM主数据加工-customer
+- generic "测试"
+- button "运行设置":
+- button "发布版本":
+- button "测试运行":
+  - generic: 测试运行
+- button "保存草稿":
+  - generic: 保存草稿
+- button "已是最新版本" [disabled]:
+  - generic: 已是最新版本
+- button "更多发布操作":
+- complementary:
+  - separator "调整节点面板宽度"
+  - generic: mdm_collect_customer_1
+  - button "复制节点":
+  - button "更多操作":
+  - button "关闭":
+  - generic: 失败时重试
+  - switch [checked]
+  - generic: 重试次数
+  - slider
+  - spinbutton: "2"
+  - generic: 次
+  - generic: 重试间隔
+  - slider
+  - spinbutton: "0"
+  - generic: 秒
+  - generic: 异常处理
+  - combobox
+  - generic "无"
+  - generic "高级运行设置 已配置":
+    - text: 高级运行设置
+    - generic: 已配置
+  - text: 触发规则
+  - combobox
+  - generic "所有前置成功"
+  - generic: 调度超时
+  - spinbutton: "0"
+  - generic: 秒
+  - generic: 执行超时
+  - spinbutton: "0"
+  - generic: 秒
+  - text: 输入映射
+  - 'textbox "{ \"requestId\": \"$workflow.requestId\" }"':
+    - /placeholder: "{\n  \"requestId\": \"$workflow.requestId\"\n}"
+    - text: "{ \"requestId\": \"$.input.requestId\" }"
+  - generic: 下一步
+  - button "选择下一步":
+    - generic: 选择下一步
+- button "开始 开始 requestId String":
+  - generic: 开始
+  - generic: 开始
+  - generic: requestId
+  - generic: String
+- button "节点操作 mdm_collect_customer_1 失败时重试 2 次" [active]:
+  - button "节点操作":
+  - generic: mdm_collect_customer_1
+  - generic: 失败时重试 2 次
+- link "React Flow attribution":
+  - /url: https://reactflow.dev
+  - text: React Flow
+- button "新增节点":
+- button "添加注释":
+- button "选择模式":
+- button "画布拖拽模式":
+- button "适应画布":
+- button "撤销" [disabled]:
+- button "重做" [disabled]:
+- button "历史记录":

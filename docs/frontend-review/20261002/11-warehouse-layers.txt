@@ -1,0 +1,207 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义" [expanded]:
+      - generic "业务语义"
+    - link "业务域":
+      - /url: /semantic/domains
+      - generic "业务域"
+    - link "业务过程":
+      - /url: /semantic/processes
+      - generic "业务过程"
+    - link "数据标准":
+      - /url: /semantic/standards
+      - generic "数据标准"
+    - link "标准字段":
+      - /url: /semantic/fields
+      - generic "标准字段"
+    - link "数仓分层":
+      - /url: /semantic/layers
+      - generic "数仓分层"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数仓分层
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 数仓分层
+  - generic: 各层定位库、数据源与命名标准（只存引用）；默认分层不可删，自定义分层被模型引用时阻断删除
+  - button "初始化默认分层":
+    - generic: 初始化默认分层
+  - button "新建分层":
+    - generic: 新建分层
+  - table:
+    - rowgroup:
+      - row "编码 名称 库名 数据源 命名标准 默认分区 存储格式 生命周期 是否默认 定标强制 被引用模型数 落标进度 状态 操作":
+        - columnheader "编码"
+        - columnheader "名称"
+        - columnheader "库名"
+        - columnheader "数据源"
+        - columnheader "命名标准"
+        - columnheader "默认分区"
+        - columnheader "存储格式"
+        - columnheader "生命周期"
+        - columnheader "是否默认"
+        - columnheader "定标强制"
+        - columnheader "被引用模型数"
+        - columnheader "落标进度"
+        - columnheader "状态"
+        - columnheader "操作"
+    - rowgroup:
+      - row "ODS 贴源层 ods 数仓-ods ODS表命名（naming_table_ods） - Parquet 永久 默认 免强制 10 41/137 · 30% 启用 编辑 停用":
+        - cell "ODS":
+          - code: ODS
+        - cell "贴源层"
+        - cell "ods"
+        - cell "数仓-ods"
+        - cell "ODS表命名（naming_table_ods）"
+        - cell "-"
+        - cell "Parquet"
+        - cell "永久"
+        - cell "默认":
+          - generic: 默认
+        - cell "免强制":
+          - generic: 免强制
+        - cell "10"
+        - cell "41/137 · 30%":
+          - generic: 41/137 · 30%
+        - cell "启用":
+          - generic: 启用
+        - cell "编辑 停用":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+      - row "DWD 明细层 dwd 数仓-dwd DWD表命名（naming_table_dwd） - Parquet 永久 默认 强制 4 52/80 · 65% 启用 编辑 停用":
+        - cell "DWD":
+          - code: DWD
+        - cell "明细层"
+        - cell "dwd"
+        - cell "数仓-dwd"
+        - cell "DWD表命名（naming_table_dwd）"
+        - cell "-"
+        - cell "Parquet"
+        - cell "永久"
+        - cell "默认":
+          - generic: 默认
+        - cell "强制":
+          - generic: 强制
+        - cell "4"
+        - cell "52/80 · 65%":
+          - generic: 52/80 · 65%
+        - cell "启用":
+          - generic: 启用
+        - cell "编辑 停用":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+      - row "DWS 汇总层 dws 数仓-dws - - - 永久 默认 强制 1 — 启用 编辑 停用":
+        - cell "DWS":
+          - code: DWS
+        - cell "汇总层"
+        - cell "dws"
+        - cell "数仓-dws"
+        - cell "-"
+        - cell "-"
+        - cell "-"
+        - cell "永久"
+        - cell "默认":
+          - generic: 默认
+        - cell "强制":
+          - generic: 强制
+        - cell "1"
+        - cell "—"
+        - cell "启用":
+          - generic: 启用
+        - cell "编辑 停用":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+      - row "ADS 应用层 ads 数仓-ads - - - 永久 默认 强制 0 — 启用 编辑 停用":
+        - cell "ADS":
+          - code: ADS
+        - cell "应用层"
+        - cell "ads"
+        - cell "数仓-ads"
+        - cell "-"
+        - cell "-"
+        - cell "-"
+        - cell "永久"
+        - cell "默认":
+          - generic: 默认
+        - cell "强制":
+          - generic: 强制
+        - cell "0"
+        - cell "—"
+        - cell "启用":
+          - generic: 启用
+        - cell "编辑 停用":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+      - row "DIM 维度层 dim 数仓-dim DIM表命名（naming_table_dim） - Parquet 永久 自定义 强制 1 6/14 · 43% 启用 编辑 停用 删除":
+        - cell "DIM":
+          - code: DIM
+        - cell "维度层"
+        - cell "dim"
+        - cell "数仓-dim"
+        - cell "DIM表命名（naming_table_dim）"
+        - cell "-"
+        - cell "Parquet"
+        - cell "永久"
+        - cell "自定义":
+          - generic: 自定义
+        - cell "强制":
+          - generic: 强制
+        - cell "1"
+        - cell "6/14 · 43%":
+          - generic: 6/14 · 43%
+        - cell "启用":
+          - generic: 启用
+        - cell "编辑 停用 删除":
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除

@@ -1,0 +1,119 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全" [expanded]:
+      - generic "数据安全"
+    - link "数据安全总览":
+      - /url: /data-security/overview
+      - generic "数据安全总览"
+    - link "分级分类":
+      - /url: /data-security/classification
+      - generic "分级分类"
+    - link "数据访问策略":
+      - /url: /data-security/access
+      - generic "数据访问策略"
+    - link "数据脱敏":
+      - /url: /data-security/masking
+      - generic "数据脱敏"
+    - link "访问审计":
+      - /url: /data-security/audit
+      - generic "访问审计"
+    - link "合规管理":
+      - /url: /data-security/compliance
+      - generic "合规管理"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据脱敏
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 数据脱敏
+  - generic: 脱敏算法字典、脱敏策略与实时试算
+  - tablist:
+    - tab "算法字典" [selected]
+    - tab "脱敏策略"
+  - tabpanel "算法字典":
+    - generic: 共 1 个算法 · 6 个内置引擎
+    - button "新建算法":
+      - generic: 新建算法
+    - table:
+      - rowgroup:
+        - row "编码 名称 类型 参数 描述 操作":
+          - columnheader "编码"
+          - columnheader "名称"
+          - columnheader "类型"
+          - columnheader "参数"
+          - columnheader "描述"
+          - columnheader "操作"
+      - rowgroup:
+        - 'row "MASK_PARTIAL 部分遮蔽 自定义 {\"front\":3,\"end\":4} 保留前后位 删除"':
+          - cell "MASK_PARTIAL"
+          - cell "部分遮蔽"
+          - cell "自定义":
+            - generic: 自定义
+          - 'cell "{\"front\":3,\"end\":4}"'
+          - cell "保留前后位"
+          - cell "删除"
+    - generic: 脱敏试算
+    - generic "算法": "* 算法"
+    - combobox "* 算法"
+    - generic: 选择算法
+    - generic "参数(JSON)"
+    - textbox "参数(JSON)":
+      - /placeholder: "如 {\"keep\":3}"
+    - generic "原始值": "* 原始值"
+    - textbox "* 原始值":
+      - /placeholder: 如 13800138000
+    - button "试 算":
+      - generic: 试 算

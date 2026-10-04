@@ -1,0 +1,295 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义" [expanded]:
+      - generic "业务语义"
+    - link "业务域":
+      - /url: /semantic/domains
+      - generic "业务域"
+    - link "业务过程":
+      - /url: /semantic/processes
+      - generic "业务过程"
+    - link "数据标准":
+      - /url: /semantic/standards
+      - generic "数据标准"
+    - link "标准字段":
+      - /url: /semantic/fields
+      - generic "标准字段"
+    - link "数仓分层":
+      - /url: /semantic/layers
+      - generic "数仓分层"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 业务过程
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 业务过程
+  - generic: 挂在业务域下的业务动作，是标准字段集与按过程派生建模的锚点
+  - combobox
+  - generic: 全部业务域
+  - combobox
+  - generic: 全部类型
+  - searchbox "按编码或名称搜索"
+  - button "search":
+    - img "search":
+  - button "新建业务过程":
+    - generic: 新建业务过程
+  - table:
+    - rowgroup:
+      - row "编码 名称 业务域 粒度 类型 负责人 描述 引用字段数 模型数 操作":
+        - columnheader "编码"
+        - columnheader "名称"
+        - columnheader "业务域"
+        - columnheader "粒度"
+        - columnheader "类型"
+        - columnheader "负责人"
+        - columnheader "描述"
+        - columnheader "引用字段数"
+        - columnheader "模型数"
+        - columnheader "操作"
+    - rowgroup:
+      - row "order_create 下单 交易域 / 订单 明细 事实 - 12 1 查看指标 编辑 删除":
+        - cell "order_create":
+          - code: order_create
+        - cell "下单"
+        - cell "交易域 / 订单"
+        - cell "明细"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell
+        - cell "12"
+        - cell "1"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "purchase_item 购买商品 交易域 / 订单 明细 事实 - 10 1 查看指标 编辑 删除":
+        - cell "purchase_item":
+          - code: purchase_item
+        - cell "购买商品"
+        - cell "交易域 / 订单"
+        - cell "明细"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell
+        - cell "10"
+        - cell "1"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "order_pay 订单支付 交易域 / 支付 支付单 事实 - 支付流水粒度，一笔订单可多次支付尝试 10 1 查看指标 编辑 删除":
+        - cell "order_pay":
+          - code: order_pay
+        - cell "订单支付"
+        - cell "交易域 / 支付"
+        - cell "支付单"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "支付流水粒度，一笔订单可多次支付尝试"
+        - cell "10"
+        - cell "1"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "order_cancel 订单取消 交易域 / 订单 订单 事实 - 以取消时间非空判定，用于取消率 6 0 查看指标 编辑 删除":
+        - cell "order_cancel":
+          - code: order_cancel
+        - cell "订单取消"
+        - cell "交易域 / 订单"
+        - cell "订单"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "以取消时间非空判定，用于取消率"
+        - cell "6"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "order_finish 订单完成 交易域 / 订单 订单 事实 - 交易成功口径，用于确认收入 6 0 查看指标 编辑 删除":
+        - cell "order_finish":
+          - code: order_finish
+        - cell "订单完成"
+        - cell "交易域 / 订单"
+        - cell "订单"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "交易成功口径，用于确认收入"
+        - cell "6"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "refund_apply 退款 交易域 / 退款 退款单 事实 - 退款流水，2% 金额大于实付需质量拦截 8 0 查看指标 编辑 删除":
+        - cell "refund_apply":
+          - code: refund_apply
+        - cell "退款"
+        - cell "交易域 / 退款"
+        - cell "退款单"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "退款流水，2% 金额大于实付需质量拦截"
+        - cell "8"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "delivery_send 发货 履约域 / 发货配送 发货单 事实 - 仓库出库发运 8 0 查看指标 编辑 删除":
+        - cell "delivery_send":
+          - code: delivery_send
+        - cell "发货"
+        - cell "履约域 / 发货配送"
+        - cell "发货单"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "仓库出库发运"
+        - cell "8"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "delivery_sign 签收 履约域 / 发货配送 发货单 事实 - 客户签收，与发货时间差为配送时长 7 0 查看指标 编辑 删除":
+        - cell "delivery_sign":
+          - code: delivery_sign
+        - cell "签收"
+        - cell "履约域 / 发货配送"
+        - cell "发货单"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "客户签收，与发货时间差为配送时长"
+        - cell "7"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "stock_change 库存变动 履约域 / 库存 库存流水 事实 - 出入库流水，可还原库存快照 9 0 查看指标 编辑 删除":
+        - cell "stock_change":
+          - code: stock_change
+        - cell "库存变动"
+        - cell "履约域 / 库存"
+        - cell "库存流水"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "出入库流水，可还原库存快照"
+        - cell "9"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+      - row "stock_snapshot 库存快照 履约域 / 库存 商品+仓+月 事实 - 月度库存快照 9 0 查看指标 编辑 删除":
+        - cell "stock_snapshot":
+          - code: stock_snapshot
+        - cell "库存快照"
+        - cell "履约域 / 库存"
+        - cell "商品+仓+月"
+        - cell "事实":
+          - generic: 事实
+        - cell "-"
+        - cell "月度库存快照"
+        - cell "9"
+        - cell "0"
+        - cell "查看指标 编辑 删除":
+          - button "查看指标":
+            - generic: 查看指标
+          - button "编辑":
+            - generic: 编辑
+          - button "删除":
+            - generic: 删除
+  - list:
+    - listitem: 共 23 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "2":
+      - generic: "2"
+    - listitem "3":
+      - generic: "3"
+    - listitem "下一页":
+      - button "right":
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

@@ -1,0 +1,66 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务":
+      - generic "API 服务"
+    - button "分析展示":
+      - generic "分析展示"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 数据产品目录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "数据消费" [level=2]
+  - generic: 统一发现已发布 Dataset 与 Data Service。这里展示的是来源域实时投影，不复制来源 Truth。
+  - searchbox "按名称或描述搜索"
+  - button "search":
+    - img "search":
+  - combobox
+  - generic: 全部产品类型
+  - generic: 主数据分发-customer-销售中台
+  - generic: Data Service
+  - generic: MDM 自动发布:实体「客户」→ 目标系统「CRM」,读统一主数据表 ACTIVE 记录,数据实时查表。
+  - generic: PUBLISHED
+  - generic: UNKNOWN
+  - generic: v1143747761
+  - generic: "ProductKey: DATA_SERVICE:1"
+  - generic: "Owner: 待治理证据"

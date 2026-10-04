@@ -1,0 +1,69 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 快速创建
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - tablist "快速创建类型":
+    - tab "离线同步" [selected]
+    - tab "实时同步"
+    - tab "数据开发"
+    - tab "工作流"
+  - generic: 快速创建
+  - generic: 填写任务名称并选择同步方式
+  - generic: 进入配置
+  - generic: 继续配置数据源、表和字段映射
+  - generic: 草稿状态
+  - generic: 不会自动发布或启动任务
+  - main:
+    - tabpanel "离线同步":
+      - heading "创建离线同步任务" [level=1]
+      - textbox "任务名称" [active]:
+        - /placeholder: ""
+      - generic: 任务名称
+      - generic: 同步方式
+      - button "table 单表同步 一张来源表同步到一张目标表":
+        - img "table":
+        - generic: 单表同步
+        - generic: 一张来源表同步到一张目标表
+      - button "database 多表同步 批量选择多张表完成同步":
+        - img "database":
+        - generic: 多表同步
+        - generic: 批量选择多张表完成同步
+      - button "创建并进入配置":
+        - generic: 创建并进入配置

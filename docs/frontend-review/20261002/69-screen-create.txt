@@ -1,0 +1,383 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务":
+      - generic "API 服务"
+    - button "分析展示" [expanded]:
+      - generic "分析展示"
+    - link "仪表盘":
+      - /url: /dashboard
+      - generic "仪表盘"
+    - link "数字大屏":
+      - /url: /digital-screen
+      - generic "数字大屏"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 新建数字化大屏
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - button:
+  - generic: 选择大屏模板
+  - generic: 模板已预设布局与视觉样式，创建后直接进入配置
+  - button "全部"
+  - button "数据中心"
+  - button "经营分析"
+  - button "通用"
+  - textbox "搜索模板"
+  - article:
+    - generic: YAK OPS / DATA OBSERVABILITY GRID
+    - generic: 全域数据智能指挥中心
+    - generic: ● LIVE · SYSTEM HEALTH 99.98%
+    - generic: 全链路吞吐趋势
+    - generic: INGEST / TRANSFORM / SERVE · 最近 12 小时
+    - generic: 数据源健康度
+    - generic: 核心数据源实时可用率
+    - generic: 任务类型分布
+    - generic: 当前 1,284 个活跃任务
+    - generic: 活跃节点
+    - generic: "128"
+    - generic: 个
+    - generic: ↑ 8.4%
+    - generic: 较昨日
+    - generic: 今日数据量
+    - generic: "18.72"
+    - generic: TB
+    - generic: ↑ 12.7%
+    - generic: 累计写入
+    - generic: 调度成功率
+    - generic: "99.82"
+    - generic: "%"
+    - generic: ↑ 0.36%
+    - generic: 近 24h
+    - generic: 活跃告警
+    - generic: "7"
+    - generic: 条
+    - generic: ↓ 22.2%
+    - generic: 持续下降
+    - generic: 全国数据链路态势
+    - generic: 实时节点 · 跨区域传输 · 计算与质量链路
+    - generic: ACTIVE NODE
+    - generic: DATA FLOW
+    - generic: 数据质量趋势
+    - generic: 完整性 / 唯一性 / 一致性综合得分
+    - generic: 异常任务 TOP 5
+    - generic: 按最近 24 小时失败次数排序
+    - generic: 计算资源占用
+    - generic: 实时工作负载构成
+    - generic: 实时链路事件流
+    - generic: LIVE DATA PIPELINE EVENTS
+    - generic: Kafka · order_stream
+    - generic: 126K/s
+    - generic: 上海 → 北京
+    - generic: MySQL · crm_prod
+    - generic: 99.96%
+    - generic: 同步 SLA
+    - generic: Quality · user_profile
+    - generic: "98.7"
+    - generic: 综合质量分
+    - generic: Flink · risk_realtime
+    - generic: 42ms
+    - generic: P95 延迟
+    - generic: Schedule · ads_sales
+    - generic: RUNNING
+    - generic: 08:42:16
+    - generic: Oracle · finance
+    - generic: RETRY
+    - generic: 重试 1/3
+    - generic: StarRocks · ads
+    - generic: 1.8TB
+    - generic: 今日写入
+    - generic: Dataset · customer360
+    - generic: V18
+    - generic: 已发布
+    - generic: Kafka · order_stream
+    - generic: 126K/s
+    - generic: 上海 → 北京
+    - generic: MySQL · crm_prod
+    - generic: 99.96%
+    - generic: 同步 SLA
+    - generic: Quality · user_profile
+    - generic: "98.7"
+    - generic: 综合质量分
+    - generic: Flink · risk_realtime
+    - generic: 42ms
+    - generic: P95 延迟
+    - generic: Schedule · ads_sales
+    - generic: RUNNING
+    - generic: 08:42:16
+    - generic: Oracle · finance
+    - generic: RETRY
+    - generic: 重试 1/3
+    - generic: StarRocks · ads
+    - generic: 1.8TB
+    - generic: 今日写入
+    - generic: Dataset · customer360
+    - generic: V18
+    - generic: 已发布
+    - button "预览":
+      - generic: 预览
+    - button "使用模板":
+      - generic: 使用模板
+    - generic: 数据智能指挥中心
+    - generic: 中心链路地图、左右趋势分析与底部实时状态流组成的高视觉冲击数字化大屏。
+    - generic: 数据中心
+    - generic: ·
+    - generic: 1920 × 1080
+    - generic: ·
+    - generic: 15 个组件
+    - button "使 用":
+      - generic: 使 用
+  - article:
+    - generic: 经营数据驾驶舱
+    - generic: 数据更新时间 09:20
+    - generic: 本月营收
+    - generic: 2,864.5
+    - generic: 万元
+    - generic: ↑ 12.6%
+    - generic: 较上月
+    - generic: 订单数量
+    - generic: 18,642
+    - generic: 单
+    - generic: ↑ 8.2%
+    - generic: 较上月
+    - generic: 活跃客户
+    - generic: 5,328
+    - generic: 人
+    - generic: ↑ 4.1%
+    - generic: 较上月
+    - generic: 转化率
+    - generic: "38.7"
+    - generic: "%"
+    - generic: ↑ 1.8%
+    - generic: 较上月
+    - generic: 营收趋势
+    - generic: 最近 7 个月经营收入变化
+    - generic: 渠道贡献
+    - generic: 本月营收渠道分布
+    - generic: 产品销售排行
+    - generic: 区域经营排行
+    - table:
+      - rowgroup:
+        - row "排名 区域 营收（万） 同比":
+          - columnheader "排名"
+          - columnheader "区域"
+          - columnheader "营收（万）"
+          - columnheader "同比"
+      - rowgroup:
+        - row "1 华东 826.4 +18.2%":
+          - cell "1"
+          - cell "华东"
+          - cell "826.4"
+          - cell "+18.2%"
+        - row "2 华南 642.8 +12.9%":
+          - cell "2"
+          - cell "华南"
+          - cell "642.8"
+          - cell "+12.9%"
+        - row "3 华北 511.6 +8.4%":
+          - cell "3"
+          - cell "华北"
+          - cell "511.6"
+          - cell "+8.4%"
+        - row "4 西南 398.7 +6.1%":
+          - cell "4"
+          - cell "西南"
+          - cell "398.7"
+          - cell "+6.1%"
+        - row "5 华中 315.0 +4.7%":
+          - cell "5"
+          - cell "华中"
+          - cell "315.0"
+          - cell "+4.7%"
+    - button "预览":
+      - generic: 预览
+    - button "使用模板":
+      - generic: 使用模板
+    - generic: 经营驾驶舱
+    - generic: 面向经营分析与管理汇报的深色驾驶舱模板。
+    - generic: 经营分析
+    - generic: ·
+    - generic: 1920 × 1080
+    - generic: ·
+    - generic: 10 个组件
+    - button "使 用":
+      - generic: 使 用
+  - article:
+    - generic: Yak Ops · 数据中心
+    - generic: ● 系统运行正常
+    - generic: 数据源
+    - generic: "42"
+    - generic: 个
+    - generic: 在线 39 · 异常 3
+    - generic: 调度任务
+    - generic: "268"
+    - generic: 个
+    - generic: ↑ 6.4%
+    - generic: 近 30 天
+    - generic: 今日成功率
+    - generic: "98.6"
+    - generic: "%"
+    - generic: ↑ 0.7%
+    - generic: 较昨日
+    - generic: 异常任务
+    - generic: "7"
+    - generic: 个
+    - generic: ↓ 22.2%
+    - generic: 较昨日减少
+    - generic: 任务执行趋势
+    - generic: 最近 24 小时任务运行情况
+    - generic: 数据源类型
+    - generic: 任务耗时分布
+    - generic: 最近运行事件
+    - table:
+      - rowgroup:
+        - row "任务名称 类型 时间 状态":
+          - columnheader "任务名称"
+          - columnheader "类型"
+          - columnheader "时间"
+          - columnheader "状态"
+      - rowgroup:
+        - row "ods_order_sync 离线同步 09:18:26 待处理":
+          - cell "ods_order_sync"
+          - cell "离线同步"
+          - cell "09:18:26"
+          - cell "待处理"
+        - row "dwd_user_profile SQL 08:52:10 重试中":
+          - cell "dwd_user_profile"
+          - cell "SQL"
+          - cell "08:52:10"
+          - cell "重试中"
+        - row "ads_sales_daily SQL 08:31:45 待处理":
+          - cell "ads_sales_daily"
+          - cell "SQL"
+          - cell "08:31:45"
+          - cell "待处理"
+        - row "kafka_order_stream 实时同步 07:46:03 已恢复":
+          - cell "kafka_order_stream"
+          - cell "实时同步"
+          - cell "07:46:03"
+          - cell "已恢复"
+    - button "预览":
+      - generic: 预览
+    - button "使用模板":
+      - generic: 使用模板
+    - generic: 数据中心
+    - generic: 面向 DataOps 运行态展示的数据中心大屏模板。
+    - generic: 数据中心
+    - generic: ·
+    - generic: 1920 × 1080
+    - generic: ·
+    - generic: 10 个组件
+    - button "使 用":
+      - generic: 使 用
+  - article:
+    - generic: 业务数据概览
+    - generic: 2026 年 8 月 · 实时数据
+    - generic: 累计收入
+    - generic: 8,642.3
+    - generic: 万元
+    - generic: ↑ 9.8%
+    - generic: 同比
+    - generic: 新增用户
+    - generic: 3,268
+    - generic: 人
+    - generic: ↑ 5.4%
+    - generic: 同比
+    - generic: 订单总量
+    - generic: 48,215
+    - generic: 单
+    - generic: ↑ 3.1%
+    - generic: 同比
+    - generic: 退款率
+    - generic: "1.7"
+    - generic: "%"
+    - generic: ↓ 0.4%
+    - generic: 同比下降
+    - generic: 核心指标趋势
+    - generic: 品类销售
+    - generic: 重点产品表现
+    - table:
+      - rowgroup:
+        - row "产品 销售额（万） 订单数 转化率 同比":
+          - columnheader "产品"
+          - columnheader "销售额（万）"
+          - columnheader "订单数"
+          - columnheader "转化率"
+          - columnheader "同比"
+      - rowgroup:
+        - row "产品 A 286.4 3826 42.6% +18.4%":
+          - cell "产品 A"
+          - cell "286.4"
+          - cell "3826"
+          - cell "42.6%"
+          - cell "+18.4%"
+        - row "产品 B 241.8 3215 39.8% +12.1%":
+          - cell "产品 B"
+          - cell "241.8"
+          - cell "3215"
+          - cell "39.8%"
+          - cell "+12.1%"
+        - row "产品 C 198.6 2760 36.2% +8.7%":
+          - cell "产品 C"
+          - cell "198.6"
+          - cell "2760"
+          - cell "36.2%"
+          - cell "+8.7%"
+        - row "产品 D 164.2 2198 33.5% +5.2%":
+          - cell "产品 D"
+          - cell "164.2"
+          - cell "2198"
+          - cell "33.5%"
+          - cell "+5.2%"
+    - button "预览":
+      - generic: 预览
+    - button "使用模板":
+      - generic: 使用模板
+    - generic: 极简数据看板
+    - generic: 适合快速汇报与通用经营指标展示的浅色模板。
+    - generic: 通用
+    - generic: ·
+    - generic: 1920 × 1080
+    - generic: ·
+    - generic: 9 个组件
+    - button "使 用":
+      - generic: 使 用

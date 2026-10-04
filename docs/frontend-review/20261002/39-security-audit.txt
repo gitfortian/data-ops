@@ -1,0 +1,179 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全" [expanded]:
+      - generic "数据安全"
+    - link "数据安全总览":
+      - /url: /data-security/overview
+      - generic "数据安全总览"
+    - link "分级分类":
+      - /url: /data-security/classification
+      - generic "分级分类"
+    - link "数据访问策略":
+      - /url: /data-security/access
+      - generic "数据访问策略"
+    - link "数据脱敏":
+      - /url: /data-security/masking
+      - generic "数据脱敏"
+    - link "访问审计":
+      - /url: /data-security/audit
+      - generic "访问审计"
+    - link "合规管理":
+      - /url: /data-security/compliance
+      - generic "合规管理"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 访问审计
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 访问审计
+  - generic: 数据访问留痕：谁、访问了什么、如何裁决与脱敏
+  - textbox "按主体搜索"
+  - textbox "按资源键搜索"
+  - combobox
+  - generic: 按裁决
+  - textbox "开始日期"
+  - generic "to":
+    - img "swap-right":
+  - textbox "结束日期"
+  - img "calendar":
+  - table:
+    - rowgroup:
+      - row "时间 主体 资源 操作 等级 裁决 脱敏 来源":
+        - columnheader "时间"
+        - columnheader "主体"
+        - columnheader "资源"
+        - columnheader "操作"
+        - columnheader "等级"
+        - columnheader "裁决"
+        - columnheader "脱敏"
+        - columnheader "来源"
+    - rowgroup:
+      - row "2026-09-19 11:58:20 root COLUMN:-:-:t_customer:phone READ L3 需审批 明文 SECURITY":
+        - cell "2026-09-19 11:58:20"
+        - cell "root"
+        - cell "COLUMN:-:-:t_customer:phone"
+        - cell "READ"
+        - cell "L3"
+        - cell "需审批":
+          - generic: 需审批
+        - cell "明文"
+        - cell "SECURITY"
+      - row "2026-09-19 11:52:43 root anything READ - 放行 明文 SECURITY":
+        - cell "2026-09-19 11:52:43"
+        - cell "root"
+        - cell "anything"
+        - cell "READ"
+        - cell "-"
+        - cell "放行":
+          - generic: 放行
+        - cell "明文"
+        - cell "SECURITY"
+      - row "2026-09-19 11:52:43 root t_customer.phone READ - 放行 明文 SECURITY":
+        - cell "2026-09-19 11:52:43"
+        - cell "root"
+        - cell "t_customer.phone"
+        - cell "READ"
+        - cell "-"
+        - cell "放行":
+          - generic: 放行
+        - cell "明文"
+        - cell "SECURITY"
+      - row "2026-09-19 11:52:43 root ds:db:tbl:col READ - 放行 明文 SECURITY":
+        - cell "2026-09-19 11:52:43"
+        - cell "root"
+        - cell "ds:db:tbl:col"
+        - cell "READ"
+        - cell "-"
+        - cell "放行":
+          - generic: 放行
+        - cell "明文"
+        - cell "SECURITY"
+      - row "2026-09-19 11:52:43 root x READ - 放行 明文 SECURITY":
+        - cell "2026-09-19 11:52:43"
+        - cell "root"
+        - cell "x"
+        - cell "READ"
+        - cell "-"
+        - cell "放行":
+          - generic: 放行
+        - cell "明文"
+        - cell "SECURITY"
+      - row "2026-09-19 11:16:48 root x READ - 放行 明文 SECURITY":
+        - cell "2026-09-19 11:16:48"
+        - cell "root"
+        - cell "x"
+        - cell "READ"
+        - cell "-"
+        - cell "放行":
+          - generic: 放行
+        - cell "明文"
+        - cell "SECURITY"
+  - list:
+    - listitem: 共 6 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "下一页":
+      - button "right" [disabled]:
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "20 条/页"
+  - generic: 访问热点主体
+  - generic: root
+  - generic: "0"

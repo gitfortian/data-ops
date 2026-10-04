@@ -1,0 +1,906 @@
+[
+  {
+    "id": "home",
+    "path": "/home",
+    "title": "首页",
+    "hidden": false,
+    "evidence": [
+      "01-home-desktop",
+      "86-home-mobile"
+    ]
+  },
+  {
+    "id": "quick-create",
+    "path": "/create",
+    "title": "快速创建",
+    "hidden": true,
+    "evidence": [
+      "65-create"
+    ]
+  },
+  {
+    "id": "ai-agent",
+    "path": "/ai-agent",
+    "title": "智能助手",
+    "hidden": true,
+    "evidence": [
+      "66-ai-agent"
+    ]
+  },
+  {
+    "id": "data-source",
+    "path": "/data-source",
+    "title": "数据源",
+    "hidden": false,
+    "evidence": [
+      "02-data-source",
+      "80-datasource-form",
+      "81-datasource-fields",
+      "88-drawer-mobile",
+      "89-datasource-list",
+      "87-datasource-mobile"
+    ]
+  },
+  {
+    "id": "sql-execution-audit",
+    "path": "/sql-execution-audit",
+    "title": "SQL 执行记录",
+    "hidden": false,
+    "evidence": [
+      "06-sql-audit"
+    ]
+  },
+  {
+    "id": "dashboard",
+    "path": "/dashboard",
+    "title": "仪表盘",
+    "hidden": false,
+    "evidence": [
+      "56-dashboards"
+    ]
+  },
+  {
+    "id": "dashboard-new",
+    "path": "/dashboard/new",
+    "title": "新建仪表盘",
+    "hidden": true,
+    "evidence": [
+      "70-dashboard-editor"
+    ]
+  },
+  {
+    "id": "dashboard-editor",
+    "path": "/dashboard/:id/edit",
+    "title": "仪表盘编辑",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "dashboard-viewer",
+    "path": "/dashboard/:id",
+    "title": "仪表盘查看",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "consumption-catalog",
+    "path": "/data-analysis/consumption",
+    "title": "数据产品目录",
+    "hidden": false,
+    "evidence": [
+      "49-consumption"
+    ]
+  },
+  {
+    "id": "consumption-detail",
+    "path": "/data-analysis/consumption/:productKey",
+    "title": "数据产品详情",
+    "hidden": true,
+    "evidence": [
+      "90-consumption-detail"
+    ]
+  },
+  {
+    "id": "dataset-management",
+    "path": "/dataset",
+    "title": "数据集管理",
+    "hidden": false,
+    "evidence": [
+      "50-datasets"
+    ]
+  },
+  {
+    "id": "dataset-management-detail",
+    "path": "/dataset/:id",
+    "title": "数据集详情",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-analysis-catalog",
+    "path": "/data-analysis/data-catalog",
+    "title": "数据目录",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-analysis-lineage",
+    "path": "/data-analysis/lineage",
+    "title": "数据血缘",
+    "hidden": false,
+    "evidence": [
+      "30-lineage"
+    ]
+  },
+  {
+    "id": "digital-screen",
+    "path": "/digital-screen",
+    "title": "数字大屏",
+    "hidden": false,
+    "evidence": [
+      "57-digital-screens"
+    ]
+  },
+  {
+    "id": "digital-screen-new",
+    "path": "/digital-screen/new",
+    "title": "新建数字化大屏",
+    "hidden": true,
+    "evidence": [
+      "69-screen-create"
+    ]
+  },
+  {
+    "id": "digital-screen-editor",
+    "path": "/digital-screen/:id/edit",
+    "title": "数字化大屏编辑",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "digital-screen-viewer",
+    "path": "/digital-screen/:id",
+    "title": "数字化大屏预览",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-analysis-chart",
+    "path": "/data-analysis/chart-analysis",
+    "title": "图表分析",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-service-api",
+    "path": "/data-service",
+    "title": "API 服务目录",
+    "hidden": false,
+    "evidence": [
+      "51-api-services"
+    ]
+  },
+  {
+    "id": "data-service-api-detail",
+    "path": "/data-service/api/:id",
+    "title": "API 详情",
+    "hidden": true,
+    "evidence": [
+      "71-api-detail"
+    ]
+  },
+  {
+    "id": "data-service-access",
+    "path": "/data-service/access",
+    "title": "调用方与密钥",
+    "hidden": false,
+    "evidence": [
+      "52-api-access"
+    ]
+  },
+  {
+    "id": "data-service-debug",
+    "path": "/data-service/debug",
+    "title": "API 调试",
+    "hidden": false,
+    "evidence": [
+      "53-api-debug"
+    ]
+  },
+  {
+    "id": "data-service-overview",
+    "path": "/data-service/overview",
+    "title": "运行概览",
+    "hidden": false,
+    "evidence": [
+      "54-api-overview"
+    ]
+  },
+  {
+    "id": "data-service-logs",
+    "path": "/data-service/logs",
+    "title": "调用记录",
+    "hidden": false,
+    "evidence": [
+      "55-api-logs"
+    ]
+  },
+  {
+    "id": "settings",
+    "path": "/settings",
+    "title": "设置",
+    "hidden": true,
+    "evidence": [
+      "64-settings"
+    ]
+  },
+  {
+    "id": "batch-link-up",
+    "path": "/sync/batch-link-up",
+    "title": "离线同步",
+    "hidden": false,
+    "evidence": [
+      "03-batch-sync"
+    ]
+  },
+  {
+    "id": "realtime-sync-detail",
+    "path": "/sync/realtime/:id/detail",
+    "title": "实时同步配置",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "realtime-sync",
+    "path": "/sync/realtime",
+    "title": "实时同步",
+    "hidden": false,
+    "evidence": [
+      "04-realtime-sync"
+    ]
+  },
+  {
+    "id": "batch-link-up-detail",
+    "path": "/sync/batch-link-up/:id/detail",
+    "title": "离线同步详情",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "batch-link-up-single",
+    "path": "/sync/batch-link-up/:id/config/single",
+    "title": "单表同步配置",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "batch-link-up-multi",
+    "path": "/sync/batch-link-up/:id/config/multi",
+    "title": "多表同步配置",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "batch-link-up-script",
+    "path": "/sync/batch-link-up/:id/config/script",
+    "title": "脚本同步配置",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-development",
+    "path": "/data-development",
+    "title": "开发工作台",
+    "hidden": false,
+    "evidence": [
+      "17-development",
+      "79-development-editor"
+    ]
+  },
+  {
+    "id": "data-development-release",
+    "path": "/data-development/releases",
+    "title": "发布中心",
+    "hidden": false,
+    "evidence": [
+      "18-releases"
+    ]
+  },
+  {
+    "id": "data-development-execution",
+    "path": "/data-development/executions",
+    "title": "开发运行记录",
+    "hidden": false,
+    "evidence": [
+      "19-development-runs"
+    ]
+  },
+  {
+    "id": "data-development-task-new",
+    "path": "/data-development/task/new",
+    "title": "新建开发任务",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-development-task",
+    "path": "/data-development/task/:id",
+    "title": "开发任务配置",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "workflow-definition",
+    "path": "/workflow/definitions",
+    "title": "工作流定义",
+    "hidden": false,
+    "evidence": [
+      "20-workflows"
+    ]
+  },
+  {
+    "id": "workflow-definition-editor",
+    "path": "/workflow/definition/:id",
+    "title": "工作流配置",
+    "hidden": true,
+    "evidence": [
+      "77-workflow-editor",
+      "78-workflow-node"
+    ]
+  },
+  {
+    "id": "workflow-schedules",
+    "path": "/workflow/definition/:id/schedule",
+    "title": "调度配置",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "workflow-instances",
+    "path": "/workflow/instances",
+    "title": "工作流实例",
+    "hidden": false,
+    "evidence": [
+      "21-workflow-runs"
+    ]
+  },
+  {
+    "id": "workflow-instance-detail",
+    "path": "/workflow/instances/:executionId",
+    "title": "工作流实例详情",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "modeling-workspace",
+    "path": "/modeling",
+    "title": "模型工作台",
+    "hidden": false,
+    "evidence": [
+      "12-modeling"
+    ]
+  },
+  {
+    "id": "semantic-standards",
+    "path": "/semantic/standards",
+    "title": "数据标准",
+    "hidden": false,
+    "evidence": [
+      "09-data-standards"
+    ]
+  },
+  {
+    "id": "semantic-domains",
+    "path": "/semantic/domains",
+    "title": "业务域",
+    "hidden": false,
+    "evidence": [
+      "07-business-domains"
+    ]
+  },
+  {
+    "id": "semantic-processes",
+    "path": "/semantic/processes",
+    "title": "业务过程",
+    "hidden": false,
+    "evidence": [
+      "08-business-processes"
+    ]
+  },
+  {
+    "id": "semantic-process-edit",
+    "path": "/semantic/processes/:id/edit",
+    "title": "业务过程编辑",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "semantic-fields",
+    "path": "/semantic/fields",
+    "title": "标准字段",
+    "hidden": false,
+    "evidence": [
+      "10-standard-fields"
+    ]
+  },
+  {
+    "id": "semantic-layers",
+    "path": "/semantic/layers",
+    "title": "数仓分层",
+    "hidden": false,
+    "evidence": [
+      "11-warehouse-layers"
+    ]
+  },
+  {
+    "id": "mdm-overview",
+    "path": "/mdm/overview",
+    "title": "主数据总览",
+    "hidden": false,
+    "evidence": [
+      "44-mdm-overview"
+    ]
+  },
+  {
+    "id": "mdm-modeling",
+    "path": "/mdm/modeling",
+    "title": "主数据建模",
+    "hidden": false,
+    "evidence": [
+      "45-mdm-modeling"
+    ]
+  },
+  {
+    "id": "mdm-identification",
+    "path": "/mdm/identification",
+    "title": "主数据识别",
+    "hidden": false,
+    "evidence": [
+      "46-mdm-identification"
+    ]
+  },
+  {
+    "id": "mdm-cleansing",
+    "path": "/mdm/cleansing",
+    "title": "主数据清洗",
+    "hidden": false,
+    "evidence": [
+      "47-mdm-cleansing"
+    ]
+  },
+  {
+    "id": "mdm-approval",
+    "path": "/mdm/approval",
+    "title": "主数据变更",
+    "hidden": false,
+    "evidence": [
+      "48-mdm-approval"
+    ]
+  },
+  {
+    "id": "mdm-entity-detail",
+    "path": "/mdm/modeling/:id",
+    "title": "主数据实体详情",
+    "hidden": true,
+    "evidence": [
+      "72-mdm-detail"
+    ]
+  },
+  {
+    "id": "metric-manage",
+    "path": "/metric/manage",
+    "title": "指标管理",
+    "hidden": false,
+    "evidence": [
+      "13-metrics"
+    ]
+  },
+  {
+    "id": "metric-detail",
+    "path": "/metric/manage/:id",
+    "title": "指标详情",
+    "hidden": true,
+    "evidence": [
+      "92-metric-detail"
+    ]
+  },
+  {
+    "id": "metric-lineage",
+    "path": "/metric/lineage",
+    "title": "指标血缘",
+    "hidden": false,
+    "evidence": [
+      "14-metric-lineage"
+    ]
+  },
+  {
+    "id": "metric-impact",
+    "path": "/metric/impact",
+    "title": "影响分析",
+    "hidden": false,
+    "evidence": [
+      "15-metric-impact"
+    ]
+  },
+  {
+    "id": "metric-service",
+    "path": "/metric/service",
+    "title": "指标标签与统计",
+    "hidden": false,
+    "evidence": [
+      "16-metric-statistics"
+    ]
+  },
+  {
+    "id": "data-lifecycle-policy",
+    "path": "/data-lifecycle/policy",
+    "title": "生命周期策略",
+    "hidden": false,
+    "evidence": [
+      "41-lifecycle-policy"
+    ]
+  },
+  {
+    "id": "data-lifecycle-monitor",
+    "path": "/data-lifecycle/monitor",
+    "title": "TTL 运行监控",
+    "hidden": false,
+    "evidence": [
+      "42-lifecycle-monitor"
+    ]
+  },
+  {
+    "id": "data-lifecycle-storage",
+    "path": "/data-lifecycle/storage",
+    "title": "存储统计",
+    "hidden": false,
+    "evidence": [
+      "43-lifecycle-storage"
+    ]
+  },
+  {
+    "id": "data-security-overview",
+    "path": "/data-security/overview",
+    "title": "数据安全总览",
+    "hidden": false,
+    "evidence": [
+      "35-security-overview"
+    ]
+  },
+  {
+    "id": "data-security-classification",
+    "path": "/data-security/classification",
+    "title": "分级分类",
+    "hidden": false,
+    "evidence": [
+      "36-classification"
+    ]
+  },
+  {
+    "id": "data-security-access",
+    "path": "/data-security/access",
+    "title": "数据访问策略",
+    "hidden": false,
+    "evidence": [
+      "37-security-access"
+    ]
+  },
+  {
+    "id": "data-security-masking",
+    "path": "/data-security/masking",
+    "title": "数据脱敏",
+    "hidden": false,
+    "evidence": [
+      "38-masking"
+    ]
+  },
+  {
+    "id": "data-security-audit",
+    "path": "/data-security/audit",
+    "title": "访问审计",
+    "hidden": false,
+    "evidence": [
+      "39-security-audit"
+    ]
+  },
+  {
+    "id": "data-security-compliance",
+    "path": "/data-security/compliance",
+    "title": "合规管理",
+    "hidden": false,
+    "evidence": [
+      "40-compliance"
+    ]
+  },
+  {
+    "id": "approval-todo",
+    "path": "/approval/todo",
+    "title": "我的待办",
+    "hidden": false,
+    "evidence": [
+      "22-approvals"
+    ]
+  },
+  {
+    "id": "approval-flows",
+    "path": "/approval/flows",
+    "title": "审批流程配置",
+    "hidden": false,
+    "evidence": [
+      "23-approval-flows"
+    ]
+  },
+  {
+    "id": "approval-detail",
+    "path": "/approval/instance/:id",
+    "title": "审批单详情",
+    "hidden": true,
+    "evidence": [
+      "91-approval-detail"
+    ]
+  },
+  {
+    "id": "data-metadata-overview",
+    "path": "/data-metadata/overview",
+    "title": "元数据概览",
+    "hidden": false,
+    "evidence": [
+      "28-metadata-overview"
+    ]
+  },
+  {
+    "id": "data-metadata-collect",
+    "path": "/data-metadata/collect",
+    "title": "采集与对账",
+    "hidden": false,
+    "evidence": [
+      "29-metadata-collection"
+    ]
+  },
+  {
+    "id": "data-asset-overview",
+    "path": "/data-asset/overview",
+    "title": "资产概览",
+    "hidden": false,
+    "evidence": [
+      "24-asset-overview"
+    ]
+  },
+  {
+    "id": "data-asset-catalog",
+    "path": "/data-asset/catalog",
+    "title": "资产目录",
+    "hidden": false,
+    "evidence": [
+      "25-asset-catalog",
+      "75-metadata-entities",
+      "76-metadata-detail",
+      "82-asset-1280",
+      "83-asset-1024",
+      "84-asset-768",
+      "85-asset-mobile"
+    ]
+  },
+  {
+    "id": "data-asset-inventory",
+    "path": "/data-asset/inventory",
+    "title": "盘点上架",
+    "hidden": false,
+    "evidence": [
+      "26-asset-inventory"
+    ]
+  },
+  {
+    "id": "data-asset-taxonomy",
+    "path": "/data-asset/taxonomy",
+    "title": "目录与标签",
+    "hidden": false,
+    "evidence": [
+      "27-taxonomy"
+    ]
+  },
+  {
+    "id": "data-asset-detail",
+    "path": "/data-asset/detail/:id",
+    "title": "资产详情",
+    "hidden": true,
+    "evidence": [
+      "73-asset-drawer",
+      "74-asset-sections"
+    ]
+  },
+  {
+    "id": "modeling-model-detail",
+    "path": "/modeling/models/:id",
+    "title": "模型详情",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "modeling-model-mapping",
+    "path": "/modeling/models/:id/mapping",
+    "title": "来源映射",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "modeling-model-layer-mapping",
+    "path": "/modeling/models/:id/layer-mapping",
+    "title": "字段分层映射",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "modeling-mainline",
+    "path": "/modeling/mainline",
+    "title": "业务过程主线视图",
+    "hidden": true,
+    "evidence": [
+      "67-modeling-mainline"
+    ]
+  },
+  {
+    "id": "modeling-impact",
+    "path": "/modeling/impact",
+    "title": "变更影响分析",
+    "hidden": true,
+    "evidence": [
+      "68-modeling-impact"
+    ]
+  },
+  {
+    "id": "resource-management",
+    "path": "/resource-management",
+    "title": "文件资源",
+    "hidden": false,
+    "evidence": [
+      "05-resources"
+    ]
+  },
+  {
+    "id": "data-quality-overview",
+    "path": "/data-quality/overview",
+    "title": "质量总览",
+    "hidden": false,
+    "evidence": [
+      "31-quality-overview"
+    ]
+  },
+  {
+    "id": "data-quality-table-config",
+    "path": "/data-quality/table-config",
+    "title": "数据表监控",
+    "hidden": false,
+    "evidence": [
+      "32-quality-tables"
+    ]
+  },
+  {
+    "id": "data-quality-monitor-create",
+    "path": "/data-quality/monitor/create",
+    "title": "新增监控",
+    "hidden": true,
+    "evidence": [
+      "94-quality-monitor-form"
+    ]
+  },
+  {
+    "id": "data-quality-monitor-detail",
+    "path": "/data-quality/monitor/:id",
+    "title": "规则管理",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-quality-monitor-edit",
+    "path": "/data-quality/monitor/:id/edit",
+    "title": "编辑监控",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "data-quality-execution",
+    "path": "/data-quality/execution",
+    "title": "质量检查记录",
+    "hidden": false,
+    "evidence": [
+      "33-quality-runs"
+    ]
+  },
+  {
+    "id": "data-quality-execution-detail",
+    "path": "/data-quality/execution/:executionNo",
+    "title": "质量检查详情",
+    "hidden": true,
+    "evidence": [
+      "93-quality-detail"
+    ]
+  },
+  {
+    "id": "data-quality-rule-template",
+    "path": "/data-quality/rule-template",
+    "title": "规则模板",
+    "hidden": false,
+    "evidence": [
+      "34-rule-templates"
+    ]
+  },
+  {
+    "id": "system-users",
+    "path": "/system/users",
+    "title": "用户管理",
+    "hidden": false,
+    "evidence": [
+      "59-users"
+    ]
+  },
+  {
+    "id": "system-departments",
+    "path": "/system/departments",
+    "title": "部门管理",
+    "hidden": false,
+    "evidence": [
+      "60-departments"
+    ]
+  },
+  {
+    "id": "system-roles",
+    "path": "/system/roles",
+    "title": "角色与权限",
+    "hidden": false,
+    "evidence": [
+      "61-roles"
+    ]
+  },
+  {
+    "id": "system-permissions",
+    "path": "/system/permissions",
+    "title": "权限管理",
+    "hidden": true,
+    "evidence": []
+  },
+  {
+    "id": "system-security-projects",
+    "path": "/system/projects",
+    "title": "项目空间",
+    "hidden": false,
+    "gate": "projectSpace",
+    "evidence": [
+      "58-projects"
+    ]
+  },
+  {
+    "id": "system-resource-permissions",
+    "path": "/system/resource-permissions",
+    "title": "资源授权",
+    "hidden": false,
+    "gate": "resourceAuthorization",
+    "evidence": []
+  },
+  {
+    "id": "system-configs",
+    "path": "/system/configs",
+    "title": "系统配置",
+    "hidden": false,
+    "gate": "systemConfig",
+    "evidence": []
+  },
+  {
+    "id": "system-operation-logs",
+    "path": "/system/oplogs",
+    "title": "操作日志",
+    "hidden": false,
+    "evidence": [
+      "62-operation-logs"
+    ]
+  },
+  {
+    "id": "system-messages",
+    "path": "/system/messages",
+    "title": "消息中心",
+    "hidden": true,
+    "evidence": [
+      "63-messages"
+    ]
+  }
+]

@@ -1,0 +1,412 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义":
+      - generic "业务语义"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标" [expanded]:
+      - generic "指标"
+    - link "指标管理":
+      - /url: /metric/manage
+      - generic "指标管理"
+    - link "指标血缘":
+      - /url: /metric/lineage
+      - generic "指标血缘"
+    - link "影响分析":
+      - /url: /metric/impact
+      - generic "影响分析"
+    - link "指标标签与统计":
+      - /url: /metric/service
+      - generic "指标标签与统计"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 指标管理
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 指标管理
+  - generic: 定义和管理原子、派生、复合指标，支撑数据分析与业务决策
+  - button "新建指标":
+    - generic: 新建指标
+  - generic: 指标总数
+  - generic: "20"
+  - generic: 原子指标
+  - generic: "11"
+  - generic: 派生指标
+  - generic: "4"
+  - generic: 复合指标
+  - generic: "5"
+  - searchbox "按编码或名称搜索"
+  - button "search":
+    - img "search":
+  - combobox
+  - generic: 指标类型
+  - combobox
+  - generic: 状态
+  - combobox
+  - generic: 业务域
+  - combobox
+  - generic: 标签
+  - searchbox "负责人"
+  - button "search":
+    - img "search":
+  - button "只看我的":
+    - generic: 只看我的
+  - table:
+    - rowgroup:
+      - row "指标编码 指标名称 业务域 类型 业务过程 口径 引用原子指标 数据来源 DWD 统计周期 状态 发布版本 当前版本 负责人 更新时间 操作":
+        - columnheader "指标编码"
+        - columnheader "指标名称"
+        - columnheader "业务域"
+        - columnheader "类型"
+        - columnheader "业务过程"
+        - columnheader "口径"
+        - columnheader "引用原子指标"
+        - columnheader "数据来源 DWD"
+        - columnheader "统计周期"
+        - columnheader "状态"
+        - columnheader "发布版本"
+        - columnheader "当前版本"
+        - columnheader "负责人"
+        - columnheader "更新时间"
+        - columnheader "操作"
+    - rowgroup:
+      - row "discount_rate_1d 优惠占比 交易域/订单 复合指标 - - - - 日 启用 未发布 3 - 2026-09-21 16:01:44 详情 编辑 停用 删除":
+        - cell "discount_rate_1d":
+          - button "discount_rate_1d":
+            - generic: discount_rate_1d
+        - cell "优惠占比"
+        - cell "交易域/订单"
+        - cell "复合指标":
+          - generic: 复合指标
+        - cell "-"
+        - cell "-"
+        - cell "-"
+        - cell "-"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "3"
+        - cell "-"
+        - cell "2026-09-21 16:01:44"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "user_avg_ord_cnt_1d 人均下单量 交易域/订单 复合指标 - 人均订单数（user_avg_order_cnt） - - 日 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "user_avg_ord_cnt_1d":
+          - button "user_avg_ord_cnt_1d":
+            - generic: user_avg_ord_cnt_1d
+        - cell "人均下单量"
+        - cell "交易域/订单"
+        - cell "复合指标":
+          - generic: 复合指标
+        - cell "-"
+        - cell "人均订单数（user_avg_order_cnt）"
+        - cell "-"
+        - cell "-"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "cancel_rate_1d 取消率 交易域/订单 复合指标 - 取消率（cancel_rate） - - 日 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "cancel_rate_1d":
+          - button "cancel_rate_1d":
+            - generic: cancel_rate_1d
+        - cell "取消率"
+        - cell "交易域/订单"
+        - cell "复合指标":
+          - generic: 复合指标
+        - cell "-"
+        - cell "取消率（cancel_rate）"
+        - cell "-"
+        - cell "-"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "pay_rate_1d 支付率 交易域/支付 复合指标 - 支付率（pay_rate） - - 日 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "pay_rate_1d":
+          - button "pay_rate_1d":
+            - generic: pay_rate_1d
+        - cell "支付率"
+        - cell "交易域/支付"
+        - cell "复合指标":
+          - generic: 复合指标
+        - cell "-"
+        - cell "支付率（pay_rate）"
+        - cell "-"
+        - cell "-"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "atv_1d 客单价 交易域/支付 复合指标 - 客单价（avg_order_amount） - - 日 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "atv_1d":
+          - button "atv_1d":
+            - generic: atv_1d
+        - cell "客单价"
+        - cell "交易域/支付"
+        - cell "复合指标":
+          - generic: 复合指标
+        - cell "-"
+        - cell "客单价（avg_order_amount）"
+        - cell "-"
+        - cell "-"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "sku_qty_1m 月商品销售件数 交易域/订单 派生指标 购买商品 - 商品销售件数 - 月 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "sku_qty_1m":
+          - button "sku_qty_1m":
+            - generic: sku_qty_1m
+        - cell "月商品销售件数"
+        - cell "交易域/订单"
+        - cell "派生指标":
+          - generic: 派生指标
+        - cell "购买商品"
+        - cell "-"
+        - cell "商品销售件数"
+        - cell "-"
+        - cell "月"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "pay_user_cnt_1m 月支付用户数 交易域/支付 派生指标 订单支付 - 支付用户数 - 月 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "pay_user_cnt_1m":
+          - button "pay_user_cnt_1m":
+            - generic: pay_user_cnt_1m
+        - cell "月支付用户数"
+        - cell "交易域/支付"
+        - cell "派生指标":
+          - generic: 派生指标
+        - cell "订单支付"
+        - cell "-"
+        - cell "支付用户数"
+        - cell "-"
+        - cell "月"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "ord_cnt_1w 周下单量 交易域/订单 派生指标 下单 - 下单量 - 周 启用 未发布 1 - 2026-09-20 12:32:13 详情 编辑 停用 删除":
+        - cell "ord_cnt_1w":
+          - button "ord_cnt_1w":
+            - generic: ord_cnt_1w
+        - cell "周下单量"
+        - cell "交易域/订单"
+        - cell "派生指标":
+          - generic: 派生指标
+        - cell "下单"
+        - cell "-"
+        - cell "下单量"
+        - cell "-"
+        - cell "周"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:13"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "pay_amt_1m 月支付金额 交易域/支付 派生指标 订单支付 - 支付金额 - 月 启用 未发布 1 - 2026-09-20 12:32:12 详情 编辑 停用 删除":
+        - cell "pay_amt_1m":
+          - button "pay_amt_1m":
+            - generic: pay_amt_1m
+        - cell "月支付金额"
+        - cell "交易域/支付"
+        - cell "派生指标":
+          - generic: 派生指标
+        - cell "订单支付"
+        - cell "-"
+        - cell "支付金额"
+        - cell "-"
+        - cell "月"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:32:12"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+      - row "cancel_ord_cnt_1d 取消订单数 交易域/订单 原子指标 订单取消 取消率（cancel_rate） - 订单支付表 日 启用 未发布 1 - 2026-09-20 12:31:48 详情 编辑 停用 删除":
+        - cell "cancel_ord_cnt_1d":
+          - button "cancel_ord_cnt_1d":
+            - generic: cancel_ord_cnt_1d
+        - cell "取消订单数"
+        - cell "交易域/订单"
+        - cell "原子指标":
+          - generic: 原子指标
+        - cell "订单取消"
+        - cell "取消率（cancel_rate）"
+        - cell "-"
+        - cell "订单支付表"
+        - cell "日"
+        - cell "启用":
+          - generic: 启用
+        - cell "未发布":
+          - generic: 未发布
+        - cell "1"
+        - cell "-"
+        - cell "2026-09-20 12:31:48"
+        - cell "详情 编辑 停用 删除":
+          - button "详情":
+            - generic: 详情
+          - button "编辑":
+            - generic: 编辑
+          - button "停用":
+            - generic: 停用
+          - button "删除":
+            - generic: 删除
+  - list:
+    - listitem: 共 20 条
+    - listitem "上一页":
+      - button "left" [disabled]:
+        - img "left":
+    - listitem "1":
+      - generic: "1"
+    - listitem "2":
+      - generic: "2"
+    - listitem "下一页":
+      - button "right":
+        - img "right":
+    - generic "页码":
+      - combobox "页码"
+      - generic "10 条/页"

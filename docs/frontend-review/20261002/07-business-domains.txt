@@ -1,0 +1,188 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模" [expanded]:
+      - generic "标准、指标与建模"
+    - button "业务语义" [expanded]:
+      - generic "业务语义"
+    - link "业务域":
+      - /url: /semantic/domains
+      - generic "业务域"
+    - link "业务过程":
+      - /url: /semantic/processes
+      - generic "业务过程"
+    - link "数据标准":
+      - /url: /semantic/standards
+      - generic "数据标准"
+    - link "标准字段":
+      - /url: /semantic/fields
+      - generic "标准字段"
+    - link "数仓分层":
+      - /url: /semantic/layers
+      - generic "数仓分层"
+    - link "模型工作台":
+      - /url: /modeling
+      - generic "模型工作台"
+    - button "指标":
+      - generic "指标"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 业务域
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 业务域
+  - generic: 按主题划分业务过程与建模主线（交易/用户/商品…），是派生建模的顶层入口
+  - button "新建根域":
+    - generic: 新建根域
+  - button "新建子域" [disabled]:
+    - generic: 新建子域
+  - textbox "for screen reader"
+  - tree:
+    - treeitem "holder minus-square 交易域 trade" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 交易域
+      - generic: trade
+    - treeitem "holder 订单 order":
+      - img "holder":
+      - generic: 订单
+      - generic: order
+    - treeitem "holder 支付 pay":
+      - img "holder":
+      - generic: 支付
+      - generic: pay
+    - treeitem "holder 退款 refund":
+      - img "holder":
+      - generic: 退款
+      - generic: refund
+    - treeitem "holder 用户域 user":
+      - img "holder":
+      - generic: 用户域
+      - generic: user
+    - treeitem "holder 公共域 common":
+      - img "holder":
+      - generic: 公共域
+      - generic: common
+    - treeitem "holder minus-square 商品域 product" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 商品域
+      - generic: product
+    - treeitem "holder 商品 item":
+      - img "holder":
+      - generic: 商品
+      - generic: item
+    - treeitem "holder 商品类目 category":
+      - img "holder":
+      - generic: 商品类目
+      - generic: category
+    - treeitem "holder minus-square 客户域 customer" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 客户域
+      - generic: customer
+    - treeitem "holder 客户档案 customer_profile":
+      - img "holder":
+      - generic: 客户档案
+      - generic: customer_profile
+    - treeitem "holder 客户历史 customer_scd":
+      - img "holder":
+      - generic: 客户历史
+      - generic: customer_scd
+    - treeitem "holder 收货地址 customer_addr":
+      - img "holder":
+      - generic: 收货地址
+      - generic: customer_addr
+    - treeitem "holder 会员域 member":
+      - img "holder":
+      - generic: 会员域
+      - generic: member
+    - treeitem "holder minus-square 营销域 marketing" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 营销域
+      - generic: marketing
+    - treeitem "holder 营销活动 activity":
+      - img "holder":
+      - generic: 营销活动
+      - generic: activity
+    - treeitem "holder 优惠券 coupon":
+      - img "holder":
+      - generic: 优惠券
+      - generic: coupon
+    - treeitem "holder minus-square 履约域 fulfil" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 履约域
+      - generic: fulfil
+    - treeitem "holder 发货配送 delivery":
+      - img "holder":
+      - generic: 发货配送
+      - generic: delivery
+    - treeitem "holder 库存 inventory":
+      - img "holder":
+      - generic: 库存
+      - generic: inventory
+    - treeitem "holder minus-square 售后域 aftersale" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 售后域
+      - generic: aftersale
+    - treeitem "holder 售后工单 ticket":
+      - img "holder":
+      - generic: 售后工单
+      - generic: ticket
+    - treeitem "holder minus-square 结算域 settlement" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 结算域
+      - generic: settlement
+    - treeitem "holder 结算单 settle":
+      - img "holder":
+      - generic: 结算单
+      - generic: settle
+    - treeitem "holder minus-square 评价域 review" [expanded]:
+      - img "holder":
+      - img "minus-square":
+      - generic: 评价域
+      - generic: review
+    - treeitem "holder 商品评价 product_review":
+      - img "holder":
+      - generic: 商品评价
+      - generic: product_review
+    - treeitem "holder 风控合规域 risk":
+      - img "holder":
+      - generic: 风控合规域
+      - generic: risk
+  - generic: 选中左侧节点查看详情

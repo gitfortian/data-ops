@@ -1,0 +1,127 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理" [expanded]:
+      - generic "数据资产与治理"
+    - link "资产目录":
+      - /url: /data-asset/catalog
+      - generic "资产目录"
+    - link "资产概览":
+      - /url: /data-asset/overview
+      - generic "资产概览"
+    - button "资产管理":
+      - generic "资产管理"
+    - button "技术元数据":
+      - generic "技术元数据"
+    - link "数据血缘":
+      - /url: /data-analysis/lineage
+      - generic "数据血缘"
+    - button "数据质量":
+      - generic "数据质量"
+    - button "数据安全" [expanded]:
+      - generic "数据安全"
+    - link "数据安全总览":
+      - /url: /data-security/overview
+      - generic "数据安全总览"
+    - link "分级分类":
+      - /url: /data-security/classification
+      - generic "分级分类"
+    - link "数据访问策略":
+      - /url: /data-security/access
+      - generic "数据访问策略"
+    - link "数据脱敏":
+      - /url: /data-security/masking
+      - generic "数据脱敏"
+    - link "访问审计":
+      - /url: /data-security/audit
+      - generic "访问审计"
+    - link "合规管理":
+      - /url: /data-security/compliance
+      - generic "合规管理"
+    - button "数据生命周期":
+      - generic "数据生命周期"
+    - button "专业方案：主数据管理":
+      - generic "专业方案：主数据管理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 合规管理
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 合规管理
+  - generic: 配置合规体检规则、执行体检并查看缺口明细
+  - generic: 最近体检：2026-10-01 19:38:49 · 批次 42fca4c4
+  - generic: 最近批次未闭环缺口：0
+  - tablist:
+    - tab "合规规则" [selected]
+    - tab "发现明细"
+  - tabpanel "合规规则":
+    - textbox "按编码/名称搜索"
+    - button "新建规则":
+      - generic: 新建规则
+    - table:
+      - rowgroup:
+        - row "编码 名称 类型 级别 启用 操作":
+          - columnheader "编码"
+          - columnheader "名称"
+          - columnheader "类型"
+          - columnheader "级别"
+          - columnheader "启用"
+          - columnheader "操作"
+      - rowgroup:
+        - row "C001 高敏感必须脱敏 敏感字段必须脱敏 HIGH 是 体检 删除":
+          - cell "C001"
+          - cell "高敏感必须脱敏"
+          - cell "敏感字段必须脱敏"
+          - cell "HIGH":
+            - generic: HIGH
+          - cell "是":
+            - generic: 是
+          - cell "体检 删除":
+            - button "体检":
+              - generic: 体检
+            - button "删除":
+              - generic: 删除
+    - list:
+      - listitem: 共 1 条
+      - listitem "上一页":
+        - button "left" [disabled]:
+          - img "left":
+      - listitem "1":
+        - generic: "1"
+      - listitem "下一页":
+        - button "right" [disabled]:
+          - img "right":
+      - generic "页码":
+        - combobox "页码"
+        - generic "10 条/页"

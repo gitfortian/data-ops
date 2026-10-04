@@ -1,0 +1,100 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务" [expanded]:
+      - generic "数据消费与服务"
+    - link "数据产品目录":
+      - /url: /data-analysis/consumption
+      - generic "数据产品目录"
+    - link "数据集管理":
+      - /url: /dataset
+      - generic "数据集管理"
+    - button "API 服务" [expanded]:
+      - generic "API 服务"
+    - link "API 服务目录":
+      - /url: /data-service
+      - generic "API 服务目录"
+    - link "调用方与密钥":
+      - /url: /data-service/access
+      - generic "调用方与密钥"
+    - link "API 调试":
+      - /url: /data-service/debug
+      - generic "API 调试"
+    - link "运行概览":
+      - /url: /data-service/overview
+      - generic "运行概览"
+    - link "调用记录":
+      - /url: /data-service/logs
+      - generic "调用记录"
+    - button "分析展示":
+      - generic "分析展示"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: API 服务目录
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - heading "API 集市" [level=1]
+  - textbox "输入 API 名称、描述或 Endpoint"
+  - button "搜 索":
+    - generic: 搜 索
+  - generic: 支持 API 名称、Endpoint、描述和数据源
+  - heading "推荐 API" [level=2]
+  - generic: 最近更新的可用服务
+  - generic: 1 个
+  - button "主数据分发-customer-销售中台 GET MDM 自动发布:实体「客户」→ 目标系统「CRM」,读统一主数据表 ACTIVE 记录,数据实时查表。 /api/v1/data-service/runtime/mdm/customer/1 客户库 运行中":
+    - generic: 主数据分发-customer-销售中台
+    - generic: GET
+    - generic: MDM 自动发布:实体「客户」→ 目标系统「CRM」,读统一主数据表 ACTIVE 记录,数据实时查表。
+    - generic "/api/v1/data-service/runtime/mdm/customer/1"
+    - generic: 客户库
+    - generic: 运行中
+  - complementary:
+    - generic: API 概览
+    - generic: API 总数
+    - generic: "1"
+    - generic: 运行中
+    - generic: "1"
+    - generic: 近期调用
+    - generic: "2"
+    - generic: 热门调用
+    - generic: 按近期调用次数排序
+    - generic: Top 1
+    - button "01 主数据分发-customer-销售中台 GET MDM 自动发布:实体「客户」→ 目标系统「CRM」,读统一主数据表 ACTIVE 记录,数据实时查表。 /api/v1/data-service/runtime/mdm/customer/1 2 次 近期调用":
+      - generic: "01"
+      - generic: 主数据分发-customer-销售中台
+      - generic: GET
+      - generic: MDM 自动发布:实体「客户」→ 目标系统「CRM」,读统一主数据表 ACTIVE 记录,数据实时查表。
+      - generic "/api/v1/data-service/runtime/mdm/customer/1"
+      - generic: 2 次
+      - generic: 近期调用

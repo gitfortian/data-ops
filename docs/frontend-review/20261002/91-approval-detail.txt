@@ -1,0 +1,80 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置":
+      - generic "平台设置"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 审批单详情
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - generic: 主数据变更申请:customer · UPDATE
+  - generic: 已通过
+  - generic: 审批依据
+  - generic: 流程：主数据变更审批
+  - generic: 发起人：root
+  - generic: 发起时间：2026-09-21 09:21:55
+  - generic: 业务对象：MDM_CHANGE / 3
+  - generic: 当前级次：-
+  - generic: 结束时间：2026-09-21 09:23:51
+  - table:
+    - rowgroup:
+      - row "changeId 3":
+        - rowheader "changeId"
+        - cell "3"
+      - row "entityId 1":
+        - rowheader "entityId"
+        - cell "1"
+      - row "entityCode customer":
+        - rowheader "entityCode"
+        - cell "customer"
+      - row "masterId b4ccf6fab3d9c65b960975e6abca2e08":
+        - rowheader "masterId"
+        - cell "b4ccf6fab3d9c65b960975e6abca2e08"
+      - row "changeType UPDATE":
+        - rowheader "changeType"
+        - cell "UPDATE"
+      - 'row "changeContent {\"member_level\":\"diamond\"}"':
+        - rowheader "changeContent"
+        - 'cell "{\"member_level\":\"diamond\"}"'
+  - generic: 审批记录
+  - list:
+    - generic: 第 1 级 · root
+    - generic: 已通过
+    - generic: 同意，会员等级升为 diamond
+    - generic: 2026-09-21 09:23:06
+    - generic: 第 2 级 · root
+    - generic: 已通过
+    - generic: 二级同意
+    - generic: 2026-09-21 09:23:51

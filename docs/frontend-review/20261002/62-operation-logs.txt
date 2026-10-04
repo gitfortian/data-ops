@@ -1,0 +1,506 @@
+- complementary:
+  - link "返回首页":
+    - /url: /home
+    - img "Yak Ops 一体化数字平台"
+  - button "快速创建":
+    - generic: 快速创建
+  - navigation "主导航":
+    - link "首页":
+      - /url: /home
+      - text: 首页
+    - link "我的待办":
+      - /url: /approval/todo
+      - text: 我的待办
+    - button "数据接入与集成":
+      - generic "数据接入与集成"
+    - button "标准、指标与建模":
+      - generic "标准、指标与建模"
+    - button "开发与运行":
+      - generic "开发与运行"
+    - button "数据资产与治理":
+      - generic "数据资产与治理"
+    - button "数据消费与服务":
+      - generic "数据消费与服务"
+    - button "平台设置" [expanded]:
+      - generic "平台设置"
+    - link "项目空间":
+      - /url: /system/projects
+      - generic "项目空间"
+    - link "用户管理":
+      - /url: /system/users
+      - generic "用户管理"
+    - link "部门管理":
+      - /url: /system/departments
+      - generic "部门管理"
+    - link "角色与权限":
+      - /url: /system/roles
+      - generic "角色与权限"
+    - link "审批流程配置":
+      - /url: /approval/flows
+      - generic "审批流程配置"
+    - link "操作日志":
+      - /url: /system/oplogs
+      - generic "操作日志"
+  - button "帮助中心":
+    - generic: 帮助中心
+- banner:
+  - button "收起菜单":
+  - generic: 操作日志
+  - button "通知":
+    - generic: 通知
+  - button "智能助手":
+    - generic: 智能助手
+  - button "切换语言 / Switch language":
+    - generic: 中文
+  - button "切换工作空间":
+    - generic: 默认空间
+  - button "打开用户菜单":
+    - generic: 系
+- main:
+  - region "审计中心":
+    - img "safety-certificate":
+    - heading "审计中心" [level=1]
+    - tablist:
+      - tab "业务审计" [selected]
+      - tab "Security 操作日志"
+    - tabpanel "业务审计":
+      - textbox "操作名 / Operation ID / 资源 / 摘要"
+      - textbox "开始日期"
+      - generic "to":
+        - img "swap-right":
+      - textbox "结束日期"
+      - img "calendar":
+      - combobox
+      - generic: 项目空间
+      - combobox
+      - generic: 操作人
+      - button "filter 更多筛选":
+        - img "filter":
+        - generic: 更多筛选
+      - button "search 查询":
+        - img "search":
+        - generic: 查询
+      - button "重 置":
+        - generic: 重 置
+      - button "reload 刷新":
+        - img "reload":
+        - generic: 刷新
+      - table:
+        - rowgroup:
+          - row "时间 操作 操作人 项目空间 资源 状态 来源 耗时 操作":
+            - columnheader "时间"
+            - columnheader "操作"
+            - columnheader "操作人"
+            - columnheader "项目空间"
+            - columnheader "资源"
+            - columnheader "状态"
+            - columnheader "来源"
+            - columnheader "耗时"
+            - columnheader "操作"
+        - rowgroup:
+          - row "2026-10-02 11:07:07 新增 data-security/top-actors DATA_SECURITY_TOP_ACTORS_CREATE root 1 默认空间 - DATA_SECURITY_TOP_ACTORS 成功 WEB 12 ms 查看":
+            - cell "2026-10-02 11:07:07"
+            - cell "新增 data-security/top-actors DATA_SECURITY_TOP_ACTORS_CREATE":
+              - generic: 新增 data-security/top-actors
+              - text: DATA_SECURITY_TOP_ACTORS_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "- DATA_SECURITY_TOP_ACTORS":
+              - generic: "-"
+              - generic: DATA_SECURITY_TOP_ACTORS
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "12 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-02 11:04:16 新增 sql-executions/summary SQL_EXECUTIONS_SUMMARY_CREATE root 1 默认空间 - SQL_EXECUTIONS_SUMMARY 成功 WEB 17 ms 查看":
+            - cell "2026-10-02 11:04:16"
+            - cell "新增 sql-executions/summary SQL_EXECUTIONS_SUMMARY_CREATE":
+              - generic: 新增 sql-executions/summary
+              - text: SQL_EXECUTIONS_SUMMARY_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "- SQL_EXECUTIONS_SUMMARY":
+              - generic: "-"
+              - generic: SQL_EXECUTIONS_SUMMARY
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "17 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-02 11:03:14 Authorize PROJECT_ACCESS AUTHORIZATION_CHECK root 1 全局 - PROJECT 失败 WEB 26 ms 查看":
+            - cell "2026-10-02 11:03:14"
+            - cell "Authorize PROJECT_ACCESS AUTHORIZATION_CHECK":
+              - generic: Authorize PROJECT_ACCESS
+              - text: AUTHORIZATION_CHECK
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "全局"
+            - cell "- PROJECT":
+              - generic: "-"
+              - generic: PROJECT
+            - cell "失败":
+              - generic: 失败
+            - cell "WEB"
+            - cell "26 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-02 11:02:45 Authorize PROJECT_ACCESS AUTHORIZATION_CHECK root 1 全局 - PROJECT 失败 WEB 191 ms 查看":
+            - cell "2026-10-02 11:02:45"
+            - cell "Authorize PROJECT_ACCESS AUTHORIZATION_CHECK":
+              - generic: Authorize PROJECT_ACCESS
+              - text: AUTHORIZATION_CHECK
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "全局"
+            - cell "- PROJECT":
+              - generic: "-"
+              - generic: PROJECT
+            - cell "失败":
+              - generic: 失败
+            - cell "WEB"
+            - cell "191 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-02 08:05:15 删除 data-quality/table-asset DATA_QUALITY_TABLE_ASSET_DELETE root 1 默认空间 5 DATA_QUALITY_TABLE_ASSET 成功 WEB 7 ms 查看":
+            - cell "2026-10-02 08:05:15"
+            - cell "删除 data-quality/table-asset DATA_QUALITY_TABLE_ASSET_DELETE":
+              - generic: 删除 data-quality/table-asset
+              - text: DATA_QUALITY_TABLE_ASSET_DELETE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "5 DATA_QUALITY_TABLE_ASSET":
+              - generic: "5"
+              - generic: DATA_QUALITY_TABLE_ASSET
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "7 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-02 08:04:33 删除 data-quality/monitor DATA_QUALITY_MONITOR_DELETE root 1 默认空间 4 DATA_QUALITY_MONITOR 成功 WEB 11 ms 查看":
+            - cell "2026-10-02 08:04:33"
+            - cell "删除 data-quality/monitor DATA_QUALITY_MONITOR_DELETE":
+              - generic: 删除 data-quality/monitor
+              - text: DATA_QUALITY_MONITOR_DELETE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "4 DATA_QUALITY_MONITOR":
+              - generic: "4"
+              - generic: DATA_QUALITY_MONITOR
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "11 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 21:50:00 Delete asset ASSET_DELETE root 1 默认空间 manual:man_1790852296409 ASSET 成功 APPLICATION 70 ms 查看":
+            - cell "2026-10-01 21:50:00"
+            - cell "Delete asset ASSET_DELETE":
+              - generic: Delete asset
+              - text: ASSET_DELETE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "manual:man_1790852296409 ASSET":
+              - generic: manual:man_1790852296409
+              - generic: ASSET
+            - cell "成功":
+              - generic: 成功
+            - cell "APPLICATION"
+            - cell "70 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 21:20:22 删除 assets ASSETS_DELETE root 1 默认空间 18 ASSETS 成功 WEB 9 ms 查看":
+            - cell "2026-10-01 21:20:22"
+            - cell "删除 assets ASSETS_DELETE":
+              - generic: 删除 assets
+              - text: ASSETS_DELETE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "18 ASSETS":
+              - generic: "18"
+              - generic: ASSETS
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "9 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 21:18:17 新增 assets/view ASSETS_VIEW_CREATE root 1 默认空间 15 ASSETS_VIEW 成功 WEB 17 ms 查看":
+            - cell "2026-10-01 21:18:17"
+            - cell "新增 assets/view ASSETS_VIEW_CREATE":
+              - generic: 新增 assets/view
+              - text: ASSETS_VIEW_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "15 ASSETS_VIEW":
+              - generic: "15"
+              - generic: ASSETS_VIEW
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "17 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:54:28 更新 alert/enabled ALERT_ENABLED_UPDATE root 1 全局 DINGTALK ALERT_ENABLED 成功 WEB 6 ms 查看":
+            - cell "2026-10-01 19:54:28"
+            - cell "更新 alert/enabled ALERT_ENABLED_UPDATE":
+              - generic: 更新 alert/enabled
+              - text: ALERT_ENABLED_UPDATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "全局"
+            - cell "DINGTALK ALERT_ENABLED":
+              - generic: DINGTALK
+              - generic: ALERT_ENABLED
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "6 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:38:49 运行 data-security/rules DATA_SECURITY_RULES_RUN root 1 默认空间 2 DATA_SECURITY_RULES 成功 WEB 6 ms 查看":
+            - cell "2026-10-01 19:38:49"
+            - cell "运行 data-security/rules DATA_SECURITY_RULES_RUN":
+              - generic: 运行 data-security/rules
+              - text: DATA_SECURITY_RULES_RUN
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "2 DATA_SECURITY_RULES":
+              - generic: "2"
+              - generic: DATA_SECURITY_RULES
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "6 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:36:28 新增 data-security/top-actors DATA_SECURITY_TOP_ACTORS_CREATE root 1 默认空间 - DATA_SECURITY_TOP_ACTORS 成功 WEB 7 ms 查看":
+            - cell "2026-10-01 19:36:28"
+            - cell "新增 data-security/top-actors DATA_SECURITY_TOP_ACTORS_CREATE":
+              - generic: 新增 data-security/top-actors
+              - text: DATA_SECURITY_TOP_ACTORS_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "- DATA_SECURITY_TOP_ACTORS":
+              - generic: "-"
+              - generic: DATA_SECURITY_TOP_ACTORS
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "7 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:35:54 预览 data-security/masking DATA_SECURITY_MASKING_PREVIEW root 1 默认空间 - DATA_SECURITY_MASKING 成功 WEB 8 ms 查看":
+            - cell "2026-10-01 19:35:54"
+            - cell "预览 data-security/masking DATA_SECURITY_MASKING_PREVIEW":
+              - generic: 预览 data-security/masking
+              - text: DATA_SECURITY_MASKING_PREVIEW
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "- DATA_SECURITY_MASKING":
+              - generic: "-"
+              - generic: DATA_SECURITY_MASKING
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "8 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:26:21 运行 data-quality/monitor DATA_QUALITY_MONITOR_RUN root 1 默认空间 4 DATA_QUALITY_MONITOR 成功 WEB 6 ms 查看":
+            - cell "2026-10-01 19:26:21"
+            - cell "运行 data-quality/monitor DATA_QUALITY_MONITOR_RUN":
+              - generic: 运行 data-quality/monitor
+              - text: DATA_QUALITY_MONITOR_RUN
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "4 DATA_QUALITY_MONITOR":
+              - generic: "4"
+              - generic: DATA_QUALITY_MONITOR
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "6 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:25:49 新增 data-quality/monitor DATA_QUALITY_MONITOR_CREATE root 1 默认空间 - DATA_QUALITY_MONITOR 成功 WEB 6 ms 查看":
+            - cell "2026-10-01 19:25:49"
+            - cell "新增 data-quality/monitor DATA_QUALITY_MONITOR_CREATE":
+              - generic: 新增 data-quality/monitor
+              - text: DATA_QUALITY_MONITOR_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "- DATA_QUALITY_MONITOR":
+              - generic: "-"
+              - generic: DATA_QUALITY_MONITOR
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "6 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:19:45 注册 data-quality/table-asset DATA_QUALITY_TABLE_ASSET_REGISTER root 1 默认空间 - DATA_QUALITY_TABLE_ASSET 成功 WEB 6 ms 查看":
+            - cell "2026-10-01 19:19:45"
+            - cell "注册 data-quality/table-asset DATA_QUALITY_TABLE_ASSET_REGISTER":
+              - generic: 注册 data-quality/table-asset
+              - text: DATA_QUALITY_TABLE_ASSET_REGISTER
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "- DATA_QUALITY_TABLE_ASSET":
+              - generic: "-"
+              - generic: DATA_QUALITY_TABLE_ASSET
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "6 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:13:56 新增 metadata/dry-run METADATA_DRY_RUN_CREATE root 1 默认空间 2 METADATA_DRY_RUN 成功 WEB 6 ms 查看":
+            - cell "2026-10-01 19:13:56"
+            - cell "新增 metadata/dry-run METADATA_DRY_RUN_CREATE":
+              - generic: 新增 metadata/dry-run
+              - text: METADATA_DRY_RUN_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "2 METADATA_DRY_RUN":
+              - generic: "2"
+              - generic: METADATA_DRY_RUN
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "6 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:09:16 新增 assets/dry-run ASSETS_DRY_RUN_CREATE root 1 默认空间 1 ASSETS_DRY_RUN 成功 WEB 7 ms 查看":
+            - cell "2026-10-01 19:09:16"
+            - cell "新增 assets/dry-run ASSETS_DRY_RUN_CREATE":
+              - generic: 新增 assets/dry-run
+              - text: ASSETS_DRY_RUN_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "1 ASSETS_DRY_RUN":
+              - generic: "1"
+              - generic: ASSETS_DRY_RUN
+            - cell "成功":
+              - generic: 成功
+            - cell "WEB"
+            - cell "7 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:07:08 Delete asset directory ASSET_DIR_DELETE root 1 默认空间 dir_19 ASSET_DIRECTORY 成功 APPLICATION 12 ms 查看":
+            - cell "2026-10-01 19:07:08"
+            - cell "Delete asset directory ASSET_DIR_DELETE":
+              - generic: Delete asset directory
+              - text: ASSET_DIR_DELETE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "dir_19 ASSET_DIRECTORY":
+              - generic: dir_19
+              - generic: ASSET_DIRECTORY
+            - cell "成功":
+              - generic: 成功
+            - cell "APPLICATION"
+            - cell "12 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+          - row "2026-10-01 19:05:55 Create asset directory ASSET_DIR_CREATE root 1 默认空间 dir_19 ASSET_DIRECTORY 成功 APPLICATION 13 ms 查看":
+            - cell "2026-10-01 19:05:55"
+            - cell "Create asset directory ASSET_DIR_CREATE":
+              - generic: Create asset directory
+              - text: ASSET_DIR_CREATE
+            - cell "root 1":
+              - generic: root
+              - generic: "1"
+            - cell "默认空间"
+            - cell "dir_19 ASSET_DIRECTORY":
+              - generic: dir_19
+              - generic: ASSET_DIRECTORY
+            - cell "成功":
+              - generic: 成功
+            - cell "APPLICATION"
+            - cell "13 ms"
+            - cell "查看":
+              - button "查看":
+                - generic: 查看
+      - generic: 共 951 条
+      - list:
+        - listitem "上一页":
+          - button "left" [disabled]:
+            - img "left":
+        - listitem "1":
+          - generic: "1"
+        - listitem "2":
+          - generic: "2"
+        - listitem "3":
+          - generic: "3"
+        - listitem "4":
+          - generic: "4"
+        - listitem "5":
+          - generic: "5"
+        - listitem "向后 5 页":
+          - img "double-right":
+          - generic: •••
+        - listitem "48":
+          - generic: "48"
+        - listitem "下一页":
+          - button "right":
+            - img "right":
+        - generic "页码":
+          - combobox "页码"
+          - generic "20 条/页"
