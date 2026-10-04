@@ -15,6 +15,7 @@ import io.yak.ops.common.constant.asset.AssetPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import lombok.RequiredArgsConstructor;
+import java.security.Principal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,8 +50,9 @@ public class ProductDiscoveryController {
 
   @Operation(summary = "读取唯一规范 Consumption Detail")
   @GetMapping("/products/{productKey:.+}")
-  public Result<CanonicalProductDetail> get(@PathVariable String productKey) {
-    return Result.success(canonicalService.detail(ProductKey.parse(productKey)));
+  public Result<CanonicalProductDetail> get(@PathVariable String productKey, Principal principal) {
+    return Result.success(canonicalService.detail(
+        ProductKey.parse(productKey), principal == null ? null : principal.getName()));
   }
 
   @Operation(summary = "从来源 stable identity 进入规范 Consumption Detail")

@@ -206,7 +206,8 @@ export default function ConsumptionDetailPage() {
 
   const key = productKeyValue(product.productKey);
   const payload = product.contractPayload;
-  const providerIssues = (product.sections || []).filter((section) => section.state !== 'READY');
+  const providerIssues = governanceEvidence.filter((section) =>
+    section.state === 'UNAVAILABLE' || section.state === 'FORBIDDEN');
   const consumptionMode = product.productKey.productType === 'DATASET' ? 'QUERY' : 'API_INVOKE';
   const ownSubscription = subscriptions.find((item) =>
     item.status === 'ACTIVE'

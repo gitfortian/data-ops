@@ -23,12 +23,66 @@ import io.yak.ops.business.dataset.definition.DatasetReader;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import io.yak.ops.core.security.ActionAuthorization;
+import io.yak.ops.core.security.ActionAccessDeniedException;
+import io.yak.ops.business.consumption.product.model.AccessDecision;
+import io.yak.ops.business.consumption.product.model.ProviderEvidenceState;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.doThrow;
 
 class DatasetDataProductProviderTest {
+
+  @Test
+  void standaloneSqlDatasetUsesOwningProvenanceForProducerBacklink() {
+    var facade = mock(io.yak.ops.business.dataset.DevelopmentDatasetFacade.class);
+    var version = new DatasetVersion(101L, 42L, 3, DatasetSourceType.SQL_QUERY,
+        0L, 0L, 0, "2", "select order_id from orders", "{}", Instant.now());
+    when(reader.catalog(List.of(42L), false)).thenReturn(List.of(
+        new DatasetCatalogEntry(entry(DatasetStatus.ONLINE, 101L).dataset(), version, List.of())));
+    when(assetLookup.lookup("DATASET", "42")).thenReturn(notIndexed("DATASET", "42"));
+    when(facade.developmentSource(42L)).thenReturn(
+        new io.yak.ops.business.dataset.DevelopmentDatasetFacade.DevelopmentSource(42L, 99L, 3, "FOUND"));
+    var projected = new DatasetDataProductProvider(reader, assetLookup, null, null, facade)
+        .get(new ProductKey(ProductType.DATASET, "42")).product();
+    assertEquals("DATA_DEVELOPMENT_NODE", projected.producerRef().domain());
+    assertEquals("99", projected.producerRef().identity());
+    assertEquals("101", projected.activeVersion().identity());
+  }
 
   private final DatasetReader reader = mock(DatasetReader.class);
   private final AssetSourceLookupService assetLookup = mock(AssetSourceLookupService.class);
   private final DatasetDataProductProvider provider = new DatasetDataProductProvider(reader, assetLookup);
+
+  @Test
+  void actionPermissionAloneCannotClaimPhysicalColumnConsumptionAllowed() {
+    ActionAuthorization authorization = mock(ActionAuthorization.class);
+    DatasetDataProductProvider secured = new DatasetDataProductProvider(reader, assetLookup, null, authorization);
+    when(reader.catalog(List.of(42L), false)).thenReturn(List.of(entry(DatasetStatus.ONLINE, 101L)));
+    when(assetLookup.lookup("DATASET", "42")).thenReturn(notIndexed("DATASET", "42"));
+
+    var access = secured.get(new ProductKey(ProductType.DATASET, "42")).product().access();
+
+    assertEquals(ProviderEvidenceState.UNAVAILABLE, access.providerState());
+    assertNull(access.decision());
+    assertEquals("QUERY", access.action());
+    assertEquals("LOGGED_IN_DATASET_QUERY", access.plane());
+  }
+
+  @Test
+  void forbiddenQueryActionKeepsProductVisibleAndIdentifiesCallPlane() {
+    ActionAuthorization authorization = mock(ActionAuthorization.class);
+    doThrow(new ActionAccessDeniedException("dataset:query")).when(authorization).requirePermission("dataset:query");
+    DatasetDataProductProvider secured = new DatasetDataProductProvider(reader, assetLookup, null, authorization);
+    when(reader.catalog(List.of(42L), false)).thenReturn(List.of(entry(DatasetStatus.ONLINE, 101L)));
+    when(assetLookup.lookup("DATASET", "42")).thenReturn(notIndexed("DATASET", "42"));
+
+    var result = secured.get(new ProductKey(ProductType.DATASET, "42"));
+
+    assertEquals(ProductLookupState.FOUND, result.state());
+    assertEquals(AccessDecision.FORBIDDEN, result.product().access().decision());
+    assertEquals(ProviderEvidenceState.READY, result.product().access().providerState());
+    assertEquals("QUERY", result.product().access().action());
+  }
 
   @Test
   void projectsOnlyOnlineDatasetWithCurrentImmutableVersion() {

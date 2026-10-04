@@ -1,4 +1,5 @@
 import YakTab from '@/components/YakTab';
+import { consumptionProductPath } from '@/services/consumption';
 import {
   DATA_SERVICE_NODE_SOURCE,
   DATA_SERVICE_PROVIDER_SOURCE_LABELS,
@@ -415,11 +416,16 @@ export default function DataServiceDetailPage() {
             >
               返回 API 集市
             </Button>
-            {developmentSourceUrl ? (
-              <Button onClick={() => history.push(developmentSourceUrl)}>
-                查看 Data Development 来源
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={() => history.push(consumptionProductPath('DATA_SERVICE', String(service.id)))}>
+                查看消费与治理
               </Button>
-            ) : null}
+              {developmentSourceUrl ? (
+                <Button onClick={() => history.push(developmentSourceUrl)}>
+                  查看 Data Development 来源
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           <section className="rounded-lg bg-white">

@@ -351,6 +351,11 @@ Domain / capability port
 
 ## 12. 修改协议
 
+Governed identity contract：PD-002 / F-004 的 Asset 与 Consumption 投影复用稳定
+Data Service ID。DataServiceIdentity.assetKey(serviceId) 生成 data_service:<serviceId>；
+path、名称、active revision 与 runtime generation 改变不改变 key。
+供 Asset 与将来的 Lineage 登记复用，不创建第二份 Definition。
+
 ```text
 Domain Impact Analysis
 - Aggregate/value object:

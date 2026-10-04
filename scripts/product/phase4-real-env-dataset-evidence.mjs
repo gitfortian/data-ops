@@ -20,6 +20,8 @@
  *   YAK_OPS_EVIDENCE_INCLUDE_ROWS (default: false)
  */
 
+import { parseEvidenceJson } from './lossless-json.mjs';
+
 const PROJECT_HEADER = 'X-YAK-SECURITY-PROJECT-ID';
 const BASE_URL = (process.env.YAK_OPS_BASE_URL || 'http://localhost:9001').replace(/\/+$/, '');
 const USERNAME = required('YAK_OPS_USERNAME');
@@ -101,7 +103,7 @@ async function request(path, { method = 'GET', body, projectScoped = false } = {
 function parseJson(text) {
   if (!text) return null;
   try {
-    return JSON.parse(text);
+    return parseEvidenceJson(text);
   } catch {
     return null;
   }

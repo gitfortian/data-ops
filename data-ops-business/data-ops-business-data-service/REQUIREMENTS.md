@@ -223,6 +223,10 @@ Project cutover 可以通过 Expand + Backfill 增加 `project_id`，Runtime coo
 
 ## 12. 需求变更协议
 
+Governed catalog read：按稳定 ID 升序提供有界 cursor read，绑定 CurrentProject，
+允许按更新时间增量过滤，单批上限 500。Asset/Consumption 回链只读取来源事实，
+不使用全局 Runtime path lookup 或无界 list 构造对账批次。
+
 本文件没有描述的新业务行为统一报告：
 
 ```text

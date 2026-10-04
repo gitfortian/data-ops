@@ -14,6 +14,7 @@ import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -90,6 +91,19 @@ public class DataServiceRepositoryAdapter implements DataServiceRepository {
         Wrappers.<DataServiceApiPO>lambdaQuery()
             .isNotNull(DataServiceApiPO::getProjectId));
     return count == null ? 0L : count;
+  }
+
+  @Override
+  public List<DataServiceDefinition> findPageAfter(Long afterId, LocalDateTime updatedAfter, int limit) {
+    Long projectId = currentProject.requireProjectId();
+    int boundedLimit = Math.max(1, Math.min(500, limit));
+    return mapper.selectList(Wrappers.<DataServiceApiPO>lambdaQuery()
+            .eq(DataServiceApiPO::getProjectId, projectId)
+            .gt(afterId != null, DataServiceApiPO::getId, afterId)
+            .gt(updatedAfter != null, DataServiceApiPO::getUpdateTime, updatedAfter)
+            .orderByAsc(DataServiceApiPO::getId)
+            .last("LIMIT " + boundedLimit))
+        .stream().map(this::toDomain).toList();
   }
 
   @Override

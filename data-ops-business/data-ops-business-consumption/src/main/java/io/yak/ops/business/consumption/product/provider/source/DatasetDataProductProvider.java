@@ -25,6 +25,7 @@ import io.yak.ops.business.dataset.DatasetField;
 import io.yak.ops.business.dataset.DatasetStatus;
 import io.yak.ops.business.dataset.DatasetSourceType;
 import io.yak.ops.business.dataset.DatasetVersion;
+import io.yak.ops.business.dataset.DevelopmentDatasetFacade;
 import io.yak.ops.business.dataset.definition.DatasetReader;
 import io.yak.ops.business.dataset.gateway.taskcatalog.DatasetTaskCatalogGateway;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
@@ -44,17 +45,26 @@ public class DatasetDataProductProvider implements DataProductProvider {
   private final AssetSourceLookupService assetLookup;
   private final DatasetTaskCatalogGateway taskCatalog;
   private final ActionAuthorization actionAuthorization;
+  private final DevelopmentDatasetFacade developmentDataset;
 
   @Autowired
   public DatasetDataProductProvider(
       DatasetReader datasetReader,
       AssetSourceLookupService assetLookup,
       DatasetTaskCatalogGateway taskCatalog,
-      ActionAuthorization actionAuthorization) {
+      ActionAuthorization actionAuthorization,
+      DevelopmentDatasetFacade developmentDataset) {
     this.datasetReader = datasetReader;
     this.assetLookup = assetLookup;
     this.taskCatalog = taskCatalog;
     this.actionAuthorization = actionAuthorization;
+    this.developmentDataset = developmentDataset;
+  }
+
+  public DatasetDataProductProvider(
+      DatasetReader datasetReader, AssetSourceLookupService assetLookup,
+      DatasetTaskCatalogGateway taskCatalog, ActionAuthorization actionAuthorization) {
+    this(datasetReader, assetLookup, taskCatalog, actionAuthorization, null);
   }
 
   public DatasetDataProductProvider(
@@ -130,7 +140,7 @@ public class DatasetDataProductProvider implements DataProductProvider {
     Dataset dataset = entry.dataset();
     DatasetVersion version = entry.currentVersion();
     AssetProjection asset = assetProjection(dataset.id());
-    ProducerProjection producer = producerProjection(version);
+    ProducerProjection producer = producerProjection(dataset.id(), version);
     List<ProductSectionState> sections = List.of(
         sourceGovernanceSection(dataset),
         unavailableSection("ownership", "DATASET", "Dataset owning contract does not expose owner"),
@@ -189,9 +199,14 @@ public class DatasetDataProductProvider implements DataProductProvider {
     }
     try {
       actionAuthorization.requirePermission("dataset:query");
-      return AccessProjection.ready(AccessDecision.ALLOWED);
+      return AccessProjection.unavailable(
+          "Dataset action permission is granted; physical-column authorization requires an exact query",
+          "Current authenticated user", "QUERY", "LOGGED_IN_DATASET_QUERY",
+          "Open the Dataset query page to evaluate the physical-column access policy");
     } catch (ActionAccessDeniedException denied) {
-      return AccessProjection.ready(AccessDecision.FORBIDDEN);
+      return new AccessProjection(
+          AccessDecision.FORBIDDEN, ProviderEvidenceState.READY, "Dataset query action is forbidden",
+          "Current authenticated user", "QUERY", "LOGGED_IN_DATASET_QUERY", null);
     } catch (RuntimeException unavailable) {
       return AccessProjection.unavailable(
           "Dataset query authorization provider is unavailable",
@@ -200,7 +215,23 @@ public class DatasetDataProductProvider implements DataProductProvider {
     }
   }
 
-  private ProducerProjection producerProjection(DatasetVersion version) {
+  private ProducerProjection producerProjection(long datasetId, DatasetVersion version) {
+    if (version.sourceType() == DatasetSourceType.SQL_QUERY && developmentDataset != null) {
+      try {
+        var source = developmentDataset.developmentSource(datasetId);
+        if ("FOUND".equals(source.state()) && source.developmentNodeId() != null) {
+          return new ProducerProjection(
+              new DomainRef("DATA_DEVELOPMENT_NODE", String.valueOf(source.developmentNodeId())),
+              new ProductSectionState("producer", ProviderEvidenceState.READY, "DATA_DEVELOPMENT", null, null));
+        }
+        return new ProducerProjection(null, new ProductSectionState(
+            "producer", ProviderEvidenceState.NOT_APPLICABLE, "DATA_DEVELOPMENT", null,
+            "Dataset owning provenance has no Development Node"));
+      } catch (RuntimeException unavailable) {
+        return new ProducerProjection(null, unavailableSection(
+            "producer", "DATA_DEVELOPMENT", "Dataset owning provenance is unavailable"));
+      }
+    }
     if (version.sourceType() != DatasetSourceType.QUERY_REVISION || version.sourceTaskAssetId() <= 0L) {
       return new ProducerProjection(null, new ProductSectionState(
           "producer", ProviderEvidenceState.EMPTY, "DATA_DEVELOPMENT", null,

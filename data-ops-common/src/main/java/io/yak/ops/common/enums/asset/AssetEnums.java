@@ -8,6 +8,7 @@ public final class AssetEnums {
     TABLE,
     METRIC,
     DATASET,
+    DATA_SERVICE,
     DASHBOARD,
     CHART,
     TASK,

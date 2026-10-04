@@ -25,6 +25,11 @@
 
 ## 不变量
 
+DATA_SERVICE 台账投影遵循 PD-002 / F-004：key 为 data_service:<serviceId>，
+由 Data Service identity contract 生成。Asset 不拥有发布版本、enabled、调用面授权或
+外部 Consumer；台账上架与服务发布仍独立。未登记源域血缘时，正常查询后的 Lineage
+分区返回 EMPTY，不推断依赖。Data Service projection 不包含 SQL、密钥和连接参数。
+
 1. **项目空间归属**：全部业务行带 `project_id`，只取 `CurrentProject` 服务端上下文（D11）。
 2. **asset_key 项目内唯一**：`uk(project_id, asset_key)`；键由源域生成器产生，禁止自造第二套键。
 3. **不写 `yak_metadata_asset`**（D6）：血缘登记与资产台账互不写入。
