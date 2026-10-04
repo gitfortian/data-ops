@@ -187,7 +187,9 @@ body[data-yak-workspace='commercial'] {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      // A nonzero duration enables the default transition-property: all,
+      // delaying the synchronous position measurements used by popup alignment.
+      transition: none !important;
       scroll-behavior: auto !important;
     }
   }
