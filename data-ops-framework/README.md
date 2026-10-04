@@ -17,8 +17,10 @@ Yak Framework 使用小型 Maven 模块保持能力边界清晰：
 | `data-security` | Spring Boot Starter | 保留 `data-security-spring-boot-starter` |
 | `data-schedule`、`data-workflow` | 子模块聚合父 POM | 使用 `*-parent`；可发布制品位于各自子目录 |
 
-历史兼容模块 `data-job` 使用 Spring Boot 2 和 Java 8，单独放在同级的
-[`data-ops-framework-legacy/data-job`](../data-ops-framework-legacy/data-job/README.md)，不属于当前 Boot 3 Maven Reactor。它的 POM、Java 包、制品坐标和 `/v1/yak-job/**` 接口保持兼容。
+历史兼容模块 `data-job` 使用 Spring Boot 2 和 Java 8，放在本目录的
+[`legacy/data-job`](./legacy/data-job/README.md)，不属于当前 Boot 3 Maven Reactor。它的 POM、Java 包、制品坐标和 `/v1/yak-job/**` 接口保持兼容。
+
+`legacy/` 统一收纳历史兼容代码，不注册为当前聚合工程的 Maven module，也不继承当前框架父 POM。当前应用不得依赖旧 `data-job-spring-boot-starter` 或导入 `com.yak.job.*`；这些边界由架构检查保护。
 
 `data-common` 不接收业务 DTO、实体或领域工具，新增内容前应确认它确实是所有业务模块共享的稳定契约。
 

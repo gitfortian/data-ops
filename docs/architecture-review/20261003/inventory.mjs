@@ -22,7 +22,7 @@ visit('pom.xml');
 const artifacts = new Set(reactor.map(m => m.artifact));
 const sorted = [...reactor].sort((a, b) => b.directory.length - a.directory.length);
 const owner = p => sorted.find(m => m.directory !== '.' && p.startsWith(m.directory + '/'))?.artifact || 'data-ops';
-const production = files.filter(p => p.includes('/src/main/java/') && !p.startsWith('data-ops-framework-legacy/'));
+const production = files.filter(p => p.includes('/src/main/java/') && !p.startsWith('data-ops-framework/legacy/'));
 const java = production.map(p => {
   const s = read(p);
   return { file: p, module: owner(p), lines: s.split(/\r?\n/).length, package: s.match(/^package ([^;]+);/m)?.[1], imports: [...s.matchAll(/^import (?:static )?([^;]+);/gm)].map(m => m[1]), source: s };
