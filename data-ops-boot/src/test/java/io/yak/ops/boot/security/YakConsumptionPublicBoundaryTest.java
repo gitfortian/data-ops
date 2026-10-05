@@ -31,7 +31,7 @@ class YakConsumptionPublicBoundaryTest {
 
   private boolean isPublic(String path) throws IOException {
     var source = new YamlPropertySourceLoader()
-        .load("application", new ClassPathResource("application.yml")).getFirst();
+        .load("application-common", new ClassPathResource("application-common.yml")).getFirst();
     List<String> patterns = new Binder(ConfigurationPropertySources.from(source))
         .bind("yak.security.public-paths", Bindable.listOf(String.class)).get();
     AntPathMatcher matcher = new AntPathMatcher();
