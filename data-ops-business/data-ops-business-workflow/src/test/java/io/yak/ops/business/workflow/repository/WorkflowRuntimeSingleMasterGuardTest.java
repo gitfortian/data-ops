@@ -48,6 +48,9 @@ class WorkflowRuntimeSingleMasterGuardTest {
     ResultSet lockResult = mock(ResultSet.class);
     ResultSet releaseResult = mock(ResultSet.class);
 
+    java.sql.DatabaseMetaData metadata = mock(java.sql.DatabaseMetaData.class);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(metadata.getURL()).thenReturn("jdbc:mysql://localhost/yak_ops");
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.prepareStatement("SELECT DATABASE()")).thenReturn(databaseStatement);
     when(connection.prepareStatement("SELECT GET_LOCK(?, 0)")).thenReturn(lockStatement);

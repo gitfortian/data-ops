@@ -1,5 +1,6 @@
 package io.yak.ops.boot.project;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -70,20 +71,35 @@ public class DatasetProjectCompatibilityBackfill {
     long defaultProjectId = projectCoordinator.ensureRequiredDefaultProject();
 
     int fromDevelopmentNode = jdbcTemplate.update(
-        "UPDATE yak_dataset d "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dataset AS d
+        SET project_id = n.project_id
+        FROM yak_dev_node AS n
+        WHERE d.project_id IS NULL AND n.project_id IS NOT NULL AND (n.id = d.development_node_id)
+        """ : "UPDATE yak_dataset d "
             + "JOIN yak_dev_node n ON n.id = d.development_node_id "
             + "SET d.project_id = n.project_id "
             + "WHERE d.project_id IS NULL AND n.project_id IS NOT NULL");
 
     int fromTaskAsset = jdbcTemplate.update(
-        "UPDATE yak_dataset d "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dataset AS d
+        SET project_id = a.project_id
+        FROM yak_dataset_version AS v, yak_task_asset AS a
+        WHERE d.project_id IS NULL AND a.project_id IS NOT NULL AND (v.dataset_id = d.id AND v.source_task_asset_id > 0) AND (a.id = v.source_task_asset_id)
+        """ : "UPDATE yak_dataset d "
             + "JOIN yak_dataset_version v ON v.dataset_id = d.id AND v.source_task_asset_id > 0 "
             + "JOIN yak_task_asset a ON a.id = v.source_task_asset_id "
             + "SET d.project_id = a.project_id "
             + "WHERE d.project_id IS NULL AND a.project_id IS NOT NULL");
 
     int fromDataSource = jdbcTemplate.update(
-        "UPDATE yak_dataset d "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dataset AS d
+        SET project_id = s.project_id
+        FROM yak_dataset_version AS v, yak_ops_data_source AS s
+        WHERE d.project_id IS NULL AND s.project_id IS NOT NULL AND (v.dataset_id = d.id AND v.data_source_id ~ '^[0-9]+$') AND (s.id = (CASE WHEN v.data_source_id ~ '^[0-9]+$' THEN CAST(v.data_source_id AS DECIMAL) END))
+        """ : "UPDATE yak_dataset d "
             + "JOIN yak_dataset_version v ON v.dataset_id = d.id "
             + "AND v.data_source_id REGEXP '^[0-9]+$' "
             + "JOIN yak_ops_data_source s ON s.id = CAST(v.data_source_id AS UNSIGNED) "
@@ -95,7 +111,12 @@ public class DatasetProjectCompatibilityBackfill {
         defaultProjectId);
 
     int inheritedDiagnostics = jdbcTemplate.update(
-        "UPDATE yak_dataset_query_performance q "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dataset_query_performance AS q
+        SET project_id = d.project_id
+        FROM yak_dataset AS d
+        WHERE q.project_id IS NULL AND d.project_id IS NOT NULL AND (d.id = q.dataset_id)
+        """ : "UPDATE yak_dataset_query_performance q "
             + "JOIN yak_dataset d ON d.id = q.dataset_id "
             + "SET q.project_id = d.project_id "
             + "WHERE q.project_id IS NULL AND d.project_id IS NOT NULL");
@@ -122,7 +143,9 @@ public class DatasetProjectCompatibilityBackfill {
 
   private int claimReferencedDataDevelopmentTaskAssets() {
     Long conflicts = jdbcTemplate.queryForObject(
-        "SELECT COUNT(1) FROM yak_task_asset legacy "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        SELECT COUNT(1) FROM yak_task_asset legacy JOIN (SELECT DISTINCT source_task_asset_id FROM yak_dataset_version WHERE source_task_asset_id > 0) referenced ON referenced.source_task_asset_id = legacy.id JOIN yak_dev_node n ON legacy.source = ? AND legacy.source_ref ~ '^[0-9]+$' AND n.id = (CASE WHEN legacy.source_ref ~ '^[0-9]+$' THEN CAST(legacy.source_ref AS numeric) END) JOIN yak_task_asset scoped ON scoped.source = legacy.source AND scoped.source_ref = legacy.source_ref AND scoped.project_id = n.project_id AND scoped.id <> legacy.id WHERE legacy.project_id IS NULL AND n.project_id IS NOT NULL
+        """ : "SELECT COUNT(1) FROM yak_task_asset legacy "
             + "JOIN (SELECT DISTINCT source_task_asset_id FROM yak_dataset_version "
             + "WHERE source_task_asset_id > 0) referenced ON referenced.source_task_asset_id = legacy.id "
             + "JOIN yak_dev_node n ON legacy.source = ? "
@@ -142,7 +165,12 @@ public class DatasetProjectCompatibilityBackfill {
     }
 
     return jdbcTemplate.update(
-        "UPDATE yak_task_asset a "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_task_asset AS a
+        SET project_id = n.project_id, update_time = CURRENT_TIMESTAMP
+        FROM (SELECT DISTINCT source_task_asset_id FROM yak_dataset_version WHERE source_task_asset_id > 0) AS referenced, yak_dev_node AS n
+        WHERE a.project_id IS NULL AND n.project_id IS NOT NULL AND (referenced.source_task_asset_id = a.id) AND (a.source = ? AND a.source_ref ~ '^[0-9]+$' AND n.id = (CASE WHEN a.source_ref ~ '^[0-9]+$' THEN CAST(a.source_ref AS DECIMAL) END))
+        """ : "UPDATE yak_task_asset a "
             + "JOIN (SELECT DISTINCT source_task_asset_id FROM yak_dataset_version "
             + "WHERE source_task_asset_id > 0) referenced ON referenced.source_task_asset_id = a.id "
             + "JOIN yak_dev_node n ON a.source = ? "
@@ -163,7 +191,9 @@ public class DatasetProjectCompatibilityBackfill {
 
   private void failOnAmbiguousSourceOwnership() {
     Long conflicts = jdbcTemplate.queryForObject(
-        "SELECT COUNT(1) FROM ("
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        SELECT COUNT(1) FROM (SELECT candidate.dataset_id FROM (SELECT d.id AS dataset_id, d.project_id AS project_id FROM yak_dataset d WHERE d.project_id IS NOT NULL UNION ALL SELECT d.id, n.project_id FROM yak_dataset d JOIN yak_dev_node n ON n.id = d.development_node_id WHERE n.project_id IS NOT NULL UNION ALL SELECT v.dataset_id, a.project_id FROM yak_dataset_version v JOIN yak_task_asset a ON a.id = v.source_task_asset_id WHERE v.source_task_asset_id > 0 AND a.project_id IS NOT NULL UNION ALL SELECT v.dataset_id, n.project_id FROM yak_dataset_version v JOIN yak_task_asset a ON a.id = v.source_task_asset_id JOIN yak_dev_node n ON a.source = ? AND a.source_ref ~ '^[0-9]+$' AND n.id = (CASE WHEN a.source_ref ~ '^[0-9]+$' THEN CAST(a.source_ref AS numeric) END) WHERE v.source_task_asset_id > 0 AND a.project_id IS NULL AND n.project_id IS NOT NULL UNION ALL SELECT v.dataset_id, s.project_id FROM yak_dataset_version v JOIN yak_ops_data_source s ON v.data_source_id ~ '^[0-9]+$' AND s.id = (CASE WHEN v.data_source_id ~ '^[0-9]+$' THEN CAST(v.data_source_id AS numeric) END) WHERE s.project_id IS NOT NULL) candidate GROUP BY candidate.dataset_id HAVING COUNT(DISTINCT candidate.project_id) > 1) conflicts
+        """ : "SELECT COUNT(1) FROM ("
             + "SELECT candidate.dataset_id FROM ("
             + "SELECT d.id AS dataset_id, d.project_id AS project_id FROM yak_dataset d "
             + "WHERE d.project_id IS NOT NULL "
@@ -214,7 +244,9 @@ public class DatasetProjectCompatibilityBackfill {
             + "WHERE a.project_id IS NOT NULL AND d.project_id <> a.project_id",
         "Dataset / TaskAsset Project mismatch");
     assertNoRows(
-        "SELECT COUNT(1) FROM yak_dataset d "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        SELECT COUNT(1) FROM yak_dataset d JOIN yak_dataset_version v ON v.dataset_id = d.id AND v.data_source_id ~ '^[0-9]+$' JOIN yak_ops_data_source s ON s.id = (CASE WHEN v.data_source_id ~ '^[0-9]+$' THEN CAST(v.data_source_id AS numeric) END) WHERE s.project_id IS NOT NULL AND d.project_id <> s.project_id
+        """ : "SELECT COUNT(1) FROM yak_dataset d "
             + "JOIN yak_dataset_version v ON v.dataset_id = d.id "
             + "AND v.data_source_id REGEXP '^[0-9]+$' "
             + "JOIN yak_ops_data_source s ON s.id = CAST(v.data_source_id AS UNSIGNED) "

@@ -107,7 +107,7 @@ public class MdmDataServiceSourceProvider implements DataServiceSourceProvider {
     List<String> codes = attributes.stream().map(MdmAttribute::code).toList();
     String sql =
         MdmDistributionQuerySql.build(
-            config.getProjectId(), config.getEntityId(), collectService.businessDatabase(), codes);
+            config.getProjectId(), config.getEntityId(), collectService.businessDatabase(), codes, collectService.isPostgresql());
     long revision = revisionOf(sql);
     SourceDescriptor descriptor =
         new SourceDescriptor(

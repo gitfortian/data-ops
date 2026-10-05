@@ -34,7 +34,7 @@
             <directory>../data-ops-boot/src/main/resources</directory>
             <outputDirectory>conf</outputDirectory>
             <includes>
-                <include>application.yml</include>
+                <include>application*.yml</include>
                 <include>logback-spring.xml</include>
             </includes>
         </fileSet>

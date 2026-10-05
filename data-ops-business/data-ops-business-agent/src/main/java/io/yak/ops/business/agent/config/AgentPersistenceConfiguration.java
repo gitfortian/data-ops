@@ -1,5 +1,6 @@
 package io.yak.ops.business.agent.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -25,7 +26,7 @@ public class AgentPersistenceConfiguration {
   public Flyway agentFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-agent")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-agent"))
         .table("flyway_schema_history_agent")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

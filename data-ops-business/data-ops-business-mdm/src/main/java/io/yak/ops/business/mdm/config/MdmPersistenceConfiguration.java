@@ -1,5 +1,6 @@
 package io.yak.ops.business.mdm.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -20,7 +21,7 @@ public class MdmPersistenceConfiguration {
   public Flyway mdmFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-mdm")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-mdm"))
         .table("flyway_schema_history_mdm")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

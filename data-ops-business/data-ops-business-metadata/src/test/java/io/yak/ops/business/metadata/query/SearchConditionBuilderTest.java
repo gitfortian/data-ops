@@ -263,8 +263,8 @@ class SearchConditionBuilderTest {
         "databaseName", List.of("dwd", "ads"), "domainId", List.of(7L, 8L)), Map.of());
     String where = fragments(plan.facetPredicates());
     assertThat(where).contains("a.database_name IN (:qf_databaseName_0_0,:qf_databaseName_0_1)");
-    assertThat(where).contains("FIND_IN_SET(:qf_domain_1, a.domain_ids)");
-    assertThat(where).contains("FIND_IN_SET(:qf_domain_2, a.domain_ids)");
+    assertThat(where).contains("POSITION(CONCAT(',', COALESCE(:qf_domain_1, ''), ',') IN CONCAT(',', a.domain_ids, ','))");
+    assertThat(where).contains("POSITION(CONCAT(',', COALESCE(:qf_domain_2, ''), ',') IN CONCAT(',', a.domain_ids, ','))");
   }
 
   @Test

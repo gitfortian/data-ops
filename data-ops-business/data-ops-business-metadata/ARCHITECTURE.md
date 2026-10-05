@@ -1,5 +1,7 @@
 # Metadata Architecture
 
+平台存储支持 MySQL 与 PostgreSQL。`MysqlMetadataSearchBackend` 保留既有装配名称，在 PostgreSQL 上用绑定的字面量词、ILIKE 与 `pg_trgm` 索引生成固定检索谓词；分面、行集和列命中共用转换，四条查询预算与项目隔离不变。共享表仍由 Lineage 维护结构，Metadata 的 PostgreSQL UPSERT 仅更新目录拥有的列。迁移按平台数据源选择对应目录。
+
 ## 包结构
 
 ```

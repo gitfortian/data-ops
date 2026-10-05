@@ -1,5 +1,9 @@
 package io.yak.ops.business.mdm.infrastructure.repository;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,8 +25,16 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
 
   private final MdmRecordMapper mapper;
   private final CurrentProject currentProject;
+  private final boolean postgresql;
 
   public MdmRecordRepositoryAdapter(MdmRecordMapper mapper, CurrentProject currentProject) {
+    this(mapper, currentProject, null);
+  }
+
+  @Autowired
+  public MdmRecordRepositoryAdapter(MdmRecordMapper mapper, CurrentProject currentProject,
+      @Qualifier("yakBusinessDataSource") DataSource dataSource) {
+    this.postgresql = dataSource != null && JdbcDatabase.isPostgresql(dataSource);
     this.mapper = mapper;
     this.currentProject = currentProject;
   }
@@ -50,8 +62,9 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
               // code 已由服务层做安全标识符白名单;关键词走参数绑定,不拼接。
               w.or()
                   .apply(
-                      "JSON_UNQUOTE(JSON_EXTRACT(attributes, {0})) LIKE CONCAT('%', {1}, '%')",
-                      "$." + code,
+                      postgresql ? "(attributes ->> {0}) LIKE CONCAT('%', COALESCE({1}, ''), '%')"
+                          : "JSON_UNQUOTE(JSON_EXTRACT(attributes, {0})) LIKE CONCAT('%', {1}, '%')",
+                      postgresql ? code : "$." + code,
                       trimmed);
             }
           });
@@ -73,14 +86,22 @@ public class MdmRecordRepositoryAdapter implements MdmRecordRepository {
   @Override
   public List<MdmDedupKey> countDedupKeys(
       Long entityId, Long ruleId, String keyExpr, String valueCondition) {
-    return mapper.countDedupKeys(requiredProjectId(), entityId, ruleId, keyExpr, valueCondition);
+    return mapper.countDedupKeys(requiredProjectId(), entityId, ruleId, platformExpression(keyExpr), platformExpression(valueCondition));
   }
 
   @Override
   public List<MdmRecord> listByDedupKey(Long entityId, String keyExpr, String key, int limit) {
-    return mapper.selectByDedupKey(requiredProjectId(), entityId, keyExpr, key, limit).stream()
+    return mapper.selectByDedupKey(requiredProjectId(), entityId, platformExpression(keyExpr), key, limit).stream()
         .map(MdmRecordRepositoryAdapter::toDomain)
         .toList();
+  }
+
+  /** Only expressions emitted by DedupSql cross this internal boundary. */
+  private String platformExpression(String expression) {
+    if (!postgresql) return expression;
+    return expression.replaceAll(
+        "JSON_UNQUOTE\\(JSON_EXTRACT\\(attributes, '\\$\\.([A-Za-z0-9_]{1,64})'\\)\\)",
+        "(attributes ->> '$1')").replace("CHAR(1)", "CHR(1)");
   }
 
   @Override

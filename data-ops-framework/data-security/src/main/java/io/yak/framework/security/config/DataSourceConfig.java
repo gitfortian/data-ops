@@ -1,7 +1,9 @@
 package io.yak.framework.security.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.baomidou.mybatisplus.annotation.DbType;
+import io.yak.framework.common.jdbc.JdbcDatabase;
+import org.apache.ibatis.mapping.VendorDatabaseIdProvider;
+import java.util.Properties;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -136,6 +138,10 @@ public class DataSourceConfig {
         result.setDriverClassName(
                 datasource.getDriverClassName());
 
+        if (JdbcDatabase.isPostgresql(datasource.getUrl())) {
+            result.addConnectionProperty("stringtype", "unspecified");
+        }
+
         result.setInitialSize(
                 datasource.getInitialSize());
 
@@ -212,8 +218,7 @@ public class DataSourceConfig {
                         tenantLineHandler));
 
         interceptor.addInnerInterceptor(
-                new PaginationInnerInterceptor(
-                        DbType.MARIADB));
+                new PaginationInnerInterceptor());
 
         return interceptor;
     }
@@ -238,7 +243,9 @@ public class DataSourceConfig {
         return Flyway.configure()
                 .dataSource(dataSource)
                 // 使用模块专属目录，避免独立数据源误执行宿主应用的迁移脚本。
-                .locations(FLYWAY_MIGRATION_LOCATION)
+                .locations(JdbcDatabase.isPostgresql(properties.getDatasource().getUrl())
+                        ? FLYWAY_MIGRATION_LOCATION.replace("/migration", "/migration-postgresql")
+                        : FLYWAY_MIGRATION_LOCATION)
                 .placeholders(Collections.singletonMap(
                         "appName",
                         properties.getApplicationName()))
@@ -279,11 +286,23 @@ public class DataSourceConfig {
                 new MybatisSqlSessionFactoryBean();
 
         factory.setDataSource(dataSource);
+        VendorDatabaseIdProvider databaseIds = new VendorDatabaseIdProvider();
+        Properties vendors = new Properties();
+        vendors.setProperty("PostgreSQL", "postgresql");
+        vendors.setProperty("MySQL", "mysql");
+        vendors.setProperty("MariaDB", "mysql");
+        databaseIds.setProperties(vendors);
+        factory.setDatabaseIdProvider(databaseIds);
+
 
         MybatisConfiguration configuration =
                 new MybatisConfiguration();
 
         configuration.setMapUnderscoreToCamelCase(true);
+        if (JdbcDatabase.isPostgresql(dataSource)) {
+            configuration.getTypeHandlerRegistry().register(Boolean.class, NumericBooleanTypeHandler.class);
+            configuration.getTypeHandlerRegistry().register(boolean.class, NumericBooleanTypeHandler.class);
+        }
 
         factory.setConfiguration(configuration);
         factory.setGlobalConfig(globalConfig);

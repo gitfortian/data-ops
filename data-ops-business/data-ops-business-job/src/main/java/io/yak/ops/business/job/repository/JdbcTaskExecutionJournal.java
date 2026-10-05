@@ -1,5 +1,6 @@
 package io.yak.ops.business.job.repository;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.job.task.TaskExecution;
@@ -39,7 +40,13 @@ public class JdbcTaskExecutionJournal implements TaskExecutionJournal {
     final String output;
     try { output = mapper.writeValueAsString(execution.output()); }
     catch (Exception failure) { throw new IllegalStateException("Cannot encode task output", failure); }
-    jdbc.update("""
+    jdbc.update((jdbc.getDataSource() != null && JdbcDatabase.isPostgresql(jdbc.getDataSource())) ? """
+        INSERT INTO yak_job_execution_result
+          (execution_id, project_id, task_type, idempotency_hash, status, error_message, output_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (project_id, task_type, idempotency_hash) DO UPDATE SET
+          execution_id = yak_job_execution_result.execution_id
+        """ : """
         INSERT INTO yak_job_execution_result
           (execution_id, project_id, task_type, idempotency_hash, status, error_message, output_json)
         VALUES (?, ?, ?, ?, ?, ?, ?)

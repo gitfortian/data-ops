@@ -1,5 +1,6 @@
 package io.yak.ops.business.audit;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.core.project.CurrentProject;
 import javax.sql.DataSource;
@@ -30,7 +31,7 @@ public class AuditConfiguration {
     Flyway flyway =
         Flyway.configure()
             .dataSource(dataSource)
-            .locations("classpath:db/migration/yak-audit")
+            .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-audit"))
             .table("yak_audit_schema_history")
             .baselineVersion(MigrationVersion.fromVersion("0"))
             .baselineOnMigrate(true)

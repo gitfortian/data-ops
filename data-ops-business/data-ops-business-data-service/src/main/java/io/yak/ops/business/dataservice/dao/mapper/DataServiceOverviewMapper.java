@@ -49,6 +49,21 @@ public interface DataServiceOverviewMapper {
       GROUP BY FLOOR(TIMESTAMPDIFF(MINUTE, #{from}, create_time) / #{bucketMinutes})
       ORDER BY bucketIndex
       """)
+  @Select(databaseId = "postgresql", value = """
+      SELECT
+          FLOOR(EXTRACT(EPOCH FROM (create_time - #{from}::timestamp)) / (#{bucketMinutes} * 60.0)) AS bucketIndex,
+          COUNT(*) AS calls,
+          COALESCE(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END), 0) AS successCalls,
+          COALESCE(SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END), 0) AS failureCalls,
+          COALESCE(SUM(CASE WHEN duration_ms > 0 THEN duration_ms ELSE 0 END), 0)
+              AS totalDurationMs
+      FROM yak_ops_data_service_call_log
+      WHERE project_id = #{projectId}
+        AND create_time >= #{from}
+        AND create_time <= #{to}
+      GROUP BY bucketIndex
+      ORDER BY bucketIndex
+      """)
   List<DataServiceOverviewTrendPO> selectTrend(
       @Param("projectId") Long projectId,
       @Param("from") LocalDateTime from,

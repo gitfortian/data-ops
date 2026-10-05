@@ -15,7 +15,7 @@ public interface DatasetFieldMapper extends BaseMapper<DatasetFieldPO> {
   @Insert({
       "<script>",
       "INSERT INTO yak_dataset_field ",
-      "(field_id, version_id, physical_name, display_name, data_type, `nullable`, description, default_role, sort_order) VALUES ",
+      "(field_id, version_id, physical_name, display_name, data_type, nullable, description, default_role, sort_order) VALUES ",
       "<foreach collection='fields' item='field' separator=','>",
       "(#{field.fieldId}, #{field.versionId}, #{field.physicalName}, #{field.displayName}, ",
       "#{field.dataType}, #{field.nullable}, #{field.description}, #{field.defaultRole}, #{field.sortOrder})",

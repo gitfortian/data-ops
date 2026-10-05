@@ -22,6 +22,19 @@ public interface WorkflowScheduleTriggerMapper extends BaseMapper<WorkflowSchedu
          #{status}, #{workflowExecutionId}, #{executionStatus}, #{message}, #{errorMessage},
          #{launchedAt}, #{completedAt}, #{createTime}, #{updateTime})
       """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_workflow_schedule_trigger
+        (id, project_id, schedule_id, workflow_id, backfill_id, trigger_id, dedupe_key, trigger_source,
+         planned_fire_time, actual_fire_time, business_date, execution_strategy, misfire_strategy,
+         status, workflow_execution_id, execution_status, message, error_message,
+         launched_at, completed_at, create_time, update_time)
+      VALUES
+        (#{id}, #{projectId}, #{scheduleId}, #{workflowId}, #{backfillId}, #{triggerId}, #{dedupeKey}, #{triggerSource},
+         #{plannedFireTime}, #{actualFireTime}, #{businessDate}, #{executionStrategy}, #{misfireStrategy},
+         #{status}, #{workflowExecutionId}, #{executionStatus}, #{message}, #{errorMessage},
+         #{launchedAt}, #{completedAt}, #{createTime}, #{updateTime})
+      ON CONFLICT DO NOTHING
+      """)
   int insertIgnore(WorkflowScheduleTriggerPO trigger);
 
   @Update("""
@@ -87,6 +100,21 @@ public interface WorkflowScheduleTriggerMapper extends BaseMapper<WorkflowSchedu
          WHERE e.runtime_metadata_json IS NOT NULL
            AND JSON_VALID(e.runtime_metadata_json)
            AND JSON_UNQUOTE(JSON_EXTRACT(e.runtime_metadata_json, '$.triggerId')) = #{triggerId}
+         ORDER BY e.created_at DESC
+         LIMIT 1)
+      )
+      """)
+  @Select(databaseId = "postgresql", value = """
+      SELECT COALESCE(
+        (SELECT t.workflow_execution_id
+         FROM yak_workflow_schedule_trigger t
+         WHERE t.trigger_id = #{triggerId}
+         LIMIT 1),
+        (SELECT e.id
+         FROM yak_workflow_execution e
+         WHERE e.runtime_metadata_json IS NOT NULL
+           AND CASE WHEN pg_input_is_valid(e.runtime_metadata_json, 'jsonb')
+             THEN e.runtime_metadata_json::jsonb ->> 'triggerId' END = #{triggerId}
          ORDER BY e.created_at DESC
          LIMIT 1)
       )

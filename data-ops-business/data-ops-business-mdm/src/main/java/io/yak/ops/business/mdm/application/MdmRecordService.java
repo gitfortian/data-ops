@@ -76,6 +76,10 @@ public class MdmRecordService {
         entityId, pageNo, pageSize, keyword, resolveStatus(status), attributeCodes);
   }
 
+  public boolean isPostgresql() {
+    return collectService.isPostgresql();
+  }
+
   /**
    * 生成主数据加工 SQL(R2:每落地表一段 INSERT...SELECT,同库拼接交数据开发执行)。
    * 来源未生成采集落地任务时阻断,保证「识别→落地→加工→记录」主链路不脱节。
@@ -124,7 +128,7 @@ public class MdmRecordService {
               entity.code(),
               specs,
               new LandingSpec(platformDatabase, link.landingTable(), source.datasourceId()),
-              source.fieldMapping()));
+              source.fieldMapping(), collectService.isPostgresql()));
     }
     return sql.toString();
   }

@@ -1,5 +1,6 @@
 package io.yak.ops.boot.project;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.resource.config.ConditionalOnResourceEnabled;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -62,7 +63,12 @@ public class ResourceProjectCompatibilityBackfill {
     do {
       updated =
           jdbcTemplate.update(
-              "UPDATE yak_ops_resource child "
+              JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_ops_resource AS child
+        SET project_id = parent.project_id
+        FROM yak_ops_resource AS parent
+        WHERE child.project_id IS NULL AND parent.project_id IS NOT NULL AND (child.parent_id = parent.id)
+        """ : "UPDATE yak_ops_resource child "
                   + "JOIN yak_ops_resource parent ON child.parent_id = parent.id "
                   + "SET child.project_id = parent.project_id "
                   + "WHERE child.project_id IS NULL AND parent.project_id IS NOT NULL");

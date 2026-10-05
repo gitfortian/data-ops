@@ -167,6 +167,8 @@ docker compose down
 
 If you already have MySQL, use `.env.without-mysql.example` together with `compose.without-mysql.yaml` instead of starting the bundled database.
 
+For a fresh PostgreSQL 16+ deployment, see [PostgreSQL deployment](docs/deployment/postgresql.md). Use the `postgresql` Spring profile or `compose.postgresql.yaml` with `.env.postgresql.example`.
+
 ### Build from source
 
 Source builds currently require:

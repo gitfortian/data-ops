@@ -1,5 +1,6 @@
 package io.yak.ops.business.digitalscreen.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -22,7 +23,7 @@ public class DigitalScreenPersistenceConfiguration {
       @Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-digital-screen")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-digital-screen"))
         .table("flyway_schema_history_digital_screen")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

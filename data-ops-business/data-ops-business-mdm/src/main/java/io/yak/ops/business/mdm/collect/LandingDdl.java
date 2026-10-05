@@ -28,6 +28,11 @@ public final class LandingDdl {
 
   /** database/table 均已在调用侧校验;返回可直接执行的建表语句(IF NOT EXISTS 幂等)。 */
   public static String createTable(String database, String table, List<CatalogColumn> columns) {
+    return createTable(database, table, columns, false);
+  }
+
+  public static String createTable(String database, String table, List<CatalogColumn> columns,
+      boolean postgresql) {
     requireSafeIdentifier(table);
     if (database != null && !database.isBlank()) {
       requireSafeIdentifier(database);
@@ -50,6 +55,12 @@ public final class LandingDdl {
     sql.append(
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             + " COMMENT='MDM 采集落地表'");
+    if (postgresql) {
+      // All identifiers have already passed the strict whitelist; only this generated DDL is adapted.
+      String ddl = sql.substring(0, sql.indexOf(") ENGINE=")) + ")";
+      return ddl.replace('`', '"').replace(" DATETIME", " TIMESTAMP")
+          .replace(" DOUBLE", " DOUBLE PRECISION").replace(" TINYINT", " BOOLEAN");
+    }
     return sql.toString();
   }
 

@@ -1,5 +1,6 @@
 package io.yak.ops.business.job.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -12,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 public class JobRuntimeFlywayConfiguration {
   @Bean(name = "yakJobRuntimeFlyway", initMethod = "migrate")
   public Flyway jobRuntimeFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
-    return Flyway.configure().dataSource(dataSource).locations("classpath:db/migration/yak-job-runtime")
+    return Flyway.configure().dataSource(dataSource).locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-job-runtime"))
         .table("flyway_schema_history_job_runtime").baselineVersion("0").baselineOnMigrate(true).load();
   }
 }

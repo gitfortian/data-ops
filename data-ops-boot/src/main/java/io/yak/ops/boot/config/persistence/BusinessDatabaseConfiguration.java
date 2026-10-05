@@ -1,6 +1,8 @@
 package io.yak.ops.boot.config.persistence;
 
-import com.baomidou.mybatisplus.annotation.DbType;
+import io.yak.framework.common.jdbc.JdbcDatabase;
+import org.apache.ibatis.mapping.VendorDatabaseIdProvider;
+import java.util.Properties;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
@@ -51,6 +53,9 @@ public class BusinessDatabaseConfiguration {
         config.setMinimumIdle(properties.getMinimumIdle());
         config.setMaximumPoolSize(properties.getMaximumPoolSize());
         config.setAutoCommit(true);
+        if (JdbcDatabase.isPostgresql(properties.getUrl())) {
+            config.addDataSourceProperty("stringtype", "unspecified");
+        }
         return new HikariDataSource(config);
     }
 
@@ -79,6 +84,14 @@ public class BusinessDatabaseConfiguration {
             @Qualifier("yakBusinessDataSource") DataSource dataSource) throws Exception {
         MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
         factory.setDataSource(dataSource);
+        VendorDatabaseIdProvider databaseIds = new VendorDatabaseIdProvider();
+        Properties vendors = new Properties();
+        vendors.setProperty("PostgreSQL", "postgresql");
+        vendors.setProperty("MySQL", "mysql");
+        vendors.setProperty("MariaDB", "mysql");
+        databaseIds.setProperties(vendors);
+        factory.setDatabaseIdProvider(databaseIds);
+
         factory.setTypeAliasesPackage("io.yak.ops.business.**.dao.model");
 
         // All Yak Ops business modules share this SqlSessionFactory. Each module keeps its XML files
@@ -89,11 +102,16 @@ public class BusinessDatabaseConfiguration {
             factory.setMapperLocations(mapperLocations);
         }
 
-        factory.setConfiguration(MybatisPlusFactorySupport.createConfiguration());
+        var configuration = MybatisPlusFactorySupport.createConfiguration();
+        if (JdbcDatabase.isPostgresql(dataSource)) {
+            configuration.getTypeHandlerRegistry().register(Boolean.class, NumericBooleanTypeHandler.class);
+            configuration.getTypeHandlerRegistry().register(boolean.class, NumericBooleanTypeHandler.class);
+        }
+        factory.setConfiguration(configuration);
         factory.setGlobalConfig(MybatisPlusFactorySupport.createGlobalConfig());
 
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         factory.setPlugins(interceptor);
         return factory.getObject();
     }

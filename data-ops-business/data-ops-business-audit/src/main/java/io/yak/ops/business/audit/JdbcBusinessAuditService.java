@@ -1,5 +1,6 @@
 package io.yak.ops.business.audit;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.core.project.CurrentProject;
@@ -384,7 +385,9 @@ final class JdbcBusinessAuditService implements BusinessAuditService {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
     if (eventKey != null) {
-      sql += " ON DUPLICATE KEY UPDATE id = id";
+      sql += JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource())
+          ? " ON CONFLICT (operation_id, event_key) DO NOTHING"
+          : " ON DUPLICATE KEY UPDATE id = id";
     }
     jdbcTemplate.update(
         sql,

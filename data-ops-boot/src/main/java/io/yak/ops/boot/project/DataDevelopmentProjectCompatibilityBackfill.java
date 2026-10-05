@@ -1,5 +1,6 @@
 package io.yak.ops.boot.project;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,12 @@ public class DataDevelopmentProjectCompatibilityBackfill {
     failOnAmbiguousLegacyDirectories();
 
     int inferredDirectories = jdbcTemplate.update(
-        "UPDATE yak_dev_directory d "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dev_directory AS d
+        SET project_id = scoped_owner.project_id
+        FROM (SELECT directory_id, MIN(project_id) AS project_id FROM yak_dev_node WHERE directory_id IS NOT NULL AND directory_id > 0 AND project_id IS NOT NULL GROUP BY directory_id HAVING COUNT(DISTINCT project_id) = 1) AS scoped_owner
+        WHERE d.project_id IS NULL AND (scoped_owner.directory_id = d.id)
+        """ : "UPDATE yak_dev_directory d "
             + "JOIN ("
             + "  SELECT directory_id, MIN(project_id) AS project_id "
             + "  FROM yak_dev_node "
@@ -55,17 +61,32 @@ public class DataDevelopmentProjectCompatibilityBackfill {
         "UPDATE yak_dev_directory SET project_id = ? WHERE project_id IS NULL",
         defaultProjectId);
     int inferredNodes = jdbcTemplate.update(
-        "UPDATE yak_dev_node n JOIN yak_dev_directory d ON d.id = n.directory_id "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dev_node AS n
+        SET project_id = d.project_id
+        FROM yak_dev_directory AS d
+        WHERE n.project_id IS NULL AND n.directory_id > 0 AND d.project_id IS NOT NULL AND (d.id = n.directory_id)
+        """ : "UPDATE yak_dev_node n JOIN yak_dev_directory d ON d.id = n.directory_id "
             + "SET n.project_id = d.project_id "
             + "WHERE n.project_id IS NULL AND n.directory_id > 0 AND d.project_id IS NOT NULL");
     int defaultNodes = jdbcTemplate.update(
         "UPDATE yak_dev_node SET project_id = ? WHERE project_id IS NULL",
         defaultProjectId);
     int executions = jdbcTemplate.update(
-        "UPDATE yak_dev_task_execution e JOIN yak_dev_node n ON n.id = e.node_id "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dev_task_execution AS e
+        SET project_id = n.project_id
+        FROM yak_dev_node AS n
+        WHERE e.project_id IS NULL AND n.project_id IS NOT NULL AND (n.id = e.node_id)
+        """ : "UPDATE yak_dev_task_execution e JOIN yak_dev_node n ON n.id = e.node_id "
             + "SET e.project_id = n.project_id WHERE e.project_id IS NULL AND n.project_id IS NOT NULL");
     int lineage = jdbcTemplate.update(
-        "UPDATE yak_dev_lineage_outbox o JOIN yak_dev_node n ON n.id = o.node_id "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_dev_lineage_outbox AS o
+        SET project_id = n.project_id
+        FROM yak_dev_node AS n
+        WHERE o.project_id IS NULL AND n.project_id IS NOT NULL AND (n.id = o.node_id)
+        """ : "UPDATE yak_dev_lineage_outbox o JOIN yak_dev_node n ON n.id = o.node_id "
             + "SET o.project_id = n.project_id WHERE o.project_id IS NULL AND n.project_id IS NOT NULL");
 
     assertNoUnscopedRows("yak_dev_directory");

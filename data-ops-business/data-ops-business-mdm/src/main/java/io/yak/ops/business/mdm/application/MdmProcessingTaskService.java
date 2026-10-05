@@ -28,8 +28,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class MdmProcessingTaskService {
 
-  /** SQL 插件 schemaVersion=1;dialect 由 MDM 固定 MySQL(09 先 MySQL)。 */
-  private static final String CONFIG_JSON_TEMPLATE = "{\"dialect\":\"MYSQL\"%s}";
+  /** SQL 插件 schemaVersion=1;dialect 跟随平台业务库。 */
+  private static final String CONFIG_JSON_TEMPLATE = "{\"dialect\":\"%s\"%s}";
 
   private final MdmRecordService recordService;
   private final MdmEntityService entityService;
@@ -78,7 +78,8 @@ public class MdmProcessingTaskService {
     }
     String configJson =
         String.format(
-            CONFIG_JSON_TEMPLATE, sinkDatasourceConfigFragment(entityId));
+            CONFIG_JSON_TEMPLATE, recordService.isPostgresql() ? "POSTGRESQL" : "MYSQL",
+            sinkDatasourceConfigFragment(entityId));
     try {
       saveDraft(tasks, node.id(), sql, configJson);
     } catch (DevelopmentDraftConflictException conflict) {

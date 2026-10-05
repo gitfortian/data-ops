@@ -1,5 +1,6 @@
 package io.yak.ops.business.development.repository;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.development.repository.DevelopmentLineageOutboxRepository.DiagnosticRecord;
 import io.yak.ops.business.development.repository.DevelopmentLineageOutboxRepository.OutboxRecord;
 import io.yak.ops.core.project.CurrentProject;
@@ -45,7 +46,10 @@ public class DevelopmentLineageOutboxRepositoryAdapter
 
     // INSERT IGNORE is intentionally idempotent: the same node/revision may already have an outbox row.
     jdbc.update(
-        "INSERT IGNORE INTO yak_dev_lineage_outbox "
+        (jdbc.getDataSource() != null && JdbcDatabase.isPostgresql(jdbc.getDataSource())) ? """
+        INSERT INTO yak_dev_lineage_outbox (task_id,project_id,node_id,revision_id,status,attempts,next_attempt_time,create_time,update_time) SELECT ?,project_id,id,?,'PENDING',0,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6) FROM yak_dev_node WHERE id=? AND project_id=?
+        ON CONFLICT DO NOTHING
+        """ : "INSERT IGNORE INTO yak_dev_lineage_outbox "
             + "(task_id,project_id,node_id,revision_id,status,attempts,next_attempt_time,create_time,update_time) "
             + "SELECT ?,project_id,id,?,'PENDING',0,NOW(6),NOW(6),NOW(6) FROM yak_dev_node "
             + "WHERE id=? AND project_id=?",
@@ -59,7 +63,9 @@ public class DevelopmentLineageOutboxRepositoryAdapter
   @Override
   public List<OutboxRecord> due(int limit) {
     return jdbc.query(
-        "SELECT task_id,project_id,node_id,revision_id,attempts FROM yak_dev_lineage_outbox "
+        (jdbc.getDataSource() != null && JdbcDatabase.isPostgresql(jdbc.getDataSource())) ? """
+        SELECT task_id,project_id,node_id,revision_id,attempts FROM yak_dev_lineage_outbox WHERE project_id IS NOT NULL AND ((status IN ('PENDING','FAILED') AND next_attempt_time<=CURRENT_TIMESTAMP(6)) OR (status='RUNNING' AND update_time<(CURRENT_TIMESTAMP(6) - INTERVAL '10 minutes'))) ORDER BY create_time LIMIT ?
+        """ : "SELECT task_id,project_id,node_id,revision_id,attempts FROM yak_dev_lineage_outbox "
             + "WHERE project_id IS NOT NULL AND ((status IN ('PENDING','FAILED') AND next_attempt_time<=NOW(6)) "
             + "OR (status='RUNNING' AND update_time<DATE_SUB(NOW(6), INTERVAL 10 MINUTE))) "
             + "ORDER BY create_time LIMIT ?",
@@ -76,7 +82,9 @@ public class DevelopmentLineageOutboxRepositoryAdapter
   @Override
   public boolean claim(OutboxRecord record) {
     return jdbc.update(
-        "UPDATE yak_dev_lineage_outbox SET status='RUNNING',attempts=attempts+1,"
+        (jdbc.getDataSource() != null && JdbcDatabase.isPostgresql(jdbc.getDataSource())) ? """
+        UPDATE yak_dev_lineage_outbox SET status='RUNNING',attempts=attempts+1,update_time=CURRENT_TIMESTAMP(6) WHERE task_id=? AND project_id=? AND revision_id=? AND (status IN ('PENDING','FAILED') OR (status='RUNNING' AND update_time<(CURRENT_TIMESTAMP(6) - INTERVAL '10 minutes')))
+        """ : "UPDATE yak_dev_lineage_outbox SET status='RUNNING',attempts=attempts+1,"
             + "update_time=NOW(6) WHERE task_id=? AND project_id=? AND revision_id=? "
             + "AND (status IN ('PENDING','FAILED') "
             + "OR (status='RUNNING' AND update_time<DATE_SUB(NOW(6), INTERVAL 10 MINUTE)))",
@@ -88,7 +96,9 @@ public class DevelopmentLineageOutboxRepositoryAdapter
   @Override
   public void complete(OutboxRecord record) {
     jdbc.update(
-        "UPDATE yak_dev_lineage_outbox SET status='SUCCEEDED',last_error=NULL,update_time=NOW(6) "
+        (jdbc.getDataSource() != null && JdbcDatabase.isPostgresql(jdbc.getDataSource())) ? """
+        UPDATE yak_dev_lineage_outbox SET status='SUCCEEDED',last_error=NULL,update_time=CURRENT_TIMESTAMP(6) WHERE task_id=? AND project_id=? AND revision_id=? AND status='RUNNING'
+        """ : "UPDATE yak_dev_lineage_outbox SET status='SUCCEEDED',last_error=NULL,update_time=NOW(6) "
             + "WHERE task_id=? AND project_id=? AND revision_id=? AND status='RUNNING'",
         record.taskId(),
         record.projectId(),
@@ -98,7 +108,9 @@ public class DevelopmentLineageOutboxRepositoryAdapter
   @Override
   public void fail(OutboxRecord record, String errorMessage, long delaySeconds) {
     jdbc.update(
-        "UPDATE yak_dev_lineage_outbox SET status='FAILED',last_error=?,"
+        (jdbc.getDataSource() != null && JdbcDatabase.isPostgresql(jdbc.getDataSource())) ? """
+        UPDATE yak_dev_lineage_outbox SET status='FAILED',last_error=?,next_attempt_time=(CURRENT_TIMESTAMP(6) + (? * INTERVAL '1 second')),update_time=CURRENT_TIMESTAMP(6) WHERE task_id=? AND project_id=? AND revision_id=? AND status='RUNNING'
+        """ : "UPDATE yak_dev_lineage_outbox SET status='FAILED',last_error=?,"
             + "next_attempt_time=DATE_ADD(NOW(6), INTERVAL ? SECOND),update_time=NOW(6) "
             + "WHERE task_id=? AND project_id=? AND revision_id=? AND status='RUNNING'",
         errorMessage,

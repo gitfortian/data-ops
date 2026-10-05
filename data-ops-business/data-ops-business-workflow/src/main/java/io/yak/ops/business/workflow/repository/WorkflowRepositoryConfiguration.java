@@ -1,5 +1,6 @@
 package io.yak.ops.business.workflow.repository;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.framework.workflow.engine.spi.ExecutionRepository;
 import io.yak.framework.workflow.engine.support.CachingExecutionRepository;
 import javax.sql.DataSource;
@@ -29,7 +30,7 @@ public class WorkflowRepositoryConfiguration {
       @Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-workflow")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-workflow"))
         .table("yak_workflow_schema_history")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

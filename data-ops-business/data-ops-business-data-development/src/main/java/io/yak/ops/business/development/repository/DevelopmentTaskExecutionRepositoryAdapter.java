@@ -50,7 +50,7 @@ public class DevelopmentTaskExecutionRepositoryAdapter
     String sql = "INSERT INTO yak_dev_task_execution "
         + "(project_id, node_id, task_name, task_type, schema_version, trigger_type, status, operator_name, "
         + "retry_of_execution_id, content, config_json, start_time, create_time, update_time) "
-        + "VALUES (?, ?, ?, ?, ?, 'MANUAL', 'PENDING', ?, ?, ?, ?, NOW(6), NOW(6), NOW(6))";
+        + "VALUES (?, ?, ?, ?, ?, 'MANUAL', 'PENDING', ?, ?, ?, ?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))";
     KeyHolder keyHolder = new GeneratedKeyHolder();
     jdbcTemplate.update(
         connection -> {
@@ -77,7 +77,7 @@ public class DevelopmentTaskExecutionRepositoryAdapter
   public void attachRuntime(long id, String runtimeExecutionId, String status) {
     Long projectId = requiredProjectId();
     jdbcTemplate.update(
-        "UPDATE yak_dev_task_execution SET runtime_execution_id = ?, status = ?, update_time = NOW(6) "
+        "UPDATE yak_dev_task_execution SET runtime_execution_id = ?, status = ?, update_time = CURRENT_TIMESTAMP(6) "
             + "WHERE id = ? AND project_id = ? AND status IN ('PENDING', 'RUNNING')",
         runtimeExecutionId,
         status,
@@ -89,7 +89,7 @@ public class DevelopmentTaskExecutionRepositoryAdapter
   public void updateActiveStatus(long id, String status) {
     Long projectId = requiredProjectId();
     jdbcTemplate.update(
-        "UPDATE yak_dev_task_execution SET status = ?, update_time = NOW(6) "
+        "UPDATE yak_dev_task_execution SET status = ?, update_time = CURRENT_TIMESTAMP(6) "
             + "WHERE id = ? AND project_id = ? AND status IN ('PENDING', 'RUNNING')",
         status,
         id,
@@ -107,7 +107,7 @@ public class DevelopmentTaskExecutionRepositoryAdapter
     Long projectId = requiredProjectId();
     jdbcTemplate.update(
         "UPDATE yak_dev_task_execution SET status = ?, duration_ms = ?, failure_reason = ?, "
-            + "error_message = ?, output_json = ?, end_time = NOW(6), update_time = NOW(6) "
+            + "error_message = ?, output_json = ?, end_time = CURRENT_TIMESTAMP(6), update_time = CURRENT_TIMESTAMP(6) "
             + "WHERE id = ? AND project_id = ? AND status IN ('PENDING', 'RUNNING')",
         status,
         durationMs,

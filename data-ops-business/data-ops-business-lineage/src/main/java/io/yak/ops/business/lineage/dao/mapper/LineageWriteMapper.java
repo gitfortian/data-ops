@@ -37,6 +37,13 @@ public interface LineageWriteMapper {
         AND legacy.project_id IS NULL
         AND scoped.id IS NULL
       """)
+  @Update(databaseId = "postgresql", value = """
+      UPDATE yak_metadata_asset AS legacy
+      SET project_id = #{projectId}, update_time = CURRENT_TIMESTAMP(6)
+      WHERE legacy.asset_key = #{assetKey} AND legacy.project_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM yak_metadata_asset scoped
+          WHERE scoped.asset_key = legacy.asset_key AND scoped.project_id = #{projectId})
+      """)
   int claimLegacyAssetProject(
       @Param("assetKey") String assetKey,
       @Param("projectId") Long projectId);
@@ -59,6 +66,30 @@ public interface LineageWriteMapper {
           table_name = VALUES(table_name), column_name = VALUES(column_name),
           properties = VALUES(properties), update_time = NOW(6)
       """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_metadata_asset
+          (project_id, asset_key, asset_type, name, source_type, source_id, parent_asset_id,
+           data_source_id, database_name, schema_name, table_name, column_name, properties,
+           create_time, update_time)
+      VALUES
+          (#{row.projectId}, #{row.assetKey}, #{row.assetType}, #{row.name}, #{row.sourceType}, #{row.sourceId},
+           #{row.parentAssetId}, #{row.dataSourceId}, #{row.databaseName}, #{row.schemaName},
+           #{row.tableName}, #{row.columnName}, #{row.properties}, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
+      ON CONFLICT (project_scope_id, asset_key) DO UPDATE SET
+        project_id = excluded.project_id,
+        asset_type = excluded.asset_type,
+        name = excluded.name,
+        source_type = excluded.source_type,
+        source_id = excluded.source_id,
+        parent_asset_id = excluded.parent_asset_id,
+        data_source_id = excluded.data_source_id,
+        database_name = excluded.database_name,
+        schema_name = excluded.schema_name,
+        table_name = excluded.table_name,
+        column_name = excluded.column_name,
+        properties = excluded.properties,
+        update_time = CURRENT_TIMESTAMP
+      """)
   int upsertAsset(@Param("row") LineageAssetPO row);
 
   @Insert(
@@ -73,6 +104,22 @@ public interface LineageWriteMapper {
       ON DUPLICATE KEY UPDATE
           project_id = VALUES(project_id), expression = VALUES(expression), confidence = VALUES(confidence),
           observed_at = VALUES(observed_at), properties = VALUES(properties), update_time = NOW(6)
+      """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_metadata_relation
+          (project_id, source_asset_id, target_asset_id, relation_type, source_type, source_id,
+           expression, confidence, version, observed_at, properties, create_time, update_time)
+      VALUES
+          (#{row.projectId}, #{row.sourceAssetId}, #{row.targetAssetId}, #{row.relationType}, #{row.sourceType},
+           #{row.sourceId}, #{row.expression}, #{row.confidence}, #{row.version},
+           #{row.observedAt}, #{row.properties}, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
+      ON CONFLICT (source_asset_id, target_asset_id, relation_type, source_type, source_id, version) DO UPDATE SET
+        project_id = excluded.project_id,
+        expression = excluded.expression,
+        confidence = excluded.confidence,
+        observed_at = excluded.observed_at,
+        properties = excluded.properties,
+        update_time = CURRENT_TIMESTAMP
       """)
   int upsertRelation(@Param("row") LineageRelationPO row);
 
@@ -98,6 +145,34 @@ public interface LineageWriteMapper {
           properties = VALUES(properties), update_time = NOW(6)
       </script>
       """)
+  @Insert(databaseId = "postgresql", value = """
+      <script>
+      INSERT INTO yak_metadata_asset
+          (project_id, asset_key, asset_type, name, source_type, source_id, parent_asset_id,
+           data_source_id, database_name, schema_name, table_name, column_name, properties,
+           create_time, update_time)
+      VALUES
+      <foreach collection="rows" item="row" separator=",">
+          (#{row.projectId}, #{row.assetKey}, #{row.assetType}, #{row.name}, #{row.sourceType}, #{row.sourceId},
+           #{row.parentAssetId}, #{row.dataSourceId}, #{row.databaseName}, #{row.schemaName},
+           #{row.tableName}, #{row.columnName}, #{row.properties}, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
+      </foreach>
+      ON CONFLICT (project_scope_id, asset_key) DO UPDATE SET
+        project_id = excluded.project_id,
+        asset_type = excluded.asset_type,
+        name = excluded.name,
+        source_type = excluded.source_type,
+        source_id = excluded.source_id,
+        parent_asset_id = excluded.parent_asset_id,
+        data_source_id = excluded.data_source_id,
+        database_name = excluded.database_name,
+        schema_name = excluded.schema_name,
+        table_name = excluded.table_name,
+        column_name = excluded.column_name,
+        properties = excluded.properties,
+        update_time = CURRENT_TIMESTAMP
+      </script>
+      """)
   int upsertAssets(@Param("rows") List<LineageAssetPO> rows);
 
   @Insert(
@@ -115,6 +190,26 @@ public interface LineageWriteMapper {
       ON DUPLICATE KEY UPDATE
           project_id = VALUES(project_id), expression = VALUES(expression), confidence = VALUES(confidence),
           observed_at = VALUES(observed_at), properties = VALUES(properties), update_time = NOW(6)
+      </script>
+      """)
+  @Insert(databaseId = "postgresql", value = """
+      <script>
+      INSERT INTO yak_metadata_relation
+          (project_id, source_asset_id, target_asset_id, relation_type, source_type, source_id,
+           expression, confidence, version, observed_at, properties, create_time, update_time)
+      VALUES
+      <foreach collection="rows" item="row" separator=",">
+          (#{row.projectId}, #{row.sourceAssetId}, #{row.targetAssetId}, #{row.relationType}, #{row.sourceType},
+           #{row.sourceId}, #{row.expression}, #{row.confidence}, #{row.version},
+           #{row.observedAt}, #{row.properties}, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
+      </foreach>
+      ON CONFLICT (source_asset_id, target_asset_id, relation_type, source_type, source_id, version) DO UPDATE SET
+        project_id = excluded.project_id,
+        expression = excluded.expression,
+        confidence = excluded.confidence,
+        observed_at = excluded.observed_at,
+        properties = excluded.properties,
+        update_time = CURRENT_TIMESTAMP
       </script>
       """)
   int upsertRelations(@Param("rows") List<LineageRelationPO> rows);
@@ -162,6 +257,18 @@ public interface LineageWriteMapper {
         AND outgoing.id IS NULL
         AND incoming.id IS NULL
         AND child.id IS NULL
+      </script>
+      """)
+  @Delete(databaseId = "postgresql", value = """
+      <script>
+      DELETE FROM yak_metadata_asset AS asset
+      WHERE asset.id IN
+      <foreach collection="assetIds" item="assetId" open="(" separator="," close=")">#{assetId}</foreach>
+        AND asset.source_type = #{ownerType} AND asset.source_id = #{ownerId}
+      <if test="projectId != null">AND asset.project_id = #{projectId}</if>
+        AND NOT EXISTS (SELECT 1 FROM yak_metadata_relation outgoing WHERE outgoing.source_asset_id = asset.id)
+        AND NOT EXISTS (SELECT 1 FROM yak_metadata_relation incoming WHERE incoming.target_asset_id = asset.id)
+        AND NOT EXISTS (SELECT 1 FROM yak_metadata_asset child WHERE child.parent_asset_id = asset.id)
       </script>
       """)
   int deleteUnreferencedOwnedAssets(

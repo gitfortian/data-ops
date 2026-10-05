@@ -1,5 +1,8 @@
 package io.yak.ops.business.metadata.query;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -33,16 +36,25 @@ public class MysqlMetadataSearchBackend implements MetadataSearchBackend {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
+  private final boolean postgresql;
 
   public MysqlMetadataSearchBackend(
       @Qualifier("yakBusinessDataSource") DataSource dataSource, ObjectMapper objectMapper) {
+    this(dataSource, objectMapper, "");
+  }
+
+  @Autowired
+  public MysqlMetadataSearchBackend(
+      @Qualifier("yakBusinessDataSource") DataSource dataSource, ObjectMapper objectMapper,
+      @Value("${yak.database.url:}") String databaseUrl) {
+    this.postgresql = JdbcDatabase.isPostgresql(databaseUrl);
     this.jdbc = new NamedParameterJdbcTemplate(dataSource);
     this.objectMapper = objectMapper;
   }
 
   @Override
   public String name() {
-    return "mysql";
+    return postgresql ? "postgresql" : "mysql";
   }
 
   @Override
@@ -160,15 +172,33 @@ public class MysqlMetadataSearchBackend implements MetadataSearchBackend {
     }
   }
 
-  private static MapSqlParameterSource params(Map<String, Object> extra, List<SqlPredicate> predicates) {
+  private MapSqlParameterSource params(Map<String, Object> extra, List<SqlPredicate> predicates) {
     MapSqlParameterSource source = new MapSqlParameterSource(extra);
     for (SqlPredicate predicate : predicates) {
-      source.addValues(predicate.params());
+      source.addValues(textPredicate(predicate).params());
     }
     return source;
   }
 
-  private static String where(List<SqlPredicate> predicates) {
-    return String.join(" AND ", predicates.stream().map(SqlPredicate::fragment).toList());
+  private String where(List<SqlPredicate> predicates) {
+    return String.join(" AND ", predicates.stream().map(this::textPredicate).map(SqlPredicate::fragment).toList());
+  }
+
+  /** Render the fixed fulltext marker using bound literal terms and PostgreSQL trigram indexes. */
+  @SuppressWarnings("unchecked")
+  private SqlPredicate textPredicate(SqlPredicate predicate) {
+    String marker = "MATCH(a.name, a.display_name, a.summary) AGAINST(:qFt IN BOOLEAN MODE)";
+    if (!postgresql || !predicate.fragment().contains(marker)) return predicate;
+    var parameters = new LinkedHashMap<>(predicate.params());
+    var alternatives = new ArrayList<String>();
+    int index = 0;
+    for (String term : (List<String>) parameters.get("qTerms")) {
+      String parameter = "pgQ" + index++;
+      parameters.put(parameter, "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
+      for (String column : List.of("a.name", "a.display_name", "a.summary")) {
+        alternatives.add(column + "::text ILIKE :" + parameter);
+      }
+    }
+    return new SqlPredicate(predicate.fragment().replace(marker, "(" + String.join(" OR ", alternatives) + ")"), parameters);
   }
 }

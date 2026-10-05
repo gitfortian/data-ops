@@ -1,5 +1,6 @@
 package io.yak.ops.business.analysis.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -22,7 +23,7 @@ public class AnalysisPersistenceConfiguration {
   public Flyway analysisFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-analysis")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-analysis"))
         .table("flyway_schema_history_analysis")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

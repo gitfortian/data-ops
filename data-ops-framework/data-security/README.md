@@ -47,6 +47,8 @@ yak:
 HTTP 接口统一位于 `/yak-security/api/v1`，项目隔离标识通过
 `X-YAK-SECURITY-PROJECT-ID` 请求头传递。
 
+PostgreSQL 新库使用 `jdbc:postgresql:` URL 和 `org.postgresql.Driver`。Starter 按安全数据源选择 PostgreSQL 迁移目录，并保留 tenant、数字型布尔标志和分页插件；账号须拥有 schema 并能安装 `citext`。Yak Ops 的完整配置参见 [PostgreSQL 部署](../../docs/deployment/postgresql.md)。
+
 ## 声明式权限注册
 
 业务接口可以把鉴权和权限元数据放在一起；启动时会自动新增权限、同步名称和描述，并把已从

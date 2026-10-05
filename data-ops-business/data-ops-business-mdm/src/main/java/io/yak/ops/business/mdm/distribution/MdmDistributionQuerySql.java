@@ -20,6 +20,11 @@ public final class MdmDistributionQuerySql {
   private MdmDistributionQuerySql() {}
 
   public static String build(Long projectId, Long entityId, String database, List<String> codes) {
+    return build(projectId, entityId, database, codes, false);
+  }
+
+  public static String build(Long projectId, Long entityId, String database, List<String> codes,
+      boolean postgresql) {
     if (projectId == null || projectId <= 0 || entityId == null || entityId <= 0) {
       throw new MdmException(MdmErrorCode.DISTRIBUTE_FAILED, "分发 SQL 缺少 project_id/entity_id");
     }
@@ -53,6 +58,14 @@ public final class MdmDistributionQuerySql {
         .append("` e WHERE e.project_id = r.project_id")
         .append(" AND e.id = r.entity_id AND e.status = 'ACTIVE')\n")
         .append("ORDER BY r.id");
+    if (postgresql) {
+      String pg = sql.toString().replace('`', '"');
+      for (String code : codes) {
+        pg = pg.replace("JSON_UNQUOTE(JSON_EXTRACT(r.attributes, '$.\"" + code + "\"'))",
+            "(r.attributes ->> '" + code + "')");
+      }
+      return pg;
+    }
     return sql.toString();
   }
 

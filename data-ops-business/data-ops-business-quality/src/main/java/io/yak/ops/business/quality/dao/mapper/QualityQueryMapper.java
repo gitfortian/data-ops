@@ -248,6 +248,27 @@ public interface QualityQueryMapper {
 
       </script>
       """)
+  @Select(databaseId = "postgresql", value = """
+      <script>
+          SELECT m.table_name,
+            (array_agg(m.id ORDER BY m.last_run_time DESC NULLS LAST, m.id DESC) FILTER (WHERE m.id IS NOT NULL))[1] AS monitor_id,
+            (array_agg(m.monitor_name ORDER BY m.last_run_time DESC NULLS LAST, m.id DESC) FILTER (WHERE m.monitor_name IS NOT NULL))[1] AS monitor_name,
+            COUNT(DISTINCT m.id) AS monitor_count,
+            COUNT(DISTINCT CASE WHEN m.enabled = 1 THEN m.id END) AS enabled_monitor_count,
+            COUNT(r.id) AS rule_count,
+            (array_agg(m.last_execution_no ORDER BY m.last_run_time DESC NULLS LAST, m.id DESC) FILTER (WHERE m.last_execution_no IS NOT NULL))[1] AS last_execution_no,
+            (array_agg(m.last_result ORDER BY m.last_run_time DESC NULLS LAST, m.id DESC) FILTER (WHERE m.last_result IS NOT NULL))[1] AS last_result,
+            MAX(m.last_run_time) AS last_run_time
+          FROM yak_quality_monitor m
+          LEFT JOIN yak_quality_rule r ON r.monitor_id = m.id AND r.deleted = 0
+          WHERE m.project_id = #{projectId} AND m.deleted = 0 AND m.data_source_id = #{dataSourceId}
+          <if test="databaseFilter != null and databaseFilter">AND COALESCE(m.database_name, '') = #{databaseName}</if>
+          <if test="schemaFilter != null and schemaFilter">AND COALESCE(m.schema_name, '') = #{schemaName}</if>
+          <if test="tableName != null">AND m.table_name = #{tableName}</if>
+          GROUP BY m.table_name ORDER BY m.table_name ASC
+
+      </script>
+      """)
   List<TableMonitorSummaryRow> selectTableSummaries(Map<String, Object> params);
 
   @Select(
@@ -299,6 +320,41 @@ public interface QualityQueryMapper {
             COUNT(DISTINCT monitor.id) AS monitor_count,
             COUNT(DISTINCT rule_row.id) AS rule_count,
             SUBSTRING_INDEX(GROUP_CONCAT(monitor.last_result ORDER BY monitor.last_run_time DESC, monitor.id DESC), ',', 1) AS last_result,
+            MAX(monitor.last_run_time) AS last_run_time
+          FROM yak_quality_table_asset asset
+          LEFT JOIN yak_quality_monitor monitor
+            ON monitor.project_id = asset.project_id
+            AND monitor.data_source_id = asset.data_source_id
+            AND COALESCE(monitor.database_name, '') = asset.database_name
+            AND COALESCE(monitor.schema_name, '') = asset.schema_name
+            AND monitor.table_name = asset.table_name AND monitor.deleted = 0
+          LEFT JOIN yak_quality_rule rule_row ON rule_row.monitor_id = monitor.id AND rule_row.deleted = 0
+
+          WHERE asset.project_id = #{projectId}
+            AND asset.deleted = 0 AND asset.data_source_id = #{dataSourceId}
+          <if test="databaseFilter != null and databaseFilter">AND asset.database_name = #{databaseName}</if>
+          <if test="schemaFilter != null and schemaFilter">AND asset.schema_name = #{schemaName}</if>
+          <if test="keyword != null and keyword != ''">
+            AND (LOWER(asset.table_name) LIKE #{keyword} OR LOWER(COALESCE(asset.remarks, '')) LIKE #{keyword})
+          </if>
+
+          GROUP BY asset.id, asset.data_source_id, asset.data_source_name, asset.database_name,
+            asset.schema_name, asset.table_name, asset.table_type, asset.remarks,
+            asset.registered_by, asset.registered_at
+          ORDER BY asset.table_name ASC, asset.id ASC
+          LIMIT #{limit} OFFSET #{offset}
+
+      </script>
+      """)
+  @Select(databaseId = "postgresql", value = """
+      <script>
+          SELECT asset.id, asset.data_source_id, asset.data_source_name,
+            asset.database_name, asset.schema_name, asset.table_name, asset.table_type,
+            asset.remarks, asset.registered_by, asset.registered_at,
+            MIN(monitor.id) AS monitor_id, MIN(monitor.monitor_name) AS monitor_name,
+            COUNT(DISTINCT monitor.id) AS monitor_count,
+            COUNT(DISTINCT rule_row.id) AS rule_count,
+            (array_agg(monitor.last_result ORDER BY monitor.last_run_time DESC NULLS LAST, monitor.id DESC) FILTER (WHERE monitor.last_result IS NOT NULL))[1] AS last_result,
             MAX(monitor.last_run_time) AS last_run_time
           FROM yak_quality_table_asset asset
           LEFT JOIN yak_quality_monitor monitor
@@ -677,6 +733,15 @@ public interface QualityQueryMapper {
           WHERE m.project_id = #{projectId} AND m.id = #{monitorId} AND m.deleted = 0
 
       """)
+  @Select(databaseId = "postgresql", value = """
+      SELECT 1
+        + CASE WHEN m.updated_at > (m.created_at + INTERVAL '1 second') THEN 1 ELSE 0 END
+        + (SELECT COUNT(*) FROM yak_quality_rule r WHERE r.monitor_id = m.id)
+        + (SELECT COUNT(*) FROM yak_quality_execution e
+            WHERE e.project_id = #{projectId} AND e.monitor_id = m.id)
+      FROM yak_quality_monitor m
+      WHERE m.project_id = #{projectId} AND m.id = #{monitorId} AND m.deleted = 0
+      """)
   long countOperationLogs( @Param("projectId") long projectId, @Param("monitorId") long monitorId);
 
   @Select(
@@ -714,6 +779,40 @@ public interface QualityQueryMapper {
           ) logs
           ORDER BY operation_time DESC, log_id DESC LIMIT #{limit} OFFSET #{offset}
 
+      """)
+  @Select(databaseId = "postgresql", value = """
+      SELECT log_id, operator_name, operation_time, action_type, action_content FROM (
+        SELECT CONCAT('monitor-create-', m.id) AS log_id, m.owner AS operator_name,
+          m.created_at AS operation_time, 'CREATE_MONITOR' AS action_type,
+          CONCAT('创建质量监控「', m.monitor_name, '」，监控对象：',
+            COALESCE(NULLIF(m.database_name, ''), ''),
+            CASE WHEN m.database_name IS NULL OR m.database_name = '' THEN '' ELSE '.' END,
+            COALESCE(NULLIF(m.schema_name, ''), ''),
+            CASE WHEN m.schema_name IS NULL OR m.schema_name = '' THEN '' ELSE '.' END,
+            m.table_name) AS action_content
+        FROM yak_quality_monitor m
+        WHERE m.project_id = #{projectId} AND m.id = #{monitorId} AND m.deleted = 0
+        UNION ALL
+        SELECT CONCAT('monitor-update-', m.id), m.owner, m.updated_at, 'UPDATE_MONITOR',
+          CONCAT('更新质量监控「', m.monitor_name, '」的基础配置、运行设置或问题处理策略')
+        FROM yak_quality_monitor m
+        WHERE m.project_id = #{projectId} AND m.id = #{monitorId} AND m.deleted = 0
+          AND m.updated_at > (m.created_at + INTERVAL '1 second')
+        UNION ALL
+        SELECT CONCAT('rule-', r.id), m.owner, r.created_at, 'SAVE_RULE',
+          CONCAT('保存质量规则「', r.rule_name, '」，规则模板：', r.template_code,
+            '，关联范围：', CASE WHEN r.rule_scope = 'TABLE' THEN '表级' ELSE '字段级' END,
+            CASE WHEN r.column_name IS NULL OR r.column_name = '' THEN '' ELSE CONCAT('，字段：', r.column_name) END)
+        FROM yak_quality_rule r JOIN yak_quality_monitor m ON m.id = r.monitor_id
+        WHERE m.project_id = #{projectId} AND r.monitor_id = #{monitorId}
+        UNION ALL
+        SELECT CONCAT('execution-', e.id), e.operator_name, e.queued_at, 'RUN_MONITOR',
+          CONCAT('触发质量检查，执行编号：', e.execution_no,
+            '，触发方式：', e.trigger_type, '，检查结果：', e.check_result)
+        FROM yak_quality_execution e
+        WHERE e.project_id = #{projectId} AND e.monitor_id = #{monitorId}
+      ) logs
+      ORDER BY operation_time DESC, log_id DESC LIMIT #{limit} OFFSET #{offset}
       """)
   List<OperationLogRow> selectOperationLogs(Map<String, Object> params);
 }

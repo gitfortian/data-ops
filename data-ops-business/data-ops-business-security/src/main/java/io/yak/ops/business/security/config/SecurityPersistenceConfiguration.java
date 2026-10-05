@@ -1,5 +1,6 @@
 package io.yak.ops.business.security.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -20,7 +21,7 @@ public class SecurityPersistenceConfiguration {
   public Flyway dataSecurityFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations("classpath:db/migration/yak-security")
+        .locations(JdbcDatabase.migrationLocation(dataSource, "classpath:db/migration/yak-security"))
         .table("flyway_schema_history_security")
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

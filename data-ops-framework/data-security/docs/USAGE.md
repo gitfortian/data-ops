@@ -18,7 +18,7 @@ Yak Security 提供：
 
 - JDK 21 或更高版本；
 - Spring Boot 3.3.13（使用 `jakarta.servlet` API）；
-- MariaDB 10.6 或更高版本；
+- MariaDB 10.6 或更高版本、MySQL 8.0，或 PostgreSQL 16 或更高版本；
 - Maven 3.6 或更高版本。
 
 > 本模块会注册 Spring MVC 控制器和拦截器，因此宿主应用应为 Spring MVC 应用。

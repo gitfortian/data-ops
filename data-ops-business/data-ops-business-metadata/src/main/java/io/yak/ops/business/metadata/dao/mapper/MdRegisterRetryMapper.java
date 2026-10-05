@@ -31,6 +31,16 @@ public interface MdRegisterRetryMapper extends BaseMapper<MdRegisterRetryPO> {
       ORDER BY next_attempt_time
       LIMIT #{limit}
       """)
+  @Select(databaseId = "postgresql", value = """
+      SELECT task_id, project_id, type_name, asset_key, source_id, operation, status,
+             attempts, next_attempt_time, last_error, payload, source_updated_at,
+             create_time, update_time
+      FROM yak_md_register_retry
+      WHERE (status = 'PENDING' AND next_attempt_time <= CURRENT_TIMESTAMP(6))
+         OR (status = 'IN_PROGRESS' AND update_time < (CURRENT_TIMESTAMP(6) - INTERVAL '10 minutes'))
+      ORDER BY next_attempt_time
+      LIMIT #{limit}
+      """)
   List<MdRegisterRetryPO> selectDue(@Param("limit") int limit);
 
   /**
@@ -47,12 +57,24 @@ public interface MdRegisterRetryMapper extends BaseMapper<MdRegisterRetryPO> {
         AND ((status = 'PENDING' AND next_attempt_time <= NOW(6))
           OR (status = 'IN_PROGRESS' AND update_time < DATE_SUB(NOW(6), INTERVAL 10 MINUTE)))
       """)
+  @Update(databaseId = "postgresql", value = """
+      UPDATE yak_md_register_retry
+      SET status = 'IN_PROGRESS', attempts = attempts + 1, update_time = CURRENT_TIMESTAMP(6)
+      WHERE task_id = #{taskId}
+        AND ((status = 'PENDING' AND next_attempt_time <= CURRENT_TIMESTAMP(6))
+          OR (status = 'IN_PROGRESS' AND update_time < (CURRENT_TIMESTAMP(6) - INTERVAL '10 minutes')))
+      """)
   int claim(@Param("taskId") String taskId);
 
   @Update(
       """
       UPDATE yak_md_register_retry
       SET status = 'DONE', last_error = NULL, update_time = NOW(6)
+      WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
+      """)
+  @Update(databaseId = "postgresql", value = """
+      UPDATE yak_md_register_retry
+      SET status = 'DONE', last_error = NULL, update_time = CURRENT_TIMESTAMP(6)
       WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
       """)
   int complete(@Param("taskId") String taskId);
@@ -70,6 +92,14 @@ public interface MdRegisterRetryMapper extends BaseMapper<MdRegisterRetryPO> {
           last_error = #{lastError},
           next_attempt_time = DATE_ADD(NOW(6), INTERVAL #{delaySeconds} SECOND),
           update_time = NOW(6)
+      WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
+      """)
+  @Update(databaseId = "postgresql", value = """
+      UPDATE yak_md_register_retry
+      SET status = #{newStatus},
+          last_error = #{lastError},
+          next_attempt_time = (CURRENT_TIMESTAMP(6) + (#{delaySeconds} * INTERVAL '1 second')),
+          update_time = CURRENT_TIMESTAMP(6)
       WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
       """)
   int fail(

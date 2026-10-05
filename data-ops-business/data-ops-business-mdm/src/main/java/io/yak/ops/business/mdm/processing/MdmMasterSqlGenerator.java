@@ -43,6 +43,12 @@ public final class MdmMasterSqlGenerator {
   public static String generate(
       Long projectId, Long entityId, String entityCode, List<AttributeSpec> attributes,
       LandingSpec landing, Map<String, String> fieldMapping) {
+    return generate(projectId, entityId, entityCode, attributes, landing, fieldMapping, false);
+  }
+
+  public static String generate(
+      Long projectId, Long entityId, String entityCode, List<AttributeSpec> attributes,
+      LandingSpec landing, Map<String, String> fieldMapping, boolean postgresql) {
     if (projectId == null || entityId == null || !hasText(entityCode)) {
       throw new IllegalArgumentException("projectId/entityId/entityCode 不能为空");
     }
@@ -67,6 +73,9 @@ public final class MdmMasterSqlGenerator {
     if (fieldMapping != null) {
       fieldMapping.values().forEach(column -> requireSafe(column, "映射源列名"));
     }
+    if (postgresql) {
+      return postgresSql(projectId, entityId, entityCode, attributes, landing, fieldMapping, pk);
+    }
     String pkColumn = quote(resolveColumn(fieldMapping, pk.code()));
     StringJoiner attrJson = new StringJoiner(", ", "JSON_OBJECT(", ")");
     for (AttributeSpec attribute : attributes) {
@@ -78,6 +87,40 @@ public final class MdmMasterSqlGenerator {
         quote(landing.database()) + "." + quote(RECORD_TABLE),
         quote(landing.database()) + "." + quote(landing.table()),
         pkColumn, attrJson.toString(), landing.datasourceId(), attributes);
+  }
+
+  /** Atomic source refresh, retaining approved overrides and incrementing version only on changes. */
+  private static String postgresSql(Long projectId, Long entityId, String entityCode,
+      List<AttributeSpec> attributes, LandingSpec landing, Map<String, String> mapping, AttributeSpec pk) {
+    String target = pgQuote(landing.database()) + "." + pgQuote(RECORD_TABLE);
+    String source = pgQuote(landing.database()) + "." + pgQuote(landing.table());
+    String pkColumn = pgQuote(resolveColumn(mapping, pk.code()));
+    StringJoiner incoming = new StringJoiner(", ", "jsonb_build_object(", ")");
+    StringJoiner effective = new StringJoiner(", ", "jsonb_build_object(", ")");
+    for (AttributeSpec attribute : attributes) {
+      String key = literal(attribute.code());
+      incoming.add(key + ", " + pgQuote(resolveColumn(mapping, attribute.code())));
+      effective.add(key + ", CASE WHEN jsonb_exists(COALESCE(current.attribute_overrides, '{}'::jsonb), "
+          + key + ") THEN current.attribute_overrides -> " + key
+          + " ELSE excluded.attributes -> " + key + " END");
+    }
+    String sourceKey = literal(landing.datasourceId().toString());
+    String changed = "current.attributes IS DISTINCT FROM " + effective
+        + " OR (current.source_ids -> " + sourceKey + ") IS DISTINCT FROM (excluded.source_ids -> " + sourceKey + ")";
+    return """
+        INSERT INTO %s AS current (project_id, entity_id, master_id, attributes, source_ids, status, version)
+        SELECT %d, %d, MD5(CONCAT(%s, ':', %s::text)), %s, jsonb_build_object(%s, %s), 'ACTIVE', 1
+        FROM %s
+        ON CONFLICT (project_id, entity_id, master_id) DO UPDATE SET
+          version = current.version + CASE WHEN %s THEN 1 ELSE 0 END,
+          attributes = %s,
+          source_ids = COALESCE(current.source_ids, '{}'::jsonb) || excluded.source_ids;
+        """.formatted(target, projectId, entityId, literal(entityCode), pkColumn, incoming,
+            sourceKey, pkColumn, source, changed, effective);
+  }
+
+  private static String pgQuote(String identifier) {
+    return "\"" + identifier + "\"";
   }
 
   /** 属性编码对应源列:field_mapping 优先,未配置/空值回退同名(约定口径;落地表按源列名建列)。 */

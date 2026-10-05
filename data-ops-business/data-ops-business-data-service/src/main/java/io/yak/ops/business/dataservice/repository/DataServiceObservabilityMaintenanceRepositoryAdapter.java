@@ -1,5 +1,6 @@
 package io.yak.ops.business.dataservice.repository;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -43,7 +44,43 @@ public class DataServiceObservabilityMaintenanceRepositoryAdapter
     LocalDateTime end = start.plusHours(1);
     Integer deleted = transactionTemplate.execute(status -> {
       jdbcTemplate.update(
-          """
+          (jdbcTemplate.getDataSource() != null && JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource())) ? """
+        INSERT INTO yak_ops_data_service_call_log_hourly
+        (project_id, api_id, bucket_hour, service_name, service_path,
+         total_calls, success_calls, failure_calls, total_duration_ms, total_rows,
+         first_call_at, last_call_at, last_success_at, last_failure_at, update_time)
+        SELECT project_id,
+               api_id,
+               ?,
+               MAX(service_name),
+               MAX(service_path),
+               COUNT(*),
+               COALESCE(SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END), 0),
+               COALESCE(SUM(GREATEST(duration_ms, 0)), 0),
+               COALESCE(SUM(GREATEST(row_count, 0)), 0),
+               MIN(create_time),
+               MAX(create_time),
+               MAX(CASE WHEN success = 1 THEN create_time END),
+               MAX(CASE WHEN success = 0 THEN create_time END),
+               CURRENT_TIMESTAMP(3)
+        FROM yak_ops_data_service_call_log
+        WHERE create_time >= ? AND create_time < ?
+        GROUP BY project_id, api_id
+        ON CONFLICT (project_id, api_id, bucket_hour) DO UPDATE SET
+          service_name = excluded.service_name,
+          service_path = excluded.service_path,
+          total_calls = excluded.total_calls,
+          success_calls = excluded.success_calls,
+          failure_calls = excluded.failure_calls,
+          total_duration_ms = excluded.total_duration_ms,
+          total_rows = excluded.total_rows,
+          first_call_at = excluded.first_call_at,
+          last_call_at = excluded.last_call_at,
+          last_success_at = excluded.last_success_at,
+          last_failure_at = excluded.last_failure_at,
+          update_time = CURRENT_TIMESTAMP
+        """ : """
           INSERT INTO yak_ops_data_service_call_log_hourly
           (project_id, api_id, bucket_hour, service_name, service_path,
            total_calls, success_calls, failure_calls, total_duration_ms, total_rows,

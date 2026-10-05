@@ -24,8 +24,8 @@ public class MdAssetExtensionPO {
   /** 产该值的类型版本，便于排查漂移。 */
   private String jsonSchema;
 
-  /** 值本体。列名 `json` 是 MySQL 关键字，必须反引号。 */
-  @TableField("`json`")
+  /** 值本体。列名 json 是 MySQL 关键字，必须反引号。 */
+  @TableField("json")
   private String json;
 
   private LocalDateTime updateTime;

@@ -44,6 +44,23 @@ public interface QualityWriteMapper {
             updated_at = CURRENT_TIMESTAMP(3)
 
       """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_quality_table_asset (
+        project_id, data_source_id, data_source_name, database_name, schema_name, table_name,
+        table_type, remarks, registered_by, registered_at, deleted
+      ) VALUES (
+        #{projectId}, #{dataSourceId}, #{dataSourceName}, #{databaseName}, #{schemaName}, #{tableName},
+        #{tableType}, #{remarks}, #{registeredBy}, CURRENT_TIMESTAMP(3), 0
+      )
+      ON CONFLICT (project_id, data_source_id, database_name, schema_name, table_name) DO UPDATE SET
+        data_source_name = excluded.data_source_name,
+        table_type = excluded.table_type,
+        remarks = excluded.remarks,
+        registered_by = excluded.registered_by,
+        registered_at = CURRENT_TIMESTAMP,
+        deleted = 0,
+        updated_at = CURRENT_TIMESTAMP
+      """)
   int upsertTableAsset(QualityTableAssetPO asset);
 
   @Insert(
@@ -70,6 +87,29 @@ public interface QualityWriteMapper {
             notify_target = VALUES(notify_target),
             alert_level = VALUES(alert_level)
 
+      """)
+  @Insert(databaseId = "postgresql", value = """
+      INSERT INTO yak_quality_monitor_setting (
+        monitor_id, run_mode, schedule_frequency, schedule_time, schedule_weekday,
+        cron_expression, next_run_time, rule_failure_action, notify_enabled,
+        notify_channel, notify_target, alert_level
+      ) VALUES (
+        #{monitorId}, #{runMode}, #{scheduleFrequency}, #{scheduleTime}, #{scheduleWeekday},
+        #{cronExpression}, #{nextRunTime}, #{ruleFailureAction}, #{notifyEnabled},
+        #{notifyChannel}, #{notifyTarget}, #{alertLevel}
+      )
+      ON CONFLICT (monitor_id) DO UPDATE SET
+        run_mode = excluded.run_mode,
+        schedule_frequency = excluded.schedule_frequency,
+        schedule_time = excluded.schedule_time,
+        schedule_weekday = excluded.schedule_weekday,
+        cron_expression = excluded.cron_expression,
+        next_run_time = excluded.next_run_time,
+        rule_failure_action = excluded.rule_failure_action,
+        notify_enabled = excluded.notify_enabled,
+        notify_channel = excluded.notify_channel,
+        notify_target = excluded.notify_target,
+        alert_level = excluded.alert_level
       """)
   int upsertMonitorSetting(QualityMonitorSettingPO setting);
 }

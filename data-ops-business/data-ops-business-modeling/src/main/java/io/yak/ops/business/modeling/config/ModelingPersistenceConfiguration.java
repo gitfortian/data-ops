@@ -1,5 +1,6 @@
 package io.yak.ops.business.modeling.config;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -29,7 +30,7 @@ public class ModelingPersistenceConfiguration {
   public Flyway modelingFlyway(@Qualifier("yakBusinessDataSource") DataSource dataSource) {
     return Flyway.configure()
         .dataSource(dataSource)
-        .locations(COMMON_MIGRATION_LOCATION)
+        .locations(JdbcDatabase.migrationLocation(dataSource, COMMON_MIGRATION_LOCATION))
         .table(HISTORY_TABLE)
         .baselineVersion(MigrationVersion.fromVersion("0"))
         .baselineOnMigrate(true)

@@ -1,5 +1,6 @@
 package io.yak.ops.boot.project;
 
+import io.yak.framework.common.jdbc.JdbcDatabase;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,12 @@ public class DataServiceProjectCompatibilityBackfill {
     failOnManagedSourceProjectMismatch();
 
     int inferredApis = jdbcTemplate.update(
-        "UPDATE yak_ops_data_service_api api "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_ops_data_service_api AS api
+        SET project_id = node.project_id
+        FROM yak_dev_node AS node
+        WHERE api.project_id IS NULL AND node.project_id IS NOT NULL AND (api.source_type = ? AND node.id = (CASE WHEN api.source_ref ~ '^[0-9]+$' THEN CAST(api.source_ref AS DECIMAL) END))
+        """ : "UPDATE yak_ops_data_service_api api "
             + "JOIN yak_dev_node node ON api.source_type = ? "
             + "AND node.id = CAST(api.source_ref AS UNSIGNED) "
             + "SET api.project_id = node.project_id "
@@ -61,7 +67,12 @@ public class DataServiceProjectCompatibilityBackfill {
         "UPDATE yak_ops_data_service_api SET project_id = ? WHERE project_id IS NULL",
         defaultProjectId);
     int inheritedLogs = jdbcTemplate.update(
-        "UPDATE yak_ops_data_service_call_log log "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        UPDATE yak_ops_data_service_call_log AS log
+        SET project_id = api.project_id
+        FROM yak_ops_data_service_api AS api
+        WHERE log.project_id IS NULL AND api.project_id IS NOT NULL AND (api.id = log.api_id)
+        """ : "UPDATE yak_ops_data_service_call_log log "
             + "JOIN yak_ops_data_service_api api ON api.id = log.api_id "
             + "SET log.project_id = api.project_id "
             + "WHERE log.project_id IS NULL AND api.project_id IS NOT NULL");
@@ -83,7 +94,9 @@ public class DataServiceProjectCompatibilityBackfill {
 
   private void failOnManagedSourceProjectMismatch() {
     Long mismatches = jdbcTemplate.queryForObject(
-        "SELECT COUNT(1) FROM yak_ops_data_service_api api "
+        JdbcDatabase.isPostgresql(jdbcTemplate.getDataSource()) ? """
+        SELECT COUNT(1) FROM yak_ops_data_service_api api JOIN yak_dev_node node ON api.source_type = ? AND node.id = (CASE WHEN api.source_ref ~ '^[0-9]+$' THEN CAST(api.source_ref AS numeric) END) WHERE api.project_id IS NOT NULL AND node.project_id IS NOT NULL AND api.project_id <> node.project_id
+        """ : "SELECT COUNT(1) FROM yak_ops_data_service_api api "
             + "JOIN yak_dev_node node ON api.source_type = ? "
             + "AND node.id = CAST(api.source_ref AS UNSIGNED) "
             + "WHERE api.project_id IS NOT NULL AND node.project_id IS NOT NULL "

@@ -125,6 +125,46 @@ public interface LineageCatalogRowMapper {
       ]]>
       </script>
       """)
+  @Insert(databaseId = "postgresql", value = """
+      <script>
+      INSERT INTO yak_metadata_asset
+          (project_id, asset_key, asset_type, name, source_type, source_id, parent_asset_id,
+           data_source_id, database_name, schema_name, table_name, column_name,
+           type_id, display_name, fully_qualified_name, fqn_hash, summary, entity_status,
+           owner_user, domain_ids, layer_code,
+           provider_type, collect_job_id, content_hash, source_hash, source_updated_at,
+           first_seen_at, last_collect_at, md_attributes, updated_by, create_time, update_time)
+      VALUES
+      <foreach collection="rows" item="row" separator=",">
+          (#{row.projectId}, #{row.assetKey}, #{row.assetType}, #{row.name}, #{row.sourceType},
+           #{row.sourceId}, #{row.parentAssetId}, #{row.dataSourceId}, #{row.databaseName},
+           #{row.schemaName}, #{row.tableName}, #{row.columnName},
+           #{row.typeId}, #{row.displayName}, #{row.fullyQualifiedName}, #{row.fqnHash},
+           #{row.summary}, #{row.entityStatus},
+           #{row.ownerUser}, #{row.domainIds}, #{row.layerCode},
+           #{row.providerType}, #{row.collectJobId},
+           #{row.contentHash}, #{row.sourceHash}, #{row.sourceUpdatedAt}, #{row.firstSeenAt},
+           #{row.lastCollectAt}, #{row.mdAttributes}, #{row.updatedBy}, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))
+      </foreach>
+      ON CONFLICT (project_scope_id, asset_key) DO UPDATE SET
+        update_time = CASE WHEN (yak_metadata_asset.content_hash IS NOT DISTINCT FROM excluded.content_hash) AND (yak_metadata_asset.source_hash IS NOT DISTINCT FROM excluded.source_hash) AND (yak_metadata_asset.md_attributes IS NOT DISTINCT FROM excluded.md_attributes) THEN yak_metadata_asset.update_time ELSE CURRENT_TIMESTAMP END,
+        content_hash = CASE WHEN yak_metadata_asset.content_hash IS NOT DISTINCT FROM excluded.content_hash THEN yak_metadata_asset.content_hash ELSE excluded.content_hash END,
+        source_hash = CASE WHEN yak_metadata_asset.source_hash IS NOT DISTINCT FROM excluded.source_hash THEN yak_metadata_asset.source_hash ELSE excluded.source_hash END,
+        md_attributes = CASE WHEN yak_metadata_asset.md_attributes IS NOT DISTINCT FROM excluded.md_attributes THEN yak_metadata_asset.md_attributes ELSE excluded.md_attributes END,
+        type_id = excluded.type_id,
+        display_name = excluded.display_name,
+        fully_qualified_name = excluded.fully_qualified_name,
+        fqn_hash = excluded.fqn_hash,
+        summary = excluded.summary,
+        owner_user = CASE WHEN excluded.owner_user IS NULL THEN yak_metadata_asset.owner_user ELSE excluded.owner_user END,
+        domain_ids = CASE WHEN excluded.domain_ids IS NULL THEN yak_metadata_asset.domain_ids ELSE excluded.domain_ids END,
+        layer_code = CASE WHEN excluded.layer_code IS NULL THEN yak_metadata_asset.layer_code ELSE excluded.layer_code END,
+        provider_type = excluded.provider_type,
+        collect_job_id = excluded.collect_job_id,
+        updated_by = excluded.updated_by,
+        gone_at = NULL
+      </script>
+      """)
   int upsertAssets(@Param("rows") Collection<CatalogAssetRow> rows);
 
   /**

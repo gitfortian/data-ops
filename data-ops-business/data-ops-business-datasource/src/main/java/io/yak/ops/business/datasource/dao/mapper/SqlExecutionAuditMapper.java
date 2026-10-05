@@ -46,7 +46,7 @@ public interface SqlExecutionAuditMapper extends BaseMapper<SqlExecutionAuditPO>
               AND e.caller_reference = #{query.callerReference}
           </if>
           <if test="query.operatorName != null">
-              AND e.operator_name LIKE CONCAT('%', #{query.operatorName}, '%')
+              AND e.operator_name LIKE CONCAT('%', COALESCE(#{query.operatorName}, ''), '%')
           </if>
           <if test="query.status != null">
               AND e.status = #{query.status}
@@ -113,7 +113,7 @@ public interface SqlExecutionAuditMapper extends BaseMapper<SqlExecutionAuditPO>
               AND e.caller_reference = #{query.callerReference}
           </if>
           <if test="query.operatorName != null">
-              AND e.operator_name LIKE CONCAT('%', #{query.operatorName}, '%')
+              AND e.operator_name LIKE CONCAT('%', COALESCE(#{query.operatorName}, ''), '%')
           </if>
           <if test="query.status != null">
               AND e.status = #{query.status}
@@ -174,7 +174,7 @@ public interface SqlExecutionAuditMapper extends BaseMapper<SqlExecutionAuditPO>
                   AND e.caller_reference = #{query.callerReference}
               </if>
               <if test="query.operatorName != null">
-                  AND e.operator_name LIKE CONCAT('%', #{query.operatorName}, '%')
+                  AND e.operator_name LIKE CONCAT('%', COALESCE(#{query.operatorName}, ''), '%')
               </if>
               <if test="query.status != null">
                   AND e.status = #{query.status}
@@ -236,7 +236,7 @@ public interface SqlExecutionAuditMapper extends BaseMapper<SqlExecutionAuditPO>
               AND e.caller_reference = #{query.callerReference}
           </if>
           <if test="query.operatorName != null">
-              AND e.operator_name LIKE CONCAT('%', #{query.operatorName}, '%')
+              AND e.operator_name LIKE CONCAT('%', COALESCE(#{query.operatorName}, ''), '%')
           </if>
           <if test="query.status != null">
               AND e.status = #{query.status}

@@ -67,6 +67,12 @@ public interface RealtimeJobCommandMapper {
       WHERE id = 1
         AND (lease_until IS NULL OR lease_until < CURRENT_TIMESTAMP(3) OR lease_owner = #{owner})
       """)
+  @Update(databaseId = "postgresql", value = """
+      UPDATE yak_realtime_runtime_lease
+      SET lease_owner = #{owner}, lease_until = CURRENT_TIMESTAMP(3) + #{leaseSeconds} * INTERVAL '1 second'
+      WHERE id = 1
+        AND (lease_until IS NULL OR lease_until < CURRENT_TIMESTAMP(3) OR lease_owner = #{owner})
+      """)
   int tryAcquireLease(@Param("owner") String owner, @Param("leaseSeconds") int leaseSeconds);
 
   @Update(
