@@ -39,6 +39,7 @@ public class QualityMonitorController {
   private final QualityMonitorManager manager;
   private final QualityExecutionManager executionManager;
   private final QualityMonitorConverter converter;
+  private final io.yak.ops.business.quality.monitor.QualitySuggestionQueryAdapter suggestions;
 
   @Operation(summary = "分页查询质量监控")
   @PostMapping("/page")
@@ -72,6 +73,22 @@ public class QualityMonitorController {
     return Result.success(converter.detail(reader.require(id)));
   }
 
+  public record EditorSnapshot(QualityMonitorVO.Detail monitor, QualityMonitorVO.Settings settings,
+      String definition) {}
+
+  @GetMapping("/{id}/editor-snapshot")
+  public Result<EditorSnapshot> editableSnapshot(@PathVariable long id) {
+    var value = reader.editableSnapshot(id);
+    return Result.success(new EditorSnapshot(converter.detail(value.monitor()),
+        converter.settings(value.settings()), value.definition()));
+  }
+
+  @Operation(summary = "读取当前可编辑定义的指纹")
+  @GetMapping("/{id}/definition")
+  public Result<String> definition(@PathVariable long id) {
+    return Result.success(reader.definition(id));
+  }
+
   @Operation(summary = "查询质量监控运行设置")
   @GetMapping("/{id}/settings")
   public Result<QualityMonitorVO.Settings> settings(@PathVariable long id) {
@@ -93,8 +110,10 @@ public class QualityMonitorController {
   public Result<QualityMonitorVO.Detail> update(
       @PathVariable long id,
       @Valid @RequestBody QualityMonitorDTO.SaveRequest request) {
+    var command = converter.command(request);
+    if (request.expectedDefinition() != null) suggestions.validateEditedFields(command);
     return Result.success(
-        converter.detail(manager.update(id, converter.command(request))));
+        converter.detail(manager.update(id, command, request.expectedDefinition())));
   }
 
   @Operation(summary = "删除质量监控")

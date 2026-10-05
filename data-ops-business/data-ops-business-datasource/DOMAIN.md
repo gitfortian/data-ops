@@ -166,3 +166,8 @@ Domain Compliance Report
 ```text
 DataSourceDefinition 物理命名清理
 ```
+
+
+## F-010 治理候选字段校验
+
+Catalog Reader 提供绕过发现缓存的当前字段只读查询，供源域在候选带入和人工保存前复核外部 DDL 漂移；复用当前项目的数据源读取、类型化 Gateway 和连接超时，不查询数据行，不返回连接配置。物理库 DDL 与平台定义不能跨库原子提交，检查后再发生的 DDL 仍由后续执行按真实结果报告。

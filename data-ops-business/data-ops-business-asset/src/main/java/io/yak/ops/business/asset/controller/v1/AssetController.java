@@ -165,7 +165,13 @@ public class AssetController {
     String operator = currentUserProvider.getCurrentUser(httpRequest);
     return Result.success(
         assetService.updateSnapshot(id, dto.getName(), dto.getDescription(), dto.getAccessUri(),
-            operator));
+            operator, dto.getExpectedDefinition()));
+  }
+
+  @Operation(summary = "读取原子条件编辑快照")
+  @GetMapping("/{id}/editor-snapshot")
+  public Result<AssetAppService.EditableSnapshot> editableSnapshot(@PathVariable("id") Long id) {
+    return Result.success(assetService.editableSnapshot(id));
   }
 
   @Operation(summary = "变更统一负责人")

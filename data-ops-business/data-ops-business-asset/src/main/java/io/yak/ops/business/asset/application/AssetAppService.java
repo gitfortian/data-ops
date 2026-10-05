@@ -1,6 +1,7 @@
 package io.yak.ops.business.asset.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.asset.controller.v1.dto.AssetRequests.ItemQueryDTO;
@@ -202,7 +203,39 @@ public class AssetAppService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public AssetView updateSnapshot(Long id, String name, String description, String accessUri,
       String operator) {
-    AssetItemPO po = requireItem(id);
+    return updateSnapshot(id, name, description, accessUri, operator, null);
+  }
+
+  public record EditableSnapshot(String definition, String name, String description, String accessUri) {}
+
+  public EditableSnapshot editableSnapshot(Long id) {
+    var po = requireItem(id);
+    return new EditableSnapshot(AssetSnapshotFingerprint.of(id, po.getName(), po.getDescription(),
+        po.getAccessUri()), po.getName(), po.getDescription(), po.getAccessUri());
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public AssetView updateSnapshot(Long id, String name, String description, String accessUri,
+      String operator, String expectedDefinition) {
+    AssetItemPO po = expectedDefinition == null ? requireItem(id) : itemMapper.selectOne(
+        new LambdaQueryWrapper<AssetItemPO>().eq(AssetItemPO::getId, id)
+            .eq(AssetItemPO::getProjectId, currentProject.requireProjectId())
+            .eq(AssetItemPO::getDeleted, false).last("FOR UPDATE"));
+    if (po == null) throw new AssetException(AssetErrorCode.INVALID_ARGUMENT, "资产不存在或不可访问");
+    var condition = new LambdaUpdateWrapper<AssetItemPO>()
+        .eq(AssetItemPO::getId, id).eq(AssetItemPO::getProjectId, currentProject.requireProjectId())
+        .eq(AssetItemPO::getDeleted, false);
+    if (expectedDefinition != null) {
+      if (!expectedDefinition.equals(AssetSnapshotFingerprint.of(id, po.getName(),
+          po.getDescription(), po.getAccessUri()))) {
+        throw new AssetException(AssetErrorCode.INVALID_ARGUMENT, "资产快照已改变，请重新加载后审核建议");
+      }
+      condition.eq(AssetItemPO::getName, po.getName());
+      if (po.getDescription() == null) condition.isNull(AssetItemPO::getDescription);
+      else condition.eq(AssetItemPO::getDescription, po.getDescription());
+      if (po.getAccessUri() == null) condition.isNull(AssetItemPO::getAccessUri);
+      else condition.eq(AssetItemPO::getAccessUri, po.getAccessUri());
+    }
     if (StringUtils.hasText(name)) {
       po.setName(name.trim());
     }
@@ -214,7 +247,14 @@ public class AssetAppService {
     }
     po.setUpdatedBy(operator);
     po.setUpdateTime(LocalDateTime.now());
-    itemMapper.updateById(po);
+    condition.set(AssetItemPO::getName, po.getName())
+        .set(AssetItemPO::getDescription, po.getDescription())
+        .set(AssetItemPO::getAccessUri, po.getAccessUri())
+        .set(AssetItemPO::getUpdatedBy, operator).set(AssetItemPO::getUpdateTime, po.getUpdateTime());
+    int changed = expectedDefinition == null ? itemMapper.updateById(po) : itemMapper.update(null, condition);
+    if (changed != 1) {
+      throw new AssetException(AssetErrorCode.INVALID_ARGUMENT, "资产快照已改变或不可访问，请重新加载");
+    }
 
     AuditOperationHandle audit = auditService.start(new AuditOperationRequest(
         "ASSET_UPDATE", "Update asset snapshot", "ASSET",

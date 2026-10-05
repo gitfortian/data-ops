@@ -7,6 +7,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class AgentExecutionContext {
   public static final String PROJECT_ID = "yak.projectId";
   private final GovernanceTarget target;
+  private volatile String qualityDefinition;
+  private volatile GovernanceSuggestion suggestion;
+  private final java.util.concurrent.atomic.AtomicInteger suggestionAttempts = new java.util.concurrent.atomic.AtomicInteger();
+  public void beginSuggestionAttempt() {
+    suggestion = null;
+    if (suggestionAttempts.incrementAndGet() > 3) {
+      throw new IllegalArgumentException("候选校验次数已达上限，请补充业务条件后重新发起");
+    }
+  }
+  private volatile java.util.List<GovernanceVerifiedFact> verifiedFacts = java.util.List.of();
+  public java.util.List<GovernanceVerifiedFact> verifiedFacts() { return verifiedFacts; }
+  public void verifiedFacts(java.util.List<GovernanceVerifiedFact> facts) { verifiedFacts = java.util.List.copyOf(facts); }
+  public String qualityDefinition() { return qualityDefinition; }
+  public void qualityDefinition(String value) { qualityDefinition = value; }
+  public GovernanceSuggestion suggestion() { return suggestion; }
+  public void suggestion(GovernanceSuggestion value) { suggestion = value; }
   private final GovernanceEvidenceLedger evidence = new GovernanceEvidenceLedger();
   private final Map<Long, DatasetSummary.DatasetFields> discoveries = new ConcurrentHashMap<>();
 

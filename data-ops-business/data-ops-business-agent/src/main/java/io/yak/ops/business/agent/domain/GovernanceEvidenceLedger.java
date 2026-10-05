@@ -11,6 +11,18 @@ public final class GovernanceEvidenceLedger {
   private static final int MAX_EVIDENCE = 40;
   private static final Pattern CITATION = Pattern.compile("\\[(E[A-Z0-9_]{1,64})\\]");
   private final List<Evidence> entries = new ArrayList<>();
+  private final java.util.Map<String, java.util.Map<String, String>> scalarFacts = new java.util.HashMap<>();
+
+  public synchronized void recordFacts(String id, java.util.Map<String, String> facts) {
+    if (entries.stream().noneMatch(e -> e.id().equals(id) && "OK".equals(e.status()))) return;
+    scalarFacts.put(id, java.util.Map.copyOf(facts));
+  }
+
+  public synchronized GovernanceVerifiedFact verifyFact(String id, String field) {
+    String value = scalarFacts.getOrDefault(id, java.util.Map.of()).get(field);
+    if (value == null) throw new IllegalArgumentException("事实字段不在本轮可读证据中");
+    return new GovernanceVerifiedFact(id, field, value);
+  }
 
   public record Evidence(String id, String owner, String reference, String status,
       Instant observedAt, String sourceUpdatedAt, String path) {}
@@ -31,7 +43,7 @@ public final class GovernanceEvidenceLedger {
   public synchronized List<Evidence> entries() { return List.copyOf(entries); }
 
   public static boolean mentionsEvidence(String text) {
-    return text != null && CITATION.matcher(text).find();
+    return text != null && (CITATION.matcher(text).find() || text.contains("```yak-"));
   }
 
   public synchronized boolean hasValidCitations(String text) {

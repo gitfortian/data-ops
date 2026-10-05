@@ -47,6 +47,7 @@ public class AssetGovernanceQueryAdapter implements AssetGovernanceQueryApi {
 
   private static AssetFact fact(AssetAppService.AssetView asset) {
     return new AssetFact(asset.id(), asset.assetKey(), asset.sourceType(), asset.sourceId(),
-        asset.name(), asset.description(), asset.owner(), asset.status(), asset.updateTime());
+        asset.name(), asset.description(), asset.owner(), asset.status(), asset.updateTime(),
+        AssetSnapshotFingerprint.of(asset.id(), asset.name(), asset.description(), asset.accessUri()));
   }
 }

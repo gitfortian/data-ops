@@ -104,3 +104,7 @@ Requirement Gap
 ## 首版治理解读（F-009）
 
 资产/质量详情提供有对象上下文的现有 AI 对话入口；授权读取、引用与回链可核验，部分失败保留其他证据，不可用/权限拒绝/不适用不得归为健康。Quality 的 ERROR / NOT_RUN / NOT_PASSED 不折叠。最终正文在引用检查后发布，工具进度仍流式展示。禁止治理写工具与未校验报告落库。Dataset 目录使用既有 data-development:read，查询使用 dataset:query 和真实 USER / 角色主体，版本发现与取数之间变化则拒绝并要求重读。
+
+## F-010 建议辅助
+
+依照 docs/product/features/F-010-ai-governance-suggestions.md 实施。候选有界、授权读取、原页面人工保存与原子并发保护；不得自动运行、启用调度、修改源域事实或绕过既有权限。真实模型验收与自动化验证分开记录。

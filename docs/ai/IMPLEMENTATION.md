@@ -65,6 +65,10 @@ Model 的 Quality / Technical Metadata 仍保持 NOT_APPLICABLE；Lifecycle 仍�
 4. 打开每条证据回链，对比源对象和历史执行；对 Model、无权限分区、异常规则分别验证表达。
 5. 执行普通 Dataset 分析，核对查询审计、版本、主体与脱敏结果；撤销权限、发布新版本后验证拒绝或要求重新发现。
 
+`application-ai.yaml` 已列出当前支持的全部启动配置：LLM `model`、StateStore、推理 `chat`、后台轮次 `turn`、上下文压缩、长期记忆、查询限额、Python、观测/OTel/Studio 和 CORS。LLM 主要修改 `yak.agent.model.name`、`base-url`、`reasoning-effort`，密钥通过 `YAK_AGENT_MODEL_API_KEY` 注入；总开关为 `YAK_AGENT_ENABLED`。文件中 `${环境变量:默认值}` 的默认值可以直接调整，环境变量优先。
+
+启动配置修改后重启生效；现有 AI 配置面中的动态值继续优先于相应启动默认值（记忆/观测开关、LLM 调用超时）。`yak.agent.llm.timeout` 是动态配置键，启动默认值对应 `yak.agent.chat.llm-call-timeout-seconds`；没有新增无读取接线的 `llm` 配置节点。Skill 的启用和内容仍通过现有 Skill 管理持久化，不添加未支持的 YAML 开关。
+
 具体自动化命令和逐项环境验收见 [验证记录](./acceptance/2026-10-05/README.md) 及 [试点场景](./acceptance/2026-10-05/SCENARIOS.md)。
 
 ## 5. 已知边界和发布状态
@@ -77,4 +81,4 @@ Model 的 Quality / Technical Metadata 仍保持 NOT_APPLICABLE；Lifecycle 仍�
 
 证据摘要沿用现有 trace，没有新增跨场景成本面板、项目灰度配置或用户反馈库。单轮预算沿用现有最大迭代、模型超时与轮次超时。浏览器验证已打开本地入口，页面正确跳转登录并保留含目标的 returnTo；由于没有测试账号登录态，尚未验证登录后的新页面和真实模型回答。运行中的用户服务未被重启。产品真实 E2E 与发布尚待完成，因此不标记 SHIPPED。
 
-后续优先完成实际登录态试点和模型评测，再进入第二期质量规则/描述草稿与人工采纳流程。框架迁移仍以调研中的具体触发条件及同场景对测为依据。
+本文保留首版范围；第二期规则/描述候选与人工采纳代码已按 F-010 实施，见 [第二版交付说明](./IMPLEMENTATION_V2.md)。实际登录态试点和模型评测仍待完成。框架迁移仍以调研中的具体触发条件及同场景对测为依据。

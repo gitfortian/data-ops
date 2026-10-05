@@ -120,6 +120,10 @@ export const getAssetLineageSummary = (assetKey: string, depth?: number) => {
 export const registerManualAsset = (params: ManualRegisterParams) =>
   HttpUtils.postData<AssetRecord>(ASSET_API_PREFIX, params);
 
+export const getAssetEditorSnapshot = (id: number) =>
+  HttpUtils.getData<{ definition: string; name: string; description?: string; accessUri?: string }>(
+    `${ASSET_API_PREFIX}/${id}/editor-snapshot`);
+
 export const updateAssetSnapshot = (id: number, params: AssetSnapshotEditParams) =>
   HttpUtils.putData<AssetRecord>(`${ASSET_API_PREFIX}/${id}`, params);
 

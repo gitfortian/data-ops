@@ -52,6 +52,8 @@ public class LongTermMemoryPromptMiddleware implements MiddlewareBase {
 
   @Override
   public Mono<String> onSystemPrompt(Agent agent, RuntimeContext context, String currentPrompt) {
+    var execution = context.get(io.yak.ops.business.agent.domain.AgentExecutionContext.class);
+    if (execution != null && execution.target() != null) return Mono.just(currentPrompt);
     if (!dynamicConfig.enabled(
         AgentDynamicConfigService.KEY_MEMORY_ENABLED, properties.getMemory().isEnabled())) {
       return Mono.just(currentPrompt);

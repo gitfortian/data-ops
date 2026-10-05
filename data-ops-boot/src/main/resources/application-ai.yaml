@@ -1,5 +1,95 @@
 # AI 配置由 application.yml 自动导入，无需额外激活 ai profile。
+# 以下列出当前 Agent 支持的全部启动配置；默认值与 AgentProperties 保持一致。
+# 修改 YAML 后重启生效。已在 AI 配置面保存的动态配置优先于对应的启动默认值。
 yak:
   # AI 分析智能体总开关：默认关闭时模块 Bean 全部不装配；置 true 后才会出现 /api/v1/agent 接口与配套 CORS。
   agent:
     enabled: ${YAK_AGENT_ENABLED:false}
+
+    # LLM 接入：启用 AI 前配置 name、base-url，并通过环境变量注入 api-key。
+    # 当前运行时仅支持 openai（包括 OpenAI-compatible 服务）。
+    suggestions:
+      enabled: ${YAK_AGENT_SUGGESTIONS_ENABLED:true}
+
+    model:
+      provider: ${YAK_AGENT_MODEL_PROVIDER:openai}
+      name: ${YAK_AGENT_MODEL_NAME:}
+      base-url: ${YAK_AGENT_MODEL_BASE_URL:}
+      api-key: ${YAK_AGENT_MODEL_API_KEY:}
+      # high / medium / low；留空不发送 reasoning_effort，按实际模型能力设置。
+      reasoning-effort: ${YAK_AGENT_MODEL_REASONING_EFFORT:}
+
+    # 官方 StateStore：database 留空使用连接默认数据库。
+    state-store:
+      database: ${YAK_AGENT_STATE_STORE_DATABASE:}
+      table: ${YAK_AGENT_STATE_STORE_TABLE:agentscope_sessions}
+
+    # ReAct 推理：超时单位为秒；超时 <= 0 表示关闭对应超时限制。
+    # 动态键 yak.agent.llm.timeout 的启动默认值来自 llm-call-timeout-seconds。
+    chat:
+      max-iters: ${YAK_AGENT_CHAT_MAX_ITERS:10}
+      turn-timeout-seconds: ${YAK_AGENT_CHAT_TURN_TIMEOUT_SECONDS:300}
+      llm-call-timeout-seconds: ${YAK_AGENT_CHAT_LLM_CALL_TIMEOUT_SECONDS:120}
+      llm-max-retries: ${YAK_AGENT_CHAT_LLM_MAX_RETRIES:3}
+
+    # 后台轮次执行及 SSE 补发；轮询间隔单位为毫秒。
+    turn:
+      worker-pool-size: ${YAK_AGENT_TURN_WORKER_POOL_SIZE:2}
+      queue-capacity: ${YAK_AGENT_TURN_QUEUE_CAPACITY:16}
+      queue-poll-millis: ${YAK_AGENT_TURN_QUEUE_POLL_MILLIS:2000}
+      sse-tail-poll-millis: ${YAK_AGENT_TURN_SSE_TAIL_POLL_MILLIS:200}
+      replay-batch-size: ${YAK_AGENT_TURN_REPLAY_BATCH_SIZE:100}
+
+    # 长对话压缩：workspace-dir 留空使用系统临时目录。
+    # token 触发阈值 = context-window-size - reserved；窗口 <= 0 时只按消息数触发。
+    compaction:
+      enabled: ${YAK_AGENT_COMPACTION_ENABLED:true}
+      workspace-dir: ${YAK_AGENT_COMPACTION_WORKSPACE_DIR:}
+      context-window-size: ${YAK_AGENT_COMPACTION_CONTEXT_WINDOW_SIZE:32000}
+      trigger-messages: ${YAK_AGENT_COMPACTION_TRIGGER_MESSAGES:50}
+      reserved: ${YAK_AGENT_COMPACTION_RESERVED:4000}
+      keep-messages: ${YAK_AGENT_COMPACTION_KEEP_MESSAGES:20}
+
+    # 长期记忆：使用上面的 model；提取间隔为毫秒，半衰期为小时。
+    memory:
+      enabled: ${YAK_AGENT_MEMORY_ENABLED:true}
+      flush-min-interval-millis: ${YAK_AGENT_MEMORY_FLUSH_MIN_INTERVAL_MILLIS:300000}
+      recall-top-k: ${YAK_AGENT_MEMORY_RECALL_TOP_K:8}
+      recall-max-chars: ${YAK_AGENT_MEMORY_RECALL_MAX_CHARS:2000}
+      decay-half-life-hours: ${YAK_AGENT_MEMORY_DECAY_HALF_LIFE_HOURS:720}
+      min-confidence: ${YAK_AGENT_MEMORY_MIN_CONFIDENCE:0.30}
+
+    # Dataset 查询行数限制。
+    query:
+      default-limit: ${YAK_AGENT_QUERY_DEFAULT_LIMIT:200}
+      max-limit: ${YAK_AGENT_QUERY_MAX_LIMIT:1000}
+
+    # Python 统计工具：默认关闭；timeout-seconds 单位为秒。
+    python:
+      enabled: ${YAK_AGENT_PYTHON_ENABLED:false}
+      command: ${YAK_AGENT_PYTHON_COMMAND:python3}
+      max-concurrent: ${YAK_AGENT_PYTHON_MAX_CONCURRENT:5}
+      timeout-seconds: ${YAK_AGENT_PYTHON_TIMEOUT_SECONDS:30}
+
+    # 内容观测与外部追踪。
+    observability:
+      enabled: ${YAK_AGENT_OBSERVABILITY_ENABLED:true}
+      max-inline-chars: ${YAK_AGENT_OBSERVABILITY_MAX_INLINE_CHARS:8000}
+      # 按 kind 覆盖记录开关；例如 {LLM_CALL: false, TOOL_CALL: true}。
+      kind-enabled: {}
+      llm-request-inline-debug: ${YAK_AGENT_OBSERVABILITY_LLM_REQUEST_INLINE_DEBUG:false}
+      otel:
+        enabled: ${YAK_AGENT_OBSERVABILITY_OTEL_ENABLED:false}
+        endpoint: ${YAK_AGENT_OBSERVABILITY_OTEL_ENDPOINT:http://localhost:4317}
+        # OTLP 请求头映射；鉴权值通过环境变量注入。
+        headers: {}
+      studio:
+        enabled: ${YAK_AGENT_OBSERVABILITY_STUDIO_ENABLED:false}
+        server-url: ${YAK_AGENT_OBSERVABILITY_STUDIO_SERVER_URL:http://localhost:3000}
+        # 留空沿用 server-url；run-name 留空由框架生成。
+        tracing-url: ${YAK_AGENT_OBSERVABILITY_STUDIO_TRACING_URL:}
+        project: ${YAK_AGENT_OBSERVABILITY_STUDIO_PROJECT:yak-agent}
+        run-name: ${YAK_AGENT_OBSERVABILITY_STUDIO_RUN_NAME:}
+
+    # 开发期直连允许的来源，逗号分隔；留空关闭 Agent CORS。
+    cors-allowed-origin-patterns: ${YAK_AGENT_CORS_ALLOWED_ORIGIN_PATTERNS:http://*:8000,https://*:8000,http://*:3000,http://*:80,http://*:8080}

@@ -41,3 +41,7 @@ Data Service Reader。Asset 不因此增加对 Consumption 或 Data Service 的�
 ## F-009 Asset API
 
 外部治理消费者只可引用 api.AssetGovernanceQueryApi / AssetSectionResult；api 不依赖 application。application.Adapter -> api + 已有 App/Discover 应用角色 + ActionAuthorization；HTTP Controller 复用 application.AssetSectionProjector。查询 DTO 的内部兼容映射停在 Asset-owning adapter，不泄漏给消费者。
+
+## F-010 条件更新
+
+继续使用本域 Mapper/Application 更新台账；对外 api 只暴露定义指纹与授权事实，Agent 不调用命令。

@@ -223,3 +223,6 @@ Repository contract 使用 Domain / Query model 和 shared `PageData`；HTTP DTO
 - 新的规则状态被强塞进现有 PASSED/NOT_PASSED/ERROR/NOT_RUN。
 
 现有领域表达不了的需求，应先更新本文件和行为测试，再修改实现。
+## F-010 人工采纳建议
+
+候选不是业务事实。只读建议及校验不触发业务写入；人工保存继续由本域命令拥有。条件更新在本域事务内比较服务器定义指纹，拒绝旧值覆盖；治理 AI 不拥有源域状态。

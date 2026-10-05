@@ -173,9 +173,13 @@ public class AgentRuntime implements TurnCorrelation {
                 memoryRecallService, memoryRepository, stateStore, properties,
                 observationCollector, dynamicConfig))
             ;
-    if (governanceTools != null) builder.middleware(new GovernanceContextMiddleware(governanceTools, observationCollector, this));
+    if (governanceTools != null) builder.middleware(new GovernanceContextMiddleware(governanceTools,
+        toolBoxes.stream().filter(io.yak.ops.business.agent.toolset.GovernanceSuggestionTools.class::isInstance)
+            .map(io.yak.ops.business.agent.toolset.GovernanceSuggestionTools.class::cast).findFirst().orElse(null),
+        observationCollector, this));
     registerSkillMiddlewareIfEnabled(builder, toolkit);
     registerCompactionIfEnabled(builder, model);
+    builder.middleware(new EffectiveConfigMiddleware(properties, toolBoxes, observationCollector, this));
     builder
             // HITL：孤儿 pending（用户放弃应答）自动补合成结果收敛，避免会话永久卡死
             .enablePendingToolRecovery(true)

@@ -150,6 +150,7 @@ export interface MonitorSettingsView extends MonitorSettingsPayload {
 }
 
 export interface SaveMonitorPayload {
+  expectedDefinition?: string;
   name: string;
   description?: string;
   dataSourceId: number;

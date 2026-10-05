@@ -50,6 +50,8 @@ import {
 
 import { governanceQuestions, governanceSourcePath, parseGovernanceTarget } from '@/services/agent/governance';
 import type { TurnSubmitPayload } from '@/services/agent';
+import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
+import { visibleGovernanceText } from '@/services/agent/suggestions';
 
 const { Sider, Content } = Layout;
 
@@ -751,9 +753,10 @@ const AiAgentPage: React.FC = () => {
             : null}
           {item.content ? (
             <Typography.Text style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {item.content}
+              {item.role === 'assistant' ? visibleGovernanceText(item.content) : item.content}
             </Typography.Text>
           ) : null}
+          {item.role === 'assistant' && item.content ? <GovernanceEvidenceCards text={item.content} /> : null}
           {(() => {
             // PI-103 口径卡：从 trace-runtime 的 extractCaliber 提取（单一实现，可测）
             const caliber = extractCaliber(

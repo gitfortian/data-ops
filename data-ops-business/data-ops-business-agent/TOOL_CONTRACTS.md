@@ -15,10 +15,14 @@
 | `list_datasets` | — | `list_datasets()` |
 | `request_clarification` | `question*`、`options` | `request_clarification(question="营收口径含税吗？", options=["含税", "不含税"])` |
 | `run_dataset_query` | `dataset_id*`、`dimensions`、`metrics`、`filters`、`sorts`、`limit` | `run_dataset_query(dataset_id=7, dimensions=["channel"], filters=["status:EQ:PAID"], limit=200)` |
+| `verify_governance_facts` | `fact_refs_json*` | `verify_governance_facts(fact_refs_json="[]")` |
 | `search_assets` | `keyword*` | `search_assets(keyword="订单")` |
 | `get_asset_evidence` | `asset_id*` | `get_asset_evidence(asset_id=7)` |
 | `get_asset_section_evidence` | `asset_id*`、`section*` | `get_asset_section_evidence(asset_id=7, section="QUALITY")` |
 | `get_quality_execution_evidence` | `execution_no*` | `get_quality_execution_evidence(execution_no="Q20261005_001")` |
+| `get_quality_monitor_evidence` | `monitor_id*` | `get_quality_monitor_evidence(monitor_id=7)` |
+| `propose_quality_rules` | `rules_json*` | `propose_quality_rules(rules_json="[]")` |
+| `propose_asset_description` | `description*` | `propose_asset_description(description="用途待确认")` |
 | `save_analysis_report` | `title*`、`markdown_text*` | `save_analysis_report(title="渠道销量周报", markdown_text="## 结论")` |
 
 ## 约束（守护测试断言的硬契约）

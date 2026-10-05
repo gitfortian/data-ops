@@ -39,6 +39,22 @@ public class QualityMonitorReader {
         .orElseThrow(() -> new IllegalArgumentException("质量监控不存在：" + id));
   }
 
+  @Transactional(transactionManager = "yakBusinessTransactionManager")
+  public String definition(long id) {
+    return editableSnapshot(id).definition();
+  }
+
+  public record EditableSnapshot(Monitor monitor, MonitorSettings settings, String definition) {}
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager")
+  public EditableSnapshot editableSnapshot(long id) {
+    repository.lockMonitor(id);
+    var monitor = require(id);
+    var settings = repository.findMonitorSettings(id);
+    return new EditableSnapshot(monitor, settings,
+        io.yak.ops.business.quality.domain.QualityDefinitionFingerprint.of(monitor, settings));
+  }
+
   @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
   public MonitorSettings settings(long id) {
     require(id);

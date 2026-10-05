@@ -15,6 +15,13 @@ import reactor.core.publisher.Flux;
 final class GovernanceAnswerGuard {
   private GovernanceAnswerGuard() {}
 
+  private static String encode(Object value) {
+    try { return new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(value); }
+    catch (com.fasterxml.jackson.core.JsonProcessingException invalid) {
+      throw new IllegalStateException("候选编码失败，未发布");
+    }
+  }
+
   static Flux<AgentEvent> guard(Flux<AgentEvent> source, AgentExecutionContext execution,
       RuntimeContext context, ReActAgent agent) {
     // Tool/thinking progress stays streamed; final prose is released only after references are known.
@@ -25,8 +32,25 @@ final class GovernanceAnswerGuard {
               && !io.yak.ops.business.agent.domain.GovernanceEvidenceLedger
                   .mentionsEvidence(result.getResult().getTextContent()))) return event;
       var original = result.getResult();
-      var validated = original.withContent(List.of(TextBlock.builder()
-          .text(execution.evidence().validateAnswer(original.getTextContent())).build()));
+      String text;
+      if (execution.target() != null && execution.target().purpose() != null) {
+        if (execution.suggestion() == null) {
+          text = execution.evidence().validateAnswer("尚未生成通过源域校验的候选，请补充业务约束或重试。");
+        } else {
+          var suggestion = execution.suggestion();
+          String refs = suggestion.evidenceRefs().stream().map(id -> "[" + id + "]")
+              .collect(java.util.stream.Collectors.joining(" "));
+          text = execution.evidence().validateAnswer("候选基于本轮授权证据 " + refs
+              + "。请核对业务条件；带入只改变未保存表单，不自动保存、启用或运行。")
+              + "\n\n```yak-suggestion\n" + encode(suggestion) + "\n```";
+        }
+      } else {
+        text = execution.evidence().validateAnswer(original.getTextContent()
+            .replaceAll("(?s)```yak-(?:suggestion|evidence|facts).*?```", "[未验证材料已移除]"));
+      }
+      if (!execution.verifiedFacts().isEmpty()) text += "\n\n```yak-facts\n" + encode(execution.verifiedFacts()) + "\n```";
+      text += "\n\n```yak-evidence\n" + encode(execution.evidence().entries()) + "\n```";
+      var validated = original.withContent(List.of(TextBlock.builder().text(text).build()));
       var state = agent.getAgentState(context);
       var messages = state.contextMutable();
       boolean replaced = false;

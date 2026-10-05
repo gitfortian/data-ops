@@ -249,6 +249,7 @@ export interface ManualRegisterParams {
 }
 
 export interface AssetSnapshotEditParams {
+  expectedDefinition?: string;
   name?: string;
   description?: string;
   accessUri?: string;

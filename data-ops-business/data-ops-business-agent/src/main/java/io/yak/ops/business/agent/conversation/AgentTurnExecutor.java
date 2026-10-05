@@ -208,7 +208,9 @@ public class AgentTurnExecutor {
       } else {
         convergePendingTools(record, state, "COMPLETED");
         // 记忆线 M1：自然完成轮异步提取长期记忆（best-effort，不阻塞终态；仅 START 轮）
-        if (record.kind() == io.yak.ops.business.agent.domain.TurnKind.START) {
+        if (record.kind() == io.yak.ops.business.agent.domain.TurnKind.START
+            && input.governanceTarget() == null && state.toolNames.stream().noneMatch(name ->
+                name.contains("asset") || name.contains("quality") || name.startsWith("propose_"))) {
           final String flushTurnId = record.turnId();
           final String flushSessionId = record.sessionId();
           memoryFlushService.submitAfterTurn(record.userId(), record.sessionId(), record.turnId(),

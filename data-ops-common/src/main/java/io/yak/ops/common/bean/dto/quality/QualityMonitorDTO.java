@@ -77,5 +77,13 @@ public final class QualityMonitorDTO {
       @NotBlank @Size(max = 128) String owner,
       Boolean enabled,
       @Valid SettingsRequest settings,
-      @NotEmpty List<@Valid SaveRuleRequest> rules) {}
+      @NotEmpty List<@Valid SaveRuleRequest> rules,
+      @Pattern(regexp = "[a-f0-9]{64}") String expectedDefinition) {
+    public SaveRequest(String name, String description, Long dataSourceId, String dataSourceName,
+        String databaseName, String schemaName, String tableName, String whereClause, String owner,
+        Boolean enabled, SettingsRequest settings, List<SaveRuleRequest> rules) {
+      this(name, description, dataSourceId, dataSourceName, databaseName, schemaName, tableName,
+          whereClause, owner, enabled, settings, rules, null);
+    }
+  }
 }
