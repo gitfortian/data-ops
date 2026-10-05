@@ -91,6 +91,9 @@ public final class AssetRequests {
   /** 编辑台账快照字段。 */
   @Data
   public static class ItemEditDTO {
+    @jakarta.validation.constraints.Pattern(regexp = "[a-f0-9]{64}")
+    private String expectedDefinition;
+
     @Size(max = 128, message = "资产名称不能超过 128 个字符")
     private String name;
 

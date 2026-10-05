@@ -73,12 +73,12 @@ class AgentTurnExecutorTest {
     when(eventRepository.append(anyString(), any()))
         .thenAnswer(inv -> seq.incrementAndGet());
     // runtime.stream 捕获回调，供用例同步驱动
-    when(agentRuntime.stream(anyLong(), anyString(), anyString(), anyString(), anyLong(), any(), any(), any()))
+    when(agentRuntime.stream(anyLong(), anyString(), anyString(), anyString(), anyLong(), any(), any(), any(), any()))
         .thenAnswer(
             inv -> {
-              onEvent = inv.getArgument(5);
-              onComplete = inv.getArgument(6);
-              onError = inv.getArgument(7);
+              onEvent = inv.getArgument(6);
+              onComplete = inv.getArgument(7);
+              onError = inv.getArgument(8);
               io.yak.ops.business.agent.runtime.TurnSubscription handle = () -> disposed.countDown();
               subscribed.countDown();
               return handle;
@@ -120,9 +120,9 @@ class AgentTurnExecutorTest {
     CountDownLatch constructing = new CountDownLatch(1);
     CountDownLatch release = new CountDownLatch(1);
     when(turnRepository.cancelRunning("t1")).thenReturn(true);
-    when(agentRuntime.stream(anyLong(), anyString(), anyString(), anyString(), anyLong(), any(), any(), any()))
+    when(agentRuntime.stream(anyLong(), anyString(), anyString(), anyString(), anyLong(), any(), any(), any(), any()))
         .thenAnswer(inv -> {
-          onComplete = inv.getArgument(6);
+          onComplete = inv.getArgument(7);
           constructing.countDown();
           assertTrue(release.await(2, TimeUnit.SECONDS));
           return (io.yak.ops.business.agent.runtime.TurnSubscription) () -> disposed.countDown();
@@ -230,11 +230,11 @@ class AgentTurnExecutorTest {
 
   @Test
   void resumeEmitsHitlSpanWithUserAnswer() {
-    when(agentRuntime.resume(anyLong(), anyString(), anyString(), any(), anyLong(), any(), any(), any()))
+    when(agentRuntime.resume(anyLong(), anyString(), anyString(), any(), anyLong(), any(), any(), any(), any()))
         .thenAnswer(inv -> {
-          onEvent = inv.getArgument(5);
-          onComplete = inv.getArgument(6);
-          onError = inv.getArgument(7);
+          onEvent = inv.getArgument(6);
+          onComplete = inv.getArgument(7);
+          onError = inv.getArgument(8);
           io.yak.ops.business.agent.runtime.TurnSubscription handle = () -> {};
           return handle;
         });

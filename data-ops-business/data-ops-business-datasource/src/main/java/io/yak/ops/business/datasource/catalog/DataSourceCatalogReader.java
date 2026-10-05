@@ -95,6 +95,13 @@ public class DataSourceCatalogReader {
         query.limit());
   }
 
+  /** Bypasses discovery cache for adoption/save validation after external DDL. */
+  public List<CatalogColumn> listColumnsFresh(Long dataSourceId, String database, String schema, String table) {
+    var definition = dataSourceReader.require(dataSourceId);
+    return catalogGateway.listColumns(definition, new CatalogTablePath(database, schema, table),
+        connectionTimeoutSeconds());
+  }
+
   public List<CatalogColumn> listColumns(
       Long dataSourceId,
       String database,

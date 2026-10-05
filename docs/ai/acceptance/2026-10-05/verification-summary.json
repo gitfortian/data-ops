@@ -1,0 +1,79 @@
+{
+  "feature": "F-009",
+  "date": "2026-10-05",
+  "evidenceType": "automated tests and browser login redirect; no live model acceptance",
+  "backend": {
+    "result": "BUILD SUCCESS",
+    "totalTests": 334.0,
+    "modules": [
+      {
+        "module": "data-security-spring-boot-starter",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "data-ops-business-quality",
+        "tests": 89,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "data-ops-business-asset",
+        "tests": 108,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "data-ops-business-metadata",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "data-ops-business-modeling",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "data-ops-business-dataset",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "data-ops-business-agent",
+        "tests": 111,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "frontend": {
+    "suites": 4,
+    "tests": 37,
+    "result": "PASS"
+  },
+  "typeGate": {
+    "result": "PASS",
+    "existingDiagnostics": 139,
+    "newDiagnostics": 0
+  },
+  "productBaseline": {
+    "result": "PASS",
+    "requiredFiles": 24,
+    "glossaryTerms": 19,
+    "decisions": 7,
+    "features": 10
+  },
+  "productSurface": "SKIP: PR event required",
+  "realEnvironment": "PENDING: authenticated test session, source objects and live model"
+}

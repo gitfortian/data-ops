@@ -34,7 +34,8 @@ class AgentChatServiceSubmitTest {
       String turnId, String sessionId, long userId) {
     String payload =
         io.yak.ops.business.agent.repository.support.TurnInputCodec.encode(
-            io.yak.ops.business.agent.domain.TurnInput.ofStart("um1", "a1", "原问题"));
+            io.yak.ops.business.agent.domain.TurnInput.ofStart("um1", "a1", "原问题")
+                .withTarget(new io.yak.ops.business.agent.domain.GovernanceTarget(7L, null)));
     return new io.yak.ops.business.agent.domain.AgentTurnRecord(
         turnId, sessionId, userId, 1L, io.yak.ops.business.agent.domain.TurnKind.START, payload,
         io.yak.ops.business.agent.domain.TurnStatus.WAITING_INPUT, null, null, null, null, null);
@@ -144,7 +145,10 @@ class AgentChatServiceSubmitTest {
         List.of(new io.yak.ops.business.agent.domain.ToolFeedback("c1", "t", "答")));
 
     org.junit.jupiter.api.Assertions.assertEquals("t9", turnId);
-    verify(turnRepository).requeueForResume(eq("t9"), anyString());
+    var resumedPayload = org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(turnRepository).requeueForResume(eq("t9"), resumedPayload.capture());
+    org.junit.jupiter.api.Assertions.assertEquals(new io.yak.ops.business.agent.domain.GovernanceTarget(7L, null),
+        io.yak.ops.business.agent.repository.support.TurnInputCodec.decode(resumedPayload.getValue()).governanceTarget());
     verify(dispatcher).kick();
   }
 

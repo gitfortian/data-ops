@@ -304,3 +304,12 @@ Datasource Catalog            = physical metadata evidence
 8. 哪个 behavior test 与 architecture test 会保护这次改动？
 
 答不清楚时不要创建新的 Helper/Common/ServiceImpl。
+
+
+## F-009 外部执行证据读取
+
+api.QualityEvidenceQueryApi 是只读公共契约；execution.QualityEvidenceQueryAdapter -> QualityExecutionReader 投影历史 Execution / RuleExecution，并检查 quality:execution:read 与 quality:monitor:read。最多 100 条规则、声明截断，不返回 executedSql / errorMessage，不回读当前 Monitor/Rule。该入口不新增通用 Service，也不参与执行状态写入。
+
+## F-010 建议边界
+
+Agent 仅消费源域 api 包的授权只读契约；Quality monitor 的 SuggestionQueryAdapter 进入既有 Reader/Policy 和 Quality-owned Catalog Gateway，DefinitionFingerprint 属于 domain；Asset 条件更新仍在 AssetAppService。候选仅存在本轮上下文与官方消息历史，不新增业务建议表。

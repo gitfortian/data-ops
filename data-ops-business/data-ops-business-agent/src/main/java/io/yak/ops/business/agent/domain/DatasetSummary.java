@@ -14,5 +14,13 @@ public record DatasetSummary(long id, String name, String description, boolean o
       boolean nullable,
       String description) {}
 
-  public record DatasetFields(long datasetId, String name, List<FieldView> fields) {}
+  public record DatasetFields(long datasetId, String name, List<FieldView> fields, Integer versionNo,
+      boolean truncated) {
+    public DatasetFields(long datasetId, String name, List<FieldView> fields) {
+      this(datasetId, name, fields, null, false);
+    }
+    public DatasetFields(long datasetId, String name, List<FieldView> fields, Integer versionNo) {
+      this(datasetId, name, fields, versionNo, false);
+    }
+  }
 }

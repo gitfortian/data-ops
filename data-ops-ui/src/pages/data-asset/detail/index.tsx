@@ -1,3 +1,5 @@
+import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
+import { governanceEntryPath } from '@/services/agent/governance';
 import { Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { history, useParams } from '@umijs/max';
@@ -10,6 +12,7 @@ import {
   changeAssetOwner,
   detachAssetTag,
   getAssetDetail,
+  getAssetEditorSnapshot,
   getAssetSourceAttributes,
   getAssetSection,
   getAssetTags,
@@ -169,6 +172,7 @@ const AssetDetailPage = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [offlineOpen, setOfflineOpen] = useState(false);
   const [snapshot, setSnapshot] = useState({ name: '', description: '', accessUri: '' });
+  const [snapshotDefinition, setSnapshotDefinition] = useState('');
   const [ownerValue, setOwnerValue] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -192,13 +196,10 @@ const AssetDetailPage = () => {
       );
       const sourceAttributesLoad = getAssetSourceAttributes(assetId)
         .catch(() => unavailableAssetSection<AssetSourceAttrs>());
-      const result = await getAssetDetail(assetId);
+      const [result, editable] = await Promise.all([getAssetDetail(assetId), getAssetEditorSnapshot(assetId)]);
       setDetail(result);
-      setSnapshot({
-        name: result.asset.name ?? '',
-        description: result.asset.description ?? '',
-        accessUri: result.asset.accessUri ?? '',
-      });
+      setSnapshotDefinition(editable.definition);
+      setSnapshot({ name: editable.name ?? '', description: editable.description ?? '', accessUri: editable.accessUri ?? '' });
       setOwnerValue(result.asset.owner ? [result.asset.owner] : []);
       void sectionLoads.then((loadedSections) => {
         loadedSections.forEach(({ sectionType, section }) => {
@@ -273,7 +274,7 @@ const AssetDetailPage = () => {
   const saveSnapshot = async () => {
     setSaving(true);
     try {
-      await updateAssetSnapshot(assetId, snapshot);
+      await updateAssetSnapshot(assetId, { ...snapshot, expectedDefinition: snapshotDefinition });
       message.success('已更新快照字段');
       void reload();
     } catch {
@@ -358,6 +359,9 @@ const AssetDetailPage = () => {
           <div className="mt-1 text-[12px] text-[#98a2b3]">{asset?.assetKey}</div>
         </div>
         <Space>
+          {asset && can('agent:chat:run') && (
+            <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
+          )}
           {asset && sourceLink && (
             <Button onClick={() => history.push(sourceLink)}>查看源对象</Button>
           )}
@@ -915,6 +919,15 @@ const AssetDetailPage = () => {
                     )}
                   </Space>
                 </Card>
+                {can('agent:chat:run') && snapshotDefinition && <GovernanceSuggestionPanel
+                  key={`${assetId}:${snapshotDefinition}`} kind="ASSET_DESCRIPTION"
+                  targetId={assetId} definition={snapshotDefinition} disabled={!canUpdate || saving || asset?.status === 'SOURCE_GONE'}
+                  onApply={async (candidate) => {
+                    if (candidate.expectedDefinition !== snapshotDefinition || candidate.targetId !== assetId) {
+                      throw new Error('资产快照已改变，请重新加载');
+                    }
+                    setSnapshot((current) => ({ ...current, description: candidate.description || '' }));
+                  }} />}
                 <Card title="快照编辑(资产中心拥有名称/描述/入口)" size="small" className="!mb-4">
                   <Space direction="vertical" className="w-full">
                     <Input

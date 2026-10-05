@@ -5,6 +5,11 @@ import io.yak.ops.business.agent.config.ConditionalOnAgentEnabled;
 import io.yak.ops.business.agent.catalog.FieldWhitelistValidator;
 import io.yak.ops.business.agent.config.AgentProperties;
 import io.yak.ops.business.agent.domain.DatasetQuerySpec;
+import io.yak.ops.business.agent.domain.DatasetSummary;
+import io.yak.framework.security.context.YakSecurityContext;
+import io.yak.framework.security.service.RoleService;
+import io.yak.ops.business.dataset.DatasetQuerySubject;
+import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.business.agent.domain.QueryEvidenceRecord;
 import io.yak.ops.business.agent.domain.QueryEvidenceView;
 import io.yak.ops.business.agent.repository.QueryLogRepository;
@@ -24,7 +29,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 数据集查询出站网关：结构化规格 -> dataset 查询运行时。
- * 证据留痕在执行边界恰好落一条（成功与失败都落），失败原样上抛由工具层回喂模型。
+ * 证据留痕在执行边界恰好落一条（成功、拒绝与失败都落），失败分类后回喂模型。
  */
 @Slf4j
 @ConditionalOnAgentEnabled
@@ -36,37 +41,50 @@ public class DatasetQueryGateway {
   private final FieldWhitelistValidator whitelistValidator;
   private final QueryLogRepository queryLogRepository;
   private final AgentProperties properties;
+  private final RoleService roleService;
 
-  public QueryEvidenceView execute(String sessionId, DatasetQuerySpec spec) {
+  public QueryEvidenceView execute(String sessionId, DatasetQuerySpec request,
+      DatasetSummary.DatasetFields discovery) {
+    DatasetQuerySpec spec = request.withVersion(discovery == null ? null : discovery.versionNo());
     int limit = resolveLimit(spec.limit());
     long startedAt = System.nanoTime();
     try {
       // 执行边界白名单前置：拒绝路径与成功/失败同边界落 query_log（REJECTED），
       // 不依赖工具层提前拦截（工具保持薄壳，留痕归 gateway corridor，DOMAIN 全量留痕契约）。
-      whitelistValidator.requireKnownFields(
-          spec.datasetId(), referencedFields(spec), spec.datasetId() + " 字段引用");
+      whitelistValidator.requireSnapshot(spec.datasetId(), discovery, referencedFields(spec));
+      if (!YakSecurityContext.isAuthenticated()) throw new ActionAccessDeniedException("dataset:query");
+      String username = YakSecurityContext.getCurrentUsername();
+      if (username == null || username.isBlank()) throw new ActionAccessDeniedException("dataset:query");
+      List<String> roles = YakSecurityContext.getCurrentRoleIds().stream().distinct().map(id -> {
+        var role = roleService.getRoleDetailByRoleId(id);
+        if (role == null || !id.equals(role.getId()) || role.getRoleCode() == null || role.getRoleCode().isBlank()) {
+          throw new ActionAccessDeniedException("dataset:query");
+        }
+        return role.getRoleCode();
+      }).toList();
       DatasetQueryResultAccess result =
           new DatasetQueryResultAccess(
               queryService.query(
                   spec.datasetId(),
                   new DatasetQueryRequest(
-                      null,
+                      spec.versionNo(),
                       spec.dimensions(),
                       toBindings(spec.metrics()),
                       toFilters(spec.filters()),
                       toSorts(spec.sorts()),
                       limit,
-                      null)));
+                      null), DatasetQuerySubject.authenticatedUser(username, roles)));
       long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L;
-      String sql = resolveSql(spec.datasetId(), result.queryId());
       record(sessionId, spec, QueryEvidenceRecord.Status.SUCCESS, null, result, elapsedMillis);
-      return result.toView(elapsedMillis, sql);
+      return result.toView(elapsedMillis, null);
     } catch (IllegalArgumentException rejection) {
       long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L;
       String message = String.valueOf(rejection.getMessage());
       boolean rejectedByGuard =
           message.contains("[FIELD_WHITELIST_REJECTED]")
-              || message.contains("[DATASET_OFFLINE]");
+              || message.contains("[DATASET_OFFLINE]")
+              || message.contains("[DATASET_DISCOVERY_REQUIRED]")
+              || message.contains("[DATASET_VERSION_CHANGED]");
       record(
           sessionId,
           spec,
@@ -74,17 +92,19 @@ public class DatasetQueryGateway {
           summarize(rejection),
           null,
           elapsedMillis);
-      throw rejection;
+      throw new IllegalArgumentException(rejectedByGuard ? message : "[DATASET_QUERY_FAILED] 查询失败，请到源域查看详情");
     } catch (RuntimeException e) {
       long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L;
       record(
           sessionId,
           spec,
-          QueryEvidenceRecord.Status.FAILED,
+          e instanceof ActionAccessDeniedException || e instanceof SecurityException
+              ? QueryEvidenceRecord.Status.REJECTED : QueryEvidenceRecord.Status.FAILED,
           summarize(e),
           null,
           elapsedMillis);
-      throw e;
+      throw new IllegalStateException(e instanceof ActionAccessDeniedException || e instanceof SecurityException
+          ? "[PERMISSION_DENIED] 无权执行此数据集查询" : "[DATASET_QUERY_FAILED] 查询失败，请到源域查看详情");
     }
   }
 
@@ -126,25 +146,6 @@ public class DatasetQueryGateway {
             elapsedMillis));
   }
 
-  /** 从查询性能留痕中取回实际执行的 SQL（读取失败不影响主流程，返回 null）。 */
-  private String resolveSql(long datasetId, String queryId) {
-    if (queryId == null) {
-      return null;
-    }
-    try {
-      return queryService
-          .recentPerformance(java.util.Set.of(datasetId), java.util.Set.of(queryId), 1)
-          .stream()
-          .filter(perf -> queryId.equals(perf.queryId()))
-          .map(io.yak.ops.business.dataset.DatasetQueryPerformance::sql)
-          .findFirst()
-          .orElse(null);
-    } catch (RuntimeException e) {
-      log.debug("resolve executed sql failed: {}", e.getMessage());
-      return null;
-    }
-  }
-
   private int resolveLimit(Integer requested) {
     int max = Math.max(1, properties.getQuery().getMaxLimit());
     if (requested == null || requested <= 0) {
@@ -154,11 +155,11 @@ public class DatasetQueryGateway {
   }
 
   private static String summarize(RuntimeException e) {
+    if (e instanceof ActionAccessDeniedException || e instanceof SecurityException) return "PERMISSION_DENIED";
     String message = e.getMessage();
-    if (message == null) {
-      return e.getClass().getSimpleName();
-    }
-    return message.length() <= 1000 ? message : message.substring(0, 1000);
+    if (message != null && message.startsWith("[DATASET_")) return message.split("]", 2)[0] + "]";
+    if (message != null && message.startsWith("[FIELD_WHITELIST_REJECTED]")) return "FIELD_WHITELIST_REJECTED";
+    return "DATASET_QUERY_FAILED";
   }
 
   private static List<DatasetMetricBinding> toBindings(List<DatasetQuerySpec.Metric> metrics) {

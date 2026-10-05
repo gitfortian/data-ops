@@ -1,3 +1,7 @@
+import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
+import { validateQualitySuggestions } from '@/services/data-quality';
+import { ruleDefaults } from './model';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { BRAND_THEME } from '@/styles/brand';
 import { history, useLocation, useModel, useParams } from '@umijs/max';
 import { Button, ConfigProvider, Form, Input, Spin } from 'antd';
@@ -12,6 +16,7 @@ import { ScheduleSettings } from './ScheduleSettings';
 import { useSectionNavigation } from './useSectionNavigation';
 
 const MonitorEditorPage = () => {
+  const { can } = usePermissionAccess();
   const params = useParams<{ id?: string }>();
   const location = useLocation();
   const { initialState } = useModel('@@initialState');
@@ -72,6 +77,27 @@ const MonitorEditorPage = () => {
                       columns={editor.columns}
                       templates={editor.templates}
                     />
+                    {params.id && editor.definition && can('agent:chat:run') && <GovernanceSuggestionPanel
+                      key={`${params.id}:${editor.definition}`}
+                      kind="QUALITY_RULES" targetId={Number(params.id)} definition={editor.definition}
+                      disabled={!can('quality:monitor:update') || editor.saving}
+                      ruleLabel={(id) => {
+                        const template = editor.templates.find((value) => value.id === id);
+                        const percent = template?.ruleType === 'COLUMN_NOT_NULL' || template?.ruleType === 'COLUMN_UNIQUE';
+                        return `${template?.name || '模板待核对'}${percent ? ' · 阈值单位：百分比（0～100）' : ''}`;
+                      }}
+                      onApply={async (candidate, index, isCurrent) => {
+                        if (candidate.expectedDefinition !== editor.definition || candidate.targetId !== Number(params.id)) {
+                          throw new Error('配置已改变，请重新加载');
+                        }
+                        const valid = await validateQualitySuggestions(params.id!, editor.definition,
+                          [candidate.rules[index ?? 0]]);
+                        if (!isCurrent()) return;
+                        const template = editor.templates.find((value) => value.id === valid[0].templateId);
+                        if (!template) throw new Error('模板已改变，请重新加载');
+                        editor.setRules((current) => [...current, { ...ruleDefaults(template), ...valid[0], enabled: false }]);
+                      }} />}
+                    {params.id && <p className="text-sm text-[#667085]">保存规则可能同步任务版本；启用规则会影响后续自动运行。请核对调度与启用状态。</p>}
                     <ScheduleSettings
                       value={editor.schedule}
                       onChange={editor.setSchedule}

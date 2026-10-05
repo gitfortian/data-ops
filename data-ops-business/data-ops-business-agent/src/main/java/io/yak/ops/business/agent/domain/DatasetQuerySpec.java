@@ -9,7 +9,17 @@ public record DatasetQuerySpec(
     List<Metric> metrics,
     List<Filter> filters,
     List<Sort> sorts,
-    Integer limit) {
+    Integer limit,
+    Integer versionNo) {
+
+  public DatasetQuerySpec(long datasetId, List<String> dimensions, List<Metric> metrics,
+      List<Filter> filters, List<Sort> sorts, Integer limit) {
+    this(datasetId, dimensions, metrics, filters, sorts, limit, null);
+  }
+
+  public DatasetQuerySpec withVersion(Integer version) {
+    return new DatasetQuerySpec(datasetId, dimensions, metrics, filters, sorts, limit, version);
+  }
 
   public record Metric(String fieldId, Aggregation aggregation) {}
 

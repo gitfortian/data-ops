@@ -10,12 +10,13 @@ Quality production 内部允许的 top-level 依赖：
 
 | Source | Allowed Quality packages |
 | --- | --- |
-| `controller` | `asset`, `config`, `domain`, `execution`, `monitor`, `template`, `workspace` |
+| `controller` | `api`（SuggestionController transport）, `asset`, `config`, `domain`, `execution`, `monitor`, `template`, `workspace` |
 | `workspace` | `config`, `domain`, `monitor`, `repository` |
-| `monitor` | `config`, `domain`, `repository`, `schedule`, `task` |
+| `monitor` | `api`（SuggestionQueryAdapter）, `gateway`（SuggestionQueryAdapter）, `config`, `domain`, `repository`, `schedule`, `task` |
 | `task` | `config`, `domain`, `execution`, `repository` |
 | `schedule` | `config`, `domain`, `execution`, `repository` |
-| `execution` | `alert`, `config`, `domain`, `gateway`, `repository` |
+| `execution` | `api`（仅 EvidenceQueryAdapter）, `alert`, `config`, `domain`, `gateway`, `repository` |
+| `api` | none |
 | `alert` | `config`, `domain`, `repository` |
 | `asset` | `config`, `domain`, `execution`, `gateway`, `monitor`, `repository` |
 | `template` | `config`, `domain`, `repository` |
@@ -255,3 +256,12 @@ config -> execution/monitor/asset/template/workspace/task
 4. **架构是否真的改变？**
 
 只有第 4 种情况才在同一个 PR 更新 `ARCHITECTURE.md`、本文件和 executable dependency test。
+
+
+## F-009 公共 evidence API
+
+新增 api 顶层包无内部依赖，execution -> api 只允许 QualityEvidenceQueryAdapter。跨模块读取只进入 QualityEvidenceQueryApi，不暴露 execution/domain/repository 实现。声明与实际依赖图仍无环。
+
+## F-010 候选契约
+
+monitor -> api 仅 QualitySuggestionQueryAdapter；monitor -> gateway 仅同一 adapter 的 QualityDataCatalogGateway；gateway/datasource 适配 typed CatalogColumn。公开 API 不依赖 Quality 内部类型。

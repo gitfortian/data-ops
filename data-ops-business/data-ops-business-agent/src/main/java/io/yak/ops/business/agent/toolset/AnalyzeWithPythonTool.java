@@ -22,6 +22,7 @@ import reactor.core.scheduler.Schedulers;
 public class AnalyzeWithPythonTool implements AgentToolBox {
 
   private final PythonRunnerGateway pythonRunnerGateway;
+  private final AgentToolExecution execution;
 
   @Tool(
       name = "analyze_with_python",
@@ -33,8 +34,13 @@ public class AnalyzeWithPythonTool implements AgentToolBox {
           线性回归、分布检验等。\
           """)
   public Mono<String> analyzeWithPython(
+      io.agentscope.core.agent.RuntimeContext context,
       @ToolParam(name = "code", description = "自包含的 Python 分析代码，数据必须内联") String code) {
-    return Mono.fromCallable(() -> pythonRunnerGateway.execute(code))
+    var state = AgentToolExecution.state(context);
+    if (state.target() != null || state.evidence().containsGovernanceEvidence()) {
+      return Mono.error(new IllegalArgumentException("首版治理解读不支持代码执行"));
+    }
+    return Mono.fromCallable(() -> execution.call(context, () -> pythonRunnerGateway.execute(code)))
         .subscribeOn(Schedulers.boundedElastic());
   }
 }

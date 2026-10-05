@@ -28,7 +28,7 @@ LLM Output != Trusted Input
 ## 10 条硬规则
 
 1. **净室实现。** 本模块禁止包含任何 DataAgent（AGPL-3.0）衍生代码、机械翻译或改写；实现以本目录契约文档为唯一蓝本。引入第三方依赖只允许 Apache-2.0 及兼容许可。
-2. **Dataset 是唯一数据事实。** 禁止 import 物理数据源 API、JDBC 或 SQL 执行器；模型不产出 SQL 文本，一切取数经 `DatasetQueryGateway` 的结构化参数完成。
+2. **Dataset 是分析取数的唯一事实入口。** 禁止 import 物理数据源 API、JDBC 或 SQL 执行器；模型不产出 SQL 文本，一切取数经 `DatasetQueryGateway` 的结构化参数完成。治理解读消费 Asset / Quality 等源域的只读证据，不替代分析取数入口。
 3. **LLM 输出是不可信输入。** 数据集 ID 与字段引用必须先经 catalog 白名单校验才可触达 Gateway；校验失败以结构化错误回喂模型自纠，不得直接透传底层异常。
 4. **Truth 单一 owner。** 消息历史 = 官方 StateStore 表；会话归属与标题 = `yak_agent_session`；报告 = `yak_agent_report`；查询证据 = `yak_agent_query_log`；推理轮次生命周期 = `yak_agent_turn`。任何一方不得代持另一方的事实。
 5. **OFFLINE 数据集一律拒绝查询。** 不提供任何绕行开关；“临时查下线数据”属于需求变更，走 Requirement Gap 流程。
@@ -195,3 +195,14 @@ Skill 加载
 ```
 
 这些 Gap 需要单独做 Requirement / Domain 设计，不在纯架构治理中顺手解决。
+
+
+## 首版治理证据与执行身份（F-009）
+
+治理目标是对象选择，不是授权。每轮 RuntimeContext 持有独立证据登记和 Dataset 字段版本发现记录；用户/项目只来自认证提交落库的轮次。每个源域工具在实际执行线程通过 UserExecutionScope 恢复当前有效账号和项目，重新检查 agent:chat:run 与源域 action 权限。Dataset 消费认证 USER 主体及 Security 角色编码，禁止无主体取数；字段发现、白名单与实际 versionNo 一致，版本变化需重新发现。
+
+Asset 分区五态保持原义；Quality 历史执行结果与规则证据仍由 Quality 拥有。输出不携带执行 SQL、原始异常或连接配置。最终正文缓冲至证据引用校验完成，进度仍流式展示；回链只从本轮登记生成。校验后的正文更新同一官方 StateStore 消息，历史与当前输出一致。没有可读证据或无有效引用时发布明确的降级结果。首版无治理命令及未校验治理报告保存。
+
+## F-010 人工采纳建议
+
+候选不是业务事实。只读建议及校验不触发业务写入；人工保存继续由本域命令拥有。条件更新在本域事务内比较服务器定义指纹，拒绝旧值覆盖；治理 AI 不拥有源域状态。

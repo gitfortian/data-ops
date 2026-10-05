@@ -48,6 +48,11 @@ import {
   type UIMessage,
 } from './types';
 
+import { governanceQuestions, governanceSourcePath, parseGovernanceTarget } from '@/services/agent/governance';
+import type { TurnSubmitPayload } from '@/services/agent';
+import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
+import { visibleGovernanceText } from '@/services/agent/suggestions';
+
 const { Sider, Content } = Layout;
 
 let messageIdSeed = 0;
@@ -74,6 +79,7 @@ function AvatarFallback(props: { icon: React.ReactNode; background: string; colo
 }
 
 const AiAgentPage: React.FC = () => {
+  const [governanceTarget, setGovernanceTarget] = React.useState(() => parseGovernanceTarget(window.location.search));
   const [sessions, setSessions] = React.useState<AgentSession[]>([]);
   const [sessionLoading, setSessionLoading] = React.useState(false);
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
@@ -425,7 +431,7 @@ const AiAgentPage: React.FC = () => {
     });
   };
 
-  const launchStream = async (payload: { sessionId: string; message?: string; toolResults?: ToolFeedback[] }) => {
+  const launchStream = async (payload: TurnSubmitPayload) => {
     setStreaming(true);
     setClarify(null);
     seenErrorKeysRef.current = new Set();
@@ -500,7 +506,7 @@ const AiAgentPage: React.FC = () => {
     setActiveSessionId(sessionId);
     setInput('');
     setMessages((prev) => [...prev, { id: nextMessageId(), role: 'user', content, trace: [] }]);
-    await launchStream({ sessionId, message: content });
+    await launchStream({ sessionId, message: content, governanceTarget: governanceTarget ?? undefined });
   };
 
   const answerClarify = async (answer: string) => {
@@ -520,6 +526,8 @@ const AiAgentPage: React.FC = () => {
       message.warning('当前正在推理，请等待结束或停止后再切换');
       return;
     }
+    setGovernanceTarget(null);
+    setInput('');
     setActiveSessionId(sessionId);
     setClarify(null);
     try {
@@ -558,6 +566,8 @@ const AiAgentPage: React.FC = () => {
       message.warning('当前正在推理，请先停止');
       return;
     }
+    setGovernanceTarget(null);
+    setInput('');
     setActiveSessionId(null);
     setMessages([]);
     setClarify(null);
@@ -743,9 +753,10 @@ const AiAgentPage: React.FC = () => {
             : null}
           {item.content ? (
             <Typography.Text style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {item.content}
+              {item.role === 'assistant' ? visibleGovernanceText(item.content) : item.content}
             </Typography.Text>
           ) : null}
+          {item.role === 'assistant' && item.content ? <GovernanceEvidenceCards text={item.content} /> : null}
           {(() => {
             // PI-103 口径卡：从 trace-runtime 的 extractCaliber 提取（单一实现，可测）
             const caliber = extractCaliber(
@@ -860,6 +871,25 @@ const AiAgentPage: React.FC = () => {
         {!sessions.length && !sessionLoading ? <Typography.Text type="secondary">暂无会话</Typography.Text> : null}
       </Sider>
       <Content style={{ display: 'flex', flexDirection: 'column', padding: 16 }}>
+        {governanceTarget && (
+          <Alert
+            type="info"
+            showIcon
+            message={governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} 治理解读` : `质量执行 ${governanceTarget.qualityExecutionNo} 解读`}
+            description={
+              <Space wrap>
+                <span>按当前权限读取证据，解读完成后可回到来源核验。</span>
+                {governanceQuestions(governanceTarget).map((question, index) => (
+                  <Button key={question} size="small" disabled={streaming || !!clarify} onClick={() => setInput(question)}>
+                    {index === 0 ? '解释结果' : '排查建议'}
+                  </Button>
+                ))}
+                <Button size="small" href={governanceSourcePath(governanceTarget)}>返回来源</Button>
+              </Space>
+            }
+            style={{ marginBottom: 12 }}
+          />
+        )}
         {(connection === 'connecting' || connection === 'reconnecting') && (
           <div style={{ padding: '4px 16px' }}>
             <Tag color={connection === 'reconnecting' ? 'orange' : 'processing'}>
@@ -884,7 +914,7 @@ const AiAgentPage: React.FC = () => {
                     {bubbleItems.length === 0 && !clarify ? (
                       <div style={{ textAlign: 'center', marginTop: 60 }}>
                         <Typography.Title level={4} type="secondary">
-                          AI 数据分析助手
+                          AI 数据与治理助手
                         </Typography.Title>
                         <Typography.Text type="secondary">用自然语言描述需求，例如：</Typography.Text>
                         <Space wrap style={{ justifyContent: 'center', marginTop: 12 }}>

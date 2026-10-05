@@ -1,5 +1,7 @@
 # Select one storage profile. MySQL is the default.
 spring:
+  config:
+    import: classpath:application-ai.yaml
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:mysql}
     group:

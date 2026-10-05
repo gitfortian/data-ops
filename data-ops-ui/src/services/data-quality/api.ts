@@ -188,6 +188,17 @@ export const getQualityMonitor = (
     `${DATA_QUALITY_MONITOR_API}/${pathId(id)}`,
   );
 
+export const getQualityEditorSnapshot = (id: QualityResourceId) =>
+  HttpUtils.getData<{ monitor: MonitorView; settings: MonitorSettingsView; definition: string }>(
+    `${DATA_QUALITY_MONITOR_API}/${pathId(id)}/editor-snapshot`);
+
+export const validateQualitySuggestions = (id: QualityResourceId, expectedDefinition: string,
+  rules: import('./types').SaveRulePayload[]) =>
+  HttpUtils.postData<import('./types').SaveRulePayload[]>(
+    `${DATA_QUALITY_MONITOR_API}/${pathId(id)}/suggestions/validate`,
+    { expectedDefinition, rules: rules.map(({ templateId, name, columnName, operator, threshold,
+      thresholdEnd, enumValues }) => ({ templateId, name, columnName, operator, threshold, thresholdEnd, enumValues })) });
+
 export const getQualityMonitorSettings = (
   id: QualityResourceId,
 ): Promise<MonitorSettingsView> =>

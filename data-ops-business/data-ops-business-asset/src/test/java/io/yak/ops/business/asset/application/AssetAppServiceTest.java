@@ -250,6 +250,42 @@ class AssetAppServiceTest {
     return item(id, key, status, "MANUAL");
   }
 
+  @Test
+  void conditionalSnapshotRejectsStaleDescriptionBeforeWriting() {
+    var po = item(7L, "manual:7", "PENDING");
+    po.setDescription("another editor saved");
+    when(mapper.selectOne(any())).thenReturn(po);
+    String old = AssetSnapshotFingerprint.of(7L, po.getName(), "old description", null);
+    assertThrows(AssetException.class, () -> service.updateSnapshot(7L, null, "AI draft", null, "actor", old));
+    verify(mapper, never()).update(any(), any());
+    verify(mapper, never()).updateById(any(AssetItemPO.class));
+    assertEquals("another editor saved", po.getDescription());
+  }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void conditionalSnapshotLocksAndUpdatesOnlyEditableFieldsWithinProject() {
+    var po = item(7L, "manual:7", "PENDING");
+    po.setOwner("current owner");
+    when(mapper.selectOne(any())).thenReturn(po);
+    when(mapper.update(org.mockito.ArgumentMatchers.isNull(), any(Wrapper.class))).thenReturn(1);
+    String definition = AssetSnapshotFingerprint.of(7L, po.getName(), po.getDescription(), po.getAccessUri());
+    var result = service.updateSnapshot(7L, null, "AI draft", null, "actor", definition);
+    assertEquals("资产", result.name());
+    assertEquals("current owner", result.owner());
+    var read = ArgumentCaptor.forClass(Wrapper.class);
+    verify(mapper).selectOne(read.capture());
+    assertTrue(read.getValue().getSqlSegment().contains("FOR UPDATE"));
+    var write = ArgumentCaptor.forClass(Wrapper.class);
+    verify(mapper).update(org.mockito.ArgumentMatchers.isNull(), write.capture());
+    var condition = (com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AssetItemPO>) write.getValue();
+    assertTrue(condition.getSqlSegment().contains("project_id"));
+    assertTrue(condition.getSqlSegment().contains("description IS NULL"));
+    assertTrue(condition.getSqlSet().contains("description="));
+    assertTrue(!condition.getSqlSet().contains("owner=") && !condition.getSqlSet().contains("status="));
+    verify(mapper, never()).updateById(any(AssetItemPO.class));
+  }
+
   private static AssetItemPO item(Long id, String key, String status, String sourceType) {
     AssetItemPO po = new AssetItemPO();
     po.setId(id);

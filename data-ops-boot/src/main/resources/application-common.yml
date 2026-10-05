@@ -51,10 +51,6 @@ sa-token:
 
 yak:
 
-  # AI 分析智能体总开关：默认关闭时模块 Bean 全部不装配；置 true 后才会出现 /api/v1/agent 接口与配套 CORS。
-  agent:
-    enabled: ${YAK_AGENT_ENABLED:false}
-
   security:
     enabled: true
     database-enabled: true

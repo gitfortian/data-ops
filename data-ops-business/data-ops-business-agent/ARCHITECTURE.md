@@ -234,3 +234,14 @@ no service/common/helper/utils buckets
 5. 新 dependency 必须同时符合 `ARCHITECTURE.md + DEPENDENCIES.md`；
 6. 代码风格与角色命名遵守 `CODE_STYLE.md`；
 7. behavior tests 与 architecture tests 都是长期 contract，不因“迁移完成”删除。
+
+
+## F-009 只读治理接入
+
+GovernanceEvidenceTools -> GovernanceEvidenceGateway -> AssetGovernanceQueryApi / QualityEvidenceQueryApi 是只读出站走廊，不进入源域实现包。AgentToolExecution 在每个实际工具线程调用 core UserExecutionScope；Boot 适配 Security TrustedUserScope 与 ProjectAccessGuard。GovernanceContextMiddleware 为入口选择读取初始对象；GovernanceAnswerGuard 校验本轮引用、服务端生成回链并更新官方 StateStore 的同一条 final Msg。系统文本只将描述当数据；动态源摘要按字段白名单投影，深度/条数/长度有界。TurnInput JSON 可选治理目标，无数据库迁移，旧输入继续兼容；HITL 恢复继承目标并重新读取授权证据。
+
+## F-010 建议边界
+
+Agent 仅消费源域 api 包的授权只读契约；Quality monitor 的 SuggestionQueryAdapter 进入既有 Reader/Policy 和 Quality-owned Catalog Gateway，DefinitionFingerprint 属于 domain；Asset 条件更新仍在 AssetAppService。候选仅存在本轮上下文与官方消息历史，不新增业务建议表。
+
+治理入口自动预读属于 runtime 横切执行：GovernanceContextMiddleware 经现有 collector 记录上下文工具读取，补足模型没有显式调用该工具时的来源 trace；EffectiveConfigMiddleware 经同一 collector 记录首次推理的非敏感有效配置与提示词/工具哈希。两者是明确登记的 runtime 调用方，不新增工具层采集依赖；保留关闭观测即不落库与采集故障不改变业务结果的契约。

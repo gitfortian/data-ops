@@ -19,6 +19,14 @@ public class AgentProperties {
   private final Memory memory = new Memory();
   private final Query query = new Query();
   private final Python python = new Python();
+  private final Suggestions suggestions = new Suggestions();
+
+  @Getter
+  @Setter
+  public static class Suggestions {
+    /** Source-owned validation and original-editor adoption only. */
+    private boolean enabled = true;
+  }
 
   /** 开发期直连允许的来源模式，逗号分隔；留空关闭 CORS。
    *  默认放行任意主机的 dev server 端口（8000）及前端构建服务端口（3000/80/8080）。 */

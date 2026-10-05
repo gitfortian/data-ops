@@ -11,6 +11,12 @@ public interface QualityDataCatalogGateway {
   List<QualityPhysicalTable> listTables(
       long dataSourceId, String databaseName, String schemaName, String keyword);
 
+  default List<QualityColumn> listColumns(long sourceId, String database, String schema, String table) {
+    throw new UnsupportedOperationException("字段读取未装配");
+  }
+
+  record QualityColumn(String name, String type, String remarks) {}
+
   String buildSqlTemplate(long dataSourceId, String tablePath);
 
   QualityQueryResult preview(long dataSourceId, String sql);

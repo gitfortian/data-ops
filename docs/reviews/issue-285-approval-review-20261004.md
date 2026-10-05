@@ -1,8 +1,8 @@
 # Issue #285 审批功能现状复核与评审意见
 
-日期：2026-10-04
-评审对象：[GitHub issue #285](https://github.com/gitfortian/data-ops/issues/285)
-代码基线：本地 main / 本地 origin/main 均为 `b082228b1ae0e0261c87a746f9e8809748098294`。未额外 fetch，不能据此断言远端实时 HEAD 与本地相同。
+日期：2026-10-04  
+评审对象：[GitHub issue #285](https://github.com/gitfortian/data-ops/issues/285)  
+代码基线：本地 main / 本地 origin/main 均为 `b082228b1ae0e0261c87a746f9e8809748098294`。未额外 fetch，不能据此断言远端实时 HEAD 与本地相同。  
 材料性质：Review / Evidence，不是 Product Decision 或实现授权。
 
 ## 1. 评审结论
@@ -27,7 +27,7 @@
 | Existing capabilities / 复用 | ApprovalApi / ApprovalFlowHandler、CurrentProject、RBAC、BusinessAuditService、源域版本与变更能力；未来通知先评估已有 NotificationRouter / NotificationPublisher |
 | E2E acceptance evidence / 证据 | 不只看页面和接口存在，还需串联审批实例、步骤、源域生效版本/策略/记录、审计记录及权限失败结果 |
 
-依据：[PRODUCT_STYLE](../../PRODUCT_STYLE.md)、[Approval DOMAIN](../../data-ops-business/data-ops-business-approval/DOMAIN.md)、[F-007](../../docs/product/features/F-007-mdm-record-correctness.md)、[F-008](../../docs/product/features/F-008-task-oriented-navigation.md)。
+依据：[PRODUCT_STYLE](D:/tianxy/code/data-ops/PRODUCT_STYLE.md)、[Approval DOMAIN](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/DOMAIN.md)、[F-007](D:/tianxy/code/data-ops/docs/product/features/F-007-mdm-record-correctness.md)、[F-008](D:/tianxy/code/data-ops/docs/product/features/F-008-task-oriented-navigation.md)。
 
 相关有效基线包括 ACCEPTED PD-001/PD-002，以及 APPROVED F-001/F-005、IMPLEMENTING F-007/F-008。PD-005 仍为 PROPOSED，不能把其质量例外审批设想当成已批准的本期要求。
 
@@ -45,7 +45,7 @@
 | 审批与审计不合并 | 已通过 BusinessAuditService 和提交后审计机制协作 | 方向成立，不需要由“事件协作”额外推导新事件总线 |
 | 业务集成体验后续加强 | 已接入模型、标准、授权、资产、MDM | 应按具体旅程核对，尤其批准内容与生效内容是否一致 |
 
-工作台代码：[三个视图](../../data-ops-ui/src/pages/approval/todo/index.tsx#L307)、[详情与审批依据](../../data-ops-ui/src/pages/approval/detail/index.tsx#L171)。导航：[我的待办与流程配置](../../data-ops-ui/src/config/navigation.ts#L161)。
+工作台代码：[三个视图](D:/tianxy/code/data-ops/data-ops-ui/src/pages/approval/todo/index.tsx:307)、[详情与审批依据](D:/tianxy/code/data-ops/data-ops-ui/src/pages/approval/detail/index.tsx:171)。导航：[我的待办与流程配置](D:/tianxy/code/data-ops/data-ops-ui/src/config/navigation.ts:161)。
 
 F-008 已将我的待办设为工作入口、流程配置放在平台设置，不应根据 #285 再新建一级审批中心。F-007 沿用 MDM 变更与 Approval 的现有边界；MDM 变更台账不是要退役的第二个流程引擎。
 
@@ -55,7 +55,7 @@ F-008 已将我的待办设为工作入口、流程配置放在平台设置，�
 
 ### E1 · P1：by-biz 绕过审批依据的当事人可见性
 
-证据：[ApprovalController.byBiz](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/controller/v1/ApprovalController.java#L133)、[ApprovalService.find](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java#L157)、[detail 可见性检查](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java#L189)。
+证据：[ApprovalController.byBiz](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/controller/v1/ApprovalController.java:133)、[ApprovalService.find](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java:157)、[detail 可见性检查](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java:189)。
 
 `GET /api/v1/approvals/by-biz` 仅通过 read 权限进入，直接调用不接受 operator/manage 参数的 find。返回 ApprovalInstanceView，包含 payloadJson、标题和申请人。detail 则明确校验申请人、任一级审批人或 manage 权限。
 
@@ -67,7 +67,7 @@ F-008 已将我的待办设为工作入口、流程配置放在平台设置，�
 
 ### E2 · P1：handler 缺失时仍然提交审批终态
 
-证据：[terminalCallback](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java#L413)、[registry.require](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/registry/ApprovalFlowRegistry.java#L42)。
+证据：[terminalCallback](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java:413)、[registry.require](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/registry/ApprovalFlowRegistry.java:42)。
 
 提交时检查 handler 注册，终态时却使用 `registry.find(...).ifPresent(...)`，找不到时静默跳过。运行期间注册表缓存不会自行消失；风险来自存在在途单的部署中移除/关闭相关业务 handler，再重启服务。
 
@@ -79,7 +79,7 @@ F-008 已将我的待办设为工作入口、流程配置放在平台设置，�
 
 ### E3 · P2：回调失败时缺少可靠的审批语义失败审计
 
-证据：[先回调后审计](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java#L345)、[audit 开账](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java#L499)、[业务异常转换](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/exception/ApprovalExceptionHandler.java#L44)、[HTTP 审计兜底判断](../../data-ops-boot/src/main/java/io/yak/ops/boot/audit/AuditWebInterceptor.java#L119)。
+证据：[先回调后审计](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java:345)、[audit 开账](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java:499)、[业务异常转换](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/exception/ApprovalExceptionHandler.java:44)、[HTTP 审计兜底判断](D:/tianxy/code/data-ops/data-ops-boot/src/main/java/io/yak/ops/boot/audit/AuditWebInterceptor.java:119)。
 
 approve/reject/cancel 的语义审计在 terminalCallback 之后才 start。handler 抛错时，Approval 层尚未建立对应操作的失败账。业务异常被 MVC 转换为普通 Result；若 handler 也没有开业务账，HTTP 兜底仅依据异常和 HTTP status，存在业务失败却记成功的路径。若 handler 已开账，兜底还可能因 ledger 防重复而跳过，不能保证留下 Approval 动作的失败证据。
 
@@ -91,7 +91,7 @@ approve/reject/cancel 的语义审计在 terminalCallback 之后才 start。hand
 
 ### E4 · P2：分页入口可变成无界查询
 
-证据：[分页 DTO](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/controller/v1/dto/ApprovalRequests.java#L47)、[todo 分页参数直传](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java#L203)、[流程全量 list](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/FlowAdminService.java#L42)、[分页插件配置](../../data-ops-boot/src/main/java/io/yak/ops/boot/config/persistence/BusinessDatabaseConfiguration.java#L95)。
+证据：[分页 DTO](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/controller/v1/dto/ApprovalRequests.java:47)、[todo 分页参数直传](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/ApprovalService.java:203)、[流程全量 list](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/FlowAdminService.java:42)、[分页插件配置](D:/tianxy/code/data-ops/data-ops-boot/src/main/java/io/yak/ops/boot/config/persistence/BusinessDatabaseConfiguration.java:95)。
 
 pageNo/pageSize 无最小值、最大值约束，服务端直接构造 Page，分页插件没有 maxLimit。项目所用 MyBatis-Plus 3.5.16 的本地源代码确认：负 size 且无 maxLimit 时 beforeQuery 不构造分页 SQL。因此请求 pageSize=-1 能退化为本人的全量列表。流程管理本身也用 selectList 全量返回。
 
@@ -103,7 +103,7 @@ pageNo/pageSize 无最小值、最大值约束，服务端直接构造 Page，�
 
 ### E5 · P2：合法最大长度 flowCode 无法软删除
 
-证据：[允许最长 64 字编码](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/controller/v1/dto/ApprovalRequests.java#L27)、[删除时拼接后缀](../../data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/FlowAdminService.java#L139)、[flow_code VARCHAR(64)](../../data-ops-business/data-ops-business-approval/src/main/resources/db/migration/yak-approval/V1__create_approval_tables.sql#L7)。
+证据：[允许最长 64 字编码](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/controller/v1/dto/ApprovalRequests.java:27)、[删除时拼接后缀](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/java/io/yak/ops/business/approval/application/FlowAdminService.java:139)、[flow_code VARCHAR(64)](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/src/main/resources/db/migration/yak-approval/V1__create_approval_tables.sql:7)。
 
 合法 64 字编码删除时变成 `code#del#id`，必定超出字段容量；严格数据库模式下删除失败，非严格模式也可能截断，不能保证稳定的编码释放语义。
 
@@ -117,27 +117,27 @@ pageNo/pageSize 无最小值、最大值约束，服务端直接构造 Page，�
 
 工作台与详情已存在，不应再次以新建三个页面作为交付成果。快速操作和批量操作并非现有基线的缺陷；尤其批量审批需先证明用户规模、风险和收益。
 
-会签、分支、转交、委托、超时和通知，与 [当前范围外池](../../data-ops-business/data-ops-business-approval/REQUIREMENTS.md#L18) 明确冲突。它们可作为候选需求保留，需求成立后走现有产品治理流程；#285 本身属于 review evidence，不能直接覆盖当前领域契约。
+会签、分支、转交、委托、超时和通知，与 [当前范围外池](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-approval/REQUIREMENTS.md:18) 明确冲突。它们可作为候选需求保留，需求成立后走现有产品治理流程；#285 本身属于 review evidence，不能直接覆盖当前领域契约。
 
 建议明确当前整改目标为“既有审批闭环正确且可解释”，保留现有导航与所有权。不要因本轮审核扩大到表单引擎、外置流程引擎或第二份业务真相。
 
 ### S2 · P1：送审内容与实际生效内容未绑定
 
-**访问授权：** [送审展示快照](../../data-ops-business/data-ops-business-security/src/main/java/io/yak/ops/business/security/approval/AccessPolicyApprovalService.java#L62) 保存主体、资源、动作、effect 等；[AccessPolicyService.update](../../data-ops-business/data-ops-business-security/src/main/java/io/yak/ops/business/security/application/AccessPolicyService.java#L66) 仍允许在途对象编辑并保持 PENDING；[授权回调](../../data-ops-business/data-ops-business-security/src/main/java/io/yak/ops/business/security/approval/AccessGrantApprovalHandler.java#L32) 只读取 policyId，然后批准当前策略。
+**访问授权：** [送审展示快照](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-security/src/main/java/io/yak/ops/business/security/approval/AccessPolicyApprovalService.java:62) 保存主体、资源、动作、effect 等；[AccessPolicyService.update](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-security/src/main/java/io/yak/ops/business/security/application/AccessPolicyService.java:66) 仍允许在途对象编辑并保持 PENDING；[授权回调](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-security/src/main/java/io/yak/ops/business/security/approval/AccessGrantApprovalHandler.java:32) 只读取 policyId，然后批准当前策略。
 
 **触发场景：** 已获 UPDATE 权限的用户先把 TABLE 范围策略送审，再直接调用更新 API 将其改为 ALL；审批详情仍展示原 TABLE 范围，批准后当前 ALL 策略变成 APPROVED 并参与裁决。隐藏 PENDING 编辑按钮不能承担服务端一致性约束。
 
-**模型发布：** [模型送审 payload](../../data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/approval/ModelPublishApprovalService.java#L40) 仅含 ID/名称；[模型回调](../../data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/approval/ModelPublishApprovalHandler.java#L35) 调用 publish，[发布时读取当前结构](../../data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/version/ModelVersionService.java#L61)。前端禁用在途保存/回滚，但 [结构保存服务](../../data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/structure/ModelStructureService.java#L79) 没有审批守卫，直接 API 仍能修改。结果是提交 A 后改成 B，批准原单却发布 B。
+**模型发布：** [模型送审 payload](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/approval/ModelPublishApprovalService.java:40) 仅含 ID/名称；[模型回调](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/approval/ModelPublishApprovalHandler.java:35) 调用 publish，[发布时读取当前结构](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/version/ModelVersionService.java:61)。前端禁用在途保存/回滚，但 [结构保存服务](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/structure/ModelStructureService.java:79) 没有审批守卫，直接 API 仍能修改。结果是提交 A 后改成 B，批准原单却发布 B。
 
 **最小修复边界：** Security 和 Modeling 各自绑定送审版本、不可变快照或内容指纹，并在业务生效事务内锁定/校验；改变内容后拒绝旧单生效并要求重新送审。Approval 负责携带关联材料，不成为模型结构或访问策略的第二个 Owner。仅增加前端禁用或非原子的“先查询是否在途”不足以保护并发。
 
-可参考已存在的 [Standard 送审版本锁定与校验](../../data-ops-business/data-ops-business-semantic/src/main/java/io/yak/ops/business/semantic/approval/StandardPublishApprovalHandler.java#L33)，但具体版本语义由源域决定。
+可参考已存在的 [Standard 送审版本锁定与校验](D:/tianxy/code/data-ops/data-ops-business/data-ops-business-semantic/src/main/java/io/yak/ops/business/semantic/approval/StandardPublishApprovalHandler.java:33)，但具体版本语义由源域决定。
 
 **验收：** 送审后通过 API 编辑及并发编辑/批准，必须阻断旧依据对应的新内容生效；未改变内容可以正常批准；错误后审批状态与业务状态仍一致。
 
 ### S3 · P2：审前依据可理解性和源域回链不足
 
-证据：[业务对象只有类型和 ID](../../data-ops-ui/src/pages/approval/detail/index.tsx#L176)、[payload 原始键值渲染](../../data-ops-ui/src/pages/approval/detail/index.tsx#L183)。
+证据：[业务对象只有类型和 ID](D:/tianxy/code/data-ops/data-ops-ui/src/pages/approval/detail/index.tsx:176)、[payload 原始键值渲染](D:/tianxy/code/data-ops/data-ops-ui/src/pages/approval/detail/index.tsx:183)。
 
 已有详情将任意 payload 用英文键和 JSON 字符串展示，没有源业务对象链接。模型/资产依据主要为 ID/名称；MDM 内容展示也缺少直接帮助判断的旧值/新值差异。用户有“通过”按钮，却未必拥有充分的决策依据。
 
@@ -211,3 +211,4 @@ mvn -pl data-ops-business/data-ops-business-approval -am test '-Dtest=ApprovalSe
 建议将 #285 改为“审批既有闭环正确性与使用体验收尾”。已有基础模型、工作台和 SPI 可以保留；先完成非当事人依据访问控制、终态 handler 必需校验、访问策略/模型送审事实绑定、失败审计及数据库竞争/回滚验收。详情体验围绕具体业务依据与回链收敛。会签、转交、通知等移入待产品评估候选池，不由本审核直接授权新增状态机、一级入口或第二份业务真相。
 
 工程轴共 5 项，最高为 P1 的依据越权读取及缺 handler 仍终态；需求轴共 3 项，最高为 P1 的送审内容与生效内容不一致。
+

@@ -59,8 +59,18 @@ public class QualityMonitorManager {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager")
   public Monitor update(long id, QualityMonitorCommand.Save command) {
-    Monitor existing = require(id);
+    return update(id, command, null);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager")
+  public Monitor update(long id, QualityMonitorCommand.Save command, String expectedDefinition) {
     monitorRepository.lockMonitor(id);
+    Monitor existing = require(id);
+    if (expectedDefinition != null && !expectedDefinition.equals(
+        io.yak.ops.business.quality.domain.QualityDefinitionFingerprint.of(existing,
+            monitorRepository.findMonitorSettings(id)))) {
+      throw new IllegalStateException("监控配置已被修改，请重新加载后审核建议");
+    }
     monitorPolicy.validateTarget(id, command);
     List<RuleSpec> rules = rulePolicy.normalize(command.rules());
     MonitorSettings currentSettings = monitorRepository.findMonitorSettings(existing.id());

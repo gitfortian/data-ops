@@ -1,3 +1,5 @@
+import { governanceEntryPath } from '@/services/agent/governance';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { YakButton, YakEmpty, YakTab } from '@/components/ui';
 import { BRAND_THEME } from '@/styles/brand';
 import { history, useLocation, useParams } from '@umijs/max';
@@ -23,6 +25,7 @@ import {
 } from './utils';
 
 const ExecutionDetailPage = () => {
+  const { can } = usePermissionAccess();
   const { executionNo = '' } = useParams<{ executionNo: string }>();
   const location = useLocation();
   const returnAssetId = new URLSearchParams(location.search).get('returnAssetId');
@@ -224,6 +227,11 @@ const ExecutionDetailPage = () => {
           />
 
           <div className="px-5 lg:px-6">
+            {can('agent:chat:run') && (
+              <YakButton className="mb-3" onClick={() => history.push(governanceEntryPath({ qualityExecutionNo: detail.executionNo }))}>
+                AI 解读结果
+              </YakButton>
+            )}
             <YakTab
               activeKey={activeTab}
               onChange={(key) => setActiveTab(key as ExecutionDetailTabKey)}

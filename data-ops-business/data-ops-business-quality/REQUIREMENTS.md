@@ -158,3 +158,6 @@ Stage 2 治理不得顺手改变：
 - alert recording semantics。
 
 真正需要改变以上 contract 时，应独立提出 Requirement / Domain / Migration 变更，不应混进纯架构治理 PR。
+## F-010 建议辅助
+
+依照 docs/product/features/F-010-ai-governance-suggestions.md 实施。候选有界、授权读取、原页面人工保存与原子并发保护；不得自动运行、启用调度、修改源域事实或绕过既有权限。真实模型验收与自动化验证分开记录。

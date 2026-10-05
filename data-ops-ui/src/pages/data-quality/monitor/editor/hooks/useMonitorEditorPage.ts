@@ -5,8 +5,7 @@ import {
 } from '@/services/data-source';
 import {
   createQualityMonitor,
-  getQualityMonitor,
-  getQualityMonitorSettings,
+  getQualityEditorSnapshot,
   listQualityTemplates,
   updateQualityMonitor,
   type CatalogColumn,
@@ -66,6 +65,7 @@ export const useMonitorEditorPage = ({
   const [nextRunTime, setNextRunTime] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [definition, setDefinition] = useState('');
 
   const dataSourceId = Form.useWatch('dataSourceId', form);
   const storedDataSourceName = Form.useWatch('dataSourceName', form);
@@ -91,10 +91,9 @@ export const useMonitorEditorPage = ({
         setTemplates(templatePage.records || []);
 
         if (editing && monitorId) {
-          const [monitor, settings] = await Promise.all([
-            getQualityMonitor(monitorId),
-            getQualityMonitorSettings(monitorId),
-          ]);
+          const loaded = await getQualityEditorSnapshot(monitorId);
+          const { monitor, settings } = loaded;
+          setDefinition(loaded.definition);
           form.setFieldsValue({
             name: monitor.name,
             description: monitor.description,
@@ -164,6 +163,7 @@ export const useMonitorEditorPage = ({
       );
       const payload: SaveMonitorPayload = {
         ...values,
+        expectedDefinition: editing ? definition : undefined,
         dataSourceId: Number(values.dataSourceId),
         dataSourceName: source?.name || values.dataSourceName,
         settings: buildSettings(schedule, notification),
@@ -197,6 +197,7 @@ export const useMonitorEditorPage = ({
 
   return {
     editing,
+    definition,
     form,
     columns,
     templates,

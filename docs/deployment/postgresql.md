@@ -1,6 +1,6 @@
 # PostgreSQL 新库部署
 
-平台管理员可使用 PostgreSQL 16 或更高版本部署空库。`application.yml` 只选择 Profile；未指定时默认 `mysql`。`mysql` 与 `postgresql` Profile 都会加载共用的 `application-common.yml`，各自的数据库、驱动和 Quartz 存储设置分别来自 `application-mysql.yml` 与 `application-postgresql.yml`。
+平台管理员可使用 PostgreSQL 16 或更高版本部署空库。`application.yml` 选择存储 Profile 并自动导入 `application-ai.yaml`；未指定 Profile 时默认 `mysql`。`mysql` 与 `postgresql` Profile 都会加载共用的 `application-common.yml`，各自的数据库、驱动和 Quartz 存储设置分别来自 `application-mysql.yml` 与 `application-postgresql.yml`。AI 配置在两个存储 Profile 下均生效，无需额外激活 `ai` Profile。
 
 业务库、Yak Security 权限库和 Quartz 调度存储均支持 PostgreSQL；MySQL 继续使用原配置和迁移链。此方式不搬迁已有 MySQL 数据。
 

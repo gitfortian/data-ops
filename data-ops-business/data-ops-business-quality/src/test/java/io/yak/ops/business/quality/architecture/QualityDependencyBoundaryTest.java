@@ -36,12 +36,13 @@ class QualityDependencyBoundaryTest {
       Map.ofEntries(
           Map.entry(
               "controller",
-              Set.of("asset", "config", "domain", "execution", "monitor", "template", "workspace")),
+              Set.of("api", "asset", "config", "domain", "execution", "monitor", "template", "workspace")),
           Map.entry("workspace", Set.of("config", "domain", "monitor", "repository")),
-          Map.entry("monitor", Set.of("config", "domain", "repository", "schedule", "task")),
+          Map.entry("monitor", Set.of("api", "gateway", "config", "domain", "repository", "schedule", "task")),
           Map.entry("task", Set.of("config", "domain", "execution", "repository")),
           Map.entry("schedule", Set.of("config", "domain", "execution", "repository")),
-          Map.entry("execution", Set.of("alert", "config", "domain", "gateway", "repository")),
+          Map.entry("api", Set.of()),
+          Map.entry("execution", Set.of("api", "alert", "config", "domain", "gateway", "repository")),
           Map.entry("alert", Set.of("config", "domain", "repository")),
           Map.entry(
               "asset",
@@ -82,6 +83,8 @@ class QualityDependencyBoundaryTest {
 
   @Test
   void crossSubsystemCorridorsStayNarrow() throws IOException {
+    assertExactCorridor("monitor", "api", Set.of(BASE + ".api.QualitySuggestionQueryApi"));
+    assertExactCorridor("monitor", "gateway", Set.of(BASE + ".gateway.datasource.QualityDataCatalogGateway"));
     assertExactCorridor(
         "monitor",
         "schedule",

@@ -27,6 +27,12 @@ public class DataSourceQualityCatalogAdapter implements QualityDataCatalogGatewa
   }
 
   @Override
+  public List<QualityColumn> listColumns(long sourceId, String database, String schema, String table) {
+    return catalogReader.listColumnsFresh(sourceId, database, schema, table).stream()
+        .map(c -> new QualityColumn(c.name(), c.typeName(), c.remarks())).toList();
+  }
+
+  @Override
   public String buildSqlTemplate(long dataSourceId, String tablePath) {
     return catalogReader.buildSqlTemplate(dataSourceId, tablePath);
   }
