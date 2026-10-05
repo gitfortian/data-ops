@@ -52,7 +52,7 @@ public class SaveAnalysisReportTool implements AgentToolBox {
       throw new IllegalArgumentException("报告需引用本轮真实查询证据后才能保存");
     }
     String content = state.evidence().entries().isEmpty() ? markdownText : state.evidence().validateAnswer(markdownText);
-    long reportId = execution.call(context, () -> reportService.saveFromTool(context.getSessionId(), title, content));
+    long reportId = execution.call(context, "save_analysis_report", () -> reportService.saveFromTool(context.getSessionId(), title, content));
     String references = state.evidence().entries().stream().map(e -> "[" + e.id() + "]")
         .collect(java.util.stream.Collectors.joining(" "));
     return "SUCCESS: 报告已保存，reportId=" + reportId + "。向用户确认时附带查询证据引用 " + references;

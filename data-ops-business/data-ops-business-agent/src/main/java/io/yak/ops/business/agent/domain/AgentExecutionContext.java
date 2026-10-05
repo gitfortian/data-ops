@@ -7,6 +7,54 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class AgentExecutionContext {
   public static final String PROJECT_ID = "yak.projectId";
   private final GovernanceTarget target;
+  private final AgentTaskToolPolicy toolPolicy;
+  private ToolBudgetSnapshot toolBudget = new ToolBudgetSnapshot(32, 3, 0, Map.of());
+  private java.util.function.Consumer<ToolBudgetSnapshot> budgetCheckpoint = snapshot -> {};
+  private boolean stopped;
+
+  public synchronized void configureBudget(ToolBudgetSnapshot snapshot,
+      java.util.function.Consumer<ToolBudgetSnapshot> checkpoint) {
+    this.toolBudget = snapshot;
+    this.budgetCheckpoint = checkpoint;
+  }
+
+  public synchronized ToolBudgetSnapshot toolBudget() { return toolBudget; }
+  public AgentTaskToolPolicy toolPolicy() { return toolPolicy; }
+  public synchronized void stopTools() { stopped = true; }
+  public synchronized void requireTool(String name) {
+    if (stopped) throw new IllegalStateException("[TOOL_EXECUTION_STOPPED] 本次执行已停止");
+    toolPolicy.require(name);
+    if (toolBudget.failures().getOrDefault(name, 0) >= toolBudget.maxFailuresPerTool()) {
+      throw new IllegalStateException("[TOOL_FAILURE_LIMIT] 此工具累计失败已达上限，请检查来源或补充条件后发起新任务");
+    }
+  }
+
+  public synchronized void reserveTool(String name) {
+    requireTool(name);
+    if (toolBudget.usedCalls() >= toolBudget.maxCalls()) {
+      throw new IllegalStateException("[TOOL_CALL_LIMIT] 本轮工具调用已达上限，请缩小问题范围后重新发起");
+    }
+    checkpoint(new ToolBudgetSnapshot(toolBudget.maxCalls(), toolBudget.maxFailuresPerTool(),
+        toolBudget.usedCalls() + 1, toolBudget.failures()));
+  }
+
+  public synchronized void toolFailed(String name) {
+    if (stopped) return; // A late callback cannot overwrite a newer turn's StateStore slot after cancellation.
+    var failures = new java.util.HashMap<>(toolBudget.failures());
+    failures.merge(name, 1, Integer::sum);
+    checkpoint(new ToolBudgetSnapshot(toolBudget.maxCalls(), toolBudget.maxFailuresPerTool(),
+        toolBudget.usedCalls(), failures));
+  }
+
+  private void checkpoint(ToolBudgetSnapshot next) {
+    try {
+      budgetCheckpoint.accept(next);
+      toolBudget = next;
+    } catch (RuntimeException failure) {
+      stopped = true;
+      throw new IllegalStateException("[TOOL_BUDGET_UNAVAILABLE] 无法保存执行预算，已停止后续工具调用");
+    }
+  }
   private volatile String qualityDefinition;
   private volatile GovernanceSuggestion suggestion;
   private final java.util.concurrent.atomic.AtomicInteger suggestionAttempts = new java.util.concurrent.atomic.AtomicInteger();
@@ -26,7 +74,10 @@ public final class AgentExecutionContext {
   private final GovernanceEvidenceLedger evidence = new GovernanceEvidenceLedger();
   private final Map<Long, DatasetSummary.DatasetFields> discoveries = new ConcurrentHashMap<>();
 
-  public AgentExecutionContext(GovernanceTarget target) { this.target = target; }
+  public AgentExecutionContext(GovernanceTarget target) {
+    this.target = target;
+    this.toolPolicy = new AgentTaskToolPolicy(target);
+  }
   public GovernanceTarget target() { return target; }
   public GovernanceEvidenceLedger evidence() { return evidence; }
   public void remember(DatasetSummary.DatasetFields fields) { discoveries.put(fields.datasetId(), fields); }

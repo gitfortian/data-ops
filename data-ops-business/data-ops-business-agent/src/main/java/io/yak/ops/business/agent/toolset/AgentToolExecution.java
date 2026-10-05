@@ -18,13 +18,15 @@ public class AgentToolExecution {
   private final UserExecutionScope users;
   private final ActionAuthorization authorization;
 
-  public <T> T call(RuntimeContext context, Supplier<T> action) {
+  public <T> T call(RuntimeContext context, String toolName, Supplier<T> action) {
+    state(context).requireTool(toolName);
     if (context == null || context.getUserId() == null) throw new SecurityException("工具缺少认证上下文");
     Number project = context.get(AgentExecutionContext.PROJECT_ID);
     if (project == null || project.longValue() <= 0) throw new SecurityException("工具缺少项目上下文");
     try {
       return users.call(Long.parseLong(context.getUserId()), project.longValue(), () -> {
         authorization.requirePermission(AgentPermissionCode.CHAT_RUN);
+        state(context).requireTool(toolName);
         return action.get();
       });
     } catch (io.yak.ops.core.security.ActionAccessDeniedException | SecurityException denied) {

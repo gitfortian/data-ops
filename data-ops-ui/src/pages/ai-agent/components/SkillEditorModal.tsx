@@ -44,6 +44,7 @@ const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, savi
       return;
     }
     const input: AgentSkillSaveInput = {
+      ...(editing ? { expectedVersion: editing.version } : {}),
       skillId: isUpdate ? editing!.skillId : values.skillId.trim(),
       name: values.name.trim(),
       content: values.content,

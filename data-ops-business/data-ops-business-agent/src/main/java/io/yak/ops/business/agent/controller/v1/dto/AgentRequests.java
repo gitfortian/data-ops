@@ -88,7 +88,13 @@ public final class AgentRequests {
           String name,
       @Size(max = 512, message = "技能描述长度不能超过 512") String description,
       @Size(max = 64, message = "技能标识长度不能超过 64") java.util.Map<String, Object> metadata,
-      @NotBlank(message = "技能正文不能为空") String content) {}
+      @NotBlank(message = "技能正文不能为空") String content,
+      @jakarta.validation.constraints.Min(1) Integer expectedVersion) {
+    public SkillSaveRequest(String skillId, String name, String description,
+        java.util.Map<String, Object> metadata, String content) {
+      this(skillId, name, description, metadata, content, null);
+    }
+  }
 
   /** 技能在线启停请求。 */
   public record SkillActiveRequest(boolean active) {}

@@ -1,0 +1,11 @@
+# 治理 Skill 评测材料
+
+以下三份是管理员维护 Skill 的候选正文。尚未注册、未默认启用、未经过真实模型验收；不要把文件存在视为框架已经加载。运行时仍以现有 DB Skill 管理为准，没有新增项目私有技能范围、资源文件执行或工具自动激活。
+
+使用现有技能页面把名称、说明、正文提交到固定测试环境，在相同问题/部署模型下对照无 Skill 与当前 Skill。记录实际 execution-contract 的 skillPromptHash / loadedSkillHash、Skill 管理版本及启停审计。至少执行题集中的 asset-read / asset-query-injection / quality-history / quality-rules / skill-scope，并人工核验原源域证据。停用、删除与冷启动效果有工程回归，真实语义与 T6/T9 仍待验收。
+
+- asset-interpretation/SKILL.md：资产解读与证据缺口。
+- quality-explanation/SKILL.md：固定历史执行解释与假设区分。
+- candidate-review/SKILL.md：规则/描述候选校验与原编辑器交接。
+
+正式开放前按真实评测逐份决定是否启用；不因全量默认启用这些材料而扩大本批产品范围。

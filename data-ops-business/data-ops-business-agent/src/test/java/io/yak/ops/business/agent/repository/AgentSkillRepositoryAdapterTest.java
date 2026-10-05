@@ -62,7 +62,7 @@ class AgentSkillRepositoryAdapterTest {
     assertEquals("asset-yoy", skill.getName(), "agentscope name=skillId（SkillBox 键）");
     assertEquals("描述-asset-yoy", skill.getDescription());
     assertEquals("正文-asset-yoy", skill.getSkillContent());
-    assertEquals("asset-yoy", skill.getMetadataValue("name"), "metadata 携带展示名（name==skillId 契约）");
+    assertEquals("asset-yoy", skill.getMetadataValue("displayName"), "metadata 携带展示名（name==skillId 契约）");
     // 契约（框架实测）：启停状态与乐观版本是 DB 持久真相，不进入运行时技能 metadata
     // （否则改 DB 启停触发 reloadSkills 签名变化、SkillBox 重建，热停用丢失）
     assertEquals(null, skill.getMetadataValue("enabled"), "启停态不得进入运行时技能 metadata");
@@ -177,5 +177,44 @@ class AgentSkillRepositoryAdapterTest {
   void toBriefNullSafe() {
     assertNull(adapter.getSkill("missing"));
     assertTrue(adapter.findBySkillId("missing").isEmpty());
+  }
+
+  @Test void coldCatalogExcludesDisabledAndRefreshesAfterAllDisabledOrDeleted() {
+    when(skillMapper.selectList(any())).thenReturn(List.of(po("a", true, 1), po("b", false, 2)),
+        List.of(po("a", false, 2)), List.of());
+    assertEquals(List.of("a"), adapter.getAllSkills().stream().map(AgentSkill::getName).toList());
+    assertTrue(adapter.getAllSkills().isEmpty());
+    assertTrue(new AgentSkillRepositoryAdapter(skillMapper).getAllSkills().isEmpty());
+  }
+
+  @Test void displayNameDoesNotReplaceLogicalFrameworkIdentity() {
+    var stored = po("stable-id", true, 1);
+    stored.setName("展示名一");
+    when(skillMapper.selectOne(any(Wrapper.class))).thenReturn(stored);
+    var first = adapter.getSkill("stable-id");
+    assertEquals("stable-id", first.getName());
+    assertEquals("展示名一", first.getMetadataValue("displayName"));
+    stored.setName("展示名二");
+    assertEquals(first.getSkillId(), adapter.getSkill("stable-id").getSkillId());
+  }
+
+  @Test void casUsesIncomingVersionAndAdvancesStoredVersion() {
+    when(skillMapper.selectOne(any(Wrapper.class))).thenReturn(po("a", true, 8));
+    when(skillMapper.update(any(AgentSkillPO.class), any(Wrapper.class))).thenAnswer(call -> {
+      AgentSkillPO updated = call.getArgument(0);
+      Wrapper<?> condition = call.getArgument(1);
+      assertEquals(2, updated.getVersion());
+      condition.getSqlSegment();
+      assertTrue(((com.baomidou.mybatisplus.core.conditions.AbstractWrapper<?, ?, ?>) condition)
+          .getParamNameValuePairs().containsValue(1));
+      return 0; // Incoming version 1 cannot overwrite current DB version 8.
+    });
+    assertFalse(adapter.save(io.yak.ops.business.agent.domain.AgentSkillBrief.create("a", "A", "d", Map.of(), "c"), true));
+  }
+
+  @Test void concurrentDeleteCannotBeResurrectedByManagementUpdate() {
+    when(skillMapper.selectOne(any(Wrapper.class))).thenReturn(null);
+    assertFalse(adapter.save(io.yak.ops.business.agent.domain.AgentSkillBrief.create("deleted", "A", "d", Map.of(), "c"), true));
+    org.mockito.Mockito.verify(skillMapper, org.mockito.Mockito.never()).insert(any(AgentSkillPO.class));
   }
 }

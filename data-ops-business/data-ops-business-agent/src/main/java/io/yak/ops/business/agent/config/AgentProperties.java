@@ -20,6 +20,15 @@ public class AgentProperties {
   private final Query query = new Query();
   private final Python python = new Python();
   private final Suggestions suggestions = new Suggestions();
+  private final Execution execution = new Execution();
+
+  @Getter
+  @Setter
+  public static class Execution {
+    private int maxToolCalls = 32;
+    private int maxFailuresPerTool = 3;
+    private int maxModelInputChars = 120000;
+  }
 
   @Getter
   @Setter
@@ -35,7 +44,7 @@ public class AgentProperties {
   @Getter
   @Setter
   public static class Model {
-    /** openai | dashscope | ollama。 */
+    /** Current runtime supports openai, including compatible endpoints. */
     private String provider = "openai";
     private String name = "";
     private String baseUrl = "";

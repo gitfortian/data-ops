@@ -24,8 +24,8 @@ import org.springframework.stereotype.Component;
  *   <li>{@code yak.agent.observability.enabled} — 步骤记录总开关（已接线）；</li>
  *   <li>{@code yak.agent.llm.timeout} — 单次模型调用超时秒数（已接线，每次尝试现读）；</li>
  *   <li>{@code yak.agent.llm.max-iters} — ReAct 最大迭代：builder 级参数无热更缝（GenerateOptions
- *       无此字段），登记预留、当前重启生效；</li>
- *   <li>{@code yak.agent.approval.query-execution} — 查询执行人工确认开关（Phase 3 审批闸门消费）。</li>
+ *       无此字段），DB 键尚未接线；实际值来自启动配置 chat.max-iters；</li>
+ *   <li>{@code yak.agent.approval.query-execution} — 查询执行人工确认预留键，尚未接线。</li>
  * </ul>
  */
 @Slf4j
@@ -59,8 +59,8 @@ public class AgentDynamicConfigService {
     register(RegisteredKey.bool(KEY_MEMORY_ENABLED, "长期记忆提取与召回总开关（关闭即零提取零注入）"));
     register(RegisteredKey.bool(KEY_OBSERVABILITY_ENABLED, "步骤记录总开关（关闭即零写入，读路径不受影响）"));
     register(RegisteredKey.intKey(KEY_LLM_TIMEOUT_SECONDS, "单次模型调用超时秒数（每次尝试现读）"));
-    register(RegisteredKey.intKey(KEY_LLM_MAX_ITERS, "ReAct 最大迭代（builder 级参数，重启生效，登记预留）"));
-    register(RegisteredKey.bool(KEY_APPROVAL_QUERY_EXECUTION, "查询执行人工确认开关（Phase 3 审批闸门消费）"));
+    register(RegisteredKey.intKey(KEY_LLM_MAX_ITERS, "预留键尚未接入；实际最大迭代由启动配置 chat.max-iters 控制"));
+    register(RegisteredKey.bool(KEY_APPROVAL_QUERY_EXECUTION, "查询执行人工确认预留键（尚未接入）"));
   }
 
   private static void register(RegisteredKey meta) {

@@ -24,6 +24,6 @@ public class ListDatasetsTool implements AgentToolBox {
       description =
           "列出当前项目上线的数据集（最多50个，含名称与业务描述）。回答数据分析问题前先发现对象；上线不代表已有数据查询权限。")
   public String listDatasets(RuntimeContext context) {
-    return execution.call(context, () -> viewFormatter.formatSummaries(catalogGateway.listOnlineDatasets()));
+    return execution.call(context, "list_datasets", () -> viewFormatter.formatSummaries(catalogGateway.listOnlineDatasets()));
   }
 }

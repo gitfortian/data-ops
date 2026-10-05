@@ -280,6 +280,9 @@ export interface ConfigItem {
   kind: 'bool' | 'int' | string;
   description: string;
   dbValue?: string | null;
+  effectiveValue?: string | null;
+  valueSource?: 'STARTUP' | 'DYNAMIC' | 'NOT_CONNECTED';
+  updateMode?: 'HOT' | 'NOT_CONNECTED';
 }
 
 /** 会话级观测视图（turns × kinds 矩阵）。 */
@@ -312,6 +315,7 @@ export interface AgentSkillItem {
 
 /** 注册/更新请求体（对应后端 SkillSaveRequest）。 */
 export interface AgentSkillSaveInput {
+  expectedVersion?: number;
   /** 注册时必填；更新时路径带 skillId，body 同步回传（后端 @NotBlank 强制）。 */
   skillId: string;
   name: string;

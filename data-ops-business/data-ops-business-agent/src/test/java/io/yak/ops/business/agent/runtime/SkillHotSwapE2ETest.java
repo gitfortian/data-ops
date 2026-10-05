@@ -40,16 +40,12 @@ import java.util.concurrent.atomic.AtomicReference;
  * DynamicSkillMiddleware → 每次推理 reloadSkills（技能集签名变化重建 SkillBox）→
  * 技能 instructions 拼入系统提示。fake OpenAI 端点截获请求体断言提示内容。</p>
  *
- * <p>覆盖分工（诚实留痕）：技能集变化（注册/更新/删除 → 签名驱动重建 → 下一轮生效）由本 E2E
- * 的确定性路径覆盖；在线启停开关（SkillBox.setSkillActive 运行时权威、改 DB 持久态不触发重建）
- * 的即时双写由 AgentSkillManageServiceTest.setActive 单测覆盖——两测各守契约层面。</p>
+ * <p>内容更新、启停、删除与冷启动经真实框架验证；管理持久化与 CAS 另由 Repository/Service 测试覆盖。</p>
  */
 class SkillHotSwapE2ETest {
 
   /**
-   * 内存技能仓库（agentscope 接口替身）。启停状态为独立持久真相（statuses map），
-   * 不进入运行时技能对象 —— 框架 reloadSkills 签名只覆盖技能内容，改持久状态不触发
-   * SkillBox 重建；热停用由 SkillBox.setSkillActive 实时生效（与生产 adapter 契约一致）。
+   * 模拟生产 DB 启用目录；状态不写入运行时 Skill metadata，过滤变化驱动 SDK 重建。
    */
   private static final class InMemorySkillRepository implements AgentSkillRepository {
 
@@ -67,7 +63,7 @@ class SkillHotSwapE2ETest {
     }
 
     void setEnabled(String name, boolean enabled) {
-      // 持久真相落独立 map，不改技能对象内容（避免触发框架签名变化重建 SkillBox）
+      // 过滤后的运行时目录变化，下一执行段重新加载。
       statuses.put(name, enabled);
     }
 
@@ -92,7 +88,7 @@ class SkillHotSwapE2ETest {
 
     @Override
     public List<AgentSkill> getAllSkills() {
-      return new ArrayList<>(skills.values());
+      return skills.values().stream().filter(skill -> isEnabled(skill.getName())).toList();
     }
 
     @Override
@@ -212,6 +208,8 @@ class SkillHotSwapE2ETest {
           done.countDown();
         });
     assertTrue(done.await(60, TimeUnit.SECONDS), "推理必须完成，事件：" + events);
+    assertTrue(events.stream().noneMatch(event -> event.type() == ChatTurnEvent.TurnEventType.ERROR),
+        "推理不能因错误提前结束：" + events);
   }
 
   // ---------------- 测试用例 ----------------
@@ -227,7 +225,7 @@ class SkillHotSwapE2ETest {
       repo.put(AgentSkill.builder()
           .name("asset-yoy")
           .description("对资产进行同比分析")
-          .putMetadata("name", "资产管理同比分析")
+          .putMetadata("displayName", "资产管理同比分析")
           .putMetadata("enabled", true)
           .putMetadata("version", 1)
           .skillContent("当用户询问资产同比时，按资产台账年度同比口径回答；输出同比率与绝对值。")
@@ -254,7 +252,7 @@ class SkillHotSwapE2ETest {
       repo.put(AgentSkill.builder()
           .name("asset-yoy")
           .description("对资产进行同比分析")
-          .putMetadata("name", "资产管理同比分析")
+          .putMetadata("displayName", "资产管理同比分析")
           .putMetadata("enabled", true)
           .putMetadata("version", 1)
           .skillContent("当用户询问资产同比时，产出同比口径分析。")
@@ -266,16 +264,12 @@ class SkillHotSwapE2ETest {
       assertNotNull(firstBody);
       assertTrue(firstBody.contains("同比"), "注册后第一轮提示必须含技能内容，实际：" + truncate(firstBody));
 
-      // 在线更新（生产经 PUT /skills/{id} → AgentSkillManageService.update：DB 覆写 + 热换；
-      // 框架保证契约（字节码实测）：技能内容变化 → 下次推理 reloadSkills 签名变化 → SkillBox
-      // 重建 → 新版技能内容注入。这是「技能集变化（更新/注册/删除）对下一轮热生效」的
-      // 框架级确定性路径；在线停用/删除开关的即时性由 AgentSkillManageServiceTest 的
-      // setActive/remove 双写单测覆盖（SkillBox.setSkillActive 是运行时权威开关）。
+      // 与生产相同的稳定逻辑 name；displayName 不占用 SDK 保留的 name。
       repo.update(
           AgentSkill.builder()
               .name("asset-yoy")
               .description("对资产进行环比分析")
-              .putMetadata("name", "资产管理环比分析")
+              .putMetadata("displayName", "资产管理环比分析")
               .putMetadata("enabled", true)
               .putMetadata("version", 2)
               .skillContent("当用户询问资产环比时，产出环比口径分析。")
@@ -287,16 +281,40 @@ class SkillHotSwapE2ETest {
       assertNotNull(secondBody);
 assertTrue(secondBody.contains("环比"),
           "更新后第一轮提示必须含新版技能内容，实际：" + truncate(secondBody));
-      // 框架行为实测记录（非本功能缺陷）：更新技能对象后，下一轮 reloadSkills 触发重建时
-      // 旧注册项仍保留于 SkillBox（当前框架版本未在重建中清理旧技能内容），提示同时含新旧内容。
-      // 这是 agentscope 内部实现契约，热更语义的「只有新内容」需框架升级或适配层补偿（登记为
-      // 后续观察项）；本 E2E 只断言确定性路径（新内容已注入），不对旧内容残留做断言绑定。
+      // 历史消息仍可能引用旧版本；加载工具只读取当前启用目录，不把历史当成当前事实。
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @org.junit.jupiter.api.Test
+  void disabledAndDeletedSkillStayAbsentAcrossColdRestartAndReenable() throws Exception {
+    HttpServer server = startFakeLlama();
+    try {
+      var repo = new InMemorySkillRepository();
+      repo.put(AgentSkill.builder().name("fixture-policy-skill").description("fixture-description")
+          .skillContent("fixture-instructions").build());
+      var runtime = newRuntime(repo, server.getAddress().getPort());
+      streamOnce(runtime, "fresh1", "t1");
+      assertTrue(LAST_REQUEST_BODY.get().contains("fixture-policy-skill"));
+      repo.setEnabled("fixture-policy-skill", false);
+      streamOnce(runtime, "fresh2", "t2");
+      org.junit.jupiter.api.Assertions.assertFalse(LAST_REQUEST_BODY.get().contains("fixture-policy-skill"));
+      var restarted = newRuntime(repo, server.getAddress().getPort());
+      streamOnce(restarted, "fresh3", "t3");
+      org.junit.jupiter.api.Assertions.assertFalse(LAST_REQUEST_BODY.get().contains("fixture-policy-skill"));
+      repo.setEnabled("fixture-policy-skill", true);
+      streamOnce(restarted, "fresh4", "t4");
+      assertTrue(LAST_REQUEST_BODY.get().contains("fixture-policy-skill"));
+      repo.remove("fixture-policy-skill");
+      streamOnce(restarted, "fresh5", "t5");
+      org.junit.jupiter.api.Assertions.assertFalse(LAST_REQUEST_BODY.get().contains("fixture-policy-skill"));
     } finally {
       server.stop(0);
     }
   }
 
   private static String truncate(String text) {
-    return text == null ? "null" : text.substring(0, Math.min(text.length(), 400));
+    return text == null ? "null" : text.substring(0, Math.min(text.length(), 600));
   }
 }

@@ -63,6 +63,7 @@ public class RunDatasetQueryTool implements AgentToolBox {
       @ToolParam(name = "limit", description = "返回行数上限，不传使用默认值", required = false)
       Integer limit) {
 
+    AgentToolExecution.state(context).requireTool("run_dataset_query");
     // 会话身份由框架注入的运行时上下文提供，绝不采信模型输出
     String sessionId = context == null ? null : context.getSessionId();
     if (sessionId == null || sessionId.isBlank()) {
@@ -78,7 +79,7 @@ public class RunDatasetQueryTool implements AgentToolBox {
     // 白名单校验与查询证据留痕统一在 DatasetQueryGateway 执行边界完成（工具保持薄壳）；
     // 步骤记录由 runtime 的 ToolAuditMiddleware 零侵入落账。
     var discovery = AgentToolExecution.state(context).discovery(datasetId);
-    var evidence = execution.call(context, () -> queryGateway.execute(sessionId, spec, discovery));
+    var evidence = execution.call(context, "run_dataset_query", () -> queryGateway.execute(sessionId, spec, discovery));
 
     var reference = AgentToolExecution.state(context).evidence().register("DATASET",
         "dataset=" + datasetId + "/version=" + discovery.versionNo() + "/query=" + evidence.queryId(),

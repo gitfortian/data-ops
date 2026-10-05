@@ -11,6 +11,12 @@ yak:
     suggestions:
       enabled: ${YAK_AGENT_SUGGESTIONS_ENABLED:true}
 
+    # 启动配置：工具额度在新轮次冻结，HITL 恢复沿用已消费额度；字符数不等于 token/费用。
+    execution:
+      max-tool-calls: ${YAK_AGENT_EXECUTION_MAX_TOOL_CALLS:32}
+      max-failures-per-tool: ${YAK_AGENT_EXECUTION_MAX_FAILURES_PER_TOOL:3}
+      max-model-input-chars: ${YAK_AGENT_EXECUTION_MAX_MODEL_INPUT_CHARS:120000}
+
     model:
       provider: ${YAK_AGENT_MODEL_PROVIDER:openai}
       name: ${YAK_AGENT_MODEL_NAME:}

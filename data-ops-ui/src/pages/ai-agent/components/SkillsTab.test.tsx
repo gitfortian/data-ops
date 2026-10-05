@@ -217,6 +217,7 @@ describe('SkillsTab 更新（文档 §5.3，验收项 4）', () => {
         name: '资产同比分析',
         description: '按统一口径输出资产同比对比结论',
         content: '当用户询问资产同比时按新版口径输出。',
+        expectedVersion: 2,
         metadata: { tags: ['资产'] },
       });
     });
