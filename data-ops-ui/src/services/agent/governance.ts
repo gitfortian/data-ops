@@ -1,0 +1,33 @@
+/** Context is a source selection only; the backend resolves all facts and permissions. */
+export type GovernanceTarget = { assetId: number; qualityExecutionNo?: never }
+  | { assetId?: never; qualityExecutionNo: string };
+
+export function governanceEntryPath(target: GovernanceTarget): string {
+  const query = target.assetId !== undefined
+    ? `assetId=${target.assetId}`
+    : `qualityExecutionNo=${encodeURIComponent(target.qualityExecutionNo)}`;
+  return `/ai-agent?${query}`;
+}
+
+export function parseGovernanceTarget(search: string): GovernanceTarget | null {
+  const params = new URLSearchParams(search);
+  const asset = params.get('assetId');
+  const execution = params.get('qualityExecutionNo');
+  if (!!asset === !!execution) return null;
+  if (asset && /^[1-9]\d*$/.test(asset) && Number.isSafeInteger(Number(asset))) {
+    return { assetId: Number(asset) };
+  }
+  if (execution && /^[A-Za-z0-9_-]{1,128}$/.test(execution)) return { qualityExecutionNo: execution };
+  return null;
+}
+
+export function governanceSourcePath(target: GovernanceTarget): string {
+  return target.assetId !== undefined ? `/data-asset/detail/${target.assetId}`
+    : `/data-quality/execution/${encodeURIComponent(target.qualityExecutionNo)}`;
+}
+
+export function governanceQuestions(target: GovernanceTarget): string[] {
+  return target.assetId !== undefined
+    ? ['解释这个资产的含义、负责人和治理状态，并引用证据。', '这个资产有哪些已证实的治理问题？区分缺失证据和待验证假设。']
+    : ['解读这次质量执行结果，区分未通过、执行异常和未执行规则，并引用证据。', '根据本次规则的实际值和预期值，给出排查建议及需要补充的证据。'];
+}

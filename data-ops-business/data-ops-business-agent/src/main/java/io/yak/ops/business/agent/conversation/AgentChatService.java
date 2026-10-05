@@ -41,6 +41,11 @@ public class AgentChatService {
 
   /** 提交新一轮：验证 + 落库 QUEUED + 立即返回。消息树节点在执行线程创建。 */
   public String submitTurn(String sessionId, String message) {
+    return submitTurn(sessionId, message, null);
+  }
+
+  public String submitTurn(String sessionId, String message,
+      io.yak.ops.business.agent.domain.GovernanceTarget target) {
     long userId = requireUserId();
     long projectId = requireProjectId();
     ownerValidator.ensureOwner(sessionId, userId, projectId, message);
@@ -53,7 +58,7 @@ public class AgentChatService {
       }
       turnId = UUID.randomUUID().toString();
       TurnInput input =
-          TurnInput.ofStart(UUID.randomUUID().toString(), UUID.randomUUID().toString(), message);
+          TurnInput.ofStart(UUID.randomUUID().toString(), UUID.randomUUID().toString(), message).withTarget(target);
       turnRepository.insertQueued(turnId, sessionId, userId, projectId, TurnKind.START,
           io.yak.ops.business.agent.repository.support.TurnInputCodec.encode(input));
     }
@@ -109,7 +114,7 @@ public class AgentChatService {
     }
     String resumePayload =
         io.yak.ops.business.agent.repository.support.TurnInputCodec.encode(
-            TurnInput.ofResume(assistantMessageId, feedbacks));
+            TurnInput.ofResume(assistantMessageId, feedbacks).withTarget(original.governanceTarget()));
     if (!turnRepository.requeueForResume(turnId, resumePayload)) {
       throw new TurnConflictException("该轮次状态已变化（可能已被应答或取消），请刷新会话后重试");
     }

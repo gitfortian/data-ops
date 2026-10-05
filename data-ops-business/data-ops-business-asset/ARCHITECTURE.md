@@ -44,3 +44,8 @@ Asset 继续通过 AssetProvider SPI 获取事实，不反向依赖 Consumption 
 
 手动对账在异步线程内通过 `ProjectContextScope` 恢复请求已验证的 Project ID，
 与调度入口使用同一上下文机制；源域 Reader 仍校验 `CurrentProject`，不开放跨项目读取。
+
+
+## F-009 治理消费者只读入口
+
+api.AssetGovernanceQueryApi 由 application.AssetGovernanceQueryAdapter 实现：台账搜索/require 和分区查询只复用现有 AssetAppService / AssetDiscoverService；每次检查 data-asset:read。AssetSectionProjector 是 HTTP 与消费者共用投影，分区 permission/provider/适用矩阵只有 DiscoverService 一个判断入口。AssetFact 不含 accessUri / 连接配置，调用者不得把台账事实当源域质量或安全事实。

@@ -7,6 +7,7 @@ import io.yak.ops.business.dataset.Dataset;
 import io.yak.ops.business.dataset.DatasetField;
 import io.yak.ops.business.dataset.DatasetService;
 import io.yak.ops.business.dataset.DatasetStatus;
+import io.yak.ops.core.security.ActionAuthorization;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,15 +19,19 @@ import org.springframework.stereotype.Component;
 public class DatasetCatalogGateway {
 
   private final DatasetService datasetService;
+  private final ActionAuthorization authorization;
 
   public List<DatasetSummary> listOnlineDatasets() {
+    authorization.requirePermission("data-development:read");
     return datasetService.list().stream()
         .filter(dataset -> dataset.status() == DatasetStatus.ONLINE)
+        .limit(50)
         .map(DatasetCatalogGateway::toSummary)
         .toList();
   }
 
   public List<DatasetSummary.FieldView> listFields(long datasetId) {
+    authorization.requirePermission("data-development:read");
     var detail = datasetService.get(datasetId);
     if (detail.dataset().status() != DatasetStatus.ONLINE) {
       throw new IllegalArgumentException("[DATASET_OFFLINE] 数据集未上线：" + datasetId);
@@ -36,6 +41,7 @@ public class DatasetCatalogGateway {
 
   /** 字段清单（含数据集名称），供目录视图格式化。 */
   public DatasetSummary.DatasetFields datasetOverview(long datasetId) {
+    authorization.requirePermission("data-development:read");
     var detail = datasetService.get(datasetId);
     if (detail.dataset().status() != DatasetStatus.ONLINE) {
       throw new IllegalArgumentException("[DATASET_OFFLINE] 数据集未上线：" + datasetId);
@@ -43,7 +49,9 @@ public class DatasetCatalogGateway {
     return new DatasetSummary.DatasetFields(
         detail.dataset().id(),
         detail.dataset().name(),
-        detail.fields().stream().map(DatasetCatalogGateway::toFieldView).toList());
+        detail.fields().stream().limit(200).map(DatasetCatalogGateway::toFieldView).toList(),
+        detail.currentVersion() == null ? null : detail.currentVersion().versionNo(),
+        detail.fields().size() > 200);
   }
 
   private static DatasetSummary toSummary(Dataset dataset) {

@@ -125,6 +125,7 @@ public class AgentTurnExecutor {
                   turnId,
                   input.message(),
                   record.projectId(),
+                  input.governanceTarget(),
                   consume(record, state),
                   () -> finishCompleted(record, input, state),
                   error -> finishFailed(record, input, state, error))
@@ -134,6 +135,7 @@ public class AgentTurnExecutor {
                   turnId,
                   input.feedbacks(),
                   record.projectId(),
+                  input.governanceTarget(),
                   consume(record, state),
                   () -> finishCompleted(record, input, state),
                   error -> finishFailed(record, input, state, error));

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class SaveAnalysisReportTool implements AgentToolBox {
 
   private final AgentReportService reportService;
+  private final AgentToolExecution execution;
 
   @Tool(
       name = "save_analysis_report",
@@ -34,6 +35,10 @@ public class SaveAnalysisReportTool implements AgentToolBox {
     if (context == null || context.getSessionId() == null) {
       throw new IllegalStateException("工具执行上下文缺少会话标识");
     }
+    var state = AgentToolExecution.state(context);
+    if (state.target() != null || state.evidence().containsGovernanceEvidence()) {
+      throw new IllegalArgumentException("首版治理报告需先完成证据校验，请在对话结果中查看解读与回链");
+    }
     if (title == null || title.isBlank()) {
       throw new IllegalArgumentException("报告标题不能为空");
     }
@@ -43,7 +48,13 @@ public class SaveAnalysisReportTool implements AgentToolBox {
     if (markdownText == null || markdownText.isBlank()) {
       throw new IllegalArgumentException("报告正文不能为空");
     }
-    long reportId = reportService.saveFromTool(context.getSessionId(), title, markdownText);
-    return "SUCCESS: 报告已保存，reportId=" + reportId;
+    if (!state.evidence().entries().isEmpty() && !state.evidence().hasValidCitations(markdownText)) {
+      throw new IllegalArgumentException("报告需引用本轮真实查询证据后才能保存");
+    }
+    String content = state.evidence().entries().isEmpty() ? markdownText : state.evidence().validateAnswer(markdownText);
+    long reportId = execution.call(context, () -> reportService.saveFromTool(context.getSessionId(), title, content));
+    String references = state.evidence().entries().stream().map(e -> "[" + e.id() + "]")
+        .collect(java.util.stream.Collectors.joining(" "));
+    return "SUCCESS: 报告已保存，reportId=" + reportId + "。向用户确认时附带查询证据引用 " + references;
   }
 }

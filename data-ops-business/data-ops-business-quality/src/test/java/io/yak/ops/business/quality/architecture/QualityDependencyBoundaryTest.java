@@ -41,7 +41,8 @@ class QualityDependencyBoundaryTest {
           Map.entry("monitor", Set.of("config", "domain", "repository", "schedule", "task")),
           Map.entry("task", Set.of("config", "domain", "execution", "repository")),
           Map.entry("schedule", Set.of("config", "domain", "execution", "repository")),
-          Map.entry("execution", Set.of("alert", "config", "domain", "gateway", "repository")),
+          Map.entry("api", Set.of()),
+          Map.entry("execution", Set.of("api", "alert", "config", "domain", "gateway", "repository")),
           Map.entry("alert", Set.of("config", "domain", "repository")),
           Map.entry(
               "asset",

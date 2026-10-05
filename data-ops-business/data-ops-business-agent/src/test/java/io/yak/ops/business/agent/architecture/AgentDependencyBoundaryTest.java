@@ -114,7 +114,11 @@ class AgentDependencyBoundaryTest {
           Map.entry("io.agentscope.", List.of("runtime")),
           // reactor 豁免：工具层以 Mono/Schedulers 卸载阻塞执行，是框架工具契约的声明式机制
           Map.entry("reactor.core.", List.of("runtime", "toolset")),
-          Map.entry("io.yak.ops.business.dataset.", List.of("gateway")));
+          Map.entry("io.yak.ops.business.dataset.", List.of("gateway")),
+          Map.entry("io.yak.ops.business.asset.api.", List.of("gateway")),
+          Map.entry("io.yak.ops.business.quality.api.", List.of("gateway")),
+          Map.entry("io.yak.ops.business.asset.", List.of()),
+          Map.entry("io.yak.ops.business.quality.", List.of()));
 
   @Test
   void sdkWhitelistsAreConfinedToDeclaredSubsystems() throws IOException {

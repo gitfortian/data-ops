@@ -25,6 +25,22 @@ public class FieldWhitelistValidator {
     return catalogGateway.listFields(datasetId);
   }
 
+  public void requireSnapshot(long datasetId, DatasetSummary.DatasetFields discovery,
+      List<String> fieldIds) {
+    if (discovery == null || discovery.datasetId() != datasetId || discovery.versionNo() == null) {
+      throw new IllegalArgumentException("[DATASET_DISCOVERY_REQUIRED] 请先发现本轮数据集字段版本");
+    }
+    var current = catalogGateway.datasetOverview(datasetId);
+    if (!discovery.versionNo().equals(current.versionNo())) {
+      throw new IllegalArgumentException("[DATASET_VERSION_CHANGED] 数据集版本已变化，请重新调用 get_dataset_fields");
+    }
+    Set<String> known = current.fields().stream().map(DatasetSummary.FieldView::fieldId)
+        .collect(java.util.stream.Collectors.toSet());
+    if (fieldIds.stream().anyMatch(field -> !known.contains(field))) {
+      throw new IllegalArgumentException("[FIELD_WHITELIST_REJECTED] 查询含未发现的字段，请重新确认字段清单");
+    }
+  }
+
   /** 校验一批 fieldId 全部存在于该 ONLINE 数据集，否则抛出带精确原因的异常。 */
   public void requireKnownFields(long datasetId, List<String> fieldIds, String usage) {
     if (fieldIds == null || fieldIds.isEmpty()) {

@@ -34,12 +34,6 @@ import io.yak.ops.business.asset.controller.v1.dto.AssetRequests.ViewReportDTO;
 import io.yak.ops.common.constant.asset.AssetPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
-import io.yak.ops.spi.section.SectionAction;
-import io.yak.ops.spi.section.SectionCapability;
-import io.yak.ops.spi.section.SectionProvenance;
-import io.yak.ops.spi.section.SectionMapSummary;
-import io.yak.ops.spi.section.SectionStatus;
-import io.yak.ops.spi.section.SectionSummary;
 import io.yak.ops.spi.section.SectionType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -47,8 +41,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -120,78 +112,13 @@ public class AssetController {
     AssetDiscoverService.SectionView view = discoverService.section(id, sectionType, operator);
     SectionType type = SectionType.valueOf(sectionType.trim().toUpperCase());
     AssetView asset = assetService.get(id);
-    if (view.data() instanceof io.yak.ops.spi.section.SectionContract contract) {
-      io.yak.ops.spi.section.SectionSummary summary = contract.summary() == null
-          ? new SectionMapSummary(Map.of()) : contract.summary();
-      return Result.success(new AssetSectionResult(
-          contract.sectionType(), contract.status(), contract.ownerDomain(),
-          summary, contract.reason(), contract.updatedAt(),
-          contract.actions(), contract.evidence(), contract.provenance(), contract.capability()));
-    }
     return Result.success(toSectionResult(type, view, asset));
   }
 
   static AssetSectionResult toSectionResult(
       SectionType type, AssetDiscoverService.SectionView view, AssetView asset) {
-    SectionStatus status = view.status();
-    String owner = switch (type) {
-      case OVERVIEW, GOVERNANCE -> "ASSET";
-      case USAGE -> "FEDERATED";
-      case TECHNICAL_METADATA -> "METADATA";
-      case QUALITY -> "QUALITY";
-      case SECURITY -> "SECURITY";
-      case LINEAGE -> "LINEAGE";
-      case LIFECYCLE -> "LIFECYCLE";
-    };
-    SectionSummary typedSummary = view.data() instanceof SectionSummary summary ? summary : null;
-    Map<String, Object> values = new LinkedHashMap<>();
-    if (typedSummary != null) {
-      values.putAll(typedSummary.values());
-    } else if (view.data() instanceof Map<?, ?> map) {
-      map.forEach((key, value) -> values.put(String.valueOf(key), value));
-    } else if (view.data() != null) {
-      values.put("data", view.data());
-    }
-    boolean hasReadableResult = status == SectionStatus.OK || status == SectionStatus.EMPTY;
-    AssetSectionResult result = new AssetSectionResult(
-        type, status, owner, typedSummary == null ? new SectionMapSummary(values) : typedSummary,
-        status == SectionStatus.OK ? null : view.note(),
-        null, combinedActions(view, type, status, asset), List.of(),
-        hasReadableResult ? new SectionProvenance(owner, asset.assetKey(), Instant.now()) : null,
-        new SectionCapability(status != SectionStatus.NOT_APPLICABLE,
-            status == SectionStatus.OK || status == SectionStatus.EMPTY,
-            status == SectionStatus.OK || status == SectionStatus.EMPTY ? null : view.note()));
-    return result;
+    return io.yak.ops.business.asset.application.AssetSectionProjector.project(type, view, asset);
   }
-
-  private static List<SectionAction> combinedActions(
-      AssetDiscoverService.SectionView view, SectionType type,
-      SectionStatus status, AssetView asset) {
-    if (status != SectionStatus.OK) return List.of();
-    java.util.ArrayList<SectionAction> actions = new java.util.ArrayList<>(
-        sectionActions(type, status, asset));
-    actions.addAll(view.actions());
-    return List.copyOf(actions);
-  }
-
-  private static List<SectionAction> sectionActions(
-      SectionType type, SectionStatus status, AssetView asset) {
-    if (status != SectionStatus.OK) {
-      return List.of();
-    }
-    String returnContext = "returnAssetId=" + asset.id();
-    return switch (type) {
-      case TECHNICAL_METADATA -> List.of();
-      case LINEAGE -> List.of(new SectionAction(
-          "打开全屏血缘图谱",
-          "/data-analysis/lineage?assetKey=" + java.net.URLEncoder.encode(
-              asset.assetKey(), java.nio.charset.StandardCharsets.UTF_8)
-              + "&" + returnContext,
-          asset.assetKey()));
-      default -> List.of();
-    };
-  }
-
   @Operation(summary = "跨域引用摘要:上游 N 张表/其中 M 张未稽核(M2-3,只读,供指标详情等消费侧)")
   @GetMapping("/lineage-summary")
   public Result<LineageSummary> lineageSummary(

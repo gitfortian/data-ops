@@ -4,6 +4,7 @@ import io.yak.ops.business.agent.config.ConditionalOnAgentEnabled;
 
 import io.agentscope.core.tool.Tool;
 import io.agentscope.core.tool.ToolParam;
+import io.agentscope.core.agent.RuntimeContext;
 import io.yak.ops.business.agent.catalog.DatasetViewFormatter;
 import io.yak.ops.business.agent.gateway.DatasetCatalogGateway;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class GetDatasetFieldsTool implements AgentToolBox {
 
   private final DatasetCatalogGateway catalogGateway;
   private final DatasetViewFormatter viewFormatter;
+  private final AgentToolExecution execution;
 
   @Tool(
       name = "get_dataset_fields",
@@ -24,7 +26,12 @@ public class GetDatasetFieldsTool implements AgentToolBox {
           "获取指定数据集的字段清单（fieldId、显示名、类型、维度/度量角色、业务描述）。"
               + "组装 run_dataset_query 参数前必须先调用本工具确认合法 fieldId。")
   public String getDatasetFields(
+      RuntimeContext context,
       @ToolParam(name = "dataset_id", description = "目标数据集ID") Long datasetId) {
-    return viewFormatter.formatFields(catalogGateway.datasetOverview(datasetId));
+    return execution.call(context, () -> {
+      var fields = catalogGateway.datasetOverview(datasetId);
+      AgentToolExecution.state(context).remember(fields);
+      return viewFormatter.formatFields(fields);
+    });
   }
 }

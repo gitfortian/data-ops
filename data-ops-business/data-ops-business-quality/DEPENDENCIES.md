@@ -15,7 +15,8 @@ Quality production 内部允许的 top-level 依赖：
 | `monitor` | `config`, `domain`, `repository`, `schedule`, `task` |
 | `task` | `config`, `domain`, `execution`, `repository` |
 | `schedule` | `config`, `domain`, `execution`, `repository` |
-| `execution` | `alert`, `config`, `domain`, `gateway`, `repository` |
+| `execution` | `api`（仅 EvidenceQueryAdapter）, `alert`, `config`, `domain`, `gateway`, `repository` |
+| `api` | none |
 | `alert` | `config`, `domain`, `repository` |
 | `asset` | `config`, `domain`, `execution`, `gateway`, `monitor`, `repository` |
 | `template` | `config`, `domain`, `repository` |
@@ -255,3 +256,8 @@ config -> execution/monitor/asset/template/workspace/task
 4. **架构是否真的改变？**
 
 只有第 4 种情况才在同一个 PR 更新 `ARCHITECTURE.md`、本文件和 executable dependency test。
+
+
+## F-009 公共 evidence API
+
+新增 api 顶层包无内部依赖，execution -> api 只允许 QualityEvidenceQueryAdapter。跨模块读取只进入 QualityEvidenceQueryApi，不暴露 execution/domain/repository 实现。声明与实际依赖图仍无环。

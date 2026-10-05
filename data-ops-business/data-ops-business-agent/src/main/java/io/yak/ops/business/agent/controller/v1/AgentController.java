@@ -78,6 +78,9 @@ public class AgentController {
   @PostMapping("/chat/turns")
   @RequiresPermission(AgentPermissionCode.CHAT_RUN)
   public Result<TurnSubmittedVO> submitTurn(@Valid @RequestBody ChatTurnSubmitRequest request) {
+    if (request.isResume() && request.governanceTarget() != null) {
+      throw new IllegalArgumentException("恢复轮次不得替换治理对象");
+    }
     String turnId =
         request.isResume()
             ? agentChatService.submitResume(
@@ -85,7 +88,7 @@ public class AgentController {
                 request.toolResults().stream()
                     .map(input -> new ToolFeedback(input.toolCallId(), input.toolName(), input.output()))
                     .toList())
-            : agentChatService.submitTurn(request.sessionId(), requireMessage(request));
+            : agentChatService.submitTurn(request.sessionId(), requireMessage(request), request.governanceTarget());
     return Result.success(new TurnSubmittedVO(turnId));
   }
 

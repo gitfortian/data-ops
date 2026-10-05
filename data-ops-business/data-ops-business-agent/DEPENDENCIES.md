@@ -221,3 +221,8 @@ utils/
 6. 确认没有建立第二个 truth owner。
 
 只为了绕过 architecture test 而扩大白名单，不是可接受的修复。
+
+
+## F-009 外部只读 API 走廊
+
+仅 gateway 可 import `io.yak.ops.business.asset.api.*` / `io.yak.ops.business.quality.api.*`。任何 Agent 包禁止引用它们的 application/execution/repository/dao/controller 实现。toolset 可消费 SPI SectionType 参数枚举，真实读取停在 gateway。身份恢复只经 core UserExecutionScope，不进入 IAM DAO；Boot 是唯一身份适配器，源域业务仍只读取认证上下文。

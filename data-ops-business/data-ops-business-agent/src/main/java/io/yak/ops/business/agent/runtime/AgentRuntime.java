@@ -35,7 +35,7 @@ import reactor.core.publisher.Flux;
 @Slf4j
 @ConditionalOnAgentEnabled
 @Component
-@RequiredArgsConstructor
+@RequiredArgsConstructor(onConstructor_ = @org.springframework.beans.factory.annotation.Autowired)
 public class AgentRuntime implements TurnCorrelation {
 
   private final List<AgentToolBox> toolBoxes;
@@ -67,6 +67,23 @@ public class AgentRuntime implements TurnCorrelation {
 
   /** 懒组装：模块启用但模型配置缺失时，应用照常启动，首次对话才报出可操作的错误。 */
   private volatile ReActAgent agent;
+
+  private final io.yak.ops.business.agent.toolset.GovernanceEvidenceTools governanceTools;
+
+  /** Compatibility for existing runtime fixtures; Spring uses the complete constructor above. */
+  public AgentRuntime(List<AgentToolBox> toolBoxes,
+      List<AgentSystemPromptContributor> promptContributors, AgentStateStore stateStore,
+      AgentProperties properties, AgentEventCodec eventCodec,
+      io.yak.ops.business.agent.telemetry.AgentStepRecorder stepRecorder,
+      AgentObservationCollector observationCollector,
+      io.yak.ops.business.agent.repository.AgentDynamicConfigService dynamicConfig,
+      io.yak.ops.business.agent.memory.MemoryRecallService memoryRecallService,
+      io.yak.ops.business.agent.memory.MemoryRepository memoryRepository,
+      ProjectContextScope projectContextScope) {
+    this(toolBoxes, promptContributors, stateStore, properties, eventCodec, stepRecorder,
+        observationCollector, dynamicConfig, memoryRecallService, memoryRepository,
+        projectContextScope, null);
+  }
 
   /** 会话 -> 活跃轮次（调用级记账归因）；推理单飞保证同会话至多一个映射，终态即清除。 */
   private final java.util.Map<String, String> activeTurnBySession =
@@ -156,6 +173,7 @@ public class AgentRuntime implements TurnCorrelation {
                 memoryRecallService, memoryRepository, stateStore, properties,
                 observationCollector, dynamicConfig))
             ;
+    if (governanceTools != null) builder.middleware(new GovernanceContextMiddleware(governanceTools, observationCollector, this));
     registerSkillMiddlewareIfEnabled(builder, toolkit);
     registerCompactionIfEnabled(builder, model);
     builder
@@ -191,7 +209,7 @@ public class AgentRuntime implements TurnCorrelation {
       Runnable onComplete,
       Consumer<Throwable> onError) {
     return streamEvents(
-        List.of(new UserMessage(message)), userId, sessionId, turnId, projectId, onEvent, onComplete, onError);
+        List.of(new UserMessage(message)), userId, sessionId, turnId, projectId, null, onEvent, onComplete, onError);
   }
 
   /** HITL 恢复：以匹配 pending 的工具结果续跑被挂起的同一轮推理。 */
@@ -213,11 +231,26 @@ public class AgentRuntime implements TurnCorrelation {
         sessionId,
         turnId,
         projectId,
+        null,
         onEvent,
         onComplete,
         onError);
   }
 
+  public TurnSubscription stream(long userId, String sessionId, String turnId, String message,
+      long projectId, io.yak.ops.business.agent.domain.GovernanceTarget target,
+      Consumer<ChatTurnEvent> onEvent, Runnable onComplete, Consumer<Throwable> onError) {
+    return streamEvents(List.of(new UserMessage(message)), userId, sessionId, turnId, projectId,
+        target, onEvent, onComplete, onError);
+  }
+
+  public TurnSubscription resume(long userId, String sessionId, String turnId, List<ToolFeedback> feedbacks,
+      long projectId, io.yak.ops.business.agent.domain.GovernanceTarget target,
+      Consumer<ChatTurnEvent> onEvent, Runnable onComplete, Consumer<Throwable> onError) {
+    return streamEvents(feedbacks.stream().map(feedback -> (Msg) new ToolResultMessage(
+        feedback.toolCallId(), feedback.toolName(), feedback.output())).toList(), userId, sessionId,
+        turnId, projectId, target, onEvent, onComplete, onError);
+  }
   /**
    * 事件流映射管道。流式增量已承载正文时，结果事件的整段全文不再重复下发
    * （否则前端会出现"打字机播完后又整体重放一遍"）；无增量的降级场景仍由结果事件兜底。
@@ -347,6 +380,7 @@ public class AgentRuntime implements TurnCorrelation {
       String sessionId,
       String turnId,
       long projectId,
+      io.yak.ops.business.agent.domain.GovernanceTarget target,
       Consumer<ChatTurnEvent> onEvent,
       Runnable onComplete,
       Consumer<Throwable> onError) {
@@ -355,6 +389,8 @@ public class AgentRuntime implements TurnCorrelation {
             .userId(String.valueOf(userId))
             .sessionId(sessionId)
             .build();
+    var execution = new io.yak.ops.business.agent.domain.AgentExecutionContext(target);
+    context.put(io.yak.ops.business.agent.domain.AgentExecutionContext.class, execution);
     // PROJECT_RUNTIME：将 projectId 写入 RuntimeContext 的 stringAttributes，
     // 供 ProjectContextMiddleware 在工具执行线程恢复 ThreadLocal
     if (projectId > 0) {
@@ -365,7 +401,7 @@ public class AgentRuntime implements TurnCorrelation {
     }
     Flux<ChatTurnEvent> pipeline =
         withTurnTimeout(
-            mapStream(agent().streamEvents(inputs, context), eventCodec),
+            mapStream(GovernanceAnswerGuard.guard(agent().streamEvents(inputs, context), execution, context, agent()), eventCodec),
             Duration.ofSeconds(properties.getChat().getTurnTimeoutSeconds()));
     reactor.core.Disposable disposable = pipeline.subscribe(onEvent::accept, onError, onComplete);
     return () -> {

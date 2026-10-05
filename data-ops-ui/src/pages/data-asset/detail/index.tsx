@@ -1,3 +1,4 @@
+import { governanceEntryPath } from '@/services/agent/governance';
 import { Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { history, useParams } from '@umijs/max';
@@ -358,6 +359,9 @@ const AssetDetailPage = () => {
           <div className="mt-1 text-[12px] text-[#98a2b3]">{asset?.assetKey}</div>
         </div>
         <Space>
+          {asset && can('agent:chat:run') && (
+            <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
+          )}
           {asset && sourceLink && (
             <Button onClick={() => history.push(sourceLink)}>查看源对象</Button>
           )}

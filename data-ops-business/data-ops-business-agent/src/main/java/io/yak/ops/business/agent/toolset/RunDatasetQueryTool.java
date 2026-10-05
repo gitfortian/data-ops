@@ -25,6 +25,7 @@ public class RunDatasetQueryTool implements AgentToolBox {
 
   private final QuerySpecParser specParser;
   private final DatasetQueryGateway queryGateway;
+  private final AgentToolExecution execution;
 
   @Tool(
       name = "run_dataset_query",
@@ -76,21 +77,28 @@ public class RunDatasetQueryTool implements AgentToolBox {
         new DatasetQuerySpec(datasetId, dimensions, parsedMetrics, parsedFilters, parsedSorts, limit);
     // 白名单校验与查询证据留痕统一在 DatasetQueryGateway 执行边界完成（工具保持薄壳）；
     // 步骤记录由 runtime 的 ToolAuditMiddleware 零侵入落账。
-    var evidence = queryGateway.execute(sessionId, spec);
+    var discovery = AgentToolExecution.state(context).discovery(datasetId);
+    var evidence = execution.call(context, () -> queryGateway.execute(sessionId, spec, discovery));
 
-    StringBuilder sb = new StringBuilder("查询成功 queryId=").append(evidence.queryId())
+    var reference = AgentToolExecution.state(context).evidence().register("DATASET",
+        "dataset=" + datasetId + "/version=" + discovery.versionNo() + "/query=" + evidence.queryId(),
+        "OK", null, "/dataset/" + datasetId);
+    StringBuilder sb = new StringBuilder("只读查询证据 [").append(reference.id()).append("]\n查询成功 queryId=").append(evidence.queryId())
         .append("，返回 ").append(evidence.returnedRows()).append(" 行");
     if (evidence.truncated()) {
       sb.append("（已截断）");
     }
     sb.append("，耗时 ").append(evidence.elapsedMillis()).append("ms\n");
     sb.append(String.join(" | ", evidence.columns())).append('\n');
+    int displayed = 0;
     for (List<Object> row : evidence.rows()) {
-      sb.append(row).append('\n');
+      if (sb.length() >= 12000) break;
+      String text = row.toString();
+      sb.append(text.length() > 1500 ? text.substring(0, 1500) + "[行内容已截断]" : text).append('\n');
+      displayed++;
     }
-    if (evidence.sql() != null && !evidence.sql().isBlank()) {
-      sb.append("\n执行SQL：\n").append(evidence.sql()).append('\n');
-    }
+    if (displayed < evidence.rows().size()) sb.append("[展示已截断，未展示的行不能视为已核验]\n");
+    sb.append("versionNo=").append(discovery.versionNo()).append('\n');
     return sb.toString();
   }
 }

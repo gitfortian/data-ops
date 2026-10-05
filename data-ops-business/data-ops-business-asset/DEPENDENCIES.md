@@ -36,3 +36,8 @@ Data Service Reader。Asset 不因此增加对 Consumption 或 Data Service 的�
 - 禁止写 `yak_metadata_asset`（D6）与任何源域表；本模块只拥有 `yak_asset_*`。
 - 禁止复制存储业务事实作为读取源（D1）——快照列仅供过滤，详情永远实时读源域。
 - 禁止无界查询：概览/排序固定查询次数 + LIMIT（D11）。
+
+
+## F-009 Asset API
+
+外部治理消费者只可引用 api.AssetGovernanceQueryApi / AssetSectionResult；api 不依赖 application。application.Adapter -> api + 已有 App/Discover 应用角色 + ActionAuthorization；HTTP Controller 复用 application.AssetSectionProjector。查询 DTO 的内部兼容映射停在 Asset-owning adapter，不泄漏给消费者。

@@ -20,7 +20,12 @@ public final class AgentRequests {
   public record ChatTurnSubmitRequest(
       @NotBlank(message = "sessionId 不能为空") String sessionId,
       String message,
-      List<ToolResultInput> toolResults) {
+      List<ToolResultInput> toolResults,
+      @jakarta.validation.Valid io.yak.ops.business.agent.domain.GovernanceTarget governanceTarget) {
+
+    public ChatTurnSubmitRequest(String sessionId, String message, List<ToolResultInput> toolResults) {
+      this(sessionId, message, toolResults, null);
+    }
 
     public boolean isResume() {
       return toolResults != null && !toolResults.isEmpty();

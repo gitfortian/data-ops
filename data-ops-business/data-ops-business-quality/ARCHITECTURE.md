@@ -304,3 +304,8 @@ Datasource Catalog            = physical metadata evidence
 8. 哪个 behavior test 与 architecture test 会保护这次改动？
 
 答不清楚时不要创建新的 Helper/Common/ServiceImpl。
+
+
+## F-009 外部执行证据读取
+
+api.QualityEvidenceQueryApi 是只读公共契约；execution.QualityEvidenceQueryAdapter -> QualityExecutionReader 投影历史 Execution / RuleExecution，并检查 quality:execution:read 与 quality:monitor:read。最多 100 条规则、声明截断，不返回 executedSql / errorMessage，不回读当前 Monitor/Rule。该入口不新增通用 Service，也不参与执行状态写入。

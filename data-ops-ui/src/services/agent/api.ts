@@ -85,6 +85,7 @@ export interface TurnSubmitPayload {
   sessionId: string;
   message?: string;
   toolResults?: ToolFeedback[];
+  governanceTarget?: import('./governance').GovernanceTarget;
 }
 
 export const agentChatApi = {
