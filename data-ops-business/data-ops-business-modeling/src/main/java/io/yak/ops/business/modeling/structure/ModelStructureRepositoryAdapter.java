@@ -49,6 +49,14 @@ public class ModelStructureRepositoryAdapter implements ModelStructureRepository
   }
 
   @Override
+  public Optional<StoredStructureAttributes> findStructureAttributesForUpdate(Long modelId) {
+    return findLiveModelForUpdate(modelId)
+        .map(po -> new StoredStructureAttributes(
+            po.getTableName(), po.getTableComment(), po.getPkColumns(), po.getPartitionType(),
+            po.getPartitionColumns(), po.getPartitionExpr(), po.getTableProperties()));
+  }
+
+  @Override
   public Optional<String> findTableComment(Long modelId) {
     return findLiveModel(modelId).map(ModelingModelPO::getTableComment);
   }
@@ -119,13 +127,25 @@ public class ModelStructureRepositoryAdapter implements ModelStructureRepository
 
   @Override
   public List<ColumnDefinition> findColumns(Long modelId) {
+    return findColumns(modelId, false);
+  }
+
+  @Override
+  public List<ColumnDefinition> findColumnsForUpdate(Long modelId) {
+    return findColumns(modelId, true);
+  }
+
+  private List<ColumnDefinition> findColumns(Long modelId, boolean forUpdate) {
     Long projectId = requiredProjectId();
-    return columnMapper.selectList(
-            new LambdaQueryWrapper<ModelingModelColumnPO>()
-                .eq(ModelingModelColumnPO::getProjectId, projectId)
-                .eq(ModelingModelColumnPO::getModelId, modelId)
-                .orderByAsc(ModelingModelColumnPO::getSortOrder)
-                .orderByAsc(ModelingModelColumnPO::getId))
+    LambdaQueryWrapper<ModelingModelColumnPO> query = new LambdaQueryWrapper<ModelingModelColumnPO>()
+        .eq(ModelingModelColumnPO::getProjectId, projectId)
+        .eq(ModelingModelColumnPO::getModelId, modelId)
+        .orderByAsc(ModelingModelColumnPO::getSortOrder)
+        .orderByAsc(ModelingModelColumnPO::getId);
+    if (forUpdate) {
+      query.last("FOR UPDATE");
+    }
+    return columnMapper.selectList(query)
         .stream()
         .map(ModelStructureRepositoryAdapter::toColumnDomain)
         .toList();
@@ -174,8 +194,12 @@ public class ModelStructureRepositoryAdapter implements ModelStructureRepository
   }
 
   @Override
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public boolean updateColumnStdField(Long modelId, String columnName, Long stdFieldId) {
     if (!StringUtils.hasText(columnName)) {
+      return false;
+    }
+    if (findLiveModelForUpdate(modelId).isEmpty()) {
       return false;
     }
     Long projectId = requiredProjectId();
@@ -192,12 +216,24 @@ public class ModelStructureRepositoryAdapter implements ModelStructureRepository
 
   @Override
   public List<IndexDefinition> findIndexes(Long modelId) {
+    return findIndexes(modelId, false);
+  }
+
+  @Override
+  public List<IndexDefinition> findIndexesForUpdate(Long modelId) {
+    return findIndexes(modelId, true);
+  }
+
+  private List<IndexDefinition> findIndexes(Long modelId, boolean forUpdate) {
     Long projectId = requiredProjectId();
-    return indexMapper.selectList(
-            new LambdaQueryWrapper<ModelingModelIndexPO>()
-                .eq(ModelingModelIndexPO::getProjectId, projectId)
-                .eq(ModelingModelIndexPO::getModelId, modelId)
-                .orderByAsc(ModelingModelIndexPO::getId))
+    LambdaQueryWrapper<ModelingModelIndexPO> query = new LambdaQueryWrapper<ModelingModelIndexPO>()
+        .eq(ModelingModelIndexPO::getProjectId, projectId)
+        .eq(ModelingModelIndexPO::getModelId, modelId)
+        .orderByAsc(ModelingModelIndexPO::getId);
+    if (forUpdate) {
+      query.last("FOR UPDATE");
+    }
+    return indexMapper.selectList(query)
         .stream()
         .map(ModelStructureRepositoryAdapter::toIndexDomain)
         .toList();
@@ -237,6 +273,17 @@ public class ModelStructureRepositoryAdapter implements ModelStructureRepository
                 .eq(ModelingModelPO::getId, modelId)
                 .eq(ModelingModelPO::getProjectId, projectId)
                 .eq(ModelingModelPO::getDeleted, Boolean.FALSE)));
+  }
+
+  private Optional<ModelingModelPO> findLiveModelForUpdate(Long modelId) {
+    Long projectId = requiredProjectId();
+    return Optional.ofNullable(
+        modelMapper.selectOne(
+            new LambdaQueryWrapper<ModelingModelPO>()
+                .eq(ModelingModelPO::getId, modelId)
+                .eq(ModelingModelPO::getProjectId, projectId)
+                .eq(ModelingModelPO::getDeleted, Boolean.FALSE)
+                .last("FOR UPDATE")));
   }
 
   private Long requiredProjectId() {

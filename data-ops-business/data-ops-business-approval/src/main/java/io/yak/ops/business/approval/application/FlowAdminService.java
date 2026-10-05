@@ -1,6 +1,8 @@
 package io.yak.ops.business.approval.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.yak.framework.common.PageData;
 import io.yak.ops.business.approval.dao.mapper.ApprovalFlowMapper;
 import io.yak.ops.business.approval.dao.mapper.ApprovalInstanceMapper;
 import io.yak.ops.business.approval.domain.FlowStepConfig;
@@ -39,16 +41,18 @@ public class FlowAdminService {
       List<FlowStepConfig> steps, boolean enabled,
       LocalDateTime createTime, LocalDateTime updateTime) {}
 
-  public List<FlowView> list(String keyword) {
+  public PageData<FlowView> list(String keyword, int pageNo, int pageSize) {
     Long projectId = currentProject.requireProjectId();
-    return flowMapper.selectList(new LambdaQueryWrapper<ApprovalFlowPO>()
+    Page<ApprovalFlowPO> page = flowMapper.selectPage(new Page<>(pageNo, pageSize),
+        new LambdaQueryWrapper<ApprovalFlowPO>()
             .eq(ApprovalFlowPO::getProjectId, projectId)
             .eq(ApprovalFlowPO::getDeleted, false)
             .and(StringUtils.hasText(keyword), w -> w
                 .like(ApprovalFlowPO::getFlowName, keyword)
                 .or().like(ApprovalFlowPO::getFlowCode, keyword))
-            .orderByDesc(ApprovalFlowPO::getId))
-        .stream().map(this::toView).toList();
+            .orderByDesc(ApprovalFlowPO::getId));
+    return new PageData<>(page.getRecords().stream().map(this::toView).toList(),
+        page.getTotal(), page.getPages(), (int) page.getCurrent(), (int) page.getSize());
   }
 
   public FlowView get(Long id) {
@@ -136,7 +140,8 @@ public class FlowAdminService {
     }
     ApprovalFlowPO patch = new ApprovalFlowPO();
     patch.setId(po.getId());
-    patch.setFlowCode(po.getFlowCode() + "#del#" + po.getId());
+    // Flow codes cannot contain '#'; the global row id makes this tombstone unique and bounded.
+    patch.setFlowCode("#del#" + po.getId());
     patch.setEnabled(false);
     patch.setDeleted(true);
     patch.setUpdatedBy(operator);

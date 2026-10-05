@@ -1,4 +1,4 @@
-import { useModel, useParams } from '@umijs/max';
+import { history, useModel, useParams } from '@umijs/max';
 import {
   Button,
   Card,
@@ -44,6 +44,70 @@ const STEP_DOT_COLOR: Record<string, string> = {
   PENDING: 'blue',
   SKIPPED: 'gray',
   WAITING: 'gray',
+};
+
+const PAYLOAD_LABELS: Record<string, string> = {
+  modelId: '模型 ID',
+  modelName: '模型名称',
+  structureFingerprint: '送审结构 SHA-256',
+  policySnapshot: '送审策略快照',
+  policyId: '策略 ID',
+  policyName: '策略名称',
+  subject: '授权主体',
+  USER: '用户',
+  ROLE: '角色',
+  subjectType: '主体类型',
+  subjectKey: '主体标识',
+  DATASOURCE: '数据源',
+  DATABASE: '数据库',
+  TABLE: '数据表',
+  COLUMN: '字段',
+  LEVEL: '安全等级',
+  ALL: '全部资源',
+  scopeType: '授权范围',
+  datasourceId: '数据源 ID',
+  dbName: '数据库',
+  tableName: '数据表',
+  columnName: '字段',
+  levelId: '安全等级 ID',
+  accessType: '操作',
+  effect: '策略效果',
+  priority: '优先级',
+  validFrom: '生效时间',
+  validTo: '失效时间',
+  resource: '资源范围',
+};
+
+const ACCESS_SNAPSHOT_FIELDS = [
+  'policyName', 'subjectType', 'subjectKey', 'scopeType', 'datasourceId',
+  'dbName', 'tableName', 'columnName', 'levelId', 'accessType', 'effect',
+  'priority', 'validFrom', 'validTo',
+];
+
+const displayPayload = (instance: ApprovalDetail['instance'], payload: Record<string, unknown>) => {
+  const snapshot = payload.policySnapshot;
+  if (instance.bizType === 'ACCESS_POLICY' && snapshot && typeof snapshot === 'object') {
+    const facts = snapshot as Record<string, unknown>;
+    return ACCESS_SNAPSHOT_FIELDS
+      .filter((key) => key in facts)
+      .map((key) => [
+        key,
+        facts[key] ?? (key === 'validFrom' ? '立即生效' : key === 'validTo' ? '长期' : null),
+      ] as const);
+  }
+  return Object.entries(payload).filter(([key]) => key !== 'policySnapshot');
+};
+
+const payloadText = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (value === 'ALLOW') return '允许';
+  if (value === 'DENY') return '拒绝';
+  if (value === 'READ') return '读取';
+  if (value === 'WRITE') return '写入';
+  if (value === 'EXPORT') return '导出';
+  if (typeof value === 'string' && value in PAYLOAD_LABELS) return PAYLOAD_LABELS[value];
+  return String(value);
 };
 
 const ApprovalDetailPage = () => {
@@ -97,6 +161,15 @@ const ApprovalDetailPage = () => {
   );
 
   const payload = useMemo(() => parsePayload(instance?.payloadJson), [instance]);
+  const basisEntries = useMemo(
+    () => instance ? displayPayload(instance, payload) : [],
+    [instance, payload],
+  );
+  const sourcePath = instance?.bizType === 'ACCESS_POLICY'
+    ? `/data-security/access?policyId=${encodeURIComponent(instance.bizId)}`
+    : instance?.bizType === 'MODEL'
+      ? `/modeling/models/${encodeURIComponent(instance.bizId)}`
+      : null;
 
   const openDecision = (next: 'approve' | 'reject' | 'cancel') => {
     setComment('');
@@ -177,16 +250,26 @@ const ApprovalDetailPage = () => {
               <div><span className="text-[#667085]">当前级次：</span>{instance.status === 'PENDING' ? `第 ${instance.currentLevel} 级` : '-'}</div>
               <div><span className="text-[#667085]">结束时间：</span>{fmt(instance.finishTime)}</div>
             </div>
-            {Object.keys(payload).length > 0 ? (
+            {instance.status === 'CANCELED' && detail?.cancelReason ? (
+              <div className="mb-3 rounded-md border border-solid border-[#ffd591] bg-[#fffbe6] px-3 py-2 text-[13px]">
+                <span className="font-medium">撤销原因：</span>{detail.cancelReason}
+              </div>
+            ) : null}
+            {sourcePath ? (
+              <Button type="link" className="!mb-2 !px-0" onClick={() => history.push(sourcePath)}>
+                {instance.bizType === 'ACCESS_POLICY' ? '打开访问策略工作台核对策略' : '打开模型详情核对结构与版本'}
+              </Button>
+            ) : null}
+            {basisEntries.length > 0 ? (
               <table className="w-full border-collapse text-[13px]">
                 <tbody>
-                  {Object.entries(payload).map(([key, value]) => (
+                  {basisEntries.map(([key, value]) => (
                     <tr key={key} className="border-b border-solid border-[#f0f0f0] last:border-b-0">
                       <th className="w-40 bg-[#fafafa] px-3 py-2 text-left font-normal text-[#667085] max-sm:w-24">
-                        {key}
+                        {PAYLOAD_LABELS[key] ?? key}
                       </th>
                       <td className="px-3 py-2 break-all">
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        {payloadText(value)}
                       </td>
                     </tr>
                   ))}

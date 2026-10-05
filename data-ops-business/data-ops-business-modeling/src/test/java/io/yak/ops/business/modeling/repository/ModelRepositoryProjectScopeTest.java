@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelDialect;
@@ -16,6 +18,7 @@ import io.yak.ops.core.project.ProjectContext;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -30,6 +33,8 @@ class ModelRepositoryProjectScopeTest {
 
   @BeforeEach
   void setUp() {
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new MybatisConfiguration(), ""), ModelingModelPO.class);
     mapper = Mockito.mock(ModelingModelMapper.class);
     ModelTagRepository tagRepository = Mockito.mock(ModelTagRepository.class);
     repository = new ModelRepositoryAdapter(mapper, tagRepository, PROJECT_7);
@@ -70,6 +75,19 @@ class ModelRepositoryProjectScopeTest {
     assertThat(found.get().id()).isEqualTo(42L);
     assertThat(found.get().dialect()).isEqualTo(ModelDialect.MYSQL);
     verify(mapper).selectOne(any());
+  }
+
+  @Test
+  void findByIdForUpdateUsesAProjectScopedRowLock() {
+    when(mapper.selectOne(any())).thenReturn(null);
+
+    assertThat(repository.findByIdForUpdate(42L)).isEmpty();
+
+    ArgumentCaptor<LambdaQueryWrapper<ModelingModelPO>> captor =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectOne(captor.capture());
+    assertThat(captor.getValue().getSqlSegment())
+        .contains("FOR UPDATE").contains("id").contains("project_id").contains("deleted");
   }
 
   @Test

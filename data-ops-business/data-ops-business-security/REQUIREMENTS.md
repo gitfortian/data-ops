@@ -66,3 +66,5 @@
 - 合规检查结论按批次归属；本分区明确返回对象级合规状态 `UNAVAILABLE`，不得将项目或批次结果解释为单对象合规结论。
 - 缺少准确对象坐标或摘要读失败时，访问策略摘要标记 `UNAVAILABLE`；脱敏摘要独立标记状态。未发现分级记录返回 `EMPTY`；分类读侧失败返回 `UNAVAILABLE`。输出保留来源与分类生命周期状态限制。
 - 该摘要是治理证据，不代表访问许可，也不把 Asset 快照提升为 Security Truth。
+ACCESS_GRANT completion must compare the entire editable policy snapshot while holding a row lock;
+stale submissions fail with `ACCESS_APPROVAL_SNAPSHOT_STALE` and remain retryable after resubmission.

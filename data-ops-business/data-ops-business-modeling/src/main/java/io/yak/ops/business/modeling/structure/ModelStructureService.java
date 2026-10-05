@@ -75,9 +75,34 @@ public class ModelStructureService {
         StructureJson.readProperties(structureRepository.findTablePropertiesJson(modelId).orElse(null)));
   }
 
+  /** Reads a complete current structure using locking reads, even inside a transaction with an old MVCC view. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public StructureView getForUpdate(Long modelId) {
+    Model model = modelRepository.findByIdForUpdate(modelId)
+        .orElseThrow(() -> new ModelingException(
+            ModelingErrorCode.NOT_FOUND, "模型不存在或已删除:" + modelId));
+    var attributes = structureRepository.findStructureAttributesForUpdate(modelId)
+        .orElseThrow(() -> new ModelingException(ModelingErrorCode.NOT_FOUND));
+    List<ColumnDefinition> columns = structureRepository.findColumnsForUpdate(modelId);
+    List<IndexDefinition> indexes = structureRepository.findIndexesForUpdate(modelId);
+    return StructureView.of(
+        model,
+        attributes.tableName(),
+        attributes.tableComment(),
+        columns,
+        StructureJson.readNameList(attributes.primaryKeyJson()),
+        indexes,
+        new StructureView.PartitionView(
+            attributes.partitionType(), StructureJson.readNameList(attributes.partitionColumnsJson()),
+            attributes.partitionExpr()),
+        StructureJson.readProperties(attributes.tablePropertiesJson()));
+  }
+
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public StructureView save(Long modelId, SaveStructureRequest request, String operator) {
-    Model model = requireLiveModel(modelId);
+    Model model = modelRepository.findByIdForUpdate(modelId)
+        .orElseThrow(() -> new ModelingException(
+            ModelingErrorCode.NOT_FOUND, "模型不存在或已删除:" + modelId));
     AuditOperationHandle audit =
         auditService.start(
             new AuditOperationRequest(

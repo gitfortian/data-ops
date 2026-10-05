@@ -7,6 +7,7 @@ import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.approval.api.ApprovalSubmitCommand;
 import io.yak.ops.business.security.application.AccessPolicyService;
+import io.yak.ops.business.security.application.AccessPolicyApprovalSnapshot;
 import io.yak.ops.business.security.exception.SecurityException;
 import io.yak.ops.business.security.dao.model.DsecAccessPolicyPO;
 import io.yak.ops.common.enums.security.SecurityErrorCode;
@@ -33,6 +34,7 @@ public class AccessPolicyApprovalService {
   static final String PAYLOAD_ACCESS_TYPE = "accessType";
   static final String PAYLOAD_EFFECT = "effect";
   static final String PAYLOAD_VALID_TO = "validTo";
+  static final String PAYLOAD_POLICY_SNAPSHOT = "policySnapshot";
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final DateTimeFormatter DATE_TIME =
@@ -67,6 +69,7 @@ public class AccessPolicyApprovalService {
     payload.put(PAYLOAD_EFFECT, po.getEffect());
     payload.put(PAYLOAD_VALID_TO,
         po.getValidTo() == null ? "长期" : DATE_TIME.format(po.getValidTo()));
+    payload.put(PAYLOAD_POLICY_SNAPSHOT, AccessPolicyApprovalSnapshot.from(po));
     return payload;
   }
 

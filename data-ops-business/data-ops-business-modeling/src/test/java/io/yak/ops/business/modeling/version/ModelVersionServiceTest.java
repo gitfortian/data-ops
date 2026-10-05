@@ -40,6 +40,9 @@ class ModelVersionServiceTest {
     structureService = mock(ModelStructureService.class);
     service = new ModelVersionService(modelRepository, versionRepository, structureService);
     when(modelRepository.findById(1L)).thenReturn(Optional.of(model(ModelStatus.DRAFT, null)));
+    when(modelRepository.findByIdForUpdate(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)));
+    when(structureService.getForUpdate(1L)).thenReturn(structure("orders_v1"));
   }
 
   @Test
@@ -76,6 +79,36 @@ class ModelVersionServiceTest {
     assertThat(result.created()).isFalse();
     assertThat(result.version()).isSameAs(latest);
     verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester");
+  }
+
+  @Test
+  void approvedPublishRejectsAChangedStructure() {
+    when(structureService.get(1L)).thenReturn(structure("orders_v1"));
+    when(structureService.getForUpdate(1L)).thenReturn(structure("orders_v2"));
+    String submittedFingerprint = service.structureFingerprint(1L);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publishApproved(1L, submittedFingerprint, "tester")))
+        .hasMessageContaining("偏离送审依据");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(), anyInt(), any(), any());
+    verify(modelRepository, never())
+        .updatePublishState(any(), anyString(), any(), anyInt(), anyString());
+  }
+
+  @Test
+  void approvedPublishAcceptsAnUnchangedStructure() {
+    when(structureService.get(1L)).thenReturn(structure("orders_v1"));
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
+    when(versionRepository.nextVersionNo(1L)).thenReturn(1);
+    when(versionRepository.insert(eq(1L), eq(1), anyString(), anyString(), eq(1), anyString(),
+        eq("tester"))).thenReturn(version(9L, 1, "{}"));
+    String submittedFingerprint = service.structureFingerprint(1L);
+
+    ModelVersionService.PublishResult result =
+        service.publishApproved(1L, submittedFingerprint, "tester");
+
+    assertThat(result.created()).isTrue();
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1, "tester");
   }
 
   @Test

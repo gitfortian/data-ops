@@ -58,9 +58,29 @@ class ModelStructureServiceTest {
 
   private void stubSave(boolean modelExists) {
     when(modelRepository.findById(42L)).thenReturn(modelExists ? Optional.of(model()) : Optional.empty());
+    when(modelRepository.findByIdForUpdate(42L))
+        .thenReturn(modelExists ? Optional.of(model()) : Optional.empty());
     when(structureRepository.updateTableInfo(any(), any(), any())).thenReturn(modelExists);
     when(structureRepository.updateTableAttributes(any(), any(), any(), any(), any(), any()))
         .thenReturn(modelExists);
+  }
+
+  @Test
+  void getForUpdateBuildsTheSnapshotFromLockingReads() {
+    when(modelRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(model()));
+    when(structureRepository.findStructureAttributesForUpdate(42L)).thenReturn(Optional.of(
+        new ModelStructureRepository.StoredStructureAttributes(
+            "dim_user", "用户", "[]", null, "[]", null, "{}")));
+    when(structureRepository.findColumnsForUpdate(42L)).thenReturn(List.of());
+    when(structureRepository.findIndexesForUpdate(42L)).thenReturn(List.of());
+
+    StructureView view = service.getForUpdate(42L);
+
+    assertThat(view.tableName()).isEqualTo("dim_user");
+    verify(modelRepository).findByIdForUpdate(42L);
+    verify(structureRepository).findStructureAttributesForUpdate(42L);
+    verify(structureRepository).findColumnsForUpdate(42L);
+    verify(structureRepository).findIndexesForUpdate(42L);
   }
 
   @Test

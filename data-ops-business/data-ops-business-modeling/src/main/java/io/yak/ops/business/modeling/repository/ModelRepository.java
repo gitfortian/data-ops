@@ -13,6 +13,9 @@ public interface ModelRepository {
   /** Finds one live (non-deleted) model. */
   Optional<Model> findById(Long id);
 
+  /** Locks one live model row for a transaction that reads or changes its structure. */
+  Optional<Model> findByIdForUpdate(Long id);
+
   /** Finds one soft-deleted model (recycle bin). */
   Optional<Model> findDeletedById(Long id);
 
