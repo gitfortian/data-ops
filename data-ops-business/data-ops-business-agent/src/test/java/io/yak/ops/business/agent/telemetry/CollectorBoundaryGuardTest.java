@@ -25,6 +25,8 @@ class CollectorBoundaryGuardTest {
       "runtime/LlmResilienceMiddleware.java",
       "runtime/ToolAuditMiddleware.java",
       "runtime/LongTermMemoryPromptMiddleware.java",
+      "runtime/GovernanceContextMiddleware.java",
+      "runtime/EffectiveConfigMiddleware.java",
       "conversation/AgentTurnExecutor.java",
       "telemetry/AgentObservationCollector.java",
       "telemetry/AgentStepRecorder.java");

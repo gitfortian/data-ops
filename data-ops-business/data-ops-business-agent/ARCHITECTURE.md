@@ -243,3 +243,5 @@ GovernanceEvidenceTools -> GovernanceEvidenceGateway -> AssetGovernanceQueryApi 
 ## F-010 建议边界
 
 Agent 仅消费源域 api 包的授权只读契约；Quality monitor 的 SuggestionQueryAdapter 进入既有 Reader/Policy 和 Quality-owned Catalog Gateway，DefinitionFingerprint 属于 domain；Asset 条件更新仍在 AssetAppService。候选仅存在本轮上下文与官方消息历史，不新增业务建议表。
+
+治理入口自动预读属于 runtime 横切执行：GovernanceContextMiddleware 经现有 collector 记录上下文工具读取，补足模型没有显式调用该工具时的来源 trace；EffectiveConfigMiddleware 经同一 collector 记录首次推理的非敏感有效配置与提示词/工具哈希。两者是明确登记的 runtime 调用方，不新增工具层采集依赖；保留关闭观测即不落库与采集故障不改变业务结果的契约。

@@ -230,3 +230,5 @@ utils/
 ## F-010 候选读取
 
 沿用 gateway -> asset.api / quality.api；QualitySuggestionQueryApi 为新增窄只读契约，不引入反向依赖。
+
+collector 调用方新增精确登记 runtime/GovernanceContextMiddleware 与 runtime/EffectiveConfigMiddleware，分别拥有入口预读 trace 和有效配置 trace；CollectorBoundaryGuardTest 按类名锁定，toolset/gateway 继续禁止触达采集入口。
