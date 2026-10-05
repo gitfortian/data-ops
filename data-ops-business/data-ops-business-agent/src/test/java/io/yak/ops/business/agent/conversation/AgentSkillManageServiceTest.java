@@ -93,7 +93,7 @@ class AgentSkillManageServiceTest {
     AgentSkillBrief updated = service.update("asset-yoy", "资产管理同比分析", "desc", Map.of(), "新正文");
 
     assertEquals("新正文", updated.content());
-    assertTrue(updated.version() >= existing.version(), "更新后版本必须推进");
+    assertEquals(existing.version() + 1, updated.version(), "响应必须返回持久化推进后的版本");
     verify(skillRepository).save(any(io.yak.ops.business.agent.domain.AgentSkillBrief.class), eq(true));
   }
 
@@ -177,5 +177,13 @@ class AgentSkillManageServiceTest {
     assertEquals("cold-skill", brief.skillId());
     verify(skillRepository).save(any(io.yak.ops.business.agent.domain.AgentSkillBrief.class), eq(false));
     assertFalse(brief.skillId().isBlank());
+  }
+
+  @Test void staleBrowserEditCannotOverwriteSkillChangedSinceLoad() {
+    var current = AgentSkillBrief.create("a", "A", "d", Map.of(), "current").withBumpedVersion();
+    when(skillRepository.findBySkillId("a")).thenReturn(Optional.of(current));
+    assertThrows(AgentSkillConflictException.class, () -> service.update("a", "A", "d", Map.of(), "stale", 1));
+    verify(skillRepository, org.mockito.Mockito.never()).save(any(AgentSkillBrief.class), anyBoolean());
+    org.mockito.Mockito.verifyNoInteractions(agentRuntime);
   }
 }

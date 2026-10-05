@@ -24,7 +24,7 @@ io.yak.ops.business.agent
 ├── conversation        # 会话 command side：流式编排、HITL 恢复、生命周期命令、动态配置治理
 │   └── query           # 会话列表 / 历史 read model
 ├── runtime             # AgentScope 边界：ReActAgent 组装、StateStore 装配、middleware、事件→domain 映射
-├── toolset             # 七个业务工具（@Tool 薄壳，委托 catalog/gateway/report）
+├── toolset             # 分析与治理工具（@Tool 薄壳，委托 catalog/gateway/report）
 ├── catalog             # 数据集目录视图：schema 格式化、字段白名单校验
 ├── gateway             # outbound：DatasetCatalogGateway / DatasetQueryGateway / PythonRunnerGateway
 ├── report              # 报告保存与管理（command + read）
@@ -144,7 +144,7 @@ list_datasets / get_dataset_fields      -> catalog（格式化）+ gateway.Datas
 run_dataset_query                       -> catalog.FieldWhitelistValidator -> gateway.DatasetQueryGateway -> query_log
 current_date_info                       -> 本地时钟计算
 analyze_with_python                     -> gateway.PythonRunnerGateway
-clarify_with_user                       -> HITL 中断信号（由 runtime 机制承接）
+request_clarification                       -> HITL 中断信号（由 runtime 机制承接）
 save_analysis_report                    -> corridor: report.AgentReportService
 ```
 
@@ -245,3 +245,13 @@ GovernanceEvidenceTools -> GovernanceEvidenceGateway -> AssetGovernanceQueryApi 
 Agent 仅消费源域 api 包的授权只读契约；Quality monitor 的 SuggestionQueryAdapter 进入既有 Reader/Policy 和 Quality-owned Catalog Gateway，DefinitionFingerprint 属于 domain；Asset 条件更新仍在 AssetAppService。候选仅存在本轮上下文与官方消息历史，不新增业务建议表。
 
 治理入口自动预读属于 runtime 横切执行：GovernanceContextMiddleware 经现有 collector 记录上下文工具读取，补足模型没有显式调用该工具时的来源 trace；EffectiveConfigMiddleware 经同一 collector 记录首次推理的非敏感有效配置与提示词/工具哈希。两者是明确登记的 runtime 调用方，不新增工具层采集依赖；保留关闭观测即不落库与采集故障不改变业务结果的契约。
+
+## 任务执行守卫
+
+AgentTaskToolPolicy/ToolBudgetSnapshot 属于 framework-free domain。runtime 的 TaskScopedTool 是无任务状态的 SDK ToolBase 适配器，保留 schema、readOnly/concurrencySafe 与权限回调；实际范围与额度从调用 RuntimeContext 读取。外部 HITL 在预占后仍返回框架 suspended 结果，方法体不执行。注册仅替换适配器，不切换共享 Toolkit 的任务激活状态；当前业务工具无 preset，MCP/新分组工具不在本契约支持范围。
+
+TaskToolPolicyMiddleware 对模型工具视图过滤、输入字符检查和 SDK 动态工具包装；toolset 的 AgentToolExecution 在真实身份线程再次检查任务，预读由 GovernanceContextMiddleware 预占后走同一工具边界。TurnToolBudgetState 在官方 StateStore 上持久化当前轮辅助额度，取消先关闭本执行上下文再 dispose。
+
+RuntimeSkillMiddleware 记录实际 SDK 提示片段哈希；只读技能加载每次读取当前启用仓储，仅返回 SKILL.md，不开放文件资源或触发 SDK 工具组激活。EffectiveConfigMiddleware 沿现有采集入口记录实际调用的工具集合/Skill 哈希/冻结预算，采集故障不改变守卫。
+
+现有 Skill 管理入口 conversation.AgentSkillManageService 及 repository.AgentSkillRepositoryAdapter 是官方 Skill SPI 走廊，与架构守护现行白名单一致；不新增稳定入口。

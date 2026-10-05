@@ -19,19 +19,20 @@ public class GovernanceSuggestionTools implements AgentToolBox, AgentSystemPromp
   public String context(RuntimeContext context,
       @ToolParam(name = "monitor_id", description = "质量监控ID") Long monitorId) {
     if (monitorId == null || monitorId <= 0) throw new IllegalArgumentException("监控编号无效");
-    return execution.call(context, () -> suggestions.qualityContext(monitorId, AgentToolExecution.state(context)));
+    AgentToolExecution.state(context).toolPolicy().requireMonitor(monitorId);
+    return execution.call(context, "get_quality_monitor_evidence", () -> suggestions.qualityContext(monitorId, AgentToolExecution.state(context)));
   }
 
   @Tool(name = "propose_quality_rules", description = "在规则建议轮次校验并输出候选，不保存、不运行。rules_json为最多5项JSON数组，字段为templateId,name,columnName,operator,threshold,thresholdEnd,enumValues；禁止SQL。")
   public String rules(RuntimeContext context,
       @ToolParam(name = "rules_json", description = "候选规则JSON数组；阈值按模板单位，比例为0到100") String json) {
-    return execution.call(context, () -> suggestions.qualityRules(AgentToolExecution.state(context), json));
+    return execution.call(context, "propose_quality_rules", () -> suggestions.qualityRules(AgentToolExecution.state(context), json));
   }
 
   @Tool(name = "propose_asset_description", description = "在资产描述建议轮次输出1到1024字台账描述候选，不写业务。仅依据本轮可读证据，不编造业务用途、合规或SLA。")
   public String description(RuntimeContext context,
       @ToolParam(name = "description", description = "台账描述候选；无用途依据时明确待确认") String value) {
-    return execution.call(context, () -> suggestions.description(AgentToolExecution.state(context), value));
+    return execution.call(context, "propose_asset_description", () -> suggestions.description(AgentToolExecution.state(context), value));
   }
 
   @Override

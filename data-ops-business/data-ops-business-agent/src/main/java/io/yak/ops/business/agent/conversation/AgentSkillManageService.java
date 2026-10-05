@@ -58,18 +58,27 @@ public class AgentSkillManageService {
   /** 更新技能（乐观版本：并发编辑丢 CAS 冲突 409）。覆写正文与元数据，启停态保持。 */
   public AgentSkillBrief update(String skillId, String name, String description,
                                 Map<String, Object> metadata, String content) {
+    return update(skillId, name, description, metadata, content, null);
+  }
+
+  public AgentSkillBrief update(String skillId, String name, String description,
+      Map<String, Object> metadata, String content, Integer expectedVersion) {
     AgentSkillBrief current =
         skillRepository
             .findBySkillId(skillId)
             .orElseThrow(() -> new AgentSkillNotFoundException("技能不存在：" + skillId));
+    if (expectedVersion != null && current.version() != expectedVersion) {
+      throw new AgentSkillConflictException("技能版本已变更，请刷新后重新编辑");
+    }
     AgentSkillBrief updated = current.updatedWith(name, description, metadata, content);
     if (!skillRepository.save(updated, true)) {
       throw new AgentSkillConflictException(
           "技能乐观版本冲突（并发编辑）：" + skillId + "；solution=刷新后重试");
     }
-    hotSwap(updated);
-    log.info("skill updated: skillId={}, version={}", skillId, updated.version());
-    return updated;
+    AgentSkillBrief saved = updated.withBumpedVersion();
+    hotSwap(saved);
+    log.info("skill updated: skillId={}, version={}", skillId, saved.version());
+    return saved;
   }
 
   /** 在线启停（热生效核心）：DB status + SkillBox.setSkillActive 双写。 */

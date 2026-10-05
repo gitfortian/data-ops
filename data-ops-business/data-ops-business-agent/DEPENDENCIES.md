@@ -22,17 +22,17 @@ Agent 使用**显式、窄、无环**依赖图：
 | Source | Allowed Agent targets |
 | --- | --- |
 | `controller` | `conversation`, `config`, `report`, `domain` |
-| `conversation` | `runtime`, `repository`, `domain`, `telemetry`, `config` |
+| `conversation` | `runtime`, `repository`, `domain`, `telemetry`, `config`, `memory` |
 | `conversation.query` | `repository`, `domain`, `telemetry`（仅只读元数据投影，见第 9 节） |
-| `runtime` | `toolset`, `config`, `domain`, `telemetry` |
-| `toolset` | `catalog`, `gateway`, `domain`, `telemetry` |
+| `runtime` | `toolset`, `config`, `domain`, `telemetry`, `memory`, `repository` |
+| `toolset` | `catalog`, `gateway`, `report`, `domain`, `telemetry` |
 | `catalog` | `gateway`, `domain` |
 | `gateway` | `config`, `domain`, `catalog`（仅白名单校验，见第 6 节）, `repository`（仅证据留痕 corridor，见第 7 节） |
 | `memory` | `repository`, `dao`, `config`（M1 已接线；M2 巩固管线规划中，见 ARCHITECTURE §Memory） |
 | `report` | `repository`, `domain` |
 | `repository` | `dao`, `domain` |
-| dao | config |
-| 	elemetry | dao |
+| `dao` | `config` |
+| `telemetry` | `dao` |
 | `config` | `domain` |
 | `domain` | none |
 
@@ -194,7 +194,7 @@ conversation/AgentConfigManageService.java   # 运行时动态配置治理（Pha
 report/AgentReportService.java
 ```
 
-内部角色使用 `@Component` 或普通对象。新增第五个 `@Service` 必须先证明存在新的稳定 Application use-case，而不是因为类“有业务逻辑”。
+Skill 管理已有独立 use-case conversation/AgentSkillManageService.java，与现行测试白名单一致；新增其他稳定入口需证明真实用例。内部角色仍使用 `@Component` 或普通对象。
 
 ## 11. Forbidden buckets
 
@@ -232,3 +232,9 @@ utils/
 沿用 gateway -> asset.api / quality.api；QualitySuggestionQueryApi 为新增窄只读契约，不引入反向依赖。
 
 collector 调用方新增精确登记 runtime/GovernanceContextMiddleware 与 runtime/EffectiveConfigMiddleware，分别拥有入口预读 trace 和有效配置 trace；CollectorBoundaryGuardTest 按类名锁定，toolset/gateway 继续禁止触达采集入口。
+
+## 任务范围、Skill 与预算
+
+本次沿用既有依赖图，不新增 top-level 包或走廊。SDK 的预算 State record、TaskScopedTool、模型过滤和 Skill 加载适配仅在 runtime；domain 的策略/额度不依赖 SDK；toolset 只经现有 RuntimeContext 读取 domain 并保持零采集依赖。
+
+既有官方 Skill 类型豁免为 runtime/conversation/repository（管理 Facade 与官方 SPI 适配器），与 AgentDependencyBoundaryTest 一致。runtime -> memory/repository 为已接线记忆/动态配置走廊，conversation -> memory 为轮次完成提取走廊；不扩展到源域 DAO。

@@ -78,7 +78,7 @@ public class AgentSkillController {
             request.name(),
             request.description(),
             request.metadata(),
-            request.content());
+            request.content(), request.expectedVersion());
     return Result.success(toVO(brief));
   }
 

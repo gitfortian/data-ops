@@ -159,7 +159,8 @@ public class AgentController {
   public Result<List<io.yak.ops.business.agent.controller.v1.vo.AgentViews.ConfigItemVO>> listConfig() {
     return Result.success(configManageService.list().stream()
         .map(item -> new io.yak.ops.business.agent.controller.v1.vo.AgentViews.ConfigItemVO(
-            item.key(), item.kind(), item.description(), item.dbValue()))
+            item.key(), item.kind(), item.description(), item.dbValue(),
+            item.effectiveValue(), item.valueSource(), item.updateMode()))
         .toList());
   }
 

@@ -23,7 +23,7 @@ import org.springframework.stereotype.Repository;
  * 实现「在线注册/启停对下一次推理热生效」；并向管理面暴露技能登记/乐观更新/启停。</p>
  *
  * <p>契约：agentscope {@code AgentSkill} 的 {@code name}=skillId（SkillBox 键）、
- * metadata 携带 {@code name}=展示名 / {@code enabled}=boolean 启停态 / {@code version}=乐观版本；
+ * 运行时 metadata 仅携带 {@code displayName}=展示名；启停和版本由 DB 拥有；
  * DB status 列在 PO 层映射为 ENABLED/DISABLED（持久真相），version 乐观锁在更新路径强制。</p>
  */
 @Slf4j
@@ -33,7 +33,7 @@ import org.springframework.stereotype.Repository;
 public class AgentSkillRepositoryAdapter
     implements io.agentscope.core.skill.repository.AgentSkillRepository {
 
-  private static final String META_NAME = "name";
+  private static final String META_DISPLAY_NAME = "displayName";
   private static final String META_ENABLED = "enabled";
   private static final String META_VERSION = "version";
 
@@ -56,6 +56,7 @@ public class AgentSkillRepositoryAdapter
   @Override
   public List<AgentSkill> getAllSkills() {
     return skillMapper.selectList(null).stream()
+        .filter(po -> "ENABLED".equals(po.getStatus()))
         .map(AgentSkillRepositoryAdapter::toAgentSkill)
         .toList();
   }
@@ -86,7 +87,8 @@ public class AgentSkillRepositoryAdapter
       // 测试环境 MyBatis-Plus lambda cache 依赖，生产列名与表结构同源）
       com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<AgentSkillPO> wrapper =
           new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
-      wrapper.eq("skill_id", po.getSkillId()).eq("version", existing.getVersion());
+      wrapper.eq("skill_id", po.getSkillId()).eq("version", po.getVersion());
+      po.setVersion(po.getVersion() + 1);
       int rows = skillMapper.update(po, wrapper);
       if (rows == 0) {
         log.warn("skill optimistic version conflict: {}", po.getSkillId());
@@ -169,18 +171,21 @@ public class AgentSkillRepositoryAdapter
             Wrappers.lambdaQuery(AgentSkillPO.class)
                 .eq(AgentSkillPO::getSkillId, po.getSkillId()));
     if (existing == null) {
+      if (overwrite) return false; // A concurrent delete must not resurrect a stale edit.
       skillMapper.insert(po);
       return true;
     }
     if (!overwrite) {
       return false;
     }
+    int expectedVersion = po.getVersion();
+    po.setVersion(expectedVersion + 1);
     int rows =
         skillMapper.update(
             po,
             new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<AgentSkillPO>()
                 .eq("skill_id", po.getSkillId())
-                .eq("version", existing.getVersion()));
+                .eq("version", expectedVersion));
     return rows > 0;
   }
 
@@ -203,13 +208,12 @@ public class AgentSkillRepositoryAdapter
     if (po == null) {
       return null;
     }
-    // 运行时技能只携带展示名（metadata），启停状态（ENABLED/DISABLED）与乐观版本是
-    // DB 持久真相，不进入运行时技能 metadata —— 否则改 DB 启停会触发框架
-    // reloadSkills 签名变化、重建 SkillBox，导致热停用丢失（框架契约实测）。
+    // 运行时技能以逻辑 skillId 为框架 name，展示名放 displayName metadata（不能覆盖 SDK 保留的 name），启停状态（ENABLED/DISABLED）与乐观版本是
+    // DB 持久真相，不作为模型指令字段；getAllSkills 过滤启用集合，变化驱动 SDK 重建。
     return AgentSkill.builder()
         .name(po.getSkillId())
         .description(po.getDescription())
-        .putMetadata(META_NAME, po.getName())
+        .putMetadata(META_DISPLAY_NAME, po.getName())
         .skillContent(po.getContent())
         .source("db:yak_agent_skill")
         .build();
@@ -218,7 +222,7 @@ public class AgentSkillRepositoryAdapter
   private static AgentSkillPO toPO(AgentSkill skill) {
     AgentSkillPO po = new AgentSkillPO();
     po.setSkillId(skill.getName());
-    Object name = skill.getMetadataValue(META_NAME);
+    Object name = skill.getMetadataValue(META_DISPLAY_NAME);
     po.setName(name == null ? skill.getName() : String.valueOf(name));
     po.setDescription(skill.getDescription());
     po.setContent(skill.getSkillContent());

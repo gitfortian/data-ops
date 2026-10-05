@@ -40,6 +40,7 @@ final class GovernanceContextMiddleware implements MiddlewareBase {
         long started = System.nanoTime();
         long epoch = System.currentTimeMillis();
         String name = target.qualityMonitorId() != null ? "get_quality_monitor_evidence" : target.assetId() != null ? "get_asset_evidence" : "get_quality_execution_evidence";
+        state.reserveTool(name);
         initial = target.qualityMonitorId() != null && suggestions != null
             ? suggestions.context(context, target.qualityMonitorId()) : target.assetId() != null ? tools.asset(context, target.assetId())
             : tools.quality(context, target.qualityExecutionNo());

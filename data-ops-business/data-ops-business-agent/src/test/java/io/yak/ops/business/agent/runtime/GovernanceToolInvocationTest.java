@@ -41,6 +41,20 @@ import reactor.core.scheduler.Schedulers;
 
 /** Real SDK registration -> worker tool context -> live identity scope -> source API -> cited final. */
 class GovernanceToolInvocationTest {
+  @Test void wrongSelectedObjectsAreRejectedBeforeIdentityOrSourceAccess() {
+    var executor = mock(AgentToolExecution.class);
+    var evidence = mock(GovernanceEvidenceGateway.class);
+    var suggestions = mock(io.yak.ops.business.agent.gateway.GovernanceSuggestionGateway.class);
+    var tools = new GovernanceEvidenceTools(executor, evidence);
+    var candidateTools = new io.yak.ops.business.agent.toolset.GovernanceSuggestionTools(executor, suggestions);
+    var context = RuntimeContext.builder().userId("7").sessionId("scope").build();
+    context.put(AgentExecutionContext.class, new AgentExecutionContext(new GovernanceTarget(7L, null)));
+    assertThrows(IllegalArgumentException.class, () -> tools.asset(context, 8L));
+    assertThrows(IllegalArgumentException.class, () -> tools.quality(context, "other-execution"));
+    assertThrows(IllegalArgumentException.class, () -> candidateTools.context(context, 9L));
+    verifyNoInteractions(executor, evidence, suggestions);
+  }
+
   @SuppressWarnings("unchecked")
   private static <T> ObjectProvider<T> provider(T value) {
     ObjectProvider<T> provider = mock(ObjectProvider.class);

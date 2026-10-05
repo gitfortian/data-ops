@@ -28,7 +28,7 @@ public class GetDatasetFieldsTool implements AgentToolBox {
   public String getDatasetFields(
       RuntimeContext context,
       @ToolParam(name = "dataset_id", description = "目标数据集ID") Long datasetId) {
-    return execution.call(context, () -> {
+    return execution.call(context, "get_dataset_fields", () -> {
       var fields = catalogGateway.datasetOverview(datasetId);
       AgentToolExecution.state(context).remember(fields);
       return viewFormatter.formatFields(fields);

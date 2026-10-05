@@ -40,7 +40,7 @@ public class AnalyzeWithPythonTool implements AgentToolBox {
     if (state.target() != null || state.evidence().containsGovernanceEvidence()) {
       return Mono.error(new IllegalArgumentException("首版治理解读不支持代码执行"));
     }
-    return Mono.fromCallable(() -> execution.call(context, () -> pythonRunnerGateway.execute(code)))
+    return Mono.fromCallable(() -> execution.call(context, "analyze_with_python", () -> pythonRunnerGateway.execute(code)))
         .subscribeOn(Schedulers.boundedElastic());
   }
 }

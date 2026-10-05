@@ -116,7 +116,8 @@ public final class AgentViews {
 
   /** 运行时动态配置条目（治理界面）。 */
   public record ConfigItemVO(
-      String key, String kind, String description, String dbValue) {}
+      String key, String kind, String description, String dbValue,
+      String effectiveValue, String valueSource, String updateMode) {}
 
   /** 查询审计条目。 */
   public record QueryAuditVO(

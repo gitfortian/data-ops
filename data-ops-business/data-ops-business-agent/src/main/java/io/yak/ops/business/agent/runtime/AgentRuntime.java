@@ -144,6 +144,7 @@ public class AgentRuntime implements TurnCorrelation {
 
     Toolkit toolkit = new Toolkit();
     toolBoxes.forEach(toolkit::registerTool);
+    TaskToolPolicyMiddleware.guardTools(toolkit);
 
     io.agentscope.core.model.Model model = openAiModel();
     ReActAgent.Builder builder =
@@ -164,6 +165,7 @@ public class AgentRuntime implements TurnCorrelation {
                     dynamicConfig))
             // 工具执行审计 seam
             .middleware(new ToolAuditMiddleware(observationCollector, this))
+            .middleware(new TaskToolPolicyMiddleware(properties.getExecution().getMaxModelInputChars()))
             // 项目空间上下文恢复 seam：在 reactor 线程的工具执行中恢复 CurrentProject ThreadLocal
             .middleware(new ProjectContextMiddleware(projectContextScope))
             // 提示词管道：能力域贡献者按序追加（排序与异步由框架 Middleware 承担）
@@ -395,6 +397,8 @@ public class AgentRuntime implements TurnCorrelation {
             .build();
     var execution = new io.yak.ops.business.agent.domain.AgentExecutionContext(target);
     context.put(io.yak.ops.business.agent.domain.AgentExecutionContext.class, execution);
+    TurnToolBudgetState.attach(stateStore, context, turnId,
+        inputs.stream().allMatch(ToolResultMessage.class::isInstance), properties.getExecution());
     // PROJECT_RUNTIME：将 projectId 写入 RuntimeContext 的 stringAttributes，
     // 供 ProjectContextMiddleware 在工具执行线程恢复 ThreadLocal
     if (projectId > 0) {
@@ -406,9 +410,11 @@ public class AgentRuntime implements TurnCorrelation {
     Flux<ChatTurnEvent> pipeline =
         withTurnTimeout(
             mapStream(GovernanceAnswerGuard.guard(agent().streamEvents(inputs, context), execution, context, agent()), eventCodec),
-            Duration.ofSeconds(properties.getChat().getTurnTimeoutSeconds()));
+            Duration.ofSeconds(properties.getChat().getTurnTimeoutSeconds()))
+            .doFinally(signal -> execution.stopTools());
     reactor.core.Disposable disposable = pipeline.subscribe(onEvent::accept, onError, onComplete);
     return () -> {
+      execution.stopTools();
       if (turnId != null && turnId.equals(activeTurnBySession.get(sessionId))) {
         activeTurnBySession.remove(sessionId, turnId);
       }
@@ -511,7 +517,7 @@ public class AgentRuntime implements TurnCorrelation {
     }
     try {
       io.agentscope.core.skill.DynamicSkillMiddleware middleware =
-          new io.agentscope.core.skill.DynamicSkillMiddleware(List.of(repo), toolkit);
+          new RuntimeSkillMiddleware(repo, toolkit);
       builder.middleware(middleware);
       skillMiddleware = middleware;
       log.info("skill middleware registered: repository={}", repo.getSource());

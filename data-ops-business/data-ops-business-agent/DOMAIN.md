@@ -16,7 +16,7 @@ ReasoningTurn (一轮 ReAct 推理, 状态由 AgentScope StateStore 持有)
       ├── run_dataset_query                   -> QueryEvidence
       ├── current_date_info                   -> 日期事实
       ├── analyze_with_python                 -> 统计结论
-      ├── clarify_with_user                   -> PendingClarify(HITL)
+      ├── request_clarification                   -> PendingClarify(HITL)
       └── save_analysis_report                -> AgentReport
 ```
 
@@ -33,7 +33,7 @@ LLM Output != Trusted Input
 4. **Truth 单一 owner。** 消息历史 = 官方 StateStore 表；会话归属与标题 = `yak_agent_session`；报告 = `yak_agent_report`；查询证据 = `yak_agent_query_log`；推理轮次生命周期 = `yak_agent_turn`。任何一方不得代持另一方的事实。
 5. **OFFLINE 数据集一律拒绝查询。** 不提供任何绕行开关；“临时查下线数据”属于需求变更，走 Requirement Gap 流程。
 6. **敏感配置短生命周期。** 模型 API 密钥只在 runtime 模型装配边界存在：不入库、不写入日志、不出现在 SSE 事件与异常文本。
-7. **HITL 反问状态机不可绕过。** `clarify_with_user` 使本轮进入 pending；恢复只能携带匹配的 toolCallId 与工具名结果；同一时刻至多一个 pending；伪造或复用旧 toolCallId 恢复必须被拒绝。
+7. **HITL 反问状态机不可绕过。** `request_clarification` 使本轮进入 pending；恢复只能携带匹配的 toolCallId 与工具名结果；同一时刻至多一个 pending；伪造或复用旧 toolCallId 恢复必须被拒绝。
 8. **SSE 是传输通道不是存储。** 断连仅停止订阅补发，不终止后台执行、不回滚已发生事实。事件帧持久化（`yak_agent_turn_event`）是投递投影：可删除、可重建，绝不是第二事实源；事实只认 StateStore / message / step / query_log / turn。
 9. **工具失败不中断推理。** 工具执行错误以结构化结果回喂模型继续 ReAct 循环；只有运行时致命错误（装配失败、流取消）才终止流并以 ERROR 终态收尾。
 10. **无法映射现有模型就是 `Domain Gap`。** 先讨论模型并修订契约，不用临时字段、boolean、enum 或新的 `*Service` 大桶绕过去。
@@ -55,7 +55,7 @@ QUEUED --claim(CAS)--> RUNNING --finish--> COMPLETED
 ## 关键不变量
 
 - 会话归属校验先于任何读写：非本人会话返回归属错误，不存在静默降级。
-- 每次 `run_dataset_query` 必须落一条 `yak_agent_query_log`（成功与失败都落），携带 datasetId、queryId、请求投影、行数、耗时与状态。
+- 每次通过任务工具准入并进入 DatasetQueryGateway 的 `run_dataset_query` 必须落一条 `yak_agent_query_log`（成功与失败都落），携带 datasetId、queryId、请求投影、行数、耗时与状态。
 - 查询行数上限 ≤ 模块配置上限；配置上限变更不追溯已产生的 Evidence。
 - Python 执行并发数受信号量约束；超时进程必须被强杀且临时目录清理完成后才释放许可。
 - 报告内容为 Markdown + ECharts 配置块文本；保存时不做 HTML 净化以外的二次加工，渲染侧由前端沙箱负责。
@@ -79,7 +79,7 @@ yak_agent_session               = 会话身份 / 归属 / 标题 truth
 yak_agent_turn                  = 推理轮次生命周期 truth（提交与执行状态机）
 yak_agent_report                = 报告内容 truth
 yak_agent_step                 = 步骤级执行事实 truth（LLM/工具记账单写入口 AgentStepRecorder；parent 内存映射进程重启即清零——接受边界：重启即 INTERRUPTED 不续跑）；kind 枚举单一真相 = telemetry.AgentKindRegistry（未注册拒绝落库），载荷以 PayloadEnvelope 四档信封落库（SUMMARY_HASH 档原文不落库）
-yak_agent_memory               = （规划中，记忆线）长期记忆 truth
+yak_agent_memory               = 长期记忆 truth（召回/提取已接线，巩固管线未接线）
 yak_agent_query_log             = 查询证据 trace truth
 yak_agent_turn_event            = 事件投递日志（可重建投影，非事实源）
 dataset 模块                     = 数据集与字段语义 truth（外部）
@@ -96,7 +96,7 @@ pending 反问单飞 + toolCallId 匹配
 查询行数上限
 Python 并发信号量 + 超时强杀 + 临时目录清理
 密钥短生命周期 / 日志脱敏
-断连取消传播（dispose 上游）
+显式停止生成取消传播（dispose 上游）；SSE 断连仅结束订阅
 query_log 全量留痕（成功与失败）
 ```
 
@@ -180,7 +180,7 @@ AgentDependencyBoundaryTest
    -> no broad service/common/helper/utils bucket
 ```
 
-行为回归测试继续保护归属校验、HITL pending 状态机、白名单自纠、limit 上限、Python 超时强杀、断连取消等 runtime contract。
+行为回归测试继续保护归属校验、HITL pending 状态机、白名单自纠、limit 上限、Python 超时强杀、显式取消与 SSE 断线续播等 runtime contract。
 
 **不要因为功能或结构调整被护栏拦住就删护栏。** 如果规则真的变化，同一个 PR 中同步修改 Requirement/Domain/Architecture/Dependencies contract 和对应测试。
 
@@ -190,7 +190,7 @@ AgentDependencyBoundaryTest
 analyze_with_python 沙箱化（容器 / 受限运行身份）
 数据集级可见性授权联动
 数据集分组发现
-Skill 加载
+Skill 作用域、评测与扩展资源加载
 报告分享与订阅
 ```
 
@@ -206,3 +206,13 @@ Asset 分区五态保持原义；Quality 历史执行结果与规则证据仍由
 ## F-010 人工采纳建议
 
 候选不是业务事实。只读建议及校验不触发业务写入；人工保存继续由本域命令拥有。条件更新在本域事务内比较服务器定义指纹，拒绝旧值覆盖；治理 AI 不拥有源域状态。
+
+## 任务工具约束与执行预算
+
+GovernanceTarget/purpose 是服务器从已持久化轮次恢复的任务范围，不授予源域权限。显式治理任务只读取所选对象，禁止 Dataset 发现/取数、Python、报告保存及其他任务候选；普通对话不按自由文本自动切换任务。未知工具默认拒绝。
+
+工具调用必须在实际执行前预占预算；官方 StateStore 的 yak_tool_budget 键只保留本会话当前轮的辅助额度（turnId、target、冻结限额、已消费数、各工具累计失败数），不保存参数/源事实、不替代轮次生命周期。HITL 恢复同轮额度，存储故障停止新调用；取消后阻止新工具进入。策略拒绝走 Agent 观测，不伪造 Dataset 查询审计。
+
+Skill 定义/启停由 yak_agent_skill 拥有；运行时只提供当前启用的管理员维护 Skill 正文，停用/删除不能通过旧 SDK 加载器重新激活。前端更新携带期望版本，旧版本不得覆盖当前内容；旧客户端无版本调用保持兼容。
+
+逻辑 skillId 是稳定框架 name，展示名使用 displayName metadata，不能写入 SDK 保留的 name。管理更新成功后持久化与响应同时推进版本，并发删除后旧编辑不能复活条目。

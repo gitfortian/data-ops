@@ -72,3 +72,6 @@ docs/**/STAGE*.md
 
 # Machine-bound Golden Sample identities / local execution reports
 docs/product/acceptance/golden-sample/*.local.json
+
+# Local AI evaluation reports (explicit reviewed evidence belongs under docs/ai/acceptance)
+/.task-ai-evaluation/
