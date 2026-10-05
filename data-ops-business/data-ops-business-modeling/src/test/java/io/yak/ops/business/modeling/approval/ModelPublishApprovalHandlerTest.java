@@ -33,12 +33,13 @@ class ModelPublishApprovalHandlerTest {
 
   @Test
   void approvedPublishesAsOriginalApplicant() {
-    when(versionService.publish(42L, "tom")).thenReturn(new PublishResult(
+    String fingerprint = "a".repeat(64);
+    when(versionService.publishApproved(42L, fingerprint, "tom")).thenReturn(new PublishResult(
         new ModelVersion(9L, 42L, 3, "{}", null, 5, "sum", "tom", LocalDateTime.now()), true));
 
-    handler.onApproved(decision("{\"modelId\":42,\"modelName\":\"订单宽表\"}"));
+    handler.onApproved(decision("{\"modelId\":42,\"structureFingerprint\":\"" + fingerprint + "\"}"));
 
-    verify(versionService).publish(42L, "tom");
+    verify(versionService).publishApproved(42L, fingerprint, "tom");
     assertEquals(ApprovalFlowCodes.MODEL_PUBLISH, handler.flowCode());
   }
 
@@ -46,14 +47,14 @@ class ModelPublishApprovalHandlerTest {
   void malformedPayloadFailsVisibly() {
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision("{}")));
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision("not-json")));
-    verify(versionService, never()).publish(anyLong(), anyString());
+    verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
   }
 
   @Test
   void rejectedAndCanceledDoNotPublish() {
     handler.onRejected(decision("{\"modelId\":42}"));
     handler.onCanceled(decision("{\"modelId\":42}"));
-    verify(versionService, never()).publish(any(), any());
+    verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
   }
 
   private static ApprovalDecision decision(String payloadJson) {

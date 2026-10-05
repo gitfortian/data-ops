@@ -2,12 +2,14 @@ package io.yak.ops.business.approval.controller.v1;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.yak.framework.common.PagingData;
 import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.approval.application.FlowAdminService;
 import io.yak.ops.business.approval.application.FlowAdminService.FlowView;
 import io.yak.ops.business.approval.controller.v1.dto.ApprovalRequests.FlowCreateDTO;
+import io.yak.ops.business.approval.controller.v1.dto.ApprovalRequests.FlowPageQueryDTO;
 import io.yak.ops.business.approval.controller.v1.dto.ApprovalRequests.FlowStepDTO;
 import io.yak.ops.business.approval.controller.v1.dto.ApprovalRequests.FlowUpdateDTO;
 import io.yak.ops.common.constant.approval.ApprovalPermissionCode;
@@ -24,7 +26,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 审批流程定义 REST API(ticket 102)。 */
@@ -41,9 +42,9 @@ public class ApprovalFlowController {
 
   @Operation(summary = "流程定义列表")
   @GetMapping
-  public Result<List<FlowView>> list(
-      @RequestParam(value = "keyword", required = false) String keyword) {
-    return Result.success(flowAdminService.list(keyword));
+  public Result<PagingData<FlowView>> list(@Valid FlowPageQueryDTO query) {
+    return Result.success(PagingData.from(
+        flowAdminService.list(query.getKeyword(), query.getPageNo(), query.getPageSize())));
   }
 
   @Operation(summary = "流程定义详情")

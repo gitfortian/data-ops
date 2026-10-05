@@ -31,6 +31,7 @@ public class ApprovalInstancePO {
   private Integer currentLevel;
   private String activeFlag;
   private LocalDateTime finishTime;
+  private String cancelReason;
   private String createdBy;
   private String updatedBy;
   private LocalDateTime createTime;

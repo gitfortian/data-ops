@@ -16,6 +16,7 @@ import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelDialect;
 import io.yak.ops.business.modeling.exception.ModelingException;
 import io.yak.ops.business.modeling.repository.ModelRepository;
+import io.yak.ops.business.modeling.version.ModelVersionService;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,13 +28,16 @@ class ModelPublishApprovalServiceTest {
 
   private ApprovalApi approvalApi;
   private ModelRepository modelRepository;
+  private ModelVersionService versionService;
   private ModelPublishApprovalService service;
 
   @BeforeEach
   void setUp() {
     approvalApi = mock(ApprovalApi.class);
     modelRepository = mock(ModelRepository.class);
-    service = new ModelPublishApprovalService(approvalApi, modelRepository);
+    versionService = mock(ModelVersionService.class);
+    when(versionService.structureFingerprint(42L)).thenReturn("a".repeat(64));
+    service = new ModelPublishApprovalService(approvalApi, modelRepository, versionService);
   }
 
   @Test
@@ -56,6 +60,7 @@ class ModelPublishApprovalServiceTest {
     assertTrue(cmd.title().contains("订单宽表"));
     assertTrue(cmd.payloadJson().contains("\"modelId\":42"));
     assertTrue(cmd.payloadJson().contains("订单宽表"));
+    assertTrue(cmd.payloadJson().contains("\"structureFingerprint\":\"" + "a".repeat(64)));
     assertEquals("tom", cmd.applicant());
   }
 

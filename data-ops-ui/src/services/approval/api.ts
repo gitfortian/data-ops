@@ -60,8 +60,12 @@ export const findByBiz = (
     `${P}/by-biz?${new URLSearchParams({ flowCode, bizType, bizId: String(bizId) })}`,
   );
 
-export const listFlows = (keyword?: string): Promise<ApprovalFlow[]> =>
-  HttpUtils.getData(`${P}/flows?${keyword ? `keyword=${encodeURIComponent(keyword)}` : ''}`);
+export const listFlows = (
+  keyword?: string,
+  pageNo = 1,
+  pageSize = 50,
+): Promise<ApprovalPage<ApprovalFlow>> =>
+  HttpUtils.getData(`${P}/flows?${pageQuery(pageNo, pageSize, { keyword })}`);
 
 export const createFlow = (payload: FlowPayload): Promise<ApprovalFlow> =>
   HttpUtils.postData(`${P}/flows`, payload);

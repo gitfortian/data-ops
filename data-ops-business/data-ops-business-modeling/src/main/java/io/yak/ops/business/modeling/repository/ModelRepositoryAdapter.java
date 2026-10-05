@@ -83,6 +83,19 @@ public class ModelRepositoryAdapter implements ModelRepository {
   }
 
   @Override
+  public Optional<Model> findByIdForUpdate(Long id) {
+    Long projectId = requiredProjectId();
+    return Optional.ofNullable(
+            mapper.selectOne(
+                new LambdaQueryWrapper<ModelingModelPO>()
+                    .eq(ModelingModelPO::getId, id)
+                    .eq(ModelingModelPO::getProjectId, projectId)
+                    .eq(ModelingModelPO::getDeleted, Boolean.FALSE)
+                    .last("FOR UPDATE")))
+        .map(po -> toDomain(po, tagRepository.tagIdsForModel(po.getId())));
+  }
+
+  @Override
   public Optional<Model> findDeletedById(Long id) {
     Long projectId = requiredProjectId();
     return Optional.ofNullable(

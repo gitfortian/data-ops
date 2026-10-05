@@ -6,6 +6,8 @@ import io.yak.ops.business.approval.api.ApprovalDecision;
 import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.approval.api.ApprovalFlowHandler;
 import io.yak.ops.business.security.application.AccessPolicyService;
+import io.yak.ops.business.security.application.AccessPolicyApprovalSnapshot;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,6 +22,10 @@ import org.springframework.stereotype.Component;
 public class AccessGrantApprovalHandler implements ApprovalFlowHandler {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final List<String> SNAPSHOT_FIELDS = List.of(
+      "policyId", "policyName", "subjectType", "subjectKey", "scopeType", "datasourceId",
+      "dbName", "tableName", "columnName", "levelId", "accessType", "effect", "priority",
+      "validFrom", "validTo");
 
   private final AccessPolicyService policyService;
 
@@ -30,28 +36,38 @@ public class AccessGrantApprovalHandler implements ApprovalFlowHandler {
 
   @Override
   public void onApproved(ApprovalDecision decision) {
-    long policyId = readPolicyId(decision.payloadJson());
-    policyService.decideApproval(policyId, true, decision.lastApprover(), decision.comment());
-    log.info("权限申请审批通过即授权: policyId={}, approver={}", policyId, decision.lastApprover());
+    AccessPolicyApprovalSnapshot snapshot = readSnapshot(decision.payloadJson());
+    policyService.decideApproval(snapshot, true, decision.lastApprover(), decision.comment());
+    log.info("权限申请审批通过即授权: policyId={}, approver={}",
+        snapshot.policyId(), decision.lastApprover());
   }
 
   @Override
   public void onRejected(ApprovalDecision decision) {
-    long policyId = readPolicyId(decision.payloadJson());
-    policyService.decideApproval(policyId, false, decision.lastApprover(), decision.comment());
-    log.info("权限申请审批拒绝即驳回: policyId={}, approver={}", policyId, decision.lastApprover());
+    AccessPolicyApprovalSnapshot snapshot = readSnapshot(decision.payloadJson());
+    policyService.decideApproval(snapshot, false, decision.lastApprover(), decision.comment());
+    log.info("权限申请审批拒绝即驳回: policyId={}, approver={}",
+        snapshot.policyId(), decision.lastApprover());
   }
 
-  private static long readPolicyId(String payloadJson) {
+  private static AccessPolicyApprovalSnapshot readSnapshot(String payloadJson) {
     try {
-      JsonNode node = MAPPER.readTree(payloadJson)
-          .path(AccessPolicyApprovalService.PAYLOAD_POLICY_ID);
-      if (!node.canConvertToLong()) {
-        throw new IllegalStateException("payload 缺少 policyId: " + payloadJson);
+      JsonNode snapshot = MAPPER.readTree(payloadJson)
+          .path(AccessPolicyApprovalService.PAYLOAD_POLICY_SNAPSHOT);
+      if (!snapshot.isObject()) {
+        throw new IllegalStateException("payload 缺少 policySnapshot");
       }
-      return node.asLong();
+      if (SNAPSHOT_FIELDS.stream().anyMatch(field -> !snapshot.has(field))) {
+        throw new IllegalStateException("policySnapshot 字段不完整");
+      }
+      AccessPolicyApprovalSnapshot result = MAPPER.treeToValue(
+          snapshot, AccessPolicyApprovalSnapshot.class);
+      if (result.policyId() == null) {
+        throw new IllegalStateException("policySnapshot 缺少 policyId");
+      }
+      return result;
     } catch (Exception e) {
-      throw new IllegalStateException("审批 payload 解析失败:" + e.getMessage(), e);
+      throw new IllegalStateException("审批送审依据解析失败:" + e.getMessage(), e);
     }
   }
 }

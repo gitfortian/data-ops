@@ -21,5 +21,7 @@
 
 ## 工程基线
 
-Flyway yak-approval V1；菜单 V2033；错误码 49001~49099；权限码 data-approval:read/create/approve/manage；
-列表全分页；project_id 服务端可信；无物理外键。
+Flyway yak-approval V2；菜单 V2033；错误码 49001~49099；权限码 data-approval:read/create/approve/manage；
+列表全分页；分页参数 pageNo ≥ 1、pageSize 1..200；project_id 服务端可信；无物理外键。
+流程列表也必须分页；软删 tombstone 不依赖可变长 flowCode；撤销原因保存在审批实例并随详情返回。
+终态 callback 失败时，审批单与 step 仍保持原状态，审计记录该次失败操作。

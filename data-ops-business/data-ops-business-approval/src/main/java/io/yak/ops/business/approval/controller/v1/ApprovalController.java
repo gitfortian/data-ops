@@ -133,7 +133,11 @@ public class ApprovalController {
   public Result<ApprovalInstanceView> byBiz(
       @RequestParam("flowCode") String flowCode,
       @RequestParam("bizType") String bizType,
-      @RequestParam("bizId") String bizId) {
-    return Result.success(approvalService.find(flowCode, bizType, bizId));
+      @RequestParam("bizId") String bizId,
+      HttpServletRequest httpRequest) {
+    String operator = currentUserProvider.getCurrentUser(httpRequest);
+    boolean manage = rbacPermissionService.stream()
+        .anyMatch(s -> s.hasPermission(operator, ApprovalPermissionCode.MANAGE));
+    return Result.success(approvalService.findVisible(flowCode, bizType, bizId, operator, manage));
   }
 }

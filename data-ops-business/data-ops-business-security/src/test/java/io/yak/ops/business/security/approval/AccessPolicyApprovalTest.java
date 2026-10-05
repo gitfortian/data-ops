@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,6 +17,7 @@ import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.approval.api.ApprovalSubmitCommand;
 import io.yak.ops.business.security.application.AccessPolicyService;
+import io.yak.ops.business.security.application.AccessPolicyApprovalSnapshot;
 import io.yak.ops.business.security.exception.SecurityException;
 import io.yak.ops.business.security.dao.model.DsecAccessPolicyPO;
 import java.time.LocalDateTime;
@@ -56,6 +56,7 @@ class AccessPolicyApprovalTest {
     assertTrue(cmd.title().contains("查订单表"));
     assertTrue(cmd.payloadJson().contains("\"policyId\":5"));
     assertTrue(cmd.payloadJson().contains("\"subject\":\"USER:tom\""));
+    assertTrue(cmd.payloadJson().contains("\"policySnapshot\""));
     assertTrue(cmd.payloadJson().contains("order"));
     assertEquals("tom", cmd.applicant());
   }
@@ -69,28 +70,32 @@ class AccessPolicyApprovalTest {
 
   @Test
   void approvedDecidesPolicyAsLastApprover() {
-    handler.onApproved(decision("{\"policyId\":5}"));
-    verify(policyService).decideApproval(5L, true, "carol", "同意");
+    handler.onApproved(decision(payloadWithSnapshot(), "同意"));
+    verify(policyService).decideApproval(
+        AccessPolicyApprovalSnapshot.from(policy(5L, "PENDING")), true, "carol", "同意");
     assertEquals(ApprovalFlowCodes.ACCESS_GRANT, handler.flowCode());
   }
 
   @Test
   void rejectedDecidesPolicyAsRejected() {
-    handler.onRejected(decision("{\"policyId\":5}", "权限过大"));
-    verify(policyService).decideApproval(5L, false, "carol", "权限过大");
+    handler.onRejected(decision(payloadWithSnapshot(), "权限过大"));
+    verify(policyService).decideApproval(
+        AccessPolicyApprovalSnapshot.from(policy(5L, "PENDING")), false, "carol", "权限过大");
   }
 
   @Test
   void canceledKeepsPolicyPending() {
     handler.onCanceled(decision("{\"policyId\":5}"));
-    verify(policyService, never()).decideApproval(anyLong(), anyBoolean(), anyString(), any());
+    verify(policyService, never()).decideApproval(any(), anyBoolean(), anyString(), any());
   }
 
   @Test
   void malformedPayloadFailsVisibly() {
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision("{}")));
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision("not-json")));
-    verify(policyService, never()).decideApproval(anyLong(), anyBoolean(), anyString(), any());
+    verify(policyService, never()).decideApproval(any(), anyBoolean(), anyString(), any());
+    assertThrows(IllegalStateException.class,
+        () -> handler.onApproved(decision("{\"policySnapshot\":{\"policyId\":5}}")));
   }
 
   private static DsecAccessPolicyPO policy(Long id, String status) {
@@ -117,5 +122,15 @@ class AccessPolicyApprovalTest {
   private static ApprovalDecision decision(String payloadJson, String comment) {
     return new ApprovalDecision(9L, ApprovalFlowCodes.ACCESS_GRANT, "ACCESS_POLICY", "5",
         payloadJson, "tom", "carol", comment, LocalDateTime.now());
+  }
+
+  private static String payloadWithSnapshot() {
+    try {
+      return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+          java.util.Map.of("policyId", 5L,
+              "policySnapshot", AccessPolicyApprovalSnapshot.from(policy(5L, "PENDING"))));
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
   }
 }

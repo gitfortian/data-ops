@@ -1,0 +1,15 @@
+# MySQL storage profile.
+yak:
+  # MySQL business database; yak.security.datasource reuses these settings by default.
+  # YAK_DATASOURCE_URL/USERNAME/PASSWORD are supported aliases for the MySQL profile.
+  database:
+    enabled: ${YAK_DATABASE_ENABLED:true}
+    url: ${YAK_DATABASE_URL:${YAK_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/yak_security?useUnicode=true&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai}}
+    username: ${YAK_DATABASE_USERNAME:${YAK_DATASOURCE_USERNAME:root}}
+    password: ${YAK_DATABASE_PASSWORD:${YAK_DATASOURCE_PASSWORD:123456}}
+    driver-class-name: ${YAK_DATABASE_DRIVER:com.mysql.cj.jdbc.Driver}
+    minimum-idle: ${YAK_DATABASE_MINIMUM_IDLE:1}
+    maximum-pool-size: ${YAK_DATABASE_MAXIMUM_POOL_SIZE:8}
+spring:
+  quartz:
+    job-store-type: memory

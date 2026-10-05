@@ -1,6 +1,7 @@
 package io.yak.ops.business.security.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.audit.AuditEventType;
@@ -82,8 +83,20 @@ public class AccessPolicyService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DsecAccessPolicyPO decideApproval(Long id, boolean approve, String approver, String reason) {
-    DsecAccessPolicyPO po = get(id);
+  public DsecAccessPolicyPO decideApproval(
+      AccessPolicyApprovalSnapshot snapshot, boolean approve, String approver, String reason) {
+    Long id = snapshot.policyId();
+    DsecAccessPolicyPO po = mapper.selectOne(
+        new QueryWrapper<DsecAccessPolicyPO>()
+            .eq("id", id)
+            .eq("project_id", currentProject.requireProjectId())
+            .last("FOR UPDATE"));
+    if (po == null) {
+      throw new SecurityException(SecurityErrorCode.ACCESS_POLICY_NOT_FOUND, String.valueOf(id));
+    }
+    if (!snapshot.matches(po)) {
+      throw new SecurityException(SecurityErrorCode.ACCESS_APPROVAL_SNAPSHOT_STALE);
+    }
     if (!"PENDING".equals(po.getStatus())) {
       throw new SecurityException(SecurityErrorCode.ACCESS_NOT_PENDING, po.getStatus());
     }

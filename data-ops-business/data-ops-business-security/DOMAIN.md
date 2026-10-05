@@ -51,3 +51,6 @@
 
 - Dataset 查询经 Dataset-owned Security Gateway 消费 Security SPI,并以投影血缘映射到物理列键;消费方不直读 `yak_dsec_*` 表。Data Service 的 API Key/consumer 身份不可伪装成 USER/ROLE,待其身份映射经产品决策后再接入。
 - 展示名与等级 rank 由本模块 SPI 解析,消费方不直读 `yak_dsec_*` 表。
+Approval payloads are immutable review snapshots. ACCESS_GRANT decisions lock the project-scoped
+policy row and reject approval or rejection if any editable policy fact differs from that snapshot.
+The policy remains the source of truth; its current record stays PENDING until the callback succeeds.

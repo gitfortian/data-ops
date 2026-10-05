@@ -1,7 +1,7 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
 import { useModelStructureDraft } from './editor/useModelStructureDraft';
-import { ColumnDraft, IndexDraft, PropertyDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
+import { type ColumnDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
 import { history, useParams } from '@umijs/max';
 import { ApartmentOutlined, CloudDownloadOutlined, CopyOutlined, ExclamationCircleOutlined, FundOutlined, ReloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import {
@@ -1126,11 +1126,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
     const isCurrent = captureEditorResource();
     let alive = true;
     listFlows(MODEL_PUBLISH_FLOW_CODE)
-      .then((flows) => {
+      .then((result) => {
         if (!isCurrent()) return;
         if (alive) {
           setPublishFlowEnabled(
-            (flows ?? []).some((flow) => flow.flowCode === MODEL_PUBLISH_FLOW_CODE && flow.enabled),
+            (result.bizData ?? []).some(
+              (flow) => flow.flowCode === MODEL_PUBLISH_FLOW_CODE && flow.enabled,
+            ),
           );
         }
       })

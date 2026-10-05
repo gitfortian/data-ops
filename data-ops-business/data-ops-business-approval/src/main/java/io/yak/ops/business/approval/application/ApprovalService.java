@@ -59,7 +59,8 @@ public class ApprovalService implements ApprovalApi {
   public record StepView(Long id, Integer levelNo, String approver, String status,
       String comment, LocalDateTime handledTime) {}
 
-  public record ApprovalDetailView(ApprovalInstanceView instance, List<StepView> steps) {}
+  public record ApprovalDetailView(
+      ApprovalInstanceView instance, List<StepView> steps, String cancelReason) {}
 
   public record TodoView(Long stepId, Integer levelNo, ApprovalInstanceView instance) {}
 
@@ -177,6 +178,24 @@ public class ApprovalService implements ApprovalApi {
     return latest.isEmpty() ? null : toView(latest.get(0));
   }
 
+  /** REST projection: the internal business lookup does not grant read access to its caller. */
+  public ApprovalInstanceView findVisible(
+      String flowCode, String bizType, String bizId, String operator, boolean manage) {
+    ApprovalInstanceView instance = find(flowCode, bizType, bizId);
+    if (instance == null || manage || instance.applicant().equals(operator)) {
+      return instance;
+    }
+    long involvementCount = stepMapper.selectCount(new LambdaQueryWrapper<ApprovalStepPO>()
+        .eq(ApprovalStepPO::getProjectId, currentProject.requireProjectId())
+        .eq(ApprovalStepPO::getInstanceId, instance.id())
+        .eq(ApprovalStepPO::getApprover, operator)
+        .eq(ApprovalStepPO::getDeleted, false));
+    if (involvementCount == 0) {
+      throw new ApprovalException(ApprovalErrorCode.NOT_INVOLVED);
+    }
+    return instance;
+  }
+
   @Override
   public boolean isFlowEnabled(String flowCode) {
     ApprovalFlowPO flow = flowMapper.selectOne(new LambdaQueryWrapper<ApprovalFlowPO>()
@@ -197,7 +216,7 @@ public class ApprovalService implements ApprovalApi {
     }
     return new ApprovalDetailView(toView(instance),
         steps.stream().map(s -> new StepView(s.getId(), s.getLevelNo(), s.getApprover(),
-            s.getStatus(), s.getComment(), s.getHandledTime())).toList());
+            s.getStatus(), s.getComment(), s.getHandledTime())).toList(), instance.getCancelReason());
   }
 
   public PageData<TodoView> todo(String operator, int pageNo, int pageSize) {
@@ -276,23 +295,37 @@ public class ApprovalService implements ApprovalApi {
     if (!instance.getApplicant().equals(operator)) {
       throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR, "仅发起人可撤销");
     }
-    LocalDateTime now = LocalDateTime.now();
-    int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
-        .eq(ApprovalInstancePO::getId, instanceId)
-        .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
-        .set(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.CANCELED.name())
-        .set(ApprovalInstancePO::getActiveFlag, null)
-        .set(ApprovalInstancePO::getFinishTime, now)
-        .set(ApprovalInstancePO::getUpdatedBy, operator)
-        .set(ApprovalInstancePO::getUpdateTime, now));
-    if (moved == 0) {
-      throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR, "并发冲突,请刷新");
+    String normalizedReason = StringUtils.hasText(reason) ? reason.trim() : null;
+    if (normalizedReason != null && normalizedReason.length() > 512) {
+      throw new ApprovalException(ApprovalErrorCode.INVALID_ARGUMENT, "撤销原因最多 512 个字符");
     }
-    skipOpenSteps(instanceId, operator, now);
-    instance.setStatus(ApprovalInstanceStatus.CANCELED.name());
-    terminalCallback(instance, null, reason, "onCanceled");
-    audit("APPROVAL_CANCEL", "撤销审批", instance, operator,
-        Map.of("reason", String.valueOf(reason)));
+    AuditOperationHandle operation = startAudit(
+        "APPROVAL_CANCEL", "撤销审批", instance, operator);
+    try {
+      registry.require(instance.getFlowCode());
+      LocalDateTime now = LocalDateTime.now();
+      int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
+          .eq(ApprovalInstancePO::getId, instanceId)
+          .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
+          .set(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.CANCELED.name())
+          .set(ApprovalInstancePO::getActiveFlag, null)
+          .set(ApprovalInstancePO::getFinishTime, now)
+          .set(ApprovalInstancePO::getCancelReason, normalizedReason)
+          .set(ApprovalInstancePO::getUpdatedBy, operator)
+          .set(ApprovalInstancePO::getUpdateTime, now));
+      if (moved == 0) {
+        throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR, "并发冲突,请刷新");
+      }
+      skipOpenSteps(instanceId, operator, now);
+      instance.setStatus(ApprovalInstanceStatus.CANCELED.name());
+      instance.setCancelReason(normalizedReason);
+      terminalCallback(instance, null, normalizedReason, "onCanceled");
+      completeAudit(operation, "撤销审批:" + instance.getTitle(),
+          Map.of("reason", String.valueOf(normalizedReason)));
+    } catch (RuntimeException exception) {
+      operation.failure("APPROVAL_CANCEL_FAILED", exception);
+      throw exception;
+    }
   }
 
   private ApprovalInstanceView decide(Long instanceId, boolean approved, String comment,
@@ -311,60 +344,71 @@ public class ApprovalService implements ApprovalApi {
     if (mineStep == null) {
       throw new ApprovalException(ApprovalErrorCode.NOT_CURRENT_APPROVER);
     }
-    LocalDateTime now = LocalDateTime.now();
-    int flipped = stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
-        .eq(ApprovalStepPO::getId, mineStep.getId())
-        .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
-        .set(ApprovalStepPO::getStatus,
-            approved ? ApprovalStepStatus.APPROVED.name() : ApprovalStepStatus.REJECTED.name())
-        .set(ApprovalStepPO::getComment, StringUtils.hasText(comment) ? comment.trim() : null)
-        .set(ApprovalStepPO::getHandledTime, now)
-        .set(ApprovalStepPO::getUpdatedBy, operator)
-        .set(ApprovalStepPO::getUpdateTime, now));
-    if (flipped == 0) {
-      throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR, "并发冲突,请刷新");
-    }
-
-    if (!approved) {
-      finish(instance, ApprovalInstanceStatus.REJECTED, operator, now);
-      skipOpenSteps(instanceId, operator, now);
-      terminalCallback(instance, operator, comment, "onRejected");
-      audit("APPROVAL_REJECT", "拒绝审批", instance, operator,
-          Map.of("level", mineStep.getLevelNo(), "comment", String.valueOf(comment)));
-      return toView(instance);
-    }
-
-    int maxLevel = stepsOf(instanceId).stream().mapToInt(ApprovalStepPO::getLevelNo).max()
-        .orElse(mineStep.getLevelNo());
-    ApprovalStateMachine.OnApprove next =
-        ApprovalStateMachine.onApprove(mineStep.getLevelNo(), maxLevel);
-    skipOpenStepsAtLevel(instanceId, mineStep.getLevelNo(), operator, now);
-    if (next.finished()) {
-      finish(instance, ApprovalInstanceStatus.APPROVED, operator, now);
-      skipOpenSteps(instanceId, operator, now);
-      terminalCallback(instance, operator, comment, "onApproved");
-    } else {
-      int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
-          .eq(ApprovalInstancePO::getId, instanceId)
-          .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
-          .set(ApprovalInstancePO::getCurrentLevel, next.nextLevelNo())
-          .set(ApprovalInstancePO::getUpdatedBy, operator)
-          .set(ApprovalInstancePO::getUpdateTime, now));
-      if (moved == 0) {
-        throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR,
-            "并发冲突,请刷新");
+    String operationCode = approved ? "APPROVAL_APPROVE" : "APPROVAL_REJECT";
+    String operationName = approved ? "通过审批" : "拒绝审批";
+    AuditOperationHandle operation = startAudit(operationCode, operationName, instance, operator);
+    try {
+      int maxLevel = stepsOf(instanceId).stream().mapToInt(ApprovalStepPO::getLevelNo).max()
+          .orElse(mineStep.getLevelNo());
+      if (!approved || mineStep.getLevelNo() >= maxLevel) {
+        registry.require(instance.getFlowCode());
       }
-      stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
-          .eq(ApprovalStepPO::getInstanceId, instanceId)
-          .eq(ApprovalStepPO::getLevelNo, next.nextLevelNo())
-          .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.WAITING.name())
-          .set(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
+      LocalDateTime now = LocalDateTime.now();
+      int flipped = stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
+          .eq(ApprovalStepPO::getId, mineStep.getId())
+          .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
+          .set(ApprovalStepPO::getStatus,
+              approved ? ApprovalStepStatus.APPROVED.name() : ApprovalStepStatus.REJECTED.name())
+          .set(ApprovalStepPO::getComment, StringUtils.hasText(comment) ? comment.trim() : null)
+          .set(ApprovalStepPO::getHandledTime, now)
+          .set(ApprovalStepPO::getUpdatedBy, operator)
           .set(ApprovalStepPO::getUpdateTime, now));
-      instance.setCurrentLevel(next.nextLevelNo());
+      if (flipped == 0) {
+        throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR, "并发冲突,请刷新");
+      }
+
+      if (!approved) {
+        finish(instance, ApprovalInstanceStatus.REJECTED, operator, now);
+        skipOpenSteps(instanceId, operator, now);
+        terminalCallback(instance, operator, comment, "onRejected");
+        completeAudit(operation, operationName + ":" + instance.getTitle(),
+            Map.of("level", mineStep.getLevelNo(), "comment", String.valueOf(comment)));
+        return toView(instance);
+      }
+
+      ApprovalStateMachine.OnApprove next =
+          ApprovalStateMachine.onApprove(mineStep.getLevelNo(), maxLevel);
+      skipOpenStepsAtLevel(instanceId, mineStep.getLevelNo(), operator, now);
+      if (next.finished()) {
+        finish(instance, ApprovalInstanceStatus.APPROVED, operator, now);
+        skipOpenSteps(instanceId, operator, now);
+        terminalCallback(instance, operator, comment, "onApproved");
+      } else {
+        int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
+            .eq(ApprovalInstancePO::getId, instanceId)
+            .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
+            .set(ApprovalInstancePO::getCurrentLevel, next.nextLevelNo())
+            .set(ApprovalInstancePO::getUpdatedBy, operator)
+            .set(ApprovalInstancePO::getUpdateTime, now));
+        if (moved == 0) {
+          throw new ApprovalException(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR,
+              "并发冲突,请刷新");
+        }
+        stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
+            .eq(ApprovalStepPO::getInstanceId, instanceId)
+            .eq(ApprovalStepPO::getLevelNo, next.nextLevelNo())
+            .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.WAITING.name())
+            .set(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
+            .set(ApprovalStepPO::getUpdateTime, now));
+        instance.setCurrentLevel(next.nextLevelNo());
+      }
+      completeAudit(operation, operationName + ":" + instance.getTitle(),
+          Map.of("level", mineStep.getLevelNo()));
+      return toView(instance);
+    } catch (RuntimeException exception) {
+      operation.failure(approved ? "APPROVAL_APPROVE_FAILED" : "APPROVAL_REJECT_FAILED", exception);
+      throw exception;
     }
-    audit("APPROVAL_APPROVE", "通过审批", instance, operator,
-        Map.of("level", mineStep.getLevelNo()));
-    return toView(instance);
   }
 
   // ---------- 内部 ----------
@@ -409,27 +453,26 @@ public class ApprovalService implements ApprovalApi {
         .set(ApprovalStepPO::getUpdateTime, now));
   }
 
-  /** 终态回调,同事务(D5):handler 缺省(被移除)时跳过,抛错 → 49009 整体回滚。 */
+  /** 终态回调,同事务(D5):handler 缺失时操作失败,抛错 → 49009 整体回滚。 */
   private void terminalCallback(ApprovalInstancePO instance, String lastApprover, String comment,
       String action) {
-    registry.find(instance.getFlowCode()).ifPresent(handler -> {
-      ApprovalDecision decision = new ApprovalDecision(instance.getId(), instance.getFlowCode(),
-          instance.getBizType(), instance.getBizId(), instance.getPayloadJson(),
-          instance.getApplicant(), lastApprover, StringUtils.hasText(comment) ? comment : null,
-          instance.getFinishTime() == null ? LocalDateTime.now() : instance.getFinishTime());
-      try {
-        switch (action) {
-            case "onApproved" -> handler.onApproved(decision);
-            case "onRejected" -> handler.onRejected(decision);
-            default -> handler.onCanceled(decision);
-        }
-      } catch (ApprovalException e) {
-        throw e;
-      } catch (Exception e) {
-        throw new ApprovalException(ApprovalErrorCode.CALLBACK_FAILED,
-            instance.getFlowCode() + " " + action + " " + e.getMessage(), e);
+    var handler = registry.require(instance.getFlowCode());
+    ApprovalDecision decision = new ApprovalDecision(instance.getId(), instance.getFlowCode(),
+        instance.getBizType(), instance.getBizId(), instance.getPayloadJson(),
+        instance.getApplicant(), lastApprover, StringUtils.hasText(comment) ? comment : null,
+        instance.getFinishTime() == null ? LocalDateTime.now() : instance.getFinishTime());
+    try {
+      switch (action) {
+        case "onApproved" -> handler.onApproved(decision);
+        case "onRejected" -> handler.onRejected(decision);
+        default -> handler.onCanceled(decision);
       }
-    });
+    } catch (ApprovalException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new ApprovalException(ApprovalErrorCode.CALLBACK_FAILED,
+          instance.getFlowCode() + " " + action + " " + e.getMessage(), e);
+    }
   }
 
   private List<ApprovalStepPO> stepsOf(Long instanceId) {
@@ -498,11 +541,21 @@ public class ApprovalService implements ApprovalApi {
 
   private void audit(String code, String action, ApprovalInstancePO instance, String operator,
       Map<String, ?> detail) {
-    AuditOperationHandle handle = auditService.start(new AuditOperationRequest(
+    completeAudit(startAudit(code, action, instance, operator),
+        action + ":" + instance.getTitle(), detail);
+  }
+
+  private AuditOperationHandle startAudit(
+      String code, String action, ApprovalInstancePO instance, String operator) {
+    return auditService.start(new AuditOperationRequest(
         code, action, "APPROVAL_INSTANCE", String.valueOf(instance.getId()),
         instance.getTitle(), "APPLICATION",
         Map.of("operator", String.valueOf(operator), "flowCode", instance.getFlowCode())));
-    AuditTransactions.completeOnCommit(handle, AuditEventType.RESOURCE_UPDATED,
-        action + ":" + instance.getTitle(), detail, null);
+  }
+
+  private void completeAudit(
+      AuditOperationHandle handle, String message, Map<String, ?> detail) {
+    AuditTransactions.completeOnCommit(
+        handle, AuditEventType.RESOURCE_UPDATED, message, detail, null);
   }
 }
