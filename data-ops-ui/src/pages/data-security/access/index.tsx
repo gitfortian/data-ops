@@ -4,6 +4,7 @@ import {
   decideAccess,
   deleteAccessPolicy,
   disableAccessPolicy,
+  getAccessPolicy,
   listActiveSecurityLevels,
   pageAccessPolicies,
   submitAccessPolicyApproval,
@@ -14,6 +15,7 @@ import type {
   AccessPolicy,
   SecurityLevel,
 } from '@/services/data-security/types';
+import { useSearchParams } from '@umijs/max';
 import {
   DatePicker,
   Drawer,
@@ -67,6 +69,7 @@ const EFFECTS = [
 const fmt = (value?: string) => (value ? String(value).replace('T', ' ').slice(0, 19) : '-');
 
 const DataSecurityAccessPage = () => {
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm();
   const [decideForm] = Form.useForm();
   const [records, setRecords] = useState<AccessPolicy[]>([]);
@@ -83,6 +86,8 @@ const DataSecurityAccessPage = () => {
   const [decideOpen, setDecideOpen] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const [decision, setDecision] = useState<AccessDecision | null>(null);
+  const [linkedPolicy, setLinkedPolicy] = useState<AccessPolicy | null>(null);
+  const linkedPolicyId = Number(searchParams.get('policyId'));
   const selectedScope = Form.useWatch('scopeType', form);
   const needsDatasource = ['DATASOURCE', 'DATABASE', 'TABLE', 'COLUMN'].includes(selectedScope);
   const needsDatabase = ['DATABASE', 'TABLE', 'COLUMN'].includes(selectedScope);
@@ -111,6 +116,18 @@ const DataSecurityAccessPage = () => {
   useEffect(() => {
     listActiveSecurityLevels().then((ls) => setLevels(ls ?? [])).catch(() => undefined);
   }, []);
+  useEffect(() => {
+    if (!Number.isSafeInteger(linkedPolicyId) || linkedPolicyId <= 0) {
+      setLinkedPolicy(null);
+      return;
+    }
+    getAccessPolicy(linkedPolicyId)
+      .then(setLinkedPolicy)
+      .catch(() => {
+        setLinkedPolicy(null);
+        message.error('无法读取该策略，请检查项目范围和访问权限');
+      });
+  }, [linkedPolicyId]);
 
   const openCreate = () => {
     setEditing(null);
@@ -255,6 +272,20 @@ const DataSecurityAccessPage = () => {
         subtitle="数据级访问策略的申请、审批与裁决试算"
         extra={<YakButton className="!h-9 !rounded-lg" onClick={() => { setDecision(null); setDecideOpen(true); }}>裁决试算</YakButton>}
       />
+
+      {linkedPolicy ? (
+        <div className="mb-3 rounded-lg border border-solid border-[#d9d9d9] bg-[#fafafa] p-3 text-[13px]">
+          <div className="mb-2 font-medium">审批关联策略：{linkedPolicy.policyName}（#{linkedPolicy.id}）</div>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-[#4d5769] sm:grid-cols-2 lg:grid-cols-3">
+            <div>状态：{STATUS_META[linkedPolicy.status ?? '']?.label ?? linkedPolicy.status ?? '-'}</div>
+            <div>主体：{linkedPolicy.subjectType} / {linkedPolicy.subjectKey}</div>
+            <div>范围：{linkedPolicy.scopeType}</div>
+            <div>资源：{[linkedPolicy.datasourceId, linkedPolicy.dbName, linkedPolicy.tableName, linkedPolicy.columnName].filter(Boolean).join(' / ') || '全部数据'}</div>
+            <div>操作 / 效果：{linkedPolicy.accessType} / {linkedPolicy.effect}</div>
+            <div>有效期：{fmt(linkedPolicy.validFrom)} — {fmt(linkedPolicy.validTo)}</div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mb-3 mt-4 flex flex-wrap items-center justify-between gap-3">
         <Space wrap>

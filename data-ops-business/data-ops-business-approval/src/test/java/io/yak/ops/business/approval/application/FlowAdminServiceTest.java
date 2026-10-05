@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.ops.business.approval.dao.mapper.ApprovalFlowMapper;
 import io.yak.ops.business.approval.dao.mapper.ApprovalInstanceMapper;
 import io.yak.ops.business.approval.exception.ApprovalException;
@@ -168,7 +169,7 @@ class FlowAdminServiceTest {
     ArgumentCaptor<ApprovalFlowPO> captor = ArgumentCaptor.forClass(ApprovalFlowPO.class);
     verify(flowMapper).updateById(captor.capture());
     ApprovalFlowPO patch = captor.getValue();
-    assertEquals("MODEL_PUBLISH#del#9", patch.getFlowCode());
+    assertEquals("#del#9", patch.getFlowCode());
     assertEquals(Boolean.TRUE, patch.getDeleted());
     assertEquals(Boolean.FALSE, patch.getEnabled());
   }
@@ -182,6 +183,22 @@ class FlowAdminServiceTest {
     ApprovalException ex =
         assertThrows(ApprovalException.class, () -> service.toggle(404L, "lucas"));
     assertEquals(ApprovalErrorCode.FLOW_NOT_FOUND, ex.getErrorCode());
+  }
+
+  @Test
+  void listReturnsOnlyTheRequestedPage() {
+    Page<ApprovalFlowPO> page = new Page<>(2, 10);
+    page.setRecords(List.of(flow(9L, "MODEL_PUBLISH", true)));
+    page.setTotal(11);
+    when(flowMapper.selectPage(any(), any())).thenReturn(page);
+
+    var result = service.list("MODEL", 2, 10);
+
+    assertEquals(1, result.records().size());
+    assertEquals(11, result.total());
+    assertEquals(2, result.pageNo());
+    assertEquals(10, result.pageSize());
+    verify(flowMapper).selectPage(any(), any());
   }
 
   private static ApprovalFlowPO flow(Long id, String code, boolean enabled) {

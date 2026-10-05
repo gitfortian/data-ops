@@ -44,6 +44,7 @@ public enum SecurityErrorCode implements ErrorCode {
   ACCESS_INVALID_SCOPE(45052, "访问范围类型不合法"),
   ACCESS_INVALID_ACTION(45053, "访问动作不合法"),
   ACCESS_NOT_PENDING(45054, "策略不处于待审批状态"),
+  ACCESS_APPROVAL_SNAPSHOT_STALE(45055, "策略已偏离送审依据，请撤销后重新提交"),
 
   MASKING_ALGO_NOT_FOUND(45060, "脱敏算法不存在"),
   MASKING_ALGO_DUPLICATE(45061, "脱敏算法编码已存在"),

@@ -31,10 +31,24 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
   @Override
   public void onApproved(ApprovalDecision decision) {
     long modelId = readModelId(decision.payloadJson());
+    String fingerprint = readStructureFingerprint(decision.payloadJson());
     ModelVersionService.PublishResult result =
-        versionService.publish(modelId, decision.applicant());
+        versionService.publishApproved(modelId, fingerprint, decision.applicant());
     log.info("模型发布审批通过即发布: modelId={}, versionNo={}, created={}, applicant={}",
         modelId, result.version().versionNo(), result.created(), decision.applicant());
+  }
+
+  private static String readStructureFingerprint(String payloadJson) {
+    try {
+      String value = MAPPER.readTree(payloadJson)
+          .path(ModelPublishApprovalService.PAYLOAD_STRUCTURE_FINGERPRINT).asText(null);
+      if (value == null || !value.matches("[a-f0-9]{64}")) {
+        throw new IllegalStateException("payload 缺少有效 structureFingerprint");
+      }
+      return value;
+    } catch (Exception e) {
+      throw new IllegalStateException("模型送审版本解析失败:" + e.getMessage(), e);
+    }
   }
 
   private static long readModelId(String payloadJson) {

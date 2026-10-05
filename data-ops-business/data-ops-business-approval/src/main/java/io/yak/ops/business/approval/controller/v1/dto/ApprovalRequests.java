@@ -1,9 +1,12 @@
 package io.yak.ops.business.approval.controller.v1.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.Data;
 
@@ -45,13 +48,29 @@ public final class ApprovalRequests {
 
   @Data
   public static class PageQueryDTO {
+    @Min(value = 1, message = "页码必须大于 0")
     private int pageNo = 1;
+    @Min(value = 1, message = "每页条数必须大于 0")
+    @Max(value = 200, message = "每页最多 200 条")
     private int pageSize = 20;
   }
 
   @Data
-  public static class MineQueryDTO {
+  public static class FlowPageQueryDTO {
+    @Min(value = 1, message = "页码必须大于 0")
     private int pageNo = 1;
+    @Min(value = 1, message = "每页条数必须大于 0")
+    @Max(value = 200, message = "每页最多 200 条")
+    private int pageSize = 20;
+    private String keyword;
+  }
+
+  @Data
+  public static class MineQueryDTO {
+    @Min(value = 1, message = "页码必须大于 0")
+    private int pageNo = 1;
+    @Min(value = 1, message = "每页条数必须大于 0")
+    @Max(value = 200, message = "每页最多 200 条")
     private int pageSize = 20;
     /** PENDING/APPROVED/REJECTED/CANCELED,空=全部。 */
     private String status;
@@ -70,6 +89,7 @@ public final class ApprovalRequests {
 
   @Data
   public static class CancelDTO {
+    @Size(max = 512, message = "撤销原因最多 512 个字符")
     private String reason;
   }
 }

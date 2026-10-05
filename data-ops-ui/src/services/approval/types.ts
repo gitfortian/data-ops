@@ -51,6 +51,7 @@ export interface ApprovalStep {
 export interface ApprovalDetail {
   instance: ApprovalInstance;
   steps: ApprovalStep[];
+  cancelReason?: string | null;
 }
 
 export interface FlowStepConfig {

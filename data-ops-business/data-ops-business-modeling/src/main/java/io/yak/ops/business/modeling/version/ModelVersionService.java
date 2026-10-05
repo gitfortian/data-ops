@@ -57,8 +57,32 @@ public class ModelVersionService {
    */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public PublishResult publish(Long modelId, String operator) {
-    Model model = requireLiveModel(modelId);
-    StructureView structure = structureService.get(modelId);
+    Model model = requireLiveModelForUpdate(modelId);
+    return publishLocked(model, structureService.getForUpdate(modelId), operator);
+  }
+
+  /** Publishes only when the current structure still matches the snapshot approved by the user. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public PublishResult publishApproved(Long modelId, String expectedFingerprint, String operator) {
+    Model model = requireLiveModelForUpdate(modelId);
+    StructureView structure = structureService.getForUpdate(modelId);
+    if (expectedFingerprint == null || !expectedFingerprint.equals(fingerprint(structure))) {
+      throw new IllegalStateException("模型结构已偏离送审依据，请撤销后重新提交");
+    }
+    return publishLocked(model, structure, operator);
+  }
+
+  /** Content digest used to bind a publish approval to the exact semantic structure. */
+  @Transactional(
+      transactionManager = "yakBusinessTransactionManager",
+      readOnly = true,
+      rollbackFor = Exception.class)
+  public String structureFingerprint(Long modelId) {
+    return fingerprint(structureService.get(modelId));
+  }
+
+  private PublishResult publishLocked(Model model, StructureView structure, String operator) {
+    Long modelId = model.id();
 
     String structureJson = serialiseStructure(structure);
     // 语义投影（去行主键/瞬态字段）做内容等值：全量替换保存会重建列行并换自增 id，
@@ -133,6 +157,23 @@ public class ModelVersionService {
   private Model requireLiveModel(Long modelId) {
     return modelRepository.findById(modelId)
         .orElseThrow(() -> new IllegalArgumentException("模型不存在或已删除：" + modelId));
+  }
+
+  private Model requireLiveModelForUpdate(Long modelId) {
+    return modelRepository.findByIdForUpdate(modelId)
+        .orElseThrow(() -> new IllegalArgumentException("模型不存在或已删除：" + modelId));
+  }
+
+  private static String fingerprint(StructureView structure) {
+    return sha256(serialise(semanticView(structure)));
+  }
+
+  private static String serialise(StructureView structure) {
+    try {
+      return MAPPER.writeValueAsString(structure);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("结构序列化失败", e);
+    }
   }
 
   private String serialiseStructure(StructureView structure) {

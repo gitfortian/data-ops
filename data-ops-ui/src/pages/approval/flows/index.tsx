@@ -175,14 +175,18 @@ const FlowConfigPage = () => {
 
   const [rows, setRows] = useState<ApprovalFlow[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [pageNo, setPageNo] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<ApprovalFlow | null>(null);
 
-  const load = useCallback(async (search?: string) => {
+  const load = useCallback(async (search = '', page = 1) => {
     setLoading(true);
     try {
-      setRows((await listFlows(search?.trim() || undefined)) ?? []);
+      const result = await listFlows(search.trim() || undefined, page, 20);
+      setRows(result.bizData ?? []);
+      setTotal(result.pagination?.total ?? 0);
     } catch (error: any) {
       message.error(error?.message ?? '流程列表加载失败');
     } finally {
@@ -191,14 +195,14 @@ const FlowConfigPage = () => {
   }, []);
 
   useEffect(() => {
-    void load();
+    void load('', 1);
   }, [load]);
 
   const toggle = async (flow: ApprovalFlow) => {
     try {
       await toggleFlow(flow.id);
       message.success(flow.enabled ? '已停用' : '已启用');
-      void load(keyword);
+      void load(keyword, pageNo);
     } catch (error: any) {
       message.error(error?.message ?? '操作失败');
     }
@@ -215,7 +219,9 @@ const FlowConfigPage = () => {
         try {
           await deleteFlow(flow.id);
           message.success('已删除');
-          void load(keyword);
+          const nextPage = rows.length === 1 && pageNo > 1 ? pageNo - 1 : pageNo;
+          setPageNo(nextPage);
+          void load(keyword, nextPage);
         } catch (error: any) {
           message.error(error?.message ?? '删除失败');
         }
@@ -295,7 +301,11 @@ const FlowConfigPage = () => {
             className="!w-60"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            onSearch={(value) => void load(value)}
+            onSearch={(value) => {
+              setKeyword(value);
+              setPageNo(1);
+              void load(value, 1);
+            }}
           />
           <Button
             type="primary"
@@ -323,7 +333,16 @@ const FlowConfigPage = () => {
             />
           ),
         }}
-        pagination={false}
+        pagination={{
+          current: pageNo,
+          pageSize: 20,
+          total,
+          showTotal: (count) => `共 ${count} 条`,
+          onChange: (page) => {
+            setPageNo(page);
+            void load(keyword, page);
+          },
+        }}
       />
       <FlowDrawer
         open={drawerOpen}
@@ -332,7 +351,7 @@ const FlowConfigPage = () => {
           setDrawerOpen(false);
           setEditing(null);
         }}
-        onSaved={() => void load(keyword)}
+        onSaved={() => void load(keyword, pageNo)}
       />
     </div>
   );

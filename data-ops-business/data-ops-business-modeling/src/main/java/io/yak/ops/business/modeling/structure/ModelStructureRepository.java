@@ -8,6 +8,18 @@ import java.util.Optional;
 /** Persistence boundary for a model's physical table structure. */
 public interface ModelStructureRepository {
 
+  /** Current structure-row values, read with a database locking read. */
+  record StoredStructureAttributes(
+      String tableName,
+      String tableComment,
+      String primaryKeyJson,
+      String partitionType,
+      String partitionColumnsJson,
+      String partitionExpr,
+      String tablePropertiesJson) {}
+
+  Optional<StoredStructureAttributes> findStructureAttributesForUpdate(Long modelId);
+
   /** Physical table name; empty means "fall back to model_code". */
   Optional<String> findTableName(Long modelId);
 
@@ -37,6 +49,8 @@ public interface ModelStructureRepository {
 
   List<ColumnDefinition> findColumns(Long modelId);
 
+  List<ColumnDefinition> findColumnsForUpdate(Long modelId);
+
   /** Full replace: removes stored columns of the model, inserts the given ordered list. */
   void replaceColumns(Long modelId, List<ColumnDefinition> columns);
 
@@ -44,6 +58,8 @@ public interface ModelStructureRepository {
   boolean updateColumnStdField(Long modelId, String columnName, Long stdFieldId);
 
   List<IndexDefinition> findIndexes(Long modelId);
+
+  List<IndexDefinition> findIndexesForUpdate(Long modelId);
 
   /** Full replace: removes stored indexes of the model, inserts the given list. */
   void replaceIndexes(Long modelId, List<IndexDefinition> indexes);

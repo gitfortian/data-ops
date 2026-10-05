@@ -9,6 +9,7 @@ import io.yak.ops.business.approval.api.ApprovalSubmitCommand;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.exception.ModelingException;
 import io.yak.ops.business.modeling.repository.ModelRepository;
+import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +26,13 @@ public class ModelPublishApprovalService {
   public static final String BIZ_TYPE = "MODEL";
   static final String PAYLOAD_MODEL_ID = "modelId";
   static final String PAYLOAD_MODEL_NAME = "modelName";
+  static final String PAYLOAD_STRUCTURE_FINGERPRINT = "structureFingerprint";
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private final ApprovalApi approvalApi;
   private final ModelRepository modelRepository;
+  private final ModelVersionService versionService;
 
   public ApprovalInstanceView submit(Long modelId, String operator) {
     Model model = modelRepository.findById(modelId)
@@ -39,7 +42,8 @@ public class ModelPublishApprovalService {
     try {
       payload = MAPPER.writeValueAsString(Map.of(
           PAYLOAD_MODEL_ID, modelId,
-          PAYLOAD_MODEL_NAME, model.name() == null ? "" : model.name()));
+          PAYLOAD_MODEL_NAME, model.name() == null ? "" : model.name(),
+          PAYLOAD_STRUCTURE_FINGERPRINT, versionService.structureFingerprint(modelId)));
     } catch (JsonProcessingException e) {
       throw new IllegalStateException("审批 payload 序列化失败", e);
     }

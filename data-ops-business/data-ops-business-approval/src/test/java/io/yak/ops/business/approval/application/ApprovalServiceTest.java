@@ -58,6 +58,7 @@ class ApprovalServiceTest {
   private ApprovalStepMapper stepMapper;
   private ApprovalFlowRegistry registry;
   private ApprovalFlowHandler handler;
+  private AuditOperationHandle auditHandle;
   private ApprovalService service;
 
   @BeforeEach
@@ -74,10 +75,11 @@ class ApprovalServiceTest {
     handler = mock(ApprovalFlowHandler.class);
     CurrentProject currentProject = mock(CurrentProject.class);
     BusinessAuditService auditService = mock(BusinessAuditService.class);
-    AuditOperationHandle handle = mock(AuditOperationHandle.class);
+    auditHandle = mock(AuditOperationHandle.class);
     lenient().when(currentProject.requireProjectId()).thenReturn(1L);
-    lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(handle);
+    lenient().when(auditService.start(any(AuditOperationRequest.class))).thenReturn(auditHandle);
     lenient().when(registry.find(eq(FLOW_CODE))).thenReturn(java.util.Optional.of(handler));
+    lenient().when(registry.require(eq(FLOW_CODE))).thenReturn(handler);
     service = new ApprovalService(currentProject, flowMapper, instanceMapper, stepMapper,
         registry, auditService);
   }
@@ -198,6 +200,7 @@ class ApprovalServiceTest {
     ApprovalInstancePO running = instance(ApprovalInstanceStatus.PENDING, 1);
     when(instanceMapper.selectById(7L)).thenReturn(running);
     when(stepMapper.update(any(), any())).thenReturn(1);
+    when(stepMapper.selectList(any())).thenReturn(List.of());
     when(instanceMapper.update(any(), any())).thenReturn(1);
 
     assertError(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR,
@@ -205,6 +208,8 @@ class ApprovalServiceTest {
 
     service.cancel(7L, "tom", "误发起");
     assertEquals(ApprovalInstanceStatus.CANCELED.name(), running.getStatus());
+    assertEquals("误发起", running.getCancelReason());
+    assertEquals("误发起", service.detail(7L, "tom", false).cancelReason());
     ArgumentCaptor<ApprovalDecision> decision = ArgumentCaptor.forClass(ApprovalDecision.class);
     verify(handler).onCanceled(decision.capture());
     assertNull(decision.getValue().lastApprover());
@@ -259,6 +264,40 @@ class ApprovalServiceTest {
         () -> service.approve(7L, null, "carol"));
     assertEquals(ApprovalErrorCode.CALLBACK_FAILED, ex.getErrorCode());
     assertTrue(ex.getUserMessage().contains("业务侧发布失败"));
+    verify(auditHandle).failure(eq("APPROVAL_APPROVE_FAILED"), any(ApprovalException.class));
+  }
+
+  @Test
+  void missingHandlerLeavesTerminalActionsPendingAndAuditsFailure() {
+    when(instanceMapper.selectById(7L)).thenReturn(instance(ApprovalInstanceStatus.PENDING, 2));
+    when(stepMapper.selectOne(any()))
+        .thenReturn(step(13L, 2, "carol", ApprovalStepStatus.PENDING));
+    when(stepMapper.selectList(any())).thenReturn(List.of(
+        step(11L, 1, "alice", ApprovalStepStatus.APPROVED),
+        step(13L, 2, "carol", ApprovalStepStatus.PENDING)));
+    doThrow(new ApprovalException(ApprovalErrorCode.HANDLER_NOT_REGISTERED, FLOW_CODE))
+        .when(registry).require(FLOW_CODE);
+
+    assertError(ApprovalErrorCode.HANDLER_NOT_REGISTERED,
+        () -> service.approve(7L, null, "carol"));
+
+    verify(stepMapper, never()).update(any(), any());
+    verify(instanceMapper, never()).update(any(), any());
+    verify(auditHandle).failure(eq("APPROVAL_APPROVE_FAILED"), any(ApprovalException.class));
+  }
+
+  @Test
+  void byBizLookupIsVisibleOnlyToApplicantApproverOrManager() {
+    when(instanceMapper.selectList(any())).thenReturn(List.of(
+        instance(ApprovalInstanceStatus.PENDING, 1)));
+    when(stepMapper.selectCount(any())).thenReturn(1L, 0L);
+
+    assertEquals(7L, service.findVisible(FLOW_CODE, "MODEL", "42", "tom", false).id());
+    assertEquals(7L, service.findVisible(FLOW_CODE, "MODEL", "42", "alice", false).id());
+    assertError(ApprovalErrorCode.NOT_INVOLVED,
+        () -> service.findVisible(FLOW_CODE, "MODEL", "42", "eve", false));
+    assertEquals(7L, service.findVisible(FLOW_CODE, "MODEL", "42", "admin", true).id());
+    verify(stepMapper, times(2)).selectCount(any());
   }
 
   // ---------- 查询 ----------
