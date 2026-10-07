@@ -291,6 +291,14 @@ public class AgentController {
     return Result.success(true);
   }
 
+  @Operation(summary = "停止指定排队或推理轮次（应答后需读取状态核对）")
+  @PostMapping("/chat/turns/{turnId}/cancel")
+  @RequiresPermission(AgentPermissionCode.CHAT_RUN)
+  public Result<Boolean> cancelTurn(@PathVariable String turnId) {
+    agentChatService.cancelTurn(turnId);
+    return Result.success(true);
+  }
+
   @Operation(summary = "查询审计分页")
   @PostMapping("/queries/page")
   @RequiresPermission(AgentPermissionCode.SESSION_READ)

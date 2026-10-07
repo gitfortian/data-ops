@@ -154,6 +154,23 @@ public class AgentChatService {
     });
   }
 
+  /** Acknowledges a precise stop request; callers must read status to learn its actual outcome. */
+  public void cancelTurn(String turnId) {
+    long userId = requireUserId();
+    long projectId = requireProjectId();
+    AgentTurnRecord turn = turnRepository.findByTurnId(turnId)
+        .orElseThrow(() -> new IllegalArgumentException("轮次不存在或不属于当前用户及项目"));
+    if (turn.userId() != userId || turn.projectId() != projectId) {
+      throw new IllegalArgumentException("轮次不存在或不属于当前用户及项目");
+    }
+    ownerValidator.assertOwner(turn.sessionId(), userId, projectId);
+    if (turn.status().terminal()) return;
+    if (turn.status() == io.yak.ops.business.agent.domain.TurnStatus.WAITING_INPUT) {
+      throw new TurnConflictException("该轮正在等待补充信息，请刷新后回答原问题或新建会话");
+    }
+    turnRegistry.cancelTurn(turnId, () -> turnRepository.cancelQueued(turnId));
+  }
+
   /** 重命名会话：仅元数据标题，消息真相不受影响。 */
   public void renameSession(String sessionId, String title) {
     long userId = requireUserId();

@@ -92,6 +92,8 @@ export interface TurnSubmitPayload {
 }
 
 export const agentChatApi = {
+  cancelTurn: (turnId: string) =>
+    HttpUtils.postData<boolean>(`${PREFIX}/chat/turns/${encodeURIComponent(turnId)}/cancel`, {}, INCLUDE_CREDENTIALS),
   /**
    * 提交一轮推理：仅入队立即返回 turnId，推理由后端异步执行。
    * 携带 toolResults 视为 HITL 反问恢复（同一轮续跑）。
