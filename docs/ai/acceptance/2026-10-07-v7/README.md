@@ -2,6 +2,8 @@
 
 日期：2026-10-07
 
+工程提交及最终 CI：[PR #324](https://github.com/gitfortian/data-ops/pull/324)。真实模型验收状态独立记录，不随 CI 通过自动变更。
+
 范围：[F-015](../../../product/features/F-015-agent-session-follow.md)、[V7 计划](../../AGENT_V7_PLAN.md)、[交付说明](../../IMPLEMENTATION_V7.md)
 
 ## 工程结果

@@ -2,6 +2,8 @@
 
 日期：2026-10-07
 
+工程交付与 CI：[PR #324](https://github.com/gitfortian/data-ops/pull/324)。以 PR 最终提交的检查结果为准。
+
 实施权威：[F-015](../product/features/F-015-agent-session-follow.md)，范围见 [第七版计划](./AGENT_V7_PLAN.md)。工程交付与真实验收分开，Feature 保持 IMPLEMENTING。
 
 ## 用户现在能做什么
