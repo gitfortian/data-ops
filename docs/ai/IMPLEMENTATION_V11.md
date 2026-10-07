@@ -1,6 +1,8 @@
 # Agent 第十一版交付说明
 
 日期：2026-10-07
+
+工程提交与最终 CI：[PR #328](https://github.com/gitfortian/data-ops/pull/328)，须在 V10 #327 后合并。
 实施权威：[F-019](../product/features/F-019-agent-live-turn-reconciliation.md)，范围见 [V11 计划](./AGENT_V11_PLAN.md)，验证见 [记录](./acceptance/2026-10-07-v11/README.md)。
 
 原实时对话的停止现在只取消提交回执确认的轮次 ID，与恢复页共用原 cancelTurn。回执未确认时不取消未知轮，等待原提交结果；重复停止受同步保护。停止先让原订阅失效并断开，然后读取实际状态；完成或待答竞态以实际读取为准。停止应答丢失只提示核对，不宣称已停止。
