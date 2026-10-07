@@ -1,0 +1,24 @@
+import type { StandardMatchTarget } from './governance';
+export interface StandardMatchSuggestion {
+  kind: 'STANDARD_MATCH'; target: StandardMatchTarget; expectedDefinition: string;
+  skillVersion: number; skillHash: string; truncated: boolean;
+  candidates: { standardId: number; version: number; code: string; name: string; stdType: string; reason: string }[];
+  questions: string[];
+}
+export function parseStandardMatch(text: string): StandardMatchSuggestion | null {
+  const matches = [...text.matchAll(/```yak-standard-match\s*\n([\s\S]*?)\n```/g)];
+  if (matches.length !== 1) return null;
+  try {
+    const value = JSON.parse(matches[0][1]) as StandardMatchSuggestion;
+    if (value.kind !== 'STANDARD_MATCH' || !value.target || !/^[a-f0-9]{64}$/.test(value.expectedDefinition)
+      || !/^[a-f0-9]{64}$/.test(value.skillHash) || !Number.isSafeInteger(value.skillVersion) || value.skillVersion < 1
+      || !Array.isArray(value.candidates) || value.candidates.length > 3
+      || !Array.isArray(value.questions) || value.questions.length > 3
+      || value.questions.some(q => typeof q !== 'string' || !q.trim() || q.length > 512)
+      || value.candidates.some(c => !c || !Number.isSafeInteger(c.standardId) || c.standardId < 1
+        || !Number.isSafeInteger(c.version) || c.version < 1
+        || [c.code, c.name, c.stdType, c.reason].some(v => typeof v !== 'string') || !c.reason.trim() || c.reason.length > 512)
+      || new Set(value.candidates.map(c => c.standardId)).size !== value.candidates.length) return null;
+    return value;
+  } catch { return null; }
+}

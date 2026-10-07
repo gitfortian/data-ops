@@ -51,6 +51,9 @@ public class AgentProperties {
     private String apiKey = "";
     /** 思维链开关：high/medium/low；留空不启用。经网关的 DeepSeek-V4 需设置才会返回推理内容。 */
     private String reasoningEffort = "";
+    /** Explicit provider capability declarations; compatible gateways must be verified before enabling. */
+    private boolean nativeStructuredOutput = false;
+    private boolean nativeStructuredOutputWithTools = false;
   }
 
   @Getter

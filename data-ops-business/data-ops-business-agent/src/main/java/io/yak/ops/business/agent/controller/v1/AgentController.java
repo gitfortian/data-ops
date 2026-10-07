@@ -93,6 +93,14 @@ public class AgentController {
     return Result.success(new TurnSubmittedVO(turnId));
   }
 
+  @Operation(summary = "带入前重新核验标准匹配候选（不写业务）")
+  @PostMapping("/standard-match/validate")
+  @RequiresPermission(AgentPermissionCode.CHAT_RUN)
+  public Result<io.yak.ops.business.agent.domain.StandardMatchSuggestion> validateStandardMatch(
+      @RequestBody io.yak.ops.business.agent.domain.StandardMatchSuggestion request) {
+    return Result.success(agentChatService.validateStandardMatch(request));
+  }
+
   /** 订阅轮次事件流（SSE）。重连时携带 Last-Event-ID 头或 cursor 查询参数即可增量续播。 */
   @Operation(summary = "订阅轮次事件流（SSE，支持 Last-Event-ID 断线续播）")
   @GetMapping(value = "/chat/turns/{turnId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

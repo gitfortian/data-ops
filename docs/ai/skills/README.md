@@ -9,3 +9,5 @@
 - candidate-review/SKILL.md：规则/描述候选校验与原编辑器交接。
 
 正式开放前按真实评测逐份决定是否启用；不因全量默认启用这些材料而扩大本批产品范围。
+
+V15 首个受控场景材料见 [standard-match](./standard-match/README.md)。它按当前场景合同绑定 Skill，仍需管理员明确登记，部署不自动启用。

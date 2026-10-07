@@ -117,6 +117,10 @@ class AgentDependencyBoundaryTest {
           Map.entry("io.yak.ops.business.dataset.", List.of("gateway")),
           Map.entry("io.yak.ops.business.asset.api.", List.of("gateway")),
           Map.entry("io.yak.ops.business.quality.api.", List.of("gateway")),
+          Map.entry("io.yak.ops.business.semantic.api.", List.of("gateway")),
+          Map.entry("io.yak.ops.business.modeling.api.", List.of("gateway")),
+          Map.entry("io.yak.ops.business.semantic.", List.of()),
+          Map.entry("io.yak.ops.business.modeling.", List.of()),
           Map.entry("io.yak.ops.business.asset.", List.of()),
           Map.entry("io.yak.ops.business.quality.", List.of()));
 

@@ -263,3 +263,10 @@ RuntimeSkillMiddleware 记录实际 SDK 提示片段哈希；只读技能加载�
 现有 Skill 管理入口 conversation.AgentSkillManageService 及 repository.AgentSkillRepositoryAdapter 是官方 Skill SPI 走廊，与架构守护现行白名单一致；不新增稳定入口。
 
 终态与草稿由原 continuation 组合 turn 输入与必要的原 Runtime.history，只读降级不改源事实。原 SubmitTurn 可选核对 expectedLatestTurnId，在原互斥区完成；无新走廊或持久化。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023 单字段 TYPE 标准匹配：用户从 Modeling 原字段草稿发起现有持久化轮次。源域授权、有界候选、Skill 同轮快照与活版本核验、SDK 结构化 call；候选经源域复核后才发布/带入。待确认项是完成轮次的问题清单，补充后重新生成，不引入新的 HITL 状态。草稿不是事实，AI 不保存业务。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

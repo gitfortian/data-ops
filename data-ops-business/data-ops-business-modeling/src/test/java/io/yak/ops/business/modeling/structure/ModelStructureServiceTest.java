@@ -84,6 +84,36 @@ class ModelStructureServiceTest {
   }
 
   @Test
+  void conditionalSaveRejectsStaleDefinitionBeforeAuditOrWrites() {
+    stubSave(true);
+    when(structureRepository.findStructureAttributesForUpdate(42L)).thenReturn(Optional.of(
+        new ModelStructureRepository.StoredStructureAttributes("dim_user", "用户", "[]", null, "[]", null, "{}")));
+    when(structureRepository.findColumnsForUpdate(42L)).thenReturn(List.of());
+    when(structureRepository.findIndexesForUpdate(42L)).thenReturn(List.of());
+    var context = service.editContext(42L);
+    assertThat(context.definition()).hasSize(64);
+    var request = new SaveStructureRequest("dim_user", null, List.of(), null, null, null, null);
+    assertThatThrownBy(() -> service.save(42L, request, "bob", "stale"))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("已改变");
+    verify(auditService, never()).start(any());
+    verify(structureRepository, never()).replaceColumns(any(), any());
+    service.save(42L, request, "bob", context.definition());
+    verify(structureRepository).replaceColumns(eq(42L), any());
+  }
+
+  @Test
+  void editorFingerprintDoesNotChangePublishedSnapshotJsonShape() throws Exception {
+    var view = new StructureView(42L, "user", "用户", "MYSQL", "DRAFT", null,
+        "user", null, List.of(), List.of(), List.of(), null, Map.of("b", "2", "a", "1"));
+    var json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(view);
+    assertThat(json).doesNotContain("definition");
+    assertThat(new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, StructureView.class)).isEqualTo(view);
+    var reordered = new StructureView(42L, "user", "用户", "MYSQL", "DRAFT", null,
+        "user", null, List.of(), List.of(), List.of(), null, Map.of("a", "1", "b", "2"));
+    assertThat(StructureFingerprint.of(view)).isEqualTo(StructureFingerprint.of(reordered));
+  }
+
+  @Test
   void saveFallsBackToModelCodeAndReplacesColumns() {
     stubSave(true);
 

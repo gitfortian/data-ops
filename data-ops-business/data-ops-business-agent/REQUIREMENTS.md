@@ -150,3 +150,10 @@ Requirement Gap
 
 ## 报告安全留存
 按 F-022 在原报告页提供静态净化 HTML 与原 Markdown 导出，图表保留配置且说明静态边界；读取/导出重新经原本人权限详情核对。列表/详情只展示最新请求，失败可重试，关闭/卸载/读权限失去隔离晚返回，重复导出同步阻止；原删除权限与确认保持。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023 单字段 TYPE 标准匹配：用户从 Modeling 原字段草稿发起现有持久化轮次。源域授权、有界候选、Skill 同轮快照与活版本核验、SDK 结构化 call；候选经源域复核后才发布/带入。待确认项是完成轮次的问题清单，补充后重新生成，不引入新的 HITL 状态。草稿不是事实，AI 不保存业务。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

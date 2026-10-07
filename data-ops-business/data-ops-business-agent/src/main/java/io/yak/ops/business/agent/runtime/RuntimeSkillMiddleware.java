@@ -15,8 +15,13 @@ final class RuntimeSkillMiddleware extends DynamicSkillMiddleware {
     super(List.of(repository), toolkit);
     this.repository = repository;
   }
+  RuntimeSkillMiddleware(AgentSkillRepository repository, Toolkit toolkit, java.nio.file.Path workDir) {
+    super(List.of(repository), toolkit, null, false, workDir);
+    this.repository = repository;
+  }
 
   @Override public Mono<String> onSystemPrompt(Agent agent, RuntimeContext context, String currentPrompt) {
+    if (repository instanceof ScenarioSkillScope scope) scope.requireCurrent();
     context.put(AgentSkillRepository.class, repository);
     return super.onSystemPrompt(agent, context, currentPrompt).map(prompt -> {
       TaskToolPolicyMiddleware.guardTools(agent.getToolkit());

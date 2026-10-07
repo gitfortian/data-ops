@@ -1,3 +1,5 @@
+import StandardMatchPanel from '@/components/ai/StandardMatchPanel';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { Button, Divider, Drawer, Form, Input, message, Select, Space, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -9,6 +11,10 @@ import {
 import type { ModelingStandardCandidate, ModelingStandardRecommendation } from '@/services/modeling/types';
 
 interface StandardAssistantDrawerProps {
+  aiDisabled?: boolean;
+  scopeKey?: string;
+  definition?: string;
+  businessDescription?: string;
   open: boolean;
   modelId: string;
   columnName: string;
@@ -42,6 +48,10 @@ interface CandidateGroup {
 /** 标准助手抽屉(ticket 39):命名校验 + 分类候选,一键套用;仅提示不阻断。 */
 const StandardAssistantDrawer = ({
   open,
+  scopeKey,
+  aiDisabled = false,
+  definition = '',
+  businessDescription = '',
   modelId,
   columnName,
   dataType,
@@ -49,6 +59,7 @@ const StandardAssistantDrawer = ({
   onClose,
   onApply,
 }: StandardAssistantDrawerProps) => {
+  const { canAll } = usePermissionAccess();
   const [report, setReport] = useState<ModelingStandardRecommendation | null>(null);
   const [captureForm] = Form.useForm<{
     kind: string;
@@ -182,6 +193,14 @@ const StandardAssistantDrawer = ({
             套用即写入当前字段的数据标准引用，随表结构保存生效；推荐仅提示，不阻断编辑。
           </Typography.Paragraph>
 
+          {open && <StandardMatchPanel
+            key={JSON.stringify([scopeKey, modelId, columnName, dataType, businessDescription, applied, definition])}
+            target={{ modelId: Number(modelId), columnName, dataType, businessDescription, keyword: '' }}
+            definition={definition}
+            disabled={aiDisabled || !canAll(['agent:chat:run', 'agent:session:read', 'modeling:update']) || businessDescription.length > 512}
+            onApply={id => onApply({ stdTypeId: id })}
+          />}
+          <Divider />
           {/* 一、推荐标准(自动推荐):五组恒显,空组显示"不适用" */}
           <Typography.Text strong className="!block !mb-2 !text-[13px]">
             一、推荐标准（自动推荐）

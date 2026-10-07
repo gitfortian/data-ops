@@ -25,6 +25,21 @@ import org.springframework.util.StringUtils;
  */
 @Repository
 public class StandardRepositoryAdapter implements SemanticStandardRepository {
+  @Override
+  public List<Standard> searchTypeCandidates(String keyword) {
+    var query = new LambdaQueryWrapper<SemanticStandardPO>()
+        .eq(SemanticStandardPO::getProjectId, requiredProjectId())
+        .eq(SemanticStandardPO::getKind, StandardKind.TYPE.name())
+        .eq(SemanticStandardPO::getStatus, StandardStatus.ENABLED.name());
+    if (StringUtils.hasText(keyword)) {
+      query.and(q -> q.like(SemanticStandardPO::getStdCode, keyword)
+          .or().like(SemanticStandardPO::getStdName, keyword)
+          .or().like(SemanticStandardPO::getDescription, keyword));
+    }
+    return mapper.selectList(query.orderByAsc(SemanticStandardPO::getSortOrder)
+        .orderByAsc(SemanticStandardPO::getId).last("LIMIT 21")).stream()
+        .map(StandardRepositoryAdapter::toDomain).toList();
+  }
 
   private final SemanticStandardMapper mapper;
   private final CurrentProject currentProject;

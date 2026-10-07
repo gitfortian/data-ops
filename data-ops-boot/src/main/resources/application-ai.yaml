@@ -24,6 +24,9 @@ yak:
       api-key: ${YAK_AGENT_MODEL_API_KEY:}
       # high / medium / low；留空不发送 reasoning_effort，按实际模型能力设置。
       reasoning-effort: ${YAK_AGENT_MODEL_REASONING_EFFORT:}
+      # 按实际网关能力声明；默认使用 SDK 合成结果工具。场景含 Skill 加载工具，启用原生需同时支持工具。
+      native-structured-output: ${YAK_AGENT_MODEL_NATIVE_STRUCTURED_OUTPUT:false}
+      native-structured-output-with-tools: ${YAK_AGENT_MODEL_NATIVE_STRUCTURED_OUTPUT_WITH_TOOLS:false}
 
     # 官方 StateStore：database 留空使用连接默认数据库。
     state-store:

@@ -39,6 +39,13 @@ public class AgentChatService {
   private final AgentRuntime agentRuntime;
   private final CurrentProject currentProject;
 
+  public io.yak.ops.business.agent.domain.StandardMatchSuggestion validateStandardMatch(
+      io.yak.ops.business.agent.domain.StandardMatchSuggestion value) {
+    requireUserId();
+    requireProjectId();
+    return agentRuntime.revalidateStandardMatch(value);
+  }
+
   /** 提交新一轮：验证 + 落库 QUEUED + 立即返回。消息树节点在执行线程创建。 */
   public String submitTurn(String sessionId, String message) {
     return submitTurn(sessionId, message, null);

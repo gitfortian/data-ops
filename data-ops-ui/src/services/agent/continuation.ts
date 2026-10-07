@@ -17,9 +17,21 @@ function readTarget(value: unknown): GovernanceTarget | null {
   if (value == null) return null;
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('任务上下文无效');
   const target = value as Record<string, unknown>;
-  const { assetId, qualityMonitorId, qualityExecutionNo, purpose } = target;
-  if ([assetId, qualityMonitorId, qualityExecutionNo].filter((item) => item != null).length !== 1) {
+  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch } = target;
+  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch].filter((item) => item != null).length !== 1) {
     throw new Error('任务上下文不唯一');
+  }
+  if (purpose === 'STANDARD_MATCH' && standardMatch && typeof standardMatch === 'object') {
+    const field = standardMatch as Record<string, unknown>;
+    if (Number.isSafeInteger(field.modelId) && Number(field.modelId) > 0
+      && typeof field.columnName === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_$]{0,127}$/.test(field.columnName)
+      && typeof field.dataType === 'string' && field.dataType.trim() && field.dataType.length <= 64
+      && typeof field.businessDescription === 'string' && field.businessDescription.length <= 512
+      && typeof field.keyword === 'string' && field.keyword.length <= 64) {
+      return { purpose, standardMatch: { modelId: Number(field.modelId), columnName: field.columnName,
+        dataType: field.dataType, businessDescription: field.businessDescription, keyword: field.keyword } };
+    }
+    throw new Error('字段草稿上下文无效');
   }
   if (assetId != null && Number.isSafeInteger(assetId) && Number(assetId) > 0
     && (purpose == null || purpose === 'ASSET_DESCRIPTION')) {

@@ -312,6 +312,7 @@ export interface ModelingPartitionRecord {
 }
 
 export interface ModelingStructureRecord {
+  definition?: string;
   modelId?: number;
   modelCode?: string;
   modelName?: string;

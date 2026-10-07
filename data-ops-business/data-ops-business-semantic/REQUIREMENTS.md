@@ -144,3 +144,10 @@
   - `listFields(String keyword)` → 标准字段库(35)清单(关键字可空 = 全量,按过程内顺序/创建顺序稳定排序),供 38 导入与 44 派生的字段匹配与展示名解析。
 - 用途边界:modeling 只做匹配与展示,不回写 semantic;匹配命中结果以松散 ID(`std_field_id`)记在 modeling 侧,语义模块不感知调用方。
 - 角色语义不变:`MAIN`/`DETAIL`/`DIM` 由 36 维护,44 仅消费;角色缺失/多主表由调用方阻断并提示回 36 配置。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每次检查 semantic 读取权限与当前项目；只查启用 TYPE，SQL 最多 21 行、交付 20 行及截断标识。按 ID/版本复核时拒绝跨项目、停用、错类别、陈旧版本；故障不能折算成无候选。不接收 Agent 写命令。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

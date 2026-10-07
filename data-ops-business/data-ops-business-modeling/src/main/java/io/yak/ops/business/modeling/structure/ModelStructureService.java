@@ -98,11 +98,37 @@ public class ModelStructureService {
         StructureJson.readProperties(attributes.tablePropertiesJson()));
   }
 
+  public record EditContext(StructureView structure, String definition) {}
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public EditContext editContext(Long modelId) {
+    var structure = getForUpdate(modelId);
+    return new EditContext(structure, StructureFingerprint.of(structure));
+  }
+
+  /** The receipt is read under the same write transaction, never from a later foreign edit. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public EditContext saveEditContext(Long modelId, SaveStructureRequest request, String operator, String expectedDefinition) {
+    if (expectedDefinition == null || !expectedDefinition.matches("[a-f0-9]{64}")) {
+      throw new IllegalArgumentException("缺少有效的编辑基线，请重新加载模型");
+    }
+    save(modelId, request, operator, expectedDefinition);
+    return editContext(modelId);
+  }
+
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public StructureView save(Long modelId, SaveStructureRequest request, String operator) {
+    return save(modelId, request, operator, null);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public StructureView save(Long modelId, SaveStructureRequest request, String operator, String expectedDefinition) {
     Model model = modelRepository.findByIdForUpdate(modelId)
         .orElseThrow(() -> new ModelingException(
             ModelingErrorCode.NOT_FOUND, "模型不存在或已删除:" + modelId));
+    if (expectedDefinition != null && !expectedDefinition.equals(StructureFingerprint.of(getForUpdate(modelId)))) {
+      throw new IllegalArgumentException("模型结构已改变，请重新加载并核对草稿后保存");
+    }
     AuditOperationHandle audit =
         auditService.start(
             new AuditOperationRequest(

@@ -40,3 +40,10 @@
 
 - 消费方(modeling)只存本模块行的**松散 ID**;展示名经 SPI 批量解析(§ARCHITECTURE SPI 面)。
 - 消费方**不解析**语义内容、不 join 本模块表。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每次检查 semantic 读取权限与当前项目；只查启用 TYPE，SQL 最多 21 行、交付 20 行及截断标识。按 ID/版本复核时拒绝跨项目、停用、错类别、陈旧版本；故障不能折算成无候选。不接收 Agent 写命令。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

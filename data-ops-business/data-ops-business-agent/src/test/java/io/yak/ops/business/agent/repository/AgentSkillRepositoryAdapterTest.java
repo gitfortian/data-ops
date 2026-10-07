@@ -63,10 +63,9 @@ class AgentSkillRepositoryAdapterTest {
     assertEquals("描述-asset-yoy", skill.getDescription());
     assertEquals("正文-asset-yoy", skill.getSkillContent());
     assertEquals("asset-yoy", skill.getMetadataValue("displayName"), "metadata 携带展示名（name==skillId 契约）");
-    // 契约（框架实测）：启停状态与乐观版本是 DB 持久真相，不进入运行时技能 metadata
-    // （否则改 DB 启停触发 reloadSkills 签名变化、SkillBox 重建，热停用丢失）
+    // 启停只由 DB 启用目录表达；只读版本投影供场景核验，不用于运行时自我修改。
     assertEquals(null, skill.getMetadataValue("enabled"), "启停态不得进入运行时技能 metadata");
-    assertEquals(null, skill.getMetadataValue("version"), "乐观版本不得进入运行时技能 metadata");
+    assertEquals(1, skill.getMetadataValue("version"), "运行时仅携带来源版本供场景快照校验");
     assertTrue(skill.getSkillId().contains("asset-yoy"), "框架派生键含技能标识（name+source）");
   }
 

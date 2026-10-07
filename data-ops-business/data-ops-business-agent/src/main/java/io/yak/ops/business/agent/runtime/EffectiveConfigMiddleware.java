@@ -30,9 +30,11 @@ final class EffectiveConfigMiddleware implements MiddlewareBase {
             + java.util.Arrays.deepToString(method.getParameterAnnotations()))
         .sorted().collect(java.util.stream.Collectors.joining("\n"));
     this.settings = Map.ofEntries(
-        Map.entry("framework", "AgentScope Java 2.0.3"), Map.entry("contractVersion", "F-011-v1"),
+        Map.entry("framework", "AgentScope Java 2.0.3"), Map.entry("contractVersion", "F-023-v1"),
         Map.entry("provider", properties.getModel().getProvider()), Map.entry("model", properties.getModel().getName()),
         Map.entry("reasoningEffort", properties.getModel().getReasoningEffort()),
+        Map.entry("nativeStructuredOutput", properties.getModel().isNativeStructuredOutput()),
+        Map.entry("nativeStructuredOutputWithTools", properties.getModel().isNativeStructuredOutputWithTools()),
         Map.entry("maxIters", properties.getChat().getMaxIters()),
         Map.entry("turnTimeoutSeconds", properties.getChat().getTurnTimeoutSeconds()),
         Map.entry("maxLlmRetries", properties.getChat().getLlmMaxRetries()),
@@ -58,6 +60,11 @@ final class EffectiveConfigMiddleware implements MiddlewareBase {
         snapshot.put("maxModelInputChars", maxModelInputChars);
         snapshot.put("modelConfigSource", "STARTUP");
         snapshot.put("dynamicLlmTimeoutSource", "LLM_CALL_TRACE");
+        var skillScope = context.get(ScenarioSkillScope.class);
+        if (skillScope != null) {
+          snapshot.put("scenarioSkillVersion", skillScope.version());
+          snapshot.put("scenarioSkillHash", skillScope.hash());
+        }
         String skillHash = context.get("yak.skillPromptHash");
         String loadedHash = context.get("yak.loadedSkillHash");
         snapshot.put("skillPromptHash", skillHash == null ? RuntimeContractHash.hash("") : skillHash);

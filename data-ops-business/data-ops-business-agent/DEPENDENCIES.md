@@ -238,3 +238,10 @@ collector 调用方新增精确登记 runtime/GovernanceContextMiddleware 与 ru
 本次沿用既有依赖图，不新增 top-level 包或走廊。SDK 的预算 State record、TaskScopedTool、模型过滤和 Skill 加载适配仅在 runtime；domain 的策略/额度不依赖 SDK；toolset 只经现有 RuntimeContext 读取 domain 并保持零采集依赖。
 
 既有官方 Skill 类型豁免为 runtime/conversation/repository（管理 Facade 与官方 SPI 适配器），与 AgentDependencyBoundaryTest 一致。runtime -> memory/repository 为已接线记忆/动态配置走廊，conversation -> memory 为轮次完成提取走廊；不扩展到源域 DAO。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023 单字段 TYPE 标准匹配：用户从 Modeling 原字段草稿发起现有持久化轮次。源域授权、有界候选、Skill 同轮快照与活版本核验、SDK 结构化 call；候选经源域复核后才发布/带入。待确认项是完成轮次的问题清单，补充后重新生成，不引入新的 HITL 状态。草稿不是事实，AI 不保存业务。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
