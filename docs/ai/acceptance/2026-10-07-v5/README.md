@@ -14,7 +14,7 @@
 | Product baseline | 通过，15 份 Feature specs |
 | Java / 前端依赖边界 | 通过，77 reactor entries / 3152 production Java files；前端 1 条既有走廊 |
 | Node architecture / release tests | 14 通过，包括现有 AI 题集与制品门禁 |
-| PR CI | 待提交后核验；真实 RA 场景仍全部 PENDING |
+| PR CI | [PR #322 检查记录](https://github.com/gitfortian/data-ops/pull/322/checks)：最终 head 的 Product Guard、Architecture Checks（后端/前端/制品）全部通过后合并；真实 RA 场景仍全部 PENDING |
 
 日志 `.task-ai-v5-*.log` 为本机忽略文件，不作为已提交的真实环境证据。仅前端代码改变；后端源 API/Policy/CAS 的回归由 PR 全仓 CI 再确认，不把 UI 替身当作数据库集成结果。
 
