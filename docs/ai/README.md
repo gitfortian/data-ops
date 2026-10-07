@@ -117,3 +117,5 @@ V12～V14 已按用户授权完成工程实现：原编辑器候选轮次核对 
 
 
 [V17 指标口径解释与业务说明](IMPLEMENTATION_V17.md)：第三个 scoped Skill 场景；合同 F-025，真实 E2E PENDING。
+
+推荐顺序的交付与阻塞状态集中见 [场景 Skill 执行记录](SKILL_SCENARIO_IMPLEMENTATION.md#pr-与继续交付顺序2026-10-08)：#332 已合并，#333/#334/#335 待 CI 账户限制解除后依次合并。
