@@ -21,7 +21,13 @@ public final class AgentRequests {
       @NotBlank(message = "sessionId 不能为空") String sessionId,
       String message,
       List<ToolResultInput> toolResults,
-      @jakarta.validation.Valid io.yak.ops.business.agent.domain.GovernanceTarget governanceTarget) {
+      @jakarta.validation.Valid io.yak.ops.business.agent.domain.GovernanceTarget governanceTarget,
+      @Size(max = 64) String expectedLatestTurnId) {
+
+    public ChatTurnSubmitRequest(String sessionId, String message, List<ToolResultInput> toolResults,
+        io.yak.ops.business.agent.domain.GovernanceTarget governanceTarget) {
+      this(sessionId, message, toolResults, governanceTarget, null);
+    }
 
     public ChatTurnSubmitRequest(String sessionId, String message, List<ToolResultInput> toolResults) {
       this(sessionId, message, toolResults, null);

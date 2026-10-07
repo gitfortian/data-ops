@@ -46,6 +46,11 @@ public class AgentChatService {
 
   public String submitTurn(String sessionId, String message,
       io.yak.ops.business.agent.domain.GovernanceTarget target) {
+    return submitTurn(sessionId, message, target, null);
+  }
+
+  public String submitTurn(String sessionId, String message,
+      io.yak.ops.business.agent.domain.GovernanceTarget target, String expectedLatestTurnId) {
     long userId = requireUserId();
     long projectId = requireProjectId();
     ownerValidator.ensureOwner(sessionId, userId, projectId, message);
@@ -53,6 +58,25 @@ public class AgentChatService {
     Object stripe = SUBMIT_STRIPES.computeIfAbsent(sessionId, key -> new Object());
     String turnId;
     synchronized (stripe) {
+      if (expectedLatestTurnId != null) {
+        AgentTurnRecord latest = turnRepository.latestBySession(sessionId)
+            .orElseThrow(() -> new TurnConflictException("原轮次已变化，请刷新会话后核对"));
+        if (!expectedLatestTurnId.equals(latest.turnId()) || !latest.status().terminal()
+            || latest.userId() != userId || latest.projectId() != projectId
+            || !sessionId.equals(latest.sessionId())) {
+          throw new TurnConflictException("原轮次已变化，请刷新会话后核对");
+        }
+        TurnInput original;
+        try {
+          original = io.yak.ops.business.agent.repository.support.TurnInputCodec.decode(latest.payloadJson());
+        } catch (RuntimeException unreadable) {
+          throw new TurnConflictException("原任务无法核对，请刷新会话");
+        }
+        if (original == null || original.assistantMessageId() == null || original.assistantMessageId().isBlank()
+            || !java.util.Objects.equals(target, original.governanceTarget())) {
+          throw new TurnConflictException("原任务范围已变化，请刷新会话后核对");
+        }
+      }
       if (turnRepository.hasActiveTurn(sessionId)) {
         throw new IllegalStateException("该会话已有排队或推理中的轮次，请等待完成或点击停止生成");
       }

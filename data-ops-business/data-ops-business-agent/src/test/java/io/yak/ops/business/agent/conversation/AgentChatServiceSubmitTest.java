@@ -153,6 +153,42 @@ class AgentChatServiceSubmitTest {
   }
 
   @Test
+  void draftSourceRequiresSameLatestTerminalTargetBeforeCreatingANewTurn() {
+    var target = new io.yak.ops.business.agent.domain.GovernanceTarget(7L, null);
+    when(sessionRepository.findBySessionId("s1")).thenReturn(Optional.of(new SessionMeta("s1", 42L, 1L, null, null, null)));
+    var original = io.yak.ops.business.agent.repository.support.TurnInputCodec.encode(
+        io.yak.ops.business.agent.domain.TurnInput.ofStart("u", "a", "原问题").withTarget(target));
+    var latest = new io.yak.ops.business.agent.domain.AgentTurnRecord("t1", "s1", 42L, 1L, TurnKind.START,
+        original, io.yak.ops.business.agent.domain.TurnStatus.CANCELLED, null, null, null, null, null);
+    when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(latest));
+    org.junit.jupiter.api.Assertions.assertThrows(TurnConflictException.class, () -> chatService.submitTurn("s1", "改写", target, "stale"));
+    org.junit.jupiter.api.Assertions.assertThrows(TurnConflictException.class, () -> chatService.submitTurn("s1", "改写", null, "t1"));
+    verify(turnRepository, never()).insertQueued(anyString(), anyString(), anyLong(), anyLong(), any(), any());
+    verify(dispatcher, never()).kick();
+    String newId = chatService.submitTurn("s1", "改写", target, "t1");
+    org.junit.jupiter.api.Assertions.assertNotEquals("t1", newId);
+    verify(turnRepository).insertQueued(eq(newId), eq("s1"), eq(42L), eq(1L), eq(TurnKind.START), anyString());
+    verify(dispatcher).kick();
+    verify(turnRepository, never()).requeueForResume(anyString(), anyString());
+  }
+
+  @Test
+  void draftSourceRejectsActiveCorruptAndForeignLatestWithoutNewInference() {
+    when(sessionRepository.findBySessionId("s1")).thenReturn(Optional.of(new SessionMeta("s1", 42L, 1L, null, null, null)));
+    for (var status : List.of(io.yak.ops.business.agent.domain.TurnStatus.RUNNING,
+        io.yak.ops.business.agent.domain.TurnStatus.WAITING_INPUT, io.yak.ops.business.agent.domain.TurnStatus.COMPLETED)) {
+      when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(new io.yak.ops.business.agent.domain.AgentTurnRecord(
+          "t1", "s1", 42L, 1L, TurnKind.START, "corrupt", status, null, null, null, null, null)));
+      org.junit.jupiter.api.Assertions.assertThrows(TurnConflictException.class, () -> chatService.submitTurn("s1", "新问题", null, "t1"));
+    }
+    when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(new io.yak.ops.business.agent.domain.AgentTurnRecord(
+        "t1", "s1", 7L, 2L, TurnKind.START, "{}", io.yak.ops.business.agent.domain.TurnStatus.COMPLETED, null, null, null, null, null)));
+    org.junit.jupiter.api.Assertions.assertThrows(TurnConflictException.class, () -> chatService.submitTurn("s1", "新问题", null, "t1"));
+    verify(turnRepository, never()).insertQueued(anyString(), anyString(), anyLong(), anyLong(), any(), any());
+    verify(dispatcher, never()).kick();
+  }
+
+  @Test
   void submitRejectedWhileSessionHasActiveTurn() {
     when(turnRepository.hasActiveTurn("busy")).thenReturn(true);
 

@@ -261,3 +261,5 @@ TaskToolPolicyMiddleware 对模型工具视图过滤、输入字符检查和 SDK
 RuntimeSkillMiddleware 记录实际 SDK 提示片段哈希；只读技能加载每次读取当前启用仓储，仅返回 SKILL.md，不开放文件资源或触发 SDK 工具组激活。EffectiveConfigMiddleware 沿现有采集入口记录实际调用的工具集合/Skill 哈希/冻结预算，采集故障不改变守卫。
 
 现有 Skill 管理入口 conversation.AgentSkillManageService 及 repository.AgentSkillRepositoryAdapter 是官方 Skill SPI 走廊，与架构守护现行白名单一致；不新增稳定入口。
+
+终态与草稿由原 continuation 组合 turn 输入与必要的原 Runtime.history，只读降级不改源事实。原 SubmitTurn 可选核对 expectedLatestTurnId，在原互斥区完成；无新走廊或持久化。
