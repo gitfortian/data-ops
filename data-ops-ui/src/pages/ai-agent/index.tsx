@@ -875,16 +875,23 @@ const AiAgentPage: React.FC = () => {
           <Alert
             type="info"
             showIcon
-            message={governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} 治理解读` : `质量执行 ${governanceTarget.qualityExecutionNo} 解读`}
+            message={governanceTarget.qualityMonitorId !== undefined ? `质量监控 #${governanceTarget.qualityMonitorId} 规则建议`
+              : governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} 治理解读`
+                : `质量执行 ${governanceTarget.qualityExecutionNo} 解读与排查`}
             description={
               <Space wrap>
-                <span>按当前权限读取证据，解读完成后可回到来源核验。</span>
+                <span>{governanceTarget.qualityExecutionNo !== undefined
+                  ? '围绕本次历史执行核对事实、缺口和人工检查步骤；具体根因需验证，调整规则请回源页面另行发起。'
+                  : '按当前权限读取证据，解读完成后可回到来源核验。'}</span>
                 {governanceQuestions(governanceTarget).map((question, index) => (
                   <Button key={question} size="small" disabled={streaming || !!clarify} onClick={() => setInput(question)}>
-                    {index === 0 ? '解释结果' : '排查建议'}
+                    {governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
+                      : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选' : (index === 0 ? '解释结果' : '排查建议')}
                   </Button>
                 ))}
-                <Button size="small" href={governanceSourcePath(governanceTarget)}>返回来源</Button>
+                <Button size="small" href={governanceSourcePath(governanceTarget)}>
+                  {governanceTarget.qualityExecutionNo !== undefined ? '返回本次执行核对' : '返回来源'}
+                </Button>
               </Space>
             }
             style={{ marginBottom: 12 }}

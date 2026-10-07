@@ -48,6 +48,9 @@ final class GovernanceAnswerGuard {
         text = execution.evidence().validateAnswer(original.getTextContent()
             .replaceAll("(?s)```yak-(?:suggestion|evidence|facts).*?```", "[未验证材料已移除]"));
       }
+      if (QualityTroubleshootingPrompt.appliesTo(execution.target())) {
+        text += "\n\n" + QualityTroubleshootingPrompt.NEXT_STEP;
+      }
       if (!execution.verifiedFacts().isEmpty()) text += "\n\n```yak-facts\n" + encode(execution.verifiedFacts()) + "\n```";
       text += "\n\n```yak-evidence\n" + encode(execution.evidence().entries()) + "\n```";
       var validated = original.withContent(List.of(TextBlock.builder().text(text).build()));

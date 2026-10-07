@@ -5,10 +5,13 @@ import { resolve, dirname } from 'node:path';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const suiteFile = resolve(root, 'docs/ai/evaluation/cases/task-scope.json');
+export const qualitySuiteFile = resolve(root, 'docs/ai/evaluation/cases/quality-troubleshooting.json');
+const suites = { 'task-scope': suiteFile, 'quality-troubleshooting': qualitySuiteFile };
+const manualQualityCases = new Set(['qp11', 'qp12', 'qp15', 'qp16']);
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 
 export function validateSuite(suite) {
-  if (suite.version !== 'F-011-v1' || !Array.isArray(suite.cases) || !suite.cases.length) throw new Error('Invalid suite');
+  if (!['F-011-v1', 'F-012-v1'].includes(suite.version) || !Array.isArray(suite.cases) || !suite.cases.length) throw new Error('Invalid suite');
   const ids = new Set();
   for (const item of suite.cases) {
     if (!/^[a-z0-9-]+$/.test(item.caseId) || ids.has(item.caseId) || !item.question || !item.scenario
@@ -21,8 +24,19 @@ export function validateSuite(suite) {
           || (target.purpose && !(target.assetId != null && target.purpose === 'ASSET_DESCRIPTION')
             && !(target.qualityMonitorId != null && target.purpose === 'QUALITY_RULES'))) throw new Error('Invalid target');
     }
+    if (suite.version === 'F-012-v1') {
+      if (!/^qp(?:0[1-9]|1[0-6])$/.test(item.caseId) || item.scenario !== item.caseId.toUpperCase()
+          || typeof target?.qualityExecutionNo !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(target.qualityExecutionNo)
+          || Object.keys(target).length !== 1
+          || item.executionMode !== (manualQualityCases.has(item.caseId) ? 'manual' : 'single-turn')
+          || !Array.isArray(item.fixture.sourceConditions) || !item.fixture.sourceConditions.length
+          || item.fixture.sourceConditions.some(value => typeof value !== 'string' || !value.trim())
+          || (item.executionMode === 'manual' && (!Array.isArray(item.manualSteps) || !item.manualSteps.length
+            || item.manualSteps.some(value => typeof value !== 'string' || !value.trim())))) throw new Error('Invalid troubleshooting case');
+    }
     ids.add(item.caseId);
   }
+  if (suite.version === 'F-012-v1' && ids.size !== 16) throw new Error('Troubleshooting suite requires QP01..QP16');
   return suite;
 }
 
@@ -40,6 +54,10 @@ async function resultJson(response) {
 
 // Fixed API routes only. No source-domain save/execute commands or automatic HITL answers.
 export async function runRealCase(item, binding, config, request = fetch) {
+  // A single chat request cannot prove revocation, UI navigation, HITL continuation or cancellation.
+  if (item.executionMode === 'manual') return { caseId: item.caseId, status: 'MANUAL_REQUIRED',
+    expertReview: 'PENDING', sourceAuditStatus: 'PENDING_EXTERNAL_REVIEW',
+    note: 'No request made. Complete the documented multi-step scenario in the authorized application.' };
   if (!binding || binding.account !== item.account || !binding.projectId) throw new Error('Missing account/project mapping');
   if (item.target != null) {
     const key = ['assetId', 'qualityExecutionNo', 'qualityMonitorId'].find(k => item.target[k] != null);
@@ -111,14 +129,16 @@ export async function main(args = process.argv.slice(2), env = process.env) {
   const option = key => args.find(arg => arg.startsWith(`${key}=`))?.slice(key.length + 1);
   const mode = option('--mode') ?? 'offline';
   if (!['offline', 'real'].includes(mode)) throw new Error('Use --mode=offline or --mode=real');
-  const suiteText = await readFile(suiteFile, 'utf8');
+  const suiteName = option('--suite') ?? 'task-scope';
+  if (!Object.hasOwn(suites, suiteName)) throw new Error('Unknown suite');
+  const suiteText = await readFile(suites[suiteName], 'utf8');
   const suite = validateSuite(JSON.parse(suiteText));
   const selected = option('--cases')?.split(',');
   if (selected?.some(id => !suite.cases.some(item => item.caseId === id))) throw new Error('Unknown case selection');
   const cases = suite.cases.filter(item => !selected || selected.includes(item.caseId));
   const repeats = Number(option('--repeats') ?? 1);
   if (!Number.isInteger(repeats) || repeats < 1 || repeats > 3) throw new Error('Repeats must be 1..3');
-  const report = { mode, suiteVersion: suite.version, suiteHash: hash(suiteText), commit: env.AI_EVAL_COMMIT ?? 'UNKNOWN',
+  const report = { mode, suite: suiteName, suiteVersion: suite.version, suiteHash: hash(suiteText), commit: env.AI_EVAL_COMMIT ?? 'UNKNOWN',
     model: mode === 'real' ? env.AI_EVAL_MODEL ?? 'UNKNOWN' : 'NOT_RUN', createdAt: new Date().toISOString(), results: [] };
   let config, mappings;
   if (mode === 'real') {
@@ -141,7 +161,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
         result = { caseId: item.caseId, status: 'ERROR', errorCode: code, expertReview: 'PENDING' };
       }
     }
-    report.results.push({ ...result, repeat });
+    report.results.push({ ...result, scenario: item.scenario, executionMode: item.executionMode ?? 'single-turn', repeat });
   }
   const output = resolve(option('--out') ?? resolve(root, '.task-ai-evaluation/report.json'));
   await mkdir(dirname(output), { recursive: true });

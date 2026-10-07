@@ -1,24 +1,24 @@
 # DataOps AI 规划与选型
 
-日期：2026-10-05  
+日期：2026-10-07
 文档类别：规划提案与调研证据（DOCS）  
-状态：首版与第二版代码已完成；第二版 [PR #319](https://github.com/gitfortian/data-ops/pull/319) 已合并。产品范围见 AI [F-009](../product/features/F-009-ai-governance-assistance.md) / [F-010](../product/features/F-010-ai-governance-suggestions.md)（IMPLEMENTING），真实模型验收待完成。F-011 任务执行约束正在实施，交付与证据见 [第三版交付说明](./IMPLEMENTATION_V3.md)。
+状态：首版至第三版工程代码已完成；第二版 [PR #319](https://github.com/gitfortian/data-ops/pull/319)、第三版 [PR #320](https://github.com/gitfortian/data-ops/pull/320) 已合并。第四版用户于 2026-10-07 授权实施，交付与检查见 [第四版说明](./IMPLEMENTATION_V4.md)。AI [F-009](../product/features/F-009-ai-governance-assistance.md) / [F-010](../product/features/F-010-ai-governance-suggestions.md) / [F-011](../product/features/F-011-agent-task-execution-controls.md) / [F-012](../product/features/F-012-agent-quality-troubleshooting.md) 均保持 IMPLEMENTING，真实模型验收待完成。
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
 ## 建议先做什么
 
-**继续使用现有 AgentScope Java，下一阶段优先完善任务工具边界、评测回归与配置/Skill 可追溯。** 资产解读、质量解释和规则/描述候选已有代码，真实任务效果与发布范围需通过后续验收确认。
+**继续使用现有 AgentScope Java，第四版聚焦历史质量执行的排查步骤与原页面核对。** 任务边界、预算和追溯复用第三版；用户已授权第四版工程建设，任务表达、原页面衔接与独立 16 例题集已接入，真实效果和开放范围通过独立试点确认。
 
 产品形态建议是“现有页面中的智能辅助 + 现有 Agent 中的跨域问答”。用户在资产、质量执行、指标详情和开发工作台完成任务；AI 随上下文进入，不增加一级 AI 治理门户，也不按业务模块各造一套聊天系统。
 
-已交付只读的资产理解与质量结果解读，以及规则、描述候选和原编辑器人工采纳；Agent → Dataset 的真实授权查询路径仍需登录态验收。下一阶段先完善任务工具边界、评测与配置/Skill 可追溯；标准映射、敏感分类和自动业务动作另行规划，不作为已交付能力。
+已交付只读的资产理解与质量结果解读，以及规则、描述候选和原编辑器人工采纳的工程代码；Agent → Dataset 的真实授权查询路径仍需登录态验收。下一轮先利用现有历史证据深化一个质量任务，跨执行对比、标准映射、敏感分类和自动业务动作另行规划，不作为已交付能力。
 
 这意味着两个方向同时推进：AI 帮助治理；治理为 AI 提供可信数据。每个方向都以可验收的用户结果衡量。
 
 ## 阅读顺序
 
-当前 F-010 代码交付与待验收范围见 [第二版交付说明](./IMPLEMENTATION_V2.md)，实施契约见 [F-010](../product/features/F-010-ai-governance-suggestions.md)。真实模型验收按用户要求独立记录待完成。
+当前用户功能先读 [第四版交付说明](./IMPLEMENTATION_V4.md) 与 [第四版验证记录](./acceptance/2026-10-07-v4/README.md)，执行底座看 [第三版说明](./IMPLEMENTATION_V3.md)。第四版 [规划](./AGENT_V4_PLAN.md) / [清单](./AGENT_V4_BACKLOG.md) 保留 DOCS / PROPOSED 快照，当前实施权威是 F-012；真实模型验收按用户要求独立记录待完成。
 
 | 文档 | 回答的问题 |
 |---|---|
@@ -30,17 +30,23 @@
 | [首版验证记录](./acceptance/2026-10-05/README.md) | 自动化测试证据与发布前场景清单 |
 | [第二版交付说明](./IMPLEMENTATION_V2.md) | F-010 已合并能力与使用/限制 |
 | [第二版验证记录](./acceptance/2026-10-05-v2/README.md) | 自动化与 CI 数据库检查、真实模型待验收范围 |
-| [Agent 下一阶段建设规划](./AGENT_NEXT_STAGE_PLAN.md) | 第二版之后的优先级、用户结果、复用、暂缓条件与框架复评门槛 |
-| [Agent 下一阶段实施清单](./AGENT_NEXT_STAGE_BACKLOG.md) | 任务工具矩阵、独立 PR 切片、评测结构、T1～T10 验收与投入估算 |
+| [Agent 第四版功能规划](./AGENT_V4_PLAN.md) | 第三版后的用户任务、现有证据限制、迭代顺序、后续功能队列 |
+| [Agent 第四版实施清单](./AGENT_V4_BACKLOG.md) | V4-0～V4-4 切片、16 个排查场景、验证与试点收口 |
+| [第四版交付说明](./IMPLEMENTATION_V4.md) | 历史质量排查表达、人工检查与回源、独立题集及边界 |
+| [第四版验证记录](./acceptance/2026-10-07-v4/README.md) | 工程检查与 QP01～QP16 真实待验收 |
+| [Agent 第三版历史建设规划](./AGENT_NEXT_STAGE_PLAN.md) | 第二版之后的提案快照；A0～A5 已由 F-011 实施，保留 A6 与框架复评依据 |
+| [Agent 第三版历史实施清单](./AGENT_NEXT_STAGE_BACKLOG.md) | 原工具矩阵与 T 验收编号；当前工程结果以第三版交付为准 |
 | [第三版交付说明](./IMPLEMENTATION_V3.md) | 任务范围、执行预算、实际配置/Skill 与评测入口 |
 | [评测运行说明](./evaluation/README.md) | 离线题集校验、真实环境执行与人工评分 |
 | [第二版历史产品规划](./NEXT_PHASE_PLAN.md) | F-010 形成前的提案证据，保留当时范围 |
 | [第二版历史技术方案](./NEXT_PHASE_TECHNICAL_PLAN.md) | F-010 的设计输入，不覆盖当前源域契约 |
 | [第二版历史交付清单](./NEXT_PHASE_BACKLOG.md) | 保留既有 G1～G12 真实验收编号；开发状态以交付说明为准 |
 
-## 第二版之后的建设建议（2026-10-05）
+## 第三版之后的建设建议（2026-10-05）
 
-继续使用 AgentScope Java 2.0.2。先完成任务工具范围与有界执行，再建立离线 CI / 真实模型两层评测、实际配置与治理 Skill 的版本证据；试点后选择质量问题排查指引作为单一深化任务。建议第一批为契约/回归基线 A0 与工具策略 A1，详见 [建设规划](./AGENT_NEXT_STAGE_PLAN.md) 和 [实施清单](./AGENT_NEXT_STAGE_BACKLOG.md)。两份文档保留为 DOCS / PROPOSED 历史提案；用户随后授权 A0～A5 工程建设，当前实施以 [F-011](../product/features/F-011-agent-task-execution-controls.md) 为准。A6 仍等待真实试点后立项。
+继续使用 AgentScope Java 2.0.2。第四版当前工程范围已由用户授权形成 F-012，复用现有历史证据改进排查表达、澄清提示与受控回链。真实试点后再决定是否增加错误类别或跨执行对比；规划快照见 [第四版规划](./AGENT_V4_PLAN.md) 和 [实施清单](./AGENT_V4_BACKLOG.md)。当前不承诺自动根因定位。
+
+原 AGENT_NEXT_STAGE 两份保留为 DOCS / PROPOSED 历史提案；A0～A5 已由 [F-011](../product/features/F-011-agent-task-execution-controls.md) 与 PR #320 交付。A6 的当前证据排查工程建设由本次授权形成 F-012，真实试点继续待完成，源读取扩展仍需独立立项。
 
 当前真实模型与登录态 E2E 继续单独记录待完成，环境等待期间可以推进获批的代码与 CI。第二版前的 NEXT_PHASE 三份规划保留为历史 Evidence，不能直接当作新的建设指令，也不能据代码合并关闭真实验收。
 
