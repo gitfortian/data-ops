@@ -1,5 +1,6 @@
 package io.yak.ops.business.agent.runtime;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;
@@ -16,7 +17,8 @@ final class GovernanceAnswerGuard {
   private GovernanceAnswerGuard() {}
 
   private static String encode(Object value) {
-    try { return new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(value); }
+    try { return new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).writeValueAsString(value); }
     catch (com.fasterxml.jackson.core.JsonProcessingException invalid) {
       throw new IllegalStateException("候选编码失败，未发布");
     }

@@ -83,7 +83,7 @@ class GovernanceAnswerGuardTest {
         .orElseThrow().getContext()).getLast().content());
   }
 
-  @Test void validatedFinalIsIdenticalInEventStateStoreAndHistory() {
+  @Test void validatedFinalIsIdenticalInEventStateStoreAndHistory() throws Exception {
     var execution = new AgentExecutionContext(new GovernanceTarget(7L, null));
     var evidence = execution.evidence().register("ASSET", "asset=7", "OK", null, "/data-asset/detail/7");
     var model = mock(Model.class);
@@ -100,6 +100,10 @@ class GovernanceAnswerGuardTest {
     String answer = events.stream().filter(AgentResultEvent.class::isInstance)
         .map(e -> ((AgentResultEvent) e).getResult().getTextContent()).findFirst().orElseThrow();
     assertTrue(answer.contains("/data-asset/detail/7"));
+    String evidenceJson = answer.split("```yak-evidence\n", 2)[1].split("\n```", 2)[0];
+    var observedAt = new com.fasterxml.jackson.databind.ObjectMapper().readTree(evidenceJson).get(0).get("observedAt");
+    assertTrue(observedAt.isTextual(), "Evidence time must match the browser's ISO string contract");
+    assertEquals(evidence.observedAt(), java.time.Instant.parse(observedAt.asText()));
     var persisted = store.get("7", "s-1", "agent_state", AgentState.class).orElseThrow();
     var history = AgentRuntime.projectHistory(persisted.getContext());
     assertEquals(answer, history.getLast().content());
