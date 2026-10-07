@@ -79,7 +79,7 @@ public class AgentController {
   @PostMapping("/chat/turns")
   @RequiresPermission(AgentPermissionCode.CHAT_RUN)
   public Result<TurnSubmittedVO> submitTurn(@Valid @RequestBody ChatTurnSubmitRequest request) {
-    if (request.isResume() && request.governanceTarget() != null) {
+    if (request.isResume() && (request.governanceTarget() != null || request.expectedLatestTurnId() != null)) {
       throw new IllegalArgumentException("恢复轮次不得替换治理对象");
     }
     String turnId =
@@ -89,7 +89,7 @@ public class AgentController {
                 request.toolResults().stream()
                     .map(input -> new ToolFeedback(input.toolCallId(), input.toolName(), input.output()))
                     .toList())
-            : agentChatService.submitTurn(request.sessionId(), requireMessage(request), request.governanceTarget());
+            : agentChatService.submitTurn(request.sessionId(), requireMessage(request), request.governanceTarget(), request.expectedLatestTurnId());
     return Result.success(new TurnSubmittedVO(turnId));
   }
 
@@ -154,7 +154,8 @@ public class AgentController {
     var view = sessionQueryService.continuation(sessionId);
     return Result.success(new SessionContinuationVO(
         view.sessionId(), view.turnId(), view.status() == null ? null : view.status().name(),
-        view.governanceTarget(), view.clarification(), view.blockingReason()));
+        view.governanceTarget(), view.clarification(), view.blockingReason(), view.errorCode(),
+        view.questionDraft(), view.draftUnavailableReason()));
   }
 
   @Operation(summary = "查看轮次 trace 详情 v2（树/时间轴/聚合/完整性/渲染投影，服务端权威计时）")

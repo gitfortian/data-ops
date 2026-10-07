@@ -49,6 +49,71 @@ beforeEach(() => {
 });
 afterEach(() => { window.history.replaceState({}, '', '/'); jest.useRealTimers(); delete (document as any).hidden; });
 
+it('fills an exact original only on request, preserves edits and submits a new turn with its source', async () => {
+  mockCanRun = true;
+  api.continuation.mockResolvedValue(context('s1', { status: 'CANCELLED', questionDraft: '原问题', governanceTarget: { assetId: 7 } }));
+  await act(async () => { render(<AiAgentPage />); });
+  const fill = await screen.findByRole('button', { name: '填入本轮问题' });
+  expect(screen.getByLabelText('会话输入')).toHaveValue('');
+  fireEvent.click(fill);
+  await waitFor(() => expect(screen.getByLabelText('会话输入')).toHaveValue('原问题'));
+  expect(chat.submit).not.toHaveBeenCalled(); expect(stream).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('会话输入'), { target: { value: '核对后的新问题' } });
+  expect(fill).toBeDisabled();
+  fireEvent.click(screen.getByText('发送测试问题'));
+  await waitFor(() => expect(chat.submit).toHaveBeenCalledWith({ sessionId: 's1', message: '核对后的新问题', governanceTarget: { assetId: 7 }, expectedLatestTurnId: 't1' }));
+  await waitFor(() => expect(screen.getByLabelText('会话输入')).not.toBeDisabled());
+  send();
+  await waitFor(() => expect(chat.submit).toHaveBeenLastCalledWith({ sessionId: 's1', message: '继续核对证据', governanceTarget: { assetId: 7 } }));
+});
+
+it('does not fill when another tab has advanced the latest turn', async () => {
+  mockCanRun = true;
+  api.continuation.mockResolvedValueOnce(context('s1', { questionDraft: '原问题' }))
+    .mockResolvedValueOnce(context('s1', { turnId: 't2', questionDraft: '别的问题' }));
+  render(<AiAgentPage />);
+  fireEvent.click(await screen.findByRole('button', { name: '填入本轮问题' }));
+  expect(await screen.findByText('任务已变化，请刷新会话后核对。')).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toHaveValue('');
+  expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it('ignores a draft response after switching session and never overwrites typing while loading', async () => {
+  mockCanRun = true;
+  api.continuation.mockResolvedValueOnce(context('s1', { questionDraft: '旧问题' }));
+  render(<AiAgentPage />);
+  const fill = await screen.findByRole('button', { name: '填入本轮问题' });
+  const pending = deferred<any>(); api.continuation.mockReturnValueOnce(pending.promise);
+  fireEvent.click(fill);
+  fireEvent.change(screen.getByLabelText('会话输入'), { target: { value: '正在编辑' } });
+  await act(async () => pending.resolve(context('s1', { questionDraft: '旧问题' })));
+  expect(screen.getByLabelText('会话输入')).toHaveValue('正在编辑');
+  fireEvent.change(screen.getByLabelText('会话输入'), { target: { value: '' } });
+  const late = deferred<any>(); api.continuation.mockReturnValueOnce(late.promise);
+  fireEvent.click(screen.getByRole('button', { name: '填入本轮问题' }));
+  api.continuation.mockResolvedValueOnce(context('s2'));
+  fireEvent.click(screen.getByText('会话二'));
+  await waitFor(() => expect(window.location.search).toBe('?sessionId=s2'));
+  await act(async () => late.resolve(context('s1', { questionDraft: '迟到问题' })));
+  expect(screen.getByLabelText('会话输入')).toHaveValue('');
+});
+
+it('locks double submission and preserves an unacknowledged question through refresh', async () => {
+  render(<AiAgentPage />);
+  await screen.findByText('历史回答');
+  const submitted = deferred<any>(); chat.submit.mockReturnValueOnce(submitted.promise);
+  fireEvent.change(screen.getByLabelText('会话输入'), { target: { value: '我的问题' } });
+  act(() => { fireEvent.click(screen.getByText('发送测试问题')); fireEvent.click(screen.getByText('发送测试问题')); });
+  expect(chat.submit).toHaveBeenCalledTimes(1);
+  await act(async () => submitted.resolve(Promise.reject(new Error('secret connection'))));
+  expect(await screen.findByText('提交未确认，请刷新会话核对状态后继续。')).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toHaveValue('我的问题');
+  fireEvent.click(screen.getByText('刷新会话'));
+  await waitFor(() => expect(screen.getByLabelText('会话输入')).not.toBeDisabled());
+  expect(screen.getByLabelText('会话输入')).toHaveValue('我的问题');
+  expect(chat.submit).toHaveBeenCalledTimes(1);
+});
+
 it('reloads history and persisted scope, ignores extra URL targets and sends a fresh scoped question', async () => {
   render(<AiAgentPage />);
   expect(await screen.findByText('质量执行 Q_1 解读与排查')).toBeInTheDocument();
@@ -101,7 +166,8 @@ it('restores an exact pending call and answers through the original resume paylo
   expect(screen.getByLabelText('会话输入')).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: /昨\s*天/ }));
   await waitFor(() => expect(chat.submit).toHaveBeenCalledWith({ sessionId: 's1', toolResults: [{ toolCallId: 'clarify-2', toolName: 'request_clarification', output: '昨天' }] }));
-  await waitFor(() => expect(screen.queryByText('AI 需要补充信息')).not.toBeInTheDocument());
+  // A completed transport cannot prove pending was consumed; the latest server projection still wins.
+  await waitFor(() => expect(screen.getByText('AI 需要补充信息')).toBeInTheDocument());
 });
 
 it('restores description purpose as a description task and keeps it on follow-up', async () => {

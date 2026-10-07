@@ -52,7 +52,7 @@ import { governanceQuestions, governanceSourcePath, parseGovernanceTarget } from
 import type { TurnSubmitPayload } from '@/services/agent';
 import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
 import { visibleGovernanceText } from '@/services/agent/suggestions';
-import { readContinuation, sessionLocation, type SessionContinuation } from '@/services/agent/continuation';
+import { isTerminal, readContinuation, sessionLocation, type SessionContinuation } from '@/services/agent/continuation';
 import { useSessionFollow } from './useSessionFollow';
 
 const { Sider, Content } = Layout;
@@ -128,7 +128,11 @@ const AiAgentPage: React.FC = () => {
   const lastFrameAtRef = React.useRef(0);
   const watchdogRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const seenErrorKeysRef = React.useRef<Set<string>>(new Set());
-  const lastUserMessageRef = React.useRef('');
+  const sendingRef = React.useRef(false);
+  const draftSourceRef = React.useRef<string | undefined>(undefined);
+  const [draftLoading, setDraftLoading] = React.useState(false);
+  const inputValueRef = React.useRef(input);
+  inputValueRef.current = input;
 
   const connectionRef = React.useRef<ConnectionState>('idle');
   const transition = (event: ConnectionEvent) => {
@@ -446,13 +450,11 @@ const AiAgentPage: React.FC = () => {
   };
 
   const launchStream = async (payload: TurnSubmitPayload) => {
+    const generation = historyRequest.current;
     setContinuation(null);
     setStreaming(true);
     setClarify(null);
     seenErrorKeysRef.current = new Set();
-    if (payload.message) {
-      lastUserMessageRef.current = payload.message;
-    }
     transition('submit');
     turnStartRef.current = Date.now();
     firstEventRef.current = 0;
@@ -464,11 +466,14 @@ const AiAgentPage: React.FC = () => {
     let submitted;
     try {
       submitted = await agentChatApi.submit(payload);
+      draftSourceRef.current = undefined;
     } catch (error) {
       setStreaming(false); stopWatchdog(); transition('fail');
       abortRef.current = null;
+      sendingRef.current = false;
+      if (payload.message) setInput(payload.message);
       continuationBlocked.current = true;
-      setHistoryError(`提交未确认，请刷新会话核对状态后继续：${(error as Error).message}`);
+      setHistoryError('提交未确认，请刷新会话核对状态后继续。');
       return;
     }
     await streamTurnEvents(
@@ -494,6 +499,8 @@ const AiAgentPage: React.FC = () => {
           assistantIdRef.current = '';
           setStreaming(false);
           abortRef.current = null;
+          sendingRef.current = false;
+          void refreshLatest(payload.sessionId, generation);
           refreshSessions();
         },
         onError: (text) => {
@@ -516,6 +523,8 @@ const AiAgentPage: React.FC = () => {
           assistantIdRef.current = '';
           setStreaming(false);
           abortRef.current = null;
+          sendingRef.current = false;
+          void refreshLatest(payload.sessionId, generation);
         },
       },
     );
@@ -523,22 +532,30 @@ const AiAgentPage: React.FC = () => {
 
   const sendMessage = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || streaming || clarify || continuationBlocked.current) {
+    if (!content || streaming || sendingRef.current || clarify || continuationBlocked.current) {
       return;
     }
+    sendingRef.current = true;
+    historyRequest.current += 1;
+    setDraftLoading(false);
+    const expectedLatestTurnId = draftSourceRef.current;
     const sessionId = activeSessionId ?? newSessionId();
     setActiveSessionId(sessionId);
     window.history.replaceState(window.history.state, '', sessionLocation(sessionId));
     setContinuation(null);
     setInput('');
     setMessages((prev) => [...prev, { id: nextMessageId(), role: 'user', content, trace: [] }]);
-    await launchStream({ sessionId, message: content, governanceTarget: governanceTarget ?? undefined });
+    await launchStream({ sessionId, message: content, governanceTarget: governanceTarget ?? undefined,
+      ...(expectedLatestTurnId ? { expectedLatestTurnId } : {}) });
   };
 
   const answerClarify = async (answer: string) => {
-    if (!clarify || streaming || continuationBlocked.current) {
+    if (!clarify || streaming || sendingRef.current || continuationBlocked.current) {
       return;
     }
+    sendingRef.current = true;
+    historyRequest.current += 1;
+    setDraftLoading(false);
     const sessionId = activeSessionId!;
     setMessages((prev) => [...prev, { id: nextMessageId(), role: 'user', content: answer, trace: [] }]);
     await launchStream({
@@ -547,7 +564,7 @@ const AiAgentPage: React.FC = () => {
     });
   };
 
-  const selectSession = async (sessionId: string) => {
+  const selectSession = async (sessionId: string, preserveInput = false) => {
     if (streaming) {
       message.warning('当前正在推理，请等待结束或停止后再切换');
       return;
@@ -555,9 +572,11 @@ const AiAgentPage: React.FC = () => {
     const request = ++historyRequest.current;
     continuationBlocked.current = true;
     setHistoryLoading(true); setHistoryError(''); setContinuation(null); setStopping(false);
-    setMessages([]); assistantIdRef.current = ''; lastUserMessageRef.current = '';
+    setMessages([]); assistantIdRef.current = '';
+    if (!preserveInput) draftSourceRef.current = undefined;
+    setDraftLoading(false);
     setGovernanceTarget(null);
-    setInput('');
+    if (!preserveInput) setInput('');
     setActiveSessionId(sessionId);
     window.history.replaceState(window.history.state, '', sessionLocation(sessionId));
     setClarify(null);
@@ -613,6 +632,7 @@ const AiAgentPage: React.FC = () => {
       return;
     }
     historyRequest.current += 1;
+    draftSourceRef.current = undefined; setDraftLoading(false);
     continuationBlocked.current = false;
     setHistoryLoading(false); setHistoryError(''); setContinuation(null); setStopping(false);
     window.history.replaceState(window.history.state, '', sessionLocation(null));
@@ -621,6 +641,43 @@ const AiAgentPage: React.FC = () => {
     setActiveSessionId(null);
     setMessages([]);
     setClarify(null);
+  };
+
+  const refreshLatest = async (sessionId: string, generation: number) => {
+    continuationBlocked.current = true;
+    try {
+      const view = readContinuation(await agentSessionApi.continuation(sessionId), sessionId);
+      if (generation !== historyRequest.current) return;
+      setContinuation(view); setGovernanceTarget(view.governanceTarget ?? null);
+      continuationBlocked.current = Boolean(view.blockingReason);
+      if (view.clarification) setClarify({ ...view.clarification, options: [] });
+    } catch {
+      if (generation === historyRequest.current) setHistoryError('最新状态未确认，请刷新会话核对后继续。');
+    }
+  };
+
+  const fillQuestionDraft = async () => {
+    if (!can('agent:chat:run') || !activeSessionId || !isTerminal(continuation) || inputValueRef.current.trim()
+      || draftLoading || streaming || historyLoading || historyError || continuationBlocked.current) return;
+    const generation = historyRequest.current;
+    const shown = continuation!;
+    setDraftLoading(true);
+    try {
+      const view = readContinuation(await agentSessionApi.continuation(activeSessionId), activeSessionId);
+      if (generation !== historyRequest.current) return;
+      if (view.turnId !== shown.turnId || view.status !== shown.status
+        || JSON.stringify(view.governanceTarget) !== JSON.stringify(shown.governanceTarget)) {
+        setHistoryError('任务已变化，请刷新会话后核对。'); continuationBlocked.current = true; return;
+      }
+      setContinuation(view);
+      if (view.blockingReason || !view.questionDraft || inputValueRef.current.trim()) return;
+      draftSourceRef.current = view.turnId!;
+      setInput(view.questionDraft);
+    } catch {
+      if (generation === historyRequest.current) { setHistoryError('原问题未能核对，请刷新会话。'); continuationBlocked.current = true; }
+    } finally {
+      if (generation === historyRequest.current) setDraftLoading(false);
+    }
   };
 
   React.useEffect(() => {
@@ -836,16 +893,6 @@ const AiAgentPage: React.FC = () => {
                 return (
                   <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                     本回合 {stats.join(' · ')}
-                    {!streaming && lastUserMessageRef.current ? (
-                      <Button
-                        type="link"
-                        size="small"
-                        style={{ padding: 0, marginLeft: 8, fontSize: 11 }}
-                        onClick={() => void sendMessage(lastUserMessageRef.current)}
-                      >
-                        重新生成
-                      </Button>
-                    ) : null}
                   </Typography.Text>
                 );
               })()
@@ -884,15 +931,6 @@ const AiAgentPage: React.FC = () => {
           {item.error
             ? (() => {
                 const presentation = presentError(item.errorCode, item.error);
-                const runAction = () => {
-                  if (presentation.action.type === 'retry' && lastUserMessageRef.current) {
-                    void sendMessage(lastUserMessageRef.current);
-                  } else if (presentation.action.type === 'narrow') {
-                    inputRef.current?.focus();
-                  } else if (presentation.action.type === 'check-config') {
-                    message.info(presentation.hint);
-                  }
-                };
                 return (
                   <Alert
                     type={presentation.severity}
@@ -901,11 +939,6 @@ const AiAgentPage: React.FC = () => {
                     description={
                       <Space direction="vertical" size={4}>
                         <span>{presentation.hint}</span>
-                        {presentation.action.type !== 'none' && !streaming ? (
-                          <Button size="small" type="primary" ghost onClick={runAction}>
-                            {presentation.action.label}
-                          </Button>
-                        ) : null}
                       </Space>
                     }
                   />
@@ -1089,14 +1122,28 @@ const AiAgentPage: React.FC = () => {
                     {(historyError || continuation?.blockingReason) && <Alert type="warning" showIcon
                       message={historyError || continuation?.blockingReason}
                       action={<Space>
-                        <Button disabled={streaming || historyLoading || stopping} onClick={() => activeSessionId && void selectSession(activeSessionId)}>刷新会话</Button>
+                        <Button disabled={streaming || historyLoading || stopping} onClick={() => activeSessionId && void selectSession(activeSessionId, true)}>刷新会话</Button>
                         {following && <Button disabled={!can('agent:chat:run') || stopping || historyLoading} loading={stopping} onClick={() => void stopRestoredTurn()}>停止本轮</Button>}
                       </Space>} />}
                     {following && !historyError && <Typography.Text type="secondary">正在自动检查状态；页面隐藏时暂停，达到检查上限后可手动刷新。</Typography.Text>}
                     {continuation?.status && <p>最近轮次状态：{turnStatusLabels[continuation.status]}；历史证据仅供回看，继续提问会重新读取并检查权限。</p>}
+                    {isTerminal(continuation) && !historyError && !continuation?.blockingReason && <Alert showIcon
+                      type={continuation?.status === 'FAILED' ? 'warning' : 'info'}
+                      message={continuation?.status === 'FAILED' ? presentError(continuation.errorCode).title
+                        : continuation?.status === 'CANCELLED' ? '本轮后续生成已停止'
+                          : continuation?.status === 'INTERRUPTED' ? '本轮已中断' : '本轮推理已结束'}
+                      description={<Space direction="vertical">
+                        <span>{continuation?.status === 'FAILED' ? presentError(continuation.errorCode).hint
+                          : '已发生的调用与证据保留。推理结束不代表质量通过或问题已解决；重新提问会创建新轮。'}</span>
+                        <span>请核对当前任务范围，重新补充需要的澄清背景。</span>
+                        {continuation?.questionDraft ? <Button disabled={!can('agent:chat:run') || hasText || draftLoading || historyLoading || streaming}
+                          loading={draftLoading} onClick={() => void fillQuestionDraft()}>填入本轮问题</Button>
+                          : <span>{continuation?.draftUnavailableReason ?? '原问题不可用，请手工整理新问题。'}</span>}
+                        {hasText && <span>已有未发送内容，保留编辑；清空后可填写原问题。</span>}
+                      </Space>} />}
                     <Sender
                       value={input}
-                      onChange={(value) => setInput(value)}
+                      onChange={(value) => { if (!value.trim()) draftSourceRef.current = undefined; setInput(value); }}
                       onSubmit={(message) => sendMessage(message)}
                       onCancel={() => {
                         abortRef.current?.abort();

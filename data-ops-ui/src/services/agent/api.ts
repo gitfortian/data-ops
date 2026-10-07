@@ -85,6 +85,7 @@ export const agentConfigApi = {
 };
 
 export interface TurnSubmitPayload {
+  expectedLatestTurnId?: string;
   sessionId: string;
   message?: string;
   toolResults?: ToolFeedback[];

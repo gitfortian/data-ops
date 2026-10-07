@@ -213,7 +213,7 @@ class AgentSessionQueryServiceTest {
   }
 
   @Test
-  void continuationRestoresPersistedTargetWithoutReadingOrWritingRuntimeState() {
+  void continuationRestoresPersistedTargetAndReadsOriginalDraftWithoutWriting() {
     ownSession();
     GovernanceTarget target = new GovernanceTarget(null, "Q_20261007");
     when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(turn(TurnStatus.COMPLETED, target)));
@@ -222,7 +222,8 @@ class AgentSessionQueryServiceTest {
     assertEquals("t1", view.turnId());
     assertEquals(TurnStatus.COMPLETED, view.status());
     assertEquals(null, view.blockingReason());
-    verifyNoInteractions(agentRuntime, eventRepository);
+    verify(agentRuntime).history(42L, "s1");
+    verifyNoInteractions(eventRepository);
   }
 
   @Test
@@ -231,7 +232,8 @@ class AgentSessionQueryServiceTest {
     when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(turn(TurnStatus.COMPLETED, null)));
     assertEquals(null, queryService.continuation("s1").governanceTarget());
     verify(turnRepository).latestBySession("s1");
-    verifyNoInteractions(agentRuntime, eventRepository);
+    verify(agentRuntime).history(42L, "s1");
+    verifyNoInteractions(eventRepository);
   }
 
   @Test
@@ -314,7 +316,8 @@ class AgentSessionQueryServiceTest {
     var view = queryService.continuation("s1");
     assertEquals(status, view.status());
     assertEquals(null, view.clarification());
-    verifyNoInteractions(agentRuntime, eventRepository);
+    verify(agentRuntime).history(42L, "s1");
+    verifyNoInteractions(eventRepository);
   }
 
   @Test
@@ -347,5 +350,50 @@ class AgentSessionQueryServiceTest {
     assertThrows(IllegalArgumentException.class, () -> queryService.continuation("s1"));
     assertThrows(IllegalArgumentException.class, () -> queryService.turnTrace("t1"));
     verifyNoInteractions(agentRuntime, eventRepository);
+  }
+
+  @Test
+  void startDraftUsesPersistedQuestionAndRejectsConflictingOrDuplicateOriginals() {
+    ownSession();
+    when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(turn(TurnStatus.CANCELLED, null)));
+    when(agentRuntime.history(42L, "s1")).thenReturn(List.of());
+    assertEquals("问题", queryService.continuation("s1").questionDraft());
+    when(agentRuntime.history(42L, "s1")).thenReturn(List.of(new HistoryTurn("user", "别的问题", "t1")));
+    assertEquals(null, queryService.continuation("s1").questionDraft());
+    when(agentRuntime.history(42L, "s1")).thenReturn(List.of(
+        new HistoryTurn("user", "问题", "t1"), new HistoryTurn("user", "问题", "t1")));
+    assertEquals(null, queryService.continuation("s1").questionDraft());
+    verifyNoInteractions(eventRepository);
+  }
+
+  @Test
+  void resumeDraftRequiresUniqueOriginalReferenceAndNeverUsesFeedback() {
+    ownSession();
+    var input = TurnInput.ofResume("a1", List.of(new io.yak.ops.business.agent.domain.ToolFeedback("c1", "request_clarification", "反馈")));
+    when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(new AgentTurnRecord(
+        "t1", "s1", 42L, 1L, TurnKind.RESUME, TurnInputCodec.encode(input), TurnStatus.FAILED,
+        "private error code", "secret api-key", null, null, null)));
+    when(agentRuntime.history(42L, "s1")).thenReturn(List.of(new HistoryTurn("user", "原问题", "t1")));
+    var view = queryService.continuation("s1");
+    assertEquals("原问题", view.questionDraft());
+    assertEquals("GENERIC", view.errorCode());
+    assertFalse(view.toString().contains("secret"));
+    when(agentRuntime.history(42L, "s1")).thenReturn(List.of(new HistoryTurn("user", "无引用旧问题")));
+    assertEquals(null, queryService.continuation("s1").questionDraft());
+    when(agentRuntime.history(42L, "s1")).thenThrow(new IllegalStateException("secret"));
+    assertFalse(queryService.continuation("s1").draftUnavailableReason().contains("secret"));
+  }
+
+  @Test
+  void oversizedOriginalIsUnavailableRatherThanTruncated() {
+    ownSession();
+    when(turnRepository.latestBySession("s1")).thenReturn(Optional.of(new AgentTurnRecord(
+        "t1", "s1", 42L, 1L, TurnKind.START,
+        TurnInputCodec.encode(TurnInput.ofStart("u", "a", "x".repeat(8001))), TurnStatus.COMPLETED,
+        null, null, null, null, null)));
+    when(agentRuntime.history(42L, "s1")).thenReturn(List.of());
+    var view = queryService.continuation("s1");
+    assertEquals(null, view.questionDraft());
+    assertTrue(view.draftUnavailableReason() != null);
   }
 }

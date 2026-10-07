@@ -7,6 +7,9 @@ export interface SessionContinuation {
   governanceTarget?: GovernanceTarget | null;
   clarification?: { toolCallId: string; toolName: string; question: string } | null;
   blockingReason?: string | null;
+  errorCode?: string | null;
+  questionDraft?: string | null;
+  draftUnavailableReason?: string | null;
 }
 
 /** Normalize nullable server fields before exposing the discriminated UI target. */
@@ -58,7 +61,16 @@ export function readContinuation(view: SessionContinuation, sessionId: string): 
     clarification = pending;
   }
   if (view.status === 'QUEUED' || view.status === 'RUNNING') reason ||= '该会话仍在排队或推理中，请刷新后继续。';
-  return { ...view, governanceTarget: target, clarification, blockingReason: reason };
+  const terminal = isTerminal(view);
+  const questionDraft = terminal && !reason && typeof view.questionDraft === 'string'
+    && view.questionDraft.trim() && view.questionDraft.length <= 8000 ? view.questionDraft : null;
+  const errorCode = ['TIMEOUT', 'USER_ERROR', 'PROVIDER_ERROR', 'GUARD_REJECTED'].includes(view.errorCode ?? '') ? view.errorCode : 'GENERIC';
+  return { ...view, governanceTarget: target, clarification, blockingReason: reason, errorCode,
+    questionDraft, draftUnavailableReason: terminal && !questionDraft ? '原问题暂不可用，请手工整理或刷新核对。' : null };
+}
+
+export function isTerminal(view: SessionContinuation | null): boolean {
+  return !!view?.turnId && ['COMPLETED', 'FAILED', 'CANCELLED', 'INTERRUPTED'].includes(view.status ?? '');
 }
 
 export function sessionLocation(sessionId: string | null): string {

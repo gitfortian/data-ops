@@ -12,6 +12,7 @@ import io.yak.ops.business.agent.domain.SessionMeta;
 import io.yak.ops.business.agent.domain.SessionContinuation;
 import io.yak.ops.business.agent.domain.TurnInput;
 import io.yak.ops.business.agent.domain.TurnStatus;
+import io.yak.ops.business.agent.domain.TurnKind;
 import io.yak.ops.business.agent.domain.SessionObservability;
 import io.yak.ops.business.agent.domain.TurnTraceView;
 import io.yak.ops.business.agent.repository.AgentStepRepository;
@@ -138,7 +139,37 @@ public class AgentSessionQueryService {
         reason = "待答问题无法读取，已暂停继续。请刷新重试或新建会话。";
       }
     }
-    return new SessionContinuation(sessionId, turn.turnId(), turn.status(), input.governanceTarget(), clarification, reason);
+    String draft = null;
+    String unavailable = null;
+    if (turn.status().terminal()) {
+      try {
+        List<HistoryTurn> originals = agentRuntime.history(userId, sessionId).stream()
+            .filter(t -> "user".equals(t.role()) && turn.turnId().equals(t.turnId())).toList();
+        if (turn.kind() == TurnKind.START) {
+          draft = input.message();
+          if (originals.size() > 1 || (originals.size() == 1
+              && !java.util.Objects.equals(draft, originals.get(0).content()))) {
+            draft = null;
+          }
+        } else if (turn.kind() == TurnKind.RESUME && originals.size() == 1) {
+          draft = originals.get(0).content();
+        }
+        if (draft == null || draft.isBlank() || draft.length() > 8000) {
+          draft = null;
+          unavailable = "原问题缺失、冲突或超过草稿上限，请手工整理新问题。";
+        }
+      } catch (RuntimeException unreadable) {
+        unavailable = "原问题暂时无法读取，请刷新或手工整理新问题。";
+      }
+    }
+    String code = turn.status() == TurnStatus.FAILED ? safeErrorCode(turn.errorCode()) : null;
+    return new SessionContinuation(sessionId, turn.turnId(), turn.status(), input.governanceTarget(),
+        clarification, reason, code, draft, unavailable);
+  }
+
+  private static String safeErrorCode(String code) {
+    return code != null && List.of("TIMEOUT", "USER_ERROR", "PROVIDER_ERROR", "GUARD_REJECTED").contains(code)
+        ? code : "GENERIC";
   }
 
   private static boolean belongsTo(AgentTurnRecord turn, String sessionId, long userId, long projectId) {

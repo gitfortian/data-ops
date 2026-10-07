@@ -20,27 +20,28 @@ describe('错误四级分发（码→文案→动作→去重）', () => {
       severity: 'warning',
     });
     expect(presentError('USER_ERROR')).toMatchObject({
-      title: '模型配置异常',
-      action: { type: 'check-config' },
+      title: '请求未能继续',
+      action: { type: 'retry' },
     });
     expect(presentError('PROVIDER_ERROR')).toMatchObject({
-      title: '模型服务暂不可用',
+      title: '模型调用未完成',
       action: { type: 'retry' },
     });
     expect(presentError('GUARD_REJECTED')).toMatchObject({
-      title: '口径校验未通过',
-      action: { type: 'narrow' },
+      title: '执行条件校验未通过',
+      action: { type: 'retry' },
       severity: 'warning',
     });
     expect(presentError('GENERIC', '磁盘满')).toMatchObject({
-      title: '磁盘满',
+      title: '本轮执行失败',
       action: { type: 'retry' },
     });
   });
 
-  it('未知码回退原文且不裸抛异常', () => {
+  it('未知码使用固定说明而不回显异常', () => {
     const p = presentError(null, null);
-    expect(p.title).toBe('执行失败');
+    expect(p.title).toBe('本轮执行失败');
+    expect(JSON.stringify(presentError('private-code', 'secret api-key'))).not.toContain('secret');
     expect(p.action.type).toBe('retry');
   });
 

@@ -2,13 +2,13 @@
 
 日期：2026-10-07
 文档类别：规划提案与调研证据（DOCS）  
-状态：首版至第七版工程代码已完成，第七版 [PR #324](https://github.com/gitfortian/data-ops/pull/324) 已合并。用户于 2026-10-07 再次授权规划后实施第八版，当前内容见 [第八版说明](./IMPLEMENTATION_V8.md)。AI F-009～[F-016](../product/features/F-016-agent-history-evidence.md) 均保持 IMPLEMENTING，真实模型验收待完成；合并不表示真实验收通过。
+状态：首版至第八版工程代码已完成，第八版 [PR #325](https://github.com/gitfortian/data-ops/pull/325) 已合并，当前内容见 [第八版说明](./IMPLEMENTATION_V8.md)。用户已授权按 [V9～V11 路线](./AGENT_V9_V11_ROADMAP.md) 依次实施；第九版实施见 [F-017](../product/features/F-017-agent-terminal-question-draft.md) 与 [交付说明](./IMPLEMENTATION_V9.md)。AI F-009～[F-016](../product/features/F-016-agent-history-evidence.md) 均保持 IMPLEMENTING，真实模型验收待完成；合并不表示真实验收通过。
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
 ## 建议先做什么
 
-**继续使用现有 AgentScope Java，第八版聚焦历史回答与执行证据准确关联。** 新消息保存原轮次引用，历史只关联明确匹配的完成轮次；旧消息或冲突保留正文并明确缺少关联，不按顺序猜测。原恢复、活动跟随、精确停止与采纳闭环保留，真实效果和开放范围通过独立试点确认。
+**下一版建议补齐终态说明与重新提问准备，继续复用现有 AgentScope Java。** 停止/失败/中断后先核对实际状态，按确切原轮来源填写问题草稿，由用户编辑后明确发送新轮；不把终态旧轮当作可继续执行。见 [第九版规划](./AGENT_V9_PLAN.md)，按获批 F-017 实施。第八版已补齐可证明的历史证据关联，真实效果和开放范围仍通过独立试点确认。
 
 产品形态建议是“现有页面中的智能辅助 + 现有 Agent 中的跨域问答”。用户在资产、质量执行、指标详情和开发工作台完成任务；AI 随上下文进入，不增加一级 AI 治理门户，也不按业务模块各造一套聊天系统。
 
@@ -22,6 +22,9 @@
 
 | 文档 | 回答的问题 |
 |---|---|
+| [V9～V11 连续路线](./AGENT_V9_V11_ROADMAP.md) | 三版顺序、产品范围、依赖与后续候选 |
+| [第九版交付说明](./IMPLEMENTATION_V9.md) | 终态说明与可核对原问题草稿，真实验收独立待完成 |
+| [Agent 第九版规划](./AGENT_V9_PLAN.md) | 终态说明、原问题草稿、手工新轮、陈旧来源保护与 NR01～NR10；以 F-017 为实施权威 |
 | [Agent 第八版计划](./AGENT_V8_PLAN.md) | 历史原轮引用、精确匹配、旧消息/冲突降级及 HE01～HE08 |
 | [第八版交付说明](./IMPLEMENTATION_V8.md) | 历史证据关联与使用限制 |
 | [第八版验证记录](./acceptance/2026-10-07-v8/README.md) | 工程回归与真实 HE 验收待办 |

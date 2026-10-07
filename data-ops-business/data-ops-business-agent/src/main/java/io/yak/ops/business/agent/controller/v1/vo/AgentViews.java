@@ -32,7 +32,7 @@ public final class AgentViews {
       String sessionId, String turnId, String status,
       io.yak.ops.business.agent.domain.GovernanceTarget governanceTarget,
       io.yak.ops.business.agent.domain.SessionContinuation.Clarification clarification,
-      String blockingReason) {}
+      String blockingReason, String errorCode, String questionDraft, String draftUnavailableReason) {}
 
   /** 历史 trace 步骤（思考/工具调用）。 */
   public record TraceStepVO(String kind, String text, String toolCallId, String toolName, String resultText) {}

@@ -23,14 +23,14 @@ export interface ErrorPresentation {
 }
 
 const ACTIONS: Record<ErrorActionType, ErrorAction> = {
-  retry: { type: 'retry', label: '重试' },
+  retry: { type: 'retry', label: '填入本轮问题' },
   narrow: { type: 'narrow', label: '调整条件后重试' },
   'check-config': { type: 'check-config', label: '查看模型配置' },
   none: { type: 'none', label: '' },
 };
 
 /** 分类错误码 → 用户可操作的文案与动作（服务端权威码，禁止裸 e.message 上屏）。 */
-export const presentError = (errorCode?: string | null, fallbackMessage?: string | null): ErrorPresentation => {
+export const presentError = (errorCode?: string | null, _fallbackMessage?: string | null): ErrorPresentation => {
   switch (errorCode) {
     case 'TIMEOUT':
       return {
@@ -41,28 +41,27 @@ export const presentError = (errorCode?: string | null, fallbackMessage?: string
       };
     case 'USER_ERROR':
       return {
-        title: '模型配置异常',
-        hint: '请检查模型服务配置（密钥 / 额度 / 限流）后重试。',
-        action: ACTIONS['check-config'],
+        title: '请求未能继续',
+        hint: '请求被拒绝或模型调用遇到不可继续错误，具体原因未确认。请核对权限与服务配置，必要时联系管理员。',
+        action: ACTIONS.retry,
         severity: 'error',
       };
     case 'PROVIDER_ERROR':
       return {
-        title: '模型服务暂不可用',
-        hint: '服务端已自动重试仍失败，请稍后重试。',
+        title: '模型调用未完成',
+        hint: '请核对模型服务后稍后重新提问。',
         action: ACTIONS.retry,
         severity: 'error',
       };
     case 'GUARD_REJECTED':
       return {
-        title: '口径校验未通过',
-        hint: '本次取数的字段或指标不符合治理口径，请调整查询条件。',
-        action: ACTIONS.narrow,
+        title: '执行条件校验未通过',
+        hint: '请核对任务范围与输入，具体原因需要进一步确认。',
+        action: ACTIONS.retry,
         severity: 'warning',
       };
     default: {
-      const detail = fallbackMessage?.trim() ? fallbackMessage : '执行失败';
-      return { title: detail, hint: '请重试；若持续失败请联系管理员。', action: ACTIONS.retry, severity: 'error' };
+      return { title: '本轮执行失败', hint: '无法确定具体原因，请核对本轮记录或联系管理员。', action: ACTIONS.retry, severity: 'error' };
     }
   }
 };
