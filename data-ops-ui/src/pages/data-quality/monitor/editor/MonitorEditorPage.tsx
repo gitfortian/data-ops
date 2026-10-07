@@ -1,6 +1,4 @@
 import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
-import { validateQualitySuggestions } from '@/services/data-quality';
-import { ruleDefaults } from './model';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { BRAND_THEME } from '@/styles/brand';
 import { history, useLocation, useModel, useParams } from '@umijs/max';
@@ -44,7 +42,7 @@ const MonitorEditorPage = () => {
           <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-6 px-6 pb-6 pt-6 max-xl:max-w-[1040px] xl:grid-cols-[minmax(0,1fr)_176px]">
             <div className="min-w-0">
               <Spin spinning={editor.loading}>
-                <Form form={editor.form} requiredMark={false}>
+                <Form form={editor.form} requiredMark={false} disabled={editor.saving || editor.adopting}>
                   <Form.Item name="dataSourceId" hidden>
                     <Input />
                   </Form.Item>
@@ -80,7 +78,8 @@ const MonitorEditorPage = () => {
                     {params.id && editor.definition && can('agent:chat:run') && <GovernanceSuggestionPanel
                       key={`${params.id}:${editor.definition}`}
                       kind="QUALITY_RULES" targetId={Number(params.id)} definition={editor.definition}
-                      disabled={!can('quality:monitor:update') || editor.saving}
+                      disabled={!can('quality:monitor:update') || editor.loading || editor.saving || editor.adopting}
+                      qualityRules={editor.rules}
                       ruleLabel={(id) => {
                         const template = editor.templates.find((value) => value.id === id);
                         const percent = template?.ruleType === 'COLUMN_NOT_NULL' || template?.ruleType === 'COLUMN_UNIQUE';
@@ -90,13 +89,10 @@ const MonitorEditorPage = () => {
                         if (candidate.expectedDefinition !== editor.definition || candidate.targetId !== Number(params.id)) {
                           throw new Error('配置已改变，请重新加载');
                         }
-                        const valid = await validateQualitySuggestions(params.id!, editor.definition,
-                          [candidate.rules[index ?? 0]]);
-                        if (!isCurrent()) return;
-                        const template = editor.templates.find((value) => value.id === valid[0].templateId);
-                        if (!template) throw new Error('模板已改变，请重新加载');
-                        editor.setRules((current) => [...current, { ...ruleDefaults(template), ...valid[0], enabled: false }]);
+                        if (!can('quality:monitor:update')) throw new Error('没有修改监控的权限');
+                        await editor.adoptRule(candidate.rules[index ?? 0], candidate.expectedDefinition, isCurrent);
                       }} />}
+                    {editor.adopting && <p role="status">正在校验候选，完成后可人工保存配置；尚未保存。</p>}
                     {params.id && <p className="text-sm text-[#667085]">保存规则可能同步任务版本；启用规则会影响后续自动运行。请核对调度与启用状态。</p>}
                     <ScheduleSettings
                       value={editor.schedule}
@@ -116,7 +112,7 @@ const MonitorEditorPage = () => {
                   <Button
                     type="primary"
                     loading={editor.saving}
-                    disabled={!editor.dataSourceId || !editor.tableName}
+                    disabled={editor.loading || editor.adopting || !editor.dataSourceId || !editor.tableName}
                     className="!h-9 !min-w-[120px] !rounded-lg"
                     onClick={() => void editor.save()}
                   >

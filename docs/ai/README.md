@@ -2,23 +2,23 @@
 
 日期：2026-10-07
 文档类别：规划提案与调研证据（DOCS）  
-状态：首版至第三版工程代码已完成；第二版 [PR #319](https://github.com/gitfortian/data-ops/pull/319)、第三版 [PR #320](https://github.com/gitfortian/data-ops/pull/320) 已合并。第四版用户于 2026-10-07 授权实施，交付与检查见 [第四版说明](./IMPLEMENTATION_V4.md)。AI [F-009](../product/features/F-009-ai-governance-assistance.md) / [F-010](../product/features/F-010-ai-governance-suggestions.md) / [F-011](../product/features/F-011-agent-task-execution-controls.md) / [F-012](../product/features/F-012-agent-quality-troubleshooting.md) 均保持 IMPLEMENTING，真实模型验收待完成。
+状态：首版至第四版工程代码已完成，第四版 [PR #321](https://github.com/gitfortian/data-ops/pull/321) 已合并。用户于 2026-10-07 授权规划后实施第五版，当前内容见 [第五版说明](./IMPLEMENTATION_V5.md)。AI F-009～[F-013](../product/features/F-013-agent-rule-adoption-review.md) 均保持 IMPLEMENTING，真实模型验收待完成；合并不表示真实验收通过。
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
 ## 建议先做什么
 
-**继续使用现有 AgentScope Java，第四版聚焦历史质量执行的排查步骤与原页面核对。** 任务边界、预算和追溯复用第三版；用户已授权第四版工程建设，任务表达、原页面衔接与独立 16 例题集已接入，真实效果和开放范围通过独立试点确认。
+**继续使用现有 AgentScope Java，第五版聚焦质量规则候选的核对与人工采纳。** 在原编辑器对照当前规则、阻止重复带入、保护校验与保存顺序，复用既有工具约束、预算和指纹保存；真实效果和开放范围通过独立试点确认。
 
 产品形态建议是“现有页面中的智能辅助 + 现有 Agent 中的跨域问答”。用户在资产、质量执行、指标详情和开发工作台完成任务；AI 随上下文进入，不增加一级 AI 治理门户，也不按业务模块各造一套聊天系统。
 
-已交付只读的资产理解与质量结果解读，以及规则、描述候选和原编辑器人工采纳的工程代码；Agent → Dataset 的真实授权查询路径仍需登录态验收。下一轮先利用现有历史证据深化一个质量任务，跨执行对比、标准映射、敏感分类和自动业务动作另行规划，不作为已交付能力。
+已交付只读资产理解、质量解读与排查指引，以及规则、描述候选的工程代码；第五版完善原编辑器采纳体验。Agent → Dataset 的真实授权查询路径仍需登录态验收。跨执行对比、标准映射、敏感分类和自动业务动作另行规划，不作为已交付能力。
 
 这意味着两个方向同时推进：AI 帮助治理；治理为 AI 提供可信数据。每个方向都以可验收的用户结果衡量。
 
 ## 阅读顺序
 
-当前用户功能先读 [第四版交付说明](./IMPLEMENTATION_V4.md) 与 [第四版验证记录](./acceptance/2026-10-07-v4/README.md)，执行底座看 [第三版说明](./IMPLEMENTATION_V3.md)。第四版 [规划](./AGENT_V4_PLAN.md) / [清单](./AGENT_V4_BACKLOG.md) 保留 DOCS / PROPOSED 快照，当前实施权威是 F-012；真实模型验收按用户要求独立记录待完成。
+当前用户功能先读 [第五版交付说明](./IMPLEMENTATION_V5.md) 与 [第五版验证记录](./acceptance/2026-10-07-v5/README.md)，历史排查看第四版，执行底座看第三版。第五版实施权威为 F-013；真实模型验收按用户要求独立记录待完成。
 
 | 文档 | 回答的问题 |
 |---|---|
@@ -30,6 +30,9 @@
 | [首版验证记录](./acceptance/2026-10-05/README.md) | 自动化测试证据与发布前场景清单 |
 | [第二版交付说明](./IMPLEMENTATION_V2.md) | F-010 已合并能力与使用/限制 |
 | [第二版验证记录](./acceptance/2026-10-05-v2/README.md) | 自动化与 CI 数据库检查、真实模型待验收范围 |
+| [Agent 第五版计划](./AGENT_V5_PLAN.md) | 候选与表单对照、重复识别、采纳/保存互斥及 RA01～RA08 |
+| [第五版交付说明](./IMPLEMENTATION_V5.md) | 当前规则核对与人工采纳能力、源域边界与限制 |
+| [第五版验证记录](./acceptance/2026-10-07-v5/README.md) | 工程回归和真实 RA 验收待办 |
 | [Agent 第四版功能规划](./AGENT_V4_PLAN.md) | 第三版后的用户任务、现有证据限制、迭代顺序、后续功能队列 |
 | [Agent 第四版实施清单](./AGENT_V4_BACKLOG.md) | V4-0～V4-4 切片、16 个排查场景、验证与试点收口 |
 | [第四版交付说明](./IMPLEMENTATION_V4.md) | 历史质量排查表达、人工检查与回源、独立题集及边界 |
