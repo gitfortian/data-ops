@@ -24,7 +24,7 @@ F-011 中的“复用 AgentScope Java 2.0.2”记录了该 Feature 建设时的�
 | 依赖收敛 | `dependency:tree -Dincludes=io.agentscope:*` 通过；当前使用的 7 个构件全部为 2.0.3，无 2.0.2 混用 |
 | MySQL 旧表兼容 | 由标准架构 CI 的隔离 MySQL 8 执行；本机未配置 CI 数据库时跳过，不连接用户数据库 |
 | 产品基线与后端/前端边界检查 | 本地通过；未增加产品入口、跨域真相或依赖走廊 |
-| 最终 PR CI | 提交后以 PR 对应 SHA 的 Product Guard、Backend、Frontend、Distribution 和 Gate 为准 |
+| 最终 PR CI | [PR #332](https://github.com/gitfortian/data-ops/pull/332) 对应最终 SHA 的 Product Guard、Backend、Frontend、Distribution 和 Gate 为准；实际结果见该 PR Checks，合并不替代下列真实验收 |
 
 本地重跑命令（仅当前测试 JVM 参数，未写入生产配置）：
 
