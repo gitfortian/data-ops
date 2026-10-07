@@ -11,3 +11,5 @@
 正式开放前按真实评测逐份决定是否启用；不因全量默认启用这些材料而扩大本批产品范围。
 
 V15 首个受控场景材料见 [standard-match](./standard-match/README.md)。它按当前场景合同绑定 Skill，仍需管理员明确登记，部署不自动启用。
+
+V16 来源字段场景材料见 [model-field-mapping](./model-field-mapping/README.md)，沿同一 DB 管理和管理员登记规则。

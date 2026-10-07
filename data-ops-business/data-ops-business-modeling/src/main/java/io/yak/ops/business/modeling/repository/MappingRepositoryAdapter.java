@@ -67,6 +67,14 @@ public class MappingRepositoryAdapter implements MappingRepository {
   }
 
   @Override
+  public Optional<ModelingColumnMappingPO> findByTargetColumnForUpdate(Long modelId, String targetColumn) {
+    return Optional.ofNullable(mapper.selectOne(new LambdaQueryWrapper<ModelingColumnMappingPO>()
+        .eq(ModelingColumnMappingPO::getProjectId, currentProject.requireProjectId())
+        .eq(ModelingColumnMappingPO::getModelId, modelId)
+        .eq(ModelingColumnMappingPO::getTargetColumn, targetColumn).last("FOR UPDATE")));
+  }
+
+  @Override
   public boolean deleteByTargetColumn(Long modelId, String targetColumn) {
     Long projectId = currentProject.requireProjectId();
     return mapper.delete(

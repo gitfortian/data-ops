@@ -28,16 +28,18 @@ public class MappingService {
   private final ModelRepository modelRepository;
   private final ModelStructureRepository structureRepository;
   private final DataSourceCatalogReader catalogReader;
+  private final io.yak.ops.core.security.ActionAuthorization authorization;
 
   public MappingService(
       MappingRepository mappingRepository,
       ModelRepository modelRepository,
       ModelStructureRepository structureRepository,
-      DataSourceCatalogReader catalogReader) {
+      DataSourceCatalogReader catalogReader, io.yak.ops.core.security.ActionAuthorization authorization) {
     this.mappingRepository = mappingRepository;
     this.modelRepository = modelRepository;
     this.structureRepository = structureRepository;
     this.catalogReader = catalogReader;
+    this.authorization = authorization;
   }
 
   /** 视图项:目标列 + 映射(可空);mapped=false 即未映射标识。 */
@@ -75,6 +77,7 @@ public class MappingService {
   }
 
   /** 设置/更新一条映射;源列经 catalog 门面校验存在。 */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void setMapping(
       Long modelId,
       String targetColumn,
@@ -101,7 +104,7 @@ public class MappingService {
       String transformExpr,
       Long stdProcessFieldId,
       String operator) {
-    requireModel(modelId);
+    requireModelForUpdate(modelId);
     requireTargetColumn(modelId, targetColumn);
     if (sourceDatasourceId == null
         || !StringUtils.hasText(sourceTable)
@@ -114,6 +117,11 @@ public class MappingService {
     }
     validateSourceColumnExists(sourceDatasourceId, sourceDatabase, sourceTable, sourceColumn);
 
+    persistMapping(modelId, targetColumn, sourceDatasourceId, sourceDatabase, sourceTable, sourceColumn, transformExpr, stdProcessFieldId, operator);
+  }
+
+  private void persistMapping(Long modelId, String targetColumn, Long sourceDatasourceId, String sourceDatabase,
+      String sourceTable, String sourceColumn, String transformExpr, Long stdProcessFieldId, String operator) {
     ModelingColumnMappingPO existing =
         mappingRepository.findByTargetColumn(modelId, targetColumn).orElse(null);
     ModelingColumnMappingPO po = existing == null ? new ModelingColumnMappingPO() : existing;
@@ -131,15 +139,58 @@ public class MappingService {
   /** 清空单列映射。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public boolean clearMapping(Long modelId, String targetColumn) {
-    requireModel(modelId);
+    requireModelForUpdate(modelId);
     return mappingRepository.deleteByTargetColumn(modelId, targetColumn);
   }
 
   /** 批量清空模型全部映射。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public int clearAll(Long modelId) {
-    requireModel(modelId);
+    requireModelForUpdate(modelId);
     return mappingRepository.deleteByModel(modelId);
+  }
+
+  public record EditContext(String modelName, String dialect, ColumnDefinition column, MappingView mapping, String definition) {}
+
+  /** Locks the parent first, then uses current reads for both children. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public EditContext editContext(Long modelId, String targetColumn) {
+    authorization.requirePermission(io.yak.ops.common.constant.modeling.ModelingPermissionCode.READ);
+    var model = requireModelForUpdate(modelId);
+    var column = structureRepository.findColumnsForUpdate(modelId).stream()
+        .filter(c -> c.columnName().equalsIgnoreCase(targetColumn)).findFirst()
+        .orElseThrow(() -> new ModelingException(ModelingErrorCode.INVALID_COLUMN, "目标字段不存在，请刷新模型"));
+    var mapping = toView(column.columnName(), column.dataType(),
+        mappingRepository.findByTargetColumnForUpdate(modelId, column.columnName()).orElse(null));
+    return new EditContext(model.name(), model.dialect().name(), column, mapping,
+        MappingContextFingerprint.target(modelId, model.dialect().name(), column, mapping));
+  }
+
+  /** Existing mapping rules with an owner-controlled compare-and-save baseline. */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public void saveIfCurrent(Long modelId, String targetColumn, Long datasourceId, String database,
+      String table, String sourceColumn, String expression, String expectedDefinition, String operator) {
+    authorization.requirePermission(io.yak.ops.common.constant.modeling.ModelingPermissionCode.UPDATE);
+    authorization.requirePermission(io.yak.ops.common.constant.datasource.DataSourcePermissionCode.READ);
+    var current = editContext(modelId, targetColumn);
+    if (expectedDefinition == null || !expectedDefinition.matches("[0-9a-f]{64}")
+        || !current.definition().equals(expectedDefinition)) {
+      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "目标字段或映射已变化，请刷新后重新核对");
+    }
+    // Bypass discovery cache on the conditional editor path. External DDL is checked at this instant.
+    if (catalogReader.listColumnsFresh(datasourceId, database, null, table).stream()
+        .noneMatch(c -> c.name().equalsIgnoreCase(sourceColumn))) {
+      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段已变化，请重新选择");
+    }
+    String expressionError = TransformExpressionValidator.validate(expression);
+    if (expressionError != null) throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, expressionError);
+    persistMapping(modelId, current.column().columnName(), datasourceId, database, table, sourceColumn,
+        expression, current.mapping().stdProcessFieldId(), operator);
+  }
+
+  private io.yak.ops.business.modeling.domain.Model requireModelForUpdate(Long modelId) {
+    return modelRepository.findByIdForUpdate(modelId)
+        .orElseThrow(() -> new ModelingException(ModelingErrorCode.NOT_FOUND, String.valueOf(modelId)));
   }
 
   /** 表达式语法校验(前端输入即时反馈)。 */
@@ -166,7 +217,7 @@ public class MappingService {
 
   private void requireTargetColumn(Long modelId, String targetColumn) {
     boolean exists =
-        structureRepository.findColumns(modelId).stream()
+        structureRepository.findColumnsForUpdate(modelId).stream()
             .anyMatch(definition -> definition.columnName().equalsIgnoreCase(targetColumn));
     if (!exists) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "目标字段不存在：" + targetColumn);

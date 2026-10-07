@@ -93,6 +93,8 @@ export interface TurnSubmitPayload {
 }
 
 export const agentChatApi = {
+  validateModelMapping: (suggestion: import('./modelMapping').ModelMappingSuggestion) =>
+    HttpUtils.postData<import('./modelMapping').ModelMappingSuggestion>(`${PREFIX}/model-mapping/validate`, suggestion, INCLUDE_CREDENTIALS),
   validateStandardMatch: (suggestion: import('./standardMatch').StandardMatchSuggestion) =>
     HttpUtils.postData<import('./standardMatch').StandardMatchSuggestion>(`${PREFIX}/standard-match/validate`, suggestion, INCLUDE_CREDENTIALS),
   cancelTurn: (turnId: string) =>

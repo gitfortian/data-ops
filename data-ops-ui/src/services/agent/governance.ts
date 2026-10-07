@@ -1,12 +1,14 @@
 /** Context is a source selection only; the backend resolves all facts and permissions. */
 export interface StandardMatchTarget { modelId: number; columnName: string; dataType: string; businessDescription: string; keyword: string }
-export type GovernanceTarget = { assetId: number; qualityExecutionNo?: never; qualityMonitorId?: never; purpose?: 'ASSET_DESCRIPTION'; standardMatch?: never }
-  | { assetId?: never; qualityExecutionNo: string; qualityMonitorId?: never; purpose?: never; standardMatch?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId: number; purpose: 'QUALITY_RULES'; standardMatch?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; purpose: 'STANDARD_MATCH'; standardMatch: StandardMatchTarget };
+export interface ModelMappingTarget { modelId: number; columnName: string; datasourceId: number; database: string; table: string; businessDescription: string; keyword: string }
+export type GovernanceTarget = { assetId: number; qualityExecutionNo?: never; qualityMonitorId?: never; purpose?: 'ASSET_DESCRIPTION'; standardMatch?: never; modelMapping?: never }
+  | { assetId?: never; qualityExecutionNo: string; qualityMonitorId?: never; purpose?: never; standardMatch?: never; modelMapping?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId: number; purpose: 'QUALITY_RULES'; standardMatch?: never; modelMapping?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; purpose: 'STANDARD_MATCH'; standardMatch: StandardMatchTarget; modelMapping?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; purpose: 'MODEL_MAPPING'; modelMapping: ModelMappingTarget };
 
 export function governanceEntryPath(target: GovernanceTarget): string {
-  if (target.standardMatch) return '/ai-agent';
+  if (target.standardMatch || target.modelMapping) return '/ai-agent';
   if (target.qualityMonitorId !== undefined) return `/ai-agent?qualityMonitorId=${target.qualityMonitorId}`;
   const query = target.assetId !== undefined
     ? `assetId=${target.assetId}`
@@ -32,6 +34,7 @@ export function parseGovernanceTarget(search: string): GovernanceTarget | null {
 }
 
 export function governanceSourcePath(target: GovernanceTarget): string {
+  if (target.modelMapping) return `/modeling/models/${target.modelMapping.modelId}/mapping`;
   if (target.standardMatch) return `/modeling/models/${target.standardMatch.modelId}`;
   if (target.qualityMonitorId !== undefined) return `/data-quality/monitor/${target.qualityMonitorId}`;
   return target.assetId !== undefined ? `/data-asset/detail/${target.assetId}`
@@ -39,6 +42,7 @@ export function governanceSourcePath(target: GovernanceTarget): string {
 }
 
 export function governanceQuestions(target: GovernanceTarget): string[] {
+  if (target.modelMapping) return ['为绑定目标字段推荐所选源表中的字段；说明业务依据、类型差异和待确认项。'];
   if (target.standardMatch) return ['根据绑定的未保存字段草稿匹配类型标准；信息不足时列出待确认项。'];
   if (target.qualityMonitorId !== undefined) return ['根据当前字段与模板给出质量规则候选；缺业务阈值请先确认。'];
   if (target.purpose === 'ASSET_DESCRIPTION') return ['根据当前资产与字段证据给出资产描述候选；缺业务背景请先确认。'];

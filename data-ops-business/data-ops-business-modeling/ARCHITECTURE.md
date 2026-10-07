@@ -78,3 +78,8 @@ overview/     项目空间全域视图(服务端聚合,ticket 29)
 F-023：原标准助手消费 AI 类型候选，仅带入当前未保存字段。模型定义仍由 Modeling 拥有，ModelSuggestionQueryApi 以授权事务锁读取定义指纹；编辑上下文同时给出结构与指纹，保存可携带 If-Match，在原结构事务/审计之前拒绝过期定义。原发布快照与审批指纹序列化保持兼容。
 
 依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
+
+
+## F-024 模型来源映射 Skill
+
+Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQueryApi 读取固定源表的 fresh 元数据并有界交付。Agent 仅 gateway → modeling.api 消费，不直接读取 Datasource 内部实现。复用原轮次、SDK Skill 与结构化调用；候选仅进入原表单，人工 If-Match 保存。映射写路径持有模型行锁，字段及单列映射用 locking read；保留标准字段关联，冲突先于写入。外部 DDL 校验只证明读取时刻，不宣称跨库原子性。详细边界见 [F-024](../../docs/product/features/F-024-skill-model-mapping.md)。

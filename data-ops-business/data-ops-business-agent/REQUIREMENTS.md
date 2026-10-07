@@ -157,3 +157,8 @@ Requirement Gap
 F-023 单字段 TYPE 标准匹配：用户从 Modeling 原字段草稿发起现有持久化轮次。源域授权、有界候选、Skill 同轮快照与活版本核验、SDK 结构化 call；候选经源域复核后才发布/带入。待确认项是完成轮次的问题清单，补充后重新生成，不引入新的 HITL 状态。草稿不是事实，AI 不保存业务。
 
 依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
+
+
+## F-024 模型来源映射 Skill
+
+Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQueryApi 读取固定源表的 fresh 元数据并有界交付。Agent 仅 gateway → modeling.api 消费，不直接读取 Datasource 内部实现。复用原轮次、SDK Skill 与结构化调用；候选仅进入原表单，人工 If-Match 保存。映射写路径持有模型行锁，字段及单列映射用 locking read；保留标准字段关联，冲突先于写入。外部 DDL 校验只证明读取时刻，不宣称跨库原子性。详细边界见 [F-024](../../docs/product/features/F-024-skill-model-mapping.md)。

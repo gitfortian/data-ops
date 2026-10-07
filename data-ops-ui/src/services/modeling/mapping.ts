@@ -11,10 +11,12 @@ export const setModelingMapping = (
   modelId: ModelingModelId,
   targetColumn: string,
   payload: ModelingMappingSavePayload,
+  definition?: string,
 ): Promise<boolean> =>
   HttpUtils.putData<boolean>(
-    `${MODELING_API_PREFIX}/models/${modelId}/mappings/${encodeURIComponent(targetColumn)}`,
+    `${MODELING_API_PREFIX}/models/${modelId}/mappings/${encodeURIComponent(targetColumn)}${definition ? '/edit-context' : ''}`,
     payload,
+    definition ? { headers: { 'If-Match': definition } } : undefined,
   );
 
 export const clearModelingMapping = (modelId: ModelingModelId, targetColumn: string): Promise<boolean> =>
@@ -33,3 +35,7 @@ export const validateModelingExpression = (
     `${MODELING_API_PREFIX}/models/${modelId}/mappings/validate-expression`,
     { expression },
   );
+
+export interface MappingEditContext { definition: string; mapping: ModelingMappingView }
+export const getModelingMappingContext = (modelId: ModelingModelId, targetColumn: string): Promise<MappingEditContext> =>
+  HttpUtils.getData<MappingEditContext>(`${MODELING_API_PREFIX}/models/${modelId}/mappings/${encodeURIComponent(targetColumn)}/edit-context`);
