@@ -1,6 +1,8 @@
 # Agent 第十版交付说明
 
 日期：2026-10-07
+
+工程提交与最终 CI：[PR #327](https://github.com/gitfortian/data-ops/pull/327)，须在 V9 #326 后合并。
 实施权威：[F-018](../product/features/F-018-agent-governance-question-preparation.md)，顺序见 [连续路线](./AGENT_V9_V11_ROADMAP.md)。
 
 在原治理对话展开“准备治理问题”，选择本任务的原问题，按需补充已知背景、希望核对的点和期望结果，查看纯文本预览，再填入原输入框并明确发送。补充内容统一标记为用户提供、尚待源证据核对；不自动补阈值、样本或根因。
