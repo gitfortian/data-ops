@@ -1,7 +1,7 @@
 # F-017 — 终态说明与重新提问准备
 
-Status: IMPLEMENTING  
-Approval: 用户于 2026-10-07 要求多版本规划后依次完成，授权 V9～V11 顺序实施。  
+Status: IMPLEMENTING
+Approval: 用户于 2026-10-07 要求多版本规划后依次完成，授权 V9～V11 顺序实施。
 Product basis: ACCEPTED PD-001/PD-002；IMPLEMENTING F-014/F-015/F-016。
 
 ## 用户、问题与结果

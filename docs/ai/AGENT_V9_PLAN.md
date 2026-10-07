@@ -1,8 +1,8 @@
 # Agent 第九版规划：终态说明与重新提问准备
 
-日期：2026-10-07  
-文档类别：DOCS / 规划提案  
-状态：IMPLEMENTING；实施权威为 [F-017](../product/features/F-017-agent-terminal-question-draft.md)，用户已授权按 [V9～V11 路线](./AGENT_V9_V11_ROADMAP.md) 依次完成。  
+日期：2026-10-07
+文档类别：DOCS / 规划提案
+状态：IMPLEMENTING；实施权威为 [F-017](../product/features/F-017-agent-terminal-question-draft.md)，用户已授权按 [V9～V11 路线](./AGENT_V9_V11_ROADMAP.md) 依次完成。
 源码基线：`main @ db459373`，V8 [PR #325](https://github.com/gitfortian/data-ops/pull/325) 已合并。
 
 ## 1. 建议与产品定义
@@ -133,4 +133,3 @@
 | 暂缓 | 团队 RAG/Skill、自动修复、通用多 Agent、框架迁移 | 分别需要 ACL/版本/撤权、写动作幂等审计或同题收益/框架阻塞证据，独立立项 |
 
 这些是候选顺序，不是已批准的跨域读取或写入范围。当前优先完成一个能验证的任务闭环，不同时铺开所有方向。
-
