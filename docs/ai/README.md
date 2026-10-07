@@ -2,13 +2,13 @@
 
 日期：2026-10-07
 文档类别：规划提案与调研证据（DOCS）  
-状态：V9～V11 工程实现与本地回归已完成，合并及最终 CI 以 [PR #326](https://github.com/gitfortian/data-ops/pull/326)、[PR #327](https://github.com/gitfortian/data-ops/pull/327)、[PR #328](https://github.com/gitfortian/data-ops/pull/328) 为准，按版本顺序交付。内容见 [连续路线](./AGENT_V9_V11_ROADMAP.md) 及各版交付说明。AI F-009～[F-019](../product/features/F-019-agent-live-turn-reconciliation.md) 保持 IMPLEMENTING，真实模型验收独立待完成；合并不表示真实验收通过。
+状态：V12～V14 工程实现与本地回归已依次完成，合并及最终 CI 以 [PR #329](https://github.com/gitfortian/data-ops/pull/329)、[PR #330](https://github.com/gitfortian/data-ops/pull/330)、[PR #331](https://github.com/gitfortian/data-ops/pull/331) 为准，按版本顺序交付。内容见 [连续建设路线](./AGENT_V12_V14_ROADMAP.md) 及各版交付说明。AI F-009～[F-022](../product/features/F-022-agent-report-safe-delivery.md) 保持 IMPLEMENTING，真实模型验收独立待完成；合并不表示真实验收通过。V9～V11 记录保留在 [上一轮路线](./AGENT_V9_V11_ROADMAP.md)。
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
 ## 建议先做什么
 
-新一轮 V12～V14 已按用户授权规划并依次实施，见 [连续建设路线](./AGENT_V12_V14_ROADMAP.md)：原编辑器候选轮次核对 → 治理证据核对 → 报告安全留存。各版工程和真实验收分开，最新进度以对应交付说明、验收记录与 PR 为准。
+V12～V14 已按用户授权完成工程实现：原编辑器候选轮次核对 → 治理证据核对与时间协议修复 → 报告安全留存。各版工程和真实验收分开，最新进度以对应交付说明、验收记录与 PR 为准。
 
 **V9～V11 已补齐终态后的重新提问准备、当前治理任务提问表单、实时精确停止与断线核对。** 继续使用 AgentScope Java 2.0.2。接下来优先按固定真实场景验证任务完成、证据语义、权限和源审计；更后续的问数澄清、质量执行比较、影响说明与团队 Skill 需要先满足 [连续路线](./AGENT_V9_V11_ROADMAP.md) 中的源域契约与试点门槛。
 
