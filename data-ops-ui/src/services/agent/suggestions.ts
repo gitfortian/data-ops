@@ -37,15 +37,37 @@ export interface GovernanceEvidenceCard {
   observedAt: string; sourceUpdatedAt: string; path: string;
 }
 
+function isGovernanceSourcePath(path: string): boolean {
+  const numeric = path.match(/^\/(?:data-asset\/detail|data-quality\/monitor|dataset)\/([1-9]\d*)$/);
+  return numeric ? Number.isSafeInteger(Number(numeric[1]))
+    : /^\/data-quality\/execution\/[A-Za-z0-9_-]{1,128}$/.test(path);
+}
+
+function readObservedAt(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  // Previous final-message encoders serialized Instant as epoch seconds, not milliseconds.
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 253402300799) {
+    return new Date(value * 1000).toISOString();
+  }
+  return null;
+}
+
 export function evidenceCards(text: string): GovernanceEvidenceCard[] {
   try {
-    const match = text.match(/```yak-evidence\s*\n([\s\S]*?)\n```/);
-    const value = match ? JSON.parse(match[1]) : [];
-    return Array.isArray(value) ? value.filter((card) =>
+    const blocks = [...text.matchAll(/```yak-evidence\s*\n([\s\S]*?)\n```/g)];
+    if (blocks.length !== 1) return [];
+    const value = JSON.parse(blocks[0][1]);
+    if (!Array.isArray(value)) return [];
+    const ids = value.filter((card) => card && typeof card.id === 'string').map((card) => card.id);
+    // Even an invalid duplicate makes identity ambiguous; filtering it first would choose a winner.
+    if (new Set(ids).size !== ids.length) return [];
+    return value.filter((card) => card &&
       typeof card.id === 'string' && /^E[A-F0-9]{8}$/.test(card.id)
-      && typeof card.path === 'string' && /^\/(?!\/)[A-Za-z0-9/_?=&%.-]+$/.test(card.path)
+      && typeof card.path === 'string' && isGovernanceSourcePath(card.path)
       && ['OK', 'EMPTY', 'NOT_APPLICABLE', 'UNAVAILABLE', 'PERMISSION_DENIED'].includes(card.status)
-      && ['owner', 'reference', 'observedAt', 'sourceUpdatedAt'].every((key) => typeof card[key] === 'string')) : [];
+      && readObservedAt(card.observedAt) !== null
+      && ['owner', 'reference', 'sourceUpdatedAt'].every((key) => typeof card[key] === 'string'))
+      .map((card) => ({ ...card, observedAt: readObservedAt(card.observedAt)! }));
   } catch { return []; }
 }
 
@@ -59,8 +81,12 @@ export function verifiedFacts(text: string): Array<{ evidenceRef: string; field:
     if (blocks.length !== 1) return [];
     const refs = new Set(evidenceCards(text).filter((card) => card.status === 'OK').map((card) => card.id));
     const value = JSON.parse(blocks[0][1]);
-    return Array.isArray(value) ? value.filter((fact) => fact && refs.has(fact.evidenceRef)
+    const valid = Array.isArray(value) ? value.filter((fact) => fact && refs.has(fact.evidenceRef)
       && typeof fact.field === 'string' && fact.field.length <= 512
-      && typeof fact.value === 'string' && fact.value.length <= 512).slice(0, 20) : [];
+      && typeof fact.value === 'string' && fact.value.length <= 512) : [];
+    const key = (fact: { evidenceRef: string; field: string }) => JSON.stringify([fact.evidenceRef, fact.field]);
+    const counts = new Map<string, number>();
+    valid.forEach((fact) => counts.set(key(fact), (counts.get(key(fact)) ?? 0) + 1));
+    return valid.filter((fact) => counts.get(key(fact)) === 1).slice(0, 20);
   } catch { return []; }
 }
