@@ -2,6 +2,8 @@
 
 日期：2026-10-07
 
+工程提交与最终 CI：[PR #325](https://github.com/gitfortian/data-ops/pull/325)。真实模型验收不随 CI 自动变更。
+
 范围：[F-016](../../../product/features/F-016-agent-history-evidence.md)、[V8 计划](../../AGENT_V8_PLAN.md)、[交付说明](../../IMPLEMENTATION_V8.md)。
 
 ## 工程结果

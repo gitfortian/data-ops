@@ -2,6 +2,8 @@
 
 日期：2026-10-07
 
+工程提交与最终 CI：[PR #325](https://github.com/gitfortian/data-ops/pull/325)，以 PR 最终提交的检查结果为准。
+
 实施权威：[F-016](../product/features/F-016-agent-history-evidence.md)，范围见 [第八版计划](./AGENT_V8_PLAN.md)。Feature 保持 IMPLEMENTING，工程交付与真实模型验收分开。
 
 ## 用户现在能做什么
