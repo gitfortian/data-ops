@@ -15,7 +15,7 @@
 | Product baseline | 通过，16 份 Feature specs |
 | Java / 前端依赖边界 | 通过，77 reactor entries / 3153 production Java files，前端 1 条既有走廊 |
 | Node architecture / release | 14 项通过，包括 AI 离线题集与制品门禁 |
-| PR CI | 合并前必须通过最终 head 的 Product Guard、后端/前端/发行制品及 Architecture Gate；真实场景不因检查通过改为 PASS |
+| PR CI | [PR #323 检查记录](https://github.com/gitfortian/data-ops/pull/323/checks)：合并前必须通过最终 head 的 Product Guard、后端/前端/发行制品及 Architecture Gate；真实场景不因检查通过改为 PASS |
 
 日志 `.task-ai-v6-*.log` 为本机忽略文件，不提交账号/模型密钥。本机 Maven 覆盖实际 SDK 与本地 HTTP 模型替身，不证明真实 LLM 语义；数据库测试跳过不记为通过，CI 需另确认。
 

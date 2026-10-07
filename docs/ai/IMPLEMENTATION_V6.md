@@ -2,7 +2,7 @@
 
 日期：2026-10-07
 
-实施权威：[F-014](../product/features/F-014-agent-session-continuation.md)，范围与取舍见 [V6 计划](./AGENT_V6_PLAN.md)。工程代码完成，真实模型/登录态验收仍 PENDING，Feature 保持 IMPLEMENTING。
+实施权威：[F-014](../product/features/F-014-agent-session-continuation.md)，范围与取舍见 [V6 计划](./AGENT_V6_PLAN.md)，交付 [PR #323](https://github.com/gitfortian/data-ops/pull/323)。工程代码完成，真实模型/登录态验收仍 PENDING，Feature 保持 IMPLEMENTING。
 
 ## 用户现在能做什么
 
