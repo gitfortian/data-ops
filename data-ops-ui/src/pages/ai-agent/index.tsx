@@ -573,7 +573,8 @@ const AiAgentPage: React.FC = () => {
           role: turn.role as UIMessage['role'],
           content: turn.content,
           turnId: turn.turnId ?? undefined,
-          trace: (turn.trace ?? []).map((step, idx) => ({
+          unlinkedHistory: turn.role === 'assistant' && !turn.turnId,
+          trace: (turn.turnId ? turn.trace ?? [] : []).map((step, idx) => ({
             key: `${step.kind === 'think' ? 't' : 'c'}-${step.toolCallId ?? idx}`,
             kind: step.kind as 'think' | 'call',
             text: step.text ?? '',
@@ -810,9 +811,13 @@ const AiAgentPage: React.FC = () => {
       item.role === 'user' ? (
         item.content
       ) : item.role === 'error' ? (
-        <Alert type="error" showIcon message={item.content} />
+        <Alert type="error" showIcon message={item.content}
+          description="独立失败记录；此处展示位置不代表它与前面回答的执行顺序。" />
       ) : (
         <Space direction="vertical" style={{ maxWidth: '100%' }}>
+          {item.unlinkedHistory && <Typography.Text type="secondary">
+            未能确定这段历史回答所属的执行轮次，暂不展示关联执行证据。
+          </Typography.Text>}
           {item.elapsedMs != null ? (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               已完成 {item.trace.filter((step) => step.kind === 'call').length} 步 · 用时{' '}

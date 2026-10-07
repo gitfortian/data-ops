@@ -215,7 +215,7 @@ public class AgentRuntime implements TurnCorrelation {
       Runnable onComplete,
       Consumer<Throwable> onError) {
     return streamEvents(
-        List.of(new UserMessage(message)), userId, sessionId, turnId, projectId, null, onEvent, onComplete, onError);
+        List.of(startMessage(message, turnId)), userId, sessionId, turnId, projectId, null, onEvent, onComplete, onError);
   }
 
   /** HITL 恢复：以匹配 pending 的工具结果续跑被挂起的同一轮推理。 */
@@ -246,7 +246,7 @@ public class AgentRuntime implements TurnCorrelation {
   public TurnSubscription stream(long userId, String sessionId, String turnId, String message,
       long projectId, io.yak.ops.business.agent.domain.GovernanceTarget target,
       Consumer<ChatTurnEvent> onEvent, Runnable onComplete, Consumer<Throwable> onError) {
-    return streamEvents(List.of(new UserMessage(message)), userId, sessionId, turnId, projectId,
+    return streamEvents(List.of(startMessage(message, turnId)), userId, sessionId, turnId, projectId,
         target, onEvent, onComplete, onError);
   }
 
@@ -465,12 +465,15 @@ public class AgentRuntime implements TurnCorrelation {
   static List<HistoryTurn> projectHistory(List<Msg> context) {
     List<HistoryTurn> turns = new java.util.ArrayList<>();
     String pendingUser = null;
+    String pendingTurnId = null;
     StringBuilder answer = new StringBuilder();
     for (Msg message : context) {
       MsgRole role = message.getRole();
       if (role == MsgRole.USER) {
-        flushTurn(turns, pendingUser, answer);
+        flushTurn(turns, pendingUser, pendingTurnId, answer);
         pendingUser = AgentEventCodec.textOf(message);
+        Object reference = message.getMetadata() == null ? null : message.getMetadata().get("yak_turn_id");
+        pendingTurnId = reference instanceof String id && !id.isBlank() ? id : null;
         answer.setLength(0);
       } else if (role == MsgRole.ASSISTANT) {
         boolean intermediate =
@@ -487,19 +490,26 @@ public class AgentRuntime implements TurnCorrelation {
         }
       }
     }
-    flushTurn(turns, pendingUser, answer);
+    flushTurn(turns, pendingUser, pendingTurnId, answer);
     return turns;
   }
 
   private static void flushTurn(
-      List<HistoryTurn> turns, String pendingUser, StringBuilder answer) {
+      List<HistoryTurn> turns, String pendingUser, String turnId, StringBuilder answer) {
     if (pendingUser == null) {
       return;
     }
-    turns.add(new HistoryTurn("user", pendingUser));
+    turns.add(new HistoryTurn("user", pendingUser, turnId));
     if (answer.length() > 0) {
-      turns.add(new HistoryTurn("assistant", answer.toString()));
+      turns.add(new HistoryTurn("assistant", answer.toString(), turnId));
     }
+  }
+
+  /** Server-owned reference in official message state; it carries no lifecycle or source facts. */
+  static Msg startMessage(String message, String turnId) {
+    return UserMessage.builder().textContent(message)
+        .metadata(turnId == null || turnId.isBlank() ? java.util.Map.of() : java.util.Map.of("yak_turn_id", turnId))
+        .build();
   }
 
   /**

@@ -60,6 +60,37 @@ it('reloads history and persisted scope, ignores extra URL targets and sends a f
   expect(window.location.search).toBe('?sessionId=s1');
 });
 
+it('keeps legacy text with an explicit missing association notice and does not hydrate another turn', async () => {
+  api.history.mockResolvedValue([{ role: 'assistant', content: '旧正文',
+    trace: [{ kind: 'think', text: '不得展示的无关联步骤' }] }] as any);
+  render(<AiAgentPage />);
+  expect(await screen.findByText('旧正文')).toBeInTheDocument();
+  expect(screen.getByText('未能确定这段历史回答所属的执行轮次，暂不展示关联执行证据。')).toBeInTheDocument();
+  expect(screen.queryByText('不得展示的无关联步骤')).not.toBeInTheDocument();
+  expect(api.trace).not.toHaveBeenCalled();
+  expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it('hydrates only the confirmed historical answer rather than the latest continuation turn', async () => {
+  api.history.mockResolvedValue([{ role: 'assistant', content: '已关联回答', turnId: 't-confirmed' }] as any);
+  api.continuation.mockResolvedValue(context('s1', { turnId: 't-latest' }));
+  render(<AiAgentPage />);
+  expect(await screen.findByText('已关联回答')).toBeInTheDocument();
+  await waitFor(() => expect(api.trace).toHaveBeenCalledWith('t-confirmed'));
+  expect(api.trace).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText(/未能确定这段历史回答/)).not.toBeInTheDocument();
+});
+
+it('marks appended failures as independent records without borrowing their identity for older text', async () => {
+  api.history.mockResolvedValue([{ role: 'assistant', content: '原正文' },
+    { role: 'error', content: '失败事实', turnId: 'failed-turn' }] as any);
+  render(<AiAgentPage />);
+  expect(await screen.findByText('失败事实')).toBeInTheDocument();
+  expect(screen.getByText('独立失败记录；此处展示位置不代表它与前面回答的执行顺序。')).toBeInTheDocument();
+  expect(screen.getByText('原正文')).toBeInTheDocument();
+  expect(api.trace).not.toHaveBeenCalled();
+});
+
 it('restores an exact pending call and answers through the original resume payload', async () => {
   api.continuation.mockResolvedValue(context('s1', {
     status: 'WAITING_INPUT', governanceTarget: { assetId: 7 },
