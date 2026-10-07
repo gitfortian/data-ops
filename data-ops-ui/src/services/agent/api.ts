@@ -93,6 +93,8 @@ export interface TurnSubmitPayload {
 }
 
 export const agentChatApi = {
+  validateMetricExplanation: (suggestion: import('./metricExplanation').MetricExplanationSuggestion) =>
+    HttpUtils.postData<import('./metricExplanation').MetricExplanationSuggestion>(`${PREFIX}/metric-explanation/validate`, suggestion, INCLUDE_CREDENTIALS),
   validateModelMapping: (suggestion: import('./modelMapping').ModelMappingSuggestion) =>
     HttpUtils.postData<import('./modelMapping').ModelMappingSuggestion>(`${PREFIX}/model-mapping/validate`, suggestion, INCLUDE_CREDENTIALS),
   validateStandardMatch: (suggestion: import('./standardMatch').StandardMatchSuggestion) =>

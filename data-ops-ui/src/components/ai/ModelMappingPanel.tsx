@@ -13,5 +13,5 @@ export default function ModelMappingPanel({ target, definition, disabled, onAppl
     bindTarget={modelMapping => ({ purpose: 'MODEL_MAPPING', modelMapping })} selectTarget={v => v?.modelMapping}
     parse={parseModelMapping} validate={agentChatApi.validateModelMapping}
     candidateKey={c => c.sourceColumn} renderCandidate={c => <><p>{c.sourceColumn} · {c.type || '类型未知'} · {c.nullable ? '可空' : '非空'}</p><p>{c.reason}</p></>}
-    onApply={c => onApply(c.sourceColumn)} />;
+    withKeyword={(value, keyword) => ({ ...value, keyword })} onApply={c => onApply(c.sourceColumn)} />;
 }

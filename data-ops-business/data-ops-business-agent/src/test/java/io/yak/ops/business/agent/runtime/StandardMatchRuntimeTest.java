@@ -55,11 +55,18 @@ class StandardMatchRuntimeTest {
   private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative) throws Exception {
     scenario(nativeOutput, unknown, budget, success, concurrent, rejectNative, false);
   }
+  @Test void metricExplanationUsesSdkStructureAndValidatedHistory() throws Exception { scenario(false, false, 32, true, false, false, false, true); }
+  @Test void metricNativeOutputKeepsSourceValidation() throws Exception { scenario(true, false, 32, true, false, false, false, true); }
+  @Test void metricSyntheticResponseRemainsBudgeted() throws Exception { scenario(false, false, 2, false, false, false, false, true); }
   private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative, boolean mapping) throws Exception {
+    scenario(nativeOutput, unknown, budget, success, concurrent, rejectNative, mapping, false);
+  }
+  private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative, boolean mapping, boolean metric) throws Exception {
     var mappingTarget = new ModelMappingTarget(7, "user_id", 9, "db", "users", "买家编号", "");
-    var target = mapping ? new GovernanceTarget(null, null, null, "MODEL_MAPPING", null, mappingTarget) : this.target;
-    String marker = mapping ? "yak-model-mapping" : "yak-standard-match";
-    var skill = ScenarioSkillScopeTest.skill(mapping ? "model-field-mapping" : "standard-match", 1, "先核对类型与业务说明，再从目录选 ID；不匹配则反问。");
+    var metricTarget = new MetricExplanationTarget(7, 3, "");
+    var target = metric ? new GovernanceTarget(null, null, null, "METRIC_EXPLANATION", null, null, metricTarget) : mapping ? new GovernanceTarget(null, null, null, "MODEL_MAPPING", null, mappingTarget) : this.target;
+    String marker = metric ? "yak-metric-explanation" : mapping ? "yak-model-mapping" : "yak-standard-match";
+    var skill = ScenarioSkillScopeTest.skill(metric ? "metric-caliber-explanation" : mapping ? "model-field-mapping" : "standard-match", 1, "先核对类型与业务说明，再从目录选 ID；不匹配则反问。");
     var repository = mock(AgentSkillRepository.class);
     when(repository.getAllSkills()).thenReturn(List.of(skill, ScenarioSkillScopeTest.skill("unrelated", 1, "禁止泄漏的无关技能")));
     when(repository.getSource()).thenReturn("db:yak_agent_skill");
@@ -89,7 +96,7 @@ class StandardMatchRuntimeTest {
             "function", Map.of("name", name, "arguments", json.writeValueAsString(Map.of("skillId", skill.getSkillId(), "path", "SKILL.md"))))));
         finish = "tool_calls";
       } else {
-        var proposal = mapping ? Map.of("candidates", List.of(Map.of("sourceColumn", "buyer_id", "reason", "业务编号")), "questions", List.of())
+        var proposal = metric ? Map.of("candidates", List.of(Map.of("businessDescription", "源域权威名称", "statements", List.of(Map.of("text", "按金额求和", "factKeys", List.of("measureExpr"))))), "questions", List.of()) : mapping ? Map.of("candidates", List.of(Map.of("sourceColumn", "buyer_id", "reason", "业务编号")), "questions", List.of())
             : Map.of("candidates", List.of(Map.of("standardId", 9, "version", 2, "reason", "业务编号")), "questions", List.of());
         if (nativeRequest) {
           delta = Map.of("role", "assistant", "content", json.writeValueAsString(proposal)); finish = "stop";
@@ -132,7 +139,15 @@ class StandardMatchRuntimeTest {
         return new ModelMappingSuggestion("MODEL_MAPPING", mappingTarget, "a".repeat(64), "b".repeat(64), "BIGINT", 1,
             invocation.getArgument(5), false, List.of(new ModelMappingSuggestion.Candidate("buyer_id", "BIGINT", false, "源域权威名称")), List.of());
       });
-      List<io.yak.ops.business.agent.toolset.AgentToolBox> boxes = mapping ? List.of(mappingTools) : List.of(tools);
+      var metricTools = mock(io.yak.ops.business.agent.toolset.MetricExplanationTools.class);
+      when(metricTools.prepare(any(), eq(metricTarget))).thenReturn(new MetricExplanationContext(19, "a".repeat(64), List.of(new MetricExplanationContext.Fact("measureExpr", "度量", "SUM(amount)"))));
+      when(metricTools.validate(any(), eq(metricTarget), any(), any(), eq(1), anyString())).thenAnswer(invocation -> {
+        var proposal = invocation.getArgument(3, MetricExplanationProposal.class);
+        assertEquals("measureExpr", proposal.candidates().getFirst().statements().getFirst().factKeys().getFirst());
+        return new MetricExplanationSuggestion("METRIC_EXPLANATION", metricTarget, "a".repeat(64), 1, invocation.getArgument(5), false,
+            List.of(new MetricExplanationSuggestion.Candidate("源域权威名称", List.of(new MetricExplanationSuggestion.Statement("求和", List.of(new MetricExplanationContext.Fact("measureExpr", "度量", "SUM(amount)")))))), List.of());
+      });
+      List<io.yak.ops.business.agent.toolset.AgentToolBox> boxes = metric ? List.of(metricTools) : mapping ? List.of(mappingTools) : List.of(tools);
       var recorder = mock(AgentStepRecorder.class);
       var config = new AgentDynamicConfigService(mock(AgentConfigMapper.class));
       var runtime = new AgentRuntime(boxes, List.of(), store, properties, new AgentEventCodec(), recorder,
@@ -168,6 +183,7 @@ class StandardMatchRuntimeTest {
         else assertTrue(requests.getFirst().contains("generate_response"));
       } else {
         assertNotNull(error.get());
+        verify(metricTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         verify(mappingTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         verify(tools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         assertTrue(runtime.history(1, "s1").stream().noneMatch(t -> t.content().contains(marker)));

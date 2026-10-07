@@ -35,6 +35,11 @@
     <dependencies>
         <dependency>
             <groupId>io.yak.ops</groupId>
+            <artifactId>data-ops-business-metric</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.yak.ops</groupId>
             <artifactId>data-ops-business-semantic</artifactId>
             <version>${project.version}</version>
         </dependency>

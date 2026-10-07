@@ -13,5 +13,5 @@ export default function StandardMatchPanel({ target, definition, disabled, onApp
     bindTarget={standardMatch => ({ purpose: 'STANDARD_MATCH', standardMatch })} selectTarget={v => v?.standardMatch}
     parse={parseStandardMatch} validate={agentChatApi.validateStandardMatch}
     candidateKey={c => c.standardId} renderCandidate={c => <><p>{c.name}（{c.code}） · v{c.version} · {c.stdType}</p><p>{c.reason}</p></>}
-    onApply={c => onApply(c.standardId)} />;
+    withKeyword={(value, keyword) => ({ ...value, keyword })} onApply={c => onApply(c.standardId)} />;
 }

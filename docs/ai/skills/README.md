@@ -13,3 +13,6 @@
 V15 首个受控场景材料见 [standard-match](./standard-match/README.md)。它按当前场景合同绑定 Skill，仍需管理员明确登记，部署不自动启用。
 
 V16 来源字段场景材料见 [model-field-mapping](./model-field-mapping/README.md)，沿同一 DB 管理和管理员登记规则。
+
+
+[指标口径解释](metric-caliber-explanation/README.md)：固定版本事实与业务说明草稿，原编辑器人工保存。

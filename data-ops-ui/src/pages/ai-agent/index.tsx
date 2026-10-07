@@ -1064,7 +1064,7 @@ const AiAgentPage: React.FC = () => {
           <Alert
             type="info"
             showIcon
-            message={governanceTarget.modelMapping ? `模型 #${governanceTarget.modelMapping.modelId} 字段 ${governanceTarget.modelMapping.columnName} 来源映射建议` : governanceTarget.standardMatch ? `模型 #${governanceTarget.standardMatch.modelId} 字段 ${governanceTarget.standardMatch.columnName} 类型标准匹配` : governanceTarget.qualityMonitorId !== undefined ? `质量监控 #${governanceTarget.qualityMonitorId} 规则建议`
+            message={governanceTarget.metricExplanation ? `指标 #${governanceTarget.metricExplanation.metricId} v${governanceTarget.metricExplanation.version} 口径解释与说明草稿` : governanceTarget.modelMapping ? `模型 #${governanceTarget.modelMapping.modelId} 字段 ${governanceTarget.modelMapping.columnName} 来源映射建议` : governanceTarget.standardMatch ? `模型 #${governanceTarget.standardMatch.modelId} 字段 ${governanceTarget.standardMatch.columnName} 类型标准匹配` : governanceTarget.qualityMonitorId !== undefined ? `质量监控 #${governanceTarget.qualityMonitorId} 规则建议`
               : governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} ${governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '描述候选' : '治理解读'}`
                 : `质量执行 ${governanceTarget.qualityExecutionNo} 解读与排查`}
             description={

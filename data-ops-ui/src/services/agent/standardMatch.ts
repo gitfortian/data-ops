@@ -1,3 +1,4 @@
+import { readStructuredReceipt } from './structuredReceipt';
 import type { StandardMatchTarget } from './governance';
 export interface StandardMatchSuggestion {
   kind: 'STANDARD_MATCH'; target: StandardMatchTarget; expectedDefinition: string;
@@ -6,10 +7,8 @@ export interface StandardMatchSuggestion {
   questions: string[];
 }
 export function parseStandardMatch(text: string): StandardMatchSuggestion | null {
-  const matches = [...text.matchAll(/```yak-standard-match\s*\n([\s\S]*?)\n```/g)];
-  if (matches.length !== 1) return null;
   try {
-    const value = JSON.parse(matches[0][1]) as StandardMatchSuggestion;
+    const value = readStructuredReceipt(text, 'yak-standard-match') as StandardMatchSuggestion;
     if (value.kind !== 'STANDARD_MATCH' || !value.target || !/^[a-f0-9]{64}$/.test(value.expectedDefinition)
       || !/^[a-f0-9]{64}$/.test(value.skillHash) || !Number.isSafeInteger(value.skillVersion) || value.skillVersion < 1
       || !Array.isArray(value.candidates) || value.candidates.length > 3

@@ -67,3 +67,8 @@ Existing tag/version/lineage packages retain their ownership; the Phase 5 packag
 迁移合入后**不可再编辑**（对齐 modeling/semantic 纪律）。
 
 `scripts/db/phase5-metric-productization-upgrade.sql` 是不运行 Flyway 时的手动等价路径；手动脚本和模块 Flyway 迁移只能选择一条。配套 verify 脚本依据 Flyway 最终列与索引形状检查，不使用手工脚本私有的列名或索引顺序。
+
+
+## F-025 指标版本口径 Skill
+
+MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版本，读取不可变快照并复用 digest；仅白名单有界事实，超界/缺快照不可用。Agent 仅 gateway → metric.api，源域不反向依赖 Agent。复用 SDK 场景执行与原表单，候选仅 businessDesc，人工保存复用 expectedVersion、校验、审计和回读；验证/发布仍独立。引用校验不等于自然语言正确，真实模型验收 PENDING。合同见 docs/product/features/F-025-skill-metric-caliber.md。

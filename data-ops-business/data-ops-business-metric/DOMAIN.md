@@ -41,3 +41,8 @@ Validation 绑定精确的 immutable `MetricVersion` 和 snapshot digest，并�
 - 消费方（dataset/dashboard）通过 Metric SPI 保存引用；新 governed reference 绑定 active Published Metric 的精确版本。历史仅有 metricId 的记录保留并显式表现为版本未知；展示名经 SPI 批量解析。
 - 消费方**不解析**指标内部结构、不 join 本模块表。
 - Reference Usage 只证明下游保存了引用；Observed Usage 由 Consumption owning domain 提供，二者不能合并。
+
+
+## F-025 指标版本口径 Skill
+
+MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版本，读取不可变快照并复用 digest；仅白名单有界事实，超界/缺快照不可用。Agent 仅 gateway → metric.api，源域不反向依赖 Agent。复用 SDK 场景执行与原表单，候选仅 businessDesc，人工保存复用 expectedVersion、校验、审计和回读；验证/发布仍独立。引用校验不等于自然语言正确，真实模型验收 PENDING。合同见 docs/product/features/F-025-skill-metric-caliber.md。
