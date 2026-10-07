@@ -1,6 +1,8 @@
 # V9 验证记录
 
 日期：2026-10-07
+
+工程提交与最终 CI：[PR #326](https://github.com/gitfortian/data-ops/pull/326)，以最终 head 检查为准。
 范围：[F-017](../../../product/features/F-017-agent-terminal-question-draft.md)、[V9 规划](../../AGENT_V9_PLAN.md)。
 
 ## 工程与真实验收分开

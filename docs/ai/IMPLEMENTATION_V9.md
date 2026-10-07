@@ -1,6 +1,8 @@
 # Agent 第九版交付说明
 
 日期：2026-10-07
+
+工程提交与最终 CI：[PR #326](https://github.com/gitfortian/data-ops/pull/326)，以最终 head 检查为准。
 实施权威：[F-017](../product/features/F-017-agent-terminal-question-draft.md)。工程验证见 [V9 验证记录](./acceptance/2026-10-07-v9/README.md)，后续顺序见 [V9～V11 路线](./AGENT_V9_V11_ROADMAP.md)。
 
 原页面在核对最新终态后解释停止、失败、中断或完成。说明来自固定状态/错误码映射，不把推理完成当作质量通过。用户可点击“填入本轮问题”，编辑并补充背景后明确发送新轮；历史气泡不再重发全局最后问题。
