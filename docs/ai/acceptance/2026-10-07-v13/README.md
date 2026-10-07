@@ -2,6 +2,8 @@
 
 范围：[F-021](../../../product/features/F-021-agent-governance-evidence-review.md)，交付 [IMPLEMENTATION_V13](../../IMPLEMENTATION_V13.md)。最终 PR/CI 链接提交前补充，本版须在 V12 后合并。
 
+本版 [PR #330](https://github.com/gitfortian/data-ops/pull/330) 记录最终头提交与完整 Product/Architecture、后端/MySQL、前端、发行包 CI。真实验收不随合并转通过。
+
 ## 工程回归
 
 定向覆盖五态与未知更新时间、筛选/回答切换、安全文本、共享卡片、重复/多块/非法回链、Dataset 合法来源、唯一 OK 事实与重复字段。完整前端、类型基线、生产构建/manifest、Product/Architecture 和 Node 工程测试作为合并条件。
