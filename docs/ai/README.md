@@ -2,13 +2,13 @@
 
 日期：2026-10-07
 文档类别：规划提案与调研证据（DOCS）  
-状态：V9 [PR #326](https://github.com/gitfortian/data-ops/pull/326) 已通过最终 CI 并合并；V10 [PR #327](https://github.com/gitfortian/data-ops/pull/327) 已完成工程实现与本地回归，等待最终 CI；V11 按 [F-019](../product/features/F-019-agent-live-turn-reconciliation.md) 实施，三版顺序见 [连续路线](./AGENT_V9_V11_ROADMAP.md)。AI F-009～F-019 保持 IMPLEMENTING，真实模型验收独立待完成；合并不表示真实验收通过。
+状态：V9～V11 工程实现与本地回归已完成，合并及最终 CI 以 [PR #326](https://github.com/gitfortian/data-ops/pull/326)、[PR #327](https://github.com/gitfortian/data-ops/pull/327)、[PR #328](https://github.com/gitfortian/data-ops/pull/328) 为准，按版本顺序交付。内容见 [连续路线](./AGENT_V9_V11_ROADMAP.md) 及各版交付说明。AI F-009～[F-019](../product/features/F-019-agent-live-turn-reconciliation.md) 保持 IMPLEMENTING，真实模型验收独立待完成；合并不表示真实验收通过。
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
 ## 建议先做什么
 
-**下一版建议补齐终态说明与重新提问准备，继续复用现有 AgentScope Java。** 停止/失败/中断后先核对实际状态，按确切原轮来源填写问题草稿，由用户编辑后明确发送新轮；不把终态旧轮当作可继续执行。见 [第九版规划](./AGENT_V9_PLAN.md)，按获批 F-017 实施。第八版已补齐可证明的历史证据关联，真实效果和开放范围仍通过独立试点确认。
+**V9～V11 已补齐终态后的重新提问准备、当前治理任务提问表单、实时精确停止与断线核对。** 继续使用 AgentScope Java 2.0.2。接下来优先按固定真实场景验证任务完成、证据语义、权限和源审计；更后续的问数澄清、质量执行比较、影响说明与团队 Skill 需要先满足 [连续路线](./AGENT_V9_V11_ROADMAP.md) 中的源域契约与试点门槛。
 
 产品形态建议是“现有页面中的智能辅助 + 现有 Agent 中的跨域问答”。用户在资产、质量执行、指标详情和开发工作台完成任务；AI 随上下文进入，不增加一级 AI 治理门户，也不按业务模块各造一套聊天系统。
 
