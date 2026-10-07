@@ -9,7 +9,7 @@
 | 检查 | 结果 |
 |---|---|
 | Agent 及上游 Maven test | 通过；Agent 228 项，227 通过、0 失败/错误、1 跳过（AgentToolBudgetMysqlTest，本机没有测试数据库，须由 CI 实跑） |
-| 完整前端 Jest | 129 suites / 614 tests 通过；随后增加损坏反问防护，最终相关 3 suites / 36 tests 通过，新增两项反问校验由 CI 再执行完整回归 |
+| 完整前端 Jest | 129 suites / 614 tests 通过；随后增加损坏反问防护与描述用途展示，最终相关 4 suites / 44 tests 通过，最终 head 由 CI 再执行完整回归 |
 | TypeScript 债务门禁 | 通过，139 条既有诊断，无新增，未扩大基线 |
 | 生产前端构建 | 通过，生成制品 manifest |
 | Product baseline | 通过，16 份 Feature specs |
@@ -23,7 +23,7 @@
 
 | ID | 自动化证据 | 真实验收 |
 |---|---|---|
-| SC01 | Query 最新持久化目标；continuation 四种规范化目标/nullable 字段；页面刷新加载与显式追问 payload、无自动推理 | PENDING |
+| SC01 | Query 最新持久化目标；continuation 四种规范化目标/nullable 字段；页面刷新加载与显式追问 payload、描述用途展示/继续、无自动推理 | PENDING |
 | SC02 | Query 普通最新轮与无轮次会话；页面普通追问不携带 URL 的旧资产目标 | PENDING |
 | SC03 | Query 仅 WAITING_INPUT 恢复最新调用；页面原选项/toolResults；实际 SDK 替身 E2E 从恢复投影提交原调用、同 turnId 完成；既有伪造/预算恢复回归 | PENDING |
 | SC04 | QUEUED/RUNNING 阻止提交且不订阅重放，刷新终态解除；FAILED/CANCELLED/INTERRUPTED 不显示待答；既有取消回归 | PENDING |

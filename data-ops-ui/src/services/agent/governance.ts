@@ -36,6 +36,7 @@ export function governanceSourcePath(target: GovernanceTarget): string {
 
 export function governanceQuestions(target: GovernanceTarget): string[] {
   if (target.qualityMonitorId !== undefined) return ['根据当前字段与模板给出质量规则候选；缺业务阈值请先确认。'];
+  if (target.purpose === 'ASSET_DESCRIPTION') return ['根据当前资产与字段证据给出资产描述候选；缺业务背景请先确认。'];
   return target.assetId !== undefined
     ? ['解释这个资产的含义、负责人和治理状态，并引用证据。', '这个资产有哪些已证实的治理问题？区分缺失证据和待验证假设。']
     : ['请围绕本次质量执行，区分未通过、执行异常和未执行规则，核验关键状态与实际值/期望值；按本次事实、关注规则、待验证假设与缺口、人工检查步骤、源页面下一步给出排查指引。', '针对本次质量排查，还缺哪些证据或业务背景？请区分源字段缺失与需要我补充的信息，必要时先问我；不要确认尚未验证的根因。'];

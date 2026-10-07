@@ -69,6 +69,18 @@ it('restores an exact pending call and answers through the original resume paylo
   await waitFor(() => expect(screen.queryByText('AI 需要补充信息')).not.toBeInTheDocument());
 });
 
+it('restores description purpose as a description task and keeps it on follow-up', async () => {
+  api.continuation.mockResolvedValue(context('s1', { governanceTarget: { assetId: 7, purpose: 'ASSET_DESCRIPTION' } }));
+  render(<AiAgentPage />);
+  expect(await screen.findByText('资产 #7 描述候选')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('生成描述候选'));
+  expect(screen.getByLabelText('会话输入')).toHaveValue('根据当前资产与字段证据给出资产描述候选；缺业务背景请先确认。');
+  expect(chat.submit).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('发送测试问题'));
+  await waitFor(() => expect(chat.submit).toHaveBeenCalledWith({ sessionId: 's1',
+    message: '根据当前资产与字段证据给出资产描述候选；缺业务背景请先确认。', governanceTarget: { assetId: 7, purpose: 'ASSET_DESCRIPTION' } }));
+});
+
 it.each(['QUEUED', 'RUNNING'] as const)('blocks %s without replay or submission, then refreshes a completed result', async (status) => {
   api.continuation.mockResolvedValueOnce(context('s1', { status }));
   render(<AiAgentPage />);

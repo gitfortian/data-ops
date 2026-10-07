@@ -933,7 +933,7 @@ const AiAgentPage: React.FC = () => {
             type="info"
             showIcon
             message={governanceTarget.qualityMonitorId !== undefined ? `质量监控 #${governanceTarget.qualityMonitorId} 规则建议`
-              : governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} 治理解读`
+              : governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} ${governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '描述候选' : '治理解读'}`
                 : `质量执行 ${governanceTarget.qualityExecutionNo} 解读与排查`}
             description={
               <Space wrap>
@@ -943,7 +943,8 @@ const AiAgentPage: React.FC = () => {
                 {governanceQuestions(governanceTarget).map((question, index) => (
                   <Button key={question} size="small" disabled={streaming || !!clarify} onClick={() => setInput(question)}>
                     {governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
-                      : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选' : (index === 0 ? '解释结果' : '排查建议')}
+                      : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选'
+                        : governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '生成描述候选' : (index === 0 ? '解释结果' : '排查建议')}
                   </Button>
                 ))}
                 <Button size="small" href={governanceSourcePath(governanceTarget)}>

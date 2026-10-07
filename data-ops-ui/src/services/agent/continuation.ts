@@ -45,7 +45,7 @@ export function readContinuation(view: SessionContinuation, sessionId: string): 
     if (!pending || pending.toolName !== 'request_clarification'
       || typeof pending.toolCallId !== 'string' || !pending.toolCallId.trim()
       || typeof pending.question !== 'string' || !pending.question.trim()) throw new Error('待答问题无法读取');
-    if (/^[{[]/.test(pending.question.trim())) {
+    if (pending.question.trim().startsWith('{') || pending.question.trim().startsWith('[')) {
       const args: unknown = JSON.parse(pending.question);
       if (!args || typeof args !== 'object' || Array.isArray(args)
         || typeof (args as { question?: unknown }).question !== 'string'
