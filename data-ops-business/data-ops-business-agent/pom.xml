@@ -17,7 +17,7 @@
     <description>Natural-language data analysis agent on top of Dataset contracts</description>
 
     <properties>
-        <agentscope.version>2.0.2</agentscope.version>
+        <agentscope.version>2.0.3</agentscope.version>
     </properties>
 
     <dependencyManagement>
