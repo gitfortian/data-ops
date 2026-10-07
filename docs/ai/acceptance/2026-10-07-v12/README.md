@@ -2,6 +2,8 @@
 
 范围：[F-020](../../../product/features/F-020-agent-suggestion-lifecycle.md)，交付说明 [IMPLEMENTATION_V12](../../IMPLEMENTATION_V12.md)。工程验证结果及 PR 链接在提交前更新，最终发行 CI 以 PR 记录为准。
 
+本版 [PR #329](https://github.com/gitfortian/data-ops/pull/329) 记录最终头提交、Product/Architecture、完整后端/MySQL、前端与发行包 CI；真实验收状态不随合并改变。
+
 ## 工程回归
 
 候选面板定向测试覆盖完成前不采纳、唯一原轮关联、FAILED 固定文案、同轮反问、活动/刷新、断线保留输入、精确停止/丢应答/待答竞态、提交双击/晚回执、切目标/晚历史、原去重/人工采纳。完整前端、类型基线、构建与 Product/Architecture 护栏作为本版合并条件。
