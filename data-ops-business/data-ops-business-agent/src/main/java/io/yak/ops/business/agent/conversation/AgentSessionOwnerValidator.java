@@ -53,6 +53,13 @@ public class AgentSessionOwnerValidator {
     }
   }
 
+  public void assertOwner(String sessionId, long userId, long projectId) {
+    var existing = sessionRepository.findBySessionId(sessionId);
+    if (existing.isEmpty() || existing.get().userId() != userId || existing.get().projectId() != projectId) {
+      throw new IllegalArgumentException("会话不存在或不属于当前用户及项目");
+    }
+  }
+
   /** 标题取对话开头部分：换行折叠为空格，超长截断。 */
   private static String initialTitle(String titleHint) {
     if (titleHint == null) {

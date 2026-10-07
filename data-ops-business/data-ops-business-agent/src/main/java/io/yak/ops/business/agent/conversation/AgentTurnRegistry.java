@@ -64,6 +64,25 @@ public class AgentTurnRegistry {
     cancelBySession(sessionId, () -> {});
   }
 
+  /** Freeze the caller's turn identity; a late request must not select the session's new turn. */
+  void cancelTurn(String turnId, Runnable cancelQueued) {
+    Handle handle;
+    synchronized (this) {
+      handle = running.remove(turnId);
+      if (handle == null) {
+        // Same lock as claimAndRegister: either queued CAS wins or its running handle is present.
+        cancelQueued.run();
+        return;
+      }
+      sessionIndex.values().removeIf(turnId::equals);
+    }
+    try {
+      handle.cancelFinalizer().run();
+    } finally {
+      handle.subscription().dispose();
+    }
+  }
+
   void cancelBySession(String sessionId, Runnable cancelQueued) {
     Handle handle;
     synchronized (this) {

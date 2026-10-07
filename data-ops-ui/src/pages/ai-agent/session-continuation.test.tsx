@@ -3,10 +3,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import AiAgentPage from './index';
 import { agentChatApi, agentSessionApi, streamTurnEvents } from '@/services/agent';
 
-jest.mock('@/hooks/usePermissionAccess', () => ({ usePermissionAccess: () => ({ can: () => false }) }));
+let mockCanRun = false;
+jest.mock('@/hooks/usePermissionAccess', () => ({ usePermissionAccess: () => ({ can: (code: string) => mockCanRun && code === 'agent:chat:run' }) }));
 jest.mock('@/services/agent', () => ({
   agentSessionApi: { list: jest.fn(), history: jest.fn(), continuation: jest.fn(), trace: jest.fn() },
-  agentChatApi: { submit: jest.fn() }, streamTurnEvents: jest.fn(),
+  agentChatApi: { submit: jest.fn(), cancelTurn: jest.fn() }, streamTurnEvents: jest.fn(),
 }));
 // These adapters exercise page state and payloads; index.test.tsx retains the installed component smoke test.
 jest.mock('@ant-design/x/lib/sender', () => ({ __esModule: true, default: (props: any) => (
@@ -33,6 +34,8 @@ function deferred<T>() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanRun = false;
+  Object.defineProperty(document, 'hidden', { configurable: true, value: false });
   window.IntersectionObserver = jest.fn(() => ({ observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() })) as any;
   window.ResizeObserver = jest.fn(() => ({ observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() })) as any;
   window.history.replaceState({}, '', '/ai-agent?sessionId=s1&assetId=999');
@@ -41,9 +44,10 @@ beforeEach(() => {
   api.continuation.mockResolvedValue(context('s1', { governanceTarget: { qualityExecutionNo: 'Q_1' } }));
   api.trace.mockResolvedValue({ spans: [] } as any);
   chat.submit.mockResolvedValue({ turnId: 't-next' } as any);
+  chat.cancelTurn.mockResolvedValue(true);
   stream.mockImplementation(async (_request, handler) => { handler.onComplete(); });
 });
-afterEach(() => window.history.replaceState({}, '', '/'));
+afterEach(() => { window.history.replaceState({}, '', '/'); jest.useRealTimers(); delete (document as any).hidden; });
 
 it('reloads history and persisted scope, ignores extra URL targets and sends a fresh scoped question', async () => {
   render(<AiAgentPage />);
@@ -149,4 +153,97 @@ it('blocks after an uncertain submission and refreshes persisted state before an
   fireEvent.click(screen.getByText('刷新会话'));
   await waitFor(() => expect(screen.getByLabelText('会话输入')).not.toBeDisabled());
   expect(chat.submit).toHaveBeenCalledTimes(1);
+});
+
+it('automatically reloads completed history without submitting or replaying the stream', async () => {
+  jest.useFakeTimers();
+  api.continuation.mockResolvedValueOnce(context('s1', { status: 'RUNNING' }));
+  api.history.mockResolvedValueOnce([{ role: 'assistant', content: '历史回答' }] as any)
+    .mockResolvedValue([{ role: 'assistant', content: '新的最终结果' }] as any);
+  render(<AiAgentPage />);
+  await screen.findByText('刷新会话');
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(await screen.findByText('新的最终结果')).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).not.toBeDisabled();
+  expect(api.history).toHaveBeenCalledTimes(2);
+  expect(chat.submit).not.toHaveBeenCalled(); expect(stream).not.toHaveBeenCalled();
+});
+
+it('automatically restores a newly waiting question and preserves its original resume call', async () => {
+  jest.useFakeTimers();
+  api.continuation.mockResolvedValue(context('s1', { status: 'WAITING_INPUT',
+    clarification: { toolCallId: 'c-auto', toolName: 'request_clarification', question: '{"question":"选择范围","options":["昨天"]}' } }))
+    .mockResolvedValueOnce(context('s1', { status: 'RUNNING' }));
+  render(<AiAgentPage />);
+  await screen.findByText('刷新会话');
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(await screen.findByText('选择范围')).toBeInTheDocument();
+  expect(chat.submit).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /昨\s*天/ }));
+  await waitFor(() => expect(chat.submit).toHaveBeenCalledWith({ sessionId: 's1', toolResults: [
+    { toolCallId: 'c-auto', toolName: 'request_clarification', output: '昨天' }] }));
+});
+
+it('stops exactly the restored turn and reads its outcome before unlocking the composer', async () => {
+  mockCanRun = true;
+  const stopped = deferred<boolean>(); chat.cancelTurn.mockReturnValueOnce(stopped.promise);
+  api.continuation.mockResolvedValue(context('s1', { status: 'CANCELLED' }))
+    .mockResolvedValueOnce(context('s1', { turnId: 't-old', status: 'RUNNING' }));
+  render(<AiAgentPage />);
+  fireEvent.click(await screen.findByText('停止本轮'));
+  expect(chat.cancelTurn).toHaveBeenCalledWith('t-old');
+  expect(screen.getByLabelText('会话输入')).toBeDisabled();
+  expect(screen.getByText('停止本轮').closest('button')).toBeDisabled();
+  await act(async () => stopped.resolve(true));
+  await waitFor(() => expect(screen.getByLabelText('会话输入')).not.toBeDisabled());
+  expect(api.history).toHaveBeenCalledTimes(2);
+  expect(screen.getByText(/最近轮次状态：已停止/)).toBeInTheDocument();
+  expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it('disables restored stop when CHAT_RUN is missing', async () => {
+  api.continuation.mockResolvedValueOnce(context('s1', { status: 'RUNNING' }));
+  render(<AiAgentPage />);
+  expect((await screen.findByText('停止本轮')).closest('button')).toBeDisabled();
+  expect(chat.cancelTurn).not.toHaveBeenCalled();
+});
+
+it('does not declare stop success when its acknowledgement is lost', async () => {
+  mockCanRun = true; chat.cancelTurn.mockRejectedValueOnce(new Error('timeout'));
+  api.continuation.mockResolvedValueOnce(context('s1', { status: 'RUNNING' }));
+  render(<AiAgentPage />);
+  fireEvent.click(await screen.findByText('停止本轮'));
+  expect(await screen.findByText(/停止请求未确认/)).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toBeDisabled();
+  expect(screen.queryByText(/最近轮次状态：已停止/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('刷新会话'));
+  await waitFor(() => expect(screen.getByLabelText('会话输入')).not.toBeDisabled());
+});
+
+it('ignores a late stop acknowledgement after selecting another session', async () => {
+  mockCanRun = true;
+  const stopped = deferred<boolean>(); chat.cancelTurn.mockReturnValueOnce(stopped.promise);
+  api.continuation.mockImplementation(async (id) => context(id, id === 's1'
+    ? { status: 'RUNNING' } : { governanceTarget: { assetId: 2 } }));
+  render(<AiAgentPage />);
+  fireEvent.click(await screen.findByText('停止本轮'));
+  fireEvent.click(await screen.findByText('会话二'));
+  await screen.findByText('资产 #2 治理解读');
+  await act(async () => stopped.resolve(true));
+  expect(window.location.search).toBe('?sessionId=s2');
+  expect(api.history).toHaveBeenLastCalledWith('s2');
+  expect(screen.getByLabelText('会话输入')).not.toBeDisabled();
+});
+
+it('keeps history and blocks sending after an automatic state check fails', async () => {
+  jest.useFakeTimers();
+  api.continuation.mockRejectedValue(new Error('HTTP 403'))
+    .mockResolvedValueOnce(context('s1', { status: 'RUNNING' }));
+  render(<AiAgentPage />);
+  await screen.findByText('刷新会话');
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(await screen.findByText(/状态检查失败/)).toBeInTheDocument();
+  expect(screen.getByText('历史回答')).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toBeDisabled();
+  expect(chat.submit).not.toHaveBeenCalled();
 });

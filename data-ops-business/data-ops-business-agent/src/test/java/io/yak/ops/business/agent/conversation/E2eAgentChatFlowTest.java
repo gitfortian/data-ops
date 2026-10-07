@@ -247,6 +247,16 @@ class E2eAgentChatFlowTest {
     }
 
     @Override
+    public synchronized boolean cancelQueued(String turnId) {
+      AgentTurnRecord r = turns.get(turnId);
+      if (r == null || r.status() != TurnStatus.QUEUED) return false;
+      turns.put(turnId, new AgentTurnRecord(r.turnId(), r.sessionId(), r.userId(), r.projectId(),
+          r.kind(), r.payloadJson(), TurnStatus.CANCELLED, null, null, r.createTime(), null,
+          LocalDateTime.now()));
+      return true;
+    }
+
+    @Override
     public synchronized int interruptOrphanRunning() {
       AtomicInteger n = new AtomicInteger();
       turns.forEach((id, r) -> {
@@ -766,7 +776,7 @@ class E2eAgentChatFlowTest {
         String turnId = assembly.service().submitTurn("sess-1", "分析长任务");
         awaitStatus(assembly.turns(), turnId, TurnStatus.RUNNING, 15_000);
 
-        assembly.service().cancel("sess-1");
+        assembly.service().cancelTurn(turnId);
         awaitTerminal(assembly.turns(), turnId, 20_000);
         assertEquals(TurnStatus.CANCELLED,
             assembly.turns().findByTurnId(turnId).orElseThrow().status(),

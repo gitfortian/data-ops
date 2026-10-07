@@ -102,6 +102,11 @@ public class AgentTurnRepositoryAdapter implements AgentTurnRepository {
   }
 
   @Override
+  public boolean cancelQueued(String turnId) {
+    return transition(turnId, TurnStatus.QUEUED, TurnStatus.CANCELLED, null, null, false);
+  }
+
+  @Override
   public int cancelQueuedBySession(String sessionId) {
     return mapper.update(
         null,

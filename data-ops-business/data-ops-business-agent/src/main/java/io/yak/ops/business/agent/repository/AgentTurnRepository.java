@@ -42,6 +42,9 @@ public interface AgentTurnRepository {
   /** 停止生成：RUNNING -> CANCELLED。 */
   boolean cancelRunning(String turnId);
 
+  /** Cancel only the identified QUEUED turn, never another turn in its session. */
+  boolean cancelQueued(String turnId);
+
   /** 取消排队：该会话全部 QUEUED -> CANCELLED，返回影响行数。 */
   int cancelQueuedBySession(String sessionId);
 

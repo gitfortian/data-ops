@@ -53,6 +53,7 @@ import type { TurnSubmitPayload } from '@/services/agent';
 import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
 import { visibleGovernanceText } from '@/services/agent/suggestions';
 import { readContinuation, sessionLocation, type SessionContinuation } from '@/services/agent/continuation';
+import { useSessionFollow } from './useSessionFollow';
 
 const { Sider, Content } = Layout;
 
@@ -90,6 +91,7 @@ const AiAgentPage: React.FC = () => {
   const [historyLoading, setHistoryLoading] = React.useState(Boolean(initialSession.current));
   const [historyError, setHistoryError] = React.useState('');
   const [continuation, setContinuation] = React.useState<SessionContinuation | null>(null);
+  const [stopping, setStopping] = React.useState(false);
   const historyRequest = React.useRef(0);
   const continuationBlocked = React.useRef(Boolean(initialSession.current));
   const [sessions, setSessions] = React.useState<AgentSession[]>([]);
@@ -365,7 +367,7 @@ const AiAgentPage: React.FC = () => {
 
   React.useEffect(() => {
     const onVisible = () => {
-      if (!document.hidden && isWatchdogDue(lastFrameAtRef.current, Date.now())) {
+      if (!document.hidden && abortRef.current && isWatchdogDue(lastFrameAtRef.current, Date.now())) {
         transition('reconnect-start');
       }
     };
@@ -464,6 +466,7 @@ const AiAgentPage: React.FC = () => {
       submitted = await agentChatApi.submit(payload);
     } catch (error) {
       setStreaming(false); stopWatchdog(); transition('fail');
+      abortRef.current = null;
       continuationBlocked.current = true;
       setHistoryError(`提交未确认，请刷新会话核对状态后继续：${(error as Error).message}`);
       return;
@@ -551,7 +554,7 @@ const AiAgentPage: React.FC = () => {
     }
     const request = ++historyRequest.current;
     continuationBlocked.current = true;
-    setHistoryLoading(true); setHistoryError(''); setContinuation(null);
+    setHistoryLoading(true); setHistoryError(''); setContinuation(null); setStopping(false);
     setMessages([]); assistantIdRef.current = ''; lastUserMessageRef.current = '';
     setGovernanceTarget(null);
     setInput('');
@@ -610,7 +613,7 @@ const AiAgentPage: React.FC = () => {
     }
     historyRequest.current += 1;
     continuationBlocked.current = false;
-    setHistoryLoading(false); setHistoryError(''); setContinuation(null);
+    setHistoryLoading(false); setHistoryError(''); setContinuation(null); setStopping(false);
     window.history.replaceState(window.history.state, '', sessionLocation(null));
     setGovernanceTarget(null);
     setInput('');
@@ -629,6 +632,40 @@ const AiAgentPage: React.FC = () => {
       stopWatchdog();
     };
   }, []);
+
+  const following = continuation?.status === 'QUEUED' || continuation?.status === 'RUNNING';
+  const followingRequest = historyRequest.current;
+  useSessionFollow({
+    sessionId: activeSessionId,
+    turnId: continuation?.turnId ?? null,
+    active: following && !streaming && !historyLoading && !historyError && !stopping,
+    generation: followingRequest,
+    onActive: (view) => { if (followingRequest === historyRequest.current) setContinuation(view); },
+    onSettled: () => { if (followingRequest === historyRequest.current && activeSessionId) void selectSession(activeSessionId); },
+    onPause: (reason) => {
+      if (followingRequest === historyRequest.current) { continuationBlocked.current = true; setHistoryError(reason); }
+    },
+  });
+
+  const stopRestoredTurn = async () => {
+    const turnId = continuation?.turnId;
+    const sessionId = activeSessionId;
+    if (!turnId || !sessionId || !following || stopping || !can('agent:chat:run')) return;
+    const request = ++historyRequest.current;
+    continuationBlocked.current = true;
+    setStopping(true);
+    try {
+      await agentChatApi.cancelTurn(turnId);
+      if (request === historyRequest.current) await selectSession(sessionId);
+    } catch (error) {
+      if (request === historyRequest.current) {
+        // A lost acknowledgement cannot prove whether the stop reached the server.
+        setHistoryError(`停止请求未确认，请刷新会话核对状态：${(error as Error).message}`);
+      }
+    } finally {
+      if (request === historyRequest.current) setStopping(false);
+    }
+  };
 
   const renameSession = async (sessionId: string, title: string) => {
     try {
@@ -1046,7 +1083,11 @@ const AiAgentPage: React.FC = () => {
                     {historyLoading && <Alert type="info" showIcon message="正在恢复会话与任务范围，请稍候…" />}
                     {(historyError || continuation?.blockingReason) && <Alert type="warning" showIcon
                       message={historyError || continuation?.blockingReason}
-                      action={<Button disabled={streaming || historyLoading} onClick={() => activeSessionId && void selectSession(activeSessionId)}>刷新会话</Button>} />}
+                      action={<Space>
+                        <Button disabled={streaming || historyLoading || stopping} onClick={() => activeSessionId && void selectSession(activeSessionId)}>刷新会话</Button>
+                        {following && <Button disabled={!can('agent:chat:run') || stopping || historyLoading} loading={stopping} onClick={() => void stopRestoredTurn()}>停止本轮</Button>}
+                      </Space>} />}
+                    {following && !historyError && <Typography.Text type="secondary">正在自动检查状态；页面隐藏时暂停，达到检查上限后可手动刷新。</Typography.Text>}
                     {continuation?.status && <p>最近轮次状态：{turnStatusLabels[continuation.status]}；历史证据仅供回看，继续提问会重新读取并检查权限。</p>}
                     <Sender
                       value={input}
