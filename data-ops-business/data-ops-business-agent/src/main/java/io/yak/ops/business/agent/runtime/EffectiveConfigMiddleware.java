@@ -30,7 +30,7 @@ final class EffectiveConfigMiddleware implements MiddlewareBase {
             + java.util.Arrays.deepToString(method.getParameterAnnotations()))
         .sorted().collect(java.util.stream.Collectors.joining("\n"));
     this.settings = Map.ofEntries(
-        Map.entry("framework", "AgentScope Java 2.0.2"), Map.entry("contractVersion", "F-011-v1"),
+        Map.entry("framework", "AgentScope Java 2.0.3"), Map.entry("contractVersion", "F-011-v1"),
         Map.entry("provider", properties.getModel().getProvider()), Map.entry("model", properties.getModel().getName()),
         Map.entry("reasoningEffort", properties.getModel().getReasoningEffort()),
         Map.entry("maxIters", properties.getChat().getMaxIters()),
