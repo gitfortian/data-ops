@@ -22,4 +22,7 @@ public interface AgentTurnEventRepository {
 
   /** 该轮最近一条 CLARIFY_REQUESTED 帧的 toolCallId（HITL 恢复校验用）。 */
   Optional<String> latestClarifyToolCallId(String turnId);
+
+  /** Latest clarification delivery projection; never creates SDK pending state. */
+  Optional<ChatTurnEvent> latestClarification(String turnId);
 }

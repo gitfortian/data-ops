@@ -28,6 +28,12 @@ public final class AgentViews {
   /** 会话历史轮次（O2：turnId 供前端懒加载 trace v2 权威视图，可空）。 */
   public record HistoryVO(String role, String content, String turnId, List<TraceStepVO> trace) {}
 
+  public record SessionContinuationVO(
+      String sessionId, String turnId, String status,
+      io.yak.ops.business.agent.domain.GovernanceTarget governanceTarget,
+      io.yak.ops.business.agent.domain.SessionContinuation.Clarification clarification,
+      String blockingReason) {}
+
   /** 历史 trace 步骤（思考/工具调用）。 */
   public record TraceStepVO(String kind, String text, String toolCallId, String toolName, String resultText) {}
 

@@ -52,8 +52,14 @@ import { governanceQuestions, governanceSourcePath, parseGovernanceTarget } from
 import type { TurnSubmitPayload } from '@/services/agent';
 import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
 import { visibleGovernanceText } from '@/services/agent/suggestions';
+import { readContinuation, sessionLocation, type SessionContinuation } from '@/services/agent/continuation';
 
 const { Sider, Content } = Layout;
+
+const turnStatusLabels: Record<NonNullable<SessionContinuation['status']>, string> = {
+  QUEUED: '排队中', RUNNING: '推理中', WAITING_INPUT: '等待补充信息', COMPLETED: '已完成',
+  FAILED: '执行失败', CANCELLED: '已停止', INTERRUPTED: '已中断',
+};
 
 let messageIdSeed = 0;
 const nextMessageId = () => `m-${Date.now().toString(36)}-${messageIdSeed++}`;
@@ -79,7 +85,13 @@ function AvatarFallback(props: { icon: React.ReactNode; background: string; colo
 }
 
 const AiAgentPage: React.FC = () => {
-  const [governanceTarget, setGovernanceTarget] = React.useState(() => parseGovernanceTarget(window.location.search));
+  const initialSession = React.useRef(new URLSearchParams(window.location.search).get('sessionId'));
+  const [governanceTarget, setGovernanceTarget] = React.useState(() => initialSession.current ? null : parseGovernanceTarget(window.location.search));
+  const [historyLoading, setHistoryLoading] = React.useState(Boolean(initialSession.current));
+  const [historyError, setHistoryError] = React.useState('');
+  const [continuation, setContinuation] = React.useState<SessionContinuation | null>(null);
+  const historyRequest = React.useRef(0);
+  const continuationBlocked = React.useRef(Boolean(initialSession.current));
   const [sessions, setSessions] = React.useState<AgentSession[]>([]);
   const [sessionLoading, setSessionLoading] = React.useState(false);
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
@@ -432,6 +444,7 @@ const AiAgentPage: React.FC = () => {
   };
 
   const launchStream = async (payload: TurnSubmitPayload) => {
+    setContinuation(null);
     setStreaming(true);
     setClarify(null);
     seenErrorKeysRef.current = new Set();
@@ -446,7 +459,15 @@ const AiAgentPage: React.FC = () => {
     const controller = new AbortController();
     abortRef.current = controller;
     // 提交/执行分离：先入队拿 turnId，再订阅事件流（断线由服务层按游标自动续播）
-    const submitted = await agentChatApi.submit(payload);
+    let submitted;
+    try {
+      submitted = await agentChatApi.submit(payload);
+    } catch (error) {
+      setStreaming(false); stopWatchdog(); transition('fail');
+      continuationBlocked.current = true;
+      setHistoryError(`提交未确认，请刷新会话核对状态后继续：${(error as Error).message}`);
+      return;
+    }
     await streamTurnEvents(
       { turnId: submitted.turnId, signal: controller.signal },
       {
@@ -499,18 +520,20 @@ const AiAgentPage: React.FC = () => {
 
   const sendMessage = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || streaming || clarify) {
+    if (!content || streaming || clarify || continuationBlocked.current) {
       return;
     }
     const sessionId = activeSessionId ?? newSessionId();
     setActiveSessionId(sessionId);
+    window.history.replaceState(window.history.state, '', sessionLocation(sessionId));
+    setContinuation(null);
     setInput('');
     setMessages((prev) => [...prev, { id: nextMessageId(), role: 'user', content, trace: [] }]);
     await launchStream({ sessionId, message: content, governanceTarget: governanceTarget ?? undefined });
   };
 
   const answerClarify = async (answer: string) => {
-    if (!clarify || streaming) {
+    if (!clarify || streaming || continuationBlocked.current) {
       return;
     }
     const sessionId = activeSessionId!;
@@ -526,13 +549,21 @@ const AiAgentPage: React.FC = () => {
       message.warning('当前正在推理，请等待结束或停止后再切换');
       return;
     }
+    const request = ++historyRequest.current;
+    continuationBlocked.current = true;
+    setHistoryLoading(true); setHistoryError(''); setContinuation(null);
+    setMessages([]); assistantIdRef.current = ''; lastUserMessageRef.current = '';
     setGovernanceTarget(null);
     setInput('');
     setActiveSessionId(sessionId);
+    window.history.replaceState(window.history.state, '', sessionLocation(sessionId));
     setClarify(null);
     try {
-      const history = await agentSessionApi.history(sessionId);
-      const restored = history
+      const [historyResult, contextResult] = await Promise.allSettled([
+        agentSessionApi.history(sessionId), agentSessionApi.continuation(sessionId),
+      ]);
+      if (request !== historyRequest.current) return;
+      const restored = (historyResult.status === 'fulfilled' ? historyResult.value : [])
         .filter((turn) => (turn.role === 'user' || turn.role === 'assistant' || turn.role === 'error') && turn.content)
         .map((turn) => ({
           id: nextMessageId(),
@@ -550,14 +581,25 @@ const AiAgentPage: React.FC = () => {
           })),
         }));
       setMessages(restored);
+      if (historyResult.status === 'rejected') throw historyResult.reason;
+      if (contextResult.status === 'rejected') throw contextResult.reason;
+      const view = readContinuation(contextResult.value, sessionId);
+      setContinuation(view);
+      setGovernanceTarget(view.governanceTarget ?? null);
+      continuationBlocked.current = Boolean(view.blockingReason);
+      if (view.clarification) setClarify({ ...view.clarification, options: [] });
       // 历史回放切换（O2）：最近一条 assistant 轮次自动水合权威链路（入参/结果/失败归因不丢）
       const lastAssistant = [...restored].reverse().find((m) => m.role === 'assistant' && m.turnId);
       if (lastAssistant?.turnId) {
         void hydrateTrace(lastAssistant.id, lastAssistant.turnId);
       }
     } catch (error) {
-      message.error(`历史加载失败：${(error as Error).message}`);
-      setMessages([]);
+      if (request === historyRequest.current) {
+        continuationBlocked.current = true;
+        setHistoryError(`会话恢复失败，已暂停继续：${(error as Error).message}`);
+      }
+    } finally {
+      if (request === historyRequest.current) setHistoryLoading(false);
     }
   };
 
@@ -566,12 +608,27 @@ const AiAgentPage: React.FC = () => {
       message.warning('当前正在推理，请先停止');
       return;
     }
+    historyRequest.current += 1;
+    continuationBlocked.current = false;
+    setHistoryLoading(false); setHistoryError(''); setContinuation(null);
+    window.history.replaceState(window.history.state, '', sessionLocation(null));
     setGovernanceTarget(null);
     setInput('');
     setActiveSessionId(null);
     setMessages([]);
     setClarify(null);
   };
+
+  React.useEffect(() => {
+    if (initialSession.current) void selectSession(initialSession.current);
+    return () => {
+      historyRequest.current += 1;
+      abortRef.current?.abort();
+      if (tickerRef.current) clearInterval(tickerRef.current);
+      if (pipelineTimerRef.current) clearTimeout(pipelineTimerRef.current);
+      stopWatchdog();
+    };
+  }, []);
 
   const renameSession = async (sessionId: string, title: string) => {
     try {
@@ -985,6 +1042,11 @@ const AiAgentPage: React.FC = () => {
                     : null}
 
                   <div ref={inputRef} tabIndex={-1} className={sendIdle ? styles.sendDisabled : undefined}>
+                    {historyLoading && <Alert type="info" showIcon message="正在恢复会话与任务范围，请稍候…" />}
+                    {(historyError || continuation?.blockingReason) && <Alert type="warning" showIcon
+                      message={historyError || continuation?.blockingReason}
+                      action={<Button disabled={streaming || historyLoading} onClick={() => activeSessionId && void selectSession(activeSessionId)}>刷新会话</Button>} />}
+                    {continuation?.status && <p>最近轮次状态：{turnStatusLabels[continuation.status]}；历史证据仅供回看，继续提问会重新读取并检查权限。</p>}
                     <Sender
                       value={input}
                       onChange={(value) => setInput(value)}
@@ -998,7 +1060,7 @@ const AiAgentPage: React.FC = () => {
                         }
                       }}
                       loading={streaming}
-                      disabled={Boolean(clarify)}
+                      disabled={Boolean(clarify) || historyLoading || Boolean(historyError || continuation?.blockingReason)}
                       placeholder={clarify ? '请先回答上方问题' : '输入数据分析问题，Enter 发送'}
                     />
                   </div>

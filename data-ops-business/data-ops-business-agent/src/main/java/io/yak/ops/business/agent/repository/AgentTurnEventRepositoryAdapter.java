@@ -60,6 +60,11 @@ public class AgentTurnEventRepositoryAdapter implements AgentTurnEventRepository
 
   @Override
   public Optional<String> latestClarifyToolCallId(String turnId) {
+    return latestClarification(turnId).map(ChatTurnEvent::toolCallId);
+  }
+
+  @Override
+  public Optional<ChatTurnEvent> latestClarification(String turnId) {
     AgentTurnEventPO tail =
         mapper.selectOne(
             Wrappers.<AgentTurnEventPO>lambdaQuery()
@@ -72,9 +77,7 @@ public class AgentTurnEventRepositoryAdapter implements AgentTurnEventRepository
     }
     ChatTurnEvent event =
         TurnEventFrameCodec.decode(tail.getPayloadJson(), tail.getEventType());
-    return event.toolCallId() == null
-        ? Optional.empty()
-        : Optional.of(event.toolCallId());
+    return Optional.of(event);
   }
 
   @Override
