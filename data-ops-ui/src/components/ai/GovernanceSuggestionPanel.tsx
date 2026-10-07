@@ -5,6 +5,9 @@ import type { TurnSubmitPayload } from '@/services/agent';
 import { parseSuggestion, visibleGovernanceText } from '@/services/agent/suggestions';
 import type { GovernanceSuggestion } from '@/services/agent/suggestions';
 import GovernanceEvidenceCards from './GovernanceEvidenceCards';
+import type { SaveRulePayload } from '@/services/data-quality';
+import { sameRuleConditions } from '@/services/data-quality/ruleComparison';
+import QualityRuleComparison from './QualityRuleComparison';
 
 interface Props {
   kind: GovernanceSuggestion['kind'];
@@ -12,11 +15,12 @@ interface Props {
   definition: string;
   disabled?: boolean;
   ruleLabel?: (templateId: number) => string;
+  qualityRules?: SaveRulePayload[];
   onApply: (suggestion: GovernanceSuggestion, ruleIndex: number | undefined, isCurrent: () => boolean) => Promise<void>;
 }
 
 /** Uses the existing durable Agent turn, HITL and cancellation; adoption only edits the original form. */
-export default function GovernanceSuggestionPanel({ kind, targetId, definition, disabled, ruleLabel, onApply }: Props) {
+export default function GovernanceSuggestionPanel({ kind, targetId, definition, disabled, ruleLabel, qualityRules = [], onApply }: Props) {
   const [constraints, setConstraints] = useState('');
   const [answer, setAnswer] = useState('');
   const [suggestion, setSuggestion] = useState<GovernanceSuggestion | null>(null);
@@ -28,17 +32,20 @@ export default function GovernanceSuggestionPanel({ kind, targetId, definition, 
   const session = useRef('');
   const controller = useRef<AbortController>();
   const generation = useRef(0);
+  const applyingRequest = useRef<number | null>(null);
 
   const cancel = () => {
     generation.current += 1;
     controller.current?.abort();
     if (session.current) void agentSessionApi.cancel(session.current).catch(() => undefined);
-    setBusy(false); setPending(null); setSuggestion(null);
+    applyingRequest.current = null;
+    setBusy(false); setApplying(null); setPending(null); setSuggestion(null);
   };
 
   useEffect(() => {
     setAnswer(''); setSuggestion(null); setApplied([]); setPending(null); setError('');
     setBusy(false); setApplying(null); session.current = '';
+    applyingRequest.current = null;
     return () => {
       generation.current += 1;
       controller.current?.abort();
@@ -47,6 +54,7 @@ export default function GovernanceSuggestionPanel({ kind, targetId, definition, 
   }, [kind, targetId, definition]);
 
   const run = async (resume = false) => {
+    if (disabled || applyingRequest.current !== null) return;
     const version = ++generation.current;
     controller.current?.abort();
     const abort = new AbortController(); controller.current = abort;
@@ -95,27 +103,35 @@ export default function GovernanceSuggestionPanel({ kind, targetId, definition, 
   };
 
   const apply = async (index: number) => {
-    if (!suggestion || applying !== null || applied.includes(index)) return;
+    const duplicate = suggestion?.kind === 'QUALITY_RULES'
+      && qualityRules.some((rule) => sameRuleConditions(rule, suggestion.rules[index]));
+    if (disabled || busy || !suggestion || applyingRequest.current !== null || duplicate
+      || (kind === 'ASSET_DESCRIPTION' && applied.includes(index))) return;
     const version = generation.current;
+    applyingRequest.current = version;
     setApplying(index); setError('');
     try {
       await onApply(suggestion, kind === 'QUALITY_RULES' ? index : undefined, () => version === generation.current);
       if (version === generation.current) setApplied((old) => [...old, index]);
     } catch (caught) {
       if (version === generation.current) setError(caught instanceof Error ? caught.message : '候选已失效，请重新生成');
-    } finally { if (version === generation.current) setApplying(null); }
+    } finally {
+      if (applyingRequest.current === version) applyingRequest.current = null;
+      if (version === generation.current) setApplying(null);
+    }
   };
 
   return <Card size="small" title={kind === 'QUALITY_RULES' ? 'AI 建议规则' : 'AI 建议台账描述'}>
     <Space direction="vertical" className="w-full">
       <Alert type="info" showIcon message="先核对业务条件与证据；带入仅修改表单，需在原页面人工保存。新规则默认不启用。" />
+      {kind === 'QUALITY_RULES' && <p>候选依据已保存的监控定义；当前表单可能有未保存修改，保存前请核对过滤条件、阈值与调度。</p>}
       {pending && <Alert type="warning" message={pending.question} />}
       <Input.TextArea value={constraints} onChange={(event) => setConstraints(event.target.value)}
         placeholder="输入允许空值、唯一性、阈值/枚举或资产用途等业务条件" maxLength={4000} disabled={busy || applying !== null} />
       <Space>
         <Button loading={busy} disabled={disabled || !definition || applying !== null || (Boolean(pending) && !constraints.trim())}
           onClick={() => void run(Boolean(pending))}>{pending ? '补充并继续' : '生成建议'}</Button>
-        {(busy || pending) && <Button onClick={cancel}>停止</Button>}
+        {(busy || pending || applying !== null) && <Button disabled={false} onClick={cancel}>停止</Button>}
       </Space>
       {error && <Alert type="error" showIcon message={error} />}
       {answer && <p>{visibleGovernanceText(answer)}</p>}
@@ -125,13 +141,17 @@ export default function GovernanceSuggestionPanel({ kind, targetId, definition, 
         <Button disabled={disabled || busy || applied.includes(0)} loading={applying === 0}
           onClick={() => void apply(0)}>{applied.includes(0) ? '已带入，尚未保存' : '带入描述'}</Button>
       </Card>}
-      {suggestion?.kind === 'QUALITY_RULES' && suggestion.rules.map((rule, index) => <Card key={index} size="small">
+      {suggestion?.kind === 'QUALITY_RULES' && suggestion.rules.map((rule, index) => {
+        const duplicate = qualityRules.some((current) => sameRuleConditions(current, rule));
+        return <Card key={index} size="small">
         <div>{ruleLabel?.(rule.templateId)}</div>
-        <p>{rule.name} · {rule.columnName || '表级'} · {rule.operator} {rule.threshold}
-          {rule.thresholdEnd != null ? `～${rule.thresholdEnd}` : ''}{rule.enumValues?.length ? ` · ${rule.enumValues.join('、')}` : ''}</p>
-        <Button disabled={disabled || busy || applied.includes(index)} loading={applying === index}
-          onClick={() => void apply(index)}>{applied.includes(index) ? '已带入，尚未保存' : '带入这条规则'}</Button>
-      </Card>)}
+        <p>{rule.name} · {rule.columnName || '表级'}</p>
+        <QualityRuleComparison candidate={rule} rules={qualityRules} />
+        <Button disabled={disabled || busy || applying !== null || duplicate} loading={applying === index}
+          onClick={() => void apply(index)}>{duplicate ? '表单已有相同条件' : '带入这条规则'}</Button>
+        {duplicate && applied.includes(index) && <p>已带入表单，尚未保存；若已修改或删除，请核对上方规则。</p>}
+      </Card>;
+      })}
     </Space>
   </Card>;
 }
