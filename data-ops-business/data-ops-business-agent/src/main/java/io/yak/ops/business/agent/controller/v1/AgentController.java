@@ -20,6 +20,7 @@ import io.yak.ops.business.agent.controller.v1.vo.AgentViews.QueryAuditVO;
 import io.yak.ops.business.agent.controller.v1.vo.AgentViews.ReportDetailVO;
 import io.yak.ops.business.agent.controller.v1.vo.AgentViews.ReportVO;
 import io.yak.ops.business.agent.controller.v1.vo.AgentViews.SessionVO;
+import io.yak.ops.business.agent.controller.v1.vo.AgentViews.SessionContinuationVO;
 import io.yak.ops.business.agent.controller.v1.vo.AgentViews.SessionObservabilityVO;
 import io.yak.ops.business.agent.controller.v1.vo.AgentViews.SpanNodeVO;
 import io.yak.ops.business.agent.controller.v1.vo.AgentViews.StepPayloadVO;
@@ -143,6 +144,17 @@ public class AgentController {
                     .toList()))
             .toList();
     return Result.success(history);
+  }
+
+  @Operation(summary = "读取会话最新任务、状态与待答问题（只读）")
+  @GetMapping("/sessions/{sessionId}/continuation")
+  @RequiresPermission(AgentPermissionCode.SESSION_READ)
+  public Result<SessionContinuationVO> continuation(
+      @PathVariable String sessionId) {
+    var view = sessionQueryService.continuation(sessionId);
+    return Result.success(new SessionContinuationVO(
+        view.sessionId(), view.turnId(), view.status() == null ? null : view.status().name(),
+        view.governanceTarget(), view.clarification(), view.blockingReason()));
   }
 
   @Operation(summary = "查看轮次 trace 详情 v2（树/时间轴/聚合/完整性/渲染投影，服务端权威计时）")

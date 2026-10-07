@@ -47,6 +47,9 @@ const SKILL_REQUEST_OPTIONS: HttpRequestOptions = {
 
 export const agentSessionApi = {
   list: () => HttpUtils.getData<AgentSession[]>(`${PREFIX}/sessions`, INCLUDE_CREDENTIALS),
+  continuation: (sessionId: string) =>
+    HttpUtils.getData<import('./continuation').SessionContinuation>(
+      `${PREFIX}/sessions/${encodeURIComponent(sessionId)}/continuation`, INCLUDE_CREDENTIALS),
   history: (sessionId: string) =>
     HttpUtils.getData<HistoryTurn[]>(
       `${PREFIX}/sessions/${encodeURIComponent(sessionId)}/history`,

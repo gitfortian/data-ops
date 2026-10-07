@@ -17,6 +17,9 @@ public interface AgentTurnRepository {
 
   Optional<AgentTurnRecord> findByTurnId(String turnId);
 
+  /** Latest submitted turn by persistence order, regardless of outcome. */
+  Optional<AgentTurnRecord> latestBySession(String sessionId);
+
   /** 认领执行：QUEUED -> RUNNING。返回 false 表示已被取消或已被其他 worker 认领。 */
   boolean claimForExecution(String turnId);
 

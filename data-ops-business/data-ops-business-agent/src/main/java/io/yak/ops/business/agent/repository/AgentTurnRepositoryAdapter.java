@@ -28,6 +28,16 @@ public class AgentTurnRepositoryAdapter implements AgentTurnRepository {
   private final AgentTurnMapper mapper;
 
   @Override
+  public Optional<AgentTurnRecord> latestBySession(String sessionId) {
+    return mapper.selectList(
+            Wrappers.<AgentTurnPO>lambdaQuery()
+                .eq(AgentTurnPO::getSessionId, sessionId)
+                .orderByDesc(AgentTurnPO::getId)
+                .last("LIMIT 1"))
+        .stream().findFirst().map(AgentTurnRepositoryAdapter::toRecord);
+  }
+
+  @Override
   public void insertQueued(
       String turnId, String sessionId, long userId, long projectId,
       TurnKind kind, String payloadJson) {

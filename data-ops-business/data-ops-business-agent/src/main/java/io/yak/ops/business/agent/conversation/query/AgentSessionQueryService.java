@@ -4,11 +4,15 @@ import io.yak.ops.business.agent.config.ConditionalOnAgentEnabled;
 import io.yak.framework.security.context.YakSecurityContext;
 import io.yak.ops.business.agent.domain.AgentStepRecord;
 import io.yak.ops.business.agent.domain.AgentTurnRecord;
+import io.yak.ops.business.agent.domain.ChatTurnEvent;
 import io.yak.ops.business.agent.domain.HistoryTurn;
 import io.yak.ops.business.agent.domain.HistoryTraceStep;
 import io.yak.ops.business.agent.domain.HistoryTurnWithTrace;
 import io.yak.ops.business.agent.domain.QueryAuditItem;
 import io.yak.ops.business.agent.domain.SessionMeta;
+import io.yak.ops.business.agent.domain.SessionContinuation;
+import io.yak.ops.business.agent.domain.TurnInput;
+import io.yak.ops.business.agent.domain.TurnStatus;
 import io.yak.ops.business.agent.domain.SessionObservability;
 import io.yak.ops.business.agent.domain.TurnTraceView;
 import io.yak.ops.business.agent.repository.AgentStepRepository;
@@ -16,6 +20,7 @@ import io.yak.ops.business.agent.repository.AgentTurnEventRepository;
 import io.yak.ops.business.agent.repository.AgentTurnRepository;
 import io.yak.ops.business.agent.repository.QueryLogRepository;
 import io.yak.ops.business.agent.repository.SessionRepository;
+import io.yak.ops.business.agent.repository.support.TurnInputCodec;
 import io.yak.ops.business.agent.runtime.AgentRuntime;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.ArrayList;
@@ -54,11 +59,8 @@ public class AgentSessionQueryService {
    */
   public List<HistoryTurnWithTrace> history(String sessionId) {
     long userId = requireUserId();
-    var meta = sessionRepository.findBySessionId(sessionId);
-    if (meta.isEmpty() || meta.get().userId() != userId) {
-      throw new IllegalArgumentException("会话不存在或不属于当前用户");
-    }
-    List<HistoryTurn> history = agentRuntime.history(userId, sessionId);
+    requireSessionOwner(sessionId, userId);
+    List<HistoryTurn> history = new ArrayList<>(agentRuntime.history(userId, sessionId));
     // 合并失败轮次：StateStore 不记录失败，但 turn 表有终态失败记录
     List<AgentTurnRecord> failed = turnRepository.listFailedBySession(sessionId);
     for (AgentTurnRecord record : failed) {
@@ -73,6 +75,50 @@ public class AgentSessionQueryService {
         .map(t -> eventRepository.reconstructTrace(t.turnId()))
         .toList();
     return enrichWithTrace(history, completed, traces, failed);
+  }
+
+  /** Only persisted input selects the task; unreadable input must never become ordinary chat. */
+  public SessionContinuation continuation(String sessionId) {
+    long userId = requireUserId();
+    requireSessionOwner(sessionId, userId);
+    var latest = turnRepository.latestBySession(sessionId);
+    if (latest.isEmpty()) {
+      return new SessionContinuation(sessionId, null, null, null, null, null);
+    }
+    AgentTurnRecord turn = latest.get();
+    if (turn.userId() != userId || turn.projectId() != currentProject.requireProjectId()
+        || !sessionId.equals(turn.sessionId())) {
+      throw new IllegalArgumentException("轮次不属于当前用户及项目");
+    }
+    TurnInput input;
+    try {
+      input = TurnInputCodec.decode(turn.payloadJson());
+      if (input == null || input.assistantMessageId() == null || input.assistantMessageId().isBlank()) {
+        throw new IllegalStateException("missing input identity");
+      }
+    } catch (RuntimeException unreadable) {
+      return new SessionContinuation(sessionId, turn.turnId(), turn.status(), null, null,
+          "任务上下文无法读取，已暂停继续。请刷新重试或新建会话。");
+    }
+    SessionContinuation.Clarification clarification = null;
+    String reason = null;
+    if (turn.status() == TurnStatus.QUEUED || turn.status() == TurnStatus.RUNNING) {
+      reason = "该会话仍在排队或推理中，请刷新查看最新结果后继续。";
+    } else if (turn.status() == TurnStatus.WAITING_INPUT) {
+      try {
+        var event = eventRepository.latestClarification(turn.turnId()).orElseThrow();
+        if (event.type() != ChatTurnEvent.TurnEventType.CLARIFY_REQUESTED
+            || event.toolCallId() == null || event.toolCallId().isBlank()
+            || !"request_clarification".equals(event.toolName())
+            || event.delta() == null || event.delta().isBlank()) {
+          throw new IllegalStateException("missing clarification projection");
+        }
+        clarification = new SessionContinuation.Clarification(event.toolCallId(), event.toolName(), event.delta());
+      } catch (RuntimeException unreadable) {
+        reason = "待答问题无法读取，已暂停继续。请刷新重试或新建会话。";
+      }
+    }
+    return new SessionContinuation(sessionId, turn.turnId(), turn.status(), input.governanceTarget(), clarification, reason);
   }
 
   /**
@@ -113,7 +159,7 @@ public class AgentSessionQueryService {
     AgentTurnRecord turn =
         turnRepository.findByTurnId(turnId)
             .orElseThrow(() -> new IllegalArgumentException("轮次不存在"));
-    if (turn.userId() != userId) {
+    if (turn.userId() != userId || turn.projectId() != currentProject.requireProjectId()) {
       throw new IllegalArgumentException("轮次不存在或不属于当前用户");
     }
     return traceViewAssembler.assembleTurn(turn, stepRepository.listByTurn(turnId));
@@ -125,10 +171,7 @@ public class AgentSessionQueryService {
    */
   public SessionObservability sessionObservability(String sessionId) {
     long userId = requireUserId();
-    var meta = sessionRepository.findBySessionId(sessionId);
-    if (meta.isEmpty() || meta.get().userId() != userId) {
-      throw new IllegalArgumentException("会话不存在或不属于当前用户");
-    }
+    requireSessionOwner(sessionId, userId);
     return traceViewAssembler.assembleSession(
         sessionId, turnRepository.listBySession(sessionId), stepRepository.listBySession(sessionId));
   }
@@ -148,5 +191,13 @@ public class AgentSessionQueryService {
       throw new IllegalArgumentException("当前无登录用户上下文");
     }
     return userId;
+  }
+
+  private void requireSessionOwner(String sessionId, long userId) {
+    long projectId = currentProject.requireProjectId();
+    var meta = sessionRepository.findBySessionId(sessionId);
+    if (meta.isEmpty() || meta.get().userId() != userId || meta.get().projectId() != projectId) {
+      throw new IllegalArgumentException("会话不存在或不属于当前用户及项目");
+    }
   }
 }

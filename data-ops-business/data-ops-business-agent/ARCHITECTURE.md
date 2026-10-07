@@ -94,6 +94,8 @@ AgentController
 
 ## Conversation Subsystem
 
+会话继续读取由既有 AgentSessionQueryService 组合 Session / 最新 TurnInput / 反问投递投影；仍只通过 AgentRuntime.history 读 SDK 消息，不新增 runtime 命令走廊。Controller 新增兼容只读 continuation 视图，原 history 协议不变；无新状态或 persistence owner。
+
 ```text
 AgentChatService
    ├── AgentSessionOwnerValidator # 会话归属校验与首访绑定（互斥真相已收敛到 turn 状态机，见 DOMAIN）

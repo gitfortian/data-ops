@@ -307,6 +307,11 @@ class E2eAgentChatFlowTest {
           .sorted(Comparator.comparing(AgentTurnRecord::createTime))
           .toList();
     }
+
+    @Override
+    public Optional<AgentTurnRecord> latestBySession(String sessionId) {
+      return listBySession(sessionId).stream().reduce((left, right) -> right);
+    }
   }
 
   /** 事件仓库内存实现：append 分配全局自增 eventId（SSE 游标），listAfter 按游标增量取帧。 */
@@ -364,6 +369,13 @@ class E2eAgentChatFlowTest {
           .map(ChatTurnEvent::toolCallId)
           .filter(id -> id != null && !id.isBlank())
           .findFirst();
+    }
+
+    @Override
+    public Optional<ChatTurnEvent> latestClarification(String turnId) {
+      return byTurn.getOrDefault(turnId, List.of()).stream().map(JournaledTurnEvent::event)
+          .filter(event -> event.type() == ChatTurnEvent.TurnEventType.CLARIFY_REQUESTED)
+          .reduce((left, right) -> right);
     }
   }
 
@@ -685,8 +697,18 @@ class E2eAgentChatFlowTest {
                 .findFirst().orElseThrow().toolCallId(),
             "澄清帧必须携带可追溯 toolCallId");
 
+        var query = new io.yak.ops.business.agent.conversation.query.AgentSessionQueryService(
+            assembly.sessions(), mock(io.yak.ops.business.agent.repository.QueryLogRepository.class),
+            assembly.turns(), assembly.events(), mock(io.yak.ops.business.agent.repository.AgentStepRepository.class),
+            mock(AgentRuntime.class), new io.yak.ops.business.agent.conversation.query.TraceViewAssembler(),
+            () -> Optional.of(new io.yak.ops.core.project.ProjectContext(1L, "test-project")));
+        var restored = query.continuation("sess-1");
+        assertEquals(turnId, restored.turnId());
+        assertEquals(TurnStatus.WAITING_INPUT, restored.status());
+        assertEquals("call_clarify_1", restored.clarification().toolCallId());
         String resumedId = assembly.service().submitResume("sess-1",
-            List.of(new ToolFeedback("call_clarify_1", "request_clarification", "口径：已支付金额")));
+            List.of(new ToolFeedback(restored.clarification().toolCallId(),
+                restored.clarification().toolName(), "口径：已支付金额")));
         assertEquals(turnId, resumedId, "恢复必须续跑同一轮");
 
         awaitTerminal(assembly.turns(), turnId, 30_000);
