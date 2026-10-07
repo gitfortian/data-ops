@@ -100,6 +100,11 @@ const AiAgentPage: React.FC = () => {
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<UIMessage[]>([]);
   const [streaming, setStreaming] = React.useState(false);
+  const streamingRef = React.useRef(false);
+  streamingRef.current = streaming;
+  const liveTurnRef = React.useRef<string | null>(null);
+  const stoppingRef = React.useRef<number | null>(null);
+  const [connectionNote, setConnectionNote] = React.useState('');
   const [clarify, setClarify] = React.useState<ClarifyPayload | null>(null);
   const [connection, setConnection] = React.useState<ConnectionState>('idle');
   const [input, setInput] = React.useState('');
@@ -425,8 +430,10 @@ const AiAgentPage: React.FC = () => {
   // ---- 权威水合（O2 双通道裁决）：轮次终态后拉取 trace v2，把入参/结果/失败归因/
   // 真实状态合并进链路卡片。SSE 帧承载实时流，本函数承载事实侧补全；think 文本保留不覆盖。
   const hydrateTrace = async (messageId: string, turnId: string) => {
+    const generation = historyRequest.current;
     try {
       const view = await agentSessionApi.trace(turnId);
+      if (generation !== historyRequest.current) return;
       setMessages((prev) =>
         prev.map((item) => {
           if (item.id !== messageId) {
@@ -455,6 +462,9 @@ const AiAgentPage: React.FC = () => {
   const launchStream = async (payload: TurnSubmitPayload) => {
     const generation = historyRequest.current;
     setContinuation(null);
+    setConnectionNote('');
+    liveTurnRef.current = null;
+    streamingRef.current = true;
     setStreaming(true);
     setClarify(null);
     seenErrorKeysRef.current = new Set();
@@ -464,13 +474,21 @@ const AiAgentPage: React.FC = () => {
     thinkStartRef.current = 0;
     toolStartRef.current = new Map();
     const controller = new AbortController();
+    let settled = false;
+    const current = () => generation === historyRequest.current && !controller.signal.aborted && !settled;
     abortRef.current = controller;
     // 提交/执行分离：先入队拿 turnId，再订阅事件流（断线由服务层按游标自动续播）
     let submitted;
     try {
       submitted = await agentChatApi.submit(payload);
+      if (!current()) return;
+      if (typeof submitted.turnId !== 'string' || !submitted.turnId.trim()) throw new Error('missing receipt identity');
+      liveTurnRef.current = submitted.turnId;
       draftSourceRef.current = undefined;
     } catch (error) {
+      if (!current()) return;
+      settled = true;
+      streamingRef.current = false;
       setStreaming(false); stopWatchdog(); transition('fail');
       abortRef.current = null;
       sendingRef.current = false;
@@ -482,9 +500,11 @@ const AiAgentPage: React.FC = () => {
     await streamTurnEvents(
       { turnId: submitted.turnId, signal: controller.signal },
       {
-        onEvent: handleEvent,
-        onReconnect: () => transition('reconnect-start'),
+        onEvent: (event) => { if (current()) handleEvent(event); },
+        onReconnect: () => { if (current()) transition('reconnect-start'); },
         onComplete: () => {
+          if (!current()) return;
+          settled = true;
           flushPendingEvents();
           flushTicker();
           stopWatchdog();
@@ -493,37 +513,39 @@ const AiAgentPage: React.FC = () => {
           patchAssistant((draft) => ({
             ...draft,
             turnId: submitted.turnId,
-            elapsedMs: Date.now() - turnStartRef.current,
           }));
-          convergeRunningCards();
           if (msgId) {
             void hydrateTrace(msgId, submitted.turnId);
           }
           assistantIdRef.current = '';
+          liveTurnRef.current = null;
+          streamingRef.current = false;
           setStreaming(false);
           abortRef.current = null;
           sendingRef.current = false;
           void refreshLatest(payload.sessionId, generation);
           refreshSessions();
         },
-        onError: (text) => {
+        onError: () => {
+          if (!current()) return;
+          settled = true;
           flushPendingEvents();
           flushTicker();
-          openAssistant();
           const msgId = assistantIdRef.current;
           patchAssistant((draft) => ({
             ...draft,
             turnId: submitted.turnId,
-            elapsedMs: Date.now() - turnStartRef.current,
-            error: text,
           }));
-          convergeRunningCards();
           if (msgId) {
             void hydrateTrace(msgId, submitted.turnId);
           }
           stopWatchdog();
+          controller.abort();
           transition('fail');
+          setConnectionNote('连接已结束，正在核对后台实际状态；已收到的内容保留。');
           assistantIdRef.current = '';
+          liveTurnRef.current = null;
+          streamingRef.current = false;
           setStreaming(false);
           abortRef.current = null;
           sendingRef.current = false;
@@ -568,14 +590,16 @@ const AiAgentPage: React.FC = () => {
   };
 
   const selectSession = async (sessionId: string, preserveInput = false) => {
-    if (streaming) {
+    if (streamingRef.current) {
       message.warning('当前正在推理，请等待结束或停止后再切换');
       return;
     }
     const request = ++historyRequest.current;
+    stoppingRef.current = null;
     continuationBlocked.current = true;
     setHistoryLoading(true); setHistoryError(''); setContinuation(null); setStopping(false);
-    setMessages([]); assistantIdRef.current = '';
+    if (!preserveInput) setMessages([]);
+    assistantIdRef.current = '';
     if (!preserveInput) draftSourceRef.current = undefined;
     setDraftLoading(false);
     setGovernanceTarget(null);
@@ -606,11 +630,12 @@ const AiAgentPage: React.FC = () => {
             resultText: step.resultText ?? undefined,
           })),
         }));
-      setMessages(restored);
+      if (historyResult.status === 'fulfilled') setMessages(restored);
       if (historyResult.status === 'rejected') throw historyResult.reason;
       if (contextResult.status === 'rejected') throw contextResult.reason;
       const view = readContinuation(contextResult.value, sessionId);
       setContinuation(view);
+      setConnectionNote('');
       setGovernanceTarget(view.governanceTarget ?? null);
       continuationBlocked.current = Boolean(view.blockingReason);
       if (view.clarification) setClarify({ ...view.clarification, options: [] });
@@ -630,11 +655,13 @@ const AiAgentPage: React.FC = () => {
   };
 
   const startNewSession = () => {
-    if (streaming) {
+    if (streamingRef.current) {
       message.warning('当前正在推理，请先停止');
       return;
     }
     historyRequest.current += 1;
+    liveTurnRef.current = null; setConnectionNote('');
+    stoppingRef.current = null;
     draftSourceRef.current = undefined; setDraftLoading(false);
     continuationBlocked.current = false;
     setHistoryLoading(false); setHistoryError(''); setContinuation(null); setStopping(false);
@@ -652,6 +679,7 @@ const AiAgentPage: React.FC = () => {
       const view = readContinuation(await agentSessionApi.continuation(sessionId), sessionId);
       if (generation !== historyRequest.current) return;
       setContinuation(view); setGovernanceTarget(view.governanceTarget ?? null);
+      setConnectionNote((note) => note ? '连接已结束；已核对后台状态，请按下方实际状态继续。' : '');
       continuationBlocked.current = Boolean(view.blockingReason);
       if (view.clarification) setClarify({ ...view.clarification, options: [] });
     } catch {
@@ -702,30 +730,56 @@ const AiAgentPage: React.FC = () => {
     active: following && !streaming && !historyLoading && !historyError && !stopping,
     generation: followingRequest,
     onActive: (view) => { if (followingRequest === historyRequest.current) setContinuation(view); },
-    onSettled: () => { if (followingRequest === historyRequest.current && activeSessionId) void selectSession(activeSessionId); },
+    onSettled: () => { if (followingRequest === historyRequest.current && activeSessionId) void selectSession(activeSessionId, true); },
     onPause: (reason) => {
       if (followingRequest === historyRequest.current) { continuationBlocked.current = true; setHistoryError(reason); }
     },
   });
 
-  const stopRestoredTurn = async () => {
-    const turnId = continuation?.turnId;
-    const sessionId = activeSessionId;
-    if (!turnId || !sessionId || !following || stopping || !can('agent:chat:run')) return;
+  const stopConfirmedTurn = async (turnId: string, sessionId: string) => {
+    if (stoppingRef.current != null || !can('agent:chat:run')) return;
     const request = ++historyRequest.current;
+    stoppingRef.current = request;
     continuationBlocked.current = true;
+    flushPendingEvents(); flushTicker(); stopWatchdog();
+    abortRef.current?.abort(); abortRef.current = null;
+    liveTurnRef.current = null; streamingRef.current = false;
+    sendingRef.current = false; setStreaming(false);
+    setConnectionNote('正在请求停止所见轮次，请等待实际状态核对。');
     setStopping(true);
     try {
       await agentChatApi.cancelTurn(turnId);
-      if (request === historyRequest.current) await selectSession(sessionId);
+      if (request === historyRequest.current) await selectSession(sessionId, true);
     } catch (error) {
       if (request === historyRequest.current) {
         // A lost acknowledgement cannot prove whether the stop reached the server.
-        setHistoryError(`停止请求未确认，请刷新会话核对状态：${(error as Error).message}`);
+        setHistoryError('停止请求未确认，请刷新会话核对状态。');
+        setConnectionNote('');
       }
     } finally {
+      if (stoppingRef.current === request) stoppingRef.current = null;
       if (request === historyRequest.current) setStopping(false);
     }
+  };
+
+  const stopRestoredTurn = async () => {
+    if (continuation?.turnId && activeSessionId && following && !stopping) {
+      await stopConfirmedTurn(continuation.turnId, activeSessionId);
+    }
+  };
+
+  const stopLiveTurn = () => {
+    if (!can('agent:chat:run')) return;
+    if (clarify) {
+      setConnectionNote('本轮正在等待补充信息，请回答原问题或刷新核对。');
+      return;
+    }
+    const turnId = liveTurnRef.current;
+    if (!turnId || !activeSessionId) {
+      setConnectionNote('提交尚未确认，暂不能停止；请等待回执后核对。');
+      return;
+    }
+    void stopConfirmedTurn(turnId, activeSessionId);
   };
 
   const renameSession = async (sessionId: string, title: string) => {
@@ -1130,6 +1184,7 @@ const AiAgentPage: React.FC = () => {
 
                   <div ref={inputRef} tabIndex={-1} className={sendIdle ? styles.sendDisabled : undefined}>
                     {historyLoading && <Alert type="info" showIcon message="正在恢复会话与任务范围，请稍候…" />}
+                    {connectionNote && <Alert type="info" showIcon message={connectionNote} />}
                     {(historyError || continuation?.blockingReason) && <Alert type="warning" showIcon
                       message={historyError || continuation?.blockingReason}
                       action={<Space>
@@ -1156,14 +1211,7 @@ const AiAgentPage: React.FC = () => {
                       value={input}
                       onChange={(value) => { if (!value.trim()) draftSourceRef.current = undefined; setInput(value); }}
                       onSubmit={(message) => sendMessage(message)}
-                      onCancel={() => {
-                        abortRef.current?.abort();
-                        const sessionId = activeSessionId;
-                        if (sessionId) {
-                          // 显式通知后端取消，立即释放会话互斥标记
-                          agentSessionApi.cancel(sessionId);
-                        }
-                      }}
+                      onCancel={stopLiveTurn}
                       loading={streaming}
                       disabled={Boolean(clarify) || historyLoading || Boolean(historyError || continuation?.blockingReason)}
                       placeholder={clarify ? '请先回答上方问题' : '输入数据分析问题，Enter 发送'}

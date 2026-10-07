@@ -9,7 +9,7 @@
 
 定向回归：后端草稿来源、精确原引用、冲突/超限/读取失败、白名单错误码、陈旧来源与目标核对；前端 3 suites / 38 tests 通过，覆盖显式填写、编辑保护、切换晚响应、重复发送、提交未确认和刷新保留输入。产品基线与前后端依赖边界通过。
 
-类型债务门禁通过（139 条既有诊断）；生产构建与 Node architecture/release 14 项通过。初次完整前端 647/648 通过，新用例首次加载仍在等待时触及断言等待期限；改为 async act 等待初始化 mock Promise 收敛，未扩大超时，最终定向 38 项通过。完整后端通过（Agent 262 项，261 通过、1 项 MySQL 因本地未提供测试数据库跳过）；完整前端最终复跑 130 suites / 648 tests 全部通过；最终提交 CI 在 PR 收尾更新。首次本地定向 Maven 因 Windows 临时目录与仓库分属不同盘符，Surefire 启动失败（0 tests），迁移本次进程 TEMP/TMP 至仓库内临时目录后通过；未将启动失败记为测试通过，未改业务或测试绕过。
+类型债务门禁通过（139 条既有诊断）；生产构建与 Node architecture/release 14 项通过。初次完整前端 647/648 通过，新用例首次加载仍在等待时触及断言等待期限；改为 async act 等待初始化 mock Promise 收敛，未扩大超时，最终定向 38 项通过。完整后端通过（Agent 262 项，261 通过、1 项 MySQL 因本地未提供测试数据库跳过）；完整前端最终复跑 130 suites / 648 tests 全部通过；最终 head `5aec0ae1` 的 [Architecture Checks](https://github.com/gitfortian/data-ops/actions/runs/37605631426) 全通过：Agent 262 项零跳过（MySQL 实跑）、前端 648 项、完整发行和 Architecture Gate；Product Guard 通过。首次本地定向 Maven 因 Windows 临时目录与仓库分属不同盘符，Surefire 启动失败（0 tests），迁移本次进程 TEMP/TMP 至仓库内临时目录后通过；未将启动失败记为测试通过，未改业务或测试绕过。
 
 ## NR 场景
 

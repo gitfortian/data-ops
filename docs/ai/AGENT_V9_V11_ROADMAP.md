@@ -39,3 +39,7 @@ V11 的停止只作用于提交回执确认的 ID；提交尚未确认时不推�
 | 自动修复 / 多 Agent | 写动作幂等、审计与补偿，或明确同题收益证据，另行立项 |
 
 这些候选没有进入本次实施范围。框架迁移需要已复现阻塞或同题对测收益，本次没有该证据。
+
+## 工程交付索引
+
+三版工程实现和本地回归已按顺序完成；最终 CI 与合并事实以 [V9 PR #326](https://github.com/gitfortian/data-ops/pull/326)、[V10 PR #327](https://github.com/gitfortian/data-ops/pull/327)、[V11 PR #328](https://github.com/gitfortian/data-ops/pull/328) 为准。说明分别见 [V9](./IMPLEMENTATION_V9.md)、[V10](./IMPLEMENTATION_V10.md)、[V11](./IMPLEMENTATION_V11.md)。Feature F-017～F-019 均保持 IMPLEMENTING，NR/GP/LC 与旧真实验收独立待完成。
