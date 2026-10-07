@@ -2,7 +2,7 @@
 
 日期：2026-10-07
 文档类别：规划提案与调研证据（DOCS）  
-状态：首版至第八版工程代码已完成，第八版 [PR #325](https://github.com/gitfortian/data-ops/pull/325) 已合并，当前内容见 [第八版说明](./IMPLEMENTATION_V8.md)。用户已授权按 [V9～V11 路线](./AGENT_V9_V11_ROADMAP.md) 依次实施；第九版实施见 [F-017](../product/features/F-017-agent-terminal-question-draft.md) 与 [交付说明](./IMPLEMENTATION_V9.md)。AI F-009～[F-016](../product/features/F-016-agent-history-evidence.md) 均保持 IMPLEMENTING，真实模型验收待完成；合并不表示真实验收通过。
+状态：V9 [PR #326](https://github.com/gitfortian/data-ops/pull/326) 已通过最终 CI 并合并；V10 [PR #327](https://github.com/gitfortian/data-ops/pull/327) 已完成工程实现与本地回归，等待最终 CI；V11 按 [F-019](../product/features/F-019-agent-live-turn-reconciliation.md) 实施，三版顺序见 [连续路线](./AGENT_V9_V11_ROADMAP.md)。AI F-009～F-019 保持 IMPLEMENTING，真实模型验收独立待完成；合并不表示真实验收通过。
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
@@ -22,6 +22,8 @@
 
 | 文档 | 回答的问题 |
 |---|---|
+| [第十一版规划](./AGENT_V11_PLAN.md) | 实时精确停止、断线核对与 LC01～LC06 |
+| [第十一版交付说明](./IMPLEMENTATION_V11.md) | 停止/断线后的使用路径与限制 |
 | [第十版规划](./AGENT_V10_PLAN.md) | 当前治理任务的提问准备、来源标记与 GP01～GP05 |
 | [第十版交付说明](./IMPLEMENTATION_V10.md) | 表单/预览/编辑保护与使用边界 |
 | [V9～V11 连续路线](./AGENT_V9_V11_ROADMAP.md) | 三版顺序、产品范围、依赖与后续候选 |

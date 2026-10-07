@@ -6,13 +6,14 @@ import { agentChatApi, agentSessionApi, streamTurnEvents } from '@/services/agen
 let mockCanRun = false;
 jest.mock('@/hooks/usePermissionAccess', () => ({ usePermissionAccess: () => ({ can: (code: string) => mockCanRun && code === 'agent:chat:run' }) }));
 jest.mock('@/services/agent', () => ({
-  agentSessionApi: { list: jest.fn(), history: jest.fn(), continuation: jest.fn(), trace: jest.fn() },
+  agentSessionApi: { list: jest.fn(), history: jest.fn(), continuation: jest.fn(), trace: jest.fn(), cancel: jest.fn() },
   agentChatApi: { submit: jest.fn(), cancelTurn: jest.fn() }, streamTurnEvents: jest.fn(),
 }));
 // These adapters exercise page state and payloads; index.test.tsx retains the installed component smoke test.
 jest.mock('@ant-design/x/lib/sender', () => ({ __esModule: true, default: (props: any) => (
   <div><textarea aria-label="会话输入" disabled={props.disabled} value={props.value} onChange={(event) => props.onChange(event.target.value)} />
-    <button disabled={props.disabled || props.loading} onClick={() => props.onSubmit(props.value)}>发送测试问题</button></div>
+    <button disabled={props.disabled || props.loading} onClick={() => props.onSubmit(props.value)}>发送测试问题</button>
+    {props.loading && <button onClick={props.onCancel}>停止实时轮</button>}</div>
 ) }));
 jest.mock('@ant-design/x/lib/conversations', () => ({ __esModule: true, default: (props: any) => (
   <div>{props.items.map((item: any) => <button key={item.key} onClick={() => props.onActiveChange(item.key)}>{item.label}</button>)}</div>
@@ -48,6 +49,132 @@ beforeEach(() => {
   stream.mockImplementation(async (_request, handler) => { handler.onComplete(); });
 });
 afterEach(() => { window.history.replaceState({}, '', '/'); jest.useRealTimers(); delete (document as any).hidden; });
+
+it('stops only the acknowledged live turn, ignores duplicate stops and late callbacks, and reads the actual completion', async () => {
+  mockCanRun = true;
+  let handler!: Parameters<typeof streamTurnEvents>[1];
+  const live = deferred<void>();
+  stream.mockImplementation(async (_request, h) => { handler = h; await live.promise; });
+  await act(async () => { render(<AiAgentPage />); });
+  send();
+  await waitFor(() => expect(stream).toHaveBeenCalled());
+  const stopped = deferred<boolean>(); chat.cancelTurn.mockReturnValueOnce(stopped.promise);
+  api.continuation.mockResolvedValueOnce(context('s1', { turnId: 't-next', status: 'COMPLETED' }));
+  const stop = screen.getByText('停止实时轮');
+  act(() => { fireEvent.click(stop); fireEvent.click(stop); });
+  act(() => { handler.onEvent({ type: 'TEXT_MESSAGE_CONTENT', delta: '迟到的错误会话内容' }); handler.onComplete(); });
+  expect(chat.cancelTurn).toHaveBeenCalledTimes(1);
+  expect(chat.cancelTurn).toHaveBeenCalledWith('t-next');
+  expect(api.cancel).not.toHaveBeenCalled();
+  expect(screen.queryByText(/最近轮次状态：已停止/)).not.toBeInTheDocument();
+  await act(async () => stopped.resolve(true));
+  expect(await screen.findByText(/最近轮次状态：已完成/)).toBeInTheDocument();
+  api.continuation.mockResolvedValueOnce(context('s2', { governanceTarget: { assetId: 2 } }));
+  fireEvent.click(screen.getByText('会话二'));
+  await screen.findByText('资产 #2 治理解读');
+  const reads = api.continuation.mock.calls.length;
+  await act(async () => { handler.onError('secret'); handler.onReconnect?.(1); handler.onComplete(); live.resolve(); });
+  expect(api.continuation).toHaveBeenCalledTimes(reads);
+  expect(screen.queryByText('迟到的错误会话内容')).not.toBeInTheDocument();
+  expect(window.location.search).toBe('?sessionId=s2');
+});
+
+it('does not cancel an unknown turn while submit is pending, then uses the confirmed receipt', async () => {
+  mockCanRun = true;
+  const receipt = deferred<any>(); chat.submit.mockReturnValueOnce(receipt.promise);
+  const live = deferred<void>(); stream.mockImplementation(async () => live.promise);
+  await act(async () => { render(<AiAgentPage />); });
+  send(); fireEvent.click(screen.getByText('停止实时轮'));
+  expect(await screen.findByText('提交尚未确认，暂不能停止；请等待回执后核对。')).toBeInTheDocument();
+  expect(chat.cancelTurn).not.toHaveBeenCalled(); expect(api.cancel).not.toHaveBeenCalled();
+  await act(async () => receipt.resolve({ turnId: 'confirmed' }));
+  fireEvent.click(screen.getByText('停止实时轮'));
+  await waitFor(() => expect(chat.cancelTurn).toHaveBeenCalledWith('confirmed'));
+  await act(async () => live.resolve());
+});
+
+it('blocks after a lost live stop acknowledgement and only displays cancelled after refresh proves it', async () => {
+  mockCanRun = true;
+  const live = deferred<void>(); stream.mockImplementation(async () => live.promise);
+  await act(async () => { render(<AiAgentPage />); });
+  send(); await waitFor(() => expect(stream).toHaveBeenCalled());
+  chat.cancelTurn.mockRejectedValueOnce(new Error('secret timeout'));
+  fireEvent.click(screen.getByText('停止实时轮'));
+  expect(await screen.findByText('停止请求未确认，请刷新会话核对状态。')).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toBeDisabled();
+  expect(screen.queryByText(/最近轮次状态：已停止/)).not.toBeInTheDocument();
+  api.continuation.mockResolvedValueOnce(context('s1', { turnId: 't-next', status: 'CANCELLED' }));
+  fireEvent.click(screen.getByText('刷新会话'));
+  expect(await screen.findByText(/最近轮次状态：已停止/)).toBeInTheDocument();
+  await act(async () => live.resolve());
+});
+
+it('preserves received text on transport and refresh failure without fabricating a failed turn', async () => {
+  let handler!: Parameters<typeof streamTurnEvents>[1];
+  const live = deferred<void>(); stream.mockImplementation(async (_request, h) => { handler = h; await live.promise; });
+  await act(async () => { render(<AiAgentPage />); });
+  send(); await waitFor(() => expect(stream).toHaveBeenCalled());
+  api.continuation.mockRejectedValueOnce(new Error('read failed'));
+  act(() => { handler.onEvent({ type: 'TEXT_MESSAGE_CONTENT', delta: '已收到的部分回答' }); handler.onError('secret connection'); });
+  expect(await screen.findByText('最新状态未确认，请刷新会话核对后继续。')).toBeInTheDocument();
+  expect(screen.getByText('已收到的部分回答')).toBeInTheDocument();
+  expect(screen.queryByText('本轮执行失败')).not.toBeInTheDocument();
+  api.history.mockRejectedValueOnce(new Error('history unavailable'));
+  fireEvent.click(screen.getByText('刷新会话'));
+  expect(await screen.findByText(/会话恢复失败/)).toBeInTheDocument();
+  expect(screen.getByText('已收到的部分回答')).toBeInTheDocument();
+  await act(async () => live.resolve());
+});
+
+it('does not turn a completed transport into a completed backend turn', async () => {
+  let handler!: Parameters<typeof streamTurnEvents>[1];
+  const live = deferred<void>(); stream.mockImplementation(async (_request, h) => { handler = h; await live.promise; });
+  await act(async () => { render(<AiAgentPage />); });
+  send(); await waitFor(() => expect(stream).toHaveBeenCalled());
+  api.continuation.mockResolvedValueOnce(context('s1', { turnId: 't-next', status: 'RUNNING' }));
+  act(() => handler.onComplete());
+  expect(await screen.findByText(/最近轮次状态：推理中/)).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toBeDisabled();
+  expect(api.cancel).not.toHaveBeenCalled();
+  await act(async () => live.resolve());
+});
+
+it('restores the original pending question when a stop races with clarification', async () => {
+  mockCanRun = true;
+  const live = deferred<void>(); stream.mockImplementation(async () => live.promise);
+  await act(async () => { render(<AiAgentPage />); });
+  send(); await waitFor(() => expect(stream).toHaveBeenCalled());
+  api.continuation.mockResolvedValueOnce(context('s1', { turnId: 't-next', status: 'WAITING_INPUT',
+    clarification: { toolCallId: 'original-call', toolName: 'request_clarification', question: '{"question":"请确认背景","options":["按原背景"]}' } }));
+  fireEvent.click(screen.getByText('停止实时轮'));
+  expect(await screen.findByText('请确认背景')).toBeInTheDocument();
+  expect(screen.getByLabelText('会话输入')).toBeDisabled();
+  expect(screen.queryByText(/最近轮次状态：已停止/)).not.toBeInTheDocument();
+  stream.mockImplementationOnce(async (_request, h) => h.onComplete());
+  fireEvent.click(screen.getByText('按原背景'));
+  await waitFor(() => expect(chat.submit).toHaveBeenLastCalledWith({ sessionId: 's1', toolResults: [
+    { toolCallId: 'original-call', toolName: 'request_clarification', output: '按原背景' },
+  ] }));
+  await act(async () => live.resolve());
+});
+
+it('does not issue a live stop without CHAT_RUN', async () => {
+  const live = deferred<void>(); stream.mockImplementation(async () => live.promise);
+  await act(async () => { render(<AiAgentPage />); });
+  send(); await waitFor(() => expect(stream).toHaveBeenCalled());
+  fireEvent.click(screen.getByText('停止实时轮'));
+  expect(chat.cancelTurn).not.toHaveBeenCalled(); expect(api.cancel).not.toHaveBeenCalled();
+  await act(async () => live.resolve());
+});
+
+it('ignores a submit receipt after unmount instead of opening an abandoned subscription', async () => {
+  const receipt = deferred<any>(); chat.submit.mockReturnValueOnce(receipt.promise);
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(<AiAgentPage />); });
+  send(); view.unmount();
+  await act(async () => receipt.resolve({ turnId: 'abandoned' }));
+  expect(stream).not.toHaveBeenCalled(); expect(chat.cancelTurn).not.toHaveBeenCalled();
+});
 
 it('fills an exact original only on request, preserves edits and submits a new turn with its source', async () => {
   mockCanRun = true;
