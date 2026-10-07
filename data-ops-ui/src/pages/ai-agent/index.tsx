@@ -12,6 +12,7 @@ import AuditTable from './components/AuditTable';
 import ConfigPanel from './components/ConfigPanel';
 import { useAgentStyles } from './components/pageStyles';
 import ReportsTab from './components/ReportsTab';
+import QuestionPreparationPanel from './components/QuestionPreparationPanel';
 import SkillsTab from './components/SkillsTab';
 import { AGENT_SKILL_READ } from './skill-runtime';
 import {
@@ -108,6 +109,8 @@ const AiAgentPage: React.FC = () => {
   const { can } = usePermissionAccess();
   const canReadSkills = can(AGENT_SKILL_READ);
   const hasText = input.trim().length > 0;
+  const preparationBlocked = streaming || !!clarify || historyLoading || !!historyError
+    || !!continuation?.blockingReason || !can('agent:chat:run');
   const sendIdle = !hasText && !streaming;
 
   const abortRef = React.useRef<AbortController | null>(null);
@@ -1016,7 +1019,8 @@ const AiAgentPage: React.FC = () => {
                   ? '围绕本次历史执行核对事实、缺口和人工检查步骤；具体根因需验证，调整规则请回源页面另行发起。'
                   : '按当前权限读取证据，解读完成后可回到来源核验。'}</span>
                 {governanceQuestions(governanceTarget).map((question, index) => (
-                  <Button key={question} size="small" disabled={streaming || !!clarify} onClick={() => setInput(question)}>
+                  <Button key={question} size="small" disabled={preparationBlocked || hasText || draftLoading}
+                    onClick={() => { if (!inputValueRef.current.trim() && !preparationBlocked) { draftSourceRef.current = undefined; setInput(question); } }}>
                     {governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
                       : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选'
                         : governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '生成描述候选' : (index === 0 ? '解释结果' : '排查建议')}
@@ -1030,6 +1034,10 @@ const AiAgentPage: React.FC = () => {
             style={{ marginBottom: 12 }}
           />
         )}
+        {governanceTarget && <QuestionPreparationPanel
+          key={`${activeSessionId ?? 'new'}:${JSON.stringify(governanceTarget)}:${continuation?.turnId ?? ''}`}
+          target={governanceTarget} disabled={preparationBlocked || draftLoading} hasInput={hasText}
+          onFill={(question) => { if (!inputValueRef.current.trim() && !preparationBlocked) { draftSourceRef.current = undefined; setInput(question); } }} />}
         {(connection === 'connecting' || connection === 'reconnecting') && (
           <div style={{ padding: '4px 16px' }}>
             <Tag color={connection === 'reconnecting' ? 'orange' : 'processing'}>
@@ -1056,16 +1064,19 @@ const AiAgentPage: React.FC = () => {
                         <Typography.Title level={4} type="secondary">
                           AI 数据与治理助手
                         </Typography.Title>
-                        <Typography.Text type="secondary">用自然语言描述需求，例如：</Typography.Text>
+                        {governanceTarget ? <Typography.Text type="secondary">请使用上方任务问题或提问准备，核对当前所选对象后明确发送。</Typography.Text>
+                          : <><Typography.Text type="secondary">用自然语言描述需求，例如：</Typography.Text>
                         <Space wrap style={{ justifyContent: 'center', marginTop: 12 }}>
                           {['上个月各区域销售额是多少？', '最近30天订单量趋势如何？', '帮我看看销量最高的10个商品'].map(
                             (sample) => (
-                              <Button key={sample} size="small" onClick={() => setInput(sample)}>
+                              <Button key={sample} size="small" disabled={preparationBlocked || hasText}
+                                onClick={() => { if (!inputValueRef.current.trim() && !preparationBlocked) setInput(sample); }}>
                                 {sample}
                               </Button>
                             ),
                           )}
                         </Space>
+                        </>}
                       </div>
                     ) : (
                       <Bubble.List items={bubbleItems} />

@@ -5,7 +5,7 @@ import { streamTurnEvents } from '@/services/agent';
 import { governanceQuestions } from '@/services/agent/governance';
 
 jest.mock('@/hooks/usePermissionAccess', () => ({
-  usePermissionAccess: () => ({ can: () => false }),
+  usePermissionAccess: () => ({ can: (code: string) => code === 'agent:chat:run' }),
 }));
 jest.mock('@/services/agent', () => ({
   agentSessionApi: { list: async () => [] },
@@ -22,10 +22,14 @@ it('keeps historical troubleshooting on the selected execution and only fills th
   try {
     render(<AiAgentPage />);
     expect(await screen.findByText('质量执行 Q_20261007-1 解读与排查')).toBeInTheDocument();
+    expect(screen.queryByText('上个月各区域销售额是多少？')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('解读与排查'));
     expect(screen.getByPlaceholderText(/输入/)).toHaveValue(governanceQuestions({ qualityExecutionNo: 'Q_20261007-1' })[0]);
     expect(streamTurnEvents).not.toHaveBeenCalled();
     expect(screen.getByText('返回本次执行核对').closest('a')).toHaveAttribute('href', '/data-quality/execution/Q_20261007-1');
+    fireEvent.click(screen.getByText('补充排查信息'));
+    expect(screen.getByPlaceholderText(/输入/)).toHaveValue(governanceQuestions({ qualityExecutionNo: 'Q_20261007-1' })[0]);
+    fireEvent.change(screen.getByPlaceholderText(/输入/), { target: { value: '' } });
     fireEvent.click(screen.getByText('补充排查信息'));
     expect(screen.getByPlaceholderText(/输入/)).toHaveValue(governanceQuestions({ qualityExecutionNo: 'Q_20261007-1' })[1]);
     fireEvent.click(screen.getByText('新建会话'));

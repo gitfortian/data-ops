@@ -78,6 +78,48 @@ it('does not fill when another tab has advanced the latest turn', async () => {
   expect(chat.submit).not.toHaveBeenCalled();
 });
 
+it('prepares a selected governance question as unconfirmed user background, then explicitly sends it', async () => {
+  mockCanRun = true;
+  await act(async () => { render(<AiAgentPage />); });
+  fireEvent.click(screen.getByText('准备治理问题'));
+  fireEvent.change(screen.getByLabelText(/已知背景/), { target: { value: '<img src=x onerror=alert(1)>昨天切换了数据源' } });
+  fireEvent.change(screen.getByLabelText(/希望核对/), { target: { value: '请确认哪些状态来自历史执行' } });
+  expect(document.querySelector('img[src="x"]')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '填入准备的问题' }));
+  const question = (screen.getByLabelText('会话输入') as HTMLTextAreaElement).value;
+  expect(question).toContain('用户提供，尚待源证据核对');
+  expect(question).toContain('希望核对：请确认哪些状态来自历史执行');
+  expect(chat.submit).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: '填入准备的问题' })).toBeDisabled();
+  expect(screen.getByText('补充排查信息').closest('button')).toBeDisabled();
+  fireEvent.click(screen.getByText('发送测试问题'));
+  await waitFor(() => expect(chat.submit).toHaveBeenCalledWith({ sessionId: 's1', message: question, governanceTarget: { qualityExecutionNo: 'Q_1' } }));
+});
+
+it('clears prepared background when switching scope', async () => {
+  mockCanRun = true;
+  await act(async () => { render(<AiAgentPage />); });
+  fireEvent.click(screen.getByText('准备治理问题'));
+  fireEvent.change(screen.getByLabelText(/已知背景/), { target: { value: '旧对象背景' } });
+  api.continuation.mockResolvedValueOnce(context('s2', { governanceTarget: { assetId: 2 } }));
+  fireEvent.click(screen.getByText('会话二'));
+  await screen.findByText('资产 #2 治理解读');
+  fireEvent.click(screen.getByText('准备治理问题'));
+  expect(screen.getByLabelText(/已知背景/)).toHaveValue('');
+  expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it.each(['COMPLETED', 'WAITING_INPUT', 'RUNNING'] as const)('blocks preparation without permission or while %s requires waiting', async (status) => {
+  mockCanRun = status !== 'COMPLETED';
+  api.continuation.mockResolvedValue(context('s1', { status, governanceTarget: { assetId: 7 },
+    ...(status === 'WAITING_INPUT' ? { clarification: { toolCallId: 'c', toolName: 'request_clarification', question: '原澄清' } } : {}) }));
+  await act(async () => { render(<AiAgentPage />); });
+  fireEvent.click(screen.getByText('准备治理问题'));
+  expect(screen.getByRole('button', { name: '填入准备的问题' })).toBeDisabled();
+  expect(screen.getByLabelText(/已知背景/)).toBeDisabled();
+  expect(chat.submit).not.toHaveBeenCalled();
+});
+
 it('ignores a draft response after switching session and never overwrites typing while loading', async () => {
   mockCanRun = true;
   api.continuation.mockResolvedValueOnce(context('s1', { questionDraft: '旧问题' }));
@@ -171,6 +213,7 @@ it('restores an exact pending call and answers through the original resume paylo
 });
 
 it('restores description purpose as a description task and keeps it on follow-up', async () => {
+  mockCanRun = true;
   api.continuation.mockResolvedValue(context('s1', { governanceTarget: { assetId: 7, purpose: 'ASSET_DESCRIPTION' } }));
   render(<AiAgentPage />);
   expect(await screen.findByText('资产 #7 描述候选')).toBeInTheDocument();
