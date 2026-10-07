@@ -50,7 +50,7 @@ public class GovernanceEvidenceTools implements AgentToolBox, AgentSystemPromptC
     return execution.call(context, "get_quality_execution_evidence", () -> evidence.execution(executionNo, AgentToolExecution.state(context).evidence()));
   }
 
-  @Tool(name = "verify_governance_facts", description = "核对本轮证据的具体字段；字段值由服务器复制，不接受模型自报数值。fact_refs_json是evidenceRef与field组成的数组，field如rules[0].checkResult。")
+  @Tool(name = "verify_governance_facts", description = "核对本轮证据的具体字段；字段值由服务器复制，不接受模型自报数值。fact_refs_json是evidenceRef与field组成的数组，field按实际JSON路径，如checkResult、rules[0].result。")
   public String verifyFacts(RuntimeContext context,
       @ToolParam(name = "fact_refs_json", description = "本轮证据ID与已读取事实字段路径，最多20项") String refs) {
     return execution.call(context, "verify_governance_facts", () -> evidence.verifyFacts(AgentToolExecution.state(context), refs));

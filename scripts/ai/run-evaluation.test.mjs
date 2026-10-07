@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
-import { validateSuite, decodeFrame, runRealCase, suiteFile, main } from './run-evaluation.mjs';
+import { validateSuite, decodeFrame, runRealCase, suiteFile, qualitySuiteFile, main } from './run-evaluation.mjs';
 
 test('default offline execution reports every model case NOT_RUN without network or authentication', async () => {
   const temp = await mkdtemp(join(tmpdir(), 'agent-eval-test-'));
@@ -26,6 +26,37 @@ test('fixed suite has unique complete task contracts and rejects malformed targe
   assert.equal(suite.cases.length, 12);
   assert.throws(() => validateSuite({ ...suite, cases: [suite.cases[0], suite.cases[0]] }));
   assert.throws(() => validateSuite({ ...suite, cases: [{ ...suite.cases[0], target: { assetId: 7, qualityExecutionNo: 'x' } }] }));
+});
+
+test('quality suite preserves 16 distinct scenarios and leaves offline semantics NOT_RUN', async () => {
+  const suite = validateSuite(JSON.parse(await readFile(qualitySuiteFile, 'utf8')));
+  const temp = await mkdtemp(join(tmpdir(), 'agent-eval-test-'));
+  try {
+    assert.equal(suite.cases.filter(item => item.executionMode === 'manual').length, 4);
+    assert.throws(() => validateSuite({ ...suite, cases: suite.cases.slice(1) }));
+    assert.throws(() => validateSuite({ ...suite, cases: suite.cases.map(item => item.caseId === 'qp11' ? { ...item, manualSteps: [] } : item) }));
+    assert.throws(() => validateSuite({ ...suite, cases: suite.cases.map(item => item.caseId === 'qp12' ? { ...item, executionMode: 'single-turn' } : item) }));
+    assert.throws(() => validateSuite({ ...suite, cases: suite.cases.map(item => item.caseId === 'qp01' ? { ...item, target: { assetId: 7 } } : item) }));
+    const report = await main(['--suite=quality-troubleshooting', `--out=${join(temp, 'quality.json')}`], {});
+    assert.equal(report.results.length, 16);
+    assert.equal(report.suiteVersion, 'F-012-v1');
+    assert.ok(report.results.every(item => item.status === 'NOT_RUN' && item.expertReview === 'PENDING'));
+    await assert.rejects(main(['--suite=../../private'], {}), /Unknown suite/);
+  } finally {
+    if (dirname(resolve(temp)) === resolve(tmpdir()) && temp.startsWith(join(tmpdir(), 'agent-eval-test-'))) await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test('multi-step quality scenarios make zero requests and never claim an automatic pass', async () => {
+  const suite = validateSuite(JSON.parse(await readFile(qualitySuiteFile, 'utf8')));
+  let requests = 0;
+  for (const item of suite.cases.filter(item => item.executionMode === 'manual')) {
+    const result = await runRealCase(item, null, null, async () => { requests++; });
+    assert.equal(result.status, 'MANUAL_REQUIRED');
+    assert.equal(result.expertReview, 'PENDING');
+    assert.equal(result.sourceAuditStatus, 'PENDING_EXTERNAL_REVIEW');
+  }
+  assert.equal(requests, 0);
 });
 
 test('SSE parser accepts data-only and multiline frames without treating heartbeats as results', () => {

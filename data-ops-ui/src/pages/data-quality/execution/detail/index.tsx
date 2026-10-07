@@ -229,7 +229,7 @@ const ExecutionDetailPage = () => {
           <div className="px-5 lg:px-6">
             {can('agent:chat:run') && (
               <YakButton className="mb-3" onClick={() => history.push(governanceEntryPath({ qualityExecutionNo: detail.executionNo }))}>
-                AI 解读结果
+                AI 解读与排查
               </YakButton>
             )}
             <YakTab

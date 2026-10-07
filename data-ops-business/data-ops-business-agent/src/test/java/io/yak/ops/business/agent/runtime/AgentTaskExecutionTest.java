@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -156,15 +158,17 @@ class AgentTaskExecutionTest {
     verify(model, never()).stream(any(), any(), any());
   }
 
-  @Test void fixedEvaluationSuiteExercisesActualPolicyAndBlockedDelegates() throws Exception {
+  @ParameterizedTest
+  @ValueSource(strings = {"task-scope", "quality-troubleshooting"})
+  void fixedEvaluationSuiteExercisesActualPolicyAndBlockedDelegates(String suite) throws Exception {
     var directory = java.nio.file.Path.of(System.getProperty("user.dir")).toAbsolutePath();
     while (!java.nio.file.Files.exists(directory.resolve("docs/ai/evaluation/cases/task-scope.json"))) {
       directory = directory.getParent();
       assertNotNull(directory, "Repository evaluation suite must be available");
     }
     var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-    var cases = mapper.readTree(directory.resolve("docs/ai/evaluation/cases/task-scope.json").toFile()).get("cases");
-    assertEquals(12, cases.size());
+    var cases = mapper.readTree(directory.resolve("docs/ai/evaluation/cases/" + suite + ".json").toFile()).get("cases");
+    assertEquals("task-scope".equals(suite) ? 12 : 16, cases.size());
     for (var fixture : cases) {
       var target = fixture.get("target").isNull() ? null : mapper.treeToValue(fixture.get("target"), GovernanceTarget.class);
       String name = fixture.get("probeTool").asText();
