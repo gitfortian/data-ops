@@ -6,7 +6,6 @@ import io.yak.ops.business.agent.domain.AgentStepRecord;
 import io.yak.ops.business.agent.domain.AgentTurnRecord;
 import io.yak.ops.business.agent.domain.ChatTurnEvent;
 import io.yak.ops.business.agent.domain.HistoryTurn;
-import io.yak.ops.business.agent.domain.HistoryTraceStep;
 import io.yak.ops.business.agent.domain.HistoryTurnWithTrace;
 import io.yak.ops.business.agent.domain.QueryAuditItem;
 import io.yak.ops.business.agent.domain.SessionMeta;
@@ -25,6 +24,8 @@ import io.yak.ops.business.agent.runtime.AgentRuntime;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -60,21 +61,40 @@ public class AgentSessionQueryService {
   public List<HistoryTurnWithTrace> history(String sessionId) {
     long userId = requireUserId();
     requireSessionOwner(sessionId, userId);
-    List<HistoryTurn> history = new ArrayList<>(agentRuntime.history(userId, sessionId));
+    List<HistoryTurn> history = agentRuntime.history(userId, sessionId);
+    long projectId = currentProject.requireProjectId();
+    Map<String, Long> references = history.stream()
+        .filter(t -> "user".equals(t.role()) && t.turnId() != null)
+        .collect(Collectors.groupingBy(HistoryTurn::turnId, Collectors.counting()));
+    Map<String, List<AgentTurnRecord>> completed = turnRepository.listCompletedBySession(sessionId).stream()
+        .collect(Collectors.groupingBy(AgentTurnRecord::turnId));
+    List<HistoryTurnWithTrace> result = new ArrayList<>();
+    for (HistoryTurn message : history) {
+      List<AgentTurnRecord> candidates = message.turnId() == null ? List.of()
+          : completed.getOrDefault(message.turnId(), List.of());
+      AgentTurnRecord matched = candidates.size() == 1 ? candidates.get(0) : null;
+      if ("assistant".equals(message.role()) && references.getOrDefault(message.turnId(), 0L) == 1L
+          && matched != null && matched.status() == TurnStatus.COMPLETED
+          && belongsTo(matched, sessionId, userId, projectId)) {
+        result.add(new HistoryTurnWithTrace(message.role(), message.content(), matched.turnId(),
+            eventRepository.reconstructTrace(matched.turnId())));
+      } else {
+        // Missing/ambiguous references preserve text; position or content cannot prove identity.
+        result.add(new HistoryTurnWithTrace(message.role(), message.content(), null, List.of()));
+      }
+    }
     // 合并失败轮次：StateStore 不记录失败，但 turn 表有终态失败记录
     List<AgentTurnRecord> failed = turnRepository.listFailedBySession(sessionId);
     for (AgentTurnRecord record : failed) {
+      if (!belongsTo(record, sessionId, userId, projectId)) {
+        throw new IllegalArgumentException("轮次不属于当前用户及项目");
+      }
       String errorContent = record.errorMessage() != null && !record.errorMessage().isBlank()
           ? record.errorMessage()
           : "推理执行失败（" + record.errorCode() + "）";
-      history.add(new HistoryTurn("error", errorContent));
+      result.add(new HistoryTurnWithTrace("error", errorContent, record.turnId(), List.of()));
     }
-    // 从事件日志重建 trace；同时携带轮次 ID 供前端懒加载 trace v2 权威视图（O2）
-    List<AgentTurnRecord> completed = turnRepository.listCompletedBySession(sessionId);
-    List<List<HistoryTraceStep>> traces = completed.stream()
-        .map(t -> eventRepository.reconstructTrace(t.turnId()))
-        .toList();
-    return enrichWithTrace(history, completed, traces, failed);
+    return result;
   }
 
   /** Only persisted input selects the task; unreadable input must never become ordinary chat. */
@@ -121,33 +141,8 @@ public class AgentSessionQueryService {
     return new SessionContinuation(sessionId, turn.turnId(), turn.status(), input.governanceTarget(), clarification, reason);
   }
 
-  /**
-   * 历史配对（数数式对齐为既有行为，O2 增补 turnId 透传）：
-   * assistant 轮次 ↔ 终态完成轮次按下标配对；error 轮次 ↔ 失败记录按追加序配对。
-   */
-  private static List<HistoryTurnWithTrace> enrichWithTrace(
-      List<HistoryTurn> history,
-      List<AgentTurnRecord> completed,
-      List<List<HistoryTraceStep>> traces,
-      List<AgentTurnRecord> failed) {
-    List<HistoryTurnWithTrace> result = new ArrayList<>();
-    int traceIdx = 0;
-    int errorIdx = 0;
-    for (HistoryTurn turn : history) {
-      if ("assistant".equals(turn.role()) && traceIdx < completed.size()) {
-        AgentTurnRecord record = completed.get(traceIdx);
-        result.add(new HistoryTurnWithTrace(
-            turn.role(), turn.content(), record.turnId(), traces.get(traceIdx)));
-        traceIdx++;
-      } else if ("error".equals(turn.role()) && errorIdx < failed.size()) {
-        AgentTurnRecord record = failed.get(errorIdx);
-        result.add(new HistoryTurnWithTrace(turn.role(), turn.content(), record.turnId(), List.of()));
-        errorIdx++;
-      } else {
-        result.add(new HistoryTurnWithTrace(turn.role(), turn.content(), null, List.of()));
-      }
-    }
-    return result;
+  private static boolean belongsTo(AgentTurnRecord turn, String sessionId, long userId, long projectId) {
+    return sessionId.equals(turn.sessionId()) && turn.userId() == userId && turn.projectId() == projectId;
   }
 
   /**

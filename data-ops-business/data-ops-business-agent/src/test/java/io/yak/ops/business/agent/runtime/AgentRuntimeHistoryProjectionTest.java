@@ -84,6 +84,46 @@ class AgentRuntimeHistoryProjectionTest {
     assertEquals("真正的回答", turns.get(1).content());
   }
 
+  @Test
+  void serverReferenceSurvivesOfficialStateJsonAndGroupsToolFeedbackUnderOriginalTurn() {
+    var state = io.agentscope.core.state.AgentState.builder().sessionId("s1").userId("42")
+        .context(List.of(AgentRuntime.startMessage("原问题", "t1"),
+            assistantWithToolCall("需要澄清", "c1"),
+            toolResult("c1", "request_clarification", "用户口径"), answerMsg("原回答"))).build();
+    var restored = io.agentscope.core.state.AgentState.fromJsonString(state.toJson());
+    var turns = AgentRuntime.projectHistory(restored.getContext());
+    assertEquals(2, turns.size());
+    assertEquals("t1", turns.get(0).turnId());
+    assertEquals("t1", turns.get(1).turnId());
+    assertEquals("原回答", turns.get(1).content());
+  }
+
+  @Test
+  void legacyAndPartialGroupsCannotShiftReferencesToLaterAnswers() {
+    var turns = AgentRuntime.projectHistory(List.of(userMsg("旧问题"), answerMsg("旧回答"),
+        AgentRuntime.startMessage("未完成", "failed"), answerMsg("部分内容"),
+        AgentRuntime.startMessage("新问题", "completed"), answerMsg("新回答")));
+    assertEquals(null, turns.get(1).turnId());
+    assertEquals("failed", turns.get(3).turnId());
+    assertEquals("completed", turns.get(5).turnId());
+  }
+
+  @Test
+  void assistantMetadataCannotInventGroupReference() {
+    var turns = AgentRuntime.projectHistory(List.of(userMsg("旧问题"),
+        answerMsg("回答").withMetadata(java.util.Map.of("yak_turn_id", "invented"))));
+    assertEquals(null, turns.get(1).turnId());
+  }
+
+  @Test
+  void malformedOrMissingUserReferenceDoesNotBorrowPreviousGroup() {
+    var turns = AgentRuntime.projectHistory(List.of(AgentRuntime.startMessage("问题一", "t1"),
+        answerMsg("回答一"), userMsg("问题二").withMetadata(java.util.Map.of("yak_turn_id", 42)),
+        answerMsg("回答二"), AgentRuntime.startMessage("无轮次", null), answerMsg("回答三")));
+    assertEquals(null, turns.get(3).turnId());
+    assertEquals(null, turns.get(5).turnId());
+  }
+
   private static void assertTrue(boolean condition) {
     if (!condition) {
       throw new AssertionError("断言失败");

@@ -464,6 +464,7 @@ class E2eAgentChatFlowTest {
 
   private record Assembly(
       AgentChatService service,
+      AgentRuntime runtime,
       AgentTurnRepository turns,
       AgentTurnEventRepository events,
       SessionRepository sessions,
@@ -547,7 +548,7 @@ class E2eAgentChatFlowTest {
             sessions,
             runtime,
             () -> java.util.Optional.of(new io.yak.ops.core.project.ProjectContext(1L, "e2e-project")));
-    return new Assembly(service, turns, events, sessions, tree, dispatcher, coordinator, tailer);
+    return new Assembly(service, runtime, turns, events, sessions, tree, dispatcher, coordinator, tailer);
   }
 
   private static HttpServer startServer(LlmScript script) throws Exception {
@@ -634,6 +635,9 @@ class E2eAgentChatFlowTest {
         assertEquals(TurnStatus.COMPLETED,
             assembly.turns().findByTurnId(turnId).orElseThrow().status(),
             "自然完成必须收敛为 COMPLETED");
+        var history = assembly.runtime().history(42L, "sess-1");
+        assertEquals(turnId, history.get(0).turnId(), "官方状态必须保存服务端原轮引用");
+        assertEquals(turnId, history.get(1).turnId(), "回答必须继承原 USER 分组身份");
 
         List<ChatTurnEvent> events = allEvents(assembly.events(), turnId);
         assertTrue(hasEvent(events, ChatTurnEvent.TurnEventType.TEXT_DELTA),
@@ -710,7 +714,7 @@ class E2eAgentChatFlowTest {
         var query = new io.yak.ops.business.agent.conversation.query.AgentSessionQueryService(
             assembly.sessions(), mock(io.yak.ops.business.agent.repository.QueryLogRepository.class),
             assembly.turns(), assembly.events(), mock(io.yak.ops.business.agent.repository.AgentStepRepository.class),
-            mock(AgentRuntime.class), new io.yak.ops.business.agent.conversation.query.TraceViewAssembler(),
+            assembly.runtime(), new io.yak.ops.business.agent.conversation.query.TraceViewAssembler(),
             () -> Optional.of(new io.yak.ops.core.project.ProjectContext(1L, "test-project")));
         var restored = query.continuation("sess-1");
         assertEquals(turnId, restored.turnId());
@@ -725,6 +729,10 @@ class E2eAgentChatFlowTest {
         assertEquals(TurnStatus.COMPLETED,
             assembly.turns().findByTurnId(turnId).orElseThrow().status(),
             "resume 后必须收敛 COMPLETED");
+        var restoredHistory = query.history("sess-1");
+        assertEquals(1, restoredHistory.stream().filter(t -> "user".equals(t.role())).count());
+        assertEquals(turnId, restoredHistory.stream().filter(t -> "assistant".equals(t.role()))
+            .findFirst().orElseThrow().turnId(), "HITL 恢复后证据仍属于原轮");
         List<ChatTurnEvent> after = allEvents(assembly.events(), turnId);
         assertTrue(after.stream()
                 .filter(e -> e.type() == ChatTurnEvent.TurnEventType.TEXT_DELTA)
