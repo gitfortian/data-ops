@@ -31,3 +31,7 @@
 F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每次检查 semantic 读取权限与当前项目；只查启用 TYPE，SQL 最多 21 行、交付 20 行及截断标识。按 ID/版本复核时拒绝跨项目、停用、错类别、陈旧版本；故障不能折算成无候选。不接收 Agent 写命令。
 
 依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
+
+## P0-B03：标准字段反向引用读侧 SPI
+
+Semantic 增加 `api.SemanticFieldReferenceReader`：消费者（当前 Modeling）实现，向字段库删除校验提供可信当前 Project 的引用数量。Semantic 绝不反向依赖 Modeling 的 Java 实现或 SQL 表；Modeling 查询本域 `yak_modeling_model_column.std_field_id`（包含可恢复模型列）并在拒绝/异常时禁止删除。该策略与 `StandardReferenceReader`、`LayerStdBindingReader` 使用相同依赖方向和 Spring 注入方式，不承诺前端动态聚合其它领域的引用计数。

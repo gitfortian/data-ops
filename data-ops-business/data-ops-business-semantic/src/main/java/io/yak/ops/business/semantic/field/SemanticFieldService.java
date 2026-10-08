@@ -6,6 +6,7 @@ import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.api.SemanticFieldApi;
+import io.yak.ops.business.semantic.api.SemanticFieldReferenceReader;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.api.StandardKind;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -42,18 +45,44 @@ public class SemanticFieldService {
   private final SemanticProcessRepository processRepository;
   private final SemanticStandardRepository standardRepository;
   private final BusinessAuditService auditService;
+  private final List<SemanticFieldReferenceReader> referenceReaders;
 
+  @Autowired
+  public SemanticFieldService(
+      SemanticFieldRepository repository,
+      SemanticProcessFieldRepository processFieldRepository,
+      SemanticProcessRepository processRepository,
+      SemanticStandardRepository standardRepository,
+      BusinessAuditService auditService,
+      ObjectProvider<SemanticFieldReferenceReader> referenceReaders) {
+    this(repository, processFieldRepository, processRepository, standardRepository,
+        auditService, referenceReaders.orderedStream().toList());
+  }
+
+  /** Compatibility constructor for focused tests without cross-domain consumers. */
   public SemanticFieldService(
       SemanticFieldRepository repository,
       SemanticProcessFieldRepository processFieldRepository,
       SemanticProcessRepository processRepository,
       SemanticStandardRepository standardRepository,
       BusinessAuditService auditService) {
+    this(repository, processFieldRepository, processRepository, standardRepository,
+        auditService, List.of());
+  }
+
+  SemanticFieldService(
+      SemanticFieldRepository repository,
+      SemanticProcessFieldRepository processFieldRepository,
+      SemanticProcessRepository processRepository,
+      SemanticStandardRepository standardRepository,
+      BusinessAuditService auditService,
+      List<SemanticFieldReferenceReader> referenceReaders) {
     this.repository = repository;
     this.processFieldRepository = processFieldRepository;
     this.processRepository = processRepository;
     this.standardRepository = standardRepository;
     this.auditService = auditService;
+    this.referenceReaders = List.copyOf(referenceReaders);
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -223,6 +252,15 @@ public class SemanticFieldService {
     StandardField existing = get(id);
     if (processFieldRepository.countByField(id) > 0) {
       throw new SemanticException(SemanticErrorCode.FIELD_REFERENCED, "存在业务过程引用");
+    }
+    // Modeling (and future consumers) own their reference truth. Never delete a
+    // standard field while a consumer still holds its stable ID; failed queries
+    // must block deletion rather than masquerade as zero references.
+    for (SemanticFieldReferenceReader reader : referenceReaders) {
+      if (reader.countFieldReferences(id) > 0) {
+        throw new SemanticException(
+            SemanticErrorCode.FIELD_REFERENCED, "存在建模或其它消费模块引用，请先解除关联");
+      }
     }
     AuditOperationHandle audit =
         auditService.start(
