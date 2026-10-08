@@ -41,6 +41,18 @@ jobs:
         run: node --test scripts/architecture/*.test.mjs scripts/release/*.test.mjs
       - name: Dependency and persistence boundaries
         run: node scripts/architecture/check-boundaries.mjs
+      - name: A8 Framework legacy-coupling gate
+        run: node scripts/architecture/framework-coupling.mjs --check
+      - name: A8 archived coupling debt ledger (architecture Draft only)
+        if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'architecture/yak-a8')
+        run: node scripts/architecture/framework-coupling.mjs --report > a8-framework-coupling.json
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'architecture/yak-a8')
+        with:
+          name: a8-framework-coupling-${{ github.run_id }}-${{ github.run_attempt }}
+          path: a8-framework-coupling.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Frontend import boundaries
         run: node scripts/architecture/check-frontend-boundaries.mjs
       - name: Migration history consistency
