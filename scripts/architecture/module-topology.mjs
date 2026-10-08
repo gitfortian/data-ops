@@ -101,7 +101,7 @@ function ownerForFile(filename, modulesByPath) {
 export function scanJavaImports(root, modules, trackedFiles = null) {
   const files = trackedFiles ?? execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
     .split('\0').filter(Boolean);
-  const owned = [...modules].filter((m) => m.directory !== '.')
+  const owned = [...modules].filter((m) => m.directory !== '.' && m.packaging !== 'pom')
     .sort((a, b) => b.directory.length - a.directory.length);
   const sourceFiles = files.filter((f) => f.endsWith('.java') && f.includes('/src/main/java/'))
     .map((f) => ({ filename: f, owner: ownerForFile(f, owned) }))
