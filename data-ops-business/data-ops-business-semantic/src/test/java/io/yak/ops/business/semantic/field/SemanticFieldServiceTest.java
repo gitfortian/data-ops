@@ -12,6 +12,7 @@ import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.api.SemanticFieldApi;
+import io.yak.ops.business.semantic.api.SemanticFieldReferenceReader;
 import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.api.StandardKind;
@@ -22,6 +23,7 @@ import io.yak.ops.business.semantic.repository.SemanticProcessFieldRepository;
 import io.yak.ops.business.semantic.repository.SemanticProcessRepository;
 import io.yak.ops.business.semantic.repository.SemanticStandardRepository;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,6 +129,64 @@ class SemanticFieldServiceTest {
     assertNull(captor.getValue().stdCaliberId());
     assertNull(captor.getValue().stdCodeSetCode());
     assertNull(captor.getValue().stdSecurityId());
+  }
+
+
+  @Test
+  void deleteRefusesReferencesOwnedByModelingEvenWithoutProcessBindings() {
+    long fieldId = 35L;
+    StandardField existing = testField(fieldId);
+    when(repository.findById(fieldId)).thenReturn(Optional.of(existing));
+    SemanticFieldReferenceReader modeling = id -> id.equals(fieldId) ? 2L : 0L;
+    SemanticFieldService guarded = new SemanticFieldService(repository,
+        Mockito.mock(SemanticProcessFieldRepository.class),
+        Mockito.mock(SemanticProcessRepository.class), standardRepository,
+        auditService, List.of(modeling));
+
+    SemanticException rejected = assertThrows(SemanticException.class, () -> guarded.delete(fieldId));
+
+    assertEquals(SemanticErrorCode.FIELD_REFERENCED, rejected.getErrorCode());
+    verify(repository, Mockito.never()).deleteById(fieldId);
+    verify(auditService, Mockito.never()).start(any(AuditOperationRequest.class));
+  }
+
+  @Test
+  void deleteFailsClosedWhenConsumerReferenceQueryIsUnavailable() {
+    long fieldId = 35L;
+    when(repository.findById(fieldId)).thenReturn(Optional.of(testField(fieldId)));
+    SemanticFieldReferenceReader unavailable = id -> {
+      throw new IllegalStateException("Modeling reference query unavailable");
+    };
+    SemanticFieldService guarded = new SemanticFieldService(repository,
+        Mockito.mock(SemanticProcessFieldRepository.class),
+        Mockito.mock(SemanticProcessRepository.class), standardRepository,
+        auditService, List.of(unavailable));
+
+    assertThrows(IllegalStateException.class, () -> guarded.delete(fieldId));
+    verify(repository, Mockito.never()).deleteById(fieldId);
+  }
+
+  @Test
+  void deleteSucceedsOnlyAfterEveryConsumerHasNoReferences() {
+    long fieldId = 35L;
+    when(repository.findById(fieldId)).thenReturn(Optional.of(testField(fieldId)));
+    when(repository.deleteById(fieldId)).thenReturn(true);
+    SemanticFieldReferenceReader empty = id -> 0L;
+    SemanticFieldService guarded = new SemanticFieldService(repository,
+        Mockito.mock(SemanticProcessFieldRepository.class),
+        Mockito.mock(SemanticProcessRepository.class), standardRepository,
+        auditService, List.of(empty));
+
+    guarded.delete(fieldId);
+
+    verify(repository).deleteById(fieldId);
+  }
+
+  private static StandardField testField(long fieldId) {
+    return new StandardField(fieldId, "order_amount", "订单金额",
+        StandardField.ROLE_METRIC, StandardField.STATUS_ENABLED, "decimal(18,2)",
+        TYPE_STANDARD_ID, 11L, null, null, null, null,
+        StandardField.SOURCE_MANUAL, 1, false, "tester", null, null);
   }
 
   private static Standard typeStandard() {
