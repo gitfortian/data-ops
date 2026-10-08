@@ -4,11 +4,12 @@ import {
   productKeyValue,
   type DataProductView,
   type ProductType,
+  type ProductSearchState,
 } from '@/services/consumption';
 import { history } from '@umijs/max';
-import { Alert, Card, Input, Select, Space, Spin, Tag, Typography } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
+import { Alert, Button, Card, Input, Select, Space, Spin, Tag, Typography } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL, resolveConsumptionDiscoveryView } from './presentation';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -27,12 +28,16 @@ export default function ConsumptionDiscoveryPage() {
   const [keyword, setKeyword] = useState('');
   const [productType, setProductType] = useState<ProductType | undefined>();
   const [products, setProducts] = useState<DataProductView[]>([]);
-  const [providerStates, setProviderStates] = useState<Record<string, string>>({});
-  const [providerReasons, setProviderReasons] = useState<Record<string, string>>({});
+  const [providerStates, setProviderStates] = useState<Partial<Record<ProductType, ProductSearchState>>>({});
+  const [providerReasons, setProviderReasons] = useState<Partial<Record<ProductType, string>>>({});
+  const latestLoadId = useRef(0);
+  const lastQuery = useRef<{ keyword: string; productType?: ProductType }>({ keyword: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const load = useCallback(async (nextKeyword = keyword, nextType = productType) => {
+    const loadId = ++latestLoadId.current;
+    lastQuery.current = { keyword: nextKeyword, productType: nextType };
     setLoading(true);
     setError('');
     try {
@@ -40,28 +45,37 @@ export default function ConsumptionDiscoveryPage() {
         keyword: nextKeyword.trim() || undefined,
         productType: nextType,
       });
+      if (loadId !== latestLoadId.current) return;
       setProducts(result.products || []);
       setProviderStates(result.providerStates || {});
       setProviderReasons(result.providerReasons || {});
     } catch (cause) {
+      if (loadId !== latestLoadId.current) return;
       setProducts([]);
       setProviderStates({});
       setProviderReasons({});
       setError(cause instanceof Error ? cause.message : '加载数据消费目录失败');
     } finally {
-      setLoading(false);
+      if (loadId === latestLoadId.current) setLoading(false);
     }
   }, [keyword, productType]);
 
   useEffect(() => {
     void load('', undefined);
+    return () => { latestLoadId.current += 1; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const retry = () => void load(lastQuery.current.keyword, lastQuery.current.productType);
 
   const providerWarnings = useMemo(() => (
     Object.entries(providerStates)
       .filter(([, state]) => state !== 'READY')
-      .map(([type, state]) => ({ type, state, reason: providerReasons[type] }))
+      .map(([type, state]) => ({ type, state, reason: providerReasons[type as ProductType] }))
   ), [providerReasons, providerStates]);
+
+  const viewState = resolveConsumptionDiscoveryView(
+    loading, error, products.length, providerStates, lastQuery.current.productType,
+  );
 
   return (
     <div className="bg-white p-6 max-md:p-4">
@@ -98,7 +112,8 @@ export default function ConsumptionDiscoveryPage() {
           />
         </Space>
 
-        {error ? <Alert type="error" showIcon message="目录加载失败" description={error} /> : null}
+        {error ? <Alert type="error" showIcon message="目录加载失败" description={error}
+          action={<Button size="small" onClick={retry}>按当前筛选重试</Button>} /> : null}
         {providerWarnings.map(({ type, state, reason }) => (
           <Alert
             key={type}
@@ -110,9 +125,13 @@ export default function ConsumptionDiscoveryPage() {
         ))}
 
         <Spin spinning={loading}>
-          {!loading && products.length === 0 ? (
+          {viewState === 'INCOMPLETE' ? (
+            <YakOpsEmpty title="目录结果尚未完整" description="部分数据产品来源未确认成功，暂不能判定当前筛选结果为空。">
+              <Button onClick={retry}>重新读取数据产品</Button>
+            </YakOpsEmpty>
+          ) : viewState === 'EMPTY' ? (
             <YakOpsEmpty title="暂无数据产品" description="当前筛选条件下没有可发现的数据产品" />
-          ) : (
+          ) : viewState === 'RESULTS' ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
               {products.map((product) => {
                 const key = productKeyValue(product.productKey);
@@ -144,7 +163,7 @@ export default function ConsumptionDiscoveryPage() {
                 );
               })}
             </div>
-          )}
+          ) : null}
         </Spin>
       </Space>
     </div>
