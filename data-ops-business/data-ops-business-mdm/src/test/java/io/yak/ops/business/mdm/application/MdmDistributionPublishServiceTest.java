@@ -108,6 +108,7 @@ class MdmDistributionPublishServiceTest {
     DataServiceView current = mock(DataServiceView.class);
     DataServiceView refreshed = mock(DataServiceView.class);
     when(current.id()).thenReturn(77L);
+    when(current.enabled()).thenReturn(false);
     when(reader.state(MdmDataServiceSourceProvider.SOURCE_TYPE, "10"))
         .thenReturn(new PublicationState(true, true, null, current));
     when(publisher.republish(eq(77L), any(PublicationSettings.class))).thenReturn(refreshed);
