@@ -34,6 +34,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import DataServiceAccessControlPanel from '../components/DataServiceAccessControlPanel';
 import DataServiceApiCallPanel from '../components/DataServiceApiCallPanel';
 import { dataServiceDevelopmentSourceUrl } from '../utils';
+import { verifiedInvocationFromWindow } from './invocation-evidence';
 
 type DetailTabKey = 'overview' | 'access' | 'network' | 'runtime' | 'logs';
 
@@ -149,6 +150,7 @@ export default function DataServiceDetailPage() {
   // MAX_SAFE_INTEGER are not sufficient evidence for an exact invocation match.
   const focusedInvocationId = /^[1-9]\d*$/.test(requestedInvocationId)
     ? requestedInvocationId : undefined;
+  const logsTab = searchParams.get('tab') === 'logs';
   const apiId = Number(params.id || 0);
   const access = useAccess();
   const canManageAccess = access.hasPermission('data-service:access');
@@ -160,13 +162,14 @@ export default function DataServiceDetailPage() {
   const [runtime, setRuntime] = useState<DataServiceRuntimeStatus>();
   const [keys, setKeys] = useState<DataServiceApiKey[]>([]);
   const [logs, setLogs] = useState<DataServiceCallLog[]>([]);
+  const [logIssue, setLogIssue] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<DetailTabKey>(
-    focusedInvocationId && canObserve ? 'logs' : 'overview');
+    (logsTab || focusedInvocationId) && canObserve ? 'logs' : 'overview');
 
   useEffect(() => {
-    if (focusedInvocationId && canObserve) setActiveTab('logs');
-  }, [focusedInvocationId, canObserve]);
+    if ((focusedInvocationId || logsTab) && canObserve) setActiveTab('logs');
+  }, [focusedInvocationId, logsTab, canObserve]);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(apiId) || apiId <= 0) {
@@ -175,6 +178,7 @@ export default function DataServiceDetailPage() {
     }
 
     setLoading(true);
+    setLogIssue('');
     try {
       const [serviceResponse, dataSourceResponse] = await Promise.all([
         getDataService(apiId),
@@ -186,7 +190,11 @@ export default function DataServiceDetailPage() {
       const [runtimeResponse, keyResponse, logResponse] = await Promise.all([
         canRuntime ? getDataServiceRuntime(apiId) : Promise.resolve(undefined),
         canManageAccess ? listDataServiceKeys(apiId) : Promise.resolve(undefined),
-        canObserve ? listDataServiceLogs(apiId, focusedInvocationId ? 200 : 50) : Promise.resolve(undefined),
+        canObserve ? listDataServiceLogs(apiId, focusedInvocationId ? 200 : 50)
+          .catch((cause) => {
+            setLogIssue(cause instanceof Error ? cause.message : '调用日志来源不可用');
+            return [] as DataServiceCallLog[];
+          }) : Promise.resolve(undefined),
       ]);
       setRuntime(runtimeResponse);
       setKeys(keyResponse || []);
@@ -214,10 +222,7 @@ export default function DataServiceDetailPage() {
       || `#${service.dataSourceId}`;
   }, [dataSources, service?.dataSourceId]);
 
-  const exactInvocation = focusedInvocationId
-    ? logs.find((item) => Number.isSafeInteger(item.id)
-        && String(item.id) === focusedInvocationId)
-    : undefined;
+  const exactInvocation = verifiedInvocationFromWindow(logs, apiId, focusedInvocationId);
 
   const logColumns: TableColumnsType<DataServiceCallLog> = [
     {
@@ -387,13 +392,16 @@ export default function DataServiceDetailPage() {
   const logsContent = (
     <SectionCard title="调用记录">
       <div className="p-5">
+        {logIssue ? <Alert className="mb-4" type="warning" showIcon
+          message="调用日志来源暂不可用" description={logIssue} /> : null}
         {focusedInvocationId ? (
           <Alert
             className="mb-4"
-            type={exactInvocation ? 'info' : 'warning'}
+            type={exactInvocation && !logIssue ? 'info' : 'warning'}
             showIcon
-            message={exactInvocation ? '已在此服务的近期日志中核对调用 ID'
-              : '未能在此服务的可读日志窗口精确定位调用'}
+            message={logIssue ? '无法核对指定来源调用'
+              : exactInvocation ? '已在此服务的近期日志中核对调用 ID'
+                : '未能在此服务的可读日志窗口精确定位调用'}
             description={(
               <div>
                 <div>Invocation ID：{focusedInvocationId}。只认可相同 ID 且属于当前 API 的记录；
@@ -406,7 +414,7 @@ export default function DataServiceDetailPage() {
             )}
           />
         ) : null}
-        {(!focusedInvocationId || exactInvocation) ? (
+        {(!focusedInvocationId || exactInvocation) && !logIssue ? (
           <Table<DataServiceCallLog>
             rowKey="id"
             size="small"
