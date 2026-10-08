@@ -3,7 +3,11 @@ import {FormInstance, message} from "antd";
 import {debounce} from "lodash";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
-import {dataSourceCatalogApi, fetchDataSourceOptions,} from "@/services/data-source/legacy";
+import { listDataSourceOptions } from '@/services/data-source';
+import {
+  listDataSourceTableOptions,
+  listDataSourceReferenceTableOptions,
+} from '@/services/data-source/catalog';
 
 import {linkupJobDefinitionApi} from "@/pages/integration/batch-link-up/api";
 import {buildTableItems, DEFAULT_DB_TYPE, DEFAULT_FORM_VALUES,} from "../config";
@@ -164,11 +168,13 @@ export function useMultiWorkflowState({
   }, [params?.id]);
 
   const fetchDataSourceOptionsU = useCallback(async (dbType: string) => {
-    const res = await fetchDataSourceOptions(dbType);
-    if (res?.code === API_SUCCESS_CODE && Array.isArray(res?.data)) {
-      return res.data;
+    try {
+      const options = await listDataSourceOptions(dbType);
+      return Array.isArray(options) ? options : [];
+    } catch {
+      // 旧版非成功的选项响应返回空数组，不阻断编辑器初始化。
+      return [];
     }
-    return [];
   }, []);
 
   const fetchTables = useCallback(
@@ -179,18 +185,14 @@ export function useMultiWorkflowState({
         setLoading(true);
         setCurrentSourceId(dataSourceId);
 
-        const res = await dataSourceCatalogApi.listTable(dataSourceId);
-        if (res?.code === API_SUCCESS_CODE) {
-          const nextTables = buildTableItems(res.data || []);
-          setTableData(nextTables);
+        const rows = await listDataSourceTableOptions(dataSourceId);
+        const nextTables = buildTableItems(Array.isArray(rows) ? rows : []);
+        setTableData(nextTables);
 
-          if (mode === "4") {
-            setMultiTableList(nextTables.map((item) => item.key));
-          } else if (mode === "1") {
-            setMultiTableList([]);
-          }
-        } else {
-          message.error(res?.message || "获取表列表失败");
+        if (mode === "4") {
+          setMultiTableList(nextTables.map((item) => item.key));
+        } else if (mode === "1") {
+          setMultiTableList([]);
         }
       } catch (error) {
         console.error(error);
@@ -209,17 +211,12 @@ export function useMultiWorkflowState({
       try {
         setLoading(true);
 
-        const res = await dataSourceCatalogApi.listTableReference(
+        const rows = await listDataSourceReferenceTableOptions(
           dataSourceId,
           mode,
           keyword
         );
-
-        if (res?.code === API_SUCCESS_CODE) {
-          setReadOnlyTables(buildTableItems(res.data || []));
-        } else {
-          message.error(res?.message || "获取参考表失败");
-        }
+        setReadOnlyTables(buildTableItems(Array.isArray(rows) ? rows : []));
       } catch (error) {
         console.error(error);
         message.error("获取参考表失败");

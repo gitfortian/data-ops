@@ -78,6 +78,26 @@ export const previewDataSourceTop20 = (
     requestBody,
   );
 
+
+/** 多表编辑器历史下拉列表，保留原有 GET /list/{id} 与 label/value 数据结构。 */
+export const listDataSourceTableOptions = (
+  id: DataSourceId,
+): Promise<unknown[]> =>
+  HttpUtils.getData<unknown[]>(`${DATA_SOURCE_CATALOG_API_PREFIX}/list/${id}`);
+
+/** 表匹配模式 2/3 的参考表：原接口通过 matchMode/keyword 查询参数筛选。 */
+export const listDataSourceReferenceTableOptions = (
+  id: DataSourceId,
+  matchMode?: string | number,
+  keyword?: string,
+): Promise<unknown[]> =>
+  HttpUtils.getData<unknown[]>(
+    `${DATA_SOURCE_CATALOG_API_PREFIX}/listByMatchMode/${id}${queryString({
+      matchMode,
+      keyword,
+    })}`,
+  );
+
 /** 按关键字搜索数据源表(源表绑定下拉用)。 */
 export const searchDataSourceTables = (
   id: DataSourceId,
