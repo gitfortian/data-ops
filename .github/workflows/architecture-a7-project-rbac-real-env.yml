@@ -1,0 +1,75 @@
+name: A7 Project and RBAC Real Environment Evidence
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Trusted Environment holding Phase 5 acceptance credentials
+        required: true
+        type: environment
+      execution_target:
+        description: Network for approved deployment
+        required: true
+        default: github-hosted
+        type: choice
+        options: [github-hosted, phase5-self-hosted]
+      primary_project_id:
+        description: Owner and denied user are primary Project members
+        required: true
+        type: string
+      secondary_project_id:
+        description: Other Project accessible to owner
+        required: true
+        type: string
+      metric_id:
+        description: Golden Metric in primary Project only
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  project-rbac:
+    name: Read-only real Project and RBAC acceptance
+    runs-on: ${{ inputs.execution_target == 'phase5-self-hosted' && 'phase5-acceptance' || 'ubuntu-latest' }}
+    environment: ${{ inputs.target_environment }}
+    env:
+      YAK_OPS_BASE_URL: ${{ vars.YAK_OPS_PHASE5_BASE_URL }}
+      YAK_OPS_A7_PRIMARY_PROJECT_ID: ${{ inputs.primary_project_id }}
+      YAK_OPS_A7_SECONDARY_PROJECT_ID: ${{ inputs.secondary_project_id }}
+      YAK_OPS_A7_METRIC_ID: ${{ inputs.metric_id }}
+      YAK_OPS_USERNAME: ${{ secrets.YAK_OPS_PHASE5_ACCEPTANCE_USERNAME }}
+      YAK_OPS_PASSWORD: ${{ secrets.YAK_OPS_PHASE5_ACCEPTANCE_PASSWORD }}
+      YAK_OPS_DENIED_USERNAME: ${{ secrets.YAK_OPS_PHASE5_DENIED_USERNAME }}
+      YAK_OPS_DENIED_PASSWORD: ${{ secrets.YAK_OPS_PHASE5_DENIED_PASSWORD }}
+      YAK_OPS_ACCEPTANCE_COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify contract tests
+        run: |
+          node --check scripts/architecture/a7-project-rbac-real-env.mjs
+          node --test scripts/architecture/a7-project-rbac-real-env.test.mjs
+      - name: Capture live read-only Project and RBAC evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-evidence
+          node scripts/architecture/a7-project-rbac-real-env.mjs > "acceptance-evidence/a7-project-rbac-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+      - name: Publish redacted summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -r '"## A7 Project / RBAC real environment\n\n- Project A: \(.primaryProjectId)\n- Project B: \(.secondaryProjectId)\n- Golden Metric: \(.metricId)\n- Switch isolation: \(.assertions.switchDoesNotLeakSameMetric)\n- Return to A: \(.assertions.restoreOriginalProjectRead)\n- Anonymous denial: \(.assertions.anonymousReadDenied)\n- RBAC member denial: \(.assertions.memberWithoutPermissionForbidden)\n- Browser E2E: NOT EXECUTED\n- Commit: \(.commit)"' acceptance-evidence/*.json >> "${GITHUB_STEP_SUMMARY}"
+      - name: Retain evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a7-project-rbac-${{ github.run_id }}-${{ github.run_attempt }}
+          path: acceptance-evidence/*.json
+          if-no-files-found: warn
+          retention-days: 30
