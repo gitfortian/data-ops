@@ -398,6 +398,8 @@ public class AgentRuntime implements TurnCorrelation {
                 ? standardMatch(inputs, context, execution)
                 : target != null && target.modelMapping() != null
                     ? modelMapping(inputs, context, execution)
+                    : target != null && target.metricExplanation() != null
+                        ? metricExplanation(inputs, context, execution)
                 : mapStream(GovernanceAnswerGuard.guard(agent().streamEvents(inputs, context), execution, context, agent()), eventCodec),
             Duration.ofSeconds(properties.getChat().getTurnTimeoutSeconds()))
             .doFinally(signal -> execution.stopTools());
@@ -435,6 +437,30 @@ public class AgentRuntime implements TurnCorrelation {
   private ScenarioSkillScope scenarioSkill(String name) {
     if (!properties.getSuggestions().isEnabled()) throw new IllegalStateException("AI 候选功能已关闭");
     return new ScenarioSkillScope(skillRepository, name);
+  }
+
+  public io.yak.ops.business.agent.domain.MetricExplanationSuggestion revalidateMetricExplanation(
+      io.yak.ops.business.agent.domain.MetricExplanationSuggestion value) {
+    var scope = requireScenarioSkill("metric-caliber-explanation", value == null ? 0 : value.skillVersion(), value == null ? null : value.skillHash());
+    var verified = toolBox(io.yak.ops.business.agent.toolset.MetricExplanationTools.class).revalidate(value);
+    scope.requireCurrent(); return verified;
+  }
+
+  private Flux<ChatTurnEvent> metricExplanation(List<Msg> inputs, RuntimeContext context,
+      io.yak.ops.business.agent.domain.AgentExecutionContext execution) {
+    return Flux.defer(() -> {
+      requireModelConfiguration();
+      var scope = scenarioSkill("metric-caliber-explanation");
+      var tools = toolBox(io.yak.ops.business.agent.toolset.MetricExplanationTools.class);
+      var target = execution.target().metricExplanation();
+      execution.reserveTool("get_metric_caliber_context");
+      var source = tools.prepare(context, target);
+      return structuredScenario(inputs, context, execution, scope, new StructuredCall<>(tools,
+          "get_metric_caliber_context", "metric-caliber-explanation", target, source,
+          io.yak.ops.business.agent.domain.MetricExplanationProposal.class,
+          (proposal, current) -> tools.validate(context, target, source, proposal, current.version(), current.hash()),
+          "yak-metric-explanation", "AI 解读依据已保存草稿版本；请核对原始事实和语义，带入仅改业务说明，仍需人工保存、验证和发布。"));
+    });
   }
 
   private ScenarioSkillScope requireScenarioSkill(String name, int version, String hash) {

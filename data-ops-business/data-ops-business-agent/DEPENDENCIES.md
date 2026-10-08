@@ -250,3 +250,8 @@ F-023 单字段 TYPE 标准匹配：用户从 Modeling 原字段草稿发起现�
 ## F-024 模型来源映射 Skill
 
 Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQueryApi 读取固定源表的 fresh 元数据并有界交付。Agent 仅 gateway → modeling.api 消费，不直接读取 Datasource 内部实现。复用原轮次、SDK Skill 与结构化调用；候选仅进入原表单，人工 If-Match 保存。映射写路径持有模型行锁，字段及单列映射用 locking read；保留标准字段关联，冲突先于写入。外部 DDL 校验只证明读取时刻，不宣称跨库原子性。详细边界见 [F-024](../../docs/product/features/F-024-skill-model-mapping.md)。
+
+
+## F-025 指标版本口径 Skill
+
+MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版本，读取不可变快照并复用 digest；仅白名单有界事实，超界/缺快照不可用。Agent 仅 gateway → metric.api，源域不反向依赖 Agent。复用 SDK 场景执行与原表单，候选仅 businessDesc，人工保存复用 expectedVersion、校验、审计和回读；验证/发布仍独立。引用校验不等于自然语言正确，真实模型验收 PENDING。合同见 docs/product/features/F-025-skill-metric-caliber.md。

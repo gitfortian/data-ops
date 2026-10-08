@@ -75,3 +75,8 @@
 2. **引用完整性**：删除原子指标时若被派生（ref_metric_id）或复合（composition REF）引用则阻断；停用被引用指标同样阻断并提示先处理下游；存在使用记录（`yak_metric_usage`）时删除阻断并提示。
 3. **展示名解析只经 SPI**：controller/service 禁止 import semantic/modeling 的 dao/内部类；口径与单位名走 `StandardQueryApi.labels`，模型名与版本走 modeling 新增 `ModelQueryApi`，域/过程走 `ProcessApi`。详情接口与列表接口同样 enrich。
 4. **ATOMIC 必填 `measureExpr` + `modelId`、DERIVED 必填 `refMetricId` 且只能引用 ATOMIC**（`validateByType`）；存量数据编辑时由表单引导补齐。
+
+
+## F-025 指标版本口径 Skill
+
+MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版本，读取不可变快照并复用 digest；仅白名单有界事实，超界/缺快照不可用。Agent 仅 gateway → metric.api，源域不反向依赖 Agent。复用 SDK 场景执行与原表单，候选仅 businessDesc，人工保存复用 expectedVersion、校验、审计和回读；验证/发布仍独立。引用校验不等于自然语言正确，真实模型验收 PENDING。合同见 docs/product/features/F-025-skill-metric-caliber.md。

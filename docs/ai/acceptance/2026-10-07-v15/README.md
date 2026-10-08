@@ -30,3 +30,5 @@
 隔离 MySQL 与完整发行验证由 CI 执行；本地 Windows JDK 的 Unix socket 临时路径采用此前已确认的短目录测试参数，不修改生产配置。
 
 2026-10-08 CI 阻塞证据：Architecture gate 首次及重跑均无执行步骤、runner_id=0。GitHub annotation：`The job was not started because recent account payments have failed or your spending limit needs to be increased.` 账户限制需用户处理；没有放宽 gate 或据此宣称 CI 全绿。
+
+同一 head 后续因 PR 描述更新触发的 Product Guard run 37650246230 也未启动，annotation 同为账户支付/额度限制。前述 PASS 是该 head 先前实际运行证据，当前完整 CI 状态仍阻塞，合并前需恢复账户并重跑最新失败检查。

@@ -1,3 +1,4 @@
+import { readStructuredReceipt } from './structuredReceipt';
 import type { ModelMappingTarget } from './governance';
 export interface ModelMappingSuggestion {
   kind: 'MODEL_MAPPING'; target: ModelMappingTarget; expectedDefinition: string; sourceDefinition: string; targetType: string;
@@ -6,10 +7,8 @@ export interface ModelMappingSuggestion {
   questions: string[];
 }
 export function parseModelMapping(text: string): ModelMappingSuggestion | null {
-  const matches = [...text.matchAll(/```yak-model-mapping\s*\n([\s\S]*?)\n```/g)];
-  if (matches.length !== 1) return null;
   try {
-    const value = JSON.parse(matches[0][1]) as ModelMappingSuggestion;
+    const value = readStructuredReceipt(text, 'yak-model-mapping') as ModelMappingSuggestion;
     if (value.kind !== 'MODEL_MAPPING' || !value.target || !/^[a-f0-9]{64}$/.test(value.expectedDefinition)
       || !/^[a-f0-9]{64}$/.test(value.sourceDefinition) || typeof value.targetType !== 'string'
       || !/^[a-f0-9]{64}$/.test(value.skillHash) || !Number.isSafeInteger(value.skillVersion) || value.skillVersion < 1

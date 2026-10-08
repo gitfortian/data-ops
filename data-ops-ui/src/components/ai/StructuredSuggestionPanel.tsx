@@ -7,7 +7,7 @@ import type { GovernanceTarget } from '@/services/agent/governance';
 interface ScenarioValue<T, C> {
   target: T; expectedDefinition: string; skillVersion: number; truncated: boolean; candidates: C[]; questions: string[];
 }
-interface Props<T extends { keyword: string }, C, V extends ScenarioValue<T, C>> {
+interface Props<T extends object, C, V extends ScenarioValue<T, C>> {
   target: T; definition: string; disabled: boolean;
   title: string; notice: string; summary: ReactNode; question: string; generateLabel: string; adoptLabel: string;
   bindTarget: (target: T) => GovernanceTarget;
@@ -16,13 +16,15 @@ interface Props<T extends { keyword: string }, C, V extends ScenarioValue<T, C>>
   validate: (value: V) => Promise<V>;
   candidateKey: (candidate: C) => string | number;
   renderCandidate: (candidate: C) => ReactNode;
-  onApply: (candidate: C) => void;
+  withKeyword?: (target: T, keyword: string) => T;
+  sourceLabel?: string;
+  onApply?: (candidate: C) => void;
 }
 
 /** Parent keys by project, object and full draft. Only persisted completed results can be adopted. */
-export default function StructuredSuggestionPanel<T extends { keyword: string }, C, V extends ScenarioValue<T, C>>({
+export default function StructuredSuggestionPanel<T extends object, C, V extends ScenarioValue<T, C>>({
   target, definition, disabled, title, notice, summary, question, generateLabel, adoptLabel,
-  bindTarget, selectTarget, parse, validate, candidateKey, renderCandidate, onApply,
+  bindTarget, selectTarget, parse, validate, candidateKey, renderCandidate, onApply, withKeyword, sourceLabel,
 }: Props<T, C, V>) {
   const [keyword, setKeyword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -85,7 +87,7 @@ export default function StructuredSuggestionPanel<T extends { keyword: string },
     setBusy(true); setError(''); setSuggestion(null); blocked.current = true;
     session.current = `ai-scenario-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setSessionId(session.current); turn.current = '';
-    selected.current = { ...target, keyword: keyword.trim() };
+    selected.current = withKeyword ? withKeyword(target, keyword.trim()) : target;
     const controller = new AbortController(); abort.current = controller;
     try {
       const result = await agentChatApi.submit({ sessionId: session.current,
@@ -105,7 +107,7 @@ export default function StructuredSuggestionPanel<T extends { keyword: string },
     if (live.current) { busyRef.current = false; setBusy(false); await refresh(); }
   };
   const apply = async (choice: C) => {
-    if (!suggestion || busyRef.current || !permitted.current) return;
+    if (!suggestion || busyRef.current || !permitted.current || !onApply) return;
     const version = ++epoch.current; busyRef.current = true;
     setBusy(true);
     try {
@@ -121,7 +123,7 @@ export default function StructuredSuggestionPanel<T extends { keyword: string },
     <Space direction="vertical" className="w-full">
       <Alert type="info" message={notice} />
       <div>{summary}</div>
-      <Input value={keyword} onChange={e => setKeyword(e.target.value)} maxLength={64} disabled={busy} placeholder="字段/标准检索词（可空，读取有界目录）" />
+      {withKeyword && <Input value={keyword} onChange={e => setKeyword(e.target.value)} maxLength={64} disabled={busy} placeholder="字段/标准检索词（可空，读取有界目录）" />}
       <Space wrap>
         <Button onClick={() => void run()} loading={busy} disabled={disabled || !definition || blocked.current}>{generateLabel}</Button>
         {running && <Button onClick={() => void stop()} disabled={disabled}>停止本轮</Button>}
@@ -129,12 +131,12 @@ export default function StructuredSuggestionPanel<T extends { keyword: string },
         {sessionId && <a href={sessionLocation(sessionId)} target="_blank" rel="noopener noreferrer">查看原会话</a>}
       </Space>
       {error && <Alert type="error" message={error} />}
-      {suggestion && <p>Skill v{suggestion.skillVersion} · {suggestion.truncated ? '候选目录已截断，请缩小检索范围' : '候选来自当前授权目录'}</p>}
+      {suggestion && <p>Skill v{suggestion.skillVersion} · {suggestion.truncated ? '候选目录已截断，请缩小检索范围' : (sourceLabel || '候选来自当前授权目录')}</p>}
       {suggestion?.questions.map(q => <Alert key={q} type="warning" message={q} />)}
-      {suggestion && !suggestion.candidates.length && <p>没有可带入的候选，请补充业务说明或调整检索词后重新生成。</p>}
+      {suggestion && !suggestion.candidates.length && <p>没有可带入的候选，请补充业务说明或核对来源后重新生成。</p>}
       {suggestion?.candidates.map(c => <Card size="small" key={candidateKey(c)}>
         {renderCandidate(c)}
-        <Button disabled={disabled || busy} onClick={() => void apply(c)}>{adoptLabel}</Button>
+        {onApply && <Button disabled={disabled || busy} onClick={() => void apply(c)}>{adoptLabel}</Button>}
       </Card>)}
     </Space>
   </Card>;

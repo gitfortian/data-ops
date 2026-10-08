@@ -29,3 +29,8 @@
 - **禁止 import `io.yak.ops.business.modeling.*` 的内部实现**——仅经 SPI 调用。
 - **禁止 import `io.yak.ops.business.semantic.*` 的内部实现**——仅经 `api` 包 SPI。
 - 禁止反向读取本模块表/绕过 SPI 暴露内部实现类型（dao/dao.model/repository.impl 一律不对外）。
+
+
+## F-025 指标版本口径 Skill
+
+MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版本，读取不可变快照并复用 digest；仅白名单有界事实，超界/缺快照不可用。Agent 仅 gateway → metric.api，源域不反向依赖 Agent。复用 SDK 场景执行与原表单，候选仅 businessDesc，人工保存复用 expectedVersion、校验、审计和回读；验证/发布仍独立。引用校验不等于自然语言正确，真实模型验收 PENDING。合同见 docs/product/features/F-025-skill-metric-caliber.md。

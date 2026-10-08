@@ -100,6 +100,13 @@ public class AgentController {
     return Result.success(agentChatService.validateModelMapping(request));
   }
 
+  @PostMapping("/metric-explanation/validate")
+  @RequiresPermission(AgentPermissionCode.CHAT_RUN)
+  public Result<io.yak.ops.business.agent.domain.MetricExplanationSuggestion> validateMetricExplanation(
+      @RequestBody io.yak.ops.business.agent.domain.MetricExplanationSuggestion request) {
+    return Result.success(agentChatService.validateMetricExplanation(request));
+  }
+
   @Operation(summary = "带入前重新核验标准匹配候选（不写业务）")
   @PostMapping("/standard-match/validate")
   @RequiresPermission(AgentPermissionCode.CHAT_RUN)
