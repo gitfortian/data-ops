@@ -11,10 +11,22 @@ public record ConsumerImpactView(
     EvidenceState subscriptionState,
     EvidenceState usageState,
     List<KnownConsumer> consumers,
-    String coverageNote) {
+    String coverageNote,
+    EvidenceCoverage coverage) {
 
   public ConsumerImpactView {
     consumers = consumers == null ? List.of() : List.copyOf(consumers);
+  }
+
+  /** Source audit and normalized Usage windows are independent, bounded read-side views. */
+  public record EvidenceCoverage(
+      int requestedUsageLimit,
+      int sourceRecordCount,
+      int normalizedUsageCount,
+      boolean sourceWindowLimitReached,
+      boolean normalizedUsageWindowLimitReached,
+      int normalizationGapCount,
+      boolean sourceReadUnavailable) {
   }
 
   public enum EvidenceState {
