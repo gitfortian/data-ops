@@ -491,4 +491,106 @@ class ConsumerImpactServiceTest {
     org.mockito.Mockito.verifyNoInteractions(sync);
   }
 
+  @Test
+  void dataServiceRevisionRecoveryUsesExactBigintAndReturnsRetryableProgress() {
+    SubscriptionRepository subs = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer sync = mock(DataServiceUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    UsageEvidence evidence = mock(UsageEvidence.class);
+    when(evidence.providerEvidenceRef()).thenReturn("invocation:9007199254740993");
+    UsageNormalizationResult normalized = UsageNormalizationResult.normalized(evidence);
+    when(sync.recoverSuccessfulRevisionPage(7L, 9007199254740995L, 9007199254740994L, 200))
+        .thenReturn(new DataServiceUsageEvidenceSynchronizer.DataServiceRecoveryPage(
+            List.of(normalized), 9007199254740993L, false));
+
+    var result = new ConsumerImpactService(subs, usage, project, null, sync)
+        .recoverDataServiceRevisionPage(
+            ProductKey.parse("DATA_SERVICE:7"), "9007199254740995",
+            9007199254740994L, 999);
+
+    assertEquals("DATA_SERVICE:7", result.productKey());
+    assertEquals("9007199254740995", result.sourceVersionIdentity());
+    assertEquals(200, result.requestedLimit());
+    assertEquals(9007199254740994L, result.requestedBeforeInvocationId());
+    assertEquals(1, result.visitedAuditCount());
+    assertEquals(1, result.normalizedOrAlreadyPresentCount());
+    assertEquals(9007199254740993L, result.nextBeforeInvocationId());
+    assertEquals(false, result.retainedAuditExhausted());
+    assertEquals(false, result.retryRequired());
+    org.mockito.Mockito.verify(sync).recoverSuccessfulRevisionPage(
+        7L, 9007199254740995L, 9007199254740994L, 200);
+    org.mockito.Mockito.verifyNoInteractions(subs, usage);
+  }
+
+  @Test
+  void dataServiceRevisionGapUnavailableAndIgnoredBlockAdvancement() {
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer sync = mock(DataServiceUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(sync.recoverSuccessfulRevisionPage(7L, 9L, 701L, 50))
+        .thenReturn(new DataServiceUsageEvidenceSynchronizer.DataServiceRecoveryPage(
+            List.of(UsageNormalizationResult.gap("invocation:legacy", "consumer missing"),
+                    UsageNormalizationResult.unavailable("invocation:old", "storage unavailable"),
+                    UsageNormalizationResult.ignored("invocation:bad", "not a success")),
+            700L, false));
+
+    var result = new ConsumerImpactService(
+        mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
+        project, null, sync)
+        .recoverDataServiceRevisionPage(ProductKey.parse("DATA_SERVICE:7"), "9", 701L, 50);
+
+    assertEquals(3, result.visitedAuditCount());
+    assertEquals(2, result.normalizationGapCount());
+    assertEquals(1, result.normalizationUnavailableCount());
+    assertEquals(null, result.nextBeforeInvocationId());
+    assertTrue(result.retryRequired());
+    assertEquals(false, result.retainedAuditExhausted());
+  }
+
+  @Test
+  void dataServiceExhaustedPageMeansOnlyRetainedSourceHistory() {
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer sync = mock(DataServiceUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(sync.recoverSuccessfulRevisionPage(7L, 9L, 100L, 20))
+        .thenReturn(new DataServiceUsageEvidenceSynchronizer.DataServiceRecoveryPage(
+            List.of(), null, true));
+    var result = new ConsumerImpactService(
+        mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
+        project, null, sync)
+        .recoverDataServiceRevisionPage(ProductKey.parse("DATA_SERVICE:7"), "9", 100L, 20);
+
+    assertTrue(result.retainedAuditExhausted());
+    assertEquals(false, result.retryRequired());
+    assertEquals(null, result.nextBeforeInvocationId());
+  }
+
+  @Test
+  void dataServiceInvalidProductRevisionAndCursorNeverReadProjectOrSource() {
+    SubscriptionRepository subs = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer sync = mock(DataServiceUsageEvidenceSynchronizer.class);
+    var service = new ConsumerImpactService(subs, usage, project, null, sync);
+
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDataServiceRevisionPage(
+            ProductKey.parse("DATASET:7"), "9", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDataServiceRevisionPage(
+            ProductKey.parse("DATA_SERVICE:0"), "9", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDataServiceRevisionPage(
+            ProductKey.parse("DATA_SERVICE:7"), "r9", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDataServiceRevisionPage(
+            ProductKey.parse("DATA_SERVICE:7"), "09", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDataServiceRevisionPage(
+            ProductKey.parse("DATA_SERVICE:7"), "9", 0L, 20));
+    org.mockito.Mockito.verifyNoInteractions(project, sync, usage, subs);
+  }
+
 }
