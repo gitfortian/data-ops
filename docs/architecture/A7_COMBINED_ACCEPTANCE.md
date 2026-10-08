@@ -35,6 +35,13 @@
 - 组合 PR 随时可变，因此每次运行都要重新读取精确 heads；一次绿色结果只证明记录下来的那组 SHA，不证明未来其他代码自动兼容。
 - 由于还没有合并权限授权，**禁止根据该结果自动切换 Draft/合并/关闭 Issue**。
 
+## 首次组合预演真实发现（2026-10-08）
+
+- A7 工作流首次成功按序模拟集成全部 **11 个 PR**，组合树 `14e39e0e51027afe35826c7fe2f9789545500c41`，基础 main `ffb9d8eff1afba16a6aa81721d8d3dad5dd5918a`；Git 层无合并冲突。
+- 组合 Node 测试 **56 号用例失败**：#385 的 `persistence-consumers.test.mjs` 仅读取旧 Boot `BusinessDatabaseConfiguration`，未识别 #375 把 SqlSessionFactory/SqlSessionTemplate 声明移到被 `@Import` 的 `BusinessMybatisSessionConfiguration`。
+- 已在 #385 **自身分支**调整测试为“两个配置均存在时一起审计；只有主类时仍兼容”，不改 #375 生产代码、不修改单 PR 产品行为。A7 后续重跑会读取 #385 新精确 Commit SHA，防止从失败状态直接宣称全部合格。
+- 此信息是首次组合验收事实，不代表数据库/前端/发行包集成已完成；后续阶段仍需 CI 逐项验证。
+
 ## 不应越权宣称的范围
 
 - 双数据库全新环境迁移 Smoke 与 SQL 版本校验并不等于**现网历史数据库的备份/升级/回滚演练**。
