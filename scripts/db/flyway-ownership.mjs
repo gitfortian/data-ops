@@ -20,7 +20,10 @@ function stringConstant(source, expression) {
 }
 
 export function parseFlywayRegistrations(file, source) {
-  if (!file.includes(JAVA) || file.startsWith('data-ops-framework/legacy/')) return [];
+  // The independently owned Framework Security datasource has a separate Flyway
+  // lifecycle and legacy-compatible shared history; do not impose the app-domain guard.
+  if (!file.includes(JAVA) ||
+      !(file.startsWith('data-ops-business/') || file.startsWith('data-ops-boot/'))) return [];
   const owner = file.slice(0, file.indexOf(JAVA));
   const declarations = [...source.matchAll(/\bpublic\s+Flyway\s+([A-Za-z_$][\w$]*)\s*\(/g)];
   const registrations = [];
