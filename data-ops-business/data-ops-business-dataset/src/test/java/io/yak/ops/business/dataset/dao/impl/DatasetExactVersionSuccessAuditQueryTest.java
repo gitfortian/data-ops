@@ -9,6 +9,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.apache.ibatis.session.Configuration;
+import org.junit.jupiter.api.BeforeAll;
 import io.yak.ops.business.dataset.dao.mapper.DatasetDraftFieldMapper;
 import io.yak.ops.business.dataset.dao.mapper.DatasetFieldMapper;
 import io.yak.ops.business.dataset.dao.mapper.DatasetMapper;
@@ -20,6 +24,17 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class DatasetExactVersionSuccessAuditQueryTest {
+
+  @BeforeAll
+  static void initializeMybatisLambdaMetadata() {
+    // Mockito-only Dao tests do not perform MapperScan or initialize table metadata.
+    // Use real MyBatis-Plus mappings to verify generated SQL and bound predicate values.
+    Configuration configuration = new Configuration();
+    configuration.setMapUnderscoreToCamelCase(true);
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(configuration, "dataset-exact-version-audit-test"),
+        DatasetQueryPerformancePO.class);
+  }
 
   @Test
   void limitsOnlyAfterProjectDatasetImmutableVersionAndSuccessPredicates() {
