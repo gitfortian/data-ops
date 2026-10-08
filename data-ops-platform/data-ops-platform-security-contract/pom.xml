@@ -13,6 +13,11 @@
     <name>Data Ops Security Platform Contract</name>
     <description>Single owner of Security Platform permission contracts, independent of framework and business modules</description>
     <dependencies>
+        <!-- Preserve existing Spring Assert/StringUtils validation exactly during FQCN migration. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
