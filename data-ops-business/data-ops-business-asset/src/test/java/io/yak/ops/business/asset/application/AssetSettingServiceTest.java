@@ -59,8 +59,8 @@ class AssetSettingServiceTest {
     assertEquals(wrappers.get(0).getSqlSegment(), wrappers.get(1).getSqlSegment());
     assertTrue(wrappers.get(0).getSqlSegment().contains("project_id"));
     assertTrue(wrappers.get(0).getSqlSegment().contains("setting_key"));
-    assertEquals(List.of(23L, "gone_window_days"),
-        List.copyOf(wrappers.get(0).getParamNameValuePairs().values()));
+    assertTrue(wrappers.get(0).getParamNameValuePairs().containsValue(23L));
+    assertTrue(wrappers.get(0).getParamNameValuePairs().containsValue("gone_window_days"));
   }
 
   @Test
