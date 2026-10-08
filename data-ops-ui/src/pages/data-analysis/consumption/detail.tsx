@@ -542,6 +542,10 @@ export default function ConsumptionDetailPage() {
               />
             ) : null}
             {subscriptionIssue ? <Alert type="warning" showIcon message="订阅记录暂不可用" description={subscriptionIssue} /> : null}
+            {product.productKey.productType === 'DATA_SERVICE' && !mayReadManagedConsumers ? (
+              <Alert showIcon type="info" message="来源调用方配置不可读"
+                description="当前身份缺少 data-service:access，无法核对调用方当前配置；历史 Subscription / Usage 证据仍独立有效。" />
+            ) : null}
             {consumerListIssue ? (
               <Alert
                 type="warning"
@@ -550,7 +554,9 @@ export default function ConsumptionDetailPage() {
                 description={<>{consumerListIssue} · <Button type="link" onClick={() => history.push('/data-service/access')}>打开 API 调用管理</Button></>}
               />
             ) : null}
-            {product.productKey.productType === 'DATA_SERVICE' && !consumerListIssue && eligibleDataServiceConsumers.length === 0 ? (
+            {product.productKey.productType === 'DATA_SERVICE'
+              && sourceConsumerState === 'READY'
+              && eligibleDataServiceConsumers.length === 0 ? (
               <Alert
                 type="info"
                 showIcon
@@ -596,6 +602,8 @@ export default function ConsumptionDetailPage() {
           impact={impact}
           impactIssue={impactIssue}
           loading={relationshipLoading}
+          sourceConsumerState={sourceConsumerState}
+          sourceConsumers={dataServiceConsumers}
         />
 
         {product.productKey.productType === 'DATASET' ? (
