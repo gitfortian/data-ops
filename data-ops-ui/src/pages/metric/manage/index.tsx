@@ -26,6 +26,7 @@ import {
   METRIC_TYPE_OPTIONS,
   STAT_PERIOD_LABELS,
 } from '../constants';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import MetricEditModal from './components/MetricEditModal';
 
 const parsePositiveId = (value: string | null): number | null => {
@@ -67,6 +68,8 @@ const MetricManagePage = () => {
   const [allTags, setAllTags] = useState<MetricTagRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [savedId, setSavedId] = useState<number>();
+  const sourceModelId = parsePositiveId(entryParams.get('sourceModelId')) ?? undefined;
   const [editing, setEditing] = useState<MetricRecord | null>(null);
   const [stats, setStats] = useState({ total: 0, atomic: 0, derived: 0, composite: 0 });
   const [publicationVersions, setPublicationVersions] = useState<Record<number, number>>({});
@@ -353,6 +356,8 @@ const MetricManagePage = () => {
         </YakButton>
       </div>
 
+      {sourceModelId && <div className="mt-3">来自模型 #{sourceModelId}；点击新建后可核对并使用来源模型。</div>}
+      {savedId && <div className="mt-3"><YakButton onClick={() => navigate(`/metric/manage/${savedId}`)}>继续验证与发布已保存指标 #{savedId}</YakButton></div>}
       {/* Stats cards */}
       <div className="mt-4 grid grid-cols-4 gap-4 max-md:grid-cols-2">
         <div className="rounded-lg border border-[#e5e7eb] px-4 py-3">
@@ -502,7 +507,9 @@ const MetricManagePage = () => {
         open={editModalOpen}
         editing={editing}
         onClose={() => setEditModalOpen(false)}
-        onSaved={() => {
+        sourceModelId={sourceModelId}
+        onSaved={(id) => {
+          setSavedId(id);
           setEditModalOpen(false);
           void loadMetrics(pageNo, pageSize);
         }}
@@ -511,4 +518,7 @@ const MetricManagePage = () => {
   );
 };
 
-export default MetricManagePage;
+export default function ScopedMetricManagePage() {
+  const { currentProject } = useSecurityProject();
+  return <MetricManagePage key={currentProject?.id} />;
+}

@@ -13,6 +13,8 @@ public interface MappingRepository {
 
   Optional<ModelingColumnMappingPO> findByTargetColumn(Long modelId, String targetColumn);
 
+  Optional<ModelingColumnMappingPO> findByTargetColumnForUpdate(Long modelId, String targetColumn);
+
   boolean deleteByTargetColumn(Long modelId, String targetColumn);
 
   int deleteByModel(Long modelId);

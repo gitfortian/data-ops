@@ -7,4 +7,5 @@ description: 在建模原字段的未保存草稿上，从本轮授权 TYPE 标�
 2. 逐项比较本轮目录中的标准名称、说明与 stdType。仅当业务含义与类型约束都有依据时保留该项。字段名相似而业务不同，应排除；不要自动修改字段名或数据类型。
 3. 输出最多三项，按匹配依据的充分程度排序。每项只能引用目录中的 standardId（来源 id）与 version，reason 用一句话说明对应的业务依据和仍需人工核对的约束，不生成新 ID 或标准定义。
 4. 没有匹配时返回空 candidates。业务信息不足时，在 questions 中列出最多三个具体待确认项。目录 truncated=true 时不能声称已经遍历所有标准，应提示调整检索范围。
-5. 使用本次 SDK 提供的结构化 schema 交付 candidates、questions。带入、保存与发布由用户在原页面完成；本任务只生成候选。
+5. 业务信息充分时可在 fieldDescription 给出至多 512 字的字段说明草稿；只重述已知业务含义，缺口留在 questions。信息不足时 fieldDescription=null；标准说明不能冒充本字段业务事实。
+6. 使用本次 SDK 提供的结构化 schema 交付 candidates、questions、fieldDescription。带入、保存与发布由用户在原页面完成；本任务只生成候选。

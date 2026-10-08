@@ -10,6 +10,8 @@
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
+当前模型映射场景见 [V16 交付说明](./IMPLEMENTATION_V16.md) 与 [F-024](../product/features/F-024-skill-model-mapping.md)。
+
 当前首个场景实施见 [V15 交付说明](./IMPLEMENTATION_V15.md)、[执行顺序](./SKILL_SCENARIO_IMPLEMENTATION.md) 与 [F-023](../product/features/F-023-skill-standard-match.md)。
 
 ## 建议先做什么
@@ -112,3 +114,10 @@ V12～V14 已按用户授权完成工程实现：原编辑器候选轮次核对 
 ```
 
 首版保留 AgentScope Java 2.0.2，增加经 F-009 授权的只读治理工具与入口。第二版经 F-010 授权增加质量规则/描述候选、事实卡与原编辑器人工采纳，Agent 仍无治理写工具。分类候选、自动业务动作与后台自主治理仍是规划；新的建设提案按既有产品流程确认后实施。
+
+
+[V17 指标口径解释与业务说明](IMPLEMENTATION_V17.md)：第三个 scoped Skill 场景；合同 F-025，真实 E2E PENDING。
+
+推荐顺序的交付与阻塞状态集中见 [场景 Skill 执行记录](SKILL_SCENARIO_IMPLEMENTATION.md#pr-与继续交付顺序2026-10-08)；V18 补记已重新核对中间分支合并与 main 的实际差异，旧账户限制记录不代表最新 head 的 CI 结论。
+
+[V18 标准批量、指标定义草稿与完整 J2 交接](IMPLEMENTATION_V18.md)：F-026–F-029，真实验收 PENDING。

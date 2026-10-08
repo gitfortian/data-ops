@@ -4,7 +4,7 @@ import java.util.Set;
 
 /** Execution scope is independent of source authorization and never comes from model instructions. */
 public final class AgentTaskToolPolicy {
-  public static final String VERSION = "F-023-v1";
+  public static final String VERSION = "F-028-v1";
   public static final Set<String> REGISTERED = Set.of("list_datasets", "get_dataset_fields",
       "run_dataset_query", "current_date_info", "analyze_with_python", "request_clarification",
       "save_analysis_report", "search_assets", "get_asset_evidence", "get_asset_section_evidence",
@@ -17,9 +17,20 @@ public final class AgentTaskToolPolicy {
   public AgentTaskToolPolicy(GovernanceTarget target) { this.target = target; }
 
   public boolean allows(String tool) {
+    if (target != null && target.metricDraft() != null) {
+      return "load_skill_through_path".equals(tool) || "generate_response".equals(tool) || "get_metric_draft_context".equals(tool);
+    }
+    if (target != null && target.metricExplanation() != null) {
+      return "load_skill_through_path".equals(tool) || "generate_response".equals(tool)
+          || "get_metric_caliber_context".equals(tool);
+    }
     if (target != null && target.standardMatch() != null) {
       return "load_skill_through_path".equals(tool) || "generate_response".equals(tool)
           || "get_standard_match_context".equals(tool);
+    }
+    if (target != null && target.modelMapping() != null) {
+      return "load_skill_through_path".equals(tool) || "generate_response".equals(tool)
+          || "get_model_mapping_context".equals(tool);
     }
     if (tool == null || !REGISTERED.contains(tool)) return false;
     if (target == null) return !tool.startsWith("propose_");

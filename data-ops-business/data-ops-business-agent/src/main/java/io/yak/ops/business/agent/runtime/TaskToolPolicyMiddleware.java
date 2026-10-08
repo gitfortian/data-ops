@@ -36,7 +36,7 @@ final class TaskToolPolicyMiddleware implements MiddlewareBase {
     // DynamicSkillMiddleware can register helpers after initial assembly. Adapters contain no task state.
     guardTools(agent.getToolkit());
     var execution = context.get(AgentExecutionContext.class);
-    if (execution != null && execution.target() != null && execution.target().standardMatch() != null) {
+    if (execution != null && execution.target() != null && (execution.target().standardMatch() != null || execution.target().modelMapping() != null || execution.target().metricExplanation() != null || execution.target().metricDraft() != null)) {
       for (var call : input.toolCalls()) {
         execution.requireTool(call.getName());
         // SDK synthetic output tool does not pass through Toolkit adapters.

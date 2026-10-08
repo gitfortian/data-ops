@@ -27,6 +27,9 @@ import type {
   MetricVersionRecord,
   UsageSummary,
 } from '@/services/metric/types';
+import MetricExplanationPanel from '@/components/ai/MetricExplanationPanel';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import MetricGovernancePanel from './MetricGovernancePanel';
 import MetricVersionComparisonDrawer from './MetricVersionComparisonDrawer';
 import {
@@ -182,6 +185,11 @@ const MetricDetailPage = () => {
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [versionCompareOpen, setVersionCompareOpen] = useState(false);
   const [comparisonVersions, setComparisonVersions] = useState<[number, number] | null>(null);
+
+  const { currentProject } = useSecurityProject();
+  const { canAll } = usePermissionAccess();
+  const [reviewVersion, setReviewVersion] = useState<number>();
+  useEffect(() => setReviewVersion(undefined), [currentProject?.id, metricId]);
 
   const loadMetric = useCallback(async () => {
     if (!metricId) return;
@@ -461,10 +469,17 @@ const MetricDetailPage = () => {
             <MetricGovernancePanel
               metricId={metric.id}
               currentVersion={metric.version}
+              onReviewVersion={setReviewVersion}
               onCompareVersions={(publishedVersion, currentVersion) =>
                 openVersionComparison(publishedVersion, currentVersion)
               }
             />
+            <div className="my-4">
+              <Select placeholder="选择精确版本解释" value={reviewVersion} onChange={setReviewVersion} className="min-w-[220px]"
+                options={[...new Set([metric.version, ...versions.map(v => v.version)])].sort((a, b) => b - a).map(v => ({ value: v, label: `v${v}${v === metric.version ? ' · 当前草稿' : ' · 历史快照'}` }))} />
+              {reviewVersion && <MetricExplanationPanel key={JSON.stringify([currentProject?.id, metric.id, reviewVersion])}
+                metricId={metric.id} version={reviewVersion} snapshot disabled={!canAll(['metric:read', 'agent:chat:run', 'agent:session:read'])} />}
+            </div>
             {/* Descriptions */}
             <Descriptions
               column={3}
@@ -859,4 +874,8 @@ const UsageCard = ({ title, value }: { title: string; value: number }) => (
   </div>
 );
 
-export default MetricDetailPage;
+export default function ScopedMetricDetailPage() {
+  const { currentProject } = useSecurityProject();
+  const { id } = useParams<{ id?: string }>();
+  return <MetricDetailPage key={JSON.stringify([currentProject?.id, id])} />;
+}

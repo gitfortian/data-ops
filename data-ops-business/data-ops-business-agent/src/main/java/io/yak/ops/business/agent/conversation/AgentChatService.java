@@ -46,6 +46,24 @@ public class AgentChatService {
     return agentRuntime.revalidateStandardMatch(value);
   }
 
+  public io.yak.ops.business.agent.domain.ModelMappingSuggestion validateModelMapping(
+      io.yak.ops.business.agent.domain.ModelMappingSuggestion value) {
+    requireUserId(); requireProjectId();
+    return agentRuntime.revalidateModelMapping(value);
+  }
+
+  public io.yak.ops.business.agent.domain.MetricDraftSuggestion validateMetricDraft(
+      io.yak.ops.business.agent.domain.MetricDraftSuggestion value) {
+    requireUserId(); requireProjectId();
+    return agentRuntime.revalidateMetricDraft(value);
+  }
+
+  public io.yak.ops.business.agent.domain.MetricExplanationSuggestion validateMetricExplanation(
+      io.yak.ops.business.agent.domain.MetricExplanationSuggestion value) {
+    requireUserId(); requireProjectId();
+    return agentRuntime.revalidateMetricExplanation(value);
+  }
+
   /** 提交新一轮：验证 + 落库 QUEUED + 立即返回。消息树节点在执行线程创建。 */
   public String submitTurn(String sessionId, String message) {
     return submitTurn(sessionId, message, null);

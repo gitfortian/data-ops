@@ -1,3 +1,7 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import ModelMappingPanel from '@/components/ai/ModelMappingPanel';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
@@ -7,6 +11,7 @@ import {
   clearAllModelingMappings,
   clearModelingMapping,
   listModelingMappings,
+  getModelingMappingContext,
   setModelingMapping,
   validateModelingExpression,
 } from '@/services/modeling/mapping';
@@ -18,6 +23,7 @@ interface MappingFormValues {
   sourceTable: string;
   sourceColumn: string;
   transformExpr?: string;
+  businessDescription?: string;
 }
 
 import { history, useParams } from '@umijs/max';
@@ -47,6 +53,15 @@ interface StructureRecordLite {
 const MappingPanel: React.FC = () => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const { currentProject } = useSecurityProject();
+  const { canAll } = usePermissionAccess();
+  const scope = JSON.stringify([currentProject?.id, modelId]);
+  const resource = useResourceScope(scope);
+  const openOperation = useLatestOperation(scope);
+  const tablesOperation = useLatestOperation(scope);
+  const columnsOperation = useLatestOperation(scope);
+  const [definition, setDefinition] = useState('');
+  const [editorLoading, setEditorLoading] = useState(false);
   const [structure, setStructure] = useState<StructureRecordLite>();
   const [views, setViews] = useState<ModelingMappingView[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,81 +74,107 @@ const MappingPanel: React.FC = () => {
   const [editTarget, setEditTarget] = useState<ModelingMappingView | null>(null);
   const [form] = Form.useForm<MappingFormValues>();
   const [saving, setSaving] = useState(false);
+  const draft = Form.useWatch<MappingFormValues>([], form);
+  const maySave = canAll(['modeling:read', 'modeling:update', 'resource:data-source:read']);
+  const maySuggest = maySave && canAll(['agent:chat:run', 'agent:session:read']);
 
   const loadAll = useCallback(async () => {
     if (!modelId) {
       return;
     }
+    const current = resource();
     setLoading(true);
     try {
       const [structureData, mappingViews] = await Promise.all([
         getModelingStructure(modelId),
         listModelingMappings(modelId),
       ]);
+      if (!current()) return;
       setStructure(structureData as StructureRecordLite);
       setViews(mappingViews ?? []);
     } catch {
-      message.error('加载来源映射失败，请稍后重试');
+      if (current()) message.error('加载来源映射失败，请稍后重试');
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [modelId]);
+  }, [modelId, resource]);
 
   useEffect(() => {
+    const current = resource();
+    setEditTarget(null); setDefinition(''); setSaving(false); setEditorLoading(false);
+    setViews([]); setStructure(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
+    setSourceDatasourceId(undefined); setSourceDatabase(undefined); setSourceTable(undefined);
+    form.resetFields();
     void loadAll();
     listDataSources({ pageNo: 1, pageSize: 200 })
-      .then((result) => setDatasources(result.bizData ?? []))
-      .catch(() => setDatasources([]));
-  }, [loadAll]);
+      .then(result => { if (current()) setDatasources(result.bizData ?? []); })
+      .catch(() => { if (current()) setDatasources([]); });
+  }, [loadAll, resource, form]);
 
   const loadSourceTables = useCallback(async (targetDatasourceId?: number) => {
+    const current = tablesOperation();
     if (!targetDatasourceId) {
       setSourceTables([]);
       return;
     }
     try {
       const list = await listModelingImportTables(targetDatasourceId, undefined);
-      setSourceTables(list ?? []);
+      if (current()) setSourceTables(list ?? []);
     } catch {
-      setSourceTables([]);
+      if (current()) setSourceTables([]);
     }
-  }, []);
+  }, [tablesOperation]);
 
   const loadSourceColumns = useCallback(async (targetDatasourceId: number, database: string, table: string) => {
+    const current = columnsOperation();
     try {
       const columns = await previewModelingImportColumns(targetDatasourceId, database, table);
-      setSourceColumns(columns ?? []);
+      if (current()) setSourceColumns(columns ?? []);
     } catch {
-      setSourceColumns([]);
+      if (current()) setSourceColumns([]);
     }
-  }, []);
+  }, [columnsOperation]);
 
-  const openEdit = (view: ModelingMappingView) => {
-    setEditTarget(view);
-    form.setFieldsValue({
-      sourceDatasourceId: view.sourceDatasourceId ?? sourceDatasourceId,
-      sourceDatabase: view.sourceDatabase ?? sourceDatabase,
-      sourceTable: view.sourceTable ?? sourceTable,
-      sourceColumn: view.sourceColumn,
-      transformExpr: view.transformExpr,
-    });
+  const openEdit = async (view: ModelingMappingView) => {
+    if (!modelId || !maySave) return;
+    const current = openOperation();
+    setEditTarget(view); setEditorLoading(true); setDefinition(''); form.resetFields();
+    try {
+      const edit = await getModelingMappingContext(modelId, view.targetColumn);
+      if (!current()) return;
+      const saved = edit.mapping;
+      setEditTarget(saved); setDefinition(edit.definition);
+      const ds = saved.sourceDatasourceId ?? sourceDatasourceId;
+      const db = saved.sourceDatabase ?? sourceDatabase;
+      const table = saved.sourceTable ?? sourceTable;
+      form.setFieldsValue({ sourceDatasourceId: ds, sourceDatabase: db, sourceTable: table,
+        sourceColumn: saved.sourceColumn, transformExpr: saved.transformExpr, businessDescription: '' });
+      setSourceDatasourceId(ds); setSourceDatabase(db); setSourceTable(table);
+      void loadSourceTables(ds);
+      if (ds && db && table) void loadSourceColumns(ds, db, table);
+    } catch (error) {
+      if (current()) message.error(error instanceof Error ? error.message : '无法读取当前映射，请重试');
+    } finally { if (current()) setEditorLoading(false); }
   };
 
   const submitMapping = async () => {
-    if (!modelId || !editTarget) {
+    if (!modelId || !editTarget || !definition || editorLoading || saving || !maySave) {
       return;
     }
-    const values = await form.validateFields();
+    const current = resource();
+    const { businessDescription: _description, ...values } = await form.validateFields();
+    if (!current()) return;
     setSaving(true);
     try {
-      await setModelingMapping(modelId, editTarget.targetColumn, values);
+      await setModelingMapping(modelId, editTarget.targetColumn, values, definition);
+      if (!current()) return;
       message.success('映射已保存');
       setEditTarget(null);
       await loadAll();
     } catch {
-      message.error('保存失败（源字段可能不存在或表达式不合法）');
+      if (current()) message.error('保存失败：目标字段、映射或源字段可能已变化，请重新打开核对；也请检查表达式。');
     } finally {
-      setSaving(false);
+      if (current()) setSaving(false);
     }
   };
 
@@ -220,8 +261,9 @@ const MappingPanel: React.FC = () => {
           <Button
             type="link"
             size="small"
+            disabled={!maySave}
             onClick={() => {
-              openEdit(record);
+              void openEdit(record);
             }}
           >
             {record.mapped ? '编辑' : '映射'}
@@ -279,13 +321,14 @@ const MappingPanel: React.FC = () => {
         okText="保存"
         cancelText="取消"
         confirmLoading={saving}
+        okButtonProps={{ disabled: !maySave || !definition || editorLoading }}
         destroyOnClose
-        onCancel={() => setEditTarget(null)}
+        onCancel={() => { openOperation(); setEditTarget(null); }}
         onOk={() => {
           void submitMapping();
         }}
       >
-        <Form form={form} layout="vertical" className="pt-2">
+        <Form form={form} layout="vertical" className="pt-2" disabled={editorLoading || saving}>
           <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item name="sourceDatasourceId" label="源数据源" rules={[{ required: true, message: '请选择数据源' }]}>
               <Select
@@ -293,6 +336,8 @@ const MappingPanel: React.FC = () => {
                 optionFilterProp="label"
                 placeholder="选择数据源"
                 onChange={(value) => {
+                  columnsOperation();
+                  form.setFieldsValue({ sourceDatabase: undefined, sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
                   setSourceDatasourceId(value);
                   setSourceDatabase(undefined);
                   setSourceTable(undefined);
@@ -310,6 +355,8 @@ const MappingPanel: React.FC = () => {
                 showSearch
                 placeholder="选择库"
                 onChange={(value) => {
+                  columnsOperation();
+                  form.setFieldsValue({ sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
                   setSourceDatabase(value);
                   setSourceTable(undefined);
                   setSourceColumns([]);
@@ -325,6 +372,7 @@ const MappingPanel: React.FC = () => {
                 optionFilterProp="label"
                 placeholder="选择源表"
                 onChange={(value) => {
+                  form.setFieldsValue({ sourceColumn: undefined, transformExpr: undefined });
                   setSourceTable(value);
                   if (sourceDatasourceId && sourceDatabase) {
                     void loadSourceColumns(sourceDatasourceId, sourceDatabase, value);
@@ -347,6 +395,17 @@ const MappingPanel: React.FC = () => {
               />
             </Form.Item>
           </div>
+          <Form.Item name="businessDescription" label="业务说明（供 AI 匹配，可选）">
+            <Input.TextArea maxLength={512} rows={2} placeholder="如：业务订单的付款用户编号，不是操作员编号" />
+          </Form.Item>
+          {editTarget && draft?.sourceDatasourceId && draft.sourceDatabase && draft.sourceTable && (
+            <ModelMappingPanel key={JSON.stringify([scope, editTarget.targetColumn, definition, draft])}
+              target={{ modelId: Number(modelId), columnName: editTarget.targetColumn,
+                datasourceId: draft.sourceDatasourceId, database: draft.sourceDatabase, table: draft.sourceTable,
+                businessDescription: draft.businessDescription ?? '', keyword: '' }}
+              definition={definition} disabled={!maySuggest || editorLoading || saving}
+              onApply={sourceColumn => form.setFieldsValue({ sourceColumn, transformExpr: undefined })} />
+          )}
           <Form.Item label="转换表达式（可空 = 直通）">
             <Space.Compact className="w-full">
               <Form.Item name="transformExpr" noStyle>

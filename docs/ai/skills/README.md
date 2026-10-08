@@ -11,3 +11,12 @@
 正式开放前按真实评测逐份决定是否启用；不因全量默认启用这些材料而扩大本批产品范围。
 
 V15 首个受控场景材料见 [standard-match](./standard-match/README.md)。它按当前场景合同绑定 Skill，仍需管理员明确登记，部署不自动启用。
+
+V16 来源字段场景材料见 [model-field-mapping](./model-field-mapping/README.md)，沿同一 DB 管理和管理员登记规则。
+
+
+[指标口径解释](metric-caliber-explanation/README.md)：固定版本事实与业务说明草稿，原编辑器人工保存。
+
+## F-028 指标定义草稿
+
+metric-definition-draft 提供有界类型草稿；人工导入/启用并复用原 Skill 版本核对。标准批量复用 standard-match；历史解释复用 metric-caliber-explanation，历史查看只读。

@@ -32,6 +32,8 @@ import { YakButton, YakEmpty } from '@/components/ui';
 import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
 import { findByBiz, listFlows } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
+import BatchStandardAssistant from './components/BatchStandardAssistant';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
 import {
@@ -124,6 +126,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
   const { currentProject } = useSecurityProject();
+  const { canAll } = usePermissionAccess();
+  const [batchAssistantOpen, setBatchAssistantOpen] = useState(false);
   const captureEditorResource = useResourceScope(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
   const beginStandardSearch = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
   const beginImportTableLoad = useLatestOperation(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
@@ -2153,6 +2157,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
               {publishFlowEnabled ? '直接发布' : '发布'}
             </YakButton>
           </Tooltip>
+          {modelInfo?.layerCode === 'DWD' && <Tooltip title={dirty ? '请先保存表结构，再交接指标设计' : '目标页将重新读取模型与业务过程'}>
+            <YakButton disabled={loading || saving || dirty || !structure || !canAll(['metric:create', 'modeling:read'])}
+              onClick={() => history.push(`/metric/manage?sourceModelId=${encodeURIComponent(String(modelId))}`)}>继续设计指标</YakButton>
+          </Tooltip>}
           <Tooltip title={approvalPending ? '发布审批在途，结构已冻结至终态' : undefined}>
             <YakButton
               type="primary"
@@ -2326,6 +2334,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
                       标准发现
                     </Button>
                   </Tooltip>
+                  <Button size="small" disabled={!selectedRowKeys.length || selectedRowKeys.length > 5 || !canAll(['agent:chat:run', 'agent:session:read', 'modeling:update', 'semantic:read'])}
+                    onClick={() => setBatchAssistantOpen(true)}>批量 AI 标准辅助</Button>
                   <Button size="small" danger disabled={!selectedRowKeys.length} onClick={handleBatchDelete}>
                     批量删除{selectedRowKeys.length ? `（${selectedRowKeys.length}）` : ''}
                   </Button>
@@ -2929,6 +2939,16 @@ const emptyColumnDraft = (): ColumnDraft => ({
           </pre>
         )}
       </Modal>
+      {batchAssistantOpen && modelId && <BatchStandardAssistant
+        key={JSON.stringify([currentProject?.id, modelId, structure?.definition])}
+        modelId={Number(modelId)} definition={structure?.definition ?? ''} rows={rows}
+        selectedKeys={selectedRowKeys.map(Number)}
+        disabled={loading || saving || publishing || approvalPending || !canAll(['agent:chat:run', 'agent:session:read', 'modeling:update', 'semantic:read'])}
+        onClose={() => setBatchAssistantOpen(false)}
+        onApply={(key, original, patch) => {
+          if (JSON.stringify(rows.find(row => row.key === key)) !== original) { message.warning('字段已修改，请重新生成'); return; }
+          updateRow(key, patch);
+        }} />}
       <StandardAssistantDrawer
         scopeKey={JSON.stringify([currentProject?.id, modelId, assistantRowKey, rows.find(row => row.key === assistantRowKey)])}
         aiDisabled={loading || saving || publishing}

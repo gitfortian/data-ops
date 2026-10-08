@@ -1,17 +1,18 @@
+import { readStructuredReceipt } from './structuredReceipt';
 import type { StandardMatchTarget } from './governance';
 export interface StandardMatchSuggestion {
   kind: 'STANDARD_MATCH'; target: StandardMatchTarget; expectedDefinition: string;
   skillVersion: number; skillHash: string; truncated: boolean;
   candidates: { standardId: number; version: number; code: string; name: string; stdType: string; reason: string }[];
   questions: string[];
+  fieldDescription?: string | null;
 }
 export function parseStandardMatch(text: string): StandardMatchSuggestion | null {
-  const matches = [...text.matchAll(/```yak-standard-match\s*\n([\s\S]*?)\n```/g)];
-  if (matches.length !== 1) return null;
   try {
-    const value = JSON.parse(matches[0][1]) as StandardMatchSuggestion;
+    const value = readStructuredReceipt(text, 'yak-standard-match') as StandardMatchSuggestion;
     if (value.kind !== 'STANDARD_MATCH' || !value.target || !/^[a-f0-9]{64}$/.test(value.expectedDefinition)
       || !/^[a-f0-9]{64}$/.test(value.skillHash) || !Number.isSafeInteger(value.skillVersion) || value.skillVersion < 1
+      || (value.fieldDescription != null && (typeof value.fieldDescription !== 'string' || !value.fieldDescription.trim() || value.fieldDescription.length > 512))
       || !Array.isArray(value.candidates) || value.candidates.length > 3
       || !Array.isArray(value.questions) || value.questions.length > 3
       || value.questions.some(q => typeof q !== 'string' || !q.trim() || q.length > 512)
