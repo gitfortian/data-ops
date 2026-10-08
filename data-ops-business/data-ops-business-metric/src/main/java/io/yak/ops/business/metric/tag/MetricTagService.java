@@ -81,12 +81,7 @@ public class MetricTagService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void updateTag(Long tagId, String tagName, Integer sortOrder) {
     Long projectId = currentProject.requireProjectId();
-    MetricTagPO existing = tagMapper.selectOne(new LambdaQueryWrapper<MetricTagPO>()
-        .eq(MetricTagPO::getId, tagId)
-        .eq(MetricTagPO::getProjectId, projectId));
-    if (existing == null) {
-      throw new MetricException(MetricErrorCode.TAG_NOT_FOUND, String.valueOf(tagId));
-    }
+    MetricTagPO existing = requireTag(projectId, tagId);
     existing.setTagName(tagName);
     if (sortOrder != null) {
       existing.setSortOrder(sortOrder);
@@ -98,12 +93,7 @@ public class MetricTagService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void deleteTag(Long tagId) {
     Long projectId = currentProject.requireProjectId();
-    MetricTagPO existing = tagMapper.selectOne(new LambdaQueryWrapper<MetricTagPO>()
-        .eq(MetricTagPO::getId, tagId)
-        .eq(MetricTagPO::getProjectId, projectId));
-    if (existing == null) {
-      throw new MetricException(MetricErrorCode.TAG_NOT_FOUND, String.valueOf(tagId));
-    }
+    MetricTagPO existing = requireTag(projectId, tagId);
     long refCount = tagRelMapper.selectCount(new LambdaQueryWrapper<MetricTagRelPO>()
         .eq(MetricTagRelPO::getProjectId, projectId)
         .eq(MetricTagRelPO::getTagId, tagId));
@@ -126,9 +116,7 @@ public class MetricTagService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void assignTag(Long metricId, Long tagId) {
     Long projectId = currentProject.requireProjectId();
-    if (tagRelMapper.exists(new LambdaQueryWrapper<MetricTagRelPO>()
-        .eq(MetricTagRelPO::getProjectId, projectId)
-        .eq(MetricTagRelPO::getMetricId, metricId)
+    if (tagRelMapper.exists(metricRelations(projectId, metricId)
         .eq(MetricTagRelPO::getTagId, tagId))) {
       return;
     }
@@ -151,17 +139,13 @@ public class MetricTagService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void removeTag(Long metricId, Long tagId) {
     Long projectId = currentProject.requireProjectId();
-    tagRelMapper.delete(new LambdaQueryWrapper<MetricTagRelPO>()
-        .eq(MetricTagRelPO::getProjectId, projectId)
-        .eq(MetricTagRelPO::getMetricId, metricId)
+    tagRelMapper.delete(metricRelations(projectId, metricId)
         .eq(MetricTagRelPO::getTagId, tagId));
   }
 
   public List<MetricTagRelPO> listTagsByMetric(Long metricId) {
     Long projectId = currentProject.requireProjectId();
-    return tagRelMapper.selectList(new LambdaQueryWrapper<MetricTagRelPO>()
-        .eq(MetricTagRelPO::getProjectId, projectId)
-        .eq(MetricTagRelPO::getMetricId, metricId));
+    return tagRelMapper.selectList(metricRelations(projectId, metricId));
   }
 
   public List<MetricTagRelPO> listMetricsByTag(Long tagId) {
@@ -169,6 +153,25 @@ public class MetricTagService {
     return tagRelMapper.selectList(new LambdaQueryWrapper<MetricTagRelPO>()
         .eq(MetricTagRelPO::getProjectId, projectId)
         .eq(MetricTagRelPO::getTagId, tagId));
+  }
+
+  /** A mutable tag is always resolved within the trusted project scope. */
+  private MetricTagPO requireTag(Long projectId, Long tagId) {
+    MetricTagPO tag = tagMapper.selectOne(new LambdaQueryWrapper<MetricTagPO>()
+        .eq(MetricTagPO::getId, tagId)
+        .eq(MetricTagPO::getProjectId, projectId));
+    if (tag == null) {
+      throw new MetricException(MetricErrorCode.TAG_NOT_FOUND, String.valueOf(tagId));
+    }
+    return tag;
+  }
+
+  /** Fresh Wrapper per operation, keeping metric-tag relationships project-scoped. */
+  private static LambdaQueryWrapper<MetricTagRelPO> metricRelations(
+      Long projectId, Long metricId) {
+    return new LambdaQueryWrapper<MetricTagRelPO>()
+        .eq(MetricTagRelPO::getProjectId, projectId)
+        .eq(MetricTagRelPO::getMetricId, metricId);
   }
 
   private static String generateTagCode(String tagName) {
