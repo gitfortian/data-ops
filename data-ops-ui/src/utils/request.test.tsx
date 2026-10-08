@@ -14,7 +14,7 @@
  */
 import { notifyOnce } from '@/utils/notifyOnce';
 
-import request, { BizError } from './request';
+import request, { BizError, resetAuthenticationFailure } from './request';
 
 jest.mock('@/utils/notifyOnce', () => ({ notifyOnce: jest.fn() }));
 jest.mock('umi', () => ({ history: { replace: jest.fn() } }));
@@ -150,6 +150,7 @@ describe('请求层错误传递契约（S11）', () => {
 
 describe('A5.2 shared HTTP boundary: 401, 403 and project context', () => {
   beforeEach(() => {
+    resetAuthenticationFailure();
     (notifyOnce as jest.Mock).mockClear();
     window.localStorage.setItem('yak-security.current-project-id', '71');
   });
