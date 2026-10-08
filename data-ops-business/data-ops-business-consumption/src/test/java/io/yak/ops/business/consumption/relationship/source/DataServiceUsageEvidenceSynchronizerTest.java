@@ -1,6 +1,7 @@
 package io.yak.ops.business.consumption.relationship.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -77,6 +78,54 @@ class DataServiceUsageEvidenceSynchronizerTest {
     verify(reader).recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 200);
     verify(reader, never()).recentSuccessfulByApi(anyLong(), anyInt());
     verify(normalizer).normalize(oldSuccess);
+  }
+
+  @Test
+  void persistedRevisionCursorProcessesAtMost200ThenContinuesToOlderSuccess() {
+    DataServiceCallLogReader reader = mock(DataServiceCallLogReader.class);
+    DataServiceUsageEvidenceNormalizer normalizer = mock(DataServiceUsageEvidenceNormalizer.class);
+    List<InvocationRecord> first = java.util.stream.LongStream.rangeClosed(1, 200)
+        .mapToObj(index -> new InvocationRecord(
+            901L - index, 42L, 7L, "Orders", "/orders", "API_KEY",
+            9L, 19L, "Historic", "sk_x", 9007199254740995L, 1, "{}",
+            true, 10L, 1, null, LocalDateTime.of(2025, 7, 1, 12, 0)))
+        .toList();
+    when(reader.successfulPageByApiAndRevision(7L, 9007199254740995L, null, 200))
+        .thenReturn(first);
+    when(normalizer.normalize(any(InvocationRecord.class)))
+        .thenReturn(UsageNormalizationResult.gap("invocation:old", "missing original consumer"));
+
+    var sync = new DataServiceUsageEvidenceSynchronizer(reader, normalizer);
+    var page1 = sync.recoverSuccessfulRevisionPage(7L, 9007199254740995L, null, 500);
+
+    assertEquals(200, page1.results().size());
+    assertEquals(701L, page1.nextBeforeInvocationId());
+    assertEquals(false, page1.exhausted());
+    verify(reader).successfulPageByApiAndRevision(7L, 9007199254740995L, null, 200);
+    InvocationRecord older = new InvocationRecord(
+        700L, 42L, 7L, "Orders", "/orders", "API_KEY",
+        9L, 19L, "Historic", "sk_x", 9007199254740995L, 1, "{}",
+        true, 10L, 1, null, LocalDateTime.of(2025, 7, 1, 12, 0));
+    when(reader.successfulPageByApiAndRevision(7L, 9007199254740995L, 701L, 200))
+        .thenReturn(List.of(older));
+    var page2 = sync.recoverSuccessfulRevisionPage(7L, 9007199254740995L, 701L, 200);
+    assertEquals(1, page2.results().size());
+    assertEquals(null, page2.nextBeforeInvocationId());
+    assertEquals(true, page2.exhausted());
+  }
+
+  @Test
+  void missingDurableInvocationIdDoesNotCreateFakeContinuationOrNormalizeAnything() {
+    DataServiceCallLogReader reader = mock(DataServiceCallLogReader.class);
+    DataServiceUsageEvidenceNormalizer normalizer = mock(DataServiceUsageEvidenceNormalizer.class);
+    InvocationRecord corrupt = mock(InvocationRecord.class);
+    when(reader.successfulPageByApiAndRevision(7L, 9L, null, 200))
+        .thenReturn(List.of(corrupt));
+    var sync = new DataServiceUsageEvidenceSynchronizer(reader, normalizer);
+
+    assertThrows(IllegalStateException.class,
+        () -> sync.recoverSuccessfulRevisionPage(7L, 9L, null, 200));
+    verify(normalizer, never()).normalize(any(InvocationRecord.class));
   }
 
 }
