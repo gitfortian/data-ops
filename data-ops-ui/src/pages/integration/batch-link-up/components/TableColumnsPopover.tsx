@@ -1,8 +1,8 @@
-import { API_SUCCESS_CODE } from '@/services/http/response';
 import React, { useState } from "react";
 import { Popover, Table, message } from "antd";
 import "../index.less";
-import { dataSourceCatalogApi } from "@/services/data-source/legacy";
+import { queryDataSourceColumnOptions } from "@/services/data-source/catalog";
+import type { DataSourceCatalogColumnOptionRow } from "@/services/data-source/catalog";
 
 interface TableColumnsPopoverProps {
   sourceId?: string | number;
@@ -58,7 +58,7 @@ const TableColumnsPopover: React.FC<TableColumnsPopoverProps> = ({
   type,
   children,
 }) => {
-  const [columns, setColumns] = useState<any[]>([]);
+  const [columns, setColumns] = useState<DataSourceCatalogColumnOptionRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchColumns = async () => {
@@ -77,14 +77,9 @@ const TableColumnsPopover: React.FC<TableColumnsPopoverProps> = ({
         read_mode: "table"
       };
 
-      const res = await dataSourceCatalogApi.listColumn(sourceId, params);
-
-      if (res?.code === API_SUCCESS_CODE) {
-        setColumns(res.data || []);
-      } else {
-        
-      }
-    } catch (e) {
+      const rows = await queryDataSourceColumnOptions(sourceId, params);
+      setColumns(rows ?? []);
+    } catch {
       message.error("Load columns failed");
     } finally {
       setLoading(false);
