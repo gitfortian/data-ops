@@ -742,6 +742,13 @@ export default function DatasetDetailPage() {
                   查看血缘
                 </YakButton>
 
+                <YakButton
+                  href={consumptionProductPath('DATASET', String(dataset.id))}
+                  icon={<LinkOutlined />}
+                >
+                  发布前核对消费者影响
+                </YakButton>
+
                 <Tooltip
                   title={
                     canCreateVersion
