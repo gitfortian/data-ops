@@ -1,3 +1,4 @@
+import { queryString } from './query-string';
 import type { ApiResponse } from '@/services/http/response';
 import HttpUtils from '@/utils/HttpUtils';
 
@@ -31,16 +32,6 @@ const NODE_API = `${DATA_DEVELOPMENT_API}/nodes`;
 const EXECUTION_API = `${DATA_DEVELOPMENT_API}/executions`;
 const RELEASE_API = `${DATA_DEVELOPMENT_API}/releases`;
 const EDITOR_SETTINGS_API = `${DATA_DEVELOPMENT_API}/editor-settings`;
-
-const queryString = (query: object) => {
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    params.set(key, String(value));
-  });
-  const value = params.toString();
-  return value ? `?${value}` : '';
-};
 
 export const listDevelopmentDirectories = (): Promise<
   ApiResponse<DevelopmentDirectory[]>
