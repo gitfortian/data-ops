@@ -6,12 +6,14 @@ import {
   LEGACY_DATA_DEVELOPMENT_RELEASE_SOURCE,
   getDataService,
   getDataServiceRuntime,
+  getDataServiceInvocationEvidence,
   listDataServiceDataSources,
   listDataServiceKeys,
   listDataServiceLogs,
   type DataServiceApi,
   type DataServiceApiKey,
   type DataServiceCallLog,
+  type DataServiceInvocationEvidence,
   type DataServiceRuntimeStatus,
   type DataSourceOption,
 } from '@/services/data-service';
@@ -21,6 +23,7 @@ import {
   Alert,
   Button,
   ConfigProvider,
+  Descriptions,
   Empty,
   Spin,
   Table,
@@ -29,12 +32,12 @@ import {
   type TableColumnsType,
 } from 'antd';
 import { ArrowLeft, PlayCircle } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import DataServiceAccessControlPanel from '../components/DataServiceAccessControlPanel';
 import DataServiceApiCallPanel from '../components/DataServiceApiCallPanel';
 import { dataServiceDevelopmentSourceUrl } from '../utils';
-import { verifiedInvocationFromWindow } from './invocation-evidence';
+import { verifiedPersistedInvocation } from './invocation-evidence';
 
 type DetailTabKey = 'overview' | 'access' | 'network' | 'runtime' | 'logs';
 
@@ -146,8 +149,7 @@ export default function DataServiceDetailPage() {
   const params = useParams<{ id?: string }>();
   const [searchParams] = useSearchParams();
   const requestedInvocationId = searchParams.get('invocationId') || '';
-  // Keep the audit ID in its original decimal form; frontend JSON numeric IDs above
-  // MAX_SAFE_INTEGER are not sufficient evidence for an exact invocation match.
+  // SQL BIGINT is preserved as decimal text by the exact audit endpoint.
   const focusedInvocationId = /^[1-9]\d*$/.test(requestedInvocationId)
     ? requestedInvocationId : undefined;
   const logsTab = searchParams.get('tab') === 'logs';
@@ -162,8 +164,10 @@ export default function DataServiceDetailPage() {
   const [runtime, setRuntime] = useState<DataServiceRuntimeStatus>();
   const [keys, setKeys] = useState<DataServiceApiKey[]>([]);
   const [logs, setLogs] = useState<DataServiceCallLog[]>([]);
+  const [auditEvidence, setAuditEvidence] = useState<DataServiceInvocationEvidence | null>(null);
   const [logIssue, setLogIssue] = useState('');
   const [loading, setLoading] = useState(true);
+  const loadRequestId = useRef(0);
   const [activeTab, setActiveTab] = useState<DetailTabKey>(
     (logsTab || focusedInvocationId) && canObserve ? 'logs' : 'overview');
 
@@ -172,42 +176,56 @@ export default function DataServiceDetailPage() {
   }, [focusedInvocationId, logsTab, canObserve]);
 
   const load = useCallback(async () => {
-    if (!Number.isFinite(apiId) || apiId <= 0) {
+    const requestId = ++loadRequestId.current;
+    if (!Number.isSafeInteger(apiId) || apiId <= 0) {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setLogIssue('');
+    setLogs([]);
+    setAuditEvidence(null);
     try {
       const [serviceResponse, dataSourceResponse] = await Promise.all([
         getDataService(apiId),
         listDataServiceDataSources(),
       ]);
+      if (requestId !== loadRequestId.current) return;
       setService(serviceResponse);
       setDataSources(dataSourceResponse);
 
-      const [runtimeResponse, keyResponse, logResponse] = await Promise.all([
+      const [runtimeResponse, keyResponse, logResult] = await Promise.all([
         canRuntime ? getDataServiceRuntime(apiId) : Promise.resolve(undefined),
         canManageAccess ? listDataServiceKeys(apiId) : Promise.resolve(undefined),
-        canObserve ? listDataServiceLogs(apiId, focusedInvocationId ? 200 : 50)
-          .catch((cause) => {
-            setLogIssue(cause instanceof Error ? cause.message : '调用日志来源不可用');
-            return [] as DataServiceCallLog[];
-          }) : Promise.resolve(undefined),
+        !canObserve ? Promise.resolve({ kind: 'none' as const })
+          : focusedInvocationId
+            ? getDataServiceInvocationEvidence(apiId, focusedInvocationId)
+              .then((value) => ({ kind: 'exact' as const, value }))
+              .catch((cause) => ({ kind: 'error' as const,
+                reason: cause instanceof Error ? cause.message : '精确调用记录不可读取' }))
+            : listDataServiceLogs(apiId, 50)
+              .then((value) => ({ kind: 'recent' as const, value }))
+              .catch((cause) => ({ kind: 'error' as const,
+                reason: cause instanceof Error ? cause.message : '调用日志来源不可用' })),
       ]);
+      if (requestId !== loadRequestId.current) return;
       setRuntime(runtimeResponse);
       setKeys(keyResponse || []);
-      setLogs(logResponse || []);
-    } catch (error: any) {
-      message.error(error?.message || '加载 API 详情失败');
+      if (logResult.kind === 'exact') setAuditEvidence(logResult.value);
+      if (logResult.kind === 'recent') setLogs(logResult.value);
+      if (logResult.kind === 'error') setLogIssue(logResult.reason);
+    } catch (cause: any) {
+      if (requestId === loadRequestId.current) {
+        message.error(cause?.message || '加载 API 详情失败');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   }, [apiId, canManageAccess, canObserve, canRuntime, focusedInvocationId]);
 
   useEffect(() => {
     void load();
+    return () => { loadRequestId.current += 1; };
   }, [load]);
 
   const sourceManaged = service?.sourceType === DATA_SERVICE_NODE_SOURCE;
@@ -222,7 +240,7 @@ export default function DataServiceDetailPage() {
       || `#${service.dataSourceId}`;
   }, [dataSources, service?.dataSourceId]);
 
-  const exactInvocation = verifiedInvocationFromWindow(logs, apiId, focusedInvocationId);
+  const exactInvocation = verifiedPersistedInvocation(auditEvidence, apiId, focusedInvocationId);
 
   const logColumns: TableColumnsType<DataServiceCallLog> = [
     {
@@ -390,46 +408,59 @@ export default function DataServiceDetailPage() {
   );
 
   const logsContent = (
-    <SectionCard title="调用记录">
+    <SectionCard title={focusedInvocationId ? '精确调用证据' : '调用记录'}>
       <div className="p-5">
         {logIssue ? <Alert className="mb-4" type="warning" showIcon
           message="调用日志来源暂不可用" description={logIssue} /> : null}
         {focusedInvocationId ? (
-          <Alert
-            className="mb-4"
-            type={exactInvocation && !logIssue ? 'info' : 'warning'}
-            showIcon
-            message={logIssue ? '无法核对指定来源调用'
-              : exactInvocation ? '已在此服务的近期日志中核对调用 ID'
-                : '未能在此服务的可读日志窗口精确定位调用'}
-            description={(
-              <div>
-                <div>Invocation ID：{focusedInvocationId}。只认可相同 ID 且属于当前 API 的记录；
-                  近期日志最多读取 200 条，超出窗口或超过 JS 安全整数精度的记录不能在此页冒充已核对。</div>
-                <Button type="link" size="small"
-                  onClick={() => history.push(`/data-service/api/${apiId}?tab=logs`)}>
-                  查看此服务最近调用
-                </Button>
-              </div>
-            )}
-          />
-        ) : null}
-        {(!focusedInvocationId || exactInvocation) && !logIssue ? (
+          <>
+            <Alert className="mb-4"
+              type={exactInvocation && !logIssue ? 'success' : 'warning'} showIcon
+              message={logIssue ? '无法核对指定来源调用'
+                : exactInvocation ? '已核对持久化调用原始记录'
+                  : '没有找到可核对的该 API 调用记录'}
+              description={(
+                <div>
+                  <div>Invocation ID：{focusedInvocationId}。按当前 Project、API 与完整 BIGINT
+                    调用 ID 直接核对持久日志，不受最近 200 条窗口限制。
+                    不存在、已清理或不属于当前项目/API 的记录均不会被邻近调用代替。</div>
+                  <Button type="link" size="small"
+                    onClick={() => history.push(`/data-service/api/${apiId}?tab=logs`)}>
+                    返回最近调用记录
+                  </Button>
+                </div>
+              )}
+            />
+            {exactInvocation && !logIssue ? (
+              <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
+                <Descriptions.Item label="Invocation ID">{exactInvocation.id}</Descriptions.Item>
+                <Descriptions.Item label="所属 API ID">{exactInvocation.apiId}</Descriptions.Item>
+                <Descriptions.Item label="状态">{exactInvocation.success ? '成功' : '失败'}</Descriptions.Item>
+                <Descriptions.Item label="调用方">{exactInvocation.callerType || '-'}</Descriptions.Item>
+                <Descriptions.Item label="Consumer ID">{exactInvocation.consumerId || '-'}</Descriptions.Item>
+                <Descriptions.Item label="Key 名称">{exactInvocation.apiKeyName || '-'}</Descriptions.Item>
+                <Descriptions.Item label="Source Revision ID">{exactInvocation.sourceRevisionId || '-'}</Descriptions.Item>
+                <Descriptions.Item label="Source Revision No">{exactInvocation.sourceRevisionNo ?? '-'}</Descriptions.Item>
+                <Descriptions.Item label="耗时">{exactInvocation.durationMs} ms</Descriptions.Item>
+                <Descriptions.Item label="返回行数">{exactInvocation.rowCount}</Descriptions.Item>
+                <Descriptions.Item label="调用时间">{formatTime(exactInvocation.createTime)}</Descriptions.Item>
+                <Descriptions.Item label="服务路径">{exactInvocation.servicePath || '-'}</Descriptions.Item>
+                <Descriptions.Item label="失败详情" span={2}>{exactInvocation.errorMessage || '-'}</Descriptions.Item>
+                <Descriptions.Item label="已脱敏参数" span={2}>
+                  <span className="break-all font-mono text-xs">{exactInvocation.paramsJson || '{}'}</span>
+                </Descriptions.Item>
+              </Descriptions>
+            ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="暂无经过 Project、API 和调用 ID 三重核对的记录" />}
+          </>
+        ) : !logIssue && logs.length ? (
           <Table<DataServiceCallLog>
-            rowKey="id"
-            size="small"
-            columns={logColumns}
-            dataSource={focusedInvocationId ? exactInvocation ? [exactInvocation] : [] : logs}
-            pagination={false}
-            scroll={{ x: 760 }}
+            rowKey="id" size="small" columns={logColumns} dataSource={logs}
+            pagination={false} scroll={{ x: 760 }}
             className="[&_.ant-table-container]:!rounded-md [&_.ant-table-container]:!border [&_.ant-table-container]:!border-solid [&_.ant-table-container]:!border-[#eceef1] [&_.ant-table-thead>tr>th]:!h-10 [&_.ant-table-thead>tr>th]:!bg-[#f7f7f8] [&_.ant-table-thead>tr>th]:!text-[12px] [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-tbody>tr>td]:!text-[12px]"
           />
-        ) : (
-          <div className="flex min-h-[320px] items-center justify-center">
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={focusedInvocationId ? '无法精确定位指定调用记录' : '暂无调用记录'} />
-          </div>
-        )}
+        ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={logIssue ? '暂无法读取调用日志' : '暂无调用记录'} />}
       </div>
     </SectionCard>
   );
