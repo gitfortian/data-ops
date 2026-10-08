@@ -5,6 +5,7 @@ import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.api.BusinessProcess;
+import io.yak.ops.business.semantic.api.SemanticStructureReferenceReader;
 import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
@@ -15,6 +16,8 @@ import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -34,18 +37,43 @@ public class BusinessProcessService {
   private final SemanticFieldService fieldService;
   private final SemanticProcessBindingService bindingService;
   private final BusinessAuditService auditService;
+  private final List<SemanticStructureReferenceReader> referenceReaders;
 
+  @Autowired
+  public BusinessProcessService(
+      SemanticProcessRepository repository,
+      SemanticDomainRepository domainRepository,
+      SemanticFieldService fieldService,
+      SemanticProcessBindingService bindingService,
+      BusinessAuditService auditService,
+      ObjectProvider<SemanticStructureReferenceReader> referenceReaders) {
+    this(repository, domainRepository, fieldService, bindingService, auditService,
+        referenceReaders.orderedStream().toList());
+  }
+
+  /** Compatibility constructor for existing focused service tests. */
   public BusinessProcessService(
       SemanticProcessRepository repository,
       SemanticDomainRepository domainRepository,
       SemanticFieldService fieldService,
       SemanticProcessBindingService bindingService,
       BusinessAuditService auditService) {
+    this(repository, domainRepository, fieldService, bindingService, auditService, List.of());
+  }
+
+  BusinessProcessService(
+      SemanticProcessRepository repository,
+      SemanticDomainRepository domainRepository,
+      SemanticFieldService fieldService,
+      SemanticProcessBindingService bindingService,
+      BusinessAuditService auditService,
+      List<SemanticStructureReferenceReader> referenceReaders) {
     this.repository = repository;
     this.domainRepository = domainRepository;
     this.fieldService = fieldService;
     this.bindingService = bindingService;
     this.auditService = auditService;
+    this.referenceReaders = List.copyOf(referenceReaders);
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -173,6 +201,14 @@ public class BusinessProcessService {
       // 引用校验(35/36 挂点):被标准字段或源表关联引用时阻断。
       fieldService.assertProcessDeletable(id);
       bindingService.assertProcessDeletable(id);
+      // Modeling owns model.processId; semantic must not read Modeling tables.
+      // Fail closed when the consumer count cannot be queried.
+      for (SemanticStructureReferenceReader reader : referenceReaders) {
+        if (reader.countProcessReferences(id) > 0) {
+          throw new SemanticException(SemanticErrorCode.PROCESS_REFERENCED,
+              "存在建模或其它消费模块引用，请先解除关联");
+        }
+      }
       if (!repository.deleteById(id)) {
         throw new SemanticException(SemanticErrorCode.DELETE_FAILED, String.valueOf(id));
       }

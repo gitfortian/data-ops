@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.domain;
 
 import io.yak.ops.business.semantic.api.BusinessDomain;
+import io.yak.ops.business.semantic.api.SemanticStructureReferenceReader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -112,6 +113,60 @@ class BusinessDomainServiceTest {
     assertEquals("trade", tree.get(0).code());
     assertEquals(1, tree.get(0).children().size());
     assertEquals("pay", tree.get(0).children().get(0).code());
+  }
+
+  @Test
+  void deleteBlockedWhenModelingStillReferencesDomain() {
+    when(repository.findById(5L)).thenReturn(Optional.of(existingDomain()));
+    BusinessDomainService guarded = new BusinessDomainService(repository, processRepository,
+        auditService, List.of(structureReader(0, 2)));
+
+    SemanticException failure = assertThrows(SemanticException.class, () -> guarded.delete(5L));
+
+    assertEquals(SemanticErrorCode.DOMAIN_REFERENCED, failure.getErrorCode());
+    verify(repository, never()).deleteById(5L);
+    verify(auditService, never()).start(any(AuditOperationRequest.class));
+  }
+
+  @Test
+  void deleteBlockedWhenModelingReferenceQueryFails() {
+    when(repository.findById(5L)).thenReturn(Optional.of(existingDomain()));
+    SemanticStructureReferenceReader unavailable = new SemanticStructureReferenceReader() {
+      @Override
+      public long countProcessReferences(Long id) { return 0; }
+
+      @Override
+      public long countDomainReferences(Long id) {
+        throw new IllegalStateException("Modeling is unavailable");
+      }
+    };
+    BusinessDomainService guarded = new BusinessDomainService(repository, processRepository,
+        auditService, List.of(unavailable));
+
+    assertThrows(IllegalStateException.class, () -> guarded.delete(5L));
+    verify(repository, never()).deleteById(5L);
+  }
+
+  @Test
+  void deleteSucceedsWhenDomainHasNoLocalOrExternalReferences() {
+    when(repository.findById(5L)).thenReturn(Optional.of(existingDomain()));
+    when(repository.deleteById(5L)).thenReturn(true);
+    BusinessDomainService guarded = new BusinessDomainService(repository, processRepository,
+        auditService, List.of(structureReader(0, 0)));
+
+    guarded.delete(5L);
+
+    verify(repository).deleteById(5L);
+  }
+
+  private static SemanticStructureReferenceReader structureReader(long processRefs, long domainRefs) {
+    return new SemanticStructureReferenceReader() {
+      @Override
+      public long countProcessReferences(Long processId) { return processRefs; }
+
+      @Override
+      public long countDomainReferences(Long domainId) { return domainRefs; }
+    };
   }
 
   private BusinessDomain existingDomain() {
