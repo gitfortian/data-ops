@@ -71,7 +71,7 @@ public class ConsumerImpactService {
     try {
       observed = usage.list(projectId, productKey, null, limit);
       // A full *window* is still readable evidence. It is not a provider outage.
-      usageState = sourceCoverage.unavailable()
+      usageState = sourceCoverage.readUnavailable() || sourceCoverage.gaps() > 0
           ? ConsumerImpactView.EvidenceState.UNAVAILABLE
           : observed.isEmpty()
           ? ConsumerImpactView.EvidenceState.EMPTY
@@ -116,7 +116,7 @@ public class ConsumerImpactService {
         : "Known consumers include declared subscriptions and normalized successful usage in the reconciled source window only; external consumers outside available evidence are not claimed complete.";
     ConsumerImpactView.EvidenceCoverage detail = new ConsumerImpactView.EvidenceCoverage(
         limit, sourceCoverage.recordCount(), observed.size(), sourceCoverage.limitReached(),
-        observed.size() == limit, sourceCoverage.gaps(), sourceCoverage.unavailable());
+        observed.size() == limit, sourceCoverage.gaps(), sourceCoverage.readUnavailable());
     return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage, detail);
   }
 
@@ -138,13 +138,13 @@ public class ConsumerImpactService {
           result.state() == UsageNormalizationState.GAP
               || result.state() == UsageNormalizationState.UNAVAILABLE).count();
       // Equality means we reached the query budget, not that the source provider is broken.
-      return new SourceSyncCoverage(results.size(), results.size() >= limit, gaps, gaps > 0);
+      return new SourceSyncCoverage(results.size(), results.size() >= limit, gaps, false);
     } catch (RuntimeException unavailable) {
       return SourceSyncCoverage.failed();
     }
   }
 
-  private record SourceSyncCoverage(int recordCount, boolean limitReached, int gaps, boolean unavailable) {
+  private record SourceSyncCoverage(int recordCount, boolean limitReached, int gaps, boolean readUnavailable) {
     static SourceSyncCoverage failed() {
       return new SourceSyncCoverage(0, false, 0, true);
     }
