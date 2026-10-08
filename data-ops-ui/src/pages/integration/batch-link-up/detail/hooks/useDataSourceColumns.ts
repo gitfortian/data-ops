@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { dataSourceCatalogApi } from '@/services/data-source/legacy';
+import { queryDataSourceColumnOptions } from '@/services/data-source/catalog';
 
 export interface DataSourceColumnOption {
   label: string;
@@ -56,10 +56,9 @@ export default function useDataSourceColumns(
     let active = true;
     setLoading(true);
 
-    dataSourceCatalogApi
-      .listColumn(dataSourceId, request)
-      .then((response) => {
-        if (active) setColumns(normalizeColumns(response?.data));
+    queryDataSourceColumnOptions(dataSourceId, request)
+      .then((rows) => {
+        if (active) setColumns(normalizeColumns(rows));
       })
       .catch(() => {
         if (active) setColumns([]);

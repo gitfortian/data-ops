@@ -34,6 +34,26 @@ export const listDataSourceColumns = (
     })}`,
   );
 
+/** SQL 模式和表路径共用的字段查询；保留 POST body，与 GET /{id}/columns 语义不同。 */
+export interface DataSourceCatalogColumnOptionRow {
+  fieldName?: string;
+  fieldType?: string;
+  fieldComment?: string;
+  fieldKey?: string;
+  fieldLength?: number;
+  fieldIndex?: number;
+  fieldIsNull?: string;
+}
+
+export const queryDataSourceColumnOptions = (
+  id: DataSourceId,
+  requestBody: Record<string, unknown>,
+): Promise<DataSourceCatalogColumnOptionRow[]> =>
+  HttpUtils.postData<DataSourceCatalogColumnOptionRow[]>(
+    `${DATA_SOURCE_CATALOG_API_PREFIX}/column/${id}`,
+    requestBody,
+  );
+
 /** 按关键字搜索数据源表(源表绑定下拉用)。 */
 export const searchDataSourceTables = (
   id: DataSourceId,
