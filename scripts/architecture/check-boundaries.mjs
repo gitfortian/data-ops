@@ -1,4 +1,4 @@
-import { crossesPersistenceBoundary } from './import-boundaries.mjs';
+import { crossesPersistenceBoundary, dependsOnBootOutsideAssembly, importsBootOutsideBoot } from './import-boundaries.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -38,11 +38,14 @@ const baseline = JSON.parse(read('scripts/architecture/legacy-shared-persistence
 for (const m of modules) {
   if (m.dependencies.includes('data-job-spring-boot-starter'))
     violations.push(`${m.directory}/pom.xml: current application must not depend on legacy data-job-spring-boot-starter`);
+  if (dependsOnBootOutsideAssembly(m.artifact, m.dependencies))
+    violations.push(`${m.directory}/pom.xml: only data-ops-dist may depend on data-ops-boot for assembly`);
 }
 for (const j of java) {
   for (const m of j.text.matchAll(/^import (?:static )?([^;]+);/gm)) {
     const name = m[1];
     if (name.startsWith('com.yak.job.')) violations.push(`${j.file}: current application must not import legacy ${name}`);
+    if (importsBootOutsideBoot(j, name)) violations.push(`${j.file}: Boot is the composition root, forbidden import ${name}`);
     if ((j.file.startsWith('data-ops-common/') || j.file.startsWith('data-ops-core/') || j.file.startsWith('data-ops-spi/') || j.file.startsWith('data-ops-plugins/')) && name.startsWith('io.yak.ops.business.')) violations.push(`${j.file}: foundation/plugin imports business ${name}`);
     if (j.module?.startsWith('data-ops-business-') && name.includes('BusinessDatabaseConfiguration')) violations.push(`${j.file}: shared persistence assembly belongs to Boot`);
     if (crossesPersistenceBoundary(j, name, classes)) violations.push(`${j.file}: cross-domain persistence ${name}`);
