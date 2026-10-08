@@ -19,7 +19,7 @@
 
 新增纯 Node 审计器 `scripts/db/flyway-ownership.mjs`、CLI `scripts/db/check-flyway-ownership.mjs`，整合到原 Architecture Checks 的静态检查 Job：
 
-1. 从仓库已跟踪的生产 Java 文件读取显式 `@Bean Flyway` / `Flyway.configure()` 注册；不要求把 domain 的 Flyway Bean 迁入 Boot。
+1. 从仓库已跟踪的 **Business/Boot 自有**生产 Java 文件读取显式 `@Bean Flyway` / `Flyway.configure()` 注册；不要求把 domain 的 Flyway Bean 迁入 Boot。
 2. 提取 Bean 方法、模块 Maven 根目录、history table、`JdbcDatabase.migrationLocation` 的资源命名空间（支持字面量及同类内静态字符串常量）。
 3. 防止不同注册者使用相同 history 表、相同迁移目录或重复 Bean 名，保护各业务域独立迁移链。
 4. 校验每个声明的 `db/migration/<namespace>` 及 `db/migration-postgresql/<namespace>` SQL 均由其所属模块拥有，避免跨模块资源误绑定。
@@ -40,7 +40,8 @@ node scripts/db/check-flyway-ownership.mjs --json
 - **不合并** MySQL/PostgreSQL 目录；不变更应用数据表、表字段或用户权限。
 - 尊重 Metadata/Lineage 的共表 steward 约定；归属脚本检查不等于跨域共享表字段的 owner 判定。
 - 和既有 `check-migration-history.mjs`、数据库 MySQL/PostgreSQL Smoke 保持互补关系。本批属于**静态已声明 Flyway Bean 的检查**，不冒充运行时迁移执行证明。
-- 对动态 Flyway/bootstrap、Spring 条件启用、Mapper / XML 与外部 framework starter 的历史表仍需真实数据库及 Spring 容器验证。
+- **显式例外（已读取真实实现）：** `data-ops-framework/data-security/src/main/java/io/yak/framework/security/config/DataSourceConfig.java` 使用独立的 Yak Security DataSource，`classpath:yak-security/db/migration`（包含 PG 切换）和历史兼容 out-of-order，且刻意不对业务自有的 `Flyway.table()` 写死名字。该 Framework 内部迁移不属于 data-ops Business/Boot 迁移链，不适用本次 A4 所约束的本地 history/path 唯一性；其独立契约必须由 Security Framework 与独立数据库回归验证。加入对应例外回归测试，不允许据此把此模块迁移并入 Boot。
+- 对动态 Flyway/bootstrap、Spring 条件启用、Mapper / XML 与其他 Framework starter 的历史表仍需真实数据库及 Spring 容器验证。
 
 ## PR 验收清单
 
