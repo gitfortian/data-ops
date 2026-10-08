@@ -12,6 +12,12 @@ export interface MetadataPageResult<T> {
   pageSize: number;
 }
 
+/** Actual current runtime policy, independent of historical per-job fields. */
+export interface EffectivePresencePolicy {
+  collapseThresholdPct: number;
+  missingRounds: number;
+}
+
 export interface CollectJobRecord {
   id: number;
   jobCode: string;
@@ -27,7 +33,9 @@ export interface CollectJobRecord {
   enabled: boolean;
   /** 启用闸门：没有一次通过的 dry-run 预演就不允许启用（作用域改动会将其重置）。 */
   dryRunPassed: boolean;
+  /** @deprecated Legacy database field, not an effective policy override. */
   collapseThresholdPct?: number | null;
+  /** @deprecated Legacy database field, not an effective policy override. */
   missingRounds?: number | null;
   lastRunId?: number | null;
   createdBy?: string;
@@ -58,7 +66,9 @@ export interface CollectJobUpsertParams {
   tablePattern?: string | null;
   collectColumns?: boolean | null;
   cronExpression?: string;
+  /** @deprecated Server rejects unsupported custom per-job protection values. */
   collapseThresholdPct?: number | null;
+  /** @deprecated Server rejects unsupported custom per-job protection values. */
   missingRounds?: number | null;
 }
 
