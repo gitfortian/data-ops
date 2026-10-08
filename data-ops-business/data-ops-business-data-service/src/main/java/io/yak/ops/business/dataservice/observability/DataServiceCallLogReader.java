@@ -23,6 +23,11 @@ public class DataServiceCallLogReader {
     return repository.recentByApi(apiId, Math.max(1, Math.min(200, limit)));
   }
 
+  /** Persisted successful calls only; ordinary recentByApi still includes failures. */
+  public List<InvocationRecord> recentSuccessfulByApi(Long apiId, int limit) {
+    return repository.recentSuccessfulByApi(apiId, Math.max(1, Math.min(200, limit)));
+  }
+
   public InvocationEvidenceView findByApiAndId(Long apiId, Long invocationId) {
     if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {
       throw new IllegalArgumentException("数据服务 ID 与调用记录 ID 必须大于 0");
