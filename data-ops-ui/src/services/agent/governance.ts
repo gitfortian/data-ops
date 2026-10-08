@@ -11,6 +11,17 @@ export type GovernanceTarget = { assetId: number; qualityExecutionNo?: never; qu
   | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; purpose: 'METRIC_EXPLANATION'; metricExplanation: MetricExplanationTarget; metricDraft?: never }
   | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; purpose: 'METRIC_DRAFT'; metricDraft: MetricDraftTarget };
 
+/** Compare the full task scope, independent of JSON key order and nullable projection fields. */
+export function sameScenarioTarget(a: unknown, b: unknown): boolean {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).filter(([, v]) => v != null)
+      .sort(([left], [right]) => left.localeCompare(right)).map(([key, v]) => [key, canonical(v)]));
+    return value;
+  };
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
 export function governanceTaskTitle(target: GovernanceTarget): string {
   if (target.metricDraft) return `${target.metricDraft.metricId ? `指标 #${target.metricDraft.metricId} v${target.metricDraft.version}` : '新建指标'} 定义草稿`;
   if (target.metricExplanation) return `指标 #${target.metricExplanation.metricId} v${target.metricExplanation.version} ${target.metricExplanation.view === 'SNAPSHOT' ? '历史快照' : '口径解释与说明草稿'}`;

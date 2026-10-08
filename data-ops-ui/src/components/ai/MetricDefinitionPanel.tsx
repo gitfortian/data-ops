@@ -36,7 +36,7 @@ export default function MetricDefinitionPanel(props: Props) {
       if (!isCurrent()) return;
       if (!context || !/^[a-f0-9]{64}$/.test(context.definition)) throw new Error('草稿上下文无法核对');
       setPrepared({ scope, target: input, context });
-    } catch (e) { if (isCurrent()) setError(e instanceof Error ? e.message : '无法准备指标草稿'); }
+    } catch { if (isCurrent()) setError('指标草稿上下文暂不可用，请核对需求及所选依赖后重试。'); }
     finally { if (busy.current === scope) busy.current = undefined; if (isCurrent()) setLoading(false); }
   };
   return <Space direction="vertical" className="w-full">

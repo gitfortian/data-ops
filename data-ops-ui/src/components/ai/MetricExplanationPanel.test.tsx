@@ -34,8 +34,20 @@ it('discards a source read from a previous project before allowing generation', 
   (getMetricExplanationContext as jest.Mock).mockImplementationOnce(() => new Promise(r => { resolve = r; })).mockRejectedValue(new Error('forbidden'));
   const view = render(<MetricExplanationPanel metricId={7} version={3} disabled={false} />);
   mockProjectId = 2; view.rerender(<MetricExplanationPanel metricId={7} version={3} disabled={false} />);
-  await screen.findByText('forbidden'); await act(async () => resolve(context));
+  await screen.findByText('指标版本上下文暂不可用，请重试读取或返回原页面核对。'); await act(async () => resolve(context));
+  expect(screen.queryByText('forbidden')).not.toBeInTheDocument();
   expect(screen.queryByText('解释口径并生成说明')).not.toBeInTheDocument(); expect(agentChatApi.submit).not.toHaveBeenCalled();
+});
+
+it('retries a failed context read only on request and hides arbitrary service exceptions', async () => {
+  (getMetricExplanationContext as jest.Mock).mockRejectedValueOnce(new Error('private source failure'));
+  render(<MetricExplanationPanel metricId={7} version={3} disabled={false} />);
+  await screen.findByText('指标版本上下文暂不可用，请重试读取或返回原页面核对。');
+  expect(screen.queryByText(/private/)).not.toBeInTheDocument();
+  expect(getMetricExplanationContext).toHaveBeenCalledTimes(1); expect(agentChatApi.submit).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('重试读取'));
+  await screen.findByText('解释口径并生成说明');
+  expect(getMetricExplanationContext).toHaveBeenCalledTimes(2); expect(agentChatApi.submit).not.toHaveBeenCalled();
 });
 it('revoking permission during adoption prevents applying a late validation', async () => {
   let resolve: (value: unknown) => void = () => {};
