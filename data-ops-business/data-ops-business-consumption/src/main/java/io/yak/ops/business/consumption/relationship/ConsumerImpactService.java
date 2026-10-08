@@ -142,7 +142,7 @@ public class ConsumerImpactService {
     return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage, detail);
   }
 
-  private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit) {
+  private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit, String exactVersion) {
     try {
       List<UsageNormalizationResult> results;
       if (productKey.productType() == ProductType.DATASET && datasetSynchronizer != null) {
