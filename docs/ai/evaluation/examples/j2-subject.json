@@ -1,0 +1,12 @@
+{
+  "version": "F-030-J2-v1",
+  "projectId": 1,
+  "modelId": 101,
+  "columnName": "customer_id",
+  "standardId": 201,
+  "standardVersion": 1,
+  "mapping": {"datasourceId": 301, "database": "evaluation", "table": "customer", "column": "customer_id"},
+  "metricId": 401,
+  "metricVersion": 1,
+  "datasetId": 501
+}

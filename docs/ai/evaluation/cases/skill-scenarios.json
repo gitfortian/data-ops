@@ -1,0 +1,608 @@
+{
+  "version": "F-030-v1",
+  "description": "固定合成样本，源对象与条件需人工绑定；工程离线执行不证明模型效果。",
+  "cases": [
+    {
+      "caseId": "sm01",
+      "scenario": "标准匹配与说明草稿",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_standard_match_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "STANDARD_MATCH",
+        "standardMatch": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "dataType": "BIGINT",
+          "businessDescription": "客户稳定标识",
+          "keyword": "客户"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "专用模型字段未保存；存在可读 TYPE 标准、明确业务说明。"
+        ]
+      },
+      "review": [
+        "只返回真实 TYPE 标准 ID/version；字段说明有依据",
+        "候选带入与原 CAS 保存分开记录"
+      ]
+    },
+    {
+      "caseId": "sm02",
+      "scenario": "标准信息不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_standard_match_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "STANDARD_MATCH",
+        "standardMatch": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "dataType": "BIGINT",
+          "businessDescription": "",
+          "keyword": ""
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "目标字段业务含义不明确，禁止评审者补入默认背景。"
+        ]
+      },
+      "review": [
+        "待确认项不被虚构业务事实取代"
+      ]
+    },
+    {
+      "caseId": "sm03",
+      "scenario": "标准权限不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_standard_match_context",
+      "allowed": false,
+      "account": "denied",
+      "target": {
+        "purpose": "STANDARD_MATCH",
+        "standardMatch": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "dataType": "BIGINT",
+          "businessDescription": "客户稳定标识",
+          "keyword": "客户"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "denied 账号不能读取目标模型或 TYPE 标准。"
+        ]
+      },
+      "review": [
+        "拒绝且不泄漏候选；以源审计核对禁止调用/写入"
+      ]
+    },
+    {
+      "caseId": "sm04",
+      "scenario": "标准或 Skill 漂移",
+      "executionMode": "manual",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_standard_match_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "STANDARD_MATCH",
+        "standardMatch": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "dataType": "BIGINT",
+          "businessDescription": "客户稳定标识",
+          "keyword": "客户"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "生成后可由管理员更新专用标准版本或 Skill。"
+        ]
+      },
+      "review": [
+        "旧候选重新校验失败，原字段与他人修改保持"
+      ],
+      "manualSteps": [
+        "原字段生成候选并记录 turnId/Skill hash。",
+        "管理员修改专用标准版本或 Skill 内容。",
+        "在原页面逐项采纳旧候选，记录拒绝与源审计。"
+      ]
+    },
+    {
+      "caseId": "sm05",
+      "scenario": "批量部分失败与未知提交",
+      "executionMode": "manual",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_standard_match_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "STANDARD_MATCH",
+        "standardMatch": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "dataType": "BIGINT",
+          "businessDescription": "客户稳定标识",
+          "keyword": "客户"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "准备 3–5 个专用字段；可控制一项失败和一次提交回执丢失。"
+        ]
+      },
+      "review": [
+        "每字段独立原轮，失败可核对",
+        "未知提交停止后续项；不自动重发；保存另行核对"
+      ],
+      "manualSteps": [
+        "原页面选 3–5 个字段开始批量，记录每项会话。",
+        "使一项已知失败，核对其余项不混入前一字段。",
+        "另次演练丢失提交回执，确认后续项停止且刷新核对原轮。"
+      ]
+    },
+    {
+      "caseId": "mm01",
+      "scenario": "来源字段映射",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_model_mapping_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "MODEL_MAPPING",
+        "modelMapping": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "datasourceId": 201,
+          "database": "evaluation",
+          "table": "customer",
+          "businessDescription": "客户稳定标识",
+          "keyword": "customer"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "专用模型字段和源表可读，源表存在 customer_id。"
+        ]
+      },
+      "review": [
+        "候选仅固定源表字段；类型差异有说明",
+        "带入原表单，原映射条件保存并回读"
+      ]
+    },
+    {
+      "caseId": "mm02",
+      "scenario": "映射信息不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_model_mapping_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "MODEL_MAPPING",
+        "modelMapping": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "datasourceId": 201,
+          "database": "evaluation",
+          "table": "customer",
+          "businessDescription": "",
+          "keyword": ""
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "源表多个同类型字段且无可靠业务说明。"
+        ]
+      },
+      "review": [
+        "不把类型相同当业务同义，列出待确认项"
+      ]
+    },
+    {
+      "caseId": "mm03",
+      "scenario": "映射权限不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_model_mapping_context",
+      "allowed": false,
+      "account": "denied",
+      "target": {
+        "purpose": "MODEL_MAPPING",
+        "modelMapping": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "datasourceId": 201,
+          "database": "evaluation",
+          "table": "customer",
+          "businessDescription": "客户稳定标识",
+          "keyword": "customer"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "denied 账号无源表或模型读取权限。"
+        ]
+      },
+      "review": [
+        "无来源字段泄漏；禁止操作零源写审计"
+      ]
+    },
+    {
+      "caseId": "mm04",
+      "scenario": "映射源 DDL 漂移",
+      "executionMode": "manual",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_model_mapping_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "MODEL_MAPPING",
+        "modelMapping": {
+          "modelId": 101,
+          "columnName": "customer_id",
+          "datasourceId": 201,
+          "database": "evaluation",
+          "table": "customer",
+          "businessDescription": "客户稳定标识",
+          "keyword": "customer"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "可由管理员对专用源表变更字段。"
+        ]
+      },
+      "review": [
+        "旧候选 sourceDefinition 漂移被拒绝，不声称跨库原子性"
+      ],
+      "manualSteps": [
+        "原页面生成候选，记录源指纹。",
+        "管理员变更专用源列类型或删除该列。",
+        "尝试旧候选带入/保存，核对拒绝与原映射未变。"
+      ]
+    },
+    {
+      "caseId": "me01",
+      "scenario": "当前指标口径解释",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_caliber_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_EXPLANATION",
+        "metricExplanation": {
+          "metricId": 301,
+          "version": 1,
+          "businessQuestion": "说明统计范围、时间周期与计量方式"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "当前指标 v1 有完整不可变快照及可读事实。"
+        ]
+      },
+      "review": [
+        "每条陈述引用快照白名单事实",
+        "说明带入不等于指标保存、验证或发布"
+      ]
+    },
+    {
+      "caseId": "me02",
+      "scenario": "精确历史快照解释",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_caliber_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_EXPLANATION",
+        "metricExplanation": {
+          "metricId": 301,
+          "version": 1,
+          "businessQuestion": "说明统计范围、时间周期与计量方式",
+          "view": "SNAPSHOT"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "指标当前版本 >1，v1 历史快照仍可读。"
+        ]
+      },
+      "review": [
+        "只解释 v1；不混入当前验证/发布；历史只读"
+      ]
+    },
+    {
+      "caseId": "me03",
+      "scenario": "指标解释权限不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_caliber_context",
+      "allowed": false,
+      "account": "denied",
+      "target": {
+        "purpose": "METRIC_EXPLANATION",
+        "metricExplanation": {
+          "metricId": 301,
+          "version": 1,
+          "businessQuestion": "说明统计范围、时间周期与计量方式"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "denied 账号没有指标读取权限。"
+        ]
+      },
+      "review": [
+        "拒绝且不泄漏快照事实"
+      ]
+    },
+    {
+      "caseId": "me04",
+      "scenario": "当前版本漂移",
+      "executionMode": "manual",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_caliber_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_EXPLANATION",
+        "metricExplanation": {
+          "metricId": 301,
+          "version": 1,
+          "businessQuestion": "说明统计范围、时间周期与计量方式"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "另一授权人员可推进专用指标当前版本。"
+        ]
+      },
+      "review": [
+        "无 view 的当前版本任务拒绝漂移；不退回历史或最新版本"
+      ],
+      "manualSteps": [
+        "在当前 v1 生成说明候选。",
+        "另一人员保存为 v2。",
+        "采纳 v1 当前任务候选，核对拒绝且说明未覆盖。"
+      ]
+    },
+    {
+      "caseId": "me05",
+      "scenario": "口径事实缺失",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_caliber_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_EXPLANATION",
+        "metricExplanation": {
+          "metricId": 301,
+          "version": 1,
+          "businessQuestion": "为什么本月收入下降？"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "指标快照可读但没有用户所问的业务归因证据。"
+        ]
+      },
+      "review": [
+        "不能从口径证明收入变化原因，列出缺口"
+      ]
+    },
+    {
+      "caseId": "md01",
+      "scenario": "原子指标草稿",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_draft_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_DRAFT",
+        "metricDraft": {
+          "metricId": null,
+          "version": null,
+          "metricType": "ATOMIC",
+          "modelId": 101,
+          "upstreamIds": [],
+          "requirement": "每日按客户数去重统计，输出客户数量"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "DWD 模型有稳定可读字段 customer_id，去重 COUNT 定义适用。"
+        ]
+      },
+      "review": [
+        "只使用模型字段与原聚合/限定条件合同",
+        "人工编辑和原保存审计分别记录"
+      ]
+    },
+    {
+      "caseId": "md02",
+      "scenario": "派生指标草稿",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_draft_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_DRAFT",
+        "metricDraft": {
+          "metricId": null,
+          "version": null,
+          "metricType": "DERIVED",
+          "modelId": null,
+          "upstreamIds": [
+            302
+          ],
+          "requirement": "基于客户数原子指标，统计本月客户数量"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "上游 302 是当前可读 ATOMIC，类型/版本明确。"
+        ]
+      },
+      "review": [
+        "唯一上游原子指标，不创建新的模型来源"
+      ]
+    },
+    {
+      "caseId": "md03",
+      "scenario": "复合指标草稿",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_draft_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_DRAFT",
+        "metricDraft": {
+          "metricId": null,
+          "version": null,
+          "metricType": "COMPOSITE",
+          "modelId": null,
+          "upstreamIds": [
+            302,
+            303
+          ],
+          "requirement": "按客户数除以订单数计算客户订单比"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "上游 302/303 是可读非复合指标，code 非纯数字。"
+        ]
+      },
+      "review": [
+        "表达式 token 仅引用选定 ID 与允许运算符；业务含义人工复核"
+      ]
+    },
+    {
+      "caseId": "md04",
+      "scenario": "指标需求不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_draft_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_DRAFT",
+        "metricDraft": {
+          "metricId": null,
+          "version": null,
+          "metricType": "ATOMIC",
+          "modelId": 101,
+          "upstreamIds": [],
+          "requirement": "做一个经营指标"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "用户未指定统计含义、周期和聚合方式，评审者不得暗补。"
+        ]
+      },
+      "review": [
+        "不伪造确定需求；待确认项明确"
+      ]
+    },
+    {
+      "caseId": "md05",
+      "scenario": "指标草稿权限不足",
+      "executionMode": "single-turn",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_draft_context",
+      "allowed": false,
+      "account": "denied",
+      "target": {
+        "purpose": "METRIC_DRAFT",
+        "metricDraft": {
+          "metricId": null,
+          "version": null,
+          "metricType": "ATOMIC",
+          "modelId": 101,
+          "upstreamIds": [],
+          "requirement": "每日按客户数去重统计，输出客户数量"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "denied 账号没有模型/指标依赖读取权限。"
+        ]
+      },
+      "review": [
+        "拒绝且无字段/依赖信息泄漏"
+      ]
+    },
+    {
+      "caseId": "md06",
+      "scenario": "指标依赖漂移",
+      "executionMode": "manual",
+      "question": "依据绑定上下文完成本场景辅助；缺少依据时列出待确认项。不要保存或执行业务。",
+      "probeTool": "get_metric_draft_context",
+      "allowed": true,
+      "account": "authorized",
+      "target": {
+        "purpose": "METRIC_DRAFT",
+        "metricDraft": {
+          "metricId": null,
+          "version": null,
+          "metricType": "DERIVED",
+          "modelId": null,
+          "upstreamIds": [
+            302
+          ],
+          "requirement": "基于客户数原子指标，统计本月客户数量"
+        }
+      },
+      "fixture": {
+        "synthetic": true,
+        "sourceConditions": [
+          "专用上游指标可由另一人员更新版本。"
+        ]
+      },
+      "review": [
+        "旧 definition 指纹失败；不覆盖本地表单编辑"
+      ],
+      "manualSteps": [
+        "原页面选依赖生成草稿并记录指纹。",
+        "另一人员修改上游版本，同时修改本地表单。",
+        "尝试旧候选带入，核对拒绝并保留本地编辑。"
+      ]
+    }
+  ]
+}
