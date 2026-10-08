@@ -196,9 +196,11 @@ describe('A5.2 shared HTTP boundary: 401, 403 and project context', () => {
     ));
 
     await expect(request(URL, { method: 'GET' })).rejects.toBeTruthy();
+    // The JSON business envelope is handled before umi-request's HTTP status
+    // fallback; 403 still denotes authorization denial, not session expiry.
     expect(notifyOnce).toHaveBeenCalledWith(
-      expect.stringContaining('http:403:'),
-      expect.objectContaining({ title: '无权访问', description: '无权访问当前项目' })
+      expect.stringContaining('business:yak-ops:403:'),
+      expect.objectContaining({ title: '操作失败', description: '无权访问当前项目' })
     );
     expect(notifyOnce).not.toHaveBeenCalledWith(
       'authentication',
