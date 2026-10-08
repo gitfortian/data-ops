@@ -103,16 +103,16 @@ export default function VersionChangeImpactReview({
   const workpack = evidenceImpact && review
     ? buildVersionChangeCoordinationWorkpack(evidenceImpact, review) : null;
   // An acknowledgement never survives a new evidence response or a version switch.
-  useEffect(() => setAcknowledged(false), [impact, selected?.identity, loading]);
+  useEffect(() => setAcknowledged(false), [impact, exact, selected?.identity, reviewLoading]);
   // Change descriptions belong to one exact source revision, never carry them across versions.
   useEffect(() => setProposedChange(''), [impact, selected?.identity]);
 
   const copyReview = async () => {
-    if (!acknowledged || !impact || !review || loading) return;
+    if (!acknowledged || !evidenceImpact || !review || reviewLoading || reviewIssue) return;
     const text = versionImpactReviewText(
       product.productKey.productType + ':' + product.productKey.sourceIdentity,
       String(product.projectId),
-      impact,
+      evidenceImpact,
       review,
       new Date().toISOString(),
     );
@@ -125,10 +125,10 @@ export default function VersionChangeImpactReview({
   };
 
   const copyOutreach = async (row: VersionImpactRow) => {
-    if (!acknowledged || !impact || !review || loading || impactIssue) return;
+    if (!acknowledged || !evidenceImpact || !review || reviewLoading || reviewIssue) return;
     try {
       await navigator.clipboard.writeText(consumerVersionOutreachDraft(
-        product, impact, review, row, proposedChange, new Date().toISOString(),
+        product, evidenceImpact, review, row, proposedChange, new Date().toISOString(),
         { state: sourceConsumerState, consumers: sourceConsumers },
       ));
       message.success('已复制人工沟通草稿；未发送任何通知或生成审批记录');
@@ -138,10 +138,10 @@ export default function VersionChangeImpactReview({
   };
 
   const copyWorkpack = async () => {
-    if (!acknowledged || !impact || !review || loading || impactIssue) return;
+    if (!acknowledged || !evidenceImpact || !review || reviewLoading || reviewIssue) return;
     try {
       await navigator.clipboard.writeText(versionChangeCoordinationWorkpackText(
-        product, impact, review, proposedChange, new Date().toISOString(),
+        product, evidenceImpact, review, proposedChange, new Date().toISOString(),
         { state: sourceConsumerState, consumers: sourceConsumers },
       ));
       message.success('已复制人工协同工作清单；未写入变更计划、通知、确认或审批');
@@ -223,7 +223,7 @@ export default function VersionChangeImpactReview({
         <Button
           type="link"
           size="small"
-          disabled={!acknowledged || loading || !!impactIssue}
+          disabled={!acknowledged || reviewLoading || !!reviewIssue}
           onClick={() => { void copyOutreach(row); }}
         >
           复制该 Consumer 沟通草稿
@@ -245,7 +245,7 @@ export default function VersionChangeImpactReview({
             aria-label="待变更来源版本"
             style={{ minWidth: 280 }}
             value={selected?.identity}
-            disabled={loading || !versions.length}
+            disabled={reviewLoading || !versions.length}
             placeholder="当前没有可确认的来源版本"
             options={versions.map((version) => ({
               value: version.identity,
@@ -259,15 +259,17 @@ export default function VersionChangeImpactReview({
             }}
           />
         </Space>
-        {impactIssue ? (
-          <Alert type="warning" showIcon message="不能核对消费影响来源" description={impactIssue} />
-        ) : !impact ? (
+        {reviewIssue ? (
+          <Alert type="warning" showIcon message="不能核对消费影响来源" description={reviewIssue} />
+        ) : exactLoading ? (
+          <Text type="secondary">正在按精确来源版本读取当前 Project 内已归一化的历史成功消费…</Text>
+        ) : !evidenceImpact ? (
           <Text type="secondary">{loading ? '正在重新核对消费事实…' : '尚无可读取的消费者影响快照'}</Text>
         ) : !review ? (
           <Alert type="warning" showIcon
             message={requestedVersion ? '指定来源版本已不在本次可核对证据中' : '没有可核对的精确来源版本'}
             description={requestedVersion
-              ? '原核对版本可能已超出当前证据窗口或来源变更。请核实版本 ID，并从当前可选版本重新选择；系统不会自动切到别的版本。'
+              ? '当前 Project 的持久化归一化 Usage 中未发现该精确版本；不代表没有历史消费，请核查来源审计。系统不会自动切到别的版本。'
               : undefined}
           />
         ) : (
@@ -276,10 +278,10 @@ export default function VersionChangeImpactReview({
               type={review.incomplete ? 'warning' : 'info'}
               showIcon
               message={review.incomplete ? '覆盖不完整，需要补充核对' : '仅限当前来源窗口，并非全量历史'}
-              description={impact.coverageNote}
+              description={evidenceImpact.coverageNote}
             />
             <Space direction="vertical" size={0}>
-              {impactEvidenceWindowFacts(impact).map((fact) => (
+              {impactEvidenceWindowFacts(evidenceImpact).map((fact) => (
                 <Text key={fact} type="secondary">{fact}</Text>
               ))}
             </Space>
@@ -332,17 +334,17 @@ export default function VersionChangeImpactReview({
             <Alert type="info" showIcon message="人工沟通准备，不是已通知状态"
               description="请使用已知 Consumer 身份自行找到真实负责人。复制草稿不会发送消息、记录已读、获得变更确认或形成 Approval/Audit。"
             />
-            <Checkbox checked={acknowledged} disabled={loading} onChange={(event) => setAcknowledged(event.target.checked)}>
+            <Checkbox checked={acknowledged} disabled={reviewLoading} onChange={(event) => setAcknowledged(event.target.checked)}>
               我已核对当前可见证据及其覆盖缺口，理解本次结果不代表所有消费者。
             </Checkbox>
             <div>
-              <Button onClick={() => { void copyReview(); }} disabled={!acknowledged || loading}>
+              <Button onClick={() => { void copyReview(); }} disabled={!acknowledged || reviewLoading || !!reviewIssue}>
                 复制本次版本影响核对记录
               </Button>
               <Button
                 style={{ marginLeft: 8 }}
                 onClick={() => { void copyWorkpack(); }}
-                disabled={!acknowledged || loading || !!impactIssue}
+                disabled={!acknowledged || reviewLoading || !!reviewIssue}
               >
                 复制完整人工协同工作清单
               </Button>
