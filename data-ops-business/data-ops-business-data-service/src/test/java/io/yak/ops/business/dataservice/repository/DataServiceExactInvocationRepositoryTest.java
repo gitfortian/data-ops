@@ -26,8 +26,10 @@ class DataServiceExactInvocationRepositoryTest {
   static void initializeMybatisLambdaMetadata() {
     // Standalone Mockito tests do not initialize MyBatis entity metadata automatically.
     // Install real TableInfo so SQL segments and bound values are asserted, not guessed.
+    Configuration configuration = new Configuration();
+    configuration.setMapUnderscoreToCamelCase(true);
     TableInfoHelper.initTableInfo(
-        new MapperBuilderAssistant(new Configuration(), "data-service-exact-audit-test"),
+        new MapperBuilderAssistant(configuration, "data-service-exact-audit-test"),
         DataServiceCallLogPO.class);
   }
 
