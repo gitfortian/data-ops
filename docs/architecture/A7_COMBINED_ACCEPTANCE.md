@@ -49,6 +49,27 @@
 - 已在 A7 Workflow 中**隔离两个数据库测试进程**：`env -u ARCHITECTURE_POSTGRESQL_URL SPRING_PROFILES_ACTIVE=mysql bash ./mvnw -B -ntp verify` 完成 MySQL reactor 全量；随后使用 `env -u ARCHITECTURE_MYSQL_URL SPRING_PROFILES_ACTIVE=postgresql` 和 Maven `-Dtest=PostgresqlStorageSmokeTest` 专项运行 PostgreSQL 容器及真实 PG 应用 Profile。没有禁用或伪造 PostgreSQL 验收结果。
 - `scripts/architecture/a7-integration-preview.test.mjs` 追加工作流断言，避免未来两库的环境变量混在同一 JVM 构建回退。修复后的 A7 结果必须以新提交 CI 为准，不能据此提前标记 PASS。
 
+## A7 组合验收已通过：第三轮实际成功记录（2026-10-08）
+
+**证据绑定：** [GitHub Actions Run 37758224213 / attempt 2](https://github.com/gitfortian/data-ops/actions/runs/37758224213)；
+[精确组合快照 Artifact 11548538844](https://github.com/gitfortian/data-ops/actions/runs/37758224213/artifacts/11548538844)（保存 30 天）。
+
+- 基础 `main`：`f15329dd4606d128aa17d13f651b30f85a6073ed`。
+- 11 个受保护架构 PR 按 A0 → A6.1 原定顺序，在**临时 worktree** 成功模拟合并。
+- 组合树 HEAD：`cd0f8561f927d66abeea60143770dc331d8f3f01`。实际组合树文件清单、11 个精确 head SHA 与冲突信息以 Artifact JSON 为准。
+- 前端 Jest：**176 suites / 986 tests 通过**；随后类型 baseline、前端 build 和发行包 manifest 校验成功。
+- MySQL：隔离 MySQL 8 空库，完整 Maven reactor `verify` **BUILD SUCCESS**；`DatabaseMigrationSmokeTest` 2 个测试通过。
+- PostgreSQL：隔离 PostgreSQL 16 空库，`PostgresqlStorageSmokeTest.freshDeploymentWritesAndDurableRestart` **1 test / 0 failures / 0 errors，BUILD SUCCESS**；验证 Spring 启动、持久化任务重启后仍存在。
+- 核心跨 PR 修复：#387 通过提交 `26f362935874c76a42aaf4929316602dd351b543` 移除 `application-common.yml` 对 PostgreSQL Quartz JDBC store 的意外 `memory` 覆盖，保留 MySQL / PostgreSQL profile 分别定义调度存储。
+- 上述仅为**该快照**成功，不代替 future main / PR head 的增量变更验收，也不代表生产数据库升级或浏览器/真实数据引擎 E2E。
+
+### 后续有边界的工作（尚未完成，禁止冒充通过）
+
+1. **现网数据库升级/回滚演练**：获取备份副本及真实历史迁移样本，核验 Flyway history/checksum、数据前后对照及回滚策略；当前空库测试不能代表这一项。
+2. **浏览器 E2E（含多 Project/RBAC）**：实际浏览器登录、切换 Project、无权限/越权错误处理、导航与数据隔离。前端 Jest / build 不是完整交互 E2E。
+3. **真实数据面 Golden E2E**：对隔离的 Flink / Link-Up 测试实例验证离线和实时提交、恢复、Checkpoint/状态、产出一致性。现有 Gateway 契约测试不足以宣称已经执行。
+4. **合并门槛**：最终计划合并之前，必须按当时最新 main 与 11 个 PR heads 重跑 A7 并复核冲突、各 PR CI、回滚计划，再取得用户明确授权。本轮**没有**修改 main 或合并任何 Draft PR。
+
 ## 不应越权宣称的范围
 
 - 双数据库全新环境迁移 Smoke 与 SQL 版本校验并不等于**现网历史数据库的备份/升级/回滚演练**。
@@ -59,9 +80,9 @@
 ## 用户最终授权前的合并准入
 
 - [ ] 11 个 PR 各自 CI 无失败且 Draft/标签未改变
-- [ ] A7 组合合并不存在冲突；组合树 `git` SHA Evidence 已记录
-- [ ] 全量 Maven reactor、MySQL & PostgreSQL、Frontend Jest/Build、Dist 校验通过
-- [ ] A7 UI/数据库/执行环境剩余真实 E2E 明确列出，无法验证的项目不标记完成
+- [x] A7 组合合并不存在冲突；组合树 `git` SHA Evidence 已记录（Run 37758224213 / attempt 2）
+- [x] 全量 Maven reactor、MySQL & PostgreSQL、Frontend Jest/Build、Dist 校验通过（限对应快照）
+- [x] A7 UI/数据库/执行环境剩余真实 E2E 缺口已经明确列出，未执行部分不标记完成
 - [ ] 选择显式回滚策略：无 DB Schema 变更的架构 PR 可以按提交回退，但不能靠 `git revert` 逆转历史 Migration 数据变更
 - [ ] 由用户在功能开发完成后明确确认合并，绝不由自动工作流执行
 
