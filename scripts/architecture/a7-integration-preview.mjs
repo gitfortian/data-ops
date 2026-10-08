@@ -100,7 +100,8 @@ function persist(report, reportPath) {
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
   const markdownPath = reportPath.replace(/\.json$/, '.md');
   fs.writeFileSync(markdownPath, integrationSummary(report));
-  if (process.env.GITHUB_STEP_SUMMARY) {
+  if (process.env.GITHUB_STEP_SUMMARY &&
+      (report.failed || (report.prs.length > 0 && report.prs.every(row => row.result === 'merged in temporary preview')))) {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, integrationSummary(report));
   }
 }
