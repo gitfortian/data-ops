@@ -28,7 +28,7 @@ const owner = p => modules.find(m => m.directory !== '.' && p.startsWith(m.direc
 for (const p of files) {
   if (p.startsWith(legacyFramework + '/') || !owner(p) || !p.includes('/src/main/resources/') || !p.endsWith('.xml')) continue;
   const resourcePath = p.split('/src/main/resources/')[1];
-  if (/(^|\\/)mappers?\\/.*\\.xml$/i.test(resourcePath) || /(^|\\/)[^/]*Mapper\\.xml$/i.test(resourcePath)) {
+  if (/(^|[/])mappers?[/].*[.]xml$/i.test(resourcePath) || /(^|[/])[^/]*Mapper[.]xml$/i.test(resourcePath)) {
     violations.push(`${p}: production Mapper XML is not allowed; use MyBatis-Plus mapper/Wrapper APIs (legacy Java 8 excluded)`);
   }
 }
