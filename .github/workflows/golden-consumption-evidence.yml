@@ -1,0 +1,47 @@
+name: Golden Consumption Evidence Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/product/golden-sample/**'
+      - 'scripts/product/phase4-real-env-data-service-evidence.mjs'
+      - 'scripts/product/golden-invocation-identity.mjs'
+      - 'scripts/product/golden-invocation-identity.test.mjs'
+      - 'scripts/product/lossless-json.mjs'
+      - '.github/workflows/golden-consumption-evidence.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/product/golden-sample/**'
+      - 'scripts/product/phase4-real-env-data-service-evidence.mjs'
+      - 'scripts/product/golden-invocation-identity.mjs'
+      - 'scripts/product/golden-invocation-identity.test.mjs'
+      - 'scripts/product/lossless-json.mjs'
+      - '.github/workflows/golden-consumption-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Offline Golden Sample contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate runner syntax
+        run: |
+          python -m py_compile scripts/product/golden-sample/consumption.py
+          node --check scripts/product/phase4-real-env-data-service-evidence.mjs
+      - name: Run Python fixture and consumption acceptance contracts
+        run: python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
+      - name: Run lossless invocation identity checks
+        run: node --test scripts/product/golden-invocation-identity.test.mjs
