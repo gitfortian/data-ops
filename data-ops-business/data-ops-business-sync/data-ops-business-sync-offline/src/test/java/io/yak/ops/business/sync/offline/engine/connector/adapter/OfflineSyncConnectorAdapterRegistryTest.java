@@ -51,6 +51,35 @@ class OfflineSyncConnectorAdapterRegistryTest {
         .contains("dataSource");
   }
 
+  @Test
+  void newConnectorIsNotAutomaticallyAuthorizedForNativeMultiTableExecution() {
+    OfflineSyncConnectorAdapter connector = adapter("future-native");
+
+    // Native GUIDE_MULTI is opt-in for *both* endpoint roles. An adapter added
+    // to the registry must not silently switch FAN_OUT into native multi-table.
+    assertThat(connector.supportsNativeMultiTable("future-native", Role.SOURCE)).isFalse();
+    assertThat(connector.supportsNativeMultiTable("future-native", Role.SINK)).isFalse();
+    assertThat(connector.supports("future-native", Role.SOURCE)).isTrue();
+  }
+
+  @Test
+  void logicalBuildContextHasImmutableSourceTableSnapshotButNoDatasourceCredentials() {
+    ObjectMapper mapper = new ObjectMapper();
+    java.util.List<String> mutable = new java.util.ArrayList<>(List.of("orders"));
+    BuildContext build = new BuildContext(
+        "jdbc", Role.SOURCE, "GUIDE_MULTI", "sync",
+        mapper.createObjectNode(), mapper.createObjectNode(),
+        mapper.createObjectNode(), 100, 100, mutable);
+
+    mutable.add("unreviewed");
+    assertThat(build.sourceTables()).containsExactly("orders");
+    assertThatThrownBy(() -> build.sourceTables().add("mutated"))
+        .isInstanceOf(UnsupportedOperationException.class);
+    assertThat(Arrays.stream(BuildContext.class.getRecordComponents())
+        .map(java.lang.reflect.RecordComponent::getType))
+        .doesNotContain(io.yak.ops.business.datasource.domain.DataSourceDefinition.class);
+  }
+
   private OfflineSyncConnectorAdapter adapter(String id) {
     return new OfflineSyncConnectorAdapter() {
       @Override
