@@ -183,6 +183,7 @@ const AssetDetailPage = () => {
     setLoading(true);
     setDetailFailure(null);
     setSnapshotAvailable(false);
+    setSnapshotDefinition('');
     try {
       const sectionTypes = [
         'TECHNICAL_METADATA', 'QUALITY', 'SECURITY', 'LINEAGE', 'USAGE', 'LIFECYCLE',
