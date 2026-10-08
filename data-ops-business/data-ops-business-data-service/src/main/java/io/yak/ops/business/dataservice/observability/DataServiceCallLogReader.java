@@ -1,6 +1,7 @@
 package io.yak.ops.business.dataservice.observability;
 
 import io.yak.ops.business.dataservice.domain.InvocationRecord;
+import io.yak.ops.business.dataservice.observability.InvocationEvidenceView;
 import io.yak.ops.business.dataservice.repository.DataServiceCallLogRepository;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import java.util.List;
@@ -20,5 +21,14 @@ public class DataServiceCallLogReader {
 
   public List<InvocationRecord> recentByApi(Long apiId, int limit) {
     return repository.recentByApi(apiId, Math.max(1, Math.min(200, limit)));
+  }
+
+  public InvocationEvidenceView findByApiAndId(Long apiId, Long invocationId) {
+    if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {
+      throw new IllegalArgumentException("数据服务 ID 与调用记录 ID 必须大于 0");
+    }
+    return repository.findByApiAndId(apiId, invocationId)
+        .map(InvocationEvidenceView::found)
+        .orElseGet(InvocationEvidenceView::notFound);
   }
 }
