@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.yak.ops.business.dataservice.dao.mapper.DataServiceCallLogMapper;
 import io.yak.ops.business.dataservice.dao.model.DataServiceCallLogPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -39,8 +39,8 @@ class DataServiceExactInvocationRepositoryTest {
     assertThat(result).isPresent();
     assertThat(result.orElseThrow().id()).isEqualTo(9007199254740993L);
     @SuppressWarnings("unchecked")
-    ArgumentCaptor<Wrapper<DataServiceCallLogPO>> capture =
-        ArgumentCaptor.forClass(Wrapper.class);
+    ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
     verify(mapper).selectOne(capture.capture());
     var query = capture.getValue();
     assertThat(query.getSqlSegment()).contains("project_id", "api_id", "id");
@@ -58,8 +58,8 @@ class DataServiceExactInvocationRepositoryTest {
 
     assertThat(repository.findByApiAndId(7L, 9007199254740993L)).isEmpty();
     @SuppressWarnings("unchecked")
-    ArgumentCaptor<Wrapper<DataServiceCallLogPO>> capture =
-        ArgumentCaptor.forClass(Wrapper.class);
+    ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
     verify(mapper).selectOne(capture.capture());
     assertThat(capture.getValue().getParamNameValuePairs().values())
         .containsExactlyInAnyOrder(5L, 7L, 9007199254740993L);
