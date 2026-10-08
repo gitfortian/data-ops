@@ -39,7 +39,7 @@ import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
 import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
-import { consumerSourceTarget } from '@/config/consumer-source-navigation';
+import { consumerSourceTarget, parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
 import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
 import {
   eligibleConfiguredDataServiceConsumers,
@@ -556,6 +556,7 @@ export default function ConsumptionDetailPage() {
             ) : null}
             {product.productKey.productType === 'DATA_SERVICE'
               && sourceConsumerState === 'READY'
+              && parseManagedConsumerSourceId(product.productKey.sourceIdentity) !== null
               && eligibleDataServiceConsumers.length === 0 ? (
               <Alert
                 type="info"
@@ -564,6 +565,11 @@ export default function ConsumptionDetailPage() {
                 description={<Button type="link" onClick={() => history.push('/data-service/access')}>前往配置 Consumer、API 权限和 Key</Button>}
               />
             ) : null}
+            {product.productKey.productType === 'DATA_SERVICE'
+              && parseManagedConsumerSourceId(product.productKey.sourceIdentity) === null ? (
+                <Alert type="warning" showIcon message="服务 ID 无法无损核对调用方授权"
+                  description="此来源 ID 不适合用当前数值型调用方 API 进行精确比对。已禁止近似匹配或误判无 Consumer，历史使用和订阅证据仍独立显示。" />
+              ) : null}
             {impactIssue ? <Alert type="warning" showIcon message="消费影响暂不可用" description={impactIssue} /> : null}
             {impact ? (
               <>
