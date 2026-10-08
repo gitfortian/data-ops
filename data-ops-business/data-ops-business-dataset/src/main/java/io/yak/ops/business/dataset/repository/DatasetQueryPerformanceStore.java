@@ -23,5 +23,9 @@ public interface DatasetQueryPerformanceStore {
   List<DatasetQueryPerformance> successfulByDatasetAndVersion(
       Long projectId, long datasetId, long datasetVersionId, int limit);
 
+  /** Only persisted SUCCESS traces, exclusively before one durable audit ID. */
+  List<io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, Long beforeAuditId, int limit);
+
   int deleteBefore(Instant cutoff, int limit);
 }
