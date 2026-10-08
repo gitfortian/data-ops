@@ -126,5 +126,5 @@ test('new Maven dependency and new auto-configuration entry fail the reference g
 
 test('missing historical anchor is a hard error, never auto-rebaselined', t => {
   const { root } = fixture(t);
-  assert.throws(() => collect(root, A8_BASELINE_SHA), /git rev-parse failed/);
+  assert.throws(() => collect(root, A8_BASELINE_SHA), /git rev-parse --verify failed/);
 });
