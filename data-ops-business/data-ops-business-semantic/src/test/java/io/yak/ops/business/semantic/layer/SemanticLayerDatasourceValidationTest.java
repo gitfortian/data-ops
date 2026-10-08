@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.audit.BusinessAuditService;
+import io.yak.ops.business.audit.AuditOperationHandle;
+import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.datasource.domain.DataSourceReference;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader;
@@ -36,10 +38,11 @@ class SemanticLayerDatasourceValidationTest {
     repository = mock(SemanticLayerRepository.class);
     datasource = mock(DataSourceReader.class);
     provider = mock(ObjectProvider.class);
+    BusinessAuditService audit = mock(BusinessAuditService.class);
+    when(audit.start(any(AuditOperationRequest.class))).thenReturn(mock(AuditOperationHandle.class));
     service = new SemanticLayerService(repository,
         mock(SemanticLayerTemplateRepository.class), mock(SemanticStandardRepository.class),
-        mock(ObjectProvider.class), mock(ObjectProvider.class), mock(BusinessAuditService.class),
-        provider);
+        mock(ObjectProvider.class), mock(ObjectProvider.class), audit, provider);
   }
 
   @Test
@@ -83,7 +86,8 @@ class SemanticLayerDatasourceValidationTest {
     when(provider.getIfAvailable()).thenReturn(datasource);
     when(datasource.requireReference(71L)).thenReturn(new DataSourceReference(71L, 4L, "valid", null));
     when(repository.existsByCode("DWS")).thenReturn(true);
-    assertThrows(RuntimeException.class, this::create);
+    SemanticException error = assertThrows(SemanticException.class, this::create);
+    assertThat(error.getErrorCode()).isEqualTo(SemanticErrorCode.DUPLICATE_CODE);
     verify(datasource).requireReference(71L);
     verify(repository, never()).insert(any(), any());
   }
