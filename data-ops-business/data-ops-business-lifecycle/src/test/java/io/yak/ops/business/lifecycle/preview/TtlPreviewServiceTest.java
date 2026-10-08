@@ -55,6 +55,37 @@ class TtlPreviewServiceTest {
   }
 
   @Test
+  void mixedValidInvalidAndRepeatedPartitionNamesKeepOriginalCounts() {
+    PartitionSplit split = TtlPreviewService.classify(
+        List.of("p20260917", "p_default", "p20260917", "p20260818"),
+        TODAY, 7, 30, 30);
+    assertThat(split.total()).isEqualTo(3);
+    assertThat(split.hotCount()).isEqualTo(2);
+    assertThat(split.coldCount()).isZero();
+    assertThat(split.deletedCount()).isEqualTo(1);
+    assertThat(split.hotRange()).isEqualTo("p20260917 ~ p20260917");
+    assertThat(split.coldRange()).isNull();
+    assertThat(split.deletedPartitions()).containsExactly("p20260818");
+    assertThat(split.estimated()).isFalse();
+    assertThat(split.estimatedReason()).contains("无法解析");
+  }
+
+  @Test
+  void entirelyUnparseablePartitionNamesStayExcluded() {
+    PartitionSplit split = TtlPreviewService.classify(
+        List.of("p_default", "invalid"), TODAY, 7, 30, 30);
+    assertThat(split.total()).isZero();
+    assertThat(split.hotCount()).isZero();
+    assertThat(split.coldCount()).isZero();
+    assertThat(split.deletedCount()).isZero();
+    assertThat(split.hotRange()).isNull();
+    assertThat(split.coldRange()).isNull();
+    assertThat(split.deletedPartitions()).isEmpty();
+    assertThat(split.estimated()).isFalse();
+    assertThat(split.estimatedReason()).contains("无法解析");
+  }
+
+  @Test
   void deletedListCappedAtFifty() {
     List<String> old = new java.util.ArrayList<>();
     for (int i = 1; i <= 60; i++) {

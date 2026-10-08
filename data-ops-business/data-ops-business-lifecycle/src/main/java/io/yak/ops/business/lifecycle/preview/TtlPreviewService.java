@@ -114,12 +114,17 @@ public class TtlPreviewService {
   /** 归类纯函数(ticket 84 单测口径):hot≤hotDays 热,>destroyDays 将删,其余冷。 */
   public static PartitionSplit classify(List<String> rawNames, LocalDate today,
       Integer hotDays, Integer coldDays, Integer destroyDays) {
-    List<String> dated = rawNames.stream().filter(n -> parsePartitionDate(n) != null).toList();
     List<String> hot = new ArrayList<>();
     List<String> cold = new ArrayList<>();
     List<String> deleted = new ArrayList<>();
-    for (String name : dated) {
-      long daysAgo = ChronoUnit.DAYS.between(parsePartitionDate(name), today);
+    int datedCount = 0;
+    for (String name : rawNames) {
+      LocalDate partitionDate = parsePartitionDate(name);
+      if (partitionDate == null) {
+        continue;
+      }
+      datedCount++;
+      long daysAgo = ChronoUnit.DAYS.between(partitionDate, today);
       if (destroyDays != null && daysAgo > destroyDays) {
         deleted.add(name);
       } else if (hotDays != null && daysAgo <= hotDays) {
@@ -128,9 +133,9 @@ public class TtlPreviewService {
         cold.add(name);
       }
     }
-    return new PartitionSplit(dated.size(), hot.size(), cold.size(), deleted.size(),
+    return new PartitionSplit(datedCount, hot.size(), cold.size(), deleted.size(),
         range(hot), range(cold), deleted.stream().sorted().limit(DELETED_LIST_CAP).toList(),
-        false, dated.size() < rawNames.size() ? "部分分区名无法解析日期,未计入归类" : null);
+        false, datedCount < rawNames.size() ? "部分分区名无法解析日期,未计入归类" : null);
   }
 
   /** 兼容 p20260918 / 20260918 / dt=2026-09-18 / 202609 / 2026 等命名。 */
