@@ -122,6 +122,7 @@ class FlowAdminServiceTest {
     assertEquals("新名字", patch.getFlowName());
     assertTrue(patch.getStepsJson().contains("dave"));
     assertEquals("lucas", patch.getUpdatedBy());
+    assertTrue(patch.getUpdateTime() != null);
   }
 
   @Test
@@ -144,6 +145,25 @@ class FlowAdminServiceTest {
     ArgumentCaptor<ApprovalFlowPO> captor = ArgumentCaptor.forClass(ApprovalFlowPO.class);
     verify(flowMapper).updateById(captor.capture());
     assertFalse(captor.getValue().getEnabled());
+    assertEquals(9L, captor.getValue().getId());
+    assertEquals("lucas", captor.getValue().getUpdatedBy());
+    assertTrue(captor.getValue().getUpdateTime() != null);
+  }
+
+  @Test
+  void toggleFromDisabledAlsoPreservesTheUpdateMetadata() {
+    when(flowMapper.selectOne(any())).thenReturn(flow(9L, "MODEL_PUBLISH", false));
+    when(flowMapper.selectById(9L)).thenReturn(flow(9L, "MODEL_PUBLISH", true));
+
+    FlowView view = service.toggle(9L, "lucas");
+
+    ArgumentCaptor<ApprovalFlowPO> captor = ArgumentCaptor.forClass(ApprovalFlowPO.class);
+    verify(flowMapper).updateById(captor.capture());
+    assertTrue(captor.getValue().getEnabled());
+    assertEquals(9L, captor.getValue().getId());
+    assertEquals("lucas", captor.getValue().getUpdatedBy());
+    assertTrue(captor.getValue().getUpdateTime() != null);
+    assertTrue(view.enabled());
   }
 
   // ---------- delete ----------
@@ -172,6 +192,9 @@ class FlowAdminServiceTest {
     assertEquals("#del#9", patch.getFlowCode());
     assertEquals(Boolean.TRUE, patch.getDeleted());
     assertEquals(Boolean.FALSE, patch.getEnabled());
+    assertEquals(9L, patch.getId());
+    assertEquals("lucas", patch.getUpdatedBy());
+    assertTrue(patch.getUpdateTime() != null);
   }
 
   // ---------- 通用 ----------
