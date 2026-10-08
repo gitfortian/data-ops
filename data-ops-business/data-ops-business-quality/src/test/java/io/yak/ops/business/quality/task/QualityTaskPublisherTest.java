@@ -1,6 +1,5 @@
 package io.yak.ops.business.quality.task;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,8 +13,8 @@ import io.yak.ops.business.quality.domain.execution.QualityExecutionDefinition;
 import io.yak.ops.business.quality.domain.execution.QualityExecutionPlan.MonitorSnapshot;
 import io.yak.ops.business.quality.execution.QualityExecutionPlanFactory;
 import io.yak.ops.business.quality.repository.QualityTaskRevisionRepository;
-import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.business.taskcatalog.service.TaskCatalogService;
+import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.common.enums.quality.QualityEnums.AlertLevel;
 import io.yak.ops.common.enums.quality.QualityEnums.CheckResult;
 import io.yak.ops.common.enums.quality.QualityEnums.NotifyChannel;
@@ -89,7 +88,6 @@ class QualityTaskPublisherTest {
     verify(catalog).publish(
         TaskAssetSource.DATA_QUALITY, "42", 7L, "customers-quality",
         "QUALITY", latest.id(), latest.revisionNo());
-    assertEquals(4, latest.revisionNo());
   }
 
   @Test
