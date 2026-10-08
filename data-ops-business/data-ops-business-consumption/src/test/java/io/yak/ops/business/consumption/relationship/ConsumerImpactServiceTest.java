@@ -184,9 +184,12 @@ class ConsumerImpactServiceTest {
     when(project.requireProjectId()).thenReturn(42L);
     UsageEvidence existing = mock(UsageEvidence.class);
     when(existing.providerEvidenceRef()).thenReturn("query:old-audit");
+    // Build the normalization result before starting another Mockito stubbing:
+    // normalized(existing) invokes a mocked getter.
+    UsageNormalizationResult successful = UsageNormalizationResult.normalized(existing);
     when(sync.recoverSuccessfulVersionPage(101L, 9007199254740993L, null, 200))
         .thenReturn(new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
-            List.of(UsageNormalizationResult.normalized(existing)), 701L, false));
+            List.of(successful), 701L, false));
     var service = new ConsumerImpactService(subs, usage, project, sync, null);
 
     var result = service.recoverDatasetVersionPage(key, "9007199254740993", null, 999);
