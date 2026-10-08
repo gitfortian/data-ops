@@ -2,6 +2,7 @@ package io.yak.ops.business.consumption.relationship.source;
 
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataservice.observability.DataServiceCallLogReader;
+import io.yak.ops.business.dataservice.domain.InvocationRecord;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
