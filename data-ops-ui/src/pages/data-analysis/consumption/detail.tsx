@@ -313,6 +313,24 @@ export default function ConsumptionDetailPage() {
     product.productKey.sourceIdentity,
     dataServiceConsumers,
   );
+
+  const refreshManagedConsumers = async () => {
+    if (product.productKey.productType !== 'DATA_SERVICE' || !mayReadManagedConsumers) return;
+    setSourceConsumerState('LOADING');
+    setConsumerListIssue('');
+    try {
+      const next = await listDataServiceConsumers();
+      setDataServiceConsumers(next);
+      setSourceConsumerState('READY');
+      const eligible = eligibleConfiguredDataServiceConsumers(product.productKey.sourceIdentity, next);
+      setSelectedConsumerId((current) => eligible.some((row) => row.id === current)
+        ? current : eligible[0]?.id);
+    } catch {
+      setDataServiceConsumers([]);
+      setSourceConsumerState('UNAVAILABLE');
+      setConsumerListIssue('来源调用方配置刷新失败；不能根据旧列表推断当前授权状态。');
+    }
+  };
   const changeSubscription = async (action: SubscriptionAction | 'REVOKE') => {
     if (action === 'NONE') return;
     const consumerRef = product.productKey.productType === 'DATASET'
@@ -477,8 +495,16 @@ export default function ConsumptionDetailPage() {
         </Card>
 
         <Card title="消费关系与影响" extra={
-          <Button size="small" loading={relationshipLoading} disabled={subscriptionSaving}
-            onClick={() => { void reloadRelationships(); }}>重新核对关系与影响</Button>
+          <Space>
+            <Button size="small" loading={relationshipLoading} disabled={subscriptionSaving}
+              onClick={() => { void reloadRelationships(); }}>重新核对关系与影响</Button>
+            {product.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers ? (
+              <Button size="small" loading={sourceConsumerState === 'LOADING'}
+                onClick={() => { void refreshManagedConsumers(); }}>
+                重新核对调用方配置
+              </Button>
+            ) : null}
+          </Space>
         }>
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Space wrap>
@@ -526,7 +552,8 @@ export default function ConsumptionDetailPage() {
                     label: `${consumer.name} · ${consumer.activeKeyCount} 个有效 Key`,
                   }))}
                   onChange={setSelectedConsumerId}
-                  loading={relationshipLoading}
+                  loading={sourceConsumerState === 'LOADING'}
+                  disabled={sourceConsumerState !== 'READY'}
                 />
               ) : null}
               <Text type="secondary">订阅只声明依赖，不会授予 Dataset 或 Data Service 的访问权限。</Text>
