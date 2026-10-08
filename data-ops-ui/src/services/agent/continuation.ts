@@ -68,8 +68,8 @@ function readTarget(value: unknown): GovernanceTarget | null {
     throw new Error('字段草稿上下文无效');
   }
   if (assetId != null && Number.isSafeInteger(assetId) && Number(assetId) > 0
-    && (purpose == null || purpose === 'ASSET_DESCRIPTION')) {
-    return purpose === 'ASSET_DESCRIPTION' ? { assetId: Number(assetId), purpose } : { assetId: Number(assetId) };
+    && (purpose == null || purpose === 'ASSET_DESCRIPTION' || purpose === 'ASSET_IMPACT')) {
+    return purpose === 'ASSET_DESCRIPTION' || purpose === 'ASSET_IMPACT' ? { assetId: Number(assetId), purpose } : { assetId: Number(assetId) };
   }
   if (qualityMonitorId != null && Number.isSafeInteger(qualityMonitorId) && Number(qualityMonitorId) > 0 && purpose === 'QUALITY_RULES') {
     return { qualityMonitorId: Number(qualityMonitorId), purpose };

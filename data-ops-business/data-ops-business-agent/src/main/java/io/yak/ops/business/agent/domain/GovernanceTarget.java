@@ -48,6 +48,7 @@ public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qua
     }
     if (purpose != null && !("QUALITY_RULES".equals(purpose) && qualityMonitorId != null)
         && !("ASSET_DESCRIPTION".equals(purpose) && assetId != null)
+        && !("ASSET_IMPACT".equals(purpose) && assetId != null)
         && !("STANDARD_MATCH".equals(purpose) && standardMatch != null)
         && !("MODEL_MAPPING".equals(purpose) && modelMapping != null)
         && !("METRIC_EXPLANATION".equals(purpose) && metricExplanation != null)

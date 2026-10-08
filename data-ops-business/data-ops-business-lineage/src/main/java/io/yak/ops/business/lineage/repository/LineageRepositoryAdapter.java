@@ -130,6 +130,11 @@ public class LineageRepositoryAdapter
   }
 
   @Override
+  public long countOutgoingRelations(long sourceAssetId) {
+    return lineageDao.countOutgoingRelations(sourceAssetId);
+  }
+
+  @Override
   public List<LineageRelation> findOutgoingRelations(Set<Long> sourceAssetIds) {
     return lineageDao.selectOutgoingRelations(sourceAssetIds).stream().map(this::toRelation).toList();
   }

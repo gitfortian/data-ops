@@ -45,3 +45,7 @@ Data Service Reader。Asset 不因此增加对 Consumption 或 Data Service 的�
 ## F-010 条件更新
 
 继续使用本域 Mapper/Application 更新台账；对外 api 只暴露定义指纹与授权事实，Agent 不调用命令。
+
+## F-035 使用摘要消费
+
+原 USAGE structuralUsage 的 downstreamReferenceCount 继续表示当前项目一跳下游关系条数；改用 LineageQueryService.downstreamRelationCount 聚合，不物化完整图。Asset 不拥有 Lineage 关系，缺注册保持 EMPTY、源失败保持 UNAVAILABLE；页面访问与 Metric/Consumption 事实分开。Agent 只消费既有 AssetGovernanceQueryApi 分区，不进入 Asset 实现或源 DAO。

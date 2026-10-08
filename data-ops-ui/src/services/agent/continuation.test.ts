@@ -5,6 +5,7 @@ const completed = { sessionId: 's1', turnId: 't1', status: 'COMPLETED' as const 
 it.each([
   [{ assetId: 7, qualityMonitorId: null, qualityExecutionNo: null, purpose: null }, { assetId: 7 }],
   [{ assetId: 7, purpose: 'ASSET_DESCRIPTION' }, { assetId: 7, purpose: 'ASSET_DESCRIPTION' }],
+  [{ assetId: 7, purpose: 'ASSET_IMPACT', qualityExecutionNo: null }, { assetId: 7, purpose: 'ASSET_IMPACT' }],
   [{ assetId: null, qualityMonitorId: 9, qualityExecutionNo: null, purpose: 'QUALITY_RULES' }, { qualityMonitorId: 9, purpose: 'QUALITY_RULES' }],
   [{ assetId: null, qualityMonitorId: null, qualityExecutionNo: 'Q_20261007-1', purpose: null }, { qualityExecutionNo: 'Q_20261007-1' }],
 ])('normalizes persisted target %j without nullable union fields', (target, expected) => {

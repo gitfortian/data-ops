@@ -390,6 +390,25 @@ class AssetDiscoverServiceTest {
     assertEquals("血缘域尚无该资产登记", usage.structuralUsage().reason());
   }
 
+  @Test
+  void usageUsesCountInsteadOfLoadingTheWholeGraphAndKeepsPartialFailure() {
+    when(assetAppService.requireItem(1L)).thenReturn(modelItem());
+    LineageQueryService lineage = mock(LineageQueryService.class);
+    when(lineageProvider.getIfAvailable()).thenReturn(lineage);
+    LineageAsset root = mock(LineageAsset.class); when(root.id()).thenReturn(7L);
+    when(lineage.getAssetByKey("modeling:model:42")).thenReturn(root);
+    when(lineage.downstreamRelationCount(7)).thenReturn(4L);
+    when(viewRecordService.summary(1L, 30)).thenReturn(new AssetViewRecordService.ActivitySummary(2L, 1L, null));
+    var usage = (AssetDiscoverService.UsageSummary) service.section(1L, "USAGE", "alice").data();
+    assertEquals(4, usage.structuralUsage().downstreamReferenceCount());
+    verify(lineage, never()).graph(anyLong(), any(), anyInt());
+    when(lineage.downstreamRelationCount(7)).thenThrow(new IllegalStateException("private"));
+    usage = (AssetDiscoverService.UsageSummary) service.section(1L, "USAGE", "alice").data();
+    assertEquals(SectionStatus.UNAVAILABLE, usage.structuralUsage().status());
+    assertNull(usage.structuralUsage().downstreamReferenceCount());
+    assertEquals(2, usage.pageActivity().viewCount());
+  }
+
   // ---------- fixtures ----------
 
   private static AssetDiscoverService.SectionView section(

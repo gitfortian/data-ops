@@ -37,6 +37,8 @@ public interface LineageRepository {
 
   List<LineageAsset> findAssetsByIds(Set<Long> assetIds);
 
+  long countOutgoingRelations(long sourceAssetId);
+
   List<LineageRelation> findOutgoingRelations(Set<Long> sourceAssetIds);
 
   List<LineageRelation> findIncomingRelations(Set<Long> targetAssetIds);

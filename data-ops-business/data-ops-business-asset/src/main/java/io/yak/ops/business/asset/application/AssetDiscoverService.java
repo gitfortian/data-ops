@@ -389,8 +389,7 @@ public class AssetDiscoverService {
               "血缘域尚无该资产登记");
         } else {
           int downstreamCount =
-              service.graph(root.id(), LineageDirection.DOWNSTREAM, LINEAGE_HOP)
-                  .relations().size();
+              Math.toIntExact(service.downstreamRelationCount(root.id()));
           structuralUsage = new StructuralUsage(UsageOwnerDomain.LINEAGE, SectionStatus.OK,
               "DOWNSTREAM", LINEAGE_HOP, downstreamCount, null);
         }

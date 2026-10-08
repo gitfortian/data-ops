@@ -124,6 +124,23 @@ beforeEach(() => {
 });
 afterEach(() => { window.history.replaceState({}, '', '/'); jest.useRealTimers(); delete (document as any).hidden; });
 
+it('keeps the impact selection through preparation and requires an explicit send', async () => {
+  mockCanRun = true; window.history.replaceState({}, '', '/ai-agent?assetId=7&purpose=ASSET_IMPACT');
+  render(<AiAgentPage />);
+  fireEvent.click(await screen.findByRole('button', { name: '准备影响说明' }));
+  expect(chat.submit).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('会话输入')).toHaveProperty('value', expect.stringContaining('一跳结构关系'));
+  fireEvent.click(screen.getByRole('button', { name: '发送测试问题' }));
+  await waitFor(() => expect(chat.submit).toHaveBeenCalledWith(expect.objectContaining({ governanceTarget: { assetId: 7, purpose: 'ASSET_IMPACT' } })));
+});
+
+it.each(['?assetId=7&purpose=UNKNOWN', '?assetId=7&purpose=ASSET_IMPACT&purpose=ASSET_DESCRIPTION', '?qualityExecutionNo=Q1&purpose=ASSET_IMPACT'])(
+  'blocks an invalid purpose entry instead of starting ordinary chat: %s', async (query) => {
+    mockCanRun = true; window.history.replaceState({}, '', `/ai-agent${query}`); render(<AiAgentPage />);
+    expect(screen.getByText('治理任务入口无效')).toBeInTheDocument();
+    expect(screen.queryByLabelText('会话输入')).not.toBeInTheDocument(); expect(chat.submit).not.toHaveBeenCalled();
+  });
+
 it.each(['STANDARD_MATCH', 'MODEL_MAPPING', 'METRIC_EXPLANATION', 'METRIC_DRAFT'] as const)('reviews a unique persisted %s result without submitting a turn', async kind => {
   const f = scenario(kind);
   api.history.mockResolvedValue([{ role: 'assistant', content: f.text, turnId: 't1' }] as any);

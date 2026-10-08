@@ -39,6 +39,8 @@ public interface LineageDao {
 
   long countRelations();
 
+  long countOutgoingRelations(long sourceAssetId);
+
   List<LineageRelationPO> selectRecentRelations(int limit);
 
   List<LineageAssetPO> selectAssetsByIds(Set<Long> assetIds);

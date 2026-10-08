@@ -1,6 +1,20 @@
 import { governanceEntryPath, governanceQuestions, governanceSourcePath, governanceTaskTitle, parseGovernanceTarget, sameScenarioTarget } from './governance';
 import { scenario } from '../../../tests/fixtures/agent-scenarios';
 
+it('roundtrips a fixed asset impact task and separates it from generic interpretation', () => {
+  const target = { assetId: 7, purpose: 'ASSET_IMPACT' as const };
+  expect(parseGovernanceTarget(governanceEntryPath(target).split('?')[1])).toEqual(target);
+  expect(governanceTaskTitle(target)).toContain('有限影响说明');
+  expect(governanceQuestions(target)[0]).toContain('页面活动');
+  expect(governanceSourcePath(target)).toBe('/data-asset/detail/7');
+  expect(sameScenarioTarget(target, { assetId: 7 })).toBe(false);
+});
+
+it.each(['?assetId=7&purpose=ASSET_IMPACT&purpose=ASSET_DESCRIPTION', '?assetId=7&purpose=UNKNOWN',
+  '?qualityExecutionNo=Q1&purpose=ASSET_IMPACT', '?assetId=7&qualityMonitorId=8&purpose=ASSET_IMPACT'])('rejects mixed asset impact URLs: %s', (search) => {
+  expect(parseGovernanceTarget(search)).toBeNull();
+});
+
 it('roundtrips asset and execution selections to existing routes', () => {
   const asset = { assetId: 7 };
   expect(parseGovernanceTarget(governanceEntryPath(asset).split('?')[1])).toEqual(asset);

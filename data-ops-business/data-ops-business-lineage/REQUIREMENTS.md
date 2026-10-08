@@ -56,3 +56,7 @@ Lineage 不负责调度 Flink/Spark/Hadoop 作业，不成为第二套任务状�
 - DAO/PO 不进入稳定 facade 与 Domain contract；
 - 跨模块调用方只依赖声明的公共 contract；
 - 业务行为测试继续通过。
+
+## F-035 下游关系计数
+
+原 query.LineageQueryService 增加 downstreamRelationCount：经 LineageGraphReader 校验当前项目可见根，再由原 Repository/DAO 按当前项目及 sourceAssetId 执行 COUNT；缺少项目拒绝。返回一跳有向边条数，不去重消费者，不含全图/表达式，不推断 observed usage。Asset USAGE 是实际调用方；无新 package、依赖边或事务 owner。

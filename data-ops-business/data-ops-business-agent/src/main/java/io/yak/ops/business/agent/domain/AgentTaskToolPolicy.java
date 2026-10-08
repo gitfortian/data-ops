@@ -4,10 +4,10 @@ import java.util.Set;
 
 /** Execution scope is independent of source authorization and never comes from model instructions. */
 public final class AgentTaskToolPolicy {
-  public static final String VERSION = "F-034-v1";
+  public static final String VERSION = "F-035-v1";
   public static final Set<String> REGISTERED = Set.of("list_datasets", "get_dataset_fields",
       "run_dataset_query", "current_date_info", "analyze_with_python", "request_clarification",
-      "save_analysis_report", "search_assets", "get_asset_evidence", "get_asset_section_evidence",
+      "save_analysis_report", "search_assets", "get_asset_evidence", "get_asset_section_evidence", "get_asset_impact_evidence",
       "get_quality_execution_evidence", "get_quality_execution_comparison", "get_quality_monitor_evidence", "propose_quality_rules",
       "propose_asset_description", "verify_governance_facts", "load_skill_through_path");
   private static final Set<String> AUXILIARY = Set.of("current_date_info", "request_clarification",
@@ -37,9 +37,10 @@ public final class AgentTaskToolPolicy {
           || "get_model_mapping_context".equals(tool);
     }
     if (tool == null || !REGISTERED.contains(tool)) return false;
-    if (target == null) return !tool.startsWith("propose_") && !"get_quality_execution_comparison".equals(tool);
+    if (target == null) return !tool.startsWith("propose_") && !"get_quality_execution_comparison".equals(tool) && !"get_asset_impact_evidence".equals(tool);
     if (AUXILIARY.contains(tool)) return true;
     if (target.qualityBaselineExecutionNo() != null) return "get_quality_execution_comparison".equals(tool);
+    if ("ASSET_IMPACT".equals(target.purpose())) return "get_asset_impact_evidence".equals(tool);
     if (target.assetId() != null) {
       return "get_asset_evidence".equals(tool) || "get_asset_section_evidence".equals(tool)
           || ("ASSET_DESCRIPTION".equals(target.purpose()) && "propose_asset_description".equals(tool));
