@@ -218,6 +218,11 @@ class ExactVersionGoldenEvidenceContractTest(unittest.TestCase):
         assert_exact_version_project_isolation(
             {"usageState": "EMPTY", "consumers": []},
             "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+        with self.assertRaisesRegex(ValueError, "isolation cannot be verified"):
+            assert_exact_version_project_isolation(
+                {"usageState": "UNAVAILABLE", "consumers": [],
+                 "coverage": {"sourceReadUnavailable": True}},
+                "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
         with self.assertRaisesRegex(ValueError, "Cross-Project"):
             assert_exact_version_project_isolation(
                 impact(), "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
