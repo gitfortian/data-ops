@@ -199,6 +199,7 @@ class ExactVersionGoldenEvidenceContractTest(unittest.TestCase):
         current = impact()
         responses = [deepcopy(current), deepcopy(current)]
         responses[1]["consumers"][0]["observedVersions"][0]["successfulUsageCount"] = 2
+        responses[1]["consumers"][0]["successfulUsageCount"] = 2
         api = SimpleNamespace(request=lambda method, path, params=None: responses.pop(0))
         with self.assertRaisesRegex(ValueError, "changed successful Usage"):
             assert_exact_version_replay(
