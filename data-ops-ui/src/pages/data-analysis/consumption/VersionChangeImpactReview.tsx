@@ -1,8 +1,10 @@
-import type { ConsumerImpact, DataProductView } from '@/services/consumption';
+import type { ConsumerImpact, DataProductView, ConsumerRef } from '@/services/consumption';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { history } from '@umijs/max';
 import { Alert, Button, Card, Checkbox, Input, Select, Space, Table, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
+import { consumerSourceTarget } from './consumer-source-navigation';
 import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
 import { consumerVersionOutreachDraft } from './version-impact-outreach';
 import {
@@ -29,6 +31,7 @@ export default function VersionChangeImpactReview({
   impactIssue: string;
   loading: boolean;
 }) {
+  const { can } = usePermissionAccess();
   const [requestedVersion, setRequestedVersion] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
   const [proposedChange, setProposedChange] = useState('');
@@ -85,6 +88,17 @@ export default function VersionChangeImpactReview({
     }
   };
 
+  const consumerSourceLink = (ref: ConsumerRef) => {
+    const target = consumerSourceTarget(ref);
+    if (!target || (target.requiredPermission && !can(target.requiredPermission))) return null;
+    return (
+      <Button type="link" size="small" style={{ padding: 0, height: 'auto' }}
+        title={target.description} onClick={() => history.push(target.href)}>
+        {target.label}
+      </Button>
+    );
+  };
+
   const columns = [
     {
       title: '已知 Consumer',
@@ -95,6 +109,7 @@ export default function VersionChangeImpactReview({
           <Text type="secondary">
             {row.consumer.consumerRef.consumerType} · {row.consumer.consumerRef.sourceDomain}:{row.consumer.consumerRef.sourceIdentity}
           </Text>
+          {consumerSourceLink(row.consumer.consumerRef)}
         </Space>
       ),
     },
@@ -150,7 +165,7 @@ export default function VersionChangeImpactReview({
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
         <Text type="secondary">
           请选择准备替换或修改的精确来源版本。此处只展示已知订阅与本次来源窗口内真实成功消费；
-          不将当前发布版本、声明依赖或 Lineage 推断为某次执行的版本。
+          不将当前发布版本、声明依赖或 Lineage 推断为某次执行的版本。可核对的来源对象链接只用于定位真实配置，不代表已确认负责人或授权。
         </Text>
         <Space wrap>
           <Text>待变更来源版本</Text>
