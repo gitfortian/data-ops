@@ -44,8 +44,13 @@ export const getProduct = async (productKey: string): Promise<ProductLookupResul
   '加载数据产品详情失败',
 );
 
-export const getConsumerImpact = async (productKey: string): Promise<ConsumerImpact> => unwrap(
-  await HttpUtils.get<ConsumerImpact>(`${CONSUMPTION_API}/impact${queryString({ productKey, usageLimit: 200 })}`),
+export const getConsumerImpact = async (
+  productKey: string,
+  sourceVersionIdentity?: string,
+): Promise<ConsumerImpact> => unwrap(
+  await HttpUtils.get<ConsumerImpact>(`${CONSUMPTION_API}/impact${queryString({
+    productKey, usageLimit: 200, sourceVersionIdentity,
+  })}`),
   '加载消费影响失败',
 );
 

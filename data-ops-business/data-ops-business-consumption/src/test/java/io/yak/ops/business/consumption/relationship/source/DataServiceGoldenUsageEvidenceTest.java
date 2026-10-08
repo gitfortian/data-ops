@@ -300,6 +300,17 @@ class DataServiceGoldenUsageEvidenceTest {
     }
 
     @Override
+    public List<UsageEvidence> listByVersion(
+        Long projectId, ProductKey productKey, String versionIdentity, int limit) {
+      return values.stream()
+          .filter(row -> row.projectId().equals(projectId))
+          .filter(row -> row.productKey().equals(productKey))
+          .filter(row -> row.sourceVersion().identity().equals(versionIdentity))
+          .limit(Math.max(1, Math.min(200, limit)))
+          .toList();
+    }
+
+    @Override
     public List<UsageEvidence> list(
         Long projectId, ProductKey productKey, ConsumerRef consumerRef, int limit) {
       return values.stream()

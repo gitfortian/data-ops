@@ -56,6 +56,19 @@ public class MybatisUsageEvidenceRepository implements UsageEvidenceRepository {
     return mapper.selectList(query).stream().map(this::toDomain).toList();
   }
 
+  @Override
+  public List<UsageEvidence> listByVersion(
+      Long projectId, ProductKey productKey, String sourceVersionIdentity, int limit) {
+    LambdaQueryWrapper<UsageEvidencePO> query = new LambdaQueryWrapper<UsageEvidencePO>()
+        .eq(UsageEvidencePO::getProjectId, projectId)
+        .eq(UsageEvidencePO::getProductKey, productKey.value())
+        .eq(UsageEvidencePO::getSourceVersionIdentity, sourceVersionIdentity)
+        .orderByDesc(UsageEvidencePO::getObservedAt)
+        .orderByDesc(UsageEvidencePO::getId)
+        .last("LIMIT " + Math.max(1, Math.min(200, limit)));
+    return mapper.selectList(query).stream().map(this::toDomain).toList();
+  }
+
   private UsageEvidence toDomain(UsageEvidencePO po) {
     return new UsageEvidence(
         po.getId(),
