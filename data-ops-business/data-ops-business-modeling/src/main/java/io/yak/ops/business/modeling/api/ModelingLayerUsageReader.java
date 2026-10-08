@@ -23,6 +23,16 @@ public class ModelingLayerUsageReader implements LayerUsageReader {
   private final CurrentProject currentProject;
 
   @Override
+  public long countPersistedLayerReferences(String layerCode) {
+    // Include recoverable models: a future restore must never point at a
+    // physically deleted Semantic warehouse layer.
+    return modelMapper.selectCount(
+        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ModelingModelPO>()
+            .eq(ModelingModelPO::getProjectId, currentProject.requireProjectId())
+            .eq(ModelingModelPO::getLayerCode, layerCode));
+  }
+
+  @Override
   public Map<String, Long> countModelsByLayer() {
     List<Map<String, Object>> rows =
         modelMapper.selectMaps(
