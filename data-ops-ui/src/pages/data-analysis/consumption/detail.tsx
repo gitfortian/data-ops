@@ -39,7 +39,7 @@ import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
 import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
-import { consumerSourceTarget } from './consumer-source-navigation';
+import { consumerSourceTarget } from '@/config/consumer-source-navigation';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
