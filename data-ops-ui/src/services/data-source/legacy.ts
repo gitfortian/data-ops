@@ -1,3 +1,4 @@
+import { queryString } from '@/services/http/query-string';
 import HttpUtils from '@/utils/HttpUtils';
 
 import type {
@@ -15,17 +16,6 @@ import type {
 
 const DATA_SOURCE_API_PREFIX = '/api/v1/data-source';
 const DATA_SOURCE_CATALOG_API_PREFIX = `${DATA_SOURCE_API_PREFIX}/catalog`;
-
-const queryString = (params: Record<string, unknown>) => {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).length > 0) {
-      search.set(key, String(value));
-    }
-  });
-  const result = search.toString();
-  return result ? `?${result}` : '';
-};
 
 export const fetchDataSourcePage = (
   params: DataSourcePageParams,

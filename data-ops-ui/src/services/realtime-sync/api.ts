@@ -1,3 +1,4 @@
+import { queryString } from '@/services/http/query-string';
 import HttpUtils from '@/utils/HttpUtils';
 
 import type {
@@ -25,17 +26,6 @@ import type {
 const REALTIME_SYNC_API = '/api/v1/realtime-sync';
 const DATA_SOURCE_API = '/api/v1/data-source';
 const COMPUTE_ENVIRONMENT_API = '/api/v1/compute-environments';
-
-const queryString = (params: object) => {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).length > 0) {
-      search.set(key, String(value));
-    }
-  });
-  const result = search.toString();
-  return result ? `?${result}` : '';
-};
 
 const needsIdempotencyKey = (action: RealtimeAction) =>
   action === 'start' ||
