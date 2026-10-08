@@ -1,3 +1,4 @@
+import { queryString } from './query-string';
 import HttpUtils from '@/utils/HttpUtils';
 
 import type {
@@ -34,16 +35,6 @@ const EDITOR_SETTINGS_API = `${DATA_DEVELOPMENT_API}/editor-settings`;
 
 const resourcePath = (prefix: string, id: DevelopmentId) =>
   `${prefix}/${encodeURIComponent(id)}`;
-
-const queryString = (query: object) => {
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    params.set(key, String(value));
-  });
-  const value = params.toString();
-  return value ? `?${value}` : '';
-};
 
 export const listDevelopmentDirectories = (): Promise<
   DevelopmentDirectory[]
