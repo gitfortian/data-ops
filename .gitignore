@@ -75,3 +75,6 @@ docs/product/acceptance/golden-sample/*.local.json
 
 # Local AI evaluation reports (explicit reviewed evidence belongs under docs/ai/acceptance)
 /.task-ai-evaluation/
+
+# Local-only AI/IDE scratch files; never commit machine-specific Jest mirrors
+/.zcode/tmp/
