@@ -9,6 +9,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.apache.ibatis.session.Configuration;
+import org.junit.jupiter.api.BeforeAll;
 import io.yak.ops.business.dataservice.dao.mapper.DataServiceCallLogMapper;
 import io.yak.ops.business.dataservice.dao.model.DataServiceCallLogPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -17,6 +21,15 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class DataServiceExactInvocationRepositoryTest {
+
+  @BeforeAll
+  static void initializeMybatisLambdaMetadata() {
+    // Standalone Mockito tests do not initialize MyBatis entity metadata automatically.
+    // Install real TableInfo so SQL segments and bound values are asserted, not guessed.
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new Configuration(), "data-service-exact-audit-test"),
+        DataServiceCallLogPO.class);
+  }
 
   @Test
   void queryScopesOneAuditByTrustedProjectAndOwningApiAndInvocationId() {
@@ -61,6 +74,7 @@ class DataServiceExactInvocationRepositoryTest {
     ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
         ArgumentCaptor.forClass(LambdaQueryWrapper.class);
     verify(mapper).selectOne(capture.capture());
+    assertThat(capture.getValue().getSqlSegment()).contains("project_id", "api_id", "id");
     assertThat(capture.getValue().getParamNameValuePairs().values())
         .containsExactlyInAnyOrder(5L, 7L, 9007199254740993L);
   }
