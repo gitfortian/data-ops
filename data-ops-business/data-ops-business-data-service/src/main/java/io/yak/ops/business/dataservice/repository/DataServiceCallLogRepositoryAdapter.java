@@ -8,6 +8,7 @@ import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.core.project.CurrentProject;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -57,6 +58,22 @@ public class DataServiceCallLogRepositoryAdapter implements DataServiceCallLogRe
                 .orderByDesc(DataServiceCallLogPO::getId)
                 .last("LIMIT " + size))
         .stream().map(this::toDomain).toList();
+  }
+
+  @Override
+  public Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId) {
+    if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {
+      throw new IllegalArgumentException("数据服务 ID 与调用记录 ID 必须大于 0");
+    }
+    Long projectId = currentProject.requireProjectId();
+    // All three predicates MUST remain on the one database query. Never select
+    // globally by audit ID then check ownership after deserializing another Project's data.
+    DataServiceCallLogPO row = mapper.selectOne(
+        Wrappers.<DataServiceCallLogPO>lambdaQuery()
+            .eq(DataServiceCallLogPO::getProjectId, projectId)
+            .eq(DataServiceCallLogPO::getApiId, apiId)
+            .eq(DataServiceCallLogPO::getId, invocationId));
+    return Optional.ofNullable(row).map(this::toDomain);
   }
 
   @Override

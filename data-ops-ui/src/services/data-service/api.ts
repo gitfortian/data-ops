@@ -13,6 +13,7 @@ import type {
   DataServiceApiKeyUpdate,
   DataServiceAuthMode,
   DataServiceCallLog,
+  DataServiceInvocationEvidence,
   DataServiceDocumentation,
   DataServiceDocumentationInput,
   DataServiceIpAccessMode,
@@ -252,6 +253,18 @@ export const listDataServiceLogs = (
 ): Promise<DataServiceCallLog[]> =>
   HttpUtils.getData<DataServiceCallLog[]>(
     `${DATA_SERVICE_API_PREFIX}/${id}/logs${queryString({ limit })}`,
+  );
+
+/**
+ * Exact historical audit: no 200-row window; invocationId is never converted to JS Number.
+ * Project + API authorization is enforced by the owning Data Service endpoint.
+ */
+export const getDataServiceInvocationEvidence = (
+  id: number,
+  invocationId: string,
+): Promise<DataServiceInvocationEvidence> =>
+  HttpUtils.getData<DataServiceInvocationEvidence>(
+    `${DATA_SERVICE_API_PREFIX}/${id}/logs/${encodeURIComponent(invocationId)}`,
   );
 
 export const listDataServiceDataSources = (): Promise<DataSourceOption[]> =>

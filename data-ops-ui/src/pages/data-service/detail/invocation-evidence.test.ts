@@ -1,24 +1,37 @@
-import { verifiedInvocationFromWindow } from './invocation-evidence';
+import { verifiedPersistedInvocation } from './invocation-evidence';
+import type { DataServiceInvocationEvidence } from '@/services/data-service';
 
-describe('Data Service execution evidence deep link', () => {
-  const calls = [{ id: 51, apiId: 7 }, { id: 52, apiId: 8 }, { id: 53, apiId: 7 }];
+const evidence = (id: string, apiId = '7'): DataServiceInvocationEvidence => ({
+  state: 'FOUND',
+  record: {
+    id, apiId, success: true, durationMs: 25, rowCount: 3,
+    sourceRevisionId: '9007199254740995', sourceRevisionNo: 12,
+  },
+});
 
-  it('selects only the requested invocation inside its owning API', () => {
-    expect(verifiedInvocationFromWindow(calls, 7, '53')).toEqual({ id: 53, apiId: 7 });
-    expect(verifiedInvocationFromWindow(calls, 7, '52')).toBeUndefined();
-    expect(verifiedInvocationFromWindow(calls, 7, '999')).toBeUndefined();
+describe('exact persisted Data Service invocation evidence', () => {
+  it('verifies old audit beyond the 200-row window with unrounded BIGINT', () => {
+    const row = verifiedPersistedInvocation(evidence('9007199254740993'),
+      7, '9007199254740993');
+    expect(row?.id).toBe('9007199254740993');
+    expect(row?.sourceRevisionId).toBe('9007199254740995');
   });
 
-  it('rejects unsafe JSON numeric IDs and cannot attribute rounded BIGINT evidence', () => {
-    expect(verifiedInvocationFromWindow([{ id: 9007199254740992, apiId: 7 }],
-      7, '9007199254740993')).toBeUndefined();
-    expect(verifiedInvocationFromWindow([{ id: 9007199254740992, apiId: 7 }],
-      7, '9007199254740992')).toBeUndefined();
+  it('does not substitute a different invocation or a foreign API', () => {
+    expect(verifiedPersistedInvocation(evidence('101'), 7, '102')).toBeUndefined();
+    expect(verifiedPersistedInvocation(evidence('101', '8'), 7, '101')).toBeUndefined();
+    expect(verifiedPersistedInvocation(evidence('9007199254740992'), 7,
+      '9007199254740993')).toBeUndefined();
   });
 
-  it('rejects invalid identities rather than falling back to unrelated log rows', () => {
-    expect(verifiedInvocationFromWindow(calls, 7, '0')).toBeUndefined();
-    expect(verifiedInvocationFromWindow(calls, 7, '../51')).toBeUndefined();
-    expect(verifiedInvocationFromWindow(calls, NaN, '51')).toBeUndefined();
+  it('never treats missing, invalid or inconsistent source states as verified', () => {
+    expect(verifiedPersistedInvocation({ state: 'NOT_FOUND', record: null },
+      7, '101')).toBeUndefined();
+    expect(verifiedPersistedInvocation(null, 7, '101')).toBeUndefined();
+    expect(verifiedPersistedInvocation(evidence('101'), 7, '0')).toBeUndefined();
+    expect(verifiedPersistedInvocation(evidence('101'), 7, '../101')).toBeUndefined();
+    expect(verifiedPersistedInvocation(evidence('101'), NaN, '101')).toBeUndefined();
+    expect(verifiedPersistedInvocation({ state: 'FOUND', record: null }, 7, '101'))
+      .toBeUndefined();
   });
 });

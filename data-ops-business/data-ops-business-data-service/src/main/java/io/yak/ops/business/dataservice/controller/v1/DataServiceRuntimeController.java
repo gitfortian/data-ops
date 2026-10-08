@@ -71,6 +71,15 @@ public class DataServiceRuntimeController {
     return Result.success(callLogReader.recent());
   }
 
+  @Operation(summary = "按 API 与 Invocation ID 精确核对持久化调用证据")
+  @RequiresPermission(DataServicePermissionCode.OBSERVE)
+  @GetMapping("/{id}/logs/{invocationId}")
+  public Result<io.yak.ops.business.dataservice.observability.InvocationEvidenceView> invocationEvidence(
+      @PathVariable("id") Long id,
+      @PathVariable("invocationId") Long invocationId) {
+    return Result.success(callLogReader.findByApiAndId(id, invocationId));
+  }
+
   @Operation(summary = "查询指定数据服务最近调用记录")
   @RequiresPermission(DataServicePermissionCode.OBSERVE)
   @GetMapping("/{id}/logs")
