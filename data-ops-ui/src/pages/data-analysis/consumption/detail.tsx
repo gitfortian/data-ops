@@ -345,6 +345,11 @@ export default function ConsumptionDetailPage() {
   };
   const changeSubscription = async (action: SubscriptionAction | 'REVOKE') => {
     if (action === 'NONE') return;
+    if (action === 'SUBSCRIBE' && product.productKey.productType === 'DATA_SERVICE'
+        && sourceConsumerState !== 'READY') {
+      message.error('当前调用方来源尚未核对成功，请先重新核对配置');
+      return;
+    }
     const consumerRef = product.productKey.productType === 'DATASET'
       ? actor
         ? { consumerType: 'USER' as const, sourceDomain: 'SECURITY_PRINCIPAL', sourceIdentity: actor, displayHint: actor }
@@ -532,7 +537,10 @@ export default function ConsumptionDetailPage() {
                   type="primary"
                   loading={subscriptionSaving || relationshipLoading}
                   disabled={!!subscriptionIssue || !canManageSubscription
-                    || (product.productKey.productType === 'DATASET' ? !actor : !selectedConsumerId)}
+                    || (product.productKey.productType === 'DATASET' ? !actor : !selectedConsumerId)
+                    || (subscriptionAction === 'SUBSCRIBE'
+                      && product.productKey.productType === 'DATA_SERVICE'
+                      && sourceConsumerState !== 'READY')}
                   onClick={() => { void changeSubscription(subscriptionAction); }}
                 >
                   {subscriptionAction === 'SUBSCRIBE' ? `声明${consumptionMode}依赖`
