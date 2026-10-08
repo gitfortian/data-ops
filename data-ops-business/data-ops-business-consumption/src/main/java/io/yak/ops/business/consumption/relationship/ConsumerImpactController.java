@@ -43,7 +43,7 @@ public class ConsumerImpactController {
   public Result<DataServiceAuditRecoveryView> recoverDataServiceRevisionPage(
       @RequestParam String productKey,
       @RequestParam String sourceVersionIdentity,
-      @RequestParam(required = false) Long beforeInvocationId,
+      @RequestParam(required = false) String beforeInvocationId,
       @RequestParam(defaultValue = "200") int limit) {
     return Result.success(service.recoverDataServiceRevisionPage(
         ProductKey.parse(productKey), sourceVersionIdentity, beforeInvocationId, limit));
