@@ -29,3 +29,7 @@
 - 新资产入口测试隔离 Ant Tabs 的样式渲染，保留真实读取、作用域与导航行为；jsdom 无法解析原页面工具类生成的焦点选择器。原 Agent 安装组件 smoke test 在集合内保留。
 
 - 最终投影边界复核 14 测试通过，补充超大 hop 不能通过整数溢出被识别为一跳；去重后后端共 552 项，550 通过、2 项既有 MySQL 条件跳过。
+
+- 代码提交 `63483276c0eceac741a12ee9c1aa0acb39720847` 的 `npm run build` 成功，随后 `node scripts/release/frontend-artifact.mjs` 校验 revision/sourceDigest/assetDigest 通过。产物对应当时本地工作区摘要（含原有未提交配置），不作为洁净发行验收；本记录后的提交仅补充 Markdown 证据，CI 从其最终 HEAD 独立构建。
+- 实际 PR 描述经 `check-product-pr.mjs` / `check-product-surface.mjs` 通过；与当时主线 `1bdeec34` 的 merge-tree 无冲突。
+- CI impact-plan 实测为 full，直接原因是 `data-ops-ui/src/services/agent/continuation.test.ts` 属于尚未映射的前端共享服务路径；本功能 PR 不修改 CI 分类策略。
