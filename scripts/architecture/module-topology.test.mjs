@@ -54,6 +54,17 @@ test('POM parser ignores commented modules, dependencyManagement and build plugi
     [['actual', 'compile'], ['only-for-tests', 'test']]);
 });
 
+
+test('inherited Maven groupId is not replaced by first external dependency group', () => {
+  const parsed = parsePom(project(parent + '<artifactId>data-ops-boot</artifactId>'
+    + '<dependencies><dependency><groupId>com.h2database</groupId>'
+    + '<artifactId>h2</artifactId><scope>test</scope></dependency>'
+    + dep('data-ops-core') + '</dependencies>'));
+  assert.equal(parsed.groupId, 'io.yak.ops');
+  assert.equal(parsed.artifactId, 'data-ops-boot');
+  assert.equal(parsed.dependencies[0].groupId, 'com.h2database');
+});
+
 test('role classification is by actual module ownership, not by a Service name', () => {
   assert.equal(moduleRole('data-ops-boot'), 'boot');
   assert.equal(moduleRole('data-ops-dist'), 'distribution');
