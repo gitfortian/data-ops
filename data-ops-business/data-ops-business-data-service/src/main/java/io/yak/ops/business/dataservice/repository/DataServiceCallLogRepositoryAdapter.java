@@ -109,6 +109,32 @@ public class DataServiceCallLogRepositoryAdapter implements DataServiceCallLogRe
         .stream().map(this::toDomain).toList();
   }
 
+  /**
+   * Source-owned durable cursor: Project/API/immutable Revision/SUCCESS/ID are
+   * all SQL predicates, applied before the bounded descending-ID window.
+   */
+  @Override
+  public List<InvocationRecord> successfulPageByApiAndRevision(
+      Long apiId, Long sourceRevisionId, Long beforeInvocationId, int requestedLimit) {
+    if (apiId == null || apiId <= 0L || sourceRevisionId == null || sourceRevisionId <= 0L
+        || (beforeInvocationId != null && beforeInvocationId <= 0L)) {
+      throw new IllegalArgumentException("Data Service, Revision and audit cursor must be positive");
+    }
+    Long projectId = currentProject.requireProjectId();
+    int size = Math.max(1, Math.min(200, requestedLimit));
+    return mapper.selectList(
+            Wrappers.<DataServiceCallLogPO>lambdaQuery()
+                .eq(DataServiceCallLogPO::getProjectId, projectId)
+                .eq(DataServiceCallLogPO::getApiId, apiId)
+                .eq(DataServiceCallLogPO::getSourceRevisionId, sourceRevisionId)
+                .eq(DataServiceCallLogPO::getSuccess, true)
+                .lt(beforeInvocationId != null, DataServiceCallLogPO::getId,
+                    beforeInvocationId == null ? Long.MAX_VALUE : beforeInvocationId)
+                .orderByDesc(DataServiceCallLogPO::getId)
+                .last("LIMIT " + size))
+        .stream().map(this::toDomain).toList();
+  }
+
   @Override
   public Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId) {
     if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {

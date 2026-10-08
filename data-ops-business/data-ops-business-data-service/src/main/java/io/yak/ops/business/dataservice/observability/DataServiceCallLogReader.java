@@ -5,6 +5,7 @@ import io.yak.ops.business.dataservice.observability.InvocationEvidenceView;
 import io.yak.ops.business.dataservice.repository.DataServiceCallLogRepository;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +37,22 @@ public class DataServiceCallLogReader {
       Long apiId, Long sourceRevisionId, int limit) {
     return repository.recentSuccessfulByApiAndRevision(
         apiId, sourceRevisionId, Math.max(1, Math.min(200, limit)));
+  }
+
+  /**
+   * Explicit bounded recovery reads retained persisted SUCCESS audits only.
+   * No in-process fallback and no accidental cross-revision reconciliation.
+   */
+  public List<InvocationRecord> successfulPageByApiAndRevision(
+      Long apiId, Long sourceRevisionId, Long beforeInvocationId, int limit) {
+    if (apiId == null || apiId <= 0L || sourceRevisionId == null || sourceRevisionId <= 0L
+        || (beforeInvocationId != null && beforeInvocationId <= 0L)) {
+      throw new IllegalArgumentException("Data Service, immutable Revision and cursor must be positive");
+    }
+    return Objects.requireNonNull(
+        repository.successfulPageByApiAndRevision(
+            apiId, sourceRevisionId, beforeInvocationId, Math.max(1, Math.min(200, limit))),
+        "Persisted Data Service successful invocation audit page is unavailable");
   }
 
   public InvocationEvidenceView findByApiAndId(Long apiId, Long invocationId) {

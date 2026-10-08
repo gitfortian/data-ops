@@ -182,4 +182,66 @@ class DataServiceExactInvocationRepositoryTest {
     verifyNoInteractions(project, mapper);
   }
 
+
+  @Test
+  void retainedSuccessfulRevisionPagesFilterProjectApiRevisionAndExclusiveBigintBeforeLimit() {
+    DataServiceCallLogMapper mapper = mock(DataServiceCallLogMapper.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    DataServiceCallLogPO row = new DataServiceCallLogPO();
+    row.setId(9007199254740993L);
+    row.setProjectId(42L);
+    row.setApiId(7L);
+    row.setSourceRevisionId(9007199254740995L);
+    row.setSuccess(true);
+    when(mapper.selectList(any())).thenReturn(java.util.List.of(row));
+    var repository = new DataServiceCallLogRepositoryAdapter(mapper, project);
+
+    var page = repository.successfulPageByApiAndRevision(
+        7L, 9007199254740995L, 9007199254740994L, 999);
+
+    assertThat(page).hasSize(1);
+    assertThat(page.getFirst().id()).isEqualTo(9007199254740993L);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectList(capture.capture());
+    var query = capture.getValue();
+    assertThat(query.getSqlSegment())
+        .contains("project_id", "api_id", "source_revision_id",
+            "success", "id <", "id DESC", "LIMIT 200")
+        .doesNotContain("create_time DESC");
+    assertThat(query.getParamNameValuePairs().values())
+        .containsExactlyInAnyOrder(42L, 7L, 9007199254740995L, true, 9007199254740994L);
+    verify(project).requireProjectId();
+  }
+
+  @Test
+  void firstRevisionPageHasNoCursorPredicateAndInvalidIdentityFailsClosed() {
+    DataServiceCallLogMapper mapper = mock(DataServiceCallLogMapper.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    var repository = new DataServiceCallLogRepositoryAdapter(mapper, project);
+
+    repository.successfulPageByApiAndRevision(7L, 99L, null, 0);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectList(capture.capture());
+    assertThat(capture.getValue().getSqlSegment())
+        .contains("id DESC", "LIMIT 1")
+        .doesNotContain("id <");
+    org.mockito.Mockito.clearInvocations(mapper, project);
+
+    assertThatThrownBy(() -> repository.successfulPageByApiAndRevision(0L, 99L, null, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> repository.successfulPageByApiAndRevision(7L, 0L, null, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> repository.successfulPageByApiAndRevision(7L, 99L, -1L, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> repository.successfulPageByApiAndRevision(7L, 99L, 0L, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    verifyNoInteractions(project, mapper);
+  }
+
 }

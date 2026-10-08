@@ -2,6 +2,7 @@ package io.yak.ops.business.consumption.relationship.source;
 
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataservice.observability.DataServiceCallLogReader;
+import io.yak.ops.business.dataservice.domain.InvocationRecord;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,35 @@ public class DataServiceUsageEvidenceSynchronizer {
             apiId, sourceRevisionId, Math.max(1, Math.min(200, limit))).stream()
         .map(normalizer::normalize)
         .toList();
+  }
+
+  /**
+   * Single bounded page of source-owned successful invocation audit.
+   * The last persisted invocation ID is the exclusive next-page cursor.
+   */
+  public DataServiceRecoveryPage recoverSuccessfulRevisionPage(
+      Long apiId, Long sourceRevisionId, Long beforeInvocationId, int requestedLimit) {
+    int limit = Math.max(1, Math.min(200, requestedLimit));
+    List<InvocationRecord> audit = callLogReader.successfulPageByApiAndRevision(
+        apiId, sourceRevisionId, beforeInvocationId, limit);
+    // A missing ID would allow a successful-looking response with no usable continuation.
+    for (InvocationRecord invocation : audit) {
+      if (invocation == null || invocation.id() == null || invocation.id() <= 0L) {
+        throw new IllegalStateException("Persisted invocation recovery page has no durable cursor");
+      }
+    }
+    List<UsageNormalizationResult> normalized = audit.stream()
+        .map(normalizer::normalize)
+        .toList();
+    Long next = audit.size() == limit ? audit.getLast().id() : null;
+    return new DataServiceRecoveryPage(normalized, next, audit.size() < limit);
+  }
+
+  public record DataServiceRecoveryPage(
+      List<UsageNormalizationResult> results, Long nextBeforeInvocationId, boolean exhausted) {
+    public DataServiceRecoveryPage {
+      results = List.copyOf(results);
+    }
   }
 
   public List<UsageNormalizationResult> synchronizeRecentByProduct(Long apiId, int limit) {

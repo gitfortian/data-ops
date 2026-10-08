@@ -38,6 +38,17 @@ public class ConsumerImpactController {
         ProductKey.parse(productKey), sourceVersionIdentity, beforeAuditId, limit));
   }
 
+  @Operation(summary = "逐页恢复精确 Data Service Revision 保留成功调用审计的 Usage 证据")
+  @PostMapping("/data-service-revision-recovery")
+  public Result<DataServiceAuditRecoveryView> recoverDataServiceRevisionPage(
+      @RequestParam String productKey,
+      @RequestParam String sourceVersionIdentity,
+      @RequestParam(required = false) String beforeInvocationId,
+      @RequestParam(defaultValue = "200") int limit) {
+    return Result.success(service.recoverDataServiceRevisionPage(
+        ProductKey.parse(productKey), sourceVersionIdentity, beforeInvocationId, limit));
+  }
+
   @Operation(summary = "查询已知 Consumer 与声明/实际消费证据")
   @GetMapping
   public Result<ConsumerImpactView> view(
