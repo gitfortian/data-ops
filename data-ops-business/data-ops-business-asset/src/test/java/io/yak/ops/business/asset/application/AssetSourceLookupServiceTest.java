@@ -7,9 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
 import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.core.project.CurrentProject;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AssetSourceLookupServiceTest {
@@ -28,7 +30,14 @@ class AssetSourceLookupServiceTest {
     row.setAssetType("DATASET");
     row.setStatus("PUBLISHED");
     row.setDeleted(false);
-    when(mapper.selectOne(any())).thenReturn(row);
+    when(mapper.selectPage(any(), any())).thenAnswer(invocation -> {
+      Page<AssetItemPO> page = invocation.getArgument(0);
+      assertEquals(1L, page.getCurrent());
+      assertEquals(1L, page.getSize());
+      assertEquals(false, page.searchCount());
+      page.setRecords(List.of(row));
+      return page;
+    });
 
     var result = new AssetSourceLookupService(currentProject, mapper).lookup("dataset", "55");
 
@@ -37,6 +46,7 @@ class AssetSourceLookupServiceTest {
     assertEquals("dataset:55", result.assetKey());
     assertEquals("55", result.sourceId());
     verify(currentProject).requireProjectId();
+    verify(mapper).selectPage(any(), any());
   }
 
   @Test
@@ -44,7 +54,7 @@ class AssetSourceLookupServiceTest {
     CurrentProject currentProject = mock(CurrentProject.class);
     AssetItemMapper mapper = mock(AssetItemMapper.class);
     when(currentProject.requireProjectId()).thenReturn(23L);
-    when(mapper.selectOne(any())).thenReturn(null);
+    when(mapper.selectPage(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
 
     var result = new AssetSourceLookupService(currentProject, mapper).lookup("DATASET", "55");
 
