@@ -2,6 +2,8 @@
 
 日期：2026-10-08。合同：[F-033](../../../product/features/F-033-agent-query-clarification.md) IMPLEMENTING；基线 main `11c7ab2f225cc7796651a4f22dae4fe75f759d9c`。实现提交 `743a338f73010dc2b6e14958669826a9467bdb7e`。V22 #360 尚未合并时从 main 独立开发，不依赖其新增指标场景。
 
+下表为独立开发阶段证据；提交 PR 时 main 已更新，合并后的最终回归见后文。
+
 | 检查 | 实际证据 | 结果 |
 | --- | --- | --- |
 | 字段来源与边界 | QueryClarificationRuntimeTest：FIELD/TIME/CALIBER 使用当前执行已发现版本与字段；缺失/伪造/重复/超限引用、治理越界、字段描述及总载荷超限拒绝 | PASS |
@@ -10,7 +12,7 @@
 | 实时/恢复与交互 | 共用严格 parser；源选项匹配、损坏投影、文本渲染、显式回答、权限/活动锁、双击、切会话/项目/待答清理、未知 live 工具身份拒绝 | PASS |
 | 前端相关回归 | `src/services/agent src/components/ai src/pages/ai-agent`：29 suites / 357 tests；最后补充 live 工具身份守卫后，该页面重新验证 1 suite / 59 tests。两组有重叠，不相加、不声称全仓回归 | PASS |
 | 类型检查 | `npm run check:types`，139 项既有诊断基线，无新增诊断 | PASS |
-| 生产构建与产物 | `npm run build`；随后 `node scripts/release/frontend-artifact.mjs` 校验实现提交、源摘要与产物摘要。后续提交仅添加本文档，构建产物不入库 | PASS |
+| 生产构建与产物 | `npm run build`；随后 `node scripts/release/frontend-artifact.mjs` 校验实现提交、源摘要与产物摘要。构建产物不入库 | PASS |
 | 架构/发行/CI 脚本测试 | `node --test scripts/architecture/*.test.mjs scripts/release/*.test.mjs scripts/ci/*.test.mjs`，40 项 | PASS |
 | 静态合同 | 架构 77 reactor / 3196 生产 Java 文件；前端保留 1 个声明的既有 corridor；62 迁移基线；产品基线 24 必需文件/19 术语/7 Decision/34 Feature；产品守卫解析自测及 diff whitespace 检查 | PASS |
 | PR 产品守卫 | 使用实际 PR 描述运行 Product Impact（12 个产品源路径）及 Product Surface 检查；现有模块与一级导航范围未扩张 | PASS |
@@ -22,6 +24,16 @@ mvn -B -ntp -pl data-ops-business/data-ops-business-agent -am test '-Dtest=Query
 ```
 
 末尾 JVM 参数仅绕过本机 Windows JDK 的 Unix-domain 临时路径问题，使用不存在的临时目录让 Surefire 回退 TCP；不修改生产配置。工程日志位于本地忽略目录 `.task-ai-evaluation/v23/`，不包含真实凭据或模型验收数据。
+
+## 合并最新 main 后复验
+
+PR #365 创建时发现 main `730d2a6ddc93b7ddad990fa70de55db48a654a2b` 已包含 V22 #360、架构 Mapper XML 守卫及消费修复。合并提交 `d118b276e40c0efe7eb355768a07e4b21575537c` 保留 V22 的指标变更工具限制和恢复目标，叠加 V23 澄清守卫；六处冲突均已解决，无源业务行为扩展。
+
+- 合并后的类型检查仍为 139 项既有诊断，无新增。
+- 原选定 Agent 回归加 MetricChangeReviewGatewayTest 共 120 项；MetricChangeReviewQueryAdapterTest 12 项；另跑 StandardMatchRuntimeTest 20 项（含 V22 native/synthetic 交付、预算及未知工具守卫）。合计 152 项，均无失败/错误/跳过。
+- 相同三个前端目录重新全量执行：31 suites / 370 tests 全部通过。该结果取代前文合并前的 357 项及单独页面回归，不相加。
+- 更新后的架构/发行/CI 脚本测试 42 项全部通过；架构 77 reactor / 3205 生产 Java 文件，前端 1 个既有 corridor、62 迁移基线，产品基线 24 必需文件/19 术语/7 Decision/35 Feature 及守卫解析自测均通过。
+- 在合并提交 `d118b276` 重新运行生产构建及产物校验均通过；产品 PR/Surface 守卫与 diff whitespace 检查再次通过。其后只追加本文档记录，未修改生产源或提交构建产物。
 
 ## 待统一真实验收
 
