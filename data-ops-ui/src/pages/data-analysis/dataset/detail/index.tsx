@@ -24,7 +24,7 @@ import {
   type DatasetSourceType,
 } from '@/services/dataset';
 import { BRAND_THEME } from '@/styles/brand';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useSearchParams } from '@umijs/max';
 import {
   Alert,
   Button,
@@ -289,10 +289,20 @@ function DatasetQueryPlayground({
 
 export default function DatasetDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const requestedQueryId = searchParams.get('queryId') || '';
+  const evidenceQueryId = /^[A-Za-z0-9._-]{1,180}$/.test(requestedQueryId)
+    ? requestedQueryId : undefined;
+  const evidenceTab = searchParams.get('tab') === 'diagnostics';
   const [dataset, setDataset] = useState<DatasetManagementDetail>();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>(
+    evidenceTab || evidenceQueryId ? 'diagnostics' : 'overview');
+
+  useEffect(() => {
+    if (evidenceTab || evidenceQueryId) setActiveTab('diagnostics');
+  }, [evidenceTab, evidenceQueryId]);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [versionCreating, setVersionCreating] = useState(false);
 
@@ -586,7 +596,11 @@ export default function DatasetDetailPage() {
       children: (
         <SectionCard title="运行诊断">
           <div className="p-5 pt-1">
-            <DatasetQueryDiagnostics datasetId={dataset.id} />
+            <DatasetQueryDiagnostics
+              datasetId={dataset.id}
+              focusedQueryId={evidenceQueryId}
+              onClearFocus={() => history.push(`/dataset/${encodeURIComponent(dataset.id)}?tab=diagnostics`)}
+            />
           </div>
         </SectionCard>
       ),

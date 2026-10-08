@@ -8,6 +8,7 @@ import {
 } from '@/services/dataset';
 import {
   Alert,
+  Button,
   InputNumber,
   Select,
   Table,
@@ -15,12 +16,14 @@ import {
   Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DETAIL_TABLE_CLASS } from './components/DatasetDetailPrimitives';
 
 interface DatasetQueryDiagnosticsProps {
   datasetId: string;
+  focusedQueryId?: string;
+  onClearFocus?: () => void;
 }
 
 type StatusFilter = 'ALL' | DatasetQueryStatus;
@@ -43,6 +46,8 @@ const shortHash = (value?: string | null) =>
 
 export default function DatasetQueryDiagnostics({
   datasetId,
+  focusedQueryId,
+  onClearFocus,
 }: DatasetQueryDiagnosticsProps) {
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [minTotalMillis, setMinTotalMillis] = useState(0);
@@ -50,20 +55,29 @@ export default function DatasetQueryDiagnostics({
   const [records, setRecords] = useState<DatasetQueryPerformance[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
     try {
-      setRecords(
-        await listDatasetQueryPerformance({
+      const response = await listDatasetQueryPerformance({
           datasetIds: [datasetId],
-          statuses: status === 'ALL' ? undefined : [status],
-          minTotalMillis: minTotalMillis > 0 ? minTotalMillis : undefined,
-          limit,
-        }),
-      );
+          queryIds: focusedQueryId ? [focusedQueryId] : undefined,
+          statuses: focusedQueryId || status === 'ALL' ? undefined : [status],
+          minTotalMillis: focusedQueryId || minTotalMillis === 0 ? undefined : minTotalMillis,
+          limit: focusedQueryId ? 10 : limit,
+        });
+      if (currentRequest !== requestId.current) return;
+      // Never mark a wrong Dataset or Query ID as verified even if the provider
+      // unexpectedly includes unrelated rows.
+      setRecords(focusedQueryId
+        ? response.filter((row) => String(row.queryId) === focusedQueryId
+            && String(row.datasetId) === datasetId)
+        : response);
     } catch (loadError) {
+      if (currentRequest !== requestId.current) return;
       setRecords([]);
       setError(
         loadError instanceof Error
@@ -71,12 +85,13 @@ export default function DatasetQueryDiagnostics({
           : '加载 Dataset 运行诊断失败',
       );
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [datasetId, limit, minTotalMillis, status]);
+  }, [datasetId, focusedQueryId, limit, minTotalMillis, status]);
 
   useEffect(() => {
     void load();
+    return () => { requestId.current += 1; };
   }, [load]);
 
   const summary = useMemo(() => {
@@ -241,8 +256,24 @@ export default function DatasetQueryDiagnostics({
         showIcon
         message="诊断记录跨实例持久化；SQL 预览由后端移除字面量和注释后再保存，仅用于查询结构定位。"
       />
+      {focusedQueryId ? (
+        <Alert type={error || (!loading && records.length === 0) ? 'warning' : 'info'} showIcon
+          message={error ? '未能核对指定 Query 证据'
+            : loading ? '正在核对指定 Query'
+              : records.length ? '已核对来源 Query 记录' : '指定来源 Query 不在当前可读范围'}
+          description={(
+            <div>
+              <div>Query ID：{focusedQueryId}。仅按当前 Dataset 与 Query ID 向来源查询，
+                不用其他记录代替；记录可能已过保留期或当前身份不可读取。</div>
+              {onClearFocus ? <Button size="small" type="link" onClick={onClearFocus}>
+                返回最近运行诊断
+              </Button> : null}
+            </div>
+          )}
+        />
+      ) : null}
 
-      <div className="flex flex-wrap items-end gap-3 rounded-md bg-[#f7f7f8] p-4">
+      {!focusedQueryId ? <div className="flex flex-wrap items-end gap-3 rounded-md bg-[#f7f7f8] p-4">
         <div>
           <div className="mb-1.5 text-[12px] text-[#667085]">终态</div>
           <Select<StatusFilter>
@@ -309,7 +340,7 @@ export default function DatasetQueryDiagnostics({
           <span>拒绝 {summary.rejected}</span>
           <span>≥3s {summary.slow}</span>
         </div>
-      </div>
+      </div> : null}
 
       {error ? (
         <Alert
