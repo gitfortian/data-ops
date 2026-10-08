@@ -133,6 +133,17 @@ describe('human coordination workpack for source version changes', () => {
     expect(text).toContain('不是已联系/已完成的状态');
   });
 
+  it('adds source management read-state to the human brief without claiming delivery or confirmation', () => {
+    const selected = reviewVersionImpact(impact, { identity: '9007199254740993' })!;
+    const text = versionChangeCoordinationWorkpackText(
+      product, impact, selected, '核对字段兼容性', '2026-10-08T19:00:00Z',
+      { state: 'FORBIDDEN', consumers: [] },
+    );
+    expect(text).toContain('当前来源配置（非消费/回复/批准）：来源配置未核实');
+    expect(text).toContain('尚未送达任何 Consumer');
+    expect(text).not.toContain('已正式批准');
+  });
+
   it('supports Dataset identity without mixing it with Data Service consumer truth', () => {
     const dataset: DataProductView = {
       ...product, productKey: { productType: 'DATASET', sourceIdentity: '9007199254741801' },
