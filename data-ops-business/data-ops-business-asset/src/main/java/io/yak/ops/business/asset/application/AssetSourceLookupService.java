@@ -1,6 +1,7 @@
 package io.yak.ops.business.asset.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.ops.business.asset.dao.mapper.AssetItemMapper;
 import io.yak.ops.business.asset.dao.model.AssetItemPO;
 import io.yak.ops.common.enums.asset.AssetSourceType;
@@ -31,12 +32,13 @@ public class AssetSourceLookupService {
     }
 
     Long projectId = currentProject.requireProjectId();
-    AssetItemPO po = itemMapper.selectOne(new LambdaQueryWrapper<AssetItemPO>()
+    Page<AssetItemPO> firstPage = new Page<>(1, 1, false);
+    itemMapper.selectPage(firstPage, new LambdaQueryWrapper<AssetItemPO>()
         .eq(AssetItemPO::getProjectId, projectId)
         .eq(AssetItemPO::getSourceType, type.name())
         .eq(AssetItemPO::getSourceId, sourceId.trim())
-        .eq(AssetItemPO::getDeleted, false)
-        .last("LIMIT 1"));
+        .eq(AssetItemPO::getDeleted, false));
+    AssetItemPO po = firstPage.getRecords().isEmpty() ? null : firstPage.getRecords().get(0);
 
     if (po == null) {
       return new SourceLookup(
