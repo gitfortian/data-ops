@@ -19,6 +19,13 @@
 
   <dependencies>
 
+    <!-- A8.2b: stable lower-layer permission contract; Framework never depends on product Common/Business/Boot. -->
+    <dependency>
+      <groupId>io.yak.ops</groupId>
+      <artifactId>data-ops-platform-security-contract</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
     <!-- 跨模块统一返回、分页和异常契约 -->
     <dependency>
       <groupId>io.github.weifuwan</groupId>
