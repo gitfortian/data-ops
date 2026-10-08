@@ -55,7 +55,8 @@ public class ConsumerImpactService {
     List<UsageEvidence> observed;
     ConsumerImpactView.EvidenceState subscriptionState;
     ConsumerImpactView.EvidenceState usageState;
-    boolean sourceCoverageComplete = synchronizeSource(productKey, usageLimit);
+    int limit = Math.max(1, Math.min(200, usageLimit));
+    SourceSyncCoverage sourceCoverage = synchronizeSource(productKey, limit);
 
     try {
       declared = subscriptions.list(projectId, productKey, null);
@@ -68,8 +69,9 @@ public class ConsumerImpactService {
     }
 
     try {
-      observed = usage.list(projectId, productKey, null, Math.max(1, Math.min(200, usageLimit)));
-      usageState = !sourceCoverageComplete
+      observed = usage.list(projectId, productKey, null, limit);
+      // A full *window* is still readable evidence. It is not a provider outage.
+      usageState = sourceCoverage.unavailable()
           ? ConsumerImpactView.EvidenceState.UNAVAILABLE
           : observed.isEmpty()
           ? ConsumerImpactView.EvidenceState.EMPTY
@@ -104,33 +106,47 @@ public class ConsumerImpactService {
         .sorted(Comparator.comparing(c -> c.consumerRef().identityKey()))
         .toList();
 
-    String coverage = subscriptionState == ConsumerImpactView.EvidenceState.UNAVAILABLE
-        || usageState == ConsumerImpactView.EvidenceState.UNAVAILABLE
+    boolean windowLimited = sourceCoverage.limitReached() || observed.size() == limit;
+    boolean providerIncomplete = subscriptionState == ConsumerImpactView.EvidenceState.UNAVAILABLE
+        || usageState == ConsumerImpactView.EvidenceState.UNAVAILABLE;
+    String coverage = providerIncomplete
         ? "Known consumers are partial because source reconciliation is incomplete or one or more evidence providers are unavailable."
+        : windowLimited
+        ? "Known consumers are limited to the requested source or normalized usage window; the row limit was reached and older or external consumers may not be included."
         : "Known consumers include declared subscriptions and normalized successful usage in the reconciled source window only; external consumers outside available evidence are not claimed complete.";
-    return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage);
+    ConsumerImpactView.EvidenceCoverage detail = new ConsumerImpactView.EvidenceCoverage(
+        limit, sourceCoverage.recordCount(), observed.size(), sourceCoverage.limitReached(),
+        observed.size() == limit, sourceCoverage.gaps(), sourceCoverage.unavailable());
+    return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage, detail);
   }
 
-  private boolean synchronizeSource(ProductKey productKey, int requestedLimit) {
-    int limit = Math.max(1, Math.min(200, requestedLimit));
+  private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit) {
     try {
       List<UsageNormalizationResult> results;
       if (productKey.productType() == ProductType.DATASET && datasetSynchronizer != null) {
         Long datasetId = parseProductId(productKey);
-        if (datasetId == null) return false;
+        if (datasetId == null) return SourceSyncCoverage.failed();
         results = datasetSynchronizer.synchronizeRecentByProduct(datasetId, limit);
       } else if (productKey.productType() == ProductType.DATA_SERVICE && dataServiceSynchronizer != null) {
         Long apiId = parseProductId(productKey);
-        if (apiId == null) return false;
+        if (apiId == null) return SourceSyncCoverage.failed();
         results = dataServiceSynchronizer.synchronizeRecentByProduct(apiId, limit);
       } else {
-        return false;
+        return SourceSyncCoverage.failed();
       }
-      return results.size() < limit && results.stream().noneMatch(result ->
+      int gaps = (int) results.stream().filter(result ->
           result.state() == UsageNormalizationState.GAP
-              || result.state() == UsageNormalizationState.UNAVAILABLE);
+              || result.state() == UsageNormalizationState.UNAVAILABLE).count();
+      // Equality means we reached the query budget, not that the source provider is broken.
+      return new SourceSyncCoverage(results.size(), results.size() >= limit, gaps, gaps > 0);
     } catch (RuntimeException unavailable) {
-      return false;
+      return SourceSyncCoverage.failed();
+    }
+  }
+
+  private record SourceSyncCoverage(int recordCount, boolean limitReached, int gaps, boolean unavailable) {
+    static SourceSyncCoverage failed() {
+      return new SourceSyncCoverage(0, false, 0, true);
     }
   }
 
