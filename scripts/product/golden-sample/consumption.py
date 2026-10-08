@@ -171,6 +171,67 @@ def assert_observed_usage(impact, consumer_type, domain, identity, mode, version
     return consumer
 
 
+
+def exact_version_usage_snapshot(impact, consumer_type, domain, identity, mode, version_id, evidence_ref):
+    """Observed exact-version Usage only; declarations never prove an invocation."""
+    assert_observed_usage(impact, consumer_type, domain, identity, mode, version_id, evidence_ref)
+    coverage = impact.get("coverage") or {}
+    require(not coverage.get("sourceReadUnavailable") and not coverage.get("normalizationGapCount"),
+            "Exact source audit reconciliation is incomplete")
+    require(not coverage.get("sourceWindowLimitReached")
+            and not coverage.get("normalizedUsageWindowLimitReached"),
+            "Exact source or normalized Usage window is full; sample evidence remains partial")
+
+    rows = []
+    for consumer in impact.get("consumers", []):
+        ref = consumer.get("consumerRef") or {}
+        for observed in consumer.get("observedVersions") or []:
+            version = (observed.get("sourceVersion") or {}).get("identity")
+            require(str(version) == str(version_id),
+                    "Exact-version response mixed successful Usage from another revision")
+            evidence = observed.get("providerEvidenceRefs") or []
+            require(len(evidence) == len(set(evidence)),
+                    "Exact-version Usage returned duplicate evidence references")
+            rows.append((
+                str(ref.get("consumerType")), str(ref.get("sourceDomain")),
+                str(ref.get("sourceIdentity")), str(version),
+                observed.get("successfulUsageCount"), tuple(sorted(evidence)),
+            ))
+    require(rows, "Exact-version response has no observed Usage")
+    return tuple(sorted(rows, key=repr))
+
+
+def assert_exact_version_replay(api, product_key, consumer_type, domain, identity, mode,
+                                version_id, evidence_ref):
+    """Repeated bounded reads must not double-count the same successful source audit."""
+    params = {"productKey": product_key, "usageLimit": 200,
+              "sourceVersionIdentity": str(version_id)}
+    first = api.request("GET", "/api/v1/consumption/impact", params=params)
+    before = exact_version_usage_snapshot(
+        first, consumer_type, domain, identity, mode, version_id, evidence_ref)
+    second = api.request("GET", "/api/v1/consumption/impact", params=params)
+    after = exact_version_usage_snapshot(
+        second, consumer_type, domain, identity, mode, version_id, evidence_ref)
+    require(before == after, "Repeating exact-version reconciliation changed successful Usage")
+    return {
+        "state": "PASSED", "sourceVersionIdentity": str(version_id),
+        "evidenceRef": evidence_ref, "repeatStable": True,
+        "coverage": second.get("coverage"),
+        "scope": "current sample version; 200+ newer calls and older unnormalized evidence not verified",
+    }
+
+
+def assert_exact_version_project_isolation(impact, version_id, evidence_ref):
+    """Another Project cannot expose source-owned exact successful Usage."""
+    for consumer in impact.get("consumers", []):
+        require(evidence_ref not in (consumer.get("providerEvidenceRefs") or []),
+                "Cross-Project Impact leaked source evidence")
+        for observed in consumer.get("observedVersions") or []:
+            require(evidence_ref not in (observed.get("providerEvidenceRefs") or []),
+                    "Cross-Project Impact leaked exact-version evidence")
+            require(str((observed.get("sourceVersion") or {}).get("identity")) != str(version_id),
+                    "Cross-Project Impact exposed the sample's source version")
+
 def consumer_usage_refs(impact, consumer_type, domain, identity):
     return set(known_consumer(impact, consumer_type, domain, identity)
                .get("providerEvidenceRefs", []))
@@ -241,6 +302,8 @@ def accept(api, samples, secret, control_project):
                         "DATA_SERVICE_INVOCATION:invocation:" + str(golden_service["invocationRecord"]["id"]))
         assert_observed_usage(
             impact, consumer_type, domain, identity, mode, version_id, expected_ref)
+        exact = assert_exact_version_replay(
+            api, key, consumer_type, domain, identity, mode, version_id, expected_ref)
         require(detail["navigation"].get("producerHref"), "Stable Producer backlink is missing")
         for section in ["quality", "security", "lineage"]:
             evidence = next(value for value in detail["governanceEvidence"] if value["sectionKey"] == section)
@@ -250,7 +313,8 @@ def accept(api, samples, secret, control_project):
         require(nav["state"] == "FOUND"
                 and nav["canonicalHref"] == detail["navigation"]["canonicalHref"], "Asset backlink mismatch")
         details[key] = {"detail": detail, "impact": impact, "assetNavigation": nav,
-                        "subscriptionId": first["id"], "duplicateSubscription": "PASSED"}
+                        "subscriptionId": first["id"], "duplicateSubscription": "PASSED",
+                        "exactVersion": exact}
     # Exercise the actual public plane with neither console cookie nor project header.
     import requests
     denied = requests.get(api.base_url + samples["dataService"]["runtimePath"],
@@ -302,6 +366,11 @@ def accept(api, samples, secret, control_project):
             hidden_asset = api.request("GET", "/api/v1/assets/source-lookup",
                                        params={"sourceType": kind, "sourceId": source_id})
             require(hidden_asset["state"] == "NOT_INDEXED", "Cross-project Asset identity leaked")
+            exact_version_id = details[key]["exactVersion"]["sourceVersionIdentity"]
+            other_impact = api.request("GET", "/api/v1/consumption/impact", params={
+                "productKey": key, "usageLimit": 200, "sourceVersionIdentity": exact_version_id})
+            assert_exact_version_project_isolation(
+                other_impact, exact_version_id, details[key]["exactVersion"]["evidenceRef"])
     finally:
         api.project_id = original_project
     return {"dataset": golden_dataset, "dataService": golden_service, "products": details,
