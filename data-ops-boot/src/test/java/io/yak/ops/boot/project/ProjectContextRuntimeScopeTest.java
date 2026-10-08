@@ -2,6 +2,7 @@ package io.yak.ops.boot.project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.yak.ops.core.project.ProjectContext;
 import org.junit.jupiter.api.Test;
@@ -30,4 +31,20 @@ class ProjectContextRuntimeScopeTest {
         runtime.call(new ProjectContext(7L, null), runtime::requireProjectId));
     assertTrue(runtime.current().isEmpty());
   }
+  @Test
+  void bootRequestBindingSurvivesFailureInsideAnExplicitBackgroundScope() {
+    ProjectContextRuntime runtime = new ProjectContextRuntime();
+    runtime.bind(new ProjectContext(15L, "request"));
+
+    assertThrows(IllegalStateException.class,
+        () -> runtime.call(new ProjectContext(16L, "background"), () -> {
+          assertEquals(16L, runtime.requireProjectId());
+          throw new IllegalStateException("background run failed");
+        }));
+    assertEquals(15L, runtime.requireProjectId());
+
+    runtime.clear();
+    assertTrue(runtime.current().isEmpty());
+  }
+
 }
