@@ -48,9 +48,7 @@ public class SemanticProcessBindingService {
       String tableRole,
       String joinCondition,
       String operator) {
-    processRepository
-        .findById(processId)
-        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
+    requireProcess(processId);
     if (datasourceId == null || datasourceId <= 0) {
       throw new SemanticException(SemanticErrorCode.INVALID_SEARCH, "必须选择数据源");
     }
@@ -95,9 +93,7 @@ public class SemanticProcessBindingService {
   }
 
   public List<ProcessSourceBinding> listByProcess(Long processId) {
-    processRepository
-        .findById(processId)
-        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
+    requireProcess(processId);
     return repository.listByProcess(processId);
   }
 
@@ -130,6 +126,12 @@ public class SemanticProcessBindingService {
       audit.failure("SEMANTIC_PROCESS_SOURCE_UNBIND_FAILED", exception);
       throw exception;
     }
+  }
+
+  /** Reuse the project-scoped process existence guard across bind and list reads. */
+  private void requireProcess(Long processId) {
+    processRepository.findById(processId)
+        .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
   }
 
   /** 34 挂点:业务过程删除前校验存在源表关联。 */
