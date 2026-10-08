@@ -39,4 +39,31 @@ class ConsumerImpactRecoveryControllerContractTest {
     assertNotNull(response);
     verify(service).recoverDatasetVersionPage(product, "9007199254740993", null, 50);
   }
+  @Test
+  void dataServiceRecoveryIsExplicitPostAndPreservesBigintInvocationCursor()
+      throws NoSuchMethodException {
+    assertNotNull(ConsumerImpactController.class.getAnnotation(ProjectScope.class));
+    assertNotNull(ConsumerImpactController.class.getAnnotation(RequiresPermission.class));
+    Method endpoint = ConsumerImpactController.class.getMethod(
+        "recoverDataServiceRevisionPage", String.class, String.class, Long.class, int.class);
+    PostMapping mapping = endpoint.getAnnotation(PostMapping.class);
+    assertNotNull(mapping);
+    assertEquals("/data-service-revision-recovery", mapping.value()[0]);
+
+    ConsumerImpactService service = mock(ConsumerImpactService.class);
+    ProductKey product = ProductKey.parse("DATA_SERVICE:7");
+    Long cursor = 9007199254740993L;
+    DataServiceAuditRecoveryView expected = new DataServiceAuditRecoveryView(
+        product.value(), "9007199254740995", cursor, 200,
+        0, 0, 0, 0, null, false, true);
+    when(service.recoverDataServiceRevisionPage(product, "9007199254740995", cursor, 200))
+        .thenReturn(expected);
+
+    var result = new ConsumerImpactController(service)
+        .recoverDataServiceRevisionPage("DATA_SERVICE:7", "9007199254740995", cursor, 200);
+
+    assertNotNull(result);
+    verify(service).recoverDataServiceRevisionPage(product, "9007199254740995", cursor, 200);
+  }
+
 }
