@@ -4,6 +4,8 @@ import io.yak.ops.business.audit.AuditEventType;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
+import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.business.datasource.domain.DataSourceReference;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader.StdBindingStats;
 import io.yak.ops.business.semantic.api.LayerUsageReader;
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -49,7 +52,27 @@ public class SemanticLayerService {
   private final ObjectProvider<LayerUsageReader> usageReader;
   private final ObjectProvider<LayerStdBindingReader> bindingReader;
   private final BusinessAuditService auditService;
+  private final ObjectProvider<DataSourceReader> datasourceReader;
 
+  @Autowired
+  public SemanticLayerService(
+      SemanticLayerRepository repository,
+      SemanticLayerTemplateRepository templateRepository,
+      io.yak.ops.business.semantic.repository.SemanticStandardRepository standardRepository,
+      ObjectProvider<LayerUsageReader> usageReader,
+      ObjectProvider<LayerStdBindingReader> bindingReader,
+      BusinessAuditService auditService,
+      ObjectProvider<DataSourceReader> datasourceReader) {
+    this.repository = repository;
+    this.templateRepository = templateRepository;
+    this.standardRepository = standardRepository;
+    this.usageReader = usageReader;
+    this.bindingReader = bindingReader;
+    this.auditService = auditService;
+    this.datasourceReader = datasourceReader;
+  }
+
+  /** Compatibility for focused tests that do not create or update layers. */
   public SemanticLayerService(
       SemanticLayerRepository repository,
       SemanticLayerTemplateRepository templateRepository,
@@ -57,12 +80,9 @@ public class SemanticLayerService {
       ObjectProvider<LayerUsageReader> usageReader,
       ObjectProvider<LayerStdBindingReader> bindingReader,
       BusinessAuditService auditService) {
-    this.repository = repository;
-    this.templateRepository = templateRepository;
-    this.standardRepository = standardRepository;
-    this.usageReader = usageReader;
-    this.bindingReader = bindingReader;
-    this.auditService = auditService;
+    this(repository, templateRepository, standardRepository, usageReader, bindingReader,
+        auditService, new org.springframework.beans.factory.support.DefaultListableBeanFactory()
+            .getBeanProvider(DataSourceReader.class));
   }
 
   public List<WarehouseLayer> list() {
@@ -104,6 +124,7 @@ public class SemanticLayerService {
     validateCode(code);
     validateName(name);
     validateCoreConfig(databaseName, datasourceId);
+    validateDatasourceReference(datasourceId);
     validateNamingRef(stdNamingId);
     validateLifecycleDays(lifecycleDays);
     validateStorageFormat(storageFormat);
@@ -158,6 +179,7 @@ public class SemanticLayerService {
     WarehouseLayer existing = get(id);
     validateName(name);
     validateCoreConfig(databaseName, datasourceId);
+    validateDatasourceReference(datasourceId);
     validateNamingRef(stdNamingId);
     validateLifecycleDays(lifecycleDays);
     validateStorageFormat(storageFormat);
@@ -336,6 +358,19 @@ public class SemanticLayerService {
   private void validateLifecycleDays(Integer lifecycleDays) {
     if (lifecycleDays != null && lifecycleDays <= 0) {
       throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID, "生命周期天数必须大于 0，留空表示永久");
+    }
+  }
+
+  /** Reject stale/cross-Project datasource IDs using their domain-owned read boundary. */
+  private void validateDatasourceReference(Long datasourceId) {
+    DataSourceReader reader = datasourceReader.getIfAvailable();
+    if (reader == null) {
+      throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID,
+          "数据源服务暂不可用，无法核验分层数据源");
+    }
+    DataSourceReference reference = reader.requireReference(datasourceId);
+    if (reference == null || !datasourceId.equals(reference.id())) {
+      throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID, "分层数据源引用无效");
     }
   }
 
