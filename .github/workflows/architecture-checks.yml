@@ -32,6 +32,8 @@ jobs:
           node-version: '20'
       - name: Test PR impact selection
         run: node --test scripts/ci/*.test.mjs
+      - name: A8 Security permission declaration single-owner contract
+        run: node scripts/architecture/check-security-declaration-owner.mjs
       - name: A8 Security Platform permission ownership
         run: node scripts/architecture/check-security-permission-owner.mjs
       - name: Plan fail-safe PR validation scope
