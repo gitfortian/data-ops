@@ -190,3 +190,7 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 ## 两次历史质量执行比较（F-034）
 
 原执行历史列表由用户明确选择另一已结束执行后进入原 Agent，不自动发送。固定对随原 turn/HITL/恢复冻结；仅允许 get_quality_execution_comparison 与原辅助工具，源域先授权并校验同一历史监控/物理目标。各侧最多20条，按正数唯一 ruleId 对齐；声明截断/缺失/定义变化，保留 ERROR/NOT_RUN/NOT_PASSED 和原值，不推断改善率或根因。双侧证据与对齐均可核验及回链，最终文本和官方历史一致。工程与真实验收分开记录。
+
+## 有限资产影响说明（F-035）
+
+ASSET_IMPACT 固定一个资产，只允许无参数 get_asset_impact_evidence 与原只读辅助工具。gateway 复用 Asset.api USAGE 分区，将页面访问、Lineage 一跳关系计数、源域业务使用分开登记 owner/五态/范围；不读完整图、下游对象或生成候选。原 turn/StateStore、预算、HITL、核验及历史保留。文本与容量超限拒绝该来源，真实验收 PENDING。精确边界见 docs/product/features/F-035-agent-asset-impact-explanation.md，无新依赖边。

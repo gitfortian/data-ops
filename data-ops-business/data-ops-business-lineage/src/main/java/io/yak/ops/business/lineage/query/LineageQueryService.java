@@ -88,6 +88,12 @@ public class LineageQueryService {
     return graphReader.graph(assetId, LineageDirection.DOWNSTREAM, depth);
   }
 
+  /** One-hop outgoing relation count, not a distinct consumer or usage count. */
+  @Transactional(value = "yakBusinessTransactionManager", readOnly = true)
+  public long downstreamRelationCount(long assetId) {
+    return graphReader.downstreamRelationCount(assetId);
+  }
+
   @Transactional(value = "yakBusinessTransactionManager", readOnly = true)
   public LineageGraph graph(long assetId, LineageDirection direction, int depth) {
     return graphReader.graph(assetId, direction, depth);

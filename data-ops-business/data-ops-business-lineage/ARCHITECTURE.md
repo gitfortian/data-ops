@@ -144,3 +144,7 @@ DAO 只感知 Lineage-owned condition。
 - 新 `@Service` 必须证明它是新的稳定应用入口；
 - 新 package、公共类型和 dependency 必须有真实调用方；
 - 架构变化同步更新代码、文档和 executable guard。
+
+## F-035 下游关系计数
+
+原 query.LineageQueryService 增加 downstreamRelationCount：经 LineageGraphReader 校验当前项目可见根，再由原 Repository/DAO 按当前项目及 sourceAssetId 执行 COUNT；缺少项目拒绝。返回一跳有向边条数，不去重消费者，不含全图/表达式，不推断 observed usage。Asset USAGE 是实际调用方；无新 package、依赖边或事务 owner。

@@ -100,3 +100,7 @@ beginReplacement
 `SqlProjectionLineageAnalyzer` 负责把只读 SQL projection 映射到物理来源字段，输出 source table、source column、output column、mapping kind、表达式与 ordinal 等信息。
 
 核心模块只拥有 contract。Schema provider 和具体 parser 是边界实现；无法解析的引用通过 unresolved count 暴露，而不是静默制造错误的物理字段血缘。
+
+## F-035 下游关系计数
+
+原 query.LineageQueryService 增加 downstreamRelationCount：经 LineageGraphReader 校验当前项目可见根，再由原 Repository/DAO 按当前项目及 sourceAssetId 执行 COUNT；缺少项目拒绝。返回一跳有向边条数，不去重消费者，不含全图/表达式，不推断 observed usage。Asset USAGE 是实际调用方；无新 package、依赖边或事务 owner。

@@ -1076,7 +1076,9 @@ const AiAgentPage: React.FC = () => {
             message={governanceTaskTitle(governanceTarget)}
             description={
               <Space wrap>
-                <span>{governanceTarget.qualityBaselineExecutionNo
+                <span>{governanceTarget.purpose === 'ASSET_IMPACT'
+                  ? '仅说明所选资产的一跳结构关系、已接入业务使用和页面活动；保留范围与缺口，不判断完整影响或发布安全。'
+                  : governanceTarget.qualityBaselineExecutionNo
                   ? '仅比较选定的两次历史执行；历史定义变化、截断和缺口需人工核对，不直接认定质量改善。'
                   : governanceTarget.qualityExecutionNo !== undefined
                   ? '围绕本次历史执行核对事实、缺口和人工检查步骤；具体根因需验证，调整规则请回源页面另行发起。'
@@ -1084,7 +1086,7 @@ const AiAgentPage: React.FC = () => {
                 {governanceQuestions(governanceTarget).map((question, index) => (
                   <Button key={question} size="small" disabled={preparationBlocked || hasText || draftLoading}
                     onClick={() => { if (!inputValueRef.current.trim() && !preparationBlocked) { draftSourceRef.current = undefined; setInput(question); } }}>
-                    {governanceTarget.qualityBaselineExecutionNo ? '比较两次执行' : governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
+                    {governanceTarget.purpose === 'ASSET_IMPACT' ? '准备影响说明' : governanceTarget.qualityBaselineExecutionNo ? '比较两次执行' : governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
                       : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选'
                         : governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '生成描述候选' : (index === 0 ? '解释结果' : '排查建议')}
                   </Button>
@@ -1223,5 +1225,9 @@ const AiAgentPage: React.FC = () => {
 export default function ScopedAiAgentPage() {
   const { currentProject } = useSecurityProject();
   const { can } = usePermissionAccess();
+  const entry = new URLSearchParams(window.location.search);
+  if (!entry.get('sessionId') && entry.has('purpose') && !parseGovernanceTarget(window.location.search)) {
+    return <Alert type="error" showIcon message="治理任务入口无效" description="请返回来源页面重新选择资产与任务。" />;
+  }
   return <AiAgentPage key={JSON.stringify([currentProject?.id, can('agent:session:read')])} />;
 }

@@ -43,3 +43,7 @@ DATA_SERVICE 台账投影遵循 PD-002 / F-004：key 为 data_service:<serviceId
 ## F-010 人工采纳建议
 
 候选不是业务事实。只读建议及校验不触发业务写入；人工保存继续由本域命令拥有。条件更新在本域事务内比较服务器定义指纹，拒绝旧值覆盖；治理 AI 不拥有源域状态。
+
+## F-035 使用摘要消费
+
+原 USAGE structuralUsage 的 downstreamReferenceCount 继续表示当前项目一跳下游关系条数；改用 LineageQueryService.downstreamRelationCount 聚合，不物化完整图。Asset 不拥有 Lineage 关系，缺注册保持 EMPTY、源失败保持 UNAVAILABLE；页面访问与 Metric/Consumption 事实分开。Agent 只消费既有 AssetGovernanceQueryApi 分区，不进入 Asset 实现或源 DAO。

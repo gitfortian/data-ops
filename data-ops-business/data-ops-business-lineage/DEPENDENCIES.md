@@ -111,3 +111,7 @@ Lineage 唯一允许的外部 business-module import 是 Datasource 配置 corri
 - `LineagePublicApiBoundaryTest`：跨模块类型根和签名纯度；
 - `LineageCodeStyleConventionTest`：角色位置；
 - `LineageDocumentationContractTest`：文档 contract。
+
+## F-035 下游关系计数
+
+原 query.LineageQueryService 增加 downstreamRelationCount：经 LineageGraphReader 校验当前项目可见根，再由原 Repository/DAO 按当前项目及 sourceAssetId 执行 COUNT；缺少项目拒绝。返回一跳有向边条数，不去重消费者，不含全图/表达式，不推断 observed usage。Asset USAGE 是实际调用方；无新 package、依赖边或事务 owner。

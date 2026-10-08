@@ -45,6 +45,34 @@ public class GovernanceEvidenceGateway {
   private final ObjectProvider<QualityEvidenceQueryApi> quality;
   private final ObjectProvider<QualityExecutionComparisonQueryApi> comparisons;
 
+  public String impact(long assetId, GovernanceEvidenceLedger ledger) {
+    synchronized (ledger) {
+      ledger.requireCapacity(3);
+      var parts = AssetImpactProjection.failure("UNAVAILABLE");
+      String updatedAt = null;
+      var api = assets.getIfAvailable();
+      if (api != null) {
+        try {
+          var result = api.section(assetId, SectionType.USAGE);
+          parts = AssetImpactProjection.project(result);
+          updatedAt = result == null ? null : time(result.updatedAt());
+        } catch (ActionAccessDeniedException | SecurityException denied) {
+          parts = AssetImpactProjection.failure("PERMISSION_DENIED");
+        } catch (RuntimeException unavailable) {
+          // Source diagnostics never enter model context or evidence.
+        }
+      }
+      var output = new StringBuilder("有限使用摘要（非完整影响、非原子快照）：\n");
+      for (var part : parts) {
+        var ref = ledger.register(part.owner(), assetId + "/USAGE/" + part.category(),
+            part.status(), updatedAt, "/data-asset/detail/" + assetId);
+        output.append(part.category()).append(":\n")
+            .append(factualEnvelope(ref, part.facts(), ledger)).append('\n');
+      }
+      return output.toString();
+    }
+  }
+
   public String comparison(String baseline, String current, GovernanceEvidenceLedger ledger) {
     synchronized (ledger) {
       ledger.requireCapacity(3);

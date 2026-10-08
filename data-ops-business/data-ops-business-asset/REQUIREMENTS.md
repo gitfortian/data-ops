@@ -86,3 +86,7 @@ F-004 Data Service 回链要求：
 ## F-010 建议辅助
 
 依照 docs/product/features/F-010-ai-governance-suggestions.md 实施。候选有界、授权读取、原页面人工保存与原子并发保护；不得自动运行、启用调度、修改源域事实或绕过既有权限。真实模型验收与自动化验证分开记录。
+
+## F-035 使用摘要消费
+
+原 USAGE structuralUsage 的 downstreamReferenceCount 继续表示当前项目一跳下游关系条数；改用 LineageQueryService.downstreamRelationCount 聚合，不物化完整图。Asset 不拥有 Lineage 关系，缺注册保持 EMPTY、源失败保持 UNAVAILABLE；页面访问与 Metric/Consumption 事实分开。Agent 只消费既有 AssetGovernanceQueryApi 分区，不进入 Asset 实现或源 DAO。

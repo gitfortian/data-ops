@@ -199,6 +199,15 @@ public class LineageDaoImpl implements LineageDao {
   }
 
   @Override
+  public long countOutgoingRelations(long sourceAssetId) {
+    Long projectId = currentProjectId();
+    if (projectId == null) throw new IllegalStateException("下游关系计数需要当前项目");
+    return relationMapper.selectCount(Wrappers.<LineageRelationPO>lambdaQuery()
+        .eq(LineageRelationPO::getProjectId, projectId)
+        .eq(LineageRelationPO::getSourceAssetId, sourceAssetId));
+  }
+
+  @Override
   public long countRelations() {
     Long projectId = currentProjectId();
     return relationMapper.selectCount(

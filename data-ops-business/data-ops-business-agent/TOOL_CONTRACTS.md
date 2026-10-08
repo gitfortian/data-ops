@@ -18,6 +18,7 @@
 | `verify_governance_facts` | `fact_refs_json*` | `verify_governance_facts(fact_refs_json="[]")` |
 | `search_assets` | `keyword*` | `search_assets(keyword="订单")` |
 | `get_asset_evidence` | `asset_id*` | `get_asset_evidence(asset_id=7)` |
+| `get_asset_impact_evidence` | — | `get_asset_impact_evidence()` |
 | `get_asset_section_evidence` | `asset_id*`、`section*` | `get_asset_section_evidence(asset_id=7, section="QUALITY")` |
 | `get_quality_execution_evidence` | `execution_no*` | `get_quality_execution_evidence(execution_no="Q20261005_001")` |
 | `get_quality_execution_comparison` | — | `get_quality_execution_comparison()` |

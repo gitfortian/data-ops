@@ -257,6 +257,11 @@ private static LineageQueryService queryService(LineageRepository repository) {
     }
 
     @Override
+    public long countOutgoingRelations(long sourceAssetId) {
+      return relations.values().stream().filter(relation -> relation.sourceAssetId() == sourceAssetId).count();
+    }
+
+    @Override
     public List<LineageRelation> findOutgoingRelations(Set<Long> sourceAssetIds) {
       return relations.values().stream()
           .filter(relation -> sourceAssetIds.contains(relation.sourceAssetId()))

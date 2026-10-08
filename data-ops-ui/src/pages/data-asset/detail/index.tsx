@@ -1,3 +1,4 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
 import { governanceEntryPath } from '@/services/agent/governance';
 import { Alert, Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
@@ -415,8 +416,11 @@ const AssetDetailPage = () => {
           <div className="mt-1 text-[12px] text-[#98a2b3]">{asset?.assetKey}</div>
         </div>
         <Space>
-          {asset && can('agent:chat:run') && (
-            <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
+          {asset && asset.id === assetId && !loading && !detailFailure && can('data-asset:read') && can('agent:chat:run') && (
+            <>
+              <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
+              <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id, purpose: 'ASSET_IMPACT' }))}>AI 影响说明</Button>
+            </>
           )}
           {asset && sourceLink && (
             <Button onClick={() => history.push(sourceLink)}>查看源对象</Button>
@@ -1061,4 +1065,9 @@ const AssetDetailPage = () => {
   );
 };
 
-export default AssetDetailPage;
+export default function ScopedAssetDetailPage() {
+  const { currentProject } = useSecurityProject();
+  const { id } = useParams<{ id: string }>();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetDetailPage key={JSON.stringify([currentProject?.id, id, permissionCodes])} />;
+}

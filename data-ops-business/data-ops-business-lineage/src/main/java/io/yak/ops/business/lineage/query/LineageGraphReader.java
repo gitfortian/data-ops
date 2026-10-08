@@ -28,6 +28,11 @@ public class LineageGraphReader {
     this.assetReader = assetReader;
   }
 
+  public long downstreamRelationCount(long assetId) {
+    assetReader.getAsset(assetId);
+    return repository.countOutgoingRelations(assetId);
+  }
+
   public LineageGraph graph(long assetId, LineageDirection direction, int depth) {
     LineageAsset root = assetReader.getAsset(assetId);
     LineageDirection actualDirection =

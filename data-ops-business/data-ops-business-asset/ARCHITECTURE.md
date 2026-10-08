@@ -53,3 +53,7 @@ api.AssetGovernanceQueryApi 由 application.AssetGovernanceQueryAdapter 实现�
 ## F-010 建议边界
 
 Agent 仅消费源域 api 包的授权只读契约；Quality monitor 的 SuggestionQueryAdapter 进入既有 Reader/Policy 和 Quality-owned Catalog Gateway，DefinitionFingerprint 属于 domain；Asset 条件更新仍在 AssetAppService。候选仅存在本轮上下文与官方消息历史，不新增业务建议表。
+
+## F-035 使用摘要消费
+
+原 USAGE structuralUsage 的 downstreamReferenceCount 继续表示当前项目一跳下游关系条数；改用 LineageQueryService.downstreamRelationCount 聚合，不物化完整图。Asset 不拥有 Lineage 关系，缺注册保持 EMPTY、源失败保持 UNAVAILABLE；页面访问与 Metric/Consumption 事实分开。Agent 只消费既有 AssetGovernanceQueryApi 分区，不进入 Asset 实现或源 DAO。

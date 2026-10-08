@@ -276,3 +276,7 @@ F-033 问数澄清仅在 runtime 内消费现有 domain.DatasetSummary/AgentExec
 ## 两次历史质量执行比较（F-034）
 
 gateway → quality.api 的既有边扩展到 QualityExecutionComparisonQueryApi；toolset/runtime 仍经现有网关读取，不进入 Quality execution/repository/dao。Quality 不依赖 Agent；SDK、Skill 与工具包装白名单不变，固定比较由原工具及场景提示承载。
+
+## 有限资产影响说明（F-035）
+
+ASSET_IMPACT 固定一个资产，只允许无参数 get_asset_impact_evidence 与原只读辅助工具。gateway 复用 Asset.api USAGE 分区，将页面访问、Lineage 一跳关系计数、源域业务使用分开登记 owner/五态/范围；不读完整图、下游对象或生成候选。原 turn/StateStore、预算、HITL、核验及历史保留。文本与容量超限拒绝该来源，真实验收 PENDING。精确边界见 docs/product/features/F-035-agent-asset-impact-explanation.md，无新依赖边。
