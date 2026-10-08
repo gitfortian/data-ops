@@ -2,6 +2,12 @@ import type { ConsumerRef } from '@/services/consumption';
 import type { DataServiceConsumer } from '@/services/data-service/consumer';
 import { parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
 
+/** Read-only source-management snapshot from the current Project and actor. */
+export interface ManagedConsumerReadSnapshot {
+  state: ManagedConsumerSourceState;
+  consumers: readonly DataServiceConsumer[];
+}
+
 /** The existing source controller is Project-scoped and requires data-service:access. */
 export type ManagedConsumerSourceState = 'LOADING' | 'READY' | 'FORBIDDEN' | 'UNAVAILABLE';
 
