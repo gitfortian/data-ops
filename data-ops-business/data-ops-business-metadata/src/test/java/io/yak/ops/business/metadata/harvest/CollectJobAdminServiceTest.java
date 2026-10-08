@@ -51,10 +51,34 @@ class CollectJobAdminServiceTest {
 
   @BeforeEach
   void wireService() {
-    service = new CollectJobAdminService(jobMapper, currentProject, bridge);
+    MetadataPresenceService presence = mock(MetadataPresenceService.class);
+    when(presence.effectivePolicy())
+        .thenReturn(new MetadataPresenceService.EffectivePolicy(30, 2));
+    service = new CollectJobAdminService(jobMapper, currentProject, bridge, presence);
     when(bridge.available()).thenReturn(true);
     // 撞码查重默认全空：只有专门测撞码的用例覆写这里
     when(jobMapper.selectList(any())).thenReturn(List.of());
+  }
+
+  @Test
+  void harvestPolicyCannotSilentlyAcceptTaskOverridesItDoesNotEnforce() {
+    assertCode(
+        () -> service.create(command().collapseThresholdPct(45).build(), "root"),
+        MetadataErrorCode.INVALID_ARGUMENT);
+    assertCode(
+        () -> service.create(command().missingRounds(3).build(), "root"),
+        MetadataErrorCode.INVALID_ARGUMENT);
+    verify(jobMapper, never()).insert(any(MdCollectJobPO.class));
+
+    service.create(command().build(), "root");
+    assertThat(capturedInsert().getCollapseThresholdPct()).isEqualTo(30);
+    assertThat(capturedInsert().getMissingRounds()).isEqualTo(2);
+  }
+
+  @Test
+  void unchangedLegacyOverrideValuesRemainAcceptedForCompatibility() {
+    service.create(command().collapseThresholdPct(30).missingRounds(2).build(), "root");
+    assertThat(capturedInsert().getMissingRounds()).isEqualTo(2);
   }
 
   @Test

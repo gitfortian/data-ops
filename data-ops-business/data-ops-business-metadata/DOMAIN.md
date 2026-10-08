@@ -89,3 +89,7 @@ OM `deleteStale` 六道安全**全部采纳**（空 seen 集→零删除、scope
 8. **项目隔离**：`project_id` 只取 `CurrentProject` 服务端上下文，永不接受前端传入；不建物理外键。
 9. **无界禁止**：游标分批 ≤500；概览查询 ≤8 次；列表一律分页；单库表数超阈值分页拉取。
 10. **分区容错不伪造**：详情 fan-out 单块失败返回 UNAVAILABLE；统计能力缺失记 UNKNOWN 而非 0。
+
+## P0-B02 当前生效缺席策略与任务配置的边界
+
+HARVESTED 的软消失保护仍由 `MetadataPresenceService` 集中判定：全局的 `yak.metadata.harvest.gone-collapse-ratio` 决定骤减熔断阈值，连续两轮有效采集缺席是当前固定规则。任务行上历史存储的 `collapse_threshold_pct` 与 `missing_rounds` 不是执行事实；读取其存储值不得标注为“生效配置”。产品页面只展示服务器返回的当前生效策略，不允许用户编辑未接入执行路径的参数。新的按任务阈值/轮数语义需要另行冻结领域和产品契约，且不能削弱空集、作用域不完整、失败、dry-run 与 SUSPECT 的保护。

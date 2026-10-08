@@ -4,6 +4,7 @@ import type {
   CollectJobRecord,
   CollectJobUpsertParams,
   CollectRunRecord,
+  EffectivePresencePolicy,
   EntityTypeView,
   MetadataChangeRecord,
   MetadataEntityDetail,
@@ -50,6 +51,10 @@ export const pageCollectJobs = async (
     await HttpUtils.postData<RawPage<CollectJobRecord>>(`${METADATA_API_PREFIX}/collect-jobs/page`, params),
     params.pageSize,
   );
+
+/** Runtime-authoritative HARVESTED Presence policy; independent of legacy job columns. */
+export const getEffectivePresencePolicy = () =>
+  HttpUtils.getData<EffectivePresencePolicy>(`${METADATA_API_PREFIX}/collect-jobs/effective-presence-policy`);
 
 export const getCollectJob = (id: number) =>
   HttpUtils.getData<CollectJobRecord>(`${METADATA_API_PREFIX}/collect-jobs/${id}`);
