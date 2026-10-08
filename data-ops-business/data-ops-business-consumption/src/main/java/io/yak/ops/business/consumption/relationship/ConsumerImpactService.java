@@ -152,7 +152,14 @@ public class ConsumerImpactService {
       } else if (productKey.productType() == ProductType.DATA_SERVICE && dataServiceSynchronizer != null) {
         Long apiId = parseProductId(productKey);
         if (apiId == null) return SourceSyncCoverage.failed();
-        results = dataServiceSynchronizer.synchronizeRecentByProduct(apiId, limit);
+        if (exactVersion != null) {
+          Long revisionId = parseSourceRevisionId(exactVersion);
+          if (revisionId == null) return SourceSyncCoverage.failed();
+          results = dataServiceSynchronizer.synchronizeRecentByProductAndRevision(
+              apiId, revisionId, limit);
+        } else {
+          results = dataServiceSynchronizer.synchronizeRecentByProduct(apiId, limit);
+        }
       } else {
         return SourceSyncCoverage.failed();
       }
