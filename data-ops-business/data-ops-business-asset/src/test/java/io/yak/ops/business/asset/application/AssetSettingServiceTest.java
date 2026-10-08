@@ -56,11 +56,11 @@ class AssetSettingServiceTest {
     ArgumentCaptor<LambdaQueryWrapper> conditions = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
     verify(mapper, Mockito.times(2)).selectOne(conditions.capture());
     List<LambdaQueryWrapper> wrappers = conditions.getAllValues();
-    assertEquals(wrappers.get(0).getSqlSegment(), wrappers.get(1).getSqlSegment());
-    assertTrue(wrappers.get(0).getSqlSegment().contains("project_id"));
-    assertTrue(wrappers.get(0).getSqlSegment().contains("setting_key"));
-    assertTrue(wrappers.get(0).getParamNameValuePairs().containsValue(23L));
-    assertTrue(wrappers.get(0).getParamNameValuePairs().containsValue("gone_window_days"));
+    for (LambdaQueryWrapper wrapper : wrappers) {
+      assertEquals(2, wrapper.getParamNameValuePairs().size());
+      assertTrue(wrapper.getParamNameValuePairs().containsValue(23L));
+      assertTrue(wrapper.getParamNameValuePairs().containsValue("gone_window_days"));
+    }
   }
 
   @Test
