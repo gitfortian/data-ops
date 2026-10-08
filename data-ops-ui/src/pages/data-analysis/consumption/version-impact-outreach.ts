@@ -1,6 +1,7 @@
 import type { ConsumerImpact, DataProductView } from '@/services/consumption';
 import type { VersionImpactReview, VersionImpactRow } from './version-impact-review';
 import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
+import { inspectManagedConsumerConfiguration, type ManagedConsumerReadSnapshot } from './managed-consumer-configuration';
 
 /**
  * This is a copyable human outreach draft, not a dispatched notification or an
@@ -13,6 +14,7 @@ export const consumerVersionOutreachDraft = (
   row: VersionImpactRow,
   proposedChange: string,
   preparedAt: string,
+  sourceSnapshot?: ManagedConsumerReadSnapshot,
 ): string => {
   const ref = row.consumer.consumerRef;
   const productKey = product.productKey.productType + ':' + product.productKey.sourceIdentity;
@@ -35,6 +37,12 @@ export const consumerVersionOutreachDraft = (
     '已知关系依据：' + basis,
     '最近该版本成功使用：' + (row.lastObservedAt || '当前窗口无此版本成功记录'),
     '该 Consumer 的该版本来源证据：' + (row.evidenceRefs.join(', ') || '无'),
+    '当前来源配置（仅为读取时快照）：' + (sourceSnapshot
+      ? inspectManagedConsumerConfiguration(
+        ref, product.productKey.productType, product.productKey.sourceIdentity,
+        sourceSnapshot.state, sourceSnapshot.consumers,
+      ).label
+      : '未核对'),
     '证据范围：' + evidenceState,
     'Subscription Provider：' + impact.subscriptionState,
     'Usage Provider：' + impact.usageState,

@@ -133,6 +133,28 @@ describe('human coordination workpack for source version changes', () => {
     expect(text).toContain('不是已联系/已完成的状态');
   });
 
+  it('marks only managed Data Service consumers as unreadable, not unrelated JOB identities', () => {
+    const managedImpact: ConsumerImpact = {
+      ...impact,
+      consumers: impact.consumers.map((item, index) => index !== 0 ? item : {
+        ...item,
+        consumerRef: {
+          ...item.consumerRef, consumerType: 'DATA_SERVICE' as const,
+          sourceDomain: 'DATA_SERVICE_CONSUMER', sourceIdentity: '42',
+        },
+      }),
+    };
+    const selected = reviewVersionImpact(managedImpact, { identity: '9007199254740993' })!;
+    const text = versionChangeCoordinationWorkpackText(
+      product, managedImpact, selected, '核对字段兼容性', '2026-10-08T19:00:00Z',
+      { state: 'FORBIDDEN', consumers: [] },
+    );
+    expect(text).toContain('当前来源配置（非消费/回复/批准）：来源配置未核实');
+    expect(text).toContain('当前来源配置（非消费/回复/批准）：该类型无统一来源配置核对');
+    expect(text).toContain('尚未送达任何 Consumer');
+    expect(text).not.toContain('已正式批准');
+  });
+
   it('supports Dataset identity without mixing it with Data Service consumer truth', () => {
     const dataset: DataProductView = {
       ...product, productKey: { productType: 'DATASET', sourceIdentity: '9007199254741801' },

@@ -39,7 +39,12 @@ import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
 import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
-import { consumerSourceTarget } from '@/config/consumer-source-navigation';
+import { consumerSourceTarget, parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
+import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
+import {
+  eligibleConfiguredDataServiceConsumers,
+  type ManagedConsumerSourceState,
+} from './managed-consumer-configuration';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
@@ -99,6 +104,7 @@ export default function ConsumptionDetailPage() {
   const [searchParams] = useSearchParams();
   const { initialState } = useModel('@@initialState');
   const { can } = usePermissionAccess();
+  const mayReadManagedConsumers = can('data-service:access');
   const actor = initialState?.currentUser?.userName || '';
   const productKey = decodeURIComponent(params.productKey || '');
   const returnAssetId = searchParams.get('returnAssetId');
@@ -115,10 +121,12 @@ export default function ConsumptionDetailPage() {
   const [subscriptionIssue, setSubscriptionIssue] = useState('');
   const [relationshipLoading, setRelationshipLoading] = useState(false);
   const relationshipRequestId = useRef(0);
+  const sourceConsumerRequestId = useRef(0);
   const [subscriptionSaving, setSubscriptionSaving] = useState(false);
   const [dataServiceConsumers, setDataServiceConsumers] = useState<DataServiceConsumer[]>([]);
   const [selectedConsumerId, setSelectedConsumerId] = useState<number>();
   const [consumerListIssue, setConsumerListIssue] = useState('');
+  const [sourceConsumerState, setSourceConsumerState] = useState<ManagedConsumerSourceState>('LOADING');
 
   const reloadRelationships = useCallback(async () => {
     const requestId = ++relationshipRequestId.current;
@@ -146,6 +154,7 @@ export default function ConsumptionDetailPage() {
 
   useEffect(() => {
     let active = true;
+    const sourceRequestId = ++sourceConsumerRequestId.current;
     setLoading(true);
     setImpact(null);
     setImpactIssue('');
@@ -154,6 +163,7 @@ export default function ConsumptionDetailPage() {
     setDataServiceConsumers([]);
     setSelectedConsumerId(undefined);
     setConsumerListIssue('');
+    setSourceConsumerState(mayReadManagedConsumers ? 'LOADING' : 'FORBIDDEN');
     void getProduct(productKey)
       .then((result) => {
         if (!active) return;
@@ -164,20 +174,23 @@ export default function ConsumptionDetailPage() {
         setReason(result.reason || '');
         if (result.state === 'FOUND') {
           void reloadRelationships();
-          if (result.product?.productKey.productType === 'DATA_SERVICE') {
+          if (result.product?.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers) {
             void listDataServiceConsumers()
               .then((value) => {
-                if (!active) return;
+                if (!active || sourceRequestId !== sourceConsumerRequestId.current) return;
                 setDataServiceConsumers(value);
-                const apiId = Number(result.product?.productKey.sourceIdentity);
-                const eligible = value.filter((consumer) => consumer.enabled
-                  && (consumer.accessScope === 'ALL' || consumer.apiIds?.includes(apiId)));
+                setSourceConsumerState('READY');
+                const eligible = eligibleConfiguredDataServiceConsumers(
+                  result.product!.productKey.sourceIdentity, value,
+                );
                 setSelectedConsumerId(eligible[0]?.id);
               })
-              .catch((cause) => {
-                if (active) setConsumerListIssue(cause instanceof Error
-                  ? cause.message
-                  : '读取 Data Service Consumer 失败');
+              .catch(() => {
+                if (!active || sourceRequestId !== sourceConsumerRequestId.current) return;
+                setDataServiceConsumers([]);
+                setSelectedConsumerId(undefined);
+                setSourceConsumerState('UNAVAILABLE');
+                setConsumerListIssue('来源调用方配置读取失败；不能将未知当作无授权或已删除。');
               });
           }
         }
@@ -193,8 +206,12 @@ export default function ConsumptionDetailPage() {
       .finally(() => {
         if (active) setLoading(false);
       });
-    return () => { active = false; relationshipRequestId.current += 1; };
-  }, [productKey, reloadRelationships]);
+    return () => {
+      active = false;
+      relationshipRequestId.current += 1;
+      sourceConsumerRequestId.current += 1;
+    };
+  }, [productKey, reloadRelationships, mayReadManagedConsumers]);
 
   const columns = useMemo<DatasetColumn[]>(() => {
     if (!product || product.productKey.productType !== 'DATASET') return [];
@@ -222,6 +239,13 @@ export default function ConsumptionDetailPage() {
           <Space direction="vertical" size={0}>
             <Text strong>{row.consumerRef.displayHint || row.consumerRef.sourceIdentity}</Text>
             <Text type="secondary">{row.consumerRef.consumerType} · {row.consumerRef.sourceDomain}:{row.consumerRef.sourceIdentity}</Text>
+            <ManagedConsumerConfigurationHint
+              consumerRef={row.consumerRef}
+              productType={product!.productKey.productType}
+              productSourceIdentity={product!.productKey.sourceIdentity}
+              sourceState={sourceConsumerState}
+              consumers={dataServiceConsumers}
+            />
             {allowed && target ? (
               <Button type="link" size="small" style={{ padding: 0, height: 'auto' }}
                 title={target.description} onClick={() => history.push(target.href)}>
@@ -293,12 +317,39 @@ export default function ConsumptionDetailPage() {
   // The controller requires Asset UPDATE; external service Consumers additionally need ACCESS.
   const canManageSubscription = can('data-asset:update')
     && (product.productKey.productType === 'DATASET' || can('data-service:access'));
-  const eligibleDataServiceConsumers = dataServiceConsumers.filter((consumer) => {
-    const apiId = Number(product.productKey.sourceIdentity);
-    return consumer.enabled && (consumer.accessScope === 'ALL' || consumer.apiIds?.includes(apiId));
-  });
+  const eligibleDataServiceConsumers = eligibleConfiguredDataServiceConsumers(
+    product.productKey.sourceIdentity,
+    dataServiceConsumers,
+  );
+
+  const refreshManagedConsumers = async () => {
+    if (product.productKey.productType !== 'DATA_SERVICE' || !mayReadManagedConsumers) return;
+    const requestId = ++sourceConsumerRequestId.current;
+    setSourceConsumerState('LOADING');
+    setConsumerListIssue('');
+    try {
+      const next = await listDataServiceConsumers();
+      if (requestId !== sourceConsumerRequestId.current) return;
+      setDataServiceConsumers(next);
+      setSourceConsumerState('READY');
+      const eligible = eligibleConfiguredDataServiceConsumers(product.productKey.sourceIdentity, next);
+      setSelectedConsumerId((current) => eligible.some((row) => row.id === current)
+        ? current : eligible[0]?.id);
+    } catch {
+      if (requestId !== sourceConsumerRequestId.current) return;
+      setDataServiceConsumers([]);
+      setSelectedConsumerId(undefined);
+      setSourceConsumerState('UNAVAILABLE');
+      setConsumerListIssue('来源调用方配置刷新失败；不能根据旧列表推断当前授权状态。');
+    }
+  };
   const changeSubscription = async (action: SubscriptionAction | 'REVOKE') => {
     if (action === 'NONE') return;
+    if (action === 'SUBSCRIBE' && product.productKey.productType === 'DATA_SERVICE'
+        && sourceConsumerState !== 'READY') {
+      message.error('当前调用方来源尚未核对成功，请先重新核对配置');
+      return;
+    }
     const consumerRef = product.productKey.productType === 'DATASET'
       ? actor
         ? { consumerType: 'USER' as const, sourceDomain: 'SECURITY_PRINCIPAL', sourceIdentity: actor, displayHint: actor }
@@ -461,8 +512,16 @@ export default function ConsumptionDetailPage() {
         </Card>
 
         <Card title="消费关系与影响" extra={
-          <Button size="small" loading={relationshipLoading} disabled={subscriptionSaving}
-            onClick={() => { void reloadRelationships(); }}>重新核对关系与影响</Button>
+          <Space>
+            <Button size="small" loading={relationshipLoading} disabled={subscriptionSaving}
+              onClick={() => { void reloadRelationships(); }}>重新核对关系与影响</Button>
+            {product.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers ? (
+              <Button size="small" loading={sourceConsumerState === 'LOADING'}
+                onClick={() => { void refreshManagedConsumers(); }}>
+                重新核对调用方配置
+              </Button>
+            ) : null}
+          </Space>
         }>
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Space wrap>
@@ -478,7 +537,10 @@ export default function ConsumptionDetailPage() {
                   type="primary"
                   loading={subscriptionSaving || relationshipLoading}
                   disabled={!!subscriptionIssue || !canManageSubscription
-                    || (product.productKey.productType === 'DATASET' ? !actor : !selectedConsumerId)}
+                    || (product.productKey.productType === 'DATASET' ? !actor : !selectedConsumerId)
+                    || (subscriptionAction === 'SUBSCRIBE'
+                      && product.productKey.productType === 'DATA_SERVICE'
+                      && sourceConsumerState !== 'READY')}
                   onClick={() => { void changeSubscription(subscriptionAction); }}
                 >
                   {subscriptionAction === 'SUBSCRIBE' ? `声明${consumptionMode}依赖`
@@ -499,7 +561,7 @@ export default function ConsumptionDetailPage() {
                   >永久撤销</Button>
                 </Popconfirm>
               )}
-              {product.productKey.productType === 'DATA_SERVICE' ? (
+              {product.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers ? (
                 <Select
                   aria-label="Data Service Consumer"
                   style={{ minWidth: 240 }}
@@ -510,7 +572,8 @@ export default function ConsumptionDetailPage() {
                     label: `${consumer.name} · ${consumer.activeKeyCount} 个有效 Key`,
                   }))}
                   onChange={setSelectedConsumerId}
-                  loading={relationshipLoading}
+                  loading={sourceConsumerState === 'LOADING'}
+                  disabled={sourceConsumerState !== 'READY'}
                 />
               ) : null}
               <Text type="secondary">订阅只声明依赖，不会授予 Dataset 或 Data Service 的访问权限。</Text>
@@ -526,6 +589,10 @@ export default function ConsumptionDetailPage() {
               />
             ) : null}
             {subscriptionIssue ? <Alert type="warning" showIcon message="订阅记录暂不可用" description={subscriptionIssue} /> : null}
+            {product.productKey.productType === 'DATA_SERVICE' && !mayReadManagedConsumers ? (
+              <Alert showIcon type="info" message="来源调用方配置不可读"
+                description="当前身份缺少 data-service:access，无法核对调用方当前配置；历史 Subscription / Usage 证据仍独立有效。" />
+            ) : null}
             {consumerListIssue ? (
               <Alert
                 type="warning"
@@ -534,7 +601,10 @@ export default function ConsumptionDetailPage() {
                 description={<>{consumerListIssue} · <Button type="link" onClick={() => history.push('/data-service/access')}>打开 API 调用管理</Button></>}
               />
             ) : null}
-            {product.productKey.productType === 'DATA_SERVICE' && !consumerListIssue && eligibleDataServiceConsumers.length === 0 ? (
+            {product.productKey.productType === 'DATA_SERVICE'
+              && sourceConsumerState === 'READY'
+              && parseManagedConsumerSourceId(product.productKey.sourceIdentity) !== null
+              && eligibleDataServiceConsumers.length === 0 ? (
               <Alert
                 type="info"
                 showIcon
@@ -542,6 +612,11 @@ export default function ConsumptionDetailPage() {
                 description={<Button type="link" onClick={() => history.push('/data-service/access')}>前往配置 Consumer、API 权限和 Key</Button>}
               />
             ) : null}
+            {product.productKey.productType === 'DATA_SERVICE'
+              && parseManagedConsumerSourceId(product.productKey.sourceIdentity) === null ? (
+                <Alert type="warning" showIcon message="服务 ID 无法无损核对调用方授权"
+                  description="此来源 ID 不适合用当前数值型调用方 API 进行精确比对。已禁止近似匹配或误判无 Consumer，历史使用和订阅证据仍独立显示。" />
+              ) : null}
             {impactIssue ? <Alert type="warning" showIcon message="消费影响暂不可用" description={impactIssue} /> : null}
             {impact ? (
               <>
@@ -580,6 +655,8 @@ export default function ConsumptionDetailPage() {
           impact={impact}
           impactIssue={impactIssue}
           loading={relationshipLoading}
+          sourceConsumerState={sourceConsumerState}
+          sourceConsumers={dataServiceConsumers}
         />
 
         {product.productKey.productType === 'DATASET' ? (
