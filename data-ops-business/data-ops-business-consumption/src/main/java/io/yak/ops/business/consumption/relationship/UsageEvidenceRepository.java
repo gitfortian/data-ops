@@ -8,4 +8,7 @@ public interface UsageEvidenceRepository {
   Optional<UsageEvidence> findByDeduplicationId(Long projectId, String deduplicationId);
   UsageEvidence save(UsageEvidence evidence);
   List<UsageEvidence> list(Long projectId, ProductKey productKey, ConsumerRef consumerRef, int limit);
+
+  /** Persisted successful Usage for exactly one immutable source version, still Project-scoped. */
+  List<UsageEvidence> listByVersion(Long projectId, ProductKey productKey, String sourceVersionIdentity, int limit);
 }
