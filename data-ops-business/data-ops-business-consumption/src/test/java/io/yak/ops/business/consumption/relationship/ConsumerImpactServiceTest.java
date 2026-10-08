@@ -268,6 +268,56 @@ class ConsumerImpactServiceTest {
   }
 
   @Test
+  void exactDatasetVersionRecoversItsOwnOldSourceBeforeReadingPersistedUsage() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    ConsumerRef consumer = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice");
+    LocalDateTime observedAt = LocalDateTime.of(2025, 7, 1, 9, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(synchronizer.synchronizeRecentByProductAndVersion(101L, 9007199254740993L, 200))
+        .thenReturn(List.of());
+    when(usage.listByVersion(42L, product, "9007199254740993", 200))
+        .thenReturn(List.of(event(42L, product, consumer, "9007199254740993",
+            "v1", observedAt, "query:old")));
+
+    var view = new ConsumerImpactService(subscriptions, usage, project, synchronizer, null)
+        .view(product, 200, "9007199254740993");
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals("9007199254740993", view.consumers().getFirst()
+        .observedVersions().getFirst().sourceVersion().identity());
+    assertTrue(view.coverageNote().contains("scoped to this exact DatasetVersion"));
+    org.mockito.InOrder order = org.mockito.Mockito.inOrder(synchronizer, usage);
+    order.verify(synchronizer).synchronizeRecentByProductAndVersion(101L, 9007199254740993L, 200);
+    order.verify(usage).listByVersion(42L, product, "9007199254740993", 200);
+    org.mockito.Mockito.verify(synchronizer, org.mockito.Mockito.never())
+        .synchronizeRecentByProduct(101L, 200);
+  }
+
+  @Test
+  void invalidExactDatasetVersionPreservesPersistedEvidenceButSignalsSourceGap() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(usage.listByVersion(42L, product, "display-only", 200)).thenReturn(List.of());
+    var view = new ConsumerImpactService(subscriptions, usage, project, sync, null)
+        .view(product, 200, "display-only");
+
+    assertEquals(ConsumerImpactView.EvidenceState.UNAVAILABLE, view.usageState());
+    assertTrue(view.coverage().sourceReadUnavailable());
+    org.mockito.Mockito.verifyNoInteractions(sync);
+    org.mockito.Mockito.verify(usage).listByVersion(42L, product, "display-only", 200);
+  }
+
+  @Test
   void invalidRequestedVersionNeverQueriesProjectOrUsage() {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
