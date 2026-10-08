@@ -176,16 +176,13 @@ public class SecurityLevelService {
 
   public List<DsecSecurityLevelPO> findAllActive() {
     return mapper.selectList(
-        new LambdaQueryWrapper<DsecSecurityLevelPO>()
-            .eq(DsecSecurityLevelPO::getProjectId, currentProject.requireProjectId())
+        projectScope()
             .eq(DsecSecurityLevelPO::getStatus, "ACTIVE")
             .orderByAsc(DsecSecurityLevelPO::getRankNo));
   }
 
   public PageData<DsecSecurityLevelPO> page(int pageNo, int pageSize, String keyword, String status) {
-    Long projectId = currentProject.requireProjectId();
-    LambdaQueryWrapper<DsecSecurityLevelPO> wrapper =
-        new LambdaQueryWrapper<DsecSecurityLevelPO>().eq(DsecSecurityLevelPO::getProjectId, projectId);
+    LambdaQueryWrapper<DsecSecurityLevelPO> wrapper = projectScope();
     if (StringUtils.hasText(keyword)) {
       String kw = keyword.trim();
       wrapper.and(c -> c.like(DsecSecurityLevelPO::getLevelCode, kw).or().like(DsecSecurityLevelPO::getLevelName, kw));
@@ -201,9 +198,7 @@ public class SecurityLevelService {
   }
 
   public long countAll() {
-    return mapper.selectCount(
-        new LambdaQueryWrapper<DsecSecurityLevelPO>()
-            .eq(DsecSecurityLevelPO::getProjectId, currentProject.requireProjectId()));
+    return mapper.selectCount(projectScope());
   }
 
   /** 引用校验仿 MdmAttributeService.validateKindRef:可空;非空必须是存在且启用的 SECURITY 标准。 */
@@ -222,10 +217,15 @@ public class SecurityLevelService {
   private boolean existsByCode(String code) {
     Long c =
         mapper.selectCount(
-            new LambdaQueryWrapper<DsecSecurityLevelPO>()
-                .eq(DsecSecurityLevelPO::getProjectId, currentProject.requireProjectId())
+            projectScope()
                 .eq(DsecSecurityLevelPO::getLevelCode, code));
     return c != null && c > 0;
+  }
+
+  /** Project scope is required for every security level read and code lookup. */
+  private LambdaQueryWrapper<DsecSecurityLevelPO> projectScope() {
+    return new LambdaQueryWrapper<DsecSecurityLevelPO>()
+        .eq(DsecSecurityLevelPO::getProjectId, currentProject.requireProjectId());
   }
 
   private LambdaQueryWrapper<DsecSecurityLevelPO> scoped(Long id) {

@@ -21,6 +21,7 @@ import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.security.dao.model.DsecSecurityLevelPO;
 import io.yak.ops.common.enums.security.SecurityErrorCode;
 import io.yak.ops.core.project.CurrentProject;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -83,6 +84,27 @@ class SecurityLevelServiceTest {
     assertEquals("DRAFT", created.getStatus());
     assertEquals(1L, created.getProjectId());
     verify(mapper).insert(any(DsecSecurityLevelPO.class));
+  }
+
+  @Test
+  void findAllActiveKeepsMapperResultsAndTrustedProjectScope() {
+    DsecSecurityLevelPO active = level(3L, "L3");
+    when(mapper.selectList(any())).thenReturn(List.of(active));
+
+    assertEquals(List.of(active), service.findAllActive());
+
+    verify(mapper).selectList(any());
+    verify(currentProject).requireProjectId();
+  }
+
+  @Test
+  void countAllUsesTrustedProjectScope() {
+    when(mapper.selectCount(any())).thenReturn(4L);
+
+    assertEquals(4L, service.countAll());
+
+    verify(mapper).selectCount(any());
+    verify(currentProject).requireProjectId();
   }
 
   @Test
