@@ -1,6 +1,10 @@
 import type { ConsumerImpact, DataProductView } from '@/services/consumption';
 import type { VersionImpactReview } from './version-impact-review';
 import { impactEvidenceGaps, impactEvidenceWindowFacts } from './impact-evidence-coverage';
+import {
+  inspectManagedConsumerConfiguration,
+  type ManagedConsumerReadSnapshot,
+} from './managed-consumer-configuration';
 
 export interface VersionChangeCoordinationTask {
   consumerIdentity: string;
@@ -56,6 +60,7 @@ export const versionChangeCoordinationWorkpackText = (
   review: VersionImpactReview,
   proposedChange: string,
   preparedAt: string,
+  sourceSnapshot?: ManagedConsumerReadSnapshot,
 ): string => {
   const pack = buildVersionChangeCoordinationWorkpack(impact, review);
   const note = proposedChange.trim().slice(0, 600) || '尚未明确，需来源 Owner 补充';
@@ -86,6 +91,15 @@ export const versionChangeCoordinationWorkpackText = (
         : '有效声明依赖，不绑定版本；当前窗口未观察到该精确版本成功使用'),
       '   待办：' + task.summary,
       '   该版本来源证据：' + (task.evidenceRefs.join(', ') || '无'),
+      '   当前来源配置（非消费/回复/批准）：' + (sourceSnapshot
+        ? inspectManagedConsumerConfiguration(
+          review.rows[index].consumer.consumerRef,
+          product.productKey.productType,
+          product.productKey.sourceIdentity,
+          sourceSnapshot.state,
+          sourceSnapshot.consumers,
+        ).label
+        : '本次未读取来源配置'),
     ]) : ['本次窗口没有可识别的 Consumer；不能据此推断无人受影响。']),
     '',
     '二、来源证据补核',
