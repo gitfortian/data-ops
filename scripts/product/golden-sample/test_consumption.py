@@ -6,6 +6,7 @@ import unittest
 from types import SimpleNamespace
 from consumption import (
     node, assert_observed_usage, assert_denied_did_not_create_usage, assert_recovered_usage,
+    exact_version_usage_snapshot, assert_exact_version_replay, assert_exact_version_project_isolation,
 )
 
 
@@ -123,6 +124,107 @@ class GoldenConsumptionEvidenceContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not attributed"):
             assert_recovered_usage({self.REF}, wrong, "DATA_SERVICE",
                                    "DATA_SERVICE_CONSUMER", "21", self.REVISION)
+
+
+
+class ExactVersionGoldenEvidenceContractTest(unittest.TestCase):
+    def test_dataset_exact_version_replay_preserves_real_query_identity(self):
+        version = "9007199254740993"
+        query_ref = "DATASET_QUERY_PERFORMANCE:query:q-old"
+        response = {
+            "usageState": "READY",
+            "coverage": {"sourceWindowLimitReached": False, "normalizedUsageWindowLimitReached": False,
+                         "normalizationGapCount": 0, "sourceReadUnavailable": False},
+            "consumers": [{
+                "consumerRef": {"consumerType": "USER", "sourceDomain": "SECURITY_PRINCIPAL",
+                                "sourceIdentity": "analyst"},
+                "observedModes": ["QUERY"],
+                "successfulUsageCount": 1,
+                "providerEvidenceRefs": [query_ref],
+                "observedVersions": [{"sourceVersion": {"identity": version},
+                                      "successfulUsageCount": 1, "providerEvidenceRefs": [query_ref]}],
+            }],
+        }
+        calls = []
+        def fetch(method, path, params=None):
+            calls.append((method, path, params))
+            return deepcopy(response)
+        api = SimpleNamespace(request=fetch)
+        result = assert_exact_version_replay(
+            api, "DATASET:101", "USER", "SECURITY_PRINCIPAL", "analyst",
+            "QUERY", version, query_ref)
+
+        self.assertEqual("PASSED", result["state"])
+        self.assertTrue(result["repeatStable"])
+        self.assertEqual(2, len(calls))
+        self.assertEqual({
+            "productKey": "DATASET:101", "usageLimit": 200,
+            "sourceVersionIdentity": version,
+        }, calls[0][2])
+        self.assertEqual(calls[0], calls[1])
+
+    def test_exact_version_rejects_wrong_revision_and_source_gaps(self):
+        result = impact()
+        result["coverage"] = {"sourceWindowLimitReached": False,
+                              "normalizedUsageWindowLimitReached": False,
+                              "sourceReadUnavailable": False, "normalizationGapCount": 0}
+        with self.assertRaisesRegex(ValueError, "mixed successful Usage"):
+            crossed = deepcopy(result)
+            crossed["consumers"].append({
+                "consumerRef": {"consumerType": "USER", "sourceDomain": "SECURITY_PRINCIPAL",
+                                "sourceIdentity": "bob"},
+                "observedVersions": [{"sourceVersion": {"identity": "999"},
+                                      "successfulUsageCount": 1,
+                                      "providerEvidenceRefs": ["other:query"]}],
+            })
+            exact_version_usage_snapshot(
+                crossed, "DATA_SERVICE", "DATA_SERVICE_CONSUMER", "21", "API_INVOKE",
+                "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+
+        with self.assertRaisesRegex(ValueError, "partial"):
+            full = deepcopy(result)
+            full["coverage"]["sourceWindowLimitReached"] = True
+            exact_version_usage_snapshot(
+                full, "DATA_SERVICE", "DATA_SERVICE_CONSUMER", "21", "API_INVOKE",
+                "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            incomplete = deepcopy(result)
+            incomplete["coverage"]["normalizationGapCount"] = 1
+            exact_version_usage_snapshot(
+                incomplete, "DATA_SERVICE", "DATA_SERVICE_CONSUMER", "21", "API_INVOKE",
+                "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+
+    def test_replayed_version_must_not_duplicate_or_change_evidence(self):
+        current = impact()
+        responses = [deepcopy(current), deepcopy(current)]
+        responses[1]["consumers"][0]["observedVersions"][0]["successfulUsageCount"] = 2
+        api = SimpleNamespace(request=lambda method, path, params=None: responses.pop(0))
+        with self.assertRaisesRegex(ValueError, "changed successful Usage"):
+            assert_exact_version_replay(
+                api, "DATA_SERVICE:7", "DATA_SERVICE", "DATA_SERVICE_CONSUMER", "21",
+                "API_INVOKE", "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+
+        duplicate = impact()
+        duplicate["consumers"][0]["observedVersions"][0]["providerEvidenceRefs"].append(
+            "DATA_SERVICE_INVOCATION:invocation:50")
+        with self.assertRaisesRegex(ValueError, "duplicate evidence"):
+            exact_version_usage_snapshot(
+                duplicate, "DATA_SERVICE", "DATA_SERVICE_CONSUMER", "21", "API_INVOKE",
+                "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+
+    def test_other_project_cannot_expose_any_old_version_usage(self):
+        assert_exact_version_project_isolation(
+            {"usageState": "EMPTY", "consumers": []},
+            "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+        with self.assertRaisesRegex(ValueError, "Cross-Project"):
+            assert_exact_version_project_isolation(
+                impact(), "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+        foreign = impact(evidence_ref="some-other-ref")
+        with self.assertRaisesRegex(ValueError, "Cross-Project"):
+            assert_exact_version_project_isolation(
+                foreign, "9007199254740999", "DATA_SERVICE_INVOCATION:invocation:50")
+
 
 
 if __name__ == "__main__":
