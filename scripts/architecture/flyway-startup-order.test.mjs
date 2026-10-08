@@ -26,15 +26,18 @@ test('detects bean method name fallback for unnamed Flyway beans', () => {
 });
 
 test('reports missing dependency, duplicate bean and dependency cycles', () => {
-  const files=[
+  const cycle=auditFlywayOrdering([
     {file:own,content:source('a','b')},
     {file:own.replace('metric','asset'),content:source('b','a')},
-    {file:own.replace('metric','job'),content:source('a','absent')},
-  ];
-  const result=auditFlywayOrdering(files,[]);
-  assert.match(result.failures.join('\n'),/duplicate/);
-  assert.match(result.failures.join('\n'),/cycle/);
-  assert.match(result.failures.join('\n'),/missing Flyway dependency bean absent/);
+  ],[]);
+  assert.match(cycle.failures.join('\n'),/cycle/);
+  const duplicate=auditFlywayOrdering([
+    {file:own,content:source('a',null)},
+    {file:own.replace('metric','asset'),content:source('a',null)},
+  ],[]);
+  assert.match(duplicate.failures.join('\n'),/declared by both/);
+  const missing=auditFlywayOrdering([{file:own,content:source('a','absent')}],[]);
+  assert.match(missing.failures.join('\n'),/missing Flyway dependency bean absent/);
 });
 
 test('detects regression if a product migration dependency is silently removed', () => {
