@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
 import { consumerVersionOutreachDraft } from './version-impact-outreach';
 import {
+  buildVersionChangeCoordinationWorkpack,
+  versionChangeCoordinationWorkpackText,
+} from './version-change-coordination';
+import {
   reviewableVersions,
   reviewVersionImpact,
   versionImpactReviewText,
@@ -33,10 +37,11 @@ export default function VersionChangeImpactReview({
   );
   const selected = versions.find((v) => v.identity === requestedVersion) || versions[0];
   const review = reviewVersionImpact(impact, selected);
+  const workpack = impact && review ? buildVersionChangeCoordinationWorkpack(impact, review) : null;
   // An acknowledgement never survives a new evidence response or a version switch.
   useEffect(() => setAcknowledged(false), [impact, selected?.identity, loading]);
   // Change descriptions belong to one exact source revision, never carry them across versions.
-  useEffect(() => setProposedChange(''), [selected?.identity]);
+  useEffect(() => setProposedChange(''), [impact, selected?.identity]);
 
   const copyReview = async () => {
     if (!acknowledged || !impact || !review || loading) return;
@@ -64,6 +69,18 @@ export default function VersionChangeImpactReview({
       message.success('已复制人工沟通草稿；未发送任何通知或生成审批记录');
     } catch {
       message.error('复制沟通草稿失败，请检查浏览器剪贴板权限');
+    }
+  };
+
+  const copyWorkpack = async () => {
+    if (!acknowledged || !impact || !review || loading || impactIssue) return;
+    try {
+      await navigator.clipboard.writeText(versionChangeCoordinationWorkpackText(
+        product, impact, review, proposedChange, new Date().toISOString(),
+      ));
+      message.success('已复制人工协同工作清单；未写入变更计划、通知、确认或审批');
+    } catch {
+      message.error('复制协同清单失败，请检查浏览器剪贴板权限');
     }
   };
 
@@ -196,6 +213,17 @@ export default function VersionChangeImpactReview({
                 onChange={(event) => setProposedChange(event.target.value)}
               />
             </div>
+            <div>
+              <Text strong>本次可见的人工协同任务（不代表已联系或已完成）</Text>
+              <Space wrap>
+                <Text>实际使用待核对：{workpack?.observedCount ?? 0} 位</Text>
+                <Text>声明依赖待确认：{workpack?.declaredOnlyCount ?? 0} 位</Text>
+                <Text>来源证据待补核：{workpack?.evidenceGaps.length ?? 0} 项</Text>
+              </Space>
+              <Text type="secondary">
+                还须核查来源窗口之外的历史使用及未登记的外部使用方；即使当前清单为空，也不能视作无影响。
+              </Text>
+            </div>
             <Alert type="info" showIcon message="人工沟通准备，不是已通知状态"
               description="请使用已知 Consumer 身份自行找到真实负责人。复制草稿不会发送消息、记录已读、获得变更确认或形成 Approval/Audit。"
             />
@@ -205,6 +233,13 @@ export default function VersionChangeImpactReview({
             <div>
               <Button onClick={() => { void copyReview(); }} disabled={!acknowledged || loading}>
                 复制本次版本影响核对记录
+              </Button>
+              <Button
+                style={{ marginLeft: 8 }}
+                onClick={() => { void copyWorkpack(); }}
+                disabled={!acknowledged || loading || !!impactIssue}
+              >
+                复制完整人工协同工作清单
               </Button>
               <Text type="secondary"> · 逐个 Consumer 的沟通草稿可从上方表格复制（需先勾选覆盖说明）。</Text>
             </div>
