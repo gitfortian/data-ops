@@ -42,6 +42,22 @@ public class ProjectScopeInterceptor implements HandlerInterceptor {
       throws Exception {
     authorizationAudit.beginRequest();
     currentProject.clear();
+    try {
+      return evaluateRequest(request, response, handler);
+    } catch (RuntimeException failure) {
+      // Spring MVC does not invoke afterCompletion when preHandle throws.
+      // Never leak a pending authorization decision to the next reused HTTP thread.
+      try {
+        authorizationAudit.endRequest();
+      } finally {
+        currentProject.clear();
+      }
+      throw failure;
+    }
+  }
+
+  private boolean evaluateRequest(
+      HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
     if (!(handler instanceof HandlerMethod handlerMethod)) {
       return true;
     }
@@ -74,8 +90,18 @@ public class ProjectScopeInterceptor implements HandlerInterceptor {
       return true;
     } catch (ProjectContextException exception) {
       // 直接落约定响应(400/40010 等),避免被各业务模块 advice 的 catch-all 兜成 999。
-      ProjectContextExceptionHandler.writeToResponse(exception, response);
-      return false;
+      try {
+        ProjectContextExceptionHandler.writeToResponse(exception, response);
+        return false;
+      } finally {
+        // HandlerInterceptor.afterCompletion is NOT called when preHandle returns false.
+        // A rejected request must clear its own audit and Project contexts here.
+        try {
+          authorizationAudit.endRequest();
+        } finally {
+          currentProject.clear();
+        }
+      }
     }
   }
 
