@@ -75,4 +75,28 @@ class DataServiceCallLogReaderTest {
     assertThat(reader.recentByApi(7L, 999)).containsExactly(record);
     verify(repository).recentByApi(7L, 200);
   }
+  @Test
+  void successfulUsageWindowUsesDedicatedPersistedSourceQueryNotMixedCallDiagnostics() {
+    DataServiceCallLogRepository repository = mock(DataServiceCallLogRepository.class);
+    InvocationRecord successful = new InvocationRecord(
+        3L, 7L, "Orders", "/orders", "API_KEY", null, null, null,
+        "{}", true, 10L, 1, null, LocalDateTime.now());
+    when(repository.recentSuccessfulByApi(7L, 200)).thenReturn(List.of(successful));
+
+    DataServiceCallLogReader reader = new DataServiceCallLogReader(repository);
+
+    assertThat(reader.recentSuccessfulByApi(7L, 999)).containsExactly(successful);
+    verify(repository).recentSuccessfulByApi(7L, 200);
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).recentByApi(7L, 200);
+  }
+
+  @Test
+  void successfulSourceReaderBoundsEmptyOrNegativeLimitBeforeDelegation() {
+    DataServiceCallLogRepository repository = mock(DataServiceCallLogRepository.class);
+    DataServiceCallLogReader reader = new DataServiceCallLogReader(repository);
+
+    assertThat(reader.recentSuccessfulByApi(7L, 0)).isEmpty();
+    verify(repository).recentSuccessfulByApi(7L, 1);
+  }
+
 }

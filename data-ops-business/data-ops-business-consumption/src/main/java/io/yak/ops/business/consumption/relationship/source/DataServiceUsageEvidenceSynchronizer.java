@@ -23,7 +23,7 @@ public class DataServiceUsageEvidenceSynchronizer {
   }
 
   public List<UsageNormalizationResult> synchronizeRecentByProduct(Long apiId, int limit) {
-    return callLogReader.recentByApi(apiId, Math.max(1, Math.min(200, limit))).stream()
+    return callLogReader.recentSuccessfulByApi(apiId, Math.max(1, Math.min(200, limit))).stream()
         .map(normalizer::normalize)
         .toList();
   }
