@@ -123,6 +123,34 @@ class ConsumerImpactServiceTest {
   }
 
   @Test
+  void persistedDatasetAuditOutageKeepsKnownUsageButDoesNotClaimCompleteCoverage() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    ConsumerRef consumer = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice");
+    LocalDateTime observedAt = LocalDateTime.of(2026, 10, 8, 12, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(synchronizer.synchronizeRecentByProduct(101L, 200))
+        .thenThrow(new IllegalStateException("source audit store offline"));
+    when(usage.list(42L, product, null, 200)).thenReturn(
+        List.of(event(42L, product, consumer, "9001", "v1", observedAt, "query:known")));
+
+    ConsumerImpactView view = new ConsumerImpactService(
+        subscriptions, usage, project, synchronizer, null).view(product, 200);
+
+    assertEquals(ConsumerImpactView.EvidenceState.UNAVAILABLE, view.usageState());
+    assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.subscriptionState());
+    assertTrue(view.coverageNote().contains("partial"));
+    assertEquals(1, view.consumers().size());
+    assertEquals(1, view.consumers().getFirst().successfulUsageCount());
+    assertEquals("9001",
+        view.consumers().getFirst().observedVersions().getFirst().sourceVersion().identity());
+  }
+
+  @Test
   void providerFailureIsUnavailableNotFakeEmpty() {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);

@@ -29,8 +29,8 @@ public class DatasetUsageEvidenceSynchronizer {
   private List<UsageNormalizationResult> synchronizeRecent(Set<Long> datasetIds, int limit) {
     Long projectId = currentProject.requireProjectId();
     int boundedLimit = Math.max(1, Math.min(200, limit));
-    return performanceReader.recent(
-            datasetIds, Set.of(), Set.of(DatasetQueryStatus.SUCCESS), null, boundedLimit).stream()
+    return performanceReader.recentPersisted(
+            datasetIds, Set.of(DatasetQueryStatus.SUCCESS), boundedLimit).stream()
         .map(trace -> normalizer.normalize(projectId, trace))
         .toList();
   }
