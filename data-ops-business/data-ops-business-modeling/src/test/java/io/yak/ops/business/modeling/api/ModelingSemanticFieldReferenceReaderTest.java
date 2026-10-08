@@ -46,7 +46,7 @@ class ModelingSemanticFieldReferenceReaderTest {
     LambdaQueryWrapper<ModelingModelColumnPO> conditions = query.getValue();
     // Field ID and project identity must both be constrained. The mock mapper
     // does not execute SQL, so use the test MyBatis mapping's column names.
-    assertThat(conditions.getSqlSegment()).contains("projectId", "stdFieldId");
+    assertThat(conditions.getSqlSegment()).contains("project_id", "std_field_id");
     assertThat(conditions.getParamNameValuePairs().values()).contains(42L, 35L);
   }
 
