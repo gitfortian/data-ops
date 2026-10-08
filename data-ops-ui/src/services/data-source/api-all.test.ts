@@ -16,10 +16,11 @@ describe('Data Source all-list modern API / single sync editor contract', () => 
     };
     const getData = jest.spyOn(HttpUtils, 'getData').mockResolvedValue(data);
 
-    await expect(listAllDataSources()).resolves.toEqual(data);
+    const result = await listAllDataSources();
+    expect(result).toEqual(data);
+    expect(result.bizData).toEqual(data.bizData);
     expect(getData).toHaveBeenCalledTimes(1);
     expect(getData).toHaveBeenCalledWith('/api/v1/data-source/all');
-    expect((await listAllDataSources()).bizData).toEqual(data.bizData);
   });
 
   it('preserves a successful empty data source list', async () => {
