@@ -76,6 +76,7 @@ export default function VersionChangeImpactReview({
     try {
       await navigator.clipboard.writeText(consumerVersionOutreachDraft(
         product, impact, review, row, proposedChange, new Date().toISOString(),
+        { state: sourceConsumerState, consumers: sourceConsumers },
       ));
       message.success('已复制人工沟通草稿；未发送任何通知或生成审批记录');
     } catch {
@@ -88,6 +89,7 @@ export default function VersionChangeImpactReview({
     try {
       await navigator.clipboard.writeText(versionChangeCoordinationWorkpackText(
         product, impact, review, proposedChange, new Date().toISOString(),
+        { state: sourceConsumerState, consumers: sourceConsumers },
       ));
       message.success('已复制人工协同工作清单；未写入变更计划、通知、确认或审批');
     } catch {
