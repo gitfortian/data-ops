@@ -19,5 +19,9 @@ public interface DatasetQueryPerformanceStore {
       Long minTotalMillis,
       int limit);
 
+  /** Persisted successful evidence of exactly one immutable DatasetVersion. */
+  List<DatasetQueryPerformance> successfulByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, int limit);
+
   int deleteBefore(Instant cutoff, int limit);
 }
