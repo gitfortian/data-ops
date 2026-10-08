@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.yak.ops.business.asset.dao.mapper.AssetSettingMapper;
 import io.yak.ops.business.asset.dao.model.AssetSettingPO;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.List;
 import org.mockito.Mockito;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 
 /** KV 设置:缺省值容错 + 有则改之无则加勉。 */
 class AssetSettingServiceTest {
@@ -49,6 +52,10 @@ class AssetSettingServiceTest {
 
   @Test
   void getAndPutUseTheSameProjectAndKeyScope() {
+    // Resolve Lambda column metadata before rendering SQL and its bound parameters.
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new MybatisConfiguration(), AssetSettingMapper.class.getName()),
+        AssetSettingPO.class);
     when(mapper.selectOne(any())).thenReturn(null);
     service.get(23L, "gone_window_days");
     service.put(23L, "gone_window_days", "7");
@@ -56,7 +63,11 @@ class AssetSettingServiceTest {
     ArgumentCaptor<LambdaQueryWrapper> conditions = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
     verify(mapper, Mockito.times(2)).selectOne(conditions.capture());
     List<LambdaQueryWrapper> wrappers = conditions.getAllValues();
+    assertEquals(wrappers.get(0).getSqlSegment(), wrappers.get(1).getSqlSegment());
     for (LambdaQueryWrapper wrapper : wrappers) {
+      String predicate = wrapper.getSqlSegment();
+      assertTrue(predicate.contains("project_id"));
+      assertTrue(predicate.contains("setting_key"));
       assertEquals(2, wrapper.getParamNameValuePairs().size());
       assertTrue(wrapper.getParamNameValuePairs().containsValue(23L));
       assertTrue(wrapper.getParamNameValuePairs().containsValue("gone_window_days"));
