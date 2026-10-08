@@ -18,6 +18,16 @@ public record ConsumerImpactView(
     consumers = consumers == null ? List.of() : List.copyOf(consumers);
   }
 
+  /** Compatible constructor for existing callers that only provide textual coverage. */
+  public ConsumerImpactView(
+      ProductKey productKey,
+      EvidenceState subscriptionState,
+      EvidenceState usageState,
+      List<KnownConsumer> consumers,
+      String coverageNote) {
+    this(productKey, subscriptionState, usageState, consumers, coverageNote, null);
+  }
+
   /** Source audit and normalized Usage windows are independent, bounded read-side views. */
   public record EvidenceCoverage(
       int requestedUsageLimit,
