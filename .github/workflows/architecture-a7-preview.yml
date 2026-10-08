@@ -1,0 +1,103 @@
+name: Architecture A7 Integration Preview
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/architecture/a7-integration-preview.mjs'
+      - 'scripts/architecture/a7-integration-preview.test.mjs'
+      - '.github/workflows/architecture-a7-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: architecture-a7-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: A7 combined migration / runtime / UI acceptance (read-only)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.head_ref == 'architecture/yak-a7-integration-acceptance-preview' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: architecture-ci
+          MYSQL_DATABASE: architecture_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -parchitecture-ci"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: architecture
+          POSTGRES_PASSWORD: architecture-ci
+          POSTGRES_DB: architecture_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U architecture -d architecture_ci"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      ARCHITECTURE_MYSQL_URL: jdbc:mysql://127.0.0.1:3306/architecture_ci?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      ARCHITECTURE_MYSQL_USERNAME: root
+      ARCHITECTURE_MYSQL_PASSWORD: architecture-ci
+      ARCHITECTURE_POSTGRESQL_URL: jdbc:postgresql://127.0.0.1:5432/architecture_ci
+      ARCHITECTURE_POSTGRESQL_USERNAME: architecture
+      ARCHITECTURE_POSTGRESQL_PASSWORD: architecture-ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: data-ops-ui/yarn.lock
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: npm install --global yarn@1.22.22
+      - name: Verify preview guard unit tests
+        run: node --test scripts/architecture/a7-integration-preview.test.mjs
+      - name: Simulate eleven protected PR merges and run complete acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          preview="$RUNNER_TEMP/a7-preview-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          report="$RUNNER_TEMP/a7-combination-snapshot.json"
+          trap 'git worktree remove --force "$preview" 2>/dev/null || true' EXIT
+          node scripts/architecture/a7-integration-preview.mjs prepare "$preview" "$report"
+          cd "$preview"
+          node --test scripts/architecture/*.test.mjs scripts/ci/*.test.mjs scripts/release/*.test.mjs
+          node scripts/architecture/check-boundaries.mjs
+          node scripts/architecture/check-frontend-boundaries.mjs
+          node scripts/architecture/check-persistence-consumers.mjs --json > "$RUNNER_TEMP/a7-persistence-consumers.json"
+          node scripts/db/check-migration-history.mjs
+          node scripts/db/check-flyway-ownership.mjs --json > "$RUNNER_TEMP/a7-flyway-ownership.json"
+          cd data-ops-ui
+          yarn install --frozen-lockfile
+          yarn jest --runInBand
+          node scripts/check-type-baseline.mjs
+          yarn build
+          cd ..
+          bash ./mvnw -B -ntp verify
+          node scripts/release/frontend-artifact.mjs
+          tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
+      - name: Retain precise SHA snapshot and inventories, including on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-a7-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/a7-combination-snapshot.json
+            ${{ runner.temp }}/a7-combination-snapshot.md
+            ${{ runner.temp }}/a7-persistence-consumers.json
+            ${{ runner.temp }}/a7-flyway-ownership.json
+          if-no-files-found: warn
+          retention-days: 30
