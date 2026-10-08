@@ -16,6 +16,12 @@ public interface DataServiceCallLogRepository {
   /** Current-Project, API-scoped, latest successful calls for Usage reconciliation only. */
   List<InvocationRecord> recentSuccessfulByApi(Long apiId, int limit);
 
+  /**
+   * Bounded successful calls for one immutable source revision.
+   * All Project + API + revision + success predicates run before LIMIT.
+   */
+  List<InvocationRecord> recentSuccessfulByApiAndRevision(Long apiId, Long sourceRevisionId, int limit);
+
   /** Exact persisted call audit in the trusted Project and owning API; no window fallback. */
   Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId);
 
