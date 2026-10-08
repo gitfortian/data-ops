@@ -179,6 +179,41 @@ public class ConsumerImpactService {
         retryRequired, !retryRequired && page.exhausted());
   }
 
+  /**
+   * Explicit, opt-in Data Service audit recovery beyond one revision's recent window.
+   * A gap blocks the next cursor; retry the identical page to preserve evidence.
+   */
+  public DataServiceAuditRecoveryView recoverDataServiceRevisionPage(
+      ProductKey productKey, String sourceVersionIdentity,
+      Long beforeInvocationId, int requestedLimit) {
+    if (productKey.productType() != ProductType.DATA_SERVICE || dataServiceSynchronizer == null) {
+      throw new IllegalArgumentException("Revision recovery requires a Data Service source");
+    }
+    Long apiId = parseProductId(productKey);
+    Long revisionId = parseSourceVersionId(sourceVersionIdentity);
+    if (apiId == null || revisionId == null
+        || (beforeInvocationId != null && beforeInvocationId <= 0L)) {
+      throw new IllegalArgumentException("Data Service, immutable revision and cursor must be canonical positive IDs");
+    }
+    currentProject.requireProjectId();
+    int limit = Math.max(1, Math.min(200, requestedLimit));
+    var page = dataServiceSynchronizer.recoverSuccessfulRevisionPage(
+        apiId, revisionId, beforeInvocationId, limit);
+    int normalized = (int) page.results().stream()
+        .filter(result -> result.state() == UsageNormalizationState.NORMALIZED).count();
+    int gaps = (int) page.results().stream()
+        .filter(result -> result.state() == UsageNormalizationState.GAP
+            || result.state() == UsageNormalizationState.IGNORED).count();
+    int unavailable = (int) page.results().stream()
+        .filter(result -> result.state() == UsageNormalizationState.UNAVAILABLE).count();
+    boolean retryRequired = gaps > 0 || unavailable > 0;
+    return new DataServiceAuditRecoveryView(
+        productKey.value(), sourceVersionIdentity, beforeInvocationId,
+        limit, page.results().size(), normalized, gaps, unavailable,
+        retryRequired ? null : page.nextBeforeInvocationId(),
+        retryRequired, !retryRequired && page.exhausted());
+  }
+
   private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit, String exactVersion) {
     try {
       List<UsageNormalizationResult> results;
