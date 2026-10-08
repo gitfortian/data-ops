@@ -101,6 +101,29 @@ public class DatasetQueryPerformanceReader {
     return unique.values().stream().limit(limit).toList();
   }
 
+  /**
+   * Reconciliation must read durable source evidence: the local diagnostics buffer is
+   * intentionally allowed for the observability UI but cannot prove complete Usage
+   * coverage across instances or after a restart.
+   *
+   * Fail closed when the persisted provider cannot be read. Consumption can then
+   * preserve known normalized usage while accurately reporting incomplete coverage.
+   */
+  public List<DatasetQueryPerformance> recentPersisted(
+      Set<Long> datasetIds, Set<DatasetQueryStatus> statuses, int requestedLimit) {
+    Long projectId = currentProject.requireProjectId();
+    int limit = Math.max(1, Math.min(requestedLimit, MAX_QUERY_LIMIT));
+    Set<Long> ids = datasetIds == null ? Set.of() : Set.copyOf(datasetIds);
+    Set<DatasetQueryStatus> states = statuses == null ? Set.of() : Set.copyOf(statuses);
+    DatasetQueryPerformanceStore store = storeProvider == null ? null : storeProvider.getIfAvailable();
+    if (store == null) {
+      throw new IllegalStateException("Persisted Dataset query diagnostics are unavailable");
+    }
+    return Objects.requireNonNull(
+        store.recent(projectId, ids, Set.of(), states, null, limit),
+        "Persisted Dataset query diagnostics response is unavailable");
+  }
+
   private boolean matches(
       DatasetQueryPerformance trace,
       Set<Long> datasetIds,
