@@ -84,6 +84,13 @@ public class MetadataPresenceService {
     this.collapseRatio = collapseRatio;
   }
 
+  /** 当前实际执行的安全策略；历史任务配置列不参与 GONE 判定。 */
+  public record EffectivePolicy(double collapseThresholdPct, int missingRounds) {}
+
+  public EffectivePolicy effectivePolicy() {
+    return new EffectivePolicy(collapseRatio * 100, 2);
+  }
+
   /**
    * 上一<b>有效</b>轮的开始时刻，即"缺席满两轮"的边界；没有可比轮次时返回 null（本轮不判 GONE）。
    *
