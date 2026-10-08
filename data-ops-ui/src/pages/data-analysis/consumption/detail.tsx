@@ -39,6 +39,7 @@ import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
 import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
+import { consumerSourceTarget } from './consumer-source-navigation';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
@@ -214,12 +215,22 @@ export default function ConsumptionDetailPage() {
     {
       title: 'Consumer',
       key: 'consumer',
-      render: (_, row) => (
-        <Space direction="vertical" size={0}>
-          <Text strong>{row.consumerRef.displayHint || row.consumerRef.sourceIdentity}</Text>
-          <Text type="secondary">{row.consumerRef.consumerType} · {row.consumerRef.sourceDomain}:{row.consumerRef.sourceIdentity}</Text>
-        </Space>
-      ),
+      render: (_, row) => {
+        const target = consumerSourceTarget(row.consumerRef);
+        const allowed = target && (!target.requiredPermission || can(target.requiredPermission));
+        return (
+          <Space direction="vertical" size={0}>
+            <Text strong>{row.consumerRef.displayHint || row.consumerRef.sourceIdentity}</Text>
+            <Text type="secondary">{row.consumerRef.consumerType} · {row.consumerRef.sourceDomain}:{row.consumerRef.sourceIdentity}</Text>
+            {allowed && target ? (
+              <Button type="link" size="small" style={{ padding: 0, height: 'auto' }}
+                title={target.description} onClick={() => history.push(target.href)}>
+                {target.label}
+              </Button>
+            ) : null}
+          </Space>
+        );
+      },
     },
     { title: '已声明方式', dataIndex: 'declaredModes', key: 'declaredModes', render: (modes: string[]) => modes?.join(', ') || '-' },
     { title: '成功消费（本次窗口）', dataIndex: 'successfulUsageCount', key: 'successfulUsageCount' },
