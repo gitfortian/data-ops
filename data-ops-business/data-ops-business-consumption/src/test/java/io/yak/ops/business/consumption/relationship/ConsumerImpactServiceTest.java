@@ -108,9 +108,70 @@ class ConsumerImpactServiceTest {
 
     assertEquals(ConsumerImpactView.EvidenceState.UNAVAILABLE, view.usageState());
     assertTrue(view.coverageNote().contains("partial"));
+    assertEquals(1, view.coverage().normalizationGapCount());
+    assertEquals(false, view.coverage().sourceReadUnavailable());
     assertEquals("9001", view.consumers().getFirst().observedVersions().getFirst()
         .sourceVersion().identity());
     assertEquals(1, view.consumers().getFirst().successfulUsageCount());
+  }
+
+  @Test
+  void fullSourceAuditWindowIsBoundedReadableEvidenceNotProviderFailure() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    ConsumerRef consumer = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice");
+    LocalDateTime at = LocalDateTime.of(2026, 10, 8, 10, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(synchronizer.synchronizeRecentByProduct(101L, 2)).thenReturn(List.of(
+        UsageNormalizationResult.ignored("query:a", "not an observed consumer"),
+        UsageNormalizationResult.ignored("query:b", "not an observed consumer")));
+    when(usage.list(42L, product, null, 2)).thenReturn(List.of(
+        event(42L, product, consumer, "9007199254740993", "r8", at, "query:known")));
+
+    ConsumerImpactView view = new ConsumerImpactService(
+        subscriptions, usage, project, synchronizer, null).view(product, 2);
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals(2, view.coverage().requestedUsageLimit());
+    assertEquals(2, view.coverage().sourceRecordCount());
+    assertEquals(1, view.coverage().normalizedUsageCount());
+    assertTrue(view.coverage().sourceWindowLimitReached());
+    assertEquals(false, view.coverage().normalizedUsageWindowLimitReached());
+    assertEquals(false, view.coverage().sourceReadUnavailable());
+    assertTrue(view.coverageNote().contains("row limit was reached"));
+    assertEquals("9007199254740993",
+        view.consumers().getFirst().observedVersions().getFirst().sourceVersion().identity());
+  }
+
+  @Test
+  void normalizedUsageWindowLimitIsVisibleWithoutDiscardingObservedRows() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer synchronizer = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    ConsumerRef consumer = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "bob", "Bob");
+    LocalDateTime at = LocalDateTime.of(2026, 10, 8, 10, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(synchronizer.synchronizeRecentByProduct(101L, 2)).thenReturn(List.of());
+    when(usage.list(42L, product, null, 2)).thenReturn(List.of(
+        event(42L, product, consumer, "9001", "v1", at, "query:1"),
+        event(42L, product, consumer, "9002", "v2", at.plusMinutes(1), "query:2")));
+
+    ConsumerImpactView view = new ConsumerImpactService(
+        subscriptions, usage, project, synchronizer, null).view(product, 2);
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals(false, view.coverage().sourceWindowLimitReached());
+    assertTrue(view.coverage().normalizedUsageWindowLimitReached());
+    assertEquals(2, view.coverage().normalizedUsageCount());
+    assertTrue(view.coverageNote().contains("row limit was reached"));
+    assertEquals(2, view.consumers().getFirst().observedVersions().size());
   }
 
   private static UsageEvidence event(
@@ -143,6 +204,8 @@ class ConsumerImpactServiceTest {
 
     assertEquals(ConsumerImpactView.EvidenceState.UNAVAILABLE, view.usageState());
     assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.subscriptionState());
+    assertTrue(view.coverage().sourceReadUnavailable());
+    assertEquals(0, view.coverage().normalizationGapCount());
     assertTrue(view.coverageNote().contains("partial"));
     assertEquals(1, view.consumers().size());
     assertEquals(1, view.consumers().getFirst().successfulUsageCount());
