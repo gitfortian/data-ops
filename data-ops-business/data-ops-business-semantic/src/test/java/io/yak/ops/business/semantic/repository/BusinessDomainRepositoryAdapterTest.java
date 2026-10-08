@@ -52,11 +52,11 @@ class BusinessDomainRepositoryAdapterTest {
     LambdaUpdateWrapper<SemanticDomainPO> wrapper = wrapperCaptor.getValue();
 
     String setSql = wrapper.getSqlSet();
-    assertThat(setSql).contains("domain_name", "owner", "description", "sort_order", "update_time");
-    assertThat(setSql).doesNotContain("parent_id", "domain_code", "created_by", "create_time");
+    assertThat(setSql).contains("domainName", "owner", "description", "sortOrder", "updateTime");
+    assertThat(setSql).doesNotContain("parentId", "domainCode", "createdBy", "createTime");
     assertThat(wrapper.getParamNameValuePairs().values().stream().filter(Objects::isNull).count())
         .isEqualTo(2L);
-    assertThat(wrapper.getSqlSegment()).contains("project_id", "id");
+    assertThat(wrapper.getSqlSegment()).contains("projectId", "id");
     assertThat(wrapper.getParamNameValuePairs().values()).contains(42L, 7L);
   }
 
