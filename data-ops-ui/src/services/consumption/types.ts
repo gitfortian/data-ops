@@ -81,6 +81,14 @@ export interface Subscription {
 
 export type EvidenceState = 'READY' | 'EMPTY' | 'UNAVAILABLE' | 'FORBIDDEN';
 
+/** Successful usage grouped by immutable source version in the returned evidence window. */
+export interface ObservedVersion {
+  sourceVersion: SourceVersionRef;
+  successfulUsageCount: number;
+  lastObservedAt?: string | null;
+  providerEvidenceRefs: string[];
+}
+
 export interface KnownConsumer {
   consumerRef: ConsumerRef;
   declaredModes: ConsumptionMode[];
@@ -90,6 +98,7 @@ export interface KnownConsumer {
   lastDeclaredAt?: string | null;
   lastObservedAt?: string | null;
   providerEvidenceRefs: string[];
+  observedVersions?: ObservedVersion[];
 }
 
 export interface ConsumerImpact {

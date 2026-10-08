@@ -1,6 +1,7 @@
 package io.yak.ops.business.consumption.relationship;
 
 import io.yak.ops.business.consumption.product.identity.ProductKey;
+import io.yak.ops.business.consumption.product.identity.SourceVersionRef;
 import io.yak.ops.business.consumption.product.model.ProductType;
 import io.yak.ops.business.consumption.relationship.source.DataServiceUsageEvidenceSynchronizer;
 import io.yak.ops.business.consumption.relationship.source.DatasetUsageEvidenceSynchronizer;
@@ -93,7 +94,9 @@ public class ConsumerImpactService {
       consumer.observedModes.add(row.consumptionMode());
       consumer.successfulUsage++;
       consumer.lastObservedAt = later(consumer.lastObservedAt, row.observedAt());
-      consumer.providerEvidenceRefs.add(row.provider() + ":" + row.providerEvidenceRef());
+      String evidenceRef = row.provider() + ":" + row.providerEvidenceRef();
+      consumer.providerEvidenceRefs.add(evidenceRef);
+      consumer.recordVersion(row.sourceVersion(), row.observedAt(), evidenceRef);
     }
 
     List<ConsumerImpactView.KnownConsumer> consumers = merged.values().stream()
@@ -150,6 +153,7 @@ public class ConsumerImpactService {
     private final Set<ConsumptionMode> declaredModes = new LinkedHashSet<>();
     private final Set<ConsumptionMode> observedModes = new LinkedHashSet<>();
     private final Set<String> providerEvidenceRefs = new LinkedHashSet<>();
+    private final Map<String, MutableObservedVersion> observedVersions = new LinkedHashMap<>();
     private int activeSubscriptions;
     private int successfulUsage;
     private LocalDateTime lastDeclaredAt;
@@ -159,7 +163,17 @@ public class ConsumerImpactService {
       this.consumerRef = consumerRef;
     }
 
+    private void recordVersion(SourceVersionRef version, LocalDateTime observedAt, String evidenceRef) {
+      observedVersions.computeIfAbsent(version.identity(), ignored -> new MutableObservedVersion(version))
+          .record(version, observedAt, evidenceRef);
+    }
+
     private ConsumerImpactView.KnownConsumer freeze() {
+      List<ConsumerImpactView.ObservedVersion> versions = observedVersions.values().stream()
+          .map(MutableObservedVersion::freeze)
+          .sorted(Comparator.comparing(ConsumerImpactView.ObservedVersion::lastObservedAt).reversed()
+              .thenComparing(version -> version.sourceVersion().identity()))
+          .toList();
       return new ConsumerImpactView.KnownConsumer(
           consumerRef,
           new ArrayList<>(declaredModes),
@@ -168,7 +182,35 @@ public class ConsumerImpactService {
           successfulUsage,
           lastDeclaredAt,
           lastObservedAt,
-          new ArrayList<>(providerEvidenceRefs));
+          new ArrayList<>(providerEvidenceRefs),
+          versions);
+    }
+  }
+
+  private static final class MutableObservedVersion {
+    private SourceVersionRef sourceVersion;
+    private int successfulUsage;
+    private LocalDateTime lastObservedAt;
+    private final Set<String> providerEvidenceRefs = new LinkedHashSet<>();
+
+    private MutableObservedVersion(SourceVersionRef sourceVersion) {
+      this.sourceVersion = sourceVersion;
+    }
+
+    private void record(SourceVersionRef candidate, LocalDateTime time, String evidenceRef) {
+      successfulUsage++;
+      providerEvidenceRefs.add(evidenceRef);
+      // Version ID owns identity; display version is descriptive and can be missing in historic audit.
+      if (candidate.displayVersion() != null
+          && (sourceVersion.displayVersion() == null || lastObservedAt == null || !time.isBefore(lastObservedAt))) {
+        sourceVersion = candidate;
+      }
+      lastObservedAt = later(lastObservedAt, time);
+    }
+
+    private ConsumerImpactView.ObservedVersion freeze() {
+      return new ConsumerImpactView.ObservedVersion(
+          sourceVersion, successfulUsage, lastObservedAt, new ArrayList<>(providerEvidenceRefs));
     }
   }
 }

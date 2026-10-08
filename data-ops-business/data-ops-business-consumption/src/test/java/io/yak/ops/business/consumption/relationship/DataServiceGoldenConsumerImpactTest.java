@@ -73,6 +73,10 @@ class DataServiceGoldenConsumerImpactTest {
     assertEquals(List.of(ConsumptionMode.API_INVOKE), known.observedModes());
     assertEquals(1, known.activeSubscriptionCount());
     assertEquals(1, known.successfulUsageCount());
+    assertEquals(1, known.observedVersions().size());
+    assertEquals("101", known.observedVersions().getFirst().sourceVersion().identity());
+    assertEquals("r4", known.observedVersions().getFirst().sourceVersion().displayVersion());
+    assertEquals(1, known.observedVersions().getFirst().successfulUsageCount());
     assertEquals(subscribedAt, known.lastDeclaredAt());
     assertEquals(observedAt, known.lastObservedAt());
     assertTrue(known.providerEvidenceRefs()
@@ -122,6 +126,7 @@ class DataServiceGoldenConsumerImpactTest {
     assertEquals(List.of(), known.observedModes());
     assertEquals(1, known.activeSubscriptionCount());
     assertEquals(0, known.successfulUsageCount());
+    assertTrue(known.observedVersions().isEmpty());
     assertEquals(subscribedAt, known.lastDeclaredAt());
     assertEquals(null, known.lastObservedAt());
     assertEquals(List.of(), known.providerEvidenceRefs());
@@ -174,6 +179,7 @@ class DataServiceGoldenConsumerImpactTest {
     assertEquals(List.of(ConsumptionMode.API_INVOKE), known.observedModes());
     assertEquals(0, known.activeSubscriptionCount());
     assertEquals(1, known.successfulUsageCount());
+    assertEquals("101", known.observedVersions().getFirst().sourceVersion().identity());
     assertEquals(observedAt, known.lastObservedAt());
     assertTrue(known.providerEvidenceRefs()
         .contains("DATA_SERVICE_INVOCATION:invocation:501"));

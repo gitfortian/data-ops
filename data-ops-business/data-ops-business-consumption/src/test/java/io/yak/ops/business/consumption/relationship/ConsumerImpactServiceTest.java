@@ -50,6 +50,79 @@ class ConsumerImpactServiceTest {
   }
 
   @Test
+  void showsExactDatasetVersionsAndEvidencePerKnownConsumerWithoutInventingDeclarations() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    ConsumerRef consumer = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice");
+    LocalDateTime first = LocalDateTime.of(2026, 10, 8, 8, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(sync.synchronizeRecentByProduct(101L, 4)).thenReturn(List.of());
+    when(usage.list(42L, product, null, 4)).thenReturn(List.of(
+        event(42L, product, consumer, "9001", "v1", first, "query:a"),
+        event(42L, product, consumer, "9002", "v2", first.plusHours(1), "query:b"),
+        event(42L, product, consumer, "9001", "v1", first.plusHours(2), "query:c")));
+
+    ConsumerImpactView view =
+        new ConsumerImpactService(subscriptions, usage, project, sync, null).view(product, 4);
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.subscriptionState());
+    assertEquals(1, view.consumers().size());
+    var known = view.consumers().getFirst();
+    assertEquals(3, known.successfulUsageCount());
+    assertEquals(0, known.activeSubscriptionCount());
+    assertEquals(2, known.observedVersions().size());
+    var latest = known.observedVersions().getFirst();
+    assertEquals("9001", latest.sourceVersion().identity());
+    assertEquals("v1", latest.sourceVersion().displayVersion());
+    assertEquals(2, latest.successfulUsageCount());
+    assertEquals(first.plusHours(2), latest.lastObservedAt());
+    assertEquals(List.of("DATASET_QUERY_PERFORMANCE:query:a", "DATASET_QUERY_PERFORMANCE:query:c"),
+        latest.providerEvidenceRefs());
+    assertEquals("9002", known.observedVersions().get(1).sourceVersion().identity());
+    assertEquals(1, known.observedVersions().get(1).successfulUsageCount());
+  }
+
+  @Test
+  void partialSourceRecoveryKeepsActualVersionEvidenceButDoesNotClaimCompleteCoverage() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATASET:101");
+    ConsumerRef consumer = new ConsumerRef(ConsumerType.USER, "SECURITY_PRINCIPAL", "alice", "Alice");
+    LocalDateTime at = LocalDateTime.of(2026, 10, 8, 10, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(sync.synchronizeRecentByProduct(101L, 20))
+        .thenReturn(List.of(UsageNormalizationResult.gap("query:legacy", "missing exact version")));
+    when(usage.list(42L, product, null, 20))
+        .thenReturn(List.of(event(42L, product, consumer, "9001", null, at, "query:a")));
+
+    ConsumerImpactView view = new ConsumerImpactService(subscriptions, usage, project, sync, null)
+        .view(product, 20);
+
+    assertEquals(ConsumerImpactView.EvidenceState.UNAVAILABLE, view.usageState());
+    assertTrue(view.coverageNote().contains("partial"));
+    assertEquals("9001", view.consumers().getFirst().observedVersions().getFirst()
+        .sourceVersion().identity());
+    assertEquals(1, view.consumers().getFirst().successfulUsageCount());
+  }
+
+  private static UsageEvidence event(
+      Long projectId, ProductKey product, ConsumerRef consumer, String versionId,
+      String displayVersion, LocalDateTime at, String evidenceRef) {
+    return new UsageEvidence(
+        null, projectId, product, new SourceVersionRef(versionId, displayVersion),
+        consumer, at, ConsumptionMode.QUERY, UsageOutcome.SUCCESS,
+        "DATASET_QUERY_PERFORMANCE", evidenceRef, evidenceRef, at);
+  }
+
+  @Test
   void providerFailureIsUnavailableNotFakeEmpty() {
     SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
     UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
