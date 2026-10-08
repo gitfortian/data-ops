@@ -9,7 +9,9 @@ import io.yak.ops.common.enums.metadata.MetadataEnums.TypeCategory;
 import io.yak.ops.common.enums.metadata.MetadataEnums.TypeStatus;
 import io.yak.ops.common.enums.metadata.MetadataErrorCode;
 import io.yak.ops.business.metadata.exception.MetadataException;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,13 +102,16 @@ public class MetadataTypeRegistry {
   private Snapshot load() {
     List<MdTypeDefPO> types = typeMapper.selectList(null);
     List<MdFieldDefPO> fields = fieldMapper.selectList(null);
+    // Index fields once; scanning the complete list for every type scales with types * fields.
+    Map<Long, List<MdFieldDefPO>> fieldsByTypeId = new HashMap<>();
+    for (MdFieldDefPO field : fields) {
+      fieldsByTypeId.computeIfAbsent(field.getTypeId(), unused -> new ArrayList<>()).add(field);
+    }
     Map<String, TypeDefinition> byName = new java.util.LinkedHashMap<>();
     for (MdTypeDefPO type : types) {
-      List<MdFieldDefPO> own =
-          fields.stream()
-              .filter(field -> type.getId().equals(field.getTypeId()))
-              .sorted(Comparator.comparing(MdFieldDefPO::getOrdinal))
-              .toList();
+      List<MdFieldDefPO> own = fieldsByTypeId.getOrDefault(type.getId(), List.of()).stream()
+          .sorted(Comparator.comparing(MdFieldDefPO::getOrdinal))
+          .toList();
       byName.put(type.getTypeName(), new TypeDefinition(type, own));
     }
     return new Snapshot(Map.copyOf(byName), System.nanoTime() / 1_000_000L);
