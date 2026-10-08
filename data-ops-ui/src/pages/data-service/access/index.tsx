@@ -1,4 +1,6 @@
 import { YakButton, YakEmpty } from '@/components/ui';
+import { parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
+import { useSearchParams } from '@umijs/max';
 import {
   createDataServiceConsumer,
   deleteDataServiceConsumer,
@@ -10,6 +12,7 @@ import {
   type DataServiceConsumer,
 } from '@/services/data-service';
 import {
+  Alert,
   Drawer,
   Form,
   Input,
@@ -60,9 +63,14 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
 
 export default function DataServiceAccessPage() {
   const [form] = Form.useForm<ConsumerFormValues>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedConsumerRef = searchParams.get('consumerId') || '';
+  const requestedConsumerId = parseManagedConsumerSourceId(requestedConsumerRef);
   const [records, setRecords] = useState<DataServiceConsumer[]>([]);
   const [apis, setApis] = useState<DataServiceAccessOverviewItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadIssue, setLoadIssue] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [selected, setSelected] = useState<DataServiceConsumer>();
@@ -72,6 +80,8 @@ export default function DataServiceAccessPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setHasLoaded(false);
+    setLoadIssue(false);
     try {
       const [nextConsumers, nextApis] = await Promise.all([
         listDataServiceConsumers(),
@@ -80,15 +90,34 @@ export default function DataServiceAccessPage() {
       setRecords(nextConsumers || []);
       setApis(nextApis || []);
     } catch (error: any) {
+      setLoadIssue(true);
       message.error(error?.message || '加载调用方与密钥配置失败');
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Only select a member of the already project-scoped source listing, with an exactly
+  // representable ID. URL parameters never grant access or become source truth.
+  useEffect(() => {
+    if (!requestedConsumerRef || !hasLoaded || loadIssue || requestedConsumerId === null) return;
+    const exact = records.find((row) => Number.isSafeInteger(row.id) && row.id === requestedConsumerId);
+    if (exact) setSelected(exact);
+  }, [requestedConsumerRef, requestedConsumerId, records, hasLoaded, loadIssue]);
+
+  const closeSelected = () => {
+    setSelected(undefined);
+    if (requestedConsumerRef) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('consumerId');
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const refreshConsumer = useCallback(async (consumerId: number) => {
     try {
@@ -312,6 +341,18 @@ export default function DataServiceAccessPage() {
           </div>
         </div>
 
+        {requestedConsumerRef && hasLoaded && !loadIssue && (
+          requestedConsumerId === null
+            || !records.some((row) => Number.isSafeInteger(row.id) && row.id === requestedConsumerId)
+        ) ? (
+          <Alert type="warning" showIcon style={{ marginTop: 12 }}
+            message="来源调用方不可核对"
+            description={requestedConsumerId === null
+              ? '来源 ID 无法安全匹配当前页面的调用方 ID；请人工按完整身份核对，不进行数字近似匹配。'
+              : '当前 Project 下未找到可读取的调用方；可能已删除或无权访问。请从来源列表重新核对。'}
+          />
+        ) : null}
+
         <div className="my-4 border-t border-[#f0f0f0]" />
 
         <div className="grid grid-cols-2 divide-x divide-[#f0f0f0] rounded-[8px] bg-[#f8f9fa] md:grid-cols-4">
@@ -368,7 +409,7 @@ export default function DataServiceAccessPage() {
       <Drawer
         open={Boolean(selected)}
         width={1100}
-        onClose={() => setSelected(undefined)}
+        onClose={closeSelected}
         title={selected ? (
           <div className="truncate text-[14px] font-semibold text-[#161823]">{selected.name}</div>
         ) : '调用方与密钥'}
