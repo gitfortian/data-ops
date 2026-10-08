@@ -15,3 +15,14 @@ export function crossesPersistenceBoundary(source, name, classes) {
     /\.(dao|mapper)(\.|$)|\.repository\.impl(\.|$)/.test(name) &&
     importedClasses(name, classes).some(target => target.module?.startsWith('data-ops-business-') && target.module !== source.module);
 }
+
+/** Only Boot may compile against its internal Java packages; assembly has no Java callers. */
+export function importsBootOutsideBoot(source, name) {
+  return source.module !== 'data-ops-boot' && /^io\.yak\.ops\.boot(?:\.|$)/.test(name);
+}
+
+/** Distribution can package Boot; all other modules must remain upstream of Boot. */
+export function dependsOnBootOutsideAssembly(module, dependencies) {
+  return module !== 'data-ops-boot' && module !== 'data-ops-dist' &&
+    dependencies.includes('data-ops-boot');
+}
