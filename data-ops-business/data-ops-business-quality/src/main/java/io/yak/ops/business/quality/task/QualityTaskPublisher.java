@@ -9,12 +9,9 @@ import io.yak.ops.business.quality.domain.QualityTaskRevision;
 import io.yak.ops.business.quality.domain.execution.QualityExecutionDefinition;
 import io.yak.ops.business.quality.execution.QualityExecutionPlanFactory;
 import io.yak.ops.business.quality.repository.QualityTaskRevisionRepository;
+import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.business.taskcatalog.service.TaskCatalogService;
 import io.yak.ops.spi.task.model.TaskAssetSource;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +46,7 @@ public class QualityTaskPublisher {
 
     QualityExecutionDefinition definition = planFactory.freeze(monitor);
     String definitionJson = write(definition);
-    String checksum = checksum(definitionJson);
+    String checksum = VersionDigests.sha256Hex(definitionJson);
     QualityTaskRevision latest = revisionRepository.findLatest(monitor.id()).orElse(null);
     QualityTaskRevision revision = latest != null && checksum.equals(latest.checksum())
         ? latest
@@ -89,7 +86,4 @@ public class QualityTaskPublisher {
     }
   }
 
-  private String checksum(String value) {
-    return io.yak.ops.common.version.VersionDigests.sha256Hex(value);
-  }
 }
