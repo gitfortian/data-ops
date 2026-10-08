@@ -40,6 +40,11 @@ import { formatObservedVersion } from './version-evidence';
 import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
 import { consumerSourceTarget } from '@/config/consumer-source-navigation';
+import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
+import {
+  eligibleConfiguredDataServiceConsumers,
+  type ManagedConsumerSourceState,
+} from './managed-consumer-configuration';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
@@ -99,6 +104,7 @@ export default function ConsumptionDetailPage() {
   const [searchParams] = useSearchParams();
   const { initialState } = useModel('@@initialState');
   const { can } = usePermissionAccess();
+  const mayReadManagedConsumers = can('data-service:access');
   const actor = initialState?.currentUser?.userName || '';
   const productKey = decodeURIComponent(params.productKey || '');
   const returnAssetId = searchParams.get('returnAssetId');
@@ -119,6 +125,7 @@ export default function ConsumptionDetailPage() {
   const [dataServiceConsumers, setDataServiceConsumers] = useState<DataServiceConsumer[]>([]);
   const [selectedConsumerId, setSelectedConsumerId] = useState<number>();
   const [consumerListIssue, setConsumerListIssue] = useState('');
+  const [sourceConsumerState, setSourceConsumerState] = useState<ManagedConsumerSourceState>('LOADING');
 
   const reloadRelationships = useCallback(async () => {
     const requestId = ++relationshipRequestId.current;
@@ -154,6 +161,7 @@ export default function ConsumptionDetailPage() {
     setDataServiceConsumers([]);
     setSelectedConsumerId(undefined);
     setConsumerListIssue('');
+    setSourceConsumerState(mayReadManagedConsumers ? 'LOADING' : 'FORBIDDEN');
     void getProduct(productKey)
       .then((result) => {
         if (!active) return;
@@ -164,20 +172,21 @@ export default function ConsumptionDetailPage() {
         setReason(result.reason || '');
         if (result.state === 'FOUND') {
           void reloadRelationships();
-          if (result.product?.productKey.productType === 'DATA_SERVICE') {
+          if (result.product?.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers) {
             void listDataServiceConsumers()
               .then((value) => {
                 if (!active) return;
                 setDataServiceConsumers(value);
-                const apiId = Number(result.product?.productKey.sourceIdentity);
-                const eligible = value.filter((consumer) => consumer.enabled
-                  && (consumer.accessScope === 'ALL' || consumer.apiIds?.includes(apiId)));
+                setSourceConsumerState('READY');
+                const eligible = eligibleConfiguredDataServiceConsumers(
+                  result.product!.productKey.sourceIdentity, value,
+                );
                 setSelectedConsumerId(eligible[0]?.id);
               })
-              .catch((cause) => {
-                if (active) setConsumerListIssue(cause instanceof Error
-                  ? cause.message
-                  : '读取 Data Service Consumer 失败');
+              .catch(() => {
+                if (!active) return;
+                setSourceConsumerState('UNAVAILABLE');
+                setConsumerListIssue('来源调用方配置读取失败；不能将未知当作无授权或已删除。');
               });
           }
         }
@@ -194,7 +203,7 @@ export default function ConsumptionDetailPage() {
         if (active) setLoading(false);
       });
     return () => { active = false; relationshipRequestId.current += 1; };
-  }, [productKey, reloadRelationships]);
+  }, [productKey, reloadRelationships, mayReadManagedConsumers]);
 
   const columns = useMemo<DatasetColumn[]>(() => {
     if (!product || product.productKey.productType !== 'DATASET') return [];
@@ -222,6 +231,13 @@ export default function ConsumptionDetailPage() {
           <Space direction="vertical" size={0}>
             <Text strong>{row.consumerRef.displayHint || row.consumerRef.sourceIdentity}</Text>
             <Text type="secondary">{row.consumerRef.consumerType} · {row.consumerRef.sourceDomain}:{row.consumerRef.sourceIdentity}</Text>
+            <ManagedConsumerConfigurationHint
+              consumerRef={row.consumerRef}
+              productType={product!.productKey.productType}
+              productSourceIdentity={product!.productKey.sourceIdentity}
+              sourceState={sourceConsumerState}
+              consumers={dataServiceConsumers}
+            />
             {allowed && target ? (
               <Button type="link" size="small" style={{ padding: 0, height: 'auto' }}
                 title={target.description} onClick={() => history.push(target.href)}>
@@ -293,10 +309,10 @@ export default function ConsumptionDetailPage() {
   // The controller requires Asset UPDATE; external service Consumers additionally need ACCESS.
   const canManageSubscription = can('data-asset:update')
     && (product.productKey.productType === 'DATASET' || can('data-service:access'));
-  const eligibleDataServiceConsumers = dataServiceConsumers.filter((consumer) => {
-    const apiId = Number(product.productKey.sourceIdentity);
-    return consumer.enabled && (consumer.accessScope === 'ALL' || consumer.apiIds?.includes(apiId));
-  });
+  const eligibleDataServiceConsumers = eligibleConfiguredDataServiceConsumers(
+    product.productKey.sourceIdentity,
+    dataServiceConsumers,
+  );
   const changeSubscription = async (action: SubscriptionAction | 'REVOKE') => {
     if (action === 'NONE') return;
     const consumerRef = product.productKey.productType === 'DATASET'
@@ -499,7 +515,7 @@ export default function ConsumptionDetailPage() {
                   >永久撤销</Button>
                 </Popconfirm>
               )}
-              {product.productKey.productType === 'DATA_SERVICE' ? (
+              {product.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers ? (
                 <Select
                   aria-label="Data Service Consumer"
                   style={{ minWidth: 240 }}
