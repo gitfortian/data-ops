@@ -35,3 +35,8 @@ F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每
 ## P0-B03：标准字段反向引用读侧 SPI
 
 Semantic 增加 `api.SemanticFieldReferenceReader`：消费者（当前 Modeling）实现，向字段库删除校验提供可信当前 Project 的引用数量。Semantic 绝不反向依赖 Modeling 的 Java 实现或 SQL 表；Modeling 查询本域 `yak_modeling_model_column.std_field_id`（包含可恢复模型列）并在拒绝/异常时禁止删除。该策略与 `StandardReferenceReader`、`LayerStdBindingReader` 使用相同依赖方向和 Spring 注入方式，不承诺前端动态聚合其它领域的引用计数。
+
+
+## P0-B03：过程及业务域跨模块引用
+
+`api.SemanticStructureReferenceReader` 是 Semantic 定义的只读反向 SPI，Modeling 实现 `countProcessReferences` 和 `countDomainReferences`，查询它拥有的 `yak_modeling_model` 记录。Semantic 只消费计数决定删除，不读取 Modeling 表、不复制引用明细；按可信 Project 范围并包含可恢复回收站记录；查不到/查询错误不得冒充零引用。保持原有 `Modeling → Semantic.api` 单向 Maven 依赖。
