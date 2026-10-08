@@ -1,2 +1,0 @@
-from pathlib import Path
-p=Path('data-ops-business/data-ops-business-metadata/src/test/java/io/yak/ops/business/metadata/architecture/MetadataLayeringConventionTest.java');s=p.read_text(encoding='utf-8').replace('Map.entry("config", Set.of()),','Map.entry("config", Set.of()),\n          // Existing read-only overview assembly depends only on its persistence condition.\n          Map.entry("stat", Set.of("config")),');p.write_text(s,encoding='utf-8')

@@ -1,4 +1,0 @@
-from pathlib import Path
-b=Path('data-ops-business/data-ops-business-data-development/src/main/java/io/yak/ops/business/development');p=b/'service/SqlExpressionClassification.java';s=p.read_text(encoding='utf-8').replace('development.service;','development.domain;').replace('final class SqlExpressionClassification','public final class SqlExpressionClassification').replace('  static final Set','  public static final Set').replace('  static boolean aggregate','  public static boolean aggregate');(b/'domain/SqlExpressionClassification.java').write_text(s,encoding='utf-8');p.unlink()
-for f in ['SqlColumnLineageParser.java','DerivedAwareSqlColumnLineageParser.java']:
- p=b/'service'/f;s=p.read_text(encoding='utf-8').replace('package io.yak.ops.business.development.service;','package io.yak.ops.business.development.service;\n\nimport io.yak.ops.business.development.domain.SqlExpressionClassification;');p.write_text(s,encoding='utf-8')
