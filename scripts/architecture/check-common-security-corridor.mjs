@@ -21,7 +21,7 @@ const legacyReference = /\bio\.yak\.framework\.(?:common|schedule|file|security)
 const securityToProduct = /\bio\.yak\.ops\.(?:common|business|boot)(?:\.[a-zA-Z_$][\w$]*|\.\*)+/g;
 const allowed = new Map([
   ...ENUM_NAMES.map(n => [ROOT_COMMON + 'io/yak/ops/common/enums/' + n + '/'
-    + n.charAt(0).toUpperCase() + n.slice(1) + 'ErrorCode.java',
+    + (n === 'datasource' ? 'DataSource' : n.charAt(0).toUpperCase() + n.slice(1)) + 'ErrorCode.java',
     new Set(['io.yak.framework.common.ErrorCode'])]),
   [SCHEDULE_GATEWAY, new Set([
     'io.yak.framework.schedule.api.ScheduleDefinition',
