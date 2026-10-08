@@ -7,13 +7,16 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.repository.DatasetQueryPerformanceStore;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 class DatasetQueryPerformanceReaderTest {
 
@@ -90,6 +93,59 @@ class DatasetQueryPerformanceReaderTest {
 
     assertEquals(DatasetQueryPerformanceReader.MAX_QUERY_LIMIT, traces.size());
     assertEquals("q504", traces.get(0).queryId());
+  }
+
+  @Test
+  void consumptionDurableReadQueriesPersistedSuccessWithinCurrentProject() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    buffer.add(7L, trace("local-only", 1L, 50L));
+    DatasetQueryPerformanceStore store = mock(DatasetQueryPerformanceStore.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DatasetQueryPerformanceStore> provider = mock(ObjectProvider.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(7L);
+    when(provider.getIfAvailable()).thenReturn(store);
+    when(store.recent(7L, Set.of(1L), Set.of(), Set.of(DatasetQueryStatus.SUCCESS), null, 20))
+        .thenReturn(List.of(trace("persisted", 1L, 10L)));
+    var reader = new DatasetQueryPerformanceReader(buffer, provider, project);
+
+    var results = reader.recentPersisted(Set.of(1L), Set.of(DatasetQueryStatus.SUCCESS), 20);
+
+    assertEquals(1, results.size());
+    assertEquals("persisted", results.getFirst().queryId());
+  }
+
+  @Test
+  void consumptionDurableReadRefusesLocalOnlySuccessWhenPersistenceIsMissing() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    buffer.add(7L, trace("local-only", 1L, 10L));
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(7L);
+    var reader = new DatasetQueryPerformanceReader(buffer, null, project);
+
+    assertThrows(IllegalStateException.class,
+        () -> reader.recentPersisted(Set.of(1L), Set.of(DatasetQueryStatus.SUCCESS), 200));
+    // Existing diagnostic UX still permits the explicitly project-scoped local fallback.
+    assertEquals("local-only", reader.recent(Set.of(1L), 200).getFirst().queryId());
+  }
+
+  @Test
+  void consumptionDurableReadPropagatesPersistedSourceFailureInsteadOfReturningFakeEmpty() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    DatasetQueryPerformanceStore store = mock(DatasetQueryPerformanceStore.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DatasetQueryPerformanceStore> provider = mock(ObjectProvider.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(7L);
+    when(provider.getIfAvailable()).thenReturn(store);
+    when(store.recent(7L, Set.of(1L), Set.of(), Set.of(DatasetQueryStatus.SUCCESS), null, 20))
+        .thenThrow(new IllegalStateException("source audit store offline"));
+    var reader = new DatasetQueryPerformanceReader(buffer, provider, project);
+
+    assertThrows(IllegalStateException.class,
+        () -> reader.recentPersisted(Set.of(1L), Set.of(DatasetQueryStatus.SUCCESS), 20));
+    // The diagnostics endpoint deliberately keeps its preexisting fallback policy.
+    assertEquals(List.of(), reader.recent(Set.of(1L), 20));
   }
 
   private Fixture fixture() {
