@@ -185,20 +185,21 @@ public class ConsumerImpactService {
    */
   public DataServiceAuditRecoveryView recoverDataServiceRevisionPage(
       ProductKey productKey, String sourceVersionIdentity,
-      Long beforeInvocationId, int requestedLimit) {
+      String beforeInvocationId, int requestedLimit) {
     if (productKey.productType() != ProductType.DATA_SERVICE || dataServiceSynchronizer == null) {
       throw new IllegalArgumentException("Revision recovery requires a Data Service source");
     }
     Long apiId = parseProductId(productKey);
     Long revisionId = parseSourceVersionId(sourceVersionIdentity);
+    Long cursorId = beforeInvocationId == null ? null : parseSourceVersionId(beforeInvocationId);
     if (apiId == null || revisionId == null
-        || (beforeInvocationId != null && beforeInvocationId <= 0L)) {
+        || (beforeInvocationId != null && cursorId == null)) {
       throw new IllegalArgumentException("Data Service, immutable revision and cursor must be canonical positive IDs");
     }
     currentProject.requireProjectId();
     int limit = Math.max(1, Math.min(200, requestedLimit));
     var page = dataServiceSynchronizer.recoverSuccessfulRevisionPage(
-        apiId, revisionId, beforeInvocationId, limit);
+        apiId, revisionId, cursorId, limit);
     int normalized = (int) page.results().stream()
         .filter(result -> result.state() == UsageNormalizationState.NORMALIZED).count();
     int gaps = (int) page.results().stream()
@@ -210,7 +211,8 @@ public class ConsumerImpactService {
     return new DataServiceAuditRecoveryView(
         productKey.value(), sourceVersionIdentity, beforeInvocationId,
         limit, page.results().size(), normalized, gaps, unavailable,
-        retryRequired ? null : page.nextBeforeInvocationId(),
+        retryRequired || page.nextBeforeInvocationId() == null
+            ? null : page.nextBeforeInvocationId().toString(),
         retryRequired, !retryRequired && page.exhausted());
   }
 
