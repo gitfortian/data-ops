@@ -61,3 +61,7 @@ Modeling 可以通过项目内 `process_id` / `domain_id` 引用 Semantic 的业
 ## P0-B03：分层删除与回收站模型引用保护
 
 数仓分层是 Semantic 的稳定配置对象，Modeling 模型以 `layer_code` 消费。原列表被引用数仅统计当前存活模型，**不能当作物理删除的安全判定**：回收站模型仍可恢复，必须将已持久化的存活和回收站模型引用同时计入删除阻断。Semantic 通过 Modeling 所实现的只读 `LayerUsageReader.countPersistedLayerReferences` 判断；未装配提供者或查询失败时拒绝危险删除，不再按零引用处理。列表的当前有效模型数继续保持原定义，不混淆“活跃模型数”与“删前持久引用数”。
+
+## 数仓分层与数据源引用事实（P0-B03）
+
+数仓分层引用 Project 内 DataSource 的稳定 ID，DataSource 域持有其实际存在性与项目范围事实。Semantic 的分层新增/编辑必须通过既有领域级只读读取器核验 ID，而不把正整数视为有效配置。依赖服务不可用时禁止新增/编辑，已预置模板允许先保持未配置的空态；不得通过 SQL 脚本接口或跨域 Mapper 自行读取数据源。
