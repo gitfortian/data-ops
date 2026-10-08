@@ -316,4 +316,4 @@ Agent 仅消费源域 api 包的授权只读契约；Quality monitor 的 Suggest
 
 ## 两次历史质量执行比较（F-034）
 
-api.QualityExecutionComparisonQueryApi 是最小公共只读契约。execution.QualityExecutionComparisonQueryAdapter 经 QualityExecutionReader.requireSummary/rulesForComparison → QualityExecutionReadRepository.findSummary/findRulesBounded → QualityExecutionDao.selectRuleExecutionsBounded；DAO 先按项目和执行主键确认归属，再执行稳定排序的 LIMIT 21。适配器校验终态/历史身份，并确定性计算可见规则对齐。原 QualityEvidenceQueryApi 的单次最多100条契约保持；比较走独立有界读取，不引入通用 service、状态写入或表迁移。
+api.QualityExecutionComparisonQueryApi 是最小公共只读契约。execution.QualityExecutionComparisonQueryAdapter 经 QualityExecutionReader.requireComparisonSummary/rulesForComparison → QualityExecutionReadRepository.findComparisonSummary/findRulesBounded → QualityExecutionDao.selectRuleExecutionsBounded；摘要与规则查询均显式选择所需字段，排除异常原文与 SQL；DAO 先按项目和执行主键确认归属，再执行稳定排序的 LIMIT 21。适配器校验终态/历史身份，并确定性计算可见规则对齐。原 QualityEvidenceQueryApi 的单次最多100条契约保持；比较走独立有界读取，不引入通用 service、状态写入或表迁移。

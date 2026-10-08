@@ -124,7 +124,25 @@ class QualityExecutionDaoProjectScopeTest {
     verify(fixture.rules).selectList(capture.capture());
     String sql = capture.getValue().getSqlSegment();
     assertThat(sql).contains("execution_id", "ORDER BY", "id ASC", "LIMIT 21");
+    assertThat(capture.getValue().getSqlSelect()).contains("rule_id", "template_code", "expected_value")
+        .doesNotContain("executed_sql", "error_message", "duration_ms");
     assertThat(capture.getValue().getParamNameValuePairs()).containsValue(42L);
     assertThatThrownBy(() -> fixture.dao.selectRuleExecutionsBounded(42, 22)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test void comparisonSummarySelectsOnlyHistoricalFieldsInsideCurrentProject() {
+    Fixture fixture = fixture(7L);
+    com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
+        new org.apache.ibatis.builder.MapperBuilderAssistant(new com.baomidou.mybatisplus.core.MybatisConfiguration(), "comparison-summary"),
+        QualityExecutionPO.class);
+    fixture.dao.selectComparisonSummary("before");
+    @SuppressWarnings("rawtypes")
+    ArgumentCaptor<com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper> capture =
+        ArgumentCaptor.forClass(com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper.class);
+    verify(fixture.executionMapper).selectOne(capture.capture());
+    assertThat(capture.getValue().getSqlSegment()).contains("project_id", "execution_no");
+    assertThat(capture.getValue().getParamNameValuePairs()).containsValue(7L).containsValue("before");
+    assertThat(capture.getValue().getSqlSelect()).contains("data_source_id", "database_name", "schema_name", "monitor_id", "finished_at")
+        .doesNotContain("error_message", "duration_ms");
   }
 }

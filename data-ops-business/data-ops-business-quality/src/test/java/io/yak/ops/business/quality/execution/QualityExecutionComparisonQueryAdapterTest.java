@@ -29,7 +29,7 @@ class QualityExecutionComparisonQueryAdapterTest {
     when(value.executionStatus()).thenReturn(ExecutionStatus.SUCCESS);
     when(value.checkResult()).thenReturn(CheckResult.NOT_PASSED);
     when(value.finishedAt()).thenReturn(LocalDateTime.of(2026, 10, 8, 12, 0));
-    when(reader.requireSummary(no)).thenReturn(value);
+    when(reader.requireComparisonSummary(no)).thenReturn(value);
     when(reader.rulesForComparison(id)).thenReturn(List.of());
     return value;
   }
@@ -56,7 +56,7 @@ class QualityExecutionComparisonQueryAdapterTest {
     var order = inOrder(authorization, reader);
     order.verify(authorization).requirePermission("quality:execution:read");
     order.verify(authorization).requirePermission("quality:monitor:read");
-    order.verify(reader).requireSummary("before");
+    order.verify(reader).requireComparisonSummary("before");
   }
 
   @ParameterizedTest @ValueSource(strings = {"quality:execution:read", "quality:monitor:read"})
@@ -79,7 +79,7 @@ class QualityExecutionComparisonQueryAdapterTest {
       case "running" -> when(after.checkResult()).thenReturn(CheckResult.RUNNING);
       case "unfinished" -> when(after.finishedAt()).thenReturn(null);
       case "identity" -> when(after.executionNo()).thenReturn("forged");
-      case "missing" -> when(reader.requireSummary("after")).thenReturn(null);
+      case "missing" -> when(reader.requireComparisonSummary("after")).thenReturn(null);
       default -> fail();
     }
     assertThrows(IllegalArgumentException.class, () -> adapter.compare("before", "after"));

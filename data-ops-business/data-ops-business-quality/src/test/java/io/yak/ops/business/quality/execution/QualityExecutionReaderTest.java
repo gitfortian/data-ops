@@ -23,6 +23,15 @@ class QualityExecutionReaderTest {
     org.mockito.Mockito.verifyNoMoreInteractions(repository);
   }
 
+  @Test void comparisonSummaryUsesDedicatedProjectionAndRejectsMissingExecution() {
+    Execution execution = mock(Execution.class);
+    when(repository.findComparisonSummary("before")).thenReturn(Optional.of(execution));
+    assertThat(reader.requireComparisonSummary("before")).isSameAs(execution);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> reader.requireComparisonSummary("missing"));
+    verify(repository).findComparisonSummary("before"); verify(repository).findComparisonSummary("missing");
+    org.mockito.Mockito.verifyNoMoreInteractions(repository);
+  }
+
   @Test
   void findSummaryDelegatesOptionalReadWithoutChangingMissingResultSemantics() {
     Execution execution = mock(Execution.class);

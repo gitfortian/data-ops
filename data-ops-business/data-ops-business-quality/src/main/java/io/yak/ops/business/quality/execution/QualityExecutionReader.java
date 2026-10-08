@@ -55,6 +55,12 @@ public class QualityExecutionReader {
   }
 
   @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
+  public Execution requireComparisonSummary(String executionNo) {
+    return repository.findComparisonSummary(executionNo)
+        .orElseThrow(() -> new IllegalArgumentException("质量比较执行不存在"));
+  }
+
+  @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
   public Optional<Execution> findSummary(String executionNo) {
     return repository.findSummary(executionNo);
   }

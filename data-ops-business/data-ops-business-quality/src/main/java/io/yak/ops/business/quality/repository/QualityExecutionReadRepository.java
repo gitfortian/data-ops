@@ -20,6 +20,7 @@ public interface QualityExecutionReadRepository {
 
   /** Lightweight execution projection without rule details, intended for status tracking. */
   Optional<Execution> findSummary(String executionNo);
+  Optional<Execution> findComparisonSummary(String executionNo);
 
   List<RuleExecution> findRulesBounded(long executionId, int limit);
 

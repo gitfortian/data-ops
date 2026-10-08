@@ -33,8 +33,8 @@ public class QualityExecutionComparisonQueryAdapter implements QualityExecutionC
     authorization.requirePermission(QualityPermissionCode.MONITOR_READ);
     if (!validNo(baselineExecutionNo) || !validNo(currentExecutionNo)
         || baselineExecutionNo.equals(currentExecutionNo)) throw invalid();
-    var before = executions.requireSummary(baselineExecutionNo);
-    var after = executions.requireSummary(currentExecutionNo);
+    var before = executions.requireComparisonSummary(baselineExecutionNo);
+    var after = executions.requireComparisonSummary(currentExecutionNo);
     requireFinished(before); requireFinished(after);
     if (!baselineExecutionNo.equals(before.executionNo()) || !currentExecutionNo.equals(after.executionNo())
         || !Objects.equals(before.monitorId(), after.monitorId())
