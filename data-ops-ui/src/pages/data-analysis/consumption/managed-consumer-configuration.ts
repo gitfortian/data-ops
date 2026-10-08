@@ -98,6 +98,24 @@ export const inspectManagedConsumerConfiguration = (
   };
 };
 
+/**
+ * Subscription selector must never match a rounded API id. This is an
+ * authorization-configuration candidate, not proof of a usable key or a call.
+ */
+export const eligibleConfiguredDataServiceConsumers = (
+  productSourceIdentity: string,
+  consumers: readonly DataServiceConsumer[],
+): DataServiceConsumer[] => {
+  const apiId = parseManagedConsumerSourceId(productSourceIdentity);
+  if (apiId === null) return [];
+  return consumers.filter((consumer) =>
+    Number.isSafeInteger(consumer.id) && consumer.id > 0
+    && consumer.enabled
+    && (consumer.accessScope === 'ALL'
+      || (consumer.accessScope === 'SELECTED'
+        && (consumer.apiIds || []).some((id) => Number.isSafeInteger(id) && id === apiId))));
+};
+
 /** Keep decisions on whether the source is loaded separate from empty source results. */
 export const sourceConsumerAccessState = (
   canRead: boolean,
