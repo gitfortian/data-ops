@@ -160,7 +160,7 @@ def assert_observed_usage(impact, consumer_type, domain, identity, mode, version
     require(evidence_ref in consumer.get("providerEvidenceRefs", []),
             "Consumer Impact is missing exact successful source evidence")
     versions = [item for item in consumer.get("observedVersions", [])
-                if str(item.get("sourceVersion", {}).get("identity")) == str(version_id)]
+                if str((item.get("sourceVersion") or {}).get("identity")) == str(version_id)]
     require(len(versions) == 1, "Impact is missing one exact consumed Dataset/Service version")
     observed = versions[0]
     require(evidence_ref in observed.get("providerEvidenceRefs", []),
@@ -182,6 +182,21 @@ def assert_denied_did_not_create_usage(before_refs, after_impact, consumer_type,
             "Failed invocation could not be checked against source Usage evidence")
     after_refs = consumer_usage_refs(after_impact, consumer_type, domain, identity)
     require(after_refs == before_refs, "Denied/disabled invoke changed successful Usage evidence")
+
+
+def assert_recovered_usage(before_refs, after_impact, consumer_type, domain, identity, version_id):
+    """Require recovery to produce a NEW success on the still-published source revision."""
+    require(after_impact.get("usageState") == "READY",
+            "Recovery source Usage evidence remains incomplete")
+    consumer = known_consumer(after_impact, consumer_type, domain, identity)
+    new_refs = set(consumer.get("providerEvidenceRefs", [])) - before_refs
+    require(new_refs, "Recovered successful invoke did not create new attributable Usage Evidence")
+    versions = [item for item in consumer.get("observedVersions", [])
+                if str((item.get("sourceVersion") or {}).get("identity")) == str(version_id)]
+    require(len(versions) == 1
+            and new_refs.intersection(versions[0].get("providerEvidenceRefs", [])),
+            "Recovered public invoke was not attributed to the published source revision")
+    return sorted(new_refs)
 
 
 def accept(api, samples, secret, control_project):
@@ -275,17 +290,8 @@ def accept(api, samples, secret, control_project):
     after_recovery = api.request(
         "GET", "/api/v1/consumption/impact",
         params={"productKey": service_key, "usageLimit": 200})
-    consumer_after_recovery = known_consumer(after_recovery, *service_consumer)
-    new_refs = set(consumer_after_recovery.get("providerEvidenceRefs", [])) - baseline_refs
-    require(after_recovery.get("usageState") == "READY" and new_refs,
-            "Recovered successful invoke did not create new attributable Usage Evidence")
-    actual_versions = [
-        item for item in consumer_after_recovery.get("observedVersions", [])
-        if str(item.get("sourceVersion", {}).get("identity")) == expected_revision
-    ]
-    require(len(actual_versions) == 1 and
-            new_refs.intersection(actual_versions[0].get("providerEvidenceRefs", [])),
-            "Recovered public invoke was not attributed to the published source revision")
+    new_refs = assert_recovered_usage(
+        baseline_refs, after_recovery, *service_consumer, expected_revision)
     original_project = api.project_id
     try:
         api.project_id = control_project
