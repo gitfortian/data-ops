@@ -11,7 +11,6 @@ const LEGACY_MODULE = 'data-ops-ui/src/services/data-source/legacy';
 const EXISTING_CONSUMERS = new Set([
   'data-ops-ui/src/pages/data-source/service.ts',
   'data-ops-ui/src/pages/integration/batch-link-up/config/multi/hooks/useMultiWorkflowState.tsx',
-  'data-ops-ui/src/pages/integration/batch-link-up/config/multi/index.tsx',
 ]);
 
 const IMPORT_LITERAL =
