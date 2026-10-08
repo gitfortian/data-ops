@@ -30,10 +30,20 @@ public class MetricExplanationQueryAdapter implements MetricExplanationQueryApi 
   @Override
   @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
   public Context require(long metricId, int version) {
+    return read(metricId, version, true);
+  }
+
+  @Override
+  @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
+  public Context requireSnapshot(long metricId, int version) {
+    return read(metricId, version, false);
+  }
+
+  private Context read(long metricId, int version, boolean requireCurrent) {
     authorization.requirePermission(MetricPermissionCode.READ);
     if (metricId <= 0 || version <= 0) throw new IllegalArgumentException("指标版本无效");
     var metric = metrics.findById(metricId).orElseThrow(() -> new IllegalArgumentException("指标不存在或不可读取"));
-    if (metric.version() != version) throw new IllegalArgumentException("指标已产生新版本，请重新打开编辑器");
+    if (requireCurrent && metric.version() != version) throw new IllegalArgumentException("指标已产生新版本，请重新打开编辑器");
     var snapshot = versions.findByMetricAndVersion(metricId, version);
     if (snapshot == null || snapshot.getId() == null || snapshot.getSnapshot() == null || snapshot.getSnapshot().length() > 65536) {
       throw new IllegalStateException("指标版本快照不可用或超过解释范围");

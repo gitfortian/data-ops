@@ -33,7 +33,8 @@ public class StandardMatchGateway {
     }
     if (proposal == null || proposal.candidates() == null || proposal.candidates().size() > 3
         || proposal.questions() == null || proposal.questions().size() > 3
-        || proposal.questions().stream().anyMatch(q -> q == null || q.isBlank() || q.length() > 512)) {
+        || proposal.questions().stream().anyMatch(q -> q == null || q.isBlank() || q.length() > 512)
+        || (proposal.fieldDescription() != null && (proposal.fieldDescription().isBlank() || proposal.fieldDescription().length() > 512))) {
       throw new IllegalArgumentException("标准匹配输出不符合候选协议");
     }
     // Recheck Semantic access even when the model produced no candidates.
@@ -48,12 +49,12 @@ public class StandardMatchGateway {
       return new StandardMatchSuggestion.Candidate(source.id(), source.version(), source.code(), source.name(), source.stdType(), c.reason());
     }).toList();
     return new StandardMatchSuggestion("STANDARD_MATCH", target, original.definition(), skillVersion, skillHash,
-        original.truncated(), candidates, proposal.questions());
+        original.truncated(), candidates, proposal.questions(), proposal.fieldDescription());
   }
 
   public StandardMatchSuggestion revalidate(StandardMatchSuggestion value) {
     if (value == null || !"STANDARD_MATCH".equals(value.kind()) || value.target() == null
-        || value.candidates() == null || value.candidates().isEmpty() || value.candidates().size() > 3
+        || value.candidates() == null || (value.candidates().isEmpty() && value.fieldDescription() == null) || value.candidates().size() > 3
         || value.candidates().stream().anyMatch(java.util.Objects::isNull)) {
       throw new IllegalArgumentException("请选择有效的标准匹配候选");
     }
@@ -61,7 +62,7 @@ public class StandardMatchGateway {
     if (!source.definition().equals(value.expectedDefinition())) throw new IllegalArgumentException("模型已改变，请重新生成");
     var choices = value.candidates().stream().map(c -> new StandardMatchProposal.Choice(c.standardId(), c.version(), c.reason())).toList();
     return validate(value.target(), source,
-        new StandardMatchProposal(choices, java.util.List.of()), value.skillVersion(), value.skillHash());
+        new StandardMatchProposal(choices, java.util.List.of(), value.fieldDescription()), value.skillVersion(), value.skillHash());
   }
 
   private ModelSuggestionQueryApi modelApi() {

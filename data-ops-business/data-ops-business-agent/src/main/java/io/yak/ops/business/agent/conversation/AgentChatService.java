@@ -52,6 +52,12 @@ public class AgentChatService {
     return agentRuntime.revalidateModelMapping(value);
   }
 
+  public io.yak.ops.business.agent.domain.MetricDraftSuggestion validateMetricDraft(
+      io.yak.ops.business.agent.domain.MetricDraftSuggestion value) {
+    requireUserId(); requireProjectId();
+    return agentRuntime.revalidateMetricDraft(value);
+  }
+
   public io.yak.ops.business.agent.domain.MetricExplanationSuggestion validateMetricExplanation(
       io.yak.ops.business.agent.domain.MetricExplanationSuggestion value) {
     requireUserId(); requireProjectId();

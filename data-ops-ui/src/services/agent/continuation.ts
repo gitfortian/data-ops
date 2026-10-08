@@ -1,3 +1,4 @@
+import { readMetricDraftTarget } from './metricDraft';
 import type { GovernanceTarget } from './governance';
 
 export interface SessionContinuation {
@@ -17,16 +18,19 @@ function readTarget(value: unknown): GovernanceTarget | null {
   if (value == null) return null;
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('任务上下文无效');
   const target = value as Record<string, unknown>;
-  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch, modelMapping, metricExplanation } = target;
-  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation].filter((item) => item != null).length !== 1) {
+  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft } = target;
+  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation, metricDraft].filter((item) => item != null).length !== 1) {
     throw new Error('任务上下文不唯一');
   }
+  if (purpose === 'METRIC_DRAFT' && metricDraft != null) return { purpose, metricDraft: readMetricDraftTarget(metricDraft) };
   if (purpose === 'METRIC_EXPLANATION' && metricExplanation && typeof metricExplanation === 'object' && !Array.isArray(metricExplanation)) {
     const metric = metricExplanation as Record<string, unknown>;
     if (Number.isSafeInteger(metric.metricId) && Number(metric.metricId) > 0
       && Number.isSafeInteger(metric.version) && Number(metric.version) > 0
-      && typeof metric.businessQuestion === 'string' && metric.businessQuestion.length <= 512) {
-      return { purpose, metricExplanation: { metricId: Number(metric.metricId), version: Number(metric.version), businessQuestion: metric.businessQuestion } };
+      && typeof metric.businessQuestion === 'string' && metric.businessQuestion.length <= 512
+      && (metric.view == null || metric.view === 'SNAPSHOT')) {
+      return { purpose, metricExplanation: { metricId: Number(metric.metricId), version: Number(metric.version), businessQuestion: metric.businessQuestion,
+        ...(metric.view === 'SNAPSHOT' ? { view: 'SNAPSHOT' as const } : {}) } };
     }
     throw new Error('指标版本上下文无效');
   }

@@ -356,3 +356,10 @@ F-023：原标准助手消费 AI 类型候选，仅带入当前未保存字段�
 ## F-024 模型来源映射 Skill
 
 Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQueryApi 读取固定源表的 fresh 元数据并有界交付。Agent 仅 gateway → modeling.api 消费，不直接读取 Datasource 内部实现。复用原轮次、SDK Skill 与结构化调用；候选仅进入原表单，人工 If-Match 保存。映射写路径持有模型行锁，字段及单列映射用 locking read；保留标准字段关联，冲突先于写入。外部 DDL 校验只证明读取时刻，不宣称跨库原子性。详细边界见 [F-024](../../docs/product/features/F-024-skill-model-mapping.md)。
+
+
+## 场景辅助与 J2 原页面交接（F-026/F-028/F-029）
+
+批量候选只改用户选定且草稿未变的字段，人工 If-Match 保存。指标定义辅助仅读取授权有界模型字段/结构指纹，不读取物理行或执行 SQL；源模型到原指标编辑器交接使用稳定 ID，目标页重读权限与项目。
+
+依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。

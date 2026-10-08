@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import io.yak.ops.business.metric.api.MetricDraftQueryApi;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,8 +22,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiresPermission(MetricPermissionCode.READ)
 public class MetricExplanationController {
   private final MetricExplanationQueryApi query;
+  private final MetricDraftQueryApi drafts;
+  @PostMapping("/draft-context")
+  public Result<MetricDraftQueryApi.Context> draftContext(@RequestBody MetricDraftQueryApi.Input input) {
+    return Result.success(drafts.prepare(input));
+  }
   @GetMapping("/{id}/versions/{version}/explanation-context")
   public Result<MetricExplanationQueryApi.Context> context(@PathVariable("id") long id, @PathVariable("version") int version) {
     return Result.success(query.require(id, version));
+  }
+  @GetMapping("/{id}/versions/{version}/snapshot-explanation-context")
+  public Result<MetricExplanationQueryApi.Context> snapshot(@PathVariable("id") long id, @PathVariable("version") int version) {
+    return Result.success(query.requireSnapshot(id, version));
   }
 }

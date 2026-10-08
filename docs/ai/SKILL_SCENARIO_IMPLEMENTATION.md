@@ -31,3 +31,9 @@ Architecture / Dependency Impact：Agent gateway → semantic.api / modeling.api
 | V17 指标口径解释与说明草稿 | [#335](https://github.com/gitfortian/data-ops/pull/335) | 完成 | 依赖 #334，完整 CI/合并待完成 |
 
 账户恢复后：重跑 #333 最新失败检查并核对准确 head；全绿后合并，#334 改 base=main 再完整 CI/合并，最后 #335 同样处理。不能因底层任务曾通过就跳过汇总 gate。真实模型/登录 E2E 和业务收益仍按各 acceptance 记录 PENDING。Skill 方法包需管理员在测试项目通过原管理面登记，不随部署自动启用。
+
+## V18 与分支状态补记（2026-10-08）
+
+以上 PR 状态为创建时证据；本次重新查询：#333 已合并到 main（4a051f5a），#334 合并到 codex/ai-standard-match-skills，#335 合并到 codex/ai-model-mapping-skill。main 仍缺少 V16/V17 实现。V18 基于已验收的 46931cd9 继续，面向 main 的 PR 将携带必要 V16/V17 提交；不把“PR 已合并到中间分支”视作主线交付完成。最新 CI 结果以 V18 PR 的实际 head 为准。
+
+用户本次明确完整标准→指标→消费链路纳入；F-026/F-027/F-028/F-029 为当前 IMPLEMENTING 合同，[V18 实施](IMPLEMENTATION_V18.md)与[真实验收待办](../product/acceptance/agent-batch-j2-2026-10-08.md)覆盖该范围。资源/Harness/子 Agent 仍无新增必要证据，不启用。

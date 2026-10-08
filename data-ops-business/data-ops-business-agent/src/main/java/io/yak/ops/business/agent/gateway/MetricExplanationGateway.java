@@ -20,7 +20,8 @@ public class MetricExplanationGateway {
   public MetricExplanationContext prepare(MetricExplanationTarget target) {
     var api = metrics.getIfAvailable();
     if (api == null) throw new IllegalStateException("指标口径读取未装配");
-    var source = api.require(target.metricId(), target.version());
+    var source = "SNAPSHOT".equals(target.view()) ? api.requireSnapshot(target.metricId(), target.version())
+        : api.require(target.metricId(), target.version());
     return new MetricExplanationContext(source.versionId(), source.definition(), source.facts().stream()
         .map(f -> new MetricExplanationContext.Fact(f.key(), f.label(), f.value())).toList());
   }

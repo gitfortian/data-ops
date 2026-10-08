@@ -4,6 +4,7 @@ import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { useModel } from '@umijs/max';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { YakButton } from '@/components/ui';
+import MetricDefinitionPanel from '@/components/ai/MetricDefinitionPanel';
 import MetricExplanationPanel from '@/components/ai/MetricExplanationPanel';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { useResourceScope } from '@/hooks/useLatestOperation';
@@ -16,7 +17,7 @@ import type {
   MetricType,
   StatPeriod,
 } from '@/services/metric/types';
-import { getModelingStructure, pageModelingModels } from '@/services/modeling/api';
+import { getModelingModel, getModelingStructure, pageModelingModels } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { getSemanticDomainTree, pageSemanticProcesses, pageSemanticStandards } from '@/services/semantic/api';
 import { collectDomainSubtreeIds, toDomainTreeData } from '@/services/semantic/domainTree';
@@ -27,7 +28,8 @@ interface MetricEditModalProps {
   open: boolean;
   editing: MetricRecord | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (savedId?: number) => void;
+  sourceModelId?: number;
 }
 
 interface MetricFormValues {
@@ -324,15 +326,16 @@ const toFormValues = (m: MetricRecord): MetricFormValues => {
   return vals;
 };
 
-const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalProps) => {
+const MetricEditModal = ({ open, editing, onClose, onSaved, sourceModelId }: MetricEditModalProps) => {
   const { currentProject } = useSecurityProject();
   const { canAll } = usePermissionAccess();
-  const scope = JSON.stringify([currentProject?.id, editing?.id, open]);
+  const scope = JSON.stringify([currentProject?.id, editing?.id, open, sourceModelId]);
   const capture = useResourceScope(scope);
   const [detailScope, setDetailScope] = useState('');
   const [detailError, setDetailError] = useState('');
   const [form] = Form.useForm<MetricFormValues>();
   const [saving, setSaving] = useState(false);
+  const [sourceMessage, setSourceMessage] = useState('');
   const isEditing = Boolean(editing);
   const { initialState } = useModel('@@initialState');
   const currentUserName = initialState?.currentUser?.userName;
@@ -432,7 +435,7 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
 
   // 编辑打开时拉完整详情（列表行没有 compositions/dimModelIds 解析所需数据）
   useEffect(() => {
-    setDetailScope(''); setDetailError(''); setDetail(null); form.resetFields(); setSaving(false);
+    setSourceMessage(''); setDetailScope(''); setDetailError(''); setDetail(null); form.resetFields(); setSaving(false);
     setDomainTree([]); setProcesses([]); setCalibers([]); setUnits([]); setDwdModels([]); setDimModels([]); setAllMetrics([]);
     if (!open) {
       setDetail(null);
@@ -642,16 +645,19 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
         compositions,
       };
 
+      let savedId: number | undefined;
       if (editing) {
         await updateMetric(editing.id, { ...payload, expectedVersion: (detail ?? editing).version });
         if (!isCurrent()) return;
+        savedId = editing.id;
         message.success('指标已更新');
       } else {
-        await createMetric(payload);
+        const saved = await createMetric(payload);
+        savedId = saved?.id;
         if (!isCurrent()) return;
         message.success('指标已创建');
       }
-      onSaved();
+      onSaved(savedId);
     } catch (error) {
       if (!isCurrent()) return;
       const msg = error instanceof Error && error.message ? error.message : '保存失败，请稍后重试';
@@ -662,6 +668,21 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
     } finally {
       if (isCurrent()) setSaving(false);
     }
+  };
+
+  const useSourceModel = async () => {
+    const isCurrent = capture();
+    const before = JSON.stringify(form.getFieldsValue(true));
+    try {
+      if (!sourceModelId || form.getFieldValue('metricType') !== 'ATOMIC' || !canAll(['metric:create', 'modeling:read'])) throw new Error('无权读取来源模型');
+      const source = await getModelingModel(sourceModelId);
+      if (!isCurrent() || before !== JSON.stringify(form.getFieldsValue(true))) return;
+      if (Number(source?.id) !== sourceModelId || source?.layerCode !== 'DWD' || !source.domainId || !source.processId) {
+        throw new Error('来源模型不可用，或缺少 DWD、业务域及过程；请在原页面核对');
+      }
+      form.setFieldsValue({ modelId: sourceModelId, domainId: source.domainId, processId: source.processId });
+      setSourceMessage(`已核对来源模型：${source.name || sourceModelId}。请继续设计并人工保存。`);
+    } catch (error) { if (isCurrent()) setSourceMessage(error instanceof Error ? error.message : '来源模型读取失败'); }
   };
 
   return (
@@ -677,6 +698,8 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
       destroyOnHidden
       width={720}
     >
+      {!isEditing && sourceModelId && <Alert type="info" message={sourceMessage || '从已保存模型继续指标设计；目标页需重新核对当前项目模型。'}
+        action={<YakButton disabled={saving || !isAtomic || !canAll(['metric:create', 'modeling:read'])} onClick={() => void useSourceModel()}>使用来源模型</YakButton>} />}
       {detailError && <Alert type="error" message={detailError} />}
       <Form
         form={form}
@@ -1020,6 +1043,18 @@ const MetricEditModal = ({ open, editing, onClose, onSaved }: MetricEditModalPro
           <Input.TextArea rows={2} placeholder="口径规则说明（选填）" />
         </Form.Item>
 
+        {open && <MetricDefinitionPanel key={JSON.stringify([scope, detail?.version, formDraft, saving])}
+          metricId={editing?.id} version={detail?.version} metricType={metricType || 'ATOMIC'}
+          modelId={modelId} refMetricId={refMetricId}
+          upstreamOptions={availableMetrics.map(m => ({ id: m.id, code: m.metricCode, name: m.metricName }))}
+          disabled={saving || (isEditing && detailScope !== scope) || !canAll(['metric:read', isEditing ? 'metric:update' : 'metric:create', 'agent:chat:run', 'agent:session:read'])}
+          onApply={(candidate, formula) => {
+            const patch: Partial<MetricFormValues> = { metricName: candidate.name, businessDesc: candidate.description, statPeriod: candidate.period };
+            if (isAtomic) { patch.measureExpr = `${candidate.aggregation}(${candidate.field})`; }
+            if (isDerived) { patch.qualifiers = candidate.qualifiers; }
+            if (isComposite) { patch.formulaText = formula; }
+            form.setFieldsValue(patch);
+          }} />}
         {open && editing && detail && <MetricExplanationPanel key={JSON.stringify([scope, detail.version, formDraft])}
           metricId={editing.id} version={detail.version} disabled={!mayExplain}
           onApply={businessDesc => form.setFieldsValue({ businessDesc })} />}

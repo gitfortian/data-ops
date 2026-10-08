@@ -58,4 +58,15 @@ class StandardMatchGatewayTest {
     when(standards.types("")).thenThrow(new SecurityException("revoked"));
     assertThrows(SecurityException.class, () -> gateway.validate(target, original, empty, 1, "hash"));
   }
+  @Test void descriptionOnlyDraftStillRechecksAuthorizationAndRejectsOversizeText() {
+    var original = gateway.prepare(target);
+    var description = new StandardMatchProposal(List.of(), List.of(), "用户唯一编号");
+    var result = gateway.validate(target, original, description, 1, "hash");
+    assertEquals("用户唯一编号", gateway.revalidate(result).fieldDescription());
+    assertThrows(IllegalArgumentException.class, () -> gateway.validate(target, original,
+        new StandardMatchProposal(List.of(), List.of(), "x".repeat(513)), 1, "hash"));
+    when(models.require(7)).thenThrow(new SecurityException("revoked"));
+    assertThrows(SecurityException.class, () -> gateway.revalidate(result));
+  }
+
 }

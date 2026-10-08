@@ -90,6 +90,7 @@ export default function ConsumptionDetailPage() {
   const actor = initialState?.currentUser?.userName || '';
   const productKey = decodeURIComponent(params.productKey || '');
   const returnAssetId = searchParams.get('returnAssetId');
+  const returnMetricId = searchParams.get('returnMetricId');
   const [product, setProduct] = useState<DataProductView | null>(null);
   const [navigation, setNavigation] = useState<ProductNavigation | null>(null);
   const [governanceEvidence, setGovernanceEvidence] = useState<GovernanceEvidence[]>([]);
@@ -202,7 +203,11 @@ export default function ConsumptionDetailPage() {
   ];
 
   if (loading) return <div style={{ padding: 48 }}><Text>加载中...</Text></div>;
-  if (state !== 'FOUND' || !product) return <div style={{ padding: 24 }}>{lookupResult(state, reason)}</div>;
+  if (state !== 'FOUND' || !product) return <div style={{ padding: 24 }}>
+    {returnMetricId && /^[1-9]\d*$/.test(returnMetricId) && Number.isSafeInteger(Number(returnMetricId)) &&
+      <Button onClick={() => history.push(`/metric/manage/${returnMetricId}`)}>返回指标定义与发布证据</Button>}
+    {lookupResult(state, reason)}
+  </div>;
 
   const key = productKeyValue(product.productKey);
   const payload = product.contractPayload;
@@ -270,6 +275,9 @@ export default function ConsumptionDetailPage() {
           >
             {returnAssetId && /^\d+$/.test(returnAssetId) ? '返回资产详情' : '返回数据消费'}
           </Button>
+          {returnMetricId && /^[1-9]\d*$/.test(returnMetricId) && Number.isSafeInteger(Number(returnMetricId)) && (
+            <Button onClick={() => history.push(`/metric/manage/${returnMetricId}`)}>返回指标定义与发布证据</Button>
+          )}
           {navigation?.sourceHref ? (
             <Button
               type="primary"

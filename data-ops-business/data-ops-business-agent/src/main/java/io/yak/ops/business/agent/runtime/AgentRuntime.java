@@ -394,7 +394,9 @@ public class AgentRuntime implements TurnCorrelation {
     }
     Flux<ChatTurnEvent> pipeline =
         withTurnTimeout(
-            target != null && target.standardMatch() != null
+            target != null && target.metricDraft() != null
+                ? metricDraft(inputs, context, execution)
+                : target != null && target.standardMatch() != null
                 ? standardMatch(inputs, context, execution)
                 : target != null && target.modelMapping() != null
                     ? modelMapping(inputs, context, execution)
@@ -446,6 +448,30 @@ public class AgentRuntime implements TurnCorrelation {
     scope.requireCurrent(); return verified;
   }
 
+  public io.yak.ops.business.agent.domain.MetricDraftSuggestion revalidateMetricDraft(
+      io.yak.ops.business.agent.domain.MetricDraftSuggestion value) {
+    var scope = requireScenarioSkill("metric-definition-draft", value == null ? 0 : value.skillVersion(), value == null ? null : value.skillHash());
+    var verified = toolBox(io.yak.ops.business.agent.toolset.MetricDraftTools.class).revalidate(value);
+    scope.requireCurrent(); return verified;
+  }
+
+  private Flux<ChatTurnEvent> metricDraft(List<Msg> inputs, RuntimeContext context,
+      io.yak.ops.business.agent.domain.AgentExecutionContext execution) {
+    return Flux.defer(() -> {
+      requireModelConfiguration();
+      var scope = scenarioSkill("metric-definition-draft");
+      var tools = toolBox(io.yak.ops.business.agent.toolset.MetricDraftTools.class);
+      var target = execution.target().metricDraft();
+      execution.reserveTool("get_metric_draft_context");
+      var source = tools.prepare(context, target);
+      return structuredScenario(inputs, context, execution, scope, new StructuredCall<>(tools,
+          "get_metric_draft_context", "metric-definition-draft", target, source,
+          io.yak.ops.business.agent.domain.MetricDraftProposal.class,
+          (proposal, current) -> tools.validate(context, target, source, proposal, current.version(), current.hash()),
+          "yak-metric-draft", "这是 AI 指标定义草稿，请核对业务需求与依赖。带入不保存，验证与发布仍需在原页面显式完成。"));
+    });
+  }
+
   private Flux<ChatTurnEvent> metricExplanation(List<Msg> inputs, RuntimeContext context,
       io.yak.ops.business.agent.domain.AgentExecutionContext execution) {
     return Flux.defer(() -> {
@@ -459,7 +485,7 @@ public class AgentRuntime implements TurnCorrelation {
           "get_metric_caliber_context", "metric-caliber-explanation", target, source,
           io.yak.ops.business.agent.domain.MetricExplanationProposal.class,
           (proposal, current) -> tools.validate(context, target, source, proposal, current.version(), current.hash()),
-          "yak-metric-explanation", "AI 解读依据已保存草稿版本；请核对原始事实和语义，带入仅改业务说明，仍需人工保存、验证和发布。"));
+          "yak-metric-explanation", "AI 解读依据选定精确版本；请核对原始事实和语义，带入仅改业务说明，仍需人工保存、验证和发布。"));
     });
   }
 

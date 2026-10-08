@@ -100,6 +100,13 @@ public class AgentController {
     return Result.success(agentChatService.validateModelMapping(request));
   }
 
+  @PostMapping("/metric-draft/validate")
+  @RequiresPermission(AgentPermissionCode.CHAT_RUN)
+  public Result<io.yak.ops.business.agent.domain.MetricDraftSuggestion> validateMetricDraft(
+      @RequestBody io.yak.ops.business.agent.domain.MetricDraftSuggestion request) {
+    return Result.success(agentChatService.validateMetricDraft(request));
+  }
+
   @PostMapping("/metric-explanation/validate")
   @RequiresPermission(AgentPermissionCode.CHAT_RUN)
   public Result<io.yak.ops.business.agent.domain.MetricExplanationSuggestion> validateMetricExplanation(

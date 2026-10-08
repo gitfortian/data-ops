@@ -52,4 +52,15 @@ class MetricExplanationQueryAdapterTest {
     source(snapshot); when(versions.findByMetricAndVersion(7L, 3)).thenReturn(null);
     assertThrows(IllegalStateException.class, () -> query.require(7, 3));
   }
+  @Test void explicitSnapshotReadsItsOwnImmutableVersionAfterCurrentAdvances() {
+    source(snapshot);
+    when(metrics.findById(7L).orElseThrow().version()).thenReturn(4);
+    assertThrows(IllegalArgumentException.class, () -> query.require(7, 3));
+    assertEquals(MetricSnapshotDigest.sha256(snapshot), query.requireSnapshot(7, 3).definition());
+    verify(versions).findByMetricAndVersion(7L, 3);
+    assertThrows(IllegalStateException.class, () -> query.requireSnapshot(7, 2));
+    doThrow(new SecurityException("revoked")).when(authorization).requirePermission(MetricPermissionCode.READ);
+    assertThrows(SecurityException.class, () -> query.requireSnapshot(7, 3));
+  }
+
 }

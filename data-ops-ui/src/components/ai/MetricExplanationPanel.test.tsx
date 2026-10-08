@@ -46,3 +46,14 @@ it('revoking permission during adoption prevents applying a late validation', as
   view.rerender(<MetricExplanationPanel metricId={7} version={3} disabled onApply={apply} />);
   await act(async () => resolve(suggestion)); expect(apply).not.toHaveBeenCalled();
 });
+
+it('binds exact historical snapshots and never offers adoption even with a callback', async () => {
+  const apply = jest.fn(); const snapshotTarget = { ...target, view: 'SNAPSHOT' };
+  (agentSessionApi.continuation as jest.Mock).mockImplementation(async sessionId => ({ sessionId, turnId: 't1', status: 'COMPLETED', governanceTarget: { purpose: 'METRIC_EXPLANATION', metricExplanation: snapshotTarget } }));
+  (agentSessionApi.history as jest.Mock).mockResolvedValue([{ role: 'assistant', turnId: 't1', content: '```yak-metric-explanation\n' + JSON.stringify({ ...suggestion, target: snapshotTarget }) + '\n```' }]);
+  render(<MetricExplanationPanel metricId={7} version={3} disabled={false} snapshot onApply={apply} />);
+  fireEvent.click(await screen.findByText('解释口径并生成说明')); await screen.findByText('AI 解读：按金额求和');
+  expect(getMetricExplanationContext).toHaveBeenCalledWith(7, 3, true);
+  expect(agentChatApi.submit).toHaveBeenCalledWith(expect.objectContaining({ governanceTarget: { purpose: 'METRIC_EXPLANATION', metricExplanation: snapshotTarget } }));
+  expect(screen.queryByText('带入业务说明')).not.toBeInTheDocument(); expect(apply).not.toHaveBeenCalled();
+});

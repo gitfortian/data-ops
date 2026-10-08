@@ -72,3 +72,14 @@ Existing tag/version/lineage packages retain their ownership; the Phase 5 packag
 ## F-025 指标版本口径 Skill
 
 MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版本，读取不可变快照并复用 digest；仅白名单有界事实，超界/缺快照不可用。Agent 仅 gateway → metric.api，源域不反向依赖 Agent。复用 SDK 场景执行与原表单，候选仅 businessDesc，人工保存复用 expectedVersion、校验、审计和回读；验证/发布仍独立。引用校验不等于自然语言正确，真实模型验收 PENDING。合同见 docs/product/features/F-025-skill-metric-caliber.md。
+
+
+## 场景辅助与 J2 原页面交接（F-027/F-028/F-029）
+
+精确历史版本解释保持不可变快照，与当前验证/发布/影响事实分开。定义辅助只生成类型适配的白名单草稿，人工原保存、精确版本验证/发布仍独立。消费出口只使用已登记目标与版本，缺失/未知/不可用不伪造完成。
+
+依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
+
+MetricDraftQueryApi 由 catalog.MetricDraftQueryAdapter 持有：先 Metric READ，读取当前项目的精确指标版本/启用上游，再经 ModelSuggestionQueryApi.fields 读取获授权的有界字段。digest 绑定用户需求、类型、来源结构和上游版本；validate 重读 digest 并检查实际字段、限定条件编译及引用 token 表达式，不写 Metric、不执行 SQL。POST /api/v1/metrics/draft-context 供原编辑器显式准备；Agent gateway 使用同一 API。requireSnapshot 与 snapshot-explanation-context 只读指定不可变版本，不展开今日依赖。
+
+UI 在原表单逐项采纳后走原 create/update expectedVersion 保存，保存回执提供精确 ID 的详情入口。原发布面板使用已登记 DATASET 引用且 metricVersion 与 active publication 一致时映射 canonical Consumption productKey；API/未知版本/未映射目标明确降级，不等同运行事实。

@@ -2,6 +2,7 @@ import { useAccess } from '@umijs/max';
 import { message, Tag } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 
+import MetricConsumptionHandoff from './MetricConsumptionHandoff';
 import { YakButton } from '@/components/ui';
 import {
   getMetricPublication,
@@ -23,6 +24,7 @@ import type {
 interface MetricGovernancePanelProps {
   metricId: number;
   currentVersion: number;
+  onReviewVersion?: (version: number) => void;
   onCompareVersions?: (publishedVersion: number, currentVersion: number) => void;
 }
 
@@ -94,7 +96,7 @@ function formatGateIssue(issue: string): string {
   return GATE_REASON_LABELS[issue] ?? issue;
 }
 
-export default function MetricGovernancePanel({ metricId, currentVersion, onCompareVersions }: MetricGovernancePanelProps) {
+export default function MetricGovernancePanel({ metricId, currentVersion, onCompareVersions, onReviewVersion }: MetricGovernancePanelProps) {
   const access = useAccess();
   const canValidate = access.hasPermission('metric:update');
   const canPublish = access.hasPermission('metric:publish');
@@ -268,6 +270,7 @@ export default function MetricGovernancePanel({ metricId, currentVersion, onComp
             对比草稿与已发布版本
           </YakButton>
         ) : null}
+        {active && onReviewVersion && <YakButton onClick={() => onReviewVersion(active.metricVersion)}>解释已发布版本 v{active.metricVersion}</YakButton>}
         {canValidate ? <YakButton loading={acting} onClick={() => void validate()}>验证当前版本 v{currentVersion}</YakButton> : null}
         {canPublish && !loading && readinessState === 'READY' && readiness?.status === 'READY' && !isCurrentPublished ? (
           <YakButton type="primary" loading={acting} onClick={() => void publish()}>发布 v{currentVersion}</YakButton>
@@ -275,6 +278,7 @@ export default function MetricGovernancePanel({ metricId, currentVersion, onComp
         {canPublish && active ? <YakButton danger loading={acting} onClick={() => void withdraw()}>撤回发布</YakButton> : null}
         {!canPublish ? <span className="self-center text-[12px] text-[#667085]">当前账号没有指标发布权限</span> : null}
       </div>
+      <MetricConsumptionHandoff metricId={metricId} publication={activeState === 'READY' ? active : null} />
     </section>
   );
 }

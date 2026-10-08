@@ -11,8 +11,10 @@ const shortText = (v: unknown): v is string => typeof v === 'string' && !!v.trim
 export function parseMetricExplanation(text: string): MetricExplanationSuggestion | null {
   try {
     const v = readStructuredReceipt(text, 'yak-metric-explanation') as MetricExplanationSuggestion;
+    if (v.target?.view == null && v.target) delete v.target.view;
     if (v.kind !== 'METRIC_EXPLANATION' || !v.target || !Number.isSafeInteger(v.target.metricId) || v.target.metricId <= 0
       || !Number.isSafeInteger(v.target.version) || v.target.version <= 0 || typeof v.target.businessQuestion !== 'string' || v.target.businessQuestion.length > 512
+      || (v.target.view != null && v.target.view !== 'SNAPSHOT')
       || !/^[a-f0-9]{64}$/.test(v.expectedDefinition) || !/^[a-f0-9]{64}$/.test(v.skillHash)
       || !Number.isSafeInteger(v.skillVersion) || v.skillVersion < 1 || v.truncated !== false
       || !Array.isArray(v.questions) || v.questions.length > 3 || v.questions.some(q => !shortText(q))
