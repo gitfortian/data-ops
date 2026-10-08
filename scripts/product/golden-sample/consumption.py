@@ -223,6 +223,10 @@ def assert_exact_version_replay(api, product_key, consumer_type, domain, identit
 
 def assert_exact_version_project_isolation(impact, version_id, evidence_ref):
     """Another Project cannot expose source-owned exact successful Usage."""
+    coverage = impact.get("coverage") or {}
+    require(impact.get("usageState") in ("READY", "EMPTY")
+            and not coverage.get("sourceReadUnavailable"),
+            "Cross-Project source provider unavailable; isolation cannot be verified")
     for consumer in impact.get("consumers", []):
         require(evidence_ref not in (consumer.get("providerEvidenceRefs") or []),
                 "Cross-Project Impact leaked source evidence")
