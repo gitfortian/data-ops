@@ -41,6 +41,8 @@ jobs:
         run: node --test scripts/architecture/*.test.mjs scripts/release/*.test.mjs
       - name: Dependency and persistence boundaries
         run: node scripts/architecture/check-boundaries.mjs
+      - name: Verify Boot persistence aliases and report actual Java consumers
+        run: node scripts/architecture/check-persistence-consumers.mjs
       - name: Frontend import boundaries
         run: node scripts/architecture/check-frontend-boundaries.mjs
       - name: Migration history consistency
