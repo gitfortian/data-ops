@@ -3,9 +3,11 @@ package io.yak.ops.business.quality.execution;
 import io.yak.framework.common.PageData;
 import io.yak.ops.business.quality.config.ConditionalOnQualityEnabled;
 import io.yak.ops.business.quality.domain.QualityDomain.Execution;
+import io.yak.ops.business.quality.domain.QualityDomain.RuleExecution;
 import io.yak.ops.business.quality.domain.QualityDomain.RuleExecutionWorkspaceItem;
 import io.yak.ops.business.quality.domain.QualityQuery;
 import io.yak.ops.business.quality.repository.QualityExecutionReadRepository;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +47,11 @@ public class QualityExecutionReader {
   public Execution requireSummary(String executionNo) {
     return repository.findSummary(executionNo)
         .orElseThrow(() -> new IllegalArgumentException("质量执行记录不存在：" + executionNo));
+  }
+
+  @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")
+  public List<RuleExecution> rulesForComparison(long executionId) {
+    return repository.findRulesBounded(executionId, 21);
   }
 
   @Transactional(readOnly = true, transactionManager = "yakBusinessTransactionManager")

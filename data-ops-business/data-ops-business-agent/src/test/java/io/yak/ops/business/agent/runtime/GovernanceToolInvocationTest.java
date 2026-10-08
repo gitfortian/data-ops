@@ -87,7 +87,7 @@ class GovernanceToolInvocationTest {
       assertEquals(42L, YakSecurityContext.getCurrentProjectId());
       return new AssetGovernanceQueryApi.AssetFact(7, "table:sales", "METADATA", "table-7", "销售", "销售事实表", "owner", "PUBLISHED", null);
     });
-    var tools = new GovernanceEvidenceTools(executor, new GovernanceEvidenceGateway(provider(api), provider(null)));
+    var tools = new GovernanceEvidenceTools(executor, new GovernanceEvidenceGateway(provider(api), provider(null), provider(null)));
     var toolkit = new Toolkit(); toolkit.registerTool(tools);
     assertTrue(toolkit.getToolNames().containsAll(Set.of("get_asset_evidence", "get_asset_section_evidence", "get_quality_execution_evidence", "search_assets")));
     var execution = new AgentExecutionContext(new GovernanceTarget(7L, null));

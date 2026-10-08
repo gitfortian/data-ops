@@ -4,16 +4,16 @@ export interface ModelMappingTarget { modelId: number; columnName: string; datas
 export interface MetricExplanationTarget { metricId: number; version: number; businessQuestion: string; view?: 'SNAPSHOT' }
 export interface MetricDraftTarget { metricId: number | null; version: number | null; metricType: 'ATOMIC' | 'DERIVED' | 'COMPOSITE'; modelId: number | null; upstreamIds: number[]; requirement: string }
 export interface MetricChangeReviewTarget { metricId: number; version: number; publishedVersion: number; publicationEventId: number; definition: string; businessQuestion: string }
-type ExistingGovernanceTarget = { assetId: number; qualityExecutionNo?: never; qualityMonitorId?: never; purpose?: 'ASSET_DESCRIPTION'; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
-  | { assetId?: never; qualityExecutionNo: string; qualityMonitorId?: never; purpose?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId: number; purpose: 'QUALITY_RULES'; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; purpose: 'STANDARD_MATCH'; standardMatch: StandardMatchTarget; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; purpose: 'MODEL_MAPPING'; modelMapping: ModelMappingTarget; metricExplanation?: never; metricDraft?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; purpose: 'METRIC_EXPLANATION'; metricExplanation: MetricExplanationTarget; metricDraft?: never }
-  | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; purpose: 'METRIC_DRAFT'; metricDraft: MetricDraftTarget };
+type ExistingGovernanceTarget = { assetId: number; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; purpose?: 'ASSET_DESCRIPTION'; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
+  | { assetId?: never; qualityExecutionNo: string; qualityBaselineExecutionNo?: string; qualityMonitorId?: never; purpose?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId: number; purpose: 'QUALITY_RULES'; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; purpose: 'STANDARD_MATCH'; standardMatch: StandardMatchTarget; modelMapping?: never; metricExplanation?: never; metricDraft?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; purpose: 'MODEL_MAPPING'; modelMapping: ModelMappingTarget; metricExplanation?: never; metricDraft?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; purpose: 'METRIC_EXPLANATION'; metricExplanation: MetricExplanationTarget; metricDraft?: never }
+  | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; purpose: 'METRIC_DRAFT'; metricDraft: MetricDraftTarget };
 
 export type GovernanceTarget = (ExistingGovernanceTarget & { metricChangeReview?: never })
-  | { purpose: 'METRIC_CHANGE_REVIEW'; metricChangeReview: MetricChangeReviewTarget; assetId?: never; qualityExecutionNo?: never;
+  | { purpose: 'METRIC_CHANGE_REVIEW'; metricChangeReview: MetricChangeReviewTarget; assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never;
       qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never };
 
 /** Compare the full task scope, independent of JSON key order and nullable projection fields. */
@@ -35,6 +35,7 @@ export function governanceTaskTitle(target: GovernanceTarget): string {
   if (target.standardMatch) return `模型 #${target.standardMatch.modelId} 字段 ${target.standardMatch.columnName} 类型标准匹配`;
   if (target.qualityMonitorId !== undefined) return `质量监控 #${target.qualityMonitorId} 规则建议`;
   if (target.assetId !== undefined) return `资产 #${target.assetId} ${target.purpose === 'ASSET_DESCRIPTION' ? '描述候选' : '治理解读'}`;
+  if (target.qualityBaselineExecutionNo) return `质量执行 ${target.qualityBaselineExecutionNo} → ${target.qualityExecutionNo} 历史比较`;
   return `质量执行 ${target.qualityExecutionNo} 解读与排查`;
 }
 
@@ -44,14 +45,17 @@ export function governanceEntryPath(target: GovernanceTarget): string {
   const query = target.assetId !== undefined
     ? `assetId=${target.assetId}`
     : `qualityExecutionNo=${encodeURIComponent(target.qualityExecutionNo)}`;
-  return `/ai-agent?${query}`;
+  return `/ai-agent?${query}${target.qualityBaselineExecutionNo ? `&qualityBaselineExecutionNo=${encodeURIComponent(target.qualityBaselineExecutionNo)}` : ''}`;
 }
 
 export function parseGovernanceTarget(search: string): GovernanceTarget | null {
   const params = new URLSearchParams(search);
+  if (['assetId', 'qualityExecutionNo', 'qualityMonitorId', 'qualityBaselineExecutionNo'].some((key) => params.getAll(key).length > 1)) return null;
+  const baseline = params.get('qualityBaselineExecutionNo');
   const asset = params.get('assetId');
   const execution = params.get('qualityExecutionNo');
   const monitor = params.get('qualityMonitorId');
+  if (baseline !== null && (!execution || asset !== null || monitor !== null || !/^[A-Za-z0-9_-]{1,128}$/.test(baseline) || baseline === execution)) return null;
   if (monitor) {
     return !asset && !execution && /^[1-9]\d*$/.test(monitor) && Number.isSafeInteger(Number(monitor))
       ? { qualityMonitorId: Number(monitor), purpose: 'QUALITY_RULES' } : null;
@@ -60,7 +64,7 @@ export function parseGovernanceTarget(search: string): GovernanceTarget | null {
   if (asset && /^[1-9]\d*$/.test(asset) && Number.isSafeInteger(Number(asset))) {
     return { assetId: Number(asset) };
   }
-  if (execution && /^[A-Za-z0-9_-]{1,128}$/.test(execution)) return { qualityExecutionNo: execution };
+  if (execution && /^[A-Za-z0-9_-]{1,128}$/.test(execution)) return { qualityExecutionNo: execution, ...(baseline ? { qualityBaselineExecutionNo: baseline } : {}) };
   return null;
 }
 
@@ -76,6 +80,7 @@ export function governanceSourcePath(target: GovernanceTarget): string {
 }
 
 export function governanceQuestions(target: GovernanceTarget): string[] {
+  if (target.qualityBaselineExecutionNo) return ['比较选定的基准执行与本次执行，核验各侧事实并按稳定规则 ID 对齐；单列历史定义变化、截断和缺口，给出人工核对步骤，不直接认定质量改善或根因。'];
   if (target.metricChangeReview) return ['解释固定发布版本与已保存草稿的差异，引用事实并列出人工检查步骤；保留验证和关系证据缺口。'];
   if (target.metricDraft) return ['根据绑定需求与依赖准备指标定义草稿；缺少业务信息时列出待确认问题。'];
   if (target.metricExplanation) return ['依据固定已保存版本解释指标口径与事实引用，生成业务说明草稿；缺依据时列出待确认项。'];

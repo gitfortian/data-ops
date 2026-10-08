@@ -6,6 +6,7 @@ import io.yak.ops.business.agent.config.ConditionalOnAgentEnabled;
 import io.yak.ops.business.agent.domain.GovernanceEvidenceLedger;
 import io.yak.ops.business.asset.api.AssetGovernanceQueryApi;
 import io.yak.ops.business.quality.api.QualityEvidenceQueryApi;
+import io.yak.ops.business.quality.api.QualityExecutionComparisonQueryApi;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.spi.section.SectionType;
 import java.util.Set;
@@ -42,6 +43,51 @@ public class GovernanceEvidenceGateway {
 
   private final ObjectProvider<AssetGovernanceQueryApi> assets;
   private final ObjectProvider<QualityEvidenceQueryApi> quality;
+  private final ObjectProvider<QualityExecutionComparisonQueryApi> comparisons;
+
+  public String comparison(String baseline, String current, GovernanceEvidenceLedger ledger) {
+    synchronized (ledger) {
+      ledger.requireCapacity(3);
+      return comparisonWithinCapacity(baseline, current, ledger);
+    }
+  }
+
+  private String comparisonWithinCapacity(String baseline, String current, GovernanceEvidenceLedger ledger) {
+    String beforePath = "/data-quality/execution/" + baseline;
+    String afterPath = "/data-quality/execution/" + current;
+    var api = comparisons.getIfAvailable();
+    String status = "UNAVAILABLE";
+    if (api != null) {
+      try {
+        var result = api.compare(baseline, current);
+        if (result == null || result.baseline() == null || result.current() == null
+            || !baseline.equals(result.baseline().executionNo()) || !current.equals(result.current().executionNo())
+            || result.alignment() == null || result.alignment().size() > 40
+            || result.baseline().rules() == null || result.baseline().rules().size() > 20
+            || result.current().rules() == null || result.current().rules().size() > 20) {
+          throw new IllegalArgumentException("比较证据不匹配");
+        }
+        // Encode and validate all parts before registering any trusted evidence.
+        String before = writeComparison(result.baseline()), after = writeComparison(result.current()), alignment = writeComparison(result.alignment());
+        if (before.length() > 10000 || after.length() > 10000 || writeComparison(result).length() > 24000) {
+          throw new IllegalArgumentException("比较证据超出范围");
+        }
+        var left = ledger.register("QUALITY", baseline, "OK", time(result.baseline().finishedAt()), beforePath);
+        var right = ledger.register("QUALITY", current, "OK", time(result.current().finishedAt()), afterPath);
+        var aligned = ledger.register("QUALITY", baseline + "/" + current, "OK", null, afterPath);
+        return "基准执行：\n" + factualEnvelope(left, before, ledger)
+            + "\n本次执行：\n" + factualEnvelope(right, after, ledger)
+            + "\n可见规则对齐（索引指向上述各侧 rules，缺失不表示新增或删除）：\n"
+            + factualEnvelope(aligned, "{\"alignment\":" + alignment + "}", ledger);
+      } catch (ActionAccessDeniedException | SecurityException denied) {
+        status = "PERMISSION_DENIED";
+      } catch (RuntimeException unavailable) {
+        status = "UNAVAILABLE";
+      }
+    }
+    return failure(ledger, "QUALITY", baseline, status, beforePath) + "\n"
+        + failure(ledger, "QUALITY", current, status, afterPath);
+  }
 
   public String search(String keyword, int limit) {
     var api = assets.getIfAvailable();
@@ -173,6 +219,10 @@ public class GovernanceEvidenceGateway {
   }
 
   private static String time(Object value) { return value == null ? null : value.toString(); }
+  private static String writeComparison(Object value) {
+    try { return JSON.writer().without(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).writeValueAsString(value); }
+    catch (com.fasterxml.jackson.core.JsonProcessingException error) { throw new IllegalStateException("比较证据无法编码"); }
+  }
   private static String write(Object value) {
     try { return JSON.writeValueAsString(value); }
     catch (com.fasterxml.jackson.core.JsonProcessingException error) {

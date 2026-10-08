@@ -181,6 +181,15 @@ public class QualityExecutionDaoImpl implements QualityExecutionDao {
   }
 
   @Override
+  public List<QualityRuleExecutionPO> selectRuleExecutionsBounded(long executionId, int limit) {
+    if (limit < 1 || limit > 21) throw new IllegalArgumentException("历史规则读取上限无效");
+    requireOwnedExecution(executionId);
+    return ruleExecutionMapper.selectList(Wrappers.<QualityRuleExecutionPO>lambdaQuery()
+        .eq(QualityRuleExecutionPO::getExecutionId, executionId)
+        .orderByAsc(QualityRuleExecutionPO::getId).last("LIMIT " + limit));
+  }
+
+  @Override
   public long countExecutionWorkspace(Map<String, Object> params) {
     return queryMapper.countExecutionWorkspace(scoped(params));
   }

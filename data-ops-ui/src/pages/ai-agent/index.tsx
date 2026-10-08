@@ -1076,13 +1076,15 @@ const AiAgentPage: React.FC = () => {
             message={governanceTaskTitle(governanceTarget)}
             description={
               <Space wrap>
-                <span>{governanceTarget.qualityExecutionNo !== undefined
+                <span>{governanceTarget.qualityBaselineExecutionNo
+                  ? '仅比较选定的两次历史执行；历史定义变化、截断和缺口需人工核对，不直接认定质量改善。'
+                  : governanceTarget.qualityExecutionNo !== undefined
                   ? '围绕本次历史执行核对事实、缺口和人工检查步骤；具体根因需验证，调整规则请回源页面另行发起。'
                   : '按当前权限读取证据，解读完成后可回到来源核验。'}</span>
                 {governanceQuestions(governanceTarget).map((question, index) => (
                   <Button key={question} size="small" disabled={preparationBlocked || hasText || draftLoading}
                     onClick={() => { if (!inputValueRef.current.trim() && !preparationBlocked) { draftSourceRef.current = undefined; setInput(question); } }}>
-                    {governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
+                    {governanceTarget.qualityBaselineExecutionNo ? '比较两次执行' : governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
                       : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选'
                         : governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '生成描述候选' : (index === 0 ? '解释结果' : '排查建议')}
                   </Button>
@@ -1090,6 +1092,8 @@ const AiAgentPage: React.FC = () => {
                 <Button size="small" href={governanceSourcePath(governanceTarget)}>
                   {governanceTarget.qualityExecutionNo !== undefined ? '返回本次执行核对' : '返回来源'}
                 </Button>
+                {governanceTarget.qualityBaselineExecutionNo && <Button size="small"
+                  href={`/data-quality/execution/${encodeURIComponent(governanceTarget.qualityBaselineExecutionNo)}`}>返回基准执行核对</Button>}
               </Space>
             }
             style={{ marginBottom: 12 }}

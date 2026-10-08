@@ -36,3 +36,5 @@ Feature SHIPPED 后，将长期有效内容提升到 Product / Domain / Architec
 - [F-032 指标发布前版本变更解释](F-032-metric-change-review.md)：IMPLEMENTING；固定版本对、精确验证与有界声明引用，只读说明及覆盖缺口；真实验收延期。
 
 - [F-033 问数字段、时间与口径澄清](F-033-agent-query-clarification.md)：IMPLEMENTING；原 HITL 的有界字段依据及同轮应答，真实模型验收延期。
+
+- [F-034 两次历史质量执行比较](F-034-agent-quality-execution-comparison.md)：IMPLEMENTING；固定执行对、历史身份核对及有界规则对齐，真实验收延期。

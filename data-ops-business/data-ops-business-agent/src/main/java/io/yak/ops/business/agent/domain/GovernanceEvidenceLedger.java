@@ -42,6 +42,12 @@ public final class GovernanceEvidenceLedger {
 
   public synchronized List<Evidence> entries() { return List.copyOf(entries); }
 
+  public synchronized void requireCapacity(int additional) {
+    if (additional < 1 || entries.size() + additional > MAX_EVIDENCE) {
+      throw new IllegalStateException("本轮证据数量已达上限，请缩小问题范围");
+    }
+  }
+
   public static boolean mentionsEvidence(String text) {
     return text != null && (CITATION.matcher(text).find() || text.contains("```yak-"));
   }

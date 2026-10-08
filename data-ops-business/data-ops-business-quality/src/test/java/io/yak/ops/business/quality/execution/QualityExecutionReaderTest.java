@@ -16,6 +16,13 @@ class QualityExecutionReaderTest {
       mock(QualityExecutionReadRepository.class);
   private final QualityExecutionReader reader = new QualityExecutionReader(repository);
 
+  @Test void comparisonUsesBoundedRepositoryInsteadOfFullExecutionRead() {
+    when(repository.findRulesBounded(42, 21)).thenReturn(java.util.List.of());
+    assertThat(reader.rulesForComparison(42)).isEmpty();
+    verify(repository).findRulesBounded(42, 21);
+    org.mockito.Mockito.verifyNoMoreInteractions(repository);
+  }
+
   @Test
   void findSummaryDelegatesOptionalReadWithoutChangingMissingResultSemantics() {
     Execution execution = mock(Execution.class);

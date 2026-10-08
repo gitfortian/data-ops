@@ -72,7 +72,7 @@ class GovernanceSuggestionGatewayTest {
     var state = new AgentExecutionContext(null);
     var evidence = state.evidence().register("QUALITY", "run", "OK", null, "/data-quality/execution/run");
     state.evidence().recordFacts(evidence.id(), java.util.Map.of("issueCount", "3"));
-    var evidenceGateway = new GovernanceEvidenceGateway(provider(assets), provider(null));
+    var evidenceGateway = new GovernanceEvidenceGateway(provider(assets), provider(null), provider(null));
     String result = evidenceGateway.verifyFacts(state, "[{\"evidenceRef\":\"" + evidence.id() + "\",\"field\":\"issueCount\",\"value\":999}]");
     assertTrue(result.contains("\"value\":\"3\""));
     assertFalse(result.contains("999"));

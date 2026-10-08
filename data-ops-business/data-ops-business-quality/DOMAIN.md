@@ -228,3 +228,7 @@ Repository contract 使用 Domain / Query model 和 shared `PageData`；HTTP DTO
 候选不是业务事实。只读建议及校验不触发业务写入；人工保存继续由本域命令拥有。条件更新在本域事务内比较服务器定义指纹，拒绝旧值覆盖；治理 AI 不拥有源域状态。
 
 候选与当前表单的对照是临时编辑状态，不是第二份定义。AI 采纳仅追加停用规则，不替换现有规则；同条件识别不改变源域 Policy 或禁止手工重复配置。编辑器校验与保存互斥，提交内容固定后不得被晚到的候选改写。
+
+## 两次历史质量执行比较（F-034）
+
+Quality Execution 的历史 monitorId、datasourceId、database/schema/table 是比较身份；名称不是身份，当前 Monitor/Rule 不能补造历史。仅两次已结束且身份一致的执行可比较，仍保留各自执行/质量状态。稳定唯一正数 ruleId 对齐各侧可见规则；一侧不可见不表示新增/删除。recordedDefinitionMatches 只比较已保存 template/type/column/expected，不证明冻结 SQL/参数/样本范围相同，不产生质量改善或因果业务真相。

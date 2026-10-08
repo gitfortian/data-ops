@@ -20,6 +20,7 @@
 | `get_asset_evidence` | `asset_id*` | `get_asset_evidence(asset_id=7)` |
 | `get_asset_section_evidence` | `asset_id*`、`section*` | `get_asset_section_evidence(asset_id=7, section="QUALITY")` |
 | `get_quality_execution_evidence` | `execution_no*` | `get_quality_execution_evidence(execution_no="Q20261005_001")` |
+| `get_quality_execution_comparison` | — | `get_quality_execution_comparison()` |
 | `get_quality_monitor_evidence` | `monitor_id*` | `get_quality_monitor_evidence(monitor_id=7)` |
 | `propose_quality_rules` | `rules_json*` | `propose_quality_rules(rules_json="[]")` |
 | `propose_asset_description` | `description*` | `propose_asset_description(description="用途待确认")` |

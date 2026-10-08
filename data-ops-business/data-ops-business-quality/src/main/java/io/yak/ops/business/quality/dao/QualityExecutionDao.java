@@ -22,6 +22,7 @@ public interface QualityExecutionDao {
   QualityExecutionPO selectLatestForTarget(
       long dataSourceId, String databaseName, String schemaName, String tableName);
   List<QualityRuleExecutionPO> selectRuleExecutions(long executionId);
+  List<QualityRuleExecutionPO> selectRuleExecutionsBounded(long executionId, int limit);
 
   long countExecutionWorkspace(Map<String, Object> params);
   List<QualityExecutionPO> selectExecutionWorkspace(Map<String, Object> params);
