@@ -1,4 +1,5 @@
 import type { ConsumerImpact, DataProductView, ConsumerRef } from '@/services/consumption';
+import { getConsumerImpact, productKeyValue } from '@/services/consumption';
 import type { DataServiceConsumer } from '@/services/data-service/consumer';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { history, useSearchParams } from '@umijs/max';
@@ -42,15 +43,65 @@ export default function VersionChangeImpactReview({
   const { can } = usePermissionAccess();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedVersion = searchParams.get('reviewVersion');
+  const productKey = productKeyValue(product.productKey);
+  const [exactVersionSnapshot, setExactVersionSnapshot] = useState<{
+    productKey: string;
+    identity: string;
+    impact: ConsumerImpact | null;
+    error: string;
+  } | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [proposedChange, setProposedChange] = useState('');
-  const versions = useMemo(
-    () => reviewableVersions(impact, product.activeVersion),
-    [impact, product.activeVersion],
-  );
+  const validRequestedVersion = !!requestedVersion && /^[1-9]\d{0,29}$/.test(requestedVersion);
+  // Product overview and exact historical version reads are distinct bounded
+  // views. Never treat the source reconciliation window as complete history.
+  useEffect(() => {
+    if (!validRequestedVersion || !requestedVersion || !impact) {
+      setExactVersionSnapshot(null);
+      return;
+    }
+    let active = true;
+    setExactVersionSnapshot(null);
+    void getConsumerImpact(productKey, requestedVersion)
+      .then((response) => {
+        if (active) setExactVersionSnapshot({
+          productKey, identity: requestedVersion, impact: response, error: '',
+        });
+      })
+      .catch((cause) => {
+        if (active) setExactVersionSnapshot({
+          productKey, identity: requestedVersion, impact: null,
+          error: cause instanceof Error ? cause.message : '精确版本证据读取失败',
+        });
+      });
+    return () => { active = false; };
+  }, [impact, productKey, requestedVersion, validRequestedVersion]);
+
+  const exact = exactVersionSnapshot?.identity === requestedVersion
+    && exactVersionSnapshot.productKey === productKey ? exactVersionSnapshot : null;
+  const exactLoading = !!requestedVersion && validRequestedVersion && !exact;
+  const reviewLoading = loading || exactLoading;
+  const evidenceImpact = requestedVersion
+    ? (validRequestedVersion ? exact?.impact ?? null : null)
+    : impact;
+  const reviewIssue = impactIssue || (requestedVersion && !validRequestedVersion
+    ? '精确版本 ID 必须是规范十进制正整数' : exact?.error || '');
+  const versions = useMemo(() => {
+    const known = reviewableVersions(impact, product.activeVersion);
+    if (requestedVersion && exact?.impact) {
+      for (const version of reviewableVersions(exact.impact)) {
+        if (version.identity === requestedVersion
+            && !known.some((item) => item.identity === version.identity)) {
+          known.push(version);
+        }
+      }
+    }
+    return known;
+  }, [impact, product.activeVersion, requestedVersion, exact]);
   const selected = selectReviewableVersion(versions, requestedVersion);
-  const review = reviewVersionImpact(impact, selected);
-  const workpack = impact && review ? buildVersionChangeCoordinationWorkpack(impact, review) : null;
+  const review = reviewVersionImpact(evidenceImpact, selected);
+  const workpack = evidenceImpact && review
+    ? buildVersionChangeCoordinationWorkpack(evidenceImpact, review) : null;
   // An acknowledgement never survives a new evidence response or a version switch.
   useEffect(() => setAcknowledged(false), [impact, selected?.identity, loading]);
   // Change descriptions belong to one exact source revision, never carry them across versions.
