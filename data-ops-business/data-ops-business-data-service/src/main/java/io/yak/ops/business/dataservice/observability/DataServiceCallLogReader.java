@@ -28,6 +28,16 @@ public class DataServiceCallLogReader {
     return repository.recentSuccessfulByApi(apiId, Math.max(1, Math.min(200, limit)));
   }
 
+  /**
+   * Recovers successful persisted calls of exactly one immutable revision even
+   * when newer revisions fill the normal product-level audit window.
+   */
+  public List<InvocationRecord> recentSuccessfulByApiAndRevision(
+      Long apiId, Long sourceRevisionId, int limit) {
+    return repository.recentSuccessfulByApiAndRevision(
+        apiId, sourceRevisionId, Math.max(1, Math.min(200, limit)));
+  }
+
   public InvocationEvidenceView findByApiAndId(Long apiId, Long invocationId) {
     if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {
       throw new IllegalArgumentException("数据服务 ID 与调用记录 ID 必须大于 0");
