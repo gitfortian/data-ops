@@ -88,6 +88,34 @@ class MetadataTypeRegistryTest {
   }
 
   @Test
+  void interleavedFieldsStayWithinTheirOwningTypesAndKeepOrdinalOrder() {
+    MdFieldDefPO tableLast = MetamodelFixtures.field(1L, "tableLast", "STRING", null);
+    tableLast.setOrdinal(30);
+    MdFieldDefPO datasetFirst = MetamodelFixtures.field(2L, "datasetFirst", "STRING", null);
+    datasetFirst.setOrdinal(10);
+    MdFieldDefPO tableFirst = MetamodelFixtures.field(1L, "tableFirst", "STRING", null);
+    tableFirst.setOrdinal(5);
+    MdFieldDefPO datasetLast = MetamodelFixtures.field(2L, "datasetLast", "STRING", null);
+    datasetLast.setOrdinal(20);
+    MdFieldDefPO orphan = MetamodelFixtures.field(99L, "orphan", "STRING", null);
+    orphan.setOrdinal(null);
+
+    MetadataTypeRegistry registry = MetamodelFixtures.registry(
+        List.of(MetamodelFixtures.entityType(1L, "table"),
+            MetamodelFixtures.entityType(2L, "dataset"),
+            MetamodelFixtures.entityType(3L, "empty")),
+        List.of(tableLast, datasetFirst, orphan, tableFirst, datasetLast), 60_000L);
+
+    assertThat(registry.fields("table")).extracting(MdFieldDefPO::getFieldName)
+        .containsExactly("tableFirst", "tableLast");
+    assertThat(registry.fields("dataset")).extracting(MdFieldDefPO::getFieldName)
+        .containsExactly("datasetFirst", "datasetLast");
+    assertThat(registry.fields("empty")).isEmpty();
+    assertThatThrownBy(() -> registry.fields("table").add(tableLast))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   void onlyActiveEntityTypesDriveTheCatalog() {
     MdTypeDefPO table = MetamodelFixtures.entityType(1L, "table");
     MdTypeDefPO deprecated = MetamodelFixtures.entityType(2L, "legacyThing");
