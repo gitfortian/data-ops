@@ -99,7 +99,7 @@ const LayersPage = () => {
     void loadOptions();
   }, [loadLayers, loadOptions]);
 
-  const datasourceNameOf = (id?: number) => (id ? (datasources.find((item) => item.id === id)?.name ?? `#${id}`) : '-');
+  const datasourceNameOf = (id?: number) => (id ? (datasources.find((item) => Number(item.id) === Number(id))?.name ?? `#${id}`) : '-');
 
   const openCreate = () => {
     datasourceLookupRevision.current += 1;
@@ -435,7 +435,7 @@ const LayersPage = () => {
                   if (datasources.length === 0) void searchDatasources('');
                 }}
                 options={[...datasources,
-                  ...(pinnedDatasource && selectedDatasourceId === pinnedDatasource.id
+                  ...(pinnedDatasource && Number(selectedDatasourceId) === Number(pinnedDatasource.id)
                     && !datasources.some((item) => Number(item.id) === Number(pinnedDatasource.id))
                     ? [pinnedDatasource] : []),
                   ...(selectedDatasourceId
