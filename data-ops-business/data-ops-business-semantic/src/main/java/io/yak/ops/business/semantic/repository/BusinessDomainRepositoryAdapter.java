@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.yak.ops.business.semantic.dao.mapper.SemanticDomainMapper;
 import io.yak.ops.business.semantic.api.BusinessDomain;
 import io.yak.ops.business.semantic.dao.model.SemanticDomainPO;
@@ -92,13 +93,17 @@ public class BusinessDomainRepositoryAdapter implements SemanticDomainRepository
   @Override
   public boolean update(BusinessDomain domain) {
     Long projectId = requiredProjectId();
-    SemanticDomainPO po = new SemanticDomainPO();
-    po.setId(domain.id());
-    po.setDomainName(domain.name());
-    po.setOwner(domain.owner());
-    po.setDescription(domain.description());
-    po.setSortOrder(domain.sortOrder());
-    return mapper.update(po, baseQuery(projectId, domain.id())) > 0;
+    // Use explicit SETs: MyBatis-Plus skips null fields on entity updates,
+    // leaving stale owner/description values after users clear the form.
+    return mapper.update(null,
+        new LambdaUpdateWrapper<SemanticDomainPO>()
+            .eq(SemanticDomainPO::getId, domain.id())
+            .eq(SemanticDomainPO::getProjectId, projectId)
+            .set(SemanticDomainPO::getDomainName, domain.name())
+            .set(SemanticDomainPO::getOwner, domain.owner())
+            .set(SemanticDomainPO::getDescription, domain.description())
+            .set(SemanticDomainPO::getSortOrder, domain.sortOrder())
+            .set(SemanticDomainPO::getUpdateTime, LocalDateTime.now())) > 0;
   }
 
   @Override
