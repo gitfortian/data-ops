@@ -104,7 +104,6 @@ public class FlowAdminService {
     patch.setFlowName(flowName.trim());
     patch.setDescription(description);
     patch.setStepsJson(FlowStepsCodec.serialize(levels));
-
     flowMapper.updateById(patch);
     audit("APPROVAL_FLOW_UPSERT", "编辑审批流程", po.getId(), patch.getFlowName(), operator);
     return toView(flowMapper.selectById(po.getId()));
@@ -115,7 +114,6 @@ public class FlowAdminService {
     ApprovalFlowPO po = requireFlow(currentProject.requireProjectId(), id);
     ApprovalFlowPO patch = patchFor(po, operator);
     patch.setEnabled(!Boolean.TRUE.equals(po.getEnabled()));
-
     flowMapper.updateById(patch);
     audit("APPROVAL_FLOW_TOGGLE",
         Boolean.TRUE.equals(patch.getEnabled()) ? "启用审批流程" : "停用审批流程",
@@ -139,7 +137,6 @@ public class FlowAdminService {
     patch.setFlowCode("#del#" + po.getId());
     patch.setEnabled(false);
     patch.setDeleted(true);
-
     flowMapper.updateById(patch);
     audit("APPROVAL_FLOW_DELETE", "删除审批流程", po.getId(), po.getFlowName(), operator);
   }
