@@ -3,6 +3,7 @@ package io.yak.ops.business.consumption.relationship.source;
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceReader;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +38,32 @@ public class DatasetUsageEvidenceSynchronizer {
             datasetId, datasetVersionId, Math.max(1, Math.min(200, limit))).stream()
         .map(trace -> normalizer.normalize(projectId, trace))
         .toList();
+  }
+
+  /**
+   * Each request processes at most 200 persisted rows. The continuation token
+   * is the smallest database audit ID actually visited, never a display version.
+   * A caller must not advance when any normalization has a GAP/UNAVAILABLE.
+   */
+  public DatasetRecoveryPage recoverSuccessfulVersionPage(
+      long datasetId, long datasetVersionId, Long beforeAuditId, int requestedLimit) {
+    Long projectId = currentProject.requireProjectId();
+    int limit = Math.max(1, Math.min(200, requestedLimit));
+    List<DatasetSuccessfulQueryAudit> audits =
+        performanceReader.successfulPageByDatasetAndVersion(
+            datasetId, datasetVersionId, beforeAuditId, limit);
+    List<UsageNormalizationResult> results = audits.stream()
+        .map(audit -> normalizer.normalize(projectId, audit.trace()))
+        .toList();
+    Long next = audits.size() == limit ? audits.getLast().auditId() : null;
+    return new DatasetRecoveryPage(results, next, audits.size() < limit);
+  }
+
+  public record DatasetRecoveryPage(
+      List<UsageNormalizationResult> results, Long nextBeforeAuditId, boolean exhausted) {
+    public DatasetRecoveryPage {
+      results = List.copyOf(results);
+    }
   }
 
   private List<UsageNormalizationResult> synchronizeRecent(Set<Long> datasetIds, int limit) {

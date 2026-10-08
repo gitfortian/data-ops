@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit;
 import io.yak.ops.business.dataset.repository.DatasetQueryPerformanceStore;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
@@ -199,6 +200,58 @@ class DatasetQueryPerformanceReaderTest {
 
     assertThrows(IllegalStateException.class,
         () -> reader.recentSuccessfulByDatasetAndVersion(101L, 9007199254740993L, 200));
+  }
+
+  @Test
+  void persistedAuditCursorCannotUseLocalBufferAndKeepsProjectExactVersionAndLimit() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    buffer.add(42L, trace("local-not-truth", 101L, 10L));
+    DatasetQueryPerformanceStore store = mock(DatasetQueryPerformanceStore.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DatasetQueryPerformanceStore> provider = mock(ObjectProvider.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(provider.getIfAvailable()).thenReturn(store);
+    when(store.successfulPageByDatasetAndVersion(
+        42L, 101L, 9007199254740993L, 88L, 200))
+        .thenReturn(List.of(new DatasetSuccessfulQueryAudit(
+            87L, trace("persisted-old-success", 101L, 10L))));
+    var reader = new DatasetQueryPerformanceReader(buffer, provider, project);
+
+    var page = reader.successfulPageByDatasetAndVersion(
+        101L, 9007199254740993L, 88L, 999);
+
+    assertEquals(1, page.size());
+    assertEquals(87L, page.getFirst().auditId());
+    assertEquals("persisted-old-success", page.getFirst().trace().queryId());
+    org.mockito.Mockito.verify(store).successfulPageByDatasetAndVersion(
+        42L, 101L, 9007199254740993L, 88L, 200);
+  }
+
+  @Test
+  void invalidOrMissingPersistedPageCannotPretendRecoverySucceeded() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    buffer.add(42L, trace("local-not-audit", 101L, 10L));
+    DatasetQueryPerformanceStore store = mock(DatasetQueryPerformanceStore.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DatasetQueryPerformanceStore> provider = mock(ObjectProvider.class);
+    CurrentProject project = mock(CurrentProject.class);
+    var reader = new DatasetQueryPerformanceReader(buffer, provider, project);
+
+    assertThrows(IllegalArgumentException.class,
+        () -> reader.successfulPageByDatasetAndVersion(101L, 90L, 0L, 200));
+    assertThrows(IllegalArgumentException.class,
+        () -> reader.successfulPageByDatasetAndVersion(-1L, 90L, null, 200));
+    org.mockito.Mockito.verifyNoInteractions(project, provider, store);
+
+    when(project.requireProjectId()).thenReturn(42L);
+    assertThrows(IllegalStateException.class,
+        () -> reader.successfulPageByDatasetAndVersion(101L, 90L, null, 200));
+    when(provider.getIfAvailable()).thenReturn(store);
+    when(store.successfulPageByDatasetAndVersion(42L, 101L, 90L, null, 200))
+        .thenThrow(new IllegalStateException("audit storage offline"));
+    assertThrows(IllegalStateException.class,
+        () -> reader.successfulPageByDatasetAndVersion(101L, 90L, null, 200));
   }
 
   private Fixture fixture() {

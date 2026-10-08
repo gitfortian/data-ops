@@ -174,6 +174,105 @@ class ConsumerImpactServiceTest {
     assertEquals(2, view.consumers().getFirst().observedVersions().size());
   }
 
+  @Test
+  void cursorRecoveryReturnsExactDatasetPageAndContinuationWithoutTouchingDeclaredSubscriptions() {
+    SubscriptionRepository subs = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    ProductKey key = ProductKey.parse("DATASET:101");
+    when(project.requireProjectId()).thenReturn(42L);
+    UsageEvidence existing = mock(UsageEvidence.class);
+    when(existing.providerEvidenceRef()).thenReturn("query:old-audit");
+    // Build the normalization result before starting another Mockito stubbing:
+    // normalized(existing) invokes a mocked getter.
+    UsageNormalizationResult successful = UsageNormalizationResult.normalized(existing);
+    when(sync.recoverSuccessfulVersionPage(101L, 9007199254740993L, null, 200))
+        .thenReturn(new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
+            List.of(successful), 701L, false));
+    var service = new ConsumerImpactService(subs, usage, project, sync, null);
+
+    var result = service.recoverDatasetVersionPage(key, "9007199254740993", null, 999);
+
+    assertEquals("DATASET:101", result.productKey());
+    assertEquals("9007199254740993", result.sourceVersionIdentity());
+    assertEquals(200, result.requestedLimit());
+    assertEquals(1, result.visitedAuditCount());
+    assertEquals(1, result.normalizedOrAlreadyPresentCount());
+    assertEquals(701L, result.nextBeforeAuditId());
+    assertEquals(false, result.retainedAuditExhausted());
+    assertEquals(false, result.retryRequired());
+    org.mockito.Mockito.verify(sync).recoverSuccessfulVersionPage(101L, 9007199254740993L, null, 200);
+    org.mockito.Mockito.verifyNoInteractions(subs, usage);
+  }
+
+  @Test
+  void gapsAndUnavailableNormalizationBlockCursorAdvanceUntilSamePageCanBeRetried() {
+    SubscriptionRepository subs = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    var page = new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
+        List.of(
+            UsageNormalizationResult.gap("query:old", "subject absent"),
+            UsageNormalizationResult.unavailable("query:recent", "store failure"),
+            UsageNormalizationResult.ignored("query:bad", "cannot count as success")),
+        500L, false);
+    when(sync.recoverSuccessfulVersionPage(101L, 7L, 501L, 10)).thenReturn(page);
+
+    var result = new ConsumerImpactService(subs, usage, project, sync, null)
+        .recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", 501L, 10);
+
+    assertEquals(3, result.visitedAuditCount());
+    assertEquals(0, result.normalizedOrAlreadyPresentCount());
+    assertEquals(2, result.normalizationGapCount());
+    assertEquals(1, result.normalizationUnavailableCount());
+    assertEquals(null, result.nextBeforeAuditId());
+    assertTrue(result.retryRequired());
+    assertEquals(false, result.retainedAuditExhausted());
+    assertEquals(501L, result.requestedBeforeAuditId());
+  }
+
+  @Test
+  void emptyRetainedAuditPageIsExplicitlyExhaustedWithoutClaimingAllHistoricalTime() {
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(sync.recoverSuccessfulVersionPage(101L, 7L, 20L, 50))
+        .thenReturn(new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
+            List.of(), null, true));
+    var result = new ConsumerImpactService(
+        mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
+        project, sync, null)
+        .recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", 20L, 50);
+
+    assertTrue(result.retainedAuditExhausted());
+    assertEquals(null, result.nextBeforeAuditId());
+    assertEquals(false, result.retryRequired());
+  }
+
+  @Test
+  void invalidRecoveryIdentityAndCursorNeverReadProjectOrPersistedUsage() {
+    SubscriptionRepository subs = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    var service = new ConsumerImpactService(subs, usage, project, sync, null);
+
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATA_SERVICE:101"), "7", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "v1", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "07", null, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", 0L, 20));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:0"), "7", null, 20));
+    org.mockito.Mockito.verifyNoInteractions(project, sync, subs, usage);
+  }
+
   private static UsageEvidence event(
       Long projectId, ProductKey product, ConsumerRef consumer, String versionId,
       String displayVersion, LocalDateTime at, String evidenceRef) {

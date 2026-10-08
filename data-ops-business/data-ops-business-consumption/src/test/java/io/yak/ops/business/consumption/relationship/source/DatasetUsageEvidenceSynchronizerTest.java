@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import io.yak.ops.business.consumption.relationship.UsageNormalizationResult;
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit;
 import io.yak.ops.business.dataset.observability.DatasetQueryPerformanceReader;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
@@ -60,6 +61,37 @@ class DatasetUsageEvidenceSynchronizerTest {
         org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.anySet(),
         org.mockito.ArgumentMatchers.anyInt());
     verify(normalizer).normalize(42L, old);
+  }
+
+  @Test
+  void historicalPageAdvancesOnlyByLastDurableAuditIdAndCapsTo200() {
+    DatasetQueryPerformanceReader reader = mock(DatasetQueryPerformanceReader.class);
+    DatasetUsageEvidenceNormalizer normalizer = mock(DatasetUsageEvidenceNormalizer.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetQueryPerformance old = mock(DatasetQueryPerformance.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    List<DatasetSuccessfulQueryAudit> page = java.util.stream.LongStream.rangeClosed(1, 200)
+        .mapToObj(id -> new DatasetSuccessfulQueryAudit(901L - id, old))
+        .toList();
+    when(reader.successfulPageByDatasetAndVersion(101L, 9007199254740993L, null, 200))
+        .thenReturn(page);
+    when(normalizer.normalize(42L, old)).thenReturn(
+        UsageNormalizationResult.gap("query:old", "test marker"));
+    var sync = new DatasetUsageEvidenceSynchronizer(reader, normalizer, project);
+
+    var first = sync.recoverSuccessfulVersionPage(101L, 9007199254740993L, null, 500);
+
+    assertEquals(200, first.results().size());
+    assertEquals(701L, first.nextBeforeAuditId());
+    assertEquals(false, first.exhausted());
+    verify(reader).successfulPageByDatasetAndVersion(101L, 9007199254740993L, null, 200);
+
+    when(reader.successfulPageByDatasetAndVersion(101L, 9007199254740993L, 701L, 200))
+        .thenReturn(List.of(new DatasetSuccessfulQueryAudit(700L, old)));
+    var second = sync.recoverSuccessfulVersionPage(101L, 9007199254740993L, 701L, 200);
+    assertEquals(1, second.results().size());
+    assertEquals(null, second.nextBeforeAuditId());
+    assertEquals(true, second.exhausted());
   }
 
   @Test

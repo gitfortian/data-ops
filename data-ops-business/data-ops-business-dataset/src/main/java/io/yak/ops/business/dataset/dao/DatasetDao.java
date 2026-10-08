@@ -96,6 +96,13 @@ public interface DatasetDao {
   List<DatasetQueryPerformancePO> selectSuccessfulQueryPerformanceByDatasetAndVersion(
       Long projectId, long datasetId, long datasetVersionId, int limit);
 
+  /**
+   * Success audit pages are ordered by persisted ID, not execution timestamp.
+   * Cursor is exclusive, so concurrent newer appends do not shift older pages.
+   */
+  List<DatasetQueryPerformancePO> selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, Long beforeAuditId, int limit);
+
   int deleteQueryPerformanceBefore(Instant cutoff, int limit);
 
   // ---- Draft columns & draft-field table ----
