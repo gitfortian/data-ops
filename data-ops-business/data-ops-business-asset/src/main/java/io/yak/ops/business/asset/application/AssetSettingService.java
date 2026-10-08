@@ -15,9 +15,7 @@ public class AssetSettingService {
   private final AssetSettingMapper settingMapper;
 
   public String get(Long projectId, String key) {
-    AssetSettingPO po = settingMapper.selectOne(new LambdaQueryWrapper<AssetSettingPO>()
-        .eq(AssetSettingPO::getProjectId, projectId)
-        .eq(AssetSettingPO::getSettingKey, key));
+    AssetSettingPO po = settingMapper.selectOne(settingScope(projectId, key));
     return po == null ? null : po.getSettingValue();
   }
 
@@ -33,10 +31,14 @@ public class AssetSettingService {
     }
   }
 
-  public void put(Long projectId, String key, String value) {
-    AssetSettingPO po = settingMapper.selectOne(new LambdaQueryWrapper<AssetSettingPO>()
+  private static LambdaQueryWrapper<AssetSettingPO> settingScope(Long projectId, String key) {
+    return new LambdaQueryWrapper<AssetSettingPO>()
         .eq(AssetSettingPO::getProjectId, projectId)
-        .eq(AssetSettingPO::getSettingKey, key));
+        .eq(AssetSettingPO::getSettingKey, key);
+  }
+
+  public void put(Long projectId, String key, String value) {
+    AssetSettingPO po = settingMapper.selectOne(settingScope(projectId, key));
     if (po == null) {
       po = new AssetSettingPO();
       po.setProjectId(projectId);
