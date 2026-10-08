@@ -50,6 +50,19 @@ it('does not present the current monitor candidate entry as an undefined executi
   } finally { window.history.replaceState({}, '', '/'); }
 });
 
+it('shows both selected historical executions and fills comparison without inference', async () => {
+  window.history.replaceState({}, '', '/ai-agent?qualityExecutionNo=after&qualityBaselineExecutionNo=before');
+  try {
+    render(<AiAgentPage />);
+    expect(await screen.findByText('质量执行 before → after 历史比较')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('比较两次执行'));
+    expect(screen.getByPlaceholderText(/输入/)).toHaveValue(governanceQuestions({ qualityExecutionNo: 'after', qualityBaselineExecutionNo: 'before' })[0]);
+    expect(streamTurnEvents).not.toHaveBeenCalled();
+    expect(screen.getByText('返回基准执行核对').closest('a')).toHaveAttribute('href', '/data-quality/execution/before');
+    expect(screen.getByText('返回本次执行核对').closest('a')).toHaveAttribute('href', '/data-quality/execution/after');
+  } finally { window.history.replaceState({}, '', '/'); }
+});
+
 it('carries an asset entry without automatically starting inference and clears it for a new conversation', async () => {
   window.history.replaceState({}, '', '/ai-agent?assetId=7');
   render(<AiAgentPage />);

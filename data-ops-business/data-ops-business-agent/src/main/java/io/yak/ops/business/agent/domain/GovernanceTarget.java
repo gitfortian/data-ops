@@ -2,7 +2,14 @@ package io.yak.ops.business.agent.domain;
 
 /** Selected source and auxiliary task; neither is an authorization grant. */
 public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qualityMonitorId,
-    String purpose, StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation, MetricDraftTarget metricDraft, MetricChangeReviewTarget metricChangeReview) {
+    String purpose, StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation, MetricDraftTarget metricDraft, MetricChangeReviewTarget metricChangeReview,
+    String qualityBaselineExecutionNo) {
+  public GovernanceTarget(Long assetId, String qualityExecutionNo, Long qualityMonitorId, String purpose,
+      StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation,
+      MetricDraftTarget metricDraft, MetricChangeReviewTarget metricChangeReview) {
+    this(assetId, qualityExecutionNo, qualityMonitorId, purpose, standardMatch, modelMapping, metricExplanation,
+        metricDraft, metricChangeReview, null);
+  }
   public GovernanceTarget(Long assetId, String qualityExecutionNo, Long qualityMonitorId, String purpose,
       StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation, MetricDraftTarget metricDraft) {
     this(assetId, qualityExecutionNo, qualityMonitorId, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, null);
@@ -25,6 +32,11 @@ public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qua
   }
 
   public GovernanceTarget {
+    if (qualityBaselineExecutionNo != null && (qualityExecutionNo == null || purpose != null
+        || !qualityBaselineExecutionNo.matches("[A-Za-z0-9_-]{1,128}")
+        || qualityBaselineExecutionNo.equals(qualityExecutionNo))) {
+      throw new IllegalArgumentException("请选择两个不同的质量历史执行");
+    }
     if ((assetId == null ? 0 : 1) + (qualityExecutionNo == null ? 0 : 1)
         + (qualityMonitorId == null ? 0 : 1) + (standardMatch == null ? 0 : 1) + (modelMapping == null ? 0 : 1) + (metricExplanation == null ? 0 : 1) + (metricDraft == null ? 0 : 1) + (metricChangeReview == null ? 0 : 1) != 1) {
       throw new IllegalArgumentException("请选择一个资产、质量执行、监控或字段草稿");

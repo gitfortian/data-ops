@@ -56,6 +56,15 @@ public class GovernanceEvidenceTools implements AgentToolBox, AgentSystemPromptC
     return execution.call(context, "verify_governance_facts", () -> evidence.verifyFacts(AgentToolExecution.state(context), refs));
   }
 
+  @Tool(name = "get_quality_execution_comparison", description = "只读比较用户固定选择的两次已结束历史质量执行；按稳定规则ID对齐最多各20条，保留截断和历史定义差异，不读取当前规则。无需参数，不允许模型更换执行对。")
+  public String comparison(RuntimeContext context) {
+    return execution.call(context, "get_quality_execution_comparison", () -> {
+      var state = AgentToolExecution.state(context);
+      return evidence.comparison(state.target().qualityBaselineExecutionNo(),
+          state.target().qualityExecutionNo(), state.evidence());
+    });
+  }
+
   @Override
   public String contribute() {
     return """

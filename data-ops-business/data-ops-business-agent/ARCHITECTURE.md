@@ -301,3 +301,7 @@ StructuredSuggestionPanel 自身按完整目标/定义/disabled 隔离组件生�
 ## 问数澄清投影（F-033）
 
 runtime.QueryClarificationProjection 消费原 AgentExecutionContext 中的 DatasetFields，TaskToolPolicyMiddleware 为 SDK ActingInput 准备同 ID 的有界展示内容；TaskScopedTool 在预算预占后再次校验再挂起。SDK 仍持原 pending，原 AgentEventCodec / AG-UI / 投递日志 / continuation 承载问题字符串。前端 readClarificationQuestion 与 QueryClarificationCard 共用实时/恢复解析及纯文本交互；不新增持久化、查询入口或源域依赖。原 query gateway 继续重验当前主体、字段与版本。
+
+## 两次历史质量执行比较（F-034）
+
+GovernanceEvidenceTools.comparison 无模型参数，从冻结目标取固定执行对，经 AgentToolExecution 的实时用户/项目与 CHAT_RUN 检查进入 GovernanceEvidenceGateway，再调用 QualityExecutionComparisonQueryApi。一次逻辑读取计一次预算；网关校验完整返回身份/界限后，在原 ledger 容量锁内分别登记两侧与对齐，任一失败不发布半份可信比较。每侧序列化≤10000、整体≤24000；原每证据200标量核验上限不变。使用原文本/事实/证据协议、原 StateStore 和同轮 HITL，无新数据库。执行页按项目/路由/权限隔离生命周期，并丢弃旧请求代次。

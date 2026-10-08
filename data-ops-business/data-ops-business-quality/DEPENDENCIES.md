@@ -260,8 +260,12 @@ config -> execution/monitor/asset/template/workspace/task
 
 ## F-009 公共 evidence API
 
-新增 api 顶层包无内部依赖，execution -> api 只允许 QualityEvidenceQueryAdapter。跨模块读取只进入 QualityEvidenceQueryApi，不暴露 execution/domain/repository 实现。声明与实际依赖图仍无环。
+新增 api 顶层包无内部依赖，execution -> api 只允许 QualityEvidenceQueryAdapter / QualityExecutionComparisonQueryAdapter。跨模块读取只进入 QualityEvidenceQueryApi / QualityExecutionComparisonQueryApi，不暴露 execution/domain/repository 实现。声明与实际依赖图仍无环。
 
 ## F-010 候选契约
 
 monitor -> api 仅 QualitySuggestionQueryAdapter；monitor -> gateway 仅同一 adapter 的 QualityDataCatalogGateway；gateway/datasource 适配 typed CatalogColumn。公开 API 不依赖 Quality 内部类型。
+
+## 两次历史质量执行比较（F-034）
+
+execution → api 的既有适配边允许 QualityExecutionComparisonQueryAdapter，公共消费者只依赖 QualityExecutionComparisonQueryApi 的有界记录。api 无内部实现依赖，execution 仍经 reader/repository；不反向依赖 Agent 或暴露 DAO/domain。

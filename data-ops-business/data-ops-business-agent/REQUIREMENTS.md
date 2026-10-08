@@ -186,3 +186,7 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 ## 问数字段、时间与口径澄清（F-033）
 
 普通问数关键歧义复用原 request_clarification，可显示 FIELD/TIME/CALIBER、已发现的数据集版本与1–8个真实相关字段；FIELD 至少两个候选且选项由源字段装配。问题/选项及投影有界，非法依据不创建 pending、不查询；旧纯文本/问题选项和治理反问保持。原页面实时与恢复共用严格解析，坏投影阻止回答；选项或≤2000字自由答案明确发送，权限/活动/加载阻止，切项目/会话/待答清理旧答案。原归属、同轮续跑、预算和查询白名单/版本核验继续生效。具体限额和真实验收待办见 docs/product/features/F-033-agent-query-clarification.md。
+
+## 两次历史质量执行比较（F-034）
+
+原执行历史列表由用户明确选择另一已结束执行后进入原 Agent，不自动发送。固定对随原 turn/HITL/恢复冻结；仅允许 get_quality_execution_comparison 与原辅助工具，源域先授权并校验同一历史监控/物理目标。各侧最多20条，按正数唯一 ruleId 对齐；声明截断/缺失/定义变化，保留 ERROR/NOT_RUN/NOT_PASSED 和原值，不推断改善率或根因。双侧证据与对齐均可核验及回链，最终文本和官方历史一致。工程与真实验收分开记录。

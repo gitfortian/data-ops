@@ -18,7 +18,7 @@ import org.springframework.beans.factory.ObjectProvider;
 
 class GovernanceEvidenceGatewayTest {
   private final AssetGovernanceQueryApi api = mock(AssetGovernanceQueryApi.class);
-  private final GovernanceEvidenceGateway gateway = new GovernanceEvidenceGateway(provider(api), provider(null));
+  private final GovernanceEvidenceGateway gateway = new GovernanceEvidenceGateway(provider(api), provider(null), provider(null));
 
   @SuppressWarnings("unchecked")
   private static <T> ObjectProvider<T> provider(T value) {

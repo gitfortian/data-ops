@@ -51,7 +51,8 @@ final class GovernanceAnswerGuard {
             .replaceAll("(?s)```yak-(?:suggestion|evidence|facts).*?```", "[未验证材料已移除]"));
       }
       if (QualityTroubleshootingPrompt.appliesTo(execution.target())) {
-        text += "\n\n" + QualityTroubleshootingPrompt.NEXT_STEP;
+        text += "\n\n" + (execution.target().qualityBaselineExecutionNo() != null
+            ? QualityExecutionComparisonPrompt.NEXT_STEP : QualityTroubleshootingPrompt.NEXT_STEP);
       }
       if (!execution.verifiedFacts().isEmpty()) text += "\n\n```yak-facts\n" + encode(execution.verifiedFacts()) + "\n```";
       text += "\n\n```yak-evidence\n" + encode(execution.evidence().entries()) + "\n```";

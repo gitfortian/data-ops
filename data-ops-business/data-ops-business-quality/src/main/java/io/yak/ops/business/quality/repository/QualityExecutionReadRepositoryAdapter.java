@@ -81,6 +81,17 @@ public class QualityExecutionReadRepositoryAdapter implements QualityExecutionRe
   }
 
   @Override
+  public List<RuleExecution> findRulesBounded(long executionId, int limit) {
+    return executionDao.selectRuleExecutionsBounded(executionId, limit).stream().map(this::ruleExecution).toList();
+  }
+
+  @Override
+  public Optional<Execution> findComparisonSummary(String executionNo) {
+    return Optional.ofNullable(executionDao.selectComparisonSummary(executionNo))
+        .map(po -> execution(po, List.of()));
+  }
+
+  @Override
   public Optional<Execution> findLatestForTarget(
       long dataSourceId, String databaseName, String schemaName, String tableName) {
     return Optional.ofNullable(executionDao.selectLatestForTarget(

@@ -1,4 +1,5 @@
 import { governanceEntryPath } from '@/services/agent/governance';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { YakButton, YakEmpty, YakTab } from '@/components/ui';
 import { BRAND_THEME } from '@/styles/brand';
@@ -187,6 +188,11 @@ const ExecutionDetailPage = () => {
           onOpen={(targetExecutionNo) =>
             history.push(`/data-quality/execution/${targetExecutionNo}`)
           }
+          onCompare={!loading && !historyLoading && can('agent:chat:run') && can('quality:execution:read')
+            && can('quality:monitor:read') && detail.executionNo === executionNo && detail.finishedAt
+            && ['SUCCESS', 'FAILED', 'CANCELED'].includes(detail.executionStatus)
+            ? (baseline) => history.push(governanceEntryPath({ qualityExecutionNo: detail.executionNo, qualityBaselineExecutionNo: baseline }))
+            : undefined}
         />
       </div>
     </ExecutionSectionCard>
@@ -257,4 +263,11 @@ const ExecutionDetailPage = () => {
   );
 };
 
-export default ExecutionDetailPage;
+export default function ExecutionDetailScope() {
+  const { currentProject } = useSecurityProject();
+  const { executionNo } = useParams<{ executionNo: string }>();
+  const { can } = usePermissionAccess();
+  if (!can('quality:execution:read')) return <YakEmpty title="暂无执行读取权限" />;
+  return <ExecutionDetailPage key={JSON.stringify([currentProject?.id, executionNo,
+    can('quality:monitor:read'), can('agent:chat:run')])} />;
+}

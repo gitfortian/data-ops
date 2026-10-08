@@ -20,6 +20,7 @@ interface ExecutionHistoryTableProps {
   loading: boolean;
   currentExecutionNo: string;
   onOpen: (executionNo: string) => void;
+  onCompare?: (executionNo: string) => void;
 }
 
 export const ExecutionHistoryTable = ({
@@ -27,6 +28,7 @@ export const ExecutionHistoryTable = ({
   loading,
   currentExecutionNo,
   onOpen,
+  onCompare,
 }: ExecutionHistoryTableProps) => {
   const columns = useMemo<ColumnsType<ExecutionWorkspaceListItem>>(
     () => [
@@ -82,10 +84,10 @@ export const ExecutionHistoryTable = ({
       },
       {
         title: '操作',
-        width: 80,
+        width: onCompare ? 190 : 80,
         fixed: 'right',
         render: (_, record) => (
-          <YakButton
+          <><YakButton
             type="text"
             size="small"
             disabled={record.executionNo === currentExecutionNo}
@@ -93,10 +95,15 @@ export const ExecutionHistoryTable = ({
           >
             查看
           </YakButton>
+          {onCompare && record.executionNo !== currentExecutionNo && record.finishedAt
+            && ['SUCCESS', 'FAILED', 'CANCELED'].includes(record.executionStatus) && (
+            <YakButton type="text" size="small" disabled={loading}
+              onClick={() => onCompare(record.executionNo)}>与本次比较</YakButton>
+          )}</>
         ),
       },
     ],
-    [currentExecutionNo, onOpen],
+    [currentExecutionNo, onOpen, onCompare, loading],
   );
 
   if (!loading && !records.length) {

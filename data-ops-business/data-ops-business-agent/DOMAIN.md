@@ -287,3 +287,7 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 ## 问数澄清（F-033）
 
 原 HITL 的可选字段/时间/口径投影只引用本执行授权发现的 DatasetFields；字段名称、类型和描述由快照装配，不能由模型伪造。投影不拥有 pending、源口径或查询权限；非法/超限/治理越界不挂起，预算仍计入原轮。应答续跑原 ID/预算，恢复后的新执行上下文重新发现字段、授权并核对版本；原 SDK、turn 和 Dataset 保持唯一事实归属。语义歧义识别仍需真实模型验收。
+
+## 两次历史质量执行比较（F-034）
+
+F-034 在原历史质量解读中增加显式固定执行对（qualityBaselineExecutionNo + qualityExecutionNo），不新增 purpose 或生命周期。Quality 拥有历史身份、结果及确定性规则对齐；Agent 仅解释有界证据，历史已保存字段一致不证明完整定义一致。旧单执行任务仍遵循 F-012，不因本扩展开放其他执行、当前规则、查询或写入。

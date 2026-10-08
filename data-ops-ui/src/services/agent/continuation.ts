@@ -20,7 +20,10 @@ function readTarget(value: unknown): GovernanceTarget | null {
   if (value == null) return null;
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('任务上下文无效');
   const target = value as Record<string, unknown>;
-  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview } = target;
+  const { assetId, qualityMonitorId, qualityExecutionNo, qualityBaselineExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview } = target;
+  if (qualityBaselineExecutionNo != null && (typeof qualityBaselineExecutionNo !== 'string'
+    || !/^[A-Za-z0-9_-]{1,128}$/.test(qualityBaselineExecutionNo)
+    || qualityExecutionNo == null || qualityBaselineExecutionNo === qualityExecutionNo || purpose != null)) throw new Error('历史执行对上下文无效');
   if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview].filter((item) => item != null).length !== 1) {
     throw new Error('任务上下文不唯一');
   }
@@ -72,7 +75,7 @@ function readTarget(value: unknown): GovernanceTarget | null {
     return { qualityMonitorId: Number(qualityMonitorId), purpose };
   }
   if (typeof qualityExecutionNo === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(qualityExecutionNo) && purpose == null) {
-    return { qualityExecutionNo };
+    return { qualityExecutionNo, ...(typeof qualityBaselineExecutionNo === 'string' ? { qualityBaselineExecutionNo } : {}) };
   }
   throw new Error('任务上下文无效');
 }
