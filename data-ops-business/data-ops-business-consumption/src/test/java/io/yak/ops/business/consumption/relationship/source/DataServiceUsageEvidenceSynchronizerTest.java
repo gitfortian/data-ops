@@ -55,4 +55,28 @@ class DataServiceUsageEvidenceSynchronizerTest {
     verify(reader).recentSuccessfulByApi(7L, 2);
     verify(normalizer, never()).normalize(any(InvocationRecord.class));
   }
+  @Test
+  void exactOldRevisionRecoversSuccessfulAuditBeyondProductWideWindow() {
+    DataServiceCallLogReader reader = mock(DataServiceCallLogReader.class);
+    DataServiceUsageEvidenceNormalizer normalizer = mock(DataServiceUsageEvidenceNormalizer.class);
+    InvocationRecord oldSuccess = new InvocationRecord(
+        9007199254740993L, 42L, 7L, "Orders", "/orders", "API_KEY",
+        9L, 19L, "Historic client", "sk_x", 9007199254740995L, 1, "{}",
+        true, 15L, 1, null, LocalDateTime.of(2025, 7, 1, 12, 0));
+    when(reader.recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 200))
+        .thenReturn(List.of(oldSuccess));
+    when(normalizer.normalize(oldSuccess))
+        .thenReturn(UsageNormalizationResult.gap(
+            "invocation:9007199254740993", "historic consumer mapping missing"));
+
+    var results = new DataServiceUsageEvidenceSynchronizer(reader, normalizer)
+        .synchronizeRecentByProductAndRevision(7L, 9007199254740995L, 500);
+
+    assertEquals(1, results.size());
+    assertEquals(UsageNormalizationState.GAP, results.getFirst().state());
+    verify(reader).recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 200);
+    verify(reader, never()).recentSuccessfulByApi(anyLong(), anyInt());
+    verify(normalizer).normalize(oldSuccess);
+  }
+
 }
