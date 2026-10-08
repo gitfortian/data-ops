@@ -67,8 +67,8 @@ public class StorageStatsService {
     for (LifecycleStorageSnapshotPO row : latest) {
       date = date == null || row.getSnapshotDate().isAfter(date) ? row.getSnapshotDate() : date;
       String layer = row.getLayerCode() == null ? "UNKNOWN" : row.getLayerCode();
-      byLayer.merge(layer, row.getSizeBytes() == null ? 0 : row.getSizeBytes(), Long::sum);
-      total += row.getSizeBytes() == null ? 0 : row.getSizeBytes();
+      byLayer.merge(layer, sizeBytes(row), Long::sum);
+      total += sizeBytes(row);
     }
     List<LayerVolume> volumes = byLayer.entrySet().stream()
         .map(e -> new LayerVolume(e.getKey(), e.getValue(), gb(e.getValue())))
@@ -88,8 +88,7 @@ public class StorageStatsService {
             .eq(LifecycleStorageSnapshotPO::getProjectId, currentProject.requireProjectId())
             .ge(LifecycleStorageSnapshotPO::getSnapshotDate, LocalDate.now().minusDays(window)));
     Map<LocalDate, Long> totals = new java.util.TreeMap<>();
-    rows.forEach(r -> totals.merge(r.getSnapshotDate(),
-        r.getSizeBytes() == null ? 0 : r.getSizeBytes(), Long::sum));
+    rows.forEach(r -> totals.merge(r.getSnapshotDate(), sizeBytes(r), Long::sum));
     List<TrendPoint> points = new ArrayList<>();
     LocalDate cursor = LocalDate.now().minusDays(window - 1L);
     while (!cursor.isAfter(LocalDate.now())) {
@@ -129,7 +128,7 @@ public class StorageStatsService {
   }
 
   private static TableStorage toTableStorage(LifecycleStorageSnapshotPO po) {
-    long bytes = po.getSizeBytes() == null ? 0 : po.getSizeBytes();
+    long bytes = sizeBytes(po);
     return new TableStorage(
         po.getSnapshotDate(), po.getLayerCode(), po.getDatasourceId(),
         po.getDatabaseName(), po.getTableName(), bytes, gb(bytes));
@@ -159,7 +158,7 @@ public class StorageStatsService {
 
   /** 热冷分布:DORIS 最近成功下发记录的分区归类占比推算(表大小不可按分区拆)。 */
   private HotColdSplit hotColdSplit(Long projectId, List<LifecycleStorageSnapshotPO> latest) {
-    long total = latest.stream().mapToLong(r -> r.getSizeBytes() == null ? 0 : r.getSizeBytes()).sum();
+    long total = latest.stream().mapToLong(StorageStatsService::sizeBytes).sum();
     Map<Long, LifecycleDispatchRecordPO> latestSuccess = new LinkedHashMap<>();
     dispatchRecordMapper.selectList(new LambdaQueryWrapper<LifecycleDispatchRecordPO>()
             .eq(LifecycleDispatchRecordPO::getProjectId, projectId)
@@ -203,6 +202,12 @@ public class StorageStatsService {
         .eq(LifecycleSettingPO::getProjectId, currentProject.requireProjectId())
         .eq(LifecycleSettingPO::getSettingKey, key)
         .last("LIMIT 1"));
+  }
+
+  /** Snapshot size is optional; missing byte measurements contribute zero to numeric views. */
+  private static long sizeBytes(LifecycleStorageSnapshotPO snapshot) {
+    Long value = snapshot.getSizeBytes();
+    return value == null ? 0L : value;
   }
 
   private static double gb(long bytes) {
