@@ -1,3 +1,4 @@
+import MetricChangeReviewPanel from '@/components/ai/MetricChangeReviewPanel';
 import { useNavigate, useParams, useSearchParams } from '@umijs/max';
 import { Descriptions, Drawer, message, Select, Spin, Table, Tabs, Tag, Timeline, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -474,6 +475,10 @@ const MetricDetailPage = () => {
                 openVersionComparison(publishedVersion, currentVersion)
               }
             />
+            <div className="my-4">
+              <MetricChangeReviewPanel key={JSON.stringify([currentProject?.id, metric.id, metric.version])}
+                metricId={metric.id} version={metric.version} disabled={!canAll(['metric:read', 'agent:chat:run', 'agent:session:read'])} />
+            </div>
             <div className="my-4">
               <Select placeholder="选择精确版本解释" value={reviewVersion} onChange={setReviewVersion} className="min-w-[220px]"
                 options={[...new Set([metric.version, ...versions.map(v => v.version)])].sort((a, b) => b - a).map(v => ({ value: v, label: `v${v}${v === metric.version ? ' · 当前草稿' : ' · 历史快照'}` }))} />

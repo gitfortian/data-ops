@@ -14,6 +14,9 @@ public interface MetricUsageRepository {
 
   List<MetricUsage> listByMetric(Long metricId);
 
+  /** Stable limited slice for evidence review; limit must be between 1 and 21. */
+  List<MetricUsage> listByMetricBounded(Long metricId, int limit);
+
   long countByMetric(Long metricId);
 
   List<UsageTypeCount> countGroupByType(Long metricId);

@@ -1,3 +1,4 @@
+import { readMetricChangeReviewTarget } from './metricChangeReview';
 import { readMetricDraftTarget } from './metricDraft';
 import type { GovernanceTarget } from './governance';
 
@@ -18,10 +19,11 @@ function readTarget(value: unknown): GovernanceTarget | null {
   if (value == null) return null;
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('任务上下文无效');
   const target = value as Record<string, unknown>;
-  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft } = target;
-  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation, metricDraft].filter((item) => item != null).length !== 1) {
+  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview } = target;
+  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview].filter((item) => item != null).length !== 1) {
     throw new Error('任务上下文不唯一');
   }
+  if (purpose === 'METRIC_CHANGE_REVIEW' && metricChangeReview != null) return { purpose, metricChangeReview: readMetricChangeReviewTarget(metricChangeReview) };
   if (purpose === 'METRIC_DRAFT' && metricDraft != null) return { purpose, metricDraft: readMetricDraftTarget(metricDraft) };
   if (purpose === 'METRIC_EXPLANATION' && metricExplanation && typeof metricExplanation === 'object' && !Array.isArray(metricExplanation)) {
     const metric = metricExplanation as Record<string, unknown>;

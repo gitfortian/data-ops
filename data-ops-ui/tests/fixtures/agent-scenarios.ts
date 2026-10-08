@@ -8,6 +8,19 @@ export function scenario(kind: ScenarioSuggestion['kind'] = 'STANDARD_MATCH', me
   let value: ScenarioSuggestion;
   let target: GovernanceTarget;
   switch (kind) {
+    case 'METRIC_CHANGE_REVIEW': {
+      const metric = { metricId: 7, version: 3, publishedVersion: 2, publicationEventId: 31,
+        definition: base.expectedDefinition, businessQuestion: '' };
+      const fact = { key: 'after.measureExpr', label: '草稿度量', value: 'SUM(amount)' };
+      target = { purpose: kind, metricChangeReview: metric };
+      value = { ...base, truncated: false, kind, target: metric,
+        source: { definition: base.expectedDefinition, preparedAt: '2026-10-08T10:00:00',
+          differences: [{ key: 'measureExpr', label: '度量', before: 'COUNT(amount)', after: 'SUM(amount)' }], facts: [fact],
+          coverage: ['validation', 'references', 'readiness', 'dependencies', 'lineage', 'observed'].map(key => ({
+            key, label: key, status: 'UNAVAILABLE', description: '请回原页面核对覆盖范围' })) },
+        candidates: [{ statements: [{ text: '变更为按金额求和', evidence: [fact] }], checks: [{ text: '请核对度量含义', evidence: [fact] }] }] };
+      break;
+    }
     case 'STANDARD_MATCH': {
       const field = { modelId: 7, columnName: 'customer_id', dataType: 'BIGINT', businessDescription: '客户标识', keyword: '' };
       target = { purpose: kind, standardMatch: field };
