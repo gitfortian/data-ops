@@ -75,6 +75,16 @@ export const cancelSubscription = async (subscriptionId: number): Promise<Subscr
   '取消消费订阅失败',
 );
 
+export const suspendSubscription = async (subscriptionId: number): Promise<Subscription> => unwrap(
+  await HttpUtils.post<Subscription>(`${CONSUMPTION_API}/subscriptions/${subscriptionId}/suspend`),
+  '暂停消费依赖失败',
+);
+
+export const resumeSubscription = async (subscriptionId: number): Promise<Subscription> => unwrap(
+  await HttpUtils.post<Subscription>(`${CONSUMPTION_API}/subscriptions/${subscriptionId}/resume`),
+  '恢复消费依赖失败',
+);
+
 export const resolveProductFromSource = async (
   productType: ProductType,
   sourceIdentity: string,
