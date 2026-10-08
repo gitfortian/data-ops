@@ -13,6 +13,9 @@ public interface DataServiceCallLogRepository {
 
   List<InvocationRecord> recentByApi(Long apiId, int limit);
 
+  /** Current-Project, API-scoped, latest successful calls for Usage reconciliation only. */
+  List<InvocationRecord> recentSuccessfulByApi(Long apiId, int limit);
+
   /** Exact persisted call audit in the trusted Project and owning API; no window fallback. */
   Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId);
 

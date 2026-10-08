@@ -60,6 +60,30 @@ public class DataServiceCallLogRepositoryAdapter implements DataServiceCallLogRe
         .stream().map(this::toDomain).toList();
   }
 
+  /**
+   * Consumption Usage is based only on successful invocation evidence. Apply
+   * success filtering inside the owning Project-scoped SQL query BEFORE the
+   * bounded window, so a burst of failed calls cannot evict real consumers.
+   * The ordinary recentByApi view remains unchanged for failure diagnostics.
+   */
+  @Override
+  public List<InvocationRecord> recentSuccessfulByApi(Long apiId, int limit) {
+    if (apiId == null || apiId <= 0L) {
+      throw new IllegalArgumentException("数据服务 ID 必须大于 0");
+    }
+    Long projectId = currentProject.requireProjectId();
+    int size = normalizeLimit(limit);
+    return mapper.selectList(
+            Wrappers.<DataServiceCallLogPO>lambdaQuery()
+                .eq(DataServiceCallLogPO::getProjectId, projectId)
+                .eq(DataServiceCallLogPO::getApiId, apiId)
+                .eq(DataServiceCallLogPO::getSuccess, true)
+                .orderByDesc(DataServiceCallLogPO::getCreateTime)
+                .orderByDesc(DataServiceCallLogPO::getId)
+                .last("LIMIT " + size))
+        .stream().map(this::toDomain).toList();
+  }
+
   @Override
   public Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId) {
     if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {

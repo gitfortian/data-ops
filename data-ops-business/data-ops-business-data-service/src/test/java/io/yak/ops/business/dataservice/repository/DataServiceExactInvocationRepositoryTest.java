@@ -92,4 +92,48 @@ class DataServiceExactInvocationRepositoryTest {
         .isInstanceOf(IllegalArgumentException.class);
     verifyNoInteractions(mapper, project);
   }
+  @Test
+  void successfulUsageAuditIsFilteredByProjectApiAndSuccessBeforeBoundedResultWindow() {
+    DataServiceCallLogMapper mapper = mock(DataServiceCallLogMapper.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    DataServiceCallLogPO successful = new DataServiceCallLogPO();
+    successful.setId(9007199254740993L);
+    successful.setProjectId(42L);
+    successful.setApiId(7L);
+    successful.setSuccess(true);
+    successful.setCreateTime(LocalDateTime.of(2026, 10, 8, 12, 0));
+    when(mapper.selectList(any())).thenReturn(java.util.List.of(successful));
+
+    var repository = new DataServiceCallLogRepositoryAdapter(mapper, project);
+    var evidence = repository.recentSuccessfulByApi(7L, 3_000);
+
+    assertThat(evidence).hasSize(1);
+    assertThat(evidence.getFirst().id()).isEqualTo(9007199254740993L);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectList(capture.capture());
+    var query = capture.getValue();
+    assertThat(query.getSqlSegment())
+        .contains("project_id", "api_id", "success", "create_time", "id");
+    assertThat(query.getParamNameValuePairs().values())
+        .containsExactlyInAnyOrder(42L, 7L, true);
+    assertThat(query.getSqlSegment()).contains("LIMIT 1000");
+    verify(project).requireProjectId();
+  }
+
+  @Test
+  void invalidSuccessfulAuditApiIdFailsClosedWithoutReadingAnyProject() {
+    DataServiceCallLogMapper mapper = mock(DataServiceCallLogMapper.class);
+    CurrentProject project = mock(CurrentProject.class);
+    var repository = new DataServiceCallLogRepositoryAdapter(mapper, project);
+
+    assertThatThrownBy(() -> repository.recentSuccessfulByApi(null, 20))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> repository.recentSuccessfulByApi(-1L, 20))
+        .isInstanceOf(IllegalArgumentException.class);
+    verifyNoInteractions(mapper, project);
+  }
+
 }
