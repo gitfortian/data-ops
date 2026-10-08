@@ -10,7 +10,6 @@ const LEGACY_MODULE = 'data-ops-ui/src/services/data-source/legacy';
 // Only the live consumers proven by the architecture scan are temporarily allowed.
 const EXISTING_CONSUMERS = new Set([
   'data-ops-ui/src/pages/data-source/service.ts',
-  'data-ops-ui/src/pages/integration/batch-link-up/config/multi/hooks/useMultiWorkflowState.tsx',
 ]);
 
 const IMPORT_LITERAL =
