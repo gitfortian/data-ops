@@ -75,17 +75,21 @@ class ThreadLocalProjectContextTest {
     TestScope scope = new TestScope();
     scope.bind(new ProjectContext(21L, "request"));
     AtomicBoolean otherThreadWasEmpty = new AtomicBoolean();
+    AtomicBoolean workerSawItsProject = new AtomicBoolean();
+    AtomicBoolean workerCleanedItsProject = new AtomicBoolean();
     Thread worker = new Thread(() -> {
       otherThreadWasEmpty.set(scope.current().isEmpty());
       scope.run(new ProjectContext(22L, "worker"), () ->
-          assertEquals(22L, scope.requireProjectId()));
-      assertTrue(scope.current().isEmpty());
+          workerSawItsProject.set(Long.valueOf(22L).equals(scope.requireProjectId())));
+      workerCleanedItsProject.set(scope.current().isEmpty());
     });
     worker.start();
     worker.join(3000);
 
     assertFalse(worker.isAlive(), "worker must finish");
     assertTrue(otherThreadWasEmpty.get());
+    assertTrue(workerSawItsProject.get());
+    assertTrue(workerCleanedItsProject.get());
     assertEquals(21L, scope.requireProjectId());
   }
 }
