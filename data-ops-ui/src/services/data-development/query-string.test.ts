@@ -11,10 +11,13 @@ describe('Data Development queryString', () => {
       .toBe('?search=a%26b&page=2&city=%E6%96%B0%E5%8A%A0%E5%9D%A1');
   });
 
-  it('keeps the original literal-empty-string semantics, distinct from HTTP shared helper', () => {
+  it('skips the literal empty string but preserves objects that stringify to empty', () => {
     const custom = { toString: () => '' };
-    expect(queryString({ custom })).toBe('');
+    // The original helper checks the raw value before String(value).
+    // An object is not === '', so URLSearchParams retains its empty value.
+    expect(queryString({ custom })).toBe('?custom=');
     expect(queryString({ custom, page: 1 })).toBe('?custom=&page=1');
+    expect(queryString({ blank: '' })).toBe('');
     expect(queryString({})).toBe('');
   });
 });
