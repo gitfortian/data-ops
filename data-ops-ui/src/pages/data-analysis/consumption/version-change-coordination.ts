@@ -1,5 +1,6 @@
 import type { ConsumerImpact, DataProductView } from '@/services/consumption';
 import type { VersionImpactReview } from './version-impact-review';
+import { impactEvidenceGaps, impactEvidenceWindowFacts } from './impact-evidence-coverage';
 
 export interface VersionChangeCoordinationTask {
   consumerIdentity: string;
@@ -38,13 +39,7 @@ export const buildVersionChangeCoordinationWorkpack = (
         : '与 Consumer 负责人核对版本兼容性、实际依赖、迁移方式和沟通窗口',
     };
   });
-  const evidenceGaps: string[] = [];
-  if (impact.subscriptionState === 'UNAVAILABLE' || impact.subscriptionState === 'FORBIDDEN') {
-    evidenceGaps.push('Subscription 来源 ' + impact.subscriptionState + '：向来源 Owner 补核声明依赖');
-  }
-  if (impact.usageState === 'UNAVAILABLE' || impact.usageState === 'FORBIDDEN') {
-    evidenceGaps.push('Usage 来源 ' + impact.usageState + '：向来源 Owner 补核成功执行及版本证据');
-  }
+  const evidenceGaps = impactEvidenceGaps(impact);
   return {
     tasks,
     evidenceGaps,
@@ -81,6 +76,7 @@ export const versionChangeCoordinationWorkpackText = (
     'Usage Provider：' + impact.usageState,
     '证据范围：' + (pack.incomplete ? 'PARTIAL / NEEDS_FOLLOW_UP' : 'WINDOW_ONLY / NOT_COMPLETE_HISTORY'),
     '覆盖说明：' + impact.coverageNote,
+    ...impactEvidenceWindowFacts(impact),
     '',
     '一、逐 Consumer 人工核对任务（不是已联系/已完成的状态）',
     ...(pack.tasks.length ? pack.tasks.flatMap((task, index) => [
