@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   REPOSITORY, ARCHITECTURE_SERIES,
   validateArchitecturePull, validateIntegrationSeries, integrationSummary,
@@ -66,4 +67,14 @@ test('detached preview report records real SHA and failure without asserting CI 
   assert.match(content, /never merged to main/);
   assert.match(content, /370/);
   assert.doesNotMatch(content, /CI PASSED|safe to merge/);
+});
+
+test('A7 requires mutually isolated MySQL and PostgreSQL integration profiles', () => {
+  const workflow = readFileSync('.github/workflows/architecture-a7-preview.yml', 'utf8');
+  assert.match(workflow,
+    /env -u ARCHITECTURE_POSTGRESQL_URL SPRING_PROFILES_ACTIVE=mysql\s*\\\s*bash \.\/mvnw -B -ntp verify/);
+  assert.match(workflow,
+    /env -u ARCHITECTURE_MYSQL_URL SPRING_PROFILES_ACTIVE=postgresql\s*\\\s*bash \.\/mvnw -B -ntp -pl data-ops-boot -am/);
+  assert.match(workflow, /-Dtest=PostgresqlStorageSmokeTest/);
+  assert.match(workflow, /-Dsurefire\.failIfNoSpecifiedTests=false test/);
 });
