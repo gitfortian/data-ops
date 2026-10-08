@@ -397,6 +397,26 @@ public class DatasetDaoImpl implements DatasetDao {
   }
 
   @Override
+  public List<DatasetQueryPerformancePO> selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, Long beforeAuditId, int requestedLimit) {
+    if (projectId == null || projectId <= 0L || datasetId <= 0L || datasetVersionId <= 0L
+        || (beforeAuditId != null && beforeAuditId <= 0L)) {
+      throw new IllegalArgumentException("Project, Dataset, version and cursor IDs must be positive");
+    }
+    int limit = Math.max(1, Math.min(requestedLimit, MAX_QUERY_PERFORMANCE_LIMIT));
+    return queryPerformanceMapper.selectList(
+        Wrappers.<DatasetQueryPerformancePO>lambdaQuery()
+            .eq(DatasetQueryPerformancePO::getProjectId, projectId)
+            .eq(DatasetQueryPerformancePO::getDatasetId, datasetId)
+            .eq(DatasetQueryPerformancePO::getDatasetVersionId, datasetVersionId)
+            .eq(DatasetQueryPerformancePO::getStatus, DatasetQueryStatus.SUCCESS.name())
+            .lt(beforeAuditId != null, DatasetQueryPerformancePO::getId,
+                beforeAuditId == null ? Long.MAX_VALUE : beforeAuditId)
+            .orderByDesc(DatasetQueryPerformancePO::getId)
+            .last("LIMIT " + limit));
+  }
+
+  @Override
   public int deleteQueryPerformanceBefore(Instant cutoff, int requestedLimit) {
     if (cutoff == null) return 0;
     int limit = Math.max(1, Math.min(requestedLimit, MAX_QUERY_PERFORMANCE_CLEANUP_BATCH));
