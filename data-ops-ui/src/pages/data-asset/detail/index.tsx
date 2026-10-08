@@ -1,7 +1,7 @@
 import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
 import { governanceEntryPath } from '@/services/agent/governance';
 import { Alert, Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { history, useParams } from '@umijs/max';
 
 import { YakEmpty } from '@/components/ui';
@@ -169,6 +169,8 @@ const AssetDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [detailFailure, setDetailFailure] = useState<AssetReadFailure | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const latestLoadId = useRef(0);
   const [dirNames, setDirNames] = useState<Record<number, string>>({});
   const [currentTags, setCurrentTags] = useState<AssetTagRecord[]>([]);
   const [tagOptions, setTagOptions] = useState<AssetTagRecord[]>([]);
@@ -180,9 +182,12 @@ const AssetDetailPage = () => {
   const [saving, setSaving] = useState(false);
 
   const reload = useCallback(async () => {
+    const loadId = ++latestLoadId.current;
     setLoading(true);
+    setDetail(null);
     setDetailFailure(null);
     setSnapshotAvailable(false);
+    setSnapshotLoading(false);
     setSnapshotDefinition('');
     try {
       const sectionTypes = [
@@ -202,29 +207,32 @@ const AssetDetailPage = () => {
       );
       const sourceAttributesLoad = getAssetSourceAttributes(assetId)
         .catch(() => unavailableAssetSection<AssetSourceAttrs>());
-      // A read-only asset is valid even when the separate editable snapshot is unavailable.
-      const [detailResult, snapshotResult] = await Promise.allSettled([
-        getAssetDetail(assetId),
-        canUpdate ? getAssetEditorSnapshot(assetId) : Promise.resolve(null),
-      ]);
-      if (detailResult.status === 'rejected') throw detailResult.reason;
-      const result = detailResult.value;
+      // Core facts must not wait for optional editing capabilities.
+      const result = await getAssetDetail(assetId);
+      if (loadId !== latestLoadId.current) return;
       setDetail(result);
       setOwnerValue(result.asset.owner ? [result.asset.owner] : []);
-      if (snapshotResult.status === 'fulfilled' && snapshotResult.value) {
-        const editable = snapshotResult.value;
-        setSnapshotDefinition(editable.definition);
-        setSnapshot({ name: editable.name ?? '', description: editable.description ?? '', accessUri: editable.accessUri ?? '' });
-        setSnapshotAvailable(true);
-      } else {
-        setSnapshotDefinition('');
-        setSnapshot({
-          name: result.asset.name ?? '',
-          description: result.asset.description ?? '',
-          accessUri: result.asset.accessUri ?? '',
-        });
+      setSnapshot({
+        name: result.asset.name ?? '',
+        description: result.asset.description ?? '',
+        accessUri: result.asset.accessUri ?? '',
+      });
+      if (canUpdate) {
+        setSnapshotLoading(true);
+        void getAssetEditorSnapshot(assetId)
+          .then((editable) => {
+            if (loadId !== latestLoadId.current) return;
+            setSnapshotDefinition(editable.definition);
+            setSnapshot({ name: editable.name ?? '', description: editable.description ?? '', accessUri: editable.accessUri ?? '' });
+            setSnapshotAvailable(true);
+          })
+          .catch(() => undefined) // Global request handler shows the transport/business error.
+          .finally(() => {
+            if (loadId === latestLoadId.current) setSnapshotLoading(false);
+          });
       }
       void sectionLoads.then((loadedSections) => {
+        if (loadId !== latestLoadId.current) return;
         loadedSections.forEach(({ sectionType, section }) => {
           setDetail((current) => {
             if (!current || current.asset.id !== assetId) return current;
@@ -250,15 +258,18 @@ const AssetDetailPage = () => {
         });
       });
       void sourceAttributesLoad.then((section) => {
+        if (loadId !== latestLoadId.current) return;
         setDetail((current) => current?.asset.id === assetId
           ? { ...current, sections: { ...current.sections, sourceAttrs: section } }
           : current);
       });
     } catch (error) {
-      setDetail(null);
-      setDetailFailure(classifyAssetReadFailure(error));
+      if (loadId === latestLoadId.current) {
+        setDetail(null);
+        setDetailFailure(classifyAssetReadFailure(error));
+      }
     } finally {
-      setLoading(false);
+      if (loadId === latestLoadId.current) setLoading(false);
     }
   }, [assetId, canUpdate]);
 
@@ -276,6 +287,7 @@ const AssetDetailPage = () => {
       .catch(() => setDirNames({}));
     // 浏览上报尽力而为(服务端 5 分钟去重)
     void reportAssetView(assetId, 'detail').catch(() => undefined);
+    return () => { latestLoadId.current += 1; };
   }, [assetId, reload]);
 
   const asset = detail?.asset;
@@ -973,7 +985,7 @@ const AssetDetailPage = () => {
                     setSnapshot((current) => ({ ...current, description: candidate.description || '' }));
                   }} />}
                 <Card title="快照编辑(资产中心拥有名称/描述/入口)" size="small" className="!mb-4">
-                  {canUpdate && !snapshotAvailable && !loading && (
+                  {canUpdate && !snapshotAvailable && !snapshotLoading && !loading && (
                     <Alert className="!mb-3" type="warning" showIcon message="快照编辑暂不可用"
                       description="已读取的资产详情仍可查看；不能取得最新快照版本时禁止保存，以免覆盖其它修改。"
                       action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
