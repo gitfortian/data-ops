@@ -23,6 +23,15 @@ function reactor(pom) {
 reactor('pom.xml');
 modules.sort((a,b) => b.directory.length-a.directory.length);
 const owner = p => modules.find(m => m.directory !== '.' && p.startsWith(m.directory+'/'))?.artifact;
+// Production persistence queries belong in Java MyBatis-Plus mapper/Wrapper code.
+// The independently released Java 8 legacy starter is not part of this reactor.
+for (const p of files) {
+  if (p.startsWith(legacyFramework + '/') || !owner(p) || !p.includes('/src/main/resources/') || !p.endsWith('.xml')) continue;
+  const resourcePath = p.split('/src/main/resources/')[1];
+  if (/(^|\\/)mappers?\\/.*\\.xml$/i.test(resourcePath) || /(^|\\/)[^/]*Mapper\\.xml$/i.test(resourcePath)) {
+    violations.push(`${p}: production Mapper XML is not allowed; use MyBatis-Plus mapper/Wrapper APIs (legacy Java 8 excluded)`);
+  }
+}
 const java = files.filter(p => p.includes('/src/main/java/') && p.endsWith('.java') && !p.startsWith(legacyFramework + '/')).map(p => ({file:p, module:owner(p), text:read(p)}));
 const classes = new Map(java.map(j => [j.text.match(/^package ([^;]+);/m)?.[1]+'.'+path.posix.basename(j.file,'.java'), j]));
 const baseline = JSON.parse(read('scripts/architecture/legacy-shared-persistence.json'));
