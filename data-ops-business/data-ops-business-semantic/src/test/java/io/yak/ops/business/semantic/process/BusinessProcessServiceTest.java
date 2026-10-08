@@ -15,11 +15,13 @@ import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.api.BusinessDomain;
 import io.yak.ops.business.semantic.api.BusinessProcess;
+import io.yak.ops.business.semantic.api.SemanticStructureReferenceReader;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
 import io.yak.ops.business.semantic.repository.SemanticDomainRepository;
 import io.yak.ops.business.semantic.repository.SemanticProcessRepository;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,6 +86,69 @@ class BusinessProcessServiceTest {
             () -> service.create(7L, "place_order", "下单", "单据", "WRONG", null, null, null,
                 "tester"));
     assertEquals(SemanticErrorCode.INVALID_SEARCH, exception.getErrorCode());
+  }
+
+  @Test
+  void deleteBlockedWhenModelingStillReferencesProcess() {
+    long id = 9L;
+    when(repository.findById(id)).thenReturn(Optional.of(existingProcess(id)));
+    BusinessProcessService guarded = new BusinessProcessService(repository, domainRepository,
+        fieldService, bindingService, auditService, List.of(structureReader(3, 0)));
+
+    SemanticException failure = assertThrows(SemanticException.class, () -> guarded.delete(id));
+
+    assertEquals(SemanticErrorCode.PROCESS_REFERENCED, failure.getErrorCode());
+    verify(repository, never()).deleteById(id);
+  }
+
+  @Test
+  void deleteBlockedWhenConsumerReferenceQueryFails() {
+    long id = 9L;
+    when(repository.findById(id)).thenReturn(Optional.of(existingProcess(id)));
+    SemanticStructureReferenceReader unavailable = new SemanticStructureReferenceReader() {
+      @Override
+      public long countProcessReferences(Long processId) {
+        throw new IllegalStateException("Modeling unavailable");
+      }
+
+      @Override
+      public long countDomainReferences(Long domainId) { return 0; }
+    };
+    BusinessProcessService guarded = new BusinessProcessService(repository, domainRepository,
+        fieldService, bindingService, auditService, List.of(unavailable));
+
+    assertThrows(IllegalStateException.class, () -> guarded.delete(id));
+    verify(repository, never()).deleteById(id);
+  }
+
+  @Test
+  void deleteSucceedsWhenModelingAndLocalBindingsHaveNoReferences() {
+    long id = 9L;
+    when(repository.findById(id)).thenReturn(Optional.of(existingProcess(id)));
+    when(repository.deleteById(id)).thenReturn(true);
+    BusinessProcessService guarded = new BusinessProcessService(repository, domainRepository,
+        fieldService, bindingService, auditService, List.of(structureReader(0, 0)));
+
+    guarded.delete(id);
+
+    verify(fieldService).assertProcessDeletable(id);
+    verify(bindingService).assertProcessDeletable(id);
+    verify(repository).deleteById(id);
+  }
+
+  private static BusinessProcess existingProcess(long id) {
+    return new BusinessProcess(id, "place_order", "下单", 7L, "单据",
+        "FACT", null, null, 0, "tester", null, null);
+  }
+
+  private static SemanticStructureReferenceReader structureReader(long processRefs, long domainRefs) {
+    return new SemanticStructureReferenceReader() {
+      @Override
+      public long countProcessReferences(Long processId) { return processRefs; }
+
+      @Override
+      public long countDomainReferences(Long domainId) { return domainRefs; }
+    };
   }
 
   @Test
