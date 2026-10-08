@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { message } from 'antd';
 import { queryDataSourceColumnOptions } from '@/services/data-source/catalog';
 import TableColumnsPopover from './TableColumnsPopover';
@@ -10,16 +11,16 @@ jest.mock('@/services/data-source/catalog', () => ({
 // Preserve the component's click and data flow while keeping portal/animation
 // internals out of a catalog contract regression test.
 jest.mock('antd', () => {
-  const React = require('react') as typeof import('react');
+  const ReactRuntime = require('react') as typeof import('react');
   return {
     message: { warning: jest.fn(), error: jest.fn() },
     Popover: ({
       children, content, placement,
     }: {
-      children: React.ReactNode;
-      content: React.ReactNode;
+      children: ReactNode;
+      content: ReactNode;
       placement: string;
-    }) => React.createElement('section', {
+    }) => ReactRuntime.createElement('section', {
       'data-testid': 'columns-popover',
       'data-placement': placement,
     }, children, content),
@@ -33,10 +34,10 @@ jest.mock('antd', () => {
         fieldKey?: string;
       }>;
       loading: boolean;
-    }) => React.createElement('output', {
+    }) => ReactRuntime.createElement('output', {
       'data-testid': 'column-rows',
       'data-loading': String(loading),
-    }, dataSource.map((row, index) => React.createElement(
+    }, dataSource.map((row, index) => ReactRuntime.createElement(
       'span',
       { key: row.fieldName ?? index },
       [row.fieldName, row.fieldType, row.fieldComment, row.fieldKey]
@@ -139,7 +140,7 @@ describe('TableColumnsPopover Data Source catalog migration', () => {
 
   it('shows a spinner while the catalog request is pending', async () => {
     let resolve!: (rows: Array<{ fieldName: string }>) => void;
-    query.mockReturnValue(new Promise((finish) => { resolve = finish; }));
+    query.mockReturnValue(new Promise<Array<{ fieldName: string }>>((finish) => { resolve = finish; }));
     render(
       <TableColumnsPopover sourceId="12" table="orders" type="source">
         <button type="button">Open columns</button>
@@ -148,7 +149,9 @@ describe('TableColumnsPopover Data Source catalog migration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open columns' }));
     expect(screen.getByTestId('column-rows')).toHaveAttribute('data-loading', 'true');
-    resolve([{ fieldName: 'done_field' }]);
+    await act(async () => {
+      resolve([{ fieldName: 'done_field' }]);
+    });
     await waitFor(() => expect(screen.getByText('done_field')).toBeInTheDocument());
     expect(screen.getByTestId('column-rows')).toHaveAttribute('data-loading', 'false');
   });
