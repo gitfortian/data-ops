@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +55,52 @@ class DirectoryServiceTest {
     });
     service = new DirectoryService(currentProject, directoryMapper, itemMapper,
         layerConfigApi, processApi, auditService);
+  }
+
+  @Test
+  void treeUsesTheSameProjectionForRootAndNestedDirectories() {
+    AssetDirectoryPO root = dir(5L, "root", "/5/", 1);
+    root.setParentId(0L);
+    root.setIconKey("database");
+    root.setDescription("数据目录");
+    AssetDirectoryPO child = dir(9L, "child", "/5/9/", 0);
+    child.setParentId(5L);
+    child.setSortOrder(null);
+    when(directoryMapper.selectList(any())).thenReturn(List.of(root, child));
+
+    List<DirectoryService.DirNode> nodes = service.tree();
+
+    assertEquals(1, nodes.size());
+    DirectoryService.DirNode parent = nodes.get(0);
+    assertEquals(5L, parent.id());
+    assertEquals("database", parent.iconKey());
+    assertEquals("数据目录", parent.description());
+    assertTrue(parent.builtin());
+    assertEquals(1, parent.children().size());
+    DirectoryService.DirNode nested = parent.children().get(0);
+    assertEquals("child", nested.dirCode());
+    assertEquals("/5/9/", nested.path());
+    assertEquals(0, nested.sortOrder());
+    assertTrue(nested.children().isEmpty());
+    verify(directoryMapper, times(1)).selectList(any());
+  }
+
+  @Test
+  void templateInitializationMaterializesBuiltinDirectoryPath() {
+    when(directoryMapper.selectCount(any())).thenReturn(0L);
+    when(layerConfigApi.listLayers()).thenReturn(List.of(
+        new io.yak.ops.business.semantic.api.WarehouseLayer(
+            10L, "DWD", "明细层", null, null, null, null, null, null, null,
+            10, "ENABLED", false, true, "system", null, null)));
+    when(processApi.listDomains()).thenReturn(List.of());
+    assertEquals(1, service.initTemplate("root"));
+
+    org.mockito.ArgumentCaptor<AssetDirectoryPO> saved =
+        org.mockito.ArgumentCaptor.forClass(AssetDirectoryPO.class);
+    verify(directoryMapper).updateById(saved.capture());
+    assertEquals("/101/", saved.getValue().getPath());
+    assertEquals("dwd", saved.getValue().getDirCode());
+    assertTrue(saved.getValue().getBuiltin());
   }
 
   @Test
