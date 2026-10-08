@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -100,6 +101,26 @@ class MdmDistributionPublishServiceTest {
 
     assertTrue(service.online(config(10L)).changed(), "重新启用等于恢复供数,应当通知");
     verify(publisher).republish(eq(77L), any(PublicationSettings.class));
+  }
+
+  @Test
+  void changedDefinitionAndDisabledRuntimeRecombineIntoOneEnabledRepublish() {
+    DataServiceView current = mock(DataServiceView.class);
+    DataServiceView refreshed = mock(DataServiceView.class);
+    when(current.id()).thenReturn(77L);
+    when(reader.state(MdmDataServiceSourceProvider.SOURCE_TYPE, "10"))
+        .thenReturn(new PublicationState(true, true, null, current));
+    when(publisher.republish(eq(77L), any(PublicationSettings.class))).thenReturn(refreshed);
+
+    MdmDistributionPublishService.PublishOutcome outcome = service.online(config(10L));
+
+    assertTrue(outcome.changed());
+    assertEquals(refreshed, outcome.view());
+    ArgumentCaptor<PublicationSettings> settings =
+        ArgumentCaptor.forClass(PublicationSettings.class);
+    verify(publisher, times(1)).republish(eq(77L), settings.capture());
+    assertEquals(Boolean.TRUE, settings.getValue().enabled());
+    verify(publisher, never()).publish(any());
   }
 
   @Test
