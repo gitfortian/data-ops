@@ -1,20 +1,26 @@
-import { history, useParams } from '@umijs/max';
+import { parseConsumptionReviewReturnPath } from '@/config/consumer-source-navigation';
+import { history, useParams, useSearchParams } from '@umijs/max';
 import { useEffect } from 'react';
 
 /**
- * 兼容旧的 `/dashboard/:id` 查看地址。
- * 仪表盘查看与编辑统一复用 fullscreen editor，避免维护两套重复页面。
+ * Keep the previous governed-consumption context through the legacy
+ * /dashboard/:id → fullscreen preview redirect. Do not accept arbitrary
+ * return URLs from query parameters.
  */
 export default function DashboardViewerRedirect() {
   const { id } = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
+  const returnTo = parseConsumptionReviewReturnPath(searchParams.get('returnTo'));
 
   useEffect(() => {
     if (!id) {
       history.replace('/dashboard');
       return;
     }
-    history.replace(`/dashboard/${id}/edit?preview=1`);
-  }, [id]);
+    const query = new URLSearchParams({ preview: '1' });
+    if (returnTo) query.set('returnTo', returnTo);
+    history.replace(`/dashboard/${id}/edit?${query.toString()}`);
+  }, [id, returnTo]);
 
   return null;
 }

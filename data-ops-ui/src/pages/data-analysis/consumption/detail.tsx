@@ -39,7 +39,7 @@ import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
 import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
-import { consumerSourceTarget, parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
+import { consumerSourceTarget, consumptionReviewReturnPath, parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
 import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
 import {
   eligibleConfiguredDataServiceConsumers,
@@ -233,7 +233,12 @@ export default function ConsumptionDetailPage() {
       title: 'Consumer',
       key: 'consumer',
       render: (_, row) => {
-        const target = consumerSourceTarget(row.consumerRef);
+        const returnPath = product && consumptionReviewReturnPath(
+          product.productKey.productType,
+          product.productKey.sourceIdentity,
+          searchParams.get('reviewVersion'),
+        );
+        const target = consumerSourceTarget(row.consumerRef, returnPath);
         const allowed = target && (!target.requiredPermission || can(target.requiredPermission));
         return (
           <Space direction="vertical" size={0}>

@@ -1,11 +1,11 @@
 import type { ConsumerImpact, DataProductView, ConsumerRef } from '@/services/consumption';
 import type { DataServiceConsumer } from '@/services/data-service/consumer';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
-import { history } from '@umijs/max';
+import { history, useSearchParams } from '@umijs/max';
 import { Alert, Button, Card, Checkbox, Input, Select, Space, Table, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
-import { consumerSourceTarget } from '@/config/consumer-source-navigation';
+import { consumerSourceTarget, consumptionReviewReturnPath } from '@/config/consumer-source-navigation';
 import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
 import type { ManagedConsumerSourceState } from './managed-consumer-configuration';
 import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
@@ -16,6 +16,7 @@ import {
 } from './version-change-coordination';
 import {
   reviewableVersions,
+  selectReviewableVersion,
   reviewVersionImpact,
   versionImpactReviewText,
   type VersionImpactRow,
@@ -39,14 +40,15 @@ export default function VersionChangeImpactReview({
   sourceConsumers: readonly DataServiceConsumer[];
 }) {
   const { can } = usePermissionAccess();
-  const [requestedVersion, setRequestedVersion] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedVersion = searchParams.get('reviewVersion');
   const [acknowledged, setAcknowledged] = useState(false);
   const [proposedChange, setProposedChange] = useState('');
   const versions = useMemo(
     () => reviewableVersions(impact, product.activeVersion),
     [impact, product.activeVersion],
   );
-  const selected = versions.find((v) => v.identity === requestedVersion) || versions[0];
+  const selected = selectReviewableVersion(versions, requestedVersion);
   const review = reviewVersionImpact(impact, selected);
   const workpack = impact && review ? buildVersionChangeCoordinationWorkpack(impact, review) : null;
   // An acknowledgement never survives a new evidence response or a version switch.
@@ -98,7 +100,10 @@ export default function VersionChangeImpactReview({
   };
 
   const consumerSourceLink = (ref: ConsumerRef) => {
-    const target = consumerSourceTarget(ref);
+    const returnPath = consumptionReviewReturnPath(
+      product.productKey.productType, product.productKey.sourceIdentity, selected?.identity,
+    );
+    const target = consumerSourceTarget(ref, returnPath);
     if (!target || (target.requiredPermission && !can(target.requiredPermission))) return null;
     return (
       <Button type="link" size="small" style={{ padding: 0, height: 'auto' }}
@@ -196,7 +201,11 @@ export default function VersionChangeImpactReview({
               label: (version.displayVersion || '未标注版本') + ' · ID ' + version.identity
                 + (version.identity === product.activeVersion?.identity ? '（当前生效）' : ''),
             }))}
-            onChange={setRequestedVersion}
+            onChange={(nextIdentity) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('reviewVersion', nextIdentity);
+              setSearchParams(next, { replace: true });
+            }}
           />
         </Space>
         {impactIssue ? (
@@ -204,7 +213,12 @@ export default function VersionChangeImpactReview({
         ) : !impact ? (
           <Text type="secondary">{loading ? '正在重新核对消费事实…' : '尚无可读取的消费者影响快照'}</Text>
         ) : !review ? (
-          <Alert type="info" showIcon message="没有可核对的精确来源版本" />
+          <Alert type="warning" showIcon
+            message={requestedVersion ? '指定来源版本已不在本次可核对证据中' : '没有可核对的精确来源版本'}
+            description={requestedVersion
+              ? '原核对版本可能已超出当前证据窗口或来源变更。请核实版本 ID，并从当前可选版本重新选择；系统不会自动切到别的版本。'
+              : undefined}
+          />
         ) : (
           <>
             <Alert
