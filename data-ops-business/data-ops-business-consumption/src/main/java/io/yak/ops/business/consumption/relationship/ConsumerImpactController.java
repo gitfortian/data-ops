@@ -30,7 +30,9 @@ public class ConsumerImpactController {
   @GetMapping
   public Result<ConsumerImpactView> view(
       @RequestParam String productKey,
-      @RequestParam(defaultValue = "200") int usageLimit) {
-    return Result.success(service.view(ProductKey.parse(productKey), usageLimit));
+      @RequestParam(defaultValue = "200") int usageLimit,
+      @RequestParam(required = false) String sourceVersionIdentity) {
+    return Result.success(service.view(
+        ProductKey.parse(productKey), usageLimit, sourceVersionIdentity));
   }
 }
