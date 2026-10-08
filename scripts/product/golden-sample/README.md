@@ -107,6 +107,18 @@ python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
 node --test scripts/product/golden-invocation-identity.test.mjs
 ```
 
+### 精确不可变版本 Impact 的 Golden 验证
+
+`consumption.py --apply --accept` 现在会在两类专属 Sample 真实 Query/Invoke 后，分别调用带 `sourceVersionIdentity` 的 Consumption Impact 两次。检查内容：
+
+- 本次返回的每条**实际成功 Usage** 都属于请求的精确 DatasetVersion / Data Service Revision，并且保留正确的 Consumer、模式和原始 Query/Invocation EvidenceRef。
+- 相同精确版本重复读取不能增加成功 Usage 次数、引入重复 EvidenceRef；来源失联、归一化 GAP、200 条窗口达到上限必须拒绝给样本出具全量结论。
+- 使用隔离对照 Project 读取相同 `productKey + sourceVersionIdentity`，不能看到原 Project 的精确版本 Usage 或 EvidenceRef（Subscription 不能代替实际 Usage）。
+
+`test_consumption.py` 提供纯离线 fixture 正反例，CI 的 `Golden Consumption Evidence Contract` 只运行这些静态/模拟契约，不调用真实部署。
+
+**已验收范围须严格区分：** 当前脚本仅验证专属 Sample 的**当前已执行版本**、重复读取和 Project 隔离；**不会自动生成旧版审计缺少 normalized Usage、再产生 200+ 新版本调用的历史反例**。要验证 PR #413 / #416 的核心历史补偿，需在 #336 隔离测试环境另行准备旧版 V1 未归一化的成功审计及 200+ 次新版 V2 调用，记录部署 SHA 和前后持久化证据。不可据本检查通过宣称全历史恢复或生产 E2E 已通过。
+
 实际部署验证仍需运行 `consumption.py --apply --accept`，记录 `repositoryCommit` 和经核对的部署产物哈希；历史 `deploymentCommit: null` 不能作为当前部署通过的证明。拒绝调用不计入成功 Usage 的本次验证局限于专用 Sample 的受管 Consumer 和最多 200 条来源窗口，并不等价于全平台历史消费计数。
 
 每个治理分区保留来源范围、Owner 与五态。Quality 对两类产品仍为 NOT_APPLICABLE，
