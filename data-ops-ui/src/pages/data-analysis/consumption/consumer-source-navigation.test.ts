@@ -1,5 +1,5 @@
 import type { ConsumerRef } from '@/services/consumption';
-import { consumerSourceTarget, parseManagedConsumerSourceId } from './consumer-source-navigation';
+import { consumerSourceTarget, parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
 
 const consumer = (
   consumerType: ConsumerRef['consumerType'],
