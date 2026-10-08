@@ -47,3 +47,7 @@
 F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每次检查 semantic 读取权限与当前项目；只查启用 TYPE，SQL 最多 21 行、交付 20 行及截断标识。按 ID/版本复核时拒绝跨项目、停用、错类别、陈旧版本；故障不能折算成无候选。不接收 Agent 写命令。
 
 依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
+
+## 跨域稳定字段引用（P0-B03）
+
+Semantic 的标准字段删除是物理删除，受本域业务过程引用和 Modeling `std_field_id` 持久化引用共同保护：只要任一项目内持久引用存在，就必须阻断删除，不能在 Semantic 自动修改建模模型。通过 Semantic 声明、Modeling 实现的只读引用 SPI 读取，引用查询异常不当作无引用。回收站模型的引用仍可能恢复，解除后才可删除；项目身份始终从可信上下文获取。
