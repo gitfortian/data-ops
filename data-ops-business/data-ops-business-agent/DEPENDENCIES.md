@@ -266,3 +266,5 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 MetricDraftTarget/METRIC_DRAFT 固定 metric-definition-draft Skill；runtime 复用 structuredScenario（AgentScope 2.0.3），仅 load_skill_through_path/get_metric_draft_context/generate_response，纳入同一轮预算与历史交付。MetricDraftGateway 只依赖 MetricDraftQueryApi，源域校验与 Skill 指纹复核都通过才可交付/带入。历史说明显式 view=SNAPSHOT；旧 target 无 view 仍只允许当前版本。
 
 F-031 原会话回看仅消费既有 session history/continuation 与前端 parser，不增加源域依赖、网络端点或反向业务依赖。目标页面仍独立进行当前项目与权限核验。
+
+F-033 问数澄清仅在 runtime 内消费现有 domain.DatasetSummary/AgentExecutionContext，toolset 扩展原反问参数；前端复用原 continuation 和提交。无新增 Dataset import、SDK 白名单、跨包边或反向依赖，Dataset 源域合同及实际查询入口保持。

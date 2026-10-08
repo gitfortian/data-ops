@@ -31,6 +31,75 @@ const send = () => {
   fireEvent.change(screen.getByLabelText('会话输入'), { target: { value: '继续核对证据' } });
   fireEvent.click(screen.getByText('发送测试问题'));
 };
+
+const queryQuestion = (kind = 'FIELD') => JSON.stringify({ question: '统计哪种金额？',
+  options: kind === 'FIELD' ? ['实付（fieldId=paid）', '应付（fieldId=due）'] : ['按实付且不含退款'],
+  queryContext: { kind, datasetId: 9, versionNo: 3, truncated: false, fields: [
+    { fieldId: 'paid', displayName: '实付', dataType: 'DECIMAL', role: 'MEASURE', description: '已支付' },
+    { fieldId: 'due', displayName: '应付', dataType: 'DECIMAL', role: 'MEASURE', description: '' },
+  ] } });
+
+const waiting = (question = queryQuestion(), toolCallId = 'query-c1', sessionId = 's1') => context(sessionId, {
+  governanceTarget: null, status: 'WAITING_INPUT', clarification: { toolCallId, toolName: 'request_clarification', question },
+});
+
+it.each(['FIELD', 'TIME', 'CALIBER'])('restores a %s query question and resumes once with the exact original call', async kind => {
+  mockCanRun = true; api.continuation.mockResolvedValue(waiting(queryQuestion(kind)));
+  render(<AiAgentPage />); await screen.findByText(/发现版本 v3/);
+  expect(chat.submit).not.toHaveBeenCalled(); expect(stream).not.toHaveBeenCalled();
+  const receipt = deferred<any>(); chat.submit.mockReturnValueOnce(receipt.promise);
+  const option = kind === 'FIELD' ? '实付（fieldId=paid）' : '按实付且不含退款';
+  const choice = screen.getByRole('button', { name: option });
+  fireEvent.click(choice); fireEvent.click(choice);
+  expect(chat.submit).toHaveBeenCalledTimes(1);
+  expect(chat.submit).toHaveBeenCalledWith({ sessionId: 's1', toolResults: [{ toolCallId: 'query-c1', toolName: 'request_clarification', output: option }] });
+  api.continuation.mockResolvedValue(context('s1', { governanceTarget: null }));
+  await act(async () => receipt.resolve({ turnId: 't1' }));
+});
+
+it('locks restored query answers without run permission and after permission loss', async () => {
+  api.continuation.mockResolvedValue(waiting());
+  const { rerender } = render(<AiAgentPage />); await screen.findByText(/发现版本 v3/);
+  fireEvent.click(screen.getByRole('button', { name: '实付（fieldId=paid）' })); expect(chat.submit).not.toHaveBeenCalled();
+  mockCanRun = true; rerender(<AiAgentPage />);
+  fireEvent.change(screen.getByLabelText('补充问数信息'), { target: { value: '补充' } });
+  mockCanRun = false; rerender(<AiAgentPage />);
+  expect(screen.getByLabelText('补充问数信息')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: '回 答' })); expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it('clears unsent clarification answers when switching the original pending call or project', async () => {
+  mockCanRun = true; api.continuation.mockResolvedValue(waiting());
+  const { rerender } = render(<AiAgentPage />); await screen.findByText(/发现版本 v3/);
+  fireEvent.change(screen.getByLabelText('补充问数信息'), { target: { value: '旧答案' } });
+  api.continuation.mockResolvedValue(waiting(queryQuestion('TIME'), 'query-c2', 's2'));
+  fireEvent.click(screen.getByText('会话二')); await screen.findByText('核对时间范围与粒度');
+  expect(screen.getByLabelText('补充问数信息')).toHaveValue('');
+  fireEvent.change(screen.getByLabelText('补充问数信息'), { target: { value: '另一个旧答案' } });
+  api.continuation.mockResolvedValue(waiting(queryQuestion(), 'query-c3', 's2')); mockProjectId = 2; rerender(<AiAgentPage />);
+  await screen.findByText('核对查询字段'); expect(screen.getByLabelText('补充问数信息')).toHaveValue('');
+  expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it('rejects malformed query source on restoration instead of offering an answer action', async () => {
+  mockCanRun = true; api.continuation.mockResolvedValue(waiting(queryQuestion('SQL')));
+  render(<AiAgentPage />); await screen.findByText(/会话恢复失败/);
+  expect(screen.queryByLabelText('补充问数信息')).not.toBeInTheDocument(); expect(chat.submit).not.toHaveBeenCalled();
+});
+
+it('does not answer a live question with an unrecognized tool identity', async () => {
+  mockCanRun = true; api.continuation.mockResolvedValue(context('s1', { governanceTarget: null }));
+  const live = deferred<void>();
+  stream.mockImplementation(async (_request, handler) => {
+    handler.onEvent({ type: 'CUSTOM', customName: 'clarify_requested', value: { toolCallId: 'c-bad', toolName: 'run_sql', question: queryQuestion() } });
+    await live.promise;
+  });
+  render(<AiAgentPage />); await screen.findByText('历史回答'); send();
+  await screen.findByText('待答问题暂无法核对，请刷新原会话。');
+  expect(screen.queryByLabelText('补充问数信息')).not.toBeInTheDocument();
+  expect(chat.submit).toHaveBeenCalledTimes(1);
+  await act(async () => live.resolve());
+});
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => { resolve = done; });
@@ -421,6 +490,7 @@ it('marks appended failures as independent records without borrowing their ident
 });
 
 it('restores an exact pending call and answers through the original resume payload', async () => {
+  mockCanRun = true;
   api.continuation.mockResolvedValue(context('s1', {
     status: 'WAITING_INPUT', governanceTarget: { assetId: 7 },
     clarification: { toolCallId: 'clarify-2', toolName: 'request_clarification', question: '{"question":"哪个分区？","options":["昨天"]}' },
@@ -532,6 +602,7 @@ it('automatically reloads completed history without submitting or replaying the 
 });
 
 it('automatically restores a newly waiting question and preserves its original resume call', async () => {
+  mockCanRun = true;
   jest.useFakeTimers();
   api.continuation.mockResolvedValue(context('s1', { status: 'WAITING_INPUT',
     clarification: { toolCallId: 'c-auto', toolName: 'request_clarification', question: '{"question":"选择范围","options":["昨天"]}' } }))

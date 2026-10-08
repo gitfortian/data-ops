@@ -4,7 +4,7 @@ import Bubble from '@ant-design/x/lib/bubble';
 import Conversations from '@ant-design/x/lib/conversations';
 import Sender from '@ant-design/x/lib/sender';
 import ThoughtChain from '@ant-design/x/lib/thought-chain';
-import { Alert, Button, Collapse, Input, Layout, message, Space, Tabs, Tag, Typography } from 'antd';
+import { Alert, Button, Collapse, Layout, message, Space, Tabs, Tag, Typography } from 'antd';
 import React from 'react';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { agentChatApi, agentSessionApi, streamTurnEvents } from '@/services/agent';
@@ -53,6 +53,8 @@ import { governanceQuestions, governanceSourcePath, governanceTaskTitle, parseGo
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { readScenarioHistory } from '@/services/agent/scenarioHistory';
 import ScenarioHistoryCard from '@/components/ai/ScenarioHistoryCard';
+import QueryClarificationCard from '@/components/ai/QueryClarificationCard';
+import { readClarificationQuestion } from '@/services/agent/clarification';
 import type { TurnSubmitPayload } from '@/services/agent';
 import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
 import { visibleGovernanceText } from '@/services/agent/suggestions';
@@ -578,9 +580,12 @@ const AiAgentPage: React.FC = () => {
   };
 
   const answerClarify = async (answer: string) => {
-    if (!clarify || streaming || sendingRef.current || continuationBlocked.current) {
+    if (!clarify || clarify.toolName !== 'request_clarification' || !clarify.toolCallId.trim()
+      || !can('agent:chat:run') || historyLoading || historyError || streaming || sendingRef.current || continuationBlocked.current
+      || !answer.trim() || answer.length > 2000) {
       return;
     }
+    try { readClarificationQuestion(clarify.question); } catch { return; }
     sendingRef.current = true;
     historyRequest.current += 1;
     setDraftLoading(false);
@@ -1028,18 +1033,6 @@ const AiAgentPage: React.FC = () => {
     label: session.title?.trim() || `会话 ${session.sessionId.slice(-8)}`,
   }));
 
-  const parseClarify = (payload: ClarifyPayload) => {
-    try {
-      const args = JSON.parse(payload.question) as { question?: string; options?: string[] };
-      return {
-        question: args.question || payload.question,
-        options: Array.isArray(args.options) ? args.options : ([] as string[]),
-      };
-    } catch {
-      return { question: payload.question, options: [] as string[] };
-    }
-  };
-
   return (
     <Layout style={{ height: 'calc(100vh - 56px)', background: '#fff' }}>
       <Sider width={256} theme="light" style={{ borderInlineEnd: '1px solid #f0f0f0', padding: 12 }}>
@@ -1158,43 +1151,13 @@ const AiAgentPage: React.FC = () => {
                     ) : null}
                   </div>
 
-                  {clarify
-                    ? (() => {
-                        const { question, options } = parseClarify(clarify);
-                        return (
-                          <Alert
-                            type="warning"
-                            showIcon
-                            message="AI 需要补充信息"
-                            description={
-                              <Space direction="vertical" style={{ width: '100%' }}>
-                                <span>{question}</span>
-                                {options.length ? (
-                                  <Space wrap>
-                                    {options.map((option) => (
-                                      <Button key={option} size="small" onClick={() => answerClarify(option)}>
-                                        {option}
-                                      </Button>
-                                    ))}
-                                  </Space>
-                                ) : null}
-                                <Input.Search
-                                  placeholder="或输入你的回答..."
-                                  enterButton="回答"
-                                  onSearch={(value) => {
-                                    const text = value.trim();
-                                    if (text) {
-                                      answerClarify(text);
-                                    }
-                                  }}
-                                />
-                              </Space>
-                            }
-                            style={{ marginTop: 12 }}
-                          />
-                        );
-                      })()
-                    : null}
+                  {clarify && (clarify.toolName !== 'request_clarification' || !clarify.toolCallId.trim()
+                    ? <Alert type="error" message="待答问题暂无法核对，请刷新原会话。" />
+                    : <QueryClarificationCard
+                    key={JSON.stringify([activeSessionId, clarify.toolCallId, clarify.question])}
+                    question={clarify.question}
+                    disabled={!can('agent:chat:run') || streaming || historyLoading || !!historyError || !!continuation?.blockingReason}
+                    onAnswer={answer => void answerClarify(answer)} />)}
 
                   <div ref={inputRef} tabIndex={-1} className={sendIdle ? styles.sendDisabled : undefined}>
                     {historyLoading && <Alert type="info" showIcon message="正在恢复会话与任务范围，请稍候…" />}

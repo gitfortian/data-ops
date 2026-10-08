@@ -279,3 +279,7 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
 
 原会话场景回看（F-031）仅是授权 history/continuation 的只读投影：最新 COMPLETED、唯一 assistant 引用与完整任务范围一致才显示交付卡。历史候选、Skill 版本和原事实只描述生成时依据，不证明当前源有效性或业务已保存/验证/发布；原消息与源域事实仍由原所有者持有。
+
+## 问数澄清（F-033）
+
+原 HITL 的可选字段/时间/口径投影只引用本执行授权发现的 DatasetFields；字段名称、类型和描述由快照装配，不能由模型伪造。投影不拥有 pending、源口径或查询权限；非法/超限/治理越界不挂起，预算仍计入原轮。应答续跑原 ID/预算，恢复后的新执行上下文重新发现字段、授权并核对版本；原 SDK、turn 和 Dataset 保持唯一事实归属。语义歧义识别仍需真实模型验收。

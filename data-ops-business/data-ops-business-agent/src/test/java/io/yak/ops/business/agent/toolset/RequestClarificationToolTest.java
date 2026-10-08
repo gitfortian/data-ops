@@ -18,7 +18,7 @@ class RequestClarificationToolTest {
   void isDeclaredAsExternalSuspendTool() throws NoSuchMethodException {
     assertTrue(tool instanceof AgentToolBox, "必须实现标记接口以被 runtime 收集");
 
-    Method method = tool.getClass().getMethod("requestClarification", String.class, List.class);
+    Method method = tool.getClass().getMethod("requestClarification", String.class, List.class, String.class, Long.class, List.class);
     Tool annotation = method.getAnnotation(Tool.class);
     assertEquals("request_clarification", annotation.name());
     assertTrue(annotation.externalTool(), "必须声明 externalTool=true 才能挂起本轮");
@@ -27,6 +27,6 @@ class RequestClarificationToolTest {
   @Test
   void bodyIsGuardedAgainstFrameworkExecution() {
     assertThrows(
-        IllegalStateException.class, () -> tool.requestClarification("q", List.of("a", "b")));
+        IllegalStateException.class, () -> tool.requestClarification("q", List.of("a", "b"), null, null, null));
   }
 }

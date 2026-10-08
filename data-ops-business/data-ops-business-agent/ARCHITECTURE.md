@@ -293,3 +293,7 @@ MetricDraftTarget/METRIC_DRAFT 固定 metric-definition-draft Skill；runtime �
 F-031 的 scenarioHistory reader 复用 continuation 目标规范化与四场景 parser；页面在过滤空消息前统计 assistant 引用唯一性，只为 history 标记来源。卡片只有展示与由权威目标派生的原页面回链；项目/读取权限变化重置页面并使异步结果失效。没有新增后端协议、源读取或状态机。
 
 StructuredSuggestionPanel 自身按完整目标/定义/disabled 隔离组件生命周期，调用方仍拥有项目与表单作用域。检索词变化保留原轮标识以核对活动/未知状态，只允许相同完整输入恢复候选；sameScenarioTarget 与原会话回看共用完整值比较。停止锁覆盖精确取消和状态核对，异步回调同时校验生命周期与操作代次；错误边界使用固定阶段提示。
+
+## 问数澄清投影（F-033）
+
+runtime.QueryClarificationProjection 消费原 AgentExecutionContext 中的 DatasetFields，TaskToolPolicyMiddleware 为 SDK ActingInput 准备同 ID 的有界展示内容；TaskScopedTool 在预算预占后再次校验再挂起。SDK 仍持原 pending，原 AgentEventCodec / AG-UI / 投递日志 / continuation 承载问题字符串。前端 readClarificationQuestion 与 QueryClarificationCard 共用实时/恢复解析及纯文本交互；不新增持久化、查询入口或源域依赖。原 query gateway 继续重验当前主体、字段与版本。

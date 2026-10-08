@@ -178,3 +178,7 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
 
 原会话可回看最新完成轮的标准匹配、来源映射、指标解释与定义草稿（F-031），展示候选、依据、待确认项和原页面入口。SSE、旧轮无范围证据、缺失/重复引用、坏回执、范围不符或读取失败保留正文并提示核对；切项目/会话或失去读取权限后旧卡失效。回看不采纳、不保存、不自动调用源，历史快照与新建未保存草稿必须明确标注。
+
+## 问数字段、时间与口径澄清（F-033）
+
+普通问数关键歧义复用原 request_clarification，可显示 FIELD/TIME/CALIBER、已发现的数据集版本与1–8个真实相关字段；FIELD 至少两个候选且选项由源字段装配。问题/选项及投影有界，非法依据不创建 pending、不查询；旧纯文本/问题选项和治理反问保持。原页面实时与恢复共用严格解析，坏投影阻止回答；选项或≤2000字自由答案明确发送，权限/活动/加载阻止，切项目/会话/待答清理旧答案。原归属、同轮续跑、预算和查询白名单/版本核验继续生效。具体限额和真实验收待办见 docs/product/features/F-033-agent-query-clarification.md。
