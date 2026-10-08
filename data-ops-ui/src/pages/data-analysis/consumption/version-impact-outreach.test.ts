@@ -125,7 +125,7 @@ describe('version-scoped manual Consumer outreach drafting', () => {
   it('remains scoped to a single source version even when display revision labels coincide', () => {
     const newer = reviewVersionImpact(impact, { identity: '9007199254740995', displayVersion: 'r8' })!;
     const other = consumerVersionOutreachDraft(
-      product, impact, newer, newer.rows[1], '另一个版本更新', '2026-10-08T16:00:00Z',
+      product, impact, newer, newer.rows[2], '另一个版本更新', '2026-10-08T16:00:00Z',
     );
     expect(other).toContain('待评估来源版本 ID：9007199254740995');
     expect(other).toContain('DATA_SERVICE_INVOCATION:invocation:9007199254741013');
