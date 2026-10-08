@@ -19,4 +19,4 @@ describe('Asset detail read failures', () => {
     expect(classifyAssetReadFailure(undefined)).toBe('UNAVAILABLE');
     expect(classifyAssetReadFailure({})).toBe('UNAVAILABLE');
   });
-};
+});
