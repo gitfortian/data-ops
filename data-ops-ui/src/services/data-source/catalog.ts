@@ -38,7 +38,13 @@ export const listDataSourceColumns = (
 export const searchDataSourceTables = (
   id: DataSourceId,
   keyword?: string,
+  options: { database?: string; schema?: string; limit?: number } = {},
 ): Promise<DataSourceCatalogTable[]> =>
   HttpUtils.getData<DataSourceCatalogTable[]>(
-    `${DATA_SOURCE_CATALOG_API_PREFIX}/${id}/tables/search${queryString({ keyword })}`,
+    `${DATA_SOURCE_CATALOG_API_PREFIX}/${id}/tables/search${queryString({
+      database: options.database,
+      schema: options.schema,
+      keyword,
+      limit: options.limit,
+    })}`,
   );
