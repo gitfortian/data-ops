@@ -16,7 +16,7 @@ import {
   Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DETAIL_TABLE_CLASS } from './components/DatasetDetailPrimitives';
 
@@ -55,21 +55,29 @@ export default function DatasetQueryDiagnostics({
   const [records, setRecords] = useState<DatasetQueryPerformance[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
     try {
-      setRecords(
-        await listDatasetQueryPerformance({
+      const response = await listDatasetQueryPerformance({
           datasetIds: [datasetId],
           queryIds: focusedQueryId ? [focusedQueryId] : undefined,
           statuses: focusedQueryId || status === 'ALL' ? undefined : [status],
           minTotalMillis: focusedQueryId || minTotalMillis === 0 ? undefined : minTotalMillis,
           limit: focusedQueryId ? 10 : limit,
-        }),
-      );
+        });
+      if (currentRequest !== requestId.current) return;
+      // Never mark a wrong Dataset or Query ID as verified even if the provider
+      // unexpectedly includes unrelated rows.
+      setRecords(focusedQueryId
+        ? response.filter((row) => String(row.queryId) === focusedQueryId
+            && String(row.datasetId) === datasetId)
+        : response);
     } catch (loadError) {
+      if (currentRequest !== requestId.current) return;
       setRecords([]);
       setError(
         loadError instanceof Error
@@ -77,12 +85,13 @@ export default function DatasetQueryDiagnostics({
           : '加载 Dataset 运行诊断失败',
       );
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   }, [datasetId, focusedQueryId, limit, minTotalMillis, status]);
 
   useEffect(() => {
     void load();
+    return () => { requestId.current += 1; };
   }, [load]);
 
   const summary = useMemo(() => {
