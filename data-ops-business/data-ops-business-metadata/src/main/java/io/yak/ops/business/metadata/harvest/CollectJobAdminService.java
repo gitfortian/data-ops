@@ -44,8 +44,6 @@ public class CollectJobAdminService {
   static final String DEFAULT_CRON = "0 0 3 * * ?";
 
   private static final int JOB_CODE_MAX = 64;
-  private static final int DEFAULT_COLLAPSE_PCT = 30;
-  private static final int DEFAULT_MISSING_ROUNDS = 2;
 
   private final MdCollectJobMapper jobMapper;
   private final CurrentProject currentProject;
@@ -233,7 +231,8 @@ public class CollectJobAdminService {
     int collapsePct = parseRange(command.collapseThresholdPct(),
         (int) Math.round(policy.collapseThresholdPct()), 1, 100, "collapseThresholdPct");
     int rounds = parseRange(command.missingRounds(), policy.missingRounds(), 1, 5, "missingRounds");
-    if (Math.abs(collapsePct - policy.collapseThresholdPct()) > 0.000001
+    if ((command.collapseThresholdPct() != null
+            && Math.abs(collapsePct - policy.collapseThresholdPct()) > 0.000001)
         || rounds != policy.missingRounds()) {
       throw new MetadataException(MetadataErrorCode.INVALID_ARGUMENT,
           "任务级缺失/熔断策略尚未生效：当前执行全局熔断 "
