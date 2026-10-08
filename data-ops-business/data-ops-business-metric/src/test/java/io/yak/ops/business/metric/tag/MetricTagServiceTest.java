@@ -50,7 +50,7 @@ class MetricTagServiceTest {
 
     verify(tagMapper, times(2)).selectOne(any());
     verify(tagMapper, never()).updateById(any(MetricTagPO.class));
-    verify(tagMapper, never()).deleteById(any());
+    verify(tagMapper, never()).deleteById((java.io.Serializable) any());
   }
 
   @Test
@@ -75,7 +75,7 @@ class MetricTagServiceTest {
     assertThatThrownBy(() -> service.deleteTag(11L))
         .isInstanceOfSatisfying(MetricException.class,
             error -> assertThat(error.getErrorCode()).isEqualTo(MetricErrorCode.TAG_REFERENCED));
-    verify(tagMapper, never()).deleteById(any());
+    verify(tagMapper, never()).deleteById((java.io.Serializable) any());
   }
 
   @Test
@@ -85,7 +85,7 @@ class MetricTagServiceTest {
 
     service.deleteTag(11L);
 
-    verify(tagMapper).deleteById(11L);
+    verify(tagMapper).deleteById((java.io.Serializable) 11L);
   }
 
   @Test
