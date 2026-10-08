@@ -1,30 +1,24 @@
 package io.yak.ops.boot.config.persistence;
 
 import io.yak.framework.common.jdbc.JdbcDatabase;
-import org.apache.ibatis.mapping.VendorDatabaseIdProvider;
-import java.util.Properties;
-import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-
 import javax.sql.DataSource;
-
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 
-/** Yak Ops 业务模块共享的数据源、MyBatis 与事务基础设施。 */
+/**
+ * Owns the primary business DataSource and transaction manager.
+ *
+ * MyBatis sessions are assembled separately, but retain all historical bean names and semantics.
+ */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(
         prefix = "yak.database",
@@ -32,6 +26,7 @@ import org.springframework.transaction.PlatformTransactionManager;
         havingValue = "true",
         matchIfMissing = true)
 @EnableConfigurationProperties(BusinessDatabaseProperties.class)
+@Import(BusinessMybatisSessionConfiguration.class)
 public class BusinessDatabaseConfiguration {
 
     @Primary
@@ -72,60 +67,4 @@ public class BusinessDatabaseConfiguration {
         return new DataSourceTransactionManager(dataSource);
     }
 
-    @Primary
-    @Bean(
-            name = {
-                    "yakBusinessSqlSessionFactory",
-                    "opsDataSourceSqlSessionFactory",
-                    "opsResourceSqlSessionFactory",
-                    "offlineSyncSqlSessionFactory"
-            })
-    public SqlSessionFactory yakBusinessSqlSessionFactory(
-            @Qualifier("yakBusinessDataSource") DataSource dataSource) throws Exception {
-        MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
-        factory.setDataSource(dataSource);
-        VendorDatabaseIdProvider databaseIds = new VendorDatabaseIdProvider();
-        Properties vendors = new Properties();
-        vendors.setProperty("PostgreSQL", "postgresql");
-        vendors.setProperty("MySQL", "mysql");
-        vendors.setProperty("MariaDB", "mysql");
-        databaseIds.setProperties(vendors);
-        factory.setDatabaseIdProvider(databaseIds);
-
-        factory.setTypeAliasesPackage("io.yak.ops.business.**.dao.model");
-
-        // All Yak Ops business modules share this SqlSessionFactory. Each module keeps its XML files
-        // under mapper/<domain>/ so complex SQL stays close to the owning business module.
-        Resource[] mapperLocations = new PathMatchingResourcePatternResolver()
-                .getResources("classpath*:mapper/**/*.xml");
-        if (mapperLocations.length > 0) {
-            factory.setMapperLocations(mapperLocations);
-        }
-
-        var configuration = MybatisPlusFactorySupport.createConfiguration();
-        if (JdbcDatabase.isPostgresql(dataSource)) {
-            configuration.getTypeHandlerRegistry().register(Boolean.class, NumericBooleanTypeHandler.class);
-            configuration.getTypeHandlerRegistry().register(boolean.class, NumericBooleanTypeHandler.class);
-        }
-        factory.setConfiguration(configuration);
-        factory.setGlobalConfig(MybatisPlusFactorySupport.createGlobalConfig());
-
-        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
-        factory.setPlugins(interceptor);
-        return factory.getObject();
-    }
-
-    @Primary
-    @Bean(
-            name = {
-                    "yakBusinessSqlSessionTemplate",
-                    "opsDataSourceSqlSessionTemplate",
-                    "opsResourceSqlSessionTemplate",
-                    "offlineSyncSqlSessionTemplate"
-            })
-    public SqlSessionTemplate yakBusinessSqlSessionTemplate(
-            @Qualifier("yakBusinessSqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
-        return new SqlSessionTemplate(sqlSessionFactory);
-    }
 }
