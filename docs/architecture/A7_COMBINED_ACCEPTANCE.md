@@ -42,6 +42,13 @@
 - 已在 #385 **自身分支**调整测试为“两个配置均存在时一起审计；只有主类时仍兼容”，不改 #375 生产代码、不修改单 PR 产品行为。A7 后续重跑会读取 #385 新精确 Commit SHA，防止从失败状态直接宣称全部合格。
 - 此信息是首次组合验收事实，不代表数据库/前端/发行包集成已完成；后续阶段仍需 CI 逐项验证。
 
+## 第二轮 CI 实测问题与修复（2026-10-08）
+
+- 组合模拟、全部 Node 架构测试以及前端 Jest（171 suites / 954 tests）、类型校验和 Build 均实际通过。MySQL 侧 `DatabaseMigrationSmokeTest` 的两项测试通过。
+- 失败发生在单次 `mvn verify` 同时存在 `ARCHITECTURE_MYSQL_URL` 和 `ARCHITECTURE_POSTGRESQL_URL` 时：PostgreSQL Smoke 测试切换 URL，但 Spring Boot 的默认 `mysql` Profile 将 `com.mysql.cj.jdbc.Driver` 注入 PostgreSQL URL，导致 `PostgresqlStorageSmokeTest` Spring 容器无法启动。
+- 已在 A7 Workflow 中**隔离两个数据库测试进程**：`env -u ARCHITECTURE_POSTGRESQL_URL SPRING_PROFILES_ACTIVE=mysql bash ./mvnw -B -ntp verify` 完成 MySQL reactor 全量；随后使用 `env -u ARCHITECTURE_MYSQL_URL SPRING_PROFILES_ACTIVE=postgresql` 和 Maven `-Dtest=PostgresqlStorageSmokeTest` 专项运行 PostgreSQL 容器及真实 PG 应用 Profile。没有禁用或伪造 PostgreSQL 验收结果。
+- `scripts/architecture/a7-integration-preview.test.mjs` 追加工作流断言，避免未来两库的环境变量混在同一 JVM 构建回退。修复后的 A7 结果必须以新提交 CI 为准，不能据此提前标记 PASS。
+
 ## 不应越权宣称的范围
 
 - 双数据库全新环境迁移 Smoke 与 SQL 版本校验并不等于**现网历史数据库的备份/升级/回滚演练**。
