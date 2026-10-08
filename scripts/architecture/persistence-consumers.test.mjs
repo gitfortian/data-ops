@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { findPersistenceConsumers, checkDeclaredPersistenceAliases, persistenceInventory, PERSISTENCE_ALIASES } from './persistence-consumers.mjs';
 
 const boot = 'data-ops-boot/src/main/java/io/yak/ops/boot/config/persistence/BusinessDatabaseConfiguration.java';
@@ -50,9 +50,15 @@ test('detects missing or duplicate declared Boot aliases, ignores @Qualifier ref
 
 test('main actual Boot alias declarations are present; inventory never requires a specific consumer count', () => {
   const source = readFileSync(boot, 'utf8');
-  const result = persistenceInventory([{file: boot, content: source}, {
-    file: moduleFile, content: '@MapperScan(sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")',
-  }]);
+  // A2.1 splits MyBatis declarations into a separate @Import configuration.
+  // Independently, A2.2 must validate *all* Boot-owned Bean declarations,
+  // while still passing on main before A2.1 has been merged.
+  const mybatis = 'data-ops-boot/src/main/java/io/yak/ops/boot/config/persistence/BusinessMybatisSessionConfiguration.java';
+  const result = persistenceInventory([
+    { file: boot, content: source },
+    ...(existsSync(mybatis) ? [{ file: mybatis, content: readFileSync(mybatis, 'utf8') }] : []),
+    { file: moduleFile, content: '@MapperScan(sqlSessionFactoryRef = "yakBusinessSqlSessionFactory")' },
+  ]);
   assert.deepEqual(result.declared, {missing: [], duplicate: []});
   assert.equal(result.consumers.some(x => x.bean === 'yakBusinessSqlSessionFactory'), true);
   assert.equal(result.modules.some(x => x.module === 'data-ops-business/data-ops-business-metric'), true);
