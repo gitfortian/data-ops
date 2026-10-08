@@ -87,14 +87,15 @@ test('new Data Source legacy consumers are not allowed', () => {
 test('live compatibility adapter cannot be removed or gain new frontend importers', () => {
   const tracked = execFileSync('git', ['ls-files', '-z', 'data-ops-ui'], {
     encoding: 'utf8',
-  }).split('\\0'.replace('\\0', '\0')).filter(Boolean);
+  }).split(String.fromCharCode(0)).filter(Boolean);
+  const sourceExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
   const sources = tracked
-    .filter(file => /\\.(?:[cm]?js|jsx|ts|tsx)$/.test(file) && existsSync(file))
+    .filter(file => sourceExtensions.some(ext => file.endsWith(ext)) && existsSync(file))
     .map(file => [file, readFileSync(file, 'utf8')]);
   const { violations, allImporters } = unexpectedImports(sources);
   assert.deepEqual(violations, [],
-    'new Data Source legacy imports must be migrated to the current API:\\n' +
-      violations.join('\\n'));
+    'new Data Source legacy imports must be migrated to the current API:' +
+      String.fromCharCode(10) + violations.join(String.fromCharCode(10)));
   if (allImporters.length > 0) {
     assert.equal(existsSync(LEGACY_MODULE + '.ts'), true,
       'legacy.ts is still required by existing envelope-response consumers');
