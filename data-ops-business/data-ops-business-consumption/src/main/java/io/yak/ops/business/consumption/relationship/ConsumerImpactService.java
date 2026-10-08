@@ -167,7 +167,8 @@ public class ConsumerImpactService {
     int normalized = (int) page.results().stream()
         .filter(result -> result.state() == UsageNormalizationState.NORMALIZED).count();
     int gaps = (int) page.results().stream()
-        .filter(result -> result.state() == UsageNormalizationState.GAP).count();
+        .filter(result -> result.state() == UsageNormalizationState.GAP
+            || result.state() == UsageNormalizationState.IGNORED).count();
     int unavailable = (int) page.results().stream()
         .filter(result -> result.state() == UsageNormalizationState.UNAVAILABLE).count();
     boolean retryRequired = gaps > 0 || unavailable > 0;
