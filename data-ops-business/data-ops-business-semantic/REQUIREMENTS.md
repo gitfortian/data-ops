@@ -151,3 +151,10 @@
 F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每次检查 semantic 读取权限与当前项目；只查启用 TYPE，SQL 最多 21 行、交付 20 行及截断标识。按 ID/版本复核时拒绝跨项目、停用、错类别、陈旧版本；故障不能折算成无候选。不接收 Agent 写命令。
 
 依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
+
+## P0-B03 / SE-02：业务域编辑可空字段必须真正清除
+
+- 业务域编辑为完整表单保存；当负责人或描述明确清空（DTO 为 `null`）时，更新语句应真正写入数据库的 `NULL`，重新打开后不能回现旧内容。
+- 持久化使用项目隔离条件 `project_id + id`，仅对业务域可编辑列做显式赋值（含空值）；不得修改稳定业务域编码、父域关系、创建人和创建时间。
+- 统一复用语义模块已在标准字段、过程、分层中采用的明确 `SET` 方案；不修改全局 MyBatis 更新策略，不引入新的事实存储。
+- 回归覆盖非空值保存、负责人/描述同时清空、项目条件保留及根/父域关系不变。真实 MySQL 保存后回读仍列为端到端验收条件。

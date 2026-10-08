@@ -4,14 +4,52 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: architecture-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
+  impact:
+    name: Architecture impact and static contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      full: ${{ steps.plan.outputs.full }}
+      backend: ${{ steps.plan.outputs.backend }}
+      frontend: ${{ steps.plan.outputs.frontend }}
+      modules: ${{ steps.plan.outputs.modules }}
+      jest_targets: ${{ steps.plan.outputs.jest_targets }}
+      mode: ${{ steps.plan.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Test PR impact selection
+        run: node --test scripts/ci/*.test.mjs
+      - name: Plan fail-safe PR validation scope
+        id: plan
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/ci/impact-plan.mjs
+      - name: Architecture and release unit contracts
+        run: node --test scripts/architecture/*.test.mjs scripts/release/*.test.mjs
+      - name: Dependency and persistence boundaries
+        run: node scripts/architecture/check-boundaries.mjs
+      - name: Frontend import boundaries
+        run: node scripts/architecture/check-frontend-boundaries.mjs
+      - name: Migration history consistency
+        run: node scripts/db/check-migration-history.mjs
+
   backend:
     name: Architecture and complete backend contracts
+    needs: [impact]
+    if: needs.impact.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     services:
@@ -30,22 +68,36 @@ jobs:
       ARCHITECTURE_MYSQL_PASSWORD: architecture-ci
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - run: node --test scripts/architecture/*.test.mjs scripts/release/*.test.mjs
-      - run: node scripts/architecture/check-boundaries.mjs
-      - run: node scripts/architecture/check-frontend-boundaries.mjs
-      - run: node scripts/db/check-migration-history.mjs
-      - run: bash ./mvnw -B -ntp -pl data-ops-boot -am verify
-      - run: node scripts/contracts/workflow-schema.mjs
+      - name: Compile and test affected Maven modules or full Boot
+        env:
+          FULL: ${{ needs.impact.outputs.full }}
+          MODULES: ${{ needs.impact.outputs.modules }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$FULL" == 'true' ]]; then
+            bash ./mvnw -B -ntp -pl data-ops-boot -am verify
+          else
+            if [[ -z "$MODULES" ]]; then
+              echo "::error::Backend requested without a selected module."
+              exit 1
+            fi
+            # Modules are validated existing reactor paths, never user-provided shell code.
+            bash ./mvnw -B -ntp -pl "$MODULES" -am test
+          fi
+      - name: Verify compiled Workflow HTTP schema
+        if: needs.impact.outputs.full == 'true'
+        run: node scripts/contracts/workflow-schema.mjs
+
   frontend:
     name: Complete frontend contracts
+    needs: [impact]
+    if: needs.impact.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -60,16 +112,37 @@ jobs:
           cache-dependency-path: data-ops-ui/yarn.lock
       - run: npm install --global yarn@1.22.22
       - run: yarn install --frozen-lockfile
-      - run: yarn jest --runInBand
+      - name: Run full or affected frontend Jest suites
+        shell: bash
+        env:
+          FULL: ${{ needs.impact.outputs.full }}
+          JEST_TARGETS: ${{ needs.impact.outputs.jest_targets }}
+        run: |
+          set -euo pipefail
+          if [[ "$FULL" == 'true' ]]; then
+            yarn jest --runInBand
+          else
+            if [[ -z "$JEST_TARGETS" ]]; then
+              echo "::error::Frontend requested without Jest targets."
+              exit 1
+            fi
+            IFS=',' read -r -a targets <<< "$JEST_TARGETS"
+            yarn jest "${targets[@]}" --runInBand --passWithNoTests
+          fi
       - run: node scripts/check-type-baseline.mjs
-      - run: yarn build
+      - name: Build complete frontend release artifact
+        if: needs.impact.outputs.full == 'true'
+        run: yarn build
       - uses: actions/upload-artifact@v4
+        if: needs.impact.outputs.full == 'true'
         with:
           name: architecture-frontend
           path: data-ops-ui/dist
+
   distribution:
     name: Distribution source and artifact consistency
-    needs: [backend, frontend]
+    needs: [impact, backend, frontend]
+    if: needs.impact.outputs.full == 'true' && needs.backend.result == 'success' && needs.frontend.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -89,15 +162,21 @@ jobs:
       - run: node scripts/release/frontend-artifact.mjs
       - run: bash ./mvnw -B -ntp verify
       - run: tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
+
   gate:
     name: Architecture gate
     if: always()
-    needs: [backend, frontend, distribution]
+    needs: [impact, backend, frontend, distribution]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every architecture check
+      - uses: actions/checkout@v4
+      - name: Verify the required scope without accepting unexpected skips
         env:
+          PLAN: ${{ needs.impact.result }}
+          FULL: ${{ needs.impact.outputs.full }}
+          EXPECT_BACKEND: ${{ needs.impact.outputs.backend }}
+          EXPECT_FRONTEND: ${{ needs.impact.outputs.frontend }}
           BACKEND: ${{ needs.backend.result }}
           FRONTEND: ${{ needs.frontend.result }}
           DISTRIBUTION: ${{ needs.distribution.result }}
-        run: test "$BACKEND" = success && test "$FRONTEND" = success && test "$DISTRIBUTION" = success
+        run: node scripts/ci/check-architecture-gate.mjs
