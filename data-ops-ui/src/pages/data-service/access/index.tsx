@@ -1,6 +1,6 @@
 import { YakButton, YakEmpty } from '@/components/ui';
-import { parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
-import { useSearchParams } from '@umijs/max';
+import { parseManagedConsumerSourceId, parseConsumptionReviewReturnPath } from '@/config/consumer-source-navigation';
+import { history, useSearchParams } from '@umijs/max';
 import {
   createDataServiceConsumer,
   deleteDataServiceConsumer,
@@ -65,6 +65,7 @@ export default function DataServiceAccessPage() {
   const [form] = Form.useForm<ConsumerFormValues>();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedConsumerRef = searchParams.get('consumerId') || '';
+  const returnToReview = parseConsumptionReviewReturnPath(searchParams.get('returnTo'));
   const requestedConsumerId = parseManagedConsumerSourceId(requestedConsumerRef);
   const [records, setRecords] = useState<DataServiceConsumer[]>([]);
   const [apis, setApis] = useState<DataServiceAccessOverviewItem[]>([]);
@@ -326,6 +327,11 @@ export default function DataServiceAccessPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="m-0 text-[17px] font-semibold text-[#161823]">调用方与密钥</h1>
           <div className="flex gap-2">
+            {returnToReview ? (
+              <YakButton type="text" onClick={() => history.push(returnToReview)}>
+                返回消费者影响核对
+              </YakButton>
+            ) : null}
             <YakButton
               type="text"
               icon={<RefreshCw size={14} />}
@@ -413,6 +419,11 @@ export default function DataServiceAccessPage() {
         title={selected ? (
           <div className="truncate text-[14px] font-semibold text-[#161823]">{selected.name}</div>
         ) : '调用方与密钥'}
+        extra={returnToReview ? (
+          <YakButton type="text" onClick={() => history.push(returnToReview)}>
+            返回消费者影响核对
+          </YakButton>
+        ) : undefined}
         styles={{
           body: {
             padding: 0,
