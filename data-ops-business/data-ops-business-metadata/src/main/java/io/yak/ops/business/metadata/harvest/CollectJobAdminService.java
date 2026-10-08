@@ -50,14 +50,17 @@ public class CollectJobAdminService {
   private final MdCollectJobMapper jobMapper;
   private final CurrentProject currentProject;
   private final MetadataScheduleEngineBridge scheduleBridge;
+  private final MetadataPresenceService presenceService;
 
   public CollectJobAdminService(
       MdCollectJobMapper jobMapper,
       CurrentProject currentProject,
-      MetadataScheduleEngineBridge scheduleBridge) {
+      MetadataScheduleEngineBridge scheduleBridge,
+      MetadataPresenceService presenceService) {
     this.jobMapper = jobMapper;
     this.currentProject = currentProject;
     this.scheduleBridge = scheduleBridge;
+    this.presenceService = presenceService;
   }
 
   /** 任务清单。{@code providerType}/{@code enabled} 为空即不过滤。 */
@@ -224,10 +227,21 @@ public class CollectJobAdminService {
       po.setTablePattern(null);
       po.setCollectColumns(Boolean.TRUE);
     }
-    po.setCollapseThresholdPct(
-        parseRange(command.collapseThresholdPct(), DEFAULT_COLLAPSE_PCT, 1, 100, "collapseThresholdPct"));
-    po.setMissingRounds(
-        parseRange(command.missingRounds(), DEFAULT_MISSING_ROUNDS, 1, 5, "missingRounds"));
+    // 任务历史列仅作兼容存储。Presence 真正执行全局熔断与固定两轮确认；
+    // 不能再悄悄保存一份看起来能生效、实际根本不消费的任务级策略。
+    MetadataPresenceService.EffectivePolicy policy = presenceService.effectivePolicy();
+    int collapsePct = parseRange(command.collapseThresholdPct(),
+        (int) Math.round(policy.collapseThresholdPct()), 1, 100, "collapseThresholdPct");
+    int rounds = parseRange(command.missingRounds(), policy.missingRounds(), 1, 5, "missingRounds");
+    if (Math.abs(collapsePct - policy.collapseThresholdPct()) > 0.000001
+        || rounds != policy.missingRounds()) {
+      throw new MetadataException(MetadataErrorCode.INVALID_ARGUMENT,
+          "任务级缺失/熔断策略尚未生效：当前执行全局熔断 "
+              + policy.collapseThresholdPct() + "%、连续缺席 " + policy.missingRounds()
+              + " 轮，请移除自定义参数");
+    }
+    po.setCollapseThresholdPct(collapsePct);
+    po.setMissingRounds(rounds);
   }
 
   private ProviderType parseProvider(String raw, boolean creating) {
