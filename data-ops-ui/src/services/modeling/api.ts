@@ -30,14 +30,21 @@ export const pageModelingModels = (params: ModelingPageParams): Promise<Modeling
 export const getModelingModel = (id: ModelingModelId): Promise<ModelingModelRecord> =>
   HttpUtils.getData<ModelingModelRecord>(`${MODELING_API_PREFIX}/models/${id}`);
 
-export const getModelingStructure = (id: ModelingModelId): Promise<ModelingStructureRecord> =>
-  HttpUtils.getData<ModelingStructureRecord>(`${MODELING_API_PREFIX}/models/${id}/structure`);
+export const getModelingStructure = async (id: ModelingModelId): Promise<ModelingStructureRecord> => {
+  const view = await HttpUtils.getData<{ structure: ModelingStructureRecord; definition: string }>(`${MODELING_API_PREFIX}/models/${id}/structure/edit-context`);
+  return { ...view.structure, definition: view.definition };
+};
 
-export const saveModelingStructure = (
+export const saveModelingStructure = async (
   id: ModelingModelId,
   payload: ModelingSaveStructurePayload,
-): Promise<ModelingStructureRecord> =>
-  HttpUtils.putData<ModelingStructureRecord>(`${MODELING_API_PREFIX}/models/${id}/structure`, payload);
+  definition?: string,
+): Promise<ModelingStructureRecord> => {
+  if (!definition) return HttpUtils.putData<ModelingStructureRecord>(`${MODELING_API_PREFIX}/models/${id}/structure`, payload);
+  const receipt = await HttpUtils.putData<{ structure: ModelingStructureRecord; definition: string }>(
+    `${MODELING_API_PREFIX}/models/${id}/structure/edit-context`, payload, { headers: { 'If-Match': definition } });
+  return { ...receipt.structure, definition: receipt.definition };
+};
 
 /** 类型目录同源于后端方言目录（ticket 07）。 */
 export const getModelingTypeCatalog = (id: ModelingModelId): Promise<ModelingTypeOption[]> =>
@@ -46,6 +53,7 @@ export const getModelingTypeCatalog = (id: ModelingModelId): Promise<ModelingTyp
 export const validateModelingStructure = (
   id: ModelingModelId,
   payload: ModelingSaveStructurePayload,
+  definition?: string,
 ): Promise<ModelingValidationIssue[]> =>
   HttpUtils.postData<ModelingValidationIssue[]>(`${MODELING_API_PREFIX}/models/${id}/structure/validate`, payload);
 

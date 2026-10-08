@@ -40,3 +40,10 @@ modeling ──> data-development  加工任务创建(生成 SQL 任务草稿),�
 4. **权限与菜单**:建模的菜单/权限目录行在 yak-security migration(`data-ops-boot`)中登记,本模块 Java 代码不操作 `yak_security_*` 表。
 5. **审计与通知**:操作审计走平台审计设施;变更通知走通知/告警基础设施,不自建通知通道。
 6. **初始化顺序**:建模 `V1__modeling_baseline.sql` 中历史 V18 Source 段保留了一次性历史回填,会读取语义中心的 `yak_semantic_process`;因此建模 Flyway 必须在语义中心 Flyway 成功后运行。该顺序只保障已有迁移链的初始化,不授权新增运行时代码直读语义中心表。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023：原标准助手消费 AI 类型候选，仅带入当前未保存字段。模型定义仍由 Modeling 拥有，ModelSuggestionQueryApi 以授权事务锁读取定义指纹；编辑上下文同时给出结构与指纹，保存可携带 If-Match，在原结构事务/审计之前拒绝过期定义。原发布快照与审批指纹序列化保持兼容。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

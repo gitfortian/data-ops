@@ -23,7 +23,7 @@ import org.springframework.stereotype.Repository;
  * 实现「在线注册/启停对下一次推理热生效」；并向管理面暴露技能登记/乐观更新/启停。</p>
  *
  * <p>契约：agentscope {@code AgentSkill} 的 {@code name}=skillId（SkillBox 键）、
- * 运行时 metadata 仅携带 {@code displayName}=展示名；启停和版本由 DB 拥有；
+ * 运行时 metadata 携带 {@code displayName}=展示名与只读来源版本；启停和版本由 DB 拥有；
  * DB status 列在 PO 层映射为 ENABLED/DISABLED（持久真相），version 乐观锁在更新路径强制。</p>
  */
 @Slf4j
@@ -214,6 +214,7 @@ public class AgentSkillRepositoryAdapter
         .name(po.getSkillId())
         .description(po.getDescription())
         .putMetadata(META_DISPLAY_NAME, po.getName())
+        .putMetadata(META_VERSION, po.getVersion())
         .skillContent(po.getContent())
         .source("db:yak_agent_skill")
         .build();

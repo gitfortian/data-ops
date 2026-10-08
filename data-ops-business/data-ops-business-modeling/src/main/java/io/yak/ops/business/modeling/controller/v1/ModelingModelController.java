@@ -134,6 +134,24 @@ public class ModelingModelController {
     return Result.success(structureService.get(id));
   }
 
+  @Operation(summary = "读取模型编辑上下文与条件保存指纹")
+  @RequiresPermission(ModelingPermissionCode.READ)
+  @GetMapping("/{id}/structure/edit-context")
+  public Result<ModelStructureService.EditContext> editContext(@PathVariable("id") Long id) {
+    return Result.success(structureService.editContext(id));
+  }
+
+  @Operation(summary = "条件保存模型编辑草稿并返回同事务编辑基线")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  @PutMapping("/{id}/structure/edit-context")
+  public Result<ModelStructureService.EditContext> saveEditContext(
+      @PathVariable("id") Long id,
+      @Valid @RequestBody ModelingStructureApi.SaveStructureRequest request,
+      HttpServletRequest httpRequest) {
+    return Result.success(structureService.saveEditContext(id, request,
+        currentUserProvider.getCurrentUser(httpRequest), httpRequest.getHeader("If-Match")));
+  }
+
   @Operation(summary = "生成建库脚本（仅生成，不在平台内执行）")
   @GetMapping("/{id}/ddl")
   public Result<DdlService.DdlView> generateDdl(@PathVariable("id") Long id) {
@@ -162,7 +180,9 @@ public class ModelingModelController {
       @Valid @RequestBody ModelingStructureApi.SaveStructureRequest request,
       HttpServletRequest httpRequest) {
     String operator = currentUserProvider.getCurrentUser(httpRequest);
-    return Result.success(structureService.save(id, request, operator));
+    String expected = httpRequest.getHeader("If-Match");
+    return Result.success(expected == null ? structureService.save(id, request, operator)
+        : structureService.save(id, request, operator, expected));
   }
 
   @Operation(summary = "设置模型所属目录")

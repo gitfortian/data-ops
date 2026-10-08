@@ -10,6 +10,8 @@ import java.util.Optional;
 
 /** Project-scoped persistence boundary for the semantic standard catalog. */
 public interface SemanticStandardRepository {
+  /** At most 21 rows: the extra row indicates truncation of the 20-candidate AI context. */
+  List<Standard> searchTypeCandidates(String keyword);
 
   Standard insert(Standard standard, String operator);
 

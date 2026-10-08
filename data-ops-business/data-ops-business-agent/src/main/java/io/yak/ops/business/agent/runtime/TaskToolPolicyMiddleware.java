@@ -35,7 +35,22 @@ final class TaskToolPolicyMiddleware implements MiddlewareBase {
       Function<ActingInput, Flux<AgentEvent>> next) {
     // DynamicSkillMiddleware can register helpers after initial assembly. Adapters contain no task state.
     guardTools(agent.getToolkit());
-    return next.apply(input);
+    var execution = context.get(AgentExecutionContext.class);
+    if (execution != null && execution.target() != null && execution.target().standardMatch() != null) {
+      for (var call : input.toolCalls()) {
+        execution.requireTool(call.getName());
+        // SDK synthetic output tool does not pass through Toolkit adapters.
+        if ("generate_response".equals(call.getName())) execution.reserveTool(call.getName());
+      }
+    }
+    return next.apply(input).doOnNext(event -> {
+      if (execution != null && event instanceof io.agentscope.core.event.ToolResultEndEvent end
+          && input.toolCalls().stream().anyMatch(call -> "generate_response".equals(call.getName())
+              && call.getId().equals(end.getToolCallId()))
+          && end.getState() == io.agentscope.core.message.ToolResultState.ERROR) {
+        execution.toolFailed("generate_response");
+      }
+    });
   }
 
   @Override public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,

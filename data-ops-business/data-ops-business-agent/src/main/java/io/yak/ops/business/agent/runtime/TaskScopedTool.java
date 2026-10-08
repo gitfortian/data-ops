@@ -72,6 +72,9 @@ final class TaskScopedTool extends ToolBase {
 
   private Mono<ToolResultBlock> loadCurrentSkill(ToolCallParam param) {
     return Mono.fromSupplier(() -> {
+      var scope = param.getRuntimeContext().get(ScenarioSkillScope.class);
+      if (scope != null) return ToolResultBlock.text(scope.load(
+          String.valueOf(param.getInput().get("skillId")), String.valueOf(param.getInput().get("path"))));
       var repository = param.getRuntimeContext().get(io.agentscope.core.skill.repository.AgentSkillRepository.class);
       if (repository == null || !"SKILL.md".equals(param.getInput().get("path"))) {
         return denied("[SKILL_NOT_AVAILABLE] 当前仅支持启用技能的 SKILL.md 正文");

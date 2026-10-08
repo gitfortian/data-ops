@@ -344,3 +344,10 @@
 - `DdlService` 对六种方言均能选到模板,不再抛 `INVALID_DIALECT`。
 - 每个模板有独立单测;不可映射类型/不支持能力必须表现为脚本内注释,而不是异常或静默丢弃。
 - 本地无任一目标库实例,生成文本只按上表口径与各方言官方语法人工核对,**不得声称已在真机执行验证**。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023：原标准助手消费 AI 类型候选，仅带入当前未保存字段。模型定义仍由 Modeling 拥有，ModelSuggestionQueryApi 以授权事务锁读取定义指纹；编辑上下文同时给出结构与指纹，保存可携带 If-Match，在原结构事务/审计之前拒绝过期定义。原发布快照与审批指纹序列化保持兼容。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

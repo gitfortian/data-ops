@@ -1594,8 +1594,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
         message.error('校验未通过：请处理列表中标红的问题后再保存');
         return;
       }
-      await saveModelingStructure(modelId, payload);
+      const saved = await saveModelingStructure(modelId, payload, structure?.definition);
       if (!isCurrent()) return;
+      // Keep newer local edits, but advance only to our transaction's receipt for the next save.
+      setStructure(saved);
       message.success('表结构已保存');
       if (!draftUnchanged()) {
         message.info('已保存提交时的草稿，后续编辑已保留');
@@ -2928,6 +2930,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
         )}
       </Modal>
       <StandardAssistantDrawer
+        scopeKey={JSON.stringify([currentProject?.id, modelId, assistantRowKey, rows.find(row => row.key === assistantRowKey)])}
+        aiDisabled={loading || saving || publishing}
+        businessDescription={rows.find((row) => row.key === assistantRowKey)?.businessDescription ?? ''}
+        definition={structure?.definition ?? ''}
         open={assistantRowKey != null && Boolean(modelId)}
         modelId={modelId ?? ''}
         columnName={rows.find((row) => row.key === assistantRowKey)?.columnName ?? ''}

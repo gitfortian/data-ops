@@ -24,3 +24,10 @@
 
 - **禁止 import `io.yak.ops.business.modeling.*`**——依赖方向仅 modeling→semantic 单向(决策 E)。
 - 禁止反向读取 modeling 表/绕过 SPI 暴露内部实现类型(dao/dao.model/repository.impl 一律不对外)。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每次检查 semantic 读取权限与当前项目；只查启用 TYPE，SQL 最多 21 行、交付 20 行及截断标识。按 ID/版本复核时拒绝跨项目、停用、错类别、陈旧版本；故障不能折算成无候选。不接收 Agent 写命令。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。

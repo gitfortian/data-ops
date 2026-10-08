@@ -71,3 +71,10 @@ overview/     项目空间全域视图(服务端聚合,ticket 29)
 - `V24__logical_modeling_foundation.sql` → `yak-modeling-history-logical`
 
 若 V22 已执行元数据快照迁移，跳过 impact 历史的 V25 或 logical 历史的 V27 快照迁移；若 V22 已创建逻辑模型版本表，跳过后续同表的建表迁移。其余历史按对应的 `snapshot`、`foundation` 目录补齐。各目录中的既有迁移按原历史保留版本号和脚本名。不要重命名或编辑已应用脚本；新增空库基线继续放在公共 `yak-modeling` 目录。
+
+
+## F-023 场景 Skill 标准匹配
+
+F-023：原标准助手消费 AI 类型候选，仅带入当前未保存字段。模型定义仍由 Modeling 拥有，ModelSuggestionQueryApi 以授权事务锁读取定义指纹；编辑上下文同时给出结构与指纹，保存可携带 If-Match，在原结构事务/审计之前拒绝过期定义。原发布快照与审批指纹序列化保持兼容。
+
+依赖：Agent runtime → toolset → gateway → semantic.api / modeling.api；源域不依赖 Agent，不新增状态机或第二业务真相。合同见 [F-023](../../docs/product/features/F-023-skill-standard-match.md)。
