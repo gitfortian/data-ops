@@ -22,6 +22,13 @@ public interface DataServiceCallLogRepository {
    */
   List<InvocationRecord> recentSuccessfulByApiAndRevision(Long apiId, Long sourceRevisionId, int limit);
 
+  /**
+   * One retained SUCCESS audit page for the exact API revision.
+   * beforeInvocationId is an exclusive persisted audit-ID cursor, never an offset.
+   */
+  List<InvocationRecord> successfulPageByApiAndRevision(
+      Long apiId, Long sourceRevisionId, Long beforeInvocationId, int limit);
+
   /** Exact persisted call audit in the trusted Project and owning API; no window fallback. */
   Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId);
 
