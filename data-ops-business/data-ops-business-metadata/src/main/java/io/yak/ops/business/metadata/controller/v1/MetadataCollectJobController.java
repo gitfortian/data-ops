@@ -15,6 +15,7 @@ import io.yak.ops.business.metadata.harvest.CollectJobAdminService;
 import io.yak.ops.business.metadata.harvest.CollectJobAdminService.JobView;
 import io.yak.ops.business.metadata.harvest.CollectJobAdminService.UpsertCommand;
 import io.yak.ops.business.metadata.harvest.CollectRunService;
+import io.yak.ops.business.metadata.harvest.MetadataPresenceService;
 import io.yak.ops.business.metadata.harvest.CollectRunService.RunView;
 import io.yak.ops.common.constant.metadata.MetadataPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
@@ -51,6 +52,7 @@ public class MetadataCollectJobController {
 
   private final CollectJobAdminService jobService;
   private final CollectRunService runService;
+  private final MetadataPresenceService presenceService;
   private final CurrentUserProvider currentUserProvider;
 
   @Operation(summary = "任务分页（物理采集与投影对账同一张列表，只按 providerType 分面）")
@@ -64,6 +66,12 @@ public class MetadataCollectJobController {
             query.getEnabled(),
             query.getKeyword());
     return Result.success(PagingData.from(page));
+  }
+
+  @Operation(summary = "当前实际生效的物理采集 GONE 判定策略（全局，不是任务级）")
+  @GetMapping("/collect-jobs/effective-presence-policy")
+  public Result<MetadataPresenceService.EffectivePolicy> effectivePresencePolicy() {
+    return Result.success(presenceService.effectivePolicy());
   }
 
   @Operation(summary = "任务详情")

@@ -5,7 +5,6 @@ import {
   Drawer,
   Form,
   Input,
-  InputNumber,
   Radio,
   Select,
   Switch,
@@ -15,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   createCollectJob,
+  getEffectivePresencePolicy,
   listEntityTypes,
   updateCollectJob,
 } from '@/services/metadata/api';
@@ -22,6 +22,7 @@ import type {
   CollectJobRecord,
   CollectJobUpsertParams,
   CollectProviderType,
+  EffectivePresencePolicy,
   EntityTypeView,
 } from '@/services/metadata/types';
 import {
@@ -50,8 +51,6 @@ interface JobFormValues {
   collectColumns?: boolean;
   typeName?: string;
   cronExpression?: string;
-  collapseThresholdPct?: number;
-  missingRounds?: number;
 }
 
 const DEFAULT_CRON = '0 0 3 * * ?';
@@ -66,6 +65,19 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
   const [entityTypes, setEntityTypes] = useState<EntityTypeView[]>([]);
   const [loadingDatabases, setLoadingDatabases] = useState(false);
   const [loadingSchemas, setLoadingSchemas] = useState(false);
+  const [effectivePolicy, setEffectivePolicy] = useState<EffectivePresencePolicy | null>(null);
+  const [policyLoadError, setPolicyLoadError] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setEffectivePolicy(null);
+    setPolicyLoadError(false);
+    void getEffectivePresencePolicy()
+      .then((policy) => { if (active) setEffectivePolicy(policy); })
+      .catch(() => { if (active) setPolicyLoadError(true); });
+    return () => { active = false; };
+  }, [open]);
 
   const providerType = Form.useWatch('providerType', form) as CollectProviderType | undefined;
   const dataSourceId = Form.useWatch('dataSourceId', form) as number | undefined;
@@ -105,8 +117,6 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
         collectColumns: editing.collectColumns ?? true,
         typeName: editing.typeName ?? undefined,
         cronExpression: editing.cronExpression || DEFAULT_CRON,
-        collapseThresholdPct: editing.collapseThresholdPct ?? 30,
-        missingRounds: editing.missingRounds ?? 2,
       });
     } else {
       form.resetFields();
@@ -114,8 +124,6 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
         providerType: 'HARVESTED',
         collectColumns: true,
         cronExpression: DEFAULT_CRON,
-        collapseThresholdPct: 30,
-        missingRounds: 2,
       });
     }
   }, [open, editing, form]);
@@ -185,8 +193,6 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
       jobName: values.jobName.trim(),
       jobCode: values.jobCode?.trim() || undefined,
       cronExpression: values.cronExpression || DEFAULT_CRON,
-      collapseThresholdPct: values.collapseThresholdPct ?? null,
-      missingRounds: values.missingRounds ?? null,
       typeName: harvest ? undefined : values.typeName,
       dataSourceId: harvest ? values.dataSourceId ?? null : null,
       databaseName: harvest ? values.databaseName || null : null,
@@ -391,23 +397,22 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
           <CronSchedulerInput placeholder={DEFAULT_CRON} />
         </Form.Item>
 
-        <div className="mb-2 mt-2 text-[13px] font-medium text-[#101828]">缺失与熔断</div>
-        <div className="mb-4 grid grid-cols-2 gap-3">
-          <Form.Item
-            name="collapseThresholdPct"
-            label="熔断阈值"
-            tooltip="单轮缺失表数占上一轮总量的百分比超过该值即判熔断(SUSPECT)，整轮不执行删除"
-          >
-            <InputNumber variant="filled" min={1} max={100} precision={0} addonAfter="%" className="!w-full !rounded-[10px]" />
-          </Form.Item>
-          <Form.Item
-            name="missingRounds"
-            label="确认轮数"
-            tooltip="连续缺失多少轮才真正把对象标记为消失(GONE)"
-          >
-            <InputNumber variant="filled" min={1} max={5} precision={0} addonAfter="轮" className="!w-full !rounded-[10px]" />
-          </Form.Item>
-        </div>
+        {isHarvest && (
+          <>
+            <div className="mb-2 mt-2 text-[13px] font-medium text-[#101828]">当前实际执行的缺席保护</div>
+            <Alert
+              className="!mb-4"
+              type={policyLoadError ? 'warning' : 'info'}
+              showIcon
+              message={policyLoadError ? '无法读取当前保护策略' : effectivePolicy ? '全局保护策略（只读）' : '正在读取保护策略'}
+              description={effectivePolicy
+                ? `表缺席比例超过 ${effectivePolicy.collapseThresholdPct}%（至少 2 张缺席）时熔断为 SUSPECT；对象连续缺席 ${effectivePolicy.missingRounds} 轮有效采集才可标记 GONE。当前未支持任务级自定义，历史保存值不代表生效策略。`
+                : policyLoadError
+                  ? '无法确认服务器当前实际阈值；请核查配置后再执行采集，历史任务自定义值不会生效。'
+                  : '以服务端实际执行配置为准，不读取任务行历史策略字段。'}
+            />
+          </>
+        )}
       </Form>
     </Drawer>
   );
