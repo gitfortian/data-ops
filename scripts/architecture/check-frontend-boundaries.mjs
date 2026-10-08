@@ -22,7 +22,7 @@ const baselinePath = 'scripts/architecture/frontend-corridors.json';
 if (process.argv.includes('--record')) writeFileSync(baselinePath, JSON.stringify([...new Set(edges)].sort(), null, 2) + '\n');
 const allowed = new Set(JSON.parse(readFileSync(baselinePath, 'utf8')));
 const added = edges.filter(edge => !allowed.has(edge));
-if (added.length) throw new Error('New cross-page coupling; move the shared contract to its owner:\\n' + added.join('\\n'));
+if (added.length) throw new Error('New cross-page coupling; move the shared contract to its owner:\n' + added.join('\n'));
 if (serviceTransportViolations.length)
-  throw new Error('Domain Services must use the shared HTTP client, not raw Umi request:\\n' + serviceTransportViolations.join('\\n'));
+  throw new Error('Domain Services must use the shared HTTP client, not raw Umi request:\n' + serviceTransportViolations.join('\n'));
 console.log(`Frontend boundaries passed (${edges.length} declared legacy corridors).`);
