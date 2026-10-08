@@ -1,7 +1,7 @@
 # Agent V22 规划：指标发布前的版本变更解释
 
-日期：2026-10-08  
-分类：DOCS / PROPOSED  
+日期：2026-10-08
+分类：DOCS / PROPOSED
 状态：规划提案，未批准实施；不改变当前 Product / Domain Contract。
 
 后续记录：用户于 2026-10-08 确认规划并授权实施。本文保留提案快照；当前实施指令与具体首版覆盖边界以 IMPLEMENTING [F-032](../product/features/F-032-metric-change-review.md) 为准。
