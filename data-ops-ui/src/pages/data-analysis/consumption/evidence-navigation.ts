@@ -24,7 +24,7 @@ export const consumptionEvidenceTarget = (
     if (!match) return null;
     return {
       href: `/data-service/api/${encodeURIComponent(product.sourceIdentity)}?tab=logs&invocationId=${encodeURIComponent(match[1])}`,
-      description: '打开 Data Service 调用日志（仅可核对当前可读窗口）',
+      description: '打开 Data Service 精确历史调用记录',
     };
   }
 

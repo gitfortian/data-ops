@@ -37,6 +37,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
+import VersionChangeImpactReview from './VersionChangeImpactReview';
 import { consumptionEvidenceTarget } from './evidence-navigation';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
@@ -561,6 +562,14 @@ export default function ConsumptionDetailPage() {
             ) : null}
           </Space>
         </Card>
+
+        <VersionChangeImpactReview
+          key={key}
+          product={product}
+          impact={impact}
+          impactIssue={impactIssue}
+          loading={relationshipLoading}
+        />
 
         {product.productKey.productType === 'DATASET' ? (
           <Card title={`字段契约 ${product.activeVersion?.displayVersion || ''}`}>
