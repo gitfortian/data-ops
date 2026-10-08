@@ -106,7 +106,7 @@ class DataServiceExactInvocationRepositoryTest {
     when(mapper.selectList(any())).thenReturn(java.util.List.of(successful));
 
     var repository = new DataServiceCallLogRepositoryAdapter(mapper, project);
-    var evidence = repository.recentSuccessfulByApi(7L, 999);
+    var evidence = repository.recentSuccessfulByApi(7L, 3_000);
 
     assertThat(evidence).hasSize(1);
     assertThat(evidence.getFirst().id()).isEqualTo(9007199254740993L);
