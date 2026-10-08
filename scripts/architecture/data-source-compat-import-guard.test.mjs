@@ -15,7 +15,6 @@ const EXISTING_CONSUMERS = new Set([
   'data-ops-ui/src/pages/integration/batch-link-up/config/multi/index.tsx',
   'data-ops-ui/src/pages/integration/batch-link-up/config/single/index.tsx',
   'data-ops-ui/src/pages/integration/batch-link-up/detail/components/SingleTablePreviewModal.tsx',
-  'data-ops-ui/src/pages/integration/batch-link-up/detail/hooks/useDataSourceColumns.ts',
 ]);
 
 const IMPORT_LITERAL =
