@@ -4,93 +4,91 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-// Freeze the current Data Source legacy importers until each is explicitly migrated.
-// The old API returns response envelopes; replacing its imports with the new data-only API is not behavior-preserving.
-const LEGACY_MODULE = 'data-ops-ui/src/services/data-source/legacy';
-// Only the live consumers proven by the architecture scan are temporarily allowed.
-const EXISTING_CONSUMERS = new Set([
-  'data-ops-ui/src/pages/data-source/service.ts',
-]);
+// All eight live Data Source compatibility imports have been migrated.
+// These two obsolete entry points must not be reintroduced; callers now use
+// @/services/data-source, whose HttpUtils.getData/postData unwrap business responses.
+const REMOVED_MODULES = [
+  'data-ops-ui/src/services/data-source/legacy',
+  'data-ops-ui/src/pages/data-source/service',
+];
+const REMOVED_PATHS = REMOVED_MODULES.map((module) => module + '.ts');
 
 const IMPORT_LITERAL =
   /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*|\bjest\.(?:mock|doMock|requireActual)\s*\(\s*)['"`]([^'"`]+)['"`]/g;
 
-function resolvesToLegacyModule(fromFile, specifier) {
+function resolvesToRemovedModule(fromFile, specifier) {
   let target;
   if (specifier.startsWith('@/')) {
     target = 'data-ops-ui/src/' + specifier.slice(2);
   } else if (specifier.startsWith('.')) {
     target = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), specifier));
   } else {
-    // A bare import would not resolve through the project's @/ alias.
     return false;
   }
-  return target === LEGACY_MODULE || target === LEGACY_MODULE + '.ts';
+  return REMOVED_MODULES.some((module) =>
+    target === module || target === module + '.ts');
 }
 
-function legacyImports(file, source) {
+function removedImports(fromFile, source) {
   const matches = [];
   for (const match of source.matchAll(IMPORT_LITERAL)) {
-    if (resolvesToLegacyModule(file, match[1])) matches.push(match[1]);
+    if (resolvesToRemovedModule(fromFile, match[1])) {
+      matches.push(match[1]);
+    }
   }
   return matches;
 }
 
-test('Data Source legacy imports are recognized in relative and alias forms', () => {
-  const file = 'data-ops-ui/src/services/data-source/api.ts';
+test('old Data Source entry points cannot be restored', () => {
+  for (const file of REMOVED_PATHS) {
+    assert.equal(existsSync(file), false,
+      file + ' is removed after the final frontend migration');
+  }
+});
+
+test('legacy and page-level facade imports are detected in static and dynamic forms', () => {
+  const legacy = 'data-ops-ui/src/services/data-source/api.ts';
+  const formerFacade = 'data-ops-ui/src/pages/data-source/index.tsx';
   for (const expression of [
-    "import { old } from './legacy';",
-    "export { old } from './legacy.ts';",
+    "import { fetchDataSourceAll } from './legacy';",
+    "export * from './legacy.ts';",
     "await import('@/services/data-source/legacy');",
     "const old = require('@/services/data-source/legacy.ts');",
     "jest.mock('./legacy');",
   ]) {
-    assert.equal(legacyImports(file, expression).length, 1, expression);
+    assert.equal(removedImports(legacy, expression).length, 1, expression);
   }
-  assert.deepEqual(legacyImports(file, "import { current } from './index';"), []);
-  assert.deepEqual(legacyImports(
-    'data-ops-ui/src/pages/data-source/view.tsx',
-    "import old from '../../services/data-source/legacy';"), ['../../services/data-source/legacy']);
+  for (const expression of [
+    "import { fetchDataSourcePage } from '@/pages/data-source/service';",
+    "export * from './service';",
+    "await import('@/pages/data-source/service.ts');",
+    "const old = require('./service.ts');",
+    "jest.doMock('./service');",
+  ]) {
+    assert.equal(removedImports(formerFacade, expression).length, 1, expression);
+  }
+  assert.deepEqual(removedImports(legacy, "import { current } from './index';"), []);
+  assert.deepEqual(removedImports(formerFacade,
+    "import { current } from '@/services/data-source';"), []);
+  assert.deepEqual(removedImports(formerFacade,
+    "import { next } from './components/DriverManager/service';"), []);
 });
 
-function unexpectedImports(sources) {
-  const violations = [];
-  const allImporters = [];
-  for (const [file, contents] of sources) {
-    for (const specifier of legacyImports(file, contents)) {
-      allImporters.push(file);
-      if (!EXISTING_CONSUMERS.has(file)) {
-        violations.push(file + ': ' + specifier);
-      }
-    }
-  }
-  return { violations, allImporters };
-}
-
-test('new Data Source legacy consumers are not allowed', () => {
-  const future = 'data-ops-ui/src/pages/new-feature/example.tsx';
-  const result = unexpectedImports([
-    [future, "import { fetchDataSourceAll } from '@/services/data-source/legacy';"],
-  ]);
-  assert.deepEqual(result.violations, [
-    future + ': @/services/data-source/legacy',
-  ]);
-});
-
-test('live compatibility adapter cannot be removed or gain new frontend importers', () => {
+test('removed Data Source entry points have no new frontend consumers', () => {
   const tracked = execFileSync('git', ['ls-files', '-z', 'data-ops-ui'], {
     encoding: 'utf8',
   }).split(String.fromCharCode(0)).filter(Boolean);
   const sourceExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
-  const sources = tracked
-    .filter(file => sourceExtensions.some(ext => file.endsWith(ext)) && existsSync(file))
-    .map(file => [file, readFileSync(file, 'utf8')]);
-  const { violations, allImporters } = unexpectedImports(sources);
-  assert.deepEqual(violations, [],
-    'new Data Source legacy imports must be migrated to the current API:' +
-      String.fromCharCode(10) + violations.join(String.fromCharCode(10)));
-  if (allImporters.length > 0) {
-    assert.equal(existsSync(LEGACY_MODULE + '.ts'), true,
-      'legacy.ts is still required by existing envelope-response consumers');
+  const violations = [];
+  for (const file of tracked) {
+    if (!sourceExtensions.some(ext => file.endsWith(ext)) || !existsSync(file)) {
+      continue;
+    }
+    for (const specifier of removedImports(file, readFileSync(file, 'utf8'))) {
+      violations.push(file + ': ' + specifier);
+    }
   }
+  assert.deepEqual(violations, [],
+    'Data Source legacy and page facade imports must use the modern API:' +
+      String.fromCharCode(10) + violations.join(String.fromCharCode(10)));
 });
