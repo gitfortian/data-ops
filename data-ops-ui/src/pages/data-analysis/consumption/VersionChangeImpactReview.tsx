@@ -236,7 +236,7 @@ export default function VersionChangeImpactReview({
     <Card title="版本变更前 · 已知消费者影响核对">
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
         <Text type="secondary">
-          请选择准备替换或修改的精确来源版本。此处只展示已知订阅与本次来源窗口内真实成功消费；
+          请选择准备替换或修改的精确来源版本。普通概览仅展示近期成功消费；选定版本后将单独读取当前 Project 内已持久化的该版本归一化 Usage（仍有 200 条上限）；
           不将当前发布版本、声明依赖或 Lineage 推断为某次执行的版本。可核对的来源对象链接只用于定位真实配置，不代表已确认负责人或授权。
         </Text>
         <Space wrap>
@@ -258,6 +258,15 @@ export default function VersionChangeImpactReview({
               setSearchParams(next, { replace: true });
             }}
           />
+          {!requestedVersion && selected ? (
+            <Button size="small" disabled={loading} onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.set('reviewVersion', selected.identity);
+              setSearchParams(next, { replace: true });
+            }}>
+              按该版本核对历史已归一化 Usage
+            </Button>
+          ) : null}
         </Space>
         {reviewIssue ? (
           <Alert type="warning" showIcon message="不能核对消费影响来源" description={reviewIssue} />
