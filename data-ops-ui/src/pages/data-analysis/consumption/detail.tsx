@@ -7,6 +7,7 @@ import {
   subscribeToProduct,
   type ConsumerImpact,
   type DataProductView,
+  type ObservedVersion,
   type GovernanceEvidence,
   type ProductLookupState,
   type ProductNavigation,
@@ -28,11 +29,13 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadConsumptionRelationships } from './relationship-load';
+import { formatObservedVersion } from './version-evidence';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
@@ -216,7 +219,20 @@ export default function ConsumptionDetailPage() {
       ),
     },
     { title: '已声明方式', dataIndex: 'declaredModes', key: 'declaredModes', render: (modes: string[]) => modes?.join(', ') || '-' },
-    { title: '成功消费次数', dataIndex: 'successfulUsageCount', key: 'successfulUsageCount' },
+    { title: '成功消费（本次窗口）', dataIndex: 'successfulUsageCount', key: 'successfulUsageCount' },
+    {
+      title: '实际使用版本（本次窗口）', dataIndex: 'observedVersions', key: 'observedVersions',
+      render: (versions?: ObservedVersion[]) => versions?.length ? (
+        <Space direction="vertical" size={2}>
+          {versions.map((version) => (
+            <Tooltip key={version.sourceVersion.identity}
+              title={(version.providerEvidenceRefs || []).join(' · ') || '暂无来源证据编号'}>
+              <Text>{formatObservedVersion(version)}</Text>
+            </Tooltip>
+          ))}
+        </Space>
+      ) : '-',
+    },
     { title: '最近消费', dataIndex: 'lastObservedAt', key: 'lastObservedAt', render: (value) => value ? new Date(value).toLocaleString() : '-' },
     { title: '证据', dataIndex: 'providerEvidenceRefs', key: 'providerEvidenceRefs', render: (refs: string[]) => refs?.length ? refs.join(', ') : '-' },
   ];
@@ -499,6 +515,7 @@ export default function ConsumptionDetailPage() {
                 {impact.usageState === 'UNAVAILABLE' || impact.subscriptionState === 'UNAVAILABLE' ? (
                   <Alert type="warning" showIcon message="已知 Consumer 覆盖不完整" description={impact.coverageNote} />
                 ) : null}
+                <Text type="secondary">成功次数与版本仅来自本次最多 200 条成功消费证据，而非历史总量或已发布最新版本；鼠标悬停版本可查看来源证据编号。来源故障时清单可能不完整。</Text>
                 {impact.consumers.length ? (
                   <Table
                     rowKey={(row) => `${row.consumerRef.consumerType}:${row.consumerRef.sourceDomain}:${row.consumerRef.sourceIdentity}`}
