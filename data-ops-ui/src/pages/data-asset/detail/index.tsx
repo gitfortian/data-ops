@@ -1,7 +1,7 @@
 import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
 import { governanceEntryPath } from '@/services/agent/governance';
-import { Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Alert, Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { history, useParams } from '@umijs/max';
 
 import { YakEmpty } from '@/components/ui';
@@ -29,6 +29,7 @@ import type {
   AssetTagRecord,
 } from '@/services/data-asset/types';
 import { toAssetSectionView, unavailableAssetSection } from '@/services/data-asset/section-view';
+import { classifyAssetReadFailure, type AssetReadFailure } from '../read-state';
 import {
   ASSET_SOURCE_TYPE_LABELS,
   ASSET_TYPE_LABELS,
@@ -166,6 +167,10 @@ const AssetDetailPage = () => {
 
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof getAssetDetail>> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailFailure, setDetailFailure] = useState<AssetReadFailure | null>(null);
+  const [snapshotAvailable, setSnapshotAvailable] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const latestLoadId = useRef(0);
   const [dirNames, setDirNames] = useState<Record<number, string>>({});
   const [currentTags, setCurrentTags] = useState<AssetTagRecord[]>([]);
   const [tagOptions, setTagOptions] = useState<AssetTagRecord[]>([]);
@@ -177,7 +182,13 @@ const AssetDetailPage = () => {
   const [saving, setSaving] = useState(false);
 
   const reload = useCallback(async () => {
+    const loadId = ++latestLoadId.current;
     setLoading(true);
+    setDetail(null);
+    setDetailFailure(null);
+    setSnapshotAvailable(false);
+    setSnapshotLoading(false);
+    setSnapshotDefinition('');
     try {
       const sectionTypes = [
         'TECHNICAL_METADATA', 'QUALITY', 'SECURITY', 'LINEAGE', 'USAGE', 'LIFECYCLE',
@@ -196,12 +207,32 @@ const AssetDetailPage = () => {
       );
       const sourceAttributesLoad = getAssetSourceAttributes(assetId)
         .catch(() => unavailableAssetSection<AssetSourceAttrs>());
-      const [result, editable] = await Promise.all([getAssetDetail(assetId), getAssetEditorSnapshot(assetId)]);
+      // Core facts must not wait for optional editing capabilities.
+      const result = await getAssetDetail(assetId);
+      if (loadId !== latestLoadId.current) return;
       setDetail(result);
-      setSnapshotDefinition(editable.definition);
-      setSnapshot({ name: editable.name ?? '', description: editable.description ?? '', accessUri: editable.accessUri ?? '' });
       setOwnerValue(result.asset.owner ? [result.asset.owner] : []);
+      setSnapshot({
+        name: result.asset.name ?? '',
+        description: result.asset.description ?? '',
+        accessUri: result.asset.accessUri ?? '',
+      });
+      if (canUpdate) {
+        setSnapshotLoading(true);
+        void getAssetEditorSnapshot(assetId)
+          .then((editable) => {
+            if (loadId !== latestLoadId.current) return;
+            setSnapshotDefinition(editable.definition);
+            setSnapshot({ name: editable.name ?? '', description: editable.description ?? '', accessUri: editable.accessUri ?? '' });
+            setSnapshotAvailable(true);
+          })
+          .catch(() => undefined) // Global request handler shows the transport/business error.
+          .finally(() => {
+            if (loadId === latestLoadId.current) setSnapshotLoading(false);
+          });
+      }
       void sectionLoads.then((loadedSections) => {
+        if (loadId !== latestLoadId.current) return;
         loadedSections.forEach(({ sectionType, section }) => {
           setDetail((current) => {
             if (!current || current.asset.id !== assetId) return current;
@@ -227,19 +258,27 @@ const AssetDetailPage = () => {
         });
       });
       void sourceAttributesLoad.then((section) => {
+        if (loadId !== latestLoadId.current) return;
         setDetail((current) => current?.asset.id === assetId
           ? { ...current, sections: { ...current.sections, sourceAttrs: section } }
           : current);
       });
-    } catch {
-      setDetail(null);
+    } catch (error) {
+      if (loadId === latestLoadId.current) {
+        setDetail(null);
+        setDetailFailure(classifyAssetReadFailure(error));
+      }
     } finally {
-      setLoading(false);
+      if (loadId === latestLoadId.current) setLoading(false);
     }
-  }, [assetId]);
+  }, [assetId, canUpdate]);
 
   useEffect(() => {
-    if (!Number.isFinite(assetId)) return;
+    if (!Number.isFinite(assetId)) {
+      setDetailFailure('NOT_FOUND');
+      setLoading(false);
+      return;
+    }
     void reload();
     void getAssetTags(assetId).then(setCurrentTags).catch(() => setCurrentTags([]));
     void listAssetTags().then(setTagOptions).catch(() => setTagOptions([]));
@@ -248,6 +287,7 @@ const AssetDetailPage = () => {
       .catch(() => setDirNames({}));
     // 浏览上报尽力而为(服务端 5 分钟去重)
     void reportAssetView(assetId, 'detail').catch(() => undefined);
+    return () => { latestLoadId.current += 1; };
   }, [assetId, reload]);
 
   const asset = detail?.asset;
@@ -310,11 +350,27 @@ const AssetDetailPage = () => {
   };
 
   if (!asset && !loading) {
+    if (detailFailure === 'NOT_FOUND') {
+      return (
+        <div className="p-6">
+          <YakEmpty title="资产不存在或当前项目不可访问" description="请确认资产 ID 和项目空间；此状态不代表其它项目也不存在该资产">
+            <Button onClick={() => history.push('/data-asset/catalog')}>返回资产目录</Button>
+          </YakEmpty>
+        </div>
+      );
+    }
     return (
       <div className="p-6">
-        <YakEmpty title="资产不存在或已删除" description="可能已被软删或不在当前项目空间">
-          <Button onClick={() => history.push('/data-asset/catalog')}>返回资产目录</Button>
-        </YakEmpty>
+        <Alert
+          showIcon
+          type={detailFailure === 'FORBIDDEN' ? 'warning' : 'error'}
+          message={detailFailure === 'FORBIDDEN' ? '无权读取资产详情' : '资产详情读取失败'}
+          description={detailFailure === 'FORBIDDEN'
+            ? '请确认当前项目及访问权限；不能据此判定资产不存在。'
+            : '服务异常或网络错误不代表资产已删除，请重试。'}
+          action={<Button size="small" onClick={() => void reload()}>重新读取</Button>}
+        />
+        <Button className="!mt-3" onClick={() => history.push('/data-asset/catalog')}>返回资产目录</Button>
       </div>
     );
   }
@@ -929,10 +985,16 @@ const AssetDetailPage = () => {
                     setSnapshot((current) => ({ ...current, description: candidate.description || '' }));
                   }} />}
                 <Card title="快照编辑(资产中心拥有名称/描述/入口)" size="small" className="!mb-4">
+                  {canUpdate && !snapshotAvailable && !snapshotLoading && !loading && (
+                    <Alert className="!mb-3" type="warning" showIcon message="快照编辑暂不可用"
+                      description="已读取的资产详情仍可查看；不能取得最新快照版本时禁止保存，以免覆盖其它修改。"
+                      action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
+                  )}
                   <Space direction="vertical" className="w-full">
                     <Input
                       addonBefore="名称"
                       value={snapshot.name}
+                      disabled={!canUpdate || !snapshotAvailable}
                       maxLength={128}
                       onChange={(event) => setSnapshot({ ...snapshot, name: event.target.value })}
                     />
@@ -941,6 +1003,7 @@ const AssetDetailPage = () => {
                       maxLength={1024}
                       showCount
                       placeholder="描述"
+                      disabled={!canUpdate || !snapshotAvailable}
                       value={snapshot.description}
                       onChange={(event) => setSnapshot({ ...snapshot, description: event.target.value })}
                     />
@@ -949,10 +1012,11 @@ const AssetDetailPage = () => {
                         addonBefore="访问入口"
                         maxLength={512}
                         value={snapshot.accessUri}
+                        disabled={!canUpdate || !snapshotAvailable}
                         onChange={(event) => setSnapshot({ ...snapshot, accessUri: event.target.value })}
                       />
                     )}
-                    <Button type="primary" disabled={!canUpdate} loading={saving} onClick={saveSnapshot} className="!text-white">
+                    <Button type="primary" disabled={!canUpdate || !snapshotAvailable} loading={saving} onClick={saveSnapshot} className="!text-white">
                       保存快照
                     </Button>
                   </Space>
