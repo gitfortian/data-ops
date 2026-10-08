@@ -119,7 +119,7 @@ class DataServiceExactInvocationRepositoryTest {
         .contains("project_id", "api_id", "success", "create_time", "id");
     assertThat(query.getParamNameValuePairs().values())
         .containsExactlyInAnyOrder(42L, 7L, true);
-    assertThat(query.getLastSql()).contains("LIMIT 1000");
+    assertThat(query.getSqlSegment()).contains("LIMIT 1000");
     verify(project).requireProjectId();
   }
 
