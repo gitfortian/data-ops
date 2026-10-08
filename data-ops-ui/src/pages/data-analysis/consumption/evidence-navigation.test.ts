@@ -16,6 +16,9 @@ describe('source-owned Usage Evidence backlinks', () => {
     expect(consumptionEvidenceTarget(service,
       'DATA_SERVICE_INVOCATION:invocation:90071992547409933')?.href)
       .toBe('/data-service/api/37?tab=logs&invocationId=90071992547409933');
+    expect(consumptionEvidenceTarget(service,
+      'DATA_SERVICE_INVOCATION:invocation:90071992547409933')?.description)
+      .toBe('打开 Data Service 精确历史调用记录');
   });
 
   it('never builds misleading links from mismatched, missing or invented providers', () => {
