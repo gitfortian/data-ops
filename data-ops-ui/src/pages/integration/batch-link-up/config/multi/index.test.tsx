@@ -44,7 +44,8 @@ jest.mock('antd', () => {
   const ReactRuntime = require('react') as typeof import('react');
   const element = ReactRuntime.createElement;
   const Empty = Object.assign(
-    ({ children }: { children: ReactNode }) => element('div', null, children),
+    ({ children, description }: { children: ReactNode; description?: ReactNode }) =>
+      element('div', null, description, children),
     { PRESENTED_IMAGE_SIMPLE: 'simple' },
   );
   return {
