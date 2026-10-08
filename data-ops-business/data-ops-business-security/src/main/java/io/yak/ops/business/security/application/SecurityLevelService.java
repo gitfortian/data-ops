@@ -182,9 +182,7 @@ public class SecurityLevelService {
   }
 
   public PageData<DsecSecurityLevelPO> page(int pageNo, int pageSize, String keyword, String status) {
-    Long projectId = currentProject.requireProjectId();
-    LambdaQueryWrapper<DsecSecurityLevelPO> wrapper =
-        projectScope();
+    LambdaQueryWrapper<DsecSecurityLevelPO> wrapper = projectScope();
     if (StringUtils.hasText(keyword)) {
       String kw = keyword.trim();
       wrapper.and(c -> c.like(DsecSecurityLevelPO::getLevelCode, kw).or().like(DsecSecurityLevelPO::getLevelName, kw));
@@ -200,8 +198,7 @@ public class SecurityLevelService {
   }
 
   public long countAll() {
-    return mapper.selectCount(
-        projectScope());
+    return mapper.selectCount(projectScope());
   }
 
   /** 引用校验仿 MdmAttributeService.validateKindRef:可空;非空必须是存在且启用的 SECURITY 标准。 */
