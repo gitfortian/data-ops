@@ -1,10 +1,13 @@
 import type { ConsumerImpact, DataProductView, ConsumerRef } from '@/services/consumption';
+import type { DataServiceConsumer } from '@/services/data-service/consumer';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { history } from '@umijs/max';
 import { Alert, Button, Card, Checkbox, Input, Select, Space, Table, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
 import { consumerSourceTarget } from '@/config/consumer-source-navigation';
+import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
+import type { ManagedConsumerSourceState } from './managed-consumer-configuration';
 import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
 import { consumerVersionOutreachDraft } from './version-impact-outreach';
 import {
@@ -25,11 +28,15 @@ export default function VersionChangeImpactReview({
   impact,
   impactIssue,
   loading,
+  sourceConsumerState,
+  sourceConsumers,
 }: {
   product: DataProductView;
   impact: ConsumerImpact | null;
   impactIssue: string;
   loading: boolean;
+  sourceConsumerState: ManagedConsumerSourceState;
+  sourceConsumers: readonly DataServiceConsumer[];
 }) {
   const { can } = usePermissionAccess();
   const [requestedVersion, setRequestedVersion] = useState('');
@@ -109,6 +116,13 @@ export default function VersionChangeImpactReview({
           <Text type="secondary">
             {row.consumer.consumerRef.consumerType} · {row.consumer.consumerRef.sourceDomain}:{row.consumer.consumerRef.sourceIdentity}
           </Text>
+          <ManagedConsumerConfigurationHint
+            consumerRef={row.consumer.consumerRef}
+            productType={product.productKey.productType}
+            productSourceIdentity={product.productKey.sourceIdentity}
+            sourceState={sourceConsumerState}
+            consumers={sourceConsumers}
+          />
           {consumerSourceLink(row.consumer.consumerRef)}
         </Space>
       ),
