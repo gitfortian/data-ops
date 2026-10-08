@@ -1,43 +1,24 @@
 package io.yak.ops.boot.project;
 
-import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
-import io.yak.ops.core.project.ProjectContextScope;
-import java.util.Optional;
-import java.util.function.Supplier;
+import io.yak.ops.core.project.ThreadLocalProjectContext;
 import org.springframework.stereotype.Component;
 
-/** Thread-local trusted Project Space runtime for HTTP requests and background scopes. */
+/**
+ * Spring / HTTP adapter for Core's trusted Project context.
+ *
+ * <p>Existing controllers, interceptors and background callers continue injecting
+ * this bean or the CurrentProject / ProjectContextScope interfaces. Only Boot can
+ * bind and clear a request's trusted context; no setter is exposed to domains.
+ */
 @Component
-public class ProjectContextRuntime implements CurrentProject, ProjectContextScope {
-
-  private final ThreadLocal<ProjectContext> holder = new ThreadLocal<>();
-
-  @Override
-  public Optional<ProjectContext> current() {
-    return Optional.ofNullable(holder.get());
-  }
-
-  @Override
-  public <T> T call(ProjectContext context, Supplier<T> action) {
-    if (context == null) throw new IllegalArgumentException("project context must not be null");
-    if (action == null) throw new IllegalArgumentException("project action must not be null");
-
-    ProjectContext previous = holder.get();
-    holder.set(context);
-    try {
-      return action.get();
-    } finally {
-      if (previous == null) holder.remove();
-      else holder.set(previous);
-    }
-  }
+public class ProjectContextRuntime extends ThreadLocalProjectContext {
 
   void bind(ProjectContext context) {
-    holder.set(context);
+    bindTrusted(context);
   }
 
   void clear() {
-    holder.remove();
+    clearTrusted();
   }
 }
