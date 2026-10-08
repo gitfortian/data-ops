@@ -45,3 +45,8 @@ Semantic 增加 `api.SemanticFieldReferenceReader`：消费者（当前 Modeling
 ## P0-B03：分层引用统计的双重语义
 
 `LayerUsageReader.countModelsByLayer()` 为 UI 提供活跃模型数，可排除软删除模型；新增 `countPersistedLayerReferences(layerCode)` 仅供删除安全校验，必须包含当前 Project 的活跃与回收站模型。Modeling 实现该 SPI 并读自己的 `yak_modeling_model`，Semantic 不读其表、不复制引用事实。提供者缺席或查询异常时删除失败，不能冒充零引用。
+
+
+## P0-B03 分层数据源只读验证
+
+SemanticLayerService 复用 `data-ops-business-datasource.query.DataSourceReader.requireReference`，该调用在 DatasourceRepositoryAdapter 中通过 `CurrentProject.requireProjectId()` 限定返回范围；源码可选依赖配置缺席时，不允许 create/update 因跳过检查而误写非法引用。不是连接测试，不要求在线，不改变 DataSource 的凭证/环境/健康度事实 Owner。
