@@ -1,3 +1,4 @@
+import { queryString } from '@/services/http/query-string';
 import HttpUtils, { type ApiResponse } from '@/utils/HttpUtils';
 import request from '@/utils/request';
 
@@ -15,17 +16,6 @@ import type {
 } from './types';
 
 const RESOURCE_API_PREFIX = '/api/v1/resources';
-
-const queryString = (params: Record<string, unknown>) => {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).length > 0) {
-      search.set(key, String(value));
-    }
-  });
-  const result = search.toString();
-  return result ? `?${result}` : '';
-};
 
 export async function fetchResourceTree(): Promise<ApiResponse<ResourceItem[]>> {
   return HttpUtils.get<ResourceItem[]>(`${RESOURCE_API_PREFIX}/tree`);
