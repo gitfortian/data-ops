@@ -1,5 +1,0 @@
-from pathlib import Path
-b=Path('data-ops-business/data-ops-business-agent/src/main/java/io/yak/ops/business/agent/conversation')
-p=b/'AgentTurnRegistry.java';s=p.read_text(encoding='utf-8').replace('import java.util.function.BooleanSupplier;\nimport java.util.concurrent.ConcurrentHashMap;','import java.util.concurrent.ConcurrentHashMap;\nimport java.util.function.BooleanSupplier;').replace('停止生成：dispose 上游 + 执行取消收尾。无登记时静默（排队轮次走存储侧取消）。','停止生成：先确认取消事实，再 dispose 上游，避免 dispose 回调抢占正常完成。');p.write_text(s,encoding='utf-8')
-p=b/'AgentTurnExecutor.java';s=p.read_text(encoding='utf-8').replace('停止生成终态：dispose 后由 registry 回调；CANECELLED 抢占失败说明恰好自然终态，仅兜底收尾。','停止生成终态：registry 在 dispose 上游之前确认取消事实。').replace('// 停止生成收尾闭包：dispose 由 registry 触发，随后补取消终态与消息树落笔','// Late cancellation handles are disposed immediately if construction was cancelled.');p.write_text(s,encoding='utf-8')
-p=Path('docs/architecture-review/20261003/implementation.md');s=p.read_text(encoding='utf-8').replace('- 新增 Boot 装配','- Agent 取消句柄与 RUNNING 认领原子登记；推理初始化期间取消会释放迟到句柄，迟到完成回调不覆盖取消事实。新增确定性阻塞初始化回归测试。\n- 新增 Boot 装配');p.write_text(s,encoding='utf-8')

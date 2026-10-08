@@ -78,3 +78,10 @@ docs/product/acceptance/golden-sample/*.local.json
 
 # Local-only AI/IDE scratch files; never commit machine-specific Jest mirrors
 /.zcode/tmp/
+
+# Keep one-off code-rewrite scripts and local Jest mirrors out of the repository.
+# Durable maintenance tools belong in scripts/ with tests and documented entrypoints.
+/data/*.py
+/data/*.cjs
+/data/architecture-mysql-test.json
+/data-ops-ui/.zcode/
