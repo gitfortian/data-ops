@@ -98,3 +98,14 @@ test('incomplete reactor references fail closed instead of silently omitting mod
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('real checked-out data-ops reactor and source inventory are parseable', () => {
+  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+  const report = audit(root);
+  assert.ok(report.moduleCount > 25, 'actual multi-module reactor is present');
+  assert.ok(report.productionJavaFiles > 100, 'actual business/backend sources are inventoried');
+  assert.ok(report.mavenEdges.some((edge) =>
+    edge.from === 'data-ops-dist' && edge.to === 'data-ops-boot'), 'distribution assembly dependency exists');
+  assert.ok(report.javaImportEdges.length > 0, 'cross-module Java graph is nonempty');
+  assert.equal(report.modules.some((m) => m.directory.startsWith('data-ops-framework/legacy')), false);
+});
