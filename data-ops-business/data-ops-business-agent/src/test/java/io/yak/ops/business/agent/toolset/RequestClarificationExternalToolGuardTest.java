@@ -16,7 +16,8 @@ class RequestClarificationExternalToolGuardTest {
   @Test
   void clarifyToolMustStayExternal() throws Exception {
     Method method = RequestClarificationTool.class.getMethod(
-        "requestClarification", String.class, java.util.List.class);
+        "requestClarification", String.class, java.util.List.class,
+        String.class, Long.class, java.util.List.class);
     Tool annotation = method.getAnnotation(Tool.class);
     assertTrue(annotation != null, "@Tool 注解缺失");
     assertTrue(annotation.externalTool(), "externalTool 必须保持 true：否则反问工具被框架真执行");

@@ -36,6 +36,8 @@ final class TaskToolPolicyMiddleware implements MiddlewareBase {
     // DynamicSkillMiddleware can register helpers after initial assembly. Adapters contain no task state.
     guardTools(agent.getToolkit());
     var execution = context.get(AgentExecutionContext.class);
+    context.put(QueryClarificationProjection.Batch.class, new QueryClarificationProjection.Batch(input.toolCalls().stream()
+        .filter(call -> "request_clarification".equals(call.getName())).count()));
     if (execution != null && execution.target() != null && (execution.target().standardMatch() != null || execution.target().modelMapping() != null || execution.target().metricExplanation() != null || execution.target().metricDraft() != null || execution.target().metricChangeReview() != null)) {
       for (var call : input.toolCalls()) {
         execution.requireTool(call.getName());
@@ -43,7 +45,17 @@ final class TaskToolPolicyMiddleware implements MiddlewareBase {
         if ("generate_response".equals(call.getName())) execution.reserveTool(call.getName());
       }
     }
-    return next.apply(input).doOnNext(event -> {
+    var projectedCalls = input.toolCalls().stream().map(call -> {
+      if (execution != null && "request_clarification".equals(call.getName())) {
+        try { return QueryClarificationProjection.prepare(call, execution); }
+        catch (RuntimeException invalid) {
+          // The actual tool adapter reserves budget and returns a fixed error without suspending.
+          return call;
+        }
+      }
+      return call;
+    }).toList();
+    return next.apply(new ActingInput(projectedCalls)).doOnNext(event -> {
       if (execution != null && event instanceof io.agentscope.core.event.ToolResultEndEvent end
           && input.toolCalls().stream().anyMatch(call -> "generate_response".equals(call.getName())
               && call.getId().equals(end.getToolCallId()))

@@ -49,8 +49,25 @@ final class TaskScopedTool extends ToolBase {
       } catch (RuntimeException denied) {
         return Mono.just(denied(denied.getMessage()));
       }
+      var batch = param.getRuntimeContext().get(QueryClarificationProjection.Batch.class);
+      if (batch != null && batch.clarificationCalls() > 0 && "run_dataset_query".equals(getName())) {
+        return Mono.just(denied("[CLARIFICATION_REQUIRED] 同批次包含澄清请求，请等待用户回答后再查询"));
+      }
+      if (batch != null && batch.clarificationCalls() > 1 && "request_clarification".equals(getName())) {
+        execution.toolFailed(getName());
+        return Mono.just(ToolResultBlock.text("[CLARIFICATION_INVALID] 每批只能提出一个澄清请求，请合并当前阻断项")
+            .withState(ToolResultState.ERROR));
+      }
       if (delegate instanceof ToolBase base && base.isExternalTool()) {
-        return Mono.just(ToolResultBlock.suspended(param.getToolUseBlock()));
+        try {
+          var call = "request_clarification".equals(getName())
+              ? QueryClarificationProjection.prepare(param.getToolUseBlock(), execution) : param.getToolUseBlock();
+          return Mono.just(ToolResultBlock.suspended(call));
+        } catch (RuntimeException invalid) {
+          execution.toolFailed(getName());
+          return Mono.just(ToolResultBlock.text("[CLARIFICATION_INVALID] 澄清问题或字段依据无效，请重新发现字段并缩小问题范围")
+              .withState(ToolResultState.ERROR));
+        }
       }
       Mono<ToolResultBlock> invocation = "load_skill_through_path".equals(getName())
           ? loadCurrentSkill(param) : delegate.callAsync(param);

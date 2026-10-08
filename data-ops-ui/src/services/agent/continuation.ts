@@ -1,5 +1,6 @@
 import { readMetricChangeReviewTarget } from './metricChangeReview';
 import { readMetricDraftTarget } from './metricDraft';
+import { readClarificationQuestion } from './clarification';
 import type { GovernanceTarget } from './governance';
 
 export interface SessionContinuation {
@@ -90,16 +91,7 @@ export function readContinuation(view: SessionContinuation, sessionId: string): 
     if (!pending || pending.toolName !== 'request_clarification'
       || typeof pending.toolCallId !== 'string' || !pending.toolCallId.trim()
       || typeof pending.question !== 'string' || !pending.question.trim()) throw new Error('待答问题无法读取');
-    if (pending.question.trim().startsWith('{') || pending.question.trim().startsWith('[')) {
-      const args: unknown = JSON.parse(pending.question);
-      if (!args || typeof args !== 'object' || Array.isArray(args)
-        || typeof (args as { question?: unknown }).question !== 'string'
-        || !(args as { question: string }).question.trim()) throw new Error('待答问题无效');
-      const options = (args as { options?: unknown }).options;
-      if (options != null && (!Array.isArray(options) || options.some((item) => typeof item !== 'string'))) {
-        throw new Error('待答选项无效');
-      }
-    }
+    readClarificationQuestion(pending.question);
     clarification = pending;
   }
   if (view.status === 'QUEUED' || view.status === 'RUNNING') reason ||= '该会话仍在排队或推理中，请刷新后继续。';

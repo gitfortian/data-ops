@@ -267,7 +267,8 @@ MetricDraftTarget/METRIC_DRAFT 固定 metric-definition-draft Skill；runtime �
 
 F-031 原会话回看仅消费既有 session history/continuation 与前端 parser，不增加源域依赖、网络端点或反向业务依赖。目标页面仍独立进行当前项目与权限核验。
 
-
 ## 指标发布前版本变更解释（F-032）
 
 原 Metric-owned 只读投影提供当前已保存草稿与 active publication 精确版本对、白名单差异、最新精确验证和最多20条声明引用；无安全有界读取的治理/关系分区明确覆盖缺口。准备指纹绑定版本、发布事件及证据，交付重读核对；原 turn/StateStore 与源域保持唯一 owner，AI 不保存/验证/发布。依赖沿用 runtime → toolset → gateway → metric.api，Metric 内部复用原 repository，无新反向边、业务表或状态机。精确边界与真实验收待办见 docs/product/features/F-032-metric-change-review.md。
+
+F-033 问数澄清仅在 runtime 内消费现有 domain.DatasetSummary/AgentExecutionContext，toolset 扩展原反问参数；前端复用原 continuation 和提交。无新增 Dataset import、SDK 白名单、跨包边或反向依赖，Dataset 源域合同及实际查询入口保持。
