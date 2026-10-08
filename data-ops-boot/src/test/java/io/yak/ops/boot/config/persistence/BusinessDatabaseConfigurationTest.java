@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.sql.DataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -44,6 +45,28 @@ class BusinessDatabaseConfigurationTest {
       });
       assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM contract_probe", Integer.class)).isZero();
     });
+  }
+
+  @Test
+  void mybatisAssemblyPreservesSingleSessionFactoryAndTemplate() {
+    runner.run(context -> {
+      assertThat(context).hasNotFailed().hasSingleBean(SqlSessionFactory.class).hasSingleBean(SqlSessionTemplate.class);
+      SqlSessionFactory factory = context.getBean("yakBusinessSqlSessionFactory", SqlSessionFactory.class);
+      SqlSessionTemplate template = context.getBean("yakBusinessSqlSessionTemplate", SqlSessionTemplate.class);
+      assertThat(template.getSqlSessionFactory()).isSameAs(factory);
+      assertThat(context.getBean("offlineSyncSqlSessionFactory")).isSameAs(factory);
+      assertThat(context.getBean("offlineSyncSqlSessionTemplate")).isSameAs(template);
+    });
+  }
+
+  @Test
+  void isolatedMybatisAssemblyCannotStartWhenSharedDatabaseDisabled() {
+    new ApplicationContextRunner()
+        .withUserConfiguration(BusinessMybatisSessionConfiguration.class)
+        .withPropertyValues("yak.database.enabled=false")
+        .run(context -> assertThat(context).hasNotFailed()
+            .doesNotHaveBean(SqlSessionFactory.class)
+            .doesNotHaveBean(SqlSessionTemplate.class));
   }
 
   @Test
