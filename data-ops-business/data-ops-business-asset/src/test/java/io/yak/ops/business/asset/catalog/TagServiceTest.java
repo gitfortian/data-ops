@@ -20,6 +20,7 @@ import io.yak.ops.business.asset.dao.model.AssetTagPO;
 import io.yak.ops.business.asset.dao.model.AssetTagRelPO;
 import io.yak.ops.common.enums.asset.AssetErrorCode;
 import io.yak.ops.core.project.CurrentProject;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,49 @@ class TagServiceTest {
     lenient().when(currentProject.requireProjectId()).thenReturn(1L);
     service = new TagService(currentProject, tagMapper, tagRelMapper, itemMapper, auditService,
         Mockito.mock(io.yak.ops.business.asset.health.HealthRecomputeService.class));
+  }
+
+  @Test
+  void listPreservesTagViewFieldsAndRealUsageCount() {
+    AssetTagPO po = tag(3L, "core");
+    po.setColor("red");
+    po.setDescription("核心资产");
+    LocalDateTime createdAt = LocalDateTime.of(2026, 10, 8, 10, 30);
+    po.setCreateTime(createdAt);
+    when(tagMapper.selectList(any())).thenReturn(List.of(po));
+    when(tagRelMapper.selectCount(any())).thenReturn(4L);
+
+    List<TagService.TagView> tags = service.list("核心");
+
+    assertEquals(List.of(new TagService.TagView(
+        3L, "core", "核心", "red", "核心资产", 4L, createdAt)), tags);
+    verify(tagRelMapper).selectCount(any());
+  }
+
+  @Test
+  void tagsOfAssetKeepsZeroUsageInDetailProjection() {
+    AssetTagRelPO rel = new AssetTagRelPO();
+    rel.setProjectId(1L);
+    rel.setAssetId(9L);
+    rel.setTagId(3L);
+    when(tagRelMapper.selectList(any())).thenReturn(List.of(rel));
+    when(tagMapper.selectList(any())).thenReturn(List.of(tag(3L, "core")));
+
+    List<TagService.TagView> tags = service.tagsOfAsset(9L);
+
+    assertEquals(1, tags.size());
+    assertEquals("core", tags.get(0).tagCode());
+    assertEquals(0L, tags.get(0).usageCount());
+    verify(tagRelMapper, never()).selectCount(any());
+  }
+
+  @Test
+  void detachPreservesIdempotentDeleteCount() {
+    when(itemMapper.selectCount(any())).thenReturn(1L);
+    when(tagRelMapper.delete(any())).thenReturn(0);
+
+    assertEquals(0, service.detach(9L, 3L, "root"));
+    verify(tagRelMapper).delete(any());
   }
 
   @Test
