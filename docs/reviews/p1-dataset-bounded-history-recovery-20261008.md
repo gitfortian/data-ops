@@ -11,14 +11,14 @@
 ## API / Cursor
 
 ```http
-GET /api/v1/consumption/impact/dataset-version-recovery?productKey=DATASET:101&sourceVersionIdentity=9007199254740993&limit=200
+POST /api/v1/consumption/impact/dataset-version-recovery?productKey=DATASET:101&sourceVersionIdentity=9007199254740993&limit=200
 X-YAK-SECURITY-PROJECT-ID: <由已认证用户选择的现有 Project>
 ```
 
-**首请求不传** `beforeAuditId`；当 `nextBeforeAuditId` 非空且 `retryRequired=false` 时，用它发下一次请求：
+显式恢复操作使用 POST（不由浏览器、代理、预取器误触发副作用），参数通过 query string 传递。**首请求不传** `beforeAuditId`；当 `nextBeforeAuditId` 非空且 `retryRequired=false` 时，用它发下一次请求：
 
 ```http
-GET /api/v1/consumption/impact/dataset-version-recovery?productKey=DATASET:101&sourceVersionIdentity=9007199254740993&beforeAuditId=701&limit=200
+POST /api/v1/consumption/impact/dataset-version-recovery?productKey=DATASET:101&sourceVersionIdentity=9007199254740993&beforeAuditId=701&limit=200
 ```
 
 响应为已有 `Result<DatasetAuditRecoveryView>` 包装；业务字段包括 `productKey`、`sourceVersionIdentity`、`requestedBeforeAuditId`、`requestedLimit`、`visitedAuditCount`、`normalizedOrAlreadyPresentCount`、`normalizationGapCount`、`normalizationUnavailableCount`、`nextBeforeAuditId`、`retryRequired` 和 `retainedAuditExhausted`。
