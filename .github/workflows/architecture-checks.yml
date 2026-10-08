@@ -45,6 +45,8 @@ jobs:
         run: node scripts/architecture/check-frontend-boundaries.mjs
       - name: Migration history consistency
         run: node scripts/db/check-migration-history.mjs
+      - name: A8 Security Platform permission ownership
+        run: node scripts/architecture/check-security-permission-owner.mjs
 
   backend:
     name: Architecture and complete backend contracts
