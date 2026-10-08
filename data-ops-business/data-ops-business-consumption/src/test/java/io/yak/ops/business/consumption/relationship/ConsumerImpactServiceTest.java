@@ -232,4 +232,54 @@ class ConsumerImpactServiceTest {
     assertEquals(ConsumerImpactView.EvidenceState.EMPTY, view.usageState());
     assertTrue(view.coverageNote().contains("partial"));
   }
+  @Test
+  void oldImmutableRevisionUsesProjectScopedPersistedUsageInsteadOfLatestProductWindow() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer synchronizer = mock(DataServiceUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATA_SERVICE:7");
+    ConsumerRef consumer = new ConsumerRef(
+        ConsumerType.DATA_SERVICE, "DATA_SERVICE_CONSUMER", "21", "Historic client");
+    LocalDateTime historical = LocalDateTime.of(2026, 7, 1, 9, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(synchronizer.synchronizeRecentByProduct(7L, 200)).thenReturn(List.of());
+    when(usage.listByVersion(42L, product, "9007199254740993", 200)).thenReturn(List.of(
+        new UsageEvidence(
+            555L, 42L, product, new SourceVersionRef("9007199254740993", "r1"),
+            consumer, historical, ConsumptionMode.API_INVOKE, UsageOutcome.SUCCESS,
+            "DATA_SERVICE_INVOCATION", "invocation:555",
+            "DATA_SERVICE_INVOCATION:555", historical)));
+
+    var view = new ConsumerImpactService(
+        subscriptions, usage, project, null, synchronizer)
+        .view(product, 200, "9007199254740993");
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals(1, view.consumers().size());
+    assertEquals("9007199254740993", view.consumers().getFirst()
+        .observedVersions().getFirst().sourceVersion().identity());
+    assertEquals(1, view.consumers().getFirst().successfulUsageCount());
+    assertTrue(view.coverageNote().contains("Exact immutable version 9007199254740993"));
+    org.mockito.Mockito.verify(usage).listByVersion(42L, product, "9007199254740993", 200);
+    org.mockito.Mockito.verify(usage, org.mockito.Mockito.never())
+        .list(42L, product, null, 200);
+  }
+
+  @Test
+  void invalidRequestedVersionNeverQueriesProjectOrUsage() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    var service = new ConsumerImpactService(subscriptions, usage, project);
+    ProductKey product = ProductKey.parse("DATASET:101");
+
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.view(product, 200, " "));
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        () -> service.view(product, 200, "a".repeat(129)));
+    org.mockito.Mockito.verifyNoInteractions(project, usage, subscriptions);
+  }
+
 }
