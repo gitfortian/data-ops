@@ -4,7 +4,7 @@ import { history } from '@umijs/max';
 import { Alert, Button, Card, Checkbox, Input, Select, Space, Table, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
-import { consumerSourceTarget } from './consumer-source-navigation';
+import { consumerSourceTarget } from '@/config/consumer-source-navigation';
 import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
 import { consumerVersionOutreachDraft } from './version-impact-outreach';
 import {
