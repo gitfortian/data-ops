@@ -36,13 +36,14 @@ export function checkDeclaredPersistenceAliases(sources) {
     .filter(({file}) => file.startsWith('data-ops-boot/src/main/java/io/yak/ops/boot/config/persistence/'))
     .map(({content}) => content)
     .join('\n');
+  const declarations = [...boot.matchAll(/@Bean\s*\(([\s\S]*?)\)/g)].map((match) => match[1]);
   const missing = [];
   const duplicate = [];
   for (const [type, aliases] of Object.entries(PERSISTENCE_ALIASES)) {
     for (const name of aliases) {
       // Includes @Bean(name = {...}) and @Bean("..."); matching the literal is
       // deliberate so splitting the Boot configurations remains source compatible.
-      const matches = [...boot.matchAll(new RegExp('"' + name + '"', 'g'))];
+      const matches = declarations.flatMap((args) => [...args.matchAll(new RegExp('"' + name + '"', 'g'))]);
       if (matches.length === 0) missing.push({ kind: type, bean: name });
       if (matches.length > 1) duplicate.push({ kind: type, bean: name, occurrences: matches.length });
     }
