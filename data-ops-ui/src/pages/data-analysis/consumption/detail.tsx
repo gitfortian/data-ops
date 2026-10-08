@@ -1,5 +1,7 @@
 import {
   cancelSubscription,
+  resumeSubscription,
+  suspendSubscription,
   getProduct,
   productKeyValue,
   subscribeToProduct,
@@ -12,6 +14,7 @@ import {
 } from '@/services/consumption';
 import { history, useModel, useParams, useSearchParams } from '@umijs/max';
 import { listDataServiceConsumers, type DataServiceConsumer } from '@/services/data-service/consumer';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import {
   Alert,
   Button,
@@ -19,6 +22,7 @@ import {
   Descriptions,
   Empty,
   message,
+  Popconfirm,
   Result,
   Select,
   Space,
@@ -29,6 +33,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadConsumptionRelationships } from './relationship-load';
+import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
 const { Title, Paragraph, Text } = Typography;
@@ -86,6 +91,7 @@ export default function ConsumptionDetailPage() {
   const params = useParams<{ productKey: string }>();
   const [searchParams] = useSearchParams();
   const { initialState } = useModel('@@initialState');
+  const { can } = usePermissionAccess();
   const actor = initialState?.currentUser?.userName || '';
   const productKey = decodeURIComponent(params.productKey || '');
   const returnAssetId = searchParams.get('returnAssetId');
@@ -227,21 +233,19 @@ export default function ConsumptionDetailPage() {
   const providerIssues = governanceEvidence.filter((section) =>
     section.state === 'UNAVAILABLE' || section.state === 'FORBIDDEN');
   const consumptionMode = product.productKey.productType === 'DATASET' ? 'QUERY' : 'API_INVOKE';
-  const ownSubscription = subscriptions.find((item) =>
-    item.status === 'ACTIVE'
-      && item.consumptionMode === consumptionMode
-      && (product.productKey.productType === 'DATASET'
-        ? item.consumerRef.consumerType === 'USER'
-          && item.consumerRef.sourceDomain === 'SECURITY_PRINCIPAL'
-          && item.consumerRef.sourceIdentity === actor
-        : item.consumerRef.consumerType === 'DATA_SERVICE'
-          && item.consumerRef.sourceDomain === 'DATA_SERVICE_CONSUMER'
-          && item.consumerRef.sourceIdentity === String(selectedConsumerId)));
+  const ownSubscription = findManagedSubscription(
+    subscriptions, key, product.productKey.productType, consumptionMode, actor, selectedConsumerId,
+  );
+  const subscriptionAction = nextSubscriptionAction(ownSubscription);
+  // The controller requires Asset UPDATE; external service Consumers additionally need ACCESS.
+  const canManageSubscription = can('data-asset:update')
+    && (product.productKey.productType === 'DATASET' || can('data-service:access'));
   const eligibleDataServiceConsumers = dataServiceConsumers.filter((consumer) => {
     const apiId = Number(product.productKey.sourceIdentity);
     return consumer.enabled && (consumer.accessScope === 'ALL' || consumer.apiIds?.includes(apiId));
   });
-  const changeSubscription = async () => {
+  const changeSubscription = async (action: SubscriptionAction | 'REVOKE') => {
+    if (action === 'NONE') return;
     const consumerRef = product.productKey.productType === 'DATASET'
       ? actor
         ? { consumerType: 'USER' as const, sourceDomain: 'SECURITY_PRINCIPAL', sourceIdentity: actor, displayHint: actor }
@@ -254,20 +258,40 @@ export default function ConsumptionDetailPage() {
           displayHint: eligibleDataServiceConsumers.find((consumer) => consumer.id === selectedConsumerId)?.name,
         }
         : null;
-    if (!consumerRef) {
+    if (action === 'SUBSCRIBE' && !consumerRef) {
       message.error('请先选择当前项目内已获此服务授权的 Consumer');
+      return;
+    }
+    if (action !== 'SUBSCRIBE' && !ownSubscription) {
+      message.error('当前依赖状态尚未确认，请刷新后重试');
       return;
     }
     setSubscriptionSaving(true);
     try {
-      const changed = ownSubscription
-        ? await cancelSubscription(ownSubscription.id)
-        : await subscribeToProduct(key, consumerRef, consumptionMode);
+      let changed: Subscription;
+      switch (action) {
+        case 'SUBSCRIBE':
+          changed = await subscribeToProduct(key, consumerRef!, consumptionMode);
+          break;
+        case 'SUSPEND':
+          changed = await suspendSubscription(ownSubscription!.id);
+          break;
+        case 'RESUME':
+          changed = await resumeSubscription(ownSubscription!.id);
+          break;
+        case 'REVOKE':
+          changed = await cancelSubscription(ownSubscription!.id);
+          break;
+      }
       setSubscriptions((current) => {
         const rest = current.filter((item) => item.id !== changed.id);
         return [changed, ...rest];
       });
-      message.success(ownSubscription ? '已取消消费依赖' : '已声明消费依赖');
+      const successMessage = {
+        SUBSCRIBE: '已声明消费依赖', SUSPEND: '已暂停消费依赖',
+        RESUME: '已恢复消费依赖', REVOKE: '已永久撤销消费依赖',
+      };
+      message.success(successMessage[action]);
       // Subscription is only a declared relationship. Re-read owning usage/impact evidence
       // rather than synthesizing a Consumer from the mutation response.
       await reloadRelationships();
@@ -389,15 +413,39 @@ export default function ConsumptionDetailPage() {
         }>
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Space wrap>
-              <Button
-                type={ownSubscription ? 'default' : 'primary'}
-                loading={subscriptionSaving || relationshipLoading}
-                disabled={!!subscriptionIssue
-                  || (product.productKey.productType === 'DATASET' ? !actor : !selectedConsumerId)}
-                onClick={() => { void changeSubscription(); }}
-              >
-                {ownSubscription ? '取消此消费依赖' : `声明${consumptionMode}依赖`}
-              </Button>
+              {ownSubscription ? (
+                <Tag color={ownSubscription.status === 'ACTIVE' ? 'success'
+                  : ownSubscription.status === 'SUSPENDED' ? 'warning' : 'default'}>
+                  依赖状态：{ownSubscription.status === 'ACTIVE' ? '有效'
+                    : ownSubscription.status === 'SUSPENDED' ? '已暂停' : '已永久撤销'}
+                </Tag>
+              ) : null}
+              {subscriptionAction !== 'NONE' && (
+                <Button
+                  type="primary"
+                  loading={subscriptionSaving || relationshipLoading}
+                  disabled={!!subscriptionIssue || !canManageSubscription
+                    || (product.productKey.productType === 'DATASET' ? !actor : !selectedConsumerId)}
+                  onClick={() => { void changeSubscription(subscriptionAction); }}
+                >
+                  {subscriptionAction === 'SUBSCRIBE' ? `声明${consumptionMode}依赖`
+                    : subscriptionAction === 'SUSPEND' ? '暂停依赖' : '恢复依赖'}
+                </Button>
+              )}
+              {ownSubscription && ownSubscription.status !== 'REVOKED' && (
+                <Popconfirm
+                  title="确定永久撤销这条消费依赖？"
+                  description="撤销是终态，不能恢复或再次声明相同身份的依赖。临时停止请选择“暂停”。"
+                  okText="永久撤销"
+                  cancelText="保留依赖"
+                  onConfirm={() => { void changeSubscription('REVOKE'); }}
+                >
+                  <Button danger
+                    loading={subscriptionSaving}
+                    disabled={relationshipLoading || !!subscriptionIssue || !canManageSubscription}
+                  >永久撤销</Button>
+                </Popconfirm>
+              )}
               {product.productKey.productType === 'DATA_SERVICE' ? (
                 <Select
                   aria-label="Data Service Consumer"
@@ -414,6 +462,16 @@ export default function ConsumptionDetailPage() {
               ) : null}
               <Text type="secondary">订阅只声明依赖，不会授予 Dataset 或 Data Service 的访问权限。</Text>
             </Space>
+            {ownSubscription?.status === 'REVOKED' ? (
+              <Alert showIcon type="info" message="这条消费依赖已永久撤销"
+                description="后端将撤销视为终态，不能恢复或用相同的产品、Consumer 与消费方式重复声明。"
+              />
+            ) : null}
+            {!canManageSubscription ? (
+              <Alert showIcon type="info" message="当前身份仅可查看消费依赖"
+                description="声明、暂停、恢复和撤销需要资产编辑权限；Data Service Consumer 还需要调用方访问管理权限。"
+              />
+            ) : null}
             {subscriptionIssue ? <Alert type="warning" showIcon message="订阅记录暂不可用" description={subscriptionIssue} /> : null}
             {consumerListIssue ? (
               <Alert
