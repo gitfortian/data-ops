@@ -7,13 +7,13 @@ package io.yak.ops.business.consumption.relationship;
 public record DataServiceAuditRecoveryView(
     String productKey,
     String sourceVersionIdentity,
-    Long requestedBeforeInvocationId,
+    String requestedBeforeInvocationId,
     int requestedLimit,
     int visitedAuditCount,
     int normalizedOrAlreadyPresentCount,
     int normalizationGapCount,
     int normalizationUnavailableCount,
-    Long nextBeforeInvocationId,
+    String nextBeforeInvocationId,
     boolean retryRequired,
     boolean retainedAuditExhausted) {
 }
