@@ -125,6 +125,40 @@ node --test scripts/product/golden-invocation-identity.test.mjs
 不继承物理表通过结果。源 owner/visibility 缺口、精确查询预裁决、受限角色、
 normalization 故障重试、废弃/退休及浏览器完整矩阵仍需验收，输出 F-004=PARTIAL。
 
+## R3：精确旧版 200+ 保留审计的真实 API + DB 验收工具
+
+`historical_recovery.py` 是供 #336 在**隔离测试部署**中显式执行的验收工具，覆盖 #422 DatasetVersion 与 #426 Data Service Revision 的排他持久化审计游标。普通运行只打印计划，不连库、不登录、更不制造历史结果。
+
+```powershell
+python scripts/product/golden-sample/historical_recovery.py
+
+# 在独立隔离环境，先完成 bootstrap.py 和 consumption.py --apply --accept。
+# 另外预备同一旧版 201+ 个来源 SUCCESS 审计，至少一个第 201 条以后的
+# 原始成功审计尚未形成 normalized Usage；脚本不会伪造、清理或删除数据。
+$env:YAK_GOLDEN_APP_MYSQL_HOST = '127.0.0.1'
+$env:YAK_GOLDEN_APP_MYSQL_PORT = '3306'
+$env:YAK_GOLDEN_APP_MYSQL_DATABASE = Read-Host '应用库名'
+$env:YAK_GOLDEN_APP_MYSQL_USERNAME = Read-Host '只读验收账号'
+$env:YAK_GOLDEN_APP_MYSQL_PASSWORD = Read-Host '只读验收密码' -MaskInput
+
+python scripts/product/golden-sample/historical_recovery.py --apply `
+  --physical-manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json `
+  --consumption-report docs/product/acceptance/golden-sample/consumption-acceptance.local.json `
+  --kind BOTH --max-pages 10 `
+  --output docs/product/acceptance/golden-sample/historical-recovery.local.json
+```
+
+`YAK_OPS_BASE_URL`、`YAK_OPS_USERNAME`、`YAK_OPS_PASSWORD` 与现有 R2 的登录方式相同；应用库 MySQL 账号应只有 SELECT 权限，不得使用来源 Sample 的建表账号。严格验证两个 Project 均有 `yak-golden-sample-v1` 所有权标记，且 ID 与原 R1/R2 清单一致。
+
+- 首先由应用库只读查询验证原始审计确实 **>200**、归属于正确 Project + 产品 + 精确版本、成功状态及可归因 Consumer；必须至少有一条较早（超过首 200 条窗口）的成功审计缺少 normalized Usage。缺少场景则退出码 **2 / PENDING**，不会报告通过。
+- 用 **POST** 按当前保留审计 ID 降序、每页 200 逐步补偿；每页的 `visitedAuditCount`、归一化数、响应游标和耗尽状态与实际数据库行逐项吻合。Dataset 游标在 JSON 中是整数，Data Service 的 BIGINT 在 JSON 中是十进制字符串。
+- 完成后从 Usage 数据库核对**所有已保留成功审计**的 Consumer、模式、EvidenceRef 已归一化，旧记录已补齐；重新请求首个恢复页，持久化 Usage 行 ID 必须完全不变；对照 Project 发相同恢复请求不能获得或写入这些证据。
+- Source 审计在跑测期间不允许有其它写入，若读前后不一致直接失败。每类最多 50 页（通过 `--max-pages` 调小）；无后台任务，无绕过原接口的 Usage INSERT/UPDATE/DELETE。报告不保存认证凭据、原始 API Key 或业务 SQL。
+
+**限制：** 只覆盖仍保留的原始明细审计，不证明已被保留策略清理的历史恢复；普通 Impact 仍是 200 条窗口。输出 `result=REAL_API_DB_RECOVERY_VERIFIED` 仅意味着部署实例当前实际 API + 数据库事实验证通过；由于该工具不能从接口独立核验部署产物身份，`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`、`productAcceptance=PARTIAL` 均保留，不把 #336 整体验收标记为通过。浏览器、受限角色与发布产物独立补验。
+
+离线 `test_historical_recovery.py` 包含 >200 条门槛、早期缺失证据、BIGINT、跨页、满页后空页、游标伪造、来源 SQL 精确谓词及 normalized Usage Consumer 不一致反例；由现有 Golden Consumption Evidence Contract 工作流执行。**CI 不运行真实 POST 或应用数据库**。
+
 ## 后续批次
 
 补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
