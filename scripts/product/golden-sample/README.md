@@ -94,6 +94,21 @@ secret 仅在本次进程内用于调用，不写清单/证据，不回显失败
 通过来源工作台临时下线专用服务并 finally 恢复，核对版本保留、availability 与调用恢复。
 下线现有实现可能返回 HTTP 500；证据记录这个局限，不冒充完整 503 契约。
 
+### R2 当前 main 的 Golden 证据校验约束
+
+`--accept` 必须证明 **成功执行记录 → 同一稳定 Consumer → 实际使用的精确不可变版本 ID → 同一版本的 ProviderEvidenceRef**，不能只检查 Consumer 级别出现了某个来源证据 ID。这个校验使用现有 Consumption Impact 的 `observedVersions`，不是重新记录执行事实。
+
+Data Service 审计 ID 可能是超过 JavaScript 安全整数范围的 BIGINT：证据脚本通过 `lossless-json.mjs` 解析并以 `BigInt` 比较新旧调用 ID；必须找到**同一 API、成功调用、精确来源 Revision**，不能回退选用别的 Revision。无效 Key / 服务下线拒绝后，Golden Sample 复查成功 Usage 引用保持不变；服务恢复并真实 Invoke 后，必须出现同一 Revision 的**新增**成功 Usage 引用，否则拒绝出具恢复通过结论。
+
+针对以上断言的可重复离线单测由 `.github/workflows/golden-consumption-evidence.yml` 在脚本相关变更时独立执行，只校验源码与模拟证据契约，**不连接真实应用、不制造浏览器/跨 Project 验收已完成的结论**。本地可以分别运行：
+
+```powershell
+python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
+node --test scripts/product/golden-invocation-identity.test.mjs
+```
+
+实际部署验证仍需运行 `consumption.py --apply --accept`，记录 `repositoryCommit` 和经核对的部署产物哈希；历史 `deploymentCommit: null` 不能作为当前部署通过的证明。拒绝调用不计入成功 Usage 的本次验证局限于专用 Sample 的受管 Consumer 和最多 200 条来源窗口，并不等价于全平台历史消费计数。
+
 每个治理分区保留来源范围、Owner 与五态。Quality 对两类产品仍为 NOT_APPLICABLE，
 不继承物理表通过结果。源 owner/visibility 缺口、精确查询预裁决、受限角色、
 normalization 故障重试、废弃/退休及浏览器完整矩阵仍需验收，输出 F-004=PARTIAL。

@@ -138,6 +138,67 @@ def source_evidence(script, env):
     return json.loads(result.stdout)
 
 
+def known_consumer(impact, consumer_type, domain, identity):
+    """Find one exact source-owned Consumer identity (not a matching display name)."""
+    matches = [
+        item for item in impact.get("consumers", [])
+        if item.get("consumerRef", {}).get("consumerType") == consumer_type
+        and item.get("consumerRef", {}).get("sourceDomain") == domain
+        and str(item.get("consumerRef", {}).get("sourceIdentity")) == str(identity)
+    ]
+    require(len(matches) == 1, "Impact did not preserve one exact stable Consumer identity")
+    return matches[0]
+
+
+def assert_observed_usage(impact, consumer_type, domain, identity, mode, version_id, evidence_ref):
+    """Acceptance requires actual success for the exact Consumer AND executed version."""
+    require(impact.get("usageState") == "READY",
+            "Source reconciliation is incomplete; successful Usage cannot be fully verified")
+    consumer = known_consumer(impact, consumer_type, domain, identity)
+    require(mode in consumer.get("observedModes", []),
+            "Subscription is not evidence of the requested consumption mode")
+    require(evidence_ref in consumer.get("providerEvidenceRefs", []),
+            "Consumer Impact is missing exact successful source evidence")
+    versions = [item for item in consumer.get("observedVersions", [])
+                if str((item.get("sourceVersion") or {}).get("identity")) == str(version_id)]
+    require(len(versions) == 1, "Impact is missing one exact consumed Dataset/Service version")
+    observed = versions[0]
+    require(evidence_ref in observed.get("providerEvidenceRefs", []),
+            "Consumption evidence belongs to a different source version")
+    require(observed.get("successfulUsageCount", 0) > 0
+            and consumer.get("successfulUsageCount", 0) >= observed["successfulUsageCount"],
+            "Observed version has no real successful Usage")
+    return consumer
+
+
+def consumer_usage_refs(impact, consumer_type, domain, identity):
+    return set(known_consumer(impact, consumer_type, domain, identity)
+               .get("providerEvidenceRefs", []))
+
+
+def assert_denied_did_not_create_usage(before_refs, after_impact, consumer_type, domain, identity):
+    """Invalid Key or unavailable source must not create a successful Usage."""
+    require(after_impact.get("usageState") == "READY",
+            "Failed invocation could not be checked against source Usage evidence")
+    after_refs = consumer_usage_refs(after_impact, consumer_type, domain, identity)
+    require(after_refs == before_refs, "Denied/disabled invoke changed successful Usage evidence")
+
+
+def assert_recovered_usage(before_refs, after_impact, consumer_type, domain, identity, version_id):
+    """Require recovery to produce a NEW success on the still-published source revision."""
+    require(after_impact.get("usageState") == "READY",
+            "Recovery source Usage evidence remains incomplete")
+    consumer = known_consumer(after_impact, consumer_type, domain, identity)
+    new_refs = set(consumer.get("providerEvidenceRefs", [])) - before_refs
+    require(new_refs, "Recovered successful invoke did not create new attributable Usage Evidence")
+    versions = [item for item in consumer.get("observedVersions", [])
+                if str((item.get("sourceVersion") or {}).get("identity")) == str(version_id)]
+    require(len(versions) == 1
+            and new_refs.intersection(versions[0].get("providerEvidenceRefs", [])),
+            "Recovered public invoke was not attributed to the published source revision")
+    return sorted(new_refs)
+
+
 def accept(api, samples, secret, control_project):
     env = dict(os.environ, YAK_OPS_BASE_URL=api.base_url, YAK_OPS_PROJECT_ID=str(api.project_id),
                YAK_OPS_DATASET_ID=samples["dataset"]["id"],
@@ -146,7 +207,7 @@ def accept(api, samples, secret, control_project):
     golden_dataset = source_evidence("phase4-real-env-dataset-evidence.mjs", env)
     golden_service = source_evidence("phase4-real-env-data-service-evidence.mjs", env)
     require(golden_dataset["query"]["result"]["returnedRows"] == 3, "Dataset sample row count mismatch")
-    require(golden_service["invocationRecord"]["consumerId"] == int(samples["consumerId"]),
+    require(str(golden_service["invocationRecord"]["consumerId"]) == str(samples["consumerId"]),
             "Invocation did not preserve stable Consumer identity")
     require(golden_service["usageNormalization"]["state"] == "NORMALIZED", "Invocation Usage missing")
     require(golden_service["invocationRecord"]["rowCount"] == 3, "API sample row count mismatch")
@@ -178,11 +239,8 @@ def accept(api, samples, secret, control_project):
         expected_ref = ("DATASET_QUERY_PERFORMANCE:query:" + golden_dataset["queryPerformance"]["queryId"]
                         if kind == "DATASET" else
                         "DATA_SERVICE_INVOCATION:invocation:" + str(golden_service["invocationRecord"]["id"]))
-        known = [value for value in impact["consumers"]
-                 if value["consumerRef"]["sourceDomain"] == domain
-                 and str(value["consumerRef"]["sourceIdentity"]) == str(identity)]
-        require(any(expected_ref in value.get("providerEvidenceRefs", []) for value in known),
-                "Impact did not preserve the exact successful consumption and Consumer identity")
+        assert_observed_usage(
+            impact, consumer_type, domain, identity, mode, version_id, expected_ref)
         require(detail["navigation"].get("producerHref"), "Stable Producer backlink is missing")
         for section in ["quality", "security", "lineage"]:
             evidence = next(value for value in detail["governanceEvidence"] if value["sectionKey"] == section)
@@ -198,10 +256,17 @@ def accept(api, samples, secret, control_project):
     denied = requests.get(api.base_url + samples["dataService"]["runtimePath"],
                           headers={"X-API-Key": "invalid-golden-sample-key"}, timeout=30)
     require(denied.status_code == 401, "Invalid API key was not rejected with HTTP 401")
+    service_key = "DATA_SERVICE:" + samples["dataService"]["id"]
+    service_consumer = ("DATA_SERVICE", "DATA_SERVICE_CONSUMER", samples["consumerId"])
+    expected_revision = samples["dataService"]["revisionId"]
+    baseline_refs = consumer_usage_refs(details[service_key]["impact"], *service_consumer)
+    after_invalid = api.request(
+        "GET", "/api/v1/consumption/impact",
+        params={"productKey": service_key, "usageLimit": 200})
+    assert_denied_did_not_create_usage(baseline_refs, after_invalid, *service_consumer)
     management = requests.get(api.base_url + "/api/v1/data-service/consumers", timeout=30)
     require(management.status_code == 401, "Anonymous service management was not rejected")
     # Disable only the dedicated source-managed sample through its owning authoring API.
-    service_key = "DATA_SERVICE:" + samples["dataService"]["id"]
     source_path = f"{NODES}/{samples['dataService']['nodeId']}/data-service/publication"
     version = details[service_key]["detail"]["product"]["activeVersion"]
     try:
@@ -213,11 +278,20 @@ def accept(api, samples, secret, control_project):
                                    headers={"X-API-Key": secret}, timeout=30)
         require(unavailable.status_code in (500, 503), "Disabled sample did not reject public invocation")
         disabled_http_status = unavailable.status_code
+        after_offline = api.request(
+            "GET", "/api/v1/consumption/impact",
+            params={"productKey": service_key, "usageLimit": 200})
+        assert_denied_did_not_create_usage(baseline_refs, after_offline, *service_consumer)
     finally:
         api.request("POST", source_path + "/online")
     recovered = requests.get(api.base_url + samples["dataService"]["runtimePath"],
                              headers={"X-API-Key": secret}, timeout=30)
     require(recovered.status_code == 200, "Sample public invocation did not recover")
+    after_recovery = api.request(
+        "GET", "/api/v1/consumption/impact",
+        params={"productKey": service_key, "usageLimit": 200})
+    new_refs = assert_recovered_usage(
+        baseline_refs, after_recovery, *service_consumer, expected_revision)
     original_project = api.project_id
     try:
         api.project_id = control_project
@@ -233,7 +307,9 @@ def accept(api, samples, secret, control_project):
     return {"dataset": golden_dataset, "dataService": golden_service, "products": details,
             "invalidPublicApiKey": "PASSED", "anonymousManagement": "PASSED", "crossProject": "PASSED",
             "sourceDisableRecovery": {"state": "PASSED", "disabledInvocationHttpStatus": disabled_http_status,
-                                      "recoveryHttpStatus": recovered.status_code}}
+                                      "recoveryHttpStatus": recovered.status_code,
+                                      "recoveredUsageEvidenceRefs": sorted(new_refs)},
+            "negativeInvocationUsage": "PASSED"}
 
 
 def main():
