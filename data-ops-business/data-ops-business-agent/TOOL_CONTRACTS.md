@@ -13,7 +13,7 @@
 | `current_date_info` | `timezone` | `current_date_info()` |
 | `get_dataset_fields` | `dataset_id*` | `get_dataset_fields(dataset_id=7)` |
 | `list_datasets` | — | `list_datasets()` |
-| `request_clarification` | `question*`、`options` | `request_clarification(question="营收口径含税吗？", options=["含税", "不含税"])` |
+| `request_clarification` | `question*`、`options`、`kind`、`dataset_id`、`field_ids` | `request_clarification(question="统计实付还是应付？", kind="FIELD", dataset_id=7, field_ids=["paid", "due"])` |
 | `run_dataset_query` | `dataset_id*`、`dimensions`、`metrics`、`filters`、`sorts`、`limit` | `run_dataset_query(dataset_id=7, dimensions=["channel"], filters=["status:EQ:PAID"], limit=200)` |
 | `verify_governance_facts` | `fact_refs_json*` | `verify_governance_facts(fact_refs_json="[]")` |
 | `search_assets` | `keyword*` | `search_assets(keyword="订单")` |
@@ -35,3 +35,5 @@
 
 > 解析约束：`@ToolParam` 的 description 不得含 ASCII 右括号 `)`（中文括号不受限），
 > 否则守护测试的参数区间解析失准。
+
+V23 / F-033：`kind`、`dataset_id`、`field_ids` 为原工具的可选扩展，旧 `question` / `options` 调用继续兼容。普通问数提供 `kind=FIELD/TIME/CALIBER` 时，必须同时提供本执行已授权发现的 Dataset ID 与 1–8 个唯一真实字段 ID（FIELD 至少两个），FIELD 选项由服务端装配；TIME/CALIBER 选项仅为待确认建议。治理反问不使用这些问数参数。完整载荷边界及同轮应答约束见 [F-033](../../docs/product/features/F-033-agent-query-clarification.md)。

@@ -35,6 +35,14 @@ PR #365 创建时发现 main `730d2a6ddc93b7ddad990fa70de55db48a654a2b` 已包�
 - 更新后的架构/发行/CI 脚本测试 42 项全部通过；架构 77 reactor / 3205 生产 Java 文件，前端 1 个既有 corridor、62 迁移基线，产品基线 24 必需文件/19 术语/7 Decision/35 Feature 及守卫解析自测均通过。
 - 在合并提交 `d118b276` 重新运行生产构建及产物校验均通过；产品 PR/Surface 守卫与 diff whitespace 检查再次通过。其后只追加本文档记录，未修改生产源或提交构建产物。
 
+## CI 工具契约遗漏修复
+
+原 head `a30b2bde` 的 [CI 后端检查](https://github.com/gitfortian/data-ops/actions/runs/37742206215/job/113195365620) 实际失败两处：TOOL_CONTRACTS.md 未登记 V23 新增的三个可选参数，RequestClarificationExternalToolGuardTest 仍反射旧两参数签名。此前选定回归未覆盖这两项，不能据其 PASS 宣称 Agent 全量通过。
+
+本地先运行这两个守卫测试，复现 3 项中的 1 failure / 1 error；随后补齐契约参数及条件约束，更新反射签名，保持工具名、required 和 externalTool 守卫不变。生产源及 CI 选择策略均未修改。
+
+修复后从 Agent 测试目录枚举全部 57 个 `*Test.java` 类，通过 Maven `-pl data-ops-business/data-ops-business-agent -am test -Dtest=<全部 Agent 测试类> -Dsurefire.failIfNoSpecifiedTests=false` 运行（沿用前文 Windows JVM 参数）。313 项中 311 项通过、2 项因本地未设置 ARCHITECTURE_MYSQL_URL 按原条件跳过，0 failure / error，BUILD SUCCESS。两处原失败守卫的 3 项均通过；SDK HITL 与会话协议回归通过。两项隔离 MySQL 测试留给原 CI 环境执行，最新远端结果以新提交 checks 为准。
+
 ## 待统一真实验收
 
 按用户既有安排，真实模型、实际登录权限与撤权、源查询审计、完整 J2、专家语义评分及耗时/成本收益全部 PENDING。手工试点题目见[清单](../../evaluation/query-clarification.md)，未注册为自动评测套件，也不计入历史 48 题评测。服务端检查字段身份与载荷边界，不能证明模型识别了全部歧义或自然语言回答正确。
