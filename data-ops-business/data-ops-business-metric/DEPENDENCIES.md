@@ -45,3 +45,8 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 MetricDraftQueryApi 由 catalog.MetricDraftQueryAdapter 持有：先 Metric READ，读取当前项目的精确指标版本/启用上游，再经 ModelSuggestionQueryApi.fields 读取获授权的有界字段。digest 绑定用户需求、类型、来源结构和上游版本；validate 重读 digest 并检查实际字段、限定条件编译及引用 token 表达式，不写 Metric、不执行 SQL。POST /api/v1/metrics/draft-context 供原编辑器显式准备；Agent gateway 使用同一 API。requireSnapshot 与 snapshot-explanation-context 只读指定不可变版本，不展开今日依赖。
 
 UI 在原表单逐项采纳后走原 create/update expectedVersion 保存，保存回执提供精确 ID 的详情入口。原发布面板使用已登记 DATASET 引用且 metricVersion 与 active publication 一致时映射 canonical Consumption productKey；API/未知版本/未映射目标明确降级，不等同运行事实。
+
+
+## 指标发布前版本变更解释（F-032）
+
+原 Metric-owned 只读投影提供当前已保存草稿与 active publication 精确版本对、白名单差异、最新精确验证和最多20条声明引用；无安全有界读取的治理/关系分区明确覆盖缺口。准备指纹绑定版本、发布事件及证据，交付重读核对；原 turn/StateStore 与源域保持唯一 owner，AI 不保存/验证/发布。依赖沿用 runtime → toolset → gateway → metric.api，Metric 内部复用原 repository，无新反向边、业务表或状态机。精确边界与真实验收待办见 docs/product/features/F-032-metric-change-review.md。

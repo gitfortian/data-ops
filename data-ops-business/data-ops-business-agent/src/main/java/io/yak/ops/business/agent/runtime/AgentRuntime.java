@@ -394,7 +394,9 @@ public class AgentRuntime implements TurnCorrelation {
     }
     Flux<ChatTurnEvent> pipeline =
         withTurnTimeout(
-            target != null && target.metricDraft() != null
+            target != null && target.metricChangeReview() != null
+                ? metricChangeReview(inputs, context, execution)
+                : target != null && target.metricDraft() != null
                 ? metricDraft(inputs, context, execution)
                 : target != null && target.standardMatch() != null
                 ? standardMatch(inputs, context, execution)
@@ -453,6 +455,23 @@ public class AgentRuntime implements TurnCorrelation {
     var scope = requireScenarioSkill("metric-definition-draft", value == null ? 0 : value.skillVersion(), value == null ? null : value.skillHash());
     var verified = toolBox(io.yak.ops.business.agent.toolset.MetricDraftTools.class).revalidate(value);
     scope.requireCurrent(); return verified;
+  }
+
+  private Flux<ChatTurnEvent> metricChangeReview(List<Msg> inputs, RuntimeContext context,
+      io.yak.ops.business.agent.domain.AgentExecutionContext execution) {
+    return Flux.defer(() -> {
+      var tools = toolBox(io.yak.ops.business.agent.toolset.MetricChangeReviewTools.class);
+      var target = execution.target().metricChangeReview();
+      execution.reserveTool("get_metric_change_review_context");
+      var source = tools.prepare(context, target);
+      requireModelConfiguration();
+      var scope = scenarioSkill("metric-change-review");
+      return structuredScenario(inputs, context, execution, scope, new StructuredCall<>(tools,
+          "get_metric_change_review_context", "metric-change-review", target, source,
+          io.yak.ops.business.agent.domain.MetricChangeReviewProposal.class,
+          (proposal, current) -> tools.validate(context, target, source, proposal, current.version(), current.hash()),
+          "yak-metric-change-review", "AI 变更说明仅供人工核对；证据有各自覆盖范围。修改、验证及发布仍须在原页面显式完成。"));
+    });
   }
 
   private Flux<ChatTurnEvent> metricDraft(List<Msg> inputs, RuntimeContext context,

@@ -20,3 +20,5 @@ V16 来源字段场景材料见 [model-field-mapping](./model-field-mapping/READ
 ## F-028 指标定义草稿
 
 metric-definition-draft 提供有界类型草稿；人工导入/启用并复用原 Skill 版本核对。标准批量复用 standard-match；历史解释复用 metric-caliber-explanation，历史查看只读。
+
+[F-032 指标发布前版本变更核对](metric-change-review/README.md)：固定版本对，只读交付，按原管理员登记规则启用。

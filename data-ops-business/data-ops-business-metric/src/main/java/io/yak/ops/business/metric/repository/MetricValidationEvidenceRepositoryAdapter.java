@@ -78,6 +78,20 @@ public class MetricValidationEvidenceRepositoryAdapter
   }
 
   @Override
+  public MetricValidationEvidence findLatest(Long metricId, int metricVersion) {
+    var po = mapper.selectOne(new LambdaQueryWrapper<MetricValidationEvidencePO>()
+        .eq(MetricValidationEvidencePO::getProjectId, currentProject.requireProjectId())
+        .eq(MetricValidationEvidencePO::getMetricId, metricId)
+        .eq(MetricValidationEvidencePO::getMetricVersion, metricVersion)
+        .orderByDesc(MetricValidationEvidencePO::getCheckedAt).orderByDesc(MetricValidationEvidencePO::getId)
+        .last("LIMIT 1"));
+    if (po != null && po.getIssuesJson() != null && po.getIssuesJson().length() > 32768) {
+      throw new IllegalStateException("验证问题载荷超过核对范围");
+    }
+    return po == null ? null : toDomain(po);
+  }
+
+  @Override
   public boolean hasEvidence(Long metricId) {
     Long projectId = currentProject.requireProjectId();
     return mapper.selectCount(new LambdaQueryWrapper<MetricValidationEvidencePO>()

@@ -68,13 +68,21 @@ class StandardMatchRuntimeTest {
   private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative, boolean mapping, boolean metric) throws Exception {
     scenario(nativeOutput, unknown, budget, success, concurrent, rejectNative, mapping, metric, false);
   }
+  @Test void changeReviewUsesScopedSkillAndPersistedValidatedSdkDelivery() throws Exception { scenario(false, false, 32, true, false, false, false, false, false, true); }
+  @Test void changeReviewNativeOutputUsesTheSameGuards() throws Exception { scenario(true, false, 32, true, false, false, false, false, false, true); }
+  @Test void changeReviewCannotBypassBudget() throws Exception { scenario(false, false, 2, false, false, false, false, false, false, true); }
+  @Test void changeReviewRejectsUnknownTools() throws Exception { scenario(false, true, 32, false, false, false, false, false, false, true); }
   private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative, boolean mapping, boolean metric, boolean draft) throws Exception {
+    scenario(nativeOutput, unknown, budget, success, concurrent, rejectNative, mapping, metric, draft, false);
+  }
+  private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative, boolean mapping, boolean metric, boolean draft, boolean review) throws Exception {
     var mappingTarget = new ModelMappingTarget(7, "user_id", 9, "db", "users", "买家编号", "");
     var metricTarget = new MetricExplanationTarget(7, 3, "");
     var draftTarget = new MetricDraftTarget(null, null, "ATOMIC", 7L, List.of(), "每日金额合计");
-    var target = draft ? new GovernanceTarget(null, null, null, "METRIC_DRAFT", null, null, null, draftTarget) : metric ? new GovernanceTarget(null, null, null, "METRIC_EXPLANATION", null, null, metricTarget) : mapping ? new GovernanceTarget(null, null, null, "MODEL_MAPPING", null, mappingTarget) : this.target;
-    String marker = draft ? "yak-metric-draft" : metric ? "yak-metric-explanation" : mapping ? "yak-model-mapping" : "yak-standard-match";
-    var skill = ScenarioSkillScopeTest.skill(draft ? "metric-definition-draft" : metric ? "metric-caliber-explanation" : mapping ? "model-field-mapping" : "standard-match", 1, "先核对类型与业务说明，再从目录选 ID；不匹配则反问。");
+    var reviewTarget = new MetricChangeReviewTarget(7, 3, 2, 31, "a".repeat(64), "");
+    var target = review ? new GovernanceTarget(null, null, null, "METRIC_CHANGE_REVIEW", null, null, null, null, reviewTarget) : draft ? new GovernanceTarget(null, null, null, "METRIC_DRAFT", null, null, null, draftTarget) : metric ? new GovernanceTarget(null, null, null, "METRIC_EXPLANATION", null, null, metricTarget) : mapping ? new GovernanceTarget(null, null, null, "MODEL_MAPPING", null, mappingTarget) : this.target;
+    String marker = review ? "yak-metric-change-review" : draft ? "yak-metric-draft" : metric ? "yak-metric-explanation" : mapping ? "yak-model-mapping" : "yak-standard-match";
+    var skill = ScenarioSkillScopeTest.skill(review ? "metric-change-review" : draft ? "metric-definition-draft" : metric ? "metric-caliber-explanation" : mapping ? "model-field-mapping" : "standard-match", 1, "先核对类型与业务说明，再从目录选 ID；不匹配则反问。");
     var repository = mock(AgentSkillRepository.class);
     when(repository.getAllSkills()).thenReturn(List.of(skill, ScenarioSkillScopeTest.skill("unrelated", 1, "禁止泄漏的无关技能")));
     when(repository.getSource()).thenReturn("db:yak_agent_skill");
@@ -107,7 +115,7 @@ class StandardMatchRuntimeTest {
         var definition = new LinkedHashMap<String, Object>();
         definition.put("name", "源域权威名称"); definition.put("description", "每日金额合计"); definition.put("period", "DAY");
         definition.put("aggregation", "SUM"); definition.put("field", "amount"); definition.put("qualifiers", List.of()); definition.put("tokens", List.of());
-        var proposal = draft ? Map.of("candidates", List.of(definition), "questions", List.of()) : metric ? Map.of("candidates", List.of(Map.of("businessDescription", "源域权威名称", "statements", List.of(Map.of("text", "按金额求和", "factKeys", List.of("measureExpr"))))), "questions", List.of()) : mapping ? Map.of("candidates", List.of(Map.of("sourceColumn", "buyer_id", "reason", "业务编号")), "questions", List.of())
+        var proposal = review ? Map.of("candidates", List.of(Map.of("statements", List.of(Map.of("text", "源域权威名称", "factKeys", List.of("after.measureExpr"))), "checks", List.of())), "questions", List.of()) : draft ? Map.of("candidates", List.of(definition), "questions", List.of()) : metric ? Map.of("candidates", List.of(Map.of("businessDescription", "源域权威名称", "statements", List.of(Map.of("text", "按金额求和", "factKeys", List.of("measureExpr"))))), "questions", List.of()) : mapping ? Map.of("candidates", List.of(Map.of("sourceColumn", "buyer_id", "reason", "业务编号")), "questions", List.of())
             : Map.of("candidates", List.of(Map.of("standardId", 9, "version", 2, "reason", "业务编号")), "questions", List.of());
         if (nativeRequest) {
           delta = Map.of("role", "assistant", "content", json.writeValueAsString(proposal)); finish = "stop";
@@ -167,7 +175,17 @@ class StandardMatchRuntimeTest {
         return new MetricDraftSuggestion("METRIC_DRAFT", draftTarget, "a".repeat(64), 1, invocation.getArgument(5), false,
             proposal.candidates(), proposal.questions(), draftContext);
       });
-      List<io.yak.ops.business.agent.toolset.AgentToolBox> boxes = draft ? List.of(draftTools) : metric ? List.of(metricTools) : mapping ? List.of(mappingTools) : List.of(tools);
+      var reviewTools = mock(io.yak.ops.business.agent.toolset.MetricChangeReviewTools.class);
+      var reviewSource = new MetricChangeReviewContext("a".repeat(64), "2026-10-08", List.of(),
+          List.of(new MetricChangeReviewContext.Fact("after.measureExpr", "度量", "SUM(amount)")), List.of());
+      when(reviewTools.prepare(any(), eq(reviewTarget))).thenReturn(reviewSource);
+      when(reviewTools.validate(any(), eq(reviewTarget), any(), any(), eq(1), anyString())).thenAnswer(invocation -> {
+        var proposal = invocation.getArgument(3, MetricChangeReviewProposal.class);
+        assertEquals(List.of("after.measureExpr"), proposal.candidates().getFirst().statements().getFirst().factKeys());
+        return new MetricChangeReviewSuggestion("METRIC_CHANGE_REVIEW", reviewTarget, "a".repeat(64), 1, invocation.getArgument(5), false,
+            reviewSource, List.of(new MetricChangeReviewSuggestion.Review(List.of(new MetricChangeReviewSuggestion.Statement("源域权威名称", reviewSource.facts())), List.of())), List.of());
+      });
+      List<io.yak.ops.business.agent.toolset.AgentToolBox> boxes = review ? List.of(reviewTools) : draft ? List.of(draftTools) : metric ? List.of(metricTools) : mapping ? List.of(mappingTools) : List.of(tools);
       var recorder = mock(AgentStepRecorder.class);
       var config = new AgentDynamicConfigService(mock(AgentConfigMapper.class));
       var runtime = new AgentRuntime(boxes, List.of(), store, properties, new AgentEventCodec(), recorder,
@@ -203,6 +221,7 @@ class StandardMatchRuntimeTest {
         else assertTrue(requests.getFirst().contains("generate_response"));
       } else {
         assertNotNull(error.get());
+        verify(reviewTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         verify(draftTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         verify(metricTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         verify(mappingTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());

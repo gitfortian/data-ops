@@ -1,7 +1,9 @@
+import MetricChangeReviewResult, { ReviewStatements } from './MetricChangeReviewResult';
 import { Alert, Button, Card, Space, Typography } from 'antd';
 import type { ScenarioHistory, ScenarioSuggestion } from '@/services/agent/scenarioHistory';
 
 const titles: Record<ScenarioSuggestion['kind'], string> = {
+  METRIC_CHANGE_REVIEW: '指标发布前版本变更核对结果',
   STANDARD_MATCH: '类型标准匹配结果', MODEL_MAPPING: '来源字段映射结果',
   METRIC_EXPLANATION: '指标口径解释结果', METRIC_DRAFT: '指标定义草稿结果',
 };
@@ -20,6 +22,12 @@ export default function ScenarioHistoryCard({ review }: { review: ScenarioHistor
         ? `历史快照 v${v.target.version}，仅供阅读；当前验证、发布与消费证据需分别核对。`
         : '候选与说明仅供人工核对。返回原页面后重新核验、选择处理；保存、验证与发布分别完成。'} />
       {v.truncated && <Alert type="warning" message="生成时目录已截断，结果不代表全部可用候选。" />}
+      {v.kind === 'METRIC_CHANGE_REVIEW' && <>
+        <p>指标 #{v.target.metricId} · 生成时发布 v{v.target.publishedVersion} → 已保存草稿 v{v.target.version}</p>
+        <MetricChangeReviewResult source={v.source} />
+        {v.candidates.map((c, i) => <Card size="small" key={i}><ReviewStatements values={c.statements} label="AI 变更说明" />
+          <ReviewStatements values={c.checks} label="人工检查建议" /></Card>)}
+      </>}
       {v.kind === 'STANDARD_MATCH' && <>
         <p>模型 #{v.target.modelId} · 字段 {v.target.columnName} · 当时输入类型 {v.target.dataType}</p>
         {v.fieldDescription && <p>字段说明草稿：{v.fieldDescription}</p>}

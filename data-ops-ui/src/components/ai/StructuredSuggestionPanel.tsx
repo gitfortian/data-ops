@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Button, Card, Input, Space } from 'antd';
 import { agentChatApi, agentSessionApi, streamTurnEvents } from '@/services/agent';
 import { readContinuation, sessionLocation } from '@/services/agent/continuation';
@@ -19,6 +19,8 @@ interface Props<T extends object, C, V extends ScenarioValue<T, C>> {
   withKeyword?: (target: T, keyword: string) => T;
   sourceLabel?: string;
   onApply?: (candidate: C) => void;
+  onActivityChange?: (blocked: boolean) => void;
+  verifyResult?: (value: V) => Promise<void>;
 }
 
 /** Parents own project/form scope; the panel also invalidates its own target, definition and permission lifetime. */
@@ -28,7 +30,7 @@ export default function StructuredSuggestionPanel<T extends object, C, V extends
 
 function ScopedStructuredSuggestionPanel<T extends object, C, V extends ScenarioValue<T, C>>({
   target, definition, disabled, title, notice, summary, question, generateLabel, adoptLabel,
-  bindTarget, selectTarget, parse, validate, candidateKey, renderCandidate, onApply, withKeyword, sourceLabel,
+  bindTarget, selectTarget, parse, validate, candidateKey, renderCandidate, onApply, withKeyword, sourceLabel, onActivityChange, verifyResult,
 }: Props<T, C, V>) {
   const [keyword, setKeyword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -52,6 +54,9 @@ function ScopedStructuredSuggestionPanel<T extends object, C, V extends Scenario
   const abort = useRef<AbortController>();
   const inputTarget = withKeyword ? withKeyword(target, keyword.trim()) : target;
   const currentTarget = useRef(inputTarget); currentTarget.current = inputTarget;
+
+  useEffect(() => { onActivityChange?.(busy || running || blocked.current); }, [busy, running, error, sessionId, onActivityChange]);
+  useEffect(() => () => { onActivityChange?.(false); }, [onActivityChange]);
 
   useLayoutEffect(() => {
     live.current = true;
@@ -94,6 +99,17 @@ function ScopedStructuredSuggestionPanel<T extends object, C, V extends Scenario
       const value = answers.length === 1 ? parse(answers[0].content) : null;
       if (!value || value.expectedDefinition !== definition || !sameScenarioTarget(value.target, selected.current)) {
         throw new Error('候选或模型定义无法核对，请重新加载原编辑器。');
+      }
+      if (verifyResult) {
+        try { await verifyResult(value); }
+        catch {
+          if (live.current && epoch.current === version) {
+            setSuggestion(null); blocked.current = false;
+            setError('来源或发布证据暂无法核对，请重新准备版本与证据。');
+          }
+          return;
+        }
+        if (!live.current || epoch.current !== version || !permitted.current) return;
       }
       setSuggestion(value); setError(''); blocked.current = false;
     } finally {

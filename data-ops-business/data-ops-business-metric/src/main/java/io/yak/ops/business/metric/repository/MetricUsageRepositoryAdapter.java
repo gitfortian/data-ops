@@ -62,6 +62,15 @@ public class MetricUsageRepositoryAdapter implements MetricUsageRepository {
   }
 
   @Override
+  public List<MetricUsage> listByMetricBounded(Long metricId, int limit) {
+    if (limit < 1 || limit > 21) throw new IllegalArgumentException("引用读取上限无效");
+    return mapper.selectList(new LambdaQueryWrapper<MetricUsagePO>()
+        .eq(MetricUsagePO::getProjectId, currentProject.requireProjectId())
+        .eq(MetricUsagePO::getMetricId, metricId).orderByAsc(MetricUsagePO::getId)
+        .last("LIMIT " + limit)).stream().map(MetricUsageRepositoryAdapter::toDomain).toList();
+  }
+
+  @Override
   public List<UsageTypeCount> countGroupByType(Long metricId) {
     return mapper.countGroupByType(currentProject.requireProjectId(), metricId).stream()
         .map(row -> new UsageTypeCount(
