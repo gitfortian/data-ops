@@ -14,7 +14,7 @@ const REMOVED_MODULES = [
 const REMOVED_PATHS = REMOVED_MODULES.map((module) => module + '.ts');
 
 const IMPORT_LITERAL =
-  /(?:\\bfrom\\s*|\\bimport\\s*(?:\\(\\s*)?|\\brequire\\s*\\(\\s*|\\bjest\\.(?:mock|doMock|requireActual)\\s*\\(\\s*)['"`]([^'"`]+)['"`]/g;
+  /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*|\bjest\.(?:mock|doMock|requireActual)\s*\(\s*)['"`]([^'"`]+)['"`]/g;
 
 function resolvesToRemovedModule(fromFile, specifier) {
   let target;
