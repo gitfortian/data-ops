@@ -45,6 +45,8 @@ jobs:
         run: node scripts/architecture/check-frontend-boundaries.mjs
       - name: Migration history consistency
         run: node scripts/db/check-migration-history.mjs
+      - name: A8 Security migration invariants
+        run: node scripts/architecture/check-security-migration-contract.mjs
 
   backend:
     name: Architecture and complete backend contracts
