@@ -508,15 +508,15 @@ class ConsumerImpactServiceTest {
     var result = new ConsumerImpactService(subs, usage, project, null, sync)
         .recoverDataServiceRevisionPage(
             ProductKey.parse("DATA_SERVICE:7"), "9007199254740995",
-            9007199254740994L, 999);
+            "9007199254740994", 999);
 
     assertEquals("DATA_SERVICE:7", result.productKey());
     assertEquals("9007199254740995", result.sourceVersionIdentity());
     assertEquals(200, result.requestedLimit());
-    assertEquals(9007199254740994L, result.requestedBeforeInvocationId());
+    assertEquals("9007199254740994", result.requestedBeforeInvocationId());
     assertEquals(1, result.visitedAuditCount());
     assertEquals(1, result.normalizedOrAlreadyPresentCount());
-    assertEquals(9007199254740993L, result.nextBeforeInvocationId());
+    assertEquals("9007199254740993", result.nextBeforeInvocationId());
     assertEquals(false, result.retainedAuditExhausted());
     assertEquals(false, result.retryRequired());
     org.mockito.Mockito.verify(sync).recoverSuccessfulRevisionPage(
@@ -539,7 +539,7 @@ class ConsumerImpactServiceTest {
     var result = new ConsumerImpactService(
         mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
         project, null, sync)
-        .recoverDataServiceRevisionPage(ProductKey.parse("DATA_SERVICE:7"), "9", 701L, 50);
+        .recoverDataServiceRevisionPage(ProductKey.parse("DATA_SERVICE:7"), "9", "701", 50);
 
     assertEquals(3, result.visitedAuditCount());
     assertEquals(2, result.normalizationGapCount());
@@ -560,7 +560,7 @@ class ConsumerImpactServiceTest {
     var result = new ConsumerImpactService(
         mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
         project, null, sync)
-        .recoverDataServiceRevisionPage(ProductKey.parse("DATA_SERVICE:7"), "9", 100L, 20);
+        .recoverDataServiceRevisionPage(ProductKey.parse("DATA_SERVICE:7"), "9", "100", 20);
 
     assertTrue(result.retainedAuditExhausted());
     assertEquals(false, result.retryRequired());
@@ -589,7 +589,7 @@ class ConsumerImpactServiceTest {
             ProductKey.parse("DATA_SERVICE:7"), "09", null, 20));
     org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
         () -> service.recoverDataServiceRevisionPage(
-            ProductKey.parse("DATA_SERVICE:7"), "9", 0L, 20));
+            ProductKey.parse("DATA_SERVICE:7"), "9", "0", 20));
     org.mockito.Mockito.verifyNoInteractions(project, sync, usage, subs);
   }
 
