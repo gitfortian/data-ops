@@ -74,3 +74,26 @@ test('legacy cannot enter the reactor directly or through its aggregate', t => {
     assert.match(result.stderr, /legacy framework must remain outside the current Maven reactor/);
   }
 });
+
+
+test('production Mapper XML is rejected while standalone legacy and Flyway files remain allowed', t => {
+  const { write, check } = fixture(t);
+  write(`${legacy}/src/main/resources/mapper/yak-job/YakTaskMapper.xml`, '<mapper/>');
+  write('data-ops-boot/src/main/resources/db/migration/V1__schema.sql', 'SELECT 1;');
+  write('data-ops-boot/src/main/resources/mybatis-config.xml', '<configuration/>');
+  const allowed = check();
+  assert.equal(allowed.status, 0, allowed.stderr);
+
+  write('data-ops-boot/src/main/resources/mapper/demo/TaskMapper.xml', '<mapper/>');
+  const forbidden = check();
+  assert.equal(forbidden.status, 1, forbidden.stderr);
+  assert.match(forbidden.stderr, /TaskMapper\\.xml: production Mapper XML is not allowed/);
+});
+
+test('Mapper XML cannot bypass the guard by moving outside the mapper directory', t => {
+  const { write, check } = fixture(t);
+  write('data-ops-boot/src/main/resources/mybatis/TaskMapper.xml', '<mapper/>');
+  const result = check();
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /mybatis\\/TaskMapper\\.xml: production Mapper XML is not allowed/);
+});
