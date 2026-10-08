@@ -87,7 +87,7 @@ test('production Mapper XML is rejected while standalone legacy and Flyway files
   write('data-ops-boot/src/main/resources/mapper/demo/TaskMapper.xml', '<mapper/>');
   const forbidden = check();
   assert.equal(forbidden.status, 1, forbidden.stderr);
-  assert.match(forbidden.stderr, /TaskMapper\\.xml: production Mapper XML is not allowed/);
+  assert.match(forbidden.stderr, /TaskMapper[.]xml: production Mapper XML is not allowed/);
 });
 
 test('Mapper XML cannot bypass the guard by moving outside the mapper directory', t => {
@@ -95,5 +95,5 @@ test('Mapper XML cannot bypass the guard by moving outside the mapper directory'
   write('data-ops-boot/src/main/resources/mybatis/TaskMapper.xml', '<mapper/>');
   const result = check();
   assert.equal(result.status, 1, result.stderr);
-  assert.match(result.stderr, /mybatis\\/TaskMapper\\.xml: production Mapper XML is not allowed/);
+  assert.match(result.stderr, /mybatis[/]TaskMapper[.]xml: production Mapper XML is not allowed/);
 });
