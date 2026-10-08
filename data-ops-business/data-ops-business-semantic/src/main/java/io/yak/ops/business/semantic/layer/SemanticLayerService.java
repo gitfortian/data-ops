@@ -4,6 +4,8 @@ import io.yak.ops.business.audit.AuditEventType;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
+import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.business.datasource.exception.DataSourceException;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader;
 import io.yak.ops.business.semantic.api.LayerStdBindingReader.StdBindingStats;
 import io.yak.ops.business.semantic.api.LayerUsageReader;
@@ -49,6 +51,7 @@ public class SemanticLayerService {
   private final ObjectProvider<LayerUsageReader> usageReader;
   private final ObjectProvider<LayerStdBindingReader> bindingReader;
   private final BusinessAuditService auditService;
+  private final ObjectProvider<DataSourceReader> dataSourceReader;
 
   public SemanticLayerService(
       SemanticLayerRepository repository,
@@ -56,13 +59,15 @@ public class SemanticLayerService {
       io.yak.ops.business.semantic.repository.SemanticStandardRepository standardRepository,
       ObjectProvider<LayerUsageReader> usageReader,
       ObjectProvider<LayerStdBindingReader> bindingReader,
-      BusinessAuditService auditService) {
+      BusinessAuditService auditService,
+      ObjectProvider<DataSourceReader> dataSourceReader) {
     this.repository = repository;
     this.templateRepository = templateRepository;
     this.standardRepository = standardRepository;
     this.usageReader = usageReader;
     this.bindingReader = bindingReader;
     this.auditService = auditService;
+    this.dataSourceReader = dataSourceReader;
   }
 
   public List<WarehouseLayer> list() {
@@ -346,6 +351,19 @@ public class SemanticLayerService {
     }
     if (datasourceId == null || datasourceId <= 0) {
       throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID, "数据源不能为空");
+    }
+    // Identity lookup is scoped to the trusted current Project by DataSourceRepository.
+    // Offline / UNKNOWN connection status is allowed; no network connectivity probe.
+    DataSourceReader reader = dataSourceReader.getIfAvailable();
+    if (reader == null) {
+      throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID,
+          "无法核验数据源归属，请确认数据源模块可用后重试");
+    }
+    try {
+      reader.requireReference(datasourceId);
+    } catch (DataSourceException notFoundOrForeign) {
+      throw new SemanticException(SemanticErrorCode.LAYER_CONFIG_INVALID,
+          "数据源不存在或不属于当前项目，请重新选择");
     }
   }
 

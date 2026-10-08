@@ -3,7 +3,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { Alert, Button, Form, Input, InputNumber, Modal, message, Select, Space, Switch,  Tag, Typography } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
-import { listDataSources } from '@/services/data-source/api';
+import { getDataSource, listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
 import { useColumnVisibility } from '@/components/table/useColumnVisibility';
 import {
@@ -34,12 +34,15 @@ const LayersPage = () => {
   const [editing, setEditing] = useState<SemanticLayerRecord | null>(null);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
   const [datasourceLoading, setDatasourceLoading] = useState(false);
+  const [pinnedDatasource, setPinnedDatasource] = useState<DataSourceRecord | null>(null);
+  const [datasourceLookupState, setDatasourceLookupState] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [namingStandards, setNamingStandards] = useState<SemanticStandardOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [optionsError, setOptionsError] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const datasourceSearchRevision = useRef(0);
+  const datasourceLookupRevision = useRef(0);
   const selectedDatasourceId = Form.useWatch('datasourceId', form) as number | undefined;
 
   const searchDatasources = useCallback(async (searchText: string) => {
@@ -96,9 +99,12 @@ const LayersPage = () => {
     void loadOptions();
   }, [loadLayers, loadOptions]);
 
-  const datasourceNameOf = (id?: number) => (id ? (datasources.find((item) => item.id === id)?.name ?? `#${id}`) : '-');
+  const datasourceNameOf = (id?: number) => (id ? (datasources.find((item) => Number(item.id) === Number(id))?.name ?? `#${id}`) : '-');
 
   const openCreate = () => {
+    datasourceLookupRevision.current += 1;
+    setPinnedDatasource(null);
+    setDatasourceLookupState('idle');
     setEditing(null);
     form.resetFields();
     form.setFieldsValue({ stdMandatory: true });
@@ -107,11 +113,27 @@ const LayersPage = () => {
   };
 
   const openEdit = (record: SemanticLayerRecord) => {
+    const revision = ++datasourceLookupRevision.current;
+    setPinnedDatasource(null);
+    setDatasourceLookupState(record.datasourceId ? 'loading' : 'idle');
     setEditing(record);
     // 存量行可能不带该字段,回显按缺省=强制,避免开关把 null 改成 false。
     form.setFieldsValue({ ...record, stdMandatory: record.stdMandatory ?? true });
     setEditorOpen(true);
     void loadOptions();
+    if (record.datasourceId) {
+      // Paged search cannot prove an existing selection is valid. Read the
+      // specific identity instead of silently inventing a confirmed option.
+      void getDataSource(record.datasourceId)
+        .then((source) => {
+          if (revision !== datasourceLookupRevision.current) return;
+          setPinnedDatasource(source);
+          setDatasourceLookupState('idle');
+        })
+        .catch(() => {
+          if (revision === datasourceLookupRevision.current) setDatasourceLookupState('failed');
+        });
+    }
   };
 
   const submitEditor = async () => {
@@ -356,13 +378,26 @@ const LayersPage = () => {
         cancelText="取消"
         confirmLoading={saving}
         destroyOnClose
-        onCancel={() => setEditorOpen(false)}
+        onCancel={() => {
+          datasourceLookupRevision.current += 1;
+          setEditorOpen(false);
+        }}
         onOk={() => {
           void submitEditor();
         }}
       >
         <Form form={form} layout="vertical" className="pt-2">
           {optionsError && <Alert className="mb-3" type="warning" showIcon message="引用选项未能完整加载" action={<Button size="small" onClick={() => void loadOptions()}>重试</Button>} />}
+          {editing && selectedDatasourceId === editing.datasourceId && datasourceLookupState !== 'idle' && (
+            <Alert
+              className="mb-3"
+              type={datasourceLookupState === 'failed' ? 'warning' : 'info'}
+              showIcon
+              message={datasourceLookupState === 'failed'
+                ? '当前引用的数据源暂无法核验：可能已删除、属于其他项目或服务不可用，请重新选择'
+                : '正在核验存量数据源是否仍属于当前项目'}
+            />
+          )}
           <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
             <Form.Item
               name="code"
@@ -399,11 +434,17 @@ const LayersPage = () => {
                 onFocus={() => {
                   if (datasources.length === 0) void searchDatasources('');
                 }}
-                options={[...datasources, ...(selectedDatasourceId && !datasources.some((item) => Number(item.id) === selectedDatasourceId)
-                  ? [{ id: selectedDatasourceId, name: `数据源 #${selectedDatasourceId}` }]
-                  : [])].map((item) => ({
+                options={[...datasources,
+                  ...(pinnedDatasource && Number(selectedDatasourceId) === Number(pinnedDatasource.id)
+                    && !datasources.some((item) => Number(item.id) === Number(pinnedDatasource.id))
+                    ? [pinnedDatasource] : []),
+                  ...(selectedDatasourceId
+                    && !datasources.some((item) => Number(item.id) === Number(selectedDatasourceId))
+                    && Number(pinnedDatasource?.id) !== Number(selectedDatasourceId)
+                    ? [{ id: selectedDatasourceId, name: `数据源 #${selectedDatasourceId}（待核验）` }]
+                    : [])].map((item) => ({
                   label: item.name ?? `数据源 #${item.id}`,
-                  value: item.id as number,
+                  value: Number(item.id),
                 }))}
               />
             </Form.Item>

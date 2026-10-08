@@ -43,7 +43,8 @@ class SemanticLayerDeletionGuardTest {
     when(auditService.start(any(AuditOperationRequest.class))).thenReturn(mock(AuditOperationHandle.class));
     when(repository.findById(12L)).thenReturn(Optional.of(customLayer()));
     service = new SemanticLayerService(repository, mock(SemanticLayerTemplateRepository.class),
-        mock(SemanticStandardRepository.class), usageProvider, mock(ObjectProvider.class), auditService);
+        mock(SemanticStandardRepository.class), usageProvider, mock(ObjectProvider.class), auditService,
+        mock(ObjectProvider.class));
   }
 
   @Test
