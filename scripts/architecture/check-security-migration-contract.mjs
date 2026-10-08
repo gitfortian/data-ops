@@ -37,8 +37,8 @@ const REQUIRE = [
   ['properties', /\/yak-security\/api\/v1\/account\/login/, 'public login endpoint'],
   ['mysql', /CREATE TABLE IF NOT EXISTS yak_security_project\b/i, 'MySQL Project history'],
   ['mysql', /CREATE TABLE IF NOT EXISTS yak_security_permission\b/i, 'MySQL permission history'],
-  ['postgres', /CREATE TABLE "yak_security_project"\b/i, 'PostgreSQL Project history'],
-  ['postgres', /CREATE TABLE "yak_security_permission"\b/i, 'PostgreSQL permission history'],
+  ['postgres', /CREATE TABLE "yak_security_project"/i, 'PostgreSQL Project history'],
+  ['postgres', /CREATE TABLE "yak_security_permission"/i, 'PostgreSQL permission history'],
 ];
 export function checkSecurityContract(files) {
   const errors = [];
