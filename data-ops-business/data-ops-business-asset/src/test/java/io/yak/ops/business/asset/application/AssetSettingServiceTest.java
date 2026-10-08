@@ -2,6 +2,7 @@ package io.yak.ops.business.asset.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,6 +12,8 @@ import io.yak.ops.business.asset.dao.model.AssetSettingPO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.List;
 import org.mockito.Mockito;
 
 /** KV 设置:缺省值容错 + 有则改之无则加勉。 */
@@ -42,6 +45,22 @@ class AssetSettingServiceTest {
 
     when(mapper.selectOne(any())).thenReturn(null);
     assertNull(service.get(1L, "missing"));
+  }
+
+  @Test
+  void getAndPutUseTheSameProjectAndKeyScope() {
+    when(mapper.selectOne(any())).thenReturn(null);
+    service.get(23L, "gone_window_days");
+    service.put(23L, "gone_window_days", "7");
+
+    ArgumentCaptor<LambdaQueryWrapper> conditions = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper, Mockito.times(2)).selectOne(conditions.capture());
+    List<LambdaQueryWrapper> wrappers = conditions.getAllValues();
+    assertEquals(wrappers.get(0).getSqlSegment(), wrappers.get(1).getSqlSegment());
+    assertTrue(wrappers.get(0).getSqlSegment().contains("project_id"));
+    assertTrue(wrappers.get(0).getSqlSegment().contains("setting_key"));
+    assertEquals(List.of(23L, "gone_window_days"),
+        List.copyOf(wrappers.get(0).getParamNameValuePairs().values()));
   }
 
   @Test
