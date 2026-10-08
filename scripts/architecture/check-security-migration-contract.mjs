@@ -25,7 +25,7 @@ const REQUIRE = [
   ['auto', /YakSecurityAuditConfiguration\.class/, 'audit configuration import'],
   ['auto', /@ConditionalOnMissingBean\(PasswordEncoder\.class\)/, 'password encoder override hook'],
   ['database', /@ConditionalOnProperty\(prefix = "yak\.security", name = "database-enabled", havingValue = "true", matchIfMissing = true\)/, 'database-enabled compatibility default'],
-  ['datasource', /"yakSecurityDataSource"/, 'independent Security datasource bean'],
+  ['datasource', /@Bean\s*\(\s*name\s*=\s*"yakSecurityDataSource"/, 'independent Security datasource bean'],
   ['datasource', /"yakSecuritySqlSessionTemplate"/, 'independent MyBatis session bean'],
   ['datasource', /"yakSecurityTransactionManager"/, 'independent transaction manager'],
   ['datasource', /classpath:yak-security\/db\/migration/, 'Security Flyway location'],
