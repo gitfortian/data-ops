@@ -35,6 +35,8 @@ export default function VersionChangeImpactReview({
   const review = reviewVersionImpact(impact, selected);
   // An acknowledgement never survives a new evidence response or a version switch.
   useEffect(() => setAcknowledged(false), [impact, selected?.identity, loading]);
+  // Change descriptions belong to one exact source revision, never carry them across versions.
+  useEffect(() => setProposedChange(''), [selected?.identity]);
 
   const copyReview = async () => {
     if (!acknowledged || !impact || !review || loading) return;
