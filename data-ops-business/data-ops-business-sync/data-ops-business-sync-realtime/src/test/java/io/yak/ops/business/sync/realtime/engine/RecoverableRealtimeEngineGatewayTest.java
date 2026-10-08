@@ -1,10 +1,12 @@
 package io.yak.ops.business.sync.realtime.engine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.sync.realtime.domain.ComputeEnvironment;
@@ -48,6 +50,50 @@ class RecoverableRealtimeEngineGatewayTest {
     assertThat(captured.getValue().idempotencyKey()).isEqualTo("deploy-key");
     assertThat(captured.getValue().source()).isSameAs(source);
     assertThat(captured.getValue().sink()).isSameAs(sink);
+  }
+
+  @Test
+  void aDeploymentWithoutVerifiedProjectNeverReachesRuntimeOrIdentityStorage() {
+    FlinkCdcEngineGateway delegate = mock(FlinkCdcEngineGateway.class);
+    RealtimeRuntimeIdentityStore store = mock(RealtimeRuntimeIdentityStore.class);
+    CurrentProject missing = Optional::empty;
+    RecoverableRealtimeEngineGateway gateway =
+        new RecoverableRealtimeEngineGateway(delegate, store, missing);
+
+    RealtimeDeployRequest request = new RealtimeDeployRequest(
+        "pipeline:\n  name: demo\n", "shared-client-key",
+        new CredentialBinding("source", "credential-one"),
+        new CredentialBinding("sink", "credential-two"));
+
+    assertThatThrownBy(() -> gateway.deploy(environment(), request))
+        .isInstanceOf(io.yak.ops.core.project.ProjectContextException.class);
+    verifyNoInteractions(store, delegate);
+  }
+
+  @Test
+  void identicalIdempotencyKeysAcrossProjectsYieldDifferentRuntimeIdentities() {
+    FlinkCdcEngineGateway delegate = mock(FlinkCdcEngineGateway.class);
+    RealtimeRuntimeIdentityStore projectSeven = mock(RealtimeRuntimeIdentityStore.class);
+    RealtimeRuntimeIdentityStore projectEight = mock(RealtimeRuntimeIdentityStore.class);
+    RealtimeDeployRequest request = new RealtimeDeployRequest(
+        "pipeline:\n  name: demo\n", "shared-client-key",
+        new CredentialBinding("source", "credential-one"),
+        new CredentialBinding("sink", "credential-two"));
+    when(delegate.deploy(eq(environment()), any())).thenReturn(
+        new RealtimeEngineGateway.DeployResult("runtime-id", "at-least-once"));
+
+    new RecoverableRealtimeEngineGateway(
+        delegate, projectSeven, () -> Optional.of(new ProjectContext(7L, "A")))
+        .deploy(environment(), request);
+    new RecoverableRealtimeEngineGateway(
+        delegate, projectEight, () -> Optional.of(new ProjectContext(8L, "B")))
+        .deploy(environment(), request);
+
+    String first = RealtimeRuntimeIdentity.jobName("7:shared-client-key");
+    String second = RealtimeRuntimeIdentity.jobName("8:shared-client-key");
+    assertThat(first).isNotEqualTo(second);
+    verify(projectSeven).bind("shared-client-key", first);
+    verify(projectEight).bind("shared-client-key", second);
   }
 
   private ComputeEnvironmentSnapshot environment() {
