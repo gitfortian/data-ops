@@ -54,6 +54,30 @@ export const queryDataSourceColumnOptions = (
     requestBody,
   );
 
+
+/** 与字段发现接口不同：保留旧版 SQL/表模式 Top20 预览的 POST body。 */
+export interface DataSourcePreviewColumn {
+  title?: string;
+  dataIndex?: string;
+  key?: string;
+  ellipsis?: boolean;
+}
+
+export interface DataSourcePreviewResult {
+  columns?: DataSourcePreviewColumn[];
+  data?: Array<Record<string, unknown>>;
+  total?: number;
+}
+
+export const previewDataSourceTop20 = (
+  id: DataSourceId,
+  requestBody: Record<string, unknown>,
+): Promise<DataSourcePreviewResult> =>
+  HttpUtils.postData<DataSourcePreviewResult>(
+    `${DATA_SOURCE_CATALOG_API_PREFIX}/getTop20Data/${id}`,
+    requestBody,
+  );
+
 /** 按关键字搜索数据源表(源表绑定下拉用)。 */
 export const searchDataSourceTables = (
   id: DataSourceId,

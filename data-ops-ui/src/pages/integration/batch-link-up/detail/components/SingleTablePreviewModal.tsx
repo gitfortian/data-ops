@@ -3,21 +3,8 @@ import { Alert, Button, Empty, Modal, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { dataSourceCatalogApi } from '@/services/data-source/legacy';
-import { API_SUCCESS_CODE } from '@/services/http/response';
-
-interface DataSourcePreviewColumn {
-  title?: string;
-  dataIndex?: string;
-  key?: string;
-  ellipsis?: boolean;
-}
-
-interface DataSourcePreviewResult {
-  columns?: DataSourcePreviewColumn[];
-  data?: Array<Record<string, unknown>>;
-  total?: number;
-}
+import { previewDataSourceTop20 } from '@/services/data-source/catalog';
+import type { DataSourcePreviewResult } from '@/services/data-source/catalog';
 
 interface SingleTablePreviewModalProps {
   open: boolean;
@@ -35,9 +22,6 @@ const emptyPreview: DataSourcePreviewResult = {
   data: [],
   total: 0,
 };
-
-const responseMessage = (response: any, fallback: string) =>
-  response?.message || response?.msg || fallback;
 
 const normalizeRequest = (sourceConfig: Record<string, any>) => {
   const readMode = sourceConfig.readMode === 'sql' ? 'sql' : 'table';
@@ -118,20 +102,12 @@ export default function SingleTablePreviewModal({
     setPreview(emptyPreview);
 
     try {
-      const previewResponse = await dataSourceCatalogApi.getTop20Data(
+      const nextPreview = (await previewDataSourceTop20(
         dataSourceId,
         requestBody,
-      );
+      )) || emptyPreview;
 
       if (sequence !== requestSequence.current) return;
-
-      if (previewResponse?.code !== API_SUCCESS_CODE) {
-        throw new Error(responseMessage(previewResponse, '获取预览数据失败'));
-      }
-
-      const nextPreview =
-        (previewResponse?.data as DataSourcePreviewResult | undefined) ||
-        emptyPreview;
 
       setPreview({
         columns: Array.isArray(nextPreview.columns) ? nextPreview.columns : [],
