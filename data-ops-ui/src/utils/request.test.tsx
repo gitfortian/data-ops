@@ -146,3 +146,84 @@ describe('请求层错误传递契约（S11）', () => {
     expect(notifyOnce).not.toHaveBeenCalled();
   });
 });
+
+
+describe('A5.2 shared HTTP boundary: 401, 403 and project context', () => {
+  beforeEach(() => {
+    (notifyOnce as jest.Mock).mockClear();
+    window.localStorage.setItem('yak-security.current-project-id', '71');
+  });
+
+  afterEach(() => {
+    window.localStorage.removeItem('yak-security.current-project-id');
+    jest.restoreAllMocks();
+  });
+
+  it('sends the stored project header with cookie credentials for a scoped management API', async () => {
+    const spy = mockFetch(() =>
+      Promise.resolve(fakeResponse({ code: 200, data: { id: 1 } }))
+    );
+
+    await request(URL, { method: 'GET', businessErrorMode: 'reject' });
+
+    const fetchOptions = spy.mock.calls[0]?.[1] as
+      | { credentials?: string; headers?: Record<string, string> }
+      | undefined;
+    expect(fetchOptions?.credentials).toBe('include');
+    expect(fetchOptions?.headers).toEqual(
+      expect.objectContaining({ 'X-YAK-SECURITY-PROJECT-ID': '71' })
+    );
+    expect(notifyOnce).not.toHaveBeenCalled();
+  });
+
+  it('never sends the stored project header to explicitly global runtime APIs', async () => {
+    const spy = mockFetch(() =>
+      Promise.resolve(fakeResponse({ code: 200, data: [] }))
+    );
+
+    await request('/api/v1/compute-environments', { method: 'GET' });
+
+    const fetchOptions = spy.mock.calls[0]?.[1] as
+      | { headers?: Record<string, string> }
+      | undefined;
+    expect(fetchOptions?.headers?.['X-YAK-SECURITY-PROJECT-ID']).toBeUndefined();
+  });
+
+  it('HTTP 403 is denied, reported as authorization failure, not treated as login expiry', async () => {
+    mockFetch(() => Promise.resolve(
+      fakeResponse({ code: 403, msg: '无权访问当前项目' }, { status: 403 })
+    ));
+
+    await expect(request(URL, { method: 'GET' })).rejects.toBeTruthy();
+    expect(notifyOnce).toHaveBeenCalledWith(
+      expect.stringContaining('http:403:'),
+      expect.objectContaining({ title: '无权访问', description: '无权访问当前项目' })
+    );
+    expect(notifyOnce).not.toHaveBeenCalledWith(
+      'authentication',
+      expect.anything()
+    );
+  });
+
+  it('HTTP 401 invokes the single authentication expiry exit', async () => {
+    mockFetch(() => Promise.resolve(
+      fakeResponse({ code: 401, msg: '会话已过期' }, { status: 401 })
+    ));
+
+    await expect(request(URL, { method: 'GET' })).rejects.toBeTruthy();
+    expect(notifyOnce).toHaveBeenCalledWith(
+      'authentication',
+      expect.objectContaining({ title: '登录状态失效' })
+    );
+  });
+
+  it('skipErrorHandler suppresses global notifications but still rejects HTTP errors', async () => {
+    mockFetch(() => Promise.resolve(
+      fakeResponse({ code: 403, msg: '不足权限' }, { status: 403 })
+    ));
+
+    await expect(request(URL, { method: 'GET', skipErrorHandler: true }))
+      .rejects.toBeTruthy();
+    expect(notifyOnce).not.toHaveBeenCalled();
+  });
+});
