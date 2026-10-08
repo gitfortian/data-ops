@@ -3,6 +3,7 @@ import { history } from '@umijs/max';
 import { Alert, Button, Card, Checkbox, Input, Select, Space, Table, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
+import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
 import { consumerVersionOutreachDraft } from './version-impact-outreach';
 import {
   buildVersionChangeCoordinationWorkpack,
@@ -181,6 +182,11 @@ export default function VersionChangeImpactReview({
               message={review.incomplete ? '覆盖不完整，需要补充核对' : '仅限当前来源窗口，并非全量历史'}
               description={impact.coverageNote}
             />
+            <Space direction="vertical" size={0}>
+              {impactEvidenceWindowFacts(impact).map((fact) => (
+                <Text key={fact} type="secondary">{fact}</Text>
+              ))}
+            </Space>
             <Space wrap>
               <Text>已观察到该版本：<strong>{review.observedConsumerCount}</strong> 个 Consumer</Text>
               <Text>仅声明依赖：<strong>{review.declaredOnlyConsumerCount}</strong> 个 Consumer</Text>
@@ -198,7 +204,7 @@ export default function VersionChangeImpactReview({
             />
             <Text type="secondary">
               {review.incomplete
-                ? '至少一个来源不可用或无权访问：必须联系对应证据 Owner 补核，不能视为无影响。'
+                ? '来源可能不可用、归一化有缺口或读取窗口达到上限；须按实际原因补核，不能视为无影响。'
                 : '未观察到目标版本消费不等于不受变更影响；订阅只表示声明依赖，不绑定版本。'}
             </Text>
             <div>
@@ -223,6 +229,9 @@ export default function VersionChangeImpactReview({
               <Text type="secondary">
                 还须核查来源窗口之外的历史使用及未登记的外部使用方；即使当前清单为空，也不能视作无影响。
               </Text>
+              {workpack?.evidenceGaps.map((gap) => (
+                <div key={gap}><Text type="warning">待补核：{gap}</Text></div>
+              ))}
             </div>
             <Alert type="info" showIcon message="人工沟通准备，不是已通知状态"
               description="请使用已知 Consumer 身份自行找到真实负责人。复制草稿不会发送消息、记录已读、获得变更确认或形成 Approval/Audit。"

@@ -1,5 +1,6 @@
 import type { ConsumerImpact, DataProductView } from '@/services/consumption';
 import type { VersionImpactReview, VersionImpactRow } from './version-impact-review';
+import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
 
 /**
  * This is a copyable human outreach draft, not a dispatched notification or an
@@ -38,6 +39,7 @@ export const consumerVersionOutreachDraft = (
     'Subscription Provider：' + impact.subscriptionState,
     'Usage Provider：' + impact.usageState,
     '覆盖说明：' + impact.coverageNote,
+    ...impactEvidenceWindowFacts(impact),
     '草稿生成时间：' + preparedAt,
     '',
     '请 Consumer 负责人核对：当前是否依赖此数据产品/来源版本，版本变更可能影响哪些接口、任务或报表，是否需要兼容性评估、迁移安排和沟通窗口。如无法确认请明确说明所需证据。',

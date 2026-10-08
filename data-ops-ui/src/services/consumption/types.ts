@@ -101,12 +101,25 @@ export interface KnownConsumer {
   observedVersions?: ObservedVersion[];
 }
 
+/** Bounded provider and normalized read windows; never a full-history guarantee. */
+export interface ImpactEvidenceCoverage {
+  requestedUsageLimit: number;
+  sourceRecordCount: number;
+  normalizedUsageCount: number;
+  sourceWindowLimitReached: boolean;
+  normalizedUsageWindowLimitReached: boolean;
+  normalizationGapCount: number;
+  sourceReadUnavailable: boolean;
+}
+
 export interface ConsumerImpact {
   productKey: { productType: ProductType; sourceIdentity: string };
   subscriptionState: EvidenceState;
   usageState: EvidenceState;
   consumers: KnownConsumer[];
   coverageNote: string;
+  /** Optional for compatibility with existing responses and test fixtures. */
+  coverage?: ImpactEvidenceCoverage | null;
 }
 
 export interface ProductDiscoveryResult {

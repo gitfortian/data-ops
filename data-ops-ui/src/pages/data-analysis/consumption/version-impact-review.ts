@@ -1,4 +1,5 @@
 import type { ConsumerImpact, KnownConsumer, SourceVersionRef } from '@/services/consumption';
+import { impactEvidenceIncomplete, impactEvidenceWindowFacts } from './impact-evidence-coverage';
 
 export interface VersionImpactRow {
   consumer: KnownConsumer;
@@ -72,10 +73,7 @@ export const reviewVersionImpact = (
     observedConsumerCount: rows.filter((row) => !row.declaredOnly).length,
     declaredOnlyConsumerCount: rows.filter((row) => row.declaredOnly).length,
     observedSuccessCount: rows.reduce((sum, row) => sum + row.successfulUsageCount, 0),
-    incomplete: impact.subscriptionState === 'UNAVAILABLE'
-      || impact.subscriptionState === 'FORBIDDEN'
-      || impact.usageState === 'UNAVAILABLE'
-      || impact.usageState === 'FORBIDDEN',
+    incomplete: impactEvidenceIncomplete(impact),
   };
 };
 
@@ -100,6 +98,7 @@ export const versionImpactReviewText = (
   '该版本已观察成功使用次数（本次窗口）: ' + review.observedSuccessCount,
   '覆盖状态: ' + (review.incomplete ? 'PARTIAL / NEEDS_FOLLOW_UP' : 'WINDOW_ONLY / NOT_COMPLETE_HISTORY'),
   '覆盖说明: ' + impact.coverageNote,
+  ...impactEvidenceWindowFacts(impact),
   ...review.rows.map((row) => [
     '- ' + row.consumer.consumerRef.consumerType + ':' + row.consumer.consumerRef.sourceDomain + ':' + row.consumer.consumerRef.sourceIdentity,
     '  ' + (row.declaredOnly ? '声明依赖，未观察到该版本消费' : '该版本成功消费 ' + row.successfulUsageCount + ' 次'),
