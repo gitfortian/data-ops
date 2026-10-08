@@ -264,3 +264,5 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
 
 MetricDraftTarget/METRIC_DRAFT 固定 metric-definition-draft Skill；runtime 复用 structuredScenario（AgentScope 2.0.3），仅 load_skill_through_path/get_metric_draft_context/generate_response，纳入同一轮预算与历史交付。MetricDraftGateway 只依赖 MetricDraftQueryApi，源域校验与 Skill 指纹复核都通过才可交付/带入。历史说明显式 view=SNAPSHOT；旧 target 无 view 仍只允许当前版本。
+
+F-031 原会话回看仅消费既有 session history/continuation 与前端 parser，不增加源域依赖、网络端点或反向业务依赖。目标页面仍独立进行当前项目与权限核验。

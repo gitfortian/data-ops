@@ -1,4 +1,5 @@
-import { governanceEntryPath, governanceQuestions, governanceSourcePath, parseGovernanceTarget } from './governance';
+import { governanceEntryPath, governanceQuestions, governanceSourcePath, governanceTaskTitle, parseGovernanceTarget } from './governance';
+import { scenario } from '../../../tests/fixtures/agent-scenarios';
 
 it('roundtrips asset and execution selections to existing routes', () => {
   const asset = { assetId: 7 };
@@ -18,4 +19,17 @@ it('returns metric tasks to their canonical existing detail route', () => {
   const metricDraft = { metricId: 7, version: 3, metricType: 'ATOMIC' as const, modelId: 9, upstreamIds: [], requirement: '每日金额' };
   expect(governanceSourcePath({ purpose: 'METRIC_DRAFT', metricDraft })).toBe('/metric/manage/7');
   expect(governanceSourcePath({ purpose: 'METRIC_DRAFT', metricDraft: { ...metricDraft, metricId: null, version: null } })).toBe('/metric/manage');
+});
+
+it('identifies all four task kinds including new drafts and exact snapshots', () => {
+  expect(governanceTaskTitle(scenario().target)).toContain('类型标准匹配');
+  expect(governanceTaskTitle(scenario('MODEL_MAPPING').target)).toContain('来源映射建议');
+  expect(governanceTaskTitle(scenario('METRIC_EXPLANATION').target)).toBe('指标 #7 v3 口径解释与说明草稿');
+  expect(governanceTaskTitle(scenario('METRIC_EXPLANATION', 'ATOMIC', true).target)).toBe('指标 #7 v3 历史快照');
+  const f = scenario('METRIC_DRAFT');
+  expect(governanceTaskTitle(f.target)).toBe('新建指标 定义草稿');
+  if (f.target.purpose !== 'METRIC_DRAFT') throw new Error('fixture');
+  expect(governanceTaskTitle({ ...f.target, metricDraft: { ...f.target.metricDraft, metricId: 12, version: 4 } })).toBe('指标 #12 v4 定义草稿');
+  expect(governanceTaskTitle({ assetId: 7 })).toBe('资产 #7 治理解读');
+  expect(governanceTaskTitle({ qualityExecutionNo: 'Q_1' })).toBe('质量执行 Q_1 解读与排查');
 });

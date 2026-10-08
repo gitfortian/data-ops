@@ -49,7 +49,10 @@ import {
   type UIMessage,
 } from './types';
 
-import { governanceQuestions, governanceSourcePath, parseGovernanceTarget } from '@/services/agent/governance';
+import { governanceQuestions, governanceSourcePath, governanceTaskTitle, parseGovernanceTarget } from '@/services/agent/governance';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { readScenarioHistory } from '@/services/agent/scenarioHistory';
+import ScenarioHistoryCard from '@/components/ai/ScenarioHistoryCard';
 import type { TurnSubmitPayload } from '@/services/agent';
 import GovernanceEvidenceCards from '@/components/ai/GovernanceEvidenceCards';
 import { visibleGovernanceText } from '@/services/agent/suggestions';
@@ -612,6 +615,10 @@ const AiAgentPage: React.FC = () => {
         agentSessionApi.history(sessionId), agentSessionApi.continuation(sessionId),
       ]);
       if (request !== historyRequest.current) return;
+      const assistantCounts = new Map<string, number>();
+      if (historyResult.status === 'fulfilled') for (const turn of historyResult.value) {
+        if (turn.role === 'assistant' && turn.turnId) assistantCounts.set(turn.turnId, (assistantCounts.get(turn.turnId) ?? 0) + 1);
+      }
       const restored = (historyResult.status === 'fulfilled' ? historyResult.value : [])
         .filter((turn) => (turn.role === 'user' || turn.role === 'assistant' || turn.role === 'error') && turn.content)
         .map((turn) => ({
@@ -620,6 +627,7 @@ const AiAgentPage: React.FC = () => {
           content: turn.content,
           turnId: turn.turnId ?? undefined,
           unlinkedHistory: turn.role === 'assistant' && !turn.turnId,
+          persistedHistory: turn.role === 'assistant' && !!turn.turnId && assistantCounts.get(turn.turnId) === 1,
           trace: (turn.turnId ? turn.trace ?? [] : []).map((step, idx) => ({
             key: `${step.kind === 'think' ? 't' : 'c'}-${step.toolCallId ?? idx}`,
             kind: step.kind as 'think' | 'call',
@@ -911,7 +919,12 @@ const AiAgentPage: React.FC = () => {
     (!lastMessage ||
       (lastMessage.role === 'assistant' && !lastMessage.content && !lastMessage.trace.length && !lastMessage.error));
 
-  const bubbleItems: BubbleItemType[] = messages.map((item) => ({
+  const scenarioReviews = new Map(messages.filter(item => item.role === 'assistant').map(item => [item.id,
+    readScenarioHistory(item.content, activeSessionId, item.turnId, !!item.persistedHistory,
+      !historyLoading && !historyError && !streaming && can('agent:session:read') ? continuation : null)]));
+  const bubbleItems: BubbleItemType[] = messages.map((item) => {
+    const scenarioReview = scenarioReviews.get(item.id);
+    return ({
     role: item.role === 'error' ? 'assistant' : item.role,
     key: item.id,
     placement: item.role === 'user' ? 'end' : 'start',
@@ -956,10 +969,12 @@ const AiAgentPage: React.FC = () => {
             : null}
           {item.content ? (
             <Typography.Text style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {item.role === 'assistant' ? visibleGovernanceText(item.content) : item.content}
+              {item.role === 'assistant' ? visibleGovernanceText(scenarioReview?.status === 'READY'
+                ? scenarioReview.text : item.content) : item.content}
             </Typography.Text>
           ) : null}
           {item.role === 'assistant' && item.content ? <GovernanceEvidenceCards text={item.content} /> : null}
+          {item.role === 'assistant' && item.content ? <ScenarioHistoryCard review={scenarioReview ?? { status: 'NONE' }} /> : null}
           {(() => {
             // PI-103 口径卡：从 trace-runtime 的 extractCaliber 提取（单一实现，可测）
             const caliber = extractCaliber(
@@ -1005,7 +1020,8 @@ const AiAgentPage: React.FC = () => {
         </Space>
       ),
     loading: item.role === 'assistant' && !item.content && !item.trace.length && !item.error && streaming,
-  }));
+    });
+  });
 
   const conversationItems: ConversationsProps['items'] = sessions.map((session) => ({
     key: session.sessionId,
@@ -1064,9 +1080,7 @@ const AiAgentPage: React.FC = () => {
           <Alert
             type="info"
             showIcon
-            message={governanceTarget.metricExplanation ? `指标 #${governanceTarget.metricExplanation.metricId} v${governanceTarget.metricExplanation.version} 口径解释与说明草稿` : governanceTarget.modelMapping ? `模型 #${governanceTarget.modelMapping.modelId} 字段 ${governanceTarget.modelMapping.columnName} 来源映射建议` : governanceTarget.standardMatch ? `模型 #${governanceTarget.standardMatch.modelId} 字段 ${governanceTarget.standardMatch.columnName} 类型标准匹配` : governanceTarget.qualityMonitorId !== undefined ? `质量监控 #${governanceTarget.qualityMonitorId} 规则建议`
-              : governanceTarget.assetId !== undefined ? `资产 #${governanceTarget.assetId} ${governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '描述候选' : '治理解读'}`
-                : `质量执行 ${governanceTarget.qualityExecutionNo} 解读与排查`}
+            message={governanceTaskTitle(governanceTarget)}
             description={
               <Space wrap>
                 <span>{governanceTarget.qualityExecutionNo !== undefined
@@ -1193,6 +1207,9 @@ const AiAgentPage: React.FC = () => {
                       </Space>} />}
                     {following && !historyError && <Typography.Text type="secondary">正在自动检查状态；页面隐藏时暂停，达到检查上限后可手动刷新。</Typography.Text>}
                     {continuation?.status && <p>最近轮次状态：{turnStatusLabels[continuation.status]}；历史证据仅供回看，继续提问会重新读取并检查权限。</p>}
+                    {activeSessionId && continuation?.status && !historyError && !continuation.blockingReason && <Button
+                      disabled={streaming || historyLoading || stopping || !can('agent:session:read')}
+                      onClick={() => void selectSession(activeSessionId, true)}>刷新会话</Button>}
                     {isTerminal(continuation) && !historyError && !continuation?.blockingReason && <Alert showIcon
                       type={continuation?.status === 'FAILED' ? 'warning' : 'info'}
                       message={continuation?.status === 'FAILED' ? presentError(continuation.errorCode).title
@@ -1236,4 +1253,8 @@ const AiAgentPage: React.FC = () => {
   );
 };
 
-export default AiAgentPage;
+export default function ScopedAiAgentPage() {
+  const { currentProject } = useSecurityProject();
+  const { can } = usePermissionAccess();
+  return <AiAgentPage key={JSON.stringify([currentProject?.id, can('agent:session:read')])} />;
+}

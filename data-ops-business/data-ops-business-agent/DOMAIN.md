@@ -275,3 +275,5 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 原轮次与 SDK 状态仍拥有执行/消息。批量是最多五项的客户端顺序选择；每项有独立原轮，提交或终态不确定时停止后续项。类型与说明候选、指标定义草稿均需活权限/源版本/Skill 重查。精确历史指标解释仅阅读，CURRENT 仍拒绝漂移。场景不开放业务写工具。
 
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
+
+原会话场景回看（F-031）仅是授权 history/continuation 的只读投影：最新 COMPLETED、唯一 assistant 引用与完整任务范围一致才显示交付卡。历史候选、Skill 版本和原事实只描述生成时依据，不证明当前源有效性或业务已保存/验证/发布；原消息与源域事实仍由原所有者持有。

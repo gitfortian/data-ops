@@ -11,6 +11,16 @@ export type GovernanceTarget = { assetId: number; qualityExecutionNo?: never; qu
   | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; purpose: 'METRIC_EXPLANATION'; metricExplanation: MetricExplanationTarget; metricDraft?: never }
   | { assetId?: never; qualityExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; purpose: 'METRIC_DRAFT'; metricDraft: MetricDraftTarget };
 
+export function governanceTaskTitle(target: GovernanceTarget): string {
+  if (target.metricDraft) return `${target.metricDraft.metricId ? `指标 #${target.metricDraft.metricId} v${target.metricDraft.version}` : '新建指标'} 定义草稿`;
+  if (target.metricExplanation) return `指标 #${target.metricExplanation.metricId} v${target.metricExplanation.version} ${target.metricExplanation.view === 'SNAPSHOT' ? '历史快照' : '口径解释与说明草稿'}`;
+  if (target.modelMapping) return `模型 #${target.modelMapping.modelId} 字段 ${target.modelMapping.columnName} 来源映射建议`;
+  if (target.standardMatch) return `模型 #${target.standardMatch.modelId} 字段 ${target.standardMatch.columnName} 类型标准匹配`;
+  if (target.qualityMonitorId !== undefined) return `质量监控 #${target.qualityMonitorId} 规则建议`;
+  if (target.assetId !== undefined) return `资产 #${target.assetId} ${target.purpose === 'ASSET_DESCRIPTION' ? '描述候选' : '治理解读'}`;
+  return `质量执行 ${target.qualityExecutionNo} 解读与排查`;
+}
+
 export function governanceEntryPath(target: GovernanceTarget): string {
   if (target.standardMatch || target.modelMapping || target.metricExplanation || target.metricDraft) return '/ai-agent';
   if (target.qualityMonitorId !== undefined) return `/ai-agent?qualityMonitorId=${target.qualityMonitorId}`;
