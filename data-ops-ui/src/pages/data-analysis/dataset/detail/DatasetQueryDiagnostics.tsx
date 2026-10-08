@@ -8,6 +8,7 @@ import {
 } from '@/services/dataset';
 import {
   Alert,
+  Button,
   InputNumber,
   Select,
   Table,
@@ -21,6 +22,8 @@ import { DETAIL_TABLE_CLASS } from './components/DatasetDetailPrimitives';
 
 interface DatasetQueryDiagnosticsProps {
   datasetId: string;
+  focusedQueryId?: string;
+  onClearFocus?: () => void;
 }
 
 type StatusFilter = 'ALL' | DatasetQueryStatus;
@@ -43,6 +46,8 @@ const shortHash = (value?: string | null) =>
 
 export default function DatasetQueryDiagnostics({
   datasetId,
+  focusedQueryId,
+  onClearFocus,
 }: DatasetQueryDiagnosticsProps) {
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [minTotalMillis, setMinTotalMillis] = useState(0);
@@ -58,9 +63,10 @@ export default function DatasetQueryDiagnostics({
       setRecords(
         await listDatasetQueryPerformance({
           datasetIds: [datasetId],
-          statuses: status === 'ALL' ? undefined : [status],
-          minTotalMillis: minTotalMillis > 0 ? minTotalMillis : undefined,
-          limit,
+          queryIds: focusedQueryId ? [focusedQueryId] : undefined,
+          statuses: focusedQueryId || status === 'ALL' ? undefined : [status],
+          minTotalMillis: focusedQueryId || minTotalMillis === 0 ? undefined : minTotalMillis,
+          limit: focusedQueryId ? 10 : limit,
         }),
       );
     } catch (loadError) {
@@ -73,7 +79,7 @@ export default function DatasetQueryDiagnostics({
     } finally {
       setLoading(false);
     }
-  }, [datasetId, limit, minTotalMillis, status]);
+  }, [datasetId, focusedQueryId, limit, minTotalMillis, status]);
 
   useEffect(() => {
     void load();
@@ -241,8 +247,24 @@ export default function DatasetQueryDiagnostics({
         showIcon
         message="诊断记录跨实例持久化；SQL 预览由后端移除字面量和注释后再保存，仅用于查询结构定位。"
       />
+      {focusedQueryId ? (
+        <Alert type={error || (!loading && records.length === 0) ? 'warning' : 'info'} showIcon
+          message={error ? '未能核对指定 Query 证据'
+            : loading ? '正在核对指定 Query'
+              : records.length ? '已核对来源 Query 记录' : '指定来源 Query 不在当前可读范围'}
+          description={(
+            <div>
+              <div>Query ID：{focusedQueryId}。仅按当前 Dataset 与 Query ID 向来源查询，
+                不用其他记录代替；记录可能已过保留期或当前身份不可读取。</div>
+              {onClearFocus ? <Button size="small" type="link" onClick={onClearFocus}>
+                返回最近运行诊断
+              </Button> : null}
+            </div>
+          )}
+        />
+      ) : null}
 
-      <div className="flex flex-wrap items-end gap-3 rounded-md bg-[#f7f7f8] p-4">
+      {!focusedQueryId ? <div className="flex flex-wrap items-end gap-3 rounded-md bg-[#f7f7f8] p-4">
         <div>
           <div className="mb-1.5 text-[12px] text-[#667085]">终态</div>
           <Select<StatusFilter>
@@ -309,7 +331,7 @@ export default function DatasetQueryDiagnostics({
           <span>拒绝 {summary.rejected}</span>
           <span>≥3s {summary.slow}</span>
         </div>
-      </div>
+      </div> : null}
 
       {error ? (
         <Alert
