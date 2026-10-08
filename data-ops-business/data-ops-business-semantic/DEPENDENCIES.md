@@ -40,3 +40,8 @@ Semantic 增加 `api.SemanticFieldReferenceReader`：消费者（当前 Modeling
 ## P0-B03：过程及业务域跨模块引用
 
 `api.SemanticStructureReferenceReader` 是 Semantic 定义的只读反向 SPI，Modeling 实现 `countProcessReferences` 和 `countDomainReferences`，查询它拥有的 `yak_modeling_model` 记录。Semantic 只消费计数决定删除，不读取 Modeling 表、不复制引用明细；按可信 Project 范围并包含可恢复回收站记录；查不到/查询错误不得冒充零引用。保持原有 `Modeling → Semantic.api` 单向 Maven 依赖。
+
+
+## P0-B03：分层引用统计的双重语义
+
+`LayerUsageReader.countModelsByLayer()` 为 UI 提供活跃模型数，可排除软删除模型；新增 `countPersistedLayerReferences(layerCode)` 仅供删除安全校验，必须包含当前 Project 的活跃与回收站模型。Modeling 实现该 SPI 并读自己的 `yak_modeling_model`，Semantic 不读其表、不复制引用事实。提供者缺席或查询异常时删除失败，不能冒充零引用。

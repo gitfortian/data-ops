@@ -235,8 +235,13 @@ public class SemanticLayerService {
         throw new SemanticException(SemanticErrorCode.LAYER_PRESET_DELETE_BLOCKED, existing.code());
       }
       LayerUsageReader reader = usageReader.getIfAvailable();
-      long used =
-          reader == null ? 0 : reader.countModelsByLayer().getOrDefault(existing.code(), 0L);
+      if (reader == null) {
+        throw new SemanticException(SemanticErrorCode.DELETE_FAILED,
+            "建模引用校验暂不可用，无法安全删除分层，请稍后重试");
+      }
+      // Dashboard usage counts only live models; deletion must also count
+      // recoverable recycle-bin models, otherwise restore leaves broken refs.
+      long used = reader.countPersistedLayerReferences(existing.code());
       if (used > 0) {
         throw new SemanticException(
             SemanticErrorCode.LAYER_REFERENCED, existing.code() + "（" + used + " 个模型）");
