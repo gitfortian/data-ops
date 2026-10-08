@@ -242,6 +242,12 @@ class DataServiceGoldenUsageEvidenceTest {
     }
 
     @Override
+    public Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId) {
+      return last != null && last.apiId().equals(apiId) && last.id().equals(invocationId)
+          ? Optional.of(last) : Optional.empty();
+    }
+
+    @Override
     public List<InvocationRecord> between(LocalDateTime from, LocalDateTime to) {
       return last == null ? List.of() : List.of(last);
     }
