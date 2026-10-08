@@ -1,8 +1,9 @@
 import type { ConsumerImpact, DataProductView } from '@/services/consumption';
 import { history } from '@umijs/max';
-import { Alert, Button, Card, Checkbox, Select, Space, Table, Typography, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Input, Select, Space, Table, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
+import { consumerVersionOutreachDraft } from './version-impact-outreach';
 import {
   reviewableVersions,
   reviewVersionImpact,
@@ -25,6 +26,7 @@ export default function VersionChangeImpactReview({
 }) {
   const [requestedVersion, setRequestedVersion] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
+  const [proposedChange, setProposedChange] = useState('');
   const versions = useMemo(
     () => reviewableVersions(impact, product.activeVersion),
     [impact, product.activeVersion],
@@ -48,6 +50,18 @@ export default function VersionChangeImpactReview({
       message.success('已复制本次核对快照；未写入审批或发布记录');
     } catch {
       message.error('浏览器剪贴板不可用，未生成持久核对记录');
+    }
+  };
+
+  const copyOutreach = async (row: VersionImpactRow) => {
+    if (!acknowledged || !impact || !review || loading || impactIssue) return;
+    try {
+      await navigator.clipboard.writeText(consumerVersionOutreachDraft(
+        product, impact, review, row, proposedChange, new Date().toISOString(),
+      ));
+      message.success('已复制人工沟通草稿；未发送任何通知或生成审批记录');
+    } catch {
+      message.error('复制沟通草稿失败，请检查浏览器剪贴板权限');
     }
   };
 
@@ -93,6 +107,20 @@ export default function VersionChangeImpactReview({
             ) : <Text key={ref} type="secondary">{ref}</Text>;
           }) : <Text type="secondary">无版本级来源证据</Text>}
         </Space>
+      ),
+    },
+    {
+      title: '人工沟通',
+      key: 'outreach',
+      render: (_: unknown, row: VersionImpactRow) => (
+        <Button
+          type="link"
+          size="small"
+          disabled={!acknowledged || loading || !!impactIssue}
+          onClick={() => { void copyOutreach(row); }}
+        >
+          复制该 Consumer 沟通草稿
+        </Button>
       ),
     },
   ];
@@ -154,6 +182,21 @@ export default function VersionChangeImpactReview({
                 ? '至少一个来源不可用或无权访问：必须联系对应证据 Owner 补核，不能视为无影响。'
                 : '未观察到目标版本消费不等于不受变更影响；订阅只表示声明依赖，不绑定版本。'}
             </Text>
+            <div>
+              <Text strong>拟变更内容（供人工沟通，不持久化）</Text>
+              <Input.TextArea
+                aria-label="拟变更内容"
+                value={proposedChange}
+                maxLength={600}
+                showCount
+                rows={2}
+                placeholder="例如：拟调整响应字段；兼容方案和时间尚待双方确认。不要填写密钥、令牌或敏感样本。"
+                onChange={(event) => setProposedChange(event.target.value)}
+              />
+            </div>
+            <Alert type="info" showIcon message="人工沟通准备，不是已通知状态"
+              description="请使用已知 Consumer 身份自行找到真实负责人。复制草稿不会发送消息、记录已读、获得变更确认或形成 Approval/Audit。"
+            />
             <Checkbox checked={acknowledged} disabled={loading} onChange={(event) => setAcknowledged(event.target.checked)}>
               我已核对当前可见证据及其覆盖缺口，理解本次结果不代表所有消费者。
             </Checkbox>
@@ -161,6 +204,7 @@ export default function VersionChangeImpactReview({
               <Button onClick={() => { void copyReview(); }} disabled={!acknowledged || loading}>
                 复制本次版本影响核对记录
               </Button>
+              <Text type="secondary"> · 逐个 Consumer 的沟通草稿可从上方表格复制（需先勾选覆盖说明）。</Text>
             </div>
             <Text type="secondary">
               这是一次性人工核对快照，不持久化、不产生审批通过状态，也不阻断 Dataset / Data Service 原发布流程。
