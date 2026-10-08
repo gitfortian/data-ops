@@ -90,7 +90,19 @@ jobs:
           node scripts/check-type-baseline.mjs
           yarn build
           cd ..
-          bash ./mvnw -B -ntp verify
+          # Run the full reactor against MySQL with the PostgreSQL smoke disabled.
+          # application.yml defaults to the mysql profile; set it explicitly for
+          # deterministic driver selection even when both CI database URLs exist.
+          env -u ARCHITECTURE_POSTGRESQL_URL SPRING_PROFILES_ACTIVE=mysql \
+            bash ./mvnw -B -ntp verify
+
+          # Use the actual PostgreSQL profile for a second *targeted* Boot smoke.
+          # Isolate MySQL smoke via its opt-in variable. Otherwise Spring can bind
+          # the MySQL driver from the default profile to the PostgreSQL JDBC URL.
+          env -u ARCHITECTURE_MYSQL_URL SPRING_PROFILES_ACTIVE=postgresql \
+            bash ./mvnw -B -ntp -pl data-ops-boot -am \
+              -Dtest=PostgresqlStorageSmokeTest \
+              -Dsurefire.failIfNoSpecifiedTests=false test
           node scripts/release/frontend-artifact.mjs
           tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
       - name: Retain precise SHA snapshot and inventories, including on failure
