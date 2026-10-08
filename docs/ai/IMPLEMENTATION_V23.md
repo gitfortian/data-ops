@@ -2,6 +2,8 @@
 
 2026-10-08，用户授权按后续规划继续实施。合同 [F-033](../product/features/F-033-agent-query-clarification.md) 为 IMPLEMENTING。基线 main `11c7ab2f`；V22 #360 尚未合并时独立开发，本版不依赖其新指标场景。真实模型与测试环境验收按既有约定延期。
 
+提交 PR #365 时 main 已前进到 `730d2a6d`，包含 V22 #360 与已合并的架构/消费修复；已合并该基线。原指标变更场景的工具策略、恢复目标及合同完整保留，V23 仍只增强普通问数反问。
+
 User：Dataset 分析人员。Problem：同名字段、多时间字段、金额/数量及去重规则存在歧义，泛化反问缺少核对依据。Capability：原问数流程的字段/时间/口径澄清。Journey：提出问题 → 授权字段发现 → 同轮反问 → 人工回答 → 重新发现/核对 → 原结构化查询与证据。Expected Outcome：明确缺项及回答范围，减少未经确认的业务假设；实际收益待试点。
 
 Truth Owner：Dataset 持字段/版本/查询，Security 持权限，原 turn/SDK StateStore 持生命周期/pending/应答。原字段发现与受控反问投影是 Producer，原 Agent 页面与恢复路径是 Consumer；复用预算、项目/归属、白名单、精确停止、原查询审计，无第二份事实。

@@ -10,6 +10,9 @@ public interface MetricValidationEvidenceRepository {
 
   List<MetricValidationEvidence> listByVersion(Long metricId, int metricVersion);
 
+  /** Latest attempt, including failed/unavailable attempts; bounded independently of history size. */
+  MetricValidationEvidence findLatest(Long metricId, int metricVersion);
+
   /** Latest PASSED evidence from a READY provider for the exact MetricVersion. */
   MetricValidationEvidence findLatestReady(Long metricId, int metricVersion);
 

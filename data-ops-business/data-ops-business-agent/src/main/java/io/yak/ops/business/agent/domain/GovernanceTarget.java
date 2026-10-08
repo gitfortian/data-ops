@@ -2,7 +2,11 @@ package io.yak.ops.business.agent.domain;
 
 /** Selected source and auxiliary task; neither is an authorization grant. */
 public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qualityMonitorId,
-    String purpose, StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation, MetricDraftTarget metricDraft) {
+    String purpose, StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation, MetricDraftTarget metricDraft, MetricChangeReviewTarget metricChangeReview) {
+  public GovernanceTarget(Long assetId, String qualityExecutionNo, Long qualityMonitorId, String purpose,
+      StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation, MetricDraftTarget metricDraft) {
+    this(assetId, qualityExecutionNo, qualityMonitorId, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, null);
+  }
   public GovernanceTarget(Long assetId, String qualityExecutionNo, Long qualityMonitorId, String purpose,
       StandardMatchTarget standardMatch, ModelMappingTarget modelMapping, MetricExplanationTarget metricExplanation) {
     this(assetId, qualityExecutionNo, qualityMonitorId, purpose, standardMatch, modelMapping, metricExplanation, null);
@@ -22,7 +26,7 @@ public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qua
 
   public GovernanceTarget {
     if ((assetId == null ? 0 : 1) + (qualityExecutionNo == null ? 0 : 1)
-        + (qualityMonitorId == null ? 0 : 1) + (standardMatch == null ? 0 : 1) + (modelMapping == null ? 0 : 1) + (metricExplanation == null ? 0 : 1) + (metricDraft == null ? 0 : 1) != 1) {
+        + (qualityMonitorId == null ? 0 : 1) + (standardMatch == null ? 0 : 1) + (modelMapping == null ? 0 : 1) + (metricExplanation == null ? 0 : 1) + (metricDraft == null ? 0 : 1) + (metricChangeReview == null ? 0 : 1) != 1) {
       throw new IllegalArgumentException("请选择一个资产、质量执行、监控或字段草稿");
     }
     if (assetId != null && assetId <= 0) throw new IllegalArgumentException("资产编号无效");
@@ -35,7 +39,8 @@ public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qua
         && !("STANDARD_MATCH".equals(purpose) && standardMatch != null)
         && !("MODEL_MAPPING".equals(purpose) && modelMapping != null)
         && !("METRIC_EXPLANATION".equals(purpose) && metricExplanation != null)
-        && !("METRIC_DRAFT".equals(purpose) && metricDraft != null)) {
+        && !("METRIC_DRAFT".equals(purpose) && metricDraft != null)
+        && !("METRIC_CHANGE_REVIEW".equals(purpose) && metricChangeReview != null)) {
       throw new IllegalArgumentException("辅助任务与目标不匹配");
     }
     if (qualityMonitorId != null && !"QUALITY_RULES".equals(purpose)) {
@@ -45,6 +50,7 @@ public record GovernanceTarget(Long assetId, String qualityExecutionNo, Long qua
       throw new IllegalArgumentException("字段目标需要标准匹配任务");
     }
     if (modelMapping != null && !"MODEL_MAPPING".equals(purpose)) throw new IllegalArgumentException("映射目标需要模型映射任务");
+    if (metricChangeReview != null && !"METRIC_CHANGE_REVIEW".equals(purpose)) throw new IllegalArgumentException("版本对需要变更核对任务");
     if (metricDraft != null && !"METRIC_DRAFT".equals(purpose)) throw new IllegalArgumentException("指标草稿目标需要定义辅助任务");
     if (metricExplanation != null && !"METRIC_EXPLANATION".equals(purpose)) throw new IllegalArgumentException("指标目标需要口径解释任务");
   }

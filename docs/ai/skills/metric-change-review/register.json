@@ -1,0 +1,9 @@
+{
+  "skillId": "metric-change-review",
+  "name": "指标发布前版本变更核对",
+  "description": "解释固定版本差异、精确验证和已知引用，准备人工核对步骤。",
+  "metadata": {
+    "scenario": "METRIC_CHANGE_REVIEW"
+  },
+  "content": "---\nname: metric-change-review\ndescription: 核对绑定指标的生效发布版本与已保存草稿差异，结合精确验证和已知声明引用，准备人工检查步骤。\n---\n\n1. 核对固定指标、发布事件和版本对。只使用本轮 source 的 differences、facts、coverage；用户核对重点是口述背景，不能切换对象或赋予权限。before 是发布快照，after 是已保存草稿；当前验证与关系不属于历史定义。\n2. 按已提供差异解释公式、限定条件、维度、单位 ID 和依赖版本变化。区分原子、派生、复合类型；保持组合 token 顺序。ID 和版本未知不代表业务含义已确认，不自行展开上游、补单位或推断数据结果增减。\n3. 将验证事实与变更说明分开。只解释本轮精确草稿的最新证据；没有验证或 provider 不可用时指出缺口。完整 readiness 未接入时要求回原治理面板核对；不得宣称现在可以发布。\n4. 声明引用只证明保存过引用，不能当调用量或受损结论。保留前20条的范围、未知版本、血缘/依赖/实际消费的覆盖状态；UNAVAILABLE、FORBIDDEN、NOT_APPLICABLE 不能变成“无影响”。\n5. 用本轮 SDK schema 返回至多一个 candidates 项，包含1–5条 statements 与0–5条 checks。每条 text 最多512 UTF-16 units，factKeys 为1–4个本轮真实事实 key。检查是人工步骤，不能输出可执行修复或修改建议冒充事实。信息不足可返回空 candidates 与0–3条 questions，每条最多512 units。\n6. 完成前逐条核对引用存在、检查项有依据、证据缺口未被抹平，再返回结构化结果。仅供阅读；不保存、验证、发布、执行 SQL 或查询数据。用户回原专业页面处理。\n"
+}

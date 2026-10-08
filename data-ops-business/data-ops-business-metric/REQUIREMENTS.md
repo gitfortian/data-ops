@@ -87,3 +87,8 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 精确历史版本解释保持不可变快照，与当前验证/发布/影响事实分开。定义辅助只生成类型适配的白名单草稿，人工原保存、精确版本验证/发布仍独立。消费出口只使用已登记目标与版本，缺失/未知/不可用不伪造完成。
 
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
+
+
+## 指标发布前版本变更解释（F-032）
+
+原 Metric-owned 只读投影提供当前已保存草稿与 active publication 精确版本对、白名单差异、最新精确验证和最多20条声明引用；无安全有界读取的治理/关系分区明确覆盖缺口。准备指纹绑定版本、发布事件及证据，交付重读核对；原 turn/StateStore 与源域保持唯一 owner，AI 不保存/验证/发布。依赖沿用 runtime → toolset → gateway → metric.api，Metric 内部复用原 repository，无新反向边、业务表或状态机。精确边界与真实验收待办见 docs/product/features/F-032-metric-change-review.md。

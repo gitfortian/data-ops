@@ -1,8 +1,6 @@
 import {
   cancelSubscription,
-  getConsumerImpact,
   getProduct,
-  listSubscriptions,
   productKeyValue,
   subscribeToProduct,
   type ConsumerImpact,
@@ -29,7 +27,8 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { loadConsumptionRelationships } from './relationship-load';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
 const { Title, Paragraph, Text } = Typography;
@@ -102,10 +101,35 @@ export default function ConsumptionDetailPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [subscriptionIssue, setSubscriptionIssue] = useState('');
   const [relationshipLoading, setRelationshipLoading] = useState(false);
+  const relationshipRequestId = useRef(0);
   const [subscriptionSaving, setSubscriptionSaving] = useState(false);
   const [dataServiceConsumers, setDataServiceConsumers] = useState<DataServiceConsumer[]>([]);
   const [selectedConsumerId, setSelectedConsumerId] = useState<number>();
   const [consumerListIssue, setConsumerListIssue] = useState('');
+
+  const reloadRelationships = useCallback(async () => {
+    const requestId = ++relationshipRequestId.current;
+    setRelationshipLoading(true);
+    setImpact(null);
+    setImpactIssue('');
+    setSubscriptions([]);
+    setSubscriptionIssue('');
+    try {
+      const result = await loadConsumptionRelationships(productKey);
+      if (requestId !== relationshipRequestId.current) return;
+      setImpact(result.impact);
+      setImpactIssue(result.impactIssue);
+      setSubscriptions(result.subscriptions);
+      setSubscriptionIssue(result.subscriptionIssue);
+    } catch (cause) {
+      if (requestId !== relationshipRequestId.current) return;
+      const reason = cause instanceof Error ? cause.message : '消费关系读取失败';
+      setImpactIssue(reason);
+      setSubscriptionIssue(reason);
+    } finally {
+      if (requestId === relationshipRequestId.current) setRelationshipLoading(false);
+    }
+  }, [productKey]);
 
   useEffect(() => {
     let active = true;
@@ -126,18 +150,7 @@ export default function ConsumptionDetailPage() {
         setGovernanceEvidence(result.governanceEvidence || []);
         setReason(result.reason || '');
         if (result.state === 'FOUND') {
-          setRelationshipLoading(true);
-          void getConsumerImpact(productKey)
-            .then((value) => { if (active) setImpact(value); })
-            .catch((cause) => {
-              if (active) setImpactIssue(cause instanceof Error ? cause.message : '消费影响暂不可用');
-            });
-          void listSubscriptions(productKey)
-            .then((value) => { if (active) setSubscriptions(value); })
-            .catch((cause) => {
-              if (active) setSubscriptionIssue(cause instanceof Error ? cause.message : '消费订阅暂不可用');
-            })
-            .finally(() => { if (active) setRelationshipLoading(false); });
+          void reloadRelationships();
           if (result.product?.productKey.productType === 'DATA_SERVICE') {
             void listDataServiceConsumers()
               .then((value) => {
@@ -167,8 +180,8 @@ export default function ConsumptionDetailPage() {
       .finally(() => {
         if (active) setLoading(false);
       });
-    return () => { active = false; };
-  }, [productKey]);
+    return () => { active = false; relationshipRequestId.current += 1; };
+  }, [productKey, reloadRelationships]);
 
   const columns = useMemo<DatasetColumn[]>(() => {
     if (!product || product.productKey.productType !== 'DATASET') return [];
@@ -255,6 +268,9 @@ export default function ConsumptionDetailPage() {
         return [changed, ...rest];
       });
       message.success(ownSubscription ? '已取消消费依赖' : '已声明消费依赖');
+      // Subscription is only a declared relationship. Re-read owning usage/impact evidence
+      // rather than synthesizing a Consumer from the mutation response.
+      await reloadRelationships();
     } catch (cause) {
       message.error(cause instanceof Error ? cause.message : '更新消费依赖失败');
     } finally {
@@ -367,7 +383,10 @@ export default function ConsumptionDetailPage() {
           )}
         </Card>
 
-        <Card title="消费关系与影响">
+        <Card title="消费关系与影响" extra={
+          <Button size="small" loading={relationshipLoading} disabled={subscriptionSaving}
+            onClick={() => { void reloadRelationships(); }}>重新核对关系与影响</Button>
+        }>
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Space wrap>
               <Button

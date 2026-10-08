@@ -33,4 +33,6 @@ Feature SHIPPED 后，将长期有效内容提升到 Product / Domain / Architec
 - [F-030 场景评测与 J2 证据](F-030-agent-scenario-evaluation.md)：IMPLEMENTING；固定题集、只读核验与基线汇总，真实验收待完成。
 - [F-031 原会话场景结果回看](F-031-agent-scenario-history.md)：IMPLEMENTING；最新完成轮的只读交付与原页面回链，真实验收按用户要求延期。
 
+- [F-032 指标发布前版本变更解释](F-032-metric-change-review.md)：IMPLEMENTING；固定版本对、精确验证与有界声明引用，只读说明及覆盖缺口；真实验收延期。
+
 - [F-033 问数字段、时间与口径澄清](F-033-agent-query-clarification.md)：IMPLEMENTING；原 HITL 的有界字段依据及同轮应答，真实模型验收延期。

@@ -1,3 +1,4 @@
+import { parseMetricChangeReview, type MetricChangeReviewSuggestion } from './metricChangeReview';
 import type { SessionContinuation } from './continuation';
 import { readContinuation } from './continuation';
 import { governanceSourcePath, sameScenarioTarget } from './governance';
@@ -6,10 +7,10 @@ import { parseModelMapping, type ModelMappingSuggestion } from './modelMapping';
 import { parseMetricExplanation, type MetricExplanationSuggestion } from './metricExplanation';
 import { parseMetricDraft, type MetricDraftSuggestion } from './metricDraft';
 
-export type ScenarioSuggestion = StandardMatchSuggestion | ModelMappingSuggestion | MetricExplanationSuggestion | MetricDraftSuggestion;
+export type ScenarioSuggestion = StandardMatchSuggestion | ModelMappingSuggestion | MetricExplanationSuggestion | MetricDraftSuggestion | MetricChangeReviewSuggestion;
 export type ScenarioHistory = { status: 'NONE' | 'UNAVAILABLE' }
   | { status: 'READY'; value: ScenarioSuggestion; text: string; sourcePath: string };
-const markers = /```yak-(?:standard-match|model-mapping|metric-explanation|metric-draft)\s*\n/g;
+const markers = /```yak-(?:standard-match|model-mapping|metric-explanation|metric-draft|metric-change-review)\s*\n/g;
 
 /** Read-only projection of the latest completed task. Never infer its scope from model text. */
 export function readScenarioHistory(text: string, sessionId: string | null, turnId: string | undefined,
@@ -25,6 +26,7 @@ export function readScenarioHistory(text: string, sessionId: string | null, turn
     let value: ScenarioSuggestion | null = null;
     let expected: unknown;
     switch (target?.purpose) {
+      case 'METRIC_CHANGE_REVIEW': value = parseMetricChangeReview(text); expected = target.metricChangeReview; break;
       case 'STANDARD_MATCH': value = parseStandardMatch(text); expected = target.standardMatch; break;
       case 'MODEL_MAPPING': value = parseModelMapping(text); expected = target.modelMapping; break;
       case 'METRIC_EXPLANATION': value = parseMetricExplanation(text); expected = target.metricExplanation; break;
@@ -33,6 +35,6 @@ export function readScenarioHistory(text: string, sessionId: string | null, turn
     }
     if (!value || typeof value.truncated !== 'boolean' || value.kind !== target.purpose || !sameScenarioTarget(value.target, expected)) return unavailable;
     return { status: 'READY', value, sourcePath: governanceSourcePath(target),
-      text: text.replace(/```yak-(?:standard-match|model-mapping|metric-explanation|metric-draft)\s*\n[\s\S]*?\n```/, '').trim() };
+      text: text.replace(/```yak-(?:standard-match|model-mapping|metric-explanation|metric-draft|metric-change-review)\s*\n[\s\S]*?\n```/, '').trim() };
   } catch { return unavailable; }
 }
