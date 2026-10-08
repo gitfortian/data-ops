@@ -1,6 +1,7 @@
 package io.yak.ops.boot.project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -116,6 +117,62 @@ class ProjectScopeInterceptorTest {
 
     interceptor.afterCompletion(
         request, new MockHttpServletResponse(), handler("required"), null);
+
+    verify(authorizationAudit).endRequest();
+    assertFalse(currentProject.isPresent());
+  }
+
+  @Test
+  void rejectedMissingProjectReleasesAuditWithoutSpringAfterCompletion() throws Exception {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    when(currentUserProvider.getCurrentUser(request)).thenReturn("alice");
+
+    assertFalse(interceptor.preHandle(request, new MockHttpServletResponse(), handler("required")));
+
+    // Spring MVC only invokes afterCompletion for successfully preHandled interceptors.
+    // This test intentionally NEVER calls afterCompletion.
+    verify(authorizationAudit).denied(null, ProjectAuthorizationReason.PROJECT_REQUIRED.name());
+    verify(authorizationAudit).endRequest();
+    assertFalse(currentProject.isPresent());
+  }
+
+  @Test
+  void rejectedInvalidProjectHeaderReleasesAuditWithoutSpringAfterCompletion() throws Exception {
+    MockHttpServletRequest request = requestWithProject("bad-id");
+    when(currentUserProvider.getCurrentUser(request)).thenReturn("alice");
+
+    assertFalse(interceptor.preHandle(request, new MockHttpServletResponse(), handler("required")));
+
+    verify(authorizationAudit).denied(null, ProjectAuthorizationReason.PROJECT_ID_INVALID.name());
+    verify(authorizationAudit).endRequest();
+    assertFalse(currentProject.isPresent());
+  }
+
+  @Test
+  void failingAuthenticationProviderDoesNotLeakPreviousRequestProject() throws Exception {
+    MockHttpServletRequest request = requestWithProject("99");
+    currentProject.bind(new ProjectContext(71L, "previous"));
+    when(currentUserProvider.getCurrentUser(request))
+        .thenThrow(new IllegalStateException("authorization backend failed"));
+
+    assertThrows(IllegalStateException.class,
+        () -> interceptor.preHandle(request, new MockHttpServletResponse(), handler("required")));
+
+    verify(authorizationAudit).beginRequest();
+    verify(authorizationAudit).endRequest();
+    verifyNoInteractions(accessGuard);
+    assertFalse(currentProject.isPresent());
+  }
+
+  @Test
+  void failingProjectAccessGuardDoesNotLeakPreviousRequestOrGrantAccess() throws Exception {
+    MockHttpServletRequest request = requestWithProject("99");
+    when(currentUserProvider.getCurrentUser(request)).thenReturn("alice");
+    when(accessGuard.requireAccessible(99L, "alice"))
+        .thenThrow(new IllegalStateException("project store unavailable"));
+
+    assertThrows(IllegalStateException.class,
+        () -> interceptor.preHandle(request, new MockHttpServletResponse(), handler("required")));
 
     verify(authorizationAudit).endRequest();
     assertFalse(currentProject.isPresent());
