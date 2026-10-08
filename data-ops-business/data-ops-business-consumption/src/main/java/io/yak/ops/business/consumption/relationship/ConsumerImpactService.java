@@ -50,6 +50,20 @@ public class ConsumerImpactService {
   }
 
   public ConsumerImpactView view(ProductKey productKey, int usageLimit) {
+    return view(productKey, usageLimit, null);
+  }
+
+  /**
+   * Optional exact-version read over already persisted successful Usage.
+   * Unlike the ordinary product overview, an older immutable revision is not
+   * evicted by newer versions. Source audit reconciliation is still bounded.
+   */
+  public ConsumerImpactView view(
+      ProductKey productKey, int usageLimit, String sourceVersionIdentity) {
+    String exactVersion = sourceVersionIdentity == null ? null : sourceVersionIdentity.trim();
+    if (exactVersion != null && (exactVersion.isEmpty() || exactVersion.length() > 128)) {
+      throw new IllegalArgumentException("Invalid immutable source version identity");
+    }
     Long projectId = currentProject.requireProjectId();
     List<Subscription> declared;
     List<UsageEvidence> observed;
@@ -69,7 +83,9 @@ public class ConsumerImpactService {
     }
 
     try {
-      observed = usage.list(projectId, productKey, null, limit);
+      observed = exactVersion == null
+          ? usage.list(projectId, productKey, null, limit)
+          : usage.listByVersion(projectId, productKey, exactVersion, limit);
       // A full *window* is still readable evidence. It is not a provider outage.
       usageState = sourceCoverage.readUnavailable() || sourceCoverage.gaps() > 0
           ? ConsumerImpactView.EvidenceState.UNAVAILABLE
@@ -114,6 +130,12 @@ public class ConsumerImpactService {
         : windowLimited
         ? "Known consumers are limited to the requested source or normalized usage window; the row limit was reached and older or external consumers may not be included."
         : "Known consumers include declared subscriptions and normalized successful usage in the reconciled source window only; external consumers outside available evidence are not claimed complete.";
+    if (exactVersion != null) {
+      coverage = "Exact immutable version " + exactVersion
+          + ": persisted normalized successful Usage is filtered by Project, Product and revision before its bounded 200-row window. "
+          + "Source audit reconciliation still covers only the latest bounded source window and may miss historical or external consumers. "
+          + coverage;
+    }
     ConsumerImpactView.EvidenceCoverage detail = new ConsumerImpactView.EvidenceCoverage(
         limit, sourceCoverage.recordCount(), observed.size(), sourceCoverage.limitReached(),
         observed.size() == limit, sourceCoverage.gaps(), sourceCoverage.readUnavailable());
