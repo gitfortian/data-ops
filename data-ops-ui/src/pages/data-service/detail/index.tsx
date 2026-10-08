@@ -16,8 +16,9 @@ import {
   type DataSourceOption,
 } from '@/services/data-service';
 import { BRAND_THEME } from '@/styles/brand';
-import { history, useAccess, useParams } from '@umijs/max';
+import { history, useAccess, useParams, useSearchParams } from '@umijs/max';
 import {
+  Alert,
   Button,
   ConfigProvider,
   Empty,
@@ -142,6 +143,12 @@ const ApiIllustration = () => (
 
 export default function DataServiceDetailPage() {
   const params = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
+  const requestedInvocationId = searchParams.get('invocationId') || '';
+  // Keep the audit ID in its original decimal form; frontend JSON numeric IDs above
+  // MAX_SAFE_INTEGER are not sufficient evidence for an exact invocation match.
+  const focusedInvocationId = /^[1-9]\d*$/.test(requestedInvocationId)
+    ? requestedInvocationId : undefined;
   const apiId = Number(params.id || 0);
   const access = useAccess();
   const canManageAccess = access.hasPermission('data-service:access');
@@ -154,7 +161,12 @@ export default function DataServiceDetailPage() {
   const [keys, setKeys] = useState<DataServiceApiKey[]>([]);
   const [logs, setLogs] = useState<DataServiceCallLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<DetailTabKey>('overview');
+  const [activeTab, setActiveTab] = useState<DetailTabKey>(
+    focusedInvocationId && canObserve ? 'logs' : 'overview');
+
+  useEffect(() => {
+    if (focusedInvocationId && canObserve) setActiveTab('logs');
+  }, [focusedInvocationId, canObserve]);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(apiId) || apiId <= 0) {
@@ -174,7 +186,7 @@ export default function DataServiceDetailPage() {
       const [runtimeResponse, keyResponse, logResponse] = await Promise.all([
         canRuntime ? getDataServiceRuntime(apiId) : Promise.resolve(undefined),
         canManageAccess ? listDataServiceKeys(apiId) : Promise.resolve(undefined),
-        canObserve ? listDataServiceLogs(apiId, 50) : Promise.resolve(undefined),
+        canObserve ? listDataServiceLogs(apiId, focusedInvocationId ? 200 : 50) : Promise.resolve(undefined),
       ]);
       setRuntime(runtimeResponse);
       setKeys(keyResponse || []);
@@ -184,7 +196,7 @@ export default function DataServiceDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiId, canManageAccess, canObserve, canRuntime]);
+  }, [apiId, canManageAccess, canObserve, canRuntime, focusedInvocationId]);
 
   useEffect(() => {
     void load();
@@ -201,6 +213,11 @@ export default function DataServiceDetailPage() {
     return dataSources.find((item) => String(item.value) === String(service.dataSourceId))?.label
       || `#${service.dataSourceId}`;
   }, [dataSources, service?.dataSourceId]);
+
+  const exactInvocation = focusedInvocationId
+    ? logs.find((item) => Number.isSafeInteger(item.id)
+        && String(item.id) === focusedInvocationId)
+    : undefined;
 
   const logColumns: TableColumnsType<DataServiceCallLog> = [
     {
@@ -370,19 +387,39 @@ export default function DataServiceDetailPage() {
   const logsContent = (
     <SectionCard title="调用记录">
       <div className="p-5">
-        {logs.length ? (
+        {focusedInvocationId ? (
+          <Alert
+            className="mb-4"
+            type={exactInvocation ? 'info' : 'warning'}
+            showIcon
+            message={exactInvocation ? '已在此服务的近期日志中核对调用 ID'
+              : '未能在此服务的可读日志窗口精确定位调用'}
+            description={(
+              <div>
+                <div>Invocation ID：{focusedInvocationId}。只认可相同 ID 且属于当前 API 的记录；
+                  近期日志最多读取 200 条，超出窗口或超过 JS 安全整数精度的记录不能在此页冒充已核对。</div>
+                <Button type="link" size="small"
+                  onClick={() => history.push(`/data-service/api/${apiId}?tab=logs`)}>
+                  查看此服务最近调用
+                </Button>
+              </div>
+            )}
+          />
+        ) : null}
+        {(!focusedInvocationId || exactInvocation) ? (
           <Table<DataServiceCallLog>
             rowKey="id"
             size="small"
             columns={logColumns}
-            dataSource={logs}
+            dataSource={focusedInvocationId ? exactInvocation ? [exactInvocation] : [] : logs}
             pagination={false}
             scroll={{ x: 760 }}
             className="[&_.ant-table-container]:!rounded-md [&_.ant-table-container]:!border [&_.ant-table-container]:!border-solid [&_.ant-table-container]:!border-[#eceef1] [&_.ant-table-thead>tr>th]:!h-10 [&_.ant-table-thead>tr>th]:!bg-[#f7f7f8] [&_.ant-table-thead>tr>th]:!text-[12px] [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-tbody>tr>td]:!text-[12px]"
           />
         ) : (
           <div className="flex min-h-[320px] items-center justify-center">
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无调用记录" />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={focusedInvocationId ? '无法精确定位指定调用记录' : '暂无调用记录'} />
           </div>
         )}
       </div>
@@ -479,6 +516,12 @@ export default function DataServiceDetailPage() {
             />
           </div>
 
+          {focusedInvocationId && !canObserve ? (
+            <Alert type="warning" showIcon className="mt-3"
+              message="当前身份无权查看调用日志"
+              description="消费影响中的证据引用并不授予 Data Service 观测权限；请联系服务 Owner 进行核对。"
+            />
+          ) : null}
           <div className="mt-3">
             {tabItems.find((item) => item.key === activeTab)?.children}
           </div>
