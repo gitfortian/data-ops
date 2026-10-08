@@ -68,3 +68,20 @@ it('failed turns and unreadable history never expose candidates', async () => {
   render(<ModelMappingPanel {...props} onApply={jest.fn()} />); await generate(); await complete();
   expect(history).not.toHaveBeenCalled(); expect(screen.queryByText('带入来源字段')).not.toBeInTheDocument();
 });
+
+it('invalidates an old source choice when search changes and never restores it from old history', async () => {
+  const apply = jest.fn(); render(<ModelMappingPanel {...props} onApply={apply} />);
+  await generate(); await complete();
+  expect(screen.getByText('带入来源字段')).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText('字段/标准检索词（可空，读取有界目录）'), { target: { value: 'operator' } });
+  expect(screen.queryByText('带入来源字段')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('刷新核对'));
+  await screen.findByText('检索条件已变化，旧候选已失效，请重新生成。');
+  await waitFor(() => expect(screen.getByText('生成来源候选').closest('button')).not.toBeDisabled());
+  expect(screen.queryByText('带入来源字段')).not.toBeInTheDocument();
+  expect(apply).not.toHaveBeenCalled(); expect(validate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('生成来源候选'));
+  await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
+  expect(submit.mock.calls[1][0].governanceTarget.modelMapping.keyword).toBe('operator');
+  await complete();
+});

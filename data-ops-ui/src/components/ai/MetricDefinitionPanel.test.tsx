@@ -10,6 +10,17 @@ const context = { definition: 'a'.repeat(64), fields: [{ name: 'amount', type: '
 const props = { metricType: 'ATOMIC' as const, modelId: 9, upstreamOptions: [], disabled: false, onApply: jest.fn() };
 const enter = () => fireEvent.change(screen.getByPlaceholderText('说明业务目标、统计粒度、周期及限定条件；缺项会列为待确认问题。'), { target: { value: '每日金额合计' } });
 beforeEach(() => { jest.clearAllMocks(); mockProjectId = 1; (getMetricDraftContext as jest.Mock).mockResolvedValue(context); });
+
+it('preserves the requirement after an unavailable source and retries only on request with fixed text', async () => {
+  (getMetricDraftContext as jest.Mock).mockRejectedValueOnce(new Error('private definition failure'));
+  render(<MetricDefinitionPanel {...props} />); enter(); fireEvent.click(screen.getByText('核对所选依赖'));
+  await screen.findByText('指标草稿上下文暂不可用，请核对需求及所选依赖后重试。');
+  expect(screen.queryByText(/private/)).not.toBeInTheDocument();
+  expect(screen.getByPlaceholderText('说明业务目标、统计粒度、周期及限定条件；缺项会列为待确认问题。')).toHaveValue('每日金额合计');
+  expect(getMetricDraftContext).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByText('核对所选依赖')); await screen.findByText('候选来自模型 9');
+  expect(getMetricDraftContext).toHaveBeenCalledTimes(2);
+});
 it('prepares only explicit source and requirement, adopts a draft without persisting it', async () => {
   render(<MetricDefinitionPanel {...props} />); enter(); fireEvent.click(screen.getByText('核对所选依赖'));
   fireEvent.click(await screen.findByText('候选来自模型 9'));

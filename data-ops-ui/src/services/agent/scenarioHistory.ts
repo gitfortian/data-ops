@@ -1,6 +1,6 @@
 import type { SessionContinuation } from './continuation';
 import { readContinuation } from './continuation';
-import { governanceSourcePath } from './governance';
+import { governanceSourcePath, sameScenarioTarget } from './governance';
 import { parseStandardMatch, type StandardMatchSuggestion } from './standardMatch';
 import { parseModelMapping, type ModelMappingSuggestion } from './modelMapping';
 import { parseMetricExplanation, type MetricExplanationSuggestion } from './metricExplanation';
@@ -10,13 +10,6 @@ export type ScenarioSuggestion = StandardMatchSuggestion | ModelMappingSuggestio
 export type ScenarioHistory = { status: 'NONE' | 'UNAVAILABLE' }
   | { status: 'READY'; value: ScenarioSuggestion; text: string; sourcePath: string };
 const markers = /```yak-(?:standard-match|model-mapping|metric-explanation|metric-draft)\s*\n/g;
-const canonical = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).filter(([, v]) => v != null)
-    .sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, canonical(v)]));
-  return value;
-};
-const same = (a: unknown, b: unknown) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 
 /** Read-only projection of the latest completed task. Never infer its scope from model text. */
 export function readScenarioHistory(text: string, sessionId: string | null, turnId: string | undefined,
@@ -38,7 +31,7 @@ export function readScenarioHistory(text: string, sessionId: string | null, turn
       case 'METRIC_DRAFT': value = parseMetricDraft(text); expected = target.metricDraft; break;
       default: return unavailable;
     }
-    if (!value || typeof value.truncated !== 'boolean' || value.kind !== target.purpose || !same(value.target, expected)) return unavailable;
+    if (!value || typeof value.truncated !== 'boolean' || value.kind !== target.purpose || !sameScenarioTarget(value.target, expected)) return unavailable;
     return { status: 'READY', value, sourcePath: governanceSourcePath(target),
       text: text.replace(/```yak-(?:standard-match|model-mapping|metric-explanation|metric-draft)\s*\n[\s\S]*?\n```/, '').trim() };
   } catch { return unavailable; }

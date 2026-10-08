@@ -1,4 +1,4 @@
-import { governanceEntryPath, governanceQuestions, governanceSourcePath, governanceTaskTitle, parseGovernanceTarget } from './governance';
+import { governanceEntryPath, governanceQuestions, governanceSourcePath, governanceTaskTitle, parseGovernanceTarget, sameScenarioTarget } from './governance';
 import { scenario } from '../../../tests/fixtures/agent-scenarios';
 
 it('roundtrips asset and execution selections to existing routes', () => {
@@ -32,4 +32,14 @@ it('identifies all four task kinds including new drafts and exact snapshots', ()
   expect(governanceTaskTitle({ ...f.target, metricDraft: { ...f.target.metricDraft, metricId: 12, version: 4 } })).toBe('指标 #12 v4 定义草稿');
   expect(governanceTaskTitle({ assetId: 7 })).toBe('资产 #7 治理解读');
   expect(governanceTaskTitle({ qualityExecutionNo: 'Q_1' })).toBe('质量执行 Q_1 解读与排查');
+});
+
+it('compares full task values while tolerating projection nulls and reordered keys', () => {
+  const target = scenario().target;
+  expect(sameScenarioTarget(target, { ...Object.fromEntries(Object.entries(target).reverse()), metricDraft: null })).toBe(true);
+  if (target.purpose !== 'STANDARD_MATCH') throw new Error('fixture');
+  expect(sameScenarioTarget(target, { ...target, standardMatch: { ...target.standardMatch, keyword: '另一条件' } })).toBe(false);
+  expect(sameScenarioTarget({ metricDraft: { upstreamIds: [1, 2] } }, { metricDraft: { upstreamIds: [2, 1] } })).toBe(false);
+  expect(sameScenarioTarget({ metricId: 7, version: 3 }, { metricId: 7, version: 4 })).toBe(false);
+  expect(sameScenarioTarget(undefined, {})).toBe(false);
 });

@@ -291,3 +291,5 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 MetricDraftTarget/METRIC_DRAFT 固定 metric-definition-draft Skill；runtime 复用 structuredScenario（AgentScope 2.0.3），仅 load_skill_through_path/get_metric_draft_context/generate_response，纳入同一轮预算与历史交付。MetricDraftGateway 只依赖 MetricDraftQueryApi，源域校验与 Skill 指纹复核都通过才可交付/带入。历史说明显式 view=SNAPSHOT；旧 target 无 view 仍只允许当前版本。
 
 F-031 的 scenarioHistory reader 复用 continuation 目标规范化与四场景 parser；页面在过滤空消息前统计 assistant 引用唯一性，只为 history 标记来源。卡片只有展示与由权威目标派生的原页面回链；项目/读取权限变化重置页面并使异步结果失效。没有新增后端协议、源读取或状态机。
+
+StructuredSuggestionPanel 自身按完整目标/定义/disabled 隔离组件生命周期，调用方仍拥有项目与表单作用域。检索词变化保留原轮标识以核对活动/未知状态，只允许相同完整输入恢复候选；sameScenarioTarget 与原会话回看共用完整值比较。停止锁覆盖精确取消和状态核对，异步回调同时校验生命周期与操作代次；错误边界使用固定阶段提示。

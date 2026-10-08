@@ -26,7 +26,7 @@ export default function MetricExplanationPanel({ metricId, version, disabled, sn
         if (!value || value.metricId !== metricId || value.version !== version || !/^[a-f0-9]{64}$/.test(value.definition)) throw new Error('指标版本上下文无法核对');
         setContext({ scope, value });
       }
-    }).catch(e => { if (!cancelled && isCurrent()) setError(e instanceof Error ? e.message : '口径上下文不可用'); });
+    }).catch(() => { if (!cancelled && isCurrent()) setError('指标版本上下文暂不可用，请重试读取或返回原页面核对。'); });
     return () => { cancelled = true; };
   }, [scope, capture, retry]);
   if (disabled) return <Alert type="info" message="请先保存口径修改，并确认指标读取、Agent 运行与会话读取权限后生成说明。" />;
