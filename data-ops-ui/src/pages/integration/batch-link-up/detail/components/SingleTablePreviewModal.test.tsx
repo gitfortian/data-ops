@@ -53,16 +53,25 @@ jest.mock('antd', () => {
         render?: (value: unknown, row: Record<string, unknown>) => ReactNode;
       }>;
       loading: boolean;
-    }) => element('div', {
-      'data-testid': 'preview-table',
-      'data-loading': String(loading),
-    }, dataSource.map((row, index) => element('div', {
-      key: String(row.__yakPreviewRowKey ?? index),
-    }, columns.map((col, colIndex) => element(
-      'span',
-      { key: col.key ?? colIndex },
-      col.render?.(undefined, row),
-    )))),
+    }) => {
+      const rows = dataSource.map((row, index) =>
+        element(
+          'div',
+          { key: String(row.__yakPreviewRowKey ?? index) },
+          columns.map((col, colIndex) =>
+            element(
+              'span',
+              { key: col.key ?? colIndex },
+              col.render?.(undefined, row),
+            ),
+          ),
+        ),
+      );
+      return element('div', {
+        'data-testid': 'preview-table',
+        'data-loading': String(loading),
+      }, rows);
+    },
   };
 });
 
