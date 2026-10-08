@@ -91,7 +91,7 @@ test('real executor uses published routes, hashes private outputs, and leaves se
   assert.ok(!JSON.stringify(report).includes('private-test-secret'));
 });
 
-test('incomplete transport explicitly cancels its own session instead of relying on disconnect', async () => {
+test('incomplete transport explicitly cancels its acknowledged turn instead of relying on disconnect', async () => {
   const calls = [];
   await assert.rejects(runRealCase(item, binding, config, async (url) => {
     calls.push(url.pathname);
@@ -100,7 +100,7 @@ test('incomplete transport explicitly cancels its own session instead of relying
     return json(true);
   }), /INCOMPLETE_STREAM/);
   assert.equal(calls.length, 3);
-  assert.match(calls[2], /\/sessions\/ai-eval-.*\/cancel$/);
+  assert.equal(calls[2], '/api/v1/agent/chat/turns/t2/cancel');
 });
 
 test('missing/mismatched bindings make zero network calls', async () => {
