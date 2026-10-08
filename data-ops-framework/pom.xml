@@ -39,7 +39,6 @@
     <module>data-security</module>
     <module>data-schedule</module>
     <module>data-workflow</module>
-    <module>data-file</module>
 
   </modules>
 

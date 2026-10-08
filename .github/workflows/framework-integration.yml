@@ -62,3 +62,5 @@ jobs:
 
       - name: Verify complete Maven reactor
         run: bash ./mvnw -B -ntp clean verify
+      - name: Verify retained File library standalone compatibility
+        run: bash ./mvnw -f data-ops-framework/data-file/pom.xml -B -ntp test

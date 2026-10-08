@@ -1,8 +1,8 @@
 # 构建兼容性边界
 
 `data-ops-framework` 目录是 Yak Ops 主仓库 Maven Reactor 中的嵌套聚合工程。其自身根
-POM 聚合 `data-common`、`data-security`、`data-schedule`、`data-workflow` 和 `data-file`；
-这些模块继承独立的 `data-ops-framework-parent`，不继承 Yak Ops 根 POM。主仓库构建框架与
+POM 聚合 `data-common`、`data-security`、`data-schedule` 和 `data-workflow`；
+上述在 Reactor 中的模块继承独立的 `data-ops-framework-parent`，不继承 Data-Ops 根 POM。`data-file` 从 A8.1 起不再进入 Reactor / BOM，但旧源码与 POM 暂保留，待外部制品兼容性核查后由 A8.5 决定最终处置。主仓库构建框架与
 业务时无需先把框架安装到本地 Maven 仓库。
 
 Framework Reactor 以 Spring Boot 3.3.13 和 Java 21 为统一基线；`data-security` 使用

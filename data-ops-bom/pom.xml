@@ -70,11 +70,6 @@
                 <artifactId>data-workflow-engine</artifactId>
                 <version>${data-ops-framework.version}</version>
             </dependency>
-            <dependency>
-                <groupId>io.github.weifuwan</groupId>
-                <artifactId>data-file</artifactId>
-                <version>${data-ops-framework.version}</version>
-            </dependency>
 
             <!-- Third-party -->
             <dependency>

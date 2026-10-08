@@ -7,7 +7,7 @@ Yak Framework 使用小型 Maven 模块保持能力边界清晰：
 - `data-security`：用户、认证、角色、权限和操作审计能力，依赖 `data-common`；
 - `data-schedule`：插件化统一调度能力，提供稳定 API、核心路由、Quartz 与 XXL-JOB 插件，以及聚合全部插件的 Starter；
 - `data-workflow/data-workflow-engine`：纯 Java DAG 工作流执行内核；
-- `data-file`：兼容 Java 8 的本地、MinIO、OSS 统一文件服务。
+- `data-file`：**A8.1 开始退出 Data-Ops 当前 Maven Reactor 和统一 BOM 管理**；其旧源码暂时保留供历史兼容性与外部发布消费者审计，不属于当前应用构建/运行能力。
 
 模块目录表达维护和聚合位置，artifactId 表达发布角色，因此两者按角色区分：
 
@@ -48,7 +48,7 @@ mvn clean verify
 
 需要把制品提供给仓库外部的 Maven 项目时，再执行 `mvn clean install`。
 
-在 Yak Ops 仓库中，`data-ops-framework` 已作为根 Maven Reactor 的子工程。直接从 Yak Ops 根目录构建即可，无需先在本目录执行 `install`：
+在 Data-Ops 仓库中，`data-ops-framework` 仍作为根 Maven Reactor 的子工程，但从 A8.1 起不再聚合 `data-file`。直接从 Yak Ops 根目录构建即可，无需先在本目录执行 `install`：
 
 ```shell
 ./mvnw clean verify
@@ -114,3 +114,5 @@ D:\baize-works\baize-tools\apache-maven-3.9.16\bin\mvn clean deploy -Pcentral-re
 ```
 
 第一版混淆策略只进行名称混淆，不执行 shrink/optimize，并保留公共 API 与 Spring/Jackson 等运行时反射所需的元数据。各模块会在 `target/` 下生成 `proguard-mapping.txt` 和 `proguard-seeds.txt`，用于问题排查和堆栈反混淆；这些文件属于内部发布元数据，不应作为 Maven 制品发布或对外提供。
+
+> A8.1 注意：`data-file` 旧 Maven Central 发布坐标保留独立兼容性审查，仓库根部的 `mvnw clean verify` 不再验证/产出此独立旧制品；不允许将当前应用的旧依赖改为从 Maven Central 下载来绕过源码治理。
