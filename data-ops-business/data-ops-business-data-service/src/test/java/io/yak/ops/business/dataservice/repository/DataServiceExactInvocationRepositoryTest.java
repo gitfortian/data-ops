@@ -136,4 +136,50 @@ class DataServiceExactInvocationRepositoryTest {
     verifyNoInteractions(mapper, project);
   }
 
+  @Test
+  void oldSuccessfulRevisionIsSelectedWithinProjectAndApiBeforeBoundedLimit() {
+    DataServiceCallLogMapper mapper = mock(DataServiceCallLogMapper.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    DataServiceCallLogPO row = new DataServiceCallLogPO();
+    row.setId(9007199254740993L);
+    row.setProjectId(42L);
+    row.setApiId(7L);
+    row.setSourceRevisionId(9007199254740995L);
+    row.setSuccess(true);
+    row.setCreateTime(LocalDateTime.of(2025, 7, 1, 12, 0));
+    when(mapper.selectList(any())).thenReturn(java.util.List.of(row));
+
+    var result = new DataServiceCallLogRepositoryAdapter(mapper, project)
+        .recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 3_000);
+
+    assertThat(result).hasSize(1);
+    assertThat(result.getFirst().sourceRevisionId()).isEqualTo(9007199254740995L);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LambdaQueryWrapper<DataServiceCallLogPO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectList(capture.capture());
+    var query = capture.getValue();
+    assertThat(query.getSqlSegment())
+        .contains("project_id", "api_id", "source_revision_id", "success",
+            "create_time DESC", "id DESC", "LIMIT 1000");
+    assertThat(query.getParamNameValuePairs().values())
+        .containsExactlyInAnyOrder(42L, 7L, 9007199254740995L, true);
+    verify(project).requireProjectId();
+  }
+
+  @Test
+  void invalidRevisionOrApiIdMustNotQueryProjectOrSourceAudit() {
+    DataServiceCallLogMapper mapper = mock(DataServiceCallLogMapper.class);
+    CurrentProject project = mock(CurrentProject.class);
+    var repository = new DataServiceCallLogRepositoryAdapter(mapper, project);
+    assertThatThrownBy(() -> repository.recentSuccessfulByApiAndRevision(7L, null, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> repository.recentSuccessfulByApiAndRevision(7L, 0L, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> repository.recentSuccessfulByApiAndRevision(null, 10L, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    verifyNoInteractions(project, mapper);
+  }
+
 }
