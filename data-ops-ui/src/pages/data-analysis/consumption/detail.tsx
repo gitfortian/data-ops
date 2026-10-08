@@ -121,6 +121,7 @@ export default function ConsumptionDetailPage() {
   const [subscriptionIssue, setSubscriptionIssue] = useState('');
   const [relationshipLoading, setRelationshipLoading] = useState(false);
   const relationshipRequestId = useRef(0);
+  const sourceConsumerRequestId = useRef(0);
   const [subscriptionSaving, setSubscriptionSaving] = useState(false);
   const [dataServiceConsumers, setDataServiceConsumers] = useState<DataServiceConsumer[]>([]);
   const [selectedConsumerId, setSelectedConsumerId] = useState<number>();
@@ -153,6 +154,7 @@ export default function ConsumptionDetailPage() {
 
   useEffect(() => {
     let active = true;
+    const sourceRequestId = ++sourceConsumerRequestId.current;
     setLoading(true);
     setImpact(null);
     setImpactIssue('');
@@ -175,7 +177,7 @@ export default function ConsumptionDetailPage() {
           if (result.product?.productKey.productType === 'DATA_SERVICE' && mayReadManagedConsumers) {
             void listDataServiceConsumers()
               .then((value) => {
-                if (!active) return;
+                if (!active || sourceRequestId !== sourceConsumerRequestId.current) return;
                 setDataServiceConsumers(value);
                 setSourceConsumerState('READY');
                 const eligible = eligibleConfiguredDataServiceConsumers(
@@ -184,7 +186,9 @@ export default function ConsumptionDetailPage() {
                 setSelectedConsumerId(eligible[0]?.id);
               })
               .catch(() => {
-                if (!active) return;
+                if (!active || sourceRequestId !== sourceConsumerRequestId.current) return;
+                setDataServiceConsumers([]);
+                setSelectedConsumerId(undefined);
                 setSourceConsumerState('UNAVAILABLE');
                 setConsumerListIssue('来源调用方配置读取失败；不能将未知当作无授权或已删除。');
               });
@@ -202,7 +206,11 @@ export default function ConsumptionDetailPage() {
       .finally(() => {
         if (active) setLoading(false);
       });
-    return () => { active = false; relationshipRequestId.current += 1; };
+    return () => {
+      active = false;
+      relationshipRequestId.current += 1;
+      sourceConsumerRequestId.current += 1;
+    };
   }, [productKey, reloadRelationships, mayReadManagedConsumers]);
 
   const columns = useMemo<DatasetColumn[]>(() => {
@@ -316,17 +324,21 @@ export default function ConsumptionDetailPage() {
 
   const refreshManagedConsumers = async () => {
     if (product.productKey.productType !== 'DATA_SERVICE' || !mayReadManagedConsumers) return;
+    const requestId = ++sourceConsumerRequestId.current;
     setSourceConsumerState('LOADING');
     setConsumerListIssue('');
     try {
       const next = await listDataServiceConsumers();
+      if (requestId !== sourceConsumerRequestId.current) return;
       setDataServiceConsumers(next);
       setSourceConsumerState('READY');
       const eligible = eligibleConfiguredDataServiceConsumers(product.productKey.sourceIdentity, next);
       setSelectedConsumerId((current) => eligible.some((row) => row.id === current)
         ? current : eligible[0]?.id);
     } catch {
+      if (requestId !== sourceConsumerRequestId.current) return;
       setDataServiceConsumers([]);
+      setSelectedConsumerId(undefined);
       setSourceConsumerState('UNAVAILABLE');
       setConsumerListIssue('来源调用方配置刷新失败；不能根据旧列表推断当前授权状态。');
     }
