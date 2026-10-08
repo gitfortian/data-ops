@@ -11,6 +11,7 @@ import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,7 +28,7 @@ public class ConsumerImpactController {
   private final ConsumerImpactService service;
 
   @Operation(summary = "逐页恢复精确 DatasetVersion 保留成功审计的 Usage 证据")
-  @GetMapping("/dataset-version-recovery")
+  @PostMapping("/dataset-version-recovery")
   public Result<DatasetAuditRecoveryView> recoverDatasetVersionPage(
       @RequestParam String productKey,
       @RequestParam String sourceVersionIdentity,
