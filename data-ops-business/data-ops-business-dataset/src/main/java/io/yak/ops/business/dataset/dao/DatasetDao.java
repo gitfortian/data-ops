@@ -92,6 +92,10 @@ public interface DatasetDao {
       Long minTotalMillis,
       int limit);
 
+  /** Current-Project successful query audit of one immutable DatasetVersion, before LIMIT. */
+  List<DatasetQueryPerformancePO> selectSuccessfulQueryPerformanceByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, int limit);
+
   int deleteQueryPerformanceBefore(Instant cutoff, int limit);
 
   // ---- Draft columns & draft-field table ----
