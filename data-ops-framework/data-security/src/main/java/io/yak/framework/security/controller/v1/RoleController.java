@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.yak.framework.common.PagingData;
 import io.yak.framework.common.Result;
 import io.yak.framework.security.common.constant.Constants;
-import io.yak.framework.security.common.constant.SecurityPermissionCode;
+import io.yak.ops.platform.security.contract.SecurityPermissionCode;
 import io.yak.framework.security.common.dto.role.RoleAssignDTO;
 import io.yak.framework.security.common.dto.role.RoleQueryDTO;
 import io.yak.framework.security.common.dto.role.RoleSaveDTO;
