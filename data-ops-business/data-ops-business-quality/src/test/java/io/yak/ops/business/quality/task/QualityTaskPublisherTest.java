@@ -14,6 +14,7 @@ import io.yak.ops.business.quality.domain.execution.QualityExecutionPlan.Monitor
 import io.yak.ops.business.quality.execution.QualityExecutionPlanFactory;
 import io.yak.ops.business.quality.repository.QualityTaskRevisionRepository;
 import io.yak.ops.business.taskcatalog.service.TaskCatalogService;
+import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.common.enums.quality.QualityEnums.AlertLevel;
 import io.yak.ops.common.enums.quality.QualityEnums.CheckResult;
 import io.yak.ops.common.enums.quality.QualityEnums.NotifyChannel;
@@ -60,6 +61,33 @@ class QualityTaskPublisherTest {
         "QUALITY",
         101L,
         1);
+  }
+
+  @Test
+  void unchangedDefinitionReusesLatestRevisionWithoutInserting() throws Exception {
+    QualityTaskRevisionRepository revisions = Mockito.mock(QualityTaskRevisionRepository.class);
+    QualityExecutionPlanFactory plans = Mockito.mock(QualityExecutionPlanFactory.class);
+    TaskCatalogService catalog = Mockito.mock(TaskCatalogService.class);
+    ObjectMapper mapper = new ObjectMapper();
+    QualityTaskPublisher publisher = new QualityTaskPublisher(revisions, plans, catalog, mapper);
+    Monitor monitor = monitor(true);
+    QualityExecutionDefinition definition = definition();
+    when(plans.freeze(monitor)).thenReturn(definition);
+
+    String definitionJson = mapper.writeValueAsString(definition);
+    String checksum = VersionDigests.sha256Hex(definitionJson);
+    QualityTaskRevision latest = new QualityTaskRevision(
+        101L, 7L, 42L, 4, "customers-quality", definitionJson, checksum, LocalDateTime.now());
+    when(revisions.findLatest(42L)).thenReturn(Optional.of(latest));
+
+    publisher.sync(monitor);
+
+    verify(revisions, never()).insert(
+        Mockito.anyLong(), Mockito.anyInt(), Mockito.anyString(),
+        Mockito.anyString(), Mockito.anyString());
+    verify(catalog).publish(
+        TaskAssetSource.DATA_QUALITY, "42", 7L, "customers-quality",
+        "QUALITY", latest.id(), latest.revisionNo());
   }
 
   @Test
