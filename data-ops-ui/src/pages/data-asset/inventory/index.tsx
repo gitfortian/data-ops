@@ -135,7 +135,7 @@ const PendingPool = () => {
       key: 'action',
       width: 90,
       render: (_, record) => (
-        <YakButton size="small" type="link" disabled={!canUpdate || loadError} onClick={() => openWizard([record])}>
+        <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => openWizard([record])}>
           上架
         </YakButton>
       ),
@@ -157,7 +157,7 @@ const PendingPool = () => {
         {canUpdate && (
           <YakButton
             size="small"
-            disabled={selectedRows.length === 0 || loadError}
+            disabled={selectedRows.length === 0 || loadError || loading}
             onClick={() => openWizard(selectedRows)}
           >
             批量上架({selectedRows.length})
@@ -350,10 +350,10 @@ const ChangeConfirm = () => {
       render: (_, record) =>
         record.handleStatus === 'OPEN' ? (
           <Space size={2}>
-            <YakButton size="small" type="link" disabled={!canUpdate || loadError} onClick={() => runConfirm(record)}>
+            <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => runConfirm(record)}>
               确认
             </YakButton>
-            <YakButton size="small" type="link" disabled={!canUpdate || loadError} onClick={() => runIgnore(record)}>
+            <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => runIgnore(record)}>
               忽略
             </YakButton>
           </Space>
@@ -515,7 +515,7 @@ const SourceAccess = () => {
         <YakButton
           size="small"
           type="link"
-          disabled={!canUpdate || !record.registered || loadError}
+          disabled={!canUpdate || !record.registered || loadError || loading}
           loading={submitting === record.sourceType}
           onClick={() => run([record.sourceType], ASSET_SOURCE_TYPE_LABELS[record.sourceType] ?? record.sourceType)}
         >
@@ -532,7 +532,7 @@ const SourceAccess = () => {
           type="primary"
           size="small"
           className="!text-white"
-          disabled={!canUpdate || submitting === 'ALL' || loadError}
+          disabled={!canUpdate || submitting === 'ALL' || loadError || loading}
           loading={submitting === 'ALL'}
           onClick={() => run(rows.filter((row) => row.registered).map((row) => row.sourceType), 'ALL')}
         >
