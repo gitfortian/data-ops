@@ -1,4 +1,4 @@
-import { Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
+import { Alert, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { history, useSearchParams } from '@umijs/max';
@@ -54,6 +54,7 @@ const PendingPool = () => {
   const [pageSize, setPageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [selectedRows, setSelectedRows] = useState<AssetRecord[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardAssets, setWizardAssets] = useState<AssetRecord[]>([]);
@@ -61,6 +62,7 @@ const PendingPool = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const result = await pageAssets({
         pageNo,
@@ -71,8 +73,7 @@ const PendingPool = () => {
       setRecords(result.records);
       setTotal(result.total);
     } catch {
-      setRecords([]);
-      setTotal(0);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -134,7 +135,7 @@ const PendingPool = () => {
       key: 'action',
       width: 90,
       render: (_, record) => (
-        <YakButton size="small" type="link" disabled={!canUpdate} onClick={() => openWizard([record])}>
+        <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => openWizard([record])}>
           上架
         </YakButton>
       ),
@@ -156,7 +157,7 @@ const PendingPool = () => {
         {canUpdate && (
           <YakButton
             size="small"
-            disabled={selectedRows.length === 0}
+            disabled={selectedRows.length === 0 || loadError || loading}
             onClick={() => openWizard(selectedRows)}
           >
             批量上架({selectedRows.length})
@@ -171,6 +172,11 @@ const PendingPool = () => {
           对账发现的源域对象自动落入这里；上架前必经预检
         </span>
       </div>
+      {loadError && (
+        <Alert className="mb-3" type="error" showIcon message="待上架池读取失败"
+          description="当前无法确认最新资产；下方保留上次成功读取的结果，请重试后操作。"
+          action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
+      )}
       <Table<AssetRecord>
         rowKey="id"
         size="small"
@@ -182,7 +188,9 @@ const PendingPool = () => {
           onChange: (_, rows) => setSelectedRows(rows),
         }}
         locale={{
-          emptyText: <YakEmpty compact title="没有待上架资产" description="对账或手工登记后出现在这里" />,
+          emptyText: loadError
+            ? <YakEmpty compact title="未能读取待上架资产" description="重试后才能确定是否为空" />
+            : <YakEmpty compact title="没有待上架资产" description="对账或手工登记后出现在这里" />,
         }}
         pagination={{
           current: pageNo,
@@ -229,16 +237,17 @@ const ChangeConfirm = () => {
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const result = await pageChanges({ handleStatus, pageNo, pageSize });
       setRecords(result.records);
       setTotal(result.total);
     } catch {
-      setRecords([]);
-      setTotal(0);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -341,10 +350,10 @@ const ChangeConfirm = () => {
       render: (_, record) =>
         record.handleStatus === 'OPEN' ? (
           <Space size={2}>
-            <YakButton size="small" type="link" disabled={!canUpdate} onClick={() => runConfirm(record)}>
+            <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => runConfirm(record)}>
               确认
             </YakButton>
-            <YakButton size="small" type="link" disabled={!canUpdate} onClick={() => runIgnore(record)}>
+            <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => runIgnore(record)}>
               忽略
             </YakButton>
           </Space>
@@ -372,6 +381,11 @@ const ChangeConfirm = () => {
           确认=用源域新值覆盖台账快照；忽略=只关流水不动台账；SOURCE_GONE 确认后资产转「源已消失」
         </span>
       </div>
+      {loadError && (
+        <Alert className="mb-3" type="error" showIcon message="变更确认记录读取失败"
+          description="当前无法确认最新流水；下方保留上次成功读取的结果，请重试后操作。"
+          action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
+      )}
       <Table<ChangeRecord>
         rowKey="id"
         size="small"
@@ -382,8 +396,8 @@ const ChangeConfirm = () => {
           emptyText: (
             <YakEmpty
               compact
-              title={handleStatus === 'OPEN' ? '没有待确认的变更' : '暂无该状态的流水'}
-              description="手动/每日对账发现源域变化后写入这里"
+              title={loadError ? '未能读取变更记录' : handleStatus === 'OPEN' ? '没有待确认的变更' : '暂无该状态的流水'}
+              description={loadError ? '重试后才能确定是否为空' : '手动/每日对账发现源域变化后写入这里'}
             />
           ),
         }}
@@ -410,14 +424,16 @@ const SourceAccess = () => {
 
   const [rows, setRows] = useState<ReconcileStatusRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setRows(await getReconcileStatus());
     } catch {
-      setRows([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -499,7 +515,7 @@ const SourceAccess = () => {
         <YakButton
           size="small"
           type="link"
-          disabled={!canUpdate || !record.registered}
+          disabled={!canUpdate || !record.registered || loadError || loading}
           loading={submitting === record.sourceType}
           onClick={() => run([record.sourceType], ASSET_SOURCE_TYPE_LABELS[record.sourceType] ?? record.sourceType)}
         >
@@ -516,7 +532,7 @@ const SourceAccess = () => {
           type="primary"
           size="small"
           className="!text-white"
-          disabled={!canUpdate || submitting === 'ALL'}
+          disabled={!canUpdate || submitting === 'ALL' || loadError || loading}
           loading={submitting === 'ALL'}
           onClick={() => run(rows.filter((row) => row.registered).map((row) => row.sourceType), 'ALL')}
         >
@@ -529,6 +545,11 @@ const SourceAccess = () => {
           手动触发为异步受理；每日凌晨自动对账，游标分批 ≤500；SOURCE_GONE 需连续两周期缺失才判定
         </span>
       </div>
+      {loadError && (
+        <Alert className="mb-3" type="error" showIcon message="源接入状态读取失败"
+          description="当前无法确认最新 Provider 状态；下方保留上次成功读取的结果，请重试后操作。"
+          action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
+      )}
       <Table<ReconcileStatusRow>
         rowKey="sourceType"
         size="small"
@@ -536,7 +557,7 @@ const SourceAccess = () => {
         dataSource={rows}
         loading={loading}
         pagination={false}
-        locale={{ emptyText: <YakEmpty compact title="暂无已定义来源域" /> }}
+        locale={{ emptyText: <YakEmpty compact title={loadError ? '未能读取来源域状态' : '暂无已定义来源域'} /> }}
       />
     </div>
   );
