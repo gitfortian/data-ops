@@ -31,7 +31,7 @@ export const REQUIRED_FLYWAY_EDGES = Object.freeze([
   ['consumptionFlyway', 'opsDataSourceFlyway'],
 ]);
 
-export function auditFlywayOrdering(sources) {
+export function auditFlywayOrdering(sources, requiredEdges = REQUIRED_FLYWAY_EDGES) {
   const nodes = sources.flatMap(({file,content}) => extractFlywayOrdering(file,content))
     .sort((a,b) => a.bean.localeCompare(b.bean));
   const failures = [];
@@ -47,7 +47,7 @@ export function auditFlywayOrdering(sources) {
       if (dependency === node.bean) failures.push(node.file + ': self-dependency on ' + node.bean);
     }
   }
-  for (const [bean, dependency] of REQUIRED_FLYWAY_EDGES) {
+  for (const [bean, dependency] of requiredEdges) {
     const owner = registry.get(bean);
     if (!owner) failures.push('Expected Flyway bean not registered: ' + bean);
     else if (!owner.dependencies.includes(dependency)) {
