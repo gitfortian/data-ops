@@ -70,7 +70,7 @@ export default function ConsumptionDiscoveryPage() {
   const providerWarnings = useMemo(() => (
     Object.entries(providerStates)
       .filter(([, state]) => state !== 'READY')
-      .map(([type, state]) => ({ type, state, reason: providerReasons[type] }))
+      .map(([type, state]) => ({ type, state, reason: providerReasons[type as ProductType] }))
   ), [providerReasons, providerStates]);
 
   const viewState = resolveConsumptionDiscoveryView(
