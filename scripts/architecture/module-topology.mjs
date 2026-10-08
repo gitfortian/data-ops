@@ -19,6 +19,8 @@ export function parsePom(xml) {
     .replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/g, '')
     .replace(/<build>[\s\S]*?<\/build>/g, '')
     .replace(/<profiles>[\s\S]*?<\/profiles>/g, '');
+  // An inherited project groupId must not be mistaken for the first dependency's groupId.
+  const identityBody = dependenciesBody.replace(/<dependencies>[\s\S]*?<\/dependencies>/g, '');
   const dependencies = [...dependenciesBody.matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)]
     .map((m) => ({
       groupId: firstTag(m[1], 'groupId'),
@@ -28,9 +30,9 @@ export function parsePom(xml) {
     }))
     .filter((d) => d.artifactId);
   return {
-    groupId: firstTag(body, 'groupId') ?? firstTag(parent, 'groupId'),
-    artifactId: firstTag(body, 'artifactId'),
-    packaging: firstTag(body, 'packaging') ?? 'jar',
+    groupId: firstTag(identityBody, 'groupId') ?? firstTag(parent, 'groupId'),
+    artifactId: firstTag(identityBody, 'artifactId'),
+    packaging: firstTag(identityBody, 'packaging') ?? 'jar',
     modules: [...modulesBlock.matchAll(/<module>([^<]+)<\/module>/g)].map((m) => m[1].trim()),
     dependencies,
   };
