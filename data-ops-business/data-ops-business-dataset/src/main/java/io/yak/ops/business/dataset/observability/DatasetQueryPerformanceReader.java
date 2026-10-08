@@ -1,6 +1,7 @@
 package io.yak.ops.business.dataset.observability;
 
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
 import io.yak.ops.business.dataset.repository.DatasetQueryPerformanceStore;
 import io.yak.ops.core.project.CurrentProject;
@@ -149,7 +150,7 @@ public class DatasetQueryPerformanceReader {
    * Bounded historical success recovery, ordered by persisted audit ID.
    * Never use local diagnostics buffer as proof of durable historical Usage.
    */
-  public List<io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
+  public List<DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
       long datasetId, long datasetVersionId, Long beforeAuditId, int requestedLimit) {
     if (datasetId <= 0L || datasetVersionId <= 0L
         || (beforeAuditId != null && beforeAuditId <= 0L)) {
