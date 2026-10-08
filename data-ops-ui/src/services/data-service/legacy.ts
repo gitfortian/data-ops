@@ -1,3 +1,4 @@
+import { queryString } from '@/services/http/query-string';
 import HttpUtils from '@/utils/HttpUtils';
 
 import {
@@ -24,17 +25,6 @@ import type {
   DataServiceUpdatePayload,
   DataSourceOption,
 } from './types';
-
-const queryString = (params: object) => {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).length > 0) {
-      search.set(key, String(value));
-    }
-  });
-  const value = search.toString();
-  return value ? `?${value}` : '';
-};
 
 export const fetchDataServices = (): Promise<
   CommonApiResponse<DataServiceApi[]>
