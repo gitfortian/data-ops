@@ -27,7 +27,7 @@
 
 ## 保留的不变量
 
-- 不修改 `@DependsOn` 本身、Flyway Config、SQL、Checksum、Schema、MySQL/PostgreSQL 分支逻辑，也不更改应用启动实际行为。
+- 不修改 `@DependsOn` 本身、Flyway Config、SQL、Checksum、Schema 或既有迁移执行顺序。**例外：修复 PostgreSQL profile 被 common profile 覆盖的 Quartz 存储配置，恢复 JDBC 持久化启动语义。**
 - A4.1 `#380` 负责 history table 和迁移目录归属；本 PR 专门验证 **启动先后依赖**，两批职责互补。
 - 静态检查不能替代 Spring 容器生命周期测试，更不能替代数据库真实迁移/重启 Smoke。数据库集成测试持续由已有 `DatabaseMigrationSmokeTest` 和 PostgreSQL 资源环境承担。
 
@@ -42,3 +42,20 @@ node --test scripts/architecture/*.test.mjs
 - [ ] 检测重复/缺失/循环/执行顺序被删的回归
 - [ ] Architecture CI / Product Guard 通过
 - [ ] Draft + `do-not-merge` + `architecture-refactor`
+
+## A7 组合验收发现的 PostgreSQL Quartz profile 冲突（2026-10-08）
+
+- [PR #395](https://github.com/gitfortian/data-ops/pull/395) 的隔离组合验收复现：
+  `PostgresqlStorageSmokeTest.freshDeploymentWritesAndDurableRestart` 在创建 Spring 容器时，报
+  `RAMJobStore` 的 `No setter for property 'isClustered'`。
+- 原因：`application.yml` 将 `postgresql` 分组展开成 `postgresql, common`，
+  但 `application-common.yml` 又定义了 `spring.quartz.job-store-type: memory`；
+  后加载的公共 profile 覆盖 `application-postgresql.yml` 的 JDBC store 类型，
+  而 PostgreSQL 的 Quartz JDBC 配置项仍然被加载。
+- 修复：`application-common.yml` 只保留 `auto-startup`，
+  存储模式由 `application-mysql.yml`（memory）或
+  `application-postgresql.yml`（jdbc）分别决定；test/default 未指定时采用 Boot memory 默认值。
+- 守护：新增 Node 配置回归测试，阻止公共 profile 重新覆盖两个特定 profile。
+  原 A7 PostgreSQL **真实运行 smoke 必须跑通**，不得通过跳过测试或强制 RAMJobStore 伪造绿色。
+- 范围：属于 PostgreSQL 启动修复，未修改 SQL 脚本、Flyway 迁移表、API 或业务 Service，
+  所有受保护架构 PR 均继续 Draft、禁止合并。

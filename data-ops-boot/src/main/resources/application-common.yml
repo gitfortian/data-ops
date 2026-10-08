@@ -24,7 +24,8 @@ spring:
     time-zone: Asia/Shanghai
   quartz:
     auto-startup: true
-    job-store-type: memory
+    # Quartz store mode is selected per storage profile (mysql=memory, postgresql=jdbc).
+    # Do not define job-store-type in common: the profile group may override postgresql.
 
 springdoc:
   api-docs:

@@ -69,3 +69,17 @@ test('real main reactor retains validated domain Flyway startup chains', () => {
     assert.ok(node && node.dependencies.includes(depends),bean+' -> '+depends);
   }
 });
+
+test('Quartz storage mode is owned by the active database profile, not the shared profile', () => {
+  const root=resolve(fileURLToPath(new URL('../../',import.meta.url)));
+  const resources=resolve(root,'data-ops-boot/src/main/resources');
+  const common=readFileSync(resolve(resources,'application-common.yml'),'utf8');
+  const mysql=readFileSync(resolve(resources,'application-mysql.yml'),'utf8');
+  const postgresql=readFileSync(resolve(resources,'application-postgresql.yml'),'utf8');
+  // 'common' is expanded after postgresql via spring.profiles.group. A default here
+  // silently selects RAMJobStore while PostgreSQL-specific JDBC properties remain.
+  assert.doesNotMatch(common,/^\s*job-store-type\s*:/m);
+  assert.match(mysql,/^\s*job-store-type:\s*memory\s*$/m);
+  assert.match(postgresql,/^\s*job-store-type:\s*jdbc\s*$/m);
+  assert.match(postgresql,/org\.quartz\.jobStore\.driverDelegateClass:\s*org\.quartz\.impl\.jdbcjobstore\.PostgreSQLDelegate/);
+});
