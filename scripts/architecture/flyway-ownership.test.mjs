@@ -81,3 +81,13 @@ test('non-reactor legacy and non-Bean helpers cannot register a production migra
     'data-ops-framework/legacy/src/main/java/Demo.java', config()).length, 0);
   assert.equal(parseFlywayRegistrations(configPath, config().replace('@Bean(name = "yakMetricFlyway", initMethod = "migrate")', '')).length, 0);
 });
+
+test('independently sourced Framework Security migrations retain their own lifecycle', () => {
+  const frameworkConfig = 'data-ops-framework/data-security/src/main/java/io/yak/framework/security/config/DataSourceConfig.java';
+  const security = config().replaceAll('MetricPersistenceConfiguration', 'DataSourceConfig')
+    .replace('.table(TABLE)', '.locations(FLYWAY_MIGRATION_LOCATION).outOfOrder(true)');
+  assert.deepEqual(parseFlywayRegistrations(frameworkConfig, security), []);
+  const audit = analyzeFlywayOwnership([{ file: frameworkConfig, content: security }], []);
+  assert.deepEqual(audit.violations, []);
+  assert.equal(audit.registrations.length, 0);
+});
