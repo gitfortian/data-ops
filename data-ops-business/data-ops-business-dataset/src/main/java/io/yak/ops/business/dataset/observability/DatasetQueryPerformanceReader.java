@@ -145,6 +145,28 @@ public class DatasetQueryPerformanceReader {
         "Persisted exact-version Dataset query diagnostics response is unavailable");
   }
 
+  /**
+   * Bounded historical success recovery, ordered by persisted audit ID.
+   * Never use local diagnostics buffer as proof of durable historical Usage.
+   */
+  public List<io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
+      long datasetId, long datasetVersionId, Long beforeAuditId, int requestedLimit) {
+    if (datasetId <= 0L || datasetVersionId <= 0L
+        || (beforeAuditId != null && beforeAuditId <= 0L)) {
+      throw new IllegalArgumentException("Dataset, DatasetVersion and cursor IDs must be positive");
+    }
+    Long projectId = currentProject.requireProjectId();
+    int limit = Math.max(1, Math.min(requestedLimit, MAX_QUERY_LIMIT));
+    DatasetQueryPerformanceStore store = storeProvider == null ? null : storeProvider.getIfAvailable();
+    if (store == null) {
+      throw new IllegalStateException("Persisted Dataset query diagnostics are unavailable");
+    }
+    return Objects.requireNonNull(
+        store.successfulPageByDatasetAndVersion(
+            projectId, datasetId, datasetVersionId, beforeAuditId, limit),
+        "Persisted Dataset successful audit page is unavailable");
+  }
+
   private boolean matches(
       DatasetQueryPerformance trace,
       Set<Long> datasetIds,
