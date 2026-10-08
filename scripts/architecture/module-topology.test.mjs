@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { audit, buildMavenEdges, moduleRole, parsePom, readReactor, scanJavaImports } from './module-topology.mjs';
 
 const project = (body) => '<project>' + body + '</project>';
@@ -100,7 +101,7 @@ test('incomplete reactor references fail closed instead of silently omitting mod
 });
 
 test('real checked-out data-ops reactor and source inventory are parseable', () => {
-  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
   const report = audit(root);
   assert.ok(report.moduleCount > 25, 'actual multi-module reactor is present');
   assert.ok(report.productionJavaFiles > 100, 'actual business/backend sources are inventoried');
