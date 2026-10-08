@@ -219,6 +219,32 @@ export interface DataServiceQueryResult {
   durationMs: number;
 }
 
+/** Exact persisted audit response; source BIGINT IDs are decimal strings. */
+export interface DataServiceInvocationEvidenceRecord {
+  id: string;
+  apiId: string;
+  serviceName?: string | null;
+  servicePath?: string | null;
+  callerType?: string | null;
+  apiKeyId?: string | null;
+  consumerId?: string | null;
+  apiKeyName?: string | null;
+  apiKeyPrefix?: string | null;
+  sourceRevisionId?: string | null;
+  sourceRevisionNo?: number | null;
+  paramsJson?: string | null;
+  success: boolean;
+  durationMs: number;
+  rowCount: number;
+  errorMessage?: string | null;
+  createTime?: string | null;
+}
+
+export interface DataServiceInvocationEvidence {
+  state: 'FOUND' | 'NOT_FOUND';
+  record: DataServiceInvocationEvidenceRecord | null;
+}
+
 export interface DataServiceCallLog {
   id: number;
   apiId: number;
