@@ -70,7 +70,7 @@ public class ConsumerImpactService {
     ConsumerImpactView.EvidenceState subscriptionState;
     ConsumerImpactView.EvidenceState usageState;
     int limit = Math.max(1, Math.min(200, usageLimit));
-    SourceSyncCoverage sourceCoverage = synchronizeSource(productKey, limit);
+    SourceSyncCoverage sourceCoverage = synchronizeSource(productKey, limit, exactVersion);
 
     try {
       declared = subscriptions.list(projectId, productKey, null);
