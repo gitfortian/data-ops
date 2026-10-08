@@ -84,6 +84,31 @@ public class DataServiceCallLogRepositoryAdapter implements DataServiceCallLogRe
         .stream().map(this::toDomain).toList();
   }
 
+  /**
+   * Query source-owned successful invocation audit for one immutable revision.
+   * Filter Project, API, revision and success inside the same DB query before
+   * ordering and LIMIT; never read a global audit and filter it in Java.
+   */
+  @Override
+  public List<InvocationRecord> recentSuccessfulByApiAndRevision(
+      Long apiId, Long sourceRevisionId, int limit) {
+    if (apiId == null || apiId <= 0L || sourceRevisionId == null || sourceRevisionId <= 0L) {
+      throw new IllegalArgumentException("数据服务 ID 与来源修订 ID 必须大于 0");
+    }
+    Long projectId = currentProject.requireProjectId();
+    int size = normalizeLimit(limit);
+    return mapper.selectList(
+            Wrappers.<DataServiceCallLogPO>lambdaQuery()
+                .eq(DataServiceCallLogPO::getProjectId, projectId)
+                .eq(DataServiceCallLogPO::getApiId, apiId)
+                .eq(DataServiceCallLogPO::getSourceRevisionId, sourceRevisionId)
+                .eq(DataServiceCallLogPO::getSuccess, true)
+                .orderByDesc(DataServiceCallLogPO::getCreateTime)
+                .orderByDesc(DataServiceCallLogPO::getId)
+                .last("LIMIT " + size))
+        .stream().map(this::toDomain).toList();
+  }
+
   @Override
   public Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId) {
     if (apiId == null || apiId <= 0L || invocationId == null || invocationId <= 0L) {

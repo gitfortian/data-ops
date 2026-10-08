@@ -70,7 +70,7 @@ public class ConsumerImpactService {
     ConsumerImpactView.EvidenceState subscriptionState;
     ConsumerImpactView.EvidenceState usageState;
     int limit = Math.max(1, Math.min(200, usageLimit));
-    SourceSyncCoverage sourceCoverage = synchronizeSource(productKey, limit);
+    SourceSyncCoverage sourceCoverage = synchronizeSource(productKey, limit, exactVersion);
 
     try {
       declared = subscriptions.list(projectId, productKey, null);
@@ -133,7 +133,9 @@ public class ConsumerImpactService {
     if (exactVersion != null) {
       coverage = "Exact immutable version " + exactVersion
           + ": persisted normalized successful Usage is filtered by Project, Product and revision before its bounded 200-row window. "
-          + "Source audit reconciliation still covers only the latest bounded source window and may miss historical or external consumers. "
+          + (productKey.productType() == ProductType.DATA_SERVICE
+              ? "Data Service source audit recovery is scoped to this exact revision, but still only covers a bounded recent success window of that revision; older and external consumers may be missing. "
+              : "Dataset source audit reconciliation still covers only the latest bounded source window and may miss historical or external consumers. ")
           + coverage;
     }
     ConsumerImpactView.EvidenceCoverage detail = new ConsumerImpactView.EvidenceCoverage(
@@ -142,7 +144,7 @@ public class ConsumerImpactService {
     return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage, detail);
   }
 
-  private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit) {
+  private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit, String exactVersion) {
     try {
       List<UsageNormalizationResult> results;
       if (productKey.productType() == ProductType.DATASET && datasetSynchronizer != null) {
@@ -152,7 +154,14 @@ public class ConsumerImpactService {
       } else if (productKey.productType() == ProductType.DATA_SERVICE && dataServiceSynchronizer != null) {
         Long apiId = parseProductId(productKey);
         if (apiId == null) return SourceSyncCoverage.failed();
-        results = dataServiceSynchronizer.synchronizeRecentByProduct(apiId, limit);
+        if (exactVersion != null) {
+          Long revisionId = parseSourceRevisionId(exactVersion);
+          if (revisionId == null) return SourceSyncCoverage.failed();
+          results = dataServiceSynchronizer.synchronizeRecentByProductAndRevision(
+              apiId, revisionId, limit);
+        } else {
+          results = dataServiceSynchronizer.synchronizeRecentByProduct(apiId, limit);
+        }
       } else {
         return SourceSyncCoverage.failed();
       }
@@ -169,6 +178,17 @@ public class ConsumerImpactService {
   private record SourceSyncCoverage(int recordCount, boolean limitReached, int gaps, boolean readUnavailable) {
     static SourceSyncCoverage failed() {
       return new SourceSyncCoverage(0, false, 0, true);
+    }
+  }
+
+  /** Source revisions are positive Java Long IDs, not display-version labels. */
+  private Long parseSourceRevisionId(String identity) {
+    if (identity == null || !identity.matches("[1-9][0-9]*")) return null;
+    try {
+      long value = Long.parseLong(identity);
+      return value > 0L && Long.toString(value).equals(identity) ? value : null;
+    } catch (NumberFormatException invalid) {
+      return null;
     }
   }
 

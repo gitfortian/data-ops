@@ -248,6 +248,14 @@ class DataServiceGoldenUsageEvidenceTest {
     }
 
     @Override
+    public List<InvocationRecord> recentSuccessfulByApiAndRevision(
+        Long apiId, Long revisionId, int limit) {
+      return last != null && last.apiId().equals(apiId)
+          && revisionId.equals(last.sourceRevisionId()) && last.success()
+          ? List.of(last) : List.of();
+    }
+
+    @Override
     public Optional<InvocationRecord> findByApiAndId(Long apiId, Long invocationId) {
       return last != null && last.apiId().equals(apiId) && last.id().equals(invocationId)
           ? Optional.of(last) : Optional.empty();

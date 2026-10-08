@@ -282,4 +282,64 @@ class ConsumerImpactServiceTest {
     org.mockito.Mockito.verifyNoInteractions(project, usage, subscriptions);
   }
 
+  @Test
+  void exactDataServiceRevisionReconcilesItsOwnSourceBeforeReadingPersistedUsage() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer synchronizer = mock(DataServiceUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATA_SERVICE:7");
+    ConsumerRef consumer = new ConsumerRef(
+        ConsumerType.DATA_SERVICE, "DATA_SERVICE_CONSUMER", "21", "Historic client");
+    LocalDateTime observedAt = LocalDateTime.of(2025, 7, 1, 9, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(synchronizer.synchronizeRecentByProductAndRevision(
+        7L, 9007199254740995L, 200)).thenReturn(List.of());
+    when(usage.listByVersion(42L, product, "9007199254740995", 200))
+        .thenReturn(List.of(new UsageEvidence(
+            55L, 42L, product, new SourceVersionRef("9007199254740995", "r1"),
+            consumer, observedAt, ConsumptionMode.API_INVOKE, UsageOutcome.SUCCESS,
+            "DATA_SERVICE_INVOCATION", "invocation:55",
+            "DATA_SERVICE_INVOCATION:55", observedAt)));
+
+    var view = new ConsumerImpactService(subscriptions, usage, project, null, synchronizer)
+        .view(product, 200, "9007199254740995");
+
+    assertEquals(ConsumerImpactView.EvidenceState.READY, view.usageState());
+    assertEquals(1, view.consumers().getFirst().successfulUsageCount());
+    assertEquals("9007199254740995", view.consumers().getFirst()
+        .observedVersions().getFirst().sourceVersion().identity());
+    assertTrue(view.coverageNote().contains("scoped to this exact revision"));
+    org.mockito.InOrder order = org.mockito.Mockito.inOrder(synchronizer, usage);
+    order.verify(synchronizer).synchronizeRecentByProductAndRevision(
+        7L, 9007199254740995L, 200);
+    order.verify(usage).listByVersion(42L, product, "9007199254740995", 200);
+    org.mockito.Mockito.verify(synchronizer, org.mockito.Mockito.never())
+        .synchronizeRecentByProduct(7L, 200);
+  }
+
+  @Test
+  void invalidSourceRevisionKeepsAvailablePersistedRowsButSignalsIncompleteSource() {
+    SubscriptionRepository subscriptions = mock(SubscriptionRepository.class);
+    UsageEvidenceRepository usage = mock(UsageEvidenceRepository.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DataServiceUsageEvidenceSynchronizer sync = mock(DataServiceUsageEvidenceSynchronizer.class);
+    ProductKey product = ProductKey.parse("DATA_SERVICE:7");
+    LocalDateTime observedAt = LocalDateTime.of(2025, 7, 1, 9, 0);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(subscriptions.list(42L, product, null)).thenReturn(List.of());
+    when(usage.listByVersion(42L, product, "r-legacy", 200)).thenReturn(List.of(
+        event(42L, product,
+            new ConsumerRef(ConsumerType.DATA_SERVICE, "DATA_SERVICE_CONSUMER", "11", null),
+            "r-legacy", "legacy", observedAt, "invocation:11")));
+
+    var view = new ConsumerImpactService(subscriptions, usage, project, null, sync)
+        .view(product, 200, "r-legacy");
+
+    assertTrue(view.coverage().sourceReadUnavailable());
+    assertEquals(1, view.consumers().size());
+    org.mockito.Mockito.verifyNoInteractions(sync);
+  }
+
 }

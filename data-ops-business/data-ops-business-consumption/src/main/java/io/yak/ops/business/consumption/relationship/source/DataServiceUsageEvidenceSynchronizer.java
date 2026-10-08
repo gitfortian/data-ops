@@ -22,6 +22,19 @@ public class DataServiceUsageEvidenceSynchronizer {
         .toList();
   }
 
+  /**
+   * A historic immutable revision may still have source-owned successful
+   * invocation audits that were never normalized. Reconcile those records
+   * independently of the newest successful calls of other revisions.
+   */
+  public List<UsageNormalizationResult> synchronizeRecentByProductAndRevision(
+      Long apiId, Long sourceRevisionId, int limit) {
+    return callLogReader.recentSuccessfulByApiAndRevision(
+            apiId, sourceRevisionId, Math.max(1, Math.min(200, limit))).stream()
+        .map(normalizer::normalize)
+        .toList();
+  }
+
   public List<UsageNormalizationResult> synchronizeRecentByProduct(Long apiId, int limit) {
     return callLogReader.recentSuccessfulByApi(apiId, Math.max(1, Math.min(200, limit))).stream()
         .map(normalizer::normalize)
