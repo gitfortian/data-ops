@@ -69,9 +69,7 @@ public class DirectoryService {
     for (AssetDirectoryPO po : all) {
       childrenByParent
           .computeIfAbsent(po.getParentId(), k -> new ArrayList<>())
-          .add(new DirNode(po.getId(), po.getDirCode(), po.getDirName(), po.getParentId(),
-              po.getPath(), po.getSortOrder() == null ? 0 : po.getSortOrder(), po.getIconKey(),
-              po.getDescription(), Boolean.TRUE.equals(po.getBuiltin()), new ArrayList<>()));
+          .add(toNode(po, new ArrayList<>()));
     }
     return assemble(ROOT_PARENT_ID, childrenByParent);
   }
@@ -115,8 +113,7 @@ public class DirectoryService {
     } catch (DuplicateKeyException e) {
       throw new AssetException(AssetErrorCode.DUPLICATE_ASSET_KEY, code);
     }
-    po.setPath(parentPath + po.getId() + "/");
-    directoryMapper.updateById(po);
+    materializePath(po, parentPath);
     audit("ASSET_DIR_CREATE", "Create asset directory", po.getId(), code, operator,
         AuditEventType.RESOURCE_CREATED, "新建目录 " + dirName);
     return toNode(po, List.of());
@@ -318,9 +315,14 @@ public class DirectoryService {
     po.setUpdatedBy(operator);
     po.setDeleted(false);
     directoryMapper.insert(po);
+    materializePath(po, parentPath);
+    return po;
+  }
+
+  /** Newly inserted directories first use /0/; the generated id must be persisted in their path. */
+  private void materializePath(AssetDirectoryPO po, String parentPath) {
     po.setPath(parentPath + po.getId() + "/");
     directoryMapper.updateById(po);
-    return po;
   }
 
   /** 父下序号式编码:{父编码}_{n};根下 dir_{n}。冲突时递增。 */
