@@ -54,6 +54,17 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
   }
 
   @Override
+  public List<io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, Long beforeAuditId, int requestedLimit) {
+    return datasetDao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+            projectId, datasetId, datasetVersionId, beforeAuditId, requestedLimit)
+        .stream()
+        .map(row -> new io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit(
+            row.getId(), toDomain(row)))
+        .toList();
+  }
+
+  @Override
   public int deleteBefore(Instant cutoff, int requestedLimit) {
     return datasetDao.deleteQueryPerformanceBefore(cutoff, requestedLimit);
   }
