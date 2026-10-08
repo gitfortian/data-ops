@@ -2,9 +2,13 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AiAgentPage from './index';
 import { agentChatApi, agentSessionApi, streamTurnEvents } from '@/services/agent';
+import { scenario } from '../../../tests/fixtures/agent-scenarios';
 
 let mockCanRun = false;
-jest.mock('@/hooks/usePermissionAccess', () => ({ usePermissionAccess: () => ({ can: (code: string) => mockCanRun && code === 'agent:chat:run' }) }));
+let mockCanRead = true;
+let mockProjectId = 1;
+jest.mock('@/contexts/SecurityProjectContext', () => ({ useSecurityProject: () => ({ currentProject: { id: mockProjectId } }) }));
+jest.mock('@/hooks/usePermissionAccess', () => ({ usePermissionAccess: () => ({ can: (code: string) => code === 'agent:session:read' ? mockCanRead : mockCanRun && code === 'agent:chat:run' }) }));
 jest.mock('@/services/agent', () => ({
   agentSessionApi: { list: jest.fn(), history: jest.fn(), continuation: jest.fn(), trace: jest.fn(), cancel: jest.fn() },
   agentChatApi: { submit: jest.fn(), cancelTurn: jest.fn() }, streamTurnEvents: jest.fn(),
@@ -34,8 +38,9 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
   mockCanRun = false;
+  mockCanRead = true; mockProjectId = 1;
   Object.defineProperty(document, 'hidden', { configurable: true, value: false });
   window.IntersectionObserver = jest.fn(() => ({ observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() })) as any;
   window.ResizeObserver = jest.fn(() => ({ observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() })) as any;
@@ -49,6 +54,96 @@ beforeEach(() => {
   stream.mockImplementation(async (_request, handler) => { handler.onComplete(); });
 });
 afterEach(() => { window.history.replaceState({}, '', '/'); jest.useRealTimers(); delete (document as any).hidden; });
+
+it.each(['STANDARD_MATCH', 'MODEL_MAPPING', 'METRIC_EXPLANATION', 'METRIC_DRAFT'] as const)('reviews a unique persisted %s result without submitting a turn', async kind => {
+  const f = scenario(kind);
+  api.history.mockResolvedValue([{ role: 'assistant', content: f.text, turnId: 't1' }] as any);
+  api.continuation.mockResolvedValue(f.continuation);
+  render(<AiAgentPage />);
+  expect(await screen.findByText(/历史生成结果 · Skill v1/)).toBeInTheDocument();
+  expect(screen.queryByText(/```yak-/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/质量执行 undefined/)).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '返回原页面核对' })).toHaveAttribute('href', kind === 'STANDARD_MATCH' ? '/modeling/models/7' : kind === 'MODEL_MAPPING' ? '/modeling/models/7/mapping' : kind === 'METRIC_DRAFT' ? '/metric/manage' : '/metric/manage/7');
+  expect(chat.submit).not.toHaveBeenCalled(); expect(stream).not.toHaveBeenCalled();
+});
+
+it.each(['empty duplicate', 'duplicate', 'old turn', 'missing turn', 'failed', 'running', 'wrong scope'] as const)('retains raw receipt for %s without upgrading it', async reason => {
+  const f = scenario();
+  const history = [{ role: 'assistant', content: f.text, turnId: reason === 'missing turn' ? undefined : reason === 'old turn' ? 'old' : 't1' }];
+  if (reason.includes('duplicate')) history.push({ role: 'assistant', content: reason === 'empty duplicate' ? '' : '另一回答', turnId: 't1' });
+  api.history.mockResolvedValue(history as any);
+  api.continuation.mockResolvedValue(reason === 'wrong scope' ? scenario('MODEL_MAPPING').continuation
+    : { ...f.continuation, status: reason === 'failed' ? 'FAILED' : reason === 'running' ? 'RUNNING' : 'COMPLETED' });
+  render(<AiAgentPage />);
+  expect(await screen.findByText('场景结果尚未核对')).toBeInTheDocument();
+  expect(screen.getByText(/```yak-standard-match/)).toBeInTheDocument();
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '返回原页面核对' })).not.toBeInTheDocument();
+});
+
+it('withdraws a verified card immediately on refresh and keeps raw history after read failure', async () => {
+  const f = scenario();
+  api.history.mockResolvedValue([{ role: 'assistant', content: f.text, turnId: 't1' }] as any);
+  api.continuation.mockResolvedValue(f.continuation);
+  render(<AiAgentPage />);
+  await screen.findByText(/历史生成结果/);
+  const pending = deferred<any>(); api.continuation.mockReturnValueOnce(pending.promise);
+  api.history.mockRejectedValueOnce(new Error('HTTP 403'));
+  fireEvent.click(screen.getByText('刷新会话'));
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+  await act(async () => pending.resolve(f.continuation));
+  expect(screen.getByText(/```yak-standard-match/)).toBeInTheDocument();
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+});
+
+it.each(['project', 'permission'] as const)('clears cards and ignores stale history reads after %s changes', async scope => {
+  const f = scenario();
+  api.history.mockResolvedValue([{ role: 'assistant', content: f.text, turnId: 't1' }] as any);
+  api.continuation.mockResolvedValue(f.continuation);
+  const { rerender } = render(<AiAgentPage />);
+  await screen.findByText(/历史生成结果/);
+  const late = deferred<any>(); api.history.mockReturnValueOnce(late.promise);
+  fireEvent.click(screen.getByText('刷新会话'));
+  api.history.mockRejectedValue(new Error('HTTP 403')); api.continuation.mockRejectedValue(new Error('HTTP 403'));
+  if (scope === 'project') mockProjectId = 2; else mockCanRead = false;
+  rerender(<AiAgentPage />);
+  await act(async () => late.resolve([{ role: 'assistant', content: f.text, turnId: 't1' }]));
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/```yak-standard-match/)).not.toBeInTheDocument();
+});
+
+it('does not upgrade a completed live receipt until authorized history is reloaded', async () => {
+  mockCanRun = true;
+  const f = scenario();
+  api.continuation.mockResolvedValue({ ...f.continuation, turnId: 't-next' });
+  stream.mockImplementation(async (_request, handler) => {
+    handler.onEvent({ type: 'TEXT_MESSAGE_CONTENT', delta: f.text }); handler.onComplete();
+  });
+  render(<AiAgentPage />);
+  await screen.findByText('历史回答'); send();
+  await screen.findByText('场景结果尚未核对');
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+  api.history.mockResolvedValue([{ role: 'assistant', content: f.text, turnId: 't-next' }] as any);
+  fireEvent.click(screen.getByText('刷新会话'));
+  expect(await screen.findByText(/历史生成结果/)).toBeInTheDocument();
+  expect(chat.submit).toHaveBeenCalledTimes(1);
+});
+
+it('withdraws scene cards during a session switch and ignores its response after a new conversation', async () => {
+  const f = scenario();
+  api.history.mockResolvedValue([{ role: 'assistant', content: f.text, turnId: 't1' }] as any);
+  api.continuation.mockResolvedValue(f.continuation);
+  render(<AiAgentPage />);
+  await screen.findByText(/历史生成结果/);
+  const late = deferred<any>(); api.continuation.mockReturnValueOnce(late.promise);
+  fireEvent.click(screen.getByText('会话二'));
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('新建会话'));
+  await act(async () => late.resolve({ ...f.continuation, sessionId: 's2' }));
+  expect(screen.queryByText(/历史生成结果/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/```yak-standard-match/)).not.toBeInTheDocument();
+  expect(window.location.search).toBe('');
+});
 
 it('stops only the acknowledged live turn, ignores duplicate stops and late callbacks, and reads the actual completion', async () => {
   mockCanRun = true;

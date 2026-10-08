@@ -31,3 +31,4 @@ Feature SHIPPED 后，将长期有效内容提升到 Product / Domain / Architec
 - [F-028 指标定义草稿](F-028-metric-definition-draft.md)：IMPLEMENTING。
 - [F-029 J2 原页面交接](F-029-j2-guided-handoff.md)：IMPLEMENTING；真实完整旅程与收益待验收。
 - [F-030 场景评测与 J2 证据](F-030-agent-scenario-evaluation.md)：IMPLEMENTING；固定题集、只读核验与基线汇总，真实验收待完成。
+- [F-031 原会话场景结果回看](F-031-agent-scenario-history.md)：IMPLEMENTING；最新完成轮的只读交付与原页面回链，真实验收按用户要求延期。

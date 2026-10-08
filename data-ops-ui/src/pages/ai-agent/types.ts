@@ -62,6 +62,8 @@ export interface UIMessage {
   turnId?: string;
   /** Restored text whose execution identity could not be established. */
   unlinkedHistory?: boolean;
+  /** Read from history with one assistant entry for this explicit turn; never set by SSE. */
+  persistedHistory?: boolean;
   /** 本轮推理耗时（毫秒），TURN_FINISHED 时写入。 */
   elapsedMs?: number;
   /** 首个事件到达耗时（毫秒）。 */

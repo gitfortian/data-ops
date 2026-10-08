@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import AiAgentPage from './index';
 import { streamTurnEvents } from '@/services/agent';
 import { governanceQuestions } from '@/services/agent/governance';
+jest.mock('@/contexts/SecurityProjectContext', () => ({ useSecurityProject: () => ({ currentProject: { id: 1 } }) }));
 
 jest.mock('@/hooks/usePermissionAccess', () => ({
   usePermissionAccess: () => ({ can: (code: string) => code === 'agent:chat:run' }),
