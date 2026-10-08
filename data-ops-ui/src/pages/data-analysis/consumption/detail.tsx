@@ -24,6 +24,7 @@ import {
   Empty,
   message,
   Popconfirm,
+  Popover,
   Result,
   Select,
   Space,
@@ -36,6 +37,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadConsumptionRelationships } from './relationship-load';
 import { formatObservedVersion } from './version-evidence';
+import { consumptionEvidenceTarget } from './evidence-navigation';
 import { findManagedSubscription, nextSubscriptionAction, type SubscriptionAction } from './subscription-actions';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL } from './presentation';
 
@@ -234,7 +236,30 @@ export default function ConsumptionDetailPage() {
       ) : '-',
     },
     { title: '最近消费', dataIndex: 'lastObservedAt', key: 'lastObservedAt', render: (value) => value ? new Date(value).toLocaleString() : '-' },
-    { title: '证据', dataIndex: 'providerEvidenceRefs', key: 'providerEvidenceRefs', render: (refs: string[]) => refs?.length ? refs.join(', ') : '-' },
+    {
+      title: '来源执行证据', dataIndex: 'providerEvidenceRefs', key: 'providerEvidenceRefs',
+      render: (refs: string[]) => refs?.length ? (
+        <Popover
+          trigger="click"
+          placement="left"
+          title="执行证据（仅已知来源可打开）"
+          content={(
+            <Space direction="vertical" size={0} style={{ maxWidth: 480, maxHeight: 340, overflowY: 'auto' }}>
+              {refs.map((ref) => {
+                const target = product ? consumptionEvidenceTarget(product.productKey, ref) : null;
+                return target ? (
+                  <Button key={ref} type="link" size="small" style={{ height: 'auto', whiteSpace: 'normal', textAlign: 'left' }}
+                    title={target.description}
+                    onClick={() => history.push(target.href)}>{ref}</Button>
+                ) : <Text key={ref} type="secondary">{ref} · 来源暂不支持直接打开</Text>;
+              })}
+            </Space>
+          )}
+        >
+          <Button type="link" size="small">核对 {refs.length} 条来源证据</Button>
+        </Popover>
+      ) : '-',
+    },
   ];
 
   if (loading) return <div style={{ padding: 48 }}><Text>加载中...</Text></div>;
@@ -515,7 +540,7 @@ export default function ConsumptionDetailPage() {
                 {impact.usageState === 'UNAVAILABLE' || impact.subscriptionState === 'UNAVAILABLE' ? (
                   <Alert type="warning" showIcon message="已知 Consumer 覆盖不完整" description={impact.coverageNote} />
                 ) : null}
-                <Text type="secondary">成功次数与版本仅来自本次最多 200 条成功消费证据，而非历史总量或已发布最新版本；鼠标悬停版本可查看来源证据编号。来源故障时清单可能不完整。</Text>
+                <Text type="secondary">成功次数与版本仅来自本次最多 200 条成功消费证据，而非历史总量或已发布最新版本；点击“核对来源证据”可进入所属域的诊断记录。来源故障或日志已超出可读范围时不能保证定位成功。</Text>
                 {impact.consumers.length ? (
                   <Table
                     rowKey={(row) => `${row.consumerRef.consumerType}:${row.consumerRef.sourceDomain}:${row.consumerRef.sourceIdentity}`}
