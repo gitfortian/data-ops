@@ -1,5 +1,5 @@
 import { YakButton, YakEmpty } from '@/components/ui';
-import { parseManagedConsumerSourceId } from '@/pages/data-analysis/consumption/consumer-source-navigation';
+import { parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
 import { useSearchParams } from '@umijs/max';
 import {
   createDataServiceConsumer,
