@@ -58,13 +58,7 @@ public class MdmDistributionPublishService {
           true);
     }
     DataServiceView view = state.detail();
-    if (state.updateAvailable()) {
-      return new PublishOutcome(
-          publisher.republish(
-              view.id(), new PublicationSettings(null, null, null, null, Boolean.TRUE, null)),
-          true);
-    }
-    if (!Boolean.TRUE.equals(view.enabled())) {
+    if (state.updateAvailable() || !Boolean.TRUE.equals(view.enabled())) {
       return new PublishOutcome(
           publisher.republish(
               view.id(), new PublicationSettings(null, null, null, null, Boolean.TRUE, null)),
