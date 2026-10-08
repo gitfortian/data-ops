@@ -39,6 +39,30 @@ class DatasetUsageEvidenceSynchronizerTest {
   }
 
   @Test
+  void exactOldVersionReadsPersistedProjectScopedVersionInsteadOfRecentDatasetWindow() {
+    DatasetQueryPerformanceReader reader = mock(DatasetQueryPerformanceReader.class);
+    DatasetUsageEvidenceNormalizer normalizer = mock(DatasetUsageEvidenceNormalizer.class);
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetQueryPerformance old = mock(DatasetQueryPerformance.class);
+    UsageNormalizationResult gap =
+        UsageNormalizationResult.gap("query:old", "missing historic subject");
+    when(project.requireProjectId()).thenReturn(42L);
+    when(reader.recentSuccessfulByDatasetAndVersion(101L, 9007199254740993L, 200))
+        .thenReturn(List.of(old));
+    when(normalizer.normalize(42L, old)).thenReturn(gap);
+
+    var result = new DatasetUsageEvidenceSynchronizer(reader, normalizer, project)
+        .synchronizeRecentByProductAndVersion(101L, 9007199254740993L, 999);
+
+    assertEquals(List.of(gap), result);
+    verify(reader).recentSuccessfulByDatasetAndVersion(101L, 9007199254740993L, 200);
+    org.mockito.Mockito.verify(reader, org.mockito.Mockito.never()).recentPersisted(
+        org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.anySet(),
+        org.mockito.ArgumentMatchers.anyInt());
+    verify(normalizer).normalize(42L, old);
+  }
+
+  @Test
   void persistenceFailureMustReachConsumerImpactInsteadOfPretendingToBeEmpty() {
     DatasetQueryPerformanceReader reader = mock(DatasetQueryPerformanceReader.class);
     DatasetUsageEvidenceNormalizer normalizer = mock(DatasetUsageEvidenceNormalizer.class);

@@ -124,6 +124,27 @@ public class DatasetQueryPerformanceReader {
         "Persisted Dataset query diagnostics response is unavailable");
   }
 
+  /**
+   * Source-owned persisted success for one immutable DatasetVersion, even
+   * when newer versions occupy the ordinary Dataset-wide recent window.
+   * Missing persistence fails closed; in-process buffers are not audit truth.
+   */
+  public List<DatasetQueryPerformance> recentSuccessfulByDatasetAndVersion(
+      long datasetId, long datasetVersionId, int requestedLimit) {
+    if (datasetId <= 0L || datasetVersionId <= 0L) {
+      throw new IllegalArgumentException("Dataset and DatasetVersion IDs must be positive");
+    }
+    Long projectId = currentProject.requireProjectId();
+    int limit = Math.max(1, Math.min(requestedLimit, MAX_QUERY_LIMIT));
+    DatasetQueryPerformanceStore store = storeProvider == null ? null : storeProvider.getIfAvailable();
+    if (store == null) {
+      throw new IllegalStateException("Persisted Dataset query diagnostics are unavailable");
+    }
+    return Objects.requireNonNull(
+        store.successfulByDatasetAndVersion(projectId, datasetId, datasetVersionId, limit),
+        "Persisted exact-version Dataset query diagnostics response is unavailable");
+  }
+
   private boolean matches(
       DatasetQueryPerformance trace,
       Set<Long> datasetIds,

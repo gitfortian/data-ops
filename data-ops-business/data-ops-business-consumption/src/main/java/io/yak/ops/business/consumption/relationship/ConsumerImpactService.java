@@ -135,7 +135,7 @@ public class ConsumerImpactService {
           + ": persisted normalized successful Usage is filtered by Project, Product and revision before its bounded 200-row window. "
           + (productKey.productType() == ProductType.DATA_SERVICE
               ? "Data Service source audit recovery is scoped to this exact revision, but still only covers a bounded recent success window of that revision; older and external consumers may be missing. "
-              : "Dataset source audit reconciliation still covers only the latest bounded source window and may miss historical or external consumers. ")
+              : "Dataset source audit recovery is scoped to this exact DatasetVersion, but still only covers a bounded recent success window of that version; older and external consumers may be missing. ")
           + coverage;
     }
     ConsumerImpactView.EvidenceCoverage detail = new ConsumerImpactView.EvidenceCoverage(
@@ -150,12 +150,19 @@ public class ConsumerImpactService {
       if (productKey.productType() == ProductType.DATASET && datasetSynchronizer != null) {
         Long datasetId = parseProductId(productKey);
         if (datasetId == null) return SourceSyncCoverage.failed();
-        results = datasetSynchronizer.synchronizeRecentByProduct(datasetId, limit);
+        if (exactVersion != null) {
+          Long versionId = parseSourceVersionId(exactVersion);
+          if (versionId == null) return SourceSyncCoverage.failed();
+          results = datasetSynchronizer.synchronizeRecentByProductAndVersion(
+              datasetId, versionId, limit);
+        } else {
+          results = datasetSynchronizer.synchronizeRecentByProduct(datasetId, limit);
+        }
       } else if (productKey.productType() == ProductType.DATA_SERVICE && dataServiceSynchronizer != null) {
         Long apiId = parseProductId(productKey);
         if (apiId == null) return SourceSyncCoverage.failed();
         if (exactVersion != null) {
-          Long revisionId = parseSourceRevisionId(exactVersion);
+          Long revisionId = parseSourceVersionId(exactVersion);
           if (revisionId == null) return SourceSyncCoverage.failed();
           results = dataServiceSynchronizer.synchronizeRecentByProductAndRevision(
               apiId, revisionId, limit);
@@ -181,8 +188,8 @@ public class ConsumerImpactService {
     }
   }
 
-  /** Source revisions are positive Java Long IDs, not display-version labels. */
-  private Long parseSourceRevisionId(String identity) {
+  /** Immutable source version IDs are canonical positive Long values, not display labels. */
+  private Long parseSourceVersionId(String identity) {
     if (identity == null || !identity.matches("[1-9][0-9]*")) return null;
     try {
       long value = Long.parseLong(identity);

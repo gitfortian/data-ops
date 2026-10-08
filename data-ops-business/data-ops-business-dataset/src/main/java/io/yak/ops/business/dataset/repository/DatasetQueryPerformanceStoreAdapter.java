@@ -45,6 +45,15 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
   }
 
   @Override
+  public List<DatasetQueryPerformance> successfulByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, int requestedLimit) {
+    return datasetDao.selectSuccessfulQueryPerformanceByDatasetAndVersion(
+            projectId, datasetId, datasetVersionId, requestedLimit).stream()
+        .map(this::toDomain)
+        .toList();
+  }
+
+  @Override
   public int deleteBefore(Instant cutoff, int requestedLimit) {
     return datasetDao.deleteQueryPerformanceBefore(cutoff, requestedLimit);
   }

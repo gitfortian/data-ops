@@ -26,6 +26,19 @@ public class DatasetUsageEvidenceSynchronizer {
     return synchronizeRecent(Set.of(datasetId), limit);
   }
 
+  /**
+   * Reconcile the exact immutable DatasetVersion before source LIMIT, rather
+   * than allowing later DatasetVersion successes to evict historic evidence.
+   */
+  public List<UsageNormalizationResult> synchronizeRecentByProductAndVersion(
+      long datasetId, long datasetVersionId, int limit) {
+    Long projectId = currentProject.requireProjectId();
+    return performanceReader.recentSuccessfulByDatasetAndVersion(
+            datasetId, datasetVersionId, Math.max(1, Math.min(200, limit))).stream()
+        .map(trace -> normalizer.normalize(projectId, trace))
+        .toList();
+  }
+
   private List<UsageNormalizationResult> synchronizeRecent(Set<Long> datasetIds, int limit) {
     Long projectId = currentProject.requireProjectId();
     int boundedLimit = Math.max(1, Math.min(200, limit));

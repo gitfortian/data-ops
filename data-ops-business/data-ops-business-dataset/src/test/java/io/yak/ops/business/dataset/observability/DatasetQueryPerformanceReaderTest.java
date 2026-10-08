@@ -148,6 +148,59 @@ class DatasetQueryPerformanceReaderTest {
     assertEquals(List.of(), reader.recent(Set.of(1L), 20));
   }
 
+  @Test
+  void exactOldDatasetVersionReadsOnlyDurableSuccessWithStrictProjectVersionAndBound() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    buffer.add(7L, trace("buffer-is-not-audit", 101L, 12L));
+    DatasetQueryPerformanceStore store = mock(DatasetQueryPerformanceStore.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DatasetQueryPerformanceStore> provider = mock(ObjectProvider.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(7L);
+    when(provider.getIfAvailable()).thenReturn(store);
+    when(store.successfulByDatasetAndVersion(7L, 101L, 9007199254740993L, 200))
+        .thenReturn(List.of(trace("old-durable", 101L, 10L)));
+
+    var reader = new DatasetQueryPerformanceReader(buffer, provider, project);
+    var result = reader.recentSuccessfulByDatasetAndVersion(101L, 9007199254740993L, 500);
+
+    assertEquals(1, result.size());
+    assertEquals("old-durable", result.getFirst().queryId());
+    org.mockito.Mockito.verify(store).successfulByDatasetAndVersion(
+        7L, 101L, 9007199254740993L, 200);
+    org.mockito.Mockito.verify(store, org.mockito.Mockito.never()).recent(
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt());
+  }
+
+  @Test
+  void invalidExactDatasetVersionFailsBeforeProjectAndStoreAccess() {
+    DatasetQueryPerformanceStore store = mock(DatasetQueryPerformanceStore.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<DatasetQueryPerformanceStore> provider = mock(ObjectProvider.class);
+    CurrentProject project = mock(CurrentProject.class);
+    var reader = new DatasetQueryPerformanceReader(new DatasetQueryPerformanceBuffer(), provider, project);
+
+    assertThrows(IllegalArgumentException.class,
+        () -> reader.recentSuccessfulByDatasetAndVersion(0L, 7L, 200));
+    assertThrows(IllegalArgumentException.class,
+        () -> reader.recentSuccessfulByDatasetAndVersion(101L, 0L, 200));
+    org.mockito.Mockito.verifyNoInteractions(project, provider, store);
+  }
+
+  @Test
+  void unavailableExactVersionPersistenceNeverSubstitutesLocalBuffer() {
+    DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
+    buffer.add(7L, trace("local-only", 101L, 10L));
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(7L);
+    var reader = new DatasetQueryPerformanceReader(buffer, null, project);
+
+    assertThrows(IllegalStateException.class,
+        () -> reader.recentSuccessfulByDatasetAndVersion(101L, 9007199254740993L, 200));
+  }
+
   private Fixture fixture() {
     DatasetQueryPerformanceBuffer buffer = new DatasetQueryPerformanceBuffer();
     return new Fixture(buffer, scopedReader(buffer, 7L));

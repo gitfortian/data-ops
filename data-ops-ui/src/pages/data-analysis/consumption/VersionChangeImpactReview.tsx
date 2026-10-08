@@ -236,7 +236,7 @@ export default function VersionChangeImpactReview({
     <Card title="版本变更前 · 已知消费者影响核对">
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
         <Text type="secondary">
-          请选择准备替换或修改的精确来源版本。普通概览仅展示近期成功消费；选定版本后将单独读取当前 Project 内已持久化的该版本归一化 Usage（仍有 200 条上限）；
+          请选择准备替换或修改的精确来源版本。普通概览仅展示近期成功消费；选定版本后将按当前 Project 和精确来源版本补偿持久化的成功调用/查询审计，再读取该版本归一化 Usage（两种窗口各有 200 条上限）；
           不将当前发布版本、声明依赖或 Lineage 推断为某次执行的版本。可核对的来源对象链接只用于定位真实配置，不代表已确认负责人或授权。
         </Text>
         <Space wrap>
@@ -264,14 +264,14 @@ export default function VersionChangeImpactReview({
               next.set('reviewVersion', selected.identity);
               setSearchParams(next, { replace: true });
             }}>
-              按该版本核对历史已归一化 Usage
+              按该版本核对历史成功消费
             </Button>
           ) : null}
         </Space>
         {reviewIssue ? (
           <Alert type="warning" showIcon message="不能核对消费影响来源" description={reviewIssue} />
         ) : exactLoading ? (
-          <Text type="secondary">正在按精确来源版本读取当前 Project 内已归一化的历史成功消费…</Text>
+          <Text type="secondary">正在核对当前 Project 内该版本的历史成功审计与归一化 Usage…</Text>
         ) : !evidenceImpact ? (
           <Text type="secondary">{loading ? '正在重新核对消费事实…' : '尚无可读取的消费者影响快照'}</Text>
         ) : !review ? (
