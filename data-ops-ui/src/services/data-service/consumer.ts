@@ -1,3 +1,4 @@
+import { queryString } from '@/services/http/query-string';
 import HttpUtils from '@/utils/HttpUtils';
 
 import { DATA_SERVICE_API_PREFIX } from './constants';
@@ -74,17 +75,6 @@ export interface DataServiceConsumerIpAccessPolicy {
   mode: DataServiceIpAccessMode;
   rules: DataServiceConsumerIpAccessRule[];
 }
-
-const queryString = (params: Record<string, unknown>) => {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).length > 0) {
-      search.set(key, String(value));
-    }
-  });
-  const value = search.toString();
-  return value ? `?${value}` : '';
-};
 
 const CONSUMER_PREFIX = `${DATA_SERVICE_API_PREFIX}/consumers`;
 
