@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import { fetchDataSourceAll } from '@/services/data-source/legacy';
+import { listAllDataSources } from '@/services/data-source';
 import type { DataSourceRecord } from '@/services/data-source';
 import { BRAND_THEME } from '@/styles/brand';
 
@@ -495,24 +495,8 @@ export default function SingleBatchLinkUpConfigPage() {
       try {
         setDataSourceLoading(true);
 
-        const response =
-          await fetchDataSourceAll();
-
-        if (!isApiSuccess(response)) {
-          message.error(
-            responseMessage(
-              response,
-              '获取数据源失败',
-            ),
-          );
-
-          setDataSources([]);
-          return;
-        }
-
-        setDataSources(
-          response?.data?.bizData || [],
-        );
+        const result = await listAllDataSources();
+        setDataSources(result?.bizData || []);
       } catch (error: any) {
         message.error(
           error?.message ||
