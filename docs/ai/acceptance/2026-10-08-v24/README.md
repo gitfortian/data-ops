@@ -1,6 +1,6 @@
 # V24 两次历史质量执行比较工程验证
 
-日期：2026-10-08。合同：[F-034](../../../product/features/F-034-agent-quality-execution-comparison.md) IMPLEMENTING。初始 main `568d6d64`，提交前快进到 `64109d18`（#372 / #374），无冲突；前端源未受主线更新影响。
+日期：2026-10-08。合同：[F-034](../../../product/features/F-034-agent-quality-execution-comparison.md) IMPLEMENTING。实现提交 `0c7f4b35`，最终证据投影提交 `02bb92ea84a87576986fc78e671b05fca94076dc`。初始 main `568d6d64`，提交前快进到 `64109d18`（#372 / #374），无冲突；前端源未受主线更新影响。
 
 | 检查 | 实际证据 | 结果 |
 | --- | --- | --- |
@@ -12,7 +12,8 @@
 | 前端相关回归 | `src/services/agent src/components/ai src/pages/ai-agent src/pages/data-quality`：41 suites / 429 tests；双身份、仅填入不推理、恢复、权限/活动/加载/路由/项目隔离、迟到与失败清理 | PASS |
 | 类型 | `npm run check:types`：139项既有诊断，无新增 | PASS |
 | 脚本与静态合同 | 架构/发行/CI 42项脚本测试；77 reactor / 3208生产 Java 文件；前端1个既有 corridor、62迁移基线、24必需文档/19术语/7 Decision/36 Feature；产品守卫解析及 whitespace 检查 | PASS |
-| 生产构建、产物及实际 PR 产品守卫 | 提交实现后执行并补记 | PENDING |
+| 生产构建与产物 | 在最终实现提交 `02bb92ea` 运行 `npm run build`，随后 `node scripts/release/frontend-artifact.mjs` 校验源码修订、工作区源摘要与产物摘要；均通过 | PASS |
+| PR 产品守卫 | 使用本 PR 的实际描述运行 Product Impact（26个产品源路径）与 Product Surface 检查，无新增一级能力/模块/导航；whitespace 检查通过 | PASS |
 
 从 Agent 与 Quality 测试目录枚举所有 `*Test.java` 类，运行：
 
@@ -25,6 +26,8 @@ node node_modules/jest/bin/jest.js src/services/agent src/components/ai src/page
 末尾 JVM 参数仅为本机 Windows JDK/Surefire 回退 TCP；不存在的 tcp-only 目录不创建、不改生产配置。Jest 沿用既有测试的异步句柄，在报告全部完成后退出；不通过退出参数跳过断言。日志位于本地忽略目录 `.task-ai-evaluation/v24/`。
 
 首轮发现并修复 Quality 枚举比较规范、数据库测试配置和前端缺失结束时间夹具；既有候选组件的异步断言首轮超时，单独复跑及最终全量相关目录均通过，没有改该组件或降低断言。最后修正网关最大对齐夹具为双方不重合 ID 后单独复跑；收紧 Quality 摘要与规则字段投影后重新运行全部 Quality 测试及31 reactor编译/测试编译。最终 Agent/Quality 生产与测试源码均有相应回归，不重复累计重跑项。
+
+构建及产物校验完成后仅追加本文档记录，未再修改生产或测试源。本地产物未提交或发布，摘要对应当时工作区；用户已有本地配置和临时资料未纳入提交。
 
 本批新增公共 Quality API，现有 impact-plan 规则会选择 FULL CI；未改 CI 范围或跳过守卫。远端 checks 以实际 PR head 为准，本地通过不等于 CI 完成。
 
