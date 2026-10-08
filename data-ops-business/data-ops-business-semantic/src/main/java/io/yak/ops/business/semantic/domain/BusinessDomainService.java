@@ -1,6 +1,7 @@
 package io.yak.ops.business.semantic.domain;
 
 import io.yak.ops.business.semantic.api.BusinessDomain;
+import io.yak.ops.business.semantic.api.SemanticStructureReferenceReader;
 
 import io.yak.ops.business.audit.AuditEventType;
 import io.yak.ops.business.audit.AuditOperationHandle;
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,14 +39,35 @@ public class BusinessDomainService {
   private final SemanticDomainRepository repository;
   private final SemanticProcessRepository processRepository;
   private final BusinessAuditService auditService;
+  private final List<SemanticStructureReferenceReader> referenceReaders;
 
+  @Autowired
+  public BusinessDomainService(
+      SemanticDomainRepository repository,
+      SemanticProcessRepository processRepository,
+      BusinessAuditService auditService,
+      ObjectProvider<SemanticStructureReferenceReader> referenceReaders) {
+    this(repository, processRepository, auditService,
+        referenceReaders.orderedStream().toList());
+  }
+
+  /** Compatibility constructor for existing focused service tests. */
   public BusinessDomainService(
       SemanticDomainRepository repository,
       SemanticProcessRepository processRepository,
       BusinessAuditService auditService) {
+    this(repository, processRepository, auditService, List.of());
+  }
+
+  BusinessDomainService(
+      SemanticDomainRepository repository,
+      SemanticProcessRepository processRepository,
+      BusinessAuditService auditService,
+      List<SemanticStructureReferenceReader> referenceReaders) {
     this.repository = repository;
     this.processRepository = processRepository;
     this.auditService = auditService;
+    this.referenceReaders = List.copyOf(referenceReaders);
   }
 
   /** 全量业务域树(空父集装配为根;排序已在仓库层保证)。 */
@@ -194,6 +218,13 @@ public class BusinessDomainService {
     }
     if (processRepository.existsByDomain(id)) {
       throw new SemanticException(SemanticErrorCode.DOMAIN_REFERENCED, "存在业务过程引用");
+    }
+    // Modeling owns model.domainId; include recoverable models in the count.
+    for (SemanticStructureReferenceReader reader : referenceReaders) {
+      if (reader.countDomainReferences(id) > 0) {
+        throw new SemanticException(SemanticErrorCode.DOMAIN_REFERENCED,
+            "存在建模或其它消费模块引用，请先解除关联");
+      }
     }
     AuditOperationHandle audit =
         auditService.start(
