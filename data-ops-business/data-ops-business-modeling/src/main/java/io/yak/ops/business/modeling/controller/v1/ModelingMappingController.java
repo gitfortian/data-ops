@@ -76,6 +76,24 @@ public class ModelingMappingController {
     return Result.success(mappingService.list(modelId));
   }
 
+  @GetMapping("/{targetColumn}/edit-context")
+  public Result<MappingService.EditContext> editContext(@PathVariable("modelId") Long modelId,
+      @PathVariable("targetColumn") String targetColumn) {
+    return Result.success(mappingService.editContext(modelId, targetColumn));
+  }
+
+  @PutMapping("/{targetColumn}/edit-context")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<Boolean> saveIfCurrent(@PathVariable("modelId") Long modelId,
+      @PathVariable("targetColumn") String targetColumn, @Valid @RequestBody MappingSetRequest request,
+      @org.springframework.web.bind.annotation.RequestHeader("If-Match") String definition,
+      HttpServletRequest httpRequest) {
+    mappingService.saveIfCurrent(modelId, targetColumn, request.getSourceDatasourceId(),
+        request.getSourceDatabase(), request.getSourceTable(), request.getSourceColumn(),
+        request.getTransformExpr(), definition, currentUserProvider.getCurrentUser(httpRequest));
+    return Result.success(Boolean.TRUE);
+  }
+
   @Operation(summary = "设置/更新目标列的来源映射")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
   @PutMapping("/{targetColumn}")

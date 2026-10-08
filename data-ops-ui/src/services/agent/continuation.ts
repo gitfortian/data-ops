@@ -17,11 +17,26 @@ function readTarget(value: unknown): GovernanceTarget | null {
   if (value == null) return null;
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('任务上下文无效');
   const target = value as Record<string, unknown>;
-  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch } = target;
-  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch].filter((item) => item != null).length !== 1) {
+  const { assetId, qualityMonitorId, qualityExecutionNo, purpose, standardMatch, modelMapping } = target;
+  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping].filter((item) => item != null).length !== 1) {
     throw new Error('任务上下文不唯一');
   }
-  if (purpose === 'STANDARD_MATCH' && standardMatch && typeof standardMatch === 'object') {
+  if (purpose === 'MODEL_MAPPING' && modelMapping && typeof modelMapping === 'object' && !Array.isArray(modelMapping)) {
+    const field = modelMapping as Record<string, unknown>;
+    if (Number.isSafeInteger(field.modelId) && Number(field.modelId) > 0
+      && Number.isSafeInteger(field.datasourceId) && Number(field.datasourceId) > 0
+      && typeof field.columnName === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_$]{0,127}$/.test(field.columnName)
+      && typeof field.database === 'string' && field.database.trim() && field.database.length <= 128
+      && typeof field.table === 'string' && field.table.trim() && field.table.length <= 128
+      && typeof field.businessDescription === 'string' && field.businessDescription.length <= 512
+      && typeof field.keyword === 'string' && field.keyword.length <= 64) {
+      return { purpose, modelMapping: { modelId: Number(field.modelId), columnName: field.columnName,
+        datasourceId: Number(field.datasourceId), database: field.database, table: field.table,
+        businessDescription: field.businessDescription, keyword: field.keyword } };
+    }
+    throw new Error('模型映射上下文无效');
+  }
+  if (purpose === 'STANDARD_MATCH'  && standardMatch && typeof standardMatch === 'object') {
     const field = standardMatch as Record<string, unknown>;
     if (Number.isSafeInteger(field.modelId) && Number(field.modelId) > 0
       && typeof field.columnName === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_$]{0,127}$/.test(field.columnName)

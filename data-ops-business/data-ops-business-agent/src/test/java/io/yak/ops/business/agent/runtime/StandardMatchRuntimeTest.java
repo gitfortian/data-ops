@@ -48,8 +48,18 @@ class StandardMatchRuntimeTest {
   private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent) throws Exception {
     scenario(nativeOutput, unknown, budget, success, concurrent, false);
   }
+  @Test void mappingUsesTheSameSdkStructuredDeliveryAndHistory() throws Exception { scenario(false, false, 32, true, false, false, true); }
+  @Test void mappingNativeOutputKeepsSourceValidation() throws Exception { scenario(true, false, 32, true, false, false, true); }
+  @Test void mappingSyntheticResponseRemainsBudgeted() throws Exception { scenario(false, false, 2, false, false, false, true); }
+
   private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative) throws Exception {
-    var skill = ScenarioSkillScopeTest.skill("standard-match", 1, "先核对类型与业务说明，再从目录选 ID；不匹配则反问。");
+    scenario(nativeOutput, unknown, budget, success, concurrent, rejectNative, false);
+  }
+  private void scenario(boolean nativeOutput, boolean unknown, int budget, boolean success, boolean concurrent, boolean rejectNative, boolean mapping) throws Exception {
+    var mappingTarget = new ModelMappingTarget(7, "user_id", 9, "db", "users", "买家编号", "");
+    var target = mapping ? new GovernanceTarget(null, null, null, "MODEL_MAPPING", null, mappingTarget) : this.target;
+    String marker = mapping ? "yak-model-mapping" : "yak-standard-match";
+    var skill = ScenarioSkillScopeTest.skill(mapping ? "model-field-mapping" : "standard-match", 1, "先核对类型与业务说明，再从目录选 ID；不匹配则反问。");
     var repository = mock(AgentSkillRepository.class);
     when(repository.getAllSkills()).thenReturn(List.of(skill, ScenarioSkillScopeTest.skill("unrelated", 1, "禁止泄漏的无关技能")));
     when(repository.getSource()).thenReturn("db:yak_agent_skill");
@@ -79,7 +89,8 @@ class StandardMatchRuntimeTest {
             "function", Map.of("name", name, "arguments", json.writeValueAsString(Map.of("skillId", skill.getSkillId(), "path", "SKILL.md"))))));
         finish = "tool_calls";
       } else {
-        var proposal = Map.of("candidates", List.of(Map.of("standardId", 9, "version", 2, "reason", "业务编号")), "questions", List.of());
+        var proposal = mapping ? Map.of("candidates", List.of(Map.of("sourceColumn", "buyer_id", "reason", "业务编号")), "questions", List.of())
+            : Map.of("candidates", List.of(Map.of("standardId", 9, "version", 2, "reason", "业务编号")), "questions", List.of());
         if (nativeRequest) {
           delta = Map.of("role", "assistant", "content", json.writeValueAsString(proposal)); finish = "stop";
         } else {
@@ -113,9 +124,18 @@ class StandardMatchRuntimeTest {
         return new StandardMatchSuggestion("STANDARD_MATCH", field, "a".repeat(64), 1, invocation.getArgument(5), false,
             List.of(new StandardMatchSuggestion.Candidate(9, 2, "user_id", "源域权威名称", "BIGINT", proposal.candidates().getFirst().reason())), List.of());
       });
+      var mappingTools = mock(io.yak.ops.business.agent.toolset.ModelMappingTools.class);
+      when(mappingTools.prepare(any(), eq(mappingTarget))).thenReturn(new ModelMappingContext("用户", "MYSQL", "user_id", "BIGINT", "编号",
+          "a".repeat(64), "b".repeat(64), List.of(new ModelMappingContext.SourceColumn("buyer_id", "BIGINT", "买家", false)), false));
+      when(mappingTools.validate(any(), eq(mappingTarget), any(), any(), eq(1), anyString())).thenAnswer(invocation -> {
+        var proposal = invocation.getArgument(3, ModelMappingProposal.class); assertEquals("buyer_id", proposal.candidates().getFirst().sourceColumn());
+        return new ModelMappingSuggestion("MODEL_MAPPING", mappingTarget, "a".repeat(64), "b".repeat(64), "BIGINT", 1,
+            invocation.getArgument(5), false, List.of(new ModelMappingSuggestion.Candidate("buyer_id", "BIGINT", false, "源域权威名称")), List.of());
+      });
+      List<io.yak.ops.business.agent.toolset.AgentToolBox> boxes = mapping ? List.of(mappingTools) : List.of(tools);
       var recorder = mock(AgentStepRecorder.class);
       var config = new AgentDynamicConfigService(mock(AgentConfigMapper.class));
-      var runtime = new AgentRuntime(List.of(tools), List.of(), store, properties, new AgentEventCodec(), recorder,
+      var runtime = new AgentRuntime(boxes, List.of(), store, properties, new AgentEventCodec(), recorder,
           new AgentObservationCollector(recorder, properties, config), config,
           mock(MemoryRecallService.class), mock(MemoryRepository.class), new ProjectContextScope() {
             @Override public <T> T call(io.yak.ops.core.project.ProjectContext context, java.util.function.Supplier<T> action) { return action.get(); }
@@ -132,7 +152,7 @@ class StandardMatchRuntimeTest {
       assertTrue(done.await(20, TimeUnit.SECONDS), "bounded fake SDK call");
       if (concurrent) {
         assertTrue(secondDone.await(20, TimeUnit.SECONDS)); assertNull(secondError.get(), String.valueOf(secondError.get()));
-        assertTrue(runtime.history(2, "s2").stream().anyMatch(t -> t.content().contains("yak-standard-match")));
+        assertTrue(runtime.history(2, "s2").stream().anyMatch(t -> t.content().contains(marker)));
         assertTrue(runtime.history(1, "s2").isEmpty());
       }
       if (success) {
@@ -140,7 +160,7 @@ class StandardMatchRuntimeTest {
         assertTrue(events.stream().anyMatch(e -> e.type() == ChatTurnEvent.TurnEventType.TURN_FINISHED));
         var answer = runtime.history(1, "s1").stream().filter(t -> "assistant".equals(t.role())).findFirst().orElseThrow();
         assertTrue(answer.content().contains("源域权威名称"));
-        assertTrue(answer.content().contains("yak-standard-match"));
+        assertTrue(answer.content().contains(marker));
         assertFalse(requests.getFirst().contains("禁止泄漏的无关技能"));
         var snapshot = store.get("1", "s1", TurnToolBudgetState.KEY, TurnToolBudgetState.class).orElseThrow();
         assertEquals(nativeOutput && !rejectNative ? 3 : 4, snapshot.budget().usedCalls());
@@ -148,8 +168,9 @@ class StandardMatchRuntimeTest {
         else assertTrue(requests.getFirst().contains("generate_response"));
       } else {
         assertNotNull(error.get());
+        verify(mappingTools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
         verify(tools, never()).validate(any(), any(), any(), any(), anyInt(), anyString());
-        assertTrue(runtime.history(1, "s1").stream().noneMatch(t -> t.content().contains("yak-standard-match")));
+        assertTrue(runtime.history(1, "s1").stream().noneMatch(t -> t.content().contains(marker)));
       }
     } finally { server.stop(0); }
   }

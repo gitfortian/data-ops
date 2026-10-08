@@ -53,7 +53,9 @@ class MappingServiceTest {
                 new ColumnDefinition(2L, "user_name", "VARCHAR", 128, null, true, null, null, null,
                     1)));
     service =
-        new MappingService(mappingRepository, modelRepository, structureRepository, catalogReader);
+        new MappingService(mappingRepository, modelRepository, structureRepository, catalogReader, mock(io.yak.ops.core.security.ActionAuthorization.class));
+    when(modelRepository.findByIdForUpdate(1L)).thenAnswer(i -> modelRepository.findById(1L));
+    when(structureRepository.findColumnsForUpdate(1L)).thenAnswer(i -> structureRepository.findColumns(1L));
   }
 
   @Test
@@ -119,6 +121,42 @@ class MappingServiceTest {
     var captor = org.mockito.ArgumentCaptor.forClass(ModelingColumnMappingPO.class);
     verify(mappingRepository).upsert(captor.capture(), eq("tester"));
     assertEquals("CAST(id AS CHAR)", captor.getValue().getTransformExpr());
+  }
+
+  @Test void staleMappingFailsBeforeCatalogReadOrWrite() {
+    var edit = service.editContext(1L, "user_id");
+    when(mappingRepository.findByTargetColumnForUpdate(1L, "user_id"))
+        .thenReturn(Optional.of(mapping("user_id", "shop", "ods_user", "id", null)));
+    assertThrows(ModelingException.class, () -> service.saveIfCurrent(1L, "user_id", 10L, "shop", "ods_user", "id", null, edit.definition(), "tester"));
+    verifyNoSourceOrWrites();
+  }
+
+  @Test void conditionalSaveUsesFreshSourceAndPreservesStandardFieldLink() {
+    var saved = mapping("user_id", "shop", "ods_user", "old", "CAST(old AS CHAR)"); saved.setStdProcessFieldId(99L);
+    when(mappingRepository.findByTargetColumnForUpdate(1L, "user_id")).thenReturn(Optional.of(saved));
+    var edit = service.editContext(1L, "user_id");
+    when(mappingRepository.findByTargetColumn(1L, "user_id")).thenReturn(Optional.of(saved));
+    when(catalogReader.listColumnsFresh(10L, "shop", null, "ods_user"))
+        .thenReturn(List.of(new CatalogColumn("id", "BIGINT", -5, 0, 0, false, 1, true, null)));
+    service.saveIfCurrent(1L, "user_id", 10L, "shop", "ods_user", "id", null, edit.definition(), "tester");
+    var captor = org.mockito.ArgumentCaptor.forClass(ModelingColumnMappingPO.class);
+    verify(mappingRepository).upsert(captor.capture(), eq("tester"));
+    assertEquals("id", captor.getValue().getSourceColumn()); assertNull(captor.getValue().getTransformExpr());
+    assertEquals(99L, captor.getValue().getStdProcessFieldId());
+    verify(catalogReader, never()).listColumns(any(), any(), any(), any());
+  }
+
+  @Test void changedTargetDefinitionRejectsStaleEditor() {
+    var edit = service.editContext(1L, "user_id");
+    when(structureRepository.findColumnsForUpdate(1L)).thenReturn(List.of(
+        new ColumnDefinition(1L, "user_id", "VARCHAR", 128, null, true, null, null, null, 0)));
+    assertThrows(ModelingException.class, () -> service.saveIfCurrent(1L, "user_id", 10L, "shop", "ods_user", "id", null, edit.definition(), "tester"));
+    verifyNoSourceOrWrites();
+  }
+
+  private void verifyNoSourceOrWrites() {
+    org.mockito.Mockito.verifyNoInteractions(catalogReader);
+    verify(mappingRepository, never()).upsert(any(), any());
   }
 
   @Test

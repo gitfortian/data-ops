@@ -10,6 +10,8 @@
 
 调研快照：`main @ 3e966e00`。下列四份规划保留当时的源码分析；首版代码与验证的最新状态见 [首版交付说明](./IMPLEMENTATION.md)。没有执行框架性能对测或真实模型产品验收。
 
+当前模型映射场景见 [V16 交付说明](./IMPLEMENTATION_V16.md) 与 [F-024](../product/features/F-024-skill-model-mapping.md)。
+
 当前首个场景实施见 [V15 交付说明](./IMPLEMENTATION_V15.md)、[执行顺序](./SKILL_SCENARIO_IMPLEMENTATION.md) 与 [F-023](../product/features/F-023-skill-standard-match.md)。
 
 ## 建议先做什么

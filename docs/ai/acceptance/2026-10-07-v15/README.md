@@ -14,7 +14,7 @@
 | 后端本地 | Agent 上游 30 reactor 完整 test 通过；新增保存回执/网关回退后再跑相关 35 项通过 | PASS |
 | 类型与发行前端 | TypeScript 保持 139 既有诊断，无新增；前端 build 成功；回执相关 8 项补充通过 | PASS |
 | 依赖与架构 | 77 reactor / 3165 Java files，前端 1 个既有 corridor；13 项架构/评测脚本 | PASS |
-| 完整 CI / 隔离 MySQL / 发行 | PR 创建后记录精确提交 | PENDING |
+| 完整 CI / 隔离 MySQL / 发行 | PR #333 head `8b152d8a5737d1d35f2092e328274325e37242d7`：[run 37646079681](https://github.com/gitfortian/data-ops/actions/runs/37646079681)，后端/前端/发行全部 PASS，Product Guard/Metric Checks PASS | 实际检查 PASS；汇总 gate / 合并待完成 |
 
 ## 真实环境待办（PENDING）
 
@@ -28,3 +28,5 @@
 - SM08：同题人工基线及不同 Skill/模型版本比较，记录耗时、修改率、返工、token/成本；目标值未采集，不宣称已达成。
 
 隔离 MySQL 与完整发行验证由 CI 执行；本地 Windows JDK 的 Unix socket 临时路径采用此前已确认的短目录测试参数，不修改生产配置。
+
+2026-10-08 CI 阻塞证据：Architecture gate 首次及重跑均无执行步骤、runner_id=0。GitHub annotation：`The job was not started because recent account payments have failed or your spending limit needs to be increased.` 账户限制需用户处理；没有放宽 gate 或据此宣称 CI 全绿。
