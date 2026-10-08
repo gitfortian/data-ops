@@ -144,6 +144,41 @@ public class ConsumerImpactService {
     return new ConsumerImpactView(productKey, subscriptionState, usageState, consumers, coverage, detail);
   }
 
+  /**
+   * Explicit continuation for retained, source-owned Dataset success audits.
+   * Callers must retry the same page on evidence gaps; advancing could silently
+   * skip an older successful query whose Usage has not been recovered.
+   */
+  public DatasetAuditRecoveryView recoverDatasetVersionPage(
+      ProductKey productKey, String sourceVersionIdentity, Long beforeAuditId, int requestedLimit) {
+    if (productKey.productType() != ProductType.DATASET || datasetSynchronizer == null) {
+      throw new IllegalArgumentException("Dataset version recovery requires a Dataset source");
+    }
+    Long datasetId = parseProductId(productKey);
+    Long versionId = parseSourceVersionId(sourceVersionIdentity);
+    if (datasetId == null || versionId == null
+        || (beforeAuditId != null && beforeAuditId <= 0L)) {
+      throw new IllegalArgumentException("Dataset, immutable version and cursor must be canonical positive IDs");
+    }
+    currentProject.requireProjectId();
+    int limit = Math.max(1, Math.min(200, requestedLimit));
+    var page = datasetSynchronizer.recoverSuccessfulVersionPage(
+        datasetId, versionId, beforeAuditId, limit);
+    int normalized = (int) page.results().stream()
+        .filter(result -> result.state() == UsageNormalizationState.NORMALIZED).count();
+    int gaps = (int) page.results().stream()
+        .filter(result -> result.state() == UsageNormalizationState.GAP
+            || result.state() == UsageNormalizationState.IGNORED).count();
+    int unavailable = (int) page.results().stream()
+        .filter(result -> result.state() == UsageNormalizationState.UNAVAILABLE).count();
+    boolean retryRequired = gaps > 0 || unavailable > 0;
+    return new DatasetAuditRecoveryView(
+        productKey.toString(), sourceVersionIdentity, beforeAuditId,
+        limit, page.results().size(), normalized, gaps, unavailable,
+        retryRequired ? null : page.nextBeforeAuditId(),
+        retryRequired, !retryRequired && page.exhausted());
+  }
+
   private SourceSyncCoverage synchronizeSource(ProductKey productKey, int limit, String exactVersion) {
     try {
       List<UsageNormalizationResult> results;

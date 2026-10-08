@@ -79,6 +79,55 @@ class DatasetExactVersionSuccessAuditQueryTest {
     verifyNoInteractions(mapper);
   }
 
+  @Test
+  void cursorPageFiltersProjectDatasetImmutableVersionAndSuccessBeforeExclusiveAuditId() {
+    DatasetQueryPerformanceMapper mapper = mock(DatasetQueryPerformanceMapper.class);
+    DatasetQueryPerformancePO source = new DatasetQueryPerformancePO();
+    source.setId(9007199254740993L);
+    source.setStatus("SUCCESS");
+    when(mapper.selectList(any())).thenReturn(List.of(source));
+
+    var rows = dao(mapper).selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+        42L, 101L, 9007199254740995L, 9007199254740994L, 999);
+
+    assertThat(rows).containsExactly(source);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LambdaQueryWrapper<DatasetQueryPerformancePO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectList(capture.capture());
+    var query = capture.getValue();
+    assertThat(query.getSqlSegment())
+        .contains("project_id", "dataset_id", "dataset_version_id", "status",
+            "id <", "id DESC", "LIMIT 200")
+        .doesNotContain("started_at DESC");
+    assertThat(query.getParamNameValuePairs().values())
+        .containsExactlyInAnyOrder(42L, 101L, 9007199254740995L, "SUCCESS", 9007199254740994L);
+  }
+
+  @Test
+  void firstCursorPageStartsAtNewestPersistedIdAndInvalidIdsNeverReachMapper() {
+    DatasetQueryPerformanceMapper mapper = mock(DatasetQueryPerformanceMapper.class);
+    var dao = dao(mapper);
+    dao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(42L, 101L, 77L, null, 1);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<LambdaQueryWrapper<DatasetQueryPerformancePO>> capture =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(mapper).selectList(capture.capture());
+    assertThat(capture.getValue().getSqlSegment()).contains("id DESC", "LIMIT 1")
+        .doesNotContain("id <");
+    org.mockito.Mockito.clearInvocations(mapper);
+
+    assertThatThrownBy(() -> dao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+        null, 101L, 77L, null, 200)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> dao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+        42L, 0L, 77L, null, 200)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> dao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+        42L, 101L, 0L, null, 200)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> dao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+        42L, 101L, 77L, 0L, 200)).isInstanceOf(IllegalArgumentException.class);
+    verifyNoInteractions(mapper);
+  }
+
   private DatasetDaoImpl dao(DatasetQueryPerformanceMapper queryPerformanceMapper) {
     return new DatasetDaoImpl(
         mock(DatasetMapper.class),

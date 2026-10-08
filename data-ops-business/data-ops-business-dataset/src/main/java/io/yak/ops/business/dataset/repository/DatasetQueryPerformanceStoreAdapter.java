@@ -1,6 +1,7 @@
 package io.yak.ops.business.dataset.repository;
 
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
 import io.yak.ops.business.dataset.dao.DatasetDao;
 import io.yak.ops.business.dataset.dao.model.DatasetQueryPerformancePO;
@@ -50,6 +51,17 @@ public class DatasetQueryPerformanceStoreAdapter implements DatasetQueryPerforma
     return datasetDao.selectSuccessfulQueryPerformanceByDatasetAndVersion(
             projectId, datasetId, datasetVersionId, requestedLimit).stream()
         .map(this::toDomain)
+        .toList();
+  }
+
+  @Override
+  public List<DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, Long beforeAuditId, int requestedLimit) {
+    return datasetDao.selectSuccessfulQueryPerformancePageByDatasetAndVersion(
+            projectId, datasetId, datasetVersionId, beforeAuditId, requestedLimit)
+        .stream()
+        .map(row -> new DatasetSuccessfulQueryAudit(
+            row.getId(), toDomain(row)))
         .toList();
   }
 

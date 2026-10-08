@@ -1,6 +1,7 @@
 package io.yak.ops.business.dataset.repository;
 
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryAudit;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
 import java.time.Instant;
 import java.util.List;
@@ -22,6 +23,10 @@ public interface DatasetQueryPerformanceStore {
   /** Persisted successful evidence of exactly one immutable DatasetVersion. */
   List<DatasetQueryPerformance> successfulByDatasetAndVersion(
       Long projectId, long datasetId, long datasetVersionId, int limit);
+
+  /** Only persisted SUCCESS traces, exclusively before one durable audit ID. */
+  List<DatasetSuccessfulQueryAudit> successfulPageByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, Long beforeAuditId, int limit);
 
   int deleteBefore(Instant cutoff, int limit);
 }
