@@ -7,7 +7,7 @@ export const impactEvidenceGaps = (impact: ConsumerImpact): string[] => {
     gaps.push('Subscription 来源 ' + impact.subscriptionState + '：向来源 Owner 补核声明依赖');
   }
   if (impact.usageState === 'UNAVAILABLE' || impact.usageState === 'FORBIDDEN') {
-    gaps.push('Usage 证据 ' + impact.usageState + '：向来源 Owner 核对失败或缺失的消费记录');
+    gaps.push('Usage 来源 ' + impact.usageState + '：向来源 Owner 核对失败或缺失的消费记录');
   }
   const coverage = impact.coverage;
   if (coverage?.sourceReadUnavailable) {
