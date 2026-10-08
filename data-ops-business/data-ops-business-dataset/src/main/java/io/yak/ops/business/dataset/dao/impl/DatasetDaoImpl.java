@@ -1,6 +1,7 @@
 package io.yak.ops.business.dataset.dao.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.yak.ops.business.dataset.DatasetQueryStatus;
 import io.yak.ops.business.dataset.dao.DatasetDao;
 import io.yak.ops.business.dataset.dao.mapper.DatasetDraftFieldMapper;
 import io.yak.ops.business.dataset.dao.mapper.DatasetFieldMapper;
@@ -371,6 +372,28 @@ public class DatasetDaoImpl implements DatasetDao {
         .orderByDesc(DatasetQueryPerformancePO::getId)
         .last("LIMIT " + limit);
     return queryPerformanceMapper.selectList(query);
+  }
+
+  /**
+   * Exact immutable DatasetVersion source audit: Project, Dataset, Version and
+   * SUCCESS are all SQL predicates applied before the 200-row result window.
+   */
+  @Override
+  public List<DatasetQueryPerformancePO> selectSuccessfulQueryPerformanceByDatasetAndVersion(
+      Long projectId, long datasetId, long datasetVersionId, int requestedLimit) {
+    if (projectId == null || projectId <= 0L || datasetId <= 0L || datasetVersionId <= 0L) {
+      throw new IllegalArgumentException("Project, Dataset and immutable DatasetVersion IDs must be positive");
+    }
+    int limit = Math.max(1, Math.min(requestedLimit, MAX_QUERY_PERFORMANCE_LIMIT));
+    return queryPerformanceMapper.selectList(
+        Wrappers.<DatasetQueryPerformancePO>lambdaQuery()
+            .eq(DatasetQueryPerformancePO::getProjectId, projectId)
+            .eq(DatasetQueryPerformancePO::getDatasetId, datasetId)
+            .eq(DatasetQueryPerformancePO::getDatasetVersionId, datasetVersionId)
+            .eq(DatasetQueryPerformancePO::getStatus, DatasetQueryStatus.SUCCESS.name())
+            .orderByDesc(DatasetQueryPerformancePO::getStartedAt)
+            .orderByDesc(DatasetQueryPerformancePO::getId)
+            .last("LIMIT " + limit));
   }
 
   @Override
