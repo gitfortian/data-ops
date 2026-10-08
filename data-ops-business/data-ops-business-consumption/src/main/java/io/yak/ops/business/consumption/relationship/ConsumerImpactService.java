@@ -133,7 +133,9 @@ public class ConsumerImpactService {
     if (exactVersion != null) {
       coverage = "Exact immutable version " + exactVersion
           + ": persisted normalized successful Usage is filtered by Project, Product and revision before its bounded 200-row window. "
-          + "Source audit reconciliation still covers only the latest bounded source window and may miss historical or external consumers. "
+          + (productKey.productType() == ProductType.DATA_SERVICE
+              ? "Data Service source audit recovery is scoped to this exact revision, but still only covers a bounded recent success window of that revision; older and external consumers may be missing. "
+              : "Dataset source audit reconciliation still covers only the latest bounded source window and may miss historical or external consumers. ")
           + coverage;
     }
     ConsumerImpactView.EvidenceCoverage detail = new ConsumerImpactView.EvidenceCoverage(
@@ -176,6 +178,17 @@ public class ConsumerImpactService {
   private record SourceSyncCoverage(int recordCount, boolean limitReached, int gaps, boolean readUnavailable) {
     static SourceSyncCoverage failed() {
       return new SourceSyncCoverage(0, false, 0, true);
+    }
+  }
+
+  /** Source revisions are positive Java Long IDs, not display-version labels. */
+  private Long parseSourceRevisionId(String identity) {
+    if (identity == null || !identity.matches("[1-9][0-9]*")) return null;
+    try {
+      long value = Long.parseLong(identity);
+      return value > 0L && Long.toString(value).equals(identity) ? value : null;
+    } catch (NumberFormatException invalid) {
+      return null;
     }
   }
 
