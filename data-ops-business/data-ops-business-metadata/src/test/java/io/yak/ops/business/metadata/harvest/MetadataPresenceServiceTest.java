@@ -66,6 +66,17 @@ class MetadataPresenceServiceTest {
   }
 
   @Test
+  void effectivePolicyExposesTheConfiguredGlobalThresholdNotTheJobColumns() {
+    assertThat(service().effectivePolicy().collapseThresholdPct()).isEqualTo(30);
+    assertThat(service().effectivePolicy().missingRounds()).isEqualTo(2);
+
+    MetadataPresenceService customized =
+        new MetadataPresenceService(repository, runMapper, revocations, 0.45);
+    assertThat(customized.effectivePolicy().collapseThresholdPct()).isEqualTo(45);
+    assertThat(customized.effectivePolicy().missingRounds()).isEqualTo(2);
+  }
+
+  @Test
   void anEmptySeenSetIsRefusedBeforeTheScanEvenHappens() {
     repository.scan = List.of(tableRow("table:7:shop..orders", "orders", STALE));
 
