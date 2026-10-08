@@ -117,4 +117,44 @@ class DataServiceCallLogReaderTest {
         .recentSuccessfulByApi(7L, 200);
   }
 
+  @Test
+  void persistedRevisionAuditCursorIsExactScopedAndBoundedWithoutGenericFallback() {
+    DataServiceCallLogRepository repository = mock(DataServiceCallLogRepository.class);
+    DataServiceCallLogReader reader = new DataServiceCallLogReader(repository);
+    InvocationRecord old = new InvocationRecord(
+        9007199254740993L, 42L, 7L, "Orders", "/orders", "API_KEY",
+        9L, 19L, "Historic", "sk_x", 9007199254740995L, 1, "{}",
+        true, 10L, 1, null, LocalDateTime.of(2025, 7, 1, 12, 0));
+    when(repository.successfulPageByApiAndRevision(
+        7L, 9007199254740995L, 9007199254740994L, 200))
+        .thenReturn(List.of(old));
+
+    var page = reader.successfulPageByApiAndRevision(
+        7L, 9007199254740995L, 9007199254740994L, 999);
+
+    assertThat(page).containsExactly(old);
+    verify(repository).successfulPageByApiAndRevision(
+        7L, 9007199254740995L, 9007199254740994L, 200);
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.never())
+        .recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 200);
+  }
+
+  @Test
+  void invalidCursorCannotTouchRepositoryAndUnavailableAuditCannotPretendToBeEmpty() {
+    DataServiceCallLogRepository repository = mock(DataServiceCallLogRepository.class);
+    DataServiceCallLogReader reader = new DataServiceCallLogReader(repository);
+    assertThatThrownBy(() -> reader.successfulPageByApiAndRevision(0L, 1L, null, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> reader.successfulPageByApiAndRevision(7L, 0L, null, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> reader.successfulPageByApiAndRevision(7L, 1L, 0L, 200))
+        .isInstanceOf(IllegalArgumentException.class);
+    org.mockito.Mockito.verifyNoInteractions(repository);
+
+    when(repository.successfulPageByApiAndRevision(7L, 1L, null, 200))
+        .thenThrow(new IllegalStateException("persistent audit unavailable"));
+    assertThatThrownBy(() -> reader.successfulPageByApiAndRevision(7L, 1L, null, 200))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
 }
