@@ -444,7 +444,7 @@ const LayersPage = () => {
                     ? [{ id: selectedDatasourceId, name: `数据源 #${selectedDatasourceId}（待核验）` }]
                     : [])].map((item) => ({
                   label: item.name ?? `数据源 #${item.id}`,
-                  value: item.id as number,
+                  value: Number(item.id),
                 }))}
               />
             </Form.Item>
