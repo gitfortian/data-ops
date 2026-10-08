@@ -11,7 +11,7 @@ export const PERSISTENCE_ALIASES = Object.freeze({
   sqlSessionTemplate: Object.freeze(['yakBusinessSqlSessionTemplate', 'opsDataSourceSqlSessionTemplate', 'opsResourceSqlSessionTemplate', 'offlineSyncSqlSessionTemplate']),
 });
 
-const ENTRY_PATTERN = /@Qualifier\s*\(\s*"([^"]+)"\s*\)|@Resource\s*\(\s*name\s*=\s*"([^"]+)"\s*\)|\b(?:sqlSessionFactoryRef|sqlSessionTemplateRef|transactionManager)\s*=\s*"([^"]+)"|\bgetBean\s*\(\s*"([^"]+)"|\b@DependsOn\s*\(\s*"([^"]+)"/g;
+const ENTRY_PATTERN = /@Qualifier\s*\(\s*"([^"]+)"\s*\)|@Resource\s*\(\s*name\s*=\s*"([^"]+)"\s*\)|\b(?:sqlSessionFactoryRef|sqlSessionTemplateRef|transactionManager)\s*=\s*"([^"]+)"|\bgetBean\s*\(\s*"([^"]+)"|@DependsOn\s*\(\s*"([^"]+)"/g;
 const ALIASES = new Map(Object.entries(PERSISTENCE_ALIASES).flatMap(([type, names]) =>
   names.map((name) => [name, type])));
 
