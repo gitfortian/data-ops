@@ -44,7 +44,7 @@ public class ProjectScopeInterceptor implements HandlerInterceptor {
     currentProject.clear();
     try {
       return evaluateRequest(request, response, handler);
-    } catch (RuntimeException failure) {
+    } catch (Exception | Error failure) {
       // Spring MVC does not invoke afterCompletion when preHandle throws.
       // Never leak a pending authorization decision to the next reused HTTP thread.
       try {
