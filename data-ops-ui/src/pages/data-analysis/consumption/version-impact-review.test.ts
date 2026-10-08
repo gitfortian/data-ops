@@ -1,5 +1,5 @@
 import type { ConsumerImpact, KnownConsumer } from '@/services/consumption';
-import { reviewableVersions, reviewVersionImpact, versionImpactReviewText } from './version-impact-review';
+import { reviewableVersions, selectReviewableVersion, reviewVersionImpact, versionImpactReviewText } from './version-impact-review';
 
 const consumer = (
   id: string,
@@ -107,4 +107,13 @@ describe('pre-change known Consumer version review', () => {
     expect(text).toContain('WINDOW_ONLY / NOT_COMPLETE_HISTORY');
     expect(text).toContain('不持久化');
   });
+  it('restores only the exact URL-selected revision, never silently selects a different version', () => {
+    const versions = reviewableVersions(impact, { identity: '9007199254740995', displayVersion: 'r8' });
+    expect(selectReviewableVersion(versions, '9007199254740993')?.identity).toBe('9007199254740993');
+    expect(selectReviewableVersion(versions, '9007199254740995')?.identity).toBe('9007199254740995');
+    expect(selectReviewableVersion(versions, null)?.identity).toBe('9007199254740995');
+    expect(selectReviewableVersion(versions, '9007199254740997')).toBeUndefined();
+    expect(selectReviewableVersion(versions, 'r8')).toBeUndefined();
+  });
+
 });

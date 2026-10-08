@@ -1,4 +1,5 @@
 import { BRAND_CSS_VARIABLES } from '@/styles/brand';
+import { parseConsumptionReviewReturnPath } from '@/config/consumer-source-navigation';
 import { history, useIntl, useParams } from '@umijs/max';
 import { Button, Modal } from 'antd';
 import { BarChart3 } from 'lucide-react';
@@ -40,6 +41,9 @@ export default function DashboardEditorPage() {
   const { id } = useParams<{ id?: string }>();
   const dashboardId = id && id !== 'new' ? id : undefined;
   const initialPreview = new URLSearchParams(window.location.search).get('preview') === '1';
+  const consumptionReturnPath = parseConsumptionReviewReturnPath(
+    new URLSearchParams(window.location.search).get('returnTo'),
+  );
   const designer = useDashboardDesigner(dashboardId, initialPreview, false);
   const { width, containerRef, mounted, measureWidth } = useContainerWidth();
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -243,7 +247,7 @@ export default function DashboardEditorPage() {
   }, [dashboardId, designer, intl]);
 
   const leaveDashboard = () => {
-    const target = '/dashboard';
+    const target = consumptionReturnPath || '/dashboard';
     if (!designer.dirty) {
       history.push(target);
       return;
@@ -359,6 +363,12 @@ export default function DashboardEditorPage() {
       className="flex h-screen min-h-[640px] flex-col overflow-hidden"
       style={themeStyle}
     >
+      {consumptionReturnPath ? (
+        <div className="flex items-center justify-between bg-white px-4 py-1 text-xs text-slate-500">
+          <span>来源对象核对 · 仪表盘预览（并非 Consumer 已确认变更）</span>
+          <Button type="link" size="small" onClick={leaveDashboard}>返回消费者影响核对</Button>
+        </div>
+      ) : null}
       <DashboardToolbar
         name={designer.dashboard.name}
         dashboardId={designer.dashboard.id}

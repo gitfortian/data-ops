@@ -39,6 +39,17 @@ export const reviewableVersions = (
   return [...byIdentity.values()];
 };
 
+/**
+ * An explicit deep-linked immutable version must match current source evidence.
+ * Never silently fall back to the active version when a returned review link is
+ * stale or the requested source version has left the readable audit window.
+ */
+export const selectReviewableVersion = (
+  versions: readonly SourceVersionRef[],
+  requestedIdentity?: string | null,
+): SourceVersionRef | undefined =>
+  requestedIdentity ? versions.find((version) => version.identity === requestedIdentity) : versions[0];
+
 /** Declared dependency is not a version-bound execution fact. */
 export const reviewVersionImpact = (
   impact: ConsumerImpact | null,

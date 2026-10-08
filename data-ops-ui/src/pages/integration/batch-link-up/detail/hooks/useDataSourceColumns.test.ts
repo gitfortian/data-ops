@@ -62,7 +62,12 @@ describe('useDataSourceColumns modern catalog migration', () => {
     const { result, rerender } = renderHook(
       ({ id, request }: { id: string; request?: Record<string, unknown> }) =>
         useDataSourceColumns(id, request),
-      { initialProps: { id: '', request: { table_path: 'orders' } } },
+      {
+        initialProps: {
+          id: '',
+          request: { table_path: 'orders' },
+        } as { id: string; request?: Record<string, unknown> },
+      },
     );
 
     expect(result.current.columns).toEqual([]);

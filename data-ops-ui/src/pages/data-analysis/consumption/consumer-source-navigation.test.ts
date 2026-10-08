@@ -1,5 +1,10 @@
 import type { ConsumerRef } from '@/services/consumption';
-import { consumerSourceTarget, parseManagedConsumerSourceId } from '@/config/consumer-source-navigation';
+import {
+  consumerSourceTarget,
+  consumptionReviewReturnPath,
+  parseConsumptionReviewReturnPath,
+  parseManagedConsumerSourceId,
+} from '@/config/consumer-source-navigation';
 
 const consumer = (
   consumerType: ConsumerRef['consumerType'],
@@ -46,7 +51,9 @@ describe('known Consumer source-object navigation', () => {
       expect(consumerSourceTarget(consumer('DATA_SERVICE', 'DATA_SERVICE_CONSUMER', id))).toBeNull();
       expect(parseManagedConsumerSourceId(id)).toBeNull();
     }
-    expect(consumerSourceTarget(consumer('DASHBOARD', 'DASHBOARD', '9007199254740993'))).toBeNull();
+    expect(consumerSourceTarget(consumer('DASHBOARD', 'DASHBOARD', '9007199254740993'))).toMatchObject({
+      href: '/dashboard/9007199254740993',
+    });
     expect(parseManagedConsumerSourceId('9007199254740991')).toBe(9007199254740991);
   });
 
@@ -56,4 +63,58 @@ describe('known Consumer source-object navigation', () => {
     expect(parseManagedConsumerSourceId('42&projectId=9')).toBeNull();
     expect(parseManagedConsumerSourceId('999999999999999999999999999')).toBeNull();
   });
+
+  it('preserves an exact source ProductKey and immutable BIGINT revision in review return context', () => {
+    const path = consumptionReviewReturnPath(
+      'DATA_SERVICE', '9007199254740995', '9007199254740993',
+    );
+    expect(path).toBe('/data-analysis/consumption/DATA_SERVICE%3A9007199254740995?reviewVersion=9007199254740993');
+    expect(parseConsumptionReviewReturnPath(path)).toBe(path);
+    expect(consumptionReviewReturnPath('DATASET', '42')).toBe(
+      '/data-analysis/consumption/DATASET%3A42',
+    );
+    const dataService = consumerSourceTarget(
+      consumer('DATA_SERVICE', 'DATA_SERVICE_CONSUMER', '73'), path,
+    );
+    expect(dataService?.href).toContain('consumerId=73');
+    expect(new URLSearchParams(dataService!.href.split('?')[1]).get('returnTo')).toBe(path);
+    const dashboard = consumerSourceTarget(consumer('DASHBOARD', 'DASHBOARD', '9007199254740999'), path);
+    expect(dashboard?.href).toContain('/dashboard/9007199254740999?');
+    expect(new URLSearchParams(dashboard!.href.split('?')[1]).get('returnTo')).toBe(path);
+  });
+
+  it('never produces a navigable untrusted return or an external redirect', () => {
+    const invalid = [
+      null, '', 'https://attacker.example/steal',
+      '//attacker.example/data-analysis/consumption/DATASET%3A1',
+      'javascript:alert(1)', '/data-service/access?returnTo=/admin',
+      '/data-analysis/consumption/DATASET%3A1/../../admin',
+      '/data-analysis/consumption/DATASET%3A1#fragment',
+      '/data-analysis/consumption/DATASET%3A1?reviewVersion=2&reviewVersion=3',
+      '/data-analysis/consumption/DATASET%3A1?projectId=4',
+      '/data-analysis/consumption/DATASET%3A1?reviewVersion=0',
+      '/data-analysis/consumption/DATASET%3A1?reviewVersion=3%2fadmin',
+      '/data-analysis/consumption/DATASET%3A0001',
+      '/data-analysis/consumption/DATASET%3A1?reviewVersion=0003',
+      '/data-analysis/consumption/EXTERNAL%3A1',
+      '/data-analysis/consumption/DATA_SERVICE:1',
+      '/data-analysis/consumption/DATA_SERVICE%3A1?reviewVersion=3\\path',
+    ];
+    invalid.forEach((target) => expect(parseConsumptionReviewReturnPath(target)).toBeNull());
+    expect(consumptionReviewReturnPath('DATASET', '01', '2')).toBeNull();
+    expect(consumptionReviewReturnPath('DATA_SERVICE', '5', '00')).toBeNull();
+    const source = consumerSourceTarget(
+      consumer('DATA_SERVICE', 'DATA_SERVICE_CONSUMER', '2'), 'https://attacker.example/',
+    )!;
+    expect(source.href).toBe('/data-service/access?consumerId=2');
+    expect(source.href).not.toContain('returnTo');
+  });
+
+  it('does not reinterpret a managed caller ID through Number when it is unsafe', () => {
+    const path = consumptionReviewReturnPath('DATA_SERVICE', '8', '9007199254740993');
+    expect(consumerSourceTarget(consumer('DATA_SERVICE', 'DATA_SERVICE_CONSUMER', '9007199254740993'), path)).toBeNull();
+    expect(consumerSourceTarget(consumer('DASHBOARD', 'DASHBOARD', '9007199254740993'), path)?.href)
+      .toContain('/dashboard/9007199254740993?');
+  });
+
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { dataSourceCatalogApi } from '@/services/data-source/legacy';
+import { searchDataSourceTables } from '@/services/data-source/catalog';
 
 const TABLE_SEARCH_DEBOUNCE_MS = 250;
 const TABLE_SEARCH_LIMIT = 100;
@@ -66,16 +66,17 @@ export default function useDataSourceTables(
     setLoading(true);
 
     const timer = window.setTimeout(() => {
-      dataSourceCatalogApi
-        .searchTables(
-          dataSourceId,
-          keyword.trim() || undefined,
-          TABLE_SEARCH_LIMIT,
-          database?.trim() || undefined,
-        )
-        .then((response) => {
+      searchDataSourceTables(
+        dataSourceId,
+        keyword.trim() || undefined,
+        {
+          limit: TABLE_SEARCH_LIMIT,
+          database: database?.trim() || undefined,
+        },
+      )
+        .then((rows) => {
           if (!active) return;
-          setTables(normalizeTableNames(response?.data, includeViews));
+          setTables(normalizeTableNames(rows, includeViews));
         })
         .catch(() => {
           if (active) setTables([]);
