@@ -26,6 +26,17 @@ public class ConsumerImpactController {
 
   private final ConsumerImpactService service;
 
+  @Operation(summary = "逐页恢复精确 DatasetVersion 保留成功审计的 Usage 证据")
+  @GetMapping("/dataset-version-recovery")
+  public Result<DatasetAuditRecoveryView> recoverDatasetVersionPage(
+      @RequestParam String productKey,
+      @RequestParam String sourceVersionIdentity,
+      @RequestParam(required = false) Long beforeAuditId,
+      @RequestParam(defaultValue = "200") int limit) {
+    return Result.success(service.recoverDatasetVersionPage(
+        ProductKey.parse(productKey), sourceVersionIdentity, beforeAuditId, limit));
+  }
+
   @Operation(summary = "查询已知 Consumer 与声明/实际消费证据")
   @GetMapping
   public Result<ConsumerImpactView> view(
