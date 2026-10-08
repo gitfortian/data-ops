@@ -1,3 +1,5 @@
+import type { ProductSearchState, ProductType } from '@/services/consumption';
+
 export const PRODUCT_TYPE_LABEL: Record<string, string> = { DATASET: '数据集', DATA_SERVICE: 'API 服务' };
 export const LIFECYCLE_LABEL: Record<string, string> = {
   NOT_PUBLISHED: '未发布', PUBLISHED: '已发布', DEPRECATED: '已弃用', RETIRED: '已退役',
@@ -15,8 +17,8 @@ export const resolveConsumptionDiscoveryView = (
   loading: boolean,
   error: string,
   productCount: number,
-  providerStates: Partial<Record<import('@/services/consumption').ProductType, import('@/services/consumption').ProductSearchState>>,
-  selectedType?: import('@/services/consumption').ProductType,
+  providerStates: Partial<Record<ProductType, ProductSearchState>>,
+  selectedType?: ProductType,
 ): 'LOADING' | 'ERROR' | 'RESULTS' | 'INCOMPLETE' | 'EMPTY' => {
   if (loading) return 'LOADING';
   if (error) return 'ERROR';
