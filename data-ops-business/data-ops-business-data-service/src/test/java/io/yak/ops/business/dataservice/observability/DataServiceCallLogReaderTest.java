@@ -99,4 +99,22 @@ class DataServiceCallLogReaderTest {
     verify(repository).recentSuccessfulByApi(7L, 1);
   }
 
+  @Test
+  void exactRevisionSourceReaderIsBoundedAndDoesNotFallbackToGenericSuccessfulWindow() {
+    DataServiceCallLogRepository repository = mock(DataServiceCallLogRepository.class);
+    DataServiceCallLogReader reader = new DataServiceCallLogReader(repository);
+    InvocationRecord oldRevision = new InvocationRecord(
+        9007199254740993L, 42L, 7L, "Orders", "/orders", "API_KEY",
+        9L, 19L, "Old client", "sk_x", 9007199254740995L, 1, "{}",
+        true, 15L, 1, null, LocalDateTime.of(2025, 7, 1, 12, 0));
+    when(repository.recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 200))
+        .thenReturn(List.of(oldRevision));
+
+    assertThat(reader.recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 500))
+        .containsExactly(oldRevision);
+    verify(repository).recentSuccessfulByApiAndRevision(7L, 9007199254740995L, 200);
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.never())
+        .recentSuccessfulByApi(7L, 200);
+  }
+
 }
