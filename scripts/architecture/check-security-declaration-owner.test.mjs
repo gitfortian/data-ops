@@ -41,6 +41,6 @@ test('A8.2c rejects reversing dependency from Platform to Framework Starter', ()
 test('A8.2c preserves the old permission scanning registration entry', () => {
   const files = readRepository();
   const path = OLD_DIR + 'PermissionRegistrationInitializer.java';
-  files.set(path, files.get(path).replace('YakPermission.class', 'DeprecatedPermission.class'));
+  files.set(path, files.get(path).replaceAll('YakPermission.class', 'DeprecatedPermission.class'));
   assert.match(validateDeclarationOwnership(files).join('\n'), /registration/);
 });
