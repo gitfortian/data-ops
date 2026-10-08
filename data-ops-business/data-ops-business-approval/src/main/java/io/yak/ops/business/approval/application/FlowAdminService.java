@@ -100,13 +100,10 @@ public class FlowAdminService {
     if (!StringUtils.hasText(flowName)) {
       throw new ApprovalException(ApprovalErrorCode.INVALID_ARGUMENT, "流程名称不能为空");
     }
-    ApprovalFlowPO patch = new ApprovalFlowPO();
-    patch.setId(po.getId());
+    ApprovalFlowPO patch = patchFor(po, operator);
     patch.setFlowName(flowName.trim());
     patch.setDescription(description);
     patch.setStepsJson(FlowStepsCodec.serialize(levels));
-    patch.setUpdatedBy(operator);
-    patch.setUpdateTime(LocalDateTime.now());
     flowMapper.updateById(patch);
     audit("APPROVAL_FLOW_UPSERT", "编辑审批流程", po.getId(), patch.getFlowName(), operator);
     return toView(flowMapper.selectById(po.getId()));
@@ -115,11 +112,8 @@ public class FlowAdminService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public FlowView toggle(Long id, String operator) {
     ApprovalFlowPO po = requireFlow(currentProject.requireProjectId(), id);
-    ApprovalFlowPO patch = new ApprovalFlowPO();
-    patch.setId(po.getId());
+    ApprovalFlowPO patch = patchFor(po, operator);
     patch.setEnabled(!Boolean.TRUE.equals(po.getEnabled()));
-    patch.setUpdatedBy(operator);
-    patch.setUpdateTime(LocalDateTime.now());
     flowMapper.updateById(patch);
     audit("APPROVAL_FLOW_TOGGLE",
         Boolean.TRUE.equals(patch.getEnabled()) ? "启用审批流程" : "停用审批流程",
@@ -138,16 +132,22 @@ public class FlowAdminService {
       throw new ApprovalException(ApprovalErrorCode.INVALID_ARGUMENT,
           "该流程存在在途审批单,不可删除:" + po.getFlowCode());
     }
-    ApprovalFlowPO patch = new ApprovalFlowPO();
-    patch.setId(po.getId());
+    ApprovalFlowPO patch = patchFor(po, operator);
     // Flow codes cannot contain '#'; the global row id makes this tombstone unique and bounded.
     patch.setFlowCode("#del#" + po.getId());
     patch.setEnabled(false);
     patch.setDeleted(true);
-    patch.setUpdatedBy(operator);
-    patch.setUpdateTime(LocalDateTime.now());
     flowMapper.updateById(patch);
     audit("APPROVAL_FLOW_DELETE", "删除审批流程", po.getId(), po.getFlowName(), operator);
+  }
+
+  /** Common patch fields for editing, toggling and deleting a flow definition. */
+  private static ApprovalFlowPO patchFor(ApprovalFlowPO po, String operator) {
+    ApprovalFlowPO patch = new ApprovalFlowPO();
+    patch.setId(po.getId());
+    patch.setUpdatedBy(operator);
+    patch.setUpdateTime(LocalDateTime.now());
+    return patch;
   }
 
   private ApprovalFlowPO requireFlow(Long projectId, Long id) {
