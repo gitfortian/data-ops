@@ -50,9 +50,7 @@ public class TagService {
             .like(AssetTagPO::getTagName, keyword)
             .or().like(AssetTagPO::getTagCode, keyword))
         .orderByAsc(AssetTagPO::getId));
-    return tags.stream().map(po -> new TagView(po.getId(), po.getTagCode(), po.getTagName(),
-        po.getColor(), po.getDescription(), usageCount(projectId, po.getId()),
-        po.getCreateTime())).toList();
+    return tags.stream().map(po -> toView(po, usageCount(projectId, po.getId()))).toList();
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -134,9 +132,7 @@ public class TagService {
     int added = 0;
     for (Long tagId : tagIds) {
       requireTag(projectId, tagId);
-      boolean exists = tagRelMapper.selectCount(new LambdaQueryWrapper<AssetTagRelPO>()
-          .eq(AssetTagRelPO::getProjectId, projectId)
-          .eq(AssetTagRelPO::getAssetId, assetId)
+      boolean exists = tagRelMapper.selectCount(relationScope(projectId, assetId)
           .eq(AssetTagRelPO::getTagId, tagId)) > 0;
       if (exists) {
         continue;
@@ -167,9 +163,7 @@ public class TagService {
   public int detach(Long assetId, Long tagId, String operator) {
     Long projectId = currentProject.requireProjectId();
     requireAsset(projectId, assetId);
-    int deleted = tagRelMapper.delete(new LambdaQueryWrapper<AssetTagRelPO>()
-        .eq(AssetTagRelPO::getProjectId, projectId)
-        .eq(AssetTagRelPO::getAssetId, assetId)
+    int deleted = tagRelMapper.delete(relationScope(projectId, assetId)
         .eq(AssetTagRelPO::getTagId, tagId));
     if (deleted > 0) {
       audit("ASSET_TAG_DETACH", "Untag asset", assetId, String.valueOf(assetId), operator,
@@ -182,9 +176,7 @@ public class TagService {
   /** 资产的标签清单(详情"业务标签"分区复用)。 */
   public List<TagView> tagsOfAsset(Long assetId) {
     Long projectId = currentProject.requireProjectId();
-    List<AssetTagRelPO> rels = tagRelMapper.selectList(new LambdaQueryWrapper<AssetTagRelPO>()
-        .eq(AssetTagRelPO::getProjectId, projectId)
-        .eq(AssetTagRelPO::getAssetId, assetId));
+    List<AssetTagRelPO> rels = tagRelMapper.selectList(relationScope(projectId, assetId));
     if (rels.isEmpty()) {
       return List.of();
     }
@@ -197,6 +189,13 @@ public class TagService {
   }
 
   // ---------- internal ----------
+
+  /** An asset-tag relation is always queried within the owning project and asset. */
+  private static LambdaQueryWrapper<AssetTagRelPO> relationScope(Long projectId, Long assetId) {
+    return new LambdaQueryWrapper<AssetTagRelPO>()
+        .eq(AssetTagRelPO::getProjectId, projectId)
+        .eq(AssetTagRelPO::getAssetId, assetId);
+  }
 
   AssetTagPO requireTag(Long projectId, Long id) {
     AssetTagPO po = tagMapper.selectOne(new LambdaQueryWrapper<AssetTagPO>()
