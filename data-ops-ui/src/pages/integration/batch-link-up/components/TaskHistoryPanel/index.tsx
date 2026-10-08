@@ -7,7 +7,7 @@ import HistoryList from "./components/HistoryList";
 import HistoryPanelHeader from "./components/HistoryPanelHeader";
 import HistoryStatusFilters from "./components/HistoryStatusFilters";
 import { useTaskHistory } from "./hooks/useTaskHistory";
-import "./sync.less"
+import "../../sync.less"
 
 interface TaskHistoryPanelProps {
   selectedItem: any;
