@@ -139,7 +139,7 @@ describe('human coordination workpack for source version changes', () => {
       consumers: impact.consumers.map((item, index) => index !== 0 ? item : {
         ...item,
         consumerRef: {
-          ...item.consumerRef, consumerType: 'DATA_SERVICE',
+          ...item.consumerRef, consumerType: 'DATA_SERVICE' as const,
           sourceDomain: 'DATA_SERVICE_CONSUMER', sourceIdentity: '42',
         },
       }),
