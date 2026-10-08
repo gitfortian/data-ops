@@ -51,3 +51,8 @@ F-023：StandardSuggestionQueryApi 是 Agent gateway 的授权只读入口。每
 ## 跨域稳定字段引用（P0-B03）
 
 Semantic 的标准字段删除是物理删除，受本域业务过程引用和 Modeling `std_field_id` 持久化引用共同保护：只要任一项目内持久引用存在，就必须阻断删除，不能在 Semantic 自动修改建模模型。通过 Semantic 声明、Modeling 实现的只读引用 SPI 读取，引用查询异常不当作无引用。回收站模型的引用仍可能恢复，解除后才可删除；项目身份始终从可信上下文获取。
+
+
+## 跨域业务过程 / 业务域稳定引用（P0-B03）
+
+Modeling 可以通过项目内 `process_id` / `domain_id` 引用 Semantic 的业务过程 / 业务域。对象删除除了本域子域、过程、字段和源表条件外，必须检查 Modeling 真实持久化引用（含回收站模型）；任何引用都阻断物理删除，不能绕过项目空间或自动清空模型端字段。消费者拥有引用事实并通过只读 SPI 提供当前 Project 的计数；不可用时禁止危险删除。
