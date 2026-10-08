@@ -6,14 +6,6 @@ export type DataSourceConnectionStatus =
   | 'DISCONNECTED'
   | string;
 
-/** Compatibility envelope used by legacy page imports during migration. */
-export interface CommonApiResponse<T> {
-  code: number;
-  data: T;
-  msg?: string;
-  message?: string;
-}
-
 export interface PaginationInfo {
   pageNo: number;
   pageSize: number;
