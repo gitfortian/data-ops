@@ -25,6 +25,7 @@
  */
 
 import { parseEvidenceJson } from './lossless-json.mjs';
+import { maxRecordId, findNewInvocation } from './golden-invocation-identity.mjs';
 
 const PROJECT_HEADER = 'X-YAK-SECURITY-PROJECT-ID';
 const BASE_URL = (process.env.YAK_OPS_BASE_URL || 'http://localhost:9001').replace(/\/+$/, '');
@@ -274,25 +275,7 @@ function usageNormalizationSummary(result) {
   };
 }
 
-function maxRecordId(records) {
-  return records.reduce((max, record) => {
-    const id = Number(record?.id);
-    return Number.isFinite(id) ? Math.max(max, id) : max;
-  }, 0);
-}
 
-function findNewInvocation(records, previousMaxId, service) {
-  const candidates = records
-    .filter((record) => Number(record?.id) > previousMaxId)
-    .filter((record) => String(record?.apiId ?? '') === String(DATA_SERVICE_ID))
-    .filter((record) => record?.success === true)
-    .sort((left, right) => Number(right?.id ?? 0) - Number(left?.id ?? 0));
-
-  const exactRevision = candidates.find((record) =>
-    String(record?.sourceRevisionId ?? '') === String(service.sourceRevisionId ?? '')
-      && String(record?.sourceRevisionNo ?? '') === String(service.sourceRevisionNo ?? ''));
-  return exactRevision ?? candidates[0] ?? null;
-}
 
 function findUsageNormalization(results, invocationRecord) {
   const expectedRef = `invocation:${invocationRecord.id}`;
@@ -362,7 +345,7 @@ async function main() {
     `/api/v1/data-service/${DATA_SERVICE_ID}/logs?limit=${LOG_LIMIT}`,
     { projectScoped: true },
   ), 'Data Service InvocationRecord');
-  const invocationRecord = findNewInvocation(afterRecords, previousMaxId, service);
+  const invocationRecord = findNewInvocation(afterRecords, previousMaxId, service, DATA_SERVICE_ID);
   if (!invocationRecord) {
     throw new Error(
       `Successful public invoke returned but no new InvocationRecord was found for Data Service ${DATA_SERVICE_ID}`,
