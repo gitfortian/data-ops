@@ -138,10 +138,10 @@ describe('Data Development execution detail modern read and legacy commands', ()
         : detail(id));
     render(<ExecutionDetailDrawer open record={record('run-3', 'FAILED')}
       onClose={jest.fn()} />);
-    await waitFor(() => expect(get).toHaveBeenCalledWith('run-1'));
-    expect(screen.getByRole('button', {
+    expect(await screen.findByRole('button', {
       name: '#run-1 · pages.dataDevelopment.execution.success',
     })).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('run-1');
     expect(screen.getByRole('button', {
       name: '#run-2 · pages.dataDevelopment.execution.failed',
     })).toBeInTheDocument();
