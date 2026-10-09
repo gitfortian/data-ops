@@ -39,9 +39,18 @@ jobs:
           node-version: '20'
       - name: Validate runner syntax
         run: |
-          python -m py_compile scripts/product/golden-sample/consumption.py scripts/product/golden-sample/historical_recovery.py scripts/product/golden-sample/historical_recovery_denials.py scripts/product/golden-sample/historical_recovery_retry.py scripts/product/golden-sample/historical_recovery_reader_outage.py scripts/product/golden-sample/historical_recovery_roles.py scripts/product/golden-sample/golden_evidence_gate.py
+          python -m py_compile scripts/product/golden-sample/consumption.py scripts/product/golden-sample/historical_recovery.py scripts/product/golden-sample/historical_recovery_denials.py scripts/product/golden-sample/historical_recovery_retry.py scripts/product/golden-sample/historical_recovery_reader_outage.py scripts/product/golden-sample/historical_recovery_roles.py scripts/product/golden-sample/golden_evidence_gate.py scripts/product/golden-sample/p0_exit_readiness.py
           node --check scripts/product/phase4-real-env-data-service-evidence.mjs
-      - name: Run Python fixture and consumption acceptance contracts
+      - name: Run Python fixture, consumption and P0 exit evidence handoff contracts
         run: python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
+      - name: Assert P0 exit cannot silently pass without authorized real evidence
+        shell: bash
+        run: |
+          set +e
+          python scripts/product/golden-sample/p0_exit_readiness.py > /tmp/p0-exit-plan.json
+          result=$?
+          set -e
+          test "$result" -eq 2
+          grep -q '"result": "BLOCKED_EVIDENCE"' /tmp/p0-exit-plan.json
       - name: Run lossless invocation identity checks
         run: node --test scripts/product/golden-invocation-identity.test.mjs

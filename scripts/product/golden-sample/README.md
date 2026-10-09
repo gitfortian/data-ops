@@ -289,3 +289,31 @@ python scripts/product/golden-sample/historical_recovery_reader_outage.py --appl
 根据 [P0 #336](../../../docs/product/acceptance/p0-closeout-20261009.md) 当前执行约束，**停止把“后续批次补齐 Model/Metric/MDM 样本”作为开发指令**；这些属于另行产品规划和明确授权之后的范围。本阶段**只使用上述已存在的 R1～R8 工具**取得真实环境证据、核实版本/权限/Usage/故障恢复，绝不开发新业务功能，也不通过写伪源审计、删除 Usage 或 Mock 伪造 PASS。
 
 本轮由 QA/部署/Product 按 [P0 Golden 真实环境验收与退出签收包](../../../docs/product/acceptance/p0-golden-operational-handoff-20261009.md) 顺序准备环境、角色、构建与真实输出，并单独完成浏览器、IP/Key、精确版本和审批签收。**R8 仍然只负责结构一致性；不执行实际部署 E2E，也不会自动签发产品 PASS。**
+
+
+## P0 四个综合 PR 最终退出证据统一入口（PR 4/4）
+
+`p0_exit_readiness.py` **不是**一个新的 Golden 执行器：它既不登录、也不操作数据库、不会执行浏览器、故障注入或修改业务记录。它只核对由 QA/Release 在同一**授权隔离**部署上取得的实际证据文件、SHA-256 和人工审批索引，永不自动签发产品 E2E PASS。全部步骤与收据字段见 [Golden QA 最终签收说明](../../../docs/product/acceptance/p0-golden-operational-handoff-20261009.md#6-四个综合-pr-的最终统一退出证据门禁第-44-个综合-pr)。
+
+```bash
+# 安全 PLAN（显示 21 个待提供的真实证据槽，退出码固定 2）
+python scripts/product/golden-sample/p0_exit_readiness.py
+
+# 离线自测（不连接真实服务、不修改事实）
+python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
+
+# 唯有获得真实文件和部署身份后，QA/Release 才运行：
+python scripts/product/golden-sample/p0_exit_readiness.py \
+  --manifest /secure/qa/p0-exit-receipt.local.json \
+  --evidence-root /secure/qa/reports \
+  --expected-commit YOUR_DEPLOYED_40_CHAR_SHA \
+  --output /secure/qa/p0-exit-review.local.json
+```
+
+收据根字段是 `schema=P0-GOLDEN-EXIT-HANDOFF-V1`、`repositoryCommit`、`environmentRef`、`environmentClass=AUTHORIZED_NON_PRODUCTION`、`deployedAt`、`projectPair`、`deployment`、`evidence`、`signoffs`。其中后端/前端收据必须带同 SHA 的实际压缩包/JAR 文件路径，门禁会计算文件真实 SHA256；另外核对已声明运行进程与后端产物摘要一致，但**仍需要 Release 对运行中进程的独立观测**。R1/R2、R3～R7 原始文件内部的仓库 commit 与时间也会校验，不能把历史报告重新包装成当前验收。
+
+- **退出码 1**：数据矛盾、哈希不一致、报告前后部署或 Project 不匹配、用离线 Mock 冒充 LIVE，立即拒绝。
+- **退出码 2**：材料缺失或全部可核对材料齐备而等待独立人工裁决；这不是失败的业务用例，也不是正式 PASS。
+- **永不返回 0 表示自动产品验收通过**。输出始终 `automatedProductPass=false` / `p0ExitSigned=false`。真正的关闭 #336、允许产品发布或批准限范围延期，只能由有权的 QA/Product/Release/Truth Owner 根据原始证据作出。
+
+不要把受控环境凭证、浏览器会话、原始业务数据、Cookie、Token 或 API Key 存入 receipt 或 Git；实际 Phase4 Query/Invoke、R3/R5/R6 恢复及故障阶段会改变运行事实，必须先由环境 Owner 明确授权。
