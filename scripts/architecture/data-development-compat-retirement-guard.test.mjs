@@ -57,8 +57,11 @@ test('no tracked UI consumer can revive retired imports or bypass the special co
           file + ' bypasses the Workbench special-command boundary');
       }
       if (resolved === COMPAT.replace(/\.ts$/, '')) {
-        assert.equal(file, PAGE_SERVICE + '.ts',
-          file + ' imports raw envelope requests instead of modern service');
+        assert.ok(
+          file === PAGE_SERVICE + '.ts'
+            || file === COMPAT.replace(/\.ts$/, '.test.ts'),
+          file + ' imports raw envelope requests instead of modern service',
+        );
       }
     }
   }
