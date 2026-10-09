@@ -32,6 +32,12 @@ class LegacyMembershipReadAdapterTest {
     row.setUserType(1);
     row.setProjectId(77L);
     when(mapper.selectList(any(Wrapper.class))).thenReturn(List.of(row));
+    // This test invokes a MyBatis-Plus lambda query without a bootstrapped SqlSessionFactory.
+    // Register the entity metadata normally installed by the mapper scanner first.
+    com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
+        new org.apache.ibatis.builder.MapperBuilderAssistant(
+            new com.baomidou.mybatisplus.core.MybatisConfiguration(), "a8.2i-unit-test"),
+        UserProjectPO.class);
     var dao = new UserProjectDaoImpl(mapper);
     UserProjectCriteria criteria = new UserProjectCriteria(5L, 10L, 1, 77L, false);
     List<UserProject> members = dao.selectMembershipsByCriteria(criteria);
