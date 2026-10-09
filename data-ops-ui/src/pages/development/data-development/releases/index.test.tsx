@@ -61,14 +61,17 @@ jest.mock('@/components/ReadableTable', () => {
           ? col.dataIndex === 'revisionNo'
             || col.title === 'pages.dataDevelopment.common.action'
           : col.dataIndex === 'taskName' || col.key === 'action');
+      const renderedRows = dataSource.map(row => {
+        const cells = visibleColumns.map((col, index) => {
+          const value = col.dataIndex ? row[col.dataIndex] : undefined;
+          return e('div', { key: index }, col.render ? col.render(value, row) : null);
+        });
+        return e('div', { key: String(isHistory ? row.id : row.assetId) }, cells);
+      });
       return e('div', {
         'data-testid': isHistory ? 'release-history' : 'release-list',
         'data-loading': String(loading),
-      }, dataSource.map(row => e('div', {
-        key: String(isHistory ? row.id : row.assetId),
-      }, visibleColumns.map((col, index) => e('div', { key: index },
-        col.render ? col.render(col.dataIndex ? row[col.dataIndex] : undefined, row) : null,
-      ))));
+      }, renderedRows);
     },
   };
 });
