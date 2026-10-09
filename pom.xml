@@ -35,6 +35,7 @@
         <module>data-ops-framework</module>
         <module>data-ops-platform/data-ops-platform-security-contract</module>
         <module>data-ops-platform/data-ops-platform-security-runtime</module>
+        <module>data-ops-platform/data-ops-platform-security-persistence</module>
         <module>data-ops-bom</module>
         <module>data-ops-common</module>
         <module>data-ops-spi</module>

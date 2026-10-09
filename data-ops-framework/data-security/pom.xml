@@ -32,6 +32,12 @@
       <artifactId>data-ops-platform-security-runtime</artifactId>
       <version>1.0.0</version>
     </dependency>
+    <!-- A8.2s: single owner of MyBatis POs, mapper interfaces and numeric flag binding. -->
+    <dependency>
+      <groupId>io.yak.ops</groupId>
+      <artifactId>data-ops-platform-security-persistence</artifactId>
+      <version>1.0.0</version>
+    </dependency>
 
     <!-- 跨模块统一返回、分页和异常契约 -->
     <dependency>

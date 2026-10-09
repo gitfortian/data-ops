@@ -104,6 +104,11 @@
                 <artifactId>data-ops-platform-security-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.yak.ops</groupId>
+                <artifactId>data-ops-platform-security-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- Data Ops Internal Modules -->
             <dependency>
