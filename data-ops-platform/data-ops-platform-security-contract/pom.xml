@@ -13,6 +13,12 @@
     <name>Data Ops Security Platform Contract</name>
     <description>Single owner of Security Platform permission contracts, independent of framework and business modules</description>
     <dependencies>
+        <!-- Preserve generated Permission getters/setters and public bean ABI at its new binary owner. -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
         <!-- Preserve existing Spring Assert/StringUtils validation exactly during FQCN migration. -->
         <dependency>
             <groupId>org.springframework</groupId>
