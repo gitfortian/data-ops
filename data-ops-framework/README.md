@@ -62,6 +62,9 @@ mvn clean verify
 
 ## 发布到 Maven Central
 
+以下命令均从 **Yak Ops 仓库根目录**执行，使用已提交的 Maven Wrapper；不依赖某位开发者本机的 Maven 安装路径。发布、签名与混淆仍需按独立发行流程评审，不能从历史示例推断已完成发布。
+
+
 项目通过 Sonatype Central Publisher Portal 发布。`central-release` Profile 会自动生成 Sources/Javadoc、执行 GPG 签名，并通过 `central-publishing-maven-plugin` 上传、验证和自动发布制品。
 
 发布前需要完成两项本地配置：
@@ -86,7 +89,7 @@ mvn clean verify
 发布 `0.1.0`：
 
 ```shell
-D:\baize-works\baize-tools\apache-maven-3.9.16\bin\mvn clean deploy -Pcentral-release -DskipTests -Dspotless.check.skip=true
+./mvnw -f data-ops-framework/pom.xml clean deploy -Pcentral-release -DskipTests -Dspotless.check.skip=true
 ```
 
 `central-release` 已启用自动发布并等待到 `published` 状态，因此命令成功结束后无需再到 Central Portal 手工点击 Publish。Maven Central 同步完成后，使用方无需配置仓库地址或下载凭证即可直接引用，例如：
@@ -104,13 +107,13 @@ D:\baize-works\baize-tools\apache-maven-3.9.16\bin\mvn clean deploy -Pcentral-re
 普通构建默认不启用 ProGuard。只有显式启用 `release-obfuscated` Profile 时，才会在 `package` 阶段对各个 JAR 模块执行混淆：
 
 ```shell
-D:\baize-works\baize-tools\apache-maven-3.9.16\bin\mvn clean package -Prelease-obfuscated -DskipTests -Dspotless.check.skip=true
+./mvnw -f data-ops-framework/pom.xml clean package -Prelease-obfuscated -DskipTests -Dspotless.check.skip=true
 ```
 
 如果发布到 Maven Central 时也需要混淆，可同时启用两个 Profile：
 
 ```shell
-D:\baize-works\baize-tools\apache-maven-3.9.16\bin\mvn clean deploy -Pcentral-release,release-obfuscated -DskipTests -Dspotless.check.skip=true
+./mvnw -f data-ops-framework/pom.xml clean deploy -Pcentral-release,release-obfuscated -DskipTests -Dspotless.check.skip=true
 ```
 
 第一版混淆策略只进行名称混淆，不执行 shrink/optimize，并保留公共 API 与 Spring/Jackson 等运行时反射所需的元数据。各模块会在 `target/` 下生成 `proguard-mapping.txt` 和 `proguard-seeds.txt`，用于问题排查和堆栈反混淆；这些文件属于内部发布元数据，不应作为 Maven 制品发布或对外提供。

@@ -29,6 +29,8 @@
   ·
   <a href="https://doc.yak-ops.com/">项目文档</a>
   ·
+  <a href="./docs/README.md">仓库内文档与证据索引</a>
+  ·
   <a href="https://github.com/weifuwan/yak-ops/issues">问题反馈</a>
   ·
   <a href="https://github.com/weifuwan/yak-ops/pulls">Pull Requests</a>

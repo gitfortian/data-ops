@@ -32,4 +32,4 @@ data-service ──(复用鉴权)──► metric ──(SPI)──► modeling
 
 ## Ticket 对应
 
-45 模块骨架 · 46 指标 CRUD · 47 列表+搜索 · 48 详情页 · 49 标签 · 50 版本 · 51 血缘 · 52 使用 · 53 影响分析 · 54 服务 · 55 市场 · 56 AI 推荐。设计文档见 [docs/semantic/metrics/](../../docs/semantic/metrics/)。
+45 模块骨架 · 46 指标 CRUD · 47 列表+搜索 · 48 详情页 · 49 标签 · 50 版本 · 51 血缘 · 52 使用 · 53 影响分析 · 54 服务 · 55 市场 · 56 AI 推荐。此处 Ticket 编号仅作历史追溯。指标历史缺口与评审材料见 [Metric 历史问题清单](../../docs/metric/issues/gap-backlog-2026-09.md)；当前跨域决策以 [PD-003 业务语义与指标合同](../../docs/product/decisions/PD-003-business-semantic-metric-contract.md) 为准，不能将旧 Ticket 自动提升为新需求。

@@ -49,6 +49,14 @@
 4. 更新引用；
 5. 最后再归档/移动旧材料。
 
+## Indexed evidence families
+
+- [历史证据总索引](../HISTORICAL_EVIDENCE_INDEX.md) 是 Evidence/Review 导航，不是新 Product Decision。
+- `docs/20261001/**`、`docs/20261003/**`、`docs/20261004/**`：日期限定的阶段测试与审核快照，验证条件必须与原始记录对照。
+- `docs/frontend-review/**`、`docs/architecture-review/**`、`docs/reviews/**`：前端及架构评审与核销材料；`txt/json` 附件是证据，不是批准的变更合同。
+- `docs/v1/**` 与 `docs/test/**`：既有盘点及测试文档，不能用文档中“待办”直接开启功能开发。
+- Metric 的 [历史 gap backlog](../metric/issues/gap-backlog-2026-09.md) 为 Evidence；当前指标跨域规则以 [PD-003](../product/decisions/PD-003-business-semantic-metric-contract.md) 的 ACCEPTED 状态为准。
+
 ## Navigation and historical plan boundary
 
 - 仓库文档导航见 [docs/README.md](../README.md)，工程治理收口证据见 [docs/engineering/code-cleanliness-p1-closeout.md](../engineering/code-cleanliness-p1-closeout.md)。

@@ -29,6 +29,8 @@
   ·
   <a href="https://doc.yak-ops.com/">Documentation</a>
   ·
+  <a href="./docs/README.md">Repository documentation and evidence index</a>
+  ·
   <a href="https://github.com/weifuwan/yak-ops/issues">Issues</a>
   ·
   <a href="https://github.com/weifuwan/yak-ops/pulls">Pull Requests</a>
