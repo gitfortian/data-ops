@@ -128,6 +128,7 @@ const AssetCatalogPage = () => {
 
   const [dirTree, setDirTree] = useState<DirNode[]>([]);
   const [directoryError, setDirectoryError] = useState<AssetListReadFailure | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [tags, setTags] = useState<AssetTagRecord[]>([]);
 
@@ -173,12 +174,15 @@ const AssetCatalogPage = () => {
   }, [load]);
 
   const reloadDirectories = useCallback(async () => {
+    setDirectoryLoading(true);
     setDirectoryError(null);
     setDirTree([]);
     try {
       setDirTree(await getDirectoryTree());
     } catch (error) {
       setDirectoryError(classifyAssetListFailure(error));
+    } finally {
+      setDirectoryLoading(false);
     }
   }, []);
 
@@ -387,7 +391,9 @@ const AssetCatalogPage = () => {
         </Button>
         <div className={directoryOpen ? '' : 'hidden md:block'}>
         <div className="mb-2 text-[13px] font-medium text-[#667085]">资产目录</div>
-        {directoryError ? (
+        {directoryLoading ? (
+          <YakEmpty compact title="正在读取目录" description="请等待当前项目的目录请求完成" />
+        ) : directoryError ? (
           <div>
             <YakEmpty compact
               title={directoryError === 'FORBIDDEN' ? '无权读取资产目录树' : '目录树读取失败'}
