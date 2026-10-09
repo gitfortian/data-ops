@@ -59,6 +59,72 @@ export function reconcileKnownCorridor(pr, conflicted, current, incoming) {
   return current.replace(INSERT_BEFORE, () => CORRIDOR_STEP + INSERT_BEFORE);
 }
 
+
+const LEGACY_WORKFLOW_GATES = Object.freeze([
+  {
+    anchor: '        run: node scripts/architecture/check-boundaries.mjs\n',
+    step: '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
+      '        run: node scripts/architecture/check-persistence-consumers.mjs\n',
+  },
+  {
+    anchor: '        run: node scripts/db/check-migration-history.mjs\n',
+    step: '      - name: Flyway history table and module ownership\n' +
+      '        run: node scripts/db/check-flyway-ownership.mjs\n',
+  },
+  {
+    anchor: INSERT_BEFORE,
+    step: CORRIDOR_STEP,
+  },
+]);
+
+function insertVettedStep(content, anchor, step) {
+  if (content.split(anchor).length !== 2 || content.includes(step)) {
+    throw new Error('Unexpected architecture workflow guard layout');
+  }
+  return content.replace(anchor, () => step + anchor);
+}
+
+/**
+ * A0–A8 preview has already merged #385, #380 and #423 before it reaches
+ * #461. Verify the entire first-parent workflow against the exact main
+ * snapshot plus only those three previously reviewed additions. Compose the
+ * Security PR's own workflow with all three checks, preserving every other
+ * byte of its submitted source. No generic merge strategy is permitted.
+ */
+export function reconcileSecurityConsolidation(pr, conflicted, current, incoming, base) {
+  if (pr?.number !== 461 ||
+      pr?.branch !== 'refactor/a8-2n-p-security-runtime-batch' ||
+      !/^[0-9a-f]{40}$/.test(pr?.sha || '') ||
+      conflicted.trim() !== WORKFLOW_PATH) {
+    throw new Error('Unapproved A8.2 integration conflict; manual resolution required');
+  }
+  let expectedPrior = base.trimEnd();
+  for (const { anchor, step } of LEGACY_WORKFLOW_GATES) {
+    expectedPrior = insertVettedStep(expectedPrior, anchor, step);
+  }
+  if (current.trimEnd() !== expectedPrior) {
+    throw new Error('Unexpected prerequisite workflow differences before #461');
+  }
+  if (!incoming.includes('A8 Security Persistence MyBatis single owner and compatibility') ||
+      !incoming.includes('A0-A8 ordered migration / runtime / UI acceptance')) {
+    throw new Error('Missing original #461 Security and integration guards');
+  }
+  let combined = incoming.trimEnd();
+  for (const { anchor, step } of LEGACY_WORKFLOW_GATES) {
+    combined = insertVettedStep(combined, anchor, step);
+  }
+  // The resolution may ONLY add the three reviewed prerequisite steps to
+  // exact #461 source; it cannot modify or discard a single Security step.
+  let restored = combined;
+  for (const { step } of LEGACY_WORKFLOW_GATES) {
+    restored = restored.replace(step, '');
+  }
+  if (restored !== incoming.trimEnd()) {
+    throw new Error('Security workflow merge changed unreviewed content');
+  }
+  return combined;
+}
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export function validateArchitecturePull(pr, expected) {
@@ -188,12 +254,17 @@ export async function prepareIntegration({ worktree, reportPath, token }) {
         const conflicted = git(['-C', absolute, 'diff', '--name-only', '--diff-filter=U']);
         const current = git(['-C', absolute, 'show', ':2:' + WORKFLOW_PATH]);
         const incoming = git(['-C', absolute, 'show', ':3:' + WORKFLOW_PATH]);
-        const reconciled = reconcileKnownCorridor(pr, conflicted, current, incoming);
+        const reconciled = pr.number === 461
+          ? reconcileSecurityConsolidation(pr, conflicted, current, incoming,
+              git(['-C', absolute, 'show', report.baseSha + ':' + WORKFLOW_PATH]))
+          : reconcileKnownCorridor(pr, conflicted, current, incoming);
         fs.writeFileSync(path.join(absolute, WORKFLOW_PATH),
           reconciled.endsWith('\n') ? reconciled : reconciled + '\n');
         git(['-C', absolute, 'add', WORKFLOW_PATH]);
         git([...safeGit, '-C', absolute, 'commit', '--no-edit']);
-        report.prs[i].resolution = 'vetted #423 corridor step, single workflow path';
+        report.prs[i].resolution = pr.number === 461
+          ? 'vetted #385/#380/#423 prerequisites retained in #461 workflow'
+          : 'vetted #423 corridor step, single workflow path';
       }
       const after = git(['-C', absolute, 'rev-parse', 'HEAD']);
       report.prs[i].result = before === after
