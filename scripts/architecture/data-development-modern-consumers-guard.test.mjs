@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 
 // These pages have completed the envelope -> modern API migration. This guard
@@ -126,4 +127,54 @@ test('Workbench keeps conflict-aware Save, preflight Run, confirmed Publish and 
   }
   assert.equal((workbench.match(/\bresponseData\(/g) || []).length, 4,
     'raw envelope unwraps should remain only in four protected coordination corridors');
+});
+
+const RETIRED_PAGE_FACADES = [
+  'data-ops-ui/src/pages/development/data-development/dataset-service.ts',
+  'data-ops-ui/src/pages/development/data-development/data-service-node-service.ts',
+  'data-ops-ui/src/pages/development/data-development/data-service-runtime-publication.ts',
+];
+
+test('retired Dataset and Data Service page-only forwarding files are absent', () => {
+  for (const path of RETIRED_PAGE_FACADES) {
+    assert.equal(existsSync(path), false, path + ' must remain removed');
+  }
+});
+
+test('tracked frontend code never references retired page-only service modules', () => {
+  const tracked = execFileSync('git', ['ls-files', '-z', '--', 'data-ops-ui/src'], {
+    encoding: 'utf8',
+  }).split('\0').filter(path => path && /\.[cm]?[jt]sx?$/.test(path));
+
+  const importPattern = /(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)['"]([^'"]+)['"]/g;
+  const retiredNames = [
+    'dataset-service',
+    'data-service-node-service',
+    'data-service-runtime-publication',
+  ];
+
+  for (const path of tracked) {
+    if (!existsSync(path)) continue;
+    const code = readFileSync(path, 'utf8');
+    for (const found of code.matchAll(importPattern)) {
+      const specifier = found[1];
+      assert.ok(!retiredNames.some(name =>
+        specifier.endsWith('/' + name) || specifier.endsWith('/' + name + '.ts')),
+      path + ' imports removed service: ' + specifier);
+    }
+  }
+});
+
+test('Dataset and Data Service editors use the real modern service barrel', () => {
+  const files = [
+    'data-ops-ui/src/pages/development/data-development/components/dataset/DatasetNodeEditor.tsx',
+    'data-ops-ui/src/pages/development/data-development/components/dataset/DatasetGovernanceTruthBar.tsx',
+    'data-ops-ui/src/pages/development/data-development/components/dataset/datasetDeliveryExperience.ts',
+    'data-ops-ui/src/pages/development/data-development/components/data-service/DataServiceNodeEditor.tsx',
+    'data-ops-ui/src/pages/development/data-development/components/data-service/dataServiceDeliveryExperience.ts',
+  ];
+  for (const path of files) {
+    const code = readFileSync(path, 'utf8');
+    assert.ok(code.includes("from '@/services/data-development'"), path);
+  }
 });

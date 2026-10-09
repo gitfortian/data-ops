@@ -12,7 +12,7 @@ import {
 import {
   getDevelopmentEditorSettings,
   saveDevelopmentEditorSettings,
-} from '@/services/data-development/legacy';
+} from '@/services/data-development';
 
 const labelClassName = 'mb-2 block text-[13px] font-medium text-[#344054]';
 const rowClassName = 'grid grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-2';
@@ -41,9 +41,9 @@ const EditorSettingsPanel = () => {
   useEffect(() => {
     let active = true;
     getDevelopmentEditorSettings()
-      .then((response) => {
+      .then((settingsData) => {
         if (!active) return;
-        const next = { ...DEFAULT_YAK_EDITOR_SETTINGS, ...(response.data || {}) };
+        const next = { ...DEFAULT_YAK_EDITOR_SETTINGS, ...(settingsData || {}) };
         setSettings(next);
         setYakEditorSettings(next);
         setSyncState('SAVED');
@@ -68,9 +68,9 @@ const EditorSettingsPanel = () => {
     saveTimer.current = setTimeout(async () => {
       setSaving(true);
       try {
-        const response = await saveDevelopmentEditorSettings(next);
+        const savedSettings = await saveDevelopmentEditorSettings(next);
         if (generation !== editGeneration.current) return;
-        const saved = { ...DEFAULT_YAK_EDITOR_SETTINGS, ...(response.data || next) };
+        const saved = { ...DEFAULT_YAK_EDITOR_SETTINGS, ...(savedSettings || next) };
         setSettings(saved);
         setYakEditorSettings(saved);
         setSyncState('SAVED');

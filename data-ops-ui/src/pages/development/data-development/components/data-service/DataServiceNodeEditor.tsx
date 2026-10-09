@@ -45,12 +45,12 @@ import {
   type DevelopmentDataServiceNodeContext,
   type DevelopmentDataServiceParameter,
   type DevelopmentDataServiceResponseField,
-} from '../../data-service-node-service';
+} from '@/services/data-development';
 import {
   bringDataServiceOnline,
   fetchDataServicePublicationState,
   type DataServicePublicationState,
-} from '../../data-service-runtime-publication';
+} from '@/services/data-development';
 import {
   executeSqlEditorCommand,
   type SqlEditorCommand,

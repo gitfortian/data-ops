@@ -9,7 +9,7 @@ import {
   lookupDatasetAsset,
   type DatasetAssetGovernanceView,
 } from '../../assetGovernance';
-import { getDevelopmentDatasetNode } from '../../dataset-service';
+import { getDevelopmentDatasetNode } from '@/services/data-development';
 import type { DevelopmentId } from '../../types';
 
 interface DatasetGovernanceTruthBarProps {

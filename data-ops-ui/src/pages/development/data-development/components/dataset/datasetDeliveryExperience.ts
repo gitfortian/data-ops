@@ -1,4 +1,4 @@
-import type { DevelopmentDatasetNodeContext } from '../../dataset-service';
+import type { DevelopmentDatasetNodeContext } from '@/services/data-development';
 
 export type DevelopmentDatasetDraftState =
   | 'NOT_CREATED'

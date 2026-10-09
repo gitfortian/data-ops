@@ -33,6 +33,9 @@ import {
 } from 'antd';
 import { ArrowLeft, PlayCircle } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { classifyDataServiceDetailReadIssue, type DataServiceDetailReadIssue } from '../hooks/read-issue';
 
 import DataServiceAccessControlPanel from '../components/DataServiceAccessControlPanel';
 import DataServiceApiCallPanel from '../components/DataServiceApiCallPanel';
@@ -145,7 +148,7 @@ const ApiIllustration = () => (
   </div>
 );
 
-export default function DataServiceDetailPage() {
+function DataServiceDetailPage() {
   const params = useParams<{ id?: string }>();
   const [searchParams] = useSearchParams();
   const requestedInvocationId = searchParams.get('invocationId') || '';
@@ -167,6 +170,10 @@ export default function DataServiceDetailPage() {
   const [auditEvidence, setAuditEvidence] = useState<DataServiceInvocationEvidence | null>(null);
   const [logIssue, setLogIssue] = useState('');
   const [loading, setLoading] = useState(true);
+  const [detailIssue, setDetailIssue] = useState<DataServiceDetailReadIssue | null>(null);
+  const [sourceUnavailable, setSourceUnavailable] = useState(false);
+  const [runtimeUnavailable, setRuntimeUnavailable] = useState(false);
+  const [keysUnavailable, setKeysUnavailable] = useState(false);
   const loadRequestId = useRef(0);
   const [activeTab, setActiveTab] = useState<DetailTabKey>(
     (logsTab || focusedInvocationId) && canObserve ? 'logs' : 'overview');
@@ -177,50 +184,83 @@ export default function DataServiceDetailPage() {
 
   const load = useCallback(async () => {
     const requestId = ++loadRequestId.current;
-    if (!Number.isSafeInteger(apiId) || apiId <= 0) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
+    setDetailIssue(null);
+    setSourceUnavailable(false);
+    setRuntimeUnavailable(false);
+    setKeysUnavailable(false);
+    setService(undefined);
+    setDataSources([]);
+    setRuntime(undefined);
+    setKeys([]);
     setLogIssue('');
     setLogs([]);
     setAuditEvidence(null);
-    try {
-      const [serviceResponse, dataSourceResponse] = await Promise.all([
-        getDataService(apiId),
-        listDataServiceDataSources(),
-      ]);
-      if (requestId !== loadRequestId.current) return;
-      setService(serviceResponse);
-      setDataSources(dataSourceResponse);
-
-      const [runtimeResponse, keyResponse, logResult] = await Promise.all([
-        canRuntime ? getDataServiceRuntime(apiId) : Promise.resolve(undefined),
-        canManageAccess ? listDataServiceKeys(apiId) : Promise.resolve(undefined),
-        !canObserve ? Promise.resolve({ kind: 'none' as const })
-          : focusedInvocationId
-            ? getDataServiceInvocationEvidence(apiId, focusedInvocationId)
-              .then((value) => ({ kind: 'exact' as const, value }))
-              .catch((cause) => ({ kind: 'error' as const,
-                reason: cause instanceof Error ? cause.message : '精确调用记录不可读取' }))
-            : listDataServiceLogs(apiId, 50)
-              .then((value) => ({ kind: 'recent' as const, value }))
-              .catch((cause) => ({ kind: 'error' as const,
-                reason: cause instanceof Error ? cause.message : '调用日志来源不可用' })),
-      ]);
-      if (requestId !== loadRequestId.current) return;
-      setRuntime(runtimeResponse);
-      setKeys(keyResponse || []);
-      if (logResult.kind === 'exact') setAuditEvidence(logResult.value);
-      if (logResult.kind === 'recent') setLogs(logResult.value);
-      if (logResult.kind === 'error') setLogIssue(logResult.reason);
-    } catch (cause: any) {
-      if (requestId === loadRequestId.current) {
-        message.error(cause?.message || '加载 API 详情失败');
-      }
-    } finally {
-      if (requestId === loadRequestId.current) setLoading(false);
+    if (!Number.isSafeInteger(apiId) || apiId <= 0) {
+      setDetailIssue('UNAVAILABLE');
+      setLoading(false);
+      return;
     }
+    // The API object owns this detail page. Metadata/source options are
+    // auxiliary and must not turn an accessible API into a false "not found".
+    const [serviceResult, sourceResult] = await Promise.allSettled([
+      getDataService(apiId),
+      listDataServiceDataSources(),
+    ]);
+    if (requestId !== loadRequestId.current) return;
+    if (serviceResult.status !== 'fulfilled' || !serviceResult.value) {
+      setDetailIssue(classifyDataServiceDetailReadIssue(
+        serviceResult.status === 'rejected' ? serviceResult.reason
+          : new Error('No service detail payload')));
+      setLoading(false);
+      return;
+    }
+    setService(serviceResult.value);
+    if (sourceResult.status === 'fulfilled' && Array.isArray(sourceResult.value)) {
+      setDataSources(sourceResult.value);
+    } else {
+      setSourceUnavailable(true);
+    }
+
+    const [runtimeResult, keysResult, logResult] = await Promise.allSettled([
+      canRuntime ? getDataServiceRuntime(apiId) : Promise.resolve(undefined),
+      canManageAccess ? listDataServiceKeys(apiId) : Promise.resolve(undefined),
+      !canObserve ? Promise.resolve({ kind: 'none' as const })
+        : focusedInvocationId
+          ? getDataServiceInvocationEvidence(apiId, focusedInvocationId)
+            .then((value) => ({ kind: 'exact' as const, value }))
+            .catch((cause) => ({ kind: 'error' as const,
+              reason: cause instanceof Error ? cause.message : '精确调用记录不可读取' }))
+          : listDataServiceLogs(apiId, 50)
+            .then((value) => ({ kind: 'recent' as const, value }))
+            .catch((cause) => ({ kind: 'error' as const,
+              reason: cause instanceof Error ? cause.message : '调用日志来源不可用' })),
+    ]);
+    if (requestId !== loadRequestId.current) return;
+    if (canRuntime) {
+      if (runtimeResult.status === 'fulfilled' && runtimeResult.value) {
+        setRuntime(runtimeResult.value);
+      } else {
+        setRuntimeUnavailable(true);
+      }
+    }
+    if (canManageAccess) {
+      if (keysResult.status === 'fulfilled' && Array.isArray(keysResult.value)) {
+        setKeys(keysResult.value);
+      } else {
+        setKeysUnavailable(true);
+      }
+    }
+    if (logResult.status === 'rejected') {
+      setLogIssue('调用日志来源不可用');
+    } else if (logResult.value.kind === 'exact') {
+      setAuditEvidence(logResult.value.value);
+    } else if (logResult.value.kind === 'recent') {
+      setLogs(logResult.value.value);
+    } else if (logResult.value.kind === 'error') {
+      setLogIssue(logResult.value.reason);
+    }
+    setLoading(false);
   }, [apiId, canManageAccess, canObserve, canRuntime, focusedInvocationId]);
 
   useEffect(() => {
@@ -241,6 +281,7 @@ export default function DataServiceDetailPage() {
   }, [dataSources, service?.dataSourceId]);
 
   const exactInvocation = verifiedPersistedInvocation(auditEvidence, apiId, focusedInvocationId);
+  const runtimeKnown = canRuntime && !runtimeUnavailable && Boolean(runtime);
 
   const logColumns: TableColumnsType<DataServiceCallLog> = [
     {
@@ -294,12 +335,20 @@ export default function DataServiceDetailPage() {
     );
   }
 
-  if (!service) {
+  if (detailIssue || !service) {
+    const issue = detailIssue ?? 'UNAVAILABLE';
     return (
-      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-[#f7f7f8]">
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未找到 API">
+      <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center gap-3 bg-[#f7f7f8]">
+        <Alert type="error" showIcon
+          message={issue === 'FORBIDDEN' ? '无权读取该 API'
+            : issue === 'NOT_FOUND_OR_INACCESSIBLE' ? 'API 不存在或当前项目无权查看'
+            : 'API 详情读取失败'}
+          description="不能将权限、网络或服务异常认定为 API 不存在，也不会显示之前查看过的 API 信息。"
+        />
+        <div className="flex gap-2">
+          <Button onClick={() => void load()}>重试</Button>
           <Button onClick={() => history.push('/data-service')}>返回 API 集市</Button>
-        </Empty>
+        </div>
       </div>
     );
   }
@@ -319,12 +368,12 @@ export default function DataServiceDetailPage() {
     <div className="grid gap-3 xl:grid-cols-2">
       <SectionCard title="API 概览">
         <div className="grid grid-cols-2 gap-3 p-5 md:grid-cols-3">
-          <MetricTile label="调用次数" value={canRuntime ? runtime?.totalCalls || 0 : '—'} />
-          <MetricTile label="成功率" value={canRuntime ? percent(runtime?.successRate) : '—'} />
-          <MetricTile label="平均耗时" value={canRuntime ? `${runtime?.averageDurationMs || 0} ms` : '—'} />
-          <MetricTile label="P95" value={canRuntime ? `${runtime?.p95DurationMs || 0} ms` : '—'} />
-          <MetricTile label="API Keys" value={canManageAccess ? keys.length : '—'} />
-          <MetricTile label="最近调用" value={canRuntime ? latestActivity(runtime) : '—'} />
+          <MetricTile label="调用次数" value={runtimeKnown ? runtime!.totalCalls : '—'} />
+          <MetricTile label="成功率" value={runtimeKnown ? percent(runtime?.successRate) : '—'} />
+          <MetricTile label="平均耗时" value={runtimeKnown ? `${runtime!.averageDurationMs} ms` : '—'} />
+          <MetricTile label="P95" value={runtimeKnown ? `${runtime!.p95DurationMs} ms` : '—'} />
+          <MetricTile label="API Keys" value={canManageAccess && !keysUnavailable ? keys.length : '—'} />
+          <MetricTile label="最近调用" value={runtimeKnown ? latestActivity(runtime) : '—'} />
         </div>
       </SectionCard>
 
@@ -361,7 +410,7 @@ export default function DataServiceDetailPage() {
     <DataServiceApiCallPanel
       service={service}
       keys={keys}
-      canManageAccess={canManageAccess}
+      canManageAccess={canManageAccess && !keysUnavailable}
       onAuthModeChange={(mode) => {
         setService((current) => current ? { ...current, authMode: mode } : current);
       }}
@@ -375,12 +424,15 @@ export default function DataServiceDetailPage() {
 
   const runtimeContent = (
     <div className="grid gap-3 xl:grid-cols-2">
+      {!runtimeKnown && <Alert type="warning" showIcon className="xl:col-span-2"
+        message="运行指标暂不可用" description="运行依赖未返回有效数据，不能将未知调用量和缓存状态显示为零。" />}
+      {runtimeKnown && <>
       <SectionCard title="运行指标">
         <div className="grid grid-cols-2 gap-3 p-5">
-          <MetricTile label="调用总数" value={runtime?.totalCalls || 0} />
-          <MetricTile label="成功率" value={percent(runtime?.successRate)} />
-          <MetricTile label="平均耗时" value={`${runtime?.averageDurationMs || 0} ms`} />
-          <MetricTile label="P95" value={`${runtime?.p95DurationMs || 0} ms`} />
+          <MetricTile label="调用总数" value={runtimeKnown ? runtime!.totalCalls : '—'} />
+          <MetricTile label="成功率" value={runtimeKnown ? percent(runtime?.successRate) : '—'} />
+          <MetricTile label="平均耗时" value={runtimeKnown ? `${runtime!.averageDurationMs} ms` : '—'} />
+          <MetricTile label="P95" value={runtimeKnown ? `${runtime!.p95DurationMs} ms` : '—'} />
         </div>
       </SectionCard>
 
@@ -404,6 +456,7 @@ export default function DataServiceDetailPage() {
           </div>
         </div>
       </SectionCard>
+      </>}
     </div>
   );
 
@@ -561,6 +614,13 @@ export default function DataServiceDetailPage() {
               description="消费影响中的证据引用并不授予 Data Service 观测权限；请联系服务 Owner 进行核对。"
             />
           ) : null}
+          {(sourceUnavailable || runtimeUnavailable || keysUnavailable) && (
+            <Alert type="warning" showIcon className="mt-3"
+              message="部分 API 详情来源不可用"
+              description="数据源名称、运行指标或 Key 列表未能独立核验；请重试，未核验字段不当作真实空值。"
+              action={<Button onClick={() => void load()}>重试</Button>}
+            />
+          )}
           <div className="mt-3">
             {tabItems.find((item) => item.key === activeTab)?.children}
           </div>
@@ -568,4 +628,11 @@ export default function DataServiceDetailPage() {
       </div>
     </ConfigProvider>
   );
+}
+
+/** A Project/permission transition invalidates all source facts and exact invocation focus. */
+export default function ScopedDataServiceDetailPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <DataServiceDetailPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
 }

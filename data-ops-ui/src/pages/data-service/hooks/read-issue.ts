@@ -6,3 +6,16 @@ export const classifyDataServiceReadIssue = (error: unknown): DataServiceReadIss
   return e.response?.status === 403 || e.code === 403 || e.response?.code === 403
     ? 'FORBIDDEN' : 'UNAVAILABLE';
 };
+
+/**
+ * A 404 may be an intentionally hidden cross-Project resource. Never assert
+ * actual absence merely from a detail endpoint's 404 response.
+ */
+export type DataServiceDetailReadIssue = DataServiceReadIssue | 'NOT_FOUND_OR_INACCESSIBLE';
+export const classifyDataServiceDetailReadIssue = (error: unknown): DataServiceDetailReadIssue => {
+  if (error && typeof error === 'object') {
+    const candidate = error as { response?: { status?: unknown } };
+    if (candidate.response?.status === 404) return 'NOT_FOUND_OR_INACCESSIBLE';
+  }
+  return classifyDataServiceReadIssue(error);
+};

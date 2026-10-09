@@ -9,10 +9,12 @@ import {
   type DataServiceConsumer,
   type DataServiceConsumerKey,
 } from '@/services/data-service';
-import { DatePicker, Form, Input, InputNumber, Modal, Spin, Switch, message } from 'antd';
+import { Alert, DatePicker, Form, Input, InputNumber, Modal, Spin, Switch, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { Copy, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useLatestDataServiceRead } from '../hooks/useLatestDataServiceRead';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from '../hooks/read-issue';
 
 interface ConsumerKeyPanelProps {
   consumer: DataServiceConsumer;
@@ -61,17 +63,30 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number>();
   const [secretView, setSecretView] = useState<SecretView>();
+  const [readIssue, setReadIssue] = useState<DataServiceReadIssue | null>(null);
+  const beginRead = useLatestDataServiceRead();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (retainNewSecret = false) => {
+    const isCurrent = beginRead();
     setLoading(true);
+    setReadIssue(null);
+    setKeys([]);
+    setModalOpen(false);
+    setEditing(undefined);
+    if (!retainNewSecret) setSecretView(undefined);
     try {
-      setKeys((await listDataServiceConsumerKeys(consumer.id)) || []);
+      const result = await listDataServiceConsumerKeys(consumer.id);
+      if (!Array.isArray(result)) throw new Error('Missing Key list');
+      if (isCurrent()) setKeys(result);
     } catch (error: any) {
-      message.error(error?.message || '加载 API Key 失败');
+      if (isCurrent()) {
+        setReadIssue(classifyDataServiceReadIssue(error));
+        message.error(error?.message || '加载 API Key 失败');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [consumer.id]);
+  }, [beginRead, consumer.id]);
 
   useEffect(() => {
     void load();
@@ -131,7 +146,7 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
       }
 
       closeModal();
-      await load();
+      await load(true);
       onChanged();
     } catch (error: any) {
       message.error(error?.message || (editing ? '更新 API Key 失败' : '创建 API Key 失败'));
@@ -145,7 +160,7 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
     try {
       await setDataServiceConsumerKeyEnabled(consumer.id, key.id, enabled);
       message.success(enabled ? 'API Key 已启用' : 'API Key 已停用');
-      await load();
+      await load(true);
       onChanged();
     } catch (error: any) {
       message.error(error?.message || '更新 API Key 状态失败');
@@ -170,7 +185,7 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
             secret: rotated.secret,
           });
           message.success('API Key 已轮换');
-          await load();
+          await load(true);
           onChanged();
         } catch (error: any) {
           message.error(error?.message || '轮换 API Key 失败');
@@ -193,7 +208,7 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
         try {
           await deleteDataServiceConsumerKey(consumer.id, key.id);
           message.success('API Key 已删除');
-          await load();
+          await load(true);
           onChanged();
         } catch (error: any) {
           message.error(error?.message || '删除 API Key 失败');
@@ -209,6 +224,29 @@ export default function ConsumerKeyPanel({ consumer, onChanged }: ConsumerKeyPan
       <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-white">
         <Spin />
       </div>
+    );
+  }
+
+  if (readIssue) {
+    return (
+      <section className="rounded-xl bg-white p-6">
+        <Alert type="error" showIcon
+          message={readIssue === 'FORBIDDEN' ? '无权读取当前调用方 API Key' : 'API Key 清单读取失败'}
+          description="密钥列表未知；不能视为没有 Key，也不能依据旧清单轮换、启停或删除。"
+          action={<YakButton onClick={() => void load(true)}>重试</YakButton>}
+        />
+        {secretView && (
+          <Modal title={secretView.title} open onCancel={() => setSecretView(undefined)}
+            footer={<YakButton onClick={() => setSecretView(undefined)}>我已保存</YakButton>}>
+            <p>「{secretView.name}」的密钥只展示这一次。</p>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 break-all">{secretView.secret}</code>
+              <YakButton type="text" iconOnly icon={<Copy size={14} />}
+                onClick={() => void copyText(secretView.secret)} />
+            </div>
+          </Modal>
+        )}
+      </section>
     );
   }
 
