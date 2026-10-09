@@ -84,6 +84,24 @@ class SaTokenAuthenticationManagerTest {
   }
 
   @Test
+  void shouldRejectBlankUsernameWithoutIssuingLogin() {
+    StpLogic logic = mock(StpLogic.class);
+    SaTokenAuthenticationManager manager = new SaTokenAuthenticationManager(logic);
+    assertThatThrownBy(() -> manager.login(42L, "  "))
+            .isInstanceOf(IllegalArgumentException.class);
+    org.mockito.Mockito.verifyNoInteractions(logic);
+  }
+
+  @Test
+  void shouldRejectInvalidActiveTimeout() {
+    StpLogic logic = mock(StpLogic.class);
+    assertThatThrownBy(() -> new SaTokenAuthenticationManager(logic, Duration.ZERO))
+            .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new SaTokenAuthenticationManager(logic, Duration.ofSeconds(-1)))
+            .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void shouldRejectUnsupportedLoginId() {
     StpLogic stpLogic = mock(StpLogic.class);
     SaTokenAuthenticationManager manager = new SaTokenAuthenticationManager(stpLogic);
