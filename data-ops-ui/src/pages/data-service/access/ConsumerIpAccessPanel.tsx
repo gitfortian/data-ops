@@ -10,10 +10,12 @@ import {
   type DataServiceIpAccessMode,
   type DataServiceIpAccessRuleType,
 } from '@/services/data-service';
-import { DatePicker, Form, Input, Modal, Spin, Switch, message } from 'antd';
+import { Alert, DatePicker, Form, Input, Modal, Spin, Switch, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLatestDataServiceRead } from '../hooks/useLatestDataServiceRead';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from '../hooks/read-issue';
 
 interface ConsumerIpAccessPanelProps {
   consumer: DataServiceConsumer;
@@ -59,20 +61,34 @@ export default function ConsumerIpAccessPanel({
   const [editing, setEditing] = useState<DataServiceConsumerIpAccessRule>();
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number>();
+  const [readIssue, setReadIssue] = useState<DataServiceReadIssue | null>(null);
+  const beginRead = useLatestDataServiceRead();
 
   const load = useCallback(async () => {
+    const isCurrent = beginRead();
     setLoading(true);
+    setReadIssue(null);
+    setMode('NONE');
+    setRules([]);
+    setModalOpen(false);
+    setEditing(undefined);
     try {
       const policy = await getDataServiceConsumerIpAccess(consumer.id);
-      setMode(policy.mode);
-      setRules(policy.rules || []);
-      if (policy.mode !== 'NONE') setActiveList(policy.mode);
+      if (!policy || !Array.isArray(policy.rules)) throw new Error('Missing IP policy');
+      if (isCurrent()) {
+        setMode(policy.mode);
+        setRules(policy.rules);
+        if (policy.mode !== 'NONE') setActiveList(policy.mode);
+      }
     } catch (error: any) {
-      message.error(error?.message || '加载来源访问策略失败');
+      if (isCurrent()) {
+        setReadIssue(classifyDataServiceReadIssue(error));
+        message.error(error?.message || '加载来源访问策略失败');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [consumer.id]);
+  }, [beginRead, consumer.id]);
 
   useEffect(() => {
     void load();
@@ -224,6 +240,18 @@ export default function ConsumerIpAccessPanel({
       <div className="flex min-h-[260px] items-center justify-center rounded-xl bg-white">
         <Spin />
       </div>
+    );
+  }
+
+  if (readIssue) {
+    return (
+      <section className="rounded-xl bg-white p-6">
+        <Alert type="error" showIcon
+          message={readIssue === 'FORBIDDEN' ? '无权读取来源策略' : '来源 IP 策略读取失败'}
+          description="当前限制模式与规则未知；不能将其当作不限制、空白名单或空黑名单，更不能据旧策略提交写入。"
+          action={<YakButton onClick={() => void load()}>重试</YakButton>}
+        />
+      </section>
     );
   }
 

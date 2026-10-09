@@ -5,18 +5,20 @@ import {
   type DataServiceConsumer,
   type DataServiceConsumerAccessScope,
 } from '@/services/data-service';
-import { Select, message } from 'antd';
+import { Alert, Select, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 interface ConsumerApiAccessPanelProps {
   consumer: DataServiceConsumer;
   apis: DataServiceAccessOverviewItem[];
+  apiOverviewAvailable: boolean;
   onChanged: (next: DataServiceConsumer) => void;
 }
 
 export default function ConsumerApiAccessPanel({
   consumer,
   apis,
+  apiOverviewAvailable,
   onChanged,
 }: ConsumerApiAccessPanelProps) {
   const [scope, setScope] = useState<DataServiceConsumerAccessScope>(consumer.accessScope);
@@ -37,6 +39,7 @@ export default function ConsumerApiAccessPanel({
   );
 
   const save = async () => {
+    if (!apiOverviewAvailable) return;
     setSaving(true);
     try {
       const next = await updateDataServiceConsumerAccess(consumer.id, {
@@ -61,6 +64,12 @@ export default function ConsumerApiAccessPanel({
       </div>
 
       <div className="px-7 py-6">
+        {!apiOverviewAvailable && (
+          <Alert type="warning" showIcon className="mb-4"
+            message="可授权 API 清单未核验"
+            description="不得在 API 清单读取失败时提交 ALL 或 SELECTED 授权；请返回调用方页面重试清单。"
+          />
+        )}
         <div className="grid gap-2 md:grid-cols-2">
           {([
             { key: 'ALL' as const, title: '所有数据服务', meta: `${apis.length} 个 API` },
@@ -69,6 +78,7 @@ export default function ConsumerApiAccessPanel({
             <button
               key={item.key}
               type="button"
+              disabled={!apiOverviewAvailable || saving}
               onClick={() => setScope(item.key)}
               className={[
                 'rounded-lg border border-solid px-4 py-3 text-left transition-colors',
@@ -101,6 +111,7 @@ export default function ConsumerApiAccessPanel({
             <Select<number[]>
               mode="multiple"
               value={apiIds}
+              disabled={!apiOverviewAvailable || saving}
               onChange={setApiIds}
               variant="filled"
               options={options}
@@ -113,7 +124,7 @@ export default function ConsumerApiAccessPanel({
         ) : null}
 
         <div className="mt-6 flex justify-end border-t border-solid border-[#f0f0f0] pt-4">
-          <YakButton loading={saving} onClick={() => void save()}>
+          <YakButton loading={saving} disabled={!apiOverviewAvailable} onClick={() => void save()}>
             保存权限
           </YakButton>
         </div>

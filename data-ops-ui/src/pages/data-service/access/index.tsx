@@ -31,6 +31,10 @@ import {
   Settings2,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { useLatestDataServiceRead } from '../hooks/useLatestDataServiceRead';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from '../hooks/read-issue';
 
 import ConsumerManagementPanel from './ConsumerManagementPanel';
 
@@ -61,7 +65,7 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
   </div>
 );
 
-export default function DataServiceAccessPage() {
+function DataServiceAccessPage() {
   const [form] = Form.useForm<ConsumerFormValues>();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedConsumerRef = searchParams.get('consumerId') || '';
@@ -69,9 +73,11 @@ export default function DataServiceAccessPage() {
   const requestedConsumerId = parseManagedConsumerSourceId(requestedConsumerRef);
   const [records, setRecords] = useState<DataServiceConsumer[]>([]);
   const [apis, setApis] = useState<DataServiceAccessOverviewItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const beginRead = useLatestDataServiceRead();
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [loadIssue, setLoadIssue] = useState(false);
+  const [loadIssue, setLoadIssue] = useState<DataServiceReadIssue | null>(null);
+  const [apiOverviewIssue, setApiOverviewIssue] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [selected, setSelected] = useState<DataServiceConsumer>();
@@ -80,24 +86,37 @@ export default function DataServiceAccessPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    const isCurrent = beginRead();
     setLoading(true);
     setHasLoaded(false);
-    setLoadIssue(false);
-    try {
-      const [nextConsumers, nextApis] = await Promise.all([
-        listDataServiceConsumers(),
-        listDataServiceAccessOverview(),
-      ]);
-      setRecords(nextConsumers || []);
-      setApis(nextApis || []);
-    } catch (error: any) {
-      setLoadIssue(true);
-      message.error(error?.message || '加载调用方与密钥配置失败');
-    } finally {
-      setLoading(false);
-      setHasLoaded(true);
+    setLoadIssue(null);
+    setApiOverviewIssue(false);
+    // Clear all old write targets before an owner-scoped refresh.
+    setRecords([]);
+    setApis([]);
+    setSelected(undefined);
+    setEditing(undefined);
+    setFormOpen(false);
+    const [consumers, overview] = await Promise.allSettled([
+      listDataServiceConsumers(),
+      listDataServiceAccessOverview(),
+    ]);
+    if (!isCurrent()) return;
+    if (consumers.status !== 'fulfilled' || !Array.isArray(consumers.value)) {
+      setLoadIssue(classifyDataServiceReadIssue(
+        consumers.status === 'rejected' ? consumers.reason : new Error('Missing consumer list')));
+      message.error('加载调用方失败，请核对权限并重试');
+    } else {
+      setRecords(consumers.value);
+      if (overview.status === 'fulfilled' && Array.isArray(overview.value)) {
+        setApis(overview.value);
+      } else {
+        setApiOverviewIssue(true);
+      }
     }
-  }, []);
+    setLoading(false);
+    setHasLoaded(true);
+  }, [beginRead]);
 
   useEffect(() => {
     void load();
@@ -341,7 +360,7 @@ export default function DataServiceAccessPage() {
             >
               刷新
             </YakButton>
-            <YakButton icon={<Plus size={14} />} onClick={openCreate}>
+            <YakButton icon={<Plus size={14} />} disabled={loading || Boolean(loadIssue)} onClick={openCreate}>
               新建调用方
             </YakButton>
           </div>
@@ -359,14 +378,28 @@ export default function DataServiceAccessPage() {
           />
         ) : null}
 
+        {loadIssue && (
+          <Alert type="error" showIcon className="mt-4"
+            message={loadIssue === 'FORBIDDEN' ? '无权读取当前 Project 的调用方' : '调用方列表读取失败'}
+            description="不能将旧调用方、权限或密钥解释为当前项目的空列表。"
+            action={<YakButton onClick={() => void load()}>重试</YakButton>}
+          />
+        )}
+        {!loadIssue && apiOverviewIssue && (
+          <Alert type="warning" showIcon className="mt-4"
+            message="API 授权清单暂不可用"
+            description="调用方信息仍可查看，但本次无法核对可授权 API；已禁止编辑 API 范围，请重试。"
+            action={<YakButton onClick={() => void load()}>重试</YakButton>}
+          />
+        )}
         <div className="my-4 border-t border-[#f0f0f0]" />
 
-        <div className="grid grid-cols-2 divide-x divide-[#f0f0f0] rounded-[8px] bg-[#f8f9fa] md:grid-cols-4">
+        {!loading && !loadIssue && <div className="grid grid-cols-2 divide-x divide-[#f0f0f0] rounded-[8px] bg-[#f8f9fa] md:grid-cols-4">
           <Metric label="调用方" value={metrics.total} />
           <Metric label="有效凭证" value={metrics.credentials} />
           <Metric label="全部 API" value={metrics.allAccess} />
           <Metric label="来源限制" value={metrics.network} />
-        </div>
+        </div>}
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Input
@@ -389,7 +422,9 @@ export default function DataServiceAccessPage() {
               { value: 'DISABLED', label: '已停用' },
             ]}
           />
-          <div className="ml-auto text-[12px] text-[#667085]">共 {filtered.length} 个调用方</div>
+          <div className="ml-auto text-[12px] text-[#667085]">
+            {loading || loadIssue ? '当前调用方数量未核验' : `共 ${filtered.length} 个调用方`}
+          </div>
         </div>
 
         <div className="mt-3">
@@ -398,7 +433,7 @@ export default function DataServiceAccessPage() {
             size="small"
             loading={loading}
             columns={columns}
-            dataSource={filtered}
+            dataSource={loading || loadIssue ? [] : filtered}
             scroll={{ x: 1050 }}
             pagination={{
               pageSize: 10,
@@ -406,7 +441,8 @@ export default function DataServiceAccessPage() {
               pageSizeOptions: [10, 20, 50],
               showTotal: (total) => `共 ${total} 条`,
             }}
-            locale={{ emptyText: <YakEmpty compact title="暂无调用方" /> }}
+            locale={{ emptyText: <YakEmpty compact
+              title={loading || loadIssue ? '调用方尚未成功读取' : '暂无调用方'} /> }}
             className="[&_.ant-table-container]:!border-t [&_.ant-table-container]:!border-[#f0f0f0] [&_.ant-table-thead>tr>th]:!bg-[#fafafa] [&_.ant-table-thead>tr>th]:!text-[12px] [&_.ant-table-tbody>tr>td]:!py-3"
           />
         </div>
@@ -432,10 +468,12 @@ export default function DataServiceAccessPage() {
           },
         }}
       >
-        {selected ? (
+        {selected && !loadIssue && !loading ? (
           <ConsumerManagementPanel
+            key={selected.id}
             consumer={selected}
             apis={apis}
+            apiOverviewAvailable={!apiOverviewIssue}
             onEdit={() => openEdit(selected)}
             onDelete={() => removeConsumer(selected)}
             onRefresh={() => void refreshConsumer(selected.id)}
@@ -490,4 +528,11 @@ export default function DataServiceAccessPage() {
       </Modal>
     </div>
   );
+}
+
+/** Project and role transitions must never reuse Consumer, Key or secret UI state. */
+export default function ScopedDataServiceAccessPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <DataServiceAccessPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
 }
