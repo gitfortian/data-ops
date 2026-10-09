@@ -4,11 +4,12 @@ import io.yak.framework.security.common.entity.UserRole;
 import io.yak.framework.security.common.po.UserRolePO;
 
 import java.util.List;
+import io.yak.ops.platform.security.port.UserRoleAssignmentPort;
 
 /**
  * 用户角色关系数据访问接口。
  */
-public interface UserRoleDao {
+public interface UserRoleDao extends UserRoleAssignmentPort {
     List<Long> selectUserIdListByRoleId(Long roleId);
 
     List<Long> selectRoleIdListByUserId(Long userId);
