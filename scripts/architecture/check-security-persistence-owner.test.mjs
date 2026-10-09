@@ -78,3 +78,33 @@ test('refuses changing historical Flyway location in Starter',()=>{
  f.set(p,f.get(p).replace('classpath:yak-security/db/migration','classpath:wrong/location'));
  assert.match(diagnostic(f),/Flyway history/);
 });
+
+const ds=O+'config/DataSourceConfig.java';
+function mutateDatasource(replaceFrom,replaceWith) {
+ const f=readRepository();
+ assert.ok(f.get(ds).includes(replaceFrom),'fixture must match actual datasource');
+ f.set(ds,f.get(ds).replace(replaceFrom,replaceWith));
+ return diagnostic(f);
+}
+test('refuses app_name tenant field drift',()=>{
+ assert.match(mutateDatasource('return "app_name";','return "tenant_id";'),/tenant app_name/);
+});
+test('refuses pagination running before tenant isolation',()=>{
+ const f=readRepository(),src=f.get(ds);
+ const tenant='interceptor.addInnerInterceptor(\\n                new TenantLineInnerInterceptor(';
+ assert.ok(src.includes(tenant));
+ f.set(ds,src.replace('new PaginationInnerInterceptor()','new TenantLineInnerInterceptor(tenantLineHandler)'));
+ assert.match(diagnostic(f),/interceptor order|tenant app_name/);
+});
+test('refuses Flyway historical baseline regression',()=>{
+ assert.match(mutateDatasource('MigrationVersion.fromVersion("0")','MigrationVersion.fromVersion("1")'),/historical Security Flyway/);
+});
+test('refuses dropping Flyway dependency before SqlSessionFactory',()=>{
+ assert.match(mutateDatasource('@DependsOn("yakSecurityFlyway")','@DependsOn("unrelated")'),/SqlSessionFactory/);
+});
+test('refuses losing MyBatis global metadata fill configuration',()=>{
+ assert.match(mutateDatasource('factory.setGlobalConfig(globalConfig)','// intentionally absent'),/SqlSessionFactory/);
+});
+test('refuses missing PostgreSQL primitive boolean handler',()=>{
+ assert.match(mutateDatasource('register(boolean.class, NumericBooleanTypeHandler.class)','register(int.class, NumericBooleanTypeHandler.class)'),/boolean type handlers/);
+});
