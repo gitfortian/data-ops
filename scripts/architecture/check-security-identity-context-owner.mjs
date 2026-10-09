@@ -26,7 +26,7 @@ export const TYPES = [
   'common/entity/dept/DeptBrief.java',
 ];
 const LEGACY = {
-  tokenAdapter: OLD + 'authentication/SaTokenAuthenticationManager.java',
+  tokenAdapter: 'data-ops-platform/data-ops-platform-security-runtime/src/main/java/io/yak/framework/security/authentication/SaTokenAuthenticationManager.java',
   servletFilter: OLD + 'context/YakSecurityContextFilter.java',
   trustedJob: OLD + 'context/TrustedUserScope.java',
   cacheAdapter: OLD + 'service/impl/CaffeinePermissionCache.java',
@@ -105,7 +105,7 @@ export function validateIdentityOwnership(files) {
       !servlet.includes('YakSecurityContext.clear()') ||
       !trusted.includes('YakSecurityContext.ImmutableCurrentUser') ||
       !cacheAdapter.includes('implements PermissionCache')) {
-    errors.push('Sa-Token, HTTP filter, background task and cache adapters must remain in Starter');
+    errors.push('Sa-Token adapter must remain in Platform Runtime; HTTP filter, background task and cache adapters must remain in Starter');
   }
   const pom=files.get(LEGACY.platformPom)||'';
   if (/<artifactId>(?:data-security-spring-boot-starter|data-ops-common|data-ops-boot|data-ops-business-[^<]+)<\/artifactId>/.test(pom)) {
