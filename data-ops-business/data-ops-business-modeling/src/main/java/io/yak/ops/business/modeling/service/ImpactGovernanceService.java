@@ -11,9 +11,6 @@ import java.util.List;
 public interface ImpactGovernanceService {
 
     default List<String> validateImpact(String objectType, Long objectId) {
-        if (objectType == null || objectId == null) {
-            return Collections.emptyList();
-        }
         return Collections.emptyList();
     }
 }

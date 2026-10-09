@@ -12,9 +12,6 @@ public class LogicalEntityImpactRelationshipAdapter implements ImpactRelationshi
 
     @Override
     public List<ModelImpactRecord> findImpacts(String objectType, Long objectId) {
-        if (objectType == null || objectId == null) {
-            return Collections.emptyList();
-        }
         return Collections.emptyList();
     }
 }

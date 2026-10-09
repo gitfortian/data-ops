@@ -19,9 +19,6 @@ public interface ImpactRelationshipPersistenceAdapter {
      * @return related object identifiers
      */
     default List<String> findRelatedObjects(String objectType, Long objectId) {
-        if (objectType == null || objectId == null) {
-            return Collections.emptyList();
-        }
         return Collections.emptyList();
     }
 }

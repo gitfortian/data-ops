@@ -14,9 +14,6 @@ public class LogicalModelImpactRelationshipAdapter implements ImpactRelationship
 
     @Override
     public List<ModelImpactRecord> findImpacts(String objectType, Long objectId) {
-        if (objectType == null || objectId == null) {
-            return Collections.emptyList();
-        }
         return Collections.emptyList();
     }
 }
