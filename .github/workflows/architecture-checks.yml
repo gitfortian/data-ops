@@ -46,6 +46,8 @@ jobs:
         run: node scripts/architecture/check-security-project-role-model-owner.mjs
       - name: A8 MySQL and PostgreSQL Security RBAC test matrix
         run: node scripts/architecture/check-security-rbac-db-matrix.mjs
+      - name: A8 Security Identity, Auth and User/Dept unique Platform owner
+        run: node scripts/architecture/check-security-identity-context-owner.mjs
       - name: A8 Security Platform permission ownership
         run: node scripts/architecture/check-security-permission-owner.mjs
       - name: Plan fail-safe PR validation scope
