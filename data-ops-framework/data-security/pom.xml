@@ -26,6 +26,13 @@
       <version>1.0.0</version>
     </dependency>
 
+    <!-- A8.2n: Sa-Token adapter retains its original FQCN but is owned by Platform Runtime. -->
+    <dependency>
+      <groupId>io.yak.ops</groupId>
+      <artifactId>data-ops-platform-security-runtime</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
     <!-- 跨模块统一返回、分页和异常契约 -->
     <dependency>
       <groupId>io.github.weifuwan</groupId>
