@@ -23,8 +23,6 @@ import org.springframework.util.CollectionUtils;
 @Service("yakSecurityUserRoleServiceImpl")
 public class UserRoleServiceImpl implements UserRoleService {
 
-  private final UserRoleDao userRoleDao;
-
   /** Product-owned port; the same legacy DAO instance also provides DTO/PO compatibility. */
   private final UserRoleAssignmentPort assignmentPort;
   private final PermissionCache permissionCache;
@@ -38,7 +36,6 @@ public class UserRoleServiceImpl implements UserRoleService {
           UserRoleDao userRoleDao,
           PermissionCache permissionCache) {
 
-    this.userRoleDao = userRoleDao;
     this.assignmentPort = userRoleDao;
     this.permissionCache = permissionCache;
   }
