@@ -64,6 +64,26 @@ public class GovernanceEvidenceTools implements AgentToolBox, AgentSystemPromptC
     });
   }
 
+  @Tool(name = "get_model_structure_review_evidence", description = "只读本轮固定模型、发布基准和服务端指纹的结构差异及当前映射检查清单。没有历史映射，不查源数据或判断类型兼容；无需参数。")
+  public String modelStructureReview(RuntimeContext context) {
+    return execution.call(context, "get_model_structure_review_evidence", () -> {
+      var state = AgentToolExecution.state(context);
+      Number project = context.get(io.yak.ops.business.agent.domain.AgentExecutionContext.PROJECT_ID);
+      return evidence.modelStructureReview(state.target().modelStructureReview(), project.longValue(), state.evidence());
+    });
+  }
+
+  public boolean confirmStructureReview(RuntimeContext context) {
+    try {
+      return execution.call(context, "get_model_structure_review_evidence", () -> {
+        var state = AgentToolExecution.state(context);
+        Number project = context.get(io.yak.ops.business.agent.domain.AgentExecutionContext.PROJECT_ID);
+        evidence.confirmStructureReview(state.target().modelStructureReview(), project.longValue());
+        return true;
+      });
+    } catch (RuntimeException invalidated) { return false; }
+  }
+
   @Tool(name = "get_consumer_version_impact_evidence", description = "只读本轮固定产品与精确来源版本的归属、有效订阅和成功使用持久化窗口，每侧最多10行；不触发同步，不表示完整影响。无需参数。")
   public String consumerVersionImpact(RuntimeContext context) {
     return execution.call(context, "get_consumer_version_impact_evidence", () -> {

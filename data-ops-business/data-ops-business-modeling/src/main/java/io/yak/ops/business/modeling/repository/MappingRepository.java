@@ -11,6 +11,9 @@ public interface MappingRepository {
 
   List<ModelingColumnMappingPO> listByModel(Long modelId);
 
+  /** Same model lock as writers; at most 101 rows so oversized reviews fail rather than truncate. */
+  List<ModelingColumnMappingPO> listByModelForReview(Long modelId);
+
   Optional<ModelingColumnMappingPO> findByTargetColumn(Long modelId, String targetColumn);
 
   Optional<ModelingColumnMappingPO> findByTargetColumnForUpdate(Long modelId, String targetColumn);

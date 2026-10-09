@@ -121,10 +121,16 @@ it('clears prior results on forbidden new query, then recovers on explicit retry
     .mockResolvedValueOnce({ records: [row(2, 'retried')], total: 1 });
   render(<AssetInventory />);
   expect(await screen.findByText('previous')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '搜索其它资产' }));
-  expect(await screen.findByText('无权读取待上架资产')).toBeInTheDocument();
+  // Flush the rejected request inside React act; assert the accessible error
+  // alert as a whole rather than racing its transient text node.
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: '搜索其它资产' }));
+  });
+  expect(screen.getByRole('alert')).toHaveTextContent('无权读取待上架资产');
   expect(screen.queryByText('previous')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '重试' }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: '重试' }));
+  });
   expect(await screen.findByText('retried')).toBeInTheDocument();
 });
 

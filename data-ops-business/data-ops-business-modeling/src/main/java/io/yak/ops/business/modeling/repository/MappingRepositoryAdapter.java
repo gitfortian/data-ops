@@ -54,6 +54,14 @@ public class MappingRepositoryAdapter implements MappingRepository {
   }
 
   @Override
+  public List<ModelingColumnMappingPO> listByModelForReview(Long modelId) {
+    return mapper.selectList(new LambdaQueryWrapper<ModelingColumnMappingPO>()
+        .eq(ModelingColumnMappingPO::getProjectId, currentProject.requireProjectId())
+        .eq(ModelingColumnMappingPO::getModelId, modelId)
+        .orderByAsc(ModelingColumnMappingPO::getId).last("LIMIT 101 FOR UPDATE"));
+  }
+
+  @Override
   public Optional<ModelingColumnMappingPO> findByTargetColumn(Long modelId, String targetColumn) {
     Long projectId = currentProject.requireProjectId();
     return mapper
