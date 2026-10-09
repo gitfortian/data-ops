@@ -26,6 +26,14 @@
 - 仅允许在**第 17 步、PR #461、唯一该工作流文件**且阶段二 Git 内容严格等于当次 `main` 加三条已核实前置守卫时合并：#385 的 `check-persistence-consumers.mjs`、#380 的 `check-flyway-ownership.mjs`、#423 的 `check-common-security-corridor.mjs`。合并结果为 #461 原工作流加这三条守卫；移除三条后必须与 #461 原内容逐字一致。
 - 任一来源 SHA/分支、冲突路径、上游内容或 Security 守卫漂移，均失败关闭并上传冲突快照；不自动接受未知冲突，也绝不修改任何远端 Draft PR。新校验需要以 #461 最新 exact HEAD 实际 CI 结果为准。
 
+## 最终发行包 Security classpath 验收（新增自动化门禁）
+
+- 在既有 Architecture Checks 的 `distribution` Job **完成 Maven reactor verify 和 dist tar 打包之后**，执行 `scripts/architecture/check-security-distribution-classpath.mjs`，且在 A0–A8 隔离正序组合树的完整构建后重复运行。**没有增加第五个独立 CI Workflow**。
+- 探针 `scripts/architecture/probe-security-distribution.py` 直接读取 Boot 可执行 JAR 与 dist 内 `libs/yak-ops-api.jar` 的 SHA-256，要求完全相同。逐一扫描 Boot 内全部嵌套依赖 JAR 的 `io/yak/framework/security/**/*.class`，而非假定源码迁移就意味着发布 classpath 正确。
+- 复用现有 Security API 75 类、Persistence 36 类、身份上下文、SPI/Runtime 和权限声明的迁移清单，逐一确认这些历史 FQCN 仅在其应有的 Contract、Runtime、Persistence JAR 中存在，且旧 Starter 不重复携带同名类型。四个 JAR 各必须恰好出现一次；任意 Security FQCN 重复、发行包 Jar 字节不一致、缺失或错误归属均失败。
+- `check-security-distribution-classpath.test.mjs` 覆盖正确清单、缺失/重复/错误模块、篡改发行包、隐蔽重复与空清单等反向路径。
+- **严格验收边界**：该检查可证实编译与最终发行制品包含唯一类归属，**不能证明**外部历史客户端以旧依赖编译过的二进制能在新发行版链接成功；后者仍需独立旧 JAR 消费者的真实二进制 smoke，不能仅凭 FQCN/classpath 通过而勾选。
+
 ## 编译与运行门槛
 
 组合树通过冲突检查后必须执行：
