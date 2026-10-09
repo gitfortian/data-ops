@@ -11,6 +11,24 @@ jest.mock('@/hooks/usePermissionAccess', () => ({
   usePermissionAccess: jest.fn(),
 }));
 
+// Monaco runs in the browser. Management-flow tests cross its controlled text seam.
+jest.mock('./SkillMarkdownSourceEditor', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    __esModule: true,
+    default: React.forwardRef(
+      (props: { value: string; onChange: (value: string) => void; disabled: boolean }, _ref) => (
+        <textarea
+          aria-label="技能 Markdown 源码"
+          value={props.value}
+          disabled={props.disabled}
+          onChange={(event) => props.onChange(event.target.value)}
+        />
+      ),
+    ),
+  };
+});
+
 jest.mock('@/services/agent', () => ({
   agentSkillApi: {
     register: jest.fn(),
@@ -117,6 +135,7 @@ describe('SkillsTab 模板发现与显式注册', () => {
     expect(screen.queryByRole('button', { name: '查看并注册' })).toBeNull();
     fireEvent.click(card().getByRole('button', { name: '查看正文' }));
     const preview = await screen.findByRole('dialog');
+    fireEvent.click(within(preview).getByText('源码', { exact: true }));
     expect(preview.textContent).toContain(template.content);
     expect(mockedApi.register).not.toHaveBeenCalled();
     expect(mockedApi.update).not.toHaveBeenCalled();
@@ -131,10 +150,15 @@ describe('SkillsTab 模板发现与显式注册', () => {
     await screen.findByText('技能标识（skillId）');
     expect(screen.getByPlaceholderText('如 asset-yoy')).toHaveProperty('value', template.skillId);
     expect(screen.getByPlaceholderText('如 asset-yoy')).toHaveProperty('disabled', true);
-    expect(screen.getByPlaceholderText(/当用户询问 X 时/)).toHaveProperty('value', template.content);
+    expect(await screen.findByRole('textbox', { name: '技能 Markdown 源码' })).toHaveProperty(
+      'value',
+      template.content,
+    );
     expect(JSON.parse((screen.getByPlaceholderText(/"tags"/) as HTMLTextAreaElement).value)).toEqual(template.metadata);
     expect(mockedApi.register).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByPlaceholderText(/当用户询问 X 时/), { target: { value: '经管理员核对的正文' } });
+    fireEvent.change(screen.getByRole('textbox', { name: '技能 Markdown 源码' }), {
+      target: { value: '经管理员核对的正文' },
+    });
     mockedApi.register.mockResolvedValue({ ...template, enabled: true, version: 1 });
     mockedApi.list.mockResolvedValue([{ ...template, content: '经管理员核对的正文', enabled: true, version: 1 }]);
     fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }));
@@ -159,7 +183,10 @@ describe('SkillsTab 模板发现与显式注册', () => {
     expect(card().queryByRole('button', { name: '查看并注册' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /编\s*辑/ }));
     await screen.findByText('技能标识（skillId）');
-    expect(screen.getByPlaceholderText(/当用户询问 X 时/)).toHaveProperty('value', '用户维护的正文');
+    expect(await screen.findByRole('textbox', { name: '技能 Markdown 源码' })).toHaveProperty(
+      'value',
+      '用户维护的正文',
+    );
     expect(mockedApi.register).not.toHaveBeenCalled();
     expect(mockedApi.update).not.toHaveBeenCalled();
   });
@@ -172,13 +199,14 @@ describe('SkillsTab 模板发现与显式注册', () => {
     expect(card().getByRole('button', { name: '查看并注册' })).toHaveProperty('disabled', true);
     expect(card().queryByText('尚未注册')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }));
-    await waitFor(() => expect(card().getByRole('button', { name: '查看并注册' })).toHaveProperty('disabled', false));
+    await screen.findByText('当前项目暂无已注册技能，可从下方模板查看并注册。');
+    expect(card().getByRole('button', { name: '查看并注册' })).toHaveProperty('disabled', false);
     expect(card().getByText('尚未注册')).toBeTruthy();
     expect(mockedApi.register).not.toHaveBeenCalled();
   });
 
   it('加载完成前不把模板当成未注册', async () => {
-    mockedApi.list.mockReturnValue(new Promise(() => {}));
+    mockedApi.list.mockReturnValue(new Promise(() => undefined));
     renderTab();
     expect(card().getByText('登记状态待确认')).toBeTruthy();
     expect(card().getByRole('button', { name: '查看并注册' })).toHaveProperty('disabled', true);
@@ -190,20 +218,22 @@ describe('SkillsTab 模板发现与显式注册', () => {
     await screen.findByText('当前项目暂无已注册技能，可从下方模板查看并注册。');
     fireEvent.click(card().getByRole('button', { name: '查看并注册' }));
     await screen.findByText('技能标识（skillId）');
-    fireEvent.change(screen.getByPlaceholderText(/当用户询问 X 时/), { target: { value: '未提交的编辑' } });
+    fireEvent.change(await screen.findByRole('textbox', { name: '技能 Markdown 源码' }), {
+      target: { value: '未提交的编辑' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
     const second = skillTemplates[1];
     fireEvent.click(
       within(screen.getByRole('group', { name: second.name })).getByRole('button', { name: '查看并注册' }),
     );
     await screen.findByText('技能标识（skillId）');
-    expect(screen.getByPlaceholderText(/当用户询问 X 时/)).toHaveProperty('value', second.content);
+    expect(await screen.findByRole('textbox', { name: '技能 Markdown 源码' })).toHaveProperty('value', second.content);
     fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
     fireEvent.click(screen.getByRole('button', { name: /注册技能/ }));
     await screen.findByText('技能标识（skillId）');
     expect(screen.getByPlaceholderText('如 asset-yoy')).toHaveProperty('value', '');
     expect(screen.getByPlaceholderText('如 asset-yoy')).toHaveProperty('disabled', false);
-    expect(screen.getByPlaceholderText(/当用户询问 X 时/)).toHaveProperty('value', '');
+    expect(await screen.findByRole('textbox', { name: '技能 Markdown 源码' })).toHaveProperty('value', '');
     expect(screen.getByPlaceholderText(/"tags"/)).toHaveProperty('value', '');
     expect(mockedApi.register).not.toHaveBeenCalled();
   });
@@ -220,7 +250,7 @@ describe('SkillsTab 在线注册（文档 §5.1，验收项 2）', () => {
     fireEvent.change(screen.getByPlaceholderText(/如 用户询问资产同比时/), {
       target: { value: '按统一口径输出资产同比对比结论' },
     });
-    fireEvent.change(screen.getByPlaceholderText(/当用户询问 X 时，按口径 Y 输出/), {
+    fireEvent.change(screen.getByRole('textbox', { name: '技能 Markdown 源码' }), {
       target: { value: '当用户询问资产同比分析时，先确认资产范围，再按口径输出。' },
     });
     fireEvent.change(screen.getByPlaceholderText(/"tags"/), {
@@ -236,6 +266,7 @@ describe('SkillsTab 在线注册（文档 §5.1，验收项 2）', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /注册技能/ }));
     await screen.findByText('技能标识（skillId）');
+    await screen.findByRole('textbox', { name: '技能 Markdown 源码' });
     fillRegisterForm();
     fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }));
 
@@ -259,6 +290,7 @@ describe('SkillsTab 在线注册（文档 §5.1，验收项 2）', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /注册技能/ }));
     await screen.findByText('技能标识（skillId）');
+    await screen.findByRole('textbox', { name: '技能 Markdown 源码' });
     fillRegisterForm();
     fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }));
 
@@ -303,7 +335,7 @@ describe('SkillsTab 更新（文档 §5.3，验收项 4）', () => {
   const openEditAndSave = async (newContent: string) => {
     fireEvent.click(screen.getAllByRole('button', { name: /编\s*辑/ })[0]);
     await screen.findByText(/编辑技能/);
-    fireEvent.change(screen.getByPlaceholderText(/当用户询问 X 时，按口径 Y 输出/), {
+    fireEvent.change(await screen.findByRole('textbox', { name: '技能 Markdown 源码' }), {
       target: { value: newContent },
     });
     fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }));
@@ -400,7 +432,7 @@ describe('SkillsTab 详情（文档 §3.4，验收项 6）', () => {
     await screen.findByText('资产同比分析');
     fireEvent.click(screen.getAllByRole('button', { name: /详\s*情/ })[0]);
 
-    const drawer = await screen.findByText('指令');
+    const drawer = await screen.findByRole('heading', { name: '指令' });
     expect(drawer).toBeTruthy();
     const drawerScope = document.querySelector('.ant-drawer-content') as HTMLElement;
     expect(drawerScope).toBeTruthy();
