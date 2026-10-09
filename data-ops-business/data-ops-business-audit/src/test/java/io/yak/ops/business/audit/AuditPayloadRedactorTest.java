@@ -42,6 +42,18 @@ class AuditPayloadRedactorTest {
   }
 
   @Test
+  void redactsSeparatedCredentialKeysInJsonAndParameters() {
+    String out = redact("{\"api-key\":\"leak-a\",\"access.key\":\"leak-b\",\"safe\":\"ok\"}");
+    assertFalse(out.contains("leak-a"));
+    assertFalse(out.contains("leak-b"));
+    assertTrue(out.contains("\"safe\":\"ok\""));
+    assertEquals(List.of("***", "safe"),
+        redactor.parameterNames(Map.of("api-key", new String[] {"leak-a"},
+            "safe", new String[] {"ok"})));
+    assertTrue(redactor.sensitive("mfa-backup-code"));
+  }
+
+  @Test
   void longPayloadIsTruncated() {
     String big = "{\"filler\":\"" + "a".repeat(20_000) + "\"}";
     String out = redact(big);

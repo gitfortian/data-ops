@@ -164,6 +164,7 @@ public class ApprovalService implements ApprovalApi {
             .eq(ApprovalInstancePO::getBizType, bizType)
             .eq(ApprovalInstancePO::getBizId, bizId)
             .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
+            .eq(ApprovalInstancePO::getDeleted, false)
             .orderByDesc(ApprovalInstancePO::getId).last("LIMIT 1"));
     if (!inFlight.isEmpty()) {
       return toView(inFlight.get(0));
@@ -174,6 +175,7 @@ public class ApprovalService implements ApprovalApi {
             .eq(ApprovalInstancePO::getFlowCode, flowCode)
             .eq(ApprovalInstancePO::getBizType, bizType)
             .eq(ApprovalInstancePO::getBizId, bizId)
+            .eq(ApprovalInstancePO::getDeleted, false)
             .orderByDesc(ApprovalInstancePO::getId).last("LIMIT 1"));
     return latest.isEmpty() ? null : toView(latest.get(0));
   }
@@ -208,6 +210,7 @@ public class ApprovalService implements ApprovalApi {
   public ApprovalDetailView detail(Long instanceId, String operator, boolean manage) {
     ApprovalInstancePO instance = requireInstance(currentProject.requireProjectId(), instanceId);
     List<ApprovalStepPO> steps = stepMapper.selectList(new LambdaQueryWrapper<ApprovalStepPO>()
+        .eq(ApprovalStepPO::getProjectId, currentProject.requireProjectId())
         .eq(ApprovalStepPO::getInstanceId, instanceId)
         .eq(ApprovalStepPO::getDeleted, false)
         .orderByAsc(ApprovalStepPO::getLevelNo).orderByAsc(ApprovalStepPO::getId));
@@ -306,6 +309,7 @@ public class ApprovalService implements ApprovalApi {
       LocalDateTime now = LocalDateTime.now();
       int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
           .eq(ApprovalInstancePO::getId, instanceId)
+          .eq(ApprovalInstancePO::getProjectId, instance.getProjectId())
           .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
           .set(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.CANCELED.name())
           .set(ApprovalInstancePO::getActiveFlag, null)
@@ -337,6 +341,7 @@ public class ApprovalService implements ApprovalApi {
           "单据已是终态:" + instance.getStatus());
     }
     ApprovalStepPO mineStep = stepMapper.selectOne(new LambdaQueryWrapper<ApprovalStepPO>()
+        .eq(ApprovalStepPO::getProjectId, projectId)
         .eq(ApprovalStepPO::getInstanceId, instanceId)
         .eq(ApprovalStepPO::getApprover, operator)
         .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
@@ -356,6 +361,8 @@ public class ApprovalService implements ApprovalApi {
       LocalDateTime now = LocalDateTime.now();
       int flipped = stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
           .eq(ApprovalStepPO::getId, mineStep.getId())
+          .eq(ApprovalStepPO::getProjectId, projectId)
+          .eq(ApprovalStepPO::getInstanceId, instanceId)
           .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
           .set(ApprovalStepPO::getStatus,
               approved ? ApprovalStepStatus.APPROVED.name() : ApprovalStepStatus.REJECTED.name())
@@ -386,6 +393,7 @@ public class ApprovalService implements ApprovalApi {
       } else {
         int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
             .eq(ApprovalInstancePO::getId, instanceId)
+            .eq(ApprovalInstancePO::getProjectId, projectId)
             .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
             .set(ApprovalInstancePO::getCurrentLevel, next.nextLevelNo())
             .set(ApprovalInstancePO::getUpdatedBy, operator)
@@ -395,6 +403,7 @@ public class ApprovalService implements ApprovalApi {
               "并发冲突,请刷新");
         }
         stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
+            .eq(ApprovalStepPO::getProjectId, projectId)
             .eq(ApprovalStepPO::getInstanceId, instanceId)
             .eq(ApprovalStepPO::getLevelNo, next.nextLevelNo())
             .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.WAITING.name())
@@ -417,6 +426,7 @@ public class ApprovalService implements ApprovalApi {
       String operator, LocalDateTime now) {
     int moved = instanceMapper.update(null, new LambdaUpdateWrapper<ApprovalInstancePO>()
         .eq(ApprovalInstancePO::getId, instance.getId())
+        .eq(ApprovalInstancePO::getProjectId, instance.getProjectId())
         .eq(ApprovalInstancePO::getStatus, ApprovalInstanceStatus.PENDING.name())
         .set(ApprovalInstancePO::getStatus, target.name())
         .set(ApprovalInstancePO::getActiveFlag, null)
@@ -434,6 +444,7 @@ public class ApprovalService implements ApprovalApi {
   /** 终态清理:剩余 WAITING/PENDING 一律 SKIPPED(不变式,勿改)。 */
   private void skipOpenSteps(Long instanceId, String operator, LocalDateTime now) {
     stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
+        .eq(ApprovalStepPO::getProjectId, currentProject.requireProjectId())
         .eq(ApprovalStepPO::getInstanceId, instanceId)
         .in(ApprovalStepPO::getStatus, ApprovalStateMachine.OPEN_STEP_STATUSES)
         .set(ApprovalStepPO::getStatus, ApprovalStepStatus.SKIPPED.name())
@@ -445,6 +456,7 @@ public class ApprovalService implements ApprovalApi {
   private void skipOpenStepsAtLevel(Long instanceId, int levelNo, String operator,
       LocalDateTime now) {
     stepMapper.update(null, new LambdaUpdateWrapper<ApprovalStepPO>()
+        .eq(ApprovalStepPO::getProjectId, currentProject.requireProjectId())
         .eq(ApprovalStepPO::getInstanceId, instanceId)
         .eq(ApprovalStepPO::getLevelNo, levelNo)
         .eq(ApprovalStepPO::getStatus, ApprovalStepStatus.PENDING.name())
@@ -477,6 +489,7 @@ public class ApprovalService implements ApprovalApi {
 
   private List<ApprovalStepPO> stepsOf(Long instanceId) {
     return stepMapper.selectList(new LambdaQueryWrapper<ApprovalStepPO>()
+        .eq(ApprovalStepPO::getProjectId, currentProject.requireProjectId())
         .eq(ApprovalStepPO::getInstanceId, instanceId)
         .eq(ApprovalStepPO::getDeleted, false));
   }

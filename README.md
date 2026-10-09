@@ -1,318 +1,123 @@
-<p align="center">
-  <img
-    src="https://github.com/user-attachments/assets/74def480-8353-45d3-982e-54606cd54474"
-    width="100%"
-    alt="Yak Ops Banner"
-  />
-</p>
+# Yak Ops
 
-<h1 align="center">Yak Ops</h1>
+**Open-source, self-hostable data operations platform** spanning data connectivity, integration, development, orchestration, data quality, assets, analytics, data services and governance.
 
-<p align="center">
-  <strong>Open-source data operations platform for data integration, workflow automation, data quality, and governance.</strong>
-</p>
+[简体中文](README_CN.md) · [Documentation index](docs/README.md) · [Issues](https://github.com/gitfortian/data-ops/issues) · [Pull requests](https://github.com/gitfortian/data-ops/pulls)
 
-<p align="center">
-  Connect data sources, move data, build tasks, orchestrate workflows, validate quality, and operate data from one self-hosted workspace.
-</p>
+> **Project status:** Actively evolving. A module or API existing in source does not imply production-readiness or end-to-end acceptance. Validate your own environment and consult current product contracts before deployment.
 
-<p align="center">
-  <a href="./README.md">English</a>
-  ·
-  <a href="./README_CN.md">简体中文</a>
-</p>
+## Overview
 
-<p align="center">
-  <a href="https://yak-ops.com/">Website</a>
-  ·
-  <a href="https://demo.yak-ops.com/">Live Demo</a>
-  ·
-  <a href="https://doc.yak-ops.com/">Documentation</a>
-  ·
-  <a href="./docs/README.md">Repository documentation and evidence index</a>
-  ·
-  <a href="https://github.com/weifuwan/yak-ops/issues">Issues</a>
-  ·
-  <a href="https://github.com/weifuwan/yak-ops/pulls">Pull Requests</a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/weifuwan/yak-ops/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/weifuwan/yak-ops?style=flat-square" alt="License" />
-  </a>
-  <a href="https://github.com/weifuwan/yak-ops/stargazers">
-    <img src="https://img.shields.io/github/stars/weifuwan/yak-ops?style=flat-square" alt="GitHub Stars" />
-  </a>
-  <a href="https://github.com/weifuwan/yak-ops/issues">
-    <img src="https://img.shields.io/github/issues/weifuwan/yak-ops?style=flat-square" alt="GitHub Issues" />
-  </a>
-  <img src="https://img.shields.io/badge/Java-21-blue?style=flat-square" alt="Java 21" />
-  <img src="https://img.shields.io/badge/Node.js-%3E%3D20-blue?style=flat-square" alt="Node.js 20+" />
-</p>
-
----
-
-## What is Yak Ops?
-
-Data operations are rarely a single job. A real workflow usually starts with a connection, moves through integration and development, becomes a scheduled workflow, needs quality checks and operational visibility, and eventually has to be exposed or governed for other people to use.
-
-Those steps are often scattered across scripts, engine consoles, scheduler pages, metadata tools, monitoring systems, and internal admin panels. **Yak Ops brings that operating context into one open-source control plane.**
-
-Yak Ops started from data integration, but the project is no longer positioned as a thin Web UI for one execution engine. The product boundary is the lifecycle around data: **connect, sync, build, orchestrate, validate, serve, and govern**. Runtime engines are integrations behind that control plane, not the definition of the product itself.
+Yak Ops is a unified control plane for the data lifecycle. It connects sources and runtime engines, defines and schedules data work, monitors execution, validates results, manages data assets, and makes governed data available to consumers. The platform is not tied to a single execution engine.
 
 ```text
-Data Sources
-     │
-     ▼
-Data Integration ──► Data Development
-     │                    │
-     └────────┬───────────┘
-              ▼
-          Workflows
-              │
-              ▼
-        Data Quality
-              │
-              ▼
-   Datasets / Analysis / APIs
-              │
-              ▼
-   Project Space / RBAC / Audit
+Data sources / metadata
+        |
+Offline sync / CDC / data development
+        |
+Workflows / schedules / executions
+        |
+Quality / assets / lineage / semantic & metrics
+        |
+Datasets / analysis / dashboards / data service
+        |
+Project spaces · identity & permissions · audit · operations
 ```
 
-## What you can do today
+## Capabilities
 
-| Area | Current capabilities |
+The following describes the **functional areas represented in this repository**, not a blanket claim that every journey is fully validated.
+
+| Area | Scope |
 | --- | --- |
-| **Data Sources** | Reusable datasource connections, connection testing, metadata and catalog discovery, plugin-based datasource capabilities. |
-| **Data Integration** | Offline synchronization with single-table, multi-table and script-oriented configuration; realtime CDC definitions, deployments and runtime control. |
-| **Data Development** | Development tasks, release and execution lifecycle, with task plugin foundations for SQL, Python, Shell and Java. |
-| **Workflow Automation** | Visual workflow definitions, scheduling, execution instances, node-level execution state and operational history. |
-| **Data Quality** | Quality overview, table monitors, reusable rule templates, rules, executions and result inspection. |
-| **Data Assets & Consumption** | Managed files, datasets, lineage, analysis, dashboards, digital screens, and data-service APIs with runtime records. |
-| **Governance & Operations** | Project spaces, users, departments, roles and permissions, operation logs, audit capabilities, notifications and alert foundations. |
+| Data sources & metadata | Datasource connection management, connectivity checks, catalog / metadata exploration and reusable datasource plugin contracts. |
+| Data integration | Offline synchronization definitions (including single-table, multi-table and script configurations), execution management and realtime CDC pipeline integration. |
+| Data development | Development tasks, versions / releases, execution records and task plugin contracts for SQL, Python, Shell and Java. |
+| Workflows & scheduling | Workflow definitions, scheduling, task instances, node status and execution history. |
+| Data quality | Table monitoring, reusable quality rule templates, checks, execution results and inspection. |
+| Data assets & lineage | Files / resource management, asset and dataset management, metadata relationships and lineage. |
+| Semantic & metric modeling | Semantic / metric / modeling domain capabilities; consult domain documentation and acceptance evidence for supported journeys and maturity. |
+| Analysis & consumption | Dataset-based analysis, dashboards, visual displays and data-service API management / runtime visibility. |
+| Governance & operations | Project-space boundaries, identity, RBAC, approvals / audit, notifications and alert extension contracts. |
+| AI-related capabilities | AI-oriented domains may be present in the repository; availability and supported workflows must be verified against their active product specifications. |
 
-The repository is evolving quickly. Some areas are more mature than others, and product boundaries will continue to be refined as the workflows become more coherent.
+### Runtime integrations
 
-## How we think about the product
+The repository includes integrations or extension foundations for **Link-Up** (offline work), **Flink CDC / Flink REST** (realtime processing), **JDBC / Doris** datasource plugins, **local filesystem / MinIO / HDFS** storage plugins, **SQL / Python / Shell / Java** task plugins and **DingTalk** alerts. Engine deployments, driver availability and configuration affect which functions are usable.
 
-Yak Ops is guided by a few principles:
+## Quick start with Docker Compose
 
-**1. The control plane should be coherent.**  
-A datasource, task, workflow, quality check, dataset, API and audit event should not feel like unrelated admin pages. They should form one understandable operating lifecycle.
-
-**2. Execution engines should remain replaceable.**  
-Yak Ops should own product concepts, lifecycle, permissions, observability and orchestration. Engines should do what they are good at: execute work.
-
-**3. Important state should be visible.**  
-Long-running work, schedules, retries, failures, runtime events and cross-module operations should be inspectable instead of hidden behind a button that only says "running" or "failed".
-
-**4. Extensibility should be a contract, not a fork.**  
-Datasource, storage, task and alert integrations are modeled as plugin capabilities so new integrations do not have to rewrite the core product.
-
-**5. Open source is the product.**  
-Yak Ops is intended to be useful as a complete open-source project. The repository is not a reduced demo whose main purpose is to push users toward a closed edition.
-
-## Current integrations
-
-The current codebase includes these runtime and plugin integrations:
-
-- **Offline synchronization:** Link-Up integration for task definitions, execution and reconciliation.
-- **Realtime synchronization:** Flink CDC pipeline submission with Flink runtime control through its REST API.
-- **Datasource plugins:** JDBC-based integrations and Doris support.
-- **Storage plugins:** Local filesystem, MinIO and HDFS.
-- **Task plugins:** SQL, Python, Shell and Java foundations.
-- **Alert plugins:** DingTalk integration and a common alert SPI.
-
-These are the integrations implemented today, not permanent limits on the platform.
-
-## Quick start
-
-### Docker Compose
-
-For local evaluation, Docker Compose is the shortest path. The default compose stack contains MySQL, the Yak Ops backend, and the frontend/reverse proxy.
+Prerequisites: Docker Engine and the Compose plugin. The default [compose.yaml](compose.yaml) provides **MySQL 8.0**, the backend and the Nginx-served frontend.
 
 ```bash
-git clone https://github.com/weifuwan/yak-ops.git
-cd yak-ops
+git clone https://github.com/gitfortian/data-ops.git
+cd data-ops
 cp .env.example .env
 ```
 
-Before starting, edit `.env` and replace the example datasource master key with your own random secret:
-
-```env
-YAK_OPS_DATASOURCE_MASTER_KEY=replace_with_your_own_random_secret
-```
-
-Then start the stack with the images referenced by `.env`:
+Before starting, replace development credentials in `.env`, particularly `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `YAK_SECURITY_BOOTSTRAP_PASSWORD` and `YAK_OPS_DATASOURCE_MASTER_KEY`. Generate and protect a strong random datasource key and keep it stable for existing encrypted credentials. The example values are **not** safe for exposed deployments.
 
 ```bash
 docker compose pull
 docker compose up -d
+docker compose ps
 ```
 
-With the current `.env.example`, open:
-
-```text
-http://localhost:9001
-```
-
-Useful commands:
+With the sample port setting, open **http://localhost:9001**. The backend listens on port 9527 **inside** the Compose network; the frontend is the public entry point.
 
 ```bash
-docker compose ps
-docker compose logs -f yak-ops-api
+docker compose logs -f yak-ops-backend
+docker compose logs -f yak-ops-frontend
 docker compose down
 ```
 
-> The values in `.env.example` are development examples. Change database passwords and the datasource master key before using Yak Ops outside a local evaluation environment.
+The project also contains [compose.without-mysql.yaml](compose.without-mysql.yaml) with [.env.without-mysql.example](.env.without-mysql.example) for an external MySQL deployment. For PostgreSQL consult [the PostgreSQL guide](docs/deployment/postgresql.md) and its dedicated Compose/profile examples. Confirm compatibility and migration behavior before reusing an existing database.
 
-If you already have MySQL, use `.env.without-mysql.example` together with `compose.without-mysql.yaml` instead of starting the bundled database.
+> `docker compose pull` uses the image tags configured in `.env`; published image availability depends on the release. For local source images use `docker compose build` followed by `docker compose up -d` instead.
 
-For a fresh PostgreSQL 16+ deployment, see [PostgreSQL deployment](docs/deployment/postgresql.md). Use the `postgresql` Spring profile or `compose.postgresql.yaml` with `.env.postgresql.example`.
+## Build from source
 
-### Build from source
-
-Source builds currently require:
-
-- JDK 21
-- Node.js 20+
-- Yarn Classic
-- Maven, or the included Maven Wrapper
-- MySQL 8.0 for a local runtime
-
-Yak Framework source is included in this repository's Maven reactor. No separate Framework installation is required.
-
-Build the frontend first:
+Prerequisites: **JDK 21**, **Node.js 20+**, **Yarn Classic**, Maven Wrapper (included), and a configured database for running the backend. Frontend: **React / Umi Max / Ant Design**. Backend: **Java / Spring Boot 3**, Maven multi-module reactor.
 
 ```bash
 cd data-ops-ui
 yarn install
 yarn build
 cd ..
-```
-
-Then build the full reactor and distribution:
-
-```bash
 ./mvnw clean verify
 ```
 
-On Windows:
+Windows: `mvnw.cmd clean verify`. Maven assembles the distribution under `data-ops-dist/target/`. To work on the frontend locally run `cd data-ops-ui && yarn dev` and configure the backend according to your environment. Database schemas and migrations should be managed by the provided application / migration flow, not by deleting historical SQL.
 
-```cmd
-mvnw.cmd clean verify
-```
-
-The assembled distribution is generated under:
+## Repository structure
 
 ```text
-data-ops-dist/target/
+data-ops-framework/    Shared framework sources in the Maven reactor
+data-ops-bom/          Dependency alignment
+data-ops-common/       Shared primitives and compatibility contracts
+data-ops-spi/          Runtime/plugin extension interfaces
+data-ops-core/         Core platform functionality
+data-ops-business/     Business capability modules
+data-ops-plugins/      Datasource, storage, task and alert adapters
+data-ops-boot/         Spring Boot application assembly
+data-ops-ui/           React / Umi frontend
+data-ops-dist/         Distribution assembly
+docs/                  Product, domain, architecture, operation and acceptance docs
 ```
 
-See the [project documentation](https://doc.yak-ops.com/) for environment-specific configuration and deployment details.
+Architectural boundaries are evolving. Use the actual Maven POMs and each domain's `DOMAIN.md`, `ARCHITECTURE.md` and `DEPENDENCIES.md` as the reference for implementation-level dependencies rather than treating this overview as a fixed architecture contract.
 
-## Architecture
+## Project-space security and deployment
 
-Yak Ops separates product domains, runtime contracts, and integrations so that execution details do not leak through every layer of the application.
+Project membership defines **where** a user operates, permissions define **what** they can do, and project ownership associates business data with a workspace. See [project scope](docs/architecture/PROJECT_SCOPE.md).
 
-```text
-┌─────────────────────────────────────────────────────┐
-│                    data-ops-ui                       │
-│              React / Umi / Ant Design               │
-└───────────────────────┬─────────────────────────────┘
-                        │ HTTP / WebSocket
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│                   data-ops-boot                      │
-│                Spring Boot runtime                  │
-└───────────────────────┬─────────────────────────────┘
-                        │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-┌──────────────────────┐   ┌──────────────────────────┐
-│   Business domains   │   │ Security / project      │
-│ datasource / sync    │   │ RBAC / audit / context  │
-│ development / job    │   │ operational boundaries  │
-│ workflow / quality   │   └──────────────────────────┘
-│ dataset / lineage    │
-│ analysis / dashboard │
-│ data service / alert │
-└──────────┬───────────┘
-           │ SPI
-           ▼
-┌─────────────────────────────────────────────────────┐
-│ Plugins: datasource / storage / task / alert        │
-└───────────────────────┬─────────────────────────────┘
-                        ▼
-       Databases / storage / Link-Up / Flink CDC / ...
-```
+For deployments beyond local testing: replace all sample credentials, restrict network access to databases and execution engines, protect datasource credential keys, define backup and audit retention policies, and test schema migrations, authorization and complete workflows in your own environment. Never use a public demo with production credentials.
 
-At repository level, the main modules are:
+## Docs, contribution and release
 
-```text
-yak-ops
-├── data-ops-bom           dependency alignment
-├── data-ops-common        shared primitives
-├── data-ops-spi           extension contracts
-├── data-ops-core          core platform capabilities
-├── data-ops-business      product business domains
-├── data-ops-plugins       datasource / storage / task / alert plugins
-├── data-ops-boot          Spring Boot application
-├── data-ops-ui            web application
-└── data-ops-dist          release distribution assembly
-```
+- [Documentation index](docs/README.md), [product baseline](docs/product/README.md) and [product style](PRODUCT_STYLE.md) explain what is authoritative versus historical planning.
+- [Agent guidance](AGENTS.md), [code style](CODE_STYLE.md) and [frontend style](data-ops-ui/FRONTEND_CODE_STYLE.md) describe contributor constraints.
+- [Release guide](docs/release/RELEASING.md) documents tag-driven builds, metadata checks and publication; do not assume untagged main is a released artifact.
+- Report issues and propose changes through this repository's [Issues](https://github.com/gitfortian/data-ops/issues) and [Pull requests](https://github.com/gitfortian/data-ops/pulls).
 
-Yak Ops also builds on [data-ops-framework](https://github.com/weifuwan/yak-framework) for shared infrastructure such as security, scheduling and workflow runtime capabilities.
-
-## Project Space and governance
-
-Yak Ops treats **Project Space** as the business workspace and data-isolation boundary inside the application. Roles answer *what a user can do*; project membership answers *where they can do it*; project ownership on business data answers *which workspace the data belongs to*.
-
-This boundary is being applied across datasource, synchronization, development, workflow, quality, dataset, analysis, dashboard and data-service flows so list, detail, mutation and runtime paths follow the same isolation rules.
-
-For the design baseline, see [`docs/architecture/PROJECT_SCOPE.md`](docs/architecture/PROJECT_SCOPE.md).
-
-## Security
-
-Yak Ops uses Yak Security for identity and permission abstractions and uses Sa-Token as the default authentication backend.
-
-Datasource connections and data-processing tasks can reach external systems. A production deployment should explicitly review:
-
-- project and functional permissions;
-- network access and egress restrictions;
-- datasource secret management and master-key handling;
-- audit and operation-log retention;
-- query and runtime limits;
-- database backup, schema migration and upgrade procedures.
-
-Do not put real production credentials or sensitive data into a public demo environment.
-
-## Project status
-
-Yak Ops is under active development. APIs, database schemas, navigation and module boundaries may continue to change as the project converges on cleaner end-to-end product flows.
-
-That pace is intentional: the goal is not to freeze a large collection of features early, but to keep turning disconnected data-engineering operations into a smaller number of understandable workflows.
-
-If you are evaluating Yak Ops for production, start with a non-production environment and validate the security, deployment and runtime assumptions that matter to your infrastructure.
-
-## Contributing
-
-Yak Ops is developed in the open. Bug reports, design discussions, documentation improvements and code contributions are welcome.
-
-A good way to contribute is to:
-
-1. search the existing [issues](https://github.com/weifuwan/yak-ops/issues);
-2. open an issue for a bug, product gap or design proposal;
-3. keep a pull request focused on one problem and explain the user-visible behavior it changes;
-4. add or update tests and documentation where the change introduces a new contract.
-
-Before changing product behavior, start with [`PRODUCT_STYLE.md`](PRODUCT_STYLE.md) and the [`docs/product/`](docs/product/) baseline. AI / coding agents should enter through [`AGENTS.md`](AGENTS.md). Before contributing code, also read [`CODE_STYLE.md`](CODE_STYLE.md); frontend changes should follow [`data-ops-ui/FRONTEND_CODE_STYLE.md`](data-ops-ui/FRONTEND_CODE_STYLE.md).
-
-If Yak Ops is useful to you, a ⭐ helps more people discover the project.
-
-<img width="180" height="264" alt="image" src="https://github.com/user-attachments/assets/a4c596d4-61eb-4bdf-b452-28d19c5b7423" />
-
-## License
-
-Yak Ops is licensed under the [Apache License 2.0](LICENSE).
+Licensed under [Apache License 2.0](LICENSE).

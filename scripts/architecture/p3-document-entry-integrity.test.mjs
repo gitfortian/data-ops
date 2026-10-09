@@ -127,11 +127,12 @@ test('all three Framework Maven invocations use a portable repo-root wrapper, no
   assert.ok(content.includes('release-obfuscated'));
 });
 
-test('bilingual root READMEs navigate to the same governed repository docs', () => {
+test('bilingual root READMEs navigate to the governed docs and current repository', () => {
   for (const file of ['README.md', 'README_CN.md']) {
     const linked = new Set(localLinks(file));
     assert.ok(linked.has('docs/README.md'), file);
-    assert.ok(read(file).includes('https://doc.yak-ops.com/'), file);
+    assert.ok(linked.has('docs/product/README.md'), file);
+    assert.ok(read(file).includes('https://github.com/gitfortian/data-ops/issues'), file);
   }
 });
 
