@@ -17,7 +17,11 @@ import {
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { realtimeApi } from './api';
+import {
+  getRealtimeSyncObservability,
+  getRealtimeSyncRuntimeLog,
+  getRealtimeSyncSubmissionLog,
+} from '@/services/realtime-sync';
 import type {
   RealtimeEvent,
   RealtimeJob,
@@ -147,8 +151,8 @@ export default function RealtimeRuntimeDetail({ job, events }: Props) {
       if (!engineJobId) return;
       setObservabilityLoading(true);
       try {
-        const result = await realtimeApi.observability(job.id);
-        setObservability(result.data);
+        const result = await getRealtimeSyncObservability(job.id);
+        setObservability(result);
       } catch (error: any) {
         if (showError) {
           message.error(
@@ -181,8 +185,8 @@ export default function RealtimeRuntimeDetail({ job, events }: Props) {
   const loadSubmissionLog = async () => {
     setSubmissionLoading(true);
     try {
-      const result = await realtimeApi.submissionLog(job.id);
-      setSubmissionLog(result.data.logs || '');
+      const result = await getRealtimeSyncSubmissionLog(job.id);
+      setSubmissionLog(result || '');
     } catch (error: any) {
       message.error(
         error?.message ||
@@ -198,8 +202,8 @@ export default function RealtimeRuntimeDetail({ job, events }: Props) {
   const loadRuntimeLog = async () => {
     setRuntimeLoading(true);
     try {
-      const result = await realtimeApi.runtimeLog(job.id);
-      setRuntimeLog(result.data);
+      const result = await getRealtimeSyncRuntimeLog(job.id);
+      setRuntimeLog(result);
     } catch (error: any) {
       message.error(
         error?.message ||

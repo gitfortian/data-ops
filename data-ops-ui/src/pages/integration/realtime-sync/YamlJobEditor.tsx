@@ -8,7 +8,12 @@ import {
 import { Button, ConfigProvider, Input, message, Spin, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { BRAND_THEME } from '@/styles/brand';
-import { realtimeApi } from './api';
+import {
+  parseRealtimeSyncYaml,
+  renderRealtimeSyncYaml,
+  updateRealtimeSyncTask,
+  validateRealtimeSyncDefinition,
+} from '@/services/realtime-sync';
 import RealtimeEditorModeSwitch from './RealtimeEditorModeSwitch';
 import type { RealtimeEditorMode } from './realtimeEditorMode';
 import type { CdcPipelineSpec, RealtimeJob } from './types';
@@ -73,8 +78,8 @@ export default function YamlJobEditor({
           if (!cancelled) setYamlText(EMPTY_TEMPLATE);
           return;
         }
-        const response = await realtimeApi.renderYaml(job.spec);
-        if (!cancelled) setYamlText(response.data.yaml);
+        const response = await renderRealtimeSyncYaml(job.spec);
+        if (!cancelled) setYamlText(response);
       } catch (error: any) {
         if (!cancelled) {
           setYamlText(EMPTY_TEMPLATE);
@@ -98,10 +103,10 @@ export default function YamlJobEditor({
   }, [validatedSpec]);
 
   const parseCurrentYaml = async () => {
-    const response = await realtimeApi.parseYaml(yamlText);
-    setValidatedSpec(response.data);
+    const response = await parseRealtimeSyncYaml(yamlText);
+    setValidatedSpec(response);
     setValidationMessage('YAML 已通过解析与 CdcPipelineSpec 校验');
-    return response.data;
+    return response;
   };
 
   const validate = async () => {
@@ -109,7 +114,7 @@ export default function YamlJobEditor({
     setValidationMessage(undefined);
     try {
       const spec = await parseCurrentYaml();
-      await realtimeApi.validateDefinition(spec, job.runtimeEnvironmentId);
+      await validateRealtimeSyncDefinition(spec, job.runtimeEnvironmentId);
       setValidationMessage('YAML 已通过解析、Spec、运行环境与数据源预校验');
       message.success('YAML 校验通过');
     } catch (error: any) {
@@ -126,8 +131,8 @@ export default function YamlJobEditor({
     setValidationMessage(undefined);
     try {
       const spec = await parseCurrentYaml();
-      const rendered = await realtimeApi.renderYaml(spec);
-      setYamlText(rendered.data.yaml);
+      const rendered = await renderRealtimeSyncYaml(spec);
+      setYamlText(rendered);
       setValidationMessage('已按 Yak Realtime YAML v1 规范格式化');
       message.success('YAML 已格式化');
     } catch (error: any) {
@@ -160,7 +165,7 @@ export default function YamlJobEditor({
     setValidationMessage(undefined);
     try {
       const spec = await parseCurrentYaml();
-      await realtimeApi.update(job.id, {
+      await updateRealtimeSyncTask(job.id, {
         name: job.name,
         description: job.description,
         runtimeEnvironmentId: job.runtimeEnvironmentId,

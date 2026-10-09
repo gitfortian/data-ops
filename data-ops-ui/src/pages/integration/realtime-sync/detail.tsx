@@ -1,7 +1,7 @@
 import { history, useParams } from '@umijs/max';
 import { message, Spin } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
-import { realtimeApi } from './api';
+import { getRealtimeSyncTask, listRealtimeDataSources } from '@/services/realtime-sync';
 import RealtimeExecutionPanel from './RealtimeExecutionPanel';
 import WizardJobEditor from './WizardJobEditor';
 import YamlJobEditor from './YamlJobEditor';
@@ -73,10 +73,10 @@ export default function RealtimeSyncDetail() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([realtimeApi.detail(Number(id)), realtimeApi.dataSources()])
+    Promise.all([getRealtimeSyncTask(Number(id)), listRealtimeDataSources()])
       .then(([detail, sources]) => {
         if (cancelled) return;
-        const nextJob = withSourceHandoff(detail.data, sourceIdFromSearch());
+        const nextJob = withSourceHandoff(detail, sourceIdFromSearch());
         const requestedMode = editorFromSearch();
         const compatibility = wizardCompatibility(nextJob.spec);
         const resolvedMode: RealtimeEditorMode =
@@ -93,7 +93,7 @@ export default function RealtimeSyncDetail() {
         }
 
         setJob(nextJob);
-        setDataSources(sources.data || []);
+        setDataSources(sources || []);
         setEditorMode(resolvedMode);
         setDraftSpec(undefined);
         replaceEditorQuery(resolvedMode);
@@ -112,8 +112,8 @@ export default function RealtimeSyncDetail() {
   const handleSaved = async () => {
     if (!job) return;
     try {
-      const refreshed = await realtimeApi.detail(job.id);
-      setJob(refreshed.data);
+      const refreshed = await getRealtimeSyncTask(job.id);
+      setJob(refreshed);
       setDraftSpec(undefined);
       setExecutionReady(true);
     } catch (error: any) {
