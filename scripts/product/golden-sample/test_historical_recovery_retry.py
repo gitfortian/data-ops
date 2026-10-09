@@ -8,7 +8,18 @@ from historical_recovery_retry import (
     validate_blocked, verify_stage,
 )
 from test_historical_recovery import response, usage
-from test_historical_recovery_denials import FakeDB
+from test_historical_recovery_denials import FakeCursor, FakeDB
+
+
+class SnapshotCursor(FakeCursor):
+    """Real DB fetchall returns fresh row dictionaries, not shared mutable objects."""
+    def fetchall(self):
+        return deepcopy(super().fetchall())
+
+
+class SnapshotDB(FakeDB):
+    def cursor(self):
+        return SnapshotCursor(self)
 
 
 BIG = 9007199254740993
@@ -79,7 +90,7 @@ class StagedApi:
 
 
 def fake_db(kind, row=None):
-    db = FakeDB()
+    db = SnapshotDB()
     db.usage = []
     db.dataset_source = [row or source_row("DATASET")]
     db.service_source = [row or source_row("DATA_SERVICE")]
@@ -178,7 +189,7 @@ class SameCursorRealFaultGoldenTest(unittest.TestCase):
     def test_missing_usage_wrong_identity_and_duplicate_usage_cannot_pass_recovery(self):
         for fault, msg in [
             ("no_usage", "did not create exactly one"),
-            ("duplicate_usage", "did not create exactly one"),
+            ("duplicate_usage", "repeated row IDs"),
             ("audit_changed", "changed source-owned audit"),
         ]:
             with self.subTest(fault=fault):
