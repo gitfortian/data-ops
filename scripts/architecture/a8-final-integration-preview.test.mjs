@@ -163,8 +163,30 @@ test('only vetted #423 SHA may carry the exact Security corridor step through co
     resolved, incoming), /Unapproved/);
 });
 
+
+/**
+ * These tests run twice: on the submitted #461 tree (without ancestor steps)
+ * and on the 17-PR integration tree (where all three steps are already
+ * retained). Use the same original #461 fixture for both environments.
+ */
+function submittedSecurityWorkflow() {
+  let source = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
+  const ancestors = [
+    '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
+      '        run: node scripts/architecture/check-persistence-consumers.mjs\n',
+    '      - name: Flyway history table and module ownership\n' +
+      '        run: node scripts/db/check-flyway-ownership.mjs\n',
+    '      - name: A8 Common and Security migration corridor\n' +
+      '        run: node scripts/architecture/check-common-security-corridor.mjs\n',
+  ];
+  for (const step of ancestors) {
+    if (source.includes(step)) source = source.replace(step, '');
+  }
+  return source;
+}
+
 test('A8.2 final preview keeps all three exact predecessor workflow guards', () => {
-  const submitted = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
+  const submitted = submittedSecurityWorkflow();
   const base = submitted.trimEnd();
   const guards = [
     {
@@ -199,7 +221,7 @@ test('A8.2 final preview keeps all three exact predecessor workflow guards', () 
 });
 
 test('A8.2 final preview rejects extra conflict files, dropped guards or source drift', () => {
-  const submitted = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
+  const submitted = submittedSecurityWorkflow();
   const gates = [
     ['        run: node scripts/architecture/check-boundaries.mjs\n',
       '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
