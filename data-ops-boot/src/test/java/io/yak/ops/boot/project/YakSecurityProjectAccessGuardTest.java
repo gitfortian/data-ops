@@ -99,8 +99,8 @@ class YakSecurityProjectAccessGuardTest {
     UserBriefVO alice = user(11L);
     when(projectService.checkProjectExist(8L)).thenReturn(true);
     when(userService.getUserBriefByUsername("alice")).thenReturn(alice);
-    when(projectService.getProjectDetailByProjectId(8L))
-        .thenReturn(project(8L, "Project B", true, List.of(), List.of()));
+    ProjectVO projectB = project(8L, "Project B", true, List.of(), List.of());
+    when(projectService.getProjectDetailByProjectId(8L)).thenReturn(projectB);
 
     assertThatThrownBy(() -> guard.requireAccessible(8L, "alice"))
         .isInstanceOfSatisfying(ProjectContextException.class,
