@@ -18,6 +18,15 @@ Prerequisite: Draft PR #453, exact head `876b7495d64060af25834f1e17d676aae0640e5
 - Maven runtime explicitly declares Lombok, Spring Boot configuration processor, Spring Web and Servlet provided API; Starter depends on Runtime and is still the only owner of DB/Flyway/MyBatis, Filter wiring, CaffeinePermissionCache and Redis DAO.
 - No production behavior intentionally changed. External compiled consumers, 401/403, real Redis multi-instance and historical database upgrades remain unmet acceptance gates.
 
+## A8.2q — Consolidated Security SPI and implementation retirement batch
+- Move **three pure extension SPIs** into the established `data-ops-platform-security-contract`: `PasswordEncoder`, `PermissionExtend`, `OperationLogExtend`. These interfaces contain no framework, servlet, persistence, business or Spring imports. Retain their old FQCN and method descriptors.
+- Move **nine production classes** into `data-ops-platform-security-runtime`: `CurrentUserProvider`, `DefaultCurrentUserProvider`, `DefaultPasswordEncoder`, `DefaultPermissionExtend`, `LoginAttemptGuard`, `NoOpOperationLogExtend`, `DatabaseNumberUtils`, `JsonUtils`, `MathUtil`. Preserve the existing source bodies and fully qualified class names; delete matching Starter copies.
+- Move `DefaultCurrentUserProviderTest` and `LoginAttemptGuardTest` to Runtime, keeping the same-package test access. Add four regression suites: BCrypt password hashes/matches and invalid values, default deny and no-op audit, JDBC numeric scalar/JSON/list/random math behavior, plus Java reflection for the three legacy SPI binary signatures.
+- Explicit Runtime dependency closure: `spring-security-crypto`, `jackson-databind`; the existing Runtime already provides contract, Spring and provided Servlet API. No reverse dependency from Contract/Runtime to Starter, Business or Boot.
+- New `check-security-extension-owner.mjs` and **16 positive/negative Node cases** check unique binary/test owners, Spring default bean references, login throttling integration, denial-by-default, BCrypt/JSON ABI, and Maven dependency direction. Reuse Architecture Checks without a fifth workflow.
+- Starter still retains the Spring auto-configuration and final Bean ownership, `DefaultLoginExtendImpl` (dependent on `data-common`, `UserService` and Security user DTO/VO), `LoginExtend`, `ResourceExtend`, MyBatis/Flyway/DataSourceConfig, CaffeinePermissionCache, HTTP controllers and Redis/session registration. These are **not** moved by guessing dependencies.
+- This batch does not assert real Redis multi-instance, HTTP 401/403, old Flyway-history upgrades, external old-JAR ABI, or ordered A0–A8 release; these remain explicit hard gates. No behavior was intentionally changed by the source relocation.
+
 ## Remaining hard gates
 - Verify clean multi-module Java compilation and existing Sa-Token authentication regressions.
 - Verify Spring bean uniqueness, unauthenticated 401 and unauthorized 403.
