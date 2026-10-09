@@ -1,6 +1,9 @@
 package io.yak.ops.business.modeling.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import io.yak.ops.business.modeling.exception.ModelingException;
+import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import io.yak.ops.business.modeling.dao.mapper.ModelingColumnMappingMapper;
 import io.yak.ops.business.modeling.dao.model.ModelingColumnMappingPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -39,7 +42,24 @@ public class MappingRepositoryAdapter implements MappingRepository {
     po.setCreatedBy(existing.getCreatedBy());
     po.setCreateTime(existing.getCreateTime());
     po.setUpdateTime(LocalDateTime.now());
-    mapper.update(po, new LambdaQueryWrapper<ModelingColumnMappingPO>().eq(ModelingColumnMappingPO::getId, po.getId()));
+    // Explicit SETs are required for a cleared expression, source database or
+    // semantic field reference; entity updates would silently preserve old values.
+    int affected = mapper.update(null, new LambdaUpdateWrapper<ModelingColumnMappingPO>()
+        .set(ModelingColumnMappingPO::getSourceDatasourceId, po.getSourceDatasourceId())
+        .set(ModelingColumnMappingPO::getSourceDatabase, po.getSourceDatabase())
+        .set(ModelingColumnMappingPO::getSourceTable, po.getSourceTable())
+        .set(ModelingColumnMappingPO::getSourceColumn, po.getSourceColumn())
+        .set(ModelingColumnMappingPO::getTransformExpr, po.getTransformExpr())
+        .set(ModelingColumnMappingPO::getStdProcessFieldId, po.getStdProcessFieldId())
+        .set(ModelingColumnMappingPO::getUpdateTime, po.getUpdateTime())
+        .eq(ModelingColumnMappingPO::getId, po.getId())
+        .eq(ModelingColumnMappingPO::getProjectId, projectId)
+        .eq(ModelingColumnMappingPO::getModelId, po.getModelId())
+        .eq(ModelingColumnMappingPO::getTargetColumn, po.getTargetColumn()));
+    if (affected != 1) {
+      throw new ModelingException(ModelingErrorCode.UPDATE_FAILED,
+          "模型字段映射已变更或项目不匹配，请刷新后重试");
+    }
     return po;
   }
 

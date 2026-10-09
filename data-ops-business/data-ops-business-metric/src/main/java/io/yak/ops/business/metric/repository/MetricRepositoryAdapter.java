@@ -83,11 +83,36 @@ public class MetricRepositoryAdapter implements MetricRepository {
   public boolean update(Metric metric) {
     Long projectId = requiredProjectId();
     MetricPO po = toPo(metric);
-    return mapper.update(po,
+    // This is a full editable-definition replacement, not a sparse patch.
+    // MyBatis entity update skips null values: DERIVED → ATOMIC, for example,
+    // must actually clear the old ref_metric_id and qualifier/model references.
+    return mapper.update(null,
         new LambdaUpdateWrapper<MetricPO>()
+            .set(MetricPO::getMetricName, po.getMetricName())
+            .set(MetricPO::getDomainId, po.getDomainId())
+            .set(MetricPO::getProcessId, po.getProcessId())
+            .set(MetricPO::getMetricType, po.getMetricType())
+            .set(MetricPO::getCaliberId, po.getCaliberId())
+            .set(MetricPO::getCalRule, po.getCalRule())
+            .set(MetricPO::getMeasureExpr, po.getMeasureExpr())
+            .set(MetricPO::getFilterExpr, po.getFilterExpr())
+            .set(MetricPO::getDimModelIds, po.getDimModelIds())
+            .set(MetricPO::getRefMetricId, po.getRefMetricId())
+            .set(MetricPO::getDimConstraint, po.getDimConstraint())
+            .set(MetricPO::getQualifiersJson, po.getQualifiersJson())
+            .set(MetricPO::getModelId, po.getModelId())
+            .set(MetricPO::getStatDimensions, po.getStatDimensions())
+            .set(MetricPO::getStatPeriod, po.getStatPeriod())
+            .set(MetricPO::getUnitId, po.getUnitId())
+            .set(MetricPO::getBusinessDesc, po.getBusinessDesc())
+            .set(MetricPO::getOwner, po.getOwner())
+            .set(MetricPO::getStatus, po.getStatus())
+            .set(MetricPO::getVersion, po.getVersion())
+            .set(MetricPO::getUpdatedBy, po.getUpdatedBy())
+            .set(MetricPO::getUpdateTime, po.getUpdateTime())
             .eq(MetricPO::getId, metric.id())
             .eq(MetricPO::getProjectId, projectId)
-            .eq(MetricPO::getVersion, metric.version() - 1)) > 0;
+            .eq(MetricPO::getVersion, metric.version() - 1)) == 1;
   }
 
   @Override
