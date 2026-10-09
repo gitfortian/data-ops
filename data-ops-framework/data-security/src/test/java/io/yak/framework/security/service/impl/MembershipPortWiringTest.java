@@ -70,6 +70,18 @@ class MembershipPortWiringTest {
   }
 
   @Test
+  void portBackedServicesRetainTheirNamedSpringBeans() {
+    org.springframework.stereotype.Service project =
+        UserProjectServiceImpl.class.getAnnotation(org.springframework.stereotype.Service.class);
+    org.springframework.stereotype.Service role =
+        UserRoleServiceImpl.class.getAnnotation(org.springframework.stereotype.Service.class);
+    assertNotNull(project);
+    assertNotNull(role);
+    assertEquals("yakSecurityUserProjectServiceImpl", project.value());
+    assertEquals("yakSecurityUserRoleServiceImpl", role.value());
+  }
+
+  @Test
   void ownerProjectWritesRetainOwnerTypeAndCacheInvalidation() {
     UserProjectDao dao = mock(UserProjectDao.class);
     PermissionCache cache = mock(PermissionCache.class);
