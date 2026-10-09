@@ -92,6 +92,12 @@ test('dashboard document and dataset owners remain distinct after proxy removal'
   assert.ok(dashboard.includes("from '@/services/dashboard'"));
   assert.ok(dashboard.includes('fetchAnalysisDatasets as fetchDashboardDatasets'));
   assert.ok(dashboard.includes("from '@/services/dataset'"));
+  for (const consumer of [
+    'pages/data-analysis/dashboard/version-history-drawer.tsx',
+    'pages/data-analysis/dashboard/widget-action-editor.tsx',
+  ]) {
+    assert.ok(sourceOf(consumer).includes("from '@/services/dashboard'"), consumer);
+  }
   assert.ok(sourceOf('services/dashboard/index.ts').includes("export * from './api'"));
   assert.ok(sourceOf('services/dataset/index.ts').includes("export * from './api'"));
 });

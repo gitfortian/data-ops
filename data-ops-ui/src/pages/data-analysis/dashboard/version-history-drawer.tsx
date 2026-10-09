@@ -2,7 +2,7 @@ import { useIntl } from '@umijs/max';
 import { Button, Drawer, Empty, Spin } from 'antd';
 import { RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchDashboardVersion } from './dashboard-service';
+import { fetchDashboardVersion } from '@/services/dashboard';
 import type { DashboardVersionDetail, DashboardVersionSummary } from './model';
 
 const formatTime = (value?: string) => value ? value.replace('T', ' ').slice(0, 19) : '-';
