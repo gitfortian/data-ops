@@ -37,3 +37,9 @@ screenshot
 .firebase
 
 build
+
+# Local TypeScript compiler diagnostics are ephemeral. The authoritative
+# tracked debt contract is scripts/type-baseline.json, not captured console text.
+/tsc-output.txt
+/tsc-output-*.txt
+/typecheck-output*.txt
