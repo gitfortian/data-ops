@@ -64,7 +64,8 @@ def assert_denied(response, scenario):
             code = int(body["code"])
         except (ValueError, TypeError):
             raise ValueError(f"{scenario}: nonnumeric application failure code") from None
-        require(code < 50000, f"{scenario}: application internal error cannot count as denial")
+        require(code < 50000 and not 500 <= code < 600,
+                f"{scenario}: application internal error cannot count as denial")
         return f"APP_DENIED_{code}"
     require(status in (400, 401, 403, 404, 405, 422),
             f"{scenario}: HTTP status is not an expected 4xx denial")
