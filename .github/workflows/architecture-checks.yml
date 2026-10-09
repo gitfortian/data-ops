@@ -98,7 +98,15 @@ jobs:
         options: >-
           --health-cmd="pg_isready -U postgres -d architecture_ci"
           --health-interval=10s --health-timeout=5s --health-retries=12
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=12
     env:
+      ARCHITECTURE_REDIS_HOST: 127.0.0.1
+      ARCHITECTURE_REDIS_PORT: '6379'
       ARCHITECTURE_MYSQL_URL: jdbc:mysql://127.0.0.1:3306/architecture_ci?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       ARCHITECTURE_MYSQL_USERNAME: root
       ARCHITECTURE_MYSQL_PASSWORD: architecture-ci
