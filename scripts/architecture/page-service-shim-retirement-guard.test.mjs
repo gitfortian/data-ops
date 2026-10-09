@@ -16,7 +16,7 @@ const RETIRED = [
   "data-ops-ui/src/pages/data-analysis/dashboard/dashboard-service"
 ];
 const IMPORT_PATTERN =
-  /(?:\\bfrom\\s*|\\bimport\\s*(?:\\(\\s*)?|\\brequire\\s*\\(\\s*|\\b(?:jest|vi)\\.mock\\s*\\(\\s*)['"\\x60]([^'"\\x60]+)['"\\x60]/g;
+  /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*|\b(?:jest|vi)\.mock\s*\(\s*)['"\x60]([^'"\x60]+)['"\x60]/g;
 
 const resolveImport = (consumer, specifier) => {
   const target = specifier.startsWith('@/') ?
@@ -24,7 +24,7 @@ const resolveImport = (consumer, specifier) => {
     specifier.startsWith('.') ?
       path.posix.normalize(path.posix.join(path.posix.dirname(consumer), specifier)) :
       null;
-  return target?.replace(/\\.(?:ts|tsx|js|jsx|mjs|mts)$/, '') ?? null;
+  return target?.replace(/\.(?:ts|tsx|js|jsx|mjs|mts)$/, '') ?? null;
 };
 
 const sourceOf = (relative) => readFileSync(ROOT + '/' + relative, 'utf8');
@@ -39,7 +39,7 @@ test('the seven page-only legacy service proxies stay retired', () => {
 test('tracked frontend import graph does not reference retired proxy modules', () => {
   const files = execFileSync('git', ['ls-files', '-z', '--', ROOT], {
     encoding: 'utf8',
-  }).split('\\0').filter(file => /\\.[cm]?[jt]sx?$/.test(file) && existsSync(file));
+  }).split('\0').filter(file => /\.[cm]?[jt]sx?$/.test(file) && existsSync(file));
   assert.ok(files.length > 100, 'full frontend import audit unexpectedly empty');
   const violations = [];
   for (const file of files) {
