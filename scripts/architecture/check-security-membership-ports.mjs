@@ -76,7 +76,7 @@ export function validateMembershipPorts(files) {
       errors.push(name + ' must route pure operations through Platform using the identical legacy DAO instance');
     }
     if (!src.includes('yakSecurityTransactionManager') ||
-        !src.includes('permissionCache.invalidate')) {
+        !/permissionCache(?:\\.|::)invalidate/.test(src)) {
       errors.push(name + ' must retain Security transactions and cache invalidation');
     }
   }
