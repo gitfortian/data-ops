@@ -71,6 +71,48 @@ class SecurityPersistenceAssemblyContractTest {
     }
 
     @Test
+    void persistenceConfigurationRetainsConditionalDatabaseIsolation() {
+        org.springframework.boot.autoconfigure.condition.ConditionalOnProperty condition =
+                DataSourceConfig.class.getAnnotation(
+                        org.springframework.boot.autoconfigure.condition.ConditionalOnProperty.class);
+        assertNotNull(condition);
+        assertEquals("yak.security", condition.prefix());
+        assertArrayEquals(new String[] {"database-enabled", "datasource.enabled"},
+                condition.name());
+        assertEquals("true", condition.havingValue());
+        assertTrue(condition.matchIfMissing());
+        assertNotNull(DataSourceConfig.class.getAnnotation(
+                org.springframework.boot.autoconfigure.condition.ConditionalOnClass.class));
+    }
+
+    @Test
+    void flywayStartupAndTransactionBeanKeepTheirOriginalNamesAndSources()
+            throws Exception {
+        Method flyway = DataSourceConfig.class.getMethod("yakSecurityFlyway",
+                javax.sql.DataSource.class, YakSecurityProperties.class);
+        Bean flywayBean = flyway.getAnnotation(Bean.class);
+        assertNotNull(flywayBean);
+        assertEquals("yakSecurityFlyway", flywayBean.name()[0]);
+        assertEquals("migrate", flywayBean.initMethod());
+        assertEquals("yakSecurityDataSource",
+                flyway.getParameters()[0].getAnnotation(Qualifier.class).value());
+
+        Method transaction = DataSourceConfig.class.getMethod(
+                "yakSecurityTransactionManager", javax.sql.DataSource.class);
+        assertEquals("yakSecurityTransactionManager",
+                transaction.getAnnotation(Bean.class).value()[0]);
+        assertEquals("yakSecurityDataSource",
+                transaction.getParameters()[0].getAnnotation(Qualifier.class).value());
+
+        Method template = DataSourceConfig.class.getMethod(
+                "yakSecuritySqlSessionTemplate", org.apache.ibatis.session.SqlSessionFactory.class);
+        assertEquals("yakSecuritySqlSessionTemplate",
+                template.getAnnotation(Bean.class).value()[0]);
+        assertEquals("yakSecuritySqlSessionFactory",
+                template.getParameters()[0].getAnnotation(Qualifier.class).value());
+    }
+
+    @Test
     void missingApplicationNameFailsClosedBeforeConstructingTenantPlugin() {
         YakSecurityProperties properties = new YakSecurityProperties();
         assertThrows(IllegalStateException.class,
