@@ -45,11 +45,17 @@ public class DataServiceUsageEvidenceSynchronizer {
     int limit = Math.max(1, Math.min(200, requestedLimit));
     List<InvocationRecord> audit = callLogReader.successfulPageByApiAndRevision(
         apiId, sourceRevisionId, beforeInvocationId, limit);
-    // A missing ID would allow a successful-looking response with no usable continuation.
+    // Reject corrupt, duplicated or unsorted pages before any usage normalization writes.
+    Long previousId = beforeInvocationId;
+    if (audit.size() > limit) {
+      throw new IllegalStateException("Persisted invocation recovery page exceeded the requested limit");
+    }
     for (InvocationRecord invocation : audit) {
-      if (invocation == null || invocation.id() == null || invocation.id() <= 0L) {
-        throw new IllegalStateException("Persisted invocation recovery page has no durable cursor");
+      if (invocation == null || invocation.id() == null || invocation.id() <= 0L
+          || (previousId != null && invocation.id() >= previousId)) {
+        throw new IllegalStateException("Persisted invocation recovery page has an invalid descending cursor");
       }
+      previousId = invocation.id();
     }
     List<UsageNormalizationResult> normalized = audit.stream()
         .map(normalizer::normalize)

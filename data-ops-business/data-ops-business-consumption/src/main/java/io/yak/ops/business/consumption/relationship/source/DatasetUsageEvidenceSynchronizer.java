@@ -52,6 +52,17 @@ public class DatasetUsageEvidenceSynchronizer {
     List<DatasetSuccessfulQueryAudit> audits =
         performanceReader.successfulPageByDatasetAndVersion(
             datasetId, datasetVersionId, beforeAuditId, limit);
+    // A corrupt or unordered persisted page must not advance the durable recovery cursor.
+    Long previousId = beforeAuditId;
+    if (audits.size() > limit) {
+      throw new IllegalStateException("Persisted Dataset audit page exceeded the requested limit");
+    }
+    for (DatasetSuccessfulQueryAudit audit : audits) {
+      if (audit == null || audit.auditId() <= 0L || (previousId != null && audit.auditId() >= previousId)) {
+        throw new IllegalStateException("Persisted Dataset audit page has an invalid descending cursor");
+      }
+      previousId = audit.auditId();
+    }
     List<UsageNormalizationResult> results = audits.stream()
         .map(audit -> normalizer.normalize(projectId, audit.trace()))
         .toList();

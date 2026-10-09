@@ -11,6 +11,7 @@ import io.yak.ops.business.consumption.relationship.UsageEvidenceService;
 import io.yak.ops.business.consumption.relationship.UsageNormalizationState;
 import io.yak.ops.business.dataset.DatasetQueryPerformance;
 import io.yak.ops.business.dataset.DatasetQueryStatus;
+import io.yak.ops.business.dataset.DatasetSuccessfulQueryEvent;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +62,36 @@ class DatasetUsageEvidenceNormalizerTest {
 
     assertEquals(UsageNormalizationState.GAP, result.state());
     assertEquals(0, repository.values.size());
+  }
+
+  @Test
+  void conflictingSourceEventProjectNeverCreatesCrossProjectUsage() {
+    InMemoryRepository repository = new InMemoryRepository();
+    DatasetSuccessfulQueryEvent event = new DatasetSuccessfulQueryEvent(
+        7L, "q-cross", 88L, 9001L, 12,
+        "USER", "SECURITY_PRINCIPAL", "alice", "alice",
+        Instant.parse("2026-09-25T01:00:00Z"));
+
+    var result = normalizer(repository).normalize(8L, event);
+
+    assertEquals(UsageNormalizationState.GAP, result.state());
+    assertEquals("query:q-cross", result.providerEvidenceRef());
+    assertEquals(0, repository.values.size());
+  }
+
+  @Test
+  void sameSourceEventProjectCanNormalizeExactVersionAndConsumer() {
+    InMemoryRepository repository = new InMemoryRepository();
+    DatasetSuccessfulQueryEvent event = new DatasetSuccessfulQueryEvent(
+        7L, "q-valid", 88L, 9001L, 12,
+        "USER", "SECURITY_PRINCIPAL", "alice", "alice",
+        Instant.parse("2026-09-25T01:00:00Z"));
+
+    var result = normalizer(repository).normalize(7L, event);
+
+    assertEquals(UsageNormalizationState.NORMALIZED, result.state());
+    assertEquals(7L, result.evidence().projectId());
+    assertEquals("9001", result.evidence().sourceVersion().identity());
   }
 
   @Test

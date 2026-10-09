@@ -26,6 +26,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { verifySourceUsagePair } from './p0-source-usage-evidence-contract.mjs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -272,6 +273,10 @@ async function main() {
     'DATASET', DATASET_ID, datasetKey, `DATASET_QUERY_PERFORMANCE:query:${datasetQueryId}`);
   const dataServiceConsumption = await captureConsumption(
     'DATA_SERVICE', DATA_SERVICE_ID, dataServiceKey, `DATA_SERVICE_INVOCATION:invocation:${invocationId}`);
+  // No successful-looking Phase4 bundle unless persisted source facts and normalized Usage
+  // prove the exact version, managed consumer and real audit IDs for BOTH query and invoke.
+  const sourceUsageAssertions = verifySourceUsagePair(
+    datasetGolden, dataServiceGolden, datasetConsumption, dataServiceConsumption);
 
   const bundle = {
     probe: 'phase4-real-env-acceptance',
@@ -294,6 +299,7 @@ async function main() {
     },
     negativeEvidence,
     assertions: {
+      ...sourceUsageAssertions,
       datasetRealQueryEvidence: !!datasetQueryId,
       dataServicePublicInvokeEvidence: !!invocationId,
       dataServiceExternalAuthorizationBoundary: dataServiceGolden.invocationRecord?.consumerId != null

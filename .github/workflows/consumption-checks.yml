@@ -23,6 +23,7 @@ on:
       - 'data-ops-ui/config/routes.ts'
       - 'data-ops-ui/scripts/check-consumption-type-errors.mjs'
       - 'scripts/product/phase4-real-env-*.mjs'
+      - 'scripts/product/p0-source-usage-evidence-contract*.mjs'
       - '.github/workflows/consumption-checks.yml'
 
 jobs:
@@ -43,7 +44,7 @@ jobs:
           mvn -B
           -pl data-ops-business/data-ops-business-consumption
           -am
-          -Dtest=*Golden*,*QueryPerformance*Test,ConsumptionContractFoundationTest,*DataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,*UsageEvidenceNormalizerTest,ConsumerImpactServiceTest
+          -Dtest=*Golden*,*QueryPerformance*Test,ConsumptionContractFoundationTest,*DataProductProviderTest,ProductDiscoveryServiceTest,CanonicalProductServiceTest,SubscriptionServiceTest,UsageEvidenceServiceTest,*UsageEvidenceNormalizerTest,*UsageEvidenceSynchronizerTest,ConsumerImpactServiceTest
           -Dsurefire.failIfNoSpecifiedTests=false
           test
       - name: Verify executable Boot assembly contains Consumption
@@ -70,6 +71,8 @@ jobs:
           node-version: '20'
           cache: yarn
           cache-dependency-path: data-ops-ui/yarn.lock
+      - name: Verify source-owned successful audit and exact Usage receipt contract
+        run: node --test ../scripts/product/p0-source-usage-evidence-contract.test.mjs
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Typecheck and gate Phase 4 consumption surfaces
