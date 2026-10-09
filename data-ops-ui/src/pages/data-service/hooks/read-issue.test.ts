@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { useLatestDataServiceRead } from './useLatestDataServiceRead';
-import { classifyDataServiceReadIssue } from './read-issue';
+import { classifyDataServiceDetailReadIssue, classifyDataServiceReadIssue } from './read-issue';
 
 describe('data service scoped read truth', () => {
   it('lets only the last request write and invalidates requests on unmount', () => {
@@ -19,5 +19,14 @@ describe('data service scoped read truth', () => {
     expect(classifyDataServiceReadIssue({ response: { status: 404 } })).toBe('UNAVAILABLE');
     expect(classifyDataServiceReadIssue({ response: { status: 500 } })).toBe('UNAVAILABLE');
     expect(classifyDataServiceReadIssue(new Error('timeout'))).toBe('UNAVAILABLE');
+  });
+});
+
+describe('Data Service details never infer true absence from unknown failures', () => {
+  it('keeps 403, 404 and 500 distinct without inventing a successful empty API', () => {
+    expect(classifyDataServiceDetailReadIssue({ response: { status: 403 } })).toBe('FORBIDDEN');
+    expect(classifyDataServiceDetailReadIssue({ response: { status: 404 } })).toBe('NOT_FOUND_OR_INACCESSIBLE');
+    expect(classifyDataServiceDetailReadIssue({ response: { status: 503 } })).toBe('UNAVAILABLE');
+    expect(classifyDataServiceDetailReadIssue(undefined)).toBe('UNAVAILABLE');
   });
 });

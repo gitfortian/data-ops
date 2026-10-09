@@ -27,6 +27,7 @@ type SectionKey = (typeof SECTION_ITEMS)[number]['key'];
 interface ConsumerManagementPanelProps {
   consumer: DataServiceConsumer;
   apis: DataServiceAccessOverviewItem[];
+  apiOverviewAvailable: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onRefresh: () => void;
@@ -109,6 +110,7 @@ function SectionNavigator({ activeKey, onSelect }: SectionNavigatorProps) {
 export default function ConsumerManagementPanel({
   consumer,
   apis,
+  apiOverviewAvailable,
   onEdit,
   onDelete,
   onRefresh,
@@ -229,6 +231,7 @@ export default function ConsumerManagementPanel({
               <ConsumerApiAccessPanel
                 consumer={consumer}
                 apis={apis}
+                apiOverviewAvailable={apiOverviewAvailable}
                 onChanged={onConsumerChanged}
               />
             </div>

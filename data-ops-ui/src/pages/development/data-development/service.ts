@@ -4,7 +4,7 @@ import {
   previewDevelopmentSqlLineageRequest,
   publishDevelopmentTask as publishDevelopmentTaskRequest,
   runDevelopmentTask as runDevelopmentTaskRequest,
-} from '@/services/data-development/legacy';
+} from '@/services/data-development/workbench-compat';
 import {
   validateDevelopmentTaskPublish,
   type DevelopmentTaskPublishValidation,
@@ -31,12 +31,6 @@ import type {
   DevelopmentTaskRevision,
   SaveDevelopmentTaskDraftPayload,
 } from './types';
-
-/**
- * @deprecated New data-development code should import from
- * `@/services/data-development`.
- */
-export * from '@/services/data-development/legacy';
 
 const draftPath = (nodeId: DevelopmentId) =>
   `/api/v1/data-development/nodes/${encodeURIComponent(nodeId)}/draft`;

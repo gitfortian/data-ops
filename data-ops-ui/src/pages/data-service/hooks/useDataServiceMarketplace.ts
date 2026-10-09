@@ -10,6 +10,7 @@ import {
 } from '@/services/data-service';
 import { useAccess, useIntl } from '@umijs/max';
 import { message } from 'antd';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from './read-issue';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -40,44 +41,55 @@ export const useDataServiceMarketplace = () => {
   const [keyword, setKeyword] = useState('');
   const [submittedKeyword, setSubmittedKeyword] = useState('');
   const [detailTarget, setDetailTarget] = useState<DataServiceApi>();
+  const [catalogIssue, setCatalogIssue] = useState<DataServiceReadIssue | null>(null);
+  const [sourceUnavailable, setSourceUnavailable] = useState(false);
+  const [callStatsUnavailable, setCallStatsUnavailable] = useState(false);
 
   const loadMarketplace = useCallback(async () => {
     const requestSequence = requestSequenceRef.current + 1;
     requestSequenceRef.current = requestSequence;
     setLoading(true);
+    setCatalogIssue(null);
+    setSourceUnavailable(false);
+    setCallStatsUnavailable(false);
+    // Never leave API rows or write targets from a previous Project/read visible.
+    setServices([]);
+    setDataSources([]);
+    setLogs([]);
+    setDetailTarget(undefined);
 
-    try {
-      const [serviceResult, dataSourceResult, logResult] = await Promise.all([
-        listDataServices(),
-        listDataServiceDataSources(),
-        canObserve ? listRecentDataServiceLogs() : Promise.resolve([]),
-      ]);
-      if (requestSequence !== requestSequenceRef.current) return;
+    // Source names and call counts are optional projections, not prerequisites
+    // for reading the authoritative Data Service API list.
+    const [catalog, source, recent] = await Promise.allSettled([
+      listDataServices(),
+      listDataServiceDataSources(),
+      canObserve ? listRecentDataServiceLogs() : Promise.resolve([]),
+    ]);
+    if (requestSequence !== requestSequenceRef.current) return;
 
-      const nextServices = serviceResult || [];
-      setServices(nextServices);
-      setDataSources(dataSourceResult || []);
-      setLogs(logResult || []);
-      setDetailTarget((current) =>
-        current
-          ? nextServices.find((service) => service.id === current.id)
-          : undefined,
-      );
-    } catch (error) {
-      if (requestSequence === requestSequenceRef.current) {
-        message.error(
-          error instanceof Error
-            ? error.message
-            : intlRef.current.formatMessage({
-                id: 'pages.dataService.message.loadFailed',
-              }),
-        );
+    if (catalog.status === 'rejected' || !Array.isArray(catalog.value)) {
+      setCatalogIssue(classifyDataServiceReadIssue(
+        catalog.status === 'rejected' ? catalog.reason
+          : new Error('API list returned no valid data')));
+      message.error(intlRef.current.formatMessage({
+        id: 'pages.dataService.message.loadFailed',
+      }));
+    } else {
+      setServices(catalog.value);
+      if (source.status === 'fulfilled' && Array.isArray(source.value)) {
+        setDataSources(source.value);
+      } else {
+        setSourceUnavailable(true);
       }
-    } finally {
-      if (requestSequence === requestSequenceRef.current) {
-        setLoading(false);
+      if (canObserve) {
+        if (recent.status === 'fulfilled' && Array.isArray(recent.value)) {
+          setLogs(recent.value);
+        } else {
+          setCallStatsUnavailable(true);
+        }
       }
     }
+    setLoading(false);
   }, [canObserve]);
 
   useEffect(() => {
@@ -231,13 +243,17 @@ export const useDataServiceMarketplace = () => {
     keyword,
     submittedKeyword,
     detailTarget,
+    catalogIssue,
+    sourceUnavailable,
+    callStatsUnavailable,
+    loadMarketplace,
     callsByApiId,
     runningServices,
     recommendedServices,
     hotServices,
     searchResults,
     searching: Boolean(submittedKeyword.trim()),
-    totalCalls: canObserve ? logs.length : undefined,
+    totalCalls: canObserve && !callStatsUnavailable && !catalogIssue ? logs.length : undefined,
     canObserve,
     canManage,
     canDelete,

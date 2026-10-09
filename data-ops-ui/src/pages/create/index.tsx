@@ -1,7 +1,6 @@
 import YakButton from '@/components/YakButton';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import { createDevelopmentNode } from '@/services/data-development/legacy';
-import type { DevelopmentNodeType } from '@/services/data-development';
+import { createDevelopmentNode, type DevelopmentNodeType } from '@/services/data-development';
 import {
   API_SUCCESS_CODE,
   extractErrorMessage,
@@ -1350,7 +1349,7 @@ export default function UnifiedCreatePage() {
         displayedType ===
         'development'
       ) {
-        const response =
+        const created =
           await createDevelopmentNode(
             {
               name,
@@ -1364,11 +1363,9 @@ export default function UnifiedCreatePage() {
             },
           );
 
-        const created =
-          unwrapApiResponse(
-            response,
-            '创建数据开发节点失败',
-          );
+        if (!created) {
+          throw new Error('创建数据开发节点失败');
+        }
 
         message.success(
           '开发节点已创建，正在打开编辑器',

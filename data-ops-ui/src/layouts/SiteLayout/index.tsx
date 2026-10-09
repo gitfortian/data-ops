@@ -8,6 +8,8 @@ import {
   type NavigationIconKey,
 } from "@/config/navigation";
 import { RouteAccessBoundary } from "@/components/security";
+import AgentAvailabilityBoundary from '@/components/ai/AgentAvailabilityBoundary';
+import { AgentAvailabilityProvider, useAgentAvailability } from '@/contexts/AgentAvailabilityContext';
 import SecurityProjectSwitcher from "@/components/security/SecurityProjectSwitcher";
 import { SecurityProjectProvider, useSecurityProject } from "@/contexts/SecurityProjectContext";
 import { logout } from "@/services/security/account";
@@ -263,6 +265,7 @@ function BrandLogo({ compact }: { compact: boolean }) {
 
 function SiteLayoutContent() {
   const location = useLocation();
+  const { agentEnabled } = useAgentAvailability();
   const { initialState, setInitialState } = useModel("@@initialState");
   const currentUser = initialState?.currentUser;
   const permissionCodes = currentUser?.permissionCodes;
@@ -698,11 +701,11 @@ function SiteLayoutContent() {
             onClick={() => history.push("/system/messages")}
           />
 
-          <HeaderAction
+          {agentEnabled === true && <HeaderAction
             icon={<Sparkles className="h-[17px] w-[17px]" strokeWidth={1.8} />}
             label="智能助手"
             onClick={() => history.push("/ai-agent")}
-          />
+          />}
 
           <SecurityProjectSwitcher />
 
@@ -766,7 +769,9 @@ function SiteLayoutContent() {
               permissionCodes={permissionCodes}
               menuCodes={menuCodes}
             >
-              <Outlet />
+              {location.pathname === '/ai-agent' || location.pathname.startsWith('/ai-agent/')
+                ? <AgentAvailabilityBoundary><Outlet /></AgentAvailabilityBoundary>
+                : <Outlet />}
             </RouteAccessBoundary>
           </div>
         </div>
@@ -778,5 +783,5 @@ function SiteLayoutContent() {
 }
 
 export default function SiteLayout() {
-  return <SecurityProjectProvider><SiteLayoutContent /></SecurityProjectProvider>;
+  return <SecurityProjectProvider><AgentAvailabilityProvider><SiteLayoutContent /></AgentAvailabilityProvider></SecurityProjectProvider>;
 }
