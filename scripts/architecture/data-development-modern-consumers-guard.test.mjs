@@ -65,3 +65,65 @@ test('historical coordinator remains present while Workbench use-cases depend on
     assert.ok(source.includes(behavior), 'Workbench business guard missing: ' + behavior);
   }
 });
+
+test('Workbench migrated query and execution commands never use the envelope facade', () => {
+  const workbench = readFileSync(
+    'data-ops-ui/src/pages/development/data-development/components/workbench/DevelopmentWorkbench.tsx',
+    'utf8',
+  );
+  const modern = readFileSync(
+    'data-ops-ui/src/pages/development/data-development/components/workbench/workbenchModernApi.ts',
+    'utf8',
+  );
+
+  const match = workbench.match(/import\s*\{([^}]+)\}\s*from\s*'\.\.\/\.\.\/service'/);
+  assert.ok(match, 'Workbench must still use its special page coordinator');
+  const exportedNames = match[1].split(',').map((name) => name.trim()).filter(Boolean).sort();
+  assert.deepEqual(exportedNames, [
+    'previewDevelopmentSqlLineage',
+    'publishDevelopmentTask',
+    'runDevelopmentTask',
+    'saveDevelopmentTaskDraft',
+  ].sort(), 'Only guarded save/run/publish/SQL preview may use the page coordinator');
+
+  for (const name of [
+    'loadWorkbenchDraft',
+    'loadWorkbenchActiveExecution',
+    'readWorkbenchExecution',
+    'cancelWorkbenchExecution',
+    'retryWorkbenchExecution',
+  ]) {
+    assert.ok(workbench.includes(name), 'Workbench does not call modern ' + name);
+    assert.ok(modern.includes('export const ' + name), 'modern boundary missing ' + name);
+  }
+  for (const name of [
+    'getDevelopmentTaskDraft',
+    'getActiveDevelopmentTaskExecution',
+    'getDevelopmentTaskExecution',
+    'cancelDevelopmentTaskExecution',
+    'retryDevelopmentTaskExecution',
+  ]) {
+    assert.ok(modern.includes(name), 'modern HTTP service missing ' + name);
+    assert.ok(!exportedNames.includes(name), 'legacy HTTP read/action reintroduced: ' + name);
+  }
+  assert.ok(modern.includes("from '@/services/data-development'"),
+    'Workbench modern boundary must use modern data-only services');
+});
+
+test('Workbench keeps conflict-aware Save, preflight Run, confirmed Publish and editor SQL preview', () => {
+  const workbench = readFileSync(
+    'data-ops-ui/src/pages/development/data-development/components/workbench/DevelopmentWorkbench.tsx',
+    'utf8',
+  );
+  const protectedCommands = [
+    'saveDevelopmentTaskDraft(',
+    'runDevelopmentTask(',
+    'publishDevelopmentTask(',
+    'previewDevelopmentSqlLineage(',
+  ];
+  for (const name of protectedCommands) {
+    assert.ok(workbench.includes(name), 'protected page coordinator bypassed: ' + name);
+  }
+  assert.equal((workbench.match(/\bresponseData\(/g) || []).length, 4,
+    'raw envelope unwraps should remain only in four protected coordination corridors');
+});
