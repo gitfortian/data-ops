@@ -23,7 +23,7 @@ POST /api/v1/consumption/impact/dataset-version-recovery?productKey=DATASET:101&
 
 响应为已有 `Result<DatasetAuditRecoveryView>` 包装；业务字段包括 `productKey`、`sourceVersionIdentity`、`requestedBeforeAuditId`、`requestedLimit`、`visitedAuditCount`、`normalizedOrAlreadyPresentCount`、`normalizationGapCount`、`normalizationUnavailableCount`、`nextBeforeAuditId`、`retryRequired` 和 `retainedAuditExhausted`。
 
-- `beforeAuditId` 是**数据库持久化成功审计行 ID 的排他上界**，不是 QueryId，不是版本号，也不是按时间构造的 OFFSET。按 `id DESC` 顺序翻页，后续新插入的较大 ID 不改变旧页边界。
+- `beforeAuditId` 是**数据库持久化成功审计行 ID 的排他上界**，不是 QueryId，不是版本号，也不是按时间构造的 OFFSET。按 `id DESC` 顺序翻页，后续新插入的较大 ID 不改变旧页边界。HTTP 查询参数及 JSON `requestedBeforeAuditId` / `nextBeforeAuditId` 统一使用 canonical 正整数十进制**字符串**（或 null），避免 JavaScript Number 丢失 BIGINT 精度；旧 HTTP 客户端继续传合法十进制参数文本即可，响应字段类型由 number 调整为 string。
 - SQL 先限定当前 Project、精确 Dataset、精确不可变 DatasetVersion、`SUCCESS` 和可选 `id < beforeAuditId`，再执行 `ORDER BY id DESC LIMIT <=200`。跨 Project 没有审计可读；无 Project、非法 ID、无数据库 provider 均不假装为空成功。
 - 对每行复用原有 QueryId 去重键和幂等插入；重复同页可以安全重试，不会产生多份成功 Usage。
 - `NORMALIZED` 表示这次调用得到了规范化证据，**包括已经存在的幂等记录**，不是“新插入数量”。
