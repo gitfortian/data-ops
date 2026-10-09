@@ -159,6 +159,40 @@ python scripts/product/golden-sample/historical_recovery.py --apply `
 
 离线 `test_historical_recovery.py` 包含 >200 条门槛、早期缺失证据、BIGINT、跨页、满页后空页、游标伪造、来源 SQL 精确谓词及 normalized Usage Consumer 不一致反例；由现有 Golden Consumption Evidence Contract 工作流执行。**CI 不运行真实 POST 或应用数据库**。
 
+## R4：历史恢复拒绝路径的真实 HTTP + 数据库不变性验收
+
+`historical_recovery_denials.py` 专门验证 #336 的两类精确版本恢复 **失败、权限、跨 Project、HTTP 方法及游标输入反例**。与 R3 不同：它不需要准备同版本的 201+ 条 SUCCESS 审计，只要求原 R2 专属 Sample 仍有至少一条真实成功 Query / Invoke 的保留审计，因此可独立执行。默认只打印 PLAN、不登录、不访问数据库。
+
+```powershell
+# R1 bootstrap 和 R2 consumption.py --apply --accept 完成后，在隔离部署执行。
+# 复用前文 YAK_OPS_* 登录态设置和 YAK_GOLDEN_APP_MYSQL_* 只读账号。
+python scripts/product/golden-sample/historical_recovery_denials.py
+
+# 可选：真实的 Project 成员、但不具有 Asset.READ 权限的受限测试账号。
+$env:YAK_GOLDEN_RESTRICTED_USERNAME = Read-Host '受限验收账号'
+$env:YAK_GOLDEN_RESTRICTED_PASSWORD = Read-Host '受限验收密码' -MaskInput
+
+python scripts/product/golden-sample/historical_recovery_denials.py --apply `
+  --physical-manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json `
+  --consumption-report docs/product/acceptance/golden-sample/consumption-acceptance.local.json `
+  --kind BOTH `
+  --output docs/product/acceptance/golden-sample/recovery-denials.local.json
+```
+
+**实际执行的检查**：首先通过原 R1/R2 manifest 验证两个真实 Project 均带 `yak-golden-sample-v1` 所有权标记，用只读 SQL 固定两个 Project **全部 Usage** 与精确版本成功来源审计的有界快照。控制 Project 没有对应审计时，正常 POST 必须返回 0 行、无下一游标且明确保留审计耗尽。随后逐项拒绝：
+
+- 不携带 Cookie 的匿名 POST，即使伪造 Project Header；
+- 已登录但缺失 Project Header 的 POST；GET 到恢复路径（不得靠 GET 执行投影写入）；
+- 将 Dataset/ProductType 与 Data Service 路由颠倒、非 canonical 的版本 `01`；
+- 非法十进制 BIGINT 游标 `0`、`01`、`-1`、`1.0`、溢出 `9223372036854775808`；
+- **可选**缺乏 Asset.READ 的受限账号在真实 Project 内调用 POST；未提供受限账号则单独 `PENDING_NO_RESTRICTED_TEST_ACCOUNT`，不是通过。
+
+每一个请求都要返回 HTTP 4xx 或确切的非成功应用错误码，**不接受 HTTP 5xx / 服务器内部异常伪装成权限拒绝**；每次请求后只读复核两个隔离 Project 的 Usage 行及来源审计未发生变化。为避免无界扫描，任一快照超过 10,000 行便 exit 2 / `PENDING`。应用数据库账号必须只有 SELECT，不会通过 SQL 改动数据；所有探针调用的也是预期拒绝或无来源的 POST，不造假消费、不删审计、不清理缓存。
+
+运行结果只记录场景名、HTTP 状态或脱敏应用错误码和整体不变性；不输出 Cookie、Authorization、API Key、用户名、响应体或原始行。受限账号若不是同 Project 的合法成员，也可能先被 Project 门禁拒绝：该状态只能声称“受限身份被拒绝”，**不能单独证明 Asset.READ 授权细分**，成员身份与授权码需在受控环境另行查证。
+
+**真实验收边界**：本脚本即使通过，也仅证明当前部署环境的这些负向 HTTP/SQL 路径，报告仍为 `productAcceptance=PARTIAL`、`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`。来源缺少真实 SUCCESS、Project 不受本 Sample 所有、SQL 快照超过预算时不生成 PASS。受限角色未准备、>200 历史恢复（另见 R3）、来源 GAP/存储失联后的原页重试、浏览器和可核验的部署产物 SHA 都保持 #336 的独立 PENDING。CLI 离线单元测试位于 `test_historical_recovery_denials.py`，由既有 Golden Evidence CI 执行，**不等于真实登录执行**。
+
 ## 后续批次
 
 补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
