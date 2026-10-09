@@ -45,7 +45,12 @@ class SecurityPersistenceAssemblyContractTest {
         MybatisPlusInterceptor plugin =
                 new DataSourceConfig().yakSecurityMybatisPlusInterceptor(properties);
         assertEquals(2, plugin.getInterceptors().size());
-        assertInstanceOf(TenantLineInnerInterceptor.class, plugin.getInterceptors().get(0));
+        TenantLineInnerInterceptor tenant =
+                assertInstanceOf(TenantLineInnerInterceptor.class, plugin.getInterceptors().get(0));
+        assertEquals("app_name", tenant.getTenantLineHandler().getTenantIdColumn());
+        assertEquals("a82_contract",
+                ((net.sf.jsqlparser.expression.StringValue)
+                        tenant.getTenantLineHandler().getTenantId()).getValue());
         assertInstanceOf(PaginationInnerInterceptor.class, plugin.getInterceptors().get(1));
     }
 
