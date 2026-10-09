@@ -160,6 +160,106 @@ class SecurityProjectRbacFlywayJdbcTest {
     }
   }
 
+  @Test
+  void mysqlHigherAppliedHostFlywayHistoryAllowsSecurityV1OutOfOrder() throws Exception {
+    String url = System.getenv("ARCHITECTURE_MYSQL_URL");
+    Assumptions.assumeTrue(url != null && !url.isBlank(), "MySQL service not configured");
+    String user = System.getenv("ARCHITECTURE_MYSQL_USERNAME");
+    String pass = System.getenv("ARCHITECTURE_MYSQL_PASSWORD");
+    String database = unique("a82future_m");
+    try (Connection admin = DriverManager.getConnection(url, user, pass);
+         Statement statement = admin.createStatement()) {
+      statement.execute("CREATE DATABASE `" + database + "`");
+    }
+    try {
+      assertHigherAppliedHostVersionBeforeSecurityV1(
+          mysqlDatabaseUrl(url, database), user, pass,
+          "classpath:yak-security/db/migration", null);
+    } finally {
+      try (Connection admin = DriverManager.getConnection(url, user, pass);
+           Statement statement = admin.createStatement()) {
+        statement.execute("DROP DATABASE IF EXISTS `" + database + "`");
+      }
+    }
+  }
+
+  @Test
+  void postgresHigherAppliedHostFlywayHistoryAllowsSecurityV1OutOfOrder() throws Exception {
+    String url = System.getenv("ARCHITECTURE_PG_URL");
+    Assumptions.assumeTrue(url != null && !url.isBlank(), "PostgreSQL service not configured");
+    String user = System.getenv("ARCHITECTURE_PG_USERNAME");
+    String pass = System.getenv("ARCHITECTURE_PG_PASSWORD");
+    String schema = unique("a82future_p");
+    try (Connection admin = DriverManager.getConnection(url, user, pass);
+         Statement statement = admin.createStatement()) {
+      statement.execute("CREATE SCHEMA \"" + schema + "\"");
+    }
+    try {
+      assertHigherAppliedHostVersionBeforeSecurityV1(
+          url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema,
+          user, pass, "classpath:yak-security/db/migration-postgresql", schema);
+    } finally {
+      try (Connection admin = DriverManager.getConnection(url, user, pass);
+           Statement statement = admin.createStatement()) {
+        statement.execute("DROP SCHEMA IF EXISTS \"" + schema + "\" CASCADE");
+      }
+    }
+  }
+
+  /**
+   * A product with a successfully APPLIED V4 is different from a database
+   * BASELINED at V4: the latter excludes every migration below that baseline.
+   * This test ensures Security V1 can arrive after an already-applied host V4.
+   */
+  private static void assertHigherAppliedHostVersionBeforeSecurityV1(
+      String url, String user, String pass, String location, String schema)
+      throws Exception {
+    try (Connection connection = DriverManager.getConnection(url, user, pass);
+         Statement statement = connection.createStatement()) {
+      statement.execute("CREATE TABLE a82_existing_host_data(id INTEGER PRIMARY KEY)");
+      statement.execute("INSERT INTO a82_existing_host_data(id) VALUES (7)");
+    }
+
+    var hostConfig = Flyway.configure().dataSource(url, user, pass)
+        .locations("classpath:yak-security/test/host-migrations")
+        .baselineOnMigrate(true)
+        .baselineVersion(MigrationVersion.fromVersion("0"));
+    if (schema != null) hostConfig.schemas(schema).defaultSchema(schema);
+    Flyway host = hostConfig.load();
+    assertEquals(1, host.migrate().migrationsExecuted);
+    try (Connection connection = DriverManager.getConnection(url, user, pass)) {
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM a82_host_migrated WHERE id = ?", 17));
+    }
+
+    var securityConfig = Flyway.configure().dataSource(url, user, pass)
+        .locations(location)
+        .placeholders(Collections.singletonMap("appName", "a82_future_app"))
+        .baselineOnMigrate(true)
+        .baselineVersion(MigrationVersion.fromVersion("0"))
+        .outOfOrder(true);
+    if (schema != null) securityConfig.schemas(schema).defaultSchema(schema);
+    Flyway security = securityConfig.load();
+    assertEquals(1, security.migrate().migrationsExecuted);
+    assertTrue(security.validateWithResult().validationSuccessful);
+    assertEquals(0, security.migrate().migrationsExecuted);
+    try (Connection connection = DriverManager.getConnection(url, user, pass)) {
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM a82_existing_host_data WHERE id = ?", 7));
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM a82_host_migrated WHERE id = ?", 17));
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM yak_security_permission WHERE permission_code = ? AND app_name = ?",
+          "security:project:read", "a82_future_app"));
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM flyway_schema_history WHERE version = ? AND success = ?",
+          "4", true));
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM flyway_schema_history WHERE version = ? AND success = ?",
+          "1", true));
+    }
+  }
+
   private static void assertBaselineAndRelations(String url, String user, String pass,
       String location, String schema) throws Exception {
     try (Connection connection = DriverManager.getConnection(url, user, pass);
