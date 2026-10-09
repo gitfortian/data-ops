@@ -2,7 +2,7 @@ import type {
   DevelopmentDataServiceDefinition,
   DevelopmentDataServiceNodeContext,
   DevelopmentDataServiceParameter,
-} from "../../data-service-node-service";
+} from "@/services/data-development";
 import type { DevelopmentId, DevelopmentResourceNode } from "../../types";
 
 export const normalizeId = (value: unknown): DevelopmentId => {
