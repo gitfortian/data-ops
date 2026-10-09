@@ -1,11 +1,13 @@
 # PD-002 — Governed Consumption Contract
 
 Status: ACCEPTED  
-Implementation: NOT_STARTED  
+Implementation: PARTIAL  
 Date: 2026-09-24  
 Owner: Product  
 Related Feature: F-004  
 Related Issues: #100, #101
+
+> **2026-10-09 实施/验收校准（仅事实记录，不修改 ACCEPTED Decision）**：既有 Dataset / Data Service Consumption、Consumer/Subscription/Usage 和回链主体已有合入代码及历史 Golden API 证据；因此 Implementation 从 `NOT_STARTED` 校准为 `PARTIAL`。历史 R1/R2 不具备已核对的当前部署 commit/产物证据，且当前主线的真实登录浏览器、受限角色、跨 Project、真实 Query/Invoke → exact Usage/来源审计、错误 Key/IP、故障恢复尚未完成签收。**PARTIAL ≠ SHIPPED / E2E PASS**。详见 [P0 收口证据台账](../acceptance/p0-closeout-20261009.md) 与 [#336](https://github.com/gitfortian/data-ops/issues/336)。
 
 ## Context
 
