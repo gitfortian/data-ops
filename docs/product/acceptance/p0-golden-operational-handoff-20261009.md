@@ -7,7 +7,7 @@
 
 ## 1. 已确认事实与不能签收的事实
 
-- [PR #463](https://github.com/gitfortian/data-ops/pull/463)、[#466](https://github.com/gitfortian/data-ops/pull/466)、[#467](https://github.com/gitfortian/data-ops/pull/467) 已于 2026-10-09 **MERGED**。这三批是文档/静态核销，不是一个新的 Golden 部署。
+- [PR #463](https://github.com/gitfortian/data-ops/pull/463)、[#466](https://github.com/gitfortian/data-ops/pull/466)、[#467](https://github.com/gitfortian/data-ops/pull/467)、[#469](https://github.com/gitfortian/data-ops/pull/469) 均已于 2026-10-09 **MERGED**。这些批次是文档/静态核销，不是新的 Golden 部署。#469 最终 Product Guard、Golden 离线、Architecture 工作流均 SUCCESS；但没有真实部署签收。
 - 仓库有 **R1、R2 历史真实 API/DB 样本**：[`physical-acceptance-20261004.json`](golden-sample/physical-acceptance-20261004.json) 的 `deploymentCommit=null`；[`consumption-acceptance-20261004.json`](golden-sample/consumption-acceptance-20261004.json) 的 `deploymentCommit=null`。后者源审计基于不同历史 repositoryCommit；没有可核验的“当前 SHA 已部署”映射。
 - 2026-10-09 的仓库目录下**没有已提交**的 R3～R8 真实环境 `--apply` 结果报告；该结论只针对版本库内留存内容，**不推断运行环境、QA 私有存储或 CI artifact 一定不存在**。
 - [Golden CI 工作流](../../../.github/workflows/golden-consumption-evidence.yml) 的实际步骤为语法检查、Python fixture unittest、Node lossless identity 测试；**不会执行实际 HTTP POST/登录/应用库核对**，不能作为 E2E_PASS。
@@ -69,3 +69,5 @@
 - **不得触发新开发**：本轮的全部工作是对已有运行工具和验收合同取证；后续 P1 E1～E4 与 Model/Metric/MDM 的新样本能力，不应借“缺证据”为由在本 #336 自动开工。
 
 **当前裁决（2026-10-09）**：`GOLDEN=BLOCKED_EVIDENCE`、`P0_EXIT=NOT_SIGNED`。此文档没有新增 E2E PASS、运行结果、授权或部署环境。
+
+> **2026-10-09 D-04/D-05 后续收口**：旧导航 #288/#289 的当前代码和登录态验收边界已单独写入 [P0 最终退出与 P1 证据移交](p0-product-exit-p1-evidence-handoff-20261009.md)。本执行包的 Golden E-00～E-05 仍是全部真实 QA 的前置条件；无环境输入不新增同类 PR，未取得签收时继续 `BLOCKED_EVIDENCE`。

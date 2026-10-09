@@ -8,6 +8,8 @@ Feature ID: F-008
 关联产品决策：PD-001、PD-002、PD-003（ACCEPTED）
 关联 Issue：[#288](https://github.com/gitfortian/data-ops/issues/288)、[#289](https://github.com/gitfortian/data-ops/issues/289)
 
+> **2026-10-09 D-04 历史状态核销（本次不实施导航功能）**：[PR #296](https://github.com/gitfortian/data-ops/pull/296) 已于 2026-09-30 合并，`main@5b5318c5e8705e6d3795e9dafcfdae59b95d0dcf` 保有五域分组、消费目录、稳定菜单码与目录一致性测试；[历史验收](../acceptance/task-oriented-navigation.md) 记录自动化/本地模拟根账号走查。真正的 J1～J5 登录态、受限角色、Project/深链浏览器全链仍未取证，因此保留 `Status: IMPLEMENTING` 而非改为 SHIPPED。参见 [P0 D-04/D-05 退出记录](../acceptance/p0-product-exit-p1-evidence-handoff-20261009.md)。**当前工作只收口，不开发新功能。**
+
 ## 1. 目标、用户与结果
 
 主要用户为数据工程师、指标 Owner、治理人员、数据消费者、审批用户和平台管理员。
