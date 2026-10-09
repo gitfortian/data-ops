@@ -100,6 +100,26 @@ class MetricUsageServiceTest {
   }
 
   @Test
+  void syncBindingsPreflightFailureDoesNotMarkCallerTransactionForRollback() {
+    when(publicationService.activeForBinding(101L))
+        .thenThrow(new IllegalStateException("published metric lookup unavailable"));
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
+    TransactionSynchronizationManager.setActualTransactionActive(true);
+    try (MockedStatic<TransactionAspectSupport> transactionContext =
+        mockStatic(TransactionAspectSupport.class)) {
+      transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+          .thenReturn(transaction);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L));
+      verify(repository, never()).deleteForConsumer("DATASET", 42L);
+      verify(repository, never()).append(any(), any());
+      verify(transaction, never()).setRollbackOnly();
+    } finally {
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
+    }
+  }
+
+  @Test
   void syncBindingsMarksTransactionRollbackOnlyWhenAnInsertFailsAfterDeletion() {
     when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
     when(publicationService.activeForBinding(102L)).thenReturn(published(102L, 2));
@@ -107,6 +127,7 @@ class MetricUsageServiceTest {
         .when(repository).append(eq(7L),
             org.mockito.ArgumentMatchers.argThat(value -> value.metricId().equals(102L)));
     TransactionStatus transaction = mock(TransactionStatus.class);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
     TransactionSynchronizationManager.setActualTransactionActive(true);
     try (MockedStatic<TransactionAspectSupport> transactionContext =
         mockStatic(TransactionAspectSupport.class)) {
@@ -116,7 +137,7 @@ class MetricUsageServiceTest {
       verify(repository).deleteForConsumer("DATASET", 42L);
       verify(transaction).setRollbackOnly();
     } finally {
-      TransactionSynchronizationManager.setActualTransactionActive(false);
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
     }
   }
 
