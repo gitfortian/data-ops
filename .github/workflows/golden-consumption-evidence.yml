@@ -39,7 +39,7 @@ jobs:
           node-version: '20'
       - name: Validate runner syntax
         run: |
-          python -m py_compile scripts/product/golden-sample/consumption.py scripts/product/golden-sample/historical_recovery.py scripts/product/golden-sample/historical_recovery_denials.py scripts/product/golden-sample/historical_recovery_retry.py
+          python -m py_compile scripts/product/golden-sample/consumption.py scripts/product/golden-sample/historical_recovery.py scripts/product/golden-sample/historical_recovery_denials.py scripts/product/golden-sample/historical_recovery_retry.py scripts/product/golden-sample/historical_recovery_reader_outage.py
           node --check scripts/product/phase4-real-env-data-service-evidence.mjs
       - name: Run Python fixture and consumption acceptance contracts
         run: python -m unittest discover -s scripts/product/golden-sample -p 'test_*.py'
