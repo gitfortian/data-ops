@@ -15,6 +15,7 @@ interface DataServiceMarketplaceHomeProps {
   totalServices: number;
   runningServices: number;
   totalCalls?: number;
+  callStatsUnavailable: boolean;
   canObserve: boolean;
   dataSourceName: (dataSourceId?: number) => string;
   onKeywordChange: (value: string) => void;
@@ -31,6 +32,7 @@ const DataServiceMarketplaceHome = ({
   totalServices,
   runningServices,
   totalCalls,
+  callStatsUnavailable,
   canObserve,
   dataSourceName,
   onKeywordChange,
@@ -139,7 +141,7 @@ const DataServiceMarketplaceHome = ({
                     {intl.formatMessage({ id: 'pages.dataService.marketplace.recentCalls' })}
                   </div>
                   <div className="mt-1 text-[21px] font-semibold tabular-nums text-[#161823]">
-                    {canObserve ? totalCalls || 0 : '—'}
+                    {canObserve && !callStatsUnavailable ? totalCalls ?? 0 : '—'}
                   </div>
                 </div>
               </div>
@@ -179,11 +181,13 @@ const DataServiceMarketplaceHome = ({
                 <div className="flex h-[190px] items-center justify-center rounded-lg bg-white">
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description={intl.formatMessage({
-                      id: canObserve
-                        ? 'pages.dataService.marketplace.noCallRecords'
-                        : 'pages.dataService.marketplace.noObservePermission',
-                    })}
+                    description={callStatsUnavailable
+                      ? '调用统计来源暂不可用，不能判定为无调用'
+                      : intl.formatMessage({
+                          id: canObserve
+                            ? 'pages.dataService.marketplace.noCallRecords'
+                            : 'pages.dataService.marketplace.noObservePermission',
+                        })}
                   />
                 </div>
               )}
