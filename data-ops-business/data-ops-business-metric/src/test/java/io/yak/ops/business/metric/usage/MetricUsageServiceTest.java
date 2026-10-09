@@ -21,6 +21,7 @@ import io.yak.ops.business.metric.repository.MetricUsageRepository;
 import io.yak.ops.business.metric.repository.MetricUsageRepository.UsageTypeCount;
 import io.yak.ops.core.project.CurrentProject;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.Savepoint;
 import java.util.List;
 import javax.sql.DataSource;
@@ -222,9 +223,13 @@ class MetricUsageServiceTest {
   void jdbcSavepointRollbackAllowsTheOuterTransactionToCommit() throws Exception {
     DataSource dataSource = mock(DataSource.class);
     Connection connection = mock(Connection.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     Savepoint savepoint = mock(Savepoint.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.getAutoCommit()).thenReturn(true);
+    // Spring's ConnectionHolder checks JDBC metadata before creating a savepoint.
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(metadata.supportsSavepoints()).thenReturn(true);
     when(connection.setSavepoint(anyString())).thenReturn(savepoint);
     DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
 
@@ -242,6 +247,7 @@ class MetricUsageServiceTest {
     });
 
     verify(connection).rollback(savepoint);
+    verify(connection).releaseSavepoint(savepoint);
     verify(connection).commit();
     verify(connection, never()).rollback();
   }
