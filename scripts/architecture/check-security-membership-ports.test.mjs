@@ -46,3 +46,14 @@ test('A8.2g blocks Project service losing its dedicated transaction manager', ()
   files.projectService = files.projectService.replaceAll('yakSecurityTransactionManager', 'otherTransactionManager');
   assert.match(validateMembershipPorts(files).join('\n'), /Security transactions/);
 });
+
+test('A8.2 consolidation rejects redundant legacy DAO state in port-backed services', () => {
+  const files = readRepository();
+  files.projectService = files.projectService.replace('private final UserProjectMembershipPort membershipPort;',
+    'private final UserProjectMembershipPort membershipPort;\\n  private final UserProjectDao userProjectDao;');
+  assert.match(validateMembershipPorts(files).join('\\n'), /identical legacy DAO/);
+  const roles = readRepository();
+  roles.roleService = roles.roleService.replace('private final UserRoleAssignmentPort assignmentPort;',
+    'private final UserRoleAssignmentPort assignmentPort;\\n  private final UserRoleDao userRoleDao;');
+  assert.match(validateMembershipPorts(roles).join('\\n'), /identical legacy DAO/);
+});
