@@ -24,6 +24,9 @@ export function validateAuthzOwners(files) {
       || /cn\.dev33\.satoken|org\.springframework\.transaction|org\.springframework\.web/.test(src)) {
      errors.push('Platform contract must not depend on Framework/runtime: '+path);
    }
+   if(src.includes('import io.yak.framework.security.common.constant.')) {
+     errors.push('Platform contract must not import Starter permission facade: '+path);
+   }
  }
  const snap=files.get(NEW+'context/AuthorizationSnapshot.java')||'';
  if(!snap.includes('SecurityPermissionCode.ROOT') ||

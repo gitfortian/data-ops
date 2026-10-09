@@ -42,3 +42,11 @@ test('A8.2k-m refuses altering original Sa-Token user logout',()=>{
  files.set(p,files.get(p).replace('stpLogic.logout(userId)','stpLogic.logout()'));
  assert.match(validateAuthzOwners(files).join('\n'),/Sa-Token adapter/);
 });
+
+test('A8.2k-m forbids importing Security Starter facade from Platform Contract',()=>{
+ const files=readRepository(),p=NEW+'context/AuthorizationSnapshot.java';
+ files.set(p,files.get(p).replace(
+   'import io.yak.ops.platform.security.contract.SecurityPermissionCode;',
+   'import io.yak.framework.security.common.constant.SecurityPermissionCode;'));
+ assert.match(validateAuthzOwners(files).join('\n'),/Starter permission facade/);
+});
