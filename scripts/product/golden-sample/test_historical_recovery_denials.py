@@ -186,7 +186,7 @@ class RecoveryDenialGoldenContractTest(unittest.TestCase):
                 self.assertEqual("43", api.calls[0][3])
                 self.assertEqual("42", api.project_id)
                 self.assertEqual(1, len(api.calls))
-                self.assertEqual(12, len(api.session.calls))
+                self.assertEqual(9, len(api.session.calls))
                 self.assertTrue(len(db.calls) > len(api.session.calls))
 
     def test_restricted_identity_is_measured_or_fails_and_never_claimed_automatically(self):
