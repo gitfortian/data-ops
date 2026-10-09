@@ -11,7 +11,7 @@
     </parent>
     <artifactId>data-ops-platform-security-runtime</artifactId>
     <name>Data Ops Security Platform Runtime</name>
-    <description>Sa-Token authentication adapter with preserved binary compatibility</description>
+    <description>Security authentication, configuration, request context and audit runtime with preserved binary compatibility</description>
     <dependencies>
         <dependency>
             <groupId>io.yak.ops</groupId>
@@ -26,6 +26,12 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
         </dependency>
+        <!-- Preserve existing Lombok-generated configuration getters and setters. -->
+        <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-configuration-processor</artifactId><optional>true</optional></dependency>
+        <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId></dependency>
+        <dependency><groupId>jakarta.servlet</groupId><artifactId>jakarta.servlet-api</artifactId><scope>provided</scope></dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
