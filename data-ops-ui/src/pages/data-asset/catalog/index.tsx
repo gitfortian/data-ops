@@ -511,7 +511,7 @@ const AssetCatalogPage = () => {
           {loadError && <Alert className="mb-3" type="error" showIcon
              message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
              description="本次筛选未能成功读取；不会展示旧查询或其它项目的结果，请重试。"
-             action={<Button onClick={load}>重试</Button>} />
+             action={<Button onClick={load}>重试</Button>} />}
           {viewMode === '列表' && screens.sm !== false ? (
             <Table<AssetRecord>
               rowKey="id"
