@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -22,6 +23,10 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** Usage SPI behavior for binding synchronization and reference summaries. */
 class MetricUsageServiceTest {
@@ -92,6 +97,48 @@ class MetricUsageServiceTest {
         .when(repository).deleteForConsumer("DATASET", 42L);
     service.syncBindings("DATASET", 42L, "x", List.of(101L));
     verify(repository, never()).append(any(), any());
+  }
+
+  @Test
+  void syncBindingsPreflightFailureDoesNotMarkCallerTransactionForRollback() {
+    when(publicationService.activeForBinding(101L))
+        .thenThrow(new IllegalStateException("published metric lookup unavailable"));
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
+    TransactionSynchronizationManager.setActualTransactionActive(true);
+    try (MockedStatic<TransactionAspectSupport> transactionContext =
+        mockStatic(TransactionAspectSupport.class)) {
+      transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+          .thenReturn(transaction);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L));
+      verify(repository, never()).deleteForConsumer("DATASET", 42L);
+      verify(repository, never()).append(any(), any());
+      verify(transaction, never()).setRollbackOnly();
+    } finally {
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
+    }
+  }
+
+  @Test
+  void syncBindingsMarksTransactionRollbackOnlyWhenAnInsertFailsAfterDeletion() {
+    when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
+    when(publicationService.activeForBinding(102L)).thenReturn(published(102L, 2));
+    doThrow(new RuntimeException("second insert failed"))
+        .when(repository).append(eq(7L),
+            org.mockito.ArgumentMatchers.argThat(value -> value.metricId().equals(102L)));
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
+    TransactionSynchronizationManager.setActualTransactionActive(true);
+    try (MockedStatic<TransactionAspectSupport> transactionContext =
+        mockStatic(TransactionAspectSupport.class)) {
+      transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+          .thenReturn(transaction);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L, 102L));
+      verify(repository).deleteForConsumer("DATASET", 42L);
+      verify(transaction).setRollbackOnly();
+    } finally {
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
+    }
   }
 
   @Test

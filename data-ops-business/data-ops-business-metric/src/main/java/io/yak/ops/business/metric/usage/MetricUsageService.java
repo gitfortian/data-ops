@@ -13,6 +13,8 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Default usage SPI implementation: project-scoped reference writes
@@ -68,6 +70,7 @@ public class MetricUsageService implements MetricUsageApi {
   @Override
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void syncBindings(String usageType, Long usageId, String usageName, List<Long> metricIds) {
+    boolean replacementStarted = false;
     try {
       Long projectId = currentProject.requireProjectId();
       List<MetricVersionRef> references = (metricIds == null ? List.<Long>of() : metricIds).stream()
@@ -83,6 +86,7 @@ public class MetricUsageService implements MetricUsageApi {
             return new MetricVersionRef(metricId, active.metricVersion());
           })
           .toList();
+      replacementStarted = true;
       repository.deleteForConsumer(usageType, usageId);
       LocalDateTime now = LocalDateTime.now();
       for (MetricVersionRef reference : references) {
@@ -90,6 +94,11 @@ public class MetricUsageService implements MetricUsageApi {
             null, reference.metricId(), reference.versionNo(), usageType, usageId, usageName, now));
       }
     } catch (RuntimeException e) {
+      // Preflight errors leave bindings untouched; do not roll back unrelated caller work.
+      // A started replacement must undo deletion and partial inserts atomically.
+      if (replacementStarted && TransactionSynchronizationManager.isActualTransactionActive()) {
+        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+      }
       log.warn("Metric usage syncBindings failed (fail-open): usageType={}, usageId={}, error={}",
           usageType, usageId, e.getMessage());
     }
