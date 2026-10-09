@@ -11,12 +11,7 @@ export default function LoginPage() {
       <div className="dataops-login-shell">
         <header className="dataops-login-header">
           <div className="dataops-login-brand" aria-label="DataOps">
-            <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
-              <path d="M10 10h13a10 10 0 1 1 0 20H10" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-              <path d="M7 19h12m-7 9 9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="7" cy="10" r="3" fill="currentColor" />
-              <circle cx="7" cy="29" r="3" fill="currentColor" />
-            </svg>
+            <img src="/dataops-logo.svg" alt="" aria-hidden="true" draggable={false} />
             <span aria-hidden="true">
               Data<span className="dataops-login-brand-ops">Ops</span>
             </span>

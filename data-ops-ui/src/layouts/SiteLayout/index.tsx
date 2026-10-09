@@ -51,6 +51,7 @@ import {
 import { recordRecentVisit } from "@/utils/recent-visits";
 
 import SidebarNavigation from './SidebarNavigation';
+import BrandLogo from './BrandLogo';
 
 const HEADER_HEIGHT = 48;
 const SIDEBAR_WIDTH = 240;
@@ -221,45 +222,6 @@ function HeaderAction({
         {label}
       </span>
     </button>
-  );
-}
-
-function BrandLogo({ compact }: { compact: boolean }) {
-  return (
-    <Link
-      to="/home"
-      aria-label="返回首页"
-      className={[
-        "mt-3 mb-1.5 flex h-12 w-full items-center border-0 bg-transparent",
-        "transition-all duration-200",
-        compact ? "justify-center px-0" : "justify-start px-5",
-      ].join(" ")}
-    >
-      {compact ? (
-        <span className="relative block h-9 w-9 shrink-0 overflow-hidden">
-          <img
-            src="/logo.png"
-            alt="Data Ops"
-            draggable={false}
-            className="
-              absolute left-[-3px] top-1/2
-              h-9 max-w-none -translate-y-1/2
-              select-none object-contain
-            "
-          />
-        </span>
-      ) : (
-        <img
-          src="/logo.png"
-          alt="Data Ops 一体化数字平台"
-          draggable={false}
-          className="
-            block h-8 w-auto max-w-full
-            select-none object-contain object-left
-          "
-        />
-      )}
-    </Link>
   );
 }
 

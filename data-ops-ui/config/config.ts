@@ -26,6 +26,7 @@ export default defineConfig({
    * @doc https://umijs.org/docs/api/config#hash
    */
   hash: true,
+  favicons: ['/dataops-logo.svg'],
 
   publicPath: PUBLIC_PATH,
   links: [

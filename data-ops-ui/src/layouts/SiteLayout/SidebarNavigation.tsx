@@ -9,6 +9,12 @@ import { Dropdown, type MenuProps } from 'antd';
 import { ChevronDown } from 'lucide-react';
 import React, { type ReactNode, useEffect, useState } from 'react';
 
+// Root labels start after 4px padding, a 20px icon and a 12px gap.
+// Nested groups and their sibling pages share that text column.
+const ROOT_LABEL_PADDING = 36;
+const NESTED_INDENT = 16;
+const nestedLabelPadding = (depth: number) => ROOT_LABEL_PADDING + (depth - 1) * NESTED_INDENT;
+
 interface SidebarNavigationProps {
   groups: NavigationGroupWithRoutes[];
   standaloneRoutes: NavigationRoute[];
@@ -48,9 +54,9 @@ export default function SidebarNavigation({
       key={route.id}
       to={route.path}
       aria-current={activeId === route.id ? 'page' : undefined}
+      style={{ paddingInlineStart: nestedLabelPadding(depth) }}
       className={[
         'flex h-9 w-full items-center rounded-md pr-2 text-[14px] transition-colors',
-        depth > 1 ? 'pl-10' : 'pl-7',
         activeId === route.id
           ? 'bg-white/80 font-semibold text-[#161823]'
           : 'text-[rgba(37,38,50,.6)] hover:bg-white/50 hover:text-[#161823]',
@@ -82,9 +88,10 @@ export default function SidebarNavigation({
         aria-haspopup={compact ? 'menu' : undefined}
         title={compact ? group.title : undefined}
         onClick={compact ? undefined : () => toggleGroup(group)}
+        style={!compact && depth > 0 ? { paddingInlineStart: nestedLabelPadding(depth) } : undefined}
         className={[
           'relative flex h-10 w-full items-center gap-3 rounded-md border-0 bg-transparent text-left text-[14px] transition-colors hover:bg-white/60',
-          compact ? 'justify-center' : depth > 0 ? 'pl-7 pr-1' : 'px-1',
+          compact ? 'justify-center' : depth > 0 ? 'pr-1' : 'px-1',
           active || open ? 'font-semibold text-[#161823]' : 'text-[rgba(22,24,35,.55)]',
         ].join(' ')}
       >
