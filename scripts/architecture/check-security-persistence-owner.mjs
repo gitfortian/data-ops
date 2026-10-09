@@ -127,6 +127,35 @@ export function validatePersistenceOwners(files) {
     !datasource.includes('yakSecurityTransactionManager')) {
    errors.push('Starter must preserve MapperScan, Flyway history and named transaction assembly');
  }
+ // A8.2t: freeze the existing runtime wiring, not merely bean names.
+ const ordered=[datasource.indexOf('new TenantLineInnerInterceptor('),
+                datasource.indexOf('new PaginationInnerInterceptor()')];
+ if(ordered.some(i=>i<0) || ordered[0]>=ordered[1] ||
+    !datasource.includes('return "app_name";') ||
+    !datasource.includes('new StringValue(') ||
+    !datasource.includes('applicationName);')) {
+   errors.push('Security tenant app_name isolation or interceptor order changed');
+ }
+ if(!datasource.includes('.baselineOnMigrate(true)') ||
+    !datasource.includes('MigrationVersion.fromVersion("0")') ||
+    !datasource.includes('.outOfOrder(true)') ||
+    !datasource.includes('/migration-postgresql') ||
+    !datasource.includes('.placeholders(Collections.singletonMap(')) {
+   errors.push('historical Security Flyway baseline, PG location or placeholders changed');
+ }
+ if(!datasource.includes('@DependsOn("yakSecurityFlyway")') ||
+    !datasource.includes('factory.setDataSource(dataSource)') ||
+    !datasource.includes('factory.setGlobalConfig(globalConfig)') ||
+    !datasource.includes('factory.setPlugins(interceptor)') ||
+    !datasource.includes('return new SqlSessionTemplate(factory)') ||
+    !datasource.includes('return new DataSourceTransactionManager(')) {
+   errors.push('Security SqlSessionFactory, MyBatis plugins or transaction wiring changed');
+ }
+ if(!datasource.includes('NumericBooleanTypeHandler.class') ||
+    !datasource.includes('configuration.getTypeHandlerRegistry().register(Boolean.class') ||
+    !datasource.includes('configuration.getTypeHandlerRegistry().register(boolean.class')) {
+   errors.push('Security PostgreSQL boolean type handlers not registered');
+ }
  return errors;
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
