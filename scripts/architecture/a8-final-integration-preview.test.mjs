@@ -76,7 +76,7 @@ test('detached preview report records real SHA and failure without asserting CI 
 });
 
 test('A0–A8 requires mutually isolated MySQL and PostgreSQL integration profiles', () => {
-  const workflow = readFileSync('.github/workflows/architecture-a8-final-preview.yml', 'utf8');
+  const workflow = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
   assert.match(workflow,
     /env -u ARCHITECTURE_POSTGRESQL_URL SPRING_PROFILES_ACTIVE=mysql\s*\\\s*bash \.\/mvnw -B -ntp verify/);
   assert.match(workflow,
@@ -111,7 +111,7 @@ test('A0–A8 rollback fails closed without all seventeen verified merge records
 });
 
 test('A0–A8 release preview must verify rollback and never push architecture branches', () => {
-  const workflow = readFileSync('.github/workflows/architecture-a8-final-preview.yml', 'utf8');
+  const workflow = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
   assert.match(workflow, /a8-final-integration-preview\.mjs rollback/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /permissions:\s+contents: read\s+pull-requests: read/);
