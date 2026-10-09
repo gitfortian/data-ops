@@ -14,6 +14,7 @@ Yak Ops 的 Web 前端，基于 Ant Design Pro / Umi 构建。
 
 ```bash
 npm install
+# CI uses: yarn install --frozen-lockfile
 ```
 
 ## Provided Scripts
@@ -21,7 +22,7 @@ npm install
 ### Start project
 
 ```bash
-npm start
+npm run start:dev
 ```
 
 ### Build project
@@ -32,9 +33,15 @@ npm run build
 
 ### Check code style and types
 
+工程检查（新提交的代码需遵守样式规范，仓库已有的 TypeScript 债务通过机器可检查的基线约束）：
+
 ```bash
-npm run lint
+npm run biome:lint
+npm run check:types
 ```
+
+`npm run lint` 会额外执行直接 `tsc --noEmit`，可能因现存类型诊断返回非零状态；CI 当前采用 `scripts/check-type-baseline.mjs` 比较 `scripts/type-baseline.json`，不使用历史 `tsc-output.txt`。
+
 
 ### Test code
 

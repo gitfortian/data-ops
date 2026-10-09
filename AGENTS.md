@@ -11,7 +11,7 @@
 5. 目标模块 `DOMAIN.md / REQUIREMENTS.md`
 6. 目标模块 `ARCHITECTURE.md / DEPENDENCIES.md`
 7. 根目录 `CODE_STYLE.md`
-8. 仅在需要证据时再读取 Review / Gap / 历史计划
+8. 仅在需要证据时再读取 Review / Gap / 历史计划；入口分类见 `docs/README.md` 和 `docs/product/LEGACY_DOC_INDEX.md`
 
 ## Mandatory behavior
 
@@ -33,7 +33,7 @@
 
 - PROPOSED / REJECTED / SUPERSEDED Product Decision 不是当前 Product Truth。
 - DRAFT / SHIPPED / SUPERSEDED Feature Spec 不是当前实现指令。
-- Review、gap、dev-plan、历史 issue 只能作为 Evidence。
+- Review、gap、dev-plan、历史 issue、`.zcode/plans/**` 只能作为 Evidence；旧 Flyway 合并/历史表改写提案不构成执行授权。
 - 如果历史材料与当前 Product / Domain Contract 冲突，必须显式指出冲突，不得静默选择历史材料。
 
 ## Scope rule

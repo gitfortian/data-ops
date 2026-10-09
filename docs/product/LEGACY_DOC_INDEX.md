@@ -29,6 +29,13 @@
 | `docs/*/gap-backlog*.md` | Evidence / Backlog | 需要 promotion 才能成为需求 |
 | module `README.md` | Orientation | 低于 Contract |
 | module `REVIEW.md` | Review / Evidence | 不拥有产品需求 |
+| `docs/20261001/**`, `docs/20261003/**`, `docs/20261004/**` | Dated Evidence / Historical | 按日期保留历史工作记录；不能替代当前 Contract |
+| `docs/frontend-review/**`, `docs/architecture-review/**` | Review / Evidence | 静态检查、Review 结论需要 owner 核销后才能改变契约 |
+| `docs/phase7-*.md`, `docs/phase8*.md`, `docs/phase9*.md` | Stage Evidence / Plan | 阶段快照，可能已过时；不自动成为当前执行计划 |
+| `.zcode/plans/plan-sess_36a3068e-4352-4d63-8388-d516f3f18f85.md` | **Unapproved historical work plan** | 包含压缩 Flyway 迁移、删除 baseline 和放弃历史库升级等高风险建议；`docs/release/**`、当前 Flyway 装配和历史校验才是运行依据，**严禁据此执行 SQL 文件删改** |
+| `.zcode/plans/plan-sess_a18ccd05-9ad6-47e1-9223-c72e865f530c.md` | Historical design request | 指向尚不存在的 `docs/two-layer-modeling-design.md`，不构成模块迁移决策 |
+| `.zcode/plans/plan-sess_b1fff9ab-dc67-4cd5-822f-1e6dca9c139d.md` | Historical delivery-plan request | 后续是否落地须按 `docs/agent/**` 当前材料与已有架构合同核对，不能作为自动重构命令 |
+| `data-ops-ui/tsc-output.txt` (retired) | Local generated diagnostic | 静态历史输出不用于 `tsc` 基线验收；以 `data-ops-ui/scripts/type-baseline.json` 与 `check-type-baseline.mjs` 为当前真相 |
 
 ## Cleanup rule
 
@@ -41,3 +48,9 @@
 3. promotion 到当前 Contract；
 4. 更新引用；
 5. 最后再归档/移动旧材料。
+
+## Navigation and historical plan boundary
+
+- 仓库文档导航见 [docs/README.md](../README.md)，工程治理收口证据见 [docs/engineering/code-cleanliness-p1-closeout.md](../engineering/code-cleanliness-p1-closeout.md)。
+- **保留** `.zcode/plans/*.md` 原始内容作为历史输入证据，不迁移至活动执行合同、不标记已批准、也不从中复制 SQL 修改操作。
+- `docs/product/**`、`docs/release/**`、Flyway SQL、模块 Contract 和真实环境证据，不因文件年龄或名称而自动归档/删除。
