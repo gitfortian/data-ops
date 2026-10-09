@@ -117,3 +117,24 @@ test('Data Service and Dataset editors import their canonical data-only service 
       'editor imports a page facade rather than a service: ' + target);
   }
 });
+
+test('Editor Settings uses modern GET/PUT while preserving deferred-save and error feedback', () => {
+  const source = readFileSync(
+    'data-ops-ui/src/pages/settings/components/EditorSettingsPanel.tsx',
+    'utf8',
+  );
+  assert.ok(source.includes("from '@/services/data-development'"),
+    'settings panel still reads an obsolete response envelope');
+  for (const contract of [
+    'getDevelopmentEditorSettings()',
+    'await saveDevelopmentEditorSettings(next)',
+    'generation !== editGeneration.current',
+    '}, 450)',
+    "setLoadFailed(true)",
+    "message.error('编辑器设置保存失败')",
+  ]) {
+    assert.ok(source.includes(contract), 'editor settings persistence guard missing: ' + contract);
+  }
+  assert.ok(!source.includes('response.data'),
+    'settings panel must not read legacy envelope.data');
+});
