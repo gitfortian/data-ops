@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import AssetOverview from './index';
 
 let mockProjectId = 42;
@@ -44,13 +44,25 @@ jest.mock('antd', () => {
   const Box = ({ children }: any) => React.createElement('div', null, children);
   return {
     Alert: ({ message, description, action }: any) =>
-      React.createElement('div', { role: 'alert' }, message, description, action),
+      React.createElement('div', { role: 'alert' },
+        React.createElement('span', null, message),
+        React.createElement('span', null, description),
+        action),
     Button: ({ children, onClick }: any) => React.createElement('button', { onClick }, children),
     Card: ({ children, loading, title }: any) =>
       React.createElement('section', null, title, loading ? '正在读取' : children),
     Space: Box, Tag: Box, Tooltip: Box,
   };
 });
+
+/** Scope numeric assertions to the named KPI; published and total can share a value. */
+const expectTotalKpi = async (total: number) => {
+  await waitFor(() => {
+    const totalCard = screen.getByText('台账总量').closest('section');
+    expect(totalCard).not.toBeNull();
+    expect(within(totalCard!).getByText(String(total))).toBeInTheDocument();
+  });
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -75,7 +87,7 @@ it('shows permission denial without a fake zero KPI, empty list or to-do', async
   expect(screen.queryByText('资产待上架 0')).not.toBeInTheDocument();
   expect(screen.queryByText('暂无数据')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '重试' }));
-  expect(await screen.findByText('5')).toBeInTheDocument();
+  await expectTotalKpi(5);
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
@@ -84,13 +96,13 @@ it('drops previously successful KPIs on a failed refresh and recovers on retry',
     .mockRejectedValueOnce(new Error('upstream unavailable'))
     .mockResolvedValueOnce(makeOverview(17));
   render(<AssetOverview />);
-  expect(await screen.findByText('13')).toBeInTheDocument();
+  await expectTotalKpi(13);
   fireEvent.click(screen.getByRole('button', { name: '刷新' }));
   expect(await screen.findByText('资产概览读取失败')).toBeInTheDocument();
-  expect(screen.queryByText('13')).not.toBeInTheDocument();
+  expect(screen.queryByText('台账总量')).not.toBeInTheDocument();
   expect(screen.queryByText('资产待上架 0')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '重试' }));
-  expect(await screen.findByText('17')).toBeInTheDocument();
+  await expectTotalKpi(17);
 });
 
 it('discards an older refresh response even when it arrives last', async () => {
@@ -99,10 +111,10 @@ it('discards an older refresh response even when it arrives last', async () => {
     .mockResolvedValueOnce(makeOverview(8));
   render(<AssetOverview />);
   fireEvent.click(screen.getByRole('button', { name: '刷新' }));
-  expect(await screen.findByText('8')).toBeInTheDocument();
+  await expectTotalKpi(8);
   await act(async () => { old.resolve(makeOverview(99)); });
-  expect(screen.queryByText('99')).not.toBeInTheDocument();
-  expect(screen.getByText('8')).toBeInTheDocument();
+  expect(screen.queryAllByText('99')).toHaveLength(0);
+  await expectTotalKpi(8);
 });
 
 it('remounts across Project and permission changes to prevent old-project metrics', async () => {
@@ -113,11 +125,11 @@ it('remounts across Project and permission changes to prevent old-project metric
   const view = render(<AssetOverview />);
   mockProjectId = 43;
   view.rerender(<AssetOverview />);
-  expect(await screen.findByText('23')).toBeInTheDocument();
+  await expectTotalKpi(23);
   await act(async () => { old.resolve(makeOverview(88)); });
-  expect(screen.queryByText('88')).not.toBeInTheDocument();
+  expect(screen.queryAllByText('88')).toHaveLength(0);
   mockPermissions = [];
   view.rerender(<AssetOverview />);
-  expect(await screen.findByText('31')).toBeInTheDocument();
-  expect(screen.queryByText('23')).not.toBeInTheDocument();
+  await expectTotalKpi(31);
+  expect(screen.queryAllByText('23')).toHaveLength(0);
 });
