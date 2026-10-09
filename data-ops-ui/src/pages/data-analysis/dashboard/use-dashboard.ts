@@ -16,7 +16,7 @@ import {
   restoreDashboardVersion,
   saveDashboardVersion,
   toDashboardDocument,
-} from './dashboard-service';
+} from '@/services/dashboard';
 import {
   cloneDashboard,
   createInlineAnalysis,
@@ -41,7 +41,7 @@ import type {
   DashboardWidget,
   PublishedDataset,
 } from './model';
-import { fetchDashboardDatasets } from './service';
+import { fetchAnalysisDatasets as fetchDashboardDatasets } from '@/services/dataset';
 
 const HISTORY_LIMIT = 50;
 const HISTORY_MERGE_WINDOW = 500;

@@ -284,7 +284,8 @@ python scripts/product/golden-sample/historical_recovery_reader_outage.py --appl
 可选同时传入 `--artifact <app.jar> --build-receipt <build.json> --runtime-receipt <runtime.json>`。build.json 应包含 `marker`、`repositoryCommit`(40 hex) 和 `artifactSha256`(64 hex)；runtime.json 应包含 `marker`、`deployedCommit`、`artifactSha256`、`instanceBaseUrl` 和 `observationReference`。三份同时提供才会流式计算真实制品 SHA256，与两个声明和 R1 URL 比对；失配直接 FAIL。**声明由运维提供，不是独立可信运行时证明**，结果始终 `deploymentIdentity=UNVERIFIED`，仍需实际部署控制器/进程映像核验、浏览器、受限角色根因以及 Source Reader 运维日志证据。
 
 两个脚本的离线 unittest 随 Golden CI 执行，仅验证模拟契约，不会连接运行环境。结果不会擅自修改 PD-005/006/007 或 AI 模块。
-## 后续批次
+## 当前阶段：仅验收收口（2026-10-09）
 
-补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
-补齐 Model、Metric 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
+根据 [P0 #336](../../../docs/product/acceptance/p0-closeout-20261009.md) 当前执行约束，**停止把“后续批次补齐 Model/Metric/MDM 样本”作为开发指令**；这些属于另行产品规划和明确授权之后的范围。本阶段**只使用上述已存在的 R1～R8 工具**取得真实环境证据、核实版本/权限/Usage/故障恢复，绝不开发新业务功能，也不通过写伪源审计、删除 Usage 或 Mock 伪造 PASS。
+
+本轮由 QA/部署/Product 按 [P0 Golden 真实环境验收与退出签收包](../../../docs/product/acceptance/p0-golden-operational-handoff-20261009.md) 顺序准备环境、角色、构建与真实输出，并单独完成浏览器、IP/Key、精确版本和审批签收。**R8 仍然只负责结构一致性；不执行实际部署 E2E，也不会自动签发产品 PASS。**

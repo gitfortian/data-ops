@@ -24,7 +24,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { API_SUCCESS_CODE } from '@/services/http/response';
 
-import { fetchResourceContent, updateResourceContent } from '../service';
+import { fetchResourceContent, updateResourceContent } from '@/services/resource-management';
 import type { ResourceContent, ResourceItem } from '../types';
 import { formatFileSize, isDirectory, isEditableResource } from '../utils';
 import { getResourceStorageLabel } from './StorageTypeLabel';

@@ -4,7 +4,9 @@ import type {
   BatchLinkUpId,
   OfflineBatchOperationResult,
   OfflineJobDefinitionVO,
+  OfflineJobExecutionDetailVO,
   OfflineJobExecutionVO,
+  OfflineTableMetric,
   OfflinePublishResult,
   OfflineSyncTaskPageQuery,
   OfflineVersionDetail,
@@ -172,4 +174,86 @@ export const batchStopOfflineSyncTasks = (
   HttpUtils.postData<OfflineBatchOperationResult>(
     `${EXECUTION_API}/batch-pause`,
     { jobDefinitionIds: definitionIds.map(Number) },
+  );
+
+/**
+ * Batch execution history: one normalizer is shared with the historical
+ * response-envelope adapter until every editor/detail consumer has migrated.
+ * In particular pageNum/pageNo and definition ID validation are not optional.
+ */
+const toPositiveSafeInteger = (value: unknown, fieldName: string) => {
+  const normalizedValue = typeof value === 'string' ? value.trim() : value;
+  const numericValue = Number(normalizedValue);
+  if (!Number.isSafeInteger(numericValue) || numericValue < 1) {
+    throw new Error(`${fieldName} 必须是安全的正整数`);
+  }
+  return numericValue;
+};
+
+export const normalizeOfflineInstancePageRequest = (
+  data: Record<string, unknown>,
+): Record<string, unknown> => {
+  const { pageNo, pageNum, jobDefinitionId, ...rest } = data;
+  const current = toPositiveSafeInteger(
+    data.current ?? pageNo ?? pageNum ?? 1,
+    '页码',
+  );
+  const pageSize = toPositiveSafeInteger(data.pageSize ?? 10, '每页条数');
+  if (pageSize > 200) throw new Error('每页条数不能超过 200');
+  return {
+    ...rest,
+    current,
+    pageSize,
+    ...(jobDefinitionId === undefined ||
+    jobDefinitionId === null ||
+    jobDefinitionId === ''
+      ? {}
+      : {
+          jobDefinitionId: toPositiveSafeInteger(
+            jobDefinitionId,
+            '任务定义 ID',
+          ),
+        }),
+  };
+};
+
+const INSTANCE_API = '/api/v1/job/batch-instance';
+const SCHEDULE_API = '/api/v1/job/schedule';
+
+export const listOfflineSyncInstances = <T = OfflineJobExecutionVO>(
+  query: Record<string, unknown>,
+): Promise<PagingData<T>> =>
+  HttpUtils.postData<PagingData<T>>(
+    `${INSTANCE_API}/page`,
+    normalizeOfflineInstancePageRequest(query),
+  );
+
+export const getOfflineSyncInstanceDetail = <T = OfflineJobExecutionDetailVO>(
+  id: BatchLinkUpId,
+): Promise<T> =>
+  HttpUtils.getData<T>(`${INSTANCE_API}/${encodeURIComponent(id)}`);
+
+export const getOfflineSyncInstanceLog = (
+  id: BatchLinkUpId,
+): Promise<string> =>
+  HttpUtils.getData<string>(`${INSTANCE_API}/${encodeURIComponent(id)}/log`);
+
+export const listOfflineSyncTableMetrics = (
+  id: BatchLinkUpId,
+): Promise<OfflineTableMetric[]> =>
+  HttpUtils.getData<OfflineTableMetric[]>(
+    `${INSTANCE_API}/${encodeURIComponent(id)}/table-metrics`,
+  );
+
+export const getOfflineSyncScheduleTimes = (cron: string): Promise<string[]> =>
+  HttpUtils.getData<string[]>(
+    `${SCHEDULE_API}/last5-execution-times?cron=${encodeURIComponent(cron)}`,
+  );
+
+export const getOfflineSyncClientLogs = (
+  instanceId: BatchLinkUpId,
+  jobMode: string,
+): Promise<unknown> =>
+  HttpUtils.getData<unknown>(
+    `/api/v1/devops/client/instance/${instanceId}/logs?jobMode=${encodeURIComponent(jobMode)}`,
   );
