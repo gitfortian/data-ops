@@ -1,12 +1,14 @@
-import { API_SUCCESS_CODE } from '@/services/http/response';
 import { CopyOutlined } from "@ant-design/icons";
 import { history, useIntl } from "@umijs/max";
 import { Divider, Empty, Table, Tooltip, message } from "antd";
 import { TableRowSelection } from "antd/es/table/interface";
 import moment from "moment";
 import { useEffect, useState } from "react";
-import { linkupJobDefinitionApi } from "../../api";
-import { batchJobExecutorApi } from "../../type";
+import {
+  listOfflineSyncTasks,
+  batchStartOfflineSyncTasks,
+  batchStopOfflineSyncTasks,
+} from '@/services/batch-link-up';
 import ActionColumn from "./components/ActionColumn";
 import AdvancedSearchForm from "./components/AdvancedSearchForm";
 import BottomActionBar from "./components/BottomActionBar";
@@ -154,16 +156,16 @@ const App: React.FC<Props> = ({ goDetail }) => {
     }
 
     try {
-      const data = await linkupJobDefinitionApi.page({
+      const data = await listOfflineSyncTasks({
         ...transformedParams,
         current: pagination.current,
         pageSize: pagination.pageSize,
       });
 
-      setTaskList(data?.data?.bizData || []);
+      setTaskList(data?.bizData || []);
       setPagination((prev) => ({
         ...prev,
-        total: data?.data?.pagination?.total || 0,
+        total: data?.pagination?.total || 0,
       }));
     } catch (error) {
       message.error("查询任务列表失败");
@@ -483,12 +485,9 @@ const App: React.FC<Props> = ({ goDetail }) => {
     }
 
     try {
-      const data = await batchJobExecutorApi.batchExecute(selectedRowKeys);
+      const result = await batchStartOfflineSyncTasks(selectedRowKeys.map(String));
 
-      if (data?.code === API_SUCCESS_CODE) {
-        const result = data?.data;
-
-        message.success(
+      message.success(
           `批量启动完成：成功 ${result?.successCount || 0} 个，失败 ${
             result?.failedCount || 0
           } 个`
@@ -496,9 +495,6 @@ const App: React.FC<Props> = ({ goDetail }) => {
 
         setSelectedRowKeys([]);
         fetchTaskList();
-      } else {
-        
-      }
     } catch (error: any) {
       message.error(getErrorMessage(error, "Start all failed"));
     }
@@ -510,12 +506,9 @@ const App: React.FC<Props> = ({ goDetail }) => {
     }
 
     try {
-      const data = await batchJobExecutorApi.batchPause(selectedRowKeys);
+      const result = await batchStopOfflineSyncTasks(selectedRowKeys.map(String));
 
-      if (data?.code === API_SUCCESS_CODE) {
-        const result = data?.data;
-
-        message.success(
+      message.success(
           `批量停止完成：成功 ${result?.successCount || 0} 个，失败 ${
             result?.failedCount || 0
           } 个`
@@ -523,9 +516,6 @@ const App: React.FC<Props> = ({ goDetail }) => {
 
         setSelectedRowKeys([]);
         fetchTaskList();
-      } else {
-        message.error(data?.message || data?.msg || "Stop all failed");
-      }
     } catch (error: any) {
       message.error(getErrorMessage(error, "Stop all failed"));
     }

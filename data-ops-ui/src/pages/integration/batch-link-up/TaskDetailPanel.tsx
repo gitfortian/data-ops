@@ -2,7 +2,7 @@ import YakTab from '@/components/YakTab';
 import { useIntl } from "@umijs/max";
 import React, { useEffect, useState } from "react";
 
-import { linkupJobInstanceApi } from "./api";
+import { getOfflineSyncInstanceLog } from "@/services/batch-link-up";
 import BasicInfoSection from "./BasicInfoSection";
 import HoconTab from "./tabs/HoconTab";
 import LogTab from "./tabs/LogTab";
@@ -26,10 +26,10 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ instanceItem }) => {
     try {
       setLogLoading(true);
 
-      const res = await linkupJobInstanceApi.getLog(instanceItem?.id);
+      const log = await getOfflineSyncInstanceLog(instanceItem?.id);
 
       setLogContent(
-        res?.data ||
+        log ||
           intl.formatMessage({
             id: "pages.job.detail.noLog",
             defaultMessage: "No log available",

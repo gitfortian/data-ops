@@ -1,5 +1,4 @@
-import { API_SUCCESS_CODE } from '@/services/http/response';
-import { linkupClientApi } from "@/pages/integration/batch-link-up/type";
+import { getOfflineSyncClientLogs } from "@/services/batch-link-up";
 import {
   CloseOutlined, EditOutlined,
   FileSearchOutlined,
@@ -233,18 +232,12 @@ const RunLogDrawer: FC<RunLogDrawerProps> = ({
       setErrorText("");
       setLogContent("");
 
-      const response = await linkupClientApi.getLogsByInstanceId(
+      const logs = await getOfflineSyncClientLogs(
         instanceId,
         jobMode
       );
 
-      if (response?.code !== API_SUCCESS_CODE) {
-        const msg = response?.msg || response?.message || "获取日志失败";
-        setErrorText(msg);
-        return;
-      }
-
-      const content = formatLogContent(response?.data);
+      const content = formatLogContent(logs);
 
       setLogContent(content || "");
     } catch (error: any) {

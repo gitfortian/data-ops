@@ -1,6 +1,4 @@
-import { API_SUCCESS_CODE } from '@/services/http/response';
-import { linkupJobInstanceApi } from "@/pages/integration/batch-link-up/api";
-import { HistoryItem } from "@/pages/integration/batch-link-up/type";
+import { listOfflineSyncInstances, type HistoryItem } from "@/services/batch-link-up";
 import { message } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -88,7 +86,7 @@ export const useTaskHistory = ({
     setLoading(true);
 
     try {
-      const data = await linkupJobInstanceApi.page({
+      const data = await listOfflineSyncInstances<HistoryItem>({
         pageNum: 1,
         pageSize: 20,
         jobDefinitionId: selectedItem.id,
@@ -99,9 +97,7 @@ export const useTaskHistory = ({
         queryEndTime,
       });
 
-      if (data?.code === API_SUCCESS_CODE) {
-        setHistoryItems(data?.data?.bizData || []);
-      }
+      setHistoryItems(data?.bizData || []);
     } catch {
       // 已由全局错误提示统一展示，此处仅结束 loading
     } finally {

@@ -12,7 +12,7 @@ import {
   Table2,
   TrendingUp,
 } from "lucide-react";
-import {batchJobInstanceApi} from "../api";
+import { listOfflineSyncTableMetrics } from "@/services/batch-link-up";
 
 
 interface MetricsTabProps {
@@ -101,26 +101,6 @@ const getStatusMeta = (status?: string) => {
     color: "default",
     text: "未知",
   };
-};
-
-const getResponseData = (res: any) => {
-  if (!res) {
-    return [];
-  }
-
-  if (Array.isArray(res)) {
-    return res;
-  }
-
-  if (Array.isArray(res.data)) {
-    return res.data;
-  }
-
-  if (Array.isArray(res?.data?.data)) {
-    return res.data.data;
-  }
-
-  return [];
 };
 
 const SparkLine: React.FC<SparkLineProps> = ({data}) => {
@@ -273,8 +253,8 @@ const MetricsTab: React.FC<MetricsTabProps> = ({instanceItem}) => {
       setTableMetricsLoading(true);
 
       try {
-        const res = await batchJobInstanceApi.tableMetrics(instanceId);
-        const list = getResponseData(res);
+        const metrics = await listOfflineSyncTableMetrics(instanceId);
+        const list = Array.isArray(metrics) ? metrics : [];
 
         if (!cancelled) {
           setTableMetrics(list);

@@ -29,15 +29,16 @@ import {
   type ReactNode,
 } from "react";
 
-import { API_SUCCESS_CODE } from "@/services/http/response";
 import { BRAND_THEME } from "@/styles/brand";
 
 import {
-  batchJobInstanceApi,
-  linkupJobDefinitionApi,
-  linkupJobInstanceApi,
+  getOfflineSyncTask,
+  listOfflineSyncInstances,
+  getOfflineSyncInstanceDetail,
+  getOfflineSyncInstanceLog,
+  listOfflineSyncTableMetrics,
   type OfflineJobDefinitionVO,
-} from "../api";
+} from "@/services/batch-link-up";
 
 type InstanceRecord = Record<string, any>;
 type DetailTabKey = "overview" | "log" | "sync" | "config" | "structure";
@@ -385,24 +386,19 @@ export default function BatchLinkUpExecutionDetailPage() {
 
     setPageLoading(true);
     try {
-      const [definitionResponse, instanceResponse] = await Promise.all([
-        linkupJobDefinitionApi.selectById(taskId),
-        linkupJobInstanceApi.page({
+      const [definition, instancePage] = await Promise.all([
+        getOfflineSyncTask(taskId),
+        listOfflineSyncInstances<InstanceRecord>({
           pageNum: 1,
           pageSize: 100,
           jobDefinitionId: taskId,
         }),
       ]);
 
-      if (
-        definitionResponse?.code !== API_SUCCESS_CODE ||
-        !definitionResponse?.data
-      ) {
-        throw new Error(definitionResponse?.message || "获取离线同步任务失败");
-      }
+      if (!definition) throw new Error("获取离线同步任务失败");
 
-      setDefinition(definitionResponse.data);
-      const nextInstances = normalizeInstanceList(instanceResponse);
+      setDefinition(definition);
+      const nextInstances = normalizeInstanceList(instancePage);
       setInstances(nextInstances);
 
       const nextSelectedId = String(
@@ -471,11 +467,10 @@ export default function BatchLinkUpExecutionDetailPage() {
 
     setInstanceLoading(true);
     try {
-      const response = await linkupJobInstanceApi.selectById(
+      const detail = await getOfflineSyncInstanceDetail<InstanceRecord>(
         selectedInstanceId
       );
-      if (response?.code === API_SUCCESS_CODE && response?.data) {
-        const detail = response.data;
+      if (detail) {
         setInstanceDetail(detail);
         setInstances((previous) => {
           const detailId = String(
@@ -519,12 +514,8 @@ export default function BatchLinkUpExecutionDetailPage() {
 
     setLogLoading(true);
     try {
-      const response = await linkupJobInstanceApi.getLog(selectedInstanceId);
-      if (response?.code !== API_SUCCESS_CODE) {
-        setLogContent(response?.message || "日志加载失败");
-        return;
-      }
-      setLogContent(formatLogContent(response) || "当前实例暂无运行日志");
+      const log = await getOfflineSyncInstanceLog(selectedInstanceId);
+      setLogContent(formatLogContent(log) || "当前实例暂无运行日志");
     } catch (error: any) {
       setLogContent(error?.message || "日志加载失败");
     } finally {
@@ -544,7 +535,7 @@ export default function BatchLinkUpExecutionDetailPage() {
 
     setMetricsLoading(true);
     try {
-      const response = await batchJobInstanceApi.tableMetrics(
+      const response = await listOfflineSyncTableMetrics(
         selectedInstanceId
       );
       setTableMetrics(normalizeTableMetrics(response));
