@@ -34,6 +34,13 @@
 - `check-security-distribution-classpath.test.mjs` 覆盖正确清单、缺失/重复/错误模块、篡改发行包、隐蔽重复与空清单等反向路径。
 - **严格验收边界**：该检查可证实编译与最终发行制品包含唯一类归属，**不能证明**外部历史客户端以旧依赖编译过的二进制能在新发行版链接成功；后者仍需独立旧 JAR 消费者的真实二进制 smoke，不能仅凭 FQCN/classpath 通过而勾选。
 
+## 迁移前独立编译消费者 ABI smoke（新增，待当前 CI 验收）
+
+- 使用 PR 事件精确、不可变的 `main` 基线 SHA；在**临时 detached worktree** 中单独构建迁移前 `data-security-spring-boot-starter:0.1.0` 原始 JAR。构建过程不允许写回 `main` 或任何受保护 Draft 分支，完成后清理该 worktree。
+- `scripts/architecture/fixtures/SecurityLegacyConsumer.java` 只使用旧 JAR 通过 `javac --release 21` 生成消费者 `.class`，从不拿新 Contract 或 Runtime 参与编译；覆盖 `PageParamDTO` 的 Lombok accessors、`User/BaseEntity`、`PermissionDefinition`、`YakPermission` 反射注解及 `AuthenticationManager` 默认方法。
+- 运行阶段**不重新编译消费端**，也不加入旧版 JAR：从本 PR 实际可执行 `data-ops-boot-1.0.0.jar` 提取 `BOOT-INF/classes` 与新 `BOOT-INF/lib/*.jar`，直接执行原消费者字节码。任何 `NoClassDefFoundError`、`NoSuchMethodError`、`AbstractMethodError` 或行为不兼容均使现有 Architecture Distribution Job 失败。
+- 仅 #461 的 PR 触发此项，复用已经生成的 Boot 发行包；不增加独立 Workflow。不把本次 smoke 冒称全部 142 个 FQCN 的外部生态保证；**独立第三方已发行消费者 JAR**及其真实依赖树仍需用户提供受信任的制品才能按相同方法验证。
+
 ## 编译与运行门槛
 
 组合树通过冲突检查后必须执行：
