@@ -8,7 +8,7 @@
  * SKILL_MANAGE='agent:skill:manage' 控制操作（注册/编辑/启停/删除）。
  */
 
-import type { AgentSkillItem } from '@/services/agent';
+import type { AgentSkillItem, AgentSkillSaveInput } from '@/services/agent';
 import { hasPermission } from '@/utils/security/permission';
 
 export const AGENT_SKILL_READ = 'agent:skill:read';
@@ -119,7 +119,7 @@ export const requireSkillVersion = (item: { version?: number } | null | undefine
   item && typeof item.version === 'number' ? item.version : null;
 
 /** 编辑器初始值：更新模式回填当前内容，metadata 反序列化为格式化 JSON 文本；注册模式全空。 */
-export const skillEditorInitialValues = (editing: AgentSkillItem | null) =>
+export const skillEditorInitialValues = (editing: AgentSkillItem | AgentSkillSaveInput | null) =>
   editing
     ? {
         skillId: editing.skillId,

@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, message, Space, Typography } from 'antd';
+import { Alert, Button, message, Space, Typography } from 'antd';
 import React from 'react';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import type { AgentSkillItem, AgentSkillSaveInput } from '@/services/agent';
@@ -8,6 +8,7 @@ import { AGENT_SKILL_MANAGE, classifySkillError, requireSkillVersion } from '../
 import SkillDetailDrawer from './SkillDetailDrawer';
 import SkillEditorModal from './SkillEditorModal';
 import SkillListTable from './SkillListTable';
+import SkillTemplateGallery from './SkillTemplateGallery';
 
 /**
  * 技能管理 Tab 容器（文档 §3.1 状态模型 / §5 交互流）。
@@ -19,7 +20,10 @@ const SkillsTab: React.FC = () => {
   const canManage = can(AGENT_SKILL_MANAGE);
 
   const [items, setItems] = React.useState<AgentSkillItem[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [template, setTemplate] = React.useState<AgentSkillSaveInput | undefined>();
   const [editing, setEditing] = React.useState<AgentSkillItem | null>(null);
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -28,10 +32,14 @@ const SkillsTab: React.FC = () => {
 
   const reload = React.useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       setItems(await agentSkillApi.list());
+      setLoaded(true);
     } catch (error) {
       const info = classifySkillError(error, 'list');
+      setLoaded(false);
+      setLoadError(info.message);
       void message.error(info.message);
     } finally {
       setLoading(false);
@@ -43,16 +51,31 @@ const SkillsTab: React.FC = () => {
   }, [reload]);
 
   const openRegister = () => {
+    setTemplate(undefined);
     setEditing(null);
     setEditorOpen(true);
   };
 
   const openEdit = (skill: AgentSkillItem) => {
+    setTemplate(undefined);
     setEditing(skill);
     setEditorOpen(true);
   };
 
+  const registrationKnown = loaded && !loading && !loadError;
+  const openTemplate = (input: AgentSkillSaveInput) => {
+    if (!canManage || !registrationKnown || items.some((item) => item.skillId === input.skillId)) return;
+    setTemplate(input);
+    setEditing(null);
+    setEditorOpen(true);
+  };
+
   const submit = async (input: AgentSkillSaveInput) => {
+    if (!canManage) return;
+    if (template && (!registrationKnown || items.some((item) => item.skillId === input.skillId))) {
+      void message.warning('请刷新并确认登记状态；已注册技能请使用编辑入口');
+      return;
+    }
     // 更新模式乐观 CAS 依赖列表项当前 version；缺失（旧数据兼容）则提示并刷新列表重试。
     if (editing && requireSkillVersion(editing) === null) {
       void message.warning('技能版本信息缺失，已刷新列表，请重新提交');
@@ -125,9 +148,29 @@ const SkillsTab: React.FC = () => {
           </Button>
         ) : null}
       </Space>
+      <Typography.Title level={5}>已注册技能</Typography.Title>
+      {loadError ? (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="已注册技能加载失败，登记状态待确认"
+          description={loadError}
+          action={<Button onClick={() => void reload()}>重试</Button>}
+        />
+      ) : null}
       <SkillListTable
         items={items}
         loading={loading}
+        emptyText={
+          loadError
+            ? '无法确认已注册技能，请重试'
+            : loading
+              ? '正在加载已注册技能'
+              : canManage
+                ? '当前项目暂无已注册技能，可从下方模板查看并注册。'
+                : '当前项目暂无已注册技能，请联系技能管理员注册。'
+        }
         canManage={canManage}
         pendingToggle={pendingToggle}
         onToggle={toggle}
@@ -135,9 +178,17 @@ const SkillsTab: React.FC = () => {
         onEdit={openEdit}
         onDelete={remove}
       />
+      <SkillTemplateGallery
+        items={items}
+        registrationKnown={registrationKnown}
+        canManage={canManage}
+        onRegister={openTemplate}
+      />
       <SkillEditorModal
+        key={editorOpen ? `open:${editing?.skillId ?? template?.skillId ?? 'custom'}` : 'closed'}
         open={editorOpen}
         editing={editing}
+        template={template}
         saving={saving}
         onCancel={() => {
           setEditorOpen(false);
