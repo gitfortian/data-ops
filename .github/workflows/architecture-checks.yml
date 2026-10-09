@@ -40,6 +40,8 @@ jobs:
         run: node scripts/architecture/check-security-permission-persistence-owner.mjs
       - name: A8 Project/RBAC relation and grant port unique owner
         run: node scripts/architecture/check-security-relations-owner.mjs
+      - name: A8 Project and Role membership Platform interface bridges
+        run: node scripts/architecture/check-security-membership-ports.mjs
       - name: A8 Security Platform permission ownership
         run: node scripts/architecture/check-security-permission-owner.mjs
       - name: Plan fail-safe PR validation scope
