@@ -5,7 +5,7 @@
 ## 唯一验收入口
 
 - 综合 PR：[#461](https://github.com/gitfortian/data-ops/pull/461)，包含 A8.2b–m 历史 Draft 的精确 Git 祖先，以及本次 A8.2n+ 收口。
-- 工作流：`.github/workflows/architecture-a8-final-preview.yml`。仅在 #461 目标分支修改对应脚本/工作流后作为 PR CI 执行；允许手动调度，不自动 push/merge。
+- 工作流：现有 `.github/workflows/architecture-checks.yml` 中的 `a8-integration` Job。该 Job 仅在 #461 的 PR 上启用；沿用已注册 Architecture Checks，不额外创建独立的 CI 工作流、不自动 push/merge。
 - 预演脚本：`scripts/architecture/a8-final-integration-preview.mjs`。继承 A7 #395 实测过的只读 Git API + 临时 detached worktree 流程，扩展为 17 个独立前置 PR。
 - 保护测试：`scripts/architecture/a8-final-integration-preview.test.mjs`，拒绝 PR ID/分支/SHA/标签/Draft/目标漂移和不完整的回滚证据。
 
@@ -34,6 +34,6 @@
 
 ## 证据与剩余合并阻断
 
-成功与失败均上传 `architecture-a8-final-preview-<run>-<attempt>`，包含完整 main SHA、17 PR HEAD、合并 commit SHA、冲突路径和源码树回滚校验。只有该工作流和 #461 同一 HEAD 上的四组 CI 都成功，才可申请人工审查。
+成功与失败均上传 `architecture-a8-final-preview-<run>-<attempt>`，包含完整 main SHA、17 PR HEAD、合并 commit SHA、冲突路径和源码树回滚校验。只有 `a8-integration` Job 和 #461 同一 HEAD 上的四组 CI 都成功，才可申请人工审查。
 
 需要独立核销的内容：真实非空生产 history 快照升级，旧版独立编译外部二进制调用方，跨进程 Redis 登录和注销、部署环境 HTTP 401/403、真实业务权限 E2E、数据库备份恢复和发布回滚。当前任何静态、MockMvc 或临时 CI 结果都不替代这些证据。**本 PR 不能自动合并，最终由用户手动批准。**
