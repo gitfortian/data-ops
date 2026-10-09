@@ -43,6 +43,8 @@
 
 - [#345 工程整洁性治理阶段证据与剩余工作](engineering/code-cleanliness-p1-closeout.md)：各批 PR、已退役入口、仍需代码级证明的 P2 项。
 - [P2 后端整洁性综合审计](engineering/p2-backend-cleanliness-audit.md)：已合并 #477 的机械等价简化与保守可达性审计；没有静态引用不等于死代码。
+- [P3 文档及工程入口核销](engineering/p3-document-cleanliness-closeout.md)与[P3 源码注释审计](engineering/p3-source-debt-closeout.md)：已合并 #481 / #484 的证据与防回流机制。
+- [#345 最终综合核销和结项交接](engineering/final-cleanliness-closeout.md)：按最新 main 核对一次性脚本、保留证据、前端旧兼容层及剩余人工审查候选；只读审计，不修改业务行为。
 - [TypeScript type-baseline](../data-ops-ui/scripts/type-baseline.json)：当前机器可验收的 TypeScript 已知诊断基线，不以先前生成的 `tsc-output.txt` 文本替代。
 - 历史文档边界细分见 [Legacy Documentation Classification](product/LEGACY_DOC_INDEX.md)。
 
