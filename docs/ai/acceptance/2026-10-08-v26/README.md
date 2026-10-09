@@ -13,9 +13,12 @@
 | 前端相关范围（15 suites） | 101 unique tests，通过 | 宽范围 data-asset/components/ai 99 项；最终原页面/新组件 7 项包含新增 2 项，重复项不再计数 |
 | 类型债务门禁 | 通过 | 139 项既有诊断，无新增；最终代码复跑通过 |
 | 架构/CI/发布脚本 | 42 tests，通过 | architecture/release/ci Node 测试；Java 边界 77 reactor entries / 3212 production files、前端边界、62 条迁移基线、产品基线和 Product Guard 自测通过 |
-| 最终前端构建与产物核验 | 待补充 | 在代码提交后执行，避免将上一版 dist 作为本版证据 |
+| 前端构建与产物核验 | 通过 | 代码提交 198d36fafe2f566a09c8252c86471900a8919345 的 npm run build 与 frontend-artifact.mjs 版本/源摘要/产物校验通过 |
+| PR 产品与 CI 路径检查 | 通过 | 产品影响与范围门禁通过；impact-plan 为 scoped，前端目标 src/pages/data-asset，后端覆盖改动模块及 Asset 的反向依赖消费者 |
 
 后端合计 613 unique tests，611 通过、2 条件跳过。完整模块回归在一次 33 模块 reactor 中执行（只选择 Agent/Asset/Consumption 测试类）；不将依赖模块只编译记为测试通过。初次针对性运行有 3 个新测试在覆盖已抛异常的 Mockito stub 时错误触发旧 stub，改用 doReturn/doThrow 后完整回归通过；没有忽略失败。
+
+构建后的补充提交只更新本验收 Markdown，不修改代码；本地产物 manifest 固定上述代码 SHA，CI 需要从最终 PR SHA 重建。源摘要按当时工作区计算，包括用户已有的本地 Boot 配置，不作为干净发行包的证明；该本地配置未提交。
 
 ## AI08 场景
 
