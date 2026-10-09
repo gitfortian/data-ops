@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   REPOSITORY, ARCHITECTURE_SERIES,
-  validateArchitecturePull, validateIntegrationSeries, integrationSummary,
+  validateArchitecturePull, validateIntegrationSeries, integrationSummary, verifyRollback,
 } from './a8-final-integration-preview.mjs';
 
 function pull(spec = ARCHITECTURE_SERIES[0]) {
@@ -81,4 +83,37 @@ test('A0–A8 requires mutually isolated MySQL and PostgreSQL integration profil
     /env -u ARCHITECTURE_MYSQL_URL SPRING_PROFILES_ACTIVE=postgresql\s*\\\s*bash \.\/mvnw -B -ntp -pl data-ops-boot -am/);
   assert.match(workflow, /-Dtest=PostgresqlStorageSmokeTest/);
   assert.match(workflow, /-Dsurefire\.failIfNoSpecifiedTests=false test/);
+});
+
+test('A8.2 integrated PR must retain exact guarded head branch and be last', () => {
+  const final = ARCHITECTURE_SERIES.at(-1);
+  const valid = pull(final);
+  assert.equal(validateArchitecturePull(valid, final).number, 461);
+  assert.throws(() => validateArchitecturePull({
+    ...valid, head: {...valid.head, ref: 'main'}}, final), /branch drifted/);
+  assert.throws(() => validateIntegrationSeries(
+    [...ARCHITECTURE_SERIES.slice(0, -1),
+      {...final, branch: 'untrusted/random'}]), /Invalid architecture PR/);
+});
+
+test('A0–A8 rollback fails closed without all seventeen verified merge records', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'a8-rollback-contract-'));
+  const reportPath = join(dir, 'report.json');
+  try {
+    writeFileSync(reportPath, JSON.stringify({
+      baseSha: 'a'.repeat(40), integratedSha: 'b'.repeat(40), prs: [],
+    }));
+    assert.throws(() => verifyRollback({worktree: dir, reportPath}),
+      /complete exact-SHA A0–A8 integration record/);
+  } finally {
+    rmSync(dir, {recursive: true, force: true});
+  }
+});
+
+test('A0–A8 release preview must verify rollback and never push architecture branches', () => {
+  const workflow = readFileSync('.github/workflows/architecture-a8-final-preview.yml', 'utf8');
+  assert.match(workflow, /a8-final-integration-preview\.mjs rollback/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /permissions:\s+contents: read\s+pull-requests: read/);
+  assert.doesNotMatch(workflow, /git push|gh pr merge|git reset --hard origin\/main/);
 });
