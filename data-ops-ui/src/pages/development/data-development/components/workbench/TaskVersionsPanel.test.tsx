@@ -99,7 +99,7 @@ describe('TaskVersionsPanel Data Development API migration', () => {
     render(<TaskVersionsPanel node={node('sql-1')} refreshKey={0} />);
     expect(await screen.findByText('v2')).toBeInTheDocument();
     expect(screen.getByText('v1')).toBeInTheDocument();
-    expect(screen.getByText('abcdef1234')).toBeInTheDocument();
+    expect(screen.getAllByText(/abcdef1234/)).toHaveLength(2);
     expect(screen.getByText('pages.dataDevelopment.versions.latest')).toBeInTheDocument();
     expect(list).toHaveBeenCalledWith('sql-1');
     expect(toast).not.toHaveBeenCalled();
