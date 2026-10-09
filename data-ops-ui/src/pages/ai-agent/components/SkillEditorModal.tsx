@@ -1,4 +1,5 @@
-import { Alert, Form, Input, Modal, message } from 'antd';
+import { Alert, Button, Form, Input, Modal, message } from 'antd';
+import { FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons';
 import React from 'react';
 import type { AgentSkillItem, AgentSkillSaveInput } from '@/services/agent';
 import {
@@ -8,6 +9,7 @@ import {
   SKILL_NAME_MAX,
   skillEditorInitialValues,
 } from '../skill-runtime';
+import SkillMarkdownEditor from './SkillMarkdownEditor';
 
 export interface SkillEditorModalProps {
   open: boolean;
@@ -31,11 +33,12 @@ const MONO_FONT = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
 /**
  * 技能编辑器（文档 §3.3）：注册/更新共用表单。
- * skillId 注册可编辑、更新只读；content 等宽大 TextArea；metadata 为 JSON 编辑区，
+ * skillId 注册可编辑、更新只读；正文为 Markdown 工作区；metadata 为 JSON 编辑区，
  * 提交前校验合法性（parseSkillMetadata，单一实现）。更新冲突由容器按 409 分流。
  */
 const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, template, saving, onCancel, onSubmit }) => {
   const [form] = Form.useForm<SkillEditorFormValues>();
+  const [fullscreen, setFullscreen] = React.useState(false);
   const isUpdate = editing !== null;
 
   const handleFinish = async (values: SkillEditorFormValues) => {
@@ -58,7 +61,27 @@ const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, temp
   return (
     <Modal
       open={open}
-      title={isUpdate ? `编辑技能「${editing!.name}」` : '注册技能'}
+      title={
+        <div className="skill-editor-title">
+          <span>{isUpdate ? `编辑技能「${editing!.name}」` : '注册技能'}</span>
+          <Button
+            type="text"
+            size="small"
+            aria-label={fullscreen ? '退出全屏' : '全屏编辑'}
+            icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            onClick={() => setFullscreen((previous) => !previous)}
+          >
+            {fullscreen ? '退出全屏' : '全屏编辑'}
+          </Button>
+        </div>
+      }
+      width={fullscreen ? '100vw' : 1440}
+      className={fullscreen ? 'skill-editor-modal skill-editor-fullscreen' : 'skill-editor-modal'}
+      style={{ top: fullscreen ? 0 : 20, maxWidth: fullscreen ? '100vw' : 'calc(100vw - 32px)', paddingBottom: 0 }}
+      styles={{
+        content: { height: fullscreen ? '100dvh' : 'min(88dvh, 960px)', display: 'flex', flexDirection: 'column' },
+        body: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' },
+      }}
       okText="保存"
       cancelText="取消"
       confirmLoading={saving}
@@ -77,82 +100,82 @@ const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, temp
       <Form
         key={isUpdate ? editing!.skillId : 'create'}
         form={form}
+        className="skill-editor-form"
         layout="vertical"
         preserve={false}
         initialValues={skillEditorInitialValues(editing ?? template ?? null)}
         onFinish={(values) => void handleFinish(values)}
       >
+        <div className="skill-editor-settings">
+          <Form.Item
+            label="技能标识（skillId）"
+            name="skillId"
+            rules={
+              isUpdate
+                ? []
+                : [
+                    { required: true, message: '技能标识不能为空' },
+                    { max: 64, message: '技能标识长度不能超过 64' },
+                    { pattern: SKILL_ID_PATTERN, message: '技能标识仅支持字母、数字与中划线' },
+                  ]
+            }
+            extra={
+              isUpdate
+                ? '更新模式：skillId 为唯一逻辑名，不可修改'
+                : template
+                  ? '模板标识由对应场景引用，不可修改'
+                  : '唯一逻辑名（字母、数字、中划线，≤64），将作为技能 Tag 展示'
+            }
+          >
+            <Input disabled={isUpdate || !!template} placeholder="如 asset-yoy" />
+          </Form.Item>
+          <Form.Item
+            label="技能名称（展示名）"
+            name="name"
+            rules={[
+              { required: true, message: '技能名称不能为空' },
+              { max: SKILL_NAME_MAX, message: `技能名称长度不能超过 ${SKILL_NAME_MAX}` },
+            ]}
+          >
+            <Input placeholder="如 资产同比分析" />
+          </Form.Item>
+          <Form.Item
+            label="技能描述（一句话，注入提示用）"
+            name="description"
+            rules={[{ max: SKILL_DESCRIPTION_MAX, message: `技能描述长度不能超过 ${SKILL_DESCRIPTION_MAX}` }]}
+          >
+            <Input.TextArea
+              rows={2}
+              placeholder="如 用户询问资产同比时按选定口径输出对比结论"
+              maxLength={SKILL_DESCRIPTION_MAX}
+            />
+          </Form.Item>
+          <Form.Item
+            label="元数据（可选，JSON 对象）"
+            name="metadata"
+            rules={[
+              {
+                validator: (_rule, value?: string) => {
+                  const parsed = parseSkillMetadata(value ?? '');
+                  return parsed.error ? Promise.reject(new Error(parsed.error)) : Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              style={{ fontFamily: MONO_FONT }}
+              placeholder='如 {"tags":["资产","同比分析"],"owner":"数据组"}'
+            />
+          </Form.Item>
+        </div>
         <Form.Item
-          label="技能标识（skillId）"
-          name="skillId"
-          rules={
-            isUpdate
-              ? []
-              : [
-                  { required: true, message: '技能标识不能为空' },
-                  { max: 64, message: '技能标识长度不能超过 64' },
-                  { pattern: SKILL_ID_PATTERN, message: '技能标识仅支持字母、数字与中划线' },
-                ]
-          }
-          extra={
-            isUpdate
-              ? '更新模式：skillId 为唯一逻辑名，不可修改'
-              : template
-                ? '模板标识由对应场景引用，不可修改'
-                : '唯一逻辑名（字母、数字、中划线，≤64），将作为技能 Tag 展示'
-          }
-        >
-          <Input disabled={isUpdate || !!template} placeholder="如 asset-yoy" />
-        </Form.Item>
-        <Form.Item
-          label="技能名称（展示名）"
-          name="name"
-          rules={[
-            { required: true, message: '技能名称不能为空' },
-            { max: SKILL_NAME_MAX, message: `技能名称长度不能超过 ${SKILL_NAME_MAX}` },
-          ]}
-        >
-          <Input placeholder="如 资产同比分析" />
-        </Form.Item>
-        <Form.Item
-          label="技能描述（一句话，注入提示用）"
-          name="description"
-          rules={[{ max: SKILL_DESCRIPTION_MAX, message: `技能描述长度不能超过 ${SKILL_DESCRIPTION_MAX}` }]}
-        >
-          <Input.TextArea
-            rows={2}
-            placeholder="如 用户询问资产同比时按选定口径输出对比结论"
-            maxLength={SKILL_DESCRIPTION_MAX}
-          />
-        </Form.Item>
-        <Form.Item
-          label="技能正文（instructions，注入 System Prompt）"
+          className="skill-editor-content"
+          label="技能正文（Markdown）"
           name="content"
           rules={[{ required: true, message: '技能正文不能为空' }]}
         >
-          <Input.TextArea
-            rows={8}
-            style={{ fontFamily: MONO_FONT }}
-            placeholder="当用户询问 X 时，按口径 Y 输出。演示剧本：如「当用户询问资产同比分析时，先确认资产范围与期间，再按统一口径对比输出。」"
-          />
-        </Form.Item>
-        <Form.Item
-          label="元数据（可选，JSON 对象）"
-          name="metadata"
-          rules={[
-            {
-              validator: (_rule, value?: string) => {
-                const parsed = parseSkillMetadata(value ?? '');
-                return parsed.error ? Promise.reject(new Error(parsed.error)) : Promise.resolve();
-              },
-            },
-          ]}
-        >
-          <Input.TextArea
-            rows={4}
-            style={{ fontFamily: MONO_FONT }}
-            placeholder='如 {"tags":["资产","同比分析"],"owner":"数据组"}'
-          />
+          <SkillMarkdownEditor disabled={saving} />
         </Form.Item>
       </Form>
     </Modal>

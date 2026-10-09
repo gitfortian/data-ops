@@ -3,6 +3,7 @@ import React from 'react';
 import type { AgentSkillItem, AgentSkillSaveInput } from '@/services/agent';
 import { skillTemplateInput, skillTemplates } from '@/services/agent/skillTemplates';
 import type { SkillTemplate } from '@/services/agent/skillTemplates';
+import SkillDocumentViewer from './SkillDocumentViewer';
 
 interface Props {
   items: AgentSkillItem[];
@@ -61,15 +62,18 @@ const SkillTemplateGallery: React.FC<Props> = ({ items, registrationKnown, canMa
         title={preview?.name}
         footer={null}
         onCancel={() => setPreview(null)}
-        width={800}
+        width={1280}
+        style={{ top: 20, maxWidth: 'calc(100vw - 32px)' }}
+        styles={{
+          content: { height: 'min(88dvh, 960px)', display: 'flex', flexDirection: 'column' },
+          body: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' },
+        }}
         destroyOnHidden
       >
         <Typography.Paragraph type="secondary">
           模板正文，仅供查看；登记和启用状态以上方已注册技能为准。
         </Typography.Paragraph>
-        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '60vh', overflowY: 'auto' }}>
-          {preview?.content}
-        </pre>
+        <SkillDocumentViewer key={preview?.skillId} source={preview?.content ?? ''} />
       </Modal>
     </section>
   );

@@ -1,8 +1,8 @@
-import { Descriptions, Drawer, Empty, Space, Tag, Typography } from 'antd';
+import { Descriptions, Drawer, Empty, Tag, Typography } from 'antd';
 import React from 'react';
 import type { AgentSkillItem } from '@/services/agent';
 import { skillTagVisual } from '../skill-runtime';
-import MarkdownContent from './MarkdownContent';
+import SkillDocumentViewer from './SkillDocumentViewer';
 
 const formatTime = (value?: string) => value?.replace('T', ' ').slice(0, 19) ?? '-';
 
@@ -17,13 +17,18 @@ const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({ open, skill, onCl
   const visual = skill ? skillTagVisual(skill) : null;
 
   return (
-    <Drawer title={skill ? `技能详情：${skill.name}` : '技能详情'} width={680} open={open} onClose={onClose}>
+    <Drawer
+      title={skill ? `技能详情：${skill.name}` : '技能详情'}
+      width="min(1280px, calc(100vw - 32px))"
+      open={open}
+      onClose={onClose}
+    >
       {!skill ? (
         <Empty description="技能不存在（可能已被删除）" />
       ) : (
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', minHeight: 0 }}>
           <Descriptions
-            column={1}
+            column={{ xs: 1, sm: 2, lg: 3 }}
             size="small"
             bordered
             items={[
@@ -45,14 +50,11 @@ const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({ open, skill, onCl
               <Typography.Paragraph style={{ marginTop: 4 }}>{skill.description}</Typography.Paragraph>
             </div>
           ) : null}
-          <div>
-            <Typography.Text strong>技能正文（instructions，注入 System Prompt）</Typography.Text>
-            <div style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '8px 12px', marginTop: 8 }}>
-              <MarkdownContent md={skill.content} />
-            </div>
+          <div style={{ flex: 1, minHeight: 300 }}>
+            <SkillDocumentViewer key={skill.skillId} source={skill.content} />
           </div>
-          <div>
-            <Typography.Text strong>元数据（能力标签等）</Typography.Text>
+          <details>
+            <summary style={{ cursor: 'pointer' }}>元数据（能力标签等）</summary>
             <pre
               style={{
                 marginTop: 8,
@@ -63,6 +65,7 @@ const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({ open, skill, onCl
                 fontSize: 12.5,
                 lineHeight: 1.6,
                 overflowX: 'auto',
+                maxHeight: 160,
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-all',
               }}
@@ -71,8 +74,8 @@ const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({ open, skill, onCl
                 ? JSON.stringify(skill.metadata, null, 2)
                 : '- (未填写)'}
             </pre>
-          </div>
-        </Space>
+          </details>
+        </div>
       )}
     </Drawer>
   );
