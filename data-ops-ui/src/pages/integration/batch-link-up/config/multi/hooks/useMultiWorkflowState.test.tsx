@@ -21,8 +21,9 @@ jest.mock('@/services/data-source/catalog', () => ({
   listDataSourceReferenceTableOptions: jest.fn(),
 }));
 
-jest.mock('@/pages/integration/batch-link-up/api', () => ({
-  linkupJobDefinitionApi: {},
+jest.mock('@/services/batch-link-up', () => ({
+  saveOfflineSyncMultiGuideWithState: jest.fn(),
+  renderOfflineSyncMultiGuideConfig: jest.fn(),
 }));
 
 describe('useMultiWorkflowState modern Data Source migration', () => {

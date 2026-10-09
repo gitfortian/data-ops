@@ -257,3 +257,30 @@ export const getOfflineSyncClientLogs = (
   HttpUtils.getData<unknown>(
     `/api/v1/devops/client/instance/${instanceId}/logs?jobMode=${encodeURIComponent(jobMode)}`,
   );
+
+/** Preserve stateful Multi Guide save results instead of collapsing the response to an ID. */
+export type OfflineGuideSaveResponse =
+  | BatchLinkUpId
+  | {
+      id?: BatchLinkUpId;
+      jobDefineId?: BatchLinkUpId;
+      jobDefinitionId?: BatchLinkUpId;
+      definitionId?: BatchLinkUpId;
+      state?: Record<string, unknown>;
+    };
+
+export const saveOfflineSyncMultiGuideWithState = (
+  payload: Record<string, unknown>,
+): Promise<OfflineGuideSaveResponse> =>
+  HttpUtils.postData<OfflineGuideSaveResponse>(
+    `${DEFINITION_API}/guide-multi/saveOrUpdate`,
+    payload,
+  );
+
+export const renderOfflineSyncMultiGuideConfig = (
+  payload: Record<string, unknown>,
+): Promise<string> =>
+  HttpUtils.postData<string>(
+    `${DEFINITION_API}/guide-multi/build-config`,
+    payload,
+  );

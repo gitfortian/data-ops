@@ -6,9 +6,8 @@ import {
   getOfflineSyncTask, listOfflineSyncInstances, listOfflineSyncTableMetrics,
   listOfflineSyncTasks, normalizeOfflineInstancePageRequest,
 } from './api';
-import { linkupJobInstanceApi } from './definition-legacy';
 
-describe('Offline Sync modern runtime transport and legacy adapter parity', () => {
+describe('Offline Sync modern runtime transport after legacy retirement', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('normalizes pagination aliases without dropping other filters', () => {
@@ -43,16 +42,13 @@ describe('Offline Sync modern runtime transport and legacy adapter parity', () =
       { current: 1, pageSize: 10 });
   });
 
-  it('keeps historical and modern execution-history page request normalization identical', async () => {
+  it('keeps the historical instance page normalization in the sole modern owner', async () => {
     const page = { bizData: [{ id: 99 }], pagination: { total: 1 } };
     const postData = jest.spyOn(HttpUtils, 'postData').mockResolvedValue(page);
-    const post = jest.spyOn(HttpUtils, 'post').mockResolvedValue({ code: 200, data: page });
     const query = { pageNum: 2, pageSize: 20, jobDefinitionId: '12' };
     await expect(listOfflineSyncInstances(query)).resolves.toEqual(page);
-    await expect(linkupJobInstanceApi.page(query)).resolves.toEqual({ code: 200, data: page });
-    const payload = { current: 2, pageSize: 20, jobDefinitionId: 12 };
-    expect(postData).toHaveBeenCalledWith('/api/v1/job/batch-instance/page', payload);
-    expect(post).toHaveBeenCalledWith('/api/v1/job/batch-instance/page', payload);
+    expect(postData).toHaveBeenCalledWith('/api/v1/job/batch-instance/page',
+      { current: 2, pageSize: 20, jobDefinitionId: 12 });
   });
 
   it('fetches instance detail and execution log without a response envelope', async () => {
