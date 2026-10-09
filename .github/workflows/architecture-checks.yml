@@ -50,6 +50,8 @@ jobs:
         run: node scripts/architecture/check-security-identity-context-owner.mjs
       - name: A8 Security extensions, default implementations and pure SPI ownership
         run: node scripts/architecture/check-security-extension-owner.mjs
+      - name: A8 Security API seventy-five DTO/VO/enum single-owner contract
+        run: node scripts/architecture/check-security-api-contract-owner.mjs
       - name: A8 Security runtime adapter, configuration and HTTP/audit unique owners
         run: node scripts/architecture/check-security-runtime-owner.mjs
       - name: A8 Security Platform permission ownership
