@@ -48,7 +48,7 @@ jobs:
         run: node scripts/architecture/check-security-rbac-db-matrix.mjs
       - name: A8 Security Identity, Auth and User/Dept unique Platform owner
         run: node scripts/architecture/check-security-identity-context-owner.mjs
-      - name: A8 Security Sa-Token Runtime adapter unique owner
+      - name: A8 Security runtime adapter, configuration and HTTP/audit unique owners
         run: node scripts/architecture/check-security-runtime-owner.mjs
       - name: A8 Security Platform permission ownership
         run: node scripts/architecture/check-security-permission-owner.mjs

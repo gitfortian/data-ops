@@ -10,6 +10,14 @@ Prerequisite: Draft PR #453, exact head `876b7495d64060af25834f1e17d676aae0640e5
 - Keep old Starter's Sa-Token/Redisx dependencies for its existing configuration/storage classes. No Redis or HTTP behavior change intended.
 - Explicitly prohibit duplicate compiled adapter ownership via a static source guard.
 
+## A8.2o-p: Runtime config, HTTP context, audit helper migration
+- Four unchanged production sources move from Starter to Runtime: YakSecurityProperties, HttpRequestUtil, NetworkUtil, SensitiveDataSanitizer. Preserve original FQCN and binary method signatures.
+- Preserve yak.security configuration prefix, Sa-Token storage/default values, project ID header, HTTP identity/Proxy IP behavior and audit secret masking.
+- Move two existing tests along with properties and request helper. Add default/binding/password masking, malformed/missing header, proxy IP fallback and audit token tests.
+- Extend Runtime source owner check to all four helpers and their four tests; 12 positive/negative Node cases prevent duplicate/absent classes, Starter reverse imports, Maven reverse dependencies and contract drift.
+- Maven runtime explicitly declares Lombok, Spring Boot configuration processor, Spring Web and Servlet provided API; Starter depends on Runtime and is still the only owner of DB/Flyway/MyBatis, Filter wiring, CaffeinePermissionCache and Redis DAO.
+- No production behavior intentionally changed. External compiled consumers, 401/403, real Redis multi-instance and historical database upgrades remain unmet acceptance gates.
+
 ## Remaining hard gates
 - Verify clean multi-module Java compilation and existing Sa-Token authentication regressions.
 - Verify Spring bean uniqueness, unauthenticated 401 and unauthorized 403.
