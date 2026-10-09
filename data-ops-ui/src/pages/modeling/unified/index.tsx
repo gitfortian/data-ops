@@ -1,4 +1,4 @@
-import { history, useParams } from '@umijs/max';
+import { history, useLocation, useParams } from '@umijs/max';
 import { Descriptions, message, Space, Tabs, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -24,6 +24,10 @@ const COMING_SOON: Record<string, { title: string; ticket: string; note: string 
 const UnifiedModelView: React.FC = () => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const location = useLocation();
+  const queryTab = new URLSearchParams(location.search).get('tab');
+  const tabKeys = ['overview', 'structure', 'mapping', 'layer-mapping', 'process', 'lineage', 'lifecycle', 'version', 'task'];
+  const activeTab = queryTab && tabKeys.includes(queryTab) ? queryTab : 'structure';
   const [model, setModel] = useState<ModelingModelRecord>();
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
@@ -165,7 +169,11 @@ const UnifiedModelView: React.FC = () => {
 
       <Tabs
         className="mt-3"
-        defaultActiveKey="structure"
+        activeKey={activeTab}
+        onChange={(tab) => {
+          const query = new URLSearchParams(location.search); query.set('tab', tab);
+          history.replace({ pathname: location.pathname, search: `?${query.toString()}` });
+        }}
         items={[
           { key: 'overview', label: '基本信息', children: overview },
           { key: 'structure', label: '表结构', children: <ModelingModelDetail /> },

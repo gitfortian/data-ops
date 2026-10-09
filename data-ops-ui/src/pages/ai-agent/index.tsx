@@ -1076,7 +1076,7 @@ const AiAgentPage: React.FC = () => {
             message={governanceTaskTitle(governanceTarget)}
             description={
               <Space wrap>
-                <span>{governanceTarget.purpose === 'CONSUMER_VERSION_IMPACT'
+                <span>{governanceTarget.purpose === 'MODEL_STRUCTURE_REVIEW' ? '固定已保存比较；当前映射没有历史快照。准备问题后请核对并明确发送。' : governanceTarget.purpose === 'CONSUMER_VERSION_IMPACT'
                   ? '仅核对所选来源版本的归属、有效订阅与该版本成功使用；读取窗口有上限，覆盖缺口需回原页面人工核查。'
                   : governanceTarget.purpose === 'ASSET_IMPACT'
                   ? '仅说明所选资产的一跳结构关系、已接入业务使用和页面活动；保留范围与缺口，不判断完整影响或发布安全。'
@@ -1088,7 +1088,7 @@ const AiAgentPage: React.FC = () => {
                 {governanceQuestions(governanceTarget).map((question, index) => (
                   <Button key={question} size="small" disabled={preparationBlocked || hasText || draftLoading}
                     onClick={() => { if (!inputValueRef.current.trim() && !preparationBlocked) { draftSourceRef.current = undefined; setInput(question); } }}>
-                    {governanceTarget.purpose === 'CONSUMER_VERSION_IMPACT' ? '准备消费影响说明' : governanceTarget.purpose === 'ASSET_IMPACT' ? '准备影响说明' : governanceTarget.qualityBaselineExecutionNo ? '比较两次执行' : governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
+                    {governanceTarget.purpose === 'MODEL_STRUCTURE_REVIEW' ? '准备结构变更说明' : governanceTarget.purpose === 'CONSUMER_VERSION_IMPACT' ? '准备消费影响说明' : governanceTarget.purpose === 'ASSET_IMPACT' ? '准备影响说明' : governanceTarget.qualityBaselineExecutionNo ? '比较两次执行' : governanceTarget.qualityExecutionNo !== undefined ? (index === 0 ? '解读与排查' : '补充排查信息')
                       : governanceTarget.qualityMonitorId !== undefined ? '生成规则候选'
                         : governanceTarget.purpose === 'ASSET_DESCRIPTION' ? '生成描述候选' : (index === 0 ? '解释结果' : '排查建议')}
                   </Button>
@@ -1228,7 +1228,7 @@ export default function ScopedAiAgentPage() {
   const { currentProject } = useSecurityProject();
   const { can } = usePermissionAccess();
   const entry = new URLSearchParams(window.location.search);
-  if (!entry.get('sessionId') && ['purpose', 'consumerProductType', 'consumerProductIdentity', 'consumerVersionIdentity'].some((key) => entry.has(key)) && !parseGovernanceTarget(window.location.search)) {
+  if (!entry.get('sessionId') && ['purpose', 'consumerProductType', 'consumerProductIdentity', 'consumerVersionIdentity', 'reviewModelId', 'reviewBaselineVersionNo', 'reviewDefinition'].some((key) => entry.has(key)) && !parseGovernanceTarget(window.location.search)) {
     return <Alert type="error" showIcon message="治理任务入口无效" description="请返回来源页面重新选择资产与任务。" />;
   }
   return <AiAgentPage key={JSON.stringify([currentProject?.id, can('agent:session:read')])} />;

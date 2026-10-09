@@ -404,7 +404,8 @@ public class AgentRuntime implements TurnCorrelation {
                     ? modelMapping(inputs, context, execution)
                     : target != null && target.metricExplanation() != null
                         ? metricExplanation(inputs, context, execution)
-                : mapStream(GovernanceAnswerGuard.guard(agent().streamEvents(inputs, context), execution, context, agent()), eventCodec),
+                : mapStream(GovernanceAnswerGuard.guard(agent().streamEvents(inputs, context), execution, context, agent(),
+                    () -> governanceTools != null && governanceTools.confirmStructureReview(context)), eventCodec),
             Duration.ofSeconds(properties.getChat().getTurnTimeoutSeconds()))
             .doFinally(signal -> execution.stopTools());
     reactor.core.Disposable disposable = pipeline.subscribe(onEvent::accept, onError, onComplete);
