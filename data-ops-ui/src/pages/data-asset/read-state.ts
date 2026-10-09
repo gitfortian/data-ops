@@ -13,3 +13,9 @@ export const classifyAssetReadFailure = (error: unknown): AssetReadFailure => {
   if (status === 404 || businessCode === 48001) return 'NOT_FOUND';
   return 'UNAVAILABLE';
 };
+
+/** List reads must not map a missing/project error to a successful empty page. */
+export type AssetListReadFailure = 'FORBIDDEN' | 'UNAVAILABLE';
+
+export const classifyAssetListFailure = (error: unknown): AssetListReadFailure =>
+  classifyAssetReadFailure(error) === 'FORBIDDEN' ? 'FORBIDDEN' : 'UNAVAILABLE';

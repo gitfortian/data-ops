@@ -20,3 +20,15 @@ describe('Asset detail read failures', () => {
     expect(classifyAssetReadFailure({})).toBe('UNAVAILABLE');
   });
 });
+
+import { classifyAssetListFailure } from './read-state';
+
+describe('Asset list failures', () => {
+  it('distinguishes 403 from unknown or ambiguous project failures', () => {
+    expect(classifyAssetListFailure({ response: { status: 403 } })).toBe('FORBIDDEN');
+    expect(classifyAssetListFailure({ code: 403 })).toBe('FORBIDDEN');
+    expect(classifyAssetListFailure({ code: 48001 })).toBe('UNAVAILABLE');
+    expect(classifyAssetListFailure({ response: { status: 500 } })).toBe('UNAVAILABLE');
+    expect(classifyAssetListFailure(new Error('timeout'))).toBe('UNAVAILABLE');
+  });
+});
