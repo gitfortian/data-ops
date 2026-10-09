@@ -11,7 +11,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const PATHS = Object.freeze({
   plan: 'data-ops-platform/data-ops-platform-security-contract/src/main/java/io/yak/framework/security/permission/PermissionDeclarationPlan.java',
   service: 'data-ops-framework/data-security/src/main/java/io/yak/framework/security/permission/PermissionRegistrationService.java',
-  dao: 'data-ops-framework/data-security/src/main/java/io/yak/framework/security/dao/PermissionDao.java',
+  dao: 'data-ops-platform/data-ops-platform-security-contract/src/main/java/io/yak/framework/security/dao/PermissionDao.java',
   contractPom: 'data-ops-platform/data-ops-platform-security-contract/pom.xml',
   securityPom: 'data-ops-framework/data-security/pom.xml',
 });
