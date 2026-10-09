@@ -4,13 +4,13 @@ import { Play } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchDataServiceDocumentation,
-  fetchDataServices,
+  getDataServiceDocumentation,
+  listDataServices,
   testDataService,
   type DataServiceApi,
   type DataServiceDocumentation,
   type DataServiceQueryResult,
-} from '../service';
+} from '@/services/data-service';
 
 const typeLabel: Record<string, string> = {
   STRING: 'String',
@@ -55,8 +55,8 @@ export default function DataServiceDebugPage() {
 
   const loadServices = useCallback(async () => {
     try {
-      const response = await fetchDataServices();
-      setServices(response.data || []);
+      const rows = await listDataServices();
+      setServices(rows || []);
     } catch (error: any) {
       message.error(error?.message || '加载 API 列表失败');
     } finally {
@@ -108,10 +108,9 @@ export default function DataServiceDebugPage() {
     setDocLoading(true);
     setTestResult(undefined);
 
-    void fetchDataServiceDocumentation(selectedApiId)
-      .then((response) => {
+    void getDataServiceDocumentation(selectedApiId)
+      .then((doc) => {
         if (cancelled) return;
-        const doc = response.data;
         setDocumentation(doc);
         const nextValues: Record<string, string> = {};
         for (const parameter of doc?.parameters || []) {
@@ -153,11 +152,11 @@ export default function DataServiceDebugPage() {
 
     setTesting(true);
     try {
-      const response = await testDataService(selectedService.id, debugValues);
-      if (!response.data) {
-        throw new Error(response.message || response.msg || '调试失败');
+      const result = await testDataService(selectedService.id, debugValues);
+      if (!result) {
+        throw new Error('调试失败');
       }
-      setTestResult(response.data);
+      setTestResult(result);
     } catch (error: any) {
       message.error(error?.message || '调试失败');
     } finally {
