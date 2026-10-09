@@ -252,6 +252,9 @@ jobs:
       ARCHITECTURE_MYSQL_USERNAME: root
       ARCHITECTURE_MYSQL_PASSWORD: architecture-ci
       ARCHITECTURE_POSTGRESQL_URL: jdbc:postgresql://127.0.0.1:5432/architecture_ci
+      ARCHITECTURE_PG_URL: jdbc:postgresql://127.0.0.1:5432/architecture_ci
+      ARCHITECTURE_PG_USERNAME: architecture
+      ARCHITECTURE_PG_PASSWORD: architecture-ci
       ARCHITECTURE_POSTGRESQL_USERNAME: architecture
       ARCHITECTURE_POSTGRESQL_PASSWORD: architecture-ci
     steps:
