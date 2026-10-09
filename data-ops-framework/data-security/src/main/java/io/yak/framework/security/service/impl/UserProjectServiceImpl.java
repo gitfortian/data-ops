@@ -4,6 +4,7 @@ import io.yak.framework.security.common.dto.user.UserProjectDTO;
 import io.yak.framework.security.common.entity.UserProject;
 import io.yak.framework.security.common.enums.project.ProjectUserCode;
 import io.yak.framework.security.dao.UserProjectDao;
+import io.yak.ops.platform.security.port.UserProjectMembershipPort;
 import io.yak.framework.security.service.PermissionCache;
 import io.yak.framework.security.service.UserProjectService;
 
@@ -40,6 +41,9 @@ public class UserProjectServiceImpl
 
   private final UserProjectDao userProjectDao;
 
+  /** Product-owned port; the same legacy DAO instance also provides DTO/PO compatibility. */
+  private final UserProjectMembershipPort membershipPort;
+
   private final PermissionCache permissionCache;
 
   /**
@@ -53,6 +57,7 @@ public class UserProjectServiceImpl
           PermissionCache permissionCache) {
 
     this.userProjectDao = userProjectDao;
+    this.membershipPort = userProjectDao;
     this.permissionCache = permissionCache;
   }
 
@@ -75,7 +80,7 @@ public class UserProjectServiceImpl
     }
 
     List<Long> userIdList =
-            userProjectDao
+            membershipPort
                     .selectUserIdListByProjectId(
                             projectId,
                             projectUserCode.getType());
@@ -103,7 +108,7 @@ public class UserProjectServiceImpl
     }
 
     List<Long> projectIdList =
-            userProjectDao
+            membershipPort
                     .selectProjectIdListByUserIdList(
                             validUserIds);
 
@@ -302,12 +307,12 @@ public class UserProjectServiceImpl
     }
 
     List<Long> affectedUserIds =
-            userProjectDao
+            membershipPort
                     .selectUserIdListByProjectId(
                             projectId,
                             NORMAL_USER_TYPE);
 
-    userProjectDao
+    membershipPort
             .deleteByProjectIdAndUserType(
                     projectId,
                     NORMAL_USER_TYPE);
@@ -333,12 +338,12 @@ public class UserProjectServiceImpl
     }
 
     List<Long> affectedUserIds =
-            userProjectDao
+            membershipPort
                     .selectUserIdListByProjectId(
                             projectId,
                             OWNER_USER_TYPE);
 
-    userProjectDao
+    membershipPort
             .deleteByProjectIdAndUserType(
                     projectId,
                     OWNER_USER_TYPE);
@@ -364,7 +369,7 @@ public class UserProjectServiceImpl
     }
 
     List<UserProject> userProjectList =
-            userProjectDao.selectByProjectIds(
+            membershipPort.selectByProjectIds(
                     validProjectIds);
 
     return userProjectList == null
@@ -425,7 +430,7 @@ public class UserProjectServiceImpl
                     validUserIds,
                     userType);
 
-    userProjectDao.insertBatch(
+    membershipPort.insertBatch(
             userProjectList);
 
     invalidateUsers(validUserIds);
@@ -454,7 +459,7 @@ public class UserProjectServiceImpl
       return;
     }
 
-    userProjectDao.deleteUserProject(
+    membershipPort.deleteUserProject(
             buildUserProjectList(
                     projectId,
                     validUserIds,
@@ -487,7 +492,7 @@ public class UserProjectServiceImpl
     }
 
     List<Long> existingUserIds =
-            userProjectDao
+            membershipPort
                     .selectUserIdListByProjectId(
                             projectId,
                             userType);
