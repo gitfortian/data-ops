@@ -2,6 +2,8 @@ package io.yak.ops.business.consumption.relationship.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -92,6 +94,40 @@ class DatasetUsageEvidenceSynchronizerTest {
     assertEquals(1, second.results().size());
     assertEquals(null, second.nextBeforeAuditId());
     assertEquals(true, second.exhausted());
+  }
+
+  @Test
+  void unorderedOrRepeatedDatasetAuditCursorCannotNormalizeOrAdvance() {
+    DatasetQueryPerformanceReader reader = mock(DatasetQueryPerformanceReader.class);
+    DatasetUsageEvidenceNormalizer normalizer = mock(DatasetUsageEvidenceNormalizer.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    DatasetQueryPerformance trace = mock(DatasetQueryPerformance.class);
+    var sync = new DatasetUsageEvidenceSynchronizer(reader, normalizer, project);
+    when(reader.successfulPageByDatasetAndVersion(101L, 99L, 900L, 3))
+        .thenReturn(List.of(
+            new DatasetSuccessfulQueryAudit(899L, trace),
+            new DatasetSuccessfulQueryAudit(899L, trace)));
+
+    assertThrows(IllegalStateException.class,
+        () -> sync.recoverSuccessfulVersionPage(101L, 99L, 900L, 3));
+    verify(normalizer, never()).normalize(any(Long.class), any(DatasetQueryPerformance.class));
+  }
+
+  @Test
+  void wrongDatasetRecoveryCursorCannotNormalizeOrAdvance() {
+    DatasetQueryPerformanceReader reader = mock(DatasetQueryPerformanceReader.class);
+    DatasetUsageEvidenceNormalizer normalizer = mock(DatasetUsageEvidenceNormalizer.class);
+    CurrentProject project = mock(CurrentProject.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(reader.successfulPageByDatasetAndVersion(101L, 99L, 900L, 3))
+        .thenReturn(List.of(new DatasetSuccessfulQueryAudit(901L,
+            mock(DatasetQueryPerformance.class))));
+    var sync = new DatasetUsageEvidenceSynchronizer(reader, normalizer, project);
+
+    assertThrows(IllegalStateException.class,
+        () -> sync.recoverSuccessfulVersionPage(101L, 99L, 900L, 3));
+    verify(normalizer, never()).normalize(any(Long.class), any(DatasetQueryPerformance.class));
   }
 
   @Test

@@ -115,6 +115,38 @@ class DataServiceUsageEvidenceSynchronizerTest {
   }
 
   @Test
+  void repeatedOrOutOfOrderInvocationPageDoesNotNormalizeOrAdvance() {
+    DataServiceCallLogReader reader = mock(DataServiceCallLogReader.class);
+    DataServiceUsageEvidenceNormalizer normalizer = mock(DataServiceUsageEvidenceNormalizer.class);
+    InvocationRecord first = mock(InvocationRecord.class);
+    InvocationRecord repeated = mock(InvocationRecord.class);
+    when(first.id()).thenReturn(899L);
+    when(repeated.id()).thenReturn(899L);
+    when(reader.successfulPageByApiAndRevision(7L, 9L, 900L, 3))
+        .thenReturn(List.of(first, repeated));
+    var sync = new DataServiceUsageEvidenceSynchronizer(reader, normalizer);
+
+    assertThrows(IllegalStateException.class,
+        () -> sync.recoverSuccessfulRevisionPage(7L, 9L, 900L, 3));
+    verify(normalizer, never()).normalize(any(InvocationRecord.class));
+  }
+
+  @Test
+  void invocationRecoveryCannotReturnRowsAtOrBeyondExclusiveCursor() {
+    DataServiceCallLogReader reader = mock(DataServiceCallLogReader.class);
+    DataServiceUsageEvidenceNormalizer normalizer = mock(DataServiceUsageEvidenceNormalizer.class);
+    InvocationRecord future = mock(InvocationRecord.class);
+    when(future.id()).thenReturn(901L);
+    when(reader.successfulPageByApiAndRevision(7L, 9L, 900L, 3))
+        .thenReturn(List.of(future));
+    var sync = new DataServiceUsageEvidenceSynchronizer(reader, normalizer);
+
+    assertThrows(IllegalStateException.class,
+        () -> sync.recoverSuccessfulRevisionPage(7L, 9L, 900L, 3));
+    verify(normalizer, never()).normalize(any(InvocationRecord.class));
+  }
+
+  @Test
   void missingDurableInvocationIdDoesNotCreateFakeContinuationOrNormalizeAnything() {
     DataServiceCallLogReader reader = mock(DataServiceCallLogReader.class);
     DataServiceUsageEvidenceNormalizer normalizer = mock(DataServiceUsageEvidenceNormalizer.class);

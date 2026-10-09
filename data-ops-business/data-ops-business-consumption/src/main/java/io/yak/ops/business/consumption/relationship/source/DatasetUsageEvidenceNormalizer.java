@@ -48,6 +48,11 @@ public class DatasetUsageEvidenceNormalizer {
 
   public UsageNormalizationResult normalize(Long projectId, DatasetSuccessfulQueryEvent event) {
     if (event == null) return UsageNormalizationResult.gap(null, "Dataset query evidence is missing");
+    // Never write source-owned query evidence under a different consumer Project context.
+    if (projectId != null && !projectId.equals(event.projectId())) {
+      return UsageNormalizationResult.gap(evidenceRef(event.queryId()),
+          "Dataset success event Project does not match the recovery Project");
+    }
     return normalize(
         projectId == null ? event.projectId() : projectId,
         event.queryId(),
@@ -129,6 +134,10 @@ public class DatasetUsageEvidenceNormalizer {
     }
     if (startedAt == null) return "Dataset query has no observation time";
     return null;
+  }
+
+  private String evidenceRef(String queryId) {
+    return queryId == null ? null : "query:" + queryId;
   }
 
   private String evidenceRef(DatasetQueryPerformance trace) {
