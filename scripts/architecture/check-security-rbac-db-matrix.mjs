@@ -18,8 +18,11 @@ export const PATHS = Object.freeze({
 export function checkDbMatrix(files) {
   const errors = [];
   const ci=files.ci||'', test=files.test||'', source=files.source||'';
-  if (!ci.includes('image: mysql:8.0') || !ci.includes('image: postgres:16')
-      || !ci.includes('ARCHITECTURE_MYSQL_URL') || !ci.includes('ARCHITECTURE_PG_URL')) {
+  // A separate A0–A8 preview also uses databases; it must never conceal
+  // the loss of the real Security backend test matrix.
+  const backend = ci.split('\n  backend:\n')[1]?.split('\n  frontend:\n')[0] || '';
+  if (!backend.includes('image: mysql:8.0') || !backend.includes('image: postgres:16')
+      || !backend.includes('ARCHITECTURE_MYSQL_URL') || !backend.includes('ARCHITECTURE_PG_URL')) {
     errors.push('Architecture CI must provide real MySQL and PostgreSQL backend containers');
   }
   if (!/mysqlHostSchemaBaselineRetainsProjectIsolationAndRbacGrant\(/.test(test)
