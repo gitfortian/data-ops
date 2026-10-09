@@ -215,6 +215,15 @@ jobs:
           node scripts/architecture/check-security-distribution-classpath.mjs \
             data-ops-boot/target/data-ops-boot-1.0.0.jar \
             data-ops-dist/target/yak-ops-1.0.0.tar.gz
+      - name: Link independently compiled legacy Security consumer against new release
+        if: github.event_name == 'pull_request' && github.head_ref == 'refactor/a8-2n-p-security-runtime-batch'
+        env:
+          IMMUTABLE_LEGACY_MAIN_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          bash scripts/architecture/verify-security-legacy-consumer.sh \
+            "$IMMUTABLE_LEGACY_MAIN_SHA" \
+            data-ops-boot/target/data-ops-boot-1.0.0.jar
 
   a8-integration:
     name: A0-A8 ordered migration / runtime / UI acceptance (read-only)
