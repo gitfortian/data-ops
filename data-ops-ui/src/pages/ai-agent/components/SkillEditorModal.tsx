@@ -1,4 +1,4 @@
-import { Form, Input, Modal, message } from 'antd';
+import { Alert, Form, Input, Modal, message } from 'antd';
 import React from 'react';
 import type { AgentSkillItem, AgentSkillSaveInput } from '@/services/agent';
 import {
@@ -13,6 +13,7 @@ export interface SkillEditorModalProps {
   open: boolean;
   /** null=注册模式；非 null=更新模式（skillId 只读并回传原值）。 */
   editing: AgentSkillItem | null;
+  template?: AgentSkillSaveInput;
   saving: boolean;
   onCancel: () => void;
   onSubmit: (input: AgentSkillSaveInput) => Promise<void> | void;
@@ -33,7 +34,7 @@ const MONO_FONT = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
  * skillId 注册可编辑、更新只读；content 等宽大 TextArea；metadata 为 JSON 编辑区，
  * 提交前校验合法性（parseSkillMetadata，单一实现）。更新冲突由容器按 409 分流。
  */
-const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, saving, onCancel, onSubmit }) => {
+const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, template, saving, onCancel, onSubmit }) => {
   const [form] = Form.useForm<SkillEditorFormValues>();
   const isUpdate = editing !== null;
 
@@ -65,12 +66,20 @@ const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, savi
       onCancel={onCancel}
       destroyOnHidden
     >
+      {template && !isUpdate ? (
+        <Alert
+          style={{ marginBottom: 16 }}
+          type="info"
+          showIcon
+          message="已填入模板，可先调整正文。保存后将注册并启用此技能，下一轮对话生效。"
+        />
+      ) : null}
       <Form
         key={isUpdate ? editing!.skillId : 'create'}
         form={form}
         layout="vertical"
         preserve={false}
-        initialValues={skillEditorInitialValues(editing)}
+        initialValues={skillEditorInitialValues(editing ?? template ?? null)}
         onFinish={(values) => void handleFinish(values)}
       >
         <Form.Item
@@ -88,10 +97,12 @@ const SkillEditorModal: React.FC<SkillEditorModalProps> = ({ open, editing, savi
           extra={
             isUpdate
               ? '更新模式：skillId 为唯一逻辑名，不可修改'
-              : '唯一逻辑名（字母、数字、中划线，≤64），将作为技能 Tag 展示'
+              : template
+                ? '模板标识由对应场景引用，不可修改'
+                : '唯一逻辑名（字母、数字、中划线，≤64），将作为技能 Tag 展示'
           }
         >
-          <Input disabled={isUpdate} placeholder="如 asset-yoy" />
+          <Input disabled={isUpdate || !!template} placeholder="如 asset-yoy" />
         </Form.Item>
         <Form.Item
           label="技能名称（展示名）"

@@ -9,6 +9,7 @@ const formatTime = (value?: string) => value?.replace('T', ' ').slice(0, 19) ?? 
 export interface SkillListTableProps {
   items: AgentSkillItem[];
   loading: boolean;
+  emptyText?: React.ReactNode;
   /** 无 manage 权限：列表只读（启停禁用、操作列仅详情）。 */
   canManage: boolean;
   /** 正在切换启停的 skillId（乐观 UI 防连点）。 */
@@ -23,6 +24,7 @@ export interface SkillListTableProps {
 const SkillListTable: React.FC<SkillListTableProps> = ({
   items,
   loading,
+  emptyText,
   canManage,
   pendingToggle,
   onToggle,
@@ -125,6 +127,7 @@ const SkillListTable: React.FC<SkillListTableProps> = ({
       size="small"
       rowKey="skillId"
       loading={loading}
+      locale={emptyText ? { emptyText } : undefined}
       columns={columns}
       dataSource={items}
       pagination={false}
