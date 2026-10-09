@@ -18,7 +18,7 @@
 5. A8.1a–c：#417、#420、#423。
 6. A8.2 综合：#461。
 
-每个 PR 在执行时从 GitHub Pull API 读取并锁定 `head.sha`，然后用 `refs/pull/<number>/head` fetch；再次核实 fetch SHA 等于元数据 SHA。若在预演中途 PR 更新，直接失败而非自动接受新版本。以运行时最新 `main` 作为基线，仅本地执行 `git merge --no-ff`。如遇冲突，报告确切文件、阶段、SHA，失败并保留 Artifact；**不允许 `-X ours`、强制接受某一方或省略前置 PR**。
+每个 PR 在执行时从 GitHub Pull API 读取并锁定 `head.sha`，然后用 `refs/pull/<number>/head` fetch；再次核实 fetch SHA 等于元数据 SHA。若在预演中途 PR 更新，直接失败而非自动接受新版本。以运行时最新 `main` 作为基线，仅本地执行 `git merge --no-ff`。如遇冲突，报告确切文件、阶段、SHA 并保留 Artifact；默认失败关闭。**唯一已审查的例外**：#423 精确 SHA `60c5378d7ba90894526e4ff0dfa06f173c4bca52`，且唯一冲突文件为 `.github/workflows/architecture-checks.yml`，并且上游文件确实包含预期的 `check-common-security-corridor.mjs` 两行检查时，只把该检查显式插入当前组合树，记录 resolution 和 merge SHA。其他任何 SHA、路径、内容漂移全部失败。绝不使用 `-X ours`、宽泛强制覆盖或跳过前置 PR。
 
 ## 编译与运行门槛
 
