@@ -3,6 +3,7 @@ package io.yak.framework.security.service.impl;
 import io.yak.framework.security.common.entity.UserRole;
 import io.yak.framework.security.dao.UserRoleDao;
 import io.yak.framework.security.service.UserRoleService;
+import io.yak.ops.platform.security.port.UserRoleAssignmentPort;
 import io.yak.framework.security.service.PermissionCache;
 import io.yak.framework.security.util.CopyBeanUtil;
 
@@ -24,6 +25,9 @@ import org.springframework.util.CollectionUtils;
 public class UserRoleServiceImpl implements UserRoleService {
 
   private final UserRoleDao userRoleDao;
+
+  /** Product-owned port; the same legacy DAO instance also provides DTO/PO compatibility. */
+  private final UserRoleAssignmentPort assignmentPort;
   private final PermissionCache permissionCache;
 
   /**
@@ -36,6 +40,7 @@ public class UserRoleServiceImpl implements UserRoleService {
           PermissionCache permissionCache) {
 
     this.userRoleDao = userRoleDao;
+    this.assignmentPort = userRoleDao;
     this.permissionCache = permissionCache;
   }
 
@@ -54,7 +59,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     List<Long> userIdList =
-            userRoleDao.selectUserIdListByRoleId(
+            assignmentPort.selectUserIdListByRoleId(
                     roleId);
 
     return userIdList == null
@@ -77,7 +82,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     List<Long> roleIdList =
-            userRoleDao.selectRoleIdListByUserId(
+            assignmentPort.selectRoleIdListByUserId(
                     userId);
 
     return roleIdList == null
@@ -109,7 +114,7 @@ public class UserRoleServiceImpl implements UserRoleService {
      *
      * 当 roleIdList 为空时，表示清空该用户的全部角色。
      */
-    userRoleDao.deleteByUserIdOrRoleId(
+    assignmentPort.deleteByUserIdOrRoleId(
             userId,
             null);
     permissionCache.invalidateUser(userId);
@@ -121,7 +126,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return;
     }
 
-    userRoleDao.insertBatch(
+    assignmentPort.insertBatch(
             buildByUserId(
                     userId,
                     validRoleIds));
@@ -151,7 +156,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     /*
      * 用户列表为空时，表示清空该角色关联的全部用户。
      */
-    userRoleDao.deleteByUserIdOrRoleId(
+    assignmentPort.deleteByUserIdOrRoleId(
             null,
             roleId);
 
@@ -162,7 +167,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return;
     }
 
-    userRoleDao.insertBatch(
+    assignmentPort.insertBatch(
             buildByRoleId(
                     roleId,
                     validUserIds));
@@ -188,7 +193,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return 0;
     }
 
-    return userRoleDao.selectCountByRoleId(
+    return assignmentPort.selectCountByRoleId(
             roleId);
   }
 
@@ -220,7 +225,7 @@ public class UserRoleServiceImpl implements UserRoleService {
     } else {
       permissionCache.invalidateRole(roleId);
     }
-    return userRoleDao.deleteByUserIdOrRoleId(
+    return assignmentPort.deleteByUserIdOrRoleId(
             userId,
             roleId);
   }
