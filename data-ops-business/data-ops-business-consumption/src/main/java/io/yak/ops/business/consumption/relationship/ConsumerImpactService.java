@@ -150,20 +150,21 @@ public class ConsumerImpactService {
    * skip an older successful query whose Usage has not been recovered.
    */
   public DatasetAuditRecoveryView recoverDatasetVersionPage(
-      ProductKey productKey, String sourceVersionIdentity, Long beforeAuditId, int requestedLimit) {
+      ProductKey productKey, String sourceVersionIdentity, String beforeAuditId, int requestedLimit) {
     if (productKey.productType() != ProductType.DATASET || datasetSynchronizer == null) {
       throw new IllegalArgumentException("Dataset version recovery requires a Dataset source");
     }
     Long datasetId = parseProductId(productKey);
     Long versionId = parseSourceVersionId(sourceVersionIdentity);
+    Long cursorId = beforeAuditId == null ? null : parseSourceVersionId(beforeAuditId);
     if (datasetId == null || versionId == null
-        || (beforeAuditId != null && beforeAuditId <= 0L)) {
+        || (beforeAuditId != null && cursorId == null)) {
       throw new IllegalArgumentException("Dataset, immutable version and cursor must be canonical positive IDs");
     }
     currentProject.requireProjectId();
     int limit = Math.max(1, Math.min(200, requestedLimit));
     var page = datasetSynchronizer.recoverSuccessfulVersionPage(
-        datasetId, versionId, beforeAuditId, limit);
+        datasetId, versionId, cursorId, limit);
     int normalized = (int) page.results().stream()
         .filter(result -> result.state() == UsageNormalizationState.NORMALIZED).count();
     int gaps = (int) page.results().stream()
@@ -175,7 +176,8 @@ public class ConsumerImpactService {
     return new DatasetAuditRecoveryView(
         productKey.toString(), sourceVersionIdentity, beforeAuditId,
         limit, page.results().size(), normalized, gaps, unavailable,
-        retryRequired ? null : page.nextBeforeAuditId(),
+        retryRequired || page.nextBeforeAuditId() == null
+            ? null : page.nextBeforeAuditId().toString(),
         retryRequired, !retryRequired && page.exhausted());
   }
 
