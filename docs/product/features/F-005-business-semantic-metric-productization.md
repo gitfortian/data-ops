@@ -12,6 +12,8 @@ Feature ID: F-005
 
 > 本 Feature 的目标不是重做 Semantic / Modeling / Metric，也不是建设新的语义查询引擎，而是把已有标准、业务域、模型、指标、版本、血缘和使用事实组织成一条可验证、可发布、可稳定引用、可追踪影响的业务语义产品闭环。
 
+> **2026-10-09 收口取证补充（不改变原产品批准状态）**：在 [#336](https://github.com/gitfortian/data-ops/issues/336) 的第三批 P0 风险核销中，针对 Metric 当前草稿版本 CAS、不可变发布事件与 active pointer、Modeling 送审指纹与回滚草稿/发布分离、Mapping 条件保存取得**静态源码/历史测试定位证据**。这只能说明特定保护实现已存在，不能将整个 F-005 或 J2 标为已正式 E2E 验收；真实数据库并发、受限/跨 Project、版本回链、审批失败恢复、浏览器路径仍待当前部署核对。`Implementation: IMPLEMENTING` 保持不变，PD-003 `Implementation: PARTIAL` 也不据此升级。精确风险与 QA 移交矩阵见 [P0 收口证据台账](../acceptance/p0-closeout-20261009.md)；**本轮及后续只收口、不开发新功能**。
+
 ## 1. 目标与价值
 
 **功能：** Business Semantic & Metric Productization
