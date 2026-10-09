@@ -17,7 +17,7 @@ class SecurityMembershipPortsTest {
   @Test
   void projectMembershipHasEightStableDtoFreeOperations() throws Exception {
     Class<?> type = UserProjectMembershipPort.class;
-    assertEquals(8, type.getDeclaredMethods().length);
+    assertEquals(9, type.getDeclaredMethods().length);
     assertEquals(List.class, type.getMethod("selectUserIdListByProjectId", Long.class, int.class).getReturnType());
     assertEquals(List.class, type.getMethod("selectProjectIdListByUserIdList", List.class).getReturnType());
     assertEquals(void.class, type.getMethod("insertBatch", List.class).getReturnType());
@@ -26,6 +26,7 @@ class SecurityMembershipPortsTest {
     assertEquals(void.class, type.getMethod("deleteByUserId", Long.class).getReturnType());
     assertEquals(void.class, type.getMethod("deleteByProjectIdAndUserType", Long.class, int.class).getReturnType());
     assertEquals(List.class, type.getMethod("selectByProjectIds", List.class).getReturnType());
+    assertEquals(List.class, type.getMethod("selectMembershipsByCriteria", UserProjectCriteria.class).getReturnType());
     assertEquals("io.yak.ops.platform.security.port.UserProjectMembershipPort", type.getName());
     assertDtoAndPoFree(type);
   }
@@ -33,12 +34,14 @@ class SecurityMembershipPortsTest {
   @Test
   void roleAssignmentHasFiveStableDtoFreeOperations() throws Exception {
     Class<?> type = UserRoleAssignmentPort.class;
-    assertEquals(5, type.getDeclaredMethods().length);
+    assertEquals(7, type.getDeclaredMethods().length);
     assertEquals(List.class, type.getMethod("selectUserIdListByRoleId", Long.class).getReturnType());
     assertEquals(List.class, type.getMethod("selectRoleIdListByUserId", Long.class).getReturnType());
     assertEquals(void.class, type.getMethod("insertBatch", List.class).getReturnType());
     assertEquals(int.class, type.getMethod("deleteByUserIdOrRoleId", Long.class, Long.class).getReturnType());
     assertEquals(int.class, type.getMethod("selectCountByRoleId", Long.class).getReturnType());
+    assertEquals(List.class, type.getMethod("selectAssignmentsByRoleIds", List.class).getReturnType());
+    assertEquals(List.class, type.getMethod("selectAssignmentsByUserIds", List.class).getReturnType());
     assertEquals("io.yak.ops.platform.security.port.UserRoleAssignmentPort", type.getName());
     assertDtoAndPoFree(type);
   }

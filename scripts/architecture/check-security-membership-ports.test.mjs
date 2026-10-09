@@ -38,8 +38,8 @@ test('A8.2g blocks a separate Platform instance in Project membership service', 
 });
 test('A8.2g blocks Role service dropping PO-dependent read through old DAO', () => {
   const files = readRepository();
-  files.roleService = files.roleService.replace('userRoleDao.selectByRoleIds(', 'assignmentPort.selectByRoleIds(');
-  assert.match(validateMembershipPorts(files).join('\n'), /PO-dependent legacy reads/);
+  files.roleService = files.roleService.replace('assignmentPort.selectAssignmentsByRoleIds(', 'userRoleDao.selectByRoleIds(');
+  assert.match(validateMembershipPorts(files).join('\n'), /PO-free read projections/);
 });
 test('A8.2g blocks Project service losing its dedicated transaction manager', () => {
   const files = readRepository();

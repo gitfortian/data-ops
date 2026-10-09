@@ -25,11 +25,12 @@ export const PATHS = {
 const projectMethods = [
   'selectUserIdListByProjectId','selectProjectIdListByUserIdList','insertBatch',
   'deleteUserProject','deleteByProjectId','deleteByUserId',
-  'deleteByProjectIdAndUserType','selectByProjectIds',
+  'deleteByProjectIdAndUserType','selectByProjectIds','selectMembershipsByCriteria',
 ];
 const roleMethods = [
   'selectUserIdListByRoleId','selectRoleIdListByUserId','insertBatch',
   'deleteByUserIdOrRoleId','selectCountByRoleId',
+  'selectAssignmentsByRoleIds','selectAssignmentsByUserIds',
 ];
 
 export function validateMembershipPorts(files) {
@@ -81,13 +82,24 @@ export function validateMembershipPorts(files) {
     }
   }
   const pService = files.projectService || '';
-  if (!/userProjectDao\.select\s*\(/.test(pService)) {
-    errors.push('Project DTO-dependent legacy read must stay on original DAO');
+  if (!pService.includes('membershipPort.selectMembershipsByCriteria(') ||
+      !pService.includes('new UserProjectCriteria(')) {
+    errors.push('Project read must use Platform criteria, not legacy DTO DAO');
+  }
+  const pImpl = files.projectImpl || '';
+  if (!pImpl.includes('UserProjectDTO dto = new UserProjectDTO()') ||
+      !pImpl.includes('return select(dto);')) {
+    errors.push('Project adapter must retain legacy DTO query translation');
   }
   const rService = files.roleService || '';
-  if (!/userRoleDao\.selectByRoleIds\s*\(/.test(rService) ||
-      !/userRoleDao\.getRoleIdListByUserIds\s*\(/.test(rService)) {
-    errors.push('Role PO-dependent legacy reads must stay on original DAO');
+  if (!rService.includes('assignmentPort.selectAssignmentsByRoleIds(') ||
+      !rService.includes('assignmentPort.selectAssignmentsByUserIds(')) {
+    errors.push('Role service must consume Platform PO-free read projections');
+  }
+  const rImpl = files.roleImpl || '';
+  if (!rImpl.includes('CopyBeanUtil.copyList(selectByRoleIds(') ||
+      !rImpl.includes('CopyBeanUtil.copyList(getRoleIdListByUserIds(')) {
+    errors.push('Role legacy DAO must retain PO-to-entity translation');
   }
   for (const [name,type] of [['projectImpl','UserProjectDao'],['roleImpl','UserRoleDao']]) {
     const src = files[name] || '';
