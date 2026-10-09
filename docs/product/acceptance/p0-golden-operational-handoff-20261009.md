@@ -71,3 +71,43 @@
 **当前裁决（2026-10-09）**：`GOLDEN=BLOCKED_EVIDENCE`、`P0_EXIT=NOT_SIGNED`。此文档没有新增 E2E PASS、运行结果、授权或部署环境。
 
 > **2026-10-09 D-04/D-05 后续收口**：旧导航 #288/#289 的当前代码和登录态验收边界已单独写入 [P0 最终退出与 P1 证据移交](p0-product-exit-p1-evidence-handoff-20261009.md)。本执行包的 Golden E-00～E-05 仍是全部真实 QA 的前置条件；无环境输入不新增同类 PR，未取得签收时继续 `BLOCKED_EVIDENCE`。
+
+## 6. 四个综合 PR 的最终统一退出证据门禁（第 4/4 个综合 PR）
+
+本节为 2026-10-09 用户指定的 **四个综合 PR 总收口**，优先于本文开头的历史 main SHA。#487 已合并，B-01～B-06 代码与旧问题证据集中核销；#489 已合并，双 Project / 受限身份 / 版本隔离工程检查；#490 已合并，Dataset Query 与 Data Service Invoke 的精确 Source Audit、Usage 对账和恢复页保护。上述 CI 的绿灯**仅代表工程门禁通过**，不代表真实 QA 及正式产品退出已签收。
+
+新增 `scripts/product/golden-sample/p0_exit_readiness.py` 对 R1～R8 与跨域实测证据作统一**脱敏索引与哈希校验**，作为 Product / QA / Release / Truth Owner 手工审查的输入。它和既有 R8 `golden_evidence_gate.py` 的分工是：
+
+- **R8**：原始 R3～R7 的场景结构、跨阶段 audit/cursor/sourceVersion 不变性，可选 JAR 与双声明校验，始终只给出 PENDING；
+- **P0 退出门禁**：在不触发实际 HTTP/DB/故障的条件下，核对本次 Golden 专用**同一提交、同一环境、Project A/B** 的后端 JAR + 前端压缩包真实 SHA-256、Release 运行进程观察索引、R1/R2/R3～R8、Phase4 Source/Usage、Phase5 Metric、真实 Project/权限、Key/IP、J1～J5 浏览器路径、版本并发/失败恢复以及四个角色的审批引用；
+- **人工正式裁决**：不能由任何 JSON 声明或脚本自动完成。即使全部证据结构齐备、文件哈希一致，程序最多输出 `READY_FOR_HUMAN_REVIEW`、`automatedProductPass=false`、`p0ExitSigned=false`。Release 必须独立核对**运行中的容器/进程**而非仅比对构建声明，QA 与 Product 再正式签署。
+
+### QA 受控环境输入及执行
+
+QA 在非生产隔离环境统一运行 R1/R2、Phase4/5、双 Project 及 R3～R8（**需授权才能执行真正 Query/Invoke、恢复写操作或故障布置**），将经过脱敏的原始 JSON、浏览器交互索引和负向场景证明保存在受控 `<evidence-root>`。不要把 Cookie、认证头、真实 API Key、密码、用户业务行、原始 SQL、未经审查的屏幕或未批准的故障日志提交到 Git。
+
+由 QA 和 Release 另外制作受控的 `p0-exit-receipt.local.json`：
+
+- 根字段：`schema="P0-GOLDEN-EXIT-HANDOFF-V1"`、`repositoryCommit`（当前实际**已部署**的 40 位 SHA）、`environmentRef`、`environmentClass="AUTHORIZED_NON_PRODUCTION"`、`deployedAt`（带时区 ISO8601）、`projectPair:{primary,control}`（两个不同正整数 ID）。
+- `deployment.backend` 和 `deployment.frontend`：各提供 `commit`、`artifactSha256`、`artifactFile`（相对于受控 evidence-root 的**实际 JAR 或前端压缩包**，不可仅空填声明）、`evidenceRef`（构建 Job/制品校验号）；`deployment.process`：`commit`、与后台产物相同的 `artifactSha256`、`evidenceRef`；另需 `releaseVerifiedProcess=true`、`processObservationRef`（Release 从进程/部署控制器独立观察的证据索引）。程序不会替 Release 验证日志真实性。
+- `evidence` 为**完整场景键 → 收据**的映射：每项 `file`（相对路径）、`sha256`（文件真实 SHA256）、`deploymentCommit`、`projectId`、`controlProjectId`、`observedAt`（部署后）、`evidenceKind`、`reviewerRef`。R1/R2/R3～R7 要同时核对**文件内部**的 `repositoryCommit/projectId/capturedAt`，不能把历史 2026-10-04 R1/R2 用新的外部清单冒充当期验收。R8 必须是 `CONSISTENT_PARTIAL_EVIDENCE` 的 7 项结构验证，Phase4 的 16 条精确 Source Audit/Usage 断言必须全部为 true，Phase5 必须保留实际 Metric 发布/版本与来源断言，受限 Project HTTP 探针必须有至少 9 条 PASS。
+- 场景键完整集由 `python scripts/product/golden-sample/p0_exit_readiness.py` 的 `requiredSlots` 输出确定，包括 21 个来源/角色/浏览器/Key-IP/并发及故障恢复证据键（含 Phase5 Metric）；R8 的 `evidenceKind=OFFLINE_STRUCTURAL_GATE`，Project/Phase5 = `LIVE_HTTP`，浏览器 = `LIVE_BROWSER`，其余使用 `REAL_API_DB`。**严格拒绝用 OFFLINE_MOCK 顶替真人/真实环境证据。**
+- `signoffs.QA/Product/Release/TruthOwner` 各需 `decision="APPROVED"`、`reviewer`、`approvalRef`。这些只是审查索引与人类批准的声明，不代表校验器验证了签名真实性；**必须有可复核的独立审批系统记录**。如依法/合规需要延期，Product+QA 必须另行明确“延期场景、风险、Owner、补救及期限”，不能通过填一个模拟 APPROVED 自动放行。
+
+示例执行：
+
+```bash
+# 无参数：打印完整必需证据清单；退出码 2，永不视为 E2E 通过
+python scripts/product/golden-sample/p0_exit_readiness.py
+
+# QA/Release 仅在所有输入由真实部署取证后执行：
+python scripts/product/golden-sample/p0_exit_readiness.py \
+  --manifest /secure/qa/p0-exit-receipt.local.json \
+  --evidence-root /secure/qa/reports \
+  --expected-commit YOUR_ACTUAL_DEPLOYED_40_CHAR_SHA \
+  --output /secure/qa/p0-exit-review.local.json
+```
+
+**退出码**：`1=证据自相矛盾、签署/版本/哈希字段非法`（拒绝；需重取证）；`2=仍缺证据或者结构完整但待独立人工裁决`（不能视作 CI 成功或正式 PASS）；本脚本不产生 `0=产品正式放行`。GitHub Golden CI 只覆盖离线测试和默认 BLOCKED 反例，不访问真实部署。
+
+**最后裁决**：当前缺实际同部署 QA 环境与 R1～R8/Phase4/5、前后端真实产物和浏览器、Key/IP、故障恢复、正式四方签名证据，因此 `#336 OPEN / GOLDEN=BLOCKED_EVIDENCE / P0_EXIT_NOT_SIGNED`。这不是在证明业务失败；待 QA/Release 提供可信实测资料或经 Product+QA 批准限范围延期，再由**有权人员**裁决，而不创建第五个 PR。
