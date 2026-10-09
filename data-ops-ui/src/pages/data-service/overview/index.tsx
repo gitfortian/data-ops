@@ -5,11 +5,15 @@ import {
   type DataServiceOverviewFailure,
   type DataServiceOverviewRange,
 } from '@/services/data-service';
-import { Button, Empty, Table, Tooltip, message, type TableColumnsType } from 'antd';
+import { Alert, Button, Empty, Table, Tooltip, message, type TableColumnsType } from 'antd';
 import type { EChartsOption } from 'echarts';
 import ReactECharts from 'echarts-for-react';
 import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { useLatestDataServiceRead } from '../hooks/useLatestDataServiceRead';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from '../hooks/read-issue';
 
 const BRAND_COLOR = 'rgba(254,44,85,1)';
 const TEXT_PRIMARY = '#161823';
@@ -140,23 +144,31 @@ const MetricCell = ({ label, value, note }: { label: string; value: string; note
   </div>
 );
 
-export default function DataServiceOverviewPage() {
+function DataServiceOverviewPage() {
   const [range, setRange] = useState<DataServiceOverviewRange>('24h');
   const [overview, setOverview] = useState<DataServiceOverview>(() => emptyOverview('24h'));
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [readIssue, setReadIssue] = useState<DataServiceReadIssue | null>(null);
+  const beginRead = useLatestDataServiceRead();
 
   const load = useCallback(async () => {
+    const isCurrent = beginRead();
     setLoading(true);
+    setReadIssue(null);
+    setOverview(emptyOverview(range));
     try {
       const data = await getDataServiceOverview(range);
-      setOverview(data || emptyOverview(range));
+      if (!data) throw new Error('数据服务运行概览未返回有效数据');
+      if (isCurrent()) setOverview(data);
     } catch (error: any) {
-      message.error(error?.message || '加载数据服务运行概览失败');
-      setOverview(emptyOverview(range));
+      if (isCurrent()) {
+        setReadIssue(classifyDataServiceReadIssue(error));
+        message.error(error?.message || '加载数据服务运行概览失败');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [range]);
+  }, [range, beginRead]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -364,7 +376,14 @@ export default function DataServiceOverviewPage() {
         </div>
 
         <div className="my-4 border-t border-[#f0f0f0]" />
-
+        {readIssue && (
+          <Alert type="error" showIcon
+            message={readIssue === 'FORBIDDEN' ? '无权读取数据服务运行概览' : '运行概览读取失败'}
+            description="统计来源不可用时不展示全零数据；请核对权限或重试当前时间范围。"
+            action={<Button onClick={() => void load()}>重试</Button>}
+          />
+        )}
+        <div className={readIssue || loading ? 'hidden' : ''} aria-hidden={Boolean(readIssue || loading)}>
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(360px,1.2fr)]">
           <DonutPanel
             title="API 状态分布"
@@ -433,7 +452,15 @@ export default function DataServiceOverviewPage() {
             </div>
           </Panel>
         </div>
+        </div>
       </div>
     </div>
   );
+}
+
+/** Role/Project context is a hard UI state boundary for consumption statistics. */
+export default function ScopedDataServiceOverviewPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <DataServiceOverviewPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
 }
