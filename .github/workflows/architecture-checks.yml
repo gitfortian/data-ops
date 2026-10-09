@@ -32,6 +32,8 @@ jobs:
           node-version: '20'
       - name: Test PR impact selection
         run: node --test scripts/ci/*.test.mjs
+      - name: A8 Security Persistence MyBatis single owner and compatibility
+        run: node scripts/architecture/check-security-persistence-owner.mjs
       - name: A8 Security permission declaration single-owner contract
         run: node scripts/architecture/check-security-declaration-owner.mjs
       - name: A8 Security permission normalization owner

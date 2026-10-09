@@ -38,6 +38,17 @@ Prerequisite: Draft PR #453, exact head `876b7495d64060af25834f1e17d676aae0640e5
 - Still not migrated: `data-common`-derived `ResultCode`, Spring auto-configuration, MyBatis/Flyway/DataSource, project/role authorization services, Redis Session wiring, controllers and business services. They must be moved only after their dependency graph and history/HTTP contracts can be honored; pure DTO/VO migration does not prove real environment acceptance.
 - **CI policy:** accumulated separately staged Git commits were not pushed individually; one final PR branch update is used to trigger the next complete CI. The four workflow checks on the preceding HEAD are not evidence for this batch.
 
+## A8.2s — MyBatis persistence binary owner (36 classes, single batch)
+
+- **18 historical PO classes** (`io.yak.framework.security.common.po.*`), **16 `@Mapper` interfaces**, `NumericBooleanTypeHandler` and `YakSecurityMetaObjectHandler` are now owned by the new **`data-ops-platform-security-persistence`** module.
+- The **36 Java source files retain their exact historical Git blob identities** and legacy FQCNs. The Starter's physical Java files are removed, so no duplicate binary owners exist.
+- Root Maven reactor and the BOM explicitly register the persistence module. Legacy Starter consumes it through a single **one-way** dependency; new adapter uses `mybatis-plus-core` **3.5.16**, Lombok and Spring Core; it has no dependency on Data-Ops Common, Business, Boot, old `data-common` or the old Starter.
+- **Nothing about actual Security database bootstrapping is changed:** `DataSourceConfig`, `@MapperScan`, `yakSecuritySqlSessionTemplate`, `yakSecurityTransactionManager`, Security MySQL/PostgreSQL Flyway location/baseline/history, DB connection pool and tenant interceptor remain Starter-owned and unchanged. Database migrations and mapper XML resource locations have not been modified.
+- New JUnit tests check historic `yak_security_user` / `yak_security_permission` tables, generated primary keys, soft-delete column, application `appName` insert fill, sensitive credential `toString` redaction, old Mapper type annotations and PostgreSQL numeric-boolean binding. The Starter validates exactly **36 compiled classpath locations**.
+- New Node architecture gate validates all 36 owner paths, old FQCNs, clean Maven direction, protected table identities, `@Mapper` annotations, historic Flyway assembly and `app_name` isolation, including 15 positive/negative cases; wired into the existing Architecture Checks workflow.
+- **Not claimed**: historical nonempty MySQL/PostgreSQL upgrade, production Redis multi-instance, HTTP 401/403, external jar ABI, real Spring Bean duplicate scanning or A0–A8 integration. These remain hard blockers before approving merge.
+- **Rollback**: revert this stacked change to place original 36 Git blobs back under Starter and remove the new module dependency; this must be tested within the final ordered combination, not directly on main.
+
 ## Remaining hard gates
 - Verify clean multi-module Java compilation and existing Sa-Token authentication regressions.
 - Verify Spring bean uniqueness, unauthenticated 401 and unauthorized 403.
