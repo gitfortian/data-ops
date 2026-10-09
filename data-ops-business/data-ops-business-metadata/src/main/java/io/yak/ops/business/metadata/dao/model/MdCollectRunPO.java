@@ -27,7 +27,7 @@ public class MdCollectRunPO {
   private Integer cntChanged;
   private Integer cntUnchanged;
   private Integer cntGone;
-  /** 单表列读取失败/为空记 PARTIAL，不静默当空表。 */
+  /** 表清单读取失败或单表列读取失败/为空均记 PARTIAL；不能充当下一轮 GONE 的完整基线。 */
   private Integer cntPartialFailed;
   private String cursorWatermark;
   /** 本轮作用域快照，JSON 文本。 */

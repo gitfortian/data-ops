@@ -215,6 +215,7 @@ class MetadataHarvestServiceTest {
     assertThat(summaryScopes()).extracting(ScopeOutcome::databaseName)
         .containsExactly("shop", "warehouse");
     assertThat(summaryScopes().get(1).failed()).isTrue();
+    assertThat(summary.partialFailed()).as("failed table listing is an incomplete baseline").isEqualTo(1);
     assertThat(summaryScopes().get(1).tablesReadable()).isFalse();
     assertThat(summaryScopes().get(1).tables()).isZero();
     assertThat(repository.keys("database")).containsExactly("database:7:shop", "database:7:warehouse");
