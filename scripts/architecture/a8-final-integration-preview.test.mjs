@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import {
   REPOSITORY, ARCHITECTURE_SERIES,
   validateArchitecturePull, validateIntegrationSeries, integrationSummary, verifyRollback,
-  reconcileKnownCorridor,
+  reconcileKnownCorridor, reconcileSecurityConsolidation,
 } from './a8-final-integration-preview.mjs';
 
 function pull(spec = ARCHITECTURE_SERIES[0]) {
@@ -161,4 +161,74 @@ test('only vetted #423 SHA may carry the exact Security corridor step through co
   assert.throws(() => reconcileKnownCorridor(
     pr, '.github/workflows/architecture-checks.yml',
     resolved, incoming), /Unapproved/);
+});
+
+test('A8.2 final preview keeps all three exact predecessor workflow guards', () => {
+  const submitted = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
+  const base = submitted.trimEnd();
+  const guards = [
+    {
+      anchor: '        run: node scripts/architecture/check-boundaries.mjs\n',
+      step: '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
+        '        run: node scripts/architecture/check-persistence-consumers.mjs\n',
+    },
+    {
+      anchor: '        run: node scripts/db/check-migration-history.mjs\n',
+      step: '      - name: Flyway history table and module ownership\n' +
+        '        run: node scripts/db/check-flyway-ownership.mjs\n',
+    },
+    {
+      anchor: '      - name: Plan fail-safe PR validation scope',
+      step: '      - name: A8 Common and Security migration corridor\n' +
+        '        run: node scripts/architecture/check-common-security-corridor.mjs\n',
+    },
+  ];
+  let integrated = base;
+  for (const gate of guards) {
+    assert.equal(integrated.split(gate.anchor).length, 2);
+    integrated = integrated.replace(gate.anchor, gate.step + gate.anchor);
+  }
+  const final = {number: 461,
+    branch: 'refactor/a8-2n-p-security-runtime-batch', sha: 'a'.repeat(40)};
+  const resolved = reconcileSecurityConsolidation(final,
+    '.github/workflows/architecture-checks.yml', integrated, submitted, base);
+  assert.equal(resolved, integrated);
+  for (const gate of guards) assert.ok(resolved.includes(gate.step));
+  assert.ok(resolved.includes('A8 Security Persistence MyBatis single owner'));
+  assert.ok(resolved.includes('A0-A8 ordered migration / runtime / UI acceptance'));
+});
+
+test('A8.2 final preview rejects extra conflict files, dropped guards or source drift', () => {
+  const submitted = readFileSync('.github/workflows/architecture-checks.yml', 'utf8');
+  const gates = [
+    ['        run: node scripts/architecture/check-boundaries.mjs\n',
+      '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
+        '        run: node scripts/architecture/check-persistence-consumers.mjs\n'],
+    ['        run: node scripts/db/check-migration-history.mjs\n',
+      '      - name: Flyway history table and module ownership\n' +
+        '        run: node scripts/db/check-flyway-ownership.mjs\n'],
+    ['      - name: Plan fail-safe PR validation scope',
+      '      - name: A8 Common and Security migration corridor\n' +
+        '        run: node scripts/architecture/check-common-security-corridor.mjs\n'],
+  ];
+  const base = submitted.trimEnd();
+  let current = base;
+  for (const [anchor, step] of gates)
+    current = current.replace(anchor, step + anchor);
+  const pr = {number: 461,
+    branch: 'refactor/a8-2n-p-security-runtime-batch', sha: 'a'.repeat(40)};
+  const file = '.github/workflows/architecture-checks.yml';
+  assert.throws(() => reconcileSecurityConsolidation(pr,
+    file + '\npom.xml', current, submitted, base), /Unapproved/);
+  assert.throws(() => reconcileSecurityConsolidation(
+    {...pr, branch: 'main'}, file, current, submitted, base), /Unapproved/);
+  assert.throws(() => reconcileSecurityConsolidation(
+    pr, file, current + '\n# surprise', submitted, base), /Unexpected prerequisite/);
+  assert.throws(() => reconcileSecurityConsolidation(
+    pr, file, current.replace(gates[0][1], ''), submitted, base), /Unexpected prerequisite/);
+  assert.throws(() => reconcileSecurityConsolidation(
+    pr, file, current, submitted.replace('A8 Security Persistence MyBatis single owner and compatibility', ''), base),
+    /Missing original/);
+  assert.throws(() => reconcileSecurityConsolidation(
+    pr, file, current, submitted + gates[1][1], base), /Unexpected architecture/);
 });
