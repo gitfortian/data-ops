@@ -107,3 +107,12 @@ test('refuses losing MyBatis global metadata fill configuration',()=>{
 test('refuses missing PostgreSQL primitive boolean handler',()=>{
  assert.match(mutateDatasource('register(boolean.class, NumericBooleanTypeHandler.class)','register(int.class, NumericBooleanTypeHandler.class)'),/boolean type handlers/);
 });
+
+test('refuses removing Security database conditional activation',()=>{
+ assert.match(mutateDatasource('matchIfMissing = true','matchIfMissing = false'),
+   /conditional activation/);
+});
+test('refuses removing Flyway migration on bean initialization',()=>{
+ assert.match(mutateDatasource('initMethod = "migrate"','initMethod = "validate"'),
+   /Flyway lifecycle/);
+});
