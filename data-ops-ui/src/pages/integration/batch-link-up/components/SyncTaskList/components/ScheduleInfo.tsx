@@ -1,10 +1,9 @@
-import { API_SUCCESS_CODE } from '@/services/http/response';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import { Empty, Popover, Spin, message } from 'antd';
 import { useState } from 'react';
 
-import { linkupJobScheduleApi } from '../../../api';
+import { getOfflineSyncScheduleTimes } from '@/services/batch-link-up';
 
 interface ScheduleRecord {
   cronExpression?: string;
@@ -53,18 +52,12 @@ const ScheduleInfo = ({ record }: ScheduleInfoProps) => {
 
     try {
       setLoading(true);
-      const response = await linkupJobScheduleApi.getLast5ExecutionTimes(
-        record.cronExpression,
-      );
+      const times = await getOfflineSyncScheduleTimes(record.cronExpression);
 
-      if (response?.code === API_SUCCESS_CODE) {
-        setExecutionTimes(response?.data || []);
-        return;
-      }
-
+      setExecutionTimes(times || []);
+    } catch (error: any) {
       message.error(
-        response?.msg ||
-          response?.message ||
+        error?.message ||
           intl.formatMessage({ id: 'pages.batchLinkUp.schedule.loadFailed' }),
       );
     } finally {

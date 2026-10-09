@@ -1,3 +1,4 @@
+import { normalizeOfflineInstancePageRequest } from './api';
 import type { ApiResponse } from '@/services/http/response';
 import HttpUtils from '@/utils/HttpUtils';
 
@@ -15,42 +16,6 @@ export enum Operate {
   Add,
   Edit,
 }
-
-const toPositiveSafeInteger = (value: unknown, fieldName: string) => {
-  const normalizedValue = typeof value === 'string' ? value.trim() : value;
-  const numericValue = Number(normalizedValue);
-  if (!Number.isSafeInteger(numericValue) || numericValue < 1) {
-    throw new Error(`${fieldName} 必须是安全的正整数`);
-  }
-  return numericValue;
-};
-
-const normalizeOfflineInstancePageRequest = (
-  data: Record<string, unknown>,
-): Record<string, unknown> => {
-  const { pageNo, pageNum, jobDefinitionId, ...rest } = data;
-  const current = toPositiveSafeInteger(
-    data.current ?? pageNo ?? pageNum ?? 1,
-    '页码',
-  );
-  const pageSize = toPositiveSafeInteger(data.pageSize ?? 10, '每页条数');
-  if (pageSize > 200) throw new Error('每页条数不能超过 200');
-  return {
-    ...rest,
-    current,
-    pageSize,
-    ...(jobDefinitionId === undefined ||
-    jobDefinitionId === null ||
-    jobDefinitionId === ''
-      ? {}
-      : {
-          jobDefinitionId: toPositiveSafeInteger(
-            jobDefinitionId,
-            '任务定义 ID',
-          ),
-        }),
-  };
-};
 
 export const apiPrefix = '/api/v1/job/batch-definition';
 export const linkupJobDefinitionApi = {
