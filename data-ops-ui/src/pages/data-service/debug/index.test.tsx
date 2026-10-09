@@ -268,7 +268,7 @@ describe('Data Service debug page modern data-only API migration', () => {
     render(<DataServiceDebugPage />);
     await screen.findByDisplayValue('42');
     fireEvent.click(screen.getByRole('button', { name: '开始测试' }));
-    fireEvent.change(screen.getByPlaceholderText('请输入 orderId'), { target: { value: '77' } });
+    fireEvent.change(screen.getByDisplayValue('42'), { target: { value: '77' } });
     await act(async () => { finish(resultRow); await old; });
     expect(screen.queryByText('200 OK')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('77')).toBeInTheDocument();

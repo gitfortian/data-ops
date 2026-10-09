@@ -72,7 +72,7 @@ describe('Data Service overview real read state', () => {
     request.mockRejectedValueOnce({ response: { status: 403 }, message: 'forbidden' })
       .mockResolvedValueOnce(makeOverview('24h', 27));
     render(<DataServiceOverviewPage />);
-    await screen.findByText('无权读取数据服务运行概览');
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('无权读取数据服务运行概览'));
     expect(screen.getByRole('alert')).toHaveTextContent('统计来源不可用');
     expect(screen.getByText('调用次数').closest('[aria-hidden="true"]')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '重试' }));
