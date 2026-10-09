@@ -1,6 +1,6 @@
 package io.yak.framework.security.context;
 
-import io.yak.framework.security.common.constant.SecurityPermissionCode;
+import io.yak.ops.platform.security.contract.SecurityPermissionCode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;

@@ -4,7 +4,7 @@
 
 ## A8.2k｜认证与授权值合同实际物理迁移
 
-从旧 `data-ops-framework/data-security` **原样搬到**唯一 `data-ops-platform-security-contract`（同 Java package/FQCN）：
+从旧 `data-ops-framework/data-security` **保留原 Java FQCN 搬到**唯一 `data-ops-platform-security-contract`（同 Java package/FQCN（仅 AuthorizationSnapshot import 指向 Platform 权威权限码））：
 
 - `authentication.AuthenticationManager`：原 `login`、`logout`、`isLogin`、`getLoginUserId`、`logoutUser`、`getLoginUsername` 接口及默认方法完全保留。上层可继续自定义实现，无需导入 Sa-Token。
 - `context.AuthorizationSnapshot`：role、permission、menu、Project 授权事实的不变集合、稳定去重、ROOT 权限绕过和空 Project 禁止。

@@ -50,12 +50,14 @@ export function validateIdentityOwnership(files) {
         || !source.includes(typeName)) {
       errors.push('original Security type/FQCN changed: ' + name);
     }
-    if (FORBIDDEN.test(source)) {
-      errors.push('Platform pure identity/model cannot import HTTP/DB/Sa-Token runtime: ' + name);
+    if (FORBIDDEN.test(source)
+        || source.includes('import io.yak.framework.security.common.constant.SecurityPermissionCode;')) {
+      errors.push('Platform pure identity/model cannot import HTTP/DB/Sa-Token or legacy Starter facade: ' + name);
     }
   }
   const snap = files.get(NEW + 'context/AuthorizationSnapshot.java') || '';
-  if (!snap.includes('SecurityPermissionCode.ROOT') ||
+  if (!snap.includes('import io.yak.ops.platform.security.contract.SecurityPermissionCode;') ||
+      (snap.match(/SecurityPermissionCode\.ROOT/g) || []).length !== 2 ||
       !snap.includes('permissionCodes.contains(permissionCode)') ||
       !snap.includes('projectIds.contains(projectId)') ||
       !snap.includes('Collections.unmodifiableList') ||
