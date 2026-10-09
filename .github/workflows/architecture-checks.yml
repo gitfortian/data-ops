@@ -38,6 +38,8 @@ jobs:
         run: node scripts/architecture/check-security-registration-plan-owner.mjs
       - name: A8 Security Permission DAO and model unique owner
         run: node scripts/architecture/check-security-permission-persistence-owner.mjs
+      - name: A8 Project/RBAC relation and grant port unique owner
+        run: node scripts/architecture/check-security-relations-owner.mjs
       - name: A8 Security Platform permission ownership
         run: node scripts/architecture/check-security-permission-owner.mjs
       - name: Plan fail-safe PR validation scope
