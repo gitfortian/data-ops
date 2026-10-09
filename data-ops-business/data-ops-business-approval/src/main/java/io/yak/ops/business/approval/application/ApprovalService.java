@@ -514,9 +514,7 @@ public class ApprovalService implements ApprovalApi {
     if (steps.isEmpty()) {
       return List.of();
     }
-    Map<Long, ApprovalInstancePO> instances = instanceMapper
-        .selectBatchIds(steps.stream().map(ApprovalStepPO::getInstanceId).distinct().toList())
-        .stream().collect(java.util.stream.Collectors.toMap(ApprovalInstancePO::getId, i -> i));
+    Map<Long, ApprovalInstancePO> instances = visibleInstances(steps);
     return steps.stream()
         .map(s -> new TodoView(s.getId(), s.getLevelNo(),
             instances.get(s.getInstanceId()) == null ? null
@@ -529,15 +527,29 @@ public class ApprovalService implements ApprovalApi {
     if (steps.isEmpty()) {
       return List.of();
     }
-    Map<Long, ApprovalInstancePO> instances = instanceMapper
-        .selectBatchIds(steps.stream().map(ApprovalStepPO::getInstanceId).distinct().toList())
-        .stream().collect(java.util.stream.Collectors.toMap(ApprovalInstancePO::getId, i -> i));
+    Map<Long, ApprovalInstancePO> instances = visibleInstances(steps);
     return steps.stream()
         .map(s -> new HandledView(s.getId(), s.getLevelNo(), s.getStatus(), s.getComment(),
             s.getHandledTime(), instances.get(s.getInstanceId()) == null ? null
                 : toView(instances.get(s.getInstanceId()))))
         .filter(v -> v.instance() != null)
         .toList();
+  }
+
+  /**
+   * Step queries are project scoped, but their linked instances need an independent boundary.
+   * Orphaned, soft-deleted, or cross-project instance rows must not appear in work lists.
+   */
+  private Map<Long, ApprovalInstancePO> visibleInstances(List<ApprovalStepPO> steps) {
+    Long projectId = currentProject.requireProjectId();
+    return instanceMapper.selectList(new LambdaQueryWrapper<ApprovalInstancePO>()
+            .eq(ApprovalInstancePO::getProjectId, projectId)
+            .eq(ApprovalInstancePO::getDeleted, false)
+            .in(ApprovalInstancePO::getId,
+                steps.stream().map(ApprovalStepPO::getInstanceId).distinct().toList()))
+        .stream()
+        .filter(i -> projectId.equals(i.getProjectId()) && !Boolean.TRUE.equals(i.getDeleted()))
+        .collect(java.util.stream.Collectors.toMap(ApprovalInstancePO::getId, i -> i));
   }
 
   private ApprovalInstanceView toView(ApprovalInstancePO po) {
