@@ -133,15 +133,15 @@ def verify_stage(api, db, project_id, control_id, selected, stage, failure_repor
         # We must inspect HTTP rather than trusting a hidden Result.success(empty).
         assert_unchanged(db, project_id, control_id, before, source_states)
         failure = classify_reader_failure(reply)
-        return {**identity, "stage": "REAL_READER_FAILURE_OBSERVED",
+        return {**identity, "stage": "REAL_SERVER_FAILURE_OBSERVED",
                 "serverFailure": failure, "usageAndSourceUnchanged": "PASSED",
-                "cause": "OPERATOR_LOG_CORRELATION_REQUIRED"}
+                "cause": "SOURCE_READER_CAUSE_NOT_INDEPENDENTLY_VERIFIED"}
 
     require(stage == "restored" and isinstance(failure_report, dict),
             "Restored stage requires prior outage report")
     required = {
         "marker": MARKER, "sceneId": "J3-EXACT-VERSION-SOURCE-READER-OUTAGE",
-        "result": "REAL_READER_FAILURE_OBSERVED",
+        "result": "REAL_SERVER_FAILURE_OBSERVED",
         "projectId": str(project_id), "controlProjectId": str(control_id),
     }
     require(all(failure_report.get(k) == v for k, v in required.items()),
@@ -149,7 +149,7 @@ def verify_stage(api, db, project_id, control_id, selected, stage, failure_repor
     prior = failure_report.get("scenario")
     require(isinstance(prior, dict) and
             all(prior.get(k) == v for k, v in identity.items())
-            and prior.get("stage") == "REAL_READER_FAILURE_OBSERVED"
+            and prior.get("stage") == "REAL_SERVER_FAILURE_OBSERVED"
             and prior.get("usageAndSourceUnchanged") == "PASSED"
             and prior.get("serverFailure") is not None,
             "Prior failed read does not match the exact source/Usage identity and cursor")
@@ -174,12 +174,12 @@ def verify_stage(api, db, project_id, control_id, selected, stage, failure_repor
     require(indexed_usage(after_usage, selected["expected"], cfg["mode"]) == {
         next(iter(selected["expected"])): int(selected["persistedUsageId"])
     }, "Restored Reader changed source-to-Usage normalized identity")
-    return {**identity, "stage": "REAL_READER_RESTORED",
+    return {**identity, "stage": "REAL_RESTORED_SOURCE_PAGE_VERIFIED",
             "priorServerFailure": prior["serverFailure"],
             "restoredExactAuditCount": 1,
             "sameCursorReplay": "PASSED",
             "usageAndSourceUnchanged": "PASSED",
-            "cause": "OPERATOR_LOG_CORRELATION_REQUIRED"}
+            "cause": "SOURCE_READER_CAUSE_NOT_INDEPENDENTLY_VERIFIED"}
 
 
 def main():
@@ -241,8 +241,8 @@ def main():
                                 args.stage, prior)
     report = {
         "marker": MARKER, "sceneId": "J3-EXACT-VERSION-SOURCE-READER-OUTAGE",
-        "result": ("REAL_READER_FAILURE_OBSERVED" if args.stage == "outage"
-                   else "REAL_READER_RESTORED"),
+        "result": ("REAL_SERVER_FAILURE_OBSERVED" if args.stage == "outage"
+                   else "REAL_RESTORED_SOURCE_PAGE_VERIFIED"),
         "productAcceptance": "PARTIAL", "repositoryCommit": current_commit(),
         "deploymentCommit": None, "deploymentIdentity": "UNVERIFIED",
         "projectId": str(project_id), "controlProjectId": str(control_id),
