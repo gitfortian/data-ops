@@ -20,7 +20,7 @@ test('A8.2e rejects moving the public DAO package/FQCN', () => {
   const files = readRepository();
   files.set(FILES.newDao, files.get(FILES.newDao).replace(
     'package io.yak.framework.security.dao;', 'package io.yak.ops.platform.security.dao;'));
-  assert.match(checkPersistencePortOwnership(files).join('\n'), /DAO legacy FQCN/);
+  assert.match(checkPersistencePortOwnership(files).join('\n'), /PermissionDao legacy FQCN/);
 });
 test('A8.2e rejects losing parent code transient field', () => {
   const files = readRepository();
