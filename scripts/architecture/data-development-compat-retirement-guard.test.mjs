@@ -45,26 +45,27 @@ test('no tracked UI consumer can revive retired imports or bypass the special co
   }).split('\0').filter((file) => /\.[cm]?[jt]sx?$/.test(file) && existsSync(file));
   assert.ok(files.length > 100, 'repository source enumeration unexpectedly empty');
 
+  const violations = [];
   for (const file of files) {
     const source = readFileSync(file, 'utf8');
     for (const match of source.matchAll(importPattern)) {
       const resolved = canonical(file, match[1]);
       if (!resolved) continue;
-      assert.ok(!RETIRED.includes(resolved),
-        file + ' still imports retired Data Development facade: ' + match[1]);
-      if (resolved === PAGE_SERVICE) {
-        assert.equal(file, COORDINATOR_USER,
-          file + ' bypasses the Workbench special-command boundary');
+      if (RETIRED.includes(resolved)) {
+        violations.push(file + ' imports retired facade ' + match[1]);
       }
-      if (resolved === COMPAT.replace(/\.ts$/, '')) {
-        assert.ok(
-          file === PAGE_SERVICE + '.ts'
-            || file === COMPAT.replace(/\.ts$/, '.test.ts'),
-          file + ' imports raw envelope requests instead of modern service',
-        );
+      if (resolved === PAGE_SERVICE && file !== COORDINATOR_USER) {
+        violations.push(file + ' bypasses the Workbench page coordinator');
+      }
+      if (resolved === COMPAT.replace(/\.ts$/, '')
+        && file !== PAGE_SERVICE + '.ts'
+        && file !== COMPAT.replace(/\.ts$/, '.test.ts')) {
+        violations.push(file + ' imports Workbench raw envelope request directly');
       }
     }
   }
+  assert.deepEqual(violations, [],
+    'Retired import audit found ' + violations.length + ' violations');
 });
 
 test('Workbench remains the only page coordinator consumer and only special commands are exported', () => {
@@ -97,6 +98,14 @@ test('Workbench remains the only page coordinator consumer and only special comm
   }
   assert.ok(workbench.includes("from '../../service'"),
     'Workbench no longer uses guarded special commands');
+});
+
+test('Quick Create outside Data Development also uses the canonical service', () => {
+  const source = readFileSync('data-ops-ui/src/pages/create/index.tsx', 'utf8');
+  assert.ok(source.includes("from '@/services/data-development'"),
+    'Quick Create still depends on the deprecated node envelope');
+  assert.ok(source.includes('await createDevelopmentNode('),
+    'Quick Create no longer calls the canonical node creation API');
 });
 
 test('Data Service and Dataset editors import their canonical data-only service exports', () => {
