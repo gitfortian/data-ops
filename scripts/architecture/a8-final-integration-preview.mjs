@@ -107,7 +107,7 @@ function persist(report, reportPath) {
   const markdownPath = reportPath.replace(/\.json$/, '.md');
   fs.writeFileSync(markdownPath, integrationSummary(report));
   if (process.env.GITHUB_STEP_SUMMARY &&
-      (report.failed || (report.prs.length > 0 && report.prs.every(row => row.result === 'merged in temporary preview')))) {
+      (report.failed || (report.prs.length > 0 && report.prs.every(row => ['merged in temporary preview', 'already present in temporary preview'].includes(row.result))))) {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, integrationSummary(report));
   }
 }
@@ -198,6 +198,8 @@ export function verifyRollback({ worktree, reportPath }) {
   if (actual !== report.integratedSha) {
     throw new Error('Preview HEAD changed before rollback; refusing unsafe verification');
   }
+  // All build outputs and generated tracked files belong only to this disposable worktree.
+  git(['-C', absolute, 'reset', '--hard', report.integratedSha]);
   const safeGit = ['-c', 'user.name=Data-Ops A8 Preview',
     '-c', 'user.email=a8-preview@localhost'];
   const shaPattern = /^[0-9a-f]{40}$/;
