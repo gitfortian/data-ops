@@ -17,6 +17,9 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { classifyAssetListFailure, type AssetListReadFailure } from '../read-state';
+import { useLatestAssetListRequest } from '../useLatestAssetListRequest';
 import { history, useSearchParams } from '@umijs/max';
 
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -98,7 +101,8 @@ const AssetCatalogPage = () => {
   const [records, setRecords] = useState<AssetRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<AssetListReadFailure | null>(null);
+  const beginLatestRequest = useLatestAssetListRequest();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -132,8 +136,13 @@ const AssetCatalogPage = () => {
   const [offlineTarget, setOfflineTarget] = useState<AssetRecord[] | null>(null);
 
   const load = useCallback(async () => {
+    const isCurrent = beginLatestRequest();
     setLoading(true);
-    setLoadError(false);
+    setLoadError(null);
+    setRecords([]);
+    setTotal(0);
+    setSelectedIds([]);
+    setSelectedRows([]);
     try {
       const result = await pageAssets({
         pageNo,
@@ -147,14 +156,16 @@ const AssetCatalogPage = () => {
         directoryId,
         sortBy: (sortBy || undefined) as 'TIME' | 'VIEWS' | 'NAME' | undefined,
       });
-      setRecords(result.records);
-      setTotal(result.total);
-    } catch {
-      setLoadError(true);
+      if (isCurrent()) {
+        setRecords(result.records);
+        setTotal(result.total);
+      }
+    } catch (error) {
+      if (isCurrent()) setLoadError(classifyAssetListFailure(error));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [pageNo, pageSize, keyword, assetTypes, layerCodes, statuses, grades, tagIds, directoryId, sortBy]);
+  }, [pageNo, pageSize, keyword, assetTypes, layerCodes, statuses, grades, tagIds, directoryId, sortBy, beginLatestRequest]);
 
   useEffect(() => {
     void load();
@@ -497,7 +508,10 @@ const AssetCatalogPage = () => {
         )}
 
         <div className="mt-4 flex-1">
-          {loadError && <Alert className="mb-3" type="error" showIcon message="资产列表读取失败" description="请重试；下方保留上次读取的结果。" action={<Button onClick={load}>重试</Button>} />}
+          {loadError && <Alert className="mb-3" type="error" showIcon
+             message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
+             description="本次筛选未能成功读取；不会展示旧查询或其它项目的结果，请重试。"
+             action={<Button onClick={load}>重试</Button>} />}
           {viewMode === '列表' && screens.sm !== false ? (
             <Table<AssetRecord>
               rowKey="id"
@@ -530,8 +544,8 @@ const AssetCatalogPage = () => {
                 emptyText: (
                   <YakEmpty
                     compact
-                    title="没有符合条件的资产"
-                    description="调整筛选，或等待对账把源域对象登记进来"
+                    title={loadError ? '未能读取资产目录' : '没有符合条件的资产'}
+                    description={loadError ? '重试后才能判断是否为空' : '调整筛选，或等待对账把源域对象登记进来'}
                   />
                 ),
               }}
@@ -551,6 +565,7 @@ const AssetCatalogPage = () => {
             <><AssetCardGrid
               records={records}
               loading={loading}
+              loadError={Boolean(loadError)}
               onOpen={(record) => history.push(`/data-asset/detail/${record.id}`)}
             />
             <Pagination className="mt-4" size="small" current={pageNo} pageSize={pageSize} total={total}
@@ -595,10 +610,12 @@ const AssetCatalogPage = () => {
 const AssetCardGrid = ({
   records,
   loading,
+  loadError,
   onOpen,
 }: {
   records: AssetRecord[];
   loading: boolean;
+  loadError: boolean;
   onOpen: (record: AssetRecord) => void;
 }) => (
   <div className="grid grid-cols-3 gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
@@ -628,9 +645,15 @@ const AssetCardGrid = ({
       </button>
     ))}
     {!loading && records.length === 0 && (
-      <YakEmpty compact title="没有符合条件的资产" description="调整筛选后再试" />
+      <YakEmpty compact title={loadError ? '未能读取资产目录' : '没有符合条件的资产'}
+        description={loadError ? '请重试后确认是否为空' : '调整筛选后再试'} />
     )}
   </div>
 );
 
-export default AssetCatalogPage;
+/** Remount on Project/permission change, discarding old filters and selections. */
+export default function ScopedAssetCatalogPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetCatalogPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}

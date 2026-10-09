@@ -1,4 +1,3 @@
-import runningWebp from '@/assets/gif/running.webp';
 import {
   YakButton,
   YakStatusIcon,
@@ -40,7 +39,6 @@ const STATUS_META: Record<string, StatusMeta> = {
   RUNNING: {
     messageId: 'pages.batchLinkUp.status.running',
     yakStatus: 'running',
-    animated: true,
   },
   SUCCEEDED: {
     messageId: 'pages.batchLinkUp.status.succeeded',
@@ -96,59 +94,19 @@ const TaskStatus = ({ status, errorMessage }: TaskStatusProps) => {
 
   const yakStatus: YakStatus = meta?.yakStatus || 'unknown';
 
-  const isRunning = normalized === 'RUNNING';
-
-const statusContent = isRunning ? (
-  <span
-    className="relative inline-flex h-[100px] min-w-[72px] items-center justify-center"
-    data-offline-sync-status={normalized}
-    title={label}
-  >
-    <span className="relative inline-flex">
-
-      {/* 上层：真正清晰的 Running 插画 */}
-      <img
-        src={runningWebp}
-        alt=""
-        draggable={false}
-        className="
-          relative
-          z-10
-          block
-          h-[88px]
-          w-auto
-          max-w-none
-          select-none
-          rounded-[14px]
-          object-contain
-        "
-        style={{
-          WebkitMaskImage:
-            'radial-gradient(ellipse 88% 94% at 50% 50%, #000 58%, rgba(0,0,0,.96) 70%, rgba(0,0,0,.72) 82%, rgba(0,0,0,.28) 92%, transparent 100%)',
-          maskImage:
-            'radial-gradient(ellipse 88% 94% at 50% 50%, #000 58%, rgba(0,0,0,.96) 70%, rgba(0,0,0,.72) 82%, rgba(0,0,0,.28) 92%, transparent 100%)',
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-          WebkitMaskSize: '100% 100%',
-          maskSize: '100% 100%',
-        }}
+  const statusContent = (
+    <span
+      className="inline-flex min-w-[78px] items-center justify-center gap-1.5 whitespace-nowrap text-[12px] font-medium leading-5 text-[#475467]"
+      data-offline-sync-status={normalized}
+    >
+      <YakStatusIcon
+        status={yakStatus}
+        size={17}
+        animated={Boolean(meta?.animated)}
       />
+      <span>{label}</span>
     </span>
-  </span>
-) : (
-  <span
-    className="inline-flex min-w-[78px] items-center justify-center gap-1.5 whitespace-nowrap text-[12px] font-medium leading-5 text-[#475467]"
-    data-offline-sync-status={normalized}
-  >
-    <YakStatusIcon
-      status={yakStatus}
-      size={17}
-      animated={Boolean(meta?.animated)}
-    />
-
-    <span>{label}</span>
-  </span>
-);
+  );
 
   if (
     !errorMessage ||

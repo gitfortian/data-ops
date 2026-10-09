@@ -38,6 +38,8 @@ export interface GovernanceEvidenceCard {
 }
 
 function isGovernanceSourcePath(path: string): boolean {
+  const review = path.match(/^\/modeling\/models\/([1-9][0-9]{0,18})\?tab=version&reviewVersion=([1-9][0-9]{0,9})$/);
+  if (review) return (review[1].length < 19 || review[1] <= '9223372036854775807') && Number(review[2]) <= 2147483647;
   const numeric = path.match(/^\/(?:data-asset\/detail|data-quality\/monitor|dataset)\/([1-9]\d*)$/);
   return numeric ? Number.isSafeInteger(Number(numeric[1]))
     : /^\/data-quality\/execution\/[A-Za-z0-9_-]{1,128}$/.test(path)

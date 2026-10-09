@@ -1,6 +1,9 @@
 import { Alert, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { classifyAssetListFailure, type AssetListReadFailure } from '../read-state';
+import { useLatestAssetListRequest } from '../useLatestAssetListRequest';
 import { history, useSearchParams } from '@umijs/max';
 
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -54,15 +57,20 @@ const PendingPool = () => {
   const [pageSize, setPageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<AssetListReadFailure | null>(null);
+  const beginLatestRequest = useLatestAssetListRequest();
   const [selectedRows, setSelectedRows] = useState<AssetRecord[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardAssets, setWizardAssets] = useState<AssetRecord[]>([]);
   const [manualOpen, setManualOpen] = useState(false);
 
   const load = useCallback(async () => {
+    const isCurrent = beginLatestRequest();
     setLoading(true);
-    setLoadError(false);
+    setLoadError(null);
+    setRecords([]);
+    setTotal(0);
+    setSelectedRows([]);
     try {
       const result = await pageAssets({
         pageNo,
@@ -70,14 +78,16 @@ const PendingPool = () => {
         statuses: ['PENDING'],
         keyword: keyword.trim() || undefined,
       });
-      setRecords(result.records);
-      setTotal(result.total);
-    } catch {
-      setLoadError(true);
+      if (isCurrent()) {
+        setRecords(result.records);
+        setTotal(result.total);
+      }
+    } catch (error) {
+      if (isCurrent()) setLoadError(classifyAssetListFailure(error));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [pageNo, pageSize, keyword]);
+  }, [pageNo, pageSize, keyword, beginLatestRequest]);
 
   useEffect(() => {
     void load();
@@ -135,7 +145,7 @@ const PendingPool = () => {
       key: 'action',
       width: 90,
       render: (_, record) => (
-        <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => openWizard([record])}>
+        <YakButton size="small" type="link" disabled={!canUpdate || Boolean(loadError) || loading} onClick={() => openWizard([record])}>
           上架
         </YakButton>
       ),
@@ -157,7 +167,7 @@ const PendingPool = () => {
         {canUpdate && (
           <YakButton
             size="small"
-            disabled={selectedRows.length === 0 || loadError || loading}
+            disabled={selectedRows.length === 0 || Boolean(loadError) || loading}
             onClick={() => openWizard(selectedRows)}
           >
             批量上架({selectedRows.length})
@@ -173,8 +183,8 @@ const PendingPool = () => {
         </span>
       </div>
       {loadError && (
-        <Alert className="mb-3" type="error" showIcon message="待上架池读取失败"
-          description="当前无法确认最新资产；下方保留上次成功读取的结果，请重试后操作。"
+        <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取待上架资产' : '待上架池读取失败'}
+          description="本次读取未成功，不再展示旧筛选或旧项目的数据；请核对权限后重试。"
           action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
       )}
       <Table<AssetRecord>
@@ -237,21 +247,27 @@ const ChangeConfirm = () => {
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<AssetListReadFailure | null>(null);
+  const beginLatestRequest = useLatestAssetListRequest();
 
   const load = useCallback(async () => {
+    const isCurrent = beginLatestRequest();
     setLoading(true);
-    setLoadError(false);
+    setLoadError(null);
+    setRecords([]);
+    setTotal(0);
     try {
       const result = await pageChanges({ handleStatus, pageNo, pageSize });
-      setRecords(result.records);
-      setTotal(result.total);
-    } catch {
-      setLoadError(true);
+      if (isCurrent()) {
+        setRecords(result.records);
+        setTotal(result.total);
+      }
+    } catch (error) {
+      if (isCurrent()) setLoadError(classifyAssetListFailure(error));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [handleStatus, pageNo, pageSize]);
+  }, [handleStatus, pageNo, pageSize, beginLatestRequest]);
 
   useEffect(() => {
     void load();
@@ -350,10 +366,10 @@ const ChangeConfirm = () => {
       render: (_, record) =>
         record.handleStatus === 'OPEN' ? (
           <Space size={2}>
-            <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => runConfirm(record)}>
+            <YakButton size="small" type="link" disabled={!canUpdate || Boolean(loadError) || loading} onClick={() => runConfirm(record)}>
               确认
             </YakButton>
-            <YakButton size="small" type="link" disabled={!canUpdate || loadError || loading} onClick={() => runIgnore(record)}>
+            <YakButton size="small" type="link" disabled={!canUpdate || Boolean(loadError) || loading} onClick={() => runIgnore(record)}>
               忽略
             </YakButton>
           </Space>
@@ -382,8 +398,8 @@ const ChangeConfirm = () => {
         </span>
       </div>
       {loadError && (
-        <Alert className="mb-3" type="error" showIcon message="变更确认记录读取失败"
-          description="当前无法确认最新流水；下方保留上次成功读取的结果，请重试后操作。"
+        <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取变更确认记录' : '变更确认记录读取失败'}
+          description="本次读取未成功，旧筛选条件的记录不再作为当前变更展示；请重试。"
           action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
       )}
       <Table<ChangeRecord>
@@ -424,20 +440,24 @@ const SourceAccess = () => {
 
   const [rows, setRows] = useState<ReconcileStatusRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<AssetListReadFailure | null>(null);
+  const beginLatestRequest = useLatestAssetListRequest();
   const [submitting, setSubmitting] = useState('');
 
   const load = useCallback(async () => {
+    const isCurrent = beginLatestRequest();
     setLoading(true);
-    setLoadError(false);
+    setLoadError(null);
+    setRows([]);
     try {
-      setRows(await getReconcileStatus());
-    } catch {
-      setLoadError(true);
+      const result = await getReconcileStatus();
+      if (isCurrent()) setRows(result);
+    } catch (error) {
+      if (isCurrent()) setLoadError(classifyAssetListFailure(error));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [beginLatestRequest]);
 
   useEffect(() => {
     void load();
@@ -515,7 +535,7 @@ const SourceAccess = () => {
         <YakButton
           size="small"
           type="link"
-          disabled={!canUpdate || !record.registered || loadError || loading}
+          disabled={!canUpdate || !record.registered || Boolean(loadError) || loading}
           loading={submitting === record.sourceType}
           onClick={() => run([record.sourceType], ASSET_SOURCE_TYPE_LABELS[record.sourceType] ?? record.sourceType)}
         >
@@ -532,7 +552,7 @@ const SourceAccess = () => {
           type="primary"
           size="small"
           className="!text-white"
-          disabled={!canUpdate || submitting === 'ALL' || loadError || loading}
+          disabled={!canUpdate || submitting === 'ALL' || Boolean(loadError) || loading}
           loading={submitting === 'ALL'}
           onClick={() => run(rows.filter((row) => row.registered).map((row) => row.sourceType), 'ALL')}
         >
@@ -546,8 +566,8 @@ const SourceAccess = () => {
         </span>
       </div>
       {loadError && (
-        <Alert className="mb-3" type="error" showIcon message="源接入状态读取失败"
-          description="当前无法确认最新 Provider 状态；下方保留上次成功读取的结果，请重试后操作。"
+        <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取源接入状态' : '源接入状态读取失败'}
+          description="本次读取未成功，旧项目的 Provider 状态不再作为当前结果；请重试。"
           action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
       )}
       <Table<ReconcileStatusRow>
@@ -595,4 +615,9 @@ const AssetInventoryPage = () => {
   );
 };
 
-export default AssetInventoryPage;
+/** Remount tabs on Project or permission changes to discard old rows and selections. */
+export default function ScopedAssetInventoryPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetInventoryPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}

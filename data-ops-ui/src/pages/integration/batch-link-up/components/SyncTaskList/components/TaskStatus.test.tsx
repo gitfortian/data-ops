@@ -50,10 +50,12 @@ describe('offline sync TaskStatus', () => {
     },
   );
 
-  it('renders the running illustration with the localized status title', () => {
+  it('renders running as a static icon with a visible localized status', () => {
     const { container } = render(<TaskStatus status="RUNNING" />);
-    expect(screen.getByTitle('运行中')).toHaveAttribute('data-offline-sync-status', 'RUNNING');
-    expect(container.querySelector('img')).toHaveAttribute('src', 'test-file');
+    expect(screen.getByText('运行中')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toHaveAttribute('data-status', 'running');
+    expect(container.querySelector('svg')).toHaveAttribute('data-animated', 'false');
+    expect(container.querySelector('img, image')).not.toBeInTheDocument();
   });
 
   it.each([

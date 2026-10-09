@@ -363,3 +363,10 @@ Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQuery
 批量候选只改用户选定且草稿未变的字段，人工 If-Match 保存。指标定义辅助仅读取授权有界模型字段/结构指纹，不读取物理行或执行 SQL；源模型到原指标编辑器交接使用稳定 ID，目标页重读权限与项目。
 
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
+
+
+## F-037 模型结构变更解释与映射检查清单
+
+模型维护者在原版本页选择精确基准并准备比较，查看结构差异、当前映射待检查项与覆盖缺口，显式进入 AI 说明并返回原版本/映射页人工核对。超过 100 字段/100 映射/20 索引或 24000 字符结果拒绝，不截断后声称无差异；无权、指定版本缺失、损坏或输入漂移要求重新核对。无保存、回滚、发布或 SQL 执行。
+
+产品范围见 [F-037](../../docs/product/features/F-037-agent-model-structure-review.md)；真实验收按用户安排保持 PENDING。
