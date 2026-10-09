@@ -16,6 +16,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.yak.ops.business.approval.api.ApprovalDecision;
@@ -319,11 +320,68 @@ class ApprovalServiceTest {
     page.setRecords(List.of(step(11L, 1, "alice", ApprovalStepStatus.PENDING)));
     page.setTotal(1);
     when(stepMapper.selectPage(any(), any())).thenReturn(page);
-    when(instanceMapper.selectBatchIds(any())).thenReturn(List.of(running));
+    when(instanceMapper.selectList(any())).thenReturn(List.of(running));
     List<TodoView> todo = service.todo("alice", 1, 20).records();
     assertEquals(1, todo.size());
     assertEquals(7L, todo.get(0).instance().id());
     assertEquals(1, todo.get(0).levelNo());
+  }
+
+  @Test
+  void todoAndHandledNeverProjectForeignOrDeletedInstances() {
+    ApprovalInstancePO foreign = instance(ApprovalInstanceStatus.PENDING, 1);
+    foreign.setProjectId(99L);
+    ApprovalInstancePO deleted = instance(ApprovalInstanceStatus.PENDING, 1);
+    deleted.setId(8L);
+    deleted.setDeleted(true);
+    ApprovalInstancePO valid = instance(ApprovalInstanceStatus.PENDING, 1);
+    valid.setId(9L);
+
+    ApprovalStepPO foreignStep = step(11L, 1, "alice", ApprovalStepStatus.PENDING);
+    ApprovalStepPO deletedStep = step(12L, 1, "alice", ApprovalStepStatus.PENDING);
+    deletedStep.setInstanceId(8L);
+    ApprovalStepPO validStep = step(13L, 1, "alice", ApprovalStepStatus.PENDING);
+    validStep.setInstanceId(9L);
+    Page<ApprovalStepPO> steps = new Page<>(1, 20);
+    steps.setRecords(List.of(foreignStep, deletedStep, validStep));
+    steps.setTotal(3);
+    when(stepMapper.selectPage(any(), any())).thenReturn(steps);
+    // A corrupt/misconfigured query response must fail closed at the projection boundary.
+    when(instanceMapper.selectList(any())).thenReturn(List.of(foreign, deleted, valid));
+
+    List<TodoView> todo = service.todo("alice", 1, 20).records();
+    List<ApprovalService.HandledView> handled = service.handled("alice", 1, 20).records();
+    assertEquals(List.of(9L), todo.stream().map(v -> v.instance().id()).toList());
+    assertEquals(List.of(9L), handled.stream().map(v -> v.instance().id()).toList());
+
+    @SuppressWarnings("rawtypes")
+    ArgumentCaptor<LambdaQueryWrapper> instanceQueries =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(instanceMapper, times(2)).selectList(instanceQueries.capture());
+    for (LambdaQueryWrapper<?> query : instanceQueries.getAllValues()) {
+      assertTrue(query.getSqlSegment().contains("project_id"));
+      assertTrue(query.getSqlSegment().contains("deleted"));
+      assertTrue(query.getSqlSegment().contains("id IN"));
+      assertTrue(query.getParamNameValuePairs().containsValue(1L));
+      assertTrue(query.getParamNameValuePairs().containsValue(false));
+    }
+  }
+
+  @Test
+  void findByBizQueriesAlwaysExcludeDeletedInstancesInsideProject() {
+    when(instanceMapper.selectList(any())).thenReturn(List.of());
+    assertNull(service.find(FLOW_CODE, "MODEL", "42"));
+
+    @SuppressWarnings("rawtypes")
+    ArgumentCaptor<LambdaQueryWrapper> instanceQueries =
+        ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(instanceMapper, times(2)).selectList(instanceQueries.capture());
+    for (LambdaQueryWrapper<?> query : instanceQueries.getAllValues()) {
+      assertTrue(query.getSqlSegment().contains("project_id"));
+      assertTrue(query.getSqlSegment().contains("deleted"));
+      assertTrue(query.getParamNameValuePairs().containsValue(1L));
+      assertTrue(query.getParamNameValuePairs().containsValue(false));
+    }
   }
 
   @Test
