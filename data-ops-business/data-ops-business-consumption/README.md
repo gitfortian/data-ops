@@ -40,3 +40,10 @@ WITHIN_LIMIT / UNKNOWN and independent provider states are evidence scope, not a
 Unreadable side-specific counts/times stay null; the known-consumer union covers readable windows only.
 NOT_PERFORMED and unknown freshness must remain visible. Empty or unsaturated persisted windows never prove
 complete source history. Asset continues to consume SPI; no reverse Maven dependency or new source truth.
+
+F-036 ConsumerVersionImpactQueryApi is the narrow read-only Agent boundary. It checks Asset READ and
+CurrentProject/source-product identity before bounded persisted version usage and ACTIVE subscriptions.
+Each side is at most 10 rows; a current active reference or normalized exact-version success proves only
+version membership, never the historical definition or completeness. No reconciliation or writes.
+Only tagged Consumer identities and scoped counts/times cross the API; no actors, display hints,
+provider refs or source configuration. Agent depends on consumption.api, never the implementation.

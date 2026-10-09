@@ -35,7 +35,7 @@ final class GovernanceAnswerGuard {
                   .mentionsEvidence(result.getResult().getTextContent()))) return event;
       var original = result.getResult();
       String text;
-      if (execution.target() != null && execution.target().purpose() != null && !AssetImpactPrompt.appliesTo(execution.target())) {
+      if (execution.target() != null && execution.target().purpose() != null && !AssetImpactPrompt.appliesTo(execution.target()) && !ConsumerVersionImpactPrompt.appliesTo(execution.target())) {
         if (execution.suggestion() == null) {
           text = execution.evidence().validateAnswer("尚未生成通过源域校验的候选，请补充业务约束或重试。");
         } else {
@@ -55,6 +55,7 @@ final class GovernanceAnswerGuard {
             ? QualityExecutionComparisonPrompt.NEXT_STEP : QualityTroubleshootingPrompt.NEXT_STEP);
       }
       if (AssetImpactPrompt.appliesTo(execution.target())) text += "\n\n" + AssetImpactPrompt.NEXT_STEP;
+      if (ConsumerVersionImpactPrompt.appliesTo(execution.target())) text += "\n\n" + ConsumerVersionImpactPrompt.NEXT_STEP;
       if (!execution.verifiedFacts().isEmpty()) text += "\n\n```yak-facts\n" + encode(execution.verifiedFacts()) + "\n```";
       text += "\n\n```yak-evidence\n" + encode(execution.evidence().entries()) + "\n```";
       var validated = original.withContent(List.of(TextBlock.builder().text(text).build()));
