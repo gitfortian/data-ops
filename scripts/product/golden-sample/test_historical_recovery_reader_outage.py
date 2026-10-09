@@ -73,6 +73,8 @@ class FakeApi:
 
 def fixture(kind):
     db = SnapshotDB()
+    db.dataset_source = [source_row("DATASET")]
+    db.service_source = [source_row("DATA_SERVICE")]
     db.usage = usage(kind, [source_row(kind)])
     return db
 
