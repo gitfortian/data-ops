@@ -28,3 +28,10 @@ TypeScript 全仓检查仍报告仓库中其他文件的既有诊断；对本次
 ## 尚未完成的验收
 
 真实登录态下的 J1、J2、J3、J4、J5 业务链路仍需在集成环境按 #289 清单走查，重点覆盖不同角色授权、刷新登录态、直达深链和项目空间上下文。未取得这些证据前，F-008 保持 IMPLEMENTING；本记录不宣称业务旅程闭环或真实用户效果已验证。
+
+## 2026-10-09 P0 D-04 复核（只收口，不改验收结论）
+
+- [PR #296](https://github.com/gitfortian/data-ops/pull/296) 已在 **2026-09-30 MERGED**（merge commit `c792ee3426fe1ab98f989333cc9a5918e511b692`）；五个业务顶层菜单、可见 Consumption Catalog、隐藏详情 parentId、Platform Settings 已见于 `main@5b5318c5e8705e6d3795e9dafcfdae59b95d0dcf` 的 [navigation.ts](https://github.com/gitfortian/data-ops/blob/5b5318c5e8705e6d3795e9dafcfdae59b95d0dcf/data-ops-ui/src/config/navigation.ts#L55-L101)。历史“仍未实施导航重组/消费入口”不再适用。
+- 现存 [navigationMenuContract.test.ts](https://github.com/gitfortian/data-ops/blob/5b5318c5e8705e6d3795e9dafcfdae59b95d0dcf/data-ops-ui/src/config/navigationMenuContract.test.ts) 检查菜单码、父子目录、路由与权限；[数据库菜单迁移回放脚本](https://github.com/gitfortian/data-ops/blob/5b5318c5e8705e6d3795e9dafcfdae59b95d0dcf/scripts/security/test-task-oriented-menu-migration.py) 指向最终归档 **V2045**。上文 5 suites / 33 tests、本地生产构建及 MySQL 8 结果均为**2026-09-30 原历史取证**；本次没有重新运行。
+- **真实登录 J1～J5 菜单/深链/角色/Project 浏览器验收未提供**。本次仅核销实现与历史测试的位置，不产生 `E2E_PASS`。F-008 保持 `Status: IMPLEMENTING`；[#289](https://github.com/gitfortian/data-ops/issues/289) 继续 OPEN 直到 QA/Product 签收。
+- 具体 D-04/D-05 责任、验收及 P1 只读证据移交详见 [P0 退出与 P1 交接记录](p0-product-exit-p1-evidence-handoff-20261009.md)。
