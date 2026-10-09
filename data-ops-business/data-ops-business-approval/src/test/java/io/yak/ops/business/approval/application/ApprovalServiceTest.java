@@ -46,6 +46,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.dao.DuplicateKeyException;
 
 /** 核心闭环单测(ticket 103):两级全链路、拒绝/撤销终态清理、乐观并发、在途唯一、回调纪律。 */
 class ApprovalServiceTest {
@@ -138,6 +139,19 @@ class ApprovalServiceTest {
     verify(instanceMapper, never()).insert(any(ApprovalInstancePO.class));
   }
 
+  @Test
+  void simultaneousDuplicateSubmissionFailsBeforeStepsOrSuccessAudit() {
+    when(flowMapper.selectOne(any())).thenReturn(flow(true));
+    when(instanceMapper.selectCount(any())).thenReturn(0L);
+    when(instanceMapper.insert(any(ApprovalInstancePO.class)))
+        .thenThrow(new DuplicateKeyException("in-flight approval unique index"));
+
+    assertError(ApprovalErrorCode.DUPLICATE_IN_FLIGHT, () -> service.submit(submitCmd()));
+    verify(stepMapper, never()).insert(any(ApprovalStepPO.class));
+    verify(instanceMapper).insert(any(ApprovalInstancePO.class));
+    verify(handler, never()).onApproved(any());
+  }
+
   // ---------- 两级全链路 ----------
 
   @Test
@@ -219,6 +233,23 @@ class ApprovalServiceTest {
   }
 
   // ---------- 并发与越权 ----------
+
+  @Test
+  void foreignProjectInstanceRejectsReadApprovalAndCancellationBeforeAnyStepWrite() {
+    ApprovalInstancePO foreign = instance(ApprovalInstanceStatus.PENDING, 1);
+    foreign.setProjectId(88L);
+    when(instanceMapper.selectById(7L)).thenReturn(foreign);
+
+    assertError(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR,
+        () -> service.detail(7L, "tom", true));
+    assertError(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR,
+        () -> service.approve(7L, null, "alice"));
+    assertError(ApprovalErrorCode.ILLEGAL_STATE_OR_OPERATOR,
+        () -> service.cancel(7L, "tom", null));
+    verify(stepMapper, never()).update(any(), any());
+    verify(instanceMapper, never()).update(any(), any());
+    verify(handler, never()).onApproved(any());
+  }
 
   @Test
   void doubleClickOnlyOneSucceeds() {

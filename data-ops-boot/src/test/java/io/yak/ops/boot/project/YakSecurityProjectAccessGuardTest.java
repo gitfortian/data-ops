@@ -82,6 +82,46 @@ class YakSecurityProjectAccessGuardTest {
   }
 
   @Test
+  void inconsistentProjectLookupCannotBindAnotherProjectEvenForItsOwner() {
+    UserBriefVO alice = user(11L);
+    ProjectVO wrongProject = project(8L, "Project B", true, List.of(alice), List.of());
+    stubExistingProject(alice, wrongProject);
+
+    assertThatThrownBy(() -> guard.requireAccessible(7L, "alice"))
+        .isInstanceOfSatisfying(ProjectContextException.class,
+            exception -> assertThat(exception.getError()).isEqualTo(ProjectContextError.PROJECT_NOT_FOUND));
+    verify(authorizationAudit)
+        .denied(7L, ProjectAuthorizationReason.PROJECT_NOT_FOUND.name());
+  }
+
+  @Test
+  void ownerOfProjectADoesNotGetProjectBMembershipAutomatically() {
+    UserBriefVO alice = user(11L);
+    when(projectService.checkProjectExist(8L)).thenReturn(true);
+    when(userService.getUserBriefByUsername("alice")).thenReturn(alice);
+    when(projectService.getProjectDetailByProjectId(8L))
+        .thenReturn(project(8L, "Project B", true, List.of(), List.of()));
+
+    assertThatThrownBy(() -> guard.requireAccessible(8L, "alice"))
+        .isInstanceOfSatisfying(ProjectContextException.class,
+            exception -> assertThat(exception.getError()).isEqualTo(ProjectContextError.PROJECT_NOT_FOUND));
+    verify(authorizationAudit).denied(8L, ProjectAuthorizationReason.PROJECT_MEMBERSHIP_REQUIRED.name());
+  }
+
+  @Test
+  void nullMembershipEntriesDoNotAuthorizeOrCrash() {
+    UserBriefVO alice = user(11L);
+    ProjectVO project = project(7L, "Project A", true,
+        java.util.Arrays.asList((UserBriefVO) null), java.util.Arrays.asList((UserBriefVO) null));
+    stubExistingProject(alice, project);
+
+    assertThatThrownBy(() -> guard.requireAccessible(7L, "alice"))
+        .isInstanceOfSatisfying(ProjectContextException.class,
+            exception -> assertThat(exception.getError()).isEqualTo(ProjectContextError.PROJECT_NOT_FOUND));
+    verify(authorizationAudit).denied(7L, ProjectAuthorizationReason.PROJECT_MEMBERSHIP_REQUIRED.name());
+  }
+
+  @Test
   void missingProjectKeepsOutwardNotFoundAndAuditsMissingReason() {
     when(projectService.checkProjectExist(7L)).thenReturn(false);
 

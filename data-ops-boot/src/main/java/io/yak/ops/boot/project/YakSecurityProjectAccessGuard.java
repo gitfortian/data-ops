@@ -52,7 +52,8 @@ public class YakSecurityProjectAccessGuard implements ProjectAccessGuard {
     }
 
     ProjectVO project = projectService.getProjectDetailByProjectId(projectId);
-    if (project == null || project.getId() == null) {
+    // A stale/misconfigured lookup must never bind another Project's identity.
+    if (project == null || !projectId.equals(project.getId())) {
       authorizationAudit.denied(projectId, ProjectAuthorizationReason.PROJECT_NOT_FOUND.name());
       throw hiddenNotFound();
     }
@@ -93,7 +94,7 @@ public class YakSecurityProjectAccessGuard implements ProjectAccessGuard {
 
   private boolean containsUser(List<UserBriefVO> users, Long userId) {
     List<UserBriefVO> safeUsers = users == null ? Collections.emptyList() : users;
-    return safeUsers.stream().anyMatch(user -> Objects.equals(userId, user.getId()));
+    return safeUsers.stream().anyMatch(user -> user != null && Objects.equals(userId, user.getId()));
   }
 
   private enum AccessPath {
