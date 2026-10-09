@@ -1,0 +1,71 @@
+# P0 Golden 真实环境验收执行与退出签收包（2026-10-09，第四批）
+
+> **用途**：#336 的 QA / Release / Product 签收交接，**不是新需求、不是实测 PASS、不是生产操作授权**。
+> **本批授权**：只收口、核证据、消除旧状态歧义；不开发任何新功能。Model / Metric / MDM 样本扩建、P1 E1～E4、AI 能力和未 ACCEPTED 的 PD-005/006/007/008 均不在本次执行范围内。
+> **代码参考 SHA**：`main@bbbb24ea1ca406a15b2d78dbe3ed1b4cf09cc348`（含合并 #467 的静态证据台账）。这**不是部署身份**。如实测时 `main` 变化，QA 以部署的精确 commit/构建收据/流程身份重新绑定。
+> **主追踪**：[P0 #336](https://github.com/gitfortian/data-ops/issues/336) · [当前证据台账](p0-closeout-20261009.md) · [现有 Golden 工具使用说明](../../../scripts/product/golden-sample/README.md) · [历史 R2](golden-sample/r2-consumption-20261004.md)。
+
+## 1. 已确认事实与不能签收的事实
+
+- [PR #463](https://github.com/gitfortian/data-ops/pull/463)、[#466](https://github.com/gitfortian/data-ops/pull/466)、[#467](https://github.com/gitfortian/data-ops/pull/467) 已于 2026-10-09 **MERGED**。这三批是文档/静态核销，不是一个新的 Golden 部署。
+- 仓库有 **R1、R2 历史真实 API/DB 样本**：[`physical-acceptance-20261004.json`](golden-sample/physical-acceptance-20261004.json) 的 `deploymentCommit=null`；[`consumption-acceptance-20261004.json`](golden-sample/consumption-acceptance-20261004.json) 的 `deploymentCommit=null`。后者源审计基于不同历史 repositoryCommit；没有可核验的“当前 SHA 已部署”映射。
+- 2026-10-09 的仓库目录下**没有已提交**的 R3～R8 真实环境 `--apply` 结果报告；该结论只针对版本库内留存内容，**不推断运行环境、QA 私有存储或 CI artifact 一定不存在**。
+- [Golden CI 工作流](../../../.github/workflows/golden-consumption-evidence.yml) 的实际步骤为语法检查、Python fixture unittest、Node lossless identity 测试；**不会执行实际 HTTP POST/登录/应用库核对**，不能作为 E2E_PASS。
+- [R8 离线证据 Gate](../../../scripts/product/golden-sample/golden_evidence_gate.py) 核对证据结构/前后阶段对应及可选 JAR SHA-256 + 双声明，即使全部结构一致也只生成 `CONSISTENT_PARTIAL_EVIDENCE`、`automatedProductPass=false`、`deploymentIdentity=UNVERIFIED`，并以 **exit 2 / PENDING** 结束。双运维声明不是运行中进程使用该 JAR 的独立证明；前端包及浏览器需要另行核实。
+- [Phase5 Real Environment Acceptance](../../../.github/workflows/phase5-real-env-acceptance.yml) 是独立的 Metric/J2 真实环境工作流，确有 `workflow_dispatch` 和 JSON artifact 路径，但不得把它的存在或某次 CI 成功当作 #336 Dataset/Service J3/J5 Golden 当前已通过；若可获得与部署 SHA/账号绑定的运行 artifact，再单独评估可复用的事实。
+
+## 2. QA / 环境 Owner 必须提供的输入（缺一不能启动对应环节）
+
+| ID / Owner（角色） | 执行前输入 | 无输入时如实记录 |
+| --- | --- | --- |
+| E-00 · Release/部署 | 经过授权的**隔离非生产环境**、可访问 URL、实际运行进程/容器/部署控制器的 `deployedCommit` 证明、构建 job/后端 JAR SHA-256/前端 bundle SHA-256；验证 URL 与 manifest 相同 | `BLOCKED_DEPLOYMENT_IDENTITY`；不能仅把 GitHub main SHA 或两份声明填为已部署 |
+| E-01 · QA/RBAC | 真实管理员、同 Project 业务用户、属于同 Project 但权限受限的**另一账号**、跨 Project 账号；实际 membership + 权限码的脱敏快照；不能仅看 HTTP 403 | `BLOCKED_AUTHORIZATION_EVIDENCE` |
+| E-02 · QA/DB | R1/R2 标记为 `yak-golden-sample-v1` 的 Project A/B manifest、Dataset/Service 与 exact source version、独立应用数据库 **SELECT-only** 账号；稳定的真实 SUCCESS 审计和 Consumer identity | `BLOCKED_SAMPLE_OR_SOURCE_AUDIT`；不创建伪 SUCCESS 记录、不在库中删除 Usage |
+| E-03 · QA/Consumer/Security | 使用现有可授权 Key/IP 策略的合成 Consumer、有效和无效/撤销 Key 的安全测试计划、真实外部 Invoke 路径；**不保存原始 Key、密码、Cookie、Token** | `BLOCKED_CONSUMER_NEGATIVE_CASE` |
+| E-04 · QA/UI | 可登录的真实浏览器与可保存**脱敏**屏幕/HTTP trace 的工作区；当前前后端部署同源身份、网络及角色可用 | `BLOCKED_BROWSER_EVIDENCE` |
+| E-05 · 运维/QA | 对 R5 的归一化缺口、R6 的来源 Reader 失联分别具备**获批准的可逆故障**布置与恢复手段、操作时间/原因/日志索引；不修改生产、不由脚本制造错误 | `BLOCKED_FAULT_PRECONDITION` |
+
+**机密性边界**：仓库只留受控环境标识、build/run/receipt URL、脱敏角色/权限快照路径、对象 ID 与不可变版本、来源审计 ID、经脱敏 JSON 报告、日志索引与摘要；禁提交密钥/认证 Header、原始 SQL、凭证、真实业务行。所有脚本只操作已有 Golden 专用项目/源域 API，应用库必须只读。样本初始化/真实 Query/Invoke 会追加**真实历史**，先获环境授权；不能宣称脚本全程只读。
+
+## 3. 推荐执行顺序（各子场景均对应原仓库现成工具）
+
+| 顺序 | 实际动作 / 使用入口 | 独立证据与判定 |
+| --- | --- | --- |
+| 0 · 环境封存 | Release 记录部署进程镜像与 backend/frontend SHA-256；QA 核对服务器 URL、Project A/B、当前权限快照；登记 `G-00` | E-00～E-02 如不齐，**停止真实验收**；不要在未知版本机器上做破坏性/误判测试 |
+| 1 · 恢复 R1/R2 | 按 [Golden README R1/R2](../../../scripts/product/golden-sample/README.md) 在**新授权隔离环境** bootstrap + `consumption.py --apply --accept`；既有历史 JSON 只作为 schema/样本参照 | 真实 Dataset Query + Data Service API Key Invoke；记录 exact sourceVersion/revision、Consumer、query/invocationId、source SUCCESS audit、normalized Usage 和回链；不能复用 10-04 历史结果当本轮 |
+| 2 · 优先 R4 / R7 | `historical_recovery_denials.py --apply`，`historical_recovery_roles.py --apply`；均依赖已有 SUCCESS 与已 normalized 的样本。每种来源 `--kind BOTH`，遵循 README 完整参数和输出规范 | 拒绝路径及对照 Project 不改变源审计/Usage；R7 同 Project 受限身份的**拒绝事实**另配权限码归因证明，否则细分 RBAC 仍 Pending |
+| 3 · R3 历史恢复 | `historical_recovery.py --apply --kind BOTH`，只在每种来源真的具有 **>200 条已保留 SUCCESS** 且旧审计实际缺 Usage 时运行 | 旧审计补偿精确版本/Consumer/游标、跨 Project 与持久化幂等。**没有天然历史样本则记 BLOCKED，不生成假审计或改库做出缺口** |
+| 4 · R5 两阶段 | 用**已保留、尚未归一化**的真实 SUCCESS，先由环境 Owner 批准布置归一化故障，再 `historical_recovery_retry.py --apply --stage blocked --confirm-fault-staged`；恢复后用原 blocked 报告 `--stage recovered` | 必须为同一 Project + SourceVersion + auditId + cursor；故障期间不新增 Usage，恢复后新增正确的一行且重试幂等。Dataset 与 Data Service 分别留证；无故障不能冒跑 blocked POST |
+| 5 · R6 两阶段 | 用**已 normalized** 的另一真实 SUCCESS 审计；Operator 布置**Reader 级故障**后 `historical_recovery_reader_outage.py --apply --stage outage --confirm-reader-outage`；恢复后 `--stage restored` | 失联必须是明确 5xx/内部失败而不是成功空页；回读同一审计且 Usage 完全不变。必须单独留 Reader 根因日志，不能仅凭 HTTP 500 归因 |
+| 6 · R8 聚合 | `golden_evidence_gate.py --assess`，按 README 指定 `--r3/--r4/--r5-blocked/--r5-recovered/--r6-outage/--r6-restored/--roles`；可选真实 JAR + build/runtime 两收据 | 7 个 slot 的阶段/版本/audit/cursor/项目关系正确；**退出码 2 是设计内 PENDING，不等于 E2E FAILED 或 PASS**；退出码 1 是校验失败须处理；留 JSON 和构建关联状态 |
+| 7 · R8 以外的正式用户路径 | QA 真实浏览器从 Consumption → Dataset/Service → Asset/Producer → 原上下文往返；测试空态、403/404/500、旧响应、受限/跨项目、错误/撤回 Key、IP 策略（适用时）、恢复；对照 UI、API、DB/审计 | 保存脱敏截图、HTTP trace、source-owned SUCCESS/拒绝状态、normalized Usage、精确版本与复核者。R8 不包含此签收，不得用 R8 代替 |
+| 8 · 退出裁决 | Product + QA + Source Truth Owner 对照下方签收表逐项审阅 | 全链相同部署构建且核心 DoD 通过才能正式 PASS；缺前提为 BLOCKED，若有延期必须附批准人/风险/限制与重新验收入口 |
+
+**注意**：R5 与 R6 需要**不同前置证据状态**：R5 目标 Usage 必须缺失；R6 目标 Usage 必须已存在。不能用 R6 的“读回已有 Usage”当作 R5 的“缺口恢复”。R3、R5、R6 的故障场景可能不易安全构造，此时正确做法是记外部 BLOCKED + Owner，而非扩新功能或改写历史数据。以上为操作规划，**不表示任何步骤已执行**。
+
+## 4. 验收归档清单（同一环境、同一部署，逐场景填写）
+
+| 字段 | 当前值 / 填写规则 |
+| --- | --- |
+| environmentId / executedAt / operatorRole | `NOT_PROVIDED / NOT_EXECUTED / UNASSIGNED` |
+| mainSnapshot / buildCommit / actualDeployedCommit | `bbbb24ea... / UNKNOWN / UNKNOWN`（mainSnapshot 不是部署） |
+| buildRun / backendJarSHA256 / frontendBundleSHA256 / process attestation | `NOT_PROVIDED` |
+| projectA / projectB / marker + role/membership/permissionRefs | `NOT_PROVIDED`；账号凭据不可留存 |
+| datasetId + exactDatasetVersion + queryId + sourceAudit + ConsumerRef + Usage row | `NOT_EXECUTED` |
+| serviceId + exactRevision string + invocationId + sourceAudit + ConsumerRef + Usage row | `NOT_EXECUTED`（BIGINT 字符串） |
+| R3 / R4 / R5-blocked / R5-recovered / R6-outage / R6-restored / R7 evidence file links | `NOT_PROVIDED` |
+| R8 evidenceGateOutput / artifact declaration relation / independent process attestation | `NOT_PROVIDED` |
+| browser / negative Key+IP / role / outage root-cause / recovery evidence | `NOT_PROVIDED` |
+| per-scene verdict + blockerOwner + releaseImpact + next action | `BLOCKED_EVIDENCE / UNASSIGNED / UNKNOWN / REQUEST_EVIDENCE` |
+| QA signature / Product signature / sourceOwner signature / approved defer boundary | `NOT_SIGNED / NOT_SIGNED / NOT_SIGNED / NONE` |
+
+不要在缺证据时把单测成功写为 `E2E_PASS`；不要用 `report.result=REAL_*` 推出最终产品验收已完成。拒绝、错误、空结果应记录实际 HTTP/应用码及写前写后真实性，不能推算或硬编码。
+
+## 5. P0 #336 最终裁决所需人工签收
+
+- **可放行**：G-00～G-05、R1/R2、R3～R8 适用项、真实浏览器与负向角色/API Key/精确版本及 V1～V5 高风险反例，有相同构建且可重放的可信证据，QA/Owner/Product 明确签署。
+- **阻塞退出**：缺真实部署进程身份、受限账号、源审计、故障能力或浏览器，而没有经 Product+QA 批准的明确延期边界。状态保持 `BLOCKED_EVIDENCE` 与 #336 OPEN。
+- **经批准延期**：必须明示 **具体场景、影响用户/发布范围、不能证明的风险、补救/禁止上线动作、Owner、截止条件、Product+QA 批准记录**；不能单纯用“CI 通过”替代批准。
+- **不得触发新开发**：本轮的全部工作是对已有运行工具和验收合同取证；后续 P1 E1～E4 与 Model/Metric/MDM 的新样本能力，不应借“缺证据”为由在本 #336 自动开工。
+
+**当前裁决（2026-10-09）**：`GOLDEN=BLOCKED_EVIDENCE`、`P0_EXIT=NOT_SIGNED`。此文档没有新增 E2E PASS、运行结果、授权或部署环境。
