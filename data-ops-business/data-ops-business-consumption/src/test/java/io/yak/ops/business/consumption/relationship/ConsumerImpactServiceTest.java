@@ -268,9 +268,39 @@ class ConsumerImpactServiceTest {
         () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "07", null, 20));
     org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
         () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", "0", 20));
+    for (String invalid : java.util.List.of(
+        "01", "-1", "1.0", " 9", "9223372036854775808")) {
+      org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+          () -> service.recoverDatasetVersionPage(
+              ProductKey.parse("DATASET:101"), "7", invalid, 20));
+    }
     org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
         () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:0"), "7", null, 20));
     org.mockito.Mockito.verifyNoInteractions(project, sync, subs, usage);
+  }
+
+  @Test
+  void datasetBigintCursorRoundTripsLosslesslyBeyondJavascriptSafeInteger() {
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    when(sync.recoverSuccessfulVersionPage(
+        101L, 9007199254740995L, 9007199254740994L, 200))
+        .thenReturn(new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
+            java.util.List.of(), 9007199254740993L, false));
+    var service = new ConsumerImpactService(
+        mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
+        project, sync, null);
+
+    var result = service.recoverDatasetVersionPage(
+        ProductKey.parse("DATASET:101"), "9007199254740995", "9007199254740994", 999);
+
+    assertEquals("9007199254740994", result.requestedBeforeAuditId());
+    assertEquals("9007199254740993", result.nextBeforeAuditId());
+    assertEquals(200, result.requestedLimit());
+    assertEquals(false, result.retryRequired());
+    org.mockito.Mockito.verify(sync).recoverSuccessfulVersionPage(
+        101L, 9007199254740995L, 9007199254740994L, 200);
   }
 
   private static UsageEvidence event(
