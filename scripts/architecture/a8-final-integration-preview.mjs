@@ -32,6 +32,33 @@ export const ARCHITECTURE_SERIES = Object.freeze([
 ]);
 
 const LABELS = ['do-not-merge', 'architecture-refactor'];
+
+const VETTED_CORRIDOR_PR = 423;
+const VETTED_CORRIDOR_SHA = '60c5378d7ba90894526e4ff0dfa06f173c4bca52';
+const WORKFLOW_PATH = '.github/workflows/architecture-checks.yml';
+const CORRIDOR_STEP =
+  '      - name: A8 Common and Security migration corridor\n' +
+  '        run: node scripts/architecture/check-common-security-corridor.mjs\n';
+const INSERT_BEFORE = '      - name: Plan fail-safe PR validation scope';
+
+/**
+ * The vetted #423 changes the existing main workflow by only this one
+ * explicitly reviewed Security corridor step. Everything else fails closed.
+ * A general "ours"/"theirs" conflict resolver is intentionally forbidden.
+ */
+export function reconcileKnownCorridor(pr, conflicted, current, incoming) {
+  if (pr?.number !== VETTED_CORRIDOR_PR ||
+      pr?.sha !== VETTED_CORRIDOR_SHA ||
+      conflicted.trim() !== WORKFLOW_PATH ||
+      incoming.split(CORRIDOR_STEP).length !== 2 ||
+      current.includes(CORRIDOR_STEP) ||
+      !current.includes(INSERT_BEFORE) ||
+      current.split(INSERT_BEFORE).length !== 2) {
+    throw new Error('Unapproved integration conflict; manual resolution required');
+  }
+  return current.replace(INSERT_BEFORE, () => CORRIDOR_STEP + INSERT_BEFORE);
+}
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export function validateArchitecturePull(pr, expected) {
@@ -155,7 +182,19 @@ export async function prepareIntegration({ worktree, reportPath, token }) {
       if (fetched !== pr.sha) throw new Error('PR #' + pr.number + ' moved during preview; retry with a new snapshot');
       // Local-only merge commit; never attempts git push or alters the checked-out main.
       const before = git(['-C', absolute, 'rev-parse', 'HEAD']);
-      git([...safeGit, '-C', absolute, 'merge', '--no-edit', '--no-ff', fetched]);
+      try {
+        git([...safeGit, '-C', absolute, 'merge', '--no-edit', '--no-ff', fetched]);
+      } catch (mergeError) {
+        const conflicted = git(['-C', absolute, 'diff', '--name-only', '--diff-filter=U']);
+        const current = git(['-C', absolute, 'show', ':2:' + WORKFLOW_PATH]);
+        const incoming = git(['-C', absolute, 'show', ':3:' + WORKFLOW_PATH]);
+        const reconciled = reconcileKnownCorridor(pr, conflicted, current, incoming);
+        fs.writeFileSync(path.join(absolute, WORKFLOW_PATH),
+          reconciled.endsWith('\n') ? reconciled : reconciled + '\n');
+        git(['-C', absolute, 'add', WORKFLOW_PATH]);
+        git([...safeGit, '-C', absolute, 'commit', '--no-edit']);
+        report.prs[i].resolution = 'vetted #423 corridor step, single workflow path';
+      }
       const after = git(['-C', absolute, 'rev-parse', 'HEAD']);
       report.prs[i].result = before === after
         ? 'already present in temporary preview'
