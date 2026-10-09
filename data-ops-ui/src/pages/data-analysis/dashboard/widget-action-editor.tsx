@@ -8,7 +8,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchDashboards } from './dashboard-service';
+import { fetchDashboards } from '@/services/dashboard';
 import type {
   DashboardInlineAnalysisSpec,
   DashboardSummary,

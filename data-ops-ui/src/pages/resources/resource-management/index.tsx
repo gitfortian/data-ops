@@ -63,7 +63,7 @@ import {
   replaceResourceFile,
   updateResource,
   uploadResource,
-} from './service';
+} from '@/services/resource-management';
 import type {
   DirectoryFormValues,
   MoveResourceFormValues,
