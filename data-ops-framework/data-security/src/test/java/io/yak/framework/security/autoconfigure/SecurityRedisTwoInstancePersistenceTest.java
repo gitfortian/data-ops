@@ -1,6 +1,9 @@
 package io.yak.framework.security.autoconfigure;
 
+import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.dao.SaTokenDao;
+import cn.dev33.satoken.json.SaJsonTemplate;
+import cn.dev33.satoken.plugin.SaTokenPluginForJackson;
 import cn.dev33.satoken.session.SaSession;
 import io.yak.framework.security.config.YakSecurityProperties;
 import java.util.UUID;
@@ -25,6 +28,12 @@ class SecurityRedisTwoInstancePersistenceTest {
     int port = Integer.parseInt(System.getenv().getOrDefault(
         "ARCHITECTURE_REDIS_PORT", "6379"));
 
+    // The standalone test constructs Starter beans without the Sa-Token SPI
+    // bootstrap that Spring normally performs. Install the same bundled Jackson
+    // plugin explicitly here; never swap the production application's serializer.
+    SaJsonTemplate previousJson = SaManager.getSaJsonTemplate();
+    new SaTokenPluginForJackson().install();
+    try {
     YakSecurityProperties properties = new YakSecurityProperties();
     properties.getAuthentication().getRedis().setHost(host);
     properties.getAuthentication().getRedis().setPort(port);
@@ -63,6 +72,9 @@ class SecurityRedisTwoInstancePersistenceTest {
     } finally {
       instanceA.delete(ticketKey);
       instanceA.deleteObject(sessionKey);
+    }
+    } finally {
+      SaManager.setSaJsonTemplate(previousJson);
     }
   }
 }
