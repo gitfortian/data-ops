@@ -22,13 +22,8 @@ import {
 } from '../../executions/execution-state';
 import { isDevelopmentTaskNode } from '../../node-model';
 import {
-  cancelDevelopmentTaskExecution,
-  getActiveDevelopmentTaskExecution,
-  getDevelopmentTaskDraft,
-  getDevelopmentTaskExecution,
   previewDevelopmentSqlLineage,
   publishDevelopmentTask,
-  retryDevelopmentTaskExecution,
   runDevelopmentTask,
   saveDevelopmentTaskDraft,
 } from '../../service';
@@ -53,6 +48,13 @@ import {
 import StandardCheckModal from './StandardCheckModal';
 import UnsavedChangesModal from './UnsavedChangesModal';
 import { responseData } from './workbenchResponse';
+import {
+  cancelWorkbenchExecution,
+  loadWorkbenchActiveExecution,
+  loadWorkbenchDraft,
+  readWorkbenchExecution,
+  retryWorkbenchExecution,
+} from './workbenchModernApi';
 import { closeTabs, tabActionTargets } from './workbenchTabs';
 
 interface DevelopmentWorkbenchProps {
@@ -147,13 +149,12 @@ const DevelopmentWorkbench = ({
     if (!node || !isDevelopmentTaskNode(node)) return;
 
     let active = true;
-    getDevelopmentTaskDraft(node.id)
-      .then((response) => {
+    loadWorkbenchDraft(
+      node.id,
+      text('pages.dataDevelopment.workbench.loadDraftFailed'),
+    )
+      .then((draft) => {
         if (!active) return;
-        const draft = responseData(
-          response,
-          text('pages.dataDevelopment.workbench.loadDraftFailed'),
-        );
         hydrateDevelopmentTaskDraft(node, draft);
       })
       .catch((error) => {
@@ -176,13 +177,12 @@ const DevelopmentWorkbench = ({
     if (!node || !isDevelopmentTaskNode(node)) return;
 
     let active = true;
-    getActiveDevelopmentTaskExecution(node.id)
-      .then((response) => {
+    loadWorkbenchActiveExecution(
+      node.id,
+      text('pages.dataDevelopment.workbench.readExecutionFailed'),
+    )
+      .then((execution) => {
         if (!active) return;
-        const execution = responseData(
-          response,
-          text('pages.dataDevelopment.workbench.readExecutionFailed'),
-        );
         if (!execution) return;
         setRunResults((current) => ({
           ...current,
@@ -214,8 +214,8 @@ const DevelopmentWorkbench = ({
       await Promise.all(
         tracked.map(async ([nodeId, executionId]) => {
           try {
-            const detail = responseData(
-              await getDevelopmentTaskExecution(executionId),
+            const detail = await readWorkbenchExecution(
+              executionId,
               text('pages.dataDevelopment.workbench.refreshExecutionFailed'),
             );
             if (disposed) return;
@@ -388,8 +388,8 @@ const DevelopmentWorkbench = ({
         return;
       }
 
-      const detail = responseData(
-        await getDevelopmentTaskExecution(submission.id),
+      const detail = await readWorkbenchExecution(
+        submission.id,
         text('pages.dataDevelopment.workbench.readResultFailed'),
       );
       setRunResults((current) => ({
@@ -421,8 +421,8 @@ const DevelopmentWorkbench = ({
       current.includes(nodeId) ? current : [...current, nodeId],
     );
     try {
-      const detail = responseData(
-        await cancelDevelopmentTaskExecution(activeRunResult.executionId),
+      const detail = await cancelWorkbenchExecution(
+        activeRunResult.executionId,
         text('pages.dataDevelopment.workbench.cancelFailed'),
       );
       setRunResults((current) => ({
@@ -467,8 +467,8 @@ const DevelopmentWorkbench = ({
       current.includes(nodeId) ? current : [...current, nodeId],
     );
     try {
-      const submission = responseData(
-        await retryDevelopmentTaskExecution(activeRunResult.executionId),
+      const submission = await retryWorkbenchExecution(
+        activeRunResult.executionId,
         text('pages.dataDevelopment.workbench.retryFailed'),
       );
       setRunResults((current) => ({
