@@ -210,6 +210,136 @@ jobs:
       - run: bash ./mvnw -B -ntp verify
       - run: tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
 
+  a8-integration:
+    name: A0-A8 ordered migration / runtime / UI acceptance (read-only)
+    if: github.event_name == 'pull_request' && github.head_ref == 'refactor/a8-2n-p-security-runtime-batch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: architecture-ci
+          MYSQL_DATABASE: architecture_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -parchitecture-ci"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=12
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: architecture
+          POSTGRES_PASSWORD: architecture-ci
+          POSTGRES_DB: architecture_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U architecture -d architecture_ci"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      ARCHITECTURE_REDIS_HOST: 127.0.0.1
+      ARCHITECTURE_REDIS_PORT: '6379'
+      GITHUB_TOKEN: ${{ github.token }}
+      ARCHITECTURE_MYSQL_URL: jdbc:mysql://127.0.0.1:3306/architecture_ci?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      ARCHITECTURE_MYSQL_USERNAME: root
+      ARCHITECTURE_MYSQL_PASSWORD: architecture-ci
+      ARCHITECTURE_POSTGRESQL_URL: jdbc:postgresql://127.0.0.1:5432/architecture_ci
+      ARCHITECTURE_POSTGRESQL_USERNAME: architecture
+      ARCHITECTURE_POSTGRESQL_PASSWORD: architecture-ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: data-ops-ui/yarn.lock
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: npm install --global yarn@1.22.22
+      - name: Verify preview guard unit tests
+        run: node --test scripts/architecture/a8-final-integration-preview.test.mjs
+      - name: Simulate seventeen protected PR merges and run complete acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          preview="$RUNNER_TEMP/a8-final-preview-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          report="$RUNNER_TEMP/a8-final-combination-snapshot.json"
+          trap 'git worktree remove --force "$preview" 2>/dev/null || true' EXIT
+          node scripts/architecture/a8-final-integration-preview.mjs prepare "$preview" "$report"
+          # The read-only API token is only needed to pin the PR snapshot.
+          # Do not expose it to arbitrary combined-branch build/test commands.
+          unset GITHUB_TOKEN
+          cd "$preview"
+          node --test scripts/architecture/*.test.mjs scripts/ci/*.test.mjs scripts/release/*.test.mjs
+          node scripts/architecture/check-security-persistence-owner.mjs
+          node scripts/architecture/check-security-membership-ports.mjs
+          node scripts/architecture/check-security-runtime-owner.mjs
+          node scripts/architecture/check-boundaries.mjs
+          node scripts/architecture/check-frontend-boundaries.mjs
+          node scripts/architecture/check-persistence-consumers.mjs --json > "$RUNNER_TEMP/a8-final-persistence-consumers.json"
+          node scripts/db/check-migration-history.mjs
+          node scripts/db/check-flyway-ownership.mjs --json > "$RUNNER_TEMP/a8-final-flyway-ownership.json"
+          cd data-ops-ui
+          yarn install --frozen-lockfile
+          yarn jest --runInBand
+          node scripts/check-type-baseline.mjs
+          yarn build
+          cd ..
+          # Run the full reactor against MySQL with the PostgreSQL smoke disabled.
+          # application.yml defaults to the mysql profile; set it explicitly for
+          # deterministic driver selection even when both CI database URLs exist.
+          env -u ARCHITECTURE_POSTGRESQL_URL SPRING_PROFILES_ACTIVE=mysql \
+            bash ./mvnw -B -ntp verify
+
+          # Use the actual PostgreSQL profile for a second *targeted* Boot smoke.
+          # Isolate MySQL smoke via its opt-in variable. Otherwise Spring can bind
+          # the MySQL driver from the default profile to the PostgreSQL JDBC URL.
+          env -u ARCHITECTURE_MYSQL_URL SPRING_PROFILES_ACTIVE=postgresql \
+            bash ./mvnw -B -ntp -pl data-ops-boot -am \
+              -Dtest=PostgresqlStorageSmokeTest \
+              -Dsurefire.failIfNoSpecifiedTests=false test
+          node scripts/release/frontend-artifact.mjs
+          tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json
+      - name: Retain precise SHA snapshot and inventories, including on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-a8-final-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/a8-final-combination-snapshot.json
+            ${{ runner.temp }}/a8-final-combination-snapshot.md
+            ${{ runner.temp }}/a8-final-persistence-consumers.json
+            ${{ runner.temp }}/a8-final-flyway-ownership.json
+          if-no-files-found: warn
+          retention-days: 30
+
+          # Reverse each local merge and prove the exact original main source tree
+          # is restored; the verifier touches only this disposable worktree.
+          node scripts/architecture/a8-final-integration-preview.mjs rollback "$preview" "$report"
+      - name: Retain precise SHA snapshot and inventories, including on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-a8-final-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/a8-final-combination-snapshot.json
+            ${{ runner.temp }}/a8-final-combination-snapshot.md
+            ${{ runner.temp }}/a8-final-persistence-consumers.json
+            ${{ runner.temp }}/a8-final-flyway-ownership.json
+          if-no-files-found: warn
+          retention-days: 30
+
   gate:
     name: Architecture gate
     if: always()
