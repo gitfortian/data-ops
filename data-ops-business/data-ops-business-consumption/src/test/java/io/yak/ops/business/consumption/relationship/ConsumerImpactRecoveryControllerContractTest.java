@@ -21,23 +21,24 @@ class ConsumerImpactRecoveryControllerContractTest {
     assertNotNull(ConsumerImpactController.class.getAnnotation(ProjectScope.class));
     assertNotNull(ConsumerImpactController.class.getAnnotation(RequiresPermission.class));
     Method endpoint = ConsumerImpactController.class.getMethod(
-        "recoverDatasetVersionPage", String.class, String.class, Long.class, int.class);
+        "recoverDatasetVersionPage", String.class, String.class, String.class, int.class);
     PostMapping mapping = endpoint.getAnnotation(PostMapping.class);
     assertNotNull(mapping);
     assertEquals("/dataset-version-recovery", mapping.value()[0]);
 
     ConsumerImpactService service = mock(ConsumerImpactService.class);
     ProductKey product = ProductKey.parse("DATASET:101");
+    String cursor = "9007199254740995";
     DatasetAuditRecoveryView expected = new DatasetAuditRecoveryView(
-        product.value(), "9007199254740993", null, 50, 0, 0, 0, 0, null, false, true);
-    when(service.recoverDatasetVersionPage(product, "9007199254740993", null, 50))
+        product.value(), "9007199254740993", cursor, 50, 0, 0, 0, 0, null, false, true);
+    when(service.recoverDatasetVersionPage(product, "9007199254740993", cursor, 50))
         .thenReturn(expected);
 
     var response = new ConsumerImpactController(service)
-        .recoverDatasetVersionPage("DATASET:101", "9007199254740993", null, 50);
+        .recoverDatasetVersionPage("DATASET:101", "9007199254740993", cursor, 50);
 
     assertNotNull(response);
-    verify(service).recoverDatasetVersionPage(product, "9007199254740993", null, 50);
+    verify(service).recoverDatasetVersionPage(product, "9007199254740993", cursor, 50);
   }
   @Test
   void dataServiceRecoveryIsExplicitPostAndPreservesBigintInvocationCursor()
