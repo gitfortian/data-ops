@@ -9,8 +9,8 @@ import {
   onlineDevelopmentRelease,
   retryDevelopmentTaskExecution,
   saveDevelopmentEditorSettings,
-  type YakEditorSettings,
 } from './api';
+import type { YakEditorSettings } from './types';
 
 describe('Data Development modern execution commands, release lifecycle and editor settings', () => {
   afterEach(() => jest.restoreAllMocks());

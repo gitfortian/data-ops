@@ -214,6 +214,35 @@ describe('Data Development execution detail and modern commands', () => {
     expect(success).not.toHaveBeenCalled();
   });
 
+  it('rejects a cancelled execution command with no durable result instead of reporting success', async () => {
+    get.mockResolvedValue(detail('run-1', 'RUNNING'));
+    cancel.mockResolvedValue(null as never);
+    render(<ExecutionDetailDrawer open record={record('run-1', 'RUNNING')}
+      onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'pages.dataDevelopment.execution.cancel',
+    }));
+    const onOk = confirm.mock.calls[0][0].onOk as () => Promise<void>;
+    await act(async () => { await onOk(); });
+    expect(toast).toHaveBeenCalledWith('cancel result unavailable');
+    expect(success).not.toHaveBeenCalled();
+  });
+
+  it('shows backend command errors without constructing a synthetic successful execution', async () => {
+    get.mockResolvedValue(detail('run-1', 'FAILED'));
+    retry.mockRejectedValue(new Error('retry denied'));
+    render(<ExecutionDetailDrawer open record={record('run-1', 'FAILED')}
+      onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'pages.dataDevelopment.execution.retry',
+    }));
+    const onOk = confirm.mock.calls[0][0].onOk as () => Promise<void>;
+    await act(async () => { await onOk(); });
+    expect(toast).toHaveBeenCalledWith('retry denied');
+    expect(success).not.toHaveBeenCalled();
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
   it('does not expose cancel or retry actions without execute permission', async () => {
     mockCanExecute = false;
     get.mockResolvedValue(detail('run-1', 'RUNNING'));
