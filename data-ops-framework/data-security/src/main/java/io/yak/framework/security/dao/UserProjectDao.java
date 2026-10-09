@@ -5,11 +5,12 @@ import io.yak.framework.security.common.entity.UserProject;
 import io.yak.framework.security.common.po.UserProjectPO;
 
 import java.util.List;
+import io.yak.ops.platform.security.port.UserProjectMembershipPort;
 
 /**
  * 用户项目关系数据访问接口。
  */
-public interface UserProjectDao {
+public interface UserProjectDao extends UserProjectMembershipPort {
     List<Long> selectUserIdListByProjectId(Long projectId, int userType);
 
     List<Long> selectProjectIdListByUserIdList(List<Long> var1);
