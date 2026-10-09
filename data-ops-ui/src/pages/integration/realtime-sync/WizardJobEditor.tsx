@@ -26,7 +26,11 @@ import {
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BRAND_THEME } from '@/styles/brand';
-import { realtimeApi } from './api';
+import {
+  listRealtimeCatalogColumns,
+  listRealtimeCatalogTables,
+  updateRealtimeSyncTask,
+} from '@/services/realtime-sync';
 import RealtimeEditorModeSwitch from './RealtimeEditorModeSwitch';
 import type { RealtimeEditorMode } from './realtimeEditorMode';
 import type {
@@ -197,11 +201,11 @@ export default function WizardJobEditor({
     const requestId = ++catalogRequestRef.current;
     setTableLoading(true);
     try {
-      const response = await realtimeApi.catalogTables(dataSourceId);
+      const tables = await listRealtimeCatalogTables(dataSourceId);
       if (requestId !== catalogRequestRef.current || sourceIdRef.current !== dataSourceId) return;
       const uniqueTables = Array.from(
         new Map(
-          (response.data || [])
+          (tables || [])
             .filter(isPhysicalTable)
             .map((table) => [table.name, table] as const),
         ).values(),
@@ -238,9 +242,9 @@ export default function WizardJobEditor({
       ),
     );
     try {
-      const response = await realtimeApi.catalogColumns(dataSourceId, table);
+      const columns = await listRealtimeCatalogColumns(dataSourceId, table);
       if (sourceIdRef.current !== dataSourceId) return;
-      const keyColumns = (response.data || [])
+      const keyColumns = (columns || [])
         .filter((column) => column.primaryKey)
         .sort((left, right) => (left.ordinalPosition || 0) - (right.ordinalPosition || 0))
         .map((column) => column.name);
@@ -386,7 +390,7 @@ export default function WizardJobEditor({
     if (!spec) return;
     setSaving(true);
     try {
-      await realtimeApi.update(job.id, {
+      await updateRealtimeSyncTask(job.id, {
         name: job.name,
         description: job.description,
         runtimeEnvironmentId: job.runtimeEnvironmentId,

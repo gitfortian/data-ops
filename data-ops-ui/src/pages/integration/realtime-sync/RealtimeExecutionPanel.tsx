@@ -9,8 +9,12 @@ import {
 import { Alert, Button, Card, ConfigProvider, Descriptions, Space, Steps, Tag, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { BRAND_THEME } from '@/styles/brand';
-import { realtimeApi } from './api';
-import type { RealtimeAction } from './api';
+import {
+  getRealtimeRuntimeCapabilities,
+  getRealtimeSyncTask,
+  performRealtimeSyncAction,
+  type RealtimeAction,
+} from '@/services/realtime-sync';
 import type { RealtimeJob, RuntimeCapabilities } from './types';
 import YakButton from '@/components/YakButton';
 
@@ -51,10 +55,9 @@ export default function RealtimeExecutionPanel({
 
   useEffect(() => {
     let cancelled = false;
-    realtimeApi
-      .capabilities(current.runtimeEnvironmentId)
+    getRealtimeRuntimeCapabilities(current.runtimeEnvironmentId)
       .then((response) => {
-        if (!cancelled) setCapabilities(response.data || {});
+        if (!cancelled) setCapabilities(response || {});
       })
       .catch(() => {
         if (!cancelled) setCapabilities({});
@@ -65,9 +68,9 @@ export default function RealtimeExecutionPanel({
   }, [current.runtimeEnvironmentId]);
 
   const refreshJob = async () => {
-    const response = await realtimeApi.detail(current.id);
-    setCurrent(response.data);
-    return response.data;
+    const response = await getRealtimeSyncTask(current.id);
+    setCurrent(response);
+    return response;
   };
 
   const waitForStartResult = async () => {
@@ -84,7 +87,7 @@ export default function RealtimeExecutionPanel({
   const run = async (action: ExecutionAction) => {
     setActing(action);
     try {
-      await realtimeApi.action(current.id, action);
+      await performRealtimeSyncAction(current.id, action);
       if (action === 'validate') {
         setValidated(true);
         message.success('Flink CDC 运行校验通过');
