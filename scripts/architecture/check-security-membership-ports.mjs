@@ -72,7 +72,7 @@ export function validateMembershipPorts(files) {
     const src = files[name] || '';
     if (!src.includes('private final ' + type + ' ' + field + ';') ||
         !src.includes('this.' + field + ' = ' + legacyField + ';') ||
-        !src.includes('this.' + legacyField + ' = ' + legacyField + ';') ||
+        src.includes('private final ' + (name === 'projectService' ? 'UserProjectDao' : 'UserRoleDao') + ' ' + legacyField + ';') ||
         !new RegExp('\\b' + field + '\\s*\\.\\s*').test(src)) {
       errors.push(name + ' must route pure operations through Platform using the identical legacy DAO instance');
     }
