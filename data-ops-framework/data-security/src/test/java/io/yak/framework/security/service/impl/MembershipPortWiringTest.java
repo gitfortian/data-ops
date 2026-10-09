@@ -54,6 +54,22 @@ class MembershipPortWiringTest {
   }
 
   @Test
+  void serviceConstructorsKeepLegacyBinarySignaturesWithoutDuplicateDaoState() throws Exception {
+    assertNotNull(UserProjectServiceImpl.class.getConstructor(
+        UserProjectDao.class, PermissionCache.class));
+    assertNotNull(UserRoleServiceImpl.class.getConstructor(
+        UserRoleDao.class, PermissionCache.class));
+    assertEquals(1, java.util.Arrays.stream(UserProjectServiceImpl.class.getDeclaredFields())
+        .filter(field -> UserProjectMembershipPort.class.isAssignableFrom(field.getType())).count());
+    assertEquals(1, java.util.Arrays.stream(UserRoleServiceImpl.class.getDeclaredFields())
+        .filter(field -> UserRoleAssignmentPort.class.isAssignableFrom(field.getType())).count());
+    assertThrows(NoSuchFieldException.class,
+        () -> UserProjectServiceImpl.class.getDeclaredField("userProjectDao"));
+    assertThrows(NoSuchFieldException.class,
+        () -> UserRoleServiceImpl.class.getDeclaredField("userRoleDao"));
+  }
+
+  @Test
   void ownerProjectWritesRetainOwnerTypeAndCacheInvalidation() {
     UserProjectDao dao = mock(UserProjectDao.class);
     PermissionCache cache = mock(PermissionCache.class);
