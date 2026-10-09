@@ -32,9 +32,17 @@
 
 这三份历史文件继续原样保存作 provenance；**不移动、不覆盖、不把文内「执行顺序」解释为当前行动**。
 
+## 按阶段与证据族浏览（Historical / Evidence）
+
+- [历史证据总索引](HISTORICAL_EVIDENCE_INDEX.md)：把按日期的实测报告、前端/架构 Review、阶段报告、旧 V1 资料与测试记录链接到原位置；**不移动或删除任何证据，也不因此确认缺陷已核销**。
+- [2026-10-01 报告](20261001/README.md) · [2026-10-03 检查](20261003/README.md) · [2026-10-04 产品审核提案](20261004/README.md)。
+- [前端 Review](frontend-review/README.md) · [架构 Review](architecture-review/README.md) · [核销与历史问题 Review](reviews/README.md)。
+- [原 V1 阶段资料](v1/README.md) · [测试报告](test/README.md)。
+
 ## 工程整洁性收口与后续验收
 
 - [#345 工程整洁性治理阶段证据与剩余工作](engineering/code-cleanliness-p1-closeout.md)：各批 PR、已退役入口、仍需代码级证明的 P2 项。
+- [P2 后端整洁性综合审计](engineering/p2-backend-cleanliness-audit.md)：已合并 #477 的机械等价简化与保守可达性审计；没有静态引用不等于死代码。
 - [TypeScript type-baseline](../data-ops-ui/scripts/type-baseline.json)：当前机器可验收的 TypeScript 已知诊断基线，不以先前生成的 `tsc-output.txt` 文本替代。
 - 历史文档边界细分见 [Legacy Documentation Classification](product/LEGACY_DOC_INDEX.md)。
 
