@@ -81,3 +81,10 @@ Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQuery
 批量候选只改用户选定且草稿未变的字段，人工 If-Match 保存。指标定义辅助仅读取授权有界模型字段/结构指纹，不读取物理行或执行 SQL；源模型到原指标编辑器交接使用稳定 ID，目标页重读权限与项目。
 
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
+
+
+## F-037 模型结构变更解释与映射检查清单
+
+模型结构、不可变 ModelVersion 和当前来源映射继续由 Modeling 拥有。结构比较只表示指定发布快照与准备时已保存结构的白名单差异；当前映射没有历史快照，不是历史映射变化证据，也不表示源字段存在或类型兼容。未保存编辑和外部源结构不包含。
+
+产品范围见 [F-037](../../docs/product/features/F-037-agent-model-structure-review.md)；真实验收按用户安排保持 PENDING。

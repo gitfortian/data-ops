@@ -315,3 +315,10 @@ ASSET_IMPACT 固定一个资产，只允许无参数 get_asset_impact_evidence �
 ## 精确消费版本影响（F-036）
 
 CONSUMER_VERSION_IMPACT 固定产品类型/ID/来源版本，消费 consumption.api 的授权只读有界持久化证据。订阅不绑定版本，成功使用必须精确匹配版本；来源归属无法确认时停止关系投影。三个来源独立登记，最多各 10 行、每份 6000 units，未同步/满窗/未知保持原义。复用原 turn/StateStore、工具守卫、预算、HITL 和回链，不查询数据或生成候选。唯一新增源 corridor 为 gateway → consumption.api；禁止依赖 Consumption 实现/仓储。详见 F-036。
+
+
+## F-037 模型结构变更解释与映射检查清单
+
+ModelStructureReviewTarget 固定比较身份；GovernanceContextMiddleware 在原工具执行守护下预读，GovernanceEvidenceGateway 调用 Modeling 窄 API 并校验项目/目标/指纹/输出容量。治理最终引用守护在交付前经 GovernanceEvidenceTools 恢复真实用户/项目再次复核源输入；该内部交付检查不作为模型工具、不增加模型工具预算。失败替换最终文本并移除旧事实/证据卡片，同步原 StateStore 消息；原预算、HITL、停止和恢复机制不变。
+
+产品范围见 [F-037](../../docs/product/features/F-037-agent-model-structure-review.md)；真实验收按用户安排保持 PENDING。

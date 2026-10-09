@@ -1,4 +1,4 @@
-import { useParams } from '@umijs/max';
+import { useLocation, useParams } from '@umijs/max';
 import { Popconfirm, Table, Tag, message, Tooltip } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakEmpty } from '@/components/ui';
@@ -13,6 +13,8 @@ import {
 import type { ModelingVersionDetail, ModelingVersionSummary } from '@/services/modeling/types';
 import { History, RotateCcw, SendHorizontal } from 'lucide-react';
 
+import ModelStructureReviewPanel from './ModelStructureReviewPanel';
+
 const formatDateTime = (value: string) => value?.replace('T', ' ').slice(0, 19) ?? '-';
 
 /** 与详情页同源的发布审批常量(01)：在途单冻结回滚，防止覆盖审批快照语义。 */
@@ -23,6 +25,7 @@ const MODEL_PUBLISH_BIZ_TYPE = 'MODEL';
 const ModelVersionPanel: React.FC = () => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const location = useLocation();
 
   const [versions, setVersions] = useState<ModelingVersionSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,11 +120,14 @@ const ModelVersionPanel: React.FC = () => {
 
   if (!loading && versions.length === 0) {
     return (
-      <YakEmpty
-        compact
-        title="暂无发布版本"
-        description="在「表结构」页面编辑字段后点击「发布」按钮即可生成版本快照"
-      />
+      <div className="space-y-4">
+        <ModelStructureReviewPanel modelId={modelId} search={location.search} />
+        <YakEmpty
+          compact
+          title="暂无发布版本"
+          description="在「表结构」页面编辑字段后点击「发布」按钮即可生成版本快照"
+        />
+      </div>
     );
   }
 
@@ -129,6 +135,7 @@ const ModelVersionPanel: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <ModelStructureReviewPanel modelId={modelId} search={location.search} />
       <div className="flex items-center gap-2 text-[14px] text-[#667085]">
         <History size={15} />
         <span>共 {versions.length} 个版本，点击版本号查看结构快照</span>

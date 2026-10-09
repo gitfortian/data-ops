@@ -92,3 +92,10 @@ Modeling 拥有单列来源映射与目标字段，授权 MappingSuggestionQuery
 依赖仍是 Agent runtime → toolset → gateway → 源域 api；Modeling/Semantic/Metric 不依赖 Agent。复用现有保存、权限、项目与审计，无新业务状态机/事实库。精确合同见 docs/product/features 下相应 Feature。
 
 ModelSuggestionQueryApi.fields 新增 1–100 项字段只读投影（name/type/businessDescription）；先 Modeling READ，再按当前项目读取结构，返回 StructureFingerprint，排除默认值、物理行与数据库凭据；标识符/类型/说明与总上下文严格限界，超界失败而非截断。供 MetricDraftQueryApi 使用，不反向依赖 Agent。批量标准辅助为原页面最多五个字段的局部选择，每字段独立原轮，说明可选、逐项带入，原结构 CAS 保存仍唯一写入口。
+
+
+## F-037 模型结构变更解释与映射检查清单
+
+version/ModelStructureReviewQueryAdapter 实现 api/ModelStructureReviewQueryApi，先检查 Model READ/当前项目，再复用 ModelStructureService.getForUpdate 的模型锁，读取指定 ModelVersion 与 MappingRepository.listByModelForReview（project/model、id ASC、LIMIT 101 FOR UPDATE）。version/ModelStructureReviewProjection 只投影白名单差异与固定检查原因；definition 包含完整保存结构指纹、版本身份/快照摘要及当前映射摘要。原结构仓储未承诺数据库侧行数限量；超出支持范围整次失败。controller/v1/ModelingStructureReviewController 只提供准备 GET。
+
+产品范围见 [F-037](../../docs/product/features/F-037-agent-model-structure-review.md)；真实验收按用户安排保持 PENDING。

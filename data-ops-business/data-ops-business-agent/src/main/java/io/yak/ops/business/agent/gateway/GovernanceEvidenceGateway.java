@@ -9,6 +9,8 @@ import io.yak.ops.business.quality.api.QualityEvidenceQueryApi;
 import io.yak.ops.business.quality.api.QualityExecutionComparisonQueryApi;
 import io.yak.ops.business.consumption.api.ConsumerVersionImpactQueryApi;
 import io.yak.ops.business.agent.domain.ConsumerVersionImpactTarget;
+import io.yak.ops.business.agent.domain.ModelStructureReviewTarget;
+import io.yak.ops.business.modeling.api.ModelStructureReviewQueryApi;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.spi.section.SectionType;
 import java.util.Set;
@@ -49,15 +51,57 @@ public class GovernanceEvidenceGateway {
   private final ObjectProvider<QualityExecutionComparisonQueryApi> comparisons;
   private final ObjectProvider<ConsumerVersionImpactQueryApi> consumers;
 
+  private final ObjectProvider<ModelStructureReviewQueryApi> structureReviews;
+
   @Autowired
   public GovernanceEvidenceGateway(ObjectProvider<AssetGovernanceQueryApi> assets,
       ObjectProvider<QualityEvidenceQueryApi> quality, ObjectProvider<QualityExecutionComparisonQueryApi> comparisons,
-      ObjectProvider<ConsumerVersionImpactQueryApi> consumers) {
+      ObjectProvider<ConsumerVersionImpactQueryApi> consumers, ObjectProvider<ModelStructureReviewQueryApi> structureReviews) {
     this.assets = assets; this.quality = quality; this.comparisons = comparisons; this.consumers = consumers;
+    this.structureReviews = structureReviews;
+  }
+  public GovernanceEvidenceGateway(ObjectProvider<AssetGovernanceQueryApi> assets,
+      ObjectProvider<QualityEvidenceQueryApi> quality, ObjectProvider<QualityExecutionComparisonQueryApi> comparisons,
+      ObjectProvider<ConsumerVersionImpactQueryApi> consumers) {
+    this(assets, quality, comparisons, consumers, null);
   }
   public GovernanceEvidenceGateway(ObjectProvider<AssetGovernanceQueryApi> assets,
       ObjectProvider<QualityEvidenceQueryApi> quality, ObjectProvider<QualityExecutionComparisonQueryApi> comparisons) {
     this(assets, quality, comparisons, null);
+  }
+
+  public String modelStructureReview(ModelStructureReviewTarget target, long projectId, GovernanceEvidenceLedger ledger) {
+    synchronized (ledger) {
+      ledger.requireCapacity(1);
+      String facts = "{}", status = "UNAVAILABLE";
+      try { facts = readStructureReview(target, projectId); status = "OK"; }
+      catch (ActionAccessDeniedException | SecurityException denied) { status = "PERMISSION_DENIED"; }
+      catch (RuntimeException unavailable) { /* Source diagnostics never enter model context. */ }
+      var ref = ledger.register("MODELING", target.modelId() + "/" + target.baselineVersionNo() + "/" + target.definition(),
+          status, null, "/modeling/models/" + target.modelId() + "?tab=version&reviewVersion=" + target.baselineVersionNo());
+      return "已保存结构与精确发布快照比较；仅当前映射，无历史映射：\n" + factualEnvelope(ref, facts, ledger);
+    }
+  }
+
+  /** Internal delivery check, not a model tool and not a new evidence read available to the model. */
+  public void confirmStructureReview(ModelStructureReviewTarget target, long projectId) { readStructureReview(target, projectId); }
+
+  private String readStructureReview(ModelStructureReviewTarget target, long projectId) {
+    var api = structureReviews == null ? null : structureReviews.getIfAvailable();
+    if (api == null) throw new IllegalStateException("结构比较不可用");
+    var result = api.read(Long.parseLong(target.modelId()), target.baselineVersionNo(), target.definition());
+    if (result == null || !Long.toString(projectId).equals(result.projectId()) || !target.modelId().equals(result.modelId())
+        || result.baselineVersionNo() != target.baselineVersionNo() || !target.definition().equals(result.definition())
+        || result.baselineVersionId() == null || !result.baselineVersionId().matches("[1-9][0-9]{0,18}")
+        || result.baselineColumnCount() < 0 || result.baselineColumnCount() > 100
+        || result.savedColumnCount() < 0 || result.savedColumnCount() > 100
+        || result.changes() == null || result.changes().size() > 244 || result.mappingChecks() == null || result.mappingChecks().size() > 200
+        || result.coverageGaps() == null || result.coverageGaps().size() > 20) throw new IllegalArgumentException("结构比较目标或范围不匹配");
+    try {
+      String encoded = JSON.writeValueAsString(result);
+      if (encoded.length() > ModelStructureReviewQueryApi.PAYLOAD_LIMIT) throw new IllegalArgumentException("结构比较超出范围");
+      return encoded;
+    } catch (com.fasterxml.jackson.core.JsonProcessingException invalid) { throw new IllegalArgumentException("结构比较不可用"); }
   }
 
   public String consumerVersionImpact(ConsumerVersionImpactTarget target, GovernanceEvidenceLedger ledger) {

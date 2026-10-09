@@ -2,6 +2,7 @@ import { readMetricChangeReviewTarget } from './metricChangeReview';
 import { readMetricDraftTarget } from './metricDraft';
 import { readClarificationQuestion } from './clarification';
 import type { GovernanceTarget } from './governance';
+import { readModelStructureReviewTarget } from './modelStructureReview';
 import { readConsumerVersionImpactTarget } from './consumerVersionImpact';
 
 export interface SessionContinuation {
@@ -21,13 +22,14 @@ function readTarget(value: unknown): GovernanceTarget | null {
   if (value == null) return null;
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('任务上下文无效');
   const target = value as Record<string, unknown>;
-  const { assetId, qualityMonitorId, qualityExecutionNo, qualityBaselineExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview, consumerVersionImpact } = target;
+  const { assetId, qualityMonitorId, qualityExecutionNo, qualityBaselineExecutionNo, purpose, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview, consumerVersionImpact, modelStructureReview } = target;
   if (qualityBaselineExecutionNo != null && (typeof qualityBaselineExecutionNo !== 'string'
     || !/^[A-Za-z0-9_-]{1,128}$/.test(qualityBaselineExecutionNo)
     || qualityExecutionNo == null || qualityBaselineExecutionNo === qualityExecutionNo || purpose != null)) throw new Error('历史执行对上下文无效');
-  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview, consumerVersionImpact].filter((item) => item != null).length !== 1) {
+  if ([assetId, qualityMonitorId, qualityExecutionNo, standardMatch, modelMapping, metricExplanation, metricDraft, metricChangeReview, consumerVersionImpact, modelStructureReview].filter((item) => item != null).length !== 1) {
     throw new Error('任务上下文不唯一');
   }
+  if (purpose === 'MODEL_STRUCTURE_REVIEW' && modelStructureReview != null) return { purpose, modelStructureReview: readModelStructureReviewTarget(modelStructureReview) };
   if (purpose === 'CONSUMER_VERSION_IMPACT' && consumerVersionImpact != null) return { purpose, consumerVersionImpact: readConsumerVersionImpactTarget(consumerVersionImpact) };
   if (purpose === 'METRIC_CHANGE_REVIEW' && metricChangeReview != null) return { purpose, metricChangeReview: readMetricChangeReviewTarget(metricChangeReview) };
   if (purpose === 'METRIC_DRAFT' && metricDraft != null) return { purpose, metricDraft: readMetricDraftTarget(metricDraft) };

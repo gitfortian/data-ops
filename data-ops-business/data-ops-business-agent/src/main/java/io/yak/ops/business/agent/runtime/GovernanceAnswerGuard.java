@@ -26,6 +26,11 @@ final class GovernanceAnswerGuard {
 
   static Flux<AgentEvent> guard(Flux<AgentEvent> source, AgentExecutionContext execution,
       RuntimeContext context, ReActAgent agent) {
+    return guard(source, execution, context, agent, null);
+  }
+
+  static Flux<AgentEvent> guard(Flux<AgentEvent> source, AgentExecutionContext execution,
+      RuntimeContext context, ReActAgent agent, java.util.function.BooleanSupplier confirmStructureReview) {
     // Tool/thinking progress stays streamed; final prose is released only after references are known.
     return source.filter(event -> !(event instanceof TextBlockDeltaEvent)).map(event -> {
       if (!(event instanceof AgentResultEvent result) || result.getResult() == null
@@ -34,8 +39,12 @@ final class GovernanceAnswerGuard {
               && !io.yak.ops.business.agent.domain.GovernanceEvidenceLedger
                   .mentionsEvidence(result.getResult().getTextContent()))) return event;
       var original = result.getResult();
+      boolean structureReview = ModelStructureReviewPrompt.appliesTo(execution.target());
+      boolean confirmed = !structureReview || (confirmStructureReview != null && confirmStructureReview.getAsBoolean());
       String text;
-      if (execution.target() != null && execution.target().purpose() != null && !AssetImpactPrompt.appliesTo(execution.target()) && !ConsumerVersionImpactPrompt.appliesTo(execution.target())) {
+      if (!confirmed) {
+        text = ModelStructureReviewPrompt.INVALIDATED;
+      } else if (execution.target() != null && execution.target().purpose() != null && !AssetImpactPrompt.appliesTo(execution.target()) && !ConsumerVersionImpactPrompt.appliesTo(execution.target()) && !structureReview) {
         if (execution.suggestion() == null) {
           text = execution.evidence().validateAnswer("尚未生成通过源域校验的候选，请补充业务约束或重试。");
         } else {
@@ -56,8 +65,9 @@ final class GovernanceAnswerGuard {
       }
       if (AssetImpactPrompt.appliesTo(execution.target())) text += "\n\n" + AssetImpactPrompt.NEXT_STEP;
       if (ConsumerVersionImpactPrompt.appliesTo(execution.target())) text += "\n\n" + ConsumerVersionImpactPrompt.NEXT_STEP;
-      if (!execution.verifiedFacts().isEmpty()) text += "\n\n```yak-facts\n" + encode(execution.verifiedFacts()) + "\n```";
-      text += "\n\n```yak-evidence\n" + encode(execution.evidence().entries()) + "\n```";
+      if (structureReview && confirmed) text += "\n\n" + ModelStructureReviewPrompt.NEXT_STEP;
+      if (confirmed && !execution.verifiedFacts().isEmpty()) text += "\n\n```yak-facts\n" + encode(execution.verifiedFacts()) + "\n```";
+      text += "\n\n```yak-evidence\n" + encode(confirmed ? execution.evidence().entries() : List.of()) + "\n```";
       var validated = original.withContent(List.of(TextBlock.builder().text(text).build()));
       var state = agent.getAgentState(context);
       var messages = state.contextMutable();

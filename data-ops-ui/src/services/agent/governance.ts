@@ -1,5 +1,6 @@
 /** Context is a source selection only; the backend resolves all facts and permissions. */
 import { consumerVersionSourcePath, readConsumerVersionImpactTarget, type ConsumerVersionImpactTarget } from './consumerVersionImpact';
+import { modelStructureReviewSourcePath, readModelStructureReviewTarget, type ModelStructureReviewTarget } from './modelStructureReview';
 export interface StandardMatchTarget { modelId: number; columnName: string; dataType: string; businessDescription: string; keyword: string }
 export interface ModelMappingTarget { modelId: number; columnName: string; datasourceId: number; database: string; table: string; businessDescription: string; keyword: string }
 export interface MetricExplanationTarget { metricId: number; version: number; businessQuestion: string; view?: 'SNAPSHOT' }
@@ -13,12 +14,15 @@ type ExistingGovernanceTarget = { assetId: number; qualityExecutionNo?: never; q
   | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; purpose: 'METRIC_EXPLANATION'; metricExplanation: MetricExplanationTarget; metricDraft?: never }
   | { assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; purpose: 'METRIC_DRAFT'; metricDraft: MetricDraftTarget };
 
-export type GovernanceTarget = (ExistingGovernanceTarget & { metricChangeReview?: never; consumerVersionImpact?: never })
+export type GovernanceTarget = (ExistingGovernanceTarget & { metricChangeReview?: never; consumerVersionImpact?: never; modelStructureReview?: never })
   | { purpose: 'METRIC_CHANGE_REVIEW'; metricChangeReview: MetricChangeReviewTarget; assetId?: never; qualityExecutionNo?: never; qualityBaselineExecutionNo?: never;
-      qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never; consumerVersionImpact?: never }
+      qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never; metricDraft?: never; consumerVersionImpact?: never; modelStructureReview?: never }
   | { purpose: 'CONSUMER_VERSION_IMPACT'; consumerVersionImpact: ConsumerVersionImpactTarget; assetId?: never; qualityExecutionNo?: never;
       qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never;
-      metricDraft?: never; metricChangeReview?: never };
+      metricDraft?: never; metricChangeReview?: never; modelStructureReview?: never }
+  | { purpose: 'MODEL_STRUCTURE_REVIEW'; modelStructureReview: ModelStructureReviewTarget; assetId?: never; qualityExecutionNo?: never;
+      qualityBaselineExecutionNo?: never; qualityMonitorId?: never; standardMatch?: never; modelMapping?: never; metricExplanation?: never;
+      metricDraft?: never; metricChangeReview?: never; consumerVersionImpact?: never };
 
 /** Compare the full task scope, independent of JSON key order and nullable projection fields. */
 export function sameScenarioTarget(a: unknown, b: unknown): boolean {
@@ -32,6 +36,7 @@ export function sameScenarioTarget(a: unknown, b: unknown): boolean {
 }
 
 export function governanceTaskTitle(target: GovernanceTarget): string {
+  if (target.modelStructureReview) return `模型 #${target.modelStructureReview.modelId} 发布 V${target.modelStructureReview.baselineVersionNo} → 已保存结构变更核对`;
   if (target.consumerVersionImpact) return `${target.consumerVersionImpact.productType}:${target.consumerVersionImpact.productIdentity} 来源版本 ${target.consumerVersionImpact.sourceVersionIdentity} 已知消费影响`;
   if (target.metricChangeReview) return `指标 #${target.metricChangeReview.metricId} 发布 v${target.metricChangeReview.publishedVersion} → 草稿 v${target.metricChangeReview.version} 变更核对`;
   if (target.metricDraft) return `${target.metricDraft.metricId ? `指标 #${target.metricDraft.metricId} v${target.metricDraft.version}` : '新建指标'} 定义草稿`;
@@ -45,6 +50,10 @@ export function governanceTaskTitle(target: GovernanceTarget): string {
 }
 
 export function governanceEntryPath(target: GovernanceTarget): string {
+  if (target.modelStructureReview) {
+    const value = target.modelStructureReview;
+    return `/ai-agent?purpose=MODEL_STRUCTURE_REVIEW&reviewModelId=${value.modelId}&reviewBaselineVersionNo=${value.baselineVersionNo}&reviewDefinition=${value.definition}`;
+  }
   if (target.consumerVersionImpact) {
     const value = target.consumerVersionImpact;
     return `/ai-agent?purpose=CONSUMER_VERSION_IMPACT&consumerProductType=${value.productType}&consumerProductIdentity=${value.productIdentity}&consumerVersionIdentity=${value.sourceVersionIdentity}`;
@@ -59,10 +68,19 @@ export function governanceEntryPath(target: GovernanceTarget): string {
 
 export function parseGovernanceTarget(search: string): GovernanceTarget | null {
   const params = new URLSearchParams(search);
+  const reviewKeys = ['reviewModelId', 'reviewBaselineVersionNo', 'reviewDefinition'];
   const consumerKeys = ['consumerProductType', 'consumerProductIdentity', 'consumerVersionIdentity'];
-  if (['assetId', 'qualityExecutionNo', 'qualityMonitorId', 'qualityBaselineExecutionNo', 'purpose', ...consumerKeys].some((key) => params.getAll(key).length > 1)) return null;
+  if (['assetId', 'qualityExecutionNo', 'qualityMonitorId', 'qualityBaselineExecutionNo', 'purpose', ...consumerKeys, ...reviewKeys].some((key) => params.getAll(key).length > 1)) return null;
   const purpose = params.get('purpose');
-  if (purpose === 'CONSUMER_VERSION_IMPACT' || consumerKeys.some((key) => params.has(key))) {
+  if (purpose === 'MODEL_STRUCTURE_REVIEW' || reviewKeys.some((key) => params.has(key))) {
+    if (purpose !== 'MODEL_STRUCTURE_REVIEW' || ['assetId', 'qualityExecutionNo', 'qualityMonitorId', 'qualityBaselineExecutionNo', ...consumerKeys].some((key) => params.has(key))) return null;
+    const version = params.get('reviewBaselineVersionNo');
+    if (!version || !/^[1-9][0-9]{0,9}$/.test(version)) return null;
+    try { return { purpose, modelStructureReview: readModelStructureReviewTarget({ modelId: params.get('reviewModelId'),
+      baselineVersionNo: Number(version), definition: params.get('reviewDefinition') }) }; }
+    catch { return null; }
+  }
+  if (purpose === 'CONSUMER_VERSION_IMPACT'  || consumerKeys.some((key) => params.has(key))) {
     if (purpose !== 'CONSUMER_VERSION_IMPACT' || ['assetId', 'qualityExecutionNo', 'qualityMonitorId', 'qualityBaselineExecutionNo'].some((key) => params.has(key))) return null;
     try { return { purpose, consumerVersionImpact: readConsumerVersionImpactTarget({ productType: params.get('consumerProductType'),
       productIdentity: params.get('consumerProductIdentity'), sourceVersionIdentity: params.get('consumerVersionIdentity') }) }; }
@@ -87,6 +105,7 @@ export function parseGovernanceTarget(search: string): GovernanceTarget | null {
 }
 
 export function governanceSourcePath(target: GovernanceTarget): string {
+  if (target.modelStructureReview) return modelStructureReviewSourcePath(target.modelStructureReview);
   if (target.consumerVersionImpact) return consumerVersionSourcePath(target.consumerVersionImpact);
   if (target.metricChangeReview) return `/metric/manage/${target.metricChangeReview.metricId}`;
   if (target.metricDraft) return target.metricDraft.metricId ? `/metric/manage/${target.metricDraft.metricId}` : '/metric/manage';
@@ -99,6 +118,7 @@ export function governanceSourcePath(target: GovernanceTarget): string {
 }
 
 export function governanceQuestions(target: GovernanceTarget): string[] {
+  if (target.modelStructureReview) return ['解释固定发布基准与已保存结构的白名单差异，核验本轮事实；分别列出当前映射检查项、未覆盖范围和原页面人工下一步，不推断历史映射变化或类型兼容，不判断允许发布。'];
   if (target.consumerVersionImpact) return ['说明固定产品和精确来源版本的归属、有效声明与该版本成功使用；核验本轮事实并分开窗口范围和缺口，给出人工兼容性核对项，不判断完整影响或发布安全。'];
   if (target.qualityBaselineExecutionNo) return ['比较选定的基准执行与本次执行，核验各侧事实并按稳定规则 ID 对齐；单列历史定义变化、截断和缺口，给出人工核对步骤，不直接认定质量改善或根因。'];
   if (target.metricChangeReview) return ['解释固定发布版本与已保存草稿的差异，引用事实并列出人工检查步骤；保留验证和关系证据缺口。'];

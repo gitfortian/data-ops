@@ -4,10 +4,10 @@ import java.util.Set;
 
 /** Execution scope is independent of source authorization and never comes from model instructions. */
 public final class AgentTaskToolPolicy {
-  public static final String VERSION = "F-036-v1";
+  public static final String VERSION = "F-037-v1";
   public static final Set<String> REGISTERED = Set.of("list_datasets", "get_dataset_fields",
       "run_dataset_query", "current_date_info", "analyze_with_python", "request_clarification",
-      "save_analysis_report", "search_assets", "get_asset_evidence", "get_asset_section_evidence", "get_asset_impact_evidence", "get_consumer_version_impact_evidence",
+      "save_analysis_report", "search_assets", "get_asset_evidence", "get_asset_section_evidence", "get_asset_impact_evidence", "get_consumer_version_impact_evidence", "get_model_structure_review_evidence",
       "get_quality_execution_evidence", "get_quality_execution_comparison", "get_quality_monitor_evidence", "propose_quality_rules",
       "propose_asset_description", "verify_governance_facts", "load_skill_through_path");
   private static final Set<String> AUXILIARY = Set.of("current_date_info", "request_clarification",
@@ -37,8 +37,9 @@ public final class AgentTaskToolPolicy {
           || "get_model_mapping_context".equals(tool);
     }
     if (tool == null || !REGISTERED.contains(tool)) return false;
-    if (target == null) return !tool.startsWith("propose_") && !"get_quality_execution_comparison".equals(tool) && !"get_asset_impact_evidence".equals(tool) && !"get_consumer_version_impact_evidence".equals(tool);
+    if (target == null) return !tool.startsWith("propose_") && !"get_quality_execution_comparison".equals(tool) && !"get_asset_impact_evidence".equals(tool) && !"get_consumer_version_impact_evidence".equals(tool) && !"get_model_structure_review_evidence".equals(tool);
     if (AUXILIARY.contains(tool)) return true;
+    if (target.modelStructureReview() != null) return "get_model_structure_review_evidence".equals(tool);
     if (target.consumerVersionImpact() != null) return "get_consumer_version_impact_evidence".equals(tool);
     if (target.qualityBaselineExecutionNo() != null) return "get_quality_execution_comparison".equals(tool);
     if ("ASSET_IMPACT".equals(target.purpose())) return "get_asset_impact_evidence".equals(tool);

@@ -99,3 +99,25 @@ it('carries an asset entry without automatically starting inference and clears i
   expect(screen.getByPlaceholderText(/输入/)).toHaveValue('');
   window.history.replaceState({}, '', '/');
 });
+
+
+it('prepares a fixed model structure review question and exact source backlink without inference', async () => {
+  const target = { purpose: 'MODEL_STRUCTURE_REVIEW' as const, modelStructureReview: { modelId: '7', baselineVersionNo: 3, definition: 'a'.repeat(64) } };
+  window.history.replaceState({}, '', `/ai-agent?purpose=MODEL_STRUCTURE_REVIEW&reviewModelId=7&reviewBaselineVersionNo=3&reviewDefinition=${'a'.repeat(64)}`);
+  try {
+    render(<AiAgentPage />);
+    expect(await screen.findByText('模型 #7 发布 V3 → 已保存结构变更核对')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('准备结构变更说明'));
+    expect(screen.getByPlaceholderText(/输入/)).toHaveValue(governanceQuestions(target)[0]);
+    expect(streamTurnEvents).not.toHaveBeenCalled();
+    expect(screen.getByText('返回来源').closest('a')).toHaveAttribute('href', '/modeling/models/7?tab=version&reviewVersion=3');
+  } finally { window.history.replaceState({}, '', '/'); }
+});
+it('rejects incomplete structure review context instead of exposing ordinary chat', () => {
+  window.history.replaceState({}, '', '/ai-agent?reviewModelId=7');
+  try {
+    render(<AiAgentPage />);
+    expect(screen.queryByPlaceholderText(/输入/)).not.toBeInTheDocument();
+    expect(streamTurnEvents).not.toHaveBeenCalled();
+  } finally { window.history.replaceState({}, '', '/'); }
+});
