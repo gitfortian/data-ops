@@ -154,9 +154,15 @@ export async function prepareIntegration({ worktree, reportPath, token }) {
       const fetched = git(['rev-parse', 'FETCH_HEAD']);
       if (fetched !== pr.sha) throw new Error('PR #' + pr.number + ' moved during preview; retry with a new snapshot');
       // Local-only merge commit; never attempts git push or alters the checked-out main.
+      const before = git(['-C', absolute, 'rev-parse', 'HEAD']);
       git([...safeGit, '-C', absolute, 'merge', '--no-edit', '--no-ff', fetched]);
-      report.prs[i].result = 'merged in temporary preview';
-      report.integratedSha = git(['-C', absolute, 'rev-parse', 'HEAD']);
+      const after = git(['-C', absolute, 'rev-parse', 'HEAD']);
+      report.prs[i].result = before === after
+        ? 'already present in temporary preview'
+        : 'merged in temporary preview';
+      report.prs[i].mergeCommitSha = before === after ? null : after;
+      report.prs[i].previousCommitSha = before;
+      report.integratedSha = after;
       persist(report, reportPath);
     }
     return report;
@@ -172,11 +178,86 @@ export async function prepareIntegration({ worktree, reportPath, token }) {
   }
 }
 
+/**
+ * Inverse-merge rehearsal on the DISPOSABLE worktree only. An exact tree
+ * equality check is stronger than "git revert exited 0": it proves the source
+ * tree returned to the recorded main snapshot after undoing every stage.
+ * This does not roll back real database migrations or external infrastructure.
+ */
+export function verifyRollback({ worktree, reportPath }) {
+  const absolute = path.resolve(worktree);
+  const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+  if (!/^[0-9a-f]{40}$/.test(report.baseSha ?? '') ||
+      !/^[0-9a-f]{40}$/.test(report.integratedSha ?? '') ||
+      !Array.isArray(report.prs) || report.prs.length !== 17 ||
+      report.prs.some(pr => !['merged in temporary preview',
+          'already present in temporary preview'].includes(pr.result))) {
+    throw new Error('Rollback requires a complete exact-SHA A0–A8 integration record');
+  }
+  const actual = git(['-C', absolute, 'rev-parse', 'HEAD']);
+  if (actual !== report.integratedSha) {
+    throw new Error('Preview HEAD changed before rollback; refusing unsafe verification');
+  }
+  const safeGit = ['-c', 'user.name=Data-Ops A8 Preview',
+    '-c', 'user.email=a8-preview@localhost'];
+  const shaPattern = /^[0-9a-f]{40}$/;
+  try {
+    for (const pr of [...report.prs].reverse()) {
+      if (pr.mergeCommitSha === null) {
+        if (pr.previousCommitSha !== null &&
+            !shaPattern.test(pr.previousCommitSha ?? '')) {
+          throw new Error('Invalid unchanged-stage SHA for PR #' + pr.number);
+        }
+        continue;
+      }
+      if (!shaPattern.test(pr.mergeCommitSha ?? '')) {
+        throw new Error('Missing merge commit SHA for PR #' + pr.number);
+      }
+      const beforeTree = git(['-C', absolute, 'rev-parse',
+        pr.mergeCommitSha + '^{tree}']);
+      const originalParentTree = git(['-C', absolute, 'rev-parse',
+        pr.mergeCommitSha + '^1^{tree}']);
+      if (git(['-C', absolute, 'rev-parse', 'HEAD^{tree}']) !== beforeTree) {
+        throw new Error('Pre-revert tree mismatch at PR #' + pr.number);
+      }
+      if (beforeTree !== originalParentTree) {
+        git([...safeGit, '-C', absolute, 'revert', '-m', '1', '--no-edit',
+          pr.mergeCommitSha]);
+      }
+      if (git(['-C', absolute, 'rev-parse', 'HEAD^{tree}']) !==
+          originalParentTree) {
+        throw new Error('Rollback tree mismatch at PR #' + pr.number);
+      }
+    }
+    const baseTree = git(['-C', absolute, 'rev-parse',
+      report.baseSha + '^{tree}']);
+    const finalTree = git(['-C', absolute, 'rev-parse', 'HEAD^{tree}']);
+    if (finalTree !== baseTree) {
+      throw new Error('Rolled-back source tree differs from exact original main');
+    }
+    report.rollback = { sourceTreeRestored: true, baseTree, finalTree };
+    persist(report, reportPath);
+    return report.rollback;
+  } catch (error) {
+    report.failed = 'Source-tree rollback failed: ' + (error.message ?? error);
+    persist(report, reportPath);
+    throw error;
+  }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [command, worktree, reportPath] = process.argv.slice(2);
-  if (command !== 'prepare' || !worktree || !reportPath) {
-    console.error('Usage: node scripts/architecture/a8-final-integration-preview.mjs prepare <new-temp-dir> <report.json>');
+  if (!worktree || !reportPath || !['prepare', 'rollback'].includes(command)) {
+    console.error('Usage: node scripts/architecture/a8-final-integration-preview.mjs <prepare|rollback> <new-temp-dir> <report.json>');
     process.exitCode = 2;
+  } else if (command === 'rollback') {
+    try {
+      const result = verifyRollback({ worktree, reportPath });
+      console.log('A0–A8 rollback restored original main tree ' + result.baseTree);
+    } catch (error) {
+      console.error('::error::' + error.message);
+      process.exitCode = 1;
+    }
   } else {
     prepareIntegration({ worktree, reportPath, token: process.env.GITHUB_TOKEN })
       .then(report => console.log('A0–A8 local merge preview ready at ' + worktree
