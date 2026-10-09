@@ -78,7 +78,7 @@ const LEGACY_WORKFLOW_GATES = Object.freeze([
 ]);
 
 function insertVettedStep(content, anchor, step) {
-  if (content.split(anchor).length !== 2 || content.includes(step)) {
+  if (content.split(anchor).length !== 2 || content.includes(step.trimEnd())) {
     throw new Error('Unexpected architecture workflow guard layout');
   }
   return content.replace(anchor, () => step + anchor);
