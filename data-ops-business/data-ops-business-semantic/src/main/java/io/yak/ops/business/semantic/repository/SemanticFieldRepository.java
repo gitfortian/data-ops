@@ -24,7 +24,8 @@ public interface SemanticFieldRepository {
 
   StandardField update(StandardField field);
 
-  boolean changeStatus(Long id, String status);
+  /** Optimistic status transition; stale edits must not silently overwrite a concurrent definition. */
+  boolean changeStatus(Long id, String status, int expectedVersion);
 
   boolean deleteById(Long id);
 

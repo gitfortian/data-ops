@@ -136,6 +136,17 @@ class BusinessProcessServiceTest {
     verify(repository).deleteById(id);
   }
 
+  @Test
+  void concurrentDeleteDuringProcessUpdateMustNotReportSuccess() {
+    long id = 9L;
+    when(repository.findById(id)).thenReturn(Optional.of(existingProcess(id)));
+    SemanticException failure = assertThrows(SemanticException.class,
+        () -> service.update(id, "更新后的过程", 7L, "单据", "FACT", null, null, null));
+    assertEquals(SemanticErrorCode.NOT_FOUND, failure.getErrorCode());
+    verify(repository).update(any(BusinessProcess.class));
+    verify(audit).failure(Mockito.eq("SEMANTIC_PROCESS_UPDATE_FAILED"), any(Throwable.class));
+  }
+
   private static BusinessProcess existingProcess(long id) {
     return new BusinessProcess(id, "place_order", "下单", 7L, "单据",
         "FACT", null, null, 0, "tester", null, null);

@@ -169,6 +169,16 @@ class BusinessDomainServiceTest {
     };
   }
 
+  @Test
+  void concurrentDeleteDuringDomainUpdateMustNotReportSuccess() {
+    when(repository.findById(5L)).thenReturn(Optional.of(existingDomain()));
+    SemanticException failure = assertThrows(SemanticException.class,
+        () -> service.update(5L, "交易新名称", null, null, null));
+    assertEquals(SemanticErrorCode.NOT_FOUND, failure.getErrorCode());
+    verify(repository).update(any(BusinessDomain.class));
+    verify(audit).failure(Mockito.eq("SEMANTIC_DOMAIN_UPDATE_FAILED"), any(Throwable.class));
+  }
+
   private BusinessDomain existingDomain() {
     return new BusinessDomain(5L, "trade", "交易", 0L, null, null, 0, "tester", null, null);
   }

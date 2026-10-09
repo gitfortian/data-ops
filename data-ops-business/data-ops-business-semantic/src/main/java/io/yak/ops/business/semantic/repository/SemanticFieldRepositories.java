@@ -148,18 +148,18 @@ public class SemanticFieldRepositories implements SemanticFieldRepository, Seman
   }
 
   @Override
-  public boolean changeStatus(Long id, String status) {
+  public boolean changeStatus(Long id, String status, int expectedVersion) {
     Long projectId = requiredProjectId();
-    SemanticFieldPO po = new SemanticFieldPO();
-    po.setStatus(status);
-    po.setUpdateTime(LocalDateTime.now());
-    return fieldMapper.update(
-            po,
-            new LambdaUpdateWrapper<SemanticFieldPO>()
-                .setSql("version = version + 1")
-                .eq(SemanticFieldPO::getId, id)
-                .eq(SemanticFieldPO::getProjectId, projectId))
-        > 0;
+    // Atomic status + version transition. An editor that saved after the read, or a
+    // concurrent status request, must turn into a VERSION_CONFLICT instead of a blind write.
+    return fieldMapper.update(null,
+        new LambdaUpdateWrapper<SemanticFieldPO>()
+            .set(SemanticFieldPO::getStatus, status)
+            .set(SemanticFieldPO::getUpdateTime, LocalDateTime.now())
+            .setSql("version = version + 1")
+            .eq(SemanticFieldPO::getId, id)
+            .eq(SemanticFieldPO::getProjectId, projectId)
+            .eq(SemanticFieldPO::getVersion, expectedVersion)) == 1;
   }
 
   @Override

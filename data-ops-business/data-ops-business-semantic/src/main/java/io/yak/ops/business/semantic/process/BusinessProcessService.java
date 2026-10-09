@@ -167,10 +167,13 @@ public class BusinessProcessService {
                 "APPLICATION",
                 Map.of()));
     try {
-      repository.update(
+      if (!repository.update(
           new BusinessProcess(existing.id(), existing.code(), name, domainId, grain, bizType,
               owner, description, sortOrder == null ? existing.sortOrder() : sortOrder,
-              existing.createdBy(), existing.createTime(), existing.updateTime()));
+              existing.createdBy(), existing.createTime(), existing.updateTime()))) {
+        throw new SemanticException(SemanticErrorCode.NOT_FOUND,
+            "业务过程已删除或项目发生变化，请刷新后重试");
+      }
       AuditTransactions.completeOnCommit(
           audit,
           AuditEventType.RESOURCE_UPDATED,
