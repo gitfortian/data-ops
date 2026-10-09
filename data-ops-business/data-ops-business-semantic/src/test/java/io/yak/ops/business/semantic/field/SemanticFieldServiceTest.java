@@ -182,6 +182,43 @@ class SemanticFieldServiceTest {
     verify(repository).deleteById(fieldId);
   }
 
+
+  @Test
+  void statusChangeUsesFieldVersionAndRefusesConcurrentWrites() {
+    long fieldId = 35L;
+    StandardField existing = testField(fieldId);
+    when(repository.findById(fieldId)).thenReturn(Optional.of(existing));
+
+    SemanticException failure = assertThrows(SemanticException.class,
+        () -> service.changeStatus(fieldId, StandardField.STATUS_DISABLED, "tester"));
+
+    assertEquals(SemanticErrorCode.VERSION_CONFLICT, failure.getErrorCode());
+    verify(repository).changeStatus(fieldId, StandardField.STATUS_DISABLED, existing.version());
+    verify(audit).failure(Mockito.eq("SEMANTIC_FIELD_STATUS_FAILED"), any(Throwable.class));
+  }
+
+  @Test
+  void statusChangeReturnsTheLatestPersistedFieldAfterCas() {
+    long fieldId = 35L;
+    StandardField before = testField(fieldId);
+    StandardField after = new StandardField(fieldId, before.code(), before.name(),
+        before.role(), StandardField.STATUS_DISABLED, before.dataType(),
+        before.stdTypeId(), before.stdUnitId(), before.stdCaliberId(),
+        before.stdCodeSetCode(), before.stdSecurityId(), before.businessDesc(),
+        before.source(), before.version() + 1, before.required(), before.createdBy(),
+        before.createTime(), before.updateTime());
+    when(repository.findById(fieldId))
+        .thenReturn(Optional.of(before), Optional.of(after));
+    when(repository.changeStatus(fieldId, StandardField.STATUS_DISABLED, before.version()))
+        .thenReturn(true);
+
+    StandardField result = service.changeStatus(fieldId, StandardField.STATUS_DISABLED, "tester");
+
+    assertEquals(StandardField.STATUS_DISABLED, result.status());
+    assertEquals(before.version() + 1, result.version());
+    verify(repository).changeStatus(fieldId, StandardField.STATUS_DISABLED, before.version());
+  }
+
   private static StandardField testField(long fieldId) {
     return new StandardField(fieldId, "order_amount", "订单金额",
         StandardField.ROLE_METRIC, StandardField.STATUS_ENABLED, "decimal(18,2)",

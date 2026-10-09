@@ -235,8 +235,10 @@ public class SemanticFieldService {
             "SEMANTIC_FIELD", String.valueOf(id), existing.code(), "APPLICATION",
             Map.of("from", existing.status(), "to", status)));
     try {
-      if (!repository.changeStatus(id, status)) {
-        throw new SemanticException(SemanticErrorCode.NOT_FOUND, String.valueOf(id));
+      if (!repository.changeStatus(id, status, existing.version())) {
+        // get(id) succeeded: a zero-row conditional update means the snapshot lost a race.
+        throw new SemanticException(SemanticErrorCode.VERSION_CONFLICT,
+            "字段状态已被并发修改，请刷新后重试");
       }
       AuditTransactions.completeOnCommit(audit, AuditEventType.RESOURCE_UPDATED,
           "Standard field status changed", Map.of("status", status), "Standard field status changed");
