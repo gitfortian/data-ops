@@ -42,7 +42,7 @@ class SecurityIdentityRelocationIntegrationTest {
   }
 
   @Test
-  void originalSpringAndSaTokenAdaptersStillUsePlatformContracts() {
+  void originalSpringAndSaTokenAdaptersStillUsePlatformContracts() throws Exception {
     assertTrue(AuthenticationManager.class.isAssignableFrom(SaTokenAuthenticationManager.class));
     assertTrue(PermissionCache.class.isAssignableFrom(CaffeinePermissionCache.class));
     assertNotNull(MenuAwareRolePermissionService.class);
