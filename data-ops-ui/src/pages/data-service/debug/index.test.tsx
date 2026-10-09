@@ -12,6 +12,14 @@ import {
 } from '@/services/data-service';
 import DataServiceDebugPage from './index';
 
+let mockProjectId = 42;
+let mockPermissionCodes = ['data-service:debug'];
+jest.mock('@/contexts/SecurityProjectContext', () => ({
+  useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
+}));
+jest.mock('@/hooks/usePermissionAccess', () => ({
+  usePermissionAccess: () => ({ permissionCodes: mockPermissionCodes }),
+}));
 jest.mock('@/services/data-service', () => ({
   getDataServiceDocumentation: jest.fn(),
   listDataServices: jest.fn(),
@@ -32,6 +40,8 @@ jest.mock('antd', () => {
     { PRESENTED_IMAGE_SIMPLE: 'simple' },
   );
   return {
+    Alert: ({ message, description }: { message: ReactNode; description: ReactNode }) =>
+      element('div', { role: 'alert' }, message, description),
     Button: ({ children, disabled, loading, onClick }: {
       children: ReactNode;
       disabled?: boolean;
@@ -113,6 +123,8 @@ describe('Data Service debug page modern data-only API migration', () => {
   const warning = jest.mocked(message.warning);
 
   beforeEach(() => {
+    mockProjectId = 42;
+    mockPermissionCodes = ['data-service:debug'];
     list.mockReset();
     getDoc.mockReset();
     run.mockReset();
@@ -226,8 +238,55 @@ describe('Data Service debug page modern data-only API migration', () => {
     render(<DataServiceDebugPage />);
 
     await waitFor(() => expect(error).toHaveBeenCalledWith('文档读取失败'));
-    expect(screen.getByText('当前 API 无请求参数')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('API 参数文档读取失败');
+    expect(screen.queryByText('当前 API 无请求参数')).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('42')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '开始测试' })).toBeDisabled();
+  });
+
+  it('does not show a previous API invocation as a successful result after switching API', async () => {
+    let finish!: (value: DataServiceQueryResult) => void;
+    const old = new Promise<DataServiceQueryResult>(resolve => { finish = resolve; });
+    run.mockReturnValueOnce(old).mockResolvedValueOnce({ ...resultRow, rowCount: 8 });
+    render(<DataServiceDebugPage />);
+    await screen.findByDisplayValue('42');
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }));
+    await waitFor(() => expect(run).toHaveBeenCalledWith(11, { orderId: '42' }));
+    fireEvent.change(screen.getByTestId('api-select'), { target: { value: '22' } });
+    await screen.findByDisplayValue('88');
+    await act(async () => { finish(resultRow); await old; });
+    expect(screen.queryByText('200 OK')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }));
+    await waitFor(() => expect(screen.getByText('8 行')).toBeInTheDocument());
+    expect(run).toHaveBeenLastCalledWith(22, { orderId: '88' });
+  });
+
+  it('ignores stale debug results after parameter edits within one API', async () => {
+    let finish!: (value: DataServiceQueryResult) => void;
+    const old = new Promise<DataServiceQueryResult>(resolve => { finish = resolve; });
+    run.mockReturnValueOnce(old);
+    render(<DataServiceDebugPage />);
+    await screen.findByDisplayValue('42');
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }));
+    fireEvent.change(screen.getByPlaceholderText('请输入 orderId'), { target: { value: '77' } });
+    await act(async () => { finish(resultRow); await old; });
+    expect(screen.queryByText('200 OK')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('77')).toBeInTheDocument();
+  });
+
+  it('remounts API selection and drops an older Project invocation response', async () => {
+    let finish!: (value: DataServiceQueryResult) => void;
+    const old = new Promise<DataServiceQueryResult>(resolve => { finish = resolve; });
+    run.mockReturnValueOnce(old);
+    const view = render(<DataServiceDebugPage />);
+    await screen.findByDisplayValue('42');
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }));
+    mockProjectId = 43;
+    view.rerender(<DataServiceDebugPage />);
+    await screen.findByDisplayValue('42');
+    await act(async () => { finish(resultRow); await old; });
+    expect(screen.queryByText('200 OK')).not.toBeInTheDocument();
+    expect(run).toHaveBeenCalledTimes(1);
   });
 
   it('ignores an outdated documentation response after the selected API changes', async () => {

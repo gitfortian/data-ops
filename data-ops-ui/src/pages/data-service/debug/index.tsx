@@ -1,7 +1,11 @@
 import { history, useLocation } from '@umijs/max';
-import { Button, Empty, Input, Select, Spin, message } from 'antd';
+import { Alert, Button, Empty, Input, Select, Spin, message } from 'antd';
 import { Play } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from '../hooks/read-issue';
+import { useLatestDataServiceRead } from '../hooks/useLatestDataServiceRead';
 
 import {
   getDataServiceDocumentation,
@@ -23,7 +27,7 @@ const typeLabel: Record<string, string> = {
 
 const prettyJson = (value: unknown) => JSON.stringify(value, null, 2);
 
-export default function DataServiceDebugPage() {
+function DataServiceDebugPage() {
   const location = useLocation();
   const requestedApiId = useMemo(
     () => Number(new URLSearchParams(location.search).get('apiId') || 0),
@@ -39,6 +43,11 @@ export default function DataServiceDebugPage() {
   const [docLoading, setDocLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const serviceLoadStartedRef = useRef(false);
+  const latestTestRef = useRef(0);
+  const beginListRead = useLatestDataServiceRead();
+  const [listIssue, setListIssue] = useState<DataServiceReadIssue | null>(null);
+  const [docIssue, setDocIssue] = useState<DataServiceReadIssue | null>(null);
+  useEffect(() => () => { latestTestRef.current += 1; }, []);
 
   const selectedService = useMemo(
     () => services.find((item) => Number(item.id) === Number(selectedApiId)),
@@ -54,15 +63,21 @@ export default function DataServiceDebugPage() {
   );
 
   const loadServices = useCallback(async () => {
+    const isCurrent = beginListRead();
+    setListIssue(null);
+    setServices([]);
     try {
       const rows = await listDataServices();
-      setServices(rows || []);
+      if (isCurrent()) setServices(rows || []);
     } catch (error: any) {
-      message.error(error?.message || '加载 API 列表失败');
+      if (isCurrent()) {
+        setListIssue(classifyDataServiceReadIssue(error));
+        message.error(error?.message || '加载 API 列表失败');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [beginListRead]);
 
   useEffect(() => {
     if (serviceLoadStartedRef.current) return;
@@ -97,16 +112,19 @@ export default function DataServiceDebugPage() {
   }, [loading, requestedApiId, services]);
 
   useEffect(() => {
+    latestTestRef.current += 1;
+    setTesting(false);
+    setDocumentation(undefined);
+    setDocIssue(null);
+    setDebugValues({});
+    setTestResult(undefined);
     if (!selectedApiId) {
-      setDocumentation(undefined);
-      setDebugValues({});
-      setTestResult(undefined);
+      setDocLoading(false);
       return;
     }
 
     let cancelled = false;
     setDocLoading(true);
-    setTestResult(undefined);
 
     void getDataServiceDocumentation(selectedApiId)
       .then((doc) => {
@@ -121,6 +139,7 @@ export default function DataServiceDebugPage() {
       .catch((error: any) => {
         if (!cancelled) {
           setDocumentation(undefined);
+          setDocIssue(classifyDataServiceReadIssue(error));
           setDebugValues({});
           message.error(error?.message || '加载 API 参数失败');
         }
@@ -135,12 +154,16 @@ export default function DataServiceDebugPage() {
   }, [selectedApiId]);
 
   const handleSelectApi = (value: number) => {
+    latestTestRef.current += 1;
+    setTesting(false);
+    setDocumentation(undefined);
+    setTestResult(undefined);
     setSelectedApiId(value);
     history.replace(`/data-service/debug?apiId=${value}`);
   };
 
   const runTest = async () => {
-    if (!selectedService) return;
+    if (!selectedService || docLoading || !documentation || docIssue) return;
 
     const missing = (documentation?.parameters || []).find(
       (item) => item.required && !String(debugValues[item.name] || '').trim(),
@@ -150,17 +173,20 @@ export default function DataServiceDebugPage() {
       return;
     }
 
+    const version = ++latestTestRef.current;
     setTesting(true);
+    setTestResult(undefined);
     try {
-      const result = await testDataService(selectedService.id, debugValues);
-      if (!result) {
-        throw new Error('调试失败');
-      }
+      const result = await testDataService(selectedService.id, { ...debugValues });
+      if (version !== latestTestRef.current) return;
+      if (!result) throw new Error('调试失败');
       setTestResult(result);
     } catch (error: any) {
-      message.error(error?.message || '调试失败');
+      if (version === latestTestRef.current) {
+        message.error(error?.message || '调试失败');
+      }
     } finally {
-      setTesting(false);
+      if (version === latestTestRef.current) setTesting(false);
     }
   };
 
@@ -198,6 +224,12 @@ export default function DataServiceDebugPage() {
         <div className="text-[17px] font-semibold text-[#161823]">API 测试</div>
       </div>
 
+      {listIssue && (
+        <Alert type="error" showIcon className="mx-5 mb-3"
+          message={listIssue === 'FORBIDDEN' ? '无权读取 API 列表' : 'API 列表读取失败'}
+          description="无法确定当前项目是否存在可调试 API；请核对权限后重新进入页面。"
+        />
+      )}
       <div className="px-4 pb-5 xl:h-[calc(100%-48px)] xl:px-5">
         <div className="grid min-h-0 gap-6 xl:h-full xl:gap-0 xl:overflow-hidden xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)]">
           <section className="flex min-w-0 min-h-0 flex-col xl:pr-5">
@@ -239,6 +271,11 @@ export default function DataServiceDebugPage() {
                   <div className="flex min-h-[180px] items-center justify-center">
                     <Spin size="small" />
                   </div>
+                ) : docIssue ? (
+                  <Alert type="error" showIcon
+                    message={docIssue === 'FORBIDDEN' ? '无权读取 API 参数' : 'API 参数文档读取失败'}
+                    description="参数结构未知，不能把读取失败解释为没有参数；请重新选择 API 重试。"
+                  />
                 ) : (documentation?.parameters || []).length ? (
                   <div className="space-y-4">
                     {(documentation?.parameters || []).map((parameter) => (
@@ -253,10 +290,15 @@ export default function DataServiceDebugPage() {
                         <Input
                           value={debugValues[parameter.name] || ''}
                           placeholder={parameter.example || `请输入 ${parameter.name}`}
-                          onChange={(event) => setDebugValues((current) => ({
-                            ...current,
-                            [parameter.name]: event.target.value,
-                          }))}
+                          onChange={(event) => {
+                            latestTestRef.current += 1;
+                            setTesting(false);
+                            setTestResult(undefined);
+                            setDebugValues((current) => ({
+                              ...current,
+                              [parameter.name]: event.target.value,
+                            }));
+                          }}
                         />
                         {parameter.description ? (
                           <div className="mt-1 text-[12px] text-[#667085]">
@@ -279,7 +321,7 @@ export default function DataServiceDebugPage() {
                 <Button
                   type="primary"
                   icon={<Play size={14} />}
-                  disabled={!selectedService}
+                  disabled={!selectedService || docLoading || !documentation || Boolean(docIssue) || Boolean(listIssue)}
                   loading={testing}
                   onClick={() => void runTest()}
                 >
@@ -335,4 +377,11 @@ export default function DataServiceDebugPage() {
       </div>
     </div>
   );
+}
+
+/** Project/permission changes discard the selected API and all console output. */
+export default function ScopedDataServiceDebugPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <DataServiceDebugPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
 }

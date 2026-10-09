@@ -1,10 +1,14 @@
 import YakButton from '@/components/YakButton';
 import { SecurityQueryTable } from '@/components/security';
-import { Input, Tag, Tooltip, message, type TableColumnsType } from 'antd';
+import { Alert, Input, Tag, Tooltip, message, type TableColumnsType } from 'antd';
 import { RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { listRecentDataServiceLogs, type DataServiceCallLog } from '@/services/data-service';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { useLatestDataServiceRead } from '../hooks/useLatestDataServiceRead';
+import { classifyDataServiceReadIssue, type DataServiceReadIssue } from '../hooks/read-issue';
 
 const formatTime = (value?: string) =>
   value ? value.replace('T', ' ').slice(0, 19) : '-';
@@ -16,22 +20,30 @@ const callerLabel = (record: DataServiceCallLog) => {
   return '历史调用';
 };
 
-export default function DataServiceLogsPage() {
+function DataServiceLogsPage() {
   const [logs, setLogs] = useState<DataServiceCallLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const [readIssue, setReadIssue] = useState<DataServiceReadIssue | null>(null);
+  const beginRead = useLatestDataServiceRead();
 
   const load = useCallback(async () => {
+    const isCurrent = beginRead();
     setLoading(true);
+    setReadIssue(null);
+    setLogs([]);
     try {
       const rows = await listRecentDataServiceLogs();
-      setLogs(rows || []);
+      if (isCurrent()) setLogs(rows || []);
     } catch (error: any) {
-      message.error(error?.message || '加载调用记录失败');
+      if (isCurrent()) {
+        setReadIssue(classifyDataServiceReadIssue(error));
+        message.error(error?.message || '加载调用记录失败');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [beginRead]);
 
   useEffect(() => {
     void load();
@@ -163,6 +175,13 @@ export default function DataServiceLogsPage() {
         </YakButton>
       </div>
 
+      {readIssue && (
+        <Alert type="error" showIcon className="mb-3"
+          message={readIssue === 'FORBIDDEN' ? '无权读取调用记录' : '调用记录读取失败'}
+          description="无法确认当前项目的最近调用；请核对权限并重试，旧记录不会继续展示。"
+          action={<YakButton onClick={() => void load()}>重试</YakButton>}
+        />
+      )}
       <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white">
         <SecurityQueryTable<DataServiceCallLog>
           rowKey="id"
@@ -177,4 +196,11 @@ export default function DataServiceLogsPage() {
       </div>
     </div>
   );
+}
+
+/** Project and permission transitions discard old result rows, keyword and reads. */
+export default function ScopedDataServiceLogsPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <DataServiceLogsPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
 }

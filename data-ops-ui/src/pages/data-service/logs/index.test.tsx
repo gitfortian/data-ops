@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { message } from 'antd';
 import {
@@ -7,6 +7,14 @@ import {
 } from '@/services/data-service';
 import DataServiceLogsPage from './index';
 
+let mockProjectId = 42;
+let mockPermissionCodes = ['data-service:observe'];
+jest.mock('@/contexts/SecurityProjectContext', () => ({
+  useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
+}));
+jest.mock('@/hooks/usePermissionAccess', () => ({
+  usePermissionAccess: () => ({ permissionCodes: mockPermissionCodes }),
+}));
 jest.mock('@/services/data-service', () => ({
   listRecentDataServiceLogs: jest.fn(),
 }));
@@ -57,6 +65,8 @@ jest.mock('antd', () => {
     }),
     Tag: ({ children }: { children: ReactNode }) => element('span', null, children),
     Tooltip: ({ children }: { children: ReactNode }) => element('span', null, children),
+    Alert: ({ message, description, action }: { message: ReactNode; description: ReactNode; action: ReactNode }) =>
+      element('div', { role: 'alert' }, message, description, action),
     message: { error: jest.fn() },
   };
 });
@@ -76,6 +86,8 @@ describe('Data Service logs modern API migration', () => {
   const listLogs = jest.mocked(listRecentDataServiceLogs);
 
   beforeEach(() => {
+    mockProjectId = 42;
+    mockPermissionCodes = ['data-service:observe'];
     listLogs.mockReset();
     jest.mocked(message.error).mockClear();
   });
@@ -127,6 +139,33 @@ describe('Data Service logs modern API migration', () => {
     ));
     expect(screen.getByTestId('log-table')).toBeEmptyDOMElement();
     expect(message.error).not.toHaveBeenCalled();
+  });
+
+  it('clears rows on a failed refresh, shows forbidden rather than empty and retries successfully', async () => {
+    listLogs.mockResolvedValueOnce([record(1, 'old-project-call')])
+      .mockRejectedValueOnce({ response: { status: 403 }, message: 'forbidden' })
+      .mockResolvedValueOnce([record(2, 'new-current-call')]);
+    render(<DataServiceLogsPage />);
+    await screen.findByText('old-project-call');
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('无权读取调用记录'));
+    expect(screen.queryByText('old-project-call')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '重试' }));
+    await screen.findByText('new-current-call');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('does not render a prior Project response after scope switches', async () => {
+    let finish!: (value: DataServiceCallLog[]) => void;
+    const pending = new Promise<DataServiceCallLog[]>(resolve => { finish = resolve; });
+    listLogs.mockReturnValueOnce(pending)
+      .mockResolvedValueOnce([record(3, 'current-project-call')]);
+    const view = render(<DataServiceLogsPage />);
+    mockProjectId = 43;
+    view.rerender(<DataServiceLogsPage />);
+    await screen.findByText('current-project-call');
+    await act(async () => { finish([record(4, 'old-project-call')]); await pending; });
+    expect(screen.queryByText('old-project-call')).not.toBeInTheDocument();
   });
 
   it('retains the existing error toast and loading reset on failed reads', async () => {
