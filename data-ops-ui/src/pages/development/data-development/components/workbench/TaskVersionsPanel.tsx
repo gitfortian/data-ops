@@ -1,4 +1,8 @@
 import { API_SUCCESS_CODE } from '@/services/http/response';
+import {
+  getDevelopmentTaskRevision,
+  listDevelopmentTaskRevisions,
+} from '@/services/data-development';
 import { history, useIntl } from '@umijs/max';
 import { Button, Spin, message } from 'antd';
 import { FileCode2, GitBranch } from 'lucide-react';
@@ -11,10 +15,6 @@ import {
   lineageEvidenceUrl,
   type DevelopmentLineageEvidence,
 } from '../../governanceEvidence';
-import {
-  getDevelopmentTaskRevision,
-  listDevelopmentTaskRevisions,
-} from '../../service';
 import type {
   DevelopmentNode,
   DevelopmentTaskRevision,
@@ -26,7 +26,8 @@ interface TaskVersionsPanelProps {
   refreshKey: number;
 }
 
-const responseData = <T,>(
+// Lineage Evidence intentionally retains the raw response and unavailable/error distinction.
+const lineageResponseData = <T,>(
   response: { code?: number; data?: T; msg?: string; message?: string },
   fallback: string,
 ): T => {
@@ -65,14 +66,9 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
     setLineageEvidence(undefined);
     setLineageFailure(undefined);
     listDevelopmentTaskRevisions(node.id)
-      .then((response) => {
+      .then((revisions) => {
         if (!active) return;
-        setVersions(
-          responseData(
-            response,
-            text('pages.dataDevelopment.versions.queryFailed'),
-          ) || [],
-        );
+        setVersions(revisions || []);
       })
       .catch((error) => {
         if (active) {
@@ -98,7 +94,7 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
     setLineageFailure(undefined);
     try {
       setLineageEvidence(
-        responseData(
+        lineageResponseData(
           await getDevelopmentLineageEvidence(node.id, revisionNo),
           '读取 Lineage evidence 失败',
         ),
@@ -119,12 +115,7 @@ const TaskVersionsPanel = ({ node, refreshKey }: TaskVersionsPanelProps) => {
     setLineageEvidence(undefined);
     setLineageFailure(undefined);
     try {
-      setDetail(
-        responseData(
-          await getDevelopmentTaskRevision(node.id, revisionNo),
-          text('pages.dataDevelopment.versions.detailFailed'),
-        ),
-      );
+      setDetail(await getDevelopmentTaskRevision(node.id, revisionNo));
       void loadLineageEvidence(revisionNo);
     } catch (error) {
       message.error(
