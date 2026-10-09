@@ -115,7 +115,23 @@ jobs:
               -Dtest=PostgresqlStorageSmokeTest \
               -Dsurefire.failIfNoSpecifiedTests=false test
           node scripts/release/frontend-artifact.mjs
-          tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
+          tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json
+      - name: Retain precise SHA snapshot and inventories, including on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-a8-final-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/a8-final-combination-snapshot.json
+            ${{ runner.temp }}/a8-final-combination-snapshot.md
+            ${{ runner.temp }}/a8-final-persistence-consumers.json
+            ${{ runner.temp }}/a8-final-flyway-ownership.json
+          if-no-files-found: warn
+          retention-days: 30
+
+          # Reverse each local merge and prove the exact original main source tree
+          # is restored; the verifier touches only this disposable worktree.
+          node scripts/architecture/a8-final-integration-preview.mjs rollback "$preview" "$report"
       - name: Retain precise SHA snapshot and inventories, including on failure
         if: always()
         uses: actions/upload-artifact@v4
