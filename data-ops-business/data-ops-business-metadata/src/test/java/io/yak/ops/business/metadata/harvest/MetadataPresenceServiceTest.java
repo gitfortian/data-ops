@@ -21,6 +21,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -437,19 +438,65 @@ class MetadataPresenceServiceTest {
   }
 
   @Test
-  void thePreviousRoundBoundaryComesBackFromTheRunHistoryInOneQuery() {
-    MdCollectRunPO previous = new MdCollectRunPO();
+  void onlyTheLatestCompleteSuccessfulRoundWithTheSameScopeCanConfirmAbsence() {
+    MdCollectRunPO current = historicalRun(RUN_ID, "scope-A", RunStatus.RUNNING, 0);
+    MdCollectRunPO previous = historicalRun(400L, "scope-A", RunStatus.SUCCESS, 0);
     previous.setStartedAt(PREVIOUS_ROUND);
+    when(runMapper.selectById(RUN_ID)).thenReturn(current);
     when(runMapper.selectOne(any())).thenReturn(previous);
+
     assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isEqualTo(PREVIOUS_ROUND);
 
-    when(runMapper.selectOne(any())).thenReturn(null);
+    // 编辑了 database/schema/tablePattern/collectColumns/dataSource 的轮次不能沿用之前的边界。
+    // 即便更早曾有相同 A 作用域，也只看最近一轮，不跳过 B 去找历史 A。
+    current.setScopeSnapshot("scope-B");
     assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
 
-    // 一次判定一条查询：它的结果只用作"缺席满两轮"的边界时刻，没有别的读取路径可以绕过它。
-    // 查询本身那四条边界（排除 dry-run、只认 SUCCESS/SUSPECT、排除本轮、倒序取一条）
-    // 写在 wrapper 上，运行期无从断言（MP 渲染时才解析列名），故由 CatalogPresenceStatementTest 锁文本。
-    verify(runMapper, times(2)).selectOne(any());
+    current.setScopeSnapshot("scope-A");
+    previous.setStatus(RunStatus.SUSPECT.name());
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
+
+    previous.setStatus(RunStatus.SUCCESS.name());
+    previous.setCntPartialFailed(1);
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
+
+    previous.setCntPartialFailed(null);
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
+
+    previous.setCntPartialFailed(0);
+    previous.setScopeSnapshot(null);
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
+
+    previous.setScopeSnapshot("scope-A");
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isEqualTo(PREVIOUS_ROUND);
+    verify(runMapper, times(7)).selectOne(any());
+  }
+
+  @Test
+  void missingOrForeignCurrentRunRefusesPresenceWithoutConsultingHistory() {
+    when(runMapper.selectById(RUN_ID)).thenReturn(null);
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
+    when(runMapper.selectById(RUN_ID))
+        .thenReturn(historicalRun(RUN_ID, "scope-A", RunStatus.RUNNING, 0));
+    assertThat(service().previousRoundStartedAt(PROJECT, 999L, RUN_ID)).isNull();
+    when(runMapper.selectById(RUN_ID))
+        .thenReturn(historicalRun(RUN_ID, null, RunStatus.RUNNING, 0));
+    assertThat(service().previousRoundStartedAt(PROJECT, 7L, RUN_ID)).isNull();
+    verify(runMapper, never()).selectOne(any());
+  }
+
+  private static MdCollectRunPO historicalRun(
+      Long id, String snapshot, RunStatus status, Integer partial) {
+    MdCollectRunPO row = new MdCollectRunPO();
+    row.setId(id);
+    row.setProjectId(PROJECT);
+    row.setJobId(7L);
+    row.setScopeSnapshot(snapshot);
+    row.setStatus(status.name());
+    row.setDryRun(false);
+    row.setCntPartialFailed(partial);
+    row.setStartedAt(PREVIOUS_ROUND);
+    return row;
   }
 
   private FactsBuilder facts() {

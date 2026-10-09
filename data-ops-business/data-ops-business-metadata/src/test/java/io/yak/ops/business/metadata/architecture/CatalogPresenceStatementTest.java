@@ -99,12 +99,17 @@ class CatalogPresenceStatementTest {
   void thePreviousRoundBoundaryExcludesRoundsThatSawNothing() throws IOException {
     String source = read(PRESENCE_SERVICE);
     String method = between(source, "public LocalDateTime previousRoundStartedAt(", "\n  }");
-    // dry-run 不改现场、FAILED 什么都没采到，两者都不能充当"那时它还该被看见"的证据。
+    // dry-run/FAILED 排除；SUSPECT 不可充当真正缺席证据；
+    // 还必须验证相邻有效轮的作用域快照、完整性，防止任务改配置导致误 GONE。
     assertThat(method)
         .contains("getDryRun, false")
         .contains("RunStatus.SUCCESS.name(), RunStatus.SUSPECT.name()")
         .contains("getId, currentRunId")
-        .contains("LIMIT 1");
+        .contains("LIMIT 1")
+        .contains("runMapper.selectById(currentRunId)")
+        .contains("getScopeSnapshot()")
+        .contains("getCntPartialFailed()")
+        .contains("RunStatus.SUCCESS.name().equals(previous.getStatus())");
     assertThat(method).doesNotContain("RunStatus.FAILED");
   }
 

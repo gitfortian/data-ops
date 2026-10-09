@@ -446,6 +446,9 @@ public class MetadataHarvestService {
             database,
             schema,
             failure);
+        // 失败的 scope 不能作为下一轮的“完整上一轮”证据；
+        // 写入 run 的 partial 计数，以便 Presence 的历史闸门识别。
+        partialFailed++;
         scopes.add(new ScopeOutcome(database, schema, 0, 0, true));
         return;
       }

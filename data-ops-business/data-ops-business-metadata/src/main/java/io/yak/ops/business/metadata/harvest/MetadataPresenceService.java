@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -94,10 +95,20 @@ public class MetadataPresenceService {
   /**
    * 上一<b>有效</b>轮的开始时刻，即"缺席满两轮"的边界；没有可比轮次时返回 null（本轮不判 GONE）。
    *
-   * <p>只认 SUCCESS 与 SUSPECT：dry-run 不改现场、FAILED 什么都没采到，两者都不能充当"那时它还该被看见"
-   * 的证据。SUSPECT 之所以算有效——它确实跑完了目录枚举、只是拒绝落 GONE。
+   * <p>先取最近的非 dry-run 完成轮次，再核查<b>同一作用域快照</b>及完整性。不能先在 SQL
+   * 中筛同快照再取最晚行：A→B→A 的任务编辑会把很久以前的 A 轮错误地当成相邻上一轮。
+   * SUSPECT 是拒绝软删的可疑轮次，不可作为缺席证据；FAILED/dry-run 完全排除。
+   * 历史记录没有完整快照/失败计数时也拒绝判 GONE，宁可多观察一轮。
    */
   public LocalDateTime previousRoundStartedAt(Long projectId, Long jobId, Long currentRunId) {
+    MdCollectRunPO current = runMapper.selectById(currentRunId);
+    if (current == null
+        || !Objects.equals(projectId, current.getProjectId())
+        || !Objects.equals(jobId, current.getJobId())
+        || current.getScopeSnapshot() == null
+        || current.getScopeSnapshot().isBlank()) {
+      return null;
+    }
     MdCollectRunPO previous =
         runMapper.selectOne(
             new LambdaQueryWrapper<MdCollectRunPO>()
@@ -108,7 +119,14 @@ public class MetadataPresenceService {
                 .in(MdCollectRunPO::getStatus, RunStatus.SUCCESS.name(), RunStatus.SUSPECT.name())
                 .orderByDesc(MdCollectRunPO::getStartedAt)
                 .last("LIMIT 1"));
-    return previous == null ? null : previous.getStartedAt();
+    if (previous == null
+        || !RunStatus.SUCCESS.name().equals(previous.getStatus())
+        || !Objects.equals(current.getScopeSnapshot(), previous.getScopeSnapshot())
+        || previous.getCntPartialFailed() == null
+        || previous.getCntPartialFailed() != 0) {
+      return null;
+    }
+    return previous.getStartedAt();
   }
 
   /** 判一轮的缺席并落软删。四道闸全过才可能写库，任一闸拦下都是"零写入 + 一条理由"。 */
