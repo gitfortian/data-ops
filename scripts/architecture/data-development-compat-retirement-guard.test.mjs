@@ -8,6 +8,7 @@ const ROOT = 'data-ops-ui/src';
 const RETIRED = [
   'data-ops-ui/src/services/data-development/legacy',
   'data-ops-ui/src/pages/development/data-development/data-service-node-service',
+  'data-ops-ui/src/pages/development/data-development/data-service-runtime-publication',
   'data-ops-ui/src/pages/development/data-development/dataset-service',
 ];
 const PAGE_SERVICE = 'data-ops-ui/src/pages/development/data-development/service';

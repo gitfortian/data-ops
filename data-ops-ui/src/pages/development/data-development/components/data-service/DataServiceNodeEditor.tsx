@@ -50,7 +50,7 @@ import {
   bringDataServiceOnline,
   fetchDataServicePublicationState,
   type DataServicePublicationState,
-} from '../../data-service-runtime-publication';
+} from '@/services/data-development';
 import {
   executeSqlEditorCommand,
   type SqlEditorCommand,

@@ -2,7 +2,7 @@ import type {
   DevelopmentDataServiceNodeContext,
   DevelopmentDataServiceRevision,
 } from '@/services/data-development';
-import type { DataServicePublicationState } from '../../data-service-runtime-publication';
+import type { DataServicePublicationState } from '@/services/data-development';
 
 export type DevelopmentDataServiceRuntimeState =
   | 'UNPUBLISHED'
