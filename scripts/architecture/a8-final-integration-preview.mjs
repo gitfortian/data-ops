@@ -175,7 +175,7 @@ export async function prepareIntegration({ worktree, reportPath, token }) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [command, worktree, reportPath] = process.argv.slice(2);
   if (command !== 'prepare' || !worktree || !reportPath) {
-    console.error('Usage: node scripts/architecture/a8-integration-preview.mjs prepare <new-temp-dir> <report.json>');
+    console.error('Usage: node scripts/architecture/a8-final-integration-preview.mjs prepare <new-temp-dir> <report.json>');
     process.exitCode = 2;
   } else {
     prepareIntegration({ worktree, reportPath, token: process.env.GITHUB_TOKEN })
