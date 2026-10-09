@@ -25,3 +25,5 @@ Truth Owner：Modeling 拥有结构、不可变版本和当前来源映射；Sec
 MS01 授权先于仓储、精确版本/项目、结构损坏和越界；MS02 SQL 限量/排序与原锁一致性、映射白名单；MS03 差异对齐、覆盖缺口、指纹漂移拒绝；MS04 工具隔离、预算和零写入；MS05 实际 SDK/HITL、最终复核与官方历史一致；MS06 原入口、版本/项目/权限变化、迟到响应、精确回链与坏 URL/continuation；MS07 原模型/映射/Agent 回归。
 
 依赖仍为 Agent.gateway → modeling.api；Modeling 不依赖 Agent。真实模型、登录态撤权、源审计、完整 J2、专家语义及收益验收按用户安排 PENDING，不标 SHIPPED。
+
+实施说明：[V28](../../ai/IMPLEMENTATION_V28.md)。工程证据：[V28 验收](../../ai/acceptance/2026-10-09-v28/README.md)。
