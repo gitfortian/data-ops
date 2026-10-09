@@ -8,6 +8,8 @@ const ROOT = 'data-ops-ui/src';
 const RETIRED = [
   ROOT + '/services/batch-link-up/task-legacy',
   ROOT + '/pages/integration/batch-link-up/type',
+  ROOT + '/services/batch-link-up/definition-legacy',
+  ROOT + '/pages/integration/batch-link-up/api',
 ];
 const CONSUMERS = [
   'pages/integration/batch-link-up/TaskDetailPanel.tsx',
@@ -33,7 +35,7 @@ const resolveImport = (file, specifier) => {
   return target?.replace(/\.(?:ts|tsx|js|jsx|mjs|mts)$/, '') ?? null;
 };
 
-test('old offline task adapter and page type facade stay retired', () => {
+test('all four legacy offline sync adapters and page facades stay retired', () => {
   for (const file of RETIRED) assert.equal(existsSync(file + '.ts'), false, file);
   const barrel = readFileSync(ROOT + '/services/batch-link-up/index.ts', 'utf8');
   assert.ok(barrel.includes("export * from './api'"));
@@ -61,6 +63,8 @@ test('import scanner resolves aliases, relative paths and dynamic imports', () =
   assert.equal(resolveImport(caller, './type'), RETIRED[1]);
   assert.equal(resolveImport(caller, '@/services/batch-link-up/task-legacy'), RETIRED[0]);
   assert.equal(resolveImport(caller, '@/services/batch-link-up'), ROOT + '/services/batch-link-up');
+  assert.equal(resolveImport(caller, '@/services/batch-link-up/definition-legacy'), RETIRED[2]);
+  assert.equal(resolveImport(caller, './api'), RETIRED[3]);
   const dynamic = "await import('@/pages/integration/batch-link-up/type')";
   assert.equal(resolveImport(caller, [...dynamic.matchAll(IMPORT_PATTERN)][0][1]), RETIRED[1]);
 });
@@ -77,16 +81,22 @@ test('all ten runtime/list and history consumers use the canonical service', () 
   }
 });
 
-test('complex offline editor still owns special stateful legacy response handling', () => {
-  const legacy = readFileSync(ROOT + '/services/batch-link-up/definition-legacy.ts', 'utf8');
-  const page = readFileSync(ROOT + '/pages/integration/batch-link-up/api.ts', 'utf8');
-  const editor = readFileSync(
+test('all offline sync editors use canonical service, preserving stateful Multi Guide saves', () => {
+  const single = readFileSync(ROOT + '/pages/integration/batch-link-up/config/single/index.tsx', 'utf8');
+  const multi = readFileSync(ROOT + '/pages/integration/batch-link-up/config/multi/index.tsx', 'utf8');
+  const hook = readFileSync(
     ROOT + '/pages/integration/batch-link-up/config/multi/hooks/useMultiWorkflowState.tsx', 'utf8');
-  assert.ok(legacy.includes("import { normalizeOfflineInstancePageRequest } from './api'"));
-  assert.ok(legacy.includes('export const linkupJobDefinitionApi'));
-  assert.ok(legacy.includes('saveOrUpdateGuideMulti'));
-  assert.ok(page.includes('definition-legacy'));
-  assert.ok(editor.includes('getSaveResponseData'));
+  const api = readFileSync(ROOT + '/services/batch-link-up/api.ts', 'utf8');
+  assert.ok(single.includes('getOfflineSyncEditDetail'));
+  assert.ok(single.includes('saveOfflineSyncSingleGuide'));
+  assert.ok(multi.includes('getOfflineSyncEditDetail'));
+  assert.ok(multi.includes('saveOfflineSyncMultiGuide'));
+  assert.ok(hook.includes('saveOfflineSyncMultiGuideWithState'));
+  assert.ok(hook.includes('getSaveResponseData(rawResult)'));
+  assert.ok(hook.includes('normalizeJobDefinitionState(saveData.state)'));
+  assert.ok(hook.includes('renderOfflineSyncMultiGuideConfig'));
+  assert.ok(api.includes('export const saveOfflineSyncMultiGuideWithState'));
+  assert.ok(api.includes('export const renderOfflineSyncMultiGuideConfig'));
 });
 
 test('the modern service owns all read, schedule and batch operations', () => {

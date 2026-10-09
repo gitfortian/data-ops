@@ -18,15 +18,12 @@ import { listAllDataSources } from '@/services/data-source';
 import type { DataSourceRecord } from '@/services/data-source';
 import { BRAND_THEME } from '@/styles/brand';
 
-import { linkupJobDefinitionApi } from '../../api';
+import { getOfflineSyncEditDetail, saveOfflineSyncMultiGuide } from '@/services/batch-link-up';
 import validateEditorConnectorForms from '../../detail/form-schema/validateEditorConnectorForms';
 import { useSmoothWheelScroll } from '../../detail/hooks/useSmoothWheelScroll';
 import {
   buildSavePayload,
-  extractSavedId,
-  isApiSuccess,
   normalizeEditDetail,
-  responseMessage,
   type SyncEditorState,
 } from '../../detail/model';
 import MultiTableSyncTaskEditor from './components/MultiTableSyncTaskEditor';
@@ -139,18 +136,14 @@ export default function MultiBatchLinkUpDetailPage() {
 
     try {
       setLoading(true);
-      const response =
-        await linkupJobDefinitionApi.selectEditDetail(taskId);
-
-      if (!isApiSuccess(response) || !response?.data) {
-        message.error(
-          responseMessage(response, '获取同步任务失败'),
-        );
+      const detail = await getOfflineSyncEditDetail(taskId);
+      if (!detail) {
+        message.error('获取同步任务失败');
         setEditor(null);
         return;
       }
 
-      const nextEditor = normalizeEditDetail(response.data, taskId);
+      const nextEditor = normalizeEditDetail(detail, taskId);
 
       if (nextEditor.mode !== 'GUIDE_MULTI') {
         history.replace(
@@ -181,20 +174,11 @@ export default function MultiBatchLinkUpDetailPage() {
     try {
       setSaving(true);
       const payload = buildSavePayload(nextEditor);
-      const response =
-        await linkupJobDefinitionApi.saveOrUpdateGuideMulti(payload);
-
-      if (!isApiSuccess(response)) {
-        message.error(
-          responseMessage(response, '保存同步任务失败'),
-        );
-        return null;
-      }
-
+      const savedId = await saveOfflineSyncMultiGuide(payload);
       const savedEditor: SyncEditorState = {
         ...nextEditor,
         basic: payload.basic,
-        id: extractSavedId(response, nextEditor.id),
+        id: savedId === undefined ? nextEditor.id : String(savedId),
       };
 
       setEditor(savedEditor);

@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { message } from 'antd';
 import { listAllDataSources } from '@/services/data-source';
-import { linkupJobDefinitionApi } from '../../api';
+import { getOfflineSyncEditDetail } from '@/services/batch-link-up';
 import MultiBatchLinkUpDetailPage from './index';
 
 jest.mock('@/services/data-source', () => ({
@@ -15,20 +15,14 @@ jest.mock('@umijs/max', () => ({
   history: { push: jest.fn(), replace: jest.fn() },
 }));
 
-jest.mock('../../api', () => ({
-  linkupJobDefinitionApi: {
-    selectEditDetail: jest.fn(),
-    saveOrUpdateGuideMulti: jest.fn(),
-  },
+jest.mock('@/services/batch-link-up', () => ({
+  getOfflineSyncEditDetail: jest.fn(),
+  saveOfflineSyncMultiGuide: jest.fn(),
 }));
 
 jest.mock('../../detail/model', () => ({
-  isApiSuccess: (response: { code?: number }) => response?.code === 200,
   normalizeEditDetail: () => ({ mode: 'GUIDE_MULTI' }),
-  responseMessage: (response: { message?: string; msg?: string }, fallback: string) =>
-    response?.message || response?.msg || fallback,
   buildSavePayload: jest.fn(),
-  extractSavedId: jest.fn(),
 }));
 
 jest.mock('../../detail/hooks/useSmoothWheelScroll', () => ({
@@ -79,13 +73,13 @@ jest.mock('./components/MultiTableSyncTaskEditor', () => {
 
 describe('Multi-table sync editor Data Source legacy migration', () => {
   const listSources = jest.mocked(listAllDataSources);
-  const loadTask = jest.mocked(linkupJobDefinitionApi.selectEditDetail);
+  const loadTask = jest.mocked(getOfflineSyncEditDetail);
 
   beforeEach(() => {
     listSources.mockReset();
     loadTask.mockReset();
     jest.mocked(message.error).mockClear();
-    loadTask.mockResolvedValue({ code: 200, data: { mode: 'GUIDE_MULTI' } } as never);
+    loadTask.mockResolvedValue({ mode: 'GUIDE_MULTI' } as never);
   });
 
   it('loads modern unwrapped bizData into the multi-table editor', async () => {
@@ -162,12 +156,12 @@ describe('Multi-table sync editor Data Source legacy migration', () => {
     expect(message.error).not.toHaveBeenCalled();
   });
 
-  it('does not change the workflow task detail envelope checks', async () => {
+  it('surfaces canonical task detail rejection without presenting an empty success', async () => {
     listSources.mockResolvedValue({
       bizData: [],
       pagination: { pageNo: 1, pageSize: 0, total: 0 },
     });
-    loadTask.mockResolvedValue({ code: 500, message: '任务详情不存在' } as never);
+    loadTask.mockRejectedValue(new Error('任务详情不存在'));
     render(<MultiBatchLinkUpDetailPage />);
 
     await waitFor(() => expect(message.error).toHaveBeenCalledWith('任务详情不存在'));

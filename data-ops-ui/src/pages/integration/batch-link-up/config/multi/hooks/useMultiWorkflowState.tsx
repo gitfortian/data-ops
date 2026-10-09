@@ -1,4 +1,7 @@
-import { API_SUCCESS_CODE } from '@/services/http/response';
+import {
+  saveOfflineSyncMultiGuideWithState,
+  renderOfflineSyncMultiGuideConfig,
+} from '@/services/batch-link-up';
 import {FormInstance, message} from "antd";
 import {debounce} from "lodash";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -9,7 +12,7 @@ import {
   listDataSourceReferenceTableOptions,
 } from '@/services/data-source/catalog';
 
-import {linkupJobDefinitionApi} from "@/pages/integration/batch-link-up/api";
+
 import {buildTableItems, DEFAULT_DB_TYPE, DEFAULT_FORM_VALUES,} from "../config";
 import {DbTypeValue, TableItem} from "../types";
 import {JobDefinitionState, markJobDefinitionSynced, normalizeJobDefinitionState} from "../jobDefinitionState";
@@ -72,8 +75,7 @@ type SaveResponseData = {
   state?: JobDefinitionState;
 };
 
-const getSaveResponseData = (res: any): SaveResponseData => {
-  const data = res?.data;
+const getSaveResponseData = (data: any): SaveResponseData => {
 
   /**
    * 兼容新版后端返回：
@@ -543,15 +545,8 @@ export function useMultiWorkflowState({
         content: workflowData,
       };
 
-      const res = await linkupJobDefinitionApi.saveOrUpdateGuideMulti(
-        finalPayload
-      );
-
-      if (res?.code !== API_SUCCESS_CODE) {
-        return;
-      }
-
-      const saveData = getSaveResponseData(res);
+      const rawResult = await saveOfflineSyncMultiGuideWithState(finalPayload);
+      const saveData = getSaveResponseData(rawResult);
       const jobDefineId = saveData.id ?? finalPayload.id;
 
       if (!jobDefineId) {
@@ -616,11 +611,8 @@ export function useMultiWorkflowState({
       setPreviewLoading(true);
 
       const finalPayload = buildFinalPayload();
-      const res = await linkupJobDefinitionApi.buildGuideMultiConfig(
-        finalPayload
-      );
-
-      setPreviewContent(res?.data || "");
+      const preview = await renderOfflineSyncMultiGuideConfig(finalPayload);
+      setPreviewContent(preview || "");
       setPreviewOpen(true);
     } catch (error: any) {
       console.error(error);
@@ -657,7 +649,7 @@ export function useMultiWorkflowState({
       setRunLoading(true);
 
       // TODO: 后续接入真正执行接口 / RunLog。
-      // await linkupJobDefinitionApi.execute(publishedJobDefineId);
+      // Runtime execution remains handled by the existing explicit run flow.
 
       // message.success("运行校验通过，可继续接入执行逻辑");
     } catch (error: any) {
