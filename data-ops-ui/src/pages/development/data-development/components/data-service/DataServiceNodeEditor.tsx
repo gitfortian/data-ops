@@ -45,7 +45,7 @@ import {
   type DevelopmentDataServiceNodeContext,
   type DevelopmentDataServiceParameter,
   type DevelopmentDataServiceResponseField,
-} from '../../data-service-node-service';
+} from '@/services/data-development';
 import {
   bringDataServiceOnline,
   fetchDataServicePublicationState,

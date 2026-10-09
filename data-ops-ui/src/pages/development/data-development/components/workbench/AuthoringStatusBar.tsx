@@ -1,4 +1,5 @@
 import {
+  listDevelopmentTaskRevisions,
   validateDevelopmentTaskPublish,
   type DevelopmentTaskPublishValidation,
 } from '@/services/data-development';
@@ -21,10 +22,8 @@ import {
   getEditorSession,
   useEditorSessionVersion,
 } from '../../editors/session/editorSessionStore';
-import { listDevelopmentTaskRevisions } from '../../service';
 import type { DevelopmentNode } from '../../types';
 import { deriveAuthoringState } from './authoringState';
-import { responseData } from './workbenchResponse';
 
 interface AuthoringStatusBarProps {
   node: DevelopmentNode;
@@ -73,12 +72,8 @@ const AuthoringStatusBar = ({
     let active = true;
     setPublishedRevision({ status: 'loading' });
     listDevelopmentTaskRevisions(node.id)
-      .then((response) => {
+      .then((revisions) => {
         if (!active) return;
-        const revisions = responseData(
-          response,
-          intl.formatMessage({ id: 'pages.dataDevelopment.versions.queryFailed' }),
-        );
         setPublishedRevision({
           status: 'ready',
           revision: revisions[0]?.revisionNo ?? null,

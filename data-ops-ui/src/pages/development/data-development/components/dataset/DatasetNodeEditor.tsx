@@ -39,7 +39,7 @@ import {
   type DevelopmentDatasetFieldDraft,
   type DevelopmentDatasetFieldRole,
   type DevelopmentDatasetNodeContext,
-} from '../../dataset-service';
+} from '@/services/data-development';
 import { listPublishedMetrics } from '@/services/metric/api';
 import type { MetricVersionRef } from '@/services/metric/types';
 import {

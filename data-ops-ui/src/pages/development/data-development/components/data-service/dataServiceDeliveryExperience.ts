@@ -1,7 +1,7 @@
 import type {
   DevelopmentDataServiceNodeContext,
   DevelopmentDataServiceRevision,
-} from '../../data-service-node-service';
+} from '@/services/data-development';
 import type { DataServicePublicationState } from '../../data-service-runtime-publication';
 
 export type DevelopmentDataServiceRuntimeState =

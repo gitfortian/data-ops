@@ -3,7 +3,7 @@ import {
   dataServicePublishOutcome,
 } from './dataServiceDeliveryExperience';
 
-import type { DevelopmentDataServiceNodeContext } from '../../data-service-node-service';
+import type { DevelopmentDataServiceNodeContext } from '@/services/data-development';
 import type { DataServicePublicationState } from '../../data-service-runtime-publication';
 
 const context = (revisionNo?: number): DevelopmentDataServiceNodeContext => ({

@@ -1,11 +1,18 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { validateDevelopmentTaskPublish } from '@/services/data-development';
+import {
+  listDevelopmentTaskRevisions,
+  validateDevelopmentTaskPublish,
+} from '@/services/data-development';
 import { hydrateEditorSession } from '../../editors/session/editorSessionStore';
 import type { DevelopmentNode } from '../../types';
 import AuthoringStatusBar from './AuthoringStatusBar';
 
-jest.mock('@/services/data-development', () => ({ validateDevelopmentTaskPublish: jest.fn().mockResolvedValue({ valid: false, draftRevision: 1, issues: [] }) }));
-jest.mock('../../service', () => ({ listDevelopmentTaskRevisions: jest.fn().mockResolvedValue({ code: 200, data: [] }) }));
+jest.mock('@/services/data-development', () => ({
+  listDevelopmentTaskRevisions: jest.fn().mockResolvedValue([]),
+  validateDevelopmentTaskPublish: jest.fn().mockResolvedValue({
+    valid: false, draftRevision: 1, issues: [],
+  }),
+}));
 const mockIntl = { formatMessage: ({ id, defaultMessage }: { id: string; defaultMessage?: string }) => defaultMessage || id };
 jest.mock('@umijs/max', () => ({ useAccess: () => ({ hasPermission: () => true }), useIntl: () => mockIntl }));
 
