@@ -42,10 +42,10 @@ import 'reactflow/dist/style.css';
 import LineageNode, { type LineageNodeData } from './LineageNode';
 import { buildLineageView, downstreamImpact } from './graph-layout';
 import {
-  fetchLineageAssetByKey,
-  fetchLineageGraph,
+  getLineageAssetByKey as fetchLineageAssetByKey,
+  getLineageGraph as fetchLineageGraph,
   searchLineageAssets,
-} from './service';
+} from '@/services/data-analysis';
 import {
   LINEAGE_ASSET_TYPES,
   assetTypeLabel,
