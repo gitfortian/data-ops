@@ -191,11 +191,13 @@ test('A8.2 final preview keeps all three exact predecessor workflow guards', () 
   const guards = [
     {
       anchor: '        run: node scripts/architecture/check-boundaries.mjs\n',
+      position: 'after',
       step: '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
         '        run: node scripts/architecture/check-persistence-consumers.mjs\n',
     },
     {
       anchor: '        run: node scripts/db/check-migration-history.mjs\n',
+      position: 'after',
       step: '      - name: Flyway history table and module ownership\n' +
         '        run: node scripts/db/check-flyway-ownership.mjs\n',
     },
@@ -208,7 +210,8 @@ test('A8.2 final preview keeps all three exact predecessor workflow guards', () 
   let integrated = base;
   for (const gate of guards) {
     assert.equal(integrated.split(gate.anchor).length, 2);
-    integrated = integrated.replace(gate.anchor, gate.step + gate.anchor);
+    integrated = integrated.replace(gate.anchor, gate.position === 'after'
+      ? gate.anchor + gate.step : gate.step + gate.anchor);
   }
   const final = {number: 461,
     branch: 'refactor/a8-2n-p-security-runtime-batch', sha: 'a'.repeat(40)};
@@ -225,18 +228,18 @@ test('A8.2 final preview rejects extra conflict files, dropped guards or source 
   const gates = [
     ['        run: node scripts/architecture/check-boundaries.mjs\n',
       '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
-        '        run: node scripts/architecture/check-persistence-consumers.mjs\n'],
+        '        run: node scripts/architecture/check-persistence-consumers.mjs\n', true],
     ['        run: node scripts/db/check-migration-history.mjs\n',
       '      - name: Flyway history table and module ownership\n' +
-        '        run: node scripts/db/check-flyway-ownership.mjs\n'],
+        '        run: node scripts/db/check-flyway-ownership.mjs\n', true],
     ['      - name: Plan fail-safe PR validation scope',
       '      - name: A8 Common and Security migration corridor\n' +
         '        run: node scripts/architecture/check-common-security-corridor.mjs\n'],
   ];
   const base = submitted.trimEnd();
   let current = base;
-  for (const [anchor, step] of gates)
-    current = current.replace(anchor, step + anchor);
+  for (const [anchor, step, after] of gates)
+    current = current.replace(anchor, after ? anchor + step : step + anchor);
   const pr = {number: 461,
     branch: 'refactor/a8-2n-p-security-runtime-batch', sha: 'a'.repeat(40)};
   const file = '.github/workflows/architecture-checks.yml';
