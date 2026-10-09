@@ -1,4 +1,8 @@
-import { getDevelopmentTaskExecution } from '@/services/data-development';
+import {
+  cancelDevelopmentTaskExecution,
+  getDevelopmentTaskExecution,
+  retryDevelopmentTaskExecution,
+} from '@/services/data-development';
 import { history, useAccess, useIntl } from '@umijs/max';
 import {
   Button,
@@ -14,10 +18,6 @@ import {
 import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  cancelDevelopmentTaskExecution,
-  retryDevelopmentTaskExecution,
-} from '../service';
 import type {
   DevelopmentId,
   DevelopmentSqlRunOutput,
@@ -245,9 +245,9 @@ const ExecutionDetailDrawer = ({
       okButtonProps: { danger: true },
       onOk: () =>
         runAction(async () => {
-          const response = await cancelDevelopmentTaskExecution(detail.id);
-          if (!response.data) throw new Error('cancel result unavailable');
-          setDetail(response.data);
+          const result = await cancelDevelopmentTaskExecution(detail.id);
+          if (!result) throw new Error('cancel result unavailable');
+          setDetail(result);
         }, 'pages.dataDevelopment.execution.cancelledSuccess'),
     });
   };
@@ -262,8 +262,7 @@ const ExecutionDetailDrawer = ({
       cancelText: intl.formatMessage({ id: 'pages.dataDevelopment.common.cancel' }),
       onOk: () =>
         runAction(async () => {
-          const response = await retryDevelopmentTaskExecution(sourceId);
-          const submission = response.data;
+          const submission = await retryDevelopmentTaskExecution(sourceId);
           if (!submission?.id) throw new Error('retry submission unavailable');
           const next = await readDetail(submission.id);
           setDetail(next);

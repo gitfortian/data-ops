@@ -1,18 +1,16 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { getDevelopmentTaskExecution, type DevelopmentTaskExecutionDetail,
-  type DevelopmentTaskExecutionSummary } from '@/services/data-development';
-import { Modal, message } from 'antd';
 import {
   cancelDevelopmentTaskExecution,
+  getDevelopmentTaskExecution,
   retryDevelopmentTaskExecution,
-} from '../service';
+  type DevelopmentTaskExecutionDetail,
+  type DevelopmentTaskExecutionSummary,
+} from '@/services/data-development';
+import { Modal, message } from 'antd';
 import ExecutionDetailDrawer from './ExecutionDetailDrawer';
 
 jest.mock('@/services/data-development', () => ({
   getDevelopmentTaskExecution: jest.fn(),
-}));
-
-jest.mock('../service', () => ({
   cancelDevelopmentTaskExecution: jest.fn(),
   retryDevelopmentTaskExecution: jest.fn(),
 }));
@@ -77,7 +75,7 @@ const detail = (id: string, status: DevelopmentTaskExecutionDetail['status'] = '
   runtimeExecutionId: 'runtime-' + id,
 });
 
-describe('Data Development execution detail modern read and legacy commands', () => {
+describe('Data Development execution detail and modern commands', () => {
   const get = jest.mocked(getDevelopmentTaskExecution);
   const cancel = jest.mocked(cancelDevelopmentTaskExecution);
   const retry = jest.mocked(retryDevelopmentTaskExecution);
@@ -159,9 +157,9 @@ describe('Data Development execution detail modern read and legacy commands', ()
     expect(get).toHaveBeenCalledTimes(1);
   });
 
-  it('preserves the envelope-based cancel command and updates the visible execution', async () => {
+  it('uses the modern cancel result and updates the visible execution', async () => {
     get.mockResolvedValue(detail('run-1', 'RUNNING'));
-    cancel.mockResolvedValue({ code: 200, data: detail('run-1', 'CANCELLED') });
+    cancel.mockResolvedValue(detail('run-1', 'CANCELLED'));
     const changed = jest.fn();
     render(<ExecutionDetailDrawer open record={record('run-1', 'RUNNING')}
       onClose={jest.fn()} onChanged={changed} />);
@@ -180,10 +178,10 @@ describe('Data Development execution detail modern read and legacy commands', ()
     expect(changed).toHaveBeenCalledTimes(1);
   });
 
-  it('retains envelope-based retry and reads the newly submitted execution using modern API', async () => {
+  it('uses the modern retry result then reads the newly submitted execution', async () => {
     get.mockImplementation(async id => detail(id, 'FAILED'));
-    retry.mockResolvedValue({ code: 200, data: { id: 'run-2', nodeId: 'node-1',
-      taskType: 'SQL', status: 'PENDING' } });
+    retry.mockResolvedValue({ id: 'run-2', nodeId: 'node-1',
+      taskType: 'SQL', status: 'PENDING' });
     const changed = jest.fn();
     render(<ExecutionDetailDrawer open record={record('run-1', 'FAILED')}
       onClose={jest.fn()} onChanged={changed} />);
@@ -203,7 +201,7 @@ describe('Data Development execution detail modern read and legacy commands', ()
 
   it('still rejects a retry acknowledgement lacking a durable execution ID', async () => {
     get.mockResolvedValue(detail('run-1', 'FAILED'));
-    retry.mockResolvedValue({ code: 200, data: null } as never);
+    retry.mockResolvedValue(null as never);
     render(<ExecutionDetailDrawer open record={record('run-1', 'FAILED')}
       onClose={jest.fn()} />);
     fireEvent.click(await screen.findByRole('button', {

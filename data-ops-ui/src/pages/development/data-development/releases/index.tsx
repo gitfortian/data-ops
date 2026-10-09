@@ -1,7 +1,13 @@
 import YakButton from '@/components/YakButton';
 import Table from '@/components/ReadableTable';
 import { YakFilterSwitch } from '@/components/ui';
-import { API_SUCCESS_CODE } from '@/services/http/response';
+import {
+  activateDevelopmentReleaseRevision,
+  getDevelopmentRelease,
+  listDevelopmentReleases,
+  offlineDevelopmentRelease,
+  onlineDevelopmentRelease,
+} from '@/services/data-development';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { history, useAccess, useIntl } from '@umijs/max';
 import {
@@ -22,13 +28,6 @@ import moment from 'moment';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { WorkspaceLoadFailureState } from '../components/WorkspaceStateFeedback';
-import {
-  activateDevelopmentReleaseRevision,
-  getDevelopmentRelease,
-  listDevelopmentReleases,
-  offlineDevelopmentRelease,
-  onlineDevelopmentRelease,
-} from '../service';
 import type {
   DevelopmentId,
   DevelopmentReleaseDetail,
@@ -59,16 +58,6 @@ const statusClassName: Record<string, string> = {
   ONLINE: 'bg-[#ecfdf3] text-[#027a48]',
   OFFLINE: 'bg-[#f2f4f7] text-[#667085]',
   DISABLED: 'bg-[#fff6ed] text-[#c4320a]',
-};
-
-const responseData = <T,>(
-  response: { code?: number; data?: T; msg?: string; message?: string },
-  fallback: string,
-): T => {
-  if (response?.code !== API_SUCCESS_CODE || response.data === undefined) {
-    throw new Error(response?.message || response?.msg || fallback);
-  }
-  return response.data;
 };
 
 const StatusBadge = ({ status }: { status?: DevelopmentReleaseStatus }) => {
@@ -129,17 +118,14 @@ const ReleaseCenterPage = () => {
     setLoading(true);
     setLoadFailure(undefined);
     try {
-      const response = await listDevelopmentReleases({
+      const data = await listDevelopmentReleases({
         pageNo,
         pageSize,
         status,
         taskType,
         keyword: keyword || undefined,
       });
-      const data = responseData(
-        response,
-        text('pages.dataDevelopment.release.loadFailed'),
-      );
+      if (!data) throw new Error(text('pages.dataDevelopment.release.loadFailed'));
       setRecords(data.records || []);
       setTotal(data.total || 0);
       setOnlineCount(data.onlineCount || 0);
@@ -164,13 +150,9 @@ const ReleaseCenterPage = () => {
       setDetailLoading(true);
       setDetailFailure(undefined);
       try {
-        const response = await getDevelopmentRelease(assetId);
-        setDetail(
-          responseData(
-            response,
-            text('pages.dataDevelopment.release.detailFailed'),
-          ),
-        );
+        const data = await getDevelopmentRelease(assetId);
+        if (!data) throw new Error(text('pages.dataDevelopment.release.detailFailed'));
+        setDetail(data);
       } catch (error) {
         setDetail(undefined);
         setDetailFailure(classifyWorkspaceLoadFailure(error));
@@ -213,18 +195,17 @@ const ReleaseCenterPage = () => {
     const actionKey = `${record.assetId}:${target}`;
     setActionLoading(actionKey);
     try {
-      const response =
+      const updated =
         target === 'ONLINE'
           ? await onlineDevelopmentRelease(record.assetId)
           : await offlineDevelopmentRelease(record.assetId);
-      responseData(
-        response,
-        text(
+      if (!updated) {
+        throw new Error(text(
           target === 'ONLINE'
             ? 'pages.dataDevelopment.release.reonlineFailed'
             : 'pages.dataDevelopment.release.offlineFailed',
-        ),
-      );
+        ));
+      }
       message.success(
         text(
           target === 'ONLINE'
@@ -254,11 +235,11 @@ const ReleaseCenterPage = () => {
     const actionKey = `${assetId}:revision:${revision.revisionNo}`;
     setActionLoading(actionKey);
     try {
-      const response = await activateDevelopmentReleaseRevision(
+      const updated = await activateDevelopmentReleaseRevision(
         assetId,
         revision.revisionNo,
       );
-      responseData(response, text('pages.dataDevelopment.release.switchFailed'));
+      if (!updated) throw new Error(text('pages.dataDevelopment.release.switchFailed'));
       message.success(
         text('pages.dataDevelopment.release.switched', {
           revision: revision.revisionNo,
