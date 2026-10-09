@@ -49,18 +49,27 @@ jest.mock('@/components/ReadableTable', () => {
     __esModule: true,
     default: ({ dataSource, columns, loading }: {
       dataSource: Array<Record<string, unknown>>;
-      columns: Array<{ key?: string; dataIndex?: string;
+      columns: Array<{ key?: string; dataIndex?: string; title?: string;
         render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode }>;
       loading: boolean;
-    }) => e('div', {
-      'data-testid': 'release-list',
-      'data-loading': String(loading),
-    }, dataSource.map((row) => e('div', { key: String(row.assetId) },
-      columns.filter(col => col.dataIndex === 'taskName' || col.key === 'action')
-        .map((col, index) => e('div', { key: index },
-          col.render ? col.render(col.dataIndex ? row[col.dataIndex] : undefined, row) : null,
-        )),
-    ))),
+    }) => {
+      // The release list and the revision history share ReadableTable.
+      // Render the action column of each table, not just the release list.
+      const isHistory = columns.some(col => col.dataIndex === 'revisionNo');
+      const visibleColumns = columns.filter(col =>
+        isHistory
+          ? col.dataIndex === 'revisionNo'
+            || col.title === 'pages.dataDevelopment.common.action'
+          : col.dataIndex === 'taskName' || col.key === 'action');
+      return e('div', {
+        'data-testid': isHistory ? 'release-history' : 'release-list',
+        'data-loading': String(loading),
+      }, dataSource.map(row => e('div', {
+        key: String(isHistory ? row.id : row.assetId),
+      }, visibleColumns.map((col, index) => e('div', { key: index },
+        col.render ? col.render(col.dataIndex ? row[col.dataIndex] : undefined, row) : null,
+      ))));
+    },
   };
 });
 
