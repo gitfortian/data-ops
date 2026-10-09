@@ -75,6 +75,21 @@ public class MybatisSubscriptionRepository implements SubscriptionRepository {
     return mapper.selectList(query).stream().map(this::toDomain).toList();
   }
 
+  @Override
+  public List<Subscription> listRecentActive(Long projectId, ProductKey productKey, int limit) {
+    if (projectId == null || projectId <= 0 || productKey == null) {
+      throw new IllegalArgumentException("Subscription evidence requires a project and product");
+    }
+    LambdaQueryWrapper<SubscriptionPO> query = new LambdaQueryWrapper<SubscriptionPO>()
+        .eq(SubscriptionPO::getProjectId, projectId)
+        .eq(SubscriptionPO::getProductKey, productKey.value())
+        .eq(SubscriptionPO::getStatus, SubscriptionStatus.ACTIVE.name())
+        .orderByDesc(SubscriptionPO::getUpdatedAt)
+        .orderByDesc(SubscriptionPO::getId)
+        .last("LIMIT " + Math.max(1, Math.min(200, limit)));
+    return mapper.selectList(query).stream().map(this::toDomain).toList();
+  }
+
   private Subscription toDomain(SubscriptionPO po) {
     return new Subscription(
         po.getId(),

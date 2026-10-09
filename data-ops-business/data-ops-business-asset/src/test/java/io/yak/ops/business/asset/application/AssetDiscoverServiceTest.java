@@ -411,6 +411,40 @@ class AssetDiscoverServiceTest {
 
   // ---------- fixtures ----------
 
+  @Test
+  void usagePreservesIndependentPersistedWindowsAndUnknownCountsThroughApiProjection() {
+    AssetItemPO item = modelItem(); item.setSourceType("DATASET"); item.setSourceId("101"); item.setAssetKey("dataset:101");
+    when(assetAppService.requireItem(1L)).thenReturn(item);
+    when(viewRecordService.summary(1L, 30)).thenReturn(new AssetViewRecordService.ActivitySummary(2L, 1L, null));
+    SectionProvider provider = mock(SectionProvider.class);
+    SectionContract contract = mock(SectionContract.class);
+    when(provider.sectionType()).thenReturn(SectionType.USAGE);
+    when(provider.supports(any())).thenReturn(true);
+    when(provider.query(any())).thenReturn(contract);
+    when(contract.status()).thenReturn(SectionStatus.OK);
+    when(contract.ownerDomain()).thenReturn("CONSUMING_DOMAINS");
+    var values = new java.util.LinkedHashMap<String, Object>();
+    values.putAll(Map.of("scope", "persisted windows", "consumerCount", 1, "successfulUsageCount", 2));
+    values.put("activeSubscriptionCount", null);
+    values.putAll(Map.of("subscriptionState", "UNAVAILABLE", "usageState", "READY", "subscriptionWindowLimit", 200,
+        "usageWindowLimit", 2, "subscriptionWindowState", "UNKNOWN", "usageWindowState", "LIMIT_REACHED", "sourceReconciliation", "NOT_PERFORMED"));
+    when(contract.summary()).thenReturn(new io.yak.ops.spi.section.SectionMapSummary(values));
+    when(sectionProviders.orderedStream()).thenAnswer(invocation -> Stream.of(provider));
+    var view = service.section(1L, "USAGE", "alice");
+    var result = AssetSectionProjector.project(SectionType.USAGE, view, AssetAppService.toView(item));
+    var usage = (AssetDiscoverService.UsageSummary) result.summary();
+    assertEquals(SectionStatus.OK, usage.businessConsumption().status());
+    assertNull(usage.businessConsumption().activeSubscriptionCount());
+    assertEquals(2, usage.businessConsumption().successfulUsageCount());
+    assertEquals("UNAVAILABLE", usage.businessConsumption().subscriptionState());
+    assertEquals("READY", usage.businessConsumption().usageState());
+    assertEquals(200, usage.businessConsumption().subscriptionWindowLimit());
+    assertEquals(2, usage.businessConsumption().usageWindowLimit());
+    assertEquals("UNKNOWN", usage.businessConsumption().subscriptionWindowState());
+    assertEquals("LIMIT_REACHED", usage.businessConsumption().usageWindowState());
+    assertEquals("NOT_PERFORMED", usage.businessConsumption().sourceReconciliation());
+  }
+
   private static AssetDiscoverService.SectionView section(
       AssetDiscoverService.AssetDetailView detail, String name) {
     AssetDiscoverService.SectionView view = detail.sections().get(name);

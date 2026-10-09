@@ -43,8 +43,12 @@ class AssetImpactEvidenceTest {
         "businessConsumption", business);
   }
   private Map<String, Object> business(String status) {
-    return Map.of("ownerDomain", "CONSUMING_DOMAINS", "status", status, "scope", "可见 Dataset 消费", "successfulUsageCount", 2,
-        "activeSubscriptionCount", 3, "coverageNote", "仅当前可见证据，非完整影响", "error", "private diagnostics");
+    var facts = new java.util.LinkedHashMap<String, Object>();
+    facts.putAll(Map.of("ownerDomain", "CONSUMING_DOMAINS", "status", status, "scope", "可见 Dataset 消费", "successfulUsageCount", 2,
+        "activeSubscriptionCount", 3, "coverageNote", "仅当前可见证据，非完整影响", "error", "private diagnostics"));
+    facts.putAll(Map.of("subscriptionState", "READY", "usageState", "READY", "subscriptionWindowLimit", 200,
+        "usageWindowLimit", 200, "subscriptionWindowState", "WITHIN_LIMIT", "usageWindowState", "WITHIN_LIMIT", "sourceReconciliation", "NOT_PERFORMED"));
+    return facts;
   }
 
   @ParameterizedTest @EnumSource(SectionStatus.class)
@@ -99,5 +103,39 @@ class AssetImpactEvidenceTest {
     assertFalse(gateway().impact(7, failedLedger).contains("private"));
     assertEquals(4, failedLedger.entries().size()); assertEquals("OK", failedLedger.entries().getFirst().status());
     assertEquals("PERMISSION_DENIED", failedLedger.entries().getLast().status());
+  }
+
+  @Test void persistedWindowScopeAndPartialFailureSurviveAndUnknownCannotVerifyAsZero() {
+    var partial = business("OK");
+    partial.put("subscriptionState", "FORBIDDEN"); partial.put("subscriptionWindowState", "UNKNOWN");
+    partial.put("activeSubscriptionCount", null);
+    partial.put("usageWindowLimit", 2); partial.put("usageWindowState", "LIMIT_REACHED");
+    when(api.section(7, SectionType.USAGE)).thenReturn(result(SectionStatus.OK, values(partial)));
+    var ledger = new GovernanceEvidenceLedger(); String output = gateway().impact(7, ledger);
+    String id = ledger.entries().get(2).id();
+    assertEquals("OK", ledger.entries().get(2).status());
+    assertEquals("2", ledger.verifyFact(id, "successfulUsageCount").value());
+    assertEquals("FORBIDDEN", ledger.verifyFact(id, "subscriptionState").value());
+    assertEquals("LIMIT_REACHED", ledger.verifyFact(id, "usageWindowState").value());
+    assertEquals("NOT_PERFORMED", ledger.verifyFact(id, "sourceReconciliation").value());
+    assertThrows(IllegalArgumentException.class, () -> ledger.verifyFact(id, "activeSubscriptionCount"));
+    assertTrue(output.contains("\"activeSubscriptionCount\":null"));
+    assertFalse(output.contains("private"));
+  }
+
+  @Test void inconsistentOrMissingConsumptionWindowCannotInventReadableFacts() {
+    for (Map<String, Object> changed : List.of(Map.<String, Object>of("subscriptionState", "UNAVAILABLE", "subscriptionWindowState", "UNKNOWN"),
+        Map.<String, Object>of("usageWindowLimit", 201), Map.<String, Object>of("usageWindowState", "LIMIT_REACHED"),
+        Map.<String, Object>of("sourceReconciliation", "COMPLETE"), Map.<String, Object>of("usageState", "UNKNOWN"),
+        Map.<String, Object>of("usageWindowLimit", "200"))) {
+      var facts = business("OK"); facts.putAll(changed);
+      when(api.section(7, SectionType.USAGE)).thenReturn(result(SectionStatus.OK, values(facts)));
+      var ledger = new GovernanceEvidenceLedger(); gateway().impact(7, ledger);
+      assertEquals(List.of("OK", "OK", "UNAVAILABLE"), ledger.entries().stream().map(e -> e.status()).toList());
+    }
+    var legacy = business("OK"); legacy.remove("usageWindowState");
+    when(api.section(7, SectionType.USAGE)).thenReturn(result(SectionStatus.OK, values(legacy)));
+    var ledger = new GovernanceEvidenceLedger(); gateway().impact(7, ledger);
+    assertEquals("UNAVAILABLE", ledger.entries().get(2).status());
   }
 }

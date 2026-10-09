@@ -18,7 +18,9 @@ final class AssetImpactProjection {
     STRUCTURAL_USAGE("structuralUsage", "LINEAGE", Set.of("direction", "hop", "downstreamReferenceCount")),
     BUSINESS_CONSUMPTION("businessConsumption", "FEDERATED", Set.of("scope", "totalCount", "reportCount", "datasetCount",
         "dashboardCount", "apiCount", "screenCount", "consumerCount", "userCount", "teamCount", "dataServiceCount",
-        "jobCount", "successfulUsageCount", "activeSubscriptionCount", "lastObservedAt", "coverageNote"));
+        "jobCount", "successfulUsageCount", "activeSubscriptionCount", "lastObservedAt", "coverageNote",
+        "subscriptionState", "usageState", "subscriptionWindowLimit", "usageWindowLimit",
+        "subscriptionWindowState", "usageWindowState", "sourceReconciliation"));
 
     private final String field;
     private final String owner;
@@ -68,7 +70,7 @@ final class AssetImpactProjection {
         if (value == null) continue;
         if (!value.isNull() && !(value.isTextual() || value.isIntegralNumber())) throw new IllegalArgumentException();
         if (value.isTextual() && value.asText().length() > 512) throw new IllegalArgumentException();
-        if (field.endsWith("Count") || "windowDays".equals(field) || "hop".equals(field)) {
+        if (field.endsWith("Count") || field.endsWith("WindowLimit") || "windowDays".equals(field) || "hop".equals(field)) {
           if (!value.isNull() && (!value.isIntegralNumber() || !value.canConvertToLong() || value.longValue() < 0)) {
             throw new IllegalArgumentException();
           }
@@ -80,11 +82,33 @@ final class AssetImpactProjection {
           || !facts.path("hop").isIntegralNumber() || facts.path("hop").longValue() != 1
           || !facts.path("downstreamReferenceCount").isIntegralNumber())) throw new IllegalArgumentException();
       if (category == Category.BUSINESS_CONSUMPTION && (!facts.path("scope").isTextual() || facts.path("scope").asText().isBlank())) throw new IllegalArgumentException();
+      if (category == Category.BUSINESS_CONSUMPTION && "CONSUMING_DOMAINS".equals(owner)) {
+        validateConsumptionWindow(facts, "subscription", "activeSubscriptionCount");
+        validateConsumptionWindow(facts, "usage", "successfulUsageCount");
+        if (!"NOT_PERFORMED".equals(facts.path("sourceReconciliation").asText())) throw new IllegalArgumentException();
+        if (!Set.of("READY", "EMPTY").contains(facts.path("usageState").asText())
+            && !facts.path("lastObservedAt").isNull() && facts.has("lastObservedAt")) throw new IllegalArgumentException();
+      }
       String encoded = JSON.writeValueAsString(facts);
       if (encoded.length() > 6000) throw new IllegalArgumentException();
       return new Part(category.field, owner, status, encoded);
     } catch (RuntimeException | com.fasterxml.jackson.core.JsonProcessingException invalid) {
       return new Part(category.field, owner, "UNAVAILABLE", "{}");
     }
+  }
+
+  private static void validateConsumptionWindow(JsonNode facts, String side, String countField) {
+    String state = facts.path(side + "State").asText();
+    if (!Set.of("READY", "EMPTY", "UNAVAILABLE", "FORBIDDEN").contains(state)) throw new IllegalArgumentException();
+    JsonNode limit = facts.path(side + "WindowLimit");
+    if (!limit.isIntegralNumber() || limit.longValue() < 1 || limit.longValue() > 200) throw new IllegalArgumentException();
+    String extent = facts.path(side + "WindowState").asText();
+    JsonNode count = facts.path(countField);
+    if (Set.of("READY", "EMPTY").contains(state)) {
+      if (!Set.of("WITHIN_LIMIT", "LIMIT_REACHED").contains(extent) || !count.isIntegralNumber()
+          || count.longValue() > limit.longValue() || ("EMPTY".equals(state) && count.longValue() != 0)
+          || ("READY".equals(state) && count.longValue() == 0)
+          || ("LIMIT_REACHED".equals(extent) != (count.longValue() == limit.longValue()))) throw new IllegalArgumentException();
+    } else if (!"UNKNOWN".equals(extent) || !count.isNull()) throw new IllegalArgumentException();
   }
 }

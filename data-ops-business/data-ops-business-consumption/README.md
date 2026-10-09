@@ -31,3 +31,12 @@ descriptor excludes SQL, raw keys and connection parameters. Asset does not depe
 
 Subscription/Usage/Impact remain independent. Known consumers are bounded evidence, not a claim
 of every external dependency. F-004 is not SHIPPED until both real journeys and its full matrix pass.
+
+F-035 read-only Asset/Agent consumption uses ConsumerUsageSummaryReader, not ConsumerImpactService.view.
+It reads only persisted current-project/product ACTIVE Subscription and successful normalized Usage windows,
+at most 200 rows per side in descending timestamp/id order. It never reconciles, normalizes or saves.
+The existing Consumption detail journey retains source reconciliation. Window limits, LIMIT_REACHED /
+WITHIN_LIMIT / UNKNOWN and independent provider states are evidence scope, not a business lifecycle.
+Unreadable side-specific counts/times stay null; the known-consumer union covers readable windows only.
+NOT_PERFORMED and unknown freshness must remain visible. Empty or unsaturated persisted windows never prove
+complete source history. Asset continues to consume SPI; no reverse Maven dependency or new source truth.

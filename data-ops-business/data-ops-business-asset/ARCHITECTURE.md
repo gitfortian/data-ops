@@ -30,6 +30,8 @@ io.yak.ops.business.asset
 
 ## 关键设计
 
+F-035 Consumption SPI 只读供给有界持久化窗口；USAGE BusinessConsumption 投影保留两侧 provider/window 状态及上限、NOT_PERFORMED 范围。Asset 不发起来源同步，也不把失败侧 null 显示为零。
+
 F-004 的 Data Service AssetProvider 在 Consumption 的 source adapter 注册，
 只读取 DataServiceReader 的有界 Project cursor 和 source-owned identity key。
 Asset 继续通过 AssetProvider SPI 获取事实，不反向依赖 Consumption 或 Data Service。

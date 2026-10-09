@@ -7,6 +7,7 @@ let mockProjectId = 42;
 let mockAssetId = '7';
 let mockPermissions = ['data-asset:read', 'agent:chat:run'];
 const mockDetail = jest.fn();
+let mockUsage: Record<string, unknown> | null = null;
 const asset = (id: number) => ({ asset: { id, name: `资产 ${id}`, sourceType: 'METADATA', sourceId: String(id), assetType: 'TABLE', status: 'PUBLISHED' }, sections: {} });
 jest.mock('@umijs/max', () => ({ history: { push: jest.fn(), back: jest.fn() }, useParams: () => ({ id: mockAssetId }) }));
 jest.mock('@/contexts/SecurityProjectContext', () => ({ useSecurityProject: () => ({ currentProject: { id: mockProjectId } }) }));
@@ -25,14 +26,16 @@ jest.mock('antd', () => {
   const React = require('react');
   const Box = ({ children }: any) => React.createElement('div', null, children);
   const Input = Object.assign(() => null, { TextArea: () => null });
-  return { Space: Box, Card: Box, Tag: Box, Tooltip: Box, Tabs: () => null, Descriptions: () => null, Input, Select: () => null,
+  return { Space: Box, Card: Box, Tag: Box, Tooltip: Box,
+    Tabs: ({ items }: any) => React.createElement('div', null, items.find((item: any) => item.key === 'usage')?.children),
+    Descriptions: ({ items }: any) => React.createElement('div', null, items.map((item: any) => React.createElement('div', { key: item.key }, item.children))), Input, Select: () => null,
     Button: ({ children, onClick, disabled }: any) => React.createElement('button', { onClick, disabled }, children),
     Alert: ({ message, action }: any) => React.createElement('div', null, message, action), message: { success: jest.fn(), error: jest.fn() },
   };
 });
 jest.mock('@/services/data-asset/api', () => ({
   getAssetDetail: (...args: any[]) => mockDetail(...args),
-  getAssetSection: jest.fn(async () => ({ status: 'UNAVAILABLE' })),
+  getAssetSection: jest.fn(async (_id: number, section: string) => section === 'USAGE' && mockUsage ? mockUsage : { status: 'UNAVAILABLE' }),
   getAssetSourceAttributes: jest.fn(async () => ({ status: 'UNAVAILABLE' })),
   getAssetTags: jest.fn(async () => []), listAssetTags: jest.fn(async () => []), getDirectoryTree: jest.fn(async () => []),
   reportAssetView: jest.fn(async () => undefined),
@@ -40,6 +43,7 @@ jest.mock('@/services/data-asset/api', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks(); mockProjectId = 42; mockAssetId = '7'; mockPermissions = ['data-asset:read', 'agent:chat:run'];
+  mockUsage = null;
   mockDetail.mockImplementation(async (id: number) => asset(id));
 });
 
@@ -75,4 +79,19 @@ it('removes the entry on permission revocation and rejects a mismatched source i
   mockDetail.mockResolvedValueOnce(asset(9)); mockPermissions = ['data-asset:read', 'agent:chat:run']; view.rerender(<AssetDetail />);
   await screen.findByText('资产 9');
   expect(screen.queryByRole('button', { name: 'AI 影响说明' })).not.toBeInTheDocument();
+});
+
+it.each(['EMPTY', 'OK'])('renders %s consumption scope in the original section without replacing unknown with zero', async (status) => {
+  mockUsage = { status: 'OK', summary: { businessConsumption: { status,
+    consumerCount: status === 'EMPTY' ? 0 : 1, successfulUsageCount: status === 'EMPTY' ? 0 : null,
+    activeSubscriptionCount: status === 'EMPTY' ? 0 : 1,
+    subscriptionState: status === 'EMPTY' ? 'EMPTY' : 'READY', usageState: status === 'EMPTY' ? 'EMPTY' : 'UNAVAILABLE',
+    subscriptionWindowLimit: 200, usageWindowLimit: 200,
+    subscriptionWindowState: 'WITHIN_LIMIT', usageWindowState: status === 'EMPTY' ? 'WITHIN_LIMIT' : 'UNKNOWN',
+    sourceReconciliation: 'NOT_PERFORMED',
+  } } };
+  render(<AssetDetail />);
+  await screen.findByText(/本次未同步原始来源/);
+  expect(screen.getByText(status === 'EMPTY' ? /成功使用 0 次，活动订阅 0 个/ : /成功使用 未知 次，活动订阅 1 个/)).toBeInTheDocument();
+  expect(screen.getByText(/有效订阅来源：.*窗口最多 200 行.*不证明历史完整/)).toBeInTheDocument();
 });

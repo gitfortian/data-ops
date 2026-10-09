@@ -39,6 +39,8 @@ public class GovernanceEvidenceGateway {
       "downstreamReferenceCount", "totalCount", "reportCount", "datasetCount", "dashboardCount",
       "apiCount", "screenCount", "userCount", "teamCount", "dataServiceCount", "jobCount",
       "successfulUsageCount", "activeSubscriptionCount", "lastObservedAt", "coverageNote",
+      "subscriptionState", "usageState", "subscriptionWindowLimit", "usageWindowLimit",
+      "subscriptionWindowState", "usageWindowState", "sourceReconciliation",
       "nodes", "edges", "id", "label", "assetType", "from", "to", "source", "target");
 
   private final ObjectProvider<AssetGovernanceQueryApi> assets;

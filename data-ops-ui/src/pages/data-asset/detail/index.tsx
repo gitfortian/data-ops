@@ -46,6 +46,7 @@ import HealthRing from '../components/HealthRing';
 import OfflineModal from '../components/OfflineModal';
 import PublishPrecheckModal from '../components/PublishPrecheckModal';
 import StatusFlowStrip from '../components/StatusFlowStrip';
+import ConsumerUsageFacts, { type ConsumerUsageFactsValue } from './ConsumerUsageFacts';
 
 interface HealthItem {
   key: string;
@@ -720,25 +721,15 @@ const AssetDetailPage = () => {
                           reason?: string;
                         };
                         structuralUsage?: { status?: string; hop?: number; direction?: string; downstreamReferenceCount?: number; reason?: string };
-                        businessConsumption?: {
+                        businessConsumption?: ConsumerUsageFactsValue & {
                           status?: string;
                           reason?: string;
                           scope?: string;
                           totalCount?: number;
                           datasetCount?: number;
-                          dashboardCount?: number;
                           reportCount?: number;
                           apiCount?: number;
                           screenCount?: number;
-                          consumerCount?: number;
-                          userCount?: number;
-                          teamCount?: number;
-                          dataServiceCount?: number;
-                          jobCount?: number;
-                          successfulUsageCount?: number;
-                          activeSubscriptionCount?: number;
-                          lastObservedAt?: string;
-                          coverageNote?: string;
                         };
                       }
                     | { date: string; count: number }[]
@@ -772,21 +763,10 @@ const AssetDetailPage = () => {
                               key: 'business',
                               label: '业务消费',
                               children: rawUsage.businessConsumption?.status === 'OK'
+                                || (rawUsage.businessConsumption?.status === 'EMPTY' && rawUsage.businessConsumption.consumerCount != null)
                                 ? rawUsage.businessConsumption.consumerCount != null
                                   ? (
-                                      <Space direction="vertical" size={2}>
-                                        <span>
-                                          已知 {rawUsage.businessConsumption.consumerCount} 个消费者（用户 {rawUsage.businessConsumption.userCount ?? 0}、团队 {rawUsage.businessConsumption.teamCount ?? 0}、仪表盘 {rawUsage.businessConsumption.dashboardCount ?? 0}、服务 {rawUsage.businessConsumption.dataServiceCount ?? 0}、任务 {rawUsage.businessConsumption.jobCount ?? 0}）
-                                        </span>
-                                        <span>
-                                          成功使用 {rawUsage.businessConsumption.successfulUsageCount ?? 0} 次，活动订阅 {rawUsage.businessConsumption.activeSubscriptionCount ?? 0} 个；最近业务消费 {formatAssetTime(rawUsage.businessConsumption.lastObservedAt)}
-                                        </span>
-                                        {rawUsage.businessConsumption.coverageNote ? (
-                                          <span className="text-[12px] text-[#98a2b3]">
-                                            {rawUsage.businessConsumption.coverageNote}
-                                          </span>
-                                        ) : null}
-                                      </Space>
+                                      <ConsumerUsageFacts value={rawUsage.businessConsumption} />
                                     )
                                   : `已记录 ${rawUsage.businessConsumption.totalCount ?? 0} 次引用（数据集 ${rawUsage.businessConsumption.datasetCount ?? 0}、仪表盘 ${rawUsage.businessConsumption.dashboardCount ?? 0}、报表 ${rawUsage.businessConsumption.reportCount ?? 0}、API ${rawUsage.businessConsumption.apiCount ?? 0}、大屏 ${rawUsage.businessConsumption.screenCount ?? 0}）`
                                 : rawUsage.businessConsumption?.status === 'EMPTY'

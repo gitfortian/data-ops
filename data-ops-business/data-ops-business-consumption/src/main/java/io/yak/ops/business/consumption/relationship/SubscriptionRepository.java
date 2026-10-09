@@ -17,4 +17,7 @@ public interface SubscriptionRepository {
   Subscription save(Subscription subscription);
 
   List<Subscription> list(Long projectId, ProductKey productKey, ConsumerRef consumerRef);
+
+  /** Most recently updated ACTIVE rows, ordered by updatedAt/id descending, at most 200. */
+  List<Subscription> listRecentActive(Long projectId, ProductKey productKey, int limit);
 }

@@ -193,4 +193,6 @@ MetricExplanationQueryApi 是 Metric-owned 授权只读投影：固定当前版�
 
 ## 有限资产影响说明（F-035）
 
+消费摘要只读已持久化的有界有效订阅/归一化成功使用窗口，不触发来源同步或补录。两侧状态、窗口上限、满窗与 NOT_PERFORMED 来源范围随原证据保留；失败侧计数为 null，不可核验为零。已知 Consumer 并集与各类型计数只覆盖可读窗口，不表示完整历史或实时影响。
+
 ASSET_IMPACT 固定一个资产，只允许无参数 get_asset_impact_evidence 与原只读辅助工具。gateway 复用 Asset.api USAGE 分区，将页面访问、Lineage 一跳关系计数、源域业务使用分开登记 owner/五态/范围；不读完整图、下游对象或生成候选。原 turn/StateStore、预算、HITL、核验及历史保留。文本与容量超限拒绝该来源，真实验收 PENDING。精确边界见 docs/product/features/F-035-agent-asset-impact-explanation.md，无新依赖边。
