@@ -232,6 +232,41 @@ python scripts/product/golden-sample/historical_recovery_retry.py --apply `
 - 数据读取有界：两个 Project Usage 与来源审计超过 10,000 行均报告 exit 2 / `PENDING`；来源不存在或之前已有 normalized Usage 也为 `PENDING`。若错误地在故障未布置的情况下运行 blocked POST，接口**可能按正常业务路径写入 Usage**：因此必须先外部确认故障及传入 `--confirm-fault-staged`；脚本检测意外持久化变化会 **FAIL**，但不会撤销业务写入。
 - **证据等级不夸大**：两个阶段分别输出 `REAL_BLOCKED_PAGE_OBSERVED`、`REAL_SAME_CURSOR_RECOVERY_VERIFIED`，仍标 `productAcceptance=PARTIAL`、`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`。本工具不证明 HTTP 5xx/Reader outage、防火墙/权限/浏览器、被保留策略清理的全历史、故障开关来源与生产恢复 SLA。部署身份和故障原因需额外独立留证。本地 `test_historical_recovery_retry.py` / GitHub Golden CI 只是**离线反例，不是实测 PASS**。
 
+## R6：来源 Reader 失联不能伪装为空页，恢复后读回同一成功审计
+
+`historical_recovery_reader_outage.py` 是 **R6 两阶段真实部署验收工具**，独立于 R5 的归一化 GAP/UNAVAILABLE。恢复 POST 若**来源读取本身异常**，不应输出成功的 `visitedAuditCount=0` / `retainedAuditExhausted=true`；依赖恢复后必须能以原排他审计 ID 游标读回**相同不可变版本的 1 条 SUCCESS 审计**。默认 PLAN 模式不登录、不查询数据库、不发送 POST。
+
+**特别安全约束：** R6 要求目标保留成功审计在开始前**已有稳定的 normalized Usage**，且 R1/R2 所属两个隔离 Project 在只读应用 MySQL 可读；因此无论故障是否生效，同样的 `limit=1` 恢复调用都只应幂等读取，**整个过程不得新增、删除或改写 Usage**。若目标审计尚未 normalized，返回 `PENDING`，不能拿 R5 的缺失 Usage 样本代替。Operator 只可在隔离环境**自行采用批准的可逆来源 Reader 故障手段**，并保留受限运维日志；脚本自身没有故障开关，不停止服务、不改 DB 账号、不修改来源审计、不读取或保存 Cookie/API Key/原始审计内容。
+
+```powershell
+# 前提：已按 R1/R2 准备两个带标记的 Golden Project、真实登录账号与
+# YAK_GOLDEN_APP_MYSQL_* 只读应用库账号；选已经 normalized 的真实成功来源 auditId。
+python scripts/product/golden-sample/historical_recovery_reader_outage.py
+
+# Operator 已在隔离环境按权限布置可逆 Reader 读取异常，仍能独立 SELECT 数据库。
+python scripts/product/golden-sample/historical_recovery_reader_outage.py --apply `
+  --stage outage --confirm-reader-outage `
+  --kind DATASET --audit-id 9007199254740993 `
+  --physical-manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json `
+  --consumption-report docs/product/acceptance/golden-sample/consumption-acceptance.local.json `
+  --output docs/product/acceptance/golden-sample/r6-dataset-outage.local.json
+
+# Operator 外部修复并保留关联事件/应用受限日志后，重放相同审计与游标。
+python scripts/product/golden-sample/historical_recovery_reader_outage.py --apply `
+  --stage restored --kind DATASET --audit-id 9007199254740993 `
+  --physical-manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json `
+  --consumption-report docs/product/acceptance/golden-sample/consumption-acceptance.local.json `
+  --outage-report docs/product/acceptance/golden-sample/r6-dataset-outage.local.json `
+  --output docs/product/acceptance/golden-sample/r6-dataset-restored.local.json
+```
+
+使用 `--kind DATA_SERVICE` 验证拥有该真实 Invocation SUCCESS 的精确 SourceRevision。上述数字仅为参数示例，不是实际执行记录。每种来源均使用纯十进制字符串形式的 BIGINT 排他游标（极大值且为第一条时允许首请求无游标）。
+
+- **Stage outage**：精确 Project + Product + SourceVersion 的当前 source-owned 成功审计及 Usage 先读出快照、校验 Consumer+Mode+SUCCESS+EvidenceRef。携带合法登录态、Project、SourceVersion、limit=1、精确游标发 POST，必须出现 **HTTP 500～599** 或 HTTP 200 且 `Result.code=999`、`data=null` 的通用服务内部失败。HTTP 200/成功空页、HTTP 4xx、跳转或其他业务错误码都 **FAIL**。请求后只读核对原来源审计和两个 Project **所有 Usage** 不变。
+- **Stage restored**：使用上阶段报告的 Project ID、版本、Audit ID、游标、来源记录 SHA-256、EvidenceRef SHA-256、既有 Usage ID 核对。然后发同一单行 POST，必须返回 1 条成功已归一化记录而不是成功空页、下一游标与实际审计 ID 一致；复读同页后所有 Usage 行 ID 和内容、两个 Project 来源审计均不变。
+- **根因边界**：HTTP 500 或全局异常 `999` 只证明 **实际恢复端点发生了服务器级失败**，不能单独证明具体失败的是 Source Reader（也可能是其它内部依赖）。报告采用 `REAL_SERVER_FAILURE_OBSERVED`、`REAL_RESTORED_SOURCE_PAGE_VERIFIED`，保留 `SOURCE_READER_CAUSE_NOT_INDEPENDENTLY_VERIFIED`；必须由环境 Owner 用隔离故障切换操作/相关受限日志独立确认 Source Reader 原因，才能将该子场景评为最终 PASS。脚本及 CI **不**替代部署身份/浏览器/RBAC 证明。
+- 任一快照超过 10,000 行、目标来源行未保留、Consumer 归属不能验证、当前 Usage 不存在或 Project 所有权不符，均不会声明 R6 PASS。失败输出不包含请求响应 body、账号、密钥或业务 SQL。即使两个阶段输出结果，`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`、`productAcceptance=PARTIAL`；真实隔离部署仍需另行执行，#336 保持 PENDING。
+
 ## 后续批次
 
 补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
