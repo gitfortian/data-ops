@@ -40,8 +40,6 @@ public class UserProjectServiceImpl
    */
   private static final int OWNER_USER_TYPE = 1;
 
-  private final UserProjectDao userProjectDao;
-
   /** Product-owned port; the same legacy DAO instance also provides DTO/PO compatibility. */
   private final UserProjectMembershipPort membershipPort;
 
@@ -57,7 +55,6 @@ public class UserProjectServiceImpl
           UserProjectDao userProjectDao,
           PermissionCache permissionCache) {
 
-    this.userProjectDao = userProjectDao;
     this.membershipPort = userProjectDao;
     this.permissionCache = permissionCache;
   }
