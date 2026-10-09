@@ -267,6 +267,23 @@ python scripts/product/golden-sample/historical_recovery_reader_outage.py --appl
 - **根因边界**：HTTP 500 或全局异常 `999` 只证明 **实际恢复端点发生了服务器级失败**，不能单独证明具体失败的是 Source Reader（也可能是其它内部依赖）。报告采用 `REAL_SERVER_FAILURE_OBSERVED`、`REAL_RESTORED_SOURCE_PAGE_VERIFIED`，保留 `SOURCE_READER_CAUSE_NOT_INDEPENDENTLY_VERIFIED`；必须由环境 Owner 用隔离故障切换操作/相关受限日志独立确认 Source Reader 原因，才能将该子场景评为最终 PASS。脚本及 CI **不**替代部署身份/浏览器/RBAC 证明。
 - 任一快照超过 10,000 行、目标来源行未保留、Consumer 归属不能验证、当前 Usage 不存在或 Project 所有权不符，均不会声明 R6 PASS。失败输出不包含请求响应 body、账号、密钥或业务 SQL。即使两个阶段输出结果，`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`、`productAcceptance=PARTIAL`；真实隔离部署仍需另行执行，#336 保持 PENDING。
 
+## R7/R8：集中权限、产物声明与 Golden 证据校验
+
+本批把多个 #336 证据收口事项集中到一个 PR，保留 R3～R6 的来源和归一化事实归属；**工具均默认 PLAN，不会访问真实服务**。
+
+### R7 真实受限身份
+
+命令：`python scripts/product/golden-sample/historical_recovery_roles.py --apply --physical-manifest <R1-owned-manifest> --consumption-report <R2-consumption-report> --kind BOTH --output <r7.local.json>`。
+需要真实管理员 `YAK_OPS_USERNAME/PASSWORD` 与**不同账号**的 `YAK_GOLDEN_RESTRICTED_USERNAME/PASSWORD`，以及 `YAK_GOLDEN_APP_MYSQL_*` 只读连接。选择两类产品最近一条**已经归一化**、保留的 SUCCESS 来源审计；管理员幂等重放、对照项目空结果、匿名伪造 Project Header 与真实受限身份拒绝，且每步比较来源审计和两个 Project 全部 Usage。无预存 Usage 返回 PENDING。**拒绝只能证明该账号遭拒，不能直接归因为 Asset.READ 权限；Project membership 与实际角色赋权须管理员另行取证**。不保存账号、令牌和 Cookie。
+
+### R8 离线证据校验
+
+命令：`python scripts/product/golden-sample/golden_evidence_gate.py --assess --physical-manifest <R1-owned-manifest> --consumption-report <R2-consumption-report> --r3 <r3.local.json> --r4 <r4.local.json> --r5-blocked <r5-blocked.local.json> --r5-recovered <r5-recovered.local.json> --r6-outage <r6-outage.local.json> --r6-restored <r6-restored.local.json> --roles <r7.local.json> --output <review.local.json>`。
+工具检查 marker、Project、一对阶段报告的同一 Audit/Version/Cursor/Source fingerprint，拒绝伪完成、历史页数据不足、跨 Project 以及重复 source kind；缺少报告列为 PENDING。**即使结构全部匹配也返回 exit 2 / PENDING 而不是产品正式 PASS**。
+
+可选同时传入 `--artifact <app.jar> --build-receipt <build.json> --runtime-receipt <runtime.json>`。build.json 应包含 `marker`、`repositoryCommit`(40 hex) 和 `artifactSha256`(64 hex)；runtime.json 应包含 `marker`、`deployedCommit`、`artifactSha256`、`instanceBaseUrl` 和 `observationReference`。三份同时提供才会流式计算真实制品 SHA256，与两个声明和 R1 URL 比对；失配直接 FAIL。**声明由运维提供，不是独立可信运行时证明**，结果始终 `deploymentIdentity=UNVERIFIED`，仍需实际部署控制器/进程映像核验、浏览器、受限角色根因以及 Source Reader 运维日志证据。
+
+两个脚本的离线 unittest 随 Golden CI 执行，仅验证模拟契约，不会连接运行环境。结果不会擅自修改 PD-005/006/007 或 AI 模块。
 ## 后续批次
 
 补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
