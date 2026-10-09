@@ -43,7 +43,7 @@ echo "Building original Security Starter from immutable main SHA $base_sha"
   bash ./mvnw -B -ntp -Dmaven.test.skip=true \
     -pl data-ops-framework/data-security -am package
 )
-legacy_jar="$legacy/data-ops-framework/data-security/target/data-security-spring-boot-starter-1.0.0.jar"
+legacy_jar="$legacy/data-ops-framework/data-security/target/data-security-spring-boot-starter-0.1.0.jar"
 [[ -f "$legacy_jar" ]] || { echo "Original Security Starter artifact missing" >&2; exit 1; }
 
 mkdir -p "$tmp/consumer" "$tmp/current"
