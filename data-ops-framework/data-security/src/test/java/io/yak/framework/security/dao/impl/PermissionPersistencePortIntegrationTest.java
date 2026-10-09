@@ -40,7 +40,7 @@ class PermissionPersistencePortIntegrationTest {
     verify(mapper).updateById(oldDeclared);
     verify(mapper, never()).updateById(manual);
     verify(mapper, never()).updateById(alreadyDisabled);
-    verify(mapper, never()).deleteById(any());
+    verify(mapper, never()).deleteById(any(java.io.Serializable.class));
   }
 
   @Test
@@ -64,7 +64,7 @@ class PermissionPersistencePortIntegrationTest {
     assertTrue(existing.getDeclared());
     assertEquals("system-security-projects", existing.getMenuCode());
     verify(mapper).updateById(existing);
-    verify(mapper, never()).deleteById(any());
+    verify(mapper, never()).deleteById(any(java.io.Serializable.class));
   }
 
   @Test
@@ -88,7 +88,7 @@ class PermissionPersistencePortIntegrationTest {
     assertEquals(List.of("security", "security:project:read"),
         inserted.getAllValues().stream().map(PermissionPO::getPermissionCode).toList());
     assertEquals(101L, inserted.getAllValues().get(1).getParentId());
-    verify(mapper, never()).deleteById(any());
+    verify(mapper, never()).deleteById(any(java.io.Serializable.class));
   }
 
   private static Permission desired(String code, String name, boolean leaf,
