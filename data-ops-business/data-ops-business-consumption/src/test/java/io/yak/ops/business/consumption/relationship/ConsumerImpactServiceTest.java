@@ -284,10 +284,13 @@ class ConsumerImpactServiceTest {
     CurrentProject project = mock(CurrentProject.class);
     DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
     when(project.requireProjectId()).thenReturn(42L);
+    UsageEvidence evidence = mock(UsageEvidence.class);
+    when(evidence.providerEvidenceRef()).thenReturn("query:bigint-old-success");
+    UsageNormalizationResult normalized = UsageNormalizationResult.normalized(evidence);
     when(sync.recoverSuccessfulVersionPage(
         101L, 9007199254740995L, 9007199254740994L, 200))
         .thenReturn(new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
-            java.util.List.of(), 9007199254740993L, false));
+            java.util.List.of(normalized), 9007199254740993L, false));
     var service = new ConsumerImpactService(
         mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
         project, sync, null);
