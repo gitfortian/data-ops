@@ -12,6 +12,9 @@ const RETIRED = [
 const CONSUMERS = [
   'pages/integration/batch-link-up/TaskDetailPanel.tsx',
   'pages/integration/batch-link-up/components/TaskHistoryPanel/hooks/useTaskHistory.ts',
+  'pages/integration/batch-link-up/components/TaskHistoryPanel/components/HistoryList.tsx',
+  'pages/integration/batch-link-up/components/TaskHistoryPanel/components/HistoryListItem.tsx',
+  'pages/integration/batch-link-up/components/TaskHistoryPanel/index.tsx',
   'pages/integration/batch-link-up/detail/redesigned.tsx',
   'pages/integration/batch-link-up/tabs/MetricsTab.tsx',
   'pages/integration/batch-link-up/components/SyncTaskList/components/RunLogDrawer.tsx',
@@ -62,7 +65,7 @@ test('import scanner resolves aliases, relative paths and dynamic imports', () =
   assert.equal(resolveImport(caller, [...dynamic.matchAll(IMPORT_PATTERN)][0][1]), RETIRED[1]);
 });
 
-test('all seven runtime/list consumers use the canonical data-only service', () => {
+test('all ten runtime/list and history consumers use the canonical service', () => {
   for (const relative of CONSUMERS) {
     const source = readFileSync(ROOT + '/' + relative, 'utf8');
     assert.ok(source.includes("from '@/services/batch-link-up'") ||

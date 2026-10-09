@@ -1,7 +1,7 @@
 import { useIntl } from "@umijs/max";
 import React from "react";
 
-import type { HistoryItem } from "../../type";
+import type { HistoryItem } from "@/services/batch-link-up";
 import HistoryFilterBar from "./components/HistoryFilterBar";
 import HistoryList from "./components/HistoryList";
 import HistoryPanelHeader from "./components/HistoryPanelHeader";

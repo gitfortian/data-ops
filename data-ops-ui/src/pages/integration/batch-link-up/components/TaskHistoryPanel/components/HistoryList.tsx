@@ -2,7 +2,7 @@ import { Empty, List } from "antd";
 import React from "react";
 import type { IntlShape } from "react-intl";
 
-import type { HistoryItem } from "@/pages/integration/batch-link-up/type";
+import type { HistoryItem } from "@/services/batch-link-up";
 import HistoryListItem from "./HistoryListItem";
 
 interface HistoryListProps {
