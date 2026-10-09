@@ -37,7 +37,7 @@ public final class AuditPayloadRedactor {
     if (extraTokens != null) {
       extraTokens.stream()
           .filter(v -> v != null && !v.isBlank())
-          .map(v -> v.trim().toLowerCase(Locale.ROOT))
+          .map(AuditPayloadRedactor::normalize)
           .forEach(merged::add);
     }
     this.tokens = Set.copyOf(merged);
@@ -91,8 +91,13 @@ public final class AuditPayloadRedactor {
     if (fieldName == null) {
       return false;
     }
-    String lowered = fieldName.toLowerCase(Locale.ROOT);
-    return tokens.stream().anyMatch(lowered::contains);
+    String normalized = normalize(fieldName);
+    return tokens.stream().anyMatch(normalized::contains);
+  }
+
+  /** Ignore common key separators so api-key, api_key and apiKey are equally protected. */
+  private static String normalize(String fieldName) {
+    return fieldName.toLowerCase(Locale.ROOT).replaceAll("[_\\-\\s.]", "");
   }
 
   private void redactNode(JsonNode node) {
