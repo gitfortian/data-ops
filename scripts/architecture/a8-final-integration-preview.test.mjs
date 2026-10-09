@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   REPOSITORY, ARCHITECTURE_SERIES,
   validateArchitecturePull, validateIntegrationSeries, integrationSummary, verifyRollback,
+  reconcileKnownCorridor,
 } from './a8-final-integration-preview.mjs';
 
 function pull(spec = ARCHITECTURE_SERIES[0]) {
@@ -135,4 +136,29 @@ test('A0–A8 release preview must verify rollback and never push architecture b
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /permissions:\s+contents: read\s+pull-requests: read/);
   assert.doesNotMatch(workflow, /git push|gh pr merge|git reset --hard origin\/main/);
+});
+
+test('only vetted #423 SHA may carry the exact Security corridor step through conflict', () => {
+  const pr = {
+    number: 423, sha: '60c5378d7ba90894526e4ff0dfa06f173c4bca52',
+  };
+  const workflow = 'jobs:\\n  impact:\\n    steps:\\n      - name: Plan fail-safe PR validation scope\\n';
+  const insertion = '      - name: A8 Common and Security migration corridor\\n' +
+    '        run: node scripts/architecture/check-common-security-corridor.mjs\\n';
+  const incoming = workflow.replace('      - name: Plan', insertion + '      - name: Plan');
+  const resolved = reconcileKnownCorridor(pr, '.github/workflows/architecture-checks.yml',
+    workflow, incoming);
+  assert.ok(resolved.includes(insertion));
+  assert.ok(resolved.includes('Plan fail-safe PR validation scope'));
+  assert.throws(() => reconcileKnownCorridor(
+    {...pr, sha: 'a'.repeat(40)}, '.github/workflows/architecture-checks.yml',
+    workflow, incoming), /Unapproved/);
+  assert.throws(() => reconcileKnownCorridor(
+    pr, 'pom.xml', workflow, incoming), /Unapproved/);
+  assert.throws(() => reconcileKnownCorridor(
+    pr, '.github/workflows/architecture-checks.yml',
+    workflow, workflow), /Unapproved/);
+  assert.throws(() => reconcileKnownCorridor(
+    pr, '.github/workflows/architecture-checks.yml',
+    resolved, incoming), /Unapproved/);
 });
