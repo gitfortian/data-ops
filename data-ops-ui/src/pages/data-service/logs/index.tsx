@@ -4,7 +4,7 @@ import { Input, Tag, Tooltip, message, type TableColumnsType } from 'antd';
 import { RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { fetchDataServiceLogs, type DataServiceCallLog } from '../service';
+import { listRecentDataServiceLogs, type DataServiceCallLog } from '@/services/data-service';
 
 const formatTime = (value?: string) =>
   value ? value.replace('T', ' ').slice(0, 19) : '-';
@@ -24,8 +24,8 @@ export default function DataServiceLogsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetchDataServiceLogs();
-      setLogs(response.data || []);
+      const rows = await listRecentDataServiceLogs();
+      setLogs(rows || []);
     } catch (error: any) {
       message.error(error?.message || '加载调用记录失败');
     } finally {
