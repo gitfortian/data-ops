@@ -113,7 +113,7 @@ export function validateApiContracts(files) {
  const page=files.get(NEW+'common/dto/PageParamDTO.java')||'';
  if(!page.includes('private int page = 1;')||!page.includes('private int size = 10;')) errors.push('Security paging DTO default drift');
  const pom=files.get(POM)||'',starter=files.get(STARTER)||'';
- for(const dep of ['lombok','jakarta.validation-api','jackson-annotations']) if(!pom.includes('<artifactId>'+dep+'</artifactId>')) errors.push('API contract dependency missing: '+dep);
+ for(const dep of ['lombok','jakarta.validation-api','jackson-annotations','jackson-databind']) if(!pom.includes('<artifactId>'+dep+'</artifactId>')) errors.push('API contract dependency missing: '+dep);
  if(/<artifactId>(?:data-security-spring-boot-starter|data-ops-common|data-ops-boot|data-ops-business-[^<]+)<\/artifactId>/.test(pom)) errors.push('Platform API cannot reverse depend on Starter/Business');
  if(!starter.includes('<artifactId>data-ops-platform-security-contract</artifactId>')) errors.push('Starter must consume canonical Platform DTO/VO');
  return errors;

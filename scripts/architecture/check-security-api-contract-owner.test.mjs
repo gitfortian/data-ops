@@ -85,3 +85,10 @@ test('rejects Starter dropping its Platform contract dependency',()=>{
  f.set(p,f.get(p).replace('<artifactId>data-ops-platform-security-contract</artifactId>','<artifactId>absent</artifactId>'));
  assert.match(errors(f),/Starter must consume/);
 });
+
+test('rejects removal of test-only Jackson databind for JSON wire regressions',()=>{
+  const f=readRepository(),p='data-ops-platform/data-ops-platform-security-contract/pom.xml';
+  f.set(p,f.get(p).replace('<artifactId>jackson-databind</artifactId>',
+    '<artifactId>removed-json-test-support</artifactId>'));
+  assert.match(errors(f),/dependency missing: jackson-databind/);
+});
