@@ -213,6 +213,9 @@ jobs:
   a8-integration:
     name: A0-A8 ordered migration / runtime / UI acceptance (read-only)
     if: github.event_name == 'pull_request' && github.head_ref == 'refactor/a8-2n-p-security-runtime-batch'
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
     timeout-minutes: 115
     services:
