@@ -46,4 +46,6 @@ DATA_SERVICE 台账投影遵循 PD-002 / F-004：key 为 data_service:<serviceId
 
 ## F-035 使用摘要消费
 
+Consumption SPI 供给只读持久化窗口。Asset 透传订阅/使用各侧状态、窗口限额/范围及未同步来源标识，不能丢掉范围后把部分证据当完整计数；不可读侧数值为未知，详情不得补零。Asset 不触发消费来源同步或创建归一化证据。
+
 原 USAGE structuralUsage 的 downstreamReferenceCount 继续表示当前项目一跳下游关系条数；改用 LineageQueryService.downstreamRelationCount 聚合，不物化完整图。Asset 不拥有 Lineage 关系，缺注册保持 EMPTY、源失败保持 UNAVAILABLE；页面访问与 Metric/Consumption 事实分开。Agent 只消费既有 AssetGovernanceQueryApi 分区，不进入 Asset 实现或源 DAO。

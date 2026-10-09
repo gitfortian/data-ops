@@ -41,6 +41,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.ObjectProvider;
 import reactor.core.publisher.Flux;
 
@@ -75,13 +77,21 @@ class AssetImpactRuntimeTest {
     return new GovernanceContextMiddleware(tools, mock(AgentObservationCollector.class), session -> "turn-impact");
   }
 
-  @Test void summaryIsPreloadedOnceAndVerifiedFinalMatchesOfficialHistory() {
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void summaryIsPreloadedOnceAndVerifiedFinalMatchesOfficialHistory(boolean persistedConsumption) {
     var api = mock(AssetGovernanceQueryApi.class);
+    var business = new java.util.LinkedHashMap<String, Object>();
+    if (persistedConsumption) {
+      business.putAll(Map.of("ownerDomain", "CONSUMING_DOMAINS", "status", "OK", "scope", "persisted windows", "successfulUsageCount", 2));
+      business.put("activeSubscriptionCount", null);
+      business.putAll(Map.of("subscriptionState", "UNAVAILABLE", "usageState", "READY", "subscriptionWindowLimit", 200,
+          "usageWindowLimit", 2, "subscriptionWindowState", "UNKNOWN", "usageWindowState", "LIMIT_REACHED", "sourceReconciliation", "NOT_PERFORMED"));
+    } else business.putAll(Map.of("ownerDomain", "METRIC", "status", "UNAVAILABLE", "scope", "private"));
     when(api.section(7, SectionType.USAGE)).thenReturn(new AssetSectionResult(SectionType.USAGE, SectionStatus.OK, "FEDERATED",
         new SectionMapSummary(Map.of(
             "pageActivity", Map.of("ownerDomain", "ASSET", "status", "OK", "windowDays", 30, "viewCount", 99),
             "structuralUsage", Map.of("ownerDomain", "LINEAGE", "status", "OK", "direction", "DOWNSTREAM", "hop", 1, "downstreamReferenceCount", 4),
-            "businessConsumption", Map.of("ownerDomain", "METRIC", "status", "UNAVAILABLE", "scope", "private"))),
+            "businessConsumption", business)),
         null, null, List.of(), List.of(), null, null));
     var tools = tools(api);
     var context = context(new GovernanceTarget(7L, null, null, "ASSET_IMPACT"));
@@ -89,6 +99,10 @@ class AssetImpactRuntimeTest {
     var preload = middleware(tools);
     String prompt = preload.onSystemPrompt(null, context, "base").block(Duration.ofSeconds(5));
     assertTrue(prompt.contains(AssetImpactPrompt.INSTRUCTIONS));
+    if (persistedConsumption) {
+      assertTrue(prompt.contains("NOT_PERFORMED")); assertTrue(prompt.contains("LIMIT_REACHED"));
+      assertTrue(prompt.contains("\"activeSubscriptionCount\":null"));
+    }
     assertFalse(prompt.contains("private"));
     assertEquals(prompt, preload.onSystemPrompt(null, context, "base").block(Duration.ofSeconds(5)));
 
@@ -100,7 +114,9 @@ class AssetImpactRuntimeTest {
       String id = execution.evidence().entries().get(1).id();
       if (inference.getAndIncrement() == 0) {
         String refs = "[{\"evidenceRef\":\"" + id + "\",\"field\":\"downstreamReferenceCount\"},"
-            + "{\"evidenceRef\":\"" + id + "\",\"field\":\"hop\"}]";
+            + "{\"evidenceRef\":\"" + id + "\",\"field\":\"hop\"}"
+            + (persistedConsumption ? ",{\"evidenceRef\":\"" + execution.evidence().entries().get(2).id()
+                + "\",\"field\":\"usageWindowState\"}" : "") + "]";
         Map<String, Object> arguments = Map.of("fact_refs_json", refs);
         return Flux.just(new ChatResponse("verify", List.of(ToolUseBlock.builder().id("verify-facts")
             .name("verify_governance_facts").input(arguments)
@@ -122,7 +138,8 @@ class AssetImpactRuntimeTest {
     assertFalse(answer.contains("尚未生成"));
     assertEquals(3, execution.evidence().entries().size());
     assertFalse(answer.contains("example.invalid"));
-    assertEquals(List.of("4", "1"), execution.verifiedFacts().stream().map(fact -> fact.value()).toList());
+    assertEquals(persistedConsumption ? List.of("4", "1", "LIMIT_REACHED") : List.of("4", "1"),
+        execution.verifiedFacts().stream().map(fact -> fact.value()).toList());
     assertEquals(2, execution.toolBudget().usedCalls()); // one preload + one verification, not per prompt rebuild
     verify(api).section(7, SectionType.USAGE); verifyNoMoreInteractions(api);
     assertEquals(answer, AgentRuntime.projectHistory(store.get("7", context.getSessionId(), "agent_state", AgentState.class)

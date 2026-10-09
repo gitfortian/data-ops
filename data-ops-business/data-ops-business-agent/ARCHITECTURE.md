@@ -6,6 +6,8 @@
 
 ## 设计原则
 
+F-035 消费摘要经原 Asset.api/SPI corridor 使用 ConsumerUsageSummaryReader，只读有界持久化窗口；ConsumerImpactService.view 的来源同步留在原消费旅程。窗口状态/限额和未同步范围沿用原证据投影，不增加 Agent 对 Consumption 实现或 DAO 的依赖。
+
 1. **业务子系统优先。** package 本身表达架构。
 2. **稳定入口，隐藏内部角色。** Controller 只进入 Application Facade；跨子系统只走声明过的 corridor。
 3. **名字表达角色。** Service / Coordinator / Manager / Resolver / Reader / Gateway / Repository 不互相冒充。

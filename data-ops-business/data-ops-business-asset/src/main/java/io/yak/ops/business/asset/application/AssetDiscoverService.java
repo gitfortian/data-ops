@@ -123,7 +123,10 @@ public class AssetDiscoverService {
       Integer reportCount, Integer datasetCount, Integer dashboardCount, Integer apiCount,
       Integer screenCount, Integer consumerCount, Integer userCount, Integer teamCount,
       Integer dataServiceCount, Integer jobCount, Integer successfulUsageCount,
-      Integer activeSubscriptionCount, String lastObservedAt, String coverageNote, String reason) {}
+      Integer activeSubscriptionCount, String lastObservedAt, String coverageNote, String reason,
+      String subscriptionState, String usageState, Integer subscriptionWindowLimit,
+      Integer usageWindowLimit, String subscriptionWindowState, String usageWindowState,
+      String sourceReconciliation) {}
 
   public record UsageSummary(
       PageActivityUsage pageActivity,
@@ -416,13 +419,16 @@ public class AssetDiscoverService {
             integerValue(values.get("successfulUsageCount")),
             integerValue(values.get("activeSubscriptionCount")),
             stringValue(values.get("lastObservedAt")), stringValue(values.get("coverageNote")),
-            contract.reason());
+            contract.reason(), stringValue(values.get("subscriptionState")), stringValue(values.get("usageState")),
+            integerValue(values.get("subscriptionWindowLimit")), integerValue(values.get("usageWindowLimit")),
+            stringValue(values.get("subscriptionWindowState")), stringValue(values.get("usageWindowState")),
+            stringValue(values.get("sourceReconciliation")));
         actions.addAll(contract.actions());
     } else {
       businessConsumption = new BusinessConsumption(UsageOwnerDomain.CONSUMING_DOMAINS,
           SectionStatus.UNAVAILABLE, null, null, null, null, null, null, null,
           null, null, null, null, null, null, null, null, null,
-          "当前资产类型尚未接入消费域读侧");
+          "当前资产类型尚未接入消费域读侧", null, null, null, null, null, null, null);
     }
     UsageSummary summary = new UsageSummary(pageActivity, structuralUsage, businessConsumption);
     SectionStatus status = List.of(pageActivity.status(), structuralUsage.status(),

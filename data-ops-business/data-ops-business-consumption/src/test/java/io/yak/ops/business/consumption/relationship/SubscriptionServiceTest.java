@@ -194,5 +194,14 @@ class SubscriptionServiceTest {
           && left.sourceDomain().equals(right.sourceDomain())
           && left.sourceIdentity().equals(right.sourceIdentity());
     }
+
+    @Override
+    public List<Subscription> listRecentActive(Long projectId, ProductKey productKey, int limit) {
+      return list(projectId, productKey, null).stream()
+          .filter(row -> row.status() == SubscriptionStatus.ACTIVE)
+          .sorted(java.util.Comparator.comparing(Subscription::updatedAt).reversed()
+              .thenComparing(Subscription::id, java.util.Comparator.reverseOrder()))
+          .limit(Math.max(1, Math.min(200, limit))).toList();
+    }
   }
 }
