@@ -8,6 +8,8 @@
 
 2026-10-04 追加：[R1 首批实施记录](golden-sample/implementation-20261004.md)补充物理表登录态 API、八分区与 Asset 项目隔离证据。下文保留 2026-09-30 历史审计；新增证据未覆盖全部七场景，不能据此关闭 #185 或宣称 PD-001 DONE。
 
+> **2026-10-09 当前状态补充（只校准历史叙述）**：本文件的“13 open / 13 closed”、#185 仍在 open 清单以及第 9 行“不能据此关闭 #185”等表述均是 **2026-09-30 历史快照 / 2026-10-04 当时证据**，不得视为今天的实时 Issue 状态。2026-10-09 已在 GitHub 核验 [#185](https://github.com/gitfortian/data-ops/issues/185) 与 [#264](https://github.com/gitfortian/data-ops/issues/264) 均为 **CLOSED**，但 **CLOSED ≠ 当前部署的完整真实 E2E 已签收**。相关阶段当前审计以 [P0 收口台账](p0-closeout-20261009.md) 与 [#336](https://github.com/gitfortian/data-ops/issues/336) 为准；以下保留原始报告以供溯源，不擅自改写旧实验记录或追认 PASS。
+
 ## 当前结论
 
 Phase 7 尚未完成总体验收。`main` 已包含 Asset 统一发现入口、Metadata 专业技术目录、Asset Section 及多个治理域只读摘要；完整的物理表、Model、Metric、Dataset 登录态用户路径，以及权限/故障隔离场景尚无一套统一、当前的 E2E 验收记录。
