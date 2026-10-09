@@ -133,8 +133,10 @@ def verify_stage(api, db, kind, sample, project_id, control_id,
         if old_matches:
             raise PendingEvidence("PENDING: selected audit was already normalized before fault observation")
         page = request_one(api, kind, product_key, version_id, before)
-        blocked = validate_blocked(kind, page, product_key, version_id, before)
+        # A mistakenly unstaged healthy fixture could have normalized Usage.
+        # Check actual DB *before* interpreting the response as a valid block.
         assert_unchanged(db, project_id, control_id, before_all, source_states)
+        blocked = validate_blocked(kind, page, product_key, version_id, before)
         return {
             "stage": "BLOCKED_REAL_OBSERVED", "kind": kind,
             "productKey": product_key, "sourceVersionIdentity": str(version_id),
@@ -199,6 +201,9 @@ def verify_stage(api, db, kind, sample, project_id, control_id,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--confirm-fault-staged", action="store_true",
+                        help="Acknowledge that an isolated reversible fault has been "
+                             "staged before issuing the first recovery POST")
     parser.add_argument("--stage", choices=["blocked", "recovered"], required=False)
     parser.add_argument("--kind", choices=["DATASET", "DATA_SERVICE"])
     parser.add_argument("--audit-id")
@@ -222,6 +227,8 @@ def main():
     require(args.stage and args.kind and args.audit_id
             and args.physical_manifest and args.consumption_report and args.output,
             "--apply requires stage, kind, audit-id, both manifests and output")
+    require(args.stage != "blocked" or args.confirm_fault_staged,
+            "Blocked stage requires --confirm-fault-staged; unstaged POST can write Usage")
     require(args.stage != "recovered" or args.blocked_report,
             "Recovered stage requires --blocked-report from the previous real blocked run")
     if args.blocked_report:
