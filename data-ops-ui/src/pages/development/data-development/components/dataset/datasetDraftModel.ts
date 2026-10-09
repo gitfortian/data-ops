@@ -1,7 +1,7 @@
 import type {
   DevelopmentDatasetFieldDraft,
   DevelopmentDatasetNodeContext,
-} from "../../dataset-service";
+} from "@/services/data-development";
 
 export const toFieldDrafts = (
   context?: DevelopmentDatasetNodeContext
