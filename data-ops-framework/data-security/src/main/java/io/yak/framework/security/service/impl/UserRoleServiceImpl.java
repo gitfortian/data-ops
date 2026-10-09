@@ -5,7 +5,6 @@ import io.yak.framework.security.dao.UserRoleDao;
 import io.yak.framework.security.service.UserRoleService;
 import io.yak.ops.platform.security.port.UserRoleAssignmentPort;
 import io.yak.framework.security.service.PermissionCache;
-import io.yak.framework.security.util.CopyBeanUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -247,10 +246,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return new ArrayList<>();
     }
 
-    return CopyBeanUtil.copyList(
-            userRoleDao.selectByRoleIds(
-                    validRoleIds),
-            UserRole.class);
+    return assignmentPort.selectAssignmentsByRoleIds(validRoleIds);
   }
 
   /**
@@ -270,10 +266,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return new ArrayList<>();
     }
 
-    return CopyBeanUtil.copyList(
-            userRoleDao.getRoleIdListByUserIds(
-                    validUserIds),
-            UserRole.class);
+    return assignmentPort.selectAssignmentsByUserIds(validUserIds);
   }
 
   /**

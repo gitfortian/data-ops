@@ -17,4 +17,9 @@ public interface UserRoleAssignmentPort {
   int deleteByUserIdOrRoleId(Long userId, Long roleId);
 
   int selectCountByRoleId(Long roleId);
+  /** Role assignment reads projected to Platform-owned models, not database PO. */
+  List<UserRole> selectAssignmentsByRoleIds(List<Long> roleIds);
+
+  List<UserRole> selectAssignmentsByUserIds(List<Long> userIds);
 }
+

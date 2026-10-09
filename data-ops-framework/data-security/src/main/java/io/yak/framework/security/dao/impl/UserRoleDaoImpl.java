@@ -187,6 +187,16 @@ public class UserRoleDaoImpl
         );
     }
 
+    @Override
+    public List<UserRole> selectAssignmentsByRoleIds(List<Long> roleIds) {
+        return CopyBeanUtil.copyList(selectByRoleIds(roleIds), UserRole.class);
+    }
+
+    @Override
+    public List<UserRole> selectAssignmentsByUserIds(List<Long> userIds) {
+        return CopyBeanUtil.copyList(getRoleIdListByUserIds(userIds), UserRole.class);
+    }
+
     /**
      * 根据指定字段和值查询目标标识列表。
      */

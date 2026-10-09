@@ -25,4 +25,7 @@ public interface UserProjectMembershipPort {
   void deleteByProjectIdAndUserType(Long projectId, int userType);
 
   List<UserProject> selectByProjectIds(List<Long> projectIds);
+  /** Criteria-only query; DTO conversion belongs exclusively to the legacy adapter. */
+  List<UserProject> selectMembershipsByCriteria(UserProjectCriteria criteria);
 }
+

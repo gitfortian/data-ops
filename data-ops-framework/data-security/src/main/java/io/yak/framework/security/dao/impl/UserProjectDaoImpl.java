@@ -6,6 +6,7 @@ import io.yak.framework.security.common.dto.user.UserProjectDTO;
 import io.yak.framework.security.common.entity.UserProject;
 import io.yak.framework.security.common.po.UserProjectPO;
 import io.yak.framework.security.dao.UserProjectDao;
+import io.yak.ops.platform.security.port.UserProjectCriteria;
 import io.yak.framework.security.dao.mapper.UserProjectMapper;
 import io.yak.framework.security.util.CopyBeanUtil;
 import io.yak.framework.security.util.DatabaseNumberUtils;
@@ -338,6 +339,19 @@ public class UserProjectDaoImpl
                 userProjectMapper.selectList(wrapper),
                 UserProject.class
         );
+    }
+
+    /** Stable query criteria are converted here to the pre-existing DTO query. */
+    @Override
+    public List<UserProject> selectMembershipsByCriteria(UserProjectCriteria criteria) {
+        if (criteria == null) return select(null);
+        UserProjectDTO dto = new UserProjectDTO();
+        dto.setId(criteria.id());
+        dto.setUserId(criteria.userId());
+        dto.setUserType(criteria.userType());
+        dto.setProjectId(criteria.projectId());
+        dto.setIsDelete(criteria.isDelete());
+        return select(dto);
     }
 
     /**

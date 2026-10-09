@@ -5,6 +5,7 @@ import io.yak.framework.security.common.entity.UserProject;
 import io.yak.framework.security.common.enums.project.ProjectUserCode;
 import io.yak.framework.security.dao.UserProjectDao;
 import io.yak.ops.platform.security.port.UserProjectMembershipPort;
+import io.yak.ops.platform.security.port.UserProjectCriteria;
 import io.yak.framework.security.service.PermissionCache;
 import io.yak.framework.security.service.UserProjectService;
 
@@ -393,8 +394,10 @@ public class UserProjectServiceImpl
     }
 
     List<UserProject> userProjectList =
-            userProjectDao.select(
-                    userProjectDTO);
+            membershipPort.selectMembershipsByCriteria(
+                    new UserProjectCriteria(userProjectDTO.getId(), userProjectDTO.getUserId(),
+                            userProjectDTO.getUserType(), userProjectDTO.getProjectId(),
+                            userProjectDTO.getIsDelete()));
 
     return userProjectList == null
             ? new ArrayList<>()
