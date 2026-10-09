@@ -68,6 +68,90 @@ class SecurityProjectRbacFlywayJdbcTest {
     }
   }
 
+  @Test
+  void mysqlExistingHostFlywayHistoryBeforeSecurityV1CanMigrate() throws Exception {
+    String url = System.getenv("ARCHITECTURE_MYSQL_URL");
+    Assumptions.assumeTrue(url != null && !url.isBlank(), "MySQL service not configured");
+    String user = System.getenv("ARCHITECTURE_MYSQL_USERNAME");
+    String pass = System.getenv("ARCHITECTURE_MYSQL_PASSWORD");
+    String database = unique("a82hist_m");
+    try (Connection admin = DriverManager.getConnection(url, user, pass);
+         Statement statement = admin.createStatement()) {
+      statement.execute("CREATE DATABASE `" + database + "`");
+    }
+    try {
+      assertHostHistoryBeforeSecurityV1(mysqlDatabaseUrl(url, database), user, pass,
+          "classpath:yak-security/db/migration", null);
+    } finally {
+      try (Connection admin = DriverManager.getConnection(url, user, pass);
+           Statement statement = admin.createStatement()) {
+        statement.execute("DROP DATABASE IF EXISTS `" + database + "`");
+      }
+    }
+  }
+
+  @Test
+  void postgresExistingHostFlywayHistoryBeforeSecurityV1CanMigrate() throws Exception {
+    String url = System.getenv("ARCHITECTURE_PG_URL");
+    Assumptions.assumeTrue(url != null && !url.isBlank(), "PostgreSQL service not configured");
+    String user = System.getenv("ARCHITECTURE_PG_USERNAME");
+    String pass = System.getenv("ARCHITECTURE_PG_PASSWORD");
+    String schema = unique("a82hist_p");
+    try (Connection admin = DriverManager.getConnection(url, user, pass);
+         Statement statement = admin.createStatement()) {
+      statement.execute("CREATE SCHEMA \"" + schema + "\"");
+    }
+    try {
+      String target = url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema;
+      assertHostHistoryBeforeSecurityV1(target, user, pass,
+          "classpath:yak-security/db/migration-postgresql", schema);
+    } finally {
+      try (Connection admin = DriverManager.getConnection(url, user, pass);
+           Statement statement = admin.createStatement()) {
+        statement.execute("DROP SCHEMA IF EXISTS \"" + schema + "\" CASCADE");
+      }
+    }
+  }
+
+  /**
+   * Existing host Flyway metadata can precede Security V1. A higher existing
+   * baseline than 1 is a distinct unresolved production-history scenario.
+   */
+  private static void assertHostHistoryBeforeSecurityV1(String url, String user,
+      String pass, String location, String schema) throws Exception {
+    try (Connection connection = DriverManager.getConnection(url, user, pass);
+         Statement statement = connection.createStatement()) {
+      statement.execute("CREATE TABLE a82_host_existing_row(id INTEGER PRIMARY KEY)");
+      statement.execute("INSERT INTO a82_host_existing_row(id) VALUES (7)");
+    }
+    var hostConfig = Flyway.configure().dataSource(url, user, pass)
+        .baselineVersion(MigrationVersion.fromVersion("0.5"))
+        .baselineDescription("existing host installation");
+    if (schema != null) hostConfig.schemas(schema).defaultSchema(schema);
+    Flyway host = hostConfig.load();
+    host.baseline();
+
+    var securityConfig = Flyway.configure().dataSource(url, user, pass)
+        .locations(location)
+        .placeholders(Collections.singletonMap("appName", "a82_history_app"))
+        .baselineOnMigrate(true)
+        .baselineVersion(MigrationVersion.fromVersion("0"))
+        .outOfOrder(true);
+    if (schema != null) securityConfig.schemas(schema).defaultSchema(schema);
+    Flyway security = securityConfig.load();
+    assertTrue(security.migrate().migrationsExecuted >= 1,
+        "Security V1 must execute against existing host history older than V1");
+    assertTrue(security.validateWithResult().validationSuccessful);
+    try (Connection connection = DriverManager.getConnection(url, user, pass)) {
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM a82_host_existing_row WHERE id = ?", 7));
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM yak_security_permission WHERE permission_code = ? AND app_name = ?",
+          "security:project:read", "a82_history_app"));
+    }
+    assertEquals(0, security.migrate().migrationsExecuted);
+  }
+
   private static void assertBaselineAndRelations(String url, String user, String pass,
       String location, String schema) throws Exception {
     try (Connection connection = DriverManager.getConnection(url, user, pass);
