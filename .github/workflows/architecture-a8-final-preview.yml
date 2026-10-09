@@ -92,9 +92,9 @@ jobs:
           node scripts/architecture/check-security-runtime-owner.mjs
           node scripts/architecture/check-boundaries.mjs
           node scripts/architecture/check-frontend-boundaries.mjs
-          node scripts/architecture/check-persistence-consumers.mjs --json > "$RUNNER_TEMP/a7-persistence-consumers.json"
+          node scripts/architecture/check-persistence-consumers.mjs --json > "$RUNNER_TEMP/a8-final-persistence-consumers.json"
           node scripts/db/check-migration-history.mjs
-          node scripts/db/check-flyway-ownership.mjs --json > "$RUNNER_TEMP/a7-flyway-ownership.json"
+          node scripts/db/check-flyway-ownership.mjs --json > "$RUNNER_TEMP/a8-final-flyway-ownership.json"
           cd data-ops-ui
           yarn install --frozen-lockfile
           yarn jest --runInBand
@@ -124,7 +124,7 @@ jobs:
           path: |
             ${{ runner.temp }}/a8-final-combination-snapshot.json
             ${{ runner.temp }}/a8-final-combination-snapshot.md
-            ${{ runner.temp }}/a7-persistence-consumers.json
-            ${{ runner.temp }}/a7-flyway-ownership.json
+            ${{ runner.temp }}/a8-final-persistence-consumers.json
+            ${{ runner.temp }}/a8-final-flyway-ownership.json
           if-no-files-found: warn
           retention-days: 30
