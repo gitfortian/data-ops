@@ -37,9 +37,9 @@ class SecurityRelationPortContractTest {
     membership.setUserId(13L);
     membership.setUserType(2);
     membership.setProjectId(991L);
-    assertEquals(13L, membership.getUserId());
-    assertEquals(2, membership.getUserType());
-    assertEquals(991L, membership.getProjectId());
+    assertEquals(Long.valueOf(13L), membership.getUserId());
+    assertEquals(Integer.valueOf(2), membership.getUserType());
+    assertEquals(Long.valueOf(991L), membership.getProjectId());
     UserProject same = new UserProject();
     same.setUserId(13L);
     same.setUserType(2);
@@ -52,15 +52,15 @@ class SecurityRelationPortContractTest {
   @Test
   void userRoleConstructorAndRoleGrantFieldsRetainLombokAbi() throws Exception {
     UserRole userRole = new UserRole(20L, 80L);
-    assertEquals(20L, userRole.getUserId());
-    assertEquals(80L, userRole.getRoleId());
+    assertEquals(Long.valueOf(20L), userRole.getUserId());
+    assertEquals(Long.valueOf(80L), userRole.getRoleId());
     assertEquals(new UserRole(20L, 80L), userRole);
     assertEquals(new UserRole(), UserRole.class.getDeclaredConstructor().newInstance());
     RolePermission grant = new RolePermission();
     grant.setRoleId(80L);
     grant.setPermissionId(501L);
-    assertEquals(80L, grant.getRoleId());
-    assertEquals(501L, grant.getPermissionId());
+    assertEquals(Long.valueOf(80L), grant.getRoleId());
+    assertEquals(Long.valueOf(501L), grant.getPermissionId());
     assertNotEquals(grant, new RolePermission());
     Set<String> publicMethods = Arrays.stream(RolePermissionDao.class.getMethods())
         .map(Method::getName).collect(Collectors.toSet());
