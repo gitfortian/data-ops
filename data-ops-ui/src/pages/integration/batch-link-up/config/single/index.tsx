@@ -12,16 +12,13 @@ import { listAllDataSources } from '@/services/data-source';
 import type { DataSourceRecord } from '@/services/data-source';
 import { BRAND_THEME } from '@/styles/brand';
 
-import { linkupJobDefinitionApi } from '../../api';
+import { getOfflineSyncEditDetail, saveOfflineSyncSingleGuide } from '@/services/batch-link-up';
 import SyncTaskEditor from '../../detail/components/SyncTaskEditor';
 import validateEditorConnectorForms from '../../detail/form-schema/validateEditorConnectorForms';
 import { useSmoothWheelScroll } from '../../detail/hooks/useSmoothWheelScroll';
 import {
   buildSavePayload,
-  extractSavedId,
-  isApiSuccess,
   normalizeEditDetail,
-  responseMessage,
   type SyncEditorState,
 } from '../../detail/model';
 
@@ -517,31 +514,13 @@ export default function SingleBatchLinkUpConfigPage() {
     try {
       setLoading(true);
 
-      const response =
-        await linkupJobDefinitionApi.selectEditDetail(
-          taskId,
-        );
-
-      if (
-        !isApiSuccess(response) ||
-        !response?.data
-      ) {
-        message.error(
-          responseMessage(
-            response,
-            '获取同步任务失败',
-          ),
-        );
-
+      const detail = await getOfflineSyncEditDetail(taskId);
+      if (!detail) {
+        message.error('获取同步任务失败');
         setEditor(null);
         return;
       }
-
-      const nextEditor =
-        normalizeEditDetail(
-          response.data,
-          taskId,
-        );
+      const nextEditor = normalizeEditDetail(detail, taskId);
 
       if (nextEditor.mode === 'GUIDE_MULTI') {
         history.replace(
@@ -590,24 +569,11 @@ export default function SingleBatchLinkUpConfigPage() {
       const payload =
         buildSavePayload(nextEditor);
 
-      const response =
-        await linkupJobDefinitionApi.saveOrUpdateGuideSingle(
-          payload,
-        );
-
-      if (!isApiSuccess(response)) {
-        
-
-        return null;
-      }
-
+      const savedId = await saveOfflineSyncSingleGuide(payload);
       const savedEditor: SyncEditorState = {
         ...nextEditor,
         basic: payload.basic,
-        id: extractSavedId(
-          response,
-          nextEditor.id,
-        ),
+        id: savedId === undefined ? nextEditor.id : String(savedId),
       };
 
       setEditor(savedEditor);
