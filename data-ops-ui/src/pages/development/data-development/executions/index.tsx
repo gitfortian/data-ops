@@ -1,4 +1,5 @@
 import YakButton from '@/components/YakButton';
+import { listDevelopmentTaskExecutions } from '@/services/data-development';
 import Table from '@/components/ReadableTable';
 import { YakFilterSwitch } from '@/components/ui';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
@@ -17,7 +18,6 @@ import moment from 'moment';
 import { useCallback, useEffect, useState } from 'react';
 
 import { WorkspaceLoadFailureState } from '../components/WorkspaceStateFeedback';
-import { listDevelopmentTaskExecutions } from '../service';
 import type {
   DevelopmentTaskExecutionStatus,
   DevelopmentTaskExecutionSummary,
@@ -105,7 +105,7 @@ const ExecutionHistoryPage = () => {
     setLoading(true);
     setLoadFailure(undefined);
     try {
-      const response = await listDevelopmentTaskExecutions({
+      const page = await listDevelopmentTaskExecutions({
         pageNo,
         pageSize,
         keyword: keyword || undefined,
@@ -115,8 +115,8 @@ const ExecutionHistoryPage = () => {
         startTime: dateRange?.[0]?.format?.('YYYY-MM-DD 00:00:00'),
         endTime: dateRange?.[1]?.format?.('YYYY-MM-DD 23:59:59'),
       });
-      setRecords(response.data?.records || []);
-      setTotal(response.data?.total || 0);
+      setRecords(page?.records || []);
+      setTotal(page?.total || 0);
     } catch (error) {
       setLoadFailure(classifyWorkspaceLoadFailure(error));
     } finally {
