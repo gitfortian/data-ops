@@ -1,6 +1,10 @@
-import { Button, Card, Space, Tag, Tooltip } from 'antd';
+import { Alert, Button, Card, Space, Tag, Tooltip } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { history } from '@umijs/max';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { classifyAssetListFailure, type AssetListReadFailure } from '../read-state';
+import { useLatestAssetListRequest } from '../useLatestAssetListRequest';
 
 import { YakButton, YakEmpty } from '@/components/ui';
 import { getAssetOverview } from '@/services/data-asset/api';
@@ -117,17 +121,23 @@ const RecentList = ({ title, rows }: { title: string; rows: AssetOverviewData['r
 const AssetOverviewPage = () => {
   const [data, setData] = useState<AssetOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<AssetListReadFailure | null>(null);
+  const beginLatestRequest = useLatestAssetListRequest();
 
   const load = useCallback(async () => {
+    const isCurrent = beginLatestRequest();
     setLoading(true);
+    setData(null);
+    setLoadError(null);
     try {
-      setData(await getAssetOverview());
-    } catch {
-      setData(null);
+      const result = await getAssetOverview();
+      if (isCurrent()) setData(result);
+    } catch (error) {
+      if (isCurrent()) setLoadError(classifyAssetListFailure(error));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [beginLatestRequest]);
 
   useEffect(() => {
     void load();
@@ -152,6 +162,14 @@ const AssetOverviewPage = () => {
         </Space>
       </div>
 
+      {loadError && (
+        <Alert className="!mt-4" type={loadError === 'FORBIDDEN' ? 'warning' : 'error'} showIcon
+          message={loadError === 'FORBIDDEN' ? '无权读取资产概览' : '资产概览读取失败'}
+          description="无法确认当前项目的资产总量与治理待办；失败不代表没有资产或待办。"
+          action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
+      )}
+      {data ? (
+        <>
       <div className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
         {KPI_CARDS.map((item) => {
           const raw = data ? Number(data.kpis[item.key] ?? 0) : 0;
@@ -200,11 +218,20 @@ const AssetOverviewPage = () => {
       </div>
 
       <div className="mt-0 grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <RecentList title="最近上架" rows={data?.recentListed ?? []} />
-        <RecentList title="最近下架" rows={data?.recentOffline ?? []} />
+        <RecentList title="最近上架" rows={data.recentListed} />
+        <RecentList title="最近下架" rows={data.recentOffline} />
       </div>
+        </>
+      ) : loading ? (
+        <Card className="!mt-4" loading />
+      ) : null}
     </div>
   );
 };
 
-export default AssetOverviewPage;
+/** A Project or permission change must discard metrics, pending responses and old actions. */
+export default function ScopedAssetOverviewPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetOverviewPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}

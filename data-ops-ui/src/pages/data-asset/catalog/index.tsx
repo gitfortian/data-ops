@@ -127,6 +127,8 @@ const AssetCatalogPage = () => {
   const [selectedRows, setSelectedRows] = useState<AssetRecord[]>([]);
 
   const [dirTree, setDirTree] = useState<DirNode[]>([]);
+  const [directoryError, setDirectoryError] = useState<AssetListReadFailure | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [tags, setTags] = useState<AssetTagRecord[]>([]);
 
@@ -171,13 +173,26 @@ const AssetCatalogPage = () => {
     void load();
   }, [load]);
 
+  const reloadDirectories = useCallback(async () => {
+    setDirectoryLoading(true);
+    setDirectoryError(null);
+    setDirTree([]);
+    try {
+      setDirTree(await getDirectoryTree());
+    } catch (error) {
+      setDirectoryError(classifyAssetListFailure(error));
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    getDirectoryTree().then(setDirTree).catch(() => setDirTree([]));
+    void reloadDirectories();
     listSemanticLayers()
       .then((list) => setLayers(list.filter((layer) => layer.status === 'ENABLED')))
       .catch(() => setLayers([]));
     listAssetTags().then(setTags).catch(() => setTags([]));
-  }, []);
+  }, [reloadDirectories]);
 
   const treeData = useMemo(() => toTreeData(dirTree), [dirTree]);
 
@@ -376,7 +391,17 @@ const AssetCatalogPage = () => {
         </Button>
         <div className={directoryOpen ? '' : 'hidden md:block'}>
         <div className="mb-2 text-[13px] font-medium text-[#667085]">资产目录</div>
-        {treeData.length === 0 ? (
+        {directoryLoading ? (
+          <YakEmpty compact title="正在读取目录" description="请等待当前项目的目录请求完成" />
+        ) : directoryError ? (
+          <div>
+            <YakEmpty compact
+              title={directoryError === 'FORBIDDEN' ? '无权读取资产目录树' : '目录树读取失败'}
+              description="不能将权限或来源异常当成没有目录"
+            />
+            <Button size="small" onClick={() => void reloadDirectories()}>重试目录读取</Button>
+          </div>
+        ) : treeData.length === 0 ? (
           <YakEmpty compact title="暂无目录" description="到「目录与标签」页按分层+业务域一键初始化" />
         ) : (
           <Tree
