@@ -63,11 +63,13 @@ export function reconcileKnownCorridor(pr, conflicted, current, incoming) {
 const LEGACY_WORKFLOW_GATES = Object.freeze([
   {
     anchor: '        run: node scripts/architecture/check-boundaries.mjs\n',
+    position: 'after',
     step: '      - name: Verify Boot persistence aliases and report actual Java consumers\n' +
       '        run: node scripts/architecture/check-persistence-consumers.mjs\n',
   },
   {
     anchor: '        run: node scripts/db/check-migration-history.mjs\n',
+    position: 'after',
     step: '      - name: Flyway history table and module ownership\n' +
       '        run: node scripts/db/check-flyway-ownership.mjs\n',
   },
@@ -77,11 +79,12 @@ const LEGACY_WORKFLOW_GATES = Object.freeze([
   },
 ]);
 
-function insertVettedStep(content, anchor, step) {
+function insertVettedStep(content, anchor, step, position = 'before') {
   if (content.split(anchor).length !== 2 || content.includes(step.trimEnd())) {
     throw new Error('Unexpected architecture workflow guard layout');
   }
-  return content.replace(anchor, () => step + anchor);
+  return content.replace(anchor, () => position === 'after'
+    ? anchor + step : step + anchor);
 }
 
 /**
@@ -99,8 +102,8 @@ export function reconcileSecurityConsolidation(pr, conflicted, current, incoming
     throw new Error('Unapproved A8.2 integration conflict; manual resolution required');
   }
   let expectedPrior = base.trimEnd();
-  for (const { anchor, step } of LEGACY_WORKFLOW_GATES) {
-    expectedPrior = insertVettedStep(expectedPrior, anchor, step);
+  for (const { anchor, step, position } of LEGACY_WORKFLOW_GATES) {
+    expectedPrior = insertVettedStep(expectedPrior, anchor, step, position);
   }
   if (current.trimEnd() !== expectedPrior) {
     throw new Error('Unexpected prerequisite workflow differences before #461');
@@ -110,8 +113,8 @@ export function reconcileSecurityConsolidation(pr, conflicted, current, incoming
     throw new Error('Missing original #461 Security and integration guards');
   }
   let combined = incoming.trimEnd();
-  for (const { anchor, step } of LEGACY_WORKFLOW_GATES) {
-    combined = insertVettedStep(combined, anchor, step);
+  for (const { anchor, step, position } of LEGACY_WORKFLOW_GATES) {
+    combined = insertVettedStep(combined, anchor, step, position);
   }
   // The resolution may ONLY add the three reviewed prerequisite steps to
   // exact #461 source; it cannot modify or discard a single Security step.
