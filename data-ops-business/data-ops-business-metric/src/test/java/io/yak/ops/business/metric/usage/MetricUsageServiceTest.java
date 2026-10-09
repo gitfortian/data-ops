@@ -3,6 +3,7 @@ package io.yak.ops.business.metric.usage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
@@ -19,14 +20,20 @@ import io.yak.ops.business.metric.publication.MetricPublicationService.Published
 import io.yak.ops.business.metric.repository.MetricUsageRepository;
 import io.yak.ops.business.metric.repository.MetricUsageRepository.UsageTypeCount;
 import io.yak.ops.core.project.CurrentProject;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.Savepoint;
 import java.util.List;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Usage SPI behavior for binding synchronization and reference summaries. */
 class MetricUsageServiceTest {
@@ -100,10 +107,81 @@ class MetricUsageServiceTest {
   }
 
   @Test
-  void syncBindingsPreflightFailureDoesNotMarkCallerTransactionForRollback() {
+  void syncBindingsPreflightFailureDoesNotTouchTransactionOrBindings() {
     when(publicationService.activeForBinding(101L))
         .thenThrow(new IllegalStateException("published metric lookup unavailable"));
     TransactionStatus transaction = mock(TransactionStatus.class);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
+    TransactionSynchronizationManager.setActualTransactionActive(true);
+    try (MockedStatic<TransactionAspectSupport> transactionContext =
+        mockStatic(TransactionAspectSupport.class)) {
+      transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+          .thenReturn(transaction);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L));
+      verify(repository, never()).deleteForConsumer("DATASET", 42L);
+      verify(repository, never()).append(any(), any());
+      verify(transaction, never()).createSavepoint();
+      verify(transaction, never()).setRollbackOnly();
+    } finally {
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
+    }
+  }
+
+  @Test
+  void syncBindingsRollsBackOnlyTheReferenceReplacementWhenAnInsertFails() {
+    when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
+    when(publicationService.activeForBinding(102L)).thenReturn(published(102L, 2));
+    doThrow(new RuntimeException("second insert failed"))
+        .when(repository).append(eq(7L),
+            org.mockito.ArgumentMatchers.argThat(value -> value.metricId().equals(102L)));
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    Object savepoint = new Object();
+    when(transaction.createSavepoint()).thenReturn(savepoint);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
+    TransactionSynchronizationManager.setActualTransactionActive(true);
+    try (MockedStatic<TransactionAspectSupport> transactionContext =
+        mockStatic(TransactionAspectSupport.class)) {
+      transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+          .thenReturn(transaction);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L, 102L));
+      verify(repository).deleteForConsumer("DATASET", 42L);
+      verify(repository, times(2)).append(eq(7L), any());
+      verify(transaction).rollbackToSavepoint(savepoint);
+      verify(transaction).releaseSavepoint(savepoint);
+      verify(transaction, never()).setRollbackOnly();
+    } finally {
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
+    }
+  }
+
+  @Test
+  void syncBindingsSuccessfulReplacementReleasesSavepointWithoutRollingBack() {
+    when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    Object savepoint = new Object();
+    when(transaction.createSavepoint()).thenReturn(savepoint);
+    boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
+    TransactionSynchronizationManager.setActualTransactionActive(true);
+    try (MockedStatic<TransactionAspectSupport> transactionContext =
+        mockStatic(TransactionAspectSupport.class)) {
+      transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+          .thenReturn(transaction);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L));
+      verify(repository).deleteForConsumer("DATASET", 42L);
+      verify(repository).append(eq(7L), any());
+      verify(transaction).releaseSavepoint(savepoint);
+      verify(transaction, never()).rollbackToSavepoint(savepoint);
+      verify(transaction, never()).setRollbackOnly();
+    } finally {
+      TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
+    }
+  }
+
+  @Test
+  void syncBindingsCannotStartReplacementWithoutSavepointInActiveTransaction() {
+    when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
+    TransactionStatus transaction = mock(TransactionStatus.class);
+    when(transaction.createSavepoint()).thenThrow(new IllegalStateException("savepoints disabled"));
     boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
     TransactionSynchronizationManager.setActualTransactionActive(true);
     try (MockedStatic<TransactionAspectSupport> transactionContext =
@@ -120,25 +198,58 @@ class MetricUsageServiceTest {
   }
 
   @Test
-  void syncBindingsMarksTransactionRollbackOnlyWhenAnInsertFailsAfterDeletion() {
+  void syncBindingsFailsClosedIfSavepointRollbackItselfFails() {
     when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
-    when(publicationService.activeForBinding(102L)).thenReturn(published(102L, 2));
-    doThrow(new RuntimeException("second insert failed"))
-        .when(repository).append(eq(7L),
-            org.mockito.ArgumentMatchers.argThat(value -> value.metricId().equals(102L)));
+    doThrow(new IllegalStateException("insert failed")).when(repository).append(eq(7L), any());
     TransactionStatus transaction = mock(TransactionStatus.class);
+    Object savepoint = new Object();
+    when(transaction.createSavepoint()).thenReturn(savepoint);
+    doThrow(new IllegalStateException("connection lost"))
+        .when(transaction).rollbackToSavepoint(savepoint);
     boolean previouslyActive = TransactionSynchronizationManager.isActualTransactionActive();
     TransactionSynchronizationManager.setActualTransactionActive(true);
     try (MockedStatic<TransactionAspectSupport> transactionContext =
         mockStatic(TransactionAspectSupport.class)) {
       transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
           .thenReturn(transaction);
-      service.syncBindings("DATASET", 42L, "sales", List.of(101L, 102L));
-      verify(repository).deleteForConsumer("DATASET", 42L);
+      service.syncBindings("DATASET", 42L, "sales", List.of(101L));
       verify(transaction).setRollbackOnly();
     } finally {
       TransactionSynchronizationManager.setActualTransactionActive(previouslyActive);
     }
+  }
+
+  @Test
+  void jdbcSavepointRollbackAllowsTheOuterTransactionToCommit() throws Exception {
+    DataSource dataSource = mock(DataSource.class);
+    Connection connection = mock(Connection.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    Savepoint savepoint = mock(Savepoint.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getAutoCommit()).thenReturn(true);
+    // Spring's ConnectionHolder checks JDBC metadata before creating a savepoint.
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(metadata.supportsSavepoints()).thenReturn(true);
+    when(connection.setSavepoint(anyString())).thenReturn(savepoint);
+    DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+
+    when(publicationService.activeForBinding(101L)).thenReturn(published(101L, 4));
+    doThrow(new IllegalStateException("write failed")).when(repository).append(eq(7L), any());
+    new TransactionTemplate(transactionManager).execute(status -> {
+      try (MockedStatic<TransactionAspectSupport> transactionContext =
+          mockStatic(TransactionAspectSupport.class)) {
+        transactionContext.when(TransactionAspectSupport::currentTransactionStatus)
+            .thenReturn(status);
+        service.syncBindings("DATASET", 42L, "sales", List.of(101L));
+      }
+      assertThat(status.isRollbackOnly()).isFalse();
+      return null;
+    });
+
+    verify(connection).rollback(savepoint);
+    verify(connection).releaseSavepoint(savepoint);
+    verify(connection).commit();
+    verify(connection, never()).rollback();
   }
 
   @Test
