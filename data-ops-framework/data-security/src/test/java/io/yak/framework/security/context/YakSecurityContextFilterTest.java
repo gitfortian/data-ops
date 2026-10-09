@@ -95,6 +95,22 @@ class YakSecurityContextFilterTest {
             });
   }
 
+  @Test
+  void alwaysClearsMovedThreadLocalContextWhenControllerThrows() throws Exception {
+    YakSecurityContextFilter filter = new YakSecurityContextFilter(
+        provider(null), authenticationProvider(authenticatedManager()));
+    var request = new MockHttpServletRequest();
+    request.addHeader(HttpRequestUtil.PROJECT_ID, "1001");
+    org.junit.jupiter.api.Assertions.assertThrows(jakarta.servlet.ServletException.class,
+        () -> filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+          assertTrue(YakSecurityContext.isAuthenticated());
+          assertEquals(Long.valueOf(42L), YakSecurityContext.getCurrentUserId());
+          throw new jakarta.servlet.ServletException("forced downstream failure");
+        }));
+    assertFalse(YakSecurityContext.isAuthenticated());
+    assertNull(YakSecurityContext.getCurrentUserId());
+  }
+
   private AuthenticationManager authenticatedManager() {
     AuthenticationManager manager = mock(AuthenticationManager.class);
     when(manager.isLogin()).thenReturn(true);
