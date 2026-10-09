@@ -24,6 +24,25 @@ test('A0–A8 inventory has unique reviewed PR numbers and correct branches', ()
   assert.deepEqual(ARCHITECTURE_SERIES.map(s => s.phase),
     ['A0', 'A1', 'A2', 'A2.2', 'A3', 'A3.2', 'A4', 'A4.2',
      'A5', 'A5.2', 'A6.1', 'A7', 'A7.1', 'A8.1a', 'A8.1b', 'A8.1c', 'A8.2']);
+  assert.deepEqual(ARCHITECTURE_SERIES.map(x => [x.number, x.branch]), [
+    [370, 'architecture/yak-principles-boot-guard'],
+    [373, 'architecture/yak-a1-module-topology'],
+    [375, 'architecture/yak-a2-persistence-wiring-split'],
+    [385, 'architecture/yak-a2-2-persistence-consumer-contract'],
+    [379, 'architecture/yak-a3-project-context-runtime'],
+    [389, 'architecture/yak-a3-2-project-access-cleanup'],
+    [380, 'architecture/yak-a4-flyway-ownership-guard'],
+    [387, 'architecture/yak-a4-2-flyway-startup-order-contract'],
+    [377, 'architecture/yak-a5-frontend-http-boundary'],
+    [391, 'architecture/yak-a5-2-frontend-transport-contract'],
+    [392, 'architecture/yak-a6-1-engine-spi-compatibility'],
+    [395, 'architecture/yak-a7-integration-acceptance-preview'],
+    [409, 'architecture/yak-a7-1-project-rbac-real-env'],
+    [417, 'architecture/yak-a8-1-file-reactor-retirement'],
+    [420, 'architecture/yak-a8-1b-bom-parent-decoupling'],
+    [423, 'architecture/yak-a8-1c-common-security-contract'],
+    [461, 'refactor/a8-2n-p-security-runtime-batch'],
+  ]);
   assert.equal(ARCHITECTURE_SERIES.at(-1).number, 461);
   assert.equal(ARCHITECTURE_SERIES.at(-1).branch,
     'refactor/a8-2n-p-security-runtime-batch');
