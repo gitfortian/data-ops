@@ -127,6 +127,14 @@ export function validatePersistenceOwners(files) {
     !datasource.includes('yakSecurityTransactionManager')) {
    errors.push('Starter must preserve MapperScan, Flyway history and named transaction assembly');
  }
+ if(!datasource.includes('@ConditionalOnProperty(') ||
+    !datasource.includes('"database-enabled"') ||
+    !datasource.includes('"datasource.enabled"') ||
+    !datasource.includes('matchIfMissing = true') ||
+    !datasource.includes('initMethod = "migrate"') ||
+    !datasource.includes('@DependsOn("yakSecurityFlyway")')) {
+   errors.push('Security database conditional activation or Flyway lifecycle changed');
+ }
  // A8.2t: freeze the existing runtime wiring, not merely bean names.
  const ordered=[datasource.indexOf('new TenantLineInnerInterceptor('),
                 datasource.indexOf('new PaginationInnerInterceptor()')];
