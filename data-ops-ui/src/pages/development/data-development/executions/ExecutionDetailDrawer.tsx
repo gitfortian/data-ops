@@ -1,3 +1,4 @@
+import { getDevelopmentTaskExecution } from '@/services/data-development';
 import { history, useAccess, useIntl } from '@umijs/max';
 import {
   Button,
@@ -15,7 +16,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   cancelDevelopmentTaskExecution,
-  getDevelopmentTaskExecution,
   retryDevelopmentTaskExecution,
 } from '../service';
 import type {
@@ -80,9 +80,9 @@ const ExecutionDetailDrawer = ({
   const [retryChain, setRetryChain] = useState<DevelopmentTaskExecutionDetail[]>([]);
 
   const readDetail = useCallback(async (id: DevelopmentId) => {
-    const response = await getDevelopmentTaskExecution(id);
-    if (!response.data) throw new Error('execution detail unavailable');
-    return response.data;
+    const detail = await getDevelopmentTaskExecution(id);
+    if (!detail) throw new Error('execution detail unavailable');
+    return detail;
   }, []);
 
   const refreshDetail = useCallback(
