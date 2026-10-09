@@ -1,7 +1,3 @@
-import type { ApiResponse } from '@/services/http/response';
-
-export type CommonApiResponse<T> = ApiResponse<T>;
-
 export interface DataSourceOption {
   label: string;
   value: string;
