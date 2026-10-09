@@ -209,6 +209,12 @@ jobs:
       - run: node scripts/release/frontend-artifact.mjs
       - run: bash ./mvnw -B -ntp verify
       - run: tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
+      - name: Verify packaged Security compiled classpath and final release JAR
+        run: |
+          set -euo pipefail
+          node scripts/architecture/check-security-distribution-classpath.mjs \
+            data-ops-boot/target/data-ops-boot-1.0.0.jar \
+            data-ops-dist/target/yak-ops-1.0.0.tar.gz
 
   a8-integration:
     name: A0-A8 ordered migration / runtime / UI acceptance (read-only)
@@ -317,6 +323,9 @@ jobs:
               -Dsurefire.failIfNoSpecifiedTests=false test
           node scripts/release/frontend-artifact.mjs
           tar -tzf data-ops-dist/target/yak-ops-*.tar.gz | grep '/web/build-manifest.json$'
+          node scripts/architecture/check-security-distribution-classpath.mjs \
+            data-ops-boot/target/data-ops-boot-1.0.0.jar \
+            data-ops-dist/target/yak-ops-1.0.0.tar.gz
           # Reverse every local merge; require the original main Git tree.
           node scripts/architecture/a8-final-integration-preview.mjs rollback "$preview" "$report"
       - name: Retain precise SHA snapshot and inventories, including on failure
