@@ -40,7 +40,8 @@ export interface GovernanceEvidenceCard {
 function isGovernanceSourcePath(path: string): boolean {
   const numeric = path.match(/^\/(?:data-asset\/detail|data-quality\/monitor|dataset)\/([1-9]\d*)$/);
   return numeric ? Number.isSafeInteger(Number(numeric[1]))
-    : /^\/data-quality\/execution\/[A-Za-z0-9_-]{1,128}$/.test(path);
+    : /^\/data-quality\/execution\/[A-Za-z0-9_-]{1,128}$/.test(path)
+      || /^\/data-analysis\/consumption\/(?:DATASET|DATA_SERVICE)%3A[1-9][0-9]{0,18}\?reviewVersion=[1-9][0-9]{0,29}$/.test(path);
 }
 
 function readObservedAt(value: unknown): string | null {

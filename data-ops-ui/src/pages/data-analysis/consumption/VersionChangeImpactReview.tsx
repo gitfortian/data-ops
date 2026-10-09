@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { consumptionEvidenceTarget } from './evidence-navigation';
 import { consumerSourceTarget, consumptionReviewReturnPath } from '@/config/consumer-source-navigation';
 import ManagedConsumerConfigurationHint from './ManagedConsumerConfigurationHint';
+import ConsumerVersionImpactEntry from './ConsumerVersionImpactEntry';
 import type { ManagedConsumerSourceState } from './managed-consumer-configuration';
 import { impactEvidenceWindowFacts } from './impact-evidence-coverage';
 import { consumerVersionOutreachDraft } from './version-impact-outreach';
@@ -241,6 +242,8 @@ export default function VersionChangeImpactReview({
         </Text>
         <Space wrap>
           <Text>待变更来源版本</Text>
+          <ConsumerVersionImpactEntry product={product} version={selected?.identity}
+            blocked={reviewLoading || !!reviewIssue || !evidenceImpact || !review} />
           <Select
             aria-label="待变更来源版本"
             style={{ minWidth: 280 }}

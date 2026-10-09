@@ -64,6 +64,14 @@ public class GovernanceEvidenceTools implements AgentToolBox, AgentSystemPromptC
     });
   }
 
+  @Tool(name = "get_consumer_version_impact_evidence", description = "只读本轮固定产品与精确来源版本的归属、有效订阅和成功使用持久化窗口，每侧最多10行；不触发同步，不表示完整影响。无需参数。")
+  public String consumerVersionImpact(RuntimeContext context) {
+    return execution.call(context, "get_consumer_version_impact_evidence", () -> {
+      var state = AgentToolExecution.state(context);
+      return evidence.consumerVersionImpact(state.target().consumerVersionImpact(), state.evidence());
+    });
+  }
+
   @Tool(name = "get_quality_execution_comparison", description = "只读比较用户固定选择的两次已结束历史质量执行；按稳定规则ID对齐最多各20条，保留截断和历史定义差异，不读取当前规则。无需参数，不允许模型更换执行对。")
   public String comparison(RuntimeContext context) {
     return execution.call(context, "get_quality_execution_comparison", () -> {

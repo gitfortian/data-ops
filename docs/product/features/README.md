@@ -40,3 +40,5 @@ Feature SHIPPED 后，将长期有效内容提升到 Product / Domain / Architec
 - [F-034 两次历史质量执行比较](F-034-agent-quality-execution-comparison.md)：IMPLEMENTING；固定执行对、历史身份核对及有界规则对齐，真实验收延期。
 
 - [F-035 有限资产影响说明](F-035-agent-asset-impact-explanation.md)：IMPLEMENTING；固定资产、三类使用摘要与范围缺口，只读说明；真实验收延期。
+
+- [F-036 精确消费来源版本的已知影响说明](F-036-agent-consumer-version-impact.md)：IMPLEMENTING；只读产品/版本归属、有效声明与精确版本成功使用窗口，真实验收延期。

@@ -280,3 +280,7 @@ gateway → quality.api 的既有边扩展到 QualityExecutionComparisonQueryApi
 ## 有限资产影响说明（F-035）
 
 ASSET_IMPACT 固定一个资产，只允许无参数 get_asset_impact_evidence 与原只读辅助工具。gateway 复用 Asset.api USAGE 分区，将页面访问、Lineage 一跳关系计数、源域业务使用分开登记 owner/五态/范围；不读完整图、下游对象或生成候选。原 turn/StateStore、预算、HITL、核验及历史保留。文本与容量超限拒绝该来源，真实验收 PENDING。精确边界见 docs/product/features/F-035-agent-asset-impact-explanation.md，无新依赖边。
+
+## 精确消费版本影响（F-036）
+
+CONSUMER_VERSION_IMPACT 固定产品类型/ID/来源版本，消费 consumption.api 的授权只读有界持久化证据。订阅不绑定版本，成功使用必须精确匹配版本；来源归属无法确认时停止关系投影。三个来源独立登记，最多各 10 行、每份 6000 units，未同步/满窗/未知保持原义。复用原 turn/StateStore、工具守卫、预算、HITL 和回链，不查询数据或生成候选。唯一新增源 corridor 为 gateway → consumption.api；禁止依赖 Consumption 实现/仓储。详见 F-036。

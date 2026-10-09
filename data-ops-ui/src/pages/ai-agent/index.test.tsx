@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import AiAgentPage from './index';
 import { streamTurnEvents } from '@/services/agent';
-import { governanceQuestions } from '@/services/agent/governance';
+import { governanceEntryPath, governanceQuestions, governanceTaskTitle } from '@/services/agent/governance';
 jest.mock('@/contexts/SecurityProjectContext', () => ({ useSecurityProject: () => ({ currentProject: { id: 1 } }) }));
 
 jest.mock('@/hooks/usePermissionAccess', () => ({
@@ -13,6 +13,29 @@ jest.mock('@/services/agent', () => ({
   agentChatApi: {},
   streamTurnEvents: jest.fn(),
 }));
+it('prepares the exact consumer version question without starting a turn', async () => {
+  const target = { purpose: 'CONSUMER_VERSION_IMPACT' as const, consumerVersionImpact: {
+    productType: 'DATA_SERVICE' as const, productIdentity: '101', sourceVersionIdentity: '9001',
+  } };
+  window.history.replaceState({}, '', governanceEntryPath(target));
+  try {
+    render(<AiAgentPage />);
+    expect(await screen.findByText(governanceTaskTitle(target))).toBeInTheDocument();
+    fireEvent.click(screen.getByText('准备消费影响说明'));
+    expect(screen.getByPlaceholderText(/输入/)).toHaveValue(governanceQuestions(target)[0]);
+    expect(streamTurnEvents).not.toHaveBeenCalled();
+    expect(screen.getByText('返回来源').closest('a')).toHaveAttribute('href', '/data-analysis/consumption/DATA_SERVICE%3A101?reviewVersion=9001');
+  } finally { window.history.replaceState({}, '', '/'); }
+});
+it('rejects consumer context without its task purpose instead of falling back to ordinary chat', () => {
+  window.history.replaceState({}, '', '/ai-agent?consumerProductType=DATASET&consumerProductIdentity=101&consumerVersionIdentity=9001');
+  try {
+    render(<AiAgentPage />);
+    expect(screen.getByText('治理任务入口无效')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/输入/)).not.toBeInTheDocument();
+    expect(streamTurnEvents).not.toHaveBeenCalled();
+  } finally { window.history.replaceState({}, '', '/'); }
+});
 it('renders the assistant entry and composer with the installed Ant Design X components', async () => {
   render(<AiAgentPage />);
   expect(await screen.findByPlaceholderText(/输入/)).toBeInTheDocument();

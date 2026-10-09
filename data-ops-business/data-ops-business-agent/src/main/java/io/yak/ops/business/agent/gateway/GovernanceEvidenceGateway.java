@@ -7,17 +7,18 @@ import io.yak.ops.business.agent.domain.GovernanceEvidenceLedger;
 import io.yak.ops.business.asset.api.AssetGovernanceQueryApi;
 import io.yak.ops.business.quality.api.QualityEvidenceQueryApi;
 import io.yak.ops.business.quality.api.QualityExecutionComparisonQueryApi;
+import io.yak.ops.business.consumption.api.ConsumerVersionImpactQueryApi;
+import io.yak.ops.business.agent.domain.ConsumerVersionImpactTarget;
 import io.yak.ops.core.security.ActionAccessDeniedException;
 import io.yak.ops.spi.section.SectionType;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /** Source-owned reads adapted to bounded, credential-free model evidence. */
 @Component
 @ConditionalOnAgentEnabled
-@RequiredArgsConstructor
 public class GovernanceEvidenceGateway {
   private static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
   // Explicit field allowlist: arbitrary attributes/config/SQL/diagnostics are never passed through.
@@ -46,6 +47,41 @@ public class GovernanceEvidenceGateway {
   private final ObjectProvider<AssetGovernanceQueryApi> assets;
   private final ObjectProvider<QualityEvidenceQueryApi> quality;
   private final ObjectProvider<QualityExecutionComparisonQueryApi> comparisons;
+  private final ObjectProvider<ConsumerVersionImpactQueryApi> consumers;
+
+  @Autowired
+  public GovernanceEvidenceGateway(ObjectProvider<AssetGovernanceQueryApi> assets,
+      ObjectProvider<QualityEvidenceQueryApi> quality, ObjectProvider<QualityExecutionComparisonQueryApi> comparisons,
+      ObjectProvider<ConsumerVersionImpactQueryApi> consumers) {
+    this.assets = assets; this.quality = quality; this.comparisons = comparisons; this.consumers = consumers;
+  }
+  public GovernanceEvidenceGateway(ObjectProvider<AssetGovernanceQueryApi> assets,
+      ObjectProvider<QualityEvidenceQueryApi> quality, ObjectProvider<QualityExecutionComparisonQueryApi> comparisons) {
+    this(assets, quality, comparisons, null);
+  }
+
+  public String consumerVersionImpact(ConsumerVersionImpactTarget target, GovernanceEvidenceLedger ledger) {
+    synchronized (ledger) {
+      ledger.requireCapacity(3);
+      var parts = ConsumerVersionImpactProjection.failure("UNAVAILABLE");
+      try {
+        var api = consumers == null ? null : consumers.getIfAvailable();
+        if (api != null) parts = ConsumerVersionImpactProjection.project(target,
+            api.read(target.productType(), target.productIdentity(), target.sourceVersionIdentity()));
+      } catch (ActionAccessDeniedException | SecurityException denied) {
+        parts = ConsumerVersionImpactProjection.failure("PERMISSION_DENIED");
+      } catch (RuntimeException unavailable) { /* Diagnostics never enter model context. */ }
+      String path = "/data-analysis/consumption/" + target.productType() + "%3A" + target.productIdentity()
+          + "?reviewVersion=" + target.sourceVersionIdentity();
+      var output = new StringBuilder("精确来源版本的已知消费窗口（未同步，非完整/原子快照）：\n");
+      for (var part : parts) {
+        var ref = ledger.register("CONSUMPTION", target.productType() + ":" + target.productIdentity()
+            + "/" + target.sourceVersionIdentity() + "/" + part.category(), part.status(), null, path);
+        output.append(part.category()).append(":\n").append(factualEnvelope(ref, part.facts(), ledger)).append('\n');
+      }
+      return output.toString();
+    }
+  }
 
   public String impact(long assetId, GovernanceEvidenceLedger ledger) {
     synchronized (ledger) {
