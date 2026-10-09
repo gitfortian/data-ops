@@ -150,6 +150,14 @@ class SecurityProjectRbacFlywayJdbcTest {
           "security:project:read", "a82_history_app"));
     }
     assertEquals(0, security.migrate().migrationsExecuted);
+    try (Connection connection = DriverManager.getConnection(url, user, pass)) {
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM flyway_schema_history WHERE version = ? AND type = ?",
+          "0.5", "BASELINE"));
+      assertEquals(1, count(connection,
+          "SELECT COUNT(*) FROM flyway_schema_history WHERE version = ? AND success = ?",
+          "1", true));
+    }
   }
 
   private static void assertBaselineAndRelations(String url, String user, String pass,
