@@ -31,11 +31,14 @@ jest.mock('@/hooks/usePermissionAccess', () => ({
 jest.mock('@/services/data-asset/api', () => ({
   getAssetOverview: (...args: unknown[]) => mockOverview(...args),
 }));
-jest.mock('@/components/ui', () => ({
-  YakButton: ({ children, onClick, disabled }: any) =>
-    React.createElement('button', { onClick, disabled }, children),
-  YakEmpty: ({ title }: any) => React.createElement('div', null, title),
-}));
+jest.mock('@/components/ui', () => {
+  const React = require('react');
+  return {
+    YakButton: ({ children, onClick, disabled }: any) =>
+      React.createElement('button', { onClick, disabled }, children),
+    YakEmpty: ({ title }: any) => React.createElement('div', null, title),
+  };
+});
 jest.mock('antd', () => {
   const React = require('react');
   const Box = ({ children }: any) => React.createElement('div', null, children);
