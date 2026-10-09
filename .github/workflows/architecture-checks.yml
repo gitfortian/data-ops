@@ -42,6 +42,8 @@ jobs:
         run: node scripts/architecture/check-security-relations-owner.mjs
       - name: A8 Project and Role membership Platform interface bridges
         run: node scripts/architecture/check-security-membership-ports.mjs
+      - name: A8 Project and Role pure model unique owner
+        run: node scripts/architecture/check-security-project-role-model-owner.mjs
       - name: A8 Security Platform permission ownership
         run: node scripts/architecture/check-security-permission-owner.mjs
       - name: Plan fail-safe PR validation scope
@@ -74,10 +76,23 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -parchitecture-ci"
           --health-interval=10s --health-timeout=5s --health-retries=12
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: architecture-ci
+          POSTGRES_DB: architecture_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres -d architecture_ci"
+          --health-interval=10s --health-timeout=5s --health-retries=12
     env:
       ARCHITECTURE_MYSQL_URL: jdbc:mysql://127.0.0.1:3306/architecture_ci?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       ARCHITECTURE_MYSQL_USERNAME: root
       ARCHITECTURE_MYSQL_PASSWORD: architecture-ci
+      ARCHITECTURE_PG_URL: jdbc:postgresql://127.0.0.1:5432/architecture_ci
+      ARCHITECTURE_PG_USERNAME: postgres
+      ARCHITECTURE_PG_PASSWORD: architecture-ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
