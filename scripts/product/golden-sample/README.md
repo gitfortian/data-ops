@@ -193,6 +193,45 @@ python scripts/product/golden-sample/historical_recovery_denials.py --apply `
 
 **真实验收边界**：本脚本即使通过，也仅证明当前部署环境的这些负向 HTTP/SQL 路径，报告仍为 `productAcceptance=PARTIAL`、`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`。来源缺少真实 SUCCESS、Project 不受本 Sample 所有、SQL 快照超过预算时不生成 PASS。受限角色未准备、>200 历史恢复（另见 R3）、来源 GAP/存储失联后的原页重试、浏览器和可核验的部署产物 SHA 都保持 #336 的独立 PENDING。CLI 离线单元测试位于 `test_historical_recovery_denials.py`，由既有 Golden Evidence CI 执行，**不等于真实登录执行**。
 
+## R5：真实 GAP/UNAVAILABLE 保留原游标、故障恢复与同页幂等
+
+`historical_recovery_retry.py` 是 #336 的 **两阶段真实部署验收**，不接入生产定时任务，不生成源审计、不删除或更改任何 Usage。使用 R1/R2 已归属的 Golden Sample Project 与空对照 Project、应用数据库 **SELECT-only** 账号。只处理一个精确不可变版本的**已保留 SUCCESS 原始审计**，每次 POST 限定 `limit=1`，因此可清楚证明同一条审计被阻断、相同持久化 ID 排他游标重试成功且幂等。
+
+**必要前置，由隔离环境 Owner 执行并独立留证：**
+
+- 预备来源审计仍存在、Consumer/QueryId 等来源归属字段完整、目标审计 **尚无归一化 Usage**。显式记录 audit ID、DatasetVersion 或 SourceRevision、Project、来源/Consumer 归属及已授权 Console 测试账号。不得伪造源成功审计、用 SQL 删除 Usage 制造缺口或改写原审计。
+- 通过**环境管理者批准的可逆故障开关/正常来源依赖断开与修复流程**，使该审计的 Consumption normalization 在一次请求内真实返回 `GAP`（含归一器的 IGNORED 归类）或 `UNAVAILABLE`。脚本本身没有故障注入器，也没有任何自动制造或修复故障的动作。
+- 仍需能用独立只读 MySQL 账号读取 Project Scope 内的真实来源和 Usage。若停掉了同一套 App MySQL 导致无法取证，本 R5 **不能**给出完成结果；来源 Reader 抛 HTTP 5xx 时不能记为受控的 GAP/UNAVAILABLE，须在 #336 单独做环境故障和日志证据验收。
+
+```powershell
+python scripts/product/golden-sample/historical_recovery_retry.py
+
+# 环境 Owner 已经有真实归一化故障；显式确认后才发送可能写 Usage 的 POST。
+# 沿用 R3 的 YAK_OPS_*、YAK_GOLDEN_APP_MYSQL_* 登录与只读 App DB 环境变量。
+python scripts/product/golden-sample/historical_recovery_retry.py --apply `
+  --stage blocked --confirm-fault-staged `
+  --kind DATASET --audit-id 9007199254740993 `
+  --physical-manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json `
+  --consumption-report docs/product/acceptance/golden-sample/consumption-acceptance.local.json `
+  --output docs/product/acceptance/golden-sample/r5-dataset-blocked.local.json
+
+# 必须先由 Owner 确认原故障已在外部恢复，原来源审计未变；
+# 第二步使用前次 blocked report 核验同一 Project+Product+Revision+auditId+cursor。
+python scripts/product/golden-sample/historical_recovery_retry.py --apply `
+  --stage recovered --kind DATASET --audit-id 9007199254740993 `
+  --physical-manifest docs/product/acceptance/golden-sample/runtime-manifest.local.json `
+  --consumption-report docs/product/acceptance/golden-sample/consumption-acceptance.local.json `
+  --blocked-report docs/product/acceptance/golden-sample/r5-dataset-blocked.local.json `
+  --output docs/product/acceptance/golden-sample/r5-dataset-recovered.local.json
+```
+
+对 Data Service Revision 用 `--kind DATA_SERVICE` 和其**真实 Invocation 行 ID**，两种来源游标都是 canonical 十进制字符串（或第一页 `null`），不会经 JavaScript Number 转换。以上 audit ID 只是调用参数示例，不能把示例数字当成实际测试结果。
+
+- **Blocked 阶段验真**：只读核对来源记录、原始来源身份、使用者版本、两个 Project 的当前 Usage；必须在真正的 API 返回中看到 `visitedAuditCount=1`、`retryRequired=true`、`normalizedOrAlreadyPresentCount=0`、`normalizationGapCount + normalizationUnavailableCount=1`、`nextBeforeAuditId/nextBeforeInvocationId=null`、`retainedAuditExhausted=false`；POST 后整个 Project Usage 与来源审计不变。不满足条件就不能生成成功报告。注意：`normalizationGapCount` 汇总 `GAP` 与 `IGNORED`，不能从聚合字段单独宣称根因。
+- **Recovered 阶段验真**：读入上述真实 blocked 报告，比较两个 Project、精确 Source、Audit ID、排他游标、来源记录 SHA-256 摘要与 EvidenceRef 摘要；确认被阻断那条 Usage 在重试前仍缺失。以**相同游标**再次 POST，使用来源 Truth 校验必须恰好新增一条 correct Consumer / Mode / SUCCESS 的 Usage，不删改其它证据。重放同一请求时 Usage 行标识及其它所有行不变，来源审计与对照 Project 也不得变化。
+- 数据读取有界：两个 Project Usage 与来源审计超过 10,000 行均报告 exit 2 / `PENDING`；来源不存在或之前已有 normalized Usage 也为 `PENDING`。若错误地在故障未布置的情况下运行 blocked POST，接口**可能按正常业务路径写入 Usage**：因此必须先外部确认故障及传入 `--confirm-fault-staged`；脚本检测意外持久化变化会 **FAIL**，但不会撤销业务写入。
+- **证据等级不夸大**：两个阶段分别输出 `REAL_BLOCKED_PAGE_OBSERVED`、`REAL_SAME_CURSOR_RECOVERY_VERIFIED`，仍标 `productAcceptance=PARTIAL`、`deploymentCommit=null`、`deploymentIdentity=UNVERIFIED`。本工具不证明 HTTP 5xx/Reader outage、防火墙/权限/浏览器、被保留策略清理的全历史、故障开关来源与生产恢复 SLA。部署身份和故障原因需额外独立留证。本地 `test_historical_recovery_retry.py` / GitHub Golden CI 只是**离线反例，不是实测 PASS**。
+
 ## 后续批次
 
 补齐 Model、Metric、Dataset 和 F-007 MDM 样本，再执行受限角色、故障隔离和浏览器旅程。F-004 沿已批准的 Dataset/Data Service 契约推进；Metric 作为新 Data Product 来源、完整质量问题状态机、质量发布门禁和生命周期对象扩展须遵循产品治理。
