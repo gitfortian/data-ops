@@ -199,7 +199,7 @@ class ConsumerImpactServiceTest {
     assertEquals(200, result.requestedLimit());
     assertEquals(1, result.visitedAuditCount());
     assertEquals(1, result.normalizedOrAlreadyPresentCount());
-    assertEquals(701L, result.nextBeforeAuditId());
+    assertEquals("701", result.nextBeforeAuditId());
     assertEquals(false, result.retainedAuditExhausted());
     assertEquals(false, result.retryRequired());
     org.mockito.Mockito.verify(sync).recoverSuccessfulVersionPage(101L, 9007199254740993L, null, 200);
@@ -222,7 +222,7 @@ class ConsumerImpactServiceTest {
     when(sync.recoverSuccessfulVersionPage(101L, 7L, 501L, 10)).thenReturn(page);
 
     var result = new ConsumerImpactService(subs, usage, project, sync, null)
-        .recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", 501L, 10);
+        .recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", "501", 10);
 
     assertEquals(3, result.visitedAuditCount());
     assertEquals(0, result.normalizedOrAlreadyPresentCount());
@@ -231,7 +231,7 @@ class ConsumerImpactServiceTest {
     assertEquals(null, result.nextBeforeAuditId());
     assertTrue(result.retryRequired());
     assertEquals(false, result.retainedAuditExhausted());
-    assertEquals(501L, result.requestedBeforeAuditId());
+    assertEquals("501", result.requestedBeforeAuditId());
   }
 
   @Test
@@ -245,7 +245,7 @@ class ConsumerImpactServiceTest {
     var result = new ConsumerImpactService(
         mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
         project, sync, null)
-        .recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", 20L, 50);
+        .recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", "20", 50);
 
     assertTrue(result.retainedAuditExhausted());
     assertEquals(null, result.nextBeforeAuditId());
@@ -267,10 +267,43 @@ class ConsumerImpactServiceTest {
     org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
         () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "07", null, 20));
     org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
-        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", 0L, 20));
+        () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:101"), "7", "0", 20));
+    for (String invalid : java.util.List.of(
+        "01", "-1", "1.0", " 9", "9223372036854775808")) {
+      org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+          () -> service.recoverDatasetVersionPage(
+              ProductKey.parse("DATASET:101"), "7", invalid, 20));
+    }
     org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
         () -> service.recoverDatasetVersionPage(ProductKey.parse("DATASET:0"), "7", null, 20));
     org.mockito.Mockito.verifyNoInteractions(project, sync, subs, usage);
+  }
+
+  @Test
+  void datasetBigintCursorRoundTripsLosslesslyBeyondJavascriptSafeInteger() {
+    CurrentProject project = mock(CurrentProject.class);
+    DatasetUsageEvidenceSynchronizer sync = mock(DatasetUsageEvidenceSynchronizer.class);
+    when(project.requireProjectId()).thenReturn(42L);
+    UsageEvidence evidence = mock(UsageEvidence.class);
+    when(evidence.providerEvidenceRef()).thenReturn("query:bigint-old-success");
+    UsageNormalizationResult normalized = UsageNormalizationResult.normalized(evidence);
+    when(sync.recoverSuccessfulVersionPage(
+        101L, 9007199254740995L, 9007199254740994L, 200))
+        .thenReturn(new DatasetUsageEvidenceSynchronizer.DatasetRecoveryPage(
+            java.util.List.of(normalized), 9007199254740993L, false));
+    var service = new ConsumerImpactService(
+        mock(SubscriptionRepository.class), mock(UsageEvidenceRepository.class),
+        project, sync, null);
+
+    var result = service.recoverDatasetVersionPage(
+        ProductKey.parse("DATASET:101"), "9007199254740995", "9007199254740994", 999);
+
+    assertEquals("9007199254740994", result.requestedBeforeAuditId());
+    assertEquals("9007199254740993", result.nextBeforeAuditId());
+    assertEquals(200, result.requestedLimit());
+    assertEquals(false, result.retryRequired());
+    org.mockito.Mockito.verify(sync).recoverSuccessfulVersionPage(
+        101L, 9007199254740995L, 9007199254740994L, 200);
   }
 
   private static UsageEvidence event(

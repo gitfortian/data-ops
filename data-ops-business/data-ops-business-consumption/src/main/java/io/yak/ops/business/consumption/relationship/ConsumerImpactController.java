@@ -32,7 +32,7 @@ public class ConsumerImpactController {
   public Result<DatasetAuditRecoveryView> recoverDatasetVersionPage(
       @RequestParam String productKey,
       @RequestParam String sourceVersionIdentity,
-      @RequestParam(required = false) Long beforeAuditId,
+      @RequestParam(required = false) String beforeAuditId,
       @RequestParam(defaultValue = "200") int limit) {
     return Result.success(service.recoverDatasetVersionPage(
         ProductKey.parse(productKey), sourceVersionIdentity, beforeAuditId, limit));

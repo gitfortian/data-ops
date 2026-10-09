@@ -149,9 +149,11 @@ class HistoricalAuditRecoveryGoldenContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate normalized"):
             indexed_usage(good + [good[0]], expected, "API_INVOKE")
 
-    def test_bigint_cursor_is_lossless_decimal_text_for_data_service(self):
-        self.assertEqual(str(BIG), transport_cursor("DATA_SERVICE", BIG))
-        self.assertEqual(BIG, transport_cursor("DATASET", str(BIG)))
+    def test_bigint_cursor_is_lossless_decimal_text_for_both_source_kinds(self):
+        for kind in ("DATASET", "DATA_SERVICE"):
+            with self.subTest(kind=kind):
+                self.assertEqual(str(BIG), transport_cursor(kind, BIG))
+                self.assertEqual(str(BIG), transport_cursor(kind, str(BIG)))
         for invalid in ["0", "-1", "01", "1.0", "9223372036854775808", ""]:
             with self.subTest(invalid=invalid):
                 with self.assertRaises(ValueError):
@@ -166,7 +168,8 @@ class HistoricalAuditRecoveryGoldenContractTest(unittest.TestCase):
         self.assertEqual("POST", api.calls[0][0])
         self.assertEqual("/api/v1/consumption/impact/dataset-version-recovery", api.calls[0][1])
         self.assertNotIn("beforeAuditId", api.calls[0][2])
-        self.assertEqual(source[199]["id"], api.calls[1][2]["beforeAuditId"])
+        self.assertEqual(str(source[199]["id"]), api.calls[1][2]["beforeAuditId"])
+        self.assertIsInstance(api.calls[1][2]["beforeAuditId"], str)
         self.assertEqual(200, api.calls[0][2]["limit"])
 
     def test_data_service_exactly_400_needs_empty_exhaustion_page(self):
@@ -178,6 +181,19 @@ class HistoricalAuditRecoveryGoldenContractTest(unittest.TestCase):
         self.assertEqual(str(source[199]["id"]), api.calls[1][2]["beforeInvocationId"])
         self.assertEqual(str(source[399]["id"]), api.calls[2][2]["beforeInvocationId"])
         self.assertIsInstance(api.calls[2][2]["beforeInvocationId"], str)
+
+    def test_dataset_recovery_rejects_numeric_bigint_response_to_prevent_js_rounding(self):
+        source = fixture("DATASET")
+        result = response("DATASET", "DATASET:7", BIG, None, source[:200])
+        with self.assertRaisesRegex(ValueError, "next cursor"):
+            validate_page("DATASET", {**result, "nextBeforeAuditId": source[199]["id"]},
+                          "DATASET:7", BIG, None, source[:200], PAGE_LIMIT)
+        with self.assertRaisesRegex(ValueError, "request cursor"):
+            validate_page("DATASET", {
+                **response("DATASET", "DATASET:7", BIG,
+                           source[199]["id"], source[200:]),
+                "requestedBeforeAuditId": source[199]["id"]},
+                "DATASET:7", BIG, source[199]["id"], source[200:], PAGE_LIMIT)
 
     def test_recovery_refuses_skipped_cursor_unverified_counts_or_forged_exhaustion(self):
         source = fixture("DATA_SERVICE")
