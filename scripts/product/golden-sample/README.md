@@ -151,7 +151,7 @@ python scripts/product/golden-sample/historical_recovery.py --apply `
 `YAK_OPS_BASE_URL`、`YAK_OPS_USERNAME`、`YAK_OPS_PASSWORD` 与现有 R2 的登录方式相同；应用库 MySQL 账号应只有 SELECT 权限，不得使用来源 Sample 的建表账号。严格验证两个 Project 均有 `yak-golden-sample-v1` 所有权标记，且 ID 与原 R1/R2 清单一致。
 
 - 首先由应用库只读查询验证原始审计确实 **>200**、归属于正确 Project + 产品 + 精确版本、成功状态及可归因 Consumer；必须至少有一条较早（超过首 200 条窗口）的成功审计缺少 normalized Usage。缺少场景则退出码 **2 / PENDING**，不会报告通过。
-- 用 **POST** 按当前保留审计 ID 降序、每页 200 逐步补偿；每页的 `visitedAuditCount`、归一化数、响应游标和耗尽状态与实际数据库行逐项吻合。Dataset 游标在 JSON 中是整数，Data Service 的 BIGINT 在 JSON 中是十进制字符串。
+- 用 **POST** 按当前保留审计 ID 降序、每页 200 逐步补偿；每页的 `visitedAuditCount`、归一化数、响应游标和耗尽状态与实际数据库行逐项吻合。Dataset 与 Data Service 的 BIGINT 游标在 JSON 中**均是十进制字符串**（或 null），不能转换为 JavaScript Number。
 - 完成后从 Usage 数据库核对**所有已保留成功审计**的 Consumer、模式、EvidenceRef 已归一化，旧记录已补齐；重新请求首个恢复页，持久化 Usage 行 ID 必须完全不变；对照 Project 发相同恢复请求不能获得或写入这些证据。
 - Source 审计在跑测期间不允许有其它写入，若读前后不一致直接失败。每类最多 50 页（通过 `--max-pages` 调小）；无后台任务，无绕过原接口的 Usage INSERT/UPDATE/DELETE。报告不保存认证凭据、原始 API Key 或业务 SQL。
 
