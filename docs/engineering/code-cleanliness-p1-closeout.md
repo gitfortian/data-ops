@@ -41,3 +41,7 @@
 - 对旧阶段文件只增加目录索引与可验证来源，不按日期大搬家、合并历史审计材料，也不把 Review 推广成“已验收”。
 
 **验收方式**：Architecture Checks 的静态合同与新增 Node 测试；Product Guard；相关 CI 按 impact planner。PR 检查未通过前不得声称完全核销；负责人手动合并。
+
+## P2 单 PR 集中实施入口
+
+P2 不再拆细粒度领域 PR。全域扫描、风险分类、7 个仅常量分支的 Modeling 等价清理及执行回归说明统一见 [P2 后端代码整洁化综合审计](p2-backend-cleanliness-audit.md)。报告中“零静态引用”仅是复核候选，绝不等于可自动删除的 Spring/Mapper/SPI 代码。
