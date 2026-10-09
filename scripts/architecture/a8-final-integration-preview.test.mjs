@@ -142,9 +142,9 @@ test('only vetted #423 SHA may carry the exact Security corridor step through co
   const pr = {
     number: 423, sha: '60c5378d7ba90894526e4ff0dfa06f173c4bca52',
   };
-  const workflow = 'jobs:\\n  impact:\\n    steps:\\n      - name: Plan fail-safe PR validation scope\\n';
-  const insertion = '      - name: A8 Common and Security migration corridor\\n' +
-    '        run: node scripts/architecture/check-common-security-corridor.mjs\\n';
+  const workflow = 'jobs:\n  impact:\n    steps:\n      - name: Plan fail-safe PR validation scope\n';
+  const insertion = '      - name: A8 Common and Security migration corridor\n' +
+    '        run: node scripts/architecture/check-common-security-corridor.mjs\n';
   const incoming = workflow.replace('      - name: Plan', insertion + '      - name: Plan');
   const resolved = reconcileKnownCorridor(pr, '.github/workflows/architecture-checks.yml',
     workflow, incoming);
