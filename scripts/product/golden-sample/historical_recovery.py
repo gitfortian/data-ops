@@ -73,7 +73,8 @@ def transport_cursor(kind, value):
     if value is None:
         return None
     value = positive_id(value)
-    return str(value) if kind == "DATA_SERVICE" else value
+    # Both recovery HTTP contracts transport signed BIGINT audit IDs as strings.
+    return str(value)
 
 
 def read_source(db, kind, project_id, source_id, version_id, limit):
