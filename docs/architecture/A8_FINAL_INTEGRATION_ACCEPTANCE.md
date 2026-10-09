@@ -20,6 +20,12 @@
 
 每个 PR 在执行时从 GitHub Pull API 读取并锁定 `head.sha`，然后用 `refs/pull/<number>/head` fetch；再次核实 fetch SHA 等于元数据 SHA。若在预演中途 PR 更新，直接失败而非自动接受新版本。以运行时最新 `main` 作为基线，仅本地执行 `git merge --no-ff`。如遇冲突，报告确切文件、阶段、SHA 并保留 Artifact；默认失败关闭。**唯一已审查的例外**：#423 精确 SHA `60c5378d7ba90894526e4ff0dfa06f173c4bca52`，且唯一冲突文件为 `.github/workflows/architecture-checks.yml`，并且上游文件确实包含预期的 `check-common-security-corridor.mjs` 两行检查时，只把该检查显式插入当前组合树，记录 resolution 和 merge SHA。其他任何 SHA、路径、内容漂移全部失败。绝不使用 `-X ours`、宽泛强制覆盖或跳过前置 PR。
 
+## #461 综合工作流冲突的审计收敛（2026-10-09）
+
+- A0–A8 read-only CI artifact `11610412360` 显示：前十六个受保护 PR 已精确 SHA 正序临时合并；#423 的唯一工作流冲突已经通过受限插入其 Common/Security corridor 检查解决；最后 #461 的 `.github/workflows/architecture-checks.yml` 再度出现独立冲突。
+- 仅允许在**第 17 步、PR #461、唯一该工作流文件**且阶段二 Git 内容严格等于当次 `main` 加三条已核实前置守卫时合并：#385 的 `check-persistence-consumers.mjs`、#380 的 `check-flyway-ownership.mjs`、#423 的 `check-common-security-corridor.mjs`。合并结果为 #461 原工作流加这三条守卫；移除三条后必须与 #461 原内容逐字一致。
+- 任一来源 SHA/分支、冲突路径、上游内容或 Security 守卫漂移，均失败关闭并上传冲突快照；不自动接受未知冲突，也绝不修改任何远端 Draft PR。新校验需要以 #461 最新 exact HEAD 实际 CI 结果为准。
+
 ## 编译与运行门槛
 
 组合树通过冲突检查后必须执行：
