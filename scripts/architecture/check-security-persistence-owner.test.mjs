@@ -89,12 +89,11 @@ function mutateDatasource(replaceFrom,replaceWith) {
 test('refuses app_name tenant field drift',()=>{
  assert.match(mutateDatasource('return "app_name";','return "tenant_id";'),/tenant app_name/);
 });
-test('refuses pagination running before tenant isolation',()=>{
- const f=readRepository(),src=f.get(ds);
- const tenant='interceptor.addInnerInterceptor(\\n                new TenantLineInnerInterceptor(';
- assert.ok(src.includes(tenant));
- f.set(ds,src.replace('new PaginationInnerInterceptor()','new TenantLineInnerInterceptor(tenantLineHandler)'));
- assert.match(diagnostic(f),/interceptor order|tenant app_name/);
+test('refuses missing pagination after tenant isolation',()=>{
+ assert.match(
+   mutateDatasource('new PaginationInnerInterceptor()', 'new TenantLineInnerInterceptor(tenantLineHandler)'),
+   /interceptor order|tenant app_name/
+ );
 });
 test('refuses Flyway historical baseline regression',()=>{
  assert.match(mutateDatasource('MigrationVersion.fromVersion("0")','MigrationVersion.fromVersion("1")'),/historical Security Flyway/);
