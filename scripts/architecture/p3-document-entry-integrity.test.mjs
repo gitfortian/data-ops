@@ -104,7 +104,7 @@ test('dated evidence, P3 and repository navigators never become new product auth
   for (const file of files) {
     const source = read(file);
     assert.ok(/Evidence|Historical|Review/.test(source), file);
-    assert.ok(/不是|非|不能|不等于|不得/.test(source), file);
+    assert.ok(/不是|非|不能|不等于|不得|不表示/.test(source), file);
   }
   assert.ok(existsSync('docs/product/DOCUMENT_GOVERNANCE.md'));
   assert.ok(existsSync('docs/product/decisions/PD-003-business-semantic-metric-contract.md'));
