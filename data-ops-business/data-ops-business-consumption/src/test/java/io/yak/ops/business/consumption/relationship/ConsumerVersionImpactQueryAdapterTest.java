@@ -100,4 +100,15 @@ class ConsumerVersionImpactQueryAdapterTest {
     assertThrows(IllegalArgumentException.class, () -> api.read("DATASET", "101", "../1"));
     verifyNoInteractions(authorization, project, discovery, usage, subscriptions);
   }
+  @Test void taggedIdentityGroupingDoesNotCollapseDelimiterCollisions() {
+    var first = observed(42, "9001");
+    var a = new UsageEvidence(first.id(), first.projectId(), first.productKey(), first.sourceVersion(),
+        new ConsumerRef(ConsumerType.JOB, "A:B", "C", "private"), first.observedAt(), first.consumptionMode(),
+        first.outcome(), first.provider(), first.providerEvidenceRef(), first.deduplicationId(), first.normalizedAt());
+    var b = new UsageEvidence(first.id(), first.projectId(), first.productKey(), first.sourceVersion(),
+        new ConsumerRef(ConsumerType.JOB, "A", "B:C", "private"), first.observedAt(), first.consumptionMode(),
+        first.outcome(), first.provider(), first.providerEvidenceRef(), first.deduplicationId(), first.normalizedAt());
+    when(usage.listByVersion(42L, key, "9001", 10)).thenReturn(List.of(a, b));
+    assertEquals(2, api.read("DATASET", "101", "9001").usage().consumers().size());
+  }
 }

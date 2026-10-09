@@ -51,8 +51,8 @@ public class ConsumerVersionImpactQueryAdapter implements ConsumerVersionImpactQ
         if (rows == null || rows.size() > WINDOW_LIMIT || rows.stream().anyMatch(row -> row == null
             || !project.equals(row.projectId()) || !key.equals(row.productKey())
             || !version.equals(row.sourceVersion().identity()) || row.outcome() != UsageOutcome.SUCCESS)) throw new IllegalStateException();
-        var merged = new LinkedHashMap<String, MutableConsumer>();
-        rows.forEach(row -> merged.computeIfAbsent(row.consumerRef().identityKey(), ignored -> new MutableConsumer(row.consumerRef()))
+        var merged = new LinkedHashMap<ConsumerIdentity, MutableConsumer>();
+        rows.forEach(row -> merged.computeIfAbsent(ConsumerIdentity.of(row.consumerRef()), ignored -> new MutableConsumer(row.consumerRef()))
             .record(row.observedAt()));
         return grouped(rows.size(), merged);
       });
@@ -64,8 +64,8 @@ public class ConsumerVersionImpactQueryAdapter implements ConsumerVersionImpactQ
         if (rows == null || rows.size() > WINDOW_LIMIT || rows.stream().anyMatch(row -> row == null
             || !project.equals(row.projectId()) || !key.equals(row.productKey())
             || row.status() != SubscriptionStatus.ACTIVE)) throw new IllegalStateException();
-        var merged = new LinkedHashMap<String, MutableConsumer>();
-        rows.forEach(row -> merged.computeIfAbsent(row.consumerRef().identityKey(), ignored -> new MutableConsumer(row.consumerRef())).record(null));
+        var merged = new LinkedHashMap<ConsumerIdentity, MutableConsumer>();
+        rows.forEach(row -> merged.computeIfAbsent(ConsumerIdentity.of(row.consumerRef()), ignored -> new MutableConsumer(row.consumerRef())).record(null));
         return grouped(rows.size(), merged);
       });
       return new Result(type, identity, version, SectionStatus.OK,
@@ -88,10 +88,15 @@ public class ConsumerVersionImpactQueryAdapter implements ConsumerVersionImpactQ
       return new Window(SectionStatus.UNAVAILABLE, 0, "UNKNOWN", List.of());
     }
   }
-  private static Window grouped(int count, Map<String, MutableConsumer> consumers) {
+  private static Window grouped(int count, Map<ConsumerIdentity, MutableConsumer> consumers) {
     return new Window(count == 0 ? SectionStatus.EMPTY : SectionStatus.OK, count,
         count == WINDOW_LIMIT ? "LIMIT_REACHED" : "WITHIN_LIMIT",
         consumers.values().stream().map(MutableConsumer::freeze).toList());
+  }
+  private record ConsumerIdentity(ConsumerType type, String domain, String identity) {
+    private static ConsumerIdentity of(ConsumerRef ref) {
+      return new ConsumerIdentity(ref.consumerType(), ref.sourceDomain(), ref.sourceIdentity());
+    }
   }
   private static final class MutableConsumer {
     private final ConsumerRef ref;
