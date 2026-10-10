@@ -7,8 +7,8 @@ import io.yak.ops.business.agent.runtime.SourceSemanticCandidateLedger.Evidence;
 import io.yak.ops.business.agent.runtime.SourceSemanticCandidateLedger.Review;
 import io.yak.ops.business.agent.runtime.SourceSemanticStateBridge;
 import io.yak.ops.business.agent.runtime.SourceSemanticTaskState;
-import io.yak.ops.business.semantic.api.SemanticCandidateCatalogApi;
-import io.yak.ops.business.semantic.api.SemanticCandidateCatalogApi.Entry;
+import io.yak.ops.business.agent.domain.SourceSemanticCatalog;
+import io.yak.ops.business.agent.domain.SourceSemanticCatalog.Entry;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -25,19 +25,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 /**
  * F-039 (3/5): source-grounded, human-reviewed candidates with zero business writes.
  * Business definitions are never inferred from column names as facts. Every candidate
  * starts unselected and incomplete; Semantic performs the catalog lookup itself.
  */
-@Service
+@Component
 @ConditionalOnAgentEnabled
 @ConditionalOnProperty(prefix = "yak.agent.source-semantic", name = "enabled", havingValue = "true")
 public class SourceSemanticCandidateService {
   private final SourceSemanticTaskFacade sources;
-  private final SemanticCandidateCatalogApi catalog;
+  private final SourceSemanticCatalog catalog;
   private final AgentSkillManageService skills;
   private final SourceSemanticCandidateLedger reviews;
 
@@ -54,7 +54,7 @@ public class SourceSemanticCandidateService {
       List<String> selected, List<String> closure, List<String> blockers, boolean ready) {}
 
   public SourceSemanticCandidateService(SourceSemanticTaskFacade sources,
-      SemanticCandidateCatalogApi catalog, AgentSkillManageService skills,
+      SourceSemanticCatalog catalog, AgentSkillManageService skills,
       SourceSemanticStateBridge state) {
     this.sources = sources;
     this.catalog = catalog;
@@ -285,7 +285,7 @@ public class SourceSemanticCandidateService {
     closure.add(id);
   }
 
-  private static void validate(Candidate c,SemanticCandidateCatalogApi.Snapshot catalog,Set<String> errors) {
+  private static void validate(Candidate c,SourceSemanticCatalog.Snapshot catalog,Set<String> errors) {
     String tag=" "+c.id();
     boolean codeNeeded=!("PROCESS_FIELD".equals(c.kind())||"SOURCE_LINK".equals(c.kind()));
     if (codeNeeded&&(c.code()==null||!c.code().matches("[A-Za-z0-9_]{1,64}")))
@@ -413,7 +413,7 @@ public class SourceSemanticCandidateService {
     return "c_"+UUID.nameUUIDFromBytes((taskId+"|"+kind+"|"+table+"|"+column)
         .getBytes(StandardCharsets.UTF_8)).toString();
   }
-  private static List<Match> match(Review review,SemanticCandidateCatalogApi.Snapshot catalog) {
+  private static List<Match> match(Review review,SourceSemanticCatalog.Snapshot catalog) {
     return review.candidates().stream().map(c -> {
       String kind=c.kind().startsWith("STANDARD_")?c.kind().substring(9):c.kind();
       var candidates=catalog.entries().stream().filter(e->kind.equals(e.kind())
@@ -430,7 +430,7 @@ public class SourceSemanticCandidateService {
         || !review.resultDigests().equals(task.resultDigests()))
       throw new IllegalStateException("[F039_REVIEW_SOURCE_CHANGED]");
   }
-  private static void verifyProject(SourceSemanticTaskState task,SemanticCandidateCatalogApi.Snapshot catalog) {
+  private static void verifyProject(SourceSemanticTaskState task,SourceSemanticCatalog.Snapshot catalog) {
     if (task.projectId()!=catalog.projectId()||!catalog.complete())
       throw new IllegalStateException("[F039_CATALOG_INCOMPLETE]");
   }
@@ -446,7 +446,7 @@ public class SourceSemanticCandidateService {
     return digest(parts);
   }
 
-  private static String digestCatalog(SemanticCandidateCatalogApi.Snapshot catalog) {
+  private static String digestCatalog(SourceSemanticCatalog.Snapshot catalog) {
     var parts=new ArrayList<String>();
     parts.add(Long.toString(catalog.projectId()));
     for(var e:catalog.entries()) {
