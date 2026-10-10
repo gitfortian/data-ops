@@ -26,4 +26,6 @@ public record ReverseImportPlan(
     String sourceDatabase,
     String sourceTable,
     List<ModelingStructureApi.ColumnInput> columns,
-    List<String> primaryKey) {}
+    List<String> primaryKey,
+    /** Exact source catalog columns, excluding automatically generated technical fields. */
+    List<String> sourceColumnNames) {}
