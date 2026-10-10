@@ -98,3 +98,28 @@ export const listLogicalVersions = (id: number): Promise<LogicalDraftVersion[]> 
   HttpUtils.getData<LogicalDraftVersion[]>(`${ROOT}/${id}/versions`);
 export const getLogicalVersionSnapshot = (id: number, version: number): Promise<string> =>
   HttpUtils.getData<string>(`${ROOT}/${id}/versions/${version}`);
+
+/** An evidence-only proposal: never a generated model, approved mapping or deployment. */
+export interface LogicalPhysicalPreview {
+  logicalModelId: number;
+  logicalVersionNo: number;
+  physicalModelId: number;
+  physicalLayer?: string;
+  physicalStatus: string;
+  readyForReview: boolean;
+  blockers: string[];
+  columns: {
+    physicalColumn: string;
+    physicalStdFieldId?: number;
+    logicalEntity?: string;
+    logicalAttribute?: string;
+    result: string;
+    reason: string;
+  }[];
+}
+export const previewLogicalPhysical = (
+  logicalId: number, versionNo: number, physicalModelId: number,
+): Promise<LogicalPhysicalPreview> =>
+  HttpUtils.getData<LogicalPhysicalPreview>(
+    `${ROOT}/${logicalId}/versions/${versionNo}/physical-preview?physicalModelId=${physicalModelId}`,
+  );
