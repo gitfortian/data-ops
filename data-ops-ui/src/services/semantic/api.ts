@@ -183,6 +183,10 @@ export type SemanticFieldUpdatePayload = Omit<SemanticFieldSavePayload, 'code'> 
 export const pageSemanticFields = (params: SemanticFieldPageParams): Promise<SemanticPageResult<SemanticFieldRecord>> =>
   HttpUtils.postData<SemanticPageResult<SemanticFieldRecord>>(`${SEMANTIC_API_PREFIX}/fields/page`, params);
 
+/** Authenticated, project-scoped original detail for F-039 formal-ID handoff. */
+export const getSemanticField = (id: number): Promise<SemanticFieldRecord> =>
+  HttpUtils.getData<SemanticFieldRecord>(`${SEMANTIC_API_PREFIX}/fields/${id}`);
+
 export const createSemanticField = (payload: SemanticFieldSavePayload): Promise<SemanticFieldRecord> =>
   HttpUtils.postData<SemanticFieldRecord>(`${SEMANTIC_API_PREFIX}/fields`, payload);
 
