@@ -47,6 +47,14 @@ export interface CandidateView {
   catalogEntries: SemanticCatalogEntry[];
   matches: Array<{ candidateId: string; matches: SemanticCatalogEntry[]; ambiguous: boolean }>;
 }
+export interface AdoptionReceipt {
+  candidateId: string;
+  status: 'CREATED' | 'REUSED' | 'LINKED' | 'NOT_EXECUTED' | 'NEEDS_RECONCILIATION' | 'WAITING_APPROVAL' | string;
+  semanticId: number | null;
+  semanticVersion: number | null;
+  kind: string;
+  message: string | null;
+}
 export interface CandidatePreflight {
   revision: number;
   payloadDigest: string;
@@ -85,6 +93,11 @@ export const sourceSemanticCandidates = {
   answer: (taskId: string, expectedRevision: number, questionId: string, value: string) =>
     HttpUtils.postData<CandidateView>(`${path(taskId)}/answer`,
       { expectedRevision, questionId, value }, OPTIONS),
+  adopt: (taskId: string, revision: number, payloadDigest: string, preflightTicket: string) =>
+    HttpUtils.postData<AdoptionReceipt[]>(`${path(taskId)}/adopt`,
+      { revision, payloadDigest, preflightTicket, confirmed: true }, OPTIONS),
+  receipts: (taskId: string) =>
+    HttpUtils.getData<AdoptionReceipt[]>(`${path(taskId)}/adoption-receipts`, OPTIONS),
   preflight: (taskId: string, revision: number) =>
     HttpUtils.postData<CandidatePreflight>(
       `${path(taskId)}/preflight?revision=${encodeURIComponent(String(revision))}`, {}, OPTIONS),
