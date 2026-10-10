@@ -13,6 +13,7 @@ import ConfigPanel from './components/ConfigPanel';
 import { useAgentStyles } from './components/pageStyles';
 import ReportsTab from './components/ReportsTab';
 import QuestionPreparationPanel from './components/QuestionPreparationPanel';
+import SourceSemanticTaskPanel from './components/SourceSemanticTaskPanel';
 import SkillsTab from './components/SkillsTab';
 import { AGENT_SKILL_READ } from './skill-runtime';
 import {
@@ -93,6 +94,9 @@ function AvatarFallback(props: { icon: React.ReactNode; background: string; colo
 
 const AiAgentPage: React.FC = () => {
   const initialSession = React.useRef(new URLSearchParams(window.location.search).get('sessionId'));
+  const sourceParams = React.useMemo(() => new URLSearchParams(window.location.search), []);
+  const sourceDataSourceId = sourceParams.get('dataSourceId');
+  const initialSourceTaskId = sourceParams.get('sourceTaskId') ?? undefined;
   const [governanceTarget, setGovernanceTarget] = React.useState(() => initialSession.current ? null : parseGovernanceTarget(window.location.search));
   const [historyLoading, setHistoryLoading] = React.useState(Boolean(initialSession.current));
   const [historyError, setHistoryError] = React.useState('');
@@ -1069,6 +1073,10 @@ const AiAgentPage: React.FC = () => {
         {!sessions.length && !sessionLoading ? <Typography.Text type="secondary">暂无会话</Typography.Text> : null}
       </Sider>
       <Content style={{ display: 'flex', flexDirection: 'column', padding: 16 }}>
+        {sourceDataSourceId && can('agent:chat:run') && can('resource:data-source:read') && (
+          <SourceSemanticTaskPanel dataSourceId={sourceDataSourceId}
+            initialTaskId={initialSourceTaskId} />
+        )}
         {governanceTarget && (
           <Alert
             type="info"

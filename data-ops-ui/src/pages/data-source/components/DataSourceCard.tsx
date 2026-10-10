@@ -4,6 +4,7 @@ import { history, useAccess, useIntl } from '@umijs/max';
 import { motion } from 'framer-motion';
 import {
   Clock3,
+  BrainCircuit,
   Pencil,
   ScrollText,
   Trash2,
@@ -13,6 +14,7 @@ import {
 
 import DatabaseIcons from '@/components/data-source/icons/DatabaseIcons';
 import { buildIntegrationCreatePath } from '@/services/integration/sourceHandoff';
+import { sourceTaskPath } from '@/services/agent/sourceSemantic';
 import { getEnvironmentTagConfigMap, PAGE_ANIMATION } from '../constants';
 import type { DataSourcePermissions, DataSourceViewMode } from '../types';
 import { dataSourceRecordKey } from '../types';
@@ -57,12 +59,16 @@ const DataSourceCard = ({
     Boolean(currentId) &&
     String(record.dbType || '').toUpperCase() === 'MYSQL' &&
     access.hasPermission('task:realtime:create');
+  const canStartSourceSemantic = Boolean(currentId)
+    && access.hasPermission('agent:chat:run')
+    && access.hasPermission('resource:data-source:read');
   const actionAvailable =
     permissions.canTest ||
     permissions.canUpdate ||
     permissions.canDelete ||
     permissions.canReadSqlExecutions ||
-    canCreateRealtime;
+    canCreateRealtime ||
+    canStartSourceSemantic;
   const isListView = viewMode === 'list';
 
   const openRealtimeCreate = () => {
@@ -139,6 +145,17 @@ const DataSourceCard = ({
 
         {actionAvailable ? (
           <div className="flex shrink-0 -translate-y-1 gap-1 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+            {canStartSourceSemantic ? (
+              <YakButton
+                type="text"
+                size="small"
+                iconOnly
+                title="来源结构业务理解（需 Agent 侧显式启用）"
+                className="!h-[30px] !w-[30px] !rounded-[8px] !border !border-[#e9ebef] !bg-white/90 !p-0"
+                icon={<BrainCircuit size={14} strokeWidth={1.9} />}
+                onClick={() => history.push(sourceTaskPath(currentId))}
+              />
+            ) : null}
             {canCreateRealtime ? (
               <YakButton
                 type="text"
