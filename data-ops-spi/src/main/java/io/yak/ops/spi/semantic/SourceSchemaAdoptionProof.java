@@ -13,4 +13,6 @@ public interface SourceSchemaAdoptionProof {
   }
   /** Fail closed on missing permissions, cross-project selection or harvest drift. */
   void assertCurrent(Expected expected);
+  /** Resolve ONLY an asset in a freshly verified authorized physical snapshot. */
+  String verifiedTableName(Expected expected,String assetKey);
 }
