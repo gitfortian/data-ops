@@ -160,4 +160,40 @@ class LogicalPhysicalHandoffPreviewServiceTest {
     assertEquals(before.physicalStructureSha256(), after.physicalStructureSha256());
   }
 
+
+  @Test void processReassignmentInvalidatesPhysicalEvidenceEvenIfColumnsUnchanged() {
+    target(11L);
+    var original = preview.preview(77L, 2, 50L);
+    Model reassigned = Model.create("dwd_orders", "订单明细", ModelDialect.DORIS,
+        "", null, "DWD", 33L).withPersisted(50L, "tester", null, null);
+    when(repository.findById(50L)).thenReturn(Optional.of(reassigned));
+    var after = preview.preview(77L, 2, 50L);
+    assertNotEquals(original.physicalStructureSha256(), after.physicalStructureSha256());
+    assertEquals(original.logicalSnapshotSha256(), after.logicalSnapshotSha256());
+    assertFalse(after.readyForReview());
+    assertTrue(after.blockers().stream().anyMatch(s -> s.contains("业务过程身份不一致")));
+  }
+
+  @Test void physicalPropertyMapOrderDoesNotChangeFingerprint() {
+    target(11L);
+    var value = structure.get(50L);
+    var a = new java.util.LinkedHashMap<String, String>();
+    a.put("replication_num", "1");
+    a.put("storage_type", "column");
+    when(structure.get(50L)).thenReturn(new StructureView(50L,
+        value.modelCode(), value.modelName(), value.dialect(), value.status(),
+        value.modelDescription(), value.tableName(), value.tableComment(),
+        value.columns(), value.primaryKey(), value.indexes(), value.partition(), a));
+    var first = preview.preview(77L, 2, 50L);
+    var b = new java.util.LinkedHashMap<String, String>();
+    b.put("storage_type", "column");
+    b.put("replication_num", "1");
+    when(structure.get(50L)).thenReturn(new StructureView(50L,
+        value.modelCode(), value.modelName(), value.dialect(), value.status(),
+        value.modelDescription(), value.tableName(), value.tableComment(),
+        value.columns(), value.primaryKey(), value.indexes(), value.partition(), b));
+    var second = preview.preview(77L, 2, 50L);
+    assertEquals(first.physicalStructureSha256(), second.physicalStructureSha256());
+  }
+
 }
