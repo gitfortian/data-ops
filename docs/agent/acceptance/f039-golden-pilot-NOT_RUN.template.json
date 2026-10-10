@@ -1,0 +1,127 @@
+{
+  "schema": "f039-golden-v1",
+  "context": {
+    "realEnvironment": false,
+    "environment": null,
+    "gitSha": null,
+    "projectId": null,
+    "dataSourceId": null,
+    "sourceFingerprint": null,
+    "collectJobId": null,
+    "taskId": null,
+    "originalTurnIds": [],
+    "modelProvider": null,
+    "modelName": null,
+    "skillVersions": null,
+    "startedAt": null,
+    "finishedAt": null
+  },
+  "scenarios": {
+    "SI01": {
+      "title": "端到端来源到正式回读",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI02": {
+      "title": "来源缺口与真实覆盖",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI03": {
+      "title": "跨片同义概念与人工归并",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI04": {
+      "title": "同名异义、标准与语义不足",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI05": {
+      "title": "Plan 确认/拒绝/修订",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI06": {
+      "title": "跨用户、跨项目与双任务隔离",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI07": {
+      "title": "总额度与超限阻断",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI08": {
+      "title": "刷新/取消/停止/重启恢复",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI09": {
+      "title": "采集及 Skill 漂移失效",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI10": {
+      "title": "撤权及源域 ACL 拒绝",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI11": {
+      "title": "幂等与并发同码冲突",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI12": {
+      "title": "丢回执、部分保存及人工继续",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI13": {
+      "title": "发布审批等待及有效引用",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI14": {
+      "title": "消息压缩/清理与交付材料留存",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    },
+    "SI15": {
+      "title": "原助手 F-023/F-026/F-028/F-029 无回归",
+      "status": "NOT_RUN",
+      "reason": "Real authorized pilot has not been executed",
+      "evidence": []
+    }
+  },
+  "expert": {
+    "independent": false,
+    "reviewerId": null,
+    "role": null,
+    "decision": "NOT_RUN",
+    "reviewedAt": null,
+    "assessment": null,
+    "reviewedScenarioIds": []
+  },
+  "measurement": {
+    "manualMinutes": null,
+    "assistedHumanMinutes": null,
+    "aiWaitMinutes": null,
+    "modelTokens": null,
+    "sameScopeJustification": null
+  }
+}
