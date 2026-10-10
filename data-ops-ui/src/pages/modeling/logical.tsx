@@ -1,9 +1,11 @@
 import { history } from '@umijs/max';
 import {
-  Alert, Button, Card, Empty, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message,
+  Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Table, Tag, Typography, message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
+import { pageModelingModels } from '@/services/modeling/api';
+import type { ModelingModelRecord } from '@/services/modeling/types';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
@@ -47,6 +49,9 @@ export default function LogicalWorkspace() {
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [snapshotText, setSnapshotText] = useState('');
   const [physicalModelId, setPhysicalModelId] = useState<number | null>(null);
+  const [physicalSearch, setPhysicalSearch] = useState('');
+  const [physicalTargets, setPhysicalTargets] = useState<ModelingModelRecord[]>([]);
+  const [physicalTargetsLoading, setPhysicalTargetsLoading] = useState(false);
   const [handoffPreview, setHandoffPreview] = useState<LogicalPhysicalPreview>();
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [createForm] = Form.useForm<CreateValues>();
@@ -85,6 +90,33 @@ export default function LogicalWorkspace() {
 
   useEffect(() => { void reload(); }, [reload]);
 
+  // Reuse Modeling's project-scoped catalog rather than expecting builders to know
+  // physical-model database IDs. Server-side search also covers later pages.
+  useEffect(() => {
+    if (!detail) {
+      setPhysicalTargets([]);
+      setPhysicalTargetsLoading(false);
+      return;
+    }
+    let active = true;
+    setPhysicalTargetsLoading(true);
+    const timeout = setTimeout(() => {
+      void pageModelingModels({
+        pageNo: 1, pageSize: 50, keyword: physicalSearch.trim() || undefined,
+      }).then((page) => {
+        if (active) setPhysicalTargets(page.bizData ?? []);
+      }).catch(() => {
+        if (active) {
+          setPhysicalTargets([]);
+          message.error('物理模型列表加载失败，请检查当前项目和读取权限');
+        }
+      }).finally(() => {
+        if (active) setPhysicalTargetsLoading(false);
+      });
+    }, 250);
+    return () => { active = false; clearTimeout(timeout); };
+  }, [detail?.model.id, physicalSearch]);
+
   useEffect(() => {
     if (!detail?.process?.id) { setFields([]); return; }
     let active = true;
@@ -96,6 +128,8 @@ export default function LogicalWorkspace() {
 
   const selectModel = useCallback(async (id: number) => {
     setHandoffPreview(undefined);
+    setPhysicalModelId(null);
+    setPhysicalSearch('');
     setSelected(id);
     setLoading(true);
     try {
@@ -201,7 +235,7 @@ export default function LogicalWorkspace() {
   };
   const previewPhysical = async (versionNo: number) => {
     if (selected == null || physicalModelId == null) {
-      message.warning('请输入需要核对的项目内物理模型 ID');
+      message.warning('请先从项目模型目录中选择要对照的物理模型');
       return;
     }
     setHandoffPreview(undefined);
@@ -299,11 +333,33 @@ export default function LogicalWorkspace() {
                   ]} />
               </Card>
               <Card title="独立设计快照（不是部署版本）"
-                extra={<Space>
-                  <Typography.Text type="secondary">对比项目内已有物理模型 ID</Typography.Text>
-                  <InputNumber min={1} precision={0} value={physicalModelId}
-                    onChange={(value) => { setPhysicalModelId(value); setHandoffPreview(undefined); }}
-                    placeholder="物理模型 ID" />
+                extra={<Space wrap>
+                  <Typography.Text type="secondary">对照项目内已有物理模型</Typography.Text>
+                  <Select<number>
+                    className="min-w-[280px]"
+                    style={{ width: 320 }}
+                    showSearch
+                    allowClear
+                    filterOption={false}
+                    loading={physicalTargetsLoading}
+                    placeholder="按物理模型名称或编码搜索"
+                    notFoundContent={physicalTargetsLoading ? '正在查询项目物理模型' : '无匹配模型，请输入更多关键词'}
+                    value={physicalModelId ?? undefined}
+                    onSearch={setPhysicalSearch}
+                    onClear={() => { setPhysicalModelId(null); setHandoffPreview(undefined); }}
+                    onChange={(value) => { setPhysicalModelId(value ?? null); setHandoffPreview(undefined); }}
+                    options={physicalTargets
+                      .filter((target) => target.id != null
+                        && Number.isSafeInteger(Number(target.id)) && Number(target.id) > 0)
+                      .map((target) => ({
+                        value: Number(target.id),
+                        label: `${target.name || target.code}（${target.code || target.id}） · ${target.layerCode || '未分层'} · ${target.status || '未知状态'}`,
+                      }))}
+                  />
+                  <Button disabled={physicalModelId == null}
+                    onClick={() => history.push(`/modeling/models/${physicalModelId}`)}>
+                    打开物理模型
+                  </Button>
                 </Space>}>
                 <Table size="small" rowKey="id" pagination={false} dataSource={versions}
                   columns={[
