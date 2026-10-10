@@ -17,7 +17,7 @@ Delivery: PR #504, main from merged #503 (`ac8dea69c4f073f329a1e295a38e0a19e99ba
 | 真实进度与成果 | 原 AgentTurnRepository/MessageTreeRepository 是真实状态和回答；只在完成且唯一 done assistant 消息存在时，复制有界结果至 CAS immutable Artifact，按 chunk/turn/source/plan/hash 回执完成 | 缺回答/空回答、修改、来源漂移时不能伪造完成 |
 | 刷新、断开和恢复 | taskId 原页面路由可回访；读取会合并原 turn 的 QUEUED/RUNNING/WAITING_INPUT/TERMINAL，SDK CAS 保留分片和额度 | 真实原 turn 可以在浏览器关闭后继续，下一片仍需本人授权触发 |
 | 服务端片段自动接续 | 每个原 Turn 确认 COMPLETED 且 assistant 消息树已最终落笔后，SourceSemanticAutoContinuation 使用 UserExecutionScope 重新恢复真实用户权限、项目成员关系；核实原 turn 收据后 CAS 尝试下一片。若撤权、漂移或预算失败则保持可回访状态、不盲目重试 | 无需页面常驻；进程在终态和提交下一片之间崩溃时仍需用户恢复推进 |
-| 暂停/取消/恢复 | 暂停只阻断未来片段，取消先 CAS 停新工作再请求原 AgentChatService.cancelTurn；中断重新验证来源和计划且新建 turn | 迟到成果不得让 CANCELLED 恢复为 COMPLETED |
+| 暂停/取消/恢复 | 运行中的“暂停”先 CAS 进入 PAUSE_REQUESTED，让真实原轮完成、封存片段后转 PAUSED，绝不启动下一片；取消先 CAS 停新工作再请求原 AgentChatService.cancelTurn；中断重新验证来源和计划且新建 turn | 迟到成果不得让 CANCELLED 恢复为 COMPLETED |
 
 ## 重要开关与部署前提
 
