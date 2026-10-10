@@ -95,8 +95,10 @@ public class SemanticAdoptionItemWriter {
       try(var writer=new DataOutputStream(bytes)) {
         var fields=new java.util.ArrayList<String>();
         fields.add(batch.taskId());fields.add(Long.toString(batch.projectId()));
-        fields.add(Long.toString(batch.userId()));fields.add(Long.toString(batch.reviewRevision()));
-        fields.add(batch.payloadDigest());fields.add(batch.evidence().evidenceFingerprint());
+        fields.add(Long.toString(batch.userId()));
+        // Item payload, not mutable batch selection/revision: old successful items
+        // remain replayable while newly selected independent items can proceed.
+        fields.add(batch.evidence().evidenceFingerprint());
         fields.add(c.id());fields.add(c.kind());
         fields.add(Objects.toString(c.code(),""));fields.add(Objects.toString(c.name(),""));
         fields.add(Objects.toString(c.role(),""));fields.add(Objects.toString(c.grain(),""));
