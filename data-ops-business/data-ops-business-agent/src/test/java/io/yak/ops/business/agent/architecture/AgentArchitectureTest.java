@@ -25,6 +25,8 @@ class AgentArchitectureTest {
   private static final List<String> STABLE_FACADES =
       List.of(
           "conversation/AgentChatService.java",
+          // F-039 guarded application Facade is the single source-task stable entry point.
+          "conversation/SourceSemanticTaskFacade.java",
           "conversation/query/AgentSessionQueryService.java",
           "conversation/AgentConfigManageService.java",
           "conversation/AgentSkillManageService.java",

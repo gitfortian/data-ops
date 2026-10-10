@@ -137,6 +137,15 @@ public class AgentChatService {
 
   void enqueueReservedSourceSemanticTurn(String sessionId, String turnId, String serverPrompt,
       long frozenUserId, long frozenProjectId) {
+    enqueueReservedSourceSemanticTurn(sessionId, turnId, serverPrompt,
+        frozenUserId, frozenProjectId, null);
+  }
+
+  void enqueueReservedSourceSemanticTurn(String sessionId, String turnId, String serverPrompt,
+      long frozenUserId, long frozenProjectId, String frozenTaskId) {
+    if (frozenTaskId != null && !frozenTaskId.matches("[a-f0-9-]{36}")) {
+      throw new IllegalArgumentException("[F039_INVALID_TASK_ID]");
+    }
     if (serverPrompt == null || serverPrompt.isBlank() || serverPrompt.length() > 16384) {
       throw new IllegalArgumentException("[F039_INVALID_BOUND_PROMPT]");
     }
@@ -155,7 +164,7 @@ public class AgentChatService {
         throw new TurnConflictException("[F039_ORIGINAL_SESSION_BUSY]");
       }
       TurnInput input = TurnInput.ofStart(UUID.randomUUID().toString(),
-          UUID.randomUUID().toString(), serverPrompt);
+          UUID.randomUUID().toString(), serverPrompt).withSourceTask(frozenTaskId);
       turnRepository.insertQueued(turnId, sessionId, frozenUserId, frozenProjectId,
           TurnKind.START, io.yak.ops.business.agent.repository.support.TurnInputCodec.encode(input));
     }

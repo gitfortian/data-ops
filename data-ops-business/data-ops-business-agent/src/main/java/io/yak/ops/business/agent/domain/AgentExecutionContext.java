@@ -74,9 +74,11 @@ public final class AgentExecutionContext {
   private final GovernanceEvidenceLedger evidence = new GovernanceEvidenceLedger();
   private final Map<Long, DatasetSummary.DatasetFields> discoveries = new ConcurrentHashMap<>();
 
-  public AgentExecutionContext(GovernanceTarget target) {
+  public AgentExecutionContext(GovernanceTarget target) { this(target, false); }
+
+  public AgentExecutionContext(GovernanceTarget target, boolean sourceReadOnly) {
     this.target = target;
-    this.toolPolicy = new AgentTaskToolPolicy(target);
+    this.toolPolicy = new AgentTaskToolPolicy(target, sourceReadOnly);
   }
   public GovernanceTarget target() { return target; }
   public GovernanceEvidenceLedger evidence() { return evidence; }
