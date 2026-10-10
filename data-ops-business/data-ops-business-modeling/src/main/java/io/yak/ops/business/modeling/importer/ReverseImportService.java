@@ -150,10 +150,9 @@ public class ReverseImportService {
                   StringUtils.hasText(current.tableName()) ? current.tableName() : item.table(),
                   model.layerCode() == null ? layerCode : null,
                   effective == null ? null : effective.defaultPartition(),
-                  model.sourceDatasourceId() == null ? item.datasourceId() : null,
-                  model.sourceDatasourceId() == null ? item.database() : null,
-                  model.sourceDatasourceId() == null ? item.table() : null,
-                  applied.inputs(), applied.primaryKey()),
+                  item.datasourceId(), item.database(), item.table(),
+                  applied.inputs(), applied.primaryKey(),
+                  columns.stream().map(CatalogColumn::name).toList()),
               operator);
           filled.add(item.table());
           models.add(
@@ -173,7 +172,8 @@ public class ReverseImportService {
                     name, code, request.dialect(), item.remarks(), request.directoryId(),
                     item.table(), layerCode, partitionExpr,
                     item.datasourceId(), item.database(), item.table(),
-                    applied.inputs(), applied.primaryKey()),
+                    applied.inputs(), applied.primaryKey(),
+                  columns.stream().map(CatalogColumn::name).toList()),
                 operator);
         created.add(item.table());
         models.add(
@@ -225,10 +225,11 @@ public class ReverseImportService {
       String sourceDatabase,
       String sourceTable,
       List<ModelingStructureApi.ColumnInput> columns,
-      List<String> primaryKey) {
+      List<String> primaryKey,
+      List<String> sourceColumnNames) {
     return new ReverseImportPlan(
         name, code, dialect, description, directoryId, tableName, layerCode, partitionExpr,
-        sourceDatasourceId, sourceDatabase, sourceTable, columns, primaryKey);
+        sourceDatasourceId, sourceDatabase, sourceTable, columns, primaryKey, sourceColumnNames);
   }
 
   /**
