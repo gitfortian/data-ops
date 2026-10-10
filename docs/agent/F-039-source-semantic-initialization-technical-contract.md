@@ -139,11 +139,17 @@ AdoptionCommand {
 | 关键核查 | 最小证据 | 状态 |
 | --- | --- | --- |
 | 现有 SDK 2.0.3 plan 路径/权限引擎 | PR #499 既有两个实验，在 commit 103b71a 的 368-test CI 中通过 | PASS（隔离 SDK） |
-| 计划正文重建/缺失/漂移及 ConfirmResult 消息封装 | SourceSemanticPlanRecoveryContractTest | NOT_RUN（新增待 CI） |
-| SDK permission HITL 真正 pause/approve/reject/duplicate | RequireUserConfirmEvent + restored same original turn | NOT_RUN |
-| 数据库 StateStore / 原 turn 与 permission pending 交互 | MySQL/PostgreSQL、崩溃和重放正反例 | NOT_RUN |
+| 计划正文重建/缺失/漂移及 ConfirmResult 消息封装 | SourceSemanticPlanRecoveryContractTest | PASS（隔离 5/5，CI 38016315346） |
+| SDK permission HITL 真正 pause/approve/reject/duplicate | HarnessAgent 原生 RequireUserConfirmEvent + ConfirmResult + JSON Store 重开 | PASS（SDK 隔离 4/4，非本项目 Executor） |
+| 数据库 StateStore / 原 turn 与 permission pending 交互 | MySQL 独立状态恢复 1/1；原 turn / PostgreSQL 未验 | PARTIAL（MySQL SDK Store PASS；生产旧 turn NOT_RUN） |
 | 总预算原子预留与失败/取消 | 双任务、写失败、跨轮次不重置 | NOT_RUN |
 | 跨域 API/依赖无环、产品合同 | Owner 评审记录 + 接口测试 | BLOCKED_BY_APPROVAL |
 | #495 及后续生产实现 | PD-009 ACCEPTED / F-039 APPROVED、前置真实证据 | BLOCKED |
 
 **当前结论**：仅隔离测试和设计可推进，不能宣告实际业务初始化已实现。后续 Owner 应依据本稿逐条 APPROVE/REVISE/REJECT，并把长期规则归入各自 DOMAIN/ARCHITECTURE，而非直接推广本提案。
+
+## 8. SDK 2.0.3 隔离验证实绩（2026-10-10）
+
+PR #499 commit `e8632ab892309d679847cc4c8a574e8b5e0cfd78`：Product Guard / Architecture Checks 均通过；Architecture Checks 后端 job `114107317073`，Agent 378/378 通过，新测 5 类共 14/14 通过。发生过的一次目录冲突模拟失败已按真实 SDK filesystem 分层修复为 WorkspaceManager 明确异常注入；此前失败日志保留在 CI run `38016005789`。
+
+**边界**：SDK `plan_exit` 即使批准也不要求 `PLAN.md` 文件已存在，且不绑定用户看到的 plan/hash。F-039 必须由应用层阻断无正文、hash/范围不匹配的批准后执行。SDK 采用 ConfirmResult 不能直接复用原生产 `ToolResultMessage`；原 `TurnToolBudgetState` 是单 turn 配额而非跨 turn 总额度。本合同仍为 PROPOSED，必须待 Owner 审核才能新建 Metadata/Semantic API 或落地生产任务写入。

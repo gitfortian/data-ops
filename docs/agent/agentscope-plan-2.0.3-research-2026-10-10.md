@@ -1,6 +1,6 @@
 # AgentScope Java 2.0.3 PlanMode 与 F-039 前置技术核查
 
-Status: EXPERIMENT_IN_PROGRESS（部分 CI 已验证，仍非 #494 验收完成）  
+Status: SDK_ISOLATED_CI_VERIFIED / PRODUCTION_INTEGRATION_NOT_APPROVED  
 Issue: #494 / Epic #493  
 Baseline: gitfortian/data-ops main，2026-10-10  
 SDK pin: data-ops-business-agent/pom.xml 中 AgentScope 2.0.3  
@@ -40,6 +40,8 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 - data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanModeSdkContractTest.java
 - data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanPermissionContractTest.java
 - data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanRecoveryContractTest.java
+- data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanHitlSdkContractTest.java
+- data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanMysqlStateContractTest.java
 
 - 使用固定 SDK 的 WorkspaceManager/PlanModeManager，两个不同任务分离的临时 workspace，验证相同逻辑 plan 路径各自写入不同内容。
 - 直接使用 2.0.3 PermissionEngine 与原生 PlanModeTools 验证 DEFAULT 下 plan_write 的 ASK、显式最小 ALLOW、plan_exit 的 ASK，以及 DONT_ASK 不能直接放行退出。
@@ -51,7 +53,11 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 
     ./mvnw -pl data-ops-business/data-ops-business-agent -am -Dtest=SourceSemanticPlan*ContractTest -Dsurefire.failIfNoSpecifiedTests=false test
 
-**已完成的 CI 事实**（commit \`103b71acad23b15df7e338c1468e1bb8ffd80518\`）：Product Guard 和 Architecture Checks 均为 SUCCESS；后端 Agent 模块在工作流 \`38014050444\` 的任务 \`114100392872\` 日志显示 **368 tests / 0 failure / 0 error / 0 skipped，BUILD SUCCESS**。当时两个隔离类各 2 个用例通过。后续新增的 RecoveryContractTest **尚需对应新 head CI 验证**，此旧成功不能自动覆盖新增改动。
+**精确 CI 证据（2026-10-10）**：PR #499 commit `e8632ab892309d679847cc4c8a574e8b5e0cfd78`，Product Guard 和 Architecture Checks 均 SUCCESS。Architecture 后端 job `114107317073`：Data Ops Business Agent **378 tests / 0 failures / 0 errors / 0 skipped，BUILD SUCCESS**。本项五组 SDK 隔离测试分别 4 + 2 + 5 + 2 + 1 = **14/14 PASS**。
+
+本次真实 HarnessAgent SDK 脚本模型实验验证：plan_exit 发出 RequireUserConfirmEvent；同一请求的 ConfirmResult(true) 放行、false 保持计划、过期/重复 ID 拒绝；JsonFile StateStore 关闭重建后可恢复待确认。MySQL 环境中验证 SDK AgentState 的 plan flag/path 按 user/session 隔离并可重开。**均不代表**本项目生产 AgentTurn/Executor 已实现上述行为。
+
+有一轮失败的真实记录：commit `cd89ad4` 的 CI run `38016005789` 中，模拟「plans 目录与文件冲突就必须抛异常」的测试失败。根因是文件后端的 overlay/namespace 与该本地假设不同，不能用该冲突模拟后端不可用。改为直接注入 WorkspaceManager 后端写异常并验证传播；在上述最新 CI 中 **PASS**。不得删掉或隐瞒这条历史失败。
 
 ## 4. 尚需逐项补齐的行为实验
 
@@ -59,16 +65,16 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 | --- | --- | --- | --- |
 | P01 | SDK 2.0.3 隔离测试编译 | 已按模块完成 Maven 编译 | PASS（commit 103b71a，CI 38014050444） |
 | P02 | plan_enter/write/exit | SDK 状态切换/文件写入与计划引用保留 | PASS（隔离 workspace，commit 103b71a） |
-| P03 | DEFAULT permission 与 ASK | SDK 的 DEFAULT 下 plan_write 实际 ASK，须显式局部 ALLOW；plan_exit 保持 ASK | PARTIAL（PermissionEngine 独立测试 PASS，生产权限中间件与 HITL 未运行） |
-| P04 | plan_exit 批准/拒绝/重复 | RequireUserConfirmEvent ↔ ConfirmResult(toolCall) 逐项匹配；拒绝不解锁 | NOT_RUN（新增 envelope 测试仅校验消息形状，不是流程） |
-| P05 | 本项目 resume 适配 | Msg.METADATA_CONFIRM_RESULTS，禁止 ToolResultMessage 冒充审批 | NOT_RUN |
+| P03 | DEFAULT permission 与 ASK | SDK DEFAULT 下 plan_write ASK，明确局部 ALLOW；plan_exit 保持 ASK | PASS（SDK PermissionEngine + Harness HITL；生产工具白名单待审） |
+| P04 | plan_exit 批准/拒绝/重复 | SDK Harness 完整事件、批准/拒绝、伪造/重复拒绝及文件 Store 待确认恢复 | PASS（SDK 隔离 4/4；生产 Executor 未接入） |
+| P05 | 本项目 resume 适配 | SDK ConfirmResult / Msg.METADATA_CONFIRM_RESULTS 完整恢复；本项目仍只使用原 ToolResultMessage | PARTIAL（SDK PASS，生产 AgentRuntime/Executor 适配 NOT_RUN） |
 | P06 | 双任务隔离 | 独立 task workspace 的计划写入互不覆盖 | PARTIAL（隔离文件 PASS；同用户真实并发/权限/StateStore 还未验证） |
-| P07 | 任务 workspace 重建 | 文件 StateStore 重建、正文缺失/改动检测的隔离实验 | NOT_RUN（新增测试待新 CI；真实生产持久化和失败阻断未接线） |
+| P07 | 任务 workspace 重建 | JSON Store + workspace 正文回读/缺失/漂移、明确后端异常传播；MySQL Store 状态重建 | PARTIAL（隔离 5/5 + MySQL 1/1 PASS；跨节点正文持久化/生产阻断未接线） |
 | P08 | 权限决策前预算 | 含拒绝/重试/HITL、取消、不双扣，不允许额度超支调用 | NOT_RUN |
 | P09 | Executor/Registry 兼容 | QUEUED/RUNNING/WAITING_INPUT 与 permission pending 不冲突；重启 INTERRUPTED | NOT_RUN |
 | P10 | 工具边界/跨域 | 无 shell、Python、SQL、业务写工具；仅显式只读投影 | NOT_RUN |
 
-说明：P01/P02 的实际成功需要 CI 证据；P03–P10 **没有通过**。不能为了关闭 #494 把源码阅读或本地状态切换等同于生产路径通过。
+说明：P01–P04 的 **SDK 隔离环境**已取得真实 CI 行为证据；P05–P07 只有部分完成；P08–P10 未验证。全部仍不足以关闭 #494 的正式业务接线/Owner 审批。
 
 ## 5. 候选技术方案（待架构评审）
 
@@ -101,4 +107,11 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 2. PlanManager 只持有激活位与工作区相对路径；计划正文是 WorkspaceManager 管理的文件。未来任务若保存了 `PLAN.md` 路径但文件不可读、hash 不匹配或受其他任务覆盖，必须 **BLOCKED / NEED_REPLAN**，而不是继续分析或写入。
 3. 任务级 `taskId` 应是本次隔离工作区的命名空间，光按 userId 不能隔离相同用户的并发任务。文件后端选择需要覆盖节点切换、备份恢复和 TTL，不能以临时目录代表生产承诺。
 4. Plan approval 的 `ConfirmResult` 限于 SDK permission pending；它只表示用户批准计划修订，后续 Semantic 批量保存仍必须独立获得用户明确选择、权限、版本与幂等回执。
-5. 剩余 P04/P05/P07–P10、跨进程/数据库/权限预算与真实模型事件完整路径尚是阻断项，不能因为本分支 CI 绿色而放行 #495 生产接线。
+5. P04 SDK 隔离通过但不能代替生产 Executor；剩余 P05–P10 中的生产权限、任务预算、跨节点 workspace 与真实模型事件仍是阻断项，不能因为本分支 CI 绿色而放行 #495 生产接线。
+
+## 8. 必须由应用补强的 SDK 安全限制
+
+1. SDK 在用户批准 `plan_exit` 时**不校验**文件是否已生成/当前内容是否与待确认计划 hash 一致。隔离测试允许尚未写 PLAN.md 的脚本 Agent 获得 plan_exit 确认并进入 BUILD。因此 F-039 不能直接公开 SDK Build 模式：必须在人工展示及批准后再核对计划正文、修订、任务与来源的精确绑定；否则失败封锁。
+2. `plan_enter/plan_write` 同时受到 PlanModeMiddleware 阶段白名单和 PermissionEngine 两层控制；DEFAULT 对 plan_write 为 ASK，不能借 `BYPASS` 或全局 ALLOW 跳过。
+3. 当前 `TurnToolBudgetState` 是 **每 turn** 单一 StateStore slot，在新 turn 时重置，无法天然承担 F-039 跨 turn 累计预算；须在生产入口决策前建立独立 task 总额度/原子预留，失败不得调用模型；不能因为 SDK permission ASK 的确认成功而重置预算。
+4. 本 PR 的 JsonFile/MySQL 证据仅覆盖 SDK 精确边界。真实生产 MySQL/PostgreSQL、现有 AgentTurn / WAITING_INPUT / INTERRUPTED / Registry 和用户授权、跨节点 workspace、TTL、取消/重放均待 Owner 批准与上线前 E2E。
