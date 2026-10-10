@@ -20,6 +20,7 @@ import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
 import io.agentscope.core.model.ToolSchema;
 import io.agentscope.core.state.JsonFileAgentStateStore;
+import io.agentscope.core.util.JsonUtils;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.filesystem.local.LocalFilesystem;
 import java.nio.file.Files;
@@ -164,7 +165,7 @@ class SourceSemanticPlanHitlSdkContractTest {
     var input = Map.<String, Object>of("summary", "Scope reviewed");
     return ChatResponse.builder().content(List.of(ToolUseBlock.builder()
         .id("plan-exit-1").name("plan_exit").input(input)
-        .content("{\\\"summary\\\":\\\"Scope reviewed\\\"}").build()))
+        .content(JsonUtils.getJsonCodec().toJson(input)).build())))
         .usage(new ChatUsage(1, 1, 0)).build();
   }
 
