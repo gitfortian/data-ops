@@ -3,6 +3,10 @@ package io.yak.ops.business.modeling.importer;
 import io.yak.ops.business.modeling.api.ModelingStructureApi;
 import io.yak.ops.business.modeling.catalog.ModelCatalogService;
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.exception.ModelingException;
+import io.yak.ops.business.modeling.mapping.MappingService;
+import io.yak.ops.common.enums.modeling.ModelingErrorCode;
+import java.util.Objects;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import java.util.List;
@@ -23,14 +27,17 @@ public class ReverseImportWriter {
   private final ModelCatalogService catalogService;
   private final ModelStructureService structureService;
   private final ModelRepository modelRepository;
+  private final MappingService mappingService;
 
   public ReverseImportWriter(
       ModelCatalogService catalogService,
       ModelStructureService structureService,
-      ModelRepository modelRepository) {
+      ModelRepository modelRepository,
+      MappingService mappingService) {
     this.catalogService = catalogService;
     this.structureService = structureService;
     this.modelRepository = modelRepository;
+    this.mappingService = mappingService;
   }
 
   /** 新建模型 + 写入表结构 + 落目标分层,同一事务。 */
@@ -51,6 +58,16 @@ public class ReverseImportWriter {
   }
 
   private void writeStructure(Long modelId, ReverseImportPlan plan, String operator) {
+    // Keep the original source of an existing model; never quietly rebind it.
+    Model existing = modelRepository.findByIdForUpdate(modelId)
+        .orElseThrow(() -> new ModelingException(ModelingErrorCode.NOT_FOUND, String.valueOf(modelId)));
+    if (existing.sourceDatasourceId() != null && plan.sourceDatasourceId() != null
+        && (!Objects.equals(existing.sourceDatasourceId(), plan.sourceDatasourceId())
+            || !Objects.equals(existing.sourceDatabase(), plan.sourceDatabase())
+            || !Objects.equals(existing.sourceTable(), plan.sourceTable()))) {
+      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN,
+          "已有模型绑定不同来源，不能在导入时覆盖");
+    }
     structureService.save(
         modelId,
         new ModelingStructureApi.SaveStructureRequest(
@@ -69,8 +86,16 @@ public class ReverseImportWriter {
       modelRepository.assignLayer(modelId, plan.layerCode(), operator);
     }
     if (plan.sourceDatasourceId() != null) {
-      modelRepository.assignSource(
-          modelId, plan.sourceDatasourceId(), plan.sourceDatabase(), plan.sourceTable(), operator);
+      if (existing.sourceDatasourceId() == null) {
+        modelRepository.assignSource(
+            modelId, plan.sourceDatasourceId(), plan.sourceDatabase(), plan.sourceTable(), operator);
+      }
+      // Only real catalog columns become direct source mappings. Generated
+      // technical fields have no source unless the catalog actually contains them.
+      for (String sourceColumn : plan.sourceColumnNames()) {
+        mappingService.setMapping(modelId, sourceColumn, plan.sourceDatasourceId(),
+            plan.sourceDatabase(), plan.sourceTable(), sourceColumn, null, operator);
+      }
     }
   }
 }
