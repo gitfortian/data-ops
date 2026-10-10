@@ -49,7 +49,8 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 | Analysis | J3-07、J3-11、J6-06 | CONS 分析已有授权数据 | analysis result with refs | C + U |
 | Dashboard | J3-07、J3-11、J6-06 | CONS 反复查看可靠业务结论 | published view / precise data contract | C + U |
 | Digital Screen（大屏） | J3-07、J3-11 | CONS 长时间展示可用指标与状态 | governed runtime/refresh evidence | C + U |
-| Agent / AI 分析 | J6-01～J6-08、X-06 | AI-USER 获得可信回答与建议 | query/evidence/access/confirmation | C + U |
+| Agent / AI 协助首次建设 | J1-16、J1-04～J1-09、X-06 | BUILD 以业务目标组织有证据的跨域建设建议，正式操作由各域执行 | goal/plan + confirmed refs + owner-domain receipts | C + U；#509 战略待确认 |
+| Agent / AI 可信问答 | J6-01～J6-08、X-06 | AI-USER 获得可信回答与建议 | query/evidence/access/confirmation | C + U |
 | Export / Downstream | J3-07、J5-04、J5-05 | CONS 合法导出/供下游系统用 | export result / permission audit | C + U |
 | MDM | MDM-01～MDM-06 | MDM STEWARD 实现主数据一致性与分发 | versioned golden record + distribution | C + U + P |
 | Project Space | X-01、X-11、J5-07 | 所有角色不会跨项目串读/串写 | trusted scope, negative permission proof | C + U |
@@ -64,7 +65,7 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 
 **矩阵输出判读**：每个正式能力均有至少一组用户目标/结果和责任角色；但大量能力还缺**独立用户实机走查与运行证据**。因此不能用本覆盖表给出“模块实现通过率”“所有功能已开发”的结论。后续按价值切片获取真实证据，而不是在规划阶段把所有菜单一次点完。
 
-### 已纳入产品评审的补全项（原 66 条 → 74 条）
+### 用户故事补充（原 66 → 74 → 75 条）
 
 本轮核对发现**有产品能力但缺独立用户工作结果**的八条故事，已追加到 V2 主地图，保留原有 ID 不重新编号：
 
@@ -81,6 +82,8 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 
 这八条是完整业务工作，不是逐按钮/逐 Controller 拆分需求。产品策略、服务端契约和运行结果仍需具体用户故事评审，不能认为“补图=已开发”。
 
+**R-01 / R-02 再补 1 条 GM-J1-16（AI 协作首次建设）**：让专业能力有限的用户从业务目标开始，取得证据支持的跨域方案、业务澄清、专家接管与各领域实际回执；它与 J6 的可信 AI 问答不同。来源于 #509 的长期战略**提案**，不代表现有 AI 编排已完成。
+
 ## 2. 三个“纸面用户故事”用于检验跨模块断点
 
 > **Paper Walkthrough，不是 E2E PASS。** 每个环节标识用户动作、权威对象和失败路径，以便后续用真实环境复现。
@@ -94,10 +97,11 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 1. 查看当前有权限的 MySQL 来源、\`trade_db.trade_order\` 和真实元数据快照；若已有 ODS 设计先复用而非重复创建。
 2. 创建/核对 ODS 贴源结构，正式保存模型级来源身份、逐列 Mapping、技术列依据；保留订单时间/金额的源端脏值类型。
 3. 确认「交易/下单」业务过程与订单头/商品明细的不同粒度，检查业务标准与标准字段库；区分“有标准”与“有正式字段”。
-4. 从 Semantic 标准字段引用设计逻辑订单实体/属性/关系/版本；不自动推断客户↔订单基数、去重业务键。
-5. 从逻辑版本预览可复用或新建的 DWD 物理模型，按非 ODS 标准字段强制规则（**待 PD-010 批准具体门禁**）校验；发布模型设计不代表 Doris 已建库。
-6. 将精确设计版本有权限地交接现有 DataDev Task/Revision/Execution；明确目标 Doris 实例、转换规则、增量/重跑策略；取得真实执行结果。
-7. BIZ 确认“下单量”时区、取消单是否计数、订单去重规则；Metric 验证/发布，Dataset 通过合法 Access 返回实际查询和 Usage Evidence。
+4. 用户可以选择 Agent 给出基于当前授权事实的标准字段/业务粒度/逻辑模型候选与待澄清问题，逐步采纳或切换专业工作台；Agent 不独立创建第二份标准或直接运行生产任务。
+5. 从 Semantic 标准字段引用设计逻辑订单实体/属性/关系/版本；不自动推断客户↔订单基数、去重业务键。
+6. 从逻辑版本预览可复用或新建的 DWD 物理模型，按非 ODS 标准字段强制规则（**待 PD-010 批准具体门禁**）校验；发布模型设计不代表 Doris 已建库。
+7. 将精确设计版本有权限地交接现有 DataDev Task/Revision/Execution；明确目标 Doris 实例、转换规则、增量/重跑策略；取得真实执行结果。
+8. BIZ 确认“下单量”时区、取消单是否计数、订单去重规则；Metric 验证/发布，Dataset 通过合法 Access 返回实际查询和 Usage Evidence。
 
 **可能失败**：采集 17 列而 ODS 设计 19 列不一致未解释；标准字段库为空；订单状态跨年码值不一致；VARCHAR 日期/金额非法值；Doris 实例未配置；标准/映射后来变化；用户仅看到设计 PUBLISHED 却以为数仓完成。
 
@@ -172,5 +176,7 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 3. 六条 Journey 的 Owner/Ref 是否符合已接受 PD-002/PD-003，是否出现两套标准、指标、数据产品/运行状态？
 4. V0～V7 应按真实业务收益与交付风险怎样排序，哪些横切安全/权限/审计必须和首 Slice 同时完成？
 5. F-040/PD-010 与全域故事地图是否相容；能否先批准首条完整切片，而不等待其它模块全部 UI 重设计？
+
+**R-02 现有消费验收风险**：[#336](https://github.com/gitfortian/data-ops/issues/336) 与 [PD-002](../decisions/PD-002-governed-consumption-contract.md) 显示消费合同 Implementation=PARTIAL，当前真实环境的受限角色/跨项目 Dataset Query、Service Invoke、精确 Usage/Source Audit、错误/恢复等尚未签收。F-040 金样从模型发布继续到业务消费之前，建议**优先复用并验证现有 PD-002 消费链路**，不开发第二套消费平台。
 
 **本矩阵是全域覆盖及走查计划，不是功能开发/验收记录。**
