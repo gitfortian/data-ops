@@ -98,7 +98,7 @@ class LogicalDraftServiceTest {
     assertThrows(ModelingException.class, () -> service.addRelation(
         77L, new LogicalDraftService.NewRelation(1L, 2L, "ASSOCIATION",
             "ONE_TO_MANY", "未证明的外部关系")));
-    verify(relations, never()).insert(any());
+    verify(relations, never()).insert(any(LogicalRelationPO.class));
   }
 
   @Test
@@ -109,7 +109,7 @@ class LogicalDraftServiceTest {
     assertThrows(ModelingException.class, () -> service.addAttribute(
         77L, 1L, new LogicalDraftService.NewAttribute("order_id", "订单ID",
             11L, "STRING", null, true, false)));
-    verify(attributes, never()).insert(any());
+    verify(attributes, never()).insert(any(LogicalAttributePO.class));
   }
 
   @Test
