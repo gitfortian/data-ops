@@ -46,7 +46,7 @@ public final class SourceSemanticCandidateLedger {
       candidates = List.copyOf(candidates);
       selectedIds = List.copyOf(selectedIds);
       answers = Map.copyOf(answers);
-      if (revision < 1 || candidates.isEmpty() || candidates.size() > 1200
+      if (revision < 1 || candidates.isEmpty() || candidates.size() > 1600
           || selectedIds.size() > candidates.size()
           || new java.util.HashSet<>(candidates.stream().map(Candidate::id).toList()).size() != candidates.size()
           || !new java.util.HashSet<>(candidates.stream().map(Candidate::id).toList())
