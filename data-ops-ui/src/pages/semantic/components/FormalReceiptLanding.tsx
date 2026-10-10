@@ -40,7 +40,7 @@ const FormalReceiptLanding: React.FC<{ kind: 'FIELD' | 'STANDARD' }> = ({ kind }
       }
       setLoaded({
         id: actual.id, code: actual.code, name: actual.name,
-        status: actual.status, kind, version: actual.version,
+        status: actual.status ?? 'UNKNOWN', kind, version: actual.version,
       });
     }).catch(() => {
       if (current) setError('无法从原 Semantic 域回读此 ID，可能已切换项目、撤销权限或对象已删除。');
