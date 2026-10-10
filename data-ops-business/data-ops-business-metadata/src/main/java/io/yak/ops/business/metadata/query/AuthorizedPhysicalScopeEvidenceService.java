@@ -1,7 +1,7 @@
 package io.yak.ops.business.metadata.query;
 
 import io.yak.framework.security.context.YakSecurityContext;
-import io.yak.ops.business.datasource.api.ProjectDataSourceReadApi;
+import io.yak.ops.business.metadata.api.PhysicalSourceAccessPort;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi;
 import io.yak.ops.common.constant.datasource.DataSourcePermissionCode;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 @ConditionalOnDataSourceEnabled
 public class AuthorizedPhysicalScopeEvidenceService {
   private final CurrentProject currentProject;
-  private final ProjectDataSourceReadApi dataSources;
+  private final PhysicalSourceAccessPort dataSources;
   private final PhysicalScopeEvidenceQueryApi evidence;
 
   public AuthorizedPhysicalScopeEvidenceService(CurrentProject currentProject,
@@ -44,7 +44,7 @@ public class AuthorizedPhysicalScopeEvidenceService {
     }
     // This is the original Datasource owner, using its project scoped repository.
     // Do not query its DAO from Agent or accept a caller-supplied ID as proof of access.
-    dataSources.requireReadableSource(dataSourceId);
+    dataSources.requireCurrentProjectSource(dataSourceId);
     var snapshot = evidence.readSelectedTables(assetKeys);
     if (snapshot.projectId() != project
         || !Objects.equals(snapshot.dataSourceId(), Long.toString(dataSourceId))) {

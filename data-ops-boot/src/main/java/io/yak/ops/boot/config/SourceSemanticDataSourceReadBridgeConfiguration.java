@@ -1,6 +1,6 @@
 package io.yak.ops.boot.config;
 
-import io.yak.ops.business.datasource.api.ProjectDataSourceReadApi;
+import io.yak.ops.business.metadata.api.PhysicalSourceAccessPort;
 import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnDataSourceEnabled
 public class SourceSemanticDataSourceReadBridgeConfiguration {
   @Bean
-  public ProjectDataSourceReadApi projectDataSourceReadApi(DataSourceReader reader) {
+  public PhysicalSourceAccessPort physicalSourceAccessPort(DataSourceReader reader) {
     return id -> { reader.require(id); };
   }
 }
