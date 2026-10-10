@@ -54,7 +54,7 @@ class SourceSemanticCandidateServiceTest {
 
   @Test void draftsAreSourceBoundAndNeverAutoSelected() {
     var view=service.read(taskId);
-    assertEquals(8,view.review().candidates().size()); // domain, process, 2*(field,binding,source)
+    assertEquals(12,view.review().candidates().size()); // domain, process, 2*(field,binding,source), 2 TYPE + UNIT + CODE
     assertTrue(view.review().selectedIds().isEmpty());
     assertEquals(2,view.review().candidates().stream().filter(c->"FIELD".equals(c.kind())).count());
     assertTrue(view.review().candidates().stream()
@@ -132,6 +132,35 @@ class SourceSemanticCandidateServiceTest {
     assertEquals("客户管理和订单支付按独立过程管理",
         next.review().answers().get("business_domain"));
     assertThrows(IllegalStateException.class,()->service.preflight(taskId,1));
+  }
+
+  @Test void explicitMergeAndSplitPreserveAllColumnWitnessesAndRewireBindings() {
+    var initial=service.read(taskId);
+    var fields=initial.review().candidates().stream()
+        .filter(c->"FIELD".equals(c.kind())).toList();
+    assertEquals(2,fields.size());
+    assertThrows(IllegalArgumentException.class,()->service.merge(taskId,
+        new SourceSemanticCandidateService.Merge(1,fields.get(0).id(),fields.get(1).id(),false)));
+    var merged=service.merge(taskId,new SourceSemanticCandidateService.Merge(1,
+        fields.get(0).id(),fields.get(1).id(),true));
+    assertEquals(2,merged.review().revision());
+    var combined=merged.review().candidates().stream()
+        .filter(c->"FIELD".equals(c.kind())).findFirst().orElseThrow();
+    assertEquals(2,combined.evidence().size());
+    assertTrue(merged.review().candidates().stream()
+        .filter(c->"PROCESS_FIELD".equals(c.kind()))
+        .allMatch(c->c.dependencies().contains(combined.id())));
+    var toSplit=combined.evidence().get(1);
+    var split=service.split(taskId,new SourceSemanticCandidateService.Split(
+        merged.review().revision(),combined.id(),toSplit.tableAssetKey(),toSplit.column()));
+    assertEquals(3,split.review().revision());
+    assertEquals(2,split.review().candidates().stream()
+        .filter(c->"FIELD".equals(c.kind())).count());
+    assertEquals(12,split.review().candidates().size());
+    assertEquals(2,split.review().candidates().stream()
+        .filter(c->"PROCESS_FIELD".equals(c.kind()))
+        .map(c->c.dependencies().get(1)).distinct().count());
+    assertTrue(split.review().selectedIds().isEmpty());
   }
 
   @Test void incompleteTurnNeverYieldsDraft() {
