@@ -46,6 +46,14 @@ public class AgentTurnExecutor {
   private final MemoryFlushService memoryFlushService;
   private final ProjectContextScope projectContextScope;
 
+  /** Optional only when the F-039 route is explicitly enabled. Existing constructor is stable. */
+  private volatile SourceSemanticTurnFence sourceSemanticFence;
+
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  public void setSourceSemanticFence(SourceSemanticTurnFence fence) {
+    this.sourceSemanticFence = fence;
+  }
+
   public void execute(AgentTurnRecord record) {
     startExecution(record, new CountDownLatch(1));
   }
@@ -117,8 +125,20 @@ public class AgentTurnExecutor {
     }
 
     try {
+      if (input.sourceTaskId() != null) {
+        if (sourceSemanticFence == null)
+          throw new IllegalStateException("[F039_SOURCE_TURN_NOT_ENABLED]");
+        if (record.kind() != io.yak.ops.business.agent.domain.TurnKind.START)
+          throw new IllegalStateException("[F039_SOURCE_TURN_CANNOT_RESUME_PENDING]");
+        sourceSemanticFence.requireActive(record, input);
+      }
       TurnSubscription subscription =
-          record.kind() == io.yak.ops.business.agent.domain.TurnKind.START
+          input.sourceTaskId() != null
+              ? agentRuntime.streamSourceSemantic(record.userId(), sessionId, turnId,
+                  input.message(), record.projectId(), consume(record, state),
+                  () -> finishCompleted(record, input, state),
+                  error -> finishFailed(record, input, state, error))
+              : record.kind() == io.yak.ops.business.agent.domain.TurnKind.START
               ? agentRuntime.stream(
                   record.userId(),
                   sessionId,
