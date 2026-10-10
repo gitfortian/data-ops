@@ -14,6 +14,8 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 
 **北极星**：让有权限的用户无须自己拼接孤立模块，能够从来源、业务需求、已发布数据产品、运行异常、安全请求或自然语言问题出发，取得**真实、可信、可追溯、可治理且能继续行动的结果**。
 
+**本轮 R-01/R-02 校准**：基于长期战略 #509 和真实消费验收 #336，补入 GM-J1-16（AI 协作首次建设，须与 J6 独立问答区别），校准 V1 仅设计里程碑、V2 才是首个可信成果；优先保障已有受治理消费的真实 E2E 回执，所有推荐仍待 Product Owner/真实角色评审。
+
 **故事单位**：一段有用户目标、入口、核心决策、正式事实、完成证据、回链与失败态的工作；不是「增加按钮、CRUD 页面、Controller、Maven module」。Story Map 上的故事编号稳定，之后具体 UX 设计/Feature/验收引用同一编号，不复制一套新对象 ID。
 
 **覆盖边界**：正式 [能力地图](../CAPABILITY_MAP.md) 的五组产品能力、MDM 专业解决方案、六条核心 Journey 与横切平台能力全部占位；未评审过的能力只规划**应当服务的用户目标**，绝不因此标记「功能已实现」。
@@ -88,8 +90,11 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-J1-13 | 在资产正式上架、变更或下架前审阅归属、质量、安全和消费影响 | Asset 专业治理；上架/下架/审批，不由模型保存隐式触发 | Asset 状态及 owner/approval/evidence；未上架不能假装可公开消费 | V2 评审补充 |
 | GM-J1-14 | 组织数据加工任务的依赖、触发、调度和发布计划 | Workflow/Scheduler，选择依赖、时区、窗口、失败重试策略 | 正式 Workflow/Task Revision、Schedule 与真实 Instance/Execution 分离 | V2 评审补充 |
 | GM-J1-15 | 给关键数据对象制定有责任人的质量规则并真正执行校验 | Quality、实际字段/模型/任务版本、规则范围与异常阈值 | Rule/Check 及质量结果、阻断/提示策略与正式修复入口；不是仅展示质量标签 | V2 评审补充 |
+| GM-J1-16 | 缺少完整数据团队的实施者以业务目标启动，在 AI 协作下审阅有来源证据的跨模块建设计划、确认必要业务决策并完成受控交接 | 已授权业务目标/数据源 → AI 候选任务计划 → 复用 Metadata/Semantic/Modeling/DataDev 等原域 API；专业入口可接管 | 计划、已确认业务答案、稳定正式对象 Ref、逐阶段真实回执/阻断和人工接管；无权/未知不执行，**不另建 Agent Truth** | V2 R-01 战略补充 |
 
 **补充用户任务**：资产上架/下架、工作流与调度计划、质量规则建立分别由原 Asset、Workflow、Quality Owner 持有。GM-J1-09 关注实际同步/加工执行，GM-J1-14 关注先配置并审查可运行计划，GM-J1-15 关注事前/持续质量规则；三者不可重复制造运行版本或质量事实。
+
+**智能协作主线（战略一致性，待产品确认）**：GM-J1-16 是业务目标驱动的 0→1 AI 协作与任务组织，覆盖有证据的来源发现、语义/标准建议、逻辑/物理模型方案、正式服务的受控交接及结果复核；**不能排到 V6 J6 问答才设计**。它不意味着一开始实现任意 Agent 自主写入/发布/运行。J6 专门负责“查询既有可信数据→证据回答”，不是 J1 智能建设的替代。
 
 **J1 特别边界**：ODS 可保真而不预先建立逻辑模型/标准字段；非 ODS 字段强制标准的发布门禁处于 PD-010 待批准状态，不能把建议当已实施事实。同步、Metadata Harvest 和开发执行可以分属不同 Owner，不能用“数据源已连接”代替“数据已生产”。
 
@@ -130,6 +135,8 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-J3-09 | 遇到未上架、过期、无权限或服务不可用时找到正确下一步 | Hub / Product Detail | 可解释状态与请求上架/申请访问/联系 Owner/重试动作 |
 | GM-J3-10 | 作为生产者将已验证的数据生产结果定义并发布为正式 Dataset 或 Data Service | 来源 Task/Model/Metric Ref，Dataset schema 或 Service interface/runtime 各归原域 | 正式 Dataset/Service ID、独立发布/访问条件与可查状态；Consumption Hub 只生成投影，不另建 Data Product Truth |
 | GM-J3-11 | 将授权数据结果形成可复用的分析成果或长期更新的 Dashboard / 大屏 | Analysis/Dashboard/Screen，数据产品或 PublishedMetric 精确引用与刷新授权 | 保存/共享/发布及实际刷新证据；消费者可回到原 Dataset/Service 和指标版本，避免自由 SQL 绕权 |
+
+**J3 不是严格线性列表**：GM-J3-10 是生产者从 J1/J2/已有 Source Object 出发创建正式 Dataset/Service；消费者的 GM-J3-01～09 可以在**产品已有时**直接从 Consumption Hub 开始，两条泳道在 Published Dataset/Service Contract 相遇。表内故事编号是稳定身份而不是用户必须顺序点击的流程顺序。
 
 **生产者/消费者双向交接**：GM-J3-10 是 Dataset / Data Service 的**生产者支线**，从 J1/J2 的已就绪数据结果进入，并不是 J3-09 发生之后才创建；GM-J3-01～09 是已有合同的消费者主线。GM-J3-11 明确把临时分析与正式 Dashboard/大屏发布和刷新分开，继续复用 PD-002 的 Access 与 Usage，不自建新的产品 Truth。
 
@@ -182,6 +189,8 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-J6-07 | 将建议交给人确认或复用分析结果，不自动改变业务 Truth | Agent Suggestion / Report/Follow-up | 候选/审批/保存结果与创建人，未确认不写 Semantic/Metric |
 | GM-J6-08 | 在数据缺失、冲突、权限不足或服务失败时明确拒答/追问 | Agent Errors | 完整证据不足原因，绝不降级为不可验证“看似正确的答案” |
 
+**与 J1 智能建设的区别**：J6 的 GM-J6-01～08 是消费已治理数据的问答/分析旅程；J1 GM-J1-16 是从业务目标开始的建设过程 Agent 协作与交接。二者复用授权证据和批准的业务事实，却不共享新的可编辑“Agent 标准/指标库”。
+
 **AI 可复用**：J1 的语义/标准/逻辑候选，J4 的根因候选，J3/J5 的受治理消费；但这不等于一个 LLM 可以越过 Domain API 替用户发布、运行、审批或查询私有数据。Agent 是否有专门顶级产品入口需正式 Product Decision，不在此自行新增。
 
 ---
@@ -228,15 +237,15 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | 切片 | 用户目标和端到端价值 | 最小贯通范围（显式复用已有能力） | 首个验收样例 | 当前依据 |
 |---|---|---|---|---|
 | **V0 统一故事与边界** | 所有人能解释六旅程的入口、产出和权威 Ref，没有跨域重复事实 | 全域用户故事/Owner/阶段/地图评审 | 本文件 + 覆盖矩阵评审 | 当前正在规划 |
-| **V1 第一次可信数据设计** | BUILD 从真实来源得到可回读、合规的设计 | J1 来源/ODS、Semantic 标准、Logical、Physical 设计；横切权限/版本 | #512 trade_order → ODS → 订单逻辑模型 → DWD 设计 | F-040 Slice A，Draft |
-| **V2 第一次可信业务结果** | BIZ/CONS 能得到一项真正可消费、经确认的订单业务结果 | J1 DataDev/Run + J2 Metric/Validation + J3 Dataset Query，质量/安全/血缘 | 每日订单量（具体口径须业务确认），真实 Dataset 查询与 Usage | F-040 Slice B，Draft |
+| **V1 第一次可信数据设计（内部里程碑，不独立宣称完成 0→1）** | BUILD 从真实来源得到可回读、合规的设计，并在 AI 建议与专业手动路径之间切换 | J1 来源/ODS、Semantic 标准、Logical、Physical 设计；横切权限/版本 | #512 trade_order → ODS → 订单逻辑模型 → DWD 设计 | F-040 Slice A，Draft |
+| **V2 第一次可信业务结果（首次业务价值交付门槛）** | BIZ/CONS 能得到一项真正可消费、经确认的订单业务结果，建设任务从目标到真实运行可追溯 | J1 DataDev/Run + J2 Metric/Validation + J3 Dataset Query，质量/安全/血缘 | 每日订单量（具体口径须业务确认），真实 Dataset 查询与 Usage | F-040 Slice B，Draft |
 | **V3 消费者自主使用** | CONS 不找工程师也能合法发现/判断/访问/订阅已有数据产品 | J3 全主线，J5 Access 的基础 | 消费者使用已有 Dataset 或 Data Service，含禁权/Unavailable | PD-002 Accepted，实施/验收未闭环 |
 | **V4 运营异常恢复** | OPS 从一个告警定位受影响对象、恢复数据、通知消费者 | J4 + J1 同步/开发 + J3 Usage/Impact + 横切告警/审计 | 单次生产实例失败→受权重跑→质量恢复→影响通知 | 当前未实机评审 |
 | **V5 安全访问闭环** | SEC 能证明敏感数据分类、访问策略与实际消费的执行结果 | J5 + J3 查询/服务 + 权限/审计 | 手机号字段敏感策略→拒绝/脱敏→撤权验证 | 当前未实机评审 |
 | **V6 可信 AI 业务问答** | AI-USER 从业务问题得到引用批准指标/数据的有证据答案 | J6 + J2 Metric + J3 Consumption + J5 Access | “上周订单量变化”含时间/口径确认、访问裁决、数据依据 | 当前未实机评审 |
 | **V7 专业主数据治理** | MDM STEWARD 合并受控主数据并安全分发 | MDM 支线 + Sync/Quality/Approval/Security/Service | 两个来源客户候选→人工确认→主记录/分发回执 | 产品形态与优先级待决 |
 
-**首批优先排序建议**：V0（现在）→ V1/V2（一条建设到使用的黄金故事）与 V3 的共享消费合同收口并行 → V4/V5 → V6；V7 需实际 MDM 业务需求和独立决策。排序是产品讨论候选，不是预设所有 MDM/实时同步或安全能力都已具备；某些安全/权限保障必须在 V1/V2 即满足，不得等 V5 才上线。
+**首批优先排序建议（R-02 第三轮校准）**：V0 范围与价值确认 → **优先取得 PD-002 既有消费真实 E2E / 权限 / Usage 证据（已有实现的验收轨，参见 #336）**，与 F-040 的 V1 设计基础和 V2 **首次真实业务结果**纵向切片并行；V1 只是一项设计里程碑、**不得作为独立“0→1 已交付”产品成果**。V1/V2 包含 GM-J1-16 的**有证据 AI 协作、人工确认及专业接管**，其受控建议路径可按能力成熟度渐进，不能因 Agent 模型不可用就阻塞人工路径。之后根据实际严重度推进 V4 异常恢复和 V5 安全专项深化（基础授权/审计从第一条 Slice 同步），再安排独立 V6 的可信 AI 问答；V7 MDM 需真实需求和 Decision。这里是**基于现有战略、已接受合同、实机缺口和未签收验收风险的相对次序**，不是虚构用户频率、商业收益或估算工作量的正式排期。
 
 ### 9.1 每个价值切片都要回答八项交付判据
 
