@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import io.yak.framework.security.context.YakSecurityContext;
-import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.business.datasource.api.ProjectDataSourceReadApi;
 import io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi;
 import io.yak.ops.common.constant.datasource.DataSourcePermissionCode;
 import io.yak.ops.common.constant.metadata.MetadataPermissionCode;
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 class AuthorizedPhysicalScopeEvidenceServiceTest {
-  private final DataSourceReader datasource = mock(DataSourceReader.class);
+  private final ProjectDataSourceReadApi datasource = mock(ProjectDataSourceReadApi.class);
   private final PhysicalScopeEvidenceQueryApi metadata = mock(PhysicalScopeEvidenceQueryApi.class);
   private final CurrentProject project = () -> Optional.of(new ProjectContext(17L, "test"));
   private final AuthorizedPhysicalScopeEvidenceService gate =
@@ -33,7 +33,7 @@ class AuthorizedPhysicalScopeEvidenceServiceTest {
       auth.when(()->YakSecurityContext.hasPermission(MetadataPermissionCode.READ)).thenReturn(true);
       auth.when(()->YakSecurityContext.canAccessProject(17L)).thenReturn(true);
       assertSame(expected,gate.read(42L,List.of("key1")));
-      verify(datasource).require(42L);
+      verify(datasource).requireReadableSource(42L);
       verify(metadata).readSelectedTables(List.of("key1"));
     }
   }
