@@ -10,6 +10,8 @@ import io.yak.ops.business.agent.conversation.SourceSemanticCandidateService;
 import io.yak.ops.business.agent.conversation.SourceSemanticCandidateService.Answer;
 import io.yak.ops.business.agent.conversation.SourceSemanticCandidateService.Edit;
 import io.yak.ops.business.agent.conversation.SourceSemanticCandidateService.Selection;
+import io.yak.ops.business.agent.conversation.SourceSemanticCandidateService.Merge;
+import io.yak.ops.business.agent.conversation.SourceSemanticCandidateService.Split;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,18 @@ public class SourceSemanticCandidateController {
   public Result<SourceSemanticCandidateService.View> select(
       @PathVariable String taskId,@RequestBody Selection request) {
     return Result.success(service.select(taskId,request));
+  }
+  @Operation(summary = "人工确认两个跨表字段表达同一概念，保留所有来源证据")
+  @PostMapping("/merge")
+  public Result<SourceSemanticCandidateService.View> merge(
+      @PathVariable String taskId, @RequestBody Merge request) {
+    return Result.success(service.merge(taskId,request));
+  }
+  @Operation(summary = "将已合并字段的一个明确来源拆出，重建依赖")
+  @PostMapping("/split")
+  public Result<SourceSemanticCandidateService.View> split(
+      @PathVariable String taskId, @RequestBody Split request) {
+    return Result.success(service.split(taskId,request));
   }
   @Operation(summary = "集中人工答疑，生成新审核修订")
   @PostMapping("/answer")
