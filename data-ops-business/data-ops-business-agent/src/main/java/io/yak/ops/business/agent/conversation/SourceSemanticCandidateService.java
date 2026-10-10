@@ -46,7 +46,7 @@ public class SourceSemanticCandidateService {
   public record Selection(long expectedRevision, List<String> ids) {}
   public record Answer(long expectedRevision, String questionId, String value) {}
   public record Match(String candidateId, List<Entry> matches, boolean ambiguous) {}
-  public record View(Review review, List<Match> matches) {}
+  public record View(Review review, List<Match> matches, List<Entry> catalogEntries) {}
   public record Preflight(long revision, String payloadDigest, String ticket,
       List<String> selected, List<String> closure, List<String> blockers, boolean ready) {}
 
@@ -70,7 +70,7 @@ public class SourceSemanticCandidateService {
       review=reviews.create(task.ownerId(),proposed);
     }
     verifySource(review,task);
-    return new View(review, match(review,currentCatalog));
+    return new View(review, match(review,currentCatalog),currentCatalog.entries());
   }
 
   public View edit(String taskId, Edit change) {
@@ -176,9 +176,9 @@ public class SourceSemanticCandidateService {
     }
     String payload=digest(bindings);
     // Ticket is only a preview binding for 4/5; it authorizes no write.
+    if (normalized.isEmpty()) errors.add("[F039_NOTHING_SELECTED]");
     String ticket=errors.isEmpty()?digest(List.of("F039_PREFLIGHT_READ_ONLY",payload,
         Long.toString(task.projectId()),task.ownerId())):null;
-    if (normalized.isEmpty()) errors.add("[F039_NOTHING_SELECTED]");
     return new Preflight(review.revision(),payload,ticket,normalized,
         List.copyOf(closure),List.copyOf(errors),errors.isEmpty());
   }
@@ -201,10 +201,10 @@ public class SourceSemanticCandidateService {
       errors.add("[F039_CODE_REQUIRED]"+tag);
     if ("PROCESS".equals(c.kind()) &&
         (c.grain()==null||c.grain().isBlank()||
-            !List.of("FACT","DIMENSION").contains(c.role())))
+            !("FACT".equals(c.role()) || "DIMENSION".equals(c.role()))))
       errors.add("[F039_PROCESS_GRAIN_OR_TYPE_UNKNOWN]"+tag);
     if ("FIELD".equals(c.kind())) {
-      if (!List.of("PROCESS","DIMENSION","METRIC").contains(c.role()))
+      if (!("PROCESS".equals(c.role()) || "DIMENSION".equals(c.role()) || "METRIC".equals(c.role())))
         errors.add("[F039_FIELD_ROLE_UNKNOWN]"+tag);
       if (c.typeId()==null || catalog.entries().stream().noneMatch(e ->
             "TYPE".equals(e.kind()) && "ENABLED".equals(e.status())
