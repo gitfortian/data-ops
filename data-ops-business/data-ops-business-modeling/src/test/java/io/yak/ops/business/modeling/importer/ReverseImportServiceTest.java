@@ -125,6 +125,8 @@ class ReverseImportServiceTest {
     assertEquals(10L, plan.getValue().sourceDatasourceId());
     assertEquals("shop", plan.getValue().sourceDatabase());
     assertEquals("ods_user", plan.getValue().sourceTable());
+    // 真正源列映射集合不包含自动生成的 process_time/event_time。
+    assertEquals(List.of("order_id", "user_name"), plan.getValue().sourceColumnNames());
     // 标准字段关联写在列上(38 治理;order_id 精确命中)
     assertEquals(9L, plan.getValue().columns().get(0).stdFieldId());
     assertEquals(null, plan.getValue().columns().get(1).stdFieldId());
@@ -219,7 +221,8 @@ class ReverseImportServiceTest {
   @Test
   void reimportKeepsExistingTableNameLayerAndSource() {
     when(modelRepository.findByCode("ods_user"))
-        .thenReturn(Optional.of(modelWithLayerAndSource(77L, "ods_user", "DWD", 3L)));
+        .thenReturn(Optional.of(modelWithLayerAndSource(77L, "ods_user", "DWD", 10L)
+            .withSource(10L, "shop", "ods_user")));
     when(catalogReader.listColumns(eq(10L), eq("shop"), isNull(), eq("ods_user")))
         .thenReturn(List.of(new CatalogColumn("id", "BIGINT", -5, 0, 0, false, 1, true, null)));
     when(structureService.get(77L))
@@ -234,9 +237,33 @@ class ReverseImportServiceTest {
     ArgumentCaptor<ReverseImportPlan> plan = ArgumentCaptor.forClass(ReverseImportPlan.class);
     verify(writer).fillStructure(eq(77L), plan.capture(), eq("tester"));
     assertEquals("ods_user_landing", plan.getValue().tableName());
-    // 已有分层/来源不覆盖:传空即"不改"
+    // 已有分层不覆盖；传真实源身份给 writer 校验后仅补齐列映射。
     assertNull(plan.getValue().layerCode());
-    assertNull(plan.getValue().sourceDatasourceId());
+    assertEquals(10L, plan.getValue().sourceDatasourceId());
+    assertEquals(List.of("id"), plan.getValue().sourceColumnNames());
+  }
+
+  @Test
+  void reimportRejectsCodeCollisionBoundToDifferentSource() {
+    when(modelRepository.findByCode("ods_user"))
+        .thenReturn(Optional.of(modelWithLayerAndSource(77L, "ods_user", "ODS", 3L)
+            .withSource(3L, "shop", "another_table")));
+    when(catalogReader.listColumns(eq(10L), eq("shop"), isNull(), eq("ods_user")))
+        .thenReturn(List.of(new CatalogColumn("id", "BIGINT", -5, 0, 0, false, 1, true, null)));
+
+    ModelingImportApi.ImportResult result =
+        service.importTables(
+            new ModelingImportApi.ImportRequest(
+                "MYSQL", null, "ODS",
+                List.of(new ModelingImportApi.ImportItem(10L, "shop", "ods_user",
+                    null, null, null, null))),
+            "tester");
+
+    assertEquals(1, result.failed().size());
+    assertTrue(result.failed().get(0).reason().contains("不同来源"));
+    verify(writer, never()).fillStructure(any(), any(), any());
+    verify(writer, never()).createWithStructure(any(), any());
+    verify(modelRepository, never()).assignSource(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -263,6 +290,8 @@ class ReverseImportServiceTest {
         ModelingImportApi.ImportResult.ImportAction.SKIPPED, result.models().get(0).action());
     verify(writer, never()).fillStructure(any(), any(), any());
     verify(writer, never()).createWithStructure(any(), any());
+    // Skipped models are read-only, not silently bound to a guessed source.
+    verify(modelRepository, never()).assignSource(any(), any(), any(), any(), any());
   }
 
   @Test

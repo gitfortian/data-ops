@@ -495,7 +495,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     }
   }, [modelId, currentProject?.id, discoverStandards, beginStructureLoad]);
 
-  /** 重新导入:用保存的 importConfig 重新拉取源表字段并覆盖当前字段列表。 */
+  /** 重新导入先展示差异和覆盖影响,要求用户明确确认,不再静默清空人工治理。 */
   const handleReimport = useCallback(async () => {
     const isCurrent = captureEditorResource();
     if (!isCurrent()) return;
@@ -506,32 +506,51 @@ const emptyColumnDraft = (): ColumnDraft => ({
       const columns = await previewModelingImportColumns(datasourceId, database, table);
       if (!isCurrent()) return;
       if (columns?.length) {
-        setRows(
-          columns.map((column) => ({
-            key: nextDraftKey(),
-            columnName: column.name || '',
-            dataType: column.typeName || '',
-            length: column.size ?? null,
-            scale: column.decimalDigits ?? null,
-            nullable: column.nullable ?? false,
-            defaultValue: column.defaultValue || '',
-            comment: column.remarks || '',
-            businessDescription: '',
-            stdTypeId: null,
-            stdNamingId: null,
-            stdCodeSetCode: null,
-            stdUnitId: null,
-            stdCaliberId: null,
-            stdSecurityId: null,
-            stdFieldId: null,
-          })),
-        );
-        const pkCols = columns.filter((c) => c.primaryKey).map((c) => c.name.trim()).filter(Boolean);
-        if (pkCols.length) setPrimaryKey(pkCols);
-        const tableRemarks = columns[0]?.tableRemarks;
-        if (tableRemarks) setTableComment(tableRemarks);
-        setDirty(true);
-        message.success(`已从源表重新导入 ${columns.length} 个字段`);
+        const incoming = new Set(columns.map((column) => column.name.trim().toLowerCase()));
+        const before = new Map(rows.map((row) => [row.columnName.trim().toLowerCase(), row]));
+        const removed = rows.filter((row) => !incoming.has(row.columnName.trim().toLowerCase()));
+        const added = columns.filter((column) => !before.has(column.name.trim().toLowerCase()));
+        const changed = columns.filter((column) => {
+          const old = before.get(column.name.trim().toLowerCase());
+          return old && (old.dataType !== column.typeName || old.length !== (column.size ?? null)
+            || old.nullable !== (column.nullable ?? false));
+        });
+        const bound = rows.filter((row) => row.stdFieldId != null || row.stdTypeId != null
+          || row.stdUnitId != null || row.stdSecurityId != null || row.businessDescription).length;
+        Modal.confirm({
+          title: '确认重新导入源表字段？',
+          content: `源列 ${columns.filter((column) => !column.technical).length}，技术生成列 ${columns.filter((column) => column.technical).length}。新增 ${added.length}、结构差异 ${changed.length}、当前仅有 ${removed.length}；已有 ${bound} 列包含人工标准/描述。覆盖会丢失当前编辑内容，请先备份或取消后逐列调整。`,
+          okText: '明确覆盖当前字段',
+          okButtonProps: { danger: true },
+          cancelText: '取消，保留当前字段',
+          onOk: () => {
+            if (!isCurrent()) return;
+            setRows(columns.map((column) => ({
+              key: nextDraftKey(),
+              columnName: column.name || '',
+              dataType: column.typeName || '',
+              length: column.size ?? null,
+              scale: column.decimalDigits ?? null,
+              nullable: column.nullable ?? false,
+              defaultValue: column.defaultValue || '',
+              comment: column.remarks || '',
+              businessDescription: '',
+              stdTypeId: null,
+              stdNamingId: null,
+              stdCodeSetCode: null,
+              stdUnitId: null,
+              stdCaliberId: null,
+              stdSecurityId: null,
+              stdFieldId: null,
+            })));
+            const pkCols = columns.filter((column) => column.primaryKey).map((column) => column.name.trim()).filter(Boolean);
+            if (pkCols.length) setPrimaryKey(pkCols);
+            const tableRemarks = columns[0]?.tableRemarks;
+            if (tableRemarks) setTableComment(tableRemarks);
+            setDirty(true);
+            message.success(`已替换当前草稿，共 ${columns.length} 列；仍需保存模型结构与核对来源映射`);
+          },
+        });
       } else {
         message.warning('源表无字段信息');
       }
@@ -543,7 +562,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       if (!isCurrent()) return;
       setReimportLoading(false);
     }
-  }, [importConfig, captureEditorResource]);
+  }, [importConfig, rows, captureEditorResource]);
 
   /** 标准发现:按字段名匹配标准字段集,匹配到的自动回填标准绑定。 */
   const handleStandardDiscover = useCallback(async () => {
@@ -2313,7 +2332,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
                     </Tooltip>
                   )}
                   {importConfig && (
-                    <Tooltip title={`从源表 ${importConfig.table} 重新导入字段(会覆盖当前字段)`}>
+                    <Tooltip title={`从源表 ${importConfig.table} 预览差异后重新导入（需要再次确认覆盖）`}>
                       <Button
                         size="small"
                         icon={<CloudDownloadOutlined />}

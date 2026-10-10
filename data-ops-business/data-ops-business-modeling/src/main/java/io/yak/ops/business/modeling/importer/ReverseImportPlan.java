@@ -11,7 +11,8 @@ import java.util.List;
  * <p>{@code tableName} is the physical table name (source table, or the name an
  * existing model already carries); {@code layerCode} is null when no layer
  * should be written; the {@code source*} triple is null when the model's source
- * binding must not be touched (nil on legacy rows or already set).
+ * binding must not be touched without comparing existing source identity. Exact
+ * sourceColumnNames are catalog-backed; generated technical columns are not mapped.
  */
 public record ReverseImportPlan(
     String name,
@@ -26,4 +27,6 @@ public record ReverseImportPlan(
     String sourceDatabase,
     String sourceTable,
     List<ModelingStructureApi.ColumnInput> columns,
-    List<String> primaryKey) {}
+    List<String> primaryKey,
+    /** Exact source catalog columns, excluding automatically generated technical fields. */
+    List<String> sourceColumnNames) {}
