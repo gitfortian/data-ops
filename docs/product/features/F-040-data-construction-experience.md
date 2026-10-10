@@ -190,3 +190,16 @@ Feature ID: F-040
 已新增 [F-040 V3 · 关键决策收敛与跨域实现契约提案](../experience/F-040-contract-resolution-proposal.md)，将交互 V2 进一步落实到一套可评审的业务决策、逻辑/物理标准引用、数据来源事务、设计版本 Manifest、DataDev 精确任务关联与兼容验收。
 
 本规格仍为 DRAFT。PD-010 必须先由 Product 正式接受；Semantic/Modeling/DataDev 需确认各自事实接口，特别是非 ODS 的 `stdFieldId` 约束与明确技术列例外。在此之前不允许以“设计稿已合并”作为实现授权，不写入生产数据或发布新的业务代码。
+
+
+## 15. 全域 R-01/R-02 确认后的实施准备（2026-10-10）
+
+用户已同意 #516 的全域 R-01/R-02 规划范围和 G1+G2 的依赖顺序；本 Feature **仍 DRAFT，业务代码尚未授权**。具体 [F-040 首次可信数据交付实施准备与验收门槛](../experience/F-040-first-value-delivery-gates.md) 已补入：
+
+- **GM-J1-16 首批 AI 建设协作**：用户用业务目标提出任务，Agent 提供证据/候选/待澄清问题与进入专业工作台的下一步，实际正式事实与保存发布仍归 Semantic/Modeling/DataDev/Metric；AI 不可用时手动路径不中断。它属于 J1 建设，而不是等到 J6 问答才开发。
+- **G1 真实消费基础**：先使用 #336、PD-002 既有 Dataset/Service 受治理合同和 Golden Runner 收集当前环境真实 Query/Invoke/Access/Usage/Source Audit/负向恢复证据，不复制消费平台；缺受信环境时 BLOCKED_EVIDENCE。
+- **G2 F-040 纵向价值**：Slice A 是从授权来源到标准字段/逻辑/物理设计的**内部里程碑**；Slice B 的真任务运行、业务口径与质量验证、Metric 发布及一次受治理数据消费，才是首次可信数据价值。
+- **十屏 UX 精简修订**：P01 增加 AI 目标计划与手工接管，P02–08 的正式引用和确认回执可回溯，P09 必须进入真实 DataDev，P10 提供真实消费与不确定性状态；不另造 Agent 中台。
+- **领域合同审批仍独立**：PD-010 的非 ODS 正式发布门禁、技术列例外、逻辑/物理版本和模型→DataDev 稳定引用尚需 Owner 签署，不能因 R-01/R-02 总方向被确认就将本 Feature 升 APPROVED。
+
+**下一阶段工程粒度**：产品/领域合同批准后，采用少量覆盖整个用户价值的集中 PR（Slice A 可信设计与 Slice B 真运行/业务消费），不按 UI 按钮或单个 DTO 拆 PR。真实 E2E 无回执不能标 SHIPPED。
