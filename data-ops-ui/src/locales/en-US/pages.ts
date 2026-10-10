@@ -2,7 +2,7 @@ export default {
   'pages.login.title': 'Data, worth trusting.',
   'pages.login.title.lead': 'Data,',
   'pages.login.title.emphasis': 'worth trusting.',
-  'pages.login.subtitle': 'Connect your data. Build trusted value.',
+  'pages.login.subtitle': 'Make trusted data easier to build, from integration to governance and use.',
   'pages.login.edition': 'Data governance & operations',
   'pages.login.welcome': 'Welcome back.',
   'pages.login.workspace': 'Sign in to your data workspace',

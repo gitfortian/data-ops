@@ -2,7 +2,7 @@ export default {
   'pages.login.title': '让数据，值得信任。',
   'pages.login.title.lead': '让数据，',
   'pages.login.title.emphasis': '值得信任。',
-  'pages.login.subtitle': '连接数据，沉淀可信价值。',
+  'pages.login.subtitle': '从数据接入到治理应用，让可信数据建设更简单。',
   'pages.login.edition': '数据治理与运营',
   'pages.login.welcome': '欢迎回来。',
   'pages.login.workspace': '登录你的数据工作空间',
