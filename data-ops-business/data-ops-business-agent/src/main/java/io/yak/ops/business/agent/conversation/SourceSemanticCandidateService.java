@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 public class SourceSemanticCandidateService {
   private final SourceSemanticTaskFacade sources;
   private final SemanticCandidateCatalogApi catalog;
+  private final AgentSkillManageService skills;
   private final SourceSemanticCandidateLedger reviews;
 
   public record Edit(long expectedRevision, String candidateId, String code, String name,
@@ -53,9 +54,11 @@ public class SourceSemanticCandidateService {
       List<String> selected, List<String> closure, List<String> blockers, boolean ready) {}
 
   public SourceSemanticCandidateService(SourceSemanticTaskFacade sources,
-      SemanticCandidateCatalogApi catalog, SourceSemanticStateBridge state) {
+      SemanticCandidateCatalogApi catalog, AgentSkillManageService skills,
+      SourceSemanticStateBridge state) {
     this.sources = sources;
     this.catalog = catalog;
+    this.skills = skills;
     this.reviews = state.candidates();
   }
 
@@ -68,7 +71,7 @@ public class SourceSemanticCandidateService {
     if (review==null) {
       Review proposed = new Review(taskId,task.projectId(),task.ownerId(),
           task.scopeFingerprint(),task.planSha256(),task.resultDigests(),
-          digestCatalog(currentCatalog),1,generate(input),List.of(),Map.of());
+          digestCatalog(currentCatalog),digestSkills(),1,generate(input),List.of(),Map.of());
       review=reviews.create(task.ownerId(),proposed);
     }
     verifySource(review,task);
@@ -227,6 +230,8 @@ public class SourceSemanticCandidateService {
     var errors=new LinkedHashSet<String>();
     if (!review.catalogDigest().equals(digestCatalog(current)))
       errors.add("[F039_SEMANTIC_CATALOG_CHANGED]");
+    if (!review.skillDigest().equals(digestSkills()))
+      errors.add("[F039_SKILL_CHANGED]");
     var byId=new LinkedHashMap<String,Candidate>();
     review.candidates().forEach(c -> byId.put(c.id(),c));
     var closure=new LinkedHashSet<String>();
@@ -245,6 +250,7 @@ public class SourceSemanticCandidateService {
     var bindings=new ArrayList<String>();
     bindings.add(taskId);bindings.add(review.sourceFingerprint());
     bindings.add(review.planSha256());bindings.add(review.catalogDigest());
+    bindings.add(review.skillDigest());
     bindings.add(Long.toString(review.revision()));
     review.resultDigests().entrySet().stream().sorted(Map.Entry.comparingByKey())
         .forEach(e -> {bindings.add(e.getKey());bindings.add(e.getValue());});
@@ -428,6 +434,18 @@ public class SourceSemanticCandidateService {
     if (task.projectId()!=catalog.projectId()||!catalog.complete())
       throw new IllegalStateException("[F039_CATALOG_INCOMPLETE]");
   }
+  /** Skill enabled state/version and complete prompt content are rechecked at preflight. */
+  private String digestSkills() {
+    var parts=new ArrayList<String>();
+    skills.list().stream().sorted(java.util.Comparator.comparing(s -> s.skillId()))
+        .forEach(s -> {
+          parts.add(s.skillId());parts.add(s.name());
+          parts.add(Integer.toString(s.version()));parts.add(Boolean.toString(s.enabled()));
+          parts.add(Objects.toString(s.content(),""));
+        });
+    return digest(parts);
+  }
+
   private static String digestCatalog(SemanticCandidateCatalogApi.Snapshot catalog) {
     var parts=new ArrayList<String>();
     parts.add(Long.toString(catalog.projectId()));
