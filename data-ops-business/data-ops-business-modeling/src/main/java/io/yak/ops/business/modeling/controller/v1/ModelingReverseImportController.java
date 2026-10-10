@@ -45,6 +45,8 @@ public class ModelingReverseImportController {
       Integer scale,
       boolean nullable,
       boolean primaryKey,
+      /** true for generated technical fields not present in the datasource catalog. */
+      boolean technical,
       String remarks,
       /** 表级备注(冗余到每列,方便前端取值)。 */
       String tableRemarks) {}
@@ -85,16 +87,17 @@ public class ModelingReverseImportController {
                 column ->
                     new ColumnPreviewView(
                         column.name(), column.typeName(), column.size(), column.scale(),
-                        column.nullable(), column.primaryKey(), column.remarks(), tableRemarksFinal))
+                        column.nullable(), column.primaryKey(), false, column.remarks(), tableRemarksFinal))
             .toList());
     // 自动追加技术字段:已存在同名源列则跳过
     java.util.Set<String> names = result.stream().map(ColumnPreviewView::name)
+        .map(String::toLowerCase)
         .collect(java.util.stream.Collectors.toSet());
     if (!names.contains("process_time")) {
-      result.add(new ColumnPreviewView("process_time", "DATETIME", null, null, false, false, "数据处理时间", tableRemarksFinal));
+      result.add(new ColumnPreviewView("process_time", "DATETIME", null, null, false, false, true, "数据处理时间", tableRemarksFinal));
     }
     if (!names.contains("event_time")) {
-      result.add(new ColumnPreviewView("event_time", "DATETIME", null, null, false, false, "业务事件时间", tableRemarksFinal));
+      result.add(new ColumnPreviewView("event_time", "DATETIME", null, null, false, false, true, "业务事件时间", tableRemarksFinal));
     }
     return Result.success(result);
   }
