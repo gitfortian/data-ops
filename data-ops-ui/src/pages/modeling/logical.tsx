@@ -1,6 +1,6 @@
 import { history } from '@umijs/max';
 import {
-  Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Table, Tag, Typography, message,
+  Alert, Button, Card, Empty, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
@@ -9,6 +9,7 @@ import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
   freezeLogicalDraft, getLogicalDraft, getLogicalVersionSnapshot, listLogicalDrafts,
   listLogicalVersions, updateLogicalEntity, updateLogicalAttribute, updateLogicalRelation,
+  previewLogicalPhysical, type LogicalPhysicalPreview,
   type LogicalDraftDetail, type LogicalDraftVersion, type LogicalModelDraft,
   type LogicalRelation,
 } from '@/services/modeling/logical';
@@ -45,6 +46,9 @@ export default function LogicalWorkspace() {
   const [relationOpen, setRelationOpen] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [snapshotText, setSnapshotText] = useState('');
+  const [physicalModelId, setPhysicalModelId] = useState<number | null>(null);
+  const [handoffPreview, setHandoffPreview] = useState<LogicalPhysicalPreview>();
+  const [handoffLoading, setHandoffLoading] = useState(false);
   const [createForm] = Form.useForm<CreateValues>();
   const [entityForm] = Form.useForm<EntityValues>();
   const [attributeForm] = Form.useForm<AttributeValues>();
@@ -192,6 +196,22 @@ export default function LogicalWorkspace() {
     } catch (err) { message.error(errorText(err)); }
     finally { setSaving(false); }
   };
+  const previewPhysical = async (versionNo: number) => {
+    if (selected == null || physicalModelId == null) {
+      message.warning('请输入需要核对的项目内物理模型 ID');
+      return;
+    }
+    setHandoffPreview(undefined);
+    setHandoffLoading(true);
+    try {
+      setHandoffPreview(await previewLogicalPhysical(selected, versionNo, physicalModelId));
+    } catch (error) {
+      message.error(errorText(error));
+    } finally {
+      setHandoffLoading(false);
+    }
+  };
+
   const showSnapshot = async (versionNo: number) => {
     if (selected == null) return;
     try {
@@ -275,14 +295,24 @@ export default function LogicalWorkspace() {
                       <Button type="link" onClick={() => editRelation(row.id)}>编辑</Button> },
                   ]} />
               </Card>
-              <Card title="独立设计快照（不是部署版本）">
+              <Card title="独立设计快照（不是部署版本）"
+                extra={<Space>
+                  <Typography.Text type="secondary">对比项目内已有物理模型 ID</Typography.Text>
+                  <InputNumber min={1} precision={0} value={physicalModelId}
+                    onChange={(value) => { setPhysicalModelId(value); setHandoffPreview(undefined); }}
+                    placeholder="物理模型 ID" />
+                </Space>}>
                 <Table size="small" rowKey="id" pagination={false} dataSource={versions}
                   columns={[
                     { title: '快照版本', dataIndex: 'versionNo', key: 'versionNo' },
                     { title: '状态', dataIndex: 'status', key: 'status', render: (s: string) => <Tag>{s}</Tag> },
                     { title: '冻结人', dataIndex: 'createdBy', key: 'createdBy' },
                     { title: '查看', key: 'action', render: (_, version: LogicalDraftVersion) =>
-                      <Button type="link" onClick={() => void showSnapshot(version.versionNo)}>查看冻结快照</Button> },
+                      <Space>
+                        <Button type="link" onClick={() => void showSnapshot(version.versionNo)}>查看冻结快照</Button>
+                        <Button loading={handoffLoading} type="link"
+                          onClick={() => void previewPhysical(version.versionNo)}>预检物理关联</Button>
+                      </Space> },
                   ]} />
               </Card>
             </>
@@ -357,6 +387,24 @@ export default function LogicalWorkspace() {
           <Form.Item name="description" label="关系的业务说明"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
+
+      {handoffPreview && <Card title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 只读候选预检`}>
+        <Alert type={handoffPreview.blockers.length ? 'warning' : 'info'} showIcon
+          message={handoffPreview.blockers.length ? '仍有交接阻断项' : '仅已达到人工审阅条件'}
+          description="字段的 stdFieldId 一致只代表可核对候选，不代表 SQL 映射、逻辑版本已发布、物理模型已生成或数据已执行。" />
+        {handoffPreview.blockers.map((blocker, i) => (
+          <Typography.Paragraph key={i} type="danger" className="!mt-2 !mb-0">{blocker}</Typography.Paragraph>
+        ))}
+        <Table className="mt-3" size="small" rowKey={(row) => row.physicalColumn} pagination={false}
+          dataSource={handoffPreview.columns} columns={[
+            { title: '物理字段', dataIndex: 'physicalColumn' },
+            { title: '标准字段 ID', dataIndex: 'physicalStdFieldId', render: (id?: number) => id ?? '缺失' },
+            { title: '逻辑实体', dataIndex: 'logicalEntity', render: (v?: string) => v || '待确认' },
+            { title: '逻辑属性', dataIndex: 'logicalAttribute', render: (v?: string) => v || '待确认' },
+            { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{v}</Tag> },
+            { title: '原因', dataIndex: 'reason' },
+          ]} />
+      </Card>}
       <Modal width={760} title="冻结的逻辑设计内容（只读）" open={snapshotOpen}
         footer={<Button onClick={() => setSnapshotOpen(false)}>关闭</Button>}
         onCancel={() => setSnapshotOpen(false)}>
