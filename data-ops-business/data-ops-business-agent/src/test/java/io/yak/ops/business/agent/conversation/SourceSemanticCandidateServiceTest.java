@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 class SourceSemanticCandidateServiceTest {
   private final SourceSemanticTaskFacade source=mock(SourceSemanticTaskFacade.class);
   private final SemanticCandidateCatalogApi catalog=mock(SemanticCandidateCatalogApi.class);
+  private final AgentSkillManageService skills=mock(AgentSkillManageService.class);
   private SourceSemanticCandidateService service;
   private SourceSemanticTaskLedger taskLedger;
   private String taskId="b380e372-ea27-4ce6-861d-8de744c5b367";
@@ -49,7 +50,8 @@ class SourceSemanticCandidateServiceTest {
     when(source.verifiedCandidateInput(taskId))
         .thenReturn(new SourceSemanticTaskFacade.CandidateInput(finished,evidence));
     when(catalog.read()).thenReturn(semantic());
-    service=new SourceSemanticCandidateService(source,catalog,state);
+    when(skills.list()).thenReturn(List.of());
+    service=new SourceSemanticCandidateService(source,catalog,skills,state);
   }
 
   @Test void draftsAreSourceBoundAndNeverAutoSelected() {
@@ -122,6 +124,21 @@ class SourceSemanticCandidateServiceTest {
     assertTrue(drift.blockers().stream().anyMatch(b->b.contains("CATALOG_CHANGED")));
     when(catalog.read()).thenReturn(new SemanticCandidateCatalogApi.Snapshot(99L,List.of(),true));
     assertThrows(IllegalStateException.class,()->service.preflight(taskId,view.review().revision()));
+  }
+
+  @Test void skillChangeInvalidatesPreviouslyReadyPreflight() {
+    var view=service.read(taskId);
+    var field=view.review().candidates().stream().filter(c->"FIELD".equals(c.kind()))
+        .findFirst().orElseThrow();
+    var selected=service.select(taskId,
+        new SourceSemanticCandidateService.Selection(1,List.of(field.id())));
+    when(skills.list()).thenReturn(List.of(new io.yak.ops.business.agent.domain.AgentSkillBrief(
+        "review-skill","source review","description",Map.of(),"changed instruction",
+        true,2,null,null)));
+    var preflight=service.preflight(taskId,selected.review().revision());
+    assertFalse(preflight.ready());
+    assertNull(preflight.ticket());
+    assertTrue(preflight.blockers().stream().anyMatch(b->b.contains("SKILL_CHANGED")));
   }
 
   @Test void answersInvalidateOlderReviewRevision() {
