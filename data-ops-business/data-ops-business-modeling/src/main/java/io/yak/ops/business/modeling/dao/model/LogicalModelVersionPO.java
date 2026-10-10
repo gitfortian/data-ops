@@ -1,6 +1,8 @@
 package io.yak.ops.business.modeling.dao.model;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.IdType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
 @TableName("yak_modeling_logical_model_version")
 public class LogicalModelVersionPO {
 
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     private Long modelId;
