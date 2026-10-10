@@ -4,6 +4,7 @@ import {
   sourceSemanticCandidates, type CandidatePreflight, type CandidateView,
   type SemanticCandidate, type AdoptionReceipt,
 } from '@/services/agent/sourceSemanticCandidates';
+import SourceSemanticHandoffPanel from './SourceSemanticHandoffPanel';
 
 /**
  * F-039 candidate review is deliberately read-only with respect to Semantic.
@@ -291,6 +292,7 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
               </Typography.Text>}
             <Typography.Text type="secondary">{' '}{item.message}</Typography.Text>
           </div>)}
+          <SourceSemanticHandoffPanel taskId={taskId} review={review} receipts={receipts} />
           {receipts.some((item) => !['CREATED', 'REUSED', 'LINKED'].includes(item.status)) &&
             <Alert type="warning" showIcon style={{ marginTop: 8 }}
               message="存在未执行、需核对或待处理项，不能宣称全部保存成功。" />}
