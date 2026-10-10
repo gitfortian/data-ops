@@ -20,7 +20,7 @@ public record SourceSemanticTaskState(
     long revision, String sessionId, SourceSemanticScope sourceManifest,
     List<SourceSemanticChunkPlanner.Chunk> frozenChunks) implements State {
 
-  public enum Status { PLANNED, READY, RUNNING, PAUSED, INTERRUPTED, COMPLETED, CANCELLED }
+  public enum Status { PLANNED, READY, RUNNING, PAUSE_REQUESTED, PAUSED, INTERRUPTED, COMPLETED, CANCELLED }
 
   public SourceSemanticTaskState {
     SourceSemanticScope.required(taskId, "taskId");
@@ -67,7 +67,8 @@ public record SourceSemanticTaskState(
         || reservedToolCalls > maxToolCalls || revision < 1)
       throw new IllegalArgumentException("invalid cumulative task reservation");
     if ((activeTurnId == null) != (activeChunkId == null)
-        || (status == Status.RUNNING) != (activeTurnId != null))
+        || (status == Status.RUNNING || status == Status.PAUSE_REQUESTED)
+            != (activeTurnId != null))
       throw new IllegalArgumentException("active turn must belong only to RUNNING");
     if (activeChunkId != null && (!chunkIds.contains(activeChunkId)
         || completedChunkIds.contains(activeChunkId)))

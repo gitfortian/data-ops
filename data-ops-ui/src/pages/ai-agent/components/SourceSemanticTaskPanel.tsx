@@ -203,8 +203,10 @@ const SourceSemanticTaskPanel: React.FC<{ dataSourceId: string; initialTaskId?: 
             onClick={() => run(() => sourceSemanticApi.action(task.taskId, 'next'))}>
               执行下一分片
             </Button>}
-          {task.status === 'READY' && <Button disabled={loading}
-            onClick={() => run(() => sourceSemanticApi.action(task.taskId, 'pause'))}>暂停</Button>}
+          {(task.status === 'READY' || task.status === 'RUNNING') && <Button disabled={loading}
+            onClick={() => run(() => sourceSemanticApi.action(task.taskId, 'pause'))}>
+              {task.status === 'RUNNING' ? '当前分片结束后暂停' : '暂停'}
+            </Button>}
           {['PAUSED', 'INTERRUPTED'].includes(task.status) && <Button disabled={loading}
             onClick={() => run(() => sourceSemanticApi.action(task.taskId, 'resume'))}>
               重新核对后恢复
@@ -213,7 +215,7 @@ const SourceSemanticTaskPanel: React.FC<{ dataSourceId: string; initialTaskId?: 
             onClick={() => run(() => sourceSemanticApi.action(task.taskId, 'cancel'))}>停止任务</Button>}
           <Button disabled={loading} onClick={() => run(() => refresh(task.taskId))}>刷新进度</Button>
         </Space>
-        {task.status === 'RUNNING' &&
+        {(task.status === 'RUNNING' || task.status === 'PAUSE_REQUESTED') &&
           <Alert type="info" showIcon style={{ marginTop: 8 }}
             message="原轮次在服务端执行，关闭页面不会把它当成已完成；刷新可核对真实状态。" />}
         {task.status === 'COMPLETED' &&

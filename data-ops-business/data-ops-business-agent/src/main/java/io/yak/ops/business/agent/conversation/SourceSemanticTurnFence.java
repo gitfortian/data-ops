@@ -46,7 +46,8 @@ public class SourceSemanticTurnFence {
     }
     SourceSemanticTaskState task = ledger.read(Long.toString(original.userId()),
         original.projectId(), input.sourceTaskId());
-    if (task.status() != SourceSemanticTaskState.Status.RUNNING
+    if ((task.status() != SourceSemanticTaskState.Status.RUNNING
+            && task.status() != SourceSemanticTaskState.Status.PAUSE_REQUESTED)
         || !Objects.equals(task.activeTurnId(), original.turnId())
         || !Objects.equals(task.sessionId(), original.sessionId())
         || task.sourceManifest() == null
