@@ -45,6 +45,8 @@ public class SourceSemanticCandidateService {
       Long reuseId, Integer reuseVersion) {}
   public record Selection(long expectedRevision, List<String> ids) {}
   public record Answer(long expectedRevision, String questionId, String value) {}
+  public record Merge(long expectedRevision, String firstId, String secondId, boolean confirmedSameMeaning) {}
+  public record Split(long expectedRevision, String candidateId, String tableAssetKey, String column) {}
   public record Match(String candidateId, List<Entry> matches, boolean ambiguous) {}
   public record View(Review review, List<Match> matches, List<Entry> catalogEntries) {}
   public record Preflight(long revision, String payloadDigest, String ticket,
@@ -109,6 +111,89 @@ public class SourceSemanticCandidateService {
       if (!known.containsAll(selection.ids()))
         throw new IllegalArgumentException("[F039_SELECTION_UNKNOWN]");
       return old.revised(old.candidates(),selection.ids(),old.answers());
+    });
+    return read(taskId);
+  }
+
+  /** Human-confirmed cross-table concept merge, NEVER an automatic name-based merge. */
+  public View merge(String taskId, Merge request) {
+    var task=sources.verifiedCandidateInput(taskId).task();
+    read(taskId);
+    if (!request.confirmedSameMeaning() || Objects.equals(request.firstId(),request.secondId()))
+      throw new IllegalArgumentException("[F039_MERGE_REQUIRES_EXPLICIT_CONFIRMATION]");
+    reviews.change(task.ownerId(),task.projectId(),taskId,request.expectedRevision(),old -> {
+      verifySource(old,task);
+      var first=old.candidates().stream().filter(c->c.id().equals(request.firstId()))
+          .findFirst().orElseThrow(()->new IllegalArgumentException("[F039_MERGE_ID_UNKNOWN]"));
+      var second=old.candidates().stream().filter(c->c.id().equals(request.secondId()))
+          .findFirst().orElseThrow(()->new IllegalArgumentException("[F039_MERGE_ID_UNKNOWN]"));
+      if (!"FIELD".equals(first.kind()) || !"FIELD".equals(second.kind())
+          || old.selectedIds().contains(first.id()) || old.selectedIds().contains(second.id()))
+        throw new IllegalArgumentException("[F039_MERGE_NOT_ALLOWED]");
+      var union=new LinkedHashSet<Evidence>(first.evidence());
+      union.addAll(second.evidence());
+      if(union.size()!=first.evidence().size()+second.evidence().size())
+        throw new IllegalArgumentException("[F039_DUPLICATE_EVIDENCE]");
+      // Reset business decisions; confirmation of equivalence is not approval of role/type/units.
+      var merged=new Candidate(first.id(),"FIELD",null,first.name(),null,null,
+          "用户已合并多个来源字段；业务角色、TYPE与编码须重新确认",null,null,null,null,
+          List.of(),List.copyOf(union));
+      var newItems=new ArrayList<Candidate>();
+      for(var item:old.candidates()) {
+        if(item.id().equals(second.id())) continue;
+        if(item.id().equals(first.id())) {newItems.add(merged);continue;}
+        if(item.dependencies().contains(second.id())) {
+          var deps=item.dependencies().stream().map(d->
+              d.equals(second.id())?first.id():d).distinct().toList();
+          newItems.add(new Candidate(item.id(),item.kind(),item.code(),item.name(),
+              item.role(),item.grain(),item.description(),item.typeId(),item.unitId(),
+              item.reuseId(),item.reuseVersion(),deps,item.evidence()));
+        } else newItems.add(item);
+      }
+      return old.revised(newItems,List.of(),old.answers());
+    });
+    return read(taskId);
+  }
+
+  /** Split ONE preserved source-column witness from a previously merged concept. */
+  public View split(String taskId, Split request) {
+    var task=sources.verifiedCandidateInput(taskId).task();
+    read(taskId);
+    reviews.change(task.ownerId(),task.projectId(),taskId,request.expectedRevision(),old -> {
+      verifySource(old,task);
+      var source=old.candidates().stream().filter(c->c.id().equals(request.candidateId()))
+          .findFirst().orElseThrow(()->new IllegalArgumentException("[F039_SPLIT_ID_UNKNOWN]"));
+      if(!"FIELD".equals(source.kind()) || source.evidence().size()<2
+          || old.selectedIds().contains(source.id()))
+        throw new IllegalArgumentException("[F039_SPLIT_NOT_ALLOWED]");
+      var witnesses=source.evidence().stream().filter(e->
+          e.tableAssetKey().equals(request.tableAssetKey())
+              && Objects.equals(e.column(),request.column())).toList();
+      if(witnesses.size()!=1) throw new IllegalArgumentException("[F039_SPLIT_EVIDENCE_MISSING]");
+      var chosen=witnesses.get(0);
+      String newId=id(taskId,"SPLIT_FIELD",chosen.tableAssetKey(),
+          Objects.toString(chosen.column(),"")+":"+old.revision());
+      var newItems=new ArrayList<Candidate>();
+      for(var item:old.candidates()) {
+        if(item.id().equals(source.id())) {
+          var remaining=source.evidence().stream().filter(e->!e.equals(chosen)).toList();
+          newItems.add(new Candidate(source.id(),"FIELD",null,source.name(),null,null,
+              "拆分后需重新核对业务含义与TYPE",null,null,null,null,List.of(),remaining));
+          newItems.add(new Candidate(newId,"FIELD",null,
+              Objects.toString(chosen.column(),"待核对字段"),null,null,
+              "来源证据由人工拆分；请明确业务角色和TYPE",null,null,null,null,
+              List.of(),List.of(chosen)));
+        } else if ("PROCESS_FIELD".equals(item.kind())
+            && item.dependencies().contains(source.id())
+            && item.evidence().contains(chosen)) {
+          var deps=item.dependencies().stream().map(d->
+              d.equals(source.id())?newId:d).toList();
+          newItems.add(new Candidate(item.id(),item.kind(),item.code(),item.name(),
+              item.role(),item.grain(),item.description(),item.typeId(),item.unitId(),
+              item.reuseId(),item.reuseVersion(),deps,item.evidence()));
+        } else newItems.add(item);
+      }
+      return old.revised(newItems,List.of(),old.answers());
     });
     return read(taskId);
   }
