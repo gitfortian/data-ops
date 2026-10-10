@@ -242,7 +242,8 @@ public class SourceSemanticCandidateService {
     var items=fresh.closure().stream().map(byId::get).map(item->
         new SourceSemanticAdoption.Candidate(item.id(),item.kind(),item.code(),
             item.name(),item.role(),item.grain(),item.description(),item.typeId(),
-            item.unitId(),item.reuseId(),item.reuseVersion(),item.dependencies())).toList();
+            item.unitId(),item.reuseId(),item.reuseVersion(),item.dependencies(),
+            "SOURCE_LINK".equals(item.kind())?item.evidence().get(0).tableAssetKey():null)).toList();
     var metadata=input.evidence();
     var scope=new SourceSemanticAdoption.Scope(state.projectId(),
         Long.parseLong(state.sourceManifest().dataSourceId()),metadata.collectJobId(),
@@ -336,6 +337,9 @@ public class SourceSemanticCandidateService {
         (c.grain()==null||c.grain().isBlank()||
             !("FACT".equals(c.role()) || "DIMENSION".equals(c.role()))))
       errors.add("[F039_PROCESS_GRAIN_OR_TYPE_UNKNOWN]"+tag);
+    if ("SOURCE_LINK".equals(c.kind()) &&
+        !List.of("MAIN","DETAIL","DIM").contains(c.role()))
+      errors.add("[F039_SOURCE_ROLE_REQUIRED]"+tag);
     if ("FIELD".equals(c.kind())) {
       if (!("PROCESS".equals(c.role()) || "DIMENSION".equals(c.role()) || "METRIC".equals(c.role())))
         errors.add("[F039_FIELD_ROLE_UNKNOWN]"+tag);
