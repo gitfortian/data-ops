@@ -21,6 +21,11 @@ import io.yak.ops.common.constant.semantic.SemanticPermissionCode;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.spi.semantic.SourceSchemaAdoptionProof;
 import java.time.LocalDateTime;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,12 +70,50 @@ public class SemanticAdoptionItemWriter {
         .eq(AdoptionReceiptPO::getCandidateId,candidateId));
   }
 
-  public List<Receipt> list(long project,String taskId) {
+  public List<Receipt> list(long project,String taskId,String operator) {
     return receipts.selectList(new LambdaQueryWrapper<AdoptionReceiptPO>()
         .eq(AdoptionReceiptPO::getProjectId,project)
         .eq(AdoptionReceiptPO::getTaskId,taskId)
+        .eq(AdoptionReceiptPO::getOperatorId,operator)
         .orderByAsc(AdoptionReceiptPO::getCreateTime)).stream()
         .map(SemanticAdoptionItemWriter::map).toList();
+  }
+
+  public Receipt replay(SemanticSourceAdoptionApi.Batch batch,Candidate candidate,
+      AdoptionReceiptPO receipt) {
+    if (!Long.toString(batch.userId()).equals(receipt.getOperatorId())
+        || !Objects.equals(receipt.getPayloadDigest(),commitment(batch,candidate)))
+      throw new IllegalStateException("[F039_IDEMPOTENCY_DIGEST_CONFLICT]");
+    if (!List.of("CREATED","REUSED","LINKED").contains(receipt.getStatus()))
+      throw new IllegalStateException("[F039_RECEIPT_NOT_COMMITTED]");
+    return map(receipt);
+  }
+
+  private static String commitment(SemanticSourceAdoptionApi.Batch batch,Candidate c) {
+    try {
+      var bytes=new ByteArrayOutputStream();
+      try(var writer=new DataOutputStream(bytes)) {
+        var fields=new java.util.ArrayList<String>();
+        fields.add(batch.taskId());fields.add(Long.toString(batch.projectId()));
+        fields.add(Long.toString(batch.userId()));fields.add(Long.toString(batch.reviewRevision()));
+        fields.add(batch.payloadDigest());fields.add(batch.evidence().evidenceFingerprint());
+        fields.add(c.id());fields.add(c.kind());
+        fields.add(Objects.toString(c.code(),""));fields.add(Objects.toString(c.name(),""));
+        fields.add(Objects.toString(c.role(),""));fields.add(Objects.toString(c.grain(),""));
+        fields.add(Objects.toString(c.description(),""));
+        fields.add(Objects.toString(c.typeId(),""));fields.add(Objects.toString(c.unitId(),""));
+        fields.add(Objects.toString(c.reuseId(),""));fields.add(Objects.toString(c.reuseVersion(),""));
+        fields.addAll(c.dependencies());
+        for(String value:fields) {
+          byte[] encoded=value.getBytes(StandardCharsets.UTF_8);
+          writer.writeInt(encoded.length);writer.write(encoded);
+        }
+      }
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+          .digest(bytes.toByteArray()));
+    } catch(Exception failure) {
+      throw new IllegalStateException("[F039_ADOPTION_DIGEST_FAILED]",failure);
+    }
   }
 
   static Receipt map(AdoptionReceiptPO receipt) {
@@ -89,18 +132,14 @@ public class SemanticAdoptionItemWriter {
     verifyActor(request);
     source.assertCurrent(request.evidence());
     var old=stored(request.projectId(),request.taskId(),candidate.id());
-    if(old!=null) {
-      if(!Objects.equals(old.getPayloadDigest(),request.payloadDigest()))
-        throw new IllegalStateException("[F039_IDEMPOTENCY_DIGEST_CONFLICT]");
-      return map(old);
-    }
+    if(old!=null) return replay(request,candidate,old);
     String actor=Long.toString(request.userId());
     var rec=new AdoptionReceiptPO();
     rec.setReceiptId(UUID.randomUUID().toString());
     rec.setProjectId(request.projectId());
     rec.setTaskId(request.taskId());
     rec.setCandidateId(candidate.id());
-    rec.setPayloadDigest(request.payloadDigest());
+    rec.setPayloadDigest(commitment(request,candidate));
     rec.setOperatorId(actor);
     rec.setKind(candidate.kind());
     rec.setStatus("PENDING");
