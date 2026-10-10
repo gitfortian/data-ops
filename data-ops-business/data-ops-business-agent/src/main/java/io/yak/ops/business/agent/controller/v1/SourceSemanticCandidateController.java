@@ -64,6 +64,19 @@ public class SourceSemanticCandidateController {
       @PathVariable String taskId,@RequestBody Answer request) {
     return Result.success(service.answer(taskId,request));
   }
+  @Operation(summary = "人工明确保存所选候选；Semantic独立核验并返回逐项真实回执")
+  @PostMapping("/adopt")
+  public Result<java.util.List<io.yak.ops.business.agent.domain.SourceSemanticAdoption.Receipt>> adopt(
+      @PathVariable String taskId,
+      @RequestBody SourceSemanticCandidateService.SaveRequest request) {
+    return Result.success(service.adopt(taskId,request));
+  }
+  @Operation(summary = "只读核对已提交的 Semantic 正式采纳回执")
+  @GetMapping("/adoption-receipts")
+  public Result<java.util.List<io.yak.ops.business.agent.domain.SourceSemanticAdoption.Receipt>> adoptionReceipts(
+      @PathVariable String taskId) {
+    return Result.success(service.adoptionReceipts(taskId));
+  }
   @Operation(summary = "跨项目/来源/标准目录新鲜校验与依赖预检（零业务写入）")
   @PostMapping("/preflight")
   public Result<SourceSemanticCandidateService.Preflight> preflight(
