@@ -49,6 +49,28 @@ class SourceSemanticMetadataEvidenceBinderTest {
     assertThrows(IllegalArgumentException.class,()->binder.bind(0,List.of("orders")));
   }
 
+  @Test void partialColumnCaptureIsRejectedBeforeScopeConstruction() {
+    when(metadata.readSelectedTables(List.of("orders"))).thenReturn(
+        new PhysicalScopeEvidenceQueryApi.Evidence(31,"7","warehouse","public","capture-1",
+        "time","fingerprint",List.of(
+            new PhysicalScopeEvidenceQueryApi.Table("orders","orders","table-hash",2,List.of(
+                new PhysicalScopeEvidenceQueryApi.Column("id","hash-id","bigint",true,""))))));
+    var error = assertThrows(IllegalStateException.class,
+        () -> binder.bind(31,List.of("orders")));
+    assertEquals("[F039_INCOMPLETE_METADATA_SELECTION]", error.getMessage());
+  }
+
+  @Test void returnedTableMustMatchExplicitSelection() {
+    when(metadata.readSelectedTables(List.of("orders"))).thenReturn(
+        new PhysicalScopeEvidenceQueryApi.Evidence(31,"7","warehouse","public","capture-1",
+        "time","fingerprint",List.of(
+            new PhysicalScopeEvidenceQueryApi.Table("other","other","table-hash",1,List.of(
+                new PhysicalScopeEvidenceQueryApi.Column("id","hash-id","bigint",true,""))))));
+    var error = assertThrows(IllegalStateException.class,
+        () -> binder.bind(31,List.of("orders")));
+    assertEquals("[F039_INCOMPLETE_METADATA_SELECTION]", error.getMessage());
+  }
+
   @Test void crossProjectAndIncompleteSourceFailClosed() {
     when(metadata.readSelectedTables(List.of("orders"))).thenReturn(
         new PhysicalScopeEvidenceQueryApi.Evidence(32,"7","warehouse","public","capture-1",

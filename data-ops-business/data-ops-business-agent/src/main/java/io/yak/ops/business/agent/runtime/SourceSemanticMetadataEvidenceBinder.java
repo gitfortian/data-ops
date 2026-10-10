@@ -42,6 +42,16 @@ public final class SourceSemanticMetadataEvidenceBinder {
     if (evidence == null || evidence.projectId() != trustedProjectId) {
       throw new IllegalStateException("[F039_METADATA_PROJECT_MISMATCH]");
     }
+    // Fail closed on missing/substituted tables or partial column capture BEFORE building
+    // SourceSemanticScope, whose constructor reports caller input errors instead.
+    if (evidence.tables().size() != tableKeys.size()
+        || !evidence.tables().stream().map(PhysicalScopeEvidenceQueryApi.Table::assetKey)
+            .sorted().toList().equals(tableKeys.stream().sorted().toList())
+        || evidence.tables().stream().anyMatch(table ->
+            table.declaredColumnCount() <= 0
+                || table.columns().size() != table.declaredColumnCount())) {
+      throw new IllegalStateException("[F039_INCOMPLETE_METADATA_SELECTION]");
+    }
     authorization.requireReadAccess(trustedProjectId, evidence.dataSourceId());
     List<SourceSemanticScope.Table> tables = new ArrayList<>();
     for (var table : evidence.tables()) {
@@ -53,11 +63,6 @@ public final class SourceSemanticMetadataEvidenceBinder {
     }
     var scope = new SourceSemanticScope(trustedProjectId, evidence.dataSourceId(),
         evidence.database(), evidence.schema(), evidence.collectJobId(), tables);
-    if (scope.tables().size() != tableKeys.size()
-        || !scope.tables().stream().map(SourceSemanticScope.Table::assetKey).toList()
-            .equals(tableKeys.stream().sorted().toList())) {
-      throw new IllegalStateException("[F039_INCOMPLETE_METADATA_SELECTION]");
-    }
     return scope;
   }
 
