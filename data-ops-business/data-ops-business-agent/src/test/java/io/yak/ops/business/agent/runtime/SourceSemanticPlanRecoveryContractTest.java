@@ -2,7 +2,9 @@ package io.yak.ops.business.agent.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.agentscope.core.agent.RuntimeContext;
@@ -110,6 +112,29 @@ class SourceSemanticPlanRecoveryContractTest {
       String current = workspace.readManagedWorkspaceFileUtf8(context, "plans/PLAN.md");
       assertNotEquals(sha256(original), sha256(current),
           "A stored plan digest is required before executing an approved revision");
+    }
+  }
+
+  @Test
+  void workspacePlanWriteFailureMustNotBeTreatedAsWritten(@TempDir Path root)
+      throws IOException {
+    Path project = Files.createDirectory(root.resolve("project"));
+    Path workspaceRoot = Files.createDirectory(root.resolve("task-a"));
+    // Force the intended plans/ directory path to be a regular file.
+    Files.writeString(workspaceRoot.resolve("plans"), "unwritable parent",
+        StandardCharsets.UTF_8);
+    var context = RuntimeContext.builder().userId("owner").sessionId("task-a").build();
+    AgentState state = AgentState.builder().userId("owner").sessionId("task-a").build();
+
+    try (WorkspaceManager workspace = workspace(project, workspaceRoot)) {
+      var plan = new PlanModeManager(workspace, null);
+      plan.enter(state);
+      assertThrows(RuntimeException.class,
+          () -> plan.writePlan(context, state, "# May not persist\\n"));
+      assertTrue(Files.isRegularFile(workspaceRoot.resolve("plans")));
+      assertFalse(Files.exists(workspaceRoot.resolve("plans/PLAN.md")));
+      // A set path is not a receipt: the adapter must fail closed after a write error.
+      assertEquals("plans/PLAN.md", state.getPlanModeContext().getCurrentPlanFile());
     }
   }
 
