@@ -201,4 +201,43 @@ class AgentChatServiceSubmitTest {
     verify(turnRepository, never())
         .insertQueued(anyString(), anyString(), anyLong(), anyLong(), any(), any());
   }
+  @Test
+  void reservedF039TurnUsesTheSameOriginalDurableQueueAndSessionOwner() {
+    String sessionId = "f039-source-session";
+    var meta = new SessionMeta(sessionId, 42L, 1L, null, null, null);
+    when(sessionRepository.findBySessionId(sessionId)).thenReturn(Optional.of(meta));
+    String turnId = java.util.UUID.randomUUID().toString();
+    chatService.assertSourceSemanticOwner(sessionId,42L,1L);
+    chatService.enqueueReservedSourceSemanticTurn(sessionId,turnId,
+        "Read-only verified metadata chunk",42L,1L);
+    var capture=org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(turnRepository).insertQueued(eq(turnId),eq(sessionId),eq(42L),eq(1L),
+        eq(TurnKind.START),capture.capture());
+    var decoded=io.yak.ops.business.agent.repository.support.TurnInputCodec.decode(
+        capture.getValue());
+    org.junit.jupiter.api.Assertions.assertEquals("Read-only verified metadata chunk",
+        decoded.message());
+    org.junit.jupiter.api.Assertions.assertNotNull(decoded.assistantMessageId());
+    org.junit.jupiter.api.Assertions.assertNull(decoded.governanceTarget());
+    verify(dispatcher).kick();
+  }
+
+  @Test
+  void reservedF039TurnRejectsWrongUserOrBusySessionBeforeEnqueue() {
+    String sessionId = "f039-closed";
+    when(sessionRepository.findBySessionId(sessionId))
+        .thenReturn(Optional.of(new SessionMeta(sessionId, 42L, 1L, null,null,null)));
+    String turnId=java.util.UUID.randomUUID().toString();
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        ()->chatService.enqueueReservedSourceSemanticTurn(sessionId,turnId,
+            "metadata",41L,1L));
+    when(turnRepository.hasActiveTurn(sessionId)).thenReturn(true);
+    org.junit.jupiter.api.Assertions.assertThrows(TurnConflictException.class,
+        ()->chatService.enqueueReservedSourceSemanticTurn(sessionId,turnId,
+            "metadata",42L,1L));
+    verify(turnRepository,never()).insertQueued(anyString(),anyString(),
+        anyLong(),anyLong(),any(),anyString());
+    verify(dispatcher,never()).kick();
+  }
+
 }

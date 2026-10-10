@@ -23,12 +23,19 @@ class SourceSemanticTaskLedgerMysqlContractTest {
      var scope=SourceSemanticScopeChunkContractTest.scope();
      String id=UUID.randomUUID().toString();
      String plan=SourceSemanticScope.digest(List.of("approved-review"));
-     var initial=ledger.create(id,"alice",scope,1,2,plan,3,4);
+     var initial=ledger.create(id,"alice","f039-original-session",scope,1,2,plan,3,4);
      ledger.confirmPlan("alice",31,id,scope.fingerprint(),plan);
      var reopened=new SourceSemanticTaskLedger(
          new MysqlAgentStateStore(ds,database,table,false));
-     assertEquals(SourceSemanticTaskState.Status.READY,
-         reopened.read("alice",31,id).status());
+     var restarted=reopened.read("alice",31,id);
+     assertEquals(SourceSemanticTaskState.Status.READY, restarted.status());
+     assertEquals("f039-original-session",restarted.sessionId());
+     assertEquals(scope,restarted.sourceManifest());
+     assertEquals(scope.fingerprint(),restarted.sourceManifest().fingerprint());
+     assertEquals(initial.chunkIds(),restarted.frozenChunks().stream()
+         .map(SourceSemanticChunkPlanner.Chunk::id).toList());
+     assertEquals(initial.chunkPlanFingerprint(),SourceSemanticChunkPlanner.planFingerprint(
+         restarted.sourceManifest(),restarted.frozenChunks()));
      reopened.reserveTurn("alice",31,id,scope.fingerprint(),plan,
          initial.chunkIds().get(0),"turn-1",2);
      var third=new SourceSemanticTaskLedger(
