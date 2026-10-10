@@ -35,7 +35,7 @@ const MATCH_LABELS: Record<string, string> = {
 
 /** event_time 来源字段自动识别:优先含 time,其次含 date/dt(与后端一致)。 */
 const detectEventTimeField = (columns: ModelingImportColumnView[]): string | undefined => {
-  const names = (columns ?? []).map((column) => column.name.toLowerCase());
+  const names = (columns ?? []).filter((column) => !column.technical).map((column) => column.name.toLowerCase());
   return names.find((name) => name.includes('time')) ?? names.find((name) => name.includes('date') || name === 'dt');
 };
 
@@ -393,8 +393,14 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
             {previewTable === table.name && previewLoading ? <Spin size="small" className="mt-2" /> : null}
             {previewTable === table.name && preview ? (
               <div className="mt-2">
+                <Typography.Text type="secondary" className="!block !text-[12px]">
+                  真实源字段 {preview.filter((column) => !column.technical).length} 个；
+                  平台生成技术列 {preview.filter((column) => column.technical).length} 个（不建立来源列映射）
+                </Typography.Text>
                 <div className="flex max-h-[140px] flex-wrap gap-2 overflow-auto rounded border border-[#f0f0f0] p-2">
-                  {preview.map((column) => (
+                  {preview.map((column) => column.technical ? (
+                    <Tag key={column.name} color="default">{column.name}:{column.typeName}（技术生成）</Tag>
+                  ) : (
                     <Tag.CheckableTag key={column.name} checked={false} onChange={() => _openCapture(column)}>
                       {column.name}:{column.typeName}
                       {column.primaryKey ? ' 🔑' : ''}
@@ -411,7 +417,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
                     onChange={(value) =>
                       setEventTimeByTable((previous) => ({ ...previous, [table.name]: value ?? '' }))
                     }
-                    options={preview.map((column) => ({
+                    options={preview.filter((column) => !column.technical).map((column) => ({
                       label: `${column.name}:${column.typeName}`,
                       value: column.name,
                     }))}
