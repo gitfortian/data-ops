@@ -70,7 +70,8 @@ class SourceSemanticTaskFacadeTest {
         .thenReturn(List.of(new DataSourceReference(7L,31L,"warehouse",DataSourceDbType.MYSQL)));
     when(evidence.readSelectedTables(List.of("orders-key"))).thenReturn(snapshot());
     facade = new SourceSemanticTaskFacade(sources,metadata,evidence,owner,chat,turns,
-        messages,project,new InMemoryAgentStateStore(),workspace.toString());
+        messages,project,new io.yak.ops.business.agent.runtime.SourceSemanticStateBridge(
+            new InMemoryAgentStateStore()),workspace.toString());
   }
 
   @AfterEach void close() { permissions.close(); security.close(); }

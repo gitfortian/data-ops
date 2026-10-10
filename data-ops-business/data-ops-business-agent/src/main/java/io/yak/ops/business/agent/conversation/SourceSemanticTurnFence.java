@@ -1,6 +1,6 @@
 package io.yak.ops.business.agent.conversation;
 
-import io.agentscope.core.state.AgentStateStore;
+import io.yak.ops.business.agent.runtime.SourceSemanticStateBridge;
 import io.yak.ops.business.agent.config.ConditionalOnAgentEnabled;
 import io.yak.ops.business.agent.domain.AgentTurnRecord;
 import io.yak.ops.business.agent.domain.TurnInput;
@@ -28,9 +28,9 @@ public class SourceSemanticTurnFence {
   private final SourceSemanticPlanDocumentGuard plans = new SourceSemanticPlanDocumentGuard();
   private final Path root;
 
-  public SourceSemanticTurnFence(AgentStateStore store,
+  public SourceSemanticTurnFence(SourceSemanticStateBridge state,
       @Value("${yak.agent.source-semantic.workspace-root:}") String sharedWorkspaceRoot) {
-    this.ledger = new SourceSemanticTaskLedger(store);
+    this.ledger = state.ledger();
     if (sharedWorkspaceRoot == null || sharedWorkspaceRoot.isBlank()
         || !Path.of(sharedWorkspaceRoot).isAbsolute())
       throw new IllegalStateException("[F039_SHARED_WORKSPACE_ROOT_REQUIRED]");

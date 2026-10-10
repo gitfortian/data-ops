@@ -20,6 +20,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 public class AgentStateStoreWiring {
 
+  /**
+   * F-039 SDK persistence remains owned by runtime; conversation receives only
+   * the typed, fail-closed task/artifact bridge.
+   */
+  @Bean
+  @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+      prefix = "yak.agent.source-semantic", name = "enabled", havingValue = "true")
+  public SourceSemanticStateBridge sourceSemanticStateBridge(AgentStateStore store) {
+    return new SourceSemanticStateBridge(store);
+  }
+
   @Bean
   public AgentStateStore agentAgentStateStore(
       @Qualifier("yakBusinessDataSource") DataSource dataSource, AgentProperties properties) {

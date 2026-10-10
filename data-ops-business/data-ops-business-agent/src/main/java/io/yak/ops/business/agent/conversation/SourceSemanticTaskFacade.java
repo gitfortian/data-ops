@@ -1,7 +1,7 @@
 package io.yak.ops.business.agent.conversation;
 
 import cn.dev33.satoken.stp.StpUtil;
-import io.agentscope.core.state.AgentStateStore;
+import io.yak.ops.business.agent.runtime.SourceSemanticStateBridge;
 import io.yak.framework.security.context.YakSecurityContext;
 import io.yak.ops.business.agent.domain.AgentTurnRecord;
 import io.yak.ops.business.agent.repository.AgentTurnRepository;
@@ -53,7 +53,6 @@ import io.yak.ops.business.agent.config.ConditionalOnAgentEnabled;
 @ConditionalOnAgentEnabled
 @ConditionalOnProperty(prefix = "yak.agent.source-semantic", name = "enabled", havingValue = "true")
 public class SourceSemanticTaskFacade {
-  private static final String ARTIFACT_KEY = "f039_immutable_artifact_v1";
   private static final int MAX_CONTEXT = 1024;
   private final DataSourceReader dataSources;
   private final MetadataQueryApi metadata;
@@ -63,7 +62,7 @@ public class SourceSemanticTaskFacade {
   private final AgentTurnRepository turns;
   private final MessageTreeRepository messages;
   private final CurrentProject project;
-  private final AgentStateStore store;
+  private final SourceSemanticStateBridge persistence;
   private final SourceSemanticTaskLedger ledger;
   private final SourceSemanticPlanDocumentGuard documents = new SourceSemanticPlanDocumentGuard();
   private final SourceSemanticPlanApprovalGate approval;
@@ -87,12 +86,12 @@ public class SourceSemanticTaskFacade {
 
   /** Result is a canonical immutable StateStore copy, not a response inferred from text. */
   public record Artifact(String taskId, String chunkId, String turnId, String markdown,
-      String sha256, String scopeFingerprint, String planSha256) implements io.agentscope.core.state.State {}
+      String sha256, String scopeFingerprint, String planSha256) {}
 
   public SourceSemanticTaskFacade(DataSourceReader dataSources, MetadataQueryApi metadata,
       PhysicalScopeEvidenceQueryApi evidenceApi, AgentSessionOwnerValidator owners,
       AgentChatService chat, AgentTurnRepository turns, MessageTreeRepository messages,
-      CurrentProject project, AgentStateStore store,
+      CurrentProject project, SourceSemanticStateBridge persistence,
       @Value("${yak.agent.source-semantic.workspace-root:}") String workspaceRoot) {
     this.dataSources = dataSources;
     this.metadata = metadata;
@@ -102,8 +101,8 @@ public class SourceSemanticTaskFacade {
     this.turns = turns;
     this.messages = messages;
     this.project = project;
-    this.store = store;
-    this.ledger = new SourceSemanticTaskLedger(store);
+    this.persistence = persistence;
+    this.ledger = persistence.ledger();
     this.approval = new SourceSemanticPlanApprovalGate(ledger, documents);
     if (workspaceRoot == null || workspaceRoot.isBlank()
         || !Path.of(workspaceRoot).isAbsolute()) {
@@ -393,12 +392,12 @@ public class SourceSemanticTaskFacade {
     var task = bound(taskId, user);
     if (!task.completedChunkIds().contains(chunkId))
       throw new IllegalArgumentException("[F039_RESULT_NOT_VERIFIED]");
-    var value = store.getVersioned(Long.toString(user), artifactSlot(taskId, chunkId),
-        ARTIFACT_KEY, Artifact.class).value();
+    var value = persistence.readArtifact(Long.toString(user), taskId, chunkId);
     if (value == null || !task.resultDigests().get(chunkId).equals(value.sha256())
         || !task.completedTurnIds().get(chunkId).equals(value.turnId()))
       throw new IllegalStateException("[F039_RESULT_ARTIFACT_DRIFT]");
-    return value;
+    return new Artifact(value.taskId(), value.chunkId(), value.turnId(), value.markdown(),
+        value.sha256(), value.scopeFingerprint(), value.planSha256());
   }
 
   private SourceSemanticOriginalTurnReconciler.Access access(SourceSemanticTaskState task) {
@@ -427,22 +426,12 @@ public class SourceSemanticTaskFacade {
     if (markdown.length() > 65536)
       throw new IllegalStateException("[F039_RESULT_EXCEEDS_LIMIT]");
     String digest = sha(List.of(markdown));
-    var written = new Artifact(state.taskId(), chunkId, original.turnId(), markdown,
-        digest, state.scopeFingerprint(), state.planSha256());
-    String slot = artifactSlot(state.taskId(), chunkId);
-    long version = store.saveIfVersion(state.ownerId(), slot, ARTIFACT_KEY, written, 0);
-    Artifact immutable = version == AgentStateStore.UNVERSIONED
-        ? store.getVersioned(state.ownerId(), slot, ARTIFACT_KEY, Artifact.class).value()
-        : written;
-    if (immutable == null || !immutable.equals(written))
-      throw new IllegalStateException("[F039_IMMUTABLE_ARTIFACT_CONFLICT]");
+    persistence.saveImmutable(state.ownerId(), new SourceSemanticStateBridge.Artifact(
+        state.taskId(), chunkId, original.turnId(), markdown, digest,
+        state.scopeFingerprint(), state.planSha256()));
     return Optional.of(new SourceSemanticOriginalTurnReconciler.Receipt(
         original.turnId(), chunkId, state.sessionId(), state.projectId(),
         Long.parseLong(state.ownerId()), state.scopeFingerprint(), state.planSha256(), digest));
-  }
-
-  private static String artifactSlot(String taskId, String chunkId) {
-    return "f039_artifact_" + taskId + "_" + chunkId;
   }
 
   private static String sha(List<String> values) {

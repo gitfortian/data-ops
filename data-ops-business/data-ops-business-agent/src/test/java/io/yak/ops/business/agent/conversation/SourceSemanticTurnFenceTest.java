@@ -20,7 +20,8 @@ class SourceSemanticTurnFenceTest {
 
   @Test void rejectsStaleCanceledOrCrossSessionOriginalBeforeInference() throws Exception {
     var store=new InMemoryAgentStateStore();
-    var ledger=new SourceSemanticTaskLedger(store);
+    var bridge=new io.yak.ops.business.agent.runtime.SourceSemanticStateBridge(store);
+    var ledger=bridge.ledger();
     var scope=new SourceSemanticScope(31,"7","warehouse","public","capture-1",
         List.of(new SourceSemanticScope.Table("orders","table-hash",List.of("id"))));
     String taskId="be1f16a4-4a71-4f15-b90c-210130735170";
@@ -31,7 +32,7 @@ class SourceSemanticTurnFenceTest {
     String plan=new SourceSemanticPlanDocumentGuard()
         .readReview(workspace.resolve("31/42/"+taskId)).sha256();
     var state=ledger.create(taskId,"42","session-1",scope,1,1,plan,2,4);
-    var fence=new SourceSemanticTurnFence(store,workspace.toString());
+    var fence=new SourceSemanticTurnFence(bridge,workspace.toString());
     var input=TurnInput.ofStart("u","a","bounded metadata").withSourceTask(taskId);
     var record=new AgentTurnRecord(turnId,"session-1",42,31,TurnKind.START,"{}",
         TurnStatus.QUEUED,null,null,null,null,null);
