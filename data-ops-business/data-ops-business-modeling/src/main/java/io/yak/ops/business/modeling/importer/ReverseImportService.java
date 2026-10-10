@@ -124,13 +124,20 @@ public class ReverseImportService {
         Optional<Model> existing = modelRepository.findByCode(code);
         if (existing.isPresent()) {
           Model model = existing.get();
+          // Model code collision does not authorize rebinding an existing model.
+          if (model.sourceDatasourceId() != null
+              && (!model.sourceDatasourceId().equals(item.datasourceId())
+                  || (StringUtils.hasText(model.sourceDatabase())
+                      && !model.sourceDatabase().equals(item.database()))
+                  || (StringUtils.hasText(model.sourceTable())
+                      && !model.sourceTable().equals(item.table())))) {
+            throw new ModelingException(ModelingErrorCode.INVALID_COLUMN,
+                "模型编码已存在且绑定不同来源，必须人工核对");
+          }
           StructureView current = structureService.get(model.id());
           if (!current.columns().isEmpty()) {
-            // 已有字段:不改动;但来源标记为空时补齐(历史模型/迁移前导入),否则 44 派生定位不到它。
-            if (model.sourceDatasourceId() == null) {
-              modelRepository.assignSource(
-                  model.id(), item.datasourceId(), item.database(), item.table(), operator);
-            }
+            // SKIPPED means no structure/source/mapping mutation. Legacy source repair
+            // requires an explicit review and must not be inferred from a code match.
             skipped.add(item.table());
             models.add(
                 new ModelingImportApi.ImportResult.ImportedModel(
