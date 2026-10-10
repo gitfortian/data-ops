@@ -13,6 +13,7 @@ public final class SourceSemanticStateBridge {
   private static final String ARTIFACT_KEY = "f039_immutable_artifact_v1";
   private final AgentStateStore store;
   private final SourceSemanticTaskLedger ledger;
+  private final SourceSemanticCandidateLedger candidates;
 
   public record Artifact(String taskId, String chunkId, String turnId, String markdown,
       String sha256, String scopeFingerprint, String planSha256) implements State {}
@@ -20,9 +21,11 @@ public final class SourceSemanticStateBridge {
   public SourceSemanticStateBridge(AgentStateStore store) {
     this.store = Objects.requireNonNull(store);
     this.ledger = new SourceSemanticTaskLedger(store);
+    this.candidates = new SourceSemanticCandidateLedger(store);
   }
 
   public SourceSemanticTaskLedger ledger() { return ledger; }
+  public SourceSemanticCandidateLedger candidates() { return candidates; }
 
   public Artifact readArtifact(String ownerId, String taskId, String chunkId) {
     return store.getVersioned(ownerId, artifactSlot(taskId, chunkId),
