@@ -6,7 +6,7 @@ import java.util.List;
 public interface SourceSemanticAdoption {
   record Candidate(String id,String kind,String code,String name,String role,String grain,
       String description,Long typeId,Long unitId,Long reuseId,Integer reuseVersion,
-      List<String> dependencies) {
+      List<String> dependencies,String sourceAssetKey) {
     public Candidate { dependencies=List.copyOf(dependencies); }
   }
   record Scope(long projectId,long dataSourceId,String captureId,
