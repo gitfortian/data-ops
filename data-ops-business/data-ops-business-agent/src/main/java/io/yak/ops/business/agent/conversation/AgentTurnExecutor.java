@@ -48,6 +48,15 @@ public class AgentTurnExecutor {
 
   /** Optional only when the F-039 route is explicitly enabled. Existing constructor is stable. */
   private volatile SourceSemanticTurnFence sourceSemanticFence;
+  /** Lazy provider avoids a startup cycle through ChatService -> Dispatcher -> Executor. */
+  private org.springframework.beans.factory.ObjectProvider<SourceSemanticAutoContinuation>
+      sourceSemanticContinuation;
+
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  public void setSourceSemanticContinuation(
+      org.springframework.beans.factory.ObjectProvider<SourceSemanticAutoContinuation> provider) {
+    this.sourceSemanticContinuation = provider;
+  }
 
   @org.springframework.beans.factory.annotation.Autowired(required = false)
   public void setSourceSemanticFence(SourceSemanticTurnFence fence) {
@@ -211,6 +220,7 @@ public class AgentTurnExecutor {
   }
 
   private void finishCompleted(AgentTurnRecord record, TurnInput input, TurnState state) {
+    boolean sourceTurnCompleted = false;
     try {
       if (state.completed.getCount() == 0) return;
       if (state.clarified.get()) {
@@ -229,7 +239,7 @@ public class AgentTurnExecutor {
         convergePendingTools(record, state, "COMPLETED");
         // 记忆线 M1：自然完成轮异步提取长期记忆（best-effort，不阻塞终态；仅 START 轮）
         if (record.kind() == io.yak.ops.business.agent.domain.TurnKind.START
-            && input.governanceTarget() == null && state.toolNames.stream().noneMatch(name ->
+            && input.sourceTaskId() == null && input.governanceTarget() == null && state.toolNames.stream().noneMatch(name ->
                 name.contains("asset") || name.contains("quality") || name.startsWith("propose_"))) {
           final String flushTurnId = record.turnId();
           final String flushSessionId = record.sessionId();
@@ -245,11 +255,16 @@ public class AgentTurnExecutor {
           appendQuietly(record.turnId(),
               ChatTurnEvent.finished(orZero(state.totalTokens), elapsed(state)));
         }
-        turnRepository.complete(record.turnId());
+        sourceTurnCompleted = turnRepository.complete(record.turnId());
       }
       completeAssistant(record, input, state);
     } finally {
       settle(record.turnId(), state);
+    }
+    if (sourceTurnCompleted && input.sourceTaskId() != null
+        && sourceSemanticContinuation != null) {
+      sourceSemanticContinuation.ifAvailable(next ->
+          next.completed(record, input.sourceTaskId()));
     }
   }
 
