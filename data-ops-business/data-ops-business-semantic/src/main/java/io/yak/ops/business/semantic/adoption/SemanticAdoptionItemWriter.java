@@ -108,7 +108,15 @@ public class SemanticAdoptionItemWriter {
     rec.setUpdateTime(rec.getCreateTime());
     receipts.insert(rec); // UNIQUE reservation before ANY business create.
     Long id;Integer version=null;String outcome;
-    if(candidate.reuseId()!=null) {
+    if ("PROCESS_FIELD".equals(candidate.kind())) {
+      StpUtil.checkPermission(SemanticPermissionCode.UPDATE);
+      if (candidate.reuseId()!=null)
+        throw new IllegalArgumentException("[F039_BINDING_CANNOT_REUSE_FORMAL_ID]");
+      Long processId=dependency(completed,candidate,"PROCESS");
+      Long fieldId=dependency(completed,candidate,"FIELD");
+      fields.bindToProcess(processId,fieldId,false,actor);
+      id=fieldId;outcome="LINKED";
+    } else if(candidate.reuseId()!=null) {
       id=assertReuse(candidate,completed);
       version=candidate.reuseVersion();
       outcome="REUSED";
