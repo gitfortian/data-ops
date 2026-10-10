@@ -34,7 +34,7 @@ public final class SourceSemanticCandidateLedger {
   }
   public record Review(String taskId, long projectId, String ownerId,
       String sourceFingerprint, String planSha256, Map<String,String> resultDigests,
-      String catalogDigest, long revision, List<Candidate> candidates,
+      String catalogDigest, String skillDigest, long revision, List<Candidate> candidates,
       List<String> selectedIds, Map<String,String> answers) implements State {
     public Review {
       SourceSemanticScope.required(taskId, "taskId");
@@ -42,6 +42,7 @@ public final class SourceSemanticCandidateLedger {
       SourceSemanticTaskState.digest(sourceFingerprint,"sourceFingerprint");
       SourceSemanticTaskState.digest(planSha256,"planSha256");
       SourceSemanticTaskState.digest(catalogDigest,"catalogDigest");
+      SourceSemanticTaskState.digest(skillDigest,"skillDigest");
       resultDigests = Map.copyOf(resultDigests);
       candidates = List.copyOf(candidates);
       selectedIds = List.copyOf(selectedIds);
@@ -57,7 +58,7 @@ public final class SourceSemanticCandidateLedger {
     }
     public Review revised(List<Candidate> items, List<String> selected, Map<String,String> questions) {
       return new Review(taskId,projectId,ownerId,sourceFingerprint,planSha256,resultDigests,
-          catalogDigest,revision+1,items,selected,questions);
+          catalogDigest,skillDigest,revision+1,items,selected,questions);
     }
   }
   public SourceSemanticCandidateLedger(AgentStateStore store) {
@@ -95,7 +96,8 @@ public final class SourceSemanticCandidateLedger {
           || !next.sourceFingerprint().equals(old.value().sourceFingerprint())
           || !next.planSha256().equals(old.value().planSha256())
           || !next.resultDigests().equals(old.value().resultDigests())
-          || !next.catalogDigest().equals(old.value().catalogDigest()))
+          || !next.catalogDigest().equals(old.value().catalogDigest())
+          || !next.skillDigest().equals(old.value().skillDigest()))
         throw new IllegalStateException("[F039_REVIEW_IDENTITY_CHANGED]");
       try {
         if (store.saveIfVersion(ownerId,slot(taskId),KEY,next,old.version())
