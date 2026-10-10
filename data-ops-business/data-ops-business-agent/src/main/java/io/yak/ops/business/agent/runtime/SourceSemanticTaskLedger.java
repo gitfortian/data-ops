@@ -24,13 +24,15 @@ public final class SourceSemanticTaskLedger {
   }
 
   public SourceSemanticTaskState create(String taskId, String ownerId, SourceSemanticScope scope,
-      List<SourceSemanticChunkPlanner.Chunk> chunks, String planSha256,
+      int tablesPerChunk, int columnsPerChunk, String planSha256,
       long maxTurns, long maxToolCalls) {
     SourceSemanticScope.required(taskId, "taskId");
     SourceSemanticScope.required(ownerId, "ownerId");
     SourceSemanticTaskState.digest(planSha256, "planSha256");
     Objects.requireNonNull(scope);
-    Objects.requireNonNull(chunks);
+    // Construct slices only from the canonical authorized scope, never from model input.
+    List<SourceSemanticChunkPlanner.Chunk> chunks =
+        SourceSemanticChunkPlanner.plan(scope, tablesPerChunk, columnsPerChunk);
     if (chunks.isEmpty() || chunks.size() > 500)
       throw new IllegalArgumentException("invalid chunk plan");
     List<String> ids = chunks.stream().map(SourceSemanticChunkPlanner.Chunk::id).toList();
