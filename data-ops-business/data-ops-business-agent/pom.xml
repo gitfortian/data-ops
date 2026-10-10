@@ -42,6 +42,17 @@
             <artifactId>data-ops-business-metric</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- F-039 consumes only the public project-scoped source / Metadata query contracts. -->
+        <dependency>
+            <groupId>io.yak.ops</groupId>
+            <artifactId>data-ops-business-datasource</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.yak.ops</groupId>
+            <artifactId>data-ops-business-metadata</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.yak.ops</groupId>
             <artifactId>data-ops-business-semantic</artifactId>
