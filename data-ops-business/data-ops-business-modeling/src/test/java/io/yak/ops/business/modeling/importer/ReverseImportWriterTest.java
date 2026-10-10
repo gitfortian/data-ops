@@ -82,6 +82,22 @@ class ReverseImportWriterTest {
   }
 
   @Test
+  void doesNotAssumeDirectSourceMappingForNonOdsTransformation() {
+    Model dwd = new Model(42L, "dwd_orders", "订单明细", ModelDialect.DORIS,
+        null, ModelStatus.DRAFT, "tester", null, null, "DWD", null, null,
+        List.of(), null, null);
+    when(modelRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(dwd));
+    ReverseImportPlan sourcePlan = new ReverseImportPlan("订单明细", "dwd_orders", "DORIS",
+        null, null, "dwd_orders", null, null, 10L, "trade_db", "trade_order",
+        List.<ModelingStructureApi.ColumnInput>of(), List.of("order_id"), List.of("order_id"));
+
+    writer.fillStructure(42L, sourcePlan, "tester");
+
+    verify(structureService).save(eq(42L), any(), eq("tester"));
+    verify(mappingService, never()).setMapping(any(), any(), any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
   void rejectsExistingModelBoundToOtherTableBeforeWritingAnything() {
     when(modelRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(model(10L, "trade_db", "other_table")));
 
