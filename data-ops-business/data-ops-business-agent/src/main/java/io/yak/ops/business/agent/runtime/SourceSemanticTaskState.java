@@ -17,13 +17,15 @@ public record SourceSemanticTaskState(
     Map<String, String> resultDigests, Map<String, String> completedTurnIds,
     String activeChunkId, String activeTurnId,
     long maxTurns, long usedTurns, long maxToolCalls, long reservedToolCalls,
-    long revision) implements State {
+    long revision, String sessionId) implements State {
 
   public enum Status { PLANNED, READY, RUNNING, PAUSED, INTERRUPTED, COMPLETED, CANCELLED }
 
   public SourceSemanticTaskState {
     SourceSemanticScope.required(taskId, "taskId");
     SourceSemanticScope.required(ownerId, "ownerId");
+    // Older #500 task snapshots have no session binding. Never infer it from a turn.
+    if (sessionId != null) SourceSemanticScope.required(sessionId, "sessionId");
     if (projectId <= 0) throw new IllegalArgumentException("projectId");
     digest(scopeFingerprint, "scopeFingerprint");
     digest(chunkPlanFingerprint, "chunkPlanFingerprint");

@@ -23,10 +23,20 @@ public final class SourceSemanticTaskLedger {
     if (!store.supportsVersioning()) throw new IllegalStateException("[F039_CAS_REQUIRED]");
   }
 
+  /** Legacy unbound task snapshots remain readable, but never enter the execution bridge. */
   public SourceSemanticTaskState create(String taskId, String ownerId, SourceSemanticScope scope,
       int tablesPerChunk, int columnsPerChunk, String planSha256,
       long maxTurns, long maxToolCalls) {
+    return create(taskId, ownerId, null, scope, tablesPerChunk, columnsPerChunk,
+        planSha256, maxTurns, maxToolCalls);
+  }
+
+  /** New tasks freeze their original Agent session before any reservation. */
+  public SourceSemanticTaskState create(String taskId, String ownerId, String sessionId,
+      SourceSemanticScope scope, int tablesPerChunk, int columnsPerChunk,
+      String planSha256, long maxTurns, long maxToolCalls) {
     SourceSemanticScope.required(taskId, "taskId");
+    if (sessionId != null) SourceSemanticScope.required(sessionId, "sessionId");
     SourceSemanticScope.required(ownerId, "ownerId");
     SourceSemanticTaskState.digest(planSha256, "planSha256");
     Objects.requireNonNull(scope);
@@ -39,7 +49,7 @@ public final class SourceSemanticTaskLedger {
     var state = new SourceSemanticTaskState(taskId, scope.projectId(), ownerId,
         scope.fingerprint(), SourceSemanticChunkPlanner.planFingerprint(scope, chunks),
         planSha256, SourceSemanticTaskState.Status.PLANNED, ids, List.of(), java.util.Map.of(),
-        java.util.Map.of(), null, null, maxTurns, 0, maxToolCalls, 0, 1);
+        java.util.Map.of(), null, null, maxTurns, 0, maxToolCalls, 0, 1, sessionId);
     try {
       long v = store.saveIfVersion(ownerId, taskSlot(taskId), KEY, state, 0);
       if (v == AgentStateStore.UNVERSIONED)
@@ -214,7 +224,8 @@ public final class SourceSemanticTaskLedger {
     return new SourceSemanticTaskState(old.taskId(), old.projectId(), old.ownerId(),
         old.scopeFingerprint(), old.chunkPlanFingerprint(), old.planSha256(),
         status, old.chunkIds(), completed, results, turns, activeChunkId, activeTurnId,
-        old.maxTurns(), usedTurns, old.maxToolCalls(), usedToolCalls, old.revision() + 1);
+        old.maxTurns(), usedTurns, old.maxToolCalls(), usedToolCalls, old.revision() + 1,
+        old.sessionId());
   }
 
   private record Snapshot(SourceSemanticTaskState value, long version) {}
