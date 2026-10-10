@@ -113,7 +113,7 @@ class LogicalDraftServiceTest {
     assertThrows(ModelingException.class, () -> service.updateAttribute(
         77L, 1L, 100L, new LogicalDraftService.NewAttribute(
             "order_id", "订单ID", null, "STRING", null, false, true)));
-    verify(attributes, never()).updateById(any());
+    verify(attributes, never()).updateById(any(LogicalAttributePO.class));
   }
 
   @Test
@@ -129,7 +129,7 @@ class LogicalDraftServiceTest {
     assertThrows(ModelingException.class, () -> service.updateRelation(
         77L, 7L, new LogicalDraftService.NewRelation(2L, 1L, "ASSOCIATION",
             "UNKNOWN", null)));
-    verify(relations, never()).updateById(any());
+    verify(relations, never()).updateById(any(LogicalRelationPO.class));
   }
 
   @Test
