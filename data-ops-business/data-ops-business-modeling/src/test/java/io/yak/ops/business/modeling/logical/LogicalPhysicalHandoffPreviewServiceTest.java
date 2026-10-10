@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelDialect;
-import io.yak.ops.business.modeling.domain.ModelStatus;
 import io.yak.ops.business.modeling.exception.ModelingException;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
@@ -109,7 +108,6 @@ class LogicalPhysicalHandoffPreviewServiceTest {
     var second = new StructureView.ColumnView(12L, "order_id_copy", "BIGINT",
         null, null, true, null, null, null, 1, null, null, null, null, null, null,
         11L, null, null, null);
-    var current = structure.get(50L);
     when(structure.get(50L)).thenReturn(new StructureView(50L, "dwd_orders", "订单明细",
         "DORIS", "DRAFT", "", "dwd_orders", "",
         List.of(first, second), List.of(), List.of(), null, java.util.Map.of()));
@@ -123,7 +121,7 @@ class LogicalPhysicalHandoffPreviewServiceTest {
     target(11L);
     String extra = "{\"id\":20,\"entityId\":1,\"code\":\"amount\",\"name\":\"金额\"},";
     when(logical.versionSnapshot(77L, 2)).thenReturn(
-        SNAPSHOT.replace("\"attributes\":[", "\"attributes\":[" + extra));
+        SNAPSHOT.replace("\"attributes\":[{\"id\":10", "\"attributes\":[" + extra + "{\"id\":10"));
     var result = preview.preview(77L, 2, 50L);
     assertFalse(result.readyForReview());
     assertTrue(result.columns().stream().anyMatch(c ->
