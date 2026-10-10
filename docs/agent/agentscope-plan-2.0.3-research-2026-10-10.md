@@ -1,6 +1,6 @@
 # AgentScope Java 2.0.3 PlanMode 与 F-039 前置技术核查
 
-Status: EXPERIMENT_IN_PROGRESS  
+Status: EXPERIMENT_IN_PROGRESS（部分 CI 已验证，仍非 #494 验收完成）  
 Issue: #494 / Epic #493  
 Baseline: gitfortian/data-ops main，2026-10-10  
 SDK pin: data-ops-business-agent/pom.xml 中 AgentScope 2.0.3  
@@ -39,9 +39,11 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 
 - data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanModeSdkContractTest.java
 - data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanPermissionContractTest.java
+- data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanRecoveryContractTest.java
 
 - 使用固定 SDK 的 WorkspaceManager/PlanModeManager，两个不同任务分离的临时 workspace，验证相同逻辑 plan 路径各自写入不同内容。
 - 直接使用 2.0.3 PermissionEngine 与原生 PlanModeTools 验证 DEFAULT 下 plan_write 的 ASK、显式最小 ALLOW、plan_exit 的 ASK，以及 DONT_ASK 不能直接放行退出。
+- 直接使用官方 JsonFileAgentStateStore 和 WorkspaceManager 验证关闭并重建后的计划状态/正文回读、缺失文件不能凭 state path 假定成功、内容变更后 hash 不同；确认审批 envelope 应为 ConfirmResult + Msg.METADATA_CONFIRM_RESULTS。注意这只是 SDK 文件存储行为与消息形状，**不是** MySQL/PostgreSQL 的生产 StateStore 完整恢复或真正 HITL 事件交互。
 - 验证 enter/write/exit 不变量：mode flag、plan path、退出后引用保留，不操作生产 AgentTurn，也不访问模型、数据库或真实 Semantic。
 - 此测试是 **SDK 文件/状态的最小实验证据**，不是 permission ASK、StateStore round-trip、真实长任务或生产 E2E 的替代。
 
@@ -49,19 +51,19 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 
     ./mvnw -pl data-ops-business/data-ops-business-agent -am -Dtest=SourceSemanticPlan*ContractTest -Dsurefire.failIfNoSpecifiedTests=false test
 
-此文档提交时，没有本地 Maven/数据库运行证据；测试结果仍是 NOT_RUN，需据实际 GitHub CI 状态更新。
+**已完成的 CI 事实**（commit \`103b71acad23b15df7e338c1468e1bb8ffd80518\`）：Product Guard 和 Architecture Checks 均为 SUCCESS；后端 Agent 模块在工作流 \`38014050444\` 的任务 \`114100392872\` 日志显示 **368 tests / 0 failure / 0 error / 0 skipped，BUILD SUCCESS**。当时两个隔离类各 2 个用例通过。后续新增的 RecoveryContractTest **尚需对应新 head CI 验证**，此旧成功不能自动覆盖新增改动。
 
 ## 4. 尚需逐项补齐的行为实验
 
 | 编号 | 实验 | 必须看到的行为 | 当前状态 |
 | --- | --- | --- | --- |
-| P01 | 最小 SDK 2.0.3 编译 | 精确依赖、工具注册与类签名可编译 | NOT_RUN |
-| P02 | plan_enter/write/exit | 计划正文由 workspace 写入，state path 不是正文 | NOT_RUN（代码已准备） |
-| P03 | DEFAULT permission 与 ASK | enter/write 不出现意外要求；exit 必须要求确认 | NOT_RUN |
-| P04 | plan_exit 批准/拒绝/重复 | RequireUserConfirmEvent ↔ ConfirmResult(toolCall) 逐项匹配；拒绝不解锁 | NOT_RUN |
+| P01 | SDK 2.0.3 隔离测试编译 | 已按模块完成 Maven 编译 | PASS（commit 103b71a，CI 38014050444） |
+| P02 | plan_enter/write/exit | SDK 状态切换/文件写入与计划引用保留 | PASS（隔离 workspace，commit 103b71a） |
+| P03 | DEFAULT permission 与 ASK | SDK 的 DEFAULT 下 plan_write 实际 ASK，须显式局部 ALLOW；plan_exit 保持 ASK | PARTIAL（PermissionEngine 独立测试 PASS，生产权限中间件与 HITL 未运行） |
+| P04 | plan_exit 批准/拒绝/重复 | RequireUserConfirmEvent ↔ ConfirmResult(toolCall) 逐项匹配；拒绝不解锁 | NOT_RUN（新增 envelope 测试仅校验消息形状，不是流程） |
 | P05 | 本项目 resume 适配 | Msg.METADATA_CONFIRM_RESULTS，禁止 ToolResultMessage 冒充审批 | NOT_RUN |
-| P06 | 双任务隔离 | 同用户不同任务计划、权限、上下文、文件不串读 | NOT_RUN（最小文件隔离试验已提交） |
-| P07 | 任务 workspace 重建 | state 恢复 + 正文真实回读 hash；失败明确停止 | NOT_RUN |
+| P06 | 双任务隔离 | 独立 task workspace 的计划写入互不覆盖 | PARTIAL（隔离文件 PASS；同用户真实并发/权限/StateStore 还未验证） |
+| P07 | 任务 workspace 重建 | 文件 StateStore 重建、正文缺失/改动检测的隔离实验 | NOT_RUN（新增测试待新 CI；真实生产持久化和失败阻断未接线） |
 | P08 | 权限决策前预算 | 含拒绝/重试/HITL、取消、不双扣，不允许额度超支调用 | NOT_RUN |
 | P09 | Executor/Registry 兼容 | QUEUED/RUNNING/WAITING_INPUT 与 permission pending 不冲突；重启 INTERRUPTED | NOT_RUN |
 | P10 | 工具边界/跨域 | 无 shell、Python、SQL、业务写工具；仅显式只读投影 | NOT_RUN |
@@ -92,3 +94,11 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 - 数据源和 Semantic 公共 API 的身份、覆盖、并发、幂等与错误语义冻结。
 - 文件 backend、跨进程/实例隔离与删除时机、实际试点上限和恢复行为获准。
 - 变更审计、旧助手 F-023/F-026/F-028/F-029 回归范围明确，#498 黄金样本与手工基线开始采集。
+
+## 7. 技术结论与隔离界限（2026-10-10）
+
+1. SDK 2.0.3 的 PlanMode 写入至少有**两道不同的工具放行机制**：PlanModeMiddleware 的规划期可执行白名单，以及 PermissionEngine 的授权决策。白名单只回答是否进入工具链，DEFAULT 仍可能 ASK。对此必须明确配置，仅可在受限计划工具上使用局部 ALLOW；`plan_exit` 的用户确认不允许一并自动放行。
+2. PlanManager 只持有激活位与工作区相对路径；计划正文是 WorkspaceManager 管理的文件。未来任务若保存了 `PLAN.md` 路径但文件不可读、hash 不匹配或受其他任务覆盖，必须 **BLOCKED / NEED_REPLAN**，而不是继续分析或写入。
+3. 任务级 `taskId` 应是本次隔离工作区的命名空间，光按 userId 不能隔离相同用户的并发任务。文件后端选择需要覆盖节点切换、备份恢复和 TTL，不能以临时目录代表生产承诺。
+4. Plan approval 的 `ConfirmResult` 限于 SDK permission pending；它只表示用户批准计划修订，后续 Semantic 批量保存仍必须独立获得用户明确选择、权限、版本与幂等回执。
+5. 剩余 P04/P05/P07–P10、跨进程/数据库/权限预算与真实模型事件完整路径尚是阻断项，不能因为本分支 CI 绿色而放行 #495 生产接线。
