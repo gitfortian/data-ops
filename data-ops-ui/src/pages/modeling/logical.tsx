@@ -55,6 +55,7 @@ export default function LogicalWorkspace() {
   const [relationForm] = Form.useForm<RelationValues>();
 
   const reload = useCallback(async (id?: number) => {
+    setHandoffPreview(undefined);
     setLoading(true);
     try {
       const [next, all] = await Promise.all([
@@ -94,6 +95,7 @@ export default function LogicalWorkspace() {
   }, [detail?.process?.id]);
 
   const selectModel = useCallback(async (id: number) => {
+    setHandoffPreview(undefined);
     setSelected(id);
     setLoading(true);
     try {
@@ -112,6 +114,7 @@ export default function LogicalWorkspace() {
     try {
       const data = await action();
       setDetail(data);
+      setHandoffPreview(undefined);
       close();
       message.success(successText);
       const next = await listLogicalDrafts();
@@ -388,19 +391,42 @@ export default function LogicalWorkspace() {
         </Form>
       </Modal>
 
-      {handoffPreview && <Card title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 只读候选预检`}>
+      {handoffPreview && handoffPreview.logicalModelId === selected
+        && handoffPreview.physicalModelId === physicalModelId
+        && <Card title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 只读候选预检`}>
         <Alert type={handoffPreview.blockers.length ? 'warning' : 'info'} showIcon
           message={handoffPreview.blockers.length ? '仍有交接阻断项' : '仅已达到人工审阅条件'}
           description="字段的 stdFieldId 一致只代表可核对候选，不代表 SQL 映射、逻辑版本已发布、物理模型已生成或数据已执行。" />
+        <div className="mt-3 flex flex-wrap gap-4">
+          <Typography.Text type="secondary">冻结逻辑 v{handoffPreview.logicalVersionNo} · SHA-256：
+            <Typography.Text copyable={{ text: handoffPreview.logicalSnapshotSha256 }}>
+              {handoffPreview.logicalSnapshotSha256.slice(0, 16)}…
+            </Typography.Text>
+          </Typography.Text>
+          <Typography.Text type="secondary">物理 {handoffPreview.physicalStatus} 当前结构 · SHA-256：
+            <Typography.Text copyable={{ text: handoffPreview.physicalStructureSha256 }}>
+              {handoffPreview.physicalStructureSha256.slice(0, 16)}…
+            </Typography.Text>
+          </Typography.Text>
+        </div>
+        <Typography.Paragraph className="!mt-2" type="secondary">
+          指纹只标识本次读取的内容，不是物理模型正式版本。任何未来的人工确认必须重新读取并比对两端指纹，发生变化则拒绝提交。
+        </Typography.Paragraph>
         {handoffPreview.blockers.map((blocker, i) => (
           <Typography.Paragraph key={i} type="danger" className="!mt-2 !mb-0">{blocker}</Typography.Paragraph>
         ))}
-        <Table className="mt-3" size="small" rowKey={(row) => row.physicalColumn} pagination={false}
+        <Table className="mt-3" size="small"
+          rowKey={(row) => row.physicalColumnId == null
+            ? `logical-${row.logicalAttributeId ?? row.logicalAttribute}`
+            : `physical-${row.physicalColumnId}`}
+          pagination={false}
           dataSource={handoffPreview.columns} columns={[
-            { title: '物理字段', dataIndex: 'physicalColumn' },
+            { title: '物理字段', dataIndex: 'physicalColumn', render: (v?: string) => v || '未覆盖' },
+            { title: '物理列 ID', dataIndex: 'physicalColumnId', render: (v?: number) => v ?? '—' },
             { title: '标准字段 ID', dataIndex: 'physicalStdFieldId', render: (id?: number) => id ?? '缺失' },
             { title: '逻辑实体', dataIndex: 'logicalEntity', render: (v?: string) => v || '待确认' },
             { title: '逻辑属性', dataIndex: 'logicalAttribute', render: (v?: string) => v || '待确认' },
+            { title: '逻辑属性 ID', dataIndex: 'logicalAttributeId', render: (v?: number) => v ?? '—' },
             { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{v}</Tag> },
             { title: '原因', dataIndex: 'reason' },
           ]} />
