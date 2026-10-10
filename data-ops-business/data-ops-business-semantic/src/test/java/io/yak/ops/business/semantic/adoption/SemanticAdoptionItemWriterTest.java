@@ -57,7 +57,7 @@ class SemanticAdoptionItemWriterTest {
       assertEquals("PENDING",pending.getStatus());
       assertNull(pending.getSemanticId());
       return 1;
-    }).when(mapper).insert(any());
+    }).when(mapper).insert(any(AdoptionReceiptPO.class));
     when(source.verifiedTableName(evidence,"orders-key")).thenReturn("orders");
     when(bindings.listByProcess(71L)).thenReturn(List.of());
     when(bindings.bind(eq(71L),eq(7L),eq("orders"),eq("MAIN"),isNull(),eq("42")))
