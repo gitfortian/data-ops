@@ -184,3 +184,9 @@ Feature ID: F-040
 ## 13. 收尾与沉淀
 
 当前：尚无 E2E 执行结果 / 成功指标结果；实现状态 NOT_STARTED。本稿批准、实现、验收后，再将持续生效的合同同步回 ACCEPTED Decision、Modeling/Semantic/DataDev 的 DOMAIN/REQUIREMENTS/ARCHITECTURE，而不是把一份 Spec 当永久 Product Truth。
+
+## 14. 第三轮产品裁决材料（不改变 DRAFT 状态）
+
+已新增 [F-040 V3 · 关键决策收敛与跨域实现契约提案](../experience/F-040-contract-resolution-proposal.md)，将交互 V2 进一步落实到一套可评审的业务决策、逻辑/物理标准引用、数据来源事务、设计版本 Manifest、DataDev 精确任务关联与兼容验收。
+
+本规格仍为 DRAFT。PD-010 必须先由 Product 正式接受；Semantic/Modeling/DataDev 需确认各自事实接口，特别是非 ODS 的 `stdFieldId` 约束与明确技术列例外。在此之前不允许以“设计稿已合并”作为实现授权，不写入生产数据或发布新的业务代码。
