@@ -1,8 +1,8 @@
 # data-ops 全产品用户故事地图 V2｜从数据建设到持续可信消费
 
-Status: DRAFT · 全产品范围校准与用户故事规划（待 Product / 业务代表评审）  
+Status: PLANNING_BASELINE_CONFIRMED · R-01/R-02 经需求提出者确认；具体故事仍可修订，PD/Feature 未自动批准  
 Date: 2026-10-10  
-Owner: Product（评审责任，非批准结果）  
+Owner: Product（规划归口）；R-01/R-02 由需求提出者在 2026-10-10 对话中确认；领域 Owner/正式功能审批另行进行  
 Parent: [#513 用户故事地图](https://github.com/gitfortian/data-ops/issues/513)  
 First deep vertical sample: [#512 真实订单 0→1 走查](https://github.com/gitfortian/data-ops/issues/512) / [F-040（DRAFT）](../features/F-040-data-construction-experience.md)  
 Binding references: [产品愿景](../PRODUCT_VISION.md)、[原则](../PRODUCT_PRINCIPLES.md)、[能力地图](../CAPABILITY_MAP.md)、[J1–J6](../USER_JOURNEYS.md)、[PD-002 ACCEPTED](../decisions/PD-002-governed-consumption-contract.md)、[PD-003 ACCEPTED](../decisions/PD-003-business-semantic-metric-contract.md)  
@@ -311,3 +311,17 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 - [ ] **只允许在产品批准的具体切片**进入详细 UX、领域合同、实现/真实 E2E，不以地图草案替代开发授权。
 
 **下一步正确动作**：与代表用户评审 V2 的“用户目标/故事/优先级”是否正确；随后基于获批队列推进对应用户旅程 UX。不可重复“先铺满页面再补业务逻辑”，也不可等所有模块逐页交互设计完才开始第一条已批准的垂直切片。
+
+## 13. R-01 / R-02 规划基线确认记录（2026-10-10）
+
+**决议来源**：在 #513 / PR #516 的全域用户故事范围及优先级审查后，需求提出者对“采用当前 75 条故事、六 Journey 作为规划基线；G1 既有消费真实验收与 G2 首次可信数据交付按依赖优先推进，J1 AI 协作从首批开始设计”的建议明确回复“好的，同意，继续”。
+
+| 决议 | 记录状态 | 具体范围 | 不意味着 |
+|---|---|---|---|
+| **R-01 全域范围** | **CONFIRMED_BY_REQUESTER** | 以 J1–J6 + MDM 专业分支 + 横切保障构成的 **75 条候选故事**作为范围与追踪基线；现有 ID 稳定，真实用户反馈可增删故事但需评审和变更记录 | 全部故事已实现/验收，所有角色完成真实访谈，或所有 UI 已获批准 |
+| **R-02 优先级** | **CONFIRMED_BY_REQUESTER** | 先核实 G1 PD-002 既有 Dataset/Service 的真实消费证据，并推进 G2 F-040 订单从来源/业务目标到可信数据结果的纵向故事；按依赖并行、遵守授权/审计。J1 从首批包含 AI 证据候选/人工确认/专业接管；J6 独立问答随后深化 | 确定排期/预算、授权 Agent 自动执行、批准 PD-010 的领域硬规则、宣称消费 E2E 已完成 |
+| **V0 规划评审出口** | **SCOPE_AND_PRIORITY_BASELINED** | 全域“广度”规划已能支持下一步价值切片工作；不再为了静态故事数持续扩张文档 | 详细交互/Domain API/架构设计可以越过产品变更流程 |
+
+**下一关口**：#516 本规划 PR 可以从 Draft 提交正常 Code Review/合并流程（无需等待所有模块实机交互设计）；**正式行为变更**须在 #515 / PD-010 / F-040 中单独明确产品决策和域契约，再准许业务代码。PD-002 已 ACCEPTED 但其消费真实 E2E 仍被 #336 的环境/证据条件阻塞，不可用文档关闭验收；任务负责人仍需提供实际环境证据。
+
+**风险保持**：真实多角色用户可用性验证尚未进行、Story ID 非固定功能承诺、外部 Provider 和完整运行状态未知。需求提出者的 R-01/R-02 确认不被写成具体的 Product Owner/Domain Owner 专业签字或部署验收。
