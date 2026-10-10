@@ -163,3 +163,33 @@ export const listEntityTypes = (category?: string) =>
     `${METADATA_API_PREFIX}/types${category ? `?category=${encodeURIComponent(category)}` : ''}`,
     undefined,
   );
+
+/** F-039 Metadata-owned, permission-checked schema-only preview. No task or AI calls. */
+export interface SourceSemanticEvidence {
+  projectId: number;
+  dataSourceId: string;
+  database: string;
+  schema: string;
+  collectJobId: string;
+  lastCollectAt: string;
+  fingerprint: string;
+  tables: Array<{
+    assetKey: string;
+    name: string;
+    contentHash: string;
+    declaredColumnCount: number;
+    columns: Array<{
+      name: string;
+      contentHash: string;
+      dataType: string;
+      primaryKey: boolean;
+      comment: string;
+    }>;
+  }>;
+}
+
+export const previewSourceSemanticEvidence = (dataSourceId: number, tableAssetKeys: string[]) =>
+  HttpUtils.postData<SourceSemanticEvidence>(
+    `${METADATA_API_PREFIX}/source-semantic/preview`,
+    { dataSourceId, tableAssetKeys },
+  );
