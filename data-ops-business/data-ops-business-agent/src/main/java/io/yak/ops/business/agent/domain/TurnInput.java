@@ -11,7 +11,13 @@ public record TurnInput(
     String assistantMessageId,
     String message,
     List<ToolFeedback> feedbacks,
-    GovernanceTarget governanceTarget) {
+    GovernanceTarget governanceTarget,
+    String sourceTaskId) {
+
+  public TurnInput(String userMessageId, String assistantMessageId, String message,
+      List<ToolFeedback> feedbacks, GovernanceTarget governanceTarget) {
+    this(userMessageId, assistantMessageId, message, feedbacks, governanceTarget, null);
+  }
 
   public TurnInput(String userMessageId, String assistantMessageId, String message,
       List<ToolFeedback> feedbacks) {
@@ -19,7 +25,12 @@ public record TurnInput(
   }
 
   public TurnInput withTarget(GovernanceTarget target) {
-    return new TurnInput(userMessageId, assistantMessageId, message, feedbacks, target);
+    return new TurnInput(userMessageId, assistantMessageId, message, feedbacks, target, sourceTaskId);
+  }
+
+  public TurnInput withSourceTask(String taskId) {
+    return new TurnInput(userMessageId, assistantMessageId, message, feedbacks,
+        governanceTarget, taskId);
   }
 
   public static TurnInput ofStart(String userMessageId, String assistantMessageId, String message) {

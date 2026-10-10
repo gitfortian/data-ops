@@ -88,7 +88,7 @@ public final class SourceSemanticVerifiedTurnAdmission {
     // before the exception was observed. Original QUEUED repository decides truth.
     try {
       originalChat.enqueueReservedSourceSemanticTurn(access.sessionId(), turnId, prompt,
-          userId, access.projectId());
+          userId, access.projectId(), access.taskId());
     } catch (RuntimeException uncertain) {
       throw new IllegalStateException("[F039_RESERVED_ADMISSION_OUTCOME_UNCERTAIN]"
           + " task=" + access.taskId() + " turn=" + turnId, uncertain);

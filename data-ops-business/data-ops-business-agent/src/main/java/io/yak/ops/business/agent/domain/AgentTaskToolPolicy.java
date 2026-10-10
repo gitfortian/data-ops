@@ -13,10 +13,19 @@ public final class AgentTaskToolPolicy {
   private static final Set<String> AUXILIARY = Set.of("current_date_info", "request_clarification",
       "verify_governance_facts", "load_skill_through_path");
   private final GovernanceTarget target;
+  private final boolean sourceReadOnly;
 
-  public AgentTaskToolPolicy(GovernanceTarget target) { this.target = target; }
+  public AgentTaskToolPolicy(GovernanceTarget target) { this(target, false); }
+
+  public AgentTaskToolPolicy(GovernanceTarget target, boolean sourceReadOnly) {
+    this.target = target;
+    this.sourceReadOnly = sourceReadOnly;
+  }
+
+  public boolean sourceReadOnly() { return sourceReadOnly; }
 
   public boolean allows(String tool) {
+    if (sourceReadOnly) return false; // F-039 uses only provided Metadata evidence, no tools.
     if (target != null && target.metricChangeReview() != null) {
       return "load_skill_through_path".equals(tool) || "generate_response".equals(tool)
           || "get_metric_change_review_context".equals(tool);
