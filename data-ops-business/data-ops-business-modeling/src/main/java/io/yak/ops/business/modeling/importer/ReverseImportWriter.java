@@ -90,11 +90,17 @@ public class ReverseImportWriter {
         modelRepository.assignSource(
             modelId, plan.sourceDatasourceId(), plan.sourceDatabase(), plan.sourceTable(), operator);
       }
-      // Only real catalog columns become direct source mappings. Generated
-      // technical fields have no source unless the catalog actually contains them.
-      for (String sourceColumn : plan.sourceColumnNames()) {
-        mappingService.setMapping(modelId, sourceColumn, plan.sourceDatasourceId(),
-            plan.sourceDatabase(), plan.sourceTable(), sourceColumn, null, operator);
+      // Direct one-to-one source mapping is an ODS mirror capability; do not
+      // silently define a DWD/DIM transformation by equal technical names.
+      boolean odsMirror = "ODS".equalsIgnoreCase(plan.layerCode())
+          || "ODS".equalsIgnoreCase(existing.layerCode());
+      if (odsMirror) {
+        // Real catalog columns only. Generated technical fields have no source,
+        // unless the catalog itself provides a column with that exact name.
+        for (String sourceColumn : plan.sourceColumnNames()) {
+          mappingService.setMapping(modelId, sourceColumn, plan.sourceDatasourceId(),
+              plan.sourceDatabase(), plan.sourceTable(), sourceColumn, null, operator);
+        }
       }
     }
   }
