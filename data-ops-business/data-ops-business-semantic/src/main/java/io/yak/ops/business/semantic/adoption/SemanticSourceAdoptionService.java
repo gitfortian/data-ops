@@ -89,7 +89,7 @@ public class SemanticSourceAdoptionService implements SemanticSourceAdoptionApi 
         continue;
       }
       try {
-        completed.put(candidate.id(),writer.apply(batch,candidate,completed));
+        completed.put(candidate.id(),writer.apply(batch,candidate,Map.copyOf(completed)));
       } catch(IllegalStateException invalid) {
         if(invalid.getMessage()!=null && invalid.getMessage().contains("IDEMPOTENCY_DIGEST_CONFLICT"))
           throw invalid;
