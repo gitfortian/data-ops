@@ -2,6 +2,7 @@ package io.yak.ops.business.metadata.query;
 
 import io.yak.framework.security.context.YakSecurityContext;
 import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi;
 import io.yak.ops.common.constant.datasource.DataSourcePermissionCode;
 import io.yak.ops.common.constant.metadata.MetadataPermissionCode;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
  * This grants catalog evidence only, never datasource credentials/rows or execution access.
  */
 @Service
+@ConditionalOnDataSourceEnabled
 public class AuthorizedPhysicalScopeEvidenceService {
   private final CurrentProject currentProject;
   private final DataSourceReader dataSources;

@@ -1,6 +1,7 @@
 package io.yak.ops.business.metadata.controller.v1;
 
 import io.yak.framework.common.Result;
+import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi;
 import io.yak.ops.business.metadata.query.AuthorizedPhysicalScopeEvidenceService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Read-only bounded schema preview; a preview does NOT create or approve an Agent task. */
 @RestController
+@ConditionalOnDataSourceEnabled
 @RequestMapping("/api/v1/metadata/source-semantic")
 @ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)
 @RequiresPermission(MetadataPermissionCode.READ)
