@@ -100,7 +100,7 @@ public class SourceSemanticCandidateService {
   public View select(String taskId, Selection selection) {
     var task = sources.verifiedCandidateInput(taskId).task();
     read(taskId);
-    if (selection.ids()==null || selection.ids().size()>1200
+    if (selection.ids()==null || selection.ids().size()>1600
         || new HashSet<>(selection.ids()).size()!=selection.ids().size())
       throw new IllegalArgumentException("[F039_SELECTION_INVALID]");
     reviews.change(task.ownerId(),task.projectId(),taskId,selection.expectedRevision(),old -> {
@@ -259,7 +259,7 @@ public class SourceSemanticCandidateService {
           "物理表只支持提出过程假设；业务过程类型和粒度须人工确认",null,null,null,null,
           List.of(domainId),List.of(new Evidence(table.assetKey(),null,chunk))));
       for(String col:table.columns()) {
-        if(items.size()+3>1200) throw new IllegalStateException("[F039_CANDIDATES_TOO_MANY]");
+        if(items.size()+3>1600) throw new IllegalStateException("[F039_CANDIDATES_TOO_MANY]");
         var field=physical.columns().stream().filter(f->col.equals(f.name())).findFirst()
             .orElseThrow(()->new IllegalStateException("[F039_COLUMN_NOT_COLLECTED]"));
         String evidenceChunk=chunkFor(task,table.assetKey(),col);
@@ -268,8 +268,10 @@ public class SourceSemanticCandidateService {
         String linkId=id(task.taskId(),"SOURCE_LINK",table.assetKey(),col);
         var evidence=List.of(new Evidence(table.assetKey(),col,evidenceChunk));
         items.add(new Candidate(fieldId,"FIELD",null,col,null,null,
-            "SQL类型="+field.dataType()+"；注释="+Objects.toString(field.comment(),"")+
-            "。业务含义、TYPE与角色均待审阅",null,null,null,null,List.of(),evidence));
+            ("SQL类型="+field.dataType()+"；注释="+Objects.toString(field.comment(),"")+
+            "。业务含义、TYPE与角色均待审阅").substring(0, Math.min(512,
+                ("SQL类型="+field.dataType()+"；注释="+Objects.toString(field.comment(),"")+
+                "。业务含义、TYPE与角色均待审阅").length())),null,null,null,null,List.of(),evidence));
         items.add(new Candidate(bindingId,"PROCESS_FIELD",null,col,null,null,
             "待确认的过程字段关联",null,null,null,null,List.of(processId,fieldId),evidence));
         items.add(new Candidate(linkId,"SOURCE_LINK",null,col,null,null,
