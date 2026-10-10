@@ -190,6 +190,11 @@ class SourceSemanticOriginalTurnReconcilerTest {
     assertEquals(old,ledger.read("42",31,"task-1"));
   }
 
+  @Test void newTaskRequiresAServerBoundSession() {
+    assertThrows(IllegalArgumentException.class, () -> ledger.create(
+        "invalid-session", "42", null, scope, 1, 1, plan, 3, 5));
+  }
+
   @Test void legacyUnboundTaskCannotBeReconciled() {
     var oldScope = scope;
     var old = ledger.create("legacy", "42", oldScope, 1,1,plan,2,3);

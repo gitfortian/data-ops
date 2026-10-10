@@ -27,16 +27,23 @@ public final class SourceSemanticTaskLedger {
   public SourceSemanticTaskState create(String taskId, String ownerId, SourceSemanticScope scope,
       int tablesPerChunk, int columnsPerChunk, String planSha256,
       long maxTurns, long maxToolCalls) {
-    return create(taskId, ownerId, null, scope, tablesPerChunk, columnsPerChunk,
+    return createInternal(taskId, ownerId, null, scope, tablesPerChunk, columnsPerChunk,
         planSha256, maxTurns, maxToolCalls);
   }
 
-  /** New tasks freeze their original Agent session before any reservation. */
+  /** New task admission MUST carry the immutable original session binding. */
   public SourceSemanticTaskState create(String taskId, String ownerId, String sessionId,
       SourceSemanticScope scope, int tablesPerChunk, int columnsPerChunk,
       String planSha256, long maxTurns, long maxToolCalls) {
+    SourceSemanticScope.required(sessionId, "sessionId");
+    return createInternal(taskId, ownerId, sessionId, scope, tablesPerChunk,
+        columnsPerChunk, planSha256, maxTurns, maxToolCalls);
+  }
+
+  private SourceSemanticTaskState createInternal(String taskId, String ownerId, String sessionId,
+      SourceSemanticScope scope, int tablesPerChunk, int columnsPerChunk,
+      String planSha256, long maxTurns, long maxToolCalls) {
     SourceSemanticScope.required(taskId, "taskId");
-    if (sessionId != null) SourceSemanticScope.required(sessionId, "sessionId");
     SourceSemanticScope.required(ownerId, "ownerId");
     SourceSemanticTaskState.digest(planSha256, "planSha256");
     Objects.requireNonNull(scope);
