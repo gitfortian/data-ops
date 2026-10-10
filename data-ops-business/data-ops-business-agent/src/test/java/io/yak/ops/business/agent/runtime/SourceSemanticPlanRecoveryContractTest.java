@@ -116,26 +116,29 @@ class SourceSemanticPlanRecoveryContractTest {
   }
 
   @Test
-  void workspacePlanWriteFailureMustNotBeTreatedAsWritten(@TempDir Path root)
-      throws IOException {
-    Path project = Files.createDirectory(root.resolve("project"));
-    Path workspaceRoot = Files.createDirectory(root.resolve("task-a"));
-    // Force the intended plans/ directory path to be a regular file.
-    Files.writeString(workspaceRoot.resolve("plans"), "unwritable parent",
-        StandardCharsets.UTF_8);
+  void reportedWorkspaceBackendWriteFailurePropagates() {
+    // A concrete filesystem directory collision is not a reliable failure injection: the
+    // SDK may write to a namespaced/overlay backend. Inject failure at the actual manager seam.
+    WorkspaceManager workspace = org.mockito.Mockito.mock(WorkspaceManager.class);
+    org.mockito.Mockito.doThrow(new IllegalStateException("backend unavailable"))
+        .when(workspace).writeUtf8WorkspaceRelative(
+            org.mockito.ArgumentMatchers.any(RuntimeContext.class),
+            org.mockito.ArgumentMatchers.eq("plans/PLAN.md"),
+            org.mockito.ArgumentMatchers.anyString());
     var context = RuntimeContext.builder().userId("owner").sessionId("task-a").build();
-    AgentState state = AgentState.builder().userId("owner").sessionId("task-a").build();
+    var state = AgentState.builder().userId("owner").sessionId("task-a").build();
+    var plan = new PlanModeManager(workspace, null);
 
-    try (WorkspaceManager workspace = workspace(project, workspaceRoot)) {
-      var plan = new PlanModeManager(workspace, null);
-      plan.enter(state);
-      assertThrows(RuntimeException.class,
-          () -> plan.writePlan(context, state, "# May not persist\\n"));
-      assertTrue(Files.isRegularFile(workspaceRoot.resolve("plans")));
-      assertFalse(Files.exists(workspaceRoot.resolve("plans/PLAN.md")));
-      // A set path is not a receipt: the adapter must fail closed after a write error.
-      assertEquals("plans/PLAN.md", state.getPlanModeContext().getCurrentPlanFile());
-    }
+    plan.enter(state);
+    IllegalStateException failure = assertThrows(IllegalStateException.class,
+        () -> plan.writePlan(context, state, "# Must not be committed\\n"));
+    assertEquals("backend unavailable", failure.getMessage());
+    // Even after a failed write, the SDK remembers the path: caller must verify real content.
+    assertEquals("plans/PLAN.md", state.getPlanModeContext().getCurrentPlanFile());
+    org.mockito.Mockito.verify(workspace).writeUtf8WorkspaceRelative(
+        org.mockito.ArgumentMatchers.eq(context),
+        org.mockito.ArgumentMatchers.eq("plans/PLAN.md"),
+        org.mockito.ArgumentMatchers.anyString());
   }
 
   @Test
