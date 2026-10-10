@@ -117,6 +117,9 @@ public class SourceSemanticTaskFacade {
   private long actor() {
     Long user = YakSecurityContext.getCurrentUserId();
     if (user == null || user <= 0) throw new IllegalArgumentException("[F039_LOGIN_REQUIRED]");
+    // Server-driven next chunks must recheck BOTH permissions, not just DataSource READ.
+    // Controller @RequiresPermission protects HTTP only, not UserExecutionScope callbacks.
+    StpUtil.checkPermission(io.yak.ops.business.agent.AgentPermissionCode.CHAT_RUN);
     StpUtil.checkPermission(DataSourcePermissionCode.READ);
     return user;
   }
