@@ -154,6 +154,14 @@ public class SourceSemanticTaskFacade {
     return List.copyOf(result);
   }
 
+  public PhysicalScopeEvidenceQueryApi.Table columns(String dataSourceId, String assetKey) {
+    actor(); sourceAccess(dataSourceId);
+    var evidence = evidenceApi.readSelectedTables(List.of(assetKey));
+    if (!Objects.equals(evidence.dataSourceId(), dataSourceId) || evidence.projectId() != project())
+      throw new IllegalArgumentException("[F039_SOURCE_SCOPE_MISMATCH]");
+    return evidence.tables().get(0);
+  }
+
   public Preview preview(String dataSourceId, List<ColumnChoice> selections) {
     actor(); sourceAccess(dataSourceId);
     SourceSemanticScope scope = verifiedScope(dataSourceId, selections);

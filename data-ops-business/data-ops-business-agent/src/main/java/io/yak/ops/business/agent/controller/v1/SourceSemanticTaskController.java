@@ -50,6 +50,13 @@ public class SourceSemanticTaskController {
     return Result.success(service.tables(dataSourceId, page));
   }
 
+  @Operation(summary = "按原 Metadata 事实读取单表列（未采集则明确阻断）")
+  @GetMapping("/columns")
+  public Result<io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi.Table> columns(
+      @RequestParam String dataSourceId, @RequestParam String assetKey) {
+    return Result.success(service.columns(dataSourceId, assetKey));
+  }
+
   @Operation(summary = "完整列证据与分片范围预览（不读取源数据行）")
   @PostMapping("/preview")
   public Result<SourceSemanticTaskFacade.Preview> preview(@RequestBody PreviewRequest request) {
