@@ -9,6 +9,7 @@ import io.yak.ops.business.agent.runtime.SourceSemanticStateBridge;
 import io.yak.ops.business.agent.runtime.SourceSemanticTaskState;
 import io.yak.ops.business.agent.domain.SourceSemanticCatalog;
 import io.yak.ops.business.agent.domain.SourceSemanticCatalog.Entry;
+import io.yak.ops.business.agent.domain.SourceSemanticAdoption;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +41,7 @@ public class SourceSemanticCandidateService {
   private final SourceSemanticCatalog catalog;
   private final AgentSkillManageService skills;
   private final SourceSemanticCandidateLedger reviews;
+  private final SourceSemanticAdoption adoption;
 
   public record Edit(long expectedRevision, String candidateId, String code, String name,
       String role, String grain, String description, Long typeId, Long unitId,
@@ -49,17 +51,24 @@ public class SourceSemanticCandidateService {
   public record Merge(long expectedRevision, String firstId, String secondId, boolean confirmedSameMeaning) {}
   public record Split(long expectedRevision, String candidateId, String tableAssetKey, String column) {}
   public record Match(String candidateId, List<Entry> matches, boolean ambiguous) {}
+  public record SaveRequest(long revision,String payloadDigest,String preflightTicket,
+      boolean confirmed) {}
   public record View(Review review, List<Match> matches, List<Entry> catalogEntries) {}
   public record Preflight(long revision, String payloadDigest, String ticket,
       List<String> selected, List<String> closure, List<String> blockers, boolean ready) {}
 
+  @org.springframework.beans.factory.annotation.Autowired
   public SourceSemanticCandidateService(SourceSemanticTaskFacade sources,
       SourceSemanticCatalog catalog, AgentSkillManageService skills,
+      SourceSemanticStateBridge state, SourceSemanticAdoption adoption) {
+    this.sources=sources;this.catalog=catalog;this.skills=skills;
+    this.reviews=state.candidates();this.adoption=adoption;
+  }
+  /** Source-only legacy unit tests: never enabled as an adoption command. */
+  SourceSemanticCandidateService(SourceSemanticTaskFacade sources,
+      SourceSemanticCatalog catalog, AgentSkillManageService skills,
       SourceSemanticStateBridge state) {
-    this.sources = sources;
-    this.catalog = catalog;
-    this.skills = skills;
-    this.reviews = state.candidates();
+    this(sources,catalog,skills,state,null);
   }
 
   public View read(String taskId) {
@@ -215,6 +224,39 @@ public class SourceSemanticCandidateService {
       return old.revised(old.candidates(),old.selectedIds(),answers);
     });
     return read(taskId);
+  }
+
+  /** Explicit user save, distinct from Plan/selection approval; no model tools involved. */
+  public List<SourceSemanticAdoption.Receipt> adopt(String taskId, SaveRequest request) {
+    if(request==null || !request.confirmed())
+      throw new IllegalArgumentException("[F039_EXPLICIT_SAVE_CONFIRMATION_REQUIRED]");
+    var input=sources.verifiedCandidateInput(taskId);
+    Preflight fresh=preflight(taskId,request.revision());
+    if(!fresh.ready() || !Objects.equals(fresh.payloadDigest(),request.payloadDigest())
+        || !Objects.equals(fresh.ticket(),request.preflightTicket()))
+      throw new IllegalStateException("[F039_PREFLIGHT_EXPIRED]");
+    var state=input.task();
+    var review=reviews.read(state.ownerId(),state.projectId(),taskId);
+    var byId=new LinkedHashMap<String,Candidate>();
+    review.candidates().forEach(item->byId.put(item.id(),item));
+    var items=fresh.closure().stream().map(byId::get).map(item->
+        new SourceSemanticAdoption.Candidate(item.id(),item.kind(),item.code(),
+            item.name(),item.role(),item.grain(),item.description(),item.typeId(),
+            item.unitId(),item.reuseId(),item.reuseVersion(),item.dependencies())).toList();
+    var metadata=input.evidence();
+    var scope=new SourceSemanticAdoption.Scope(state.projectId(),
+        Long.parseLong(state.sourceManifest().dataSourceId()),metadata.collectJobId(),
+        metadata.fingerprint(),state.sourceManifest().tables().stream()
+            .map(io.yak.ops.business.agent.runtime.SourceSemanticScope.Table::assetKey).toList());
+    if(adoption==null) throw new IllegalStateException("[F039_ADOPTION_NOT_ENABLED]");
+    return adoption.adopt(new SourceSemanticAdoption.Batch(taskId,state.projectId(),
+        Long.parseLong(state.ownerId()),review.revision(),fresh.payloadDigest(),scope,items));
+  }
+
+  public List<SourceSemanticAdoption.Receipt> adoptionReceipts(String taskId) {
+    sources.read(taskId); // Current user + project + session ownership, not model content.
+    if(adoption==null) throw new IllegalStateException("[F039_ADOPTION_NOT_ENABLED]");
+    return adoption.receipts(taskId);
   }
 
   /** Pure read-only preflight; NO Semantic create/update or source SQL. */
