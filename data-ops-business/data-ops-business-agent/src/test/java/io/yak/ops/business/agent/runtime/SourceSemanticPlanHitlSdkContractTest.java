@@ -165,7 +165,7 @@ class SourceSemanticPlanHitlSdkContractTest {
     var input = Map.<String, Object>of("summary", "Scope reviewed");
     return ChatResponse.builder().content(List.of(ToolUseBlock.builder()
         .id("plan-exit-1").name("plan_exit").input(input)
-        .content(JsonUtils.getJsonCodec().toJson(input)).build())))
+        .content(JsonUtils.getJsonCodec().toJson(input)).build()))
         .usage(new ChatUsage(1, 1, 0)).build();
   }
 
