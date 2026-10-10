@@ -168,6 +168,7 @@ export const appRoutes: readonly NavigationRoute[] = [
   { id: 'data-asset-inventory', menuCode: YAK_OPS_MENU_CODES.assetInventory, mode: 'one', permission: 'data-asset:read', path: '/data-asset/inventory', title: '盘点上架', component: './data-asset/inventory', iconKey: 'quality', menuGroup: 'asset-management', order: 10 },
   { id: 'data-asset-taxonomy', menuCode: YAK_OPS_MENU_CODES.assetTaxonomy, mode: 'one', permission: 'data-asset:read', path: '/data-asset/taxonomy', title: '目录与标签', component: './data-asset/taxonomy', iconKey: 'database', menuGroup: 'asset-management', order: 20 },
   { id: 'data-asset-detail', path: '/data-asset/detail/:id', title: '资产详情', component: './data-asset/detail', hidden: true, parentId: 'data-asset-catalog' },
+  { id: 'modeling-logical-draft', path: '/modeling/logical', title: '业务逻辑模型', component: './modeling/logical', hidden: true, parentId: 'modeling-workspace' },
   { id: 'modeling-model-detail', path: '/modeling/models/:id', title: '模型详情', component: './modeling/unified', hidden: true, parentId: 'modeling-workspace' },
   { id: 'modeling-model-mapping', path: '/modeling/models/:id/mapping', title: '来源映射', component: './modeling/mapping', hidden: true, parentId: 'modeling-workspace' },
   { id: 'modeling-model-layer-mapping', path: '/modeling/models/:id/layer-mapping', title: '字段分层映射', component: './modeling/layer-mapping', hidden: true, parentId: 'modeling-workspace' },

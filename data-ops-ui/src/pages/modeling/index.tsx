@@ -484,6 +484,8 @@ const ModelingWorkspace: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <Input.Search allowClear placeholder="按名称或编码搜索" className="!w-[240px]" onSearch={handleSearch} />
+            {/* 同一个建模域的业务层专业入口，不新增顶层菜单。 */}
+            <Button onClick={() => history.push('/modeling/logical')}>业务逻辑模型</Button>
             {/* 视图切换(2026-09-17):列表 / 主线视图不再是独立入口 */}
             <Segmented
               value="list"
