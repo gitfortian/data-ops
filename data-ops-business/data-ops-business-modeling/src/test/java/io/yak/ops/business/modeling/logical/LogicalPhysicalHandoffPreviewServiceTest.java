@@ -28,8 +28,9 @@ class LogicalPhysicalHandoffPreviewServiceTest {
   private static final String SNAPSHOT = """
       {"model":{"id":77,"processId":22,"status":"DRAFT"},
        "entities":[{"entity":{"id":1,"code":"orders","name":"订单"},
-       "attributes":[{"code":"order_id","name":"订单标识","stdFieldId":11}]}],
-       "relations":[{"cardinality":"UNKNOWN"}]}
+       "attributes":[{"id":10,"entityId":1,"code":"order_id","name":"订单标识","stdFieldId":11}]},
+       {"entity":{"id":2,"code":"order_detail","name":"订单明细"},"attributes":[]}],
+       "relations":[{"sourceEntityId":1,"targetEntityId":2,"cardinality":"UNKNOWN"}]}
       """;
 
   @BeforeEach void setup() {
@@ -87,4 +88,78 @@ class LogicalPhysicalHandoffPreviewServiceTest {
     when(logical.versionSnapshot(77L, 2)).thenReturn(SNAPSHOT.replace("\"id\":77", "\"id\":99"));
     assertThrows(ModelingException.class, () -> preview.preview(77L, 2, 50L));
   }
+
+  @Test void anchorsCandidatesWithStableIdsAndTwoInputFingerprints() {
+    target(11L);
+    when(logical.versionSnapshot(77L, 2)).thenReturn(SNAPSHOT.replace("UNKNOWN", "ONE_TO_MANY"));
+    var evidence = preview.preview(77L, 2, 50L);
+    assertTrue(evidence.readyForReview());
+    assertTrue(evidence.blockers().isEmpty());
+    assertEquals(64, evidence.logicalSnapshotSha256().length());
+    assertEquals(64, evidence.physicalStructureSha256().length());
+    assertEquals(10L, evidence.columns().get(0).physicalColumnId());
+    assertEquals(1L, evidence.columns().get(0).logicalEntityId());
+    assertEquals(10L, evidence.columns().get(0).logicalAttributeId());
+    assertEquals("CANDIDATE_ONLY", evidence.columns().get(0).result());
+  }
+
+  @Test void detectsDuplicatedPhysicalStandardReferencesRatherThanGuessingByName() {
+    target(11L);
+    var first = structure.get(50L).columns().get(0);
+    var second = new StructureView.ColumnView(12L, "order_id_copy", "BIGINT",
+        null, null, true, null, null, null, 1, null, null, null, null, null, null,
+        11L, null, null, null);
+    var current = structure.get(50L);
+    when(structure.get(50L)).thenReturn(new StructureView(50L, "dwd_orders", "订单明细",
+        "DORIS", "DRAFT", "", "dwd_orders", "",
+        List.of(first, second), List.of(), List.of(), null, java.util.Map.of()));
+    var result = preview.preview(77L, 2, 50L);
+    assertFalse(result.readyForReview());
+    assertEquals("AMBIGUOUS_PHYSICAL_REFERENCE", result.columns().get(0).result());
+    assertEquals("AMBIGUOUS_PHYSICAL_REFERENCE", result.columns().get(1).result());
+  }
+
+  @Test void surfacesUnboundLogicalAttributesInsteadOfHidingThem() {
+    target(11L);
+    String extra = "{\"id\":20,\"entityId\":1,\"code\":\"amount\",\"name\":\"金额\"},";
+    when(logical.versionSnapshot(77L, 2)).thenReturn(
+        SNAPSHOT.replace("\"attributes\":[", "\"attributes\":[" + extra));
+    var result = preview.preview(77L, 2, 50L);
+    assertFalse(result.readyForReview());
+    assertTrue(result.columns().stream().anyMatch(c ->
+        "MISSING_LOGICAL_STANDARD".equals(c.result())
+            && c.logicalAttributeId() != null && c.logicalAttributeId() == 20L));
+  }
+
+  @Test void invalidatesStaleCrossEntityAttributeIdentity() {
+    target(11L);
+    when(logical.versionSnapshot(77L, 2)).thenReturn(
+        SNAPSHOT.replace("\"entityId\":1,\"code\":\"order_id\"",
+            "\"entityId\":2,\"code\":\"order_id\""));
+    var result = preview.preview(77L, 2, 50L);
+    assertFalse(result.readyForReview());
+    assertTrue(result.blockers().stream().anyMatch(s -> s.contains("跨实体")));
+  }
+
+  @Test void rejectsAStalePhysicalStructureProjection() {
+    target(11L);
+    var old = structure.get(50L);
+    when(structure.get(50L)).thenReturn(new StructureView(999L,
+        old.modelCode(), old.modelName(), old.dialect(), old.status(),
+        old.modelDescription(), old.tableName(), old.tableComment(),
+        old.columns(), old.primaryKey(), old.indexes(), old.partition(),
+        old.tableProperties()));
+    assertThrows(ModelingException.class, () -> preview.preview(77L, 2, 50L));
+  }
+
+  @Test void fingerprintsChangeWhenLogicalSnapshotDrifts() {
+    target(11L);
+    var before = preview.preview(77L, 2, 50L);
+    when(logical.versionSnapshot(77L, 2)).thenReturn(
+        SNAPSHOT.replace("订单标识", "订单业务标识"));
+    var after = preview.preview(77L, 2, 50L);
+    assertNotEquals(before.logicalSnapshotSha256(), after.logicalSnapshotSha256());
+    assertEquals(before.physicalStructureSha256(), after.physicalStructureSha256());
+  }
+
 }
