@@ -128,6 +128,14 @@ Related Issues: #512（走查证据）、#513（用户故事地图）
 
 这些都是评审建议，**不表示已取得产品 Owner 的 ACCEPT**。需在 DR-01～DR-08 记录决议、批准人、日期和迁移影响，才考虑本 PD 从 PROPOSED 升为 ACCEPTED；旧 PD-003/PD-002 合同不因文档变更被覆盖。
 
+## 10. 与全域 R-01/R-02 规划确认的边界（2026-10-10）
+
+需求提出者已确认 [全域用户故事地图 V2 / #516](https://github.com/gitfortian/data-ops/pull/516) 的 R-01（75 条候选故事作为规划范围基线）和 R-02（G1 消费真实验收 + G2 首次可信业务结果按依赖优先，J1 AI 辅助建设首批规划）。这意味着可以基于此**开展 F-040 交互/验收准备**，不代表本 PD 的具体业务合同自动 ACCEPTED。
+
+**仍待本 PD 专项产品评审**：非 ODS 业务/技术物理列的强制标准字段身份与例外、草稿/发布具体闸门；逻辑模型独立版本/与 Semantic 的正式引用；物理版本的来源/映射冻结与历史兼容；ModelVersion→DataDev 原域真实关联；默认双入口影响旧工作台的迁移与权限/失败恢复。详见 [F-040 交付门槛](../experience/F-040-first-value-delivery-gates.md) 与 [V3 领域契约评审](../experience/F-040-contract-resolution-proposal.md)。
+
+**产品事实状态保持不变**：PD-010 = PROPOSED，Implementation = NOT_STARTED；F-040 = DRAFT。无业务代码、DDL、数据库表结构或用户行为变更。
+
 ## Supersedes
 
 None。与 PD-003 的 Semantic/Modeling/Metric Owner、PD-002 的受治理消费、现有 F-002 / F-008 / F-029 可用边界对齐；如有实际冲突先回到其各自 Owner Contract 评审，不擅自覆盖。
