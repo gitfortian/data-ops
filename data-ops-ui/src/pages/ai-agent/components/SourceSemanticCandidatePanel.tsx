@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Button, Checkbox, Input, InputNumber, Select, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Checkbox, Input, Select, Space, Tag, Typography } from 'antd';
 import {
   sourceSemanticCandidates, type CandidatePreflight, type CandidateView,
   type SemanticCandidate,
@@ -20,6 +20,8 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
   const [preflight, setPreflight] = React.useState<CandidatePreflight>();
   const [questionId, setQuestionId] = React.useState('business_domain');
   const [answer, setAnswer] = React.useState('');
+  const [mergeTarget, setMergeTarget] = React.useState<string>();
+  const [mergeConfirmed, setMergeConfirmed] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -38,6 +40,8 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
       setView(next);
       setPreflight(undefined);
       setEdit(undefined);
+      setMergeTarget(undefined);
+      setMergeConfirmed(false);
     } catch (e) {
       setError(String((e as Error).message || e));
     } finally {
@@ -166,6 +170,33 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
                   code: found?.code ?? edit.code, name: found?.name ?? edit.name });
               }} />
           </Space>
+          {edit.kind === 'FIELD' && <>
+            <Typography.Text type="secondary">
+              同名不等于同义；只有业务负责人确认两列含义相同才允许归并。
+            </Typography.Text>
+            <Select allowClear showSearch optionFilterProp="label" style={{ width: '100%' }}
+              placeholder="选择另一条尚未选用的标准字段候选作人工归并"
+              value={mergeTarget}
+              options={review.candidates.filter((c) => c.kind === 'FIELD' && c.id !== edit.id
+                && !review.selectedIds.includes(c.id) && !review.selectedIds.includes(edit.id))
+                .map((c) => ({ value: c.id, label: `${c.name} (${c.evidence[0]?.tableAssetKey})` }))}
+              onChange={(v) => { setMergeTarget(v); setMergeConfirmed(false); }} />
+            <Checkbox checked={mergeConfirmed} onChange={(e) => setMergeConfirmed(e.target.checked)}>
+              我已核对两个来源列确实表达同一业务概念；合并后重新审查编码、角色与标准引用
+            </Checkbox>
+            <Button disabled={!mergeTarget || !mergeConfirmed || busy} onClick={() =>
+              mutate(() => sourceSemanticCandidates.merge(taskId, review.revision, edit.id, mergeTarget!))}>
+              合并来源概念（清除旧选择）
+            </Button>
+            {edit.evidence.length > 1 && <Space wrap>
+              {edit.evidence.map((e) => <Button key={`${e.tableAssetKey}/${e.column}`}
+                disabled={busy || review.selectedIds.includes(edit.id)} size="small"
+                onClick={() => mutate(() => sourceSemanticCandidates.split(taskId,
+                  review.revision, edit.id, e.tableAssetKey, e.column!))}>
+                拆出 {e.tableAssetKey}/{e.column}
+              </Button>)}
+            </Space>}
+          </>}
           <Space>
             <Button type="primary" loading={busy} onClick={() =>
               mutate(() => sourceSemanticCandidates.edit(taskId, edit, review.revision))}>提交新修订</Button>
