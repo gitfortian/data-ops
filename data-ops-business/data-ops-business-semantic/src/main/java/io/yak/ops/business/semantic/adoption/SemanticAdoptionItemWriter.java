@@ -14,6 +14,7 @@ import io.yak.ops.business.semantic.api.StandardField;
 import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.semantic.catalog.StandardCatalogService;
+import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.domain.BusinessDomainService;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
 import io.yak.ops.business.semantic.process.BusinessProcessService;
@@ -43,15 +44,17 @@ public class SemanticAdoptionItemWriter {
   private final BusinessProcessService processes;
   private final SemanticFieldService fields;
   private final StandardCatalogService standards;
+  private final SemanticProcessBindingService bindings;
   private final CurrentProject currentProject;
   private final SourceSchemaAdoptionProof source;
 
   public SemanticAdoptionItemWriter(AdoptionReceiptMapper receipts,
       BusinessDomainService domains, BusinessProcessService processes,
       SemanticFieldService fields, StandardCatalogService standards,
-      CurrentProject currentProject, SourceSchemaAdoptionProof source) {
+      SemanticProcessBindingService bindings, CurrentProject currentProject,
+      SourceSchemaAdoptionProof source) {
     this.receipts=receipts;this.domains=domains;this.processes=processes;
-    this.fields=fields;this.standards=standards;
+    this.fields=fields;this.standards=standards;this.bindings=bindings;
     this.currentProject=currentProject;this.source=source;
   }
 
@@ -105,6 +108,7 @@ public class SemanticAdoptionItemWriter {
         fields.add(Objects.toString(c.description(),""));
         fields.add(Objects.toString(c.typeId(),""));fields.add(Objects.toString(c.unitId(),""));
         fields.add(Objects.toString(c.reuseId(),""));fields.add(Objects.toString(c.reuseVersion(),""));
+        fields.add(Objects.toString(c.sourceAssetKey(),""));
         fields.addAll(c.dependencies());
         for(String value:fields) {
           byte[] encoded=value.getBytes(StandardCharsets.UTF_8);
@@ -157,6 +161,36 @@ public class SemanticAdoptionItemWriter {
       Long fieldId=dependency(completed,candidate,"FIELD");
       fields.bindToProcess(processId,fieldId,false,actor);
       id=fieldId;outcome="LINKED";
+    } else if ("SOURCE_LINK".equals(candidate.kind())) {
+      StpUtil.checkPermission(SemanticPermissionCode.UPDATE);
+      if(candidate.reuseId()!=null || candidate.sourceAssetKey()==null
+          || !List.of("MAIN","DETAIL","DIM").contains(candidate.role()))
+        throw new IllegalArgumentException("[F039_SOURCE_LINK_REVIEW_REQUIRED]");
+      if(candidate.dependencies().size()!=1)
+        throw new IllegalArgumentException("[F039_SOURCE_LINK_DEPENDENCY_INVALID]");
+      String fieldLinkId=candidate.dependencies().get(0);
+      Candidate fieldLink=request.candidates().stream()
+          .filter(item->item.id().equals(fieldLinkId)
+              && "PROCESS_FIELD".equals(item.kind()))
+          .findFirst().orElseThrow(()->new IllegalStateException("[F039_PROCESS_FIELD_REQUIRED]"));
+      Long processId=dependency(completed,fieldLink,"PROCESS");
+      String physicalTable=source.verifiedTableName(request.evidence(),candidate.sourceAssetKey());
+      if(physicalTable==null || physicalTable.isBlank()||physicalTable.length()>128)
+        throw new IllegalStateException("[F039_SOURCE_TABLE_INVALID]");
+      var existing=bindings.listByProcess(processId).stream()
+          .filter(v->request.evidence().dataSourceId()==v.datasourceId()
+              && physicalTable.equals(v.sourceTable())).toList();
+      var compatible=existing.stream().filter(v->candidate.role().equals(v.tableRole())
+          && (v.joinCondition()==null || v.joinCondition().isBlank())).findFirst();
+      if(compatible.isPresent()) {
+        id=compatible.get().id();outcome="REUSED";
+      } else if(!existing.isEmpty()) {
+        throw new IllegalStateException("[F039_SOURCE_BINDING_ROLE_CONFLICT]");
+      } else {
+        var binding=bindings.bind(processId,request.evidence().dataSourceId(),physicalTable,
+            candidate.role(),null,actor);
+        id=binding.id();outcome="LINKED";
+      }
     } else if(candidate.reuseId()!=null) {
       id=assertReuse(candidate,completed);
       version=candidate.reuseVersion();
