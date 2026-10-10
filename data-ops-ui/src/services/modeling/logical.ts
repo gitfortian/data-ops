@@ -107,6 +107,9 @@ export interface LogicalPhysicalPreview {
   physicalLayer?: string;
   physicalStatus: string;
   readyForReview: boolean;
+  /** SHA-256 of the compared frozen logical JSON and live physical DRAFT projection. */
+  logicalSnapshotSha256: string;
+  physicalStructureSha256: string;
   blockers: string[];
   columns: {
     physicalColumn: string;
@@ -115,6 +118,9 @@ export interface LogicalPhysicalPreview {
     logicalAttribute?: string;
     result: string;
     reason: string;
+    physicalColumnId?: number;
+    logicalEntityId?: number;
+    logicalAttributeId?: number;
   }[];
 }
 export const previewLogicalPhysical = (
