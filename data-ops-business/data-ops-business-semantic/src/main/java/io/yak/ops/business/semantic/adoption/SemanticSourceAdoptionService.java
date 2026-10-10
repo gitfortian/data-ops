@@ -76,7 +76,7 @@ public class SemanticSourceAdoptionService implements SemanticSourceAdoptionApi 
             null,null,candidate.kind(),"Confirmed category-specific standard details required"));
         continue;
       }
-      if("SOURCE_LINK".equals(candidate.kind())||"STANDARD_CODE".equals(candidate.kind())) {
+      if("STANDARD_CODE".equals(candidate.kind())) {
         completed.put(candidate.id(),new Receipt(candidate.id(),"NOT_EXECUTED",
             null,null,candidate.kind(),"Source-column or code-set contract not yet authorized"));
         continue;
