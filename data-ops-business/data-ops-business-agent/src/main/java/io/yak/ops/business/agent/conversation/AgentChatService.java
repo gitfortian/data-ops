@@ -119,6 +119,50 @@ public class AgentChatService {
   private static final java.util.concurrent.ConcurrentHashMap<String, Object> SUBMIT_STRIPES =
       new java.util.concurrent.ConcurrentHashMap<>();
 
+  /**
+   * Server-internal admission for an already CAS-reserved F-039 chunk.
+   * This deliberately reuses the existing Session/Turn owner, persisted QUEUED input,
+   * dispatcher and the same per-session submission stripe as ordinary chat.
+   *
+   * No HTTP route or caller-supplied user identity is trusted here. An admission failure
+   * after the separate task CAS must NEVER refund its reservation or blindly retry enqueue.
+   */
+  void assertSourceSemanticOwner(String sessionId, long frozenUserId, long frozenProjectId) {
+    if (frozenUserId <= 0 || frozenProjectId <= 0
+        || requireUserId() != frozenUserId || requireProjectId() != frozenProjectId) {
+      throw new IllegalArgumentException("[F039_AUTHENTICATED_OWNER_MISMATCH]");
+    }
+    ownerValidator.assertOwner(sessionId, frozenUserId, frozenProjectId);
+  }
+
+  void enqueueReservedSourceSemanticTurn(String sessionId, String turnId, String serverPrompt,
+      long frozenUserId, long frozenProjectId) {
+    if (serverPrompt == null || serverPrompt.isBlank() || serverPrompt.length() > 16384) {
+      throw new IllegalArgumentException("[F039_INVALID_BOUND_PROMPT]");
+    }
+    // Freeze UUID identity BEFORE enqueue and ensure a repeated request cannot substitute
+    // an arbitrary id / a different original turn.
+    try {
+      UUID.fromString(turnId);
+    } catch (RuntimeException invalid) {
+      throw new IllegalArgumentException("[F039_INVALID_ORIGINAL_TURN_ID]", invalid);
+    }
+    assertSourceSemanticOwner(sessionId, frozenUserId, frozenProjectId);
+    Object stripe = SUBMIT_STRIPES.computeIfAbsent(sessionId, key -> new Object());
+    synchronized (stripe) {
+      assertSourceSemanticOwner(sessionId, frozenUserId, frozenProjectId);
+      if (turnRepository.hasActiveTurn(sessionId)) {
+        throw new TurnConflictException("[F039_ORIGINAL_SESSION_BUSY]");
+      }
+      TurnInput input = TurnInput.ofStart(UUID.randomUUID().toString(),
+          UUID.randomUUID().toString(), serverPrompt);
+      turnRepository.insertQueued(turnId, sessionId, frozenUserId, frozenProjectId,
+          TurnKind.START, io.yak.ops.business.agent.repository.support.TurnInputCodec.encode(input));
+    }
+    // This is only a wakeup hint: the existing durable QUEUED scanner owns delivery.
+    turnDispatcher.kick();
+  }
+
   /** HITL 恢复提交：定位 WAITING_INPUT 轮，校验 feedback toolCallId 匹配反问帧，CAS 回 QUEUED 后续跑。 */
   public String submitResume(String sessionId, List<io.yak.ops.business.agent.domain.ToolFeedback> feedbacks) {
     long userId = requireUserId();
