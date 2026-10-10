@@ -17,7 +17,8 @@ public record SourceSemanticTaskState(
     Map<String, String> resultDigests, Map<String, String> completedTurnIds,
     String activeChunkId, String activeTurnId,
     long maxTurns, long usedTurns, long maxToolCalls, long reservedToolCalls,
-    long revision, String sessionId) implements State {
+    long revision, String sessionId, SourceSemanticScope sourceManifest,
+    List<SourceSemanticChunkPlanner.Chunk> frozenChunks) implements State {
 
   public enum Status { PLANNED, READY, RUNNING, PAUSED, INTERRUPTED, COMPLETED, CANCELLED }
 
@@ -26,6 +27,22 @@ public record SourceSemanticTaskState(
     SourceSemanticScope.required(ownerId, "ownerId");
     // Older #500 task snapshots have no session binding. Never infer it from a turn.
     if (sessionId != null) SourceSemanticScope.required(sessionId, "sessionId");
+    // Old #500/#502 records may lack these new fields. They stay readable, but cannot
+    // be used as a trusted source manifest for fresh turn admission.
+    if ((sourceManifest == null) != (frozenChunks == null)) {
+      throw new IllegalArgumentException("[F039_PARTIAL_SOURCE_MANIFEST]");
+    }
+    if (sourceManifest != null) {
+      frozenChunks = List.copyOf(frozenChunks);
+      if (sourceManifest.projectId() != projectId
+          || !sourceManifest.fingerprint().equals(scopeFingerprint)
+          || !frozenChunks.stream().map(SourceSemanticChunkPlanner.Chunk::id).toList()
+              .equals(chunkIds)
+          || !SourceSemanticChunkPlanner.planFingerprint(sourceManifest, frozenChunks)
+              .equals(chunkPlanFingerprint)) {
+        throw new IllegalArgumentException("[F039_SOURCE_MANIFEST_MISMATCH]");
+      }
+    }
     if (projectId <= 0) throw new IllegalArgumentException("projectId");
     digest(scopeFingerprint, "scopeFingerprint");
     digest(chunkPlanFingerprint, "chunkPlanFingerprint");

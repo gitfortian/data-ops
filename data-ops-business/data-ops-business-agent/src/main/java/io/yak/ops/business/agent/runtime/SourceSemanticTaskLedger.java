@@ -56,7 +56,8 @@ public final class SourceSemanticTaskLedger {
     var state = new SourceSemanticTaskState(taskId, scope.projectId(), ownerId,
         scope.fingerprint(), SourceSemanticChunkPlanner.planFingerprint(scope, chunks),
         planSha256, SourceSemanticTaskState.Status.PLANNED, ids, List.of(), java.util.Map.of(),
-        java.util.Map.of(), null, null, maxTurns, 0, maxToolCalls, 0, 1, sessionId);
+        java.util.Map.of(), null, null, maxTurns, 0, maxToolCalls, 0, 1, sessionId,
+        scope, chunks);
     try {
       long v = store.saveIfVersion(ownerId, taskSlot(taskId), KEY, state, 0);
       if (v == AgentStateStore.UNVERSIONED)
@@ -232,7 +233,7 @@ public final class SourceSemanticTaskLedger {
         old.scopeFingerprint(), old.chunkPlanFingerprint(), old.planSha256(),
         status, old.chunkIds(), completed, results, turns, activeChunkId, activeTurnId,
         old.maxTurns(), usedTurns, old.maxToolCalls(), usedToolCalls, old.revision() + 1,
-        old.sessionId());
+        old.sessionId(), old.sourceManifest(), old.frozenChunks());
   }
 
   private record Snapshot(SourceSemanticTaskState value, long version) {}
