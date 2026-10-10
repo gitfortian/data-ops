@@ -29,6 +29,9 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
   React.useEffect(() => {
     let mounted = true;
     setView(undefined);
+    setReceipts([]);
+    setPreflight(undefined);
+    setSaveConfirmed(false);
     sourceSemanticCandidates.read(taskId).then((response) => {
       if (mounted) setView(response);
     }).catch((e) => { if (mounted) setError(String((e as Error).message || e)); });
