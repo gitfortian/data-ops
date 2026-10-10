@@ -90,6 +90,24 @@ public class CatalogQueryService {
         params, " ORDER BY a.id");
   }
 
+  /**
+   * Bounded child projection for F-039 source evidence. Reuses the same single catalog table,
+   * row mapper and trusted CurrentProject predicate; reads one extra row to detect overflow.
+   */
+  public List<EntityDTO> childrenBounded(long parentId, String childTypeName, int limit) {
+    if (limit < 1 || limit > 501) {
+      throw new IllegalArgumentException("bounded children limit must be in 1..501");
+    }
+    Long childTypeId = entityTypeId(childTypeName).orElse(null);
+    if (childTypeId == null) {
+      return List.of();
+    }
+    MapSqlParameterSource params = scoped().addValue("parentId", parentId)
+        .addValue("childTypeId", childTypeId).addValue("bound", limit);
+    return read("a.parent_asset_id = :parentId AND a.type_id = :childTypeId"
+        + " AND a.gone_at IS NULL", params, " ORDER BY a.id LIMIT :bound");
+  }
+
   /** 本类型声明的子类型名；没有父子对时为空——调用方据此知道"这类实体没有子级"，不是出错。 */
   public Optional<String> childTypeOf(String typeName) {
     for (TypeDefinition definition : typeRegistry.allTypeDefinitions()) {
