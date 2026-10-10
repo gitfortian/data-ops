@@ -24,7 +24,7 @@ public class AuthorizedPhysicalScopeEvidenceService {
   private final PhysicalScopeEvidenceQueryApi evidence;
 
   public AuthorizedPhysicalScopeEvidenceService(CurrentProject currentProject,
-      ProjectDataSourceReadApi dataSources, PhysicalScopeEvidenceQueryApi evidence) {
+      PhysicalSourceAccessPort dataSources, PhysicalScopeEvidenceQueryApi evidence) {
     this.currentProject = currentProject;
     this.dataSources = dataSources;
     this.evidence = evidence;

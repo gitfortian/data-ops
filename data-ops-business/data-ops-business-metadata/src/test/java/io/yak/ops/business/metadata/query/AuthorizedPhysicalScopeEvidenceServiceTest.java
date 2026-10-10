@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 class AuthorizedPhysicalScopeEvidenceServiceTest {
-  private final PhysicalSourceAccessPort datasource = mock(ProjectDataSourceReadApi.class);
+  private final PhysicalSourceAccessPort datasource = mock(PhysicalSourceAccessPort.class);
   private final PhysicalScopeEvidenceQueryApi metadata = mock(PhysicalScopeEvidenceQueryApi.class);
   private final CurrentProject project = () -> Optional.of(new ProjectContext(17L, "test"));
   private final AuthorizedPhysicalScopeEvidenceService gate =
