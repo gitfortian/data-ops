@@ -1,14 +1,10 @@
 package io.yak.ops.business.modeling.dao.mapper;
 
-import io.yak.ops.business.modeling.domain.LogicalAttribute;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import io.yak.ops.business.modeling.dao.model.LogicalAttributePO;
 import org.apache.ibatis.annotations.Mapper;
 
+/** Mapper of existing logical-modeling tables. Consumers enforce scoped parents. */
 @Mapper
-public interface ModelingLogicalAttributeMapper {
-
-  LogicalAttribute selectById(Long id);
-
-  int insert(LogicalAttribute attribute);
-
-  int update(LogicalAttribute attribute);
+public interface ModelingLogicalAttributeMapper extends BaseMapper<LogicalAttributePO> {
 }
