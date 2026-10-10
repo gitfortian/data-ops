@@ -387,6 +387,31 @@ public class SourceSemanticTaskFacade {
     return read(taskId);
   }
 
+  /**
+   * Phase 3 handoff: verified ORIGINAL turn receipts, fresh Metadata fingerprint,
+   * approved plan hash and original owner binding are all mandatory.
+   */
+  record CandidateInput(SourceSemanticTaskState task,
+      PhysicalScopeEvidenceQueryApi.Evidence evidence) {}
+
+  CandidateInput verifiedCandidateInput(String taskId) {
+    long user = actor();
+    var state = bound(taskId, user);
+    fresh(state);
+    var result = reconciler(state).reconcile(access(state));
+    var completed = result.task();
+    if (completed.status() != SourceSemanticTaskState.Status.COMPLETED)
+      throw new IllegalStateException("[F039_ANALYSIS_NOT_COMPLETE]");
+    documents.verifyApproved(workspace(user, taskId), completed.planSha256());
+    for (String chunk : completed.chunkIds()) artifact(taskId, chunk);
+    var source = evidenceApi.readSelectedTables(
+        completed.sourceManifest().tables().stream().map(SourceSemanticScope.Table::assetKey).toList());
+    if (source.projectId() != completed.projectId()
+        || !Objects.equals(source.dataSourceId(), completed.sourceManifest().dataSourceId()))
+      throw new IllegalStateException("[F039_SOURCE_SCOPE_MISMATCH]");
+    return new CandidateInput(completed, source);
+  }
+
   public Artifact artifact(String taskId, String chunkId) {
     long user = actor();
     var task = bound(taskId, user);
