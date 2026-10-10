@@ -15,14 +15,16 @@ public final class SourceSchemaAdoptionProofAdapter implements SourceSchemaAdopt
     this.authorized = authorized;
   }
   @Override public String verifiedTableName(Expected expected,String assetKey) {
-    assertCurrent(expected);
-    var current=authorized.read(expected.dataSourceId(),expected.tableAssetKeys());
+    var current=verified(expected);
     return current.tables().stream().filter(table->table.assetKey().equals(assetKey))
         .map(io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi.Table::name)
         .findFirst().orElseThrow(()->new IllegalStateException("[F039_ADOPTION_TABLE_MISMATCH]"));
   }
 
-  @Override public void assertCurrent(Expected expected) {
+  @Override public void assertCurrent(Expected expected) { verified(expected); }
+
+  private io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi.Evidence verified(
+      Expected expected) {
     if (expected == null || expected.projectId() <= 0 || expected.dataSourceId() <= 0
         || expected.tableAssetKeys().isEmpty() || expected.tableAssetKeys().size() > 20
         || expected.tableAssetKeys().stream().anyMatch(v -> v == null || v.isBlank())
@@ -34,5 +36,6 @@ public final class SourceSchemaAdoptionProofAdapter implements SourceSchemaAdopt
         || !Objects.equals(actual.fingerprint(),expected.evidenceFingerprint())
         || actual.tables().size()!=expected.tableAssetKeys().size())
       throw new IllegalStateException("[F039_ADOPTION_SOURCE_DRIFT]");
+    return actual;
   }
 }
