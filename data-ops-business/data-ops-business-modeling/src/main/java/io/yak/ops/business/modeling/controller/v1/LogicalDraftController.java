@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class LogicalDraftController {
 
   private final LogicalDraftService service;
+  private final io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffPreviewService handoffPreview;
   private final CurrentUserProvider currentUserProvider;
 
   @GetMapping
@@ -97,6 +98,13 @@ public class LogicalDraftController {
   @GetMapping("/{id}/versions")
   public Result<List<VersionView>> versions(@PathVariable Long id) {
     return Result.success(service.versions(id));
+  }
+
+  /** Read-only; version and target model must each be scoped in their owning repositories. */
+  @GetMapping("/{id}/versions/{versionNo}/physical-preview")
+  public Result<io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffPreviewService.Preview>
+      physicalPreview(@PathVariable Long id, @PathVariable int versionNo, @RequestParam Long physicalModelId) {
+    return Result.success(handoffPreview.preview(id, versionNo, physicalModelId));
   }
 
   @GetMapping("/{id}/versions/{versionNo}")
