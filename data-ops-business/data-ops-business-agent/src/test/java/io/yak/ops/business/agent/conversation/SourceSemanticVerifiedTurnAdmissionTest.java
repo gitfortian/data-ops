@@ -125,7 +125,7 @@ class SourceSemanticVerifiedTurnAdmissionTest {
 
   @Test void initialActorValidationFailureLeavesBudgetUntouched() {
     doThrow(new IllegalArgumentException("no current principal"))
-        .when(chat).assertSourceSemanticOwner(anyString(),anyLong(),anyLong(),eq("source-task-1"));
+        .when(chat).assertSourceSemanticOwner(anyString(),anyLong(),anyLong());
     assertThrows(IllegalArgumentException.class,()->adapter.admitNext(access,2));
     assertEquals(0,ledger.read("42",31,access.taskId()).reservedToolCalls());
     verify(chat,never()).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
