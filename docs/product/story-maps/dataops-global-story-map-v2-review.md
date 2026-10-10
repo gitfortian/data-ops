@@ -1,6 +1,6 @@
 # data-ops 全产品用户故事地图 V2 · 产品评审纪要
 
-Status: PRODUCT_DESIGN_REVIEW = CONDITIONAL_PASS（**有条件通过，不是 Product Owner 正式批准**）  
+Status: PRODUCT_SCOPE_PRIORITY = CONFIRMED_BY_REQUESTER（**规划范围与优先级已确认，详细产品/领域规则尚未批准**）  
 Date: 2026-10-10  
 Review targets: [V2 主地图](./dataops-global-user-story-map-v2.md)、[能力追踪与三角色纸面走查](./dataops-coverage-and-walkthrough-v2.md)  
 Source of truth: [PRODUCT_VISION](../PRODUCT_VISION.md)、[PRODUCT_PRINCIPLES](../PRODUCT_PRINCIPLES.md)、[CAPABILITY_MAP](../CAPABILITY_MAP.md)、[USER_JOURNEYS](../USER_JOURNEYS.md)、[PD-002 ACCEPTED](../decisions/PD-002-governed-consumption-contract.md)、[PD-003 ACCEPTED](../decisions/PD-003-business-semantic-metric-contract.md)  
@@ -168,3 +168,25 @@ First detailed story: [#515 F-040](https://github.com/gitfortian/data-ops/pull/5
 在得到 Owner 的明确确认前，记录 \`R01_SCOPE_RECOMMEND_ACCEPT\`、\`R02_PRIORITY_RECOMMEND_ACCEPT\`、\`PRODUCT_OWNER_SIGNOFF=PENDING\`、\`REAL_USERS_VALIDATED=NO\`、\`E2E=BLOCKED_EVIDENCE/NOT_EXECUTED\`。
 
 **整个 V2 仍为 DRAFT 评审材料，PR #516 的合并不代表 Product Truth 或业务上线。**
+
+
+## 8. R-01/R-02 需求提出者确认及评审出口（2026-10-10）
+
+本条为前述 1–7 节“建议/待确认”之后的**最新范围决议**。需求提出者审阅了两项明确的规划问题并回复“好的，同意，继续”。根据该授权，记录：
+
+- **R-01 = CONFIRMED_BY_REQUESTER**：认可 75 条用户故事与 J1–J6、MDM/横切作为**全域候选规划基线**；编号和领域归属有持续复核机制，不锁死未来用户反馈。
+- **R-02 = CONFIRMED_BY_REQUESTER**：认可 G1 当前 PD-002 的真实消费环境/权限/Usage E2E 证据优先收口，以及 G2 F-040 从来源/业务目标到真实运行/指标/合法查询的首次业务价值交付，按依赖可并行；J1 Agent 辅助建设从首批规划。
+- **全域 V0 规划工作 = EXIT_READY_FOR_PR_REVIEW**：不再要求把每个菜单的详细交互画完才可批准本规划稿。后续变更仍应附 Story ID 和理由。
+
+### 不可扩张解释的边界
+
+该决议不是 Product Decision PD-010 ACCEPTED，不是 Feature F-040 APPROVED，不是 PD-002 的实际 Golden E2E PASS，也不是跨域治理/技术列例外和 Agent 自主写入的授权。此前关于缺真实多角色走查的事实继续成立。详细规则仍需 Semantic / Modeling / DataDev / Security/Consumption 的 Domain Contract Review；G1 真实验收受 #336 当前证据/环境前提制约。
+
+### 进入下一阶段时的最小交付
+
+1. **#516 全域地图 PR 准备正常评审/合并**：仅文档范围基线，不影响生产行为。
+2. **#515 F-040 实施准备**：把 J1 的 Agent 证据候选/人工确认/专业接管与 G1 既有受治理消费对接落实为可测试的第一条纵向 Slice，冻结 Stage A 设计里程碑与 Stage B 真消费业务价值门槛。
+3. **PD-010 的未决业务选择**：非 ODS 全列标准字段及技术列例外、逻辑版本/映射、模型→DataDev 版本交接，需要显式批准；不借 R-01/R-02 的总方向代替审批。
+4. **#336 消费验收**：只使用可信授权环境+实际部署与真实 Provider/审计证据，由具备权限的 QA/Release 运行已有 runner；未取得则保持 BLOCKED_EVIDENCE，不重复创造消费系统或伪造测试结果。
+
+\`GLOBAL_STORY_SCOPE=BASELINED_BY_REQUESTER\`；\`PR516_IMPLEMENTATION=DOCS_ONLY\`；\`PD010=PROPOSED\`；\`F040=DRAFT\`；\`G1_E2E=BLOCKED_EVIDENCE\`；\`G2_E2E=NOT_EXECUTED\`。
