@@ -14,6 +14,14 @@ public final class SourceSchemaAdoptionProofAdapter implements SourceSchemaAdopt
   public SourceSchemaAdoptionProofAdapter(AuthorizedPhysicalScopeEvidenceService authorized) {
     this.authorized = authorized;
   }
+  @Override public String verifiedTableName(Expected expected,String assetKey) {
+    assertCurrent(expected);
+    var current=authorized.read(expected.dataSourceId(),expected.tableAssetKeys());
+    return current.tables().stream().filter(table->table.assetKey().equals(assetKey))
+        .map(io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi.Table::name)
+        .findFirst().orElseThrow(()->new IllegalStateException("[F039_ADOPTION_TABLE_MISMATCH]"));
+  }
+
   @Override public void assertCurrent(Expected expected) {
     if (expected == null || expected.projectId() <= 0 || expected.dataSourceId() <= 0
         || expected.tableAssetKeys().isEmpty() || expected.tableAssetKeys().size() > 20
