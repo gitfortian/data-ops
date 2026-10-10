@@ -57,6 +57,7 @@ export default function LogicalWorkspace() {
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [mappingSelections, setMappingSelections] = useState<Record<number, number>>({});
   const [reviewResult, setReviewResult] = useState<LogicalPhysicalReview>();
+  const [reviewSelectionSnapshot, setReviewSelectionSnapshot] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
   const [createForm] = Form.useForm<CreateValues>();
   const [entityForm] = Form.useForm<EntityValues>();
@@ -278,7 +279,9 @@ export default function LogicalWorkspace() {
   const validateExplicitReview = async () => {
     if (selected == null || physicalModelId == null || !handoffPreview) return;
     setReviewResult(undefined);
+    setReviewSelectionSnapshot('');
     setReviewLoading(true);
+    const selectionSnapshot = JSON.stringify(mappingSelections);
     try {
       const receipt = await reviewLogicalPhysical(selected, handoffPreview.logicalVersionNo, physicalModelId, {
         logicalSnapshotSha256: handoffPreview.logicalSnapshotSha256,
@@ -287,6 +290,7 @@ export default function LogicalWorkspace() {
           physicalColumnId: Number(physicalColumnId), logicalAttributeId,
         })),
       });
+      setReviewSelectionSnapshot(selectionSnapshot);
       setReviewResult(receipt);
       if (!receipt.evidenceUnchanged) {
         setHandoffPreview(undefined);
@@ -572,7 +576,13 @@ export default function LogicalWorkspace() {
             已选 {Object.keys(mappingSelections).length} 项。本阶段仅可审阅、复查、修正，不创建正式映射或发布版本。
           </Typography.Text>
         </Space>
-        {reviewResult && (
+        {reviewResult
+          && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
+          && reviewResult.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
+          && reviewResult.physicalStructureSha256 === handoffPreview.physicalStructureSha256
+          && reviewResult.logicalModelId === handoffPreview.logicalModelId
+          && reviewResult.physicalModelId === handoffPreview.physicalModelId
+          && (
           <div className="mt-4">
             <Alert showIcon type={reviewResult.readyForManualDesign ? 'info' : 'warning'}
               message={reviewResult.readyForManualDesign
