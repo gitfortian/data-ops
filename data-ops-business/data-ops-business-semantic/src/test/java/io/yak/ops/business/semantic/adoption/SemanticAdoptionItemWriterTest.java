@@ -51,7 +51,7 @@ class SemanticAdoptionItemWriterTest {
     security=mockStatic(YakSecurityContext.class);
     security.when(YakSecurityContext::getCurrentUserId).thenReturn(42L);
     permissions=mockStatic(StpUtil.class);
-    when(mapper.updateById(any())).thenReturn(1);
+    when(mapper.updateById(any(AdoptionReceiptPO.class))).thenReturn(1);
     doAnswer(invocation -> {
       AdoptionReceiptPO pending=invocation.getArgument(0);
       assertEquals("PENDING",pending.getStatus());
@@ -90,8 +90,8 @@ class SemanticAdoptionItemWriterTest {
     assertEquals(991L,result.semanticId());
     verify(source,atLeastOnce()).assertCurrent(evidence);
     verify(bindings).bind(71L,7L,"orders","MAIN",null,"42");
-    verify(mapper).insert(any());
-    verify(mapper).updateById(argThat(row -> "LINKED".equals(row.getStatus())
+    verify(mapper).insert(any(AdoptionReceiptPO.class));
+    verify(mapper).updateById(argThat((AdoptionReceiptPO row) -> "LINKED".equals(row.getStatus())
         && Long.valueOf(991L).equals(row.getSemanticId())));
   }
 
@@ -102,7 +102,7 @@ class SemanticAdoptionItemWriterTest {
     assertThrows(IllegalStateException.class,()->writer.apply(
         request,request.candidates().get(3),dependencies()));
     verify(bindings,never()).bind(any(),any(),any(),any(),any(),any());
-    verify(mapper,never()).updateById(any());
+    verify(mapper,never()).updateById(any(AdoptionReceiptPO.class));
   }
 
   @Test void sourceDriftStopsBeforeTransactionReceiptInsert() {
@@ -110,7 +110,7 @@ class SemanticAdoptionItemWriterTest {
     doThrow(new IllegalStateException("[F039_DRIFT]")).when(source).assertCurrent(evidence);
     assertThrows(IllegalStateException.class,()->writer.apply(
         request,request.candidates().get(3),dependencies()));
-    verify(mapper,never()).insert(any());
+    verify(mapper,never()).insert(any(AdoptionReceiptPO.class));
   }
 
   @Test void writerUsesBusinessTransactionManager() throws Exception {
