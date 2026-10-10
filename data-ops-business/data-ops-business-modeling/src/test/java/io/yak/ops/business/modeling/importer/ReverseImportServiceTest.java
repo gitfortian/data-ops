@@ -221,7 +221,8 @@ class ReverseImportServiceTest {
   @Test
   void reimportKeepsExistingTableNameLayerAndSource() {
     when(modelRepository.findByCode("ods_user"))
-        .thenReturn(Optional.of(modelWithLayerAndSource(77L, "ods_user", "DWD", 3L)));
+        .thenReturn(Optional.of(modelWithLayerAndSource(77L, "ods_user", "DWD", 10L)
+            .withSource(10L, "shop", "ods_user")));
     when(catalogReader.listColumns(eq(10L), eq("shop"), isNull(), eq("ods_user")))
         .thenReturn(List.of(new CatalogColumn("id", "BIGINT", -5, 0, 0, false, 1, true, null)));
     when(structureService.get(77L))
@@ -240,6 +241,29 @@ class ReverseImportServiceTest {
     assertNull(plan.getValue().layerCode());
     assertEquals(10L, plan.getValue().sourceDatasourceId());
     assertEquals(List.of("id"), plan.getValue().sourceColumnNames());
+  }
+
+  @Test
+  void reimportRejectsCodeCollisionBoundToDifferentSource() {
+    when(modelRepository.findByCode("ods_user"))
+        .thenReturn(Optional.of(modelWithLayerAndSource(77L, "ods_user", "ODS", 3L)
+            .withSource(3L, "shop", "another_table")));
+    when(catalogReader.listColumns(eq(10L), eq("shop"), isNull(), eq("ods_user")))
+        .thenReturn(List.of(new CatalogColumn("id", "BIGINT", -5, 0, 0, false, 1, true, null)));
+
+    ModelingImportApi.ImportResult result =
+        service.importTables(
+            new ModelingImportApi.ImportRequest(
+                "MYSQL", null, "ODS",
+                List.of(new ModelingImportApi.ImportItem(10L, "shop", "ods_user",
+                    null, null, null, null))),
+            "tester");
+
+    assertEquals(1, result.failed().size());
+    assertTrue(result.failed().get(0).reason().contains("不同来源"));
+    verify(writer, never()).fillStructure(any(), any(), any());
+    verify(writer, never()).createWithStructure(any(), any());
+    verify(modelRepository, never()).assignSource(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -266,6 +290,8 @@ class ReverseImportServiceTest {
         ModelingImportApi.ImportResult.ImportAction.SKIPPED, result.models().get(0).action());
     verify(writer, never()).fillStructure(any(), any(), any());
     verify(writer, never()).createWithStructure(any(), any());
+    // Skipped models are read-only, not silently bound to a guessed source.
+    verify(modelRepository, never()).assignSource(any(), any(), any(), any(), any());
   }
 
   @Test
