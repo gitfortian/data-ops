@@ -11,7 +11,9 @@ import io.agentscope.harness.agent.filesystem.spec.LocalFilesystemSpec;
 import io.agentscope.harness.agent.tool.PlanModeTools;
 import io.agentscope.harness.agent.workspace.WorkspaceManager;
 import io.agentscope.harness.agent.workspace.plan.PlanModeManager;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.IOException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,9 +25,10 @@ import org.junit.jupiter.api.io.TempDir;
 class SourceSemanticPlanPermissionContractTest {
 
   @Test
-  void defaultModeAsksForPlanWriteUnlessExplicitlyAllowed(@TempDir Path root) {
-    try (WorkspaceManager workspace = new WorkspaceManager(root.resolve("workspace"),
-        new LocalFilesystemSpec().project(root).toFilesystem(root.resolve("workspace"), null))) {
+  void defaultModeAsksForPlanWriteUnlessExplicitlyAllowed(@TempDir Path root) throws IOException {
+    Path isolatedWorkspace = Files.createDirectory(root.resolve("workspace"));
+    try (WorkspaceManager workspace = new WorkspaceManager(isolatedWorkspace,
+        new LocalFilesystemSpec().project(root).toFilesystem(isolatedWorkspace, null))) {
       PlanModeManager plan = new PlanModeManager(workspace, null);
       PermissionEngine engine = new PermissionEngine(
           PermissionContextState.builder().mode(PermissionMode.DEFAULT).build());
@@ -54,9 +57,10 @@ class SourceSemanticPlanPermissionContractTest {
   }
 
   @Test
-  void nonInteractiveModeNeverApprovesPlanExit(@TempDir Path root) {
-    try (WorkspaceManager workspace = new WorkspaceManager(root.resolve("workspace"),
-        new LocalFilesystemSpec().project(root).toFilesystem(root.resolve("workspace"), null))) {
+  void nonInteractiveModeNeverApprovesPlanExit(@TempDir Path root) throws IOException {
+    Path isolatedWorkspace = Files.createDirectory(root.resolve("workspace"));
+    try (WorkspaceManager workspace = new WorkspaceManager(isolatedWorkspace,
+        new LocalFilesystemSpec().project(root).toFilesystem(isolatedWorkspace, null))) {
       PlanModeManager plan = new PlanModeManager(workspace, null);
       PermissionEngine engine = new PermissionEngine(
           PermissionContextState.builder().mode(PermissionMode.DONT_ASK).build());
