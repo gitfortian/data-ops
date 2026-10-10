@@ -56,7 +56,7 @@ class SourceSemanticVerifiedTurnAdmissionTest {
       assertEquals(turnId,ledger.read("42",31,access.taskId()).activeTurnId());
       return null;
     }).when(chat).enqueueReservedSourceSemanticTurn(anyString(), anyString(),
-        anyString(), eq(42L),eq(31L));
+        anyString(), eq(42L),eq(31L),eq("source-task-1"));
     var submitted=adapter.admitNext(access,2);
     var state=ledger.read("42",31,access.taskId());
     assertEquals(1,state.usedTurns());
@@ -70,7 +70,7 @@ class SourceSemanticVerifiedTurnAdmissionTest {
     var prompt=ArgumentCaptor.forClass(String.class);
     verify(chat).assertSourceSemanticOwner("original-session",42L,31L);
     verify(chat).enqueueReservedSourceSemanticTurn(eq("original-session"),
-        eq(submitted.turnId()),prompt.capture(),eq(42L),eq(31L));
+        eq(submitted.turnId()),prompt.capture(),eq(42L),eq(31L),eq("source-task-1"));
     assertTrue(prompt.getValue().contains(frozen.fingerprint()));
     assertTrue(prompt.getValue().contains(approvedPlan));
     assertTrue(prompt.getValue().contains(submitted.chunkId()));
@@ -79,7 +79,7 @@ class SourceSemanticVerifiedTurnAdmissionTest {
     // There is exactly one durable ledger reservation; never another turn while RUNNING.
     assertThrows(IllegalStateException.class,()->adapter.admitNext(access,1));
     verify(chat,times(1)).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
-        anyString(),anyLong(),anyLong());
+        anyString(),anyLong(),anyLong(),eq("source-task-1"));
   }
 
   @Test void driftOrWorkspaceEditFailBeforeReservation() throws Exception {
@@ -92,7 +92,7 @@ class SourceSemanticVerifiedTurnAdmissionTest {
     var state=ledger.read("42",31,access.taskId());
     assertEquals(0,state.usedTurns());
     verify(chat,never()).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
-        anyString(),anyLong(),anyLong());
+        anyString(),anyLong(),anyLong(),eq("source-task-1"));
   }
 
   @Test void wrongSessionAndProjectCannotReserve() {
@@ -104,13 +104,13 @@ class SourceSemanticVerifiedTurnAdmissionTest {
             "original-session",workspace),1));
     assertEquals(0,ledger.read("42",31,access.taskId()).usedTurns());
     verify(chat,never()).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
-        anyString(),anyLong(),anyLong());
+        anyString(),anyLong(),anyLong(),eq("source-task-1"));
   }
 
   @Test void definitiveOrAmbiguousQueueFailureNeverRefundsOrReplaysTurn() {
     doThrow(new IllegalStateException("DB connection lost after insert"))
         .when(chat).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
-            anyString(),eq(42L),eq(31L));
+            anyString(),eq(42L),eq(31L),eq("source-task-1"));
     var failure=assertThrows(IllegalStateException.class,()->adapter.admitNext(access,2));
     assertTrue(failure.getMessage().contains("F039_RESERVED_ADMISSION_OUTCOME_UNCERTAIN"));
     var state=ledger.read("42",31,access.taskId());
@@ -120,16 +120,16 @@ class SourceSemanticVerifiedTurnAdmissionTest {
     assertNotNull(state.activeTurnId());
     assertThrows(IllegalStateException.class,()->adapter.admitNext(access,2));
     verify(chat,times(1)).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
-        anyString(),anyLong(),anyLong());
+        anyString(),anyLong(),anyLong(),eq("source-task-1"));
   }
 
   @Test void initialActorValidationFailureLeavesBudgetUntouched() {
     doThrow(new IllegalArgumentException("no current principal"))
-        .when(chat).assertSourceSemanticOwner(anyString(),anyLong(),anyLong());
+        .when(chat).assertSourceSemanticOwner(anyString(),anyLong(),anyLong(),eq("source-task-1"));
     assertThrows(IllegalArgumentException.class,()->adapter.admitNext(access,2));
     assertEquals(0,ledger.read("42",31,access.taskId()).reservedToolCalls());
     verify(chat,never()).enqueueReservedSourceSemanticTurn(anyString(),anyString(),
-        anyString(),anyLong(),anyLong());
+        anyString(),anyLong(),anyLong(),eq("source-task-1"));
   }
 
   @Test void legacyTaskMustNotEnterAdmission() {
