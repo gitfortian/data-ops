@@ -2,6 +2,7 @@ package io.yak.ops.business.modeling.logical;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.exception.ModelingException;
 import io.yak.ops.business.modeling.repository.ModelRepository;
@@ -24,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Read-only version-pinned comparison. This is NOT logical-to-physical generation,
@@ -50,6 +52,9 @@ public class LogicalPhysicalHandoffPreviewService {
                         String logicalSnapshotSha256, String physicalStructureSha256) {}
   private record LogicalAttribute(Long entityId, String entityName, Long attributeId,
                                   String attributeName, Long stdFieldId) {}
+  /** Physical evidence includes model-level semantics, not only live column structure. */
+  private record PhysicalEvidence(Long modelId, Long processId, String layerCode,
+                                  String status, StructureView structure) {}
 
   private static String sha256(byte[] bytes) {
     try {
@@ -59,6 +64,7 @@ public class LogicalPhysicalHandoffPreviewService {
     }
   }
 
+  @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
   public Preview preview(Long logicalId, int versionNo, Long physicalId) {
     if (logicalId == null || versionNo < 1 || physicalId == null) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "必须提供逻辑模型/版本和物理模型 ID");
@@ -89,7 +95,10 @@ public class LogicalPhysicalHandoffPreviewService {
     }
     final String physicalHash;
     try {
-      physicalHash = sha256(json.writeValueAsBytes(structure));
+      physicalHash = sha256(json.writer()
+          .with(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+          .writeValueAsBytes(new PhysicalEvidence(physicalId, target.processId(),
+              target.layerCode(), target.status().name(), structure)));
     } catch (JsonProcessingException e) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN,
           "物理结构无法生成可复核指纹");
@@ -235,8 +244,8 @@ public class LogicalPhysicalHandoffPreviewService {
     if (checks.stream().anyMatch(c -> !"CANDIDATE_ONLY".equals(c.result()))) {
       blockers.add("存在缺失、失效、未覆盖或歧义的字段引用；仅允许人工修正后重新预检");
     }
-    // A SHA is evidence of the compared input, NOT a saved mapping or physical
-    // model version. Any subsequent confirmation must re-read both inputs.
+    // SHA fingerprints include model-level process/layer identity and current structure,
+    // NOT a saved mapping or an immutable physical version. Re-read and revalidate on confirm.
     return new Preview(logicalId, versionNo, physicalId, target.layerCode(),
         target.status().name(), blockers.isEmpty(), List.copyOf(blockers), List.copyOf(checks),
         logicalHash, physicalHash);
