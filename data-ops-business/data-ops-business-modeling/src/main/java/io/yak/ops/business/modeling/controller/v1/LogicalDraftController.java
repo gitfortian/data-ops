@@ -27,6 +27,7 @@ public class LogicalDraftController {
 
   private final LogicalDraftService service;
   private final io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffPreviewService handoffPreview;
+  private final io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffReviewService handoffReview;
   private final CurrentUserProvider currentUserProvider;
 
   @GetMapping
@@ -105,6 +106,15 @@ public class LogicalDraftController {
   public Result<io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffPreviewService.Preview>
       physicalPreview(@PathVariable Long id, @PathVariable int versionNo, @RequestParam Long physicalModelId) {
     return Result.success(handoffPreview.preview(id, versionNo, physicalModelId));
+  }
+
+  /** Explicit read-only mapping review. No mapping writes or approval is performed. */
+  @PostMapping("/{id}/versions/{versionNo}/physical-review")
+  public Result<io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffReviewService.ReviewResult>
+      reviewPhysical(@PathVariable Long id, @PathVariable int versionNo,
+          @RequestParam Long physicalModelId,
+          @RequestBody io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffReviewService.ReviewRequest request) {
+    return Result.success(handoffReview.validate(id, versionNo, physicalModelId, request));
   }
 
   @GetMapping("/{id}/versions/{versionNo}")
