@@ -1,12 +1,14 @@
 package io.yak.ops.business.metadata.query;
 
 import io.yak.ops.spi.semantic.SourceSchemaAdoptionProof;
+import io.yak.ops.business.datasource.config.ConditionalOnDataSourceEnabled;
 import java.util.HashSet;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
 
 /** Delegate all source authorization and complete evidence to its Metadata owner. */
 @Component
+@ConditionalOnDataSourceEnabled
 public final class SourceSchemaAdoptionProofAdapter implements SourceSchemaAdoptionProof {
   private final AuthorizedPhysicalScopeEvidenceService authorized;
   public SourceSchemaAdoptionProofAdapter(AuthorizedPhysicalScopeEvidenceService authorized) {
