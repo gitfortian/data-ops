@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { join, tmpdir } from 'node:path';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { evaluateGolden, template, SCENARIOS } from './f039-golden-acceptance.mjs';
 
 const C='c'.repeat(64), S='a'.repeat(40);
