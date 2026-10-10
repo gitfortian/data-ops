@@ -9,48 +9,50 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 
 ## 1. 全产品能力覆盖：每一项能回答“谁为了什么结果使用”
 
+故事卡覆盖列使用简写 `J1-01` 等，正式稳定 ID 为 `GM-J1-01`；`X-10` 对应 `GM-X-10`。一行可引用多个故事，不能因“有覆盖”推断其已经运行验收。
+
 证据标签：**E** = #512 订单实机走查涉及，**C** = 现行产品合同/能力图规划（不表示代码可用），**U** = 当前未做专门产品实机/代码深审，**P** = 仍需正式产品决策。多标签可以并存。
 
 | 能力（按正式 Capability Map） | 故事卡覆盖 | 主角色 / 用户结果 | 交接对象与成功证据 | 证据深度 |
 |---|---|---|---|---|
 | 数据源 | J1-01、J1-02、J5-07 | BUILD 建立有权限的来源 | datasourceId / connection verdict | E + C |
 | 文件资源 | J1-01、J1-09 | BUILD 引入文件并保留版本/格式/权限 | file/source identity / ingest result | C + U |
-| 离线同步 | J1-09、J4-05 | DEV 安全迁移和重跑批次 | task/run/partition offset | C + U |
+| 离线同步 | J1-09、J1-14、J4-05 | DEV 安全迁移和重跑批次 | task/run/partition offset | C + U |
 | 实时同步 | J1-10、J4-01、J4-05 | DEV 维持流式数据准确性 | checkpoint/lag/replay evidence | C + U |
 | Metadata Harvest | J1-02、J1-03、J1-06 | BUILD 知道具体发现了什么 | schema snapshot/fingerprint | E + C |
 | 业务域 / 业务过程 | J1-04、J2-01、J2-02 | BIZ 正确描述业务事件/粒度 | ProcessRef / user confirmation | E + C |
-| 数据标准 | J1-05、J2-02、J5-01 | STEWARD 管理启用的治理标准 | StandardRef / version / validity | E + C |
+| 数据标准 | J1-05、J2-02、J2-09、J5-01 | STEWARD 管理启用的治理标准 | StandardRef / version / validity | E + C |
 | 标准字段 / 过程引用 | J1-05、J1-07、J2-02 | STEWARD 将标准业务属性交给建模复用 | stdFieldId / ProcessBinding | E + C |
 | 数仓分层 | J1-06、J1-08 | BUILD 区分贴源与标准化落地 | layer policy / physical design | E + C |
 | 逻辑模型 | J1-07、J1-08、J2-02 | BIZ/BUILD 设计独立于方言的业务对象 | LogicalVersionRef / entity/attribute/relation | C + U，骨架代码审查见 #513 |
 | 物理模型 | J1-06、J1-08、J1-12 | BUILD 形成准确设计和版本 | ModelVersionRef / mappings | E + C |
 | 指标 | J2-01～J2-08、J6-02 | BIZ 得到可验证业务口径 | MetricVersion/Validation/Publication | C + U，PD-003 |
-| 数据开发 | J1-09、J4-04、J4-05 | DEV 编辑与运行真实加工任务 | Task Draft/Revision/Execution | E（仅首页）+ C |
-| 任务发布版本 | J1-09、J4-04、J4-05 | DEV 版本一致、部署/执行可解释 | Task Revision + execution distinction | C + U |
-| 工作流编排 | J1-09、J4-02、J4-05 | DEV 将依赖任务有序执行 | workflow/version/instances | C + U |
-| 调度 | J1-09、J4-01、J4-05 | OPS 按预期触发数据生产 | schedule / actual runs | C + U |
+| 数据开发 | J1-09、J1-14、J4-04、J4-05 | DEV 编辑与运行真实加工任务 | Task Draft/Revision/Execution | E（仅首页）+ C |
+| 任务发布版本 | J1-09、J1-14、J4-04、J4-05 | DEV 版本一致、部署/执行可解释 | Task Revision + execution distinction | C + U |
+| 工作流编排 | J1-09、J1-14、J4-02、J4-05 | DEV 将依赖任务有序执行 | workflow/version/instances | C + U |
+| 调度 | J1-09、J1-14、J4-01、J4-05 | OPS 按预期触发数据生产 | schedule / actual runs | C + U |
 | 实例运维 | J4-01～J4-06 | OPS 发现、诊断和恢复故障 | run/instance/log/recovery | C + U |
 | 补数 / 重跑 | J4-04、J4-05 | OPS 恢复特定范围且不重写正确数据 | backfill IDs / data validation | C + U |
-| Asset 目录与资产详情 | J1-03、J1-11、J3-02、J4-02 | STEWARD/CONS 找到可信数据对象与责任人 | AssetRef/governance/owner | E + C |
+| Asset 目录与资产详情 | J1-03、J1-13、J1-11、J3-02、J4-02 | STEWARD/CONS 找到可信数据对象与责任人 | AssetRef/governance/owner | E + C |
 | Metadata Catalog / Reconciliation | J1-02、J4-07 | BUILD 识别结构变化和影响 | source snapshot / drift | E + C |
 | Lineage | J1-11、J4-02、J4-07、J3-08 | OPS/STEWARD 查真实来源/变更影响 | typed edge + evidence/version | E（CONTAINS 限制）+ C |
-| 数据质量 | J1-11、J2-05、J4-01、J4-06 | STEWARD 保证数据质量影响决策 | Quality Result / scope / failures | C + U |
+| 数据质量 | J1-11、J1-15、J2-05、J4-01、J4-06 | STEWARD 保证数据质量影响决策 | Quality Result / scope / failures | C + U |
 | 数据安全 | J5-01～J5-07、J3-03 | SEC 证明策略真正生效 | policy/access decision/audit | C + U |
-| 生命周期 | J1-11、X-09、J4-07 | STEWARD 正确留存、删除或下发 TTL | apply/dispatch result | E（模型未配置）+ C |
+| 生命周期 | J1-11、X-09、X-10、J4-07 | STEWARD 正确留存、删除或下发 TTL | apply/dispatch result | E（模型未配置）+ C |
 | 使用 / 影响分析 | J3-08、J4-02、J4-07 | PRODUCER/OPS 知道真实消费者与影响 | Usage vs Subscription vs Lineage | C + U |
 | Consumption Hub / 产品发现 | J3-01～J3-03 | CONS 找到可用数据产品 | governed Product View | C + U，PD-002 |
 | Data Product View | J3-01、J3-02、J3-08 | CONS 理解治理投影与来源合同 | stable product/source key | C + U，PD-002 |
-| Dataset | J3-02、J3-05、J6-05 | CONS 合法查询结构化结果 | dataset contract/query evidence | C + U，PD-002 |
-| Data Service | J3-02、J3-06、J6-05 | 应用用户合法调用正式接口 | service contract/invoke evidence | C + U，PD-002 |
+| Dataset | J3-02、J3-05、J3-10、J6-05 | CONS 合法查询结构化结果 | dataset contract/query evidence | C + U，PD-002 |
+| Data Service | J3-02、J3-06、J3-10、J6-05 | 应用用户合法调用正式接口 | service contract/invoke evidence | C + U，PD-002 |
 | Access Projection | J3-03、J5-03～J5-05 | CONS/SEC 获得真实授权裁决 | Access Decision | C + U |
 | Subscription / Usage Evidence | J3-04、J3-08、J4-06 | PRODUCER 知道声明依赖与真实消费 | subscription vs observed event | C + U |
-| Analysis | J3-07、J6-06 | CONS 分析已有授权数据 | analysis result with refs | C + U |
-| Dashboard | J3-07、J6-06 | CONS 反复查看可靠业务结论 | published view / precise data contract | C + U |
-| Digital Screen（大屏） | J3-07 | CONS 长时间展示可用指标与状态 | governed runtime/refresh evidence | C + U |
+| Analysis | J3-07、J3-11、J6-06 | CONS 分析已有授权数据 | analysis result with refs | C + U |
+| Dashboard | J3-07、J3-11、J6-06 | CONS 反复查看可靠业务结论 | published view / precise data contract | C + U |
+| Digital Screen（大屏） | J3-07、J3-11 | CONS 长时间展示可用指标与状态 | governed runtime/refresh evidence | C + U |
 | Agent / AI 分析 | J6-01～J6-08、X-06 | AI-USER 获得可信回答与建议 | query/evidence/access/confirmation | C + U |
 | Export / Downstream | J3-07、J5-04、J5-05 | CONS 合法导出/供下游系统用 | export result / permission audit | C + U |
 | MDM | MDM-01～MDM-06 | MDM STEWARD 实现主数据一致性与分发 | versioned golden record + distribution | C + U + P |
-| Project Space | X-01、J5-07 | 所有角色不会跨项目串读/串写 | trusted scope, negative permission proof | C + U |
+| Project Space | X-01、X-11、J5-07 | 所有角色不会跨项目串读/串写 | trusted scope, negative permission proof | C + U |
 | RBAC | X-01、J3-03、J5-03～J5-07 | 所有角色仅执行授权能力 | explicit deny/allow + audit | C + U |
 | Approval Engine | X-02、X-03、J5-03、MDM-04 | SEC/STEWARD 对风险操作作正式决定 | approved/rejected decision | C + U |
 | Audit | X-02、X-03、J5-06 | 责任人能回溯谁何时修改/访问 | operation/access events | C + U |
@@ -58,9 +60,26 @@ Evidence: [#512 首次建设巡检](https://github.com/gitfortian/data-ops/issue
 | Task Runtime | J1-09、J4-05、J6-05 | DEV/OPS 获得真实运行反馈 | execution IDs and logs | C + U |
 | Plugin / SPI | X-08、J1-01、J6-05 | BUILD/CONS 知道支持的能力/缺失 | available/unavailable/not supported | C + U |
 | Storage | J1-09、J1-11、X-09 | DEV/STEWARD 确保物理存储可靠 | deployed/retained/expired result | C + U |
-| Scheduler | J1-09、J4-01、J4-05 | OPS 确认按时触发和失败补偿 | schedule vs actual execution | C + U |
+| Scheduler | J1-09、J1-14、J4-01、J4-05 | OPS 确认按时触发和失败补偿 | schedule vs actual execution | C + U |
 
 **矩阵输出判读**：每个正式能力均有至少一组用户目标/结果和责任角色；但大量能力还缺**独立用户实机走查与运行证据**。因此不能用本覆盖表给出“模块实现通过率”“所有功能已开发”的结论。后续按价值切片获取真实证据，而不是在规划阶段把所有菜单一次点完。
+
+### 已纳入产品评审的补全项（原 66 条 → 74 条）
+
+本轮核对发现**有产品能力但缺独立用户工作结果**的八条故事，已追加到 V2 主地图，保留原有 ID 不重新编号：
+
+| 补全故事 | 为什么原故事不够 | 验收对应事实 |
+|---|---|---|
+| GM-J1-13 资产上架/下架 | 资产自动纳管 ≠ 治理者正式审核上架或下架 | Asset 状态、负责人、审查证据 |
+| GM-J1-14 任务编排/调度 | 执行过单个 SQL/同步 ≠ 生产依赖、发布调度可运行 | Workflow/Task Revision、Schedule、实际 Run 区别 |
+| GM-J1-15 质量规则定义与校验 | 质量结果/故障告警 ≠ 有规则、阈值、责任和真实执行 | Quality Rule、Check/Result、动作策略 |
+| GM-J2-09 标准变更治理 | 创建标准字段 ≠ 被多模型使用后的变更审批与版本影响 | Semantic 正式标准版本与影响 |
+| GM-J3-10 Dataset/Service 生产者 | 找得到数据产品 ≠ 有人从可信结果创建并发布来源合同 | Dataset/Service 正式 owning contract；Hub 仅投影 |
+| GM-J3-11 分析与可持续看板 | 一次导出/Query ≠ 可重复、可授权刷新 Dashboard/大屏 | 分析/看板发布及刷新/权限证据 |
+| GM-X-10 留存生命周期制定 | 显示 TTL 设置 ≠ 治理者定义、批准、执行并验证删除策略 | Policy / Apply / Disposal Evidence |
+| GM-X-11 项目加入与切换 | RBAC 拦截 ≠ 用户知道自己在哪个项目、能做什么 | Project Scope/成员身份/拒绝回执 |
+
+这八条是完整业务工作，不是逐按钮/逐 Controller 拆分需求。产品策略、服务端契约和运行结果仍需具体用户故事评审，不能认为“补图=已开发”。
 
 ## 2. 三个“纸面用户故事”用于检验跨模块断点
 
