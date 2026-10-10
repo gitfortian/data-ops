@@ -163,3 +163,72 @@ validateForDesignPublication(model, frozenStructure, references):
 - PD-010 仍是 PROPOSED、F-040 仍是 DRAFT；
 - 本轮不修改运行代码、不审批业务决策、不执行 SQL/DDL 或操作真实数据；
 - 评审建议优先处理三项 P0 分歧：非 ODS 全字段强制标准规则与例外、逻辑属性到 StandardField 的正式引用合同、ModelVersion 到 DataDev 的受权持久关联。完成后产品负责人决定是否接受 PD-010，再据此批准 F-040 并集中实施。
+
+## 九、正式产品与领域评审记录（2026-10-10；技术/产品方案审查，不代表 Owner 签署）
+
+**评审对象**：PD-010、F-040、十屏 V2、V3 领域契约，以及当前 main 的相关代码。  
+**审查结论**：**方案方向有条件通过，可以进入 Product Owner 的统一裁决；仍不能标记 PD-010 ACCEPTED / F-040 APPROVED，也不能据此启动改变正式用户行为的业务代码。** 本次代码核对属于静态审查，没有运行数据库/权限/任务 E2E；当前 PR 可合并为评审材料，合并不代表产品审批。
+
+### 9.1 DR-01～DR-08 审查处置
+
+| 决策 | 审查建议 | 是否尚需实质裁决 | 条件 |
+|---|---|---|---|
+| DR-01 双入口 | **推荐接受**，复用现有专业导航；首页落点可以在交互阶段微调 | Product 签署 | 不创建独立建设任务 Truth；权限缺失不展示真实资产名 |
+| DR-02 ODS 例外 | **推荐接受**，源表保真、一表一模型只是默认候选 | Product 签署 | 不要求先有逻辑/标准字段，但来源身份/列证据和技术生成列可追溯 |
+| DR-03 非 ODS 标准字段 | **推荐接受核心硬约束**：所有正式物理列均有合法 \`stdFieldId\`，草稿可带缺口、设计发布阻断；**首期不允许未批准的技术列例外** | Product + Semantic/Modeling 签署；与 \`stdMandatory\` 现状协调 | 技术审计列如确实必要，先成为标准字段或另行正式批准例外策略，不能偷偷略过 |
+| DR-04 逻辑属性引用 | **推荐接受**：逻辑属性有稳定 ID，已确认语义引用 Semantic；允许待确认草稿，不复制第二标准库 | Product + Semantic/Modeling 签署 | 哪种逻辑版本可以“确认但暂缺标准”需写清；正式非 ODS 物理发布不得缺标准 |
+| DR-05 业务关系 | **推荐接受**：证据和确认人必需；同名/外键只是候选，清单/关系表先行 | Product + 业务 Owner 签署 | 订单主表与明细可属同一过程、不同粒度，不能硬造新事件 |
+| DR-06 逻辑→物理 | **有条件推荐接受**：允许一个逻辑版本形成多个物理目标，并可关联已有物理模型；实际支持的多对多/Join 复杂度分期 | Product + Modeling 签署详细映射规则 | Slice A 先完成可回读逻辑模型，生成的完整映射/冲突放 Slice B；别承诺首期任意 N:M SQL |
+| DR-07 模型→DataDev | **有条件推荐接受**：真实 DataDev 拥有节点/任务/执行，Modeling 只提供冻结设计引用 | Product + DataDev/Modeling 签署版本/provenance | \`SaveDraftRequest\` 目前无正式 ModelVersionRef，不能仅凭 URL、SQL 注释或 \`configJson\` 任意文本称已绑定 |
+| DR-08 价值验收 | **推荐接受**每日下单订单量作为黄金验证样例，不能默认为业务已确认口径 | Product + 业务/Metric Owner 签署 | 明确时区、取消单过滤、订单去重字段，再定义指标与运行质量规则 |
+
+**说明**：上表“推荐接受”是本轮审查建议，**不是**已签署的 Product Decision；需要有权限的产品/领域负责人按现行 Product Change Process 留下正式决议及日期。不要用用户一句“继续评审”冒充已对所有例外/版本细节做过批准。
+
+### 9.2 本次发现并修正的跨域事实与 P0/P1 风险
+
+**P0-A｜字段角色存在两套不同的分类，不可自动映射**
+
+- Semantic 的 \`StandardField.role\` 是 \`PROCESS / DIMENSION / METRIC\`；其中 PROCESS 是**标准字段角色**，不是 BusinessProcessId。
+- Modeling \`ModelStructureService\` 的物理分析字段角色是 \`DIMENSION / MEASURE\`，而 \`MEASURE\` 当前还要指定 \`aggregateFunc\`。
+- **禁止**把 \`StandardField.ROLE_METRIC\` 静默映成物理 \`MEASURE\` 并替所有 DWD 金额字段设置 \`SUM\`；标准字段的业务身份与物理列在特定汇总建模中的聚合行为是两回事。金额字段可以符合标准但尚无聚合函数，后续 DWS/ADS/Metric 的口径应显式定义。
+- 合同建议：字段符合标准 = 有合法标准字段稳定引用及所需数据标准，不要求“分析角色”和标准字段角色字符串相同。物理 \`fieldRole/aggregateFunc\` 由具体分层/模型用途确认，不能为通过标准准入而无依据硬加聚合。后端类型/角色校验要与此分离，非 ODS 准入不能靠角色文本对齐。
+
+**P0-B｜标准字段准入不等于只判 \`stdFieldId != null\`**
+
+需要 Semantic Owner 返回引用存在、当前项目合法/可访问、状态 ENABLED、角色适用、TYPE/UNIT/CODE/CALIBER/SECURITY 引用合法和适当的标准/字段版本指纹。UI“未治理=stdTypeId 缺失”不能当正式准入结果，所有物理发布入口必须走同一服务端结果。草稿缺口可提示，但非法发布拒绝须逐列给出具体原因。
+
+**P0-C｜逻辑模型版本与物理版本不能按“当前最新”关联**
+
+现有 \`LogicalModelVersion.create()\` 创建默认 DRAFT；当前没有完整正式发布、确认/回滚及逻辑→物理生成服务。生成方案先用明确的逻辑草稿 revision 或已确认逻辑版本作为输入，并在用户确认生成时核验其未变化；正式发布的物理模型引用其**确切**逻辑版本。不得把“已有逻辑版本表”当作可用的已批准版本机制。
+
+**P0-D｜来源保真导入必须容纳未确认/冲突状态**
+
+ODS 导入 UI 的同名 17/17 映射是**示例**。真正的预览必须对照采集证据、技术列、目标列是否被人工改名、数据源权限以及当前结构指纹给出准确数量；不要将“候选 100%”冒充正式保存的来源血缘。单用户提交如存在结构成功/列映射失败，回执必须分项可恢复，不得伪装为原子成功。
+
+**P1-E｜模型版本指纹的真实现状应精确描述**
+
+[ModelVersionService.semanticView](https://github.com/gitfortian/data-ops/blob/main/data-ops-business/data-ops-business-modeling/src/main/java/io/yak/ops/business/modeling/version/ModelVersionService.java) **已经包含列上的 \`stdFieldId\`、\`stdTypeId\`、各类别标准 ID、\`transformExpr\` 等结构内字段**；因此切换物理列绑定的 \`stdFieldId\` 或其结构内表达式，已可能改变当前结构语义指纹并产生新物理版本。
+
+真正不足的是：\`serialiseMeta\` 只保存名称、描述、layer/dialect/domain，**没有将 BusinessProcessRef、SourceRef、逻辑版本、独立 MappingRepository 的来源规则、Semantic 标准字段自身的版本和有效性证据纳入同一冻结合同**。若结构不变、外部这些关系变化，当前“仅以结构语义投影去重”仍可能将新业务语义错误地沿用旧设计版本。建议扩展不可变设计证据关联并使版本判等覆盖真正变更的设计引用，保留历史兼容；不能说当前“所有标准变动一律不触发版本”。
+
+**P1-F｜DataDev 任务定义可以直接运行当前编辑内容，不能把运行当保存**
+
+[DevelopmentTaskApi.RunRequest](https://github.com/gitfortian/data-ops/blob/main/data-ops-business/data-ops-business-data-development/src/main/java/io/yak/ops/business/development/api/DevelopmentTaskApi.java) 注释明确“运行当前编辑定义，不隐式保存或发布”；\`SaveDraftRequest\` 是 taskType/schemaVersion/content/configJson/baseRevision，未有正式 ModelVersionRef。后续若模型交接直接展示“创建并运行”，必须区分新建节点、草稿保存、发布修订版、运行当前编辑内容/发布版以及返回的真实 ExecutionRef。运行记录不能伪造模型精确版本血缘。
+
+**P1-G｜Semantic Project Scope 不可由“全局标准字段”注释推断为跨项目共享**
+
+\`StandardField\` 的源码注释叫“全局标准字段”，但 [PD-003](https://github.com/gitfortian/data-ops/blob/main/docs/product/decisions/PD-003-business-semantic-metric-contract.md) 已明确现有 Standard 身份采用 \`(project_id, kind, std_code)\`，写入 API 又从可信项目上下文解析。因此设计文本中的“全局”仅应理解为“当前业务体系可复用的标准字段”，**不能直接授权跨项目引用或推断所有项目共用同一 Field ID**。正式校验由 Semantic 的 Project scope 与权限合约定义，不由 Modeling 自己猜测。
+
+### 9.3 Slice A / Slice B 实施边界审查
+
+**Slice A 的完整成果**（下一阶段一条跨域价值切片，可用少量集中 PR）：从授权的元数据来源创建可持久回读的 ODS 结构 + 来源列引用；有业务过程/标准字段的可解释审阅与原域引用；逻辑模型实体、属性、关系草稿/版本可回读；逻辑→物理、标准治理缺口可准确预检。**绝不声称已部署 Doris、运行数据或产生正式 DWD 加工任务。**
+
+**Slice B 的完整成果**：逻辑版本→合规 DWD/DIM 物理设计→精确物理版本→受权 DataDev Task Draft/Revision/Execution→质量、安全和血缘→已确认 Metric→实际 Dataset/Service 查询与使用回执，必须真实 E2E。Slice A、Slice B 不为了省 PR 把“真运行 E2E”做成仅 UI mock。
+
+### 9.4 建议 Product Decision 的批准条件（可一次性裁决）
+
+要将 PD-010 置为 ACCEPTED，必须由负责人明确批准：① DR-01～DR-08 的总体方向；② **全非 ODS 物理列** 的标准字段强约束、正式发布门禁和首期**零未批准豁免**；③ 逻辑属性引用 Semantic 而不复制标准；④ LogicVersion / ModelVersion / DataDev TaskVersion 三套身份及来源冻结关系；⑤ 首个黄金验收用“订单量”，业务实际口径另行确认。有关具体 UI 控件颜色/布局、多表 N:M 高级表达式和未来 SLA 不阻断 PD 审批，可留在 Feature/实现设计中。
+
+批准后更新 F-040 至 APPROVED（需依赖 Owner 合同已签），准备 Domain/Architecture 更新与 Slice A 的**整体**工程实现；否则保持本次评审材料为 DRAFT，不擅自开展改变业务规则的代码修改。
+
+**评审结论记录**：\`TECHNICAL_PRODUCT_REVIEW=CONDITIONAL_PASS\`；\`PRODUCT_OWNER_APPROVAL=PENDING\`；\`DOMAIN_OWNER_CONTRACTS=PENDING\`；\`E2E=NOT_EXECUTED\`。
