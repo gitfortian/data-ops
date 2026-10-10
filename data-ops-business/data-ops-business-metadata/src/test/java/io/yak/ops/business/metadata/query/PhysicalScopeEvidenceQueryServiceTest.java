@@ -9,17 +9,17 @@ import io.yak.ops.core.project.ProjectContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class PhysicalScopeEvidenceQueryServiceTest {
   private final CatalogQueryService catalog = mock(CatalogQueryService.class);
-  private final CurrentProject current = mock(CurrentProject.class);
+  // Use the genuine interface default methods; a plain Mockito mock masks requireProjectId().
+  private final AtomicReference<Optional<ProjectContext>> project =
+      new AtomicReference<>(Optional.of(new ProjectContext(31L, "source-scope")));
+  private final CurrentProject current = () -> project.get();
   private final PhysicalScopeEvidenceQueryService service =
       new PhysicalScopeEvidenceQueryService(catalog, current);
-
-  PhysicalScopeEvidenceQueryServiceTest() {
-    when(current.current()).thenReturn(Optional.of(new ProjectContext(31L, "source-scope")));
-  }
 
   private static EntityDTO table(long id, String key, String capture, String hash, int columns) {
     return new EntityDTO(id, "table", Map.of("assetKey", key, "providerType", "HARVESTED",
@@ -95,7 +95,7 @@ class PhysicalScopeEvidenceQueryServiceTest {
   }
 
   @Test void projectContextIsMandatory() {
-    when(current.current()).thenReturn(Optional.empty());
+    project.set(Optional.empty());
     assertThrows(RuntimeException.class, () -> service.readSelectedTables(List.of("a")));
     verifyNoInteractions(catalog);
   }
