@@ -85,6 +85,11 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-J1-10 | 处理实时数据源、流式同步与 schema 变更 | 实时接入/集成（当前仅规划，需能力审计） | 延迟/位点/重放/漂移和运行结果，不能将预览当同步成功 | V2 新增 |
 | GM-J1-11 | 将实际产出的对象质量检查并建立真实血缘和治理状态 | 质量/Lineage/Asset，缺口需明确 | QualityResult、真实 upstream/run evidence、资产态 | US-17/18 |
 | GM-J1-12 | 知道哪些模型/任务可交接并继续形成消费资产 | Model Version、DataDev、资产详情 | 可返回准确设计/部署/运行状态，链接到 J2/J3 | US-20 的前置 |
+| GM-J1-13 | 在资产正式上架、变更或下架前审阅归属、质量、安全和消费影响 | Asset 专业治理；上架/下架/审批，不由模型保存隐式触发 | Asset 状态及 owner/approval/evidence；未上架不能假装可公开消费 | V2 评审补充 |
+| GM-J1-14 | 组织数据加工任务的依赖、触发、调度和发布计划 | Workflow/Scheduler，选择依赖、时区、窗口、失败重试策略 | 正式 Workflow/Task Revision、Schedule 与真实 Instance/Execution 分离 | V2 评审补充 |
+| GM-J1-15 | 给关键数据对象制定有责任人的质量规则并真正执行校验 | Quality、实际字段/模型/任务版本、规则范围与异常阈值 | Rule/Check 及质量结果、阻断/提示策略与正式修复入口；不是仅展示质量标签 | V2 评审补充 |
+
+**补充用户任务**：资产上架/下架、工作流与调度计划、质量规则建立分别由原 Asset、Workflow、Quality Owner 持有。GM-J1-09 关注实际同步/加工执行，GM-J1-14 关注先配置并审查可运行计划，GM-J1-15 关注事前/持续质量规则；三者不可重复制造运行版本或质量事实。
 
 **J1 特别边界**：ODS 可保真而不预先建立逻辑模型/标准字段；非 ODS 字段强制标准的发布门禁处于 PD-010 待批准状态，不能把建议当已实施事实。同步、Metadata Harvest 和开发执行可以分属不同 Owner，不能用“数据源已连接”代替“数据已生产”。
 
@@ -104,6 +109,7 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-J2-06 | 受权发布一份精确指标定义，其他消费引用不跟随可变草稿 | Metric Publication | PublishedMetricContract、版本/理由/审计 |
 | GM-J2-07 | 将指标交给已有 Dataset/Service 消费，知道是否真正被使用 | Published Metric→Consumption | 引用使用（声明）与实际 Usage Evidence **分开** |
 | GM-J2-08 | 变更口径后知道受影响模型、指标与消费方 | Metric Impact/Usage | Dependency UP_TO_DATE/OUTDATED/REMOVED、受影响清单与回链 |
+| GM-J2-09 | 标准负责人修改被复用的数据标准/字段时先评估影响、审批并可追溯变更 | Semantic Standard/StdField 生命周期与引用影响；版本/停用 | 明确新旧定义、批准结果、受影响逻辑/物理模型及指标；不静默改写历史版本 |
 
 **错误态**：口径多解、标准已停用、模型无授权/版本过期、定义验证通过但真实数据未执行、发布被拒绝、消费者引用旧版。**重要**：标准字段 ROLE_METRIC ≠ 自动创建 Metric，也不等于物理字段 MEASURE/SUM 聚合。
 
@@ -122,6 +128,10 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-J3-07 | 将结果导出或交给分析、Dashboard、大屏、下游应用 | Export/Analysis/Dashboard/Screen | 实际消费行为、精确契约/权限与错误回执；不自造 Dataset |
 | GM-J3-08 | 知道真实谁在用、订阅谁、变更会影响谁 | Usage / Impact / Backlink | Usage Evidence、Subscription、Lineage **分别**展示 |
 | GM-J3-09 | 遇到未上架、过期、无权限或服务不可用时找到正确下一步 | Hub / Product Detail | 可解释状态与请求上架/申请访问/联系 Owner/重试动作 |
+| GM-J3-10 | 作为生产者将已验证的数据生产结果定义并发布为正式 Dataset 或 Data Service | 来源 Task/Model/Metric Ref，Dataset schema 或 Service interface/runtime 各归原域 | 正式 Dataset/Service ID、独立发布/访问条件与可查状态；Consumption Hub 只生成投影，不另建 Data Product Truth |
+| GM-J3-11 | 将授权数据结果形成可复用的分析成果或长期更新的 Dashboard / 大屏 | Analysis/Dashboard/Screen，数据产品或 PublishedMetric 精确引用与刷新授权 | 保存/共享/发布及实际刷新证据；消费者可回到原 Dataset/Service 和指标版本，避免自由 SQL 绕权 |
+
+**生产者/消费者双向交接**：GM-J3-10 是 Dataset / Data Service 的**生产者支线**，从 J1/J2 的已就绪数据结果进入，并不是 J3-09 发生之后才创建；GM-J3-01～09 是已有合同的消费者主线。GM-J3-11 明确把临时分析与正式 Dashboard/大屏发布和刷新分开，继续复用 PD-002 的 Access 与 Usage，不自建新的产品 Truth。
 
 **体验评审重点**：数据消费者不应该为一次 Dataset 预览先配置建模、元数据和调度；Analysis、Dashboard、Agent 都应复用已治理消费合同和 Access，而不是各自自由 SQL 或另做数据权限。
 
@@ -204,6 +214,8 @@ Nonbinding proposal: [PD-010 PROPOSED](../decisions/PD-010-guided-business-to-da
 | GM-X-07 | 告警、通知、审批的处理状态能够回到原业务对象 | J3/J4/J5/MDM | 通知目标与实际对象/任务/请求一致 |
 | GM-X-08 | 专业产品缺少 Provider/插件时，不在 UI 假装该能力有数据 | J1～J6/MDM | 插件不可用/能力未支持/权限不足不同状态 |
 | GM-X-09 | 生命周期、留存/删除规则在实际目标和消费中生效，不只是模型设置项 | J1/J3/J4/J5 | 下发/执行/不适用状态与安全审计 |
+| GM-X-10 | 数据负责人定义留存、归档、到期删除和策略例外，并核验实际执行 | J1/J3/J4/J5 | 策略版本、审批、目标端执行/未执行的真实回执，不能只看 TTL 表单 |
+| GM-X-11 | 新团队成员进入正确 Project Space、理解可操作角色和已授权资源，切换项目时不串数据 | J1～J6/MDM | 可信成员身份与角色、项目范围切换、权限拒绝/对象范围回读；不创建第二权限库 |
 
 **架构约束**：这些是验收横切，不等于要新增一个统一 Project Truth/Approval Engine 业务域；现有 Project、RBAC、审批、审计、告警、Runtime、Plugin/SPI、存储/Scheduler 继续各司其职。
 
