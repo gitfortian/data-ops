@@ -31,7 +31,7 @@ Feature gate: `yak.agent.source-semantic.enabled` remains required for Agent ori
 - DOMAIN new/reuse, PROCESS new/reuse, FIELD new/reuse, PROCESS_FIELD binding via original field service are implemented as opt-in formal writes with original source-domain validation/audit and commit receipts.
 - Existing TYPE/UNIT references can be checked at their original ID/category/version/status. **New TYPE/UNIT** need category-specific property capture (type_code/std_type/unit_code) and owner approval that 3/5 candidate format does not contain: marked NOT_EXECUTED, not fabricated.
 - CODE has no complete confirmed values/labels in physical schema. Both new and candidate reuse remain NOT_EXECUTED until source-domain code-set transaction and active whole-set semantics are integrated.
-- Original Semantic contains **process→source table** associations, not a permanent arbitrary source-column→standard-field mapping. Current SOURCE_LINK is NOT_EXECUTED to prevent creating a false mapping or duplicate project truths; do not describe it as saved.
+- SOURCE_LINK uses the original **process→source table** binding owner with a Metadata-resolved table and explicitly reviewed MAIN/DETAIL/DIM role. Repeated column witnesses may reference the same real process/table binding. **This does not persist source-column→standard-field mappings or inferred lineage**; incompatible existing table roles are rejected.
 - For metadata drift, revoked permissions, transient timeout or unknown receipt, no new writes should proceed. Human confirmations never replace source-domain permission checks.
 - Candidate completion, preflight ready and selected items all have **separate** meaning from selected items formally committed. UI renders receipt status per item.
 
