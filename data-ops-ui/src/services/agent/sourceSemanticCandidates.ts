@@ -75,6 +75,13 @@ export const sourceSemanticCandidates = {
     }, OPTIONS),
   select: (taskId: string, expectedRevision: number, ids: string[]) =>
     HttpUtils.postData<CandidateView>(`${path(taskId)}/select`, { expectedRevision, ids }, OPTIONS),
+  merge: (taskId: string, expectedRevision: number, firstId: string, secondId: string) =>
+    HttpUtils.postData<CandidateView>(`${path(taskId)}/merge`,
+      { expectedRevision, firstId, secondId, confirmedSameMeaning: true }, OPTIONS),
+  split: (taskId: string, expectedRevision: number, candidateId: string,
+    tableAssetKey: string, column: string) =>
+    HttpUtils.postData<CandidateView>(`${path(taskId)}/split`,
+      { expectedRevision, candidateId, tableAssetKey, column }, OPTIONS),
   answer: (taskId: string, expectedRevision: number, questionId: string, value: string) =>
     HttpUtils.postData<CandidateView>(`${path(taskId)}/answer`,
       { expectedRevision, questionId, value }, OPTIONS),
