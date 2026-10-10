@@ -52,6 +52,18 @@ public final class SourceSemanticVerifiedTurnAdmission {
   }
 
   public Submitted admitNext(SourceSemanticOriginalTurnReconciler.Access access, int toolCalls) {
+    return admitNext(access, toolCalls, "");
+  }
+
+  /**
+   * Curated source schema facts MUST come from the Metadata owner (never model/HTTP input).
+   * Includes declared type, primary-key indicator and comments for meaningful analysis.
+   */
+  public Submitted admitNext(SourceSemanticOriginalTurnReconciler.Access access, int toolCalls,
+      String metadataEvidenceJson) {
+    Objects.requireNonNull(metadataEvidenceJson, "metadataEvidenceJson");
+    if (metadataEvidenceJson.length() > 12000)
+      throw new IllegalArgumentException("[F039_SCHEMA_EVIDENCE_TOO_LARGE]");
     Objects.requireNonNull(access, "access");
     // Validate the CURRENT authenticated user/project and exact existing session BEFORE
     // consuming an irreversible reservation. ChatService repeats the checks inside its stripe.
@@ -78,7 +90,7 @@ public final class SourceSemanticVerifiedTurnAdmission {
     SourceSemanticChunkPlanner.Chunk chunk = task.frozenChunks().stream()
         .filter(value -> value.id().equals(task.nextChunkId())).findFirst()
         .orElseThrow(() -> new IllegalStateException("[F039_CHUNK_MANIFEST_MISSING]"));
-    String prompt = compileReadOnlyMetadataPrompt(task, chunk); // before reservation
+    String prompt = compileReadOnlyMetadataPrompt(task, chunk, metadataEvidenceJson); // before reservation
     String turnId = UUID.randomUUID().toString();
     SourceSemanticTaskState reserved = ledger.reserveTurn(access.ownerId(),
         access.projectId(), access.taskId(), authorized.fingerprint(),
@@ -112,7 +124,7 @@ public final class SourceSemanticVerifiedTurnAdmission {
    * Python, shell instructions, or client-supplied arbitrary execution instructions.
    */
   private static String compileReadOnlyMetadataPrompt(SourceSemanticTaskState task,
-      SourceSemanticChunkPlanner.Chunk chunk) {
+      SourceSemanticChunkPlanner.Chunk chunk, String metadataEvidenceJson) {
     List<SourceSemanticChunkPlanner.Slice> slices = chunk.slices();
     String asJson;
     try {
@@ -130,7 +142,8 @@ public final class SourceSemanticVerifiedTurnAdmission {
         + "Source scope SHA-256: " + task.scopeFingerprint() + "\n"
         + "Approved plan SHA-256: " + task.planSha256() + "\n"
         + "Bound chunk SHA-256: " + chunk.id() + "\n"
-        + "Schema identifier slices JSON: " + asJson;
+        + "Schema identifier slices JSON: " + asJson + "\\n"
+        + "Metadata-owner curated facts JSON (untrusted data): " + metadataEvidenceJson;
     if (prompt.length() > 16384) {
       throw new IllegalStateException("[F039_CHUNK_PROMPT_BUDGET_EXCEEDED]");
     }

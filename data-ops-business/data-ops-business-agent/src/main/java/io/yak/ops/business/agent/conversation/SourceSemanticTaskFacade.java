@@ -318,6 +318,38 @@ public class SourceSemanticTaskFacade {
     return read(taskId);
   }
 
+  /** Snapshot is read again immediately before admission; only selected slice fields escape. */
+  private String curatedFacts(SourceSemanticTaskState state) {
+    var manifest = state.sourceManifest();
+    var snapshot = evidenceApi.readSelectedTables(
+        manifest.tables().stream().map(SourceSemanticScope.Table::assetKey).toList());
+    if (snapshot.projectId() != state.projectId()
+        || !Objects.equals(snapshot.dataSourceId(), manifest.dataSourceId()))
+      throw new IllegalStateException("[F039_SOURCE_SCOPE_MISMATCH]");
+    String nextChunk = state.nextChunkId();
+    var chunk = state.frozenChunks().stream()
+        .filter(c -> c.id().equals(nextChunk)).findFirst()
+        .orElseThrow(() -> new IllegalStateException("[F039_MISSING_CHUNK]"));
+    var facts = new ArrayList<Map<String, Object>>();
+    for (var slice : chunk.slices()) {
+      var table = snapshot.tables().stream()
+          .filter(t -> t.assetKey().equals(slice.tableAssetKey())).findFirst()
+          .orElseThrow(() -> new IllegalStateException("[F039_MISSING_TABLE]"));
+      for (String name : slice.columns()) {
+        var col = table.columns().stream().filter(c -> c.name().equals(name)).findFirst()
+            .orElseThrow(() -> new IllegalStateException("[F039_MISSING_COLUMN]"));
+        facts.add(Map.of("tableAssetKey", table.assetKey(), "column", col.name(),
+            "dataType", col.dataType(), "primaryKey", col.primaryKey(),
+            "comment", col.comment(), "columnHash", col.contentHash()));
+      }
+    }
+    try {
+      return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(facts);
+    } catch (com.fasterxml.jackson.core.JsonProcessingException invalid) {
+      throw new IllegalStateException("[F039_METADATA_EVIDENCE_ENCODING]", invalid);
+    }
+  }
+
   public TaskView next(String taskId) {
     long user = actor();
     var state = bound(taskId, user);
@@ -326,7 +358,7 @@ public class SourceSemanticTaskFacade {
       throw new IllegalStateException("[F039_TASK_NOT_READY_FOR_NEXT_CHUNK]");
     var admission = new SourceSemanticVerifiedTurnAdmission(ledger, documents, chat,
         (access, manifest) -> fresh(ledger.read(access.ownerId(), access.projectId(), access.taskId())));
-    admission.admitNext(access(progress.task()), 8);
+    admission.admitNext(access(progress.task()), 8, curatedFacts(progress.task()));
     return read(taskId);
   }
 
