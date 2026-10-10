@@ -121,18 +121,24 @@ public class SemanticSourceAdoptionService implements SemanticSourceAdoptionApi 
   @Override public List<Receipt> receipts(String taskId) {
     Long actor=YakSecurityContext.getCurrentUserId();
     if(actor==null||actor<=0) throw new IllegalArgumentException("[F039_LOGIN_REQUIRED]");
-    verifyScope(project.requireProjectId(),actor);
+    verifyReadScope(project.requireProjectId(),actor);
     if(taskId==null||!taskId.matches("[a-f0-9-]{36}"))
       throw new IllegalArgumentException("[F039_TASK_ID_INVALID]");
     // A foreign user in the same project is not allowed to enumerate any receipt.
     return writer.list(project.requireProjectId(),taskId,Long.toString(actor));
   }
 
-  private void verifyScope(long projectId,long actor) {
+  private void verifyReadScope(long projectId,long actor) {
     Long current=YakSecurityContext.getCurrentUserId();
     if(current==null||current!=actor||project.requireProjectId()!=projectId)
       throw new IllegalArgumentException("[F039_ADOPTION_SCOPE_MISMATCH]");
     StpUtil.checkPermission(SemanticPermissionCode.READ);
+  }
+  private void verifyScope(long projectId,long actor) {
+    verifyReadScope(projectId,actor);
+    Long current=YakSecurityContext.getCurrentUserId();
+    if(current==null||current!=actor||project.requireProjectId()!=projectId)
+      throw new IllegalArgumentException("[F039_ADOPTION_SCOPE_MISMATCH]");
     StpUtil.checkPermission(SemanticPermissionCode.CREATE);
   }
   private static boolean isSuccessful(Receipt receipt) {
