@@ -5,6 +5,7 @@ import {
   type SourceSelection, type SourceTable, type SourceTask,
 } from '@/services/agent/sourceSemantic';
 import { newSessionId } from '../types';
+import SourceSemanticCandidatePanel from './SourceSemanticCandidatePanel';
 
 const terminal = (status: string) => ['COMPLETED', 'CANCELLED'].includes(status);
 const Status: React.FC<{ task: SourceTask }> = ({ task }) => (
@@ -220,6 +221,7 @@ const SourceSemanticTaskPanel: React.FC<{ dataSourceId: string; initialTaskId?: 
             message="原轮次在服务端执行，关闭页面不会把它当成已完成；刷新可核对真实状态。" />}
         {task.status === 'COMPLETED' &&
           <Alert type="success" showIcon message="全部已核验分片完成。结果仅供业务理解和人工复核。" />}
+        {task.status === 'COMPLETED' && <SourceSemanticCandidatePanel taskId={task.taskId} />}
         {Object.entries(task.completedTurnIds).map(([chunkId, turnId]) => (
           <div key={chunkId} style={{ marginTop: 10 }}>
             <Space><Typography.Text>分片 {chunkId.slice(0, 10)} · 原轮次 {turnId}</Typography.Text>
