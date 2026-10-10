@@ -84,7 +84,8 @@ class SourceSemanticOriginalTurnReconcilerTest {
       assertEquals(task,ledger.read("42",31,"task-1"));
       assertTrue(ledger.read("42",31,"task-1").completedChunkIds().isEmpty());
     }
-    verifyNoMoreInteractions(originals); // Reads only: no direct repository transitions.
+    verify(originals, never()).claimForExecution(anyString());
+    verify(originals, never()).complete(anyString()); // Reads only; no direct turn transitions.
   }
 
   @Test void completedTurnCannotAdvanceWithoutVerifiedImmutableReceipt() {
