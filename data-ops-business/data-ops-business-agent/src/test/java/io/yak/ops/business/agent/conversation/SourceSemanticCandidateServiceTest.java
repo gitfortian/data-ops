@@ -9,7 +9,7 @@ import io.yak.ops.business.agent.runtime.SourceSemanticScope;
 import io.yak.ops.business.agent.runtime.SourceSemanticStateBridge;
 import io.yak.ops.business.agent.runtime.SourceSemanticTaskLedger;
 import io.yak.ops.business.metadata.api.PhysicalScopeEvidenceQueryApi;
-import io.yak.ops.business.semantic.api.SemanticCandidateCatalogApi;
+import io.yak.ops.business.agent.domain.SourceSemanticCatalog;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 class SourceSemanticCandidateServiceTest {
   private final SourceSemanticTaskFacade source=mock(SourceSemanticTaskFacade.class);
-  private final SemanticCandidateCatalogApi catalog=mock(SemanticCandidateCatalogApi.class);
+  private final SourceSemanticCatalog catalog=mock(SourceSemanticCatalog.class);
   private final AgentSkillManageService skills=mock(AgentSkillManageService.class);
   private SourceSemanticCandidateService service;
   private SourceSemanticTaskLedger taskLedger;
@@ -25,10 +25,10 @@ class SourceSemanticCandidateServiceTest {
   private static final String HASH="a".repeat(64);
   private static final String RESULT="b".repeat(64);
 
-  private SemanticCandidateCatalogApi.Snapshot semantic() {
-    return new SemanticCandidateCatalogApi.Snapshot(31L,List.of(
-        new SemanticCandidateCatalogApi.Entry("TYPE",9L,1,"DECIMAL","Decimal","ENABLED",null,null,null),
-        new SemanticCandidateCatalogApi.Entry("UNIT",10L,1,"CNY","人民币","ENABLED",null,null,null)),true);
+  private SourceSemanticCatalog.Snapshot semantic() {
+    return new SourceSemanticCatalog.Snapshot(31L,List.of(
+        new SourceSemanticCatalog.Entry("TYPE",9L,1,"DECIMAL","Decimal","ENABLED",null,null,null),
+        new SourceSemanticCatalog.Entry("UNIT",10L,1,"CNY","人民币","ENABLED",null,null,null)),true);
   }
 
   @BeforeEach void setup() {
@@ -117,12 +117,12 @@ class SourceSemanticCandidateServiceTest {
 
   @Test void catalogDriftAndCrossProjectResultNeverProduceTicket() {
     var view=service.read(taskId);
-    when(catalog.read()).thenReturn(new SemanticCandidateCatalogApi.Snapshot(31L,List.of(),true));
+    when(catalog.read()).thenReturn(new SourceSemanticCatalog.Snapshot(31L,List.of(),true));
     var drift=service.preflight(taskId,view.review().revision());
     assertFalse(drift.ready());
     assertNull(drift.ticket());
     assertTrue(drift.blockers().stream().anyMatch(b->b.contains("CATALOG_CHANGED")));
-    when(catalog.read()).thenReturn(new SemanticCandidateCatalogApi.Snapshot(99L,List.of(),true));
+    when(catalog.read()).thenReturn(new SourceSemanticCatalog.Snapshot(99L,List.of(),true));
     assertThrows(IllegalStateException.class,()->service.preflight(taskId,view.review().revision()));
   }
 
