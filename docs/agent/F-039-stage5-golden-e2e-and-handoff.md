@@ -20,6 +20,25 @@
 - 源字段映射不由候选证据直接提升为 Modeling 事实。只有原 Semantic 真实来源关联可回读，且 SOURCE_LINK 在原服务的语义是**过程→来源表**，不能宣称是永久来源列→标准字段映射。
 - 工程行为仍受 `yak.agent.source-semantic.enabled` 和 `yak.agent.source-semantic.adoption-enabled`（默认关闭）控制，不在验收阶段绕开源域授权。
 
+## 授权真实环境只读回读探针（无新增业务写）
+
+先在部署好的试点环境、已经有正式采纳回执的完成任务上执行。这个命令会使用独立项目会话**登录**，其余只读调用原 Agent Task、原 Semantic 收据及当前项目正式详情和过程关联；**不创建、不保存、不启停、不审批、不执行 SQL/物理行查询**：
+
+```bash
+export YAK_OPS_BASE_URL='https://<authorized-pilot-host>'
+export YAK_OPS_USERNAME='<pilot-user>'
+export YAK_OPS_PASSWORD='<secret-in-local-environment-only>'
+export YAK_OPS_PROJECT_ID='<authorized-project-id>'
+export YAK_OPS_F039_TASK_ID='<actual-completed-task-id>'
+export YAK_OPS_F039_OUTPUT='/secure/f039/real-source-readback.json'
+node scripts/ai/f039-live-readback.mjs
+```
+
+- 输出为严格脱敏的真实项目/来源指纹、任务状态、候选修订、所选已提交回执和逐对象“原域 GET 是否查到”的结果，默认私有目录文件权限 0600；命令只打印输出位置、SHA-256、结论和数量。
+- `SOURCE_OWNER_READBACK_VERIFIED` **仅证明某时刻已提交项在原域可读**，不证明业务语义正确、审批、其他 SI、时间收益。其他情况 `INCOMPLETE_OR_UNVERIFIED` 且退出码 2，切换项目/撤权/目标删除不能用缓存成功代替。
+- 真实业务证据需由试点负责人按原环境授权留档；正式数据、SQL 行、密钥和用户隐私不能上传公共 CI。审批和用户撤权反例需由有权限的测试负责人在隔离环境执行并另行取证。
+- 该探针产生的只读现场输出可按 `kind: api` 输入黄金门禁，但 SI01 仍须独立的 **db/browser** 证据，不得单靠探针将它标 PASS。
+
 ## SI01–SI15 原始业务样本验收矩阵
 
 在源环境执行并保存精确 API/数据库/审计、浏览器、Turn/trace、用户动作、专业复核等独立证据。每项结果只能为 `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`，状态后附真实观察和证据路径。
