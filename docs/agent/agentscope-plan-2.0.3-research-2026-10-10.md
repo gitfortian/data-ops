@@ -35,15 +35,19 @@ SDK 官方文档：https://github.com/agentscope-ai/agentscope-java/blob/v2.0.3/
 
 ## 3. 已加入的无模型 SDK 隔离实验
 
-测试类：data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanModeSdkContractTest.java
+隔离测试类：
+
+- data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanModeSdkContractTest.java
+- data-ops-business/data-ops-business-agent/src/test/java/io/yak/ops/business/agent/runtime/SourceSemanticPlanPermissionContractTest.java
 
 - 使用固定 SDK 的 WorkspaceManager/PlanModeManager，两个不同任务分离的临时 workspace，验证相同逻辑 plan 路径各自写入不同内容。
+- 直接使用 2.0.3 PermissionEngine 与原生 PlanModeTools 验证 DEFAULT 下 plan_write 的 ASK、显式最小 ALLOW、plan_exit 的 ASK，以及 DONT_ASK 不能直接放行退出。
 - 验证 enter/write/exit 不变量：mode flag、plan path、退出后引用保留，不操作生产 AgentTurn，也不访问模型、数据库或真实 Semantic。
 - 此测试是 **SDK 文件/状态的最小实验证据**，不是 permission ASK、StateStore round-trip、真实长任务或生产 E2E 的替代。
 
 建议复核命令（有 Java/Maven 环境的 CI/工作站执行）：
 
-    ./mvnw -pl data-ops-business/data-ops-business-agent -am -Dtest=SourceSemanticPlanModeSdkContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+    ./mvnw -pl data-ops-business/data-ops-business-agent -am -Dtest=SourceSemanticPlan*ContractTest -Dsurefire.failIfNoSpecifiedTests=false test
 
 此文档提交时，没有本地 Maven/数据库运行证据；测试结果仍是 NOT_RUN，需据实际 GitHub CI 状态更新。
 
