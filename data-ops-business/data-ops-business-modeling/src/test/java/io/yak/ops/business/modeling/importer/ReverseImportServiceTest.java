@@ -125,6 +125,8 @@ class ReverseImportServiceTest {
     assertEquals(10L, plan.getValue().sourceDatasourceId());
     assertEquals("shop", plan.getValue().sourceDatabase());
     assertEquals("ods_user", plan.getValue().sourceTable());
+    // 真正源列映射集合不包含自动生成的 process_time/event_time。
+    assertEquals(List.of("order_id", "user_name"), plan.getValue().sourceColumnNames());
     // 标准字段关联写在列上(38 治理;order_id 精确命中)
     assertEquals(9L, plan.getValue().columns().get(0).stdFieldId());
     assertEquals(null, plan.getValue().columns().get(1).stdFieldId());
@@ -234,9 +236,10 @@ class ReverseImportServiceTest {
     ArgumentCaptor<ReverseImportPlan> plan = ArgumentCaptor.forClass(ReverseImportPlan.class);
     verify(writer).fillStructure(eq(77L), plan.capture(), eq("tester"));
     assertEquals("ods_user_landing", plan.getValue().tableName());
-    // 已有分层/来源不覆盖:传空即"不改"
+    // 已有分层不覆盖；传真实源身份给 writer 校验后仅补齐列映射。
     assertNull(plan.getValue().layerCode());
-    assertNull(plan.getValue().sourceDatasourceId());
+    assertEquals(10L, plan.getValue().sourceDatasourceId());
+    assertEquals(List.of("id"), plan.getValue().sourceColumnNames());
   }
 
   @Test
