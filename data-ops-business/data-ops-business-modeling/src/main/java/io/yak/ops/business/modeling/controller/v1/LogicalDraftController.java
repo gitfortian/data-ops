@@ -58,6 +58,25 @@ public class LogicalDraftController {
     return Result.success(service.addAttribute(id, entityId, request));
   }
 
+  @PutMapping("/{id}/entities/{entityId}")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<DraftView> editEntity(@PathVariable Long id, @PathVariable Long entityId, @RequestBody NewEntity request) {
+    return Result.success(service.updateEntity(id, entityId, request));
+  }
+
+  @PutMapping("/{id}/entities/{entityId}/attributes/{attributeId}")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<DraftView> editAttribute(@PathVariable Long id, @PathVariable Long entityId,
+      @PathVariable Long attributeId, @RequestBody NewAttribute request) {
+    return Result.success(service.updateAttribute(id, entityId, attributeId, request));
+  }
+
+  @PutMapping("/{id}/relations/{relationId}")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<DraftView> editRelation(@PathVariable Long id, @PathVariable Long relationId, @RequestBody NewRelation request) {
+    return Result.success(service.updateRelation(id, relationId, request));
+  }
+
   @PostMapping("/{id}/relations")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
   public Result<DraftView> relation(@PathVariable Long id, @RequestBody NewRelation request) {

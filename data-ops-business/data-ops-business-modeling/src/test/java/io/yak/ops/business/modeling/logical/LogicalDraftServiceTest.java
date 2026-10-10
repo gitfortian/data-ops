@@ -102,6 +102,37 @@ class LogicalDraftServiceTest {
   }
 
   @Test
+  void editRejectsAttributeFromAnotherEntity() {
+    when(models.selectOne(any())).thenReturn(model());
+    when(entities.selectById(1L)).thenReturn(entity(1L, 77L));
+    LogicalAttributePO wrong = new LogicalAttributePO();
+    wrong.setId(100L);
+    wrong.setEntityId(98L);
+    wrong.setCode("order_id");
+    when(attributes.selectById(100L)).thenReturn(wrong);
+    assertThrows(ModelingException.class, () -> service.updateAttribute(
+        77L, 1L, 100L, new LogicalDraftService.NewAttribute(
+            "order_id", "订单ID", null, "STRING", null, false, true)));
+    verify(attributes, never()).updateById(any());
+  }
+
+  @Test
+  void editRejectsRebindingRelationshipEndpoints() {
+    when(models.selectOne(any())).thenReturn(model());
+    when(entities.selectById(1L)).thenReturn(entity(1L, 77L));
+    when(entities.selectById(2L)).thenReturn(entity(2L, 77L));
+    LogicalRelationPO original = new LogicalRelationPO();
+    original.setId(7L);
+    original.setSourceEntityId(1L);
+    original.setTargetEntityId(2L);
+    when(relations.selectById(7L)).thenReturn(original);
+    assertThrows(ModelingException.class, () -> service.updateRelation(
+        77L, 7L, new LogicalDraftService.NewRelation(2L, 1L, "ASSOCIATION",
+            "UNKNOWN", null)));
+    verify(relations, never()).updateById(any());
+  }
+
+  @Test
   void disabledStandardCannotBeAttachedToNewAttribute() {
     when(models.selectOne(any())).thenReturn(model());
     when(entities.selectById(1L)).thenReturn(entity(1L, 77L));

@@ -73,6 +73,19 @@ export const addLogicalAttribute = (id: number, entityId: number, payload: {
   description?: string; primaryFlag?: boolean; nullable?: boolean;
 }): Promise<LogicalDraftDetail> =>
   HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes`, payload);
+export const updateLogicalEntity = (id: number, entityId: number, payload: {
+  code: string; name: string; businessName?: string; description?: string;
+}): Promise<LogicalDraftDetail> =>
+  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}`, payload);
+export const updateLogicalAttribute = (id: number, entityId: number, attrId: number, payload: {
+  code: string; name: string; stdFieldId?: number; logicalType?: string;
+  description?: string; primaryFlag?: boolean; nullable?: boolean;
+}): Promise<LogicalDraftDetail> =>
+  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes/${attrId}`, payload);
+export const updateLogicalRelation = (id: number, relationId: number, payload: {
+  sourceEntityId: number; targetEntityId: number; cardinality: LogicalRelation['cardinality']; description?: string;
+}): Promise<LogicalDraftDetail> =>
+  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/relations/${relationId}`, payload);
 export const addLogicalRelation = (id: number, payload: {
   sourceEntityId: number; targetEntityId: number; cardinality: LogicalRelation['cardinality'];
   description?: string;

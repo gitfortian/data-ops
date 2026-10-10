@@ -186,6 +186,22 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public DraftView updateEntity(Long modelId, Long entityId, NewEntity input) {
+    LogicalModelPO root = requireModel(modelId, true);
+    LogicalEntityPO entity = requireEntity(modelId, entityId);
+    if (!Objects.equals(entity.getCode(), requiredCode(input.code()))) {
+      throw invalid("逻辑实体编码不可更改");
+    }
+    entity.setName(requiredName(input.name()));
+    entity.setBusinessName(optional(input.businessName(), 256, "业务名称"));
+    entity.setDescription(optional(input.description(), 1024, "实体描述"));
+    entity.setUpdateTime(LocalDateTime.now());
+    entities.updateById(entity);
+    touch(root);
+    return get(modelId);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public DraftView addAttribute(Long modelId, Long entityId, NewAttribute input) {
     LogicalModelPO root = requireModel(modelId, true);
     requireEntity(modelId, entityId);
@@ -214,6 +230,32 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public DraftView updateAttribute(Long modelId, Long entityId, Long attributeId, NewAttribute input) {
+    LogicalModelPO root = requireModel(modelId, true);
+    requireEntity(modelId, entityId);
+    LogicalAttributePO attribute = attributes.selectById(attributeId);
+    if (attribute == null || !Objects.equals(attribute.getEntityId(), entityId)) {
+      throw invalid("逻辑属性不属于当前模型实体");
+    }
+    if (!Objects.equals(attribute.getCode(), requiredCode(input.code()))) {
+      throw invalid("逻辑属性编码不可更改");
+    }
+    if (input.stdFieldId() != null) {
+      StandardField field = processes.getField(input.stdFieldId());
+      if (field == null || !field.isEnabled()) throw invalid("标准字段不可用或已停用");
+    }
+    attribute.setName(requiredName(input.name()));
+    attribute.setStdFieldId(input.stdFieldId());
+    attribute.setLogicalType(optional(input.logicalType(), 128, "逻辑类型"));
+    attribute.setDescription(optional(input.description(), 1024, "属性描述"));
+    attribute.setPrimaryFlag(Boolean.TRUE.equals(input.primaryFlag()));
+    attribute.setNullable(!Boolean.FALSE.equals(input.nullable()));
+    attributes.updateById(attribute);
+    touch(root);
+    return get(modelId);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public DraftView addRelation(Long modelId, NewRelation input) {
     LogicalModelPO root = requireModel(modelId, true);
     requireEntity(modelId, input.sourceEntityId());
@@ -232,6 +274,28 @@ public class LogicalDraftService {
     relation.setCardinality(input.cardinality());
     relation.setDescription(optional(input.description(), 1024, "关系描述"));
     relations.insert(relation);
+    touch(root);
+    return get(modelId);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public DraftView updateRelation(Long modelId, Long relationId, NewRelation input) {
+    LogicalModelPO root = requireModel(modelId, true);
+    LogicalRelationPO relation = relations.selectById(relationId);
+    if (relation == null) throw invalid("逻辑关系不存在");
+    requireEntity(modelId, relation.getSourceEntityId());
+    requireEntity(modelId, relation.getTargetEntityId());
+    if (!Objects.equals(relation.getSourceEntityId(), input.sourceEntityId())
+        || !Objects.equals(relation.getTargetEntityId(), input.targetEntityId())) {
+      throw invalid("已有关系不可重绑实体");
+    }
+    if (!Set.of("ONE_TO_ONE", "ONE_TO_MANY", "MANY_TO_ONE", "MANY_TO_MANY", "UNKNOWN")
+        .contains(input.cardinality() == null ? "" : input.cardinality())) {
+      throw invalid("请选择关系基数或 UNKNOWN");
+    }
+    relation.setCardinality(input.cardinality());
+    relation.setDescription(optional(input.description(), 1024, "关系描述"));
+    relations.updateById(relation);
     touch(root);
     return get(modelId);
   }

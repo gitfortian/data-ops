@@ -8,7 +8,7 @@ import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/sema
 import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
   freezeLogicalDraft, getLogicalDraft, getLogicalVersionSnapshot, listLogicalDrafts,
-  listLogicalVersions,
+  listLogicalVersions, updateLogicalEntity, updateLogicalAttribute, updateLogicalRelation,
   type LogicalDraftDetail, type LogicalDraftVersion, type LogicalModelDraft,
   type LogicalRelation,
 } from '@/services/modeling/logical';
@@ -38,6 +38,9 @@ export default function LogicalWorkspace() {
   const [saving, setSaving] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [entityOpen, setEntityOpen] = useState(false);
+  const [editEntityId, setEditEntityId] = useState<number>();
+  const [editAttributeId, setEditAttributeId] = useState<number>();
+  const [editRelationId, setEditRelationId] = useState<number>();
   const [attributeEntityId, setAttributeEntityId] = useState<number>();
   const [relationOpen, setRelationOpen] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
@@ -99,7 +102,8 @@ export default function LogicalWorkspace() {
     } finally { setLoading(false); }
   }, []);
 
-  const perform = async (action: () => Promise<LogicalDraftDetail>, successText: string, close: () => void) => {
+  const perform = async (action: () => Promise<LogicalDraftDetail>, successText: string,
+    close: () => void): Promise<LogicalDraftDetail | undefined> => {
     setSaving(true);
     try {
       const data = await action();
@@ -108,8 +112,10 @@ export default function LogicalWorkspace() {
       message.success(successText);
       const next = await listLogicalDrafts();
       setModels(next);
+      return data;
     } catch (err) {
       message.error(errorText(err));
+      return undefined;
     } finally { setSaving(false); }
   };
 
@@ -117,34 +123,63 @@ export default function LogicalWorkspace() {
 
   const create = async () => {
     const values = await createForm.validateFields();
-    await perform(() => createLogicalDraft(values), '已创建逻辑设计草稿，尚未发布或生成物理表', () => {
+    const created = await perform(() => createLogicalDraft(values), '已创建逻辑设计草稿，尚未发布或生成物理表', () => {
       setCreateOpen(false);
       createForm.resetFields();
     });
-    // A newly created model appears in the list; let the user choose the exact draft.
-    await reload().catch(() => undefined);
+    if (created) await reload(created.model.id);
   };
   const addEntity = async () => {
     if (selected == null) return;
     const values = await entityForm.validateFields();
-    await perform(() => addLogicalEntity(selected, values), '已保存逻辑实体', () => {
-      setEntityOpen(false); entityForm.resetFields();
+    await perform(() => editEntityId == null
+      ? addLogicalEntity(selected, values) : updateLogicalEntity(selected, editEntityId, values),
+    '已保存逻辑实体', () => {
+      setEntityOpen(false); setEditEntityId(undefined); entityForm.resetFields();
     });
   };
   const addAttribute = async () => {
     if (selected == null || attributeEntityId == null) return;
     const values = await attributeForm.validateFields();
-    await perform(() => addLogicalAttribute(selected, attributeEntityId, values), '已保存业务属性', () => {
-      setAttributeEntityId(undefined); attributeForm.resetFields();
+    await perform(() => editAttributeId == null
+      ? addLogicalAttribute(selected, attributeEntityId, values)
+      : updateLogicalAttribute(selected, attributeEntityId, editAttributeId, values),
+    '已保存业务属性', () => {
+      setAttributeEntityId(undefined); setEditAttributeId(undefined); attributeForm.resetFields();
     });
   };
   const addRelation = async () => {
     if (selected == null) return;
     const values = await relationForm.validateFields();
-    await perform(() => addLogicalRelation(selected, values), '已保存待确认或已确认的逻辑关系', () => {
-      setRelationOpen(false); relationForm.resetFields();
+    await perform(() => editRelationId == null
+      ? addLogicalRelation(selected, values) : updateLogicalRelation(selected, editRelationId, values),
+    '已保存待确认或已确认的逻辑关系', () => {
+      setRelationOpen(false); setEditRelationId(undefined); relationForm.resetFields();
     });
   };
+  const editEntity = (id?: number) => {
+    setEditEntityId(id);
+    entityForm.resetFields();
+    const current = detail?.entities.find(x => x.entity.id === id)?.entity;
+    if (current) entityForm.setFieldsValue(current);
+    setEntityOpen(true);
+  };
+  const editAttribute = (entityId: number, id?: number) => {
+    setAttributeEntityId(entityId);
+    setEditAttributeId(id);
+    attributeForm.resetFields();
+    const current = detail?.entities.find(x => x.entity.id === entityId)
+      ?.attributes.find(x => x.id === id);
+    if (current) attributeForm.setFieldsValue(current);
+  };
+  const editRelation = (id?: number) => {
+    setEditRelationId(id);
+    relationForm.resetFields();
+    const current = detail?.relations.find(x => x.id === id);
+    if (current) relationForm.setFieldsValue(current);
+    setRelationOpen(true);
+  };
+
   const freeze = async () => {
     if (selected == null) return;
     setSaving(true);
@@ -192,8 +227,8 @@ export default function LogicalWorkspace() {
             <>
               <Card title={<Space>{detail.model.name}<Tag>DRAFT</Tag></Space>}
                 extra={<Space wrap>
-                  <Button onClick={() => setEntityOpen(true)}>添加业务实体</Button>
-                  <Button disabled={entities.length < 2} onClick={() => setRelationOpen(true)}>定义实体关系</Button>
+                  <Button onClick={() => editEntity()}>添加业务实体</Button>
+                  <Button disabled={entities.length < 2} onClick={() => editRelation()}>定义实体关系</Button>
                   <Button type="primary" loading={saving} onClick={() => void freeze()}>冻结草稿快照</Button>
                 </Space>}>
                 <Typography.Text>业务过程：{detail.process.name}（{detail.process.code}）</Typography.Text>
@@ -204,7 +239,10 @@ export default function LogicalWorkspace() {
               </Card>
               {detail.entities.map(({ entity, attributes }) => (
                 <Card key={entity.id} title={entity.businessName || entity.name}
-                  extra={<Button onClick={() => { setAttributeEntityId(entity.id); attributeForm.resetFields(); }}>添加属性</Button>}>
+                  extra={<Space>
+                    <Button onClick={() => editEntity(entity.id)}>编辑实体</Button>
+                    <Button onClick={() => editAttribute(entity.id)}>添加属性</Button>
+                  </Space>}>
                   <Typography.Text type="secondary">{entity.code} · {entity.description || '暂无业务说明'}</Typography.Text>
                   <Table size="small" rowKey="id" pagination={false} className="mt-3"
                     dataSource={attributes} columns={[
@@ -215,6 +253,8 @@ export default function LogicalWorkspace() {
                         render: (v?: number) => v == null ? <Tag>待治理</Tag> : <Tag color="blue">{v}</Tag> },
                       { title: '业务主标识', dataIndex: 'primaryFlag', key: 'primaryFlag',
                         render: (v?: boolean) => v ? '用户确认' : '否' },
+                      { title: '操作', key: 'op', render: (_, row) =>
+                        <Button type="link" onClick={() => editAttribute(entity.id, row.id)}>编辑</Button> },
                     ]} />
                 </Card>
               ))}
@@ -227,6 +267,8 @@ export default function LogicalWorkspace() {
                       render: (id: number) => entities.find((e) => e.id === id)?.businessName || entities.find((e) => e.id === id)?.name || id },
                     { title: '业务关系基数', dataIndex: 'cardinality', key: 'cardinality' },
                     { title: '说明', dataIndex: 'description', key: 'description' },
+                    { title: '操作', key: 'op', render: (_, row) =>
+                      <Button type="link" onClick={() => editRelation(row.id)}>编辑</Button> },
                   ]} />
               </Card>
               <Card title="独立设计快照（不是部署版本）">
@@ -260,20 +302,20 @@ export default function LogicalWorkspace() {
           <Form.Item label="业务说明" name="description"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal open={entityOpen} title="新增业务实体" onOk={() => void addEntity()}
-        okText="保存实体" okButtonProps={{ loading: saving }} onCancel={() => setEntityOpen(false)} destroyOnHidden>
+      <Modal open={entityOpen} title={editEntityId == null ? '新增业务实体' : '编辑业务实体'} onOk={() => void addEntity()}
+        okText="保存实体" okButtonProps={{ loading: saving }} onCancel={() => { setEntityOpen(false); setEditEntityId(undefined); }} destroyOnHidden>
         <Form layout="vertical" form={entityForm}>
-          <Form.Item name="code" label="实体编码" rules={[{ required: true }]}><Input placeholder="order" /></Form.Item>
+          <Form.Item name="code" label="实体编码" rules={[{ required: true }]}><Input placeholder="order" disabled={editEntityId != null} /></Form.Item>
           <Form.Item name="name" label="实体名称" rules={[{ required: true }]}><Input placeholder="Order" /></Form.Item>
           <Form.Item name="businessName" label="业务名称"><Input placeholder="订单" /></Form.Item>
           <Form.Item name="description" label="业务说明"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal open={attributeEntityId != null} title="新增业务属性" okText="保存属性"
+      <Modal open={attributeEntityId != null} title={editAttributeId == null ? '新增业务属性' : '编辑业务属性'} okText="保存属性"
         okButtonProps={{ loading: saving }} onOk={() => void addAttribute()}
-        onCancel={() => setAttributeEntityId(undefined)} destroyOnHidden>
+        onCancel={() => { setAttributeEntityId(undefined); setEditAttributeId(undefined); }} destroyOnHidden>
         <Form layout="vertical" form={attributeForm} initialValues={{ primaryFlag: false, nullable: true }}>
-          <Form.Item label="属性编码" name="code" rules={[{ required: true }]}><Input placeholder="order_id" /></Form.Item>
+          <Form.Item label="属性编码" name="code" rules={[{ required: true }]}><Input placeholder="order_id" disabled={editAttributeId != null} /></Form.Item>
           <Form.Item label="属性名称" name="name" rules={[{ required: true }]}><Input placeholder="订单标识" /></Form.Item>
           <Form.Item label="标准字段（可先留待确认）" name="stdFieldId">
             <Select allowClear showSearch optionFilterProp="label"
@@ -289,15 +331,15 @@ export default function LogicalWorkspace() {
           <Form.Item name="description" label="业务说明"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal open={relationOpen} title="明确业务关系（绝不自动推断）" okText="保存关系"
+      <Modal open={relationOpen} title={editRelationId == null ? '明确业务关系（绝不自动推断）' : '编辑业务关系'} okText="保存关系"
         okButtonProps={{ loading: saving }} onOk={() => void addRelation()}
-        onCancel={() => setRelationOpen(false)} destroyOnHidden>
+        onCancel={() => { setRelationOpen(false); setEditRelationId(undefined); }} destroyOnHidden>
         <Form form={relationForm} layout="vertical">
           <Form.Item name="sourceEntityId" label="来源实体" rules={[{ required: true }]}>
-            <Select options={entities.map(e => ({ label: e.businessName || e.name, value: e.id }))} />
+            <Select disabled={editRelationId != null} options={entities.map(e => ({ label: e.businessName || e.name, value: e.id }))} />
           </Form.Item>
           <Form.Item name="targetEntityId" label="目标实体" rules={[{ required: true }]}>
-            <Select options={entities.map(e => ({ label: e.businessName || e.name, value: e.id }))} />
+            <Select disabled={editRelationId != null} options={entities.map(e => ({ label: e.businessName || e.name, value: e.id }))} />
           </Form.Item>
           <Form.Item name="cardinality" label="业务关系基数" rules={[{ required: true }]}>
             <Select options={[
