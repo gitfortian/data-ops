@@ -2,13 +2,13 @@ import React from 'react';
 import { Alert, Button, Checkbox, Input, Select, Space, Tag, Typography } from 'antd';
 import {
   sourceSemanticCandidates, type CandidatePreflight, type CandidateView,
-  type SemanticCandidate,
+  type SemanticCandidate, type AdoptionReceipt,
 } from '@/services/agent/sourceSemanticCandidates';
 
 /**
  * F-039 candidate review is deliberately read-only with respect to Semantic.
  * Each selection is explicit, missing dependencies remain visible, and editing
- * invalidates the previous preflight. No "Save to Semantic" action exists here.
+ * invalidates the previous preflight; a separate explicit action calls Semantic-owned adoption.
  */
 const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) => {
   const [view, setView] = React.useState<CandidateView>();
@@ -18,6 +18,8 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [preflight, setPreflight] = React.useState<CandidatePreflight>();
+  const [saveConfirmed, setSaveConfirmed] = React.useState(false);
+  const [receipts, setReceipts] = React.useState<AdoptionReceipt[]>([]);
   const [questionId, setQuestionId] = React.useState('business_domain');
   const [answer, setAnswer] = React.useState('');
   const [mergeTarget, setMergeTarget] = React.useState<string>();
@@ -39,6 +41,7 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
       const next = await operation();
       setView(next);
       setPreflight(undefined);
+      setSaveConfirmed(false);
       setEdit(undefined);
       setMergeTarget(undefined);
       setMergeConfirmed(false);
@@ -221,13 +224,69 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
         <Button type="primary" disabled={busy || !review.selectedIds.length}
           onClick={async () => {
             setBusy(true);setError('');
-            try { setPreflight(await sourceSemanticCandidates.preflight(taskId, review.revision)); }
+            try { setPreflight(await sourceSemanticCandidates.preflight(taskId, review.revision)); setSaveConfirmed(false); }
             catch (e) { setError(String((e as Error).message || e)); }
             finally { setBusy(false); }
           }}>依赖闭包及只读预检</Button>
         <Button disabled={busy} onClick={() => mutate(() => sourceSemanticCandidates.read(taskId))}>
           重新核验目录</Button>
       </Space>
+      <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ddd' }}>
+        <Typography.Text strong>4/5 · 正式语义人工采纳</Typography.Text>
+        <Typography.Paragraph type="secondary">
+          计划确认和候选选择都不授权正式写入。仅会提交已明确选择且完成只读预检的对象。
+          未具备完整标准属性或缺少正式来源关联合同的项目会保留未执行，不自动审批或发布。
+        </Typography.Paragraph>
+        {preflight?.ready && <>
+          <Checkbox checked={saveConfirmed} disabled={busy}
+            onChange={(e) => setSaveConfirmed(e.target.checked)}>
+            我已逐项核对本次预检、选择及依赖，明确同意由 Semantic 保存可执行项
+          </Checkbox>
+          <div style={{ marginTop: 8 }}>
+            <Button danger disabled={!saveConfirmed || busy || !preflight.ticket}
+              loading={busy} onClick={async () => {
+                setBusy(true);setError('');
+                try {
+                  const saved = await sourceSemanticCandidates.adopt(taskId, preflight.revision,
+                    preflight.payloadDigest, preflight.ticket!);
+                  setReceipts(saved);
+                  setSaveConfirmed(false);
+                } catch (e) {
+                  setError('保存响应不可核对时请先查询 Semantic 原回执，不要盲目重复保存：'
+                    + String((e as Error).message || e));
+                  try { setReceipts(await sourceSemanticCandidates.receipts(taskId)); }
+                  catch { /* Do not infer failed write when readback is unavailable. */ }
+                } finally { setBusy(false); }
+              }}>明确保存所选候选</Button>
+          </div>
+        </>}
+        <Button size="small" style={{ marginTop: 8 }} disabled={busy}
+          onClick={async () => {
+            setBusy(true);setError('');
+            try { setReceipts(await sourceSemanticCandidates.receipts(taskId)); }
+            catch(e) { setError('回执无法核对，正式保存结果未知：'
+              + String((e as Error).message || e)); }
+            finally { setBusy(false); }
+          }}>查询 Semantic 正式回执</Button>
+        {receipts.length > 0 && <div style={{ marginTop: 10 }}>
+          <Typography.Text strong>真实回执（不根据模型文字推测）</Typography.Text>
+          {receipts.map((item) => <div key={item.candidateId}
+            style={{ borderTop: '1px solid #eee', marginTop: 7, paddingTop: 7 }}>
+            <Tag color={['CREATED', 'REUSED', 'LINKED'].includes(item.status)
+              ? 'success' : 'warning'}>{item.status}</Tag>
+            <span>{item.kind} · {review.candidates.find((v) => v.id === item.candidateId)?.name
+              || item.candidateId}</span>
+            {item.semanticId != null &&
+              <Typography.Text copyable={{ text: String(item.semanticId) }}>
+                {' '}正式 ID：{item.semanticId}
+              </Typography.Text>}
+            <Typography.Text type="secondary">{' '}{item.message}</Typography.Text>
+          </div>)}
+          {receipts.some((item) => !['CREATED', 'REUSED', 'LINKED'].includes(item.status)) &&
+            <Alert type="warning" showIcon style={{ marginTop: 8 }}
+              message="存在未执行、需核对或待处理项，不能宣称全部保存成功。" />}
+        </div>}
+      </div>
       {preflight && <Alert style={{ marginTop: 10 }} showIcon
         type={preflight.ready ? 'success' : 'warning'}
         message={preflight.ready ? '只读预检通过（不是正式保存授权）' : '未满足预检条件'}
