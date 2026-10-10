@@ -82,3 +82,7 @@ Date: 2026-10-10
 **当前仍待确认**：业务指标按哪个时区统计、是否剔除取消订单、按 order_id 还是 order_no 去重、支付/下单如何区分业务事件。不得由 AI 或方案作者自行定真相。
 
 **本次交付是设计和评审证据，未执行真实 E2E。**
+
+## 7. 第三轮评审材料
+
+为避免本 V2 表仅停留在系统能力罗列，已根据当前 `main` 的 `ModelVersionService`、`ModelStructureService`、`ReverseImportWriter`、`MappingService`、`DevelopmentNodeController`、`DevelopmentTaskController`、`DevelopmentTaskApi` 和 `SemanticFieldService` 补充 [V3 正式合同建议](./F-040-contract-resolution-proposal.md)。V3 对 DR-01～DR-08 给出可讨论推荐方案，**并保留产品、架构、治理 Owner 的签署门禁**。
