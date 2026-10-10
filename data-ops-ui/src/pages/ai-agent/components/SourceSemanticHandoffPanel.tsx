@@ -4,7 +4,6 @@ import { history } from '@umijs/max';
 import {
   sourceSemanticCandidates, type AdoptionReceipt, type CandidateReview,
 } from '@/services/agent/sourceSemanticCandidates';
-import { getSemanticProcess } from '@/services/semantic/api';
 import {
   modelingMetricNextSteps, verifiedSourceSemanticHandoff,
 } from '@/services/agent/sourceSemanticHandoff';
@@ -92,7 +91,7 @@ const SourceSemanticHandoffPanel: React.FC<{
           <Typography.Text strong>已核验过程 #{verifiedProcessId} · 原专业工作区</Typography.Text>
           <div style={{ marginTop: 6 }}>
             <Space wrap>
-              {modelingMetricNextSteps({ path: '', label: '', detail: '' }, undefined, verifiedProcessId)
+              {modelingMetricNextSteps(verifiedProcessId)
                 .map((step) => <Button key={step.path} size="small" disabled={busy}
                   onClick={() => void openProfessionalStep(step.path)}>
                   {step.label}
