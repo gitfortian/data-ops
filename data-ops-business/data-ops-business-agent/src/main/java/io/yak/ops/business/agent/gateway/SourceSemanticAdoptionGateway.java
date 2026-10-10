@@ -27,7 +27,7 @@ public class SourceSemanticAdoptionGateway implements SourceSemanticAdoption {
         scope.captureId(),scope.evidenceFingerprint(),scope.tableKeys());
     var candidates=request.candidates().stream().map(c->new SemanticSourceAdoptionApi.Candidate(
         c.id(),c.kind(),c.code(),c.name(),c.role(),c.grain(),c.description(),
-        c.typeId(),c.unitId(),c.reuseId(),c.reuseVersion(),c.dependencies())).toList();
+        c.typeId(),c.unitId(),c.reuseId(),c.reuseVersion(),c.dependencies(),c.sourceAssetKey())).toList();
     var cmd=new SemanticSourceAdoptionApi.Batch(request.taskId(),request.projectId(),
         request.userId(),request.revision(),request.payloadDigest(),proof,candidates);
     return owner().adopt(cmd).stream().map(SourceSemanticAdoptionGateway::map).toList();
