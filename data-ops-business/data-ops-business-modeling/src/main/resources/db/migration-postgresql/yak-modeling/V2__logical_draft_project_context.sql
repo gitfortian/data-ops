@@ -2,6 +2,7 @@
 -- NULL project_id legacy rows are intentionally invisible to the new scoped API.
 ALTER TABLE yak_modeling_logical_model ADD COLUMN project_id bigint;
 ALTER TABLE yak_modeling_logical_model ADD COLUMN process_id bigint;
+ALTER TABLE yak_modeling_logical_model ADD COLUMN draft_revision bigint NOT NULL DEFAULT 0;
 ALTER TABLE yak_modeling_logical_attribute ADD COLUMN std_field_id bigint;
 
 CREATE UNIQUE INDEX uq_logical_model_project_code

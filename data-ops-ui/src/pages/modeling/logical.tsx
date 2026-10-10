@@ -130,29 +130,31 @@ export default function LogicalWorkspace() {
     if (created) await reload(created.model.id);
   };
   const addEntity = async () => {
-    if (selected == null) return;
+    if (selected == null || !detail) return;
     const values = await entityForm.validateFields();
     await perform(() => editEntityId == null
-      ? addLogicalEntity(selected, values) : updateLogicalEntity(selected, editEntityId, values),
+      ? addLogicalEntity(selected, values, detail.model.draftRevision)
+      : updateLogicalEntity(selected, editEntityId, values, detail.model.draftRevision),
     '已保存逻辑实体', () => {
       setEntityOpen(false); setEditEntityId(undefined); entityForm.resetFields();
     });
   };
   const addAttribute = async () => {
-    if (selected == null || attributeEntityId == null) return;
+    if (selected == null || attributeEntityId == null || !detail) return;
     const values = await attributeForm.validateFields();
     await perform(() => editAttributeId == null
-      ? addLogicalAttribute(selected, attributeEntityId, values)
-      : updateLogicalAttribute(selected, attributeEntityId, editAttributeId, values),
+      ? addLogicalAttribute(selected, attributeEntityId, values, detail.model.draftRevision)
+      : updateLogicalAttribute(selected, attributeEntityId, editAttributeId, values, detail.model.draftRevision),
     '已保存业务属性', () => {
       setAttributeEntityId(undefined); setEditAttributeId(undefined); attributeForm.resetFields();
     });
   };
   const addRelation = async () => {
-    if (selected == null) return;
+    if (selected == null || !detail) return;
     const values = await relationForm.validateFields();
     await perform(() => editRelationId == null
-      ? addLogicalRelation(selected, values) : updateLogicalRelation(selected, editRelationId, values),
+      ? addLogicalRelation(selected, values, detail.model.draftRevision)
+      : updateLogicalRelation(selected, editRelationId, values, detail.model.draftRevision),
     '已保存待确认或已确认的逻辑关系', () => {
       setRelationOpen(false); setEditRelationId(undefined); relationForm.resetFields();
     });
@@ -184,7 +186,7 @@ export default function LogicalWorkspace() {
     if (selected == null) return;
     setSaving(true);
     try {
-      const version = await freezeLogicalDraft(selected);
+      const version = await freezeLogicalDraft(selected, detail?.model.draftRevision ?? -1);
       setVersions(await listLogicalVersions(selected));
       message.success(`已冻结第 ${version.versionNo} 个逻辑设计草稿快照；未发布、未部署`);
     } catch (err) { message.error(errorText(err)); }
@@ -229,6 +231,8 @@ export default function LogicalWorkspace() {
                 extra={<Space wrap>
                   <Button onClick={() => editEntity()}>添加业务实体</Button>
                   <Button disabled={entities.length < 2} onClick={() => editRelation()}>定义实体关系</Button>
+                  <Button onClick={() => void selectModel(detail.model.id)}>刷新草稿</Button>
+                  <Tag>修订 {detail.model.draftRevision}</Tag>
                   <Button type="primary" loading={saving} onClick={() => void freeze()}>冻结草稿快照</Button>
                 </Space>}>
                 <Typography.Text>业务过程：{detail.process.name}（{detail.process.code}）</Typography.Text>

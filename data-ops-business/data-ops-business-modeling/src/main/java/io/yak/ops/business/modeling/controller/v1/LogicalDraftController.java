@@ -47,46 +47,51 @@ public class LogicalDraftController {
   @PostMapping("/{id}/entities")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
   public Result<DraftView> entity(@PathVariable Long id, @RequestBody NewEntity request,
-                                  HttpServletRequest http) {
-    return Result.success(service.addEntity(id, request, currentUserProvider.getCurrentUser(http)));
+                                  @RequestParam Long expectedRevision, HttpServletRequest http) {
+    return Result.success(service.addEntity(id, request, currentUserProvider.getCurrentUser(http), expectedRevision));
   }
 
   @PostMapping("/{id}/entities/{entityId}/attributes")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
   public Result<DraftView> attribute(@PathVariable Long id, @PathVariable Long entityId,
-                                     @RequestBody NewAttribute request) {
-    return Result.success(service.addAttribute(id, entityId, request));
+                                     @RequestBody NewAttribute request, @RequestParam Long expectedRevision) {
+    return Result.success(service.addAttribute(id, entityId, request, expectedRevision));
   }
 
   @PutMapping("/{id}/entities/{entityId}")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
-  public Result<DraftView> editEntity(@PathVariable Long id, @PathVariable Long entityId, @RequestBody NewEntity request) {
-    return Result.success(service.updateEntity(id, entityId, request));
+  public Result<DraftView> editEntity(@PathVariable Long id, @PathVariable Long entityId,
+      @RequestBody NewEntity request, @RequestParam Long expectedRevision) {
+    return Result.success(service.updateEntity(id, entityId, request, expectedRevision));
   }
 
   @PutMapping("/{id}/entities/{entityId}/attributes/{attributeId}")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
   public Result<DraftView> editAttribute(@PathVariable Long id, @PathVariable Long entityId,
-      @PathVariable Long attributeId, @RequestBody NewAttribute request) {
-    return Result.success(service.updateAttribute(id, entityId, attributeId, request));
+      @PathVariable Long attributeId, @RequestBody NewAttribute request,
+      @RequestParam Long expectedRevision) {
+    return Result.success(service.updateAttribute(id, entityId, attributeId, request, expectedRevision));
   }
 
   @PutMapping("/{id}/relations/{relationId}")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
-  public Result<DraftView> editRelation(@PathVariable Long id, @PathVariable Long relationId, @RequestBody NewRelation request) {
-    return Result.success(service.updateRelation(id, relationId, request));
+  public Result<DraftView> editRelation(@PathVariable Long id, @PathVariable Long relationId,
+      @RequestBody NewRelation request, @RequestParam Long expectedRevision) {
+    return Result.success(service.updateRelation(id, relationId, request, expectedRevision));
   }
 
   @PostMapping("/{id}/relations")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
-  public Result<DraftView> relation(@PathVariable Long id, @RequestBody NewRelation request) {
-    return Result.success(service.addRelation(id, request));
+  public Result<DraftView> relation(@PathVariable Long id, @RequestBody NewRelation request,
+      @RequestParam Long expectedRevision) {
+    return Result.success(service.addRelation(id, request, expectedRevision));
   }
 
   @PostMapping("/{id}/versions")
   @RequiresPermission(ModelingPermissionCode.UPDATE)
-  public Result<VersionView> freeze(@PathVariable Long id, HttpServletRequest http) {
-    return Result.success(service.freezeDraft(id, currentUserProvider.getCurrentUser(http)));
+  public Result<VersionView> freeze(@PathVariable Long id, @RequestParam Long expectedRevision,
+      HttpServletRequest http) {
+    return Result.success(service.freezeDraft(id, currentUserProvider.getCurrentUser(http), expectedRevision));
   }
 
   @GetMapping("/{id}/versions")

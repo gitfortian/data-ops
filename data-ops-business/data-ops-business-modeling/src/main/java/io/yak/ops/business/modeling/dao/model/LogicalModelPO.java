@@ -14,6 +14,8 @@ public class LogicalModelPO {
   private Long id;
   private Long projectId;
   private Long processId;
+  /** Monotone root revision for every child edit and saved snapshot. */
+  private Long draftRevision;
   private String code;
   private String name;
   private String description;

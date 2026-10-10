@@ -2,6 +2,7 @@
 -- be exposed by the new scoped draft API until explicitly reviewed/migrated.
 ALTER TABLE yak_modeling_logical_model ADD COLUMN project_id BIGINT NULL;
 ALTER TABLE yak_modeling_logical_model ADD COLUMN process_id BIGINT NULL;
+ALTER TABLE yak_modeling_logical_model ADD COLUMN draft_revision BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE yak_modeling_logical_attribute ADD COLUMN std_field_id BIGINT NULL;
 
 CREATE UNIQUE INDEX uq_logical_model_project_code

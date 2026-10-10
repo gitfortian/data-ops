@@ -31,6 +31,7 @@ class LogicalDraftServiceTest {
     LogicalModelPO p = new LogicalModelPO();
     p.setId(77L);
     p.setProjectId(101L);
+    p.setDraftRevision(0L);
     p.setCode("order_business");
     p.setName("订单业务模型");
     p.setDomainId(9L);
@@ -97,7 +98,7 @@ class LogicalDraftServiceTest {
     when(entities.selectById(2L)).thenReturn(entity(2L, 88L));
     assertThrows(ModelingException.class, () -> service.addRelation(
         77L, new LogicalDraftService.NewRelation(1L, 2L, "ASSOCIATION",
-            "ONE_TO_MANY", "未证明的外部关系")));
+            "ONE_TO_MANY", "未证明的外部关系"), 0L));
     verify(relations, never()).insert(any(LogicalRelationPO.class));
   }
 
@@ -112,7 +113,7 @@ class LogicalDraftServiceTest {
     when(attributes.selectById(100L)).thenReturn(wrong);
     assertThrows(ModelingException.class, () -> service.updateAttribute(
         77L, 1L, 100L, new LogicalDraftService.NewAttribute(
-            "order_id", "订单ID", null, "STRING", null, false, true)));
+            "order_id", "订单ID", null, "STRING", null, false, true), 0L));
     verify(attributes, never()).updateById(any(LogicalAttributePO.class));
   }
 
@@ -128,7 +129,7 @@ class LogicalDraftServiceTest {
     when(relations.selectById(7L)).thenReturn(original);
     assertThrows(ModelingException.class, () -> service.updateRelation(
         77L, 7L, new LogicalDraftService.NewRelation(2L, 1L, "ASSOCIATION",
-            "UNKNOWN", null)));
+            "UNKNOWN", null), 0L));
     verify(relations, never()).updateById(any(LogicalRelationPO.class));
   }
 
@@ -139,8 +140,25 @@ class LogicalDraftServiceTest {
     when(processes.getField(11L)).thenReturn(field(StandardField.STATUS_DISABLED));
     assertThrows(ModelingException.class, () -> service.addAttribute(
         77L, 1L, new LogicalDraftService.NewAttribute("order_id", "订单ID",
-            11L, "STRING", null, true, false)));
+            11L, "STRING", null, true, false), 0L));
     verify(attributes, never()).insert(any(LogicalAttributePO.class));
+  }
+
+  @Test
+  void rejectsStaleBrowserRevisionBeforeWritingAnyEntity() {
+    when(models.selectOne(any())).thenReturn(model());
+    assertThrows(ModelingException.class, () -> service.addEntity(77L,
+        new LogicalDraftService.NewEntity("order", "订单", "订单", null),
+        "tester", 7L));
+    verify(entities, never()).insert(any(LogicalEntityPO.class));
+    verify(models, never()).updateById(any(LogicalModelPO.class));
+  }
+
+  @Test
+  void requiresRevisionForSnapshotToAvoidFreezingStaleContent() {
+    when(models.selectOne(any())).thenReturn(model());
+    assertThrows(ModelingException.class, () -> service.freezeDraft(77L, "tester", null));
+    verify(versions, never()).insert(any(LogicalModelVersionPO.class));
   }
 
   @Test
@@ -157,7 +175,7 @@ class LogicalDraftServiceTest {
     when(attributes.selectList(any())).thenReturn(List.of(attr));
     when(relations.selectList(any())).thenReturn(List.of());
     when(versions.selectList(any())).thenReturn(List.of());
-    LogicalDraftService.VersionView frozen = service.freezeDraft(77L, "tester");
+    LogicalDraftService.VersionView frozen = service.freezeDraft(77L, "tester", 0L);
 
     assertEquals(1, frozen.versionNo());
     assertEquals("DRAFT", frozen.status());

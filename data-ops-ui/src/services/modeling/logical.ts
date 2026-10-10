@@ -7,6 +7,7 @@ const ROOT = '/api/v1/modeling/logical-models';
 export interface LogicalModelDraft {
   id: number;
   projectId: number;
+  draftRevision: number;
   domainId: number;
   processId: number;
   code: string;
@@ -66,33 +67,33 @@ export const createLogicalDraft = (payload: {
   HttpUtils.postData<LogicalDraftDetail>(ROOT, payload);
 export const addLogicalEntity = (id: number, payload: {
   code: string; name: string; businessName?: string; description?: string;
-}): Promise<LogicalDraftDetail> =>
-  HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/entities`, payload);
+}, expectedRevision: number): Promise<LogicalDraftDetail> =>
+  HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/entities?expectedRevision=${expectedRevision}`, payload);
 export const addLogicalAttribute = (id: number, entityId: number, payload: {
   code: string; name: string; stdFieldId?: number; logicalType?: string;
   description?: string; primaryFlag?: boolean; nullable?: boolean;
-}): Promise<LogicalDraftDetail> =>
-  HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes`, payload);
+}, expectedRevision: number): Promise<LogicalDraftDetail> =>
+  HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes?expectedRevision=${expectedRevision}`, payload);
 export const updateLogicalEntity = (id: number, entityId: number, payload: {
   code: string; name: string; businessName?: string; description?: string;
-}): Promise<LogicalDraftDetail> =>
-  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}`, payload);
+}, expectedRevision: number): Promise<LogicalDraftDetail> =>
+  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}?expectedRevision=${expectedRevision}`, payload);
 export const updateLogicalAttribute = (id: number, entityId: number, attrId: number, payload: {
   code: string; name: string; stdFieldId?: number; logicalType?: string;
   description?: string; primaryFlag?: boolean; nullable?: boolean;
-}): Promise<LogicalDraftDetail> =>
-  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes/${attrId}`, payload);
+}, expectedRevision: number): Promise<LogicalDraftDetail> =>
+  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes/${attrId}?expectedRevision=${expectedRevision}`, payload);
 export const updateLogicalRelation = (id: number, relationId: number, payload: {
   sourceEntityId: number; targetEntityId: number; cardinality: LogicalRelation['cardinality']; description?: string;
-}): Promise<LogicalDraftDetail> =>
-  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/relations/${relationId}`, payload);
+}, expectedRevision: number): Promise<LogicalDraftDetail> =>
+  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/relations/${relationId}?expectedRevision=${expectedRevision}`, payload);
 export const addLogicalRelation = (id: number, payload: {
   sourceEntityId: number; targetEntityId: number; cardinality: LogicalRelation['cardinality'];
   description?: string;
-}): Promise<LogicalDraftDetail> =>
-  HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/relations`, payload);
-export const freezeLogicalDraft = (id: number): Promise<LogicalDraftVersion> =>
-  HttpUtils.postData<LogicalDraftVersion>(`${ROOT}/${id}/versions`, {});
+}, expectedRevision: number): Promise<LogicalDraftDetail> =>
+  HttpUtils.postData<LogicalDraftDetail>(`${ROOT}/${id}/relations?expectedRevision=${expectedRevision}`, payload);
+export const freezeLogicalDraft = (id: number, expectedRevision: number): Promise<LogicalDraftVersion> =>
+  HttpUtils.postData<LogicalDraftVersion>(`${ROOT}/${id}/versions?expectedRevision=${expectedRevision}`, {});
 export const listLogicalVersions = (id: number): Promise<LogicalDraftVersion[]> =>
   HttpUtils.getData<LogicalDraftVersion[]>(`${ROOT}/${id}/versions`);
 export const getLogicalVersionSnapshot = (id: number, version: number): Promise<string> =>

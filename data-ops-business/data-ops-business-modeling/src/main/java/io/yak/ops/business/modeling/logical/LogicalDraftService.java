@@ -149,6 +149,7 @@ public class LogicalDraftService {
     LogicalModelPO root = new LogicalModelPO();
     root.setProjectId(currentProject.requireProjectId());
     root.setProcessId(process.id());
+    root.setDraftRevision(0L);
     root.setDomainId(process.domainId());
     root.setCode(code);
     root.setName(requiredName(input.name()));
@@ -164,8 +165,9 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DraftView addEntity(Long modelId, NewEntity input, String actor) {
+  public DraftView addEntity(Long modelId, NewEntity input, String actor, Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     String code = requiredCode(input.code());
     if (entities.selectCount(new LambdaQueryWrapper<LogicalEntityPO>()
         .eq(LogicalEntityPO::getLogicalModelId, modelId)
@@ -186,8 +188,9 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DraftView updateEntity(Long modelId, Long entityId, NewEntity input) {
+  public DraftView updateEntity(Long modelId, Long entityId, NewEntity input, Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     LogicalEntityPO entity = requireEntity(modelId, entityId);
     if (!Objects.equals(entity.getCode(), requiredCode(input.code()))) {
       throw invalid("逻辑实体编码不可更改");
@@ -202,8 +205,9 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DraftView addAttribute(Long modelId, Long entityId, NewAttribute input) {
+  public DraftView addAttribute(Long modelId, Long entityId, NewAttribute input, Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     requireEntity(modelId, entityId);
     String code = requiredCode(input.code());
     if (attributes.selectCount(new LambdaQueryWrapper<LogicalAttributePO>()
@@ -230,8 +234,10 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DraftView updateAttribute(Long modelId, Long entityId, Long attributeId, NewAttribute input) {
+  public DraftView updateAttribute(Long modelId, Long entityId, Long attributeId, NewAttribute input,
+      Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     requireEntity(modelId, entityId);
     LogicalAttributePO attribute = attributes.selectById(attributeId);
     if (attribute == null || !Objects.equals(attribute.getEntityId(), entityId)) {
@@ -256,8 +262,9 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DraftView addRelation(Long modelId, NewRelation input) {
+  public DraftView addRelation(Long modelId, NewRelation input, Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     requireEntity(modelId, input.sourceEntityId());
     requireEntity(modelId, input.targetEntityId());
     if (Objects.equals(input.sourceEntityId(), input.targetEntityId())) {
@@ -279,8 +286,9 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public DraftView updateRelation(Long modelId, Long relationId, NewRelation input) {
+  public DraftView updateRelation(Long modelId, Long relationId, NewRelation input, Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     LogicalRelationPO relation = relations.selectById(relationId);
     if (relation == null) throw invalid("逻辑关系不存在");
     requireEntity(modelId, relation.getSourceEntityId());
@@ -301,8 +309,9 @@ public class LogicalDraftService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public VersionView freezeDraft(Long modelId, String actor) {
+  public VersionView freezeDraft(Long modelId, String actor, Long expectedRevision) {
     LogicalModelPO root = requireModel(modelId, true);
+    assertDraftRevision(root, expectedRevision);
     DraftView current = get(modelId);
     if (current.entities().isEmpty() || current.entities().stream().allMatch(e -> e.attributes().isEmpty())) {
       throw invalid("逻辑模型至少需要一个实体和一项属性，才能保存独立快照");
@@ -349,7 +358,15 @@ public class LogicalDraftService {
         po.getCreatedBy(), po.getCreateTime());
   }
 
+  /** Root lock serializes writes, revision prevents stale client drafts from overwriting them. */
+  private static void assertDraftRevision(LogicalModelPO root, Long expectedRevision) {
+    if (expectedRevision == null || !Objects.equals(root.getDraftRevision(), expectedRevision)) {
+      throw invalid("逻辑模型草稿已被其他操作修改，请刷新核对后重试");
+    }
+  }
+
   private void touch(LogicalModelPO root) {
+    root.setDraftRevision(root.getDraftRevision() + 1L);
     root.setUpdateTime(LocalDateTime.now());
     models.updateById(root);
   }
