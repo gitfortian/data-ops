@@ -149,6 +149,15 @@ const SourceSemanticCandidatePanel: React.FC<{ taskId: string }> = ({ taskId }) 
               options={['FACT', 'DIMENSION'].map((s) => ({ value: s, label: s }))}
               onChange={(v) => set({ role: v || null })} />
           </>}
+          {edit.kind === 'SOURCE_LINK' && <>
+            <Typography.Text type="secondary">
+              正式 Semantic 仅绑定“过程→来源表”，不建立推测的列级永久映射。
+              必须由人工明确确认来源表在该过程中的角色。
+            </Typography.Text>
+            <Select allowClear placeholder="确认来源表角色" style={{ width: '100%' }}
+              value={edit.role} options={['MAIN','DETAIL','DIM'].map((v)=>({ value:v,label:v }))}
+              onChange={(v)=>set({ role:v || null })}/>
+          </>}
           {edit.kind === 'FIELD' && <>
             <Select value={edit.role} allowClear placeholder="字段角色" style={{ width: '100%' }}
               options={['PROCESS', 'DIMENSION', 'METRIC'].map((s) => ({ value: s, label: s }))}
