@@ -303,8 +303,8 @@ public class SourceSemanticCandidateService {
       if (!"METRIC".equals(c.role())&&c.unitId()!=null)
         errors.add("[F039_UNIT_NOT_APPLICABLE]"+tag);
     }
-    if ("STANDARD_TYPE".equals(c.kind()) || "STANDARD_UNIT".equals(c.kind())
-        || "STANDARD_CODE".equals(c.kind()))
+    if ("STANDARD_CODE".equals(c.kind()) || (c.kind().startsWith("STANDARD_")
+        && c.reuseId()==null))
       errors.add("[F039_NEW_STANDARD_REQUIRES_SEMANTIC_REVIEW]"+tag);
     if (c.reuseId()!=null) {
       String matchKind=switch(c.kind()) {
@@ -364,6 +364,36 @@ public class SourceSemanticCandidateService {
             List.of(bindingId),evidence));
       }
     }
+    // SQL types can suggest review questions, NEVER a verified business TYPE.
+    var typeEvidence=new LinkedHashMap<String,List<Evidence>>();
+    for (var table:task.sourceManifest().tables()) {
+      var physical=tableMap.get(table.assetKey());
+      for(String name:table.columns()) {
+        var column=physical.columns().stream().filter(f->name.equals(f.name())).findFirst()
+            .orElseThrow(()->new IllegalStateException("[F039_COLUMN_NOT_COLLECTED]"));
+        typeEvidence.computeIfAbsent(column.dataType(), ignored->new ArrayList<>())
+            .add(new Evidence(table.assetKey(),name,chunkFor(task,table.assetKey(),name)));
+      }
+    }
+    for (var entry:typeEvidence.entrySet()) {
+      var witnesses=entry.getValue();
+      String typeName="SQL "+entry.getKey();
+      if (typeName.length()>128) typeName=typeName.substring(0,128);
+      items.add(new Candidate(id(task.taskId(),"STANDARD_TYPE",entry.getKey(),""),
+          "STANDARD_TYPE",null,typeName,null,null,
+          "物理SQL类型不是正式TYPE。仅供核对复用或正式标准创建前的业务评审",
+          null,null,null,null,List.of(),witnesses));
+    }
+    var sample=List.of(new Evidence(any.assetKey(),null,task.chunkIds().get(0)));
+    items.add(new Candidate(id(task.taskId(),"STANDARD_UNIT","",""),
+        "STANDARD_UNIT",null,"待确认业务计量单位",null,null,
+        "未读取源数据行；币种与单位没有有效证据时禁止自动创建",
+        null,null,null,null,List.of(),sample));
+    items.add(new Candidate(id(task.taskId(),"STANDARD_CODE","",""),
+        "STANDARD_CODE",null,"待确认完整码集",null,null,
+        "缺少人工确认的全量码值和标签；不得从列名猜测码集",
+        null,null,null,null,List.of(),sample));
+    if(items.size()>2400) throw new IllegalStateException("[F039_CANDIDATES_TOO_MANY]");
     return List.copyOf(items);
   }
 
