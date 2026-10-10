@@ -4,6 +4,7 @@ import { history } from '@umijs/max';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
+import FormalReceiptLanding from '../components/FormalReceiptLanding';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { findByBiz, getApprovalDetail } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
@@ -719,6 +720,7 @@ const SemanticStandardsPage = () => {
 
   return (
     <div className="flex min-h-[calc(100dvh-64px)] flex-col bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
+      <FormalReceiptLanding kind="STANDARD" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-[20px] font-semibold leading-7">数据标准</div>

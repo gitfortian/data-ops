@@ -77,12 +77,6 @@
             <artifactId>data-ops-business-asset</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- F-039 consumes only Metadata owner's bounded read-only public evidence API. -->
-        <dependency>
-            <groupId>io.yak.ops</groupId>
-            <artifactId>data-ops-business-metadata</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.yak.ops</groupId>
             <artifactId>data-ops-business-quality</artifactId>

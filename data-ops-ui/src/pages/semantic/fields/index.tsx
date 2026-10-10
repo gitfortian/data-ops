@@ -1,5 +1,6 @@
 import Table from '@/components/ReadableTable';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
+import FormalReceiptLanding from '../components/FormalReceiptLanding';
 import { Alert, Button, Form, Input, Modal, message, Select, Space,  Tabs, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
@@ -411,6 +412,7 @@ const FieldsPage = () => {
 
   const libraryTab = (
     <>
+      <FormalReceiptLanding kind="FIELD" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Space wrap>
           <Select
