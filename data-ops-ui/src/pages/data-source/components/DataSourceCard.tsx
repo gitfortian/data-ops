@@ -71,7 +71,7 @@ const DataSourceCard = ({
     String(record.dbType || '').toUpperCase() === 'MYSQL' &&
     access.hasPermission('task:realtime:create');
   const canPreviewSource = Boolean(currentId) && Number.isSafeInteger(Number(currentId))
-    && Number(currentId) > 0 && access.hasPermission('resource:metadata:read');
+    && Number(currentId) > 0 && access.hasPermission('data-metadata:read');
   const loadScopeTables = async (keyword = '') => {
     if (!canPreviewSource) return;
     setScopeLoading(true);
