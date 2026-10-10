@@ -52,6 +52,12 @@ class SemanticAdoptionItemWriterTest {
     security.when(YakSecurityContext::getCurrentUserId).thenReturn(42L);
     permissions=mockStatic(StpUtil.class);
     when(mapper.updateById(any())).thenReturn(1);
+    doAnswer(invocation -> {
+      AdoptionReceiptPO pending=invocation.getArgument(0);
+      assertEquals("PENDING",pending.getStatus());
+      assertNull(pending.getSemanticId());
+      return 1;
+    }).when(mapper).insert(any());
     when(source.verifiedTableName(evidence,"orders-key")).thenReturn("orders");
     when(bindings.listByProcess(71L)).thenReturn(List.of());
     when(bindings.bind(eq(71L),eq(7L),eq("orders"),eq("MAIN"),isNull(),eq("42")))
@@ -84,8 +90,7 @@ class SemanticAdoptionItemWriterTest {
     assertEquals(991L,result.semanticId());
     verify(source,atLeastOnce()).assertCurrent(evidence);
     verify(bindings).bind(71L,7L,"orders","MAIN",null,"42");
-    verify(mapper).insert(argThat(row -> "PENDING".equals(row.getStatus())
-        && row.getSemanticId()==null));
+    verify(mapper).insert(any());
     verify(mapper).updateById(argThat(row -> "LINKED".equals(row.getStatus())
         && Long.valueOf(991L).equals(row.getSemanticId())));
   }
