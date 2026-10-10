@@ -206,6 +206,8 @@ export interface ModelingImportColumnView {
   decimalDigits?: number | null;
   nullable?: boolean;
   primaryKey?: boolean;
+  /** 来源预览: false=真实源表列; true=平台生成技术列(不能作为源列映射)。 */
+  technical?: boolean;
   /** 默认值(部分 JDBC 驱动返回)。 */
   defaultValue?: string;
   remarks?: string;
