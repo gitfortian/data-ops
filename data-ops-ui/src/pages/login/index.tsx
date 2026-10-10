@@ -30,7 +30,7 @@ export default function LoginPage() {
               <br />
               <span>{intl.formatMessage({ id: 'pages.login.title.emphasis', defaultMessage: '值得信任。' })}</span>
             </h1>
-            <p>{intl.formatMessage({ id: 'pages.login.subtitle', defaultMessage: '连接数据，沉淀可信价值。' })}</p>
+            <p>{intl.formatMessage({ id: 'pages.login.subtitle', defaultMessage: '从数据接入到治理应用，让可信数据建设更简单。' })}</p>
             <DataSculpture />
           </section>
         </div>
