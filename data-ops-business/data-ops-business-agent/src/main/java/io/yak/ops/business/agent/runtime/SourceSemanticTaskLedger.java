@@ -119,7 +119,10 @@ public final class SourceSemanticTaskLedger {
       var turns = new HashMap<>(old.completedTurnIds());
       turns.put(chunkId, turnId);
       SourceSemanticTaskState.Status next = completed.size() == old.chunkIds().size()
-          ? SourceSemanticTaskState.Status.COMPLETED : SourceSemanticTaskState.Status.READY;
+          ? SourceSemanticTaskState.Status.COMPLETED
+          : old.status() == SourceSemanticTaskState.Status.PAUSE_REQUESTED
+              ? SourceSemanticTaskState.Status.PAUSED
+              : SourceSemanticTaskState.Status.READY;
       return copy(old, next, completed, results, turns, null, null,
           old.usedTurns(), old.reservedToolCalls());
     });
@@ -152,6 +155,13 @@ public final class SourceSemanticTaskLedger {
 
   public SourceSemanticTaskState pause(String ownerId, long projectId, String taskId) {
     return change(ownerId, projectId, taskId, old -> {
+      if (old.status() == SourceSemanticTaskState.Status.RUNNING) {
+        // Pause *after* the current original turn: never pretend model inference paused.
+        return copy(old, SourceSemanticTaskState.Status.PAUSE_REQUESTED,
+            old.completedChunkIds(), old.resultDigests(), old.completedTurnIds(),
+            old.activeChunkId(), old.activeTurnId(),
+            old.usedTurns(), old.reservedToolCalls());
+      }
       if (old.status() != SourceSemanticTaskState.Status.READY)
         throw new IllegalStateException("[F039_TASK_NOT_PAUSABLE]");
       return copy(old, SourceSemanticTaskState.Status.PAUSED, old.completedChunkIds(),
@@ -219,7 +229,8 @@ public final class SourceSemanticTaskLedger {
   }
 
   private static void verifyActive(SourceSemanticTaskState state, String chunkId, String turnId) {
-    if (state.status() != SourceSemanticTaskState.Status.RUNNING
+    if ((state.status() != SourceSemanticTaskState.Status.RUNNING
+            && state.status() != SourceSemanticTaskState.Status.PAUSE_REQUESTED)
         || !Objects.equals(state.activeChunkId(), chunkId)
         || !Objects.equals(state.activeTurnId(), turnId))
       throw new IllegalStateException("[F039_STALE_TURN]");

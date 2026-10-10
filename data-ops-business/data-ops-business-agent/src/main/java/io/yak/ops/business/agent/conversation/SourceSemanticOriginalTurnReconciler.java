@@ -119,7 +119,8 @@ public final class SourceSemanticOriginalTurnReconciler {
         || view.originalStatus() == TurnStatus.WAITING_INPUT) {
       return view;
     }
-    if (task.status() != SourceSemanticTaskState.Status.RUNNING) {
+    if (task.status() != SourceSemanticTaskState.Status.RUNNING
+        && task.status() != SourceSemanticTaskState.Status.PAUSE_REQUESTED) {
       // Cancellation wins: an old COMPLETED callback cannot resurrect this task.
       return view;
     }

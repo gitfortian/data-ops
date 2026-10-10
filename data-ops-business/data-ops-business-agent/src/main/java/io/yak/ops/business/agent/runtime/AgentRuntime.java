@@ -365,22 +365,35 @@ public class AgentRuntime implements TurnCorrelation {
             });
   }
 
+  /**
+   * F-039 runtime path: all registered Agent tools are denied by AgentTaskToolPolicy,
+   * including SQL, Python, report writes and dynamically loaded skill helpers.
+   */
+  public TurnSubscription streamSourceSemantic(long userId, String sessionId, String turnId,
+      String message, long projectId, Consumer<ChatTurnEvent> onEvent,
+      Runnable onComplete, Consumer<Throwable> onError) {
+    return streamEvents(List.of(startMessage(message, turnId)), userId, sessionId, turnId,
+        projectId, null, true, onEvent, onComplete, onError);
+  }
+
   private TurnSubscription streamEvents(
-      List<Msg> inputs,
-      long userId,
-      String sessionId,
-      String turnId,
-      long projectId,
+      List<Msg> inputs, long userId, String sessionId, String turnId, long projectId,
       io.yak.ops.business.agent.domain.GovernanceTarget target,
-      Consumer<ChatTurnEvent> onEvent,
-      Runnable onComplete,
-      Consumer<Throwable> onError) {
+      Consumer<ChatTurnEvent> onEvent, Runnable onComplete, Consumer<Throwable> onError) {
+    return streamEvents(inputs, userId, sessionId, turnId, projectId, target, false,
+        onEvent, onComplete, onError);
+  }
+
+  private TurnSubscription streamEvents(
+      List<Msg> inputs, long userId, String sessionId, String turnId, long projectId,
+      io.yak.ops.business.agent.domain.GovernanceTarget target, boolean sourceReadOnly,
+      Consumer<ChatTurnEvent> onEvent, Runnable onComplete, Consumer<Throwable> onError) {
     RuntimeContext context =
         RuntimeContext.builder()
             .userId(String.valueOf(userId))
             .sessionId(sessionId)
             .build();
-    var execution = new io.yak.ops.business.agent.domain.AgentExecutionContext(target);
+    var execution = new io.yak.ops.business.agent.domain.AgentExecutionContext(target, sourceReadOnly);
     context.put(io.yak.ops.business.agent.domain.AgentExecutionContext.class, execution);
     TurnToolBudgetState.attach(stateStore, context, turnId,
         inputs.stream().allMatch(ToolResultMessage.class::isInstance), properties.getExecution());

@@ -38,6 +38,9 @@ final class TaskToolPolicyMiddleware implements MiddlewareBase {
     var execution = context.get(AgentExecutionContext.class);
     context.put(QueryClarificationProjection.Batch.class, new QueryClarificationProjection.Batch(input.toolCalls().stream()
         .filter(call -> "request_clarification".equals(call.getName())).count()));
+    if (execution != null && execution.toolPolicy().sourceReadOnly()) {
+      for (var call : input.toolCalls()) execution.requireTool(call.getName());
+    }
     if (execution != null && execution.target() != null && (execution.target().standardMatch() != null || execution.target().modelMapping() != null || execution.target().metricExplanation() != null || execution.target().metricDraft() != null || execution.target().metricChangeReview() != null)) {
       for (var call : input.toolCalls()) {
         execution.requireTool(call.getName());
