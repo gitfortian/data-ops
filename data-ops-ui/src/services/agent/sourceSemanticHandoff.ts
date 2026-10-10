@@ -106,9 +106,9 @@ export async function verifiedSourceSemanticHandoff(
   }
 }
 
-export function modelingMetricNextSteps(verifiedProcess: VerifiedHandoff | null,
-  domainId?: number, processId?: number): { path: string; label: string; note: string }[] {
-  if (!verifiedProcess || !positive(processId ?? null)) return [];
+export function modelingMetricNextSteps(processId: number | null,
+  domainId?: number): { path: string; label: string; note: string }[] {
+  if (!positive(processId)) return [];
   const metricFilter = new URLSearchParams({ processId: String(processId) });
   if (positive(domainId ?? null)) metricFilter.set('domainId', String(domainId));
   return [
