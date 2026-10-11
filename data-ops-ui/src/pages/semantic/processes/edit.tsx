@@ -29,7 +29,8 @@ import type { DataSourceCatalogColumn, DataSourceCatalogTable } from '@/services
 import { listDataSourceColumns, searchDataSourceTables } from '@/services/data-source/catalog';
 import type { DataSourceRecord } from '@/services/data-source/types';
 import type { ModelingMainlineCoverage } from '@/services/modeling/types';
-import { processToLogical, processToPhysical } from '@/utils/journeyNavigation';
+import { processToLogical, processToLogicalGovernance,
+  processToPhysical, processToPhysicalGovernance } from '@/utils/journeyNavigation';
 import { getModelingMainlineCoverage } from '@/services/modeling/view';
 import {
   bindSemanticProcessField,
@@ -942,7 +943,11 @@ const ProcessEditPage: React.FC = () => {
           setActiveTab(key === 'source' ? 'sources' : 'fields');
         }}
         onOpenLogical={() => processId && history.push(processToLogical(processId))}
-        onOpenPhysical={() => processId && history.push(processToPhysical(processId))} />
+        onOpenPhysical={() => processId && history.push(processToPhysical(processId))}
+        onOpenLogicalEvidence={(id) => processId && canReadModels
+          && history.push(processToLogicalGovernance(processId, id))}
+        onOpenPhysicalEvidence={(id) => processId && canReadModels
+          && history.push(processToPhysicalGovernance(processId, id))} />
       {sectionErrors.length ? <div role="alert">{sectionErrors.join('、')}暂不可读取，当前显示不能作为无引用证据。<Button onClick={() => void loadProcess()}>重试</Button></div> : null}
       {focusedEvidence && (
         <Alert className="mt-3" showIcon type="info"
