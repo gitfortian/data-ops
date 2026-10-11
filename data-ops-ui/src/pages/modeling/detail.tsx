@@ -37,6 +37,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
 import {
+  assignImportLineage,
   commitOdsManualImport,
   generateModelingDdl,
   getModelingMetricDraft,
