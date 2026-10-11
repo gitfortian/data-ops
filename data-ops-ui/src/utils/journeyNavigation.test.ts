@@ -1,5 +1,6 @@
 import {
-  chooseJourneyLogicalModel, logicalDraftsForProcess, parseJourneyProcessId,
+  chooseJourneyLogicalModel, exactJourneyLogicalDraft, latestJourneyFrozenVersion,
+  logicalDraftsForProcess, parseJourneyProcessId,
   processToLogical, processToLogicalGovernance,
   processToPhysical, processToPhysicalGovernance, processToSemantic,
 } from './journeyNavigation';
@@ -37,6 +38,16 @@ describe('guided process/model URL context', () => {
       expect(() => processToLogicalGovernance(7, id)).toThrow();
       expect(() => processToPhysicalGovernance(id, 34)).toThrow();
     }
+  });
+
+  it('rejects foreign, missing, and invalid evidence object IDs without a fallback', () => {
+    expect(exactJourneyLogicalDraft(drafts, 7, 23)?.name).toBe('订单扩展');
+    expect(exactJourneyLogicalDraft(drafts, 7, 22)).toBeUndefined();
+    expect(exactJourneyLogicalDraft(drafts, 7, 99)).toBeUndefined();
+    expect(exactJourneyLogicalDraft(drafts, 7, -1)).toBeUndefined();
+    expect(latestJourneyFrozenVersion([{ versionNo: 2 }, { versionNo: 1 }])).toBe(2);
+    expect(latestJourneyFrozenVersion([])).toBeUndefined();
+    expect(latestJourneyFrozenVersion([{ versionNo: -1 }])).toBeUndefined();
   });
 
   it('never falls back to another process when the URL is scoped', () => {
