@@ -35,6 +35,32 @@ export const getModelingStructure = async (id: ModelingModelId): Promise<Modelin
   return { ...view.structure, definition: view.definition };
 };
 
+export interface OdsManualImportReceipt {
+  modelId: number;
+  status: 'SAVED_AND_VERIFIED';
+  sourceDatasourceId: number;
+  sourceDatabase?: string;
+  sourceTable: string;
+  sourceColumnCount: number;
+  confirmedMappingCount: number;
+  newStructureDefinition: string;
+}
+/** One domain command, not separate save-structure / set-source / map-column calls. */
+export const commitOdsManualImport = (
+  id: ModelingModelId,
+  payload: {
+    expectedDefinition: string;
+    sourceDatasourceId: number;
+    sourceDatabase: string;
+    sourceTable: string;
+    structure: ModelingSaveStructurePayload;
+    selections: { targetColumn: string; sourceColumn: string }[];
+  },
+): Promise<OdsManualImportReceipt> =>
+  HttpUtils.postData<OdsManualImportReceipt>(
+    `${MODELING_API_PREFIX}/models/${id}/ods-manual-import`, payload,
+  );
+
 export const saveModelingStructure = async (
   id: ModelingModelId,
   payload: ModelingSaveStructurePayload,
