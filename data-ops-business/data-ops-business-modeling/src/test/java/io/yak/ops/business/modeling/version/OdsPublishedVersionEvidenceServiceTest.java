@@ -31,8 +31,11 @@ class OdsPublishedVersionEvidenceServiceTest {
   private StructureView live;
 
   private static ColumnDefinition col(long id, String name, String type) {
+    // Database row IDs change after full-replace. The field's design order does not.
+    int designOrder = "order_id".equals(name) ? 1
+        : "amount".equals(name) ? 2 : 3;
     return new ColumnDefinition(id, name, type, null, null, true,
-        null, null, null, (int) id);
+        null, null, null, designOrder);
   }
 
   private StructureView structure(String tableName, ColumnDefinition... columns) {
