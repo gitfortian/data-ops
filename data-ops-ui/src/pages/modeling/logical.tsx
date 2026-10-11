@@ -1,12 +1,16 @@
-import { history } from '@umijs/max';
+import { history, useSearchParams } from '@umijs/max';
 import {
   Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Table, Tag, Typography, message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
+import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
+import {
+  chooseJourneyLogicalModel, logicalDraftsForProcess, parseJourneyProcessId,
+  processToPhysical, processToSemantic,
+} from './journeyNavigation';
 import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
   freezeLogicalDraft, getLogicalDraft, getLogicalVersionSnapshot, listLogicalDrafts,
@@ -32,6 +36,12 @@ const errorText = (error: unknown): string =>
  * this page never claims that snapshots are deployed/published physical tables.
  */
 export default function LogicalWorkspace() {
+  const [searchParams] = useSearchParams();
+  const processParam = searchParams.get('processId');
+  const requestedProcessId = parseJourneyProcessId(processParam);
+  const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
+  const [journeyProblem, setJourneyProblem] = useState<string>();
+  const loadEpoch = useRef(0);
   const [models, setModels] = useState<LogicalModelDraft[]>([]);
   const [processes, setProcesses] = useState<SemanticProcessRecord[]>([]);
   const [selected, setSelected] = useState<number>();
@@ -68,36 +78,63 @@ export default function LogicalWorkspace() {
   const [relationForm] = Form.useForm<RelationValues>();
 
   const reload = useCallback(async (id?: number) => {
+    const epoch = ++loadEpoch.current;
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
+    setJourneyProblem(undefined);
+    setJourneyProcess(undefined);
     setLoading(true);
+    setDetail(undefined);
+    setVersions([]);
+    setSelected(undefined);
     try {
-      const [next, all] = await Promise.all([
+      if (processParam !== null && requestedProcessId === undefined) {
+        throw new Error('业务过程 URL 参数不是有效的正整数，请返回业务过程列表重新选择');
+      }
+      // The URL only carries a hint. Resolve with Semantic's authenticated,
+      // current-project owner API before selecting any existing logical draft.
+      const [next, all, authorizedProcess] = await Promise.all([
         listLogicalDrafts(),
         pageSemanticProcesses({ pageNo: 1, pageSize: 200 }),
+        requestedProcessId ? getSemanticProcess(requestedProcessId) : Promise.resolve(undefined),
       ]);
-      setModels(next);
-      setProcesses(all.bizData ?? []);
-      const active = id ?? next[0]?.id;
+      if (epoch !== loadEpoch.current) return;
+      if (requestedProcessId && (!authorizedProcess
+          || Number(authorizedProcess.id) !== requestedProcessId)) {
+        throw new Error('业务过程身份与当前项目不一致');
+      }
+      const eligible = logicalDraftsForProcess(next, requestedProcessId);
+      setJourneyProcess(authorizedProcess);
+      setModels(eligible);
+      setProcesses(authorizedProcess ? [authorizedProcess] : (all.bizData ?? []));
+      const active = chooseJourneyLogicalModel(eligible, requestedProcessId, id);
       setSelected(active);
-      if (active != null) {
+      if (active !== undefined) {
         const [data, historyVersions] = await Promise.all([
           getLogicalDraft(active), listLogicalVersions(active),
         ]);
+        if (epoch !== loadEpoch.current) return;
+        if (requestedProcessId && data.model.processId !== requestedProcessId) {
+          throw new Error('逻辑草稿不属于指定业务过程');
+        }
         setDetail(data);
         setVersions(historyVersions);
-      } else {
-        setDetail(undefined);
-        setVersions([]);
       }
     } catch (err) {
+      if (epoch !== loadEpoch.current) return;
+      setModels([]);
+      setProcesses([]);
+      setSelected(undefined);
+      setDetail(undefined);
+      setVersions([]);
+      setJourneyProblem(errorText(err));
       message.error(errorText(err));
     } finally {
-      setLoading(false);
+      if (epoch === loadEpoch.current) setLoading(false);
     }
-  }, []);
+  }, [processParam, requestedProcessId]);
 
   useEffect(() => { void reload(); }, [reload]);
 
@@ -138,6 +175,8 @@ export default function LogicalWorkspace() {
   }, [detail?.process?.id]);
 
   const selectModel = useCallback(async (id: number) => {
+    if (!models.some((model) => model.id === id)) return;
+    const epoch = ++loadEpoch.current;
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
@@ -148,13 +187,19 @@ export default function LogicalWorkspace() {
     setLoading(true);
     try {
       const [data, previous] = await Promise.all([getLogicalDraft(id), listLogicalVersions(id)]);
+      if (epoch !== loadEpoch.current) return;
+      if (requestedProcessId && data.model.processId !== requestedProcessId) {
+        throw new Error('逻辑草稿不属于所选业务过程');
+      }
       setDetail(data);
       setVersions(previous);
     } catch (err) {
-      message.error(errorText(err));
-      setDetail(undefined);
-    } finally { setLoading(false); }
-  }, []);
+      if (epoch === loadEpoch.current) {
+        message.error(errorText(err));
+        setDetail(undefined);
+      }
+    } finally { if (epoch === loadEpoch.current) setLoading(false); }
+  }, [models, requestedProcessId]);
 
   const perform = async (action: () => Promise<LogicalDraftDetail>, successText: string,
     close: () => void): Promise<LogicalDraftDetail | undefined> => {
@@ -177,6 +222,11 @@ export default function LogicalWorkspace() {
   };
 
   const entities = useMemo(() => detail?.entities.map((item) => item.entity) ?? [], [detail]);
+  const openCreate = () => {
+    createForm.resetFields();
+    if (journeyProcess) createForm.setFieldsValue({ processId: journeyProcess.id });
+    setCreateOpen(true);
+  };
 
   const create = async () => {
     const values = await createForm.validateFields();
@@ -339,15 +389,31 @@ export default function LogicalWorkspace() {
   return (
     <div className="min-h-screen bg-[#f8fafc] p-6">
       <Space className="mb-4" wrap>
-        <Button onClick={() => history.push('/modeling')}>返回模型工作台</Button>
+        <Button onClick={() => history.push(
+          journeyProcess ? processToPhysical(journeyProcess.id) : '/modeling',
+        )}>返回物理模型工作台</Button>
         <Typography.Title level={4} className="!mb-0">业务逻辑模型</Typography.Title>
       </Space>
+      {journeyProblem && <Alert className="mb-4" showIcon type="error"
+        message="无法使用所请求的业务过程上下文" description={journeyProblem}
+        action={<Button onClick={() => history.push('/semantic/processes')}>重新选择业务过程</Button>} />}
+      {journeyProcess && <Alert className="mb-4" showIcon type="info"
+        message={`正在处理业务过程：${journeyProcess.name}（${journeyProcess.code}）`}
+        description="仅显示该过程所属逻辑草稿；URL 不授予新权限，也不会自动创建物理模型。"
+        action={<Space>
+          <Button onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
+          <Button onClick={() => history.push(processToPhysical(journeyProcess.id))}>查看该过程物理模型</Button>
+          <Button onClick={() => history.push('/modeling/logical')}>查看全部逻辑草稿</Button>
+        </Space>} />}
       <Alert className="mb-4" type="info" showIcon
         message="逻辑设计是业务语义与物理模型之间的桥梁"
         description="这里创建和冻结的都是逻辑设计草稿。业务过程、标准字段由 Semantic 正式管理；保存草稿不代表物理模型已经发布、Doris 已建表或数据已执行。" />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <Card title="项目逻辑模型" extra={<Button type="primary" onClick={() => setCreateOpen(true)}>新建草稿</Button>}>
-          {models.length === 0 ? <Empty description="尚无逻辑模型，选择业务过程开始" /> : (
+        <Card title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
+          extra={<Button type="primary" disabled={Boolean(journeyProblem) || loading}
+            onClick={openCreate}>新建草稿</Button>}>
+          {models.length === 0 ? <Empty description={journeyProcess
+            ? '该业务过程尚无逻辑草稿，可创建第一份草稿' : '尚无逻辑模型，选择业务过程开始'} /> : (
             <div className="flex flex-col gap-2">
               {models.map((model) => (
                 <Button key={model.id} block
@@ -472,7 +538,8 @@ export default function LogicalWorkspace() {
         onOk={() => void create()} onCancel={() => setCreateOpen(false)} destroyOnHidden>
         <Form layout="vertical" form={createForm}>
           <Form.Item label="正式业务过程" name="processId" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="label" options={processes.map(p => ({
+            <Select showSearch optionFilterProp="label" disabled={Boolean(journeyProcess)}
+              options={processes.map(p => ({
               label: `${p.name} · ${p.grain || '粒度待确认'}`, value: p.id,
             }))} />
           </Form.Item>
