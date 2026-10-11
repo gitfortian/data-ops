@@ -90,6 +90,28 @@ describe('F-040 process journey read-only projection', () => {
     expect(status(result, 'physical')?.evidence).toEqual([]);
   });
 
+  it('advertises field coverage only for DWD/DIM, not ODS or unknown layers', () => {
+    const review = buildProcessJourneyReview({ ...input(), physical: available({
+      processId: 7, processCode: 'place_order', processName: '下单', totalModels: 3,
+      layers: [
+        { layerCode: 'ODS', modelCount: 1, models: [
+          { modelId: 32, name: 'ods_order', code: 'ods_order', status: 'DRAFT' },
+        ] },
+        { layerCode: 'DWD', modelCount: 1, models: [
+          { modelId: 34, name: 'dwd_order', code: 'dwd_order', status: 'DRAFT' },
+        ] },
+        { layerCode: 'OTHER', modelCount: 1, models: [
+          { modelId: 35, name: 'another', code: 'another', status: 'DRAFT' },
+        ] },
+      ],
+    }) });
+    const evidences = status(review, 'physical')?.evidence;
+    expect(evidences?.find(e => e.id === '32')?.governanceTarget).toBeUndefined();
+    expect(evidences?.find(e => e.id === '34')?.governanceTarget).toBe('physical');
+    expect(evidences?.find(e => e.id === '35')?.governanceTarget).toBeUndefined();
+    expect(status(review, 'logical')?.evidence?.[0].governanceTarget).toBe('logical');
+  });
+
   it('an unavailable owner does not fabricate object-level evidence', () => {
     const result = buildProcessJourneyReview({
       ...input(), sources: unavailable(), standards: unavailable(), logical: unavailable(),
