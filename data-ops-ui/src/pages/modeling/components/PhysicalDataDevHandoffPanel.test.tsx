@@ -3,9 +3,9 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import PhysicalDataDevHandoffPanel from './PhysicalDataDevHandoffPanel';
 import { inspectPhysicalDataDevHandoff, listModelingVersions } from '@/services/modeling/api';
 
-let projectId = 1;
+let mockProjectId = 1;
 jest.mock('@/contexts/SecurityProjectContext', () => ({
-  useSecurityProject: () => ({ currentProject: { id: projectId } }),
+  useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
 jest.mock('@/services/modeling/api', () => ({
   listModelingVersions: jest.fn(),
@@ -40,7 +40,7 @@ const report = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  projectId = 1;
+  mockProjectId = 1;
   (listModelingVersions as jest.Mock).mockResolvedValue([{ versionNo: 2, columnCount: 2 }]);
   (inspectPhysicalDataDevHandoff as jest.Mock).mockResolvedValue(report);
 });
@@ -63,7 +63,7 @@ it('discards stale cross-project request results', async () => {
     ] });
   const view = render(<PhysicalDataDevHandoffPanel modelId={50} open onClose={jest.fn()} />);
   await waitFor(() => expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledTimes(1));
-  projectId = 2;
+  mockProjectId = 2;
   view.rerender(<PhysicalDataDevHandoffPanel modelId={50} open onClose={jest.fn()} />);
   await waitFor(() => expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledTimes(2));
   await act(async () => finish(report));
