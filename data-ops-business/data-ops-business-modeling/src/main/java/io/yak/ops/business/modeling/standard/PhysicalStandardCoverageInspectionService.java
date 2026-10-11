@@ -58,7 +58,8 @@ public class PhysicalStandardCoverageInspectionService {
   private record StandardFact(Long id, String code, String status, String role, String type,
                               Integer version) {}
   private record Evidence(Long modelId, String modelCode, String layer, String status,
-                          Long processId, String structureSha,
+                          Long processId, String processCode, String processName,
+                          String processGrain, String structureSha,
                           List<ColumnEvidence> columns, List<StandardFact> standards) {}
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
@@ -159,7 +160,9 @@ public class PhysicalStandardCoverageInspectionService {
         }).toList();
     String structureSha = StructureFingerprint.of(structure);
     String evidenceSha = digest(new Evidence(modelId, model.code(), model.layerCode(),
-        model.status().name(), model.processId(), structureSha, ordered, facts));
+        model.status().name(), model.processId(), process == null ? null : process.code(),
+        process == null ? null : process.name(), process == null ? null : process.grain(),
+        structureSha, ordered, facts));
     return new Report(modelId, model.code(), model.layerCode(), model.status().name(),
         model.processId(), process == null ? null : process.name(),
         findings.isEmpty() ? "COVERED_NOW" : "NEEDS_REVIEW",
