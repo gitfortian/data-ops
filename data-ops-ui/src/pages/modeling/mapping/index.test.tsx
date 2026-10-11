@@ -74,10 +74,10 @@ it('previews ODS source evidence and allows deliberate batch selection without i
     mappedCount: 1, confirmedTargets: ['user_id'],
   });
   render(<MappingPage />);
-  fireEvent.click(await screen.findByRole('button', { name: 'ODS 来源映射批量核验/修复' }));
+  fireEvent.click((await screen.findByText('ODS 来源映射批量核验/修复')).closest('button')!);
   expect(await screen.findByText(/正式绑定来源/)).toBeInTheDocument();
   expect(confirmOdsMappingReconcile).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: /选择全部安全同名候选/ }));
+  fireEvent.click(screen.getByText(/选择全部安全同名候选/).closest('button')!);
   expect(screen.getByText(/本次已选择 1/)).toBeInTheDocument();
   expect(confirmOdsMappingReconcile).not.toHaveBeenCalled();
 });
