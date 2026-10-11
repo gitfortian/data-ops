@@ -9,6 +9,8 @@ import { pageModelingModels } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { locateCurrentLogicalAttribute, locateCurrentLogicalRelation } from './governanceRepairLocator';
+import { compareLogicalGovernance, logicalGovernanceBaseline,
+  type LogicalGovernanceBaseline } from './governanceRecheck';
 import {
   chooseJourneyLogicalModel, exactJourneyLogicalDraft, latestJourneyFrozenVersion,
   logicalDraftsForProcess, parseJourneyProcessId,
@@ -68,6 +70,9 @@ export default function LogicalWorkspace() {
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [snapshotText, setSnapshotText] = useState('');
   const [semanticReview, setSemanticReview] = useState<LogicalVersionSemanticReview>();
+  const [reviewFeedback, setReviewFeedback] = useState<{
+    projectId?: number | string; baseline: LogicalGovernanceBaseline;
+  }>();
   const [semanticReviewLoading, setSemanticReviewLoading] = useState(false);
   const semanticReviewEpoch = useRef(0);
   const [physicalModelId, setPhysicalModelId] = useState<number | null>(null);
@@ -90,6 +95,7 @@ export default function LogicalWorkspace() {
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setSemanticReviewLoading(false);
     setReviewEntryProblem(undefined);
+    setReviewFeedback(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
@@ -223,6 +229,7 @@ export default function LogicalWorkspace() {
     if (!models.some((model) => model.id === id)) return;
     const epoch = ++loadEpoch.current;
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
+    setReviewFeedback(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
@@ -406,19 +413,27 @@ export default function LogicalWorkspace() {
 
   const showSemanticReview = async (versionNo: number) => {
     if (selected == null) return;
+    const targetModelId = selected;
+    const loadRequest = loadEpoch.current;
     const request = ++semanticReviewEpoch.current;
     setSemanticReview(undefined);
     setSemanticReviewLoading(true);
     try {
-      const report = await reviewLogicalVersionSemantics(selected, versionNo);
-      if (request === semanticReviewEpoch.current
-          && report.logicalModelId === selected && report.versionNo === versionNo) {
-        setSemanticReview(report);
+      const report = await reviewLogicalVersionSemantics(targetModelId, versionNo);
+      if (request !== semanticReviewEpoch.current || loadRequest !== loadEpoch.current) return;
+      if (report.logicalModelId !== targetModelId || report.versionNo !== versionNo) {
+        message.warning('逻辑治理报告身份或冻结版本不匹配，不能作为当前证据');
+        return;
       }
+      setSemanticReview(report);
     } catch (error) {
-      if (request === semanticReviewEpoch.current) message.error(errorText(error));
+      if (request === semanticReviewEpoch.current && loadRequest === loadEpoch.current) {
+        message.error(errorText(error));
+      }
     } finally {
-      if (request === semanticReviewEpoch.current) setSemanticReviewLoading(false);
+      if (request === semanticReviewEpoch.current && loadRequest === loadEpoch.current) {
+        setSemanticReviewLoading(false);
+      }
     }
   };
 
@@ -462,6 +477,8 @@ export default function LogicalWorkspace() {
         setEditRelationId(target.relationId);
         setRelationOpen(true);
       }
+      setReviewFeedback({ projectId: currentProject?.id,
+        baseline: logicalGovernanceBaseline(semanticReview) });
       setSemanticReview(undefined);
       message.info('已打开当前逻辑草稿对象；冻结历史版本不会改变，请人工核对后再保存');
     } catch (error) {
@@ -480,6 +497,11 @@ export default function LogicalWorkspace() {
     } catch (err) { message.error(errorText(err)); }
   };
 
+  const reviewComparison = semanticReview && reviewFeedback
+    && reviewFeedback.projectId === currentProject?.id
+    && reviewFeedback.baseline.logicalModelId === selected
+      ? compareLogicalGovernance(reviewFeedback.baseline, semanticReview) : undefined;
+
   return (
     <div className="min-h-screen bg-[#f8fafc] p-6">
       <Space className="mb-4" wrap>
@@ -491,6 +513,14 @@ export default function LogicalWorkspace() {
       {journeyProblem && <Alert className="mb-4" showIcon type="error"
         message="无法使用所请求的业务过程上下文" description={journeyProblem}
         action={<Button onClick={() => history.push('/semantic/processes')}>重新选择业务过程</Button>} />}
+      {reviewFeedback && reviewFeedback.projectId === currentProject?.id
+        && reviewFeedback.baseline.logicalModelId === selected && <Alert className="mb-4" showIcon type="info"
+        message={`已定位冻结 V${reviewFeedback.baseline.versionNo} 的当前业务对象`}
+        description="修改属性或关系后请先显式保存，再重新核验当前业务设计与标准。冻结历史版本不会被改写，也不会自动审批。"
+        action={<Button disabled={saving || loading || semanticReviewLoading}
+          onClick={() => void showSemanticReview(reviewFeedback.baseline.versionNo)}>
+          修正后重新核验
+        </Button>} />}
       {reviewEntryProblem && <Alert className="mb-4" showIcon type="warning"
         message="当前冻结版本治理核验尚不可完成" description={reviewEntryProblem} />}
       {semanticReviewLoading && reviewRequested && <Alert className="mb-4" showIcon type="info"
@@ -794,6 +824,16 @@ export default function LogicalWorkspace() {
         footer={<Button onClick={() => setSemanticReview(undefined)}>关闭报告</Button>}
         onCancel={() => setSemanticReview(undefined)}>
         {semanticReview && <>
+          {reviewComparison && <Alert showIcon className="mb-3"
+            type={reviewComparison.state === 'WRONG_OWNER' ? 'error' : 'info'}
+            message={reviewComparison.state === 'CHANGED' ? '已重新核验：逻辑治理证据有变化'
+              : reviewComparison.state === 'UNCHANGED' ? '已重新核验：逻辑治理证据未变'
+                : '证据身份不一致，不能比较'}
+            description={reviewComparison.explanation} />}
+          <Button className="mb-3" loading={semanticReviewLoading}
+            onClick={() => void showSemanticReview(semanticReview.versionNo)}>
+            重新读取本冻结版本治理证据
+          </Button>
           <Alert className="mb-3" showIcon
             type={semanticReview.reviewStatus === 'NEEDS_REVIEW' ? 'warning' : 'info'}
             message={semanticReview.reviewStatus === 'NEEDS_REVIEW'
