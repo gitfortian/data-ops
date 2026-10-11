@@ -12,6 +12,7 @@ import { getSemanticProcess } from '@/services/semantic/api';
 import { getDevelopmentTaskDraft } from '@/services/data-development';
 import type { DevelopmentResourceNode, DevelopmentTaskDraft } from '@/services/data-development';
 import DevelopmentTaskDeliveryEvidencePanel from './DevelopmentTaskDeliveryEvidencePanel';
+import DatasetConsumptionProofPanel from './DatasetConsumptionProofPanel';
 import {
   isCurrentProjectSqlCandidate, parsePhysicalDataDevHandoff,
   verifyPhysicalDataDevEvidence,
@@ -189,6 +190,10 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
           {draft && selected && !draftProblem &&
             <DevelopmentTaskDeliveryEvidencePanel
               key={`${String(projectId)}:${selected.id}`}
+              nodeId={selected.id} projectId={projectId} />}
+          {draft && selected && !draftProblem &&
+            <DatasetConsumptionProofPanel
+              key={`dataset:${String(projectId)}:${selected.id}`}
               nodeId={selected.id} projectId={projectId} />}
         </>
       )}
