@@ -68,10 +68,10 @@ test('exact logical/physical owner evidence has per-record navigation, never a w
     ...report,
     steps: report.steps.map(step => step.key === 'logical'
       ? { ...step, status: 'RECORDED', evidence: [
-        { id: '21', label: '订单逻辑草稿', detail: 'draft #21', status: 'OK' },
+        { id: '21', label: '订单逻辑草稿', detail: 'draft #21', status: 'OK', governanceTarget: 'logical' },
       ] }
       : step.key === 'physical' ? { ...step, evidence: [
-        { id: '34', label: 'dwd_orders', detail: 'DWD · DRAFT', status: 'OK' },
+        { id: '34', label: 'dwd_orders', detail: 'DWD · DRAFT', status: 'OK', governanceTarget: 'physical' },
       ] } : step),
   };
   render(<ProcessJourneyReviewPanel report={withOwners} loading={false}
