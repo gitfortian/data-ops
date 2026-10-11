@@ -30,7 +30,8 @@ import { listDataSourceColumns, searchDataSourceTables } from '@/services/data-s
 import type { DataSourceRecord } from '@/services/data-source/types';
 import type { ModelingMainlineCoverage } from '@/services/modeling/types';
 import { processToLogical, processToLogicalGovernance,
-  processToPhysical, processToPhysicalGovernance } from '@/utils/journeyNavigation';
+  processToPhysical, processToPhysicalGovernance,
+  processToPhysicalHandoff } from '@/utils/journeyNavigation';
 import { getModelingMainlineCoverage } from '@/services/modeling/view';
 import {
   bindSemanticProcessField,
@@ -947,7 +948,9 @@ const ProcessEditPage: React.FC = () => {
         onOpenLogicalEvidence={(id) => processId && canReadModels
           && history.push(processToLogicalGovernance(processId, id))}
         onOpenPhysicalEvidence={(id) => processId && canReadModels
-          && history.push(processToPhysicalGovernance(processId, id))} />
+          && history.push(processToPhysicalGovernance(processId, id))}
+        onOpenPhysicalHandoff={(id) => processId && canReadModels
+          && history.push(processToPhysicalHandoff(processId, id))} />
       {sectionErrors.length ? <div role="alert">{sectionErrors.join('、')}暂不可读取，当前显示不能作为无引用证据。<Button onClick={() => void loadProcess()}>重试</Button></div> : null}
       {focusedEvidence && (
         <Alert className="mt-3" showIcon type="info"
