@@ -12,11 +12,12 @@ const physical = {
 const logical = {
   logicalModelId: 30, versionNo: 2, frozenSnapshotSha256: 'f'.repeat(64),
   currentDesignSha256: 'a'.repeat(64), reviewStatus: 'NEEDS_REVIEW',
+  frozenStatus: 'DRAFT', draftStatus: 'DRAFT', designComparison: 'MATCHES_CURRENT',
   attributes: [{ entityId: 3, attributeId: 4, stdFieldId: null,
     standardStatus: 'PENDING_STANDARD', explanation: '待确认' }],
   relations: [{ relationId: 5, cardinality: 'UNKNOWN',
     status: 'CARDINALITY_PENDING', explanation: '未知关系' }],
-  blockers: ['尚有业务关系待确认'], changes: [],
+  blockers: ['尚有业务关系待确认'], changes: [], limitations: [],
 } as LogicalVersionSemanticReview;
 
 describe('F-040 governance recheck: evidence only, never a persistent approval', () => {
@@ -58,6 +59,20 @@ describe('F-040 governance recheck: evidence only, never a persistent approval',
     expect(compareLogicalGovernance(before, {
       ...logical, blockers: ['新增异常说明'],
     }).state).toBe('CHANGED');
+    expect(compareLogicalGovernance(before, {
+      ...logical, attributes: [{ ...logical.attributes[0], standardName: '重命名' }],
+    }).state).toBe('CHANGED');
+  });
+
+  it('does not count harmless API result reordering as changed governance evidence', () => {
+    const a = { ...logical.attributes[0], attributeId: 7, standardStatus: 'ENABLED_NOW' as const };
+    const report = { ...logical, attributes: [...logical.attributes, a],
+      blockers: ['B', 'A'], limitations: ['D', 'C'] };
+    const before = logicalGovernanceBaseline(report);
+    expect(compareLogicalGovernance(before, {
+      ...report, attributes: [a, logical.attributes[0]],
+      blockers: ['A', 'B'], limitations: ['C', 'D'],
+    }).state).toBe('UNCHANGED');
   });
 
   it('rejects another logical model, version, or changed frozen snapshot', () => {
