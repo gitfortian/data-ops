@@ -80,4 +80,36 @@ it('only allows explicit navigation for governance gaps; never writes standards 
   expect(onLocateColumn.mock.calls[0][0]).toMatchObject({
     columnId: 2, columnName: 'process_time', status: 'MISSING_STANDARD',
   });
+  expect(onLocateColumn.mock.calls[0][1]).toMatchObject({ modelId: 50, evidenceSha256: report.evidenceSha256 });
+});
+
+it('explicit recheck replaces stale evidence and compares pre-repair to current counts', async () => {
+  const fresh = { ...report, evidenceSha256: 'c'.repeat(64),
+    missingCount: 0, enabledCount: 2, findings: ['已重新读取当前标准状态'] };
+  (inspectPhysicalStandardCoverage as jest.Mock)
+    .mockResolvedValueOnce(report).mockResolvedValueOnce(fresh);
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()}
+    baseline={{ modelId: 50, evidenceSha256: report.evidenceSha256,
+      missingCount: 1, invalidCount: 0, reviewCount: 0 }} />);
+  expect(await screen.findByText('已重新核验：证据尚未变化')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '重新读取当前治理证据' }));
+  expect(await screen.findByText('已重新读取当前标准状态')).toBeInTheDocument();
+  expect(screen.getByText('已重新核验：本次证据与修正前不同')).toBeInTheDocument();
+  expect(screen.getByText(/缺少标准 1→0/)).toBeInTheDocument();
+  expect(screen.queryByText('未关联正式标准：process_time')).not.toBeInTheDocument();
+  expect(inspectPhysicalStandardCoverage).toHaveBeenCalledTimes(2);
+});
+
+it('rejects a stale wrong-model receipt rather than displaying old successful findings', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue({ ...report, modelId: 999 });
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('本次治理报告不可用')).toBeInTheDocument();
+  expect(screen.queryByText('未关联正式标准：process_time')).not.toBeInTheDocument();
+});
+
+it('does not interpret an owner read failure as empty or compliant standard evidence', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockRejectedValue(new Error('标准权限已撤销'));
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('标准权限已撤销')).toBeInTheDocument();
+  expect(screen.queryByText('当前模型所有字段已关联可用标准')).not.toBeInTheDocument();
 });
