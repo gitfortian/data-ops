@@ -22,6 +22,10 @@ export const processToLogicalGovernance = (processId: number, draftId: number): 
 export const processToPhysicalGovernance = (processId: number, modelId: number): string =>
   `/modeling/models/${requirePositiveId(modelId)}?processId=${requirePositiveId(processId)}&review=standard-coverage`;
 
+/** A navigation hint only: the Modeling owner verifies the chosen physical version. */
+export const processToPhysicalHandoff = (processId: number, modelId: number): string =>
+  `/modeling/models/${requirePositiveId(modelId)}?processId=${requirePositiveId(processId)}&review=datadev-handoff`;
+
 export const processToSemantic = (processId: number): string =>
   `/semantic/processes/${requirePositiveId(processId)}/edit`;
 
