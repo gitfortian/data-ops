@@ -47,3 +47,18 @@ export const chooseJourneyLogicalModel = <T extends { id: number; processId: num
   }
   return eligible[0]?.id;
 };
+
+
+/** Owner re-read required: never silently use a same-name or first available draft. */
+export const exactJourneyLogicalDraft = <T extends { id: number; processId: number }>(
+  drafts: T[], processId: number, draftId: number,
+): T | undefined => Number.isSafeInteger(processId) && processId > 0
+    && Number.isSafeInteger(draftId) && draftId > 0
+    ? drafts.find((draft) => draft.id === draftId && draft.processId === processId)
+    : undefined;
+
+/** Use an actual version returned by the Modeling owner, not a guessed revision. */
+export const latestJourneyFrozenVersion = (versions: { versionNo: number }[]): number | undefined =>
+  versions.filter((item) => Number.isSafeInteger(item.versionNo) && item.versionNo > 0)
+    .reduce<number | undefined>((latest, item) => latest === undefined
+      ? item.versionNo : Math.max(latest, item.versionNo), undefined);
