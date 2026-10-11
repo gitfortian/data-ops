@@ -8,6 +8,7 @@ interface Props {
   onOpenProcess: (key: 'grain' | 'source' | 'standard') => void;
   onOpenLogical: () => void;
   onOpenPhysical: () => void;
+  onOpenEvidence: (key: 'source' | 'standard', id: number) => void;
 }
 const meta: Record<ProcessJourneyStatus, { label: string; color: string }> = {
   RECORDED: { label: '已有当前记录', color: 'blue' },
@@ -17,7 +18,7 @@ const meta: Record<ProcessJourneyStatus, { label: string; color: string }> = {
 };
 
 export default function ProcessJourneyReviewPanel({
-  report, loading, onReload, onOpenProcess, onOpenLogical, onOpenPhysical,
+  report, loading, onReload, onOpenProcess, onOpenLogical, onOpenPhysical, onOpenEvidence,
 }: Props) {
   return (
     <Card className="mb-4" loading={loading} title="从业务过程到数仓设计 · 建设接续"
@@ -54,6 +55,13 @@ export default function ProcessJourneyReviewPanel({
                         <Typography.Paragraph type="secondary" className="!mb-0 !text-xs">
                           {item.detail}
                         </Typography.Paragraph>
+                        {(step.key === 'source' || step.key === 'standard')
+                          && item.status === 'REVIEW' && (
+                          <Button type="link" size="small" className="!px-0"
+                            onClick={() => onOpenEvidence(step.key as 'source' | 'standard', Number(item.id))}>
+                            定位此对象
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>,
