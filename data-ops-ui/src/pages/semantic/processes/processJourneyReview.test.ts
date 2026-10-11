@@ -4,6 +4,8 @@ import type { SemanticProcessRecord } from '@/services/semantic/types';
 const process = {
   id: 7, code: 'place_order', name: '下单', grain: '每单一行',
 } as SemanticProcessRecord;
+const physicalCoverage = { processId: 7, processCode: 'place_order',
+  processName: '下单', totalModels: 1, layers: [] };
 const input = () => ({
   process,
   sources: available([{ id: 1, processId: 7, datasourceId: 4,
@@ -14,8 +16,7 @@ const input = () => ({
     draftRevision: 1, code: 'order', name: '订单', status: 'DRAFT' as const },
   { id: 22, projectId: 1, processId: 8, domainId: 1,
     draftRevision: 1, code: 'payment', name: '支付', status: 'DRAFT' as const }]),
-  physical: available({ processId: 7, processCode: 'place_order',
-    processName: '下单', totalModels: 1, layers: [] }),
+  physical: available(physicalCoverage),
 });
 const status = (result: ReturnType<typeof buildProcessJourneyReview>, key: string) =>
   result.steps.find(s => s.key === key);
@@ -33,7 +34,7 @@ describe('F-040 process journey read-only projection', () => {
   it('missing sources and fields are distinct from inaccessible owner facts', () => {
     const sourceMissing = buildProcessJourneyReview({
       ...input(), sources: available([]), standards: available([]),
-      logical: available([]), physical: available({ ...input().physical.value, totalModels: 0 }),
+      logical: available([]), physical: available({ ...physicalCoverage, totalModels: 0 }),
     });
     expect(status(sourceMissing, 'source')?.status).toBe('NOT_STARTED');
     expect(status(sourceMissing, 'standard')?.status).toBe('NOT_STARTED');
@@ -63,7 +64,7 @@ describe('F-040 process journey read-only projection', () => {
 
   it('mismatched physical scope must not appear as zero or complete', () => {
     const result = buildProcessJourneyReview({
-      ...input(), physical: available({ ...input().physical.value, processId: 88 }),
+      ...input(), physical: available({ ...physicalCoverage, processId: 88 }),
     });
     expect(status(result, 'physical')?.status).toBe('UNAVAILABLE');
     expect(result.unknownCount).toBe(1);
