@@ -297,6 +297,45 @@ export const getOdsPublishedVersionEvidence = (
     `${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/source-evidence-review`,
   );
 
+/** Current DWD/DIM source-of-truth standards coverage; never a publish gate. */
+export interface PhysicalStandardCoverageInspection {
+  modelId: number;
+  modelCode: string;
+  layerCode: 'DWD' | 'DIM';
+  modelStatus: string;
+  processId?: number | null;
+  processName?: string | null;
+  status: 'COVERED_NOW' | 'NEEDS_REVIEW';
+  structureSha256: string;
+  evidenceSha256: string;
+  columnCount: number;
+  enabledCount: number;
+  missingCount: number;
+  invalidCount: number;
+  reviewCount: number;
+  columns: {
+    columnId: number;
+    columnName: string;
+    dataType: string;
+    stdFieldId?: number | null;
+    standardName?: string | null;
+    semanticRole?: string | null;
+    standardType?: string | null;
+    physicalRole?: string | null;
+    aggregateFunc?: string | null;
+    status: 'ENABLED_NOW' | 'MISSING_STANDARD' | 'INVALID_STANDARD' | 'AGGREGATE_REVIEW';
+    explanation: string;
+  }[];
+  findings: string[];
+  limitations: string[];
+}
+export const inspectPhysicalStandardCoverage = (
+  modelId: ModelingModelId,
+): Promise<PhysicalStandardCoverageInspection> =>
+  HttpUtils.getData<PhysicalStandardCoverageInspection>(
+    `${MODELING_API_PREFIX}/models/${modelId}/standard-coverage`,
+  );
+
 /** 回滚第一步：用指定版本覆盖当前草稿（置 DRAFT，不发布）。 */
 export const rollbackModelingVersion = (id: ModelingModelId, versionNo: number): Promise<boolean> =>
   HttpUtils.postData<boolean>(`${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/rollback`, {});
