@@ -14,9 +14,9 @@ const logical = {
   currentDesignSha256: 'a'.repeat(64), reviewStatus: 'NEEDS_REVIEW',
   frozenStatus: 'DRAFT', draftStatus: 'DRAFT', designComparison: 'MATCHES_CURRENT',
   frozenDesignSha256: 'g'.repeat(64), entityCount: 1, attributeCount: 1, relationCount: 1,
-  attributes: [{ entityId: 3, attributeId: 4, stdFieldId: null,
+  attributes: [{ entityId: 3, entityName: '订单', attributeId: 4, attributeName: '订单编号', stdFieldId: null,
     standardStatus: 'PENDING_STANDARD', explanation: '待确认' }],
-  relations: [{ relationId: 5, cardinality: 'UNKNOWN',
+  relations: [{ relationId: 5, sourceEntity: '订单', targetEntity: '订单明细', cardinality: 'UNKNOWN',
     status: 'CARDINALITY_PENDING', explanation: '未知关系' }],
   blockers: ['尚有业务关系待确认'], changes: [], limitations: [],
 } as LogicalVersionSemanticReview;
