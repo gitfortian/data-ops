@@ -63,13 +63,20 @@ export const logicalGovernanceBaseline = (
   pendingAttributeCount: report.attributes.filter(a => a.standardStatus !== 'ENABLED_NOW').length,
   pendingRelationCount: report.relations.length,
   reviewProjection: JSON.stringify({
-    status: report.reviewStatus, currentDesign: report.currentDesignSha256,
-    attributes: report.attributes.map(a => [
-      a.entityId, a.attributeId, a.stdFieldId, a.standardStatus, a.explanation,
+    status: report.reviewStatus, frozenStatus: report.frozenStatus,
+    draftStatus: report.draftStatus, designComparison: report.designComparison,
+    currentDesign: report.currentDesignSha256,
+    attributes: [...report.attributes].sort((a, b) =>
+      a.entityId - b.entityId || a.attributeId - b.attributeId).map(a => [
+      a.entityId, a.entityName, a.attributeId, a.attributeName,
+      a.stdFieldId, a.standardName, a.standardRole, a.standardStatus, a.explanation,
     ]),
-    relations: report.relations.map(r => [r.relationId, r.cardinality, r.status, r.explanation]),
-    blockers: report.blockers,
-    changes: report.changes,
+    relations: [...report.relations].sort((a, b) => a.relationId - b.relationId)
+      .map(r => [r.relationId, r.cardinality, r.status, r.sourceEntity, r.targetEntity, r.explanation]),
+    blockers: [...report.blockers].sort(),
+    changes: [...report.changes].sort((a, b) =>
+      a.objectType.localeCompare(b.objectType) || a.objectId - b.objectId),
+    limitations: [...report.limitations].sort(),
   }),
 });
 
