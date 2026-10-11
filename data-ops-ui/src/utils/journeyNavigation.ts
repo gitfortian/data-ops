@@ -62,3 +62,21 @@ export const latestJourneyFrozenVersion = (versions: { versionNo: number }[]): n
   versions.filter((item) => Number.isSafeInteger(item.versionNo) && item.versionNo > 0)
     .reduce<number | undefined>((latest, item) => latest === undefined
       ? item.versionNo : Math.max(latest, item.versionNo), undefined);
+
+
+/** UI-only entry precondition; the existing Modeling API still owns authorization. */
+export const canOpenPhysicalGovernanceEvidence = (entry: {
+  processId?: number;
+  modelId: number;
+  owner?: { id?: number | string; processId?: number; layerCode?: string } | null;
+  savedStructureReady: boolean;
+  dirty: boolean;
+  canRead: boolean;
+}): boolean => Boolean(
+  entry.canRead && !entry.dirty && entry.savedStructureReady
+  && entry.processId && Number.isSafeInteger(entry.processId) && entry.processId > 0
+  && Number.isSafeInteger(entry.modelId) && entry.modelId > 0
+  && Number(entry.owner?.id) === entry.modelId
+  && entry.owner?.processId === entry.processId
+  && ['DWD', 'DIM'].includes(entry.owner?.layerCode?.toUpperCase() || '')
+);
