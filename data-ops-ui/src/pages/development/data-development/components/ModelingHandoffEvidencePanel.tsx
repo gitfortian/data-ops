@@ -11,6 +11,7 @@ import type { ModelingModelRecord } from '@/services/modeling/types';
 import { getSemanticProcess } from '@/services/semantic/api';
 import { getDevelopmentTaskDraft } from '@/services/data-development';
 import type { DevelopmentResourceNode, DevelopmentTaskDraft } from '@/services/data-development';
+import DevelopmentTaskDeliveryEvidencePanel from './DevelopmentTaskDeliveryEvidencePanel';
 import {
   isCurrentProjectSqlCandidate, parsePhysicalDataDevHandoff,
   verifyPhysicalDataDevEvidence,
@@ -185,6 +186,10 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
           {draft && <Alert showIcon type="info"
             message={`SQL 任务 #${draft.nodeId}，草稿 Revision ${draft.draftRevision}`}
             description={`DataDev 独立草稿：SQL ${draft.definition.content.trim() ? '已有内容' : '尚无内容'}，配置 ${draft.definition.configJson.trim() ? '已填写' : '待填写'}；与冻结物理 V${verified.report.version.versionNo} 尚无正式持久引用，执行目标、权限和版本映射仍待专业人工核验。`} />}
+          {draft && selected && !draftProblem &&
+            <DevelopmentTaskDeliveryEvidencePanel
+              key={`${String(projectId)}:${selected.id}`}
+              nodeId={selected.id} projectId={projectId} />}
         </>
       )}
     </Card>
