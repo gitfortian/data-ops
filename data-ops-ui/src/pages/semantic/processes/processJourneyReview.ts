@@ -17,6 +17,8 @@ export interface ProcessJourneyEvidence {
   label: string;
   detail: string;
   status: 'OK' | 'REVIEW';
+  /** Only supported owner evidence may offer cross-workspace governance navigation. */
+  governanceTarget?: 'logical' | 'physical';
 }
 export interface ProcessJourneyStep {
   key: 'grain' | 'source' | 'standard' | 'logical' | 'physical';
@@ -98,7 +100,7 @@ export const buildProcessJourneyReview = (input: {
         : '该过程尚无逻辑设计草稿，可从正式业务过程开始', 'logical',
       models.map(item => ({ id: String(item.id), label: `${item.name} (${item.code})`,
         detail: `逻辑草稿 #${item.id} · ${item.status} · 仅供设计，不是已发布物理版本`,
-        status: 'OK' as const })));
+        status: 'OK' as const, governanceTarget: 'logical' as const })));
   }
 
   if (input.physical.state === 'UNAVAILABLE'
@@ -113,6 +115,8 @@ export const buildProcessJourneyReview = (input: {
         id: String(model.modelId), label: `${model.name} (${model.code})`,
         detail: `${layer.layerCode} · ${model.status || '状态未知'} · 发布不等于部署运行`,
         status: 'OK' as const,
+        governanceTarget: ['DWD', 'DIM'].includes(layer.layerCode?.toUpperCase() || '')
+          ? 'physical' as const : undefined,
       }))));
   }
 
