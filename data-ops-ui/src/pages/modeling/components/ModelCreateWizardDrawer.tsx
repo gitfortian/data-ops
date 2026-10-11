@@ -26,6 +26,7 @@ interface ModelCreateWizardDrawerProps {
   layers: SemanticLayerRecord[];
   processes: SemanticProcessRecord[];
   domainTree: SemanticDomainNode[];
+  initialProcessId?: number;
   onClose: () => void;
   onSubmit: (payload: WizardSubmitPayload) => void;
 }
@@ -36,6 +37,7 @@ const ModelCreateWizardDrawer = ({
   layers,
   processes,
   domainTree,
+  initialProcessId,
   onClose,
   onSubmit,
 }: ModelCreateWizardDrawerProps) => {
@@ -45,8 +47,9 @@ const ModelCreateWizardDrawer = ({
   useEffect(() => {
     if (!open) return;
     form.resetFields();
+    if (initialProcessId) form.setFieldsValue({ processId: initialProcessId });
     codeManuallyEdited.current = false;
-  }, [form, open]);
+  }, [form, open, initialProcessId]);
 
   const handleClose = () => {
     if (loading) return;
@@ -73,6 +76,9 @@ const ModelCreateWizardDrawer = ({
 
   // 业务域变化时，清空业务过程
   useEffect(() => {
+    // Opening a process-scoped wizard must not discard its validated process.
+    // Explicitly changing the business domain invalidates that selection.
+    if (selectedDomainId === undefined) return;
     form.setFieldsValue({ processId: undefined });
   }, [selectedDomainId, form]);
 
