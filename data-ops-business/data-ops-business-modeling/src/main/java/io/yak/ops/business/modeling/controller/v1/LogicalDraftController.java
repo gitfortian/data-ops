@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class LogicalDraftController {
 
   private final LogicalDraftService service;
+  private final io.yak.ops.business.modeling.logical.LogicalVersionSemanticReviewService semanticReview;
   private final io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffPreviewService handoffPreview;
   private final io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffReviewService handoffReview;
   private final CurrentUserProvider currentUserProvider;
@@ -115,6 +116,13 @@ public class LogicalDraftController {
           @RequestParam Long physicalModelId,
           @RequestBody io.yak.ops.business.modeling.logical.LogicalPhysicalHandoffReviewService.ReviewRequest request) {
     return Result.success(handoffReview.validate(id, versionNo, physicalModelId, request));
+  }
+
+  /** Frozen logical design vs current author draft + today's authorized Semantic status. */
+  @GetMapping("/{id}/versions/{versionNo}/semantic-review")
+  public Result<io.yak.ops.business.modeling.logical.LogicalVersionSemanticReviewService.Report>
+      semanticReview(@PathVariable Long id, @PathVariable int versionNo) {
+    return Result.success(semanticReview.review(id, versionNo));
   }
 
   @GetMapping("/{id}/versions/{versionNo}")

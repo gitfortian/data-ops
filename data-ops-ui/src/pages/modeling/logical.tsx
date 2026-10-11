@@ -2,7 +2,7 @@ import { history } from '@umijs/max';
 import {
   Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Table, Tag, Typography, message,
 } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
@@ -11,8 +11,8 @@ import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
   freezeLogicalDraft, getLogicalDraft, getLogicalVersionSnapshot, listLogicalDrafts,
   listLogicalVersions, updateLogicalEntity, updateLogicalAttribute, updateLogicalRelation,
-  previewLogicalPhysical, reviewLogicalPhysical,
-  type LogicalPhysicalPreview, type LogicalPhysicalReview,
+  previewLogicalPhysical, reviewLogicalPhysical, reviewLogicalVersionSemantics,
+  type LogicalPhysicalPreview, type LogicalPhysicalReview, type LogicalVersionSemanticReview,
   type LogicalDraftDetail, type LogicalDraftVersion, type LogicalModelDraft,
   type LogicalRelation,
 } from '@/services/modeling/logical';
@@ -49,6 +49,9 @@ export default function LogicalWorkspace() {
   const [relationOpen, setRelationOpen] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [snapshotText, setSnapshotText] = useState('');
+  const [semanticReview, setSemanticReview] = useState<LogicalVersionSemanticReview>();
+  const [semanticReviewLoading, setSemanticReviewLoading] = useState(false);
+  const semanticReviewEpoch = useRef(0);
   const [physicalModelId, setPhysicalModelId] = useState<number | null>(null);
   const [physicalSearch, setPhysicalSearch] = useState('');
   const [physicalTargets, setPhysicalTargets] = useState<ModelingModelRecord[]>([]);
@@ -65,6 +68,7 @@ export default function LogicalWorkspace() {
   const [relationForm] = Form.useForm<RelationValues>();
 
   const reload = useCallback(async (id?: number) => {
+    semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
@@ -134,6 +138,7 @@ export default function LogicalWorkspace() {
   }, [detail?.process?.id]);
 
   const selectModel = useCallback(async (id: number) => {
+    semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
@@ -304,6 +309,24 @@ export default function LogicalWorkspace() {
     }
   };
 
+  const showSemanticReview = async (versionNo: number) => {
+    if (selected == null) return;
+    const request = ++semanticReviewEpoch.current;
+    setSemanticReview(undefined);
+    setSemanticReviewLoading(true);
+    try {
+      const report = await reviewLogicalVersionSemantics(selected, versionNo);
+      if (request === semanticReviewEpoch.current
+          && report.logicalModelId === selected && report.versionNo === versionNo) {
+        setSemanticReview(report);
+      }
+    } catch (error) {
+      if (request === semanticReviewEpoch.current) message.error(errorText(error));
+    } finally {
+      if (request === semanticReviewEpoch.current) setSemanticReviewLoading(false);
+    }
+  };
+
   const showSnapshot = async (versionNo: number) => {
     if (selected == null) return;
     try {
@@ -429,7 +452,11 @@ export default function LogicalWorkspace() {
                     { title: '冻结人', dataIndex: 'createdBy', key: 'createdBy' },
                     { title: '查看', key: 'action', render: (_, version: LogicalDraftVersion) =>
                       <Space>
-                        <Button type="link" onClick={() => void showSnapshot(version.versionNo)}>查看冻结快照</Button>
+                        <Button type="link" onClick={() => void showSnapshot(version.versionNo)}>原始 JSON</Button>
+                        <Button type="link" loading={semanticReviewLoading}
+                          onClick={() => void showSemanticReview(version.versionNo)}>
+                          审阅语义与变更
+                        </Button>
                         <Button loading={handoffLoading} type="link"
                           onClick={() => void previewPhysical(version.versionNo)}>预检物理关联</Button>
                       </Space> },
@@ -597,6 +624,79 @@ export default function LogicalWorkspace() {
           </div>
         )}
       </Card>}
+      <Modal title="冻结逻辑版本：业务语义与草稿差异（只读）"
+        width={1000} open={Boolean(semanticReview)} destroyOnHidden
+        footer={<Button onClick={() => setSemanticReview(undefined)}>关闭报告</Button>}
+        onCancel={() => setSemanticReview(undefined)}>
+        {semanticReview && <>
+          <Alert className="mb-3" showIcon
+            type={semanticReview.reviewStatus === 'NEEDS_REVIEW' ? 'warning' : 'info'}
+            message={semanticReview.reviewStatus === 'NEEDS_REVIEW'
+              ? '当前存在需要人工核对的业务语义证据'
+              : '达到人工审阅条件，不代表逻辑模型已批准'}
+            description={`逻辑草稿冻结 V${semanticReview.versionNo}，${semanticReview.designComparison === 'MATCHES_CURRENT'
+              ? '与当前业务设计内容一致' : '当前业务设计已有变更'}。报告不会写入映射或发布模型。`} />
+          <Space wrap className="mb-3">
+            <Tag>实体 {semanticReview.entityCount}</Tag>
+            <Tag>属性 {semanticReview.attributeCount}</Tag>
+            <Tag>关系 {semanticReview.relationCount}</Tag>
+            <Tag>冻结状态：{semanticReview.frozenStatus}</Tag>
+          </Space>
+          <Typography.Paragraph type="secondary">
+            冻结版本证据：
+            <Typography.Text copyable={{ text: semanticReview.frozenSnapshotSha256 }}>
+              {semanticReview.frozenSnapshotSha256.slice(0, 20)}…
+            </Typography.Text>
+          </Typography.Paragraph>
+          {semanticReview.blockers.map((reason, i) => (
+            <Typography.Paragraph type="danger" key={i} className="!mb-1">{reason}</Typography.Paragraph>
+          ))}
+          <Typography.Title level={5}>业务设计差异</Typography.Title>
+          <Table rowKey={(row) => `${row.objectType}-${row.objectId}`} size="small"
+            pagination={{ pageSize: 10 }}
+            locale={{ emptyText: '该冻结版本与当前逻辑草稿的实体、属性及关系内容一致' }}
+            dataSource={semanticReview.changes} columns={[
+              { title: '类型', dataIndex: 'objectType', width: 100 },
+              { title: '业务对象', dataIndex: 'label' },
+              { title: '变化', dataIndex: 'status', width: 150,
+                render: (value: string) => <Tag color="warning">{value}</Tag> },
+              { title: '冻结内容', dataIndex: 'frozenValue', ellipsis: true,
+                render: (value?: string) => value
+                  ? <Typography.Text ellipsis={{ tooltip: value }}>{value}</Typography.Text> : '—' },
+              { title: '当前内容', dataIndex: 'currentValue', ellipsis: true,
+                render: (value?: string) => value
+                  ? <Typography.Text ellipsis={{ tooltip: value }}>{value}</Typography.Text> : '—' },
+            ]} />
+          <Typography.Title level={5}>标准字段当前有效性</Typography.Title>
+          <Table size="small" pagination={{ pageSize: 10 }} rowKey="attributeId"
+            dataSource={semanticReview.attributes} columns={[
+              { title: '实体', dataIndex: 'entityName' },
+              { title: '属性', dataIndex: 'attributeName' },
+              { title: '标准字段 ID', dataIndex: 'stdFieldId',
+                render: (value?: number) => value ?? '待治理' },
+              { title: '当前标准', dataIndex: 'standardName',
+                render: (value?: string) => value || '—' },
+              { title: '标准角色', dataIndex: 'standardRole',
+                render: (value?: string) => value || '—' },
+              { title: '当前证据', dataIndex: 'standardStatus',
+                render: (value: string) => <Tag color={value === 'ENABLED_NOW' ? 'green' : 'warning'}>{value}</Tag> },
+              { title: '说明', dataIndex: 'explanation' },
+            ]} />
+          <Typography.Title level={5}>关系基数与确认边界</Typography.Title>
+          <Table size="small" pagination={{ pageSize: 10 }} rowKey="relationId"
+            dataSource={semanticReview.relations} columns={[
+              { title: '来源实体', dataIndex: 'sourceEntity' },
+              { title: '目标实体', dataIndex: 'targetEntity' },
+              { title: '声明基数', dataIndex: 'cardinality' },
+              { title: '确认状态', dataIndex: 'status',
+                render: (value: string) => <Tag color="warning">{value}</Tag> },
+              { title: '说明', dataIndex: 'explanation' },
+            ]} />
+          {semanticReview.limitations.map((reason, i) => (
+            <Typography.Paragraph key={i} type="secondary" className="!mb-1">{reason}</Typography.Paragraph>
+          ))}
+        </>}
+      </Modal>
       <Modal width={760} title="冻结的逻辑设计内容（只读）" open={snapshotOpen}
         footer={<Button onClick={() => setSnapshotOpen(false)}>关闭</Button>}
         onCancel={() => setSnapshotOpen(false)}>
