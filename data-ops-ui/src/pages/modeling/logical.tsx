@@ -3,13 +3,15 @@ import {
   Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Table, Tag, Typography, message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { locateCurrentLogicalAttribute, locateCurrentLogicalRelation } from './governanceRepairLocator';
 import {
-  chooseJourneyLogicalModel, logicalDraftsForProcess, parseJourneyProcessId,
+  chooseJourneyLogicalModel, exactJourneyLogicalDraft, latestJourneyFrozenVersion,
+  logicalDraftsForProcess, parseJourneyProcessId,
   processToPhysical, processToSemantic,
 } from '@/utils/journeyNavigation';
 import {
@@ -40,6 +42,11 @@ export default function LogicalWorkspace() {
   const [searchParams] = useSearchParams();
   const processParam = searchParams.get('processId');
   const requestedProcessId = parseJourneyProcessId(processParam);
+  const reviewRequested = searchParams.get('review') === 'semantic';
+  const draftParam = searchParams.get('draftId');
+  const requestedDraftId = parseJourneyProcessId(draftParam);
+  const { currentProject } = useSecurityProject();
+  const [reviewEntryProblem, setReviewEntryProblem] = useState<string>();
   const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
   const [journeyProblem, setJourneyProblem] = useState<string>();
   const loadEpoch = useRef(0);
@@ -81,6 +88,8 @@ export default function LogicalWorkspace() {
   const reload = useCallback(async (id?: number) => {
     const epoch = ++loadEpoch.current;
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
+    setSemanticReviewLoading(false);
+    setReviewEntryProblem(undefined);
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
@@ -95,6 +104,9 @@ export default function LogicalWorkspace() {
     try {
       if (processParam !== null && requestedProcessId === undefined) {
         throw new Error('业务过程 URL 参数不是有效的正整数，请返回业务过程列表重新选择');
+      }
+      if (reviewRequested && (!requestedProcessId || !requestedDraftId || draftParam === null)) {
+        throw new Error('治理入口缺少合法的业务过程或逻辑草稿身份，请从业务过程重新选择');
       }
       // The URL only carries a hint. Resolve with Semantic's authenticated,
       // current-project owner API before selecting any existing logical draft.
@@ -112,7 +124,12 @@ export default function LogicalWorkspace() {
       setJourneyProcess(authorizedProcess);
       setModels(eligible);
       setProcesses(authorizedProcess ? [authorizedProcess] : (all.bizData ?? []));
-      const active = chooseJourneyLogicalModel(eligible, requestedProcessId, id);
+      const active = reviewRequested
+        ? exactJourneyLogicalDraft(eligible, requestedProcessId!, requestedDraftId!)?.id
+        : chooseJourneyLogicalModel(eligible, requestedProcessId, id);
+      if (reviewRequested && active === undefined) {
+        throw new Error('目标逻辑草稿不存在于当前有权访问的业务过程中，不会选中其他草稿');
+      }
       setSelected(active);
       if (active !== undefined) {
         const [data, historyVersions] = await Promise.all([
@@ -124,6 +141,30 @@ export default function LogicalWorkspace() {
         }
         setDetail(data);
         setVersions(historyVersions);
+        if (reviewRequested && active === requestedDraftId) {
+          const versionNo = latestJourneyFrozenVersion(historyVersions);
+          if (versionNo === undefined) {
+            setReviewEntryProblem('该逻辑草稿没有可审阅的冻结版本，请先人工冻结设计；当前草稿不是历史版本。');
+          } else {
+            const reviewEpoch = semanticReviewEpoch.current;
+            setSemanticReviewLoading(true);
+            try {
+              const evidence = await reviewLogicalVersionSemantics(active, versionNo);
+              if (epoch === loadEpoch.current && reviewEpoch === semanticReviewEpoch.current
+                  && evidence.logicalModelId === active && evidence.versionNo === versionNo) {
+                setSemanticReview(evidence);
+              }
+            } catch (error) {
+              if (epoch === loadEpoch.current && reviewEpoch === semanticReviewEpoch.current) {
+                setReviewEntryProblem(`冻结版本 V${versionNo} 的治理核验暂不可读取：${errorText(error)}`);
+              }
+            } finally {
+              if (epoch === loadEpoch.current && reviewEpoch === semanticReviewEpoch.current) {
+                setSemanticReviewLoading(false);
+              }
+            }
+          }
+        }
       }
     } catch (err) {
       if (epoch !== loadEpoch.current) return;
@@ -137,7 +178,8 @@ export default function LogicalWorkspace() {
     } finally {
       if (epoch === loadEpoch.current) setLoading(false);
     }
-  }, [processParam, requestedProcessId]);
+  }, [processParam, requestedProcessId, requestedDraftId, draftParam,
+    reviewRequested, currentProject?.id]);
 
   useEffect(() => { void reload(); }, [reload]);
 
@@ -449,6 +491,10 @@ export default function LogicalWorkspace() {
       {journeyProblem && <Alert className="mb-4" showIcon type="error"
         message="无法使用所请求的业务过程上下文" description={journeyProblem}
         action={<Button onClick={() => history.push('/semantic/processes')}>重新选择业务过程</Button>} />}
+      {reviewEntryProblem && <Alert className="mb-4" showIcon type="warning"
+        message="当前冻结版本治理核验尚不可完成" description={reviewEntryProblem} />}
+      {semanticReviewLoading && reviewRequested && <Alert className="mb-4" showIcon type="info"
+        message="正在核验指定逻辑草稿最新冻结版本的业务语义及差异…" />}
       {journeyProcess && <Alert className="mb-4" showIcon type="info"
         message={`正在处理业务过程：${journeyProcess.name}（${journeyProcess.code}）`}
         description="仅显示该过程所属逻辑草稿；URL 不授予新权限，也不会自动创建物理模型。"
