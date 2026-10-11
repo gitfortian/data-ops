@@ -18,6 +18,11 @@ import {
   Typography,
 } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { listLogicalDrafts } from '@/services/modeling/logical';
+import ProcessJourneyReviewPanel from './ProcessJourneyReviewPanel';
+import { available, buildProcessJourneyReview, unavailable,
+  type ProcessJourneyReview } from './processJourneyReview';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceCatalogColumn, DataSourceCatalogTable } from '@/services/data-source/catalog';
@@ -84,6 +89,12 @@ interface FieldBindFormValues {
 /** 业务过程编辑工作台(ticket 34 交互重构):多 Tab 整页 + 子操作抽屉。 */
 const ProcessEditPage: React.FC = () => {
   const { can } = usePermissionAccess();
+  const canReadModels = can('modeling:read');
+  const { currentProject } = useSecurityProject();
+  const loadEpoch = useRef(0);
+  const [journeyLoading, setJourneyLoading] = useState(false);
+  const [journeyReview, setJourneyReview] = useState<ProcessJourneyReview>();
+  const [activeTab, setActiveTab] = useState('basic');
   const params = useParams<{ id?: string }>();
   const processId = params.id ? Number(params.id) : undefined;
   const [process, setProcess] = useState<SemanticProcessRecord | null>(null);
@@ -130,25 +141,52 @@ const ProcessEditPage: React.FC = () => {
   const [mainline, setMainline] = useState<ModelingMainlineCoverage | null>(null);
 
   const loadProcess = useCallback(async () => {
-    if (!processId) {
+    const epoch = ++loadEpoch.current;
+    setJourneyLoading(true);
+    setJourneyReview(undefined);
+    setMainline(null);
+    setSources([]);
+    setBoundFields([]);
+    setSectionErrors([]);
+    if (!processId || !Number.isSafeInteger(processId) || processId <= 0) {
+      setLoadError(true);
+      setJourneyLoading(false);
       return;
     }
     try {
+      // The process is the trusted project-scoped root. A URL is not evidence.
       const detail = await getSemanticProcess(processId);
+      if (epoch !== loadEpoch.current) return;
+      if (!detail || detail.id !== processId) {
+        throw new Error('业务过程身份不符合当前项目授权范围');
+      }
       setLoadError(false);
       setProcess(detail);
+      const denied = () => Promise.reject(new Error('当前没有 Modeling 读取权限'));
       const results = await Promise.allSettled([
         listSemanticProcessSources(processId),
         listSemanticProcessFields(processId),
-        getModelingMainlineCoverage(processId),
+        canReadModels ? getModelingMainlineCoverage(processId) : denied(),
+        canReadModels ? listLogicalDrafts() : denied(),
       ]);
-      const [sourceResult, fieldResult, modelResult] = results;
+      if (epoch !== loadEpoch.current) return;
+      const [sourceResult, fieldResult, modelResult, logicalResult] = results;
       setSectionErrors(results.flatMap((result, index) =>
-        result.status === 'rejected' ? [['源表', '标准字段', '模型'][index]] : []));
-      const sources = sourceResult.status === 'fulfilled' ? sourceResult.value : [];
-      const fields = fieldResult.status === 'fulfilled' ? fieldResult.value : [];
-      const mainline = modelResult.status === 'fulfilled' ? modelResult.value : null;
-      setProcess(detail);
+        result.status === 'rejected' ? [['源表', '标准字段', '模型', '逻辑模型'][index]] : []));
+      const sourceEvidence = sourceResult.status === 'fulfilled'
+        ? available(sourceResult.value ?? []) : unavailable<SemanticProcessSourceRecord[]>();
+      const standardEvidence = fieldResult.status === 'fulfilled'
+        ? available(fieldResult.value ?? []) : unavailable<SemanticFieldRecord[]>();
+      const physicalEvidence = modelResult.status === 'fulfilled' && modelResult.value
+        ? available(modelResult.value) : unavailable<ModelingMainlineCoverage>();
+      const logicalEvidence = logicalResult.status === 'fulfilled'
+        ? available(logicalResult.value ?? []) : unavailable<Awaited<ReturnType<typeof listLogicalDrafts>>>();
+      // This is a read-only projection over owners, not new progress truth.
+      setJourneyReview(buildProcessJourneyReview({
+        process: detail,
+        sources: sourceEvidence, standards: standardEvidence,
+        physical: physicalEvidence, logical: logicalEvidence,
+      }));
       basicForm.setFieldsValue({
         name: detail.name,
         domainId: detail.domainId,
@@ -158,14 +196,20 @@ const ProcessEditPage: React.FC = () => {
         sortOrder: detail.sortOrder,
         description: detail.description,
       });
-      setSources(sources ?? []);
-      setBoundFields(fields ?? []);
-      setMainline(mainline);
+      setSources(sourceEvidence.state === 'AVAILABLE' ? sourceEvidence.value : []);
+      setBoundFields(standardEvidence.state === 'AVAILABLE' ? standardEvidence.value : []);
+      setMainline(physicalEvidence.state === 'AVAILABLE' ? physicalEvidence.value : null);
     } catch {
+      if (epoch !== loadEpoch.current) return;
       setLoadError(true);
-      message.error('加载业务过程失败，请稍后重试');
+      setJourneyReview(undefined);
+      setProcess(null);
+      setMainline(null);
+      message.error('业务过程不存在、当前项目无权访问或加载失败');
+    } finally {
+      if (epoch === loadEpoch.current) setJourneyLoading(false);
     }
-  }, [processId, basicForm]);
+  }, [processId, basicForm, canReadModels, currentProject?.id]);
 
   const loadDatasourceLabels = useCallback(async () => {
     try {
@@ -181,6 +225,7 @@ const ProcessEditPage: React.FC = () => {
   useEffect(() => {
     void loadProcess();
     void loadDatasourceLabels();
+    return () => { loadEpoch.current += 1; };
   }, [loadProcess, loadDatasourceLabels]);
 
   const datasourceNameOf = (id: number) => datasources.find((item) => Number(item.id) === id)?.name ?? `数据源 #${id}`;
@@ -881,10 +926,17 @@ const ProcessEditPage: React.FC = () => {
         </YakButton>
       </div>
 
+      <ProcessJourneyReviewPanel report={journeyReview} loading={journeyLoading}
+        onReload={() => { void loadProcess(); }}
+        onOpenProcess={(key) => setActiveTab(key === 'source'
+          ? 'sources' : key === 'standard' ? 'fields' : 'basic')}
+        onOpenLogical={() => processId && history.push(processToLogical(processId))}
+        onOpenPhysical={() => processId && history.push(processToPhysical(processId))} />
       {sectionErrors.length ? <div role="alert">{sectionErrors.join('、')}暂不可读取，当前显示不能作为无引用证据。<Button onClick={() => void loadProcess()}>重试</Button></div> : null}
       <Tabs
         className="mt-3"
-        defaultActiveKey="basic"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           { key: 'basic', label: '基本信息', children: basicTab },
           { key: 'sources', label: '关联源表', children: sourcesTab },
