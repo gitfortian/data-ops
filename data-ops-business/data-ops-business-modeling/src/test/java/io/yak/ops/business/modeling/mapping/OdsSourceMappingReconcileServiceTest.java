@@ -211,4 +211,20 @@ class OdsSourceMappingReconcileServiceTest {
     verify(mappings, never()).upsert(any(), anyString());
   }
 
+  @Test void realPersistedTimestampsDoNotBreakOrArtificiallyChangeEvidence() {
+    var first = model("ODS", ModelStatus.DRAFT).withPersisted(50L, "tester",
+        java.time.LocalDateTime.of(2026, 10, 1, 10, 0),
+        java.time.LocalDateTime.of(2026, 10, 10, 11, 0));
+    rows.get(0).setCreateTime(java.time.LocalDateTime.of(2026, 10, 1, 10, 0));
+    rows.get(0).setUpdateTime(java.time.LocalDateTime.of(2026, 10, 10, 11, 0));
+    when(models.findById(50L)).thenReturn(Optional.of(first));
+    var baseline = service.preview(50L);
+    assertEquals(64, baseline.definition().length());
+    rows.get(0).setUpdateTime(java.time.LocalDateTime.of(2026, 10, 11, 13, 0));
+    var updated = first.withPersisted(50L, "tester", first.createTime(),
+        java.time.LocalDateTime.of(2026, 10, 11, 13, 0));
+    when(models.findById(50L)).thenReturn(Optional.of(updated));
+    assertEquals(baseline.definition(), service.preview(50L).definition());
+  }
+
 }
