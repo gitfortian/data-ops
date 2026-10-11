@@ -96,7 +96,7 @@ export const inspectExactDatasetConsumption = (
     || impact.productKey.sourceIdentity !== dataset.id
     || !product.activeVersion || product.activeVersion.identity !== versionId
     || (dataset.currentVersionId && dataset.currentVersionId !== versionId)
-    || !Number.isSafeInteger(versionNo) || versionNo <= 0) {
+    || typeof versionNo !== 'number' || !Number.isSafeInteger(versionNo) || versionNo <= 0) {
     return { state: 'INVALID_OWNER', reason: 'Dataset 当前版本与 Consumption 产品、项目或消费归属不一致' };
   }
   if (dataset.status !== 'ONLINE'
