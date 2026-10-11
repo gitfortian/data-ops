@@ -69,6 +69,8 @@ export const verifyPhysicalDataDevEvidence = (input: {
     || report.version.modelId !== hint.modelId
     || report.version.versionNo !== hint.modelVersionNo
     || frozen.length !== 1
+    || frozen[0].id !== report.version.versionId
+    || frozen[0].modelId !== hint.modelId
     || !Number.isSafeInteger(report.version.versionId) || report.version.versionId <= 0
     || !/^[a-f0-9]{64}$/i.test(signature)
     || !/^[a-f0-9]{64}$/i.test(report.inspectionSha256)
