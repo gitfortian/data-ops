@@ -74,7 +74,8 @@ class PhysicalStandardCoverageInspectionServiceTest {
     assertEquals("DIMENSION", first.columns().get(0).physicalRole());
     assertTrue(first.limitations().stream().anyMatch(x -> x.contains("PD-010")));
     columns = List.of(col(2L, "status", 12L, null), col(1L, "order_id", 11L, null));
-    assertEquals(first.evidenceSha256(), service.inspect(50L).evidenceSha256());
+    // Physical column order is part of the owned saved design, not an unordered set.
+    assertNotEquals(first.evidenceSha256(), service.inspect(50L).evidenceSha256());
     verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
   }
 
