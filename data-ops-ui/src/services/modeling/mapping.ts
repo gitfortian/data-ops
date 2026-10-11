@@ -39,3 +39,46 @@ export const validateModelingExpression = (
 export interface MappingEditContext { definition: string; mapping: ModelingMappingView }
 export const getModelingMappingContext = (modelId: ModelingModelId, targetColumn: string): Promise<MappingEditContext> =>
   HttpUtils.getData<MappingEditContext>(`${MODELING_API_PREFIX}/models/${modelId}/mappings/${encodeURIComponent(targetColumn)}/edit-context`);
+
+/** Existing ODS draft: authoritative source catalog versus persisted column mappings. */
+export interface OdsMappingReconcilePreview {
+  modelId: number;
+  sourceDatasourceId: number;
+  sourceDatabase: string;
+  sourceTable: string;
+  definition: string;
+  sourceColumns: string[];
+  rows: {
+    targetColumn: string;
+    dataType: string;
+    status: 'MAPPED' | 'UNMAPPED' | 'TECHNICAL' | 'SOURCE_CONFLICT';
+    existingSourceColumn?: string | null;
+    suggestedSourceColumn?: string | null;
+  }[];
+  mappedCount: number;
+  unmappedCount: number;
+  technicalCount: number;
+  orphanCount: number;
+  conflictCount: number;
+}
+export interface OdsMappingReconcileReceipt {
+  modelId: number;
+  applied: number;
+  mappedCount: number;
+  confirmedTargets: string[];
+  status: 'SAVED_AND_VERIFIED';
+}
+export const previewOdsMappingReconcile = (
+  modelId: ModelingModelId,
+): Promise<OdsMappingReconcilePreview> =>
+  HttpUtils.getData<OdsMappingReconcilePreview>(
+    `${MODELING_API_PREFIX}/models/${modelId}/mappings/ods-reconcile`,
+  );
+export const confirmOdsMappingReconcile = (
+  modelId: ModelingModelId, expectedDefinition: string,
+  selections: { targetColumn: string; sourceColumn: string }[],
+): Promise<OdsMappingReconcileReceipt> =>
+  HttpUtils.postData<OdsMappingReconcileReceipt>(
+    `${MODELING_API_PREFIX}/models/${modelId}/mappings/ods-reconcile`,
+    { expectedDefinition, selections },
+  );

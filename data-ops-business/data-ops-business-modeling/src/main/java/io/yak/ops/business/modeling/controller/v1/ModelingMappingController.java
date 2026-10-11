@@ -6,6 +6,7 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.modeling.mapping.MappingService;
+import io.yak.ops.business.modeling.mapping.OdsSourceMappingReconcileService;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -36,7 +37,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class ModelingMappingController {
 
   private final MappingService mappingService;
+  private final OdsSourceMappingReconcileService odsReconcile;
   private final CurrentUserProvider currentUserProvider;
+
+  /** ODS repair remains an explicit read / select / confirm operation. */
+  @Operation(summary = "ODS 绑定来源与存量列映射证据预检（无修改）")
+  @GetMapping("/ods-reconcile")
+  public Result<OdsSourceMappingReconcileService.Preview> odsReconcilePreview(
+      @PathVariable("modelId") Long modelId) {
+    return Result.success(odsReconcile.preview(modelId));
+  }
+
+  @Operation(summary = "确认修复 ODS 未映射真实源列（全事务、不可覆盖已有映射）")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  @PostMapping("/ods-reconcile")
+  public Result<OdsSourceMappingReconcileService.Receipt> odsReconcileConfirm(
+      @PathVariable("modelId") Long modelId,
+      @RequestBody OdsSourceMappingReconcileService.ConfirmRequest request,
+      HttpServletRequest httpRequest) {
+    return Result.success(odsReconcile.confirm(
+        modelId, request, currentUserProvider.getCurrentUser(httpRequest)));
+  }
 
   /** 映射设置请求。 */
   @Data
