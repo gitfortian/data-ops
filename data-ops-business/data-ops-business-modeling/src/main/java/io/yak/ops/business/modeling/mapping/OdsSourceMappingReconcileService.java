@@ -58,8 +58,16 @@ public class OdsSourceMappingReconcileService {
   public record ConfirmRequest(String expectedDefinition, List<Selection> selections) {}
   public record Receipt(Long modelId, int applied, int mappedCount,
                         List<String> confirmedTargets, String status) {}
-  private record Evidence(Model model, List<ColumnDefinition> columns,
-                          List<ModelingColumnMappingPO> mappings, List<CatalogColumn> sources) {}
+  /** Stable source semantics: never hash mutable PO timestamps or Java Time values. */
+  private record MappingEvidence(Long projectId, Long modelId, String targetColumn,
+                                 Long sourceDatasourceId, String sourceDatabase,
+                                 String sourceTable, String sourceColumn,
+                                 String transformExpr, Long stdProcessFieldId) {}
+  private record Evidence(Long modelId, String code, String dialect, String layerCode,
+                          String status, Long processId, Long sourceDatasourceId,
+                          String sourceDatabase, String sourceTable, String importMode,
+                          List<ColumnDefinition> columns, List<MappingEvidence> mappings,
+                          List<CatalogColumn> sources) {}
   private record State(Preview preview, Model model, Map<String, ColumnDefinition> columns,
                        Map<String, ModelingColumnMappingPO> existing, Map<String, CatalogColumn> sources) {}
 
@@ -216,7 +224,14 @@ public class OdsSourceMappingReconcileService {
         .sorted(Comparator.comparing(m -> key(m.getTargetColumn()))).toList();
     List<CatalogColumn> orderedSource = source.stream()
         .sorted(Comparator.comparing(c -> key(c.name()))).toList();
-    String definition = hash(new Evidence(model, orderedColumns, orderedMappings, orderedSource));
+    List<MappingEvidence> mappingFacts = orderedMappings.stream().map(m ->
+        new MappingEvidence(m.getProjectId(), m.getModelId(), m.getTargetColumn(),
+            m.getSourceDatasourceId(), m.getSourceDatabase(), m.getSourceTable(),
+            m.getSourceColumn(), m.getTransformExpr(), m.getStdProcessFieldId())).toList();
+    String definition = hash(new Evidence(model.id(), model.code(), model.dialect().name(),
+        model.layerCode(), model.status().name(), model.processId(),
+        model.sourceDatasourceId(), model.sourceDatabase(), model.sourceTable(),
+        model.importMode(), orderedColumns, mappingFacts, orderedSource));
     Preview preview = new Preview(modelId, model.sourceDatasourceId(), model.sourceDatabase(),
         model.sourceTable(), definition,
         orderedSource.stream().map(CatalogColumn::name).toList(), List.copyOf(rows),
