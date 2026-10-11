@@ -1,9 +1,14 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { history } from '@umijs/max';
 import PhysicalDataDevHandoffPanel from './PhysicalDataDevHandoffPanel';
 import { inspectPhysicalDataDevHandoff, listModelingVersions } from '@/services/modeling/api';
 
 let mockProjectId = 1;
+jest.mock('@umijs/max', () => ({ history: { push: jest.fn() } }));
+jest.mock('@/hooks/usePermissionAccess', () => ({
+  __esModule: true, default: () => ({ canAll: () => true }),
+}));
 jest.mock('@/contexts/SecurityProjectContext', () => ({
   useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
@@ -71,4 +76,22 @@ it('discards stale cross-project request results', async () => {
   await act(async () => finish(report));
   expect(await screen.findByText('PROJECT_SCOPE : NOT_CHECKED')).toBeInTheDocument();
   expect(screen.queryByText('DATADEV_PROVENANCE : NOT_APPROVED')).not.toBeInTheDocument();
+});
+
+it('only forwards a real inspected version and process to DataDev as a read-only hint', async () => {
+  render(<PhysicalDataDevHandoffPanel modelId={50} processId={7} open onClose={jest.fn()} />);
+  expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
+  expect(history.push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: '前往 DataDev 核对该冻结版本（只读）' }));
+  expect(history.push).toHaveBeenCalledWith(
+    '/data-development?source=modeling-handoff&processId=7&modelId=50&modelVersionNo=2',
+  );
+});
+
+it('never offers a DataDev handoff button without a resolved owning business process', async () => {
+  render(<PhysicalDataDevHandoffPanel modelId={50} open onClose={jest.fn()} />);
+  await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/);
+  expect(screen.getByRole('button', { name: '前往 DataDev 核对该冻结版本（只读）' }))
+    .toBeDisabled();
+  expect(history.push).not.toHaveBeenCalled();
 });
