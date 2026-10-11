@@ -7,6 +7,7 @@ import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.modeling.mapping.MappingService;
 import io.yak.ops.business.modeling.mapping.OdsSourceMappingReconcileService;
+import io.yak.ops.business.modeling.mapping.OdsSourceEvidenceInspectionService;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -38,7 +39,16 @@ public class ModelingMappingController {
 
   private final MappingService mappingService;
   private final OdsSourceMappingReconcileService odsReconcile;
+  private final OdsSourceEvidenceInspectionService odsInspection;
   private final CurrentUserProvider currentUserProvider;
+
+  /** Fresh real-source snapshot; never claims published-version immutability or executes DDL. */
+  @Operation(summary = "核验当前 ODS 物理结构与授权真实源表及正式映射（只读）")
+  @GetMapping("/ods-source-evidence")
+  public Result<OdsSourceEvidenceInspectionService.Inspection> odsSourceEvidence(
+      @PathVariable("modelId") Long modelId) {
+    return Result.success(odsInspection.inspect(modelId));
+  }
 
   /** ODS repair remains an explicit read / select / confirm operation. */
   @Operation(summary = "ODS 绑定来源与存量列映射证据预检（无修改）")

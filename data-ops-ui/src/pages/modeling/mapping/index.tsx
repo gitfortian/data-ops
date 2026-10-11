@@ -14,6 +14,8 @@ import {
   getModelingMappingContext,
   previewOdsMappingReconcile,
   confirmOdsMappingReconcile,
+  inspectOdsSourceEvidence,
+  type OdsSourceEvidenceInspection,
   type OdsMappingReconcilePreview,
   setModelingMapping,
   validateModelingExpression,
@@ -79,10 +81,13 @@ const MappingPanel: React.FC = () => {
   const [form] = Form.useForm<MappingFormValues>();
   const [saving, setSaving] = useState(false);
   const [odsReview, setOdsReview] = useState<OdsMappingReconcilePreview>();
+  const [odsInspection, setOdsInspection] = useState<OdsSourceEvidenceInspection>();
+  const [odsInspectionLoading, setOdsInspectionLoading] = useState(false);
   const [odsReviewLoading, setOdsReviewLoading] = useState(false);
   const [odsSaving, setOdsSaving] = useState(false);
   const [odsChoices, setOdsChoices] = useState<Record<string, string>>({});
   const draft = Form.useWatch<MappingFormValues>([], form);
+  const mayInspectOds = canAll(['modeling:read', 'resource:data-source:read']);
   const maySave = canAll(['modeling:read', 'modeling:update', 'resource:data-source:read']);
   const maySuggest = maySave && canAll(['agent:chat:run', 'agent:session:read']);
 
@@ -114,6 +119,7 @@ const MappingPanel: React.FC = () => {
     setEditTarget(null); setDefinition(''); setSaving(false); setEditorLoading(false);
     setViews([]); setStructure(undefined); setModelRecord(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
     setOdsReview(undefined); setOdsChoices({}); setOdsSaving(false); setOdsReviewLoading(false);
+    setOdsInspection(undefined); setOdsInspectionLoading(false);
     setSourceDatasourceId(undefined); setSourceDatabase(undefined); setSourceTable(undefined);
     form.resetFields();
     void loadAll();
@@ -222,6 +228,22 @@ const MappingPanel: React.FC = () => {
         await loadAll();
       },
     });
+  };
+
+  const loadOdsInspection = async () => {
+    if (!modelId || !mayInspectOds) return;
+    const active = resource();
+    setOdsInspection(undefined);
+    setOdsInspectionLoading(true);
+    try {
+      const report = await inspectOdsSourceEvidence(modelId);
+      if (active()) setOdsInspection(report);
+    } catch (error) {
+      if (active()) message.error(error instanceof Error ? error.message
+        : '真实来源目录不可用或无权限，不能将核验失败当成零个差异');
+    } finally {
+      if (active()) setOdsInspectionLoading(false);
+    }
   };
 
   /** Existing source binding is always resolved by the server, not selected in the browser. */
@@ -368,6 +390,10 @@ const MappingPanel: React.FC = () => {
         </div>
         <Space>
           <Button onClick={() => history.push(`/modeling/models/${modelId}`)}>返回模型</Button>
+          {modelRecord?.layerCode?.toUpperCase() === 'ODS' && (
+            <Button disabled={!mayInspectOds} loading={odsInspectionLoading}
+              onClick={() => void loadOdsInspection()}>核验当前 ODS 来源证据（只读）</Button>
+          )}
           {modelRecord?.layerCode?.toUpperCase() === 'ODS'
             && modelRecord.status === 'DRAFT'
             && modelRecord.sourceDatasourceId != null && (
@@ -398,6 +424,57 @@ const MappingPanel: React.FC = () => {
           pagination={false}
         />
       )}
+
+      <Modal
+        open={Boolean(odsInspection)}
+        title="ODS 当前来源证据核验（只读）"
+        width={1020}
+        footer={<Button onClick={() => setOdsInspection(undefined)}>关闭报告</Button>}
+        onCancel={() => setOdsInspection(undefined)}>
+        {odsInspection && <>
+          <Typography.Paragraph type="secondary">
+            当前模型状态：{odsInspection.modelStatus}；授权来源：
+            #{odsInspection.sourceDatasourceId ?? '未绑定'} · {odsInspection.sourceDatabase || '-'}.
+            {odsInspection.sourceTable || '-'}
+          </Typography.Paragraph>
+          <Space wrap className="mb-3">
+            <Tag color={odsInspection.status === 'CONSISTENT_NOW' ? 'green' : 'warning'}>
+              {odsInspection.status === 'CONSISTENT_NOW' ? '当前来源与设计一致'
+                : odsInspection.status === 'NOT_CHECKABLE' ? '缺少正式来源绑定'
+                : '存在需要审阅的来源证据'}
+            </Tag>
+            <Tag>物理列 {odsInspection.targetCount}</Tag>
+            <Tag>真实源列 {odsInspection.sourceCount}</Tag>
+            <Tag>持久映射 {odsInspection.mappingCount}</Tag>
+          </Space>
+          {odsInspection.evidenceSha256 && (
+            <Typography.Paragraph type="secondary">
+              本次核验指纹：
+              <Typography.Text copyable={{ text: odsInspection.evidenceSha256 }}>
+                {odsInspection.evidenceSha256.slice(0, 20)}…
+              </Typography.Text>
+            </Typography.Paragraph>
+          )}
+          <Typography.Paragraph type="secondary">
+            本报告仅核验最新授权源表和当前模型设计，不等于某个已发布历史版本、
+            物理表部署、数据质量或真实运行已通过。发现差异不会自动修改任何映射。
+          </Typography.Paragraph>
+          {odsInspection.blockers.map((blocker, index) => (
+            <Typography.Paragraph key={index} type="danger" className="!mb-1">{blocker}</Typography.Paragraph>
+          ))}
+          <Table size="small" rowKey={(_, index) => String(index)}
+            pagination={{ pageSize: 20 }} dataSource={odsInspection.fields}
+            columns={[
+              { title: '物理目标列', dataIndex: 'targetColumn', render: (v?: string) => v || '—' },
+              { title: '目标类型', dataIndex: 'targetType', render: (v?: string) => v || '—' },
+              { title: '真实源列', dataIndex: 'sourceColumn', render: (v?: string) => v || '—' },
+              { title: '源类型', dataIndex: 'sourceType', render: (v?: string) => v || '—' },
+              { title: '证据状态', dataIndex: 'status', render: (v: string) => <Tag
+                color={v === 'MATCHED' ? 'green' : v === 'TECHNICAL' ? 'default' : 'warning'}>{v}</Tag> },
+              { title: '说明 / 下一步', dataIndex: 'reason' },
+            ]} />
+        </>}
+      </Modal>
 
       <Modal
         open={Boolean(odsReview)}
