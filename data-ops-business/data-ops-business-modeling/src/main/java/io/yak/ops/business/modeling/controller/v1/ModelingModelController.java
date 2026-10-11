@@ -24,6 +24,7 @@ import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.modeling.structure.ValidationIssue;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.business.modeling.version.OdsPublishedVersionEvidenceService;
+import io.yak.ops.business.modeling.version.PhysicalDataDevHandoffReadinessService;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelVersionSummary;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
@@ -57,6 +58,7 @@ public class ModelingModelController {
   private final DdlService ddlService;
   private final ModelVersionService versionService;
   private final OdsPublishedVersionEvidenceService odsVersionEvidence;
+  private final PhysicalDataDevHandoffReadinessService dataDevHandoff;
   private final PhysicalStandardCoverageInspectionService standardCoverage;
   private final ModelPublishApprovalService publishApprovalService;
   private final ModelViewConverter viewConverter;
@@ -290,6 +292,13 @@ public class ModelingModelController {
   public Result<List<ModelVersionVO>> listVersions(@PathVariable("id") Long id) {
     List<ModelVersionSummary> versions = versionService.listVersions(id);
     return Result.success(versions.stream().map(this::toVersionVO).toList());
+  }
+
+  @Operation(summary = "DWD/DIM 精确物理发布版本到 DataDev 交接证据预检（只读）")
+  @GetMapping("/{id}/versions/{versionNo}/datadev-handoff-readiness")
+  public Result<PhysicalDataDevHandoffReadinessService.Report> dataDevHandoffReadiness(
+      @PathVariable("id") Long id, @PathVariable("versionNo") int versionNo) {
+    return Result.success(dataDevHandoff.inspect(id, versionNo));
   }
 
   @Operation(summary = "对照精确 ODS 发布结构版本与当前来源事实（只读、历史映射未冻结）")
