@@ -268,6 +268,35 @@ export const listModelingVersions = (id: ModelingModelId): Promise<ModelingVersi
 export const getModelingVersion = (id: ModelingModelId, versionNo: number): Promise<ModelingVersionDetail> =>
   HttpUtils.getData<ModelingVersionDetail>(`${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}`);
 
+/** A historical ODS physical structure snapshot compared with today's design/evidence.
+ * External source mappings were NOT frozen in existing model versions. */
+export interface OdsPublishedVersionEvidence {
+  modelId: number;
+  versionNo: number;
+  versionId: number;
+  modelStatus: string;
+  latestPublishedVersion: boolean;
+  structureStatus: 'MATCHES_CURRENT' | 'DIFFERS_FROM_CURRENT';
+  frozenColumnCount: number;
+  currentColumnCount: number;
+  differences: {
+    column: string;
+    status: 'CHANGED' | 'REMOVED' | 'ADDED' | 'TABLE_DEFINITION_CHANGED';
+    frozenType?: string | null;
+    currentType?: string | null;
+  }[];
+  currentSourceStatus: 'CONSISTENT_NOW' | 'NEEDS_REVIEW' | 'NOT_CHECKABLE';
+  currentSourceEvidenceSha256?: string | null;
+  historicalSourceStatus: 'NOT_FROZEN';
+  limitations: string[];
+}
+export const getOdsPublishedVersionEvidence = (
+  id: ModelingModelId, versionNo: number,
+): Promise<OdsPublishedVersionEvidence> =>
+  HttpUtils.getData<OdsPublishedVersionEvidence>(
+    `${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/source-evidence-review`,
+  );
+
 /** 回滚第一步：用指定版本覆盖当前草稿（置 DRAFT，不发布）。 */
 export const rollbackModelingVersion = (id: ModelingModelId, versionNo: number): Promise<boolean> =>
   HttpUtils.postData<boolean>(`${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/rollback`, {});
