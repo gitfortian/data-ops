@@ -85,6 +85,8 @@ export default function LogicalWorkspace() {
     setMappingSelections({});
     setJourneyProblem(undefined);
     setJourneyProcess(undefined);
+    setModels([]);
+    setProcesses([]);
     setLoading(true);
     setDetail(undefined);
     setVersions([]);
@@ -213,7 +215,7 @@ export default function LogicalWorkspace() {
       close();
       message.success(successText);
       const next = await listLogicalDrafts();
-      setModels(next);
+      setModels(logicalDraftsForProcess(next, requestedProcessId));
       return data;
     } catch (err) {
       message.error(errorText(err));
