@@ -15,9 +15,15 @@ jest.mock('antd', () => {
 jest.mock('@/components/ui' , () => ({ YakButton: ({ children, onClick }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button onClick={onClick}>{children}</button>, YakEmpty: () => <div /> }));
 jest.mock('@/components/ai/ModelMappingPanel', () => ({ __esModule: true, default: ({ definition, onApply }: { definition: string; onApply: (column: string) => void }) => <button onClick={() => onApply('buyer_id')}>AI 带入 {definition}</button> }));
 jest.mock('@/services/data-source/api', () => ({ listDataSources: jest.fn().mockResolvedValue({ bizData: [{ id: 9, name: '测试源' }] }) }));
-jest.mock('@/services/modeling/api', () => ({ getModelingStructure: jest.fn().mockResolvedValue({ modelName: '用户', modelCode: 'users' }) }));
+jest.mock('@/services/modeling/api', () => ({
+  getModelingStructure: jest.fn().mockResolvedValue({ modelName: '用户', modelCode: 'users' }),
+  getModelingModel: jest.fn().mockResolvedValue({
+    id: 7, code: 'users', name: '用户', layerCode: 'DWD', status: 'DRAFT',
+  }),
+}));
 jest.mock('@/services/modeling/import', () => ({ listModelingImportTables: jest.fn().mockResolvedValue([{ database: 'db', name: 'users' }]), previewModelingImportColumns: jest.fn().mockResolvedValue([{ name: 'old', typeName: 'BIGINT' }, { name: 'buyer_id', typeName: 'BIGINT' }]) }));
-jest.mock('@/services/modeling/mapping', () => ({ listModelingMappings: jest.fn(), getModelingMappingContext: jest.fn(), setModelingMapping: jest.fn(), clearAllModelingMappings: jest.fn(), clearModelingMapping: jest.fn(), validateModelingExpression: jest.fn() }));
+jest.mock('@/services/modeling/mapping', () => ({ listModelingMappings: jest.fn(), getModelingMappingContext: jest.fn(), setModelingMapping: jest.fn(), clearAllModelingMappings: jest.fn(), clearModelingMapping: jest.fn(), validateModelingExpression: jest.fn(),
+  previewOdsMappingReconcile: jest.fn(), confirmOdsMappingReconcile: jest.fn() }));
 const saved = { targetColumn: 'user_id', dataType: 'BIGINT', mapped: true, sourceDatasourceId: 9, sourceDatabase: 'db', sourceTable: 'users', sourceColumn: 'old', transformExpr: 'CAST(old AS BIGINT)' };
 beforeEach(() => {
   jest.clearAllMocks(); mockProjectId = 1;
