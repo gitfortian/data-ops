@@ -106,7 +106,7 @@ describe('F-040 C6 source-owner exact TaskAsset to governed consumption', () => 
     const notObserved = inspectExactDatasetConsumption(dataset, 4, lookup, {
       ...impact, consumers: [{ ...impact.consumers[0], observedVersions: [
         { sourceVersion: { identity: '800' }, successfulUsageCount: 50, providerEvidenceRefs: [] },
-      ] },
+      ] }],
     });
     expect(notObserved).toMatchObject({ state: 'NOT_OBSERVED', successfulUsage: 0 });
   });
