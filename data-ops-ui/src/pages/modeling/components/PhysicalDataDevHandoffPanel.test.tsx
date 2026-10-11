@@ -58,14 +58,16 @@ it('discards stale cross-project request results', async () => {
   let finish: (value: unknown) => void = () => {};
   (inspectPhysicalDataDevHandoff as jest.Mock)
     .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
-    .mockResolvedValueOnce({ ...report, dependencies: [
+    // Project changes re-fetch version list before repeating inspection. Both
+    // the immediate and the version-list-driven checks must return NEW scope.
+    .mockResolvedValue({ ...report, dependencies: [
       { code: 'PROJECT_SCOPE', status: 'NOT_CHECKED', explanation: '新项目审阅' },
     ] });
   const view = render(<PhysicalDataDevHandoffPanel modelId={50} open onClose={jest.fn()} />);
   await waitFor(() => expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledTimes(1));
   mockProjectId = 2;
   view.rerender(<PhysicalDataDevHandoffPanel modelId={50} open onClose={jest.fn()} />);
-  await waitFor(() => expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect((inspectPhysicalDataDevHandoff as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(2));
   await act(async () => finish(report));
   expect(await screen.findByText('PROJECT_SCOPE : NOT_CHECKED')).toBeInTheDocument();
   expect(screen.queryByText('DATADEV_PROVENANCE : NOT_APPROVED')).not.toBeInTheDocument();
