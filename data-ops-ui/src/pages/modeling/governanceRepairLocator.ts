@@ -37,8 +37,7 @@ export const locatePhysicalCoverageColumn = (input: {
   if (savedMatches.length !== 1) return reject('原始物理字段已删除、变更身份或不唯一，请重新核验');
   const stored: ModelingColumnRecord = savedMatches[0];
   if (normalized(stored.columnName) !== normalized(column.columnName)
-      || stored.stdFieldId !== (column.stdFieldId ?? null)
-          && (stored.stdFieldId ?? null) !== (column.stdFieldId ?? null)
+      || (stored.stdFieldId ?? null) !== (column.stdFieldId ?? null)
       || normalized(stored.dataType) !== normalized(column.dataType)
       || (stored.aggregateFunc ?? null) !== (column.aggregateFunc ?? null)) {
     return reject('物理字段名称、标准引用、类型或聚合含义已变化；旧证据不能作为当前编辑依据');
