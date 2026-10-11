@@ -1,5 +1,6 @@
 import {
-  chooseJourneyLogicalModel, exactJourneyLogicalDraft, latestJourneyFrozenVersion,
+  canOpenPhysicalGovernanceEvidence, chooseJourneyLogicalModel,
+  exactJourneyLogicalDraft, latestJourneyFrozenVersion,
   logicalDraftsForProcess, parseJourneyProcessId,
   processToLogical, processToLogicalGovernance,
   processToPhysical, processToPhysicalGovernance, processToSemantic,
@@ -48,6 +49,21 @@ describe('guided process/model URL context', () => {
     expect(latestJourneyFrozenVersion([{ versionNo: 2 }, { versionNo: 1 }])).toBe(2);
     expect(latestJourneyFrozenVersion([])).toBeUndefined();
     expect(latestJourneyFrozenVersion([{ versionNo: -1 }])).toBeUndefined();
+  });
+
+  it('opens physical evidence only for the same saved DWD/DIM and current process', () => {
+    const base = { processId: 7, modelId: 34, owner: { id: 34, processId: 7, layerCode: 'DWD' },
+      savedStructureReady: true, dirty: false, canRead: true };
+    expect(canOpenPhysicalGovernanceEvidence(base)).toBe(true);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, owner: { ...base.owner, layerCode: 'DIM' } })).toBe(true);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, owner: { ...base.owner, processId: 8 } })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, owner: { ...base.owner, id: 99 } })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, owner: { ...base.owner, layerCode: 'ODS' } })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, owner: null })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, processId: undefined })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, dirty: true })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, savedStructureReady: false })).toBe(false);
+    expect(canOpenPhysicalGovernanceEvidence({ ...base, canRead: false })).toBe(false);
   });
 
   it('never falls back to another process when the URL is scoped', () => {
