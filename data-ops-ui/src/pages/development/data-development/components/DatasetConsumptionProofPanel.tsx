@@ -156,7 +156,7 @@ export default function DatasetConsumptionProofPanel({ nodeId, projectId }: Prop
       </Typography.Paragraph>}
       {usageProblem && <Alert showIcon type="error" className="!mb-3"
         message="消费证据身份或权限不可核实" description={usageProblem} />}
-      {usage && <Alert showIcon className="!mb-3"
+      {usage && usage.state !== 'INVALID_OWNER' && <Alert showIcon className="!mb-3"
         type={usage.state === 'OBSERVED' ? 'info' : 'warning'}
         message={usage.state === 'OBSERVED'
           ? 'Consumption 观察到当前 Dataset 版本的成功消费回执'
