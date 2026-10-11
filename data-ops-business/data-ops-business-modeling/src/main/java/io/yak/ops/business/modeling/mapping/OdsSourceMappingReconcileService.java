@@ -53,7 +53,7 @@ public class OdsSourceMappingReconcileService {
   public record Preview(Long modelId, Long sourceDatasourceId, String sourceDatabase,
                         String sourceTable, String definition, List<String> sourceColumns,
                         List<MappingRow> rows, int mappedCount, int unmappedCount,
-                        int technicalCount, int orphanCount) {}
+                        int technicalCount, int orphanCount, int conflictCount) {}
   public record Selection(String targetColumn, String sourceColumn) {}
   public record ConfirmRequest(String expectedDefinition, List<Selection> selections) {}
   public record Receipt(Long modelId, int applied, int mappedCount,
@@ -79,6 +79,9 @@ public class OdsSourceMappingReconcileService {
         || !request.expectedDefinition().matches("[0-9a-f]{64}")
         || !Objects.equals(request.expectedDefinition(), state.preview().definition())) {
       throw reject("来源、目标结构或映射已变化，请重新预检并确认");
+    }
+    if (state.preview().conflictCount() > 0 || state.preview().orphanCount() > 0) {
+      throw reject("模型含其他来源映射或已删除字段的历史映射，须人工核查后才能批量修复");
     }
     List<Selection> selected = request.selections();
     if (selected == null || selected.isEmpty() || selected.size() > MAX_COLUMNS) {
@@ -182,10 +185,17 @@ public class OdsSourceMappingReconcileService {
     int mapped = 0;
     int unmapped = 0;
     int generated = 0;
+    int conflicts = 0;
     for (ColumnDefinition column : columns) {
       String name = column.columnName();
       ModelingColumnMappingPO existingMapping = saved.get(key(name));
-      if (existingMapping != null) {
+      if (existingMapping != null && !sameBinding(model, existingMapping)) {
+        conflicts++;
+        rows.add(new MappingRow(name, column.dataType(), "SOURCE_CONFLICT",
+            existingMapping.getSourceDatasourceId() + ":"
+                + existingMapping.getSourceDatabase() + "."
+                + existingMapping.getSourceTable() + "." + existingMapping.getSourceColumn(), null));
+      } else if (existingMapping != null) {
         mapped++;
         rows.add(new MappingRow(name, column.dataType(), "MAPPED",
             existingMapping.getSourceColumn(), null));
@@ -210,7 +220,7 @@ public class OdsSourceMappingReconcileService {
     Preview preview = new Preview(modelId, model.sourceDatasourceId(), model.sourceDatabase(),
         model.sourceTable(), definition,
         orderedSource.stream().map(CatalogColumn::name).toList(), List.copyOf(rows),
-        mapped, unmapped, generated, orphan);
+        mapped, unmapped, generated, orphan, conflicts);
     return new State(preview, model, targets, saved, sources);
   }
 
