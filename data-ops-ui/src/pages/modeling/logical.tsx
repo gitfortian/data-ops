@@ -7,6 +7,7 @@ import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } 
 import { pageModelingModels } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
+import { locateCurrentLogicalAttribute, locateCurrentLogicalRelation } from './governanceRepairLocator';
 import {
   chooseJourneyLogicalModel, logicalDraftsForProcess, parseJourneyProcessId,
   processToPhysical, processToSemantic,
@@ -376,6 +377,55 @@ export default function LogicalWorkspace() {
       if (request === semanticReviewEpoch.current) message.error(errorText(error));
     } finally {
       if (request === semanticReviewEpoch.current) setSemanticReviewLoading(false);
+    }
+  };
+
+  /** Re-read Modeling owner before opening an authoring modal from frozen evidence. */
+  const openCurrentReviewTarget = async (
+    target: { kind: 'attribute'; entityId: number; attributeId: number }
+      | { kind: 'relation'; relationId: number },
+  ) => {
+    if (!semanticReview || selected == null || semanticReview.logicalModelId !== selected) return;
+    const requestEpoch = loadEpoch.current;
+    const reviewEpoch = semanticReviewEpoch.current;
+    const targetModelId = selected;
+    try {
+      const fresh = await getLogicalDraft(targetModelId);
+      if (requestEpoch !== loadEpoch.current || reviewEpoch !== semanticReviewEpoch.current) return;
+      if (fresh.model.id !== targetModelId
+          || (requestedProcessId && fresh.model.processId !== requestedProcessId)) {
+        message.warning('所选逻辑草稿已不属于当前业务过程或项目，请重新打开');
+        return;
+      }
+      if (target.kind === 'attribute') {
+        const located = locateCurrentLogicalAttribute(
+          targetModelId, fresh, target.entityId, target.attributeId);
+        if (!located.ok) { message.warning(located.reason); return; }
+        const current = fresh.entities.find(e => e.entity.id === target.entityId)
+          ?.attributes.find(a => a.id === target.attributeId);
+        if (!current) { message.warning('无法读取当前逻辑属性，请重新审阅'); return; }
+        setDetail(fresh);
+        attributeForm.resetFields();
+        attributeForm.setFieldsValue(current);
+        setEditAttributeId(target.attributeId);
+        setAttributeEntityId(target.entityId);
+      } else {
+        const located = locateCurrentLogicalRelation(targetModelId, fresh, target.relationId);
+        if (!located.ok) { message.warning(located.reason); return; }
+        const current = fresh.relations.find(r => r.id === target.relationId);
+        if (!current) { message.warning('无法读取当前逻辑关系，请重新审阅'); return; }
+        setDetail(fresh);
+        relationForm.resetFields();
+        relationForm.setFieldsValue(current);
+        setEditRelationId(target.relationId);
+        setRelationOpen(true);
+      }
+      setSemanticReview(undefined);
+      message.info('已打开当前逻辑草稿对象；冻结历史版本不会改变，请人工核对后再保存');
+    } catch (error) {
+      if (requestEpoch === loadEpoch.current && reviewEpoch === semanticReviewEpoch.current) {
+        message.error(errorText(error));
+      }
     }
   };
 
@@ -750,6 +800,13 @@ export default function LogicalWorkspace() {
               { title: '当前证据', dataIndex: 'standardStatus',
                 render: (value: string) => <Tag color={value === 'ENABLED_NOW' ? 'green' : 'warning'}>{value}</Tag> },
               { title: '说明', dataIndex: 'explanation' },
+              { title: '操作', key: 'repair', width: 136,
+                render: (_: unknown, record: LogicalVersionSemanticReview['attributes'][number]) =>
+                  record.standardStatus !== 'ENABLED_NOW'
+                    ? <Button type="link" size="small"
+                        onClick={() => void openCurrentReviewTarget({
+                          kind: 'attribute', entityId: record.entityId, attributeId: record.attributeId,
+                        })}>定位当前属性</Button> : '—' },
             ]} />
           <Typography.Title level={5}>关系基数与确认边界</Typography.Title>
           <Table size="small" pagination={{ pageSize: 10 }} rowKey="relationId"
@@ -760,6 +817,12 @@ export default function LogicalWorkspace() {
               { title: '确认状态', dataIndex: 'status',
                 render: (value: string) => <Tag color="warning">{value}</Tag> },
               { title: '说明', dataIndex: 'explanation' },
+              { title: '操作', key: 'repair', width: 136,
+                render: (_: unknown, record: LogicalVersionSemanticReview['relations'][number]) =>
+                  <Button type="link" size="small"
+                    onClick={() => void openCurrentReviewTarget({
+                      kind: 'relation', relationId: record.relationId,
+                    })}>定位当前关系</Button> },
             ]} />
           {semanticReview.limitations.map((reason, i) => (
             <Typography.Paragraph key={i} type="secondary" className="!mb-1">{reason}</Typography.Paragraph>
