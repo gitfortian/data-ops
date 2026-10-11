@@ -1623,6 +1623,34 @@ const emptyColumnDraft = (): ColumnDraft => ({
         message.error('校验未通过：请处理列表中标红的问题后再保存');
         return;
       }
+      // First ODS import must persist the physical structure and real source
+      // mappings in one domain transaction, never as separate browser writes.
+      if (importConfig && modelInfo?.layerCode?.toUpperCase() === 'ODS'
+          && modelInfo.status === 'DRAFT' && !structure?.columns?.length) {
+        if (!structure?.definition) {
+          message.error('缺少草稿编辑基线，请刷新后重新核对');
+          return;
+        }
+        const sourceColumns = await previewModelingImportColumns(
+          importConfig.datasourceId, importConfig.database, importConfig.table);
+        if (!isCurrent() || !draftUnchanged()) return;
+        const names = sourceColumns.filter((col) => !col.technical).map((col) => col.name);
+        if (!names.length || new Set(names.map((name) => name.toLowerCase())).size !== names.length) {
+          message.error('真实源字段为空或存在重复，请核查授权元数据');
+          return;
+        }
+        const mapping: Record<string, string> = {};
+        names.forEach((source) => {
+          const target = payload.columns.find((col) => col.columnName.toLowerCase() === source.toLowerCase());
+          if (target) mapping[target.columnName] = source;
+        });
+        odsCommitDraftGuard.current = draftUnchanged;
+        setOdsCommitReview({
+          structure: payload, definition: structure.definition, source: importConfig,
+          sourceColumns: names, mappings: mapping,
+        });
+        return;
+      }
       const saved = await saveModelingStructure(modelId, payload, structure?.definition);
       if (!isCurrent()) return;
       // Keep newer local edits, but advance only to our transaction's receipt for the next save.
@@ -1640,6 +1668,56 @@ const emptyColumnDraft = (): ColumnDraft => ({
     } finally {
       if (!isCurrent()) return;
       setSaving(false);
+    }
+  };
+
+  /** One explicit confirm command. Success comes from the same-transaction readback receipt. */
+  const confirmOdsFirstImport = async () => {
+    const review = odsCommitReview;
+    if (!review || !modelId || saving) return;
+    const current = captureEditorResource();
+    if (!current() || !odsCommitDraftGuard.current?.()) {
+      message.warning('草稿内容或项目已变化，请重新核对来源后保存');
+      setOdsCommitReview(null);
+      return;
+    }
+    const selections = Object.entries(review.mappings)
+      .filter(([, sourceColumn]) => Boolean(sourceColumn))
+      .map(([targetColumn, sourceColumn]) => ({ targetColumn, sourceColumn }));
+    if (selections.length !== review.sourceColumns.length
+        || new Set(selections.map((selection) => selection.sourceColumn.toLowerCase())).size
+          !== review.sourceColumns.length) {
+      message.warning('全部真实源列须逐一对应不同的 ODS 物理目标列；技术列无需来源映射');
+      return;
+    }
+    setSaving(true);
+    try {
+      const receipt = await commitOdsManualImport(modelId, {
+        expectedDefinition: review.definition,
+        sourceDatasourceId: review.source.datasourceId,
+        sourceDatabase: review.source.database,
+        sourceTable: review.source.table,
+        structure: review.structure,
+        selections,
+      });
+      if (!current()) return;
+      if (receipt.status !== 'SAVED_AND_VERIFIED'
+          || receipt.confirmedMappingCount !== selections.length
+          || receipt.sourceColumnCount !== review.sourceColumns.length) {
+        throw new Error('来源映射保存回执不完整，不能认定导入成功');
+      }
+      setOdsCommitReview(null);
+      message.success(`已原子保存 ODS 结构及 ${receipt.confirmedMappingCount} 条真实源列映射，回读验证通过`);
+      const updated = await getModelingModel(modelId);
+      if (current()) setModelInfo(updated);
+      if (current()) await loadStructure();
+    } catch (error) {
+      if (current()) {
+        setOdsCommitReview(null);
+        message.error(error instanceof Error ? error.message : 'ODS 来源保存失败，请刷新后核验');
+      }
+    } finally {
+      if (current()) setSaving(false);
     }
   };
 
