@@ -52,7 +52,7 @@ it('can locate an exact reviewed source row instead of redirecting generically',
   render(<ProcessJourneyReviewPanel report={report} loading={false}
     onReload={jest.fn()} onOpenProcess={jest.fn()} onOpenLogical={jest.fn()}
     onOpenPhysical={jest.fn()} onOpenEvidence={openEvidence} />);
-  fireEvent.click(screen.getAllByText('逐项查看（1）')[1]);
+  fireEvent.click(screen.getByText('逐项查看（1）'));
   fireEvent.click(screen.getByRole('button', { name: '定位此对象' }));
   expect(openEvidence).toHaveBeenCalledWith('source', 42);
 });
