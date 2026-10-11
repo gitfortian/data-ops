@@ -18,6 +18,7 @@ import {
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
 import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWizardDrawer';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
@@ -53,6 +54,7 @@ const TREE_MAX_WIDTH = 480;
 const clampTreeWidth = (width: number) => Math.min(TREE_MAX_WIDTH, Math.max(TREE_MIN_WIDTH, Math.round(width)));
 
 const ModelingWorkspace: React.FC = () => {
+  const { can } = usePermissionAccess();
   const [searchParams, setSearchParams] = useSearchParams();
   const processParam = searchParams.get('processId');
   const requestedProcessId = parseJourneyProcessId(processParam);
@@ -599,6 +601,12 @@ const ModelingWorkspace: React.FC = () => {
             onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
           <Button type="link" size="small"
             onClick={() => history.push(processToLogical(journeyProcess.id))}>逻辑模型</Button>
+          {can('data-development:read') && <Tooltip
+            title="仅进入现有 DataDev 工作台；不传递模型版本、不创建任务、不声明交接批准">
+            <Button type="link" size="small" onClick={() => history.push('/data-development')}>
+              打开 DataDev 工作台（手动）
+            </Button>
+          </Tooltip>}
           <Button type="link" size="small" onClick={clearJourney}>清除过程筛选</Button>
         </div>}
         <div className="mb-3 mt-4 flex flex-wrap items-center gap-2">
