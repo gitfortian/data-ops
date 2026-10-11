@@ -39,7 +39,11 @@ export const parsePhysicalDataDevHandoff = (search: string): ParsedPhysicalDataD
   const params = new URLSearchParams(search);
   const marker = params.get('source');
   const keys = ['source', 'processId', 'modelId', 'modelVersionNo'];
-  if (!keys.some(key => params.has(key))) return { kind: 'NONE' };
+  // Other DataDev flows may use a generic source flag; do not hijack them.
+  if (marker !== 'modeling-handoff'
+    && !['processId', 'modelId', 'modelVersionNo'].some(key => params.has(key))) {
+    return { kind: 'NONE' };
+  }
   if (marker !== 'modeling-handoff' || keys.some(key => params.getAll(key).length !== 1)) {
     return { kind: 'INVALID', problem: '不完整或重复的模型交接参数；请从已发布物理版本重新进入' };
   }
