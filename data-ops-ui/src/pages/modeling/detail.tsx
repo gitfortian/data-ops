@@ -132,7 +132,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
   const [searchParams] = useSearchParams();
-  const coverageRequested = searchParams.get('review') === 'standard-coverage';
+  const evidenceMode = searchParams.get('review');
+  const coverageRequested = evidenceMode === 'standard-coverage';
+  const handoffRequested = evidenceMode === 'datadev-handoff';
   const coverageProcessId = parseJourneyProcessId(searchParams.get('processId'));
   const { currentProject } = useSecurityProject();
   const loadedEvidenceScopeRef = useRef<string>();
@@ -1115,6 +1117,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     resetDraft();
     loadedEvidenceScopeRef.current = undefined;
     setStandardCoverageOpen(false);
+    setDataDevHandoffOpen(false);
     setModelInfo(null);
     setStructure(undefined);
     setImportConfig(null);
@@ -1170,9 +1173,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
   // F-040 cross-workspace evidence request. Only an owner re-read for the current
   // project+model+process may open the existing read-only coverage report.
   useEffect(() => {
-    if (!coverageRequested || !modelInfo || !structure || loading) return;
+    if ((!coverageRequested && !handoffRequested) || !modelInfo || !structure || loading) return;
     const scope = `${currentProject?.id ?? ''}:${modelId ?? ''}`;
-    const entryKey = `${scope}:${coverageProcessId ?? 'invalid'}`;
+    const entryKey = `${scope}:${coverageProcessId ?? 'invalid'}:${evidenceMode}`;
     if (handledEvidenceScopeRef.current === entryKey
         || loadedEvidenceScopeRef.current !== scope) return;
     handledEvidenceScopeRef.current = entryKey;
@@ -1184,9 +1187,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
       message.warning('物理模型不属于所选业务过程、分层不支持标准覆盖核验，或当前结构尚不可安全审阅；请返回过程重新选择');
       return;
     }
-    setStandardCoverageOpen(true);
-  }, [coverageRequested, coverageProcessId, modelId, modelInfo, structure,
-    loading, dirty, currentProject?.id, canAll]);
+    if (coverageRequested) setStandardCoverageOpen(true);
+    else setDataDevHandoffOpen(true);
+  }, [coverageRequested, handoffRequested, evidenceMode, coverageProcessId,
+    modelId, modelInfo, structure, loading, dirty, currentProject?.id, canAll]);
 
   // 发布审批开关(01):MODEL_PUBLISH 流未配置/未启用或无审批读权限时按关闭处理，维持现状直发
   useEffect(() => {
