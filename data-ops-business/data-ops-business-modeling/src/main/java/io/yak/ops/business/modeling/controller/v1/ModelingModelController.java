@@ -17,6 +17,7 @@ import io.yak.ops.business.modeling.controller.v1.vo.ModelVO;
 import io.yak.ops.business.modeling.controller.v1.vo.ModelVersionVO;
 import io.yak.ops.business.modeling.ddl.DdlService;
 import io.yak.ops.business.modeling.importer.OdsManualImportCommitService;
+import io.yak.ops.business.modeling.standard.PhysicalStandardCoverageInspectionService;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureDialectCatalog;
 import io.yak.ops.business.modeling.structure.StructureView;
@@ -56,6 +57,7 @@ public class ModelingModelController {
   private final DdlService ddlService;
   private final ModelVersionService versionService;
   private final OdsPublishedVersionEvidenceService odsVersionEvidence;
+  private final PhysicalStandardCoverageInspectionService standardCoverage;
   private final ModelPublishApprovalService publishApprovalService;
   private final ModelViewConverter viewConverter;
   private final CurrentUserProvider currentUserProvider;
@@ -105,6 +107,14 @@ public class ModelingModelController {
       HttpServletRequest httpRequest) {
     return Result.success(odsManualImport.commit(
         id, request, currentUserProvider.getCurrentUser(httpRequest)));
+  }
+
+  /** Read-only current standards diagnostic; no new publish rule is enforced. */
+  @Operation(summary = "DWD/DIM 当前标准字段覆盖与治理缺口核验（只读）")
+  @GetMapping("/{id}/standard-coverage")
+  public Result<PhysicalStandardCoverageInspectionService.Report> standardCoverage(
+      @PathVariable("id") Long id) {
+    return Result.success(standardCoverage.inspect(id));
   }
 
   @Operation(summary = "模型详情")
