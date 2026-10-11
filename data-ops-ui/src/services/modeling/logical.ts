@@ -129,3 +129,36 @@ export const previewLogicalPhysical = (
   HttpUtils.getData<LogicalPhysicalPreview>(
     `${ROOT}/${logicalId}/versions/${versionNo}/physical-preview?physicalModelId=${physicalModelId}`,
   );
+
+/** User-selected, ephemeral mapping review; never a saved or approved Mapping. */
+export interface LogicalPhysicalReview {
+  logicalModelId: number;
+  logicalVersionNo: number;
+  physicalModelId: number;
+  logicalSnapshotSha256: string;
+  physicalStructureSha256: string;
+  evidenceUnchanged: boolean;
+  readyForManualDesign: boolean;
+  status: 'REVIEWABLE_ONLY' | 'BLOCKED';
+  blockers: string[];
+  reviewedMappings: {
+    logicalAttributeId: number;
+    physicalColumnId: number;
+    stdFieldId: number;
+    physicalColumn: string;
+    logicalAttribute: string;
+  }[];
+}
+export interface LogicalPhysicalReviewRequest {
+  logicalSnapshotSha256: string;
+  physicalStructureSha256: string;
+  selections: { logicalAttributeId: number; physicalColumnId: number }[];
+}
+export const reviewLogicalPhysical = (
+  logicalId: number, versionNo: number, physicalModelId: number,
+  request: LogicalPhysicalReviewRequest,
+): Promise<LogicalPhysicalReview> =>
+  HttpUtils.postData<LogicalPhysicalReview>(
+    `${ROOT}/${logicalId}/versions/${versionNo}/physical-review?physicalModelId=${physicalModelId}`,
+    request,
+  );

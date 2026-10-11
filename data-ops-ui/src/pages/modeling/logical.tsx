@@ -11,7 +11,8 @@ import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
   freezeLogicalDraft, getLogicalDraft, getLogicalVersionSnapshot, listLogicalDrafts,
   listLogicalVersions, updateLogicalEntity, updateLogicalAttribute, updateLogicalRelation,
-  previewLogicalPhysical, type LogicalPhysicalPreview,
+  previewLogicalPhysical, reviewLogicalPhysical,
+  type LogicalPhysicalPreview, type LogicalPhysicalReview,
   type LogicalDraftDetail, type LogicalDraftVersion, type LogicalModelDraft,
   type LogicalRelation,
 } from '@/services/modeling/logical';
@@ -54,6 +55,10 @@ export default function LogicalWorkspace() {
   const [physicalTargetsLoading, setPhysicalTargetsLoading] = useState(false);
   const [handoffPreview, setHandoffPreview] = useState<LogicalPhysicalPreview>();
   const [handoffLoading, setHandoffLoading] = useState(false);
+  const [mappingSelections, setMappingSelections] = useState<Record<number, number>>({});
+  const [reviewResult, setReviewResult] = useState<LogicalPhysicalReview>();
+  const [reviewSelectionSnapshot, setReviewSelectionSnapshot] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
   const [createForm] = Form.useForm<CreateValues>();
   const [entityForm] = Form.useForm<EntityValues>();
   const [attributeForm] = Form.useForm<AttributeValues>();
@@ -61,6 +66,8 @@ export default function LogicalWorkspace() {
 
   const reload = useCallback(async (id?: number) => {
     setHandoffPreview(undefined);
+    setReviewResult(undefined);
+    setMappingSelections({});
     setLoading(true);
     try {
       const [next, all] = await Promise.all([
@@ -128,6 +135,8 @@ export default function LogicalWorkspace() {
 
   const selectModel = useCallback(async (id: number) => {
     setHandoffPreview(undefined);
+    setReviewResult(undefined);
+    setMappingSelections({});
     setPhysicalModelId(null);
     setPhysicalSearch('');
     setSelected(id);
@@ -149,6 +158,8 @@ export default function LogicalWorkspace() {
       const data = await action();
       setDetail(data);
       setHandoffPreview(undefined);
+      setReviewResult(undefined);
+      setMappingSelections({});
       close();
       message.success(successText);
       const next = await listLogicalDrafts();
@@ -239,6 +250,8 @@ export default function LogicalWorkspace() {
       return;
     }
     setHandoffPreview(undefined);
+    setReviewResult(undefined);
+    setMappingSelections({});
     setHandoffLoading(true);
     try {
       setHandoffPreview(await previewLogicalPhysical(selected, versionNo, physicalModelId));
@@ -246,6 +259,48 @@ export default function LogicalWorkspace() {
       message.error(errorText(error));
     } finally {
       setHandoffLoading(false);
+    }
+  };
+
+  const logicalReviewOptions = useMemo(() => {
+    const values = new Map<number, { id: number; stdFieldId?: number; label: string }>();
+    handoffPreview?.columns.forEach((row) => {
+      if (row.logicalAttributeId != null) {
+        values.set(row.logicalAttributeId, {
+          id: row.logicalAttributeId,
+          stdFieldId: row.physicalStdFieldId,
+          label: `${row.logicalEntity || '未命名实体'} · ${row.logicalAttribute || '未命名属性'} (#${row.logicalAttributeId})`,
+        });
+      }
+    });
+    return [...values.values()];
+  }, [handoffPreview]);
+
+  const validateExplicitReview = async () => {
+    if (selected == null || physicalModelId == null || !handoffPreview) return;
+    setReviewResult(undefined);
+    setReviewSelectionSnapshot('');
+    setReviewLoading(true);
+    const selectionSnapshot = JSON.stringify(mappingSelections);
+    try {
+      const receipt = await reviewLogicalPhysical(selected, handoffPreview.logicalVersionNo, physicalModelId, {
+        logicalSnapshotSha256: handoffPreview.logicalSnapshotSha256,
+        physicalStructureSha256: handoffPreview.physicalStructureSha256,
+        selections: Object.entries(mappingSelections).map(([physicalColumnId, logicalAttributeId]) => ({
+          physicalColumnId: Number(physicalColumnId), logicalAttributeId,
+        })),
+      });
+      setReviewSelectionSnapshot(selectionSnapshot);
+      setReviewResult(receipt);
+      if (!receipt.evidenceUnchanged) {
+        setHandoffPreview(undefined);
+        setMappingSelections({});
+        message.warning('版本证据已变化，请重新预检并选择映射');
+      }
+    } catch (error) {
+      message.error(errorText(error));
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -346,8 +401,14 @@ export default function LogicalWorkspace() {
                     notFoundContent={physicalTargetsLoading ? '正在查询项目物理模型' : '无匹配模型，请输入更多关键词'}
                     value={physicalModelId ?? undefined}
                     onSearch={setPhysicalSearch}
-                    onClear={() => { setPhysicalModelId(null); setHandoffPreview(undefined); }}
-                    onChange={(value) => { setPhysicalModelId(value ?? null); setHandoffPreview(undefined); }}
+                    onClear={() => {
+                      setPhysicalModelId(null); setHandoffPreview(undefined);
+                      setReviewResult(undefined); setMappingSelections({});
+                    }}
+                    onChange={(value) => {
+                      setPhysicalModelId(value ?? null); setHandoffPreview(undefined);
+                      setReviewResult(undefined); setMappingSelections({});
+                    }}
                     options={physicalTargets
                       .filter((target) => target.id != null
                         && Number.isSafeInteger(Number(target.id)) && Number(target.id) > 0)
@@ -485,7 +546,56 @@ export default function LogicalWorkspace() {
             { title: '逻辑属性 ID', dataIndex: 'logicalAttributeId', render: (v?: number) => v ?? '—' },
             { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{v}</Tag> },
             { title: '原因', dataIndex: 'reason' },
+            { title: '人工选择（仅本次浏览器会话）', key: 'selection',
+              render: (_, row) => row.physicalColumnId == null ? '—' : (
+                <Select<number> showSearch optionFilterProp="label" allowClear
+                  placeholder="选择逻辑属性" className="min-w-[240px]" style={{ width: 260 }}
+                  value={mappingSelections[row.physicalColumnId]}
+                  options={logicalReviewOptions
+                    .filter((a) => a.stdFieldId != null && a.stdFieldId === row.physicalStdFieldId)
+                    .map((a) => ({ label: a.label, value: a.id }))}
+                  onChange={(value) => {
+                    setMappingSelections((prev) => {
+                      const next = { ...prev };
+                      if (value == null) delete next[row.physicalColumnId!];
+                      else next[row.physicalColumnId!] = value;
+                      return next;
+                    });
+                    setReviewResult(undefined);
+                  }}
+                />
+              ) },
           ]} />
+        <Space wrap className="mt-3">
+          <Button type="primary" loading={reviewLoading}
+            disabled={Object.keys(mappingSelections).length === 0}
+            onClick={() => void validateExplicitReview()}>
+            校验本次人工选择（只读，不保存）
+          </Button>
+          <Typography.Text type="secondary">
+            已选 {Object.keys(mappingSelections).length} 项。本阶段仅可审阅、复查、修正，不创建正式映射或发布版本。
+          </Typography.Text>
+        </Space>
+        {reviewResult
+          && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
+          && reviewResult.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
+          && reviewResult.physicalStructureSha256 === handoffPreview.physicalStructureSha256
+          && reviewResult.logicalModelId === handoffPreview.logicalModelId
+          && reviewResult.physicalModelId === handoffPreview.physicalModelId
+          && (
+          <div className="mt-4">
+            <Alert showIcon type={reviewResult.readyForManualDesign ? 'info' : 'warning'}
+              message={reviewResult.readyForManualDesign
+                ? '本次人工选择通过只读校验（不是正式确认或发布）'
+                : '本次选择存在阻断项，尚不能作为正式设计依据'}
+              description={`校验状态：${reviewResult.status} · 检查通过的字段关联：${reviewResult.reviewedMappings.length} 项。服务端已重新校验逻辑与物理证据。`} />
+            {reviewResult.blockers.map((blocker, idx) => (
+              <Typography.Paragraph key={idx} type="danger" className="!mt-2 !mb-0">
+                {blocker}
+              </Typography.Paragraph>
+            ))}
+          </div>
+        )}
       </Card>}
       <Modal width={760} title="冻结的逻辑设计内容（只读）" open={snapshotOpen}
         footer={<Button onClick={() => setSnapshotOpen(false)}>关闭</Button>}
