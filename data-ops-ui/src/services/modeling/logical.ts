@@ -99,6 +99,58 @@ export const listLogicalVersions = (id: number): Promise<LogicalDraftVersion[]> 
 export const getLogicalVersionSnapshot = (id: number, version: number): Promise<string> =>
   HttpUtils.getData<string>(`${ROOT}/${id}/versions/${version}`);
 
+/** Exact logical DRAFT snapshot compared with live authoring and today's Semantic references.
+ * Does not approve the logical model, freeze standards or create physical mappings. */
+export interface LogicalVersionSemanticReview {
+  logicalModelId: number;
+  versionNo: number;
+  frozenStatus: string;
+  draftStatus: string;
+  frozenSnapshotSha256: string;
+  frozenDesignSha256: string;
+  currentDesignSha256: string;
+  entityCount: number;
+  attributeCount: number;
+  relationCount: number;
+  designComparison: 'MATCHES_CURRENT' | 'DIFFERS_FROM_CURRENT';
+  reviewStatus: 'REVIEWABLE_ONLY' | 'NEEDS_REVIEW';
+  changes: {
+    objectType: string;
+    objectId: number;
+    label: string;
+    status: 'ADDED_NOW' | 'REMOVED_NOW' | 'CHANGED_NOW';
+    frozenValue?: string | null;
+    currentValue?: string | null;
+  }[];
+  attributes: {
+    entityId: number;
+    entityName: string;
+    attributeId: number;
+    attributeName: string;
+    stdFieldId?: number | null;
+    standardName?: string | null;
+    standardRole?: string | null;
+    standardStatus: 'PENDING_STANDARD' | 'INVALID_STANDARD' | 'ENABLED_NOW';
+    explanation: string;
+  }[];
+  relations: {
+    relationId: number;
+    sourceEntity: string;
+    targetEntity: string;
+    cardinality: string;
+    status: 'CARDINALITY_PENDING' | 'DECLARED_NOT_CONFIRMED';
+    explanation: string;
+  }[];
+  blockers: string[];
+  limitations: string[];
+}
+export const reviewLogicalVersionSemantics = (
+  logicalId: number, versionNo: number,
+): Promise<LogicalVersionSemanticReview> =>
+  HttpUtils.getData<LogicalVersionSemanticReview>(
+    `${ROOT}/${logicalId}/versions/${versionNo}/semantic-review`,
+  );
+
 /** An evidence-only proposal: never a generated model, approved mapping or deployment. */
 export interface LogicalPhysicalPreview {
   logicalModelId: number;
