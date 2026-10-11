@@ -336,6 +336,39 @@ export const inspectPhysicalStandardCoverage = (
     `${MODELING_API_PREFIX}/models/${modelId}/standard-coverage`,
   );
 
+/** Frozen Modeling version plus CURRENT standards evidence; never a DataDev task permission. */
+export interface PhysicalDataDevHandoffReadiness {
+  modelId: number;
+  modelCode: string;
+  layerCode: 'DWD' | 'DIM';
+  modelStatus: string;
+  version: {
+    modelId: number;
+    versionId: number;
+    versionNo: number;
+    frozenStructureSha256: string;
+  };
+  currentStructureSha256: string;
+  currentStandardEvidenceSha256: string;
+  selectedLatestVersion: boolean;
+  designStatus: 'DESIGN_REVIEWABLE' | 'DESIGN_NEEDS_REVIEW';
+  dataDevStatus: 'NOT_AUTHORIZED_FOR_TASK_CREATION';
+  frozenColumnCount: number;
+  currentColumnCount: number;
+  frozenStandardRefCount: number;
+  frozenUnboundColumnCount: number;
+  dependencies: { code: string; status: string; explanation: string }[];
+  blockers: string[];
+  nextActions: string[];
+  inspectionSha256: string;
+}
+export const inspectPhysicalDataDevHandoff = (
+  id: ModelingModelId, versionNo: number,
+): Promise<PhysicalDataDevHandoffReadiness> =>
+  HttpUtils.getData<PhysicalDataDevHandoffReadiness>(
+    `${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/datadev-handoff-readiness`,
+  );
+
 /** 回滚第一步：用指定版本覆盖当前草稿（置 DRAFT，不发布）。 */
 export const rollbackModelingVersion = (id: ModelingModelId, versionNo: number): Promise<boolean> =>
   HttpUtils.postData<boolean>(`${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/rollback`, {});
