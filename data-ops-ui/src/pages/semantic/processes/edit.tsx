@@ -95,6 +95,9 @@ const ProcessEditPage: React.FC = () => {
   const [journeyLoading, setJourneyLoading] = useState(false);
   const [journeyReview, setJourneyReview] = useState<ProcessJourneyReview>();
   const [activeTab, setActiveTab] = useState('basic');
+  const [focusedEvidence, setFocusedEvidence] = useState<{
+    key: 'source' | 'standard'; id: number;
+  }>();
   const params = useParams<{ id?: string }>();
   const processId = params.id ? Number(params.id) : undefined;
   const [process, setProcess] = useState<SemanticProcessRecord | null>(null);
@@ -433,6 +436,8 @@ const ProcessEditPage: React.FC = () => {
         <Table<SemanticProcessSourceRecord>
           rowKey="id"
           size="small"
+          rowClassName={(row) => focusedEvidence?.key === 'source'
+            && focusedEvidence.id === row.id ? 'bg-amber-50' : ''}
           columns={sourceColumns}
           dataSource={sources}
           pagination={false}
@@ -768,6 +773,8 @@ const ProcessEditPage: React.FC = () => {
         <Table<SemanticFieldRecord>
           rowKey="id"
           size="small"
+          rowClassName={(row) => focusedEvidence?.key === 'standard'
+            && focusedEvidence.id === row.id ? 'bg-amber-50' : ''}
           columns={fieldColumns}
           dataSource={boundFields}
           pagination={false}
@@ -930,9 +937,20 @@ const ProcessEditPage: React.FC = () => {
         onReload={() => { void loadProcess(); }}
         onOpenProcess={(key) => setActiveTab(key === 'source'
           ? 'sources' : key === 'standard' ? 'fields' : 'basic')}
+        onOpenEvidence={(key, id) => {
+          setFocusedEvidence({ key, id });
+          setActiveTab(key === 'source' ? 'sources' : 'fields');
+        }}
         onOpenLogical={() => processId && history.push(processToLogical(processId))}
         onOpenPhysical={() => processId && history.push(processToPhysical(processId))} />
       {sectionErrors.length ? <div role="alert">{sectionErrors.join('、')}暂不可读取，当前显示不能作为无引用证据。<Button onClick={() => void loadProcess()}>重试</Button></div> : null}
+      {focusedEvidence && (
+        <Alert className="mt-3" showIcon type="info"
+          message={`已定位到${focusedEvidence.key === 'source' ? '来源表' : '标准字段'} #${focusedEvidence.id}`}
+          description="下方对应表格中的记录已标记；请先核对正式对象，再决定是否执行解绑、调整或治理操作。"
+          action={<Button onClick={() => setFocusedEvidence(undefined)}>清除定位</Button>}
+        />
+      )}
       <Tabs
         className="mt-3"
         activeKey={activeTab}
