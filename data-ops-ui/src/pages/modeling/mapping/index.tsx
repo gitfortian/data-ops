@@ -400,7 +400,8 @@ const MappingPanel: React.FC = () => {
           <Button onClick={() => { setOdsReview(undefined); setOdsChoices({}); }} disabled={odsSaving}>关闭</Button>
           <Button disabled={odsSaving} onClick={selectMatchingOdsColumns}>选择全部安全同名候选（仅选择，不保存）</Button>
           <Button type="primary" loading={odsSaving}
-            disabled={!maySave || Object.keys(odsChoices).length === 0}
+            disabled={!maySave || Object.keys(odsChoices).length === 0
+              || Boolean(odsReview?.conflictCount || odsReview?.orphanCount)}
             onClick={confirmOdsRepair}>确认选中来源映射</Button>
         </Space>}
         onCancel={() => { if (!odsSaving) { setOdsReview(undefined); setOdsChoices({}); } }}>
@@ -417,8 +418,14 @@ const MappingPanel: React.FC = () => {
             <Tag color="warning">待映射 {odsReview.unmappedCount}</Tag>
             <Tag>技术列 {odsReview.technicalCount}</Tag>
             {odsReview.orphanCount > 0 && <Tag color="red">已删除目标的历史孤儿映射 {odsReview.orphanCount}，需单独核查</Tag>}
+            {odsReview.conflictCount > 0 && <Tag color="red">其他来源的历史映射冲突 {odsReview.conflictCount}，请先核查</Tag>}
             <Tag color="blue">本次已选择 {Object.keys(odsChoices).length}</Tag>
           </Space>
+          {(odsReview.conflictCount > 0 || odsReview.orphanCount > 0) && (
+            <Typography.Paragraph type="danger">
+              存在跨来源或已删除目标字段的历史映射，服务端将拒绝本批次写入，请先使用现有逐列编辑和清理操作。
+            </Typography.Paragraph>
+          )}
           <Table size="small" rowKey="targetColumn" pagination={{ pageSize: 20 }}
             dataSource={odsReview.rows} columns={[
               { title: '物理目标字段', dataIndex: 'targetColumn' },
@@ -426,6 +433,7 @@ const MappingPanel: React.FC = () => {
               { title: '当前来源状态', key: 'sourceStatus',
                 render: (_, row) => row.status === 'MAPPED'
                   ? <Tag color="green">已映射：{row.existingSourceColumn}</Tag>
+                  : row.status === 'SOURCE_CONFLICT' ? <Tag color="red">来源冲突：{row.existingSourceColumn}</Tag>
                   : row.status === 'TECHNICAL' ? <Tag>平台技术列，无真实来源</Tag>
                   : <Tag color="warning">未映射</Tag> },
               { title: '用户明确选择源字段', key: 'sourceChoice',
