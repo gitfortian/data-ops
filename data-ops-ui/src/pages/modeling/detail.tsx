@@ -37,7 +37,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
 import {
-  assignImportLineage,
+  commitOdsManualImport,
   generateModelingDdl,
   getModelingMetricDraft,
   getModelingModel,
@@ -53,7 +53,7 @@ import {
 } from '@/services/modeling/api';
 import JsonDiffView from '@/components/version/JsonDiffView';
 import { previewModelingImportColumns } from '@/services/modeling/import';
-import type { ModelingModelRecord, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
+import type { ModelingModelRecord, ModelingSaveStructurePayload, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
 import { getStandardOptions, pageSemanticFields, pageSemanticProcesses } from '@/services/semantic/api';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { listAllDataSources, listDataSourceTables } from '@/services/data-source/api';
@@ -178,6 +178,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
   // 逆向导入配置(从 URL 读取后持久化,支持重新导入恢复源表字段)
   const [importConfig, setImportConfig] = useState<{ datasourceId: number; database: string; table: string } | null>(null);
   const [reimportLoading, setReimportLoading] = useState(false);
+  const [odsCommitReview, setOdsCommitReview] = useState<{
+    structure: ModelingSaveStructurePayload;
+    definition: string;
+    source: { datasourceId: number; database: string; table: string };
+    sourceColumns: string[];
+    mappings: Record<string, string>;
+  } | null>(null);
+  const odsCommitDraftGuard = useRef<(() => boolean) | null>(null);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   // 导入字段弹窗状态(用于空模型导入)
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -705,23 +713,21 @@ const emptyColumnDraft = (): ColumnDraft => ({
           if (!isCurrent()) return;
           setRows(discovered.rows);
           if (discovered.matchCount > 0) {
-            message.success(`导入成功，标准发现匹配到 ${discovered.matchCount} 个字段`);
+            message.success(`已加载来源字段草稿，标准发现匹配 ${discovered.matchCount} 项；仍需确认保存来源映射`);
           } else {
-            message.success(`导入成功，共 ${columns.length} 个字段`);
+            message.success(`已加载 ${columns.length} 个来源字段草稿；尚未保存正式映射`);
           }
         } catch {
           if (!isCurrent()) return;
           setRows(initialRows);
-          message.success(`导入成功，共 ${columns.length} 个字段`);
+          message.success(`已加载 ${columns.length} 个来源字段草稿；尚未保存正式映射`);
         }
         // 保存导入配置以支持重新导入
         setImportConfig({ datasourceId: importDatasourceId, database: importDatabase, table: importTable });
         setDirty(true);
         setImportModalOpen(false);
-        // 血缘追溯:记录导入方式
-        if (modelId) {
-          assignImportLineage(Number(modelId), 'SOURCE_TABLE').catch(() => undefined);
-        }
+        // Preview cannot write authoritative lineage. First ODS import persists
+        // source provenance only together with structure and every source mapping.
       } else {
         message.warning('源表无字段信息');
       }
