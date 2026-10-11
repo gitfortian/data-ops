@@ -1,6 +1,7 @@
 import { Alert, Button, Modal, Space, Table, Tag, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { comparePhysicalGovernance, type PhysicalGovernanceBaseline } from '../governanceRecheck';
 import {
   inspectPhysicalStandardCoverage,
   type PhysicalStandardCoverageInspection,
@@ -11,35 +12,60 @@ interface Props {
   open: boolean;
   onClose: () => void;
   /** Navigation only; report column identity is revalidated in the editor. */
-  onLocateColumn?: (column: PhysicalStandardCoverageInspection['columns'][number]) => void;
+  onLocateColumn?: (column: PhysicalStandardCoverageInspection['columns'][number], report: PhysicalStandardCoverageInspection) => void;
+  /** Previous evidence exists only in the current editor session after explicit repair navigation. */
+  baseline?: PhysicalGovernanceBaseline;
 }
 
 /** Read-only evidence of current physical-field standards. NOT a publish gate. */
-export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, onLocateColumn }: Props) {
+export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, onLocateColumn, baseline }: Props) {
   const { currentProject } = useSecurityProject();
   const [report, setReport] = useState<PhysicalStandardCoverageInspection>();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     setReport(undefined);
-    if (!open) return () => { active = false; };
+    setError(undefined);
+    if (!open) { setLoading(false); return () => { active = false; }; }
     setLoading(true);
     void inspectPhysicalStandardCoverage(modelId).then((result) => {
-      if (active && result.modelId === modelId) setReport(result);
+      if (active) {
+        if (result.modelId !== modelId) setError('标准覆盖报告模型身份与当前编辑器不一致，不能用于治理');
+        else setReport(result);
+      }
     }).catch((error: unknown) => {
-      if (active) message.error(error instanceof Error ? error.message
-        : '标准目录或项目模型不可访问，不能将错误视作覆盖合格');
+      if (active) {
+        const reason = error instanceof Error ? error.message
+          : '标准目录或项目模型不可访问，不能将错误视作覆盖合格';
+        setError(reason);
+        message.error(reason);
+      }
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [open, modelId, currentProject?.id]);
+  }, [open, modelId, currentProject?.id, reloadKey]);
+
+  const feedback = report && baseline ? comparePhysicalGovernance(baseline, report) : undefined;
 
   return (
     <Modal title="DWD/DIM 当前字段标准覆盖与治理缺口（只读）"
       width={1080} open={open} destroyOnHidden
-      footer={<Button onClick={onClose}>关闭</Button>} onCancel={onClose}>
+      footer={<Space>
+        <Button disabled={loading} onClick={() => setReloadKey(key => key + 1)}>重新读取当前治理证据</Button>
+        <Button onClick={onClose}>关闭</Button>
+      </Space>} onCancel={onClose}>
+      {error && <Alert className="mb-3" showIcon type="error"
+        message="本次治理报告不可用" description={error} />}
+      {feedback && <Alert className="mb-3" showIcon
+        type={feedback.state === 'WRONG_OWNER' ? 'error' : 'info'}
+        message={feedback.state === 'CHANGED' ? '已重新核验：本次证据与修正前不同'
+          : feedback.state === 'UNCHANGED' ? '已重新核验：证据尚未变化'
+            : '无法比较不同对象的证据'}
+        description={feedback.explanation} />}
       {loading && <Typography.Paragraph type="secondary">正在核验已保存的模型与正式标准字段…</Typography.Paragraph>}
       {report && <>
         <Alert showIcon className="mb-3"
@@ -86,7 +112,7 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
               render: (_: unknown, column: PhysicalStandardCoverageInspection['columns'][number]) =>
                 onLocateColumn && column.status !== 'ENABLED_NOW'
                   ? <Button type="link" size="small"
-                      onClick={() => onLocateColumn(column)}>定位当前物理列</Button>
+                      onClick={() => onLocateColumn(column, report)}>定位当前物理列</Button>
                   : <Typography.Text type="secondary">—</Typography.Text> },
           ]} />
         <Typography.Title level={5}>核验适用范围</Typography.Title>
