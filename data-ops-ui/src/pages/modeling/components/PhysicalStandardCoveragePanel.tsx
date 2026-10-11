@@ -10,10 +10,12 @@ interface Props {
   modelId: number;
   open: boolean;
   onClose: () => void;
+  /** Navigation only; report column identity is revalidated in the editor. */
+  onLocateColumn?: (column: PhysicalStandardCoverageInspection['columns'][number]) => void;
 }
 
 /** Read-only evidence of current physical-field standards. NOT a publish gate. */
-export default function PhysicalStandardCoveragePanel({ modelId, open, onClose }: Props) {
+export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, onLocateColumn }: Props) {
   const { currentProject } = useSecurityProject();
   const [report, setReport] = useState<PhysicalStandardCoverageInspection>();
   const [loading, setLoading] = useState(false);
@@ -80,6 +82,12 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose }
               render: (status: string) => <Tag color={status === 'ENABLED_NOW'
                 ? 'green' : status === 'INVALID_STANDARD' ? 'red' : 'orange'}>{status}</Tag> },
             { title: '为何需要复核', dataIndex: 'explanation' },
+            { title: '下一步', key: 'action', width: 135,
+              render: (_: unknown, column: PhysicalStandardCoverageInspection['columns'][number]) =>
+                onLocateColumn && column.status !== 'ENABLED_NOW'
+                  ? <Button type="link" size="small"
+                      onClick={() => onLocateColumn(column)}>定位当前物理列</Button>
+                  : <Typography.Text type="secondary">—</Typography.Text> },
           ]} />
         <Typography.Title level={5}>核验适用范围</Typography.Title>
         {report.limitations.map((value, i) => (
