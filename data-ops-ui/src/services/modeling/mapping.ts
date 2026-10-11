@@ -51,7 +51,7 @@ export interface OdsMappingReconcilePreview {
   rows: {
     targetColumn: string;
     dataType: string;
-    status: 'MAPPED' | 'UNMAPPED' | 'TECHNICAL';
+    status: 'MAPPED' | 'UNMAPPED' | 'TECHNICAL' | 'SOURCE_CONFLICT';
     existingSourceColumn?: string | null;
     suggestedSourceColumn?: string | null;
   }[];
@@ -59,6 +59,7 @@ export interface OdsMappingReconcilePreview {
   unmappedCount: number;
   technicalCount: number;
   orphanCount: number;
+  conflictCount: number;
 }
 export interface OdsMappingReconcileReceipt {
   modelId: number;
