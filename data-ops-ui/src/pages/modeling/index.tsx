@@ -1,5 +1,5 @@
 import { DownOutlined } from '@ant-design/icons';
-import { history } from '@umijs/max';
+import { history, useSearchParams } from '@umijs/max';
 import {
   Button,
   Checkbox,
@@ -16,8 +16,9 @@ import {
   Tooltip,
 } from 'antd';
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
 import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWizardDrawer';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
@@ -37,8 +38,11 @@ import {
   pageModelingModels,
 } from '@/services/modeling/api';
 import type { ModelingModelRecord, ModelingTagRecord } from '@/services/modeling/types';
-import { getSemanticDomainTree, listSemanticLayers, pageSemanticProcesses } from '@/services/semantic/api';
+import { getSemanticDomainTree, getSemanticProcess, listSemanticLayers, pageSemanticProcesses } from '@/services/semantic/api';
 import type { SemanticDomainNode, SemanticLayerRecord, SemanticProcessRecord } from '@/services/semantic/types';
+import {
+  parseJourneyProcessId, processToLogical, processToSemantic,
+} from '@/utils/journeyNavigation';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const TREE_WIDTH_STORAGE_KEY = 'yak.modeling.tree.width';
@@ -50,6 +54,14 @@ const TREE_MAX_WIDTH = 480;
 const clampTreeWidth = (width: number) => Math.min(TREE_MAX_WIDTH, Math.max(TREE_MIN_WIDTH, Math.round(width)));
 
 const ModelingWorkspace: React.FC = () => {
+  const { can } = usePermissionAccess();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processParam = searchParams.get('processId');
+  const requestedProcessId = parseJourneyProcessId(processParam);
+  const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
+  const [journeyReady, setJourneyReady] = useState(processParam === null);
+  const listEpoch = useRef(0);
+  const [journeyProblem, setJourneyProblem] = useState<string>();
   // 列表与过滤状态
   const [records, setRecords] = useState<ModelingModelRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -59,7 +71,7 @@ const ModelingWorkspace: React.FC = () => {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   // 2026-09-17 筛选扩展:分层/业务过程/状态/目标库
   const [layerFilter, setLayerFilter] = useState<string | undefined>(undefined);
-  const [processFilter, setProcessFilter] = useState<number | undefined>(undefined);
+  const [processFilter, setProcessFilter] = useState<number | undefined>(requestedProcessId);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [dbFilter, setDbFilter] = useState<string | undefined>(undefined);
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
@@ -142,6 +154,7 @@ const ModelingWorkspace: React.FC = () => {
       status?: string,
       domainId?: number,
     ) => {
+      const epoch = ++listEpoch.current;
       setLoading(true);
       try {
         const data = await pageModelingModels({
@@ -154,12 +167,16 @@ const ModelingWorkspace: React.FC = () => {
           domainId,
           status,
         });
+        if (epoch !== listEpoch.current) return;
         setRecords(data?.bizData || []);
         setTotal(data?.pagination?.total || 0);
       } catch (error) {
+        if (epoch !== listEpoch.current) return;
+        setRecords([]);
+        setTotal(0);
         message.error(error instanceof Error ? error.message : '模型列表加载失败');
       } finally {
-        setLoading(false);
+        if (epoch === listEpoch.current) setLoading(false);
       }
     },
     [],
@@ -208,7 +225,48 @@ const ModelingWorkspace: React.FC = () => {
     return out;
   }, [domainTree]);
 
+  // The URL processId is just a routing hint. Semantic must confirm
+  // current-project access before opening this scoped physical catalog.
   useEffect(() => {
+    let active = true;
+    // A previous process filter's pending response must not repaint this route.
+    listEpoch.current += 1;
+    setRecords([]);
+    setTotal(0);
+    setJourneyProcess(undefined);
+    setJourneyProblem(undefined);
+    if (processParam === null) {
+      setJourneyReady(true);
+      return () => { active = false; };
+    }
+    setJourneyReady(false);
+    if (!requestedProcessId) {
+      setJourneyProblem('无效的业务过程参数，请从业务过程列表重新选择');
+      return () => { active = false; };
+    }
+    void getSemanticProcess(requestedProcessId).then((process) => {
+      if (!active) return;
+      if (!process || Number(process.id) !== requestedProcessId) {
+        throw new Error('业务过程不属于当前授权项目');
+      }
+      setJourneyProcess(process);
+      setProcesses((previous) => previous.some((item) => item.id === process.id)
+        ? previous : [...previous, process]);
+      setProcessFilter(requestedProcessId);
+      setDomainFilter(undefined);
+      setPageNo(1);
+      setJourneyReady(true);
+    }).catch(() => {
+      if (!active) return;
+      setRecords([]);
+      setTotal(0);
+      setJourneyProblem('指定业务过程不存在、已失效或当前项目无权访问');
+    });
+    return () => { active = false; };
+  }, [processParam, requestedProcessId]);
+
+  useEffect(() => {
+    if (!journeyReady || journeyProblem) return;
     void loadRecords(
       pageNo,
       pageSize,
@@ -220,6 +278,8 @@ const ModelingWorkspace: React.FC = () => {
       domainFilter,
     );
   }, [
+    journeyReady,
+    journeyProblem,
     loadRecords,
     pageNo,
     pageSize,
@@ -259,6 +319,16 @@ const ModelingWorkspace: React.FC = () => {
 
   const goSemantic = () => {
     history.push('/semantic/domains');
+  };
+
+  const clearJourney = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('processId');
+    setSearchParams(next, { replace: true });
+    setJourneyProcess(undefined);
+    setJourneyProblem(undefined);
+    setProcessFilter(undefined);
+    setPageNo(1);
   };
 
   const handleSearch = (value: string) => {
@@ -485,7 +555,8 @@ const ModelingWorkspace: React.FC = () => {
           <div className="flex items-center gap-3">
             <Input.Search allowClear placeholder="按名称或编码搜索" className="!w-[240px]" onSearch={handleSearch} />
             {/* 同一个建模域的业务层专业入口，不新增顶层菜单。 */}
-            <Button onClick={() => history.push('/modeling/logical')}>业务逻辑模型</Button>
+            <Button onClick={() => history.push(journeyProcess
+              ? processToLogical(journeyProcess.id) : '/modeling/logical')}>业务逻辑模型</Button>
             {/* 视图切换(2026-09-17):列表 / 主线视图不再是独立入口 */}
             <Segmented
               value="list"
@@ -528,6 +599,25 @@ const ModelingWorkspace: React.FC = () => {
           </div>
         </div>
 
+        {journeyProblem && <div role="alert" className="mb-3">
+          <span className="text-red-600">{journeyProblem}</span>
+          <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
+          <Button onClick={clearJourney}>查看全部物理模型</Button>
+        </div>}
+        {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#d0d5dd] bg-white px-3 py-2 text-[13px]">
+          <span>正在查看业务过程：<strong>{journeyProcess.name}</strong>，仅显示当前项目对应的物理模型</span>
+          <Button type="link" size="small"
+            onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
+          <Button type="link" size="small"
+            onClick={() => history.push(processToLogical(journeyProcess.id))}>逻辑模型</Button>
+          {can('data-development:read') && <Tooltip
+            title="仅进入现有 DataDev 工作台；不传递模型版本、不创建任务、不声明交接批准">
+            <Button type="link" size="small" onClick={() => history.push('/data-development')}>
+              打开 DataDev 工作台（手动）
+            </Button>
+          </Tooltip>}
+          <Button type="link" size="small" onClick={clearJourney}>清除过程筛选</Button>
+        </div>}
         <div className="mb-3 mt-4 flex flex-wrap items-center gap-2">
           {/* 目录 vs 标签职责提示(2026-09-17):目录=层级分类,标签=横向标记 */}
           <Tooltip title="目录=层级分类(如 交易/订单)；标签=横向标记(如 核心模型/临时模型)">
@@ -567,6 +657,7 @@ const ModelingWorkspace: React.FC = () => {
             value={domainFilter}
             options={flatDomains.map((domain) => ({ value: domain.id, label: domain.name }))}
             onChange={(value) => {
+              if (processParam !== null) clearJourney();
               setDomainFilter(value);
               setProcessFilter(undefined);
               setPageNo(1);
@@ -584,6 +675,10 @@ const ModelingWorkspace: React.FC = () => {
               label: process.name,
             }))}
             onChange={(value) => {
+              const next = new URLSearchParams(searchParams);
+              if (value) next.set('processId', String(value));
+              else next.delete('processId');
+              setSearchParams(next, { replace: true });
               setProcessFilter(value);
               setDomainFilter(undefined);
               setPageNo(1);
@@ -755,6 +850,7 @@ const ModelingWorkspace: React.FC = () => {
 
       <ModelCreateWizardDrawer
         open={wizardOpen}
+        initialProcessId={journeyProcess?.id}
         loading={creating}
         layers={layers}
         processes={processes}
