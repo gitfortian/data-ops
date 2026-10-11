@@ -33,7 +33,7 @@ describe('F-040 C5 DataDev task revision vs runtime evidence', () => {
       { ...run, nodeId: '123', id: '44' }, // exact scope cannot prefix-match
       { ...run, taskType: 'PYTHON', id: '45' },
       run,
-      { ...run, id: '46', status: 'FAILED', startTime: '2026-10-11T11:00:00' },
+      { ...run, id: '46', status: 'FAILED' as const, startTime: '2026-10-11T11:00:00' },
     ], total: 4 });
     expect(evidence.state).toBe('OBSERVED');
     if (evidence.state === 'OBSERVED') {
