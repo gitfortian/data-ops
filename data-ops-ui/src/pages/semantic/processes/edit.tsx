@@ -24,7 +24,7 @@ import type { DataSourceCatalogColumn, DataSourceCatalogTable } from '@/services
 import { listDataSourceColumns, searchDataSourceTables } from '@/services/data-source/catalog';
 import type { DataSourceRecord } from '@/services/data-source/types';
 import type { ModelingMainlineCoverage } from '@/services/modeling/types';
-import { processToLogical, processToPhysical } from '@/pages/modeling/journeyNavigation';
+import { processToLogical, processToPhysical } from '@/utils/journeyNavigation';
 import { getModelingMainlineCoverage } from '@/services/modeling/view';
 import {
   bindSemanticProcessField,
