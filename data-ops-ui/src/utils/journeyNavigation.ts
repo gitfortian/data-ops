@@ -15,6 +15,13 @@ export const processToLogical = (processId: number): string =>
 export const processToPhysical = (processId: number): string =>
   `/modeling?processId=${requirePositiveId(processId)}`;
 
+/** Navigate to one owner record; its destination must re-verify both IDs. */
+export const processToLogicalGovernance = (processId: number, draftId: number): string =>
+  `/modeling/logical?processId=${requirePositiveId(processId)}&draftId=${requirePositiveId(draftId)}&review=semantic`;
+
+export const processToPhysicalGovernance = (processId: number, modelId: number): string =>
+  `/modeling/models/${requirePositiveId(modelId)}?processId=${requirePositiveId(processId)}&review=standard-coverage`;
+
 export const processToSemantic = (processId: number): string =>
   `/semantic/processes/${requirePositiveId(processId)}/edit`;
 
