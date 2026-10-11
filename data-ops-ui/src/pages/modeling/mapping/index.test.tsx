@@ -54,7 +54,7 @@ it('ignores a late edit baseline after the project changes', async () => {
 });
 
 it('previews ODS source evidence and allows deliberate batch selection without implicit persistence', async () => {
-  (getModelingModel as jest.Mock).mockResolvedValueOnce({
+  (getModelingModel as jest.Mock).mockResolvedValue({
     id: 7, code: 'ods_users', name: '用户 ODS',
     layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: 9,
   });
