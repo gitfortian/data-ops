@@ -282,7 +282,6 @@ public class ModelingModelController {
     return Result.success(versions.stream().map(this::toVersionVO).toList());
   }
 
-  @Operation(summary = "查看某版本结构详情")
   @Operation(summary = "对照精确 ODS 发布结构版本与当前来源事实（只读、历史映射未冻结）")
   @GetMapping("/{id}/versions/{versionNo}/source-evidence-review")
   public Result<OdsPublishedVersionEvidenceService.Report> odsVersionEvidence(
@@ -290,6 +289,7 @@ public class ModelingModelController {
     return Result.success(odsVersionEvidence.review(id, versionNo));
   }
 
+  @Operation(summary = "查看某版本结构详情")
   @GetMapping("/{id}/versions/{versionNo}")
   public Result<ModelVersionService.VersionDetailView> getVersionDetail(
       @PathVariable("id") Long id, @PathVariable("versionNo") int versionNo) {
