@@ -14,6 +14,7 @@ import {
   pageSemanticProcesses,
 } from '@/services/semantic/api';
 import type { SemanticDomainNode, SemanticProcessRecord } from '@/services/semantic/types';
+import { processToLogical, processToPhysical } from '@/pages/modeling/journeyNavigation';
 
 const BIZ_TYPE_LABELS: Record<string, string> = {
   FACT: '事实',
@@ -222,11 +223,19 @@ const SemanticProcessesPage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 250,
+      width: 380,
       // 宽表在 1280px 下会把操作列挤出可视区,钉在右侧保证始终可操作。
       fixed: 'right' as const,
       render: (_: unknown, record: SemanticProcessRecord) => (
         <Space size={0}>
+          {can('modeling:read') && <Button type="link" size="small"
+            onClick={() => history.push(processToLogical(record.id))}>
+            逻辑建模
+          </Button>}
+          {can('modeling:read') && <Button type="link" size="small"
+            onClick={() => history.push(processToPhysical(record.id))}>
+            物理模型
+          </Button>}
           <Button
             type="link"
             size="small"
