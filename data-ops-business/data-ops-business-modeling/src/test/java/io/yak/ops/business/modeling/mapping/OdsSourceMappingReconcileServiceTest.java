@@ -185,4 +185,30 @@ class OdsSourceMappingReconcileServiceTest {
         "tester"));
     verify(mappings, never()).upsert(any(), anyString());
   }
+  @Test void crossSourceExistingMappingIsVisibleAndBlocksBulkRepair() {
+    ModelingColumnMappingPO foreign = mapping("order_id", "order_id");
+    foreign.setSourceDatasourceId(999L);
+    rows.clear();
+    rows.add(foreign);
+    var view = service.preview(50L);
+    assertEquals(1, view.conflictCount());
+    assertEquals("SOURCE_CONFLICT", view.rows().get(0).status());
+    assertThrows(ModelingException.class, () -> service.confirm(50L,
+        new OdsSourceMappingReconcileService.ConfirmRequest(view.definition(),
+            List.of(new OdsSourceMappingReconcileService.Selection("amount", "amount"))),
+        "tester"));
+    verify(mappings, never()).upsert(any(), anyString());
+  }
+
+  @Test void orphanedMappingsBlockBatchRepairAndRemainVisibleForCleanup() {
+    rows.add(mapping("deleted_target", "amount"));
+    var view = service.preview(50L);
+    assertEquals(1, view.orphanCount());
+    assertThrows(ModelingException.class, () -> service.confirm(50L,
+        new OdsSourceMappingReconcileService.ConfirmRequest(view.definition(),
+            List.of(new OdsSourceMappingReconcileService.Selection("amount", "amount"))),
+        "tester"));
+    verify(mappings, never()).upsert(any(), anyString());
+  }
+
 }
