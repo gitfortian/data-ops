@@ -172,7 +172,7 @@ class LogicalVersionSemanticReviewServiceTest {
     when(drafts.versionSnapshot(77L, 1)).thenThrow(ModelingException.class);
     assertThrows(ModelingException.class, () -> service.review(77L, 1));
     verify(semantic, never()).getField(anyLong());
-    when(drafts.versionSnapshot(77L, 1)).thenAnswer(i -> snapshot);
+    doAnswer(i -> snapshot).when(drafts).versionSnapshot(77L, 1);
     when(semantic.getField(11L)).thenThrow(SecurityException.class);
     assertThrows(SecurityException.class, () -> service.review(77L, 1));
   }
