@@ -59,7 +59,7 @@ describe('F-040 C5 DataDev task revision vs runtime evidence', () => {
       { ...page, pageSize: 0 },
       { ...page, total: 0 },
       { ...page, records: [{ ...run, id: '' }] },
-      { ...page, records: [{ ...run, status: '' }] },
+      { ...page, records: [{ ...run, status: '' as DevelopmentTaskExecutionSummary['status'] }] },
     ];
     inputs.forEach(value => expect(observeTaskExecutions('12', value).state).toBe('INVALID_PAGE'));
   });
