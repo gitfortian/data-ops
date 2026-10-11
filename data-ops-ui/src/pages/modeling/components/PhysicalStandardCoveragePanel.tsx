@@ -65,7 +65,7 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
         message={feedback.state === 'CHANGED' ? '已重新核验：本次证据与修正前不同'
           : feedback.state === 'UNCHANGED' ? '已重新核验：证据尚未变化'
             : '无法比较不同对象的证据'}
-        description={feedback.explanation} />
+        description={feedback.explanation} />}
       {loading && <Typography.Paragraph type="secondary">正在核验已保存的模型与正式标准字段…</Typography.Paragraph>}
       {report && <>
         <Alert showIcon className="mb-3"
