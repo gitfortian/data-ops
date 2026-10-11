@@ -406,7 +406,7 @@ const MappingPanel: React.FC = () => {
         onCancel={() => { if (!odsSaving) { setOdsReview(undefined); setOdsChoices({}); } }}>
         {odsReview && <>
           <Typography.Paragraph type="secondary">
-            正式绑定来源：#${odsReview.sourceDatasourceId} · ${odsReview.sourceDatabase}.${odsReview.sourceTable}
+            正式绑定来源：#{odsReview.sourceDatasourceId} · {odsReview.sourceDatabase}.{odsReview.sourceTable}
           </Typography.Paragraph>
           <Typography.Paragraph type="secondary">
             来源与物理结构证据 SHA-256：
