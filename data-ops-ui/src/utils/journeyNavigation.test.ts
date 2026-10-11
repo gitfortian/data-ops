@@ -3,7 +3,7 @@ import {
   exactJourneyLogicalDraft, latestJourneyFrozenVersion,
   logicalDraftsForProcess, parseJourneyProcessId,
   processToLogical, processToLogicalGovernance,
-  processToPhysical, processToPhysicalGovernance, processToSemantic,
+  processToPhysical, processToPhysicalGovernance, processToPhysicalHandoff, processToSemantic,
 } from './journeyNavigation';
 
 const drafts = [
@@ -35,9 +35,12 @@ describe('guided process/model URL context', () => {
       .toBe('/modeling/logical?processId=7&draftId=21&review=semantic');
     expect(processToPhysicalGovernance(7, 34))
       .toBe('/modeling/models/34?processId=7&review=standard-coverage');
+    expect(processToPhysicalHandoff(7, 34))
+      .toBe('/modeling/models/34?processId=7&review=datadev-handoff');
     for (const id of [0, -1, 1.4, Number.MAX_SAFE_INTEGER + 1]) {
       expect(() => processToLogicalGovernance(7, id)).toThrow();
       expect(() => processToPhysicalGovernance(id, 34)).toThrow();
+      expect(() => processToPhysicalHandoff(7, id)).toThrow();
     }
   });
 
