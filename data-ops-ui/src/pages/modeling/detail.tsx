@@ -38,6 +38,7 @@ import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssista
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
 import {
   assignImportLineage,
+  commitOdsManualImport,
   generateModelingDdl,
   getModelingMetricDraft,
   getModelingModel,
@@ -53,7 +54,7 @@ import {
 } from '@/services/modeling/api';
 import JsonDiffView from '@/components/version/JsonDiffView';
 import { previewModelingImportColumns } from '@/services/modeling/import';
-import type { ModelingModelRecord, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
+import type { ModelingModelRecord, ModelingSaveStructurePayload, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
 import { getStandardOptions, pageSemanticFields, pageSemanticProcesses } from '@/services/semantic/api';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { listAllDataSources, listDataSourceTables } from '@/services/data-source/api';
@@ -178,6 +179,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
   // 逆向导入配置(从 URL 读取后持久化,支持重新导入恢复源表字段)
   const [importConfig, setImportConfig] = useState<{ datasourceId: number; database: string; table: string } | null>(null);
   const [reimportLoading, setReimportLoading] = useState(false);
+  const [odsCommitReview, setOdsCommitReview] = useState<{
+    structure: ModelingSaveStructurePayload;
+    definition: string;
+    source: { datasourceId: number; database: string; table: string };
+    sourceColumns: string[];
+    mappings: Record<string, string>;
+  } | null>(null);
+  const odsCommitDraftGuard = useRef<(() => boolean) | null>(null);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   // 导入字段弹窗状态(用于空模型导入)
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -705,23 +714,21 @@ const emptyColumnDraft = (): ColumnDraft => ({
           if (!isCurrent()) return;
           setRows(discovered.rows);
           if (discovered.matchCount > 0) {
-            message.success(`导入成功，标准发现匹配到 ${discovered.matchCount} 个字段`);
+            message.success(`已加载来源字段草稿，标准发现匹配 ${discovered.matchCount} 项；仍需确认保存来源映射`);
           } else {
-            message.success(`导入成功，共 ${columns.length} 个字段`);
+            message.success(`已加载 ${columns.length} 个来源字段草稿；尚未保存正式映射`);
           }
         } catch {
           if (!isCurrent()) return;
           setRows(initialRows);
-          message.success(`导入成功，共 ${columns.length} 个字段`);
+          message.success(`已加载 ${columns.length} 个来源字段草稿；尚未保存正式映射`);
         }
         // 保存导入配置以支持重新导入
         setImportConfig({ datasourceId: importDatasourceId, database: importDatabase, table: importTable });
         setDirty(true);
         setImportModalOpen(false);
-        // 血缘追溯:记录导入方式
-        if (modelId) {
-          assignImportLineage(Number(modelId), 'SOURCE_TABLE').catch(() => undefined);
-        }
+        // Preview cannot write authoritative lineage. First ODS import persists
+        // source provenance only together with structure and every source mapping.
       } else {
         message.warning('源表无字段信息');
       }
@@ -1617,6 +1624,34 @@ const emptyColumnDraft = (): ColumnDraft => ({
         message.error('校验未通过：请处理列表中标红的问题后再保存');
         return;
       }
+      // First ODS import must persist the physical structure and real source
+      // mappings in one domain transaction, never as separate browser writes.
+      if (importConfig && modelInfo?.layerCode?.toUpperCase() === 'ODS'
+          && modelInfo.status === 'DRAFT' && !structure?.columns?.length) {
+        if (!structure?.definition) {
+          message.error('缺少草稿编辑基线，请刷新后重新核对');
+          return;
+        }
+        const sourceColumns = await previewModelingImportColumns(
+          importConfig.datasourceId, importConfig.database, importConfig.table);
+        if (!isCurrent() || !draftUnchanged()) return;
+        const names = sourceColumns.filter((col) => !col.technical).map((col) => col.name);
+        if (!names.length || new Set(names.map((name) => name.toLowerCase())).size !== names.length) {
+          message.error('真实源字段为空或存在重复，请核查授权元数据');
+          return;
+        }
+        const mapping: Record<string, string> = {};
+        names.forEach((source) => {
+          const target = payload.columns.find((col) => col.columnName.toLowerCase() === source.toLowerCase());
+          if (target) mapping[target.columnName] = source;
+        });
+        odsCommitDraftGuard.current = draftUnchanged;
+        setOdsCommitReview({
+          structure: payload, definition: structure.definition, source: importConfig,
+          sourceColumns: names, mappings: mapping,
+        });
+        return;
+      }
       const saved = await saveModelingStructure(modelId, payload, structure?.definition);
       if (!isCurrent()) return;
       // Keep newer local edits, but advance only to our transaction's receipt for the next save.
@@ -1634,6 +1669,56 @@ const emptyColumnDraft = (): ColumnDraft => ({
     } finally {
       if (!isCurrent()) return;
       setSaving(false);
+    }
+  };
+
+  /** One explicit confirm command. Success comes from the same-transaction readback receipt. */
+  const confirmOdsFirstImport = async () => {
+    const review = odsCommitReview;
+    if (!review || !modelId || saving) return;
+    const current = captureEditorResource();
+    if (!current() || !odsCommitDraftGuard.current?.()) {
+      message.warning('草稿内容或项目已变化，请重新核对来源后保存');
+      setOdsCommitReview(null);
+      return;
+    }
+    const selections = Object.entries(review.mappings)
+      .filter(([, sourceColumn]) => Boolean(sourceColumn))
+      .map(([targetColumn, sourceColumn]) => ({ targetColumn, sourceColumn }));
+    if (selections.length !== review.sourceColumns.length
+        || new Set(selections.map((selection) => selection.sourceColumn.toLowerCase())).size
+          !== review.sourceColumns.length) {
+      message.warning('全部真实源列须逐一对应不同的 ODS 物理目标列；技术列无需来源映射');
+      return;
+    }
+    setSaving(true);
+    try {
+      const receipt = await commitOdsManualImport(modelId, {
+        expectedDefinition: review.definition,
+        sourceDatasourceId: review.source.datasourceId,
+        sourceDatabase: review.source.database,
+        sourceTable: review.source.table,
+        structure: review.structure,
+        selections,
+      });
+      if (!current()) return;
+      if (receipt.status !== 'SAVED_AND_VERIFIED'
+          || receipt.confirmedMappingCount !== selections.length
+          || receipt.sourceColumnCount !== review.sourceColumns.length) {
+        throw new Error('来源映射保存回执不完整，不能认定导入成功');
+      }
+      setOdsCommitReview(null);
+      message.success(`已原子保存 ODS 结构及 ${receipt.confirmedMappingCount} 条真实源列映射，回读验证通过`);
+      const updated = await getModelingModel(modelId);
+      if (current()) setModelInfo(updated);
+      if (current()) await loadStructure();
+    } catch (error) {
+      if (current()) {
+        setOdsCommitReview(null);
+        message.error(error instanceof Error ? error.message : 'ODS 来源保存失败，请刷新后核验');
+      }
+    } finally {
+      if (current()) setSaving(false);
     }
   };
 
@@ -2480,6 +2565,61 @@ const emptyColumnDraft = (): ColumnDraft => ({
               <span className="text-[13px] text-[#475467]">新增行数</span>
               <InputNumber min={1} max={100} value={bulkAddCount} onChange={(value) => setBulkAddCount(value ?? 5)} />
             </div>
+          </Modal>
+
+          {/* Real catalog columns are user-reviewed BEFORE first ODS atomic save. */}
+          <Modal
+            title="确认 ODS 首次来源映射与表结构"
+            open={Boolean(odsCommitReview)}
+            width={880}
+            okText="确认全部源列并原子保存"
+            confirmLoading={saving}
+            okButtonProps={{ disabled: !odsCommitReview
+              || Object.keys(odsCommitReview.mappings).length !== odsCommitReview.sourceColumns.length }}
+            onOk={() => void confirmOdsFirstImport()}
+            onCancel={() => { if (!saving) setOdsCommitReview(null); }}>
+            {odsCommitReview && <>
+              <Typography.Paragraph type="secondary">
+                正式来源：#{odsCommitReview.source.datasourceId} · {odsCommitReview.source.database}.{odsCommitReview.source.table}
+              </Typography.Paragraph>
+              <Typography.Paragraph type="secondary">
+                草稿版本证据：
+                <Typography.Text copyable={{ text: odsCommitReview.definition }}>
+                  {odsCommitReview.definition.slice(0, 16)}…
+                </Typography.Text>
+              </Typography.Paragraph>
+              <Typography.Paragraph>
+                请核实全部 {odsCommitReview.sourceColumns.length} 个真实源列对应的 ODS 物理目标列。
+                同名只是初始预选；更名后需人工配对。取消不会保存结构、来源身份或逐列映射。
+                系统确认时会重新读取真实源表、核对物理草稿并完成事务回读。
+              </Typography.Paragraph>
+              <Table size="small" pagination={{ pageSize: 15 }} rowKey="source"
+                dataSource={odsCommitReview.sourceColumns.map((source) => ({ source }))} columns={[
+                  { title: '真实源列', dataIndex: 'source' },
+                  { title: '对应的 ODS 目标列', key: 'target',
+                    render: (_, row) => {
+                      const selectedTarget = Object.keys(odsCommitReview.mappings)
+                        .find((target) => odsCommitReview.mappings[target] === row.source);
+                      return <Select<string> showSearch allowClear optionFilterProp="label"
+                        style={{ width: 310 }}
+                        placeholder="选择物理目标列"
+                        value={selectedTarget}
+                        options={odsCommitReview.structure.columns.map((column) => ({
+                          value: column.columnName, label: column.columnName,
+                        }))}
+                        onChange={(value) => setOdsCommitReview((prev) => {
+                          if (!prev) return prev;
+                          const next = { ...prev.mappings };
+                          for (const target of Object.keys(next)) {
+                            if (next[target] === row.source) delete next[target];
+                          }
+                          if (value) next[value] = row.source;
+                          return { ...prev, mappings: next };
+                        })}
+                      />;
+                    } },
+                ]} />
+            </>}
           </Modal>
 
           {/* 导入字段弹窗 */}

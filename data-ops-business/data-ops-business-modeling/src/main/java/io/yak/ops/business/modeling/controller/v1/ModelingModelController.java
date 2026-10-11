@@ -16,6 +16,7 @@ import io.yak.ops.business.modeling.controller.v1.dto.ModelingModelQueryDTO;
 import io.yak.ops.business.modeling.controller.v1.vo.ModelVO;
 import io.yak.ops.business.modeling.controller.v1.vo.ModelVersionVO;
 import io.yak.ops.business.modeling.ddl.DdlService;
+import io.yak.ops.business.modeling.importer.OdsManualImportCommitService;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureDialectCatalog;
 import io.yak.ops.business.modeling.structure.StructureView;
@@ -50,6 +51,7 @@ public class ModelingModelController {
 
   private final ModelCatalogService service;
   private final ModelStructureService structureService;
+  private final OdsManualImportCommitService odsManualImport;
   private final DdlService ddlService;
   private final ModelVersionService versionService;
   private final ModelPublishApprovalService publishApprovalService;
@@ -89,6 +91,18 @@ public class ModelingModelController {
     return Result.success(
         viewConverter.page(
             page, service.processNames(), service.layerDatabaseNames(), service.domainNames()));
+  }
+
+  /** Model + structure + real source mappings are committed and read back in one transaction. */
+  @Operation(summary = "ODS 手工来源导入：一次确认原子保存结构、来源绑定及逐列映射")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  @PostMapping("/{id}/ods-manual-import")
+  public Result<OdsManualImportCommitService.Receipt> commitOdsManualImport(
+      @PathVariable("id") Long id,
+      @Valid @RequestBody OdsManualImportCommitService.Request request,
+      HttpServletRequest httpRequest) {
+    return Result.success(odsManualImport.commit(
+        id, request, currentUserProvider.getCurrentUser(httpRequest)));
   }
 
   @Operation(summary = "模型详情")
