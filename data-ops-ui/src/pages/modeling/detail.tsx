@@ -36,6 +36,7 @@ import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
 import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
+import { physicalGovernanceBaseline, type PhysicalGovernanceBaseline } from './governanceRecheck';
 import { canOpenPhysicalGovernanceEvidence, parseJourneyProcessId } from '@/utils/journeyNavigation';
 import PhysicalDataDevHandoffPanel from './components/PhysicalDataDevHandoffPanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
@@ -156,6 +157,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const [publishing, setPublishing] = useState(false);
   const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
   const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
+  const [coverageFeedback, setCoverageFeedback] = useState<{
+    projectId?: number | string; baseline: PhysicalGovernanceBaseline;
+  }>();
   const [dataDevHandoffOpen, setDataDevHandoffOpen] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
     before: unknown;
@@ -1117,6 +1121,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     resetDraft();
     loadedEvidenceScopeRef.current = undefined;
     setStandardCoverageOpen(false);
+    setCoverageFeedback(undefined);
     setDataDevHandoffOpen(false);
     setModelInfo(null);
     setStructure(undefined);
@@ -1908,7 +1913,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   /** 点击 COLUMN 类校验问题定位到具体字段行（AC ticket 07）。 */
   /** Evidence is read-only. Locate only an exact saved DAO identity in this editor. */
-  const locateCoverageGap = (column: import('@/services/modeling/api').PhysicalStandardCoverageInspection['columns'][number]) => {
+  const locateCoverageGap = (
+    column: import('@/services/modeling/api').PhysicalStandardCoverageInspection['columns'][number],
+    report: import('@/services/modeling/api').PhysicalStandardCoverageInspection,
+  ) => {
     const result = locatePhysicalCoverageColumn({
       reportModelId: Number(modelId),
       editorModelId: Number(modelInfo?.id),
@@ -1919,6 +1927,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       return;
     }
     setStandardCoverageOpen(false);
+    setCoverageFeedback({ projectId: currentProject?.id, baseline: physicalGovernanceBaseline(report) });
     setHighlightRowKey(result.value);
     editorRootRef.current?.querySelector(`tr[data-row-key="${result.value}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2256,6 +2265,16 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   return (
     <div className="min-h-[calc(100dvh-64px)] bg-[#f7f8fa] p-6 text-[#242731]">
+      {coverageFeedback && coverageFeedback.projectId === currentProject?.id
+        && coverageFeedback.baseline.modelId === Number(modelId) && (
+        <Alert showIcon className="mb-4" type="info"
+          message="已从治理报告定位到当前物理字段"
+          description={dirty
+            ? '当前结构有未保存更改；旧治理报告不能代表新字段。请先保存或放弃更改，再重新核验。'
+            : '可重新读取已保存的字段与当前标准，检查治理证据是否变化。历史报告和发布资格不会自动修改。'}
+          action={<Button disabled={dirty || loading || saving || !canAll(['modeling:read'])}
+            onClick={() => setStandardCoverageOpen(true)}>修正后重新核验</Button>} />
+      )}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {modelInfo?.status ? (
@@ -3142,6 +3161,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
         <PhysicalStandardCoveragePanel
           modelId={Number(modelId)} open={standardCoverageOpen}
           onClose={() => setStandardCoverageOpen(false)}
+          baseline={coverageFeedback?.projectId === currentProject?.id
+            && coverageFeedback?.baseline.modelId === Number(modelId)
+              ? coverageFeedback.baseline : undefined}
           onLocateColumn={locateCoverageGap} />
       )}
       {modelId && odsVersionEvidenceOpen && (
