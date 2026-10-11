@@ -122,6 +122,9 @@ describe('F-040 C6 source-owner exact TaskAsset to governed consumption', () => 
       ...impact, usageState: 'UNAVAILABLE',
     }).state).toBe('UNAVAILABLE');
     expect(inspectExactDatasetConsumption(dataset, 4, lookup, {
+      ...impact, usageState: 'EMPTY',
+    }).state).toBe('NOT_OBSERVED');
+    expect(inspectExactDatasetConsumption(dataset, 4, lookup, {
       ...impact, coverage: {
         requestedUsageLimit: 200, sourceRecordCount: 3, normalizedUsageCount: 0,
         sourceWindowLimitReached: false, normalizedUsageWindowLimitReached: false,
