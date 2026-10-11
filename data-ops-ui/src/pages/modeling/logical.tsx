@@ -10,7 +10,7 @@ import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/sema
 import {
   chooseJourneyLogicalModel, logicalDraftsForProcess, parseJourneyProcessId,
   processToPhysical, processToSemantic,
-} from './journeyNavigation';
+} from '@/utils/journeyNavigation';
 import {
   addLogicalAttribute, addLogicalEntity, addLogicalRelation, createLogicalDraft,
   freezeLogicalDraft, getLogicalDraft, getLogicalVersionSnapshot, listLogicalDrafts,
