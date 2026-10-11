@@ -42,7 +42,7 @@ import { getSemanticDomainTree, getSemanticProcess, listSemanticLayers, pageSema
 import type { SemanticDomainNode, SemanticLayerRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import {
   parseJourneyProcessId, processToLogical, processToSemantic,
-} from '@/pages/modeling/journeyNavigation';
+} from '@/utils/journeyNavigation';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const TREE_WIDTH_STORAGE_KEY = 'yak.modeling.tree.width';
