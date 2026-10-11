@@ -14,7 +14,7 @@ import {
   pageSemanticProcesses,
 } from '@/services/semantic/api';
 import type { SemanticDomainNode, SemanticProcessRecord } from '@/services/semantic/types';
-import { processToLogical, processToPhysical } from '@/pages/modeling/journeyNavigation';
+import { processToLogical, processToPhysical } from '@/utils/journeyNavigation';
 
 const BIZ_TYPE_LABELS: Record<string, string> = {
   FACT: '事实',
