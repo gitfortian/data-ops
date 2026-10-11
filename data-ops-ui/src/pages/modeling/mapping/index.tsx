@@ -12,6 +12,9 @@ import {
   clearModelingMapping,
   listModelingMappings,
   getModelingMappingContext,
+  previewOdsMappingReconcile,
+  confirmOdsMappingReconcile,
+  type OdsMappingReconcilePreview,
   setModelingMapping,
   validateModelingExpression,
 } from '@/services/modeling/mapping';
@@ -74,6 +77,10 @@ const MappingPanel: React.FC = () => {
   const [editTarget, setEditTarget] = useState<ModelingMappingView | null>(null);
   const [form] = Form.useForm<MappingFormValues>();
   const [saving, setSaving] = useState(false);
+  const [odsReview, setOdsReview] = useState<OdsMappingReconcilePreview>();
+  const [odsReviewLoading, setOdsReviewLoading] = useState(false);
+  const [odsSaving, setOdsSaving] = useState(false);
+  const [odsChoices, setOdsChoices] = useState<Record<string, string>>({});
   const draft = Form.useWatch<MappingFormValues>([], form);
   const maySave = canAll(['modeling:read', 'modeling:update', 'resource:data-source:read']);
   const maySuggest = maySave && canAll(['agent:chat:run', 'agent:session:read']);
@@ -103,6 +110,7 @@ const MappingPanel: React.FC = () => {
     const current = resource();
     setEditTarget(null); setDefinition(''); setSaving(false); setEditorLoading(false);
     setViews([]); setStructure(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
+    setOdsReview(undefined); setOdsChoices({}); setOdsSaving(false); setOdsReviewLoading(false);
     setSourceDatasourceId(undefined); setSourceDatabase(undefined); setSourceTable(undefined);
     form.resetFields();
     void loadAll();
@@ -213,6 +221,74 @@ const MappingPanel: React.FC = () => {
     });
   };
 
+  /** Existing source binding is always resolved by the server, not selected in the browser. */
+  const loadOdsReview = async () => {
+    if (!modelId || !maySave) return;
+    const active = resource();
+    setOdsReviewLoading(true);
+    setOdsChoices({});
+    setOdsReview(undefined);
+    try {
+      const evidence = await previewOdsMappingReconcile(modelId);
+      if (active()) setOdsReview(evidence);
+    } catch (error) {
+      if (active()) message.error(error instanceof Error ? error.message
+        : 'ODS 来源证据不可核验，请确认模型仍是已绑定真实来源的草稿');
+    } finally { if (active()) setOdsReviewLoading(false); }
+  };
+
+  const selectMatchingOdsColumns = () => {
+    if (!odsReview) return;
+    const selected: Record<string, string> = {};
+    const used = new Set<string>();
+    odsReview.rows.forEach((row) => {
+      const name = row.suggestedSourceColumn;
+      if (row.status === 'UNMAPPED' && name && !used.has(name.toLowerCase())) {
+        selected[row.targetColumn] = name;
+        used.add(name.toLowerCase());
+      }
+    });
+    setOdsChoices(selected);
+  };
+
+  const confirmOdsRepair = () => {
+    if (!modelId || !odsReview || !maySave || odsSaving) return;
+    const selections = Object.entries(odsChoices)
+      .filter(([, sourceColumn]) => Boolean(sourceColumn))
+      .map(([targetColumn, sourceColumn]) => ({ targetColumn, sourceColumn }));
+    if (!selections.length) {
+      message.warning('请先选择需要修复的未映射真实源字段');
+      return;
+    }
+    const expectedDefinition = odsReview.definition;
+    Modal.confirm({
+      title: '确认修复 ODS 正式来源映射',
+      content: `将按已核验的来源快照写入 ${selections.length} 条真实来源映射。不会更改现有映射、物理结构或技术生成字段。若期间证据发生变化，所有修改都会拒绝并回滚。`,
+      okText: '确认保存并回读',
+      cancelText: '返回审阅',
+      async onOk() {
+        const active = resource();
+        setOdsSaving(true);
+        try {
+          const receipt = await confirmOdsMappingReconcile(modelId, expectedDefinition, selections);
+          if (!active()) return;
+          if (receipt.status !== 'SAVED_AND_VERIFIED' || receipt.applied !== selections.length) {
+            throw new Error('服务端回执与确认项不一致，请刷新核验');
+          }
+          message.success(`已正式保存并回读验证 ${receipt.applied} 条 ODS 源列映射`);
+          setOdsReview(undefined); setOdsChoices({});
+          await loadAll();
+        } catch (error) {
+          if (active()) {
+            setOdsReview(undefined); setOdsChoices({});
+            message.error(error instanceof Error ? error.message : '源列发生变化，修复未完成，请重新预检');
+          }
+          throw error;
+        } finally { if (active()) setOdsSaving(false); }
+      },
+    });
+  };
+
   const checkExpression = async () => {
     if (!modelId) {
       return;
@@ -289,6 +365,8 @@ const MappingPanel: React.FC = () => {
         </div>
         <Space>
           <Button onClick={() => history.push(`/modeling/models/${modelId}`)}>返回模型</Button>
+          <Button disabled={!maySave} loading={odsReviewLoading}
+            onClick={() => void loadOdsReview()}>ODS 来源映射批量核验/修复</Button>
           <YakButton
             className="!h-9 !rounded-lg !px-4"
             danger
@@ -314,6 +392,68 @@ const MappingPanel: React.FC = () => {
         />
       )}
 
+      <Modal
+        open={Boolean(odsReview)}
+        title="ODS 来源证据核验与显式批量修复"
+        width={960}
+        footer={<Space>
+          <Button onClick={() => { setOdsReview(undefined); setOdsChoices({}); }} disabled={odsSaving}>关闭</Button>
+          <Button disabled={odsSaving} onClick={selectMatchingOdsColumns}>选择全部安全同名候选（仅选择，不保存）</Button>
+          <Button type="primary" loading={odsSaving}
+            disabled={!maySave || Object.keys(odsChoices).length === 0}
+            onClick={confirmOdsRepair}>确认选中来源映射</Button>
+        </Space>}
+        onCancel={() => { if (!odsSaving) { setOdsReview(undefined); setOdsChoices({}); } }}>
+        {odsReview && <>
+          <Typography.Paragraph type="secondary">
+            正式绑定来源：#${odsReview.sourceDatasourceId} · ${odsReview.sourceDatabase}.${odsReview.sourceTable}
+          </Typography.Paragraph>
+          <Typography.Paragraph type="secondary">
+            来源与物理结构证据 SHA-256：
+            <Typography.Text copyable={{ text: odsReview.definition }}>{odsReview.definition.slice(0, 20)}…</Typography.Text>
+          </Typography.Paragraph>
+          <Space wrap className="mb-3">
+            <Tag color="green">已映射 {odsReview.mappedCount}</Tag>
+            <Tag color="warning">待映射 {odsReview.unmappedCount}</Tag>
+            <Tag>技术列 {odsReview.technicalCount}</Tag>
+            {odsReview.orphanCount > 0 && <Tag color="red">已删除目标的历史孤儿映射 {odsReview.orphanCount}，需单独核查</Tag>}
+            <Tag color="blue">本次已选择 {Object.keys(odsChoices).length}</Tag>
+          </Space>
+          <Table size="small" rowKey="targetColumn" pagination={{ pageSize: 20 }}
+            dataSource={odsReview.rows} columns={[
+              { title: '物理目标字段', dataIndex: 'targetColumn' },
+              { title: '类型', dataIndex: 'dataType' },
+              { title: '当前来源状态', key: 'sourceStatus',
+                render: (_, row) => row.status === 'MAPPED'
+                  ? <Tag color="green">已映射：{row.existingSourceColumn}</Tag>
+                  : row.status === 'TECHNICAL' ? <Tag>平台技术列，无真实来源</Tag>
+                  : <Tag color="warning">未映射</Tag> },
+              { title: '用户明确选择源字段', key: 'sourceChoice',
+                render: (_, row) => row.status !== 'UNMAPPED' ? '—' : (
+                  <Select<string> allowClear showSearch optionFilterProp="label"
+                    style={{ width: 230 }}
+                    placeholder={row.suggestedSourceColumn
+                      ? `同名候选：${row.suggestedSourceColumn}` : '选择真实源列'}
+                    value={odsChoices[row.targetColumn]}
+                    options={odsReview.sourceColumns.map((sourceColumn) => ({
+                      value: sourceColumn, label: sourceColumn,
+                    }))}
+                    onChange={(value) => {
+                      setOdsChoices((prev) => {
+                        const next = { ...prev };
+                        if (value) next[row.targetColumn] = value;
+                        else delete next[row.targetColumn];
+                        return next;
+                      });
+                    }} />
+                ) },
+            ]} />
+          <Typography.Paragraph type="secondary">
+            同名列仅为候选，不自动保存。未选择的列保持原状；已有人工映射不会被覆盖。
+            保存前后端会重新读取真实源表与模型状态，证据过期则整批失败。
+          </Typography.Paragraph>
+        </>}
+      </Modal>
       <Modal
         open={Boolean(editTarget)}
         title={`映射目标字段：${editTarget?.targetColumn || ''}`}
