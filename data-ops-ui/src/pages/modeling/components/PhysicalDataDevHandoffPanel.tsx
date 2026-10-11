@@ -1,4 +1,7 @@
 import { Alert, Button, Modal, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { history } from '@umijs/max';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { physicalDataDevHandoffUrl } from '@/utils/physicalDataDevHandoff';
 import { useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import {
@@ -9,12 +12,14 @@ import type { ModelingVersionSummary } from '@/services/modeling/types';
 
 interface Props {
   modelId: number;
+  processId?: number;
   open: boolean;
   onClose: () => void;
 }
 
 /** No cross-domain write or DataDev task creation here. */
-export default function PhysicalDataDevHandoffPanel({ modelId, open, onClose }: Props) {
+export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, onClose }: Props) {
+  const { canAll } = usePermissionAccess();
   const { currentProject } = useSecurityProject();
   const [versions, setVersions] = useState<ModelingVersionSummary[]>([]);
   const [versionNo, setVersionNo] = useState<number>();
@@ -113,6 +118,19 @@ export default function PhysicalDataDevHandoffPanel({ modelId, open, onClose }: 
                 ? 'green' : 'orange'}>{value}</Tag> },
             { title: '解释与责任边界', dataIndex: 'explanation' },
           ]} />
+        <Space className="mt-3" wrap>
+          <Button type="primary" disabled={!processId || !canAll(['data-development:read', 'modeling:read'])
+            || report.modelId !== modelId || report.version.modelId !== modelId
+            || report.version.versionNo !== versionNo}
+            onClick={() => {
+              if (processId && versionNo) history.push(physicalDataDevHandoffUrl({
+                processId, modelId, modelVersionNo: versionNo,
+              }));
+            }}>
+            前往 DataDev 核对该冻结版本（只读）
+          </Button>
+          <Typography.Text type="secondary">DataDev 将重新读取有权原域对象；不建立任务关联、不自动创建 SQL。</Typography.Text>
+        </Space>
         <Typography.Title level={5}>下一步（仍需人工处理）</Typography.Title>
         {report.nextActions.map((action, i) => (
           <Typography.Paragraph key={i} className="!mb-1">{i + 1}. {action}</Typography.Paragraph>

@@ -3155,7 +3155,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       )}
       {modelId && dataDevHandoffOpen && (
         <PhysicalDataDevHandoffPanel
-          modelId={Number(modelId)} open={dataDevHandoffOpen}
+          modelId={Number(modelId)} processId={modelInfo?.processId} open={dataDevHandoffOpen}
           onClose={() => setDataDevHandoffOpen(false)} />
       )}
       {modelId && standardCoverageOpen && (

@@ -11,6 +11,7 @@ import CreateDevelopmentNodeModal from './components/CreateDevelopmentNodeModal'
 import CreateDirectoryModal from './components/CreateDirectoryModal';
 import DeleteDevelopmentResourceModal from './components/DeleteDevelopmentResourceModal';
 import DevelopmentEditorWorkspace from './components/DevelopmentEditorWorkspace';
+import ModelingHandoffEvidencePanel from './components/ModelingHandoffEvidencePanel';
 import DevelopmentTreePane from './components/DevelopmentTreePane';
 import MoveResourceModal from './components/MoveResourceModal';
 import RenameResourceModal from './components/RenameResourceModal';
@@ -89,6 +90,8 @@ export default function DataDevelopmentPage() {
           />
         ) : null}
 
+        <ModelingHandoffEvidencePanel search={window.location.search}
+          nodes={page.nodes} onFocusNode={page.focusNode} />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[#e4e7ec] bg-white md:flex-row">
           {page.treeFailure ? (
             <WorkspaceLoadFailureState
