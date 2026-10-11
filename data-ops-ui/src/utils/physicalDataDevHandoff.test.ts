@@ -28,6 +28,7 @@ describe('F-040 C5 explicit Modeling → DataDev evidence only', () => {
       kind: 'HINT', value: eligible.hint,
     });
     expect(parsePhysicalDataDevHandoff('?nodeId=abc')).toEqual({ kind: 'NONE' });
+    expect(parsePhysicalDataDevHandoff('?source=dataset&datasetId=42')).toEqual({ kind: 'NONE' });
     expect(parsePhysicalDataDevHandoff('')).toEqual({ kind: 'NONE' });
   });
 
