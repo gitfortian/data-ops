@@ -34,6 +34,7 @@ import { findByBiz, listFlows } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
+import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
@@ -144,6 +145,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
+  const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
     before: unknown;
     after: unknown;
@@ -2246,6 +2248,17 @@ const emptyColumnDraft = (): ColumnDraft => ({
               核对 ODS 发布版本证据
             </YakButton>
           )}
+          {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '') && (
+            <Tooltip title={dirty
+              ? '请先保存当前物理结构；核验只读取服务端已保存版本'
+              : '只读核验已保存字段对正式标准的当前覆盖，不会改变发布资格'}>
+              <YakButton className="!h-9 !rounded-lg !px-4"
+                disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setStandardCoverageOpen(true)}>
+                核验标准覆盖
+              </YakButton>
+            </Tooltip>
+          )}
           <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => void handleGenerateDdl()}>
             建库脚本
           </YakButton>
@@ -3054,6 +3067,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
             )}
           </Card>
         </div>
+      )}
+      {modelId && standardCoverageOpen && (
+        <PhysicalStandardCoveragePanel
+          modelId={Number(modelId)} open={standardCoverageOpen}
+          onClose={() => setStandardCoverageOpen(false)} />
       )}
       {modelId && odsVersionEvidenceOpen && (
         <OdsPublishedVersionEvidencePanel
