@@ -9,13 +9,14 @@ import { getDevelopmentTaskDraft } from '@/services/data-development';
 
 let mockProjectId = 1;
 let mockAllowed = true;
+const mockCanAll = () => mockAllowed;
 jest.mock('@umijs/max', () => ({ history: { push: jest.fn() } }));
 jest.mock('@/contexts/SecurityProjectContext', () => ({
   useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
 jest.mock('@/hooks/usePermissionAccess', () => ({
   __esModule: true,
-  default: () => ({ canAll: () => mockAllowed }),
+  default: () => ({ canAll: mockCanAll }),
 }));
 jest.mock('@/services/modeling/api', () => ({
   getModelingModel: jest.fn(),
@@ -79,7 +80,7 @@ it('shows owner-verified frozen version and unresolved original DataDev blockers
   expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
   expect(screen.getByText('未确认目标 Doris 环境')).toBeInTheDocument();
   expect(screen.getByText(/不是最新发布指针/)).toBeInTheDocument();
-  expect(screen.getByText(/不会自动创建新任务/)).toBeInTheDocument();
+  expect(screen.getByText(/不自动创建新任务/)).toBeInTheDocument();
   expect(getModelingModel).toHaveBeenCalledWith(50);
   expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledWith(50, 3);
   expect(getDevelopmentTaskDraft).not.toHaveBeenCalled();
