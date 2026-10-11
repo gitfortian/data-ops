@@ -2566,6 +2566,61 @@ const emptyColumnDraft = (): ColumnDraft => ({
             </div>
           </Modal>
 
+          {/* Real catalog columns are user-reviewed BEFORE first ODS atomic save. */}
+          <Modal
+            title="确认 ODS 首次来源映射与表结构"
+            open={Boolean(odsCommitReview)}
+            width={880}
+            okText="确认全部源列并原子保存"
+            confirmLoading={saving}
+            okButtonProps={{ disabled: !odsCommitReview
+              || Object.keys(odsCommitReview.mappings).length !== odsCommitReview.sourceColumns.length }}
+            onOk={() => void confirmOdsFirstImport()}
+            onCancel={() => { if (!saving) setOdsCommitReview(null); }}>
+            {odsCommitReview && <>
+              <Typography.Paragraph type="secondary">
+                正式来源：#{odsCommitReview.source.datasourceId} · {odsCommitReview.source.database}.{odsCommitReview.source.table}
+              </Typography.Paragraph>
+              <Typography.Paragraph type="secondary">
+                草稿版本证据：
+                <Typography.Text copyable={{ text: odsCommitReview.definition }}>
+                  {odsCommitReview.definition.slice(0, 16)}…
+                </Typography.Text>
+              </Typography.Paragraph>
+              <Typography.Paragraph>
+                请核实全部 {odsCommitReview.sourceColumns.length} 个真实源列对应的 ODS 物理目标列。
+                同名只是初始预选；更名后需人工配对。取消不会保存结构、来源身份或逐列映射。
+                系统确认时会重新读取真实源表、核对物理草稿并完成事务回读。
+              </Typography.Paragraph>
+              <Table size="small" pagination={{ pageSize: 15 }} rowKey="source"
+                dataSource={odsCommitReview.sourceColumns.map((source) => ({ source }))} columns={[
+                  { title: '真实源列', dataIndex: 'source' },
+                  { title: '对应的 ODS 目标列', key: 'target',
+                    render: (_, row) => {
+                      const selectedTarget = Object.keys(odsCommitReview.mappings)
+                        .find((target) => odsCommitReview.mappings[target] === row.source);
+                      return <Select<string> showSearch allowClear optionFilterProp="label"
+                        style={{ width: 310 }}
+                        placeholder="选择物理目标列"
+                        value={selectedTarget}
+                        options={odsCommitReview.structure.columns.map((column) => ({
+                          value: column.columnName, label: column.columnName,
+                        }))}
+                        onChange={(value) => setOdsCommitReview((prev) => {
+                          if (!prev) return prev;
+                          const next = { ...prev.mappings };
+                          for (const target of Object.keys(next)) {
+                            if (next[target] === row.source) delete next[target];
+                          }
+                          if (value) next[value] = row.source;
+                          return { ...prev, mappings: next };
+                        })}
+                      />;
+                    } },
+                ]} />
+            </>}
+          </Modal>
+
           {/* 导入字段弹窗 */}
           <Modal
             open={importModalOpen}
