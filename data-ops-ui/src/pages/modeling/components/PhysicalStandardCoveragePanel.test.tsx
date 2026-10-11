@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PhysicalStandardCoveragePanel from './PhysicalStandardCoveragePanel';
 import { inspectPhysicalStandardCoverage } from '@/services/modeling/api';
 
@@ -12,10 +12,14 @@ jest.mock('@/services/modeling/api', () => ({
 }));
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
-  return { ...actual, Table: ({ dataSource }: {
+  return { ...actual, Table: ({ dataSource, columns }: {
     dataSource: { columnId: number; columnName: string; status: string }[];
+    columns: { key?: string; render?: (_: unknown, row: {
+      columnId: number; columnName: string; status: string;
+    }) => React.ReactNode }[];
   }) => <div>{dataSource.map(row => <div key={row.columnId}>
     {row.columnName} : {row.status}
+    {columns.find(col => col.key === 'action')?.render?.(undefined, row)}
   </div>)}</div> };
 });
 
@@ -62,4 +66,18 @@ it('does not surface late report after selected project changes', async () => {
   await act(async () => finish(report));
   expect(await screen.findByText('新项目需复核标准字段')).toBeInTheDocument();
   expect(screen.queryByText('未关联正式标准：process_time')).not.toBeInTheDocument();
+});
+
+it('only allows explicit navigation for governance gaps; never writes standards from report', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(report);
+  const onLocateColumn = jest.fn();
+  render(<PhysicalStandardCoveragePanel modelId={50} open
+    onClose={jest.fn()} onLocateColumn={onLocateColumn} />);
+  const buttons = await screen.findAllByRole('button', { name: '定位当前物理列' });
+  expect(buttons).toHaveLength(1);
+  fireEvent.click(buttons[0]);
+  expect(onLocateColumn).toHaveBeenCalledTimes(1);
+  expect(onLocateColumn.mock.calls[0][0]).toMatchObject({
+    columnId: 2, columnName: 'process_time', status: 'MISSING_STANDARD',
+  });
 });
