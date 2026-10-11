@@ -24,6 +24,7 @@ import type { DataSourceCatalogColumn, DataSourceCatalogTable } from '@/services
 import { listDataSourceColumns, searchDataSourceTables } from '@/services/data-source/catalog';
 import type { DataSourceRecord } from '@/services/data-source/types';
 import type { ModelingMainlineCoverage } from '@/services/modeling/types';
+import { processToLogical, processToPhysical } from '@/pages/modeling/journeyNavigation';
 import { getModelingMainlineCoverage } from '@/services/modeling/view';
 import {
   bindSemanticProcessField,
@@ -795,6 +796,17 @@ const ProcessEditPage: React.FC = () => {
   // ============ Tab4: 关联模型 ============
   const modelTab = mainline ? (
     <div>
+      {process && can('modeling:read') && <Space className="mb-3" wrap>
+        <Button type="primary" onClick={() => history.push(processToLogical(process.id))}>
+          从该业务过程进入逻辑建模
+        </Button>
+        <Button onClick={() => history.push(processToPhysical(process.id))}>
+          查看该过程的物理模型
+        </Button>
+        <Typography.Text type="secondary">
+          只传递正式过程 ID；不会自动生成、发布物理模型或 DataDev 任务。
+        </Typography.Text>
+      </Space>}
       {(mainline.layers ?? []).length === 0 ? (
         <YakEmpty
           compact
