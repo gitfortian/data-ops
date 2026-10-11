@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MappingPage from './index';
 import { getModelingMappingContext, listModelingMappings, setModelingMapping,
-  previewOdsMappingReconcile, confirmOdsMappingReconcile } from '@/services/modeling/mapping';
+  previewOdsMappingReconcile, confirmOdsMappingReconcile, inspectOdsSourceEvidence } from '@/services/modeling/mapping';
 import { getModelingModel } from '@/services/modeling/api';
 
 let mockProjectId = 1;
@@ -25,7 +25,8 @@ jest.mock('@/services/modeling/api', () => ({
 }));
 jest.mock('@/services/modeling/import', () => ({ listModelingImportTables: jest.fn().mockResolvedValue([{ database: 'db', name: 'users' }]), previewModelingImportColumns: jest.fn().mockResolvedValue([{ name: 'old', typeName: 'BIGINT' }, { name: 'buyer_id', typeName: 'BIGINT' }]) }));
 jest.mock('@/services/modeling/mapping', () => ({ listModelingMappings: jest.fn(), getModelingMappingContext: jest.fn(), setModelingMapping: jest.fn(), clearAllModelingMappings: jest.fn(), clearModelingMapping: jest.fn(), validateModelingExpression: jest.fn(),
-  previewOdsMappingReconcile: jest.fn(), confirmOdsMappingReconcile: jest.fn() }));
+  previewOdsMappingReconcile: jest.fn(), confirmOdsMappingReconcile: jest.fn(),
+  inspectOdsSourceEvidence: jest.fn() }));
 const saved = { targetColumn: 'user_id', dataType: 'BIGINT', mapped: true, sourceDatasourceId: 9, sourceDatabase: 'db', sourceTable: 'users', sourceColumn: 'old', transformExpr: 'CAST(old AS BIGINT)' };
 beforeEach(() => {
   jest.clearAllMocks(); mockProjectId = 1;
@@ -80,4 +81,28 @@ it('previews ODS source evidence and allows deliberate batch selection without i
   fireEvent.click(screen.getByText(/选择全部安全同名候选/).closest('button')!);
   expect(screen.getByText(/本次已选择 1/)).toBeInTheDocument();
   expect(confirmOdsMappingReconcile).not.toHaveBeenCalled();
+});
+
+it('published ODS source inspection shows a read-only report, not a repair action', async () => {
+  (getModelingModel as jest.Mock).mockResolvedValue({
+    id: 7, code: 'ods_users', name: '用户 ODS',
+    layerCode: 'ODS', status: 'PUBLISHED', sourceDatasourceId: 9,
+  });
+  (inspectOdsSourceEvidence as jest.Mock).mockResolvedValue({
+    modelId: 7, modelStatus: 'PUBLISHED', sourceDatasourceId: 9,
+    sourceDatabase: 'db', sourceTable: 'users',
+    status: 'NEEDS_REVIEW', evidenceSha256: 'a'.repeat(64),
+    targetCount: 1, sourceCount: 1, mappingCount: 1,
+    blockers: ['真实源列无法匹配：old'],
+    fields: [{ targetColumn: 'user_id', targetType: 'BIGINT', sourceColumn: 'old',
+      sourceType: null, status: 'MISSING_SOURCE', reason: '最新源表不存在该列' }],
+  });
+  render(<MappingPage />);
+  fireEvent.click((await screen.findByText('核验当前 ODS 来源证据（只读）')).closest('button')!);
+  expect(await screen.findByText('存在需要审阅的来源证据')).toBeInTheDocument();
+  expect(screen.getByText('真实源列无法匹配：old')).toBeInTheDocument();
+  expect(previewOdsMappingReconcile).not.toHaveBeenCalled();
+  expect(confirmOdsMappingReconcile).not.toHaveBeenCalled();
+  expect(setModelingMapping).not.toHaveBeenCalled();
+  expect(screen.queryByText('ODS 来源映射批量核验/修复')).not.toBeInTheDocument();
 });
