@@ -11,6 +11,7 @@ interface Props {
   onOpenEvidence: (key: 'source' | 'standard', id: number) => void;
   onOpenLogicalEvidence: (id: number) => void;
   onOpenPhysicalEvidence: (id: number) => void;
+  onOpenPhysicalHandoff: (id: number) => void;
 }
 const meta: Record<ProcessJourneyStatus, { label: string; color: string }> = {
   RECORDED: { label: '已有当前记录', color: 'blue' },
@@ -20,7 +21,7 @@ const meta: Record<ProcessJourneyStatus, { label: string; color: string }> = {
 };
 
 export default function ProcessJourneyReviewPanel({
-  report, loading, onReload, onOpenProcess, onOpenLogical, onOpenPhysical, onOpenEvidence, onOpenLogicalEvidence, onOpenPhysicalEvidence,
+  report, loading, onReload, onOpenProcess, onOpenLogical, onOpenPhysical, onOpenEvidence, onOpenLogicalEvidence, onOpenPhysicalEvidence, onOpenPhysicalHandoff,
 }: Props) {
   return (
     <Card className="mb-4" loading={loading} title="从业务过程到数仓设计 · 建设接续"
@@ -74,6 +75,12 @@ export default function ProcessJourneyReviewPanel({
                           <Button type="link" size="small" className="!px-0"
                             onClick={() => onOpenPhysicalEvidence(Number(item.id))}>
                             核验此物理模型字段
+                          </Button>
+                        )}
+                        {step.key === 'physical' && item.governanceTarget === 'physical' && (
+                          <Button type="link" size="small" className="!px-0"
+                            onClick={() => onOpenPhysicalHandoff(Number(item.id))}>
+                            查看版本交接预检
                           </Button>
                         )}
                       </div>
