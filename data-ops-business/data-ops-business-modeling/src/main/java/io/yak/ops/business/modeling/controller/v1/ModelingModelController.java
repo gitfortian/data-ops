@@ -22,6 +22,7 @@ import io.yak.ops.business.modeling.structure.StructureDialectCatalog;
 import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.modeling.structure.ValidationIssue;
 import io.yak.ops.business.modeling.version.ModelVersionService;
+import io.yak.ops.business.modeling.version.OdsPublishedVersionEvidenceService;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelVersionSummary;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
@@ -54,6 +55,7 @@ public class ModelingModelController {
   private final OdsManualImportCommitService odsManualImport;
   private final DdlService ddlService;
   private final ModelVersionService versionService;
+  private final OdsPublishedVersionEvidenceService odsVersionEvidence;
   private final ModelPublishApprovalService publishApprovalService;
   private final ModelViewConverter viewConverter;
   private final CurrentUserProvider currentUserProvider;
@@ -278,6 +280,13 @@ public class ModelingModelController {
   public Result<List<ModelVersionVO>> listVersions(@PathVariable("id") Long id) {
     List<ModelVersionSummary> versions = versionService.listVersions(id);
     return Result.success(versions.stream().map(this::toVersionVO).toList());
+  }
+
+  @Operation(summary = "对照精确 ODS 发布结构版本与当前来源事实（只读、历史映射未冻结）")
+  @GetMapping("/{id}/versions/{versionNo}/source-evidence-review")
+  public Result<OdsPublishedVersionEvidenceService.Report> odsVersionEvidence(
+      @PathVariable("id") Long id, @PathVariable("versionNo") int versionNo) {
+    return Result.success(odsVersionEvidence.review(id, versionNo));
   }
 
   @Operation(summary = "查看某版本结构详情")

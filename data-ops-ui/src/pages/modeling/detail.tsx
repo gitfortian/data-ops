@@ -33,6 +33,7 @@ import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
 import { findByBiz, listFlows } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
+import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
@@ -142,6 +143,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
     before: unknown;
     after: unknown;
@@ -2236,6 +2238,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
               返回资产详情
             </YakButton>
           )}
+          {modelInfo?.layerCode?.toUpperCase() === 'ODS'
+            && Number(modelInfo.latestVersionNo) > 0 && (
+            <YakButton className="!h-9 !rounded-lg !px-4"
+              disabled={!canAll(['modeling:read', 'resource:data-source:read'])}
+              onClick={() => setOdsVersionEvidenceOpen(true)}>
+              核对 ODS 发布版本证据
+            </YakButton>
+          )}
           <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => void handleGenerateDdl()}>
             建库脚本
           </YakButton>
@@ -3044,6 +3054,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
             )}
           </Card>
         </div>
+      )}
+      {modelId && odsVersionEvidenceOpen && (
+        <OdsPublishedVersionEvidencePanel
+          open={odsVersionEvidenceOpen} modelId={Number(modelId)}
+          onClose={() => setOdsVersionEvidenceOpen(false)} />
       )}
       <Modal
         open={publishPreview !== null}
