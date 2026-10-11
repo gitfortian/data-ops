@@ -5,7 +5,7 @@ interface Props {
   report?: ProcessJourneyReview;
   loading: boolean;
   onReload: () => void;
-  onOpenProcess: () => void;
+  onOpenProcess: (key: 'grain' | 'source' | 'standard') => void;
   onOpenLogical: () => void;
   onOpenPhysical: () => void;
 }
@@ -42,7 +42,7 @@ export default function ProcessJourneyReviewPanel({
                 {step.summary}
               </Typography.Paragraph>
               {step.action === 'process' && <Button type="link" className="!px-0"
-                onClick={onOpenProcess}>查看过程配置</Button>}
+                onClick={() => onOpenProcess(step.key as 'grain' | 'source' | 'standard')}>查看过程配置</Button>}
               {step.action === 'logical' && <Button type="link" className="!px-0"
                 onClick={onOpenLogical}>进入逻辑设计</Button>}
               {step.action === 'physical' && <Button type="link" className="!px-0"
