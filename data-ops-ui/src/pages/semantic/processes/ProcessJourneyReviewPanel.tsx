@@ -64,13 +64,13 @@ export default function ProcessJourneyReviewPanel({
                             定位此对象
                           </Button>
                         )}
-                        {step.key === 'logical' && (
+                        {step.key === 'logical' && item.governanceTarget === 'logical' && (
                           <Button type="link" size="small" className="!px-0"
                             onClick={() => onOpenLogicalEvidence(Number(item.id))}>
                             审阅此逻辑草稿
                           </Button>
                         )}
-                        {step.key === 'physical' && (
+                        {step.key === 'physical' && item.governanceTarget === 'physical' && (
                           <Button type="link" size="small" className="!px-0"
                             onClick={() => onOpenPhysicalEvidence(Number(item.id))}>
                             核验此物理模型字段
