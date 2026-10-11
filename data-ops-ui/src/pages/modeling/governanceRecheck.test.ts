@@ -13,6 +13,7 @@ const logical = {
   logicalModelId: 30, versionNo: 2, frozenSnapshotSha256: 'f'.repeat(64),
   currentDesignSha256: 'a'.repeat(64), reviewStatus: 'NEEDS_REVIEW',
   frozenStatus: 'DRAFT', draftStatus: 'DRAFT', designComparison: 'MATCHES_CURRENT',
+  frozenDesignSha256: 'g'.repeat(64), entityCount: 1, attributeCount: 1, relationCount: 1,
   attributes: [{ entityId: 3, attributeId: 4, stdFieldId: null,
     standardStatus: 'PENDING_STANDARD', explanation: '待确认' }],
   relations: [{ relationId: 5, cardinality: 'UNKNOWN',
