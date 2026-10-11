@@ -1,6 +1,7 @@
 import {
   chooseJourneyLogicalModel, logicalDraftsForProcess, parseJourneyProcessId,
-  processToLogical, processToPhysical, processToSemantic,
+  processToLogical, processToLogicalGovernance,
+  processToPhysical, processToPhysicalGovernance, processToSemantic,
 } from './journeyNavigation';
 
 const drafts = [
@@ -25,6 +26,17 @@ describe('guided process/model URL context', () => {
     expect(processToLogical(7)).toBe('/modeling/logical?processId=7');
     expect(processToPhysical(7)).toBe('/modeling?processId=7');
     expect(processToLogical(7)).not.toContain('approved');
+  });
+
+  it('builds canonical owner evidence URLs with both process and model identity', () => {
+    expect(processToLogicalGovernance(7, 21))
+      .toBe('/modeling/logical?processId=7&draftId=21&review=semantic');
+    expect(processToPhysicalGovernance(7, 34))
+      .toBe('/modeling/models/34?processId=7&review=standard-coverage');
+    for (const id of [0, -1, 1.4, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => processToLogicalGovernance(7, id)).toThrow();
+      expect(() => processToPhysicalGovernance(id, 34)).toThrow();
+    }
   });
 
   it('never falls back to another process when the URL is scoped', () => {
