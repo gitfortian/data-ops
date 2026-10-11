@@ -9,7 +9,8 @@ const report: ProcessJourneyReview = {
   steps: [
     { key: 'grain', name: '业务过程与粒度', status: 'NEEDS_ATTENTION',
       summary: '尚未明确业务粒度', action: 'process' },
-    { key: 'source', name: '业务过程来源', status: 'UNAVAILABLE',
+    { key: 'source', name: '业务过程来源', status: 'NEEDS_ATTENTION',
+      evidence: [{ id: '42', label: 'order_detail', detail: 'DETAIL，无 MAIN', status: 'REVIEW' }],
       summary: '来源不可读，不等于空', action: 'process' },
     { key: 'standard', name: '过程标准字段', status: 'NOT_STARTED',
       summary: '未引用标准字段', action: 'process' },
@@ -24,9 +25,10 @@ it('shows evidence labels and routes to owner tabs/workspaces without creating t
   const openProcess = jest.fn();
   const openLogical = jest.fn();
   const openPhysical = jest.fn();
+  const openEvidence = jest.fn();
   render(<ProcessJourneyReviewPanel report={report} loading={false}
     onReload={jest.fn()} onOpenProcess={openProcess}
-    onOpenLogical={openLogical} onOpenPhysical={openPhysical} />);
+    onOpenLogical={openLogical} onOpenPhysical={openPhysical} onOpenEvidence={openEvidence} />);
   expect(screen.getByText(/有 1 项领域事实不可读取/)).toBeInTheDocument();
   expect(screen.getByText('来源不可读，不等于空')).toBeInTheDocument();
   const processButtons = screen.getAllByRole('button', { name: '查看过程配置' });
@@ -40,7 +42,17 @@ it('shows evidence labels and routes to owner tabs/workspaces without creating t
 
 it('does not present missing context as successfully empty data', () => {
   render(<ProcessJourneyReviewPanel loading={false} onReload={jest.fn()}
-    onOpenProcess={jest.fn()} onOpenLogical={jest.fn()} onOpenPhysical={jest.fn()} />);
+    onOpenProcess={jest.fn()} onOpenLogical={jest.fn()} onOpenPhysical={jest.fn()} onOpenEvidence={jest.fn()} />);
   expect(screen.getByText('暂无完整的建设上下文')).toBeInTheDocument();
   expect(screen.queryByText('已有当前记录')).not.toBeInTheDocument();
+});
+
+it('can locate an exact reviewed source row instead of redirecting generically', () => {
+  const openEvidence = jest.fn();
+  render(<ProcessJourneyReviewPanel report={report} loading={false}
+    onReload={jest.fn()} onOpenProcess={jest.fn()} onOpenLogical={jest.fn()}
+    onOpenPhysical={jest.fn()} onOpenEvidence={openEvidence} />);
+  fireEvent.click(screen.getByText('逐项查看（1）'));
+  fireEvent.click(screen.getByRole('button', { name: '定位此对象' }));
+  expect(openEvidence).toHaveBeenCalledWith('source', 42);
 });

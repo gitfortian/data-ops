@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Collapse, Space, Tag, Typography } from 'antd';
 import type { ProcessJourneyReview, ProcessJourneyStatus } from './processJourneyReview';
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   onOpenProcess: (key: 'grain' | 'source' | 'standard') => void;
   onOpenLogical: () => void;
   onOpenPhysical: () => void;
+  onOpenEvidence: (key: 'source' | 'standard', id: number) => void;
 }
 const meta: Record<ProcessJourneyStatus, { label: string; color: string }> = {
   RECORDED: { label: '已有当前记录', color: 'blue' },
@@ -17,7 +18,7 @@ const meta: Record<ProcessJourneyStatus, { label: string; color: string }> = {
 };
 
 export default function ProcessJourneyReviewPanel({
-  report, loading, onReload, onOpenProcess, onOpenLogical, onOpenPhysical,
+  report, loading, onReload, onOpenProcess, onOpenLogical, onOpenPhysical, onOpenEvidence,
 }: Props) {
   return (
     <Card className="mb-4" loading={loading} title="从业务过程到数仓设计 · 建设接续"
@@ -41,6 +42,33 @@ export default function ProcessJourneyReviewPanel({
               <Typography.Paragraph className="!mb-2 !mt-2" type="secondary">
                 {step.summary}
               </Typography.Paragraph>
+              {step.evidence?.length ? (
+                <Collapse ghost size="small" items={[{
+                  key: step.key, label: `逐项查看（${step.evidence.length}）`,
+                  children: <div className="max-h-52 overflow-y-auto">
+                    {step.evidence.map(item => (
+                      <div key={item.id} className="mb-2 rounded border border-[#f0f0f0] p-2">
+                        <Space size={4} wrap>
+                          <Typography.Text strong>{item.label}</Typography.Text>
+                          {item.status === 'REVIEW' && <Tag color="orange">需核对</Tag>}
+                        </Space>
+                        <Typography.Paragraph type="secondary" className="!mb-0 !text-xs">
+                          {item.detail}
+                        </Typography.Paragraph>
+                        {(step.key === 'source' || step.key === 'standard')
+                          && item.status === 'REVIEW' && (
+                          <Button type="link" size="small" className="!px-0"
+                            onClick={() => onOpenEvidence(step.key as 'source' | 'standard', Number(item.id))}>
+                            定位此对象
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>,
+                }]} />
+              ) : step.status === 'UNAVAILABLE' ? (
+                <Typography.Text type="danger">不能读取对象清单，请核对权限并重新核验。</Typography.Text>
+              ) : null}
               {step.action === 'process' && <Button type="link" className="!px-0"
                 onClick={() => onOpenProcess(step.key as 'grain' | 'source' | 'standard')}>查看过程配置</Button>}
               {step.action === 'logical' && <Button type="link" className="!px-0"

@@ -69,4 +69,33 @@ describe('F-040 process journey read-only projection', () => {
     expect(status(result, 'physical')?.status).toBe('UNAVAILABLE');
     expect(result.unknownCount).toBe(1);
   });
+  it('identifies exact source and standard refs without guessing ownership or approval', () => {
+    const row = {
+      ...input(),
+      sources: available([
+        { id: 41, processId: 7, datasourceId: 3, sourceTable: 'orders', tableRole: 'MAIN' as const },
+        { id: 42, processId: 7, datasourceId: 3, sourceTable: 'order_detail', tableRole: 'MAIN' as const },
+      ]),
+      standards: available([
+        { id: 23, code: 'amount', name: '金额', role: 'METRIC' as const, status: 'DISABLED' as const },
+        { id: 24, code: 'order_id', name: '订单号', role: 'PROCESS' as const, status: 'ENABLED' as const },
+      ]),
+    };
+    const result = buildProcessJourneyReview(row);
+    expect(status(result, 'source')?.evidence?.map(x => x.id)).toEqual(['41', '42']);
+    expect(status(result, 'source')?.evidence?.every(x => x.status === 'REVIEW')).toBe(true);
+    expect(status(result, 'standard')?.evidence?.find(x => x.id === '23')?.status).toBe('REVIEW');
+    expect(status(result, 'standard')?.evidence?.find(x => x.id === '24')?.status).toBe('OK');
+    expect(status(result, 'logical')?.evidence?.map(x => x.id)).toEqual(['21']);
+    expect(status(result, 'physical')?.evidence).toEqual([]);
+  });
+
+  it('an unavailable owner does not fabricate object-level evidence', () => {
+    const result = buildProcessJourneyReview({
+      ...input(), sources: unavailable(), standards: unavailable(), logical: unavailable(),
+      physical: unavailable(),
+    });
+    expect(result.steps.every(x => !x.evidence?.length || x.key === 'grain')).toBe(true);
+  });
+
 });
