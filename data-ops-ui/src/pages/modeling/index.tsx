@@ -16,7 +16,7 @@ import {
   Tooltip,
 } from 'antd';
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
@@ -60,6 +60,7 @@ const ModelingWorkspace: React.FC = () => {
   const requestedProcessId = parseJourneyProcessId(processParam);
   const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
   const [journeyReady, setJourneyReady] = useState(processParam === null);
+  const listEpoch = useRef(0);
   const [journeyProblem, setJourneyProblem] = useState<string>();
   // 列表与过滤状态
   const [records, setRecords] = useState<ModelingModelRecord[]>([]);
@@ -153,6 +154,7 @@ const ModelingWorkspace: React.FC = () => {
       status?: string,
       domainId?: number,
     ) => {
+      const epoch = ++listEpoch.current;
       setLoading(true);
       try {
         const data = await pageModelingModels({
@@ -165,12 +167,16 @@ const ModelingWorkspace: React.FC = () => {
           domainId,
           status,
         });
+        if (epoch !== listEpoch.current) return;
         setRecords(data?.bizData || []);
         setTotal(data?.pagination?.total || 0);
       } catch (error) {
+        if (epoch !== listEpoch.current) return;
+        setRecords([]);
+        setTotal(0);
         message.error(error instanceof Error ? error.message : '模型列表加载失败');
       } finally {
-        setLoading(false);
+        if (epoch === listEpoch.current) setLoading(false);
       }
     },
     [],
@@ -223,7 +229,10 @@ const ModelingWorkspace: React.FC = () => {
   // current-project access before opening this scoped physical catalog.
   useEffect(() => {
     let active = true;
+    // A previous process filter's pending response must not repaint this route.
+    listEpoch.current += 1;
     setRecords([]);
+    setTotal(0);
     setJourneyProcess(undefined);
     setJourneyProblem(undefined);
     if (processParam === null) {
