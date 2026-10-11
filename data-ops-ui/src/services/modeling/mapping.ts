@@ -82,3 +82,32 @@ export const confirmOdsMappingReconcile = (
     `${MODELING_API_PREFIX}/models/${modelId}/mappings/ods-reconcile`,
     { expectedDefinition, selections },
   );
+
+/** Live ODS source evidence, not a frozen publish version or running data result. */
+export interface OdsSourceEvidenceInspection {
+  modelId: number;
+  modelStatus: string;
+  sourceDatasourceId?: number | null;
+  sourceDatabase?: string | null;
+  sourceTable?: string | null;
+  status: 'CONSISTENT_NOW' | 'NEEDS_REVIEW' | 'NOT_CHECKABLE';
+  evidenceSha256?: string | null;
+  targetCount: number;
+  sourceCount: number;
+  mappingCount: number;
+  fields: {
+    targetColumn?: string | null;
+    targetType?: string | null;
+    sourceColumn?: string | null;
+    sourceType?: string | null;
+    status: string;
+    reason: string;
+  }[];
+  blockers: string[];
+}
+export const inspectOdsSourceEvidence = (
+  modelId: ModelingModelId,
+): Promise<OdsSourceEvidenceInspection> =>
+  HttpUtils.getData<OdsSourceEvidenceInspection>(
+    `${MODELING_API_PREFIX}/models/${modelId}/mappings/ods-source-evidence`,
+  );
