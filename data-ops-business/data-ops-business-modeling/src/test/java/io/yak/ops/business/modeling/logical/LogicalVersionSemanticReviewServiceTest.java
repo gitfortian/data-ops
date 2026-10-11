@@ -156,7 +156,7 @@ class LogicalVersionSemanticReviewServiceTest {
     snapshot = json.writeValueAsString(frozen);
     var report = service.review(77L, 1);
     assertEquals("DECLARED_NOT_CONFIRMED", report.relations().get(0).status());
-    assertTrue(report.limitations().stream().anyMatch(s -> s.contains("人工")));
+    assertTrue(report.relations().get(0).explanation().contains("人工"));
   }
 
   @Test void forgedSnapshotModelIdentityAndForeignRelationFailClosed() throws Exception {
