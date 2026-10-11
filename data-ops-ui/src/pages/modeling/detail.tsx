@@ -35,6 +35,7 @@ import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
+import PhysicalDataDevHandoffPanel from './components/PhysicalDataDevHandoffPanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
@@ -146,6 +147,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const [publishing, setPublishing] = useState(false);
   const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
   const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
+  const [dataDevHandoffOpen, setDataDevHandoffOpen] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
     before: unknown;
     after: unknown;
@@ -2259,6 +2261,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
               </YakButton>
             </Tooltip>
           )}
+          {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '')
+            && Number(modelInfo.latestVersionNo) > 0 && (
+            <YakButton className="!h-9 !rounded-lg !px-4"
+              disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+              onClick={() => setDataDevHandoffOpen(true)}>
+              DataDev 交接预检
+            </YakButton>
+          )}
           <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => void handleGenerateDdl()}>
             建库脚本
           </YakButton>
@@ -3067,6 +3077,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
             )}
           </Card>
         </div>
+      )}
+      {modelId && dataDevHandoffOpen && (
+        <PhysicalDataDevHandoffPanel
+          modelId={Number(modelId)} open={dataDevHandoffOpen}
+          onClose={() => setDataDevHandoffOpen(false)} />
       )}
       {modelId && standardCoverageOpen && (
         <PhysicalStandardCoveragePanel
