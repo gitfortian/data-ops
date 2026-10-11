@@ -2262,7 +2262,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
             </Tooltip>
           )}
           {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '')
-            && Number(modelInfo.latestVersionNo) > 0 && (
+            && Number(modelInfo?.latestVersionNo) > 0 && (
             <YakButton className="!h-9 !rounded-lg !px-4"
               disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
               onClick={() => setDataDevHandoffOpen(true)}>
