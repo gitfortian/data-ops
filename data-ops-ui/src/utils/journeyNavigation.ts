@@ -15,6 +15,17 @@ export const processToLogical = (processId: number): string =>
 export const processToPhysical = (processId: number): string =>
   `/modeling?processId=${requirePositiveId(processId)}`;
 
+/** Navigate to one owner record; its destination must re-verify both IDs. */
+export const processToLogicalGovernance = (processId: number, draftId: number): string =>
+  `/modeling/logical?processId=${requirePositiveId(processId)}&draftId=${requirePositiveId(draftId)}&review=semantic`;
+
+export const processToPhysicalGovernance = (processId: number, modelId: number): string =>
+  `/modeling/models/${requirePositiveId(modelId)}?processId=${requirePositiveId(processId)}&review=standard-coverage`;
+
+/** A navigation hint only: the Modeling owner verifies the chosen physical version. */
+export const processToPhysicalHandoff = (processId: number, modelId: number): string =>
+  `/modeling/models/${requirePositiveId(modelId)}?processId=${requirePositiveId(processId)}&review=datadev-handoff`;
+
 export const processToSemantic = (processId: number): string =>
   `/semantic/processes/${requirePositiveId(processId)}/edit`;
 
@@ -40,3 +51,36 @@ export const chooseJourneyLogicalModel = <T extends { id: number; processId: num
   }
   return eligible[0]?.id;
 };
+
+
+/** Owner re-read required: never silently use a same-name or first available draft. */
+export const exactJourneyLogicalDraft = <T extends { id: number; processId: number }>(
+  drafts: T[], processId: number, draftId: number,
+): T | undefined => Number.isSafeInteger(processId) && processId > 0
+    && Number.isSafeInteger(draftId) && draftId > 0
+    ? drafts.find((draft) => draft.id === draftId && draft.processId === processId)
+    : undefined;
+
+/** Use an actual version returned by the Modeling owner, not a guessed revision. */
+export const latestJourneyFrozenVersion = (versions: { versionNo: number }[]): number | undefined =>
+  versions.filter((item) => Number.isSafeInteger(item.versionNo) && item.versionNo > 0)
+    .reduce<number | undefined>((latest, item) => latest === undefined
+      ? item.versionNo : Math.max(latest, item.versionNo), undefined);
+
+
+/** UI-only entry precondition; the existing Modeling API still owns authorization. */
+export const canOpenPhysicalGovernanceEvidence = (entry: {
+  processId?: number;
+  modelId: number;
+  owner?: { id?: number | string; processId?: number; layerCode?: string } | null;
+  savedStructureReady: boolean;
+  dirty: boolean;
+  canRead: boolean;
+}): boolean => Boolean(
+  entry.canRead && !entry.dirty && entry.savedStructureReady
+  && entry.processId && Number.isSafeInteger(entry.processId) && entry.processId > 0
+  && Number.isSafeInteger(entry.modelId) && entry.modelId > 0
+  && Number(entry.owner?.id) === entry.modelId
+  && entry.owner?.processId === entry.processId
+  && ['DWD', 'DIM'].includes(entry.owner?.layerCode?.toUpperCase() || '')
+);

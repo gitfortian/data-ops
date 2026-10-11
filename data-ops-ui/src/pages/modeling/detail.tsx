@@ -2,7 +2,7 @@ import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
 import { useModelStructureDraft } from './editor/useModelStructureDraft';
 import { type ColumnDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useSearchParams } from '@umijs/max';
 import { ApartmentOutlined, CloudDownloadOutlined, CopyOutlined, ExclamationCircleOutlined, FundOutlined, ReloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import {
   AutoComplete,
@@ -36,6 +36,7 @@ import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
 import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
+import { canOpenPhysicalGovernanceEvidence, parseJourneyProcessId } from '@/utils/journeyNavigation';
 import PhysicalDataDevHandoffPanel from './components/PhysicalDataDevHandoffPanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
@@ -130,7 +131,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const { captureDraft, resetDraft, tableName, setTableName, tableComment, setTableComment, rows, setRows, primaryKey, setPrimaryKey, indexes, setIndexes, partitionEnabled, setPartitionEnabled, partitionType, setPartitionType, partitionColumns, setPartitionColumns, partitionExpression, setPartitionExpression, properties, setProperties, dirty, setDirty } = useModelStructureDraft();
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const [searchParams] = useSearchParams();
+  const evidenceMode = searchParams.get('review');
+  const coverageRequested = evidenceMode === 'standard-coverage';
+  const handoffRequested = evidenceMode === 'datadev-handoff';
+  const coverageProcessId = parseJourneyProcessId(searchParams.get('processId'));
   const { currentProject } = useSecurityProject();
+  const loadedEvidenceScopeRef = useRef<string>();
+  const handledEvidenceScopeRef = useRef<string>();
   const { canAll } = usePermissionAccess();
   const [batchAssistantOpen, setBatchAssistantOpen] = useState(false);
   const captureEditorResource = useResourceScope(`${currentProject?.id ?? ""}:${modelId ?? ""}`);
@@ -300,6 +308,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       ]);
       if (!isCurrent()) return;
       if (!canApply()) return;
+      loadedEvidenceScopeRef.current = `${currentProject?.id ?? ''}:${modelId ?? ''}`;
       setStructure(data);
       setModelInfo(modelData);
       // B4(2026-09-17):物理表名默认为模型编码
@@ -1106,6 +1115,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   useEffect(() => {
     resetDraft();
+    loadedEvidenceScopeRef.current = undefined;
+    setStandardCoverageOpen(false);
+    setDataDevHandoffOpen(false);
     setModelInfo(null);
     setStructure(undefined);
     setImportConfig(null);
@@ -1157,6 +1169,28 @@ const emptyColumnDraft = (): ColumnDraft => ({
   useEffect(() => {
     void loadStructure();
   }, [loadStructure]);
+
+  // F-040 cross-workspace evidence request. Only an owner re-read for the current
+  // project+model+process may open the existing read-only coverage report.
+  useEffect(() => {
+    if ((!coverageRequested && !handoffRequested) || !modelInfo || !structure || loading) return;
+    const scope = `${currentProject?.id ?? ''}:${modelId ?? ''}`;
+    const entryKey = `${scope}:${coverageProcessId ?? 'invalid'}:${evidenceMode}`;
+    if (handledEvidenceScopeRef.current === entryKey
+        || loadedEvidenceScopeRef.current !== scope) return;
+    handledEvidenceScopeRef.current = entryKey;
+    if (!canOpenPhysicalGovernanceEvidence({
+      processId: coverageProcessId,
+      modelId: Number(modelId), owner: modelInfo,
+      savedStructureReady: true, dirty, canRead: canAll(['modeling:read']),
+    })) {
+      message.warning('物理模型不属于所选业务过程、分层不支持标准覆盖核验，或当前结构尚不可安全审阅；请返回过程重新选择');
+      return;
+    }
+    if (coverageRequested) setStandardCoverageOpen(true);
+    else setDataDevHandoffOpen(true);
+  }, [coverageRequested, handoffRequested, evidenceMode, coverageProcessId,
+    modelId, modelInfo, structure, loading, dirty, currentProject?.id, canAll]);
 
   // 发布审批开关(01):MODEL_PUBLISH 流未配置/未启用或无审批读权限时按关闭处理，维持现状直发
   useEffect(() => {
