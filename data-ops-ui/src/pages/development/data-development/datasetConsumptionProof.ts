@@ -110,8 +110,15 @@ export const inspectExactDatasetConsumption = (
       activeVersionId: versionId, coverageNote: impact.coverageNote || '治理或访问证据不可用',
     };
   }
+  // Consumption provider state is authoritative. An EMPTY response must not be
+  // upgraded to success by contradictory nested aggregates from a stale read.
+  if (impact.usageState !== 'READY' && impact.usageState !== 'EMPTY') {
+    return { state: 'UNAVAILABLE', successfulUsage: 0, usageState: impact.usageState,
+      activeVersionId: versionId, coverageNote: impact.coverageNote || 'Consumption 当前不提供可核查使用证据' };
+  }
   // Do not count unversioned consumer aggregates. Only exact immutable source version receipts.
-  const receipts = impact.consumers.flatMap(c => c.observedVersions ?? [])
+  const receipts = (impact.usageState === 'READY' ? impact.consumers : [])
+    .flatMap(c => c.observedVersions ?? [])
     .filter(v => v.sourceVersion.identity === versionId
       && Number.isSafeInteger(v.successfulUsageCount) && v.successfulUsageCount > 0);
   // A version may be present under multiple consumers. We display observations without
