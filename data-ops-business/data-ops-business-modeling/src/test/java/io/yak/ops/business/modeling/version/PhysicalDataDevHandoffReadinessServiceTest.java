@@ -89,6 +89,7 @@ class PhysicalDataDevHandoffReadinessServiceTest {
         && d.status().equals("NOT_CHECKED")));
     verify(versions).getVersionDetail(50L, 2);
     verify(coverage).inspect(50L);
+    verify(structures).get(50L);
     verifyNoMoreInteractions(coverage, structures, versions);
   }
 
