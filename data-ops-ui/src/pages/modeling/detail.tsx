@@ -35,6 +35,7 @@ import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
+import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
 import PhysicalDataDevHandoffPanel from './components/PhysicalDataDevHandoffPanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
@@ -1872,6 +1873,26 @@ const emptyColumnDraft = (): ColumnDraft => ({
   };
 
   /** 点击 COLUMN 类校验问题定位到具体字段行（AC ticket 07）。 */
+  /** Evidence is read-only. Locate only an exact saved DAO identity in this editor. */
+  const locateCoverageGap = (column: import('@/services/modeling/api').PhysicalStandardCoverageInspection['columns'][number]) => {
+    const result = locatePhysicalCoverageColumn({
+      reportModelId: Number(modelId),
+      editorModelId: Number(modelInfo?.id),
+      saved: structure, rows, dirty, column,
+    });
+    if (!result.ok) {
+      message.warning(result.reason);
+      return;
+    }
+    setStandardCoverageOpen(false);
+    setHighlightRowKey(result.value);
+    editorRootRef.current?.querySelector(`tr[data-row-key="${result.value}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setHighlightRowKey(undefined), 2500);
+    message.info('已定位当前物理列；请自行审查标准引用并保存，原核验报告不会自动修改');
+  };
+
   const locateIssue = (issue: ModelingValidationIssue) => {
     if (issue.scope !== 'COLUMN' || !issue.target) return;
     const row = rows.find((item) => item.columnName.trim().toLowerCase() === issue.target!.toLowerCase());
@@ -3086,7 +3107,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
       {modelId && standardCoverageOpen && (
         <PhysicalStandardCoveragePanel
           modelId={Number(modelId)} open={standardCoverageOpen}
-          onClose={() => setStandardCoverageOpen(false)} />
+          onClose={() => setStandardCoverageOpen(false)}
+          onLocateColumn={locateCoverageGap} />
       )}
       {modelId && odsVersionEvidenceOpen && (
         <OdsPublishedVersionEvidencePanel
