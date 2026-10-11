@@ -5,7 +5,7 @@ import ModelMappingPanel from '@/components/ai/ModelMappingPanel';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
-import { getModelingStructure } from '@/services/modeling/api';
+import { getModelingModel, getModelingStructure } from '@/services/modeling/api';
 import { listModelingImportTables, previewModelingImportColumns } from '@/services/modeling/import';
 import {
   clearAllModelingMappings,
@@ -18,7 +18,7 @@ import {
   setModelingMapping,
   validateModelingExpression,
 } from '@/services/modeling/mapping';
-import type { ModelingImportColumnView, ModelingMappingView } from '@/services/modeling/types';
+import type { ModelingImportColumnView, ModelingMappingView, ModelingModelRecord } from '@/services/modeling/types';
 
 interface MappingFormValues {
   sourceDatasourceId: number;
@@ -66,6 +66,7 @@ const MappingPanel: React.FC = () => {
   const [definition, setDefinition] = useState('');
   const [editorLoading, setEditorLoading] = useState(false);
   const [structure, setStructure] = useState<StructureRecordLite>();
+  const [modelRecord, setModelRecord] = useState<ModelingModelRecord>();
   const [views, setViews] = useState<ModelingMappingView[]>([]);
   const [loading, setLoading] = useState(false);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
@@ -92,13 +93,15 @@ const MappingPanel: React.FC = () => {
     const current = resource();
     setLoading(true);
     try {
-      const [structureData, mappingViews] = await Promise.all([
+      const [structureData, mappingViews, currentModel] = await Promise.all([
         getModelingStructure(modelId),
         listModelingMappings(modelId),
+        getModelingModel(modelId),
       ]);
       if (!current()) return;
       setStructure(structureData as StructureRecordLite);
       setViews(mappingViews ?? []);
+      setModelRecord(currentModel);
     } catch {
       if (current()) message.error('加载来源映射失败，请稍后重试');
     } finally {
@@ -109,7 +112,7 @@ const MappingPanel: React.FC = () => {
   useEffect(() => {
     const current = resource();
     setEditTarget(null); setDefinition(''); setSaving(false); setEditorLoading(false);
-    setViews([]); setStructure(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
+    setViews([]); setStructure(undefined); setModelRecord(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
     setOdsReview(undefined); setOdsChoices({}); setOdsSaving(false); setOdsReviewLoading(false);
     setSourceDatasourceId(undefined); setSourceDatabase(undefined); setSourceTable(undefined);
     form.resetFields();
@@ -365,8 +368,12 @@ const MappingPanel: React.FC = () => {
         </div>
         <Space>
           <Button onClick={() => history.push(`/modeling/models/${modelId}`)}>返回模型</Button>
-          <Button disabled={!maySave} loading={odsReviewLoading}
-            onClick={() => void loadOdsReview()}>ODS 来源映射批量核验/修复</Button>
+          {modelRecord?.layerCode?.toUpperCase() === 'ODS'
+            && modelRecord.status === 'DRAFT'
+            && modelRecord.sourceDatasourceId != null && (
+            <Button disabled={!maySave} loading={odsReviewLoading}
+              onClick={() => void loadOdsReview()}>ODS 来源映射批量核验/修复</Button>
+          )}
           <YakButton
             className="!h-9 !rounded-lg !px-4"
             danger
