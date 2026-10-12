@@ -215,8 +215,8 @@ const DirectoryTab = () => {
       <Tree.TreeNode
         key={node.id}
         title={
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate">
+          <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-[#f4f7fb]">
+            <span className="min-w-0 truncate text-[13px] text-[#34445a]">
               {node.dirName}
               {node.builtin && <Tag className="!ml-1">内置</Tag>}
             </span>
@@ -234,7 +234,12 @@ const DirectoryTab = () => {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold text-[#2a3a4e]">目录结构</h2>
+          <p className="mb-0 mt-1 text-[12px] text-[#8491a4]">按业务域与数仓分层组织资产，目录移动会更新子树位置。</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
         {canCreate && (
           <YakButton size="small" type="primary" className="!text-white" onClick={() => openCreate(undefined)}>
             新建根目录
@@ -250,7 +255,7 @@ const DirectoryTab = () => {
         <YakButton size="small" onClick={load}>
           刷新
         </YakButton>
-        <span className="text-[13px] text-[#667085]">目录编码自动生成，移动时会同步更新子目录的位置。</span>
+        </div>
       </div>
       {loadError ? <Alert className="!mb-3" type="error" showIcon message="目录读取失败，不代表尚无目录" action={<Button size="small" onClick={() => void load()}>重试</Button>} /> : null}
       <Card size="small" loading={loading} className="!rounded-xl !border-[#e6eaf0] !shadow-none">
@@ -281,7 +286,7 @@ const DirectoryTab = () => {
           >
             <Input placeholder="如：客户域主数据" />
           </Form.Item>
-          <Form.Item name="iconKey" label="图标标识" rules={[{ max: 64 }]}>
+          <Form.Item name="iconKey" label="图标标识（可选）" rules={[{ max: 64 }]}>
             <Input placeholder="可空，前端按默认图标渲染" />
           </Form.Item>
           <Form.Item name="description" label="描述" rules={[{ max: 512 }]}>
@@ -570,15 +575,19 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold text-[#2a3a4e]">自动编目规则</h2>
+          <p className="mb-0 mt-1 text-[12px] text-[#8491a4]">新增规则默认停用，必须先试跑确认命中面，再明确启用。</p>
+        </div>
         {canCreate && (
           <YakButton size="small" type="primary" className="!text-white" onClick={() => openEditor('new')}>
             新建规则
           </YakButton>
         )}
-        <span className="text-[12px] text-[#98a2b3]">
-          规则必须试跑后才可启用（D10）；条件之间是 AND，留空即通配；对账对新资产自动应用启用中的规则
-        </span>
+      </div>
+      <div className="mb-4 rounded-xl border border-solid border-[#e9edf3] bg-[#f8f9fc] px-4 py-3 text-[12px] leading-5 text-[#738398]">
+        命中条件之间使用 AND；未填写的条件相当于全部匹配。重新应用作用于已有资产，需单独确认。
       </div>
       {loadError ? <Alert className="!mb-4" type="error" showIcon message="编目规则读取失败，不能视为没有规则" action={<Button onClick={() => void load()}>重试</Button>} /> : null}
       <Table<RuleRecord>
@@ -845,19 +854,23 @@ const TagTab = () => {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold text-[#2a3a4e]">业务标签字典</h2>
+          <p className="mb-0 mt-1 text-[12px] text-[#8491a4]">标签用于人工治理与发现，不等同于目录树中的归属位置。</p>
+        </div>
+        {canCreate && (
+          <YakButton size="small" type="primary" className="!text-white" onClick={() => openEditor('new')}>新建标签</YakButton>
+        )}
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-[#f7f9fc] px-4 py-3">
         <Input.Search
           allowClear
           placeholder="按名称/编码搜索"
           className="!w-[240px]"
           onSearch={(value) => setKeyword(value.trim())}
         />
-        {canCreate && (
-          <YakButton size="small" type="primary" className="!text-white" onClick={() => openEditor('new')}>
-            新建标签
-          </YakButton>
-        )}
-        <span className="text-[12px] text-[#98a2b3]">标签用于人工业务分组，与目录（自动编目目标）互补</span>
+        <span className="ml-auto text-[12px] text-[#8a96a6]">仅搜索标签名称与编码</span>
       </div>
       {loadError ? <Alert className="!mb-4" type="error" showIcon message="标签清单读取失败，不能视为没有标签" action={<Button onClick={() => void load()}>重试</Button>} /> : null}
       <Table<AssetTagRecord>
@@ -917,17 +930,18 @@ const AssetTaxonomyPage = () => {
       <AssetWorkspaceHeading
         title="目录与标签"
         description="建立可维护的目录体系、自动编目规则和标签字典；规则需先试跑再启用。"
-        actions={<Segmented
-          options={[
-            { value: 'directory', label: '目录树' },
-            { value: 'rules', label: '编目规则' },
-            { value: 'tags', label: '标签字典' },
-          ]}
-          value={tab}
-          onChange={(value) => setTab(value as typeof tab)}
-        />}
       />
-      <div className="mt-6 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-0 border-b border-solid border-[#e3e8f0] pb-3">
+        <Segmented size="large"
+          options={[
+            { value: 'directory', label: '目录结构' },
+            { value: 'rules', label: '自动编目规则' },
+            { value: 'tags', label: '业务标签字典' },
+          ]}
+          value={tab} onChange={(value) => setTab(value as typeof tab)} />
+        <span className="text-[12px] text-[#8a96a6]">目录、规则、标签分别管理，不会因切换而提交变更</span>
+      </div>
+      <div className="mt-4 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)] max-sm:p-4">
         {tab === 'directory' && <DirectoryTab />}
         {tab === 'rules' && <RuleTab dirTree={dirTree} tags={tags} />}
         {tab === 'tags' && <TagTab />}
