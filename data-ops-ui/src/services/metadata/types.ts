@@ -1,5 +1,16 @@
 /** 元数据中心(data-metadata)后端契约类型,对齐 /api/v1/metadata REST API（ticket 116/129）。 */
 
+/** S2 durable delivery status; this is NOT the current Asset PENDING/PUBLISHED status. */
+export interface MetadataAutoIngestReceipt {
+  eventId: number | null;
+  runId: number | null;
+  entityId: number | null;
+  status: 'NEVER' | 'PENDING' | 'RUNNING' | 'RETRY' | 'SUCCEEDED' | 'DEAD';
+  attemptCount: number;
+  errorMessage?: string | null;
+  updatedAt?: string | null;
+}
+
 export type CollectProviderType = 'HARVESTED' | 'REGISTERED';
 export type CollectRunStatus = 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SUSPECT';
 export type CollectTriggerType = 'SCHEDULE' | 'MANUAL' | 'DRY_RUN';
