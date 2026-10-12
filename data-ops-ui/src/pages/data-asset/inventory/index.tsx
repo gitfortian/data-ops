@@ -192,7 +192,8 @@ const PendingPool = () => {
       )}
       <Table<AssetRecord>
         rowKey="id"
-        size="small"
+        size="middle"
+        scroll={{ x: 940 }}
         columns={columns}
         dataSource={records}
         loading={loading}
@@ -407,7 +408,8 @@ const ChangeConfirm = () => {
       )}
       <Table<ChangeRecord>
         rowKey="id"
-        size="small"
+        size="middle"
+        scroll={{ x: 1020 }}
         columns={columns}
         dataSource={records}
         loading={loading}
@@ -589,7 +591,8 @@ const SourceAccess = () => {
       )}
       <Table<ReconcileStatusRow>
         rowKey="sourceType"
-        size="small"
+        size="middle"
+        scroll={{ x: 860 }}
         columns={columns}
         dataSource={rows}
         loading={loading}

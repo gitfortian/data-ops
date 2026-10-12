@@ -922,10 +922,18 @@ const AssetTaxonomyPage = () => {
   const [tab, setTab] = useState<'directory' | 'rules' | 'tags'>('directory');
   const [dirTree, setDirTree] = useState<DirNode[]>([]);
   const [tags, setTags] = useState<AssetTagRecord[]>([]);
+  const [targetLookupError, setTargetLookupError] = useState(false);
 
   useEffect(() => {
-    getDirectoryTree().then(setDirTree).catch(() => setDirTree([]));
-    listAssetTags().then(setTags).catch(() => setTags([]));
+    let active = true;
+    setTargetLookupError(false);
+    void Promise.allSettled([getDirectoryTree(), listAssetTags()]).then(([dirs, items]) => {
+      if (!active) return;
+      setDirTree(dirs.status === 'fulfilled' ? dirs.value : []);
+      setTags(items.status === 'fulfilled' ? items.value : []);
+      setTargetLookupError(dirs.status !== 'fulfilled' || items.status !== 'fulfilled');
+    });
+    return () => { active = false; };
   }, [tab]);
 
   return (
@@ -963,6 +971,12 @@ const AssetTaxonomyPage = () => {
         description={tab === 'directory' ? '目录移动会影响子目录位置；内置目录与自定义目录需要区分。'
           : tab === 'rules' ? '已启用规则会影响后续自动纳管的目录/标签归属，试跑只展示命中样例。'
             : '标签是跨目录的业务标识，删除正在使用的标签会影响现有关联。'}>
+        {tab === 'rules' && targetLookupError ? (
+          <Alert className="!mb-4" type="warning" showIcon
+            message="部分规则目标目录或标签未能读取"
+            description="目标选项未完成核验，空列表不代表目标不存在。请检查项目权限或重新进入此页面。"
+          />
+        ) : null}
         {tab === 'directory' && <DirectoryTab />}
         {tab === 'rules' && <RuleTab dirTree={dirTree} tags={tags} />}
         {tab === 'tags' && <TagTab />}

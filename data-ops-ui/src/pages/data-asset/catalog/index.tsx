@@ -45,6 +45,7 @@ import { listSemanticLayers } from '@/services/semantic/api';
 import type { SemanticLayerRecord } from '@/services/semantic/types';
 import {
   ASSET_SOURCE_TYPE_LABELS,
+  collectDirOptions,
   ASSET_TYPE_LABELS,
   formatAssetTime,
   healthGradeColor,
@@ -137,6 +138,9 @@ const AssetCatalogPage = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardAssets, setWizardAssets] = useState<AssetRecord[]>([]);
   const [manualOpen, setManualOpen] = useState(false);
+  const [batchMoveOpen, setBatchMoveOpen] = useState(false);
+  const [batchMoveTarget, setBatchMoveTarget] = useState<number | undefined>();
+  const [batchMoveSaving, setBatchMoveSaving] = useState(false);
   const [offlineTarget, setOfflineTarget] = useState<AssetRecord[] | null>(null);
 
   const load = useCallback(async () => {
@@ -228,31 +232,27 @@ const AssetCatalogPage = () => {
   };
 
   const runBatchMove = () => {
-    let target: number | undefined;
-    Modal.confirm({
-      title: '批量移目录',
-      content: (
-        <Tree
-          treeData={treeData as never}
-          selectedKeys={target ? [target] : []}
-          onSelect={(keys) => {
-            target = keys[0] as number | undefined;
-          }}
-          style={{ maxHeight: 300, overflow: 'auto' }}
-        />
-      ),
-      okText: '移动',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const count = await batchMoveAssetsDirectory(selectedIds, target ?? null);
-          message.success(`已移动 ${count} 个资产`);
-          refresh();
-        } catch {
-          // 已由全局错误提示统一展示后端原话（如目录不存在/有环 48006）
-        }
-      },
-    });
+    if (!canUpdate || selectedIds.length === 0) return;
+    setBatchMoveTarget(undefined);
+    setBatchMoveOpen(true);
+  };
+
+  const confirmBatchMove = async () => {
+    if (!canUpdate || !selectedIds.length || batchMoveTarget == null || batchMoveSaving) return;
+    setBatchMoveSaving(true);
+    try {
+      // Root-level placement is an explicit choice; no selection must never mean root.
+      const destination = batchMoveTarget === 0 ? null : batchMoveTarget;
+      const count = await batchMoveAssetsDirectory(selectedIds, destination);
+      message.success(`已移动 ${count} 个资产`);
+      setBatchMoveOpen(false);
+      setBatchMoveTarget(undefined);
+      refresh();
+    } catch {
+      // Leave the dialog open for retry; server enforces project and directory validity.
+    } finally {
+      setBatchMoveSaving(false);
+    }
   };
 
   const runDelete = (record: AssetRecord) => {
@@ -388,10 +388,10 @@ const AssetCatalogPage = () => {
       ) : (
       <div className="mt-5 flex min-h-0 flex-1 items-start gap-4 max-lg:flex-col">
       <aside className="w-[246px] shrink-0 rounded-2xl border border-solid border-[#e7ebf1] bg-white p-4 shadow-[0_3px_16px_rgba(23,36,57,0.025)] max-lg:w-full lg:sticky lg:top-4">
-        <Button className="mb-2 md:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
+        <Button className="mb-2 lg:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
           {directoryId ? '目录筛选 · 已选择' : '选择目录'}
         </Button>
-        <div className={directoryOpen ? '' : 'hidden md:block'}>
+        <div className={directoryOpen ? '' : 'hidden lg:block'}>
         <div className="mb-4 flex items-center gap-2 border-0 border-b border-solid border-[#edf0f4] pb-3 text-[13px] font-semibold text-[#32445d]"><FolderTree size={16} className="text-[#6d8bac]" />按业务目录筛选</div>
         {directoryLoading ? (
           <YakEmpty compact title="正在读取目录" description="请等待当前项目的目录请求完成" />
@@ -418,7 +418,7 @@ const AssetCatalogPage = () => {
           />
         )}
         {directoryId && (
-          <Button type="link" size="small" className="!px-0" onClick={() => setDirectoryId(undefined)}>
+          <Button type="link" size="small" className="!px-0" onClick={() => { setDirectoryId(undefined); setPageNo(1); }}>
             清除目录筛选
           </Button>
         )}
@@ -428,7 +428,7 @@ const AssetCatalogPage = () => {
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-solid border-[#e7ebf1] bg-white shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
         <div className="border-0 border-b border-solid border-[#edf0f4] px-5 py-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="m-0 text-[15px] font-semibold text-[#2a394e]">资产台账</h2><p className="mb-0 mt-1 text-[12px] text-[#8b98aa]">当前筛选下共 {total} 项 · 详情以当前资产台账为准</p></div>
+          <div><h2 className="m-0 text-[15px] font-semibold text-[#2a394e]">资产台账</h2><p className="mb-0 mt-1 text-[12px] text-[#8b98aa]">当前筛选下 {loadError ? '数量未知' : loading ? '读取中' : `${total} 项`} · 详情以当前资产台账为准</p></div>
           <span className="flex items-center gap-1 text-[12px] text-[#8694a7]"><SlidersHorizontal size={14} />筛选条件</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -437,7 +437,10 @@ const AssetCatalogPage = () => {
             placeholder="名称 / 描述 / 负责人 / 标签"
             className="!w-[240px] max-sm:!w-full"
             value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
+            onChange={(event) => {
+              setSearchText(event.target.value);
+              if (!event.target.value) { setKeyword(''); setPageNo(1); }
+            }}
             onSearch={(value) => {
               setKeyword(value.trim());
               setPageNo(1);
@@ -610,6 +613,39 @@ const AssetCatalogPage = () => {
       </div>
       )}
 
+      <Modal
+        open={batchMoveOpen}
+        title="批量调整资产目录"
+        width={520}
+        okText="确认移动"
+        cancelText="取消"
+        okButtonProps={{ disabled: batchMoveTarget == null || !canUpdate || !selectedIds.length }}
+        confirmLoading={batchMoveSaving}
+        maskClosable={!batchMoveSaving}
+        keyboard={!batchMoveSaving}
+        onOk={() => void confirmBatchMove()}
+        onCancel={() => {
+          if (batchMoveSaving) return;
+          setBatchMoveOpen(false);
+          setBatchMoveTarget(undefined);
+        }}
+        destroyOnClose
+      >
+        <div className="mb-4 mt-3 rounded-xl border border-solid border-[#e4ebf4] bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#73839a]">
+          本次仅改变已选 {selectedIds.length} 项资产的目录归属，不改变来源实体、负责人或发布状态。
+          必须明确选择目标；取消目录归属也必须主动选中“目录根级”。
+        </div>
+        <div className="mb-2 text-[13px] font-medium text-[#34465c]">目标目录</div>
+        <Select
+          showSearch
+          optionFilterProp="label"
+          className="w-full"
+          placeholder="明确选择目标目录"
+          value={batchMoveTarget}
+          onChange={setBatchMoveTarget}
+          options={[{ value: 0, label: '目录根级（取消目录归属）' }, ...collectDirOptions(dirTree)]}
+        />
+      </Modal>
       <PublishPrecheckModal
         open={wizardOpen}
         assets={wizardAssets}
