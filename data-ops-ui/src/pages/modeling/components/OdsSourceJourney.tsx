@@ -1,6 +1,6 @@
 import { history, useSearchParams } from '@umijs/max';
 import { Alert, Button, Input, Select, Space, Spin, Tag, Typography, message } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { listAllDataSources } from '@/services/data-source/api';
@@ -50,15 +50,21 @@ const OdsSourceJourney = () => {
   const [creating, setCreating] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
+  const readEpoch = useRef(0);
+  const sourceIdentity = useRef('');
 
   const refresh = useCallback(async () => {
+    const ticket = ++readEpoch.current;
+    const sourceKey = JSON.stringify([projectId, datasourceId, database, schema, table, entityId]);
+    const changedSource = sourceIdentity.current !== sourceKey;
+    sourceIdentity.current = sourceKey;
     setLoading(true);
     setFailure('');
     setLookup(null);
     setSourceVerified(false);
-    setColumns(null);
+    // A draftId-only redirect must not erase a preview/mapping the user just confirmed.
+    if (changedSource) { setColumns(null); setSavedId(null); }
     setSavedDraft(null);
-    setSavedId(null);
     if (!valid || datasourceId == null) {
       setFailure('来源坐标不完整或非法；请从已发现的物理表进入 ODS 建模。');
       setLoading(false);
@@ -71,6 +77,7 @@ const OdsSourceJourney = () => {
         entityId ? getEntityDetail(entityId) : Promise.resolve(null),
         draftId ? getModelingModel(draftId) : Promise.resolve(null),
       ]);
+      if (ticket !== readEpoch.current) return;
       // URL hints never grant access. Confirm both the active project's DataSource owner
       // and, if provided, the specific Metadata table identity before suggesting writes.
       const validSource = (sources.bizData ?? []).find(s => Number(s.id) === datasourceId);
@@ -93,15 +100,20 @@ const OdsSourceJourney = () => {
       const inferred = dialectOfDbType(validSource.dbType);
       if (inferred) setDialect(inferred);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : '来源和模型核验失败；请重试。');
+      if (ticket === readEpoch.current)
+        setFailure(error instanceof Error ? error.message : '来源和模型核验失败；请重试。');
     } finally {
-      setLoading(false);
+      if (ticket === readEpoch.current) setLoading(false);
     }
   }, [projectId, datasourceId, database, schema, table, entityId, draftId, valid, reload]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    return () => { readEpoch.current += 1; };
+  }, [refresh]);
 
   const preview = useCallback(async () => {
+    const ticket = readEpoch.current;
     if (!sourceVerified || !lookup || lookup.state !== 'READY' || lookup.candidates.length > 0
         || datasourceId == null) return;
     setPreviewBusy(true);
@@ -109,15 +121,17 @@ const OdsSourceJourney = () => {
     try {
       const next = (await previewModelingImportColumns(datasourceId, database, table, schema))
         .filter(col => !col.technical);
+      if (ticket !== readEpoch.current) return;
       if (!next.length) throw new Error('当前物理表没有可核验的真实源列。');
       const names: Record<string, string> = {};
       next.forEach(col => { names[col.name] = col.name; });
       setTargetNames(names);
       setColumns(next);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : '物理表列读取失败。');
+      if (ticket === readEpoch.current)
+        setFailure(error instanceof Error ? error.message : '物理表列读取失败。');
     } finally {
-      setPreviewBusy(false);
+      if (ticket === readEpoch.current) setPreviewBusy(false);
     }
   }, [sourceVerified, lookup, datasourceId, database, schema, table]);
 
