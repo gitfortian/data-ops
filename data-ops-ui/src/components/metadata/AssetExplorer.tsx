@@ -210,7 +210,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
   const filterKey = JSON.stringify(compactFilter(filter));
 
   const load = useCallback(async () => {
-    if (sourceHint !== null && sourceHintProject !== String(projectId ?? "")) return;
+    if (typeof sourceHint === "number" && sourceHintProject !== String(projectId ?? "")) return;
     if (sourceHintStatus === "VERIFYING") return;
     const ticket = ++readEpoch.current;
     if (sourceHintStatus === "INVALID" || sourceHintStatus === "UNAVAILABLE") {
