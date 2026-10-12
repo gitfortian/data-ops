@@ -1,4 +1,5 @@
 import { Alert, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
+import { AssetWorkspaceHeading, ASSET_SURFACE } from '../components/AssetWorkspace';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -604,29 +605,25 @@ const AssetInventoryPage = () => {
   const tab: InventoryTab = tabParam in TAB_LABELS ? tabParam : 'publish';
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">盘点上架</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            待上架池 / 变更确认 / 源接入三段闭环：对账发现 → 人工确认 → 向导上架
-          </div>
-        </div>
-        <Segmented
+    <main className={ASSET_SURFACE}>
+      <AssetWorkspaceHeading
+        title="盘点与上架"
+        description="先核对来源与资产变更，再人工确认并完成上架。自动纳管进入待上架池，不代表已经发布。"
+        actions={<Segmented
           options={(Object.keys(TAB_LABELS) as InventoryTab[]).map((value) => ({
             value,
             label: TAB_LABELS[value],
           }))}
           value={tab}
           onChange={(value) => setSearchParams({ tab: String(value) })}
-        />
-      </div>
-      <div className="mt-4">
+        />}
+      />
+      <div className="mt-6 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
         {tab === 'publish' && <PendingPool />}
         {tab === 'changes' && <ChangeConfirm />}
         {tab === 'sources' && <SourceAccess />}
       </div>
-    </div>
+    </main>
   );
 };
 
