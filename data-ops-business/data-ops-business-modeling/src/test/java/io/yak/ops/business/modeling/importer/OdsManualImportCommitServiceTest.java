@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.datasource.domain.catalog.CatalogColumn;
+import io.yak.ops.business.datasource.domain.catalog.CatalogTable;
 import io.yak.ops.business.modeling.api.ModelingStructureApi;
 import io.yak.ops.business.modeling.dao.model.ModelingColumnMappingPO;
 import io.yak.ops.business.modeling.domain.Model;
@@ -70,6 +71,9 @@ class OdsManualImportCommitServiceTest {
     when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(model));
     when(structures.getForUpdate(50L)).thenReturn(empty);
     when(mappings.listByModel(50L)).thenAnswer(i -> new ArrayList<>(rows));
+    when(catalog.listTables(10L, "trade_db", null, "trade_order"))
+        .thenReturn(List.of(new CatalogTable("trade_db", null, "trade_order", "TABLE", null)));
+    when(models.listBySource(10L, "trade_order")).thenReturn(List.of());
     when(catalog.listColumnsFresh(10L, "trade_db", null, "trade_order"))
         .thenReturn(List.of(source("order_id"), source("amount")));
     when(models.assignSource(eq(50L), eq(10L), eq("trade_db"),
