@@ -85,6 +85,47 @@ class AssetReconcileServiceTest {
         mock(io.yak.ops.business.asset.health.HealthRecomputeService.class));
   }
 
+  // ---------- S2 durable, positive-evidence-only automatic ingest ----------
+
+  @Test
+  void autoIngestRejectsCrossProjectBeforeReadingAnySource() {
+    assertThrows(AssetException.class, () ->
+        service.ingestCommittedMetadataTable(2L, 42L, "metadata-auto-ingest"));
+    verify(registry, never()).find(AssetSourceType.METADATA);
+    verify(itemMapper, never()).insert(any(AssetItemPO.class));
+  }
+
+  @Test
+  void autoIngestAcceptsOnlyProjectScopedCommittedTableAndNeverMarksGone() {
+    AssetProvider metadata = mock(AssetProvider.class);
+    when(registry.find(AssetSourceType.METADATA)).thenReturn(Optional.of(metadata));
+    AssetDescriptor row = new AssetDescriptor(
+        "datasource:7:orders", "42", "orders", "physical table",
+        AssetType.TABLE, null, null, null, LocalDateTime.now(),
+        "abc123", Map.of("dataSourceId", "7"));
+    when(metadata.refreshInProject(1L, "42")).thenReturn(Optional.of(row));
+    when(ruleService.suggestedTagIds(eq(1L), any())).thenReturn(List.of());
+    var receipt = service.ingestCommittedMetadataTable(1L, 42L, "metadata-auto-ingest");
+    assertEquals(1, receipt.created());
+    assertEquals(0, receipt.changed());
+    assertEquals(0, receipt.restored());
+    assertEquals(42L, receipt.metadataEntityId());
+    ArgumentCaptor<AssetItemPO> created = ArgumentCaptor.forClass(AssetItemPO.class);
+    verify(itemMapper).insert(created.capture());
+    assertEquals(AssetStatus.PENDING.name(), created.getValue().getStatus());
+    assertEquals(AssetSourceType.METADATA.name(), created.getValue().getSourceType());
+    verify(settingService, never()).put(anyLong(), anyString(), anyString());
+  }
+
+  @Test
+  void autoIngestFailsClosedWhenProviderCannotProveScopedEntity() {
+    AssetProvider metadata = mock(AssetProvider.class);
+    when(registry.find(AssetSourceType.METADATA)).thenReturn(Optional.of(metadata));
+    assertThrows(AssetException.class, () ->
+        service.ingestCommittedMetadataTable(1L, 42L, "metadata-auto-ingest"));
+    verify(itemMapper, never()).insert(any(AssetItemPO.class));
+  }
+
   // ---------- upsert 三分支 ----------
 
   @Test
