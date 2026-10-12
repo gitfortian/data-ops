@@ -93,6 +93,18 @@ class CollectRunServiceTest {
   }
 
   @Test
+  void formalHistoryFiltersDryRunsWithoutLosingProjectAndTaskScope() {
+    when(runMapper.selectPage(any(), any()))
+        .thenReturn(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<MdCollectRunPO>(1, 1));
+    service.pageRuns(JOB_ID, 1, 1, false);
+    ArgumentCaptor<com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MdCollectRunPO>> query =
+        ArgumentCaptor.forClass(com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper.class);
+    verify(runMapper).selectPage(any(), query.capture());
+    assertThat(query.getValue().getSqlSegment()).contains("project_id", "job_id", "dry_run", "started_at DESC", "id DESC");
+    assertThat(query.getValue().getParamNameValuePairs().values()).contains(PROJECT_ID, JOB_ID, false);
+  }
+
+  @Test
   void theReconcileChannelDoesNotPretendItCanRun() {
     when(jobMapper.selectOne(any())).thenReturn(job(true, ProviderType.REGISTERED));
 

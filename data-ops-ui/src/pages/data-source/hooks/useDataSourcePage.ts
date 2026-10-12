@@ -14,10 +14,7 @@ import {
 } from '@/services/data-source';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  EMPTY_DATA_SOURCE_SUMMARY,
-  PAGE_DEFAULT_PAGINATION,
-} from '../constants';
+import { EMPTY_DATA_SOURCE_SUMMARY, PAGE_DEFAULT_PAGINATION } from '../constants';
 import type { DataSourcePermissions, DataSourceViewMode } from '../types';
 import { dataSourceRecordKey } from '../types';
 
@@ -37,13 +34,11 @@ export const useDataSourcePage = () => {
   );
 
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [summaryUnavailable, setSummaryUnavailable] = useState(true);
   const [records, setRecords] = useState<DataSourceRecord[]>([]);
-  const [summary, setSummary] = useState<DataSourceSummary>(
-    EMPTY_DATA_SOURCE_SUMMARY,
-  );
-  const [pagination, setPagination] = useState<PaginationInfo>(
-    PAGE_DEFAULT_PAGINATION,
-  );
+  const [summary, setSummary] = useState<DataSourceSummary>(EMPTY_DATA_SOURCE_SUMMARY);
+  const [pagination, setPagination] = useState<PaginationInfo>(PAGE_DEFAULT_PAGINATION);
   const [keyword, setKeywordState] = useState('');
   const [dbType, setDbTypeState] = useState<string>();
   const [environment, setEnvironmentState] = useState<string>();
@@ -66,6 +61,7 @@ export const useDataSourcePage = () => {
     const requestSequence = requestSequenceRef.current + 1;
     requestSequenceRef.current = requestSequence;
     setLoading(true);
+    setLoadError(false);
 
     const params: DataSourcePageParams = {
       pageNo: pagination.pageNo,
@@ -76,24 +72,16 @@ export const useDataSourcePage = () => {
     };
 
     try {
-      const [pageResult, summaryResult] = await Promise.allSettled([
-        listDataSources(params),
-        getDataSourceSummary(),
-      ]);
+      const [pageResult, summaryResult] = await Promise.allSettled([listDataSources(params), getDataSourceSummary()]);
 
       if (requestSequence !== requestSequenceRef.current) return;
 
       if (pageResult.status === 'fulfilled') {
         const pageData = pageResult.value;
         const nextRecords = pageData?.bizData || [];
-        const nextPagination =
-          pageData?.pagination || PAGE_DEFAULT_PAGINATION;
+        const nextPagination = pageData?.pagination || PAGE_DEFAULT_PAGINATION;
 
-        if (
-          nextRecords.length === 0 &&
-          nextPagination.total > 0 &&
-          params.pageNo > 1
-        ) {
+        if (nextRecords.length === 0 && nextPagination.total > 0 && params.pageNo > 1) {
           setPagination((current) => ({
             ...current,
             pageNo: Math.max(1, params.pageNo - 1),
@@ -103,32 +91,33 @@ export const useDataSourcePage = () => {
           setRecords(nextRecords);
           setPagination(nextPagination);
         }
+      } else {
+        setRecords([]);
+        setLoadError(true);
       }
 
       if (summaryResult.status === 'fulfilled') {
         setSummary(summaryResult.value || EMPTY_DATA_SOURCE_SUMMARY);
       }
+      setSummaryUnavailable(summaryResult.status !== 'fulfilled' || !summaryResult.value);
     } finally {
       if (requestSequence === requestSequenceRef.current) {
         setLoading(false);
       }
     }
-  }, [
-    dbType,
-    environment,
-    keyword,
-    pagination.pageNo,
-    pagination.pageSize,
-    refreshVersion,
-  ]);
+  }, [dbType, environment, keyword, pagination.pageNo, pagination.pageSize, refreshVersion]);
 
   useEffect(() => {
-    const timer = window.setTimeout(
-      () => void loadPage(),
-      keyword.trim() ? 300 : 0,
-    );
+    const timer = window.setTimeout(() => void loadPage(), keyword.trim() ? 300 : 0);
     return () => window.clearTimeout(timer);
   }, [keyword, loadPage]);
+
+  useEffect(
+    () => () => {
+      requestSequenceRef.current += 1;
+    },
+    [],
+  );
 
   const setKeyword = useCallback(
     (value: string) => {
@@ -167,12 +156,7 @@ export const useDataSourcePage = () => {
 
   const loadRecordForEdit = useCallback(
     async (record: DataSourceRecord): Promise<DataSourceRecord | undefined> => {
-      if (
-        !permissions.canUpdate ||
-        record.id === undefined ||
-        record.id === null ||
-        editingId
-      ) {
+      if (!permissions.canUpdate || record.id === undefined || record.id === null || editingId) {
         return undefined;
       }
 
@@ -199,12 +183,7 @@ export const useDataSourcePage = () => {
 
   const testRecord = useCallback(
     async (record: DataSourceRecord): Promise<boolean> => {
-      if (
-        !permissions.canTest ||
-        record.id === undefined ||
-        record.id === null ||
-        testingId
-      ) {
+      if (!permissions.canTest || record.id === undefined || record.id === null || testingId) {
         return false;
       }
 
@@ -223,6 +202,8 @@ export const useDataSourcePage = () => {
 
   return {
     loading,
+    loadError,
+    summaryUnavailable,
     records,
     summary,
     pagination,
