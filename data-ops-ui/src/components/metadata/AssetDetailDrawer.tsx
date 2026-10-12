@@ -1,5 +1,5 @@
 import { history } from "@umijs/max";
-import { Alert, Button, Descriptions, Drawer, Spin, Tag, Tooltip } from "antd";
+import { Alert, Button, Descriptions, Drawer, Spin, Tag, Tooltip, message } from "antd";
 import { ExternalLink, RotateCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
@@ -11,14 +11,16 @@ import {
   resolveTypeVisual,
 } from "@/components/metadata/typeVisual";
 import { YakEmpty } from "@/components/ui";
+import { useSecurityProject } from "@/contexts/SecurityProjectContext";
 import usePermissionAccess from "@/hooks/usePermissionAccess";
 import { lookupAssetBySource } from "@/services/data-asset/api";
 import type { AssetSourceLookup } from "@/services/data-asset/types";
 import { getTableStorage } from "@/services/data-lifecycle/api";
 import type { TableStorage } from "@/services/data-lifecycle/types";
-import { getEntityDetail } from "@/services/metadata/api";
+import { getEntityDetail, getMetadataAutoIngestReceipt, retryMetadataAutoIngest } from "@/services/metadata/api";
 import { formatMetadataTime } from "@/services/metadata/presentation";
 import type {
+  MetadataAutoIngestReceipt,
   EntityTypeView,
   MetadataChangeRecord,
   MetadataEntityDetail,
@@ -81,6 +83,8 @@ const AssetDetailDrawer = ({
   onDrillColumns?: (item: MetadataSearchItem) => void;
 }) => {
   const { can } = usePermissionAccess();
+  const { currentProject } = useSecurityProject();
+  const currentProjectId = currentProject?.id;
   const [detail, setDetail] = useState<MetadataEntityDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +93,9 @@ const AssetDetailDrawer = ({
   const [assetLookup, setAssetLookup] = useState<AssetSourceLookup | null>(
     null
   );
+  const [autoReceipt, setAutoReceipt] = useState<MetadataAutoIngestReceipt | null>(null);
+  const [autoReceiptError, setAutoReceiptError] = useState(false);
+  const [retryingAuto, setRetryingAuto] = useState(false);
 
   const entityTypeName = detail?.entity.typeName ?? item?.typeName ?? "";
   const registered =
@@ -102,6 +109,8 @@ const AssetDetailDrawer = ({
     setDetail(null);
     setStorage(null);
     setAssetLookup(null);
+    setAutoReceipt(null);
+    setAutoReceiptError(false);
     getEntityDetail(item.id)
       .then((result) => {
         if (!alive) return;
@@ -112,6 +121,9 @@ const AssetDetailDrawer = ({
           result.entity.typeName === "table" &&
           result.entity.facts.providerType === "HARVESTED"
         ) {
+          getMetadataAutoIngestReceipt(Number(result.entity.id))
+            .then((receipt) => alive && setAutoReceipt(receipt))
+            .catch(() => alive && setAutoReceiptError(true));
           lookupAssetBySource("METADATA", String(result.entity.id))
             .then((lookup) => alive && setAssetLookup(lookup))
             .catch(() => alive && setAssetLookup(null));
@@ -136,7 +148,7 @@ const AssetDetailDrawer = ({
     return () => {
       alive = false;
     };
-  }, [open, item, nonce]);
+  }, [open, item, nonce, currentProjectId]);
 
   if (!item) return null;
 
@@ -419,6 +431,49 @@ const AssetDetailDrawer = ({
             </Button>
           ) : null}
         </div>
+
+        {detail?.entity.typeName === "table" && detail.entity.facts.providerType === "HARVESTED" && (
+          <div className="space-y-2">
+            {autoReceipt && (
+              <Alert
+                type={autoReceipt.status === "DEAD" ? "error" : autoReceipt.status === "RETRY" ? "warning" : "info"}
+                showIcon
+                message={({
+                  NEVER: "尚无自动纳管投递记录",
+                  PENDING: "源表提交事实已入队，等待自动纳管",
+                  RUNNING: "自动纳管处理中",
+                  RETRY: "自动纳管等待重试",
+                  SUCCEEDED: "自动纳管已收到 Asset Owner 的提交回执",
+                  DEAD: "自动纳管多次失败，需人工恢复",
+                } as Record<string, string>)[autoReceipt.status] ?? "自动纳管状态待核实"}
+                description={`这是 Metadata Run #${autoReceipt.runId ?? "-"} 的持久投递记录，不代表资产已发布，也不代表当前 Asset 台账状态。${autoReceipt.errorMessage ? ` 原因：${autoReceipt.errorMessage}` : ""}`}
+                action={<div className="flex items-center gap-2">
+                  <Button size="small" onClick={() => setNonce((n) => n + 1)}>刷新证据</Button>
+                  {autoReceipt.status === "DEAD" && autoReceipt.eventId &&
+                    can("data-metadata:update") && can("data-asset:update") && (
+                      <Button size="small" loading={retryingAuto} onClick={async () => {
+                        setRetryingAuto(true);
+                        try {
+                          const accepted = await retryMetadataAutoIngest(autoReceipt.eventId!);
+                          if (accepted) {
+                            message.success("死信重试已受理；资产是否纳管成功仍需查询最新回执");
+                            setNonce((n) => n + 1);
+                          } else {
+                            message.warning("事件当前不在可重试的死信状态，请刷新");
+                          }
+                        } catch { message.error("重试请求失败；不代表后台操作成功"); }
+                        finally { setRetryingAuto(false); }
+                      }}>重新投递</Button>
+                    )}
+                </div>}
+              />
+            )}
+            {autoReceiptError && (
+              <Alert showIcon type="warning" message="自动纳管回执读取失败，当前状态未知"
+                action={<Button size="small" onClick={() => setNonce((n) => n + 1)}>重新查询</Button>} />
+            )}
+          </div>
+        )}
 
         {renderBody()}
       </div>
