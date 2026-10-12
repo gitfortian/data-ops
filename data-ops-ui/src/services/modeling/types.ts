@@ -36,6 +36,8 @@ export interface ModelingModelRecord {
   sourceDatasourceId?: number | null;
   /** 来源库名。 */
   sourceDatabase?: string | null;
+  /** S1 精确来源 schema；历史模型可能没有此证据。 */
+  sourceSchema?: string | null;
   /** 来源表名。 */
   sourceTable?: string | null;
   /** 字段导入方式(血缘追溯):MANUAL/SOURCE_TABLE/MODEL/BUSINESS_PROCESS。 */
