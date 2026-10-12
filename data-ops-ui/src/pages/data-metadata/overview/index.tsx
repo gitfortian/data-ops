@@ -233,7 +233,7 @@ const MetadataOverviewPage = () => {
           <div className="mt-6 space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Metric label="目录实体" value={overview.catalogEntityCount} icon={<DatabaseOutlined />} note="当前项目已登记的目录实体（含多种实体类型）" />
-              <Metric label="已保存采集任务" value={overview.totalJobCount} icon={<ScheduleOutlined />} note={'已启用 ' + overview.enabledJobCount + ' · 待预演 ' + overview.dryRunRequiredJobCount} />
+              <Metric label="已保存任务" value={overview.totalJobCount} icon={<ScheduleOutlined />} note={'已启用 ' + overview.enabledJobCount + ' · 待预演 ' + overview.dryRunRequiredJobCount} />
               <Metric label="需要关注的运行" value={recentAttentionCount} icon={<WarningOutlined />} attention={recentAttentionCount > 0} note={'最近 ' + overview.recentRunLimit + ' 条记录中的失败 / 熔断，不代表历史总数'} />
               <Metric label="未办结治理待办" value={overview.openTaskCount} icon={<FileSearchOutlined />} note="当前项目按待办类型汇总" />
             </div>
@@ -278,7 +278,7 @@ const MetadataOverviewPage = () => {
                           <span className="text-[19px] font-semibold tabular-nums text-[#29374c]">{row.totalCount}</span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[#718097]">
-                          <span>已启用 {row.enabledCount}</span><span>待预演 {row.dryRunRequiredCount}</span>
+                          <span>{row.providerType === 'REGISTERED' ? '历史启用标志 ' : '已设启用 '}{row.enabledCount}</span><span>待预演 {row.dryRunRequiredCount}</span>
                         </div>
                         {row.providerType === 'REGISTERED' ? (
                           <div className="mt-2 text-[11px] text-[#b16b35]">仅支持保存配置，独立对账执行器尚未开放。</div>
