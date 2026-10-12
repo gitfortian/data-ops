@@ -52,6 +52,7 @@ export const commitOdsManualImport = (
     expectedDefinition: string;
     sourceDatasourceId: number;
     sourceDatabase: string;
+    sourceSchema?: string;
     sourceTable: string;
     structure: ModelingSaveStructurePayload;
     selections: { targetColumn: string; sourceColumn: string }[];
