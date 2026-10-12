@@ -163,7 +163,10 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
       .catch(() => {
         if (!active) return;
         setDataSourceNames([]);
-        if (typeof sourceHint === "number") setSourceHintStatus("UNAVAILABLE");
+        if (typeof sourceHint === "number") {
+          setSourceHintProject(String(projectId ?? ""));
+          setSourceHintStatus("UNAVAILABLE");
+        }
       });
     return () => { active = false; ++readEpoch.current; };
   }, [sourceHint, projectId]);
