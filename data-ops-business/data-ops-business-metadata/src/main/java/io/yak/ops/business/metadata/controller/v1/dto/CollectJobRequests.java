@@ -66,6 +66,16 @@ public final class CollectJobRequests {
 
     @Size(max = 128, message = "搜索关键词不能超过 128 个字符")
     private String keyword;
+
+    /** Exact project-scoped saved-job lookup; distinct from keyword and SQL LIKE scope. */
+    @Min(1)
+    private Long dataSourceId;
+
+    @Size(max = 128)
+    private String databaseName;
+
+    @Size(max = 128)
+    private String schemaName;
   }
 
   @Data
