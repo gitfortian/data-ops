@@ -49,18 +49,30 @@ public class OdsManualImportCommitService {
 
   public record ColumnSelection(@NotBlank String targetColumn, @NotBlank String sourceColumn) {}
 
+  /** Browser-confirmed physical-column identity, verified again against live catalog at commit. */
+  public record SourceColumnSnapshot(String name, String typeName, Integer size,
+                                     Integer scale, boolean nullable, boolean primaryKey) {}
+
   public record Request(@NotBlank String expectedDefinition,
                         @NotNull Long sourceDatasourceId,
                         String sourceDatabase,
                         @NotBlank String sourceTable,
                         @Valid @NotNull ModelingStructureApi.SaveStructureRequest structure,
                         @NotNull List<@Valid ColumnSelection> selections,
-                        String sourceSchema) {
+                        String sourceSchema,
+                        List<@Valid SourceColumnSnapshot> expectedSourceColumns) {
+    /** Schema-aware legacy constructor; new S1 flow sends expectedSourceColumns too. */
+    public Request(String expectedDefinition, Long sourceDatasourceId, String sourceDatabase,
+                   String sourceTable, ModelingStructureApi.SaveStructureRequest structure,
+                   List<ColumnSelection> selections, String sourceSchema) {
+      this(expectedDefinition, sourceDatasourceId, sourceDatabase, sourceTable,
+          structure, selections, sourceSchema, null);
+    }
     /** Historical client contract remains valid: default/no schema. */
     public Request(String expectedDefinition, Long sourceDatasourceId, String sourceDatabase,
                    String sourceTable, ModelingStructureApi.SaveStructureRequest structure,
                    List<ColumnSelection> selections) {
-      this(expectedDefinition, sourceDatasourceId, sourceDatabase, sourceTable, structure, selections, null);
+      this(expectedDefinition, sourceDatasourceId, sourceDatabase, sourceTable, structure, selections, null, null);
     }
   }
 
@@ -122,6 +134,29 @@ public class OdsManualImportCommitService {
     }
     List<CatalogColumn> sourceColumns = catalog.listColumnsFresh(
         request.sourceDatasourceId(), request.sourceDatabase(), request.sourceSchema(), request.sourceTable());
+    // Only the S1 preview→confirm journey provides this evidence. Revalidate the
+    // acknowledged structure using the same DataSource catalog contract; drift
+    // in type/width/nullability/PK is a review gate, not an implicit rewrite.
+    if (request.expectedSourceColumns() != null) {
+      Map<String, SourceColumnSnapshot> expected = new HashMap<>();
+      for (SourceColumnSnapshot item : request.expectedSourceColumns()) {
+        if (item == null || !StringUtils.hasText(item.name())
+            || expected.putIfAbsent(key(item.name()), item) != null) {
+          throw reject("预览源列身份缺失或重复，请重新核验");
+        }
+      }
+      if (expected.size() != sourceColumns.size() || sourceColumns.stream().anyMatch(actual -> {
+        SourceColumnSnapshot previous = expected.get(key(actual.name()));
+        return previous == null
+            || !Objects.equals(clean(previous.typeName()), clean(actual.typeName()))
+            || !Objects.equals(previous.size(), actual.size())
+            || !Objects.equals(previous.scale(), actual.scale())
+            || previous.nullable() != actual.nullable()
+            || previous.primaryKey() != actual.primaryKey();
+      })) {
+        throw reject("源表列结构已发生漂移（字段/类型/长度/可空/主键），请重新预览并人工确认");
+      }
+    }
     List<ModelingStructureApi.ColumnInput> targets = request.structure().columns();
     List<ColumnSelection> selected = request.selections();
     if (sourceColumns == null || sourceColumns.isEmpty()
