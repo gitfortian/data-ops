@@ -36,6 +36,8 @@ import { PROVIDER_LABELS } from '../constants';
 interface CollectJobDrawerProps {
   open: boolean;
   editing: CollectJobRecord | null;
+  /** A project-verified URL hint, not an authorization or a saved job scope. */
+  initialDataSourceId?: number;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -56,7 +58,7 @@ interface JobFormValues {
 const DEFAULT_CRON = '0 0 3 * * ?';
 
 /** 物理表名匹配式是 SQL LIKE 语义(% 通配),留空即整库采集。 */
-const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerProps) => {
+const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved }: CollectJobDrawerProps) => {
   const [form] = Form.useForm<JobFormValues>();
   const [saving, setSaving] = useState(false);
   const [dataSources, setDataSources] = useState<DataSourceRecord[]>([]);
@@ -122,11 +124,12 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
       form.resetFields();
       form.setFieldsValue({
         providerType: 'HARVESTED',
+        dataSourceId: initialDataSourceId,
         collectColumns: true,
         cronExpression: DEFAULT_CRON,
       });
     }
-  }, [open, editing, form]);
+  }, [open, editing, form, initialDataSourceId]);
 
   const refreshDatabases = async (id: number) => {
     setLoadingDatabases(true);
@@ -153,6 +156,18 @@ const CollectJobDrawer = ({ open, editing, onClose, onSaved }: CollectJobDrawerP
       setLoadingSchemas(false);
     }
   };
+
+  // Verify a prefilled source against the drawer's fresh project-scoped Owner listing;
+  // never treat a navigation hint as a valid source if the current list rejects it.
+  useEffect(() => {
+    if (!open || editing || !initialDataSourceId || dataSources.length === 0) return;
+    if (!dataSources.some((source) => Number(source.id) === initialDataSourceId)) {
+      form.setFieldValue('dataSourceId', undefined);
+      message.warning('原数据源在当前项目下不可用，请重新选择');
+      return;
+    }
+    void refreshDatabases(initialDataSourceId);
+  }, [open, editing, initialDataSourceId, dataSources, form]);
 
   // 编辑物理采集任务时,按已存作用域把库/schema 下拉补载出来(选而不清,保留原值)。
   useEffect(() => {
