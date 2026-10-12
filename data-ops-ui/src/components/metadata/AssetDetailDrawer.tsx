@@ -11,6 +11,7 @@ import {
   resolveTypeVisual,
 } from "@/components/metadata/typeVisual";
 import { YakEmpty } from "@/components/ui";
+import usePermissionAccess from "@/hooks/usePermissionAccess";
 import { lookupAssetBySource } from "@/services/data-asset/api";
 import type { AssetSourceLookup } from "@/services/data-asset/types";
 import { getTableStorage } from "@/services/data-lifecycle/api";
@@ -79,6 +80,7 @@ const AssetDetailDrawer = ({
   onClose: () => void;
   onDrillColumns?: (item: MetadataSearchItem) => void;
 }) => {
+  const { can } = usePermissionAccess();
   const [detail, setDetail] = useState<MetadataEntityDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -360,6 +362,34 @@ const AssetDetailDrawer = ({
           </Tag>
           {item.entityStatus ? <Tag>{item.entityStatus}</Tag> : null}
           {item.layerCode ? <Tag color="cyan">{item.layerCode}</Tag> : null}
+          {detail?.entity.typeName === "table" &&
+            detail.entity.facts.providerType === "HARVESTED" &&
+            Number.isSafeInteger(Number(detail.entity.facts.dataSourceId)) &&
+            Number(detail.entity.facts.dataSourceId) > 0 &&
+            detail.entity.facts.databaseName && detail.entity.facts.tableName ? (
+            <Button size="small" type="primary" onClick={() => {
+              const facts = detail.entity.facts;
+              const journey = new URLSearchParams({
+                sourceJourney: "ods", datasourceId: String(facts.dataSourceId),
+                database: String(facts.databaseName), table: String(facts.tableName),
+                entityId: String(detail.entity.id),
+              });
+              if (facts.schemaName) journey.set("schema", String(facts.schemaName));
+              history.push(`/modeling?${journey.toString()}`);
+            }}>继续 ODS 设计 / 复用</Button>
+          ) : null}
+          {detail?.entity.typeName === "table" &&
+            detail.entity.facts.providerType === "HARVESTED" && can("data-asset:read") ? (
+            <Button size="small" onClick={() => history.push("/data-asset/inventory?tab=sources")}>
+              资产治理 / 手动对账（可选）
+            </Button>
+          ) : null}
+          {detail?.entity.typeName === "table" &&
+            detail.entity.facts.providerType === "HARVESTED" && can("semantic:read") ? (
+            <Button size="small" onClick={() => history.push("/semantic/processes")}>
+              查看业务过程（可选）
+            </Button>
+          ) : null}
           {sourcePath && item.sourceId ? (
             <Button
               size="small"

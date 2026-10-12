@@ -56,7 +56,8 @@ public class ModelViewConverter {
         model.latestVersionNo(),
         model.domainId(),
         model.domainId() == null ? null : domainNames.get(model.domainId()),
-        model.updatedBy());
+        model.updatedBy(),
+        model.sourceSchema());
   }
 
   public PagingData<ModelVO> page(

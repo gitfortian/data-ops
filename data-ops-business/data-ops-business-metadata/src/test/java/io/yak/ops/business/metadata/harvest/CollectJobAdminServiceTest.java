@@ -2,6 +2,10 @@ package io.yak.ops.business.metadata.harvest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -25,6 +29,7 @@ import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.springframework.dao.DuplicateKeyException;
 
 /**
@@ -58,6 +63,26 @@ class CollectJobAdminServiceTest {
     when(bridge.available()).thenReturn(true);
     // 撞码查重默认全空：只有专门测撞码的用例覆写这里
     when(jobMapper.selectList(any())).thenReturn(List.of());
+  }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void exactSourceQueryStaysProjectScopedAndDoesNotDependOnPaginationNameSearch() {
+    Page<MdCollectJobPO> page = new Page<>(1, 20);
+    when(jobMapper.selectPage(any(), any())).thenReturn(page);
+    service.page(1, 20, "HARVESTED", null, null, 7L, "trade_db", "public");
+    ArgumentCaptor<LambdaQueryWrapper> capture = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+    verify(jobMapper).selectPage(any(), capture.capture());
+    // Mockito bypasses MyBatis Mapper initialization. Register real column metadata first;
+    // otherwise evaluating this lambda wrapper throws 'can not find lambda cache'.
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new MybatisConfiguration(), "s1-exact-source-query"),
+        MdCollectJobPO.class);
+    // SQL generation also populates the lazily-bound parameter map.
+    String sql = capture.getValue().getSqlSegment();
+    assertThat(sql).contains("data_source_id", "database_name", "schema_name");
+    var values = capture.getValue().getParamNameValuePairs().values();
+    assertThat(values).contains(PROJECT_ID, 7L, "trade_db", "public", "HARVESTED");
   }
 
   @Test

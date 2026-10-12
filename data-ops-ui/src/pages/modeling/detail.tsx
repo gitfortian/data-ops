@@ -433,12 +433,12 @@ const emptyColumnDraft = (): ColumnDraft => ({
       }
       // 如果模型无字段且 URL 没有导入参数，尝试从模型的来源信息读取
       if (!data.columns?.length && search.get('initMode') !== 'import' && modelData) {
-        const { sourceDatasourceId, sourceDatabase, sourceTable } = modelData;
+        const { sourceDatasourceId, sourceDatabase, sourceSchema, sourceTable } = modelData;
         if (sourceDatasourceId && sourceTable) {
           const config = { datasourceId: sourceDatasourceId, database: sourceDatabase || '', table: sourceTable };
           setImportConfig(config);
           try {
-            const columns = await previewModelingImportColumns(config.datasourceId, config.database, config.table);
+            const columns = await previewModelingImportColumns(config.datasourceId, config.database, config.table, sourceSchema || undefined);
             if (!isCurrent()) return;
             if (columns?.length) {
               const initialRows: ColumnDraft[] = columns.map((column) => ({
@@ -2316,6 +2316,28 @@ const emptyColumnDraft = (): ColumnDraft => ({
             >
               返回资产详情
             </YakButton>
+          )}
+          {modelInfo?.layerCode?.toUpperCase() === 'ODS'
+            && modelInfo.sourceDatasourceId && modelInfo.sourceDatabase && modelInfo.sourceTable && (
+            <YakButton className="!h-9 !rounded-lg !px-4"
+              onClick={() => {
+                const qs = new URLSearchParams({
+                  view: 'entity',
+                  datasourceId: String(modelInfo.sourceDatasourceId),
+                  databaseName: modelInfo.sourceDatabase || '',
+                });
+                const target = `/data-asset/catalog?${qs.toString()}`;
+                if (dirty) {
+                  Modal.confirm({
+                    title: '物理模型还有未保存的改动',
+                    content: '离开会放弃当前未保存编辑；保存模型后才可从新页面恢复结构与映射。',
+                    okText: '放弃未保存改动并返回', okType: 'danger',
+                    cancelText: '继续编辑', onOk: () => history.push(target),
+                  });
+                  return;
+                }
+                history.push(target);
+              }}>返回来源物理表目录</YakButton>
           )}
           {modelInfo?.layerCode?.toUpperCase() === 'ODS'
             && Number(modelInfo.latestVersionNo) > 0 && (

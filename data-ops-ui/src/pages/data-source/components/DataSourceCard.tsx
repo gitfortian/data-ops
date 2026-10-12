@@ -308,6 +308,22 @@ const DataSourceCard = ({
         ) : null}
       </div>
 
+      {canPreviewSource ? (
+        <div className="relative z-[1] flex flex-wrap items-center gap-2 border-t border-[#eef0f3] bg-white/90 px-[18px] py-3">
+          <Button type="primary" size="small" onClick={() => history.push(
+            `/data-asset/catalog?view=entity&datasourceId=${encodeURIComponent(currentId)}`
+          )}>
+            查看已发现表
+          </Button>
+          <Button size="small" onClick={() => history.push(
+            `/data-metadata/collect?dataSourceId=${encodeURIComponent(currentId)}`
+          )}>
+            采集表结构
+          </Button>
+          <span className="text-[12px] text-[#667085]">连接状态与已采集结构分别核验；没有元数据时先保存采集任务。</span>
+        </div>
+      ) : null}
+
       <div
         className={[
           'relative z-[1] grid grid-cols-[1.05fr_0.8fr_1.15fr] border-t border-[#eef0f3] bg-white/75 px-[18px] py-[14px]',

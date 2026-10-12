@@ -44,4 +44,22 @@ public record ModelVO(
     /** 业务域名称(服务端经 ProcessApi 解析)。 */
     String domainName,
     /** 最后更新人(V20;历史行为 null 时前端显示「-」)。 */
-    String updatedBy) {}
+    String updatedBy,
+    /** Exact source provenance; legacy rows expose null. */
+    String sourceSchema) {
+  /** Retain existing API/fixture constructor compatibility. */
+  public ModelVO(Long id, String code, String name, String dialect, String description,
+      String status, String owner, LocalDateTime createTime, LocalDateTime updateTime,
+      String layerCode, Long processId, String processName, String databaseName,
+      Long directoryId, List<Long> tagIds, String deletedBy, LocalDateTime deletedTime,
+      Long sourceDatasourceId, String sourceDatabase, String sourceTable,
+      String statPeriod, String appCode, String appName, String importMode,
+      Long sourceModelId, Long publishedVersionId, Integer latestVersionNo,
+      Long domainId, String domainName, String updatedBy) {
+    this(id, code, name, dialect, description, status, owner, createTime,
+        updateTime, layerCode, processId, processName, databaseName, directoryId,
+        tagIds, deletedBy, deletedTime, sourceDatasourceId, sourceDatabase,
+        sourceTable, statPeriod, appCode, appName, importMode, sourceModelId,
+        publishedVersionId, latestVersionNo, domainId, domainName, updatedBy, null);
+  }
+}

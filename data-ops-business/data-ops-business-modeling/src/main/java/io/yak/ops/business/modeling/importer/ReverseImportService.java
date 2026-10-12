@@ -88,7 +88,12 @@ public class ReverseImportService {
   /** 单表列结构预览。 */
   public List<CatalogColumn> previewColumns(
       Long datasourceId, String database, String table) {
-    return catalogReader.listColumns(datasourceId, database, null, table);
+    return previewColumns(datasourceId, database, null, table);
+  }
+
+  public List<CatalogColumn> previewColumns(
+      Long datasourceId, String database, String schema, String table) {
+    return catalogReader.listColumns(datasourceId, database, schema, table);
   }
 
   /**

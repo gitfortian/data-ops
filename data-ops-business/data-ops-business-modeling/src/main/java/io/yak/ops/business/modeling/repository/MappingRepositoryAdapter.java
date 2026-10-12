@@ -47,6 +47,7 @@ public class MappingRepositoryAdapter implements MappingRepository {
     int affected = mapper.update(null, new LambdaUpdateWrapper<ModelingColumnMappingPO>()
         .set(ModelingColumnMappingPO::getSourceDatasourceId, po.getSourceDatasourceId())
         .set(ModelingColumnMappingPO::getSourceDatabase, po.getSourceDatabase())
+        .set(ModelingColumnMappingPO::getSourceSchema, po.getSourceSchema())
         .set(ModelingColumnMappingPO::getSourceTable, po.getSourceTable())
         .set(ModelingColumnMappingPO::getSourceColumn, po.getSourceColumn())
         .set(ModelingColumnMappingPO::getTransformExpr, po.getTransformExpr())

@@ -72,11 +72,13 @@ public class ModelingReverseImportController {
   public Result<List<ColumnPreviewView>> preview(
       @Valid @RequestBody ModelingImportApi.PreviewRequest request) {
     List<CatalogColumn> columns =
-        importService.previewColumns(request.datasourceId(), request.database(), request.table());
+        importService.previewColumns(request.datasourceId(), request.database(), request.schema(), request.table());
     // 从表列表中查找目标表备注
     String tableRemarks = importService.listTables(request.datasourceId(), request.table())
         .stream()
-        .filter(t -> request.table().equalsIgnoreCase(t.name()))
+        .filter(t -> request.table().equals(t.name())
+            && request.database().equals(t.database())
+            && java.util.Objects.equals(request.schema(), t.schema()))
         .findFirst()
         .map(CatalogTable::remarks)
         .orElse(null);

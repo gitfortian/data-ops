@@ -22,6 +22,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
 import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWizardDrawer';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
+import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
 import ModelTreePane from '@/pages/modeling/components/ModelTreePane';
 import RecycleBinDrawer from '@/pages/modeling/components/RecycleBinDrawer';
 import TagManageModal from '@/pages/modeling/components/TagManageModal';
@@ -524,6 +525,8 @@ const ModelingWorkspace: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [actionId, domainNameById, tagNameById, hiddenColumns],
   );
+
+  if (searchParams.get('sourceJourney') === 'ods') return <OdsSourceJourney />;
 
   return (
     <div className="flex min-h-[calc(100dvh-64px)] bg-white text-[#242731]">

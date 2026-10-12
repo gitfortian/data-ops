@@ -64,6 +64,13 @@ public class CollectJobAdminService {
   /** 任务清单。{@code providerType}/{@code enabled} 为空即不过滤。 */
   public PageData<JobView> page(
       int pageNo, int pageSize, String providerType, Boolean enabled, String keyword) {
+    return page(pageNo, pageSize, providerType, enabled, keyword, null, null, null);
+  }
+
+  /** Server-owned exact source lookup; never infer from a first-page name search. */
+  public PageData<JobView> page(
+      int pageNo, int pageSize, String providerType, Boolean enabled, String keyword,
+      Long dataSourceId, String databaseName, String schemaName) {
     LambdaQueryWrapper<MdCollectJobPO> query =
         new LambdaQueryWrapper<MdCollectJobPO>()
             .eq(MdCollectJobPO::getProjectId, currentProject.requireProjectId())
@@ -71,6 +78,11 @@ public class CollectJobAdminService {
             .eq(providerType != null && !providerType.isBlank(),
                 MdCollectJobPO::getProviderType, providerType)
             .eq(enabled != null, MdCollectJobPO::getEnabled, enabled)
+            .eq(dataSourceId != null, MdCollectJobPO::getDataSourceId, dataSourceId)
+            .eq(databaseName != null && !databaseName.isBlank(),
+                MdCollectJobPO::getDatabaseName, databaseName)
+            .eq(schemaName != null && !schemaName.isBlank(),
+                MdCollectJobPO::getSchemaName, schemaName)
             .orderByDesc(MdCollectJobPO::getId);
     if (keyword != null && !keyword.isBlank()) {
       String needle = keyword.trim();

@@ -30,6 +30,9 @@ public class ModelingColumnMappingPO {
   /** 源库。 */
   private String sourceDatabase;
 
+  /** S1 精确源 Schema；历史行可以为空。 */
+  private String sourceSchema;
+
   /** 源表。 */
   private String sourceTable;
 
