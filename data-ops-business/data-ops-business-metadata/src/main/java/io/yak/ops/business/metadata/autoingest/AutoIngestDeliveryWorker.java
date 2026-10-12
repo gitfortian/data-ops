@@ -2,7 +2,7 @@ package io.yak.ops.business.metadata.autoingest;
 
 import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
 
-import io.yak.ops.business.asset.reconcile.AssetReconcileService;
+import io.yak.ops.business.asset.api.MetadataAutoIngestApi;
 import io.yak.ops.business.metadata.config.ConditionalOnMetadataPersistence;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
@@ -32,7 +32,7 @@ public class AutoIngestDeliveryWorker {
   static final int BATCH_SIZE = 32;
   static final int MAX_ATTEMPTS = 8;
   private final AutoIngestEventMapper events;
-  private final AssetReconcileService asset;
+  private final MetadataAutoIngestApi asset;
   private final ProjectContextScope scope;
 
   @Scheduled(fixedDelayString = "${yak.metadata.auto-ingest.poll-ms:15000}")
@@ -60,7 +60,7 @@ public class AutoIngestDeliveryWorker {
     }
     int attempts = (event.getAttemptCount() == null ? 0 : event.getAttemptCount()) + 1;
     try {
-      AtomicReference<AssetReconcileService.ScopedIngestReceipt> receipt = new AtomicReference<>();
+      AtomicReference<MetadataAutoIngestApi.ScopedIngestReceipt> receipt = new AtomicReference<>();
       scope.run(new ProjectContext(event.getProjectId(), null), () ->
           receipt.set(asset.ingestCommittedMetadataTable(
               event.getProjectId(), event.getEntityId(), "metadata-auto-ingest")));
