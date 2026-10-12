@@ -358,7 +358,7 @@ const AssetCatalogPage = () => {
         description={view === '台账资产'
           ? '按目录与治理状态查找真实资产，检查归属、健康度与上架状态。资产纳管和正式发布是两个不同步骤。'
           : '检索 Metadata 领域拥有的物理实体和采集证据；技术实体不等于已上架资产。'}
-        extra={<Space size={8} wrap>}
+        extra={<Space size={8} wrap>
           {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
             <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>
               <ArrowLeft size={14} className="mr-1 inline" />返回资产详情
