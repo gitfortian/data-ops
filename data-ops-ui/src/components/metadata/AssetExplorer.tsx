@@ -93,6 +93,10 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
     const parsed = Number(raw);
     return /^[1-9]\d*$/.test(raw) && Number.isSafeInteger(parsed) ? parsed : "INVALID";
   }, []);
+  const databaseHint = useMemo(() => {
+    const raw = new URLSearchParams(window.location.search).get("databaseName");
+    return raw && raw.length <= 255 ? raw : undefined;
+  }, []);
   const [sourceHintStatus, setSourceHintStatus] = useState<
     "NONE" | "VERIFYING" | "VALID" | "INVALID" | "UNAVAILABLE"
   >(sourceHint === null ? "NONE" : sourceHint === "INVALID" ? "INVALID" : "VERIFYING");
@@ -106,7 +110,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
   const [index, setIndex] = useState<string[]>(typeof sourceHint === "number" ? ["table"] : []);
   const [filter, setFilter] = useState<MetadataFilter>(
     typeof sourceHint === "number"
-      ? { datasourceId: String(sourceHint), providerType: "HARVESTED" }
+      ? { datasourceId: String(sourceHint), providerType: "HARVESTED", ...(databaseHint ? { databaseName: databaseHint } : {}) }
       : {}
   );
   const [advancedOpen, setAdvancedOpen] = useState(false);
