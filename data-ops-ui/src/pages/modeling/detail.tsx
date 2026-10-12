@@ -433,12 +433,12 @@ const emptyColumnDraft = (): ColumnDraft => ({
       }
       // 如果模型无字段且 URL 没有导入参数，尝试从模型的来源信息读取
       if (!data.columns?.length && search.get('initMode') !== 'import' && modelData) {
-        const { sourceDatasourceId, sourceDatabase, sourceTable } = modelData;
+        const { sourceDatasourceId, sourceDatabase, sourceSchema, sourceTable } = modelData;
         if (sourceDatasourceId && sourceTable) {
           const config = { datasourceId: sourceDatasourceId, database: sourceDatabase || '', table: sourceTable };
           setImportConfig(config);
           try {
-            const columns = await previewModelingImportColumns(config.datasourceId, config.database, config.table);
+            const columns = await previewModelingImportColumns(config.datasourceId, config.database, config.table, sourceSchema || undefined);
             if (!isCurrent()) return;
             if (columns?.length) {
               const initialRows: ColumnDraft[] = columns.map((column) => ({
