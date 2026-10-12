@@ -3,7 +3,8 @@ import { Alert, Button, Dropdown, Input, message, Modal, Segmented, Select, Tag,
 import { ArrowRightOutlined, MoreOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { history, useSearchParams } from '@umijs/max';
 import type { ColumnsType } from 'antd/es/table';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 
 import { YakButton, YakEmpty } from '@/components/ui';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
@@ -29,6 +30,8 @@ import { PROVIDER_COLORS, PROVIDER_LABELS, formatMetadataTime } from './constant
 
 const MetadataCollectPage = () => {
   const { can } = usePermissionAccess();
+  const { currentProject } = useSecurityProject();
+  const projectId = currentProject?.id;
   const [searchParams] = useSearchParams();
   const rawSourceHint = searchParams.get('dataSourceId');
   const parsedSourceHint = Number(rawSourceHint);
@@ -58,11 +61,14 @@ const MetadataCollectPage = () => {
   const [sourceHint, setSourceHint] = useState<{ id: number; name: string } | null>(null);
   const [sourceHintError, setSourceHintError] = useState('');
   const [jobsLoadError, setJobsLoadError] = useState(false);
+  const jobsRequestSeq = useRef(0);
+  const sourceHintPending = rawSourceHint !== null && !sourceHint && !sourceHintError;
 
   useEffect(() => {
     let active = true;
     setSourceHint(null);
     setSourceHintError('');
+    setDataSourceNames({});
     listAllDataSources()
       .then((result) => {
         if (!active) return;
@@ -85,14 +91,16 @@ const MetadataCollectPage = () => {
         if (rawSourceHint !== null) setSourceHintError('无法核验来源所属项目；请稍后重试。');
       });
     return () => { active = false; };
-  }, [rawSourceHint, sourceHintId]);
+  }, [rawSourceHint, sourceHintId, projectId]);
 
   const loadJobs = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
+      const ticket = ++jobsRequestSeq.current;
       // An unverified cross-domain URL must not silently become a global job list.
       if (rawSourceHint !== null && (!sourceHintId || sourceHint?.id !== sourceHintId)) {
         setRecords([]);
         setTotal(0);
+        setLoading(false);
         return;
       }
       setLoading(true);
@@ -108,21 +116,24 @@ const MetadataCollectPage = () => {
           ...(sourceHint ? { providerType: 'HARVESTED' as const } : {}),
         };
         const result = await pageCollectJobs(query);
+        if (ticket !== jobsRequestSeq.current) return;
         setRecords(result.records ?? []);
         setTotal(result.total ?? 0);
       } catch {
+        if (ticket !== jobsRequestSeq.current) return;
         setRecords([]);
         setTotal(0);
         setJobsLoadError(true);
       } finally {
-        setLoading(false);
+        if (ticket === jobsRequestSeq.current) setLoading(false);
       }
     },
-    [keyword, providerType, enabledFilter, rawSourceHint, sourceHintId, sourceHint],
+    [keyword, providerType, enabledFilter, rawSourceHint, sourceHintId, sourceHint, projectId],
   );
 
   useEffect(() => {
     void loadJobs(pageNo, pageSize);
+    return () => { jobsRequestSeq.current += 1; };
   }, [pageNo, pageSize, loadJobs]);
 
   const reload = () => loadJobs(pageNo, pageSize);
@@ -389,7 +400,7 @@ const MetadataCollectPage = () => {
             <div>
               <h2 className="m-0 text-[16px] font-semibold text-[#253145]">已保存任务</h2>
               <div className="mt-1 text-[12px] text-[#8a97a8]">
-                当前筛选下共 {total} 个任务 · 任务停用只关闭定时调度，不影响历史记录
+                {sourceHintPending ? '正在核验来源' : sourceHintError ? '来源不可用' : '当前筛选下共 ' + total + ' 个任务'} · 任务停用只关闭定时调度，不影响历史记录
               </div>
             </div>
             {hasFilter ? (
@@ -439,10 +450,14 @@ const MetadataCollectPage = () => {
           size="middle"
           columns={columns}
           dataSource={records}
-          loading={loading}
+          loading={loading || sourceHintPending}
           scroll={{ x: 1250 }}
           locale={{
-            emptyText: jobsLoadError ? (
+            emptyText: sourceHintError ? (
+              <YakEmpty compact title="来源未通过核验" description="检查项目权限或来源身份；不能假定没有采集任务" />
+            ) : sourceHintPending ? (
+              <YakEmpty compact title="正在核验来源" description="来源身份经当前项目验证后才查询任务" />
+            ) : jobsLoadError ? (
               <YakEmpty compact title="任务读取未成功" description="请重试，避免因为未知状态而重复创建任务" />
             ) : hasFilter ? (
               <YakEmpty compact title="当前筛选下没有任务" description="可清除筛选条件或调整关键字" />
