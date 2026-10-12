@@ -64,7 +64,7 @@ const DistributionCard = ({
     if (group === 'status') {
       return ASSET_STATUS_BAR_COLORS[key as keyof typeof ASSET_STATUS_BAR_COLORS] ?? '#FE2C55';
     }
-    return '#FE2C55';
+    return '#718caf';
   };
   return (
     <Card title={title} size="small" className="!mb-0 !rounded-xl !border-[#e8ecf2] !shadow-none">
@@ -96,15 +96,16 @@ const DistributionCard = ({
 };
 
 const RecentList = ({ title, rows }: { title: string; rows: AssetOverviewData['recentListed'] }) => (
-  <Card title={title} size="small" className="!mb-4">
+  <Card title={title} size="small" className="!mb-0 !rounded-xl !border-[#e8ecf2] !shadow-none">
     {rows.length === 0 ? (
       <YakEmpty compact title="暂无动态" />
     ) : (
       <Space direction="vertical" className="w-full" size={2}>
         {rows.map((row) => (
-          <div
+          <button
             key={`${row.assetId}-${row.at ?? ''}`}
-            className="flex cursor-pointer items-center justify-between gap-2 rounded px-1 py-1.5 hover:bg-[#f8f9fa]"
+            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left transition hover:bg-[#f4f7fb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#89a6ce]"
+            type="button"
             onClick={() => history.push(`/data-asset/detail/${row.assetId}`)}
           >
             <span className="min-w-0 truncate text-[13px]">{row.name}</span>
@@ -112,7 +113,7 @@ const RecentList = ({ title, rows }: { title: string; rows: AssetOverviewData['r
               {row.assetType && <Tag>{ASSET_SOURCE_TYPE_LABELS[row.assetType as keyof typeof ASSET_SOURCE_TYPE_LABELS] ?? row.assetType}</Tag>}
               <span>{formatAssetTime(row.at)}</span>
             </Space>
-          </div>
+          </button>
         ))}
       </Space>
     )}
@@ -161,59 +162,98 @@ const AssetOverviewPage = () => {
           action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
       )}
       {data ? (
-        <>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {KPI_CARDS.map((item) => {
-          const raw = data ? Number(data.kpis[item.key] ?? 0) : 0;
-          const display = item.percent ? `${Math.round(raw * 1000) / 10}%` : raw;
-          return (
-            <Card key={item.key} size="small" loading={loading} className="!rounded-2xl !border-[#e6eaf0] !shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
-              <Tooltip title={item.hint}>
-                <div className="text-[12px] text-[#667085]">{item.label}</div>
-              </Tooltip>
-              <div className="mt-1 text-[24px] font-semibold leading-8" style={{ color: item.color }}>
-                {data ? display : '-'}
+        <div className="mt-6 space-y-5">
+          <section aria-label="核心资产指标">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {KPI_CARDS.slice(0, 4).map((item) => {
+                const raw = Number(data.kpis[item.key] ?? 0);
+                return (
+                  <Card key={item.key} size="small" className="!rounded-2xl !border-[#e6eaf0] !shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+                    <Tooltip title={item.hint}>
+                      <div className="text-[13px] font-medium text-[#718095]">{item.label}</div>
+                    </Tooltip>
+                    <div className="mt-3 text-[31px] font-semibold leading-10 tabular-nums tracking-tight text-[#27374c]">
+                      {raw.toLocaleString()}
+                    </div>
+                    <div className="mt-2 text-[12px] text-[#93a0b0]">
+                      {item.key === 'total' ? '当前项目已纳入台账' :
+                        item.key === 'published' ? '已通过人工上架流程' :
+                        item.key === 'pending' ? '需要治理与发布预检' : '过去 30 天新增'}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="m-0 text-[16px] font-semibold text-[#26354a]">治理待办</h2>
+                <p className="mb-0 mt-1 text-[12px] text-[#8794a6]">从这里直接进入需要处理的资产队列，不在概览中执行不可撤销的治理动作。</p>
               </div>
-            </Card>
-          );
-        })}
-      </div>
+              <span className="text-[12px] text-[#9aa5b3]">当前项目 · 待处理</span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {TODO_ITEMS.map((item) => {
+                const count = Number(data.todos[item.key] ?? 0);
+                const urgent = count > 0 && (item.key === 'gradeD' || item.key === 'sourceGone');
+                return (
+                  <Button key={item.key} size="small"
+                    danger={urgent} type="default"
+                    onClick={() => history.push(item.to)}
+                    className="!flex !h-auto !min-h-[84px] !flex-col !items-start !justify-center !gap-2 !rounded-xl !border-[#e8edf4] !px-4 !py-3 !text-left hover:!border-[#c9d7e8]">
+                    <span className="text-[12px] font-medium text-[#738297]">{item.label} {count}</span>
+                    <span className={'text-[23px] font-semibold tabular-nums ' + (urgent ? 'text-[#bd5c47]' : 'text-[#29394e]')}>{count.toLocaleString()}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </section>
 
-      <Card title="优先处理 · 治理工作台" size="small" className="!my-5 !rounded-2xl !border-[#e6eaf0]" loading={loading}>
-        <Space size={8} wrap>
-          {TODO_ITEMS.map((item) => {
-            const count = data ? Number(data.todos[item.key] ?? 0) : 0;
-            return (
-              <Button
-                key={item.key}
-                size="small"
-                danger={count > 0 && (item.key === 'gradeD' || item.key === 'sourceGone')}
-                type="default"
-                onClick={() => history.push(item.to)}
-              >
-                {item.label} {count}
-              </Button>
-            );
-          })}
-        </Space>
-      </Card>
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.6fr_1fr]">
+            <section className="min-w-0 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+              <h2 className="m-0 text-[16px] font-semibold text-[#26354a]">资产构成</h2>
+              <p className="mb-4 mt-1 text-[12px] text-[#8794a6]">按生命周期状态、健康等级及资产类型查看台账分布。</p>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <DistributionCard title="按状态" group="status" rows={data.distributions.status} />
+                <DistributionCard title="按健康等级" group="grade" rows={data.distributions.grade} />
+                <DistributionCard title="按资产类型" group="type" rows={data.distributions.type} />
+                <DistributionCard title="按数仓分层" group="layer" rows={data.distributions.layer} />
+              </div>
+            </section>
+            <section className="min-w-0 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+              <h2 className="m-0 text-[16px] font-semibold text-[#26354a]">治理基础覆盖</h2>
+              <p className="mb-4 mt-1 text-[12px] text-[#8794a6]">衡量资产治理资料的完备程度，不直接代表资产已经通过发布审批。</p>
+              <div className="grid grid-cols-2 gap-3">
+                {KPI_CARDS.slice(4).map((item) => {
+                  const value = Number(data.kpis[item.key] ?? 0);
+                  const display = item.percent ? `${Math.round(value * 1000) / 10}%` : value.toLocaleString();
+                  return (
+                    <div key={item.key} className="rounded-xl border border-solid border-[#edf0f4] bg-[#f8fafc] p-4">
+                      <Tooltip title={item.hint}><div className="text-[12px] text-[#718095]">{item.label}</div></Tooltip>
+                      <div className="mt-2 text-[24px] font-semibold leading-8 tabular-nums text-[#2b3b50]">{display}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 rounded-xl bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#8190a3]">
+                缺少负责人、安全等级或健康度较低的资产，建议进入目录按状态筛选后逐项治理。
+              </div>
+            </section>
+          </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <div>
-          <DistributionCard title="按状态分布" group="status" rows={data?.distributions.status ?? []} />
-          <DistributionCard title="按健康度分布" group="grade" rows={data?.distributions.grade ?? []} />
+          <section>
+            <div className="mb-3">
+              <h2 className="m-0 text-[16px] font-semibold text-[#26354a]">最近资产动态</h2>
+              <p className="mb-0 mt-1 text-[12px] text-[#8794a6]">历史上架、下架记录与当前状态分开呈现。</p>
+            </div>
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+              <RecentList title="最近上架" rows={data.recentListed} />
+              <RecentList title="最近下架" rows={data.recentOffline} />
+            </div>
+          </section>
         </div>
-        <div>
-          <DistributionCard title="按类型分布" group="type" rows={data?.distributions.type ?? []} />
-          <DistributionCard title="按分层分布" group="layer" rows={data?.distributions.layer ?? []} />
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <RecentList title="最近上架" rows={data.recentListed} />
-        <RecentList title="最近下架" rows={data.recentOffline} />
-      </div>
-        </>
       ) : loading ? (
         <Card className="!mt-4" loading />
       ) : null}
