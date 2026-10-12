@@ -156,34 +156,36 @@ const PendingPool = () => {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold text-[#2a3a4e]">待上架资产</h2>
+          <p className="mb-0 mt-1 text-[12px] text-[#8492a5]">{loadError ? '数量待核验' : loading ? '正在查询资产' : `当前筛选 ${total} 项`} · 登记成功不代表已发布，所有上架均需完成预检</p>
+        </div>
+        {canCreate && (
+          <YakButton size="small" type="primary" className="!text-white" onClick={() => setManualOpen(true)}>手工登记</YakButton>
+        )}
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-[#f7f9fc] px-4 py-3">
         <Input.Search
           allowClear
-          placeholder="名称 / 描述 / 负责人 / 标签"
-          className="!w-[240px]"
+          placeholder="搜索待上架资产"
+          className="!w-[260px] max-sm:!w-full"
           onSearch={(value) => {
             setKeyword(value.trim());
             setPageNo(1);
           }}
         />
-        {canUpdate && (
-          <YakButton
-            size="small"
-            disabled={selectedRows.length === 0 || Boolean(loadError) || loading}
-            onClick={() => openWizard(selectedRows)}
-          >
-            批量上架({selectedRows.length})
-          </YakButton>
-        )}
-        {canCreate && (
-          <YakButton size="small" type="primary" className="!text-white" onClick={() => setManualOpen(true)}>
-            手工登记
-          </YakButton>
-        )}
-        <span className="ml-auto text-[12px] text-[#98a2b3]">
-          对账发现的源域对象自动落入这里；上架前必经预检
-        </span>
+        <span className="ml-auto text-[12px] text-[#8492a5]">仅显示 PENDING 资产，不自动发布</span>
       </div>
+      {canUpdate && selectedRows.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-solid border-[#dce8f4] bg-[#f0f6fd] px-4 py-3">
+          <span className="text-[13px] font-semibold text-[#426185]">已选 {selectedRows.length} 项资产</span>
+          <YakButton size="small" type="primary" className="!text-white"
+            disabled={Boolean(loadError) || loading}
+            onClick={() => openWizard(selectedRows)}>批量进入上架预检</YakButton>
+          <span className="ml-auto text-[12px] text-[#8594a6]">操作仅作用于当前页已选资产</span>
+        </div>
+      )}
       {loadError && (
         <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取待上架资产' : '待上架池读取失败'}
           description="本次读取未成功，不再展示旧筛选或旧项目的数据；请核对权限后重试。"
@@ -191,8 +193,9 @@ const PendingPool = () => {
       )}
       <Table<AssetRecord>
         rowKey="id"
-        size="small"
+        size="middle"
         columns={columns}
+        scroll={{ x: 940 }}
         dataSource={records}
         loading={loading}
         rowSelection={{
@@ -383,7 +386,11 @@ const ChangeConfirm = () => {
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold text-[#2a3a4e]">来源变更审核</h2>
+          <p className="mb-0 mt-1 text-[12px] text-[#8492a5]">先阅读差异，再确认更新台账或仅忽略本条流水。</p>
+        </div>
         <Segmented
           options={(Object.keys(HANDLE_STATUS_LABELS) as ChangeHandleStatus[]).map((value) => ({
             value,
@@ -395,9 +402,9 @@ const ChangeConfirm = () => {
             setPageNo(1);
           }}
         />
-        <span className="text-[12px] text-[#98a2b3]">
-          确认=用源域新值覆盖台账快照；忽略=只关流水不动台账；SOURCE_GONE 确认后资产转「源已消失」
-        </span>
+      </div>
+      <div className="mb-4 rounded-xl border border-solid border-[#e9edf3] bg-[#f8f9fc] px-4 py-3 text-[12px] leading-5 text-[#738398]">
+        确认：以来源的新值更新台账快照 · 忽略：仅关闭本条记录、不更改台账 · 源已消失变更须人工判断
       </div>
       {loadError && (
         <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取变更确认记录' : '变更确认记录读取失败'}
@@ -406,7 +413,8 @@ const ChangeConfirm = () => {
       )}
       <Table<ChangeRecord>
         rowKey="id"
-        size="small"
+        size="middle"
+        scroll={{ x: 1030 }}
         columns={columns}
         dataSource={records}
         loading={loading}
@@ -559,7 +567,12 @@ const SourceAccess = () => {
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-[16px] font-semibold text-[#2a3a4e]">来源接入与人工对账</h2>
+          <p className="mb-0 mt-1 text-[12px] text-[#8492a5]">在这里查看 Provider 历史状态，按授权范围发起人工请求。</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
         <YakButton
           type="primary"
           size="small"
@@ -570,12 +583,11 @@ const SourceAccess = () => {
         >
           全部对账
         </YakButton>
-        <YakButton size="small" onClick={load}>
-          刷新状态
-        </YakButton>
-        <span className="text-[12px] text-[#98a2b3]">
-          手动触发仅代表受理；下表显示 Provider 历史 lastRun，不是本次请求回执。缺席判定由服务端有效对账窗口决定（默认 7 天）。
-        </span>
+        <YakButton size="small" onClick={load}>刷新状态</YakButton>
+        </div>
+      </div>
+      <div className="mb-4 rounded-xl border border-solid border-[#e9edf3] bg-[#f8f9fc] px-4 py-3 text-[12px] leading-5 text-[#738398]">
+        手工触发只能确认受理。下方的 Provider lastRun 是历史状态，不能当作刚才请求的执行结果；缺席判定由服务端有效对账窗口决定。
       </div>
       {acceptedRequest && (
         <Alert className="mb-3" type="info" showIcon message={acceptedRequest}
@@ -588,7 +600,8 @@ const SourceAccess = () => {
       )}
       <Table<ReconcileStatusRow>
         rowKey="sourceType"
-        size="small"
+        size="middle"
+        scroll={{ x: 920 }}
         columns={columns}
         dataSource={rows}
         loading={loading}
@@ -609,16 +622,14 @@ const AssetInventoryPage = () => {
       <AssetWorkspaceHeading
         title="盘点与上架"
         description="先核对来源与资产变更，再人工确认并完成上架。自动纳管进入待上架池，不代表已经发布。"
-        actions={<Segmented
-          options={(Object.keys(TAB_LABELS) as InventoryTab[]).map((value) => ({
-            value,
-            label: TAB_LABELS[value],
-          }))}
-          value={tab}
-          onChange={(value) => setSearchParams({ tab: String(value) })}
-        />}
       />
-      <div className="mt-6 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-0 border-b border-solid border-[#e3e8f0] pb-3">
+        <Segmented size="large" options={(Object.keys(TAB_LABELS) as InventoryTab[]).map((value) => ({
+          value, label: TAB_LABELS[value],
+        }))} value={tab} onChange={(value) => setSearchParams({ tab: String(value) })} />
+        <span className="text-[12px] text-[#8a96a6]">上架 / 变更 / 对账职责分离，每项操作保留独立证据</span>
+      </div>
+      <div className="mt-4 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)] max-sm:p-4">
         {tab === 'publish' && <PendingPool />}
         {tab === 'changes' && <ChangeConfirm />}
         {tab === 'sources' && <SourceAccess />}
