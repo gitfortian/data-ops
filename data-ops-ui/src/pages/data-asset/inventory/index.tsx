@@ -183,10 +183,6 @@ const PendingPool = () => {
           对账发现的源域对象自动落入这里；上架前必经预检
         </span>
       </div>
-      {acceptedRequest && (
-        <Alert className="mb-3" type="info" showIcon message={acceptedRequest}
-          description="请稍后使用「刷新状态」核对历史 Provider 状态，并在资产台账独立查询来源；当前接口不提供本次请求与 lastRun 的关联，不能据此判定本次成功。" />
-      )}
       {loadError && (
         <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取待上架资产' : '待上架池读取失败'}
           description="本次读取未成功，不再展示旧筛选或旧项目的数据；请核对权限后重试。"
@@ -580,6 +576,10 @@ const SourceAccess = () => {
           手动触发仅代表受理；下表显示 Provider 历史 lastRun，不是本次请求回执。缺席判定由服务端有效对账窗口决定（默认 7 天）。
         </span>
       </div>
+      {acceptedRequest && (
+        <Alert className="mb-3" type="info" showIcon message={acceptedRequest}
+          description="请稍后使用「刷新状态」核对历史 Provider 状态，并在资产台账独立查询来源；当前接口不提供本次请求与 lastRun 的关联，不能据此判定本次成功。" />
+      )}
       {loadError && (
         <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取源接入状态' : '源接入状态读取失败'}
           description="本次读取未成功，旧项目的 Provider 状态不再作为当前结果；请重试。"
