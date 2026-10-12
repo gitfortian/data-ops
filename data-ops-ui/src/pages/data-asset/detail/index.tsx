@@ -1,5 +1,6 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import { ASSET_SURFACE, ASSET_PANEL } from '../components/AssetWorkspace';
+import { ArrowLeft, ArrowUpRight, Database, FolderTree, ShieldCheck, UserRound } from 'lucide-react';
+import { AssetPageHeader, AssetWorkspace } from '../asset-ui';
 import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
 import { governanceEntryPath } from '@/services/agent/governance';
 import { Alert, Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
@@ -400,63 +401,72 @@ const AssetDetailPage = () => {
   };
 
   return (
-    <main className={ASSET_SURFACE}>
-      <div className={ASSET_PANEL + ' flex flex-wrap items-start justify-between gap-5 p-5 max-sm:p-4'}>
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-[#92a0b0]">资产中心 · 资产详情</div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="text" size="small" className="!px-0 !text-[#667085]" onClick={() => history.back()}>
-              ← 返回
-            </Button>
-            <span className="text-[23px] font-semibold leading-8 tracking-tight text-[#26354a]">{asset?.name}</span>
-            {asset && <AssetStatusTag status={asset.status} />}
-            {detail?.sections.sourceAttrs?.data?.sourceChanged && (
-              <Tooltip title="源域对象已变化,待盘点确认后刷新快照">
-                <Tag color="gold">源已变更</Tag>
-              </Tooltip>
-            )}
-          </div>
-          <div className="mt-2 break-all font-mono text-[12px] text-[#8794a8]">{asset?.assetKey}</div>
-          {asset ? (
-            <div className="mt-4 flex flex-wrap gap-2 text-[12px] text-[#73839a]">
-              <span className="rounded-lg bg-[#f3f6fa] px-3 py-1.5">来源 {ASSET_SOURCE_TYPE_LABELS[asset.sourceType] ?? asset.sourceType}</span>
-              {asset.layerCode ? <span className="rounded-lg bg-[#f3f6fa] px-3 py-1.5">分层 {asset.layerCode}</span> : null}
-              <span className="rounded-lg bg-[#f3f6fa] px-3 py-1.5">负责人 {asset.owner || '待完善'}</span>
-            </div>
+    <AssetWorkspace>
+      <div className="mb-4">
+        <Button type="link" size="small" className="!px-0 !text-[#75849a]" onClick={() => history.back()}>
+          <ArrowLeft size={14} className="mr-1 inline" />返回资产目录
+        </Button>
+      </div>
+      <AssetPageHeader
+        title={<span className="flex min-w-0 flex-wrap items-center gap-3">
+          <span className="min-w-0 break-words">{asset?.name || (loading ? '正在读取资产' : '资产详情')}</span>
+          {asset ? <AssetStatusTag status={asset.status} /> : null}
+          {detail?.sections.sourceAttrs?.data?.sourceChanged ? (
+            <Tooltip title="源域对象已有变化；需盘点确认后才能更新台账快照">
+              <Tag color="warning">源域已有变更 · 待确认</Tag>
+            </Tooltip>
           ) : null}
+        </span>}
+        description={
+          <span className="break-all font-mono text-[12px] text-[#8b9aaf]">
+            {asset?.assetKey || '当前资产台账及独立来源事实'}
+          </span>
+        }
+        extra={
+          <Space size={8} wrap>
+            {asset && asset.id === assetId && !loading && !detailFailure && can('data-asset:read') && can('agent:chat:run') ? (
+              <>
+                <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
+                <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id, purpose: 'ASSET_IMPACT' }))}>AI 影响说明</Button>
+              </>
+            ) : null}
+            {asset && sourceLink ? (
+              <Button onClick={() => history.push(sourceLink)}>查看源对象 <ArrowUpRight size={13} className="ml-1 inline" /></Button>
+            ) : null}
+            {asset && canUpdate && ['PENDING', 'OFFLINE', 'IGNORED'].includes(asset.status) ? (
+              <>
+                <Button onClick={() => void submitPublishApproval()}>申请上架审批</Button>
+                <Button type="primary" onClick={() => setWizardOpen(true)}>上架预检</Button>
+              </>
+            ) : null}
+            {asset?.status === 'PUBLISHED' && canUpdate ? (
+              <Button danger onClick={() => setOfflineOpen(true)}>下架</Button>
+            ) : null}
+          </Space>
+        }
+      />
+      {asset && !detailFailure ? (
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: '资产来源', value: ASSET_SOURCE_TYPE_LABELS[asset.sourceType] ?? asset.sourceType, icon: <Database size={17} /> },
+            { label: '治理负责人', value: asset.owner || '尚未指定', icon: <UserRound size={17} /> },
+            { label: '所属目录', value: asset.directoryId ? (dirNames[asset.directoryId] || '#' + asset.directoryId) : '尚未归类', icon: <FolderTree size={17} /> },
+            { label: '安全等级快照', value: asset.securityLevelCode || '尚未定级', icon: <ShieldCheck size={17} /> },
+          ].map((item) => (
+            <div key={item.label} className="flex min-w-0 items-center gap-3 rounded-xl border border-solid border-[#e7ebf1] bg-white p-4 shadow-[0_2px_12px_rgba(27,42,64,0.025)]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eef4fa] text-[#5f85ad]">{item.icon}</span>
+              <div className="min-w-0"><div className="text-[11px] text-[#8e9bad]">{item.label}</div>
+                <div className="mt-1 truncate text-[13px] font-semibold text-[#32445b]" title={String(item.value)}>{item.value}</div></div>
+            </div>
+          ))}
         </div>
-        <Space wrap className="!max-w-full !items-start">
-          {asset && asset.id === assetId && !loading && !detailFailure && can('data-asset:read') && can('agent:chat:run') && (
-            <>
-              <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
-              <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id, purpose: 'ASSET_IMPACT' }))}>AI 影响说明</Button>
-            </>
-          )}
-          {asset && sourceLink && (
-            <Button onClick={() => history.push(sourceLink)}>查看源对象</Button>
-          )}
-          {asset && canUpdate && ['PENDING', 'OFFLINE', 'IGNORED'].includes(asset.status) && (
-            <Button type="primary" className="!text-white" onClick={() => setWizardOpen(true)}>
-              上架
-            </Button>
-          )}
-          {asset && canUpdate && ['PENDING', 'OFFLINE', 'IGNORED'].includes(asset.status) && (
-            <Button onClick={() => void submitPublishApproval()}>申请上架审批</Button>
-          )}
-          {asset?.status === 'PUBLISHED' && canUpdate && (
-            <Button danger onClick={() => setOfflineOpen(true)}>
-              下架
-            </Button>
-          )}
-        </Space>
-      </div>
+      ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-solid border-[#e6eaf0] bg-white px-4 py-2">
-        <StatusFlowStrip section={detail?.sections.statusFlow} />
-      </div>
+      <StatusFlowStrip section={detail?.sections.statusFlow} />
 
+      <div className="mt-5 rounded-2xl border border-solid border-[#e7ebf1] bg-white px-4 pb-5 pt-2 shadow-[0_3px_16px_rgba(23,36,57,0.025)] [&_.ant-card]:!rounded-xl [&_.ant-card]:!border-[#e9edf3] [&_.ant-card]:!shadow-none [&_.ant-card-head]:!border-[#edf0f5] [&_.ant-descriptions-item-label]:!text-[#8290a3]">
       <Tabs
-        className="!mt-5 [&_.ant-tabs-nav]:!mb-5"
+        className="!mt-1"
         items={[
           {
             key: 'overview',
@@ -465,8 +475,8 @@ const AssetDetailPage = () => {
               <div>
                 <Card title="台账信息" size="small" className="!mb-4" loading={loading}>
                   <Descriptions
-                    size="middle"
-                    column={{ xs: 1, sm: 2, lg: 3 }}
+                    size="small"
+                    column={3}
                     items={[
                       {
                         key: 'type',
@@ -979,13 +989,12 @@ const AssetDetailPage = () => {
                     }
                     setSnapshot((current) => ({ ...current, description: candidate.description || '' }));
                   }} />}
-                <Card title="资产基本资料" size="small" className="!mb-4">
+                <Card title="快照编辑(资产中心拥有名称/描述/入口)" size="small" className="!mb-4">
                   {canUpdate && !snapshotAvailable && !snapshotLoading && !loading && (
                     <Alert className="!mb-3" type="warning" showIcon message="快照编辑暂不可用"
                       description="已读取的资产详情仍可查看；不能取得最新快照版本时禁止保存，以免覆盖其它修改。"
                       action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
                   )}
-                  <div className="mb-3 rounded-lg bg-[#f6f8fb] px-3 py-2 text-[12px] leading-5 text-[#78879a]">这里只修改资产中心持有的展示资料，不会回写元数据源库或建模定义。保存需要最新快照版本。</div>
                   <Space direction="vertical" className="w-full">
                     <Input
                       addonBefore="名称"
@@ -1017,8 +1026,8 @@ const AssetDetailPage = () => {
                     </Button>
                   </Space>
                 </Card>
-                <Card title="资产负责人" size="small">
-                  <Space wrap className="w-full">
+                <Card title="统一负责人(唯一事实源,变更留审计)" size="small">
+                  <Space>
                     <UserSelect value={ownerValue} onChange={setOwnerValue} max={1} placeholder="搜索并选择负责人" />
                     <Button disabled={!canUpdate} onClick={saveOwner}>
                       变更负责人
@@ -1030,6 +1039,7 @@ const AssetDetailPage = () => {
           },
         ]}
       />
+      </div>
 
       {asset && (
         <>
@@ -1053,7 +1063,7 @@ const AssetDetailPage = () => {
           />
         </>
       )}
-    </main>
+    </AssetWorkspace>
   );
 };
 

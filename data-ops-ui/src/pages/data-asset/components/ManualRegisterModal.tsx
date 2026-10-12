@@ -1,4 +1,4 @@
-import { Form, Input, message, Modal, Select, TreeSelect } from 'antd';
+import { Alert, Form, Input, message, Modal, Select, TreeSelect } from 'antd';
 import { useEffect, useState } from 'react';
 
 import UserSelect from '@/components/UserSelect';
@@ -67,58 +67,69 @@ const ManualRegisterModal = ({
   return (
     <Modal
       open={open}
-      width={700}
-      title={<div>
-        <div className="text-[18px] font-semibold text-[#25364c]">手工登记资产</div>
-        <div className="mt-1 text-[12px] font-normal text-[#8794a6]">登记后进入待上架池；发布还需单独预检与审批。</div>
-      </div>}
+      title={<div><div className="text-[18px] font-semibold text-[#25374d]">手工登记资产</div>
+        <div className="mt-1 text-[12px] font-normal text-[#8492a5]">补充无法通过现有来源自动接入的资产，先纳管后治理。</div></div>}
+      width={720}
       okText="保存为待上架"
-      cancelText="取消"
       confirmLoading={submitting}
-      maskClosable={!submitting}
       onOk={submit}
       onCancel={onClose}
       destroyOnClose
+      styles={{ body: { background: '#f7f8fb', padding: 20 }, footer: { padding: '14px 24px' } }}
     >
-      <Form form={form} layout="vertical" className="!mt-5" requiredMark={false}>
-        <div className="mb-4 rounded-xl border border-solid border-[#e4ebf3] bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#708096]">
-          适用于暂时无法通过来源域自动纳管的资产。编码可自动生成，保存不会从数据源采集表结构，也不会直接上架。
-        </div>
-        <h3 className="mb-3 text-[14px] font-semibold text-[#304158]">01 · 基本信息</h3>
-        <Form.Item name="name" label="资产名称"
-          rules={[{ required: true, message: '请填写资产名称' }, { max: 128 }]}>
-          <Input placeholder="例如：外部研报数据集" />
+      <Alert className="!mb-4" type="info" showIcon message="登记成功后进入待上架池，不会立即发布"
+        description="资产编码可以自动生成；负责人、描述、目录等内容可在上架预检时补齐。" />
+      <Form form={form} layout="vertical" requiredMark={false} className="space-y-4">
+        <section className="rounded-xl border border-solid border-[#e8ecf2] bg-white p-5">
+          <h3 className="mb-4 text-[14px] font-semibold text-[#2e4058]">01 · 资产基本信息</h3>
+        <Form.Item
+          name="name"
+          label="资产名称"
+          rules={[{ required: true, message: '请填写资产名称' }]}
+        >
+          <Input placeholder="如：外部研报数据集" maxLength={128} />
         </Form.Item>
         <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-          <Form.Item name="assetType" label="资产类型" initialValue="DOC">
-            <Select options={MANUAL_TYPES.map((type) => ({ value: type, label: ASSET_TYPE_LABELS[type] }))} />
-          </Form.Item>
-          <Form.Item name="owner" label="治理负责人（可在上架前补齐）">
-            <UserSelect placeholder="搜索并选择负责人" max={1} />
-          </Form.Item>
-        </div>
-        <Form.Item name="description" label="业务描述（可选）">
-          <Input.TextArea rows={3} maxLength={1024} showCount placeholder="说明这份资产的业务含义、用途和使用约束" />
+        <Form.Item name="assetCode" label="资产编码" extra="留空由系统生成稳定编码">
+          <Input placeholder="自动生成" maxLength={64} />
         </Form.Item>
-        <h3 className="mb-3 mt-3 border-0 border-t border-solid border-[#edf0f4] pt-4 text-[14px] font-semibold text-[#304158]">02 · 访问与归属</h3>
-        <Form.Item name="accessUri" label="访问入口（可选）">
+        <Form.Item name="assetType" label="资产类型" initialValue="DOC">
+          <Select
+            options={MANUAL_TYPES.map((type) => ({ value: type, label: ASSET_TYPE_LABELS[type] }))}
+          />
+        </Form.Item>
+        </div>
+        <Form.Item name="description" label="资产描述">
+          <Input.TextArea rows={2} maxLength={1024} showCount placeholder="这份资产是什么、怎么用" />
+        </Form.Item>
+        </section>
+        <section className="rounded-xl border border-solid border-[#e8ecf2] bg-white p-5">
+          <h3 className="mb-4 text-[14px] font-semibold text-[#2e4058]">02 · 治理归属与访问</h3>
+        <Form.Item name="owner" label="治理负责人">
+          <UserSelect placeholder="搜索并选择负责人" max={1} />
+        </Form.Item>
+        <Form.Item name="accessUri" label="访问入口">
           <Input placeholder="https://… 或系统内路径" maxLength={512} />
         </Form.Item>
         <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-          <Form.Item name="layerCode" label="数仓分层（可选）">
-            <Select allowClear placeholder="选择分层"
-              options={layers.map((layer) => ({ value: layer.code, label: `${layer.name} (${layer.code})` }))} />
-          </Form.Item>
-          <Form.Item name="directoryId" label="资产目录（可选）">
-            <TreeSelect allowClear treeDefaultExpandAll placeholder="上架前也可补齐" treeData={toDirOptions(dirTree)} />
-          </Form.Item>
+        <Form.Item name="layerCode" label="数仓分层">
+          <Select
+            allowClear
+            placeholder="可选"
+            options={layers.map((layer) => ({ value: layer.code, label: `${layer.name}(${layer.code})` }))}
+          />
+        </Form.Item>
+        <Form.Item name="directoryId" label="归入目录">
+          <TreeSelect
+            allowClear
+            treeDefaultExpandAll
+            placeholder="可选，上架前也可由预检补齐"
+            treeData={toDirOptions(dirTree)}
+          />
+        </Form.Item>
         </div>
-        <details className="rounded-xl border border-solid border-[#e8edf3] bg-[#fbfcfe] px-4 py-3">
-          <summary className="cursor-pointer text-[12px] font-medium text-[#73839a]">高级配置 · 自定义资产编码</summary>
-          <Form.Item name="assetCode" label="资产编码" extra="不填写将自动生成唯一的 manual: 编码。" className="!mb-0 !mt-4">
-            <Input placeholder="留空自动生成" maxLength={64} />
-          </Form.Item>
-        </details>
+        <div className="text-[12px] leading-5 text-[#8996a8]">目录和分层属于治理信息，不会从这里反向修改源系统对象。</div>
+        </section>
       </Form>
     </Modal>
   );

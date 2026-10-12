@@ -44,39 +44,28 @@ const OfflineModal = ({
   return (
     <Modal
       open={open}
-      width={560}
-      title={<div>
-        <div className="text-[18px] font-semibold text-[#27374c]">确认下架 · {assets.length} 项资产</div>
-        <div className="mt-1 text-[12px] font-normal text-[#8794a6]">下架前请确认业务影响，操作原因会写入审计记录。</div>
-      </div>}
+      title={<div><div className="text-[18px] font-semibold text-[#273950]">确认下架 {assets.length} 个资产</div>
+        <div className="mt-1 text-[12px] font-normal text-[#8492a5]">下架是资产发布状态变更，不会删除源系统对象。</div></div>}
       okText="确认下架"
-      okButtonProps={{ danger: true, disabled: !reason.trim() || submitting }}
-      confirmLoading={submitting}
-      maskClosable={!submitting}
+      width={560}
+      okButtonProps={{ danger: true, disabled: !reason.trim() || submitting, loading: submitting }}
       onOk={submit}
-      onCancel={onClose}
+      onCancel={() => { if (!submitting) onClose(); }}
+      maskClosable={!submitting}
+      keyboard={!submitting}
       destroyOnClose
     >
-      <div className="mt-3 space-y-4">
-        <Alert type="warning" showIcon message="下架会改变资产的对外可用状态"
-          description="仅调整资产台账发布状态，不删除源数据库表或元数据。请先与依赖该资产的使用方确认影响。" />
-        <div className="rounded-xl border border-solid border-[#e9edf3] bg-[#f8fafc] px-4 py-3">
-          <div className="mb-2 text-[12px] font-medium text-[#65758b]">本次下架范围</div>
-          <div className="text-[13px] leading-6 text-[#34445a]">
-            {assets.slice(0, 4).map((asset) => asset.name).join('、')}{assets.length > 4 ? ` 等 ${assets.length} 项` : ''}
-          </div>
-        </div>
-        <label htmlFor="asset-offline-reason" className="block text-[13px] font-medium text-[#3f5065]">下架原因（必填）</label>
-        <Input.TextArea
-        id="asset-offline-reason"
-        rows={4}
+      <Alert type="warning" showIcon className="!mb-4" message="下架后将从已上架可消费目录移出"
+        description="该操作不删除源数据库、元数据实体或历史记录。原因会记录在资产台账和审计中。" />
+      <div className="mb-2 text-[13px] font-medium text-[#41536c]">下架原因 <span className="text-[#c75e4a]">*</span></div>
+      <Input.TextArea
+        rows={3}
         maxLength={512}
         showCount
         value={reason}
         onChange={(event) => setReason(event.target.value)}
-        placeholder="例如：业务口径变更，暂停对外提供，待使用方确认后重新上架"
+        placeholder="说明下架的业务原因，例如：口径变更，暂停对外提供"
       />
-      </div>
     </Modal>
   );
 };
