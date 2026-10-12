@@ -2318,6 +2318,28 @@ const emptyColumnDraft = (): ColumnDraft => ({
             </YakButton>
           )}
           {modelInfo?.layerCode?.toUpperCase() === 'ODS'
+            && modelInfo.sourceDatasourceId && modelInfo.sourceDatabase && modelInfo.sourceTable && (
+            <YakButton className="!h-9 !rounded-lg !px-4"
+              onClick={() => {
+                const qs = new URLSearchParams({
+                  view: 'entity',
+                  datasourceId: String(modelInfo.sourceDatasourceId),
+                  databaseName: modelInfo.sourceDatabase || '',
+                });
+                const target = `/data-asset/catalog?${qs.toString()}`;
+                if (dirty) {
+                  Modal.confirm({
+                    title: '物理模型还有未保存的改动',
+                    content: '离开会放弃当前未保存编辑；保存模型后才可从新页面恢复结构与映射。',
+                    okText: '放弃未保存改动并返回', okType: 'danger',
+                    cancelText: '继续编辑', onOk: () => history.push(target),
+                  });
+                  return;
+                }
+                history.push(target);
+              }}>返回来源物理表目录</YakButton>
+          )}
+          {modelInfo?.layerCode?.toUpperCase() === 'ODS'
             && Number(modelInfo.latestVersionNo) > 0 && (
             <YakButton className="!h-9 !rounded-lg !px-4"
               disabled={!canAll(['modeling:read', 'resource:data-source:read'])}
