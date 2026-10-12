@@ -283,7 +283,7 @@ const MetadataCollectPage = () => {
       width: 160,
       render: (_, job) => (
         <div>
-          <span className="text-[12px] text-[#53637a]">{job.enabled ? '定时调度已开启' : '仅手工触发'}</span>
+          <span className="text-[12px] text-[#53637a]">{job.providerType === 'REGISTERED' ? '执行器未开放' : job.enabled ? '定时调度已设启用' : '仅手工触发'}</span>
           <div className="mt-1 truncate font-mono text-[11px] text-[#98a4b4]">{job.cronExpression || '无调度计划'}</div>
         </div>
       ),
@@ -294,7 +294,7 @@ const MetadataCollectPage = () => {
       width: 152,
       render: (_, job) => (
         <div className="space-y-1">
-          <div><Tag color={job.enabled ? 'success' : 'default'}>{job.enabled ? '已启用' : '停用中'}</Tag></div>
+          <div><Tag color={job.enabled && job.providerType === 'HARVESTED' ? 'success' : 'default'}>{job.providerType === 'REGISTERED' ? '历史任务配置' : job.enabled ? '已启用' : '停用中'}</Tag></div>
           {!job.dryRunPassed ? (
             <Tooltip title="没有当前配置有效的预演结论；预演失败或修改采集范围后均需重新确认">
               <Tag color={job.enabled ? 'warning' : 'default'}>{job.enabled ? '需重新预演' : '尚未通过预演'}</Tag>
