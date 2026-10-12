@@ -33,11 +33,19 @@ import {
 } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
 
+export interface CollectJobInitialScope {
+  databaseName?: string;
+  schemaName?: string;
+  sourceTableName?: string;
+  jobName?: string;
+}
+
 interface CollectJobDrawerProps {
   open: boolean;
   editing: CollectJobRecord | null;
   /** A project-verified URL hint, not an authorization or a saved job scope. */
   initialDataSourceId?: number;
+  initialScope?: CollectJobInitialScope;
   onClose: () => void;
   onSaved: (saved: CollectJobRecord) => void;
 }
@@ -58,7 +66,7 @@ interface JobFormValues {
 const DEFAULT_CRON = '0 0 3 * * ?';
 
 /** 物理表名匹配式是 SQL LIKE 语义(% 通配),留空即整库采集。 */
-const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved }: CollectJobDrawerProps) => {
+const CollectJobDrawer = ({ open, editing, initialDataSourceId, initialScope, onClose, onSaved }: CollectJobDrawerProps) => {
   const [form] = Form.useForm<JobFormValues>();
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -133,11 +141,14 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       form.setFieldsValue({
         providerType: 'HARVESTED',
         dataSourceId: initialDataSourceId,
+        jobName: initialScope?.jobName,
+        databaseName: initialScope?.databaseName,
+        schemaName: initialScope?.schemaName,
         collectColumns: true,
         cronExpression: DEFAULT_CRON,
       });
     }
-  }, [open, editing, form, initialDataSourceId]);
+  }, [open, editing, form, initialDataSourceId, initialScope]);
 
   const refreshDatabases = async (id: number) => {
     setLoadingDatabases(true);
@@ -175,7 +186,8 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       return;
     }
     void refreshDatabases(initialDataSourceId);
-  }, [open, editing, initialDataSourceId, dataSources, form]);
+    if (initialScope?.databaseName) void refreshSchemas(initialDataSourceId, initialScope.databaseName);
+  }, [open, editing, initialDataSourceId, initialScope, dataSources, form]);
 
   // 编辑物理采集任务时,按已存作用域把库/schema 下拉补载出来(选而不清,保留原值)。
   useEffect(() => {
@@ -334,6 +346,12 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
         onValuesChange={() => setDirty(true)}
         className="space-y-4"
       >
+        {!isEdit && initialScope?.sourceTableName ? (
+          <Alert type="info" showIcon
+            className="!mb-0"
+            message={`从表「${initialScope.sourceTableName}」进入任务定义`}
+            description="默认采集所选库 / Schema 的全部表；如需缩小范围，请调整下方表名匹配式。" />
+        ) : null}
         <div className="rounded-xl border border-solid border-[#e7eaf0] bg-[#f0f5fb] px-4 py-3">
           <div className="text-[13px] font-semibold text-[#3b5f87]">
             {isEdit ? '配置修改提醒' : '新任务默认停用'}
@@ -434,7 +452,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
               </div>
               <Form.Item
                 name="tablePattern"
-                label="表名匹配规则"
+                label="表名匹配式"
                 tooltip="采用 SQL LIKE 语义：% 匹配任意字符，_ 匹配单字符；不是文件名通配符 *"
                 className="!mb-2"
               >
