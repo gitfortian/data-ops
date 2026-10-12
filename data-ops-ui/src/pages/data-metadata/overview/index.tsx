@@ -17,7 +17,7 @@ import {
   ScheduleOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Empty, Spin, Tag } from 'antd';
+import { Alert, Button, Empty, Skeleton, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -228,8 +228,16 @@ const MetadataOverviewPage = () => {
           action={<Button onClick={() => void loadOverview()}>重新加载</Button>}
         />
       ) : null}
-      <Spin spinning={loading}>
-        {overview ? (
+      <div>
+        {loading && !overview ? (
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5">
+                <Skeleton active title={{ width: '55%' }} paragraph={{ rows: 2 }} />
+              </div>
+            ))}
+          </div>
+        ) : overview ? (
           <div className="mt-6 space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Metric label="目录实体" value={overview.catalogEntityCount} icon={<DatabaseOutlined />} note="当前项目已登记的目录实体（含多种实体类型）" />
@@ -330,7 +338,7 @@ const MetadataOverviewPage = () => {
             </YakEmpty>
           </div>
         ) : null}
-      </Spin>
+      </div>
     </main>
   );
 };
