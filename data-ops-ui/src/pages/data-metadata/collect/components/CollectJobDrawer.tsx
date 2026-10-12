@@ -39,7 +39,7 @@ interface CollectJobDrawerProps {
   /** A project-verified URL hint, not an authorization or a saved job scope. */
   initialDataSourceId?: number;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (saved: CollectJobRecord) => void;
 }
 
 interface JobFormValues {
@@ -217,14 +217,15 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
     };
     setSaving(true);
     try {
+      let saved: CollectJobRecord;
       if (editing) {
-        await updateCollectJob(editing.id, params);
+        saved = await updateCollectJob(editing.id, params);
         message.success('任务已更新；若作用域有变更，需重新 dry-run 预演后方可启用');
       } else {
-        await createCollectJob(params);
-        message.success('任务已创建（默认停用，需先通过一次 dry-run 预演）');
+        saved = await createCollectJob(params);
+        message.success('任务已创建并保存（默认停用）；手动正式运行不等于启用定时调度');
       }
-      onSaved();
+      onSaved(saved);
     } catch {
       // 全局错误提示已展示业务原因（编码重复 / 作用域非法）
     } finally {
