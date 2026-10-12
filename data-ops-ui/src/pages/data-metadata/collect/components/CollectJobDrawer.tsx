@@ -32,7 +32,6 @@ import {
   listDataSourceSchemas,
 } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
-import { PROVIDER_LABELS } from '../constants';
 
 interface CollectJobDrawerProps {
   open: boolean;
