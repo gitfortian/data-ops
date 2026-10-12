@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import io.yak.ops.business.asset.reconcile.AssetReconcileService;
+import io.yak.ops.business.asset.api.MetadataAutoIngestApi;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.core.project.ProjectContextScope;
 import java.time.LocalDateTime;
@@ -16,7 +16,7 @@ import org.mockito.ArgumentCaptor;
 
 class AutoIngestDeliveryWorkerTest {
   private final AutoIngestEventMapper events = mock(AutoIngestEventMapper.class);
-  private final AssetReconcileService asset = mock(AssetReconcileService.class);
+  private final MetadataAutoIngestApi asset = mock(MetadataAutoIngestApi.class);
   private final ProjectContextScope scope = mock(ProjectContextScope.class);
   private final AutoIngestDeliveryWorker worker =
       new AutoIngestDeliveryWorker(events, asset, scope);
@@ -46,7 +46,7 @@ class AutoIngestDeliveryWorkerTest {
     when(events.claim(eq(100L), anyString(), any(), any())).thenReturn(1);
     when(events.succeed(eq(100L), anyString(), any())).thenReturn(1);
     when(asset.ingestCommittedMetadataTable(42L, 7L, "metadata-auto-ingest"))
-        .thenReturn(new AssetReconcileService.ScopedIngestReceipt(
+        .thenReturn(new MetadataAutoIngestApi.ScopedIngestReceipt(
             42L, 7L, "source-key", 1, 0, 0));
     worker.deliver(e);
     verify(asset).ingestCommittedMetadataTable(42L, 7L, "metadata-auto-ingest");
