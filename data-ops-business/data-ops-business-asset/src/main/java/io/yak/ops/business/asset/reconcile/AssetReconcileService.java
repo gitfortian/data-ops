@@ -127,6 +127,41 @@ public class AssetReconcileService {
     return "对账已受理,后台执行中";
   }
 
+  /**
+   * S2 Asset-owned scope-limited positive-evidence ingest. This is called only
+   * by an internal durable Metadata delivery worker, never by a public URL.
+   * A single committed physical-table identity is verified again by its owner
+   * inside the current project. Crucially there is NO provider sweep, watermark,
+   * global lastRun update, or SOURCE_GONE inference here.
+   */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public ScopedIngestReceipt ingestCommittedMetadataTable(
+      Long projectId, Long metadataEntityId, String operator) {
+    if (projectId == null || metadataEntityId == null || metadataEntityId <= 0
+        || !Objects.equals(projectId, currentProject.requireProjectId())) {
+      throw new AssetException(AssetErrorCode.ASSET_NOT_FOUND, "自动纳管来源项目或实体无效");
+    }
+    AssetProvider provider = registry.find(AssetSourceType.METADATA)
+        .orElseThrow(() -> new AssetException(
+            AssetErrorCode.ASSET_NOT_FOUND, "METADATA AssetProvider 未接入"));
+    AssetDescriptor descriptor = provider
+        .refreshInProject(projectId, String.valueOf(metadataEntityId))
+        .orElseThrow(() -> new AssetException(
+            AssetErrorCode.ASSET_NOT_FOUND, "当前项目源表未提交、缺席或已撤销"));
+    if (!Objects.equals(descriptor.sourceId(), String.valueOf(metadataEntityId))
+        || !StringUtils.hasText(descriptor.assetKey())
+        || descriptor.assetType() != io.yak.ops.common.enums.asset.AssetEnums.AssetType.TABLE) {
+      throw new AssetException(AssetErrorCode.ASSET_NOT_FOUND, "METADATA 表身份不匹配");
+    }
+    UpsertResult result = upsert(projectId, AssetSourceType.METADATA,
+        descriptor, LocalDateTime.now(), operator == null ? "metadata-auto-ingest" : operator);
+    return new ScopedIngestReceipt(projectId, metadataEntityId, descriptor.assetKey(),
+        result.created(), result.changed(), result.restored());
+  }
+
+  public record ScopedIngestReceipt(Long projectId, Long metadataEntityId,
+                                    String assetKey, int created, int changed, int restored) {}
+
   /** 同步核心:调度与测试入口;acquireLock=true 时自行抢互斥。 */
   public List<ProviderOutcome> reconcileNow(Long projectId, List<AssetSourceType> types,
       String operator, boolean acquireLock) {
