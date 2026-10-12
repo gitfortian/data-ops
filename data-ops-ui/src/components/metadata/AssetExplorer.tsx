@@ -85,6 +85,17 @@ export interface DrillTarget {
  * 不换接口，facet 计数来自服务端同一次 GROUP BY，因此不会出现"切了类型总数还不变"的假象。
  */
 const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
+  // Navigation hints are never authority: validate the source in the active project's
+  // DataSource Owner listing before searching. Search still enforces server-side RBAC.
+  const sourceHint = useMemo(() => {
+    const raw = new URLSearchParams(window.location.search).get("datasourceId");
+    if (raw === null) return null;
+    const parsed = Number(raw);
+    return /^[1-9]\\d*$/.test(raw) && Number.isSafeInteger(parsed) ? parsed : "INVALID";
+  }, []);
+  const [sourceHintStatus, setSourceHintStatus] = useState<
+    "NONE" | "VERIFYING" | "VALID" | "INVALID" | "UNAVAILABLE"
+  >(sourceHint === null ? "NONE" : sourceHint === "INVALID" ? "INVALID" : "VERIFYING");
   const [types, setTypes] = useState<EntityTypeView[]>([]);
   const [dataSourceNames, setDataSourceNames] = useState<
     { id: number; name: string }[]
@@ -92,8 +103,12 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
 
   const [keyword, setKeyword] = useState("");
   const [q, setQ] = useState("");
-  const [index, setIndex] = useState<string[]>([]);
-  const [filter, setFilter] = useState<MetadataFilter>({});
+  const [index, setIndex] = useState<string[]>(typeof sourceHint === "number" ? ["table"] : []);
+  const [filter, setFilter] = useState<MetadataFilter>(
+    typeof sourceHint === "number"
+      ? { datasourceId: String(sourceHint), providerType: "HARVESTED" }
+      : {}
+  );
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [sortField, setSortField] = useState<SortOption>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -119,18 +134,20 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
       )
       .catch(() => setTypes([]));
     listAllDataSources()
-      .then((result) =>
-        setDataSourceNames(
-          (result.bizData ?? [])
-            .filter((ds) => ds.id != null)
-            .map((ds) => ({
-              id: Number(ds.id),
-              name: ds.name ?? String(ds.id),
-            }))
-        )
-      )
-      .catch(() => setDataSourceNames([]));
-  }, []);
+      .then((result) => {
+        const sources = (result.bizData ?? [])
+          .filter((ds) => ds.id != null)
+          .map((ds) => ({ id: Number(ds.id), name: ds.name ?? String(ds.id) }));
+        setDataSourceNames(sources);
+        if (typeof sourceHint === "number") {
+          setSourceHintStatus(sources.some((ds) => ds.id === sourceHint) ? "VALID" : "INVALID");
+        }
+      })
+      .catch(() => {
+        setDataSourceNames([]);
+        if (typeof sourceHint === "number") setSourceHintStatus("UNAVAILABLE");
+      });
+  }, [sourceHint]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -164,6 +181,14 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
   const filterKey = JSON.stringify(compactFilter(filter));
 
   const load = useCallback(async () => {
+    if (sourceHintStatus === "VERIFYING") return;
+    if (sourceHintStatus === "INVALID" || sourceHintStatus === "UNAVAILABLE") {
+      setResult(null);
+      setError(sourceHintStatus === "INVALID"
+        ? "指定的数据源不存在或当前项目无权访问；未将其解释为零张表。"
+        : "无法核验数据源与当前项目的关系；请重试读取来源。");
+      return;
+    }
     setLoading(true);
     try {
       const search = await searchMetadata({
@@ -202,6 +227,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
     page,
     explain,
     nonce,
+    sourceHintStatus,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
