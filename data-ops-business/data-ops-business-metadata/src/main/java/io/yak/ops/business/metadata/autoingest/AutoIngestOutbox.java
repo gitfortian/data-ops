@@ -1,5 +1,7 @@
 package io.yak.ops.business.metadata.autoingest;
 
+import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
+
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
