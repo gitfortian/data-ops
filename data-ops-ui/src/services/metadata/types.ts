@@ -47,6 +47,10 @@ export interface CollectJobRecord {
 export interface CollectJobQueryParams {
   pageNo: number;
   pageSize: number;
+  /** Backend exact-match filters; not a first-page approximation. */
+  dataSourceId?: number;
+  databaseName?: string;
+  schemaName?: string;
   providerType?: CollectProviderType | '';
   enabled?: boolean;
   keyword?: string;
