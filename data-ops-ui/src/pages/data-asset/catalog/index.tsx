@@ -44,6 +44,7 @@ import { listSemanticLayers } from '@/services/semantic/api';
 import type { SemanticLayerRecord } from '@/services/semantic/types';
 import {
   ASSET_SOURCE_TYPE_LABELS,
+  collectDirOptions,
   ASSET_TYPE_LABELS,
   formatAssetTime,
   healthGradeColor,
@@ -136,6 +137,8 @@ const AssetCatalogPage = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardAssets, setWizardAssets] = useState<AssetRecord[]>([]);
   const [manualOpen, setManualOpen] = useState(false);
+  const [batchMoveOpen, setBatchMoveOpen] = useState(false);
+  const [batchMoveTarget, setBatchMoveTarget] = useState<number | undefined>();
   const [offlineTarget, setOfflineTarget] = useState<AssetRecord[] | null>(null);
 
   const load = useCallback(async () => {
@@ -227,31 +230,22 @@ const AssetCatalogPage = () => {
   };
 
   const runBatchMove = () => {
-    let target: number | undefined;
-    Modal.confirm({
-      title: '批量移目录',
-      content: (
-        <Tree
-          treeData={treeData as never}
-          selectedKeys={target ? [target] : []}
-          onSelect={(keys) => {
-            target = keys[0] as number | undefined;
-          }}
-          style={{ maxHeight: 300, overflow: 'auto' }}
-        />
-      ),
-      okText: '移动',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const count = await batchMoveAssetsDirectory(selectedIds, target ?? null);
-          message.success(`已移动 ${count} 个资产`);
-          refresh();
-        } catch {
-          // 已由全局错误提示统一展示后端原话（如目录不存在/有环 48006）
-        }
-      },
-    });
+    if (!selectedIds.length) return;
+    setBatchMoveTarget(undefined);
+    setBatchMoveOpen(true);
+  };
+
+  const confirmBatchMove = async () => {
+    if (batchMoveTarget == null || !selectedIds.length || !canUpdate) return;
+    try {
+      const count = await batchMoveAssetsDirectory(selectedIds, batchMoveTarget === 0 ? null : batchMoveTarget);
+      message.success(`已移动 ${count} 个资产`);
+      setBatchMoveOpen(false);
+      setBatchMoveTarget(undefined);
+      refresh();
+    } catch {
+      // Owner handles errors; keep the dialog open for re-check.
+    }
   };
 
   const runDelete = (record: AssetRecord) => {
@@ -414,7 +408,7 @@ const AssetCatalogPage = () => {
           />
         )}
         {directoryId && (
-          <Button type="link" size="small" className="!px-0" onClick={() => setDirectoryId(undefined)}>
+          <Button type="link" size="small" className="!px-0" onClick={() => { setDirectoryId(undefined); setPageNo(1); }}>
             清除目录筛选
           </Button>
         )}
@@ -428,7 +422,10 @@ const AssetCatalogPage = () => {
               <h2 className="m-0 text-[16px] font-semibold text-[#253145]">资产清单</h2>
               <p className="mb-0 mt-1 text-[12px] text-[#8491a4]">当前筛选下 {loadError ? '数量未知' : loading ? '读取中' : `${total} 项`} · 来源与治理状态均以当前项目的资产台账为准</p>
             </div>
-            <Segmented options={['列表', '卡片']} value={viewMode}
+            <Segmented options={[
+              { label: '列表', value: '列表', disabled: screens.sm === false },
+              { label: '卡片', value: '卡片' },
+            ]} value={screens.sm === false ? '卡片' : viewMode}
               onChange={(value) => setViewMode(value as '列表' | '卡片')} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -437,7 +434,10 @@ const AssetCatalogPage = () => {
             placeholder="搜索资产名称、负责人或标签"
             className="!w-[245px] max-sm:!w-full"
             value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
+            onChange={(event) => {
+              setSearchText(event.target.value);
+              if (!event.target.value) { setKeyword(''); setPageNo(1); }
+            }}
             onSearch={(value) => {
               setKeyword(value.trim());
               setPageNo(1);
@@ -540,7 +540,7 @@ const AssetCatalogPage = () => {
           </div>
         )}
 
-        <div className="min-w-0 flex-1 px-5 pb-4 pt-4">
+        <div className="min-w-0 flex-1 px-5 pb-4 pt-4 max-sm:px-3">
           {loadError && <Alert className="mb-3" type="error" showIcon
              message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
              description="本次筛选未能成功读取；不会展示旧查询或其它项目的结果，请重试。"
@@ -611,6 +611,31 @@ const AssetCatalogPage = () => {
       </div>
       )}
 
+      <Modal
+        open={batchMoveOpen}
+        width={520}
+        title="批量调整资产目录"
+        okText="确认移动"
+        cancelText="取消"
+        okButtonProps={{ disabled: batchMoveTarget == null || !canUpdate }}
+        onOk={() => void confirmBatchMove()}
+        onCancel={() => { setBatchMoveOpen(false); setBatchMoveTarget(undefined); }}
+        destroyOnClose
+      >
+        <div className="mt-3 rounded-xl bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#73829a]">
+          当前操作将移动 {selectedIds.length} 项资产的目录归属，不改变其来源实体、发布状态或负责人。
+        </div>
+        <div className="mb-2 mt-5 text-[13px] font-medium text-[#34465c]">目标目录（必选）</div>
+        <Select
+          showSearch
+          optionFilterProp="label"
+          className="w-full"
+          placeholder="明确选择目标目录"
+          value={batchMoveTarget}
+          onChange={setBatchMoveTarget}
+          options={[{ value: 0, label: '目录根级（取消目录归属）' }, ...collectDirOptions(dirTree)]}
+        />
+      </Modal>
       <PublishPrecheckModal
         open={wizardOpen}
         assets={wizardAssets}
