@@ -1,5 +1,7 @@
 package io.yak.ops.business.metadata.autoingest;
 
+import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
+
 import io.yak.ops.business.asset.reconcile.AssetReconcileService;
 import io.yak.ops.business.metadata.config.ConditionalOnMetadataPersistence;
 import io.yak.ops.core.project.ProjectContext;
