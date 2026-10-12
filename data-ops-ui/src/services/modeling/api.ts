@@ -54,6 +54,9 @@ export const commitOdsManualImport = (
     sourceDatabase: string;
     sourceSchema?: string;
     sourceTable: string;
+    /** Verified live snapshot at preview; Owner rechecks on atomic save. */
+    expectedSourceColumns?: { name: string; typeName: string; size?: number | null;
+      scale?: number | null; nullable: boolean; primaryKey: boolean }[];
     structure: ModelingSaveStructurePayload;
     selections: { targetColumn: string; sourceColumn: string }[];
   },
