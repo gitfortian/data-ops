@@ -189,6 +189,7 @@ public class OdsManualImportCommitService {
       mapping.setTargetColumn(physical.get(key(pair.targetColumn())).columnName());
       mapping.setSourceDatasourceId(request.sourceDatasourceId());
       mapping.setSourceDatabase(request.sourceDatabase());
+      mapping.setSourceSchema(clean(request.sourceSchema()));
       mapping.setSourceTable(request.sourceTable());
       mapping.setSourceColumn(sources.get(key(pair.sourceColumn())).name());
       mapping.setTransformExpr(null);
@@ -200,6 +201,7 @@ public class OdsManualImportCommitService {
       boolean found = persisted.stream().anyMatch(row ->
           Objects.equals(row.getSourceDatasourceId(), request.sourceDatasourceId())
               && Objects.equals(row.getSourceDatabase(), request.sourceDatabase())
+              && Objects.equals(clean(row.getSourceSchema()), clean(request.sourceSchema()))
               && Objects.equals(row.getSourceTable(), request.sourceTable())
               && row.getTransformExpr() == null
               && key(row.getTargetColumn()).equals(key(pair.targetColumn()))
