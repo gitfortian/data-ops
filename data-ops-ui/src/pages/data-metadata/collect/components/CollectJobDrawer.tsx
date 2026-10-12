@@ -64,6 +64,8 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [dataSources, setDataSources] = useState<DataSourceRecord[]>([]);
+  const [sourceLoadError, setSourceLoadError] = useState(false);
+  const [loadingSources, setLoadingSources] = useState(false);
   const [databases, setDatabases] = useState<string[]>([]);
   const [schemas, setSchemas] = useState<string[]>([]);
   const [entityTypes, setEntityTypes] = useState<EntityTypeView[]>([]);
@@ -90,6 +92,8 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
   const isEdit = Boolean(editing);
 
   const loadCatalog = useCallback(async () => {
+    setSourceLoadError(false);
+    setLoadingSources(true);
     const [sources, types] = await Promise.allSettled([
       listAllDataSources(),
       listEntityTypes('ENTITY'),
@@ -97,6 +101,8 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
     setDataSources(
       sources.status === 'fulfilled' ? sources.value.bizData ?? [] : [],
     );
+    setSourceLoadError(sources.status !== 'fulfilled');
+    setLoadingSources(false);
     const list = types.status === 'fulfilled' ? types.value ?? [] : [];
     // 投影对账通道只服务写时登记的内部实体:collectible 类型由物理采集维护,不该出现在这里。
     setEntityTypes(list.filter((t) => t.status === 'ACTIVE' && !t.collectible));
@@ -222,7 +228,8 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
   }, [open, dirty]);
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    const values = await form.validateFields().catch(() => null);
+    if (!values) return;
     const harvest = values.providerType === 'HARVESTED';
     const params: CollectJobUpsertParams = {
       providerType: values.providerType,
@@ -277,199 +284,233 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
   return (
     <Drawer
       open={open}
-      width={560}
+      width="min(700px, 100vw)"
       placement="right"
-      closable={false}
+      closable
       destroyOnClose
       maskClosable={!saving}
       keyboard={!saving}
       onClose={requestClose}
       title={
-        <div className="text-[18px] font-semibold leading-7 text-[#101828]">
-          {isEdit ? '编辑采集任务' : '新建采集任务'}
+        <div className="pr-4">
+          <div className="text-[19px] font-semibold leading-7 text-[#243248]">
+            {isEdit ? '编辑采集任务' : '新建采集任务'}
+          </div>
+          <div className="mt-1 text-[12px] font-normal leading-5 text-[#8794a8]">
+            先明确采集对象，再决定预演与执行方式；保存不会自动触发采集。
+          </div>
         </div>
       }
-      extra={
-        <div className="flex items-center gap-2">
-          <YakButton disabled={saving} onClick={requestClose} className="!h-9 !rounded-lg !px-4">
-            取消
-          </YakButton>
-          <YakButton
-            type="primary"
-            loading={saving}
-            onClick={() => void handleSubmit()}
-            className="!h-9 !rounded-lg !px-5 !text-white"
-          >
-            保存
-          </YakButton>
+      footer={
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[12px] text-[#8997a8]">
+            {dirty ? '有尚未保存的修改' : '所有更改均需明确保存'}
+          </span>
+          <div className="flex items-center gap-2">
+            <YakButton disabled={saving} onClick={requestClose} className="!h-9 !rounded-lg !px-5">取消</YakButton>
+            <YakButton type="primary" loading={saving} onClick={() => void handleSubmit()}
+              className="!h-9 !rounded-lg !px-5 !text-white">保存任务</YakButton>
+          </div>
         </div>
       }
       styles={{
-        header: { padding: '18px 24px', borderBottom: '1px solid #eaecf0' },
-        body: { padding: 24 },
+        header: { padding: '20px 24px', borderBottom: '1px solid #e9edf3' },
+        body: { padding: '20px 24px 28px', background: '#f7f8fb' },
+        footer: { padding: '14px 24px', borderTop: '1px solid #e9edf3', background: '#fff' },
       }}
     >
-      <Form form={form} layout="vertical" requiredMark="optional" onValuesChange={() => setDirty(true)}>
-        {isEdit ? (
-          <Alert
-            type="info"
-            showIcon
-            className="!mb-4"
-            message="修改作用域（数据源 / 库 / schema / 表匹配式）会使旧的 dry-run 预演结论失效，需重新预演才能启用。"
-          />
-        ) : (
-          <Alert
-            type="info"
-            showIcon
-            className="!mb-4"
-            message="新建任务默认停用，必须先跑一次通过的 dry-run 预演才允许启用。"
-          />
-        )}
-
-        <Form.Item name="providerType" label="通道" className="!mb-4">
-          <Radio.Group optionType="button" buttonStyle="solid" disabled={isEdit}>
-            {(Object.keys(PROVIDER_LABELS) as CollectProviderType[]).map((value) => (
-              <Radio.Button key={value} value={value}>
-                {PROVIDER_LABELS[value]}
-              </Radio.Button>
-            ))}
-          </Radio.Group>
-        </Form.Item>
-
-        <div className="mb-4 grid grid-cols-2 gap-3">
-          <Form.Item
-            name="jobName"
-            label="任务名称"
-            required
-            rules={[
-              { required: true, message: '请输入任务名称' },
-              { max: 128, message: '不能超过 128 个字符' },
-            ]}
-          >
-            <Input variant="filled" placeholder="如：订单库表结构采集" className="!h-[44px] !rounded-[10px]" />
-          </Form.Item>
-          <Form.Item
-            name="jobCode"
-            label="任务编码"
-            tooltip="留空自动生成；它是身份不是内容，编辑时不可改"
-            rules={[{ max: 64, message: '不能超过 64 个字符' }]}
-          >
-            <Input
-              variant="filled"
-              disabled={isEdit}
-              placeholder="留空自动生成"
-              className="!h-[44px] !rounded-[10px]"
-            />
-          </Form.Item>
+      <Form
+        form={form}
+        layout="vertical"
+        onValuesChange={() => setDirty(true)}
+        className="space-y-4"
+      >
+        <div className="rounded-xl border border-solid border-[#e7eaf0] bg-[#f0f5fb] px-4 py-3">
+          <div className="text-[13px] font-semibold text-[#3b5f87]">
+            {isEdit ? '配置修改提醒' : '新任务默认停用'}
+          </div>
+          <div className="mt-1 text-[12px] leading-5 text-[#637b97]">
+            {isEdit
+              ? '修改来源、Schema 或表范围后，旧预演结论可能失效；已启用任务的下次调度范围也可能改变，保存前会再次确认。'
+              : '保存只创建任务，不采集表结构。建议先预演核对范围，再明确点击正式采集；如需周期执行，还要单独启用调度。'}
+          </div>
         </div>
 
-        {isHarvest ? (
-          <>
-            <Form.Item
-              name="dataSourceId"
-              label="数据源"
-              required
-              rules={[{ required: true, message: '物理采集任务必须绑定数据源' }]}
-            >
-              <Select
-                variant="filled"
-                showSearch
-                optionFilterProp="label"
-                placeholder="选择要采集的数据源"
-                loading={dataSources.length === 0}
-                options={dataSourceOptions}
-                onChange={(value?: number) => onDataSourceChange(value)}
-              />
-            </Form.Item>
-
-            <div className="mb-4 grid grid-cols-2 gap-3">
-              <Form.Item name="databaseName" label="数据库">
-                <Select
-                  variant="filled"
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  disabled={dataSourceId == null}
-                  loading={loadingDatabases}
-                  placeholder={dataSourceId == null ? '先选数据源' : '全部库（留空）'}
-                  options={databases.map((name) => ({ value: name, label: name }))}
-                  onChange={(value?: string) => onDatabaseChange(value)}
-                />
-              </Form.Item>
-              <Form.Item name="schemaName" label="Schema">
-                <Select
-                  variant="filled"
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  disabled={dataSourceId == null}
-                  loading={loadingSchemas}
-                  placeholder={databaseName ? '选择 schema（留空=默认）' : '全部 schema（留空）'}
-                  options={schemas.map((name) => ({ value: name, label: name }))}
-                />
-              </Form.Item>
+        <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#edf3fa] text-[12px] font-semibold text-[#597fa8]">01</span>
+            <div>
+              <h3 className="m-0 text-[15px] font-semibold text-[#26364a]">任务信息</h3>
+              <p className="mb-0 mt-0.5 text-[12px] text-[#8a98aa]">让后续使用者认得出这个任务的目的。</p>
             </div>
-
-            <Form.Item name="tablePattern" label="表名匹配式" tooltip="SQL LIKE 语义，% 通配；留空采集该作用域下全部表">
-              <Input variant="filled" placeholder="如 ods_* 或留空采集全部" className="!h-[44px] !rounded-[10px]" />
-            </Form.Item>
-
+          </div>
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <Form.Item
-              name="collectColumns"
-              label="采集列级元数据"
-              valuePropName="checked"
-              tooltip="关闭后只采表级；一期默认采到列"
-              className="!mb-4"
+              name="jobName"
+              label="任务名称"
+              rules={[{ required: true, message: '请输入任务名称' }, { max: 128, message: '不能超过 128 个字符' }]}
             >
-              <Switch />
+              <Input placeholder="例如：订单库表结构采集" />
             </Form.Item>
-          </>
-        ) : (
-          <Form.Item
-            name="typeName"
-            label="对账实体类型"
-            required
-            tooltip="投影对账校验写时登记通道落库的实体是否与源域一致，只覆盖内部登记类型"
-            rules={[{ required: true, message: '请选择实体类型' }]}
-          >
-            <Select
-              variant="filled"
-              showSearch
-              optionFilterProp="label"
-              placeholder="选择内部实体类型"
-              options={entityTypes.map((t) => ({
-                value: t.typeName,
-                label: t.displayName ? `${t.displayName}（${t.typeName}）` : t.typeName,
-              }))}
-            />
+            <Form.Item name="jobCode" label="任务编码" tooltip="稳定身份，留空自动生成；编辑时不可修改"
+              rules={[{ max: 64, message: '不能超过 64 个字符' }]}>
+              <Input disabled={isEdit} placeholder="留空自动生成" />
+            </Form.Item>
+          </div>
+          <Form.Item name="providerType" label="任务类型" className="!mb-2">
+            <Radio.Group optionType="button" buttonStyle="solid" disabled={isEdit}>
+              <Radio.Button value="HARVESTED">物理采集</Radio.Button>
+              <Radio.Button value="REGISTERED" disabled={!isEdit}>投影对账 · 尚未开放</Radio.Button>
+            </Radio.Group>
           </Form.Item>
-        )}
+          <div className="text-[12px] leading-5 text-[#8b98a9]">
+            物理采集读取源库的表与列。内部投影对账已有登记和失败补偿能力，但独立任务执行器尚未开放。
+          </div>
+        </section>
 
-        <Form.Item
-          name="cronExpression"
-          label="调度周期"
-          tooltip="点选周期与时分生成表达式，无需手写"
-          className="mt-2"
-        >
-          <CronSchedulerInput placeholder={DEFAULT_CRON} />
-        </Form.Item>
+        <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#edf3fa] text-[12px] font-semibold text-[#597fa8]">02</span>
+            <div>
+              <h3 className="m-0 text-[15px] font-semibold text-[#26364a]">{isHarvest ? '选择来源与采集范围' : '登记对象范围'}</h3>
+              <p className="mb-0 mt-0.5 text-[12px] text-[#8a98aa]">
+                {isHarvest ? '范围以保存后的任务配置为准，不会因为页面筛选自动改变。' : '此类任务目前只能维护已保存配置。'}
+              </p>
+            </div>
+          </div>
+          {isHarvest ? (
+            <>
+              {sourceLoadError ? (
+                <Alert className="!mb-4" type="warning" showIcon message="数据源清单读取失败"
+                  description="当前无法确认可选择的数据源，请检查服务或权限后重新打开表单。" />
+              ) : null}
+              <Form.Item
+                name="dataSourceId"
+                label="数据源"
+                rules={[{ required: true, message: '请选择要采集的数据源' }]}
+              >
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择当前项目的数据源"
+                  loading={loadingSources}
+                  options={dataSourceOptions}
+                  onChange={(value?: number) => onDataSourceChange(value)}
+                />
+              </Form.Item>
+              <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
+                <Form.Item name="databaseName" label="数据库">
+                  <Select
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    disabled={dataSourceId == null}
+                    loading={loadingDatabases}
+                    placeholder={dataSourceId == null ? '先选择数据源' : '全部库（留空）'}
+                    options={databases.map((name) => ({ value: name, label: name }))}
+                    onChange={(value?: string) => onDatabaseChange(value)}
+                  />
+                </Form.Item>
+                <Form.Item name="schemaName" label="Schema">
+                  <Select
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    disabled={dataSourceId == null}
+                    loading={loadingSchemas}
+                    placeholder={databaseName ? '默认 Schema（留空）' : '全部 Schema（留空）'}
+                    options={schemas.map((name) => ({ value: name, label: name }))}
+                  />
+                </Form.Item>
+              </div>
+              <Form.Item
+                name="tablePattern"
+                label="表名匹配规则"
+                tooltip="采用 SQL LIKE 语义：% 匹配任意字符，_ 匹配单字符；不是文件名通配符 *"
+                className="!mb-2"
+              >
+                <Input placeholder="例如：trade_%；留空表示范围内全部表" />
+              </Form.Item>
+              <div className="mb-4 text-[12px] leading-5 text-[#8b98a9]">
+                留空按所选库 / Schema 的实际范围采集。建议初次测试用明确的库与表范围，避免意外扫描其他业务库。
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-solid border-[#e9edf3] bg-[#fafbfd] px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-[#34445a]">同时采集字段结构</div>
+                  <div className="mt-1 text-[12px] leading-5 text-[#8a98aa]">默认开启，读取字段名、数据类型、可空性等元数据；关闭后只采集表级信息。</div>
+                </div>
+                <Form.Item name="collectColumns" valuePropName="checked" className="!mb-0">
+                  <Switch />
+                </Form.Item>
+              </div>
+            </>
+          ) : (
+            <>
+              <Alert type="warning" showIcon className="!mb-4" message="投影对账任务执行器尚未开放"
+                description="当前可查看和维护历史任务定义，但不能进行预演、手动运行或定时执行。" />
+              <Form.Item
+                name="typeName"
+                label="登记实体类型"
+                rules={[{ required: true, message: '请选择登记实体类型' }]}
+              >
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择内部实体类型"
+                  options={entityTypes.map((type) => ({
+                    value: type.typeName,
+                    label: type.displayName ? type.displayName + '（' + type.typeName + '）' : type.typeName,
+                  }))}
+                />
+              </Form.Item>
+            </>
+          )}
+        </section>
 
-        {isHarvest && (
-          <>
-            <div className="mb-2 mt-2 text-[13px] font-medium text-[#101828]">当前实际执行的缺席保护</div>
+        <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#edf3fa] text-[12px] font-semibold text-[#597fa8]">03</span>
+            <div>
+              <h3 className="m-0 text-[15px] font-semibold text-[#26364a]">执行安排</h3>
+              <p className="mb-0 mt-0.5 text-[12px] text-[#8a98aa]">保存配置 ≠ 执行采集 ≠ 启用周期调度。</p>
+            </div>
+          </div>
+          <Form.Item
+            name="cronExpression"
+            label="周期调度表达式"
+            tooltip="只有用户另行启用定时任务且调度器可用时才生效"
+            className="!mb-2"
+          >
+            <CronSchedulerInput placeholder={DEFAULT_CRON} />
+          </Form.Item>
+          <div className="text-[12px] leading-5 text-[#8a98aa]">
+            默认每天 03:00。保存后仍是停用状态；需要正式采集时可在列表手工运行。
+          </div>
+        </section>
+
+        {isHarvest ? (
+          <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#edf3fa] text-[12px] font-semibold text-[#597fa8]">04</span>
+              <div>
+                <h3 className="m-0 text-[15px] font-semibold text-[#26364a]">缺席安全保护</h3>
+                <p className="mb-0 mt-0.5 text-[12px] text-[#8a98aa]">保护策略由服务端管理，任务内不可更改。</p>
+              </div>
+            </div>
             <Alert
-              className="!mb-4"
               type={policyLoadError ? 'warning' : 'info'}
               showIcon
-              message={policyLoadError ? '无法读取当前保护策略' : effectivePolicy ? '全局保护策略（只读）' : '正在读取保护策略'}
-              description={effectivePolicy
-                ? `表缺席比例超过 ${effectivePolicy.collapseThresholdPct}%（至少 2 张缺席）时熔断为 SUSPECT；对象连续缺席 ${effectivePolicy.missingRounds} 轮有效采集才可标记 GONE。当前未支持任务级自定义，历史保存值不代表生效策略。`
-                : policyLoadError
-                  ? '无法确认服务器当前实际阈值；请核查配置后再执行采集，历史任务自定义值不会生效。'
-                  : '以服务端实际执行配置为准，不读取任务行历史策略字段。'}
+              message={policyLoadError ? '当前无法核验缺席保护参数' : effectivePolicy ? '已读取全局保护策略' : '正在读取保护策略'}
+              description={
+                effectivePolicy
+                  ? '表缺席比例超过 ' + effectivePolicy.collapseThresholdPct + '%（至少 2 张缺席）将熔断为 SUSPECT；连续 ' + effectivePolicy.missingRounds + ' 轮有效采集缺席后才可标 GONE。任务历史存储值不代表实际执行阈值。'
+                  : policyLoadError
+                    ? '无法确认实际阈值，请先核验服务器配置后再正式执行。'
+                    : '以服务端当前实际生效的策略为准。'
+              }
             />
-          </>
-        )}
+          </section>
+        ) : null}
       </Form>
     </Drawer>
   );
