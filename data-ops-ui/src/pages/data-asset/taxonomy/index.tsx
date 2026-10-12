@@ -1,3 +1,6 @@
+import { FolderTree, Tags, WandSparkles, ArrowRight } from 'lucide-react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { AssetPageHeader, AssetPanel, AssetWorkspace } from '../asset-ui';
 import {
   Button,
   Card,
@@ -209,8 +212,8 @@ const DirectoryTab = () => {
       <Tree.TreeNode
         key={node.id}
         title={
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate">
+          <div className="flex min-w-0 items-center justify-between gap-3 py-1">
+            <span className="min-w-0 truncate text-[13px] font-medium text-[#40516a]">
               {node.dirName}
               {node.builtin && <Tag className="!ml-1">内置</Tag>}
             </span>
@@ -246,7 +249,7 @@ const DirectoryTab = () => {
         </YakButton>
         <span className="text-[13px] text-[#667085]">目录编码自动生成，移动时会同步更新子目录的位置。</span>
       </div>
-      <Card size="small" loading={loading}>
+      <Card size="small" loading={loading} className="!rounded-xl !border-[#e6ebf1] [&_.ant-card-body]:!p-5">
         {tree.length === 0 ? (
           <YakEmpty compact title="暂无目录" description="点上方按钮按分层+业务域一键初始化" />
         ) : (
@@ -570,7 +573,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
       </div>
       <Table<RuleRecord>
         rowKey="id"
-        size="small"
+        size="middle"
         columns={columns}
         dataSource={rules}
         loading={loading}
@@ -688,7 +691,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
         destroyOnClose
       >
         <div className="mb-2 text-[13px]">
-          命中 <span className="text-[16px] font-semibold text-[#FE2C55]">{dryRun?.hitCount ?? 0}</span> 个资产
+          命中 <span className="text-[16px] font-semibold text-[#527cab]">{dryRun?.hitCount ?? 0}</span> 个资产
           （样例最多 50 条；确认无误后点「启用」）
         </div>
         <Table
@@ -844,7 +847,7 @@ const TagTab = () => {
       </div>
       <Table<AssetTagRecord>
         rowKey="id"
-        size="small"
+        size="middle"
         columns={columns}
         dataSource={tags}
         loading={loading}
@@ -894,15 +897,10 @@ const AssetTaxonomyPage = () => {
   }, [tab]);
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">目录与标签</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            组织资产目录、设置编目规则与业务标签。规则需试跑通过后才能启用。
-          </div>
-        </div>
-        <Segmented
+    <AssetWorkspace>
+      <AssetPageHeader title="目录与治理分类"
+        description="维护可浏览的资产目录、可验证的自动编目规则与人工业务标签。目录组织不等于资产上架。"
+        extra={<Segmented
           options={[
             { value: 'directory', label: '目录树' },
             { value: 'rules', label: '编目规则' },
@@ -910,15 +908,40 @@ const AssetTaxonomyPage = () => {
           ]}
           value={tab}
           onChange={(value) => setTab(value as typeof tab)}
-        />
+        />}
+      />
+      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[
+          { id: 'directory' as const, name: '目录结构', explanation: '分层、业务域与用户可浏览的业务分类', icon: <FolderTree size={18} /> },
+          { id: 'rules' as const, name: '自动编目规则', explanation: '先试跑验证命中范围，再启用自动应用', icon: <WandSparkles size={18} /> },
+          { id: 'tags' as const, name: '业务标签字典', explanation: '跨目录分类与治理标识，按需手动打标', icon: <Tags size={18} /> },
+        ].map((item) => (
+          <button type="button" key={item.id} onClick={() => setTab(item.id)}
+            className={'flex min-w-0 items-center gap-3 rounded-xl border border-solid p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6] ' +
+              (tab === item.id ? 'border-[#b4c8df] bg-[#edf4fb]' : 'border-[#e7ebf1] bg-white hover:border-[#c1d0e3]')}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#5a80a9]">{item.icon}</span>
+            <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold text-[#32455e]">{item.name}</span>
+              <span className="mt-1 block text-[11px] leading-5 text-[#8796aa]">{item.explanation}</span></span>
+            <ArrowRight size={14} className="shrink-0 text-[#92a5b9]" />
+          </button>
+        ))}
       </div>
-      <div className="mt-4">
+      <AssetPanel className="mt-5"
+        title={tab === 'directory' ? '资产目录树' : tab === 'rules' ? '编目规则列表' : '标签字典'}
+        description={tab === 'directory' ? '目录移动会影响子目录位置；内置目录与自定义目录需要区分。'
+          : tab === 'rules' ? '已启用规则会影响后续自动纳管的目录/标签归属，试跑只展示命中样例。'
+            : '标签是跨目录的业务标识，删除正在使用的标签会影响现有关联。'}>
         {tab === 'directory' && <DirectoryTab />}
         {tab === 'rules' && <RuleTab dirTree={dirTree} tags={tags} />}
         {tab === 'tags' && <TagTab />}
-      </div>
-    </div>
+      </AssetPanel>
+    </AssetWorkspace>
   );
 };
 
-export default AssetTaxonomyPage;
+/** A project/permission change must reset directory editors and cached tag/rule state. */
+export default function ScopedAssetTaxonomyPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetTaxonomyPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}
