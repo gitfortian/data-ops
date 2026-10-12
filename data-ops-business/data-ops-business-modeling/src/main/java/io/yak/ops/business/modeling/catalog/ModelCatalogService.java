@@ -336,7 +336,20 @@ public class ModelCatalogService {
               ? request.sourceDatasourceId()
               : existing.sourceDatasourceId();
       if (sourceId != null && StringUtils.hasText(request.sourceTable())) {
-        repository.assignSource(id, sourceId, request.sourceDatabase(), request.sourceTable(), operator);
+        // A legacy edit form has no Schema field. Preserve a proven named-schema
+        // identity only when every other source-key segment remains unchanged.
+        if (StringUtils.hasText(existing.sourceSchema())) {
+          if (!java.util.Objects.equals(sourceId, existing.sourceDatasourceId())
+              || !java.util.Objects.equals(request.sourceDatabase(), existing.sourceDatabase())
+              || !java.util.Objects.equals(request.sourceTable(), existing.sourceTable())) {
+            throw new ModelingException(ModelingErrorCode.INVALID_COLUMN,
+                "模型有精确 Schema 来源绑定；旧编辑表单不能跨来源改绑，请先核验来源");
+          }
+          repository.assignSource(id, sourceId, request.sourceDatabase(),
+              existing.sourceSchema(), request.sourceTable(), operator);
+        } else {
+          repository.assignSource(id, sourceId, request.sourceDatabase(), request.sourceTable(), operator);
+        }
       }
       AuditTransactions.completeOnCommit(
           audit,
