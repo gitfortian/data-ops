@@ -27,6 +27,7 @@ import CollectJobDrawer from './components/CollectJobDrawer';
 import RunHistoryDrawer from './components/RunHistoryDrawer';
 import RunResultModal from './components/RunResultModal';
 import { PROVIDER_COLORS, PROVIDER_LABELS, formatMetadataTime } from './constants';
+import { canEnableCollectSchedule, supportsCollectTaskExecution } from './collectTaskCapabilities';
 
 const MetadataCollectPage = () => {
   const { can } = usePermissionAccess();
@@ -152,7 +153,7 @@ const MetadataCollectPage = () => {
     job: CollectJobRecord,
     action: 'dry-run' | 'run',
   ) => {
-    if (job.providerType !== 'HARVESTED') {
+    if (!supportsCollectTaskExecution(job.providerType)) {
       message.warning('投影对账执行器尚未开放，不能预演或运行该任务');
       return;
     }
@@ -180,7 +181,7 @@ const MetadataCollectPage = () => {
   };
 
   const confirmRun = (job: CollectJobRecord) => {
-    if (job.providerType !== 'HARVESTED') return;
+    if (!supportsCollectTaskExecution(job.providerType)) return;
     Modal.confirm({
       title: '确认正式采集已保存的任务范围？',
       content: `任务「${job.jobName}」将采集数据源 #${job.dataSourceId ?? '-'} / ${job.databaseName || '全部库'} / ${job.schemaName || '默认 Schema'} / 表匹配 ${job.tablePattern || '全部表'}。这不是 dry-run，可能写入部分元数据；超时不能自动重发。`,
@@ -191,7 +192,7 @@ const MetadataCollectPage = () => {
   };
 
   const toggleEnabled = (job: CollectJobRecord) => {
-    if (job.providerType !== 'HARVESTED') {
+    if (!supportsCollectTaskExecution(job.providerType)) {
       message.warning('投影对账执行器尚未开放，不能启用周期调度');
       return;
     }
@@ -316,7 +317,7 @@ const MetadataCollectPage = () => {
       fixed: 'right' as const,
       render: (_, job) => {
         const busy = busyJob?.id === job.id;
-        const runnable = job.providerType === 'HARVESTED';
+        const runnable = supportsCollectTaskExecution(job.providerType);
         return (
           <div className="flex items-center justify-end gap-1">
             <Tooltip title={runnable ? '只预览本任务范围，不写入元数据' : '投影对账执行器尚未开放'}>
@@ -337,7 +338,7 @@ const MetadataCollectPage = () => {
                   { key: 'edit', label: '编辑任务配置', disabled: !canUpdate || busy },
                   { type: 'divider' },
                   { key: 'enabled', label: job.enabled ? '停用定时调度' : '启用定时调度',
-                    disabled: !canUpdate || busy || !runnable || (!job.enabled && !job.dryRunPassed) },
+                    disabled: !canUpdate || busy || (job.enabled ? !runnable : !canEnableCollectSchedule(job)) },
                   { key: 'delete', label: '删除任务', danger: true, disabled: !canDelete || busy },
                 ],
                 onClick: ({ key }) => {
@@ -504,7 +505,7 @@ const MetadataCollectPage = () => {
         onSaved={(saved) => {
           setDrawerOpen(false);
           void reload();
-          if (saved.providerType !== 'HARVESTED') {
+          if (!supportsCollectTaskExecution(saved.providerType)) {
             message.info('已保存配置；投影对账任务执行器尚未开放');
             return;
           }
