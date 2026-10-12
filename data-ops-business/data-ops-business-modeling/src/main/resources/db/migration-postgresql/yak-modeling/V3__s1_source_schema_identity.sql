@@ -4,3 +4,6 @@ ALTER TABLE yak_modeling_model
   ADD COLUMN source_schema VARCHAR(128);
 CREATE INDEX idx_yak_modeling_model_exact_source
   ON yak_modeling_model (project_id, source_datasource_id, source_database, source_schema, source_table);
+
+ALTER TABLE yak_modeling_column_mapping
+  ADD COLUMN source_schema VARCHAR(128);
