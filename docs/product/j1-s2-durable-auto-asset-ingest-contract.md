@@ -32,7 +32,7 @@ Status: **IMPLEMENTING / one concentrated Draft PR / NOT ACCEPTED**. Approved di
 | S2-T01 same-transaction outbox | IMPLEMENTED, CI pending | Data row + ticket rollback + no dry-run/REGISTERED test |
 | S2-T02 project-scoped single-table ingest, no GONE | IMPLEMENTED, CI pending | Provider exact project SQL + Asset no-global-sweep tests |
 | S2-T03 lease CAS, replay, retry, dead-letter | IMPLEMENTED, CI pending | Retry/lost ACK/multi-worker/project tests |
-| S2-T04 admin read receipt/retry + UI provenance | API IMPLEMENTED; UI PENDING | Tenant read+write RBAC, Asset lookup separation |
+| S2-T04 admin read receipt/retry + UI provenance | IMPLEMENTED, CI pending | Tenant read+write RBAC, Asset lookup separation |
 | S2-T05 full regression, migrations, release evidence | PENDING | Full CI, Product Guard, database integration and manual E2E |
 
 ### Release / final acceptance
