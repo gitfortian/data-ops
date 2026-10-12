@@ -1,6 +1,6 @@
 package io.yak.ops.business.metadata.dao.mapper;
 
-import io.yak.ops.business.metadata.autoingest.AutoIngestEvent;
+import io.yak.ops.business.metadata.dao.model.AutoIngestEvent;
 
 import java.time.LocalDateTime;
 import java.util.List;
