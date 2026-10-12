@@ -91,7 +91,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
     const raw = new URLSearchParams(window.location.search).get("datasourceId");
     if (raw === null) return null;
     const parsed = Number(raw);
-    return /^[1-9]\\d*$/.test(raw) && Number.isSafeInteger(parsed) ? parsed : "INVALID";
+    return /^[1-9]\d*$/.test(raw) && Number.isSafeInteger(parsed) ? parsed : "INVALID";
   }, []);
   const [sourceHintStatus, setSourceHintStatus] = useState<
     "NONE" | "VERIFYING" | "VALID" | "INVALID" | "UNAVAILABLE"
