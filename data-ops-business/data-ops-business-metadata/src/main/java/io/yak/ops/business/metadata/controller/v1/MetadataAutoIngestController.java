@@ -4,7 +4,7 @@ import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
 
 import io.yak.framework.common.Result;
 import io.yak.framework.security.web.RequiresPermission;
-import io.yak.ops.business.metadata.autoingest.AutoIngestEvent;
+import io.yak.ops.business.metadata.dao.model.AutoIngestEvent;
 import io.yak.ops.common.constant.asset.AssetPermissionCode;
 import io.yak.ops.common.constant.metadata.MetadataPermissionCode;
 import io.yak.ops.core.project.CurrentProject;
