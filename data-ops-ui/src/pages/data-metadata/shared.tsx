@@ -11,13 +11,14 @@ export const PageHeader = ({
   subtitle?: string;
   extra?: ReactNode;
 }) => (
-  <div className="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <div className="text-[20px] font-semibold leading-7">{title}</div>
-      {subtitle ? <div className="mt-1 text-[13px] text-[#667085]">{subtitle}</div> : null}
+  <header className="flex flex-wrap items-center justify-between gap-4 pb-1">
+    <div className="min-w-0">
+      <div className="mb-1 text-[11px] font-semibold tracking-[0.12em] text-[#8993a5]">元数据中心</div>
+      <h1 className="m-0 text-[24px] font-semibold leading-9 tracking-[-0.025em] text-[#202939]">{title}</h1>
+      {subtitle ? <p className="mb-0 mt-1 max-w-[760px] text-[13px] leading-5 text-[#677389]">{subtitle}</p> : null}
     </div>
-    {extra ? <div className="flex items-center gap-2">{extra}</div> : null}
-  </div>
+    {extra ? <div className="flex flex-wrap items-center gap-2">{extra}</div> : null}
+  </header>
 );
 
 /**

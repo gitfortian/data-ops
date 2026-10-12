@@ -1,13 +1,14 @@
 import Table from '@/components/ReadableTable';
-import { Alert, Button, Input, message, Modal, Select, Space, Tag, Tooltip } from 'antd';
-import { useSearchParams } from '@umijs/max';
+import { Alert, Button, Dropdown, Input, message, Modal, Segmented, Select, Tag, Tooltip } from 'antd';
+import { ArrowRightOutlined, MoreOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { history, useSearchParams } from '@umijs/max';
+import { readCollectionDefinitionHint } from '@/services/metadata/collectionHandoff';
 import type { ColumnsType } from 'antd/es/table';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 
 import { YakButton, YakEmpty } from '@/components/ui';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
-import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import { readCollectionDefinitionHint } from '@/services/metadata/collectionHandoff';
 import {
   changeCollectJobEnabled,
   deleteCollectJob,
@@ -29,18 +30,19 @@ import type { CollectJobInitialScope } from './components/CollectJobDrawer';
 import RunHistoryDrawer from './components/RunHistoryDrawer';
 import RunResultModal from './components/RunResultModal';
 import { PROVIDER_COLORS, PROVIDER_LABELS, formatMetadataTime } from './constants';
+import { canEnableCollectSchedule, supportsCollectTaskExecution } from './collectTaskCapabilities';
 
 const MetadataCollectPage = () => {
   const { can } = usePermissionAccess();
+  const { currentProject } = useSecurityProject();
+  const projectId = currentProject?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const definitionAction = searchParams.get('action');
   const definitionHint = useMemo(() => readCollectionDefinitionHint(searchParams), [searchParams]);
   const rawSourceHint = searchParams.get('dataSourceId');
   const parsedSourceHint = Number(rawSourceHint);
-  const sourceHintId =
-    rawSourceHint && /^[1-9]\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
-      ? parsedSourceHint
-      : undefined;
+  const sourceHintId = rawSourceHint && /^[1-9]\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
+    ? parsedSourceHint : undefined;
   const canCreate = can('data-metadata:create');
   const canUpdate = can('data-metadata:update');
   const canDelete = can('data-metadata:delete');
@@ -50,6 +52,7 @@ const MetadataCollectPage = () => {
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
+  const [searchText, setSearchText] = useState('');
   const [providerType, setProviderType] = useState<CollectProviderType | ''>('');
   const [enabledFilter, setEnabledFilter] = useState<'' | 'true' | 'false'>('');
   const [loading, setLoading] = useState(false);
@@ -66,6 +69,8 @@ const MetadataCollectPage = () => {
   const [sourceHint, setSourceHint] = useState<{ id: number; name: string } | null>(null);
   const [sourceHintError, setSourceHintError] = useState('');
   const [jobsLoadError, setJobsLoadError] = useState(false);
+  const jobsRequestSeq = useRef(0);
+  const sourceHintPending = rawSourceHint !== null && !sourceHint && !sourceHintError;
 
   useEffect(() => {
     if (definitionAction !== 'define') return;
@@ -136,6 +141,7 @@ const MetadataCollectPage = () => {
     let active = true;
     setSourceHint(null);
     setSourceHintError('');
+    setDataSourceNames({});
     listAllDataSources()
       .then((result) => {
         if (!active) return;
@@ -157,17 +163,17 @@ const MetadataCollectPage = () => {
         setDataSourceNames({});
         if (rawSourceHint !== null) setSourceHintError('无法核验来源所属项目；请稍后重试。');
       });
-    return () => {
-      active = false;
-    };
-  }, [rawSourceHint, sourceHintId]);
+    return () => { active = false; };
+  }, [rawSourceHint, sourceHintId, projectId]);
 
   const loadJobs = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
+      const ticket = ++jobsRequestSeq.current;
       // An unverified cross-domain URL must not silently become a global job list.
       if (rawSourceHint !== null && (!sourceHintId || sourceHint?.id !== sourceHintId)) {
         setRecords([]);
         setTotal(0);
+        setLoading(false);
         return;
       }
       setLoading(true);
@@ -183,21 +189,24 @@ const MetadataCollectPage = () => {
           ...(sourceHint ? { providerType: 'HARVESTED' as const } : {}),
         };
         const result = await pageCollectJobs(query);
+        if (ticket !== jobsRequestSeq.current) return;
         setRecords(result.records ?? []);
         setTotal(result.total ?? 0);
       } catch {
+        if (ticket !== jobsRequestSeq.current) return;
         setRecords([]);
         setTotal(0);
         setJobsLoadError(true);
       } finally {
-        setLoading(false);
+        if (ticket === jobsRequestSeq.current) setLoading(false);
       }
     },
-    [keyword, providerType, enabledFilter, rawSourceHint, sourceHintId, sourceHint],
+    [keyword, providerType, enabledFilter, rawSourceHint, sourceHintId, sourceHint, projectId],
   );
 
   useEffect(() => {
     void loadJobs(pageNo, pageSize);
+    return () => { jobsRequestSeq.current += 1; };
   }, [pageNo, pageSize, loadJobs]);
 
   const reload = () => loadJobs(pageNo, pageSize);
@@ -214,7 +223,14 @@ const MetadataCollectPage = () => {
     setDrawerOpen(true);
   };
 
-  const execute = async (job: CollectJobRecord, action: 'dry-run' | 'run') => {
+  const execute = async (
+    job: CollectJobRecord,
+    action: 'dry-run' | 'run',
+  ) => {
+    if (!supportsCollectTaskExecution(job.providerType)) {
+      message.warning('投影对账执行器尚未开放，不能预演或运行该任务');
+      return;
+    }
     setBusyJob({ id: job.id, action });
     try {
       const run = action === 'dry-run' ? await dryRunCollectJob(job.id) : await runCollectJob(job.id);
@@ -228,8 +244,7 @@ const MetadataCollectPage = () => {
       // associate any similarly-timed history row with this request.
       Modal.warning({
         title: '本次请求没有取得可信运行回执',
-        content:
-          '先核对这个已保存任务的运行历史及当前元数据目录。无法精确关联的历史记录不代表本次采集成功或失败；如再次执行，请先确认前次可能仍在运行。',
+        content: '先核对这个已保存任务的运行历史及当前元数据目录。无法精确关联的历史记录不代表本次采集成功或失败；如再次执行，请先确认前次可能仍在运行。',
         okText: '核对任务历史',
         onOk: () => setHistoryJob(job),
       });
@@ -240,6 +255,7 @@ const MetadataCollectPage = () => {
   };
 
   const confirmRun = (job: CollectJobRecord) => {
+    if (!supportsCollectTaskExecution(job.providerType)) return;
     Modal.confirm({
       title: '确认正式采集已保存的任务范围？',
       content: `任务「${job.jobName}」将采集数据源 #${job.dataSourceId ?? '-'} / ${job.databaseName || '全部库'} / ${job.schemaName || '默认 Schema'} / 表匹配 ${job.tablePattern || '全部表'}。这不是 dry-run，可能写入部分元数据；超时不能自动重发。`,
@@ -250,6 +266,10 @@ const MetadataCollectPage = () => {
   };
 
   const toggleEnabled = (job: CollectJobRecord) => {
+    if (!supportsCollectTaskExecution(job.providerType)) {
+      message.warning('投影对账执行器尚未开放，不能启用周期调度');
+      return;
+    }
     const next = !job.enabled;
     if (next && !job.dryRunPassed) {
       message.warning('启用前必须先通过一次 dry-run 预演');
@@ -310,107 +330,102 @@ const MetadataCollectPage = () => {
     {
       title: '任务',
       dataIndex: 'jobName',
-      width: 220,
-      ellipsis: true,
+      width: 235,
       render: (name: string, job) => (
-        <div>
-          <div className="truncate">{name}</div>
-          <div className="text-[12px] text-[#98a2b3]">{job.jobCode}</div>
+        <div className="min-w-0 py-1">
+          <div className="truncate text-[13px] font-semibold text-[#26364a]">{name}</div>
+          <div className="mt-1 truncate font-mono text-[11px] text-[#95a0b1]">{job.jobCode}</div>
         </div>
       ),
     },
     {
-      title: '通道',
-      dataIndex: 'providerType',
-      width: 100,
-      render: (value: CollectProviderType) => <Tag color={PROVIDER_COLORS[value]}>{PROVIDER_LABELS[value]}</Tag>,
-    },
-    {
-      title: '作用域',
+      title: '来源与采集范围',
       key: 'scope',
-      ellipsis: true,
-      render: (_, job) => scopeText(job),
-    },
-    {
-      title: '调度',
-      dataIndex: 'cronExpression',
-      width: 140,
-      render: (value?: string | null) => (
-        <Tooltip title="运行历史里可看每轮实际耗时">
-          <code className="font-mono text-[12px] text-[#344054]">{value || '-'}</code>
-        </Tooltip>
-      ),
-    },
-    {
-      title: '状态',
-      key: 'status',
-      width: 150,
+      width: 300,
       render: (_, job) => (
-        <Space size={4}>
-          <Tag color={job.enabled ? 'green' : 'default'}>{job.enabled ? '启用中' : '停用'}</Tag>
-          {!job.dryRunPassed &&
-            (job.enabled ? (
-              <Tag color="warning">启用中但未预演</Tag>
-            ) : (
-              <Tooltip title="dry-run 预演通过后才允许启用;改动作用域后需重新预演">
-                <Tag>未预演</Tag>
-              </Tooltip>
-            ))}
-        </Space>
+        <div className="min-w-0">
+          <div className="truncate text-[12px] text-[#47586e]">{scopeText(job)}</div>
+          <div className="mt-1">
+            <Tag color={PROVIDER_COLORS[job.providerType]}>{PROVIDER_LABELS[job.providerType]}</Tag>
+            {job.providerType === 'REGISTERED' ? <Tag color="warning">执行未开放</Tag> : null}
+          </div>
+        </div>
       ),
     },
     {
-      title: '更新时间',
-      dataIndex: 'updateTime',
+      title: '执行安排',
+      key: 'schedule',
       width: 160,
-      render: (value?: string) => formatMetadataTime(value),
+      render: (_, job) => (
+        <div>
+          <span className="text-[12px] text-[#53637a]">{job.providerType === 'REGISTERED' ? '执行器未开放' : job.enabled ? '定时调度已设启用' : '仅手工触发'}</span>
+          <div className="mt-1 truncate font-mono text-[11px] text-[#98a4b4]">{job.cronExpression || '无调度计划'}</div>
+        </div>
+      ),
+    },
+    {
+      title: '任务状态',
+      key: 'status',
+      width: 152,
+      render: (_, job) => (
+        <div className="space-y-1">
+          <div><Tag color={job.enabled && job.providerType === 'HARVESTED' ? 'success' : 'default'}>{job.providerType === 'REGISTERED' ? '历史任务配置' : job.enabled ? '已启用' : '停用中'}</Tag></div>
+          {!job.dryRunPassed ? (
+            <Tooltip title="没有当前配置有效的预演结论；预演失败或修改采集范围后均需重新确认">
+              <Tag color={job.enabled ? 'warning' : 'default'}>{job.enabled ? '需重新预演' : '尚未通过预演'}</Tag>
+            </Tooltip>
+          ) : <span className="text-[11px] text-[#448a67]">预演已通过</span>}
+        </div>
+      ),
+    },
+    {
+      title: '最近更新',
+      dataIndex: 'updateTime',
+      width: 155,
+      render: (value?: string) => <span className="text-[12px] text-[#8591a3]">{formatMetadataTime(value)}</span>,
     },
     {
       title: '操作',
       key: 'action',
-      width: 300,
+      width: 244,
       fixed: 'right' as const,
       render: (_, job) => {
         const busy = busyJob?.id === job.id;
+        const runnable = supportsCollectTaskExecution(job.providerType);
         return (
-          <Space size={0}>
-            <Button type="link" size="small" disabled={!canUpdate || busy} onClick={() => openEdit(job)}>
-              编辑
-            </Button>
-            <Button
-              type="link"
-              size="small"
-              disabled={!canCreate || busy}
-              loading={busy && busyJob?.action === 'dry-run'}
-              onClick={() => void execute(job, 'dry-run')}
+          <div className="flex items-center justify-end gap-1">
+            <Tooltip title={runnable ? '只预览本任务范围，不写入元数据' : '投影对账执行器尚未开放'}>
+              <Button size="small" disabled={!canCreate || busy || !runnable}
+                loading={busy && busyJob?.action === 'dry-run'}
+                onClick={() => void execute(job, 'dry-run')}>预演</Button>
+            </Tooltip>
+            <Tooltip title={runnable ? '执行已保存的任务范围' : '投影对账执行器尚未开放'}>
+              <Button type="primary" ghost size="small" disabled={!canCreate || busy || !runnable}
+                loading={busy && busyJob?.action === 'run'}
+                onClick={() => confirmRun(job)}>正式采集</Button>
+            </Tooltip>
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'history', label: '查看运行历史' },
+                  { key: 'edit', label: '编辑任务配置', disabled: !canUpdate || busy },
+                  { type: 'divider' },
+                  { key: 'enabled', label: job.enabled ? '停用定时调度' : '启用定时调度',
+                    disabled: !canUpdate || busy || (job.enabled ? !runnable : !canEnableCollectSchedule(job)) },
+                  { key: 'delete', label: '删除任务', danger: true, disabled: !canDelete || busy },
+                ],
+                onClick: ({ key }) => {
+                  if (key === 'history') setHistoryJob(job);
+                  if (key === 'edit') openEdit(job);
+                  if (key === 'enabled') toggleEnabled(job);
+                  if (key === 'delete') removeJob(job);
+                },
+              }}
             >
-              预演
-            </Button>
-            <Button
-              type="link"
-              size="small"
-              disabled={!canCreate || busy}
-              loading={busy && busyJob?.action === 'run'}
-              onClick={() => confirmRun(job)}
-            >
-              立即运行
-            </Button>
-            <Button type="link" size="small" onClick={() => setHistoryJob(job)}>
-              历史
-            </Button>
-            <Button
-              type="link"
-              size="small"
-              danger={job.enabled}
-              disabled={!canUpdate}
-              onClick={() => toggleEnabled(job)}
-            >
-              {job.enabled ? '停用' : '启用'}
-            </Button>
-            <Button type="link" size="small" danger disabled={!canDelete} onClick={() => removeJob(job)}>
-              删除
-            </Button>
-          </Space>
+              <Button size="small" aria-label={'更多任务操作：' + job.jobName} icon={<MoreOutlined />} />
+            </Dropdown>
+          </div>
         );
       },
     },
@@ -419,110 +434,124 @@ const MetadataCollectPage = () => {
   const hasFilter = Boolean(keyword || providerType || enabledFilter);
 
   return (
-    <div className="flex min-h-[calc(100dvh-64px)] flex-col bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
+    <main className="min-h-[calc(100dvh-64px)] bg-[#f7f8fb] px-6 pb-8 pt-6 max-md:px-4">
       <PageHeader
-        title="采集与对账"
-        subtitle="管理采集范围、执行计划与对账结果，跟踪技术目录的变化。"
+        title="采集任务"
+        subtitle="确认来源、保存采集范围，然后预演或手工采集；启用调度是独立操作。"
         extra={
-          canCreate ? (
-            <YakButton type="primary" className="!h-9 !rounded-lg !px-4 !text-white" onClick={openCreate}>
-              新建任务
-            </YakButton>
-          ) : null
+          <>
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void reload()}>刷新</Button>
+            <Button onClick={() => history.push('/metadata/explorer')}>元数据目录 <ArrowRightOutlined /></Button>
+            {canCreate ? (
+              <YakButton type="primary" className="!h-9 !rounded-lg !px-4 !text-white" onClick={openCreate}>
+                <PlusOutlined /> 新建采集任务
+              </YakButton>
+            ) : null}
+          </>
         }
       />
 
-      {sourceHint && (
-        <Alert
-          className="mt-4"
-          type="info"
-          showIcon
-          message={`已核验当前项目来源「${sourceHint.name}」 (#${sourceHint.id})`}
-          description="下方仅显示当前查询页返回的已保存任务；来源查询结果依赖服务端实际过滤，不可凭一页没有记录断言该来源不存在任务。请先核查后续页，再考虑新建。运行仍以已保存任务的范围为准。"
-        />
-      )}
-      {sourceHintError && <Alert className="mt-4" type="warning" showIcon message={sourceHintError} />}
-      {definitionError ? <Alert className="mt-4" type="warning" showIcon message={definitionError} /> : null}
-      {jobsLoadError && (
-        <Alert
-          className="mt-4"
-          type="error"
-          showIcon
-          message="采集任务读取失败，不能视为尚无任务"
-          action={
-            <Button size="small" onClick={() => void reload()}>
-              重试
-            </Button>
-          }
-        />
-      )}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Input.Search
-          allowClear
-          placeholder="按名称或编码搜索"
-          className="!w-[240px]"
-          onSearch={(value) => {
-            setKeyword(value.trim());
-            setPageNo(1);
-          }}
-        />
-        <Select
-          allowClear
-          placeholder="通道"
-          className="!w-[140px]"
-          value={providerType || undefined}
-          onChange={(value) => {
-            setProviderType((value ?? '') as CollectProviderType | '');
-            setPageNo(1);
-          }}
-          options={(Object.keys(PROVIDER_LABELS) as CollectProviderType[]).map((value) => ({
-            value,
-            label: PROVIDER_LABELS[value],
-          }))}
-        />
-        <Select
-          allowClear
-          placeholder="状态"
-          className="!w-[120px]"
-          value={enabledFilter || undefined}
-          onChange={(value) => {
-            setEnabledFilter((value ?? '') as '' | 'true' | 'false');
-            setPageNo(1);
-          }}
-          options={[
-            { value: 'true', label: '启用中' },
-            { value: 'false', label: '停用' },
-          ]}
-        />
+      <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        {[
+          { number: '01', title: '保存范围', detail: '选数据源和表，保存后不会自动执行' },
+          { number: '02', title: '预演核对', detail: '验证读取范围；不写目录数据' },
+          { number: '03', title: '正式采集', detail: '明确确认已保存范围，再查看运行回执' },
+        ].map((step) => (
+          <div key={step.number} className="flex items-start gap-3 rounded-xl border border-solid border-[#e6eaf0] bg-white px-4 py-3">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#edf3fa] text-[11px] font-semibold text-[#5680ae]">{step.number}</span>
+            <div className="min-w-0">
+              <div className="text-[13px] font-semibold text-[#2d3d51]">{step.title}</div>
+              <div className="mt-0.5 text-[12px] leading-5 text-[#8491a4]">{step.detail}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="mt-4 flex-1">
+      {sourceHint ? (
+        <Alert className="mt-4 rounded-xl" type="info" showIcon
+          message={'当前来源：' + sourceHint.name + '（#' + sourceHint.id + '）'}
+          description="已核验所属项目；列表在服务端按来源精确过滤。运行时始终使用任务已保存的范围，而非导航参数。" />
+      ) : null}
+      {sourceHintError ? <Alert className="mt-4 rounded-xl" type="warning" showIcon message={sourceHintError} /> : null}
+      {definitionError ? <Alert className="mt-4 rounded-xl" type="warning" showIcon message={definitionError} /> : null}
+      {jobsLoadError ? (
+        <Alert className="mt-4 rounded-xl" type="error" showIcon message="任务读取失败，不能视为没有任务"
+          action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
+      ) : null}
+
+      <section className="mt-5 overflow-hidden rounded-2xl border border-solid border-[#e6eaf0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+        <div className="border-0 border-b border-solid border-[#edf0f4] px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="m-0 text-[16px] font-semibold text-[#253145]">已保存任务</h2>
+              <div className="mt-1 text-[12px] text-[#8a97a8]">
+                {sourceHintPending ? '正在核验来源' : sourceHintError ? '来源不可用' : '当前筛选下共 ' + total + ' 个任务'} · 任务停用只关闭定时调度，不影响历史记录
+              </div>
+            </div>
+            {hasFilter ? (
+              <Button size="small" onClick={() => {
+                setKeyword(''); setSearchText(''); setProviderType(''); setEnabledFilter(''); setPageNo(1);
+              }}>清除筛选</Button>
+            ) : null}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {!sourceHint ? (
+              <Segmented
+                options={[
+                  { value: '', label: '全部任务' },
+                  { value: 'HARVESTED', label: '物理采集' },
+                  { value: 'REGISTERED', label: '投影对账' },
+                ]}
+                value={providerType}
+                onChange={(value) => { setProviderType(value as CollectProviderType | ''); setPageNo(1); }}
+              />
+            ) : null}
+            <Input.Search
+              allowClear
+              placeholder="搜索任务名称或编码"
+              className="!w-[230px] max-sm:!w-full"
+              value={searchText}
+              onChange={(event) => {
+                setSearchText(event.target.value);
+                if (!event.target.value) { setKeyword(''); setPageNo(1); }
+              }}
+              onSearch={(value) => { setKeyword(value.trim()); setPageNo(1); }}
+            />
+            <Select
+              allowClear
+              placeholder="调度状态"
+              className="!w-[132px]"
+              value={enabledFilter || undefined}
+              onChange={(value) => {
+                setEnabledFilter((value ?? '') as '' | 'true' | 'false');
+                setPageNo(1);
+              }}
+              options={[{ value: 'true', label: '已启用' }, { value: 'false', label: '停用中' }]}
+            />
+          </div>
+        </div>
         <Table<CollectJobRecord>
           rowKey="id"
+          size="middle"
           columns={columns}
           dataSource={records}
-          loading={loading}
-          scroll={{ x: 1240 }}
+          loading={loading || sourceHintPending}
+          scroll={{ x: 1250 }}
           locale={{
-            emptyText: jobsLoadError ? (
-              <YakEmpty compact title="任务查询未成功" description="请重试，勿重复创建任务" />
+            emptyText: sourceHintError ? (
+              <YakEmpty compact title="来源未通过核验" description="检查项目权限或来源身份；不能假定没有采集任务" />
+            ) : sourceHintPending ? (
+              <YakEmpty compact title="正在核验来源" description="来源身份经当前项目验证后才查询任务" />
+            ) : jobsLoadError ? (
+              <YakEmpty compact title="任务读取未成功" description="请重试，避免因为未知状态而重复创建任务" />
             ) : hasFilter ? (
-              <YakEmpty compact title="没有符合条件的任务" description="调整筛选条件或重置后再试" />
+              <YakEmpty compact title="当前筛选下没有任务" description="可清除筛选条件或调整关键字" />
             ) : (
-              <YakEmpty
-                compact
-                title={sourceHint ? '当前查询页未发现该来源任务' : '还没有采集任务'}
-                description={
-                  sourceHint
-                    ? '请先核对筛选条件及已保存任务的其他页；当前结果不能证明来源尚无任务，避免重复创建。'
-                    : '新建物理采集任务对数据源采表/列结构，或建立投影对账任务。'
-                }
+              <YakEmpty compact
+                title={sourceHint ? '此来源未找到已保存任务' : '还没有采集任务'}
+                description={sourceHint ? '核对当前项目与来源后，可为该来源新建物理采集任务' : '先从物理采集开始。投影对账执行器目前尚未开放。'}
               >
-                {canCreate && (
-                  <YakButton type="primary" className="!mt-3 !rounded-lg !text-white" onClick={openCreate}>
-                    新建任务
-                  </YakButton>
-                )}
+                {canCreate ? <Button type="primary" onClick={openCreate}>新建物理采集任务</Button> : null}
               </YakEmpty>
             ),
           }}
@@ -531,14 +560,17 @@ const MetadataCollectPage = () => {
             pageSize,
             total,
             showSizeChanger: true,
-            showTotal: (count) => `共 ${count} 条`,
+            showTotal: (count) => '共 ' + count + ' 条',
             onChange: (nextPageNo, nextPageSize) => {
               setPageNo(nextPageNo);
               setPageSize(nextPageSize);
             },
           }}
         />
-      </div>
+        <div className="border-0 border-t border-solid border-[#edf0f4] px-5 py-3 text-[12px] leading-5 text-[#8a97a8]">
+          预演不产生目录实体；正式采集可能部分成功。投影对账的写时登记与失败重试已存在，但独立任务执行器尚未开放。
+        </div>
+      </section>
 
       <CollectJobDrawer
         open={drawerOpen}
@@ -549,6 +581,10 @@ const MetadataCollectPage = () => {
         onSaved={(saved) => {
           setDrawerOpen(false);
           void reload();
+          if (!supportsCollectTaskExecution(saved.providerType)) {
+            message.info('已保存配置；投影对账任务执行器尚未开放');
+            return;
+          }
           if (!canCreate) return;
           Modal.confirm({
             title: '采集任务已保存，下一步预演范围',
@@ -564,13 +600,13 @@ const MetadataCollectPage = () => {
         job={historyJob ?? null}
         onClose={() => setHistoryJob(undefined)}
       />
-      <RunResultModal run={runResult?.run ?? null} title={runResult?.title ?? ''} onClose={() => setRunResult(null)} />
-    </div>
+      <RunResultModal
+        run={runResult?.run ?? null}
+        title={runResult?.title ?? ''}
+        onClose={() => setRunResult(null)}
+      />
+    </main>
   );
 };
 
-export default function ScopedMetadataCollectPage() {
-  const { currentProject } = useSecurityProject();
-  const { permissionCodes } = usePermissionAccess();
-  return <MetadataCollectPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
-}
+export default MetadataCollectPage;
