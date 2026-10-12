@@ -16,6 +16,7 @@ import {
 import { history, useModel, useParams, useSearchParams } from '@umijs/max';
 import { listDataServiceConsumers, type DataServiceConsumer } from '@/services/data-service/consumer';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import {
   Alert,
   Button,
@@ -99,7 +100,7 @@ const factText = (facts: Record<string, unknown>) => {
   return entries.map(([key, value]) => `${key}=${String(value)}`).join(' · ');
 };
 
-export default function ConsumptionDetailPage() {
+function ConsumptionDetailPage() {
   const params = useParams<{ productKey: string }>();
   const [searchParams] = useSearchParams();
   const { initialState } = useModel('@@initialState');
@@ -115,6 +116,13 @@ export default function ConsumptionDetailPage() {
   const [state, setState] = useState<ProductLookupState>('UNAVAILABLE');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(true);
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const activePage = useRef(true);
+  const subscriptionPending = useRef(false);
+  useEffect(() => {
+    activePage.current = true;
+    return () => { activePage.current = false; };
+  }, []);
   const [impact, setImpact] = useState<ConsumerImpact | null>(null);
   const [impactIssue, setImpactIssue] = useState('');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -129,6 +137,7 @@ export default function ConsumptionDetailPage() {
   const [sourceConsumerState, setSourceConsumerState] = useState<ManagedConsumerSourceState>('LOADING');
 
   const reloadRelationships = useCallback(async () => {
+    if (!activePage.current) return;
     const requestId = ++relationshipRequestId.current;
     setRelationshipLoading(true);
     setImpact(null);
@@ -156,6 +165,9 @@ export default function ConsumptionDetailPage() {
     let active = true;
     const sourceRequestId = ++sourceConsumerRequestId.current;
     setLoading(true);
+    setProduct(null);
+    setNavigation(null);
+    setGovernanceEvidence([]);
     setImpact(null);
     setImpactIssue('');
     setSubscriptions([]);
@@ -211,7 +223,7 @@ export default function ConsumptionDetailPage() {
       relationshipRequestId.current += 1;
       sourceConsumerRequestId.current += 1;
     };
-  }, [productKey, reloadRelationships, mayReadManagedConsumers]);
+  }, [productKey, reloadRelationships, mayReadManagedConsumers, reloadVersion]);
 
   const columns = useMemo<DatasetColumn[]>(() => {
     if (!product || product.productKey.productType !== 'DATASET') return [];
@@ -305,8 +317,15 @@ export default function ConsumptionDetailPage() {
 
   if (loading) return <div style={{ padding: 48 }}><Text>加载中...</Text></div>;
   if (state !== 'FOUND' || !product) return <div style={{ padding: 24 }}>
+    <Space wrap>
+      <Button onClick={() => history.push(
+        returnAssetId && /^\d+$/.test(returnAssetId)
+          ? `/data-asset/detail/${returnAssetId}` : '/data-analysis/consumption',
+      )}>{returnAssetId && /^\d+$/.test(returnAssetId) ? '返回资产详情' : '返回数据消费'}</Button>
     {returnMetricId && /^[1-9]\d*$/.test(returnMetricId) && Number.isSafeInteger(Number(returnMetricId)) &&
       <Button onClick={() => history.push(`/metric/manage/${returnMetricId}`)}>返回指标定义与发布证据</Button>}
+      <Button onClick={() => setReloadVersion(value => value + 1)}>重新读取数据产品</Button>
+    </Space>
     {lookupResult(state, reason)}
   </div>;
 
@@ -328,7 +347,7 @@ export default function ConsumptionDetailPage() {
   );
 
   const refreshManagedConsumers = async () => {
-    if (product.productKey.productType !== 'DATA_SERVICE' || !mayReadManagedConsumers) return;
+    if (!activePage.current || product.productKey.productType !== 'DATA_SERVICE' || !mayReadManagedConsumers) return;
     const requestId = ++sourceConsumerRequestId.current;
     setSourceConsumerState('LOADING');
     setConsumerListIssue('');
@@ -349,7 +368,7 @@ export default function ConsumptionDetailPage() {
     }
   };
   const changeSubscription = async (action: SubscriptionAction | 'REVOKE') => {
-    if (action === 'NONE') return;
+    if (!activePage.current || subscriptionPending.current || !canManageSubscription || action === 'NONE') return;
     if (action === 'SUBSCRIBE' && product.productKey.productType === 'DATA_SERVICE'
         && sourceConsumerState !== 'READY') {
       message.error('当前调用方来源尚未核对成功，请先重新核对配置');
@@ -375,6 +394,7 @@ export default function ConsumptionDetailPage() {
       message.error('当前依赖状态尚未确认，请刷新后重试');
       return;
     }
+    subscriptionPending.current = true;
     setSubscriptionSaving(true);
     try {
       let changed: Subscription;
@@ -392,6 +412,7 @@ export default function ConsumptionDetailPage() {
           changed = await cancelSubscription(ownSubscription!.id);
           break;
       }
+      if (!activePage.current) return;
       setSubscriptions((current) => {
         const rest = current.filter((item) => item.id !== changed.id);
         return [changed, ...rest];
@@ -405,9 +426,10 @@ export default function ConsumptionDetailPage() {
       // rather than synthesizing a Consumer from the mutation response.
       await reloadRelationships();
     } catch (cause) {
-      message.error(cause instanceof Error ? cause.message : '更新消费依赖失败');
+      if (activePage.current) message.error(cause instanceof Error ? cause.message : '更新消费依赖失败');
     } finally {
-      setSubscriptionSaving(false);
+      subscriptionPending.current = false;
+      if (activePage.current) setSubscriptionSaving(false);
     }
   };
 
@@ -415,6 +437,8 @@ export default function ConsumptionDetailPage() {
     <div className="bg-white p-6 max-md:p-4">
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <Space wrap>
+          <Button disabled={subscriptionSaving}
+            onClick={() => setReloadVersion(value => value + 1)}>刷新契约与访问状态</Button>
           <Button
             onClick={() => history.push(
               returnAssetId && /^\d+$/.test(returnAssetId)
@@ -733,4 +757,16 @@ export default function ConsumptionDetailPage() {
       </Space>
     </div>
   );
+}
+
+export default function ConsumptionDetailScope() {
+  const { currentProject } = useSecurityProject();
+  const { productKey } = useParams<{ productKey: string }>();
+  const { can, permissionCodes } = usePermissionAccess();
+  const { initialState } = useModel('@@initialState');
+  if (!currentProject) return <Alert type="info" showIcon message="请选择项目空间" />;
+  if (!can('data-asset:read')) return <Alert type="info" showIcon message="暂无数据产品发现权限" />;
+  return <ConsumptionDetailPage key={JSON.stringify([
+    currentProject.id, productKey, initialState?.currentUser?.userName, permissionCodes,
+  ])} />;
 }
