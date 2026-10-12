@@ -350,6 +350,13 @@ public class ModelRepositoryAdapter implements ModelRepository {
   public boolean assignSource(
       Long modelId, Long sourceDatasourceId, String sourceDatabase, String sourceTable,
       String operator) {
+    return assignSource(modelId, sourceDatasourceId, sourceDatabase, null, sourceTable, operator);
+  }
+
+  @Override
+  public boolean assignSource(
+      Long modelId, Long sourceDatasourceId, String sourceDatabase, String sourceSchema,
+      String sourceTable, String operator) {
     if (sourceDatasourceId == null || !StringUtils.hasText(sourceTable)) {
       return false;
     }
@@ -358,6 +365,7 @@ public class ModelRepositoryAdapter implements ModelRepository {
     po.setSourceDatasourceId(sourceDatasourceId);
     po.setSourceDatabase(StringUtils.hasText(sourceDatabase) ? sourceDatabase.trim() : null);
     po.setSourceTable(sourceTable.trim());
+    po.setSourceSchema(StringUtils.hasText(sourceSchema) ? sourceSchema.trim() : null);
     po.setUpdatedBy(operator);
     po.setUpdateTime(LocalDateTime.now());
     return mapper.update(
@@ -461,7 +469,8 @@ public class ModelRepositoryAdapter implements ModelRepository {
         po.getPublishedVersionId(),
         po.getLatestVersionNo() == null ? 0 : po.getLatestVersionNo(),
         po.getDomainId(),
-        po.getUpdatedBy());
+        po.getUpdatedBy(),
+        po.getSourceSchema());
   }
 
   private static Long storedToDomainDirectoryId(Long directoryId) {
