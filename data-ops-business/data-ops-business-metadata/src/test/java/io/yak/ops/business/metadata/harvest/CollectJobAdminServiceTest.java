@@ -70,9 +70,11 @@ class CollectJobAdminServiceTest {
     service.page(1, 20, "HARVESTED", null, null, 7L, "trade_db", "public");
     ArgumentCaptor<LambdaQueryWrapper> capture = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
     verify(jobMapper).selectPage(any(), capture.capture());
+    // MyBatis builds SQL and parameter bindings lazily. Evaluate SQL before inspecting bound values.
+    String sql = capture.getValue().getSqlSegment();
+    assertThat(sql).contains("data_source_id", "database_name", "schema_name");
     var values = capture.getValue().getParamNameValuePairs().values();
     assertThat(values).contains(PROJECT_ID, 7L, "trade_db", "public", "HARVESTED");
-    assertThat(capture.getValue().getSqlSegment()).contains("data_source_id", "database_name", "schema_name");
   }
 
   @Test
