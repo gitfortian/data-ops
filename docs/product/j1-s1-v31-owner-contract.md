@@ -2,6 +2,30 @@
 
 Status: **IN_PROGRESS / one S1 draft PR**. Design: [#539](https://github.com/gitfortian/data-ops/issues/539) UX-GATE-A/B APPROVED (2026-10-12). Engineering: [#538](https://github.com/gitfortian/data-ops/issues/538). **UX-D6=B: no Home modifications.**
 
+## S1 cross-owner implementation verification ledger (2026-10-12, pending final CI)
+
+> This section supersedes the earlier *pre-implementation gap list* below. It does **not** claim runtime deployment E2E or S1-GATE approval. All changes remain in one Draft PR #540.
+
+| S1 task | Implemented engineering contract (review with actual PR diff) | Still requires gate evidence |
+|---|---|---|
+| T00/T01 | Existing UX #539 frozen. DataSource source-ID links; project-scoped DataSource listing validates hints; Catalog entityId deep links check source/database on return and ignore stale project responses | Latest Architecture/Guard + negative tests |
+| T02 | Metadata `JobQueryDTO` and `CollectJobAdminService.page` filter exact `dataSourceId/databaseName/schemaName` **inside Project ID** (existing query overload retained). UI prioritizes saved-job reuse; editing dirty leave protection and active-schedule impact confirmation | Actual API contract tests and UI |
+| T03 | Run frozen `scopeSnapshot` and counts remain separate from current table catalog. Timeout does **not** prove a run ID or completion: consult persisted Job/Run history and do not auto-resubmit | Cross-role/manual unknown recovery E2E deferred |
+| T04 | Existing AssetExplorer and Metadata entity owner remain sole physical-detail UI. Table → exact ODS main action, plus independent optional Asset manual governance / Semantic process inspection. Entity-return link verified to source | Table/column, RBAC and project-change regression |
+| T05 | Asset project-wide Provider reconcile remains explicit/manual, only "accepted but unverified" from submission; lastRun status is historical with unknown/failed cases, Source Lookup remains separately queried | Server receipt correlation **not available** in S1: downgrade is intentional, not a success claim |
+| T06 | Modeling source key: active Project + datasourceId + database + schema + table, with live exact DataSource table existence check; 0/1/N candidates, legacy schema ambiguity `UNVERIFIED`, not code/name matching. MySQL/PostgreSQL V3 persist source schema on model **and source column mapping**, including database lookup index | No automatic claim that missing legacy source schema uniquely identifies an existing model |
+| T07 | S1 ODS UI validates Metadata entity/source, previews schema-aware live columns, manually maps and saves resumable ODS Draft ID, then atomic optimistic structure/mapping/source save. Live source columns are compared against preview fields/types/width/nullability/PK at commit. Reopen model ID retains source schema, return source catalog after save; dirty navigation prompts; late project write responses do not claim success | Browser refresh/Project/RBAC/full integration tests plus manual dataset |
+| T08 | Added backend unit tests for 0/1/N, DB/schema collisions, ambiguous legacy, absent physical source, live drift; UI Jest for saved ODS reuse, ambiguous source, denied project source; Metadata exact paginated query test. | **Only actual CI successes and independent manual E2E can close this line** |
+
+### Outstanding evidence / bounded limitations
+
+- **Real MySQL `trade_db.trade_order` and `trade_order_detail` run → Modeling save/reopen** requires an integrated deployed environment, tracked as `DEFERRED_MANUAL_TEST`, not simulated PASS.
+- No correlated Asset asynchronous reconcile receipt ID in current Owner service. S1 intentionally reports ACCEPTED/UNKNOWN and historical Provider evidence, never per-click SUCCESS.
+- Database has an exact-source lookup index, **not a uniqueness constraint**; 0/1/N candidate UI supports historical duplicates. Transactional save rechecks existing candidates but does not claim a cross-transaction distributed uniqueness guarantee.
+- Old ODS with non-null source ID/database/table but missing schema may require manual provenance repair. S1 fails closed when a named schema cannot be proven.
+- S1 creates/updates **draft models only** and never auto-executes SQL, publishes, auto-reconciles Asset, or requires Asset UPDATE permission for Modeling.
+- S1-GATE must remain unchecked until latest final PR HEAD has all required checks complete and a reviewer accepts the evidence.
+
 ## Frozen user journey
 
 1. DataSource: connection saved, connection test and physical Metadata harvest are separate facts.
