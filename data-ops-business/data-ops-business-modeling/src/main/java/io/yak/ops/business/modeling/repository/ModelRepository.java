@@ -75,6 +75,15 @@ public interface ModelRepository {
       Long modelId, Long sourceDatasourceId, String sourceDatabase, String sourceTable,
       String operator);
 
+  /** S1: full source key on a project-scoped record. */
+  default boolean assignSource(Long modelId, Long sourceDatasourceId,
+      String sourceDatabase, String sourceSchema, String sourceTable, String operator) {
+    if (sourceSchema != null && !sourceSchema.isBlank()) {
+      throw new IllegalStateException("Repository cannot persist a schema-bound source");
+    }
+    return assignSource(modelId, sourceDatasourceId, sourceDatabase, sourceTable, operator);
+  }
+
   /** 血缘追溯:写入字段导入方式和来源模型。 */
   boolean assignImportLineage(Long modelId, String importMode, Long sourceModelId, String operator);
 
