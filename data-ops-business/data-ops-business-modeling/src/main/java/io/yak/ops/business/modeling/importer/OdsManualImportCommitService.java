@@ -102,13 +102,13 @@ public class OdsManualImportCommitService {
 
     // Recheck the physical owner AT COMMIT, not only when the browser navigated here.
     // A broad keyword match must never authorize a different database or schema.
-    List<CatalogTable> physical = catalog.listTables(request.sourceDatasourceId(),
+    List<CatalogTable> sourceTableMatches = catalog.listTables(request.sourceDatasourceId(),
         request.sourceDatabase(), request.sourceSchema(), request.sourceTable()).stream()
         .filter(t -> Objects.equals(clean(t.database()), clean(request.sourceDatabase()))
             && Objects.equals(clean(t.schema()), clean(request.sourceSchema()))
             && Objects.equals(clean(t.name()), clean(request.sourceTable())))
         .toList();
-    if (physical.size() != 1) {
+    if (sourceTableMatches.size() != 1) {
       throw reject("来源表不可唯一核验；请返回来源目录重新确认");
     }
     boolean sourceClash = models.listBySource(request.sourceDatasourceId(), request.sourceTable())
