@@ -350,6 +350,9 @@ const AssetCatalogPage = () => {
   ];
 
   const hasSelection = selectedIds.length > 0;
+  const publishableSelected = selectedRows.filter((row) => PUBLISHABLE.includes(row.status));
+  const publishedSelected = selectedRows.filter((row) => row.status === 'PUBLISHED');
+  const ignorableSelected = selectedRows.filter((row) => IGNORABLE.includes(row.status));
 
   return (
     <AssetWorkspace>
@@ -521,19 +524,19 @@ const AssetCatalogPage = () => {
         {canUpdate && hasSelection && (
           <div className="flex flex-wrap items-center gap-2 border-0 border-b border-solid border-[#dbe5f2] bg-[#f0f5fc] px-5 py-3">
             <span className="text-[13px]">已选 {selectedIds.length} 项</span>
-            <YakButton size="small" onClick={() => openWizard(selectedRows)}>
-              批量上架
+            <YakButton size="small" disabled={publishableSelected.length === 0} onClick={() => openWizard(publishableSelected)}>
+              批量上架（{publishableSelected.length}）
             </YakButton>
-            <YakButton size="small" onClick={() => setOfflineTarget(selectedRows.filter((row) => row.status === 'PUBLISHED'))}>
-              批量下架
+            <YakButton size="small" disabled={publishedSelected.length === 0} onClick={() => setOfflineTarget(publishedSelected)}>
+              批量下架（{publishedSelected.length}）
             </YakButton>
             <YakButton size="small" onClick={runBatchMove}>
               移目录
             </YakButton>
-            <YakButton size="small" onClick={() => runIgnore(selectedRows.filter((row) => IGNORABLE.includes(row.status)))}>
-              忽略
+            <YakButton size="small" disabled={ignorableSelected.length === 0} onClick={() => runIgnore(ignorableSelected)}>
+              忽略（{ignorableSelected.length}）
             </YakButton>
-            <span className="ml-auto text-[12px] text-[#98a2b3]">仅本页可选，单次批量上限 200</span>
+            <span className="ml-auto text-[12px] text-[#7e90a6]">仅操作状态允许的选中资产 · 本页选择，单次最多 200</span>
           </div>
         )}
 
