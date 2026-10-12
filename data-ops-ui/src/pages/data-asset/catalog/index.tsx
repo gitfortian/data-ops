@@ -15,6 +15,7 @@ import {
   Tooltip,
   Tree,
 } from 'antd';
+import { AssetWorkspaceHeading, ASSET_SURFACE } from '../components/AssetWorkspace';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -350,17 +351,13 @@ const AssetCatalogPage = () => {
   const hasSelection = selectedIds.length > 0;
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">资产目录</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            {view === '台账资产'
-              ? '查找数据对象，了解负责人、来源与治理状态。'
-              : '检索已登记的技术实体，查看结构、属性与采集证据。'}
-          </div>
-        </div>
-        <Space size={12} wrap>
+    <main className={ASSET_SURFACE}>
+      <AssetWorkspaceHeading
+        title="资产目录"
+        description={view === '台账资产'
+          ? '查找已纳管的数据资产，查看来源、负责人和治理状态。'
+          : '浏览技术元数据实体，核对真实表结构与采集证据。'}
+        actions={<Space size={12} wrap>
           {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
             <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>
               返回资产详情
@@ -376,8 +373,8 @@ const AssetCatalogPage = () => {
               手工登记
             </YakButton>
           )}
-        </Space>
-      </div>
+        </Space>}
+      />
 
       {view === '元数据实体' ? (
         <div className="mt-4">
@@ -628,7 +625,7 @@ const AssetCatalogPage = () => {
           refresh();
         }}
       />
-    </div>
+    </main>
   );
 };
 
