@@ -1,4 +1,5 @@
 import { Alert, Button, Card, Space, Tag, Tooltip } from 'antd';
+import { AssetWorkspaceHeading, ASSET_SURFACE } from '../components/AssetWorkspace';
 import { useCallback, useEffect, useState } from 'react';
 import { history } from '@umijs/max';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -66,7 +67,7 @@ const DistributionCard = ({
     return '#FE2C55';
   };
   return (
-    <Card title={title} size="small" className="!mb-4">
+    <Card title={title} size="small" className="!mb-0 !rounded-xl !border-[#e8ecf2] !shadow-none">
       {rows.length === 0 ? (
         <YakEmpty compact title="暂无数据" description="对账产出资产后自动聚合" />
       ) : (
@@ -144,23 +145,14 @@ const AssetOverviewPage = () => {
   }, [load]);
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">资产概览</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            了解资产覆盖、治理待办与最近变化。{data?.generatedAt ? ` 更新于 ${formatAssetTime(data.generatedAt)}` : ''}
-          </div>
-        </div>
-        <Space>
-          <YakButton onClick={load} loading={loading}>
-            刷新
-          </YakButton>
-          <YakButton type="primary" className="!text-white" onClick={() => history.push('/data-asset/catalog')}>
-            进入资产目录
-          </YakButton>
-        </Space>
-      </div>
+    <main className={ASSET_SURFACE}>
+      <AssetWorkspaceHeading title="资产概览"
+        description={<>查看资产台账、待处理治理事项与发布状态。{data?.generatedAt ? ` 数据更新于 ${formatAssetTime(data.generatedAt)}` : ''}</>}
+        actions={<Space wrap>
+          <YakButton onClick={load} loading={loading}>刷新</YakButton>
+          <YakButton type="primary" className="!text-white" onClick={() => history.push('/data-asset/catalog')}>进入资产目录</YakButton>
+        </Space>}
+      />
 
       {loadError && (
         <Alert className="!mt-4" type={loadError === 'FORBIDDEN' ? 'warning' : 'error'} showIcon
@@ -170,12 +162,12 @@ const AssetOverviewPage = () => {
       )}
       {data ? (
         <>
-      <div className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {KPI_CARDS.map((item) => {
           const raw = data ? Number(data.kpis[item.key] ?? 0) : 0;
           const display = item.percent ? `${Math.round(raw * 1000) / 10}%` : raw;
           return (
-            <Card key={item.key} size="small" loading={loading}>
+            <Card key={item.key} size="small" loading={loading} className="!rounded-2xl !border-[#e6eaf0] !shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
               <Tooltip title={item.hint}>
                 <div className="text-[12px] text-[#667085]">{item.label}</div>
               </Tooltip>
@@ -187,7 +179,7 @@ const AssetOverviewPage = () => {
         })}
       </div>
 
-      <Card title="治理待办" size="small" className="!my-4" loading={loading}>
+      <Card title="优先处理 · 治理工作台" size="small" className="!my-5 !rounded-2xl !border-[#e6eaf0]" loading={loading}>
         <Space size={8} wrap>
           {TODO_ITEMS.map((item) => {
             const count = data ? Number(data.todos[item.key] ?? 0) : 0;
@@ -206,7 +198,7 @@ const AssetOverviewPage = () => {
         </Space>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div>
           <DistributionCard title="按状态分布" group="status" rows={data?.distributions.status ?? []} />
           <DistributionCard title="按健康度分布" group="grade" rows={data?.distributions.grade ?? []} />
@@ -217,7 +209,7 @@ const AssetOverviewPage = () => {
         </div>
       </div>
 
-      <div className="mt-0 grid grid-cols-2 gap-4 max-md:grid-cols-1">
+      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
         <RecentList title="最近上架" rows={data.recentListed} />
         <RecentList title="最近下架" rows={data.recentOffline} />
       </div>
@@ -225,7 +217,7 @@ const AssetOverviewPage = () => {
       ) : loading ? (
         <Card className="!mt-4" loading />
       ) : null}
-    </div>
+    </main>
   );
 };
 
