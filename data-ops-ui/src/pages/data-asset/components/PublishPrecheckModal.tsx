@@ -193,8 +193,9 @@ const PublishPrecheckModal = ({
       ),
     },
     {
-      title: '补齐(能选择就不填)',
+      title: '需要补齐的资料',
       key: 'repair',
+      width: 280,
       render: (_, record) => {
         if (record.gaps.length === 0) return <span className="text-[#98a2b3]">无需补齐</span>;
         const repair = repairs[record.assetId] ?? {};
@@ -235,15 +236,18 @@ const PublishPrecheckModal = ({
   return (
     <Modal
       open={open}
-      title="上架预检"
-      width={920}
+      title={<div>
+        <div className="text-[18px] font-semibold text-[#26364a]">资产上架 · 发布前检查</div>
+        <div className="mt-1 text-[12px] font-normal text-[#8593a7]">本次共 {assets.length} 项 · 修改缺口后需重新预检，未授权的风险上架不会自动执行</div>
+      </div>}
+      width={980}
       onCancel={onClose}
       destroyOnClose
       footer={
-        <Space>
+        <Space wrap className="!justify-end">
           <Button onClick={onClose}>取消</Button>
-          <Button loading={applying} disabled={loading || !precheck} onClick={applyRepairsAndRecheck}>
-            应用补齐并重检
+          <Button loading={applying} disabled={loading || !precheck || publishing} onClick={applyRepairsAndRecheck}>
+            保存补齐并重新预检
           </Button>
           <Button
             type="primary"
@@ -258,9 +262,14 @@ const PublishPrecheckModal = ({
         </Space>
       }
     >
+      <div className="mb-4 mt-2 grid grid-cols-1 gap-2 text-[12px] text-[#73839a] sm:grid-cols-3">
+        <div className="rounded-xl border border-solid border-[#e9edf3] bg-[#f8fafc] px-3 py-3"><strong className="mr-2 text-[#536f92]">01</strong>核对上架缺口</div>
+        <div className="rounded-xl border border-solid border-[#e9edf3] bg-[#f8fafc] px-3 py-3"><strong className="mr-2 text-[#536f92]">02</strong>补齐后重新预检</div>
+        <div className="rounded-xl border border-solid border-[#e9edf3] bg-[#f8fafc] px-3 py-3"><strong className="mr-2 text-[#536f92]">03</strong>明确确认上架</div>
+      </div>
       {precheck && !precheck.allClear && (
         <Alert
-          className="!mb-3"
+          className="!mb-4 !rounded-xl"
           type="warning"
           showIcon
           message={`有 ${gapCount} 个资产存在阻断缺口`}
@@ -285,18 +294,18 @@ const PublishPrecheckModal = ({
       {precheck?.allClear && (
         <Alert className="!mb-3" type="success" showIcon message="全部资产预检通过，可直接上架" />
       )}
-      <div className="mb-2 text-[12px] text-[#667085]">
+      <div className="mb-3 text-[12px] leading-5 text-[#718197]">
         预检令牌 {precheck ? `${Math.round(precheck.expiresIn / 60)} 分钟` : '-'}
         内有效；过期后点"应用补齐并重检"重新获取。
       </div>
       <Table
         rowKey="assetId"
-        size="small"
+        size="middle"
         loading={loading}
         columns={columns}
         dataSource={precheck?.items ?? []}
         pagination={false}
-        scroll={{ y: 380 }}
+        scroll={{ x: 900, y: 380 }}
       />
     </Modal>
   );
