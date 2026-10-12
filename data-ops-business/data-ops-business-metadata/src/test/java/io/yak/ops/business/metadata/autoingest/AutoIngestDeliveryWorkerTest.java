@@ -1,5 +1,7 @@
 package io.yak.ops.business.metadata.autoingest;
 
+import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
