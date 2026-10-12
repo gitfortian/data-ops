@@ -928,10 +928,18 @@ const AssetTaxonomyPage = () => {
   const [tab, setTab] = useState<'directory' | 'rules' | 'tags'>('directory');
   const [dirTree, setDirTree] = useState<DirNode[]>([]);
   const [tags, setTags] = useState<AssetTagRecord[]>([]);
+  const [supportError, setSupportError] = useState(false);
 
   useEffect(() => {
-    getDirectoryTree().then(setDirTree).catch(() => setDirTree([]));
-    listAssetTags().then(setTags).catch(() => setTags([]));
+    let active = true;
+    setSupportError(false);
+    void Promise.allSettled([getDirectoryTree(), listAssetTags()]).then(([dirs, items]) => {
+      if (!active) return;
+      setDirTree(dirs.status === 'fulfilled' ? dirs.value : []);
+      setTags(items.status === 'fulfilled' ? items.value : []);
+      setSupportError(dirs.status !== 'fulfilled' || items.status !== 'fulfilled');
+    });
+    return () => { active = false; };
   }, [tab]);
 
   return (
@@ -951,6 +959,12 @@ const AssetTaxonomyPage = () => {
         <span className="text-[12px] text-[#8a96a6]">目录、规则、标签分别管理，不会因切换而提交变更</span>
       </div>
       <div className="mt-4 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)] max-sm:p-4">
+        {tab === 'rules' && supportError ? (
+          <Alert className="!mb-4" type="warning" showIcon
+            message="部分规则目标信息未能读取"
+            description="无法确认全部目录或标签，不应将空选择误认为尚未配置，请核对权限并重新进入。"
+          />
+        ) : null}
         {tab === 'directory' && <DirectoryTab />}
         {tab === 'rules' && <RuleTab dirTree={dirTree} tags={tags} />}
         {tab === 'tags' && <TagTab />}
@@ -959,4 +973,9 @@ const AssetTaxonomyPage = () => {
   );
 };
 
-export default AssetTaxonomyPage;
+/** Project/role boundaries must reset dialog drafts, directory targets and pending responses. */
+export default function ScopedAssetTaxonomyPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetTaxonomyPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}
