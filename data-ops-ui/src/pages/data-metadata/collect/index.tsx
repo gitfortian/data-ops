@@ -2,6 +2,7 @@ import Table from '@/components/ReadableTable';
 import { Alert, Button, Dropdown, Input, message, Modal, Segmented, Select, Tag, Tooltip } from 'antd';
 import { ArrowRightOutlined, MoreOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { history, useSearchParams } from '@umijs/max';
+import { readCollectionDefinitionHint } from '@/services/metadata/collectionHandoff';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -12,6 +13,7 @@ import {
   changeCollectJobEnabled,
   deleteCollectJob,
   dryRunCollectJob,
+  getCollectJob,
   pageCollectJobs,
   runCollectJob,
 } from '@/services/metadata/api';
@@ -24,6 +26,7 @@ import type {
 import { listAllDataSources } from '@/services/data-source/api';
 import { PageHeader } from '../shared';
 import CollectJobDrawer from './components/CollectJobDrawer';
+import type { CollectJobInitialScope } from './components/CollectJobDrawer';
 import RunHistoryDrawer from './components/RunHistoryDrawer';
 import RunResultModal from './components/RunResultModal';
 import { PROVIDER_COLORS, PROVIDER_LABELS, formatMetadataTime } from './constants';
@@ -33,7 +36,9 @@ const MetadataCollectPage = () => {
   const { can } = usePermissionAccess();
   const { currentProject } = useSecurityProject();
   const projectId = currentProject?.id;
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const definitionAction = searchParams.get('action');
+  const definitionHint = useMemo(() => readCollectionDefinitionHint(searchParams), [searchParams]);
   const rawSourceHint = searchParams.get('dataSourceId');
   const parsedSourceHint = Number(rawSourceHint);
   const sourceHintId = rawSourceHint && /^[1-9]\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
@@ -55,6 +60,8 @@ const MetadataCollectPage = () => {
   const [busyJob, setBusyJob] = useState<{ id: number; action: 'dry-run' | 'run' } | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [definitionScope, setDefinitionScope] = useState<CollectJobInitialScope>();
+  const [definitionError, setDefinitionError] = useState('');
   const [editing, setEditing] = useState<CollectJobRecord | null>(null);
   const [historyJob, setHistoryJob] = useState<CollectJobRecord | null | undefined>(undefined);
   const [runResult, setRunResult] = useState<{ run: CollectRunRecord; title: string } | null>(null);
@@ -64,6 +71,71 @@ const MetadataCollectPage = () => {
   const [jobsLoadError, setJobsLoadError] = useState(false);
   const jobsRequestSeq = useRef(0);
   const sourceHintPending = rawSourceHint !== null && !sourceHint && !sourceHintError;
+
+  useEffect(() => {
+    if (definitionAction !== 'define') return;
+    let active = true;
+    const consumeHint = () => {
+      const params = new URLSearchParams(searchParams);
+      ['action', 'jobId', 'databaseName', 'schemaName', 'sourceTableName'].forEach((key) => params.delete(key));
+      setSearchParams(params, { replace: true });
+    };
+    if (!definitionHint.valid || sourceHintError) {
+      setDefinitionError(sourceHintError || '任务定义导航参数不合法，请重新选择来源');
+      consumeHint();
+      return;
+    }
+    if (!sourceHint || sourceHint.id !== definitionHint.sourceId) return;
+    const verifiedSource = sourceHint;
+    const openDefinition = async () => {
+      try {
+        if (definitionHint.jobId) {
+          if (!canUpdate) throw new Error('当前账号没有修改采集任务的权限');
+          const job = await getCollectJob(definitionHint.jobId);
+          if (!active) return;
+          if (
+            job.id !== definitionHint.jobId ||
+            job.providerType !== 'HARVESTED' ||
+            job.dataSourceId !== verifiedSource.id
+          )
+            throw new Error('任务不属于当前核验的数据源，不能打开定义');
+          // Existing tasks keep their persisted scope and schedule, independent of source-table hints.
+          setEditing(job);
+          setDefinitionScope(undefined);
+        } else {
+          if (!canCreate) throw new Error('当前账号没有创建采集任务的权限');
+          setEditing(null);
+          setDefinitionScope({
+            databaseName: definitionHint.databaseName,
+            schemaName: definitionHint.schemaName,
+            sourceTableName: definitionHint.sourceTableName,
+            jobName: `${(definitionHint.databaseName || verifiedSource.name).slice(0, 124)}结构采集`,
+          });
+        }
+        if (!active) return;
+        setDefinitionError('');
+        setDrawerOpen(true);
+        consumeHint();
+      } catch (error) {
+        if (!active) return;
+        setDefinitionError(error instanceof Error ? error.message : '无法核验采集任务定义，请重试');
+        consumeHint();
+      }
+    };
+    void openDefinition();
+    return () => {
+      active = false;
+    };
+  }, [
+    definitionAction,
+    definitionHint,
+    sourceHint,
+    sourceHintError,
+    canCreate,
+    canUpdate,
+    searchParams,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -141,11 +213,13 @@ const MetadataCollectPage = () => {
 
   const openCreate = () => {
     setEditing(null);
+    setDefinitionScope(undefined);
     setDrawerOpen(true);
   };
 
   const openEdit = (job: CollectJobRecord) => {
     setEditing(job);
+    setDefinitionScope(undefined);
     setDrawerOpen(true);
   };
 
@@ -399,6 +473,7 @@ const MetadataCollectPage = () => {
           description="已核验所属项目；列表在服务端按来源精确过滤。运行时始终使用任务已保存的范围，而非导航参数。" />
       ) : null}
       {sourceHintError ? <Alert className="mt-4 rounded-xl" type="warning" showIcon message={sourceHintError} /> : null}
+      {definitionError ? <Alert className="mt-4 rounded-xl" type="warning" showIcon message={definitionError} /> : null}
       {jobsLoadError ? (
         <Alert className="mt-4 rounded-xl" type="error" showIcon message="任务读取失败，不能视为没有任务"
           action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
@@ -501,6 +576,7 @@ const MetadataCollectPage = () => {
         open={drawerOpen}
         editing={editing}
         initialDataSourceId={sourceHint?.id}
+        initialScope={definitionScope}
         onClose={() => setDrawerOpen(false)}
         onSaved={(saved) => {
           setDrawerOpen(false);
