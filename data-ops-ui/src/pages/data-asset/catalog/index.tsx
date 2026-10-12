@@ -381,13 +381,14 @@ const AssetCatalogPage = () => {
           <AssetExplorer searchable />
         </div>
       ) : (
-      <div className="mt-4 flex min-h-0 flex-1 gap-4 max-md:flex-col">
-      <div className="w-[240px] shrink-0 max-md:w-full">
-        <Button className="mb-2 md:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
+      <div className="mt-6 flex min-h-0 flex-1 items-start gap-4 max-lg:flex-col">
+      <aside className="w-[250px] shrink-0 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-4 shadow-[0_4px_20px_rgba(15,23,42,0.025)] max-lg:w-full">
+        <div className="mb-3 hidden border-0 border-b border-solid border-[#edf0f4] pb-3 text-[14px] font-semibold text-[#2c3c50] lg:block">目录导航</div>
+        <Button className="mb-2 lg:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
           {directoryId ? '目录筛选 · 已选择' : '选择目录'}
         </Button>
-        <div className={directoryOpen ? '' : 'hidden md:block'}>
-        <div className="mb-2 text-[13px] font-medium text-[#667085]">资产目录</div>
+        <div className={directoryOpen ? '' : 'hidden lg:block'}>
+        <div className="mb-2 text-[12px] font-medium text-[#8793a5]">按所属目录筛选资产</div>
         {directoryLoading ? (
           <YakEmpty compact title="正在读取目录" description="请等待当前项目的目录请求完成" />
         ) : directoryError ? (
@@ -418,14 +419,23 @@ const AssetCatalogPage = () => {
           </Button>
         )}
         </div>
-      </div>
+      </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-3">
+      <section className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-solid border-[#e6eaf0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
+        <div className="border-0 border-b border-solid border-[#edf0f4] px-5 py-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="m-0 text-[16px] font-semibold text-[#253145]">资产清单</h2>
+              <p className="mb-0 mt-1 text-[12px] text-[#8491a4]">当前筛选下 {loadError ? '数量未知' : loading ? '读取中' : `${total} 项`} · 来源与治理状态均以当前项目的资产台账为准</p>
+            </div>
+            <Segmented options={['列表', '卡片']} value={viewMode}
+              onChange={(value) => setViewMode(value as '列表' | '卡片')} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
           <Input.Search
             allowClear
-            placeholder="名称 / 描述 / 负责人 / 标签"
-            className="!w-[240px] max-sm:!w-full"
+            placeholder="搜索资产名称、负责人或标签"
+            className="!w-[245px] max-sm:!w-full"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             onSearch={(value) => {
@@ -446,21 +456,42 @@ const AssetCatalogPage = () => {
           <Select
             mode="multiple"
             allowClear
+            placeholder="状态"
+            className="min-w-[140px] max-w-[210px]"
+            value={statuses}
+            onChange={(value) => { setStatuses(value); setPageNo(1); }}
+            options={Object.entries({ PENDING: '待上架', PUBLISHED: '已上架', OFFLINE: '已下架', IGNORED: '已忽略', SOURCE_GONE: '源已消失' }).map(([value, label]) => ({ value, label }))}
+            maxTagCount="responsive"
+          />
+          <Button aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
+            高级筛选{layerCodes.length + grades.length + tagIds.length > 0 ? ` (${layerCodes.length + grades.length + tagIds.length})` : ''}
+          </Button>
+          <Button onClick={() => {
+            setKeyword(''); setSearchText(''); setAssetTypes([]); setLayerCodes([]);
+            setStatuses([]); setGrades([]); setTagIds([]); setDirectoryId(undefined); setSortBy(''); setPageNo(1);
+          }}>重置</Button>
+          <div className="ml-auto flex flex-wrap items-center gap-2">          <Select
+            value={sortBy}
+            className="!w-[150px]"
+            onChange={(value) => {
+              setSortBy(value);
+              setPageNo(1);
+            }}
+            options={Object.entries(SORT_LABELS).map(([value, label]) => ({ value, label }))}
+          />
+          </div>
+          </div>
+          {advancedOpen ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-0 border-t border-solid border-[#eef1f5] pt-3">
+              <span className="mr-1 text-[12px] font-medium text-[#8491a4]">更多筛选</span>
+          <Select
+            mode="multiple"
+            allowClear
             placeholder="分层"
             className={advancedOpen ? 'min-w-[110px] max-w-[200px]' : 'hidden'}
             value={layerCodes}
             onChange={(value) => { setLayerCodes(value); setPageNo(1); }}
             options={layers.map((layer) => ({ value: layer.code, label: layer.name }))}
-            maxTagCount="responsive"
-          />
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="状态"
-            className="min-w-[110px] max-w-[200px]"
-            value={statuses}
-            onChange={(value) => { setStatuses(value); setPageNo(1); }}
-            options={Object.entries({ PENDING: '待上架', PUBLISHED: '已上架', OFFLINE: '已下架', IGNORED: '已忽略', SOURCE_GONE: '源已消失' }).map(([value, label]) => ({ value, label }))}
             maxTagCount="responsive"
           />
           <Select
@@ -486,33 +517,13 @@ const AssetCatalogPage = () => {
             options={tags.map((tag) => ({ value: tag.id, label: tag.tagName }))}
             maxTagCount="responsive"
           />
-          <Select
-            value={sortBy}
-            className="!w-[150px]"
-            onChange={(value) => {
-              setSortBy(value);
-              setPageNo(1);
-            }}
-            options={Object.entries(SORT_LABELS).map(([value, label]) => ({ value, label }))}
-          />
-          <Segmented
-            options={['列表', '卡片']}
-            className="max-sm:!hidden"
-            value={viewMode}
-            onChange={(value) => setViewMode(value as '列表' | '卡片')}
-          />
-          <Button aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
-            高级筛选{layerCodes.length + grades.length + tagIds.length > 0 ? ` (${layerCodes.length + grades.length + tagIds.length})` : ''}
-          </Button>
-          <Button onClick={() => {
-            setKeyword(''); setSearchText(''); setAssetTypes([]); setLayerCodes([]);
-            setStatuses([]); setGrades([]); setTagIds([]); setDirectoryId(undefined); setSortBy(''); setPageNo(1);
-          }}>重置</Button>
+            </div>
+          ) : null}
         </div>
 
         {canUpdate && hasSelection && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-[#f8f9fa] px-3 py-2">
-            <span className="text-[13px]">已选 {selectedIds.length} 项</span>
+          <div className="mx-5 mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-solid border-[#dbe5f1] bg-[#f0f5fc] px-4 py-3">
+            <span className="mr-2 text-[13px] font-semibold text-[#3b5d84]">已选 {selectedIds.length} 项</span>
             <YakButton size="small" onClick={() => openWizard(selectedRows)}>
               批量上架
             </YakButton>
@@ -529,7 +540,7 @@ const AssetCatalogPage = () => {
           </div>
         )}
 
-        <div className="mt-4 flex-1">
+        <div className="min-w-0 flex-1 px-5 pb-4 pt-4">
           {loadError && <Alert className="mb-3" type="error" showIcon
              message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
              description="本次筛选未能成功读取；不会展示旧查询或其它项目的结果，请重试。"
@@ -538,6 +549,7 @@ const AssetCatalogPage = () => {
             <Table<AssetRecord>
               rowKey="id"
               columns={columns}
+              size="middle"
               dataSource={records}
               loading={loading}
               scroll={{ x: 1030 }}
@@ -595,7 +607,7 @@ const AssetCatalogPage = () => {
             </>
           )}
         </div>
-      </div>
+      </section>
       </div>
       )}
 
