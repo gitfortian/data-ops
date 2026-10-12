@@ -38,7 +38,7 @@ class MetadataLayeringConventionTest {
           // ticket 116 起 controller 还读采集任务的读写服务（它们与守护的执行体同住 harvest）。
           // ticket 117 起还读 query：搜索的应用服务住在 query 自己包里，controller 只做参数拆装。
           Map.entry("controller",
-              Set.of("metamodel", "exception", "harvest", "query", "detail", "governance", "api")),
+              Set.of("metamodel", "exception", "harvest", "query", "detail", "governance", "api", "autoingest")),
           Map.entry("dao", Set.of()),
           Map.entry("exception", Set.of()),
           Map.entry("repository", Set.of("dao")),
@@ -55,7 +55,10 @@ class MetadataLayeringConventionTest {
           // 三个方向都是"采集在上、模型与持久化在下"，反向依赖一律不放行。
           // harvest→schedule 只有 ticket 116 这一条边：任务改了 cron 或开关，闹钟必须跟着改，
           // 而"闹钟长什么样"的判据全在桥接层那一个类里，不在这里另写一份。
-          Map.entry("harvest", Set.of("metamodel", "dao", "exception", "schedule")),
+          Map.entry("harvest", Set.of("metamodel", "dao", "exception", "schedule", "autoingest")),
+          // S2 durable delivery depends downwards on DAO/config only; harvest writes
+          // committed tickets through its public outbox seam, controller reads receipts.
+          Map.entry("autoingest", Set.of("dao", "config")),
           // 检索侧读元模型解释可搜性（§4.5 的"零代码分支"就靠这条边），异常走本模块的 49xxx；
           // 它不碰 dao——共表读路径经 NamedParameterJdbcTemplate 的接缝自己渲染，
           // 也不反向被 metamodel 读。
