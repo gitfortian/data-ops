@@ -1,121 +1,83 @@
-import { Alert, Button, Card, Space, Tag, Tooltip } from 'antd';
+import { Alert, Button, Tag } from 'antd';
+import { ArrowRight, ClipboardCheck, Clock3, Database, Layers3, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { history } from '@umijs/max';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { classifyAssetListFailure, type AssetListReadFailure } from '../read-state';
 import { useLatestAssetListRequest } from '../useLatestAssetListRequest';
-
-import { YakButton, YakEmpty } from '@/components/ui';
+import { YakEmpty } from '@/components/ui';
 import { getAssetOverview } from '@/services/data-asset/api';
 import type { AssetOverviewData, DistributionRow } from '@/services/data-asset/types';
-import {
-  ASSET_SOURCE_TYPE_LABELS,
-  ASSET_STATUS_BAR_COLORS,
-  distributionLabel,
-  formatAssetTime,
-  healthGradeColor,
-} from '../constants';
+import { ASSET_SOURCE_TYPE_LABELS, ASSET_TYPE_LABELS, ASSET_STATUS_BAR_COLORS, distributionLabel, formatAssetTime, healthGradeColor } from '../constants';
+import { AssetMetric, AssetPageHeader, AssetPanel, AssetWorkspace } from '../asset-ui';
 
-const KPI_CARDS: {
-  key: keyof AssetOverviewData['kpis'];
-  label: string;
-  hint?: string;
-  percent?: boolean;
-  color?: string;
-}[] = [
-  { key: 'total', label: '台账总量' },
-  { key: 'published', label: '已上架', color: '#52c41a' },
-  { key: 'pending', label: '待上架', color: '#fa8c16' },
-  { key: 'added30d', label: '近 30 天新增' },
-  { key: 'ownerCoverage', label: '负责人覆盖率', percent: true, hint: '有负责人的资产占比' },
-  { key: 'classifiedRate', label: '安全定级率', percent: true, hint: '已有安全等级快照的资产占比' },
-  { key: 'gradeACount', label: 'A 级资产', color: '#52c41a' },
-  { key: 'gradeDCount', label: 'D 级资产', color: '#f5222d' },
+const KPI_CARDS: { key: keyof AssetOverviewData['kpis']; label: string; note: string; percent?: boolean; type?: 'warning' | 'success' }[] = [
+  { key: 'total', label: '台账总量', note: '当前项目可见的资产总数' },
+  { key: 'published', label: '已上架', note: '已进入资产消费目录', type: 'success' },
+  { key: 'pending', label: '待上架', note: '需要治理后才能正式发布', type: 'warning' },
+  { key: 'added30d', label: '近 30 天新增', note: '新纳入资产台账的对象' },
+  { key: 'ownerCoverage', label: '负责人覆盖率', note: '已明确治理联系人的资产比例', percent: true },
+  { key: 'classifiedRate', label: '安全定级率', note: '已有安全等级快照的资产比例', percent: true },
+  { key: 'gradeACount', label: 'A 级资产', note: '健康度评级 A 的资产', type: 'success' },
+  { key: 'gradeDCount', label: 'D 级资产', note: '健康度评级 D 的资产', type: 'warning' },
 ];
 
-const TODO_ITEMS: {
-  key: keyof AssetOverviewData['todos'];
-  label: string;
-  to: string;
-}[] = [
-  { key: 'pendingPublish', label: '资产待上架', to: '/data-asset/inventory?tab=publish' },
-  { key: 'openChanges', label: '变更待确认', to: '/data-asset/inventory?tab=changes' },
-  { key: 'noOwner', label: '无负责人资产', to: '/data-asset/catalog' },
-  { key: 'gradeD', label: 'D 级低健康资产', to: '/data-asset/catalog?grades=D' },
-  { key: 'sourceGone', label: '源已消失资产', to: '/data-asset/catalog?statuses=SOURCE_GONE' },
+const TODO_ITEMS: { key: keyof AssetOverviewData['todos']; label: string; description: string; to: string; priority: 'warning' | 'normal' }[] = [
+  { key: 'pendingPublish', label: '资产待上架', description: '完善负责人、目录、描述后进入预检', to: '/data-asset/inventory?tab=publish', priority: 'normal' },
+  { key: 'openChanges', label: '变更待确认', description: '比较源域变化，决定更新或忽略', to: '/data-asset/inventory?tab=changes', priority: 'warning' },
+  { key: 'noOwner', label: '无负责人资产', description: '责任人未配置，无法有效治理', to: '/data-asset/catalog', priority: 'normal' },
+  { key: 'gradeD', label: 'D 级低健康资产', description: '检查治理缺口及健康指标', to: '/data-asset/catalog?grades=D', priority: 'warning' },
+  { key: 'sourceGone', label: '源已消失资产', description: '核对来源证据，避免误删除', to: '/data-asset/catalog?statuses=SOURCE_GONE', priority: 'warning' },
 ];
 
-const DistributionCard = ({
-  title,
-  group,
-  rows,
-}: {
-  title: string;
-  group: 'status' | 'grade' | 'type' | 'layer';
-  rows: DistributionRow[];
+const DistributionCard = ({ title, group, rows }: {
+  title: string; group: 'status' | 'grade' | 'type' | 'layer'; rows: DistributionRow[];
 }) => {
   const max = Math.max(1, ...rows.map((row) => row.c));
   const barColor = (key: string) => {
-    if (group === 'grade') {
-      return healthGradeColor(key);
-    }
-    if (group === 'status') {
-      return ASSET_STATUS_BAR_COLORS[key as keyof typeof ASSET_STATUS_BAR_COLORS] ?? '#FE2C55';
-    }
-    return '#FE2C55';
+    if (group === 'grade') return healthGradeColor(key);
+    if (group === 'status') return ASSET_STATUS_BAR_COLORS[key as keyof typeof ASSET_STATUS_BAR_COLORS] ?? '#6988b0';
+    return '#7894b6';
   };
   return (
-    <Card title={title} size="small" className="!mb-4">
-      {rows.length === 0 ? (
-        <YakEmpty compact title="暂无数据" description="对账产出资产后自动聚合" />
-      ) : (
-        <Space direction="vertical" className="w-full" size={6}>
+    <AssetPanel title={title} description="当前项目资产台账分布 · 最多显示 8 项" bodyClassName="px-5 pb-5 pt-4">
+      {rows.length === 0 ? <YakEmpty compact title="暂无数据" description="当前没有可统计的目录资产" /> : (
+        <div className="space-y-3">
           {rows.slice(0, 8).map((row) => (
-            <div key={row.k} className="flex items-center gap-2 text-[12px]">
-              <span className="w-[90px] shrink-0 truncate text-[#667085]">
-                {distributionLabel(group, row.k)}
-              </span>
-              <div className="h-[10px] flex-1 overflow-hidden rounded-full bg-[#f2f4f7]">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.max(4, (row.c / max) * 100)}%`,
-                    background: barColor(row.k),
-                  }}
-                />
+            <div key={row.k} className="grid grid-cols-[100px_minmax(0,1fr)_52px] items-center gap-3">
+              <span className="truncate text-[12px] text-[#64748a]" title={distributionLabel(group, row.k)}>{distributionLabel(group, row.k)}</span>
+              <div className="h-[7px] overflow-hidden rounded-full bg-[#f0f3f7]" role="img"
+                aria-label={distributionLabel(group, row.k) + '：' + row.c + ' 个'}>
+                <div className="h-full rounded-full" style={{ width: Math.max(3, row.c / max * 100) + '%', backgroundColor: barColor(row.k) }} />
               </div>
-              <span className="w-[46px] shrink-0 text-right font-medium">{row.c}</span>
+              <span className="text-right text-[12px] font-medium tabular-nums text-[#34455e]">{row.c.toLocaleString()}</span>
             </div>
           ))}
-        </Space>
+        </div>
       )}
-    </Card>
+    </AssetPanel>
   );
 };
 
 const RecentList = ({ title, rows }: { title: string; rows: AssetOverviewData['recentListed'] }) => (
-  <Card title={title} size="small" className="!mb-4">
-    {rows.length === 0 ? (
-      <YakEmpty compact title="暂无动态" />
-    ) : (
-      <Space direction="vertical" className="w-full" size={2}>
+  <AssetPanel title={title} description="点击资产查看当前台账及来源证据" bodyClassName="px-2 py-2">
+    {rows.length === 0 ? <YakEmpty compact title="暂无动态" description="暂无可核实的上架或下架记录" /> : (
+      <div className="divide-y divide-[#edf0f4]">
         {rows.map((row) => (
-          <div
-            key={`${row.assetId}-${row.at ?? ''}`}
-            className="flex cursor-pointer items-center justify-between gap-2 rounded px-1 py-1.5 hover:bg-[#f8f9fa]"
-            onClick={() => history.push(`/data-asset/detail/${row.assetId}`)}
-          >
-            <span className="min-w-0 truncate text-[13px]">{row.name}</span>
-            <Space size={6} className="shrink-0 text-[12px] text-[#98a2b3]">
-              {row.assetType && <Tag>{ASSET_SOURCE_TYPE_LABELS[row.assetType as keyof typeof ASSET_SOURCE_TYPE_LABELS] ?? row.assetType}</Tag>}
-              <span>{formatAssetTime(row.at)}</span>
-            </Space>
-          </div>
+          <button type="button" key={row.assetId + ':' + (row.at || '')}
+            onClick={() => history.push('/data-asset/detail/' + row.assetId)}
+            className="flex w-full items-center justify-between gap-3 border-0 bg-white px-4 py-3 text-left transition-colors hover:bg-[#f7f9fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6]">
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-medium text-[#2d3d53]">{row.name}</div>
+              <div className="mt-1 text-[11px] text-[#8e9baf]">{row.assetType ? ASSET_TYPE_LABELS[row.assetType as keyof typeof ASSET_TYPE_LABELS] ?? ASSET_SOURCE_TYPE_LABELS[row.assetType as keyof typeof ASSET_SOURCE_TYPE_LABELS] ?? row.assetType : '资产'} · {formatAssetTime(row.at)}</div>
+            </div>
+            <ArrowRight size={15} className="shrink-0 text-[#9aabba]" />
+          </button>
         ))}
-      </Space>
+      </div>
     )}
-  </Card>
+  </AssetPanel>
 );
 
 const AssetOverviewPage = () => {
@@ -139,93 +101,86 @@ const AssetOverviewPage = () => {
     }
   }, [beginLatestRequest]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
+
+  const metricIcon = (key: string) => key === 'total' ? <Database size={18}/> : key === 'pending' || key === 'gradeDCount'
+    ? <TriangleAlert size={18}/> : key === 'ownerCoverage' || key === 'classifiedRate'
+      ? <ShieldCheck size={18}/> : key === 'added30d' ? <Clock3 size={18}/> : <Layers3 size={18}/>;
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">资产概览</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            了解资产覆盖、治理待办与最近变化。{data?.generatedAt ? ` 更新于 ${formatAssetTime(data.generatedAt)}` : ''}
-          </div>
-        </div>
-        <Space>
-          <YakButton onClick={load} loading={loading}>
-            刷新
-          </YakButton>
-          <YakButton type="primary" className="!text-white" onClick={() => history.push('/data-asset/catalog')}>
-            进入资产目录
-          </YakButton>
-        </Space>
-      </div>
-
-      {loadError && (
-        <Alert className="!mt-4" type={loadError === 'FORBIDDEN' ? 'warning' : 'error'} showIcon
+    <AssetWorkspace>
+      <AssetPageHeader
+        title="资产工作台"
+        description={<>基于真实资产台账识别治理缺口、检查发布状态，并快速进入对应处理流程。
+          {data?.generatedAt ? <span className="ml-2 text-[#9ba6b6]">数据更新时间：{formatAssetTime(data.generatedAt)}</span> : null}</>}
+        extra={
+          <>
+            <Button onClick={() => void load()} disabled={loading}><RefreshCw size={14} className="mr-1 inline" />刷新</Button>
+            <Button type="primary" onClick={() => history.push('/data-asset/catalog')}>进入资产目录 <ArrowRight size={14} className="ml-1 inline" /></Button>
+          </>
+        }
+      />
+      {loadError ? (
+        <Alert className="!mt-5 !rounded-xl" type={loadError === 'FORBIDDEN' ? 'warning' : 'error'} showIcon
           message={loadError === 'FORBIDDEN' ? '无权读取资产概览' : '资产概览读取失败'}
           description="无法确认当前项目的资产总量与治理待办；失败不代表没有资产或待办。"
-          action={<YakButton size="small" onClick={() => void load()}>重试</YakButton>} />
-      )}
-      {data ? (
-        <>
-      <div className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-        {KPI_CARDS.map((item) => {
-          const raw = data ? Number(data.kpis[item.key] ?? 0) : 0;
-          const display = item.percent ? `${Math.round(raw * 1000) / 10}%` : raw;
-          return (
-            <Card key={item.key} size="small" loading={loading}>
-              <Tooltip title={item.hint}>
-                <div className="text-[12px] text-[#667085]">{item.label}</div>
-              </Tooltip>
-              <div className="mt-1 text-[24px] font-semibold leading-8" style={{ color: item.color }}>
-                {data ? display : '-'}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card title="治理待办" size="small" className="!my-4" loading={loading}>
-        <Space size={8} wrap>
-          {TODO_ITEMS.map((item) => {
-            const count = data ? Number(data.todos[item.key] ?? 0) : 0;
-            return (
-              <Button
-                key={item.key}
-                size="small"
-                danger={count > 0 && (item.key === 'gradeD' || item.key === 'sourceGone')}
-                type="default"
-                onClick={() => history.push(item.to)}
-              >
-                {item.label} {count}
-              </Button>
-            );
-          })}
-        </Space>
-      </Card>
-
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <div>
-          <DistributionCard title="按状态分布" group="status" rows={data?.distributions.status ?? []} />
-          <DistributionCard title="按健康度分布" group="grade" rows={data?.distributions.grade ?? []} />
-        </div>
-        <div>
-          <DistributionCard title="按类型分布" group="type" rows={data?.distributions.type ?? []} />
-          <DistributionCard title="按分层分布" group="layer" rows={data?.distributions.layer ?? []} />
-        </div>
-      </div>
-
-      <div className="mt-0 grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <RecentList title="最近上架" rows={data.recentListed} />
-        <RecentList title="最近下架" rows={data.recentOffline} />
-      </div>
-        </>
-      ) : loading ? (
-        <Card className="!mt-4" loading />
+          action={<Button size="small" onClick={() => void load()}>重试</Button>} />
       ) : null}
-    </div>
+      {data ? (
+        <div className="mt-6 space-y-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {KPI_CARDS.map((item) => {
+              const raw = Number(data.kpis[item.key] ?? 0);
+              return (
+                <AssetMetric key={item.key} label={item.label}
+                  value={item.percent ? (Math.round(raw * 1000) / 10) + '%' : raw.toLocaleString()}
+                  helper={item.note} icon={metricIcon(item.key)} emphasis={item.type || 'default'} />
+              );
+            })}
+          </div>
+
+          <AssetPanel title="需要处理的治理工作"
+            description="这里显示待办数量；点击后会进入对应目录或处理台，不会自动执行变更。"
+            action={<Button type="link" onClick={() => history.push('/data-asset/inventory?tab=publish')}>打开盘点上架 <ArrowRight size={14} className="ml-1 inline" /></Button>}
+            bodyClassName="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">
+            {TODO_ITEMS.map((item) => {
+              const count = Number(data.todos[item.key] ?? 0);
+              return (
+                <button type="button" key={item.key} onClick={() => history.push(item.to)}
+                  className="min-w-0 rounded-xl border border-solid border-[#e8edf3] bg-[#fafbfd] p-4 text-left transition-colors hover:border-[#b8cbe1] hover:bg-[#f4f8fd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6]">
+                  <span className="block text-[12px] font-medium text-[#64748a]">{item.label} {count}</span>
+                  <span className={'mt-2 block text-[24px] font-semibold leading-7 tabular-nums ' + (count > 0 && item.priority === 'warning' ? 'text-[#ad6333]' : 'text-[#29394f]')}>{count.toLocaleString()}</span>
+                  <span className="mt-2 block text-[11px] leading-5 text-[#95a1b2]">{item.description}</span>
+                </button>
+              );
+            })}
+          </AssetPanel>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <DistributionCard title="资产生命周期" group="status" rows={data.distributions.status} />
+            <DistributionCard title="资产健康分布" group="grade" rows={data.distributions.grade} />
+            <DistributionCard title="资产类型构成" group="type" rows={data.distributions.type} />
+            <DistributionCard title="数仓分层构成" group="layer" rows={data.distributions.layer} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <RecentList title="最近上架" rows={data.recentListed} />
+            <RecentList title="最近下架" rows={data.recentOffline} />
+          </div>
+          <div className="flex items-start gap-2 rounded-xl border border-solid border-[#e5ebf2] bg-[#f0f4f9] px-4 py-3 text-[12px] leading-5 text-[#738399]">
+            <ClipboardCheck size={15} className="mt-0.5 shrink-0" />
+            资产台账的治理状态独立于元数据采集运行。待上架不代表已发布，源对象变化也必须经过可核验的变更处理。
+          </div>
+        </div>
+      ) : loading ? (
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="正在读取资产概览">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div key={index} className="h-[142px] animate-pulse rounded-2xl border border-solid border-[#e7ebf1] bg-white p-5">
+              <div className="h-4 w-2/3 rounded bg-[#edf1f5]" /><div className="mt-5 h-9 w-1/3 rounded bg-[#edf1f5]" />
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </AssetWorkspace>
   );
 };
 
