@@ -64,7 +64,8 @@ public class MetadataCollectJobController {
             query.getPageSize(),
             query.getProviderType(),
             query.getEnabled(),
-            query.getKeyword());
+            query.getKeyword(), query.getDataSourceId(),
+            query.getDatabaseName(), query.getSchemaName());
     return Result.success(PagingData.from(page));
   }
 
