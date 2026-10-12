@@ -52,7 +52,15 @@ public class MappingService {
       String sourceTable,
       String sourceColumn,
       String transformExpr,
-      Long stdProcessFieldId) {}
+      Long stdProcessFieldId,
+      String sourceSchema) {
+    public MappingView(String targetColumn, String dataType, boolean mapped,
+        Long sourceDatasourceId, String sourceDatabase, String sourceTable,
+        String sourceColumn, String transformExpr, Long stdProcessFieldId) {
+      this(targetColumn, dataType, mapped, sourceDatasourceId, sourceDatabase,
+          sourceTable, sourceColumn, transformExpr, stdProcessFieldId, null);
+    }
+  }
 
   public List<MappingView> list(Long modelId) {
     requireModel(modelId);
@@ -104,7 +112,7 @@ public class MappingService {
       String transformExpr,
       Long stdProcessFieldId,
       String operator) {
-    requireModelForUpdate(modelId);
+    var model = requireModelForUpdate(modelId);
     requireTargetColumn(modelId, targetColumn);
     if (sourceDatasourceId == null
         || !StringUtils.hasText(sourceTable)
@@ -115,7 +123,9 @@ public class MappingService {
     if (expressionError != null) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, expressionError);
     }
-    validateSourceColumnExists(sourceDatasourceId, sourceDatabase, sourceTable, sourceColumn);
+    validateSourceColumnExists(sourceDatasourceId, sourceDatabase,
+        schemaForSource(model, sourceDatasourceId, sourceDatabase, sourceTable),
+        sourceTable, sourceColumn);
 
     persistMapping(modelId, targetColumn, sourceDatasourceId, sourceDatabase, sourceTable, sourceColumn, transformExpr, stdProcessFieldId, operator);
   }
@@ -129,6 +139,8 @@ public class MappingService {
     po.setTargetColumn(targetColumn);
     po.setSourceDatasourceId(sourceDatasourceId);
     po.setSourceDatabase(sourceDatabase);
+    po.setSourceSchema(schemaForSource(requireModelForUpdate(modelId),
+        sourceDatasourceId, sourceDatabase, sourceTable));
     po.setSourceTable(sourceTable);
     po.setSourceColumn(sourceColumn);
     po.setTransformExpr(transformExpr);
@@ -178,7 +190,9 @@ public class MappingService {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "目标字段或映射已变化，请刷新后重新核对");
     }
     // Bypass discovery cache on the conditional editor path. External DDL is checked at this instant.
-    if (catalogReader.listColumnsFresh(datasourceId, database, null, table).stream()
+    var boundModel = requireModelForUpdate(modelId);
+    String schema = schemaForSource(boundModel, datasourceId, database, table);
+    if (catalogReader.listColumnsFresh(datasourceId, database, schema, table).stream()
         .noneMatch(c -> c.name().equalsIgnoreCase(sourceColumn))) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段已变化，请重新选择");
     }
@@ -199,13 +213,26 @@ public class MappingService {
   }
 
   private void validateSourceColumnExists(
-      Long datasourceId, String database, String table, String sourceColumn) {
-    List<CatalogColumn> columns = catalogReader.listColumns(datasourceId, database, null, table);
+      Long datasourceId, String database, String schema, String table, String sourceColumn) {
+    List<CatalogColumn> columns = catalogReader.listColumns(datasourceId, database, schema, table);
     boolean exists =
         columns.stream().anyMatch(column -> column.name().equalsIgnoreCase(sourceColumn));
     if (!exists) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段不存在：" + sourceColumn);
     }
+  }
+
+  /** Named-schema ODS mappings can only be updated against the persisted same source. */
+  private String schemaForSource(io.yak.ops.business.modeling.domain.Model model,
+      Long datasourceId, String database, String table) {
+    if (!StringUtils.hasText(model.sourceSchema())) return null;
+    if (!java.util.Objects.equals(model.sourceDatasourceId(), datasourceId)
+        || !java.util.Objects.equals(model.sourceDatabase(), database)
+        || !java.util.Objects.equals(model.sourceTable(), table)) {
+      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN,
+          "已有 ODS 来源带有 Schema 身份，不能将逐列映射悄悄改绑到其他来源");
+    }
+    return model.sourceSchema();
   }
 
   private void requireModel(Long modelId) {
@@ -246,6 +273,7 @@ public class MappingService {
         match.getSourceTable(),
         match.getSourceColumn(),
         match.getTransformExpr(),
-        match.getStdProcessFieldId());
+        match.getStdProcessFieldId(),
+        match.getSourceSchema());
   }
 }
