@@ -360,6 +360,22 @@ const AssetDetailDrawer = ({
           </Tag>
           {item.entityStatus ? <Tag>{item.entityStatus}</Tag> : null}
           {item.layerCode ? <Tag color="cyan">{item.layerCode}</Tag> : null}
+          {detail?.entity.typeName === "table" &&
+            detail.entity.facts.providerType === "HARVESTED" &&
+            Number.isSafeInteger(Number(detail.entity.facts.dataSourceId)) &&
+            Number(detail.entity.facts.dataSourceId) > 0 &&
+            detail.entity.facts.databaseName && detail.entity.facts.tableName ? (
+            <Button size="small" type="primary" onClick={() => {
+              const facts = detail.entity.facts;
+              const journey = new URLSearchParams({
+                sourceJourney: "ods", datasourceId: String(facts.dataSourceId),
+                database: String(facts.databaseName), table: String(facts.tableName),
+                entityId: String(detail.entity.id),
+              });
+              if (facts.schemaName) journey.set("schema", String(facts.schemaName));
+              history.push(`/modeling?${journey.toString()}`);
+            }}>继续 ODS 设计 / 复用</Button>
+          ) : null}
           {sourcePath && item.sourceId ? (
             <Button
               size="small"
