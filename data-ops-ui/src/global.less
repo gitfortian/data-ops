@@ -165,7 +165,13 @@ ol {
   .ant-table-wrapper { min-width: 0; max-width: 100%; }
   .ant-table-thead > tr > th { color: #475467; font-weight: 500; }
   .ant-table-tbody > tr > td { overflow-wrap: anywhere; }
-  :is(button, a, input, [role='button']):focus-visible {
+  // Buttons and links need a visible keyboard focus indicator. Text inputs
+  // must NOT share this generic outline: :focus-visible also matches a
+  // mouse-clicked text field, producing a square dark ring around rounded
+  // Ant Design Input / Input.Search / Select search boxes. Their own control
+  // border and focus-within styles already provide the appropriate feedback.
+  // Plain native inputs retain their browser/default focus treatment.
+  :is(button, a, [role='button']):focus-visible {
     outline: 2px solid #475467;
     outline-offset: 3px;
   }
