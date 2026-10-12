@@ -6,6 +6,7 @@ import { useIntl } from '@umijs/max';
 import { message } from 'antd';
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -41,13 +42,19 @@ export const useDataSourceTree = () => {
   intlRef.current = intl;
 
   const requestSequenceRef = useRef(0);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; requestSequenceRef.current += 1; };
+  }, []);
   const dragRef = useRef<{ x: number; width: number }>();
   const [dataSources, setDataSources] = useState<DataSourceRecord[]>([]);
   const [sourceNodes, setSourceNodes] = useState<QualityDataSourceNode[]>([]);
   const [selectedNodeKey, setSelectedNodeKey] =
     useState<QualityDataSourceTreeKey>();
   const [dataSourceId, setDataSourceId] = useState<number>();
-  const [treeLoading, setTreeLoading] = useState(false);
+  const [treeLoading, setTreeLoading] = useState(true);
+  const [sourceError, setSourceError] = useState('');
   const [leftWidth, setLeftWidth] = useState(initialTreeWidth);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -62,13 +69,15 @@ export const useDataSourceTree = () => {
   );
 
   const loadSourceTree = useCallback(async (preferredKey?: string) => {
+    if (!active.current) return undefined;
     const requestSequence = requestSequenceRef.current + 1;
     requestSequenceRef.current = requestSequence;
     setTreeLoading(true);
+    setSourceError('');
 
     try {
       const result = await listAllDataSources();
-      if (requestSequence !== requestSequenceRef.current) return undefined;
+      if (!active.current || requestSequence !== requestSequenceRef.current) return undefined;
 
       const records = result?.bizData || [];
       const nodes = buildQualityDataSourceNodes(records);
@@ -81,22 +90,23 @@ export const useDataSourceTree = () => {
       setDataSourceId(selected?.dataSourceId);
       return selected;
     } catch (error) {
-      if (requestSequence === requestSequenceRef.current) {
+      if (active.current && requestSequence === requestSequenceRef.current) {
         setDataSources([]);
         setSourceNodes([]);
         setSelectedNodeKey(undefined);
         setDataSourceId(undefined);
-        message.error(
+        const reason =
           error instanceof Error
             ? error.message
             : intlRef.current.formatMessage({
                 id: 'pages.dataQuality.tableConfig.message.sourceLoadFailed',
-              }),
-        );
+              });
+        setSourceError(reason);
+        message.error(reason);
       }
       return undefined;
     } finally {
-      if (requestSequence === requestSequenceRef.current) {
+      if (active.current && requestSequence === requestSequenceRef.current) {
         setTreeLoading(false);
       }
     }
@@ -168,6 +178,7 @@ export const useDataSourceTree = () => {
     selectedNodeKey,
     sourceNodes,
     treeLoading,
+    sourceError,
     leftWidth,
     collapsed,
     setCollapsed,

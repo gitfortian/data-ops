@@ -1,7 +1,7 @@
 import { YakButton, YakEmpty } from '@/components/ui';
 import type { TableCandidateView } from '@/services/data-quality';
 import { useIntl } from '@umijs/max';
-import { Drawer, Input, Pagination, Spin, Table, Tag } from 'antd';
+import { Alert, Button, Drawer, Input, Pagination, Spin, Table, Tag } from 'antd';
 import { Database, Search, X } from 'lucide-react';
 
 import { dataQualityTableClassName } from '../../components/tableStyle';
@@ -16,6 +16,8 @@ interface RegisterTableDrawerProps {
   candidateCurrent: number;
   candidateKeyword: string;
   candidateLoading: boolean;
+  candidateError: string;
+  onRetry: () => void;
   selectedCandidates: Map<string, TableCandidateView>;
   selectedCandidateKeys: string[];
   selectedCandidateRecords: TableCandidateView[];
@@ -36,6 +38,8 @@ const RegisterTableDrawer = ({
   candidateCurrent,
   candidateKeyword,
   candidateLoading,
+  candidateError,
+  onRetry,
   selectedCandidates,
   selectedCandidateKeys,
   selectedCandidateRecords,
@@ -87,7 +91,7 @@ const RegisterTableDrawer = ({
           <YakButton
             type="primary"
             loading={registering}
-            disabled={!selectedCount}
+            disabled={!selectedCount || candidateLoading || !!candidateError}
             className="!h-9 !rounded-lg !px-5 !font-medium"
             onClick={onRegister}
           >
@@ -116,12 +120,12 @@ const RegisterTableDrawer = ({
                 id: 'pages.dataQuality.tableConfig.drawer.available',
               })}
             </div>
-            <span className="text-xs text-[#8a8f99]">
+            {!candidateError && <span className="text-xs text-[#8a8f99]">
               {intl.formatMessage(
                 { id: 'pages.dataQuality.tableConfig.drawer.availableTotal' },
                 { count: candidateTotal },
               )}
-            </span>
+            </span>}
           </div>
 
           <Input
@@ -138,6 +142,10 @@ const RegisterTableDrawer = ({
 
           <div className="min-h-0 flex-1 overflow-hidden">
             <Spin spinning={candidateLoading}>
+              {candidateError ? (
+                <Alert type="error" showIcon message="候选表读取失败" description={candidateError}
+                  action={<Button onClick={onRetry}>按当前筛选重试</Button>} />
+              ) : (
               <Table<TableCandidateView>
                 rowKey={qualityTableCandidateKey}
                 size="small"
@@ -207,6 +215,7 @@ const RegisterTableDrawer = ({
                   },
                 ]}
               />
+              )}
             </Spin>
           </div>
 
