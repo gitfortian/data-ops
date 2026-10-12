@@ -3,6 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { classifyAssetListFailure, type AssetListReadFailure } from '../read-state';
+import { classifyReconcileLastRun, formatHistoricalReconcileCounts } from '../reconcileEvidence';
 import { useLatestAssetListRequest } from '../useLatestAssetListRequest';
 import { history, useSearchParams } from '@umijs/max';
 
@@ -182,6 +183,10 @@ const PendingPool = () => {
           对账发现的源域对象自动落入这里；上架前必经预检
         </span>
       </div>
+      {acceptedRequest && (
+        <Alert className="mb-3" type="info" showIcon message={acceptedRequest}
+          description="请稍后使用「刷新状态」核对历史 Provider 状态，并在资产台账独立查询来源；当前接口不提供本次请求与 lastRun 的关联，不能据此判定本次成功。" />
+      )}
       {loadError && (
         <Alert className="mb-3" type="error" showIcon message={loadError === 'FORBIDDEN' ? '无权读取待上架资产' : '待上架池读取失败'}
           description="本次读取未成功，不再展示旧筛选或旧项目的数据；请核对权限后重试。"
@@ -443,6 +448,8 @@ const SourceAccess = () => {
   const [loadError, setLoadError] = useState<AssetListReadFailure | null>(null);
   const beginLatestRequest = useLatestAssetListRequest();
   const [submitting, setSubmitting] = useState('');
+  // This receipt describes this browser action only. The status table is historical Provider evidence.
+  const [acceptedRequest, setAcceptedRequest] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const isCurrent = beginLatestRequest();
@@ -463,17 +470,28 @@ const SourceAccess = () => {
     void load();
   }, [load]);
 
-  const run = async (sourceTypes: string[], label: string) => {
-    setSubmitting(label);
-    try {
-      const accepted = await triggerReconcile(sourceTypes);
-      message.success(accepted || `已受理「${label}」对账，稍后刷新查看结果`);
-      setTimeout(() => void load(), 3000);
-    } catch {
-      // 互斥 48012 / 来源缺失 48011,提示已由全局展示
-    } finally {
-      setSubmitting('');
-    }
+  const run = (sourceTypes: string[], label: string) => {
+    if (!canUpdate || sourceTypes.length === 0) return;
+    Modal.confirm({
+      title: '发起本项目的来源对账？',
+      content: `将按当前项目的 Provider 范围对「${label}」执行对账，而非仅对当前数据源/表执行。请求受理并不等于已完成，也不代表本次创建了 PENDING 资产。继续？`,
+      okText: '确认发起',
+      cancelText: '取消',
+      onOk: async () => {
+        setSubmitting(sourceTypes.length === 1 ? sourceTypes[0] : 'ALL');
+        setAcceptedRequest(null);
+        try {
+          await triggerReconcile(sourceTypes);
+          setAcceptedRequest(`${label}：请求已受理；本次执行状态与最终结果尚未核验`);
+          message.info('对账请求已受理，完成情况待确认；请稍后主动核对来源与台账');
+          // /status only reports Provider lastRun. It cannot correlate this request to that run.
+        } catch {
+          // 48012 mutual exclusion / 48011 missing provider: handled by the global API error handler.
+        } finally {
+          setSubmitting('');
+        }
+      },
+    });
   };
 
   const columns: ColumnsType<ReconcileStatusRow> = [
@@ -508,24 +526,21 @@ const SourceAccess = () => {
       key: 'counts',
       width: 170,
       render: (_, record) =>
-        record.lastRun
-          ? `${record.lastRun.scanned ?? 0} / ${record.lastRun.created ?? 0} / ${record.lastRun.changed ?? 0} / ${record.lastRun.restored ?? 0}`
-          : '-',
+        formatHistoricalReconcileCounts(record.lastRun),
     },
     {
       title: '结果',
       key: 'result',
       ellipsis: true,
-      render: (_, record) =>
-        record.lastRun?.error ? (
-          <Tooltip title={record.lastRun.error}>
-            <Tag color="red">失败</Tag>
-          </Tooltip>
-        ) : record.lastRun ? (
-          <Tag color="green">成功</Tag>
-        ) : (
-          <span className="text-[12px] text-[#98a2b3]">从未运行</span>
-        ),
+      render: (_, record) => {
+        const evidence = classifyReconcileLastRun(record.lastRun);
+        if (evidence === 'FAILED') return (
+          <Tooltip title={record.lastRun?.error}><Tag color="red">历史失败</Tag></Tooltip>
+        );
+        if (evidence === 'SUCCESS') return <Tag color="green">历史成功</Tag>;
+        if (evidence === 'NEVER') return <span className="text-[12px] text-[#98a2b3]">从未运行</span>;
+        return <Tag color="warning">历史结果未确认</Tag>;
+      },
     },
     {
       title: '操作',
@@ -535,7 +550,7 @@ const SourceAccess = () => {
         <YakButton
           size="small"
           type="link"
-          disabled={!canUpdate || !record.registered || Boolean(loadError) || loading}
+          disabled={!canUpdate || !record.registered || Boolean(loadError) || loading || Boolean(submitting)}
           loading={submitting === record.sourceType}
           onClick={() => run([record.sourceType], ASSET_SOURCE_TYPE_LABELS[record.sourceType] ?? record.sourceType)}
         >
@@ -552,7 +567,7 @@ const SourceAccess = () => {
           type="primary"
           size="small"
           className="!text-white"
-          disabled={!canUpdate || submitting === 'ALL' || Boolean(loadError) || loading}
+          disabled={!canUpdate || Boolean(submitting) || Boolean(loadError) || loading || !rows.some((row) => row.registered)}
           loading={submitting === 'ALL'}
           onClick={() => run(rows.filter((row) => row.registered).map((row) => row.sourceType), 'ALL')}
         >
@@ -562,7 +577,7 @@ const SourceAccess = () => {
           刷新状态
         </YakButton>
         <span className="text-[12px] text-[#98a2b3]">
-          手动触发为异步受理；每日凌晨自动对账，游标分批 ≤500；SOURCE_GONE 需连续两周期缺失才判定
+          手动触发仅代表受理；下表显示 Provider 历史 lastRun，不是本次请求回执。缺席判定由服务端有效对账窗口决定（默认 7 天）。
         </span>
       </div>
       {loadError && (
