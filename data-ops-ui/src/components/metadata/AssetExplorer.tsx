@@ -1,9 +1,10 @@
 import { Button, Checkbox, Input, Select, Space, Tag, Tooltip } from "antd";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AssetDetailDrawer from "@/components/metadata/AssetDetailDrawer";
+import { useSecurityProject } from "@/contexts/SecurityProjectContext";
 import {
   ENTITY_STATUS_OPTIONS,
   PROVIDER_OPTIONS,
@@ -85,6 +86,9 @@ export interface DrillTarget {
  * 不换接口，facet 计数来自服务端同一次 GROUP BY，因此不会出现"切了类型总数还不变"的假象。
  */
 const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
+  const { currentProject } = useSecurityProject();
+  const projectId = currentProject?.id;
+  const readEpoch = useRef(0);
   // Navigation hints are never authority: validate the source in the active project's
   // DataSource Owner listing before searching. Search still enforces server-side RBAC.
   const sourceHint = useMemo(() => {
@@ -97,6 +101,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
     const raw = new URLSearchParams(window.location.search).get("databaseName");
     return raw && raw.length <= 255 ? raw : undefined;
   }, []);
+  const [sourceHintProject, setSourceHintProject] = useState<string>();
   const [sourceHintStatus, setSourceHintStatus] = useState<
     "NONE" | "VERIFYING" | "VALID" | "INVALID" | "UNAVAILABLE"
   >(sourceHint === null ? "NONE" : sourceHint === "INVALID" ? "INVALID" : "VERIFYING");
@@ -132,28 +137,40 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
   const [detail, setDetail] = useState<MetadataSearchItem | null>(null);
 
   useEffect(() => {
+    let active = true;
+    ++readEpoch.current;
+    setResult(null);
+    setDetail(null);
+    setSourceHintProject(undefined);
+    if (typeof sourceHint === "number") setSourceHintStatus("VERIFYING");
     listEntityTypes("ENTITY")
       .then((list) =>
-        setTypes((list ?? []).filter((type) => type.status === "ACTIVE"))
+        { if (active) setTypes((list ?? []).filter((type) => type.status === "ACTIVE")); }
       )
-      .catch(() => setTypes([]));
+      .catch(() => { if (active) setTypes([]); });
     listAllDataSources()
       .then((result) => {
+        if (!active) return;
         const sources = (result.bizData ?? [])
           .filter((ds) => ds.id != null)
           .map((ds) => ({ id: Number(ds.id), name: ds.name ?? String(ds.id) }));
         setDataSourceNames(sources);
         if (typeof sourceHint === "number") {
+          setSourceHintProject(String(projectId ?? ""));
           setSourceHintStatus(sources.some((ds) => ds.id === sourceHint) ? "VALID" : "INVALID");
         }
       })
       .catch(() => {
+        if (!active) return;
         setDataSourceNames([]);
         if (typeof sourceHint === "number") setSourceHintStatus("UNAVAILABLE");
       });
-  }, [sourceHint]);
+    return () => { active = false; ++readEpoch.current; };
+  }, [sourceHint, projectId]);
 
   useEffect(() => {
+    if (sourceHint !== null && (sourceHintStatus !== "VALID"
+      || sourceHintProject !== String(projectId ?? ""))) return;
     const params = new URLSearchParams(window.location.search);
     const entityIdValue = params.get("entityId");
     const entityId =
@@ -166,6 +183,14 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
       .then(({ entity }) => {
         if (!current) return;
         const facts = entity.facts;
+        if (typeof sourceHint === "number" && (
+          Number(facts.dataSourceId) !== sourceHint ||
+          (databaseHint && facts.databaseName !== databaseHint) ||
+          entity.typeName !== "table" || facts.providerType !== "HARVESTED"
+        )) {
+          setError("实体与导航数据源/数据库不一致，拒绝打开其他来源的表");
+          return;
+        }
         setDetail({
           ...facts,
           id: entity.id,
@@ -180,12 +205,14 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
     return () => {
       current = false;
     };
-  }, []);
+  }, [sourceHintStatus, sourceHintProject, sourceHint, databaseHint, projectId]);
 
   const filterKey = JSON.stringify(compactFilter(filter));
 
   const load = useCallback(async () => {
+    if (sourceHint !== null && sourceHintProject !== String(projectId ?? "")) return;
     if (sourceHintStatus === "VERIFYING") return;
+    const ticket = ++readEpoch.current;
     if (sourceHintStatus === "INVALID" || sourceHintStatus === "UNAVAILABLE") {
       setResult(null);
       setError(sourceHintStatus === "INVALID"
@@ -207,11 +234,13 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
         searchAfter: cursors[page],
         explain,
       });
+      if (ticket !== readEpoch.current) return;
       setResult(search);
       setError(null);
       const next = search.nextSearchAfter;
       setCursors((prev) => (next ? { ...prev, [page + 1]: next } : prev));
     } catch (cause) {
+      if (ticket !== readEpoch.current) return;
       // 业务原因（筛选键不合法、类型名不存在等）已由全局提示给出，这里只负责把结果面清空，
       // 但必须把失败留在面上——否则空态会说"目录里还没有数据"，把服务端的错记到数据账上。
       setResult(null);
@@ -219,7 +248,7 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
         cause instanceof Error && cause.message ? cause.message : "检索失败"
       );
     } finally {
-      setLoading(false);
+      if (ticket === readEpoch.current) setLoading(false);
     }
   }, [
     q,
@@ -232,6 +261,9 @@ const AssetExplorer = ({ searchable = false }: { searchable?: boolean }) => {
     explain,
     nonce,
     sourceHintStatus,
+    sourceHintProject,
+    sourceHint,
+    projectId,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
