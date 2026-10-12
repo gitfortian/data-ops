@@ -21,11 +21,13 @@ export const previewModelingImportColumns = (
   datasourceId: number,
   database: string,
   table: string,
+  schema?: string,
 ): Promise<ModelingImportColumnView[]> =>
   HttpUtils.postData<ModelingImportColumnView[]>(`${MODELING_API_PREFIX}/import/preview`, {
     datasourceId,
     database,
     table,
+    schema,
   });
 
 export const importModelingTables = (payload: ModelingImportPayload): Promise<ModelingImportResult> =>
