@@ -440,7 +440,7 @@ const AssetCatalogPage = () => {
             onChange={(event) => {
               setSearchText(event.target.value);
               if (!event.target.value) { setKeyword(''); setPageNo(1); }
-            }
+            }}
             onSearch={(value) => {
               setKeyword(value.trim());
               setPageNo(1);
