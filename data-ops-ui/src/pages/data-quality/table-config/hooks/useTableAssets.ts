@@ -9,7 +9,7 @@ import {
 } from '@/services/data-quality';
 import { history, useIntl } from '@umijs/max';
 import { message } from 'antd';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   QUALITY_TABLE_CANDIDATE_PAGE_SIZE,
@@ -40,12 +40,28 @@ export const useTableAssets = ({
 
   const assetRequestSequenceRef = useRef(0);
   const candidateRequestSequenceRef = useRef(0);
+  const sourceScope = useRef({ id: dataSourceId, generation: 0 });
+  if (sourceScope.current.id !== dataSourceId) {
+    sourceScope.current = { id: dataSourceId, generation: sourceScope.current.generation + 1 };
+  }
+  const registrationRequest = useRef(0);
+  const registrationPending = useRef(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      assetRequestSequenceRef.current += 1;
+      candidateRequestSequenceRef.current += 1;
+    };
+  }, []);
   const [assets, setAssets] = useState<TableAssetView[]>([]);
   const [assetTotal, setAssetTotal] = useState(0);
   const [assetCurrent, setAssetCurrent] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [queryKeyword, setQueryKeyword] = useState('');
   const [assetLoading, setAssetLoading] = useState(false);
+  const [assetError, setAssetError] = useState('');
 
   const [registerOpen, setRegisterOpen] = useState(false);
   const [candidates, setCandidates] = useState<TableCandidateView[]>([]);
@@ -54,6 +70,7 @@ export const useTableAssets = ({
   const [candidateKeyword, setCandidateKeyword] = useState('');
   const [candidateQueryKeyword, setCandidateQueryKeyword] = useState('');
   const [candidateLoading, setCandidateLoading] = useState(false);
+  const [candidateError, setCandidateError] = useState('');
   const [registering, setRegistering] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState<
     Map<string, TableCandidateView>
@@ -75,9 +92,11 @@ export const useTableAssets = ({
       current: number,
       searchKeyword: string,
     ) => {
+      if (!active.current || sourceScope.current.id !== targetDataSourceId) return;
       const requestSequence = assetRequestSequenceRef.current + 1;
       assetRequestSequenceRef.current = requestSequence;
       setAssetLoading(true);
+      setAssetError('');
 
       try {
         const result = await listQualityTableAssets({
@@ -86,23 +105,24 @@ export const useTableAssets = ({
           dataSourceId: targetDataSourceId,
           keyword: searchKeyword || undefined,
         });
-        if (requestSequence !== assetRequestSequenceRef.current) return;
+        if (!active.current || requestSequence !== assetRequestSequenceRef.current) return;
         setAssets(result?.records || []);
         setAssetTotal(result?.total || 0);
       } catch (error) {
-        if (requestSequence === assetRequestSequenceRef.current) {
+        if (active.current && requestSequence === assetRequestSequenceRef.current) {
           setAssets([]);
           setAssetTotal(0);
-          message.error(
+          const reason =
             error instanceof Error
               ? error.message
               : intlRef.current.formatMessage({
                   id: 'pages.dataQuality.tableConfig.message.assetsLoadFailed',
-                }),
-          );
+                });
+          setAssetError(reason);
+          message.error(reason);
         }
       } finally {
-        if (requestSequence === assetRequestSequenceRef.current) {
+        if (active.current && requestSequence === assetRequestSequenceRef.current) {
           setAssetLoading(false);
         }
       }
@@ -116,9 +136,11 @@ export const useTableAssets = ({
       current: number,
       searchKeyword: string,
     ) => {
+      if (!active.current || sourceScope.current.id !== targetDataSourceId) return;
       const requestSequence = candidateRequestSequenceRef.current + 1;
       candidateRequestSequenceRef.current = requestSequence;
       setCandidateLoading(true);
+      setCandidateError('');
 
       try {
         const result = await listQualityTableCandidates({
@@ -127,23 +149,24 @@ export const useTableAssets = ({
           pageSize: QUALITY_TABLE_CANDIDATE_PAGE_SIZE,
           keyword: searchKeyword || undefined,
         });
-        if (requestSequence !== candidateRequestSequenceRef.current) return;
+        if (!active.current || requestSequence !== candidateRequestSequenceRef.current) return;
         setCandidates(result?.records || []);
         setCandidateTotal(result?.total || 0);
       } catch (error) {
-        if (requestSequence === candidateRequestSequenceRef.current) {
+        if (active.current && requestSequence === candidateRequestSequenceRef.current) {
           setCandidates([]);
           setCandidateTotal(0);
-          message.error(
+          const reason =
             error instanceof Error
               ? error.message
               : intlRef.current.formatMessage({
                   id: 'pages.dataQuality.tableConfig.message.candidatesLoadFailed',
-                }),
-          );
+                });
+          setCandidateError(reason);
+          message.error(reason);
         }
       } finally {
-        if (requestSequence === candidateRequestSequenceRef.current) {
+        if (active.current && requestSequence === candidateRequestSequenceRef.current) {
           setCandidateLoading(false);
         }
       }
@@ -171,6 +194,7 @@ export const useTableAssets = ({
       setAssets([]);
       setAssetTotal(0);
       setAssetLoading(false);
+      setAssetError('');
       return;
     }
     void requestAssets(dataSourceId, assetCurrent, queryKeyword);
@@ -192,7 +216,16 @@ export const useTableAssets = ({
   ]);
 
   const resetForDataSource = useCallback(() => {
+    registrationRequest.current += 1;
+    registrationPending.current = false;
+    setRegistering(false);
+    assetRequestSequenceRef.current += 1;
     candidateRequestSequenceRef.current += 1;
+    setAssets([]);
+    setAssetTotal(0);
+    setAssetError('');
+    setCandidateError('');
+    setCandidateLoading(false);
     setAssetCurrent(1);
     setKeyword('');
     setQueryKeyword('');
@@ -201,6 +234,8 @@ export const useTableAssets = ({
     setCandidateTotal(0);
     setSelectedCandidates(new Map());
   }, []);
+
+  useLayoutEffect(resetForDataSource, [dataSourceId, resetForDataSource]);
 
   const openRegisterDrawer = useCallback(() => {
     if (!dataSourceId) {
@@ -260,6 +295,7 @@ export const useTableAssets = ({
   );
 
   const handleRegister = useCallback(async () => {
+    if (!active.current || candidateLoading || candidateError || registrationPending.current) return;
     if (!dataSourceId || !selectedDataSource) return;
     if (!selectedCandidates.size) {
       message.warning(
@@ -270,6 +306,11 @@ export const useTableAssets = ({
       return;
     }
 
+    const request = ++registrationRequest.current;
+    const generation = sourceScope.current.generation;
+    const isCurrent = () => active.current && request === registrationRequest.current
+      && generation === sourceScope.current.generation;
+    registrationPending.current = true;
     setRegistering(true);
     try {
       const result = await registerQualityTables({
@@ -284,6 +325,7 @@ export const useTableAssets = ({
           remarks: record.remarks,
         })),
       });
+      if (!isCurrent()) return;
       message.success(
         intlRef.current.formatMessage(
           { id: 'pages.dataQuality.tableConfig.message.registered' },
@@ -295,6 +337,7 @@ export const useTableAssets = ({
       setAssetCurrent(1);
       await requestAssets(dataSourceId, 1, queryKeyword);
     } catch (error) {
+      if (!isCurrent()) return;
       message.error(
         error instanceof Error
           ? error.message
@@ -303,10 +346,15 @@ export const useTableAssets = ({
             }),
       );
     } finally {
-      setRegistering(false);
+      if (isCurrent()) {
+        registrationPending.current = false;
+        setRegistering(false);
+      }
     }
   }, [
     dataSourceId,
+    candidateLoading,
+    candidateError,
     queryKeyword,
     requestAssets,
     selectedCandidateRecords,
@@ -334,6 +382,8 @@ export const useTableAssets = ({
    */
   const unregisterTableAsset = useCallback(
     async (record: TableAssetView) => {
+      const generation = sourceScope.current.generation;
+      const isCurrent = () => active.current && generation === sourceScope.current.generation;
       if (record.monitorCount > 0) {
         message.warning(
           intlRef.current.formatMessage(
@@ -345,6 +395,7 @@ export const useTableAssets = ({
       }
       try {
         await deleteQualityTableAsset(record.id);
+        if (!isCurrent()) return;
         message.success(
           intlRef.current.formatMessage(
             { id: 'pages.dataQuality.tableConfig.message.unregistered' },
@@ -355,6 +406,7 @@ export const useTableAssets = ({
           await requestAssets(dataSourceId, assetCurrent, queryKeyword);
         }
       } catch (error) {
+        if (!isCurrent()) return;
         message.error(
           error instanceof Error
             ? error.message
@@ -380,6 +432,7 @@ export const useTableAssets = ({
     setKeyword,
     queryKeyword,
     assetLoading,
+    assetError,
     registerOpen,
     candidates,
     candidateTotal,
@@ -388,6 +441,10 @@ export const useTableAssets = ({
     candidateKeyword,
     setCandidateKeyword,
     candidateLoading,
+    candidateError,
+    retryCandidates: () => dataSourceId
+      ? requestCandidates(dataSourceId, candidateCurrent, candidateQueryKeyword)
+      : Promise.resolve(),
     registering,
     selectedCandidates,
     selectedCandidateKeys,

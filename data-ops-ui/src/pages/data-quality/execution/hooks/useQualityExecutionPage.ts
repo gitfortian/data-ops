@@ -46,6 +46,12 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
   const intl = useIntl();
   const intlRef = useRef(intl);
   intlRef.current = intl;
+  const active = useRef(true);
+  const requestSequence = useRef(0);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; requestSequence.current += 1; };
+  }, []);
 
   const [executionRecords, setExecutionRecords] = useState<
     ExecutionWorkspaceListItem[]
@@ -57,6 +63,7 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [keywordDraft, setKeywordDraft] = useState('');
   const [keyword, setKeyword] = useState('');
   const [filters, setFilters] = useState<ExecutionAdvancedFilterState>(
@@ -72,15 +79,24 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
 
   const load = useCallback(
     async (requestedCurrent = 1, requestedPageSize = pageSize) => {
+      if (!active.current) return;
+      const request = ++requestSequence.current;
+      const isCurrent = () => active.current && request === requestSequence.current;
       if (!dataSourceId) {
         setExecutionRecords([]);
         setRuleRecords([]);
         setTotal(0);
         setCurrent(1);
+        setLoadError('');
+        setLoading(false);
         return;
       }
 
       setLoading(true);
+      setLoadError('');
+      setExecutionRecords([]);
+      setRuleRecords([]);
+      setTotal(0);
       try {
         const query: ExecutionWorkspaceQuery = {
           current: requestedCurrent,
@@ -104,6 +120,7 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
 
         if (viewMode === 'RULE') {
           const result = await listQualityRuleExecutionWorkspace(query);
+          if (!isCurrent()) return;
           setRuleRecords(result.records || []);
           setExecutionRecords([]);
           setTotal(result.total);
@@ -111,6 +128,7 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
           setPageSize(result.pageSize);
         } else {
           const result = await listQualityExecutionWorkspace(query);
+          if (!isCurrent()) return;
           setExecutionRecords(result.records || []);
           setRuleRecords([]);
           setTotal(result.total);
@@ -118,15 +136,17 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
           setPageSize(result.pageSize);
         }
       } catch (error) {
-        message.error(
+        if (!isCurrent()) return;
+        const reason =
           error instanceof Error
             ? error.message
             : intlRef.current.formatMessage({
                 id: 'pages.dataQuality.execution.loadFailed',
-              }),
-        );
+              });
+        setLoadError(reason);
+        message.error(reason);
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [dataSourceId, dateRange, filters, keyword, pageSize, viewMode],
@@ -134,11 +154,13 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
 
   useEffect(() => {
     void load(1);
+    return () => { requestSequence.current += 1; };
   }, [load]);
 
   useEffect(() => {
     const records = viewMode === 'RULE' ? ruleRecords : executionRecords;
     if (
+      loading || loadError ||
       !records.some((record) =>
         ['WAITING', 'RUNNING'].includes(record.executionStatus),
       )
@@ -151,7 +173,7 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
       3000,
     );
     return () => window.clearInterval(timer);
-  }, [current, executionRecords, load, pageSize, ruleRecords, viewMode]);
+  }, [current, executionRecords, load, loadError, loading, pageSize, ruleRecords, viewMode]);
 
   const advancedFilterCount = useMemo(
     () =>
@@ -207,6 +229,7 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
     current,
     pageSize,
     loading,
+    loadError,
     keywordDraft,
     setKeywordDraft,
     draftFilters,

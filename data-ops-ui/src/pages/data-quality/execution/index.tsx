@@ -1,6 +1,8 @@
 import { BRAND_THEME } from '@/styles/brand';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { history, useIntl } from '@umijs/max';
-import { ConfigProvider, Pagination } from 'antd';
+import { Alert, Button, ConfigProvider, Pagination } from 'antd';
 import { useEffect } from 'react';
 
 import DataSourceTreePane from '../table-config/components/DataSourceTreePane';
@@ -16,6 +18,7 @@ const ExecutionPage = () => {
     selectedNodeKey,
     sourceNodes,
     treeLoading,
+    sourceError,
     leftWidth,
     collapsed,
     setCollapsed,
@@ -42,6 +45,8 @@ const ExecutionPage = () => {
           <DataSourceTreePane
             sourceNodes={sourceNodes}
             treeLoading={treeLoading}
+            sourceError={sourceError}
+            onRetry={() => void loadSourceTree(selectedNodeKey)}
             selectedNodeKey={selectedNodeKey}
             leftWidth={leftWidth}
             collapsed={collapsed}
@@ -75,6 +80,13 @@ const ExecutionPage = () => {
             />
 
             <div className="min-h-0 flex-1 overflow-auto pt-2">
+              {execution.loadError ? (
+                <Alert type="error" showIcon message="质量运行记录读取失败"
+                  description={execution.loadError}
+                  action={<Button onClick={() => void execution.load(execution.current, execution.pageSize)}>
+                    按当前筛选重试
+                  </Button>} />
+              ) : (
               <ExecutionRecordTable
                 executionRecords={execution.executionRecords}
                 ruleRecords={execution.ruleRecords}
@@ -87,6 +99,7 @@ const ExecutionPage = () => {
                   history.push(`/data-quality/monitor/${monitorId}`)
                 }
               />
+              )}
             </div>
 
             <div className="flex shrink-0 justify-end border-t border-[#f0f2f5] pt-3">
@@ -112,4 +125,10 @@ const ExecutionPage = () => {
   );
 };
 
-export default ExecutionPage;
+export default function QualityExecutionScope() {
+  const { currentProject } = useSecurityProject();
+  const { can, permissionCodes } = usePermissionAccess();
+  if (!currentProject) return <Alert type="info" showIcon message="请选择项目空间" />;
+  if (!can('quality:execution:read')) return <Alert type="info" showIcon message="暂无执行读取权限" />;
+  return <ExecutionPage key={JSON.stringify([currentProject.id, permissionCodes])} />;
+}

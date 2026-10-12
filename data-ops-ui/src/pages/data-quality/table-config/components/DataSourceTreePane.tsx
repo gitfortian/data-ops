@@ -1,6 +1,6 @@
 import YakOpsEmpty from '@/components/YakOpsEmpty';
 import { useIntl } from '@umijs/max';
-import { Spin, Tooltip, Tree } from 'antd';
+import { Alert, Button, Spin, Tooltip, Tree } from 'antd';
 import type { TreeProps } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import {
@@ -18,6 +18,8 @@ import { groupQualityDataSourceNodes } from '../utils';
 interface DataSourceTreePaneProps {
   sourceNodes: QualityDataSourceNode[];
   treeLoading: boolean;
+  sourceError?: string;
+  onRetry?: () => void;
   selectedNodeKey?: string;
   leftWidth: number;
   collapsed: boolean;
@@ -37,6 +39,8 @@ interface QualityTreeDataNode extends DataNode {
 const DataSourceTreePane = ({
   sourceNodes,
   treeLoading,
+  sourceError,
+  onRetry,
   selectedNodeKey,
   leftWidth,
   collapsed,
@@ -147,7 +151,10 @@ const DataSourceTreePane = ({
 
           <div className="mt-1 min-h-0 flex-1 overflow-y-auto px-[14px]">
             <Spin spinning={treeLoading} wrapperClassName="block min-h-full">
-              {treeData.length ? (
+              {sourceError ? (
+                <Alert type="error" showIcon message="数据源读取失败" description={sourceError}
+                  action={<Button size="small" onClick={onRetry}>重新读取</Button>} />
+              ) : treeData.length ? (
                 <Tree
                   blockNode
                   defaultExpandAll

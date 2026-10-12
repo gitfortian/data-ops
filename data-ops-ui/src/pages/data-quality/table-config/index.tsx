@@ -1,5 +1,7 @@
 import { BRAND_THEME } from '@/styles/brand';
-import { ConfigProvider } from 'antd';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { Alert, Button, ConfigProvider } from 'antd';
 import { history, useLocation } from '@umijs/max';
 
 import DataSourceTreePane from './components/DataSourceTreePane';
@@ -37,6 +39,8 @@ const QualityTableRegistryPage = () => {
           <DataSourceTreePane
             sourceNodes={source.sourceNodes}
             treeLoading={source.treeLoading}
+            sourceError={source.sourceError}
+            onRetry={() => void refresh()}
             selectedNodeKey={source.selectedNodeKey}
             leftWidth={source.leftWidth}
             collapsed={source.collapsed}
@@ -45,7 +49,13 @@ const QualityTableRegistryPage = () => {
             onCollapsedChange={source.setCollapsed}
           />
 
-          <RegisteredTablePanel
+          {table.assetError ? (
+            <div className="min-w-0 flex-1 p-4">
+              <Alert type="error" showIcon message="已注册数据表读取失败"
+                description={table.assetError}
+                action={<Button onClick={() => void refresh()}>按当前筛选重试</Button>} />
+            </div>
+          ) : <RegisteredTablePanel
             dataSourceId={source.dataSourceId}
             selectedSourceNode={source.selectedSourceNode}
             assets={table.assets}
@@ -59,7 +69,7 @@ const QualityTableRegistryPage = () => {
             onOpenRuleManagement={table.openRuleManagement}
             onCreateMonitor={table.createMonitor}
             onUnregister={(record) => void table.unregisterTableAsset(record)}
-          />
+          />}
         </div>
       </div>
 
@@ -71,6 +81,8 @@ const QualityTableRegistryPage = () => {
         candidateCurrent={table.candidateCurrent}
         candidateKeyword={table.candidateKeyword}
         candidateLoading={table.candidateLoading}
+        candidateError={table.candidateError}
+        onRetry={() => void table.retryCandidates()}
         selectedCandidates={table.selectedCandidates}
         selectedCandidateKeys={table.selectedCandidateKeys}
         selectedCandidateRecords={table.selectedCandidateRecords}
@@ -86,4 +98,10 @@ const QualityTableRegistryPage = () => {
   );
 };
 
-export default QualityTableRegistryPage;
+export default function QualityTableRegistryScope() {
+  const { currentProject } = useSecurityProject();
+  const { can, permissionCodes } = usePermissionAccess();
+  if (!currentProject) return <Alert type="info" showIcon message="请选择项目空间" />;
+  if (!can('quality:monitor:read')) return <Alert type="info" showIcon message="暂无质量监控读取权限" />;
+  return <QualityTableRegistryPage key={JSON.stringify([currentProject.id, permissionCodes])} />;
+}
