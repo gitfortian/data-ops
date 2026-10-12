@@ -230,6 +230,16 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
     const values = await form.validateFields().catch(() => null);
     if (!values) return;
     const harvest = values.providerType === 'HARVESTED';
+    // The field may be prefilled from a cross-domain URL. A valid Form value is
+    // not proof that this source still belongs to the active project.
+    if (harvest && (loadingSources || sourceLoadError)) {
+      message.warning('尚未核验当前项目的数据源列表，请稍后重试');
+      return;
+    }
+    if (harvest && !dataSources.some((source) => Number(source.id) === values.dataSourceId)) {
+      message.warning('该数据源不在当前项目的可用列表中，请重新选择');
+      return;
+    }
     const params: CollectJobUpsertParams = {
       providerType: values.providerType,
       jobName: values.jobName.trim(),
