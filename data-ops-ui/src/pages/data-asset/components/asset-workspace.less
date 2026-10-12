@@ -1,0 +1,80 @@
+/* Asset workspace typography, density and responsive rhythm.
+ * Scoped to asset routes to avoid changing Metadata/Modeling tables and dialogs. */
+.asset-workspace {
+  --asset-stroke: #e6eaf0;
+  --asset-muted: #8491a4;
+  --asset-ink: #263449;
+  --asset-surface: #ffffff;
+
+  .ant-card {
+    border-color: var(--asset-stroke);
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
+  .ant-card .ant-card-head {
+    min-height: 46px;
+    padding: 0 18px;
+    border-bottom-color: #edf0f5;
+  }
+  .ant-card .ant-card-head-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--asset-ink);
+  }
+  .ant-card .ant-card-body { padding: 18px; }
+
+  .ant-table {
+    color: #3b4c61;
+    font-size: 12px;
+  }
+  .ant-table-wrapper .ant-table-thead > tr > th {
+    padding: 13px 12px;
+    background: #f8fafc;
+    color: #718094;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom-color: #e9edf3;
+  }
+  .ant-table-wrapper .ant-table-tbody > tr > td {
+    padding: 13px 12px;
+    border-bottom-color: #f0f2f6;
+    vertical-align: middle;
+  }
+  .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+    background: #f8fafd;
+  }
+  .ant-table-wrapper .ant-table-pagination {
+    padding-top: 14px;
+    margin: 8px 0 0;
+  }
+  .ant-table-wrapper .ant-table-cell-fix-right {
+    box-shadow: -5px 0 14px -13px rgba(29, 43, 68, .3);
+  }
+
+  .ant-segmented {
+    padding: 4px;
+    border-radius: 11px;
+    background: #eef2f7;
+  }
+  .ant-segmented-item { border-radius: 8px; }
+  .ant-segmented-item-selected { box-shadow: 0 1px 5px rgba(17, 34, 59, .08); }
+
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-select-selector,
+  .ant-btn:not(.ant-btn-link):not(.ant-btn-text) {
+    border-radius: 9px;
+  }
+  .ant-tag { border-radius: 5px; }
+  .ant-tabs-nav { margin-bottom: 16px; }
+  .ant-tabs-tab { padding: 11px 2px; }
+
+  @media (max-width: 767px) {
+    .ant-card .ant-card-body { padding: 14px; }
+    .ant-card .ant-card-head { padding: 0 14px; }
+    .ant-table-wrapper .ant-table-pagination { justify-content: flex-start; }
+    .ant-segmented { max-width: 100%; }
+    .ant-segmented-group { flex-wrap: wrap; }
+  }
+}
