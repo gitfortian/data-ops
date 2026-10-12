@@ -1,5 +1,7 @@
 package io.yak.ops.business.metadata.autoingest;
 
+import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
+
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
