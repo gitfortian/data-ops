@@ -17,6 +17,7 @@ import {
   Tree,
   TreeSelect,
 } from 'antd';
+import { AssetWorkspaceHeading, ASSET_SURFACE } from '../components/AssetWorkspace';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
@@ -894,15 +895,11 @@ const AssetTaxonomyPage = () => {
   }, [tab]);
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">目录与标签</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            组织资产目录、设置编目规则与业务标签。规则需试跑通过后才能启用。
-          </div>
-        </div>
-        <Segmented
+    <main className={ASSET_SURFACE}>
+      <AssetWorkspaceHeading
+        title="目录与标签"
+        description="建立可维护的目录体系、自动编目规则和标签字典；规则需先试跑再启用。"
+        actions={<Segmented
           options={[
             { value: 'directory', label: '目录树' },
             { value: 'rules', label: '编目规则' },
@@ -910,14 +907,14 @@ const AssetTaxonomyPage = () => {
           ]}
           value={tab}
           onChange={(value) => setTab(value as typeof tab)}
-        />
-      </div>
-      <div className="mt-4">
+        />}
+      />
+      <div className="mt-6 rounded-2xl border border-solid border-[#e6eaf0] bg-white p-5 shadow-[0_4px_20px_rgba(15,23,42,0.025)]">
         {tab === 'directory' && <DirectoryTab />}
         {tab === 'rules' && <RuleTab dirTree={dirTree} tags={tags} />}
         {tab === 'tags' && <TagTab />}
       </div>
-    </div>
+    </main>
   );
 };
 
