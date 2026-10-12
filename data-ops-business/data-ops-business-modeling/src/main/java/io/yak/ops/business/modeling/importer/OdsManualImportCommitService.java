@@ -2,6 +2,7 @@ package io.yak.ops.business.modeling.importer;
 
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.datasource.domain.catalog.CatalogColumn;
+import io.yak.ops.business.datasource.domain.catalog.CatalogTable;
 import io.yak.ops.business.modeling.api.ModelingStructureApi;
 import io.yak.ops.business.modeling.dao.model.ModelingColumnMappingPO;
 import io.yak.ops.business.modeling.domain.Model;
@@ -53,7 +54,15 @@ public class OdsManualImportCommitService {
                         String sourceDatabase,
                         @NotBlank String sourceTable,
                         @Valid @NotNull ModelingStructureApi.SaveStructureRequest structure,
-                        @NotNull List<@Valid ColumnSelection> selections) {}
+                        @NotNull List<@Valid ColumnSelection> selections,
+                        String sourceSchema) {
+    /** Historical client contract remains valid: default/no schema. */
+    public Request(String expectedDefinition, Long sourceDatasourceId, String sourceDatabase,
+                   String sourceTable, ModelingStructureApi.SaveStructureRequest structure,
+                   List<ColumnSelection> selections) {
+      this(expectedDefinition, sourceDatasourceId, sourceDatabase, sourceTable, structure, selections, null);
+    }
+  }
 
   public record Receipt(Long modelId, String status, Long sourceDatasourceId,
                         String sourceDatabase, String sourceTable, int sourceColumnCount,
@@ -79,7 +88,8 @@ public class OdsManualImportCommitService {
     if (model.sourceDatasourceId() != null
         && (!Objects.equals(model.sourceDatasourceId(), request.sourceDatasourceId())
             || !Objects.equals(model.sourceDatabase(), request.sourceDatabase())
-            || !Objects.equals(model.sourceTable(), request.sourceTable()))) {
+            || !Objects.equals(model.sourceTable(), request.sourceTable())
+            || !Objects.equals(clean(model.sourceSchema()), clean(request.sourceSchema())))) {
       throw reject("目标模型已绑定其他来源，不允许重新绑定");
     }
     var original = structures.getForUpdate(modelId);
@@ -90,8 +100,28 @@ public class OdsManualImportCommitService {
       throw reject("此模型已有结构或来源映射，请使用存量核验/修复流程，禁止覆盖");
     }
 
+    // Recheck the physical owner AT COMMIT, not only when the browser navigated here.
+    // A broad keyword match must never authorize a different database or schema.
+    List<CatalogTable> physical = catalog.listTables(request.sourceDatasourceId(),
+        request.sourceDatabase(), request.sourceSchema(), request.sourceTable()).stream()
+        .filter(t -> Objects.equals(clean(t.database()), clean(request.sourceDatabase()))
+            && Objects.equals(clean(t.schema()), clean(request.sourceSchema()))
+            && Objects.equals(clean(t.name()), clean(request.sourceTable())))
+        .toList();
+    if (physical.size() != 1) {
+      throw reject("来源表不可唯一核验；请返回来源目录重新确认");
+    }
+    boolean sourceClash = models.listBySource(request.sourceDatasourceId(), request.sourceTable())
+        .stream().anyMatch(candidate -> !Objects.equals(candidate.id(), modelId)
+            && "ODS".equalsIgnoreCase(candidate.layerCode())
+            && Objects.equals(clean(candidate.sourceDatabase()), clean(request.sourceDatabase()))
+            && (Objects.equals(clean(candidate.sourceSchema()), clean(request.sourceSchema()))
+                || clean(candidate.sourceSchema()) == null && clean(request.sourceSchema()) != null));
+    if (sourceClash) {
+      throw reject("精确来源已存在 ODS 或有来源不完整的旧模型；必须先复用/核验，禁止重复绑定");
+    }
     List<CatalogColumn> sourceColumns = catalog.listColumnsFresh(
-        request.sourceDatasourceId(), request.sourceDatabase(), null, request.sourceTable());
+        request.sourceDatasourceId(), request.sourceDatabase(), request.sourceSchema(), request.sourceTable());
     List<ModelingStructureApi.ColumnInput> targets = request.structure().columns();
     List<ColumnSelection> selected = request.selections();
     if (sourceColumns == null || sourceColumns.isEmpty()
@@ -143,8 +173,11 @@ public class OdsManualImportCommitService {
     // its existing validation, optimistic evidence and audit policy.
     var saved = structures.saveEditContext(modelId, request.structure(), operator,
         request.expectedDefinition());
-    if (model.sourceDatasourceId() == null && !models.assignSource(modelId,
-        request.sourceDatasourceId(), request.sourceDatabase(), request.sourceTable(), operator)) {
+    if (model.sourceDatasourceId() == null && !(clean(request.sourceSchema()) == null
+        ? models.assignSource(modelId, request.sourceDatasourceId(),
+            request.sourceDatabase(), request.sourceTable(), operator)
+        : models.assignSource(modelId, request.sourceDatasourceId(), request.sourceDatabase(),
+            request.sourceSchema(), request.sourceTable(), operator))) {
       throw reject("模型来源身份保存失败，整批回滚");
     }
     if (!models.assignImportLineage(modelId, "SOURCE_TABLE", null, operator)) {
@@ -176,6 +209,10 @@ public class OdsManualImportCommitService {
     return new Receipt(modelId, "SAVED_AND_VERIFIED", request.sourceDatasourceId(),
         request.sourceDatabase(), request.sourceTable(), sources.size(),
         persisted.size(), saved.definition());
+  }
+
+  private static String clean(String value) {
+    return StringUtils.hasText(value) ? value.trim() : null;
   }
 
   private static String key(String column) { return column.trim().toLowerCase(Locale.ROOT); }
