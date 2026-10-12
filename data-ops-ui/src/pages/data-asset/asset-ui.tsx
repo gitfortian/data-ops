@@ -48,14 +48,14 @@ export const AssetMetric = ({
     ? 'bg-[#fff5e9] text-[#bd7a3a]'
     : emphasis === 'success' ? 'bg-[#eaf7f1] text-[#318369]' : 'bg-[#eef4fa] text-[#5c7fa8]';
   return (
-    <div className="min-w-0 rounded-2xl border border-solid border-[#e7ebf1] bg-white px-5 py-4 shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
+    <section className="min-w-0 rounded-2xl border border-solid border-[#e7ebf1] bg-white px-5 py-4 shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[13px] font-medium text-[#728097]">{label}</span>
         {icon ? <span className={'flex h-9 w-9 items-center justify-center rounded-xl ' + iconTone}>{icon}</span> : null}
       </div>
       <div className={'mt-2 text-[30px] font-semibold leading-10 tracking-tight tabular-nums ' + color}>{value}</div>
       {helper ? <p className="mb-0 mt-1 min-h-5 text-[12px] leading-5 text-[#94a0b0]">{helper}</p> : null}
-    </div>
+    </section>
   );
 };
 
