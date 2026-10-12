@@ -222,9 +222,8 @@ const DirectoryTab = () => {
               {node.builtin && <Tag className="!ml-1">内置</Tag>}
             </span>
             <Dropdown menu={nodeDropdown(node)} trigger={['click']}>
-              <Button type="text" size="small" onClick={(event) => event.stopPropagation()}>
-                ···
-              </Button>
+              <Button type="text" size="small" aria-label={'管理目录：' + node.dirName}
+                icon={<MoreOutlined />} onClick={(event) => event.stopPropagation()} />
             </Dropdown>
           </div>
         }
@@ -274,12 +273,16 @@ const DirectoryTab = () => {
       <Modal
         open={Boolean(editing)}
         title={editing?.node ? `编辑目录「${editing.node.dirName}」` : '新建目录'}
-        okText="保存"
+        width={580}
+        okText="保存目录"
         cancelText="取消"
         onOk={submitEdit}
         destroyOnClose
       >
         <Form form={form} layout="vertical" className="!mt-4">
+          <div className="mb-4 rounded-xl bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#738298]">
+            目录编码由平台生成。新建目录不会立即移动已有资产；修改名称或排序不会更改源资产身份。
+          </div>
           <Form.Item
             name="dirName"
             label="目录名称"
@@ -287,22 +290,25 @@ const DirectoryTab = () => {
           >
             <Input placeholder="如：客户域主数据" />
           </Form.Item>
-          <Form.Item name="iconKey" label="图标标识（可选）" rules={[{ max: 64 }]}>
-            <Input placeholder="可空，前端按默认图标渲染" />
+          <Form.Item name="description" label="目录说明（可选）" rules={[{ max: 512 }]}>
+            <Input.TextArea rows={3} placeholder="说明该目录的业务边界和适用资产" />
           </Form.Item>
-          <Form.Item name="description" label="描述" rules={[{ max: 512 }]}>
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="sortOrder" label="排序" initialValue={100}>
-            <InputNumber min={0} max={9999} className="w-full" />
-          </Form.Item>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item name="iconKey" label="图标标识（可选）" rules={[{ max: 64 }]}>
+              <Input placeholder="留空使用默认图标" />
+            </Form.Item>
+            <Form.Item name="sortOrder" label="显示顺序" initialValue={100}>
+              <InputNumber min={0} max={9999} className="w-full" />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
 
       <Modal
         open={Boolean(moving)}
         title={`移动目录「${moving?.dirName ?? ''}」`}
-        okText="移动"
+        width={560}
+        okText="确认移动"
         cancelText="取消"
         onOk={runMove}
         destroyOnClose
@@ -315,7 +321,9 @@ const DirectoryTab = () => {
           value={moveTarget}
           onChange={setMoveTarget}
         />
-        <div className="mt-2 text-[13px] text-[#667085]">不能移动到当前目录或其子目录中。</div>
+        <div className="mt-3 rounded-xl bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#738298]">
+          移动将更新该目录及子目录的组织路径。不能移动到当前目录或其后代节点，已纳管资产不会被删除。
+        </div>
       </Modal>
     </div>
   );
@@ -895,13 +903,17 @@ const TagTab = () => {
 
       <Modal
         open={Boolean(editing)}
-        title={editing === 'new' ? '新建标签' : '编辑标签'}
-        okText="保存"
+        title={editing === 'new' ? '新建业务标签' : '编辑业务标签'}
+        width={560}
+        okText="保存标签"
         cancelText="取消"
         onOk={submit}
         destroyOnClose
       >
         <Form form={form} layout="vertical" className="!mt-4">
+          <div className="mb-4 rounded-xl bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#738298]">
+            标签用于业务发现和分类，可以同时赋予多个资产；修改标签不会改变资产源表或发布状态。
+          </div>
           <Form.Item name="tagName" label="标签名称" rules={[{ required: true, message: '请输入标签名称' }, { max: 128 }]}>
             <Input placeholder="如：核心数据" />
           </Form.Item>
