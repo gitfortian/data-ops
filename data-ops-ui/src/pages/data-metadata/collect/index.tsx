@@ -31,7 +31,7 @@ const MetadataCollectPage = () => {
   const [searchParams] = useSearchParams();
   const rawSourceHint = searchParams.get('dataSourceId');
   const parsedSourceHint = Number(rawSourceHint);
-  const sourceHintId = rawSourceHint && /^[1-9]\\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
+  const sourceHintId = rawSourceHint && /^[1-9]\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
     ? parsedSourceHint : undefined;
   const canCreate = can('data-metadata:create');
   const canUpdate = can('data-metadata:update');
