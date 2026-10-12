@@ -5,6 +5,7 @@ import {
   Drawer,
   Form,
   Input,
+  Modal,
   Radio,
   Select,
   Switch,
@@ -61,6 +62,7 @@ const DEFAULT_CRON = '0 0 3 * * ?';
 const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved }: CollectJobDrawerProps) => {
   const [form] = Form.useForm<JobFormValues>();
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [dataSources, setDataSources] = useState<DataSourceRecord[]>([]);
   const [databases, setDatabases] = useState<string[]>([]);
   const [schemas, setSchemas] = useState<string[]>([]);
@@ -107,6 +109,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
 
   useEffect(() => {
     if (!open) return;
+    setDirty(false);
     if (editing) {
       form.setFieldsValue({
         providerType: editing.providerType,
@@ -200,6 +203,24 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
     [dataSources],
   );
 
+  const requestClose = () => {
+    if (saving) return;
+    if (!dirty) { onClose(); return; }
+    Modal.confirm({
+      title: '还有未保存的采集范围',
+      content: '离开将放弃本次未保存的表匹配、Schema 与调度改动。已保存任务和运行历史不受影响。',
+      okText: '放弃本次编辑', okType: 'danger', cancelText: '继续编辑',
+      onOk: onClose,
+    });
+  };
+
+  useEffect(() => {
+    if (!open || !dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [open, dirty]);
+
   const handleSubmit = async () => {
     const values = await form.validateFields();
     const harvest = values.providerType === 'HARVESTED';
@@ -215,6 +236,25 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       tablePattern: harvest ? values.tablePattern?.trim() || null : null,
       collectColumns: harvest ? values.collectColumns ?? true : null,
     };
+    if (editing?.enabled) {
+      const changed = editing.dataSourceId !== (params.dataSourceId ?? null)
+        || (editing.databaseName || null) !== (params.databaseName ?? null)
+        || (editing.schemaName || null) !== (params.schemaName ?? null)
+        || (editing.tablePattern || null) !== (params.tablePattern ?? null)
+        || (editing.cronExpression || DEFAULT_CRON) !== params.cronExpression
+        || (editing.collectColumns ?? true) !== (params.collectColumns ?? true);
+      if (changed) {
+        const approved = await new Promise<boolean>((resolve) => {
+          Modal.confirm({
+            title: '确认修改已启用任务的采集范围或调度？',
+            content: '任务目前已启用。保存会影响后续 Quartz 执行范围/时间，作用域改动将使旧 dry-run 证据失效，但不会自动停用或执行。请确认后再保存。',
+            okText: '确认修改已启用任务', cancelText: '保留原配置',
+            onOk: () => resolve(true), onCancel: () => resolve(false),
+          });
+        });
+        if (!approved) return;
+      }
+    }
     setSaving(true);
     try {
       let saved: CollectJobRecord;
@@ -225,6 +265,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
         saved = await createCollectJob(params);
         message.success('任务已创建并保存（默认停用）；手动正式运行不等于启用定时调度');
       }
+      setDirty(false);
       onSaved(saved);
     } catch {
       // 全局错误提示已展示业务原因（编码重复 / 作用域非法）
@@ -242,7 +283,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       destroyOnClose
       maskClosable={!saving}
       keyboard={!saving}
-      onClose={onClose}
+      onClose={requestClose}
       title={
         <div className="text-[18px] font-semibold leading-7 text-[#101828]">
           {isEdit ? '编辑采集任务' : '新建采集任务'}
@@ -250,7 +291,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       }
       extra={
         <div className="flex items-center gap-2">
-          <YakButton disabled={saving} onClick={onClose} className="!h-9 !rounded-lg !px-4">
+          <YakButton disabled={saving} onClick={requestClose} className="!h-9 !rounded-lg !px-4">
             取消
           </YakButton>
           <YakButton
@@ -268,7 +309,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
         body: { padding: 24 },
       }}
     >
-      <Form form={form} layout="vertical" requiredMark="optional">
+      <Form form={form} layout="vertical" requiredMark="optional" onValuesChange={() => setDirty(true)}>
         {isEdit ? (
           <Alert
             type="info"
