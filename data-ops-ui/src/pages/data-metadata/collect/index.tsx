@@ -455,9 +455,17 @@ const MetadataCollectPage = () => {
         editing={editing}
         initialDataSourceId={sourceHint?.id}
         onClose={() => setDrawerOpen(false)}
-        onSaved={() => {
+        onSaved={(saved) => {
           setDrawerOpen(false);
           void reload();
+          if (!canCreate) return;
+          Modal.confirm({
+            title: '采集任务已保存，下一步预演范围',
+            content: `已保存任务 #${saved.id}「${saved.jobName}」；当前执行范围：${scopeText(saved)}。预演不写入元数据目录，也不会启用定时调度。可以返回列表直接正式采集（需再次确认范围）。`,
+            okText: '预演采集范围',
+            cancelText: '返回已保存任务',
+            onOk: () => execute(saved, 'dry-run'),
+          });
         }}
       />
       <RunHistoryDrawer
