@@ -235,10 +235,12 @@ const PublishPrecheckModal = ({
   return (
     <Modal
       open={open}
-      title="上架预检"
-      width={920}
+      title={<div><div className="text-[18px] font-semibold text-[#273950]">资产上架预检</div>
+        <div className="mt-1 text-[12px] font-normal text-[#8997a9]">检查缺口 → 补齐治理信息 → 重新预检 → 明确发布</div></div>}
+      width={960}
       onCancel={onClose}
       destroyOnClose
+      styles={{ body: { padding: '20px 24px', background: '#f8f9fc' }, footer: { padding: '14px 24px' } }}
       footer={
         <Space>
           <Button onClick={onClose}>取消</Button>
@@ -258,6 +260,19 @@ const PublishPrecheckModal = ({
         </Space>
       }
     >
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {[
+          { title: '预检资产', number: assets.length, note: '以本次选中的资产为准' },
+          { title: '待处理缺口资产', number: precheck ? gapCount : '—', note: '需补齐或显式接受风险' },
+          { title: '预检状态', number: !precheck ? '读取中' : precheck.allClear ? '已通过' : '待处理', note: '有效结果来自本次预检令牌' },
+        ].map((item) => (
+          <div key={item.title} className="rounded-xl border border-solid border-[#e6eaf1] bg-white px-4 py-3">
+            <div className="text-[11px] text-[#8796aa]">{item.title}</div>
+            <div className="mt-1 text-[20px] font-semibold tabular-nums text-[#2d4159]">{item.number}</div>
+            <div className="mt-1 text-[11px] text-[#9aa6b5]">{item.note}</div>
+          </div>
+        ))}
+      </div>
       {precheck && !precheck.allClear && (
         <Alert
           className="!mb-3"
@@ -267,12 +282,12 @@ const PublishPrecheckModal = ({
           description={
             <Space direction="vertical" size={4}>
               <span>
-                建议先"应用补齐并重检"；负责人默认当前用户、描述从源域带出、目录需选择。
+                建议先补充负责人、描述和目录并重新预检；只有明确接受风险后才允许带缺口上架。
               </span>
               <label className="cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  className="mr-1 accent-[#FE2C55]"
+                  className="mr-2 accent-[#4d7da9]"
                   checked={acceptRisk}
                   onChange={(event) => setAcceptRisk(event.target.checked)}
                 />
@@ -285,10 +300,11 @@ const PublishPrecheckModal = ({
       {precheck?.allClear && (
         <Alert className="!mb-3" type="success" showIcon message="全部资产预检通过，可直接上架" />
       )}
-      <div className="mb-2 text-[12px] text-[#667085]">
-        预检令牌 {precheck ? `${Math.round(precheck.expiresIn / 60)} 分钟` : '-'}
+      <div className="mb-3 rounded-lg border border-solid border-[#e3eaf2] bg-[#f0f5fa] px-4 py-3 text-[12px] leading-5 text-[#708197]">
+        当前预检令牌 {precheck ? `${Math.round(precheck.expiresIn / 60)} 分钟` : '-'}
         内有效；过期后点"应用补齐并重检"重新获取。
       </div>
+      <div className="overflow-hidden rounded-xl border border-solid border-[#e5eaf1] bg-white px-3 py-2">
       <Table
         rowKey="assetId"
         size="small"
@@ -296,8 +312,9 @@ const PublishPrecheckModal = ({
         columns={columns}
         dataSource={precheck?.items ?? []}
         pagination={false}
-        scroll={{ y: 380 }}
+        scroll={{ x: 760, y: 380 }}
       />
+      </div>
     </Modal>
   );
 };

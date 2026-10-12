@@ -1,4 +1,8 @@
+import { FolderTree, Tags, WandSparkles, ArrowRight } from 'lucide-react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { AssetPageHeader, AssetPanel, AssetWorkspace } from '../asset-ui';
 import {
+  Alert,
   Button,
   Card,
   Dropdown,
@@ -90,6 +94,7 @@ const DirectoryTab = () => {
 
   const [tree, setTree] = useState<DirNode[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState<{ node: DirNode | null; parentId?: number } | null>(null);
   const [moving, setMoving] = useState<DirNode | null>(null);
   const [moveTarget, setMoveTarget] = useState<number | undefined>();
@@ -97,10 +102,12 @@ const DirectoryTab = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setTree(await getDirectoryTree());
     } catch {
       setTree([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -209,8 +216,8 @@ const DirectoryTab = () => {
       <Tree.TreeNode
         key={node.id}
         title={
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate">
+          <div className="flex min-w-0 items-center justify-between gap-3 py-1">
+            <span className="min-w-0 truncate text-[13px] font-medium text-[#40516a]">
               {node.dirName}
               {node.builtin && <Tag className="!ml-1">内置</Tag>}
             </span>
@@ -246,9 +253,13 @@ const DirectoryTab = () => {
         </YakButton>
         <span className="text-[13px] text-[#667085]">目录编码自动生成，移动时会同步更新子目录的位置。</span>
       </div>
-      <Card size="small" loading={loading}>
+      {loadError ? <Alert type="error" showIcon className="!mb-4"
+        message="资产目录结构读取失败" description="无法判断当前项目是否已有目录；请核对权限并重试。"
+        action={<Button size="small" onClick={() => void load()}>重试</Button>} /> : null}
+      <Card size="small" loading={loading} className="!rounded-xl !border-[#e6ebf1] [&_.ant-card-body]:!p-5">
         {tree.length === 0 ? (
-          <YakEmpty compact title="暂无目录" description="点上方按钮按分层+业务域一键初始化" />
+          <YakEmpty compact title={loadError ? '目录状态尚未核验' : '暂无目录'}
+            description={loadError ? '请修复目录查询错误后再操作' : '点上方按钮按分层+业务域一键初始化'} />
         ) : (
           <Tree defaultExpandAll blockNode>
             {renderTree(tree)}
@@ -326,6 +337,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
 
   const [rules, setRules] = useState<RuleRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState<RuleRecord | 'new' | null>(null);
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [domains, setDomains] = useState<{ value: string; label: string }[]>([]);
@@ -338,10 +350,12 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setRules(await listAssetRules());
     } catch {
       setRules([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -531,24 +545,27 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
     {
       title: '操作',
       key: 'action',
-      width: 250,
+      width: 150,
       render: (_, rule) => (
-        <Space size={2}>
-          <Button type="link" size="small" disabled={!canUpdate} onClick={() => runDry(rule)}>
-            试跑
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate} onClick={() => toggle(rule)}>
-            {rule.enabled ? '停用' : '启用'}
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate || !rule.enabled} onClick={() => reapply(rule)}>
-            重应用
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate} onClick={() => openEditor(rule)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger disabled={!canUpdate} onClick={() => remove(rule)}>
-            删除
-          </Button>
+        <Space size={5}>
+          <Button size="small" disabled={!canUpdate} onClick={() => runDry(rule)}>试跑</Button>
+          <Dropdown trigger={['click']} menu={{
+            items: [
+              { key: 'toggle', label: rule.enabled ? '停用规则' : '启用规则', disabled: !canUpdate },
+              { key: 'reapply', label: '重应用到已有资产', disabled: !canUpdate || !rule.enabled },
+              { key: 'edit', label: '编辑规则', disabled: !canUpdate },
+              { type: 'divider' },
+              { key: 'delete', label: '删除规则', danger: true, disabled: !canUpdate },
+            ],
+            onClick: ({ key }) => {
+              if (key === 'toggle') toggle(rule);
+              if (key === 'reapply') reapply(rule);
+              if (key === 'edit') openEditor(rule);
+              if (key === 'delete') remove(rule);
+            },
+          }}>
+            <Button size="small" aria-label={'管理规则：' + rule.ruleName}>更多</Button>
+          </Dropdown>
         </Space>
       ),
     },
@@ -568,14 +585,18 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
           规则必须试跑后才可启用（D10）；条件之间是 AND，留空即通配；对账对新资产自动应用启用中的规则
         </span>
       </div>
+      {loadError ? <Alert type="error" showIcon className="!mb-4"
+        message="编目规则读取失败" description="当前未能读取真实规则，不能当作尚无配置。"
+        action={<Button size="small" onClick={() => void load()}>重试</Button>} /> : null}
       <Table<RuleRecord>
         rowKey="id"
-        size="small"
+        size="middle"
         columns={columns}
         dataSource={rules}
         loading={loading}
         pagination={false}
-        locale={{ emptyText: <YakEmpty compact title="暂无编目规则" description="新建后先试跑确认命中面，再启用" /> }}
+        locale={{ emptyText: <YakEmpty compact title={loadError ? '规则状态尚未核验' : '暂无编目规则'}
+          description={loadError ? '请修复查询错误后再操作' : '新建后先试跑确认命中面，再启用'} /> }}
       />
 
       <Modal
@@ -584,15 +605,19 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
         okText="保存"
         cancelText="取消"
         onOk={submit}
-        width={640}
+        width={760}
         destroyOnClose
       >
+        <div className="mb-4 rounded-xl border border-solid border-[#dbe6f2] bg-[#f0f6fc] px-4 py-3 text-[12px] leading-6 text-[#6e829b]">
+          新规则保存后不会自动启用；请先执行试跑核对命中数量及样例，再决定是否启用。
+        </div>
         <Form form={form} layout="vertical" className="!mt-4">
-          <Space className="w-full" size={12}>
+          <div className="mb-3 text-[13px] font-semibold text-[#364a64]">01 · 规则标识与优先级</div>
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <Form.Item
               name="ruleName"
               label="规则名称"
-              className="!w-[280px]"
+              className="!w-full"
               rules={[{ required: true, message: '请输入规则名称' }, { max: 128 }]}
             >
               <Input placeholder="如：ODS 层客户表自动入贴源层" />
@@ -603,7 +628,8 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
             <Form.Item name="priority" label="优先级(小者先)" initialValue={100}>
               <InputNumber min={1} max={9999} />
             </Form.Item>
-          </Space>
+          </div>
+          <div className="mb-3 mt-3 text-[13px] font-semibold text-[#364a64]">02 · 编目目标</div>
           <Form.Item
             name={ruleType === 'TAG' ? 'targetTagId' : 'targetDirectoryId'}
             label={ruleType === 'TAG' ? '目标标签' : '目标目录'}
@@ -624,8 +650,10 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
               />
             )}
           </Form.Item>
-          <Space className="w-full" size={12} wrap>
-            <Form.Item name="assetTypes" label="资产类型" className="!w-[280px]">
+          <div className="mb-3 mt-3 text-[13px] font-semibold text-[#364a64]">03 · 对象匹配条件</div>
+          <div className="mb-3 text-[12px] text-[#8a97a9]">条件之间为 AND；未填写的条件不限制命中范围。</div>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item name="assetTypes" label="资产类型" className="!w-full">
               <Select
                 mode="multiple"
                 allowClear
@@ -634,7 +662,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <Form.Item name="layerCodes" label="分层" className="!w-[150px]">
+            <Form.Item name="layerCodes" label="分层" className="!w-full">
               <Select
                 mode="multiple"
                 allowClear
@@ -643,7 +671,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <Form.Item name="sourceTypes" label="来源域" className="!w-[150px]">
+            <Form.Item name="sourceTypes" label="来源域" className="!w-full">
               <Select
                 mode="multiple"
                 allowClear
@@ -654,7 +682,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <Form.Item name="domainCodes" label="业务域" className="!w-[150px]">
+            <Form.Item name="domainCodes" label="业务域" className="!w-full">
               <Select
                 mode="multiple"
                 allowClear
@@ -663,20 +691,20 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-          </Space>
-          <Space className="w-full" size={12}>
+          </div>
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <Form.Item
               name="nameRegex"
               label="名称正则"
-              className="!w-[280px]"
+              className="!w-full"
               rules={[{ max: 256 }]}
             >
               <Input placeholder="如 ^ods_cust.*" />
             </Form.Item>
-            <Form.Item name="keyword" label="关键词(名称/描述包含)" className="!w-[280px]" rules={[{ max: 64 }]}>
+            <Form.Item name="keyword" label="关键词(名称/描述包含)" className="!w-full" rules={[{ max: 64 }]}>
               <Input placeholder="如 客户" />
             </Form.Item>
-          </Space>
+          </div>
         </Form>
       </Modal>
 
@@ -688,7 +716,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
         destroyOnClose
       >
         <div className="mb-2 text-[13px]">
-          命中 <span className="text-[16px] font-semibold text-[#FE2C55]">{dryRun?.hitCount ?? 0}</span> 个资产
+          命中 <span className="text-[16px] font-semibold text-[#527cab]">{dryRun?.hitCount ?? 0}</span> 个资产
           （样例最多 50 条；确认无误后点「启用」）
         </div>
         <Table
@@ -717,16 +745,19 @@ const TagTab = () => {
 
   const [tags, setTags] = useState<AssetTagRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [editing, setEditing] = useState<AssetTagRecord | 'new' | null>(null);
   const [form] = Form.useForm();
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setTags(await listAssetTags(keyword.trim() || undefined));
     } catch {
       setTags([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -842,13 +873,17 @@ const TagTab = () => {
         )}
         <span className="text-[12px] text-[#98a2b3]">标签用于人工业务分组，与目录（自动编目目标）互补</span>
       </div>
+      {loadError ? <Alert type="error" showIcon className="!mb-4"
+        message="标签字典读取失败" description="请求未成功时不能推断标签数量为零。"
+        action={<Button size="small" onClick={() => void load()}>重试</Button>} /> : null}
       <Table<AssetTagRecord>
         rowKey="id"
-        size="small"
+        size="middle"
         columns={columns}
         dataSource={tags}
         loading={loading}
-        locale={{ emptyText: <YakEmpty compact title="暂无标签" description="新建标签后到资产详情或目录页打标" /> }}
+        locale={{ emptyText: <YakEmpty compact title={loadError ? '标签状态尚未核验' : '暂无标签'}
+          description={loadError ? '请核对当前项目权限后重试' : '新建标签后到资产详情或目录页打标'} /> }}
         pagination={{ pageSize: 20, showTotal: (count) => `共 ${count} 条` }}
       />
 
@@ -894,15 +929,10 @@ const AssetTaxonomyPage = () => {
   }, [tab]);
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">目录与标签</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            组织资产目录、设置编目规则与业务标签。规则需试跑通过后才能启用。
-          </div>
-        </div>
-        <Segmented
+    <AssetWorkspace>
+      <AssetPageHeader title="目录与治理分类"
+        description="维护可浏览的资产目录、可验证的自动编目规则与人工业务标签。目录组织不等于资产上架。"
+        extra={<Segmented
           options={[
             { value: 'directory', label: '目录树' },
             { value: 'rules', label: '编目规则' },
@@ -910,15 +940,40 @@ const AssetTaxonomyPage = () => {
           ]}
           value={tab}
           onChange={(value) => setTab(value as typeof tab)}
-        />
+        />}
+      />
+      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[
+          { id: 'directory' as const, name: '目录结构', explanation: '分层、业务域与用户可浏览的业务分类', icon: <FolderTree size={18} /> },
+          { id: 'rules' as const, name: '自动编目规则', explanation: '先试跑验证命中范围，再启用自动应用', icon: <WandSparkles size={18} /> },
+          { id: 'tags' as const, name: '业务标签字典', explanation: '跨目录分类与治理标识，按需手动打标', icon: <Tags size={18} /> },
+        ].map((item) => (
+          <button type="button" key={item.id} onClick={() => setTab(item.id)}
+            className={'flex min-w-0 items-center gap-3 rounded-xl border border-solid p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6] ' +
+              (tab === item.id ? 'border-[#b4c8df] bg-[#edf4fb]' : 'border-[#e7ebf1] bg-white hover:border-[#c1d0e3]')}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#5a80a9]">{item.icon}</span>
+            <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold text-[#32455e]">{item.name}</span>
+              <span className="mt-1 block text-[11px] leading-5 text-[#8796aa]">{item.explanation}</span></span>
+            <ArrowRight size={14} className="shrink-0 text-[#92a5b9]" />
+          </button>
+        ))}
       </div>
-      <div className="mt-4">
+      <AssetPanel className="mt-5"
+        title={tab === 'directory' ? '资产目录树' : tab === 'rules' ? '编目规则列表' : '标签字典'}
+        description={tab === 'directory' ? '目录移动会影响子目录位置；内置目录与自定义目录需要区分。'
+          : tab === 'rules' ? '已启用规则会影响后续自动纳管的目录/标签归属，试跑只展示命中样例。'
+            : '标签是跨目录的业务标识，删除正在使用的标签会影响现有关联。'}>
         {tab === 'directory' && <DirectoryTab />}
         {tab === 'rules' && <RuleTab dirTree={dirTree} tags={tags} />}
         {tab === 'tags' && <TagTab />}
-      </div>
-    </div>
+      </AssetPanel>
+    </AssetWorkspace>
   );
 };
 
-export default AssetTaxonomyPage;
+/** A project/permission change must reset directory editors and cached tag/rule state. */
+export default function ScopedAssetTaxonomyPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <AssetTaxonomyPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}

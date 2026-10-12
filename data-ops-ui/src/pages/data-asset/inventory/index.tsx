@@ -1,4 +1,6 @@
 import { Alert, Input, Modal, message, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
+import { ArrowRight, ClipboardCheck, GitCompareArrows, ShieldCheck } from 'lucide-react';
+import { AssetPageHeader, AssetPanel, AssetWorkspace } from '../asset-ui';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -107,12 +109,12 @@ const PendingPool = () => {
       render: (name: string, record) => (
         <div>
           <a
-            className="font-medium text-[#161823] hover:text-[#FE2C55]"
+            className="font-semibold text-[#2d405a] hover:text-[#457aaa]"
             onClick={() => history.push(`/data-asset/detail/${record.id}`)}
           >
             {name}
           </a>
-          <div className="text-[12px] text-[#98a2b3]">{record.assetKey}</div>
+          <div className="mt-1 truncate font-mono text-[11px] text-[#9aa6b6]">{record.assetKey}</div>
         </div>
       ),
     },
@@ -128,7 +130,7 @@ const PendingPool = () => {
       width: 100,
       render: (value: string) => ASSET_TYPE_LABELS[value as keyof typeof ASSET_TYPE_LABELS] ?? value ?? '-',
     },
-    { title: '负责人', dataIndex: 'owner', width: 110, render: (value?: string) => value || <span className="text-[#f5222d]">缺</span> },
+    { title: '负责人', dataIndex: 'owner', width: 110, render: (value?: string) => value || <span className="text-[12px] text-[#b5794a]">待配置</span> },
     {
       title: '健康度',
       dataIndex: 'healthScore',
@@ -317,7 +319,7 @@ const ChangeConfirm = () => {
       ellipsis: true,
       render: (name: string | undefined, record) =>
         record.assetId ? (
-          <a className="text-[#161823] hover:text-[#FE2C55]" onClick={() => history.push(`/data-asset/detail/${record.assetId}`)}>
+          <a className="font-medium text-[#2d405a] hover:text-[#457aaa]" onClick={() => history.push(`/data-asset/detail/${record.assetId}`)}>
             {name ?? `#${record.assetId}`}
           </a>
         ) : (
@@ -604,29 +606,40 @@ const AssetInventoryPage = () => {
   const tab: InventoryTab = tabParam in TAB_LABELS ? tabParam : 'publish';
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">盘点上架</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            待上架池 / 变更确认 / 源接入三段闭环：对账发现 → 人工确认 → 向导上架
-          </div>
-        </div>
-        <Segmented
+    <AssetWorkspace>
+      <AssetPageHeader title="资产盘点与发布"
+        description="把来源对象纳管为待治理资产，人工确认变更，经过上架预检后才进入可消费目录。"
+        extra={<Segmented
           options={(Object.keys(TAB_LABELS) as InventoryTab[]).map((value) => ({
             value,
             label: TAB_LABELS[value],
           }))}
           value={tab}
           onChange={(value) => setSearchParams({ tab: String(value) })}
-        />
+        />}
+      />
+      <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[
+          { id: 'sources' as const, title: '来源接入', note: '项目级 Provider 对账，受理不代表完成', icon: <GitCompareArrows size={16} /> },
+          { id: 'changes' as const, title: '变更确认', note: '检查差异，人工确认或忽略', icon: <ClipboardCheck size={16} /> },
+          { id: 'publish' as const, title: '待上架治理', note: '补齐负责人、目录、描述并通过预检', icon: <ShieldCheck size={16} /> },
+        ].map((step, index) => (
+          <button key={step.id} type="button" onClick={() => setSearchParams({ tab: step.id })}
+            className={'flex min-w-0 items-center gap-3 rounded-xl border border-solid px-4 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6] ' +
+              (tab === step.id ? 'border-[#b5c9e1] bg-[#edf4fb]' : 'border-[#e7ebf1] bg-white hover:border-[#c3d2e4]')}>
+            <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ' + (tab === step.id ? 'bg-white text-[#4c78a9]' : 'bg-[#f2f5f9] text-[#8293a8]')}>{step.icon}</span>
+            <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold text-[#30425a]">{step.title}</span><span className="mt-0.5 block text-[11px] leading-5 text-[#8b99ab]">{step.note}</span></span>
+            {index < 2 ? <ArrowRight size={14} className="shrink-0 text-[#98a9ba]" /> : null}
+          </button>
+        ))}
       </div>
-      <div className="mt-4">
+      <AssetPanel className="mt-5" title={TAB_LABELS[tab]}
+        description={tab === 'publish' ? '仅显示当前项目 PENDING 资产；通过预检才能完成上架。' : tab === 'changes' ? '历史变化保留证据，确认将刷新台账，忽略只关闭该流水。' : '项目级手工对账与历史状态分开看，不能凭 lastRun 判断本次操作成功。'}>
         {tab === 'publish' && <PendingPool />}
         {tab === 'changes' && <ChangeConfirm />}
         {tab === 'sources' && <SourceAccess />}
-      </div>
-    </div>
+      </AssetPanel>
+    </AssetWorkspace>
   );
 };
 

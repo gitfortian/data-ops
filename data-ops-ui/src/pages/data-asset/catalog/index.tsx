@@ -1,4 +1,6 @@
 import Table from '@/components/ReadableTable';
+import { FolderTree, ArrowLeft, Plus, SlidersHorizontal, Search } from 'lucide-react';
+import { AssetPageHeader, AssetWorkspace } from '../asset-ui';
 import {
   Button,
   Alert,
@@ -280,12 +282,12 @@ const AssetCatalogPage = () => {
       render: (name: string, record) => (
         <div>
           <a href={`/data-asset/detail/${record.id}`}
-            className="font-medium text-[#161823] hover:text-[#FE2C55]"
+            className="font-semibold text-[#2c405b] hover:text-[#3d74b1]"
             onClick={(event) => { event.preventDefault(); history.push(`/data-asset/detail/${record.id}`); }}
           >
             {name}
           </a>
-          <div className="truncate text-[12px] text-[#667085]" title={record.assetKey}>{record.assetKey}</div>
+          <div className="mt-1 truncate font-mono text-[11px] text-[#9aa5b4]" title={record.assetKey}>{record.assetKey}</div>
         </div>
       ),
     },
@@ -300,7 +302,7 @@ const AssetCatalogPage = () => {
         </div>
       ),
     },
-    { title: '负责人', dataIndex: 'owner', width: 110, render: (value?: string) => value || '-' },
+    { title: '负责人', dataIndex: 'owner', width: 120, render: (value?: string) => value ? <span className="text-[12px] text-[#53667e]">{value}</span> : <span className="text-[12px] text-[#bc743e]">待指定</span> },
     {
       title: '状态',
       dataIndex: 'status',
@@ -348,22 +350,21 @@ const AssetCatalogPage = () => {
   ];
 
   const hasSelection = selectedIds.length > 0;
+  const publishableSelected = selectedRows.filter((row) => PUBLISHABLE.includes(row.status));
+  const publishedSelected = selectedRows.filter((row) => row.status === 'PUBLISHED');
+  const ignorableSelected = selectedRows.filter((row) => IGNORABLE.includes(row.status));
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">资产目录</div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            {view === '台账资产'
-              ? '查找数据对象，了解负责人、来源与治理状态。'
-              : '检索已登记的技术实体，查看结构、属性与采集证据。'}
-          </div>
-        </div>
-        <Space size={12} wrap>
+    <AssetWorkspace>
+      <AssetPageHeader
+        title="资产目录"
+        description={view === '台账资产'
+          ? '按目录与治理状态查找真实资产，检查归属、健康度与上架状态。资产纳管和正式发布是两个不同步骤。'
+          : '检索 Metadata 领域拥有的物理实体和采集证据；技术实体不等于已上架资产。'}
+        extra={<Space size={8} wrap>
           {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
             <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>
-              返回资产详情
+              <ArrowLeft size={14} className="mr-1 inline" />返回资产详情
             </Button>
           )}
           <Segmented
@@ -373,24 +374,25 @@ const AssetCatalogPage = () => {
           />
           {view === '台账资产' && canCreate && (
             <YakButton type="primary" className="!h-9 !rounded-lg !px-4 !text-white" onClick={() => setManualOpen(true)}>
-              手工登记
+              <Plus size={14} className="mr-1 inline" />手工登记
             </YakButton>
           )}
-        </Space>
-      </div>
+        </Space>}
+      />
 
       {view === '元数据实体' ? (
-        <div className="mt-4">
+        <section className="mt-5 rounded-2xl border border-solid border-[#e7ebf1] bg-white p-5 shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
+          <div className="mb-4 flex items-center gap-2 text-[13px] text-[#73839a]"><Search size={16} />技术元数据目录来自 Metadata Owner，展示实时登记的实体。</div>
           <AssetExplorer searchable />
-        </div>
+        </section>
       ) : (
-      <div className="mt-4 flex min-h-0 flex-1 gap-4 max-md:flex-col">
-      <div className="w-[240px] shrink-0 max-md:w-full">
+      <div className="mt-5 flex min-h-0 flex-1 items-start gap-4 max-lg:flex-col">
+      <aside className="w-[246px] shrink-0 rounded-2xl border border-solid border-[#e7ebf1] bg-white p-4 shadow-[0_3px_16px_rgba(23,36,57,0.025)] max-lg:w-full lg:sticky lg:top-4">
         <Button className="mb-2 md:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
           {directoryId ? '目录筛选 · 已选择' : '选择目录'}
         </Button>
         <div className={directoryOpen ? '' : 'hidden md:block'}>
-        <div className="mb-2 text-[13px] font-medium text-[#667085]">资产目录</div>
+        <div className="mb-4 flex items-center gap-2 border-0 border-b border-solid border-[#edf0f4] pb-3 text-[13px] font-semibold text-[#32445d]"><FolderTree size={16} className="text-[#6d8bac]" />按业务目录筛选</div>
         {directoryLoading ? (
           <YakEmpty compact title="正在读取目录" description="请等待当前项目的目录请求完成" />
         ) : directoryError ? (
@@ -421,10 +423,15 @@ const AssetCatalogPage = () => {
           </Button>
         )}
         </div>
-      </div>
+      </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-3">
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-solid border-[#e7ebf1] bg-white shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
+        <div className="border-0 border-b border-solid border-[#edf0f4] px-5 py-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="m-0 text-[15px] font-semibold text-[#2a394e]">资产台账</h2><p className="mb-0 mt-1 text-[12px] text-[#8b98aa]">当前筛选下共 {total} 项 · 详情以当前资产台账为准</p></div>
+          <span className="flex items-center gap-1 text-[12px] text-[#8694a7]"><SlidersHorizontal size={14} />筛选条件</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Input.Search
             allowClear
             placeholder="名称 / 描述 / 负责人 / 标签"
@@ -513,26 +520,27 @@ const AssetCatalogPage = () => {
           }}>重置</Button>
         </div>
 
+        </div>
         {canUpdate && hasSelection && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-[#f8f9fa] px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2 border-0 border-b border-solid border-[#dbe5f2] bg-[#f0f5fc] px-5 py-3">
             <span className="text-[13px]">已选 {selectedIds.length} 项</span>
-            <YakButton size="small" onClick={() => openWizard(selectedRows)}>
-              批量上架
+            <YakButton size="small" disabled={publishableSelected.length === 0} onClick={() => openWizard(publishableSelected)}>
+              批量上架（{publishableSelected.length}）
             </YakButton>
-            <YakButton size="small" onClick={() => setOfflineTarget(selectedRows.filter((row) => row.status === 'PUBLISHED'))}>
-              批量下架
+            <YakButton size="small" disabled={publishedSelected.length === 0} onClick={() => setOfflineTarget(publishedSelected)}>
+              批量下架（{publishedSelected.length}）
             </YakButton>
             <YakButton size="small" onClick={runBatchMove}>
               移目录
             </YakButton>
-            <YakButton size="small" onClick={() => runIgnore(selectedRows.filter((row) => IGNORABLE.includes(row.status)))}>
-              忽略
+            <YakButton size="small" disabled={ignorableSelected.length === 0} onClick={() => runIgnore(ignorableSelected)}>
+              忽略（{ignorableSelected.length}）
             </YakButton>
-            <span className="ml-auto text-[12px] text-[#98a2b3]">仅本页可选，单次批量上限 200</span>
+            <span className="ml-auto text-[12px] text-[#7e90a6]">仅操作状态允许的选中资产 · 本页选择，单次最多 200</span>
           </div>
         )}
 
-        <div className="mt-4 flex-1">
+        <div className="min-w-0 flex-1 px-4 pb-3 pt-4">
           {loadError && <Alert className="mb-3" type="error" showIcon
              message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
              description="本次筛选未能成功读取；不会展示旧查询或其它项目的结果，请重试。"
@@ -598,7 +606,7 @@ const AssetCatalogPage = () => {
             </>
           )}
         </div>
-      </div>
+      </section>
       </div>
       )}
 
@@ -628,7 +636,7 @@ const AssetCatalogPage = () => {
           refresh();
         }}
       />
-    </div>
+    </AssetWorkspace>
   );
 };
 
@@ -647,13 +655,13 @@ const AssetCardGrid = ({
     {records.map((record) => (
       <button type="button"
         key={record.id}
-        className="cursor-pointer rounded-xl border border-solid border-[#e5e7eb] bg-white p-4 text-left transition hover:border-[#667085] hover:shadow-sm"
+        className="cursor-pointer rounded-xl border border-solid border-[#e6ebf1] bg-white p-4 text-left transition-all hover:border-[#a9bfd8] hover:shadow-[0_8px_20px_rgba(36,56,84,0.07)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6]"
         onClick={() => onOpen(record)}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-medium">{record.name}</div>
-            <div className="mt-1 truncate text-[12px] text-[#98a2b3]">{record.assetKey}</div>
+            <div className="truncate text-[14px] font-semibold text-[#2d405a]">{record.name}</div>
+            <div className="mt-1 truncate font-mono text-[11px] text-[#98a6b8]">{record.assetKey}</div>
           </div>
           <HealthRing score={record.healthScore} grade={record.healthGrade} size={44} />
         </div>
