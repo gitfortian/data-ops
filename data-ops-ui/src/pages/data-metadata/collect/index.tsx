@@ -364,7 +364,7 @@ const MetadataCollectPage = () => {
       {sourceHint && (
         <Alert className="mt-4" type="info" showIcon
           message={`已核验当前项目来源「${sourceHint.name}」 (#${sourceHint.id})`}
-          description="下方任务已由 Metadata Owner 在当前项目按来源 ID 精确过滤。先复用已有任务；新建仅在确实需要不同采集范围时进行。运行仍以已保存任务的范围为准。" />
+          description="下方仅显示当前查询页返回的已保存任务；来源查询结果依赖服务端实际过滤，不可凭一页没有记录断言该来源不存在任务。请先核查后续页，再考虑新建。运行仍以已保存任务的范围为准。" />
       )}
       {sourceHintError && (
         <Alert className="mt-4" type="warning" showIcon message={sourceHintError} />
@@ -428,8 +428,8 @@ const MetadataCollectPage = () => {
             ) : (
               <YakEmpty
                 compact
-                title={sourceHint ? '此来源尚无已保存的物理采集任务' : '还没有采集任务'}
-                description="新建一个物理采集任务对数据源采表/列结构，或建一个投影对账任务兜底写时登记的漏网"
+                title={sourceHint ? '当前查询页未发现该来源任务' : '还没有采集任务'}
+                description={sourceHint ? '请先核对筛选条件及已保存任务的其他页；当前结果不能证明来源尚无任务，避免重复创建。' : '新建物理采集任务对数据源采表/列结构，或建立投影对账任务。'}
               >
                 {canCreate && (
                   <YakButton
