@@ -19,6 +19,7 @@ import {
   TreeSelect,
 } from 'antd';
 import { AssetWorkspaceHeading, ASSET_SURFACE } from '../components/AssetWorkspace';
+import { MoreOutlined } from '@ant-design/icons';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -548,25 +549,29 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
     {
       title: '操作',
       key: 'action',
-      width: 250,
+      width: 170,
+      fixed: 'right' as const,
       render: (_, rule) => (
-        <Space size={2}>
-          <Button type="link" size="small" disabled={!canUpdate} onClick={() => runDry(rule)}>
-            试跑
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate} onClick={() => toggle(rule)}>
-            {rule.enabled ? '停用' : '启用'}
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate || !rule.enabled} onClick={() => reapply(rule)}>
-            重应用
-          </Button>
-          <Button type="link" size="small" disabled={!canUpdate} onClick={() => openEditor(rule)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger disabled={!canUpdate} onClick={() => remove(rule)}>
-            删除
-          </Button>
-        </Space>
+        <div className="flex items-center justify-end gap-2">
+          <Button size="small" disabled={!canUpdate} onClick={() => runDry(rule)}>试跑验证</Button>
+          <Dropdown trigger={['click']} menu={{
+            items: [
+              { key: 'edit', label: '编辑规则', disabled: !canUpdate },
+              { key: 'toggle', label: rule.enabled ? '停用规则' : '启用规则', disabled: !canUpdate },
+              { key: 'apply', label: '重应用到已有资产', disabled: !canUpdate || !rule.enabled },
+              { type: 'divider' },
+              { key: 'delete', label: '删除规则', danger: true, disabled: !canUpdate },
+            ],
+            onClick: ({ key }) => {
+              if (key === 'edit') openEditor(rule);
+              if (key === 'toggle') void toggle(rule);
+              if (key === 'apply') reapply(rule);
+              if (key === 'delete') remove(rule);
+            },
+          }}>
+            <Button size="small" aria-label={'更多规则操作：' + rule.ruleName} icon={<MoreOutlined />} />
+          </Dropdown>
+        </div>
       ),
     },
   ];
@@ -603,19 +608,21 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
 
       <Modal
         open={Boolean(editing)}
-        title={editing === 'new' ? '新建编目规则' : '编辑编目规则'}
-        okText="保存"
+        title={editing === 'new' ? '新建自动编目规则' : '编辑自动编目规则'}
+        okText="保存规则"
         cancelText="取消"
         onOk={submit}
-        width={640}
+        width={780}
         destroyOnClose
       >
         <Form form={form} layout="vertical" className="!mt-4">
-          <Space className="w-full" size={12}>
+          <div className="mb-4 rounded-xl border border-solid border-[#e6ecf4] bg-[#f4f7fb] px-4 py-3 text-[12px] leading-5 text-[#6f7e92]">保存规则不会自动启用或修改存量资产。先检查目标，再执行一次试跑；核对命中结果后单独启用。</div>
+          <h3 className="mb-3 text-[14px] font-semibold text-[#2c3d51]">01 · 规则名称与执行目标</h3>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.7fr)]">
             <Form.Item
               name="ruleName"
               label="规则名称"
-              className="!w-[280px]"
+              className="min-w-0"
               rules={[{ required: true, message: '请输入规则名称' }, { max: 128 }]}
             >
               <Input placeholder="如：ODS 层客户表自动入贴源层" />
@@ -623,10 +630,10 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
             <Form.Item name="ruleType" label="规则类型" rules={[{ required: true }]}>
               <Radio.Group options={(Object.keys(RULE_TYPE_LABELS) as RuleType[]).map((value) => ({ value, label: RULE_TYPE_LABELS[value] }))} optionType="button" />
             </Form.Item>
-            <Form.Item name="priority" label="优先级(小者先)" initialValue={100}>
+            <Form.Item name="priority" label="执行优先级" tooltip="数字越小，越优先应用" initialValue={100}>
               <InputNumber min={1} max={9999} />
             </Form.Item>
-          </Space>
+          </div>
           <Form.Item
             name={ruleType === 'TAG' ? 'targetTagId' : 'targetDirectoryId'}
             label={ruleType === 'TAG' ? '目标标签' : '目标目录'}
@@ -647,8 +654,10 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
               />
             )}
           </Form.Item>
-          <Space className="w-full" size={12} wrap>
-            <Form.Item name="assetTypes" label="资产类型" className="!w-[280px]">
+          <h3 className="mb-3 mt-3 border-0 border-t border-solid border-[#edf0f4] pt-4 text-[14px] font-semibold text-[#2c3d51]">02 · 资产匹配条件</h3>
+          <div className="mb-4 text-[12px] text-[#8794a5]">不同条件之间是 AND；留空代表不限此维度。</div>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item name="assetTypes" label="资产类型" className="min-w-0">
               <Select
                 mode="multiple"
                 allowClear
@@ -657,7 +666,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <Form.Item name="layerCodes" label="分层" className="!w-[150px]">
+            <Form.Item name="layerCodes" label="分层" className="min-w-0">
               <Select
                 mode="multiple"
                 allowClear
@@ -666,7 +675,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <Form.Item name="sourceTypes" label="来源域" className="!w-[150px]">
+            <Form.Item name="sourceTypes" label="来源域" className="min-w-0">
               <Select
                 mode="multiple"
                 allowClear
@@ -677,7 +686,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <Form.Item name="domainCodes" label="业务域" className="!w-[150px]">
+            <Form.Item name="domainCodes" label="业务域" className="min-w-0">
               <Select
                 mode="multiple"
                 allowClear
@@ -686,20 +695,20 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
                 maxTagCount="responsive"
               />
             </Form.Item>
-          </Space>
-          <Space className="w-full" size={12}>
+          </div>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <Form.Item
               name="nameRegex"
               label="名称正则"
-              className="!w-[280px]"
+              className="min-w-0"
               rules={[{ max: 256 }]}
             >
               <Input placeholder="如 ^ods_cust.*" />
             </Form.Item>
-            <Form.Item name="keyword" label="关键词(名称/描述包含)" className="!w-[280px]" rules={[{ max: 64 }]}>
+            <Form.Item name="keyword" label="关键词(名称/描述包含)" className="min-w-0" rules={[{ max: 64 }]}>
               <Input placeholder="如 客户" />
             </Form.Item>
-          </Space>
+          </div>
         </Form>
       </Modal>
 
@@ -711,7 +720,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
         destroyOnClose
       >
         <div className="mb-2 text-[13px]">
-          命中 <span className="text-[16px] font-semibold text-[#FE2C55]">{dryRun?.hitCount ?? 0}</span> 个资产
+          命中 <span className="text-[20px] font-semibold text-[#334d71]">{dryRun?.hitCount ?? 0}</span> 个资产
           （样例最多 50 条；确认无误后点「启用」）
         </div>
         <Table
