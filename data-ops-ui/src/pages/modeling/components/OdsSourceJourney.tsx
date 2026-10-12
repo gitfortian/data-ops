@@ -1,5 +1,5 @@
 import { history, useSearchParams } from '@umijs/max';
-import { Alert, Button, Input, Select, Space, Spin, Tag, Typography, message } from 'antd';
+import { Alert, Button, Input, Modal, Select, Space, Spin, Tag, Typography, message } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
@@ -44,14 +44,35 @@ const OdsSourceJourney = () => {
   const [targetNames, setTargetNames] = useState<Record<string, string>>({});
   const [previewBusy, setPreviewBusy] = useState(false);
   const [code, setCode] = useState(() =>
-    (`ods_${database}_${table}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 120));
+    (`ods_${database}_${schema || ''}_${table}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 120));
   const [name, setName] = useState(() => `ODS ${table}`);
   const [savedDraft, setSavedDraft] = useState<ModelingModelRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
   const readEpoch = useRef(0);
   const sourceIdentity = useRef('');
+
+  const navigateSafely = (path: string) => {
+    if (dirty && !savedId) {
+      Modal.confirm({
+        title: '当前 ODS 字段映射尚未保存',
+        content: '可以继续编辑并保存，也可以放弃本次未提交的字段映射。已保存的空模型草稿仍在 Modeling Owner，可从其 ID 重新进入。',
+        okType: 'danger', okText: '放弃未保存编辑并离开', cancelText: '继续编辑',
+        onOk: () => history.push(path),
+      });
+      return;
+    }
+    history.push(path);
+  };
+
+  useEffect(() => {
+    if (!dirty || savedId) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, savedId]);
 
   const refresh = useCallback(async () => {
     const ticket = ++readEpoch.current;
@@ -63,7 +84,7 @@ const OdsSourceJourney = () => {
     setLookup(null);
     setSourceVerified(false);
     // A draftId-only redirect must not erase a preview/mapping the user just confirmed.
-    if (changedSource) { setColumns(null); setSavedId(null); }
+    if (changedSource) { setColumns(null); setSavedId(null); setDirty(false); }
     setSavedDraft(null);
     if (!valid || datasourceId == null) {
       setFailure('来源坐标不完整或非法；请从已发现的物理表进入 ODS 建模。');
@@ -127,6 +148,7 @@ const OdsSourceJourney = () => {
       next.forEach(col => { names[col.name] = col.name; });
       setTargetNames(names);
       setColumns(next);
+      setDirty(true);
     } catch (error) {
       if (ticket === readEpoch.current)
         setFailure(error instanceof Error ? error.message : '物理表列读取失败。');
@@ -200,6 +222,7 @@ const OdsSourceJourney = () => {
         throw new Error('写入回执尚不足以证明模型与全部来源列已保存；请打开模型核对。');
       }
       setSavedId(Number(savedDraft.id));
+      setDirty(false);
       message.success('ODS 草稿、结构及逐列来源映射已在 Modeling Owner 保存。');
     } catch (error) {
       setFailure(error instanceof Error ? error.message : '来源映射保存失败，草稿仍可按模型 ID 恢复。');
@@ -209,8 +232,8 @@ const OdsSourceJourney = () => {
   return (
     <div className="mx-auto max-w-[1080px] space-y-4 px-6 py-6">
       <Space>
-        <Button onClick={() => history.push(sourceReturn)}>返回来源物理表</Button>
-        <Button type="link" onClick={() => history.push('/modeling')}>建模工作台</Button>
+        <Button onClick={() => navigateSafely(sourceReturn)}>返回来源物理表</Button>
+        <Button type="link" onClick={() => navigateSafely('/modeling')}>建模工作台</Button>
       </Space>
       <Typography.Title level={4}>从物理表继续 ODS 设计</Typography.Title>
       <Typography.Paragraph type="secondary">
@@ -253,7 +276,7 @@ const OdsSourceJourney = () => {
                   <span className="truncate">{col.name} <Tag>{col.typeName}</Tag></span>
                   <span className="text-[#667085]">→</span>
                   <Input aria-label={`ODS 字段 ${col.name}`} value={targetNames[col.name] ?? ''}
-                    disabled={Boolean(savedId)} onChange={e => setTargetNames(v => ({ ...v, [col.name]: e.target.value }))} />
+                    disabled={Boolean(savedId)} onChange={e => { setDirty(true); setTargetNames(v => ({ ...v, [col.name]: e.target.value })); }} />
                 </div>
               ))}
               {!validMappings && <Alert type="error" message="字段名必须合法且互不重复；未满足时不允许提交。" />}
@@ -265,10 +288,10 @@ const OdsSourceJourney = () => {
               description="刷新后使用 URL 中的 draftId 和原域持久化事实恢复；如果提交失败，先核对这个草稿，不能重复创建。" />
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <Input aria-label="ODS 编码" placeholder="ODS 模型编码" value={code} onChange={e => setCode(e.target.value)} />
-              <Input aria-label="ODS 名称" placeholder="ODS 模型名称" value={name} onChange={e => setName(e.target.value)} />
+              <Input aria-label="ODS 编码" placeholder="ODS 模型编码" value={code} onChange={e => { setDirty(true); setCode(e.target.value); }} />
+              <Input aria-label="ODS 名称" placeholder="ODS 模型名称" value={name} onChange={e => { setDirty(true); setName(e.target.value); }} />
               <Select aria-label="目标方言" placeholder="选择目标方言" value={dialect || undefined}
-                onChange={setDialect} options={MODELING_DIALECT_OPTIONS} />
+                onChange={v => { setDirty(true); setDialect(v); }} options={MODELING_DIALECT_OPTIONS} />
             </div>
           )}
           {!savedId && (
