@@ -401,9 +401,10 @@ const AssetDetailPage = () => {
 
   return (
     <main className={ASSET_SURFACE}>
-      <div className={ASSET_PANEL + ' flex flex-wrap items-start justify-between gap-4 p-5'}>
-        <div className="min-w-0">
-          <Space size={8} wrap>
+      <div className={ASSET_PANEL + ' flex flex-wrap items-start justify-between gap-5 p-5 max-sm:p-4'}>
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-[#92a0b0]">资产中心 · 资产详情</div>
+          <div className="flex flex-wrap items-center gap-2">
             <Button type="text" size="small" className="!px-0 !text-[#667085]" onClick={() => history.back()}>
               ← 返回
             </Button>
@@ -414,10 +415,17 @@ const AssetDetailPage = () => {
                 <Tag color="gold">源已变更</Tag>
               </Tooltip>
             )}
-          </Space>
-          <div className="mt-1 break-all font-mono text-[12px] text-[#8794a8]">{asset?.assetKey}</div>
+          </div>
+          <div className="mt-2 break-all font-mono text-[12px] text-[#8794a8]">{asset?.assetKey}</div>
+          {asset ? (
+            <div className="mt-4 flex flex-wrap gap-2 text-[12px] text-[#73839a]">
+              <span className="rounded-lg bg-[#f3f6fa] px-3 py-1.5">来源 {ASSET_SOURCE_TYPE_LABELS[asset.sourceType] ?? asset.sourceType}</span>
+              {asset.layerCode ? <span className="rounded-lg bg-[#f3f6fa] px-3 py-1.5">分层 {asset.layerCode}</span> : null}
+              <span className="rounded-lg bg-[#f3f6fa] px-3 py-1.5">负责人 {asset.owner || '待完善'}</span>
+            </div>
+          ) : null}
         </div>
-        <Space>
+        <Space wrap className="!max-w-full !items-start">
           {asset && asset.id === assetId && !loading && !detailFailure && can('data-asset:read') && can('agent:chat:run') && (
             <>
               <Button onClick={() => history.push(governanceEntryPath({ assetId: asset.id }))}>AI 解读资产</Button>
@@ -443,10 +451,12 @@ const AssetDetailPage = () => {
         </Space>
       </div>
 
-      <StatusFlowStrip section={detail?.sections.statusFlow} />
+      <div className="mt-4 overflow-hidden rounded-xl border border-solid border-[#e6eaf0] bg-white px-4 py-2">
+        <StatusFlowStrip section={detail?.sections.statusFlow} />
+      </div>
 
       <Tabs
-        className="mt-4"
+        className="!mt-5 [&_.ant-tabs-nav]:!mb-5"
         items={[
           {
             key: 'overview',
@@ -455,8 +465,8 @@ const AssetDetailPage = () => {
               <div>
                 <Card title="台账信息" size="small" className="!mb-4" loading={loading}>
                   <Descriptions
-                    size="small"
-                    column={3}
+                    size="middle"
+                    column={{ xs: 1, sm: 2, lg: 3 }}
                     items={[
                       {
                         key: 'type',
@@ -969,12 +979,13 @@ const AssetDetailPage = () => {
                     }
                     setSnapshot((current) => ({ ...current, description: candidate.description || '' }));
                   }} />}
-                <Card title="快照编辑(资产中心拥有名称/描述/入口)" size="small" className="!mb-4">
+                <Card title="资产基本资料" size="small" className="!mb-4">
                   {canUpdate && !snapshotAvailable && !snapshotLoading && !loading && (
                     <Alert className="!mb-3" type="warning" showIcon message="快照编辑暂不可用"
                       description="已读取的资产详情仍可查看；不能取得最新快照版本时禁止保存，以免覆盖其它修改。"
                       action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
                   )}
+                  <div className="mb-3 rounded-lg bg-[#f6f8fb] px-3 py-2 text-[12px] leading-5 text-[#78879a]">这里只修改资产中心持有的展示资料，不会回写元数据源库或建模定义。保存需要最新快照版本。</div>
                   <Space direction="vertical" className="w-full">
                     <Input
                       addonBefore="名称"
@@ -1006,8 +1017,8 @@ const AssetDetailPage = () => {
                     </Button>
                   </Space>
                 </Card>
-                <Card title="统一负责人(唯一事实源,变更留审计)" size="small">
-                  <Space>
+                <Card title="资产负责人" size="small">
+                  <Space wrap className="w-full">
                     <UserSelect value={ownerValue} onChange={setOwnerValue} max={1} placeholder="搜索并选择负责人" />
                     <Button disabled={!canUpdate} onClick={saveOwner}>
                       变更负责人
