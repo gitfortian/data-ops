@@ -20,7 +20,8 @@ import {
 import { Alert, Button, Empty, Spin, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { PageHeader } from '../shared';
 
 const channelLabels: Record<string, string> = {
@@ -93,25 +94,31 @@ const Metric = ({
 );
 
 const MetadataOverviewPage = () => {
+  const { currentProject } = useSecurityProject();
+  const projectId = currentProject?.id;
+  const requestSeq = useRef(0);
   const [overview, setOverview] = useState<MetadataOverviewData>();
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
   const loadOverview = useCallback(async () => {
+    const ticket = ++requestSeq.current;
     setLoading(true);
     setFailed(false);
+    setOverview(undefined);
     try {
-      setOverview(await getMetadataOverview());
+      const result = await getMetadataOverview();
+      if (ticket === requestSeq.current) setOverview(result);
     } catch {
-      setOverview(undefined);
-      setFailed(true);
+      if (ticket === requestSeq.current) setFailed(true);
     } finally {
-      setLoading(false);
+      if (ticket === requestSeq.current) setLoading(false);
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     void loadOverview();
+    return () => { requestSeq.current += 1; };
   }, [loadOverview]);
 
   const recentAttentionCount =
