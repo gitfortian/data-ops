@@ -118,6 +118,21 @@ class OdsManualImportCommitServiceTest {
     assertEquals("order_id", rows.get(0).getSourceColumn());
   }
 
+  @Test void liveSourceTypeDriftRejectsBeforeAnyStructureOrMappingWrite() {
+    var request = request(baseline(),
+        List.of(target("order_id"), target("amount")),
+        List.of(select("order_id", "order_id"), select("amount", "amount")));
+    var confirmed = new OdsManualImportCommitService.Request(
+        request.expectedDefinition(), request.sourceDatasourceId(), request.sourceDatabase(),
+        request.sourceTable(), request.structure(), request.selections(), null,
+        List.of(
+            new OdsManualImportCommitService.SourceColumnSnapshot("order_id", "BIGINT", 0, 0, false, true),
+            new OdsManualImportCommitService.SourceColumnSnapshot("amount", "VARCHAR", 0, 0, false, true)));
+    assertThrows(ModelingException.class, () -> service.commit(50L, confirmed, "tester"));
+    verify(structures, never()).saveEditContext(anyLong(), any(), anyString(), anyString());
+    verify(mappings, never()).upsert(any(), anyString());
+  }
+
   @Test void staleStructureCannotWriteSourceOrMappings() {
     assertThrows(ModelingException.class, () -> service.commit(50L, request("0".repeat(64),
         List.of(target("order_id"), target("amount")),
