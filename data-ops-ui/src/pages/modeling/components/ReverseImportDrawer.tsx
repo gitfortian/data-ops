@@ -34,6 +34,8 @@ const MATCH_LABELS: Record<string, string> = {
 };
 
 /** event_time 来源字段自动识别:优先含 time,其次含 date/dt(与后端一致)。 */
+const importTableKey = (table: ModelingImportTableView): string => JSON.stringify([table.database ?? '', table.schema ?? '', table.name]);
+
 const detectEventTimeField = (columns: ModelingImportColumnView[]): string | undefined => {
   const names = (columns ?? []).filter((column) => !column.technical).map((column) => column.name.toLowerCase());
   return names.find((name) => name.includes('time')) ?? names.find((name) => name.includes('date') || name === 'dt');
@@ -83,7 +85,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
     [result],
   );
 
-  const selectedTables = useMemo(() => tables.filter((table) => selected[table.name]), [tables, selected]);
+  const selectedTables = useMemo(() => tables.filter((table) => selected[importTableKey(table)]), [tables, selected]);
   const selectedDatasource = useMemo(() => datasources.find((d) => d.id === datasourceId), [datasources, datasourceId]);
 
   useEffect(() => {
@@ -139,10 +141,10 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
 
   const previewTableColumns = async (table: ModelingImportTableView) => {
     if (!datasourceId || !table.database) return;
-    setPreviewTable(table.name);
+    setPreviewTable(importTableKey(table));
     setPreviewLoading(true);
     try {
-      const columns = await previewModelingImportColumns(datasourceId, table.database, table.name);
+      const columns = await previewModelingImportColumns(datasourceId, table.database, table.name, table.schema);
       setPreview(columns ?? []);
     } catch {
       message.error('预览失败，请稍后重试');
@@ -182,6 +184,11 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
 
   const doImport = async () => {
     if (!datasourceId || !dialect || selectedTables.length === 0) return;
+    // Legacy import writer does not persist an exact schema identity: refuse instead of importing a different same-name table.
+    if (selectedTables.some((table) => Boolean(table.schema))) {
+      message.error('当前逆向导入写入契约不能可靠保存 Schema；请先完成 Modeling 精确来源契约升级，不能按表名冒险导入。');
+      return;
+    }
     setImporting(true);
     try {
       const report = await importModelingTables({
@@ -194,7 +201,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
           table: table.name,
           name: table.remarks || undefined,
           remarks: table.remarks || undefined,
-          eventTimeField: eventTimeByTable[table.name] || undefined,
+          eventTimeField: eventTimeByTable[importTableKey(table)] || undefined,
         })),
       });
       setResult(report);
@@ -276,17 +283,17 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
       ) : (
         <div className="max-h-[360px] overflow-auto rounded border border-[#f0f0f0] p-2">
           {tables.map((table) => (
-            <div key={`${table.database}/${table.name}`} className="flex items-center gap-2 py-1">
+            <div key={importTableKey(table)} className="flex items-center gap-2 py-1">
               <Checkbox
-                checked={Boolean(selected[table.name])}
+                checked={Boolean(selected[importTableKey(table)])}
                 onChange={(event) =>
                   setSelected((previous) => ({
                     ...previous,
-                    [table.name]: event.target.checked,
+                    [importTableKey(table)]: event.target.checked,
                   }))
                 }
               />
-              <Typography.Text className="!text-[13px]">{table.name}</Typography.Text>
+              <Typography.Text className="!text-[13px]">{[table.database, table.schema, table.name].filter(Boolean).join('.')}</Typography.Text>
               {table.remarks ? (
                 <Typography.Text type="secondary" className="!text-[12px]">
                   {table.remarks}
@@ -346,7 +353,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
       </Typography.Text>
       <div className="max-h-[300px] overflow-auto rounded border border-[#f0f0f0] p-2">
         {selectedTables.map((table) => (
-          <div key={table.name} className="flex items-center gap-2 py-1">
+          <div key={importTableKey(table)} className="flex items-center gap-2 py-1">
             <Typography.Text className="!text-[13px]">{table.name}</Typography.Text>
             {table.remarks ? (
               <Typography.Text type="secondary" className="!text-[12px]">
@@ -371,7 +378,7 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
 
       <div className="flex flex-col gap-3">
         {selectedTables.map((table) => (
-          <div key={table.name} className="rounded border border-[#f0f0f0] p-3">
+          <div key={importTableKey(table)} className="rounded border border-[#f0f0f0] p-3">
             <div className="flex items-center gap-2">
               <Typography.Text strong className="!text-[13px]">
                 {table.name}
@@ -387,10 +394,10 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
                 className="!ml-auto"
                 onClick={() => void previewTableColumns(table)}
               >
-                {previewTable === table.name ? '重新预览' : '预览列'}
+                {previewTable === importTableKey(table) ? '重新预览' : '预览列'}
               </Button>
             </div>
-            {previewTable === table.name && previewLoading ? <Spin size="small" className="mt-2" /> : null}
+            {previewTable === importTableKey(table) && previewLoading ? <Spin size="small" className="mt-2" /> : null}
             {previewTable === table.name && preview ? (
               <div className="mt-2">
                 <Typography.Text type="secondary" className="!block !text-[12px]">
@@ -413,9 +420,9 @@ const ReverseImportDrawer = ({ open, directories, onClose, onImported }: Reverse
                     size="small"
                     className="!w-[240px]"
                     placeholder="自动识别（含 time/date 的列）"
-                    value={eventTimeByTable[table.name] ?? detectEventTimeField(preview)}
+                    value={eventTimeByTable[importTableKey(table)] ?? detectEventTimeField(preview)}
                     onChange={(value) =>
-                      setEventTimeByTable((previous) => ({ ...previous, [table.name]: value ?? '' }))
+                      setEventTimeByTable((previous) => ({ ...previous, [importTableKey(table)]: value ?? '' }))
                     }
                     options={preview.filter((column) => !column.technical).map((column) => ({
                       label: `${column.name}:${column.typeName}`,
