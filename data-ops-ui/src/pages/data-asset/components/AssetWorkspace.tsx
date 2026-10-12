@@ -1,9 +1,10 @@
+import './asset-workspace.less';
 import type { ReactNode } from 'react';
 import { Button } from 'antd';
 import { ArrowRightOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 
-export const ASSET_SURFACE = 'min-h-[calc(100dvh-64px)] bg-[#f7f8fb] px-6 pb-8 pt-6 text-[#253145] max-md:px-4';
+export const ASSET_SURFACE = 'asset-workspace min-h-[calc(100dvh-64px)] bg-[#f7f8fb] px-6 pb-8 pt-6 text-[#253145] max-md:px-4';
 export const ASSET_PANEL = 'rounded-2xl border border-solid border-[#e6eaf0] bg-white shadow-[0_4px_20px_rgba(15,23,42,0.025)]';
 
 export const AssetWorkspaceHeading = ({
