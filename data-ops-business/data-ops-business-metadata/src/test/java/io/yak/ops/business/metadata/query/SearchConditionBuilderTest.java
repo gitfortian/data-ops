@@ -205,6 +205,17 @@ class SearchConditionBuilderTest {
   }
 
   @Test
+  void collectionTaskFilterUsesPersistedAssociationAndNumericBinding() {
+    SearchPlan plan = build(SURFACE, map("collectJobId", "71"), Map.of());
+    assertThat(fragments(plan.rowPredicates())).contains("a.collect_job_id = :qf_collectJobId");
+    assertThat(fragments(plan.facetPredicates())).contains("a.collect_job_id = :qf_collectJobId");
+    assertThat(fragments(plan.rowPredicates())).contains("a.project_id");
+    assertThat(lastParams(plan).values()).containsExactly(71L);
+    assertThatThrownBy(() -> build(SURFACE, Map.of("collectJobId", "71 OR 1=1"), Map.of()))
+        .isInstanceOf(MetadataException.class);
+  }
+
+  @Test
   void defaultSortWeightsByTypeWhenQueryPresent() {
     SearchPlan plan = build(SURFACE, Map.of(), Map.of(), "订单");
     assertThat(plan.orderBySql()).startsWith("(CASE WHEN a.type_id = :wt0 THEN :wv0");

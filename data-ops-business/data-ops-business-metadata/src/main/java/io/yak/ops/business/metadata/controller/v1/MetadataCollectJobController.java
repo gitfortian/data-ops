@@ -136,7 +136,7 @@ public class MetadataCollectJobController {
   @PostMapping("/collect-runs/page")
   public Result<PagingData<RunView>> runs(@Valid @RequestBody RunQueryDTO query) {
     PageData<RunView> page =
-        runService.pageRuns(query.getJobId(), query.getPageNo(), query.getPageSize());
+        runService.pageRuns(query.getJobId(), query.getPageNo(), query.getPageSize(), query.getDryRun());
     return Result.success(PagingData.from(page));
   }
 
