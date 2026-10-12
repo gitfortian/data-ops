@@ -32,3 +32,33 @@ export const previewModelingImportColumns = (
 
 export const importModelingTables = (payload: ModelingImportPayload): Promise<ModelingImportResult> =>
   HttpUtils.postData<ModelingImportResult>(`${MODELING_API_PREFIX}/import`, payload);
+
+/** Modeling Owner verifies Project + datasource + database + schema + table before returning 0/1/N. */
+export interface OdsSourceCandidate {
+  modelId: number;
+  code: string;
+  name: string;
+  status: string;
+  sourceDatabase: string;
+  sourceSchema?: string | null;
+  sourceTable: string;
+}
+export interface OdsSourceLookup {
+  state: 'READY' | 'UNVERIFIED';
+  reason: string;
+  datasourceId: number;
+  database: string;
+  schema?: string | null;
+  table: string;
+  candidates: OdsSourceCandidate[];
+}
+
+export const getOdsSourceCandidates = (key: {
+  datasourceId: number; database: string; schema?: string; table: string;
+}): Promise<OdsSourceLookup> => {
+  const q = new URLSearchParams({
+    datasourceId: String(key.datasourceId), database: key.database, table: key.table,
+  });
+  if (key.schema) q.set('schema', key.schema);
+  return HttpUtils.getData<OdsSourceLookup>(`${MODELING_API_PREFIX}/source-journey/ods-candidates?${q}`);
+};
