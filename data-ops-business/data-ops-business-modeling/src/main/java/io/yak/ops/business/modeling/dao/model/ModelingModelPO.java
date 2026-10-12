@@ -44,6 +44,9 @@ public class ModelingModelPO {
 
   /** 来源表名。 */
   private String sourceTable;
+
+  /** S1 精确来源 Schema；旧模型为空，使用时须校验歧义。 */
+  private String sourceSchema;
   
   /** 字段导入方式(血缘追溯):MANUAL/SOURCE_TABLE/MODEL/BUSINESS_PROCESS。 */
   private String importMode;
