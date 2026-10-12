@@ -19,7 +19,12 @@ public final class ModelingImportApi {
   public record PreviewRequest(
       @NotNull(message = "数据源不能为空") Long datasourceId,
       @NotBlank(message = "库不能为空") String database,
-      @NotBlank(message = "表不能为空") String table) {}
+      @NotBlank(message = "表不能为空") String table,
+      String schema) {
+    public PreviewRequest(Long datasourceId, String database, String table) {
+      this(datasourceId, database, table, null);
+    }
+  }
 
   /** 单表导入项:code 可改(默认=表名);eventTimeField 指定 event_time 的来源业务字段(可空=自动识别)。 */
   public record ImportItem(
