@@ -1,5 +1,7 @@
 package io.yak.ops.business.metadata.autoingest;
 
+import io.yak.ops.business.metadata.dao.model.AutoIngestEvent;
+
 import io.yak.ops.business.metadata.dao.mapper.AutoIngestEventMapper;
 
 import static org.junit.jupiter.api.Assertions.*;
