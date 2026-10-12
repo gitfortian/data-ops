@@ -54,3 +54,18 @@ test('a departed page does not show late errors', async () => {
   await act(async () => { rejectOld(new Error('old project')); });
   expect(message.error).not.toHaveBeenCalled();
 });
+
+test('a failed page transition retries that page rather than the previous successful page', async () => {
+  jest.mocked(listQualityRuleExecutionWorkspace)
+    .mockResolvedValueOnce(page('first') as never)
+    .mockRejectedValueOnce(new Error('page unavailable'))
+    .mockResolvedValueOnce({ ...page('second'), current: 2 } as never);
+  const { result } = renderHook(() => useQualityExecutionPage(1));
+  await waitFor(() => expect(result.current.ruleRecords[0]?.executionNo).toBe('first'));
+  await act(async () => { await result.current.load(2); });
+  expect(result.current.current).toBe(2);
+  expect(result.current.loadError).toBe('page unavailable');
+  await act(async () => { await result.current.load(result.current.current); });
+  expect(listQualityRuleExecutionWorkspace).toHaveBeenLastCalledWith(expect.objectContaining({ current: 2 }));
+  expect(result.current.ruleRecords[0]?.executionNo).toBe('second');
+});

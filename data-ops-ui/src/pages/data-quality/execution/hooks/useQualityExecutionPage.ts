@@ -93,6 +93,7 @@ export const useQualityExecutionPage = (dataSourceId?: number) => {
       }
 
       setLoading(true);
+      setCurrent(requestedCurrent);
       setLoadError('');
       setExecutionRecords([]);
       setRuleRecords([]);
