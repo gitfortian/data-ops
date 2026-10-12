@@ -11,6 +11,7 @@ import io.yak.ops.business.asset.api.AssetCursorQuery;
 import io.yak.ops.business.asset.api.AssetDescriptor;
 import io.yak.ops.business.asset.api.AssetPage;
 import io.yak.ops.business.asset.api.AssetProvider;
+import io.yak.ops.business.asset.api.MetadataAutoIngestApi;
 import io.yak.ops.business.asset.application.AssetSettingService;
 import io.yak.ops.business.asset.catalog.AssignRuleService;
 import io.yak.ops.business.asset.dao.mapper.AssetChangeRecordMapper;
@@ -64,7 +65,7 @@ import org.springframework.util.StringUtils;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AssetReconcileService {
+public class AssetReconcileService implements MetadataAutoIngestApi {
 
   private final ObjectProvider<SectionProvider> sectionProviders;
 
@@ -134,8 +135,9 @@ public class AssetReconcileService {
    * inside the current project. Crucially there is NO provider sweep, watermark,
    * global lastRun update, or SOURCE_GONE inference here.
    */
+  @Override
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
-  public ScopedIngestReceipt ingestCommittedMetadataTable(
+  public MetadataAutoIngestApi.ScopedIngestReceipt ingestCommittedMetadataTable(
       Long projectId, Long metadataEntityId, String operator) {
     if (projectId == null || metadataEntityId == null || metadataEntityId <= 0
         || !Objects.equals(projectId, currentProject.requireProjectId())) {
@@ -155,12 +157,9 @@ public class AssetReconcileService {
     }
     UpsertResult result = upsert(projectId, AssetSourceType.METADATA,
         descriptor, LocalDateTime.now(), operator == null ? "metadata-auto-ingest" : operator);
-    return new ScopedIngestReceipt(projectId, metadataEntityId, descriptor.assetKey(),
+    return new MetadataAutoIngestApi.ScopedIngestReceipt(projectId, metadataEntityId, descriptor.assetKey(),
         result.created(), result.changed(), result.restored());
   }
-
-  public record ScopedIngestReceipt(Long projectId, Long metadataEntityId,
-                                    String assetKey, int created, int changed, int restored) {}
 
   /** 同步核心:调度与测试入口;acquireLock=true 时自行抢互斥。 */
   public List<ProviderOutcome> reconcileNow(Long projectId, List<AssetSourceType> types,
