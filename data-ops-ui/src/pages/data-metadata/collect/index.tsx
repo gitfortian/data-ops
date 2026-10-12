@@ -43,6 +43,7 @@ const MetadataCollectPage = () => {
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
+  const [searchText, setSearchText] = useState('');
   const [providerType, setProviderType] = useState<CollectProviderType | ''>('');
   const [enabledFilter, setEnabledFilter] = useState<'' | 'true' | 'false'>('');
   const [loading, setLoading] = useState(false);
@@ -393,7 +394,7 @@ const MetadataCollectPage = () => {
             </div>
             {hasFilter ? (
               <Button size="small" onClick={() => {
-                setKeyword(''); setProviderType(''); setEnabledFilter(''); setPageNo(1);
+                setKeyword(''); setSearchText(''); setProviderType(''); setEnabledFilter(''); setPageNo(1);
               }}>清除筛选</Button>
             ) : null}
           </div>
@@ -413,6 +414,11 @@ const MetadataCollectPage = () => {
               allowClear
               placeholder="搜索任务名称或编码"
               className="!w-[230px] max-sm:!w-full"
+              value={searchText}
+              onChange={(event) => {
+                setSearchText(event.target.value);
+                if (!event.target.value) { setKeyword(''); setPageNo(1); }
+              }}
               onSearch={(value) => { setKeyword(value.trim()); setPageNo(1); }}
             />
             <Select
