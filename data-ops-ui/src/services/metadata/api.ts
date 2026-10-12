@@ -83,6 +83,7 @@ export const pageCollectRuns = async (params: {
   pageNo: number;
   pageSize: number;
   jobId?: number;
+  dryRun?: boolean;
 }): Promise<MetadataPageResult<CollectRunRecord>> =>
   toPageResult(
     await HttpUtils.postData<RawPage<CollectRunRecord>>(`${METADATA_API_PREFIX}/collect-runs/page`, params),

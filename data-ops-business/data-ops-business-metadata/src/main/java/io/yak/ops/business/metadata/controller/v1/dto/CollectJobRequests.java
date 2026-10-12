@@ -95,5 +95,7 @@ public final class CollectJobRequests {
 
     /** 只看某个任务的历史；留空 = 本项目全部任务的运行历史。 */
     private Long jobId;
+    /** 留空包含预演；false 仅返回正式采集记录。 */
+    private Boolean dryRun;
   }
 }

@@ -19,6 +19,7 @@ public final class MetadataNativeFilterColumns {
       "datasourceId", "a.data_source_id",
       // 与列命中 rollup 的 GROUP BY 同一列：点"命中 N 列"下钻到该表的列，靠这个键而不是新端点。
       "parentAssetId", "a.parent_asset_id",
+      "collectJobId", "a.collect_job_id",
       "databaseName", "a.database_name",
       "layerCode", "a.layer_code",
       "owner", "a.owner_user",

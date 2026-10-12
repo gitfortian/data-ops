@@ -278,7 +278,7 @@ public final class SearchConditionBuilder {
         }
         return (Object) status.value();
       }).toList();
-    } else if ("parentAssetId".equals(key)) {
+    } else if ("parentAssetId".equals(key) || "collectJobId".equals(key)) {
       // BIGINT 列必须按数字绑定：字符串绑参会让 MySQL 隐式转换，索引当场失效。
       // datasourceId 相反——data_source_id 是 varchar，按数字绑会把隐式转换压到列上，
       // 一样废掉 idx_yak_metadata_asset_datasource，所以保持字符串形状。

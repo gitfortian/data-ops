@@ -1,29 +1,36 @@
-import { useIntl } from "@umijs/max";
-import { message, Modal, Pagination, Spin } from "antd";
-import { motion } from "framer-motion";
-import { useRef } from "react";
+import { useIntl } from '@umijs/max';
+import { Alert, Button, message, Modal, Pagination, Spin } from 'antd';
+import { motion } from 'framer-motion';
+import { useRef, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
 
-import AddOrEditDataSourceModal from "./components/AddOrEditDataSourceModal";
-import DataSourceCard from "./components/DataSourceCard";
-import DataSourceEmptyState from "./components/DataSourceEmptyState";
-import DataSourcePageHeader from "./components/DataSourcePageHeader";
-import DataSourceSummaryCards from "./components/DataSourceSummaryCards";
-import DataSourceToolbar from "./components/DataSourceToolbar";
-import { DATA_SOURCE_PAGE_SIZE_OPTIONS, PAGE_ANIMATION } from "./constants";
-import { useDataSourcePage } from "./hooks/useDataSourcePage";
-import type { DataSourceModalRef, DataSourceRecord } from "./types";
-import { DataSourceOperateType, dataSourceRecordKey } from "./types";
+import AddOrEditDataSourceModal from './components/AddOrEditDataSourceModal';
+import DataSourceCard from './components/DataSourceCard';
+import DataSourceEmptyState from './components/DataSourceEmptyState';
+import DataSourcePageHeader from './components/DataSourcePageHeader';
+import DataSourceSummaryCards from './components/DataSourceSummaryCards';
+import DataSourceToolbar from './components/DataSourceToolbar';
+import DataSourceWorkspace from './components/DataSourceWorkspace';
+import './index.less';
+import { DATA_SOURCE_PAGE_SIZE_OPTIONS, PAGE_ANIMATION } from './constants';
+import { useDataSourcePage } from './hooks/useDataSourcePage';
+import type { DataSourceModalRef, DataSourceRecord } from './types';
+import { DataSourceOperateType, dataSourceRecordKey } from './types';
 
 const { confirm } = Modal;
 
 const DataSourcePage = () => {
   const intl = useIntl();
   const modalRef = useRef<DataSourceModalRef>(null);
+  const [workspaceRecord, setWorkspaceRecord] = useState<DataSourceRecord | null>(null);
 
   const {
     loading,
     records,
     summary,
+    loadError,
+    summaryUnavailable,
     pagination,
     keyword,
     dbType,
@@ -73,40 +80,33 @@ const DataSourcePage = () => {
     if (!permissions.canDelete) return;
 
     confirm({
-      title: intl.formatMessage({ id: "pages.datasource.delete.confirmTitle" }),
+      title: intl.formatMessage({ id: 'pages.datasource.delete.confirmTitle' }),
       centered: true,
       content: (
         <span>
-          {intl.formatMessage(
-            { id: "pages.datasource.delete.content" },
-            { name: record.name || "-" }
-          )}
+          {intl.formatMessage({ id: 'pages.datasource.delete.content' }, { name: record.name || '-' })}
           <br />
-          {intl.formatMessage({ id: "pages.datasource.delete.warning" })}
+          {intl.formatMessage({ id: 'pages.datasource.delete.warning' })}
         </span>
       ),
-      okText: intl.formatMessage({ id: "pages.datasource.delete.okText" }),
+      okText: intl.formatMessage({ id: 'pages.datasource.delete.okText' }),
       cancelText: intl.formatMessage({
-        id: "pages.datasource.delete.cancelText",
+        id: 'pages.datasource.delete.cancelText',
       }),
-      okType: "primary",
-      okButtonProps: { size: "small", danger: true },
-      cancelButtonProps: { size: "small" },
+      okType: 'primary',
+      okButtonProps: { size: 'small', danger: true },
+      cancelButtonProps: { size: 'small' },
       maskClosable: true,
       async onOk() {
         if (record.id === undefined || record.id === null) {
-          message.error(
-            intl.formatMessage({ id: "pages.datasource.delete.idMissing" })
-          );
+          message.error(intl.formatMessage({ id: 'pages.datasource.delete.idMissing' }));
           return;
         }
 
         try {
           const deleted = await removeRecord(record.id);
           if (deleted) {
-            message.success(
-              intl.formatMessage({ id: "pages.datasource.delete.success" })
-            );
+            message.success(intl.formatMessage({ id: 'pages.datasource.delete.success' }));
           }
         } catch {
           // The shared request layer owns request error feedback.
@@ -119,9 +119,7 @@ const DataSourcePage = () => {
     try {
       const connected = await testRecord(record);
       if (connected) {
-        message.success(
-          intl.formatMessage({ id: "pages.datasource.test.success" })
-        );
+        message.success(intl.formatMessage({ id: 'pages.datasource.test.success' }));
       }
     } catch {
       // The shared request layer owns request error feedback.
@@ -137,19 +135,11 @@ const DataSourcePage = () => {
           variants={PAGE_ANIMATION.sectionStagger}
           // className="px-4 pb-4 pt-4"
         >
-          <motion.section
-            variants={PAGE_ANIMATION.fadeUp}
-            className="flex min-h-[calc(100dvh-64px)] flex-col 
-             bg-white px-6 pb-4 pt-5 shadow-[0_2px_10px_rgba(31,35,41,0.025)] max-md:px-4"
-            style={{ borderTopLeftRadius: 8, borderTopRightRadius: 8 }}
-          >
+          <motion.section variants={PAGE_ANIMATION.fadeUp} className="source-page">
             <div className="space-y-5">
-              <DataSourcePageHeader
-                canCreate={permissions.canCreate}
-                onCreate={handleCreate}
-              />
+              <DataSourcePageHeader canCreate={permissions.canCreate} onCreate={handleCreate} />
 
-              <DataSourceSummaryCards summary={summary} />
+              <DataSourceSummaryCards summary={summary} unavailable={summaryUnavailable} />
 
               <DataSourceToolbar
                 environment={environment}
@@ -165,24 +155,26 @@ const DataSourcePage = () => {
               />
             </div>
 
-            <div className="mt-5 flex flex-1 flex-col">
+            <div className="source-page-content">
+              {loadError ? (
+                <Alert
+                  type="error"
+                  showIcon
+                  message="暂时无法读取数据源"
+                  description="请重试后查看当前项目的数据源。"
+                  action={<Button onClick={refresh}>重新加载</Button>}
+                />
+              ) : null}
               <Spin spinning={loading}>
                 <motion.section
                   variants={PAGE_ANIMATION.cardStagger}
                   initial="hidden"
                   animate="visible"
-                  className={
-                    viewMode === "list"
-                      ? "grid grid-cols-1 gap-[14px]"
-                      : "grid grid-cols-1 gap-[14px] md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-                  }
+                  className={viewMode === 'list' ? 'source-records source-records-list' : 'source-records'}
                 >
                   {records.map((record, index) => (
                     <DataSourceCard
-                      key={
-                        dataSourceRecordKey(record.id) ||
-                        `${record.name || "data-source"}-${index}`
-                      }
+                      key={dataSourceRecordKey(record.id) || `${record.name || 'data-source'}-${index}`}
                       record={record}
                       viewMode={viewMode}
                       permissions={permissions}
@@ -190,14 +182,13 @@ const DataSourcePage = () => {
                       editingId={editingId}
                       onEdit={(item) => void handleEdit(item)}
                       onDelete={handleDelete}
-                      onTestConnection={(item) =>
-                        void handleTestConnection(item)
-                      }
+                      onOpenWorkspace={setWorkspaceRecord}
+                      onTestConnection={(item) => void handleTestConnection(item)}
                     />
                   ))}
                 </motion.section>
 
-                {!loading && records.length === 0 ? (
+                {!loading && !loadError && records.length === 0 ? (
                   <div className="mt-6">
                     <DataSourceEmptyState
                       filtered={hasActiveFilters}
@@ -210,10 +201,7 @@ const DataSourcePage = () => {
               </Spin>
 
               {pagination.total > 0 ? (
-                <motion.footer
-                  variants={PAGE_ANIMATION.fadeUp}
-                  className="mt-auto flex shrink-0 justify-end pt-6"
-                >
+                <motion.footer variants={PAGE_ANIMATION.fadeUp} className="mt-auto flex shrink-0 justify-end pt-6">
                   <Pagination
                     current={pagination.pageNo}
                     pageSize={pagination.pageSize}
@@ -224,8 +212,8 @@ const DataSourcePage = () => {
                     disabled={loading}
                     showTotal={(total, range) =>
                       intl.formatMessage(
-                        { id: "pages.datasource.pagination.total" },
-                        { start: range[0], end: range[1], total }
+                        { id: 'pages.datasource.pagination.total' },
+                        { start: range[0], end: range[1], total },
                       )
                     }
                     onChange={changePage}
@@ -238,8 +226,26 @@ const DataSourcePage = () => {
       </div>
 
       <AddOrEditDataSourceModal ref={modalRef} />
+      {workspaceRecord ? (
+        <DataSourceWorkspace
+          key={dataSourceRecordKey(workspaceRecord.id)}
+          record={
+            records.find((item) => dataSourceRecordKey(item.id) === dataSourceRecordKey(workspaceRecord.id)) ||
+            workspaceRecord
+          }
+          permissions={permissions}
+          testingId={testingId}
+          onClose={() => setWorkspaceRecord(null)}
+          onTestConnection={(record) => void handleTestConnection(record)}
+          onEdit={(record) => void handleEdit(record)}
+        />
+      ) : null}
     </>
   );
 };
 
-export default DataSourcePage;
+export default function ScopedDataSourcePage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <DataSourcePage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}

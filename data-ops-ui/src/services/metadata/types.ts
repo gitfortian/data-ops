@@ -197,6 +197,7 @@ export type MetadataNativeFilterKey =
   | 'providerType'
   | 'datasourceId'
   | 'parentAssetId'
+  | 'collectJobId'
   | 'databaseName'
   | 'layerCode'
   | 'owner'
@@ -237,6 +238,8 @@ export interface MetadataSearchItem extends Record<string, unknown> {
   typeName?: string | null;
   typeDisplayName?: string | null;
   providerType?: string | null;
+  /** Current collector association, not membership of a historical run. */
+  collectJobId?: number | string | null;
   /** 源侧坐标：投影实体据此跳回源域编辑（HARVESTED 行的 source_id 是数据源 id，不可当跳转目标）。 */
   sourceType?: string | null;
   sourceId?: string | null;

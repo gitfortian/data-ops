@@ -102,12 +102,17 @@ public class CollectRunService {
 
   /** 运行历史（ticket 122 的抽屉）：最新的在最前，含 SUSPECT/FAILED 的原因原文。 */
   public PageData<RunView> pageRuns(Long jobId, int pageNo, int pageSize) {
+    return pageRuns(jobId, pageNo, pageSize, null);
+  }
+
+  public PageData<RunView> pageRuns(Long jobId, int pageNo, int pageSize, Boolean dryRun) {
     Page<MdCollectRunPO> result =
         runMapper.selectPage(
             new Page<>(pageNo, pageSize),
             new LambdaQueryWrapper<MdCollectRunPO>()
                 .eq(MdCollectRunPO::getProjectId, currentProject.requireProjectId())
                 .eq(jobId != null, MdCollectRunPO::getJobId, jobId)
+                .eq(dryRun != null, MdCollectRunPO::getDryRun, dryRun)
                 .orderByDesc(MdCollectRunPO::getStartedAt)
                 .orderByDesc(MdCollectRunPO::getId));
     return new PageData<>(

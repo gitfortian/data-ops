@@ -1,16 +1,6 @@
 import CronSchedulerInput from '@/components/CronSchedulerEditor/CronSchedulerInput';
 import { YakButton } from '@/components/ui';
-import {
-  Alert,
-  Drawer,
-  Form,
-  Input,
-  Modal,
-  Radio,
-  Select,
-  Switch,
-  message,
-} from 'antd';
+import { Alert, Drawer, Form, Input, Modal, Radio, Select, Switch, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
@@ -26,19 +16,23 @@ import type {
   EffectivePresencePolicy,
   EntityTypeView,
 } from '@/services/metadata/types';
-import {
-  listAllDataSources,
-  listDataSourceDatabases,
-  listDataSourceSchemas,
-} from '@/services/data-source/api';
+import { listAllDataSources, listDataSourceDatabases, listDataSourceSchemas } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
 import { PROVIDER_LABELS } from '../constants';
+
+export interface CollectJobInitialScope {
+  databaseName?: string;
+  schemaName?: string;
+  sourceTableName?: string;
+  jobName?: string;
+}
 
 interface CollectJobDrawerProps {
   open: boolean;
   editing: CollectJobRecord | null;
   /** A project-verified URL hint, not an authorization or a saved job scope. */
   initialDataSourceId?: number;
+  initialScope?: CollectJobInitialScope;
   onClose: () => void;
   onSaved: (saved: CollectJobRecord) => void;
 }
@@ -59,7 +53,14 @@ interface JobFormValues {
 const DEFAULT_CRON = '0 0 3 * * ?';
 
 /** 物理表名匹配式是 SQL LIKE 语义(% 通配),留空即整库采集。 */
-const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved }: CollectJobDrawerProps) => {
+const CollectJobDrawer = ({
+  open,
+  editing,
+  initialDataSourceId,
+  initialScope,
+  onClose,
+  onSaved,
+}: CollectJobDrawerProps) => {
   const [form] = Form.useForm<JobFormValues>();
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -78,9 +79,15 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
     setEffectivePolicy(null);
     setPolicyLoadError(false);
     void getEffectivePresencePolicy()
-      .then((policy) => { if (active) setEffectivePolicy(policy); })
-      .catch(() => { if (active) setPolicyLoadError(true); });
-    return () => { active = false; };
+      .then((policy) => {
+        if (active) setEffectivePolicy(policy);
+      })
+      .catch(() => {
+        if (active) setPolicyLoadError(true);
+      });
+    return () => {
+      active = false;
+    };
   }, [open]);
 
   const providerType = Form.useWatch('providerType', form) as CollectProviderType | undefined;
@@ -90,14 +97,9 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
   const isEdit = Boolean(editing);
 
   const loadCatalog = useCallback(async () => {
-    const [sources, types] = await Promise.allSettled([
-      listAllDataSources(),
-      listEntityTypes('ENTITY'),
-    ]);
-    setDataSources(
-      sources.status === 'fulfilled' ? sources.value.bizData ?? [] : [],
-    );
-    const list = types.status === 'fulfilled' ? types.value ?? [] : [];
+    const [sources, types] = await Promise.allSettled([listAllDataSources(), listEntityTypes('ENTITY')]);
+    setDataSources(sources.status === 'fulfilled' ? (sources.value.bizData ?? []) : []);
+    const list = types.status === 'fulfilled' ? (types.value ?? []) : [];
     // 投影对账通道只服务写时登记的内部实体:collectible 类型由物理采集维护,不该出现在这里。
     setEntityTypes(list.filter((t) => t.status === 'ACTIVE' && !t.collectible));
   }, []);
@@ -128,11 +130,14 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       form.setFieldsValue({
         providerType: 'HARVESTED',
         dataSourceId: initialDataSourceId,
+        jobName: initialScope?.jobName,
+        databaseName: initialScope?.databaseName,
+        schemaName: initialScope?.schemaName,
         collectColumns: true,
         cronExpression: DEFAULT_CRON,
       });
     }
-  }, [open, editing, form, initialDataSourceId]);
+  }, [open, editing, form, initialDataSourceId, initialScope]);
 
   const refreshDatabases = async (id: number) => {
     setLoadingDatabases(true);
@@ -170,7 +175,8 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       return;
     }
     void refreshDatabases(initialDataSourceId);
-  }, [open, editing, initialDataSourceId, dataSources, form]);
+    if (initialScope?.databaseName) void refreshSchemas(initialDataSourceId, initialScope.databaseName);
+  }, [open, editing, initialDataSourceId, initialScope, dataSources, form]);
 
   // 编辑物理采集任务时,按已存作用域把库/schema 下拉补载出来(选而不清,保留原值)。
   useEffect(() => {
@@ -205,18 +211,26 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
 
   const requestClose = () => {
     if (saving) return;
-    if (!dirty) { onClose(); return; }
+    if (!dirty) {
+      onClose();
+      return;
+    }
     Modal.confirm({
       title: '还有未保存的采集范围',
       content: '离开将放弃本次未保存的表匹配、Schema 与调度改动。已保存任务和运行历史不受影响。',
-      okText: '放弃本次编辑', okType: 'danger', cancelText: '继续编辑',
+      okText: '放弃本次编辑',
+      okType: 'danger',
+      cancelText: '继续编辑',
       onOk: onClose,
     });
   };
 
   useEffect(() => {
     if (!open || !dirty) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [open, dirty]);
@@ -230,26 +244,30 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       jobCode: values.jobCode?.trim() || undefined,
       cronExpression: values.cronExpression || DEFAULT_CRON,
       typeName: harvest ? undefined : values.typeName,
-      dataSourceId: harvest ? values.dataSourceId ?? null : null,
+      dataSourceId: harvest ? (values.dataSourceId ?? null) : null,
       databaseName: harvest ? values.databaseName || null : null,
       schemaName: harvest ? values.schemaName || null : null,
       tablePattern: harvest ? values.tablePattern?.trim() || null : null,
-      collectColumns: harvest ? values.collectColumns ?? true : null,
+      collectColumns: harvest ? (values.collectColumns ?? true) : null,
     };
     if (editing?.enabled) {
-      const changed = editing.dataSourceId !== (params.dataSourceId ?? null)
-        || (editing.databaseName || null) !== (params.databaseName ?? null)
-        || (editing.schemaName || null) !== (params.schemaName ?? null)
-        || (editing.tablePattern || null) !== (params.tablePattern ?? null)
-        || (editing.cronExpression || DEFAULT_CRON) !== params.cronExpression
-        || (editing.collectColumns ?? true) !== (params.collectColumns ?? true);
+      const changed =
+        editing.dataSourceId !== (params.dataSourceId ?? null) ||
+        (editing.databaseName || null) !== (params.databaseName ?? null) ||
+        (editing.schemaName || null) !== (params.schemaName ?? null) ||
+        (editing.tablePattern || null) !== (params.tablePattern ?? null) ||
+        (editing.cronExpression || DEFAULT_CRON) !== params.cronExpression ||
+        (editing.collectColumns ?? true) !== (params.collectColumns ?? true);
       if (changed) {
         const approved = await new Promise<boolean>((resolve) => {
           Modal.confirm({
             title: '确认修改已启用任务的采集范围或调度？',
-            content: '任务目前已启用。保存会影响后续 Quartz 执行范围/时间，作用域改动将使旧 dry-run 证据失效，但不会自动停用或执行。请确认后再保存。',
-            okText: '确认修改已启用任务', cancelText: '保留原配置',
-            onOk: () => resolve(true), onCancel: () => resolve(false),
+            content:
+              '任务目前已启用。保存会影响后续 Quartz 执行范围/时间，作用域改动将使旧 dry-run 证据失效，但不会自动停用或执行。请确认后再保存。',
+            okText: '确认修改已启用任务',
+            cancelText: '保留原配置',
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
           });
         });
         if (!approved) return;
@@ -310,6 +328,15 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
       }}
     >
       <Form form={form} layout="vertical" requiredMark="optional" onValuesChange={() => setDirty(true)}>
+        {!isEdit && initialScope?.sourceTableName ? (
+          <Alert
+            type="info"
+            showIcon
+            className="!mb-4"
+            message={`从表「${initialScope.sourceTableName}」进入任务定义`}
+            description="默认采集所选库 / Schema 的全部表；如需缩小范围，请调整下方表名匹配式。"
+          />
+        ) : null}
         {isEdit ? (
           <Alert
             type="info"
@@ -445,12 +472,7 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
           </Form.Item>
         )}
 
-        <Form.Item
-          name="cronExpression"
-          label="调度周期"
-          tooltip="点选周期与时分生成表达式，无需手写"
-          className="mt-2"
-        >
+        <Form.Item name="cronExpression" label="调度周期" tooltip="点选周期与时分生成表达式，无需手写" className="mt-2">
           <CronSchedulerInput placeholder={DEFAULT_CRON} />
         </Form.Item>
 
@@ -461,12 +483,16 @@ const CollectJobDrawer = ({ open, editing, initialDataSourceId, onClose, onSaved
               className="!mb-4"
               type={policyLoadError ? 'warning' : 'info'}
               showIcon
-              message={policyLoadError ? '无法读取当前保护策略' : effectivePolicy ? '全局保护策略（只读）' : '正在读取保护策略'}
-              description={effectivePolicy
-                ? `表缺席比例超过 ${effectivePolicy.collapseThresholdPct}%（至少 2 张缺席）时熔断为 SUSPECT；对象连续缺席 ${effectivePolicy.missingRounds} 轮有效采集才可标记 GONE。当前未支持任务级自定义，历史保存值不代表生效策略。`
-                : policyLoadError
-                  ? '无法确认服务器当前实际阈值；请核查配置后再执行采集，历史任务自定义值不会生效。'
-                  : '以服务端实际执行配置为准，不读取任务行历史策略字段。'}
+              message={
+                policyLoadError ? '无法读取当前保护策略' : effectivePolicy ? '全局保护策略（只读）' : '正在读取保护策略'
+              }
+              description={
+                effectivePolicy
+                  ? `表缺席比例超过 ${effectivePolicy.collapseThresholdPct}%（至少 2 张缺席）时熔断为 SUSPECT；对象连续缺席 ${effectivePolicy.missingRounds} 轮有效采集才可标记 GONE。当前未支持任务级自定义，历史保存值不代表生效策略。`
+                  : policyLoadError
+                    ? '无法确认服务器当前实际阈值；请核查配置后再执行采集，历史任务自定义值不会生效。'
+                    : '以服务端实际执行配置为准，不读取任务行历史策略字段。'
+              }
             />
           </>
         )}

@@ -6,10 +6,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { YakButton, YakEmpty } from '@/components/ui';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { readCollectionDefinitionHint } from '@/services/metadata/collectionHandoff';
 import {
   changeCollectJobEnabled,
   deleteCollectJob,
   dryRunCollectJob,
+  getCollectJob,
   pageCollectJobs,
   runCollectJob,
 } from '@/services/metadata/api';
@@ -22,17 +25,22 @@ import type {
 import { listAllDataSources } from '@/services/data-source/api';
 import { PageHeader } from '../shared';
 import CollectJobDrawer from './components/CollectJobDrawer';
+import type { CollectJobInitialScope } from './components/CollectJobDrawer';
 import RunHistoryDrawer from './components/RunHistoryDrawer';
 import RunResultModal from './components/RunResultModal';
 import { PROVIDER_COLORS, PROVIDER_LABELS, formatMetadataTime } from './constants';
 
 const MetadataCollectPage = () => {
   const { can } = usePermissionAccess();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const definitionAction = searchParams.get('action');
+  const definitionHint = useMemo(() => readCollectionDefinitionHint(searchParams), [searchParams]);
   const rawSourceHint = searchParams.get('dataSourceId');
   const parsedSourceHint = Number(rawSourceHint);
-  const sourceHintId = rawSourceHint && /^[1-9]\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
-    ? parsedSourceHint : undefined;
+  const sourceHintId =
+    rawSourceHint && /^[1-9]\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
+      ? parsedSourceHint
+      : undefined;
   const canCreate = can('data-metadata:create');
   const canUpdate = can('data-metadata:update');
   const canDelete = can('data-metadata:delete');
@@ -49,6 +57,8 @@ const MetadataCollectPage = () => {
   const [busyJob, setBusyJob] = useState<{ id: number; action: 'dry-run' | 'run' } | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [definitionScope, setDefinitionScope] = useState<CollectJobInitialScope>();
+  const [definitionError, setDefinitionError] = useState('');
   const [editing, setEditing] = useState<CollectJobRecord | null>(null);
   const [historyJob, setHistoryJob] = useState<CollectJobRecord | null | undefined>(undefined);
   const [runResult, setRunResult] = useState<{ run: CollectRunRecord; title: string } | null>(null);
@@ -56,6 +66,71 @@ const MetadataCollectPage = () => {
   const [sourceHint, setSourceHint] = useState<{ id: number; name: string } | null>(null);
   const [sourceHintError, setSourceHintError] = useState('');
   const [jobsLoadError, setJobsLoadError] = useState(false);
+
+  useEffect(() => {
+    if (definitionAction !== 'define') return;
+    let active = true;
+    const consumeHint = () => {
+      const params = new URLSearchParams(searchParams);
+      ['action', 'jobId', 'databaseName', 'schemaName', 'sourceTableName'].forEach((key) => params.delete(key));
+      setSearchParams(params, { replace: true });
+    };
+    if (!definitionHint.valid || sourceHintError) {
+      setDefinitionError(sourceHintError || '任务定义导航参数不合法，请重新选择来源');
+      consumeHint();
+      return;
+    }
+    if (!sourceHint || sourceHint.id !== definitionHint.sourceId) return;
+    const verifiedSource = sourceHint;
+    const openDefinition = async () => {
+      try {
+        if (definitionHint.jobId) {
+          if (!canUpdate) throw new Error('当前账号没有修改采集任务的权限');
+          const job = await getCollectJob(definitionHint.jobId);
+          if (!active) return;
+          if (
+            job.id !== definitionHint.jobId ||
+            job.providerType !== 'HARVESTED' ||
+            job.dataSourceId !== verifiedSource.id
+          )
+            throw new Error('任务不属于当前核验的数据源，不能打开定义');
+          // Existing tasks keep their persisted scope and schedule, independent of source-table hints.
+          setEditing(job);
+          setDefinitionScope(undefined);
+        } else {
+          if (!canCreate) throw new Error('当前账号没有创建采集任务的权限');
+          setEditing(null);
+          setDefinitionScope({
+            databaseName: definitionHint.databaseName,
+            schemaName: definitionHint.schemaName,
+            sourceTableName: definitionHint.sourceTableName,
+            jobName: `${(definitionHint.databaseName || verifiedSource.name).slice(0, 124)}结构采集`,
+          });
+        }
+        if (!active) return;
+        setDefinitionError('');
+        setDrawerOpen(true);
+        consumeHint();
+      } catch (error) {
+        if (!active) return;
+        setDefinitionError(error instanceof Error ? error.message : '无法核验采集任务定义，请重试');
+        consumeHint();
+      }
+    };
+    void openDefinition();
+    return () => {
+      active = false;
+    };
+  }, [
+    definitionAction,
+    definitionHint,
+    sourceHint,
+    sourceHintError,
+    canCreate,
+    canUpdate,
+    searchParams,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -82,7 +157,9 @@ const MetadataCollectPage = () => {
         setDataSourceNames({});
         if (rawSourceHint !== null) setSourceHintError('无法核验来源所属项目；请稍后重试。');
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [rawSourceHint, sourceHintId]);
 
   const loadJobs = useCallback(
@@ -127,18 +204,17 @@ const MetadataCollectPage = () => {
 
   const openCreate = () => {
     setEditing(null);
+    setDefinitionScope(undefined);
     setDrawerOpen(true);
   };
 
   const openEdit = (job: CollectJobRecord) => {
     setEditing(job);
+    setDefinitionScope(undefined);
     setDrawerOpen(true);
   };
 
-  const execute = async (
-    job: CollectJobRecord,
-    action: 'dry-run' | 'run',
-  ) => {
+  const execute = async (job: CollectJobRecord, action: 'dry-run' | 'run') => {
     setBusyJob({ id: job.id, action });
     try {
       const run = action === 'dry-run' ? await dryRunCollectJob(job.id) : await runCollectJob(job.id);
@@ -152,7 +228,8 @@ const MetadataCollectPage = () => {
       // associate any similarly-timed history row with this request.
       Modal.warning({
         title: '本次请求没有取得可信运行回执',
-        content: '先核对这个已保存任务的运行历史及当前元数据目录。无法精确关联的历史记录不代表本次采集成功或失败；如再次执行，请先确认前次可能仍在运行。',
+        content:
+          '先核对这个已保存任务的运行历史及当前元数据目录。无法精确关联的历史记录不代表本次采集成功或失败；如再次执行，请先确认前次可能仍在运行。',
         okText: '核对任务历史',
         onOk: () => setHistoryJob(job),
       });
@@ -246,9 +323,7 @@ const MetadataCollectPage = () => {
       title: '通道',
       dataIndex: 'providerType',
       width: 100,
-      render: (value: CollectProviderType) => (
-        <Tag color={PROVIDER_COLORS[value]}>{PROVIDER_LABELS[value]}</Tag>
-      ),
+      render: (value: CollectProviderType) => <Tag color={PROVIDER_COLORS[value]}>{PROVIDER_LABELS[value]}</Tag>,
     },
     {
       title: '作用域',
@@ -350,11 +425,7 @@ const MetadataCollectPage = () => {
         subtitle="管理采集范围、执行计划与对账结果，跟踪技术目录的变化。"
         extra={
           canCreate ? (
-            <YakButton
-              type="primary"
-              className="!h-9 !rounded-lg !px-4 !text-white"
-              onClick={openCreate}
-            >
+            <YakButton type="primary" className="!h-9 !rounded-lg !px-4 !text-white" onClick={openCreate}>
               新建任务
             </YakButton>
           ) : null
@@ -362,16 +433,28 @@ const MetadataCollectPage = () => {
       />
 
       {sourceHint && (
-        <Alert className="mt-4" type="info" showIcon
+        <Alert
+          className="mt-4"
+          type="info"
+          showIcon
           message={`已核验当前项目来源「${sourceHint.name}」 (#${sourceHint.id})`}
-          description="下方仅显示当前查询页返回的已保存任务；来源查询结果依赖服务端实际过滤，不可凭一页没有记录断言该来源不存在任务。请先核查后续页，再考虑新建。运行仍以已保存任务的范围为准。" />
+          description="下方仅显示当前查询页返回的已保存任务；来源查询结果依赖服务端实际过滤，不可凭一页没有记录断言该来源不存在任务。请先核查后续页，再考虑新建。运行仍以已保存任务的范围为准。"
+        />
       )}
-      {sourceHintError && (
-        <Alert className="mt-4" type="warning" showIcon message={sourceHintError} />
-      )}
+      {sourceHintError && <Alert className="mt-4" type="warning" showIcon message={sourceHintError} />}
+      {definitionError ? <Alert className="mt-4" type="warning" showIcon message={definitionError} /> : null}
       {jobsLoadError && (
-        <Alert className="mt-4" type="error" showIcon message="采集任务读取失败，不能视为尚无任务"
-          action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
+        <Alert
+          className="mt-4"
+          type="error"
+          showIcon
+          message="采集任务读取失败，不能视为尚无任务"
+          action={
+            <Button size="small" onClick={() => void reload()}>
+              重试
+            </Button>
+          }
+        />
       )}
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Input.Search
@@ -429,14 +512,14 @@ const MetadataCollectPage = () => {
               <YakEmpty
                 compact
                 title={sourceHint ? '当前查询页未发现该来源任务' : '还没有采集任务'}
-                description={sourceHint ? '请先核对筛选条件及已保存任务的其他页；当前结果不能证明来源尚无任务，避免重复创建。' : '新建物理采集任务对数据源采表/列结构，或建立投影对账任务。'}
+                description={
+                  sourceHint
+                    ? '请先核对筛选条件及已保存任务的其他页；当前结果不能证明来源尚无任务，避免重复创建。'
+                    : '新建物理采集任务对数据源采表/列结构，或建立投影对账任务。'
+                }
               >
                 {canCreate && (
-                  <YakButton
-                    type="primary"
-                    className="!mt-3 !rounded-lg !text-white"
-                    onClick={openCreate}
-                  >
+                  <YakButton type="primary" className="!mt-3 !rounded-lg !text-white" onClick={openCreate}>
                     新建任务
                   </YakButton>
                 )}
@@ -461,6 +544,7 @@ const MetadataCollectPage = () => {
         open={drawerOpen}
         editing={editing}
         initialDataSourceId={sourceHint?.id}
+        initialScope={definitionScope}
         onClose={() => setDrawerOpen(false)}
         onSaved={(saved) => {
           setDrawerOpen(false);
@@ -480,13 +564,13 @@ const MetadataCollectPage = () => {
         job={historyJob ?? null}
         onClose={() => setHistoryJob(undefined)}
       />
-      <RunResultModal
-        run={runResult?.run ?? null}
-        title={runResult?.title ?? ''}
-        onClose={() => setRunResult(null)}
-      />
+      <RunResultModal run={runResult?.run ?? null} title={runResult?.title ?? ''} onClose={() => setRunResult(null)} />
     </div>
   );
 };
 
-export default MetadataCollectPage;
+export default function ScopedMetadataCollectPage() {
+  const { currentProject } = useSecurityProject();
+  const { permissionCodes } = usePermissionAccess();
+  return <MetadataCollectPage key={JSON.stringify([currentProject?.id, permissionCodes])} />;
+}
