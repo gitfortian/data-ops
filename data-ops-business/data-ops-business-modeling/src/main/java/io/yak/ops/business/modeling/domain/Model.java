@@ -119,7 +119,7 @@ public record Model(
     return new Model(id, code, name, dialect, description, status, owner, createTime, updateTime,
         layerCode, processId, directoryId, tagIds, deletedBy, deletedTime, sourceDatasourceId,
         sourceDatabase, sourceTable, statPeriod, appCode, appName, importMode, sourceModelId,
-        publishedVersionId, latestVersionNo, domainId, updatedBy);
+        publishedVersionId, latestVersionNo, domainId, updatedBy, sourceSchema);
   }
 
   /** 聚合/应用层元数据(51/52)。 */
@@ -127,7 +127,7 @@ public record Model(
     return new Model(id, code, name, dialect, description, status, owner, createTime, updateTime,
         layerCode, processId, directoryId, tagIds, deletedBy, deletedTime, sourceDatasourceId,
         sourceDatabase, sourceTable, statPeriod, appCode, appName, importMode, sourceModelId,
-        publishedVersionId, latestVersionNo, domainId, updatedBy);
+        publishedVersionId, latestVersionNo, domainId, updatedBy, sourceSchema);
   }
 
   /** 血缘信息(导入方式 + 来源模型)。 */
@@ -135,7 +135,7 @@ public record Model(
     return new Model(id, code, name, dialect, description, status, owner, createTime, updateTime,
         layerCode, processId, directoryId, tagIds, deletedBy, deletedTime, sourceDatasourceId,
         sourceDatabase, sourceTable, statPeriod, appCode, appName, importMode, sourceModelId,
-        publishedVersionId, latestVersionNo, domainId, updatedBy);
+        publishedVersionId, latestVersionNo, domainId, updatedBy, sourceSchema);
   }
 
   /** 版本发布信息:更新状态、发布版本指针。 */
@@ -143,7 +143,7 @@ public record Model(
     return new Model(id, code, name, dialect, description, newStatus, owner, createTime, updateTime,
         layerCode, processId, directoryId, tagIds, deletedBy, deletedTime, sourceDatasourceId,
         sourceDatabase, sourceTable, statPeriod, appCode, appName, importMode, sourceModelId,
-        publishedVersionId, latestVersionNo, domainId, updatedBy);
+        publishedVersionId, latestVersionNo, domainId, updatedBy, sourceSchema);
   }
 
   public static Model create(String code, String name, ModelDialect dialect, String description) {
@@ -228,7 +228,8 @@ public record Model(
         publishedVersionId,
         latestVersionNo,
         domainId,
-        owner);
+        owner,
+        sourceSchema);
   }
 
   public boolean isRecycled() {
