@@ -2,23 +2,23 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import OdsSourceJourney from './OdsSourceJourney';
 
-let query = new URLSearchParams({
+let mockQuery = new URLSearchParams({
   sourceJourney: 'ods', datasourceId: '10', database: 'trade_db',
   schema: 'public', table: 'orders',
 });
-let projectId = 42;
-const push = jest.fn();
-const candidates = jest.fn();
-const sources = jest.fn();
-const getModel = jest.fn();
-const createModel = jest.fn();
+let mockProjectId = 42;
+const mockPush = jest.fn();
+const mockCandidates = jest.fn();
+const mockSources = jest.fn();
+const mockGetModel = jest.fn();
+const mockCreateModel = jest.fn();
 
 jest.mock('@umijs/max', () => ({
-  history: { push: (...args: unknown[]) => push(...args), replace: jest.fn() },
-  useSearchParams: () => [query, jest.fn()],
+  history: { push: (...args: unknown[]) => mockPush(...args), replace: jest.fn() },
+  useSearchParams: () => [mockQuery, jest.fn()],
 }));
 jest.mock('@/contexts/SecurityProjectContext', () => ({
-  useSecurityProject: () => ({ currentProject: { id: projectId } }),
+  useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
 jest.mock('@/hooks/usePermissionAccess', () => ({
   __esModule: true,
@@ -27,30 +27,30 @@ jest.mock('@/hooks/usePermissionAccess', () => ({
   }),
 }));
 jest.mock('@/services/data-source/api', () => ({
-  listAllDataSources: (...args: unknown[]) => sources(...args),
+  listAllDataSources: (...args: unknown[]) => mockSources(...args),
 }));
 jest.mock('@/services/metadata/api', () => ({
   getEntityDetail: jest.fn(),
 }));
 jest.mock('@/services/modeling/api', () => ({
-  getModelingModel: (...args: unknown[]) => getModel(...args),
-  createModelingModel: (...args: unknown[]) => createModel(...args),
+  getModelingModel: (...args: unknown[]) => mockGetModel(...args),
+  createModelingModel: (...args: unknown[]) => mockCreateModel(...args),
   getModelingStructure: jest.fn(), commitOdsManualImport: jest.fn(),
 }));
 jest.mock('@/services/modeling/import', () => ({
-  getOdsSourceCandidates: (...args: unknown[]) => candidates(...args),
+  getOdsSourceCandidates: (...args: unknown[]) => mockCandidates(...args),
   previewModelingImportColumns: jest.fn(),
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  projectId = 42;
-  query = new URLSearchParams({
+  mockProjectId = 42;
+  mockQuery = new URLSearchParams({
     sourceJourney: 'ods', datasourceId: '10',
     database: 'trade_db', schema: 'public', table: 'orders',
   });
-  sources.mockResolvedValue({ bizData: [{ id: 10, dbType: 'MYSQL' }] });
-  candidates.mockResolvedValue({
+  mockSources.mockResolvedValue({ bizData: [{ id: 10, dbType: 'MYSQL' }] });
+  mockCandidates.mockResolvedValue({
     state: 'READY', reason: 'found', datasourceId: 10, database: 'trade_db',
     schema: 'public', table: 'orders',
     candidates: [{ modelId: 501, code: 'ods_orders', name: '订单 ODS',
@@ -64,15 +64,15 @@ it('opens an existing precise ODS model without creating or mutating it; Asset w
   expect(await screen.findByRole('button', { name: '打开已保存 ODS' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '打开已保存 ODS' }));
-  expect(push).toHaveBeenCalledWith('/modeling/models/501');
-  expect(createModel).not.toHaveBeenCalled();
-  expect(candidates).toHaveBeenCalledWith({
+  expect(mockPush).toHaveBeenCalledWith('/modeling/models/501');
+  expect(mockCreateModel).not.toHaveBeenCalled();
+  expect(mockCandidates).toHaveBeenCalledWith({
     datasourceId: 10, database: 'trade_db', schema: 'public', table: 'orders',
   });
 });
 
 it('does not treat unverified or unowned source as an empty ODS candidate list', async () => {
-  candidates.mockResolvedValueOnce({
+  mockCandidates.mockResolvedValueOnce({
     state: 'UNVERIFIED', reason: 'legacy schema unknown',
     datasourceId: 10, database: 'trade_db', schema: 'public', table: 'orders',
     candidates: [],
@@ -80,11 +80,11 @@ it('does not treat unverified or unowned source as an empty ODS candidate list',
   render(<OdsSourceJourney />);
   expect(await screen.findByText('不能确认来源身份')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
-  expect(createModel).not.toHaveBeenCalled();
+  expect(mockCreateModel).not.toHaveBeenCalled();
 });
 
 it('rejects missing project source evidence instead of offering a new model', async () => {
-  sources.mockResolvedValueOnce({ bizData: [{ id: 99, dbType: 'MYSQL' }] });
+  mockSources.mockResolvedValueOnce({ bizData: [{ id: 99, dbType: 'MYSQL' }] });
   render(<OdsSourceJourney />);
   await waitFor(() =>
     expect(screen.getByText(/当前项目无法核验来源数据源/)).toBeInTheDocument());
