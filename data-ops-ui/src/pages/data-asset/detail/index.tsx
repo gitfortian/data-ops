@@ -1,4 +1,5 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { ASSET_SURFACE, ASSET_PANEL } from '../components/AssetWorkspace';
 import GovernanceSuggestionPanel from '@/components/ai/GovernanceSuggestionPanel';
 import { governanceEntryPath } from '@/services/agent/governance';
 import { Alert, Button, Card, Descriptions, Input, message, Select, Space, Tabs, Tag, Tooltip } from 'antd';
@@ -399,14 +400,14 @@ const AssetDetailPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-6 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <main className={ASSET_SURFACE}>
+      <div className={ASSET_PANEL + ' flex flex-wrap items-start justify-between gap-4 p-5'}>
         <div className="min-w-0">
           <Space size={8} wrap>
             <Button type="text" size="small" className="!px-0 !text-[#667085]" onClick={() => history.back()}>
               ← 返回
             </Button>
-            <span className="text-[20px] font-semibold leading-7">{asset?.name}</span>
+            <span className="text-[23px] font-semibold leading-8 tracking-tight text-[#26354a]">{asset?.name}</span>
             {asset && <AssetStatusTag status={asset.status} />}
             {detail?.sections.sourceAttrs?.data?.sourceChanged && (
               <Tooltip title="源域对象已变化,待盘点确认后刷新快照">
@@ -414,7 +415,7 @@ const AssetDetailPage = () => {
               </Tooltip>
             )}
           </Space>
-          <div className="mt-1 text-[12px] text-[#98a2b3]">{asset?.assetKey}</div>
+          <div className="mt-1 break-all font-mono text-[12px] text-[#8794a8]">{asset?.assetKey}</div>
         </div>
         <Space>
           {asset && asset.id === assetId && !loading && !detailFailure && can('data-asset:read') && can('agent:chat:run') && (
@@ -1041,7 +1042,7 @@ const AssetDetailPage = () => {
           />
         </>
       )}
-    </div>
+    </main>
   );
 };
 
