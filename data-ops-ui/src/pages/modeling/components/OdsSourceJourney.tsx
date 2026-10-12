@@ -84,7 +84,10 @@ const OdsSourceJourney = () => {
     setLookup(null);
     setSourceVerified(false);
     // A draftId-only redirect must not erase a preview/mapping the user just confirmed.
-    if (changedSource) { setColumns(null); setSavedId(null); setDirty(false); }
+    if (changedSource) {
+      setColumns(null); setSavedId(null); setDirty(false);
+      setPreviewBusy(false); setCreating(false); setCommitting(false);
+    }
     setSavedDraft(null);
     if (!valid || datasourceId == null) {
       setFailure('来源坐标不完整或非法；请从已发现的物理表进入 ODS 建模。');
@@ -164,6 +167,7 @@ const OdsSourceJourney = () => {
     && new Set(targetValues.map(v => v.toLowerCase())).size === targetValues.length;
 
   const createDraft = async () => {
+    const ticket = readEpoch.current;
     if (!sourceVerified || lookup?.state !== 'READY' || lookup.candidates.length > 0
         || !can('modeling:create') || !dialect || !code || !validMappings || savedDraft) return;
     setCreating(true);
@@ -171,6 +175,7 @@ const OdsSourceJourney = () => {
       const created = await createModelingModel({
         code: code.trim(), name: name.trim(), dialect, layerCode: 'ODS',
       });
+      if (ticket !== readEpoch.current) return;
       if (!created.id) throw new Error('创建接口未返回可恢复的模型 ID。');
       setSavedDraft(created);
       const next = new URLSearchParams(params.toString());
@@ -178,11 +183,13 @@ const OdsSourceJourney = () => {
       history.replace(`/modeling?${next.toString()}`);
       message.info('空 ODS 草稿已保存。字段和来源映射尚未提交，请核对后继续。');
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : '草稿创建失败；未写入来源映射。');
-    } finally { setCreating(false); }
+      if (ticket === readEpoch.current)
+        setFailure(error instanceof Error ? error.message : '草稿保存结果未知；请按模型编码检查当前项目已有草稿，勿直接重复创建。');
+    } finally { if (ticket === readEpoch.current) setCreating(false); }
   };
 
   const commit = async () => {
+    const ticket = readEpoch.current;
     if (!savedDraft?.id || !can('modeling:update') || !validMappings || datasourceId == null
         || lookup?.state !== 'READY' || lookup.candidates.length > 0 || !sourceVerified) return;
     setCommitting(true);
@@ -191,6 +198,7 @@ const OdsSourceJourney = () => {
       const [live, structure] = await Promise.all([
         getModelingModel(savedDraft.id), getModelingStructure(savedDraft.id),
       ]);
+      if (ticket !== readEpoch.current) return;
       if (live.status !== 'DRAFT' || live.layerCode !== 'ODS' || live.sourceDatasourceId != null
           || !structure.definition || (structure.columns ?? []).length !== 0) {
         throw new Error('草稿已变化或有字段/来源映射；请在原模型核验，禁止覆盖。');
@@ -222,6 +230,7 @@ const OdsSourceJourney = () => {
           targetColumn: targetNames[col.name].trim(), sourceColumn: col.name,
         })),
       });
+      if (ticket !== readEpoch.current) return;
       if (receipt.status !== 'SAVED_AND_VERIFIED' || receipt.modelId !== Number(savedDraft.id)
           || receipt.confirmedMappingCount !== physicalColumns.length) {
         throw new Error('写入回执尚不足以证明模型与全部来源列已保存；请打开模型核对。');
@@ -230,8 +239,9 @@ const OdsSourceJourney = () => {
       setDirty(false);
       message.success('ODS 草稿、结构及逐列来源映射已在 Modeling Owner 保存。');
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : '来源映射保存失败，草稿仍可按模型 ID 恢复。');
-    } finally { setCommitting(false); }
+      if (ticket === readEpoch.current)
+        setFailure(error instanceof Error ? error.message : '来源映射保存结果未知，请按草稿 ID 核查原域持久化记录与映射，勿自动重提。');
+    } finally { if (ticket === readEpoch.current) setCommitting(false); }
   };
 
   return (
