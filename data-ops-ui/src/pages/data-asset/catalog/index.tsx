@@ -527,14 +527,18 @@ const AssetCatalogPage = () => {
             <YakButton size="small" onClick={() => openWizard(selectedRows)}>
               批量上架
             </YakButton>
-            <YakButton size="small" onClick={() => setOfflineTarget(selectedRows.filter((row) => row.status === 'PUBLISHED'))}>
-              批量下架
+            <YakButton size="small"
+              disabled={!selectedRows.some((row) => row.status === 'PUBLISHED')}
+              onClick={() => setOfflineTarget(selectedRows.filter((row) => row.status === 'PUBLISHED'))}>
+              下架已上架项 ({selectedRows.filter((row) => row.status === 'PUBLISHED').length})
             </YakButton>
             <YakButton size="small" onClick={runBatchMove}>
               移目录
             </YakButton>
-            <YakButton size="small" onClick={() => runIgnore(selectedRows.filter((row) => IGNORABLE.includes(row.status)))}>
-              忽略
+            <YakButton size="small"
+              disabled={!selectedRows.some((row) => IGNORABLE.includes(row.status))}
+              onClick={() => runIgnore(selectedRows.filter((row) => IGNORABLE.includes(row.status)))}>
+              忽略可处理项 ({selectedRows.filter((row) => IGNORABLE.includes(row.status)).length})
             </YakButton>
             <span className="ml-auto text-[12px] text-[#98a2b3]">仅本页可选，单次批量上限 200</span>
           </div>
