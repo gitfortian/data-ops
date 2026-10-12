@@ -199,6 +199,11 @@ const OdsSourceJourney = () => {
         expectedDefinition: structure.definition,
         sourceDatasourceId: datasourceId, sourceDatabase: database, sourceSchema: schema,
         sourceTable: table,
+        expectedSourceColumns: physicalColumns.map(col => ({
+          name: col.name, typeName: col.typeName, size: col.size ?? null,
+          scale: col.scale ?? null, nullable: col.nullable ?? true,
+          primaryKey: col.primaryKey ?? false,
+        })),
         structure: {
           tableName: live.code || code,
           tableComment: name,
