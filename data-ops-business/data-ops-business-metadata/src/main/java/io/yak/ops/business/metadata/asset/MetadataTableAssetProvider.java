@@ -59,6 +59,16 @@ public class MetadataTableAssetProvider implements AssetProvider {
   }
 
   @Override
+  public Optional<AssetDescriptor> refreshInProject(Long projectId, String sourceId) {
+    Long id = parseIdOrNull(sourceId);
+    if (projectId == null || projectId <= 0 || id == null || id <= 0) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(mapper.selectProviderRowInProject(projectId, id))
+        .map(MetadataTableAssetProvider::toDescriptor);
+  }
+
+  @Override
   public Optional<AssetDescriptor> refresh(String sourceId) {
     Long id = parseIdOrNull(sourceId);
     if (id == null) {

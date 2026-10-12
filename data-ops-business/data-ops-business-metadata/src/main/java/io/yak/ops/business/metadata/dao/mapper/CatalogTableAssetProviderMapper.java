@@ -64,6 +64,24 @@ public interface CatalogTableAssetProviderMapper {
       @Param("afterId") Long afterId,
       @Param("limit") int limit);
 
+  /** S2 automatic writes require a project-scoped, still-present physical table identity. */
+  @Select(
+      """
+      SELECT id, asset_key AS assetKey, name, display_name AS displayName,
+             summary, layer_code AS layerCode, owner_user AS ownerUser,
+             entity_status AS entityStatus, data_source_id AS dataSourceId,
+             database_name AS databaseName, schema_name AS schemaName,
+             table_name AS tableName, update_time AS updateTime
+      FROM yak_metadata_asset
+      WHERE project_id = #{projectId}
+        AND id = #{id}
+        AND source_type = 'METADATA'
+        AND asset_type = 'TABLE'
+        AND gone_at IS NULL
+      """)
+  CatalogTableAssetRow selectProviderRowInProject(
+      @Param("projectId") Long projectId, @Param("id") Long id);
+
   /** 单行读回（sourceId = 本表主键）；边界谓词与分页一致，防跨类型/已软删行借道返回。 */
   @Select(
       """

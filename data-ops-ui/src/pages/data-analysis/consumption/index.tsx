@@ -1,4 +1,6 @@
 import YakOpsEmpty from '@/components/YakOpsEmpty';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import {
   discoverProducts,
   productKeyValue,
@@ -6,7 +8,7 @@ import {
   type ProductType,
   type ProductSearchState,
 } from '@/services/consumption';
-import { history } from '@umijs/max';
+import { history, useModel } from '@umijs/max';
 import { Alert, Button, Card, Input, Select, Space, Spin, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AVAILABILITY_LABEL, EVIDENCE_LABEL, LIFECYCLE_LABEL, PRODUCT_TYPE_LABEL, resolveConsumptionDiscoveryView } from './presentation';
@@ -24,7 +26,7 @@ const availabilityColor = (value: DataProductView['availability']) => {
   return 'default';
 };
 
-export default function ConsumptionDiscoveryPage() {
+function ConsumptionDiscoveryPage() {
   const [keyword, setKeyword] = useState('');
   const [productType, setProductType] = useState<ProductType | undefined>();
   const [products, setProducts] = useState<DataProductView[]>([]);
@@ -35,7 +37,7 @@ export default function ConsumptionDiscoveryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = useCallback(async (nextKeyword = keyword, nextType = productType) => {
+  const load = useCallback(async (nextKeyword: string, nextType?: ProductType) => {
     const loadId = ++latestLoadId.current;
     lastQuery.current = { keyword: nextKeyword, productType: nextType };
     setLoading(true);
@@ -58,12 +60,12 @@ export default function ConsumptionDiscoveryPage() {
     } finally {
       if (loadId === latestLoadId.current) setLoading(false);
     }
-  }, [keyword, productType]);
+  }, []);
 
   useEffect(() => {
     void load('', undefined);
     return () => { latestLoadId.current += 1; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [load]);
 
   const retry = () => void load(lastQuery.current.keyword, lastQuery.current.productType);
 
@@ -168,4 +170,15 @@ export default function ConsumptionDiscoveryPage() {
       </Space>
     </div>
   );
+}
+
+export default function ConsumptionDiscoveryScope() {
+  const { currentProject } = useSecurityProject();
+  const { can, permissionCodes } = usePermissionAccess();
+  const { initialState } = useModel('@@initialState');
+  if (!currentProject) return <Alert type="info" showIcon message="请选择项目空间" />;
+  if (!can('data-asset:read')) return <Alert type="info" showIcon message="暂无数据产品发现权限" />;
+  return <ConsumptionDiscoveryPage key={JSON.stringify([
+    currentProject.id, initialState?.currentUser?.userName, permissionCodes,
+  ])} />;
 }

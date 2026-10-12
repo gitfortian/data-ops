@@ -17,6 +17,15 @@ public interface AssetProvider {
   /** 增量游标遍历:按主键升序;updatedAfter 非空时仅返回该时间后有更新的资产。 */
   AssetPage cursorList(AssetCursorQuery query);
 
+  /**
+   * S2 project-scoped refresh for durable auto-ingest. Default MUST fail closed:
+   * legacy providers may implement unscoped refresh for older read-only flows,
+   * but may not be used for cross-domain automatic writes without owner proof.
+   */
+  default Optional<AssetDescriptor> refreshInProject(Long projectId, String sourceId) {
+    return Optional.empty();
+  }
+
   /** 单资产刷新:详情聚合/对账复核用;源已删除或不存在时返回 empty。 */
   Optional<AssetDescriptor> refresh(String sourceId);
 }
