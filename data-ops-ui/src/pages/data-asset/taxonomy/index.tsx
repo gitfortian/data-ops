@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Card,
   Dropdown,
@@ -18,6 +19,7 @@ import {
   TreeSelect,
 } from 'antd';
 import { AssetWorkspaceHeading, ASSET_SURFACE } from '../components/AssetWorkspace';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
@@ -90,6 +92,7 @@ const DirectoryTab = () => {
   const canDelete = can('data-asset:delete');
 
   const [tree, setTree] = useState<DirNode[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ node: DirNode | null; parentId?: number } | null>(null);
   const [moving, setMoving] = useState<DirNode | null>(null);
@@ -98,9 +101,11 @@ const DirectoryTab = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setTree(await getDirectoryTree());
     } catch {
+      setLoadError(true);
       setTree([]);
     } finally {
       setLoading(false);
@@ -247,8 +252,11 @@ const DirectoryTab = () => {
         </YakButton>
         <span className="text-[13px] text-[#667085]">目录编码自动生成，移动时会同步更新子目录的位置。</span>
       </div>
-      <Card size="small" loading={loading}>
-        {tree.length === 0 ? (
+      {loadError ? <Alert className="!mb-3" type="error" showIcon message="目录读取失败，不代表尚无目录" action={<Button size="small" onClick={() => void load()}>重试</Button>} /> : null}
+      <Card size="small" loading={loading} className="!rounded-xl !border-[#e6eaf0] !shadow-none">
+        {loadError ? (
+          <YakEmpty compact title="无法确认目录" description="修复权限或服务错误后重新读取" />
+        ) : tree.length === 0 ? (
           <YakEmpty compact title="暂无目录" description="点上方按钮按分层+业务域一键初始化" />
         ) : (
           <Tree defaultExpandAll blockNode>
@@ -326,6 +334,7 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
   const canUpdate = can('data-asset:update');
 
   const [rules, setRules] = useState<RuleRecord[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<RuleRecord | 'new' | null>(null);
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
@@ -339,9 +348,11 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setRules(await listAssetRules());
     } catch {
+      setLoadError(true);
       setRules([]);
     } finally {
       setLoading(false);
@@ -569,14 +580,16 @@ const RuleTab = ({ dirTree, tags }: { dirTree: DirNode[]; tags: AssetTagRecord[]
           规则必须试跑后才可启用（D10）；条件之间是 AND，留空即通配；对账对新资产自动应用启用中的规则
         </span>
       </div>
+      {loadError ? <Alert className="!mb-4" type="error" showIcon message="编目规则读取失败，不能视为没有规则" action={<Button onClick={() => void load()}>重试</Button>} /> : null}
       <Table<RuleRecord>
         rowKey="id"
-        size="small"
+        size="middle"
+        scroll={{ x: 1120 }}
         columns={columns}
         dataSource={rules}
         loading={loading}
         pagination={false}
-        locale={{ emptyText: <YakEmpty compact title="暂无编目规则" description="新建后先试跑确认命中面，再启用" /> }}
+        locale={{ emptyText: <YakEmpty compact title={loadError ? '尚未成功读取规则' : '暂无编目规则'} description={loadError ? '不能将读取错误判定为无规则' : '新建后先试跑确认命中面，再启用'} /> }}
       />
 
       <Modal
@@ -717,6 +730,7 @@ const TagTab = () => {
   const canDelete = can('data-asset:delete');
 
   const [tags, setTags] = useState<AssetTagRecord[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [editing, setEditing] = useState<AssetTagRecord | 'new' | null>(null);
@@ -724,9 +738,11 @@ const TagTab = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       setTags(await listAssetTags(keyword.trim() || undefined));
     } catch {
+      setLoadError(true);
       setTags([]);
     } finally {
       setLoading(false);
@@ -843,13 +859,15 @@ const TagTab = () => {
         )}
         <span className="text-[12px] text-[#98a2b3]">标签用于人工业务分组，与目录（自动编目目标）互补</span>
       </div>
+      {loadError ? <Alert className="!mb-4" type="error" showIcon message="标签清单读取失败，不能视为没有标签" action={<Button onClick={() => void load()}>重试</Button>} /> : null}
       <Table<AssetTagRecord>
         rowKey="id"
-        size="small"
+        size="middle"
+        scroll={{ x: 860 }}
         columns={columns}
         dataSource={tags}
         loading={loading}
-        locale={{ emptyText: <YakEmpty compact title="暂无标签" description="新建标签后到资产详情或目录页打标" /> }}
+        locale={{ emptyText: <YakEmpty compact title={loadError ? '尚未成功读取标签' : '暂无标签'} description={loadError ? '请重试后确认' : '新建标签后到资产详情或目录页打标'} /> }}
         pagination={{ pageSize: 20, showTotal: (count) => `共 ${count} 条` }}
       />
 
