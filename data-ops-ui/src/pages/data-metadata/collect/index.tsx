@@ -72,7 +72,6 @@ const MetadataCollectPage = () => {
         if (rawSourceHint !== null) {
           if (sourceHintId && map[String(sourceHintId)]) {
             setSourceHint({ id: sourceHintId, name: map[String(sourceHintId)] });
-            if (canCreate) { setEditing(null); setDrawerOpen(true); }
           } else {
             setSourceHintError('来源 ID 不存在或当前项目无权读取；不会根据导航参数创建跨项目任务。');
           }
@@ -84,10 +83,16 @@ const MetadataCollectPage = () => {
         if (rawSourceHint !== null) setSourceHintError('无法核验来源所属项目；请稍后重试。');
       });
     return () => { active = false; };
-  }, [rawSourceHint, sourceHintId, canCreate]);
+  }, [rawSourceHint, sourceHintId]);
 
   const loadJobs = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
+      // An unverified cross-domain URL must not silently become a global job list.
+      if (rawSourceHint !== null && (!sourceHintId || sourceHint?.id !== sourceHintId)) {
+        setRecords([]);
+        setTotal(0);
+        return;
+      }
       setLoading(true);
       setJobsLoadError(false);
       try {
@@ -97,6 +102,8 @@ const MetadataCollectPage = () => {
           keyword: keyword.trim() || undefined,
           providerType: providerType || undefined,
           enabled: enabledFilter === '' ? undefined : enabledFilter === 'true',
+          dataSourceId: sourceHint?.id,
+          ...(sourceHint ? { providerType: 'HARVESTED' as const } : {}),
         };
         const result = await pageCollectJobs(query);
         setRecords(result.records ?? []);
@@ -109,7 +116,7 @@ const MetadataCollectPage = () => {
         setLoading(false);
       }
     },
-    [keyword, providerType, enabledFilter],
+    [keyword, providerType, enabledFilter, rawSourceHint, sourceHintId, sourceHint],
   );
 
   useEffect(() => {
@@ -357,7 +364,7 @@ const MetadataCollectPage = () => {
       {sourceHint && (
         <Alert className="mt-4" type="info" showIcon
           message={`已核验当前项目来源「${sourceHint.name}」 (#${sourceHint.id})`}
-          description="导航来源只用作新任务预填。下方现有任务列表是当前查询范围，不代表仅此来源；运行以已保存任务范围为准。" />
+          description="下方任务已由 Metadata Owner 在当前项目按来源 ID 精确过滤。先复用已有任务；新建仅在确实需要不同采集范围时进行。运行仍以已保存任务的范围为准。" />
       )}
       {sourceHintError && (
         <Alert className="mt-4" type="warning" showIcon message={sourceHintError} />
@@ -421,7 +428,7 @@ const MetadataCollectPage = () => {
             ) : (
               <YakEmpty
                 compact
-                title="还没有采集任务"
+                title={sourceHint ? '此来源尚无已保存的物理采集任务' : '还没有采集任务'}
                 description="新建一个物理采集任务对数据源采表/列结构，或建一个投影对账任务兜底写时登记的漏网"
               >
                 {canCreate && (
