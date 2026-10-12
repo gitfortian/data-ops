@@ -1,5 +1,6 @@
 package io.yak.ops.business.metadata.harvest;
 
+import io.yak.ops.business.metadata.autoingest.AutoIngestOutbox;
 import io.yak.ops.business.metadata.dao.mapper.LineageCatalogRowMapper;
 import io.yak.ops.business.metadata.dao.mapper.MdChangeMapper;
 import io.yak.ops.business.metadata.dao.model.CatalogAssetRow;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,11 +55,19 @@ public class AssetUpsertRepository {
 
   private final LineageCatalogRowMapper catalogMapper;
   private final MdChangeMapper changeMapper;
+  private final AutoIngestOutbox autoIngestOutbox;
 
-  public AssetUpsertRepository(
-      LineageCatalogRowMapper catalogMapper, MdChangeMapper changeMapper) {
+  @Autowired
+  public AssetUpsertRepository(LineageCatalogRowMapper catalogMapper,
+                               MdChangeMapper changeMapper, AutoIngestOutbox autoIngestOutbox) {
     this.catalogMapper = catalogMapper;
     this.changeMapper = changeMapper;
+    this.autoIngestOutbox = autoIngestOutbox;
+  }
+
+  /** Legacy unit-test seam; production always wires the durable outbox. */
+  public AssetUpsertRepository(LineageCatalogRowMapper catalogMapper, MdChangeMapper changeMapper) {
+    this(catalogMapper, changeMapper, null);
   }
 
   /** 写入一批目录行，产出 NEW/CHANGED/UNCHANGED 计数与已存在行的复活情况。 */
@@ -111,6 +121,18 @@ public class AssetUpsertRepository {
     List<String> keys = rows.stream().map(CatalogAssetRow::getAssetKey).toList();
     for (List<String> chunk : partition(keys, WRITE_BATCH_SIZE)) {
       catalogMapper.touchLastCollected(command.projectId(), chunk, command.collectedAt());
+    }
+    // One transaction: the committed physical TABLE facts and their durable delivery
+    // tickets either both commit, or neither does. FAILED later collection rounds still
+    // deliver all table chunks that independently committed before the failure.
+    if (autoIngestOutbox != null && command.providerType() == ProviderType.HARVESTED
+        && "table".equals(command.typeName()) && command.collectRunId() != null) {
+      Map<String, Long> committedTableIds = idsOf(command.projectId(), keys);
+      if (committedTableIds.size() != new LinkedHashSet<>(keys).size()) {
+        throw new IllegalStateException("物理表批次持久化事实回读不完整，不能投递自动纳管事件");
+      }
+      autoIngestOutbox.enqueueCommittedTables(
+          command.projectId(), command.collectRunId(), committedTableIds);
     }
     return new HarvestBatchResult(
         newKeys.size(), changedKeys.size(), unchanged, revivedKeys.size(), Map.copyOf(ids));

@@ -1,5 +1,6 @@
 import HttpUtils from '@/utils/HttpUtils';
 import type {
+  MetadataAutoIngestReceipt,
   CollectJobQueryParams,
   CollectJobRecord,
   CollectJobUpsertParams,
@@ -16,6 +17,18 @@ import type {
 } from './types';
 
 const METADATA_API_PREFIX = '/api/v1/metadata';
+
+/** Project-scoped Metadata delivery receipt; current Asset state is queried separately. */
+export const getMetadataAutoIngestReceipt = (entityId: number) =>
+  HttpUtils.getData<MetadataAutoIngestReceipt>(
+    `${METADATA_API_PREFIX}/auto-ingest/entities/${entityId}/latest`,
+  );
+
+/** Manual recovery is allowed only for DEAD and additionally requires Asset UPDATE on server. */
+export const retryMetadataAutoIngest = (eventId: number) =>
+  HttpUtils.postData<boolean>(`${METADATA_API_PREFIX}/auto-ingest/events/${eventId}/retry`, {});
+
+
 
 /** Metadata specialist workbench overview: catalog inventory, collection and open tasks. */
 export const getMetadataOverview = () =>

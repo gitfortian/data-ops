@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.yak.ops.business.metadata.autoingest.AutoIngestOutbox;
 import io.yak.ops.business.metadata.dao.mapper.LineageCatalogRowMapper;
 import io.yak.ops.business.metadata.dao.mapper.MdChangeMapper;
 import io.yak.ops.business.metadata.dao.model.CatalogAssetRow;
@@ -108,6 +109,46 @@ class AssetUpsertRepositoryTest {
       changes.add(call.getArgument(0));
       return 1;
     });
+  }
+
+  @Test
+  void physicalTableWriteEmitsOnlyRealCommittedRunAndEntityIds() {
+    AutoIngestOutbox outbox = mock(AutoIngestOutbox.class);
+    AssetUpsertRepository withOutbox =
+        new AssetUpsertRepository(catalogMapper, changeMapper, outbox);
+
+    withOutbox.write(command(ProviderType.HARVESTED,
+        row("table:7:trade.orders", "h1", null)));
+    org.mockito.ArgumentCaptor<Map> receiptIds = org.mockito.ArgumentCaptor.forClass(Map.class);
+    verify(outbox).enqueueCommittedTables(eq(PROJECT), eq(501L), receiptIds.capture());
+    assertThat(receiptIds.getValue().values()).containsExactly(1000L);
+  }
+
+  @Test
+  void dryRunAndRegisteredProjectionNeverEmitAutomaticMetadataTableEvents() {
+    AutoIngestOutbox outbox = mock(AutoIngestOutbox.class);
+    AssetUpsertRepository withOutbox =
+        new AssetUpsertRepository(catalogMapper, changeMapper, outbox);
+
+    withOutbox.write(command(ProviderType.HARVESTED, true,
+        row("table:7:trade.dry", "h1", null)));
+    withOutbox.write(command(ProviderType.REGISTERED,
+        row("table:7:trade.projection", "h2", null)));
+    verify(outbox, never()).enqueueCommittedTables(any(), any(), any());
+  }
+
+  @Test
+  void aTableWriteWithMissingCommittedIdentityFailsClosed() {
+    AutoIngestOutbox outbox = mock(AutoIngestOutbox.class);
+    AssetUpsertRepository withOutbox =
+        new AssetUpsertRepository(catalogMapper, changeMapper, outbox);
+    org.mockito.Mockito.reset(catalogMapper);
+    when(catalogMapper.selectStates(eq(PROJECT), any())).thenReturn(List.of());
+    assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+        withOutbox.write(command(ProviderType.HARVESTED,
+            row("table:7:trade.orders", "h1", null)))))
+        .isInstanceOf(IllegalStateException.class);
+    verify(outbox, never()).enqueueCommittedTables(any(), any(), any());
   }
 
   @Test

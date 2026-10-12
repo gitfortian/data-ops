@@ -98,6 +98,17 @@ class MetadataTableAssetProviderTest {
     assertEquals(table(5L, "ods", "t").getAssetKey(), provider.refresh("5").orElseThrow().assetKey());
   }
 
+  @Test
+  void automaticRefreshIsProjectScopedAndFailsClosed() {
+    assertEquals(Optional.empty(), provider.refreshInProject(null, "5"));
+    assertEquals(Optional.empty(), provider.refreshInProject(1L, "abc"));
+    assertEquals(Optional.empty(), provider.refreshInProject(1L, "-9"));
+    assertEquals(Optional.empty(), provider.refreshInProject(1L, "5"));
+    when(mapper.selectProviderRowInProject(1L, 5L)).thenReturn(table(5L, "ods", "t"));
+    assertEquals("5", provider.refreshInProject(1L, "5").orElseThrow().sourceId());
+    assertEquals(Optional.empty(), provider.refreshInProject(2L, "5"));
+  }
+
   private static CatalogTableAssetRow table(Long id, String db, String tbl) {
     CatalogTableAssetRow row = new CatalogTableAssetRow();
     row.setId(id);
