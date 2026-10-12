@@ -1,5 +1,6 @@
 import Table from '@/components/ReadableTable';
-import { Button, Input, message, Modal, Select, Space,  Tag, Tooltip } from 'antd';
+import { Alert, Button, Input, message, Modal, Select, Space, Tag, Tooltip } from 'antd';
+import { useSearchParams } from '@umijs/max';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -27,6 +28,11 @@ import { PROVIDER_COLORS, PROVIDER_LABELS, formatMetadataTime } from './constant
 
 const MetadataCollectPage = () => {
   const { can } = usePermissionAccess();
+  const [searchParams] = useSearchParams();
+  const rawSourceHint = searchParams.get('dataSourceId');
+  const parsedSourceHint = Number(rawSourceHint);
+  const sourceHintId = rawSourceHint && /^[1-9]\\d*$/.test(rawSourceHint) && Number.isSafeInteger(parsedSourceHint)
+    ? parsedSourceHint : undefined;
   const canCreate = can('data-metadata:create');
   const canUpdate = can('data-metadata:update');
   const canDelete = can('data-metadata:delete');
@@ -47,22 +53,43 @@ const MetadataCollectPage = () => {
   const [historyJob, setHistoryJob] = useState<CollectJobRecord | null | undefined>(undefined);
   const [runResult, setRunResult] = useState<{ run: CollectRunRecord; title: string } | null>(null);
   const [dataSourceNames, setDataSourceNames] = useState<Record<string, string>>({});
+  const [sourceHint, setSourceHint] = useState<{ id: number; name: string } | null>(null);
+  const [sourceHintError, setSourceHintError] = useState('');
+  const [jobsLoadError, setJobsLoadError] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    setSourceHint(null);
+    setSourceHintError('');
     listAllDataSources()
       .then((result) => {
+        if (!active) return;
         const map: Record<string, string> = {};
         (result.bizData ?? []).forEach((ds) => {
           if (ds.id != null) map[String(ds.id)] = ds.name ?? String(ds.id);
         });
         setDataSourceNames(map);
+        if (rawSourceHint !== null) {
+          if (sourceHintId && map[String(sourceHintId)]) {
+            setSourceHint({ id: sourceHintId, name: map[String(sourceHintId)] });
+            if (canCreate) { setEditing(null); setDrawerOpen(true); }
+          } else {
+            setSourceHintError('来源 ID 不存在或当前项目无权读取；不会根据导航参数创建跨项目任务。');
+          }
+        }
       })
-      .catch(() => setDataSourceNames({}));
-  }, []);
+      .catch(() => {
+        if (!active) return;
+        setDataSourceNames({});
+        if (rawSourceHint !== null) setSourceHintError('无法核验来源所属项目；请稍后重试。');
+      });
+    return () => { active = false; };
+  }, [rawSourceHint, sourceHintId, canCreate]);
 
   const loadJobs = useCallback(
     async (targetPageNo: number, targetPageSize: number) => {
       setLoading(true);
+      setJobsLoadError(false);
       try {
         const query: CollectJobQueryParams = {
           pageNo: targetPageNo,
@@ -77,6 +104,7 @@ const MetadataCollectPage = () => {
       } catch {
         setRecords([]);
         setTotal(0);
+        setJobsLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -113,11 +141,28 @@ const MetadataCollectPage = () => {
       });
       if (action === 'dry-run' && run.status === 'SUCCESS') message.success('预演通过,现在可以启用该任务');
     } catch {
-      // 全局错误提示已展示业务原因(连不上数据源等)
+      // Timeout/rejection has no trustworthy runId, so we cannot infer cancellation or
+      // associate any similarly-timed history row with this request.
+      Modal.warning({
+        title: '本次请求没有取得可信运行回执',
+        content: '先核对这个已保存任务的运行历史及当前元数据目录。无法精确关联的历史记录不代表本次采集成功或失败；如再次执行，请先确认前次可能仍在运行。',
+        okText: '核对任务历史',
+        onOk: () => setHistoryJob(job),
+      });
     } finally {
       setBusyJob(null);
       await reload();
     }
+  };
+
+  const confirmRun = (job: CollectJobRecord) => {
+    Modal.confirm({
+      title: '确认正式采集已保存的任务范围？',
+      content: `任务「${job.jobName}」将采集数据源 #${job.dataSourceId ?? '-'} / ${job.databaseName || '全部库'} / ${job.schemaName || '默认 Schema'} / 表匹配 ${job.tablePattern || '全部表'}。这不是 dry-run，可能写入部分元数据；超时不能自动重发。`,
+      okText: '确认正式采集',
+      cancelText: '取消',
+      onOk: () => execute(job, 'run'),
+    });
   };
 
   const toggleEnabled = (job: CollectJobRecord) => {
@@ -264,7 +309,7 @@ const MetadataCollectPage = () => {
               size="small"
               disabled={!canCreate || busy}
               loading={busy && busyJob?.action === 'run'}
-              onClick={() => void execute(job, 'run')}
+              onClick={() => confirmRun(job)}
             >
               立即运行
             </Button>
@@ -309,6 +354,18 @@ const MetadataCollectPage = () => {
         }
       />
 
+      {sourceHint && (
+        <Alert className="mt-4" type="info" showIcon
+          message={`已核验当前项目来源「${sourceHint.name}」 (#${sourceHint.id})`}
+          description="导航来源只用作新任务预填。下方现有任务列表是当前查询范围，不代表仅此来源；运行以已保存任务范围为准。" />
+      )}
+      {sourceHintError && (
+        <Alert className="mt-4" type="warning" showIcon message={sourceHintError} />
+      )}
+      {jobsLoadError && (
+        <Alert className="mt-4" type="error" showIcon message="采集任务读取失败，不能视为尚无任务"
+          action={<Button size="small" onClick={() => void reload()}>重试</Button>} />
+      )}
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Input.Search
           allowClear
@@ -357,7 +414,9 @@ const MetadataCollectPage = () => {
           loading={loading}
           scroll={{ x: 1240 }}
           locale={{
-            emptyText: hasFilter ? (
+            emptyText: jobsLoadError ? (
+              <YakEmpty compact title="任务查询未成功" description="请重试，勿重复创建任务" />
+            ) : hasFilter ? (
               <YakEmpty compact title="没有符合条件的任务" description="调整筛选条件或重置后再试" />
             ) : (
               <YakEmpty
@@ -394,6 +453,7 @@ const MetadataCollectPage = () => {
       <CollectJobDrawer
         open={drawerOpen}
         editing={editing}
+        initialDataSourceId={sourceHint?.id}
         onClose={() => setDrawerOpen(false)}
         onSaved={() => {
           setDrawerOpen(false);
