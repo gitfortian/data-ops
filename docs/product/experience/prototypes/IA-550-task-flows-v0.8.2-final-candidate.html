@@ -1909,7 +1909,7 @@ function v81HomeStory(){
 function v81IssueDraft(){
  const c=v6.collab,src=c.source,old=v6.records.filter(x=>x.type==="issue"&&x.source===src?.id&&x.sourceVersion===src?.version&&x.sourceKind===src?.kind);
  return pageHead("反馈数据产品使用问题 · 新建草稿","提交前此处只允许编辑新的反馈；旧指标问题不在主工作区，也不能被评论或处置操作修改。","GM-J3-09 / ISSUEDRAFT",
- '<button class="btn" data-v81-feedback-return="1">← 返回 '+esc(src?.kind||"数据产品")+' 合同</button>')+
+ '<div class="v6Role">协作职责：<select id="v6-role">'+Object.entries(v6RoleNames).map(([key,name])=>'<option value="'+key+'" '+(c.role===key?"selected":"")+'>'+name+'</option>').join("")+'</select></div><button class="btn" data-v81-feedback-return="1">← 返回 '+esc(src?.kind||"数据产品")+' 合同</button>')+
  '<div class="v6Grid"><section class="v6Section" aria-label="当前新问题草稿"><h2>当前操作：新建数据问题（尚未提交）</h2>'+
  '<div class="v6Hint"><b>精确来源合同</b> · '+esc(src?.kind||"未知类型")+' · '+esc(src?.id||"未选定")+' · '+esc(src?.version||"未知版本")+'</div>'+
  '<p>首次反馈会建立独立 ISS-LOCAL 单据；点击提交之前不会修改任何已有问题时间线或运行状态。</p>'+
