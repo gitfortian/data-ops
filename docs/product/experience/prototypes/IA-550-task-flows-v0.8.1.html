@@ -1368,8 +1368,8 @@ function v6Check(){
 function v6Save(){
  const x=v6Layer();if(!x.checked||x.pending||!actionAllowed())return;
  if(x.checkSignature!==v7ScopeSignature(x)||x.layer!=="ODS"&&!v7MappingCurrent()){x.checked=false;toast("草稿已变化，请重新核对");renderMain();return}
- const id="DEMO-"+x.layer+"-V"+(x.saved.length+1);
- x.saved.push(Object.freeze({id,rev:x.revision,signature:v7ScopeSignature(x),deps:Object.freeze(x.deps.map(d=>d+"@"+v6Sources[d].version)),
+ const id=v81Current(x.layer).id+"-V"+(x.saved.length+1);
+ x.saved.push(Object.freeze({id,physicalModelId:v81Current(x.layer).id,projectId:v81.project,rev:x.revision,signature:v7ScopeSignature(x),deps:Object.freeze(x.deps.map(d=>d+"@"+v6Sources[d].version)),
   fields:Object.freeze(x.rows.map(r=>Object.freeze({...r}))),grain:x.grain,scd:x.scd,metricRef:x.layer==="DWS"?x.metric:null,consumer:x.layer==="ADS"?x.consumer:null,
   logicalMapping:x.layer==="ODS"?null:v7MappingState().receipt}));
  x.dirty=false;x.handoff=false;renderMain();
@@ -1663,7 +1663,7 @@ function v7Design(layer){
  if(layer!=="ODS"){v7.targetByLayer[layer]=v7Current().id;delete v7.mapping[layer];if(v6.layers[layer])v6.layers[layer].checked=false}
  renderMain();
 }
-function v7ScopeSignature(x){return JSON.stringify({layer:x.layer,deps:x.deps.map(d=>[d,v6Sources[d].version]),grain:x.grain,scd:x.scd,metric:x.metric,consumer:x.consumer,
+function v7ScopeSignature(x){return JSON.stringify({projectId:v81.project,physicalModelId:v81Current(x.layer).id,layer:x.layer,deps:x.deps.map(d=>[d,v6Sources[d].version]),grain:x.grain,scd:x.scd,metric:x.metric,consumer:x.consumer,
  fields:x.rows.map(r=>[r.name,r.type,r.source,r.origin,r.rule,r.std,r.role]),rev:x.revision});}
 
 function v7MappingState(layer=v6.layer){
@@ -1755,7 +1755,7 @@ function v7MappingPage(){
 }
 
 function v7Model(){
- const layer=v6.layer,ods=layer==="ODS",active=v7.view,ctx=ods?"ODS 直接镜像源表，无须逻辑模型前置": "逻辑设计是 "+layer+" 的默认业务桥梁；不是后置填写一项来源映射";
+ const layer=v6.layer,ods=layer==="ODS",active=v7.view;v81Current(layer);const ctx=ods?"ODS 直接镜像源表，无须逻辑模型前置": "逻辑设计是 "+layer+" 的默认业务桥梁；不是后置填写一项来源映射";
  const nav='<div class="v6Tabs">'+
  '<button data-v7-mode="logical" class="'+(active==="logical"?"active":"")+'">业务逻辑设计</button>'+
  '<button data-v7-mode="physical" class="'+(active==="physical"?"active":"")+'">分层物理设计</button>'+
@@ -1766,7 +1766,7 @@ function v7Model(){
  const returnTo=v6.origin?'<div class="v6Hint">来自协作事项 '+esc(v6.origin.id)+' <button data-v6-return="1">← 返回需求与协作</button></div>':'';
  const body=active==="legacy"?v6LegacyModel(true):active==="physical"?v6LayerModel(true):active==="mapping"?v7MappingPage():v7LogicalPage();
  return pageHead("模型工作台 · 业务逻辑到分层物理","先设计业务实体、属性、关系、粒度及逻辑版本，再对接 DWD/DIM 等物理结构；ODS 保留贴源直建。","IA-550 / LOGICAL MODEL BRIDGE v0.8.1")+
- returnTo+nav+current+(active==="physical"&&!ods?'<div class="v6Actions"><button data-v7-mode="mapping">审阅逻辑→物理字段映射 →</button></div>':'')+
+ returnTo+nav+current+(["physical","mapping"].includes(active)?v81TargetStrip():"")+(active==="physical"&&!ods?'<div class="v6Actions"><button data-v7-mode="mapping">审阅逻辑→物理字段映射 →</button></div>':'')+
  body;
 }
 
@@ -1911,6 +1911,7 @@ function v3Run(){
  toolInfo[id]?toolPage(id):placeholderPage(id);
  if(id==="home")view=v8Home();
  if(id==="product")view=v8Consumption();
+ if(id==="dev")view=v81HandoffSummary()+view;
  if(["asset","metric","dataset","visual"].includes(id)){
   view= '<div class="v6Actions" style="margin-bottom:10px"><button data-v6-report="'+id+'">反馈当前对象的数据问题 →</button></div>'+view;
  }
@@ -2036,6 +2037,10 @@ document.addEventListener("click",function(ev){
  if(el.dataset.v7Homeitem){const r=v6.records.find(x=>x.id===el.dataset.v7Homeitem);if(r){v6.collab.view=r.type;v6.collab.selected=r.id;go("collab")}return}
  if(el.dataset.v7Homeflow){v7HomeJump(el.dataset.v7Homeflow,el.dataset.v7Homelayer,el.dataset.v7Homelogical);return}
  if(el.dataset.v7Newlogic){v7NewLogical();return}
+ if(el.dataset.v81Target){v81SwitchTarget(el.dataset.v81Target);return}
+ if(el.dataset.v81New){v81AddTarget();return}
+ if(el.dataset.v81Dev){v81DevelopmentPackage();return}
+ if(el.dataset.v81Backmodel){v81SwitchTarget(el.dataset.v81Backmodel);go("model");v7.view="physical";renderMain();return}
  if(el.dataset.v7Mode){v7.view=el.dataset.v7Mode;renderMain();return}
  if(el.dataset.v7Logical){v7.selected=el.dataset.v7Logical;renderMain();return}
  if(el.dataset.v7Freeze){v7FreezeLogical();return}
@@ -2233,7 +2238,12 @@ function v8Home(){
  const config={
   build:{label:"建设可信数据",title:"继续订单业务逻辑设计",text:"先确认一行数据代表什么、业务属性和关系，再选择实际需要的物理层。已有来源可直接做 ODS。",action:"继续逻辑设计",target:"logical",story:"GM-J1-07 / 08",identity:v7.selected},
   consume:{label:"使用已有数据",title:"判断订单经营日报能否使用",text:"从已有 Dataset 或服务合同开始，核对版本、更新、访问条件；无需重走接入和建模。",action:"查看数据产品",target:"product",story:"GM-J3-01 / 02 / 03 / 05 / 06",identity:"DATASET:DEMO-DS-901"},
-  operate:{label:"处理异常",title:"复核售后表结构漂移",text:"核对源字段变化、影响对象与负责人，完成有依据的处置。恢复需要另行读取实际运行及质量结果。",action:"打开漂移任务",target:"drift",story:"GM-J4-02 / 07",identity:"GOV-320 → ENT-604"}
+  operate:{label:"处理异常",title:"复核售后表结构漂移",text:"核对源字段变化、影响对象与负责人，完成有依据的处置。恢复需要另行读取实际运行及质量结果。",action:"打开漂移任务",target:"drift",story:"GM-J4-02 / 07",identity:"GOV-320 → ENT-604"},
+  define:{label:"定义业务指标",title:"先明确订单支付指标口径",text:"从业务过程与标准字段确认时间、去重和退款，再验证与发布精确指标版本。",action:"进入指标工作台",target:"metric",story:"GM-J2-01—09",identity:"MET-026"},
+  secure:{label:"安全授权",title:"检查访问范围及授权决策",text:"从敏感字段、策略与消费请求开始；访问被拒绝、无权、Provider 故障必须可区分。",action:"进入安全专业页",target:"security",story:"GM-J5-01—07",identity:"DATASET:DEMO-DS-901"},
+  assist:{label:"AI 协助建设",title:"先审证据建议，再人工接管",text:"候选来源、业务过程、逻辑粒度与专业后续动作均需人工确认；不自动写入或执行。",action:"查看证据清单",target:"assist-desk",story:"GM-J1-16",identity:"HARVEST-20261012 / PRC-102"},
+  ask:{label:"可信 AI 问答",title:"没有授权数据时应追问或拒答",text:"先核对已发布语义、指标、数据合同及查询权限；无证据不生成业务数字。",action:"查看取证条件",target:"ask-desk",story:"GM-J6-01—08",identity:"MET-026 / DATASET:DEMO-DS-901"},
+  mdm:{label:"主数据",title:"确认客户唯一身份及治理责任",text:"合并只是建议，黄金记录需审批；分发也必须有真实回执。",action:"进入主数据专业页",target:"mdm",story:"GM-MDM-01—06",identity:"客户业务实体 · 待核验"}
  };
  const c=config[v8.mode];
  const todo=rows.map(r=>'<button class="v8Row" data-v7-homeitem="'+esc(r.id)+'"><span><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+' · '+esc(r.status)+' · 下一步 '+esc(r.next)+'</small></span><em>继续 →</em></button>').join('');
@@ -2241,7 +2251,7 @@ function v8Home(){
  const recent='<button class="v8Row" data-v7-homeflow="logical" data-v7-homelogical="'+esc(currentModel.id)+'"><span><strong>'+esc(currentModel.name)+'</strong><small>'+esc(currentModel.id)+' · 当前修订 '+currentModel.rev+' · '+esc(v7Latest(currentModel)?.version||"未冻结")+'</small></span><em>继续 →</em></button>'+
   Object.values(v6.layers).filter(x=>x.loaded).map(x=>'<button class="v8Row" data-v7-homeflow="physical" data-v7-homelayer="'+x.layer+'"><span><strong>'+x.layer+' 物理设计样例</strong><small>'+x.rows.length+' 列 · '+(x.dirty?'本次尚未保存':'本地已保存')+' · '+esc(x.saved.at(-1)?.id||"无保存版本")+'</small></span><em>继续 →</em></button>').join('');
  return '<div class="v8Home"><div class="v8Demo">可交互原型 v0.8.1 · Retail Analytics 示例项目 · 数据与动作均为模拟</div>'+
-  '<div class="v8Intro"><div><h1>从当前工作，找到下一步</h1><p>建设者推进设计，消费者直接使用已有合同，运维人员从异常开始。每个入口保留对象身份和返回路径。</p></div></div>'+
+  '<div class="v8Intro"><div><h1>从当前工作，找到下一步</h1><p>建设、指标、消费、异常恢复、安全、AI 协作与问答、主数据是独立故事入口。每条入口有自己的证据、决策及失败态。</p></div></div>'+
   '<div class="v8Modes" aria-label="当前工作目标">'+Object.entries(config).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div>'+
   '<div class="v8Columns"><div><section class="v8Panel v8Next"><small>建议下一步 · '+esc(c.story)+'</small><h3>'+c.title+'</h3><p>'+c.text+'</p><div class="v8Status"><b>'+esc(c.identity)+'</b><span>样例对象 · 无真实运行证据</span></div><button class="btn primary" data-v8-next="'+c.target+'">'+c.action+' →</button>'+
   (v8.mode==='build'?'<button class="btn" data-v7-homeflow="physical" data-v7-homelayer="ODS">从源表直接设计 ODS →</button>':'')+'</section>'+
@@ -2249,7 +2259,7 @@ function v8Home(){
   (todo||'<p>当前职责没有匹配的演示待办。可查看协作事项，不把他人的工作计为你的待办。</p>')+'<button class="btn" data-page="collab">查看全部协作事项 →</button></section>'+
   '<section class="v8Panel"><h2>设计、部署、运行与消费</h2><div class="v8Readiness"><b>设计：'+localVersions+' 个本地快照</b><span>只反映当前浏览会话；冻结不等于正式发布</span></div><div class="v8Readiness"><b>部署与运行：尚无真实证据</b><span>待目标环境、任务修订和执行回执核验</span></div><div class="v8Readiness"><b>消费：尚无真实证据</b><span>待真实 Query / Invoke、来源审计和 Usage 回执</span></div><details><summary>查看验收边界</summary><p>J1 设计完成不能替代 G2 首次价值；G1 需要当前受限身份和双 Project 的真实消费。原型不生成产品完成百分比。</p></details></section></div>'+
   '<aside><section class="v8Panel"><h2>继续工作</h2>'+recent+'<small>当前会话保留；刷新不会恢复服务端草稿。</small></section><section class="v8Panel"><h2>需要关注</h2><button class="v8Row" data-v8-drift="GOV-320"><span><strong>来源结构漂移 · 待复核</strong><small>GOV-320 · ENT-604 · return_amount 精度变化</small></span><em>定位 →</em></button><button class="v8Row" data-v7-homeitem="CAL-301"><span><strong>支付订单数退款口径</strong><small>CAL-301 · MET-026 · 待业务确认</small></span><em>确认 →</em></button></section><section class="v8Panel"><details><summary>专业入口与范围</summary><p>语义、标准、模型和治理沿用原工作台。接入、运行、J5 安全策略、J6 AI 和 MDM 完整闭环仍需专项原型与验收。</p>'+['semantic','standard','model','metric','asset','dev','product'].map(id=>'<button class="btn" data-page="'+id+'">'+esc(nameOf(id))+'</button>').join('')+'</details></section></aside></div>'+
-  '<section class="v8Panel"><h2>项目规模与运行概况</h2><p>尚未连接领域读接口；缺少数据时显示未知，不能推算数量或成功率。</p><div class="v8Facts">'+[['数据源','DataSource / Metadata'],['物理模型','Modeling'],['正式指标','Metric'],['治理资产','Asset'],['运行异常','DataDev / Runtime'],['消费交付','Dataset / Service']].map(([n,o])=>'<div><small>'+n+'</small><strong>— 待连接</strong><small>'+o+'</small></div>').join('')+'</div></section></div>';
+  '<section class="v8Panel"><h2>项目规模与运行概况</h2><p>尚未连接领域读接口；缺少数据时显示未知，不能推算数量或成功率。</p><div class="v8Facts">'+[['数据源','DataSource / Metadata'],['物理模型','Modeling'],['正式指标','Metric'],['治理资产','Asset'],['运行异常','DataDev / Runtime'],['消费交付','Dataset / Service']].map(([n,o])=>'<div><small>'+n+'</small><strong>— 待连接</strong><small>'+o+'</small></div>').join('')+'</div></section>'+v81HomeStory()+'</div>';
 }
 function v8Consumption(){
  const p=v8Products[v8.product],usable=v8.runtime==='available'&&v8.access==='allowed';
@@ -2272,8 +2282,10 @@ function v8Consume(){
 }
 document.addEventListener('click',function(ev){
  const e=ev.target.closest('button');if(!e)return;
+ if(e.dataset.v81Route){v81Route(e.dataset.v81Route);return}
+ if(e.dataset.v81Ai){v81.aiAnswers[e.dataset.v81Ai]=true;renderMain();return}
  if(e.dataset.v8Mode){v8.mode=e.dataset.v8Mode;renderMain();return}
- if(e.dataset.v8Next){if(e.dataset.v8Next==='drift')v8ExactGovernance('GOV-320');else v7HomeJump(e.dataset.v8Next);return}
+ if(e.dataset.v8Next){if(e.dataset.v8Next==='drift')v8ExactGovernance('GOV-320');else if(["security","metric","mdm","dev"].includes(e.dataset.v8Next))v81Route(e.dataset.v8Next);else if(e.dataset.v8Next==="ask-desk"||e.dataset.v8Next==="assist-desk"){v81.modeDetail=e.dataset.v8Next;renderMain()}else v7HomeJump(e.dataset.v8Next);return}
  if(e.dataset.v8Drift){v8ExactGovernance(e.dataset.v8Drift);return}
  if(e.dataset.v8Product){v8.product=e.dataset.v8Product;v8.result=null;renderMain();return}
  if(e.dataset.v8Consume){v8Consume();return}
