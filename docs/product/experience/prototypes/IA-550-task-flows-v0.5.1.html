@@ -922,7 +922,9 @@ function v51StandardWorkspace(){
   '<p class="micro">目录规则不是标准字段，也不是模型属性；审批发布沿原 Semantic Owner。</p>'+
   '<button class="btn primary" data-v51-view="library">前往标准字段库 →</button></div></section></div>'+v3Review();
  }
- return top+v5DraftList("standard")+v5DraftWorkspace("standard")+
+ return top+'<div class="v4AsideChoice"><label for="v4-category">标准字段分类</label><select id="v4-category">'+
+ ["全部标准","基础标识","交易订单","金额计量","时间与日期"].map(x=>'<option value="'+x+'" '+(state.tree===x?"selected":"")+'>'+x+'</option>').join("")+
+ '</select></div>'+v5DraftList("standard")+v5DraftWorkspace("standard")+
  '<div class="v51StandardGrid"><section class="card"><div class="cardHead"><h2>可复用的标准字段</h2></div>'+v3Filters()+v3Table("standard")+'</section>'+
  '<section class="card"><div class="v4TaskBody">'+v51BindingPanel(r)+'</div></section></div>'+v3Review();
 }
