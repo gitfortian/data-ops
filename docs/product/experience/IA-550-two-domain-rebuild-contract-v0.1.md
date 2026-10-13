@@ -2,7 +2,7 @@
 
 > **状态：DRAFT / 待设计冻结；仅用于评审，不等于 D1～D8 已批准，也不授权更改领域状态机或上线新菜单。**  
 > 日期：2026-10-13。上游：[#550](https://github.com/gitfortian/data-ops/issues/550)（尤其评论 [深度复审](https://github.com/gitfortian/data-ops/issues/550#issuecomment-6136909226) 和 [双域范围](https://github.com/gitfortian/data-ops/issues/550#issuecomment-6136948422)）、[IA V3.1](IA-V3.1-navigation-page-composition-plan.md)、[106+4 去向矩阵](IA-V3.1-route-disposition.md)、[#539 J1 冻结体验](https://github.com/gitfortian/data-ops/issues/539)。  
-> 本文“重建”是**预定工作范围**，不是实现完成状态。配套最新交互样板：[**完整菜单 + 按对象隔离任务与验证回归 v0.4**](prototypes/IA-550-task-flows-v0.4.html)（v0.2 作为历史比较稿保留；静态演示，不接真实 API，不是可用性测试证据）。
+> 本文“重建”是**预定工作范围**，不是实现完成状态。配套最新交互样板：[**完整菜单 + 目标关系确认与红白黑视觉规范 v0.5**](prototypes/IA-550-task-flows-v0.5.html)（v0.2 作为历史比较稿保留；静态演示，不接真实 API，不是可用性测试证据）。
 
 ## 一、目标、角色与边界
 
@@ -249,3 +249,18 @@
 **未通过设计签收**：审核 #6 / #12 / #17 所指尺寸、字号、表单空间需要浏览器截图；#13 的真实浏览器 Back/刷新、焦点/键盘需验证；质量、安全、生命周期、MDM 仍有明确未深化的独立任务，不应过早展开生产重构。
 
 **工程边界不变**：本 PR Draft，修改仅限产品设计 HTML/文档和可重复执行的原型回归测试；不更改生产 `data-ops-ui`、Owner、菜单授权或 Flyway。
+
+
+## 十一、2026-10-13 · v0.4 深度复核 → v0.5 主评审稿
+
+**最新主稿：** [IA-550-task-flows-v0.5.html](prototypes/IA-550-task-flows-v0.5.html)。v0.4 与之前版本均保留为历史比较，不再作为最新验收对象。**审核状态：REVISE / 未签收。**
+
+依据需求方提供《IA-550 v0.4 设计复核》（5 P1、7 P2、11 项建议验收），本次集中修复主动切换模型的“继续编辑”循环、放弃修改到最近保存版本的恢复、过程/标准对既有 ODS 模型的不经确认修改、校验/保存/发布状态分离、资产/专业工具的主内容空间分配；同步处理紧凑治理队列的 P0/Owner/等待时间、指标多次发布版本与模拟回执区别、无关联与无搜索结果区别、新建草稿独立可发现入口。
+
+- [17 项及 10 条前轮任务线整改历史记录](IA-550-v0.4-review-response.md)
+- [当前 v0.5：5 P1 / 7 P2 状态与 11 条具体验收](IA-550-v0.5-review-response.md)
+- [v0.5 可重放原型回归脚本](../../scripts/architecture/ia550-v05-prototype.test.mjs)
+
+**品牌约束：** v0.5 原型演示 red/white/black 视觉；真实开发必须沿用项目现有 Design Tokens 和商业级交互组件，不能把旧绿色预览或 HTML 临时色值作为品牌规范。
+
+**严格范围**：此 PR 继续 Draft，不修改正式页面/菜单/RBAC/Owner。隔离回归不等于五档视口实屏、焦点/键盘、真实业务 Owner 的使用测试。确认之前不进入全项目生产 UI 大重构。
