@@ -591,7 +591,7 @@ function v5StageProcess(){
 }
 function v5StageStandard(){
  const r=v3Selected("standard");if(!r)return;
- v6.modelMode="legacy";
+ v6.modelMode="legacy";v7.view="legacy";
  const old=(v3.scope?.from==="semantic"&&v5.relation?.process)?v5.relation:{process:null,processName:null};
  v5.relation={...old,field:r[4],fieldName:r[0],target:"",attribute:v5.fields[r[4]]||"",confirmed:false};
  v3Route("model",{id:r[4],label:r[0],relation:"选择目标模型，尚未应用"});
@@ -1683,7 +1683,7 @@ function go(id,keepHistory){
  if(v3.editing && state.editDirty){v3.pending=id;v3DirtyDialog();return}
  if(v3.editing&&!state.editDirty){v3.editing=null;closeDialog()}
  v4SaveActive(state.page);
- if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null;v5.relation=null;if(id==="standard")v51.view="catalog";if(id==="model")v6.modelMode="layered"}
+ if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null;v5.relation=null;if(id==="standard")v51.view="catalog";if(id==="model"){v6.modelMode="layered";v7.view="logical"}}
  if(!keepHistory&&state.page!==id)state.history.push(state.page);
  state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";
  /* explicit target selection: do not force existing ODS model */
