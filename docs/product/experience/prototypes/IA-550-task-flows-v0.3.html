@@ -16,6 +16,7 @@
 @media(max-width:390px){.roleSwitcher{max-width:70px;font-size:10px;padding:6px 3px}.topbar .project{max-width:144px;padding:7px}.userdot{display:none}.body{padding:15px 11px 40px}.pageHead h1{font-size:20px}.headActions .btn{flex:1}.queueCards{grid-template-columns:1fr 1fr}.queueCard{padding:11px}.detailStrip .tag{margin-left:0}.field.search{min-width:100%}.field.short{width:calc(50% - 4px)}.tag{white-space:normal}.kpis{gap:7px}.kpi:after{display:none}.split,.workgrid{gap:11px}.side{width:calc(100vw - 76px)}.modal{padding:15px}}
 
 /* v0.3: task-first layout, legible content and resilient narrow widths */
+th{font-size:11px}td{font-size:12px}.rowmeta{font-size:11px}.micro{font-size:11px}.navitem{font-size:12px}.sidefoot{font-size:11px}
 body{font-size:13px;line-height:1.64}
 .prototypeNotice{padding:8px 12px;font-size:11px;margin-bottom:10px}
 .body{padding-top:18px}
@@ -445,7 +446,7 @@ function v3Definition(id){
   '<strong>下一步：确认模型字段映射</strong><p>字段必须与业务过程关联，模型侧重新读取其身份与生效版本。这里的关联仅用于静态演示。</p>'+
   v3ActionLine('<button class="btn primary" data-v3-action="standard-attach" '+(!r?"disabled":"")+'>带入模型映射 →</button>',r?"选中标准字段："+r[0]:"没有符合条件的标准字段");
  const sidebar='<section class="card lefttree"><div class="treehead">业务目录 <span class="tag">按范围</span></div>'+categories.map((x,i)=>'<button class="treeRow '+(state.tree===x?"active":"")+'" data-tree="'+esc(x)+'">'+icon(i?"folder":"layers")+esc(x)+'</button>').join("")+'</section>';
- return pageHead(title,semantic?"业务过程确定后继续标准、建模与版本保存。":"围绕选定业务过程找到对应标准字段，明确状态和引用范围。","",'<button class="btn" data-v3-action="new">新建'+(semantic?"业务过程":"标准字段")+'</button>')+
+ return pageHead(title,semantic?"业务过程确定后继续标准、建模与版本保存。":"围绕选定业务过程找到对应标准字段，明确状态和引用范围。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建'+(semantic?"业务过程":"标准字段")+'</button>')+
  v3Ctx()+v3FlowBar()+
  '<div class="split">'+sidebar+v3Card(title+"对象列表","当前范围是本地演示；结果和详情始终引用同一个对象",v3Filters()+v3Table(id),
  '<div class="inlineWorkflow">'+(r?'<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div><div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div><div class="factRow"><span>'+(semantic?"过程粒度":"字段数据类型")+'</span><strong>'+esc(r[2])+'</strong></div></div>':'<div class="resultPanel warn"><h3>没有选中对象</h3><p>已清空旧详情；请先调整筛选。</p></div>')+'<div style="padding-top:15px">'+follow+'</div><div class="actionLine"><button class="btn" data-v3-action="edit" '+(!r||!actionAllowed()?"disabled":"")+'>编辑当前对象</button></div></div>')+'</div>'+v3Review();
@@ -484,7 +485,7 @@ function v3Model(){
  const item=x=>'<button class="modelItem '+(r&&r[4]===x[4]?"active":"")+'" data-model="'+esc(x[4])+'"><strong>'+esc(x[0])+'</strong><small>'+esc(x[4])+' · '+esc(x[1])+'</small></button>';
  const cats='<section class="card modelTree"><div class="treehead">模型资源分类（非步骤）</div><div class="modelList"><small>逻辑模型</small>'+logical.map(item).join("")+'<small>物理模型 · ODS / DWD</small>'+physical.map(item).join("")+'</div></section>';
  const tabs=["业务关联","字段设计","来源映射","校验记录","版本差异"];
- return pageHead("模型工作台","按模型身份执行关联、字段、映射、校验和版本保存。步骤与模型分类分别展示。","",'<button class="btn" data-v3-action="new">新建模型</button>')+
+ return pageHead("模型工作台","按模型身份执行关联、字段、映射、校验和版本保存。步骤与模型分类分别展示。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建模型</button>')+
  v3Ctx()+v3FlowBar()+'<div class="workgrid">'+cats+
  '<section class="card"><div class="cardHead"><h2>模型任务区 · '+(r?esc(r[0]):"无当前模型")+'</h2><span class="tag blue">当前模型驱动全部画面</span></div><div class="tabs">'+tabs.map(t=>'<button class="tab '+((state.tab.model||"来源映射")===t?"active":"")+'" data-v3-tab="'+t+'">'+t+'</button>').join("")+'</div>'+ (state.status==="ready"?v3ModelBody():statePanel())+'</section></div>'+
  '<div class="explain">'+icon("shield")+'<span class="explaintxt">模型资源按逻辑/物理类型和物理层次分类；步骤按业务关联→字段→来源映射→校验→保存版本推进。ODS 不以 Asset 上架作为建模必经门槛。</span></div>'+v3Review();
@@ -514,7 +515,7 @@ function v3Metric(){
  const metric=v3Selected("metric");
  const tabs=["定义口径","校验","引用与影响","版本与发布"];
  const current=state.tab.metric||"定义口径";
- return pageHead("指标中心","完成定义、修改口径、校验、影响复核和版本发布的完整任务路径。","",'<button class="btn" data-v3-action="new">新建指标</button>')+
+ return pageHead("指标中心","完成定义、修改口径、校验、影响复核和版本发布的完整任务路径。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建指标</button>')+
  v3Ctx()+v3Steps(["定义口径","校验","分析影响","发布"],Math.max(0,tabs.indexOf(current)),"metric")+
  '<div class="split medium">'+v3Card("指标列表","按指标标识选择版本上下文，筛选后不保留旧详情",v3Filters()+v3Table("metric"))+
  '<section class="card"><div class="tabs">'+tabs.map(t=>'<button class="tab '+(t===current?"active":"")+'" data-v3-tab="'+t+'">'+t+'</button>').join("")+'</div>'+(state.status==="ready"?v3MetricBody():statePanel())+'</section></div>'+v3Review();
