@@ -50,6 +50,7 @@ function build(page = 'semantic') {
     click: data => dispatch('click', { target: { closest() { return { dataset: data }; } } }),
     input: (id, value) => dispatch('input', { target: { id, value, selectionStart: value.length } }),
     change: (id, value) => dispatch('change', { target: { id, value } }),
+    key: key => dispatch('keydown', { key, ctrlKey: false, metaKey: false }),
   };
 }
 
@@ -181,5 +182,6 @@ test('draft dialog is clean when first opened, dirty on edit, and Esc requests c
   const a = build();a.click({v3Action:'new'});
   assert.equal(a.state.editDirty,false);
   a.input('v3-edit-name','退款对账过程');assert.equal(a.state.editDirty,true);
-  assert.match(a.dialog(),/退款对账过程/).doesNotExist;
+  a.key('Escape');
+  assert.match(a.dialog(),/存在未保存的编辑内容/);
 });
