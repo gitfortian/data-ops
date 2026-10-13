@@ -624,20 +624,33 @@ function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+
 
 
 function v3Definition(id){
- const semantic=id==="semantic",r=v3Selected(id);
- const title=semantic?"业务语义":"数据标准";
- const categories=semantic?["全部业务域","交易域","售后服务","用户行为域","供应链域"]:["全部标准","基础标识","交易订单","金额计量","时间与日期"];
- const scope=semantic?(r?{id:r[4],label:r[0]}:null):v3.scope;
- let follow=semantic?
-  '<strong>下一步：确认业务过程的对象与粒度</strong><p>业务过程确认后，带入此过程选择标准字段。标准字段仍是独立对象，不自动变成已生效标准。</p>'+
-  v3ActionLine('<button class="btn primary" data-v3-action="process-next" '+(!r?"disabled":"")+'>引用标准字段 →</button>',r?"当前： "+r[0]+" / "+r[2]:"无当前对象"):
-  '<strong>下一步：确认模型字段映射</strong><p>字段必须与业务过程关联，模型侧重新读取其身份与生效版本。这里的关联仅用于静态演示。</p>'+
-  v3ActionLine('<button class="btn primary" data-v3-action="standard-attach" '+(!r?"disabled":"")+'>带入模型映射 →</button>',r?"选中标准字段："+r[0]:"没有符合条件的标准字段");
- const sidebar='<section class="card lefttree"><div class="treehead">业务目录 <span class="tag">按范围</span></div>'+categories.map((x,i)=>'<button class="treeRow '+(state.tree===x?"active":"")+'" data-tree="'+esc(x)+'">'+icon(i?"folder":"layers")+esc(x)+'</button>').join("")+'</section>';
- return pageHead(title,semantic?"业务过程确定后继续标准、建模与版本保存。":"围绕选定业务过程找到对应标准字段，明确状态和引用范围。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建'+(semantic?"业务过程":"标准字段")+'</button>')+
- v3Ctx()+v3FlowBar()+
- '<div class="split">'+sidebar+v3Card(title+"对象列表","当前范围是本地演示；结果和详情始终引用同一个对象",v3Filters()+v3Table(id),
- '<div class="inlineWorkflow">'+(r?'<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div><div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div><div class="factRow"><span>'+(semantic?"过程粒度":"字段数据类型")+'</span><strong>'+esc(r[2])+'</strong></div></div>':'<div class="resultPanel warn"><h3>没有选中对象</h3><p>已清空旧详情；请先调整筛选。</p></div>')+'<div style="padding-top:15px">'+follow+'</div><div class="actionLine"><button class="btn" data-v3-action="edit" '+(!r||!actionAllowed()?"disabled":"")+'>编辑当前对象</button></div></div>')+'</div>'+v3Review();
+ const semantic=id==="semantic",r=v3Selected(id),title=semantic?"业务语义":"数据标准";
+ const cats=semantic?["全部业务域","交易域","售后服务","用户行为域","供应链域"]:["全部标准","基础标识","交易订单","金额计量","时间与日期"];
+ const fieldMap={"STD-201":"order_id","STD-205":"payment_time","STD-208":"pay_amount","STD-212":"customer_id"};
+ const categories='<div class="v4AsideChoice"><label for="v4-category">按业务分类筛选</label><select id="v4-category">'+cats.map(x=>'<option value="'+esc(x)+'" '+(state.tree===x?"selected":"")+'>'+esc(x)+'</option>').join("")+'</select></div>';
+ const sidebar='<section class="card lefttree"><div class="treehead">业务目录</div>'+cats.map((x,i)=>'<button class="treeRow '+(state.tree===x?"active":"")+'" data-tree="'+esc(x)+'">'+icon(i?"folder":"layers")+esc(x)+'</button>').join("")+'</section>';
+ let details='<div class="v4Empty"><h3>尚未选择对象</h3><p>调整筛选或分类，不会显示旧对象的编辑动作。</p></div>';
+ if(r){
+  const idKey=r[4];
+  details='<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(idKey)+'</span>'+badge(r[3])+'</div>'+
+  '<div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div>'+
+  '<div class="factRow"><span>'+(semantic?"业务粒度":"标准类型")+'</span><strong>'+esc(r[2])+'</strong></div>'+
+  '<div class="factRow"><span>负责域</span><strong>'+(semantic?"业务语义负责人（示例）":"数据标准维护人（示例）")+'</strong></div></div>';
+  if(semantic)details+='<div class="factBox" style="margin-top:12px"><h3>确认业务过程的含义</h3>'+
+   '<p class="micro">一个业务事件对应 '+esc(r[2])+'；通过业务过程标识 '+esc(idKey)+' 与模型关联。粒度和业务责任人仍需在正式系统内确认。</p>'+
+   '<span class="tag warn">生产确认未完成</span></div>';
+  else details+='<div class="factBox" style="margin-top:12px"><h3>标准定义及约束</h3>'+
+   '<div class="itemFacts"><div class="factRow"><span>标准字段</span><strong>'+esc(r[0])+'</strong></div>'+
+   '<div class="factRow"><span>数据类型</span><strong>'+esc(r[2])+'</strong></div>'+
+   '<div class="factRow"><span>目标属性映射</span><strong>'+esc(fieldMap[idKey]||"需确认")+'</strong></div>'+
+   '<div class="factRow"><span>引用范围</span><strong>选定模型的工作草稿（非生效绑定）</strong></div></div></div>';
+  details+='<div class="actionLine"><button class="btn" data-v3-action="edit" '+(!actionAllowed()?"disabled":"")+'>编辑当前对象</button>'+
+  '<button class="btn primary" data-v3-action="'+(semantic?"process-next":"standard-attach")+'">'+(semantic?"按本过程引用标准 →":"映射当前标准字段 →")+'</button></div>';
+ }
+ return pageHead(title,semantic?"明确业务过程与粒度，继续字段标准和模型映射。":"维护标准字段的定义、类型、引用关系；并非只有一个跳转入口。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建'+(semantic?"业务过程":"标准字段")+'</button>')+
+ v3Ctx()+v4MobileSelector(id)+categories+'<div class="split">'+sidebar+
+ '<section class="card"><div class="cardHead"><h2>'+esc(title)+' · 当前对象</h2></div>'+v3Filters()+v3Table(id)+
+ '<div class="v4TaskBody">'+details+'</div></section></div>'+v3Review();
 }
 function v3ModelBody(){
  const r=v3Selected("model");if(!r)return v4Prompt()+v3Hint("请选择或恢复一个模型对象。","warn");
@@ -865,7 +878,7 @@ function selectRow(i){
  if(["metric","model","governance"].includes(id))v4Switch(id,i);
  else state.select[id]=i;
  renderMain();
- if(id==="semantic"||id==="standard"){if(!v4.pending)v3OpenDrawer(id)}
+ if(id==="governance"&&typeof window.innerWidth==="number"&&window.innerWidth<=1060)dom("main").querySelector(".v4Workspace")?.scrollIntoView?.({behavior:"smooth",block:"start"})
 }
 function go(id,keepHistory){
  if(v3.editing && state.editDirty){v3.pending=id;v3DirtyDialog();return}
@@ -914,7 +927,7 @@ function v3HandleAction(a){
  if(a==="edit"){v3OpenEdit("edit");return}
  if(a==="process-next"){const r=v3Selected("semantic");if(!r)return;const linked=v4StoreFor("model","PM-701");if(linked.process!==r[4]){v4InvalidModel(linked);linked.process=r[4]}v3Route("standard",{id:r[4],label:r[0],relation:"业务过程"});return}
  if(a==="standard-attach"){const r=v3Selected("standard");if(!r)return;
-  const linked=v4StoreFor("model","PM-701");if(linked.field!==r[4]){v4InvalidModel(linked);linked.field=r[4]}
+  const linked=v4StoreFor("model","PM-701");if(linked.field!==r[4]){v4InvalidModel(linked);linked.field=r[4];linked.mapField=({"STD-201":"order_id","STD-205":"payment_time","STD-208":"pay_amount","STD-212":"customer_id"})[r[4]]||linked.mapField}
   state.select.model=sample.model.findIndex(x=>x[4]==="PM-701");v3Route("model",{id:r[4],label:r[0],relation:"标准字段"});return}
  if(a==="model-open"){v3OpenDrawer("model");return}
  if(a==="model-check"){if(!allow)return;b.checked=false;b.checkRevision=-1;state.tab.model="校验记录";renderMain();return}
