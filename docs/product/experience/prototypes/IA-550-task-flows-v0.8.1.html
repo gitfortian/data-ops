@@ -1627,8 +1627,9 @@ function v7RelationEdit(index,key,value){
 function v7SelectPhysicalLogical(id){
  if(!actionAllowed()){toast("只读画像不能修改设计草稿");return}
  const m=v7.models.find(x=>x.id===id);if(!m||v6.layer==="ODS")return;
- v7.targetByLayer[v6.layer]=id;delete v7.mapping[v6.layer];
- const x=v6Layer();x.checked=false;x.logicalRef=null;renderMain();
+ const target=v81Current(),x=v6Layer();if(target.logicalId===id)return;
+ target.logicalId=id;v7.targetByLayer[v6.layer]=id;delete v7.mapping[v6.layer];target.mapping=null;
+ x.checked=false;x.handoff=false;x.dirty=true;x.logicalRef=null;x.revision++;renderMain();
 }
 
 function v7Current(){return v7.models.find(x=>x.id===v7.selected)||v7.models[0]}
@@ -1667,7 +1668,7 @@ function v7Design(layer){
  if(layer!=="ODS"){v7.targetByLayer[layer]=v7Current().id;delete v7.mapping[layer];if(v6.layers[layer])v6.layers[layer].checked=false;const t=v81Current(layer);t.logicalId=v7Current().id;t.mapping=null}
  renderMain();
 }
-function v7ScopeSignature(x){return JSON.stringify({projectId:v81.project,physicalModelId:v81Current(x.layer).id,layer:x.layer,deps:x.deps.map(d=>[d,v6Sources[d].version]),grain:x.grain,scd:x.scd,metric:x.metric,consumer:x.consumer,
+function v7ScopeSignature(x){return JSON.stringify({projectId:v81.project,physicalModelId:v81Current(x.layer).id,logicalId:x.layer==="ODS"?null:v81Current(x.layer).logicalId,logicalVersion:x.layer==="ODS"?null:v7Latest(v7ForLayer(x.layer))?.version||null,layer:x.layer,deps:x.deps.map(d=>[d,v6Sources[d].version]),grain:x.grain,scd:x.scd,metric:x.metric,consumer:x.consumer,
  fields:x.rows.map(r=>[r.name,r.type,r.source,r.origin,r.rule,r.std,r.role]),rev:x.revision});}
 
 function v7MappingState(layer=v6.layer){
@@ -2267,7 +2268,8 @@ function v8Home(){
  const relevant={coordinator:['待受理','澄清与方案'],builder:['待确认','核实中','建设中','待专业发布'],steward:['已确认待处置','处置中'],owner:['待业务确认','待验收'],business:['待验收','待业务复核'],analyst:['待业务确认']};
  const mine=v6.records.filter(r=>!terminal.includes(r.status)&&(String(r.next).includes(v6RoleNames[role])||(relevant[role]||[]).includes(r.status)));
  const rows=mine.length?mine:[];
- const localVersions=v7.models.reduce((n,m)=>n+m.versions.length,0)+Object.values(v6.layers).reduce((n,x)=>n+x.saved.length,0);
+ for(const layer of Object.keys(v6.layers))v81Current(layer);
+ const localVersions=v7.models.reduce((n,m)=>n+m.versions.length,0)+Object.values(v81.byId).reduce((n,t)=>n+t.state.saved.length,0);
  const config={
   build:{label:"建设可信数据",title:"继续订单业务逻辑设计",text:"先确认一行数据代表什么、业务属性和关系，再选择实际需要的物理层。已有来源可直接做 ODS。",action:"继续逻辑设计",target:"logical",story:"GM-J1-07 / 08",identity:v7.selected},
   consume:{label:"使用已有数据",title:"判断订单经营日报能否使用",text:"从已有 Dataset 或服务合同开始，核对版本、更新、访问条件；无需重走接入和建模。",action:"查看数据产品",target:"product",story:"GM-J3-01 / 02 / 03 / 05 / 06",identity:"DATASET:DEMO-DS-901"},
