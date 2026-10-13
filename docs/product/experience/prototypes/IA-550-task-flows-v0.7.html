@@ -1282,12 +1282,13 @@ function v6Check(){
  if(x.conflicts.length){toast("请先确认跨来源的同名字段冲突");return}
  if(x.rows.some(r=>!r.name.trim()||!r.type.trim())){toast("发现未定义名称或类型的字段");return}
  if(!x.grain.trim()){toast("请说明本层的模型粒度");return}
+ if(x.layer!=="ODS"&&!v7MappingCurrent()){toast("本设计评审原型要求先审阅逻辑版本与物理列映射；该正式门禁仍待 PD-010 批准");return}
  x.checked=true;renderMain();
 }
 function v6Save(){
  const x=v6Layer();if(!x.checked||x.pending||!actionAllowed())return;
  const id="DEMO-"+x.layer+"-V"+(x.saved.length+1);
- x.saved.push(Object.freeze({id,rev:x.revision,deps:x.deps.map(d=>d+"@"+v6Sources[d].version),fields:x.rows.map(r=>Object.freeze({...r})),grain:x.grain}));
+ x.saved.push(Object.freeze({id,rev:x.revision,deps:x.deps.map(d=>d+"@"+v6Sources[d].version),fields:x.rows.map(r=>Object.freeze({...r})),grain:x.grain,logicalMapping:x.layer==="ODS"?null:v7MappingState().receipt}));
  x.dirty=false;x.handoff=false;renderMain();
 }
 function v6EditRow(i,key,value){
@@ -1406,7 +1407,7 @@ function v6CollabCreate(){
 }
 function v6ToPro(domain){
  const r=v6CurrentCase();v6.origin={id:r.id,role:v6.collab.role,view:v6.collab.view,selected:r.id,domain};
- if(domain==="model"){v6.modelMode="layered";go("model");return}
+ if(domain==="model"){v6.modelMode="layered";v7.view="logical";go("model");return}
  go(domain);
 }
 function v6Return(){const from=v6.origin;if(!from)return;v6.origin=null;v6.collab.selected=from.selected;v6.collab.view=from.view;v6.collab.role=from.role;go("collab")}
@@ -1779,6 +1780,17 @@ function v3HandleAction(a){
 document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
  
+ 
+ if(el.dataset.v7Mode){v7.view=el.dataset.v7Mode;renderMain();return}
+ if(el.dataset.v7Logical){v7.selected=el.dataset.v7Logical;renderMain();return}
+ if(el.dataset.v7Freeze){v7FreezeLogical();return}
+ if(el.dataset.v7Addattr){v7AddAttr();return}
+ if(el.dataset.v7Addrelation){v7AddRelation();return}
+ if(el.dataset.v7Ods){v6.layer="ODS";v7.view="physical";renderMain();return}
+ if(el.dataset.v7Design){v7Design(el.dataset.v7Design);return}
+ if(el.dataset.v7Candidates){v7MappingReset();return}
+ if(el.dataset.v7Mapconfirm){v7MappingReview();return}
+
  if(el.dataset.v6Layer){v6.layer=el.dataset.v6Layer;v6.modelMode="layered";renderMain();return}
  if(el.dataset.v6Mode){v6.modelMode=el.dataset.v6Mode;renderMain();return}
  if(el.dataset.v6Dep){v6Dependency(el.dataset.v6Dep);return}
@@ -1849,6 +1861,10 @@ document.addEventListener("click",function(ev){
 });
 document.addEventListener("input",function(ev){
  const t=ev.target;
+ 
+ if(t.id==="v7-grain"){const m=v7Current();if(m.grain!==t.value&&actionAllowed()){m.grain=t.value;v7LogicalTouch(m)}return}
+ if(t.dataset?.v7Attr!==undefined){v7FieldChange(Number(t.dataset.v7Attr),t.dataset.v7Key,t.value);return}
+
  if(t.id==="v6-note"){v6.collab.note=t.value;return}
  if(t.id==="v6-newtitle"){v6.collab.draftTitle=t.value;return}
  if(t.id==="v6-newdetail"){v6.collab.draftDetail=t.value;return}
@@ -1867,6 +1883,10 @@ document.addEventListener("input",function(ev){
 document.addEventListener("change",function(ev){
  const t=ev.target;
  
+ 
+ if(t.dataset?.v7Row!==undefined){v7MapEdit(Number(t.dataset.v7Row),t.value);return}
+ if(t.dataset?.v7Attr!==undefined){v7FieldChange(Number(t.dataset.v7Attr),t.dataset.v7Key,t.value);renderMain();return}
+
  if(t.id==="v6-role"){v6.collab.role=t.value;renderMain();return}
  if(t.id==="v6-reference"){v6.collab.reference=t.value;renderMain();return}
  if(t.id==="v6-transfer"){v6.collab.transferTo=t.value;renderMain();return}
