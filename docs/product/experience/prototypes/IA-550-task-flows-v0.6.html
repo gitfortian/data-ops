@@ -1285,6 +1285,128 @@ function v6LayerModel(){
  '<div class="v6Stage"><strong>模型 ≠ 已生产的数据</strong><p>设计版本、部署版本、运行结果分别核验。</p></div></section></div></div>';
 }
 
+
+const v6RoleNames={business:"需求发起人",coordinator:"需求协调人",builder:"技术负责人",steward:"治理负责人",analyst:"分析参与人",owner:"业务确认人"};
+const v6Cases=[
+ {id:"REQ-102",type:"demand",title:"订单经营日报的数据需求",status:"待受理",owner:"数据产品协调人",next:"需求协调人",requester:"电商运营团队",expect:"需要每日支付订单数、实付交易金额与可用的经营日报",accept:"按订单去重，支付成功时间归属统计日；财务样例可核对",due:"2026-10-22",planned:"待评估",version:"需求草稿 R1",tasks:[],deliveries:[],log:[{who:"电商运营",what:"提交订单日报数据需求，等待受理"}],scopeConfirmed:false,verified:false,delivered:false},
+ {id:"ISS-201",type:"issue",title:"支付金额与财务日报核对不一致",status:"待确认",owner:"技术核实人",next:"技术负责人",requester:"财务业务团队",expect:"2026-10-10 的金额差异需说明来源、统计口径和数据时间",accept:"复核原日期与原筛选条件，提交修复或解释证据",due:"待核实",planned:"待核实",version:"MET-027 · v1.2",source:"MET-027",tasks:[],deliveries:[],log:[{who:"业务运营",what:"针对指标版本提出差异反馈"}],verified:false,delivered:false},
+ {id:"CAL-301",type:"caliber",title:"支付订单数 · 重要口径确认",status:"待业务确认",owner:"业务口径负责人",next:"分析与业务确认",requester:"交易运营",expect:"明确支付后退款是否回减支付订单数",accept:"按订单去重；支付成功日；支付失败不计；重复支付回传不重复计数",due:"2026-10-19",planned:"2026-10-19",version:"MET-026 · 草稿 v1.2",source:"MET-026",tasks:[],deliveries:[],log:[{who:"研发负责人",what:"建立 MET-026 v1.2 口径草稿 · 尚待多方确认"}],sampleConfirmed:false,businessConfirmed:false,verified:false,delivered:false}
+];
+function v6InitCases(){if(!v6.records.length)v6.records=v6Cases}
+function v6CurrentCase(){v6InitCases();return v6.records.find(r=>r.id===v6.collab.selected)||v6.records[0]}
+function v6Log(r,what){r.log.push({who:v6RoleNames[v6.collab.role],what});v6.collab.note="";}
+function v6NeedsRole(...roles){if(roles.includes(v6.collab.role))return true;toast("本操作由指定协作职责执行；可切换演示职责体验");return false}
+function v6CaseAct(action){
+ const r=v6CurrentCase(),c=v6.collab,notes=(c.note||"").trim();
+ const reason=()=>{if(notes.length<5){toast("需补充至少 5 字原因或证据，不可无理由提交");return false}return true};
+ if(action==="accept"&&v6NeedsRole("coordinator")){if(r.type!=="demand"||r.status!=="待受理")return;r.status="澄清与方案";r.next="需求协调人";r.owner="数据产品协调人";v6Log(r,"已受理并进入方案澄清，尚未开始开发")}
+ if(action==="scope"&&v6NeedsRole("coordinator","builder")){if(r.type!=="demand"||r.status!=="澄清与方案"||!reason())return;r.status="待业务确认";r.version="需求范围基准 R1";r.next="业务确认人";v6Log(r,"提交范围及验收标准："+notes)}
+ if(action==="confirmScope"&&v6NeedsRole("owner","business")){if(r.type!=="demand"||r.status!=="待业务确认")return;r.status="建设中";r.scopeConfirmed=true;r.next="技术负责人";v6Log(r,"业务已确认本次范围与验收标准 R1；尚未代表交付")}
+ if(action==="addTask"&&v6NeedsRole("builder","coordinator")){if(r.type!=="demand"||!r.scopeConfirmed)return;const id="TASK-"+(130+r.tasks.length);r.tasks.push({id,title:r.tasks.length?"指标定义与样例验证":"订单分层模型设计",owner:"数据研发",status:"未开始",source:"Modeling / Metric",result:"待关联专业版本"});v6Log(r,"新增专业任务 "+id+"（仅协作计划，未调用开发/建模服务）")}
+ if(action==="attach"&&v6NeedsRole("builder","steward")){if(r.type==="demand"&&r.status!=="建设中")return;if(r.type==="issue"&&r.status!=="处置中")return;r.deliveries.push({id:"DEMO-OUTPUT-"+(r.deliveries.length+1),source:"Modeling",version:"设计草稿 V1",status:"专业验证待回读"});v6Log(r,"关联一项示例专业成果；不能据此认定运行已成功")}
+ if(action==="test"&&v6NeedsRole("builder")){if(r.type!=="demand"||r.status!=="建设中"||!r.deliveries.length){toast("需先在建设中关联可审阅的交付成果");return}if(!reason())return;r.status="待验收";r.next="业务确认人";r.verified=true;v6Log(r,"提交技术验证摘要与交付清单："+notes)}
+ if(action==="acceptDelivery"&&v6NeedsRole("business","owner")){if(r.type!=="demand"||r.status!=="待验收")return;r.status="待交付";r.next="技术交付人";v6Log(r,"业务按范围基准 R1 验收通过，但专业发布/交付仍待执行")}
+ if(action==="deliver"&&v6NeedsRole("builder")){if(r.type!=="demand"||r.status!=="待交付"||!reason())return;r.status="已完成";r.delivered=true;r.next="无";v6Log(r,"交付记录（示例，不代表真实上架）："+notes)}
+ if(action==="return"&&v6NeedsRole("business","owner")){if(r.type!=="demand"||!["待验收","待业务确认"].includes(r.status)||!reason())return;r.status="澄清与方案";r.scopeConfirmed=false;r.verified=false;r.next="需求协调人";v6Log(r,"退回修改，原版本/结论仍保留："+notes)}
+ if(action==="investigate"&&v6NeedsRole("builder")){if(r.type!=="issue"||r.status!=="待确认"||!reason())return;r.status="已确认待处置";r.next="技术/治理处理人";v6Log(r,"核实结论："+notes)}
+ if(action==="issueStart"&&v6NeedsRole("builder","steward")){if(r.type!=="issue"||r.status!=="已确认待处置")return;r.status="处置中";r.next="治理负责人";v6Log(r,"创建/承接问题处理，保留原核实结论")}
+ if(action==="issueResolve"&&v6NeedsRole("steward","builder")){if(r.type!=="issue"||r.status!=="处置中"||!reason())return;r.status="待业务复核";r.next="业务发起人";v6Log(r,"提交处置证据与限制："+notes)}
+ if(action==="issueClose"&&v6NeedsRole("business","owner")){if(r.type!=="issue"||r.status!=="待业务复核")return;r.status="已关闭";r.next="无";v6Log(r,"业务复核通过并关闭当前问题单")}
+ if(action==="issueReopen"&&v6NeedsRole("business","owner")){if(r.type!=="issue"||!["已关闭","待业务复核"].includes(r.status)||!reason())return;r.status="核实中";r.next="技术核实人";v6Log(r,"保留原处置证据并重开："+notes)}
+ if(action==="sample"&&v6NeedsRole("analyst")){if(r.type!=="caliber"||r.status!=="待业务确认")return;r.sampleConfirmed=true;v6Log(r,"分析参与人按支付/未支付/退款/重复回传样例进行了本地确认")}
+ if(action==="approve"&&v6NeedsRole("owner")){if(r.type!=="caliber"||r.status!=="待业务确认")return;if(!r.sampleConfirmed){toast("先完成分析样例核对，评论不等于确认");return}r.businessConfirmed=true;r.status="口径已确认 · 待技术验证";r.next="技术负责人";v6Log(r,"业务口径负责人确认 "+r.version+"，仅对此精确版本有效")}
+ if(action==="caliberTest"&&v6NeedsRole("builder")){if(r.type!=="caliber"||!r.businessConfirmed||!reason())return;r.verified=true;r.status="待专业发布";r.next="指标发布人";v6Log(r,"当前版本的技术检查与试算："+notes)}
+ if(action==="caliberHandoff"&&v6NeedsRole("builder")){if(r.type!=="caliber"||!r.verified)return;r.status="已交接发布";r.next="Metric 发布职责";v6Log(r,"交接指标中心按正式合同发布；协作不会自行写入已发布状态")}
+ if(action==="newCaliber"&&v6NeedsRole("builder","owner")){if(r.type!=="caliber"||!reason())return;r.version="MET-026 · 新草稿 v1.3";r.businessConfirmed=false;r.sampleConfirmed=false;r.verified=false;r.status="待业务确认";r.next="分析与业务确认";v6Log(r,"实质口径变更，旧 v1.2 确认不证明新 v1.3："+notes)}
+ renderMain();
+}
+function v6CollabCreate(){
+ const c=v6.collab;
+ if(!["business","owner","analyst","coordinator"].includes(c.role)){toast("当前职责不能代表业务提交新的协作事项");return}
+ if((c.draftTitle||"").trim().length<4||(c.draftDetail||"").trim().length<5){toast("至少填写标题与明确业务期望");return}
+ const type=c.view==="issue"?"issue":c.view==="caliber"?"caliber":"demand",id=(type==="issue"?"ISS":type==="caliber"?"CAL":"REQ")+"-LOCAL-"+(v6.records.length+1);
+ const x={id,type,title:c.draftTitle.trim(),expect:c.draftDetail.trim(),accept:"受理时共同补齐验收/复核标准",status:type==="issue"?"待确认":type==="caliber"?"待研发草案":"待受理",owner:"待受理",next:type==="caliber"?"研发负责人":"需求协调人",requester:v6RoleNames[c.role],version:c.source?.version||"待明确",source:c.source?.id||null,due:"待评估",planned:"待评估",tasks:[],deliveries:[],log:[{who:v6RoleNames[c.role],what:"创建本地协作记录"+(c.source?"，关联来源 "+c.source.id+" "+c.source.version:"")}]};
+ v6.records.push(x);c.selected=id;c.draftTitle="";c.draftDetail="";c.source=null;renderMain();
+}
+function v6ToPro(domain){
+ const r=v6CurrentCase();v6.origin={id:r.id,role:v6.collab.role,view:v6.collab.view,selected:r.id,domain};
+ if(domain==="model"){v6.modelMode="layered";go("model");return}
+ go(domain);
+}
+function v6Return(){const from=v6.origin;if(!from)return;v6.origin=null;v6.collab.selected=from.selected;v6.collab.view=from.view;v6.collab.role=from.role;go("collab")}
+function v6ReportFrom(page){
+ v6.collab.view="issue";v6.collab.source={id:v3Selected(page)?.[4]||page,version:"当前页面选择的样例版本",kind:page};
+ v6.collab.draftTitle="反馈当前"+nameOf(page)+"的数据问题";v6.collab.draftDetail="";
+ v6.origin=null;go("collab");
+}
+function v6ActionButton(action,title,roles,disabled){
+ const roleOk=roles.includes(v6.collab.role);
+ return '<button data-v6-action="'+action+'" '+(!roleOk||disabled?"disabled":"")+' title="'+(roleOk?"":"请切换对应协作职责")+'">'+title+'</button>';
+}
+function v6Collab(){
+ v6InitCases();const c=v6.collab,r=v6CurrentCase(),types=[["demand","数据需求"],["issue","数据问题"],["caliber","口径确认"]];
+ const viewItems=v6.records.filter(x=>x.type===c.view),actions=[];
+ if(r.type==="demand"){
+  actions.push(v6ActionButton("accept","受理需求",["coordinator"],r.status!=="待受理"));
+  actions.push(v6ActionButton("scope","提交方案与范围",["builder","coordinator"],r.status!=="澄清与方案"));
+  actions.push(v6ActionButton("confirmScope","确认范围及验收",["business","owner"],r.status!=="待业务确认"));
+  actions.push(v6ActionButton("addTask","拆分专业任务",["builder","coordinator"],!r.scopeConfirmed));
+  actions.push(v6ActionButton("attach","关联专业成果（模拟）",["builder","steward"],r.status!=="建设中"));
+  actions.push(v6ActionButton("test","提交技术验证与交付清单",["builder"],r.status!=="建设中"));
+  actions.push(v6ActionButton("acceptDelivery","业务验收通过",["business","owner"],r.status!=="待验收"));
+  actions.push(v6ActionButton("deliver","交付完成（模拟）",["builder"],r.status!=="待交付"));
+  actions.push(v6ActionButton("return","退回并说明原因",["business","owner"],!["待验收","待业务确认"].includes(r.status)));
+ }else if(r.type==="issue"){
+  actions.push(v6ActionButton("investigate","核实分类与证据",["builder"],r.status!=="待确认"));
+  actions.push(v6ActionButton("issueStart","开始处置",["builder","steward"],r.status!=="已确认待处置"));
+  actions.push(v6ActionButton("issueResolve","提交修复与验证",["builder","steward"],r.status!=="处置中"));
+  actions.push(v6ActionButton("issueClose","业务复核通过",["business","owner"],r.status!=="待业务复核"));
+  actions.push(v6ActionButton("issueReopen","重开并说明原因",["business","owner"],!["已关闭","待业务复核"].includes(r.status)));
+ }else{
+  actions.push(v6ActionButton("sample","分析样例已复核",["analyst"],r.status!=="待业务确认"));
+  actions.push(v6ActionButton("approve","确认当前口径版本",["owner"],r.status!=="待业务确认"));
+  actions.push(v6ActionButton("caliberTest","提交同版本技术检查",["builder"],!r.businessConfirmed));
+  actions.push(v6ActionButton("caliberHandoff","交接指标中心发布",["builder"],!r.verified));
+  actions.push(v6ActionButton("newCaliber","形成新口径草稿并重新确认",["builder","owner"],!["待专业发布","已交接发布"].includes(r.status)));
+ }
+ const linkedTasks=r.tasks.map(t=>'<div class="v6Stage"><strong>'+esc(t.id)+' · '+esc(t.title)+'</strong><div class="v6Meta">'+esc(t.owner)+' · '+esc(t.status)+' · '+esc(t.result)+'</div></div>').join("");
+ const deliveries=r.deliveries.map(d=>'<div class="v6Stage"><strong>'+esc(d.id)+'</strong><div class="v6Meta">'+esc(d.source)+" · "+esc(d.version)+" · "+esc(d.status)+'</div></div>').join("");
+ const example=r.type==="caliber"?'<div class="v6Section"><h2>版本 '+esc(r.version)+' 的业务样例</h2><table class="v6Table"><thead><tr><th>输入</th><th>待确认预期</th></tr></thead><tbody><tr><td>订单已支付</td><td>计入 1 笔</td></tr><tr><td>取消未支付</td><td>计入 0 笔</td></tr><tr><td>支付后退款</td><td>是否回减须由业务口径负责人确认</td></tr><tr><td>同一订单重复支付回传</td><td>合计计入 1 笔</td></tr></tbody></table><p class="micro">本原型只演示角色确认记录，指标定义仍由 Metric 保管，确认不等于专业发布。</p></div>':'';
+ const workflow= r.type==="demand"?"草稿 → 待受理 → 澄清与方案 → 待业务确认 → 建设中 → 待验收 → 待交付 → 已完成":
+ r.type==="issue"?"待确认 → 核实中 → 待处置 → 处置中 → 待业务复核 → 已关闭（可重开）":
+ "检索已有指标 → 形成精确草案 → 分析复核 → 业务确认 → 技术验证 → 专业发布";
+ const drafts='<div class="v6Section"><h2>新建'+(c.view==="demand"?"数据需求":c.view==="issue"?"数据问题":"指标口径诉求")+'</h2>'+
+ (c.source?'<div class="v6Hint">来源对象：'+esc(c.source.id)+' · '+esc(c.source.version)+'</div>':'')+
+ '<label class="v6Field">业务标题<input id="v6-newtitle" value="'+esc(c.draftTitle||"")+'" placeholder="描述业务想得到什么或遇到的问题"></label>'+
+ '<label class="v6Field">目的、预期结果或实际异常<textarea id="v6-newdetail" placeholder="不需要填写 SQL 或技术表名">'+esc(c.draftDetail||"")+'</textarea></label>'+
+ '<div class="v6Actions"><button class="primary" data-v6-create="1">提交协作记录（本地示例）</button></div></div>';
+ return pageHead("需求与协作","同一需求、专业对象、口径版本与交付形成协作闭环；记录与专业域真相分离。","IA-550 / DATA COLLABORATION v1.0",
+ '<div class="v6Role">协作职责：<select id="v6-role">'+Object.entries(v6RoleNames).map(([key,name])=>'<option value="'+key+'" '+(c.role===key?"selected":"")+'>'+name+'</option>').join("")+'</select></div>')+
+ '<div class="v6Tabs">'+types.map(([key,name])=>'<button data-v6-view="'+key+'" class="'+(c.view===key?"active":"")+'">'+name+' · '+v6.records.filter(x=>x.type===key).length+'</button>').join("")+'</div>'+
+ '<div class="v6Grid"><div class="v6Main"><section class="v6Section"><h2>当前记录 · '+esc(r.id)+' · '+esc(r.title)+'</h2>'+
+ '<div class="v6Meta">'+badge(r.status)+'<span>当前负责人：'+esc(r.owner)+'</span><span>下一步：'+esc(r.next)+'</span><span>业务期望：'+esc(r.due)+'</span><span>研发计划：'+esc(r.planned)+'</span></div>'+
+ '<div class="v6Stage"><strong>事项流转</strong><p class="micro">'+esc(workflow)+'</p></div>'+
+ '<div class="v6Stage"><strong>业务目标与场景</strong><p>'+esc(r.expect)+'</p></div>'+
+ '<div class="v6Stage"><strong>本次验收/复核基准</strong><p>'+esc(r.accept)+'</p></div>'+
+ '<div class="v6Stage"><strong>当前精确版本</strong><p>'+esc(r.version)+'</p></div>'+
+ '<label class="v6Field">本次说明、证据、决策或退回原因<textarea id="v6-note" placeholder="变更范围、提交验证或退回需留下具体理由">'+esc(c.note||"")+'</textarea></label>'+
+ '<div class="v6Actions">'+actions.join("")+'</div></section>'+
+ example+
+ '<section class="v6Section"><h2>专业任务、交付与业务验收</h2>'+
+ (linkedTasks||'<p class="micro">当前无专业任务。受理并确认范围后可按实际需要拆分；不是所有需求都强制走五域。</p>')+
+ (deliveries||'<p class="micro">当前无成果回执。开发完成、业务验收、实际交付是三个不同阶段。</p>')+
+ '<div class="v6Actions"><button data-v6-pro="model">前往分层模型设计 →</button><button data-v6-pro="metric">查看指标中心 →</button><button data-v6-pro="governance">进入治理工作队列 →</button></div></section>'+
+ '<section class="v6Section"><h2>协作时间线与决策留痕</h2><div class="v6Timeline">'+r.log.map((entry,i)=>'<div class="v6Event"><b>'+esc(entry.who)+' · 记录 '+(i+1)+'</b>'+esc(entry.what)+'</div>').join("")+'</div></section></div>'+
+ '<aside class="v6Side"><section class="v6Section"><h2>三类事项</h2><div class="v6Items">'+viewItems.map(x=>'<button data-v6-case="'+x.id+'" class="v6Item '+(r.id===x.id?"active":"")+'"><strong>'+esc(x.title)+'</strong><small>'+esc(x.id)+' · '+esc(x.status)+'</small></button>').join("")+'</div></section>'+
+ drafts+'<section class="v6Section"><h2>责任与事实边界</h2><p>业务人员能提交需求、反馈及验收，即使专业 Modeling/Metric 为只读；只有具备技术职责的人可执行专业修改。</p><p>协作状态不是实际 SQL 执行、指标发布、资产上架或质量结果。</p></section></aside></div>';
+}
+function v6Tasks(){
+ v6InitCases();
+ const items=v6.records.map(r=>'<div class="v6Stage"><strong>'+esc(r.id)+' · '+esc(r.title)+'</strong><div class="v6Meta">'+esc(r.status)+' · 下一步 '+esc(r.next)+'</div><div class="v6Actions"><button data-v6-open="'+r.id+'">打开并继续 →</button></div></div>').join("");
+ return pageHead("我的待办","协作任务按当前负责人和下一步行动推进；与专业工作原有权限分开。","TASKS / PREVIEW",'<button class="btn" data-page="collab">需求与协作 →</button>')+
+ '<section class="v6Section"><h2>订单分析 · 当前协作示例</h2><p>本地场景，用于验证受理、核实、口径确认和验收的可发现入口。</p>'+items+'</section>';
+}
+
 function v3Run(){
  nav();
  dom("roleSwitch").value=state.role;
