@@ -326,7 +326,7 @@ dom("openPalette").addEventListener("click",openPalette);dom("projectBtn").addEv
 dom("mobileToggle").addEventListener("click",function(){dom("rail").classList.add("drawerOpen");dom("side").classList.add("drawerOpen");dom("mobileShade").classList.add("active")});dom("mobileShade").addEventListener("click",closeMobile);
 dom("dialogShade").addEventListener("click",function(e){if(e.target===dom("dialogShade")&&!state.editDirty)closeDialog()});dom("paletteShade").addEventListener("click",function(e){if(e.target===dom("paletteShade"))closePalette()});
 window.addEventListener("hashchange",function(){var id=decodeURIComponent(window.location.hash.replace(/^#/,""));if((paths[id]||labels[id]||toolInfo[id]||domains.some(function(d){return d.tools.some(function(t){return t[0]===id})}))&&state.page!==id){state.editDirty=false;state.page=id;state.lastMenu=domainOf(id).id;state.query="";state.status="ready";render()}});
-var start=decodeURIComponent(window.location.hash.replace(/^#/,""));if(paths[start]||labels[start]||toolInfo[start]){state.page=start;state.lastMenu=domainOf(start).id}render();
+
 
 /* ========== IA-550 v0.3 task-context model ========== */
 const v3={
@@ -431,6 +431,7 @@ function v3ActionLine(buttons,note){
 }
 function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+esc(text)+'</p></div>'}
 
+var start=decodeURIComponent(window.location.hash.replace(/^#/,""));if(paths[start]||labels[start]||toolInfo[start]){state.page=start;state.lastMenu=domainOf(start).id}render();
 })();
 </script>
 </body>
