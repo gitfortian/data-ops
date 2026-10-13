@@ -275,3 +275,58 @@ test('H09: responsive home layout rules exist for desktop, compact and narrow wi
  assert.match(html,/@media\(max-width:700px\)\{\.v7StageGrid\{grid-template-columns:repeat\(2/);
  assert.match(html,/@media\(max-width:440px\)\{\.v7HomeStats\{grid-template-columns:/);
 });
+
+
+test('H10: home project scale and operation counters explicitly require live owner APIs',()=>{
+ const a=build('home');
+ assert.match(a.view(),/项目规模与运行概况/);
+ assert.match(a.view(),/DataSource \/ Metadata/);
+ assert.match(a.view(),/Modeling/);
+ assert.match(a.view(),/Metric/);
+ assert.match(a.view(),/DataDev \/ Runtime/);
+ assert.match(a.view(),/不伪造数量/);
+});
+test('L13: new logical model starts empty and must define attributes before freezing',()=>{
+ const a=build('model');a.click({v7Newlogic:'1'});
+ assert.equal(a.v7.selected,'LOCAL-LM-001');
+ assert.equal(a.logical().attrs.length,0);
+ a.click({v7Freeze:'1'});assert.equal(a.logical().versions.length,0);
+ assert.match(a.view(),/归属业务过程/);
+});
+test('L14: new logical entity from Semantic process freezes its own editable business model',()=>{
+ const a=build('model');a.click({v7Newlogic:'1'});
+ a.input('v7-name','售后退款业务事实');
+ a.change('v7-process','PRC-103');
+ a.input('v7-grain','一行代表一次退款明细');
+ a.click({v7Addattr:'1'});
+ a.click({v7Freeze:'1'});
+ assert.equal(a.logical().name,'售后退款业务事实');
+ assert.equal(a.logical().process,'PRC-103');
+ assert.equal(a.logical().versions[0].process,'PRC-103');
+});
+test('L15: logical relation target and cardinality support explicit edit, never inferred',()=>{
+ const a=build('model');a.click({v7Addrelation:'1'});
+ a.input('x','订单退款事实',{v7Rel:'1',v7Key:'to'});
+ a.change('x','一对多 · 人工确认',{v7Rel:'1',v7Key:'cardinality'});
+ assert.equal(a.logical().relations[1].to,'订单退款事实');
+ assert.equal(a.logical().relations[1].cardinality,'一对多 · 人工确认');
+});
+test('L16: physical layer can explicitly choose another logical model before mapping',()=>{
+ const a=build('model');
+ a.click({v7Freeze:'1'});a.click({v7Design:'DWD'});
+ a.click({v6Load:'1'});a.click({v7Mode:'mapping'});
+ a.change('v7-layer-model','LM-019');
+ assert.equal(a.v7.targetByLayer.DWD,'LM-019');
+ assert.equal(a.mappingCurrent(),false);
+ assert.match(a.view(),/会员业务实体/);
+});
+test('L17: modified logical draft must freeze another version before mapping review',()=>{
+ const a=build('model');a.click({v7Freeze:'1'});a.click({v7Design:'DWD'});
+ a.click({v6Load:'1'});a.click({v7Mode:'mapping'});
+ a.click({v7Candidates:'1'});a.click({v7Mapconfirm:'1'});
+ assert.equal(a.mappingCurrent(),true);
+ a.click({v7Mode:'logical'});a.input('v7-grain','修订后的订单事实粒度');
+ a.click({v7Mode:'mapping'});a.click({v7Candidates:'1'});a.click({v7Mapconfirm:'1'});
+ assert.equal(a.mappingCurrent(),false);
+ assert.equal(a.mapping().reviewed,false);
+});
