@@ -398,7 +398,7 @@ if(x.dataset.tree){state.tree=x.dataset.tree;renderMain();return}
 if(x.dataset.tab){state.tab[state.page]=x.dataset.tab;renderMain();return}
 if(x.dataset.view){state.view=x.dataset.view;state.query="";state.select.asset=state.view==="entity"?3:0;renderMain();return}
 if(x.dataset.queue){state.queue=x.dataset.queue;renderMain();return}
-if(x.dataset.model){state.select.model=Math.max(0,sample.model.findIndex(function(r){return r[4]===x.dataset.model}));renderMain();return}
+if(x.dataset.model){v4.switchReason="manual";state.select.model=Math.max(0,sample.model.findIndex(function(r){return r[4]===x.dataset.model}));renderMain();v4.switchReason=null;return}
 if(x.dataset.stateReset){state.status="ready";renderMain();return}
 if(x.dataset.clear){state.query="";state.filter="all";state.queue="all";state.tree="";v4.pending=null;renderMain();return}
 if(x.dataset.action){onAction(x.dataset.action);return}
@@ -435,7 +435,7 @@ const v3QueueInfo={
 const v4={
  store:{metric:{},model:{},governance:{}},
  active:{metric:null,model:null,governance:null},
- pending:null, trail:[], lastScroll:0,
+ pending:null, trail:[], lastScroll:0, switchReason:null,
  links:{"PM-701":["MET-026","MET-027"],"PM-732":["MET-026","MET-027"],"PM-733":[],"LM-016":["MET-026"]},
  metricTemplates:{
  "MET-026":{formula:"COUNT(order_id)",filter:"",prior:"COUNT(order_id)",expected:"status = PAID",unit:"笔",period:"自然日",dimension:"支付渠道 / 店铺",problem:"缺少订单支付状态，取消订单可能被计入。"},
@@ -495,11 +495,11 @@ function v4Dirty(page){
  if(page==="governance"){const q=v4.store.governance[v4.active.governance];return !!q?.dirty}
  return false;
 }
-function v4Switch(page,index,force=false){
+function v4Switch(page,index,force=false,reason="filter"){
  const rows=v3Rows(page);const next=(sample[page]||[])[index];if(!next)return;
  if(v4.active[page]===next[4]){state.select[page]=index;return}
  if(!force&&v4.active[page]&&v4Dirty(page)){
-   v4.pending={page,from:v4.active[page],to:next[4],index,fromIndex:state.select[page]};
+   v4.pending={page,from:v4.active[page],to:next[4],index,fromIndex:sample[page].findIndex(x=>x[4]===v4.active[page]),reason:v4.switchReason||reason};
    return;
  }
  v4.pending=null;v4Apply(page,index);
@@ -507,7 +507,7 @@ function v4Switch(page,index,force=false){
 function v4Prompt(){
  const p=v4.pending;if(!p||p.page!==state.page)return "";
  const r=sample[p.page].find(x=>x[4]===p.to);const old=sample[p.page].find(x=>x[4]===p.from);
- return '<div class="v4Notice" role="status"><strong>正在编辑的对象已离开当前筛选范围</strong>'+
+ return '<div class="v4Notice" role="status"><strong>'+(p.reason==="manual"?"切换当前编辑对象":"正在编辑的对象已离开筛选结果")+'</strong>'+
  '<p>当前草稿属于 '+esc(old?.[0]||p.from)+' · '+esc(p.from)+'；新结果是 '+esc(r?.[0]||p.to)+' · '+esc(p.to)+'。不会自动把旧口径或处理说明带入新对象。</p>'+
  '<div class="actions"><button class="btn primary" data-v4-switch="keep">保留当前草稿并切换</button>'+
  '<button class="btn" data-v4-switch="discard">放弃当前修改并切换</button>'+
@@ -515,14 +515,42 @@ function v4Prompt(){
 }
 function v4ResolvePending(mode){
  const p=v4.pending;if(!p)return;
- if(mode==="stay"){v4.pending=null;state.query="";state.filter="all";state.queue="all";state.tree="";renderMain();return}
- if(mode==="discard"){const prev=v4.store[p.page][p.from];
-  if(p.page==="metric"){const history=prev?.receipts||[];v4.store.metric[p.from]={...v4DefaultMetric(p.from),receipts:history};}
-  if(p.page==="model"){const history=prev?.savedVersions||[];v4.store.model[p.from]={...v4DefaultModel(p.from),savedVersions:history};}
-  if(p.page==="governance"){const history=prev?.receipts||[];v4.store.governance[p.from]={...v4DefaultQueue(p.from),receipts:history};}
+ const prev=v4.store[p.page][p.from];
+ if(mode==="stay"){
+   v4.pending=null;state.select[p.page]=p.fromIndex;
+   if(!v3Rows(p.page).some(x=>x.i===p.fromIndex)){state.query="";state.filter="all";state.queue="all";state.tree=""}
+   v4.switchReason=null;renderMain();return;
+ }
+ if(mode==="discard"){
+  if(p.page==="model"){
+    const versions=prev?.savedVersions||[],saved=versions.at(-1);
+    v4.store.model[p.from]=saved?{
+     ...v4DefaultModel(p.from),model:p.from,process:saved.process,field:saved.field,
+     source:saved.source,mapField:saved.mapField,rev:saved.rev,
+     checked:true,checkRevision:saved.rev,fixed:true,dirty:false,version:saved.id,
+     savedVersions:versions
+    }:{...v4DefaultModel(p.from),savedVersions:versions};
+  }
+  if(p.page==="metric"){
+    const receipts=prev?.receipts||[],saved=receipts.at(-1);
+    v4.store.metric[p.from]=saved?{
+      ...v4DefaultMetric(p.from),formula:saved.formula,filter:saved.filter,
+      rev:saved.rev,checked:true,checkRevision:saved.rev,impactSeen:true,
+      impactRevision:saved.rev,published:true,dirty:false,
+      release:saved.id,receipts
+    }:{...v4DefaultMetric(p.from),receipts};
+  }
+  if(p.page==="governance"){
+    const receipts=prev?.receipts||[],saved=receipts.at(-1);
+    v4.store.governance[p.from]=saved?{
+      ...v4DefaultQueue(p.from),receipts,
+      decision:saved.decision,transferTo:saved.transferTo,note:saved.note,
+      queueStep:"receipt",dirty:false
+    }:{...v4DefaultQueue(p.from),receipts};
+  }
   v4.active[p.page]=null;
  }
- v4.pending=null;v4Apply(p.page,p.index);renderMain();
+ v4.pending=null;v4.switchReason=null;v4Apply(p.page,p.index);renderMain();
 }
 function v4InvalidMetric(m){
  m.rev++;m.checked=false;m.checkRevision=-1;m.impactSeen=false;m.impactRevision=-1;
@@ -545,7 +573,7 @@ function v4QueueChanged(){const q=v4StoreFor("governance",v3.queueId);q.dirty=tr
 function v4ModelIssue(b){return b.issue||"待补充当前模型的校验规则"}
 function v4Progress(kind,n){
  if(kind==="metric"){const m=v3.metric;return n===0?true:n===1?v4ValidMetric(m):n===2?v4ValidMetric(m)&&m.impactSeen&&m.impactRevision===m.rev:n===3?!!m.published:false}
- if(kind==="queue"){const q=v4StoreFor("governance",v3.queueId);return n===0?true:n===1?!!(q.decision&&q.note.trim().length>=4&&(q.decision!=="transfer"||q.transferTo)):n===2?!!q.receipts.length:n===3?!!q.receipts.length:false}
+ if(kind==="queue"){const q=v4StoreFor("governance",v3.queueId);return n===0?true:n===1?!!(q.decision&&q.note.trim().length>=4&&(q.decision!=="transfer"||q.transferTo)):n===2?!!q.receipts.length&&!q.dirty:n===3?!!q.receipts.length&&!q.dirty:false}
  return false;
 }
 function v4HistoryBlock(kind){
@@ -692,7 +720,7 @@ function v3Definition(id){
 function v3ModelBody(){
  const r=v3Selected("model");if(!r)return v4Prompt()+v3Hint("请选择或恢复一个模型对象。","warn");
  const b=v3.build,tab=state.tab.model||"来源映射",current=v4ValidModel(b);
- const pre='<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span><span class="v4Progress">'+(b.dirty?"草稿有修改 · 待复检":current?"本次草稿校验通过":"尚未校验")+'</span></div>';
+ const pre='<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span><span class="v4Progress">'+(current?(b.dirty?"本次校验通过 · 尚未保存":b.savedVersions.some(x=>x.rev===b.rev)?"当前版本已保存":"本次校验通过 · 尚未保存"):b.dirty?"草稿已修改 · 待校验":"尚未校验")+'</span></div>';
  const status='<div class="v4Notice"><strong>当前草稿与已存版本分别管理</strong><p>'+(
  b.dirty?"来源/字段/业务关联已经变化，历史校验无法证明本次修改有效。":
  b.savedVersions.length?"当前草稿与最后保存的历史版本无额外更改。":"当前尚无历史保存记录。")+'</p></div>';
@@ -745,7 +773,7 @@ function v3MetricBody(){
   '<div class="v4Empty"><h3>当前没有匹配指标</h3><p>调整搜索或退出筛选后再继续。</p></div>';
  const m=v3.metric,tab=state.tab.metric||"定义口径",valid=v4ValidMetric(m);
  const top='<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(m.id)+'</span>'+
- '<span class="v4Progress">'+(m.dirty?"已修改 · 待校验":m.published?"已生成模拟发布记录":valid?"本次草稿已校验":"草稿待校验")+'</span></div>';
+ '<span class="v4Progress">'+(valid?(m.published&&!m.dirty?"已发布 · 本次版本":"本次校验通过 · "+(m.impactSeen&&m.impactRevision===m.rev?"可发布":"尚未发布")):m.dirty?"草稿已修改 · 待校验":"草稿待校验")+'</span></div>';
  const disabled=!actionAllowed(),lock=disabled?'disabled title="只读画像不能修改"':"";
  const original=v4.metricTemplates[m.id];
  const meta='<div class="v4FieldSummary"><div class="factBox"><h3>单位</h3><b>'+esc(m.unit)+'</b></div><div class="factBox"><h3>时间周期</h3><b>'+esc(m.period)+'</b></div><div class="factBox"><h3>分析维度</h3><b>'+esc(m.dimension)+'</b></div></div>';
@@ -800,7 +828,7 @@ function v3QueueBody(){
  const receipt=q.receipts.at(-1),valid=!v4GuardQueue();
  const steps=["evidence","resolve","submit","receipt"],index=steps.indexOf(step);
  const header='<div class="detailStrip"><strong>'+esc(task[0])+'</strong><span>'+id+'</span><span class="tag warn">'+esc(m.priority)+' · '+esc(m.age)+'</span></div>'+
- '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>负责人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>任务阶段</span><strong>'+(q.receipts.length?"已提交样例，等待业务核验":q.dirty?"填写处理中":"未开始处理")+'</strong></div></div>';
+ '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>负责人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>任务阶段</span><strong>'+(q.dirty&&q.receipts.length?"有历史记录 · 本次未提交":q.dirty?"填写处理中":q.receipts.length?"已提交样例 · 等待业务核验":"未开始处理")+'</strong></div></div>';
  const canEdit=actionAllowed();
  let detail="";
  if(step==="evidence"){
@@ -912,7 +940,7 @@ function chosen(){return v3Selected(state.page)}
 function selectRow(i){
  if(!sample[state.page]||!sample[state.page][i])return;
  const id=state.page;
- if(["metric","model","governance"].includes(id))v4Switch(id,i);
+ if(["metric","model","governance"].includes(id))v4Switch(id,i,false,"manual");
  else state.select[id]=i;
  renderMain();
  if(id==="governance"&&typeof window.innerWidth==="number"&&window.innerWidth<=1060)dom("main").querySelector(".v4Workspace")?.scrollIntoView?.({behavior:"smooth",block:"start"})
