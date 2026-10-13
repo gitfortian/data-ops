@@ -563,9 +563,9 @@ function v3Table(id){
  if(state.status!=="ready")return statePanel();
  if(!rows.length)return '<div class="stateArea"><h3>当前筛选无结果</h3><p>已清空对象详情和操作；请调整范围或关键词，避免误操作之前的对象。</p><button class="btn" data-clear="1">清除筛选</button></div>';
  if(id==="governance")return '<div class="tableScroll"><table class="queueTable"><thead><tr><th>任务 / 影响对象</th><th>责任人</th><th>优先级</th><th>等待时间</th><th>状态</th><th>查看</th></tr></thead><tbody>'+
-  rows.map(x=>{const r=x.r,m=v3QueueInfo[r[4]];return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="queueItemName">'+esc(r[0])+'</span><div class="rowmeta">'+esc(m.subject)+'</div></td><td>'+esc(m.owner)+'</td><td><span class="tag '+(m.priority==="P0"?"danger":m.priority==="P1"?"warn":"blue")+'">'+m.priority+'</span></td><td>'+esc(m.age)+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">处理 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+  rows.map(x=>{const r=x.r,m=v3QueueInfo[r[4]];return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="queueItemName">'+esc(r[0])+'</span><div class="rowmeta">'+esc(m.subject)+'</div></td><td>'+esc(m.owner)+'</td><td><span class="tag '+(m.priority==="P0"?"danger":m.priority==="P1"?"warn":"blue")+'">'+m.priority+'</span></td><td>'+esc(m.age)+'</td><td>'+((v4.store.governance[r[4]]?.receipts.length)?badge("已提交 · 待核验"):badge(r[3]))+'</td><td><button class="link" data-select="'+x.i+'">处理 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
  return '<div class="tableScroll"><table><thead><tr><th>名称 / 标识</th><th>业务归属</th><th>类别</th><th>当前状态（示例）</th><th>操作</th></tr></thead><tbody>'+
- rows.map(x=>{const r=x.r;return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+'</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">选中 / 详情 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+ rows.map(x=>{const r=x.r;return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+'</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+((id==="metric"&&v4.store.metric[r[4]]?.receipts.length)?badge("已有模拟发布历史"):badge(r[3]))+'</td><td><button class="link" data-select="'+x.i+'">选中 / 详情 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
 }
 function v3Filters(){return '<div class="filters"><input class="field search" id="localSearch" value="'+esc(state.query||"")+'" placeholder="搜索名称、对象编号或业务归属" aria-label="搜索对象"><select class="field short" id="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option value="pending">待处理</option><option value="done">已确认</option></select></div>'}
 function v3Card(title,subtitle,inner,footer){return '<section class="card"><div class="listhead"><div><strong>'+esc(title)+'</strong><p>'+esc(subtitle||"")+'</p></div></div>'+(inner||"")+(footer?'<div class="cardBody">'+footer+'</div>':"")+'</section>'}
@@ -817,7 +817,7 @@ function v3Asset(){
  '<section class="card"><div class="cardHead"><h2>对象事实与操作</h2></div><div class="cardBody">'+(r?
  '<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div>'+
  '<div class="itemFacts"><div class="factRow"><span>对象身份</span><strong>'+esc(r[2])+'</strong></div><div class="factRow"><span>Owner</span><strong>'+esc(r[2]==="技术实体"?"Metadata":"Asset")+'</strong></div><div class="factRow"><span>业务范围</span><strong>'+esc(r[1])+'</strong></div></div>'+
- '<div class="riskLine">'+(r[2]==="技术实体"?"仅表示来源实体已被发现，并未成为治理资产。":"PENDING 等待治理处理；不表示已经发布或可消费。")+'</div>'+
+ '<div class="riskLine">'+(r[2]==="技术实体"?"仅表示来源实体已被发现，并未成为治理资产。":r[3].includes("已上架")?"当前资产标记为已上架（静态示例）。应通过具体历史任务查看变更和审批记录。":"当前资产尚未上架，不能当作可消费资产。")+'</div>'+
  v3ActionLine('<button class="btn" data-v3-action="asset-drawer">查看技术证据</button><button class="btn primary" data-v3-action="asset-queue">筛选该对象的治理任务 →</button>') :
  v3Hint("无匹配资产。已清空上次对象详情与治理操作。","warn"))+'</div></section></div>'+v3Review();
 }
@@ -838,7 +838,7 @@ function v3Specialist(id){
  id==="lifecycle"&&index===1?'<div class="itemFacts"><div class="factRow"><span>待绑定对象</span><strong>ods_order_detail</strong></div><div class="factRow"><span>策略版本</span><strong>草稿 v1.0</strong></div><div class="factRow"><span>生效结果</span><strong>未确认</strong></div></div>':
  id==="mdm"&&index===2?'<div class="docGrid"><div class="factBox"><h3>原字段</h3><p>客户名称：张 三</p></div><div class="factBox"><h3>规范化预览</h3><p>客户名称：张三</p></div></div>':
  '<div class="softPanel">'+esc(config.help)+'</div>')+
- '<div class="resultPanel warn"><h3>当前为专项交互设计占位</h3><p>需按该领域 Owner 的真实字段、权限与运行回执深化，不用其他页的列表假装此任务已经完成。</p></div></div>';
+ '<div class="resultPanel warn"><h3>独立功能样例 · 尚未关联当前对象</h3><p>此演示片段用于表达专业任务结构，示例对象不等于上方选择的业务对象。后续需按当前对象身份及其真实检查/策略/审批记录深化，不将示意内容当成实际结果。</p></div></div>';
  return pageHead(nameOf(id),descriptions[id],"",'<button class="btn" data-page="'+(id==="quality"?"qualityRun":id==="security"?"securityAudit":id==="lifecycle"?"metadata":"asset")+'">项目级专业入口 ↗</button>')+
  v3Ctx()+v3Steps(config.steps,index,"specialist")+
  '<div class="split medium"><section class="card"><div class="cardHead"><h2>'+esc(config.panels[index])+'</h2></div>'+content+'</section><section class="card"><div class="cardHead"><h2>任务说明 / 事实边界</h2></div><div class="cardBody">'+facts+'<p>'+esc(config.help)+'</p><div class="riskLine">当前原型不执行该领域真实规则配置、策略部署、主数据合并或生命周期运行。</div><div class="itemFacts"><div class="factRow"><span>当前步骤</span><strong>'+esc(current)+'</strong></div><div class="factRow"><span>所属 Owner</span><strong>'+esc(nameOf(id))+'</strong></div><div class="factRow"><span>正式证据</span><strong>尚未接入</strong></div></div></div></section></div>'+v3Review();
@@ -849,8 +849,8 @@ function v3StatePanel(){
  loading:["正在加载对象","保持当前操作上下文；不能提前展示成功结果。","返回正常演示"],
  error:["读取失败（示例）","无法获取实时数据。示例模式可恢复，不代表服务器重试成功。","退出异常预览"],
  forbidden:["无权限查看此项内容","不查询受限制接口；可返回有权入口或请求管理员授权。","返回可访问入口"],
- partial:["部分服务不可用","显示可确认的部分证据，无法获取的结果明确标记未知。","重试不可用项"],
- unknown:["当前状态无法确认","查询 Owner 回执或等待真实执行状态；禁止推测完成。","重新确认"]
+ partial:["部分功能暂不可用","当前本地对象列表仍可浏览；缺失的质量/安全/元数据证据标记为未知，不推断结果成功。","退出异常预览"],
+ unknown:["当前状态无法确认","当前仅有已知对象身份，执行/审批结果缺少证据。不能推断成功。","退出异常预览"]
  }[state.status]||["当前内容","仅显示静态数据","重试"];
  return '<div class="stateArea"><div class="glyph">◇</div><h3>'+data[0]+'</h3><p>'+data[1]+'</p><button class="btn" data-v3-action="state-retry">'+data[2]+'</button></div>';
 }
