@@ -783,7 +783,7 @@ function v3Definition(id){
   '<button class="btn primary" data-v3-action="'+(semantic?"process-next":"standard-attach")+'">'+(semantic?"按本过程引用标准 →":"映射当前标准字段 →")+'</button></div>';
  }
  return pageHead(title,semantic?"明确业务过程与粒度，继续字段标准和模型映射。":"维护标准字段的定义、类型、引用关系；并非只有一个跳转入口。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建'+(semantic?"业务过程":"标准字段")+'</button>')+
- v3Ctx()+v4MobileSelector(id)+categories+'<div class="split">'+sidebar+
+ v3Ctx()+v5DraftList(id)+v5DraftWorkspace(id)+v4MobileSelector(id)+categories+'<div class="split">'+sidebar+
  '<section class="card"><div class="cardHead"><h2>'+esc(title)+' · 当前对象</h2></div>'+v3Filters()+v3Table(id)+
  '<div class="v4TaskBody">'+details+'</div></section></div>'+v3Review();
 }
@@ -832,7 +832,7 @@ function v3Model(){
  const cats='<section class="card modelTree"><div class="treehead">模型资源</div><div class="modelList"><small>逻辑模型</small>'+logical.map(item).join("")+'<small>物理模型 · ODS / DWD / DIM</small>'+physical.map(item).join("")+'</div></section>';
  const tabs=["业务关联","字段设计","来源映射","校验记录","版本差异"];
  return pageHead("模型工作台","模型资源分类和操作步骤独立；每个模型维护自己的草稿与历史版本。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建模型</button>')+
- v3Ctx()+v4MobileSelector("model")+'<div class="workgrid">'+cats+
+ v3Ctx()+v5RelationPanel()+v5DraftList("model")+v5DraftWorkspace("model")+v4MobileSelector("model")+'<div class="workgrid">'+cats+
  '<section class="card v4Workspace"><div class="cardHead"><h2>当前模型 · '+(r?esc(r[0]):"切换待确认")+'</h2></div><div class="v4Tabs">'+tabs.map(t=>'<button class="tab '+((state.tab.model||"来源映射")===t?"active":"")+'" data-v3-tab="'+t+'">'+t+'</button>').join("")+'</div>'+
  (state.status==="ready"?v4Prompt()+v3ModelBody():statePanel())+'</section></div>'+v3Review();
 }
@@ -886,7 +886,7 @@ function v3Metric(){
  const current=state.tab.metric||"定义口径",relation=v3.scope?.from==="model";
  return pageHead("指标中心","对象与草稿独立管理；从定义到校验、影响确认、发布都使用同一版本身份。","",
  '<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建指标</button>')+
- v3Ctx()+(relation?'<div class="v4ContextBadge">模型关联结果：'+v3Rows("metric").length+' 个指标 · 仅展示明确样例关系</div>':"")+
+ v3Ctx()+v5DraftList("metric")+v5DraftWorkspace("metric")+(relation?'<div class="v4ContextBadge">模型关联结果：'+v3Rows("metric").length+' 个指标 · 仅展示明确样例关系</div>':"")+
  '<div class="v4MetricWork"><section class="card v4ListSlim"><div class="cardHead"><h2>指标对象选择</h2></div>'+v3Filters()+v3Table("metric")+'</section>'+
  '<section class="card v4Workspace">'+v3Steps(tabs,tabs.indexOf(current),"metric")+
  (state.status==="ready"?v4Prompt()+v3MetricBody():statePanel())+
@@ -1022,7 +1022,7 @@ function go(id,keepHistory){
  if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null}
  if(!keepHistory&&state.page!==id)state.history.push(state.page);
  state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";
- if(id==="model"&&v3.scope&&["standard","semantic"].includes(v3.scope.from))state.select.model=1;
+ /* explicit target selection: do not force existing ODS model */
  state.tool=toolInfo[id]?id:"";state.lastMenu=domainOf(id).id;
  v3CloseDrawer();renderMain();closeMobile();
  if(window.location.hash!=="#"+id)window.location.hash=id;
@@ -1033,7 +1033,7 @@ function v3OpenEdit(mode){
  if(mode==="edit"&&!r){toast("无当前对象，无法编辑");return}
  if(!actionAllowed()){toast("只读画像无法写入");return}
  const key=mode==="create"?"new:"+state.page:state.page+":"+r[4],draft=v3.storedDrafts[key];
- v3.editing={mode,key,original:r?r[0]:"",name:draft?draft.name:mode==="edit"?r[0]:"",note:draft?draft.note:""};
+ v3.editing={mode,key,page:state.page,original:r?r[0]:"",name:draft?draft.name:mode==="edit"?r[0]:"",note:draft?draft.note:""};
  v3.editing.openedName=v3.editing.name;v3.editing.openedNote=v3.editing.note;state.editDirty=false;
  v3ShowEdit();
 }
@@ -1051,7 +1051,13 @@ function v3DirtyDialog(){
 }
 function v3FinishEdit(leave){
  const p=v3.editing;if(!p)return;
- v3.storedDrafts[p.key]={name:p.name,note:p.note,at:"当前会话"};state.editDirty=false;v3.editing=null;closeDialog();
+ v3.storedDrafts[p.key]={name:p.name,note:p.note,at:"当前会话"};
+ if(p.mode==="create"){
+   const page=p.page||state.page,arr=v5.drafts[page]||(v5.drafts[page]=[]);
+   const d={page,id:"LOCAL-"+page.toUpperCase()+"-"+(++v5.draftCounter),name:p.name,note:p.note,content:""};
+   arr.push(d);v5.activeDraft=d;
+ }
+ state.editDirty=false;v3.editing=null;closeDialog();renderMain();
  toast("本地草稿已保存。可再次打开继续编辑；未调用生产接口。");
  if(leave&&v3.pending){const next=v3.pending;v3.pending=null;go(next)}
 }
@@ -1060,10 +1066,8 @@ function v3HandleAction(a){
  if(a==="state-retry"){state.status="ready";renderMain();return}
  if(a==="new"){v3OpenEdit("create");return}
  if(a==="edit"){v3OpenEdit("edit");return}
- if(a==="process-next"){const r=v3Selected("semantic");if(!r)return;const linked=v4StoreFor("model","PM-701");if(linked.process!==r[4]){v4InvalidModel(linked);linked.process=r[4]}v3Route("standard",{id:r[4],label:r[0],relation:"业务过程"});return}
- if(a==="standard-attach"){const r=v3Selected("standard");if(!r)return;
-  const linked=v4StoreFor("model","PM-701");if(linked.field!==r[4]){v4InvalidModel(linked);linked.field=r[4];linked.mapField=({"STD-201":"order_id","STD-205":"payment_time","STD-208":"pay_amount","STD-212":"customer_id"})[r[4]]||linked.mapField}
-  state.select.model=sample.model.findIndex(x=>x[4]==="PM-701");v3Route("model",{id:r[4],label:r[0],relation:"标准字段"});return}
+ if(a==="process-next"){v5StageProcess();return}
+ if(a==="standard-attach"){v5StageStandard();return}
  if(a==="model-open"){v3OpenDrawer("model");return}
  if(a==="model-check"){if(!allow)return;b.checked=false;b.checkRevision=-1;state.tab.model="校验记录";renderMain();return}
  if(a==="model-fix"){if(!allow)return;b.fixed=true;b.dirty=true;renderMain();return}
@@ -1112,6 +1116,18 @@ document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
  if(el.dataset.queue){return}
  if(el.dataset.model){return}
+ if(el.dataset.v5Rel){
+  if(el.dataset.v5Rel==="confirm")v5ApplyRelation();
+  else{v5.relation=null;renderMain()}
+  return;
+ }
+ if(el.dataset.v5Draft){
+   const d=Object.values(v5.drafts).flat().find(x=>x.id===el.dataset.v5Draft);
+   if(d){v5.activeDraft=d;renderMain()}
+   return;
+ }
+ if(el.dataset.v5DraftClose){v5.activeDraft=null;renderMain();return}
+ if(el.dataset.v5DraftSave){if(!actionAllowed())return;toast("当前会话草稿已保存，未写入生产服务");renderMain();return}
  if(el.dataset.v3Action){v3HandleAction(el.dataset.v3Action);return}
  if(el.dataset.v3Tab){state.tab[state.page]=el.dataset.v3Tab;renderMain();return}
  if(el.dataset.v3Step){
@@ -1146,9 +1162,12 @@ document.addEventListener("input",function(ev){
  if(t.id==="v3-condition"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.filter=t.value}
  if(t.id==="v3-mapfield"&&actionAllowed()){v4InvalidModel(v3.build);v3.build.mapField=t.value}
  if(t.id==="v3-queue-note"&&actionAllowed()){v3.note=t.value;v4QueueChanged()}
+ if(t.id==="v5-attribute"&&v5.relation){v5.relation.attribute=t.value}
+ if(t.id==="v5-draft-content"&&v5.activeDraft&&actionAllowed()){v5.activeDraft.content=t.value}
 });
 document.addEventListener("change",function(ev){
  const t=ev.target;
+ if(t.id==="v5-target"&&v5.relation){v5.relation.target=t.value;renderMain();return}
  if(t.id==="v4-choose"){selectRow(Number(t.value));return}
  if(t.id==="v4-category"){state.tree=t.value;renderMain();return}
  if(t.id==="v3-queue-decision"&&actionAllowed()){v3.decision=t.value;if(t.value!=="transfer")v3.transferTo="";v4QueueChanged();renderMain()}
