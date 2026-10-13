@@ -321,6 +321,7 @@ body{color:#18191d;background:#f7f7f8}
 .v81RoleNote{padding:10px;background:#fbf8f9;border:1px solid #eee6e8;border-radius:8px;margin-top:7px;font-size:11px}
 @media(max-width:940px){.v81JourneyGrid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:570px){.v81Targets button{flex:1 1 125px}.v81Modelbar{padding:11px}}
+.v81Other{margin:0 0 10px}.v81Other summary{cursor:pointer;font-size:11px;color:#9c3742;padding:8px}.v81Other .v8Modes{margin-top:7px;flex-wrap:wrap}.v81Other .v8Modes button{min-height:38px}
 </style>
 </head>
 <body>
@@ -2253,6 +2254,11 @@ function v8Home(){
   ask:{label:"可信 AI 问答",title:"没有授权数据时应追问或拒答",text:"先核对已发布语义、指标、数据合同及查询权限；无证据不生成业务数字。",action:"查看取证条件",target:"ask-desk",story:"GM-J6-01—08",identity:"MET-026 / DATASET:DEMO-DS-901"},
   mdm:{label:"主数据",title:"确认客户唯一身份及治理责任",text:"合并只是建议，黄金记录需审批；分发也必须有真实回执。",action:"进入主数据专业页",target:"mdm",story:"GM-MDM-01—06",identity:"客户业务实体 · 待核验"}
  };
+ const pendingPhysical=Object.values(v81.byId).find(t=>t.state.loaded&&t.state.dirty);
+ if(pendingPhysical){
+  config.build={...config.build,title:"继续 "+pendingPhysical.layer+" · "+pendingPhysical.title,text:"当前 "+pendingPhysical.id+" 有未保存的物理字段草稿。先恢复精确模型身份，处理来源/映射差异，再保存设计版本；不可跳过 DataDev 交接。",action:"继续该物理模型",target:"resume",identity:pendingPhysical.id,story:"GM-J1-08 / 12"};
+  v81.resumeId=pendingPhysical.id;
+ }
  const c=config[v8.mode];
  const todo=rows.map(r=>'<button class="v8Row" data-v7-homeitem="'+esc(r.id)+'"><span><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+' · '+esc(r.status)+' · 下一步 '+esc(r.next)+'</small></span><em>继续 →</em></button>').join('');
  const currentModel=v7Current();
@@ -2260,7 +2266,8 @@ function v8Home(){
   Object.values(v81.byId).filter(t=>t.state.loaded).map(t=>'<button class="v8Row" data-v81-resume="'+t.id+'"><span><strong>'+esc(t.title)+'</strong><small>'+esc(t.id)+' · '+t.state.rows.length+' 列 · '+(t.state.dirty?'本次尚未保存':'已保存设计草稿')+' · '+esc(t.state.saved.at(-1)?.id||"无保存版本")+'</small></span><em>继续精确目标 →</em></button>').join('');
  return '<div class="v8Home"><div class="v8Demo">可交互原型 v0.8.1 · Retail Analytics 示例项目 · 数据与动作均为模拟</div>'+
   '<div class="v8Intro"><div><h1>从当前工作，找到下一步</h1><p>建设、指标、消费、异常恢复、安全、AI 协作与问答、主数据是独立故事入口。每条入口有自己的证据、决策及失败态。</p></div></div>'+
-  '<div class="v8Modes" aria-label="当前工作目标">'+Object.entries(config).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div>'+
+  '<div class="v8Modes" aria-label="主要工作目标">'+Object.entries(config).filter(([k])=>["build","consume","operate"].includes(k)).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div>'+
+  '<details class="v81Other" '+(!["build","consume","operate"].includes(v8.mode)?"open":"")+'><summary>更多工作：指标、安全、AI 与主数据</summary><div class="v8Modes">'+Object.entries(config).filter(([k])=>!["build","consume","operate"].includes(k)).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div></details>'+
   '<div class="v8Columns"><div><section class="v8Panel v8Next"><small>建议下一步 · '+esc(c.story)+'</small><h3>'+c.title+'</h3><p>'+c.text+'</p><div class="v8Status"><b>'+esc(c.identity)+'</b><span>样例对象 · 无真实运行证据</span></div><button class="btn primary" data-v8-next="'+c.target+'">'+c.action+' →</button>'+
   (v8.mode==='build'?'<button class="btn" data-v7-homeflow="physical" data-v7-homelayer="ODS">从源表直接设计 ODS →</button>':'')+'</section>'+
   '<section class="v8Panel"><h2>我的待推进</h2><label>协作职责 <select id="v7-home-role">'+Object.entries(v6RoleNames).map(([k,n])=>'<option value="'+k+'" '+(k===role?'selected':'')+'>'+n+'</option>').join('')+'</select></label><p>职责用于筛选演示待办，专业读写权限由顶栏画像单独表达。</p>'+
@@ -2294,6 +2301,7 @@ document.addEventListener('click',function(ev){
  if(e.dataset.v81Route){v81Route(e.dataset.v81Route);return}
  if(e.dataset.v81Ai){v81.aiAnswers[e.dataset.v81Ai]=true;renderMain();return}
  if(e.dataset.v8Mode){v8.mode=e.dataset.v8Mode;renderMain();return}
+ if(e.dataset.v8Next==='resume'&&v81.resumeId){v81SwitchTarget(v81.resumeId);go('model');v7.view='physical';renderMain();return}
  if(e.dataset.v8Next){if(e.dataset.v8Next==='drift')v8ExactGovernance('GOV-320');else if(["security","metric","mdm","dev"].includes(e.dataset.v8Next))v81Route(e.dataset.v8Next);else if(e.dataset.v8Next==="ask-desk"||e.dataset.v8Next==="assist-desk"){v81.modeDetail=e.dataset.v8Next;renderMain()}else v7HomeJump(e.dataset.v8Next);return}
  if(e.dataset.v8Drift){v8ExactGovernance(e.dataset.v8Drift);return}
  if(e.dataset.v8Product){v8.product=e.dataset.v8Product;v8.result=null;renderMain();return}
