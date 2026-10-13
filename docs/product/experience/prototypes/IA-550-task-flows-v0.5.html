@@ -358,7 +358,7 @@ var rows=id==="metadata"?sample.asset:id==="metricImpact"||id==="metricLineage"?
 var overrideRows=rows.map(function(r,i){return [r[0],r[1],t[2],r[3],r[4]]});
 return pageHead(t[0],t[1],"PROFESSIONAL TOOL / "+t[2],'<div class="headActions"><button class="btn" data-page="'+(domainOf(id).id==="definition"?"metric":"asset")+'">← 返回工作台</button><button class="btn" data-action="evidence">工具权限说明</button></div>')+
 '<div class="detailStrip">'+icon("shield")+'<strong>项目级独立专业入口</strong><span>不要求先选定某个 Asset / Metric ID</span><span class="tag blue">'+esc(t[2])+'</span></div>'+stateSwitch()+
-'<div class="split medium"><div class="card"><div class="listhead"><div><strong>'+esc(t[3])+'</strong><p>此为该专业能力的信息结构设计，尚未接入正式服务</p></div><span class="tag warn">示例集合</span></div>'+filters()+(state.status!=="ready"?statePanel():('<div class="tableScroll"><table><thead><tr><th>专业对象</th><th>来源范围</th><th>Owner</th><th>状态</th><th>查看</th></tr></thead><tbody>'+overrideRows.filter(function(r){return r.join(" ").toLowerCase().includes(state.query.toLowerCase())}).map(function(r,i){return '<tr><td><span class="rowtitle">'+esc(r[0])+'</span><small>'+esc(r[4])+'</small></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-action="evidence">证据 ›</button></td></tr>'}).join("")+'</tbody></table></div>'))+'</div><div class="card inspect"><small class="label">访问合同</small><h3>'+esc(t[2])+' 独立授权</h3><p>专业工具应保留原业务权限和菜单身份，不因收敛到工作台新增其它门槛。</p><div class="kv"><div class="kvrow"><span>对象范围</span><b>项目级 / 集合 / 反向查询</b></div><div class="kvrow"><span>访问身份</span><b>原 leaf menuCode</b></div><div class="kvrow"><span>跳转上下文</span><b>精确重验 projectHint</b></div><div class="kvrow"><span>真实回执</span><b>尚无（静态原型）</b></div></div><div class="softPanel">专业集合入口始终可发现，但只有授权的用户才能实际访问受限 API。</div></div></div>';
+'<div class="split medium v5ContentFirst"><div class="card"><div class="listhead"><div><strong>'+esc(t[3])+'</strong><p>此为该专业能力的信息结构设计，尚未接入正式服务</p></div><span class="tag warn">示例集合</span></div>'+filters()+(state.status!=="ready"?statePanel():('<div class="tableScroll"><table><thead><tr><th>专业对象</th><th>来源范围</th><th>Owner</th><th>状态</th><th>查看</th></tr></thead><tbody>'+overrideRows.filter(function(r){return r.join(" ").toLowerCase().includes(state.query.toLowerCase())}).map(function(r,i){return '<tr><td><span class="rowtitle">'+esc(r[0])+'</span><small>'+esc(r[4])+'</small></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-action="evidence">证据 ›</button></td></tr>'}).join("")+'</tbody></table></div>'))+'</div><div class="card inspect"><small class="label">访问合同</small><h3>'+esc(t[2])+' 独立授权</h3><p>专业工具应保留原业务权限和菜单身份，不因收敛到工作台新增其它门槛。</p><div class="kv"><div class="kvrow"><span>对象范围</span><b>项目级 / 集合 / 反向查询</b></div><div class="kvrow"><span>访问身份</span><b>原 leaf menuCode</b></div><div class="kvrow"><span>跳转上下文</span><b>精确重验 projectHint</b></div><div class="kvrow"><span>真实回执</span><b>尚无（静态原型）</b></div></div><div class="softPanel">专业集合入口始终可发现，但只有授权的用户才能实际访问受限 API。</div></div></div>';
 }
 function placeholderPage(id){
 var d=domainOf(id);return pageHead(nameOf(id),"完整 V3.1 导航中的既有能力；本轮不重构其生产页面或菜单授权。","UNMODIFIED / NAVIGATION PLACEHOLDER",'<button class="btn" data-palette="1">'+icon("grid")+' 查看全部菜单</button>')+
@@ -697,8 +697,14 @@ function v3Table(id){
  const rows=v3Rows(id);
  if(state.status!=="ready")return statePanel();
  if(!rows.length)return '<div class="stateArea"><h3>当前筛选无结果</h3><p>已清空对象详情和操作；请调整范围或关键词，避免误操作之前的对象。</p><button class="btn" data-clear="1">清除筛选</button></div>';
- if(id==="governance")return '<div class="tableScroll"><table class="queueTable"><thead><tr><th>任务 / 影响对象</th><th>责任人</th><th>优先级</th><th>等待时间</th><th>状态</th><th>查看</th></tr></thead><tbody>'+
-  rows.map(x=>{const r=x.r,m=v3QueueInfo[r[4]];return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="queueItemName">'+esc(r[0])+'</span><div class="rowmeta">'+esc(m.subject)+'</div></td><td>'+esc(m.owner)+'</td><td><span class="tag '+(m.priority==="P0"?"danger":m.priority==="P1"?"warn":"blue")+'">'+m.priority+'</span></td><td>'+esc(m.age)+'</td><td>'+((v4.store.governance[r[4]]?.receipts.length)?badge("已提交 · 待核验"):badge(r[3]))+'</td><td><button class="link" data-select="'+x.i+'">处理 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+ if(id==="governance")return '<div class="v5QueueList" aria-label="治理任务选择">'+rows.map(x=>{
+ const r=x.r,m=v3QueueInfo[r[4]],q=v4.store.governance[r[4]];
+ const current=q?.dirty?"本次内容未提交":q?.receipts.length?"已提交 · 待核验":r[3];
+ return '<button class="v5QueueEntry '+(state.select[id]===x.i?"active":"")+'" data-select="'+x.i+'">'+
+ '<span class="v5QueueName">'+esc(r[0])+' <span class="v5Priority">'+esc(m.priority)+'</span></span>'+
+ '<span class="v5QueueSubject">'+esc(m.subject)+'</span>'+
+ '<span class="v5QueueMeta"><span>'+esc(m.owner)+' · '+esc(m.age)+'</span><span>'+esc(current)+'</span></span></button>';
+ }).join("")+'</div>';
  return '<div class="tableScroll"><table><thead><tr><th>名称 / 标识</th><th>业务归属</th><th>类别</th><th>当前状态（示例）</th><th>操作</th></tr></thead><tbody>'+
  rows.map(x=>{const r=x.r;return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+'</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+((id==="metric"&&v4.store.metric[r[4]]?.receipts.length)?badge("已有模拟发布历史"):badge(r[3]))+'</td><td><button class="link" data-select="'+x.i+'">选中 / 详情 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
 }
@@ -935,10 +941,11 @@ function v3QueueBody(){
 function v3Governance(){
  const task=v3Selected("governance"),typeMap={"盘点":"盘点与上架","对账":"对账检查","变更":"资产变更","漂移":"来源变更"};
  const cardData=[["all","全部任务"],["盘点","盘点上架"],["对账","来源对账"],["变更","资产变更"],["漂移","结构漂移"]];
- const cards=cardData.map(x=>{const count=sample.governance.filter(r=>x[0]==="all"||r[1]===typeMap[x[0]]).length;
+ const scoped=sample.governance.filter(r=>v3.scope?.from!=="asset"||v3QueueInfo[r[4]].subject.includes(v3.scope.id));
+ const cards=cardData.map(x=>{const count=scoped.filter(r=>x[0]==="all"||r[1]===typeMap[x[0]]).length;
  return '<button class="queueCard '+(state.queue===x[0]?"active":"")+'" data-queue="'+x[0]+'"><span>'+x[1]+'</span><b>'+count+'</b><small>示例任务 · 同源计数</small></button>';}).join("");
  return pageHead("治理工作队列","先查看任务及处理责任；选择一条后在宽工作区完成差异核对、处理、提交与回执。","")+
- v3Ctx()+'<div class="queueCards">'+cards+'</div>'+
+ v3Ctx()+(v3.scope?.from==="asset"?'<p class="v5ScopeTag">仅统计当前关联资产 '+esc(v3.scope.id)+' 的任务</p>':"")+'<div class="queueCards">'+cards+'</div>'+
  '<div class="v4QueueWork"><section class="card v4ListSlim"><div class="cardHead"><h2>任务清单</h2></div>'+v3Filters()+v3Table("governance")+'</section>'+
  '<section class="card v4Workspace"><div class="cardHead"><h2>处理当前任务 · '+(task?esc(task[4]):"待确认选择")+'</h2></div>'+
  (state.status==="ready"?v4Prompt()+v3QueueBody():statePanel())+'</section></div>'+v3Review();
@@ -948,7 +955,7 @@ function v3Asset(){
  return pageHead("资产目录","区分治理资产与技术元数据实体；从对象事实出发查看对应治理任务。","",'<button class="btn" data-page="taxonomy">编目规则</button>')+
  v3Ctx()+
  '<div class="compactHead"><div><strong>资产与元数据双视图</strong><small style="display:block">技术实体不等于已上架资产</small></div><div class="hrow"><button class="btn '+(state.view==="asset"?"soft":"")+'" data-view="asset">治理资产</button><button class="btn '+(state.view==="entity"?"soft":"")+'" data-view="entity">技术实体</button></div></div>'+
- '<div class="split medium">'+v3Card("资产发现","筛选与对象选择一致，只有关联到本资产的治理记录才可显示",v3Filters()+v3Table("asset"))+
+ '<div class="split medium v5ContentFirst">'+v3Card("资产发现","筛选与对象选择一致，只有关联到本资产的治理记录才可显示",v3Filters()+v3Table("asset"))+
  '<section class="card"><div class="cardHead"><h2>对象事实与操作</h2></div><div class="cardBody">'+(r?
  '<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div>'+
  '<div class="itemFacts"><div class="factRow"><span>对象身份</span><strong>'+esc(r[2])+'</strong></div><div class="factRow"><span>Owner</span><strong>'+esc(r[2]==="技术实体"?"Metadata":"Asset")+'</strong></div><div class="factRow"><span>业务范围</span><strong>'+esc(r[1])+'</strong></div></div>'+
@@ -976,7 +983,7 @@ function v3Specialist(id){
  '<div class="resultPanel warn"><h3>独立功能样例 · 尚未关联当前对象</h3><p>此演示片段用于表达专业任务结构，示例对象不等于上方选择的业务对象。后续需按当前对象身份及其真实检查/策略/审批记录深化，不将示意内容当成实际结果。</p></div></div>';
  return pageHead(nameOf(id),descriptions[id],"",'<button class="btn" data-page="'+(id==="quality"?"qualityRun":id==="security"?"securityAudit":id==="lifecycle"?"metadata":"asset")+'">项目级专业入口 ↗</button>')+
  v3Ctx()+v3Steps(config.steps,index,"specialist")+
- '<div class="split medium"><section class="card"><div class="cardHead"><h2>'+esc(config.panels[index])+'</h2></div>'+content+'</section><section class="card"><div class="cardHead"><h2>任务说明 / 事实边界</h2></div><div class="cardBody">'+facts+'<p>'+esc(config.help)+'</p><div class="riskLine">当前原型不执行该领域真实规则配置、策略部署、主数据合并或生命周期运行。</div><div class="itemFacts"><div class="factRow"><span>当前步骤</span><strong>'+esc(current)+'</strong></div><div class="factRow"><span>所属 Owner</span><strong>'+esc(nameOf(id))+'</strong></div><div class="factRow"><span>正式证据</span><strong>尚未接入</strong></div></div></div></section></div>'+v3Review();
+ '<div class="split medium v5ContentFirst"><section class="card"><div class="cardHead"><h2>'+esc(config.panels[index])+'</h2></div>'+content+'</section><section class="card"><div class="cardHead"><h2>任务说明 / 事实边界</h2></div><div class="cardBody">'+facts+'<p>'+esc(config.help)+'</p><div class="riskLine">当前原型不执行该领域真实规则配置、策略部署、主数据合并或生命周期运行。</div><div class="itemFacts"><div class="factRow"><span>当前步骤</span><strong>'+esc(current)+'</strong></div><div class="factRow"><span>所属 Owner</span><strong>'+esc(nameOf(id))+'</strong></div><div class="factRow"><span>正式证据</span><strong>尚未接入</strong></div></div></div></section></div>'+v3Review();
 }
 function v3StatePanel(){
  const data={
