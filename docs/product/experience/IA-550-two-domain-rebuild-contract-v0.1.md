@@ -282,3 +282,14 @@
 当前**最新综合原型**：[IA-550-task-flows-v0.6.html](prototypes/IA-550-task-flows-v0.6.html)。[两项新需求的流程、Owner 和模拟交互验收](IA-550-v0.6-new-requirements-prototype-review.md)。[可重复 v0.6 交互回归](../../scripts/architecture/ia550-v06-prototype.test.mjs)。v0.5.1 保留为此前边界审查的历史基线；v0.6 **不是已签收**。
 
 **严格原则**：模型选择来源依赖在前、字段批量生成及源列证据在后、编辑/标准/清洗/汇总按层区分；协作中心只管理需求/问题/口径确认、责任、任务引用与验收，专业模型、标准、指标、治理、执行的权威事实仍归原 Owner。源表、版本、协作回执、模型保存均为模拟，不声称真实部署、运行和发布。正式实施必须先完成新一轮 UX/Owner 合同审核；PR #553 保持 Draft、不得自动合并或改动生产 UI。
+
+
+## 十四、2026-10-13 · v0.7 逻辑模型作为业务→物理建模桥梁（新增设计复核）
+
+需求方指出 v0.6 过度强调分层物理来源与自动加载字段，却没有让独立逻辑模型成为可操作的业务桥梁。本次评审对照 `data-ops-ui/src/pages/modeling/logical.tsx` 和 **PD-010 PROPOSED**，不是直接批准新的生产门禁。
+
+**最新综合主原型：** [IA-550-task-flows-v0.7.html](prototypes/IA-550-task-flows-v0.7.html)。[v0.7 专项设计合同与 13 条验收](IA-550-v0.7-logical-to-physical-review.md)；[可重复 Node 模拟 DOM 回归](../../scripts/architecture/ia550-v07-prototype.test.mjs)。v0.6 分层物理与协作流程、v0.5.1 历史收尾全部保留为对照基线。
+
+按故事默认正向：Semantic 业务过程/标准字段 → **Modeling Logical：业务实体、属性、关系、粒度、版本** → Modeling Physical 目标分层/依赖版本/全字段候选 → **逻辑属性↔物理列关系确认** → 保存物理设计版本 → DataDev 另行部署执行。逆向 ODS 贴源例外：物理来源可直接生成 ODS，再由来源证据形成人工审阅的逻辑候选。DWS/ADS 可以复用已有逻辑、指标/消费语义，不应强制每张表新建一份逻辑实体。
+
+原型目前展示独立逻辑冻结快照及逐字段审阅关系，仅证明**交互路径**，不代表当前 PD 已 APPROVED、Semantic 已授权、映射已真正持久化或目标物理表已经部署。完整产品门禁要先与 Owner 审核确认再进入工程；保持 PR Draft，不改生产 UI/API/RBAC/DDL。
