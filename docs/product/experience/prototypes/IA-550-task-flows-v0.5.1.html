@@ -879,6 +879,26 @@ function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+
 
 
 
+
+function v51BindingPanel(r){
+ if(!r)return '<div class="v4Empty"><h3>当前没有标准字段</h3><p>请从左侧选择一个字段。</p></div>';
+ const id=r[4],role=v51.fieldRoles[id]||"PROCESS",draft=v51BindDraft(id),saved=v51Binding(id),error=v51ValidBinding(id,draft);
+ const fields=role==="METRIC"?["TYPE","UNIT","CALIBER"]:role==="DIMENSION"?["TYPE","CODE","SECURITY"]:["TYPE"];
+ const names={TYPE:"类型标准（必填）",UNIT:"单位标准（度量必填）",CALIBER:"业务口径标准",CODE:"码值标准",SECURITY:"安全标准"};
+ const selects=fields.map(k=>'<div class="v51BindingRow"><label>'+names[k]+'</label><select id="v51-bind-'+k+'" '+(!actionAllowed()?"disabled":"")+'><option value="">'+(k==="TYPE"||k==="UNIT"?"请选择有效标准":"不引用")+'</option>'+
+ v51.standards.filter(s=>s.kind===k&&s.status==="ENABLED").map(s=>'<option value="'+s.id+'" '+(draft[k]===s.id?"selected":"")+'>'+esc(s.name)+' · '+esc(s.code)+'</option>').join("")+'</select></div>').join("");
+ const dirty=fields.some(k=>draft[k]!==saved[k]),history=v51.bindingHistory[id]||[];
+ return '<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>stdFieldId '+esc(id)+'</span></div>'+
+ '<div class="itemFacts"><div class="factRow"><span>字段角色</span><strong>'+esc(role)+'</strong></div><div class="factRow"><span>字段类型快照</span><strong>'+esc(r[2])+'</strong></div><div class="factRow"><span>角色约束</span><strong>'+(role==="METRIC"?"TYPE+UNIT 必填":role==="DIMENSION"?"TYPE 必填，CODE/SECURITY 可选":"TYPE 必填")+'</strong></div></div>'+
+ '<h3 style="margin-top:14px">关联数据标准</h3><p class="micro">这一步编辑的是标准字段→已启用标准的引用，不会修改当前模型草稿。</p>'+selects+
+ (error?'<div class="v4Notice"><strong>引用校验</strong><p>'+esc(error)+'</p></div>':'')+
+ (dirty?'<p class="v51BindingStatus">关联草稿已变化 · 尚未保存</p>':'<p class="micro">引用关系与当前本地记录一致。</p>')+
+ v3ActionLine('<button class="btn" data-v51-reset="1">恢复原绑定</button><button class="btn primary" data-v51-save="1" '+(!actionAllowed()||!dirty||error?"disabled":"")+'>保存标准引用（模拟）</button>')+
+ '<div class="v51BindingFacts"><h3>保存中的标准引用</h3>'+fields.map(k=>'<div class="factRow"><span>'+k+'</span><strong>'+esc(v51.standards.find(s=>s.id===saved[k])?.name||"未绑定")+'</strong></div>').join("")+'</div>'+
+ '<div class="v4History"><h3>绑定历史</h3>'+(history.map(x=>'<p>修订 '+x.revision+' · '+esc(x.fieldId)+' · '+esc(x.date)+'</p>').join("")||'<p>尚无本地绑定变更。</p>')+'</div>'+
+ '<div class="actionLine"><button class="btn" data-v3-action="standard-attach">引用当前标准字段到指定模型 →</button></div>';
+}
+
 function v51StandardWorkspace(){
  const fieldMode=v51.view==="library",r=fieldMode?v3Selected("standard"):null;
  const tabs='<nav class="v51StandardTabs" aria-label="标准与字段视图"><button data-v51-view="catalog" class="'+(!fieldMode?"active":"")+'">标准目录 · 六类标准</button><button data-v51-view="library" class="'+(fieldMode?"active":"")+'">标准字段库</button></nav>';
