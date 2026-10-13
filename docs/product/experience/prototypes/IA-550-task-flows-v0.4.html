@@ -904,31 +904,57 @@ function v3FinishEdit(leave){
  if(leave&&v3.pending){const next=v3.pending;v3.pending=null;go(next)}
 }
 function v3HandleAction(a){
- const m=v3.metric,b=v3.build;
+ const m=v3.metric,b=v3.build,allow=actionAllowed();
  if(a==="state-retry"){state.status="ready";renderMain();return}
  if(a==="new"){v3OpenEdit("create");return}
  if(a==="edit"){v3OpenEdit("edit");return}
- if(a==="process-next"){const r=v3Selected("semantic");if(!r)return;b.process=r[4];v3Route("standard",{id:r[4],label:r[0],relation:"业务过程"});return}
- if(a==="standard-attach"){const r=v3Selected("standard");if(!r)return;b.field=r[4];v3Route("model",{id:r[4],label:r[0],relation:"标准字段"});return}
+ if(a==="process-next"){const r=v3Selected("semantic");if(!r)return;const linked=v4StoreFor("model","PM-701");if(linked.process!==r[4]){v4InvalidModel(linked);linked.process=r[4]}v3Route("standard",{id:r[4],label:r[0],relation:"业务过程"});return}
+ if(a==="standard-attach"){const r=v3Selected("standard");if(!r)return;
+  const linked=v4StoreFor("model","PM-701");if(linked.field!==r[4]){v4InvalidModel(linked);linked.field=r[4]}
+  state.select.model=sample.model.findIndex(x=>x[4]==="PM-701");v3Route("model",{id:r[4],label:r[0],relation:"标准字段"});return}
  if(a==="model-open"){v3OpenDrawer("model");return}
- if(a==="model-check"){b.checked=false;state.tab.model="校验记录";renderMain();return}
- if(a==="model-fix"){b.fixed=true;renderMain();return}
- if(a==="model-recheck"){b.checked=!!b.fixed;renderMain();return}
- if(a==="model-save"){if(!b.checked)return; b.version="DEMO-MODEL-"+b.model+"-V2.1";renderMain();return}
+ if(a==="model-check"){if(!allow)return;b.checked=false;b.checkRevision=-1;state.tab.model="校验记录";renderMain();return}
+ if(a==="model-fix"){if(!allow)return;b.fixed=true;b.dirty=true;renderMain();return}
+ if(a==="model-recheck"){if(!allow||!b.fixed)return;b.checked=true;b.checkRevision=b.rev;renderMain();return}
+ if(a==="model-save"){if(!allow||!v4ValidModel(b))return;
+  if(!b.savedVersions.some(x=>x.rev===b.rev)){
+   const id="DEMO-MODEL-"+b.model+"-V2."+(b.savedVersions.length+1);
+   b.savedVersions.push(Object.freeze({id,modelId:b.model,source:b.source,mapField:b.mapField,field:b.field,process:b.process,rev:b.rev,date:new Date().toLocaleString("zh-CN")}));
+   b.version=id;
+  }
+  b.dirty=false;renderMain();return}
  if(a==="model-next-metric"){const r=v3Selected("model");if(r)v3Route("metric",{id:r[4],label:r[0],relation:"模型引用"});return}
- if(a==="metric-validate"){m.checked=!!m.formula.trim()&&!!m.filter.trim();m.impactSeen=false;state.tab.metric="校验";renderMain();return}
- if(a==="metric-fix"){m.filter="status = PAID";m.checked=false;state.tab.metric="定义口径";renderMain();return}
- if(a==="metric-impact"){if(!m.checked)return;m.impactSeen=true;state.tab.metric="引用与影响";renderMain();return}
- if(a==="metric-to-publish"){if(!m.checked)return;m.impactSeen=true;state.tab.metric="版本与发布";renderMain();return}
- if(a==="metric-publish"){if(!(m.checked&&m.impactSeen))return;m.published=true;m.release="DEMO-METRIC-PUBLICATION-"+m.id+"-V1.2";renderMain();return}
+ if(a==="metric-validate"){if(!allow)return;m.validationAttempted=true;
+  const must=m.expected;
+  const formulaOk=!!m.formula.trim()&&(m.id!=="MET-031"||m.formula.includes("NULLIF"));
+  const filterOk=m.filter.replace(/\s+/g," ").toUpperCase().includes(must.replace(/\s+/g," ").toUpperCase());
+  m.checked=!!(formulaOk&&filterOk);m.checkRevision=m.checked?m.rev:-1;m.impactSeen=false;m.impactRevision=-1;
+  state.tab.metric="校验";renderMain();return}
+ if(a==="metric-fix"){if(!allow)return;
+  if(m.filter!==m.expected){m.filter=m.expected;v4InvalidMetric(m)}
+  m.validationAttempted=false;state.tab.metric="定义口径";renderMain();return}
+ if(a==="metric-impact"){if(!v4ValidMetric(m))return;state.tab.metric="引用与影响";renderMain();return}
+ if(a==="metric-to-publish"){if(!allow||!v4ValidMetric(m))return;m.impactSeen=true;m.impactRevision=m.rev;state.tab.metric="版本与发布";renderMain();return}
+ if(a==="metric-publish"){if(!allow||!v4ValidMetric(m)||!m.impactSeen||m.impactRevision!==m.rev)return;
+  if(!m.receipts.some(x=>x.rev===m.rev)){
+   const id="DEMO-METRIC-PUBLICATION-"+m.id+"-V"+(m.receipts.length+1);
+   m.receipts.push(Object.freeze({id,metricId:m.id,formula:m.formula,filter:m.filter,rev:m.rev,date:new Date().toLocaleString("zh-CN")}));
+   m.release=id;
+  }
+  m.published=true;m.dirty=false;renderMain();return}
  if(a==="metric-return"){state.tab.metric="定义口径";renderMain();return}
  if(a==="asset-drawer"){v3OpenDrawer("asset");return}
- if(a==="asset-queue"){const r=v3Selected("asset");if(!r)return;v3Route("governance",{id:r[4],label:r[0],relation:"治理记录"});return}
- if(a==="queue-evidence"){v3.queueStep="evidence";renderMain();return}
- if(a==="queue-resolve"){if(!actionAllowed())return;v3.queueStep="resolve";renderMain();return}
- if(a==="queue-review"){if(!v3.decision){toast("请选择处理或转交方式");return}if(v3.decision==="transfer"&&!v3.transferTo){toast("转交必须选择责任人");return}if(v3.note.trim().length<4){toast("请填写至少 4 字的处理依据");return}v3.queueStep="submit";renderMain();return}
- if(a==="queue-submit"){const task=v3Selected("governance");if(!task||!v3.decision)return;v3.receipts||={};v3.receipts[task[4]]="DEMO-GOV-RECEIPT-"+task[4]+"-01";v3.queueStep="receipt";renderMain();return}
- if(a==="queue-next"){v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo="";renderMain();return}
+ if(a==="asset-queue"){const r=v3Selected("asset");if(r)v3Route("governance",{id:r[4],label:r[0],relation:"资产治理任务"});return}
+ if(a==="queue-evidence"){v3.queueStep="evidence";v4SaveActive("governance");renderMain();return}
+ if(a==="queue-resolve"){if(!allow){toast("只读画像不能开始处理或转交");return}v3.queueStep="resolve";v4SaveActive("governance");renderMain();return}
+ if(a==="queue-review"){const issue=v4GuardQueue();if(issue){toast(issue);v3.queueStep="resolve";renderMain();return}v3.queueStep="submit";v4SaveActive("governance");renderMain();return}
+ if(a==="queue-submit"){
+  const issue=v4GuardQueue();if(issue){toast(issue);v3.queueStep="resolve";renderMain();return}
+  const task=v3Selected("governance");if(!task)return;
+  const q=v4StoreFor("governance",task[4]);const id="DEMO-GOV-RECEIPT-"+task[4]+"-"+(q.receipts.length+1);
+  const rec=Object.freeze({id,taskId:task[4],subject:v3QueueInfo[task[4]].subject,decision:v3.decision,transferTo:v3.transferTo,note:v3.note,date:new Date().toLocaleString("zh-CN")});
+  q.receipts.push(rec);q.dirty=false;v3.queueStep="receipt";v4SaveActive("governance");renderMain();return}
+ if(a==="queue-next"){v3.queueStep="evidence";v4SaveActive("governance");renderMain();return}
 }
 document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
@@ -938,11 +964,18 @@ document.addEventListener("click",function(ev){
  if(el.dataset.v3Tab){state.tab[state.page]=el.dataset.v3Tab;renderMain();return}
  if(el.dataset.v3Step){
   const [kind,num]=el.dataset.v3Step.split(":"),n=Number(num);
+  if(kind==="queue"){
+    if(n===1&&!actionAllowed()){toast("只读角色只能查看历史和差异");return}
+    if(n===2){const issue=v4GuardQueue();if(issue){toast(issue);v3.queueStep="resolve";renderMain();return}}
+    if(n===3&&!v4StoreFor("governance",v3.queueId).receipts.length){toast("尚无此任务的处理记录");return}
+  }
   if(kind==="metric"){state.tab.metric=["定义口径","校验","引用与影响","版本与发布"][n]}
   if(kind==="specialist"){state.tab[state.page]=({quality:["规则监控","检查执行","结果证据","失败恢复"],security:["分级分类","访问策略","脱敏裁决","访问审计"],lifecycle:["策略定义","生效绑定","TTL 观测","存储趋势"],mdm:["实体建模","匹配识别","清洗规则","变更审批"]})[state.page][n]}
-  if(kind==="queue"){if(n===0)v3.queueStep="evidence";if(n===1)v3.queueStep="resolve";if(n===2&&v3.note&&v3.decision)v3.queueStep="submit";if(n===3&&v3.receipts&&v3.receipts[v3.queueId])v3.queueStep="receipt"}
+  if(kind==="queue"){v3.queueStep=["evidence","resolve","submit","receipt"][n];v4SaveActive("governance")}
   renderMain();return
  }
+ if(el.dataset.v4Backto!==undefined){v3Back(Number(el.dataset.v4Backto));return}
+ if(el.dataset.v4Switch){v4ResolvePending(el.dataset.v4Switch);return}
  if(el.dataset.v3Back){v3Back();return}
  if(el.dataset.v3Close){v3CloseDrawer();return}
  if(el.dataset.v3Edit){
@@ -957,16 +990,18 @@ document.addEventListener("click",function(ev){
 document.addEventListener("input",function(ev){
  const t=ev.target;if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=true}
  if(t.id==="v3-edit-note"&&v3.editing){v3.editing.note=t.value;state.editDirty=true}
- if(t.id==="v3-formula"){v3.metric.formula=t.value;v3.metric.checked=false;v3.metric.impactSeen=false;v3.metric.published=false}
- if(t.id==="v3-condition"){v3.metric.filter=t.value;v3.metric.checked=false;v3.metric.impactSeen=false;v3.metric.published=false}
- if(t.id==="v3-mapfield"){v3.build.mapField=t.value;v3.build.checked=false;v3.build.version=null}
- if(t.id==="v3-queue-note"){v3.note=t.value}
+ if(t.id==="v3-formula"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.formula=t.value}
+ if(t.id==="v3-condition"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.filter=t.value}
+ if(t.id==="v3-mapfield"&&actionAllowed()){v4InvalidModel(v3.build);v3.build.mapField=t.value}
+ if(t.id==="v3-queue-note"&&actionAllowed()){v3.note=t.value;v4QueueChanged()}
 });
 document.addEventListener("change",function(ev){
  const t=ev.target;
- if(t.id==="v3-queue-decision"){v3.decision=t.value;if(t.value!=="transfer")v3.transferTo="";renderMain()}
- if(t.id==="v3-transfer"){v3.transferTo=t.value}
- if(t.id==="v3-source"){v3.build.source=t.value;v3.build.checked=false;renderMain()}
+ if(t.id==="v4-choose"){selectRow(Number(t.value));return}
+ if(t.id==="v4-category"){state.tree=t.value;renderMain();return}
+ if(t.id==="v3-queue-decision"&&actionAllowed()){v3.decision=t.value;if(t.value!=="transfer")v3.transferTo="";v4QueueChanged();renderMain()}
+ if(t.id==="v3-transfer"&&actionAllowed()){v3.transferTo=t.value;v4QueueChanged()}
+ if(t.id==="v3-source"&&actionAllowed()){if(v3.build.source!==t.value){v4InvalidModel(v3.build);v3.build.source=t.value}renderMain()}
 });
 dom("drawerShade").addEventListener("click",v3CloseDrawer);
 
