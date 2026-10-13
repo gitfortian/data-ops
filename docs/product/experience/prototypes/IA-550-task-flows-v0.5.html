@@ -648,7 +648,15 @@ function v4GuardQueue(){
  if((v3.note||"").trim().length<4)return "请至少填写 4 字的处理依据。";
  return "";
 }
-function v4QueueChanged(){const q=v4StoreFor("governance",v3.queueId);q.dirty=true;v4SaveActive("governance")}
+function v4QueueChanged(){
+ const q=v4StoreFor("governance",v3.queueId);q.dirty=true;v4SaveActive("governance");
+ const root=dom("main"),status=root.querySelector?.(".v5TaskStatus");
+ if(status)status.textContent=q.receipts.length?"有历史记录 · 本次未提交":"填写处理中";
+ for(const n of [2,3]){
+  const step=root.querySelector?.('[data-v3-step="queue:'+n+'"]');
+  if(step){step.classList.remove("done");const tick=step.querySelector?.(".tick");if(tick)tick.textContent=(n+1)+"."}
+ }
+}
 function v4ModelIssue(b){return b.issue||"待补充当前模型的校验规则"}
 function v4Progress(kind,n){
  if(kind==="metric"){const m=v3.metric;return n===0?true:n===1?v4ValidMetric(m):n===2?v4ValidMetric(m)&&m.impactSeen&&m.impactRevision===m.rev:n===3?!!m.published:false}
@@ -918,7 +926,7 @@ function v3QueueBody(){
  const receipt=q.receipts.at(-1),valid=!v4GuardQueue();
  const steps=["evidence","resolve","submit","receipt"],index=steps.indexOf(step);
  const header='<div class="detailStrip"><strong>'+esc(task[0])+'</strong><span>'+id+'</span><span class="tag warn">'+esc(m.priority)+' · '+esc(m.age)+'</span></div>'+
- '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>负责人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>任务阶段</span><strong>'+(q.dirty&&q.receipts.length?"有历史记录 · 本次未提交":q.dirty?"填写处理中":q.receipts.length?"已提交样例 · 等待业务核验":"未开始处理")+'</strong></div></div>';
+ '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>负责人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>任务阶段</span><strong class="v5TaskStatus">'+(q.dirty&&q.receipts.length?"有历史记录 · 本次未提交":q.dirty?"填写处理中":q.receipts.length?"已提交样例 · 等待业务核验":"未开始处理")+'</strong></div></div>';
  const canEdit=actionAllowed();
  let detail="";
  if(step==="evidence"){
