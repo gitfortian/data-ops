@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const html = readFileSync('docs/product/experience/prototypes/IA-550-task-flows-v0.5.1.1.html', 'utf8');
+const html = readFileSync('docs/product/experience/prototypes/IA-550-task-flows-v0.5.1.html', 'utf8');
 const code = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 assert.ok(code, 'v0.5.1 must contain its own standalone interaction implementation');
 const fixture = code.replace('var start=decodeURIComponent',
