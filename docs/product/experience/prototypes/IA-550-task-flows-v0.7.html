@@ -290,6 +290,12 @@ body{color:#18191d;background:#f7f7f8}
 @media(max-width:980px){.v7HomeGrid{grid-template-columns:minmax(0,1fr)}.v7Hero{flex-direction:column;align-items:flex-start}.v7StageGrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:700px){.v7StageGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.v7Hero{padding:18px}.v7Hero h1{font-size:21px}.v7HeroActions button{flex:1}}
 @media(max-width:440px){.v7HomeStats{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.v7Stat{padding:11px}.v7Stat .number{font-size:21px}.v7HomePanel{padding:13px}}
+
+.v7ResourceGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
+.v7Resource{border:1px solid #ebe7e9;background:#fdfcfc;border-radius:9px;padding:12px;min-width:0}
+.v7Resource small,.v7Resource span{font-size:10px;color:#77717a;display:block}.v7Resource strong{font-size:22px;display:block;color:#8c7a7f;font-weight:650;margin:6px 0}.v7Resource span{font-size:9px}
+@media(max-width:1200px){.v7ResourceGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.v7ResourceGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -1568,7 +1574,7 @@ function v7NewLogical(){
 function v7MetaEdit(key,value){
  const m=v7Current();if(!actionAllowed()||!["name","process","grain"].includes(key)||m[key]===value)return;
  m[key]=value;v7LogicalTouch(m);
- if(key!=="grain")renderMain();
+ if(key==="process")renderMain();
 }
 function v7RelationEdit(index,key,value){
  const m=v7Current(),r=m.relations[index];
@@ -1587,7 +1593,7 @@ function v7Latest(m){return m.versions.at(-1)}
 function v7LogicalTouch(m){m.rev++;for(const k of Object.keys(v7.mapping)){const x=v7.mapping[k];if(x.logicalId===m.id){x.reviewed=false;x.stale=true;if(v6.layers[k])v6.layers[k].checked=false}}}
 function v7FreezeLogical(){
  if(!actionAllowed()){toast("当前专业只读画像不能保存逻辑草稿");return}
- const m=v7Current();if(!m.attrs.length){toast("请先添加逻辑属性再冻结");return}if(!m.grain.trim()||m.attrs.some(a=>!a.code.trim()||!a.name.trim())){toast("先完成逻辑粒度及业务属性");return}
+ const m=v7Current();if(!m.attrs.length){toast("请先添加逻辑属性再冻结");return}if(!m.name.trim()||!m.process.trim()){toast("请填写逻辑模型名称和业务过程");return}if(!m.grain.trim()||m.attrs.some(a=>!a.code.trim()||!a.name.trim())){toast("先完成逻辑粒度及业务属性");return}
  const version="L"+(m.versions.length+1);
  m.versions.push(Object.freeze({version,revision:m.rev,grain:m.grain,process:m.process,attrs:m.attrs.map(a=>Object.freeze({...a})),relations:m.relations.map(r=>Object.freeze({...r}))}));
  toast("逻辑草稿已冻结本地设计快照 "+version+"；未获业务批准或模型发布");
@@ -1730,8 +1736,17 @@ function v7Home(){
   ["待推进事项",String(waiting.length),"会话中的订单主题协作演示"],
   ["逻辑设计版本",String(logicalSaved),"当前会话冻结的本地逻辑快照"],
   ["物理设计版本",String(physicalSaved),"本地模拟保存 · 未创建物理表"],
-  ["待核验/阻塞",String(Math.max(1,reviewPending)),"来源漂移及映射复核为示例"]
+  ["待核验/阻塞",String(1+reviewPending),"一项示例来源漂移 + 待核验映射"]
  ];
+ 
+ const realOwners=[
+  ["数据源","DataSource / Metadata"],["物理模型","Modeling"],["已发布指标","Metric"],
+  ["治理资产","Asset"],["运行异常","DataDev / Runtime"],["消费交付","Dataset / Service"]
+ ];
+ const resourceView='<section class="v7HomePanel" style="margin-top:14px"><div class="v7PanelTitle"><h2>项目规模与运行概况 · 待接入实时证据</h2><button data-v7-homeflow="dev">进入开发运行 →</button></div>'+
+ '<p class="v7LiveDisclaimer">正式首页应按权限从各领域 API 读取有版本/范围的项目事实。设计阶段没有真实连接，因此不伪造数量、增长率或“运行正常”。</p>'+
+ '<div class="v7ResourceGrid">'+realOwners.map(([label,owner])=>'<div class="v7Resource"><small>'+esc(label)+'</small><strong>—</strong><span>待连接 '+esc(owner)+'</span></div>').join("")+'</div></section>';
+
  const statCards=st.map(v=>'<div class="v7Stat"><label>'+esc(v[0])+'</label><span class="number">'+esc(v[1])+'</span><span class="note">'+esc(v[2])+'</span></div>').join("");
  const actions=visible.map(r=>{
   const isMine=my.includes(r),label=types[r.type]||"事项";
@@ -1785,7 +1800,7 @@ function v7Home(){
  '<div class="v6Stage"><strong>设计就绪</strong><p class="micro">逻辑设计、模型结构、版本和标准字段映射</p></div>'+
  '<div class="v6Stage"><strong>部署就绪</strong><p class="micro">目标环境、DDL/SQL 与任务合同待确认</p></div>'+
  '<div class="v6Stage"><strong>实际运行与消费</strong><p class="micro">执行回执、质量验证、指标发布和可用交付</p></div>'+
- '<p class="v7LiveDisclaimer">不能以“已保存模型”推断数据已经入仓。</p></section></aside></div></div>';
+ '<p class="v7LiveDisclaimer">不能以“已保存模型”推断数据已经入仓。</p></section></aside></div>'+resourceView+'</div>';
 }
 function v7MappingCurrentHome(layer,p){
  const m=v7.models.find(x=>x.id===p.logicalId);
