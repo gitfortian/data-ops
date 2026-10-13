@@ -1221,7 +1221,7 @@ function v6FieldCandidates(x){
  if(x.layer==="DWS"){
  const m=x.metric==="MET-026"?"pay_order_cnt":"pay_amount_sum";
  return [{name:"stat_date",type:"DATE",source:x.deps[0],origin:"pay_time",rule:"DATE(pay_time)",role:"维度",std:""},
- {name:m,type:m==="pay_order_cnt"?"BIGINT":"DECIMAL(20,2)",source:x.deps[0],origin:m==="pay_order_cnt"?"order_id":"pay_amount",rule:m==="pay_order_cnt"?"COUNT(DISTINCT order_id)":"SUM(pay_amount)",role:"度量",std:m==="pay_order_cnt"?"STD-201":"STD-208"}];
+ {name:m,type:m==="pay_order_cnt"?"BIGINT":"DECIMAL(20,2)",source:x.deps[0],origin:m==="pay_order_cnt"?"order_id":"pay_amount",rule:m==="pay_order_cnt"?"COUNT(DISTINCT order_id)":"SUM(pay_amount)",role:"度量",std:m==="pay_order_cnt"?"":"STD-208"}];
  }
  if(x.layer==="ADS"){const want=x.consumer==="订单经营日报"?["stat_date","pay_order_cnt","pay_amount_sum"]:["order_id","pay_amount","pay_time"];return want.map(name=>{const hit=x.deps.flatMap(id=>v6Sources[id].cols.map(col=>({id,col}))).find(o=>o.col[0]===name);return {name,type:hit?.col[1]||"待补充",source:hit?.id||"无已核实来源",origin:name,rule:"输出投影 · 待确认",role:"消费输出",std:""}})}
  return x.deps.flatMap(id=>v6Sources[id].cols.map(col=>({name:col[0],type:col[1],source:id,origin:col[0],rule:x.layer==="ODS"?"保真镜像":x.layer==="DIM"?"维度属性待确认":"清洗及关联待确认",role:x.layer==="ODS"?"来源列":x.layer==="DIM"?"维度属性":"明细字段",std:x.layer==="ODS"?"":col[0]==="pay_amount"?"STD-208":col[0]==="order_id"?"STD-201":""})));
@@ -1287,6 +1287,7 @@ function v6Check(){
 }
 function v6Save(){
  const x=v6Layer();if(!x.checked||x.pending||!actionAllowed())return;
+ if(x.layer!=="ODS"&&!v7MappingCurrent()){x.checked=false;toast("逻辑或物理版本已变化，请重新审阅逻辑→物理映射");renderMain();return}
  const id="DEMO-"+x.layer+"-V"+(x.saved.length+1);
  x.saved.push(Object.freeze({id,rev:x.revision,deps:x.deps.map(d=>d+"@"+v6Sources[d].version),fields:x.rows.map(r=>Object.freeze({...r})),grain:x.grain,logicalMapping:x.layer==="ODS"?null:v7MappingState().receipt}));
  x.dirty=false;x.handoff=false;renderMain();
@@ -1516,13 +1517,13 @@ const v7={
   {id:"LM-019",name:"会员业务实体",process:"会员识别 · 示例语义",grain:"一个会员身份",rev:1,versions:[],relations:[{from:"会员实体",to:"订单支付",cardinality:"一对多 · 待确认"}],
    attrs:[{id:"LA-201",code:"customer_id",name:"会员身份标识",role:"业务主键",std:"STD-212"},{id:"LA-202",code:"member_tier",name:"会员等级",role:"维度属性",std:""},{id:"LA-203",code:"customer_name",name:"会员名称",role:"维度属性",std:""}]},
   {id:"LM-026",name:"支付订单分析主题视图",process:"订单支付 · MET-026 / MET-027",grain:"按统计日的支付订单分析",rev:1,versions:[],relations:[{from:"支付订单分析",to:"订单支付事实",cardinality:"按统计日汇总"}],
-   attrs:[{id:"LA-301",code:"stat_date",name:"支付统计日期",role:"分析维度",std:"STD-205"},{id:"LA-302",code:"pay_order_cnt",name:"支付订单数",role:"汇总度量",std:"STD-201"},{id:"LA-303",code:"pay_amount_sum",name:"实付金额汇总",role:"汇总度量",std:"STD-208"}]}
+   attrs:[{id:"LA-301",code:"stat_date",name:"支付统计日期",role:"分析维度",std:"STD-205"},{id:"LA-302",code:"pay_order_cnt",name:"支付订单数",role:"汇总度量",std:""},{id:"LA-303",code:"pay_amount_sum",name:"实付金额汇总",role:"汇总度量",std:"STD-208"}]}
  ]
 };
 function v7Current(){return v7.models.find(x=>x.id===v7.selected)||v7.models[0]}
 function v7ForLayer(layer=v6.layer){return v7.models.find(x=>x.id===v7.targetByLayer[layer])||v7.models[0]}
 function v7Latest(m){return m.versions.at(-1)}
-function v7LogicalTouch(m){m.rev++;for(const k of Object.keys(v7.mapping)){const x=v7.mapping[k];if(x.logicalId===m.id){x.reviewed=false;x.stale=true}}}
+function v7LogicalTouch(m){m.rev++;for(const k of Object.keys(v7.mapping)){const x=v7.mapping[k];if(x.logicalId===m.id){x.reviewed=false;x.stale=true;if(v6.layers[k])v6.layers[k].checked=false}}}
 function v7FreezeLogical(){
  if(!actionAllowed()){toast("当前专业只读画像不能保存逻辑草稿");return}
  const m=v7Current();if(!m.grain.trim()||m.attrs.some(a=>!a.code.trim()||!a.name.trim())){toast("先完成逻辑粒度及业务属性");return}
@@ -1564,7 +1565,7 @@ function v7MappingReset(){
  const attrs=version?.attrs||m.attrs;
  for(let i=0;i<x.rows.length;i++){
   const r=x.rows[i];
-  const guess=attrs.find(a=>a.code.toLowerCase()===r.name.toLowerCase()||!!(r.std&&a.std&&r.std===a.std));
+  const guess=attrs.find(a=>a.code.toLowerCase()===r.name.toLowerCase());
   p.selection[i]=guess?.id||"";
  }
  renderMain();
