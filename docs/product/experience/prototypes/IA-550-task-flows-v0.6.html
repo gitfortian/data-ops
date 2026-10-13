@@ -340,7 +340,7 @@ var d=domains.find(function(x){return x.id===state.lastMenu})||domains[0];dom("s
 dom("sideTitle").textContent=d.name;dom("topDomain").textContent=d.name+"  /  "+nameOf(state.page);
 dom("sideLinks").innerHTML='<div class="nlabel">主要任务入口 <span>'+d.items.length+'</span></div>'+d.items.map(function(id,i){return '<button class="navitem '+(state.page===id?"active":"")+'" data-page="'+id+'"><span class="navicon">'+icon(d.id==="settings"?"settings":i===0?"grid":i===1?"layers":i===2?"box":"file")+'</span><span>'+esc(nameOf(id))+'</span><span class="arrow">'+(isTarget(id)?"":'<span style="font-size:9px;color:#9aabaf">占位</span>')+'</span></button>'}).join("")+(d.tools.length?'<div class="nlabel">专业工具 / 全部能力</div>'+d.tools.map(function(t){return '<button class="toolLink '+(state.page===t[0]?"active":"")+'" data-page="'+t[0]+'">'+icon("chev")+'<span>'+esc(t[1])+'</span></button>'}).join(""):"")+'<div class="nlabel">菜单视图</div><button class="toolLink" data-palette="1">'+icon("search")+' 浏览完整菜单（20 项）</button>';
 }
-function notice(){return '<div class="prototypeNotice">'+icon("spark")+'<span><strong>设计原型 v0.6</strong> · 采用 IA V3.1 完整五域菜单；仅定义与治理两域展示新工作台。所有项目、数量、对象及状态为静态样例，不代表运行回执。</span><span class="noticeEnd">#550 · 待评审</span></div>'}
+function notice(){return '<div class="prototypeNotice">'+icon("spark")+'<span><strong>设计原型 v0.6</strong> · 在 IA V3.1 五域之上新增需求与协作、分层建模评审；所有记录仅为本地样例，不能作为真实审批、发布或运行回执。</span><span class="noticeEnd">#550 · 待评审</span></div>'}
 function pageHead(title,description,eyebrow,buttons){return '<div class="pageHead"><div><div class="eyebrow">'+esc(eyebrow||"WORKSPACE / DESIGN REVIEW")+'</div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div><div class="headActions">'+(buttons||'')+'</div></div>'}
 function trail(items){return '<div class="trail">'+items.map(function(x,i){return (i?'<span class="sep">›</span>':"")+'<button class="'+(state.page===x[0]?"active":"")+'" data-page="'+x[0]+'">'+esc(x[1])+'</button>'}).join("")+'</div>'}
 function statCards(vals){return '<div class="kpis">'+vals.map(function(v){return '<div class="kpi"><label>'+esc(v[0])+'</label><b>'+esc(v[1])+'</b><small>'+esc(v[2])+'</small></div>'}).join("")+'</div>'}
@@ -1412,7 +1412,7 @@ function v3Run(){
  dom("roleSwitch").value=state.role;
  const s=dom("statusFilter");if(s)s.value=state.filter;
  const id=state.page;
- const view=id==="semantic"||id==="standard"?v3Definition(id):
+ let view=id==="semantic"||id==="standard"?v3Definition(id):
  id==="model"?(v6.modelMode==="legacy"?v6LegacyModel():v6LayerModel()):
  id==="collab"?v6Collab():
  id==="tasks"?v6Tasks():
@@ -1421,6 +1421,12 @@ function v3Run(){
  id==="asset"?v3Asset():
  ["quality","security","lifecycle","mdm"].includes(id)?v3Specialist(id):
  toolInfo[id]?toolPage(id):placeholderPage(id);
+ if(["asset","metric","dataset","visual"].includes(id)){
+  view= '<div class="v6Actions" style="margin-bottom:10px"><button data-v6-report="'+id+'">反馈当前对象的数据问题 →</button></div>'+view;
+ }
+ if(v6.origin&&["metric","governance","asset"].includes(id)){
+  view='<div class="v6Hint"><b>协作任务 '+esc(v6.origin.id)+'</b> · 专业工作台保留各自职责/版本。<button class="btn" data-v6-return="1">← 返回协作详情</button></div>'+view;
+ }
  dom("main").innerHTML=view;
  const f=dom("statusFilter");if(f)f.value=state.filter;
 }
@@ -1535,6 +1541,25 @@ function v3HandleAction(a){
 }
 document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
+ 
+ if(el.dataset.v6Layer){v6.layer=el.dataset.v6Layer;v6.modelMode="layered";renderMain();return}
+ if(el.dataset.v6Mode){v6.modelMode=el.dataset.v6Mode;renderMain();return}
+ if(el.dataset.v6Dep){v6Dependency(el.dataset.v6Dep);return}
+ if(el.dataset.v6Decision){v6DepDecision(el.dataset.v6Decision);return}
+ if(el.dataset.v6Load){v6Load("replace");return}
+ if(el.dataset.v6Tech){v6Tech(el.dataset.v6Tech);return}
+ if(el.dataset.v6Check){v6Check();return}
+ if(el.dataset.v6Save){v6Save();return}
+ if(el.dataset.v6Handoff){if(v6Layer().saved.length){v6Layer().handoff=true;renderMain()}return}
+ if(el.dataset.v6Return){v6Return();return}
+ if(el.dataset.v6View){v6.collab.view=el.dataset.v6View;v6.collab.selected=(v6.records.find(r=>r.type===v6.collab.view)||v6Cases.find(r=>r.type===v6.collab.view))?.id;v6.collab.note="";renderMain();return}
+ if(el.dataset.v6Case){v6.collab.selected=el.dataset.v6Case;v6.collab.note="";renderMain();return}
+ if(el.dataset.v6Open){const obj=v6.records.find(r=>r.id===el.dataset.v6Open);if(obj){v6.collab.selected=obj.id;v6.collab.view=obj.type;go("collab")}return}
+ if(el.dataset.v6Action){v6CaseAct(el.dataset.v6Action);return}
+ if(el.dataset.v6Create){v6CollabCreate();return}
+ if(el.dataset.v6Pro){v6ToPro(el.dataset.v6Pro);return}
+ if(el.dataset.v6Report){v6ReportFrom(el.dataset.v6Report);return}
+
  if(el.dataset.queue){return}
  if(el.dataset.model){return}
  if(el.dataset.v51Open){v51OpenExisting();return}
@@ -1583,7 +1608,14 @@ document.addEventListener("click",function(ev){
  }
 });
 document.addEventListener("input",function(ev){
- const t=ev.target;if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=v3.editing.name!==v3.editing.openedName||v3.editing.note!==v3.editing.openedNote}
+ const t=ev.target;
+ if(t.id==="v6-note"){v6.collab.note=t.value;return}
+ if(t.id==="v6-newtitle"){v6.collab.draftTitle=t.value;return}
+ if(t.id==="v6-newdetail"){v6.collab.draftDetail=t.value;return}
+ if(t.id==="v6-grain"){const x=v6Layer();if(x.grain!==t.value){x.grain=t.value;x.checked=false;x.dirty=true;x.revision++}return}
+ if(t.dataset?.v6Row!==undefined){v6EditRow(Number(t.dataset.v6Row),t.dataset.v6Key,t.value);return}
+
+ if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=v3.editing.name!==v3.editing.openedName||v3.editing.note!==v3.editing.openedNote}
  if(t.id==="v3-edit-note"&&v3.editing){v3.editing.note=t.value;state.editDirty=v3.editing.name!==v3.editing.openedName||v3.editing.note!==v3.editing.openedNote}
  if(t.id==="v3-formula"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.formula=t.value}
  if(t.id==="v3-condition"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.filter=t.value}
@@ -1594,6 +1626,12 @@ document.addEventListener("input",function(ev){
 });
 document.addEventListener("change",function(ev){
  const t=ev.target;
+ 
+ if(t.id==="v6-role"){v6.collab.role=t.value;renderMain();return}
+ if(t.id==="v6-metric"){const x=v6Layer();if(x.metric!==t.value){x.metric=t.value;x.checked=false;x.dirty=true;if(x.loaded){x.loaded=false;x.rows=[]}}renderMain();return}
+ if(t.id==="v6-consumer"){const x=v6Layer();if(x.consumer!==t.value){x.consumer=t.value;x.checked=false;x.dirty=true;if(x.loaded){x.loaded=false;x.rows=[]}}renderMain();return}
+ if(t.id==="v6-scd"){const x=v6Layer();x.scd=t.value;x.checked=false;x.dirty=true;renderMain();return}
+
  if(t.id.startsWith("v51-bind-")){const r=v3Selected("standard");if(r&&actionAllowed()){v51BindDraft(r[4])[t.id.slice(9)]=t.value;renderMain()}return}
  if(t.id==="v5-target"&&v5.relation){v5.relation.target=t.value;renderMain();return}
  if(t.id==="v4-choose"){selectRow(Number(t.value));return}
