@@ -459,3 +459,35 @@ test('CODE: home has real Cockpit count API although HTML remains disconnected',
  assert.match(c,/runningCount: number/);
  assert.match(html,/Home Cockpit 已有数据源数和运行数接口/);
 });
+
+
+test('REVIEW: ODS physical identities never silently inherit LM-016 before or after second target',()=>{
+ const a=build('model');a.click({v7Ods:'1'});
+ assert.equal(a.v81Current().logicalId,null);
+ assert.match(a.view(),/ODS 贴源无需逻辑模型/);
+ a.click({v81New:'1'});
+ assert.equal(a.v81Current().logicalId,null);
+ a.click({page:'home'});
+ a.click({page:'model'});
+ assert.equal(a.v81Current().logicalId,null);
+});
+test('REVIEW: a technical consumer can report data-product issue despite lacking business demand role',()=>{
+ const a=build('product');a.click({v81Productissue:'1'});
+ a.change('v6-role','builder');
+ a.input('v6-newtitle','数据服务流量异常');
+ a.input('v6-newdetail','同样参数查询连续超时，需研发查看调用日志');
+ a.click({v6Create:'1'});
+ assert.equal(a.v6.collab.creating,false);
+ assert.equal(a.v6.records.at(-1).type,'issue');
+ assert.equal(a.v6.records.at(-1).source,'DATASET:DEMO-DS-901');
+});
+test('REVIEW: exiting an unsent product feedback does not leak source into later generic creation',()=>{
+ const a=build('product');a.click({v81Productissue:'1'});
+ assert.ok(a.v6.collab.source);
+ a.click({v81FeedbackReturn:'1'});
+ assert.equal(a.state.page,'product');
+ assert.equal(a.v6.collab.source,null);
+ assert.equal(a.v6.collab.creating,false);
+ a.click({page:'collab'});
+ assert.doesNotMatch(a.view(),/新建数据问题.*来源对象：DATASET:DEMO-DS-901/s);
+});
