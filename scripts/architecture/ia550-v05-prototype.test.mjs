@@ -133,7 +133,7 @@ test('6: customer model has no invented order-metric relation', () => {
   a.click({v3Action:'model-next-metric'});
   assert.equal(a.v3.scope.id,'PM-733');
   assert.equal(a.rows('metric').length,0);
-  assert.match(a.view(),/暂无已核验的关联指标/);
+  assert.match(a.view(),/当前模型尚未关联指标/);
 });
 
 test('7: transfer receipts preserve submitted facts even after changing tasks', () => {
@@ -220,7 +220,7 @@ test('v0.5-03: refund and member field require explicit target, no order ODS mut
  a.change('v5-target','new');a.change('v5-attribute','member_id');
  a.click({v5Rel:'confirm'});
  assert.equal(a.v4.active.model,'DEMO-PM-REFUND');
- assert.equal(a.v4.store.model['PM-701'].field,before.field);
+ assert.equal(a.v4.store.model['PM-701']?.field,before.field);
 });
 
 test('v0.5-04: read-only role can review relation but cannot apply model mutation',()=>{
