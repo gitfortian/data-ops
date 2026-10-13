@@ -431,6 +431,63 @@ function v3ActionLine(buttons,note){
 }
 function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+esc(text)+'</p></div>'}
 
+
+function v3Definition(id){
+ const semantic=id==="semantic",r=v3Selected(id);
+ const title=semantic?"业务语义":"数据标准";
+ const categories=semantic?["全部业务域","交易域","售后服务","用户行为域","供应链域"]:["全部标准","基础标识","交易订单","金额计量","时间与日期"];
+ const scope=semantic?(r?{id:r[4],label:r[0]}:null):v3.scope;
+ let follow=semantic?
+  '<strong>下一步：确认业务过程的对象与粒度</strong><p>业务过程确认后，带入此过程选择标准字段。标准字段仍是独立对象，不自动变成已生效标准。</p>'+
+  v3ActionLine('<button class="btn primary" data-v3-action="process-next" '+(!r?"disabled":"")+'>引用标准字段 →</button>',r?"当前： "+r[0]+" / "+r[2]:"无当前对象"):
+  '<strong>下一步：确认模型字段映射</strong><p>字段必须与业务过程关联，模型侧重新读取其身份与生效版本。这里的关联仅用于静态演示。</p>'+
+  v3ActionLine('<button class="btn primary" data-v3-action="standard-attach" '+(!r?"disabled":"")+'>带入模型映射 →</button>',r?"选中标准字段："+r[0]:"没有符合条件的标准字段");
+ const sidebar='<section class="card lefttree"><div class="treehead">业务目录 <span class="tag">按范围</span></div>'+categories.map((x,i)=>'<button class="treeRow '+(state.tree===x?"active":"")+'" data-tree="'+esc(x)+'">'+icon(i?"folder":"layers")+esc(x)+'</button>').join("")+'</section>';
+ return pageHead(title,semantic?"业务过程确定后继续标准、建模与版本保存。":"围绕选定业务过程找到对应标准字段，明确状态和引用范围。","",'<button class="btn" data-v3-action="new">新建'+(semantic?"业务过程":"标准字段")+'</button>')+
+ v3Ctx()+v3FlowBar()+
+ '<div class="split">'+sidebar+v3Card(title+"对象列表","当前范围是本地演示；结果和详情始终引用同一个对象",v3Filters()+v3Table(id),
+ '<div class="inlineWorkflow">'+(r?'<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div><div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div><div class="factRow"><span>'+(semantic?"过程粒度":"字段数据类型")+'</span><strong>'+esc(r[2])+'</strong></div></div>':'<div class="resultPanel warn"><h3>没有选中对象</h3><p>已清空旧详情；请先调整筛选。</p></div>')+'<div style="padding-top:15px">'+follow+'</div></div>')+'</div>'+v3Review();
+}
+function v3ModelBody(){
+ const model=v3Selected("model");const tab=state.tab.model||"来源映射";
+ if(!model)return v3Hint("此范围内没有模型。清除筛选后重新选择。","warn");
+ const modelName=model[0],logical=model[2]==="逻辑",source=v3.build.source;
+ const head='<div class="detailStrip"><strong>当前模型：'+esc(modelName)+'</strong><span>'+esc(model[4])+'</span>'+badge(model[3])+'<button class="link" data-v3-action="model-open">对象证据 ↗</button></div>';
+ if(tab==="业务关联"){
+ return head+'<div class="diagram"><div class="flowNode"><div class="nodeTop"><strong>业务过程 · '+esc((sample.semantic.find(x=>x[4]===v3.build.process)||sample.semantic[0])[0])+'</strong><span class="tag warn">粒度需核验</span></div><small>Semantic · '+esc(v3.build.process)+'</small></div><div class="flowArrow">↓</div><div class="flowNode primary"><div class="nodeTop"><strong>'+esc(modelName)+'</strong><span class="tag">'+(logical?"逻辑":"物理")+'</span></div><small>Modeling · '+esc(model[4])+'，随当前模型切换更新</small></div><div class="flowArrow">↓</div><div class="flowNode"><div class="nodeTop"><strong>来源 / 目标 · '+esc(source)+'</strong><span class="tag blue">示例映射</span></div><small>来源与模型关系需真实 Owner 核验</small></div></div>';
+ }
+ if(tab==="字段设计"){
+ const field=(sample.standard.find(x=>x[4]===v3.build.field)||sample.standard[0]);
+ return head+'<div class="cardBody"><h2>目标字段结构 · '+esc(modelName)+'</h2><p class="muted">逻辑字段与物理列的类型和必填规则分别管理。</p><div class="diffRow"><div><strong>order_id</strong><small style="display:block">标识 · VARCHAR(64) · 必填</small></div><span class="tag good">已映射</span></div><div class="diffRow"><div><strong>pay_amount</strong><small style="display:block">金额 · DECIMAL(18,2) · 待确认精度</small></div><span class="tag warn">需校验</span></div><div class="diffRow"><div><strong>'+esc(field[0])+'</strong><small style="display:block">标准字段引用 · '+esc(field[4])+'</small></div><span class="tag blue">引用中</span></div>'+v3ActionLine('<button class="btn primary" data-v3-tab="来源映射">继续来源映射 →</button>')+'</div>';
+ }
+ if(tab==="来源映射"){
+ return head+'<div class="cardBody"><h2>来源映射 · '+esc(modelName)+'</h2><p class="muted">来源字段与标准字段/物理目标不共享 Owner，保存前校验指纹与映射规则。</p><div class="workflowGrid"><div><label class="formRow">来源表<select id="v3-source"><option value="orders.order_detail">orders.order_detail</option><option value="crm.customer">crm.customer</option><option value="stock.inventory">stock.inventory</option></select></label><label class="formRow">来源字段<input id="v3-mapfield" value="'+esc(v3.build.mapField)+'" aria-label="来源字段"></label><label class="formRow">目标模型<input value="'+esc(modelName)+'" readonly></label></div><div class="factBox"><h3>映射契约</h3><div class="itemFacts"><div class="factRow"><span>业务过程</span><strong>'+esc((sample.semantic.find(x=>x[4]===v3.build.process)||sample.semantic[0])[0])+'</strong></div><div class="factRow"><span>标准字段</span><strong>'+esc((sample.standard.find(x=>x[4]===v3.build.field)||sample.standard[0])[0])+'</strong></div><div class="factRow"><span>来源表</span><strong>'+esc(v3.build.source)+'</strong></div><div class="factRow"><span>目标模型</span><strong>'+esc(model[4])+'</strong></div></div><div class="riskLine">当前结构与冻结采集范围不同版本时，必须显示来源漂移证据。</div></div></div>'+v3ActionLine('<button class="btn" data-v3-tab="字段设计">查看字段设计</button><button class="btn primary" data-v3-action="model-check">校验映射 →</button>','校验前不允许保存版本')+'</div>';
+ }
+ if(tab==="校验记录"){
+ return head+'<div class="cardBody"><h2>校验结果与处理建议</h2>'+
+ (!v3.build.checked?v3Hint("映射字段已提交本地校验预览；先修复一项模拟差异，之后重新校验。","warn"):'<div class="resultPanel"><h3>✓ 映射检查通过（仅演示）</h3><p>来源字段、数据类型、标准引用、对象归属已完成样例验证；这不是实际 Metadata Run。</p></div>')+
+ (!v3.build.fixed?'<div class="diffRow"><div><b>差异 01 · 金额字段精度不一致</b><p class="micro">模型 pay_amount DECIMAL(18,2)，旧映射 DECIMAL(12,2)。</p><p class="micro">处理方式：调整映射精度并重新校验；正式系统需 Owner 证据。</p></div><button class="btn soft" data-v3-action="model-fix">应用修复样例</button></div>':'<div class="diffRow"><div><b>差异已处理</b><p class="micro">模拟修复为 DECIMAL(18,2)</p></div><span class="tag good">已复核</span></div>')+
+ v3ActionLine('<button class="btn" data-v3-tab="来源映射">返回映射</button>'+(v3.build.checked?'<button class="btn primary" data-v3-tab="版本差异">比较并保存版本 →</button>':'<button class="btn primary" data-v3-action="model-recheck" '+(!v3.build.fixed?"disabled":"")+'>重新校验</button>'))+'</div>';
+ }
+ if(tab==="版本差异"){
+ return head+'<div class="cardBody"><h2>版本差异 · '+esc(modelName)+'</h2><p class="muted">仅显示本次模拟版本变更；保存新版本不等于发布或运行。</p><div class="docGrid"><div class="factBox"><h3>原版本 · v2.0（示例）</h3><p>字段 pay_amount <del>DECIMAL(12,2)</del></p><p>标准字段引用：未关联</p></div><div class="factBox"><h3>目标版本 · v2.1（模拟）</h3><p>字段 pay_amount <ins>DECIMAL(18,2)</ins></p><p>标准字段引用：'+esc(v3.build.field)+'</p></div></div>'+
+ (v3.build.version?'<div class="resultPanel"><h3>✓ 已保存本地版本示例</h3><p class="receipt">'+esc(v3.build.version)+' · '+esc(model[4])+'</p><p>真实模型服务未写入；还需单独发布或执行审批。</p></div>':v3Hint(v3.build.checked?"校验通过，可保存本次模拟新版本。":"请先通过映射校验，才可保存版本。",v3.build.checked?"":"warn"))+
+ v3ActionLine((v3.build.version?'<button class="btn primary" data-v3-action="model-next-metric">查看指标影响 →</button>':'<button class="btn primary" data-v3-action="model-save" '+(!v3.build.checked?"disabled":"")+'>保存新版本</button>')+'<button class="btn" data-v3-tab="校验记录">查看校验结果</button>')+'</div>';
+ }
+ return head;
+}
+function v3Model(){
+ const r=v3Selected("model");
+ const physical=sample.model.filter(x=>x[2]==="物理"),logical=sample.model.filter(x=>x[2]==="逻辑");
+ const item=x=>'<button class="modelItem '+(r&&r[4]===x[4]?"active":"")+'" data-model="'+esc(x[4])+'"><strong>'+esc(x[0])+'</strong><small>'+esc(x[4])+' · '+esc(x[1])+'</small></button>';
+ const cats='<section class="card modelTree"><div class="treehead">模型资源分类（非步骤）</div><div class="modelList"><small>逻辑模型</small>'+logical.map(item).join("")+'<small>物理模型 · ODS / DWD</small>'+physical.map(item).join("")+'</div></section>';
+ const tabs=["业务关联","字段设计","来源映射","校验记录","版本差异"];
+ return pageHead("模型工作台","按模型身份执行关联、字段、映射、校验和版本保存。步骤与模型分类分别展示。","",'<button class="btn" data-v3-action="new">新建模型</button>')+
+ v3Ctx()+v3FlowBar()+'<div class="workgrid">'+cats+
+ '<section class="card"><div class="cardHead"><h2>模型任务区 · '+(r?esc(r[0]):"无当前模型")+'</h2><span class="tag blue">当前模型驱动全部画面</span></div><div class="tabs">'+tabs.map(t=>'<button class="tab '+((state.tab.model||"来源映射")===t?"active":"")+'" data-v3-tab="'+t+'">'+t+'</button>').join("")+'</div>'+ (state.status==="ready"?v3ModelBody():statePanel())+'</section></div>'+
+ '<div class="explain">'+icon("shield")+'<span class="explaintxt">模型资源按逻辑/物理类型和物理层次分类；步骤按业务关联→字段→来源映射→校验→保存版本推进。ODS 不以 Asset 上架作为建模必经门槛。</span></div>'+v3Review();
+}
+
 var start=decodeURIComponent(window.location.hash.replace(/^#/,""));if(paths[start]||labels[start]||toolInfo[start]){state.page=start;state.lastMenu=domainOf(start).id}render();
 })();
 </script>
