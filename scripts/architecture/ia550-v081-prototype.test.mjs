@@ -280,3 +280,30 @@ test('VR02 same target logical rebind immediately updates identity and survives 
  assert.equal(a.v81Current().logicalId,'LM-019');
  assert.match(a.view(),/LM-019/);
 });
+
+test('VR03 home sums all independently saved physical targets even when inactive',()=>{
+ const a=build('model');a.click({v7Ods:'1'});
+ a.click({v6Load:'1'});a.click({v6Check:'1'});a.click({v6Save:'1'});
+ const first=a.v81Current().id;a.click({v81New:'1'});
+ const second=a.v81Current().id;
+ a.click({page:'home'});assert.match(a.view(),/设计：1 个本地快照/);
+ a.click({v81Resume:second});
+ a.click({v6Load:'1'});a.click({v6Check:'1'});a.click({v6Save:'1'});
+ a.click({page:'home'});assert.match(a.view(),/设计：2 个本地快照/);
+ a.click({v81Resume:first});a.click({page:'home'});
+ assert.match(a.view(),/设计：2 个本地快照/);
+});
+test('VR04 AI main button opens actionable evidence panel with focus anchor',()=>{
+ const a=build('home');a.click({v8Mode:'assist'});
+ assert.doesNotMatch(a.view(),/id="v81-evidence"/);
+ a.click({v8Next:'assist-desk'});
+ assert.match(a.view(),/id="v81-evidence" tabindex="-1"/);
+ assert.match(a.view(),/AI 建设证据与人工决策/);
+ assert.match(a.view(),/aria-expanded="true"/);
+ a.click({v81CloseEvidence:'1'});
+ assert.doesNotMatch(a.view(),/id="v81-evidence"/);
+ a.click({v8Mode:'ask'});a.click({v8Next:'ask-desk'});
+ assert.match(a.view(),/可信 AI 问答 · 取证条件/);
+ assert.match(a.view(),/当前结论：证据不足/);
+ assert.doesNotMatch(a.view(),/真实查询成功/);
+});
