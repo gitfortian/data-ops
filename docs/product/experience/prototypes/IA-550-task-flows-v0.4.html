@@ -393,6 +393,134 @@ const v3QueueInfo={
  "GOV-314":{owner:"元数据管理员 · 陈帆",priority:"P1",age:"等待 27 小时",subject:"AST-240 · dim_product",why:"已受理来源对账请求，尚缺完成确认和目标映射差异处理。",kind:"来源对账",before:"来源字段：product_code VARCHAR(32)",after:"目标字段：product_code VARCHAR(64)",required:"核验字段长度变更、确认受影响对象及对账完成证据",risk:"ACCEPTED 是已受理，不等于 reconcile 成功"},
  "GOV-320":{owner:"元数据管理员 · 陈帆",priority:"P0",age:"等待 2 小时",subject:"ENT-604 · ods_return_log",why:"上游来源字段发生变化且冻结任务范围不一致，需要判断数据接入影响。",kind:"结构漂移",before:"源表：return_amount DECIMAL(12,2)",after:"当前来源：return_amount DECIMAL(18,2)",required:"确认当前指纹及历史 Run 差异、记录影响与处置结论",risk:"超时或未知状态不可伪装采集成功"}
 };
+
+/* v0.4: explicit object-owned task contexts, immutable receipts and context trail. */
+const v4={
+ store:{metric:{},model:{},governance:{}},
+ active:{metric:null,model:null,governance:null},
+ pending:null, trail:[], lastScroll:0,
+ links:{"PM-701":["MET-026","MET-027"],"PM-732":["MET-026","MET-027"],"PM-733":[],"LM-016":["MET-026"]},
+ metricTemplates:{
+ "MET-026":{formula:"COUNT(order_id)",filter:"",prior:"COUNT(order_id)",expected:"status = PAID",unit:"笔",period:"自然日",dimension:"支付渠道 / 店铺",problem:"缺少订单支付状态，取消订单可能被计入。"},
+ "MET-027":{formula:"SUM(pay_amount)",filter:"payment_status = SUCCESS",prior:"SUM(pay_amount)",expected:"payment_status = SUCCESS",unit:"元",period:"自然日",dimension:"商家 / 支付渠道",problem:"金额口径需限制为已成功支付记录。"},
+ "MET-031":{formula:"COUNT(DISTINCT paid_order_id) / NULLIF(COUNT(DISTINCT visit_session_id),0)",filter:"event_date = business_date",prior:"COUNT(paid_order_id) / COUNT(visit_session_id)",expected:"event_date = business_date",unit:"%",period:"自然日",dimension:"渠道 / 终端",problem:"比率分母应排除 0，按同一业务日匹配浏览会话。"},
+ "MET-035":{formula:"SUM(refund_amount)",filter:"refund_status = COMPLETED",prior:"SUM(refund_amount)",expected:"refund_status = COMPLETED",unit:"元",period:"自然日",dimension:"退款原因 / 支付渠道",problem:"退款金额只统计已完成退款，不包含申请中金额。"}
+ },
+ modelTemplates:{
+ "LM-016":{source:"未绑定来源",mapField:"order_id",process:"PRC-102",field:"STD-201",issue:"逻辑模型业务过程粒度尚待确认",fixText:"确认订单粒度与标准字段引用"},
+ "PM-701":{source:"orders.order_detail",mapField:"order_id",process:"PRC-102",field:"STD-201",issue:"支付金额字段映射精度不一致",fixText:"DECIMAL(12,2) → DECIMAL(18,2)"},
+ "PM-732":{source:"ods_order_detail",mapField:"pay_amount",process:"PRC-102",field:"STD-208",issue:"DWD 明细需确认来源 ODS 字段与目标明细粒度",fixText:"补充 ODS → DWD 字段粒度确认"},
+ "PM-733":{source:"crm.customer",mapField:"customer_id",process:"",field:"STD-212",issue:"会员维度业务关联尚未完成确认",fixText:"确认会员标识与维度键对应关系"}
+ }
+};
+function v4DefaultMetric(id){
+ const t=v4.metricTemplates[id]||v4.metricTemplates["MET-026"];
+ return {id,formula:t.formula,filter:t.filter,prior:t.prior,checked:false,impactSeen:false,published:false,
+ release:null,receipts:[],rev:0,checkRevision:-1,impactRevision:-1,dirty:false,
+ version:"v1.2 · 草稿",unit:t.unit,period:t.period,dimension:t.dimension,expected:t.expected,problem:t.problem};
+}
+function v4DefaultModel(id){
+ const t=v4.modelTemplates[id]||v4.modelTemplates["PM-701"];
+ return {model:id,source:t.source,mapField:t.mapField,process:t.process,field:t.field,
+ issue:t.issue,fixText:t.fixText,checked:false,fixed:false,version:null,savedVersions:[],rev:0,checkRevision:-1,dirty:false};
+}
+function v4DefaultQueue(id){
+ return {id,queueStep:"evidence",decision:"",transferTo:"",note:"",receipts:[],dirty:false};
+}
+function v4StoreFor(page,id){
+ const map=v4.store[page];
+ return map[id]||(map[id]=page==="metric"?v4DefaultMetric(id):page==="model"?v4DefaultModel(id):v4DefaultQueue(id));
+}
+function v4SaveActive(page){
+ const id=v4.active[page];if(!id)return;
+ if(page==="metric")v4.store.metric[id]=v3.metric;
+ if(page==="model")v4.store.model[id]=v3.build;
+ if(page==="governance"){
+  const q=v4StoreFor(page,id);
+  Object.assign(q,{queueStep:v3.queueStep,decision:v3.decision,transferTo:v3.transferTo,note:v3.note,dirty:q.dirty});
+ }
+}
+function v4Apply(page,index){
+ const r=(sample[page]||[])[index];if(!r)return;
+ const id=r[4],old=v4.active[page];
+ if(old!==id){v4SaveActive(page);const obj=v4StoreFor(page,id);v4.active[page]=id;
+   if(page==="metric")v3.metric=obj;
+   if(page==="model")v3.build=obj;
+   if(page==="governance"){v3.queueId=id;v3.queueStep=obj.queueStep;v3.decision=obj.decision;v3.transferTo=obj.transferTo;v3.note=obj.note}
+ }
+ state.select[page]=index;
+}
+function v4Dirty(page){
+ if(page==="metric")return !!v3.metric.dirty;
+ if(page==="model")return !!v3.build.dirty;
+ if(page==="governance"){const q=v4.store.governance[v4.active.governance];return !!q?.dirty}
+ return false;
+}
+function v4Switch(page,index,force=false){
+ const rows=v3Rows(page);const next=(sample[page]||[])[index];if(!next)return;
+ if(v4.active[page]===next[4]){state.select[page]=index;return}
+ if(!force&&v4.active[page]&&v4Dirty(page)){
+   v4.pending={page,from:v4.active[page],to:next[4],index,fromIndex:state.select[page]};
+   return;
+ }
+ v4.pending=null;v4Apply(page,index);
+}
+function v4Prompt(){
+ const p=v4.pending;if(!p||p.page!==state.page)return "";
+ const r=sample[p.page].find(x=>x[4]===p.to);const old=sample[p.page].find(x=>x[4]===p.from);
+ return '<div class="v4Notice" role="status"><strong>正在编辑的对象已离开当前筛选范围</strong>'+
+ '<p>当前草稿属于 '+esc(old?.[0]||p.from)+' · '+esc(p.from)+'；新结果是 '+esc(r?.[0]||p.to)+' · '+esc(p.to)+'。不会自动把旧口径或处理说明带入新对象。</p>'+
+ '<div class="actions"><button class="btn primary" data-v4-switch="keep">保留当前草稿并切换</button>'+
+ '<button class="btn" data-v4-switch="discard">放弃当前修改并切换</button>'+
+ '<button class="btn" data-v4-switch="stay">继续编辑原对象</button></div></div>';
+}
+function v4ResolvePending(mode){
+ const p=v4.pending;if(!p)return;
+ if(mode==="stay"){v4.pending=null;state.query="";state.filter="all";state.queue="all";state.tree="";renderMain();return}
+ if(mode==="discard"){const prev=v4.store[p.page][p.from];
+  if(p.page==="metric"){const history=prev?.receipts||[];v4.store.metric[p.from]={...v4DefaultMetric(p.from),receipts:history};}
+  if(p.page==="model"){const history=prev?.savedVersions||[];v4.store.model[p.from]={...v4DefaultModel(p.from),savedVersions:history};}
+  if(p.page==="governance"){const history=prev?.receipts||[];v4.store.governance[p.from]={...v4DefaultQueue(p.from),receipts:history};}
+  v4.active[p.page]=null;
+ }
+ v4.pending=null;v4Apply(p.page,p.index);renderMain();
+}
+function v4InvalidMetric(m){
+ m.rev++;m.checked=false;m.checkRevision=-1;m.impactSeen=false;m.impactRevision=-1;
+ m.published=false;m.release=null;m.dirty=true;
+}
+function v4ValidMetric(m){return m.checked&&m.checkRevision===m.rev}
+function v4InvalidModel(b){
+ b.rev++;b.checked=false;b.checkRevision=-1;b.fixed=false;b.dirty=true;
+ // b.version and savedVersions remain historical; they do not validate current rev.
+}
+function v4ValidModel(b){return b.checked&&b.checkRevision===b.rev}
+function v4GuardQueue(){
+ if(!actionAllowed())return "只读角色可以查看证据，但不能处理、转交或提交。";
+ if(!v3.decision)return "请选择处理方式。";
+ if(v3.decision==="transfer"&&!v3.transferTo)return "请明确转交责任人。";
+ if((v3.note||"").trim().length<4)return "请至少填写 4 字的处理依据。";
+ return "";
+}
+function v4QueueChanged(){const q=v4StoreFor("governance",v3.queueId);q.dirty=true;v4SaveActive("governance")}
+function v4ModelIssue(b){return b.issue||"待补充当前模型的校验规则"}
+function v4Progress(kind,n){
+ if(kind==="metric"){const m=v3.metric;return n===0?true:n===1?v4ValidMetric(m):n===2?v4ValidMetric(m)&&m.impactSeen&&m.impactRevision===m.rev:n===3?!!m.published:false}
+ if(kind==="queue"){const q=v4StoreFor("governance",v3.queueId);return n===0?true:n===1?!!(q.decision&&q.note.trim().length>=4&&(q.decision!=="transfer"||q.transferTo)):n===2?!!q.receipts.length:n===3?!!q.receipts.length:false}
+ return false;
+}
+function v4HistoryBlock(kind){
+ if(kind==="model"){const b=v3.build;return '<div class="v4History"><h3>已保存历史版本</h3>'+(b.savedVersions.length?b.savedVersions.map(x=>'<p><span>'+esc(x.id)+'</span> · 旧来源 '+esc(x.source)+' · 已保存版本（不是当前草稿）</p>').join(""):'<p>当前模型尚无本地模拟版本保存记录。</p>')+'</div>'}
+ if(kind==="metric"){const m=v3.metric;return '<div class="v4History"><h3>历史发布记录</h3>'+(m.receipts.length?m.receipts.map(x=>'<p><span>'+esc(x.id)+'</span> · '+esc(x.metricId)+' · '+esc(x.formula)+' · '+esc(x.filter)+'</p>').join(""):'<p>尚未模拟发布。</p>')+'</div>'}
+ if(kind==="governance"){const q=v4StoreFor("governance",v3.queueId);return '<div class="v4History"><h3>不可变的处理记录</h3>'+(q.receipts.length?q.receipts.map(x=>'<p><span>'+esc(x.id)+'</span> · '+esc(x.taskId)+' · '+esc(x.decision==="transfer"?"转交 "+x.transferTo:"提交处理")+' · '+esc(x.note)+' · '+esc(x.date)+'</p>').join(""):'<p>该任务尚无处理记录。</p>')+'</div>'}
+ return "";
+}
+function v4MobileSelector(id){
+ const rows=sample[id]||[];
+ return '<div class="v4AsideChoice"><label for="v4-choose">切换'+esc(nameOf(id))+'对象</label><select id="v4-choose" aria-label="切换当前对象">'+
+ rows.map((r,i)=>'<option value="'+i+'" '+(state.select[id]===i?"selected":"")+'>'+esc(r[0])+' · '+esc(r[4])+'</option>').join("")+'</select></div>';
+}
+
 function v3Rows(id){
  let rows=(sample[id]||[]).map((r,i)=>({r,i}));
  if(id==="asset")rows=rows.filter(x=>state.view==="entity"?x.r[2]==="技术实体":x.r[2]==="治理资产");
