@@ -450,6 +450,76 @@ const v4={
  "PM-733":{source:"crm.customer",mapField:"customer_id",process:"",field:"STD-212",issue:"会员维度业务关联尚未完成确认",fixText:"确认会员标识与维度键对应关系"}
  }
 };
+
+const v5={relation:null,drafts:{},draftCounter:0,activeDraft:null,fields:{"STD-201":"order_id","STD-205":"payment_time","STD-208":"pay_amount","STD-212":"customer_id"}};
+function v5StageProcess(){
+ const r=v3Selected("semantic");if(!r)return;
+ v5.relation={process:r[4],processName:r[0],field:null,fieldName:null,target:"",attribute:"",confirmed:false};
+ v3Route("standard",{id:r[4],label:r[0],relation:"查看业务过程适用标准"});
+}
+function v5StageStandard(){
+ const r=v3Selected("standard");if(!r)return;
+ const old=v5.relation||{process:null,processName:null};
+ v5.relation={...old,field:r[4],fieldName:r[0],target:"",attribute:v5.fields[r[4]]||"",confirmed:false};
+ v3Route("model",{id:r[4],label:r[0],relation:"选择目标模型，尚未应用"});
+}
+function v5Conflict(rel,target){
+ if(!target||target==="new")return "";
+ if(rel.process==="PRC-103"&&target==="PM-701")return "退款过程不能默认覆盖订单 ODS；请选择对应模型或新建退款模型。";
+ if(rel.field==="STD-212"&&target!=="PM-733")return "会员标识不适合覆盖订单明细模型；请选择会员维度或新建模型。";
+ return "";
+}
+function v5RelationPanel(){
+ const rel=v5.relation;if(!rel||rel.confirmed)return "";
+ const obj=rel.target&&rel.target!=="new"?v4StoreFor("model",rel.target):null;
+ const err=v5Conflict(rel,rel.target);
+ return '<section class="card" style="margin-bottom:14px"><div class="v4TaskBody"><h2>确认目标模型与字段映射</h2><p class="micro">浏览业务过程和标准不会修改现有模型，必须选定目标并核对变更。</p>'+
+ '<div class="workflowGrid"><div><label class="formRow">目标模型<select id="v5-target"><option value="">请选择</option>'+
+ sample.model.map(x=>'<option value="'+esc(x[4])+'" '+(rel.target===x[4]?"selected":"")+'>'+esc(x[0])+' · '+esc(x[4])+'</option>').join("")+
+ '<option value="new" '+(rel.target==="new"?"selected":"")+'>＋ 新建模型草稿</option></select></label>'+
+ '<label class="formRow">目标属性<input id="v5-attribute" value="'+esc(rel.attribute)+'" placeholder="例如 refund_id" '+(!actionAllowed()?"readonly":"")+'></label></div>'+
+ '<div class="factBox"><h3>待确认的关系变化</h3><div class="itemFacts">'+
+ '<div class="factRow"><span>业务过程</span><strong>'+esc(rel.processName||"仅字段引用")+' · '+esc(rel.process||"无")+'</strong></div>'+
+ '<div class="factRow"><span>标准字段</span><strong>'+esc(rel.fieldName||"无")+' · '+esc(rel.field||"无")+'</strong></div>'+
+ '<div class="factRow"><span>目标模型</span><strong>'+esc(rel.target==="new"?"新模型草稿":sample.model.find(x=>x[4]===rel.target)?.[0]||"未选择")+'</strong></div>'+
+ '<div class="factRow"><span>原关联</span><strong>'+esc(obj?.process||"无")+' / '+esc(obj?.field||"无")+' → '+esc(obj?.mapField||"无")+'</strong></div>'+
+ '<div class="factRow"><span>本次拟修改</span><strong>'+esc(rel.process||"不改变过程")+' / '+esc(rel.field||"无")+' → '+esc(rel.attribute||"未选择属性")+'</strong></div></div></div></div>'+
+ (err?'<div class="v4Notice"><strong>对象不匹配</strong><p>'+esc(err)+'</p></div>':"")+
+ (!actionAllowed()?v3Hint("当前只读：可以检查关系，但不能修改目标模型草稿。","warn"):"")+
+ v3ActionLine('<button class="btn" data-v5-rel="cancel">取消预览</button><button class="btn primary" data-v5-rel="confirm" '+(!actionAllowed()||!rel.target||!rel.attribute?.trim()||err?"disabled":"")+'>确认变更到目标草稿</button>')+'</div></section>';
+}
+function v5ApplyRelation(){
+ const rel=v5.relation;
+ if(!rel||!actionAllowed()||!rel.target||!rel.attribute?.trim()||v5Conflict(rel,rel.target))return;
+ let id=rel.target;
+ if(id==="new"){
+  id=rel.process==="PRC-103"?"DEMO-PM-REFUND":rel.field==="STD-212"?"DEMO-PM-MEMBER":"DEMO-PM-NEW-"+(sample.model.length+1);
+  if(!sample.model.some(x=>x[4]===id)){
+   sample.model.push([rel.process==="PRC-103"?"ods_refund_detail":rel.field==="STD-212"?"dim_member":"new_business_model","新建 · 尚未绑定来源","物理","草稿",id]);
+   v4.modelTemplates[id]={source:"未绑定来源",mapField:rel.attribute,process:rel.process||"",field:rel.field||"",issue:"新模型需要验证来源及业务粒度",fixText:"补充来源表及目标属性"};
+  }
+ }
+ const m=v4StoreFor("model",id);
+ const changed=m.field!==rel.field||m.mapField!==rel.attribute||(rel.process&&m.process!==rel.process);
+ if(changed){v4InvalidModel(m);m.field=rel.field;m.mapField=rel.attribute;if(rel.process)m.process=rel.process}
+ rel.confirmed=true;v4SaveActive("model");v4.active.model=null;
+ state.select.model=sample.model.findIndex(x=>x[4]===id);state.tab.model="来源映射";
+ v4.pending=null;v4Apply("model",state.select.model);
+ toast("已修改指定模型的本地草稿；请校验后再保存。");renderMain();
+}
+function v5DraftList(page){
+ const arr=v5.drafts[page]||[];
+ return '<div class="v5Drafts"><h3>新建草稿 · '+arr.length+'</h3>'+
+ (arr.length?arr.map(x=>'<div class="draftRow"><div><b>'+esc(x.name)+'</b> <small>'+esc(x.id)+'</small><p class="micro">'+esc(x.note||"待完善")+'</p></div><button class="btn" data-v5-draft="'+esc(x.id)+'">继续完善 →</button></div>').join(""):'<p class="micro">保存新建草稿后在此查看；仅限当前页面会话。</p>')+'</div>';
+}
+function v5DraftWorkspace(page){
+ const d=v5.activeDraft;if(!d||d.page!==page)return "";
+ return '<section class="card" style="margin:12px 0"><div class="v4TaskBody"><div class="detailStrip"><strong>当前新建草稿：'+esc(d.name)+'</strong><span>'+esc(d.id)+'</span></div>'+
+ '<h2>业务内容继续完善</h2><label class="formRow">'+(page==="metric"?"公式、周期与业务口径":page==="model"?"模型粒度与来源":page==="standard"?"类型、必填与取值约束":"业务粒度、Owner 与确认条件")+
+ '<textarea id="v5-draft-content" '+(!actionAllowed()?"readonly":"")+'>'+esc(d.content||"")+'</textarea></label>'+
+ v3ActionLine('<button class="btn" data-v5-draft-close="1">关闭草稿</button><button class="btn primary" data-v5-draft-save="1" '+(!actionAllowed()?"disabled":"")+'>保存草稿内容</button>')+'</div></section>';
+}
+
 function v4DefaultMetric(id){
  const t=v4.metricTemplates[id]||v4.metricTemplates["MET-026"];
  return {id,formula:t.formula,filter:t.filter,prior:t.prior,checked:false,impactSeen:false,published:false,
