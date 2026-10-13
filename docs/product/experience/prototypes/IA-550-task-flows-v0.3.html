@@ -89,7 +89,7 @@ footer.contextActions{display:flex;align-items:center;justify-content:flex-end;g
 }
 @media(max-width:1000px){
  .split>.card:first-child{display:block} /* critical: never hide task list */
- .split>.lefttree{display:none} .workgrid>.card:first-child{display:none}
+ .split>.lefttree{display:none} .split>.card.lefttree:first-child{display:none} .workgrid>.card:first-child{display:none}
 }
 @media(max-width:760px){
  .body{padding-top:15px}.prototypeNotice{font-size:10px}
@@ -347,6 +347,8 @@ function v3Rows(id){
  let rows=(sample[id]||[]).map((r,i)=>({r,i}));
  if(id==="asset")rows=rows.filter(x=>state.view==="entity"?x.r[2]==="技术实体":x.r[2]==="治理资产");
  if(id==="governance"&&state.queue!=="all")rows=rows.filter(x=>x.r[1].includes(state.queue));
+ if(id==="governance"&&v3.scope&&v3.scope.from==="asset")rows=rows.filter(x=>(v3QueueInfo[x.r[4]]||{}).subject?.includes(v3.scope.id));
+ if(id==="governance")rows.sort((a,b)=>{const rank={P0:0,P1:1,P2:2};return rank[v3QueueInfo[a.r[4]].priority]-rank[v3QueueInfo[b.r[4]].priority]});
  const tree=state.tree||"";
  const treeFilter={
   "交易域":"订单|支付|退款","售后服务":"退款|退货","用户行为域":"浏览|会员","供应链域":"库存|商品",
@@ -424,7 +426,7 @@ function v3Back(){
 }
 function v3Route(page,ref){
  if(ref){v3Remember();v3.scope={from:state.page,id:ref.id,label:ref.label,relation:ref.relation||""}}
- go(page);
+ go(page,true);
 }
 function v3ActionLine(buttons,note){
  return '<div class="actionLine">'+(note?'<span class="secondaryMsg">'+esc(note)+'</span>':"")+buttons+'</div>'
@@ -446,7 +448,7 @@ function v3Definition(id){
  return pageHead(title,semantic?"业务过程确定后继续标准、建模与版本保存。":"围绕选定业务过程找到对应标准字段，明确状态和引用范围。","",'<button class="btn" data-v3-action="new">新建'+(semantic?"业务过程":"标准字段")+'</button>')+
  v3Ctx()+v3FlowBar()+
  '<div class="split">'+sidebar+v3Card(title+"对象列表","当前范围是本地演示；结果和详情始终引用同一个对象",v3Filters()+v3Table(id),
- '<div class="inlineWorkflow">'+(r?'<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div><div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div><div class="factRow"><span>'+(semantic?"过程粒度":"字段数据类型")+'</span><strong>'+esc(r[2])+'</strong></div></div>':'<div class="resultPanel warn"><h3>没有选中对象</h3><p>已清空旧详情；请先调整筛选。</p></div>')+'<div style="padding-top:15px">'+follow+'</div></div>')+'</div>'+v3Review();
+ '<div class="inlineWorkflow">'+(r?'<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div><div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div><div class="factRow"><span>'+(semantic?"过程粒度":"字段数据类型")+'</span><strong>'+esc(r[2])+'</strong></div></div>':'<div class="resultPanel warn"><h3>没有选中对象</h3><p>已清空旧详情；请先调整筛选。</p></div>')+'<div style="padding-top:15px">'+follow+'</div><div class="actionLine"><button class="btn" data-v3-action="edit" '+(!r||!actionAllowed()?"disabled":"")+'>编辑当前对象</button></div></div>')+'</div>'+v3Review();
 }
 function v3ModelBody(){
  const model=v3Selected("model");const tab=state.tab.model||"来源映射";
@@ -697,6 +699,8 @@ function v3HandleAction(a){
 }
 document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
+ if(el.dataset.queue){v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo="";renderMain();return}
+ if(el.dataset.model){v3.build.checked=false;v3.build.fixed=false;v3.build.version=null;renderMain();return}
  if(el.dataset.v3Action){v3HandleAction(el.dataset.v3Action);return}
  if(el.dataset.v3Tab){state.tab[state.page]=el.dataset.v3Tab;renderMain();return}
  if(el.dataset.v3Step){
