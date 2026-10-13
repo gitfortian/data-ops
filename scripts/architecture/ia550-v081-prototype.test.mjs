@@ -247,3 +247,36 @@ test('S12: homepage cross-journey actions reach correct domain instead of anothe
  a.click({page:'home'});a.click({v8Mode:'secure'});a.click({v8Next:'security'});assert.equal(a.state.page,'security');
  a.click({page:'home'});a.click({v8Mode:'mdm'});a.click({v8Next:'mdm'});assert.equal(a.state.page,'mdm');
 });
+
+test('VR01 feedback draft cannot edit the prior issue',()=>{
+ const a=build('product');a.click({v8Product:'service'});
+ const before=JSON.stringify(a.v6.records);a.click({v81Productissue:'1'});
+ assert.match(a.view(),/当前操作：新建数据问题/);
+ assert.doesNotMatch(a.view(),/当前记录 · ISS-201/);
+ a.v6.collab.note='接口调用一直超时，请核对合同';a.click({v6Action:'comment'});
+ assert.equal(JSON.stringify(a.v6.records),before);
+ a.input('v6-newdetail','接口连续超时，希望按原合同恢复');
+ a.click({v6Create:'1'});
+ assert.equal(a.v6.records.length,4);
+ const x=a.v6.records.at(-1);
+ assert.equal(x.source,'DATA_SERVICE:DEMO-SVC-902');
+ assert.equal(x.sourceVersion,'DEMO-SR-2');
+ assert.equal(x.sourceKind,'Data Service');
+ assert.equal(a.v6.collab.selected,x.id);
+ a.click({v81FeedbackReturn:'1'});
+ assert.equal(a.state.page,'product');assert.equal(a.v8.product,'service');
+ a.click({page:'collab'});a.click({v6Case:x.id});
+ assert.match(a.view(),new RegExp(x.id));
+});
+test('VR02 same target logical rebind immediately updates identity and survives switch',()=>{
+ const a=build('model');a.click({v7Design:'DWD'});
+ const first=a.v81Current().id;
+ a.click({v6Load:'1'});a.click({v7Mode:'mapping'});
+ a.change('v7-layer-model','LM-019');
+ assert.equal(a.v81Current().logicalId,'LM-019');
+ assert.equal(a.v7.targetByLayer.DWD,'LM-019');
+ assert.equal(a.v6Layer().dirty,true);
+ a.click({v81New:'1'});a.click({v81Target:first});
+ assert.equal(a.v81Current().logicalId,'LM-019');
+ assert.match(a.view(),/LM-019/);
+});
