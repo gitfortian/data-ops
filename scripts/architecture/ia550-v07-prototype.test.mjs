@@ -59,7 +59,7 @@ function build(page = 'semantic') {
     dialog: () => byId('dialog').innerHTML,
     click: data => dispatch('click', { target: { closest() { return { dataset: data }; } } }),
     input: (id, value, dataset) => dispatch('input', { target: { id, value, dataset, selectionStart: value.length } }),
-    change: (id, value) => dispatch('change', { target: { id, value } }),
+    change: (id, value, dataset) => dispatch('change', { target: { id, value, dataset } }),
     key: key => dispatch('keydown', { key, ctrlKey: false, metaKey: false }),
   };
 }
