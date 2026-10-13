@@ -187,3 +187,91 @@ test('L12: readonly user can inspect but not freeze logical model or confirm map
  a.click({v7Mode:'mapping'});a.click({v7Mapconfirm:'1'});
  assert.equal(a.mapping().reviewed,false);
 });
+
+
+test('H00: new home replaces obsolete placeholder with task-first project work area',()=>{
+ const a=build('home');
+ assert.match(a.view(),/订单分析项目 · 数据工作总览/);
+ assert.match(a.view(),/待推进与需反馈/);
+ assert.match(a.view(),/订单分析 · 从来源到交付/);
+ assert.match(a.view(),/继续未完成工作/);
+ assert.match(a.view(),/五个专业域/);
+ assert.doesNotMatch(a.view(),/OUT OF CURRENT REBUILD SCOPE/);
+});
+test('H01: home always identifies simulated figures, not real workflow counters',()=>{
+ const a=build('home');
+ assert.match(a.view(),/可交互设计样例，不代表已连接项目的真实统计或运行回执/);
+ assert.match(a.view(),/不是跨领域实时完成百分比/);
+ assert.match(a.view(),/模型.*入仓/);
+});
+test('H02: home role selector changes actionable queue without changing professional permission',()=>{
+ const a=build('home');
+ const before=a.state.role;
+ a.change('v7-home-role','owner');
+ assert.equal(a.v6.collab.role,'owner');
+ assert.equal(a.state.role,before);
+ assert.match(a.view(),/业务确认人/);
+});
+test('H03: home provides exact collaboration record jump and project demand start',()=>{
+ const a=build('home');
+ a.click({v7Homeitem:'ISS-201'});
+ assert.equal(a.state.page,'collab');
+ assert.equal(a.v6.collab.selected,'ISS-201');
+ a.click({page:'home'});a.click({v7Homeflow:'demand'});
+ assert.equal(a.state.page,'collab');
+ assert.equal(a.v6.collab.view,'demand');
+});
+test('H04: home task first entry opens real logical workbench and ODS direct route',()=>{
+ const a=build('home');
+ a.click({v7Homeflow:'logical'});
+ assert.equal(a.state.page,'model');
+ assert.equal(a.v7.view,'logical');
+ assert.match(a.view(),/业务实体|业务事实/);
+ a.click({page:'home'});a.click({v7Homeflow:'source'});
+ assert.equal(a.state.page,'source');
+});
+test('H05: home resumes latest locally edited logical version at correct model',()=>{
+ const a=build('model');
+ a.click({v7Freeze:'1'});a.click({page:'home'});
+ assert.match(a.view(),/LM-016/);
+ assert.match(a.view(),/L1/);
+ a.click({v7Homeflow:'logical',v7Homelogical:'LM-016'});
+ assert.equal(a.state.page,'model');
+ assert.equal(a.v7.view,'logical');
+ assert.equal(a.logical().id,'LM-016');
+});
+test('H06: home resumes layer-specific physical structure without losing rows',()=>{
+ const a=build('model');
+ a.click({v7Design:'DWD'});
+ a.click({v6Load:'1'});
+ const len=a.layer().rows.length;
+ a.click({page:'home'});
+ assert.match(a.view(),/DWD · 未保存结构草稿/);
+ a.click({v7Homeflow:'physical',v7Homelayer:'DWD'});
+ assert.equal(a.v6.layer,'DWD');
+ assert.equal(a.v7.view,'physical');
+ assert.equal(a.layer().rows.length,len);
+});
+test('H07: full logical→physical version workflow visible via new homepage entry',()=>{
+ const a=build('home');
+ a.click({v7Homeflow:'logical'});a.click({v7Freeze:'1'});
+ a.click({v7Design:'DWD'});a.click({v6Load:'1'});
+ a.click({v7Mode:'mapping'});a.click({v7Candidates:'1'});a.click({v7Mapconfirm:'1'});
+ assert.equal(a.mappingCurrent(),true);
+ a.click({v7Mode:'physical'});a.click({v6Check:'1'});a.click({v6Save:'1'});
+ assert.equal(a.layer().saved.length,1);
+ assert.equal(a.layer().saved[0].logicalMapping.logicalId,'LM-016');
+});
+test('H08: ODS source-first remains available from project home without frozen logical model',()=>{
+ const a=build('home');
+ a.click({v7Homeflow:'logical'});a.click({v7Ods:'1'});
+ a.click({v6Load:'1'});a.click({v6Check:'1'});
+ assert.equal(a.logical().versions.length,0);
+ assert.equal(a.layer().checked,true);
+});
+test('H09: responsive home layout rules exist for desktop, compact and narrow widths',()=>{
+ assert.match(html,/\.v7HomeGrid\{display:grid;grid-template-columns:/);
+ assert.match(html,/@media\(max-width:980px\)\{\.v7HomeGrid\{grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(html,/@media\(max-width:700px\)\{\.v7StageGrid\{grid-template-columns:repeat\(2/);
+ assert.match(html,/@media\(max-width:440px\)\{\.v7HomeStats\{grid-template-columns:/);
+});
