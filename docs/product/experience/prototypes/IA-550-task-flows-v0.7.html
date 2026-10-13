@@ -1683,6 +1683,99 @@ function v7Model(){
  body;
 }
 
+
+function v7Home(){
+ v6InitCases();
+ const role=v6.collab.role,records=v6.records, types={demand:"数据需求",issue:"数据问题",caliber:"口径确认"};
+ const expectedRole={
+  coordinator:["待受理","澄清与方案"],builder:["已确认待处置","待确认","建设中","口径已确认 · 待技术验证","待专业发布","核实中"],steward:["已确认待处置","处置中"],owner:["待业务确认","待验收"],business:["待验收","待业务复核"],analyst:["待业务确认"]
+ };
+ const waiting=records.filter(r=>!["已完成","已关闭","已交接发布"].includes(r.status));
+ const my=waiting.filter(r=>(expectedRole[role]||[]).some(s=>r.status===s)||String(r.next).includes(v6RoleNames[role]||"_"));
+ const visible=[...my,...waiting.filter(r=>!my.includes(r))].slice(0,4);
+ const logicalSaved=v7.models.reduce((a,m)=>a+m.versions.length,0);
+ const physicalSaved=Object.values(v6.layers).reduce((n,x)=>n+x.saved.length,0);
+ const reviewPending=Object.entries(v7.mapping).filter(([key,x])=>key!=="ODS"&&!v7MappingCurrentHome(key,x)).length;
+ const st=[
+  ["待推进事项",String(waiting.length),"会话中的订单主题协作演示"],
+  ["逻辑设计版本",String(logicalSaved),"当前会话冻结的本地逻辑快照"],
+  ["物理设计版本",String(physicalSaved),"本地模拟保存 · 未创建物理表"],
+  ["待核验/阻塞",String(Math.max(1,reviewPending)),"来源漂移及映射复核为示例"]
+ ];
+ const statCards=st.map(v=>'<div class="v7Stat"><label>'+esc(v[0])+'</label><span class="number">'+esc(v[1])+'</span><span class="note">'+esc(v[2])+'</span></div>').join("");
+ const actions=visible.map(r=>{
+  const isMine=my.includes(r),label=types[r.type]||"事项";
+  return '<button class="v7ActionRow" data-v7-homeitem="'+esc(r.id)+'"><span class="v7RedDot"></span><span><strong>'+esc(r.title)+'</strong><small>'+esc(label)+' · '+esc(r.id)+' · '+esc(r.status)+' · 下一步 '+esc(r.next)+'</small></span><em>'+(isMine?"适合当前职责":"查看进度")+' →</em></button>';
+ }).join("");
+ const progress=[
+  ["来源发现","已采集结构样例","source",100],
+  ["业务语义","已定义业务过程示例","semantic",80],
+  ["逻辑模型","业务实体/关系、冻结版本","logical",logicalSaved?100:47],
+  ["物理建模","ODS→DWD→DWS→ADS","physical",physicalSaved?72:27],
+  ["可信交付","指标确认、数据验收与消费","collab",21]
+ ].map(([label,note,id,pct])=>'<button class="v7WorkTile" data-v7-homeflow="'+id+'"><b>'+label+'</b><div class="v7Meter"><span style="width:'+pct+'%"></span></div><small>'+note+'</small></button>').join("");
+ const steps=[
+  ["① 接入与来源核验","MySQL 订单源表及元数据结构", "source","示例结构：需要实际读取与漂移复核"],
+  ["② 语义与逻辑设计","PRC-102 / LM-016", "logical","冻结业务粒度、逻辑属性及关系"],
+  ["③ 分层模型设计","ODS→DWD/DIM→DWS→ADS", "physical","依赖字段前置、批量载入与映射审阅"],
+  ["④ 指标口径与业务确认","支付订单数 · MET-026", "caliber","必须确认统计日、去重、退款边界"],
+  ["⑤ 交付与业务验收","订单经营日报 · REQ-102", "demand","运行/发布/验收是分别需要证据的状态"]
+ ].map(([label,obj,id,desc])=>'<div class="v7ProgressRow"><div><strong>'+label+'</strong><small>'+obj+' · '+desc+'</small></div><button data-v7-homeflow="'+id+'">继续 →</button></div>').join("");
+ const ongoing=[];
+ const dirtyLayers=Object.entries(v6.layers).filter(([_,x])=>x.dirty||x.pending||x.saved.length);
+ for(const [layer,x] of dirtyLayers)ongoing.push({title:layer+" · "+(x.dirty?"未保存结构草稿":x.saved.length+" 个设计版本"),note:x.rows.length+" 列 · 来源 "+x.deps.join("、"),go:"physical",layer});
+ for(const m of v7.models.filter(x=>x.rev>1||x.versions.length))ongoing.push({title:"逻辑模型 · "+m.name,note:m.id+" · "+(v7Latest(m)?.version||"待冻结")+" · 当前修订 "+m.rev,go:"logical",id:m.id});
+ if(!ongoing.length)ongoing.push({title:"建立第一个业务逻辑版本",note:"从业务过程与实体属性开始，随后设计 DWD/DIM",go:"logical"});
+ const continueMarkup=ongoing.slice(0,4).map(x=>'<button class="v7Next" data-v7-homeflow="'+x.go+'" '+(x.layer?'data-v7-homelayer="'+x.layer+'" ':x.id?'data-v7-homelogical="'+x.id+'" ':'')+'><b>'+esc(x.title)+'</b><small>'+esc(x.note)+' · 继续工作 →</small></button>').join("");
+ const domainShortcuts=[
+  ["数据接入","源表核对与接入采集","source"],
+  ["业务定义","语义、标准和逻辑建模","logical"],
+  ["开发运行","SQL / 工作流 / 执行","dev"],
+  ["数据治理","资产、质量和处置","governance"],
+  ["数据消费","数据集、服务及分析","product"]
+ ].map(([title,desc,id])=>'<button class="v7Next" data-v7-homeflow="'+id+'"><b>'+title+'</b><small>'+desc+' →</small></button>').join("");
+ return '<div class="v7Home"><div class="v7Hero"><div><div class="v7Eyebrow">PROJECT WORKSPACE · IA-550 V0.7</div>'+
+ '<h1>订单分析项目 · 数据工作总览</h1><p>从业务需求、来源发现和逻辑建模开始，推进分层模型、指标确认、治理问题到可信交付。首页提示下一步，不要求用户在孤立菜单里猜流程。</p>'+
+ '<p class="micro" style="margin-top:9px">本页全部数据为可交互设计样例，不代表已连接项目的真实统计或运行回执。</p></div>'+
+ '<div class="v7HeroActions"><button data-v7-homeflow="demand">发起数据需求</button><button class="ghost" data-v7-homeflow="logical">进入逻辑模型</button><button class="ghost" data-v7-homeflow="source">查看已发现源表</button></div></div>'+
+ '<div class="v7HomeStats">'+statCards+'</div>'+
+ '<div class="v7HomeGrid"><div class="v7HomeStack"><section class="v7HomePanel"><div class="v7PanelTitle"><h2>待推进与需反馈</h2><div class="v7HomeRole"><span>按协作职责</span><select id="v7-home-role">'+Object.entries(v6RoleNames).map(([key,label])=>'<option value="'+key+'" '+(key===role?"selected":"")+'>'+label+'</option>').join("")+'</select></div></div>'+
+ '<p class="v7LiveDisclaimer">根据当前职责优先展示待办；业务确认与专业发布是不同动作。</p>'+actions+
+ '<div class="v7PanelTitle"><span class="v7LiveDisclaimer">接收/确认/验收均在协作事项内形成记录。</span><button data-page="tasks">查看我的待办 →</button></div></section>'+
+ '<section class="v7HomePanel"><div class="v7PanelTitle"><h2>订单分析 · 从来源到交付</h2><button data-v7-homeflow="demand">查看需求闭环 →</button></div>'+
+ '<div class="v7StageGrid">'+progress+'</div><p class="v7LiveDisclaimer" style="margin-top:9px">进度条仅为示意阶段成熟度，不是跨领域实时完成百分比；开发后应替换为各 Owner 的事实状态和证据。</p>'+
+ steps+'</section>'+
+ '<section class="v7HomePanel"><div class="v7PanelTitle"><h2>异常、风险与等待确认</h2><button data-v7-homeflow="governance">进入治理工作队列 →</button></div>'+
+ '<button class="v7ActionRow" data-v7-homeflow="governance"><span class="v7RedDot"></span><span><strong>来源表结构漂移待复核</strong><small>GOV-320 · 未确认新字段是否影响订单模型；来自既有静态治理样例</small></span><em>定位 →</em></button>'+
+ '<button class="v7ActionRow" data-v7-homeflow="caliber"><span class="v7RedDot"></span><span><strong>支付订单数退款口径未最终确认</strong><small>MET-026 · 同一精确口径版本和边界样例需要业务参与</small></span><em>确认 →</em></button></section></div>'+
+ '<aside class="v7HomeStack"><section class="v7HomePanel"><h2>继续未完成工作</h2>'+continueMarkup+
+ '<p class="v7LiveDisclaimer">本地草稿在当前页面会话中演示；重新加载网页不代表服务端已持久化。</p></section>'+
+ '<section class="v7HomePanel"><h2>五个专业域</h2><p class="v7LiveDisclaimer">首页提供跨域入口，专业对象、授权、版本和执行仍由原领域拥有。</p>'+domainShortcuts+'</section>'+
+ '<section class="v7HomePanel"><h2>设计、部署与运行分开</h2>'+
+ '<div class="v6Stage"><strong>设计就绪</strong><p class="micro">逻辑设计、模型结构、版本和标准字段映射</p></div>'+
+ '<div class="v6Stage"><strong>部署就绪</strong><p class="micro">目标环境、DDL/SQL 与任务合同待确认</p></div>'+
+ '<div class="v6Stage"><strong>实际运行与消费</strong><p class="micro">执行回执、质量验证、指标发布和可用交付</p></div>'+
+ '<p class="v7LiveDisclaimer">不能以“已保存模型”推断数据已经入仓。</p></section></aside></div></div>';
+}
+function v7MappingCurrentHome(layer,p){
+ const m=v7.models.find(x=>x.id===p.logicalId);
+ const latest=m&&v7Latest(m),x=v6.layers[layer];
+ return !!(latest&&x&&p.reviewed&&!p.stale&&p.logicalVersion===latest.version&&p.signature===v7ScopeSignature(x));
+}
+function v7HomeJump(target,layer,logical){
+ if(target==="logical"||target==="physical"){
+  go("model");if(target==="logical"){v7.view="logical";if(logical)v7.selected=logical}
+  else{v7.view="physical";if(layer)v6.layer=layer}
+  renderMain();return;
+ }
+ if(target==="demand"||target==="caliber"||target==="issue"){
+  go("collab");v6.collab.view=target;
+  const r=v6.records.find(x=>x.type===target);if(r)v6.collab.selected=r.id;
+  renderMain();return;
+ }
+ go(target);
+}
+
 function v3Run(){
  nav();
  dom("roleSwitch").value=state.role;
@@ -1697,7 +1790,7 @@ function v3Run(){
  id==="asset"?v3Asset():
  ["quality","security","lifecycle","mdm"].includes(id)?v3Specialist(id):
  toolInfo[id]?toolPage(id):placeholderPage(id);
- if(id==="home")view=v6HomeBrief()+view;
+ if(id==="home")view=v7Home();
  if(["asset","metric","dataset","visual"].includes(id)){
   view= '<div class="v6Actions" style="margin-bottom:10px"><button data-v6-report="'+id+'">反馈当前对象的数据问题 →</button></div>'+view;
  }
@@ -1820,6 +1913,8 @@ document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
  
  
+ if(el.dataset.v7Homeitem){const r=v6.records.find(x=>x.id===el.dataset.v7Homeitem);if(r){v6.collab.view=r.type;v6.collab.selected=r.id;go("collab")}return}
+ if(el.dataset.v7Homeflow){v7HomeJump(el.dataset.v7Homeflow,el.dataset.v7Homelayer,el.dataset.v7Homelogical);return}
  if(el.dataset.v7Mode){v7.view=el.dataset.v7Mode;renderMain();return}
  if(el.dataset.v7Logical){v7.selected=el.dataset.v7Logical;renderMain();return}
  if(el.dataset.v7Freeze){v7FreezeLogical();return}
@@ -1926,6 +2021,7 @@ document.addEventListener("change",function(ev){
  if(t.dataset?.v7Row!==undefined){v7MapEdit(Number(t.dataset.v7Row),t.value);return}
  if(t.dataset?.v7Attr!==undefined){v7FieldChange(Number(t.dataset.v7Attr),t.dataset.v7Key,t.value);renderMain();return}
 
+ if(t.id==="v7-home-role"){v6.collab.role=t.value;renderMain();return}
  if(t.id==="v6-role"){v6.collab.role=t.value;renderMain();return}
  if(t.id==="v6-reference"){v6.collab.reference=t.value;renderMain();return}
  if(t.id==="v6-transfer"){v6.collab.transferTo=t.value;renderMain();return}
