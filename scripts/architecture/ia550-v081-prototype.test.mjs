@@ -307,3 +307,17 @@ test('VR04 AI main button opens actionable evidence panel with focus anchor',()=
  assert.match(a.view(),/当前结论：证据不足/);
  assert.doesNotMatch(a.view(),/真实查询成功/);
 });
+
+test('VR02 ODS physical target identity displays source-first exception, not LM-016',()=>{
+ const a=build('model');a.click({v7Ods:'1'});
+ assert.equal(a.v81Current().logicalId,null);
+ assert.match(a.view(),/ODS 贴源无需逻辑模型/);
+ a.click({v81New:'1'});assert.equal(a.v81Current().logicalId,null);
+});
+test('VR01 cancelling new feedback preserves all existing issue timelines and source state',()=>{
+ const a=build('product');a.click({v81Productissue:'1'});
+ const before=JSON.stringify(a.v6.records);
+ a.click({v81FeedbackCancel:'1'});
+ assert.equal(JSON.stringify(a.v6.records),before);
+ assert.equal(a.v6.collab.creating,false);
+});
