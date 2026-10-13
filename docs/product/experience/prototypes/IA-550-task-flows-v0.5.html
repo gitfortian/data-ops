@@ -625,6 +625,7 @@ function v4ResolvePending(mode){
 function v4InvalidMetric(m){
  m.rev++;m.checked=false;m.checkRevision=-1;m.impactSeen=false;m.impactRevision=-1;
  m.published=false;m.release=null;m.dirty=true;
+ m.version="v1."+(2+m.receipts.length)+" · 草稿";
 }
 function v4ValidMetric(m){return m.checked&&m.checkRevision===m.rev}
 function v4InvalidModel(b){
@@ -648,7 +649,7 @@ function v4Progress(kind,n){
 }
 function v4HistoryBlock(kind){
  if(kind==="model"){const b=v3.build;return '<div class="v4History"><h3>已保存历史版本</h3>'+(b.savedVersions.length?b.savedVersions.map(x=>'<p><span>'+esc(x.id)+'</span> · 旧来源 '+esc(x.source)+' · 已保存版本（不是当前草稿）</p>').join(""):'<p>当前模型尚无本地模拟版本保存记录。</p>')+'</div>'}
- if(kind==="metric"){const m=v3.metric;return '<div class="v4History"><h3>历史发布记录</h3>'+(m.receipts.length?m.receipts.map(x=>'<p><span>'+esc(x.id)+'</span> · '+esc(x.metricId)+' · '+esc(x.formula)+' · '+esc(x.filter)+'</p>').join(""):'<p>尚未模拟发布。</p>')+'</div>'}
+ if(kind==="metric"){const m=v3.metric;return '<div class="v4History"><h3>历史发布记录</h3>'+(m.receipts.length?m.receipts.map(x=>'<p><span>'+esc(x.version||"历史版本")+'</span> · '+esc(x.id)+' · '+esc(x.metricId)+' · '+esc(x.formula)+' · '+esc(x.filter)+'</p>').join(""):'<p>尚未模拟发布。</p>')+'</div>'}
  if(kind==="governance"){const q=v4StoreFor("governance",v3.queueId);return '<div class="v4History"><h3>不可变的处理记录</h3>'+(q.receipts.length?q.receipts.map(x=>'<p><span>'+esc(x.id)+'</span> · '+esc(x.taskId)+' · '+esc(x.decision==="transfer"?"转交 "+x.transferTo:"提交处理")+' · '+esc(x.note)+' · '+esc(x.date)+'</p>').join(""):'<p>该任务尚无处理记录。</p>')+'</div>'}
  return "";
 }
@@ -844,9 +845,14 @@ function v3Model(){
 }
 function v3MetricBody(){
  const r=v3Selected("metric");
- if(!r)return v3.scope?.from==="model"?
-  '<div class="v4Empty"><h3>当前来源模型暂无已核验的关联指标</h3><p>'+esc(v3.scope.label)+" · "+esc(v3.scope.id)+'；不会拿其他模型的指标示例充当关联结果。</p><button class="btn" data-v3-back="1">返回模型</button></div>':
-  '<div class="v4Empty"><h3>当前没有匹配指标</h3><p>调整搜索或退出筛选后再继续。</p></div>';
+ if(!r){
+  if(v4.pending?.page==="metric")return v4Prompt();
+  const links=v3.scope?.from==="model"?(v4.links[v3.scope.id]||[]):null;
+  const noRelation=Array.isArray(links)&&links.length===0;
+  return '<div class="v4Empty"><h3>'+(noRelation?"当前模型尚未关联指标":"当前筛选没有匹配指标")+'</h3>'+
+    '<p>'+(noRelation?"来源模型 "+esc(v3.scope.id)+" 没有明确关联样例。":"已存在 "+(links?.length||"")+" 条来源关联，当前搜索“"+esc(state.query||"全部")+"”无匹配；不代表无关联。")+'</p>'+
+    '<button class="btn" data-clear="1">清除筛选</button><button class="btn" data-v3-back="1">返回上一步</button></div>';
+ }
  const m=v3.metric,tab=state.tab.metric||"定义口径",valid=v4ValidMetric(m);
  const top='<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(m.id)+'</span>'+
  '<span class="v4Progress">'+(valid?(m.published&&!m.dirty?"已发布 · 本次版本":"本次校验通过 · "+(m.impactSeen&&m.impactRevision===m.rev?"可发布":"尚未发布")):m.dirty?"草稿已修改 · 待校验":"草稿待校验")+'</span></div>';
@@ -856,7 +862,7 @@ function v3MetricBody(){
  if(tab==="定义口径")return top+'<div class="v4TaskBody"><h2>'+esc(r[0])+' · 编辑口径</h2>'+meta+
  '<div class="workflowGrid" style="margin-top:14px"><div><label class="formRow">指标表达式<textarea id="v3-formula" '+(disabled?"readonly":"")+'>'+esc(m.formula)+'</textarea></label>'+
  '<label class="formRow">业务范围<input id="v3-condition" value="'+esc(m.filter)+'" '+(disabled?"readonly":"")+'></label></div>'+
- '<div class="factBox"><h3>版本与业务解释</h3><div class="itemFacts"><div class="factRow"><span>指标标识</span><strong>'+esc(m.id)+'</strong></div><div class="factRow"><span>当前操作</span><strong>'+esc(m.version)+'</strong></div><div class="factRow"><span>原始口径</span><strong>'+esc(m.prior)+'</strong></div><div class="factRow"><span>类型</span><strong>'+esc(r[2])+'</strong></div></div></div></div>'+
+ '<div class="factBox"><h3>版本与业务解释</h3><div class="itemFacts"><div class="factRow"><span>指标标识</span><strong>'+esc(m.id)+'</strong></div><div class="factRow"><span>当前编辑版本</span><strong>'+esc(m.version)+'</strong></div><div class="factRow"><span>当前使用版本</span><strong>'+esc(m.receipts.at(-1)?.version||"尚未模拟发布")+'</strong></div><div class="factRow"><span>原始口径</span><strong>'+esc(m.prior)+'</strong></div><div class="factRow"><span>类型</span><strong>'+esc(r[2])+'</strong></div></div></div></div>'+
  v3ActionLine('<button class="btn primary" data-v3-action="metric-validate" '+lock+'>检查本次口径 →</button>')+v4HistoryBlock("metric")+'</div>';
  if(tab==="校验")return top+'<div class="v4TaskBody"><h2>校验范围 · '+esc(r[0])+'</h2>'+
  (valid?'<div class="resultPanel"><h3>✓ 当前修订号 '+m.rev+' 已通过样例校验</h3><p>'+esc(m.id)+' 的口径和关键过滤条件与业务指标类型一致。</p></div>':
@@ -879,7 +885,7 @@ function v3MetricBody(){
  if(tab==="版本与发布"){
  const allowed=valid&&m.impactSeen&&m.impactRevision===m.rev;
  return top+'<div class="v4TaskBody"><h2>'+esc(r[0])+' · 发布版本确认</h2>'+
- '<div class="itemFacts"><div class="factRow"><span>本次指标</span><strong>'+esc(m.id)+'</strong></div><div class="factRow"><span>版本</span><strong>v1.2 · 修订 '+m.rev+'</strong></div><div class="factRow"><span>目标范围</span><strong>'+esc(m.filter||"待补充")+'</strong></div><div class="factRow"><span>校验</span><strong>'+(valid?"通过本次修订检查":"未验证 / 已失效")+'</strong></div><div class="factRow"><span>影响</span><strong>'+(m.impactSeen&&m.impactRevision===m.rev?"已复核":"待复核")+'</strong></div></div>'+
+ '<div class="itemFacts"><div class="factRow"><span>本次指标</span><strong>'+esc(m.id)+'</strong></div><div class="factRow"><span>当前使用版本</span><strong>'+esc(m.receipts.at(-1)?.version||"无已发布版本")+'</strong></div><div class="factRow"><span>版本</span><strong>'+esc(m.version)+' · 修订 '+m.rev+'</strong></div><div class="factRow"><span>目标范围</span><strong>'+esc(m.filter||"待补充")+'</strong></div><div class="factRow"><span>校验</span><strong>'+(valid?"通过本次修订检查":"未验证 / 已失效")+'</strong></div><div class="factRow"><span>影响</span><strong>'+(m.impactSeen&&m.impactRevision===m.rev?"已复核":"待复核")+'</strong></div></div>'+
  (!allowed?v3Hint("必须先完成当前修订的校验并确认影响。查看此页不代表步骤已完成。","warn"):
  v3Hint("可提交本地模拟发布；不会调用真实指标发布接口。"))+
  v3ActionLine('<button class="btn" data-v3-step="metric:2">返回影响分析</button><button class="btn primary" data-v3-action="metric-publish" '+(!allowed||disabled?"disabled":"")+'>确认发布本次修订</button>')+
@@ -1100,8 +1106,9 @@ function v3HandleAction(a){
  if(a==="metric-to-publish"){if(!allow||!v4ValidMetric(m))return;m.impactSeen=true;m.impactRevision=m.rev;state.tab.metric="版本与发布";renderMain();return}
  if(a==="metric-publish"){if(!allow||!v4ValidMetric(m)||!m.impactSeen||m.impactRevision!==m.rev)return;
   if(!m.receipts.some(x=>x.rev===m.rev)){
-   const id="DEMO-METRIC-PUBLICATION-"+m.id+"-V"+(m.receipts.length+1);
-   m.receipts.push(Object.freeze({id,metricId:m.id,formula:m.formula,filter:m.filter,rev:m.rev,date:new Date().toLocaleString("zh-CN")}));
+   const id="DEMO-METRIC-PUBLICATION-"+m.id+"-V"+(m.receipts.length+1),version="v1."+(2+m.receipts.length);
+   m.receipts.push(Object.freeze({id,version,metricId:m.id,formula:m.formula,filter:m.filter,rev:m.rev,date:new Date().toLocaleString("zh-CN")}));
+   m.version=version+" · 已发布";
    m.release=id;
   }
   m.published=true;m.dirty=false;renderMain();return}
