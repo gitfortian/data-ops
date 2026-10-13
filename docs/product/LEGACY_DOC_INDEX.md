@@ -1,6 +1,6 @@
 # Existing Documentation Classification Index
 
-本索引用于解释旧文档，不移动、不删除文件。
+本索引用于区分现行产品合同和历史证据。2026-10-13 文档清理后，部分旧路径已从当前树删除；下文历史类别不表示文件仍存在，失效资料通过 Git 历史快照追溯，不能被当作现行产品事实。
 
 | Path / Family | Class | Current Use |
 |---|---|---|
@@ -39,7 +39,7 @@
 
 ## Cleanup rule
 
-不做一次性大搬家。
+不通过本索引恢复或批量迁移已清理的历史文件。
 
 每一族旧文档按以下顺序治理：
 
@@ -51,14 +51,17 @@
 
 ## Indexed evidence families
 
-- [历史证据总索引](../HISTORICAL_EVIDENCE_INDEX.md) 是 Evidence/Review 导航，不是新 Product Decision。
+- [清理前历史证据总索引](https://github.com/gitfortian/data-ops/blob/140c82c6227ef39339ff19825c41786b4035c6fb/docs/HISTORICAL_EVIDENCE_INDEX.md) 是 Evidence/Review 导航，不是新 Product Decision。
 - `docs/20261001/**`、`docs/20261003/**`、`docs/20261004/**`：日期限定的阶段测试与审核快照，验证条件必须与原始记录对照。
 - `docs/frontend-review/**`、`docs/architecture-review/**`、`docs/reviews/**`：前端及架构评审与核销材料；`txt/json` 附件是证据，不是批准的变更合同。
 - `docs/v1/**` 与 `docs/test/**`：既有盘点及测试文档，不能用文档中“待办”直接开启功能开发。
-- Metric 的 [历史 gap backlog](../metric/issues/gap-backlog-2026-09.md) 为 Evidence；当前指标跨域规则以 [PD-003](../product/decisions/PD-003-business-semantic-metric-contract.md) 的 ACCEPTED 状态为准。
+- Metric 的 [清理前历史 gap backlog](https://github.com/gitfortian/data-ops/blob/140c82c6227ef39339ff19825c41786b4035c6fb/docs/metric/issues/gap-backlog-2026-09.md) 为 Evidence；当前指标跨域规则以 [PD-003](../product/decisions/PD-003-business-semantic-metric-contract.md) 的 ACCEPTED 状态为准。
 
 ## Navigation and historical plan boundary
 
-- 仓库文档导航见 [docs/README.md](../README.md)，工程治理收口证据见 [docs/engineering/code-cleanliness-p1-closeout.md](../engineering/code-cleanliness-p1-closeout.md)。
+- 仓库文档导航见 [docs/README.md](../README.md)，工程治理收口证据见 [清理前工程治理证据](https://github.com/gitfortian/data-ops/blob/140c82c6227ef39339ff19825c41786b4035c6fb/docs/engineering/code-cleanliness-p1-closeout.md)。
 - **保留** `.zcode/plans/*.md` 原始内容作为历史输入证据，不迁移至活动执行合同、不标记已批准、也不从中复制 SQL 修改操作。
 - `docs/product/**`、`docs/release/**`、Flyway SQL、模块 Contract 和真实环境证据，不因文件年龄或名称而自动归档/删除。
+
+
+> 当前源树已删除的旧文档可通过 [2026-10-13 清理前 Git 快照](https://github.com/gitfortian/data-ops/tree/140c82c6227ef39339ff19825c41786b4035c6fb/docs) 查阅。历史快照只是 Evidence/Review，不代表已验收状态。

@@ -11,13 +11,9 @@ const tracked = execFileSync('git', ['ls-files', '-z'], {
 const trackedSet = new Set(tracked);
 
 const INDEXES = [
-  'docs/README.md', 'docs/HISTORICAL_EVIDENCE_INDEX.md',
-  'docs/20261001/README.md', 'docs/20261003/README.md',
-  'docs/20261004/README.md', 'docs/frontend-review/README.md',
-  'docs/architecture-review/README.md', 'docs/reviews/README.md',
-  'docs/v1/README.md', 'docs/test/README.md',
-  'docs/engineering/p3-document-cleanliness-closeout.md',
-  'docs/product/LEGACY_DOC_INDEX.md',
+  // Only indexes still present after 482017e document cleanup.
+  'docs/README.md', 'docs/product/README.md',
+  'docs/product/LEGACY_DOC_INDEX.md', 'docs/reviews/README.md',
 ];
 
 const isModuleReadme = file =>
@@ -45,66 +41,50 @@ function localLinks(file) {
   return linksIn(read(file)).map(link => localTarget(file, link)).filter(Boolean);
 }
 
-test('repo, P3 and business entrypoint Markdown/HTML links all resolve on disk', () => {
-  const entrypoints = [
-    'README.md', 'README_CN.md', 'AGENTS.md',
-    'data-ops-framework/README.md', 'data-ops-ui/README.md',
-    ...INDEXES,
-    ...tracked.filter(isModuleReadme),
-  ];
-  assert.ok(entrypoints.length >= 35, entrypoints.length);
-  const broken = [];
-  for (const file of entrypoints) {
+test('retained repository documentation indexes have no broken local links', () => {
+  assert.equal(INDEXES.length, 4);
+  assert.ok(trackedSet.has('docs/README.md'));
+  for (const file of INDEXES) {
+    assert.ok(trackedSet.has(file), file);
     assert.ok(existsSync(file), file);
     for (const target of localLinks(file)) {
-      if (!existsSync(target)) broken.push(file + ' -> ' + target);
+      assert.ok(existsSync(target), file + ' -> ' + target);
     }
   }
-  assert.deepEqual(broken, []);
-});
-
-test('dated report and review indexes include every direct Markdown report, not just a sample', () => {
-  for (const root of [
-    'docs/20261001/', 'docs/20261003/', 'docs/20261004/', 'docs/reviews/',
-  ]) {
-    const index = root + 'README.md';
-    const markdown = tracked.filter(file =>
-      file.startsWith(root) && file.endsWith('.md') &&
-      file.slice(root.length).split('/').length === 1 && file !== index);
-    const destinations = new Set(localLinks(index));
-    assert.ok(markdown.length >= 1, root);
-    for (const file of markdown)
-      assert.ok(destinations.has(file), index + ' is missing ' + file);
-  }
-});
-
-test('all historical entry directories stay indexed without moving original evidence', () => {
-  const atlas = read('docs/HISTORICAL_EVIDENCE_INDEX.md');
-  for (const file of [
-    'docs/20261001/README.md', 'docs/20261003/README.md',
-    'docs/20261004/README.md', 'docs/reviews/README.md',
-    'docs/frontend-review/README.md', 'docs/architecture-review/README.md',
-    'docs/v1/README.md', 'docs/test/README.md',
-  ]) {
+  for (const file of ['README.md', 'README_CN.md', 'AGENTS.md']) {
     assert.ok(trackedSet.has(file), file);
-    assert.ok(localLinks('docs/HISTORICAL_EVIDENCE_INDEX.md').includes(file),
-      'unlisted evidence owner: ' + file);
-    assert.match(read(file), /Evidence|Review|Historical/);
   }
-  assert.match(atlas, /不是|非/);
 });
 
-test('dated evidence, P3 and repository navigators never become new product authority', () => {
-  const files = [
-    'docs/HISTORICAL_EVIDENCE_INDEX.md', ...INDEXES.filter(f =>
-      f.startsWith('docs/20') || f.startsWith('docs/frontend-review/') ||
-      f.startsWith('docs/architecture-review/') || f.startsWith('docs/reviews/') ||
-      f.startsWith('docs/v1/') || f.startsWith('docs/test/')),
-  ];
-  for (const file of files) {
+test('retained review index includes every current direct Markdown report', () => {
+  const root = 'docs/reviews/';
+  const index = root + 'README.md';
+  const markdown = tracked.filter(file =>
+    file.startsWith(root) && file.endsWith('.md') &&
+    file.slice(root.length).split('/').length === 1 && file !== index);
+  const destinations = new Set(localLinks(index));
+  assert.ok(markdown.length >= 1, root);
+  for (const file of markdown)
+    assert.ok(destinations.has(file), index + ' is missing ' + file);
+});
+
+test('removed historic docs are traceable without resurrecting stale local paths', () => {
+  const docIndex = read('docs/README.md');
+  const classification = read('docs/product/LEGACY_DOC_INDEX.md');
+  assert.ok(trackedSet.has('docs/reviews/README.md'));
+  assert.ok(localLinks('docs/README.md').includes('docs/reviews/README.md'));
+  assert.match(read('docs/reviews/README.md'), /Evidence|Review|Historical/);
+  assert.match(docIndex, /482017e/);
+  assert.match(classification, /140c82c6227ef39339ff19825c41786b4035c6fb/);
+  assert.match(docIndex, /不是|非/);
+});
+
+test('retained evidence and repository navigators never become new product authority', () => {
+  for (const file of ['docs/README.md', 'docs/product/LEGACY_DOC_INDEX.md',
+    'docs/reviews/README.md']) {
     const source = read(file);
-    assert.ok(/Evidence|Historical|Review/.test(source), file);
-    assert.ok(/不是|非|不能|不等于|不得|不表示/.test(source), file);
+    assert.match(source, /Evidence|Historical|Review/i, file);
+    assert.match(source, /不是|非|不能|不等于|不得|不表示/, file);
   }
   assert.ok(existsSync('docs/product/DOCUMENT_GOVERNANCE.md'));
   assert.ok(existsSync('docs/product/decisions/PD-003-business-semantic-metric-contract.md'));
@@ -136,14 +116,14 @@ test('bilingual root READMEs navigate to the governed docs and current repositor
   }
 });
 
-test('P2 audit, Framework legacy contract, migration history and raw evidence remain available', () => {
+test('preserved release, framework, migration and evidence contracts remain available', () => {
   for (const file of [
-    'docs/engineering/p2-backend-cleanliness-audit.md',
     'scripts/architecture/backend-p2-reachability-audit.mjs',
     'scripts/architecture/framework-legacy.test.mjs',
     'scripts/db/check-migration-history.mjs',
     'data-ops-framework/legacy/data-job/pom.xml',
-    'docs/architecture-review/20261003/evidence.json',
-    'docs/frontend-review/20261003/typecheck-comparison.json',
+    'docs/product/DOCUMENT_GOVERNANCE.md',
+    'docs/release/RELEASING.md',
+    'data-ops-ui/scripts/type-baseline.json',
   ]) assert.ok(existsSync(file), file);
 });

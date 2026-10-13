@@ -127,7 +127,8 @@ test('existing coverage for retired frontend imports, migrations and source debt
     'scripts/architecture/page-service-shim-retirement-guard.test.mjs',
   ]) assert.equal(existsSync(file), true, file);
   const docs = readFileSync('docs/README.md', 'utf8');
-  assert.ok(docs.includes('engineering/final-cleanliness-closeout.md'));
-  assert.ok(readFileSync('docs/engineering/final-cleanliness-closeout.md', 'utf8')
-    .includes('Evidence / Review'));
+  assert.ok(docs.includes('product/LEGACY_DOC_INDEX.md'));
+  assert.ok(readFileSync('docs/product/LEGACY_DOC_INDEX.md', 'utf8')
+    .includes('Evidence'));
+  assert.ok(docs.includes('482017e'), 'historical evidence must remain traceable');
 });

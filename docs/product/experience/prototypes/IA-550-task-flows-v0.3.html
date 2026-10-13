@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yak DataOps · IA V3.1 全菜单双域工作台原型 v0.3</title>
+<style>
+:root{--ink:#1a2935;--ink2:#354956;--muted:#70828e;--hint:#94a3ae;--line:#e1e8eb;--paper:#ffffff;--canvas:#f4f7f7;--cream:#fafcfc;--deep:#142c36;--deep2:#1e3b45;--teal:#14796f;--teal2:#0e5f58;--sea:#e7f5f1;--amber:#b46e19;--gold:#fff4e4;--red:#ba4e4e;--redbg:#fff0ef;--shadow:0 4px 22px rgba(20,47,57,.035);--radius:13px}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--canvas);font-size:13px;line-height:1.6;font-feature-settings:"tnum"}button,input,select,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #6cbbae;outline-offset:2px}button:disabled{cursor:not-allowed;opacity:.48}h1,h2,h3,h4,p{margin-top:0}h1{font-size:25px;letter-spacing:-.75px;line-height:1.36;margin-bottom:8px;font-weight:760}h2{font-size:15px;letter-spacing:-.14px}h3{font-size:13px}small{font-size:11px;color:var(--muted)}svg{display:inline-block;vertical-align:middle;flex-shrink:0}a{text-decoration:none;color:var(--teal)}
+.app{display:grid;grid-template-columns:78px 228px minmax(0,1fr);min-height:100vh}.rail{background:var(--deep);height:100vh;position:sticky;top:0;color:#aec6ca;display:flex;flex-direction:column;align-items:center;gap:8px;padding:19px 8px;z-index:20}.mark{width:43px;height:43px;background:#87d4c0;display:grid;place-items:center;border-radius:13px;color:#183941;font-size:21px;font-weight:800;letter-spacing:-2px;margin-bottom:20px}.railbtn{width:62px;min-height:64px;border:0;background:transparent;color:#aec1c5;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;line-height:1.4;padding:7px 3px}.railbtn:hover{background:#254752;color:white}.railbtn.active{background:#2a5357;color:#d7fff4}.railbtn.active:before{content:"";position:absolute;margin-left:-67px;height:25px;width:3px;border-radius:3px;background:#92dfc9}.railbtn svg{width:21px;height:21px}.railsep{height:1px;background:#40606a;width:39px;margin:8px 0}.railbottom{margin-top:auto;display:grid;gap:6px}.side{position:sticky;top:0;height:100vh;overflow:auto;background:#fcfdfd;border-right:1px solid var(--line);padding:20px 13px;z-index:19}.sidetitle{font-size:10px;color:#8c9aa4;font-weight:800;letter-spacing:1.3px;padding:4px 13px 8px}.sidetop{font-size:17px;font-weight:780;letter-spacing:-.4px;padding:0 12px 14px}.sidebox{border-top:1px solid #ebeff1;padding-top:16px}.navitem{border:0;background:transparent;text-align:left;width:100%;display:flex;align-items:center;gap:10px;min-height:40px;padding:10px 11px;border-radius:9px;color:#4b606c;font-size:12px;font-weight:560;margin:2px 0}.navitem:hover{background:#eef4f3}.navitem.active{background:#e6f4ef;color:#0e695f;font-weight:750}.navitem.active .navicon{color:#118074}.navicon{width:18px;color:#718792;display:inline-grid;place-items:center}.navicon svg{height:16px;width:16px}.navitem .arrow{margin-left:auto;color:#96a3aa}.nlabel{color:#91a1a8;font-size:10px;font-weight:760;letter-spacing:.8px;text-transform:uppercase;padding:19px 12px 7px;display:flex;justify-content:space-between}.toolLink{border:0;background:none;padding:8px 11px;width:100%;display:flex;align-items:center;gap:8px;color:#698089;font-size:11.5px;text-align:left;border-radius:7px}.toolLink:hover,.toolLink.active{color:var(--teal);background:#f0f7f4}.toolLink svg{width:14px;height:14px}.sidefoot{border-top:1px solid #edf1f3;margin-top:28px;padding:15px 12px;color:#97a5ad;font-size:10.5px}
+.workspace{min-width:0}.topbar{height:67px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.97);display:flex;align-items:center;justify-content:space-between;padding:0 30px;gap:15px;position:sticky;top:0;z-index:15}.topgroup{display:flex;align-items:center;gap:12px;min-width:0}.project{display:flex;align-items:center;gap:9px;background:#f5f8f8;border:1px solid #e6eced;padding:8px 11px;border-radius:8px;color:#435865;white-space:nowrap;font-size:11.5px}.project b{font-weight:750;color:#263f49}.crumbtop{font-size:11px;color:#84939c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.searchbtn{display:flex;gap:12px;align-items:center;width:265px;background:#f6f9f8;color:#9aa6aa;border:1px solid #e5eceb;text-align:left;border-radius:9px;padding:9px 12px;font-size:11.5px;white-space:nowrap}.searchbtn kbd{margin-left:auto;background:white;color:#8998a3;border-radius:5px;padding:1px 5px;border:1px solid #e2e8e7;font-family:inherit}.roleSwitcher{border:1px solid #dfe9e6;background:#f9fcfa;color:#55746d;padding:7px 8px;border-radius:8px;font-size:11px;max-width:95px}.userdot{width:32px;height:32px;border-radius:50%;background:#d4ebdf;display:grid;place-items:center;color:#26715f;font-weight:800}.topicon{border:1px solid #e4ebec;background:#fff;width:32px;height:32px;border-radius:9px;color:#627780;display:grid;place-items:center}.topicon svg{width:16px;height:16px}.mobileToggle{display:none}.body{max-width:1600px;margin:auto;padding:28px 30px 55px}.prototypeNotice{background:#e8f4f1;border:1px solid #d1e7df;border-radius:9px;padding:9px 14px;display:flex;gap:10px;align-items:center;color:#376659;font-size:11px;margin-bottom:21px}.prototypeNotice strong{font-weight:800}.noticeEnd{margin-left:auto;color:#568378}.breadcrumb{font-size:11px;color:#8b9aa3;display:flex;gap:8px;align-items:center;margin-bottom:13px}.breadcrumb button{border:0;background:transparent;color:#46796e;font-size:11px;padding:0}.pageHead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:19px}.pageHead .eyebrow{font-size:10px;color:#13786d;font-weight:800;letter-spacing:1.3px;margin-bottom:7px}.pageHead p{max-width:725px;color:#748690;margin:0;font-size:12px}.headActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{padding:9px 14px;border-radius:8px;border:1px solid #dbe5e5;background:white;color:#395563;font-weight:700;min-height:35px;white-space:nowrap;font-size:11.5px;display:inline-flex;align-items:center;gap:7px;justify-content:center}.btn:hover{border-color:#a5c7bc;background:#f5fbf8}.btn.primary{background:var(--teal);border-color:var(--teal);color:white}.btn.primary:hover{background:var(--teal2)}.btn.soft{background:#ebf5f1;color:#13766d;border-color:#d4ece5}.btn.ghost{background:transparent;border-color:transparent}.btn svg{width:15px;height:15px}.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:#f2f5f6;color:#607883;border-radius:5px;font-size:10px;font-weight:700;white-space:nowrap}.tag.good{background:#e6f5ed;color:#288464}.tag.warn{background:#fff3e4;color:#aa712b}.tag.danger{background:#fff0ef;color:#b85a54}.tag.blue{background:#eaf3fa;color:#397995}.card{background:white;border:1px solid #e2e9e9;border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}.cardHead{padding:17px 19px;border-bottom:1px solid #edf1f1;display:flex;align-items:center;justify-content:space-between;gap:10px}.cardHead h2{margin:0;font-size:13px;font-weight:760}.cardHead small{color:#90a0a8}.cardBody{padding:18px 19px}.hrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.muted{color:var(--muted)}.subtle{color:#97a4ab}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:0 0 17px}.kpi{padding:16px 18px;background:white;border:1px solid #e2e9e9;border-radius:11px;display:flex;flex-direction:column;min-height:98px;position:relative;overflow:hidden}.kpi:after{content:"";position:absolute;right:16px;top:15px;width:31px;height:31px;border-radius:9px;background:#f0f6f4}.kpi label{color:#81939c;font-size:11px}.kpi b{font-size:25px;line-height:1.3;letter-spacing:-.7px;margin-top:7px}.kpi small{font-size:10px;margin-top:2px}.kpi small em{color:#27876b;font-style:normal}.split{display:grid;grid-template-columns:238px minmax(0,1fr) 273px;gap:15px;align-items:start}.split.medium{grid-template-columns:minmax(0,1fr) 298px}.lefttree{padding:8px 10px 12px}.treehead{padding:12px 10px 15px;display:flex;align-items:center;justify-content:space-between;font-weight:780;color:#4a626e;font-size:11px}.treeRow{background:transparent;border:0;border-radius:8px;min-height:36px;display:flex;align-items:center;gap:8px;padding:7px 9px;width:100%;color:#657b86;text-align:left;font-size:11.5px}.treeRow svg{width:15px;height:15px}.treeRow.active{background:#e9f6f1;color:#13786e;font-weight:760}.treeRow.indent{padding-left:26px}.treeRow .count{margin-left:auto;font-size:10px;color:#9cacb2}.listhead{padding:17px 18px 13px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.listhead strong{font-size:14px}.listhead p{font-size:11px;color:#8b9aa3;margin:2px 0 0}.filters{padding:0 18px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.field{border:1px solid #e0e8e8;border-radius:8px;background:white;color:#526c77;padding:9px 11px;min-height:35px;outline:none;font-size:11.5px}.field:focus{border-color:#84bdae}.field.search{flex:1;min-width:175px;background:#fcfdfd}.field.short{width:120px}.tableScroll{overflow:auto;max-width:100%}table{border-collapse:collapse;width:100%;min-width:560px}th{font-size:10px;color:#8b9ca5;text-transform:none;font-weight:760;text-align:left;padding:11px 16px;border-block:1px solid #edf1f1;background:#fafcfc;white-space:nowrap}td{padding:12px 16px;border-bottom:1px solid #eef2f1;color:#546b75;font-size:11.5px;vertical-align:middle}tbody tr:hover{background:#fafdfb}tbody tr.selected{background:#f0f8f5}tbody tr:last-child td{border-bottom:0}.rowtitle{font-weight:760;color:#284753;display:block;font-size:11.5px}.rowmeta{font-size:10px;color:#9aa8af;margin-top:3px}.link{background:none;border:0;color:var(--teal);font-weight:730;padding:2px 0;font-size:11.5px}.link:hover{text-decoration:underline}.pagination{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;color:#99a7ae;font-size:10px;gap:10px}.pageinfo{display:flex;align-items:center;gap:7px}.pagechip{padding:3px 8px;border:1px solid #e0e9e8;border-radius:6px;background:#fbfdfc;color:#496b69}.pagechip.active{background:#e3f4ed;color:#176b63;border-color:#c8e3d9}.inspect{padding:19px}.inspect small.label{display:block;letter-spacing:.8px;color:#9ca9b1;font-size:10px;font-weight:760;margin-bottom:7px}.inspect h3{font-size:17px;letter-spacing:-.4px;margin:0 0 7px;line-height:1.4}.inspect p{font-size:11px;color:#788b93}.kv{display:grid;gap:0;margin:13px 0}.kvrow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-top:1px solid #edf1f1;padding:10px 0;font-size:11px}.kvrow span{color:#8b9ca5}.kvrow b{color:#425b67;text-align:right;font-weight:680}.softPanel{background:#f3f8f6;border:1px solid #e1ede8;border-radius:9px;padding:11px 12px;font-size:11px;color:#58786e}.softPanel.warn{background:#fff9ed;border-color:#f7e7c9;color:#8b743d}.softPanel.danger{background:#fff3f2;border-color:#f5d9d4;color:#9e5550}.inspect .btn{width:100%;margin-top:12px}.trail{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #e3eaea;border-radius:9px;padding:11px 13px;margin-bottom:16px;font-size:11px}.trail button{border:0;background:none;color:#607983;font-size:11px;font-weight:660;padding:2px 5px}.trail button.active{color:var(--teal)}.trail .sep{color:#bac7c9}.tabs{display:flex;gap:19px;border-bottom:1px solid #e4eaea;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;padding:0 18px}.tab{padding:14px 1px 11px;border:0;border-bottom:2px solid transparent;color:#82939d;font-size:11.5px;font-weight:670;background:none;white-space:nowrap}.tab.active{border-color:#1c887a;color:#13776c}.placeholder{min-height:455px;background:white;border:1px solid #e2e9e9;border-radius:13px;display:grid;place-items:center;padding:40px 20px;text-align:center}.placeholderIcon{width:69px;height:69px;border-radius:20px;background:#eef6f3;display:grid;place-items:center;color:var(--teal);margin:0 auto 17px}.placeholderIcon svg{width:29px;height:29px}.placeholder h2{font-size:19px;margin:0 0 9px}.placeholder p{max-width:520px;color:#8497a0;font-size:12px;margin:0 auto 20px}.placeholder .caps{color:#7a938b;letter-spacing:1px;font-size:10px;font-weight:800;margin-bottom:9px}.placeholderLink{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.progressCards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}.progressCard{background:white;border:1px solid #e3ebea;border-radius:10px;text-align:left;padding:13px;min-height:86px;position:relative}.progressCard .num{font-size:10px;color:#8a9ba3;margin-bottom:6px}.progressCard b{font-size:12px;display:block}.progressCard small{font-size:10px}.progressCard.active{border-color:#95c6b6;box-shadow:0 0 0 2px #e6f4ec}.progressCard.active b{color:var(--teal)}.workgrid{display:grid;grid-template-columns:250px minmax(0,1fr) 270px;gap:15px}.modelTree{padding:16px}.modelList{display:grid;gap:8px}.modelItem{border:1px solid #e7eded;border-radius:8px;padding:11px;background:#fff;text-align:left}.modelItem.active{border-color:#9ed3c1;background:#f0f8f5}.modelItem strong{display:block;font-size:11px;color:#375862}.modelItem small{display:block;margin-top:3px}.diagram{padding:23px;min-height:338px;background-color:#fff;background-image:radial-gradient(#dfe9e8 .9px,transparent .9px);background-size:18px 18px;border-radius:0 0 12px 12px;display:flex;flex-direction:column;justify-content:center;gap:14px}.flowNode{margin:0 auto;width:min(370px,100%);background:white;border:1px solid #cadbd7;border-radius:10px;padding:13px 16px;box-shadow:0 10px 20px rgba(36,95,85,.06);position:relative}.flowNode .nodeTop{display:flex;justify-content:space-between;gap:9px;align-items:center}.flowNode strong{font-size:12px}.flowNode small{display:block;margin-top:5px}.flowNode.primary{border-color:#77bba8;box-shadow:0 5px 16px #d7e9e3}.flowArrow{align-self:center;font-size:16px;color:#8daea4;line-height:10px}.diagramFoot{font-size:10px;color:#95a5a7;text-align:center;padding-top:2px}.sideMetric{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #edf1f1}.ring{height:44px;width:44px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(#188675 0deg 264deg,#e4eeea 264deg 360deg);position:relative;font-size:10px;font-weight:800;color:#256d62}.ring:before{content:"";position:absolute;inset:5px;border-radius:50%;background:white}.ring span{position:relative}.statList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}.statMini{background:#fff;border:1px solid #e4ebe9;padding:16px;border-radius:10px}.statMini small{display:block}.statMini strong{font-size:23px}.statMini .bar{height:4px;border-radius:5px;background:#edf3f0;margin-top:11px;overflow:hidden}.statMini .bar i{display:block;height:100%;background:#57ab92;border-radius:5px}.queueCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:16px}.queueCard{background:white;border:1px solid #e0e9e6;border-radius:10px;padding:16px;display:grid;gap:6px;text-align:left}.queueCard.active{border-color:#a8d1be;background:#f2faf5}.queueCard span{color:#81969c;font-size:11px}.queueCard b{font-size:22px;line-height:1.2}.queueCard small{font-size:10px}.stateArea{border:1px dashed #cbdad9;background:#fafdfc;border-radius:10px;padding:60px 20px;text-align:center;min-height:220px}.stateArea h3{font-size:15px;margin-bottom:5px}.stateArea p{font-size:11px;max-width:440px;margin:0 auto 15px;color:#8b9ca4}.stateArea .glyph{font-size:27px;color:#81a5a0;margin-bottom:10px}.stateSwitch{display:flex;justify-content:flex-end;align-items:center;gap:7px;color:#879ba2;font-size:10px;margin-bottom:12px}.stateSwitch select{font-size:10px;padding:5px;border:1px solid #dde7e4;border-radius:6px;color:#68827f;background:#fff;max-width:142px}.explain{display:flex;gap:13px;align-items:flex-start;margin-top:17px;background:#ecf6f2;border:1px solid #d6ebe3;color:#467969;padding:13px 16px;border-radius:10px;font-size:11px}.explain svg{width:17px;height:17px;margin-top:1px}.explaintxt{flex:1}.toolbarRight{display:flex;align-items:center;gap:7px}.timeline{display:flex;flex-direction:column;gap:12px;padding:18px}.timeRow{display:flex;gap:13px}.timeDot{width:10px;height:10px;border-radius:50%;background:#62aa94;margin-top:6px;box-shadow:0 0 0 4px #e8f5ee}.timeRow span{font-size:10px;color:#91a2a6}.timeRow strong{display:block;font-size:11px;color:#445f69}.legendDot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#51a58b;margin-right:5px}.detailStrip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border:1px solid #e0e9e6;border-radius:9px;background:#fbfdfc;margin-bottom:14px;font-size:11px}.detailStrip strong{font-size:12px}.detailStrip .tag{margin-left:auto}.toast{position:fixed;bottom:25px;right:25px;z-index:100;background:#173b42;color:white;padding:12px 17px;border-radius:10px;box-shadow:0 12px 30px #15323b33;max-width:min(440px,92vw);font-size:12px;display:none}.toast.show{display:block}.shade{position:fixed;inset:0;background:#0a2631aa;z-index:55;display:none;align-items:center;justify-content:center;padding:20px}.shade.open{display:flex}.dialog{width:min(520px,100%);max-height:85vh;overflow:auto;background:white;border-radius:15px;padding:24px;box-shadow:0 28px 70px #071b2033}.dialog h2{font-size:19px;margin-bottom:8px}.dialog p{font-size:12px;color:#7a8f97;line-height:1.85}.dlgfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:21px;flex-wrap:wrap}.dlgfield{display:block;margin:15px 0;color:#5c737d;font-size:11px;font-weight:700}.dlgfield input,.dlgfield textarea{display:block;width:100%;border:1px solid #dce6e5;border-radius:8px;padding:11px;font-size:12px;margin-top:6px;outline:none}.dlgfield textarea{min-height:90px;resize:vertical}.palette{width:min(650px,100%);background:white;border-radius:15px;overflow:hidden;box-shadow:0 25px 70px #072b3b33}.palette input{width:100%;padding:20px 24px;border:0;border-bottom:1px solid #e4ebeb;outline:none;font-size:15px}.paletteContent{max-height:430px;overflow:auto;padding:11px}.paletteEntry{width:100%;background:none;border:0;text-align:left;padding:11px 13px;display:flex;justify-content:space-between;gap:10px;border-radius:8px;color:#43616b}.paletteEntry:hover{background:#eff6f3}.paletteEntry span{font-weight:750}.paletteEntry small{font-size:10px}.mobileShade{display:none}
+@media(max-width:1350px){.app{grid-template-columns:68px 210px minmax(0,1fr)}.railbtn{width:54px}.body{padding:24px 22px 45px}.topbar{padding:0 21px}.split{grid-template-columns:210px minmax(0,1fr)}.split>.card:last-child{grid-column:1/-1}.workgrid{grid-template-columns:210px minmax(0,1fr)}.workgrid>.card:last-child{grid-column:1/-1}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1000px){.app{grid-template-columns:65px 195px minmax(0,1fr)}.topbar .crumbtop{display:none}.searchbtn{width:auto}.searchbtn span{display:none}.searchbtn kbd{display:none}.progressCards{grid-template-columns:repeat(2,1fr)}.split,.workgrid{grid-template-columns:minmax(0,1fr)}.split>.card:last-child,.workgrid>.card:last-child{grid-column:auto}.split>.card:first-child{display:none}}
+@media(max-width:760px){.app{display:block}.rail{position:fixed;left:-83px;width:76px;height:100dvh;transition:left .2s;z-index:70}.rail.drawerOpen{left:0}.side{position:fixed;left:-310px;width:230px;top:0;height:100dvh;transition:left .2s;z-index:69;padding-top:72px}.side.drawerOpen{left:76px}.mobileShade.active{display:block;position:fixed;inset:0;background:#102c3899;z-index:65}.mobileToggle{display:inline-flex;align-items:center;justify-content:center;border:1px solid #e1e9e8;width:35px;height:35px;border-radius:8px;background:white;color:#466370}.topbar{height:59px;padding:0 14px}.topbar .project{max-width:205px;overflow:hidden;text-overflow:ellipsis}.topicon{display:none}.body{padding:20px 15px 50px}.prototypeNotice{align-items:flex-start;flex-wrap:wrap}.noticeEnd{width:100%;margin-left:0}.pageHead{flex-direction:column;gap:11px}.pageHead h1{font-size:21px}.pageHead .headActions{width:100%}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.kpi{padding:12px;min-height:86px}.kpi b{font-size:21px}.progressCards{gap:8px}.progressCard{min-height:74px;padding:11px}.statList{grid-template-columns:1fr 1fr}.queueCards{grid-template-columns:1fr 1fr}.cardHead{padding:14px 15px}.cardBody{padding:15px}.filters{padding:0 14px 13px}.listhead{padding:14px}.inspect{padding:15px}}
+@media(max-width:390px){.roleSwitcher{max-width:70px;font-size:10px;padding:6px 3px}.topbar .project{max-width:144px;padding:7px}.userdot{display:none}.body{padding:15px 11px 40px}.pageHead h1{font-size:20px}.headActions .btn{flex:1}.queueCards{grid-template-columns:1fr 1fr}.queueCard{padding:11px}.detailStrip .tag{margin-left:0}.field.search{min-width:100%}.field.short{width:calc(50% - 4px)}.tag{white-space:normal}.kpis{gap:7px}.kpi:after{display:none}.split,.workgrid{gap:11px}.side{width:calc(100vw - 76px)}.modal{padding:15px}}
+
+/* v0.3: task-first layout, legible content and resilient narrow widths */
+th{font-size:11px}td{font-size:12px}.rowmeta{font-size:11px}.micro{font-size:11px}.navitem{font-size:12px}.sidefoot{font-size:11px}
+body{font-size:13px;line-height:1.64}
+.prototypeNotice{padding:8px 12px;font-size:11px;margin-bottom:10px}
+.body{padding-top:18px}
+.breadcrumb{margin-bottom:7px}
+.pageHead{margin-bottom:13px}.pageHead .eyebrow{display:none}
+.pageHead h1{font-size:22px;margin-bottom:3px}.pageHead p{font-size:12px}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:11px}.kpi{min-height:74px;padding:12px}.kpi b{font-size:20px;margin-top:3px}
+.progressCards{margin-bottom:12px}.progressCard{min-height:65px;padding:10px}
+.split{grid-template-columns:210px minmax(0,1fr)}.split>.card:last-child{grid-column:auto}
+.split.medium{grid-template-columns:minmax(0,1fr) 335px}
+.workgrid{grid-template-columns:220px minmax(0,1fr)}.workgrid>.card:last-child{grid-column:auto}
+.stateSwitch{margin-bottom:8px}
+.compactHead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 15px;background:#fff;border:1px solid var(--line);border-radius:10px;margin:0 0 12px}
+.compactHead strong{font-size:12px}.compactHead small{font-size:11px}
+.taskTabs{display:flex;gap:6px;overflow-x:auto;padding:9px;background:#f3f7f6;border:1px solid #e1e9e6;border-radius:10px;margin-bottom:13px}
+.taskStep{border:1px solid transparent;background:none;border-radius:7px;white-space:nowrap;text-align:left;padding:8px 12px;color:#58727a;min-height:39px;font-size:12px;font-weight:650;flex:1}
+.taskStep.active{background:#fff;color:#106f64;border-color:#b3d7c9;box-shadow:0 1px 4px #164b3c12}
+.taskStep.done{color:#217762}.taskStep .tick{font-size:12px;margin-right:5px}
+.contextbar{display:flex;justify-content:space-between;align-items:center;gap:13px;background:#f4f9f6;border:1px solid #d2e6dc;border-radius:10px;padding:9px 13px;margin-bottom:12px;font-size:12px}
+.contextbar b{color:#226e61}.contextbar button{border:0;background:transparent;color:#177c70;font-size:12px;font-weight:700}
+.contextbar p{margin:0;color:#607a72}.contextbar .hrow{flex:1}
+.inlineWorkflow{background:#fff;border:1px solid var(--line);border-radius:11px;padding:18px;margin-top:12px}
+.inlineWorkflow h2{font-size:15px;margin-bottom:5px}.inlineWorkflow p{color:#71858c;font-size:12px}
+.workflowGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,.85fr);gap:16px;align-items:start}
+.workflowGrid>*{min-width:0}
+.itemFacts{display:grid;gap:10px}.factRow{display:grid;grid-template-columns:115px 1fr;gap:10px;padding-bottom:8px;border-bottom:1px solid #edf1f0;font-size:12px}
+.factRow span{color:#788b92}.factRow strong{font-weight:650;color:#294b57}
+.formRow{display:grid;gap:5px;margin-bottom:12px;font-size:12px;color:#4e6771;font-weight:650}
+.formRow input,.formRow select,.formRow textarea{width:100%;padding:10px;border:1px solid #d7e4df;border-radius:8px;background:#fff;font-size:12px;color:#203f4b;outline:none}
+.formRow textarea{min-height:84px;resize:vertical}
+.formRow input:focus,.formRow textarea:focus{border-color:#4ca790;box-shadow:0 0 0 2px #e0f3eb}
+.factBox{border:1px solid #e0e9e6;background:#f8fbfa;border-radius:10px;padding:14px}
+.factBox h3{font-size:12px;margin-bottom:8px}
+.docGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.diffRow{border:1px solid #e3ece8;border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:8px;font-size:12px}
+.diffRow del{color:#ae6860}.diffRow ins{color:#177d67;text-decoration:none}
+.resultPanel{padding:16px;border:1px solid #d2e9de;background:#f1f9f5;border-radius:10px;margin:10px 0}
+.resultPanel.warn{background:#fff8ef;border-color:#efdabf}
+.resultPanel.error{background:#fff2f0;border-color:#ebcecc}
+.resultPanel h3{font-size:14px;margin-bottom:8px}.resultPanel p{margin-bottom:9px;color:#667e81}
+.actionLine{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:13px;flex-wrap:wrap}
+.actionLine .secondaryMsg{margin-right:auto;color:#758b90;font-size:11px}
+.drawerShade{display:none;position:fixed;inset:0;background:#0d2b3880;z-index:58}
+.drawerShade.open{display:block}
+.inspectorDrawer{position:fixed;right:0;top:0;height:100dvh;width:min(460px,94vw);z-index:59;background:#fff;box-shadow:-16px 0 45px #092b3429;overflow:auto;transform:translateX(110%);transition:transform .2s}
+.inspectorDrawer.open{transform:translateX(0)}
+.inspectorDrawer .drawerHeading{padding:15px 22px;border-bottom:1px solid #e2eae7;display:flex;align-items:center;justify-content:space-between}
+.inspectorDrawer .inspect{padding:24px}
+.plainClose{border:1px solid #dce8e3;border-radius:8px;width:33px;height:33px;background:#fff;color:#57726c}
+.reviewerTools{display:none}.reviewerTools.open{display:flex;background:#fff;border:1px solid #dce8e3;border-radius:8px;padding:8px;flex-wrap:wrap;margin-bottom:12px}
+.reviewerToggle{border:0;background:none;color:#7c908e;font-size:11px;padding:4px}
+.secondarySide{max-height:400px;overflow:auto}
+.riskLine{border-left:3px solid #dc9b46;padding:11px 13px;background:#fff9ed;border-radius:3px;margin:10px 0;font-size:12px}
+.receipt{font-weight:760;color:#16715e}
+.diagram{min-height:280px}.diagram .flowNode{width:min(430px,100%)}
+.queueCards{grid-template-columns:repeat(3,minmax(0,1fr))}
+.queueCard{padding:12px;gap:3px}.queueCard b{font-size:18px}
+.queueTable{min-width:690px}.queueTable td{font-size:12px}
+.queueItemName{font-weight:740;color:#234d55}
+.micro{font-size:11px;color:#667f85}
+footer.contextActions{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:12px 0;flex-wrap:wrap}
+@media(max-width:1366px){
+ .split{grid-template-columns:195px minmax(0,1fr)}.split.medium{grid-template-columns:minmax(0,1fr) 300px}
+ .workgrid{grid-template-columns:200px minmax(0,1fr)}
+}
+@media(max-width:1100px){
+ .split{grid-template-columns:minmax(0,1fr)}.split>.lefttree{display:none}
+ .split.medium{grid-template-columns:minmax(0,1fr)}.workgrid{grid-template-columns:minmax(0,1fr)}
+ .workgrid>.modelTree{display:none}.split>.card:last-child,.workgrid>.card:last-child{grid-column:auto}
+ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:1000px){
+ .split>.card:first-child{display:block} /* critical: never hide task list */
+ .split>.lefttree{display:none} .split>.card.lefttree:first-child{display:none} .workgrid>.card:first-child{display:none}
+}
+@media(max-width:760px){
+ .body{padding-top:15px}.prototypeNotice{font-size:10px}
+ .pageHead h1{font-size:20px}.workflowGrid,.docGrid{grid-template-columns:1fr}
+ .queueCards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .taskTabs{gap:3px}.taskStep{padding:8px;flex:0 0 auto}
+ .compactHead{flex-wrap:wrap}.factRow{grid-template-columns:98px 1fr}
+}
+@media(max-width:390px){
+ .queueCards{grid-template-columns:1fr 1fr}.queueCard{padding:9px}
+ .pageHead{gap:7px}.headActions .btn{flex:0 1 auto}
+ .taskStep{font-size:11px}.contextbar{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div id="mobileShade" class="mobileShade" aria-hidden="true"></div>
+<div class="app">
+<nav class="rail" id="rail" aria-label="业务域导航"><div class="mark" aria-label="Yak DataOps">Y</div><div id="railLinks"></div><div class="railbottom" id="railBottom"></div></nav>
+<aside class="side" id="side" aria-label="域内菜单"><div class="sidetitle" id="sideCaption">WORKSPACE</div><div class="sidetop" id="sideTitle"></div><div class="sidebox" id="sideLinks"></div><div class="sidefoot">IA V3.1 · 五域完整菜单<br>本轮仅重建定义与治理两域<br>其他菜单保留入口占位</div></aside>
+<div class="workspace">
+<header class="topbar"><div class="topgroup"><button class="mobileToggle" id="mobileToggle" aria-label="打开完整菜单">☰</button><button class="project" id="projectBtn" title="示例项目；点击了解项目上下文">◉ <b>Retail Analytics</b><span class="muted">⌄</span></button><div class="crumbtop" id="topDomain"></div></div><div class="topgroup"><button class="searchbtn" id="openPalette" aria-label="搜索菜单"><span>⌕　搜索功能、工作台或工具...</span><kbd>⌘ K</kbd></button><button class="topicon" id="helpBtn" aria-label="查看原型说明">?</button><select id="roleSwitch" class="roleSwitcher" title="仅切换原型角色画像，不代表真实权限"><option value="builder">建设人员</option><option value="steward">治理人员</option><option value="reader">只读人员</option></select><span class="userdot">YT</span></div></header>
+<main id="main" class="body" tabindex="-1"></main>
+</div></div>
+<div class="shade" id="dialogShade" aria-hidden="true"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" id="dialog"></section></div>
+<div class="shade" id="paletteShade" aria-hidden="true"><section class="palette" role="dialog" aria-modal="true" aria-label="完整菜单搜索"><input type="search" id="paletteInput" placeholder="搜索 5 大业务域、20 个入口及专业工具..." autocomplete="off"><div id="paletteResults" class="paletteContent"></div></section></div>
+<div class="drawerShade" id="drawerShade"></div><aside class="inspectorDrawer" id="inspectorDrawer" aria-label="对象详情抽屉"></aside><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+"use strict";
+var paths={
+home:"首页",tasks:"我的待办",settings:"平台设置",source:"数据源",sync:"同步任务",file:"文件资源",semantic:"业务语义",standard:"数据标准",model:"模型工作台",metric:"指标中心",dev:"开发工作台",workflow:"工作流",release:"发布与运行",asset:"资产目录",governance:"治理工作队列",quality:"质量治理",security:"数据安全",lifecycle:"生命周期",mdm:"主数据专业工作台",product:"数据产品目录",dataset:"数据集",api:"API 服务",visual:"分析展示"
+};
+var domains=[
+{id:"work",name:"工作入口",icon:"home",items:["home","tasks"],tools:[]},
+{id:"integration",name:"数据接入与集成",icon:"plug",items:["source","sync","file"],tools:[["harvestExternal","项目级元数据采集"],["sqlAudit","SQL 执行审计"],["syncRun","同步监控与诊断"]]},
+{id:"definition",name:"标准、指标与建模",icon:"layers",items:["semantic","standard","model","metric"],tools:[["metricImpact","反向指标影响"],["metricLineage","指标血缘"],["layerConfig","数仓分层配置"]]},
+{id:"development",name:"开发与运行",icon:"code",items:["dev","workflow","release"],tools:[["runHistory","运行历史与异常"],["instance","工作流实例"],["releaseDiag","发布诊断"]]},
+{id:"governance",name:"数据资产与治理",icon:"shield",items:["asset","governance","quality","security","lifecycle","mdm"],tools:[["metadata","元数据采集与诊断"],["lineage","血缘与影响分析"],["qualityRun","质量检查记录"],["qualityRule","质量规则模板"],["taxonomy","编目与标签配置"],["securityAudit","安全审计与合规"]]},
+{id:"consumption",name:"数据消费与服务",icon:"chart",items:["product","dataset","api","visual"],tools:[["callers","调用方与密钥"],["apiObserve","API 运行观测"],["apiLog","调用日志与调试"]]},
+{id:"settings",name:"平台设置",icon:"settings",items:["userSetting","departmentSetting","roleSetting","projectSetting","approvalSetting","logSetting"],tools:[]}
+];
+var labels={userSetting:"用户管理",departmentSetting:"部门管理",roleSetting:"角色管理",projectSetting:"项目管理",approvalSetting:"审批流程",logSetting:"操作日志"};
+var descriptions={
+semantic:"从业务域到业务过程，先确认业务含义、过程粒度与责任人，再接续标准和模型。",
+standard:"将数据标准与标准字段放在同一工作台管理；定义、引用和生效分别有证据。",
+model:"逻辑定义、物理模型、来源映射与版本不再散落在多个孤立页面。",
+metric:"从指标定义到验证、版本与发布，在同一个上下文里追溯口径和影响。",
+asset:"一处发现治理资产与技术实体，明确对象身份、来源与上架状态。",
+governance:"把盘点、上架、资产变更和对账集中处理，同时保留各自的真实回执。",
+quality:"监控对象、检查记录和质量规则统一发现；结果与执行证据独立呈现。",
+security:"沿着分类、策略、脱敏和审计查看控制链路，避免把展示状态当访问授权。",
+lifecycle:"从生命周期策略到 TTL 监控与存储统计，展示生效和运行之间的区别。",
+mdm:"主数据专业工作台，保留实体建模、识别、清洗和变更的完整独立流程。"
+};
+var toolInfo={
+metricImpact:["反向指标影响","从标准字段、业务过程或模型反查受影响指标","Semantic / Metric","上游对象 → 指标版本 → 影响关系"],
+metricLineage:["指标血缘","按指定指标和版本查看有据可查的上游引用","Metric","版本、模型、标准与使用关系"],
+layerConfig:["数仓分层配置","维护数仓分层的专业定义，不等于批准任意模型发布","Semantic","ODS / DWD / DWS / ADS 配置"],
+metadata:["元数据采集与诊断","项目级采集任务、冻结 Run 范围与来源漂移诊断","Metadata","任务、Run、当前实体目录"],
+lineage:["血缘与影响分析","从项目级对象集合出发查询真实读写关系","Lineage","来源对象、下游及影响证据"],
+qualityRun:["质量检查记录","不依赖质量监控权限的项目级执行记录入口","Quality","Execution ID、检查结果、失败原因"],
+qualityRule:["质量规则模板","项目级规则模板管理与对象绑定","Quality","规则模板、应用对象、版本"],
+taxonomy:["编目与标签配置","资产目录分类和标签的专业配置入口","Asset","标签集、目录结构、变更记录"],
+securityAudit:["安全审计与合规","从访问请求和决策证据查看审计记录","Security","主体、资源、策略与审计 ID"]
+};
+var sample={
+semantic:[["订单支付","交易域 / 订单","订单粒度","待确认","PRC-102"],["订单退款","交易域 / 售后","退款单粒度","已定义","PRC-103"],["商品浏览","用户行为域","事件粒度","待复核","PRC-104"],["库存变更","供应链域","变更明细","已定义","PRC-105"]],
+standard:[["订单编号","标识字段","VARCHAR(64)","引用中","STD-201"],["支付时间","时间字段","TIMESTAMP","待校验","STD-205"],["实付金额","金额字段","DECIMAL(18,2)","引用中","STD-208"],["会员标识","标识字段","VARCHAR(32)","草稿","STD-212"]],
+model:[["订单支付明细","逻辑模型 · 订单过程","逻辑","草稿","LM-016"],["ods_order_detail","ODS · 来源表映射","物理","已保存","PM-701"],["dwd_order_detail","DWD · 明细事实","物理","待核验","PM-732"],["dim_customer","DIM · 会员维度","物理","草稿","PM-733"]],
+metric:[["支付订单数","订单主题","计数指标","待校验","MET-026"],["实付交易金额","订单主题","金额指标","草稿","MET-027"],["订单转化率","交易主题","比率指标","待校验","MET-031"],["退款金额","售后主题","金额指标","已定义","MET-035"]],
+asset:[["ods_order_detail","交易主题 / 订单","治理资产","待上架","AST-208"],["会员主数据","客户主题 / 会员","治理资产","编目中","AST-233"],["dim_product","商品主题","治理资产","已上架（示例）","AST-240"],["ods_return_log","技术元数据","技术实体","未纳管","ENT-604"]],
+governance:[["订单明细资产盘点","盘点与上架","等待核对","待处理","GOV-301"],["会员主数据变更","资产变更","责任人审批","待处理","GOV-309"],["商品维度对账","对账检查","仅已受理","待验证","GOV-314"],["售后表结构漂移","来源变更","需要复核","待处理","GOV-320"]],
+quality:[["订单金额非负检查","订单明细表","质量规则","待检查","Q-110"],["主键唯一性检测","会员主数据","检查运行","已执行","Q-115"],["支付时间完整性","支付订单表","质量规则","待修复","Q-119"],["金额范围模板","通用财务主题","规则模板","草稿","Q-121"]],
+security:[["客户手机号","个人信息","敏感分类","策略待复核","SEC-016"],["订单收货地址","地址数据","脱敏规则","已配置","SEC-018"],["用户行为事件","行为记录","访问策略","待审计","SEC-024"],["跨项目访问请求","访问申请","审计线索","待核对","SEC-027"]],
+lifecycle:[["订单明细归档","ODS / 明细资产","生命周期策略","草稿","LC-021"],["日志保留期限","运行与审计数据","TTL 监控","待核对","LC-023"],["冷热数据分层","交易历史","存储统计","未验证","LC-028"]],
+mdm:[["客户主数据","客户主题","实体定义","草稿","MDM-301"],["商品主数据","商品主题","主数据识别","待复核","MDM-304"],["供应商主数据","供应链主题","清洗规则","待执行","MDM-309"],["客户信息变更","客户主题","主数据变更","待审批","MDM-312"]]
+};
+var routeFor={home:"/",tasks:"/tasks",source:"/data-source",sync:"/sync/batch-link-up",file:"/resource-management",semantic:"/semantic/domains",standard:"/semantic/standards",model:"/modeling",metric:"/metric/manage",dev:"/data-development",workflow:"/workflow/definitions",release:"/data-development/releases",asset:"/data-asset/catalog",governance:"/data-asset/inventory",quality:"/data-quality/overview",security:"/data-security/overview",lifecycle:"/data-lifecycle/policy",mdm:"/mdm/overview",product:"/data-analysis/consumption",dataset:"/dataset",api:"/data-service",visual:"/dashboard"};
+var icons={
+home:"<path d='m3 9 9-7 9 7v11H3z'/><path d='M9 20v-7h6v7'/>",
+plug:"<path d='M8 3v5M16 3v5M7 8h10v5a5 5 0 0 1-10 0zM12 18v3'/>",
+layers:"<path d='m12 2 10 5-10 5L2 7zM2 12l10 5 10-5M2 17l10 5 10-5'/>",
+code:"<path d='m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16'/>",
+shield:"<path d='M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z'/><path d='m9 12 2 2 4-4'/>",
+chart:"<rect x='3' y='3' width='18' height='18' rx='2'/><path d='M7 16v-3M12 16V8M17 16v-6'/>",
+settings:"<path d='M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z'/><path d='m19.4 15 .1.2 1.5 1-2 3.4-1.8-.8-.2.1-2 1.2-.2 1.9h-4l-.2-1.9-2-1.2-.2-.1-1.8.8-2-3.4 1.5-1 .1-.2a8 8 0 0 1 0-3l-.1-.2-1.5-1 2-3.4 1.8.8.2-.1 2-1.2.2-1.9h4l.2 1.9 2 1.2.2.1 1.8-.8 2 3.4-1.5 1-.1.2a8 8 0 0 1 0 3Z'/>",
+search:"<circle cx='11' cy='11' r='7'/><path d='m20 20-4-4'/>",arrow:"<path d='m5 12 14 0M13 6l6 6-6 6'/>",chev:"<path d='m9 18 6-6-6-6'/>",
+box:"<path d='m3 7 9-4 9 4v10l-9 4-9-4zM3 7l9 5 9-5M12 12v9'/>",
+file:"<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><path d='M14 2v6h6M8 13h8M8 17h6'/>",
+grid:"<rect x='3' y='3' width='7' height='7' rx='1'/><rect x='14' y='3' width='7' height='7' rx='1'/><rect x='3' y='14' width='7' height='7' rx='1'/><rect x='14' y='14' width='7' height='7' rx='1'/>",
+clock:"<circle cx='12' cy='12' r='9'/><path d='M12 7v5l4 2'/>",
+spark:"<path d='m12 2 1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6zM20 17v5M17.5 19.5h5'/>",
+folder:"<path d='M3 6h7l2 2h9v11H3z'/>",
+alert:"<path d='m12 3 10 18H2zM12 9v5M12 17h.01'/>"
+};
+function icon(n){return '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'+(icons[n]||icons.file)+'</svg>'}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function dom(id){return document.getElementById(id)}
+var state={page:"semantic",role:"builder",tab:{},query:"",select:{},tree:"交易域",view:"asset",status:"ready",filter:"all",editDirty:false,dialogName:"",queue:"all",history:[],tool:"",lastMenu:"definition"};
+function domainOf(id){return domains.find(function(d){return d.items.indexOf(id)>-1||d.tools.some(function(t){return t[0]===id})})||domains[0]}
+function isTarget(id){return ["semantic","standard","model","metric","asset","governance","quality","security","lifecycle","mdm"].indexOf(id)>-1||!!toolInfo[id]}
+function nameOf(id){return paths[id]||labels[id]||(toolInfo[id]&&toolInfo[id][0])||domains.reduce(function(v,d){return v||((d.tools.find(function(t){return t[0]===id})||[])[1])},null)||id}
+function actionAllowed(){return state.role!=="reader"}
+function closeMobile(){dom("rail").classList.remove("drawerOpen");dom("side").classList.remove("drawerOpen");dom("mobileShade").classList.remove("active")}
+function go(id,keepHistory){if(state.editDirty){openDialog("dirty","未保存的更改","当前演示编辑尚未保存。离开时应让使用者明确选择保留编辑或放弃修改。",id);return}if(!keepHistory&&state.page!==id)state.history.push(state.page);state.page=id;state.status="ready";state.filter="all";state.query="";state.tool=toolInfo[id]?id:"";state.lastMenu=domainOf(id).id;render();closeMobile();if(window.location.hash!=="#"+id)window.location.hash=id;window.scrollTo(0,0)}
+function selectRow(i){state.select[state.page]=i;renderMain()}
+function chosen(){var data=sample[state.page]||[];return data[state.select[state.page]||0]||data[0]}
+function badge(s){var cls=/待|草稿|未|仅已/.test(s)?"warn":/已上架|已保存|已定义|已执行|已配置/.test(s)?"good":"blue";return '<span class="tag '+cls+'">'+esc(s)+'</span>'}
+function nav(){
+dom("railLinks").innerHTML=domains.filter(function(d){return d.id!=="settings"}).map(function(d){return '<button class="railbtn '+(state.lastMenu===d.id?"active":"")+'" data-domain="'+d.id+'" title="'+esc(d.name)+'">'+icon(d.icon)+'<span>'+esc(d.id==="work"?"工作":d.id==="integration"?"接入":d.id==="definition"?"定义":d.id==="development"?"开发":d.id==="governance"?"治理":"消费")+'</span></button>'}).join("");
+dom("railBottom").innerHTML='<div class="railsep"></div><button class="railbtn '+(state.lastMenu==="settings"?"active":"")+'" data-domain="settings" title="平台设置">'+icon("settings")+'<span>设置</span></button>';
+var d=domains.find(function(x){return x.id===state.lastMenu})||domains[0];dom("sideCaption").textContent=d.id==="work"?"MY WORKSPACE":"PRODUCT NAVIGATION";
+dom("sideTitle").textContent=d.name;dom("topDomain").textContent=d.name+"  /  "+nameOf(state.page);
+dom("sideLinks").innerHTML='<div class="nlabel">主要任务入口 <span>'+d.items.length+'</span></div>'+d.items.map(function(id,i){return '<button class="navitem '+(state.page===id?"active":"")+'" data-page="'+id+'"><span class="navicon">'+icon(d.id==="settings"?"settings":i===0?"grid":i===1?"layers":i===2?"box":"file")+'</span><span>'+esc(nameOf(id))+'</span><span class="arrow">'+(isTarget(id)?"":'<span style="font-size:9px;color:#9aabaf">占位</span>')+'</span></button>'}).join("")+(d.tools.length?'<div class="nlabel">专业工具 / 全部能力</div>'+d.tools.map(function(t){return '<button class="toolLink '+(state.page===t[0]?"active":"")+'" data-page="'+t[0]+'">'+icon("chev")+'<span>'+esc(t[1])+'</span></button>'}).join(""):"")+'<div class="nlabel">菜单视图</div><button class="toolLink" data-palette="1">'+icon("search")+' 浏览完整菜单（20 项）</button>';
+}
+function notice(){return '<div class="prototypeNotice">'+icon("spark")+'<span><strong>设计原型 v0.3</strong> · 采用 IA V3.1 完整五域菜单；仅定义与治理两域展示新工作台。所有项目、数量、对象及状态为静态样例，不代表运行回执。</span><span class="noticeEnd">#550 · 待评审</span></div>'}
+function pageHead(title,description,eyebrow,buttons){return '<div class="pageHead"><div><div class="eyebrow">'+esc(eyebrow||"WORKSPACE / DESIGN REVIEW")+'</div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div><div class="headActions">'+(buttons||'')+'</div></div>'}
+function trail(items){return '<div class="trail">'+items.map(function(x,i){return (i?'<span class="sep">›</span>':"")+'<button class="'+(state.page===x[0]?"active":"")+'" data-page="'+x[0]+'">'+esc(x[1])+'</button>'}).join("")+'</div>'}
+function statCards(vals){return '<div class="kpis">'+vals.map(function(v){return '<div class="kpi"><label>'+esc(v[0])+'</label><b>'+esc(v[1])+'</b><small>'+esc(v[2])+'</small></div>'}).join("")+'</div>'}
+function stateSwitch(){return '<div class="stateSwitch"><span>体验状态预览（演示）</span><select id="stateMode" aria-label="切换演示状态">'+["ready:正常","empty:空结果","error:读取失败","forbidden:无权限","partial:部分可用","unknown:未知","loading:加载中"].map(function(pair){var p=pair.split(":");return '<option value="'+p[0]+'" '+(state.status===p[0]?"selected":"")+'>'+p[1]+'</option>'}).join("")+'</select></div>'}
+function statePanel(){var copy={empty:["没有符合条件的结果","请求已成功返回，但当前范围没有匹配数据。"],error:["当前无法加载数据","数据服务返回失败，应保留重试能力，不得将错误呈现为空列表。"],forbidden:["你没有此项能力的访问权限","权限必须按原 Owner 和独立 menuCode 判定，不能因视觉组合扩大权限。"],partial:["部分专业信息暂不可用","对象仍可浏览，但不能把质量、安全等未返回的结果显示为无风险。"],unknown:["无法确认最新状态","尚缺 Owner 的正式证据；未知不等于执行完成，也不等于失败。"],loading:["正在读取数据","演示加载占位；正式页面应在请求完成后才更新数据，不提前显示成功。"]}[state.status];return '<div class="stateArea"><div class="glyph">◇</div><h3>'+copy[0]+'</h3><p>'+copy[1]+'</p><button class="btn" data-state-reset="1">恢复正常演示</button></div>'}
+function listTable(id,mode){var rows=(sample[id]||[]).map(function(r,i){return {r:r,i:i}});if(id==="asset"&&state.view==="entity")rows=rows.filter(function(x){return x.r[2]==="技术实体"});if(id==="asset"&&state.view==="asset")rows=rows.filter(function(x){return x.r[2]==="治理资产"});if(state.queue!=="all"&&id==="governance")rows=rows.filter(function(x){return x.r[1].indexOf(state.queue)>=0});if(state.filter==="pending")rows=rows.filter(function(x){return /待|草稿|未|编目|仅已/.test(x.r[3])});if(state.filter==="done")rows=rows.filter(function(x){return /已保存|已定义|已上架|已执行|已配置/.test(x.r[3])});if(state.query.trim())rows=rows.filter(function(x){return x.r.join(" ").toLowerCase().indexOf(state.query.toLowerCase())>-1});if(state.status!=="ready")return statePanel();if(!rows.length)return '<div class="stateArea"><div class="glyph">⌕</div><h3>没有匹配的样例记录</h3><p>当前检索仅作用于演示数据；正式页面由成功返回的检索结果判断 EMPTY。</p><button class="btn" data-clear="1">清除筛选</button></div>';
+return '<div class="tableScroll"><table><thead><tr><th>'+esc(mode==="standard"?"字段 / 标准名称":mode==="metric"?"指标 / 版本":mode==="model"?"模型名称":mode==="asset"?"对象名称":"名称")+'</th><th>业务归属</th><th>类型 / 粒度</th><th>状态</th><th>操作</th></tr></thead><tbody>'+rows.map(function(x){var r=x.r;return '<tr class="'+((state.select[id]||0)===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+' · 示例</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">查看详情 ›</button></td></tr>'}).join("")+'</tbody></table></div><div class="pagination"><span>显示 '+rows.length+' 条示例 · 非接口数据</span><span class="pageinfo"><span class="pagechip active">1</span><span>共 1 页</span></span></div>'
+}
+function filters(extra){return '<div class="filters"><input id="localSearch" class="field search" value="'+esc(state.query)+'" placeholder="搜索名称、编号或业务归属" aria-label="搜索当前示例表格"><select id="statusFilter" class="field short" aria-label="筛选状态"><option value="all">全部状态</option><option value="pending">待处理 / 草稿</option><option value="done">已配置 / 已保存</option></select>'+(extra||"")+'</div>'}
+function inspector(id,action){var r=chosen()||["示例对象","未知","--","未知","—"];return '<div class="card"><div class="inspect"><small class="label">对象检查器 · '+esc((id==="asset"&&state.view==="entity")?"Metadata":"OWNER")+'</small><h3>'+esc(r[0])+'</h3><p>'+esc(r[4])+' · 仅演示，不是实时业务事实</p>'+badge(r[3])+'<div class="kv"><div class="kvrow"><span>稳定对象标识</span><b>'+esc(r[4])+'</b></div><div class="kvrow"><span>所属项目</span><b>Retail Analytics · 示例</b></div><div class="kvrow"><span>领域事实归属</span><b>'+esc(id==="semantic"||id==="standard"?"Semantic":id==="model"?"Modeling":id==="metric"?"Metric":id==="asset"||id==="governance"?"Asset":id==="quality"?"Quality":id==="security"?"Security":id==="lifecycle"?"Lifecycle":"MDM")+'</b></div><div class="kvrow"><span>版本与 Run</span><b>无真实回执</b></div></div><div class="softPanel">详情应从 Owner 重新读取权限、版本和状态；不能把导航带来的 project hint 当作授权凭证。</div>'+(action?'<button class="btn primary" data-action="'+esc(action[0])+'">'+esc(action[1])+' '+icon("arrow")+'</button>':"")+'<button class="btn" data-action="evidence">查看证据要求</button></div></div>'}
+function pathButtons(){return '<div class="headActions"><button class="btn" data-action="openTools">'+icon("grid")+' 专业工具</button><button class="btn primary" data-action="edit" '+(!actionAllowed()?"disabled title='只读画像无编辑操作'":"")+'>'+icon("file")+' 新建 / 编辑</button></div>'}
+function definitionPage(id){
+var cfg={
+semantic:{title:"业务语义",head:"让业务过程成为建设的起点",text:descriptions.semantic,tab:["业务域与过程","粒度确认","关联模型"],tree:["全部业务域","交易域","订单履约","售后服务","用户行为域","供应链域"],stat:[["业务域","4","示例分类"],["业务过程","12","当前项目演示"],["待确认粒度","3","需业务复核"],["关联模型","7","引用关系示例"]],next:["standard","检查标准字段"]},
+standard:{title:"数据标准",head:"数据标准与标准字段，一处管理",text:descriptions.standard,tab:["标准目录","标准字段","引用与影响"],tree:["全部标准","基础标识","交易订单","金额计量","时间与日期","客户主数据"],stat:[["标准主题","6","演示分类"],["标准字段","24","演示字段"],["待校验","4","不得视为生效"],["引用模型","8","示例关联"]],next:["model","查看模型引用"]},
+metric:{title:"指标中心",head:"指标口径清晰，版本与发布可追溯",text:descriptions.metric,tab:["指标定义","版本与校验","发布状态","血缘与影响"],tree:["全部指标","交易指标","订单主题","金额指标","客户主题","复合指标"],stat:[["指标定义","26","示例数据"],["待校验版本","5","非真实校验"],["引用模型","13","模拟引用"],["发布审查","3","未执行发布"]],next:["metricImpact","反向影响查询"]}
+}[id];
+return pageHead(cfg.head,cfg.text,cfg.title.toUpperCase()+" / "+(id==="semantic"?"SEMANTIC":id==="standard"?"STANDARD":"METRIC"),pathButtons())+
+trail([["semantic","业务过程"],["standard","标准字段"],["model","逻辑 / 物理模型"],["metric","指标定义"]])+
+statCards(cfg.stat)+stateSwitch()+
+'<div class="split"><div class="card lefttree"><div class="treehead">分类与范围 <button class="btn ghost" data-action="scope">···</button></div>'+cfg.tree.map(function(s,i){return '<button class="treeRow '+(state.tree===s||(!state.tree&&i===0)?"active":"")+' '+(i>0?"indent":"")+'" data-tree="'+esc(s)+'">'+icon(i===0?"layers":"folder")+'<span>'+esc(s)+'</span><span class="count">'+(i===0?"12":i+1)+'</span></button>'}).join("")+'</div>'+
+'<div class="card"><div class="listhead"><div><strong>'+esc(cfg.title)+'工作区</strong><p>按稳定对象查看详情，保留当前筛选与上下文</p></div><span class="tag blue">列表 · 示例</span></div><div class="tabs">'+cfg.tab.map(function(t){return '<button class="tab '+((state.tab[id]||cfg.tab[0])===t?"active":"")+'" data-tab="'+esc(t)+'">'+esc(t)+'</button>'}).join("")+'</div>'+filters()+
+listTable(id,id)+'<div class="cardBody"><div class="softPanel">'+(id==="semantic"?"过程粒度未确认时，可继续查看下游，但不得自动标记为已批准。":id==="standard"?"标准字段与标准定义为不同稳定对象，引用历史需保留版本。":"MetricVersion、校验回执与发布状态由各自 Owner 事实决定。")+'</div></div></div>'+
+inspector(id,["goto:"+cfg.next[0],cfg.next[1]])+'</div>';
+}
+function modelPage(){
+var active=state.tab.model||"模型总览";return pageHead("模型工作台","将业务过程、逻辑模型、物理表结构及来源映射放在同一建设上下文中；ODS 与非 ODS 仍按各自业务合同处理。","MODELING / WORKSPACE",pathButtons())+
+trail([["semantic","业务过程"],["standard","标准字段"],["model","逻辑 / 物理模型"],["metric","指标定义"]])+
+'<div class="progressCards">'+[["1","关联业务过程","订单支付 · 粒度待确认"],["2","逻辑模型","字段和业务规则"],["3","物理映射","来源 / 目标 / 分层"],["4","校验与版本","保存不是发布"]].map(function(v,i){return '<button class="progressCard '+(i===2?"active":"")+'" data-tab="'+esc(i===0?"业务关联":i===1?"逻辑模型":i===2?"模型总览":"版本记录")+'"><div class="num">STEP '+v[0]+'</div><b>'+v[1]+'</b><small>'+v[2]+'</small></button>'}).join("")+'</div>'+stateSwitch()+
+'<div class="workgrid"><div class="card modelTree"><div class="treehead">模型资源树 <span class="tag">项目级</span></div><div class="modelList">'+["ODS · 原始数据层","DWD · 明细数据层","DWS · 汇总数据层"].map(function(layer,i){return '<div><small style="display:block;font-weight:800;margin:13px 0 7px">'+layer+'</small>'+sample.model.filter(function(r){return (i===0&&r[1].includes("ODS"))||(i===1&&r[1].includes("DWD"))||(i===2&&!r[1].includes("ODS")&&!r[1].includes("DWD"))}).map(function(r){return '<button class="modelItem '+((chosen()||[])[0]===r[0]?"active":"")+'" data-model="'+esc(r[4])+'"><strong>'+esc(r[0])+'</strong><small>'+esc(r[4])+' · '+r[3]+'</small></button>'}).join("")+'</div>'}).join("")+'</div><div class="softPanel" style="margin-top:18px">逻辑模型与物理模型分离；不得把“模型已保存”表述为“已执行/发布”。</div></div>'+
+'<div class="card"><div class="cardHead"><h2>模型画布 · 订单主题</h2><div class="toolbarRight"><span class="tag blue">逻辑 → 物理 → 来源</span><button class="btn" data-action="evidence">版本信息</button></div></div><div class="tabs">'+["模型总览","业务关联","逻辑模型","字段映射","版本记录"].map(function(t){return '<button class="tab '+(active===t?"active":"")+'" data-tab="'+t+'">'+t+'</button>'}).join("")+'</div>'+(state.status!=="ready"?'<div class="cardBody">'+statePanel()+'</div>':(active==="模型总览"?'<div class="diagram"><div class="flowNode"><div class="nodeTop"><strong>业务过程 · 订单支付</strong><span class="tag warn">粒度待确认</span></div><small>Semantic · PRC-102</small></div><div class="flowArrow">↓</div><div class="flowNode primary"><div class="nodeTop"><strong>订单支付明细 · 逻辑模型</strong><span class="tag">草稿</span></div><small>Modeling · LM-016 · 属性与度量定义</small></div><div class="flowArrow">↓</div><div class="flowNode"><div class="nodeTop"><strong>ods_order_detail · 物理模型</strong><span class="tag good">已保存</span></div><small>Modeling · PM-701 · 来源表映射</small></div><div class="diagramFoot">示例关系图 · 不是运行时血缘，也不是自动批准的非 ODS 构建规则</div></div>':'<div class="cardBody"><div class="softPanel">“'+esc(active)+'”属于模型工作台的独立任务视图。真实重建时使用本域对象 ID、版本和原生编辑能力，而非嵌套旧路由 JSX。</div><div style="margin-top:13px">'+listTable("model","model")+'</div></div>'))+'</div>'+
+inspector("model",["goto:metric","查看关联指标"])+'</div>';
+}
+function assetPage(){
+var assetTabs='<div class="tabs"><button class="tab '+(state.view==="asset"?"active":"")+'" data-view="asset">治理资产</button><button class="tab '+(state.view==="entity"?"active":"")+'" data-view="entity">技术实体（Metadata）</button></div>';
+return pageHead("资产目录","以同一发现入口理解资产与技术实体，先看对象来源与治理身份，再进入详情与治理动作。","GOVERNANCE / ASSET CATALOG",'<div class="headActions"><button class="btn" data-page="taxonomy">'+icon("layers")+' 编目配置</button><button class="btn primary" data-page="governance">'+icon("arrow")+' 治理工作队列</button></div>')+
+'<div class="statList">'+[["治理资产","38","61"],["待盘点 / 待上架","7","29"],["技术实体","154","78"]].map(function(v){return '<div class="statMini"><small>'+v[0]+' · 示例</small><strong>'+v[1]+'</strong><div class="bar"><i style="width:'+v[2]+'%"></i></div></div>'}).join("")+'</div>'+stateSwitch()+
+'<div class="split"><div class="card lefttree"><div class="treehead">资产目录树</div>'+["全部资产","业务主题","交易与订单","客户与会员","商品管理","技术实体"].map(function(t,i){return '<button class="treeRow '+(state.tree===t?"active":"")+' '+(i>1?"indent":"")+'" data-tree="'+esc(t)+'">'+icon(i<2?"layers":"folder")+' '+esc(t)+'</button>'}).join("")+'</div><div class="card"><div class="listhead"><div><strong>对象发现与检索</strong><p>技术发现不等于资产纳管或允许消费</p></div><span class="tag blue">双视图</span></div>'+assetTabs+filters()+
+listTable("asset","asset")+'</div>'+inspector("asset",["goto:governance","查看关联治理记录"])+'</div>'+
+'<div class="explain">'+icon("shield")+'<span class="explaintxt">目录中“技术实体”与“治理资产”具有不同事实 Owner。Metadata 当前结构与采集 Run 的历史冻结证据应分别查询；Asset PENDING 不等于已上架。</span></div>';
+}
+function queuePage(){
+var actions='<div class="headActions"><button class="btn" data-page="asset">返回资产目录</button><button class="btn primary" data-action="review" '+(!actionAllowed()?"disabled":"")+'>查看处理条件 '+icon("arrow")+'</button></div>';
+return pageHead("治理工作队列","从项目级查找需要处理的资产问题，按原有盘点、变更、对账等独立业务回执完成核查。","GOVERNANCE / WORK QUEUE",actions)+
+'<div class="queueCards">'+[["all","全部待核对",14,"跨类别任务汇总"],["盘点","盘点与上架",6,"保留 PENDING 状态"],["对账","来源对账",3,"ACCEPTED ≠ 完成"]].map(function(v){return '<button class="queueCard '+(state.queue===v[0]?"active":"")+'" data-queue="'+v[0]+'"><span>'+v[1]+'（示例）</span><b>'+v[2]+'</b><small>'+v[3]+'</small></button>'}).join("")+'</div>'+stateSwitch()+
+'<div class="split medium"><div class="card"><div class="listhead"><div><strong>等待处理的治理任务</strong><p>不同任务类型具有不同 Owner、审批和运行证据</p></div><span class="tag warn">模拟任务 · 不可提交</span></div>'+filters()+listTable("governance","governance")+'</div>'+inspector("governance",["review","查看处理详情"])+'</div>';
+}
+function specialistPage(id){
+var config={
+quality:{head:"质量治理",tabs:["规则与监控","检查运行","规则模板","失败恢复"],stats:[["监控对象","18","配置示例"],["检查执行","36","执行回执示例"],["需排查","5","不得视为空"]]},
+security:{head:"数据安全",tabs:["分类分级","数据策略","脱敏规则","访问审计","合规"],stats:[["分类对象","26","示例对象"],["策略草稿","7","未正式生效"],["审计线索","3","待复核"]]},
+lifecycle:{head:"生命周期",tabs:["生命周期策略","TTL 监控","存储统计"],stats:[["策略定义","9","示例"],["待核验绑定","4","未确认生效"],["归档任务","2","仅展示状态"]]},
+mdm:{head:"主数据专业工作台",tabs:["实体总览","主数据建模","实体识别","清洗校验","变更审批"],stats:[["主数据实体","12","示例"],["待清洗","4","清洗尚未执行"],["待变更审批","3","需要人工回执"]]}
+}[id];var current=state.tab[id]||config.tabs[0];return pageHead(config.head,descriptions[id],id.toUpperCase()+" / SPECIALIZED WORKBENCH",pathButtons())+
+'<div class="statList">'+config.stats.map(function(v,i){return '<div class="statMini"><small>'+v[0]+'</small><strong>'+v[1]+'</strong><div class="bar"><i style="width:'+(i===0?73:i===1?39:20)+'%"></i></div></div>'}).join("")+'</div>'+stateSwitch()+
+'<div class="card" style="margin-bottom:15px"><div class="tabs">'+config.tabs.map(function(t){return '<button class="tab '+(current===t?"active":"")+'" data-tab="'+t+'">'+t+'</button>'}).join("")+'</div><div class="listhead"><div><strong>'+esc(current)+' · 对象与证据</strong><p>正式状态由本领域服务持有；专业集合页面不能被对象详情替代</p></div><button class="btn" data-action="evidence">查看领域合同</button></div>'+filters()+listTable(id,id)+'</div>'+
+'<div class="split medium"><div class="card"><div class="cardHead"><h2>处理与证据链</h2><small>按领域状态独立表达</small></div><div class="timeline">'+(id==="security"?[["分类","确认敏感信息类别"],["策略","核对访问范围与申请主体"],["裁决","允许、拒绝或脱敏须有决策记录"],["审计","追踪请求和策略证据"]]:id==="mdm"?[["实体建模","明确稳定主数据实体"],["识别","匹配与去重证据"],["清洗","待执行与执行成功分开"],["变更","保留审批与回执"]]:id==="quality"?[["配置规则","指定对象与检查范围"],["执行检查","冻结 Execution 与配置版本"],["查看结果","失败、未知、无权区分"],["恢复验证","重新读取执行结果"]]:[["策略定义","选择生效对象与 TTL"],["版本保存","草稿不等于生效"],["运行检查","保留真实执行回执"],["存储统计","统计不能代替处置"]]).map(function(v){return '<div class="timeRow"><span class="timeDot"></span><div><strong>'+v[0]+'</strong><span>'+v[1]+'</span></div></div>'}).join("")+'</div></div>'+inspector(id,["evidence","查看结果与权限要求"])+'</div>';
+}
+function toolPage(id){
+var t=toolInfo[id];if(!t)return placeholderPage(id);
+var rows=id==="metadata"?sample.asset:id==="metricImpact"||id==="metricLineage"?sample.metric:id==="taxonomy"?sample.asset:id==="qualityRun"||id==="qualityRule"?sample.quality:id==="securityAudit"?sample.security:sample.model;
+var overrideRows=rows.map(function(r,i){return [r[0],r[1],t[2],r[3],r[4]]});
+return pageHead(t[0],t[1],"PROFESSIONAL TOOL / "+t[2],'<div class="headActions"><button class="btn" data-page="'+(domainOf(id).id==="definition"?"metric":"asset")+'">← 返回工作台</button><button class="btn" data-action="evidence">工具权限说明</button></div>')+
+'<div class="detailStrip">'+icon("shield")+'<strong>项目级独立专业入口</strong><span>不要求先选定某个 Asset / Metric ID</span><span class="tag blue">'+esc(t[2])+'</span></div>'+stateSwitch()+
+'<div class="split medium"><div class="card"><div class="listhead"><div><strong>'+esc(t[3])+'</strong><p>此为该专业能力的信息结构设计，尚未接入正式服务</p></div><span class="tag warn">示例集合</span></div>'+filters()+(state.status!=="ready"?statePanel():('<div class="tableScroll"><table><thead><tr><th>专业对象</th><th>来源范围</th><th>Owner</th><th>状态</th><th>查看</th></tr></thead><tbody>'+overrideRows.filter(function(r){return r.join(" ").toLowerCase().includes(state.query.toLowerCase())}).map(function(r,i){return '<tr><td><span class="rowtitle">'+esc(r[0])+'</span><small>'+esc(r[4])+'</small></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-action="evidence">证据 ›</button></td></tr>'}).join("")+'</tbody></table></div>'))+'</div><div class="card inspect"><small class="label">访问合同</small><h3>'+esc(t[2])+' 独立授权</h3><p>专业工具应保留原业务权限和菜单身份，不因收敛到工作台新增其它门槛。</p><div class="kv"><div class="kvrow"><span>对象范围</span><b>项目级 / 集合 / 反向查询</b></div><div class="kvrow"><span>访问身份</span><b>原 leaf menuCode</b></div><div class="kvrow"><span>跳转上下文</span><b>精确重验 projectHint</b></div><div class="kvrow"><span>真实回执</span><b>尚无（静态原型）</b></div></div><div class="softPanel">专业集合入口始终可发现，但只有授权的用户才能实际访问受限 API。</div></div></div>';
+}
+function placeholderPage(id){
+var d=domainOf(id);return pageHead(nameOf(id),"完整 V3.1 导航中的既有能力；本轮不重构其生产页面或菜单授权。","UNMODIFIED / NAVIGATION PLACEHOLDER",'<button class="btn" data-palette="1">'+icon("grid")+' 查看全部菜单</button>')+
+'<div class="placeholder"><div><div class="placeholderIcon">'+icon(d.icon)+'</div><div class="caps">OUT OF CURRENT REBUILD SCOPE</div><h2>'+esc(nameOf(id))+' · 页面占位</h2><p>这个入口来自最新 IA V3.1 菜单规划，属于“'+esc(d.name)+'”。真实生产页面沿用现有功能与权限；原型不在这里模拟未授权的业务行为，也不会显示伪造的数据。</p><div class="placeholderLink"><button class="btn" data-page="semantic">查看定义域重设计</button><button class="btn primary" data-page="asset">查看治理域重设计</button></div><div class="softPanel" style="margin-top:24px;text-align:left;max-width:520px">现有访问路径：<strong>'+esc(routeFor[id]||"原系统既有入口")+'</strong><br>不对项目配置、授权、菜单授权或后端状态作任何修改。</div></div></div>';
+}
+function renderMain(){
+nav();dom("roleSwitch").value=state.role;var id=state.page;dom("main").innerHTML=notice()+(id==="model"?modelPage():id==="asset"?assetPage():id==="governance"?queuePage():["semantic","standard","metric"].includes(id)?definitionPage(id):["quality","security","lifecycle","mdm"].includes(id)?specialistPage(id):toolInfo[id]?toolPage(id):placeholderPage(id))+
+'<div class="explain">'+icon("file")+'<span class="explaintxt"><b>设计边界：</b>仅标准、指标与建模以及数据资产与治理两域做页面重建原型；其余三域、首页、待办与平台设置都是导航占位。全部数据为虚构示例，正式产品的权限、版本、执行、发布、审计仍以原 Truth Owner 为准。</span></div>';
+var sf=dom("statusFilter");if(sf)sf.value=state.filter;
+}
+function render(){renderMain()}
+function toast(text){var x=dom("toast");x.textContent=text;x.classList.add("show");if(window.tmr)clearTimeout(window.tmr);window.tmr=setTimeout(function(){x.classList.remove("show")},3700)}
+function closeDialog(){dom("dialogShade").classList.remove("open");dom("dialogShade").setAttribute("aria-hidden","true");state.dialogName=""}
+function openDialog(kind,title,body,pending){
+state.dialogName=kind;state.pending=pending;var edit=kind==="edit";dom("dialog").innerHTML='<h2 id="dialogTitle">'+esc(title)+'</h2><p>'+esc(body)+'</p>'+(edit?'<label class="dlgfield">对象名称（本地草稿演示）<input id="editTitle" value="'+esc((chosen()||[])[0]||"示例对象")+'"></label><label class="dlgfield">变更说明<textarea id="editNotes" placeholder="说明变更目的..."></textarea></label>':"")+
+'<div class="dlgfoot">'+(kind==="dirty"?'<button class="btn" data-modal="stay">继续编辑</button><button class="btn" data-modal="discard">放弃更改并离开</button>':edit?'<button class="btn" data-modal="cancel">取消</button><button class="btn primary" data-modal="draft">仅保存本地草稿</button>':'<button class="btn primary" data-modal="cancel">知道了</button>')+'</div>';
+dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");setTimeout(function(){var el=dom("editTitle")||dom("dialog").querySelector("button");if(el)el.focus()},0);
+}
+function onAction(a){
+if(a.indexOf("goto:")===0){go(a.split(":")[1]);return}
+if(a==="openTools"){var d=domainOf(state.page);if(!d.tools.length){toast("当前工作台没有额外专业工具");return}state.dialogName="tools";dom("dialog").innerHTML='<h2 id="dialogTitle">'+esc(d.name)+' · 专业工具</h2><p>以下是 V3.1 中独立的专业集合入口，不要求先打开某个对象。</p>'+d.tools.map(function(t){return '<button class="navitem" data-page="'+esc(t[0])+'">'+esc(t[1])+'　›</button>'}).join("")+'<div class="dlgfoot"><button class="btn" data-modal="cancel">关闭</button></div>';dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");return}
+if(a==="edit"){if(!actionAllowed())return;openDialog("edit","新建 / 编辑对象 · 演示","此表单演示清晰校验、脏数据离开保护与保存草稿；不会修改真实系统。");return}
+if(a==="review"){openDialog("info","治理处理条件","盘点 PENDING 不等于上架完成，对账 ACCEPTED 仅代表受理。正式处理必须核验对象、责任人、授权和真实回执。");return}
+if(a==="scope"){toast("分类及范围须由真实 Owner 读取；当前仅做视觉结构演示。");return}
+openDialog("info",a==="evidence"?"事实证据与权限边界":"原型交互说明","展示项目、对象、版本与 Run 的精确标识。正式系统须重新校验授权并读取 Owner 回执；当前原型没有服务调用，也没有发布、执行或审批动作。");
+}
+function paletteList(q){q=(q||"").trim().toLowerCase();var entries=[];domains.forEach(function(d){d.items.forEach(function(id){entries.push({id:id,domain:d.name,title:nameOf(id),other:!isTarget(id)})});d.tools.forEach(function(t){entries.push({id:t[0],domain:d.name,title:t[1]+" · 专业工具",other:!isTarget(t[0])})})});var match=entries.filter(function(e){return (e.title+" "+e.domain).toLowerCase().includes(q)});dom("paletteResults").innerHTML=match.length?match.map(function(e){return '<button class="paletteEntry" data-page="'+e.id+'"><span>'+esc(e.title)+' <small>'+esc(e.domain)+'</small></span><span class="tag '+(e.other?"":"good")+'">'+(e.other?"占位":"重建设计")+'</span></button>'}).join(""):'<div class="stateArea"><h3>没有找到入口</h3><p>试试名称、业务域或专业工具。</p></div>'}
+function openPalette(){dom("paletteShade").classList.add("open");dom("paletteShade").setAttribute("aria-hidden","false");dom("paletteInput").value="";paletteList("");setTimeout(function(){dom("paletteInput").focus()},0)}
+function closePalette(){dom("paletteShade").classList.remove("open");dom("paletteShade").setAttribute("aria-hidden","true")}
+document.addEventListener("click",function(e){
+var x=e.target.closest("button");if(!x)return;
+if(x.dataset.domain){state.lastMenu=x.dataset.domain;var d=domains.find(function(a){return a.id===state.lastMenu});if(d&&d.items.length)go(d.items[0]);return}
+if(x.dataset.page){closeDialog();closePalette();go(x.dataset.page);return}
+if(x.dataset.palette){openPalette();closeMobile();return}
+if(x.dataset.select){selectRow(Number(x.dataset.select));return}
+if(x.dataset.tree){state.tree=x.dataset.tree;renderMain();return}
+if(x.dataset.tab){state.tab[state.page]=x.dataset.tab;renderMain();return}
+if(x.dataset.view){state.view=x.dataset.view;state.query="";state.select.asset=state.view==="entity"?3:0;renderMain();return}
+if(x.dataset.queue){state.queue=x.dataset.queue;state.select.governance=0;renderMain();return}
+if(x.dataset.model){state.select.model=Math.max(0,sample.model.findIndex(function(r){return r[4]===x.dataset.model}));renderMain();return}
+if(x.dataset.stateReset){state.status="ready";renderMain();return}
+if(x.dataset.clear){state.query="";renderMain();return}
+if(x.dataset.action){onAction(x.dataset.action);return}
+if(x.dataset.modal){var t=x.dataset.modal;if(t==="draft"){state.editDirty=false;toast("演示草稿已记录在当前页面；未调用后端保存接口。");closeDialog();return}if(t==="discard"){var to=state.pending;state.editDirty=false;closeDialog();go(to);return}if(t==="stay"){closeDialog();return}closeDialog();return}
+});
+document.addEventListener("input",function(e){
+if(e.target.id==="localSearch"){var sel=e.target.selectionStart;state.query=e.target.value;renderMain();var field=dom("localSearch");if(field){field.focus();field.setSelectionRange(sel,sel)}}if(e.target.id==="editTitle"||e.target.id==="editNotes")state.editDirty=true;if(e.target.id==="paletteInput")paletteList(e.target.value);
+});
+document.addEventListener("change",function(e){if(e.target.id==="stateMode"){state.status=e.target.value;renderMain()}if(e.target.id==="statusFilter"){state.filter=e.target.value;renderMain()}if(e.target.id==="roleSwitch"){state.role=e.target.value;state.editDirty=false;renderMain();toast("仅切换原型角色画像；真实权限需后端独立鉴权。")}});
+document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openPalette()}if(e.key==="Escape"){closeDialog();closePalette();closeMobile()}});
+dom("openPalette").addEventListener("click",openPalette);dom("projectBtn").addEventListener("click",function(){openDialog("info","项目上下文与数据隔离","Retail Analytics 是静态演示项目。真实切换应验证项目权限、清除旧选择、忽略迟到请求，并对对象重新鉴权。")});dom("helpBtn").addEventListener("click",function(){openDialog("info","完整菜单与双域设计","按最新 IA V3.1 显示五个业务域的 20 个默认任务入口，加上工作首页、待办、平台设置及各域专业工具。本轮只有定义/治理两域设计新页面；其他域为占位。")});
+dom("mobileToggle").addEventListener("click",function(){dom("rail").classList.add("drawerOpen");dom("side").classList.add("drawerOpen");dom("mobileShade").classList.add("active")});dom("mobileShade").addEventListener("click",closeMobile);
+dom("dialogShade").addEventListener("click",function(e){if(e.target===dom("dialogShade")&&!state.editDirty)closeDialog()});dom("paletteShade").addEventListener("click",function(e){if(e.target===dom("paletteShade"))closePalette()});
+window.addEventListener("hashchange",function(){var id=decodeURIComponent(window.location.hash.replace(/^#/,""));if((paths[id]||labels[id]||toolInfo[id]||domains.some(function(d){return d.tools.some(function(t){return t[0]===id})}))&&state.page!==id){state.editDirty=false;state.page=id;state.lastMenu=domainOf(id).id;state.query="";state.status="ready";render()}});
+
+
+/* ========== IA-550 v0.3 task-context model ========== */
+const v3={
+ scope:null, snapshots:[], preview:false, drawer:false, createMode:"edit",
+ editing:null, storedDrafts:{}, draftsByObject:{}, flowStage:"process",
+ build:{process:"PRC-102",field:"STD-201",model:"PM-701",source:"orders.order_detail",mapField:"order_id",checked:false,fixed:false,version:null},
+ metric:{id:"MET-026",tab:"定义口径",formula:"COUNT(order_id)",filter:"",checked:false,impactSeen:false,published:false,release:null,version:"v1.2 · 草稿",prior:"COUNT(order_id)"},
+ queueId:"GOV-301",queueStep:"evidence",decision:"",transferTo:"",note:"",receipt:null,
+ sort:"priority"
+};
+const v3QueueInfo={
+ "GOV-301":{owner:"资产管理员 · 王倩",priority:"P1",age:"等待 18 小时",subject:"AST-208 · ods_order_detail",why:"来源表已发现，但资产责任人及业务分类待确认，阻断上架预检。",kind:"盘点与上架",before:"责任人：缺失；资产目录：待分类",after:"建议：订单主题 / 交易资产；责任人待复核",required:"确认业务分类、责任人；重新执行上架预检",risk:"不能把 PENDING 资产展示为已上架"},
+ "GOV-309":{owner:"数据管家 · 李宁",priority:"P2",age:"等待 6 小时",subject:"AST-233 · 会员主数据",why:"资产业务负责人申请修改分级，现有有效分类需要人工批准。",kind:"资产变更",before:"数据分级：内部",after:"申请分级：敏感",required:"审查申请理由、变更影响及审批人",risk:"提交申请不表示策略即时生效"},
+ "GOV-314":{owner:"元数据管理员 · 陈帆",priority:"P1",age:"等待 27 小时",subject:"AST-240 · dim_product",why:"已受理来源对账请求，尚缺完成确认和目标映射差异处理。",kind:"来源对账",before:"来源字段：product_code VARCHAR(32)",after:"目标字段：product_code VARCHAR(64)",required:"核验字段长度变更、确认受影响对象及对账完成证据",risk:"ACCEPTED 是已受理，不等于 reconcile 成功"},
+ "GOV-320":{owner:"元数据管理员 · 陈帆",priority:"P0",age:"等待 2 小时",subject:"ENT-604 · ods_return_log",why:"上游来源字段发生变化且冻结任务范围不一致，需要判断数据接入影响。",kind:"结构漂移",before:"源表：return_amount DECIMAL(12,2)",after:"当前来源：return_amount DECIMAL(18,2)",required:"确认当前指纹及历史 Run 差异、记录影响与处置结论",risk:"超时或未知状态不可伪装采集成功"}
+};
+function v3Rows(id){
+ let rows=(sample[id]||[]).map((r,i)=>({r,i}));
+ if(id==="asset")rows=rows.filter(x=>state.view==="entity"?x.r[2]==="技术实体":x.r[2]==="治理资产");
+ if(id==="governance"&&state.queue!=="all")rows=rows.filter(x=>x.r[1].includes(state.queue));
+ if(id==="governance"&&v3.scope&&v3.scope.from==="asset")rows=rows.filter(x=>(v3QueueInfo[x.r[4]]||{}).subject?.includes(v3.scope.id));
+ if(id==="governance")rows.sort((a,b)=>{const rank={P0:0,P1:1,P2:2};return rank[v3QueueInfo[a.r[4]].priority]-rank[v3QueueInfo[b.r[4]].priority]});
+ const tree=state.tree||"";
+ const treeFilter={
+  "交易域":"订单|支付|退款","售后服务":"退款|退货","用户行为域":"浏览|会员","供应链域":"库存|商品",
+  "交易与订单":"订单|支付","客户与会员":"会员|客户","商品管理":"商品|product",
+  "基础标识":"编号|标识","交易订单":"订单|支付","金额计量":"金额","时间与日期":"时间",
+  "订单主题":"订单|支付","交易指标":"订单|金额","金额指标":"金额","客户主题":"会员|客户"
+ };
+ if(treeFilter[tree]&&["semantic","standard","metric","asset"].includes(id))rows=rows.filter(x=>new RegExp(treeFilter[tree],"i").test(x.r.join(" ")));
+ if(state.filter==="pending")rows=rows.filter(x=>/待|草稿|未|编目|仅已/.test(x.r[3]));
+ if(state.filter==="done")rows=rows.filter(x=>/已保存|已定义|已上架|已执行|已配置/.test(x.r[3]));
+ const q=(state.query||"").trim().toLowerCase();
+ if(q)rows=rows.filter(x=>(x.r.join(" ")+(v3QueueInfo[x.r[4]]?JSON.stringify(v3QueueInfo[x.r[4]]):"")).toLowerCase().includes(q));
+ return rows;
+}
+function v3SyncSelected(id){
+ if(!(id in sample))return;
+ const rows=v3Rows(id);
+ if(!rows.length){state.select[id]=-1;return}
+ const current=state.select[id];
+ if(!rows.some(x=>x.i===current))state.select[id]=rows[0].i;
+ if(id==="governance")v3.queueId=(sample.governance[state.select.governance]||[])[4]||"";
+ if(id==="metric")v3.metric.id=(sample.metric[state.select.metric]||[])[4]||"";
+ if(id==="model")v3.build.model=(sample.model[state.select.model]||[])[4]||"";
+}
+function v3Selected(id){
+ v3SyncSelected(id);
+ const i=state.select[id];
+ return i==null||i<0?null:sample[id][i];
+}
+function v3Table(id){
+ v3SyncSelected(id);
+ const rows=v3Rows(id);
+ if(state.status!=="ready")return statePanel();
+ if(!rows.length)return '<div class="stateArea"><h3>当前筛选无结果</h3><p>已清空对象详情和操作；请调整范围或关键词，避免误操作之前的对象。</p><button class="btn" data-clear="1">清除筛选</button></div>';
+ if(id==="governance")return '<div class="tableScroll"><table class="queueTable"><thead><tr><th>任务 / 影响对象</th><th>责任人</th><th>优先级</th><th>等待时间</th><th>状态</th><th>查看</th></tr></thead><tbody>'+
+  rows.map(x=>{const r=x.r,m=v3QueueInfo[r[4]];return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="queueItemName">'+esc(r[0])+'</span><div class="rowmeta">'+esc(m.subject)+'</div></td><td>'+esc(m.owner)+'</td><td><span class="tag '+(m.priority==="P0"?"danger":m.priority==="P1"?"warn":"blue")+'">'+m.priority+'</span></td><td>'+esc(m.age)+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">处理 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+ return '<div class="tableScroll"><table><thead><tr><th>名称 / 标识</th><th>业务归属</th><th>类别</th><th>真实状态</th><th>操作</th></tr></thead><tbody>'+
+ rows.map(x=>{const r=x.r;return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+'</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">选中 / 详情 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+}
+function v3Filters(){return '<div class="filters"><input class="field search" id="localSearch" value="'+esc(state.query||"")+'" placeholder="搜索名称、对象编号或业务归属" aria-label="搜索对象"><select class="field short" id="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option value="pending">待处理</option><option value="done">已确认</option></select></div>'}
+function v3Card(title,subtitle,inner,footer){return '<section class="card"><div class="listhead"><div><strong>'+esc(title)+'</strong><p>'+esc(subtitle||"")+'</p></div></div>'+(inner||"")+(footer?'<div class="cardBody">'+footer+'</div>':"")+'</section>'}
+function v3Steps(arr,active,kind){
+ return '<nav class="taskTabs" aria-label="任务步骤">'+arr.map((s,i)=>'<button class="taskStep '+(i===active?"active":i<active?"done":"")+'" data-v3-step="'+kind+':'+i+'"><span class="tick">'+(i<active?"✓":i+1)+'.</span>'+esc(s)+'</button>').join("")+'</nav>';
+}
+function v3Ctx(){
+ if(!v3.scope)return "";
+ return '<div class="contextbar"><div class="hrow"><b>关联范围</b><span>'+esc(v3.scope.label)+' · '+esc(v3.scope.id)+'</span><span class="micro">原页面：'+esc(nameOf(v3.scope.from))+'</span></div><button data-v3-back="1">← 返回原工作</button></div>';
+}
+function v3FlowBar(){
+ return '<div class="compactHead"><div><strong>建设主线 · 业务过程 → 标准字段 → 来源映射 → 校验 → 版本</strong><small style="display:block">所有对象均为示例。每一步必须显示具体目标和反馈，不自动提交生产服务。</small></div><span class="tag blue">演示任务链</span></div>';
+}
+function v3Review(){
+ return '<details style="margin-top:20px" class="card"><summary class="reviewerToggle">原型评审工具 · 角色 / 加载与异常状态预览（非产品界面）</summary><div class="cardBody"><p class="muted">此区只用于设计评审，示例状态不代表真实后端结果。</p>'+stateSwitch()+'</div></details>'
+}
+function v3OpenDrawer(id){
+ const r=v3Selected(id);
+ if(!r){v3CloseDrawer();return}
+ const panel=inspector(id,null);
+ dom("inspectorDrawer").innerHTML='<div class="drawerHeading"><b>对象详情 · '+esc(nameOf(id))+'</b><button class="plainClose" data-v3-close="1" aria-label="关闭对象详情">×</button></div>'+panel.replace('class="card"','class="drawerCard"');
+ dom("inspectorDrawer").classList.add("open");dom("drawerShade").classList.add("open");
+ v3.drawer=true;
+}
+function v3CloseDrawer(){
+ dom("inspectorDrawer").classList.remove("open");dom("drawerShade").classList.remove("open");v3.drawer=false;
+}
+function v3Remember(){
+ const item={page:state.page,query:state.query,tree:state.tree,filter:state.filter,queue:state.queue,view:state.view,selected:state.select[state.page],tab:state.tab[state.page]};
+ if(!v3.snapshots.length||JSON.stringify(v3.snapshots.at(-1))!==JSON.stringify(item))v3.snapshots.push(item);
+}
+function v3Back(){
+ const h=v3.snapshots.pop();if(!h){v3.scope=null;go("semantic",true);return}
+ state.page=h.page;state.query=h.query;state.tree=h.tree;state.filter=h.filter;state.queue=h.queue;state.view=h.view;
+ state.select[h.page]=h.selected;state.tab[h.page]=h.tab;state.status="ready";state.lastMenu=domainOf(h.page).id;
+ v3.scope=null;v3CloseDrawer();renderMain();window.location.hash=h.page;window.scrollTo(0,0);
+}
+function v3Route(page,ref){
+ if(ref){v3Remember();v3.scope={from:state.page,id:ref.id,label:ref.label,relation:ref.relation||""}}
+ go(page,true);
+}
+function v3ActionLine(buttons,note){
+ return '<div class="actionLine">'+(note?'<span class="secondaryMsg">'+esc(note)+'</span>':"")+buttons+'</div>'
+}
+function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+esc(text)+'</p></div>'}
+
+
+function v3Definition(id){
+ const semantic=id==="semantic",r=v3Selected(id);
+ const title=semantic?"业务语义":"数据标准";
+ const categories=semantic?["全部业务域","交易域","售后服务","用户行为域","供应链域"]:["全部标准","基础标识","交易订单","金额计量","时间与日期"];
+ const scope=semantic?(r?{id:r[4],label:r[0]}:null):v3.scope;
+ let follow=semantic?
+  '<strong>下一步：确认业务过程的对象与粒度</strong><p>业务过程确认后，带入此过程选择标准字段。标准字段仍是独立对象，不自动变成已生效标准。</p>'+
+  v3ActionLine('<button class="btn primary" data-v3-action="process-next" '+(!r?"disabled":"")+'>引用标准字段 →</button>',r?"当前： "+r[0]+" / "+r[2]:"无当前对象"):
+  '<strong>下一步：确认模型字段映射</strong><p>字段必须与业务过程关联，模型侧重新读取其身份与生效版本。这里的关联仅用于静态演示。</p>'+
+  v3ActionLine('<button class="btn primary" data-v3-action="standard-attach" '+(!r?"disabled":"")+'>带入模型映射 →</button>',r?"选中标准字段："+r[0]:"没有符合条件的标准字段");
+ const sidebar='<section class="card lefttree"><div class="treehead">业务目录 <span class="tag">按范围</span></div>'+categories.map((x,i)=>'<button class="treeRow '+(state.tree===x?"active":"")+'" data-tree="'+esc(x)+'">'+icon(i?"folder":"layers")+esc(x)+'</button>').join("")+'</section>';
+ return pageHead(title,semantic?"业务过程确定后继续标准、建模与版本保存。":"围绕选定业务过程找到对应标准字段，明确状态和引用范围。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建'+(semantic?"业务过程":"标准字段")+'</button>')+
+ v3Ctx()+v3FlowBar()+
+ '<div class="split">'+sidebar+v3Card(title+"对象列表","当前范围是本地演示；结果和详情始终引用同一个对象",v3Filters()+v3Table(id),
+ '<div class="inlineWorkflow">'+(r?'<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div><div class="itemFacts"><div class="factRow"><span>业务归属</span><strong>'+esc(r[1])+'</strong></div><div class="factRow"><span>'+(semantic?"过程粒度":"字段数据类型")+'</span><strong>'+esc(r[2])+'</strong></div></div>':'<div class="resultPanel warn"><h3>没有选中对象</h3><p>已清空旧详情；请先调整筛选。</p></div>')+'<div style="padding-top:15px">'+follow+'</div><div class="actionLine"><button class="btn" data-v3-action="edit" '+(!r||!actionAllowed()?"disabled":"")+'>编辑当前对象</button></div></div>')+'</div>'+v3Review();
+}
+function v3ModelBody(){
+ const model=v3Selected("model");const tab=state.tab.model||"来源映射";
+ if(!model)return v3Hint("此范围内没有模型。清除筛选后重新选择。","warn");
+ const modelName=model[0],logical=model[2]==="逻辑",source=v3.build.source;
+ const head='<div class="detailStrip"><strong>当前模型：'+esc(modelName)+'</strong><span>'+esc(model[4])+'</span>'+badge(model[3])+'<button class="link" data-v3-action="model-open">对象证据 ↗</button></div>';
+ if(tab==="业务关联"){
+ return head+'<div class="diagram"><div class="flowNode"><div class="nodeTop"><strong>业务过程 · '+esc((sample.semantic.find(x=>x[4]===v3.build.process)||sample.semantic[0])[0])+'</strong><span class="tag warn">粒度需核验</span></div><small>Semantic · '+esc(v3.build.process)+'</small></div><div class="flowArrow">↓</div><div class="flowNode primary"><div class="nodeTop"><strong>'+esc(modelName)+'</strong><span class="tag">'+(logical?"逻辑":"物理")+'</span></div><small>Modeling · '+esc(model[4])+'，随当前模型切换更新</small></div><div class="flowArrow">↓</div><div class="flowNode"><div class="nodeTop"><strong>来源 / 目标 · '+esc(source)+'</strong><span class="tag blue">示例映射</span></div><small>来源与模型关系需真实 Owner 核验</small></div></div>';
+ }
+ if(tab==="字段设计"){
+ const field=(sample.standard.find(x=>x[4]===v3.build.field)||sample.standard[0]);
+ return head+'<div class="cardBody"><h2>目标字段结构 · '+esc(modelName)+'</h2><p class="muted">逻辑字段与物理列的类型和必填规则分别管理。</p><div class="diffRow"><div><strong>order_id</strong><small style="display:block">标识 · VARCHAR(64) · 必填</small></div><span class="tag good">已映射</span></div><div class="diffRow"><div><strong>pay_amount</strong><small style="display:block">金额 · DECIMAL(18,2) · 待确认精度</small></div><span class="tag warn">需校验</span></div><div class="diffRow"><div><strong>'+esc(field[0])+'</strong><small style="display:block">标准字段引用 · '+esc(field[4])+'</small></div><span class="tag blue">引用中</span></div>'+v3ActionLine('<button class="btn primary" data-v3-tab="来源映射">继续来源映射 →</button>')+'</div>';
+ }
+ if(tab==="来源映射"){
+ return head+'<div class="cardBody"><h2>来源映射 · '+esc(modelName)+'</h2><p class="muted">来源字段与标准字段/物理目标不共享 Owner，保存前校验指纹与映射规则。</p><div class="workflowGrid"><div><label class="formRow">来源表<select id="v3-source">'+["orders.order_detail","crm.customer","stock.inventory"].map(src=>'<option value="'+src+'" '+(v3.build.source===src?"selected":"")+'>'+src+'</option>').join("")+'</select></label><label class="formRow">来源字段<input id="v3-mapfield" value="'+esc(v3.build.mapField)+'" aria-label="来源字段"></label><label class="formRow">目标模型<input value="'+esc(modelName)+'" readonly></label></div><div class="factBox"><h3>映射契约</h3><div class="itemFacts"><div class="factRow"><span>业务过程</span><strong>'+esc((sample.semantic.find(x=>x[4]===v3.build.process)||sample.semantic[0])[0])+'</strong></div><div class="factRow"><span>标准字段</span><strong>'+esc((sample.standard.find(x=>x[4]===v3.build.field)||sample.standard[0])[0])+'</strong></div><div class="factRow"><span>来源表</span><strong>'+esc(v3.build.source)+'</strong></div><div class="factRow"><span>目标模型</span><strong>'+esc(model[4])+'</strong></div></div><div class="riskLine">当前结构与冻结采集范围不同版本时，必须显示来源漂移证据。</div></div></div>'+v3ActionLine('<button class="btn" data-v3-tab="字段设计">查看字段设计</button><button class="btn primary" data-v3-action="model-check">校验映射 →</button>','校验前不允许保存版本')+'</div>';
+ }
+ if(tab==="校验记录"){
+ return head+'<div class="cardBody"><h2>校验结果与处理建议</h2>'+
+ (!v3.build.checked?v3Hint("映射字段已提交本地校验预览；先修复一项模拟差异，之后重新校验。","warn"):'<div class="resultPanel"><h3>✓ 映射检查通过（仅演示）</h3><p>来源字段、数据类型、标准引用、对象归属已完成样例验证；这不是实际 Metadata Run。</p></div>')+
+ (!v3.build.fixed?'<div class="diffRow"><div><b>差异 01 · 金额字段精度不一致</b><p class="micro">模型 pay_amount DECIMAL(18,2)，旧映射 DECIMAL(12,2)。</p><p class="micro">处理方式：调整映射精度并重新校验；正式系统需 Owner 证据。</p></div><button class="btn soft" data-v3-action="model-fix">应用修复样例</button></div>':'<div class="diffRow"><div><b>差异已处理</b><p class="micro">模拟修复为 DECIMAL(18,2)</p></div><span class="tag good">已复核</span></div>')+
+ v3ActionLine('<button class="btn" data-v3-tab="来源映射">返回映射</button>'+(v3.build.checked?'<button class="btn primary" data-v3-tab="版本差异">比较并保存版本 →</button>':'<button class="btn primary" data-v3-action="model-recheck" '+(!v3.build.fixed?"disabled":"")+'>重新校验</button>'))+'</div>';
+ }
+ if(tab==="版本差异"){
+ return head+'<div class="cardBody"><h2>版本差异 · '+esc(modelName)+'</h2><p class="muted">仅显示本次模拟版本变更；保存新版本不等于发布或运行。</p><div class="docGrid"><div class="factBox"><h3>原版本 · v2.0（示例）</h3><p>字段 pay_amount <del>DECIMAL(12,2)</del></p><p>标准字段引用：未关联</p></div><div class="factBox"><h3>目标版本 · v2.1（模拟）</h3><p>字段 pay_amount <ins>DECIMAL(18,2)</ins></p><p>标准字段引用：'+esc(v3.build.field)+'</p></div></div>'+
+ (v3.build.version?'<div class="resultPanel"><h3>✓ 已保存本地版本示例</h3><p class="receipt">'+esc(v3.build.version)+' · '+esc(model[4])+'</p><p>真实模型服务未写入；还需单独发布或执行审批。</p></div>':v3Hint(v3.build.checked?"校验通过，可保存本次模拟新版本。":"请先通过映射校验，才可保存版本。",v3.build.checked?"":"warn"))+
+ v3ActionLine((v3.build.version?'<button class="btn primary" data-v3-action="model-next-metric">查看指标影响 →</button>':'<button class="btn primary" data-v3-action="model-save" '+(!v3.build.checked?"disabled":"")+'>保存新版本</button>')+'<button class="btn" data-v3-tab="校验记录">查看校验结果</button>')+'</div>';
+ }
+ return head;
+}
+function v3Model(){
+ const r=v3Selected("model");
+ const physical=sample.model.filter(x=>x[2]==="物理"),logical=sample.model.filter(x=>x[2]==="逻辑");
+ const item=x=>'<button class="modelItem '+(r&&r[4]===x[4]?"active":"")+'" data-model="'+esc(x[4])+'"><strong>'+esc(x[0])+'</strong><small>'+esc(x[4])+' · '+esc(x[1])+'</small></button>';
+ const cats='<section class="card modelTree"><div class="treehead">模型资源分类（非步骤）</div><div class="modelList"><small>逻辑模型</small>'+logical.map(item).join("")+'<small>物理模型 · ODS / DWD</small>'+physical.map(item).join("")+'</div></section>';
+ const tabs=["业务关联","字段设计","来源映射","校验记录","版本差异"];
+ return pageHead("模型工作台","按模型身份执行关联、字段、映射、校验和版本保存。步骤与模型分类分别展示。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建模型</button>')+
+ v3Ctx()+v3FlowBar()+'<div class="workgrid">'+cats+
+ '<section class="card"><div class="cardHead"><h2>模型任务区 · '+(r?esc(r[0]):"无当前模型")+'</h2><span class="tag blue">当前模型驱动全部画面</span></div><div class="tabs">'+tabs.map(t=>'<button class="tab '+((state.tab.model||"来源映射")===t?"active":"")+'" data-v3-tab="'+t+'">'+t+'</button>').join("")+'</div>'+ (state.status==="ready"?v3ModelBody():statePanel())+'</section></div>'+
+ '<div class="explain">'+icon("shield")+'<span class="explaintxt">模型资源按逻辑/物理类型和物理层次分类；步骤按业务关联→字段→来源映射→校验→保存版本推进。ODS 不以 Asset 上架作为建模必经门槛。</span></div>'+v3Review();
+}
+
+
+function v3MetricBody(){
+ const metric=v3Selected("metric");if(!metric)return v3Hint("当前筛选没有指标；无法继续编辑或发布。","warn");
+ const m=v3.metric,tab=state.tab.metric||"定义口径";
+ const top='<div class="detailStrip"><strong>'+esc(metric[0])+'</strong><span>'+esc(metric[4])+'</span><span class="tag warn">'+esc(m.version)+'</span></div>';
+ if(tab==="定义口径")return top+'<div class="cardBody"><h2>编辑指标口径</h2><p class="muted">演示中的指标版本可编辑，尚未保存到真实 Metric 服务。</p><div class="workflowGrid"><div><label class="formRow">指标表达式<textarea id="v3-formula">'+esc(m.formula)+'</textarea></label><label class="formRow">业务过滤条件<input id="v3-condition" value="'+esc(m.filter)+'" placeholder="例如 status = PAID"></label></div><div class="factBox"><h3>指标合同</h3><div class="itemFacts"><div class="factRow"><span>指标标识</span><strong>'+esc(metric[4])+'</strong></div><div class="factRow"><span>业务主题</span><strong>'+esc(metric[1])+'</strong></div><div class="factRow"><span>计算类型</span><strong>'+esc(metric[2])+'</strong></div><div class="factRow"><span>当前版本</span><strong>'+esc(m.version)+'</strong></div></div></div></div>'+v3ActionLine('<button class="btn primary" data-v3-action="metric-validate">校验指标口径 →</button>','修改后需重新校验')+'</div>';
+ if(tab==="校验")return top+'<div class="cardBody"><h2>版本校验与问题定位</h2>'+
+ (m.checked?'<div class="resultPanel"><h3>✓ 口径校验通过（样例）</h3><p>公式语法及业务过滤范围已检查。实际上线需要由 Metric Owner 验证对应版本与数据源。</p></div>':
+ '<div class="resultPanel warn"><h3>校验发现 1 个待处理问题</h3><p>支付订单数尚未限定已支付状态，可能将取消订单纳入口径。</p><div class="diffRow"><div><b>问题 MET-CHECK-01</b><p class="micro">缺少过滤条件 status = PAID，影响订单主题指标含义。</p></div><button class="btn soft" data-v3-action="metric-fix">采用修正建议</button></div></div>')+
+ '<div class="docGrid"><div class="factBox"><h3>原版本定义</h3><p>'+esc(m.prior)+'</p></div><div class="factBox"><h3>本次草稿定义</h3><p>'+esc(m.formula)+'<br><span class="muted">'+esc(m.filter||"尚未定义过滤范围")+'</span></p></div></div>'+
+ v3ActionLine(m.checked?'<button class="btn primary" data-v3-action="metric-impact">查看影响范围 →</button>':'<button class="btn" data-v3-action="metric-validate">重新校验</button>')+'</div>';
+ if(tab==="引用与影响")return top+'<div class="cardBody"><h2>发布前影响分析</h2><p class="muted">基于当前指标版本的模拟引用证据，而非真实的反向影响 API。</p>'+
+ '<div class="diffRow"><div><b>使用者：交易经营看板</b><p class="micro">引用当前已发布版本 v1.1 · 口径变更后需复核展示指标</p></div><span class="tag warn">待复核</span></div><div class="diffRow"><div><b>下游报表：订单日报</b><p class="micro">字段 order_id · 模型 PM-701</p></div><span class="tag blue">受影响</span></div><div class="diffRow"><div><b>标准字段引用：STD-201</b><p class="micro">订单标识标准与版本引用关系</p></div><span class="tag blue">上游</span></div>'+
+ '<div class="riskLine">影响说明：发布新版本不应悄然切换历史数据消费的精确口径，订阅方引用必须可追溯。</div>'+v3ActionLine('<button class="btn primary" data-v3-action="metric-to-publish">确认已查看影响，进入发布 →</button>','演示操作，不实际变更已发布版本')+'</div>';
+ if(tab==="版本与发布")return top+'<div class="cardBody"><h2>版本发布确认</h2><p class="muted">校验、影响、发布为三个独立决策，未经确认不会自动发布。</p><div class="itemFacts"><div class="factRow"><span>拟发布指标</span><strong>'+esc(metric[4])+' · '+esc(metric[0])+'</strong></div><div class="factRow"><span>拟发布版本</span><strong>v1.2 · 本次模拟草稿</strong></div><div class="factRow"><span>变更范围</span><strong>支付订单范围；'+esc(m.filter||"未确定")+'</strong></div><div class="factRow"><span>校验结果</span><strong>'+ (m.checked?"样例校验通过":"未通过")+'</strong></div><div class="factRow"><span>影响分析</span><strong>'+(m.impactSeen?"已查看样例引用":"尚未确认")+'</strong></div></div>'+
+ (m.published?'<div class="resultPanel"><h3>✓ 模拟发布回执已生成</h3><p class="receipt">'+esc(m.release)+'</p><p>仅保存在当前原型内存，实际 MetricPublication 未创建。</p></div>':
+ v3Hint(m.checked&&m.impactSeen?"具备发布确认的演示条件；请确认版本后提交。":"校验与影响分析均完成后才可发布。",m.checked&&m.impactSeen?"":"warn"))+
+ v3ActionLine('<button class="btn" data-v3-tab="引用与影响">返回影响</button>'+(m.published?'<button class="btn soft" data-v3-action="metric-return">返回指标列表</button>':'<button class="btn primary" data-v3-action="metric-publish" '+(!(m.checked&&m.impactSeen)?"disabled":"")+'>确认模拟发布</button>'))+'</div>';
+ return top;
+}
+function v3Metric(){
+ const metric=v3Selected("metric");
+ const tabs=["定义口径","校验","引用与影响","版本与发布"];
+ const current=state.tab.metric||"定义口径";
+ return pageHead("指标中心","完成定义、修改口径、校验、影响复核和版本发布的完整任务路径。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建指标</button>')+
+ v3Ctx()+v3Steps(["定义口径","校验","分析影响","发布"],Math.max(0,tabs.indexOf(current)),"metric")+
+ '<div class="split medium">'+v3Card("指标列表","按指标标识选择版本上下文，筛选后不保留旧详情",v3Filters()+v3Table("metric"))+
+ '<section class="card"><div class="tabs">'+tabs.map(t=>'<button class="tab '+(t===current?"active":"")+'" data-v3-tab="'+t+'">'+t+'</button>').join("")+'</div>'+(state.status==="ready"?v3MetricBody():statePanel())+'</section></div>'+v3Review();
+}
+function v3QueueBody(){
+ const task=v3Selected("governance");
+ if(!task)return '<div class="cardBody">'+v3Hint("当前任务范围没有记录；已清空处理对象。","warn")+'</div>';
+ const id=task[4],m=v3QueueInfo[id],step=v3.queueStep,receipt=v3.receipts&&v3.receipts[id];
+ const pStep=["evidence","resolve","submit","receipt"].indexOf(step);
+ const summary='<div class="detailStrip"><strong>'+esc(task[0])+'</strong><span>'+esc(task[4])+'</span><span class="tag '+(m.priority==="P0"?"danger":"warn")+'">'+m.priority+'</span></div>'+
+ '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>处理责任人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>等待时间</span><strong>'+esc(m.age)+'</strong></div><div class="factRow"><span>业务类型</span><strong>'+esc(m.kind)+'</strong></div></div>';
+ let content="";
+ if(step==="evidence"){
+ content='<h2>为什么需要处理</h2><p>'+esc(m.why)+'</p><div class="riskLine">'+esc(m.risk)+'</div>'+
+ '<h3>前后证据对比</h3><div class="docGrid"><div class="factBox"><h3>当前 / 原始证据</h3><p>'+esc(m.before)+'</p></div><div class="factBox"><h3>变化 / 待确认</h3><p>'+esc(m.after)+'</p></div></div><p style="margin:14px 0 0" class="micro"><b>需要补充：</b>'+esc(m.required)+'</p>'+
+ v3ActionLine('<button class="btn primary" data-v3-action="queue-resolve" '+(!actionAllowed()?"disabled":"")+'>进入处理或转交 →</button>');
+ }else if(step==="resolve"){
+ content='<h2>处理还是转交？</h2><p>'+esc(m.required)+'</p><label class="formRow">处理方式<select id="v3-queue-decision"><option value="">请选择</option><option value="process">补充材料并处理</option><option value="transfer">转交其他责任人</option></select></label>'+
+ (v3.decision==="transfer"?'<label class="formRow">转交给<select id="v3-transfer"><option value="">选择目标责任人</option><option value="元数据管理员">元数据管理员</option><option value="业务负责人">业务负责人</option><option value="资产管理员">资产管理员</option></select></label>':'')+
+ '<label class="formRow">处理说明 / 补充证据<textarea id="v3-queue-note" placeholder="说明变更依据、核验方式或转交原因">'+esc(v3.note||"")+'</textarea></label>'+
+ '<div class="riskLine">'+esc(m.risk)+'</div>'+
+ v3ActionLine('<button class="btn" data-v3-action="queue-evidence">返回差异证据</button><button class="btn primary" data-v3-action="queue-review">检查提交内容 →</button>');
+ }else if(step==="submit"){
+ content='<h2>提交前核对</h2><div class="itemFacts"><div class="factRow"><span>任务</span><strong>'+esc(id)+'</strong></div><div class="factRow"><span>处理方式</span><strong>'+esc(v3.decision==="transfer"?"转交给 "+v3.transferTo:"补充处理材料")+'</strong></div><div class="factRow"><span>依据</span><strong>'+esc(v3.note||"未填写")+'</strong></div><div class="factRow"><span>风险提醒</span><strong>'+esc(m.risk)+'</strong></div></div>'+
+ v3Hint("本次仅生成原型回执；不会向治理 API、审批服务或源系统写入数据。")+
+ v3ActionLine('<button class="btn" data-v3-action="queue-resolve">修改内容</button><button class="btn primary" data-v3-action="queue-submit">确认生成模拟回执</button>');
+ }else{
+ content='<div class="resultPanel"><h3>✓ 已生成演示处理回执</h3><p class="receipt">'+esc(receipt||"本任务尚未生成回执")+'</p><p>处理方式：'+esc(v3.decision==="transfer"?"转交":"提交处理建议")+'；正式任务状态需回源系统核验。并未自动上架、应用差异、采集或批准。</p></div><div class="itemFacts"><div class="factRow"><span>原任务</span><strong>'+esc(id)+'</strong></div><div class="factRow"><span>业务结果</span><strong>等待 Owner 再次确认</strong></div></div>'+
+ v3ActionLine('<button class="btn primary" data-v3-action="queue-next">返回任务列表 →</button>');
+ }
+ return '<div class="cardBody">'+v3Steps(["查看差异","处理 / 转交","提交确认","查看结果"],pStep,"queue")+
+ summary+'<div style="margin-top:17px">'+content+'</div></div>';
+}
+function v3Governance(){
+ v3SyncSelected("governance");
+ const task=v3Selected("governance"),active=v3.queueId;
+ const count=Object.keys(v3QueueInfo).length;
+ return pageHead("治理工作队列","按优先级处理真实对象的盘点、变更、对账和结构漂移；每个类型都有不同的处理证据。","",'<button class="btn" data-page="asset">资产目录</button>')+
+ v3Ctx()+
+ '<div class="queueCards">'+[["all","全部待处理",count],["盘点","盘点上架",1],["对账","来源对账",1],["变更","资产变更",1],["漂移","结构漂移",1]].map(x=>'<button class="queueCard '+(state.queue===x[0]?"active":"")+'" data-queue="'+x[0]+'"><span>'+x[1]+'</span><b>'+x[2]+'</b><small>仅演示任务</small></button>').join("")+'</div>'+
+ '<div class="split medium">'+v3Card("任务清单","责任人、优先级、等待时间、影响对象和处理状态",v3Filters()+v3Table("governance"))+
+ '<section class="card"><div class="cardHead"><h2>任务处理 · '+(task?esc(task[4]):"未选择")+'</h2><span class="tag blue">'+(task?esc(v3QueueInfo[active].kind):"无当前对象")+'</span></div>'+(state.status==="ready"?v3QueueBody():statePanel())+'</section></div>'+v3Review();
+}
+function v3Asset(){
+ const r=v3Selected("asset");
+ return pageHead("资产目录","区分治理资产与技术元数据实体；从对象事实出发查看对应治理任务。","",'<button class="btn" data-page="taxonomy">编目规则</button>')+
+ v3Ctx()+
+ '<div class="compactHead"><div><strong>资产与元数据双视图</strong><small style="display:block">技术实体不等于已上架资产</small></div><div class="hrow"><button class="btn '+(state.view==="asset"?"soft":"")+'" data-view="asset">治理资产</button><button class="btn '+(state.view==="entity"?"soft":"")+'" data-view="entity">技术实体</button></div></div>'+
+ '<div class="split medium">'+v3Card("资产发现","筛选与对象选择一致，只有关联到本资产的治理记录才可显示",v3Filters()+v3Table("asset"))+
+ '<section class="card"><div class="cardHead"><h2>对象事实与操作</h2></div><div class="cardBody">'+(r?
+ '<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(r[4])+'</span>'+badge(r[3])+'</div>'+
+ '<div class="itemFacts"><div class="factRow"><span>对象身份</span><strong>'+esc(r[2])+'</strong></div><div class="factRow"><span>Owner</span><strong>'+esc(r[2]==="技术实体"?"Metadata":"Asset")+'</strong></div><div class="factRow"><span>业务范围</span><strong>'+esc(r[1])+'</strong></div></div>'+
+ '<div class="riskLine">'+(r[2]==="技术实体"?"仅表示来源实体已被发现，并未成为治理资产。":"PENDING 等待治理处理；不表示已经发布或可消费。")+'</div>'+
+ v3ActionLine('<button class="btn" data-v3-action="asset-drawer">查看技术证据</button><button class="btn primary" data-v3-action="asset-queue">筛选该对象的治理任务 →</button>') :
+ v3Hint("无匹配资产。已清空上次对象详情与治理操作。","warn"))+'</div></section></div>'+v3Review();
+}
+
+
+function v3Specialist(id){
+ const config={
+  quality:{steps:["规则监控","检查执行","结果证据","失败恢复"],help:"质量执行记录必须保留独立 Owner 和独立读取权限。",panels:["规则与监控对象","Execution 与配置版本","检查结果及失败样本","排障与重试证据"]},
+  security:{steps:["分级分类","访问策略","脱敏裁决","访问审计"],help:"安全分类不等于访问许可；策略与访问决策独立留证。",panels:["敏感字段的分类证据","权限请求及策略版本","脱敏算法与裁决结果","主体 / 资源 / 审计记录"]},
+  lifecycle:{steps:["策略定义","生效绑定","TTL 观测","存储趋势"],help:"保存 TTL 策略不等于已在执行环境生效。",panels:["生命周期策略草稿","对象与生效范围","过期检查与异常","冷热存储趋势"]},
+  mdm:{steps:["实体建模","匹配识别","清洗规则","变更审批"],help:"MDM 保留实体级身份、清洗前后版本及人工审批，不与 Asset 真相混用。",panels:["主数据实体建模","匹配、去重规则","清洗前后值对照","审批人和实际回执"]}
+ }[id];
+ const current=state.tab[id]||config.steps[0],index=config.steps.indexOf(current),item=v3Selected(id);
+ const facts=item?'<div class="detailStrip"><strong>'+esc(item[0])+'</strong>'+badge(item[3])+'<span>'+esc(item[4])+'</span></div>':'<div class="resultPanel warn"><p>暂无符合条件的对象。</p></div>';
+ const content=index===0?v3Filters()+v3Table(id):'<div class="cardBody">'+facts+'<h2>'+esc(config.panels[index])+'</h2><p>此视图展示具体任务应具有的输入、证据与处理反馈，与其他页签不是同一张列表。</p>'+
+ (id==="quality"&&index===1?'<div class="itemFacts"><div class="factRow"><span>检查 ID</span><strong>DEMO-EXE-115</strong></div><div class="factRow"><span>冻结范围</span><strong>示例会员表 / 3 项规则</strong></div><div class="factRow"><span>结果状态</span><strong>UNKNOWN（不能视为已通过）</strong></div></div>':
+ id==="security"&&index===2?'<div class="docGrid"><div class="factBox"><h3>请求值</h3><p>13800138000</p></div><div class="factBox"><h3>演示脱敏效果</h3><p>138****8000</p></div></div>':
+ id==="lifecycle"&&index===1?'<div class="itemFacts"><div class="factRow"><span>待绑定对象</span><strong>ods_order_detail</strong></div><div class="factRow"><span>策略版本</span><strong>草稿 v1.0</strong></div><div class="factRow"><span>生效结果</span><strong>未确认</strong></div></div>':
+ id==="mdm"&&index===2?'<div class="docGrid"><div class="factBox"><h3>原字段</h3><p>客户名称：张 三</p></div><div class="factBox"><h3>规范化预览</h3><p>客户名称：张三</p></div></div>':
+ '<div class="softPanel">'+esc(config.help)+'</div>')+
+ '<div class="resultPanel warn"><h3>当前为专项交互设计占位</h3><p>需按该领域 Owner 的真实字段、权限与运行回执深化，不用其他页的列表假装此任务已经完成。</p></div></div>';
+ return pageHead(nameOf(id),descriptions[id],"",'<button class="btn" data-page="'+(id==="quality"?"qualityRun":id==="security"?"securityAudit":id==="lifecycle"?"metadata":"asset")+'">项目级专业入口 ↗</button>')+
+ v3Ctx()+v3Steps(config.steps,index,"specialist")+
+ '<div class="split medium"><section class="card"><div class="cardHead"><h2>'+esc(config.panels[index])+'</h2></div>'+content+'</section><section class="card"><div class="cardHead"><h2>任务说明 / 事实边界</h2></div><div class="cardBody">'+facts+'<p>'+esc(config.help)+'</p><div class="riskLine">当前原型不执行该领域真实规则配置、策略部署、主数据合并或生命周期运行。</div><div class="itemFacts"><div class="factRow"><span>当前步骤</span><strong>'+esc(current)+'</strong></div><div class="factRow"><span>所属 Owner</span><strong>'+esc(nameOf(id))+'</strong></div><div class="factRow"><span>正式证据</span><strong>尚未接入</strong></div></div></div></section></div>'+v3Review();
+}
+function v3StatePanel(){
+ const data={
+ empty:["没有符合条件的记录","当前请求成功，但所选范围确实没有内容。","清空筛选"],
+ loading:["正在加载对象","保持当前操作上下文；不能提前展示成功结果。","返回正常演示"],
+ error:["读取失败 · 请重新加载","服务或网络错误，不会把错误当成空列表。保留本地筛选和对象选择。","重试读取"],
+ forbidden:["无权限查看此项内容","不查询受限制接口；可返回有权入口或请求管理员授权。","返回可访问入口"],
+ partial:["部分服务不可用","显示可确认的部分证据，无法获取的结果明确标记未知。","重试不可用项"],
+ unknown:["当前状态无法确认","查询 Owner 回执或等待真实执行状态；禁止推测完成。","重新确认"]
+ }[state.status]||["当前内容","仅显示静态数据","重试"];
+ return '<div class="stateArea"><div class="glyph">◇</div><h3>'+data[0]+'</h3><p>'+data[1]+'</p><button class="btn" data-v3-action="state-retry">'+data[2]+'</button></div>';
+}
+function v3Run(){
+ nav();
+ dom("roleSwitch").value=state.role;
+ const s=dom("statusFilter");if(s)s.value=state.filter;
+ const id=state.page;
+ const view=id==="semantic"||id==="standard"?v3Definition(id):
+ id==="model"?v3Model():
+ id==="metric"?v3Metric():
+ id==="governance"?v3Governance():
+ id==="asset"?v3Asset():
+ ["quality","security","lifecycle","mdm"].includes(id)?v3Specialist(id):
+ toolInfo[id]?toolPage(id):placeholderPage(id);
+ dom("main").innerHTML=view;
+ const f=dom("statusFilter");if(f)f.value=state.filter;
+}
+function renderMain(){v3Run()}
+function statePanel(){return v3StatePanel()}
+function chosen(){return v3Selected(state.page)}
+function selectRow(i){
+ if(!sample[state.page]||!sample[state.page][i])return;
+ const old=state.select[state.page],id=state.page;
+ state.select[id]=i;
+ if(id==="governance"&&old!==i){v3.queueId=sample.governance[i][4];v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo=""}
+ if(id==="metric"&&old!==i){v3.metric={id:sample.metric[i][4],tab:"定义口径",formula:"COUNT(order_id)",filter:"",checked:false,impactSeen:false,published:false,release:null,version:"v1.2 · 草稿",prior:"COUNT(order_id)"};state.tab.metric="定义口径"}
+ if(id==="model"&&old!==i){v3.build.model=sample.model[i][4];v3.build.checked=false;v3.build.fixed=false;v3.build.version=null}
+ renderMain();
+ if(id==="semantic"||id==="standard")v3OpenDrawer(id);
+}
+function go(id,keepHistory){
+ if(!keepHistory && state.editDirty && v3.editing){v3.pending=id;v3DirtyDialog();return}
+ if(!keepHistory){v3.scope=null;v3.snapshots=[]}
+ if(!keepHistory&&state.page!==id)state.history.push(state.page);
+ state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";state.tool=toolInfo[id]?id:"";
+ state.lastMenu=domainOf(id).id;
+ if(id==="model" && v3.scope && (v3.scope.from==="standard"||v3.scope.from==="semantic")){state.select.model=1;state.tab.model="来源映射";v3.build.model="PM-701"}
+ if(id==="metric" && v3.scope){state.tab.metric="引用与影响"}
+ v3CloseDrawer();renderMain();closeMobile();
+ if(window.location.hash!=="#"+id)window.location.hash=id;
+ window.scrollTo(0,0);
+}
+function v3OpenEdit(mode){
+ const r=v3Selected(state.page);
+ if(mode==="edit"&&!r){toast("无当前对象，无法编辑");return}
+ if(!actionAllowed()){toast("只读画像无法写入");return}
+ const key=mode==="create"?"new:"+state.page:state.page+":"+r[4],draft=v3.storedDrafts[key];
+ v3.editing={mode,key,original:r?r[0]:"",name:draft?draft.name:mode==="edit"?r[0]:"",note:draft?draft.note:""};
+ v3ShowEdit();
+}
+function v3ShowEdit(){
+ const p=v3.editing;if(!p)return;
+ state.editDirty=true;state.dialogName="v3-edit";
+ dom("dialog").innerHTML='<h2 id="dialogTitle">'+(p.mode==="create"?"新建":"编辑")+esc(nameOf(state.page))+' · 本地草稿</h2><p>新建不会带入旧对象，编辑会恢复本地未完成草稿。此原型没有生产 API。</p><label class="dlgfield">名称<input id="v3-edit-name" value="'+esc(p.name)+'" placeholder="请输入名称"></label><label class="dlgfield">变更说明<textarea id="v3-edit-note" placeholder="填写本次变更依据">'+esc(p.note)+'</textarea></label><div class="dlgfoot"><button class="btn" data-v3-edit="cancel">取消</button><button class="btn primary" data-v3-edit="save">保存本地草稿</button></div>';
+ dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");
+}
+function v3DirtyDialog(){
+ if(!v3.editing)return;
+ state.dialogName="v3-dirty";
+ dom("dialog").innerHTML='<h2 id="dialogTitle">存在未保存的编辑内容</h2><p>继续编辑会恢复刚才的输入；保存草稿可以再次打开。放弃后原型不会修改对象。</p><div class="dlgfoot"><button class="btn" data-v3-edit="stay">继续编辑</button><button class="btn" data-v3-edit="discard">放弃并离开</button><button class="btn primary" data-v3-edit="saveleave">保存草稿并离开</button></div>';
+ dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");
+}
+function v3FinishEdit(leave){
+ const p=v3.editing;if(!p)return;
+ v3.storedDrafts[p.key]={name:p.name,note:p.note,at:"当前会话"};state.editDirty=false;v3.editing=null;closeDialog();
+ toast("本地草稿已保存。可再次打开继续编辑；未调用生产接口。");
+ if(leave&&v3.pending){const next=v3.pending;v3.pending=null;go(next)}
+}
+function v3HandleAction(a){
+ const m=v3.metric,b=v3.build;
+ if(a==="state-retry"){state.status="ready";renderMain();return}
+ if(a==="new"){v3OpenEdit("create");return}
+ if(a==="edit"){v3OpenEdit("edit");return}
+ if(a==="process-next"){const r=v3Selected("semantic");if(!r)return;b.process=r[4];v3Route("standard",{id:r[4],label:r[0],relation:"业务过程"});return}
+ if(a==="standard-attach"){const r=v3Selected("standard");if(!r)return;b.field=r[4];v3Route("model",{id:r[4],label:r[0],relation:"标准字段"});return}
+ if(a==="model-open"){v3OpenDrawer("model");return}
+ if(a==="model-check"){b.checked=false;state.tab.model="校验记录";renderMain();return}
+ if(a==="model-fix"){b.fixed=true;renderMain();return}
+ if(a==="model-recheck"){b.checked=!!b.fixed;renderMain();return}
+ if(a==="model-save"){if(!b.checked)return; b.version="DEMO-MODEL-"+b.model+"-V2.1";renderMain();return}
+ if(a==="model-next-metric"){const r=v3Selected("model");if(r)v3Route("metric",{id:r[4],label:r[0],relation:"模型引用"});return}
+ if(a==="metric-validate"){m.checked=!!m.formula.trim()&&!!m.filter.trim();m.impactSeen=false;state.tab.metric="校验";renderMain();return}
+ if(a==="metric-fix"){m.filter="status = PAID";m.checked=false;state.tab.metric="定义口径";renderMain();return}
+ if(a==="metric-impact"){if(!m.checked)return;m.impactSeen=true;state.tab.metric="引用与影响";renderMain();return}
+ if(a==="metric-to-publish"){if(!m.checked)return;m.impactSeen=true;state.tab.metric="版本与发布";renderMain();return}
+ if(a==="metric-publish"){if(!(m.checked&&m.impactSeen))return;m.published=true;m.release="DEMO-METRIC-PUBLICATION-"+m.id+"-V1.2";renderMain();return}
+ if(a==="metric-return"){state.tab.metric="定义口径";renderMain();return}
+ if(a==="asset-drawer"){v3OpenDrawer("asset");return}
+ if(a==="asset-queue"){const r=v3Selected("asset");if(!r)return;v3Route("governance",{id:r[4],label:r[0],relation:"治理记录"});return}
+ if(a==="queue-evidence"){v3.queueStep="evidence";renderMain();return}
+ if(a==="queue-resolve"){if(!actionAllowed())return;v3.queueStep="resolve";renderMain();return}
+ if(a==="queue-review"){if(!v3.decision){toast("请选择处理或转交方式");return}if(v3.decision==="transfer"&&!v3.transferTo){toast("转交必须选择责任人");return}if(v3.note.trim().length<4){toast("请填写至少 4 字的处理依据");return}v3.queueStep="submit";renderMain();return}
+ if(a==="queue-submit"){const task=v3Selected("governance");if(!task||!v3.decision)return;v3.receipts||={};v3.receipts[task[4]]="DEMO-GOV-RECEIPT-"+task[4]+"-01";v3.queueStep="receipt";renderMain();return}
+ if(a==="queue-next"){v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo="";renderMain();return}
+}
+document.addEventListener("click",function(ev){
+ const el=ev.target.closest("button");if(!el)return;
+ if(el.dataset.queue){v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo="";renderMain();return}
+ if(el.dataset.model){const id=el.dataset.model;v3.build.source=id==="PM-701"?"orders.order_detail":id==="PM-732"?"ods_order_detail":id==="PM-733"?"crm.customer":"orders.order_detail";v3.build.mapField=id==="PM-733"?"customer_id":"order_id";v3.build.checked=false;v3.build.fixed=false;v3.build.version=null;renderMain();return}
+ if(el.dataset.v3Action){v3HandleAction(el.dataset.v3Action);return}
+ if(el.dataset.v3Tab){state.tab[state.page]=el.dataset.v3Tab;renderMain();return}
+ if(el.dataset.v3Step){
+  const [kind,num]=el.dataset.v3Step.split(":"),n=Number(num);
+  if(kind==="metric"){state.tab.metric=["定义口径","校验","引用与影响","版本与发布"][n]}
+  if(kind==="specialist"){state.tab[state.page]=({quality:["规则监控","检查执行","结果证据","失败恢复"],security:["分级分类","访问策略","脱敏裁决","访问审计"],lifecycle:["策略定义","生效绑定","TTL 观测","存储趋势"],mdm:["实体建模","匹配识别","清洗规则","变更审批"]})[state.page][n]}
+  if(kind==="queue"){if(n===0)v3.queueStep="evidence";if(n===1)v3.queueStep="resolve";if(n===2&&v3.note&&v3.decision)v3.queueStep="submit";if(n===3&&v3.receipts&&v3.receipts[v3.queueId])v3.queueStep="receipt"}
+  renderMain();return
+ }
+ if(el.dataset.v3Back){v3Back();return}
+ if(el.dataset.v3Close){v3CloseDrawer();return}
+ if(el.dataset.v3Edit){
+  const a=el.dataset.v3Edit;
+  if(a==="save"){if(v3.editing&&!v3.editing.name.trim()){toast("请填写名称");return}v3FinishEdit(false);return}
+  if(a==="saveleave"){if(v3.editing&&!v3.editing.name.trim()){toast("请填写名称");return}v3FinishEdit(true);return}
+  if(a==="stay"){v3ShowEdit();return}
+  if(a==="discard"){const next=v3.pending;v3.pending=null;v3.editing=null;state.editDirty=false;closeDialog();if(next)go(next);return}
+  if(a==="cancel"){v3DirtyDialog();return}
+ }
+});
+document.addEventListener("input",function(ev){
+ const t=ev.target;if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=true}
+ if(t.id==="v3-edit-note"&&v3.editing){v3.editing.note=t.value;state.editDirty=true}
+ if(t.id==="v3-formula"){v3.metric.formula=t.value;v3.metric.checked=false;v3.metric.impactSeen=false;v3.metric.published=false}
+ if(t.id==="v3-condition"){v3.metric.filter=t.value;v3.metric.checked=false;v3.metric.impactSeen=false;v3.metric.published=false}
+ if(t.id==="v3-mapfield"){v3.build.mapField=t.value;v3.build.checked=false;v3.build.version=null}
+ if(t.id==="v3-queue-note"){v3.note=t.value}
+});
+document.addEventListener("change",function(ev){
+ const t=ev.target;
+ if(t.id==="v3-queue-decision"){v3.decision=t.value;if(t.value!=="transfer")v3.transferTo="";renderMain()}
+ if(t.id==="v3-transfer"){v3.transferTo=t.value}
+ if(t.id==="v3-source"){v3.build.source=t.value;v3.build.checked=false;renderMain()}
+});
+dom("drawerShade").addEventListener("click",v3CloseDrawer);
+
+var start=decodeURIComponent(window.location.hash.replace(/^#/,""));if(paths[start]||labels[start]||toolInfo[start]){state.page=start;state.lastMenu=domainOf(start).id}render();
+})();
+</script>
+</body>
+</html>
