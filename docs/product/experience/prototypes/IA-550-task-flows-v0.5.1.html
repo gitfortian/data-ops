@@ -878,7 +878,34 @@ function v3ActionLine(buttons,note){
 function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+esc(text)+'</p></div>'}
 
 
+
+function v51StandardWorkspace(){
+ const fieldMode=v51.view==="library",r=fieldMode?v3Selected("standard"):null;
+ const tabs='<nav class="v51StandardTabs" aria-label="标准与字段视图"><button data-v51-view="catalog" class="'+(!fieldMode?"active":"")+'">标准目录 · 六类标准</button><button data-v51-view="library" class="'+(fieldMode?"active":"")+'">标准字段库</button></nav>';
+ const top=pageHead("数据标准","标准定义与标准字段分别管理；通过稳定引用关系连接。","",'<button class="btn" data-v3-action="new" '+(!actionAllowed()?"disabled":"")+'>新建'+(fieldMode?"标准字段":"标准定义")+'</button>')+v3Ctx()+tabs;
+ if(!fieldMode){
+  const names={NAMING:"命名",TYPE:"类型",CODE:"码值",UNIT:"单位",CALIBER:"口径",SECURITY:"安全"};
+  const shown=v51.standards.filter(s=>(v51.kind==="ALL"||s.kind===v51.kind)&&(!state.query||[s.name,s.code,s.id].join(" ").toLowerCase().includes(state.query.toLowerCase())));
+  const chosen=v51.standards.find(s=>s.id===v51.selectedStandard);
+  const types='<div class="v51StandardKinds">'+["ALL",...Object.keys(names)].map(k=>'<button data-v51-kind="'+k+'" class="'+(v51.kind===k?"active":"")+'">'+(names[k]||"全部")+'</button>').join("")+'</div>';
+  const rows=shown.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(names[s.kind])+'</td><td>'+esc(s.code)+'</td><td><button data-v51-catalog="'+s.id+'">查看</button></td></tr>').join("");
+  const uses=chosen?sample.standard.filter(s=>Object.values(v51Binding(s[4])).includes(chosen.id)):[];
+  return top+types+'<div class="v51StandardGrid"><section class="card"><div class="cardHead"><h2>数据标准目录</h2></div>'+v3Filters()+
+  '<table class="v51CompactTable"><thead><tr><th>标准</th><th>类别</th><th>编码</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></section>'+
+  '<section class="card"><div class="v4TaskBody"><h2>标准定义与使用情况</h2>'+
+  (chosen?'<div class="detailStrip"><strong>'+esc(chosen.name)+'</strong><span>'+esc(chosen.id)+'</span></div>'+
+   '<p>类别：'+esc(names[chosen.kind])+'；编码：'+esc(chosen.code)+'；状态：启用（模拟目录）</p>'+
+   '<h3>引用此标准的标准字段</h3>'+(uses.map(x=>'<p>'+esc(x[0])+' · '+esc(x[4])+'</p>').join("")||'<p class="micro">暂无引用样例</p>'):'<p>请选择一条标准。</p>')+
+  '<p class="micro">目录规则不是标准字段，也不是模型属性；审批发布沿原 Semantic Owner。</p>'+
+  '<button class="btn primary" data-v51-view="library">前往标准字段库 →</button></div></section></div>'+v3Review();
+ }
+ return top+v5DraftList("standard")+v5DraftWorkspace("standard")+
+ '<div class="v51StandardGrid"><section class="card"><div class="cardHead"><h2>可复用的标准字段</h2></div>'+v3Filters()+v3Table("standard")+'</section>'+
+ '<section class="card"><div class="v4TaskBody">'+v51BindingPanel(r)+'</div></section></div>'+v3Review();
+}
+
 function v3Definition(id){
+ if(id==="standard")return v51StandardWorkspace();
  const semantic=id==="semantic",r=v3Selected(id),title=semantic?"业务语义":"数据标准";
  const cats=semantic?["全部业务域","交易域","售后服务","用户行为域","供应链域"]:["全部标准","基础标识","交易订单","金额计量","时间与日期"];
  const fieldMap={"STD-201":"order_id","STD-205":"payment_time","STD-208":"pay_amount","STD-212":"customer_id"};
