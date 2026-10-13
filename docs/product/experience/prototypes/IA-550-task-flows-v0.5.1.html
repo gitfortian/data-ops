@@ -494,6 +494,7 @@ const v51={
   {id:"CAT-NAME-01",kind:"NAMING",name:"字段命名规则",code:"snake_case",status:"ENABLED"},
   {id:"CAT-TYPE-VARCHAR",kind:"TYPE",name:"字符类型标准",code:"VARCHAR",status:"ENABLED"},
   {id:"CAT-TYPE-DECIMAL",kind:"TYPE",name:"金额类型标准",code:"DECIMAL(18,2)",status:"ENABLED"},
+  {id:"CAT-TYPE-TIMESTAMP",kind:"TYPE",name:"时间戳类型标准",code:"TIMESTAMP",status:"ENABLED"},
   {id:"CAT-CODE-MEMBER",kind:"CODE",name:"会员枚举码集",code:"MEMBER_STATUS",status:"ENABLED"},
   {id:"CAT-UNIT-CNY",kind:"UNIT",name:"人民币单位标准",code:"CNY",status:"ENABLED"},
   {id:"CAT-CALIBER-PAID",kind:"CALIBER",name:"已支付交易金额口径",code:"PAID_AMOUNT",status:"ENABLED"},
@@ -502,7 +503,7 @@ const v51={
  fieldRoles:{"STD-201":"PROCESS","STD-205":"PROCESS","STD-208":"METRIC","STD-212":"DIMENSION"},
  defaults:{
   "STD-201":{TYPE:"CAT-TYPE-VARCHAR",UNIT:"",CALIBER:"",CODE:"",SECURITY:""},
-  "STD-205":{TYPE:"CAT-TYPE-VARCHAR",UNIT:"",CALIBER:"",CODE:"",SECURITY:""},
+  "STD-205":{TYPE:"CAT-TYPE-TIMESTAMP",UNIT:"",CALIBER:"",CODE:"",SECURITY:""},
   "STD-208":{TYPE:"CAT-TYPE-DECIMAL",UNIT:"CAT-UNIT-CNY",CALIBER:"CAT-CALIBER-PAID",CODE:"",SECURITY:""},
   "STD-212":{TYPE:"CAT-TYPE-VARCHAR",UNIT:"",CALIBER:"",CODE:"CAT-CODE-MEMBER",SECURITY:"CAT-SEC-PII"}
  }
