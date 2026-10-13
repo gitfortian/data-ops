@@ -18,6 +18,10 @@ Feature Spec 是“当前变更契约”，不是永久 Product Truth。
 
 只有 APPROVED / IMPLEMENTING 可以指导当前实现。
 
+## 待评审
+
+- [F-039 — 来源业务库语义初始化闭环](./F-039-source-semantic-initialization.md)：DRAFT；AgentScope PlanMode、有界长任务、关联候选及人工批量采纳方案，相关PD-009为PROPOSED，尚未授权实现。
+
 ## Closeout
 
 Feature SHIPPED 后，将长期有效内容提升到 Product / Domain / Architecture Contract，然后保留 Feature Spec 作为交付证据。

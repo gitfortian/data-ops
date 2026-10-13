@@ -19,6 +19,14 @@
 - [FEATURE_SPEC_TEMPLATE.md](./FEATURE_SPEC_TEMPLATE.md)
 - [features/](./features/)：只有 APPROVED / IMPLEMENTING Feature Spec 可以指导当前实现
 
+### 待评审设计
+
+- [PD-009 — 来源业务系统的语义初始化与长任务交接](./decisions/PD-009-source-semantic-initialization.md)：PROPOSED，讨论任务材料、AgentScope PlanMode与人工批量采纳的边界。
+- [F-039 — 来源业务库语义初始化闭环](./features/F-039-source-semantic-initialization.md)：DRAFT，范围选择、分片理解、集中核对、保存回读与验收方案。
+- [AgentScope Java 2.0.3 Plan研究](../agent/agentscope-plan-2.0.3-research-2026-10-09.md)：框架证据，不是当前产品或实现指令。
+
+以上材料不属于 Current Product Truth，设计授权不等于开发批准。
+
 ## Governance
 
 - [DOCUMENT_GOVERNANCE.md](./DOCUMENT_GOVERNANCE.md)

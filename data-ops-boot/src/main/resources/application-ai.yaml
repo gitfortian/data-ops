@@ -4,7 +4,7 @@
 yak:
   # AI 分析智能体总开关：默认关闭时模块 Bean 全部不装配；置 true 后才会出现 /api/v1/agent 接口与配套 CORS。
   agent:
-    enabled: ${YAK_AGENT_ENABLED:false}
+    enabled: ${YAK_AGENT_ENABLED:true}
 
     # LLM 接入：启用 AI 前配置 name、base-url，并通过环境变量注入 api-key。
     # 当前运行时仅支持 openai（包括 OpenAI-compatible 服务）。
