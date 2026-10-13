@@ -205,7 +205,7 @@ test('S06: ODS can hand off only a snapshot with project, physical ID and missin
  a.click({v81Dev:'1'});assert.equal(a.state.page,'dev');
  assert.equal(a.v81.handoff.projectId,'DEMO-RETAIL');
  assert.equal(a.v81.handoff.physicalModelId,a.v81Current().id);
- assert.match(a.view(),/没有 TaskRevision/);
+ assert.match(a.view(),/未创建 TaskRevision/);
  assert.match(a.view(),/目标连接/);
 });
 test('S07: DataDev handoff can return to exact source model and no other target',()=>{
@@ -324,9 +324,8 @@ test('VR01 cancelling new feedback preserves all existing issue timelines and so
 
 
 test('VR01: new Service issue starts isolated from previous ISS-201, including comment guard',()=>{
- const a=build('product');a.click({v8Product:'service'});const old=a.v6.records.find(x=>x.id==='ISS-201');
- const initialLog=old.log.length;
- a.click({v81Productissue:'1'});
+ const a=build('product');a.click({v8Product:'service'});a.click({v81Productissue:'1'});
+ const old=a.v6.records.find(x=>x.id==='ISS-201'),initialLog=old.log.length;
  assert.equal(a.state.page,'collab');assert.equal(a.v6.collab.creating,true);
  assert.match(a.view(),/当前操作：新建数据问题/);
  assert.match(a.view(),/DATA_SERVICE:DEMO-SVC-902/);
@@ -336,8 +335,8 @@ test('VR01: new Service issue starts isolated from previous ISS-201, including c
  assert.equal(old.log.length,initialLog);
 });
 test('VR01: Service source version survives create, reopen and returns to source contract',()=>{
- const a=build('product');a.click({v8Product:'service'});const old=a.v6.records.find(x=>x.id==='ISS-201'),len=old.log.length;
- a.click({v81Productissue:'1'});
+ const a=build('product');a.click({v8Product:'service'});a.click({v81Productissue:'1'});
+ const old=a.v6.records.find(x=>x.id==='ISS-201'),len=old.log.length;
  a.input('v6-newtitle','订单实时 API 超时问题');
  a.input('v6-newdetail','该服务接口从下午开始持续超时，期望正常返回订单列表');
  a.click({v6Create:'1'});
@@ -356,8 +355,8 @@ test('VR01: Service source version survives create, reopen and returns to source
  assert.equal(a.state.page,'product');assert.equal(a.v8.product,'service');
 });
 test('VR01: empty submission and cancel never mutate old issue',()=>{
- const a=build('product'),old=a.v6.records.find(x=>x.id==='ISS-201'),len=old.log.length;
- a.click({v81Productissue:'1'});
+ const a=build('product');a.click({v81Productissue:'1'});
+ const old=a.v6.records.find(x=>x.id==='ISS-201'),len=old.log.length;
  a.click({v6Create:'1'});
  assert.equal(a.v6.records.length,3);
  assert.equal(a.v6.collab.creating,true);
