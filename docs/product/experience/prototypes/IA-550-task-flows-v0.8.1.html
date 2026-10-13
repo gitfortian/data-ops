@@ -322,6 +322,12 @@ body{color:#18191d;background:#f7f7f8}
 @media(max-width:940px){.v81JourneyGrid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:570px){.v81Targets button{flex:1 1 125px}.v81Modelbar{padding:11px}}
 .v81Other{margin:0 0 10px}.v81Other summary{cursor:pointer;font-size:11px;color:#9c3742;padding:8px}.v81Other .v8Modes{margin-top:7px;flex-wrap:wrap}.v81Other .v8Modes button{min-height:38px}
+
+.v81Evidence{background:#fff9fa;border:1px solid #e5bcc3;border-left:3px solid #b7303d;border-radius:9px;padding:15px;margin-top:14px;scroll-margin-top:16px}
+.v81Evidence:focus{outline:2px solid #b7303d;outline-offset:2px}
+.v81Evidence .v7PanelTitle{display:flex;justify-content:space-between;gap:8px}
+.v81Evidence h3{font-size:14px;margin:0 0 7px}.v81Evidence p{font-size:11px;line-height:1.6}
+@media(max-width:570px){.v81Evidence{padding:10px}.v81Evidence .v81RouteLinks{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -2262,6 +2268,22 @@ function v8ExactGovernance(id){
  if(index<0){toast("样例任务不存在；不能替换成另一个任务");return}
  state.select.governance=index;v3.queueStep="evidence";renderMain();
 }
+
+function v81EvidencePanel(){
+ const key=v8.mode==="assist"?"assist-desk":v8.mode==="ask"?"ask-desk":null;
+ if(!key||v81.modeDetail!==key)return "";
+ const assist=key==="assist-desk";
+ return '<section id="v81-evidence" tabindex="-1" role="region" aria-label="'+(assist?"AI 建设证据清单":"可信问答取证条件")+'" class="v81Evidence">'+
+ '<div class="v7PanelTitle"><h3>'+(assist?"AI 建设证据与人工决策":"可信 AI 问答 · 取证条件")+'</h3><button data-v81-close-evidence="1" aria-label="关闭当前证据面板">关闭</button></div>'+
+ (assist?'<p>来源 HARVEST-20261012 / 业务过程 PRC-102 · **均为模拟证据**。确认订单明细一行代表什么、来源表指纹是否有效、标准字段是否存在、关键 Join 是否经业务确认。</p>'+
+ '<div class="v81RoleNote"><b>待业务/专家确认</b><p>候选：从已采集订单表映射 ODS，复用 LM-016 逻辑设计。人工确认不生成 SQL/DDL，也不替代正式来源审计。</p></div>'+
+ '<div class="v81RouteLinks"><button data-v81-ai="review">'+(v81.aiAnswers.review?"已人工审阅（仅演示）":"确认已审阅此候选（本地）")+'</button><button data-v81-route="model">由建模专家接管 →</button><button data-v81-route="source">回到来源证据 →</button></div>':
+ '<p>需要先澄清统计日期、粒度和支付退款口径，再读取当前 Project 中已发布的 MetricVersion、Dataset/Service 合同、授权判定和真实 Query/Invoke 响应。</p>'+
+ '<div class="v81RoleNote"><b>当前结论：证据不足，不能生成业务数值。</b><p>尚无真实查询响应、访问审计或版本化来源记录；必须追问或拒答，而非给出虚构销售额。</p></div>'+
+ '<div class="v81RouteLinks"><button data-v81-route="metric">核对指标版本 →</button><button data-v81-route="product">查看授权消费合同 →</button></div>')+
+ '</section>';
+}
+
 function v8Home(){
  v6InitCases();
  const role=v6.collab.role,terminal=["已完成","已关闭","已交接发布"];
@@ -2294,8 +2316,8 @@ function v8Home(){
   '<div class="v8Intro"><div><h1>从当前工作，找到下一步</h1><p>建设、指标、消费、异常恢复、安全、AI 协作与问答、主数据是独立故事入口。每条入口有自己的证据、决策及失败态。</p></div></div>'+
   '<div class="v8Modes" aria-label="主要工作目标">'+Object.entries(config).filter(([k])=>["build","consume","operate"].includes(k)).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div>'+
   '<details class="v81Other" '+(!["build","consume","operate"].includes(v8.mode)?"open":"")+'><summary>更多工作：指标、安全、AI 与主数据</summary><div class="v8Modes">'+Object.entries(config).filter(([k])=>!["build","consume","operate"].includes(k)).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div></details>'+
-  '<div class="v8Columns"><div><section class="v8Panel v8Next"><small>建议下一步 · '+esc(c.story)+'</small><h3>'+c.title+'</h3><p>'+c.text+'</p><div class="v8Status"><b>'+esc(c.identity)+'</b><span>样例对象 · 无真实运行证据</span></div><button class="btn primary" data-v8-next="'+c.target+'">'+c.action+' →</button>'+
-  (v8.mode==='build'?'<button class="btn" data-v7-homeflow="physical" data-v7-homelayer="ODS">从源表直接设计 ODS →</button>':'')+'</section>'+
+  '<div class="v8Columns"><div><section class="v8Panel v8Next"><small>建议下一步 · '+esc(c.story)+'</small><h3>'+c.title+'</h3><p>'+c.text+'</p><div class="v8Status"><b>'+esc(c.identity)+'</b><span>样例对象 · 无真实运行证据</span></div><button class="btn primary" data-v8-next="'+c.target+'" aria-expanded="'+((c.target==="assist-desk"||c.target==="ask-desk")&&v81.modeDetail===c.target)+'" aria-controls="v81-evidence">'+c.action+' →</button>'+
+  (v8.mode==='build'?'<button class="btn" data-v7-homeflow="physical" data-v7-homelayer="ODS">从源表直接设计 ODS →</button>':'')+v81EvidencePanel()+'</section>'+
   '<section class="v8Panel"><h2>我的待推进</h2><label>协作职责 <select id="v7-home-role">'+Object.entries(v6RoleNames).map(([k,n])=>'<option value="'+k+'" '+(k===role?'selected':'')+'>'+n+'</option>').join('')+'</select></label><p>职责用于筛选演示待办，专业读写权限由顶栏画像单独表达。</p>'+
   (todo||'<p>当前职责没有匹配的演示待办。可查看协作事项，不把他人的工作计为你的待办。</p>')+'<button class="btn" data-page="collab">查看全部协作事项 →</button></section>'+
   '<section class="v8Panel"><h2>设计、部署、运行与消费</h2><div class="v8Readiness"><b>设计：'+localVersions+' 个本地快照</b><span>只反映当前浏览会话；冻结不等于正式发布</span></div><div class="v8Readiness"><b>部署与运行：尚无真实证据</b><span>待目标环境、任务修订和执行回执核验</span></div><div class="v8Readiness"><b>消费：尚无真实证据</b><span>待真实 Query / Invoke、来源审计和 Usage 回执</span></div><details><summary>查看验收边界</summary><p>J1 设计完成不能替代 G2 首次价值；G1 需要当前受限身份和双 Project 的真实消费。原型不生成产品完成百分比。</p></details></section></div>'+
@@ -2326,9 +2348,10 @@ document.addEventListener('click',function(ev){
  if(e.dataset.v81Productissue){v81ProductIssue();return}
  if(e.dataset.v81Route){v81Route(e.dataset.v81Route);return}
  if(e.dataset.v81Ai){v81.aiAnswers[e.dataset.v81Ai]=true;renderMain();return}
- if(e.dataset.v8Mode){v8.mode=e.dataset.v8Mode;renderMain();return}
+ if(e.dataset.v81CloseEvidence){v81.modeDetail="";renderMain();return}
+ if(e.dataset.v8Mode){v8.mode=e.dataset.v8Mode;v81.modeDetail="";renderMain();return}
  if(e.dataset.v8Next==='resume'&&v81.resumeId){v81SwitchTarget(v81.resumeId);go('model');v7.view='physical';renderMain();return}
- if(e.dataset.v8Next){if(e.dataset.v8Next==='drift')v8ExactGovernance('GOV-320');else if(["security","metric","mdm","dev"].includes(e.dataset.v8Next))v81Route(e.dataset.v8Next);else if(e.dataset.v8Next==="ask-desk"||e.dataset.v8Next==="assist-desk"){v81.modeDetail=e.dataset.v8Next;renderMain()}else v7HomeJump(e.dataset.v8Next);return}
+ if(e.dataset.v8Next){if(e.dataset.v8Next==='drift')v8ExactGovernance('GOV-320');else if(["security","metric","mdm","dev"].includes(e.dataset.v8Next))v81Route(e.dataset.v8Next);else if(e.dataset.v8Next==="ask-desk"||e.dataset.v8Next==="assist-desk"){v81.modeDetail=e.dataset.v8Next;renderMain();const target=dom("v81-evidence");target?.scrollIntoView?.({behavior:"smooth",block:"start"});target?.focus?.()}else v7HomeJump(e.dataset.v8Next);return}
  if(e.dataset.v8Drift){v8ExactGovernance(e.dataset.v8Drift);return}
  if(e.dataset.v8Product){v8.product=e.dataset.v8Product;v8.result=null;renderMain();return}
  if(e.dataset.v8Consume){v8Consume();return}
