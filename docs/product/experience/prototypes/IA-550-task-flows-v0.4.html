@@ -360,10 +360,10 @@ if(x.dataset.select){selectRow(Number(x.dataset.select));return}
 if(x.dataset.tree){state.tree=x.dataset.tree;renderMain();return}
 if(x.dataset.tab){state.tab[state.page]=x.dataset.tab;renderMain();return}
 if(x.dataset.view){state.view=x.dataset.view;state.query="";state.select.asset=state.view==="entity"?3:0;renderMain();return}
-if(x.dataset.queue){state.queue=x.dataset.queue;state.select.governance=0;renderMain();return}
+if(x.dataset.queue){state.queue=x.dataset.queue;renderMain();return}
 if(x.dataset.model){state.select.model=Math.max(0,sample.model.findIndex(function(r){return r[4]===x.dataset.model}));renderMain();return}
 if(x.dataset.stateReset){state.status="ready";renderMain();return}
-if(x.dataset.clear){state.query="";renderMain();return}
+if(x.dataset.clear){state.query="";state.filter="all";state.queue="all";state.tree="";v4.pending=null;renderMain();return}
 if(x.dataset.action){onAction(x.dataset.action);return}
 if(x.dataset.modal){var t=x.dataset.modal;if(t==="draft"){state.editDirty=false;toast("演示草稿已记录在当前页面；未调用后端保存接口。");closeDialog();return}if(t==="discard"){var to=state.pending;state.editDirty=false;closeDialog();go(to);return}if(t==="stay"){closeDialog();return}closeDialog();return}
 });
@@ -524,21 +524,19 @@ function v4MobileSelector(id){
 function v3Rows(id){
  let rows=(sample[id]||[]).map((r,i)=>({r,i}));
  if(id==="asset")rows=rows.filter(x=>state.view==="entity"?x.r[2]==="技术实体":x.r[2]==="治理资产");
- if(id==="governance"&&state.queue!=="all")rows=rows.filter(x=>x.r[1].includes(state.queue));
+ const typeMap={"盘点":"盘点与上架","对账":"对账检查","变更":"资产变更","漂移":"来源变更"};
+ if(id==="governance"&&state.queue!=="all")rows=rows.filter(x=>x.r[1]===typeMap[state.queue]);
  if(id==="governance"&&v3.scope&&v3.scope.from==="asset")rows=rows.filter(x=>(v3QueueInfo[x.r[4]]||{}).subject?.includes(v3.scope.id));
+ if(id==="metric"&&v3.scope&&v3.scope.from==="model"){
+  const related=v4.links[v3.scope.id]||[];
+  rows=rows.filter(x=>related.includes(x.r[4]));
+ }
  if(id==="governance")rows.sort((a,b)=>{const rank={P0:0,P1:1,P2:2};return rank[v3QueueInfo[a.r[4]].priority]-rank[v3QueueInfo[b.r[4]].priority]});
- const tree=state.tree||"";
- const treeFilter={
-  "交易域":"订单|支付|退款","售后服务":"退款|退货","用户行为域":"浏览|会员","供应链域":"库存|商品",
-  "交易与订单":"订单|支付","客户与会员":"会员|客户","商品管理":"商品|product",
-  "基础标识":"编号|标识","交易订单":"订单|支付","金额计量":"金额","时间与日期":"时间",
-  "订单主题":"订单|支付","交易指标":"订单|金额","金额指标":"金额","客户主题":"会员|客户"
- };
- if(treeFilter[tree]&&["semantic","standard","metric","asset"].includes(id))rows=rows.filter(x=>new RegExp(treeFilter[tree],"i").test(x.r.join(" ")));
+ const map={"交易域":"订单|支付|退款","售后服务":"退款|退货","用户行为域":"浏览|会员","供应链域":"库存|商品","交易与订单":"订单|支付","客户与会员":"会员|客户","商品管理":"商品|product","基础标识":"编号|标识","交易订单":"订单|支付","金额计量":"金额","时间与日期":"时间","订单主题":"订单|支付","交易指标":"订单|金额","金额指标":"金额","客户主题":"会员|客户"};
+ if(map[state.tree]&&["semantic","standard","metric","asset"].includes(id))rows=rows.filter(x=>new RegExp(map[state.tree],"i").test(x.r.join(" ")));
  if(state.filter==="pending")rows=rows.filter(x=>/待|草稿|未|编目|仅已/.test(x.r[3]));
  if(state.filter==="done")rows=rows.filter(x=>/已保存|已定义|已上架|已执行|已配置/.test(x.r[3]));
- const q=(state.query||"").trim().toLowerCase();
- if(q)rows=rows.filter(x=>(x.r.join(" ")+(v3QueueInfo[x.r[4]]?JSON.stringify(v3QueueInfo[x.r[4]]):"")).toLowerCase().includes(q));
+ if(state.query?.trim()){const q=state.query.trim().toLowerCase();rows=rows.filter(x=>(x.r.join(" ")+(v3QueueInfo[x.r[4]]?JSON.stringify(v3QueueInfo[x.r[4]]):"")).toLowerCase().includes(q))}
  return rows;
 }
 function v3SyncSelected(id){
@@ -546,15 +544,16 @@ function v3SyncSelected(id){
  const rows=v3Rows(id);
  if(!rows.length){state.select[id]=-1;return}
  const current=state.select[id];
- if(!rows.some(x=>x.i===current))state.select[id]=rows[0].i;
- if(id==="governance")v3.queueId=(sample.governance[state.select.governance]||[])[4]||"";
- if(id==="metric")v3.metric.id=(sample.metric[state.select.metric]||[])[4]||"";
- if(id==="model")v3.build.model=(sample.model[state.select.model]||[])[4]||"";
+ const chosen=rows.some(x=>x.i===current)?current:rows[0].i;
+ if(["metric","model","governance"].includes(id)){
+  if(v4.pending?.page===id)return;
+  v4Switch(id,chosen);
+ }else{state.select[id]=chosen}
 }
 function v3Selected(id){
  v3SyncSelected(id);
- const i=state.select[id];
- return i==null||i<0?null:sample[id][i];
+ if(v4.pending?.page===id)return null;
+ const index=state.select[id];return index==null||index<0?null:sample[id][index];
 }
 function v3Table(id){
  v3SyncSelected(id);
@@ -569,11 +568,12 @@ function v3Table(id){
 function v3Filters(){return '<div class="filters"><input class="field search" id="localSearch" value="'+esc(state.query||"")+'" placeholder="搜索名称、对象编号或业务归属" aria-label="搜索对象"><select class="field short" id="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option value="pending">待处理</option><option value="done">已确认</option></select></div>'}
 function v3Card(title,subtitle,inner,footer){return '<section class="card"><div class="listhead"><div><strong>'+esc(title)+'</strong><p>'+esc(subtitle||"")+'</p></div></div>'+(inner||"")+(footer?'<div class="cardBody">'+footer+'</div>':"")+'</section>'}
 function v3Steps(arr,active,kind){
- return '<nav class="taskTabs" aria-label="任务步骤">'+arr.map((s,i)=>'<button class="taskStep '+(i===active?"active":i<active?"done":"")+'" data-v3-step="'+kind+':'+i+'"><span class="tick">'+(i<active?"✓":i+1)+'.</span>'+esc(s)+'</button>').join("")+'</nav>';
+ return '<nav class="taskTabs" aria-label="任务步骤">'+arr.map((s,i)=>'<button class="taskStep '+(i===active?"active":v4Progress(kind,i)?"done":"")+'" data-v3-step="'+kind+':'+i+'"><span class="tick">'+(v4Progress(kind,i)&&i!==active?"✓":i+1)+'.</span>'+esc(s)+'</button>').join("")+'</nav>';
 }
 function v3Ctx(){
- if(!v3.scope)return "";
- return '<div class="contextbar"><div class="hrow"><b>关联范围</b><span>'+esc(v3.scope.label)+' · '+esc(v3.scope.id)+'</span><span class="micro">原页面：'+esc(nameOf(v3.scope.from))+'</span></div><button data-v3-back="1">← 返回原工作</button></div>';
+ const trail=v4.trail.length?'<nav class="v4Breadcrumb" aria-label="返回任务链">'+v4.trail.map((x,i)=>'<button data-v4-backto="'+i+'">'+esc(nameOf(x.page))+' · '+esc((sample[x.page]||[])[x.selected]?.[0]||"原工作")+'</button><span>›</span>').join("")+'<button class="current" disabled>'+esc(nameOf(state.page))+'</button></nav>':"";
+ if(!v3.scope)return trail;
+ return trail+'<div class="contextbar"><div class="hrow"><b>当前关联范围</b><span>'+esc(v3.scope.label)+' · '+esc(v3.scope.id)+'</span><span class="micro">来自 '+esc(nameOf(v3.scope.from))+'</span></div><button data-v3-back="1">← 返回上一步</button></div>';
 }
 function v3FlowBar(){
  return '<div class="compactHead"><div><strong>建设主线 · 业务过程 → 标准字段 → 来源映射 → 校验 → 版本</strong><small style="display:block">所有对象均为示例。每一步必须显示具体目标和反馈，不自动提交生产服务。</small></div><span class="tag blue">演示任务链</span></div>';
@@ -593,17 +593,26 @@ function v3CloseDrawer(){
  dom("inspectorDrawer").classList.remove("open");dom("drawerShade").classList.remove("open");v3.drawer=false;
 }
 function v3Remember(){
- const item={page:state.page,query:state.query,tree:state.tree,filter:state.filter,queue:state.queue,view:state.view,selected:state.select[state.page],tab:state.tab[state.page]};
- if(!v3.snapshots.length||JSON.stringify(v3.snapshots.at(-1))!==JSON.stringify(item))v3.snapshots.push(item);
+ v4SaveActive(state.page);
+ const snap={page:state.page,query:state.query,tree:state.tree,filter:state.filter,queue:state.queue,
+ view:state.view,selected:state.select[state.page],tab:state.tab[state.page],
+ scope:v3.scope?{...v3.scope}:null, scroll:(typeof window.scrollY==="number"?window.scrollY:0)};
+ v4.trail.push(snap);
 }
-function v3Back(){
- const h=v3.snapshots.pop();if(!h){v3.scope=null;go("semantic",true);return}
- state.page=h.page;state.query=h.query;state.tree=h.tree;state.filter=h.filter;state.queue=h.queue;state.view=h.view;
- state.select[h.page]=h.selected;state.tab[h.page]=h.tab;state.status="ready";state.lastMenu=domainOf(h.page).id;
- v3.scope=null;v3CloseDrawer();renderMain();window.location.hash=h.page;window.scrollTo(0,0);
+function v3Back(index){
+ if(!v4.trail.length){v3.scope=null;go("semantic",true);return}
+ const pos=index==null?v4.trail.length-1:index;
+ const h=v4.trail[pos];if(!h)return;
+ v4SaveActive(state.page);v4.trail=v4.trail.slice(0,pos);
+ Object.assign(state,{page:h.page,query:h.query,tree:h.tree,filter:h.filter,queue:h.queue,view:h.view,status:"ready"});
+ state.select[h.page]=h.selected;state.tab[h.page]=h.tab;state.lastMenu=domainOf(h.page).id;
+ v3.scope=h.scope;v4.pending=null;v3CloseDrawer();renderMain();
+ window.location.hash=h.page;
+ if(typeof window.scrollTo==="function")window.scrollTo(0,h.scroll||0);
 }
 function v3Route(page,ref){
- if(ref){v3Remember();v3.scope={from:state.page,id:ref.id,label:ref.label,relation:ref.relation||""}}
+ v3Remember();
+ if(ref)v3.scope={from:state.page,id:ref.id,label:ref.label,relation:ref.relation||""};
  go(page,true);
 }
 function v3ActionLine(buttons,note){
@@ -802,25 +811,23 @@ function statePanel(){return v3StatePanel()}
 function chosen(){return v3Selected(state.page)}
 function selectRow(i){
  if(!sample[state.page]||!sample[state.page][i])return;
- const old=state.select[state.page],id=state.page;
- state.select[id]=i;
- if(id==="governance"&&old!==i){v3.queueId=sample.governance[i][4];v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo=""}
- if(id==="metric"&&old!==i){v3.metric={id:sample.metric[i][4],tab:"定义口径",formula:"COUNT(order_id)",filter:"",checked:false,impactSeen:false,published:false,release:null,version:"v1.2 · 草稿",prior:"COUNT(order_id)"};state.tab.metric="定义口径"}
- if(id==="model"&&old!==i){v3.build.model=sample.model[i][4];v3.build.checked=false;v3.build.fixed=false;v3.build.version=null}
+ const id=state.page;
+ if(["metric","model","governance"].includes(id))v4Switch(id,i);
+ else state.select[id]=i;
  renderMain();
- if(id==="semantic"||id==="standard")v3OpenDrawer(id);
+ if(id==="semantic"||id==="standard"){if(!v4.pending)v3OpenDrawer(id)}
 }
 function go(id,keepHistory){
- if(!keepHistory && state.editDirty && v3.editing){v3.pending=id;v3DirtyDialog();return}
- if(!keepHistory){v3.scope=null;v3.snapshots=[]}
+ if(v3.editing && state.editDirty){v3.pending=id;v3DirtyDialog();return}
+ if(v3.editing&&!state.editDirty){v3.editing=null;closeDialog()}
+ v4SaveActive(state.page);
+ if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null}
  if(!keepHistory&&state.page!==id)state.history.push(state.page);
- state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";state.tool=toolInfo[id]?id:"";
- state.lastMenu=domainOf(id).id;
- if(id==="model" && v3.scope && (v3.scope.from==="standard"||v3.scope.from==="semantic")){state.select.model=1;state.tab.model="来源映射";v3.build.model="PM-701"}
- if(id==="metric" && v3.scope){state.tab.metric="引用与影响"}
+ state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";
+ state.tool=toolInfo[id]?id:"";state.lastMenu=domainOf(id).id;
  v3CloseDrawer();renderMain();closeMobile();
  if(window.location.hash!=="#"+id)window.location.hash=id;
- window.scrollTo(0,0);
+ if(typeof window.scrollTo==="function")window.scrollTo(0,0);
 }
 function v3OpenEdit(mode){
  const r=v3Selected(state.page);
@@ -877,8 +884,8 @@ function v3HandleAction(a){
 }
 document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
- if(el.dataset.queue){v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo="";renderMain();return}
- if(el.dataset.model){const id=el.dataset.model;v3.build.source=id==="PM-701"?"orders.order_detail":id==="PM-732"?"ods_order_detail":id==="PM-733"?"crm.customer":"orders.order_detail";v3.build.mapField=id==="PM-733"?"customer_id":"order_id";v3.build.checked=false;v3.build.fixed=false;v3.build.version=null;renderMain();return}
+ if(el.dataset.queue){return}
+ if(el.dataset.model){return}
  if(el.dataset.v3Action){v3HandleAction(el.dataset.v3Action);return}
  if(el.dataset.v3Tab){state.tab[state.page]=el.dataset.v3Tab;renderMain();return}
  if(el.dataset.v3Step){
