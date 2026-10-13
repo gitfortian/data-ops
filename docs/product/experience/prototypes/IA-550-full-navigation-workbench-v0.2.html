@@ -191,6 +191,7 @@ var d=domainOf(id);return pageHead(nameOf(id),"完整 V3.1 导航中的既有能
 function renderMain(){
 nav();dom("roleSwitch").value=state.role;var id=state.page;dom("main").innerHTML=notice()+(id==="model"?modelPage():id==="asset"?assetPage():id==="governance"?queuePage():["semantic","standard","metric"].includes(id)?definitionPage(id):["quality","security","lifecycle","mdm"].includes(id)?specialistPage(id):toolInfo[id]?toolPage(id):placeholderPage(id))+
 '<div class="explain">'+icon("file")+'<span class="explaintxt"><b>设计边界：</b>仅标准、指标与建模以及数据资产与治理两域做页面重建原型；其余三域、首页、待办与平台设置都是导航占位。全部数据为虚构示例，正式产品的权限、版本、执行、发布、审计仍以原 Truth Owner 为准。</span></div>';
+var sf=dom("statusFilter");if(sf)sf.value=state.filter;
 }
 function render(){renderMain()}
 function toast(text){var x=dom("toast");x.textContent=text;x.classList.add("show");if(window.tmr)clearTimeout(window.tmr);window.tmr=setTimeout(function(){x.classList.remove("show")},3700)}
