@@ -82,7 +82,7 @@
 
 | Journey | 发起与目的（组合视图概念） | 必须携带 / 重新核实的身份 | 返回/异常/证据 |
 | --- | --- | --- | --- |
-| J1 | 数据源 / 源表 → Metadata 采集任务或目录 → ODS → 建模与 DataDev | 当前项目待核验 Source ID，表/列结构指纹、任务 ID、冻结 RunScope、ODS 模型 ID；目的页重新查 Owner | 保存≠运行，Run 当前目录≠历史冻结清单，OD S 保存后返回正确来源；无 Asset 写权限不阻断建模 |
+| J1 | 数据源 / 源表 → Metadata 采集任务或目录 → ODS → 建模与 DataDev | 当前项目待核验 Source ID，表/列结构指纹、任务 ID、冻结 RunScope、ODS 模型 ID；目的页重新查 Owner | 保存≠运行，Run 当前目录≠历史冻结清单，ODS 保存后返回正确来源；无 Asset 写权限不阻断建模 |
 | J2 | 业务域/过程→标准字段→逻辑/物理模型→指标及反向影响 | ProcessRef、StdFieldRef、LogicalVersion、ModelVersion、MetricVersion | 历史版本与当前草稿显式区分；反向影响可从标准/模型项目级查询 |
 | J3 | 消费目录→产品详情→Dataset Query 或 Service Invoke→Usage | ProductKey、Dataset/Service 源合同 ID、ConsumerRef、查询权限 | EMPTY/FORBIDDEN/UNAVAILABLE 区分，声明订阅≠真实 Usage |
 | J4 | 项目运行异常→Execution/实例→血缘/下游→授权修复与重跑 | Owner 的 Run/Execution ID、事件时间、实际读写边、影响对象 | 没有证据不虚构影响或“已经恢复”；返回原告警或运行队列 |
