@@ -1563,6 +1563,9 @@ function v6Collab(){
  '<div class="v6Role">协作职责：<select id="v6-role">'+Object.entries(v6RoleNames).map(([key,name])=>'<option value="'+key+'" '+(c.role===key?"selected":"")+'>'+name+'</option>').join("")+'</select></div>')+
  '<div class="v6Tabs">'+types.map(([key,name])=>'<button data-v6-view="'+key+'" class="'+(c.view===key?"active":"")+'">'+name+' · '+v6.records.filter(x=>x.type===key).length+'</button>').join("")+'</div>'+
  '<div class="v6Grid"><div class="v6Main"><section class="v6Section"><h2>当前记录 · '+esc(r.id)+' · '+esc(r.title)+'</h2>'+
+ (c.feedbackOrigin&&r.source===c.feedbackOrigin.key&&r.sourceVersion===c.feedbackOrigin.version&&r.sourceKind===c.feedbackOrigin.kind?
+ '<div class="v6Hint">来自 '+esc(c.feedbackOrigin.kind)+' 合同 · '+esc(c.feedbackOrigin.key)+' · '+esc(c.feedbackOrigin.version)+
+ '<div class="v6Actions"><button data-v81-feedback-return="1">← 返回精确来源合同</button></div></div>':'')+
  '<div class="v6Meta">'+badge(r.status)+'<span>当前负责人：'+esc(r.owner)+'</span><span>下一步：'+esc(r.next)+'</span><span>业务期望：'+esc(r.due)+'</span><span>研发计划：'+esc(r.planned)+'</span></div>'+
  '<div class="v6Stage"><strong>事项流转</strong><p class="micro">'+esc(workflow)+'</p></div>'+
  '<div class="v6Stage"><strong>业务目标与场景</strong><p>'+esc(r.expect)+'</p></div>'+
