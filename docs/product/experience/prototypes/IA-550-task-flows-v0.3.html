@@ -570,6 +570,169 @@ function v3Asset(){
  v3Hint("无匹配资产。已清空上次对象详情与治理操作。","warn"))+'</div></section></div>'+v3Review();
 }
 
+
+function v3Specialist(id){
+ const config={
+  quality:{steps:["规则监控","检查执行","结果证据","失败恢复"],help:"质量执行记录必须保留独立 Owner 和独立读取权限。",panels:["规则与监控对象","Execution 与配置版本","检查结果及失败样本","排障与重试证据"]},
+  security:{steps:["分级分类","访问策略","脱敏裁决","访问审计"],help:"安全分类不等于访问许可；策略与访问决策独立留证。",panels:["敏感字段的分类证据","权限请求及策略版本","脱敏算法与裁决结果","主体 / 资源 / 审计记录"]},
+  lifecycle:{steps:["策略定义","生效绑定","TTL 观测","存储趋势"],help:"保存 TTL 策略不等于已在执行环境生效。",panels:["生命周期策略草稿","对象与生效范围","过期检查与异常","冷热存储趋势"]},
+  mdm:{steps:["实体建模","匹配识别","清洗规则","变更审批"],help:"MDM 保留实体级身份、清洗前后版本及人工审批，不与 Asset 真相混用。",panels:["主数据实体建模","匹配、去重规则","清洗前后值对照","审批人和实际回执"]}
+ }[id];
+ const current=state.tab[id]||config.steps[0],index=config.steps.indexOf(current),item=v3Selected(id);
+ const facts=item?'<div class="detailStrip"><strong>'+esc(item[0])+'</strong>'+badge(item[3])+'<span>'+esc(item[4])+'</span></div>':'<div class="resultPanel warn"><p>暂无符合条件的对象。</p></div>';
+ const content=index===0?v3Filters()+v3Table(id):'<div class="cardBody">'+facts+'<h2>'+esc(config.panels[index])+'</h2><p>此视图展示具体任务应具有的输入、证据与处理反馈，与其他页签不是同一张列表。</p>'+
+ (id==="quality"&&index===1?'<div class="itemFacts"><div class="factRow"><span>检查 ID</span><strong>DEMO-EXE-115</strong></div><div class="factRow"><span>冻结范围</span><strong>示例会员表 / 3 项规则</strong></div><div class="factRow"><span>结果状态</span><strong>UNKNOWN（不能视为已通过）</strong></div></div>':
+ id==="security"&&index===2?'<div class="docGrid"><div class="factBox"><h3>请求值</h3><p>13800138000</p></div><div class="factBox"><h3>演示脱敏效果</h3><p>138****8000</p></div></div>':
+ id==="lifecycle"&&index===1?'<div class="itemFacts"><div class="factRow"><span>待绑定对象</span><strong>ods_order_detail</strong></div><div class="factRow"><span>策略版本</span><strong>草稿 v1.0</strong></div><div class="factRow"><span>生效结果</span><strong>未确认</strong></div></div>':
+ id==="mdm"&&index===2?'<div class="docGrid"><div class="factBox"><h3>原字段</h3><p>客户名称：张 三</p></div><div class="factBox"><h3>规范化预览</h3><p>客户名称：张三</p></div></div>':
+ '<div class="softPanel">'+esc(config.help)+'</div>')+
+ '<div class="resultPanel warn"><h3>当前为专项交互设计占位</h3><p>需按该领域 Owner 的真实字段、权限与运行回执深化，不用其他页的列表假装此任务已经完成。</p></div></div>';
+ return pageHead(nameOf(id),descriptions[id],"",'<button class="btn" data-page="'+(id==="quality"?"qualityRun":id==="security"?"securityAudit":id==="lifecycle"?"metadata":"asset")+'">项目级专业入口 ↗</button>')+
+ v3Ctx()+v3Steps(config.steps,index,"specialist")+
+ '<div class="split medium"><section class="card"><div class="cardHead"><h2>'+esc(config.panels[index])+'</h2></div>'+content+'</section><section class="card"><div class="cardHead"><h2>任务说明 / 事实边界</h2></div><div class="cardBody">'+facts+'<p>'+esc(config.help)+'</p><div class="riskLine">当前原型不执行该领域真实规则配置、策略部署、主数据合并或生命周期运行。</div><div class="itemFacts"><div class="factRow"><span>当前步骤</span><strong>'+esc(current)+'</strong></div><div class="factRow"><span>所属 Owner</span><strong>'+esc(nameOf(id))+'</strong></div><div class="factRow"><span>正式证据</span><strong>尚未接入</strong></div></div></div></section></div>'+v3Review();
+}
+function v3StatePanel(){
+ const data={
+ empty:["没有符合条件的记录","当前请求成功，但所选范围确实没有内容。","清空筛选"],
+ loading:["正在加载对象","保持当前操作上下文；不能提前展示成功结果。","返回正常演示"],
+ error:["读取失败 · 请重新加载","服务或网络错误，不会把错误当成空列表。保留本地筛选和对象选择。","重试读取"],
+ forbidden:["无权限查看此项内容","不查询受限制接口；可返回有权入口或请求管理员授权。","返回可访问入口"],
+ partial:["部分服务不可用","显示可确认的部分证据，无法获取的结果明确标记未知。","重试不可用项"],
+ unknown:["当前状态无法确认","查询 Owner 回执或等待真实执行状态；禁止推测完成。","重新确认"]
+ }[state.status]||["当前内容","仅显示静态数据","重试"];
+ return '<div class="stateArea"><div class="glyph">◇</div><h3>'+data[0]+'</h3><p>'+data[1]+'</p><button class="btn" data-v3-action="state-retry">'+data[2]+'</button></div>';
+}
+function v3Run(){
+ nav();
+ dom("roleSwitch").value=state.role;
+ const s=dom("statusFilter");if(s)s.value=state.filter;
+ const id=state.page;
+ const view=id==="semantic"||id==="standard"?v3Definition(id):
+ id==="model"?v3Model():
+ id==="metric"?v3Metric():
+ id==="governance"?v3Governance():
+ id==="asset"?v3Asset():
+ ["quality","security","lifecycle","mdm"].includes(id)?v3Specialist(id):
+ toolInfo[id]?toolPage(id):placeholderPage(id);
+ dom("main").innerHTML=view;
+ const f=dom("statusFilter");if(f)f.value=state.filter;
+}
+function renderMain(){v3Run()}
+function statePanel(){return v3StatePanel()}
+function chosen(){return v3Selected(state.page)}
+function selectRow(i){
+ if(!sample[state.page]||!sample[state.page][i])return;
+ const old=state.select[state.page],id=state.page;
+ state.select[id]=i;
+ if(id==="governance"&&old!==i){v3.queueId=sample.governance[i][4];v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo=""}
+ if(id==="metric"&&old!==i){v3.metric={id:sample.metric[i][4],tab:"定义口径",formula:"COUNT(order_id)",filter:"",checked:false,impactSeen:false,published:false,release:null,version:"v1.2 · 草稿",prior:"COUNT(order_id)"};state.tab.metric="定义口径"}
+ if(id==="model"&&old!==i){v3.build.model=sample.model[i][4];v3.build.checked=false;v3.build.fixed=false;v3.build.version=null}
+ renderMain();
+ if(id==="semantic"||id==="standard")v3OpenDrawer(id);
+}
+function go(id,keepHistory){
+ if(!keepHistory && state.editDirty && v3.editing){v3.pending=id;v3DirtyDialog();return}
+ if(!keepHistory){v3.scope=null;v3.snapshots=[]}
+ if(!keepHistory&&state.page!==id)state.history.push(state.page);
+ state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";state.tool=toolInfo[id]?id:"";
+ state.lastMenu=domainOf(id).id;
+ if(id==="model" && v3.scope && (v3.scope.from==="standard"||v3.scope.from==="semantic")){state.select.model=1;state.tab.model="来源映射";v3.build.model="PM-701"}
+ if(id==="metric" && v3.scope){state.tab.metric="引用与影响"}
+ v3CloseDrawer();renderMain();closeMobile();
+ if(window.location.hash!=="#"+id)window.location.hash=id;
+ window.scrollTo(0,0);
+}
+function v3OpenEdit(mode){
+ const r=v3Selected(state.page);
+ if(mode==="edit"&&!r){toast("无当前对象，无法编辑");return}
+ if(!actionAllowed()){toast("只读画像无法写入");return}
+ const key=mode==="create"?"new:"+state.page:state.page+":"+r[4],draft=v3.storedDrafts[key];
+ v3.editing={mode,key,original:r?r[0]:"",name:draft?draft.name:mode==="edit"?r[0]:"",note:draft?draft.note:""};
+ v3ShowEdit();
+}
+function v3ShowEdit(){
+ const p=v3.editing;if(!p)return;
+ state.editDirty=true;state.dialogName="v3-edit";
+ dom("dialog").innerHTML='<h2 id="dialogTitle">'+(p.mode==="create"?"新建":"编辑")+esc(nameOf(state.page))+' · 本地草稿</h2><p>新建不会带入旧对象，编辑会恢复本地未完成草稿。此原型没有生产 API。</p><label class="dlgfield">名称<input id="v3-edit-name" value="'+esc(p.name)+'" placeholder="请输入名称"></label><label class="dlgfield">变更说明<textarea id="v3-edit-note" placeholder="填写本次变更依据">'+esc(p.note)+'</textarea></label><div class="dlgfoot"><button class="btn" data-v3-edit="cancel">取消</button><button class="btn primary" data-v3-edit="save">保存本地草稿</button></div>';
+ dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");
+}
+function v3DirtyDialog(){
+ if(!v3.editing)return;
+ state.dialogName="v3-dirty";
+ dom("dialog").innerHTML='<h2 id="dialogTitle">存在未保存的编辑内容</h2><p>继续编辑会恢复刚才的输入；保存草稿可以再次打开。放弃后原型不会修改对象。</p><div class="dlgfoot"><button class="btn" data-v3-edit="stay">继续编辑</button><button class="btn" data-v3-edit="discard">放弃并离开</button><button class="btn primary" data-v3-edit="saveleave">保存草稿并离开</button></div>';
+ dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");
+}
+function v3FinishEdit(leave){
+ const p=v3.editing;if(!p)return;
+ v3.storedDrafts[p.key]={name:p.name,note:p.note,at:"当前会话"};state.editDirty=false;v3.editing=null;closeDialog();
+ toast("本地草稿已保存。可再次打开继续编辑；未调用生产接口。");
+ if(leave&&v3.pending){const next=v3.pending;v3.pending=null;go(next)}
+}
+function v3HandleAction(a){
+ const m=v3.metric,b=v3.build;
+ if(a==="state-retry"){state.status="ready";renderMain();return}
+ if(a==="new"){v3OpenEdit("create");return}
+ if(a==="edit"){v3OpenEdit("edit");return}
+ if(a==="process-next"){const r=v3Selected("semantic");if(!r)return;b.process=r[4];v3Route("standard",{id:r[4],label:r[0],relation:"业务过程"});return}
+ if(a==="standard-attach"){const r=v3Selected("standard");if(!r)return;b.field=r[4];v3Route("model",{id:r[4],label:r[0],relation:"标准字段"});return}
+ if(a==="model-open"){v3OpenDrawer("model");return}
+ if(a==="model-check"){b.checked=false;state.tab.model="校验记录";renderMain();return}
+ if(a==="model-fix"){b.fixed=true;renderMain();return}
+ if(a==="model-recheck"){b.checked=!!b.fixed;renderMain();return}
+ if(a==="model-save"){if(!b.checked)return; b.version="DEMO-MODEL-"+b.model+"-V2.1";renderMain();return}
+ if(a==="model-next-metric"){const r=v3Selected("model");if(r)v3Route("metric",{id:r[4],label:r[0],relation:"模型引用"});return}
+ if(a==="metric-validate"){m.checked=!!m.formula.trim()&&!!m.filter.trim();m.impactSeen=false;state.tab.metric="校验";renderMain();return}
+ if(a==="metric-fix"){m.filter="status = PAID";m.checked=false;state.tab.metric="定义口径";renderMain();return}
+ if(a==="metric-impact"){if(!m.checked)return;m.impactSeen=true;state.tab.metric="引用与影响";renderMain();return}
+ if(a==="metric-to-publish"){if(!m.checked)return;m.impactSeen=true;state.tab.metric="版本与发布";renderMain();return}
+ if(a==="metric-publish"){if(!(m.checked&&m.impactSeen))return;m.published=true;m.release="DEMO-METRIC-PUBLICATION-"+m.id+"-V1.2";renderMain();return}
+ if(a==="metric-return"){state.tab.metric="定义口径";renderMain();return}
+ if(a==="asset-drawer"){v3OpenDrawer("asset");return}
+ if(a==="asset-queue"){const r=v3Selected("asset");if(!r)return;v3Route("governance",{id:r[4],label:r[0],relation:"治理记录"});return}
+ if(a==="queue-evidence"){v3.queueStep="evidence";renderMain();return}
+ if(a==="queue-resolve"){if(!actionAllowed())return;v3.queueStep="resolve";renderMain();return}
+ if(a==="queue-review"){if(!v3.decision){toast("请选择处理或转交方式");return}if(v3.decision==="transfer"&&!v3.transferTo){toast("转交必须选择责任人");return}if(v3.note.trim().length<4){toast("请填写至少 4 字的处理依据");return}v3.queueStep="submit";renderMain();return}
+ if(a==="queue-submit"){const task=v3Selected("governance");if(!task||!v3.decision)return;v3.receipts||={};v3.receipts[task[4]]="DEMO-GOV-RECEIPT-"+task[4]+"-01";v3.queueStep="receipt";renderMain();return}
+ if(a==="queue-next"){v3.queueStep="evidence";v3.decision="";v3.note="";v3.transferTo="";renderMain();return}
+}
+document.addEventListener("click",function(ev){
+ const el=ev.target.closest("button");if(!el)return;
+ if(el.dataset.v3Action){v3HandleAction(el.dataset.v3Action);return}
+ if(el.dataset.v3Tab){state.tab[state.page]=el.dataset.v3Tab;renderMain();return}
+ if(el.dataset.v3Step){
+  const [kind,num]=el.dataset.v3Step.split(":"),n=Number(num);
+  if(kind==="metric"){state.tab.metric=["定义口径","校验","引用与影响","版本与发布"][n]}
+  if(kind==="specialist"){state.tab[state.page]=({quality:["规则监控","检查执行","结果证据","失败恢复"],security:["分级分类","访问策略","脱敏裁决","访问审计"],lifecycle:["策略定义","生效绑定","TTL 观测","存储趋势"],mdm:["实体建模","匹配识别","清洗规则","变更审批"]})[state.page][n]}
+  if(kind==="queue"){if(n===0)v3.queueStep="evidence";if(n===1)v3.queueStep="resolve";if(n===2&&v3.note&&v3.decision)v3.queueStep="submit";if(n===3&&v3.receipts&&v3.receipts[v3.queueId])v3.queueStep="receipt"}
+  renderMain();return
+ }
+ if(el.dataset.v3Back){v3Back();return}
+ if(el.dataset.v3Close){v3CloseDrawer();return}
+ if(el.dataset.v3Edit){
+  const a=el.dataset.v3Edit;
+  if(a==="save"){if(v3.editing&&!v3.editing.name.trim()){toast("请填写名称");return}v3FinishEdit(false);return}
+  if(a==="saveleave"){if(v3.editing&&!v3.editing.name.trim()){toast("请填写名称");return}v3FinishEdit(true);return}
+  if(a==="stay"){v3ShowEdit();return}
+  if(a==="discard"){const next=v3.pending;v3.pending=null;v3.editing=null;state.editDirty=false;closeDialog();if(next)go(next);return}
+  if(a==="cancel"){v3DirtyDialog();return}
+ }
+});
+document.addEventListener("input",function(ev){
+ const t=ev.target;if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=true}
+ if(t.id==="v3-edit-note"&&v3.editing){v3.editing.note=t.value;state.editDirty=true}
+ if(t.id==="v3-formula"){v3.metric.formula=t.value;v3.metric.checked=false;v3.metric.impactSeen=false;v3.metric.published=false}
+ if(t.id==="v3-condition"){v3.metric.filter=t.value;v3.metric.checked=false;v3.metric.impactSeen=false;v3.metric.published=false}
+ if(t.id==="v3-mapfield"){v3.build.mapField=t.value;v3.build.checked=false;v3.build.version=null}
+ if(t.id==="v3-queue-note"){v3.note=t.value}
+});
+document.addEventListener("change",function(ev){
+ const t=ev.target;
+ if(t.id==="v3-queue-decision"){v3.decision=t.value;if(t.value!=="transfer")v3.transferTo="";renderMain()}
+ if(t.id==="v3-transfer"){v3.transferTo=t.value}
+ if(t.id==="v3-source"){v3.build.source=t.value;v3.build.checked=false;renderMain()}
+});
+dom("drawerShade").addEventListener("click",v3CloseDrawer);
+
 var start=decodeURIComponent(window.location.hash.replace(/^#/,""));if(paths[start]||labels[start]||toolInfo[start]){state.page=start;state.lastMenu=domainOf(start).id}render();
 })();
 </script>
