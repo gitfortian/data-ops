@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DataOps / 双域工作台交互原型 v0.1 · Issue #550</title>
+<style>
+:root{color-scheme:light;--nav:#172536;--nav2:#22354a;--ink:#162337;--sub:#596b7e;--muted:#8494a4;--line:#e4eaf1;--surface:#fff;--bg:#f5f7fa;--soft:#edf4fa;--blue:#20619d;--blue2:#e7f1fa;--ok:#26765b;--warn:#b17029;--err:#a64242;--radius:12px;--shadow:0 9px 24px rgba(22,38,59,.055)}
+*{box-sizing:border-box}html{font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #6cb3eb;outline-offset:2px}button:disabled{opacity:.4;cursor:not-allowed}a{color:inherit}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}.sidebar{background:var(--nav);color:#e9f2f9;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto;padding:22px 13px}.brand{display:flex;align-items:center;gap:12px;padding:3px 13px 22px;border-bottom:1px solid rgba(255,255,255,.1);font-size:17px;font-weight:700;letter-spacing:.2px}.brandmark{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#77c4cc;color:#152e39;font-weight:850;font-size:19px}.brand small{display:block;color:#97adbf;font-size:10px;font-weight:500;letter-spacing:1.5px;margin-top:-2px}.navtitle{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#96adc0;padding:24px 12px 10px;font-weight:700}.navitem{width:100%;border:0;background:transparent;color:#c6d5e2;text-align:left;padding:10px 12px;border-radius:9px;display:flex;align-items:center;gap:10px;margin-bottom:3px;font-weight:540}.navitem:hover{background:#263b51;color:#fff}.navitem.active{background:#365371;color:#fff;box-shadow:inset 3px 0 #89cad5}.navitem .dot{height:7px;width:7px;border-radius:100%;border:1px solid #98b5ca;flex:0 0 auto}.navitem.active .dot{background:#9fdcdd;border-color:#9fdcdd}.sidebar-foot{margin-top:auto;padding:20px 12px 4px;color:#a8bac9;font-size:11px;line-height:1.7}.work{min-width:0}.topbar{background:#fff;border-bottom:1px solid var(--line);padding:13px clamp(17px,2.7vw,42px);display:flex;align-items:center;gap:12px;justify-content:space-between;min-height:69px}.top-left,.top-right{display:flex;align-items:center;gap:12px;min-width:0}.project{display:flex;align-items:center;gap:8px;background:#f3f6fa;border:1px solid var(--line);padding:8px 12px;border-radius:9px;font-size:12px;white-space:nowrap}.project b{color:var(--blue)}.toplabel{color:#607287;font-size:12px}.tag-demo{background:#f5ebd9;color:#8b641e;border:1px solid #eed8a7;border-radius:20px;padding:5px 10px;font-size:11px;white-space:nowrap}.topbar select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px;color:var(--ink);max-width:162px}.menubtn{display:none;background:white;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.content{max-width:1600px;margin:auto;padding:28px clamp(17px,2.7vw,42px) 70px}.crumb{color:var(--muted);font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.crumb button{border:0;background:transparent;color:var(--blue);padding:0}.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px;flex-wrap:wrap}.eyebrow{font-size:11px;color:var(--blue);font-weight:750;letter-spacing:1.1px;margin-bottom:6px}.heading h1{font-size:27px;line-height:1.25;margin:0 0 8px;letter-spacing:-.6px}.heading p{color:var(--sub);margin:0;max-width:750px;font-size:13px}.heading-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{border:1px solid #d6e1eb;background:#fff;padding:9px 15px;border-radius:9px;color:#23465f;font-weight:650;min-height:38px;white-space:nowrap}.btn:hover{background:#f1f7fb}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.primary:hover{background:#155282}.btn.subtle{border-color:transparent;background:#eaf0f6}.journey{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}.step{display:flex;align-items:center;gap:8px;color:#8897a5;border:1px solid #e1e7ed;border-radius:40px;background:#fff;padding:6px 11px;font-size:11px;font-weight:650}.step strong{display:grid;place-items:center;background:#e9edf2;border-radius:100%;width:21px;height:21px;color:#6b7d8f;font-size:10px}.step.active{background:var(--blue2);border-color:#c7deed;color:var(--blue)}.step.active strong{background:var(--blue);color:white}.step.done{border-color:#cfe4da;color:#4f7864}.step.done strong{background:#d7f0e5;color:#277255}.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.identity{display:flex;align-items:center;gap:15px;padding:17px 20px;margin-bottom:18px;flex-wrap:wrap}.identity-icon{width:42px;height:42px;display:grid;place-items:center;background:#e9f2fa;color:#2b6699;border-radius:10px;font-size:18px;font-weight:750}.identity-main{flex:1;min-width:240px}.identity-main strong{display:block;font-size:14px}.identity-main span{display:block;font-size:11px;color:var(--muted);margin-top:2px}.identity-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.chip{background:#f2f5f8;border:1px solid #e5eaef;color:#536477;font-size:11px;padding:5px 9px;border-radius:6px;white-space:nowrap}.chip.warn{color:#986527;background:#fbf4e5;border-color:#f1dfb5}.chip.good{color:#227257;background:#e9f6ee;border-color:#c9e6d4}
+.grid{display:grid;grid-template-columns:minmax(0,1.72fr) minmax(265px,.88fr);gap:18px;align-items:start}.main-col,.side-col{min-width:0;display:flex;flex-direction:column;gap:18px}.section{padding:20px}.section-head{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:15px;flex-wrap:wrap}.section h2{font-size:15px;margin:0;font-weight:730}.section-head small{color:var(--muted);font-size:11px}.section p{margin:0 0 12px;color:var(--sub);font-size:12px}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.search{flex:1;min-width:165px;border:1px solid #dce5ed;border-radius:8px;outline:none;padding:10px 12px}.search:focus{border-color:var(--blue)}.filter{background:#fff;border:1px solid #dce5ed;border-radius:8px;padding:10px;min-width:105px;color:#4b5d70}.table-wrap{overflow-x:auto;border:1px solid #edf1f4;border-radius:9px}table{border-collapse:collapse;width:100%;min-width:570px;font-size:12px}th{text-align:left;color:#8090a0;font-weight:670;background:#f8fafb;padding:11px 14px;border-bottom:1px solid #e8edf2}td{padding:13px 14px;border-bottom:1px solid #eff2f6;vertical-align:middle}tr:last-child td{border-bottom:0}tr:hover td{background:#fbfdfe}td strong{display:block;color:#24465f}td small{font-size:11px;color:#8795a1}.link{color:var(--blue);font-weight:700;border:0;background:transparent;padding:0;text-align:left}.link:hover{text-decoration:underline}.pill{font-size:10px;padding:4px 7px;border-radius:5px;background:#edf3f8;color:#466b8e;white-space:nowrap;display:inline-block}.pill.pending{background:#fbf1e2;color:#a16d2d}.pill.success{background:#eaf5ef;color:#297054}.hint{border-left:3px solid #82b9dc;background:#f1f7fb;color:#395d77;padding:11px 13px;border-radius:4px;font-size:12px}.hint.warn{background:#fcf6e8;border-color:#dbaa53;color:#82622a}.hint.error{background:#fff0f0;border-color:#ce7777;color:#903f42}.evidence{display:grid;gap:0}.evidence div{padding:12px 0;border-bottom:1px solid #edf1f4;display:flex;justify-content:space-between;gap:16px;align-items:start}.evidence div:last-child{border-bottom:0}.evidence span{color:#7b8b9b;font-size:12px}.evidence b{font-size:12px;text-align:right;font-weight:670;color:#415971}.side-action{width:100%;display:flex;justify-content:space-between;background:#fff;border:1px solid #dce6ef;color:#315b77;padding:11px 12px;border-radius:8px;font-weight:650;margin-top:7px;text-align:left}.side-action:hover{background:#f4f9fd}.stagebox{border:1px dashed #b9cbdc;border-radius:10px;background:#f8fbfe;padding:15px;margin-top:12px}.stagebox strong{display:block;font-size:13px}.stagebox p{margin:5px 0 0}.tabs{display:flex;border-bottom:1px solid var(--line);gap:4px;overflow:auto;margin-bottom:14px}.tab{border:0;background:transparent;padding:9px 14px;white-space:nowrap;color:#60778a;border-bottom:2px solid transparent;font-size:12px}.tab.active{border-color:var(--blue);color:var(--blue);font-weight:730}.state-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#eef3f7;padding:9px 12px;border-radius:9px;margin-bottom:18px}.state-controls label{font-size:11px;font-weight:720;color:#607184}.state-controls select{background:white;border:1px solid #d9e3eb;padding:6px 8px;border-radius:7px;font-size:12px}.state-controls .note{font-size:11px;color:#8393a1;margin-left:auto}.alt-state{padding:40px 26px;text-align:center;border:1px dashed #ccd8e4;border-radius:10px;background:#fbfcfe}.alt-state .symbol{font-size:31px;color:#678aa8}.alt-state h3{font-size:15px;margin:10px 0}.alt-state p{max-width:450px;margin:0 auto 17px}.toast{position:fixed;bottom:23px;right:23px;max-width:min(360px,90vw);background:#172e45;color:#fff;border-radius:9px;padding:12px 16px;box-shadow:0 13px 34px #0003;z-index:50;display:none}.toast.show{display:block}.overlay{position:fixed;inset:0;background:#07182899;display:none;align-items:center;justify-content:center;z-index:60;padding:16px}.overlay.show{display:flex}.modal{background:#fff;border-radius:14px;max-width:485px;width:100%;padding:25px;box-shadow:0 30px 50px #0003}.modal h2{font-size:19px;margin:0 0 9px}.modal p{color:#607187;font-size:13px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:25px;flex-wrap:wrap}.footer-note{margin-top:29px;color:#8b98a6;font-size:11px}.scrim{display:none}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.side-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}.sidebar{width:220px}.layout{grid-template-columns:220px minmax(0,1fr)}}
+@media(max-width:760px){.layout{display:block}.sidebar{position:fixed;z-index:45;left:-262px;transition:left .18s;top:0;width:250px}.sidebar.open{left:0}.scrim.open{display:block;position:fixed;inset:0;background:#10213280;z-index:40}.menubtn{display:block}.topbar{gap:8px;padding:12px 16px}.toplabel{display:none}.content{padding:20px 16px 60px}.heading h1{font-size:22px}.heading{gap:12px}.identity{padding:15px}.side-col{display:flex;gap:15px}.tag-demo{font-size:9px}.topbar select{max-width:118px;font-size:11px}.project{padding:6px 8px}.step{font-size:10px}.section{padding:16px}}
+@media(max-width:390px){.topbar{flex-wrap:wrap}.top-right{width:100%;justify-content:space-between}.heading-actions{width:100%}.heading-actions .btn{flex:1}.identity-meta{width:100%}.state-controls .note{width:100%}.stagebox{padding:12px}.btn{padding:9px 11px}.section{padding:13px}.filter{min-width:0;width:100%}.toolbar .search{width:100%;flex:auto}}
+</style>
+</head>
+<body>
+<div id="scrim" class="scrim" aria-hidden="true"></div>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="两域设计原型导航">
+<div class="brand"><div class="brandmark">Y</div><div>Yak DataOps<small>WORKBENCH CONCEPT</small></div></div>
+<div class="navtitle">标准、指标与建模</div>
+<button class="navitem" data-screen="D1"><span class="dot"></span>业务语义</button>
+<button class="navitem" data-screen="D2"><span class="dot"></span>数据标准</button>
+<button class="navitem" data-screen="D3"><span class="dot"></span>模型工作台</button>
+<button class="navitem" data-screen="D4"><span class="dot"></span>指标中心</button>
+<div class="navtitle">数据资产与治理</div>
+<button class="navitem" data-screen="G1"><span class="dot"></span>资产目录</button>
+<button class="navitem" data-screen="G2"><span class="dot"></span>资产详情 360</button>
+<button class="navitem" data-screen="G3"><span class="dot"></span>治理工作队列</button>
+<div class="navtitle">专业工具（入口位置预演）</div>
+<button class="navitem" data-tool="metadata"><span class="dot"></span>技术元数据管理</button>
+<button class="navitem" data-tool="quality"><span class="dot"></span>质量检查 / 规则模板</button>
+<button class="navitem" data-tool="security"><span class="dot"></span>安全 / 生命周期 / MDM</button>
+<div class="sidebar-foot">Issue #550 · IA V3.1<br>仅供设计走查；原有导航及路由未修改。<br>静态示例，所有对象与状态均非真实业务数据。</div>
+</aside>
+<div id="work" class="work">
+<header class="topbar">
+<div class="top-left"><button class="menubtn" id="menuBtn" aria-label="打开导航">☰</button><div class="project">项目 <b>Retail Analytics · 示例</b> ⌄</div><span class="toplabel">任务导向工作台</span></div>
+<div class="top-right"><span class="tag-demo">● 静态交互原型 / 虚构数据</span><select id="role" aria-label="预览角色"><option value="builder">建模实施者</option><option value="steward">治理人员</option><option value="reader">只读观察者</option></select></div>
+</header>
+<main id="app" class="content" tabindex="-1" aria-live="polite"></main>
+</div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="overlay" class="overlay" role="presentation">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<h2 id="modalTitle">演示确认</h2><p id="modalBody"></p>
+<div class="modal-actions"><button class="btn" data-modal="close">继续查看</button><button class="btn primary" data-modal="ack">知道了</button></div>
+</div></div>
+<script>
+(function(){
+"use strict";
+var screens={
+D1:{domain:"标准、指标与建模",label:"业务语义",title:"从业务过程出发，建立清晰的定义",description:"先确认业务域、业务过程和粒度，再衔接标准、模型与指标。业务事实与技术实现不混在同一个状态里。",entity:"下单履约 / 订单明细",entityId:"process:demo-102",evidence:"业务过程仅为示例；粒度尚待业务确认",action:"核对标准字段",next:"D2",hint:"粒度是后续事实模型的定义边界；尚未确认时不得悄悄标记为已批准。"},
+D2:{domain:"标准、指标与建模",label:"数据标准",title:"同一过程里的标准与字段",description:"字段引用、数据类型和治理状态分开呈现；标准定义不是业务过程本身。",entity:"订单业务字段标准",entityId:"standard:demo-32",evidence:"3 条字段示例，均不代表真实库中的核定状态",action:"进入模型工作台",next:"D3",hint:"发现缺失标准时应启动已有的治理处理，而不是把缺口自动填充成‘已批准标准’。"},
+D3:{domain:"标准、指标与建模",label:"模型工作台",title:"从逻辑定义连接到物理模型",description:"区分逻辑/物理、分层、版本和来源映射；保存、核验、发布按真实能力分别触发。",entity:"订单明细模型 · 示例",entityId:"model:demo-701",evidence:"ODS 来源映射是示例；不自动触发资产上架",action:"查看相关指标",next:"D4",hint:"J1 已冻结行为继续有效：ODS 可以在无 Asset Write 权限时合法保存，非 ODS 规则仍受独立产品决策约束。"},
+D4:{domain:"标准、指标与建模",label:"指标中心",title:"定义、验证、发布，逐项有据可查",description:"让指标版本、口径和上游引用明确；专业用户仍可做跨模型/标准的反向影响检索。",entity:"支付订单数 · 示例",entityId:"metric:demo-18",evidence:"校验、发布与血缘均无真实后端执行",action:"查看发布与影响要求",next:null,hint:"示例中的指标状态不构成‘已校验/已发布’证明；实际发布必须读取 Metric Owner 回执。"},
+G1:{domain:"数据资产与治理",label:"资产目录",title:"先发现对象，再核对治理身份",description:"资产清单与技术实体可切换，但不能将技术实体视为已上架资产。",entity:"订单主题目录 · 示例",entityId:"catalog:demo",evidence:"目录对象与来源均为模拟展示",action:"打开资产详情",next:"G2",hint:"资产清单 / 技术实体是两种不同的发现视图；权限、来源与状态都必须独立鉴权。"},
+G2:{domain:"数据资产与治理",label:"资产详情",title:"资产 360：以事实证据为中心",description:"对象身份、技术来源、治理状态和专业风险摘要在同一详情下协作，专业模块仍持有正式事实。",entity:"订单明细数据集 · 示例",entityId:"asset:demo-205",evidence:"PENDING 仅表示等待治理，不是已上架或可消费",action:"前往治理队列",next:"G3",hint:"质量、安全等摘要可能由不同 Owner 提供。未读取到结果时展示不可用或未知，不能写成‘无风险’。"},
+G3:{domain:"数据资产与治理",label:"治理工作队列",title:"核对任务，处理真实的治理回执",description:"盘点、上架、变更与对账分别保留处理条件和事件身份；可以从对象上下文进入，也可以项目级直接查找。",entity:"治理对象集合 · 示例",entityId:"governance:demo",evidence:"展示待办演示；没有执行上架/对账",action:"查看处理条件",next:null,hint:"对账受理 ACCEPTED 不等于全部成功；上架 PENDING 不等于 PUBLISHED。正式动作必须有已有 Owner 和审计证据。"}};
+var datasets={
+D1:[["订单创建","交易域 · 订单","明细粒度待确认","查看过程"],["商品下单","交易域 · 订单","已定义（示例）","查看过程"],["退款申请","交易域 · 售后","待复核","查看过程"]],
+D2:[["order_id","标识字段","核验中","查看引用"],["order_amount","金额字段","草稿","查看引用"],["paid_at","时间字段","核验中","查看引用"]],
+D3:[["订单明细逻辑模型","逻辑 · 交易域","草稿","查看模型"],["ods_order_detail","物理 · ODS","映射待确认","查看模型"],["dwd_order_detail","物理 · DWD","待独立合同确认","查看模型"]],
+D4:[["支付订单数","交易指标","待校验","查看定义"],["订单金额","金额指标","草稿","查看定义"],["退款率","比率指标","待影响核对","查看定义"]],
+G1:[["订单明细数据集","治理资产","待上架","查看资产"],["用户主数据","治理资产","编目中","查看资产"],["商品快照表","技术实体","未纳管","查看技术实体"]],
+G2:[["来源连接","Source · demo-12","已发现（示例）","来源证据"],["结构快照","Metadata · demo-run","历史快照","查看版本"],["治理处置","Asset · demo-205","待审批","查看队列"]],
+G3:[["订单明细数据集","盘点 / 上架","待核对","查看处理条件"],["商品维度变更","资产变更","未处理","查看处理条件"],["来源结构漂移","对账证据","待验证","查看处理条件"]]};
+var state={screen:"D1",mode:"ready",role:"builder",query:"",tab:"概览",assetView:"asset",history:[],dirty:false};
+var $=function(s){return document.querySelector(s)};
+function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function canWrite(){return state.role!=="reader"}
+function group(){return state.screen[0]==="D"?"D":"G"}
+function steps(){return group()==="D"?["D1","D2","D3","D4"]:["G1","G2","G3"]}
+function hasAnother(){return !!screens[state.screen].next}
+function toast(msg){var t=$("#toast");t.textContent=msg;t.classList.add("show");if(window.__toastTimer)clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(function(){t.classList.remove("show")},3400)}
+function confirmDemo(title,body){$("#modalTitle").textContent=title;$("#modalBody").textContent=body;$("#overlay").classList.add("show");$('[data-modal="close"]').focus()}
+function closeModal(){$("#overlay").classList.remove("show");$("#app").focus()}
+function go(next,fromHistory){if(!screens[next])return;if(state.dirty&&!fromHistory){confirmDemo("未保存的示例编辑","此处展示离开确认规则。当前输入未提交任何服务，若继续切换，演示编辑将丢失。");state.pending=next;return}if(!fromHistory&&next!==state.screen)state.history.push(state.screen);state.screen=next;state.query="";state.mode="ready";state.tab="概览";state.dirty=false;render();window.scrollTo(0,0);closeSidebar()}
+function back(){var last=state.history.pop();if(last)go(last,true);else toast("这是示例旅程的起点")}
+function roleLabel(){return state.role==="builder"?"建模实施者":state.role==="steward"?"治理人员":"只读观察者"}
+function statePanel(){
+var config={
+empty:["◇","成功但无结果","示例：已成功读取对象集合，但筛选没有匹配记录。","清空筛选并返回"],
+unavailable:["!","读取失败 / 服务不可用","示例：Owner API 不可用。禁止清空原列表后显示‘没有数据’。应保留失败信息和重试。","模拟重试"],
+forbidden:["⊘","没有当前能力授权","示例：本角色无法读取该视图。导航展示不代表能访问后端操作。","返回上一步"],
+unknown:["?","状态未知 / 暂不能判断","示例：没有足够回执证明业务对象已完成当前动作。","查看需要的证据"],
+partial:["◐","部分信息可用","示例：当前对象可见，但专业治理 Provider 无法返回风险摘要，不得推断‘无风险’。","继续查看已授权事实"]};
+var d=config[state.mode];if(!d)return "";return '<div class="alt-state"><div class="symbol" aria-hidden="true">'+d[0]+'</div><h3>'+d[1]+'</h3><p>'+d[2]+'</p><button class="btn" data-state-reset="yes">'+d[3]+'</button></div>'
+}
+function table(){
+if(state.mode!=="ready")return statePanel();
+var arr=datasets[state.screen].filter(function(r){return (r.join(" ").toLowerCase().indexOf(state.query.toLowerCase())>=0)});
+if(state.screen==="G1"&&state.assetView==="entity")arr=arr.filter(function(r){return r[1].indexOf("技术实体")>=0});
+if(state.screen==="G1"&&state.assetView==="asset")arr=arr.filter(function(r){return r[1].indexOf("治理资产")>=0});
+if(!arr.length)return statePanelEmpty();
+var content=arr.map(function(r){var cls=/待|草稿|未处理|编目|核验/.test(r[2])?"pending":/已定义|已发现/.test(r[2])?"success":"";return '<tr><td><strong>'+esc(r[0])+'</strong><small>仅示例数据</small></td><td>'+esc(r[1])+'</td><td><span class="pill '+cls+'">'+esc(r[2])+'</span></td><td><button class="link" data-row="'+esc(r[3])+'">'+esc(r[3])+' →</button></td></tr>'}).join("");
+return '<div class="table-wrap"><table><thead><tr><th>名称</th><th>类别 / 归属</th><th>演示状态</th><th>下一步</th></tr></thead><tbody>'+content+'</tbody></table></div><p style="margin-top:10px;color:#8a99a8;font-size:11px">共 '+arr.length+' 项 · 仅演示筛选与状态布局，不代表真实 Owner 返回。</p>'
+}
+function statePanelEmpty(){return '<div class="alt-state"><div class="symbol">◇</div><h3>没有匹配的样例结果</h3><p>可清除筛选恢复示例行。正式实现必须根据成功的响应与筛选条件区分空态和失败。</p><button class="btn" data-clear="yes">清空筛选</button></div>'}
+function mainContent(s){
+var t=state.screen==="D3"?["概览","逻辑模型","物理模型","来源映射","版本证据"]:state.screen==="D4"?["概览","定义与口径","校验","发布","反向影响"]:state.screen==="G2"?["概览","来源证据","质量与安全","治理历史"]:state.screen==="G3"?["概览","盘点上架","变更处理","对账记录"]:["概览","对象集合","关联证据"];
+var tabs='<div class="tabs" role="tablist" aria-label="工作台视图">'+t.map(function(v){return '<button role="tab" aria-selected="'+(state.tab===v)+'" class="tab '+(state.tab===v?"active":"")+'" data-tab="'+esc(v)+'">'+esc(v)+'</button>'}).join("")+'</div>';
+var switcher=state.screen==="G1"?'<div class="tabs" role="tablist" aria-label="对象类型"><button role="tab" aria-selected="'+(state.assetView==="asset")+'" class="tab '+(state.assetView==="asset"?"active":"")+'" data-view="asset">治理资产</button><button role="tab" aria-selected="'+(state.assetView==="entity")+'" class="tab '+(state.assetView==="entity"?"active":"")+'" data-view="entity">技术实体</button></div>':tabs;
+var extra=state.tab!=="概览"&&state.screen!=="G1"?'<div class="stagebox"><strong>'+esc(state.tab)+' · 设计结构预演</strong><p>此处应展示当前 Owner 的独立版本/规则/执行/权限证据，不通过复制其他旧路由页面实现。静态原型只验证导航层与信息优先级。</p></div>':"";
+return '<div class="panel section"><div class="section-head"><div><h2>'+esc(s.label)+'工作区</h2><small>先确认身份与状态，然后给出下一动作</small></div><span class="chip">当前项目 · 演示数据</span></div>'+switcher+'<div class="toolbar"><input id="search" class="search" type="search" placeholder="搜索当前对象 / 字段 / 状态" aria-label="示例表格搜索" value="'+esc(state.query)+'"><select class="filter" aria-label="演示范围"><option>全部范围</option><option>当前上下文</option></select></div>'+table()+extra+'</div>'
+}
+function render(){
+var s=screens[state.screen];var progress=steps().map(function(id,i){var done=steps().indexOf(state.screen)>i;var here=id===state.screen;return '<button class="step '+(here?"active":done?"done":"")+'" data-screen="'+id+'"><strong>'+(i+1)+'</strong>'+screens[id].label+'</button>'}).join("");
+document.querySelectorAll("[data-screen]").forEach(function(el){el.classList.toggle("active",el.dataset.screen===state.screen)});
+var prev=state.history.length?'<button class="btn" data-back="yes">← 返回来源</button>':'';
+var next=hasAnother()?'<button class="btn primary" data-next="yes">'+esc(s.action)+' →</button>':'<button class="btn primary" data-act="inspect">'+esc(s.action)+' ↗</button>';
+var evidence='<div class="evidence"><div><span>对象身份</span><b>'+esc(s.entityId)+'</b></div><div><span>项目上下文</span><b>Retail Analytics（待核验）</b></div><div><span>当前角色</span><b>'+roleLabel()+'</b></div><div><span>版本 / Run</span><b>无真实回执</b></div><div><span>数据来源</span><b>本地演示对象</b></div></div>';
+var actionHint=state.role==="reader"?'只读模拟角色不显示写入动作；实际授权须基于原菜单码和 Owner API。':'操作前必须读取真实权限和 Owner 最新状态；演示不执行服务调用。';
+$("#app").innerHTML='<div class="crumb"><button data-root="'+(group()==="D"?"D1":"G1")+'">'+esc(s.domain)+'</button><span>／</span><span>'+esc(s.label)+'</span><span>／</span><span>工作台原型</span></div>'+
+'<div class="heading"><div><div class="eyebrow">WORKSPACE · '+esc(state.screen)+'</div><h1>'+esc(s.title)+'</h1><p>'+esc(s.description)+'</p></div><div class="heading-actions">'+prev+next+'</div></div>'+
+'<div class="journey" aria-label="当前示例旅程">'+progress+'</div>'+
+'<div class="state-controls"><label for="previewState">演示状态</label><select id="previewState"><option value="ready">READY / 正常</option><option value="empty">EMPTY / 真实空</option><option value="unavailable">UNAVAILABLE / 读取失败</option><option value="forbidden">FORBIDDEN / 无权</option><option value="unknown">UNKNOWN / 未知</option><option value="partial">PARTIAL / 部分可用</option></select><span class="note">状态可切换，用于评审，不代表接口实测</span></div>'+
+'<div class="panel identity"><div class="identity-icon">◈</div><div class="identity-main"><strong>'+esc(s.entity)+'</strong><span>示例 ID '+esc(s.entityId)+' · 来源与版本需由 Owner 重读</span></div><div class="identity-meta"><span class="chip warn">演示 · 未签收</span><span class="chip">权限独立核验</span></div></div>'+
+'<div class="grid"><div class="main-col">'+mainContent(s)+'<div class="panel section"><div class="section-head"><h2>阶段与操作合同</h2><small>动作不是成功回执</small></div><div class="hint warn">'+esc(s.hint)+'</div><div class="stagebox"><strong>下一步为什么是这一步？</strong><p>'+esc(s.evidence)+'。主操作只做导航或展示交互规则；正式产品须经权限、版本与服务证据复核。</p></div><div class="toolbar" style="margin-top:14px"><button class="btn" data-act="edit" '+(!canWrite()?'disabled title="此预览角色没有写入能力"':'')+'>演示编辑与离开保护</button><button class="btn" data-act="evidence">查看证据要求</button></div></div></div>'+
+'<div class="side-col"><div class="panel section"><div class="section-head"><h2>对象身份与证据</h2><small>可追溯</small></div>'+evidence+'</div><div class="panel section"><div class="section-head"><h2>下一步与专业工具</h2></div><p>'+actionHint+'</p><button class="side-action" data-act="owner">查看 Owner 事实边界 <span>↗</span></button><button class="side-action" data-tool="metadata">项目级技术元数据 <span>↗</span></button><button class="side-action" data-tool="impact">跨对象影响查询 <span>↗</span></button><button class="side-action" data-tool="quality">质量检查与诊断 <span>↗</span></button></div></div></div>'+
+'<div class="footer-note">#550 · v0.1 页面结构演示。未接后端、未运行 RBAC 或浏览器 E2E；真实产品仍遵循独立 Truth Owner、菜单授权及项目隔离。</div>';
+$("#previewState").value=state.mode;
+}
+function closeSidebar(){$("#sidebar").classList.remove("open");$("#scrim").classList.remove("open")}
+document.addEventListener("click",function(ev){
+var e=ev.target.closest("button");if(!e)return;
+if(e.dataset.screen){go(e.dataset.screen);return}
+if(e.dataset.root){go(e.dataset.root);return}
+if(e.dataset.next){go(screens[state.screen].next);return}
+if(e.dataset.back){back();return}
+if(e.dataset.tab){state.tab=e.dataset.tab;render();return}
+if(e.dataset.view){state.assetView=e.dataset.view;state.query="";render();return}
+if(e.dataset.clear){state.query="";render();return}
+if(e.dataset.stateReset){state.mode="ready";render();return}
+if(e.dataset.row){var dest=state.screen==="G1"?"G2":state.screen==="D1"?"D2":state.screen==="D2"?"D3":state.screen==="D3"?"D4":state.screen==="G2"?"G3":null;if(dest)go(dest);else confirmDemo("查看演示对象",e.dataset.row+"：本静态原型未接后端，只提供正式页面应有的导航/回执要求。");return}
+if(e.dataset.tool){confirmDemo("专业工具可发现性","“"+e.dataset.tool+"”为项目级专业入口位置示例。它必须保留独立权限和旧 URL；本轮原型不模拟其业务操作。");closeSidebar();return}
+if(e.dataset.act){if(e.dataset.act==="edit"){state.dirty=true;confirmDemo("未保存编辑演示","演示已将当前工作台标记为 dirty。点击下一步会触发离开保护；没有任何内容被写入后端。")}else confirmDemo("证据与权限说明","此动作只展示正式实现要求：Owner ID、项目核验、独立授权、版本及 Run/Execution 证据；本静态样例不能替代真实业务动作。");return}
+if(e.dataset.modal){if(e.dataset.modal==="ack"&&state.pending){var next=state.pending;state.pending=null;state.dirty=false;closeModal();go(next);return}state.pending=null;closeModal();return}
+});
+document.addEventListener("input",function(ev){if(ev.target.id==="search"){state.query=ev.target.value;var focus=ev.target.selectionStart;render();var input=$("#search");input.focus();input.setSelectionRange(focus,focus)}});
+document.addEventListener("change",function(ev){if(ev.target.id==="previewState"){state.mode=ev.target.value;render()}if(ev.target.id==="role"){state.role=ev.target.value;state.mode="ready";state.dirty=false;render();toast("已切换演示画像："+roleLabel()+"（非真实授权）")}});
+$("#menuBtn").addEventListener("click",function(){$("#sidebar").classList.add("open");$("#scrim").classList.add("open")});
+$("#scrim").addEventListener("click",closeSidebar);
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape"){if($("#overlay").classList.contains("show")){state.pending=null;closeModal()}else closeSidebar()}});
+render();
+})();
+</script>
+</body></html>
