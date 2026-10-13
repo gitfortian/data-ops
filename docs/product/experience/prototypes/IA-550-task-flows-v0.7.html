@@ -1295,8 +1295,8 @@ function v6EditRow(i,key,value){
  const x=v6Layer(),r=x.rows[i];if(!r||!["name","type","rule"].includes(key)||!actionAllowed())return;
  if(r[key]===value)return;r[key]=value;x.dirty=true;x.checked=false;x.revision++;
 }
-function v6LegacyModel(){return pageHead("已有模型详情（原设计对照）","保留现有逐对象映射路径，分层建模为默认设计。","",'<button class="btn primary" data-v6-mode="layered">返回分层建模 →</button>')+v3Model()}
-function v6LayerModel(){
+function v6LegacyModel(embedded=false){return (embedded?"":pageHead("已有模型详情（原设计对照）","保留现有逐对象映射路径，分层建模为默认设计。","",'<button class="btn primary" data-v6-mode="layered">返回分层建模 →</button>'))+v3Model()}
+function v6LayerModel(embedded=false){
  const x=v6Layer(),conf=v6Configs[x.layer],tab='<div class="v6Tabs">'+Object.keys(v6Configs).map(k=>'<button data-v6-layer="'+k+'" class="'+(x.layer===k?"active":"")+'">'+k+' · '+v6Configs[k].label+'</button>').join("")+'</div>';
  const depButtons=conf.deps.map(id=>{const s=v6Sources[id],selected=(x.pending||x.deps).includes(id);return '<button data-v6-dep="'+id+'" class="v6Source '+(selected?"selected":"")+'"><strong>'+(selected?"☑ ":"☐ ")+esc(s.name)+'</strong><small>'+s.layer+' · '+s.version+' · '+s.cols.length+' 列</small></button>'}).join("");
  const start= '<section class="v6Section"><h2>1. 建模依据 · '+esc(conf.label)+'</h2><p>'+esc(conf.explain)+'</p>'+
@@ -1327,8 +1327,8 @@ function v6LayerModel(){
  '<div class="v6Actions"><button class="primary" data-v6-save="1" '+(!x.checked||!actionAllowed()?"disabled":"")+'>保存设计版本（模拟）</button><button data-v6-handoff="1" '+(!x.saved.length?"disabled":"")+'>准备数据开发交接</button></div>'+
  (x.handoff?'<div class="v6Warn">已形成设计引用。SQL、DDL 部署、加工运行和调度需由 DataDev 独立验证；这里没有真实执行。</div>':'')+versions+'</section>';
  const returnTo=v6.origin?'<div class="v6Hint"><strong>来自协作事项 '+esc(v6.origin.id)+'</strong> · 完成设计后可以返回原事项，保持上下文。<div class="v6Actions"><button data-v6-return="1">← 返回协作</button></div></div>':'';
- return pageHead("模型工作台 · 分层建模","ODS/DWD/DIM/DWS/ADS 的建模起点各不相同；先选择依赖、自动批量加载字段，再做字段加工与校验。","IA-550 / PROPOSAL v0.7",'<button class="btn" data-v6-mode="legacy">原有对象映射对照</button>')+
- returnTo+tab+'<div class="v6Step"><span class="active">① 确定分层与依赖</span><span>② 批量字段</span><span>③ 本层加工</span><span>④ 版本与交接</span></div>'+
+ return (embedded?"":pageHead("模型工作台 · 分层建模","ODS/DWD/DIM/DWS/ADS 的建模起点各不相同；先选择依赖、自动批量加载字段，再做字段加工与校验。","IA-550 / PROPOSAL v0.7",'<button class="btn" data-v6-mode="legacy">原有对象映射对照</button>'))+
+ (embedded?"":returnTo)+tab+'<div class="v6Step"><span class="active">① 确定分层与依赖</span><span>② 批量字段</span><span>③ 本层加工</span><span>④ 版本与交接</span></div>'+
  '<div class="v6Grid"><div class="v6Main">'+start+fields+rules+review+'</div><div class="v6Side"><section class="v6Section"><h2>本层设计说明</h2><p>'+esc(conf.explain)+'</p><div class="v6Stage"><strong>来源依赖版本</strong><p>'+esc(x.deps.map(id=>v6Sources[id].name+" @ "+v6Sources[id].version).join(" / "))+'</p></div>'+
  '<div class="v6Stage"><strong>逻辑模型与标准字段</strong><p>Semantic 与逻辑建模是业务含义的引用，不能复刻一份标准目录。</p></div>'+
  '<div class="v6Stage"><strong>模型 ≠ 已生产的数据</strong><p>设计版本、部署版本、运行结果分别核验。</p></div></section></div></div>';
@@ -1638,7 +1638,7 @@ function v7Model(){
  const current=ods?'<div class="v6Hint">ODS 例外：来源物理表 → ODS 字段/分区 → 来源映射证据。后续可根据 ODS 证据提出逻辑实体候选并由业务确认。</div>':
  '<div class="v7Context"><strong>业务桥梁</strong>：'+esc(v7ForLayer().name)+' · '+esc(v7Latest(v7ForLayer())?.version||"逻辑草稿待冻结")+' → '+layer+' 物理候选 → 字段级映射与差异审阅。<p class="micro">非 ODS 的业务模型默认引用已有逻辑版本；DWS/ADS 可复用逻辑/指标与消费合同，不必新建重复实体。</p></div>';
  const returnTo=v6.origin?'<div class="v6Hint">来自协作事项 '+esc(v6.origin.id)+' <button data-v6-return="1">← 返回需求与协作</button></div>':'';
- const body=active==="legacy"?v6LegacyModel():active==="physical"?v6LayerModel():active==="mapping"?v7MappingPage():v7LogicalPage();
+ const body=active==="legacy"?v6LegacyModel(true):active==="physical"?v6LayerModel(true):active==="mapping"?v7MappingPage():v7LogicalPage();
  return pageHead("模型工作台 · 业务逻辑到分层物理","先设计业务实体、属性、关系、粒度及逻辑版本，再对接 DWD/DIM 等物理结构；ODS 保留贴源直建。","IA-550 / LOGICAL MODEL BRIDGE v0.7")+
  returnTo+nav+current+(active==="physical"&&!ods?'<div class="v6Actions"><button data-v7-mode="mapping">审阅逻辑→物理字段映射 →</button></div>':'')+
  body;
