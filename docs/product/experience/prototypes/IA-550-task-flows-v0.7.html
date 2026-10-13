@@ -1558,13 +1558,36 @@ const v7={
    attrs:[{id:"LA-301",code:"stat_date",name:"支付统计日期",role:"分析维度",std:"STD-205"},{id:"LA-302",code:"pay_order_cnt",name:"支付订单数",role:"汇总度量",std:""},{id:"LA-303",code:"pay_amount_sum",name:"实付金额汇总",role:"汇总度量",std:"STD-208"}]}
  ]
 };
+
+function v7NewLogical(){
+ if(!actionAllowed()){toast("当前角色不能创建逻辑模型草稿");return}
+ const n=v7.models.filter(m=>m.id.startsWith("LOCAL-LM-")).length+1;
+ const model={id:"LOCAL-LM-"+String(n).padStart(3,"0"),name:"新建业务逻辑模型 "+n,process:"PRC-102",grain:"",rev:1,versions:[],relations:[],attrs:[]};
+ v7.models.push(model);v7.selected=model.id;v7.view="logical";renderMain();
+}
+function v7MetaEdit(key,value){
+ const m=v7Current();if(!actionAllowed()||!["name","process","grain"].includes(key)||m[key]===value)return;
+ m[key]=value;v7LogicalTouch(m);
+ if(key!=="grain")renderMain();
+}
+function v7RelationEdit(index,key,value){
+ const m=v7Current(),r=m.relations[index];
+ if(!actionAllowed()||!r||!["from","to","cardinality"].includes(key)||r[key]===value)return;
+ r[key]=value;v7LogicalTouch(m);
+}
+function v7SelectPhysicalLogical(id){
+ const m=v7.models.find(x=>x.id===id);if(!m||v6.layer==="ODS")return;
+ v7.targetByLayer[v6.layer]=id;delete v7.mapping[v6.layer];
+ const x=v6Layer();x.checked=false;x.logicalRef=null;renderMain();
+}
+
 function v7Current(){return v7.models.find(x=>x.id===v7.selected)||v7.models[0]}
 function v7ForLayer(layer=v6.layer){return v7.models.find(x=>x.id===v7.targetByLayer[layer])||v7.models[0]}
 function v7Latest(m){return m.versions.at(-1)}
 function v7LogicalTouch(m){m.rev++;for(const k of Object.keys(v7.mapping)){const x=v7.mapping[k];if(x.logicalId===m.id){x.reviewed=false;x.stale=true;if(v6.layers[k])v6.layers[k].checked=false}}}
 function v7FreezeLogical(){
  if(!actionAllowed()){toast("当前专业只读画像不能保存逻辑草稿");return}
- const m=v7Current();if(!m.grain.trim()||m.attrs.some(a=>!a.code.trim()||!a.name.trim())){toast("先完成逻辑粒度及业务属性");return}
+ const m=v7Current();if(!m.attrs.length){toast("请先添加逻辑属性再冻结");return}if(!m.grain.trim()||m.attrs.some(a=>!a.code.trim()||!a.name.trim())){toast("先完成逻辑粒度及业务属性");return}
  const version="L"+(m.versions.length+1);
  m.versions.push(Object.freeze({version,revision:m.rev,grain:m.grain,process:m.process,attrs:m.attrs.map(a=>Object.freeze({...a})),relations:m.relations.map(r=>Object.freeze({...r}))}));
  toast("逻辑草稿已冻结本地设计快照 "+version+"；未获业务批准或模型发布");
@@ -1587,7 +1610,7 @@ function v7AddRelation(){
 }
 function v7Design(layer){
  v6.layer=layer;v6.modelMode="layered";v7.view="physical";
- if(layer!=="ODS"){const lm=v7Current();if((layer==="DIM"&&lm.id==="LM-019")||(layer==="DWD"&&lm.id==="LM-016")||(["DWS","ADS"].includes(layer)&&lm.id==="LM-026"))v7.targetByLayer[layer]=lm.id}
+ if(layer!=="ODS"){v7.targetByLayer[layer]=v7Current().id;delete v7.mapping[layer];if(v6.layers[layer])v6.layers[layer].checked=false}
  renderMain();
 }
 function v7ScopeSignature(x){
@@ -1621,6 +1644,7 @@ function v7MappingReview(){
  if(x.layer==="ODS"){toast("ODS 贴源例外：直接核对来源逐列映射");return}
  if(!version){toast("先冻结相应的逻辑设计版本，再审阅物理映射");return}
  if(!x.loaded){toast("先选物理依赖并批量加载字段，才能审阅逻辑到物理映射");return}
+ if(m.rev!==version.revision){toast("当前逻辑草稿已修改，请冻结新的逻辑版本后再确认映射");return}
  if(p.logicalVersion!==version.version||p.signature!==v7ScopeSignature(x)){toast("模型或逻辑版本已变化，请重新生成映射候选");return}
  const accepted=Object.values(p.selection).filter(Boolean);
  if(!accepted.length){toast("至少确认一个逻辑属性与物理字段的关系");return}
@@ -1915,6 +1939,7 @@ document.addEventListener("click",function(ev){
  
  if(el.dataset.v7Homeitem){const r=v6.records.find(x=>x.id===el.dataset.v7Homeitem);if(r){v6.collab.view=r.type;v6.collab.selected=r.id;go("collab")}return}
  if(el.dataset.v7Homeflow){v7HomeJump(el.dataset.v7Homeflow,el.dataset.v7Homelayer,el.dataset.v7Homelogical);return}
+ if(el.dataset.v7Newlogic){v7NewLogical();return}
  if(el.dataset.v7Mode){v7.view=el.dataset.v7Mode;renderMain();return}
  if(el.dataset.v7Logical){v7.selected=el.dataset.v7Logical;renderMain();return}
  if(el.dataset.v7Freeze){v7FreezeLogical();return}
@@ -1996,7 +2021,9 @@ document.addEventListener("click",function(ev){
 document.addEventListener("input",function(ev){
  const t=ev.target;
  
- if(t.id==="v7-grain"){const m=v7Current();if(m.grain!==t.value&&actionAllowed()){m.grain=t.value;v7LogicalTouch(m)}return}
+ if(t.id==="v7-grain"){v7MetaEdit("grain",t.value);return}
+ if(t.id==="v7-name"){v7MetaEdit("name",t.value);return}
+ if(t.dataset?.v7Rel!==undefined){v7RelationEdit(Number(t.dataset.v7Rel),t.dataset.v7Key,t.value);return}
  if(t.dataset?.v7Attr!==undefined){v7FieldChange(Number(t.dataset.v7Attr),t.dataset.v7Key,t.value);return}
 
  if(t.id==="v6-note"){v6.collab.note=t.value;return}
@@ -2022,6 +2049,9 @@ document.addEventListener("change",function(ev){
  if(t.dataset?.v7Attr!==undefined){v7FieldChange(Number(t.dataset.v7Attr),t.dataset.v7Key,t.value);renderMain();return}
 
  if(t.id==="v7-home-role"){v6.collab.role=t.value;renderMain();return}
+ if(t.id==="v7-layer-model"){v7SelectPhysicalLogical(t.value);return}
+ if(t.id==="v7-process"){v7MetaEdit("process",t.value);return}
+ if(t.dataset?.v7Rel!==undefined){v7RelationEdit(Number(t.dataset.v7Rel),t.dataset.v7Key,t.value);return}
  if(t.id==="v6-role"){v6.collab.role=t.value;renderMain();return}
  if(t.id==="v6-reference"){v6.collab.reference=t.value;renderMain();return}
  if(t.id==="v6-transfer"){v6.collab.transferTo=t.value;renderMain();return}
