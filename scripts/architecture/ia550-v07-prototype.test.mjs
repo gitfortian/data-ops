@@ -112,7 +112,8 @@ test('L04: DWD cannot validate physical structure before logical version and exp
  a.click({v7Design:'DWD'});a.click({v6Load:'1'});
  a.click({v6Check:'1'});assert.equal(a.layer().checked,false);
  a.click({v7Mode:'mapping'});
- assert.match(a.view(),/先冻结相应的逻辑设计版本/); // update when UI exposes it
+ assert.match(a.view(),/未冻结/);
+ a.click({v7Mapconfirm:'1'});assert.equal(a.mapping().reviewed,false);
 });
 test('L05: DWD end-to-end logical snapshot → ODS source fields → mapping review → design save',()=>{
  const a=build('model');a.click({v7Freeze:'1'});
