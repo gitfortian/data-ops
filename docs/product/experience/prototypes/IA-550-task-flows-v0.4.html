@@ -371,7 +371,7 @@ document.addEventListener("input",function(e){
 if(e.target.id==="localSearch"){var sel=e.target.selectionStart;state.query=e.target.value;renderMain();var field=dom("localSearch");if(field){field.focus();field.setSelectionRange(sel,sel)}}if(e.target.id==="editTitle"||e.target.id==="editNotes")state.editDirty=true;if(e.target.id==="paletteInput")paletteList(e.target.value);
 });
 document.addEventListener("change",function(e){if(e.target.id==="stateMode"){state.status=e.target.value;renderMain()}if(e.target.id==="statusFilter"){state.filter=e.target.value;renderMain()}if(e.target.id==="roleSwitch"){state.role=e.target.value;state.editDirty=false;renderMain();toast("仅切换原型角色画像；真实权限需后端独立鉴权。")}});
-document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openPalette()}if(e.key==="Escape"){closeDialog();closePalette();closeMobile()}});
+document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openPalette()}if(e.key==="Escape"){if(v3.editing&&state.editDirty){v3DirtyDialog()}else{v3.editing=null;closeDialog()}closePalette();closeMobile()}});
 dom("openPalette").addEventListener("click",openPalette);dom("projectBtn").addEventListener("click",function(){openDialog("info","项目上下文与数据隔离","Retail Analytics 是静态演示项目。真实切换应验证项目权限、清除旧选择、忽略迟到请求，并对对象重新鉴权。")});dom("helpBtn").addEventListener("click",function(){openDialog("info","完整菜单与双域设计","按最新 IA V3.1 显示五个业务域的 20 个默认任务入口，加上工作首页、待办、平台设置及各域专业工具。本轮只有定义/治理两域设计新页面；其他域为占位。")});
 dom("mobileToggle").addEventListener("click",function(){dom("rail").classList.add("drawerOpen");dom("side").classList.add("drawerOpen");dom("mobileShade").classList.add("active")});dom("mobileShade").addEventListener("click",closeMobile);
 dom("dialogShade").addEventListener("click",function(e){if(e.target===dom("dialogShade")&&!state.editDirty)closeDialog()});dom("paletteShade").addEventListener("click",function(e){if(e.target===dom("paletteShade"))closePalette()});
@@ -443,7 +443,9 @@ function v4SaveActive(page){
 function v4Apply(page,index){
  const r=(sample[page]||[])[index];if(!r)return;
  const id=r[4],old=v4.active[page];
- if(old!==id){v4SaveActive(page);const obj=v4StoreFor(page,id);v4.active[page]=id;
+ if(old!==id){if(old&&["metric","model"].includes(page))v4StoreFor(page,old).tab=state.tab[page];
+  v4SaveActive(page);const obj=v4StoreFor(page,id);v4.active[page]=id;
+  if(page==="metric"||page==="model")state.tab[page]=obj.tab||(page==="metric"?"定义口径":"来源映射");
    if(page==="metric")v3.metric=obj;
    if(page==="model")v3.build=obj;
    if(page==="governance"){v3.queueId=id;v3.queueStep=obj.queueStep;v3.decision=obj.decision;v3.transferTo=obj.transferTo;v3.note=obj.note}
@@ -562,7 +564,7 @@ function v3Table(id){
  if(!rows.length)return '<div class="stateArea"><h3>当前筛选无结果</h3><p>已清空对象详情和操作；请调整范围或关键词，避免误操作之前的对象。</p><button class="btn" data-clear="1">清除筛选</button></div>';
  if(id==="governance")return '<div class="tableScroll"><table class="queueTable"><thead><tr><th>任务 / 影响对象</th><th>责任人</th><th>优先级</th><th>等待时间</th><th>状态</th><th>查看</th></tr></thead><tbody>'+
   rows.map(x=>{const r=x.r,m=v3QueueInfo[r[4]];return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="queueItemName">'+esc(r[0])+'</span><div class="rowmeta">'+esc(m.subject)+'</div></td><td>'+esc(m.owner)+'</td><td><span class="tag '+(m.priority==="P0"?"danger":m.priority==="P1"?"warn":"blue")+'">'+m.priority+'</span></td><td>'+esc(m.age)+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">处理 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
- return '<div class="tableScroll"><table><thead><tr><th>名称 / 标识</th><th>业务归属</th><th>类别</th><th>真实状态</th><th>操作</th></tr></thead><tbody>'+
+ return '<div class="tableScroll"><table><thead><tr><th>名称 / 标识</th><th>业务归属</th><th>类别</th><th>当前状态（示例）</th><th>操作</th></tr></thead><tbody>'+
  rows.map(x=>{const r=x.r;return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+'</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">选中 / 详情 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
 }
 function v3Filters(){return '<div class="filters"><input class="field search" id="localSearch" value="'+esc(state.query||"")+'" placeholder="搜索名称、对象编号或业务归属" aria-label="搜索对象"><select class="field short" id="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option value="pending">待处理</option><option value="done">已确认</option></select></div>'}
@@ -832,7 +834,7 @@ function v3StatePanel(){
  const data={
  empty:["没有符合条件的记录","当前请求成功，但所选范围确实没有内容。","清空筛选"],
  loading:["正在加载对象","保持当前操作上下文；不能提前展示成功结果。","返回正常演示"],
- error:["读取失败 · 请重新加载","服务或网络错误，不会把错误当成空列表。保留本地筛选和对象选择。","重试读取"],
+ error:["读取失败（示例）","无法获取实时数据。示例模式可恢复，不代表服务器重试成功。","退出异常预览"],
  forbidden:["无权限查看此项内容","不查询受限制接口；可返回有权入口或请求管理员授权。","返回可访问入口"],
  partial:["部分服务不可用","显示可确认的部分证据，无法获取的结果明确标记未知。","重试不可用项"],
  unknown:["当前状态无法确认","查询 Owner 回执或等待真实执行状态；禁止推测完成。","重新确认"]
@@ -872,6 +874,7 @@ function go(id,keepHistory){
  if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null}
  if(!keepHistory&&state.page!==id)state.history.push(state.page);
  state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";
+ if(id==="model"&&v3.scope&&["standard","semantic"].includes(v3.scope.from))state.select.model=1;
  state.tool=toolInfo[id]?id:"";state.lastMenu=domainOf(id).id;
  v3CloseDrawer();renderMain();closeMobile();
  if(window.location.hash!=="#"+id)window.location.hash=id;
@@ -883,11 +886,12 @@ function v3OpenEdit(mode){
  if(!actionAllowed()){toast("只读画像无法写入");return}
  const key=mode==="create"?"new:"+state.page:state.page+":"+r[4],draft=v3.storedDrafts[key];
  v3.editing={mode,key,original:r?r[0]:"",name:draft?draft.name:mode==="edit"?r[0]:"",note:draft?draft.note:""};
+ v3.editing.openedName=v3.editing.name;v3.editing.openedNote=v3.editing.note;state.editDirty=false;
  v3ShowEdit();
 }
 function v3ShowEdit(){
  const p=v3.editing;if(!p)return;
- state.editDirty=true;state.dialogName="v3-edit";
+ state.dialogName="v3-edit";
  dom("dialog").innerHTML='<h2 id="dialogTitle">'+(p.mode==="create"?"新建":"编辑")+esc(nameOf(state.page))+' · 本地草稿</h2><p>新建不会带入旧对象，编辑会恢复本地未完成草稿。此原型没有生产 API。</p><label class="dlgfield">名称<input id="v3-edit-name" value="'+esc(p.name)+'" placeholder="请输入名称"></label><label class="dlgfield">变更说明<textarea id="v3-edit-note" placeholder="填写本次变更依据">'+esc(p.note)+'</textarea></label><div class="dlgfoot"><button class="btn" data-v3-edit="cancel">取消</button><button class="btn primary" data-v3-edit="save">保存本地草稿</button></div>';
  dom("dialogShade").classList.add("open");dom("dialogShade").setAttribute("aria-hidden","false");
 }
@@ -984,12 +988,12 @@ document.addEventListener("click",function(ev){
   if(a==="saveleave"){if(v3.editing&&!v3.editing.name.trim()){toast("请填写名称");return}v3FinishEdit(true);return}
   if(a==="stay"){v3ShowEdit();return}
   if(a==="discard"){const next=v3.pending;v3.pending=null;v3.editing=null;state.editDirty=false;closeDialog();if(next)go(next);return}
-  if(a==="cancel"){v3DirtyDialog();return}
+  if(a==="cancel"){if(state.editDirty)v3DirtyDialog();else{v3.editing=null;closeDialog()}return}
  }
 });
 document.addEventListener("input",function(ev){
- const t=ev.target;if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=true}
- if(t.id==="v3-edit-note"&&v3.editing){v3.editing.note=t.value;state.editDirty=true}
+ const t=ev.target;if(t.id==="v3-edit-name"&&v3.editing){v3.editing.name=t.value;state.editDirty=v3.editing.name!==v3.editing.openedName||v3.editing.note!==v3.editing.openedNote}
+ if(t.id==="v3-edit-note"&&v3.editing){v3.editing.note=t.value;state.editDirty=v3.editing.name!==v3.editing.openedName||v3.editing.note!==v3.editing.openedNote}
  if(t.id==="v3-formula"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.formula=t.value}
  if(t.id==="v3-condition"&&actionAllowed()){v4InvalidMetric(v3.metric);v3.metric.filter=t.value}
  if(t.id==="v3-mapfield"&&actionAllowed()){v4InvalidModel(v3.build);v3.build.mapField=t.value}
