@@ -1,134 +1,169 @@
-import { Alert, Button, Modal, Tag } from 'antd';
-import { ArrowRightOutlined } from '@ant-design/icons';
-import { history } from '@umijs/max';
-
-import type { CollectRunRecord } from '@/services/metadata/types';
+import { Alert, Button, Collapse, Descriptions, Modal, Tooltip } from 'antd';
 import {
-  formatDuration,
-  formatMetadataTime,
-  PROVIDER_LABELS,
-  RUN_STATUS_COLORS,
-  RUN_STATUS_LABELS,
-} from '../constants';
+  ArrowRightOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons';
+import { history } from '@umijs/max';
+import type { CollectRunRecord } from '@/services/metadata/types';
+import { formatDuration, formatMetadataTime } from '../constants';
 import { currentSourceCatalogPath, readFrozenHarvestScope } from '../scopeEvidence';
+import '../index.less';
 
-const shown = (value?: number | null) => value == null ? '—' : value;
+const shown = (value?: number | null) => (value == null ? '—' : value);
 
-/**
- * This modal uses the persisted RunView and frozen scope from Metadata Owner.
- * The current catalog is a separate read, not a complete historical run-member list.
- */
-const RunResultModal = ({
+export default function RunResultModal({
   run,
   title,
+  sourceNames = {},
   onClose,
 }: {
   run: CollectRunRecord | null;
   title: string;
+  sourceNames?: Record<string, string>;
   onClose: () => void;
-}) => {
+}) {
   const scope = readFrozenHarvestScope(run?.scopeSnapshot);
-  const counts = run ? [
-    { label: '实体总数', value: run.cntTotal },
-    { label: '新增', value: run.cntNew },
-    { label: '更新', value: run.cntChanged },
-    { label: '未变化', value: run.cntUnchanged },
-  ] : [];
-
+  const preview = Boolean(run?.dryRun);
+  const partial = (run?.cntPartialFailed ?? 0) > 0;
+  const status = run?.status;
+  const summary = !status
+    ? '执行状态待确认'
+    : preview
+      ? status === 'SUCCESS'
+        ? partial
+          ? '采集预览部分完成'
+          : '采集预览已完成'
+        : status === 'RUNNING'
+          ? '正在预览采集范围'
+          : '采集预览未完成'
+      : status === 'SUCCESS'
+        ? partial
+          ? '采集部分完成'
+          : '采集已完成'
+        : status === 'RUNNING'
+          ? '正在采集'
+          : status === 'SUSPECT'
+            ? '采集已停止'
+            : '采集失败';
+  const icon =
+    status === 'SUCCESS' && !partial ? (
+      <CheckCircleOutlined />
+    ) : status === 'RUNNING' ? (
+      <ClockCircleOutlined />
+    ) : (
+      <ExclamationCircleOutlined />
+    );
   return (
     <Modal
       open={Boolean(run)}
-      title={<span className="text-[18px] font-semibold text-[#26364a]">{title}</span>}
-      okText="完成"
-      cancelButtonProps={{ hidden: true }}
-      onOk={onClose}
+      title={title.replace(/dry[- ]?run\s*/gi, '').replace(/预演/g, '采集预览')}
+      width={680}
+      className="metadata-run-result"
       onCancel={onClose}
-      width={700}
-      styles={{ body: { paddingTop: 14 } }}
-    >
-      {run ? (
-        <div className="space-y-4 py-1">
-          <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-[#fbfcfe] p-4">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              {run.status ? (
-                <Tag color={RUN_STATUS_COLORS[run.status]}>{RUN_STATUS_LABELS[run.status] || run.status}</Tag>
-              ) : <Tag color="warning">状态未知</Tag>}
-              <Tag color={run.dryRun ? 'default' : 'blue'}>{run.dryRun ? '预演 · 不写入目录' : '正式采集'}</Tag>
-              <span className="text-[12px] text-[#93a0b1]">{run.providerType ? PROVIDER_LABELS[run.providerType] : '未知通道'}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {counts.map((item) => (
-                <div key={item.label} className="rounded-xl border border-solid border-[#e9edf3] bg-white px-3 py-3">
-                  <div className="text-[11px] text-[#8c98a8]">{item.label}</div>
-                  <div className="mt-1 text-[22px] font-semibold tabular-nums text-[#2b3b50]">{shown(item.value)}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 text-[12px] leading-5 text-[#8a98ab]">
-              这是当次元数据实体数，可能包含数据库、表和列；不能当作本次发现表数量或完整清单。
-            </div>
-            <div className="mt-2 text-[12px] leading-5 text-[#8a98ab]">
-              {formatMetadataTime(run.startedAt)} – {formatMetadataTime(run.finishedAt)} ·
-              耗时 {formatDuration(run.durationMs)} · 操作人 {run.createdBy || '—'} · Run #{run.runId}
-            </div>
-          </section>
-
-          {run.errorMessage ? (
-            <Alert type="error" showIcon message="本轮执行存在错误" description={run.errorMessage} />
-          ) : null}
-          {(run.cntPartialFailed ?? 0) > 0 ? (
-            <Alert type="warning" showIcon message={'局部失败 ' + run.cntPartialFailed + ' 个实体'}
-              description="成功提交的实体可能已进入当前目录；不能因此推断整个来源消失。" />
-          ) : null}
-          {(run.cntGone ?? 0) > 0 ? (
-            <Alert type="warning" showIcon message={'当轮存在 ' + run.cntGone + ' 条撤销记录'}
-              description="请先核对冻结范围和有效采集轮次，不把目录当前数量当作缺席证据。" />
-          ) : null}
-
-          <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-4">
-            <h3 className="m-0 text-[14px] font-semibold text-[#2d3c50]">本轮冻结的采集范围</h3>
-            <p className="mb-3 mt-1 text-[12px] text-[#8c99a9]">这是运行时保存的范围，不会跟随之后的任务编辑而变化。</p>
-            {scope ? (
-              <div className="grid grid-cols-1 gap-3 rounded-xl bg-[#f7f9fc] p-4 sm:grid-cols-2">
-                <div>
-                  <div className="text-[11px] text-[#8c99aa]">来源 / 数据库 / Schema</div>
-                  <div className="mt-1 break-all text-[13px] font-medium text-[#34455c]">
-                    #{scope.dataSourceId} / {scope.databaseName || '全部库'} / {scope.schemaName || '默认 Schema'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-[#8c99aa]">表范围 / 列级采集</div>
-                  <div className="mt-1 break-all text-[13px] font-medium text-[#34455c]">
-                    {scope.tablePattern || '全部表'} · {scope.collectColumns === false ? '不采集列' : scope.collectColumns === true ? '采集列' : '列级范围未知'}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Alert type="warning" showIcon message="缺少可信的冻结范围快照"
-                description="不能用当前任务配置反推历史运行范围；请先核对任务运行证据。" />
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-solid border-[#e6eaf0] bg-white p-4">
-            <h3 className="m-0 text-[14px] font-semibold text-[#2d3c50]">接下来做什么？</h3>
-            <p className="mb-3 mt-1 text-[12px] leading-5 text-[#8c99a9]">
-              核对当前来源的真实表与列。目录是另外一次实时查询，并非这个 Run 的完整历史表清单。
-            </p>
-            {scope && !run.dryRun ? (
-              <Button type="primary" onClick={() => {
+      footer={
+        <div className="collect-result-actions">
+          {scope && !preview ? (
+            <Button
+              onClick={() => {
                 onClose();
                 history.push(currentSourceCatalogPath(scope));
-              }}>查看此来源当前已采集表 <ArrowRightOutlined /></Button>
-            ) : (
-              <div className="text-[12px] text-[#8a97a9]">
-                {run.dryRun ? '这次是预演，未写入目录；需要正式采集后才能核对已采表。' : '缺少可核验的来源身份，暂时无法跳转到当前来源目录。'}
+              }}
+            >
+              查看已采集表 <ArrowRightOutlined />
+            </Button>
+          ) : null}
+          <Button type="primary" onClick={onClose}>
+            完成
+          </Button>
+        </div>
+      }
+    >
+      {run ? (
+        <>
+          <div
+            className={`collect-result-summary ${status === 'SUCCESS' && !partial ? 'success' : status === 'RUNNING' ? 'running' : 'warning'}`}
+          >
+            <div className="collect-result-icon">{icon}</div>
+            <div>
+              <h2>{summary}</h2>
+              <p>
+                {preview
+                  ? '仅预览结构，不更新元数据目录'
+                  : `${formatMetadataTime(run.finishedAt || run.startedAt)} · 耗时 ${formatDuration(run.durationMs)}`}
+              </p>
+            </div>
+          </div>
+          <div className="collect-result-counts">
+            {[
+              { label: '元数据总数', value: run.cntTotal, help: '包含数据库、表及字段' },
+              { label: preview ? '预计新增' : '新增', value: run.cntNew },
+              { label: preview ? '预计更新' : '更新', value: run.cntChanged },
+              { label: '未变化', value: run.cntUnchanged },
+            ].map((item) => (
+              <div key={item.label}>
+                <Tooltip title={item.help}>
+                  <span>{item.label}</span>
+                </Tooltip>
+                <strong>{shown(item.value)}</strong>
               </div>
+            ))}
+          </div>
+          {partial ? <Alert type="warning" showIcon message={`${run.cntPartialFailed} 项处理失败`} /> : null}
+          {(run.cntGone ?? 0) > 0 ? (
+            <Alert type="warning" showIcon message={`${run.cntGone} 项元数据${preview ? '预计撤销' : '已撤销'}`} />
+          ) : null}
+          {run.errorMessage ? (
+            <Collapse
+              ghost
+              items={[
+                {
+                  key: 'error',
+                  label: '查看错误详情',
+                  children: (
+                    <pre className="collect-error-detail">{run.errorMessage.replace(/dry[- ]?run/gi, '采集预览')}</pre>
+                  ),
+                },
+              ]}
+            />
+          ) : null}
+          <section className="collect-result-scope">
+            <h3>本次采集范围</h3>
+            {scope ? (
+              <Descriptions
+                size="small"
+                column={2}
+                items={[
+                  {
+                    key: 'source',
+                    label: '数据源',
+                    children: sourceNames[String(scope.dataSourceId)] || `数据源 ${scope.dataSourceId}`,
+                  },
+                  { key: 'database', label: '库名', children: scope.databaseName || '全部库' },
+                  { key: 'schema', label: 'Schema', children: scope.schemaName || '未限定' },
+                  { key: 'table', label: '表范围', children: scope.tablePattern || '全部表' },
+                  {
+                    key: 'columns',
+                    label: '字段结构',
+                    children:
+                      scope.collectColumns === true ? '包含字段' : scope.collectColumns === false ? '仅表结构' : '—',
+                  },
+                ]}
+              />
+            ) : (
+              <Alert type="warning" showIcon message="本次采集范围暂不可用" />
             )}
           </section>
-        </div>
+          <div className="collect-result-meta">
+            <span>
+              {preview ? `${formatMetadataTime(run.startedAt)} · ${formatDuration(run.durationMs)} · ` : ''}操作人{' '}
+              {run.createdBy || '—'}
+            </span>
+            <span>运行编号 {run.runId}</span>
+          </div>
+        </>
       ) : null}
     </Modal>
   );
-};
-
-export default RunResultModal;
+}
