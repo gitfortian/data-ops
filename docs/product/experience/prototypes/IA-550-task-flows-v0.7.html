@@ -1660,16 +1660,20 @@ function v7LogicalPage(){
  const entityNav=v7.models.map(t=>'<button class="v7Entity '+(m.id===t.id?"active":"")+'" data-v7-logical="'+t.id+'"><strong>'+esc(t.name)+'</strong><small>'+esc(t.id)+' · '+(v7Latest(t)?.version||"未冻结逻辑草稿")+'</small></button>').join("");
  const editAttrs='<div class="v6TableWrap"><table class="v7AttrTable"><thead><tr><th>业务属性 / 标识</th><th>物理友好编码（候选）</th><th>角色</th><th>Semantic 标准字段引用</th></tr></thead><tbody>'+
  attrs.map((a,i)=>'<tr><td><input class="v6Field" data-v7-attr="'+i+'" data-v7-key="name" value="'+esc(a.name)+'"></td><td><input class="v6Field" data-v7-attr="'+i+'" data-v7-key="code" value="'+esc(a.code)+'"></td><td><select data-v7-attr="'+i+'" data-v7-key="role">'+["业务标识","业务主键","关联标识","业务属性","事件时间","维度属性","分析维度","度量","汇总度量"].map(v=>'<option '+(v===a.role?"selected":"")+'>'+v+'</option>').join("")+'</select></td><td><select data-v7-attr="'+i+'" data-v7-key="std"><option value="">待补充</option>'+sample.standard.map(r=>'<option value="'+r[4]+'" '+(a.std===r[4]?"selected":"")+'>'+esc(r[0])+' · '+r[4]+'</option>').join("")+'</select></td></tr>').join("")+'</tbody></table></div>';
- return '<div class="v7Pair"><aside class="v6Section"><h2>业务逻辑模型 · 项目草稿</h2><p>独立于 ODS 技术表，不是另一份 Semantic 标准库。</p><div class="v7EntityList">'+entityNav+'</div>'+
+ return '<div class="v7Pair"><aside class="v6Section"><h2>业务逻辑模型 · 项目草稿</h2><p>独立于 ODS 技术表，不是另一份 Semantic 标准库。</p><div class="v6Actions"><button data-v7-newlogic="1" '+(!actionAllowed()?"disabled":"")+'>+ 从业务过程新建逻辑模型</button></div><div class="v7EntityList">'+entityNav+'</div>'+
  '<div class="v6Actions"><button data-v7-ods="1">从源表直接做 ODS（例外） →</button></div></aside>'+
  '<div class="v6Main"><section class="v6Section"><div class="v6Meta"><b>'+esc(m.id)+'</b><span>业务过程 '+esc(m.process)+'</span><span>当前修订 '+m.rev+'</span><span>最近冻结 '+esc(latest?.version||"无")+'</span></div>'+
  '<h2>'+esc(m.name)+' · 业务设计</h2>'+
+ '<label class="v6Field">逻辑模型名称<input id="v7-name" value="'+esc(m.name)+'" '+(!actionAllowed()?"readonly":"")+'></label>'+
+ '<label class="v6Field">归属业务过程（引用 Semantic）<select id="v7-process" '+(!actionAllowed()?"disabled":"")+'>'+
+ (sample.semantic.some(r=>r[4]===m.process)?"":'<option value="'+esc(m.process)+'" selected>'+esc(m.process)+' · 原有引用</option>')+
+ sample.semantic.map(r=>'<option value="'+r[4]+'" '+(m.process===r[4]?"selected":"")+'>'+esc(r[0])+' · '+r[4]+'</option>').join("")+'</select></label>'+
  '<label class="v6Field">业务事实 / 实体粒度<input id="v7-grain" value="'+esc(m.grain)+'" '+(!actionAllowed()?"readonly":"")+'></label>'+
  '<div class="v7Context"><strong>逻辑设计要回答什么？</strong><p>一个业务实体/事实代表什么、属性有什么业务含义、主键是什么、与其他实体是什么关系。标准定义仍引用 Semantic 的 stdFieldId。</p></div>'+
  '<h3>逻辑属性与标准字段</h3>'+editAttrs+
  '<div class="v6Actions"><button data-v7-addattr="1" '+(!actionAllowed()?"disabled":"")+'>添加业务属性</button><button data-v7-addrelation="1" '+(!actionAllowed()?"disabled":"")+'>添加实体关系</button></div>'+
  '<h3 style="margin-top:14px">逻辑实体关系及基数</h3>'+
- m.relations.map((r,i)=>'<div class="v6Stage"><strong>'+esc(r.from)+' → '+esc(r.to)+'</strong><small> '+esc(r.cardinality)+'</small></div>').join("")+
+ m.relations.map((r,i)=>'<div class="v6Stage"><div class="v7Fieldrow"><label>来源实体<input data-v7-rel="'+i+'" data-v7-key="from" value="'+esc(r.from)+'" '+(!actionAllowed()?"readonly":"")+'></label><label>关联实体<input data-v7-rel="'+i+'" data-v7-key="to" value="'+esc(r.to)+'" '+(!actionAllowed()?"readonly":"")+'></label><label>关系基数<input data-v7-rel="'+i+'" data-v7-key="cardinality" value="'+esc(r.cardinality)+'" '+(!actionAllowed()?"readonly":"")+'></label><small>待业务确认</small></div></div>').join("")+
  '<div class="v6Actions"><button class="primary" data-v7-freeze="1" '+(!actionAllowed()?"disabled":"")+'>冻结逻辑设计草稿版本（模拟）</button></div>'+
  (latest?'<div class="v6Hint">当前最新逻辑版本：'+latest.version+' · 冻结时修订 '+latest.revision+'。'+(latest.revision!==m.rev?"当前草稿有变更，逻辑→物理对照需要重新审阅。":"当前草稿与冻结快照一致。")+'</div>':'<div class="v6Warn">尚未冻结版本；可以继续设计逻辑实体与属性，但不应假装物理模型已建立业务映射。</div>')+
  '</section><section class="v6Section"><h2>从业务逻辑设计接续物理建模</h2><p>相同逻辑事实可以映射到多个物理模型。请先确认逻辑版本，再按实际业务需求选择物理目标层级。</p>'+
@@ -1679,13 +1683,15 @@ function v7LogicalPage(){
 function v7MappingPage(){
  const x=v6Layer();if(x.layer==="ODS")return '<section class="v6Section"><h2>ODS 例外：来源→目标列保真映射</h2><p>无需先有逻辑实体；选择物理业务表并批量生成 ODS 来源列，然后核验字段/结构版本即可。</p><div class="v6Actions"><button data-v7-mode="physical">查看 ODS 字段 →</button></div></section>';
  const m=v7ForLayer(),version=v7Latest(m),p=v7MappingState(),attrSet=version?.attrs||[];
+ const selectModel='<label class="v6Field">本次物理目标引用的逻辑模型（请选择确切身份）<select id="v7-layer-model">'+
+ v7.models.map(y=>'<option value="'+y.id+'" '+(y.id===m.id?"selected":"")+'>'+esc(y.name)+' · '+y.id+' · '+esc(v7Latest(y)?.version||"待冻结")+'</option>').join("")+'</select></label>';
  const rowTable=x.loaded?'<div class="v6TableWrap"><table class="v7Mapping"><thead><tr><th>目标物理字段</th><th>上游来源字段</th><th>逻辑属性/实体引用</th><th>关系状态</th></tr></thead><tbody>'+x.rows.map((r,i)=>'<tr><td><strong>'+esc(r.name)+'</strong> <small>'+esc(r.type)+'</small></td><td>'+esc(r.origin)+'<small> · '+esc(r.source)+'</small></td>'+
  '<td><select data-v7-row="'+i+'"><option value="">未映射（需说明原因）</option>'+attrSet.map(a=>'<option value="'+a.id+'" '+(p.selection[i]===a.id?"selected":"")+'>'+esc(a.name)+' · '+a.id+'</option>').join("")+'</select></td>'+
  '<td>'+esc(p.selection[i]?"待人工复核":"暂无对应逻辑属性")+'</td></tr>').join("")+'</tbody></table></div>':'<div class="v6Warn">还未加载实际来源依赖字段。请先返回“分层物理设计”，选择上游并载入字段。</div>';
  const matched=p.receipt?.mappings?.filter(z=>z.logicalAttributeId).length||0;
  return '<section class="v6Section"><h2>逻辑 → 物理映射 · '+esc(x.layer)+'</h2>'+
  '<div class="v6Meta"><span>逻辑 '+esc(m.name)+' · '+esc(m.id)+' / '+esc(version?.version||"未冻结")+'</span><span>物理 '+esc(x.layer)+' · 来源 '+esc(x.deps.join("、"))+'</span></div>'+
- '<p>逻辑实体/属性是业务身份，物理表/列是技术实现。可以一对多、多对一，不能按字段同名默认为已确认关系；此处仅演示人工审阅。</p>'+
+ '<p>逻辑实体/属性是业务身份，物理表/列是技术实现。可以一对多、多对一，不能按字段同名默认为已确认关系；此处仅演示人工审阅。</p>'+selectModel+
  (p.stale||p.logicalVersion&&p.logicalVersion!==version?.version||p.signature&&p.signature!==v7ScopeSignature(x)?'<div class="v7Pending">逻辑或物理草稿已经变化，上次映射审阅失效。请重新生成候选并确认。</div>':'')+
  '<div class="v6Actions"><button data-v7-candidates="1" '+(!version||!x.loaded?"disabled":"")+'>按当前冻结逻辑与物理来源生成映射候选</button>'+
  '<button class="primary" data-v7-mapconfirm="1" '+(!version||!x.loaded||!actionAllowed()?"disabled":"")+'>确认本次映射草稿（仅审阅）</button></div>'+rowTable+
