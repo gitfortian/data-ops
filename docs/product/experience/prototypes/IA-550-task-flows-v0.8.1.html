@@ -1660,7 +1660,7 @@ function v7AddRelation(){
 }
 function v7Design(layer){
  v6.layer=layer;v6.modelMode="layered";v7.view="physical";
- if(layer!=="ODS"){v7.targetByLayer[layer]=v7Current().id;delete v7.mapping[layer];if(v6.layers[layer])v6.layers[layer].checked=false}
+ if(layer!=="ODS"){v7.targetByLayer[layer]=v7Current().id;delete v7.mapping[layer];if(v6.layers[layer])v6.layers[layer].checked=false;const t=v81Current(layer);t.logicalId=v7Current().id;t.mapping=null}
  renderMain();
 }
 function v7ScopeSignature(x){return JSON.stringify({projectId:v81.project,physicalModelId:v81Current(x.layer).id,layer:x.layer,deps:x.deps.map(d=>[d,v6Sources[d].version]),grain:x.grain,scd:x.scd,metric:x.metric,consumer:x.consumer,
@@ -1765,9 +1765,10 @@ function v7Model(){
  '<div class="v7Context"><strong>业务桥梁</strong>：'+esc(v7ForLayer().name)+' · '+esc(v7Latest(v7ForLayer())?.version||"逻辑草稿待冻结")+' → '+layer+' 物理候选 → 字段级映射与差异审阅。<p class="micro">非 ODS 的业务模型默认引用已有逻辑版本；DWS/ADS 可复用逻辑/指标与消费合同，不必新建重复实体。</p></div>';
  const returnTo=v6.origin?'<div class="v6Hint">来自协作事项 '+esc(v6.origin.id)+' <button data-v6-return="1">← 返回需求与协作</button></div>':'';
  const body=active==="legacy"?v6LegacyModel(true):active==="physical"?v6LayerModel(true):active==="mapping"?v7MappingPage():v7LogicalPage();
+ const onward=active==="physical"?'<div class="v81Modelbar"><h2>从当前模型设计继续数据生产</h2><p>设计版本与可执行任务不是同一种状态。只有当前模型保存快照一致、无待解决映射，才能形成带目标模型 ID 的交接上下文。</p><button class="btn primary" data-v81-dev="1" '+(!v8CanHandoff()?"disabled":"")+'>带当前模型版本进入 DataDev →</button></div>':"";
  return pageHead("模型工作台 · 业务逻辑到分层物理","先设计业务实体、属性、关系、粒度及逻辑版本，再对接 DWD/DIM 等物理结构；ODS 保留贴源直建。","IA-550 / LOGICAL MODEL BRIDGE v0.8.1")+
  returnTo+nav+current+(["physical","mapping"].includes(active)?v81TargetStrip():"")+(active==="physical"&&!ods?'<div class="v6Actions"><button data-v7-mode="mapping">审阅逻辑→物理字段映射 →</button></div>':'')+
- body;
+ body+onward;
 }
 
 
@@ -1887,6 +1888,12 @@ function v81HomeStory(){
  '<button class="btn" data-v81-ai="review">标记为“已人工审阅”（仅会话）</button> '+(v81.aiAnswers.review?"人工审阅记录已存在；没有修改原域对象":"尚未人工审阅")+
  '<button class="btn" data-v81-route="model">交给模型专家继续 →</button></div>':
  v8.mode==="ask"?'<div class="v81RoleNote"><b>当前只能追问/拒答</b><p>没有授权查询响应、源版本、使用审计；因此不生成“订单销售额”等结果，也不提供绕过服务的自由 SQL。</p><button class="btn" data-v81-route="product">核对发布合同与访问状态 →</button></div>':"")+'</section>';
+}
+function v81ProductIssue(){
+ const prod=v8Products[v8.product];
+ v6.collab.view="issue";v6.collab.source={id:prod.key,version:prod.version,kind:prod.type};
+ v6.collab.draftTitle="反馈 "+prod.name+" 的消费问题";v6.collab.draftDetail="";
+ go("collab");
 }
 function v81Route(route){
  if(["logical","physical"].includes(route)){v7HomeJump(route);return}
@@ -2037,6 +2044,7 @@ document.addEventListener("click",function(ev){
  if(el.dataset.v7Homeitem){const r=v6.records.find(x=>x.id===el.dataset.v7Homeitem);if(r){v6.collab.view=r.type;v6.collab.selected=r.id;go("collab")}return}
  if(el.dataset.v7Homeflow){v7HomeJump(el.dataset.v7Homeflow,el.dataset.v7Homelayer,el.dataset.v7Homelogical);return}
  if(el.dataset.v7Newlogic){v7NewLogical();return}
+ if(el.dataset.v81Resume){v81SwitchTarget(el.dataset.v81Resume);go("model");v7.view="physical";renderMain();return}
  if(el.dataset.v81Target){v81SwitchTarget(el.dataset.v81Target);return}
  if(el.dataset.v81New){v81AddTarget();return}
  if(el.dataset.v81Dev){v81DevelopmentPackage();return}
@@ -2249,7 +2257,7 @@ function v8Home(){
  const todo=rows.map(r=>'<button class="v8Row" data-v7-homeitem="'+esc(r.id)+'"><span><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+' · '+esc(r.status)+' · 下一步 '+esc(r.next)+'</small></span><em>继续 →</em></button>').join('');
  const currentModel=v7Current();
  const recent='<button class="v8Row" data-v7-homeflow="logical" data-v7-homelogical="'+esc(currentModel.id)+'"><span><strong>'+esc(currentModel.name)+'</strong><small>'+esc(currentModel.id)+' · 当前修订 '+currentModel.rev+' · '+esc(v7Latest(currentModel)?.version||"未冻结")+'</small></span><em>继续 →</em></button>'+
-  Object.values(v6.layers).filter(x=>x.loaded).map(x=>'<button class="v8Row" data-v7-homeflow="physical" data-v7-homelayer="'+x.layer+'"><span><strong>'+x.layer+' 物理设计样例</strong><small>'+x.rows.length+' 列 · '+(x.dirty?'本次尚未保存':'本地已保存')+' · '+esc(x.saved.at(-1)?.id||"无保存版本")+'</small></span><em>继续 →</em></button>').join('');
+  Object.values(v81.byId).filter(t=>t.state.loaded).map(t=>'<button class="v8Row" data-v81-resume="'+t.id+'"><span><strong>'+esc(t.title)+'</strong><small>'+esc(t.id)+' · '+t.state.rows.length+' 列 · '+(t.state.dirty?'本次尚未保存':'已保存设计草稿')+' · '+esc(t.state.saved.at(-1)?.id||"无保存版本")+'</small></span><em>继续精确目标 →</em></button>').join('');
  return '<div class="v8Home"><div class="v8Demo">可交互原型 v0.8.1 · Retail Analytics 示例项目 · 数据与动作均为模拟</div>'+
   '<div class="v8Intro"><div><h1>从当前工作，找到下一步</h1><p>建设、指标、消费、异常恢复、安全、AI 协作与问答、主数据是独立故事入口。每条入口有自己的证据、决策及失败态。</p></div></div>'+
   '<div class="v8Modes" aria-label="当前工作目标">'+Object.entries(config).map(([k,d])=>'<button data-v8-mode="'+k+'" aria-pressed="'+(v8.mode===k)+'">'+d.label+'</button>').join('')+'</div>'+
@@ -2272,7 +2280,7 @@ function v8Consumption(){
   '<div class="v6Actions"><button class="primary" data-v8-consume="1" '+(!usable?'disabled':'')+'>模拟'+(p.type==='Dataset'?'预览 Dataset':'调用 Service')+'</button>'+(v8.access==='request'?'<button data-v8-request="1">查看申请所需信息</button>':'')+'</div>'+
   (!usable?'<p role="status">'+(v8.access==='unavailable'?'无法读取访问判定，请重试。不能解释为拒绝。':v8.access!=='allowed'?'当前访问条件不满足，请联系数据负责人。':'缺少可用运行证据，请联系生产负责人或重试。')+'</p>':'<p>演示动作生成本地模拟回执；正式验收需真实响应、来源审计和 Usage Evidence。</p>')+
   '<details><summary>来源与专业回链</summary><p>'+esc(p.producer)+'</p><button class="btn" data-page="'+(v8.product==='dataset'?'dataset':'api')+'">查看原域入口 →</button><p>专业入口仍为占位；原型不借此声称真实生产链已闭环。</p></details></section>'+
-  '<aside><section class="v8Panel"><h2>使用事实分开查看</h2><div class="v8Readiness"><b>订阅：未连接正式记录</b><span>声明依赖不等于访问授权或实际使用</span></div><div class="v8Readiness"><b>实际 Usage：'+(v8.usage==='unavailable'?'暂不可读取，数量未知':'无真实证据，当前仅演示本地回执')+'</b><span>不从模拟查询自动推导真实 Usage</span></div><div class="v8Readiness"><b>本地模拟回执：'+v8.receipts.filter(r=>r.key===p.key).length+'</b><span>只用于原型操作验证</span></div><button class="btn" data-v7-homeitem="ISS-201">查看数据问题反馈样例 →</button></section>'+
+  '<aside><section class="v8Panel"><h2>使用事实分开查看</h2><div class="v8Readiness"><b>订阅：未连接正式记录</b><span>声明依赖不等于访问授权或实际使用</span></div><div class="v8Readiness"><b>实际 Usage：'+(v8.usage==='unavailable'?'暂不可读取，数量未知':'无真实证据，当前仅演示本地回执')+'</b><span>不从模拟查询自动推导真实 Usage</span></div><div class="v8Readiness"><b>本地模拟回执：'+v8.receipts.filter(r=>r.key===p.key).length+'</b><span>只用于原型操作验证</span></div><button class="btn" data-v81-productissue="1">反馈当前合同的问题（携带 ProductKey/版本） →</button></section>'+
   '<section class="v8Panel"><details><summary>原型评审工具 · 状态预览</summary><label class="v6Field">运行证据<select id="v8-runtime">'+Object.entries(runtimeLabels).map(([k,n])=>'<option value="'+k+'" '+(v8.runtime===k?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label class="v6Field">访问判定<select id="v8-access">'+Object.entries(accessLabels).map(([k,n])=>'<option value="'+k+'" '+(v8.access===k?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label class="v6Field">Usage 读取<select id="v8-usage"><option value="ready">仅本地示例回执</option><option value="unavailable" '+(v8.usage==='unavailable'?'selected':'')+'>暂不可用</option></select></label></details></section></aside></div>';
 }
 function v8Consume(){
@@ -2282,6 +2290,7 @@ function v8Consume(){
 }
 document.addEventListener('click',function(ev){
  const e=ev.target.closest('button');if(!e)return;
+ if(e.dataset.v81Productissue){v81ProductIssue();return}
  if(e.dataset.v81Route){v81Route(e.dataset.v81Route);return}
  if(e.dataset.v81Ai){v81.aiAnswers[e.dataset.v81Ai]=true;renderMain();return}
  if(e.dataset.v8Mode){v8.mode=e.dataset.v8Mode;renderMain();return}
