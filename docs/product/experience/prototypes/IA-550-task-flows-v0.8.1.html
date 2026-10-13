@@ -1431,6 +1431,7 @@ function v6CurrentCase(){v6InitCases();return v6.records.find(r=>r.id===v6.colla
 function v6Log(r,what){r.log.push({who:v6RoleNames[v6.collab.role],what:what+" · 引用："+(v6.collab.reference||"当前记录")});v6.collab.note="";}
 function v6NeedsRole(...roles){if(roles.includes(v6.collab.role))return true;toast("本操作由指定协作职责执行；可切换演示职责体验");return false}
 function v6CaseAct(action){
+ if(v6.collab.creating){toast("请先提交或取消当前反馈草稿，不能修改已有问题");return}
  const r=v6CurrentCase(),c=v6.collab,notes=(c.note||"").trim();
  const reason=()=>{if(notes.length<5){toast("需补充至少 5 字原因或证据，不可无理由提交");return false}return true};
  if(action==="comment"){
@@ -1487,8 +1488,8 @@ function v6CollabCreate(){
  if(!["business","owner","analyst","coordinator"].includes(c.role)){toast("当前职责不能代表业务提交新的协作事项");return}
  if((c.draftTitle||"").trim().length<4||(c.draftDetail||"").trim().length<5){toast("至少填写标题与明确业务期望");return}
  const type=c.view==="issue"?"issue":c.view==="caliber"?"caliber":"demand",id=(type==="issue"?"ISS":type==="caliber"?"CAL":"REQ")+"-LOCAL-"+(v6.records.length+1);
- const x={id,type,title:c.draftTitle.trim(),expect:c.draftDetail.trim(),accept:"受理时共同补齐验收/复核标准",status:type==="issue"?"待确认":type==="caliber"?"待研发草案":"待受理",owner:"待受理",next:type==="caliber"?"研发负责人":"需求协调人",requester:v6RoleNames[c.role],version:c.source?.version||"待明确",source:c.source?.id||null,due:"待评估",planned:"待评估",tasks:[],deliveries:[],log:[{who:v6RoleNames[c.role],what:"创建本地协作记录"+(c.source?"，关联来源 "+c.source.id+" "+c.source.version:"")}]};
- v6.records.push(x);c.selected=id;c.draftTitle="";c.draftDetail="";c.source=null;renderMain();
+ const x={id,type,title:c.draftTitle.trim(),expect:c.draftDetail.trim(),sourceKind:c.source?.kind||null,sourceVersion:c.source?.version||null,accept:"受理时共同补齐验收/复核标准",status:type==="issue"?"待确认":type==="caliber"?"待研发草案":"待受理",owner:"待受理",next:type==="caliber"?"研发负责人":"需求协调人",requester:v6RoleNames[c.role],version:c.source?.version||"待明确",source:c.source?.id||null,due:"待评估",planned:"待评估",tasks:[],deliveries:[],log:[{who:v6RoleNames[c.role],what:"创建本地协作记录"+(c.source?"，关联来源 "+c.source.id+" "+c.source.version:"")}]};
+ v6.records.push(x);c.selected=id;c.creating=false;c.draftTitle="";c.draftDetail="";c.source=null;renderMain();
 }
 function v6ToPro(domain){
  const r=v6CurrentCase();v6.origin={id:r.id,role:v6.collab.role,view:v6.collab.view,selected:r.id,domain};
@@ -1497,7 +1498,7 @@ function v6ToPro(domain){
 }
 function v6Return(){const from=v6.origin;if(!from)return;v6.origin=null;v6.collab.selected=from.selected;v6.collab.view=from.view;v6.collab.role=from.role;go("collab")}
 function v6ReportFrom(page){
- v6.collab.view="issue";v6.collab.source={id:v3Selected(page)?.[4]||page,version:"当前页面选择的样例版本",kind:page};
+ v6.collab.view="issue";v6.collab.creating=true;v6.collab.source={id:v3Selected(page)?.[4]||page,version:"当前页面选择的样例版本",kind:page};
  v6.collab.draftTitle="反馈当前"+nameOf(page)+"的数据问题";v6.collab.draftDetail="";
  v6.origin=null;go("collab");
 }
@@ -1506,7 +1507,9 @@ function v6ActionButton(action,title,roles,disabled){
  return '<button data-v6-action="'+action+'" '+(!roleOk||disabled?"disabled":"")+' title="'+(roleOk?"":"请切换对应协作职责")+'">'+title+'</button>';
 }
 function v6Collab(){
- v6InitCases();const c=v6.collab,r=v6CurrentCase(),types=[["demand","数据需求"],["issue","数据问题"],["caliber","口径确认"]];
+ v6InitCases();const c=v6.collab;
+ if(c.creating&&c.view==="issue")return v81IssueDraft();
+ const r=v6CurrentCase(),types=[["demand","数据需求"],["issue","数据问题"],["caliber","口径确认"]];
  const viewItems=v6.records.filter(x=>x.type===c.view),actions=[];
  if(r.type==="demand"){
   actions.push(v6ActionButton("accept","受理需求",["coordinator"],r.status!=="待受理"));
@@ -1890,10 +1893,28 @@ function v81HomeStory(){
  '<button class="btn" data-v81-route="model">交给模型专家继续 →</button></div>':
  v8.mode==="ask"?'<div class="v81RoleNote"><b>当前只能追问/拒答</b><p>没有授权查询响应、源版本、使用审计；因此不生成“订单销售额”等结果，也不提供绕过服务的自由 SQL。</p><button class="btn" data-v81-route="product">核对发布合同与访问状态 →</button></div>':"")+'</section>';
 }
+
+function v81IssueDraft(){
+ const c=v6.collab,src=c.source,old=v6.records.filter(x=>x.type==="issue"&&x.source===src?.id&&x.sourceVersion===src?.version&&x.sourceKind===src?.kind);
+ return pageHead("反馈数据产品使用问题 · 新建草稿","提交前此处只允许编辑新的反馈；旧指标问题不在主工作区，也不能被评论或处置操作修改。","GM-J3-09 / ISSUEDRAFT",
+ '<button class="btn" data-v81-feedback-return="1">← 返回 '+esc(src?.kind||"数据产品")+' 合同</button>')+
+ '<div class="v6Grid"><section class="v6Section" aria-label="当前新问题草稿"><h2>当前操作：新建数据问题（尚未提交）</h2>'+
+ '<div class="v6Hint"><b>精确来源合同</b> · '+esc(src?.kind||"未知类型")+' · '+esc(src?.id||"未选定")+' · '+esc(src?.version||"未知版本")+'</div>'+
+ '<p>首次反馈会建立独立 ISS-LOCAL 单据；点击提交之前不会修改任何已有问题时间线或运行状态。</p>'+
+ '<label class="v6Field">业务标题<input id="v6-newtitle" value="'+esc(c.draftTitle||"")+'" placeholder="描述实际异常与业务影响"></label>'+
+ '<label class="v6Field">实际异常、时间和期望结果<textarea id="v6-newdetail" placeholder="例如接口超时、期望可用时间及影响范围">'+esc(c.draftDetail||"")+'</textarea></label>'+
+ '<div class="v6Actions"><button class="primary" data-v6-create="1">提交为独立新问题（本地示例）</button>'+
+ '<button data-v81-feedback-cancel="1">取消本次草稿</button>'+
+ '<button data-v81-feedback-return="1">不提交，返回原合同</button></div></section>'+
+ '<aside class="v6Side"><section class="v6Section"><h2>此合同关联的已有问题 · '+old.length+'</h2>'+
+ (old.length?old.map(x=>'<button class="v6Item" data-v81-feedback-existing="'+esc(x.id)+'"><strong>'+esc(x.title)+'</strong><small>'+esc(x.id)+' · '+esc(x.status)+' · '+esc(x.version)+'</small></button>').join(""):'<p class="micro">当前精确对象和版本没有已关联问题；不会默认选择其他指标问题。</p>')+
+ '<div class="v81Trace">已有问题只有在明确选择后才能打开；仅同 ProductKey、类型和版本的记录出现在这里。</div></section></aside></div>';
+}
+
 function v81ProductIssue(){
  const prod=v8Products[v8.product];
- v6InitCases();v6.collab.view="issue";v6.collab.selected=v6.records.find(r=>r.type==="issue")?.id||"ISS-201";v6.collab.source={id:prod.key,version:prod.version,kind:prod.type};
- v6.collab.draftTitle="反馈 "+prod.name+" 的消费问题";v6.collab.draftDetail="";
+ v6InitCases();v6.collab.view="issue";v6.collab.creating=true;v6.collab.feedbackOrigin={kind:prod.type,key:prod.key,version:prod.version,product:v8.product};v6.collab.source={id:prod.key,version:prod.version,kind:prod.type};
+ v6.collab.draftTitle="反馈 "+prod.name+" 的消费问题";v6.collab.draftDetail="";v6.collab.note="";
  go("collab");
 }
 function v81Route(route){
@@ -2077,6 +2098,9 @@ document.addEventListener("click",function(ev){
  if(el.dataset.v6Case){v6.collab.selected=el.dataset.v6Case;v6.collab.note="";renderMain();return}
  if(el.dataset.v6Open){const obj=v6.records.find(r=>r.id===el.dataset.v6Open);if(obj){v6.collab.selected=obj.id;v6.collab.view=obj.type;go("collab")}return}
  if(el.dataset.v6Action){v6CaseAct(el.dataset.v6Action);return}
+ if(el.dataset.v81FeedbackCancel){v6.collab.creating=false;v6.collab.source=null;v6.collab.draftTitle="";v6.collab.draftDetail="";renderMain();return}
+ if(el.dataset.v81FeedbackReturn){v6.collab.creating=false;v8.product=v6.collab.feedbackOrigin?.product||v8.product;go("product");return}
+ if(el.dataset.v81FeedbackExisting){const r=v6.records.find(x=>x.id===el.dataset.v81FeedbackExisting);if(r){v6.collab.creating=false;v6.collab.selected=r.id;v6.collab.view="issue";renderMain()}return}
  if(el.dataset.v6Create){v6CollabCreate();return}
  if(el.dataset.v6Pro){v6ToPro(el.dataset.v6Pro);return}
  if(el.dataset.v6Report){v6ReportFrom(el.dataset.v6Report);return}
