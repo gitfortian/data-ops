@@ -216,7 +216,7 @@ test('v0.5-03: refund and member field require explicit target, no order ODS mut
  a.click({select:'3'});a.click({v3Action:'standard-attach'});
  const before={...a.v4.store.model['PM-701']};
  assert.match(a.view(),/确认目标模型与字段映射/);
- assert.equal(a.v4.store.model['PM-701'].field,before.field);
+ assert.equal(a.v4.store.model['PM-701']?.field,before.field);
  a.change('v5-target','new');a.change('v5-attribute','member_id');
  a.click({v5Rel:'confirm'});
  assert.equal(a.v4.active.model,'DEMO-PM-REFUND');
@@ -227,9 +227,9 @@ test('v0.5-04: read-only role can review relation but cannot apply model mutatio
  const a=build();a.change('roleSwitch','reader');
  a.click({v3Action:'process-next'});a.click({v3Action:'standard-attach'});
  a.change('v5-target','PM-701');
- const before=a.v4.store.model['PM-701'].rev;
+ const before=a.v4.store.model['PM-701']?.rev;
  a.click({v5Rel:'confirm'});
- assert.equal(a.v4.store.model['PM-701'].rev,before);
+ assert.equal(a.v4.store.model['PM-701']?.rev,before);
  assert.match(a.view(),/当前只读/);
 });
 
