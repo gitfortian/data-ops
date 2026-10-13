@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-13",
+  "baseline": "f3e1d9b0028e830c39f01c9fd7f75367be9cb92b",
+  "scope": "Local static prototype only; no backend or production E2E",
+  "viewportAudit": [
+    {
+      "page": "home",
+      "width": 320,
+      "client": 305,
+      "main": 305,
+      "scroll": 305
+    },
+    {
+      "page": "home",
+      "width": 390,
+      "client": 375,
+      "main": 375,
+      "scroll": 375
+    },
+    {
+      "page": "home",
+      "width": 768,
+      "client": 753,
+      "main": 493,
+      "scroll": 753
+    },
+    {
+      "page": "home",
+      "width": 1024,
+      "client": 1009,
+      "main": 731,
+      "scroll": 1009
+    },
+    {
+      "page": "home",
+      "width": 1366,
+      "client": 1351,
+      "main": 1045,
+      "scroll": 1351
+    },
+    {
+      "page": "home",
+      "width": 1440,
+      "client": 1425,
+      "main": 1119,
+      "scroll": 1425
+    },
+    {
+      "page": "model",
+      "width": 320,
+      "client": 305,
+      "main": 305,
+      "scroll": 305
+    },
+    {
+      "page": "model",
+      "width": 390,
+      "client": 375,
+      "main": 375,
+      "scroll": 375
+    },
+    {
+      "page": "model",
+      "width": 768,
+      "client": 753,
+      "main": 493,
+      "scroll": 753
+    },
+    {
+      "page": "model",
+      "width": 1024,
+      "client": 1009,
+      "main": 731,
+      "scroll": 1009
+    },
+    {
+      "page": "model",
+      "width": 1366,
+      "client": 1351,
+      "main": 1045,
+      "scroll": 1351
+    },
+    {
+      "page": "model",
+      "width": 1440,
+      "client": 1425,
+      "main": 1119,
+      "scroll": 1425
+    },
+    {
+      "page": "product",
+      "width": 320,
+      "client": 305,
+      "main": 305,
+      "scroll": 305
+    },
+    {
+      "page": "product",
+      "width": 390,
+      "client": 375,
+      "main": 375,
+      "scroll": 375
+    },
+    {
+      "page": "product",
+      "width": 768,
+      "client": 753,
+      "main": 493,
+      "scroll": 753
+    },
+    {
+      "page": "product",
+      "width": 1024,
+      "client": 1009,
+      "main": 731,
+      "scroll": 1009
+    },
+    {
+      "page": "product",
+      "width": 1366,
+      "client": 1366,
+      "main": 1060,
+      "scroll": 1366
+    },
+    {
+      "page": "product",
+      "width": 1440,
+      "client": 1440,
+      "main": 1134,
+      "scroll": 1440
+    }
+  ],
+  "manual": [
+    "Dataset mock preview; access unavailable and forbidden deny mock action",
+    "DWD incomplete mapping cannot confirm; deferred explanation allows design save but blocks handoff",
+    "Reader disables mapping inputs and candidate actions",
+    "Keyboard ArrowUp preserves select focus and expanded details",
+    "Dialog traps Tab and Escape returns focus to helpBtn"
+  ],
+  "mappingAt390": {
+    "client": 375,
+    "scroll": 375,
+    "table": 940,
+    "region": 325
+  }
+}
