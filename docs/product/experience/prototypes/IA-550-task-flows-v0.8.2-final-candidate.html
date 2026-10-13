@@ -1492,7 +1492,8 @@ function v6CaseAct(action){
 }
 function v6CollabCreate(){
  const c=v6.collab;
- if(!["business","owner","analyst","coordinator"].includes(c.role)){toast("当前职责不能代表业务提交新的协作事项");return}
+ const actionKind=c.view==="issue"?"issue":c.view==="caliber"?"caliber":"demand";
+ if(actionKind!=="issue"&&!["business","owner","analyst","coordinator"].includes(c.role)){toast("当前职责不能代表业务提交新的协作事项");return}
  if((c.draftTitle||"").trim().length<4||(c.draftDetail||"").trim().length<5){toast("至少填写标题与明确业务期望");return}
  const type=c.view==="issue"?"issue":c.view==="caliber"?"caliber":"demand",id=(type==="issue"?"ISS":type==="caliber"?"CAL":"REQ")+"-LOCAL-"+(v6.records.length+1);
  const x={id,type,title:c.draftTitle.trim(),expect:c.draftDetail.trim(),sourceKind:c.source?.kind||null,sourceVersion:c.source?.version||null,accept:"受理时共同补齐验收/复核标准",status:type==="issue"?"待确认":type==="caliber"?"待研发草案":"待受理",owner:"待受理",next:type==="caliber"?"研发负责人":"需求协调人",requester:v6RoleNames[c.role],version:c.source?.version||"待明确",source:c.source?.id||null,due:"待评估",planned:"待评估",tasks:[],deliveries:[],log:[{who:v6RoleNames[c.role],what:"创建本地协作记录"+(c.source?"，关联来源 "+c.source.id+" "+c.source.version:"")}]};
@@ -2130,7 +2131,7 @@ document.addEventListener("click",function(ev){
  if(el.dataset.v6Open){const obj=v6.records.find(r=>r.id===el.dataset.v6Open);if(obj){v6.collab.selected=obj.id;v6.collab.view=obj.type;go("collab")}return}
  if(el.dataset.v6Action){v6CaseAct(el.dataset.v6Action);return}
  if(el.dataset.v81FeedbackCancel){v6.collab.creating=false;v6.collab.source=null;v6.collab.draftTitle="";v6.collab.draftDetail="";renderMain();return}
- if(el.dataset.v81FeedbackReturn){v6.collab.creating=false;v8.product=v6.collab.feedbackOrigin?.product||v8.product;go("product");return}
+ if(el.dataset.v81FeedbackReturn){if(v6.collab.creating){v6.collab.source=null;v6.collab.draftTitle="";v6.collab.draftDetail=""}v6.collab.creating=false;v8.product=v6.collab.feedbackOrigin?.product||v8.product;go("product");return}
  if(el.dataset.v81FeedbackExisting){const r=v6.records.find(x=>x.id===el.dataset.v81FeedbackExisting);if(r){v6.collab.creating=false;v6.collab.selected=r.id;v6.collab.view="issue";renderMain()}return}
  if(el.dataset.v6Create){v6CollabCreate();return}
  if(el.dataset.v6Pro){v6ToPro(el.dataset.v6Pro);return}
