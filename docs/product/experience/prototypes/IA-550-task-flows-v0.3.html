@@ -327,6 +327,110 @@ dom("mobileToggle").addEventListener("click",function(){dom("rail").classList.ad
 dom("dialogShade").addEventListener("click",function(e){if(e.target===dom("dialogShade")&&!state.editDirty)closeDialog()});dom("paletteShade").addEventListener("click",function(e){if(e.target===dom("paletteShade"))closePalette()});
 window.addEventListener("hashchange",function(){var id=decodeURIComponent(window.location.hash.replace(/^#/,""));if((paths[id]||labels[id]||toolInfo[id]||domains.some(function(d){return d.tools.some(function(t){return t[0]===id})}))&&state.page!==id){state.editDirty=false;state.page=id;state.lastMenu=domainOf(id).id;state.query="";state.status="ready";render()}});
 var start=decodeURIComponent(window.location.hash.replace(/^#/,""));if(paths[start]||labels[start]||toolInfo[start]){state.page=start;state.lastMenu=domainOf(start).id}render();
+
+/* ========== IA-550 v0.3 task-context model ========== */
+const v3={
+ scope:null, snapshots:[], preview:false, drawer:false, createMode:"edit",
+ editing:null, storedDrafts:{}, draftsByObject:{}, flowStage:"process",
+ build:{process:"PRC-102",field:"STD-201",model:"PM-701",source:"orders.order_detail",mapField:"order_id",checked:false,fixed:false,version:null},
+ metric:{id:"MET-026",tab:"定义口径",formula:"COUNT(order_id)",filter:"",checked:false,impactSeen:false,published:false,release:null,version:"v1.2 · 草稿",prior:"COUNT(order_id)"},
+ queueId:"GOV-301",queueStep:"evidence",decision:"",transferTo:"",note:"",receipt:null,
+ sort:"priority"
+};
+const v3QueueInfo={
+ "GOV-301":{owner:"资产管理员 · 王倩",priority:"P1",age:"等待 18 小时",subject:"AST-208 · ods_order_detail",why:"来源表已发现，但资产责任人及业务分类待确认，阻断上架预检。",kind:"盘点与上架",before:"责任人：缺失；资产目录：待分类",after:"建议：订单主题 / 交易资产；责任人待复核",required:"确认业务分类、责任人；重新执行上架预检",risk:"不能把 PENDING 资产展示为已上架"},
+ "GOV-309":{owner:"数据管家 · 李宁",priority:"P2",age:"等待 6 小时",subject:"AST-233 · 会员主数据",why:"资产业务负责人申请修改分级，现有有效分类需要人工批准。",kind:"资产变更",before:"数据分级：内部",after:"申请分级：敏感",required:"审查申请理由、变更影响及审批人",risk:"提交申请不表示策略即时生效"},
+ "GOV-314":{owner:"元数据管理员 · 陈帆",priority:"P1",age:"等待 27 小时",subject:"AST-240 · dim_product",why:"已受理来源对账请求，尚缺完成确认和目标映射差异处理。",kind:"来源对账",before:"来源字段：product_code VARCHAR(32)",after:"目标字段：product_code VARCHAR(64)",required:"核验字段长度变更、确认受影响对象及对账完成证据",risk:"ACCEPTED 是已受理，不等于 reconcile 成功"},
+ "GOV-320":{owner:"元数据管理员 · 陈帆",priority:"P0",age:"等待 2 小时",subject:"ENT-604 · ods_return_log",why:"上游来源字段发生变化且冻结任务范围不一致，需要判断数据接入影响。",kind:"结构漂移",before:"源表：return_amount DECIMAL(12,2)",after:"当前来源：return_amount DECIMAL(18,2)",required:"确认当前指纹及历史 Run 差异、记录影响与处置结论",risk:"超时或未知状态不可伪装采集成功"}
+};
+function v3Rows(id){
+ let rows=(sample[id]||[]).map((r,i)=>({r,i}));
+ if(id==="asset")rows=rows.filter(x=>state.view==="entity"?x.r[2]==="技术实体":x.r[2]==="治理资产");
+ if(id==="governance"&&state.queue!=="all")rows=rows.filter(x=>x.r[1].includes(state.queue));
+ const tree=state.tree||"";
+ const treeFilter={
+  "交易域":"订单|支付|退款","售后服务":"退款|退货","用户行为域":"浏览|会员","供应链域":"库存|商品",
+  "交易与订单":"订单|支付","客户与会员":"会员|客户","商品管理":"商品|product",
+  "基础标识":"编号|标识","交易订单":"订单|支付","金额计量":"金额","时间与日期":"时间",
+  "订单主题":"订单|支付","交易指标":"订单|金额","金额指标":"金额","客户主题":"会员|客户"
+ };
+ if(treeFilter[tree]&&["semantic","standard","metric","asset"].includes(id))rows=rows.filter(x=>new RegExp(treeFilter[tree],"i").test(x.r.join(" ")));
+ if(state.filter==="pending")rows=rows.filter(x=>/待|草稿|未|编目|仅已/.test(x.r[3]));
+ if(state.filter==="done")rows=rows.filter(x=>/已保存|已定义|已上架|已执行|已配置/.test(x.r[3]));
+ const q=(state.query||"").trim().toLowerCase();
+ if(q)rows=rows.filter(x=>(x.r.join(" ")+(v3QueueInfo[x.r[4]]?JSON.stringify(v3QueueInfo[x.r[4]]):"")).toLowerCase().includes(q));
+ return rows;
+}
+function v3SyncSelected(id){
+ if(!(id in sample))return;
+ const rows=v3Rows(id);
+ if(!rows.length){state.select[id]=-1;return}
+ const current=state.select[id];
+ if(!rows.some(x=>x.i===current))state.select[id]=rows[0].i;
+ if(id==="governance")v3.queueId=(sample.governance[state.select.governance]||[])[4]||"";
+ if(id==="metric")v3.metric.id=(sample.metric[state.select.metric]||[])[4]||"";
+ if(id==="model")v3.build.model=(sample.model[state.select.model]||[])[4]||"";
+}
+function v3Selected(id){
+ v3SyncSelected(id);
+ const i=state.select[id];
+ return i==null||i<0?null:sample[id][i];
+}
+function v3Table(id){
+ v3SyncSelected(id);
+ const rows=v3Rows(id);
+ if(state.status!=="ready")return statePanel();
+ if(!rows.length)return '<div class="stateArea"><h3>当前筛选无结果</h3><p>已清空对象详情和操作；请调整范围或关键词，避免误操作之前的对象。</p><button class="btn" data-clear="1">清除筛选</button></div>';
+ if(id==="governance")return '<div class="tableScroll"><table class="queueTable"><thead><tr><th>任务 / 影响对象</th><th>责任人</th><th>优先级</th><th>等待时间</th><th>状态</th><th>查看</th></tr></thead><tbody>'+
+  rows.map(x=>{const r=x.r,m=v3QueueInfo[r[4]];return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="queueItemName">'+esc(r[0])+'</span><div class="rowmeta">'+esc(m.subject)+'</div></td><td>'+esc(m.owner)+'</td><td><span class="tag '+(m.priority==="P0"?"danger":m.priority==="P1"?"warn":"blue")+'">'+m.priority+'</span></td><td>'+esc(m.age)+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">处理 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+ return '<div class="tableScroll"><table><thead><tr><th>名称 / 标识</th><th>业务归属</th><th>类别</th><th>真实状态</th><th>操作</th></tr></thead><tbody>'+
+ rows.map(x=>{const r=x.r;return '<tr class="'+(state.select[id]===x.i?"selected":"")+'"><td><span class="rowtitle">'+esc(r[0])+'</span><div class="rowmeta">'+esc(r[4])+'</div></td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+badge(r[3])+'</td><td><button class="link" data-select="'+x.i+'">选中 / 详情 ›</button></td></tr>'}).join("")+'</tbody></table></div>';
+}
+function v3Filters(){return '<div class="filters"><input class="field search" id="localSearch" value="'+esc(state.query||"")+'" placeholder="搜索名称、对象编号或业务归属" aria-label="搜索对象"><select class="field short" id="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option value="pending">待处理</option><option value="done">已确认</option></select></div>'}
+function v3Card(title,subtitle,inner,footer){return '<section class="card"><div class="listhead"><div><strong>'+esc(title)+'</strong><p>'+esc(subtitle||"")+'</p></div></div>'+(inner||"")+(footer?'<div class="cardBody">'+footer+'</div>':"")+'</section>'}
+function v3Steps(arr,active,kind){
+ return '<nav class="taskTabs" aria-label="任务步骤">'+arr.map((s,i)=>'<button class="taskStep '+(i===active?"active":i<active?"done":"")+'" data-v3-step="'+kind+':'+i+'"><span class="tick">'+(i<active?"✓":i+1)+'.</span>'+esc(s)+'</button>').join("")+'</nav>';
+}
+function v3Ctx(){
+ if(!v3.scope)return "";
+ return '<div class="contextbar"><div class="hrow"><b>关联范围</b><span>'+esc(v3.scope.label)+' · '+esc(v3.scope.id)+'</span><span class="micro">原页面：'+esc(nameOf(v3.scope.from))+'</span></div><button data-v3-back="1">← 返回原工作</button></div>';
+}
+function v3FlowBar(){
+ return '<div class="compactHead"><div><strong>建设主线 · 业务过程 → 标准字段 → 来源映射 → 校验 → 版本</strong><small style="display:block">所有对象均为示例。每一步必须显示具体目标和反馈，不自动提交生产服务。</small></div><span class="tag blue">演示任务链</span></div>';
+}
+function v3Review(){
+ return '<details style="margin-top:20px" class="card"><summary class="reviewerToggle">原型评审工具 · 角色 / 加载与异常状态预览（非产品界面）</summary><div class="cardBody"><p class="muted">此区只用于设计评审，示例状态不代表真实后端结果。</p>'+stateSwitch()+'</div></details>'
+}
+function v3OpenDrawer(id){
+ const r=v3Selected(id);
+ if(!r){v3CloseDrawer();return}
+ const panel=inspector(id,null);
+ dom("inspectorDrawer").innerHTML='<div class="drawerHeading"><b>对象详情 · '+esc(nameOf(id))+'</b><button class="plainClose" data-v3-close="1" aria-label="关闭对象详情">×</button></div>'+panel.replace('class="card"','class="drawerCard"');
+ dom("inspectorDrawer").classList.add("open");dom("drawerShade").classList.add("open");
+ v3.drawer=true;
+}
+function v3CloseDrawer(){
+ dom("inspectorDrawer").classList.remove("open");dom("drawerShade").classList.remove("open");v3.drawer=false;
+}
+function v3Remember(){
+ const item={page:state.page,query:state.query,tree:state.tree,filter:state.filter,queue:state.queue,view:state.view,selected:state.select[state.page],tab:state.tab[state.page]};
+ if(!v3.snapshots.length||JSON.stringify(v3.snapshots.at(-1))!==JSON.stringify(item))v3.snapshots.push(item);
+}
+function v3Back(){
+ const h=v3.snapshots.pop();if(!h){v3.scope=null;go("semantic",true);return}
+ state.page=h.page;state.query=h.query;state.tree=h.tree;state.filter=h.filter;state.queue=h.queue;state.view=h.view;
+ state.select[h.page]=h.selected;state.tab[h.page]=h.tab;state.status="ready";state.lastMenu=domainOf(h.page).id;
+ v3.scope=null;v3CloseDrawer();renderMain();window.location.hash=h.page;window.scrollTo(0,0);
+}
+function v3Route(page,ref){
+ if(ref){v3Remember();v3.scope={from:state.page,id:ref.id,label:ref.label,relation:ref.relation||""}}
+ go(page);
+}
+function v3ActionLine(buttons,note){
+ return '<div class="actionLine">'+(note?'<span class="secondaryMsg">'+esc(note)+'</span>':"")+buttons+'</div>'
+}
+function v3Hint(text,type){return '<div class="resultPanel '+(type||"")+'"><p>'+esc(text)+'</p></div>'}
+
 })();
 </script>
 </body>
