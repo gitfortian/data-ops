@@ -486,14 +486,83 @@ const v4={
 };
 
 const v5={relation:null,drafts:{},draftCounter:0,activeDraft:null,fields:{"STD-201":"order_id","STD-205":"payment_time","STD-208":"pay_amount","STD-212":"customer_id"}};
+
+const v51={
+ view:"catalog", kind:"ALL", selectedStandard:"CAT-TYPE-VARCHAR",
+ bindingDraft:{},bindings:{},bindingHistory:{},openExisting:null,
+ standards:[
+  {id:"CAT-NAME-01",kind:"NAMING",name:"字段命名规则",code:"snake_case",status:"ENABLED"},
+  {id:"CAT-TYPE-VARCHAR",kind:"TYPE",name:"字符类型标准",code:"VARCHAR",status:"ENABLED"},
+  {id:"CAT-TYPE-DECIMAL",kind:"TYPE",name:"金额类型标准",code:"DECIMAL(18,2)",status:"ENABLED"},
+  {id:"CAT-CODE-MEMBER",kind:"CODE",name:"会员枚举码集",code:"MEMBER_STATUS",status:"ENABLED"},
+  {id:"CAT-UNIT-CNY",kind:"UNIT",name:"人民币单位标准",code:"CNY",status:"ENABLED"},
+  {id:"CAT-CALIBER-PAID",kind:"CALIBER",name:"已支付交易金额口径",code:"PAID_AMOUNT",status:"ENABLED"},
+  {id:"CAT-SEC-PII",kind:"SECURITY",name:"个人信息保护标准",code:"PERSONAL_DATA",status:"ENABLED"}
+ ],
+ fieldRoles:{"STD-201":"PROCESS","STD-205":"PROCESS","STD-208":"METRIC","STD-212":"DIMENSION"},
+ defaults:{
+  "STD-201":{TYPE:"CAT-TYPE-VARCHAR",UNIT:"",CALIBER:"",CODE:"",SECURITY:""},
+  "STD-205":{TYPE:"CAT-TYPE-VARCHAR",UNIT:"",CALIBER:"",CODE:"",SECURITY:""},
+  "STD-208":{TYPE:"CAT-TYPE-DECIMAL",UNIT:"CAT-UNIT-CNY",CALIBER:"CAT-CALIBER-PAID",CODE:"",SECURITY:""},
+  "STD-212":{TYPE:"CAT-TYPE-VARCHAR",UNIT:"",CALIBER:"",CODE:"CAT-CODE-MEMBER",SECURITY:"CAT-SEC-PII"}
+ }
+};
+function v51NewModelId(rel){
+ return rel.process==="PRC-103"?"DEMO-PM-REFUND":rel.field==="STD-212"?"DEMO-PM-MEMBER":"DEMO-PM-NEW-"+(sample.model.length+1);
+}
+function v51Binding(fieldId){
+ return v51.bindings[fieldId]||(v51.bindings[fieldId]={...(v51.defaults[fieldId]||{TYPE:"",UNIT:"",CALIBER:"",CODE:"",SECURITY:""})});
+}
+function v51BindDraft(fieldId){
+ return v51.bindingDraft[fieldId]||(v51.bindingDraft[fieldId]={...v51Binding(fieldId)});
+}
+function v51ValidBinding(fieldId,values){
+ const role=v51.fieldRoles[fieldId]||"PROCESS";
+ for(const kind of ["TYPE",...(role==="METRIC"?["UNIT"]:[])]){
+  const standard=v51.standards.find(x=>x.id===values[kind]);
+  if(!standard||standard.kind!==kind||standard.status!=="ENABLED")return kind+" 标准必需且须为有效标准";
+ }
+ for(const kind of ["TYPE","UNIT","CALIBER","CODE","SECURITY"]){
+  if(!values[kind])continue;
+  const st=v51.standards.find(x=>x.id===values[kind]);
+  if(!st||st.kind!==kind||st.status!=="ENABLED")return kind+" 引用失效或与类别不匹配";
+ }
+ if(role!=="METRIC"&&(values.UNIT||values.CALIBER))return "非 METRIC 角色不承接单位/口径默认引用";
+ if(role!=="DIMENSION"&&(values.CODE||values.SECURITY))return "仅 DIMENSION 角色可引用此处码值/安全标准";
+ return "";
+}
+function v51SaveBinding(){
+ const r=v3Selected("standard");if(!r||!actionAllowed())return;
+ const id=r[4],draft=v51BindDraft(id),issue=v51ValidBinding(id,draft);
+ if(issue){toast(issue);return}
+ const old=v51Binding(id);
+ const changed=["TYPE","UNIT","CALIBER","CODE","SECURITY"].some(k=>old[k]!==draft[k]);
+ if(!changed){toast("当前标准引用与上次保存一致");return}
+ v51.bindings[id]={...draft};
+ const list=v51.bindingHistory[id]||(v51.bindingHistory[id]=[]);
+ list.push(Object.freeze({revision:list.length+1,fieldId:id,bindings:{...draft},date:new Date().toLocaleString("zh-CN")}));
+ toast("已记录标准字段与数据标准的本地绑定草稿；未写入生产 Semantic");
+ renderMain();
+}
+function v51ModelAlreadyExists(){
+ return v5.relation?.target==="new"&&sample.model.some(x=>x[4]===v51NewModelId(v5.relation));
+}
+function v51OpenExisting(){
+ const id=v51NewModelId(v5.relation||{});
+ const i=sample.model.findIndex(x=>x[4]===id);if(i<0)return;
+ v51.openExisting=null;v5.relation=null;
+ v4SaveActive("model");v4.active.model=null;state.select.model=i;
+ v4.pending=null;state.tab.model="来源映射";v4Apply("model",i);renderMain();
+}
 function v5StageProcess(){
  const r=v3Selected("semantic");if(!r)return;
  v5.relation={process:r[4],processName:r[0],field:null,fieldName:null,target:"",attribute:"",confirmed:false};
+ v51.view="library";
  v3Route("standard",{id:r[4],label:r[0],relation:"查看业务过程适用标准"});
 }
 function v5StageStandard(){
  const r=v3Selected("standard");if(!r)return;
- const old=v5.relation||{process:null,processName:null};
+ const old=(v3.scope?.from==="semantic"&&v5.relation?.process)?v5.relation:{process:null,processName:null};
  v5.relation={...old,field:r[4],fieldName:r[0],target:"",attribute:v5.fields[r[4]]||"",confirmed:false};
  v3Route("model",{id:r[4],label:r[0],relation:"选择目标模型，尚未应用"});
 }
@@ -527,7 +596,8 @@ function v5ApplyRelation(){
  if(!rel||!actionAllowed()||!rel.target||!rel.attribute?.trim()||v5Conflict(rel,rel.target))return;
  let id=rel.target;
  if(id==="new"){
-  id=rel.process==="PRC-103"?"DEMO-PM-REFUND":rel.field==="STD-212"?"DEMO-PM-MEMBER":"DEMO-PM-NEW-"+(sample.model.length+1);
+  id=v51NewModelId(rel);
+  if(sample.model.some(x=>x[4]===id)){v51.openExisting=id;renderMain();return}
   if(!sample.model.some(x=>x[4]===id)){
    sample.model.push([rel.process==="PRC-103"?"ods_refund_detail":rel.field==="STD-212"?"dim_member":"new_business_model","新建 · 尚未绑定来源","物理","草稿",id]);
    v4.modelTemplates[id]={source:"未绑定来源",mapField:rel.attribute,process:rel.process||"",field:rel.field||"",issue:"新模型需要验证来源及业务粒度",fixText:"补充来源表及目标属性"};
@@ -539,6 +609,7 @@ function v5ApplyRelation(){
  rel.confirmed=true;v4SaveActive("model");v4.active.model=null;
  state.select.model=sample.model.findIndex(x=>x[4]===id);state.tab.model="来源映射";
  v4.pending=null;v4Apply("model",state.select.model);
+ v51.openExisting=null;
  toast("已修改指定模型的本地草稿；请校验后再保存。");renderMain();
 }
 function v5DraftList(page){
@@ -641,7 +712,7 @@ function v4ResolvePending(mode){
       ...v4DefaultMetric(p.from),formula:saved.formula,filter:saved.filter,
       rev:saved.rev,checked:true,checkRevision:saved.rev,impactSeen:true,
       impactRevision:saved.rev,published:true,dirty:false,
-      release:saved.id,receipts
+      release:saved.id,version:(saved.version||"v1."+(1+receipts.length))+" · 已发布",receipts
     }:{...v4DefaultMetric(p.from),receipts};
   }
   if(p.page==="governance"){
@@ -1074,7 +1145,7 @@ function go(id,keepHistory){
  if(v3.editing && state.editDirty){v3.pending=id;v3DirtyDialog();return}
  if(v3.editing&&!state.editDirty){v3.editing=null;closeDialog()}
  v4SaveActive(state.page);
- if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null}
+ if(!keepHistory){v3.scope=null;v4.trail=[];v4.pending=null;v5.relation=null;if(id==="standard")v51.view="catalog"}
  if(!keepHistory&&state.page!==id)state.history.push(state.page);
  state.page=id;state.status="ready";state.filter="all";state.query="";state.tree="";state.queue="all";
  /* explicit target selection: do not force existing ODS model */
