@@ -165,7 +165,7 @@ test('9: narrow layout offers a model chooser and a category chooser', () => {
   const a = build();a.click({page:'model'});
   assert.match(a.view(),/id="v4-choose"/);
   assert.match(html,/@media\(max-width:1120px\)\{\.v4AsideChoice\{display:block/);
-  a.click({page:'standard'});assert.match(a.view(),/id="v4-category"/);
+  a.click({page:'standard'});a.click({v51View:'library'});assert.match(a.view(),/id="v4-category"/);
 });
 
 test('10: reader role cannot bypass submission / model saving / metric publication', () => {
