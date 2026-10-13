@@ -1813,7 +1813,7 @@ function v81Current(layer=v6.layer){
  let id=v81.active[layer];if(id&&v81.byId[id])return v81.byId[id];
  const x=v6Layer(),n=++v81.seq;id="DEMO-"+layer+"-MODEL-"+String(n).padStart(3,"0");
  x.physicalModelId=id;x.projectId=v81.project;
- const item={id,layer,title:layer==="DWD"?"订单支付明细事实":layer==="ODS"?"订单来源镜像":layer+" 物理模型草稿",projectId:v81.project,state:x,logicalId:v7.targetByLayer[layer]||"LM-016",mapping:v7.mapping[layer]||null};
+ const item={id,layer,title:layer==="DWD"?"订单支付明细事实":layer==="ODS"?"订单来源镜像":layer+" 物理模型草稿",projectId:v81.project,state:x,logicalId:layer==="ODS"?null:v7.targetByLayer[layer]||"LM-016",mapping:layer==="ODS"?null:v7.mapping[layer]||null};
  v81.byId[id]=item;v81.active[layer]=id;return item;
 }
 function v81SwitchTarget(id){
@@ -1828,7 +1828,7 @@ function v81AddTarget(){
  if(!actionAllowed()){toast("只读身份不可新建模型草稿");return}
  const layer=v6.layer,from=v81Current(layer),prior=from.state,n=++v81.seq,id="DEMO-"+layer+"-MODEL-"+String(n).padStart(3,"0");
  const state={...prior,layer,projectId:v81.project,physicalModelId:id,deps:[v6Configs[layer].deps[0]],pending:null,rows:[],loaded:false,dirty:false,checked:false,revision:0,saved:[],note:"",handoff:false,conflicts:[],pendingReload:false,pendingOption:null,logicalRef:null};
- v81.byId[id]={id,layer,title:"新建 "+layer+" 物理模型 "+n,projectId:v81.project,state,logicalId:v7ForLayer(layer).id,mapping:null};
+ v81.byId[id]={id,layer,title:"新建 "+layer+" 物理模型 "+n,projectId:v81.project,state,logicalId:layer==="ODS"?null:v7ForLayer(layer).id,mapping:null};
  v81SwitchTarget(id);
 }
 function v81TargetStrip(){
