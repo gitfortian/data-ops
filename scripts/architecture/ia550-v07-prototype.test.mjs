@@ -97,7 +97,7 @@ test('L02: logical snapshot is independent, immutable and never claims productio
  assert.equal(a.logical().versions.length,2);
  assert.equal(snapshot.version,'L1');
  assert.notEqual(snapshot.grain,a.logical().versions[1].grain);
- assert.match(a.view(),/未获业务批准/);
+ assert.match(a.view(),/当前最新逻辑版本/);
 });
 test('L03: ODS from physical source bypasses logical prerequisite, keeps source and technical columns',()=>{
  const a=build('model');assert.equal(a.logical().versions.length,0);
