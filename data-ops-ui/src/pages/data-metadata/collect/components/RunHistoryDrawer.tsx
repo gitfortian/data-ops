@@ -3,6 +3,8 @@ import { ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import RunResultModal from './RunResultModal';
+import '../index.less';
 import { YakEmpty } from '@/components/ui';
 import { pageCollectRuns } from '@/services/metadata/api';
 import type { CollectJobRecord, CollectRunRecord } from '@/services/metadata/types';
@@ -15,7 +17,7 @@ import {
   TRIGGER_LABELS,
 } from '../constants';
 
-const countOrUnknown = (value?: number | null) => value == null ? '—' : value;
+const countOrUnknown = (value?: number | null) => (value == null ? '—' : value);
 
 /** Historical runs remain distinct from the current catalog and the latest job configuration. */
 const RunHistoryDrawer = ({
@@ -27,6 +29,7 @@ const RunHistoryDrawer = ({
   job: CollectJobRecord | null;
   onClose: () => void;
 }) => {
+  const [selectedRun, setSelectedRun] = useState<CollectRunRecord | null>(null);
   const [records, setRecords] = useState<CollectRunRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -37,6 +40,7 @@ const RunHistoryDrawer = ({
 
   useEffect(() => {
     setPageNo(1);
+    setSelectedRun(null);
   }, [job?.id]);
 
   const load = useCallback(async () => {
@@ -60,7 +64,9 @@ const RunHistoryDrawer = ({
 
   useEffect(() => {
     if (open) void load();
-    return () => { requestSeq.current += 1; };
+    return () => {
+      requestSeq.current += 1;
+    };
   }, [open, load]);
 
   const columns: ColumnsType<CollectRunRecord> = [
@@ -77,10 +83,16 @@ const RunHistoryDrawer = ({
       render: (value: CollectRunRecord['status'], run) => {
         const content = value ? (
           <Tag color={RUN_STATUS_COLORS[value]}>{RUN_STATUS_LABELS[value]}</Tag>
-        ) : <Tag color="warning">未知</Tag>;
+        ) : (
+          <Tag color="warning">未知</Tag>
+        );
         return run.errorMessage ? (
-          <Tooltip title={run.errorMessage}><span>{content}</span></Tooltip>
-        ) : content;
+          <Tooltip title={run.errorMessage}>
+            <span>{content}</span>
+          </Tooltip>
+        ) : (
+          content
+        );
       },
     },
     {
@@ -90,9 +102,7 @@ const RunHistoryDrawer = ({
       render: (_, run) => (
         <div className="text-[12px] text-[#59697e]">
           <div>{run.triggerType ? TRIGGER_LABELS[run.triggerType] : '—'}</div>
-          {run.dryRun && run.triggerType !== 'DRY_RUN' ? (
-            <Tag className="!mt-1">预演</Tag>
-          ) : null}
+          {run.dryRun && run.triggerType !== 'DRY_RUN' ? <Tag className="!mt-1">采集预览</Tag> : null}
         </div>
       ),
     },
@@ -100,17 +110,24 @@ const RunHistoryDrawer = ({
       title: '范围类型',
       dataIndex: 'providerType',
       width: 96,
-      render: (value?: keyof typeof PROVIDER_LABELS) => <span className="text-[12px] text-[#64748b]">{value ? PROVIDER_LABELS[value] : '—'}</span>,
+      render: (value?: keyof typeof PROVIDER_LABELS) => (
+        <span className="text-[12px] text-[#64748b]">{value ? PROVIDER_LABELS[value] : '—'}</span>
+      ),
     },
     {
-      title: '实体统计',
+      title: '元数据统计',
       key: 'counts',
       width: 260,
       render: (_, run) => (
         <div className="text-[12px] tabular-nums leading-5 text-[#64748b]">
-          <div>总 {countOrUnknown(run.cntTotal)} · 新增 {countOrUnknown(run.cntNew)} · 更新 {countOrUnknown(run.cntChanged)} · 未变 {countOrUnknown(run.cntUnchanged)}</div>
+          <div>
+            总 {countOrUnknown(run.cntTotal)} · 新增 {countOrUnknown(run.cntNew)} · 更新{' '}
+            {countOrUnknown(run.cntChanged)} · 未变 {countOrUnknown(run.cntUnchanged)}
+          </div>
           {(run.cntGone ?? 0) > 0 ? <span className="mr-3 text-[#ad743b]">撤销 {run.cntGone}</span> : null}
-          {(run.cntPartialFailed ?? 0) > 0 ? <span className="text-[#be5550]">局部失败 {run.cntPartialFailed}</span> : null}
+          {(run.cntPartialFailed ?? 0) > 0 ? (
+            <span className="text-[#be5550]">局部失败 {run.cntPartialFailed}</span>
+          ) : null}
         </div>
       ),
     },
@@ -125,10 +142,21 @@ const RunHistoryDrawer = ({
         </div>
       ),
     },
+    {
+      title: '操作',
+      key: 'action',
+      width: 90,
+      render: (_, run) => (
+        <Button type="link" onClick={() => setSelectedRun(run)}>
+          查看
+        </Button>
+      ),
+    },
   ];
 
   return (
     <Drawer
+      className="collect-history"
       open={open}
       width="min(940px, 100vw)"
       placement="right"
@@ -137,31 +165,32 @@ const RunHistoryDrawer = ({
       title={
         <div>
           <div className="text-[19px] font-semibold text-[#243248]">运行历史{job ? ' · ' + job.jobName : ''}</div>
-          <div className="mt-1 text-[12px] font-normal text-[#8794a8]">每一条记录代表一次真实 Run 或预演。历史范围与当前任务配置可能不同。</div>
         </div>
       }
       styles={{
         header: { padding: '20px 24px', borderBottom: '1px solid #e9edf3' },
-        body: { padding: '22px 24px', background: '#f7f8fb' },
+        body: { padding: '22px 24px', background: '#fff' },
       }}
     >
-      {job && !job.enabled ? (
-        <div className="mb-4 rounded-xl border border-solid border-[#e6eaf0] bg-white px-4 py-3 text-[12px] text-[#718096]">
-          任务当前停用，仅关闭周期调度；已保存的历史 Run 不受影响。
-        </div>
-      ) : null}
       {readError ? (
-        <Alert type="error" showIcon className="!mb-4" message="运行历史暂时无法查询"
-          description="失败不代表该任务从未运行，请核查服务或权限后重试。"
-          action={<Button size="small" onClick={() => void load()}>重试</Button>} />
+        <Alert
+          type="error"
+          showIcon
+          className="!mb-4"
+          message="运行历史暂时无法查询"
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重试
+            </Button>
+          }
+        />
       ) : null}
-      <section className="overflow-hidden rounded-2xl border border-solid border-[#e6eaf0] bg-white px-4 pb-3 pt-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[14px] font-semibold text-[#2f3e52]">历史执行记录</div>
-            <div className="mt-1 text-[12px] text-[#94a0b0]">统计包含数据库、表、列等实体，并非表数量。</div>
-          </div>
-          <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>刷新</Button>
+      <section>
+        <div className="collect-history-toolbar">
+          <span>{readError ? '—' : `${total} 条运行记录`}</span>
+          <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+            刷新
+          </Button>
         </div>
         <Table<CollectRunRecord>
           rowKey="runId"
@@ -171,9 +200,11 @@ const RunHistoryDrawer = ({
           loading={loading}
           scroll={{ x: 850 }}
           locale={{
-            emptyText: readError
-              ? <YakEmpty compact title="未能读取历史" description="请先修复查询错误，不能据此判断无记录" />
-              : <YakEmpty compact title="还没有运行记录" description="保存任务后可预演或明确触发一次正式采集" />,
+            emptyText: readError ? (
+              <YakEmpty compact title="未能读取历史" />
+            ) : (
+              <YakEmpty compact title="还没有运行记录" />
+            ),
           }}
           pagination={{
             current: pageNo,
@@ -188,6 +219,11 @@ const RunHistoryDrawer = ({
           }}
         />
       </section>
+      <RunResultModal
+        run={open ? selectedRun : null}
+        title={'运行结果' + (job ? ' · ' + job.jobName : '')}
+        onClose={() => setSelectedRun(null)}
+      />
     </Drawer>
   );
 };

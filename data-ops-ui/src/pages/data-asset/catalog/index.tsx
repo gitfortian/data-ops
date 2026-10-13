@@ -1,19 +1,28 @@
 import Table from '@/components/ReadableTable';
-import { FolderTree, ArrowLeft, Plus, SlidersHorizontal, Search } from 'lucide-react';
-import { AssetPageHeader, AssetWorkspace } from '../asset-ui';
+import { ArrowLeft, Boxes, Folder, Layers3, MoreHorizontal, Plus, ShieldCheck } from 'lucide-react';
+import CatalogEntityIcon from '@/components/asset-catalog/CatalogEntityIcon';
+import {
+  CatalogField,
+  CatalogFilters,
+  CatalogObjectIcon,
+  CatalogResultToolbar,
+  CatalogSearch,
+  CatalogTypeButton,
+  CatalogWorkbench,
+  type CatalogDisplay,
+  type CatalogFilterChip,
+} from '@/components/asset-catalog/CatalogWorkbench';
 import {
   Button,
   Alert,
   Dropdown,
   Grid,
   Pagination,
-  Input,
   Modal,
   message,
-  Segmented,
+  Drawer,
+  Skeleton,
   Select,
-  Space,
-  Tag,
   Tooltip,
   Tree,
 } from 'antd';
@@ -24,7 +33,7 @@ import { classifyAssetListFailure, type AssetListReadFailure } from '../read-sta
 import { useLatestAssetListRequest } from '../useLatestAssetListRequest';
 import { history, useSearchParams } from '@umijs/max';
 
-import { YakButton, YakEmpty } from '@/components/ui';
+import { YakEmpty } from '@/components/ui';
 import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import {
   batchMoveAssetsDirectory,
@@ -34,13 +43,7 @@ import {
   listAssetTags,
   pageAssets,
 } from '@/services/data-asset/api';
-import type {
-  AssetRecord,
-  AssetStatus,
-  DirNode,
-  HealthGrade,
-  AssetTagRecord,
-} from '@/services/data-asset/types';
+import type { AssetRecord, AssetStatus, DirNode, HealthGrade, AssetTagRecord } from '@/services/data-asset/types';
 import { listSemanticLayers } from '@/services/semantic/api';
 import type { SemanticLayerRecord } from '@/services/semantic/types';
 import {
@@ -51,14 +54,12 @@ import {
   healthGradeColor,
   SORT_LABELS,
   toTreeData,
-  type DirTreeNode,
+  ASSET_STATUS_LABELS,
 } from '../constants';
 import AssetStatusTag from '../components/AssetStatusTag';
-import HealthRing from '../components/HealthRing';
 import ManualRegisterModal from '../components/ManualRegisterModal';
 import OfflineModal from '../components/OfflineModal';
 import PublishPrecheckModal from '../components/PublishPrecheckModal';
-// 元数据实体检索核(M2-2 目录三合一:目录浏览/统一搜索并入本账,docs/PLATFORM_CORE_FLOW.md)
 import AssetExplorer from '@/components/metadata/AssetExplorer';
 
 const PUBLISHABLE: AssetStatus[] = ['PENDING', 'OFFLINE', 'IGNORED'];
@@ -68,8 +69,7 @@ const DELETABLE: AssetStatus[] = ['OFFLINE', 'SOURCE_GONE'];
 const MANUAL_DELETABLE: AssetStatus[] = ['PENDING', 'OFFLINE', 'IGNORED'];
 
 const isDeletable = (record: AssetRecord) =>
-  DELETABLE.includes(record.status) ||
-  (record.sourceType === 'MANUAL' && MANUAL_DELETABLE.includes(record.status));
+  DELETABLE.includes(record.status) || (record.sourceType === 'MANUAL' && MANUAL_DELETABLE.includes(record.status));
 
 type CatalogView = '台账资产' | '元数据实体';
 
@@ -83,15 +83,10 @@ const AssetCatalogPage = () => {
   // 概览驾驶舱待办深链:?statuses=SOURCE_GONE&grades=D;实体视图深链:?view=entity
   const [entryParams, setEntryParams] = useSearchParams();
   const returnAssetIdValue = entryParams.get('returnAssetId');
-  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue)
-    ? Number(returnAssetIdValue)
-    : undefined;
-  const [view, setView] = useState<CatalogView>(() =>
-    entryParams.get('view') === 'entity' ? '元数据实体' : '台账资产',
-  );
+  const returnAssetId = returnAssetIdValue && /^\d+$/.test(returnAssetIdValue) ? Number(returnAssetIdValue) : undefined;
+  const view: CatalogView = entryParams.get('view') === 'entity' ? '元数据实体' : '台账资产';
 
   const switchView = (next: CatalogView) => {
-    setView(next);
     const params = new URLSearchParams(entryParams);
     if (next === '元数据实体') {
       params.set('view', 'entity');
@@ -125,7 +120,7 @@ const AssetCatalogPage = () => {
   const [sortBy, setSortBy] = useState('');
   const [directoryId, setDirectoryId] = useState<number | undefined>();
 
-  const [viewMode, setViewMode] = useState<'列表' | '卡片'>('列表');
+  const [viewMode, setViewMode] = useState<CatalogDisplay>('list');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedRows, setSelectedRows] = useState<AssetRecord[]>([]);
 
@@ -145,6 +140,10 @@ const AssetCatalogPage = () => {
 
   const load = useCallback(async () => {
     const isCurrent = beginLatestRequest();
+    if (view !== '台账资产') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(null);
     setRecords([]);
@@ -173,7 +172,20 @@ const AssetCatalogPage = () => {
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  }, [pageNo, pageSize, keyword, assetTypes, layerCodes, statuses, grades, tagIds, directoryId, sortBy, beginLatestRequest]);
+  }, [
+    view,
+    pageNo,
+    pageSize,
+    keyword,
+    assetTypes,
+    layerCodes,
+    statuses,
+    grades,
+    tagIds,
+    directoryId,
+    sortBy,
+    beginLatestRequest,
+  ]);
 
   useEffect(() => {
     void load();
@@ -193,12 +205,15 @@ const AssetCatalogPage = () => {
   }, []);
 
   useEffect(() => {
+    if (view !== '台账资产') return;
     void reloadDirectories();
     listSemanticLayers()
       .then((list) => setLayers(list.filter((layer) => layer.status === 'ENABLED')))
       .catch(() => setLayers([]));
-    listAssetTags().then(setTags).catch(() => setTags([]));
-  }, [reloadDirectories]);
+    listAssetTags()
+      .then(setTags)
+      .catch(() => setTags([]));
+  }, [view, reloadDirectories]);
 
   const treeData = useMemo(() => toTreeData(dirTree), [dirTree]);
 
@@ -274,79 +289,200 @@ const AssetCatalogPage = () => {
     });
   };
 
+  const typeLabel = (record: AssetRecord) =>
+    (record.assetType && ASSET_TYPE_LABELS[record.assetType]) || ASSET_SOURCE_TYPE_LABELS[record.sourceType];
+  const openAsset = (record: AssetRecord) => history.push('/data-asset/detail/' + record.id);
   const columns: ColumnsType<AssetRecord> = [
     {
-      title: '资产',
+      title: '资产名称',
       dataIndex: 'name',
+      width: '30%',
       ellipsis: true,
-      render: (name: string, record) => (
+      render: (_, record) => (
+        <div className="catalog-name-cell">
+          <CatalogObjectIcon>
+            <CatalogEntityIcon
+              kind={record.sourceType === 'MODEL' ? 'MODEL' : (record.assetType ?? record.sourceType)}
+              size={19}
+            />
+          </CatalogObjectIcon>
+          <div className="catalog-name-copy">
+            <a
+              className="catalog-object-name"
+              href={'/data-asset/detail/' + record.id}
+              onClick={(event) => {
+                event.preventDefault();
+                openAsset(record);
+              }}
+            >
+              {record.name}
+            </a>
+            <div className="catalog-object-description" title={record.description || record.assetKey}>
+              {record.description || record.assetKey}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: '类型 / 分层',
+      width: 120,
+      render: (_, record) => (
         <div>
-          <a href={`/data-asset/detail/${record.id}`}
-            className="font-semibold text-[#2c405b] hover:text-[#3d74b1]"
-            onClick={(event) => { event.preventDefault(); history.push(`/data-asset/detail/${record.id}`); }}
-          >
-            {name}
-          </a>
-          <div className="mt-1 truncate font-mono text-[11px] text-[#9aa5b4]" title={record.assetKey}>{record.assetKey}</div>
+          <span className="catalog-type-label">{typeLabel(record)}</span>
+          {record.layerCode && <div className="catalog-path">{record.layerCode}</div>}
         </div>
       ),
     },
     {
-      title: '类型',
-      dataIndex: 'assetType',
-      width: 110,
-      render: (type: string, record) => (
-        <div className="flex flex-wrap gap-1">
-          <Tag>{ASSET_TYPE_LABELS[type as keyof typeof ASSET_TYPE_LABELS] ?? ASSET_SOURCE_TYPE_LABELS[record.sourceType as keyof typeof ASSET_SOURCE_TYPE_LABELS] ?? type}</Tag>
-          {record.layerCode && <Tag color="geekblue">{record.layerCode}</Tag>}
-        </div>
-      ),
+      title: '负责人',
+      dataIndex: 'owner',
+      width: 125,
+      render: (owner?: string) =>
+        owner ? (
+          <span className="catalog-owner">
+            <span>{owner.slice(0, 1)}</span>
+            {owner}
+          </span>
+        ) : (
+          <span className="catalog-missing">待指定</span>
+        ),
     },
-    { title: '负责人', dataIndex: 'owner', width: 120, render: (value?: string) => value ? <span className="text-[12px] text-[#53667e]">{value}</span> : <span className="text-[12px] text-[#bc743e]">待指定</span> },
     {
-      title: '状态',
+      title: '上架状态',
       dataIndex: 'status',
       width: 100,
       render: (status: AssetStatus) => <AssetStatusTag status={status} />,
     },
     {
       title: '健康度',
-      dataIndex: 'healthScore',
-      width: 88,
-      render: (score: number | null, record) => <HealthRing score={score} grade={record.healthGrade} size={38} />,
+      width: 90,
+      render: (_, record) =>
+        record.healthScore == null ? (
+          <span className="catalog-missing">未评估</span>
+        ) : (
+          <Tooltip title="资产治理健康度">
+            <span style={{ color: healthGradeColor(record.healthGrade) }}>
+              {record.healthScore} <small>分 · {record.healthGrade ?? '—'}</small>
+            </span>
+          </Tooltip>
+        ),
     },
+    { title: '源更新时间', dataIndex: 'sourceUpdatedAt', width: 160, render: (time?: string) => formatAssetTime(time) },
     {
-      title: '近30天浏览',
-      dataIndex: 'viewCount30d',
-      width: 100,
-      align: 'right' as const,
-      render: (count?: number) => count ?? 0,
-    },
-    {
-      title: '源更新',
-      dataIndex: 'sourceUpdatedAt',
-      width: 150,
-      render: (value?: string) => formatAssetTime(value),
-    },
-    {
-      title: '操作',
+      title: '',
       key: 'action',
-      width: 120,
-      fixed: 'right' as const,
+      width: 55,
+      fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
-          <Button type="link" size="small" onClick={() => history.push(`/data-asset/detail/${record.id}`)}>详情</Button>
-          <Dropdown trigger={['click']} menu={{ items: [
-            { key: 'publish', label: '上架', disabled: !canUpdate || !PUBLISHABLE.includes(record.status), onClick: () => openWizard([record]) },
-            { key: 'offline', label: '下架', disabled: !canUpdate || record.status !== 'PUBLISHED', onClick: () => setOfflineTarget([record]) },
-            { key: 'ignore', label: '忽略', disabled: !canUpdate || !IGNORABLE.includes(record.status), onClick: () => runIgnore([record]) },
-            { key: 'delete', label: '删除', danger: true, disabled: !canDelete || !isDeletable(record), onClick: () => runDelete(record) },
-          ] }}>
-            <Button type="text" size="small" aria-label={`更多操作：${record.name}`}>更多</Button>
-          </Dropdown>
-        </Space>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              { key: 'detail', label: '查看详情', onClick: () => openAsset(record) },
+              {
+                key: 'publish',
+                label: '上架',
+                disabled: !canUpdate || !PUBLISHABLE.includes(record.status),
+                onClick: () => openWizard([record]),
+              },
+              {
+                key: 'offline',
+                label: '下架',
+                disabled: !canUpdate || record.status !== 'PUBLISHED',
+                onClick: () => setOfflineTarget([record]),
+              },
+              {
+                key: 'ignore',
+                label: '忽略',
+                disabled: !canUpdate || !IGNORABLE.includes(record.status),
+                onClick: () => runIgnore([record]),
+              },
+              {
+                key: 'delete',
+                label: '删除',
+                danger: true,
+                disabled: !canDelete || !isDeletable(record),
+                onClick: () => runDelete(record),
+              },
+            ],
+          }}
+        >
+          <Button
+            type="text"
+            size="small"
+            aria-label={'更多操作：' + record.name}
+            icon={<MoreHorizontal size={17} />}
+          />
+        </Dropdown>
       ),
     },
+  ];
+
+  const resetFilters = () => {
+    setKeyword('');
+    setSearchText('');
+    setAssetTypes([]);
+    setLayerCodes([]);
+    setStatuses([]);
+    setGrades([]);
+    setTagIds([]);
+    setDirectoryId(undefined);
+    setPageNo(1);
+  };
+  const removeFilter = (action: () => void) => {
+    action();
+    setPageNo(1);
+  };
+  const selectedDirectory = collectDirOptions(dirTree).find((option) => option.value === directoryId);
+  const filterChips: CatalogFilterChip[] = [
+    ...(keyword
+      ? [
+          {
+            key: 'keyword',
+            label: '关键词：' + keyword,
+            onRemove: () =>
+              removeFilter(() => {
+                setKeyword('');
+                setSearchText('');
+              }),
+          },
+        ]
+      : []),
+    ...assetTypes.map((type) => ({
+      key: 'type-' + type,
+      label: ASSET_TYPE_LABELS[type as keyof typeof ASSET_TYPE_LABELS] ?? type,
+      onRemove: () => removeFilter(() => setAssetTypes(assetTypes.filter((value) => value !== type))),
+    })),
+    ...statuses.map((status) => ({
+      key: 'status-' + status,
+      label: ASSET_STATUS_LABELS[status],
+      onRemove: () => removeFilter(() => setStatuses(statuses.filter((value) => value !== status))),
+    })),
+    ...layerCodes.map((code) => ({
+      key: 'layer-' + code,
+      label: '分层：' + code,
+      onRemove: () => removeFilter(() => setLayerCodes(layerCodes.filter((value) => value !== code))),
+    })),
+    ...grades.map((grade) => ({
+      key: 'grade-' + grade,
+      label: '健康度：' + grade,
+      onRemove: () => removeFilter(() => setGrades(grades.filter((value) => value !== grade))),
+    })),
+    ...tagIds.map((id) => ({
+      key: 'tag-' + id,
+      label: tags.find((tag) => tag.id === id)?.tagName ?? '标签 ' + id,
+      onRemove: () => removeFilter(() => setTagIds(tagIds.filter((value) => value !== id))),
+    })),
+    ...(directoryId != null
+      ? [
+          {
+            key: 'directory',
+            label: '目录：' + (selectedDirectory?.label ?? directoryId),
+            onRemove: () => removeFilter(() => setDirectoryId(undefined)),
+          },
+        ]
+      : []),
   ];
 
   const hasSelection = selectedIds.length > 0;
@@ -355,262 +491,341 @@ const AssetCatalogPage = () => {
   const ignorableSelected = selectedRows.filter((row) => IGNORABLE.includes(row.status));
 
   return (
-    <AssetWorkspace>
-      <AssetPageHeader
-        title="资产目录"
-        description={view === '台账资产'
-          ? '按目录与治理状态查找真实资产，检查归属、健康度与上架状态。资产纳管和正式发布是两个不同步骤。'
-          : '检索 Metadata 领域拥有的物理实体和采集证据；技术实体不等于已上架资产。'}
-        extra={<Space size={8} wrap>
+    <main className="asset-catalog">
+      <header className="catalog-page-heading">
+        <div>
+          <h1>资产目录</h1>
+          <p>发现数据，了解来源，让每一次使用都有依据。</p>
+        </div>
+        <div className="catalog-heading-actions">
           {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
-            <Button onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}>
-              <ArrowLeft size={14} className="mr-1 inline" />返回资产详情
+            <Button icon={<ArrowLeft size={14} />} onClick={() => history.push('/data-asset/detail/' + returnAssetId)}>
+              返回资产详情
             </Button>
           )}
-          <Segmented
-            options={['台账资产', '元数据实体']}
-            value={view}
-            onChange={(value) => switchView(value as CatalogView)}
-          />
           {view === '台账资产' && canCreate && (
-            <YakButton type="primary" className="!h-9 !rounded-lg !px-4 !text-white" onClick={() => setManualOpen(true)}>
-              <Plus size={14} className="mr-1 inline" />手工登记
-            </YakButton>
+            <Button type="primary" aria-label="登记资产" icon={<Plus size={16} />} onClick={() => setManualOpen(true)}>
+              <span className="catalog-register-label">登记资产</span>
+            </Button>
           )}
-        </Space>}
-      />
-
+        </div>
+      </header>
+      <nav className="catalog-scope-tabs" aria-label="目录范围">
+        <button type="button" aria-pressed={view === '台账资产'} onClick={() => switchView('台账资产')}>
+          <ShieldCheck size={16} />
+          资产台账
+        </button>
+        <button type="button" aria-pressed={view === '元数据实体'} onClick={() => switchView('元数据实体')}>
+          <Layers3 size={16} />
+          元数据实体
+        </button>
+        <span>{view === '台账资产' ? '查看归属、上架状态与治理健康度' : '查看已采集和登记的表、字段及业务对象'}</span>
+      </nav>
       {view === '元数据实体' ? (
-        <section className="mt-5 rounded-2xl border border-solid border-[#e7ebf1] bg-white p-5 shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
-          <div className="mb-4 flex items-center gap-2 text-[13px] text-[#73839a]"><Search size={16} />技术元数据目录来自 Metadata Owner，展示实时登记的实体。</div>
-          <AssetExplorer searchable />
-        </section>
+        <AssetExplorer searchable />
       ) : (
-      <div className="mt-5 flex min-h-0 flex-1 items-start gap-4 max-lg:flex-col">
-      <aside className="w-[246px] shrink-0 rounded-2xl border border-solid border-[#e7ebf1] bg-white p-4 shadow-[0_3px_16px_rgba(23,36,57,0.025)] max-lg:w-full lg:sticky lg:top-4">
-        <Button className="mb-2 lg:!hidden" aria-expanded={directoryOpen} onClick={() => setDirectoryOpen(!directoryOpen)}>
-          {directoryId ? '目录筛选 · 已选择' : '选择目录'}
-        </Button>
-        <div className={directoryOpen ? '' : 'hidden lg:block'}>
-        <div className="mb-4 flex items-center gap-2 border-0 border-b border-solid border-[#edf0f4] pb-3 text-[13px] font-semibold text-[#32445d]"><FolderTree size={16} className="text-[#6d8bac]" />按业务目录筛选</div>
-        {directoryLoading ? (
-          <YakEmpty compact title="正在读取目录" description="请等待当前项目的目录请求完成" />
-        ) : directoryError ? (
-          <div>
-            <YakEmpty compact
-              title={directoryError === 'FORBIDDEN' ? '无权读取资产目录树' : '目录树读取失败'}
-              description="不能将权限或来源异常当成没有目录"
-            />
-            <Button size="small" onClick={() => void reloadDirectories()}>重试目录读取</Button>
-          </div>
-        ) : treeData.length === 0 ? (
-          <YakEmpty compact title="暂无目录" description="到「目录与标签」页按分层+业务域一键初始化" />
-        ) : (
-          <Tree
-            treeData={treeData as never}
-            selectedKeys={directoryId ? [directoryId] : []}
-            onSelect={(keys) => {
-              setDirectoryId(keys[0] as number | undefined);
-              setPageNo(1);
-            }}
-            defaultExpandAll
-            blockNode
-          />
-        )}
-        {directoryId && (
-          <Button type="link" size="small" className="!px-0" onClick={() => { setDirectoryId(undefined); setPageNo(1); }}>
-            清除目录筛选
-          </Button>
-        )}
-        </div>
-      </aside>
-
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-solid border-[#e7ebf1] bg-white shadow-[0_3px_16px_rgba(23,36,57,0.025)]">
-        <div className="border-0 border-b border-solid border-[#edf0f4] px-5 py-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="m-0 text-[15px] font-semibold text-[#2a394e]">资产台账</h2><p className="mb-0 mt-1 text-[12px] text-[#8b98aa]">当前筛选下 {loadError ? '数量未知' : loading ? '读取中' : `${total} 项`} · 详情以当前资产台账为准</p></div>
-          <span className="flex items-center gap-1 text-[12px] text-[#8694a7]"><SlidersHorizontal size={14} />筛选条件</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input.Search
-            allowClear
-            placeholder="名称 / 描述 / 负责人 / 标签"
-            className="!w-[240px] max-sm:!w-full"
+        <>
+          <CatalogSearch
             value={searchText}
-            onChange={(event) => {
-              setSearchText(event.target.value);
-              if (!event.target.value) { setKeyword(''); setPageNo(1); }
-            }}
-            onSearch={(value) => {
-              setKeyword(value.trim());
-              setPageNo(1);
-            }}
-          />
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="类型"
-            className="min-w-[120px] max-w-[220px]"
-            value={assetTypes}
-            onChange={(value) => { setAssetTypes(value); setPageNo(1); }}
-            options={Object.entries(ASSET_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
-            maxTagCount="responsive"
-          />
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="分层"
-            className={advancedOpen ? 'min-w-[110px] max-w-[200px]' : 'hidden'}
-            value={layerCodes}
-            onChange={(value) => { setLayerCodes(value); setPageNo(1); }}
-            options={layers.map((layer) => ({ value: layer.code, label: layer.name }))}
-            maxTagCount="responsive"
-          />
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="状态"
-            className="min-w-[110px] max-w-[200px]"
-            value={statuses}
-            onChange={(value) => { setStatuses(value); setPageNo(1); }}
-            options={Object.entries({ PENDING: '待上架', PUBLISHED: '已上架', OFFLINE: '已下架', IGNORED: '已忽略', SOURCE_GONE: '源已消失' }).map(([value, label]) => ({ value, label }))}
-            maxTagCount="responsive"
-          />
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="健康度"
-            className={advancedOpen ? 'min-w-[100px] max-w-[160px]' : 'hidden'}
-            value={grades}
-            onChange={(value) => { setGrades(value); setPageNo(1); }}
-            options={['A', 'B', 'C', 'D'].map((grade) => ({
-              value: grade,
-              label: <span style={{ color: healthGradeColor(grade) }}>{grade} 级</span>,
-            }))}
-            maxTagCount="responsive"
-          />
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="标签"
-            className={advancedOpen ? 'min-w-[110px] max-w-[200px]' : 'hidden'}
-            value={tagIds}
-            onChange={(value) => { setTagIds(value); setPageNo(1); }}
-            options={tags.map((tag) => ({ value: tag.id, label: tag.tagName }))}
-            maxTagCount="responsive"
-          />
-          <Select
-            value={sortBy}
-            className="!w-[150px]"
+            placeholder="搜索资产名称、描述、负责人或标签"
+            loading={loading}
             onChange={(value) => {
-              setSortBy(value);
+              setSearchText(value);
+              if (!value) {
+                setKeyword('');
+                setPageNo(1);
+              }
+            }}
+            onSearch={() => {
+              setKeyword(searchText.trim());
               setPageNo(1);
             }}
-            options={Object.entries(SORT_LABELS).map(([value, label]) => ({ value, label }))}
+            onFilter={() => setAdvancedOpen(true)}
+            filterCount={filterChips.length}
           />
-          <Segmented
-            options={['列表', '卡片']}
-            className="max-sm:!hidden"
-            value={viewMode}
-            onChange={(value) => setViewMode(value as '列表' | '卡片')}
-          />
-          <Button aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
-            高级筛选{layerCodes.length + grades.length + tagIds.length > 0 ? ` (${layerCodes.length + grades.length + tagIds.length})` : ''}
-          </Button>
-          <Button onClick={() => {
-            setKeyword(''); setSearchText(''); setAssetTypes([]); setLayerCodes([]);
-            setStatuses([]); setGrades([]); setTagIds([]); setDirectoryId(undefined); setSortBy(''); setPageNo(1);
-          }}>重置</Button>
-        </div>
-
-        </div>
-        {canUpdate && hasSelection && (
-          <div className="flex flex-wrap items-center gap-2 border-0 border-b border-solid border-[#dbe5f2] bg-[#f0f5fc] px-5 py-3">
-            <span className="text-[13px]">已选 {selectedIds.length} 项</span>
-            <YakButton size="small" disabled={publishableSelected.length === 0} onClick={() => openWizard(publishableSelected)}>
-              批量上架（{publishableSelected.length}）
-            </YakButton>
-            <YakButton size="small" disabled={publishedSelected.length === 0} onClick={() => setOfflineTarget(publishedSelected)}>
-              批量下架（{publishedSelected.length}）
-            </YakButton>
-            <YakButton size="small" onClick={runBatchMove}>
-              移目录
-            </YakButton>
-            <YakButton size="small" disabled={ignorableSelected.length === 0} onClick={() => runIgnore(ignorableSelected)}>
-              忽略（{ignorableSelected.length}）
-            </YakButton>
-            <span className="ml-auto text-[12px] text-[#7e90a6]">仅操作状态允许的选中资产 · 本页选择，单次最多 200</span>
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1 px-4 pb-3 pt-4">
-          {loadError && <Alert className="mb-3" type="error" showIcon
-             message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
-             description="本次筛选未能成功读取；不会展示旧查询或其它项目的结果，请重试。"
-             action={<Button onClick={load}>重试</Button>} />}
-          {viewMode === '列表' && screens.sm !== false ? (
-            <Table<AssetRecord>
-              rowKey="id"
-              columns={columns}
-              dataSource={records}
+          <CatalogFilters chips={filterChips} onReset={resetFilters} />
+          <CatalogWorkbench
+            sidebar={
+              <>
+                <div className="catalog-sidebar-section">
+                  <h3>资产类型</h3>
+                  <div className="catalog-types">
+                    <CatalogTypeButton
+                      label="全部资产"
+                      icon={<Boxes />}
+                      active={!assetTypes.length}
+                      onClick={() => {
+                        setAssetTypes([]);
+                        setPageNo(1);
+                      }}
+                    />
+                    {Object.entries(ASSET_TYPE_LABELS).map(([value, label]) => (
+                      <CatalogTypeButton
+                        key={value}
+                        label={label}
+                        icon={<CatalogEntityIcon kind={value} size={16} />}
+                        active={assetTypes.includes(value)}
+                        onClick={() => {
+                          setAssetTypes(
+                            assetTypes.includes(value)
+                              ? assetTypes.filter((type) => type !== value)
+                              : [...assetTypes, value],
+                          );
+                          setPageNo(1);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="catalog-sidebar-section catalog-sidebar-fields">
+                  <h3>治理筛选</h3>
+                  <CatalogField label="上架状态">
+                    <Select
+                      mode="multiple"
+                      allowClear
+                      placeholder="全部状态"
+                      value={statuses}
+                      maxTagCount="responsive"
+                      options={Object.entries(ASSET_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+                      onChange={(value) => {
+                        setStatuses(value);
+                        setPageNo(1);
+                      }}
+                    />
+                  </CatalogField>
+                </div>
+                <div className="catalog-sidebar-section">
+                  <h3>业务目录</h3>
+                  <Button
+                    className="catalog-directory-toggle"
+                    type="text"
+                    aria-expanded={directoryOpen}
+                    icon={<Folder size={15} />}
+                    onClick={() => setDirectoryOpen(!directoryOpen)}
+                  >
+                    业务目录{selectedDirectory ? ' · ' + selectedDirectory.label : ''}
+                  </Button>
+                  <div className="catalog-directory-body" data-expanded={directoryOpen}>
+                    <CatalogTypeButton
+                      label="全部目录"
+                      icon={<Folder />}
+                      active={directoryId == null}
+                      onClick={() => {
+                        setDirectoryId(undefined);
+                        setPageNo(1);
+                      }}
+                    />
+                    {directoryLoading ? (
+                      <Skeleton active paragraph={{ rows: 3 }} title={false} />
+                    ) : directoryError ? (
+                      <div className="catalog-directory-caption">
+                        {directoryError === 'FORBIDDEN' ? '无权读取目录' : '目录读取失败'}
+                        <Button type="link" size="small" onClick={() => void reloadDirectories()}>
+                          重试
+                        </Button>
+                      </div>
+                    ) : treeData.length ? (
+                      <Tree
+                        treeData={treeData}
+                        selectedKeys={directoryId != null ? [directoryId] : []}
+                        blockNode
+                        defaultExpandAll
+                        onSelect={(keys) => {
+                          setDirectoryId(keys.length ? Number(keys[0]) : undefined);
+                          setPageNo(1);
+                        }}
+                      />
+                    ) : (
+                      <div className="catalog-directory-caption">
+                        尚未创建目录
+                        <Button type="link" size="small" onClick={() => history.push('/data-asset/taxonomy')}>
+                          管理目录
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            }
+          >
+            <CatalogResultToolbar
+              title={keyword ? '搜索结果' : filterChips.length ? '筛选结果' : '全部资产'}
+              count={total}
               loading={loading}
-              scroll={{ x: 1030 }}
-              rowClassName={() => 'cursor-pointer'}
-              onRow={(record) => ({
-                onClick: (event) => {
-                  const target = event.target as HTMLElement;
-                  // 行内链接/按钮/勾选框已有自身行为,不触发行跳转
-                  if (target.closest('a, button, input, .ant-checkbox-wrapper')) {
-                    return;
-                  }
-                  if (window.getSelection()?.toString()) {
-                    return;
-                  }
-                  history.push(`/data-asset/detail/${record.id}`);
-                },
-              })}
-              rowSelection={{
-                selectedRowKeys: selectedIds,
-                onChange: (keys, rows) => {
-                  setSelectedIds(keys as number[]);
-                  setSelectedRows(rows);
-                },
-              }}
-              locale={{
-                emptyText: (
-                  <YakEmpty
-                    compact
-                    title={loadError ? '未能读取资产目录' : '没有符合条件的资产'}
-                    description={loadError ? '重试后才能判断是否为空' : '调整筛选，或等待对账把源域对象登记进来'}
-                  />
-                ),
-              }}
-              pagination={{
-                current: pageNo,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                showTotal: (count) => `共 ${count} 条`,
-                onChange: (next, size) => {
-                  setPageNo(next);
-                  setPageSize(size);
-                },
-              }}
+              failed={!!loadError}
+              display={viewMode}
+              onDisplay={setViewMode}
+              onRefresh={load}
+              sort={
+                <Select
+                  aria-label="资产排序"
+                  variant="borderless"
+                  value={sortBy}
+                  style={{ width: 160 }}
+                  options={Object.entries(SORT_LABELS).map(([value, label]) => ({
+                    value,
+                    label: value ? label : '推荐排序',
+                  }))}
+                  onChange={(value) => {
+                    setSortBy(value);
+                    setPageNo(1);
+                  }}
+                />
+              }
             />
-          ) : (
-            <><AssetCardGrid
-              records={records}
-              loading={loading}
-              loadError={Boolean(loadError)}
-              onOpen={(record) => history.push(`/data-asset/detail/${record.id}`)}
-            />
-            <Pagination className="mt-4" size="small" current={pageNo} pageSize={pageSize} total={total}
-              showTotal={(count) => `共 ${count} 条`} onChange={(next, size) => { setPageNo(next); setPageSize(size); }} />
-            </>
-          )}
-        </div>
-      </section>
-      </div>
+            {canUpdate && hasSelection && (
+              <div className="catalog-batch-bar">
+                <span>已选 {selectedIds.length} 项</span>
+                <Button
+                  size="small"
+                  disabled={!publishableSelected.length}
+                  onClick={() => openWizard(publishableSelected)}
+                >
+                  上架（{publishableSelected.length}）
+                </Button>
+                <Button
+                  size="small"
+                  disabled={!publishedSelected.length}
+                  onClick={() => setOfflineTarget(publishedSelected)}
+                >
+                  下架（{publishedSelected.length}）
+                </Button>
+                <Button size="small" onClick={runBatchMove}>
+                  移动目录
+                </Button>
+                <Button size="small" disabled={!ignorableSelected.length} onClick={() => runIgnore(ignorableSelected)}>
+                  忽略（{ignorableSelected.length}）
+                </Button>
+                <Button
+                  type="text"
+                  size="small"
+                  onClick={() => {
+                    setSelectedIds([]);
+                    setSelectedRows([]);
+                  }}
+                >
+                  取消选择
+                </Button>
+              </div>
+            )}
+            {loadError ? (
+              <Alert
+                type="error"
+                showIcon
+                message={loadError === 'FORBIDDEN' ? '无权读取资产目录' : '资产列表读取失败'}
+                description="请重试，或检查当前项目的访问权限。"
+                action={<Button onClick={load}>重试</Button>}
+              />
+            ) : loading ? (
+              <Skeleton active paragraph={{ rows: 8 }} />
+            ) : !records.length ? (
+              <YakEmpty
+                title="没有符合条件的资产"
+                description={
+                  filterChips.length ? '试试其他关键词，或清空筛选条件。' : '完成资产盘点后，数据会出现在这里。'
+                }
+              >
+                <Button onClick={filterChips.length ? resetFilters : () => history.push('/data-asset/inventory')}>
+                  {filterChips.length ? '清空筛选' : '前往盘点上架'}
+                </Button>
+              </YakEmpty>
+            ) : viewMode === 'list' && screens.md !== false ? (
+              <Table<AssetRecord>
+                className="catalog-table"
+                rowKey="id"
+                columns={columns}
+                dataSource={records}
+                pagination={false}
+                scroll={{ x: 'max-content' }}
+                rowSelection={
+                  canUpdate
+                    ? {
+                        selectedRowKeys: selectedIds,
+                        onChange: (keys, rows) => {
+                          setSelectedIds(keys.map(Number));
+                          setSelectedRows(rows);
+                        },
+                      }
+                    : undefined
+                }
+              />
+            ) : (
+              <AssetCardGrid records={records} onOpen={openAsset} />
+            )}
+            {!loadError && total > 0 && (
+              <div className="catalog-pagination">
+                <span>共 {total} 项资产</span>
+                <Pagination
+                  size="small"
+                  current={pageNo}
+                  pageSize={pageSize}
+                  total={total}
+                  showSizeChanger
+                  onChange={(next, size) => {
+                    setPageNo(size !== pageSize ? 1 : next);
+                    setPageSize(size);
+                  }}
+                />
+              </div>
+            )}
+          </CatalogWorkbench>
+          <Drawer
+            title="筛选资产"
+            open={advancedOpen}
+            onClose={() => setAdvancedOpen(false)}
+            width={360}
+            footer={
+              <div className="catalog-drawer-actions">
+                <Button onClick={resetFilters}>清空条件</Button>
+                <Button type="primary" onClick={() => setAdvancedOpen(false)}>
+                  查看结果
+                </Button>
+              </div>
+            }
+          >
+            <CatalogField label="分层">
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="全部分层"
+                value={layerCodes}
+                options={layers.map((layer) => ({ value: layer.code, label: layer.name }))}
+                onChange={(value) => {
+                  setLayerCodes(value);
+                  setPageNo(1);
+                }}
+              />
+            </CatalogField>
+            <CatalogField label="健康度">
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="全部等级"
+                value={grades}
+                options={['A', 'B', 'C', 'D'].map((value) => ({ value, label: value + ' 级' }))}
+                onChange={(value) => {
+                  setGrades(value);
+                  setPageNo(1);
+                }}
+              />
+            </CatalogField>
+            <CatalogField label="业务标签">
+              <Select
+                mode="multiple"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="全部标签"
+                value={tagIds}
+                options={tags.map((tag) => ({ value: tag.id, label: tag.tagName }))}
+                onChange={(value) => {
+                  setTagIds(value);
+                  setPageNo(1);
+                }}
+              />
+            </CatalogField>
+          </Drawer>
+        </>
       )}
 
       <Modal
@@ -672,51 +887,35 @@ const AssetCatalogPage = () => {
           refresh();
         }}
       />
-    </AssetWorkspace>
+    </main>
   );
 };
 
-const AssetCardGrid = ({
-  records,
-  loading,
-  loadError,
-  onOpen,
-}: {
-  records: AssetRecord[];
-  loading: boolean;
-  loadError: boolean;
-  onOpen: (record: AssetRecord) => void;
-}) => (
-  <div className="grid grid-cols-3 gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
+const AssetCardGrid = ({ records, onOpen }: { records: AssetRecord[]; onOpen: (record: AssetRecord) => void }) => (
+  <div className="catalog-result-card-grid">
     {records.map((record) => (
-      <button type="button"
-        key={record.id}
-        className="cursor-pointer rounded-xl border border-solid border-[#e6ebf1] bg-white p-4 text-left transition-all hover:border-[#a9bfd8] hover:shadow-[0_8px_20px_rgba(36,56,84,0.07)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7894b6]"
-        onClick={() => onOpen(record)}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="truncate text-[14px] font-semibold text-[#2d405a]">{record.name}</div>
-            <div className="mt-1 truncate font-mono text-[11px] text-[#98a6b8]">{record.assetKey}</div>
-          </div>
-          <HealthRing score={record.healthScore} grade={record.healthGrade} size={44} />
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1">
-          <Tag>{ASSET_TYPE_LABELS[record.assetType as keyof typeof ASSET_TYPE_LABELS] ?? record.assetType}</Tag>
-          {record.layerCode && <Tag color="geekblue">{record.layerCode}</Tag>}
-          {record.securityLevelCode && <Tag color="volcano">{record.securityLevelCode}</Tag>}
-        </div>
-        <div className="mt-3 flex items-center justify-between text-[12px] text-[#667085]">
-          <span>{record.owner || '无负责人'}</span>
+      <button type="button" key={record.id} className="catalog-result-card" onClick={() => onOpen(record)}>
+        <div className="catalog-card-top">
+          <CatalogObjectIcon>
+            <CatalogEntityIcon
+              kind={record.sourceType === 'MODEL' ? 'MODEL' : (record.assetType ?? record.sourceType)}
+              size={20}
+            />
+          </CatalogObjectIcon>
           <AssetStatusTag status={record.status} />
-          <span>浏览 {record.viewCount30d ?? 0}</span>
+        </div>
+        <div className="catalog-object-name">{record.name}</div>
+        <div className="catalog-card-description">{record.description || '暂无描述'}</div>
+        <div className="catalog-path">{record.assetKey}</div>
+        <div className="catalog-card-footer">
+          <span>{record.owner || '待指定负责人'}</span>
+          <span>
+            {(record.assetType && ASSET_TYPE_LABELS[record.assetType]) || ASSET_SOURCE_TYPE_LABELS[record.sourceType]}
+            {record.layerCode && ' · ' + record.layerCode}
+          </span>
         </div>
       </button>
     ))}
-    {!loading && records.length === 0 && (
-      <YakEmpty compact title={loadError ? '未能读取资产目录' : '没有符合条件的资产'}
-        description={loadError ? '请重试后确认是否为空' : '调整筛选后再试'} />
-    )}
   </div>
 );
 
