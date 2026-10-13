@@ -338,7 +338,7 @@ dom("railLinks").innerHTML=domains.filter(function(d){return d.id!=="settings"})
 dom("railBottom").innerHTML='<div class="railsep"></div><button class="railbtn '+(state.lastMenu==="settings"?"active":"")+'" data-domain="settings" title="平台设置">'+icon("settings")+'<span>设置</span></button>';
 var d=domains.find(function(x){return x.id===state.lastMenu})||domains[0];dom("sideCaption").textContent=d.id==="work"?"MY WORKSPACE":"PRODUCT NAVIGATION";
 dom("sideTitle").textContent=d.name;dom("topDomain").textContent=d.name+"  /  "+nameOf(state.page);
-dom("sideLinks").innerHTML='<div class="nlabel">主要任务入口 <span>'+d.items.length+'</span></div>'+d.items.map(function(id,i){return '<button class="navitem '+(state.page===id?"active":"")+'" data-page="'+id+'"><span class="navicon">'+icon(d.id==="settings"?"settings":i===0?"grid":i===1?"layers":i===2?"box":"file")+'</span><span>'+esc(nameOf(id))+'</span><span class="arrow">'+(isTarget(id)?"":'<span style="font-size:9px;color:#9aabaf">占位</span>')+'</span></button>'}).join("")+(d.tools.length?'<div class="nlabel">专业工具 / 全部能力</div>'+d.tools.map(function(t){return '<button class="toolLink '+(state.page===t[0]?"active":"")+'" data-page="'+t[0]+'">'+icon("chev")+'<span>'+esc(t[1])+'</span></button>'}).join(""):"")+'<div class="nlabel">菜单视图</div><button class="toolLink" data-palette="1">'+icon("search")+' 浏览完整菜单（20 项）</button>';
+dom("sideLinks").innerHTML='<div class="nlabel">主要任务入口 <span>'+d.items.length+'</span></div>'+d.items.map(function(id,i){return '<button class="navitem '+(state.page===id?"active":"")+'" data-page="'+id+'"><span class="navicon">'+icon(d.id==="settings"?"settings":i===0?"grid":i===1?"layers":i===2?"box":"file")+'</span><span>'+esc(nameOf(id))+'</span><span class="arrow">'+(isTarget(id)?"":'<span style="font-size:9px;color:#9aabaf">占位</span>')+'</span></button>'}).join("")+(d.tools.length?'<div class="nlabel">专业工具 / 全部能力</div>'+d.tools.map(function(t){return '<button class="toolLink '+(state.page===t[0]?"active":"")+'" data-page="'+t[0]+'">'+icon("chev")+'<span>'+esc(t[1])+'</span></button>'}).join(""):"")+'<div class="nlabel">菜单视图</div><button class="toolLink" data-palette="1">'+icon("search")+' 浏览完整菜单</button>';
 }
 function notice(){return '<div class="prototypeNotice">'+icon("spark")+'<span><strong>设计原型 v0.6</strong> · 在 IA V3.1 五域之上新增需求与协作、分层建模评审；所有记录仅为本地样例，不能作为真实审批、发布或运行回执。</span><span class="noticeEnd">#550 · 待评审</span></div>'}
 function pageHead(title,description,eyebrow,buttons){return '<div class="pageHead"><div><div class="eyebrow">'+esc(eyebrow||"WORKSPACE / DESIGN REVIEW")+'</div><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div><div class="headActions">'+(buttons||'')+'</div></div>'}
@@ -1198,7 +1198,7 @@ const v6Configs={
  ADS:{label:"应用 ADS",deps:["PM-832","PM-732"],explain:"从看板/API 的输出合同开始 → 选择 DWS 或 DWD → 自动投影消费字段 → 核对授权与刷新"}
 };
 const v6={modelMode:"layered",layer:"ODS",layers:{},origin:null,
-collab:{view:"demand",selected:"REQ-102",role:"coordinator",note:"",filter:"mine"},records:[]};
+collab:{view:"demand",selected:"REQ-102",role:"coordinator",note:"",filter:"mine",reference:"范围/业务定义",transferTo:"builder",issueKind:"数据错误或缺失",deliverable:"报表/分析"},records:[]};
 function v6Layer(){const k=v6.layer;return v6.layers[k]||(v6.layers[k]={layer:k,deps:[v6Configs[k].deps[0]],pending:null,rows:[],loaded:false,dirty:false,checked:false,revision:0,saved:[],metric:"MET-026",consumer:"订单经营日报",grain:k==="ODS"?"与来源表一行一致":k==="DWD"?"订单明细行":k==="DIM"?"一个会员版本":k==="DWS"?"按日汇总": "每个报表日期一行",tech:["etl_time","dt"],scd:"SCD2",note:"",handoff:false,conflicts:[],pendingReload:false,pendingOption:null})}
 function v6TechRows(x){if(x.layer==="ODS"){for(const name of x.tech)if(!x.rows.some(r=>r.name===name))x.rows.push({name,type:name==="dt"?"DATE":"TIMESTAMP",source:"系统技术列",origin:"无源列",rule:name==="dt"?"分区日期（待确认）":"采集处理时间（待确认）",std:"",role:"技术字段"})}}
 function v6FieldCandidates(x){
@@ -1326,11 +1326,31 @@ const v6Cases=[
 ];
 function v6InitCases(){if(!v6.records.length)v6.records=v6Cases}
 function v6CurrentCase(){v6InitCases();return v6.records.find(r=>r.id===v6.collab.selected)||v6.records[0]}
-function v6Log(r,what){r.log.push({who:v6RoleNames[v6.collab.role],what});v6.collab.note="";}
+function v6Log(r,what){r.log.push({who:v6RoleNames[v6.collab.role],what:what+" · 引用："+(v6.collab.reference||"当前记录")});v6.collab.note="";}
 function v6NeedsRole(...roles){if(roles.includes(v6.collab.role))return true;toast("本操作由指定协作职责执行；可切换演示职责体验");return false}
 function v6CaseAct(action){
  const r=v6CurrentCase(),c=v6.collab,notes=(c.note||"").trim();
  const reason=()=>{if(notes.length<5){toast("需补充至少 5 字原因或证据，不可无理由提交");return false}return true};
+ if(action==="comment"){
+  if(!reason())return;
+  v6Log(r,"讨论/补充（非确认）："+notes);
+ }
+ if(action==="transfer"&&v6NeedsRole("coordinator","builder","steward")){
+  if(!reason())return;
+  if(r.transfer?.status==="待接收"){toast("上一笔转交尚未被接收或拒接");return}
+  if(c.transferTo===c.role){toast("转交目标必须与当前执行职责不同");return}
+  r.transfer={from:r.owner,to:c.transferTo,status:"待接收"};
+  v6Log(r,"请求由 "+v6RoleNames[c.transferTo]+" 接收，原负责人仍需跟进；原因："+notes);
+ }
+ if(action==="takeTransfer"){
+  if(r.transfer?.status!=="待接收"||c.role!==r.transfer.to){toast("只有被指定的接收职责可以正式接收");return}
+  r.owner=v6RoleNames[c.role];r.next=v6RoleNames[c.role];r.transfer.status="已接收";
+  v6Log(r,"接收转交，新负责人正式承接");
+ }
+ if(action==="rejectTransfer"){
+  if(r.transfer?.status!=="待接收"||c.role!==r.transfer.to||!reason())return;
+  r.transfer.status="已拒接";v6Log(r,"拒绝转交，原负责人继续跟进："+notes);
+ }
  if(action==="accept"&&v6NeedsRole("coordinator")){if(r.type!=="demand"||r.status!=="待受理")return;r.status="澄清与方案";r.next="需求协调人";r.owner="数据产品协调人";v6Log(r,"已受理并进入方案澄清，尚未开始开发")}
  if(action==="scope"&&v6NeedsRole("coordinator","builder")){if(r.type!=="demand"||r.status!=="澄清与方案"||!reason())return;r.status="待业务确认";r.version="需求范围基准 R1";r.next="业务确认人";v6Log(r,"提交范围及验收标准："+notes)}
  if(action==="confirmScope"&&v6NeedsRole("owner","business")){if(r.type!=="demand"||r.status!=="待业务确认")return;r.status="建设中";r.scopeConfirmed=true;r.next="技术负责人";v6Log(r,"业务已确认本次范围与验收标准 R1；尚未代表交付")}
@@ -1340,16 +1360,24 @@ function v6CaseAct(action){
  if(action==="acceptDelivery"&&v6NeedsRole("business","owner")){if(r.type!=="demand"||r.status!=="待验收")return;r.status="待交付";r.next="技术交付人";v6Log(r,"业务按范围基准 R1 验收通过，但专业发布/交付仍待执行")}
  if(action==="deliver"&&v6NeedsRole("builder")){if(r.type!=="demand"||r.status!=="待交付"||!reason())return;r.status="已完成";r.delivered=true;r.next="无";v6Log(r,"交付记录（示例，不代表真实上架）："+notes)}
  if(action==="return"&&v6NeedsRole("business","owner")){if(r.type!=="demand"||!["待验收","待业务确认"].includes(r.status)||!reason())return;r.status="澄清与方案";r.scopeConfirmed=false;r.verified=false;r.next="需求协调人";v6Log(r,"退回修改，原版本/结论仍保留："+notes)}
- if(action==="investigate"&&v6NeedsRole("builder")){if(r.type!=="issue"||r.status!=="待确认"||!reason())return;r.status="已确认待处置";r.next="技术/治理处理人";v6Log(r,"核实结论："+notes)}
+ if(action==="investigate"&&v6NeedsRole("builder")){if(r.type!=="issue"||r.status!=="待确认"||!reason())return;r.status="已确认待处置";r.next="技术/治理处理人";v6Log(r,"核实分类 "+c.issueKind+"；核实结论："+notes)}
  if(action==="issueStart"&&v6NeedsRole("builder","steward")){if(r.type!=="issue"||r.status!=="已确认待处置")return;r.status="处置中";r.next="治理负责人";v6Log(r,"创建/承接问题处理，保留原核实结论")}
  if(action==="issueResolve"&&v6NeedsRole("steward","builder")){if(r.type!=="issue"||r.status!=="处置中"||!reason())return;r.status="待业务复核";r.next="业务发起人";v6Log(r,"提交处置证据与限制："+notes)}
  if(action==="issueClose"&&v6NeedsRole("business","owner")){if(r.type!=="issue"||r.status!=="待业务复核")return;r.status="已关闭";r.next="无";v6Log(r,"业务复核通过并关闭当前问题单")}
  if(action==="issueReopen"&&v6NeedsRole("business","owner")){if(r.type!=="issue"||!["已关闭","待业务复核"].includes(r.status)||!reason())return;r.status="核实中";r.next="技术核实人";v6Log(r,"保留原处置证据并重开："+notes)}
+ if(action==="caliberRequest"&&v6NeedsRole("owner")){
+  if(r.type!=="caliber"||r.status!=="待业务确认"||!reason())return;
+  v6Log(r,"要求补充样例（不是同意）："+notes);
+ }
+ if(action==="caliberReject"&&v6NeedsRole("owner")){
+  if(r.type!=="caliber"||r.status!=="待业务确认"||!reason())return;
+  r.status="待研发补充";r.next="技术负责人";v6Log(r,"退回精确口径版本并指出分歧："+notes);
+ }
  if(action==="sample"&&v6NeedsRole("analyst")){if(r.type!=="caliber"||r.status!=="待业务确认")return;r.sampleConfirmed=true;v6Log(r,"分析参与人按支付/未支付/退款/重复回传样例进行了本地确认")}
  if(action==="approve"&&v6NeedsRole("owner")){if(r.type!=="caliber"||r.status!=="待业务确认")return;if(!r.sampleConfirmed){toast("先完成分析样例核对，评论不等于确认");return}r.businessConfirmed=true;r.status="口径已确认 · 待技术验证";r.next="技术负责人";v6Log(r,"业务口径负责人确认 "+r.version+"，仅对此精确版本有效")}
  if(action==="caliberTest"&&v6NeedsRole("builder")){if(r.type!=="caliber"||!r.businessConfirmed||!reason())return;r.verified=true;r.status="待专业发布";r.next="指标发布人";v6Log(r,"当前版本的技术检查与试算："+notes)}
  if(action==="caliberHandoff"&&v6NeedsRole("builder")){if(r.type!=="caliber"||!r.verified)return;r.status="已交接发布";r.next="Metric 发布职责";v6Log(r,"交接指标中心按正式合同发布；协作不会自行写入已发布状态")}
- if(action==="newCaliber"&&v6NeedsRole("builder","owner")){if(r.type!=="caliber"||!reason())return;r.version="MET-026 · 新草稿 v1.3";r.businessConfirmed=false;r.sampleConfirmed=false;r.verified=false;r.status="待业务确认";r.next="分析与业务确认";v6Log(r,"实质口径变更，旧 v1.2 确认不证明新 v1.3："+notes)}
+ if(action==="newCaliber"&&v6NeedsRole("builder","owner")){if(r.type!=="caliber"||!["待研发补充","待专业发布","已交接发布"].includes(r.status)||!reason())return;r.version="MET-026 · 新草稿 v1.3";r.businessConfirmed=false;r.sampleConfirmed=false;r.verified=false;r.status="待业务确认";r.next="分析与业务确认";v6Log(r,"实质口径变更，旧 v1.2 确认不证明新 v1.3："+notes)}
  renderMain();
 }
 function v6CollabCreate(){
@@ -1396,10 +1424,18 @@ function v6Collab(){
   actions.push(v6ActionButton("issueReopen","重开并说明原因",["business","owner"],!["已关闭","待业务复核"].includes(r.status)));
  }else{
   actions.push(v6ActionButton("sample","分析样例已复核",["analyst"],r.status!=="待业务确认"));
+  actions.push(v6ActionButton("caliberRequest","请求补充样例",["owner"],r.status!=="待业务确认"));
+  actions.push(v6ActionButton("caliberReject","退回并记录分歧",["owner"],r.status!=="待业务确认"));
   actions.push(v6ActionButton("approve","确认当前口径版本",["owner"],r.status!=="待业务确认"));
   actions.push(v6ActionButton("caliberTest","提交同版本技术检查",["builder"],!r.businessConfirmed));
   actions.push(v6ActionButton("caliberHandoff","交接指标中心发布",["builder"],!r.verified));
-  actions.push(v6ActionButton("newCaliber","形成新口径草稿并重新确认",["builder","owner"],!["待专业发布","已交接发布"].includes(r.status)));
+  actions.push(v6ActionButton("newCaliber","形成新口径草稿并重新确认",["builder","owner"],!["待专业发布","已交接发布","待研发补充"].includes(r.status)));
+ }
+ actions.push(v6ActionButton("comment","提交讨论/补充（不代表确认）",["business","coordinator","builder","steward","analyst","owner"],false));
+ actions.push(v6ActionButton("transfer","申请跨职责转交",["coordinator","builder","steward"],r.transfer?.status==="待接收"));
+ if(r.transfer?.status==="待接收"){
+  actions.push(v6ActionButton("takeTransfer","接收转交",[r.transfer.to],false));
+  actions.push(v6ActionButton("rejectTransfer","拒接并说明原因",[r.transfer.to],false));
  }
  const linkedTasks=r.tasks.map(t=>'<div class="v6Stage"><strong>'+esc(t.id)+' · '+esc(t.title)+'</strong><div class="v6Meta">'+esc(t.owner)+' · '+esc(t.status)+' · '+esc(t.result)+'</div></div>').join("");
  const deliveries=r.deliveries.map(d=>'<div class="v6Stage"><strong>'+esc(d.id)+'</strong><div class="v6Meta">'+esc(d.source)+" · "+esc(d.version)+" · "+esc(d.status)+'</div></div>').join("");
@@ -1421,6 +1457,10 @@ function v6Collab(){
  '<div class="v6Stage"><strong>业务目标与场景</strong><p>'+esc(r.expect)+'</p></div>'+
  '<div class="v6Stage"><strong>本次验收/复核基准</strong><p>'+esc(r.accept)+'</p></div>'+
  '<div class="v6Stage"><strong>当前精确版本</strong><p>'+esc(r.version)+'</p></div>'+
+ '<div class="v6Field"><label>评论引用范围</label><select id="v6-reference">'+["范围/业务定义","版本与差异","样例与预期","验收标准","执行/治理证据"].map(k=>'<option '+(c.reference===k?"selected":"")+'>'+k+'</option>').join("")+'</select></div>'+
+ (r.type==="issue"?'<label class="v6Field">核实问题分类<select id="v6-issuekind">'+["数据错误或缺失","更新延迟或运行异常","口径定义分歧","访问或产品使用问题","信息不足待补充"].map(k=>'<option '+(c.issueKind===k?"selected":"")+'>'+k+'</option>').join("")+'</select></label>':"")+
+ '<label class="v6Field">跨团队转交目标<select id="v6-transfer">'+Object.entries(v6RoleNames).map(([key,name])=>'<option value="'+key+'" '+(c.transferTo===key?"selected":"")+'>'+name+'</option>').join("")+'</select></label>'+
+ (r.transfer?.status==="待接收"?'<div class="v6Warn">转交待接收：'+esc(v6RoleNames[r.transfer.to])+'；当前跟进责任仍由 '+esc(r.transfer.from)+' 承担。拒接必须保留原因。</div>':"")+
  '<label class="v6Field">本次说明、证据、决策或退回原因<textarea id="v6-note" placeholder="变更范围、提交验证或退回需留下具体理由">'+esc(c.note||"")+'</textarea></label>'+
  '<div class="v6Actions">'+actions.join("")+'</div></section>'+
  example+
@@ -1663,6 +1703,9 @@ document.addEventListener("change",function(ev){
  const t=ev.target;
  
  if(t.id==="v6-role"){v6.collab.role=t.value;renderMain();return}
+ if(t.id==="v6-reference"){v6.collab.reference=t.value;renderMain();return}
+ if(t.id==="v6-transfer"){v6.collab.transferTo=t.value;renderMain();return}
+ if(t.id==="v6-issuekind"){v6.collab.issueKind=t.value;renderMain();return}
  if(t.id==="v6-metric"){v6OptionChange("metric",t.value);return}
  if(t.id==="v6-consumer"){v6OptionChange("consumer",t.value);return}
  if(t.id==="v6-scd"){const x=v6Layer();x.scd=t.value;x.checked=false;x.dirty=true;renderMain();return}
