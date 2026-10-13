@@ -687,22 +687,48 @@ function v3Model(){
  (state.status==="ready"?v4Prompt()+v3ModelBody():statePanel())+'</section></div>'+v3Review();
 }
 function v3MetricBody(){
- const metric=v3Selected("metric");if(!metric)return v3Hint("当前筛选没有指标；无法继续编辑或发布。","warn");
- const m=v3.metric,tab=state.tab.metric||"定义口径";
- const top='<div class="detailStrip"><strong>'+esc(metric[0])+'</strong><span>'+esc(metric[4])+'</span><span class="tag warn">'+esc(m.version)+'</span></div>';
- if(tab==="定义口径")return top+'<div class="cardBody"><h2>编辑指标口径</h2><p class="muted">演示中的指标版本可编辑，尚未保存到真实 Metric 服务。</p><div class="workflowGrid"><div><label class="formRow">指标表达式<textarea id="v3-formula">'+esc(m.formula)+'</textarea></label><label class="formRow">业务过滤条件<input id="v3-condition" value="'+esc(m.filter)+'" placeholder="例如 status = PAID"></label></div><div class="factBox"><h3>指标合同</h3><div class="itemFacts"><div class="factRow"><span>指标标识</span><strong>'+esc(metric[4])+'</strong></div><div class="factRow"><span>业务主题</span><strong>'+esc(metric[1])+'</strong></div><div class="factRow"><span>计算类型</span><strong>'+esc(metric[2])+'</strong></div><div class="factRow"><span>当前版本</span><strong>'+esc(m.version)+'</strong></div></div></div></div>'+v3ActionLine('<button class="btn primary" data-v3-action="metric-validate">校验指标口径 →</button>','修改后需重新校验')+'</div>';
- if(tab==="校验")return top+'<div class="cardBody"><h2>版本校验与问题定位</h2>'+
- (m.checked?'<div class="resultPanel"><h3>✓ 口径校验通过（样例）</h3><p>公式语法及业务过滤范围已检查。实际上线需要由 Metric Owner 验证对应版本与数据源。</p></div>':
- '<div class="resultPanel warn"><h3>校验发现 1 个待处理问题</h3><p>支付订单数尚未限定已支付状态，可能将取消订单纳入口径。</p><div class="diffRow"><div><b>问题 MET-CHECK-01</b><p class="micro">缺少过滤条件 status = PAID，影响订单主题指标含义。</p></div><button class="btn soft" data-v3-action="metric-fix">采用修正建议</button></div></div>')+
- '<div class="docGrid"><div class="factBox"><h3>原版本定义</h3><p>'+esc(m.prior)+'</p></div><div class="factBox"><h3>本次草稿定义</h3><p>'+esc(m.formula)+'<br><span class="muted">'+esc(m.filter||"尚未定义过滤范围")+'</span></p></div></div>'+
- v3ActionLine(m.checked?'<button class="btn primary" data-v3-action="metric-impact">查看影响范围 →</button>':'<button class="btn" data-v3-action="metric-validate">重新校验</button>')+'</div>';
- if(tab==="引用与影响")return top+'<div class="cardBody"><h2>发布前影响分析</h2><p class="muted">基于当前指标版本的模拟引用证据，而非真实的反向影响 API。</p>'+
- '<div class="diffRow"><div><b>使用者：交易经营看板</b><p class="micro">引用当前已发布版本 v1.1 · 口径变更后需复核展示指标</p></div><span class="tag warn">待复核</span></div><div class="diffRow"><div><b>下游报表：订单日报</b><p class="micro">字段 order_id · 模型 PM-701</p></div><span class="tag blue">受影响</span></div><div class="diffRow"><div><b>标准字段引用：STD-201</b><p class="micro">订单标识标准与版本引用关系</p></div><span class="tag blue">上游</span></div>'+
- '<div class="riskLine">影响说明：发布新版本不应悄然切换历史数据消费的精确口径，订阅方引用必须可追溯。</div>'+v3ActionLine('<button class="btn primary" data-v3-action="metric-to-publish">确认已查看影响，进入发布 →</button>','演示操作，不实际变更已发布版本')+'</div>';
- if(tab==="版本与发布")return top+'<div class="cardBody"><h2>版本发布确认</h2><p class="muted">校验、影响、发布为三个独立决策，未经确认不会自动发布。</p><div class="itemFacts"><div class="factRow"><span>拟发布指标</span><strong>'+esc(metric[4])+' · '+esc(metric[0])+'</strong></div><div class="factRow"><span>拟发布版本</span><strong>v1.2 · 本次模拟草稿</strong></div><div class="factRow"><span>变更范围</span><strong>支付订单范围；'+esc(m.filter||"未确定")+'</strong></div><div class="factRow"><span>校验结果</span><strong>'+ (m.checked?"样例校验通过":"未通过")+'</strong></div><div class="factRow"><span>影响分析</span><strong>'+(m.impactSeen?"已查看样例引用":"尚未确认")+'</strong></div></div>'+
- (m.published?'<div class="resultPanel"><h3>✓ 模拟发布回执已生成</h3><p class="receipt">'+esc(m.release)+'</p><p>仅保存在当前原型内存，实际 MetricPublication 未创建。</p></div>':
- v3Hint(m.checked&&m.impactSeen?"具备发布确认的演示条件；请确认版本后提交。":"校验与影响分析均完成后才可发布。",m.checked&&m.impactSeen?"":"warn"))+
- v3ActionLine('<button class="btn" data-v3-tab="引用与影响">返回影响</button>'+(m.published?'<button class="btn soft" data-v3-action="metric-return">返回指标列表</button>':'<button class="btn primary" data-v3-action="metric-publish" '+(!(m.checked&&m.impactSeen)?"disabled":"")+'>确认模拟发布</button>'))+'</div>';
+ const r=v3Selected("metric");
+ if(!r)return v3.scope?.from==="model"?
+  '<div class="v4Empty"><h3>当前来源模型暂无已核验的关联指标</h3><p>'+esc(v3.scope.label)+" · "+esc(v3.scope.id)+'；不会拿其他模型的指标示例充当关联结果。</p><button class="btn" data-v3-back="1">返回模型</button></div>':
+  '<div class="v4Empty"><h3>当前没有匹配指标</h3><p>调整搜索或退出筛选后再继续。</p></div>';
+ const m=v3.metric,tab=state.tab.metric||"定义口径",valid=v4ValidMetric(m);
+ const top='<div class="detailStrip"><strong>'+esc(r[0])+'</strong><span>'+esc(m.id)+'</span>'+
+ '<span class="v4Progress">'+(m.dirty?"已修改 · 待校验":m.published?"已生成模拟发布记录":valid?"本次草稿已校验":"草稿待校验")+'</span></div>';
+ const disabled=!actionAllowed(),lock=disabled?'disabled title="只读画像不能修改"':"";
+ const original=v4.metricTemplates[m.id];
+ const meta='<div class="v4FieldSummary"><div class="factBox"><h3>单位</h3><b>'+esc(m.unit)+'</b></div><div class="factBox"><h3>时间周期</h3><b>'+esc(m.period)+'</b></div><div class="factBox"><h3>分析维度</h3><b>'+esc(m.dimension)+'</b></div></div>';
+ if(tab==="定义口径")return top+'<div class="v4TaskBody"><h2>'+esc(r[0])+' · 编辑口径</h2>'+meta+
+ '<div class="workflowGrid" style="margin-top:14px"><div><label class="formRow">指标表达式<textarea id="v3-formula" '+(disabled?"readonly":"")+'>'+esc(m.formula)+'</textarea></label>'+
+ '<label class="formRow">业务范围<input id="v3-condition" value="'+esc(m.filter)+'" '+(disabled?"readonly":"")+'></label></div>'+
+ '<div class="factBox"><h3>版本与业务解释</h3><div class="itemFacts"><div class="factRow"><span>指标标识</span><strong>'+esc(m.id)+'</strong></div><div class="factRow"><span>当前操作</span><strong>'+esc(m.version)+'</strong></div><div class="factRow"><span>原始口径</span><strong>'+esc(m.prior)+'</strong></div><div class="factRow"><span>类型</span><strong>'+esc(r[2])+'</strong></div></div></div></div>'+
+ v3ActionLine('<button class="btn primary" data-v3-action="metric-validate" '+lock+'>检查本次口径 →</button>')+v4HistoryBlock("metric")+'</div>';
+ if(tab==="校验")return top+'<div class="v4TaskBody"><h2>校验范围 · '+esc(r[0])+'</h2>'+
+ (valid?'<div class="resultPanel"><h3>✓ 当前修订号 '+m.rev+' 已通过样例校验</h3><p>'+esc(m.id)+' 的口径和关键过滤条件与业务指标类型一致。</p></div>':
+ '<div class="resultPanel warn"><h3>'+ (m.validationAttempted?"待处理校验问题":"尚未完成本次校验")+'</h3><p>'+esc(m.problem)+'</p><div class="diffRow"><div><b>'+esc(m.id)+' · 关键条件</b><p class="micro">建议：'+esc(m.expected)+'</p></div><button class="btn soft" data-v3-action="metric-fix" '+lock+'>采用建议</button></div></div>')+
+ '<div class="docGrid"><div class="factBox"><h3>旧口径</h3><p>'+esc(m.prior)+'</p></div><div class="factBox"><h3>当前草稿</h3><p>'+esc(m.formula)+'</p><p>'+esc(m.filter||"未设置业务过滤")+'</p></div></div>'+
+ v3ActionLine('<button class="btn" data-v3-step="metric:0">返回口径</button><button class="btn" data-v3-action="metric-validate" '+lock+'>重新校验</button>'+
+ '<button class="btn primary" data-v3-action="metric-impact" '+(!valid?"disabled":"")+'>查看引用影响 →</button>')+'</div>';
+ if(tab==="引用与影响"){
+ const impact={
+ "MET-026":[["交易经营看板","订单日报","PM-701","STD-201"]],
+ "MET-027":[["销售收入看板","交易金额日报","PM-732","STD-208"]],
+ "MET-031":[["渠道转化分析","用户行为日报","LM-016","STD-201"]],
+ "MET-035":[["退款分析看板","售后退款日报","PM-732","STD-208"]]
+ }[m.id]||[];
+ return top+'<div class="v4TaskBody"><h2>'+esc(r[0])+' · 引用与影响</h2><p class="micro">演示中限定当前指标和具体模型的样例关系；对非关联模型不显示虚假的引用。</p>'+
+ impact.map(x=>'<div class="diffRow"><div><b>下游看板：'+esc(x[0])+'</b><p class="micro">下游报表：'+esc(x[1])+' / 依赖模型：'+esc(x[2])+' / 标准字段：'+esc(x[3])+'</p></div><span class="tag warn">需复核</span></div>').join("")+
+ '<div class="riskLine">历史精确版本不会被新定义自动替换；生产发布需要真实引用证据和授权。</div>'+
+ v3ActionLine('<button class="btn primary" data-v3-action="metric-to-publish" '+(!actionAllowed()||!valid?"disabled":"")+'>确认影响并进入发布 →</button>')+'</div>';
+ }
+ if(tab==="版本与发布"){
+ const allowed=valid&&m.impactSeen&&m.impactRevision===m.rev;
+ return top+'<div class="v4TaskBody"><h2>'+esc(r[0])+' · 发布版本确认</h2>'+
+ '<div class="itemFacts"><div class="factRow"><span>本次指标</span><strong>'+esc(m.id)+'</strong></div><div class="factRow"><span>版本</span><strong>v1.2 · 修订 '+m.rev+'</strong></div><div class="factRow"><span>目标范围</span><strong>'+esc(m.filter||"待补充")+'</strong></div><div class="factRow"><span>校验</span><strong>'+(valid?"通过本次修订检查":"未验证 / 已失效")+'</strong></div><div class="factRow"><span>影响</span><strong>'+(m.impactSeen&&m.impactRevision===m.rev?"已复核":"待复核")+'</strong></div></div>'+
+ (!allowed?v3Hint("必须先完成当前修订的校验并确认影响。查看此页不代表步骤已完成。","warn"):
+ v3Hint("可提交本地模拟发布；不会调用真实指标发布接口。"))+
+ v3ActionLine('<button class="btn" data-v3-step="metric:2">返回影响分析</button><button class="btn primary" data-v3-action="metric-publish" '+(!allowed||disabled?"disabled":"")+'>确认发布本次修订</button>')+
+ v4HistoryBlock("metric")+'</div>';
+ }
  return top;
 }
 function v3Metric(){
@@ -717,43 +743,55 @@ function v3Metric(){
  '</section></div>'+v3Review();
 }
 function v3QueueBody(){
- const task=v3Selected("governance");
- if(!task)return '<div class="cardBody">'+v3Hint("当前任务范围没有记录；已清空处理对象。","warn")+'</div>';
- const id=task[4],m=v3QueueInfo[id],step=v3.queueStep,receipt=v3.receipts&&v3.receipts[id];
- const pStep=["evidence","resolve","submit","receipt"].indexOf(step);
- const summary='<div class="detailStrip"><strong>'+esc(task[0])+'</strong><span>'+esc(task[4])+'</span><span class="tag '+(m.priority==="P0"?"danger":"warn")+'">'+m.priority+'</span></div>'+
- '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>处理责任人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>等待时间</span><strong>'+esc(m.age)+'</strong></div><div class="factRow"><span>业务类型</span><strong>'+esc(m.kind)+'</strong></div></div>';
- let content="";
+ const task=v3Selected("governance");if(!task)return '<div class="v4TaskBody">'+v4Prompt()+v3Hint("没有当前可操作任务；请先处理切换确认或清除筛选。","warn")+'</div>';
+ const id=task[4],m=v3QueueInfo[id],q=v4StoreFor("governance",id),step=v3.queueStep;
+ const receipt=q.receipts.at(-1),valid=!v4GuardQueue();
+ const steps=["evidence","resolve","submit","receipt"],index=steps.indexOf(step);
+ const header='<div class="detailStrip"><strong>'+esc(task[0])+'</strong><span>'+id+'</span><span class="tag warn">'+esc(m.priority)+' · '+esc(m.age)+'</span></div>'+
+ '<div class="itemFacts"><div class="factRow"><span>影响对象</span><strong>'+esc(m.subject)+'</strong></div><div class="factRow"><span>负责人</span><strong>'+esc(m.owner)+'</strong></div><div class="factRow"><span>任务阶段</span><strong>'+(q.receipts.length?"已提交样例，等待业务核验":q.dirty?"填写处理中":"未开始处理")+'</strong></div></div>';
+ const canEdit=actionAllowed();
+ let detail="";
  if(step==="evidence"){
- content='<h2>为什么需要处理</h2><p>'+esc(m.why)+'</p><div class="riskLine">'+esc(m.risk)+'</div>'+
- '<h3>前后证据对比</h3><div class="docGrid"><div class="factBox"><h3>当前 / 原始证据</h3><p>'+esc(m.before)+'</p></div><div class="factBox"><h3>变化 / 待确认</h3><p>'+esc(m.after)+'</p></div></div><p style="margin:14px 0 0" class="micro"><b>需要补充：</b>'+esc(m.required)+'</p>'+
- v3ActionLine('<button class="btn primary" data-v3-action="queue-resolve" '+(!actionAllowed()?"disabled":"")+'>进入处理或转交 →</button>');
+ detail='<h2>为什么需要处理</h2><p>'+esc(m.why)+'</p>'+
+ '<div class="docGrid"><div class="factBox"><h3>变化前</h3><p>'+esc(m.before)+'</p></div><div class="factBox"><h3>变化后 / 待确认</h3><p>'+esc(m.after)+'</p></div></div>'+
+ '<div class="riskLine">'+esc(m.risk)+'</div><p class="micro">缺口：'+esc(m.required)+'</p>'+
+ v3ActionLine('<button class="btn primary" data-v3-action="queue-resolve" '+(!canEdit?"disabled":"")+'>处理或转交 →</button>');
  }else if(step==="resolve"){
- content='<h2>处理还是转交？</h2><p>'+esc(m.required)+'</p><label class="formRow">处理方式<select id="v3-queue-decision"><option value="">请选择</option><option value="process">补充材料并处理</option><option value="transfer">转交其他责任人</option></select></label>'+
- (v3.decision==="transfer"?'<label class="formRow">转交给<select id="v3-transfer"><option value="">选择目标责任人</option><option value="元数据管理员">元数据管理员</option><option value="业务负责人">业务负责人</option><option value="资产管理员">资产管理员</option></select></label>':'')+
- '<label class="formRow">处理说明 / 补充证据<textarea id="v3-queue-note" placeholder="说明变更依据、核验方式或转交原因">'+esc(v3.note||"")+'</textarea></label>'+
- '<div class="riskLine">'+esc(m.risk)+'</div>'+
- v3ActionLine('<button class="btn" data-v3-action="queue-evidence">返回差异证据</button><button class="btn primary" data-v3-action="queue-review">检查提交内容 →</button>');
+ const d=v3.decision;
+ detail='<h2>填写处理依据</h2><p>'+esc(m.required)+'</p>'+
+ '<label class="formRow">处理方式<select id="v3-queue-decision" '+(!canEdit?"disabled":"")+'>'
+ +[["","请选择"],["process","补充材料并处理"],["transfer","转交其他责任人"]].map(x=>'<option value="'+x[0]+'" '+(x[0]===d?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>'+
+ (d==="transfer"?'<label class="formRow">转交给<select id="v3-transfer" '+(!canEdit?"disabled":"")+'>'
+ +[["","选择负责人"],["元数据管理员","元数据管理员"],["业务负责人","业务负责人"],["资产管理员","资产管理员"]].map(x=>'<option value="'+x[0]+'" '+(x[0]===v3.transferTo?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></label>':"")+
+ '<label class="formRow">说明与核验依据<textarea id="v3-queue-note" '+(!canEdit?"readonly":"")+'>'+esc(v3.note)+'</textarea></label>'+
+ v3Hint(canEdit?"说明不少于 4 字；转交时必须选定责任人。":"只读角色仅能查看历史记录与证据，不能提交处理意见。","warn")+
+ v3ActionLine('<button class="btn" data-v3-action="queue-evidence">返回差异</button><button class="btn primary" data-v3-action="queue-review" '+(!canEdit||!valid?"disabled":"")+'>检查提交内容 →</button>');
  }else if(step==="submit"){
- content='<h2>提交前核对</h2><div class="itemFacts"><div class="factRow"><span>任务</span><strong>'+esc(id)+'</strong></div><div class="factRow"><span>处理方式</span><strong>'+esc(v3.decision==="transfer"?"转交给 "+v3.transferTo:"补充处理材料")+'</strong></div><div class="factRow"><span>依据</span><strong>'+esc(v3.note||"未填写")+'</strong></div><div class="factRow"><span>风险提醒</span><strong>'+esc(m.risk)+'</strong></div></div>'+
- v3Hint("本次仅生成原型回执；不会向治理 API、审批服务或源系统写入数据。")+
- v3ActionLine('<button class="btn" data-v3-action="queue-resolve">修改内容</button><button class="btn primary" data-v3-action="queue-submit">确认生成模拟回执</button>');
+ detail='<h2>提交核对 · '+esc(id)+'</h2><div class="itemFacts">'+
+ '<div class="factRow"><span>处理方式</span><strong>'+esc(v3.decision==="transfer"?"转交 "+v3.transferTo:"补充材料处理")+'</strong></div>'+
+ '<div class="factRow"><span>操作理由</span><strong>'+esc(v3.note)+'</strong></div>'+
+ '<div class="factRow"><span>结果边界</span><strong>提交记录 ≠ 上架/对账/漂移实际完成</strong></div></div>'+
+ (valid?v3Hint("提交时冻结当前任务标识、责任人、内容及时间。"):v3Hint(v4GuardQueue(),"warn"))+
+ v3ActionLine('<button class="btn" data-v3-action="queue-resolve">修改内容</button><button class="btn primary" data-v3-action="queue-submit" '+(!valid?"disabled":"")+'>确认生成处理记录</button>');
  }else{
- content='<div class="resultPanel"><h3>✓ 已生成演示处理回执</h3><p class="receipt">'+esc(receipt||"本任务尚未生成回执")+'</p><p>处理方式：'+esc(v3.decision==="transfer"?"转交":"提交处理建议")+'；正式任务状态需回源系统核验。并未自动上架、应用差异、采集或批准。</p></div><div class="itemFacts"><div class="factRow"><span>原任务</span><strong>'+esc(id)+'</strong></div><div class="factRow"><span>业务结果</span><strong>等待 Owner 再次确认</strong></div></div>'+
- v3ActionLine('<button class="btn primary" data-v3-action="queue-next">返回任务列表 →</button>');
+ detail='<h2>处理结果 · '+esc(id)+'</h2>'+
+ (receipt?'<div class="resultPanel"><h3>✓ 已提交本地处理记录</h3><p class="receipt">'+esc(receipt.id)+'</p><div class="itemFacts"><div class="factRow"><span>任务编号</span><strong>'+esc(receipt.taskId)+'</strong></div><div class="factRow"><span>处理方式</span><strong>'+esc(receipt.decision==="transfer"?"转交":"补充处理")+'</strong></div><div class="factRow"><span>转交对象</span><strong>'+esc(receipt.transferTo||"不适用")+'</strong></div><div class="factRow"><span>处理依据</span><strong>'+esc(receipt.note)+'</strong></div><div class="factRow"><span>提交时间</span><strong>'+esc(receipt.date)+'</strong></div><div class="factRow"><span>真实业务结果</span><strong>待实际系统核验</strong></div></div></div>':
+ v3Hint("尚未提交，当前不能显示历史回执。","warn"))+
+ v3ActionLine('<button class="btn" data-v3-action="queue-evidence">返回证据</button>');
  }
- return '<div class="cardBody">'+v3Steps(["查看差异","处理 / 转交","提交确认","查看结果"],pStep,"queue")+
- summary+'<div style="margin-top:17px">'+content+'</div></div>';
+ return '<div class="v4TaskBody">'+v3Steps(["查看差异","处理或转交","提交确认","处理记录"],index,"queue")+header+
+ '<div style="padding-top:16px">'+detail+'</div>'+v4HistoryBlock("governance")+'</div>';
 }
 function v3Governance(){
- v3SyncSelected("governance");
- const task=v3Selected("governance"),active=v3.queueId;
- const count=Object.keys(v3QueueInfo).length;
- return pageHead("治理工作队列","按优先级处理真实对象的盘点、变更、对账和结构漂移；每个类型都有不同的处理证据。","",'<button class="btn" data-page="asset">资产目录</button>')+
- v3Ctx()+
- '<div class="queueCards">'+[["all","全部待处理",count],["盘点","盘点上架",1],["对账","来源对账",1],["变更","资产变更",1],["漂移","结构漂移",1]].map(x=>'<button class="queueCard '+(state.queue===x[0]?"active":"")+'" data-queue="'+x[0]+'"><span>'+x[1]+'</span><b>'+x[2]+'</b><small>仅演示任务</small></button>').join("")+'</div>'+
- '<div class="split medium">'+v3Card("任务清单","责任人、优先级、等待时间、影响对象和处理状态",v3Filters()+v3Table("governance"))+
- '<section class="card"><div class="cardHead"><h2>任务处理 · '+(task?esc(task[4]):"未选择")+'</h2><span class="tag blue">'+(task?esc(v3QueueInfo[active].kind):"无当前对象")+'</span></div>'+(state.status==="ready"?v3QueueBody():statePanel())+'</section></div>'+v3Review();
+ const task=v3Selected("governance"),typeMap={"盘点":"盘点与上架","对账":"对账检查","变更":"资产变更","漂移":"来源变更"};
+ const cardData=[["all","全部任务"],["盘点","盘点上架"],["对账","来源对账"],["变更","资产变更"],["漂移","结构漂移"]];
+ const cards=cardData.map(x=>{const count=sample.governance.filter(r=>x[0]==="all"||r[1]===typeMap[x[0]]).length;
+ return '<button class="queueCard '+(state.queue===x[0]?"active":"")+'" data-queue="'+x[0]+'"><span>'+x[1]+'</span><b>'+count+'</b><small>示例任务 · 同源计数</small></button>';}).join("");
+ return pageHead("治理工作队列","先查看任务及处理责任；选择一条后在宽工作区完成差异核对、处理、提交与回执。","")+
+ v3Ctx()+'<div class="queueCards">'+cards+'</div>'+
+ '<div class="v4QueueWork"><section class="card v4ListSlim"><div class="cardHead"><h2>任务清单</h2></div>'+v3Filters()+v3Table("governance")+'</section>'+
+ '<section class="card v4Workspace"><div class="cardHead"><h2>处理当前任务 · '+(task?esc(task[4]):"待确认选择")+'</h2></div>'+
+ (state.status==="ready"?v4Prompt()+v3QueueBody():statePanel())+'</section></div>'+v3Review();
 }
 function v3Asset(){
  const r=v3Selected("asset");
