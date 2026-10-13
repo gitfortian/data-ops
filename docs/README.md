@@ -1,51 +1,30 @@
-# Documentation navigation · 资料权威与证据入口
+# Documentation navigation · 产品合同与保留证据
 
-本索引用于**先确定 Owner 再检索具体材料**。仓库历史文档和评审资料很多；不要全量加载 `docs/**`，不要以日期或目录名判断是否为当前需求。
+本页按照**当前仓库中实际存在的文件**维护入口。不要从目录名或历史计划判断需求已批准。仅 `ACCEPTED` Product Decision 与 `APPROVED / IMPLEMENTING` Feature Spec 能作为对应范围的实施依据；原始 Review、Issue、旧计划和代码快照只是证据。
 
-## 当前 Contract 的入口
+## 当前权威入口
 
-| 要解决的问题 | 首选来源 | 权威边界 |
-|---|---|---|
-| 产品目标、Capability 与长期语义 | [Product baseline](product/README.md)、[Document Governance](product/DOCUMENT_GOVERNANCE.md) | 仅生效的 Product Truth / ACCEPTED Decision；不能把 SHIPPED Feature 当作新任务 |
-| 当前获准的变更与验收 | [Feature Specs](product/features/README.md)、[Product Change Process](product/PRODUCT_CHANGE_PROCESS.md) | 只有 APPROVED / IMPLEMENTING Feature Spec 是当前变更合同 |
-| Domain 不变量与架构依赖 | 各业务模块的 `DOMAIN.md`、`REQUIREMENTS.md`、`ARCHITECTURE.md`、`DEPENDENCIES.md`；根 [CODE_STYLE](../CODE_STYLE.md) | 精确到目标模块读取；避免跨域重复定义 |
-| 构建、部署、迁移与恢复 | [Release](release/RELEASING.md)、[Engineering CI 验收](engineering/ci-impact-validation.md) | 操作合同需与当前 workflow/代码及 SQL 历史一致 |
-| AI / Coding Agent 读档次序 | [AGENTS.md](../AGENTS.md)、[Legacy Classification](product/LEGACY_DOC_INDEX.md) | 历史计划只做证据，禁止自动提升为合同 |
+| 需要做什么 | 当前文件 | 使用边界 |
+| --- | --- | --- |
+| 产品定位、用户旅程和能力图 | [产品基线](product/README.md)、[Capability Map](product/CAPABILITY_MAP.md)、[User Journeys](product/USER_JOURNEYS.md) | 以当前获批合同为准，不能以代码存在推断旅程已验收 |
+| 审查 Product Decision / Feature | [文档治理](product/DOCUMENT_GOVERNANCE.md)、[特性清单](product/features/README.md)、[变更流程](product/PRODUCT_CHANGE_PROCESS.md) | `ACCEPTED` / `APPROVED` / `IMPLEMENTING`，不得把 PROPOSED 当作事实 |
+| 产品历史和讨论材料 | [历史文档分类](product/LEGACY_DOC_INDEX.md)、[保留的 Review 索引](reviews/README.md) | Evidence / Review，不是新产品合同 |
+| 当前运行与升级要求 | [Release Guide](release/RELEASING.md)、[仓库代码规范](../CODE_STYLE.md) | 不改写已经执行的 Flyway，也不凭历史规划执行删除 |
+| 前端现状与设计 | [前端工程约定](../data-ops-ui/FRONTEND_CODE_STYLE.md)、[IA V3.1](product/experience/IA-V3.1-navigation-page-composition-plan.md) | IA 文档仍按其审批状态执行；原型不是生产代码 |
+| AI/Coding Agent 入口 | [AGENTS.md](../AGENTS.md)、[PRODUCT_STYLE.md](../PRODUCT_STYLE.md) | 按 Owner 和已批准变更最小范围读取 |
 
-## 按用途定位证据，不从旧计划自动起开发
+## 历史证据清理的可追溯边界
 
-| 路径 / 类型 | 当前用途 |
-|---|---|
-| `product/acceptance/**`、`test/**` | 产品验收和测试证据；真实环境证明须满足对应验收门槛 |
-| `reviews/**`、`frontend-review/**`、`architecture-review/**`、`v1/**` | 评审、缺口、历史观察，不能独立声明产品真相 |
-| `20261001/**`、`20261003/**`、`20261004/**` | 按日期保存的交付/分析证据，日期不是状态批准 |
-| `phase7-*.md`、`phase8*.md`、`phase9*.md` | 阶段性记录，按当前 Contract 和 PR 状态交叉核对 |
-| `ai/**`、`agent/**`、`semantic/**`、`metric/**`、`model/**` 等 | 按业务域选择性查看相关研究、回归、设计或操作材料 |
-| `prototypes/**`、`INTERACTION_PRINCIPLES.md`、`MENU_REDESIGN.md` | 交互设计参考或历史输入，非自动生效的导航要求 |
-| `.zcode/plans/*.md` | **仓库外层 IDE/Agent 历史计划**，不能作为迁移命令、发布步骤或 SQL 删除授权 |
+2026-10-13 的仓库提交 [`482017e`](https://github.com/gitfortian/data-ops/commit/482017e607c33d13ebcc4cdf64277aeb6d60114b) 清理了旧的 `docs/20261001/**`、`docs/20261003/**`、`docs/20261004/**`、`docs/engineering/**`、`docs/frontend-review/**`、`docs/architecture-review/**`、`docs/v1/**`、`docs/test/**` 和旧历史证据索引。**这些路径不再是 main 中有效的本地链接**。需要审计旧材料时，可查看[清理前的 Git 历史快照](https://github.com/gitfortian/data-ops/tree/140c82c6227ef39339ff19825c41786b4035c6fb/docs)，不得编造已删除的实时文档或将历史记录自动变成当前 Contract。
 
-## 高风险旧计划：明确不执行
+对于现存材料，优先阅读[保留的 Review 索引](reviews/README.md)、[产品规格](product/features/README.md)、[产品决策](product/decisions/)和各模块稳定合同。只有真实保存于当前库且具备合法访问路径的证据才能当作**当前可访问证据**；Git 历史快照属于历史来源，不表示今天验收通过。
 
-1. `../.zcode/plans/plan-sess_36a3068e-4352-4d63-8388-d516f3f18f85.md`：提出将 173 个 Flyway 文件压缩成 30 个、移除 baseline/历史迁移和放弃老库升级。**这是历史提案，不是 ACCEPTED Contract；不得据此合并/删除 Flyway SQL、重写历史版本或切换生产库。** 按现行迁移校验和 Release 合同验证任何独立变更。
-2. `../.zcode/plans/plan-sess_a18ccd05-9ad6-47e1-9223-c72e865f530c.md`：本体/语义双层架构设计任务草案；原要求目标 `docs/two-layer-modeling-design.md` 在当前树不存在，不等于批准了 Maven 模块重构。
-3. `../.zcode/plans/plan-sess_b1fff9ab-dc67-4cd5-822f-1e6dca9c139d.md`：Agent 可观测性改造文档任务草案；是否落地以当前 Agent 模块 Contract 和后续审批为准。
+## 高风险旧计划（历史输入，不执行）
 
-这三份历史文件继续原样保存作 provenance；**不移动、不覆盖、不把文内「执行顺序」解释为当前行动**。
+- `.zcode/plans/plan-sess_36a3068e-4352-4d63-8388-d516f3f18f85.md` 曾提出删除大量 Flyway 历史版本、改写 baseline 与迁移顺序。**严禁**以该提案自行修改已经执行的迁移 SQL；当前升级约束以 Release / Flyway 合同为准。
+- `.zcode/plans/plan-sess_a18ccd05-9ad6-47e1-9223-c72e865f530c.md` 属于历史双层建模设计请求，不是正式授权。
+- `.zcode/plans/plan-sess_b1fff9ab-dc67-4cd5-822f-1e6dca9c139d.md` 属于 Agent 可观测性历史任务草案，不是可直接执行的开发计划。
 
-## 按阶段与证据族浏览（Historical / Evidence）
+## 实施与验收原则
 
-- [历史证据总索引](HISTORICAL_EVIDENCE_INDEX.md)：把按日期的实测报告、前端/架构 Review、阶段报告、旧 V1 资料与测试记录链接到原位置；**不移动或删除任何证据，也不因此确认缺陷已核销**。
-- [2026-10-01 报告](20261001/README.md) · [2026-10-03 检查](20261003/README.md) · [2026-10-04 产品审核提案](20261004/README.md)。
-- [前端 Review](frontend-review/README.md) · [架构 Review](architecture-review/README.md) · [核销与历史问题 Review](reviews/README.md)。
-- [原 V1 阶段资料](v1/README.md) · [测试报告](test/README.md)。
-
-## 工程整洁性收口与后续验收
-
-- [#345 工程整洁性治理阶段证据与剩余工作](engineering/code-cleanliness-p1-closeout.md)：各批 PR、已退役入口、仍需代码级证明的 P2 项。
-- [P2 后端整洁性综合审计](engineering/p2-backend-cleanliness-audit.md)：已合并 #477 的机械等价简化与保守可达性审计；没有静态引用不等于死代码。
-- [P3 文档及工程入口核销](engineering/p3-document-cleanliness-closeout.md)与[P3 源码注释审计](engineering/p3-source-debt-closeout.md)：已合并 #481 / #484 的证据与防回流机制。
-- [#345 最终综合核销和结项交接](engineering/final-cleanliness-closeout.md)：按最新 main 核对一次性脚本、保留证据、前端旧兼容层及剩余人工审查候选；只读审计，不修改业务行为。
-- [TypeScript type-baseline](../data-ops-ui/scripts/type-baseline.json)：当前机器可验收的 TypeScript 已知诊断基线，不以先前生成的 `tsc-output.txt` 文本替代。
-- 历史文档边界细分见 [Legacy Documentation Classification](product/LEGACY_DOC_INDEX.md)。
-
-本索引不修改任一 Product Decision / Feature 状态，不重命名 Flyway 文件，不声明 P2 全仓可达性审计已完成。
+面向具体变更：Product / Domain Contract → 工程与 API 事实 → 真实测试证据。当前源码、CI、部署版本、Owner 身份和角色权限必须分别核对；PR merged 不等于已部署/已验收。没有证据不宣称 SHIPPED。
