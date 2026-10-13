@@ -1791,6 +1791,110 @@ function v7HomeJump(target,layer,logical){
  go(target);
 }
 
+
+/* v0.8.1: identity is project + physicalModelId, NEVER warehouse layer alone. */
+const v81={project:"DEMO-RETAIL",byId:{},active:{},seq:0,modeDetail:"",aiAnswers:{},handoff:null};
+function v81Current(layer=v6.layer){
+ let id=v81.active[layer];if(id&&v81.byId[id])return v81.byId[id];
+ const x=v6Layer(),n=++v81.seq;id="DEMO-"+layer+"-MODEL-"+String(n).padStart(3,"0");
+ x.physicalModelId=id;x.projectId=v81.project;
+ const item={id,layer,title:layer==="DWD"?"订单支付明细事实":layer==="ODS"?"订单来源镜像":layer+" 物理模型草稿",projectId:v81.project,state:x,logicalId:v7.targetByLayer[layer]||"LM-016",mapping:v7.mapping[layer]||null};
+ v81.byId[id]=item;v81.active[layer]=id;return item;
+}
+function v81SwitchTarget(id){
+ const to=v81.byId[id];if(!to)return;
+ const layer=to.layer,old=v81Current(layer);
+ old.state=v6.layers[layer];old.mapping=v7.mapping[layer]||null;old.logicalId=v7.targetByLayer[layer];
+ v81.active[layer]=id;v6.layer=layer;v6.layers[layer]=to.state;v7.targetByLayer[layer]=to.logicalId;
+ if(to.mapping)v7.mapping[layer]=to.mapping;else delete v7.mapping[layer];
+ v7.view="physical";renderMain();
+}
+function v81AddTarget(){
+ if(!actionAllowed()){toast("只读身份不可新建模型草稿");return}
+ const layer=v6.layer,from=v81Current(layer),prior=from.state,n=++v81.seq,id="DEMO-"+layer+"-MODEL-"+String(n).padStart(3,"0");
+ const state={...prior,layer,projectId:v81.project,physicalModelId:id,deps:[v6Configs[layer].deps[0]],pending:null,rows:[],loaded:false,dirty:false,checked:false,revision:0,saved:[],note:"",handoff:false,conflicts:[],pendingReload:false,pendingOption:null,logicalRef:null};
+ v81.byId[id]={id,layer,title:"新建 "+layer+" 物理模型 "+n,projectId:v81.project,state,logicalId:v7ForLayer(layer).id,mapping:null};
+ v81SwitchTarget(id);
+}
+function v81TargetStrip(){
+ const current=v81Current(),items=Object.values(v81.byId).filter(x=>x.layer===v6.layer);
+ return '<div class="v81Modelbar"><h2>物理目标身份 · '+esc(v6.layer)+'</h2>'+
+ '<p>同层允许多个独立目标；每个目标都有自己的字段、依赖、逻辑映射、未保存草稿和版本，不会借用另一张表的校验。</p>'+
+ '<div class="v81Targets">'+items.map(item=>'<button class="'+(item.id===current.id?"active":"")+'" data-v81-target="'+item.id+'">'+esc(item.title)+' · '+item.id+'</button>').join("")+
+ '<button data-v81-new="1" '+(!actionAllowed()?"disabled":"")+'>+ 另建 '+v6.layer+' 目标</button></div>'+
+ '<div class="v81Trail"><strong>当前：</strong>'+esc(current.projectId)+' / '+esc(current.id)+
+ ' · '+esc(current.state.saved.at(-1)?.id||"尚无保存版本")+' · '+esc(current.logicalId||"ODS 贴源无需逻辑模型")+'</div></div>';
+}
+function v81DevelopmentPackage(){
+ const x=v6Layer(),target=v81Current();
+ if(!v8CanHandoff()||!x.saved.length){toast("只允许从当前已保存、无待补映射的有效设计建立交接上下文");return}
+ const snap=x.saved.at(-1);
+ v81.handoff=Object.freeze({projectId:v81.project,physicalModelId:target.id,layer:x.layer,modelDesignId:snap.id,logicalVersion:snap.logicalMapping?.logicalVersion||null,deps:snap.deps.map(String),status:"DESIGN_CONTEXT_ONLY"});
+ go("dev");
+}
+function v81HandoffSummary(){
+ if(state.page!=="dev"||!v81.handoff)return "";
+ const h=v81.handoff;
+ return '<section class="v81Modelbar"><h2>来自建模的待开发交接 · '+esc(h.modelDesignId)+'</h2>'+
+ '<p>项目 '+esc(h.projectId)+' / 物理目标 '+esc(h.physicalModelId)+
+ ' · 逻辑版本 '+esc(h.logicalVersion||"ODS 贴源例外")+'</p>'+
+ '<div class="v81Trace">**仅设计上下文**：没有 TaskRevision、目标连接、SQL/DDL、Schedule、Execution、质量结果或消费回执。需在 DataDev 原域创建和授权执行，不能在本原型标记交付。</div>'+
+ '<div class="v81RouteLinks"><button data-v81-backmodel="'+h.physicalModelId+'">← 回到精确物理目标</button><button data-page="home">返回项目首页</button></div></section>';
+}
+function v81HomeStory(){
+ const paths={
+ build:{title:"J1 · 首次可信建设",codes:"GM-J1-01—16",cards:[
+ ["授权来源/确认业务语义","已采集物理列是 ODS 的依据；未经授权不能开始","source","来源连接、采集结果及业务过程是不同事实"],
+ ["逻辑设计→有身份的物理目标","LM-016 及目标物理 ID/保存版本，来源字段先批量加载","model","ODS 可直建；DWD/DIM 按逻辑、标准和粒度审阅"],
+ ["数据开发→质量→消费","TaskRevision、真实执行、Quality 和 Dataset/Service 各自回读","dev","模型设计完成 != 已部署 != 已运行 != 已消费"]]},
+ consume:{title:"J3 · 找到并合法使用数据",codes:"GM-J3-01—11",cards:[
+ ["发现产品与读懂合同","从 Dataset / Data Service 开始，不强迫重新建设","product","产品类型、版本、粒度、更新时间均须查来源 Owner"],
+ ["授权与真实请求","ACCESS_ALLOWED 和运行可用时才可以 Query/Invoke","security","拒绝、待审批、访问 Provider 不可用必须区分"],
+ ["消费结果与反馈","真实 Source Audit、Usage、订阅、变更通知需回读","product","模拟预览不意味着真实 Usage，需可追溯反馈"]]},
+ operate:{title:"J4 · 发现异常并安全恢复",codes:"GM-J4-01—07",cards:[
+ ["确认运行/质量异常","从告警证据定位受影响对象和责任人","governance","来源漂移不是实际运行失败"],
+ ["影响范围和授权处置","任务/工作流/指标/消费者受影响范围及重跑权限","dev","未知影响必须标未知，不能直接重跑"],
+ ["验证恢复并通知","重新执行的 Run/Quality 结果和消费通知","quality","没有真实结果只能保持待验证"]]},
+ define:{title:"J2 · 业务问题到统一指标",codes:"GM-J2-01—09",cards:[
+ ["过程与标准口径","确认事件、统计日、去重和标准字段正式版本","semantic","ROLE_METRIC 标准字段不是指标定义"],
+ ["指标草稿与版本校验","MetricVersion、定义验证、实际数据验证是不同证据","metric","公式字符串不等于在真实数据上验证过"],
+ ["发布并交给消费","发布合同交给 Dataset/Service，再回看真实使用与影响","product","指标发布不会触发数据集查询"]]},
+ secure:{title:"J5 · 敏感数据到安全消费",codes:"GM-J5-01—07",cards:[
+ ["发现敏感字段与策略","来源证据、Project、数据范围和敏感分类","security","不能从字段名自动得出最终分级"],
+ ["申请/审批与执行","真实消费入口按权限作允许、脱敏或拒绝判定","product","页面点击通过不等于授权批准"],
+ ["审计/撤权与影响","访问 Audit、有效期、跨项目隔离和撤权反馈","security","Provider 故障不得表现为业务拒绝"]]},
+ assist:{title:"J1 · AI 协作建设（与 J6 问答独立）",codes:"GM-J1-16 / GM-X-06",cards:[
+ ["来源证据候选","订单表结构 HARVEST-20261012 仅为模拟来源快照","source","需辨别对象身份、权限、漂移和来源有效期"],
+ ["人工确认业务决策","确认订单头/明细粒度、关键业务键和口径，不让 AI 猜测","semantic","未知关系/Join 不可自动晋升业务事实"],
+ ["受控专业接管","Modeling / DataDev 只读建议与实际授权动作分离","model","本原型不自动创建任务/执行或保存第二份 AI Truth"]]},
+ ask:{title:"J6 · 有证据的可信问答",codes:"GM-J6-01—08",cards:[
+ ["澄清业务问题","选择精确指标、时间范围、业务场景和当前 Project","metric","未澄清时只能追问"],
+ ["授权查询计划","用已发布指标及 Dataset/Service 合同确定可审核计划","product","不能在此生成自由 SQL 或绕过 Access"],
+ ["基于证据回答/拒答","真实响应、版本、来源、审计均需存在","product","本原型没有真实数据，因此只能展示待取证而不伪造答案"]]},
+ mdm:{title:"MDM · 主数据专业解决方案",codes:"GM-MDM-01—06",cards:[
+ ["确认主数据身份","选客户/产品、业务键、归属与源记录","mdm","不能与订单事实粒度混用"],
+ ["冲突/匹配/审批","审查跨来源候选、黄金记录建议与审批","mdm","候选合并不是已发布黄金记录"],
+ ["受控分发与修复","有权限的分发、纠错、回退和受影响消费者","mdm","没有真实分发回执只能标待验证"]]}
+ };
+ const x=paths[v8.mode]||paths.build;
+ const items=x.cards.map(([label,why,route,note],i)=>'<div class="v81Step"><b>'+(i+1)+'. '+esc(label)+'</b><small>'+esc(why)+'</small>'+
+ '<div class="v81Pill">当前：'+(i===0?"核实/设计":"尚无真实证据")+'</div><small>'+esc(note)+'</small>'+
+ '<button data-v81-route="'+route+'">进入原专业域 →</button></div>').join("");
+ return '<section class="v81Journey"><h3>'+esc(x.title)+' · '+esc(x.codes)+'</h3>'+
+ '<p class="v7LiveDisclaimer">三阶段只是此旅程的“入口→关键确认→交付证据”设计，绝不把 75 条用户故事画成一个强制串行向导。</p>'+
+ '<div class="v81JourneyGrid">'+items+'</div>'+
+ (v8.mode==="assist"?'<div class="v81RoleNote"><b>AI 建设建议 · 来源 HARVEST-20261012（示例）</b><p>候选：复用订单业务过程 PRC-102、确认订单商品明细粒度、从 ODS 继承字段。涉及主键、Join、标准字段缺口须由人确认。</p>'+
+ '<button class="btn" data-v81-ai="review">标记为“已人工审阅”（仅会话）</button> '+(v81.aiAnswers.review?"人工审阅记录已存在；没有修改原域对象":"尚未人工审阅")+
+ '<button class="btn" data-v81-route="model">交给模型专家继续 →</button></div>':
+ v8.mode==="ask"?'<div class="v81RoleNote"><b>当前只能追问/拒答</b><p>没有授权查询响应、源版本、使用审计；因此不生成“订单销售额”等结果，也不提供绕过服务的自由 SQL。</p><button class="btn" data-v81-route="product">核对发布合同与访问状态 →</button></div>':"")+'</section>';
+}
+function v81Route(route){
+ if(["logical","physical"].includes(route)){v7HomeJump(route);return}
+ if(route==="product"){go("product");return}
+ if(route==="source"||route==="dev"||route==="security"||route==="metric"||route==="semantic"||route==="model"||route==="governance"||route==="quality"||route==="mdm"){go(route);return}
+ toast("该专业领域没有已确认入口，暂不可开始");
+}
+
 function v3Run(){
  nav();
  dom("roleSwitch").value=state.role;
