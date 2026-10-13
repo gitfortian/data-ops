@@ -1891,7 +1891,7 @@ function v81HomeStory(){
 }
 function v81ProductIssue(){
  const prod=v8Products[v8.product];
- v6.collab.view="issue";v6.collab.source={id:prod.key,version:prod.version,kind:prod.type};
+ v6InitCases();v6.collab.view="issue";v6.collab.selected=v6.records.find(r=>r.type==="issue")?.id||"ISS-201";v6.collab.source={id:prod.key,version:prod.version,kind:prod.type};
  v6.collab.draftTitle="反馈 "+prod.name+" 的消费问题";v6.collab.draftDetail="";
  go("collab");
 }
