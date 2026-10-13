@@ -1199,7 +1199,7 @@ const v6Configs={
 };
 const v6={modelMode:"layered",layer:"ODS",layers:{},origin:null,
 collab:{view:"demand",selected:"REQ-102",role:"coordinator",note:"",filter:"mine"},records:[]};
-function v6Layer(){const k=v6.layer;return v6.layers[k]||(v6.layers[k]={layer:k,deps:[v6Configs[k].deps[0]],pending:null,rows:[],loaded:false,dirty:false,checked:false,revision:0,saved:[],metric:"MET-026",consumer:"订单经营日报",grain:k==="ODS"?"与来源表一行一致":k==="DWD"?"订单明细行":k==="DIM"?"一个会员版本":k==="DWS"?"按日汇总": "每个报表日期一行",tech:["etl_time","dt"],scd:"SCD2",note:"",handoff:false})}
+function v6Layer(){const k=v6.layer;return v6.layers[k]||(v6.layers[k]={layer:k,deps:[v6Configs[k].deps[0]],pending:null,rows:[],loaded:false,dirty:false,checked:false,revision:0,saved:[],metric:"MET-026",consumer:"订单经营日报",grain:k==="ODS"?"与来源表一行一致":k==="DWD"?"订单明细行":k==="DIM"?"一个会员版本":k==="DWS"?"按日汇总": "每个报表日期一行",tech:["etl_time","dt"],scd:"SCD2",note:"",handoff:false,conflicts:[],pendingReload:false,pendingOption:null})}
 function v6TechRows(x){if(x.layer==="ODS"){for(const name of x.tech)if(!x.rows.some(r=>r.name===name))x.rows.push({name,type:name==="dt"?"DATE":"TIMESTAMP",source:"系统技术列",origin:"无源列",rule:name==="dt"?"分区日期（待确认）":"采集处理时间（待确认）",std:"",role:"技术字段"})}}
 function v6FieldCandidates(x){
  if(x.layer==="DWS"){
@@ -1213,7 +1213,11 @@ function v6FieldCandidates(x){
 function v6Load(mode="replace"){
  const x=v6Layer();if(!x.deps.length){toast("先选择有权限的来源或依赖模型");return}
  const incoming=v6FieldCandidates(x);if(mode==="merge"&&x.loaded){const old=new Set(x.rows.map(r=>r.name.toLowerCase()));const add=incoming.filter(r=>!old.has(r.name.toLowerCase()));x.rows.push(...add);x.note="保留已有字段，合并 "+add.length+" 个新字段；重名列没有覆盖。"}else{x.rows=incoming;x.note="从依赖结构批量加载 "+incoming.length+" 列待确认候选。"}
- v6TechRows(x);x.loaded=true;x.dirty=true;x.checked=false;x.revision++;renderMain();
+ v6TechRows(x);
+ const seen=new Set(),clashes=[];
+ for(const r of x.rows){const key=r.name.toLowerCase();if(seen.has(key))clashes.push(r.name);else seen.add(key)}
+ if(mode==="merge"){const from=x.deps.flatMap(id=>v6Sources[id].cols.map(z=>z[0].toLowerCase())),repeat=from.filter((n,i)=>from.indexOf(n)!==i);clashes.push(...repeat)}
+ x.conflicts=[...new Set(clashes)];x.loaded=true;x.dirty=true;x.checked=false;x.revision++;renderMain();
 }
 function v6Dependency(id){
  const x=v6Layer(),list=x.pending?[...x.pending]:[...x.deps],index=list.indexOf(id);
@@ -1226,6 +1230,30 @@ function v6DepDecision(act){
  if(act==="cancel"){x.pending=null;renderMain();return}
  x.deps=x.pending;x.pending=null;v6Load(act==="merge"?"merge":"replace");
 }
+function v6RequestLoad(){
+ const x=v6Layer();if(x.loaded&&x.dirty){x.pendingReload=true;renderMain();return}v6Load("replace");
+}
+function v6ReloadDecision(mode){
+ const x=v6Layer();x.pendingReload=false;
+ if(mode==="cancel"){renderMain();return}
+ v6Load(mode==="merge"?"merge":"replace");
+}
+function v6ResolveConflicts(){
+ const x=v6Layer(),seen=new Set();x.rows=x.rows.filter(r=>{const key=r.name.toLowerCase();if(seen.has(key))return false;seen.add(key);return true});
+ x.note="已确认同名列冲突：暂采用现有首选来源，备选依赖保留在上游列表；仍需业务 Join 审阅。";
+ x.conflicts=[];x.checked=false;x.dirty=true;x.revision++;renderMain();
+}
+function v6OptionChange(name,value){
+ const x=v6Layer(),old=x[name];if(old===value)return;
+ if(x.loaded&&x.dirty){x.pendingOption={name,value};renderMain();return}
+ x[name]=value;if(x.loaded){x.loaded=false;x.rows=[];x.checked=false}renderMain();
+}
+function v6OptionConfirm(mode){
+ const x=v6Layer(),opt=x.pendingOption;if(!opt)return;
+ x.pendingOption=null;if(mode==="cancel"){renderMain();return}
+ x[opt.name]=opt.value;x.loaded=false;x.rows=[];x.checked=false;x.dirty=false;x.conflicts=[];
+ renderMain();
+}
 function v6Tech(name){
  const x=v6Layer();if(x.layer!=="ODS")return;
  x.tech=x.tech.includes(name)?x.tech.filter(z=>z!==name):[...x.tech,name];
@@ -1234,7 +1262,8 @@ function v6Tech(name){
 }
 function v6Check(){
  const x=v6Layer();
- if(!x.loaded||!x.deps.length||x.pending){toast("请先选择依赖并生成字段，处理全部来源变更");return}
+ if(!x.loaded||!x.deps.length||x.pending||x.pendingReload||x.pendingOption){toast("请先选择依赖并确认待处理的结构差异");return}
+ if(x.conflicts.length){toast("请先确认跨来源的同名字段冲突");return}
  if(x.rows.some(r=>!r.name.trim()||!r.type.trim())){toast("发现未定义名称或类型的字段");return}
  if(!x.grain.trim()){toast("请说明本层的模型粒度");return}
  x.checked=true;renderMain();
@@ -1259,10 +1288,13 @@ function v6LayerModel(){
  x.layer==="DWD"||x.layer==="DIM"?'<div class="v6Hint">逻辑设计桥梁：'+(x.layer==="DWD"?"订单支付过程 PRC-102 / 逻辑实体 LM-016":"会员实体与维度属性草稿")+'。逻辑定义负责粒度，不能替代真实来源列。</div>':
  '<div class="v6Hint">从已采集物理源表直接进入 ODS；不依赖 Asset Write 或预先建立全部标准字段。</div>')+
  '<h3 style="margin-top:12px">选择源表/上游模型及其版本</h3><div class="v6Sources">'+depButtons+'</div>'+
+ (x.pendingReload?'<div class="v6Warn"><b>字段草稿已有未保存更改</b>。重新加载会覆盖当前字段，必须选择合并、替换或取消。<div class="v6Actions"><button data-v6-reload="merge">保留修改并合并</button><button data-v6-reload="replace">明确放弃并重载</button><button data-v6-reload="cancel">继续原编辑</button></div></div>':'')+
+ (x.pendingOption?'<div class="v6Warn"><b>正在切换指标或消费场景</b>：现有字段草稿已修改。<div class="v6Actions"><button data-v6-option="replace">放弃当前字段并切换</button><button data-v6-option="cancel">继续当前设计</button></div></div>':'')+
  (x.pending?'<div class="v6Warn">来源变更待确认，手工编辑不能静默丢弃。<div class="v6Actions"><button data-v6-decision="merge">保留编辑并并入新列</button><button data-v6-decision="replace">确认放弃并重载</button><button data-v6-decision="cancel">取消来源变更</button></div></div>':'')+
  '<div class="v6Actions"><button class="primary" data-v6-load="1" '+(!x.deps.length||!!x.pending?"disabled":"")+'>'+(x.loaded?"按当前依赖重新生成":"读取结构并批量加载字段 →")+'</button></div></section>';
  const fields='<section class="v6Section"><h2>2. 全表字段与来源映射 · '+x.rows.length+' 列</h2><p>字段自动批量继承是主流程，不要求一列一列重新选择来源。标准与加工规则后续人工确认。</p>'+
  (x.layer==="ODS"?'<div class="v6Actions"><button data-v6-tech="etl_time">'+(x.tech.includes("etl_time")?"☑":"☐")+' etl_time 技术时间列</button><button data-v6-tech="dt">'+(x.tech.includes("dt")?"☑":"☐")+' dt 分区列</button></div>':'')+
+ (x.conflicts.length?'<div class="v6Warn"><strong>多上游同名列待决策</strong><p>'+esc(x.conflicts.join("、"))+' 来自不止一个上游，不能自动当作相同字段。</p><button data-v6-conflict="keep">确认暂以首个来源保留（后续校验 Join）</button></div>':'')+
  (x.loaded?'<div class="v6TableWrap"><table class="v6Table"><thead><tr><th>目标列</th><th>类型</th><th>来源模型及字段</th><th>角色</th><th>映射/加工</th><th>标准字段 ID</th></tr></thead><tbody>'+x.rows.map((r,i)=>'<tr><td><input data-v6-row="'+i+'" data-v6-key="name" value="'+esc(r.name)+'"></td><td><input data-v6-row="'+i+'" data-v6-key="type" value="'+esc(r.type)+'"></td><td>'+esc(v6Sources[r.source]?.name||r.source)+'<small> · '+esc(r.origin)+'</small></td><td>'+esc(r.role)+'</td><td><input data-v6-row="'+i+'" data-v6-key="rule" value="'+esc(r.rule)+'"></td><td>'+esc(r.std||"待确认")+'</td></tr>').join("")+'</tbody></table></div>':'<div class="v6Hint">还没有字段。请先在上方选依赖并批量加载。</div>')+
  '<p class="micro">'+esc(x.note||"切换来源必须先查看差异；来源快照不是默认已建立真实血缘。")+'</p></section>';
  const rules='<section class="v6Section"><h2>3. '+x.layer+' 本层加工与粒度</h2><label class="v6Field">目标粒度<input id="v6-grain" value="'+esc(x.grain)+'"></label>'+
@@ -1546,7 +1578,10 @@ document.addEventListener("click",function(ev){
  if(el.dataset.v6Mode){v6.modelMode=el.dataset.v6Mode;renderMain();return}
  if(el.dataset.v6Dep){v6Dependency(el.dataset.v6Dep);return}
  if(el.dataset.v6Decision){v6DepDecision(el.dataset.v6Decision);return}
- if(el.dataset.v6Load){v6Load("replace");return}
+ if(el.dataset.v6Load){v6RequestLoad();return}
+ if(el.dataset.v6Reload){v6ReloadDecision(el.dataset.v6Reload);return}
+ if(el.dataset.v6Conflict){v6ResolveConflicts();return}
+ if(el.dataset.v6Option){v6OptionConfirm(el.dataset.v6Option);return}
  if(el.dataset.v6Tech){v6Tech(el.dataset.v6Tech);return}
  if(el.dataset.v6Check){v6Check();return}
  if(el.dataset.v6Save){v6Save();return}
@@ -1628,8 +1663,8 @@ document.addEventListener("change",function(ev){
  const t=ev.target;
  
  if(t.id==="v6-role"){v6.collab.role=t.value;renderMain();return}
- if(t.id==="v6-metric"){const x=v6Layer();if(x.metric!==t.value){x.metric=t.value;x.checked=false;x.dirty=true;if(x.loaded){x.loaded=false;x.rows=[]}}renderMain();return}
- if(t.id==="v6-consumer"){const x=v6Layer();if(x.consumer!==t.value){x.consumer=t.value;x.checked=false;x.dirty=true;if(x.loaded){x.loaded=false;x.rows=[]}}renderMain();return}
+ if(t.id==="v6-metric"){v6OptionChange("metric",t.value);return}
+ if(t.id==="v6-consumer"){v6OptionChange("consumer",t.value);return}
  if(t.id==="v6-scd"){const x=v6Layer();x.scd=t.value;x.checked=false;x.dirty=true;renderMain();return}
 
  if(t.id.startsWith("v51-bind-")){const r=v3Selected("standard");if(r&&actionAllowed()){v51BindDraft(r[4])[t.id.slice(9)]=t.value;renderMain()}return}
