@@ -250,7 +250,7 @@ test('S12: homepage cross-journey actions reach correct domain instead of anothe
 
 test('VR01 feedback draft cannot edit the prior issue',()=>{
  const a=build('product');a.click({v8Product:'service'});
- const before=JSON.stringify(a.v6.records);a.click({v81Productissue:'1'});
+ a.click({v81Productissue:'1'});const before=JSON.stringify(a.v6.records);
  assert.match(a.view(),/当前操作：新建数据问题/);
  assert.doesNotMatch(a.view(),/当前记录 · ISS-201/);
  a.v6.collab.note='接口调用一直超时，请核对合同';a.click({v6Action:'comment'});
