@@ -574,6 +574,7 @@ function v5Conflict(rel,target){
 }
 function v5RelationPanel(){
  const rel=v5.relation;if(!rel||rel.confirmed)return "";
+ const duplicate=v51ModelAlreadyExists();
  const obj=rel.target&&rel.target!=="new"?v4StoreFor("model",rel.target):null;
  const err=v5Conflict(rel,rel.target);
  return '<section class="card" style="margin-bottom:14px"><div class="v4TaskBody"><h2>确认目标模型与字段映射</h2><p class="micro">浏览业务过程和标准不会修改现有模型，必须选定目标并核对变更。</p>'+
@@ -588,8 +589,9 @@ function v5RelationPanel(){
  '<div class="factRow"><span>原关联</span><strong>'+esc(obj?.process||"无")+' / '+esc(obj?.field||"无")+' → '+esc(obj?.mapField||"无")+'</strong></div>'+
  '<div class="factRow"><span>本次拟修改</span><strong>'+esc(rel.process||"不改变过程")+' / '+esc(rel.field||"无")+' → '+esc(rel.attribute||"未选择属性")+'</strong></div></div></div></div>'+
  (err?'<div class="v4Notice"><strong>对象不匹配</strong><p>'+esc(err)+'</p></div>':"")+
+ (duplicate?'<div class="v4Notice"><strong>已有同类模型草稿</strong><p>当前新建操作不会覆盖 '+esc(v51NewModelId(rel))+'。是否打开已有草稿再单独编辑？</p><button class="btn" data-v51-open="1">打开已有模型（不应用本次关联）</button></div>':"")+
  (!actionAllowed()?v3Hint("当前只读：可以检查关系，但不能修改目标模型草稿。","warn"):"")+
- v3ActionLine('<button class="btn" data-v5-rel="cancel">取消预览</button><button class="btn primary" data-v5-rel="confirm" '+(!actionAllowed()||!rel.target||!rel.attribute?.trim()||err?"disabled":"")+'>确认变更到目标草稿</button>')+'</div></section>';
+ v3ActionLine('<button class="btn" data-v5-rel="cancel">取消预览</button><button class="btn primary" data-v5-rel="confirm" '+(!actionAllowed()||!rel.target||!rel.attribute?.trim()||err||duplicate?"disabled":"")+'>确认变更到目标草稿</button>')+'</div></section>';
 }
 function v5ApplyRelation(){
  const rel=v5.relation;
@@ -1290,6 +1292,12 @@ document.addEventListener("click",function(ev){
  const el=ev.target.closest("button");if(!el)return;
  if(el.dataset.queue){return}
  if(el.dataset.model){return}
+ if(el.dataset.v51Open){v51OpenExisting();return}
+ if(el.dataset.v51View){v51.view=el.dataset.v51View;state.query="";state.filter="all";state.tree="";renderMain();return}
+ if(el.dataset.v51Kind){v51.kind=el.dataset.v51Kind;renderMain();return}
+ if(el.dataset.v51Catalog){v51.selectedStandard=el.dataset.v51Catalog;renderMain();return}
+ if(el.dataset.v51Save){v51SaveBinding();return}
+ if(el.dataset.v51Reset){const r=v3Selected("standard");if(r){v51.bindingDraft[r[4]]={...v51Binding(r[4])};renderMain()}return}
  if(el.dataset.v5Rel){
   if(el.dataset.v5Rel==="confirm")v5ApplyRelation();
   else{v5.relation=null;renderMain()}
@@ -1341,6 +1349,7 @@ document.addEventListener("input",function(ev){
 });
 document.addEventListener("change",function(ev){
  const t=ev.target;
+ if(t.id.startsWith("v51-bind-")){const r=v3Selected("standard");if(r&&actionAllowed()){v51BindDraft(r[4])[t.id.slice(9)]=t.value;renderMain()}return}
  if(t.id==="v5-target"&&v5.relation){v5.relation.target=t.value;renderMain();return}
  if(t.id==="v4-choose"){selectRow(Number(t.value));return}
  if(t.id==="v4-category"){state.tree=t.value;renderMain();return}
