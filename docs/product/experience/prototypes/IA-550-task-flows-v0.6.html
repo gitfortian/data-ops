@@ -1180,6 +1180,111 @@ function v3StatePanel(){
  }[state.status]||["当前内容","仅显示静态数据","重试"];
  return '<div class="stateArea"><div class="glyph">◇</div><h3>'+data[0]+'</h3><p>'+data[1]+'</p><button class="btn" data-v3-action="state-retry">'+data[2]+'</button></div>';
 }
+
+const v6Sources={
+ "src.order_detail":{name:"MySQL sales.order_detail",layer:"物理源表",version:"HARVEST-20261012",cols:[["order_id","BIGINT"],["item_id","BIGINT"],["pay_amount","DECIMAL(18,2)"],["pay_time","DATETIME"],["updated_at","DATETIME"]]},
+ "PM-701":{name:"ods_order_detail",layer:"ODS",version:"V2.1",cols:[["order_id","BIGINT"],["item_id","BIGINT"],["pay_amount","DECIMAL(18,2)"],["pay_time","DATETIME"],["etl_time","DATETIME"]]},
+ "PM-710":{name:"ods_payment",layer:"ODS",version:"V1.4",cols:[["payment_id","BIGINT"],["order_id","BIGINT"],["payment_status","VARCHAR(24)"],["paid_at","DATETIME"]]},
+ "PM-702":{name:"ods_customer",layer:"ODS",version:"V1.2",cols:[["customer_id","BIGINT"],["customer_name","VARCHAR(80)"],["member_tier","VARCHAR(20)"]]},
+ "PM-732":{name:"dwd_order_detail",layer:"DWD",version:"V1.3",cols:[["order_id","BIGINT"],["customer_id","BIGINT"],["pay_amount","DECIMAL(18,2)"],["pay_time","DATETIME"],["status","VARCHAR(24)"]]},
+ "PM-733":{name:"dim_customer",layer:"DIM",version:"V1.1",cols:[["customer_id","BIGINT"],["member_tier","VARCHAR(20)"],["effective_from","DATETIME"]]},
+ "PM-832":{name:"dws_order_daily",layer:"DWS",version:"V1.0",cols:[["stat_date","DATE"],["pay_order_cnt","BIGINT"],["pay_amount_sum","DECIMAL(20,2)"]]}
+};
+const v6Configs={
+ ODS:{label:"贴源 ODS",deps:["src.order_detail"],explain:"确认已采集的物理源表 → 批量镜像所有源列 → 追加采集时间/分区技术列 → 审核逐列来源"},
+ DWD:{label:"明细 DWD",deps:["PM-701","PM-710"],explain:"确认业务过程/逻辑粒度 → 选择 ODS 模型版本 → 自动加载候选列 → 人工确认清洗/关联与标准"},
+ DIM:{label:"维度 DIM",deps:["PM-702","PM-701"],explain:"确认业务实体 → 选择上游模型 → 批量继承属性 → 审核维度键及 SCD 历史策略"},
+ DWS:{label:"汇总 DWS",deps:["PM-732","PM-733"],explain:"根据指标与统计周期 → 选择 DWD/DIM 上游 → 推导维度和度量候选 → 核对聚合"},
+ ADS:{label:"应用 ADS",deps:["PM-832","PM-732"],explain:"从看板/API 的输出合同开始 → 选择 DWS 或 DWD → 自动投影消费字段 → 核对授权与刷新"}
+};
+const v6={modelMode:"layered",layer:"ODS",layers:{},origin:null,
+collab:{view:"demand",selected:"REQ-102",role:"coordinator",note:"",filter:"mine"},records:[]};
+function v6Layer(){const k=v6.layer;return v6.layers[k]||(v6.layers[k]={layer:k,deps:[v6Configs[k].deps[0]],pending:null,rows:[],loaded:false,dirty:false,checked:false,revision:0,saved:[],metric:"MET-026",consumer:"订单经营日报",grain:k==="ODS"?"与来源表一行一致":k==="DWD"?"订单明细行":k==="DIM"?"一个会员版本":k==="DWS"?"按日汇总": "每个报表日期一行",tech:["etl_time","dt"],scd:"SCD2",note:"",handoff:false})}
+function v6TechRows(x){if(x.layer==="ODS"){for(const name of x.tech)if(!x.rows.some(r=>r.name===name))x.rows.push({name,type:name==="dt"?"DATE":"TIMESTAMP",source:"系统技术列",origin:"无源列",rule:name==="dt"?"分区日期（待确认）":"采集处理时间（待确认）",std:"",role:"技术字段"})}}
+function v6FieldCandidates(x){
+ if(x.layer==="DWS"){
+ const m=x.metric==="MET-026"?"pay_order_cnt":"pay_amount_sum";
+ return [{name:"stat_date",type:"DATE",source:x.deps[0],origin:"pay_time",rule:"DATE(pay_time)",role:"维度",std:""},
+ {name:m,type:m==="pay_order_cnt"?"BIGINT":"DECIMAL(20,2)",source:x.deps[0],origin:m==="pay_order_cnt"?"order_id":"pay_amount",rule:m==="pay_order_cnt"?"COUNT(DISTINCT order_id)":"SUM(pay_amount)",role:"度量",std:m==="pay_order_cnt"?"STD-201":"STD-208"}];
+ }
+ if(x.layer==="ADS"){const want=x.consumer==="订单经营日报"?["stat_date","pay_order_cnt","pay_amount_sum"]:["order_id","pay_amount","pay_time"];return want.map(name=>{const hit=x.deps.flatMap(id=>v6Sources[id].cols.map(col=>({id,col}))).find(o=>o.col[0]===name);return {name,type:hit?.col[1]||"待补充",source:hit?.id||"无已核实来源",origin:name,rule:"输出投影 · 待确认",role:"消费输出",std:""}})}
+ return x.deps.flatMap(id=>v6Sources[id].cols.map(col=>({name:col[0],type:col[1],source:id,origin:col[0],rule:x.layer==="ODS"?"保真镜像":x.layer==="DIM"?"维度属性待确认":"清洗及关联待确认",role:x.layer==="ODS"?"来源列":x.layer==="DIM"?"维度属性":"明细字段",std:x.layer==="ODS"?"":col[0]==="pay_amount"?"STD-208":col[0]==="order_id"?"STD-201":""})));
+}
+function v6Load(mode="replace"){
+ const x=v6Layer();if(!x.deps.length){toast("先选择有权限的来源或依赖模型");return}
+ const incoming=v6FieldCandidates(x);if(mode==="merge"&&x.loaded){const old=new Set(x.rows.map(r=>r.name.toLowerCase()));const add=incoming.filter(r=>!old.has(r.name.toLowerCase()));x.rows.push(...add);x.note="保留已有字段，合并 "+add.length+" 个新字段；重名列没有覆盖。"}else{x.rows=incoming;x.note="从依赖结构批量加载 "+incoming.length+" 列待确认候选。"}
+ v6TechRows(x);x.loaded=true;x.dirty=true;x.checked=false;x.revision++;renderMain();
+}
+function v6Dependency(id){
+ const x=v6Layer(),list=x.pending?[...x.pending]:[...x.deps],index=list.indexOf(id);
+ if(index>=0)list.splice(index,1);else list.push(id);
+ if(x.loaded){x.pending=list}else{x.deps=list;x.checked=false}
+ renderMain();
+}
+function v6DepDecision(act){
+ const x=v6Layer();if(!x.pending)return;
+ if(act==="cancel"){x.pending=null;renderMain();return}
+ x.deps=x.pending;x.pending=null;v6Load(act==="merge"?"merge":"replace");
+}
+function v6Tech(name){
+ const x=v6Layer();if(x.layer!=="ODS")return;
+ x.tech=x.tech.includes(name)?x.tech.filter(z=>z!==name):[...x.tech,name];
+ if(x.loaded){x.rows=x.rows.filter(r=>r.source!=="系统技术列");v6TechRows(x);x.dirty=true;x.checked=false;x.revision++}
+ renderMain();
+}
+function v6Check(){
+ const x=v6Layer();
+ if(!x.loaded||!x.deps.length||x.pending){toast("请先选择依赖并生成字段，处理全部来源变更");return}
+ if(x.rows.some(r=>!r.name.trim()||!r.type.trim())){toast("发现未定义名称或类型的字段");return}
+ if(!x.grain.trim()){toast("请说明本层的模型粒度");return}
+ x.checked=true;renderMain();
+}
+function v6Save(){
+ const x=v6Layer();if(!x.checked||x.pending||!actionAllowed())return;
+ const id="DEMO-"+x.layer+"-V"+(x.saved.length+1);
+ x.saved.push(Object.freeze({id,rev:x.revision,deps:x.deps.map(d=>d+"@"+v6Sources[d].version),fields:x.rows.map(r=>Object.freeze({...r})),grain:x.grain}));
+ x.dirty=false;x.handoff=false;renderMain();
+}
+function v6EditRow(i,key,value){
+ const x=v6Layer(),r=x.rows[i];if(!r||!["name","type","rule"].includes(key)||!actionAllowed())return;
+ if(r[key]===value)return;r[key]=value;x.dirty=true;x.checked=false;x.revision++;
+}
+function v6LegacyModel(){return pageHead("已有模型详情（原设计对照）","保留现有逐对象映射路径，分层建模为默认设计。","",'<button class="btn primary" data-v6-mode="layered">返回分层建模 →</button>')+v3Model()}
+function v6LayerModel(){
+ const x=v6Layer(),conf=v6Configs[x.layer],tab='<div class="v6Tabs">'+Object.keys(v6Configs).map(k=>'<button data-v6-layer="'+k+'" class="'+(x.layer===k?"active":"")+'">'+k+' · '+v6Configs[k].label+'</button>').join("")+'</div>';
+ const depButtons=conf.deps.map(id=>{const s=v6Sources[id],selected=(x.pending||x.deps).includes(id);return '<button data-v6-dep="'+id+'" class="v6Source '+(selected?"selected":"")+'"><strong>'+(selected?"☑ ":"☐ ")+esc(s.name)+'</strong><small>'+s.layer+' · '+s.version+' · '+s.cols.length+' 列</small></button>'}).join("");
+ const start= '<section class="v6Section"><h2>1. 建模依据 · '+esc(conf.label)+'</h2><p>'+esc(conf.explain)+'</p>'+
+ (x.layer==="DWS"?'<label class="v6Field">指标版本与目标口径<select id="v6-metric"><option value="MET-026" '+(x.metric==="MET-026"?"selected":"")+'>支付订单数 · MET-026 v1.2</option><option value="MET-027" '+(x.metric==="MET-027"?"selected":"")+'>实付金额 · MET-027 v1.2</option></select></label>':
+ x.layer==="ADS"?'<label class="v6Field">消费场景/输出合同<select id="v6-consumer"><option '+(x.consumer==="订单经营日报"?"selected":"")+'>订单经营日报</option><option '+(x.consumer==="订单明细 API"?"selected":"")+'>订单明细 API</option></select></label>':
+ x.layer==="DWD"||x.layer==="DIM"?'<div class="v6Hint">逻辑设计桥梁：'+(x.layer==="DWD"?"订单支付过程 PRC-102 / 逻辑实体 LM-016":"会员实体与维度属性草稿")+'。逻辑定义负责粒度，不能替代真实来源列。</div>':
+ '<div class="v6Hint">从已采集物理源表直接进入 ODS；不依赖 Asset Write 或预先建立全部标准字段。</div>')+
+ '<h3 style="margin-top:12px">选择源表/上游模型及其版本</h3><div class="v6Sources">'+depButtons+'</div>'+
+ (x.pending?'<div class="v6Warn">来源变更待确认，手工编辑不能静默丢弃。<div class="v6Actions"><button data-v6-decision="merge">保留编辑并并入新列</button><button data-v6-decision="replace">确认放弃并重载</button><button data-v6-decision="cancel">取消来源变更</button></div></div>':'')+
+ '<div class="v6Actions"><button class="primary" data-v6-load="1" '+(!x.deps.length||!!x.pending?"disabled":"")+'>'+(x.loaded?"按当前依赖重新生成":"读取结构并批量加载字段 →")+'</button></div></section>';
+ const fields='<section class="v6Section"><h2>2. 全表字段与来源映射 · '+x.rows.length+' 列</h2><p>字段自动批量继承是主流程，不要求一列一列重新选择来源。标准与加工规则后续人工确认。</p>'+
+ (x.layer==="ODS"?'<div class="v6Actions"><button data-v6-tech="etl_time">'+(x.tech.includes("etl_time")?"☑":"☐")+' etl_time 技术时间列</button><button data-v6-tech="dt">'+(x.tech.includes("dt")?"☑":"☐")+' dt 分区列</button></div>':'')+
+ (x.loaded?'<div class="v6TableWrap"><table class="v6Table"><thead><tr><th>目标列</th><th>类型</th><th>来源模型及字段</th><th>角色</th><th>映射/加工</th><th>标准字段 ID</th></tr></thead><tbody>'+x.rows.map((r,i)=>'<tr><td><input data-v6-row="'+i+'" data-v6-key="name" value="'+esc(r.name)+'"></td><td><input data-v6-row="'+i+'" data-v6-key="type" value="'+esc(r.type)+'"></td><td>'+esc(v6Sources[r.source]?.name||r.source)+'<small> · '+esc(r.origin)+'</small></td><td>'+esc(r.role)+'</td><td><input data-v6-row="'+i+'" data-v6-key="rule" value="'+esc(r.rule)+'"></td><td>'+esc(r.std||"待确认")+'</td></tr>').join("")+'</tbody></table></div>':'<div class="v6Hint">还没有字段。请先在上方选依赖并批量加载。</div>')+
+ '<p class="micro">'+esc(x.note||"切换来源必须先查看差异；来源快照不是默认已建立真实血缘。")+'</p></section>';
+ const rules='<section class="v6Section"><h2>3. '+x.layer+' 本层加工与粒度</h2><label class="v6Field">目标粒度<input id="v6-grain" value="'+esc(x.grain)+'"></label>'+
+ (x.layer==="DWD"?'<div class="v6Warn">ODS 多表合并时必须确认主键、去重规则与 Join 基数；来源相同字段名不等于同一业务身份。</div>':
+ x.layer==="DIM"?'<label class="v6Field">维度历史策略<select id="v6-scd"><option>SCD2</option><option>SCD1</option></select></label>':
+ x.layer==="DWS"?'<div class="v6Hint">当前指标 '+esc(x.metric)+'：统计日、去重计数或金额汇总已形成候选表达式，必须业务口径确认后才能投入执行。</div>':
+ x.layer==="ADS"?'<div class="v6Hint">输出字段与刷新 SLA/消费授权按具体数据产品要求审阅，允许直接选 DWD 作为依赖。</div>':
+ '<div class="v6Hint">技术时间和分区字段不是源业务列；原始值默认保真，禁止自动规范化。</div>')+
+ '<div class="v6Actions"><button class="primary" data-v6-check="1" '+(!x.loaded||!!x.pending?"disabled":"")+'>核对本次模型草稿 →</button></div></section>';
+ const versions=x.saved.map(s=>'<div class="v6Stage"><strong>'+esc(s.id)+'</strong><p>'+s.fields.length+' 列 · 修订 '+s.rev+' · '+esc(s.deps.join("、"))+'</p></div>').join("");
+ const review='<section class="v6Section"><h2>4. 校验、设计版本和交接</h2><div class="'+(x.checked?"v6Hint":"v6Warn")+'">'+(x.checked?"本次结构草稿通过原型级检查（非生产服务校验）":"当前修订未检查、已修改或依赖差异待确认")+'</div>'+
+ '<p class="micro">本地修订 '+x.revision+' · '+(x.dirty?"尚未保存":"无新编辑")+' · '+x.deps.map(id=>id+"@"+v6Sources[id].version).join(" / ")+'</p>'+
+ '<div class="v6Actions"><button class="primary" data-v6-save="1" '+(!x.checked||!actionAllowed()?"disabled":"")+'>保存设计版本（模拟）</button><button data-v6-handoff="1" '+(!x.saved.length?"disabled":"")+'>准备数据开发交接</button></div>'+
+ (x.handoff?'<div class="v6Warn">已形成设计引用。SQL、DDL 部署、加工运行和调度需由 DataDev 独立验证；这里没有真实执行。</div>':'')+versions+'</section>';
+ const returnTo=v6.origin?'<div class="v6Hint"><strong>来自协作事项 '+esc(v6.origin.id)+'</strong> · 完成设计后可以返回原事项，保持上下文。<div class="v6Actions"><button data-v6-return="1">← 返回协作</button></div></div>':'';
+ return pageHead("模型工作台 · 分层建模","ODS/DWD/DIM/DWS/ADS 的建模起点各不相同；先选择依赖、自动批量加载字段，再做字段加工与校验。","IA-550 / PROPOSAL v0.6",'<button class="btn" data-v6-mode="legacy">原有对象映射对照</button>')+
+ returnTo+tab+'<div class="v6Step"><span class="active">① 确定分层与依赖</span><span>② 批量字段</span><span>③ 本层加工</span><span>④ 版本与交接</span></div>'+
+ '<div class="v6Grid"><div class="v6Main">'+start+fields+rules+review+'</div><div class="v6Side"><section class="v6Section"><h2>本层设计说明</h2><p>'+esc(conf.explain)+'</p><div class="v6Stage"><strong>来源依赖版本</strong><p>'+esc(x.deps.map(id=>v6Sources[id].name+" @ "+v6Sources[id].version).join(" / "))+'</p></div>'+
+ '<div class="v6Stage"><strong>逻辑模型与标准字段</strong><p>Semantic 与逻辑建模是业务含义的引用，不能复刻一份标准目录。</p></div>'+
+ '<div class="v6Stage"><strong>模型 ≠ 已生产的数据</strong><p>设计版本、部署版本、运行结果分别核验。</p></div></section></div></div>';
+}
+
 function v3Run(){
  nav();
  dom("roleSwitch").value=state.role;
