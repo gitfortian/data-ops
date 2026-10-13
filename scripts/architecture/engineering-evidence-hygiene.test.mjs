@@ -57,8 +57,8 @@ test('documentation navigation links current owners without rewriting Product Tr
     'docs/product/DOCUMENT_GOVERNANCE.md',
     'docs/product/LEGACY_DOC_INDEX.md',
     'docs/release/RELEASING.md',
-    'docs/engineering/ci-impact-validation.md',
-    'docs/engineering/code-cleanliness-p1-closeout.md',
+    '.github/workflows/architecture-checks.yml',
+    'data-ops-ui/scripts/type-baseline.json',
   ]) {
     assert.equal(existsSync(target), true, target);
   }
