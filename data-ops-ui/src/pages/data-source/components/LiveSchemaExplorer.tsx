@@ -405,9 +405,17 @@ export default function LiveSchemaExplorer({
                           <h3>{selected.name}</h3>
                           <p>{selected.remarks || '字段结构'}</p>
                         </div>
+                        <Button
+                          aria-label="重新读取所选表字段"
+                          icon={<RefreshCw size={14} />}
+                          onClick={() => setColumnVersion((value) => value + 1)}
+                        />
+                      </div>
+                      <div className="mb-3 flex flex-wrap gap-2">
                         {selected.type === 'TABLE' && onOpenOds ? (
                           <Button
                             type="primary"
+                            className="w-full"
                             disabled={columnsLoading || columnError || columns.length === 0
                               || !(selected.database ?? database)}
                             onClick={() => {
@@ -424,11 +432,6 @@ export default function LiveSchemaExplorer({
                             打开或创建 ODS
                           </Button>
                         ) : null}
-                        <Button
-                          aria-label="重新读取所选表字段"
-                          icon={<RefreshCw size={14} />}
-                          onClick={() => setColumnVersion((value) => value + 1)}
-                        />
                       </div>
                       {columnError ? (
                         <Alert
