@@ -196,13 +196,13 @@ it('delivers the visible complete J1 journey: exact source → live columns → 
   expect(returned.searchParams.get('table')).toBe('orders');
 });
 
-it('shows the actionable task-first workbench instead of the old unstructured ODS form', async () => {
+it('shows one native ODS content workspace instead of prototype rails and English decoration', async () => {
   render(<OdsSourceJourney />);
-  expect(screen.getByRole('navigation', { name: 'ODS 建模进度' })).toBeInTheDocument();
-  expect(screen.getByRole('complementary', { name: '当前来源对象' })).toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'ODS 建模进度' })).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: '当前来源对象' })).toBeInTheDocument();
   expect(screen.getByRole('main', { name: 'ODS 字段与来源设计' })).toBeInTheDocument();
-  expect(screen.getByRole('complementary', { name: '下一步操作' })).toBeInTheDocument();
+  expect(screen.queryByRole('complementary', { name: '下一步操作' })).not.toBeInTheDocument();
   await screen.findByRole('button', { name: '打开已保存 ODS' });
-  expect(screen.getByText('优先复用现有 ODS')).toBeInTheDocument();
+  expect(screen.getByText('已有同源 ODS')).toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });

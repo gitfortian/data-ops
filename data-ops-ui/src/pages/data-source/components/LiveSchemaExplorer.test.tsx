@@ -124,7 +124,10 @@ it('opens ODS only from a confirmed physical table with exact source coordinates
   render(<LiveSchemaExplorer sourceId="18" canRead onOpenOds={onOpenOds} />);
   fireEvent.click(await screen.findByRole('button', { name: 'trade_order' }));
   await screen.findByText('order_id');
-  fireEvent.click(screen.getByRole('button', { name: '打开或创建 ODS' }));
+  const odsAction = screen.getByRole('button', { name: '打开或创建 ODS' });
+  expect(odsAction).toHaveClass('source-probe-ods-action');
+  expect(odsAction).not.toHaveClass('w-full');
+  fireEvent.click(odsAction);
   expect(onOpenOds).toHaveBeenCalledWith({
     dataSourceId: 18, database: 'trade_db', schema: 'public', table: 'trade_order',
   });

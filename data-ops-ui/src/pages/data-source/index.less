@@ -116,90 +116,124 @@
 @media (max-width: 1100px) { .source-card-list { grid-template-columns: 1fr; } .source-card-list .source-card-facts { padding: 12px 22px; background: #fcfcfd; border-top: 1px solid #f0f1f4; } .source-card-list .source-card-structure { margin-left: auto; } .source-card-list .source-card-footer { padding: 14px 22px; } }
 @media (max-width: 600px) { .source-page { padding: 20px 16px; } .source-page-header { align-items: flex-start; flex-wrap: wrap; } .source-page-header h1 { font-size: 21px; } .source-summary { gap: 12px 20px; } .source-summary-note { margin-left: 0; width: 100%; } .source-workspace .ant-drawer-body { padding: 16px; } .source-workspace-panel { padding: 0 12px 16px; } .source-card-heading { padding: 18px 18px 0; } .source-card-facts, .source-card-footer { padding-left: 18px; padding-right: 18px; } }
 @media (prefers-reduced-motion: reduce) { .source-card { transition: none; } }
-
-
-/* J1 full delivery: source discovery and ODS continuation are a full workspace,
-   not the old narrow CRUD drawer. Source list CRUD remains unchanged. */
+/* J1 consistent with the existing data-ops page language.
+   Use the global Yak brand theme and the existing DataSource component styles. */
 .source-workbench-v082 .ant-drawer-header {
-  padding: 12px 24px;
+  padding: 16px 24px;
   background: #fff;
-  border-bottom: 1px solid #e1e8e7;
+  border-bottom: 1px solid #e8ecf1;
 }
-.source-workbench-v082 .ant-drawer-body { padding: 0; background: #f4f7f7; }
-.source-workbench-v082 .source-workspace-title { width: 100%; }
-.source-workbench-head-caption { margin-left: auto; color: #668078; font-size: 12px; font-weight: 650; }
-.source-workbench-layout {
-  display: grid;
-  grid-template-columns: 225px minmax(0, 1fr) 264px;
-  min-height: calc(100dvh - 78px);
-  color: #263d45;
+.source-workbench-v082 .ant-drawer-body {
+  padding: 0;
+  background: #f7f8fa;
 }
-.source-workbench-rail {
-  background: #fdfefe; border-right: 1px solid #e1e8e7;
-  padding: 28px 20px; min-width: 0;
+.source-workbench-content {
+  margin: 0 auto;
+  max-width: 1320px;
+  min-height: calc(100dvh - 94px);
+  padding: 24px 28px 32px;
+  color: #242731;
 }
-.source-workbench-eyebrow {
-  margin: 0 0 8px; font-size: 10px; font-weight: 800;
-  letter-spacing: 1.1px; color: #14796f;
+.source-workbench-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
 }
-.source-workbench-rail h2 { margin: 0; font-size: 18px; font-weight: 750; line-height: 1.45; }
-.source-workbench-rail-desc { color: #748690; font-size: 12px; line-height: 1.7; margin-top: 10px; }
-.source-workbench-steps { padding: 0; margin: 28px 0; list-style: none; display: grid; gap: 12px; }
-.source-workbench-step { display: flex; align-items: flex-start; gap: 10px; padding: 12px 9px; border-radius: 10px; border: 1px solid transparent; }
-.source-workbench-step.active { background: #e8f5f1; border-color: #cae9dd; color: #116e62; }
-.source-workbench-step-number { flex: 0 0 32px; height: 32px; display: grid; place-items: center; background: #eff3f3; border-radius: 9px; font-weight: 800; font-size: 12px; color: #74868c; }
-.source-workbench-step.active .source-workbench-step-number { background: #d0eee2; color: #137466; }
-.source-workbench-step strong { display: block; font-size: 12px; line-height: 20px; }
-.source-workbench-step small { display: block; color: #8a9ba0; line-height: 1.5; font-size: 10px; margin-top: 3px; }
-.source-workbench-rail-footer { border-top: 1px solid #e8efed; padding-top: 18px; font-size: 12px; }
-.source-workbench-rail-footer p { font-size: 11px; color: #748690; line-height: 1.65; margin-top: 7px; }
-.source-workbench-main { min-width: 0; padding: 28px clamp(16px, 2.3vw, 36px) 60px; }
-.source-workbench-page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
-.source-workbench-page-head h1 { font-size: clamp(20px, 1.7vw, 25px); font-weight: 760; letter-spacing: -.5px; line-height: 1.4; margin: 0 0 8px; }
-.source-workbench-page-head p:last-child { margin: 0; color: #71848d; font-size: 12px; line-height: 1.7; }
-.source-workbench-v082 .source-workspace-panel { padding: 0 22px 22px; border-color: #e1e8e7; box-shadow: 0 3px 18px rgba(21, 52, 48, .025); }
-.source-workbench-v082 .source-workspace-connection { border-color: #e1e8e7; padding: 18px 22px; }
-.source-workbench-section-head { padding: 20px 0 4px; }
-.source-workbench-section-head h2 { font-size: 15px; margin: 0 0 5px; font-weight: 740; }
-.source-workbench-section-head p { color: #85949b; font-size: 11px; margin: 0; }
-.source-workbench-v082 .source-probe-grid { grid-template-columns: minmax(205px, .72fr) minmax(0, 1.52fr); gap: 16px; }
-.source-workbench-v082 .source-probe-table-link.ant-btn { color: #1b625c; }
-.source-workbench-v082 .source-probe-selected .ant-table-cell { background: #eaf6f1 !important; }
-.source-workbench-v082 .source-probe-detail-heading { border-bottom: 1px solid #e7eceb; padding-bottom: 12px; }
-.source-workbench-v082 .source-probe-detail .ant-btn-primary { background: #14796f; border-color: #14796f; color: white; min-height: 40px; font-weight: 700; }
-.source-workbench-v082 .source-probe-detail .ant-btn-primary:hover { background: #0e5f58; }
-.source-workbench-aside { background: #f9fbfa; border-left: 1px solid #e1e8e7; padding: 27px 16px; min-width: 0; display: flex; flex-direction: column; gap: 15px; }
-.source-workbench-aside-card { padding: 18px; background: #fff; border: 1px solid #e1e8e7; border-radius: 12px; box-shadow: 0 3px 18px rgba(21, 52, 48, .025); }
-.source-workbench-aside-card h2 { font-size: 16px; line-height: 1.45; margin: 0 0 10px; }
-.source-workbench-aside-card h3 { font-size: 14px; margin: 0 0 9px; }
-.source-workbench-aside-card p:not(.source-workbench-eyebrow) { color: #6c8188; font-size: 12px; line-height: 1.75; }
-.source-workbench-proof { margin-top: 18px; padding: 13px; background: #edf7f2; border-radius: 9px; font-size: 11px; line-height: 1.65; color: #54786f; }
-.source-workbench-proof strong { display: block; color: #1c6658; margin-bottom: 5px; }
-.source-workbench-proof span { display: block; }
-@media (max-width: 1200px) {
-  .source-workbench-layout { grid-template-columns: 200px minmax(0, 1fr); }
-  .source-workbench-aside { border-left: 0; border-top: 1px solid #e1e8e7; grid-column: 2; flex-direction: row; align-items: flex-start; }
-  .source-workbench-aside-card { flex: 1; }
+.source-workbench-intro h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+}
+.source-workbench-intro p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #7b8390;
+}
+.source-workbench-v082 .source-workspace-connection {
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border-color: #e5e8ee;
+  background: #fff;
+}
+.source-workbench-v082 .source-workspace-panel {
+  margin-top: 0;
+  padding: 0 20px 20px;
+  border-color: #e5e8ee;
+  background: #fff;
+}
+.source-workbench-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 19px 0 8px;
+}
+.source-workbench-panel-head h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: #242731;
+}
+.source-workbench-panel-head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #7b8390;
+}
+.source-workbench-panel-head > span {
+  font-size: 12px;
+  color: #7b8390;
+}
+.source-workbench-v082 .source-probe-grid {
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.8fr);
+  gap: 18px;
+}
+.source-workbench-v082 .source-probe-selected .ant-table-cell {
+  background: #f7f8fa !important;
+}
+.source-workbench-v082 .source-probe-detail-heading {
+  margin-bottom: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #eef0f4;
+}
+.source-workbench-footnote {
+  margin: 14px 2px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a929c;
 }
 @media (max-width: 800px) {
-  .source-workbench-layout { grid-template-columns: minmax(0, 1fr); }
-  .source-workbench-rail { border-right: 0; border-bottom: 1px solid #e1e8e7; padding: 15px; }
-  .source-workbench-rail-desc, .source-workbench-rail-footer { display: none; }
-  .source-workbench-rail h2 { font-size: 14px; }
-  .source-workbench-steps { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; margin: 10px 0 0; }
-  .source-workbench-step { padding: 7px; }
-  .source-workbench-main { padding: 18px 14px 30px; }
-  .source-workbench-aside { grid-column: 1; padding: 16px; }
-  .source-workbench-head-caption { display: none; }
+  .source-workbench-content { padding: 16px 14px 24px; }
+  .source-workbench-v082 .source-probe-grid { grid-template-columns: 1fr; }
+  .source-workbench-v082 .source-workspace-panel { padding: 0 14px 18px; }
+  .source-workbench-panel-head > span { display: none; }
 }
 @media (max-width: 560px) {
-  .source-workbench-v082 .ant-drawer-header { padding: 10px 14px; }
-  .source-workbench-page-head { flex-direction: column; align-items: stretch; }
-  .source-workbench-steps { grid-template-columns: 1fr 1fr; }
-  .source-workbench-step-number { flex-basis: 25px; width: 25px; height: 25px; }
-  .source-workbench-step small { display: none; }
-  .source-workbench-v082 .source-workspace-panel { padding: 0 12px 14px; }
-  .source-workbench-v082 .source-probe-grid { grid-template-columns: 1fr; }
-  .source-workbench-aside { flex-direction: column; }
-  .source-workbench-aside-card { width: 100%; }
+  .source-workbench-v082 .ant-drawer-header { padding: 12px 14px; }
+  .source-workbench-intro { align-items: stretch; flex-direction: column; }
+  .source-workbench-intro h1 { font-size: 19px; }
+  .source-workbench-v082 .source-workspace-connection { padding: 14px; }
+}
+
+/* Keep actions adjacent to the selected table instead of placing a full-width
+   banner between source identity and the field evidence. */
+.source-probe-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.source-probe-ods-action.ant-btn { width: auto; min-width: 126px; max-width: 230px; height: auto; min-height: 32px; white-space: normal; }
+@media (max-width: 560px) {
+  .source-probe-detail-heading { flex-wrap: wrap; }
+  .source-probe-heading-actions { justify-content: flex-start; width: 100%; }
 }
