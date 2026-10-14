@@ -161,3 +161,26 @@ it('ignores task resolution after the source workspace unmounts', async () => {
   await act(async () => resolve([job]));
   expect(history.push).not.toHaveBeenCalled();
 });
+
+it('renders a full source-to-ODS workbench with task progress and keeps existing source management', () => {
+  render(<DataSourceWorkspace {...props} />);
+  expect(screen.getByTestId('source-ods-workbench')).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: '来源到 ODS 工作步骤' })).toBeInTheDocument();
+  expect(screen.getByRole('main')).toHaveTextContent('发现源表，继续 ODS 建模');
+  expect(screen.getByText('打开或创建 ODS')).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: '即时探查' })).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(screen.getByRole('button', { name: '检测连接' }));
+  expect(props.onTestConnection).toHaveBeenCalledWith(props.record);
+  fireEvent.click(screen.getByRole('button', { name: '返回数据源列表' }));
+  expect(props.onClose).toHaveBeenCalled();
+});
+
+it('retains source discovery when Metadata permission is missing, with a clear unrelated optional step', () => {
+  mockHasPermission.mockImplementation(permission => permission === 'resource:data-source:read');
+  render(<DataSourceWorkspace {...props} />);
+  expect(screen.getByRole('main')).toHaveTextContent('发现源表，继续 ODS 建模');
+  expect(screen.getByText('源库结构探查')).toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: '采集信息' })).not.toBeInTheDocument();
+  expect(screen.getByText(/当前角色无元数据读取权限/)).toBeInTheDocument();
+  expect(history.push).not.toHaveBeenCalled();
+});

@@ -11,6 +11,7 @@ import type { OdsSourceLookup } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord } from '@/services/modeling/types';
 import { MODELING_DIALECT_OPTIONS, dialectOfDbType } from '@/pages/modeling/constants';
 import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
+import './OdsSourceJourney.less';
 
 const positiveId = (raw: string | null): number | null => {
   if (!raw || !/^[1-9]\d*$/.test(raw)) return null;
@@ -264,94 +265,225 @@ const OdsSourceJourney = () => {
     } finally { if (ticket === readEpoch.current) setCommitting(false); }
   };
 
+
+  const existing = lookup?.state === 'READY' && lookup.candidates.length > 0;
+  const newTarget = lookup?.state === 'READY' && lookup.candidates.length === 0 && sourceVerified;
+  const stage = savedId ? 4 : savedDraft ? 3 : physicalColumns.length ? 3
+    : sourceVerified && lookup?.state === 'READY' ? 2 : 1;
+
   return (
-    <div className="mx-auto max-w-[1080px] space-y-4 px-6 py-6">
-      <Space>
-        <Button onClick={() => navigateSafely(sourceReturn)}>{liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}</Button>
-        <Button type="link" onClick={() => navigateSafely('/modeling')}>建模工作台</Button>
-      </Space>
-      <Typography.Title level={4}>从物理表继续 ODS 设计</Typography.Title>
-      <Typography.Paragraph type="secondary">
-        来源 #{datasourceId || '-'} / {database} / {schema || '默认 Schema'} / {table}。
-        资产待治理是并行操作，不要求资产上架或 Asset 写权限。这里只保存模型草稿，不执行 DDL。
-      </Typography.Paragraph>
-      {loading && <Spin tip="正在核验来源和已保存 ODS" />}
-      {failure && <Alert type="error" showIcon message={failure}
-        action={<Button size="small" onClick={() => setReload(v => v + 1)}>重新核验</Button>} />}
-      {lookup?.state === 'UNVERIFIED' && <Alert type="warning" showIcon
-        message="不能确认来源身份" description={lookup.reason} />}
-      {lookup?.state === 'READY' && lookup.candidates.length > 0 && (
-        <div className="space-y-2">
-          <Alert type="info" showIcon message={lookup.candidates.length === 1
-            ? '找到一个已有 ODS，请优先打开原模型' : `找到 ${lookup.candidates.length} 个同源候选，请人工选择`}
-            description="不覆盖原模型、字段或来源映射；源表结构变化请在模型中人工审阅。" />
-          {lookup.candidates.map(candidate => (
-            <div key={candidate.modelId} className="flex items-center justify-between rounded border border-solid border-[#eaecf0] p-3">
-              <Space><strong>{candidate.name}</strong><Tag>{candidate.code}</Tag><Tag>{candidate.status}</Tag></Space>
-              <Button type="primary" onClick={() => history.push(modelDetailPath(candidate.modelId))}>
-                打开已保存 ODS
-              </Button>
-            </div>
-          ))}
+    <div className="ods-workbench" data-testid="ods-source-workbench">
+      <header className="ods-workbench-head">
+        <div>
+          <p className="ods-workbench-eyebrow">MODELING / ODS · 来源驱动建模</p>
+          <h1>从已核验源表建立 ODS</h1>
+          <p>查找现有目标 → 读取真实源列 → 审阅映射 → 保存模型与来源 → 返回同一源表</p>
         </div>
-      )}
-      {lookup?.state === 'READY' && lookup.candidates.length === 0 && sourceVerified && (
-        <div className="space-y-4 rounded border border-solid border-[#eaecf0] bg-white p-4">
-          <Alert type="info" showIcon message={lookup.reason}
-            description="先预览当前物理表并确认逐列映射，再保存空 ODS 草稿与其结构。历史 Metadata Run 不是本次实时预览。" />
-          <Space wrap>
-            <Button loading={previewBusy} onClick={() => void preview()}>读取当前物理列并核对</Button>
-            <Tag>{physicalColumns.length ? `已核对 ${physicalColumns.length} 个源列` : '尚未预览源列'}</Tag>
-          </Space>
-          {physicalColumns.length > 0 && (
-            <div className="space-y-2">
-              <Typography.Text strong>逐列映射核对（源列 → ODS 字段）</Typography.Text>
-              {physicalColumns.map(col => (
-                <div key={col.name} className="grid grid-cols-3 items-center gap-3">
-                  <span className="truncate">{col.name} <Tag>{col.typeName}</Tag></span>
-                  <span className="text-[#667085]">→</span>
-                  <Input aria-label={`ODS 字段 ${col.name}`} value={targetNames[col.name] ?? ''}
-                    disabled={Boolean(savedId)} onChange={e => { setDirty(true); setTargetNames(v => ({ ...v, [col.name]: e.target.value })); }} />
+        <Space wrap>
+          <Button onClick={() => navigateSafely(sourceReturn)}>
+            {liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}
+          </Button>
+          <Button type="text" onClick={() => navigateSafely('/modeling')}>模型工作台</Button>
+        </Space>
+      </header>
+
+      <nav aria-label="ODS 建模进度" className="ods-workbench-progress">
+        {[
+          ['01', '来源身份', sourceVerified ? '已通过当前项目核验' : '正在核验'],
+          ['02', '目标 ODS', existing ? '已有同源候选' : newTarget ? '可创建新目标' : '等待精确查找'],
+          ['03', '源列与映射', physicalColumns.length ? `已读取 ${physicalColumns.length} 列` : '等待实时结构预览'],
+          ['04', '保存与返回', savedId ? '已获持久化回执' : savedDraft ? '已保存空草稿，待提交字段' : '未完成'],
+        ].map(([number, title, detail], index) => (
+          <div key={number}
+            className={`ods-workbench-progress-item ${index + 1 === stage ? 'active' : ''} ${index + 1 < stage || savedId && index === 3 ? 'complete' : ''}`}>
+            <span className="ods-workbench-progress-number">{number}</span>
+            <div><strong>{title}</strong><small>{detail}</small></div>
+          </div>
+        ))}
+      </nav>
+
+      <div className="ods-workbench-grid">
+        <aside className="ods-workbench-origin" aria-label="当前来源对象">
+          <div className="ods-workbench-card">
+            <p className="ods-workbench-eyebrow">SOURCE IDENTITY</p>
+            <h2>当前原始表</h2>
+            <div className="ods-workbench-origin-name">{table || '来源待核验'}</div>
+            <dl>
+              <div><dt>数据源 ID</dt><dd>#{datasourceId || '—'}</dd></div>
+              <div><dt>数据库</dt><dd>{database || '—'}</dd></div>
+              <div><dt>Schema</dt><dd>{schema || '默认 Schema'}</dd></div>
+              <div><dt>源表</dt><dd>{table || '—'}</dd></div>
+            </dl>
+            <Tag color={sourceVerified ? 'success' : 'warning'}>
+              {sourceVerified ? '已验证当前项目来源' : '等待当前项目身份核验'}
+            </Tag>
+          </div>
+          <div className="ods-workbench-origin-note">
+            <strong>ODS 是贴源例外</strong>
+            <p>不要求先创建逻辑模型、标准字段或纳管资产。字段映射要基于真实源列；本页仅保存模型定义，不执行 DDL。</p>
+          </div>
+        </aside>
+
+        <main className="ods-workbench-main" aria-label="ODS 字段与来源设计">
+          {loading && <div className="ods-workbench-card ods-workbench-wait"><Spin tip="正在核验来源和已保存 ODS" /></div>}
+          {failure && <Alert className="ods-workbench-alert" type="error" showIcon message={failure}
+            description="失败或超时不表示来源、空草稿或结构不存在。请先核验后继续，避免重复提交。"
+            action={<Button size="small" onClick={() => setReload(v => v + 1)}>重新核验</Button>} />}
+          {lookup?.state === 'UNVERIFIED' && <Alert className="ods-workbench-alert"
+            type="warning" showIcon message="不能确认来源身份" description={lookup.reason} />}
+
+          {lookup?.state === 'READY' && lookup.candidates.length > 0 && (
+            <section className="ods-workbench-card" aria-label="已有同源 ODS">
+              <p className="ods-workbench-eyebrow">MATCHED MODELS</p>
+              <h2>先使用现有同源 ODS</h2>
+              <Alert className="ods-workbench-alert" type="info" showIcon
+                message={lookup.candidates.length === 1
+                  ? '找到一个已有 ODS，请优先打开原模型' : `找到 ${lookup.candidates.length} 个同源候选，请人工选择`}
+                description="当前候选只基于精确来源查找。不覆盖任何模型；如源结构发生变化，请在原模型核验版本与差异。" />
+              <div className="ods-workbench-candidate-list">
+                {lookup.candidates.map(candidate => (
+                  <article key={candidate.modelId} className="ods-workbench-candidate">
+                    <div>
+                      <strong>{candidate.name}</strong>
+                      <div><Tag>{candidate.code}</Tag><Tag>{candidate.status}</Tag><span>#{candidate.modelId}</span></div>
+                    </div>
+                    <Button type="primary" onClick={() => history.push(modelDetailPath(candidate.modelId))}>打开已保存 ODS</Button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {newTarget && (
+            <>
+              <section className="ods-workbench-card" aria-label="源表列结构">
+                <Alert className="ods-workbench-alert" type="info" showIcon
+                  message={lookup?.reason || '当前项目尚无精确同源 ODS'}
+                  description="这是目标查找结果，不等于当前实时字段预览已完成；请先读取并核对源列。" />
+                <div className="ods-workbench-section-title">
+                  <div><p className="ods-workbench-eyebrow">01 / LIVE SOURCE COLUMNS</p>
+                    <h2>核对实时源表与字段</h2>
+                    <p>先读取本次真实源列，不能把历史 Metadata Run 当作当前物理表结构。</p>
+                  </div>
+                  <Tag>{physicalColumns.length ? `已读取 ${physicalColumns.length} 个源列` : '尚未预览源列'}</Tag>
                 </div>
-              ))}
-              {!validMappings && <Alert type="error" message="字段名必须合法且互不重复；未满足时不允许提交。" />}
-            </div>
+                <div className="ods-workbench-action-row">
+                  <Button type="primary" loading={previewBusy} disabled={Boolean(savedId)}
+                    onClick={() => void preview()}>读取当前物理列并核对</Button>
+                  {physicalColumns.length ? <span>逐列核对完成后方可保存结构与映射。</span>
+                    : <span>这是只读预览，不写元数据或 ODS。</span>}
+                </div>
+                {physicalColumns.length > 0 && (
+                  <div className="ods-workbench-mapping" role="region" tabIndex={0} aria-label="源列与 ODS 字段映射，可横向滚动">
+                    <div className="ods-workbench-mapping-row ods-workbench-mapping-head">
+                      <span>源表字段</span><span>源类型 / 约束</span><span>目标 ODS 字段名（可修改）</span>
+                    </div>
+                    {physicalColumns.map(col => (
+                      <div key={col.name} className="ods-workbench-mapping-row">
+                        <div className="ods-workbench-mapping-source">
+                          <strong>{col.name}</strong>
+                          {col.remarks && <small>{col.remarks}</small>}
+                        </div>
+                        <div className="ods-workbench-mapping-type">
+                          <Tag>{col.typeName}{col.size ? `(${col.size})` : ''}</Tag>
+                          {col.primaryKey ? <Tag color="blue">源主键</Tag> : null}
+                          <small>{col.nullable === false ? '不可空' : '可空'}</small>
+                        </div>
+                        <Input aria-label={`ODS 字段 ${col.name}`} value={targetNames[col.name] ?? ''}
+                          disabled={Boolean(savedId)}
+                          onChange={e => { setDirty(true); setTargetNames(v => ({ ...v, [col.name]: e.target.value })); }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {physicalColumns.length > 0 && !validMappings && <Alert className="ods-workbench-alert"
+                  type="error" showIcon message="字段名必须合法且互不重复；未满足时不允许提交。" />}
+              </section>
+
+              <section className="ods-workbench-card" aria-label="目标 ODS 草稿配置">
+                <div className="ods-workbench-section-title">
+                  <div><p className="ods-workbench-eyebrow">02 / PHYSICAL TARGET</p>
+                    <h2>确认 ODS 模型身份</h2>
+                    <p>保存空草稿后保留真实 ID；第二次提交才原子保存源列结构与逐列映射。</p>
+                  </div>
+                  {savedDraft && <Tag color="blue">物理模型 #{savedDraft.id}</Tag>}
+                </div>
+                {savedDraft ? (
+                  <Alert className="ods-workbench-alert" type={savedId ? 'success' : 'warning'} showIcon
+                    message={`已保存空草稿 #${savedDraft.id}，字段映射${savedId ? '已提交' : '尚未提交'}`}
+                    description="刷新后按 URL 的 draftId 和 Modeling 服务端事实恢复。失败后应先按模型 ID 或编码核对，不能再创建同名空模型。" />
+                ) : (
+                  <div className="ods-workbench-form">
+                    <label>ODS 模型编码
+                      <Input aria-label="ODS 编码" placeholder="例如 ods_trade_order" value={code}
+                        onChange={e => { setDirty(true); setCode(e.target.value); }} />
+                    </label>
+                    <label>ODS 模型名称
+                      <Input aria-label="ODS 名称" placeholder="例如 ODS 订单" value={name}
+                        onChange={e => { setDirty(true); setName(e.target.value); }} />
+                    </label>
+                    <label>目标数据库方言
+                      <Select aria-label="目标方言" className="ods-workbench-select" placeholder="选择目标方言"
+                        value={dialect || undefined} onChange={v => { setDirty(true); setDialect(v); }}
+                        options={MODELING_DIALECT_OPTIONS} />
+                    </label>
+                  </div>
+                )}
+                <div className="ods-workbench-tech-note">
+                  <strong>技术字段与分区</strong>
+                  <p>此处仅镜像并映射真实源列。额外的 ETL 时间列、分区及索引请在保存后的物理表结构工作区单独设计；不把技术列伪装成源列。</p>
+                </div>
+              </section>
+            </>
           )}
-          {savedDraft ? (
-            <Alert type="warning" showIcon
-              message={`已保存空草稿 #${savedDraft.id}，字段映射${savedId ? '已提交' : '尚未提交'}`}
-              description="刷新后使用 URL 中的 draftId 和原域持久化事实恢复；如果提交失败，先核对这个草稿，不能重复创建。" />
-          ) : (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <Input aria-label="ODS 编码" placeholder="ODS 模型编码" value={code} onChange={e => { setDirty(true); setCode(e.target.value); }} />
-              <Input aria-label="ODS 名称" placeholder="ODS 模型名称" value={name} onChange={e => { setDirty(true); setName(e.target.value); }} />
-              <Select aria-label="目标方言" placeholder="选择目标方言" value={dialect || undefined}
-                onChange={v => { setDirty(true); setDialect(v); }} options={MODELING_DIALECT_OPTIONS} />
-            </div>
-          )}
-          {!savedId && (
-            <Space>
-              {!savedDraft ? <Button type="primary" loading={creating} disabled={!validMappings || !dialect
-                || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code) || !name.trim() || !can('modeling:create')}
-                onClick={() => void createDraft()}>保存可恢复的空 ODS 草稿</Button> :
-                <Button type="primary" loading={committing} disabled={!validMappings || !can('modeling:update')}
-                  onClick={() => void commit()}>确认并原子保存结构与映射</Button>}
-            </Space>
-          )}
-          {savedDraft?.id && (
-            <Button onClick={() => history.push(modelDetailPath(Number(savedDraft.id)))}>
-              打开已保存的模型 #{savedDraft.id}
-            </Button>
-          )}
-          {savedId && (
-            <Alert type="success" showIcon message="ODS 已保存，逐列映射有持久化回执"
-              action={<Space>
+        </main>
+
+        <aside className="ods-workbench-next" aria-label="下一步操作">
+          <section className="ods-workbench-next-card">
+            <p className="ods-workbench-eyebrow">NEXT ACTION</p>
+            <h2>{savedId ? 'ODS 已成功保存' : existing ? '优先复用现有 ODS'
+              : savedDraft ? '提交真实结构和映射' : physicalColumns.length ? '保存可恢复草稿' : '先核对源列'}</h2>
+            <p>{savedId ? '已取得 Modeling 服务端保存和逐列映射回执；建议返回同一来源核对闭环。'
+              : existing ? '已有精确同源目标，直接打开原模型继续审阅。'
+              : savedDraft ? '空草稿仍不是完整 ODS；请确认映射后提交，并核对持久化回执。'
+              : physicalColumns.length ? '已读取实时源列。完成字段命名与物理身份核对后，保存模型草稿。'
+              : '当前来源核验通过后，请先读取实时结构、确认字段，再保存 ODS。'}</p>
+            {newTarget && !savedId && (!savedDraft ? (
+              <Button className="ods-workbench-next-primary" type="primary"
+                loading={creating}
+                disabled={!validMappings || !dialect || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code)
+                  || !name.trim() || !can('modeling:create')}
+                onClick={() => void createDraft()}>保存可恢复的空 ODS 草稿</Button>
+            ) : (
+              <Button className="ods-workbench-next-primary" type="primary"
+                loading={committing} disabled={!validMappings || !can('modeling:update')}
+                onClick={() => void commit()}>确认并原子保存结构与映射</Button>
+            ))}
+            {savedId ? (
+              <div className="ods-workbench-next-actions">
                 <Button type="primary" onClick={() => history.push(sourceReturn)}>保存并返回来源</Button>
                 <Button onClick={() => history.push(modelDetailPath(savedId))}>打开 ODS</Button>
-              </Space>} />
-          )}
-        </div>
-      )}
+              </div>
+            ) : savedDraft?.id ? (
+              <Button block onClick={() => history.push(modelDetailPath(Number(savedDraft.id)))}>
+                打开已保存的模型 #{savedDraft.id}
+              </Button>
+            ) : null}
+          </section>
+          <section className="ods-workbench-next-card">
+            <p className="ods-workbench-eyebrow">TRUTH & SAFETY</p>
+            <h3>真实保存的判定</h3>
+            <ul>
+              <li>当前项目和数据源身份已核验。</li>
+              <li>ODS 同源候选按精确库、Schema、表查找。</li>
+              <li>原子提交核对源列和目标字段全量回执。</li>
+              <li>未保存的编辑离开前会提示。</li>
+            </ul>
+            <p>资产纳管是并行治理；保存设计不执行 SQL/DDL，不代表已部署或完成数据同步。</p>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { commitOdsManualImport, getModelingStructure } from '@/services/modeling/api';
+import { previewModelingImportColumns } from '@/services/modeling/import';
 import OdsSourceJourney from './OdsSourceJourney';
 
 let mockQuery = new URLSearchParams({
@@ -135,5 +137,72 @@ it('passes live source context to an existing ODS model detail for verified retu
       database: 'trade_db', table: 'orders', schema: 'public',
     })}`,
   );
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});
+
+it('delivers the visible complete J1 journey: exact source → live columns → draft → atomic save → return', async () => {
+  mockQuery = new URLSearchParams({
+    sourceJourney: 'ods', origin: 'live-source', datasourceId: '10',
+    database: 'trade_db', schema: 'public', table: 'orders',
+  });
+  mockCandidates.mockResolvedValueOnce({
+    state: 'READY', reason: 'no matching ODS yet',
+    datasourceId: 10, database: 'trade_db', schema: 'public', table: 'orders', candidates: [],
+  });
+  jest.mocked(previewModelingImportColumns).mockResolvedValueOnce([
+    { name: 'order_id', typeName: 'BIGINT', primaryKey: true, nullable: false, technical: false },
+    { name: 'order_amount', typeName: 'DECIMAL', size: 18, scale: 2, nullable: false, technical: false },
+  ]);
+  mockCreateModel.mockResolvedValueOnce({ id: 777, code: 'ods_trade_db_public_orders', name: 'ODS orders',
+    layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null });
+  mockGetModel.mockResolvedValueOnce({ id: 777, code: 'ods_trade_db_public_orders', name: 'ODS orders',
+    layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'a-recoverable-definition', columns: [],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(commitOdsManualImport).mockResolvedValueOnce({
+    status: 'SAVED_AND_VERIFIED', modelId: 777, confirmedMappingCount: 2,
+  } as Awaited<ReturnType<typeof commitOdsManualImport>>);
+
+  render(<OdsSourceJourney />);
+  expect(screen.getByTestId('ods-source-workbench')).toBeInTheDocument();
+  expect(await screen.findByText('no matching ODS yet')).toBeInTheDocument();
+  const create = screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' });
+  expect(create).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
+  expect(await screen.findByLabelText('ODS 字段 order_id')).toHaveValue('order_id');
+  expect(screen.getByLabelText('ODS 字段 order_amount')).toHaveValue('order_amount');
+  expect(screen.getByText('源主键')).toBeInTheDocument();
+  expect(create).toBeEnabled();
+  fireEvent.click(create);
+  await screen.findByText(/已保存空草稿 #777/);
+  expect(mockCreateModel).toHaveBeenCalledWith(expect.objectContaining({
+    layerCode: 'ODS', dialect: 'MYSQL',
+  }));
+  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  await screen.findByText('ODS 已成功保存');
+  expect(commitOdsManualImport).toHaveBeenCalledWith(777, expect.objectContaining({
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+    expectedSourceColumns: expect.arrayContaining([expect.objectContaining({ name: 'order_id' })]),
+    selections: [{ targetColumn: 'order_id', sourceColumn: 'order_id' },
+      { targetColumn: 'order_amount', sourceColumn: 'order_amount' }],
+  }));
+  fireEvent.click(screen.getByRole('button', { name: '保存并返回来源' }));
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/data-source?')));
+  const returned = new URL(String(mockPush.mock.calls.at(-1)?.[0]), 'http://localhost');
+  expect(returned.searchParams.get('sourceId')).toBe('10');
+  expect(returned.searchParams.get('database')).toBe('trade_db');
+  expect(returned.searchParams.get('schema')).toBe('public');
+  expect(returned.searchParams.get('table')).toBe('orders');
+});
+
+it('shows the actionable task-first workbench instead of the old unstructured ODS form', async () => {
+  render(<OdsSourceJourney />);
+  expect(screen.getByRole('navigation', { name: 'ODS 建模进度' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: '当前来源对象' })).toBeInTheDocument();
+  expect(screen.getByRole('main', { name: 'ODS 字段与来源设计' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: '下一步操作' })).toBeInTheDocument();
+  await screen.findByRole('button', { name: '打开已保存 ODS' });
+  expect(screen.getByText('优先复用现有 ODS')).toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });

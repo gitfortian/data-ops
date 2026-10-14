@@ -1,0 +1,96 @@
+
+/* IA-550 v0.8.2-inspired task-first ODS modeling workbench.
+   Visual layout owns no Job/Run/Model state; it renders verified Owner facts. */
+.ods-workbench {
+  min-height: calc(100dvh - 64px);
+  padding: 28px clamp(14px, 2.4vw, 40px) 60px;
+  background: #f4f7f7;
+  color: #263d45;
+}
+.ods-workbench-eyebrow { margin: 0 0 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.15px; color: #14796f; }
+.ods-workbench-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 0 auto 21px; max-width: 1680px; }
+.ods-workbench-head h1 { font-size: clamp(22px, 2vw, 27px); font-weight: 760; line-height: 1.35; letter-spacing: -.7px; margin: 0 0 9px; }
+.ods-workbench-head p:last-child { font-size: 12px; color: #768c92; line-height: 1.7; margin: 0; }
+.ods-workbench-progress { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; max-width: 1680px; margin: 0 auto 20px; }
+.ods-workbench-progress-item { min-width: 0; min-height: 80px; display: flex; gap: 12px; align-items: center; padding: 14px; background: #fff; border: 1px solid #e0e8e7; border-radius: 11px; }
+.ods-workbench-progress-item.active { background: #ebf7f2; border-color: #a5d8c9; }
+.ods-workbench-progress-item.complete { border-color: #cfe4dc; }
+.ods-workbench-progress-number { flex: 0 0 37px; width: 37px; height: 37px; display: grid; place-items: center; border-radius: 10px; background: #f0f5f3; color: #8ba19b; font-size: 13px; font-weight: 800; }
+.ods-workbench-progress-item.active .ods-workbench-progress-number,
+.ods-workbench-progress-item.complete .ods-workbench-progress-number { background: #cfebe0; color: #166c5f; }
+.ods-workbench-progress-item strong { display: block; font-size: 12px; font-weight: 750; line-height: 1.5; }
+.ods-workbench-progress-item small { display: block; font-size: 10px; line-height: 1.6; color: #8a9da3; margin-top: 4px; }
+.ods-workbench-grid { max-width: 1680px; margin: 0 auto; display: grid; align-items: start; grid-template-columns: minmax(175px, 220px) minmax(0, 1fr) minmax(230px, 290px); gap: 16px; }
+.ods-workbench-origin, .ods-workbench-next, .ods-workbench-main { min-width: 0; display: grid; gap: 16px; align-content: start; }
+.ods-workbench-card, .ods-workbench-next-card { background: #fff; border: 1px solid #e0e8e7; border-radius: 12px; box-shadow: 0 4px 20px rgba(20, 47, 57, .035); padding: 21px; min-width: 0; }
+.ods-workbench-card h2, .ods-workbench-next-card h2 { margin: 0 0 12px; font-size: 17px; line-height: 1.4; font-weight: 750; }
+.ods-workbench-next-card h3 { font-size: 13px; font-weight: 750; }
+.ods-workbench-origin-name { padding: 13px; color: #1e5b54; background: #eff8f4; border: 1px solid #d8ede3; border-radius: 9px; overflow-wrap: anywhere; font-size: 16px; font-weight: 750; }
+.ods-workbench-origin dl { margin: 18px 0; }
+.ods-workbench-origin dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-bottom: 1px solid #f0f2f2; padding: 11px 0; font-size: 11px; }
+.ods-workbench-origin dt { color: #8a9ca3; }
+.ods-workbench-origin dd { font-weight: 650; color: #344e54; margin: 0; max-width: 100%; overflow-wrap: anywhere; }
+.ods-workbench-origin-note { padding: 16px; border: 1px solid #d8e9e1; background: #eaf5f0; border-radius: 10px; line-height: 1.65; font-size: 12px; color: #587b70; }
+.ods-workbench-origin-note strong { display: block; color: #176957; margin-bottom: 7px; }
+.ods-workbench-origin-note p { margin: 0; }
+.ods-workbench-alert { margin-bottom: 16px; }
+.ods-workbench-wait { min-height: 80px; display: flex; align-items: center; }
+.ods-workbench-section-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 17px; flex-wrap: wrap; }
+.ods-workbench-section-title h2 { font-size: 17px; margin: 0 0 7px; }
+.ods-workbench-section-title p:last-child { font-size: 12px; color: #8a9ba0; line-height: 1.65; margin: 0; }
+.ods-workbench-action-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
+.ods-workbench-action-row > span { font-size: 11px; color: #8398a0; }
+.ods-workbench .ant-btn-primary { background: #14796f; border-color: #14796f; }
+.ods-workbench .ant-btn-primary:hover { background: #0f625a !important; border-color: #0f625a !important; }
+.ods-workbench-mapping { overflow-x: auto; max-width: 100%; border: 1px solid #e2eae8; border-radius: 10px; }
+.ods-workbench-mapping-row { display: grid; min-width: 595px; grid-template-columns: minmax(160px,1fr) minmax(154px,.9fr) minmax(190px,1.16fr); gap: 12px; align-items: center; padding: 11px 13px; border-bottom: 1px solid #ecf1f0; font-size: 12px; }
+.ods-workbench-mapping-row:last-child { border: 0; }
+.ods-workbench-mapping-head { background: #f7faf9; color: #738c90; font-size: 11px; font-weight: 760; padding-top: 13px; padding-bottom: 13px; }
+.ods-workbench-mapping-source { min-width: 0; overflow-wrap: anywhere; }
+.ods-workbench-mapping-source strong { color: #284c51; font-size: 12px; }
+.ods-workbench-mapping-source small { color: #82969e; display: block; margin-top: 4px; line-height: 1.5; }
+.ods-workbench-mapping-type .ant-tag { margin-bottom: 3px; }
+.ods-workbench-mapping-type small { display: block; color: #82949c; }
+.ods-workbench-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.ods-workbench-form label { display: grid; gap: 8px; color: #576f78; font-size: 12px; font-weight: 670; }
+.ods-workbench-form label:last-child { grid-column: 1 / -1; }
+.ods-workbench-select { width: 100%; }
+.ods-workbench-tech-note { margin-top: 20px; padding: 14px 15px; background: #f5f8f7; border-radius: 9px; border: 1px solid #e6edeb; font-size: 11px; color: #748a90; line-height: 1.7; }
+.ods-workbench-tech-note strong { display: block; font-size: 12px; color: #47635f; margin-bottom: 4px; }
+.ods-workbench-tech-note p { margin: 0; }
+.ods-workbench-candidate-list { display: grid; gap: 10px; }
+.ods-workbench-candidate { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; border: 1px solid #e3eae8; border-radius: 10px; padding: 16px; }
+.ods-workbench-candidate strong { display: block; color: #2a4f50; font-size: 13px; margin-bottom: 7px; }
+.ods-workbench-candidate span { color: #9aacac; font-size: 11px; }
+.ods-workbench-next { position: sticky; top: 16px; }
+.ods-workbench-next-card h2 { font-size: 16px; }
+.ods-workbench-next-card > p:not(.ods-workbench-eyebrow), .ods-workbench-next-card li { color: #748992; font-size: 11px; line-height: 1.8; }
+.ods-workbench-next-card ul { padding-left: 17px; }
+.ods-workbench-next-primary { width: 100%; min-height: 41px; margin-top: 12px; height: auto; white-space: normal; }
+.ods-workbench-next-actions { display: grid; gap: 10px; margin-top: 14px; }
+.ods-workbench-next-card > .ant-btn:not(.ods-workbench-next-primary) { margin-top: 12px; }
+@media (max-width: 1200px) {
+  .ods-workbench-grid { grid-template-columns: minmax(165px, 215px) minmax(0, 1fr); }
+  .ods-workbench-next { grid-column: 2; position: static; grid-row: 2; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 780px) {
+  .ods-workbench-progress { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .ods-workbench-grid { grid-template-columns: minmax(0, 1fr); }
+  .ods-workbench-origin { grid-column: 1; grid-row: 1; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .ods-workbench-main, .ods-workbench-next { grid-column: 1; }
+  .ods-workbench-next { grid-row: auto; }
+  .ods-workbench-card { padding: 18px; }
+}
+@media (max-width: 560px) {
+  .ods-workbench { padding: 18px 13px 38px; }
+  .ods-workbench-head { display: block; }
+  .ods-workbench-head > .ant-space { margin-top: 12px; }
+  .ods-workbench-progress { gap: 8px; }
+  .ods-workbench-progress-item { padding: 10px; gap: 7px; min-height: 70px; }
+  .ods-workbench-progress-number { flex-basis: 28px; width: 28px; height: 28px; }
+  .ods-workbench-progress-item small { font-size: 9px; }
+  .ods-workbench-origin { grid-template-columns: 1fr; }
+  .ods-workbench-next { grid-template-columns: 1fr; }
+  .ods-workbench-form { grid-template-columns: 1fr; }
+  .ods-workbench-section-title { display: block; }
+}
