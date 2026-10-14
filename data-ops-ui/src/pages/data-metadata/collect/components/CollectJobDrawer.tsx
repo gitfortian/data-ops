@@ -362,7 +362,7 @@ const CollectJobDrawer = ({
             showIcon
             className="!mb-0"
             message={`从表「${initialScope.sourceTableName}」进入任务定义`}
-            description="已带入库和 Schema，表范围默认全部表。"
+            description="已带入库和 Schema，但尚未限定表名匹配式；留空会采集该范围内全部表。表名中的 _ 和 % 是通配符，请明确核对匹配范围并先预演。"
           />
         ) : null}
 

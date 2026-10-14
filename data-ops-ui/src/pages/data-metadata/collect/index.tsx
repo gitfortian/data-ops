@@ -2,7 +2,9 @@ import Table from '@/components/ReadableTable';
 import { Alert, Button, Dropdown, Input, message, Modal, Segmented, Select, Descriptions, Tag, Tooltip } from 'antd';
 import { ArrowRightOutlined, MoreOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { history, useSearchParams } from '@umijs/max';
-import { readCollectionDefinitionHint } from '@/services/metadata/collectionHandoff';
+import { readCollectionDefinitionHint, collectionJobCovers } from '@/services/metadata/collectionHandoff';
+import type { CollectionSourceScope } from '@/services/metadata/collectionHandoff';
+import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -30,6 +32,7 @@ import CollectJobDrawer from './components/CollectJobDrawer';
 import type { CollectJobInitialScope } from './components/CollectJobDrawer';
 import RunHistoryDrawer from './components/RunHistoryDrawer';
 import RunResultModal from './components/RunResultModal';
+import CollectionJourneyContinuation from './components/CollectionJourneyContinuation';
 import { PROVIDER_LABELS, formatMetadataTime, describeCollectSchedule } from './constants';
 import { canEnableCollectSchedule, supportsCollectTaskExecution } from './collectTaskCapabilities';
 
@@ -68,6 +71,22 @@ const MetadataCollectPage = () => {
   const [editing, setEditing] = useState<CollectJobRecord | null>(null);
   const [historyJob, setHistoryJob] = useState<CollectJobRecord | null | undefined>(undefined);
   const [runResult, setRunResult] = useState<{ run: CollectRunRecord; title: string } | null>(null);
+  const [continuedJob, setContinuedJob] = useState<CollectJobRecord | null>(null);
+  const [continuedRun, setContinuedRun] = useState<CollectRunRecord | null>(null);
+  const [continuedResultUnknown, setContinuedResultUnknown] = useState(false);
+  const [sourceOrigin, setSourceOrigin] = useState<CollectionSourceScope | null>(null);
+  const continuationScopeEpoch = useRef(0);
+  useEffect(() => {
+    // A saved task receipt from another Project or source-scoped page cannot be
+    // silently reused as a current-context journey.
+    continuationScopeEpoch.current += 1;
+    setContinuedJob(null);
+    setContinuedRun(null);
+    setContinuedResultUnknown(false);
+    setSourceOrigin(null);
+    setBusyJob(null);
+    setRunResult(null);
+  }, [projectId, rawSourceHint]);
   const [dataSourceNames, setDataSourceNames] = useState<Record<string, string>>({});
   const [sourceHint, setSourceHint] = useState<{ id: number; name: string } | null>(null);
   const [sourceHintError, setSourceHintError] = useState('');
@@ -90,6 +109,15 @@ const MetadataCollectPage = () => {
     }
     if (!sourceHint || sourceHint.id !== definitionHint.sourceId) return;
     const verifiedSource = sourceHint;
+    const originScope: CollectionSourceScope | null =
+      definitionHint.databaseName && definitionHint.sourceTableName
+        ? {
+            dataSourceId: String(verifiedSource.id),
+            databaseName: definitionHint.databaseName,
+            schemaName: definitionHint.schemaName,
+            tableName: definitionHint.sourceTableName,
+          }
+        : null;
     const openDefinition = async () => {
       try {
         if (definitionHint.jobId) {
@@ -116,6 +144,7 @@ const MetadataCollectPage = () => {
           });
         }
         if (!active) return;
+        setSourceOrigin(originScope);
         setDefinitionError('');
         setDrawerOpen(true);
         consumeHint();
@@ -227,30 +256,50 @@ const MetadataCollectPage = () => {
   const reload = () => loadJobs(pageNo, pageSize);
 
   const openCreate = () => {
+    setSourceOrigin(null);
     setEditing(null);
     setDefinitionScope(undefined);
     setDrawerOpen(true);
   };
 
   const openEdit = (job: CollectJobRecord) => {
+    setSourceOrigin(null);
     setEditing(job);
     setDefinitionScope(undefined);
     setDrawerOpen(true);
   };
 
   const execute = async (job: CollectJobRecord, action: 'dry-run' | 'run') => {
+    if (!canCreate || busyJob) return;
     if (!supportsCollectTaskExecution(job.providerType)) {
       message.warning('此类任务暂不支持执行');
       return;
     }
+    const scopeEpoch = continuationScopeEpoch.current;
     setBusyJob({ id: job.id, action });
     try {
       const run = action === 'dry-run' ? await dryRunCollectJob(job.id) : await runCollectJob(job.id);
+      if (scopeEpoch !== continuationScopeEpoch.current) return;
+      // Even a transport-level 2xx isn't a safe run receipt if the backend
+      // returned another job or the opposite execution mode.
+      if (run.jobId !== job.id || !Number.isSafeInteger(run.runId) || run.runId <= 0
+          || run.dryRun !== (action === 'dry-run')) {
+        throw new Error('The collection run receipt did not match the saved task');
+      }
+      if (continuedJob?.id === job.id) {
+        setContinuedRun(run);
+        setContinuedResultUnknown(false);
+      }
       setRunResult({
         run,
         title: action === 'dry-run' ? `采集预览 · ${job.jobName}` : `采集结果 · ${job.jobName}`,
       });
     } catch {
+      if (scopeEpoch !== continuationScopeEpoch.current) return;
+      if (continuedJob?.id === job.id) {
+        setContinuedRun(null);
+        setContinuedResultUnknown(true);
+      }
       // Timeout/rejection has no trustworthy runId, so we cannot infer cancellation or
       // associate any similarly-timed history row with this request.
       Modal.warning({
@@ -260,13 +309,16 @@ const MetadataCollectPage = () => {
         onOk: () => setHistoryJob(job),
       });
     } finally {
-      setBusyJob(null);
-      await reload();
+      if (scopeEpoch === continuationScopeEpoch.current) {
+        setBusyJob(null);
+        await reload();
+      }
     }
   };
 
   const confirmRun = (job: CollectJobRecord) => {
-    if (!supportsCollectTaskExecution(job.providerType)) return;
+    if (!canCreate || busyJob || !supportsCollectTaskExecution(job.providerType)) return;
+    const intentScopeEpoch = continuationScopeEpoch.current;
     Modal.confirm({
       className: 'collect-execute-confirm',
       title: '开始采集？',
@@ -292,7 +344,13 @@ const MetadataCollectPage = () => {
       ),
       okText: '开始采集',
       cancelText: '取消',
-      onOk: () => execute(job, 'run'),
+      onOk: () => {
+        if (intentScopeEpoch !== continuationScopeEpoch.current) {
+          message.warning('当前项目或来源已变更，请重新核验任务后再采集');
+          return;
+        }
+        return execute(job, 'run');
+      },
     });
   };
 
@@ -475,6 +533,16 @@ const MetadataCollectPage = () => {
   ];
 
   const hasFilter = Boolean(keyword || providerType || enabledFilter);
+  const returnToSource = continuedJob && sourceOrigin
+    && collectionJobCovers(continuedJob, sourceOrigin)
+    && sourceOrigin.databaseName && sourceOrigin.tableName
+    ? buildLiveSourceReturnPath({
+        dataSourceId: Number(sourceOrigin.dataSourceId),
+        database: sourceOrigin.databaseName,
+        schema: sourceOrigin.schemaName,
+        table: sourceOrigin.tableName,
+      })
+    : null;
 
   return (
     <main className="metadata-collect-page">
@@ -502,6 +570,22 @@ const MetadataCollectPage = () => {
           showIcon
           message="未能读取采集任务"
           action={<Button onClick={() => void reload()}>重试</Button>}
+        />
+      ) : null}
+      {continuedJob && !sourceHintError ? (
+        <CollectionJourneyContinuation
+          job={continuedJob}
+          sourceName={dataSourceNames[String(continuedJob.dataSourceId)] || `数据源 ${continuedJob.dataSourceId}`}
+          run={continuedRun}
+          resultUnknown={continuedResultUnknown}
+          busy={Boolean(busyJob)}
+          canExecute={canCreate && supportsCollectTaskExecution(continuedJob.providerType)}
+          sourceReturn={returnToSource ? () => history.push(returnToSource) : undefined}
+          onPreview={() => void execute(continuedJob, 'dry-run')}
+          onConfirmRun={() => confirmRun(continuedJob)}
+          onHistory={() => setHistoryJob(continuedJob)}
+          onOpenJob={() => history.push(collectTaskDetailPath(continuedJob.id, sourceHint?.id ? String(sourceHint.id) : undefined))}
+          onDismiss={() => { setContinuedJob(null); setContinuedRun(null); setContinuedResultUnknown(false); }}
         />
       ) : null}
       <section className="collect-list-panel">
@@ -627,8 +711,14 @@ const MetadataCollectPage = () => {
         initialDataSourceId={sourceHint?.id}
         initialScope={definitionScope}
         onClose={() => setDrawerOpen(false)}
-        onSaved={() => {
+        onSaved={(saved) => {
           setDrawerOpen(false);
+          if (saved.id > 0 && saved.providerType === 'HARVESTED'
+              && (sourceHint == null || saved.dataSourceId === sourceHint.id)) {
+            setContinuedJob(saved);
+            setContinuedRun(null);
+            setContinuedResultUnknown(false);
+          }
           void reload();
         }}
       />
