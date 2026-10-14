@@ -1,6 +1,9 @@
 import { pageCollectJobs } from './api';
 import {
   collectDefinitionPath,
+  readCollectTaskOrigin,
+  verifiedCollectTaskReturnPath,
+  collectTaskDetailWithOriginPath,
   collectionJobCovers,
   findCoveringCollectionJobs,
   readCollectionDefinitionHint,
@@ -74,4 +77,37 @@ it('passes bounded navigation context without a prefilled run, schedule or narro
   expect(
     readCollectionDefinitionHint(new URLSearchParams(`dataSourceId=18&databaseName=${'x'.repeat(257)}`)).valid,
   ).toBe(false);
+});
+
+it('carries only a complete verified origin from the saved task into detail and back to source', () => {
+  const saved = { ...job, schemaName: 'public', tablePattern: 'trade_%' };
+  const detailPath = collectTaskDetailWithOriginPath(saved, scope);
+  expect(detailPath.startsWith('/data-metadata/collect/71?')).toBe(true);
+  const hint = readCollectTaskOrigin(new URL(detailPath, 'http://localhost').searchParams);
+  expect(hint).toEqual(scope);
+  const back = verifiedCollectTaskReturnPath(saved, hint);
+  expect(back?.startsWith('/data-source?')).toBe(true);
+  const q = new URL(back!, 'http://localhost').searchParams;
+  expect(q.get('sourceId')).toBe('18');
+  expect(q.get('database')).toBe('trade_db');
+  expect(q.get('schema')).toBe('public');
+  expect(q.get('table')).toBe('trade_order');
+});
+
+it('refuses fake source origins, out-of-scope jobs, and partial table hints', () => {
+  const saved = { ...job, schemaName: 'public', tablePattern: 'trade_%' };
+  expect(verifiedCollectTaskReturnPath(saved, { ...scope, schemaName: 'audit' })).toBeNull();
+  expect(verifiedCollectTaskReturnPath({ ...saved, dataSourceId: 99 }, scope)).toBeNull();
+  expect(verifiedCollectTaskReturnPath({ ...saved, providerType: 'REGISTERED' }, scope)).toBeNull();
+  expect(verifiedCollectTaskReturnPath({ ...saved, tablePattern: 'unrelated' }, scope)).toBeNull();
+  expect(readCollectTaskOrigin(new URLSearchParams('dataSourceId=18&database=trade_db'))).toBeNull();
+  expect(readCollectTaskOrigin(new URLSearchParams('dataSourceId=0&database=trade_db&table=trade_order'))).toBeNull();
+  const path = collectTaskDetailWithOriginPath({ ...saved, schemaName: 'audit' }, scope);
+  expect(new URL(path, 'http://localhost').searchParams.has('table')).toBe(false);
+});
+
+it('does not fabricate exact table identity from a broad task-only link', () => {
+  const origin = readCollectTaskOrigin(new URLSearchParams('dataSourceId=18'));
+  expect(origin).toBeNull();
+  expect(verifiedCollectTaskReturnPath(job, origin)).toBeNull();
 });
