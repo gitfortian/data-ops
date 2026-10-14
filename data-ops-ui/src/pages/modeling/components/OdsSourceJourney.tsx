@@ -42,6 +42,18 @@ const OdsSourceJourney = () => {
   const sourceReturn = liveSourceReturn ??
     `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
 
+  const modelDetailPath = (modelId: number): string => {
+    const path = `/modeling/models/${modelId}`;
+    if (!liveSourceReturn || datasourceId == null) return path;
+    const query = new URLSearchParams({
+      origin: 'live-source',
+      datasourceId: String(datasourceId),
+      database, table,
+    });
+    if (schema) query.set('schema', schema);
+    return `${path}?${query}`;
+  };
+
   const [lookup, setLookup] = useState<OdsSourceLookup | null>(null);
   const [failure, setFailure] = useState('');
   const [loading, setLoading] = useState(false);
@@ -276,7 +288,7 @@ const OdsSourceJourney = () => {
           {lookup.candidates.map(candidate => (
             <div key={candidate.modelId} className="flex items-center justify-between rounded border border-solid border-[#eaecf0] p-3">
               <Space><strong>{candidate.name}</strong><Tag>{candidate.code}</Tag><Tag>{candidate.status}</Tag></Space>
-              <Button type="primary" onClick={() => history.push(`/modeling/models/${candidate.modelId}`)}>
+              <Button type="primary" onClick={() => history.push(modelDetailPath(candidate.modelId))}>
                 打开已保存 ODS
               </Button>
             </div>
@@ -327,7 +339,7 @@ const OdsSourceJourney = () => {
             </Space>
           )}
           {savedDraft?.id && (
-            <Button onClick={() => history.push(`/modeling/models/${savedDraft.id}`)}>
+            <Button onClick={() => history.push(modelDetailPath(Number(savedDraft.id)))}>
               打开已保存的模型 #{savedDraft.id}
             </Button>
           )}
@@ -335,7 +347,7 @@ const OdsSourceJourney = () => {
             <Alert type="success" showIcon message="ODS 已保存，逐列映射有持久化回执"
               action={<Space>
                 <Button type="primary" onClick={() => history.push(sourceReturn)}>保存并返回来源</Button>
-                <Button onClick={() => history.push(`/modeling/models/${savedId}`)}>打开 ODS</Button>
+                <Button onClick={() => history.push(modelDetailPath(savedId))}>打开 ODS</Button>
               </Space>} />
           )}
         </div>
