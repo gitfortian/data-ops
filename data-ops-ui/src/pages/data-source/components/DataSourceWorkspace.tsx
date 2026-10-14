@@ -82,8 +82,9 @@ export default function DataSourceWorkspace({
       <Drawer
         open
         onClose={onClose}
-        width="min(880px, 100vw)"
-        rootClassName="source-workspace"
+        width="100vw"
+        placement="right"
+        rootClassName="source-workspace source-workbench-v082"
         title={
           <div className="source-workspace-title">
             <div className="source-card-icon">
@@ -91,84 +92,125 @@ export default function DataSourceWorkspace({
             </div>
             <div>
               <h2>{record.name || '数据源工作区'}</h2>
-              <p>
-                {record.dbType} · {record.environmentName || record.environment || '未分类环境'}
-              </p>
+              <p>{record.dbType} · {record.environmentName || record.environment || '未分类环境'}</p>
             </div>
+            <span className="source-workbench-head-caption">J1 / 来源发现与贴源建模</span>
           </div>
         }
       >
-        <section className="source-workspace-connection">
-          <div>
-            <div className="source-workspace-connection-label">
-              <strong>连接检测</strong>
-              <DataSourceStatus status={record.connStatus} />
+        <div className="source-workbench-layout" data-testid="source-ods-workbench">
+          <aside className="source-workbench-rail" aria-label="来源到 ODS 工作步骤">
+            <div className="source-workbench-eyebrow">SOURCE / WORKBENCH</div>
+            <h2>从源表开始建设</h2>
+            <p className="source-workbench-rail-desc">
+              不需要先创建资产。按当前项目的真实来源逐步核对，再选择打开或新建 ODS。
+            </p>
+            <ol className="source-workbench-steps">
+              <li className="source-workbench-step">
+                <span className="source-workbench-step-number">01</span>
+                <div><strong>连接与授权</strong><small>已有数据源 · 按当前权限检查</small></div>
+              </li>
+              <li className="source-workbench-step active">
+                <span className="source-workbench-step-number">02</span>
+                <div><strong>发现并核对源表</strong><small>库 / Schema / 表 / 实时列结构</small></div>
+              </li>
+              <li className="source-workbench-step">
+                <span className="source-workbench-step-number">03</span>
+                <div><strong>打开或创建 ODS</strong><small>查找精确同源目标 · 核对字段后保存</small></div>
+              </li>
+              <li className="source-workbench-step">
+                <span className="source-workbench-step-number">04</span>
+                <div><strong>返回来源继续</strong><small>保存后回到同一张原始表</small></div>
+              </li>
+            </ol>
+            <div className="source-workbench-rail-footer">
+              <strong>资产治理是并行任务</strong>
+              <p>没有 Asset 写权限，也可以完成来源发现及有权的 ODS 建模。</p>
             </div>
-            <div className="source-workspace-connection-note">连接状态来自最近一次检测。</div>
-          </div>
-          <Space wrap>
-            {permissions.canUpdate ? <Button onClick={() => onEdit(record)}>编辑连接</Button> : null}
-            {permissions.canTest ? (
-              <Button
-                icon={<Unplug size={15} />}
-                loading={testingId === sourceKey}
-                disabled={Boolean(testingId) && testingId !== sourceKey}
-                onClick={() => onTestConnection(record)}
-              >
-                检测连接
-              </Button>
-            ) : null}
-          </Space>
-        </section>
-        <section className="source-workspace-panel">
-          <Tabs
-            activeKey={tab}
-            onChange={setTab}
-            items={[
-              {
-                key: 'live',
-                label: (
-                  <span className="source-workspace-tab-label">
-                    <Search size={15} aria-hidden="true" />
-                    <span>即时探查</span>
-                  </span>
-                ),
-              },
-              ...(canReadMetadata
-                ? [
-                    {
-                      key: 'collection',
-                      label: (
-                        <span className="source-workspace-tab-label">
-                          <Database size={15} aria-hidden="true" />
-                          <span>采集信息</span>
-                        </span>
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-          {tab === 'live' ? (
-            <LiveSchemaExplorer
-              sourceId={sourceKey}
-              initialTable={initialTable}
-              onOpenOds={validSource && access.hasPermission('modeling:read') &&
-                access.hasPermission('resource:data-source:read')
-                ? (source) => {
-                    const path = buildLiveSourceOdsPath(source);
-                    if (path) history.push(path);
-                    else message.warning('来源坐标不完整，无法安全进入 ODS，请重新核对物理表');
-                  }
-                : undefined}
-              canRead={validSource && access.hasPermission('resource:data-source:read')}
-              onDefineTask={canCreate || canUpdate ? (target) => void defineCollection(target) : undefined}
-              definitionLoading={defining}
-            />
-          ) : (
-            <CollectionInfo sourceId={sourceKey} canCreate={canCreate} />
-          )}
-        </section>
+          </aside>
+          <main className="source-workbench-main">
+            <header className="source-workbench-page-head">
+              <div>
+                <p className="source-workbench-eyebrow">SOURCE DISCOVERY · 当前项目</p>
+                <h1>发现源表，继续 ODS 建模</h1>
+                <p>选择准确的数据库、Schema 和原始表；核对实际列结构后，再进入 ODS 目标查找和字段保存。</p>
+              </div>
+              <Button onClick={onClose}>返回数据源列表</Button>
+            </header>
+            <section className="source-workspace-connection" aria-label="当前数据源连接">
+              <div>
+                <div className="source-workspace-connection-label">
+                  <strong>连接状态</strong>
+                  <DataSourceStatus status={record.connStatus} />
+                </div>
+                <div className="source-workspace-connection-note">来自最近一次连接检测；不是本次源表、采集或 ODS 保存成功的凭据。</div>
+              </div>
+              <Space wrap>
+                {permissions.canUpdate ? <Button onClick={() => onEdit(record)}>编辑连接</Button> : null}
+                {permissions.canTest ? (
+                  <Button icon={<Unplug size={15} />}
+                    loading={testingId === sourceKey}
+                    disabled={Boolean(testingId) && testingId !== sourceKey}
+                    onClick={() => onTestConnection(record)}
+                  >检测连接</Button>
+                ) : null}
+              </Space>
+            </section>
+            <section className="source-workspace-panel" aria-label="源表发现与采集信息">
+              <div className="source-workbench-section-head">
+                <div><h2>来源结构与采集</h2><p>直接探查与目录采集是不同操作，切换不会写入元数据。</p></div>
+              </div>
+              <Tabs
+                activeKey={tab}
+                onChange={setTab}
+                items={[
+                  { key: 'live', label: <span className="source-workspace-tab-label"><Search size={15} aria-hidden="true" />即时探查源表</span> },
+                  ...(canReadMetadata ? [
+                    { key: 'collection', label: <span className="source-workspace-tab-label"><Database size={15} aria-hidden="true" />采集记录与任务</span> },
+                  ] : []),
+                ]}
+              />
+              {tab === 'live' ? (
+                <LiveSchemaExplorer
+                  sourceId={sourceKey}
+                  initialTable={initialTable}
+                  onOpenOds={validSource && access.hasPermission('modeling:read')
+                    && access.hasPermission('resource:data-source:read')
+                    ? (source) => {
+                        const path = buildLiveSourceOdsPath(source);
+                        if (path) history.push(path);
+                        else message.warning('来源坐标不完整，无法安全进入 ODS，请重新核对物理表');
+                      }
+                    : undefined}
+                  canRead={validSource && access.hasPermission('resource:data-source:read')}
+                  onDefineTask={canCreate || canUpdate ? (target) => void defineCollection(target) : undefined}
+                  definitionLoading={defining}
+                />
+              ) : (
+                <CollectionInfo sourceId={sourceKey} canCreate={canCreate} />
+              )}
+            </section>
+          </main>
+          <aside className="source-workbench-aside" aria-label="来源工作台下一步与说明">
+            <section className="source-workbench-aside-card">
+              <p className="source-workbench-eyebrow">NEXT ACTION</p>
+              <h2>先核对来源，再做 ODS</h2>
+              <p>在中央选择一张表，确认字段和主键之后，使用表结构区域的“打开或创建 ODS”。</p>
+              <div className="source-workbench-proof">
+                <strong>为何不直接建模？</strong>
+                <span>同名表可能位于不同数据库或 Schema。目标页会再次核验源身份并精确查找已有 ODS，避免重复创建。</span>
+              </div>
+            </section>
+            <section className="source-workbench-aside-card">
+              <p className="source-workbench-eyebrow">可选治理步骤</p>
+              <h3>需要正式采集元数据？</h3>
+              <p>在“即时探查”选择库或表后点击“配置采集”，保存任务、预演，再正式运行。即时探查本身不代表采集完成。</p>
+              {canReadMetadata ? (
+                <Button block onClick={() => setTab('collection')}>查看采集信息</Button>
+              ) : <p>当前角色无元数据读取权限，仍可使用已授权的实时源表能力。</p>}
+            </section>
+          </aside>
+        </div>
       </Drawer>
       <Modal
         open={Boolean(candidates)}
