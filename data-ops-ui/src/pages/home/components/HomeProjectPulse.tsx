@@ -10,7 +10,7 @@ import { readSharedHomeAssetOverview } from '../hooks/readSharedHomeAssetOvervie
 import {
   canReadHomePulse, HOME_PULSE_ROUTES, pulseScopeKey, safeOwnerCount,
   type DynamicHomePulseKey, type HomePulseKey,
-} from './homeProjectPulse';
+} from './projectPulseContract';
 import { appRoutes } from '@/config/navigation';
 
 type LoadState = { status: 'loading' | 'ready' | 'unavailable'; value: number | null };
