@@ -34,46 +34,46 @@ interface HomeJourneyDefinition {
 const JOURNEYS: readonly HomeJourneyDefinition[] = [
   {
     key: 'build', title: '建设可信数据',
-    description: '从有权限的来源开始，核对表结构、建立 ODS，再继续业务建模。',
+    description: '接入数据、查看结构，或继续已有建模工作。',
     story: 'GM-J1', primary: true,
     candidates: ['data-source', 'data-metadata-collect', 'modeling-workspace'],
   },
   {
     key: 'consume', title: '使用已有数据',
-    description: '从受治理的数据产品目录核对版本和授权，不经过生产者 Dataset 管理。',
+    description: '查找数据产品，查看版本与使用条件。',
     story: 'GM-J3', primary: true,
     candidates: ['consumption-catalog'],
   },
   {
     key: 'recover', title: '处理运行异常',
-    description: '定位真实质量或执行记录，再进入有权限的专业恢复流程。',
+    description: '查看质量问题或执行记录，定位异常。',
     story: 'GM-J4', primary: true,
     candidates: ['data-quality-overview', 'data-development-execution', 'workflow-instances'],
   },
   {
     key: 'metric', title: '定义和验证指标',
-    description: '复用业务语义、指标版本、校验和发布入口。',
+    description: '查看与管理指标定义。',
     story: 'GM-J2', primary: false, candidates: ['metric-manage'],
   },
   {
     key: 'security', title: '安全与访问',
-    description: '核对分类、策略、授权和访问审计。',
+    description: '查看数据安全与访问情况。',
     story: 'GM-J5', primary: false, candidates: ['data-security-overview'],
   },
   {
     key: 'semantic', title: '业务语义与标准',
-    description: '核对业务过程、粒度及合法标准字段。',
+    description: '查看业务过程与数据标准。',
     story: 'GM-J1/J2', primary: false,
     candidates: ['semantic-processes', 'semantic-standards'],
   },
   {
     key: 'mdm', title: '主数据管理',
-    description: '进入主数据的识别、审查和发布专业工作台。',
+    description: '查看和管理主数据。',
     story: 'GM-MDM', primary: false, candidates: ['mdm-overview'],
   },
   {
     key: 'agent', title: '智能助手',
-    description: '进入现有助手。建议与问答仍须原域授权和真实证据。',
+    description: '通过对话获取数据工作建议。',
     story: 'GM-J1/J6', primary: false, candidates: ['ai-agent'],
   },
 ];

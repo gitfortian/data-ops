@@ -21,7 +21,7 @@ export default function HomePage() {
       <HomeBackground />
 
       <div className="relative z-10">
-        <HomeHeader stats={cockpit.data?.header} />
+        <HomeHeader />
 
         <main className="px-4 pb-4">
           <div className="mt-4">
