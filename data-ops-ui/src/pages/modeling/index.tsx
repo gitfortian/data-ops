@@ -22,6 +22,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
 import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWizardDrawer';
+import ModelingStartGuide from '@/pages/modeling/components/ModelingStartGuide';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
 import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
 import ModelTreePane from '@/pages/modeling/components/ModelTreePane';
@@ -622,12 +623,17 @@ const ModelingWorkspace: React.FC = () => {
           <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
           <Button onClick={clearJourney}>查看全部物理模型</Button>
         </div>}
-        {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#d0d5dd] bg-white px-3 py-2 text-[13px]">
-          <span>正在查看业务过程：<strong>{journeyProcess.name}</strong>，仅显示当前项目对应的物理模型</span>
-          <Button type="link" size="small"
-            onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
-          <Button type="link" size="small"
-            onClick={() => history.push(processToLogical(journeyProcess.id))}>逻辑模型</Button>
+        <ModelingStartGuide
+          process={journeyProcess}
+          onBusiness={() => history.push(journeyProcess ? processToSemantic(journeyProcess.id) : '/semantic/processes')}
+          onLogical={() => history.push(journeyProcess ? processToLogical(journeyProcess.id) : '/modeling/logical')}
+          onSource={() => history.push('/data-source')}
+          onCreate={() => setWizardOpen(true)}
+          canCreate={can('modeling:create') && !Boolean(journeyProblem) && journeyReady && !optionsLoading}
+          loading={optionsLoading || !journeyReady}
+        />
+        {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-3 text-[12px] text-[#667085]">
+          <span>当前过程筛选：<strong>{journeyProcess.name}</strong>（{journeyProcess.code}）</span>
           {can('data-development:read') && <Tooltip
             title="仅进入现有 DataDev 工作台；不传递模型版本、不创建任务、不声明交接批准">
             <Button type="link" size="small" onClick={() => history.push('/data-development')}>
