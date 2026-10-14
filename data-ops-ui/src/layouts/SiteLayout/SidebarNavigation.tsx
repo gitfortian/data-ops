@@ -139,7 +139,18 @@ export default function SidebarNavigation({
   const renderTools = (group: NavigationGroupWithRoutes, model: TaskNavigationModel) => {
     const routes = allTools(model);
     if (!routes.length) return null;
-    const expanded = openTools.has(group.id) || model.tasks.length === 0;
+    // If this role has only a specialist grant, it must be immediately
+    // discoverable. Do not render a fake collapsible button that cannot close.
+    if (!model.tasks.length) return <div className="pt-1" key={group.id + ':tools'}>
+      <div className="px-3 py-2 text-[12px] font-medium text-[#667085]">专业工具</div>
+      <div className="ml-3 border-l border-[#eaecf0] pl-1.5">
+        {model.tools.map(section => <div key={section.id}>
+          {model.tools.length > 1 && <div className="px-3 pb-1 pt-2 text-[11px] text-[#98a2b3]">{section.title}</div>}
+          {section.routes.map(route => routeLink(route))}
+        </div>)}
+      </div>
+    </div>;
+    const expanded = openTools.has(group.id);
     return <div className="mt-2 border-t border-[#eaecf0] pt-2" key={group.id + ':tools'}>
       <button
         type="button"
