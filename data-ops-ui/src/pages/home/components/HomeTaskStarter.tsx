@@ -1,4 +1,3 @@
-import { canAccessNavigationRoute, appRoutes } from '@/config/navigation';
 import { useAgentAvailability } from '@/contexts/AgentAvailabilityContext';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { history, useModel } from '@umijs/max';
@@ -39,7 +38,6 @@ function JourneyButton({ entry }: { entry: HomeJourneyEntry }) {
         <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#dee8e7] bg-white/80 text-[#315b59]">
           {JOURNEY_ICONS[entry.key]}
         </span>
-        <span className="text-[11px] font-medium text-[#839096]">{entry.story}</span>
       </div>
       <strong className="mt-3 text-[15px] font-semibold leading-6 text-[#213b43]">
         {entry.title}
@@ -70,29 +68,21 @@ export default function HomeTaskStarter() {
   const primary = entries.filter((entry) => entry.primary);
   const secondary = entries.filter((entry) => !entry.primary);
 
-  const sourceRoute = appRoutes.find((route) => route.id === 'data-source');
-  const canVisitSources = Boolean(
-    user && sourceRoute && canAccessNavigationRoute(sourceRoute, user.permissionCodes, user.menuCodes),
-  );
-
   return (
     <section className="min-w-0 rounded-[22px] border border-[#e1e9e9] bg-white px-4 py-5 shadow-sm sm:px-6" aria-labelledby="home-task-title">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="mb-1 text-[11px] font-semibold tracking-[0.08em] text-[#188177]">工作空间 · {currentProject?.projectName ?? '尚未选择'}</p>
+          <p className="mb-1 text-[11px] font-semibold tracking-[0.08em] text-[#188177]">当前项目 · {currentProject?.projectName ?? '尚未选择'}</p>
           <h2 id="home-task-title" className="m-0 text-[21px] font-semibold tracking-[-0.5px] text-[#223941]">
-            从当前任务开始
+            开始工作
           </h2>
-          <p className="mb-0 mt-1 text-[12px] leading-5 text-[#71838c]">
-            选择要完成的工作；下方入口由当前项目和原有菜单权限决定，不创建新的业务流程或事实。
-          </p>
         </div>
       </header>
 
       {!currentProject ? (
         <div role="status" className="mt-5 flex items-start gap-2 rounded-xl border border-[#f0e4cf] bg-[#fffbf3] px-4 py-3 text-[12px] text-[#805f3a]">
           <LockKeyhole size={17} className="shrink-0" />
-          当前没有可用的项目空间；请先在顶部切换或向管理员申请加入项目。不会展示其他项目的任务。
+          暂无可用项目空间，请切换项目或联系管理员申请加入。
         </div>
       ) : primary.length ? (
         <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -100,25 +90,21 @@ export default function HomeTaskStarter() {
         </div>
       ) : (
         <div role="status" className="mt-5 rounded-xl border border-dashed border-[#d5e2e0] p-4 text-[12px] text-[#687c86]">
-          当前身份没有匹配的建设、消费或异常处理入口。可从现有专业菜单查看已授权功能，不会以空任务代替权限限制。
+          {secondary.length > 0
+            ? '可展开下方更多工作入口，选择已授权功能。'
+            : '暂无可用的工作入口，可从侧栏查看已授权功能。'}
         </div>
       )}
 
       {currentProject && secondary.length > 0 ? (
         <details className="mt-4 rounded-xl border border-[#e8eeef] bg-[#fbfcfc]">
           <summary className="cursor-pointer px-4 py-3 text-[12px] font-semibold text-[#44646b] focus-visible:outline-2 focus-visible:outline-offset-2">
-            更多专业工作（{secondary.length}）
+            更多工作入口（{secondary.length}）
           </summary>
           <div className="grid grid-cols-1 gap-3 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-4">
             {secondary.map((entry) => <JourneyButton key={entry.key} entry={entry} />)}
           </div>
         </details>
-      ) : null}
-
-      {currentProject && canVisitSources ? (
-        <p className="mb-0 mt-3 text-[11px] text-[#84949d]">
-          数据源连接、结构采集和模型保存分别由原域管理；ODS 设计不以资产纳管作为前置。
-        </p>
       ) : null}
     </section>
   );

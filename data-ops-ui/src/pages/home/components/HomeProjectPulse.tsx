@@ -4,7 +4,7 @@ import { API_SUCCESS_CODE } from '@/services/http/response';
 import { pageModelingModels } from '@/services/modeling/api';
 import { getMetricStats } from '@/services/metric/api';
 import { history, useModel } from '@umijs/max';
-import { ArrowUpRight, Clock3 } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { readSharedHomeAssetOverview } from '../hooks/readSharedHomeAssetOverview';
 import {
@@ -29,15 +29,15 @@ const initialSnapshot = (scope: string | null): PulseSnapshot => ({
 const routeById = (id: string) => appRoutes.find((route) => route.id === id);
 
 function formatPulse(value: LoadState, failedLabel = '暂不可用') {
-  if (value.status === 'loading') return '读取中';
+  if (value.status === 'loading') return '加载中';
   if (value.status === 'unavailable') return failedLabel;
   return value.value == null ? '—' : value.value.toLocaleString('zh-CN');
 }
 
 function OwnerPulseCard({
-  label, detail, value, target, clickable,
+  label, value, target, clickable, destination,
 }: {
-  label: string; detail: string; value: LoadState; target?: string; clickable?: boolean;
+  label: string; value: LoadState; target?: string; clickable?: boolean; destination?: string;
 }) {
   const content = (
     <>
@@ -45,7 +45,6 @@ function OwnerPulseCard({
       <strong className="mt-2 block truncate text-[22px] font-semibold tabular-nums leading-7 text-[#243d46]">
         {formatPulse(value)}
       </strong>
-      <span className="mt-2 block text-[11px] leading-4 text-[#83929b]">{detail}</span>
       {clickable ? <ArrowUpRight size={15} className="absolute right-3 top-3 text-[#9bacae]" aria-hidden="true" /> : null}
     </>
   );
@@ -55,7 +54,7 @@ function OwnerPulseCard({
       type="button"
       onClick={() => history.push(target)}
       className={`${classes} transition-colors hover:border-[#85bcb3] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16877d]`}
-      aria-label={`${label}：${formatPulse(value)}，前往对应专业页面`}
+      aria-label={`${label}：${value.status === 'ready' && value.value == null ? '未知' : formatPulse(value)}，前往${destination}`}
     >
       {content}
     </button>
@@ -145,13 +144,13 @@ export default function HomeProjectPulse({
     running: homeValue(stats?.runningCount, stats?.runningAvailable),
   };
 
-  const cards: Array<{ key: HomePulseKey; label: string; detail: string }> = [
-    { key: 'sources', label: '数据源', detail: 'Home / DataSource' },
-    { key: 'models', label: '物理模型', detail: 'Modeling 模型总数' },
-    { key: 'metrics', label: '指标定义', detail: 'Metric 定义总数，非发布数' },
-    { key: 'assets', label: '表资产', detail: 'Asset 表资产，不代表已上架' },
-    { key: 'quality', label: '今日质量异常表', detail: 'Quality 异常表数' },
-    { key: 'running', label: '运行中任务', detail: 'Home Cockpit 汇总，非统一 Run' },
+  const cards: Array<{ key: HomePulseKey; label: string; scopeDescription: string }> = [
+    { key: 'sources', label: '数据源', scopeDescription: '当前项目的数据源数量。' },
+    { key: 'models', label: '物理模型', scopeDescription: '物理模型总数，不代表已部署表数。' },
+    { key: 'metrics', label: '指标定义', scopeDescription: '指标定义总数，不代表已发布指标数。' },
+    { key: 'assets', label: '表资产', scopeDescription: '表资产数量，不代表已上架数量。' },
+    { key: 'quality', label: '今日质量异常表', scopeDescription: '今日质量检查发现异常的表数量。' },
+    { key: 'running', label: '运行中任务', scopeDescription: '离线同步、工作流和质量检查的运行中数量汇总。' },
   ];
 
   const visible = cards.filter(({ key }) => key === 'running' || allowed[key]);
@@ -159,24 +158,32 @@ export default function HomeProjectPulse({
 
   return (
     <section aria-labelledby="home-project-pulse-title" className="mt-4 min-w-0 rounded-[22px] border border-[#e5ebec] bg-white p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 id="home-project-pulse-title" className="m-0 text-[17px] font-semibold text-[#253b44]">项目规模与运行概况</h2>
-          <p className="mb-0 mt-1 text-[11px] text-[#87959d]">当前项目 · 各卡片独立读取所属领域事实，未知和不可用不会计为零。</p>
-        </div>
-        <span className="inline-flex items-center gap-1 text-[11px] text-[#87959d]"><Clock3 size={13} aria-hidden="true" />实时读模型</span>
-      </div>
+      <h2 id="home-project-pulse-title" className="m-0 text-[17px] font-semibold text-[#253b44]">项目概况</h2>
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        {visible.map(({ key, label, detail }) => {
+        {visible.map(({ key, label }) => {
           const route = key === 'running' ? undefined : routeById(HOME_PULSE_ROUTES[key]);
           return (
             <OwnerPulseCard
-              key={key} label={label} detail={detail} value={values[key]}
-              target={route?.path} clickable={Boolean(route)}
+              key={key} label={label} value={values[key]}
+              target={route?.path} destination={route?.title} clickable={Boolean(route)}
             />
           );
         })}
       </div>
+      <details className="mt-3 text-[12px] text-[#647984]">
+        <summary className="w-fit cursor-pointer rounded-sm font-medium text-[#44646b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16877d]">
+          统计口径
+        </summary>
+        <dl className="mb-0 mt-2 grid gap-2 rounded-xl border border-[#e8eeef] bg-[#fbfcfc] p-3 sm:grid-cols-2 xl:grid-cols-3">
+          {visible.map(({ key, label, scopeDescription }) => (
+            <div key={key}>
+              <dt className="font-medium text-[#253b44]">{label}</dt>
+              <dd className="mb-0 mt-0.5">{scopeDescription}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mb-0 mt-2">“—”表示暂无可确认的统计值；读取失败时显示“暂不可用”。</p>
+      </details>
     </section>
   );
 }
