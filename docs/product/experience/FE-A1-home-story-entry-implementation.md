@@ -6,7 +6,7 @@
 ## 交付的完整用户动作（有限范围）
 
 - 已授权用户进入 `/home` 时，第一屏可选择 **建设可信数据 / 使用已有数据 / 处理运行异常**，不被四种技术任务创建入口抢占优先级；按 `currentProject` 与当前登录身份展示。
-- 从建设进入当前角色**确实可访问**的数据源、Metadata 采集或既有建模工作台（按次序）；从消费进入 Consumption Product（如果受限则降级到仍具有既有公开路由合同的 Dataset）；从异常进入 Quality 或 DataDev 执行记录（如果受限则降级到已有 Workflow 实例）。
+- 从建设进入当前角色**确实可访问**的数据源、Metadata 采集或既有建模工作台（按次序）；从消费进入 Consumption Product（无受治理目录权限则隐藏消费任务入口，不误进生产者 Dataset）；从异常进入 Quality 或 DataDev 执行记录（如果受限则降级到已有 Workflow 实例）。
 - 指标、安全、业务过程/标准、MDM、AI 专业入口**按需展开**；Agent 受现有服务器 application-features 可用性控制。其 CTA 仅导航，不声称已有获授权的建设 Agent、可信问答响应或完整模型→任务交接。
 - 首页项目名取 `SecurityProjectContext.currentProject.projectName`；计数只使用已存在 `useHomeCockpit` / `/api/v1/home/cockpit` 的 DataSourceCount、runningCount，并严格将 `available=false` 展示为“暂不可用”，未知为“—”，零才显示 0。
 - 没有有效项目空间时只展示受限说明，不泄露上一项目的待办/任务 CTA；原首页的 HomeHeader、QuickCreatePanel、DataCenter、Consumption、Approval、Quality、资产、运行、通知/调度等**全部保留**，不删除历史专业路由。
