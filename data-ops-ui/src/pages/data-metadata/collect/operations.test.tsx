@@ -28,7 +28,7 @@ jest.mock('./components/CollectJobDrawer', () => ({
     open: boolean;
     onSaved: (job: CollectJobRecord) => void;
   }) => open ? (
-    <button type="button" onClick={() => onSaved({ ...job, dryRunPassed: false })}>模拟保存来源任务</button>
+    <button type="button" onClick={() => onSaved({ ...mockJob, dryRunPassed: false })}>模拟保存来源任务</button>
   ) : null,
 }));
 jest.mock('./components/RunHistoryDrawer', () => () => null);
@@ -38,7 +38,7 @@ jest.mock(
     ({ run, title }: { run: unknown; title: string }) =>
       run ? <div role="dialog">{title}</div> : null,
 );
-const job = {
+const mockJob = {
   id: 71,
   jobCode: 'orders',
   jobName: '订单采集',
@@ -56,7 +56,7 @@ beforeEach(() => {
   jest
     .mocked(listAllDataSources)
     .mockResolvedValue({ bizData: [{ id: 18, name: '订单库' }], pagination: { pageNo: 1, pageSize: 10, total: 1 } });
-  jest.mocked(pageCollectJobs).mockResolvedValue({ records: [job], total: 1, pages: 1, pageNo: 1, pageSize: 10 });
+  jest.mocked(pageCollectJobs).mockResolvedValue({ records: [mockJob], total: 1, pages: 1, pageNo: 1, pageSize: 10 });
   jest.mocked(dryRunCollectJob).mockResolvedValue({ runId: 1, jobId: 71, dryRun: true, status: 'SUCCESS' });
   jest.mocked(runCollectJob).mockResolvedValue({ runId: 2, jobId: 71, dryRun: false, status: 'SUCCESS' });
 });
