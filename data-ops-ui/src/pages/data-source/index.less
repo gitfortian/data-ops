@@ -221,3 +221,19 @@
   .source-workbench-intro h1 { font-size: 19px; }
   .source-workbench-v082 .source-workspace-connection { padding: 14px; }
 }
+
+/* Keep actions adjacent to the selected table instead of placing a full-width
+   banner between source identity and the field evidence. */
+.source-probe-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.source-probe-ods-action.ant-btn { width: auto; min-width: 126px; max-width: 230px; height: auto; min-height: 32px; white-space: normal; }
+@media (max-width: 560px) {
+  .source-probe-detail-heading { flex-wrap: wrap; }
+  .source-probe-heading-actions { justify-content: flex-start; width: 100%; }
+}
