@@ -60,8 +60,7 @@ const model = {
   sourceDatasourceId: 18, sourceDatabase: 'trade_db',
   sourceSchema: 'public', sourceTable: 'trade_order',
 };
-let pendingConfirm: { onOk?: (close?: () => void) => void | Promise<void>; onCancel?: () => void;
-  okText?: string; cancelText?: string } | undefined;
+let pendingConfirm: Parameters<typeof Modal.confirm>[0] | undefined;
 
 beforeEach(() => {
   jest.clearAllMocks();
