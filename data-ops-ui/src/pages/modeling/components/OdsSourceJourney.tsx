@@ -10,6 +10,7 @@ import { getOdsSourceCandidates, previewModelingImportColumns } from '@/services
 import type { OdsSourceLookup } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord } from '@/services/modeling/types';
 import { MODELING_DIALECT_OPTIONS, dialectOfDbType } from '@/pages/modeling/constants';
+import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
 
 const positiveId = (raw: string | null): number | null => {
   if (!raw || !/^[1-9]\d*$/.test(raw)) return null;
@@ -32,7 +33,14 @@ const OdsSourceJourney = () => {
   const draftId = positiveId(params.get('draftId'));
   const valid = datasourceId != null && validName(database) && validName(table)
     && (!schema || validName(schema));
-  const sourceReturn = `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
+  // The origin is a known enumeration, never an arbitrary redirect URL.
+  // This hint only affects where navigation returns; source ownership is still
+  // checked independently by DataSource and Modeling on every read/write.
+  const liveSourceReturn = datasourceId != null && params.get('origin') === 'live-source'
+    ? buildLiveSourceReturnPath({ dataSourceId: datasourceId, database, schema, table })
+    : null;
+  const sourceReturn = liveSourceReturn ??
+    `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
 
   const [lookup, setLookup] = useState<OdsSourceLookup | null>(null);
   const [failure, setFailure] = useState('');
@@ -247,7 +255,7 @@ const OdsSourceJourney = () => {
   return (
     <div className="mx-auto max-w-[1080px] space-y-4 px-6 py-6">
       <Space>
-        <Button onClick={() => navigateSafely(sourceReturn)}>返回来源物理表</Button>
+        <Button onClick={() => navigateSafely(sourceReturn)}>{liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}</Button>
         <Button type="link" onClick={() => navigateSafely('/modeling')}>建模工作台</Button>
       </Space>
       <Typography.Title level={4}>从物理表继续 ODS 设计</Typography.Title>
