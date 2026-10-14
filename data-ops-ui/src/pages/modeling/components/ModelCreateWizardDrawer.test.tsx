@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import ModelCreateWizardDrawer from './ModelCreateWizardDrawer';
 import type { SemanticDomainNode, SemanticProcessRecord, SemanticLayerRecord } from '@/services/semantic/types';
 
@@ -16,7 +17,7 @@ const layers = [
   { id: 11, code: 'ODS', name: '贴源层' },
   { id: 12, code: 'DWD', name: '明细层' },
 ] as SemanticLayerRecord[];
-const setup = (extra: Partial<React.ComponentProps<typeof ModelCreateWizardDrawer>> = {}) => {
+const setup = (extra: Partial<ComponentProps<typeof ModelCreateWizardDrawer>> = {}) => {
   const submit = jest.fn();
   const close = jest.fn();
   const view = render(<ModelCreateWizardDrawer open loading={false} layers={layers}
