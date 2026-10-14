@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Modal } from 'antd';
+import type { CollectJobRecord } from '@/services/metadata/types';
 import { listAllDataSources } from '@/services/data-source/api';
 import { dryRunCollectJob, runCollectJob, pageCollectJobs } from '@/services/metadata/api';
 import MetadataCollectPage from './index';
@@ -25,7 +26,7 @@ jest.mock('./components/CollectJobDrawer', () => ({
   __esModule: true,
   default: ({ open, onSaved }: {
     open: boolean;
-    onSaved: (job: typeof job) => void;
+    onSaved: (job: CollectJobRecord) => void;
   }) => open ? (
     <button type="button" onClick={() => onSaved({ ...job, dryRunPassed: false })}>模拟保存来源任务</button>
   ) : null,
