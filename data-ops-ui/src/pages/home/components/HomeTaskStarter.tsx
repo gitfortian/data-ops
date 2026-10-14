@@ -1,0 +1,143 @@
+import { canAccessNavigationRoute, appRoutes } from '@/config/navigation';
+import { useAgentAvailability } from '@/contexts/AgentAvailabilityContext';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import type { HomeCockpitHeaderStats } from '@/services/home';
+import { history, useModel } from '@umijs/max';
+import {
+  ArrowRight, AlertTriangle, BarChart3, Bot, Database,
+  Layers3, LockKeyhole, PackageCheck, ShieldCheck, Workflow,
+} from 'lucide-react';
+import type { ReactNode } from 'react';
+import { resolveHomeJourneyEntries, type HomeJourneyEntry, type HomeJourneyKey } from './homeJourneyEntries';
+
+const JOURNEY_ICONS: Record<HomeJourneyKey, ReactNode> = {
+  build: <Database size={19} strokeWidth={1.8} />,
+  consume: <PackageCheck size={19} strokeWidth={1.8} />,
+  recover: <AlertTriangle size={19} strokeWidth={1.8} />,
+  metric: <BarChart3 size={18} strokeWidth={1.8} />,
+  security: <ShieldCheck size={18} strokeWidth={1.8} />,
+  semantic: <Layers3 size={18} strokeWidth={1.8} />,
+  mdm: <Workflow size={18} strokeWidth={1.8} />,
+  agent: <Bot size={18} strokeWidth={1.8} />,
+};
+
+const cardStyles: Record<'build' | 'consume' | 'recover', string> = {
+  build: 'border-[#cce6e1] bg-[#f2faf8] hover:border-[#77b9a8]',
+  consume: 'border-[#d8e5f6] bg-[#f5f9fe] hover:border-[#94b4da]',
+  recover: 'border-[#f0e0d4] bg-[#fffaf5] hover:border-[#e0b18c]',
+};
+
+function JourneyButton({ entry }: { entry: HomeJourneyEntry }) {
+  return (
+    <button
+      type="button"
+      data-home-journey={entry.key}
+      onClick={() => history.push(entry.path)}
+      aria-label={`${entry.title}：${entry.action}`}
+      className={`group flex min-w-0 flex-col rounded-2xl border p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16877d] sm:p-5 ${entry.primary ? cardStyles[entry.key as 'build' | 'consume' | 'recover'] : 'border-[#e5eaec] bg-white hover:border-[#bfd4d1]'}`}
+    >
+      <div className="flex w-full items-center justify-between gap-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#dee8e7] bg-white/80 text-[#315b59]">
+          {JOURNEY_ICONS[entry.key]}
+        </span>
+        <span className="text-[11px] font-medium text-[#839096]">{entry.story}</span>
+      </div>
+      <strong className="mt-3 text-[15px] font-semibold leading-6 text-[#213b43]">
+        {entry.title}
+      </strong>
+      <span className="mt-1 min-h-[42px] text-[12px] leading-[21px] text-[#647984]">
+        {entry.description}
+      </span>
+      <span className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#13796e]">
+        {entry.action} <ArrowRight size={14} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5" />
+      </span>
+    </button>
+  );
+}
+
+function Statistic({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="min-w-[95px] rounded-lg border border-[#e2ebeb] bg-white px-3 py-2">
+      <span className="block text-[11px] text-[#768690]">{label}</span>
+      <strong className="mt-0.5 block text-[17px] font-semibold tabular-nums text-[#243b43]">{value}</strong>
+    </div>
+  );
+}
+
+/**
+ * Project-scoped task starting points. This is navigation/presentation only:
+ * no new workflow state, no automatic model/TaskRevision creation, and no
+ * attempt to treat missing Provider metrics as zero.
+ */
+export default function HomeTaskStarter({ stats }: { stats?: HomeCockpitHeaderStats }) {
+  const { currentProject } = useSecurityProject();
+  const { initialState } = useModel('@@initialState');
+  const { agentEnabled } = useAgentAvailability();
+  const user = initialState?.currentUser;
+  const entries = user && currentProject
+    ? resolveHomeJourneyEntries(user.permissionCodes, user.menuCodes, { agentEnabled })
+    : [];
+  const primary = entries.filter((entry) => entry.primary);
+  const secondary = entries.filter((entry) => !entry.primary);
+  const sources = stats?.dataSourceAvailable === false ? '暂不可用' : stats?.dataSourceCount ?? '—';
+  const running = stats?.runningAvailable === false ? '暂不可用' : stats?.runningCount ?? '—';
+
+  const sourceRoute = appRoutes.find((route) => route.id === 'data-source');
+  const canVisitSources = Boolean(
+    user && sourceRoute && canAccessNavigationRoute(sourceRoute, user.permissionCodes, user.menuCodes),
+  );
+
+  return (
+    <section className="min-w-0 rounded-[22px] border border-[#e1e9e9] bg-white px-4 py-5 shadow-sm sm:px-6" aria-labelledby="home-task-title">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="mb-1 text-[11px] font-semibold tracking-[0.08em] text-[#188177]">工作空间 · {currentProject?.projectName ?? '尚未选择'}</p>
+          <h2 id="home-task-title" className="m-0 text-[21px] font-semibold tracking-[-0.5px] text-[#223941]">
+            从当前任务开始
+          </h2>
+          <p className="mb-0 mt-1 text-[12px] leading-5 text-[#71838c]">
+            选择要完成的工作；下方入口由当前项目和原有菜单权限决定，不创建新的业务流程或事实。
+          </p>
+        </div>
+        {currentProject ? (
+          <div className="flex flex-wrap gap-2" aria-label="当前项目基础运行概况">
+            <Statistic label="数据源" value={sources} />
+            <Statistic label="运行中任务" value={running} />
+          </div>
+        ) : null}
+      </header>
+
+      {!currentProject ? (
+        <div role="status" className="mt-5 flex items-start gap-2 rounded-xl border border-[#f0e4cf] bg-[#fffbf3] px-4 py-3 text-[12px] text-[#805f3a]">
+          <LockKeyhole size={17} className="shrink-0" />
+          当前没有可用的项目空间；请先在顶部切换或向管理员申请加入项目。不会展示其他项目的任务。
+        </div>
+      ) : primary.length ? (
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+          {primary.map((entry) => <JourneyButton key={entry.key} entry={entry} />)}
+        </div>
+      ) : (
+        <div role="status" className="mt-5 rounded-xl border border-dashed border-[#d5e2e0] p-4 text-[12px] text-[#687c86]">
+          当前身份没有匹配的建设、消费或异常处理入口。可从现有专业菜单查看已授权功能，不会以空任务代替权限限制。
+        </div>
+      )}
+
+      {currentProject && secondary.length > 0 ? (
+        <details className="mt-4 rounded-xl border border-[#e8eeef] bg-[#fbfcfc]">
+          <summary className="cursor-pointer px-4 py-3 text-[12px] font-semibold text-[#44646b] focus-visible:outline-2 focus-visible:outline-offset-2">
+            更多专业工作（{secondary.length}）
+          </summary>
+          <div className="grid grid-cols-1 gap-3 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-4">
+            {secondary.map((entry) => <JourneyButton key={entry.key} entry={entry} />)}
+          </div>
+        </details>
+      ) : null}
+
+      {currentProject && canVisitSources ? (
+        <p className="mb-0 mt-3 text-[11px] text-[#84949d]">
+          数据源连接、结构采集和模型保存分别由原域管理；ODS 设计不以资产纳管作为前置。
+        </p>
+      ) : null}
+    </section>
+  );
+}
