@@ -41,7 +41,7 @@ beforeEach(() => {
       databaseName: 'trade_db',
       schemaName: 'public',
       enabled: true,
-      dryRunPassed: true,
+      dryRunPassed: false,
     });
 });
 it('loads exact task and its persisted scope', async () => {
@@ -61,7 +61,7 @@ it('rejects a mismatched source', async () => {
       providerType: 'HARVESTED',
       dataSourceId: 19,
       enabled: true,
-      dryRunPassed: true,
+      dryRunPassed: false,
     });
   render(<Detail />);
   await screen.findByText('未能读取任务详情');
