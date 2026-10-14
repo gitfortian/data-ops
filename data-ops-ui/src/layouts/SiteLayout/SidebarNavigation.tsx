@@ -9,7 +9,6 @@ import {
 } from '@/config/taskNavigation';
 import { Link } from '@umijs/max';
 import { Dropdown, type MenuProps } from 'antd';
-import { ChevronRight } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 interface SidebarNavigationProps {
@@ -33,6 +32,10 @@ export default function SidebarNavigation({
   groups, standaloneRoutes, icons, compact, activeId, activeGroupPath, onNavigate,
 }: SidebarNavigationProps) {
   const activeDomain = activeGroupPath[activeGroupPath.length - 1];
+  const domainNames: Record<string, string> = {
+    integration: '数据接入', modeling: '标准与建模', development: '开发运行',
+    'data-asset': '资产治理', 'data-analysis': '数据消费', system: '平台设置',
+  };
   const models = useMemo(
     () => new Map(groups.map(group => [group.id, getContextNavigationModel(group)])),
     [groups],
@@ -106,8 +109,7 @@ export default function SidebarNavigation({
   </Link>);
 
   const domainControls = (isCompact: boolean) => groups.map((group, index) => {
-    const selected = (selectedDomain === group.id && activeId !== 'home' && activeId !== 'approval-todo')
-      || activeDomain === group.id;
+    const selected = selectedDomain === group.id;
     const button = <button
       type="button"
       aria-label={group.title}
@@ -117,12 +119,11 @@ export default function SidebarNavigation({
       aria-controls={isCompact ? undefined : 'navigation-context-panel'}
       aria-haspopup={isCompact ? 'menu' : undefined}
       onClick={isCompact ? undefined : () => setSelectedDomain(group.id)}
-      className={globalButtonClass(selectedDomain === group.id, isCompact)}
+      className={globalButtonClass(selected && activeId !== 'home' && activeId !== 'approval-todo', isCompact)}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icons[group.iconKey]}</span>
       {!isCompact && <>
-        <span className="min-w-0 flex-1 truncate text-[12px]">{group.title}</span>
-        <ChevronRight size={13} className="shrink-0 opacity-50" />
+        <span className="min-w-0 flex-1 truncate text-[12px]">{domainNames[group.id] ?? group.title}</span>
       </>}
     </button>;
     const content = isCompact
