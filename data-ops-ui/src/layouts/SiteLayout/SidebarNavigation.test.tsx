@@ -26,43 +26,75 @@ const props = {
   activeGroupPath: ['data-quality', 'data-asset'],
 };
 
-describe('task-oriented sidebar', () => {
-  it('opens only the active capability and specialist, with hidden branches absent from keyboard navigation', () => {
+describe('IA-550 task-first sidebar', () => {
+  it('opens the actual active task without forcing a nested specialist group or exposing hidden tool links', () => {
     render(React.createElement(SidebarNavigation, props));
-    expect(screen.getByRole('link', { name: '数据表监控' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: '数据表监控' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: '质量治理' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.queryByRole('link', { name: '业务域' })).toBeNull();
-    expect(screen.queryByRole('link', { name: '主数据建模' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '规则模板' })).toBeNull();
+
     fireEvent.click(screen.getByRole('button', { name: '标准、指标与建模' }));
     expect(screen.queryByRole('link', { name: '数据表监控' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '业务语义' }));
-    expect(screen.getByRole('link', { name: '业务域' }).getAttribute('href')).toBe('/semantic/domains');
+    expect(screen.getByRole('link', { name: '业务域' })).toHaveAttribute('href', '/semantic/domains');
+    expect(screen.getByRole('link', { name: '业务过程' })).toHaveAttribute('href', '/semantic/processes');
+    expect(screen.queryByRole('link', { name: '标准字段' })).toBeNull();
   });
 
-  it('resets expansion when navigation moves to another detail context', () => {
-    const { rerender } = render(React.createElement(SidebarNavigation, props));
-    rerender(React.createElement(SidebarNavigation, { ...props, activeId: 'consumption-catalog', activeGroupPath: ['data-analysis'] }));
-    expect(screen.getByRole('link', { name: '数据产品目录' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.queryByRole('link', { name: '数据表监控' })).toBeNull();
+  it('exposes every specialist through the same domain without putting it in the default list', () => {
+    render(React.createElement(SidebarNavigation, {
+      ...props, activeId: 'data-service-api', activeGroupPath: ['data-service', 'data-analysis'],
+    }));
+    expect(screen.getByRole('link', { name: 'API 服务' })).toHaveAttribute('href', '/data-service');
     expect(screen.queryByRole('link', { name: '调用方与密钥' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '数据消费与服务专业工具' }));
+    expect(screen.getByRole('link', { name: '调用方与密钥' })).toHaveAttribute('href', '/data-service/access');
+    expect(screen.getByRole('link', { name: '运行概览' })).toHaveAttribute('href', '/data-service/overview');
   });
 
-  it('keeps collapsed navigation at domain level and opens specialist pages in a popup', async () => {
+  it('reveals an active standalone specialist on deep navigation and collapses the old domain', () => {
+    const { rerender } = render(React.createElement(SidebarNavigation, props));
+    rerender(React.createElement(SidebarNavigation, {
+      ...props,
+      activeId: 'metric-impact',
+      activeGroupPath: ['metric', 'modeling'],
+    }));
+    expect(screen.getByRole('link', { name: '影响分析' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: '数据表监控' })).toBeNull();
+    expect(screen.getByRole('button', { name: '标准、指标与建模专业工具' }))
+      .toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('keeps the collapsed domain menu usable with its task views and specialists', async () => {
     const { container } = render(React.createElement(SidebarNavigation, { ...props, compact: true }));
     expect(within(container).getAllByRole('button')).toHaveLength(6);
-    expect(within(container).queryByRole('link', { name: '数据表监控' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '数据接入与集成' }));
-    await waitFor(() => expect(screen.getByRole('link', { name: '文件资源' })).toBeTruthy());
-    expect(screen.getByRole('link', { name: '文件资源' }).getAttribute('href')).toBe('/resource-management');
+    await waitFor(() => expect(screen.getByRole('link', { name: '文件资源' })).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: '文件资源' })).toHaveAttribute('href', '/resource-management');
     expect(within(container).queryByRole('link', { name: '文件资源' })).toBeNull();
   });
 
-  it('renders task order across routes and groups, not all pages before all groups', () => {
-    render(React.createElement(SidebarNavigation, { ...props, activeId: 'modeling-workspace', activeGroupPath: ['modeling'] }));
-    const domain = screen.getByRole('button', { name: '标准、指标与建模' }).parentElement!;
-    const items = within(domain).getAllByRole('button').map((item) => item.getAttribute('aria-label'));
-    expect(items).toEqual(['标准、指标与建模', '业务语义', '指标']);
-    const semantic = within(domain).getByRole('button', { name: '业务语义' });
-    const model = within(domain).getByRole('link', { name: '模型工作台' });
-    expect(semantic.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it('notifies the host when a mobile task link is chosen so the drawer can close', () => {
+    const onNavigate = jest.fn();
+    render(React.createElement(SidebarNavigation, {
+      ...props, activeId: 'modeling-workspace',
+      activeGroupPath: ['modeling'], onNavigate,
+    }));
+    fireEvent.click(screen.getByRole('link', { name: '模型工作台' }));
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports independently authorized tools for roles without any default task', () => {
+    const filtered = getMainNavigationGroups(
+      ['resource:sql-execution:read'], ['sql-execution-audit'],
+    );
+    render(React.createElement(SidebarNavigation, {
+      ...props, groups: filtered, standaloneRoutes: [],
+      activeId: 'sql-execution-audit', activeGroupPath: ['integration'],
+    }));
+    expect(screen.getByRole('link', { name: 'SQL 执行记录' })).toHaveAttribute('href', '/sql-execution-audit');
+    expect(screen.getByRole('link', { name: 'SQL 执行记录' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: '数据源' })).toBeNull();
   });
 });

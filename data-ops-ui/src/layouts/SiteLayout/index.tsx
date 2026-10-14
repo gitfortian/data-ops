@@ -580,7 +580,7 @@ function SiteLayoutContent() {
 
       <Drawer title="导航" placement="left" width={300} open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} rootClassName="yak-mobile-navigation">
         <nav aria-label="手机主导航">
-          <SidebarNavigation groups={navigationGroups} standaloneRoutes={standaloneRoutes} icons={navigationIcons} compact={false} activeId={activeNavigationId} activeGroupPath={getActiveNavigationGroupPath(location.pathname, permissionCodes, menuCodes)} />
+          <SidebarNavigation groups={navigationGroups} standaloneRoutes={standaloneRoutes} icons={navigationIcons} compact={false} activeId={activeNavigationId} activeGroupPath={getActiveNavigationGroupPath(location.pathname, permissionCodes, menuCodes)} onNavigate={() => setMobileMenuOpen(false)} />
         </nav>
         {quickCreateRoutes.length > 0 && <div className="mt-5 border-t border-[#eaecf0] pt-4">
           <div className="mb-2 text-xs font-medium text-[#667085]">快速创建</div>
