@@ -1,3 +1,5 @@
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { readSharedHomeAssetOverview } from './readSharedHomeAssetOverview';
 import {
   fetchDashboardOverview,
   type DashboardSummary,
@@ -11,7 +13,6 @@ import {
   type DigitalScreenInstance,
 } from '@/services/digital-screen';
 import {
-  homeAssetOverviewApi,
   type HomeAssetDatasetItem,
 } from '@/services/home';
 import { useEffect, useState } from 'react';
@@ -39,6 +40,8 @@ const recentFirst = <T,>(
     .slice(0, PREVIEW_LIMIT);
 
 export function useHomeDataAssets() {
+  const { currentProject } = useSecurityProject();
+  const projectId = currentProject?.id == null ? undefined : String(currentProject.id);
   const [datasets, setDatasets] = useState<
     HomeDataAssetListState<HomeAssetDatasetItem>
   >({ items: [], loading: true, failed: false });
@@ -54,9 +57,19 @@ export function useHomeDataAssets() {
 
   useEffect(() => {
     let active = true;
+    if (!projectId) {
+      setDatasets({ items: [], loading: false, failed: false });
+      setDashboards({ items: [], loading: false, failed: false });
+      setScreens({ items: [], loading: false, failed: false });
+      setServices({ items: [], loading: false, failed: false });
+      return () => { active = false; };
+    }
+    setDatasets({ items: [], loading: true, failed: false });
+    setDashboards({ items: [], loading: true, failed: false });
+    setScreens({ items: [], loading: true, failed: false });
+    setServices({ items: [], loading: true, failed: false });
 
-    void homeAssetOverviewApi
-      .overview()
+    void readSharedHomeAssetOverview(projectId)
       .then((response) => {
         if (!active) return;
         setDatasets({
@@ -118,7 +131,7 @@ export function useHomeDataAssets() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [projectId]);
 
   return {
     datasets,
