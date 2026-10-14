@@ -108,7 +108,18 @@ function CollectTaskDetail() {
           setError(true);
           return;
         }
+        const scopeChanged = fresh.databaseName !== currentJob.databaseName
+          || fresh.schemaName !== currentJob.schemaName
+          || fresh.tablePattern !== currentJob.tablePattern
+          || fresh.collectColumns !== currentJob.collectColumns;
         setJob(fresh);
+        if (scopeChanged) {
+          // An exact run receipt is historical; do not present it as success
+          // for a task whose current saved definition changed meanwhile.
+          setLatestRun(null);
+          setResultUnknown(true);
+          setRefreshWarning(true);
+        }
       } catch {
         if (epoch === operationEpoch.current) setRefreshWarning(true);
       }
@@ -188,8 +199,8 @@ function CollectTaskDetail() {
             </header>
             {refreshWarning ? (
               <Alert type="warning" showIcon className="metadata-task-detail-alert"
-                message="执行已返回回执，但任务当前配置读取失败"
-                description="请刷新任务核验实际范围、预演资格及最新调度状态；不把先前的本地任务配置当作新事实。"
+                message="执行后的任务状态需要核对"
+                description="任务当前配置读取失败或执行期间作用域发生变化，请核对运行历史和最新任务范围；旧运行不能冒充新范围的采集结果。"
                 action={<Button size="small" onClick={() => setVersion((value) => value + 1)}>重新核验任务</Button>} />
             ) : null}
             {job.providerType === 'HARVESTED' && showJourney ? (
