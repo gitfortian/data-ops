@@ -122,6 +122,24 @@ def main() -> int:
             check(f"UX-09-{width}-js-errors", lambda: (
                 (_ for _ in ()).throw(AssertionError(str(js_errors))) if js_errors else {"errors": 0}
             ))
+            if width in (320, 390, 768):
+                def standard_table_scroll():
+                    page.goto(HTML.as_uri() + "#standard")
+                    selector = page.locator(".v51StandardGrid .tableScroll[role='region'][tabindex='0']")
+                    if selector.count() != 1:
+                        raise AssertionError("standard catalog table lacks accessible local scroll region")
+                    dimensions = selector.evaluate("""el => ({
+                      scrollWidth:el.scrollWidth,
+                      clientWidth:el.clientWidth,
+                      maxRight:el.getBoundingClientRect().right,
+                      viewportWidth:innerWidth
+                    })""")
+                    if dimensions["maxRight"] > width + 2:
+                        raise AssertionError(f"local scroll region escapes viewport: {dimensions}")
+                    if width <= 390 and dimensions["scrollWidth"] <= dimensions["clientWidth"]:
+                        raise AssertionError(f"mobile standard table should scroll locally: {dimensions}")
+                    return dimensions
+                check(f"UX-01-{width}-standard-local-scroll", standard_table_scroll)
             if width == 390:
                 def focus_and_skip():
                     page.goto(HTML.as_uri() + "#home")
