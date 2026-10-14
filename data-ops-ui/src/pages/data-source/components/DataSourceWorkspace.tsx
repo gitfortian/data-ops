@@ -164,9 +164,9 @@ export default function DataSourceWorkspace({
                 activeKey={tab}
                 onChange={setTab}
                 items={[
-                  { key: 'live', label: <span className="source-workspace-tab-label"><Search size={15} aria-hidden="true" />即时探查源表</span> },
+                  { key: 'live', label: <span className="source-workspace-tab-label"><Search size={15} aria-hidden="true" />即时探查</span> },
                   ...(canReadMetadata ? [
-                    { key: 'collection', label: <span className="source-workspace-tab-label"><Database size={15} aria-hidden="true" />采集记录与任务</span> },
+                    { key: 'collection', label: <span className="source-workspace-tab-label"><Database size={15} aria-hidden="true" />采集信息</span> },
                   ] : []),
                 ]}
               />
