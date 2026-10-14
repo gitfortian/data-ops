@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Modal } from 'antd';
 import { getCollectJob, dryRunCollectJob, runCollectJob } from '@/services/metadata/api';
 import Detail from './detail';
-const mockCan = jest.fn(() => true);
+const mockCan = jest.fn((_permission: string) => true);
 let mockSourceQuery = 'dataSourceId=18';
 const mockPush = jest.fn();
 const mockParams = jest.fn(() => ({ id: '71' }));
