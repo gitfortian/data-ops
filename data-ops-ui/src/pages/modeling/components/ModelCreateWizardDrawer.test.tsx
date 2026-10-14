@@ -5,13 +5,13 @@ import type { SemanticDomainNode, SemanticProcessRecord, SemanticLayerRecord } f
 
 jest.mock('./ModelCreationLogicalBasis', () => () => <div>只读业务逻辑依据</div>);
 const tree: SemanticDomainNode[] = [{
-  id: 1, code: 'trade', name: '交易域', children: [
-    { id: 2, code: 'orders', name: '订单子域', children: [] },
+  id: 1, code: 'trade', name: '交易域', sortOrder: 1, children: [
+    { id: 2, code: 'orders', name: '订单子域', sortOrder: 1, children: [] },
   ],
 }];
 const processes: SemanticProcessRecord[] = [
-  { id: 71, code: 'order_create', name: '下单', domainId: 2, grain: '每笔订单', bizType: 'FACT' },
-  { id: 80, code: 'bill', name: '开票', domainId: 9, bizType: 'FACT' },
+  { id: 71, code: 'order_create', name: '下单', sortOrder: 1, domainId: 2, grain: '每笔订单', bizType: 'FACT' },
+  { id: 80, code: 'bill', name: '开票', sortOrder: 2, domainId: 9, bizType: 'FACT' },
 ];
 const layers = [
   { id: 11, code: 'ODS', name: '贴源层' },
