@@ -46,7 +46,7 @@ const UnifiedModelView: React.FC = () => {
   const [loadError, setLoadError] = useState(false);
   const returnToVerifiedSource = () => {
     if (!sourceReturnPath) return;
-    const editor = structureEditor?.modelId === modelId ? structureEditor.state : undefined;
+    const editor = structureEditor && structureEditor.modelId === modelId ? structureEditor.state : undefined;
     if (editor?.loading || editor?.saving) {
       message.warning('模型表结构正在加载或保存，请完成后再返回来源表。');
       return;
