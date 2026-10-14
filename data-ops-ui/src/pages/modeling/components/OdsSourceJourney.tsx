@@ -332,7 +332,7 @@ const OdsSourceJourney = () => {
           {lookup?.state === 'UNVERIFIED' && <Alert className="ods-workbench-alert"
             type="warning" showIcon message="不能确认来源身份" description={lookup.reason} />}
 
-          {existing && (
+          {lookup?.state === 'READY' && lookup.candidates.length > 0 && (
             <section className="ods-workbench-card" aria-label="已有同源 ODS">
               <p className="ods-workbench-eyebrow">MATCHED MODELS</p>
               <h2>先使用现有同源 ODS</h2>
