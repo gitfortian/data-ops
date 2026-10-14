@@ -156,3 +156,22 @@ it('does not offer ODS creation for a view or when current columns could not be 
   expect(screen.getByRole('button', { name: '打开或创建 ODS' })).toBeDisabled();
   expect(onOpenOds).not.toHaveBeenCalled();
 });
+
+it('refuses to restore same-named tables from the wrong schema', async () => {
+  mockTables.mockResolvedValue([{ ...table, schema: 'audit' }]);
+  render(<LiveSchemaExplorer sourceId="18" canRead initialTable={{
+    database: 'trade_db', schema: 'public', table: 'trade_order',
+  }} />);
+  expect(await screen.findByText(/原来源表无法在当前项目及 Schema 精确核验/)).toBeInTheDocument();
+  expect(mockColumns).not.toHaveBeenCalled();
+  expect(screen.queryByRole('button', { name: '打开或创建 ODS' })).not.toBeInTheDocument();
+});
+
+it('does not guess the requested schema when Catalog omits schema evidence', async () => {
+  mockTables.mockResolvedValue([{ ...table, schema: undefined }]);
+  render(<LiveSchemaExplorer sourceId="18" canRead initialTable={{
+    database: 'trade_db', schema: 'public', table: 'trade_order',
+  }} />);
+  expect(await screen.findByText(/原来源表无法在当前项目及 Schema 精确核验/)).toBeInTheDocument();
+  expect(mockColumns).not.toHaveBeenCalled();
+});
