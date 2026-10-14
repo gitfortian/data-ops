@@ -85,7 +85,7 @@ export default function SidebarNavigation({
 
   const popupItems = (group: NavigationGroupWithRoutes): MenuProps['items'] => {
     const model = models.get(group.id) ?? getTaskNavigationModel(group);
-    const tasks: MenuProps['items'] = model.tasks.map(task => task.routes.length === 1 ? ({
+    const tasks: NonNullable<MenuProps['items']> = model.tasks.map(task => task.routes.length === 1 ? ({
       key: task.routes[0].id,
       label: <Link to={task.routes[0].path}>{task.title}</Link>,
     }) : ({
