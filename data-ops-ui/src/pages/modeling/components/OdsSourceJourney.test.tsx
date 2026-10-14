@@ -102,7 +102,12 @@ it('returns to the exact live source table rather than forcing Asset catalog aft
   const expected = new URLSearchParams({
     sourceId: '10', database: 'trade_db', schema: 'public', table: 'orders',
   });
-  expect(mockPush).toHaveBeenCalledWith(`/data-source?${expected.toString()}`);
+  // Query parameter ordering is not an identity contract.
+  expect(mockPush).toHaveBeenCalledTimes(1);
+  const returnedUrl = mockPush.mock.calls[0][0] as string;
+  expect(returnedUrl.split('?')[0]).toBe('/data-source');
+  expect(Object.fromEntries(new URLSearchParams(returnedUrl.split('?')[1]).entries()))
+    .toEqual(Object.fromEntries(expected.entries()));
   expect(mockCandidates).toHaveBeenCalledWith({
     datasourceId: 10, database: 'trade_db', schema: 'public', table: 'orders',
   });
