@@ -61,7 +61,7 @@ describe('IA-550 fixed global rail + independent business context rail', () => {
       activeGroupPath: ['data-security', 'data-asset'],
     }));
     const context = screen.getByRole('navigation', { name: '数据资产与治理页面' });
-    expect(within(context).getByRole('link', { name: '安全审计' })).toHaveAttribute('aria-current', 'page');
+    expect(within(context).getByRole('link', { name: '访问审计' })).toHaveAttribute('aria-current', 'page');
     expect(within(context).getByRole('link', { name: '安全审计' })).toHaveAttribute('href', '/data-security/audit');
   });
 
