@@ -426,15 +426,16 @@ export default function LiveSchemaExplorer({
                             type="primary"
                             className="w-full"
                             disabled={columnsLoading || columnError || columns.length === 0
-                              || !(selected.database ?? database)}
+                              || !(selected.database ?? database) || !selected.name}
                             onClick={() => {
                               const sourceDatabase = selected.database ?? database;
-                              if (!sourceDatabase) return;
+                              const sourceTable = selected.name;
+                              if (!sourceDatabase || !sourceTable) return;
                               onOpenOds({
                                 dataSourceId: Number(sourceId),
                                 database: sourceDatabase,
                                 schema: selected.schema ?? schema,
-                                table: selected.name,
+                                table: sourceTable,
                               });
                             }}
                           >
