@@ -116,3 +116,19 @@ it('does not trust an arbitrary return URL; legacy Asset navigation still has it
   expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/data-asset/catalog?'));
   expect(mockPush).not.toHaveBeenCalledWith('https://attacker.example');
 });
+
+it('passes live source context to an existing ODS model detail for verified return', async () => {
+  mockQuery = new URLSearchParams({
+    sourceJourney: 'ods', origin: 'live-source', datasourceId: '10',
+    database: 'trade_db', schema: 'public', table: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  fireEvent.click(await screen.findByRole('button', { name: '打开已保存 ODS' }));
+  expect(mockPush).toHaveBeenCalledWith(
+    `/modeling/models/501?${new URLSearchParams({
+      origin: 'live-source', datasourceId: '10',
+      database: 'trade_db', table: 'orders', schema: 'public',
+    })}`,
+  );
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});
