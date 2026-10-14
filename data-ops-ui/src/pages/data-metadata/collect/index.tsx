@@ -280,16 +280,15 @@ const MetadataCollectPage = () => {
     try {
       const run = action === 'dry-run' ? await dryRunCollectJob(job.id) : await runCollectJob(job.id);
       if (scopeEpoch !== continuationScopeEpoch.current) return;
+      // Even a transport-level 2xx isn't a safe run receipt if the backend
+      // returned another job or the opposite execution mode.
+      if (run.jobId !== job.id || !Number.isSafeInteger(run.runId) || run.runId <= 0
+          || run.dryRun !== (action === 'dry-run')) {
+        throw new Error('The collection run receipt did not match the saved task');
+      }
       if (continuedJob?.id === job.id) {
-        const confirmed = run.jobId === job.id && Number.isSafeInteger(run.runId) && run.runId > 0
-          && run.dryRun === (action === 'dry-run');
-        if (confirmed) {
-          setContinuedRun(run);
-          setContinuedResultUnknown(false);
-        } else {
-          setContinuedRun(null);
-          setContinuedResultUnknown(true);
-        }
+        setContinuedRun(run);
+        setContinuedResultUnknown(false);
       }
       setRunResult({
         run,
@@ -319,6 +318,7 @@ const MetadataCollectPage = () => {
 
   const confirmRun = (job: CollectJobRecord) => {
     if (!canCreate || busyJob || !supportsCollectTaskExecution(job.providerType)) return;
+    const intentScopeEpoch = continuationScopeEpoch.current;
     Modal.confirm({
       className: 'collect-execute-confirm',
       title: '开始采集？',
@@ -344,7 +344,13 @@ const MetadataCollectPage = () => {
       ),
       okText: '开始采集',
       cancelText: '取消',
-      onOk: () => execute(job, 'run'),
+      onOk: () => {
+        if (intentScopeEpoch !== continuationScopeEpoch.current) {
+          message.warning('当前项目或来源已变更，请重新核验任务后再采集');
+          return;
+        }
+        return execute(job, 'run');
+      },
     });
   };
 
