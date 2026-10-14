@@ -179,6 +179,65 @@ def main() -> int:
                     return {"source": "DATASET:DEMO-DS-901", "version": "DEMO-DV-3"}
                 check("UX-05-390-feedback-source", feedback)
 
+                def service_feedback():
+                    page.goto(HTML.as_uri() + "#product")
+                    page.locator('button[data-v8-product="service"]').click()
+                    page.locator('button[data-v81-productissue="1"]').click()
+                    details = page.locator("#main").inner_text()
+                    if "DATA_SERVICE:DEMO-SVC-902" not in details or "DEMO-SR-2" not in details:
+                        raise AssertionError("Service issue lost immutable ProductKey or version")
+                    return {"source": "DATA_SERVICE:DEMO-SVC-902", "version": "DEMO-SR-2"}
+                check("UX-05-390-service-feedback-source", service_feedback)
+
+                def modal_keyboard():
+                    page.goto(HTML.as_uri() + "#standard")
+                    page.locator('button[data-action="evidence"]').first.click()
+                    page.locator("#dialogShade.open").wait_for(state="visible")
+                    page.wait_for_function("document.getElementById('dialog')?.contains(document.activeElement)")
+                    page.keyboard.press("Escape")
+                    if page.locator("#dialogShade.open").count() != 0:
+                        raise AssertionError("Escape did not dismiss evidence dialog")
+                    return {"initial_focus": "inside-dialog", "escape": "dismissed"}
+                check("UX-06-390-dialog-escape-focus", modal_keyboard)
+
+            if width == 1366:
+                def source_to_ods_design():
+                    page.goto(HTML.as_uri() + "#model")
+                    page.locator('button[data-v7-ods="1"]').first.click()
+                    page.locator('button[data-v6-load="1"]').first.click()
+                    page.locator('button[data-v6-check="1"]').first.click()
+                    page.locator('button[data-v6-save="1"]').first.click()
+                    main_text = page.locator("#main").inner_text()
+                    if "ODS" not in main_text or "设计版本" not in main_text:
+                        raise AssertionError("source-first ODS design did not produce visible design evidence")
+                    page.locator('button[data-v81-dev="1"]').first.click()
+                    dev_text = page.locator("#main").inner_text()
+                    if "TaskRevision" not in dev_text or "未创建" not in dev_text:
+                        raise AssertionError("DataDev handoff falsely hides absence of TaskRevision")
+                    return {"design": "ODS simulated save", "data_dev": "context only, no TaskRevision"}
+                check("UX-04-1366-ods-design-to-datadev-context", source_to_ods_design)
+
+                def physical_targets_isolation():
+                    page.goto(HTML.as_uri() + "#model")
+                    page.locator('button[data-v7-design="DWD"]').first.click()
+                    old = page.locator('[data-v81-target]').first.get_attribute('data-v81-target')
+                    page.locator('[data-v81-new="1"]').first.click()
+                    buttons = page.locator('[data-v81-target]')
+                    if buttons.count() < 2:
+                        raise AssertionError("could not create a second independently-addressable DWD target")
+                    ids = [buttons.nth(i).get_attribute('data-v81-target') for i in range(buttons.count())]
+                    newer = next((i for i in ids if i != old), None)
+                    if not newer:
+                        raise AssertionError("new DWD target borrowed existing model identity")
+                    page.locator(f'[data-v81-target="{old}"]').first.click()
+                    if old not in page.locator(".v81Trail").inner_text():
+                        raise AssertionError("switch did not restore precise first physical model identity")
+                    page.locator(f'[data-v81-target="{newer}"]').first.click()
+                    if newer not in page.locator(".v81Trail").inner_text():
+                        raise AssertionError("switch did not restore precise second physical model identity")
+                    return {"first": old, "second": newer}
+                check("UX-04-1366-physical-target-identity", physical_targets_isolation)
+
             context.close()
         browser.close()
 
