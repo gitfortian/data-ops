@@ -1,0 +1,36 @@
+name: IA-550 v0.8.2 Browser Candidate
+on:
+  pull_request:
+    paths:
+      - 'docs/product/experience/prototypes/IA-550-task-flows-v0.8.2-final-candidate.html'
+      - 'scripts/architecture/ia550-v082-browser-signoff.py'
+      - '.github/workflows/ia550-v082-browser-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-prototype-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and Chromium
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.58.0
+          python -m playwright install --with-deps chromium
+      - name: Run viewport and focus checks
+        run: python scripts/architecture/ia550-v082-browser-signoff.py
+      - name: Upload screenshots and machine-readable results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ia550-v082-browser-evidence
+          path: build/ia550-v082-browser-signoff/
+          if-no-files-found: warn
+          retention-days: 30
