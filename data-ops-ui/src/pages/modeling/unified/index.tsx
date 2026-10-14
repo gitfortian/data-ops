@@ -45,7 +45,7 @@ const UnifiedModelView: React.FC = () => {
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
   const [loadError, setLoadError] = useState(false);
-  const guardDraftAndNavigate = (navigate: () => void) => {
+  const guardDraftAndNavigate = (navigate: () => void, returningToSource = false) => {
     const editor = structureEditor && structureEditor.modelId === modelId ? structureEditor.state : undefined;
     if (editor?.loading || editor?.saving) {
       message.warning('模型表结构正在加载或保存，请完成后再离开。');
@@ -53,9 +53,11 @@ const UnifiedModelView: React.FC = () => {
     }
     if (editor?.dirty) {
       Modal.confirm({
-        title: '当前物理表结构还有未保存改动',
-        content: '离开当前字段编辑界面会丢弃未保存的字段、主键、索引和表属性修改。请先保存，或明确放弃后继续。',
-        okText: '放弃修改并继续', okType: 'danger',
+        title: returningToSource ? '物理模型还有未保存的改动' : '当前物理表结构还有未保存改动',
+        content: returningToSource
+          ? '离开会放弃当前未保存的字段、主键、索引和表属性修改；请先保存，或者明确放弃后返回来源表。'
+          : '离开当前字段编辑界面会丢弃未保存的字段、主键、索引和表属性修改。请先保存，或明确放弃后继续。',
+        okText: returningToSource ? '放弃未保存改动并返回' : '放弃修改并继续', okType: 'danger',
         cancelText: '继续编辑', onOk: navigate,
       });
       return;
@@ -64,7 +66,7 @@ const UnifiedModelView: React.FC = () => {
   };
   const returnToVerifiedSource = () => {
     if (!sourceReturnPath) return;
-    guardDraftAndNavigate(() => history.push(sourceReturnPath));
+    guardDraftAndNavigate(() => history.push(sourceReturnPath), true);
   };
 
   const reloadModel = useCallback(() => {

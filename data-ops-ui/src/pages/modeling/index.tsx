@@ -19,8 +19,10 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
 import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWizardDrawer';
+import ModelingStartGuide from '@/pages/modeling/components/ModelingStartGuide';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
 import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
 import ModelTreePane from '@/pages/modeling/components/ModelTreePane';
@@ -56,12 +58,15 @@ const clampTreeWidth = (width: number) => Math.min(TREE_MAX_WIDTH, Math.max(TREE
 
 const ModelingWorkspace: React.FC = () => {
   const { can } = usePermissionAccess();
+  const { currentProject } = useSecurityProject();
+  const currentProjectId = currentProject?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const processParam = searchParams.get('processId');
   const requestedProcessId = parseJourneyProcessId(processParam);
   const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
   const [journeyReady, setJourneyReady] = useState(processParam === null);
   const listEpoch = useRef(0);
+  const dictionaryEpoch = useRef(0);
   const [journeyProblem, setJourneyProblem] = useState<string>();
   // 列表与过滤状态
   const [records, setRecords] = useState<ModelingModelRecord[]>([]);
@@ -180,11 +185,12 @@ const ModelingWorkspace: React.FC = () => {
         if (epoch === listEpoch.current) setLoading(false);
       }
     },
-    [],
+    [currentProjectId],
   );
 
   /** 筛选选项字典(分层/业务过程/业务域,2026-09-17):列表页加载一次,规模小。 */
   const loadFilterOptions = useCallback(async () => {
+    const epoch = ++dictionaryEpoch.current;
     setOptionsLoading(true);
     try {
       const [layerList, processPage, domains] = await Promise.all([
@@ -192,17 +198,19 @@ const ModelingWorkspace: React.FC = () => {
         pageSemanticProcesses({ pageNo: 1, pageSize: 200 }),
         getSemanticDomainTree(),
       ]);
+      if (epoch !== dictionaryEpoch.current) return;
       setLayers(layerList ?? []);
       setProcesses(processPage.bizData ?? []);
       setDomainTree(domains ?? []);
     } catch {
+      if (epoch !== dictionaryEpoch.current) return;
       setLayers([]);
       setProcesses([]);
       setDomainTree([]);
     } finally {
-      setOptionsLoading(false);
+      if (epoch === dictionaryEpoch.current) setOptionsLoading(false);
     }
-  }, []);
+  }, [currentProjectId]);
 
   const loadOrganization = useCallback(async () => {
     try {
@@ -211,7 +219,7 @@ const ModelingWorkspace: React.FC = () => {
     } catch (error) {
       message.error(error instanceof Error ? error.message : '标签加载失败');
     }
-  }, []);
+  }, [currentProjectId]);
 
   /** 业务域扁平列表(右侧筛选 + 目录树按业务域视图,2026-09-17)。 */
   const flatDomains = useMemo(() => {
@@ -264,7 +272,7 @@ const ModelingWorkspace: React.FC = () => {
       setJourneyProblem('指定业务过程不存在、已失效或当前项目无权访问');
     });
     return () => { active = false; };
-  }, [processParam, requestedProcessId]);
+  }, [processParam, requestedProcessId, currentProjectId]);
 
   useEffect(() => {
     if (!journeyReady || journeyProblem) return;
@@ -293,6 +301,12 @@ const ModelingWorkspace: React.FC = () => {
   ]);
 
   useEffect(() => {
+    // Never carry the creation drawer's current Project selections into
+    // another Project; dictionaries are fetched under the active Owner scope.
+    setWizardOpen(false);
+    setDomainTree([]);
+    setProcesses([]);
+    setLayers([]);
     void loadOrganization();
     void loadFilterOptions();
   }, [loadOrganization, loadFilterOptions]);
@@ -341,7 +355,7 @@ const ModelingWorkspace: React.FC = () => {
     setCreating(true);
     try {
       const created = await createModelingModel(payload.base);
-      message.success('模型创建成功');
+      message.success('物理模型草稿已创建；下一步请保存表结构并核对逻辑依据和来源映射');
       setWizardOpen(false);
       setKeyword('');
       setPageNo(1);
@@ -356,7 +370,7 @@ const ModelingWorkspace: React.FC = () => {
         domainFilter,
       );
       if (!created.id) return;
-      history.push(`/modeling/models/${created.id}`);
+      history.push(`/modeling/models/${created.id}?tab=structure`);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '模型创建失败');
     } finally {
@@ -596,8 +610,10 @@ const ModelingWorkspace: React.FC = () => {
               type="primary"
               className="!h-9 !rounded-lg !px-4 !text-white"
               onClick={() => setWizardOpen(true)}
+              disabled={Boolean(journeyProblem) || !journeyReady || optionsLoading || !can('modeling:create')}
+              title={!journeyReady ? '正在核验当前业务过程与项目归属' : undefined}
             >
-              新建模型
+              新建物理草稿
             </YakButton>
           </div>
         </div>
@@ -607,12 +623,17 @@ const ModelingWorkspace: React.FC = () => {
           <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
           <Button onClick={clearJourney}>查看全部物理模型</Button>
         </div>}
-        {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#d0d5dd] bg-white px-3 py-2 text-[13px]">
-          <span>正在查看业务过程：<strong>{journeyProcess.name}</strong>，仅显示当前项目对应的物理模型</span>
-          <Button type="link" size="small"
-            onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
-          <Button type="link" size="small"
-            onClick={() => history.push(processToLogical(journeyProcess.id))}>逻辑模型</Button>
+        <ModelingStartGuide
+          process={journeyProcess}
+          onBusiness={() => history.push(journeyProcess ? processToSemantic(journeyProcess.id) : '/semantic/processes')}
+          onLogical={() => history.push(journeyProcess ? processToLogical(journeyProcess.id) : '/modeling/logical')}
+          onSource={() => history.push('/data-source')}
+          onCreate={() => setWizardOpen(true)}
+          canCreate={can('modeling:create') && !Boolean(journeyProblem) && journeyReady && !optionsLoading}
+          loading={optionsLoading || !journeyReady}
+        />
+        {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-3 text-[12px] text-[#667085]">
+          <span>当前过程筛选：<strong>{journeyProcess.name}</strong>（{journeyProcess.code}）</span>
           {can('data-development:read') && <Tooltip
             title="仅进入现有 DataDev 工作台；不传递模型版本、不创建任务、不声明交接批准">
             <Button type="link" size="small" onClick={() => history.push('/data-development')}>
@@ -856,8 +877,17 @@ const ModelingWorkspace: React.FC = () => {
         initialProcessId={journeyProcess?.id}
         loading={creating}
         layers={layers}
-        processes={processes}
+        processes={journeyProcess && !processes.some(x => x.id === journeyProcess.id)
+          ? [journeyProcess, ...processes] : processes}
         domainTree={domainTree}
+        onGoLogical={(id) => {
+          setWizardOpen(false);
+          history.push(processToLogical(id));
+        }}
+        onGoSource={() => {
+          setWizardOpen(false);
+          history.push('/data-source');
+        }}
         onClose={() => setWizardOpen(false)}
         onSubmit={(payload) => void handleWizardSubmit(payload)}
       />
