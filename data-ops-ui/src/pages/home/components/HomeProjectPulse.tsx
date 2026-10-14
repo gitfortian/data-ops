@@ -104,7 +104,7 @@ export default function HomeProjectPulse({
       setSnapshot((previous) => previous.scope === scope
         ? { ...previous, [key]: result } : previous);
     };
-    const read = (key: DynamicHomePulseKey, promise: Promise<unknown>, select: (value: any) => unknown) => {
+    const read = <T,>(key: DynamicHomePulseKey, promise: Promise<T>, select: (value: T) => unknown) => {
       void promise.then((result) => {
         const count = safeOwnerCount(select(result));
         report(key, { status: 'ready', value: count });
