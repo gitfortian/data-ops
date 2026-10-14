@@ -113,8 +113,17 @@ const SortableRow = (
   );
 };
 
+/** Shared, read-only reporting of a local editor draft; the editor remains its sole owner. */
+export interface ModelStructureEditorStatus {
+  dirty: boolean;
+  saving: boolean;
+  loading: boolean;
+}
+
 /** 模型详情：表结构在线编辑器（表基础信息 + 字段 + 主键/索引/分区/表属性全量保存）。 */
-const ModelingModelDetail: React.FC = () => {
+const ModelingModelDetail: React.FC<{
+  onEditorStateChange?: (status: ModelStructureEditorStatus) => void;
+}> = ({ onEditorStateChange }) => {
 const draftSeq = useRef(0);
 const nextDraftKey = () => {
   draftSeq.current += 1;
@@ -155,6 +164,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const [modelInfo, setModelInfo] = useState<ModelingModelRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // The unified view's source-return action must not bypass the draft owner.
+  // Report the actual local reducer dirty bit, not a second inferred draft.
+  useEffect(() => {
+    onEditorStateChange?.({ dirty, saving, loading });
+  }, [dirty, saving, loading, onEditorStateChange]);
+  useEffect(() => () => {
+    onEditorStateChange?.({ dirty: false, saving: false, loading: false });
+  }, [onEditorStateChange]);
   const [publishing, setPublishing] = useState(false);
   const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
   const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
