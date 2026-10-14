@@ -190,8 +190,9 @@ def main() -> int:
                 check("UX-05-390-service-feedback-source", service_feedback)
 
                 def modal_keyboard():
-                    page.goto(HTML.as_uri() + "#standard")
-                    page.locator('button[data-action="evidence"]').first.click()
+                    page.goto(HTML.as_uri() + "#home")
+                    page.reload()  # independent story state; global project context opens the same accessible dialog
+                    page.locator("#projectBtn").click()
                     page.locator("#dialogShade.open").wait_for(state="visible")
                     page.wait_for_function("document.getElementById('dialog')?.contains(document.activeElement)")
                     page.keyboard.press("Escape")
@@ -219,6 +220,7 @@ def main() -> int:
 
                 def physical_targets_isolation():
                     page.goto(HTML.as_uri() + "#model")
+                    page.reload()  # hash navigation alone preserves the previous DataDev JS state
                     page.locator('button[data-v7-design="DWD"]').first.click()
                     old = page.locator('[data-v81-target]').first.get_attribute('data-v81-target')
                     page.locator('[data-v81-new="1"]').first.click()
