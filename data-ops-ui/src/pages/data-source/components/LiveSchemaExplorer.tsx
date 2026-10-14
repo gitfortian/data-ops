@@ -8,7 +8,8 @@ import type { CollectionSourceScope } from '@/services/metadata/collectionHandof
 import { Alert, Button, Input, Select, Spin, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { KeyRound, RefreshCw, Search, Table2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { LiveSourceCoordinate } from '@/utils/liveSourceOdsJourney';
 
 const tableKey = (table: DataSourceCatalogTable) => JSON.stringify([table.database, table.schema, table.name]);
 
@@ -18,18 +19,24 @@ export default function LiveSchemaExplorer({
   canRead,
   onScopeChange,
   onDefineTask,
+  onOpenOds,
+  initialTable,
   definitionLoading = false,
 }: {
   sourceId: string;
   canRead: boolean;
   onScopeChange?: (scope: CollectionSourceScope) => void;
   onDefineTask?: (scope: CollectionSourceScope) => void;
+  /** Modeling route access is checked by the parent and rechecked on the destination. */
+  onOpenOds?: (source: LiveSourceCoordinate) => void;
+  /** Exact source coordinates returned by ODS, never a source authorization. */
+  initialTable?: { database: string; schema?: string; table: string };
   definitionLoading?: boolean;
 }) {
   const [databases, setDatabases] = useState<string[]>([]);
-  const [database, setDatabase] = useState<string>();
+  const [database, setDatabase] = useState<string | undefined>(initialTable?.database);
   const [schemas, setSchemas] = useState<string[]>([]);
-  const [schema, setSchema] = useState<string>();
+  const [schema, setSchema] = useState<string | undefined>(initialTable?.schema);
   const [databasesReady, setDatabasesReady] = useState(false);
   const [resolvedDatabases, setResolvedDatabases] = useState<{ sourceId: string; version: number } | null>(null);
   const [schemasReady, setSchemasReady] = useState(false);
@@ -39,8 +46,10 @@ export default function LiveSchemaExplorer({
   const [databaseError, setDatabaseError] = useState(false);
   const [schemaError, setSchemaError] = useState(false);
   const [version, setVersion] = useState(0);
-  const [searchInput, setSearchInput] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState(initialTable?.table ?? '');
+  const [keyword, setKeyword] = useState(initialTable?.table ?? '');
+  const restorePending = useRef(Boolean(initialTable));
+  const [restoreWarning, setRestoreWarning] = useState('');
   const [tables, setTables] = useState<DataSourceCatalogTable[]>([]);
   const [tablesLoading, setTablesLoading] = useState(true);
   const [tableError, setTableError] = useState(false);
@@ -155,6 +164,19 @@ export default function LiveSchemaExplorer({
           return;
         }
         setTables(result);
+        if (restorePending.current && initialTable) {
+          restorePending.current = false;
+          const exact = result.find((candidate) =>
+            (candidate.database ?? database) === initialTable.database
+            && (candidate.schema ?? schema ?? undefined) === (initialTable.schema ?? undefined)
+            && candidate.name === initialTable.table);
+          if (exact && database === initialTable.database && schema === initialTable.schema) {
+            setSelected(exact);
+            setRestoreWarning('');
+          } else {
+            setRestoreWarning('原来源表无法在当前项目及 Schema 精确核验，请重新选择源表；不会自动跳至同名表。');
+          }
+        }
       })
       .catch(() => {
         if (active) setTableError(true);
@@ -194,7 +216,7 @@ export default function LiveSchemaExplorer({
       key: 'name',
       render: (_, table) => (
         <div>
-          <Button type="link" size="small" className="source-probe-table-link" onClick={() => setSelected(table)}>
+          <Button type="link" size="small" className="source-probe-table-link" onClick={() => { restorePending.current = false; setRestoreWarning(''); setSelected(table); }}>
             {table.name}
           </Button>
           <div className="source-workspace-scope">
@@ -262,6 +284,8 @@ export default function LiveSchemaExplorer({
               setSchemasReady(false);
               setSchema(undefined);
               setSelected(null);
+              restorePending.current = false;
+              setRestoreWarning('');
               setDatabase(value);
             }}
           />
@@ -281,6 +305,8 @@ export default function LiveSchemaExplorer({
             onChange={(value) => {
               setSchema(value);
               setSelected(null);
+              restorePending.current = false;
+              setRestoreWarning('');
             }}
           />
         </label>
@@ -315,6 +341,7 @@ export default function LiveSchemaExplorer({
         />
       ) : (
         <>
+          {restoreWarning ? <Alert type="warning" showIcon message={restoreWarning} /> : null}
           <div className="source-probe-search-row">
             <Input
               className="source-workspace-search"
@@ -378,6 +405,25 @@ export default function LiveSchemaExplorer({
                           <h3>{selected.name}</h3>
                           <p>{selected.remarks || '字段结构'}</p>
                         </div>
+                        {selected.type === 'TABLE' && onOpenOds ? (
+                          <Button
+                            type="primary"
+                            disabled={columnsLoading || columnError || columns.length === 0
+                              || !(selected.database ?? database)}
+                            onClick={() => {
+                              const sourceDatabase = selected.database ?? database;
+                              if (!sourceDatabase) return;
+                              onOpenOds({
+                                dataSourceId: Number(sourceId),
+                                database: sourceDatabase,
+                                schema: selected.schema ?? schema,
+                                table: selected.name,
+                              });
+                            }}
+                          >
+                            打开或创建 ODS
+                          </Button>
+                        ) : null}
                         <Button
                           aria-label="重新读取所选表字段"
                           icon={<RefreshCw size={14} />}
