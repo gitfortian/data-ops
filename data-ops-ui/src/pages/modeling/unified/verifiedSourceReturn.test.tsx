@@ -1,4 +1,7 @@
 import React from 'react';
+// JSDOM's nwsapi cannot parse some Tailwind-generated CSS selectors while
+// Testing Library computes accessible roles. Label/text queries still
+// exercise the real buttons, onClick handlers and the draft-confirm contract.
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Modal } from 'antd';
 import UnifiedModelView from './index';
@@ -78,11 +81,11 @@ it('keeps every dirty structure draft edit when source return is cancelled, and 
     return { destroy: jest.fn(), update: jest.fn() };
   });
   render(<UnifiedModelView />);
-  fireEvent.change(await screen.findByRole('textbox', { name: '结构草稿' }), {
+  fireEvent.change(await screen.findByLabelText('结构草稿'), {
     target: { value: 'unsaved-field-primary-key-index' },
   });
-  expect(await screen.findByRole('button', { name: '返回来源表' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '返回来源表' }));
+  expect((await screen.findByText('返回来源表')).closest('button')).not.toBeNull();
+  fireEvent.click(screen.getByText('返回来源表'));
   expect(pendingConfirm?.cancelText).toBe('继续编辑');
   expect(pendingConfirm?.okText).toMatch(/放弃未保存/);
   expect(mockPush).not.toHaveBeenCalled();
@@ -90,7 +93,7 @@ it('keeps every dirty structure draft edit when source return is cancelled, and 
   // Simulate choosing "continue editing" rather than calling the destructive onOk.
   await act(async () => { pendingConfirm?.onCancel?.(); });
   // Cancelling is the default: no navigation or edits are discarded.
-  expect(screen.getByRole('textbox', { name: '结构草稿' })).toHaveValue('unsaved-field-primary-key-index');
+  expect(screen.getByLabelText('结构草稿')).toHaveValue('unsaved-field-primary-key-index');
   expect(mockEditorValue).toBe('unsaved-field-primary-key-index');
   expect(mockPush).not.toHaveBeenCalled();
 
@@ -104,12 +107,12 @@ it('keeps every dirty structure draft edit when source return is cancelled, and 
 it('returns directly after successful structure save clears the dirty state', async () => {
   const confirm = jest.spyOn(Modal, 'confirm');
   render(<UnifiedModelView />);
-  fireEvent.change(await screen.findByRole('textbox', { name: '结构草稿' }), {
+  fireEvent.change(await screen.findByLabelText('结构草稿'), {
     target: { value: 'unsaved-column' },
   });
-  fireEvent.click(screen.getByRole('button', { name: '模拟保存成功' }));
-  await waitFor(() => expect(screen.getByRole('textbox', { name: '结构草稿' })).toHaveValue('server'));
-  fireEvent.click(screen.getByRole('button', { name: '返回来源表' }));
+  fireEvent.click(screen.getByText('模拟保存成功'));
+  await waitFor(() => expect(screen.getByLabelText('结构草稿')).toHaveValue('server'));
+  fireEvent.click(screen.getByText('返回来源表'));
   expect(confirm).not.toHaveBeenCalled();
   expect(mockPush).toHaveBeenCalledTimes(1);
 });
@@ -118,5 +121,5 @@ it('does not offer a return action when persisted ODS source differs from URL', 
   mockGetModel.mockResolvedValue({ ...model, sourceSchema: 'audit' });
   render(<UnifiedModelView />);
   await screen.findByText('Order ODS');
-  expect(screen.queryByRole('button', { name: '返回来源表' })).not.toBeInTheDocument();
+  expect(screen.queryByText('返回来源表')).not.toBeInTheDocument();
 });
