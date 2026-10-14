@@ -40,9 +40,9 @@ const JOURNEYS: readonly HomeJourneyDefinition[] = [
   },
   {
     key: 'consume', title: '使用已有数据',
-    description: '先看数据产品及其授权和版本；无需重走数据建设。',
+    description: '从受治理的数据产品目录核对版本和授权，不经过生产者 Dataset 管理。',
     story: 'GM-J3', primary: true,
-    candidates: ['consumption-catalog', 'dataset-management', 'data-service-api'],
+    candidates: ['consumption-catalog'],
   },
   {
     key: 'recover', title: '处理运行异常',
