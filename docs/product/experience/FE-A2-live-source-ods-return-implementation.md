@@ -32,7 +32,7 @@
 ## 剩余 FE-A2 工作（不在本 PR 内声称完成）
 
 1. 采集任务从精确源范围接续“保存 → 预演 → 正式运行 → 结果下一步”全链路可用性；尤其运行超时、重新载入、回源与 Run/Job 对账。
-2. 已存在 ODS 的详情已接入来源上下文，仍需在真实环境中确认各发布/历史版本与原域匹配，以及详情编辑状态下的未保存修改返回提示。
+2. 已存在 ODS 的详情已接入来源上下文，`ModelingModelDetail` 真实 `dirty/saving/loading` 状态已连接外层返回来源操作：未保存修改必须先明确放弃、保存成功无弹窗、写入/加载期间不可跳出。真实环境仍需检查历史版本与源头匹配以及页面级 E2E。
 3. 真实双 Project 跨 DataSource/Metadata/Modeling 权限拒绝、被动撤权/字段漂移、会话切换验收；这些仍属 #559 UX 与 G2 实景门禁。
 
 本 PR **不调整**导航数据库/menuCode、后端/DB、新的 MappingSet 或 TaskRevision 写操作，也不代 Product/UX 签署。
@@ -44,3 +44,14 @@
 - `OdsSourceJourney.test.tsx`：预期和实际的 `URLSearchParams` 键顺序不同，来源 ID、库、表、Schema 值相同；改为分别核对路径及解析后的键值，避免将序列化顺序误认为业务身份。
 - 新增负例：指定 `public` 却只收到 `audit` 表、Catalog 没有携带 Schema 时，均不尝试读取同名表字段，也不出现 ODS CTA。
 - **修复提交已推送，等待本轮完整 CI 实际结果**。此项不能仅凭源代码自检声明 Green；真实 Project/权限/浏览器验证仍待 #559 验收。
+
+## PR Review P2 处理记录（2026-10-14）
+
+[PR #561 Review 评论](https://github.com/gitfortian/data-ops/pull/561#issuecomment-6160269548) 指出 `UnifiedModelView` 新增“返回来源表”绕过本地结构草稿保护，可导致字段/主键/索引未保存的修改静默丢失。**接受本项 P2；采用既有编辑器真实 draft 状态订阅而非复制 reducer 或添加新的后端保存合同。**
+
+- `ModelingModelDetail` 通过可选的 `onEditorStateChange` 上报原 `useModelStructureDraft.dirty`、`saving`、`loading`；撤销挂载时清理报告，且按当前 modelId 识别，避免用另一份本地编辑状态猜测脏数据。
+- 统一模型详情来源按钮：`dirty=true` 时确认“继续编辑 / 放弃未保存改动并返回”，取消不导航；`saving/loading=true` 时暂时阻止导航；编辑器保存并清除 dirty 后直接回源。
+- 同一轮修复 CI 新增 TypeScript 错误：Catalog 物理表返回的 `name?: string` 是可选字段；真实导航回调必须显式检测 `sourceTable` 非空，不能将 `string | undefined` 当 `string`。
+- 新增 `src/pages/modeling/unified/verifiedSourceReturn.test.tsx` 页面级回归涵盖未保存取消、明确放弃、保存成功、持久化来源不匹配四类判断。此前完整 Jest 已 1511/1511 PASS，但 TypeScript baseline 因可选表名失败；新增提交必须重新通过 CI 才可合并。
+
+目前仍需真实浏览器/双 Project/撤权/源表漂移验收；不要将 CI 成功等同 FE-A2 全部完成。
