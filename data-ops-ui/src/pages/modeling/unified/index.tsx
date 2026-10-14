@@ -12,6 +12,7 @@ import MappingPanel from '@/pages/modeling/mapping';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
 import { getModelingModel } from '@/services/modeling/api';
+import { verifiedOdsModelSourceReturn } from '@/utils/liveSourceOdsJourney';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { listSemanticLayers } from '@/services/semantic/api';
 import type { SemanticLayerRecord } from '@/services/semantic/types';
@@ -29,6 +30,9 @@ const UnifiedModelView: React.FC = () => {
   const tabKeys = ['overview', 'structure', 'mapping', 'layer-mapping', 'process', 'lineage', 'lifecycle', 'version', 'task'];
   const activeTab = queryTab && tabKeys.includes(queryTab) ? queryTab : 'structure';
   const [model, setModel] = useState<ModelingModelRecord>();
+  const sourceReturnPath = model?.id != null && String(model.id) === modelId
+    ? verifiedOdsModelSourceReturn(model, new URLSearchParams(location.search))
+    : null;
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -161,6 +165,11 @@ const UnifiedModelView: React.FC = () => {
           </div>
         </div>
         <Space>
+          {sourceReturnPath ? (
+            <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => history.push(sourceReturnPath)}>
+              返回来源表
+            </YakButton>
+          ) : null}
           <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => history.push('/modeling')}>
             返回列表
           </YakButton>
