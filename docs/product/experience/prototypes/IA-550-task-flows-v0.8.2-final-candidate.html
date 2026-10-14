@@ -1020,7 +1020,7 @@ function v51StandardWorkspace(){
   const rows=shown.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(names[s.kind])+'</td><td>'+esc(s.code)+'</td><td><button data-v51-catalog="'+s.id+'">查看</button></td></tr>').join("");
   const uses=chosen?sample.standard.filter(s=>Object.values(v51Binding(s[4])).includes(chosen.id)):[];
   return top+types+'<div class="v51StandardGrid"><section class="card"><div class="cardHead"><h2>数据标准目录</h2></div>'+v3Filters()+
-  '<table class="v51CompactTable"><thead><tr><th>标准</th><th>类别</th><th>编码</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></section>'+
+  '<div class="tableScroll" role="region" tabindex="0" aria-label="数据标准目录表格，窄屏可左右滚动"><table class="v51CompactTable"><thead><tr><th>标准</th><th>类别</th><th>编码</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
   '<section class="card"><div class="v4TaskBody"><h2>标准定义与使用情况</h2>'+
   (chosen?'<div class="detailStrip"><strong>'+esc(chosen.name)+'</strong><span>'+esc(chosen.id)+'</span></div>'+
    '<p>类别：'+esc(names[chosen.kind])+'；编码：'+esc(chosen.code)+'；状态：启用（模拟目录）</p>'+
