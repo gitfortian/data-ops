@@ -1,5 +1,5 @@
 import { history, useSearchParams } from '@umijs/max';
-import { Alert, Button, Input, Modal, Select, Space, Spin, Tag, Typography, message } from 'antd';
+import { Alert, Button, Input, Modal, Select, Space, Spin, Tag, message } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
@@ -266,10 +266,7 @@ const OdsSourceJourney = () => {
   };
 
 
-  const existing = lookup?.state === 'READY' && lookup.candidates.length > 0;
   const newTarget = lookup?.state === 'READY' && lookup.candidates.length === 0 && sourceVerified;
-  const stage = savedId ? 4 : savedDraft ? 3 : physicalColumns.length ? 3
-    : sourceVerified && lookup?.state === 'READY' ? 2 : 1;
 
   return (
     <div className="ods-workbench" data-testid="ods-source-workbench">
