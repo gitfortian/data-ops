@@ -6,12 +6,10 @@ import {
 import {
   getContextNavigationModel,
   type ContextNavigationModel,
-  type ContextNavigationSection,
 } from '@/config/taskNavigation';
 import { Link } from '@umijs/max';
 import { Dropdown, type MenuProps } from 'antd';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 interface SidebarNavigationProps {
   groups: NavigationGroupWithRoutes[];
@@ -23,166 +21,162 @@ interface SidebarNavigationProps {
   onNavigate?: () => void;
 }
 
-const sectionKey = (domain: string, section: string) => domain + ':' + section;
-
+/**
+ * IA-550 / user-approved dual rail:
+ * - global rail contains ONLY Home/Todo and existing authorized business domains
+ * - context rail holds the selected domain's original, authorized page URLs
+ * - captions are not links; there is no third level, "更多" or tool bucket
+ * - collapsed mode retains the same routes in a single grouped popup
+ */
 export default function SidebarNavigation({
   groups, standaloneRoutes, icons, compact, activeId, activeGroupPath, onNavigate,
 }: SidebarNavigationProps) {
-  const rootActive = activeGroupPath[activeGroupPath.length - 1];
-  const models = useMemo(() => new Map(groups.map(group =>
-    [group.id, getContextNavigationModel(group)])), [groups]);
-  const [openDomain, setOpenDomain] = useState<string | undefined>(rootActive);
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-
-  // A deep link, browser back, or permission refresh must expose its owning
-  // section without inventing another permission parent or submenu level.
+  const activeDomain = activeGroupPath[activeGroupPath.length - 1];
+  const domainNames: Record<string, string> = {
+    integration: '数据接入', modeling: '标准与建模', development: '开发运行',
+    'data-asset': '资产治理', 'data-analysis': '数据消费', system: '平台设置',
+  };
+  const models = useMemo(
+    () => new Map(groups.map(group => [group.id, getContextNavigationModel(group)])),
+    [groups],
+  );
+  const [selectedDomain, setSelectedDomain] = useState<string | undefined>(
+    () => groups.find(group => group.id === activeDomain)?.id ?? groups[0]?.id,
+  );
+  // Keep navigation anchored to the active domain on deep links and back/forward
+  // without forcing home/todo to wipe the operator's last selected domain.
   useEffect(() => {
-    setOpenDomain(rootActive);
-    const activeSections = new Set<string>();
-    for (const group of groups) {
-      const model = models.get(group.id);
-      if (!model) continue;
-      for (const section of model.sections) {
-        const extra = section.routes.slice(section.visibleCount);
-        if (extra.some(route => route.id === activeId))
-          activeSections.add(sectionKey(group.id, section.id));
-      }
-    }
-    setExpanded(activeSections);
-  }, [activeId, rootActive, models]);
+    setSelectedDomain(previous =>
+      groups.find(group => group.id === activeDomain)?.id
+        ?? (groups.some(group => group.id === previous) ? previous : groups[0]?.id));
+  }, [activeDomain, groups]);
 
-  const toggleExtra = (key: string) => setExpanded(current => {
-    const next = new Set(current);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    return next;
-  });
-  const linkClass = 'flex h-9 w-full min-w-0 items-center rounded-md px-3 text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]';
-  const selectedStyle = { color: '#fe2c55', background: 'rgba(254,44,85,0.07)' };
-  const renderLink = (route: NavigationRoute) => <Link
+  const renderRoute = (route: NavigationRoute) => <Link
     key={route.id}
     to={route.path}
     title={route.title}
     onClick={onNavigate}
     aria-current={activeId === route.id ? 'page' : undefined}
-    style={activeId === route.id ? selectedStyle : undefined}
-    className={linkClass + (activeId === route.id
-      ? ' font-semibold' : ' text-[#667085] hover:bg-white hover:text-[#344054]')}
+    className={[
+      'flex min-h-9 w-full items-center rounded-md px-3 py-2 text-[13px] leading-5',
+      'transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]',
+      activeId === route.id
+        ? 'bg-[rgba(254,44,85,0.07)] font-semibold text-[#fe2c55]'
+        : 'text-[#475467] hover:bg-[#f4f5f7] hover:text-[#344054]',
+    ].join(' ')}
   >{route.title}</Link>;
 
-  const renderSection = (group: NavigationGroupWithRoutes, section: ContextNavigationSection) => {
-    const key = sectionKey(group.id, section.id);
-    const isExpanded = expanded.has(key);
-    const primary = section.routes.slice(0, section.visibleCount);
-    const remaining = section.routes.slice(section.visibleCount);
-    const extraCount = remaining.length;
-    return <div key={key} className="py-0.5">
-      {section.routes.length > 1 && section.title && <div
-        className="px-3 pb-1 pt-3 text-[11px] font-medium tracking-[0.02em] text-[#98a2b3]"
-      >{section.title}</div>}
-      {primary.map(renderLink)}
-      {isExpanded && <div id={`navigation-extra-${group.id}-${section.id}`}>{remaining.map(renderLink)}</div>}
-      {extraCount > 0 && <button
-        type="button"
-        aria-label={section.title + (isExpanded ? '收起其他页面' : '展开其他页面')}
-        aria-expanded={isExpanded}
-        aria-controls={`navigation-extra-${group.id}-${section.id}`}
-        className="flex h-8 w-full items-center gap-2 rounded-md border-0 bg-transparent px-3 text-left text-[12px] text-[#98a2b3] hover:bg-white hover:text-[#475467]"
-        onClick={() => toggleExtra(key)}
-      >
-        <ChevronRight size={12} className={isExpanded ? 'rotate-90' : ''} />
-        {isExpanded ? '收起' : `更多 ${extraCount} 项`}
-      </button>}
-    </div>;
-  };
-
-  // Popup is only two levels: business domain -> page. Menu group labels are
-  // non-clickable captions, not a third nested submenu.
   const popupItems = (group: NavigationGroupWithRoutes): MenuProps['items'] => {
-    const model = models.get(group.id) ?? getContextNavigationModel(group);
-    return model.sections.flatMap(section => section.routes.length > 1 && section.title
-      ? [{
-          type: 'group' as const,
-          key: `section:${group.id}:${section.id}`,
-          label: section.title,
-          children: section.routes.map(route => ({
+    const model: ContextNavigationModel = models.get(group.id) ?? getContextNavigationModel(group);
+    return model.sections.flatMap(section =>
+      section.title && section.routes.length > 1
+        ? [{
+            type: 'group' as const,
+            key: `section:${group.id}:${section.id}`,
+            label: section.title,
+            children: section.routes.map(route => ({
+              key: route.id,
+              label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
+            })),
+          }]
+        : section.routes.map(route => ({
             key: route.id,
             label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
           })),
-        }]
-      : section.routes.map(route => ({
-          key: route.id,
-          label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
-        })));
+    );
   };
 
-  const renderGroup = (group: NavigationGroupWithRoutes) => {
-    const active = rootActive === group.id;
-    const open = openDomain === group.id;
-    const model: ContextNavigationModel = models.get(group.id) ?? getContextNavigationModel(group);
-    const header = <button
+  const globalButtonClass = (isSelected: boolean, collapsed = false) => [
+    'flex w-full min-h-10 items-center gap-2 rounded-md border-0 text-left',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]',
+    'transition-colors',
+    collapsed ? 'justify-center px-1' : 'px-3',
+    isSelected ? 'bg-white font-semibold text-[#fe2c55] shadow-[0_1px_3px_rgba(16,24,40,0.06)]'
+      : 'bg-transparent font-normal text-[#667085] hover:bg-white hover:text-[#344054]',
+  ].join(' ');
+
+  const standaloneLinks = (isCompact: boolean) => standaloneRoutes.map(route => <Link
+    key={route.id}
+    to={route.path}
+    title={route.title}
+    aria-label={route.title}
+    onClick={onNavigate}
+    aria-current={activeId === route.id ? 'page' : undefined}
+    className={globalButtonClass(activeId === route.id, isCompact)}
+  >
+    {route.iconKey && <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icons[route.iconKey]}</span>}
+    {!isCompact && <span className="min-w-0 truncate text-[12px]">{route.title}</span>}
+  </Link>);
+
+  const domainControls = (isCompact: boolean) => groups.map((group, index) => {
+    const selected = selectedDomain === group.id;
+    const button = <button
       type="button"
       aria-label={group.title}
-      aria-expanded={compact ? undefined : open}
-      aria-controls={compact ? undefined : `navigation-${group.id}`}
-      aria-haspopup={compact ? 'menu' : undefined}
-      title={compact ? group.title : undefined}
-      onClick={compact ? undefined : () => setOpenDomain(current => current === group.id ? undefined : group.id)}
-      className={[
-        'relative flex h-10 w-full items-center gap-3 rounded-md border-0 bg-transparent text-left text-[14px]',
-        'transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]',
-        compact ? 'justify-center' : 'px-2',
-        active || open ? 'font-semibold text-[#344054]' : 'text-[#667085]',
-      ].join(' ')}
+      title={group.title}
+      aria-current={selected ? 'true' : undefined}
+      aria-expanded={isCompact ? undefined : selectedDomain === group.id}
+      aria-controls={isCompact ? undefined : 'navigation-context-panel'}
+      aria-haspopup={isCompact ? 'menu' : undefined}
+      onClick={isCompact ? undefined : () => setSelectedDomain(group.id)}
+      className={globalButtonClass(selected && activeId !== 'home' && activeId !== 'approval-todo', isCompact)}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icons[group.iconKey]}</span>
-      {!compact && <>
-        <span className="min-w-0 flex-1 truncate" title={group.title}>{group.title}</span>
-        <ChevronDown size={14} className={open ? 'shrink-0 rotate-180' : 'shrink-0'} />
+      {!isCompact && <>
+        <span className="min-w-0 flex-1 truncate text-[12px]">{domainNames[group.id] ?? group.title}</span>
       </>}
-      {compact && active && <span className="absolute right-0 h-4 w-[3px] rounded-full bg-[#fe2c55]" />}
     </button>;
-    if (compact) return <Dropdown
-      key={group.id}
-      trigger={['hover', 'click']}
-      placement="bottomLeft"
-      align={{ points: ['tl', 'tr'], offset: [8, 0] }}
-      menu={{
-        items: popupItems(group), selectedKeys: activeId ? [activeId] : [],
-        style: { minWidth: 230, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto' },
-      }}
-    >{header}</Dropdown>;
+    const content = isCompact
+      ? <Dropdown key={group.id} trigger={['hover', 'click']} placement="bottomLeft"
+          align={{ points: ['tl', 'tr'], offset: [8, 0] }}
+          menu={{
+            items: popupItems(group),
+            selectedKeys: activeId ? [activeId] : [],
+            style: { minWidth: 240, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto' },
+          }}>
+          {button}
+        </Dropdown>
+      : <div key={group.id}>{button}</div>;
+    return <div key={group.id} className={index === groups.length - 1 && group.section === 'system'
+      ? 'mt-auto border-t border-[#e5e7eb] pt-3' : undefined}>{content}</div>;
+  });
 
-    return <div key={group.id} className="mb-1">
-      {header}
-      {open && <div id={`navigation-${group.id}`} className="space-y-0.5 pb-2 pl-6">
-        {model.sections.map(section => renderSection(group, section))}
-      </div>}
-    </div>;
-  };
+  if (compact) return <div data-testid="dual-rail-compact" className="flex h-full flex-col gap-2">
+    <div className="flex flex-col gap-1 border-b border-[#eaecf0] pb-3">{standaloneLinks(true)}</div>
+    <div className="flex min-h-0 flex-1 flex-col gap-1">{domainControls(true)}</div>
+  </div>;
 
-  return <React.Fragment>
-    {standaloneRoutes.length > 0 && <div className="mb-3 border-b border-[#eaecf0] pb-3">
-      {standaloneRoutes.map(route => <Link
-        key={route.id}
-        to={route.path}
-        onClick={onNavigate}
-        aria-label={route.title}
-        title={compact ? route.title : undefined}
-        aria-current={activeId === route.id ? 'page' : undefined}
-        style={activeId === route.id ? selectedStyle : undefined}
-        className={'mb-0.5 flex h-10 items-center gap-3 rounded-md text-[14px] transition-colors hover:bg-white ' +
-          (compact ? 'justify-center' : 'px-2') +
-          (activeId === route.id ? ' font-semibold' : ' text-[#667085] hover:text-[#344054]')}
-      >
-        {route.iconKey && <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icons[route.iconKey]}</span>}
-        {!compact && route.title}
-      </Link>)}
-    </div>}
-    {groups.map((group, index) => <div key={group.id}
-      className={index > 0 && groups[index - 1].section !== group.section
-        ? 'mt-3 border-t border-[#eaecf0] pt-3' : undefined}>
-      {renderGroup(group)}
-    </div>)}
-  </React.Fragment>;
+  const currentGroup = groups.find(group => group.id === selectedDomain) ?? groups[0];
+  const currentModel = currentGroup && (models.get(currentGroup.id) ?? getContextNavigationModel(currentGroup));
+
+  return <div data-testid="dual-rail-navigation" className="flex h-full min-h-0 w-full overflow-hidden">
+    <div className="flex h-full w-[146px] shrink-0 flex-col border-r border-[#e6e8ed] px-2 py-3"
+      aria-label="全局导航">
+      <div className="flex flex-col gap-1 border-b border-[#eaecf0] pb-3">
+        {standaloneLinks(false)}
+      </div>
+      <div className="mt-3 flex min-h-0 flex-1 flex-col gap-1">
+        {domainControls(false)}
+      </div>
+    </div>
+    <div id="navigation-context-panel" role="navigation"
+      aria-label={currentGroup ? currentGroup.title + '页面' : '业务页面'}
+      className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white px-3 pb-6 pt-4">
+      {currentGroup && currentModel && <>
+        <div className="mb-4 border-b border-[#eaecf0] px-2 pb-3 text-[13px] font-semibold text-[#344054]">
+          {currentGroup.title}
+        </div>
+        <div className="space-y-1">
+          {currentModel.sections.map(section => <section key={section.id}
+            aria-label={section.title || currentGroup.title} className="pb-1">
+            {section.title && section.routes.length > 1 && <div
+              className="px-3 pb-1 pt-3 text-[11px] font-medium text-[#98a2b3]">
+              {section.title}
+            </div>}
+            {section.routes.map(renderRoute)}
+          </section>)}
+        </div>
+      </>}
+    </div>
+  </div>;
 }
