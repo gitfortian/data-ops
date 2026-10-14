@@ -47,3 +47,24 @@ npm run build
 ### PR 元数据与持续集成门禁
 
 本变更分类为 **PRODUCT / Product Behavior Changed: Yes**，PR 必须具备 Change Classification、Product Impact、Truth & Ownership 以及 Acceptance 四节。原域权威事实不变；CI 失败以当前 PR head 与具体 job 日志为准，不复用原型 #555 的自动回归结果。
+
+## FE-A1 第二段（2026-10-14）｜当前项目真实规模与运行概况
+
+新增 `HomeProjectPulse`，在任务入口后显示最多 6 个真正可用且有权的指标卡；不能把业务 Owner 的不同事实加总成统一“数据资产成功数”，也不把设计、执行、消费混为一个发布状态。
+
+| 卡片 | 原 Owner + 已有读接口 | 身份/权限门禁 | 不能误读为 |
+|---|---|---|---|
+| 数据源 | Home Cockpit `header.dataSourceCount`、`dataSourceAvailable` | DataSource 原 route/menu | 无法读取时 0 |
+| 物理模型 | Modeling `pageModelingModels({pageNo:1,pageSize:1}).pagination.total` | `modeling:read` + 模型菜单码 | Logical 模型数/已部署表数 |
+| 指标定义 | Metric `getMetricStats().total` | `metric:read` + 指标菜单码 | 已发布指标数 |
+| 表资产 | Asset `homeAssetOverviewApi.overview().data.dataset.tableAssetCount` | `data-asset:read` + Asset Catalog 菜单码 | 已上架治理资产数 |
+| 今日质量异常表 | Quality `homeQualityOverviewApi.overview().data.todayIssueTableCount` | `quality:execution:read` + Quality Overview 菜单码 | 所有域的统一运行异常数 |
+| 运行中任务 | Home Cockpit `header.runningCount`、`runningAvailable` | Home 当前项目已授权只读汇总，不链接不存在的通用 Run 页面 | DataDev 独占执行数、成功运行数 |
+
+- 项目/用户/原菜单授权组成 `pulseScopeKey`；切换时直接屏蔽旧 scope 快照，Promise 回调只写当前 scope；某一个 Provider 失败仅降级该卡，其他领域仍可读取。
+- `safeOwnerCount` 只接受非负安全整数。0 是真实 Owner 返回的 0，`null/undefined/NaN/负数/字符串` 全部保持未知；失败显示“暂不可用”，不把未知填 0。
+- 首页既有 `useHomeDataAssets` 与新概况复用 `readSharedHomeAssetOverview(projectId)`，只合并同项目同时在途的请求，Promise settle 后清理，不跨项目缓存上一次业务值。
+- HomeTaskStarter 不重复显示统计，原 HomeHeader、DataCenter、审批/资源/消费等面板仍保留。没有项目/权限不发敏感 Owner 查询、不呈现跨项目数据卡。
+- 新增 `homeProjectPulse.test.ts` 校验负值/未知、项目与角色分离、逐卡独立权限；还需实际浏览器 320/390/768/1024/1440 与双项目部署联调证明完整 UX。
+
+**仍未实施/不能宣称已完成**：正式导航的 20 任务入口冻结、Model/Metric 的完整状态分布、指标发布/资产上架精确计数、真实跨域 G1/G2 E2E 和 D1–D5 产品签署。所有未批准写合同仍禁用。
