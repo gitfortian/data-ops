@@ -38,7 +38,8 @@ function CollectTaskDetail() {
   const jobId = id && /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id)) ? Number(id) : undefined;
   const canRead = can('data-metadata:read');
   const canExecute = can('data-metadata:create');
-  const sourceReturnPath = job ? verifiedCollectTaskReturnPath(job, origin) : null;
+  const canReadSource = can('resource:data-source:read');
+  const sourceReturnPath = job && canReadSource ? verifiedCollectTaskReturnPath(job, origin) : null;
 
   useEffect(() => {
     const requestEpoch = ++operationEpoch.current;
