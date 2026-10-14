@@ -43,3 +43,7 @@ npm run build
 3. 与 #555 UX 人工签收同步，确保可回退，且不新增 DR-06/07/08 未批准的正式写操作。
 
 **当前状态**：CODE_PROPOSED / UX_SIGNOFF_PENDING / CI_PENDING / MAIN_UNCHANGED。
+
+### PR 元数据与持续集成门禁
+
+本变更分类为 **PRODUCT / Product Behavior Changed: Yes**，PR 必须具备 Change Classification、Product Impact、Truth & Ownership 以及 Acceptance 四节。原域权威事实不变；CI 失败以当前 PR head 与具体 job 日志为准，不复用原型 #555 的自动回归结果。
