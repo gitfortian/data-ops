@@ -2,9 +2,8 @@ import Table from '@/components/ReadableTable';
 import { Alert, Button, Dropdown, Input, message, Modal, Segmented, Select, Descriptions, Tag, Tooltip } from 'antd';
 import { ArrowRightOutlined, MoreOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { history, useSearchParams } from '@umijs/max';
-import { readCollectionDefinitionHint, collectionJobCovers } from '@/services/metadata/collectionHandoff';
+import { readCollectionDefinitionHint, collectTaskDetailWithOriginPath, verifiedCollectTaskReturnPath } from '@/services/metadata/collectionHandoff';
 import type { CollectionSourceScope } from '@/services/metadata/collectionHandoff';
-import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
 import type { ColumnsType } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -533,16 +532,7 @@ const MetadataCollectPage = () => {
   ];
 
   const hasFilter = Boolean(keyword || providerType || enabledFilter);
-  const returnToSource = continuedJob && sourceOrigin
-    && collectionJobCovers(continuedJob, sourceOrigin)
-    && sourceOrigin.databaseName && sourceOrigin.tableName
-    ? buildLiveSourceReturnPath({
-        dataSourceId: Number(sourceOrigin.dataSourceId),
-        database: sourceOrigin.databaseName,
-        schema: sourceOrigin.schemaName,
-        table: sourceOrigin.tableName,
-      })
-    : null;
+  const returnToSource = continuedJob ? verifiedCollectTaskReturnPath(continuedJob, sourceOrigin) : null;
 
   return (
     <main className="metadata-collect-page">
@@ -584,7 +574,7 @@ const MetadataCollectPage = () => {
           onPreview={() => void execute(continuedJob, 'dry-run')}
           onConfirmRun={() => confirmRun(continuedJob)}
           onHistory={() => setHistoryJob(continuedJob)}
-          onOpenJob={() => history.push(collectTaskDetailPath(continuedJob.id, sourceHint?.id ? String(sourceHint.id) : undefined))}
+          onOpenJob={() => history.push(collectTaskDetailWithOriginPath(continuedJob, sourceOrigin))}
           onDismiss={() => { setContinuedJob(null); setContinuedRun(null); setContinuedResultUnknown(false); }}
         />
       ) : null}

@@ -82,3 +82,20 @@ it('does not make execution actionable without Metadata permission', () => {
   expect(button).toBeDisabled();
   expect(actions.onPreview).not.toHaveBeenCalled();
 });
+
+it('uses persisted dry-run qualification on a reopened saved task without inventing an in-session run', () => {
+  const actions = {
+    onPreview: jest.fn(), onConfirmRun: jest.fn(), onHistory: jest.fn(),
+    onOpenJob: jest.fn(), onDismiss: jest.fn(),
+  };
+  render(<CollectionJourneyContinuation
+    job={{ ...job, dryRunPassed: true }} sourceName="交易库" run={null}
+    busy={false} canExecute {...actions}
+  />);
+  expect(screen.getByText('当前范围预演闸门已通过')).toBeInTheDocument();
+  expect(screen.getByText(/本页没有本次预演运行回执/)).toBeInTheDocument();
+  expect(screen.queryByText('已收到通过的预览回执')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('正式采集'));
+  expect(actions.onConfirmRun).toHaveBeenCalledTimes(1);
+  expect(actions.onPreview).not.toHaveBeenCalled();
+});
