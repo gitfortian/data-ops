@@ -60,3 +60,35 @@ export function parseLiveSourceReturn(
   const result = { dataSourceId: id, database, schema, table };
   return isValidLiveSourceCoordinate(result) ? result : null;
 }
+
+/**
+ * Model detail may show a "return to source" action only after loading the
+ * persisted ODS record and matching its exact source evidence to the URL hint.
+ * Legacy models without an exact Schema must not claim an exact return link.
+ */
+export function verifiedOdsModelSourceReturn(
+  model: {
+    layerCode?: string | null;
+    sourceDatasourceId?: number | null;
+    sourceDatabase?: string | null;
+    sourceSchema?: string | null;
+    sourceTable?: string | null;
+  } | null | undefined,
+  params: Pick<URLSearchParams, 'get'>,
+): string | null {
+  if (params.get('origin') !== 'live-source' || model?.layerCode !== 'ODS') return null;
+  const query = new URLSearchParams({
+    sourceId: params.get('datasourceId') ?? '',
+    database: params.get('database') ?? '',
+    table: params.get('table') ?? '',
+  });
+  const schema = params.get('schema');
+  if (schema) query.set('schema', schema);
+  const coordinate = parseLiveSourceReturn(query);
+  if (!coordinate
+      || model.sourceDatasourceId !== coordinate.dataSourceId
+      || model.sourceDatabase !== coordinate.database
+      || (model.sourceSchema ?? undefined) !== coordinate.schema
+      || model.sourceTable !== coordinate.table) return null;
+  return buildLiveSourceReturnPath(coordinate);
+}
