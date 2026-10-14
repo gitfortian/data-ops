@@ -75,6 +75,16 @@ describe('IA-550 task-first sidebar', () => {
     expect(within(container).queryByRole('link', { name: '文件资源' })).toBeNull();
   });
 
+  it('notifies the host when a mobile task link is chosen so the drawer can close', () => {
+    const onNavigate = jest.fn();
+    render(React.createElement(SidebarNavigation, {
+      ...props, activeId: 'modeling-workspace',
+      activeGroupPath: ['modeling'], onNavigate,
+    }));
+    fireEvent.click(screen.getByRole('link', { name: '模型工作台' }));
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+  });
+
   it('supports independently authorized tools for roles without any default task', () => {
     const filtered = getMainNavigationGroups(
       ['resource:sql-execution:read'], ['sql-execution-audit'],
