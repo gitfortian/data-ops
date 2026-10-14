@@ -46,7 +46,9 @@ it('loads an exact same-process frozen logical version and previews physical evi
   render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={back} />);
   await waitFor(() => expect(listLogicalVersions).toHaveBeenCalledWith(71));
   expect(getLogicalDraft).toHaveBeenCalledWith(71);
-  fireEvent.click(await screen.findByText('预检逻辑↔物理（只读）'));
+  const previewButton = await screen.findByText('预检逻辑↔物理（只读）');
+  await waitFor(() => expect(previewButton.closest('button')).not.toBeDisabled());
+  fireEvent.click(previewButton);
   expect(await screen.findByText('当前证据可供人工对照（不是正式映射）')).toBeInTheDocument();
   expect(await screen.findByText('order_id')).toBeInTheDocument();
   expect(previewLogicalPhysical).toHaveBeenCalledWith(71, 3, 701);
@@ -73,7 +75,9 @@ it('rejects mismatched evidence instead of labeling a different model as ready',
   jest.mocked(previewLogicalPhysical).mockResolvedValueOnce({ ...evidence, physicalModelId: 702 });
   render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={jest.fn()} />);
   await waitFor(() => expect(listLogicalVersions).toHaveBeenCalledWith(71));
-  fireEvent.click(await screen.findByText('预检逻辑↔物理（只读）'));
+  const previewButton = await screen.findByText('预检逻辑↔物理（只读）');
+  await waitFor(() => expect(previewButton.closest('button')).not.toBeDisabled());
+  fireEvent.click(previewButton);
   expect(await screen.findByText(/模型证据已变化、缺失或未通过身份校验/)).toBeInTheDocument();
   expect(screen.queryByText('当前证据可供人工对照（不是正式映射）')).not.toBeInTheDocument();
 });
