@@ -36,3 +36,11 @@
 3. 真实双 Project 跨 DataSource/Metadata/Modeling 权限拒绝、被动撤权/字段漂移、会话切换验收；这些仍属 #559 UX 与 G2 实景门禁。
 
 本 PR **不调整**导航数据库/menuCode、后端/DB、新的 MappingSet 或 TaskRevision 写操作，也不代 Product/UX 签署。
+
+## PR #561 CI 失败复盘与修复（2026-10-14）
+
+- 首次完整 Architecture Checks 的 `Complete frontend contracts` Jest 总结为 **266 suites / 1509 tests：264 suites 通过、2 suites 失败、1507 tests 通过、2 失败**；Backend Contracts、Static Architecture、Product Guard 通过。前端失败引起 Architecture gate 失败。
+- `LiveSchemaExplorer.test.tsx`：Catalog mock 同时返回 `public` 和 `audit` 的同名表，页面先前将任意其他 Schema 行视为整批查询失败，导致无法恢复 `public`。现在对 Catalog 回包先保持数据库身份校验；在指定 Schema 下**仅保留该 Schema 有明确证据的行**，不再用下拉框值补全缺失的 Schema 来推断相同表。无匹配表仍给出原有错误提示，不跨 Schema 恢复。
+- `OdsSourceJourney.test.tsx`：预期和实际的 `URLSearchParams` 键顺序不同，来源 ID、库、表、Schema 值相同；改为分别核对路径及解析后的键值，避免将序列化顺序误认为业务身份。
+- 新增负例：指定 `public` 却只收到 `audit` 表、Catalog 没有携带 Schema 时，均不尝试读取同名表字段，也不出现 ODS CTA。
+- **修复提交已推送，等待本轮完整 CI 实际结果**。此项不能仅凭源代码自检声明 Green；真实 Project/权限/浏览器验证仍待 #559 验收。
