@@ -33,5 +33,5 @@ export function parseLogicalPhysicalHint(q: URLSearchParams, physicalId: number)
 
 export function logicalDraftNavigationPath(processId: number, logicalId: number): string | null {
   if (!positive(processId) || !positive(logicalId)) return null;
-  return `/modeling/logical?processId=${processId}&draftId=${logicalId}`;
+  return `/modeling/logical?processId=${processId}&draftId=${logicalId}&review=physical`;
 }
