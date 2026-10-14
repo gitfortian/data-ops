@@ -357,6 +357,9 @@ const OdsSourceJourney = () => {
           {newTarget && (
             <>
               <section className="ods-workbench-card" aria-label="源表列结构">
+                <Alert className="ods-workbench-alert" type="info" showIcon
+                  message={lookup?.reason || '当前项目尚无精确同源 ODS'}
+                  description="这是目标查找结果，不等于当前实时字段预览已完成；请先读取并核对源列。" />
                 <div className="ods-workbench-section-title">
                   <div><p className="ods-workbench-eyebrow">01 / LIVE SOURCE COLUMNS</p>
                     <h2>核对实时源表与字段</h2>
