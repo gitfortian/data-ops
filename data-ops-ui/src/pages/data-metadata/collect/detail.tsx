@@ -28,6 +28,7 @@ function CollectTaskDetail() {
   const [version, setVersion] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('tables');
+  const [showJourney, setShowJourney] = useState(true);
   const [executing, setExecuting] = useState<'dry-run' | 'run' | null>(null);
   const [latestRun, setLatestRun] = useState<CollectRunRecord | null>(null);
   const [runResult, setRunResult] = useState<CollectRunRecord | null>(null);
@@ -50,6 +51,7 @@ function CollectTaskDetail() {
     setResultUnknown(false);
     setRefreshWarning(false);
     setActiveTab('tables');
+    setShowJourney(true);
     setHistoryOpen(false);
     if (!jobId || !canRead) {
       setLoading(false);
@@ -64,6 +66,7 @@ function CollectTaskDetail() {
           (sourceHint !== null && (String(result.dataSourceId) !== sourceHint || result.providerType !== 'HARVESTED'))
         ) throw new Error('Task scope mismatch');
         setJob(result);
+        if (result.providerType !== 'HARVESTED') setActiveTab('history');
       })
       .catch(() => {
         if (requestEpoch === operationEpoch.current) setError(true);
@@ -189,7 +192,7 @@ function CollectTaskDetail() {
                 description="请刷新任务核验实际范围、预演资格及最新调度状态；不把先前的本地任务配置当作新事实。"
                 action={<Button size="small" onClick={() => setVersion((value) => value + 1)}>重新核验任务</Button>} />
             ) : null}
-            {job.providerType === 'HARVESTED' ? (
+            {job.providerType === 'HARVESTED' && showJourney ? (
               <CollectionJourneyContinuation
                 job={job}
                 sourceName={`数据源 ${job.dataSourceId ?? '—'}`}
@@ -202,11 +205,13 @@ function CollectTaskDetail() {
                 onConfirmRun={() => confirmRun(job)}
                 onHistory={() => setHistoryOpen(true)}
                 onOpenJob={() => setActiveTab('tables')}
-                onDismiss={() => setActiveTab('tables')}
+                onDismiss={() => setShowJourney(false)}
               />
-            ) : (
+            ) : job.providerType !== 'HARVESTED' ? (
               <Alert type="info" showIcon className="metadata-task-detail-alert"
                 message="系统对账任务仅可查看当前已保存配置和运行历史；不支持直接采集" />
+            ) : (
+              <div className="metadata-task-detail-restore"><Button onClick={() => setShowJourney(true)}>继续采集任务步骤</Button></div>
             )}
             <section className="metadata-task-detail-settings" aria-label="采集任务持久配置">
               <h2>已保存的采集定义</h2>
