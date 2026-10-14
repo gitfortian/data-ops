@@ -71,6 +71,10 @@ export default function ModelCreationLogicalBasis({
     return () => { live = false; };
   }, [scope, selected, selectedDraft?.id]);
 
+  if (!layer) return <Alert type="info" showIcon
+    message="请选择目标数仓分层"
+    description="选择 ODS 将进入贴源分支；选择 DWD/DIM 等非 ODS 分层后，可核对当前业务过程的逻辑草稿与冻结版本。" />;
+
   if (!active) return (
     <Alert type="info" showIcon
       message="ODS 贴源建模是独立路径"
