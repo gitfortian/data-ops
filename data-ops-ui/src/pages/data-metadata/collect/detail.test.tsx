@@ -46,7 +46,7 @@ beforeEach(() => {
 });
 it('loads exact task and its persisted scope', async () => {
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   expect(getCollectJob).toHaveBeenCalledWith(71);
   expect(screen.getByText('trade_db')).toBeInTheDocument();
   expect(screen.getByText('来源18任务71关联表')).toBeInTheDocument();
@@ -76,7 +76,7 @@ it('does not fetch without permission', async () => {
 
 it('runs preview against the persisted task and never starts formal collection from preview', async () => {
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   fireEvent.click(screen.getByText('预演采集范围'));
   await screen.findByText('收到运行回执 801');
   expect(dryRunCollectJob).toHaveBeenCalledWith(71);
@@ -87,7 +87,7 @@ it('runs preview against the persisted task and never starts formal collection f
 it('requires explicit formal run confirmation and reads the saved scope', async () => {
   const confirm = jest.spyOn(Modal, 'confirm').mockReturnValue({ destroy: jest.fn(), update: jest.fn() });
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   fireEvent.click(screen.getByText('直接采集'));
   expect(runCollectJob).not.toHaveBeenCalled();
   const config = confirm.mock.calls[0][0];
@@ -102,7 +102,7 @@ it('requires explicit formal run confirmation and reads the saved scope', async 
 it('offers a precise source return only when the persisted job covers the exact origin', async () => {
   mockSourceQuery = 'dataSourceId=18&database=trade_db&schema=public&table=trade_order';
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   fireEvent.click(screen.getAllByText('返回原来源表')[0]);
   expect(mockPush).toHaveBeenCalledTimes(1);
   const target = String(mockPush.mock.calls[0][0]);
@@ -114,14 +114,14 @@ it('offers a precise source return only when the persisted job covers the exact 
 it('never restores a table when the task is from another Schema', async () => {
   mockSourceQuery = 'dataSourceId=18&database=trade_db&schema=audit&table=trade_order';
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   expect(screen.queryByText('返回原来源表')).not.toBeInTheDocument();
 });
 
 it('disables both collection actions for read-only roles', async () => {
   mockCan.mockImplementation((permission: string) => permission === 'data-metadata:read');
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   expect(screen.getByText('预演采集范围').closest('button')).toBeDisabled();
   expect(screen.getByText('直接采集').closest('button')).toBeDisabled();
   expect(dryRunCollectJob).not.toHaveBeenCalled();
@@ -131,7 +131,7 @@ it('handles a mismatched preview receipt as unknown and sends user to actual his
   jest.mocked(dryRunCollectJob).mockResolvedValueOnce({ jobId: 99, runId: 899, dryRun: true, status: 'SUCCESS' });
   const warning = jest.spyOn(Modal, 'warning').mockReturnValue({ destroy: jest.fn(), update: jest.fn() });
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   fireEvent.click(screen.getByText('预演采集范围'));
   await screen.findByText('运行结果待核对');
   expect(screen.queryByText('已收到通过的预览回执')).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ it('handles a mismatched preview receipt as unknown and sends user to actual his
 
 it('re-opens the guided panel after dismissing it', async () => {
   render(<Detail />);
-  await screen.findByText('订单采集');
+  await screen.findByText('订单采集', { selector: 'h1' });
   fireEvent.click(screen.getByText('收起引导'));
   expect(screen.queryByText('预演采集范围')).not.toBeInTheDocument();
   fireEvent.click(screen.getByText('继续采集任务步骤'));
