@@ -130,3 +130,19 @@ it('fails closed after a preview failure and directs users to run history', asyn
   expect(screen.getByText(/核对运行历史/)).toBeInTheDocument();
   expect(runCollectJob).not.toHaveBeenCalled();
 });
+
+it('rejects a mismatched backend Run receipt instead of presenting another task as success', async () => {
+  const warning = jest.spyOn(Modal, 'warning').mockReturnValue({ destroy: jest.fn(), update: jest.fn() });
+  jest.mocked(dryRunCollectJob).mockResolvedValueOnce({
+    runId: 333, jobId: 999, dryRun: true, status: 'SUCCESS',
+  });
+  render(<MetadataCollectPage />);
+  fireEvent.click(screen.getByRole('button', { name: '新建采集任务' }));
+  fireEvent.click(screen.getByText('模拟保存来源任务'));
+  fireEvent.click(screen.getByText('预演采集范围'));
+  expect(await screen.findByText('运行结果待核对')).toBeInTheDocument();
+  expect(screen.queryByText('已收到通过的预览回执')).not.toBeInTheDocument();
+  expect(runCollectJob).not.toHaveBeenCalled();
+  expect(warning).toHaveBeenCalledWith(expect.objectContaining({ title: '暂未收到执行结果' }));
+  warning.mockRestore();
+});
