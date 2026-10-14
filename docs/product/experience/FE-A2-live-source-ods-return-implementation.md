@@ -9,7 +9,7 @@
 - [x] 复用已有 `OdsSourceJourney` 中 `listAllDataSources`、`getOdsSourceCandidates`、精准 0/1/N 候选/Unverified、实时源列预览、`createModelingModel` 和 `commitOdsManualImport` 带乐观锁的原子回执，**不复制写接口、不放宽异常或 Project 授权**。
 - [x] 从这条 DataSource 入口进入时，ODS 的“返回来源物理表”及“保存并返回来源”跳到 `/data-source?sourceId=&database=&schema=&table=`，并且 DataSource 页必须由 **DataSource Owner `getDataSource` + `listAllDataSources` 双重证明当前项目持有该来源** 后才打开 Workspace；没有授权/来源失效/深链参数畸形时仅报错并允许回列表。
 - [x] 恢复时从 *exact* 库/Schema/表重新执行 Catalog 列读取和表选择；不自动跳到另一个 Schema 的同名表。历史来自 Asset Catalog 的入口仍返回 Asset Catalog，无行为回退。
-- [x] 旧数据源列表、连接检测、Metadata 采集信息、保存/预演/运行和资产纳管各自保留原操作；**不存在先资产 WRITE 才能建 ODS 的条件**。
+- [x] 已有 ODS 候选进入模型详情时携带来源四元组；详情页必须通过 Modeling Owner 返回的 ODS sourceDatasourceId/database/schema/table 四字段精确核验，才显示“返回来源表”。历史 Schema 缺失、不一致及非 ODS 不显示。\n- [x] 旧数据源列表、连接检测、Metadata 采集信息、保存/预演/运行和资产纳管各自保留原操作；**不存在先资产 WRITE 才能建 ODS 的条件**。
 
 ## 真正的服务与授权合同
 
@@ -32,7 +32,7 @@
 ## 剩余 FE-A2 工作（不在本 PR 内声称完成）
 
 1. 采集任务从精确源范围接续“保存 → 预演 → 正式运行 → 结果下一步”全链路可用性；尤其运行超时、重新载入、回源与 Run/Job 对账。
-2. 已存在 ODS 的精确模型详情返回来源上下文；模型详情仍沿用原有链接，不能宣称其已具备新的专属回退按钮。
+2. 已存在 ODS 的详情已接入来源上下文，仍需在真实环境中确认各发布/历史版本与原域匹配，以及详情编辑状态下的未保存修改返回提示。
 3. 真实双 Project 跨 DataSource/Metadata/Modeling 权限拒绝、被动撤权/字段漂移、会话切换验收；这些仍属 #559 UX 与 G2 实景门禁。
 
 本 PR **不调整**导航数据库/menuCode、后端/DB、新的 MappingSet 或 TaskRevision 写操作，也不代 Product/UX 签署。
