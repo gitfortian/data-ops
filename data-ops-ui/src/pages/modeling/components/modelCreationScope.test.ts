@@ -3,17 +3,17 @@ import {
 } from './modelCreationScope';
 import type { SemanticDomainNode, SemanticProcessRecord } from '@/services/semantic/types';
 const tree: SemanticDomainNode[] = [
-  { id: 1, code: 'trade', name: '交易', children: [
-    { id: 2, code: 'orders', name: '订单', children: [
-      { id: 3, code: 'details', name: '订单明细', children: [] },
+  { id: 1, code: 'trade', name: '交易', sortOrder: 1, children: [
+    { id: 2, code: 'orders', name: '订单', sortOrder: 1, children: [
+      { id: 3, code: 'details', name: '订单明细', sortOrder: 1, children: [] },
     ] },
   ] },
-  { id: 4, code: 'finance', name: '财务', children: [] },
+  { id: 4, code: 'finance', name: '财务', sortOrder: 2, children: [] },
 ];
 const processes: SemanticProcessRecord[] = [
-  { id: 71, code: 'order_create', name: '下单', domainId: 2, grain: '每笔订单', bizType: 'FACT' },
-  { id: 72, code: 'item_create', name: '订单明细', domainId: 3, grain: '每笔订单明细', bizType: 'FACT' },
-  { id: 80, code: 'invoice', name: '开票', domainId: 4, bizType: 'FACT' },
+  { id: 71, code: 'order_create', name: '下单', sortOrder: 1, domainId: 2, grain: '每笔订单', bizType: 'FACT' },
+  { id: 72, code: 'item_create', name: '订单明细', sortOrder: 2, domainId: 3, grain: '每笔订单明细', bizType: 'FACT' },
+  { id: 80, code: 'invoice', name: '开票', sortOrder: 3, domainId: 4, bizType: 'FACT' },
 ];
 
 it('prefills parent business domain from nested process owner without changing the process or its grain', () => {
