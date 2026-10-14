@@ -6,6 +6,7 @@ import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT, MODELING_STATUS_LABE
 import ModelLineagePanel from '@/pages/modeling/components/ModelLineagePanel';
 import ModelVersionPanel from '@/pages/modeling/components/ModelVersionPanel';
 import ModelingModelDetail from '@/pages/modeling/detail';
+import LogicalPhysicalEvidencePanel from '@/pages/modeling/components/LogicalPhysicalEvidencePanel';
 import type { ModelStructureEditorStatus } from '@/pages/modeling/detail';
 import ModelLifecycleTab from '@/pages/data-lifecycle/components/ModelLifecycleTab';
 import LayerFieldMappingPage from '@/pages/modeling/layer-mapping';
@@ -28,7 +29,7 @@ const UnifiedModelView: React.FC = () => {
   const modelId = params.id;
   const location = useLocation();
   const queryTab = new URLSearchParams(location.search).get('tab');
-  const tabKeys = ['overview', 'structure', 'mapping', 'layer-mapping', 'process', 'lineage', 'lifecycle', 'version', 'task'];
+  const tabKeys = ['overview', 'logical', 'structure', 'mapping', 'layer-mapping', 'process', 'lineage', 'lifecycle', 'version', 'task'];
   const activeTab = queryTab && tabKeys.includes(queryTab) ? queryTab : 'structure';
   const [model, setModel] = useState<ModelingModelRecord>();
   const [structureEditor, setStructureEditor] = useState<{
@@ -44,24 +45,26 @@ const UnifiedModelView: React.FC = () => {
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
   const [loadError, setLoadError] = useState(false);
-  const returnToVerifiedSource = () => {
-    if (!sourceReturnPath) return;
+  const guardDraftAndNavigate = (navigate: () => void) => {
     const editor = structureEditor && structureEditor.modelId === modelId ? structureEditor.state : undefined;
     if (editor?.loading || editor?.saving) {
-      message.warning('模型表结构正在加载或保存，请完成后再返回来源表。');
+      message.warning('模型表结构正在加载或保存，请完成后再离开。');
       return;
     }
     if (editor?.dirty) {
       Modal.confirm({
-        title: '物理模型还有未保存的改动',
-        content: '离开会放弃当前未保存的字段、主键、索引和表属性修改；请先保存，或者明确放弃后返回来源表。',
-        okText: '放弃未保存改动并返回', okType: 'danger',
-        cancelText: '继续编辑',
-        onOk: () => history.push(sourceReturnPath),
+        title: '当前物理表结构还有未保存改动',
+        content: '离开当前字段编辑界面会丢弃未保存的字段、主键、索引和表属性修改。请先保存，或明确放弃后继续。',
+        okText: '放弃修改并继续', okType: 'danger',
+        cancelText: '继续编辑', onOk: navigate,
       });
       return;
     }
-    history.push(sourceReturnPath);
+    navigate();
+  };
+  const returnToVerifiedSource = () => {
+    if (!sourceReturnPath) return;
+    guardDraftAndNavigate(() => history.push(sourceReturnPath));
   };
 
   const reloadModel = useCallback(() => {
@@ -197,7 +200,7 @@ const UnifiedModelView: React.FC = () => {
               返回来源表
             </YakButton>
           ) : null}
-          <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => history.push('/modeling')}>
+          <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => guardDraftAndNavigate(() => history.push('/modeling'))}>
             返回列表
           </YakButton>
         </Space>
@@ -208,10 +211,15 @@ const UnifiedModelView: React.FC = () => {
         activeKey={activeTab}
         onChange={(tab) => {
           const query = new URLSearchParams(location.search); query.set('tab', tab);
-          history.replace({ pathname: location.pathname, search: `?${query.toString()}` });
+          guardDraftAndNavigate(() => history.replace({ pathname: location.pathname, search: `?${query.toString()}` }));
         }}
         items={[
           { key: 'overview', label: '基本信息', children: overview },
+          { key: 'logical', label: '业务逻辑依据', children: <LogicalPhysicalEvidencePanel
+            model={model?.id != null && String(model.id) === modelId ? model : undefined}
+            search={location.search}
+            onNavigateLogical={(path) => guardDraftAndNavigate(() => history.push(path))}
+          /> },
           { key: 'structure', label: '表结构', children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
           { key: 'mapping', label: '来源映射', children: <MappingPanel /> },
           {

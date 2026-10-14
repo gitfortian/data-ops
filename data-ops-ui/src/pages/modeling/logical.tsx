@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
+import { physicalEvidencePath } from '@/utils/logicalPhysicalJourney';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { locateCurrentLogicalAttribute, locateCurrentLogicalRelation } from './governanceRepairLocator';
@@ -45,6 +46,7 @@ export default function LogicalWorkspace() {
   const processParam = searchParams.get('processId');
   const requestedProcessId = parseJourneyProcessId(processParam);
   const reviewRequested = searchParams.get('review') === 'semantic';
+  const physicalReturnRequested = searchParams.get('review') === 'physical';
   const draftParam = searchParams.get('draftId');
   const requestedDraftId = parseJourneyProcessId(draftParam);
   const { currentProject } = useSecurityProject();
@@ -111,7 +113,7 @@ export default function LogicalWorkspace() {
       if (processParam !== null && requestedProcessId === undefined) {
         throw new Error('业务过程 URL 参数不是有效的正整数，请返回业务过程列表重新选择');
       }
-      if (reviewRequested && (!requestedProcessId || !requestedDraftId || draftParam === null)) {
+      if ((reviewRequested || physicalReturnRequested) && (!requestedProcessId || !requestedDraftId || draftParam === null)) {
         throw new Error('治理入口缺少合法的业务过程或逻辑草稿身份，请从业务过程重新选择');
       }
       // The URL only carries a hint. Resolve with Semantic's authenticated,
@@ -130,10 +132,10 @@ export default function LogicalWorkspace() {
       setJourneyProcess(authorizedProcess);
       setModels(eligible);
       setProcesses(authorizedProcess ? [authorizedProcess] : (all.bizData ?? []));
-      const active = reviewRequested
+      const active = (reviewRequested || physicalReturnRequested)
         ? exactJourneyLogicalDraft(eligible, requestedProcessId!, requestedDraftId!)?.id
         : chooseJourneyLogicalModel(eligible, requestedProcessId, id);
-      if (reviewRequested && active === undefined) {
+      if ((reviewRequested || physicalReturnRequested) && active === undefined) {
         throw new Error('目标逻辑草稿不存在于当前有权访问的业务过程中，不会选中其他草稿');
       }
       setSelected(active);
@@ -185,7 +187,7 @@ export default function LogicalWorkspace() {
       if (epoch === loadEpoch.current) setLoading(false);
     }
   }, [processParam, requestedProcessId, requestedDraftId, draftParam,
-    reviewRequested, currentProject?.id]);
+    reviewRequested, physicalReturnRequested, currentProject?.id]);
 
   useEffect(() => { void reload(); }, [reload]);
 
@@ -736,6 +738,17 @@ export default function LogicalWorkspace() {
         <Alert type={handoffPreview.blockers.length ? 'warning' : 'info'} showIcon
           message={handoffPreview.blockers.length ? '仍有交接阻断项' : '仅已达到人工审阅条件'}
           description="字段的 stdFieldId 一致只代表可核对候选，不代表 SQL 映射、逻辑版本已发布、物理模型已生成或数据已执行。" />
+        <div className="mt-3">
+          <Button onClick={() => {
+            const target = detail && physicalEvidencePath({
+              processId: detail.model.processId,
+              logicalId: handoffPreview.logicalModelId,
+              logicalVersionNo: handoffPreview.logicalVersionNo,
+              physicalId: handoffPreview.physicalModelId,
+            });
+            if (target) history.push(target);
+          }}>打开此物理模型 · 核对逻辑依据</Button>
+        </div>
         <div className="mt-3 flex flex-wrap gap-4">
           <Typography.Text type="secondary">冻结逻辑 v{handoffPreview.logicalVersionNo} · SHA-256：
             <Typography.Text copyable={{ text: handoffPreview.logicalSnapshotSha256 }}>

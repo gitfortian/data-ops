@@ -123,3 +123,25 @@ it('does not offer a return action when persisted ODS source differs from URL', 
   await screen.findByText('Order ODS');
   expect(screen.queryByText('返回来源表')).not.toBeInTheDocument();
 });
+
+it('does not silently discard the structure editor when switching to logical evidence', async () => {
+  jest.spyOn(Modal, 'confirm').mockImplementation((options) => {
+    pendingConfirm = options;
+    return { destroy: jest.fn(), update: jest.fn() };
+  });
+  render(<UnifiedModelView />);
+  fireEvent.change(await screen.findByLabelText('结构草稿'), {
+    target: { value: 'unsaved-business-key' },
+  });
+  fireEvent.click(screen.getByText('业务逻辑依据'));
+  expect(pendingConfirm?.okText).toBe('放弃修改并继续');
+  expect(pendingConfirm?.cancelText).toBe('继续编辑');
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('结构草稿')).toHaveValue('unsaved-business-key');
+  await act(async () => { pendingConfirm?.onCancel?.(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  await act(async () => { await pendingConfirm?.onOk?.(jest.fn()); });
+  expect(mockReplace).toHaveBeenCalledTimes(1);
+  const destination = mockReplace.mock.calls[0][0] as { search: string };
+  expect(new URLSearchParams(destination.search).get('tab')).toBe('logical');
+});
