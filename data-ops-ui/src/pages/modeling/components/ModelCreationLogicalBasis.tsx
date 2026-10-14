@@ -2,7 +2,7 @@ import { Alert, Button, Select, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import { listLogicalDrafts, listLogicalVersions } from '@/services/modeling/logical';
+import { getLogicalDraft, listLogicalDrafts, listLogicalVersions } from '@/services/modeling/logical';
 import type { LogicalDraftVersion, LogicalModelDraft } from '@/services/modeling/logical';
 import { latestJourneyFrozenVersion } from '@/utils/journeyNavigation';
 import { requiresLogicalBasis } from './modelCreationScope';
@@ -44,7 +44,8 @@ export default function ModelCreationLogicalBasis({
     setFetching(true);
     void listLogicalDrafts().then((items) => {
       if (!live) return;
-      setCatalog({ scope, drafts: (items ?? []).filter(x => x.processId === processId) });
+      setCatalog({ scope, drafts: (items ?? []).filter(x =>
+        x.processId === processId && String(x.projectId) === String(currentProject.id)) });
     }).catch(() => {
       if (live) setCatalog({ scope, drafts: [], error: true });
     }).finally(() => { if (live) setFetching(false); });
@@ -56,8 +57,12 @@ export default function ModelCreationLogicalBasis({
     if (selected == null || !selectedDraft) return;
     let live = true;
     setVersionsLoading(true);
-    void listLogicalVersions(selected).then((list) => {
+    void Promise.all([getLogicalDraft(selected), listLogicalVersions(selected)]).then(([detail, list]) => {
       if (!live) return;
+      if (detail.model.id !== selected || detail.model.processId !== processId
+          || String(detail.model.projectId) !== String(currentProject?.id)) {
+        throw new Error('Logical draft Owner identity mismatch');
+      }
       setVersions({ scope, id: selected, list: (list ?? []).filter(x =>
         Number.isSafeInteger(x.versionNo) && x.versionNo > 0) });
     }).catch(() => {
