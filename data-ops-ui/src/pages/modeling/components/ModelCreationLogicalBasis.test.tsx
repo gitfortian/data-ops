@@ -25,6 +25,13 @@ beforeEach(() => {
   jest.mocked(getLogicalDraft).mockResolvedValue({ model: draft, process: { id: 15 } as any, entities: [], relations: [] });
 });
 
+it('does not claim ODS semantics before the target warehouse layer is selected', () => {
+  render(<ModelCreationLogicalBasis processId={15} onOpenLogical={jest.fn()} />);
+  expect(screen.getByText('请选择目标数仓分层')).toBeInTheDocument();
+  expect(screen.queryByText('ODS 贴源建模是独立路径')).not.toBeInTheDocument();
+  expect(listLogicalDrafts).not.toHaveBeenCalled();
+});
+
 it('never queries a logical draft for source-to-ODS creation', () => {
   render(<ModelCreationLogicalBasis layer="ODS" processId={15} onOpenLogical={jest.fn()} />);
   expect(screen.getByText('ODS 贴源建模是独立路径')).toBeInTheDocument();
