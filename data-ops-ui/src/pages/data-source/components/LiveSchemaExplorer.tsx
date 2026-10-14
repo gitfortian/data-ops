@@ -8,7 +8,8 @@ import type { CollectionSourceScope } from '@/services/metadata/collectionHandof
 import { Alert, Button, Input, Select, Spin, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { KeyRound, RefreshCw, Search, Table2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { LiveSourceCoordinate } from '@/utils/liveSourceOdsJourney';
 
 const tableKey = (table: DataSourceCatalogTable) => JSON.stringify([table.database, table.schema, table.name]);
 
@@ -18,18 +19,24 @@ export default function LiveSchemaExplorer({
   canRead,
   onScopeChange,
   onDefineTask,
+  onOpenOds,
+  initialTable,
   definitionLoading = false,
 }: {
   sourceId: string;
   canRead: boolean;
   onScopeChange?: (scope: CollectionSourceScope) => void;
   onDefineTask?: (scope: CollectionSourceScope) => void;
+  /** Modeling route access is checked by the parent and rechecked on the destination. */
+  onOpenOds?: (source: LiveSourceCoordinate) => void;
+  /** Exact source coordinates returned by ODS, never a source authorization. */
+  initialTable?: { database: string; schema?: string; table: string };
   definitionLoading?: boolean;
 }) {
   const [databases, setDatabases] = useState<string[]>([]);
-  const [database, setDatabase] = useState<string>();
+  const [database, setDatabase] = useState<string | undefined>(initialTable?.database);
   const [schemas, setSchemas] = useState<string[]>([]);
-  const [schema, setSchema] = useState<string>();
+  const [schema, setSchema] = useState<string | undefined>(initialTable?.schema);
   const [databasesReady, setDatabasesReady] = useState(false);
   const [resolvedDatabases, setResolvedDatabases] = useState<{ sourceId: string; version: number } | null>(null);
   const [schemasReady, setSchemasReady] = useState(false);
@@ -39,8 +46,10 @@ export default function LiveSchemaExplorer({
   const [databaseError, setDatabaseError] = useState(false);
   const [schemaError, setSchemaError] = useState(false);
   const [version, setVersion] = useState(0);
-  const [searchInput, setSearchInput] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState(initialTable?.table ?? '');
+  const [keyword, setKeyword] = useState(initialTable?.table ?? '');
+  const restorePending = useRef(Boolean(initialTable));
+  const [restoreWarning, setRestoreWarning] = useState('');
   const [tables, setTables] = useState<DataSourceCatalogTable[]>([]);
   const [tablesLoading, setTablesLoading] = useState(true);
   const [tableError, setTableError] = useState(false);
@@ -143,18 +152,40 @@ export default function LiveSchemaExplorer({
     void searchDataSourceTables(sourceId, keyword || undefined, { database, schema, limit: 100 })
       .then((result) => {
         if (!active) return;
-        if (
-          result.some(
-            (table) =>
-              !table.name ||
-              (database && table.database && table.database !== database) ||
-              (schema && table.schema && table.schema !== schema),
-          )
-        ) {
+        // Some Catalog providers return tables across schemas despite the
+        // requested schema filter. Never expose an out-of-scope candidate as
+        // the returned source; filter by the *actual* table schema, not a
+        // fallback inferred from the selected dropdown.
+        if (result.some((table) =>
+          !table.name || (database && table.database && table.database !== database)
+        )) {
           setTableError(true);
           return;
         }
-        setTables(result);
+        const scopedTables = schema
+          ? result.filter((candidate) => candidate.schema === schema)
+          : result;
+        setTables(scopedTables);
+        if (restorePending.current && initialTable) {
+          // The return hint does not prove a source identity. Selection only
+          // happens after the exact requested DB and schema have been resolved.
+          // A missing schema or an extra identically named table in another
+          // schema is never treated as an exact match.
+          restorePending.current = false;
+          const exact = database === initialTable.database
+            && schema === initialTable.schema
+            ? scopedTables.find((candidate) =>
+                candidate.database === initialTable.database
+                && (candidate.schema ?? undefined) === initialTable.schema
+                && candidate.name === initialTable.table)
+            : undefined;
+          if (exact) {
+            setSelected(exact);
+            setRestoreWarning('');
+          } else {
+            setRestoreWarning('原来源表无法在当前项目及 Schema 精确核验，请重新选择源表；不会自动跳至同名表。');
+          }
+        }
       })
       .catch(() => {
         if (active) setTableError(true);
@@ -194,7 +225,7 @@ export default function LiveSchemaExplorer({
       key: 'name',
       render: (_, table) => (
         <div>
-          <Button type="link" size="small" className="source-probe-table-link" onClick={() => setSelected(table)}>
+          <Button type="link" size="small" className="source-probe-table-link" onClick={() => { restorePending.current = false; setRestoreWarning(''); setSelected(table); }}>
             {table.name}
           </Button>
           <div className="source-workspace-scope">
@@ -262,6 +293,8 @@ export default function LiveSchemaExplorer({
               setSchemasReady(false);
               setSchema(undefined);
               setSelected(null);
+              restorePending.current = false;
+              setRestoreWarning('');
               setDatabase(value);
             }}
           />
@@ -281,6 +314,8 @@ export default function LiveSchemaExplorer({
             onChange={(value) => {
               setSchema(value);
               setSelected(null);
+              restorePending.current = false;
+              setRestoreWarning('');
             }}
           />
         </label>
@@ -315,6 +350,7 @@ export default function LiveSchemaExplorer({
         />
       ) : (
         <>
+          {restoreWarning ? <Alert type="warning" showIcon message={restoreWarning} /> : null}
           <div className="source-probe-search-row">
             <Input
               className="source-workspace-search"
@@ -383,6 +419,29 @@ export default function LiveSchemaExplorer({
                           icon={<RefreshCw size={14} />}
                           onClick={() => setColumnVersion((value) => value + 1)}
                         />
+                      </div>
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {selected.type === 'TABLE' && onOpenOds ? (
+                          <Button
+                            type="primary"
+                            className="w-full"
+                            disabled={columnsLoading || columnError || columns.length === 0
+                              || !(selected.database ?? database) || !selected.name}
+                            onClick={() => {
+                              const sourceDatabase = selected.database ?? database;
+                              const sourceTable = selected.name;
+                              if (!sourceDatabase || !sourceTable) return;
+                              onOpenOds({
+                                dataSourceId: Number(sourceId),
+                                database: sourceDatabase,
+                                schema: selected.schema ?? schema,
+                                table: sourceTable,
+                              });
+                            }}
+                          >
+                            打开或创建 ODS
+                          </Button>
+                        ) : null}
                       </div>
                       {columnError ? (
                         <Alert

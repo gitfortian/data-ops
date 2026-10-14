@@ -90,3 +90,50 @@ it('rejects missing project source evidence instead of offering a new model', as
     expect(screen.getByText(/当前项目无法核验来源数据源/)).toBeInTheDocument());
   expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
 });
+
+it('returns to the exact live source table rather than forcing Asset catalog after direct source entry', async () => {
+  mockQuery = new URLSearchParams({
+    sourceJourney: 'ods', origin: 'live-source', datasourceId: '10',
+    database: 'trade_db', schema: 'public', table: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  const returnButton = await screen.findByRole('button', { name: '返回数据源表结构' });
+  fireEvent.click(returnButton);
+  const expected = new URLSearchParams({
+    sourceId: '10', database: 'trade_db', schema: 'public', table: 'orders',
+  });
+  // Query parameter ordering is not an identity contract.
+  expect(mockPush).toHaveBeenCalledTimes(1);
+  const returnedUrl = mockPush.mock.calls[0][0] as string;
+  expect(returnedUrl.split('?')[0]).toBe('/data-source');
+  expect(Object.fromEntries(new URLSearchParams(returnedUrl.split('?')[1]).entries()))
+    .toEqual(Object.fromEntries(expected.entries()));
+  expect(mockCandidates).toHaveBeenCalledWith({
+    datasourceId: 10, database: 'trade_db', schema: 'public', table: 'orders',
+  });
+});
+
+it('does not trust an arbitrary return URL; legacy Asset navigation still has its original destination', async () => {
+  mockQuery.set('returnTo', 'https://attacker.example');
+  render(<OdsSourceJourney />);
+  const button = await screen.findByRole('button', { name: '返回来源物理表' });
+  fireEvent.click(button);
+  expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/data-asset/catalog?'));
+  expect(mockPush).not.toHaveBeenCalledWith('https://attacker.example');
+});
+
+it('passes live source context to an existing ODS model detail for verified return', async () => {
+  mockQuery = new URLSearchParams({
+    sourceJourney: 'ods', origin: 'live-source', datasourceId: '10',
+    database: 'trade_db', schema: 'public', table: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  fireEvent.click(await screen.findByRole('button', { name: '打开已保存 ODS' }));
+  expect(mockPush).toHaveBeenCalledWith(
+    `/modeling/models/501?${new URLSearchParams({
+      origin: 'live-source', datasourceId: '10',
+      database: 'trade_db', table: 'orders', schema: 'public',
+    })}`,
+  );
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});

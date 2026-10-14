@@ -7,6 +7,7 @@ import { collectDefinitionPath, findCoveringCollectionJobs } from '@/services/me
 import type { CollectionSourceScope } from '@/services/metadata/collectionHandoff';
 import type { CollectJobRecord } from '@/services/metadata/types';
 import type { DataSourcePermissions, DataSourceRecord } from '../types';
+import { buildLiveSourceOdsPath } from '@/utils/liveSourceOdsJourney';
 import { dataSourceRecordKey } from '../types';
 import CollectionInfo from './CollectionInfo';
 import DataSourceStatus from './DataSourceStatus';
@@ -19,6 +20,7 @@ interface DataSourceWorkspaceProps {
   onClose: () => void;
   onTestConnection: (record: DataSourceRecord) => void;
   onEdit: (record: DataSourceRecord) => void;
+  initialTable?: { database: string; schema?: string; table: string };
 }
 
 export default function DataSourceWorkspace({
@@ -28,6 +30,7 @@ export default function DataSourceWorkspace({
   onClose,
   onTestConnection,
   onEdit,
+  initialTable,
 }: DataSourceWorkspaceProps) {
   const access = useAccess();
   const sourceKey = dataSourceRecordKey(record.id);
@@ -149,6 +152,15 @@ export default function DataSourceWorkspace({
           {tab === 'live' ? (
             <LiveSchemaExplorer
               sourceId={sourceKey}
+              initialTable={initialTable}
+              onOpenOds={validSource && access.hasPermission('modeling:read') &&
+                access.hasPermission('resource:data-source:read')
+                ? (source) => {
+                    const path = buildLiveSourceOdsPath(source);
+                    if (path) history.push(path);
+                    else message.warning('来源坐标不完整，无法安全进入 ODS，请重新核对物理表');
+                  }
+                : undefined}
               canRead={validSource && access.hasPermission('resource:data-source:read')}
               onDefineTask={canCreate || canUpdate ? (target) => void defineCollection(target) : undefined}
               definitionLoading={defining}

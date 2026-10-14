@@ -10,6 +10,7 @@ import { getOdsSourceCandidates, previewModelingImportColumns } from '@/services
 import type { OdsSourceLookup } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord } from '@/services/modeling/types';
 import { MODELING_DIALECT_OPTIONS, dialectOfDbType } from '@/pages/modeling/constants';
+import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
 
 const positiveId = (raw: string | null): number | null => {
   if (!raw || !/^[1-9]\d*$/.test(raw)) return null;
@@ -32,7 +33,26 @@ const OdsSourceJourney = () => {
   const draftId = positiveId(params.get('draftId'));
   const valid = datasourceId != null && validName(database) && validName(table)
     && (!schema || validName(schema));
-  const sourceReturn = `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
+  // The origin is a known enumeration, never an arbitrary redirect URL.
+  // This hint only affects where navigation returns; source ownership is still
+  // checked independently by DataSource and Modeling on every read/write.
+  const liveSourceReturn = datasourceId != null && params.get('origin') === 'live-source'
+    ? buildLiveSourceReturnPath({ dataSourceId: datasourceId, database, schema, table })
+    : null;
+  const sourceReturn = liveSourceReturn ??
+    `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
+
+  const modelDetailPath = (modelId: number): string => {
+    const path = `/modeling/models/${modelId}`;
+    if (!liveSourceReturn || datasourceId == null) return path;
+    const query = new URLSearchParams({
+      origin: 'live-source',
+      datasourceId: String(datasourceId),
+      database, table,
+    });
+    if (schema) query.set('schema', schema);
+    return `${path}?${query}`;
+  };
 
   const [lookup, setLookup] = useState<OdsSourceLookup | null>(null);
   const [failure, setFailure] = useState('');
@@ -247,7 +267,7 @@ const OdsSourceJourney = () => {
   return (
     <div className="mx-auto max-w-[1080px] space-y-4 px-6 py-6">
       <Space>
-        <Button onClick={() => navigateSafely(sourceReturn)}>返回来源物理表</Button>
+        <Button onClick={() => navigateSafely(sourceReturn)}>{liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}</Button>
         <Button type="link" onClick={() => navigateSafely('/modeling')}>建模工作台</Button>
       </Space>
       <Typography.Title level={4}>从物理表继续 ODS 设计</Typography.Title>
@@ -268,7 +288,7 @@ const OdsSourceJourney = () => {
           {lookup.candidates.map(candidate => (
             <div key={candidate.modelId} className="flex items-center justify-between rounded border border-solid border-[#eaecf0] p-3">
               <Space><strong>{candidate.name}</strong><Tag>{candidate.code}</Tag><Tag>{candidate.status}</Tag></Space>
-              <Button type="primary" onClick={() => history.push(`/modeling/models/${candidate.modelId}`)}>
+              <Button type="primary" onClick={() => history.push(modelDetailPath(candidate.modelId))}>
                 打开已保存 ODS
               </Button>
             </div>
@@ -319,7 +339,7 @@ const OdsSourceJourney = () => {
             </Space>
           )}
           {savedDraft?.id && (
-            <Button onClick={() => history.push(`/modeling/models/${savedDraft.id}`)}>
+            <Button onClick={() => history.push(modelDetailPath(Number(savedDraft.id)))}>
               打开已保存的模型 #{savedDraft.id}
             </Button>
           )}
@@ -327,7 +347,7 @@ const OdsSourceJourney = () => {
             <Alert type="success" showIcon message="ODS 已保存，逐列映射有持久化回执"
               action={<Space>
                 <Button type="primary" onClick={() => history.push(sourceReturn)}>保存并返回来源</Button>
-                <Button onClick={() => history.push(`/modeling/models/${savedId}`)}>打开 ODS</Button>
+                <Button onClick={() => history.push(modelDetailPath(savedId))}>打开 ODS</Button>
               </Space>} />
           )}
         </div>

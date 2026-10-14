@@ -1,9 +1,11 @@
-import { useIntl } from '@umijs/max';
+import { history, useIntl, useSearchParams } from '@umijs/max';
 import { Alert, Button, message, Modal, Pagination, Spin } from 'antd';
 import { motion } from 'framer-motion';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { getDataSource, listAllDataSources } from '@/services/data-source/api';
+import { parseLiveSourceReturn } from '@/utils/liveSourceOdsJourney';
 
 import AddOrEditDataSourceModal from './components/AddOrEditDataSourceModal';
 import DataSourceCard from './components/DataSourceCard';
@@ -23,7 +25,12 @@ const { confirm } = Modal;
 const DataSourcePage = () => {
   const intl = useIntl();
   const modalRef = useRef<DataSourceModalRef>(null);
+  const [params] = useSearchParams();
   const [workspaceRecord, setWorkspaceRecord] = useState<DataSourceRecord | null>(null);
+  const [returnProblem, setReturnProblem] = useState('');
+  const returnKey = params.toString();
+  const returnHint = parseLiveSourceReturn(params);
+  const returnRequested = params.has('sourceId');
 
   const {
     loading,
@@ -51,6 +58,43 @@ const DataSourcePage = () => {
     removeRecord,
     testRecord,
   } = useDataSourcePage();
+
+  useEffect(() => {
+    if (!returnRequested) { setReturnProblem(''); return; }
+    if (!returnHint) {
+      setReturnProblem('来源坐标无效，请从数据源列表重新选择，禁止按同名表自动恢复。');
+      return;
+    }
+    let active = true;
+    setWorkspaceRecord(null);
+    setReturnProblem('');
+    // This URL is a hint only. Both the scoped list and the exact record
+    // must independently confirm the DataSource Owner identity in this Project.
+    void Promise.all([
+      getDataSource(returnHint.dataSourceId),
+      listAllDataSources(),
+    ]).then(([record, available]) => {
+      if (!active) return;
+      const exists = (available.bizData ?? []).some((item) =>
+        Number(item.id) === returnHint.dataSourceId);
+      if (!record || Number(record.id) !== returnHint.dataSourceId || !exists) {
+        throw new Error('当前项目无法核验原数据源；请从列表手动核查，不跨项目显示结构。');
+      }
+      setWorkspaceRecord(record);
+    }).catch((error) => {
+      if (active) setReturnProblem(error instanceof Error ? error.message : '无法核验来源，请手动打开数据源。');
+    });
+    return () => { active = false; };
+  }, [returnKey]);
+
+  const closeWorkspace = () => {
+    setWorkspaceRecord(null);
+    if (returnRequested) {
+      const cleaned = new URLSearchParams(params.toString());
+      ['sourceId', 'database', 'schema', 'table'].forEach((key) => cleaned.delete(key));
+      history.replace(`/data-source${cleaned.toString() ? `?${cleaned}` : ''}`);
+    }
+  };
 
   const handleCreate = () => {
     if (!permissions.canCreate) return;
@@ -156,6 +200,11 @@ const DataSourcePage = () => {
             </div>
 
             <div className="source-page-content">
+              {returnProblem ? (
+                <Alert type="warning" showIcon message="未能恢复来源表"
+                  description={returnProblem}
+                  action={<Button onClick={() => history.replace('/data-source')}>查看数据源列表</Button>} />
+              ) : null}
               {loadError ? (
                 <Alert
                   type="error"
@@ -235,7 +284,10 @@ const DataSourcePage = () => {
           }
           permissions={permissions}
           testingId={testingId}
-          onClose={() => setWorkspaceRecord(null)}
+          initialTable={returnHint && Number(workspaceRecord.id) === returnHint.dataSourceId
+            ? { database: returnHint.database, schema: returnHint.schema, table: returnHint.table }
+            : undefined}
+          onClose={closeWorkspace}
           onTestConnection={(record) => void handleTestConnection(record)}
           onEdit={(record) => void handleEdit(record)}
         />

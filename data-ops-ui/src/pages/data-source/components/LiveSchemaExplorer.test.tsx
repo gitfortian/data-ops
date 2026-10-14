@@ -118,3 +118,60 @@ it('reports field-read failure without substituting collected metadata', async (
   fireEvent.click(screen.getByRole('button', { name: '重新读取所选表字段' }));
   await screen.findByText('order_id');
 });
+
+it('opens ODS only from a confirmed physical table with exact source coordinates', async () => {
+  const onOpenOds = jest.fn();
+  render(<LiveSchemaExplorer sourceId="18" canRead onOpenOds={onOpenOds} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'trade_order' }));
+  await screen.findByText('order_id');
+  fireEvent.click(screen.getByRole('button', { name: '打开或创建 ODS' }));
+  expect(onOpenOds).toHaveBeenCalledWith({
+    dataSourceId: 18, database: 'trade_db', schema: 'public', table: 'trade_order',
+  });
+});
+
+it('restores exactly the returned schema/table rather than a different same-name source', async () => {
+  mockTables.mockResolvedValue([table, { ...table, schema: 'audit' }]);
+  render(<LiveSchemaExplorer sourceId="18" canRead initialTable={{
+    database: 'trade_db', schema: 'public', table: 'trade_order',
+  }} />);
+  await screen.findByText('order_id');
+  expect(mockColumns).toHaveBeenCalledWith('18', 'trade_db', 'public', 'trade_order');
+  expect(mockColumns).not.toHaveBeenCalledWith('18', 'trade_db', 'audit', 'trade_order');
+});
+
+it('does not offer ODS creation for a view or when current columns could not be verified', async () => {
+  const onOpenOds = jest.fn();
+  mockTables.mockResolvedValue([{ ...table, type: 'VIEW' }]);
+  const { unmount } = render(<LiveSchemaExplorer sourceId="18" canRead onOpenOds={onOpenOds} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'trade_order' }));
+  await screen.findByText('order_id');
+  expect(screen.queryByRole('button', { name: '打开或创建 ODS' })).not.toBeInTheDocument();
+  unmount();
+  mockTables.mockResolvedValue([table]);
+  mockColumns.mockRejectedValue(new Error('denied'));
+  render(<LiveSchemaExplorer sourceId="18" canRead onOpenOds={onOpenOds} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'trade_order' }));
+  await screen.findByText('未能读取字段结构');
+  expect(screen.getByRole('button', { name: '打开或创建 ODS' })).toBeDisabled();
+  expect(onOpenOds).not.toHaveBeenCalled();
+});
+
+it('refuses to restore same-named tables from the wrong schema', async () => {
+  mockTables.mockResolvedValue([{ ...table, schema: 'audit' }]);
+  render(<LiveSchemaExplorer sourceId="18" canRead initialTable={{
+    database: 'trade_db', schema: 'public', table: 'trade_order',
+  }} />);
+  expect(await screen.findByText(/原来源表无法在当前项目及 Schema 精确核验/)).toBeInTheDocument();
+  expect(mockColumns).not.toHaveBeenCalled();
+  expect(screen.queryByRole('button', { name: '打开或创建 ODS' })).not.toBeInTheDocument();
+});
+
+it('does not guess the requested schema when Catalog omits schema evidence', async () => {
+  mockTables.mockResolvedValue([{ ...table, schema: undefined }]);
+  render(<LiveSchemaExplorer sourceId="18" canRead initialTable={{
+    database: 'trade_db', schema: 'public', table: 'trade_order',
+  }} />);
+  expect(await screen.findByText(/原来源表无法在当前项目及 Schema 精确核验/)).toBeInTheDocument();
+  expect(mockColumns).not.toHaveBeenCalled();
+});
