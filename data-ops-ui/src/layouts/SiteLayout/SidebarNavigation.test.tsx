@@ -62,7 +62,7 @@ describe('IA-550 fixed global rail + independent business context rail', () => {
     }));
     const context = screen.getByRole('navigation', { name: '数据资产与治理页面' });
     expect(within(context).getByRole('link', { name: '访问审计' })).toHaveAttribute('aria-current', 'page');
-    expect(within(context).getByRole('link', { name: '安全审计' })).toHaveAttribute('href', '/data-security/audit');
+    expect(within(context).getByRole('link', { name: '访问审计' })).toHaveAttribute('href', '/data-security/audit');
   });
 
   it('keeps specialist-only users in their authorized context without fake parent grants', () => {
