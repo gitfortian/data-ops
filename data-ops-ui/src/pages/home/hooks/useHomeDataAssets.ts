@@ -1,5 +1,5 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import { pulseScopeKey } from '../components/homeProjectPulse';
+import { pulseScopeKey } from '../components/projectPulseContract';
 import { API_SUCCESS_CODE } from '@/services/http/response';
 import { useModel } from '@umijs/max';
 import { readSharedHomeAssetOverview } from './readSharedHomeAssetOverview';
