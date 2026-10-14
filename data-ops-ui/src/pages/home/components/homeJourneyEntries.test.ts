@@ -24,8 +24,8 @@ describe('FE-A1 home journey entry contract', () => {
     expect(entries.find((entry) => entry.key === 'security')).toBeUndefined();
     expect(entries.find((entry) => entry.key === 'mdm')).toBeUndefined();
     expect(entries.find((entry) => entry.key === 'agent')).toBeUndefined();
-    // Existing public entrypoint semantics are preserved, not silently tightened.
-    expect(entries.find((entry) => entry.key === 'consume')?.path).toBe('/dataset');
+    // A public Dataset management producer route must never substitute for governed consumption.
+    expect(entries.find((entry) => entry.key === 'consume')).toBeUndefined();
     expect(entries.find((entry) => entry.key === 'recover')?.path).toBe('/workflow/instances');
   });
 
