@@ -53,6 +53,9 @@ export default function CollectionJourneyContinuation({
   const stage = collectionContinuationStage(job, run, resultUnknown);
   const isPreviewDone = stage === 'preview-ok';
   const isCollected = stage === 'run-ok';
+  // Formal collection alone is NOT proof a separate preview was performed.
+  // The backend invalidates this persisted flag when the scope is edited.
+  const previewConfirmed = isPreviewDone || job.dryRunPassed;
   return (
     <section aria-label="采集任务下一步" className="collect-journey">
       <div className="collect-journey-top">
@@ -68,8 +71,8 @@ export default function CollectionJourneyContinuation({
       </div>
       <div className="collect-journey-stages" aria-label="任务进度">
         <div className="collect-journey-stage complete"><CheckCircleOutlined /> 1 保存任务</div>
-        <div className={isPreviewDone || isCollected ? 'collect-journey-stage complete' : 'collect-journey-stage'}>
-          {isPreviewDone || isCollected ? <CheckCircleOutlined /> : <ClockCircleOutlined />} 2 采集预览
+        <div className={previewConfirmed ? 'collect-journey-stage complete' : 'collect-journey-stage'}>
+          {previewConfirmed ? <CheckCircleOutlined /> : <ClockCircleOutlined />} 2 采集预览（建议）
         </div>
         <div className={isCollected ? 'collect-journey-stage complete' : 'collect-journey-stage'}>
           {isCollected ? <CheckCircleOutlined /> : <ClockCircleOutlined />} 3 正式采集与核验
