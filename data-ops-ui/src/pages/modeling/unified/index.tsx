@@ -1,11 +1,12 @@
 import { history, useLocation, useParams } from '@umijs/max';
-import { Descriptions, message, Space, Tabs, Tag, Typography } from 'antd';
+import { Descriptions, message, Modal, Space, Tabs, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT, MODELING_STATUS_LABELS } from '@/pages/modeling/constants';
 import ModelLineagePanel from '@/pages/modeling/components/ModelLineagePanel';
 import ModelVersionPanel from '@/pages/modeling/components/ModelVersionPanel';
 import ModelingModelDetail from '@/pages/modeling/detail';
+import type { ModelStructureEditorStatus } from '@/pages/modeling/detail';
 import ModelLifecycleTab from '@/pages/data-lifecycle/components/ModelLifecycleTab';
 import LayerFieldMappingPage from '@/pages/modeling/layer-mapping';
 import MappingPanel from '@/pages/modeling/mapping';
@@ -30,12 +31,38 @@ const UnifiedModelView: React.FC = () => {
   const tabKeys = ['overview', 'structure', 'mapping', 'layer-mapping', 'process', 'lineage', 'lifecycle', 'version', 'task'];
   const activeTab = queryTab && tabKeys.includes(queryTab) ? queryTab : 'structure';
   const [model, setModel] = useState<ModelingModelRecord>();
+  const [structureEditor, setStructureEditor] = useState<{
+    modelId?: string; state: ModelStructureEditorStatus;
+  }>();
+  const reportStructureEditor = useCallback((state: ModelStructureEditorStatus) => {
+    setStructureEditor({ modelId, state });
+  }, [modelId]);
+
   const sourceReturnPath = model?.id != null && String(model.id) === modelId
     ? verifiedOdsModelSourceReturn(model, new URLSearchParams(location.search))
     : null;
   const [layers, setLayers] = useState<SemanticLayerRecord[]>([]);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
   const [loadError, setLoadError] = useState(false);
+  const returnToVerifiedSource = () => {
+    if (!sourceReturnPath) return;
+    const editor = structureEditor?.modelId === modelId ? structureEditor.state : undefined;
+    if (editor?.loading || editor?.saving) {
+      message.warning('模型表结构正在加载或保存，请完成后再返回来源表。');
+      return;
+    }
+    if (editor?.dirty) {
+      Modal.confirm({
+        title: '物理模型还有未保存的改动',
+        content: '离开会放弃当前未保存的字段、主键、索引和表属性修改；请先保存，或者明确放弃后返回来源表。',
+        okText: '放弃未保存改动并返回', okType: 'danger',
+        cancelText: '继续编辑',
+        onOk: () => history.push(sourceReturnPath),
+      });
+      return;
+    }
+    history.push(sourceReturnPath);
+  };
 
   const reloadModel = useCallback(() => {
     if (!modelId) {
@@ -166,7 +193,7 @@ const UnifiedModelView: React.FC = () => {
         </div>
         <Space>
           {sourceReturnPath ? (
-            <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => history.push(sourceReturnPath)}>
+            <YakButton className="!h-9 !rounded-lg !px-4" onClick={returnToVerifiedSource}>
               返回来源表
             </YakButton>
           ) : null}
@@ -185,7 +212,7 @@ const UnifiedModelView: React.FC = () => {
         }}
         items={[
           { key: 'overview', label: '基本信息', children: overview },
-          { key: 'structure', label: '表结构', children: <ModelingModelDetail /> },
+          { key: 'structure', label: '表结构', children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
           { key: 'mapping', label: '来源映射', children: <MappingPanel /> },
           {
             key: 'layer-mapping',
