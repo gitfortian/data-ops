@@ -152,25 +152,34 @@ export default function LiveSchemaExplorer({
     void searchDataSourceTables(sourceId, keyword || undefined, { database, schema, limit: 100 })
       .then((result) => {
         if (!active) return;
-        if (
-          result.some(
-            (table) =>
-              !table.name ||
-              (database && table.database && table.database !== database) ||
-              (schema && table.schema && table.schema !== schema),
-          )
-        ) {
+        // Some Catalog providers return tables across schemas despite the
+        // requested schema filter. Never expose an out-of-scope candidate as
+        // the returned source; filter by the *actual* table schema, not a
+        // fallback inferred from the selected dropdown.
+        if (result.some((table) =>
+          !table.name || (database && table.database && table.database !== database)
+        )) {
           setTableError(true);
           return;
         }
-        setTables(result);
+        const scopedTables = schema
+          ? result.filter((candidate) => candidate.schema === schema)
+          : result;
+        setTables(scopedTables);
         if (restorePending.current && initialTable) {
+          // The return hint does not prove a source identity. Selection only
+          // happens after the exact requested DB and schema have been resolved.
+          // A missing schema or an extra identically named table in another
+          // schema is never treated as an exact match.
           restorePending.current = false;
-          const exact = result.find((candidate) =>
-            (candidate.database ?? database) === initialTable.database
-            && (candidate.schema ?? schema ?? undefined) === (initialTable.schema ?? undefined)
-            && candidate.name === initialTable.table);
-          if (exact && database === initialTable.database && schema === initialTable.schema) {
+          const exact = database === initialTable.database
+            && schema === initialTable.schema
+            ? scopedTables.find((candidate) =>
+                candidate.database === initialTable.database
+                && (candidate.schema ?? undefined) === initialTable.schema
+                && candidate.name === initialTable.table)
+            : undefined;
+          if (exact) {
             setSelected(exact);
             setRestoreWarning('');
           } else {
