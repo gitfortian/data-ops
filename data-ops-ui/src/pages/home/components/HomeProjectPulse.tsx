@@ -117,7 +117,7 @@ export default function HomeProjectPulse({
     );
     if (allowed.metrics) read('metrics', getMetricStats(), (result) => result?.total);
     if (allowed.assets) read(
-      'assets', readSharedHomeAssetOverview(projectId),
+      'assets', readSharedHomeAssetOverview(scope),
       (result) => result?.code === API_SUCCESS_CODE ? result?.data?.dataset?.tableAssetCount : null,
     );
     if (allowed.quality) read(
