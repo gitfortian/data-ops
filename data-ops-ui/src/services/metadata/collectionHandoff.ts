@@ -1,4 +1,5 @@
 import { pageCollectJobs } from './api';
+import { buildLiveSourceReturnPath, parseLiveSourceReturn } from '@/utils/liveSourceOdsJourney';
 import type { CollectJobRecord } from './types';
 
 export interface CollectionSourceScope {
@@ -77,4 +78,60 @@ export const readCollectionDefinitionHint = (params: URLSearchParams) => {
       (value) => !value || (value.length <= 256 && !/[\u0000-\u001f]/.test(value)),
     );
   return { valid, sourceId, jobId, databaseName, schemaName, sourceTableName };
+};
+
+/**
+ * A task origin is navigational context, NOT evidence of collected tables.
+ * The detail route must re-read a persisted Job before displaying the return link.
+ */
+export const readCollectTaskOrigin = (
+  params: Pick<URLSearchParams, 'get'>,
+): CollectionSourceScope | null => {
+  const sourceId = params.get('dataSourceId');
+  const source = new URLSearchParams({
+    sourceId: sourceId ?? '',
+    database: params.get('database') ?? '',
+    table: params.get('table') ?? '',
+  });
+  const schema = params.get('schema');
+  if (schema) source.set('schema', schema);
+  const parsed = parseLiveSourceReturn(source);
+  return parsed ? {
+    dataSourceId: String(parsed.dataSourceId),
+    databaseName: parsed.database,
+    schemaName: parsed.schema,
+    tableName: parsed.table,
+  } : null;
+};
+
+/**
+ * Verify navigational table coordinates against the persisted Metadata Job
+ * scope; the DataSource Owner will reverify the Project and exact table.
+ */
+export const verifiedCollectTaskReturnPath = (
+  job: CollectJobRecord,
+  origin: CollectionSourceScope | null,
+): string | null => {
+  if (!origin || !origin.databaseName || !origin.tableName || !collectionJobCovers(job, origin))
+    return null;
+  return buildLiveSourceReturnPath({
+    dataSourceId: Number(origin.dataSourceId),
+    database: origin.databaseName,
+    schema: origin.schemaName,
+    table: origin.tableName,
+  });
+};
+
+export const collectTaskDetailWithOriginPath = (
+  job: CollectJobRecord,
+  origin: CollectionSourceScope | null,
+): string => {
+  const base = collectTaskDetailPath(job.id, job.dataSourceId ? String(job.dataSourceId) : undefined);
+  if (!verifiedCollectTaskReturnPath(job, origin) || !origin) return base;
+  const [pathname, query] = base.split('?');
+  const params = new URLSearchParams(query);
+  params.set('database', origin.databaseName!);
+  if (origin.schemaName) params.set('schema', origin.schemaName);
+  params.set('table', origin.tableName!);
+  return `${pathname}?${params}`;
 };
