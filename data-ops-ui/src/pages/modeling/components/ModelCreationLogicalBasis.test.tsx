@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { listLogicalDrafts, listLogicalVersions } from '@/services/modeling/logical';
+import { getLogicalDraft, listLogicalDrafts, listLogicalVersions } from '@/services/modeling/logical';
 import ModelCreationLogicalBasis from './ModelCreationLogicalBasis';
 
 let mockProject = 1;
@@ -11,7 +11,7 @@ jest.mock('@/hooks/usePermissionAccess', () => ({
   __esModule: true, default: () => ({ can: mockCan }),
 }));
 jest.mock('@/services/modeling/logical', () => ({
-  listLogicalDrafts: jest.fn(), listLogicalVersions: jest.fn(),
+  listLogicalDrafts: jest.fn(), listLogicalVersions: jest.fn(), getLogicalDraft: jest.fn(),
 }));
 const draft = { id: 71, projectId: 1, processId: 15, domainId: 1,
   name: '订单逻辑设计', code: 'trade_order', status: 'DRAFT' as const, draftRevision: 2 };
@@ -22,6 +22,7 @@ beforeEach(() => {
   mockCan.mockReturnValue(true);
   jest.mocked(listLogicalDrafts).mockResolvedValue([draft]);
   jest.mocked(listLogicalVersions).mockResolvedValue([{ id: 50, versionNo: 3, status: 'DRAFT' }]);
+  jest.mocked(getLogicalDraft).mockResolvedValue({ model: draft, process: { id: 15 } as any, entities: [], relations: [] });
 });
 
 it('never queries a logical draft for source-to-ODS creation', () => {
