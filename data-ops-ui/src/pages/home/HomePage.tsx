@@ -4,6 +4,7 @@ import HomeDataAssets from './components/HomeDataAssets';
 import { HomeBackground } from './components/HomeBackground';
 import { HomeHeader } from './components/HomeHeader';
 import HomeQuickNavigation from './components/HomeQuickNavigation';
+import HomeTaskStarter from './components/HomeTaskStarter';
 import HomeResourceCenter from './components/HomeResourceCenter';
 import { HomeWorkbenchMain } from './components/HomeWorkbench';
 import NotificationCenter from './components/NotificationCenter';
@@ -22,6 +23,9 @@ export default function HomePage() {
         <HomeHeader stats={cockpit.data?.header} />
 
         <main className="px-4 pb-4">
+          <div className="mt-4">
+            <HomeTaskStarter stats={cockpit.data?.header} />
+          </div>
           <div className="mt-4">
             <QuickCreatePanel />
           </div>
