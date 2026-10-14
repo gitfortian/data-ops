@@ -21,7 +21,15 @@ jest.mock('@/services/metadata/api', () => ({
   deleteCollectJob: jest.fn(),
   changeCollectJobEnabled: jest.fn(),
 }));
-jest.mock('./components/CollectJobDrawer', () => () => null);
+jest.mock('./components/CollectJobDrawer', () => ({
+  __esModule: true,
+  default: ({ open, onSaved }: {
+    open: boolean;
+    onSaved: (job: typeof job) => void;
+  }) => open ? (
+    <button type="button" onClick={() => onSaved({ ...job, dryRunPassed: false })}>模拟保存来源任务</button>
+  ) : null,
+}));
 jest.mock('./components/RunHistoryDrawer', () => () => null);
 jest.mock(
   './components/RunResultModal',
@@ -85,4 +93,39 @@ it('keeps execution unavailable without creation permission', async () => {
   await screen.findByText('订单采集');
   expect(screen.getByRole('button', { name: '立即采集' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '采集预览' })).toBeDisabled();
+});
+
+it('continues from a real saved Job receipt through preview and confirmed collection', async () => {
+  const confirm = jest.spyOn(Modal, 'confirm').mockReturnValue({ destroy: jest.fn(), update: jest.fn() });
+  render(<MetadataCollectPage />);
+  fireEvent.click(screen.getByRole('button', { name: '新建采集任务' }));
+  fireEvent.click(screen.getByText('模拟保存来源任务'));
+  expect(await screen.findByText('任务已保存')).toBeInTheDocument();
+  expect(dryRunCollectJob).not.toHaveBeenCalled();
+  expect(runCollectJob).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('预演采集范围'));
+  expect(await screen.findByText('已收到通过的预览回执')).toBeInTheDocument();
+  expect(dryRunCollectJob).toHaveBeenCalledWith(71);
+  expect(runCollectJob).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('正式采集'));
+  expect(runCollectJob).not.toHaveBeenCalled();
+  const options = confirm.mock.calls.at(-1)?.[0];
+  expect(options?.title).toBe('开始采集？');
+  await act(async () => { await options?.onOk?.(); });
+  await screen.findByText('已收到成功采集回执');
+  expect(runCollectJob).toHaveBeenCalledWith(71);
+  confirm.mockRestore();
+});
+
+it('fails closed after a preview failure and directs users to run history', async () => {
+  jest.mocked(dryRunCollectJob).mockResolvedValueOnce({
+    runId: 3, jobId: 71, dryRun: true, status: 'FAILED', errorMessage: 'no privilege',
+  });
+  render(<MetadataCollectPage />);
+  fireEvent.click(screen.getByRole('button', { name: '新建采集任务' }));
+  fireEvent.click(screen.getByText('模拟保存来源任务'));
+  fireEvent.click(screen.getByText('预演采集范围'));
+  expect(await screen.findByText('运行结果待核对')).toBeInTheDocument();
+  expect(screen.getByText(/核对运行历史/)).toBeInTheDocument();
+  expect(runCollectJob).not.toHaveBeenCalled();
 });
