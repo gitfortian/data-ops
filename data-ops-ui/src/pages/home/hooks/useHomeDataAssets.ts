@@ -79,7 +79,12 @@ export function useHomeDataAssets() {
     void readSharedHomeAssetOverview(scope)
       .then((response) => {
         if (!active) return;
+        if (response.code !== API_SUCCESS_CODE || !response.data) {
+          setDatasets({ scope, items: [], loading: false, failed: true });
+          return;
+        }
         setDatasets({
+          scope,
           items: (response.data?.dataset?.recentDatasets || []).slice(
             0,
             PREVIEW_LIMIT,
@@ -90,10 +95,6 @@ export function useHomeDataAssets() {
       })
       .catch(() => {
         if (!active) return;
-        if (response.code !== API_SUCCESS_CODE || !response.data) {
-          setDatasets({ scope, items: [], loading: false, failed: true });
-          return;
-        }
         setDatasets({ scope, items: [], loading: false, failed: true });
       });
 
@@ -101,6 +102,7 @@ export function useHomeDataAssets() {
       .then((overview) => {
         if (!active) return;
         setDashboards({
+          scope,
           items: (overview.recentDashboards || []).slice(0, PREVIEW_LIMIT),
           loading: false,
           failed: false,
@@ -115,6 +117,7 @@ export function useHomeDataAssets() {
       .then((items) => {
         if (!active) return;
         setScreens({
+          scope,
           items: recentFirst(items, (item) => item.updatedAt),
           loading: false,
           failed: false,
@@ -129,6 +132,7 @@ export function useHomeDataAssets() {
       .then((items) => {
         if (!active) return;
         setServices({
+          scope,
           items: recentFirst(items, (item) => item.updateTime || item.createTime),
           loading: false,
           failed: false,
