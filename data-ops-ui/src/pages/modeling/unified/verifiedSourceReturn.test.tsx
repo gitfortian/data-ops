@@ -60,7 +60,7 @@ const model = {
   sourceDatasourceId: 18, sourceDatabase: 'trade_db',
   sourceSchema: 'public', sourceTable: 'trade_order',
 };
-let pendingConfirm: { onOk?: () => void | Promise<void>; onCancel?: () => void;
+let pendingConfirm: { onOk?: (close?: () => void) => void | Promise<void>; onCancel?: () => void;
   okText?: string; cancelText?: string } | undefined;
 
 beforeEach(() => {
@@ -88,12 +88,14 @@ it('keeps every dirty structure draft edit when source return is cancelled, and 
   expect(pendingConfirm?.okText).toMatch(/放弃未保存/);
   expect(mockPush).not.toHaveBeenCalled();
 
+  // Simulate choosing "continue editing" rather than calling the destructive onOk.
+  await act(async () => { pendingConfirm?.onCancel?.(); });
   // Cancelling is the default: no navigation or edits are discarded.
   expect(screen.getByRole('textbox', { name: '结构草稿' })).toHaveValue('unsaved-field-primary-key-index');
   expect(mockEditorValue).toBe('unsaved-field-primary-key-index');
   expect(mockPush).not.toHaveBeenCalled();
 
-  await act(async () => { await pendingConfirm?.onOk?.(); });
+  await act(async () => { await pendingConfirm?.onOk?.(jest.fn()); });
   expect(mockPush).toHaveBeenCalledTimes(1);
   const returned = mockPush.mock.calls[0][0] as string;
   expect(returned.startsWith('/data-source?')).toBe(true);
