@@ -73,13 +73,15 @@ export default function SidebarNavigation({
   const renderSection = (group: NavigationGroupWithRoutes, section: ContextNavigationSection) => {
     const key = sectionKey(group.id, section.id);
     const isExpanded = expanded.has(key);
-    const visible = isExpanded ? section.routes : section.routes.slice(0, section.visibleCount);
-    const extraCount = Math.max(0, section.routes.length - section.visibleCount);
+    const primary = section.routes.slice(0, section.visibleCount);
+    const remaining = section.routes.slice(section.visibleCount);
+    const extraCount = remaining.length;
     return <div key={key} className="py-0.5">
       {section.routes.length > 1 && section.title && <div
         className="px-3 pb-1 pt-3 text-[11px] font-medium tracking-[0.02em] text-[#98a2b3]"
       >{section.title}</div>}
-      {visible.map(renderLink)}
+      {primary.map(renderLink)}
+      {isExpanded && <div id={`navigation-extra-${group.id}-${section.id}`}>{remaining.map(renderLink)}</div>}
       {extraCount > 0 && <button
         type="button"
         aria-label={section.title + (isExpanded ? '收起其他页面' : '展开其他页面')}
