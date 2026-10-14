@@ -3,10 +3,14 @@ import {
   type NavigationIconKey,
   type NavigationRoute,
 } from '@/config/navigation';
-import { getTaskNavigationModel, type TaskNavigationModel } from '@/config/taskNavigation';
+import {
+  getContextNavigationModel,
+  type ContextNavigationModel,
+  type ContextNavigationSection,
+} from '@/config/taskNavigation';
 import { Link } from '@umijs/max';
 import { Dropdown, type MenuProps } from 'antd';
-import { ChevronDown, ChevronRight, Wrench } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 interface SidebarNavigationProps {
@@ -19,171 +23,101 @@ interface SidebarNavigationProps {
   onNavigate?: () => void;
 }
 
-const taskKey = (domain: string, task: string) => domain + ':' + task;
-const allTools = (model: TaskNavigationModel) => model.tools.flatMap(section => section.routes);
-const isTaskActive = (routes: NavigationRoute[], activeId?: string) =>
-  routes.some(route => route.id === activeId);
+const sectionKey = (domain: string, section: string) => domain + ':' + section;
 
 export default function SidebarNavigation({
   groups, standaloneRoutes, icons, compact, activeId, activeGroupPath, onNavigate,
 }: SidebarNavigationProps) {
   const rootActive = activeGroupPath[activeGroupPath.length - 1];
   const models = useMemo(() => new Map(groups.map(group =>
-    [group.id, getTaskNavigationModel(group)])), [groups]);
+    [group.id, getContextNavigationModel(group)])), [groups]);
   const [openDomain, setOpenDomain] = useState<string | undefined>(rootActive);
-  const [openTaskIds, setOpenTaskIds] = useState<Set<string>>(() => new Set());
-  const [openTools, setOpenTools] = useState<Set<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
-  // Deep links, browser back, role changes and project menu changes must always
-  // reveal the original accessible route, whether it is primary or a tool.
+  // A deep link, browser back, or permission refresh must expose its owning
+  // section without inventing another permission parent or submenu level.
   useEffect(() => {
     setOpenDomain(rootActive);
-    const activeTasks = new Set<string>();
-    const activeToolDomains = new Set<string>();
+    const activeSections = new Set<string>();
     for (const group of groups) {
       const model = models.get(group.id);
       if (!model) continue;
-      for (const task of model.tasks) {
-        if (task.routes.length > 1 && isTaskActive(task.routes, activeId))
-          activeTasks.add(taskKey(group.id, task.id));
+      for (const section of model.sections) {
+        const extra = section.routes.slice(section.visibleCount);
+        if (extra.some(route => route.id === activeId))
+          activeSections.add(sectionKey(group.id, section.id));
       }
-      if (isTaskActive(allTools(model), activeId))
-        activeToolDomains.add(group.id);
     }
-    setOpenTaskIds(activeTasks);
-    setOpenTools(activeToolDomains);
-  }, [rootActive, activeId, models]);
+    setExpanded(activeSections);
+  }, [activeId, rootActive, models]);
 
-  const toggleTask = (key: string) => setOpenTaskIds(current => {
+  const toggleExtra = (key: string) => setExpanded(current => {
     const next = new Set(current);
     if (next.has(key)) next.delete(key);
     else next.add(key);
     return next;
   });
-  const toggleTools = (id: string) => setOpenTools(current => {
-    const next = new Set(current);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
+  const linkClass = 'flex h-9 w-full min-w-0 items-center rounded-md px-3 text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]';
+  const selectedStyle = { color: '#fe2c55', background: 'rgba(254,44,85,0.07)' };
+  const renderLink = (route: NavigationRoute) => <Link
+    key={route.id}
+    to={route.path}
+    title={route.title}
+    onClick={onNavigate}
+    aria-current={activeId === route.id ? 'page' : undefined}
+    style={activeId === route.id ? selectedStyle : undefined}
+    className={linkClass + (activeId === route.id
+      ? ' font-semibold' : ' text-[#667085] hover:bg-white hover:text-[#344054]')}
+  >{route.title}</Link>;
 
-  const linkStyle = (selected: boolean) => selected
-    ? { color: 'var(--yak-brand-color, #fe2c55)', backgroundColor: 'var(--yak-brand-color-soft, rgba(254,44,85,.06))' }
-    : undefined;
-  const rowClasses = 'flex min-h-9 w-full items-center rounded-lg px-3 py-2 text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]';
-  const routeLink = (route: NavigationRoute, opts: { label?: string; indent?: boolean } = {}) => (
-    <Link
-      key={route.id}
-      to={route.path}
-      onClick={onNavigate}
-      aria-current={activeId === route.id ? 'page' : undefined}
-      title={route.title}
-      style={linkStyle(activeId === route.id)}
-      className={rowClasses + ' ' +
-        (opts.indent ? 'pl-7 ' : '') +
-        (activeId === route.id ? 'font-semibold' : 'text-[#667085] hover:bg-[#f5f6f8] hover:text-[#344054]')}
-    >{opts.label || route.title}</Link>
-  );
-
-  const popupItems = (group: NavigationGroupWithRoutes): MenuProps['items'] => {
-    const model = models.get(group.id) ?? getTaskNavigationModel(group);
-    const tasks: NonNullable<MenuProps['items']> = model.tasks.map(task => task.routes.length === 1 ? ({
-      key: task.routes[0].id,
-      label: <Link to={task.routes[0].path} onClick={onNavigate}>{task.title}</Link>,
-    }) : ({
-      key: 'task:' + task.id, label: task.title,
-      children: task.routes.map(route => ({
-        key: route.id, label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
-      })),
-    }));
-    const tools = model.tools.flatMap(section => section.routes.map(route => ({
-      key: route.id, label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
-    })));
-    if (tools.length) tasks.push({
-      key: 'tools:' + group.id,
-      label: '专业工具',
-      children: tools,
-    });
-    return tasks;
-  };
-
-  const renderTask = (group: NavigationGroupWithRoutes, model: TaskNavigationModel['tasks'][number]) => {
-    const selected = isTaskActive(model.routes, activeId);
-    const key = taskKey(group.id, model.id);
-    const expanded = openTaskIds.has(key);
-    if (model.routes.length === 1) {
-      const route = model.routes[0];
-      return <div key={key}>{routeLink(route, { label: model.title })}</div>;
-    }
-    return (
-      <div key={key}>
-        <button
-          type="button"
-          aria-label={model.title}
-          aria-expanded={expanded}
-          aria-controls={`task-navigation-${group.id}-${model.id}`}
-          onClick={() => toggleTask(key)}
-          style={selected ? linkStyle(true) : undefined}
-          className={rowClasses + ' justify-between gap-2 border-0 bg-transparent text-left ' +
-            (selected ? 'font-semibold' : 'text-[#667085] hover:bg-[#f5f6f8] hover:text-[#344054]')}
-        >
-          <span className="truncate">{model.title}</span>
-          <ChevronRight className={expanded ? 'shrink-0 rotate-90' : 'shrink-0'} size={14} />
-        </button>
-        {expanded && <div id={`task-navigation-${group.id}-${model.id}`}
-          className="ml-3 border-l border-[#eaecf0] py-0.5 pl-1.5">
-          {model.routes.map(route => routeLink(route))}
-        </div>}
-      </div>
-    );
-  };
-
-  const renderTools = (group: NavigationGroupWithRoutes, model: TaskNavigationModel) => {
-    const routes = allTools(model);
-    if (!routes.length) return null;
-    // If this role has only a specialist grant, it must be immediately
-    // discoverable. Do not render a fake collapsible button that cannot close.
-    if (!model.tasks.length) return <div className="pt-1" key={group.id + ':tools'}>
-      <div className="px-3 py-2 text-[12px] font-medium text-[#667085]">专业工具</div>
-      <div className="ml-3 border-l border-[#eaecf0] pl-1.5">
-        {model.tools.map(section => <div key={section.id}>
-          {model.tools.length > 1 && <div className="px-3 pb-1 pt-2 text-[11px] text-[#98a2b3]">{section.title}</div>}
-          {section.routes.map(route => routeLink(route))}
-        </div>)}
-      </div>
-    </div>;
-    const expanded = openTools.has(group.id);
-    return <div className="mt-2 border-t border-[#eaecf0] pt-2" key={group.id + ':tools'}>
-      <button
+  const renderSection = (group: NavigationGroupWithRoutes, section: ContextNavigationSection) => {
+    const key = sectionKey(group.id, section.id);
+    const isExpanded = expanded.has(key);
+    const visible = isExpanded ? section.routes : section.routes.slice(0, section.visibleCount);
+    const extraCount = Math.max(0, section.routes.length - section.visibleCount);
+    return <div key={key} className="py-0.5">
+      {section.routes.length > 1 && section.title && <div
+        className="px-3 pb-1 pt-3 text-[11px] font-medium tracking-[0.02em] text-[#98a2b3]"
+      >{section.title}</div>}
+      {visible.map(renderLink)}
+      {extraCount > 0 && <button
         type="button"
-        aria-label={group.title + '专业工具'}
-        aria-expanded={expanded}
-        aria-controls={`task-navigation-tools-${group.id}`}
-        onClick={() => toggleTools(group.id)}
-        className={rowClasses + ' justify-between gap-2 border-0 bg-transparent text-left text-[#667085] hover:bg-[#f5f6f8]'}
+        aria-label={section.title + (isExpanded ? '收起其他页面' : '展开其他页面')}
+        aria-expanded={isExpanded}
+        aria-controls={`navigation-extra-${group.id}-${section.id}`}
+        className="flex h-8 w-full items-center gap-2 rounded-md border-0 bg-transparent px-3 text-left text-[12px] text-[#98a2b3] hover:bg-white hover:text-[#475467]"
+        onClick={() => toggleExtra(key)}
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <Wrench size={14} className="shrink-0" />
-          <span className="truncate">专业工具</span>
-          <span className="text-[11px] text-[#98a2b3]">{routes.length}</span>
-        </span>
-        <ChevronDown size={13} className={expanded ? 'shrink-0 rotate-180' : 'shrink-0'} />
-      </button>
-      {expanded && <div id={`task-navigation-tools-${group.id}`} className="ml-3 border-l border-[#eaecf0] pb-1 pl-1.5">
-        {model.tools.map(section => <div key={section.id}>
-          {model.tools.length > 1 && <div className="px-3 pb-1 pt-3 text-[11px] font-medium text-[#98a2b3]">
-            {section.title}
-          </div>}
-          {section.routes.map(route => routeLink(route))}
-        </div>)}
-      </div>}
+        <ChevronRight size={12} className={isExpanded ? 'rotate-90' : ''} />
+        {isExpanded ? '收起' : `更多 ${extraCount} 项`}
+      </button>}
     </div>;
+  };
+
+  // Popup is only two levels: business domain -> page. Menu group labels are
+  // non-clickable captions, not a third nested submenu.
+  const popupItems = (group: NavigationGroupWithRoutes): MenuProps['items'] => {
+    const model = models.get(group.id) ?? getContextNavigationModel(group);
+    return model.sections.flatMap(section => section.routes.length > 1 && section.title
+      ? [{
+          type: 'group' as const,
+          key: `section:${group.id}:${section.id}`,
+          label: section.title,
+          children: section.routes.map(route => ({
+            key: route.id,
+            label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
+          })),
+        }]
+      : section.routes.map(route => ({
+          key: route.id,
+          label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
+        })));
   };
 
   const renderGroup = (group: NavigationGroupWithRoutes) => {
-    const model = models.get(group.id) ?? getTaskNavigationModel(group);
     const active = rootActive === group.id;
     const open = openDomain === group.id;
+    const model: ContextNavigationModel = models.get(group.id) ?? getContextNavigationModel(group);
     const header = <button
       type="button"
       aria-label={group.title}
@@ -192,9 +126,8 @@ export default function SidebarNavigation({
       aria-haspopup={compact ? 'menu' : undefined}
       title={compact ? group.title : undefined}
       onClick={compact ? undefined : () => setOpenDomain(current => current === group.id ? undefined : group.id)}
-      style={active ? { color: '#344054' } : undefined}
       className={[
-        'relative flex h-10 w-full items-center gap-3 rounded-lg border-0 bg-transparent text-left text-[14px]',
+        'relative flex h-10 w-full items-center gap-3 rounded-md border-0 bg-transparent text-left text-[14px]',
         'transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]',
         compact ? 'justify-center' : 'px-2',
         active || open ? 'font-semibold text-[#344054]' : 'text-[#667085]',
@@ -205,24 +138,23 @@ export default function SidebarNavigation({
         <span className="min-w-0 flex-1 truncate" title={group.title}>{group.title}</span>
         <ChevronDown size={14} className={open ? 'shrink-0 rotate-180' : 'shrink-0'} />
       </>}
-      {compact && active && <span className="absolute right-0 h-4 w-[3px] rounded-full"
-        style={{ background: 'var(--yak-brand-color, #fe2c55)' }} />}
+      {compact && active && <span className="absolute right-0 h-4 w-[3px] rounded-full bg-[#fe2c55]" />}
     </button>;
-
     if (compact) return <Dropdown
       key={group.id}
       trigger={['hover', 'click']}
       placement="bottomLeft"
       align={{ points: ['tl', 'tr'], offset: [8, 0] }}
-      menu={{ items: popupItems(group), selectedKeys: activeId ? [activeId] : [],
-        style: { minWidth: 240, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto' } }}
+      menu={{
+        items: popupItems(group), selectedKeys: activeId ? [activeId] : [],
+        style: { minWidth: 230, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto' },
+      }}
     >{header}</Dropdown>;
 
     return <div key={group.id} className="mb-1">
       {header}
-      {open && <div id={`navigation-${group.id}`} className="space-y-0.5 pb-2 pl-3">
-        {model.tasks.map(task => renderTask(group, task))}
-        {renderTools(group, model)}
+      {open && <div id={`navigation-${group.id}`} className="space-y-0.5 pb-2 pl-6">
+        {model.sections.map(section => renderSection(group, section))}
       </div>}
     </div>;
   };
@@ -236,10 +168,10 @@ export default function SidebarNavigation({
         aria-label={route.title}
         title={compact ? route.title : undefined}
         aria-current={activeId === route.id ? 'page' : undefined}
-        style={linkStyle(activeId === route.id)}
-        className={rowClasses + ' mb-0.5 gap-3 ' +
-          (compact ? 'justify-center !px-0' : '') +
-          (activeId === route.id ? ' font-semibold' : ' text-[#667085] hover:bg-white hover:text-[#344054]')}
+        style={activeId === route.id ? selectedStyle : undefined}
+        className={'mb-0.5 flex h-10 items-center gap-3 rounded-md text-[14px] transition-colors hover:bg-white ' +
+          (compact ? 'justify-center' : 'px-2') +
+          (activeId === route.id ? ' font-semibold' : ' text-[#667085] hover:text-[#344054]')}
       >
         {route.iconKey && <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icons[route.iconKey]}</span>}
         {!compact && route.title}
