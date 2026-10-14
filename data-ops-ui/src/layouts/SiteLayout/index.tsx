@@ -54,7 +54,7 @@ import SidebarNavigation from './SidebarNavigation';
 import BrandLogo from './BrandLogo';
 
 const HEADER_HEIGHT = 48;
-const SIDEBAR_WIDTH = 240;
+const SIDEBAR_WIDTH = 360; // 146px global rail + 214px context panel
 const COLLAPSED_SIDEBAR_WIDTH = 64;
 
 const NAVIGATION_ICON_SIZE = 17;
@@ -423,7 +423,7 @@ function SiteLayoutContent() {
           className={[
             "relative z-50 shrink-0",
             quickCreateRoutes.length === 0 ? "hidden" : "",
-            compact ? "mx-3 mb-4 mt-4" : "mx-6 mb-4 mt-4",
+            compact ? "mx-3 mb-3 mt-3" : "ml-3 mb-3 mt-3 w-[146px] px-2",
           ].join(" ")}
         >
           <button
@@ -441,7 +441,7 @@ function SiteLayoutContent() {
               "hover:brightness-[0.97] active:brightness-95",
               compact
                 ? "w-10 justify-center rounded-full px-0"
-                : "w-full justify-start rounded-md px-3",
+                : "w-full justify-start rounded-md px-2",
             ].join(" ")}
           >
             <SquarePlus className="h-4 w-4 shrink-0" strokeWidth={2} />
@@ -478,7 +478,7 @@ function SiteLayoutContent() {
                 "ring-1 ring-black/[0.04]",
                 compact
                   ? ["left-[48px] top-0", "w-44"].join(" ")
-                  : ["left-0 right-0", "top-[48px]"].join(" "),
+                  : ["left-0 top-[48px]", "w-56"].join(" "),
               ].join(" ")}
             >
               {quickCreateRoutes.length > 0 ? (
@@ -532,8 +532,8 @@ function SiteLayoutContent() {
         </div>
 
         <nav aria-label="主导航" className={[
-          'min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-2',
-          compact ? 'px-3' : 'px-4',
+          'min-h-0 flex-1 overflow-hidden',
+          compact ? 'px-2 py-2' : '',
         ].join(' ')}>
           <SidebarNavigation
             groups={navigationGroups}
@@ -546,7 +546,7 @@ function SiteLayoutContent() {
         </nav>
 
         <div
-          className={["shrink-0 pb-4 pt-2", compact ? "px-3" : "px-6"].join(
+          className={["shrink-0 pb-3 pt-1", compact ? "px-3" : "w-[146px] border-t border-[#e6e8ed] px-4"].join(
             " "
           )}
         >
@@ -578,13 +578,14 @@ function SiteLayoutContent() {
         </div>
       </aside>
 
-      <Drawer title="导航" placement="left" width={300} open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} rootClassName="yak-mobile-navigation">
-        <nav aria-label="手机主导航">
+      <Drawer title="导航" placement="left" width="min(400px, 100vw)" open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} rootClassName="yak-mobile-navigation"
+        styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' } }}>
+        <nav aria-label="手机主导航" className="min-h-0 flex-1 overflow-hidden">
           <SidebarNavigation groups={navigationGroups} standaloneRoutes={standaloneRoutes} icons={navigationIcons} compact={false} activeId={activeNavigationId} activeGroupPath={getActiveNavigationGroupPath(location.pathname, permissionCodes, menuCodes)} onNavigate={() => setMobileMenuOpen(false)} />
         </nav>
-        {quickCreateRoutes.length > 0 && <div className="mt-5 border-t border-[#eaecf0] pt-4">
+        {quickCreateRoutes.length > 0 && <div className="shrink-0 border-t border-[#eaecf0] bg-white p-3">
           <div className="mb-2 text-xs font-medium text-[#667085]">快速创建</div>
-          {quickCreateRoutes.map(route => <Link key={route.id} to={route.path} className="block rounded-md px-3 py-2 text-sm text-[#344054]">{route.quickCreateLabel ?? route.title}</Link>)}
+          {quickCreateRoutes.map(route => <Link key={route.id} to={route.path} onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-sm text-[#344054]">{route.quickCreateLabel ?? route.title}</Link>)}
         </div>}
       </Drawer>
 
