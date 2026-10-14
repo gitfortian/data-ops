@@ -16,6 +16,7 @@ interface SidebarNavigationProps {
   compact: boolean;
   activeId?: string;
   activeGroupPath: string[];
+  onNavigate?: () => void;
 }
 
 const taskKey = (domain: string, task: string) => domain + ':' + task;
@@ -24,7 +25,7 @@ const isTaskActive = (routes: NavigationRoute[], activeId?: string) =>
   routes.some(route => route.id === activeId);
 
 export default function SidebarNavigation({
-  groups, standaloneRoutes, icons, compact, activeId, activeGroupPath,
+  groups, standaloneRoutes, icons, compact, activeId, activeGroupPath, onNavigate,
 }: SidebarNavigationProps) {
   const rootActive = activeGroupPath[activeGroupPath.length - 1];
   const models = useMemo(() => new Map(groups.map(group =>
@@ -74,6 +75,7 @@ export default function SidebarNavigation({
     <Link
       key={route.id}
       to={route.path}
+      onClick={onNavigate}
       aria-current={activeId === route.id ? 'page' : undefined}
       title={route.title}
       style={linkStyle(activeId === route.id)}
@@ -87,15 +89,15 @@ export default function SidebarNavigation({
     const model = models.get(group.id) ?? getTaskNavigationModel(group);
     const tasks: NonNullable<MenuProps['items']> = model.tasks.map(task => task.routes.length === 1 ? ({
       key: task.routes[0].id,
-      label: <Link to={task.routes[0].path}>{task.title}</Link>,
+      label: <Link to={task.routes[0].path} onClick={onNavigate}>{task.title}</Link>,
     }) : ({
       key: 'task:' + task.id, label: task.title,
       children: task.routes.map(route => ({
-        key: route.id, label: <Link to={route.path}>{route.title}</Link>,
+        key: route.id, label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
       })),
     }));
     const tools = model.tools.flatMap(section => section.routes.map(route => ({
-      key: route.id, label: <Link to={route.path}>{route.title}</Link>,
+      key: route.id, label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
     })));
     if (tools.length) tasks.push({
       key: 'tools:' + group.id,
@@ -230,6 +232,7 @@ export default function SidebarNavigation({
       {standaloneRoutes.map(route => <Link
         key={route.id}
         to={route.path}
+        onClick={onNavigate}
         aria-label={route.title}
         title={compact ? route.title : undefined}
         aria-current={activeId === route.id ? 'page' : undefined}
