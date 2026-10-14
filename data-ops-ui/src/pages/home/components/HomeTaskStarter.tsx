@@ -1,7 +1,6 @@
 import { canAccessNavigationRoute, appRoutes } from '@/config/navigation';
 import { useAgentAvailability } from '@/contexts/AgentAvailabilityContext';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
-import type { HomeCockpitHeaderStats } from '@/services/home';
 import { history, useModel } from '@umijs/max';
 import {
   ArrowRight, AlertTriangle, BarChart3, Bot, Database,
@@ -55,21 +54,12 @@ function JourneyButton({ entry }: { entry: HomeJourneyEntry }) {
   );
 }
 
-function Statistic({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="min-w-[95px] rounded-lg border border-[#e2ebeb] bg-white px-3 py-2">
-      <span className="block text-[11px] text-[#768690]">{label}</span>
-      <strong className="mt-0.5 block text-[17px] font-semibold tabular-nums text-[#243b43]">{value}</strong>
-    </div>
-  );
-}
-
 /**
  * Project-scoped task starting points. This is navigation/presentation only:
  * no new workflow state, no automatic model/TaskRevision creation, and no
  * attempt to treat missing Provider metrics as zero.
  */
-export default function HomeTaskStarter({ stats }: { stats?: HomeCockpitHeaderStats }) {
+export default function HomeTaskStarter() {
   const { currentProject } = useSecurityProject();
   const { initialState } = useModel('@@initialState');
   const { agentEnabled } = useAgentAvailability();
@@ -79,8 +69,6 @@ export default function HomeTaskStarter({ stats }: { stats?: HomeCockpitHeaderSt
     : [];
   const primary = entries.filter((entry) => entry.primary);
   const secondary = entries.filter((entry) => !entry.primary);
-  const sources = stats?.dataSourceAvailable === false ? '暂不可用' : stats?.dataSourceCount ?? '—';
-  const running = stats?.runningAvailable === false ? '暂不可用' : stats?.runningCount ?? '—';
 
   const sourceRoute = appRoutes.find((route) => route.id === 'data-source');
   const canVisitSources = Boolean(
@@ -99,12 +87,6 @@ export default function HomeTaskStarter({ stats }: { stats?: HomeCockpitHeaderSt
             选择要完成的工作；下方入口由当前项目和原有菜单权限决定，不创建新的业务流程或事实。
           </p>
         </div>
-        {currentProject ? (
-          <div className="flex flex-wrap gap-2" aria-label="当前项目基础运行概况">
-            <Statistic label="数据源" value={sources} />
-            <Statistic label="运行中任务" value={running} />
-          </div>
-        ) : null}
       </header>
 
       {!currentProject ? (
