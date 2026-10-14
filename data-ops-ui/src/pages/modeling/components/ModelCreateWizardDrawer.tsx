@@ -42,6 +42,7 @@ const ModelCreateWizardDrawer = ({
 }: ModelCreateWizardDrawerProps) => {
   const [form] = Form.useForm<WizardFormValues>();
   const codeManuallyEdited = useRef(false);
+  const userEdited = useRef(false);
   const initialized = useRef(false);
   const selectedLayerCode = Form.useWatch('layerCode', form);
   const selectedName = Form.useWatch('name', form);
@@ -71,6 +72,7 @@ const ModelCreateWizardDrawer = ({
       form.setFieldsValue({ domainId: initialRoot, processId: initialProcessId });
     }
     codeManuallyEdited.current = false;
+    userEdited.current = false;
     initialized.current = true;
   }, [form, open, initialProcessId, initialRoot, scopeNotReady]);
 
@@ -83,15 +85,16 @@ const ModelCreateWizardDrawer = ({
 
   const discardAndExit = (callback: () => void) => {
     if (loading) return;
-    if (form.isFieldsTouched()) {
+    if (userEdited.current) {
       Modal.confirm({
         title: '物理模型草稿尚未创建',
         content: '离开将放弃向导中尚未提交的名称、业务过程和物理配置。需要保存时请选择“继续编辑”。',
         cancelText: '继续编辑', okText: '放弃并离开', okType: 'danger',
-        onOk: () => { form.resetFields(); callback(); },
+        onOk: () => { form.resetFields(); userEdited.current = false; callback(); },
       });
     } else {
       form.resetFields();
+      userEdited.current = false;
       callback();
     }
   };
@@ -145,6 +148,7 @@ const ModelCreateWizardDrawer = ({
       <Form form={form} layout="vertical" requiredMark
         initialValues={{ dialect: 'MYSQL' }}
         onValuesChange={(changed: Partial<WizardFormValues>, all: WizardFormValues) => {
+          userEdited.current = true;
           // Only an explicit user domain change may invalidate a process; do
           // not clear a verified prefill just because useWatch fires.
           if (Object.prototype.hasOwnProperty.call(changed, 'domainId')
