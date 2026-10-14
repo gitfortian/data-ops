@@ -24,7 +24,7 @@ HTML = ROOT / "docs/product/experience/prototypes/IA-550-task-flows-v0.8.2-final
 OUTPUT = ROOT / "build/ia550-v082-browser-signoff"
 WIDTHS = (320, 390, 768, 1024, 1366, 1440)
 PAGES = ("home", "model", "product", "collab", "metric", "semantic", "standard", "asset", "governance", "quality", "security", "mdm")
-SCREENSHOT_PAGES = {"home", "model", "product", "collab"}
+SCREENSHOT_PAGES = {"home", "model", "product", "collab", "standard"}
 
 
 def revision() -> str:
@@ -100,10 +100,22 @@ def main() -> int:
                     })""")
                     if measurements["main"] < 80:
                         raise AssertionError(f"main content missing for {route}: {measurements}")
-                    if measurements["documentWidth"] > measurements["innerWidth"] + 2:
-                        raise AssertionError(f"unintended page-wide horizontal overflow: {measurements}")
                     if route in SCREENSHOT_PAGES:
                         page.screenshot(path=str(OUTPUT / f"{route}-{width}.png"), full_page=True, animations="disabled")
+                    if measurements["documentWidth"] > measurements["innerWidth"] + 2:
+                        offenders = page.evaluate("""() => [...document.querySelectorAll('body *')]
+                          .map(el => ({el, rect: el.getBoundingClientRect(), css: getComputedStyle(el)}))
+                          .filter(x => x.rect.right > innerWidth + 2 && x.rect.width > 0 &&
+                            x.css.position !== 'fixed')
+                          .sort((a,b) => b.rect.right - a.rect.right)
+                          .slice(0,15)
+                          .map(x => ({
+                            tag:x.el.tagName, cls:String(x.el.className).slice(0,90),
+                            width:Math.round(x.rect.width), right:Math.round(x.rect.right),
+                            overflow:x.css.overflowX,
+                            html:x.el.outerHTML.slice(0,140)
+                          }))""")
+                        raise AssertionError(f"unintended page-wide horizontal overflow: {measurements}; offenders={offenders}")
                     return measurements
 
                 check(name, run_layout)
