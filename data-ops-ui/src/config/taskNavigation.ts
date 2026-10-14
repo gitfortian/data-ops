@@ -1,119 +1,116 @@
 import type { NavigationGroupWithRoutes, NavigationRoute } from './navigation';
 
 /**
- * IA-550 V3.1 presentation only. A task is a discoverable group of *existing*
- * independent routes, not a new URL, backend resource or inherited grant.
- * Never mutate menuGroup / parentId / menuCode / required permissions.
+ * IA-550: render accessible routes in their business context instead of
+ * inventing extra menu levels or a miscellaneous "专业工具" bucket.
+ * Section captions are NOT routes and must never become permission parents.
  */
-export interface TaskMenuItem {
+export interface ContextNavigationSection {
   id: string;
   title: string;
   routes: NavigationRoute[];
+  /** The number of directly visible links. Other links expand IN this section. */
+  visibleCount: number;
 }
-export interface TaskToolSection {
-  id: string;
-  title: string;
-  routes: NavigationRoute[];
-}
-export interface TaskNavigationModel {
-  tasks: TaskMenuItem[];
-  tools: TaskToolSection[];
+export interface ContextNavigationModel {
+  sections: ContextNavigationSection[];
 }
 
-interface TaskSpec {
+interface SectionSpec {
   id: string;
   title: string;
-  routeIds: readonly string[];
+  routes: readonly string[];
+  visible: number;
 }
 
-/** 3 + 4 + 3 + 6 + 4 default task concepts per #550 / IA-V3.1. */
-export const DEFAULT_TASK_MENU: Readonly<Record<string, readonly TaskSpec[]>> = {
+/** One domain expansion -> directly clickable pages (no nested task menu). */
+export const CONTEXT_NAVIGATION_SECTIONS: Readonly<Record<string, readonly SectionSpec[]>> = {
   integration: [
-    { id: 'sources', title: '数据源', routeIds: ['data-source'] },
-    { id: 'sync', title: '同步任务', routeIds: ['batch-link-up', 'realtime-sync'] },
-    { id: 'files', title: '文件资源', routeIds: ['resource-management'] },
+    { id: 'source', title: '来源管理', routes: ['data-source', 'sql-execution-audit'], visible: 1 },
+    { id: 'sync', title: '数据同步', routes: ['batch-link-up', 'realtime-sync'], visible: 2 },
+    { id: 'files', title: '文件资源', routes: ['resource-management'], visible: 1 },
   ],
   modeling: [
-    { id: 'business', title: '业务语义', routeIds: ['semantic-domains', 'semantic-processes'] },
-    { id: 'standards', title: '数据标准', routeIds: ['semantic-standards', 'semantic-fields'] },
-    { id: 'models', title: '模型工作台', routeIds: ['modeling-workspace'] },
-    { id: 'metrics', title: '指标中心', routeIds: ['metric-manage'] },
+    { id: 'business', title: '业务定义', routes: ['semantic-domains', 'semantic-processes'], visible: 2 },
+    { id: 'standards', title: '标准规范', routes: ['semantic-standards', 'semantic-fields', 'semantic-layers'], visible: 2 },
+    { id: 'models', title: '模型设计', routes: ['modeling-workspace'], visible: 1 },
+    { id: 'metrics', title: '指标体系', routes: ['metric-manage', 'metric-lineage', 'metric-impact', 'metric-service'], visible: 1 },
   ],
   development: [
-    { id: 'dev', title: '开发工作台', routeIds: ['data-development'] },
-    { id: 'workflows', title: '工作流', routeIds: ['workflow-definition', 'workflow-instances'] },
-    { id: 'operations', title: '发布与运行', routeIds: ['data-development-release', 'data-development-execution'] },
+    { id: 'development', title: '数据开发', routes: ['data-development'], visible: 1 },
+    { id: 'workflow', title: '工作流', routes: ['workflow-definition', 'workflow-instances'], visible: 2 },
+    { id: 'release', title: '发布与运行', routes: ['data-development-release', 'data-development-execution'], visible: 2 },
   ],
   'data-asset': [
-    { id: 'catalog', title: '资产目录', routeIds: ['data-asset-catalog'] },
-    { id: 'governance', title: '治理工作队列', routeIds: ['data-asset-inventory'] },
-    { id: 'quality', title: '质量治理', routeIds: ['data-quality-overview', 'data-quality-table-config'] },
-    { id: 'security', title: '数据安全', routeIds: ['data-security-overview'] },
-    { id: 'lifecycle', title: '生命周期', routeIds: ['data-lifecycle-policy'] },
-    { id: 'mdm', title: '主数据专业工作台', routeIds: ['mdm-overview'] },
+    { id: 'catalog', title: '资产发现', routes: ['data-asset-catalog', 'data-asset-overview', 'data-analysis-lineage'], visible: 1 },
+    { id: 'governance', title: '资产治理', routes: ['data-asset-inventory', 'data-asset-taxonomy'], visible: 1 },
+    { id: 'metadata', title: '技术元数据', routes: ['data-metadata-overview', 'data-metadata-collect'], visible: 1 },
+    { id: 'quality', title: '数据质量', routes: ['data-quality-overview', 'data-quality-table-config', 'data-quality-execution', 'data-quality-rule-template'], visible: 2 },
+    { id: 'security', title: '数据安全', routes: ['data-security-overview', 'data-security-classification', 'data-security-access', 'data-security-masking', 'data-security-audit', 'data-security-compliance'], visible: 1 },
+    { id: 'lifecycle', title: '生命周期', routes: ['data-lifecycle-policy', 'data-lifecycle-monitor', 'data-lifecycle-storage'], visible: 1 },
+    { id: 'mdm', title: '主数据管理', routes: ['mdm-overview', 'mdm-modeling', 'mdm-identification', 'mdm-cleansing', 'mdm-approval'], visible: 1 },
   ],
   'data-analysis': [
-    { id: 'products', title: '数据产品目录', routeIds: ['consumption-catalog'] },
-    { id: 'datasets', title: '数据集', routeIds: ['dataset-management'] },
-    { id: 'services', title: 'API 服务', routeIds: ['data-service-api'] },
-    { id: 'analytics', title: '分析展示', routeIds: ['dashboard', 'digital-screen'] },
+    { id: 'products', title: '数据产品', routes: ['consumption-catalog'], visible: 1 },
+    { id: 'datasets', title: '数据集', routes: ['dataset-management'], visible: 1 },
+    { id: 'api', title: 'API 服务', routes: ['data-service-api', 'data-service-access', 'data-service-debug', 'data-service-overview', 'data-service-logs'], visible: 1 },
+    { id: 'presentation', title: '分析展示', routes: ['dashboard', 'digital-screen'], visible: 2 },
   ],
 };
 
-interface SectionWithRoute { sectionId: string; sectionTitle: string; route: NavigationRoute }
-const enumerateAuthorizedRoutes = (group: NavigationGroupWithRoutes): SectionWithRoute[] => {
-  const result = group.routes.map(route => ({ sectionId: group.id, sectionTitle: '', route }));
-  for (const sub of group.subGroups ?? []) {
-    result.push(...enumerateAuthorizedRoutes(sub).map(x => ({
-      ...x,
-      sectionTitle: x.sectionTitle || sub.title,
-    })));
-  }
-  return result;
-};
+interface AuthorizedLeaf {
+  route: NavigationRoute;
+  ownerGroup: string;
+  ownerTitle: string;
+}
+const collectVisible = (group: NavigationGroupWithRoutes): AuthorizedLeaf[] => [
+  ...group.routes.map(route => ({ route, ownerGroup: group.id, ownerTitle: group.title })),
+  ...(group.subGroups ?? []).flatMap(collectVisible),
+];
 
 /**
- * Input groups are already permission/menu-grant/feature filtered by
- * getMainNavigationGroups. This function must not introduce extra auth gates.
- * Every original visible authorized leaf is retained exactly once.
+ * This function receives ONLY routes already filtered by Security RBAC, actual
+ * permissionCodes and feature flags. Every authorized leaf is returned once.
+ * Unplanned future pages stay alongside their original capability, never lost.
  */
-export function getTaskNavigationModel(group: NavigationGroupWithRoutes): TaskNavigationModel {
-  const available = enumerateAuthorizedRoutes(group);
-  const byId = new Map(available.map(x => [x.route.id, x.route]));
-  const consumed = new Set<string>();
-  const specs = DEFAULT_TASK_MENU[group.id];
+export const getContextNavigationModel = (group: NavigationGroupWithRoutes): ContextNavigationModel => {
+  const available = collectVisible(group);
+  const byId = new Map(available.map(item => [item.route.id, item.route]));
+  const used = new Set<string>();
+  const specs = CONTEXT_NAVIGATION_SECTIONS[group.id];
 
-  // Existing platform administration is a domain with its own menu authorization:
-  // keep each authorized management page directly accessible, not under Tools.
-  if (!specs) return {
-    tasks: group.routes.map(route => ({ id: route.id, title: route.title, routes: [route] })),
-    tools: available.some(x => x.sectionId !== group.id)
-      ? [{ id: 'other', title: '专业工具', routes: available.filter(x => x.sectionId !== group.id).map(x => x.route) }]
-      : [],
-  };
+  if (!specs) return { sections: [{
+    id: 'settings',
+    title: '',
+    routes: available.map(item => item.route),
+    visibleCount: available.length,
+  }] };
 
-  const tasks: TaskMenuItem[] = specs.map(spec => {
-    const routes = spec.routeIds
-      .filter(id => byId.has(id) && !consumed.has(id))
-      .map(id => { consumed.add(id); return byId.get(id)!; });
-    return { id: spec.id, title: spec.title, routes };
-  }).filter(item => item.routes.length > 0);
+  const sections: ContextNavigationSection[] = specs.map(spec => {
+    const routes = spec.routes.filter(id => byId.has(id)).map(id => {
+      used.add(id);
+      return byId.get(id)!;
+    });
+    return { id: spec.id, title: spec.title, routes, visibleCount: spec.visible };
+  }).filter(section => section.routes.length > 0);
 
-  const toolMap = new Map<string, TaskToolSection>();
+  // Fallback is not a miscellaneous sidebar bucket: place each new capability
+  // under its existing authorized business owner, close to related pages.
   for (const item of available) {
-    if (consumed.has(item.route.id)) continue;
-    const section = toolMap.get(item.sectionId) ?? {
-      id: item.sectionId,
-      title: item.sectionTitle || '其他专业工具',
-      routes: [],
-    };
-    section.routes.push(item.route);
-    toolMap.set(item.sectionId, section);
+    if (used.has(item.route.id)) continue;
+    const section = sections.find(s => s.id === item.ownerGroup)
+      ?? sections.find(s => s.title === item.ownerTitle);
+    if (section) section.routes.push(item.route);
+    else sections.push({
+      id: item.ownerGroup,
+      title: item.ownerGroup === group.id ? '' : item.ownerTitle,
+      routes: [item.route],
+      visibleCount: 1,
+    });
+    used.add(item.route.id);
   }
-  return { tasks, tools: [...toolMap.values()] };
-}
+  return { sections };
+};
 
-export function taskNavigationIds(model: TaskNavigationModel): string[] {
-  return [...model.tasks.flatMap(item => item.routes.map(route => route.id)),
-    ...model.tools.flatMap(section => section.routes.map(route => route.id))];
-}
+export const contextNavigationRouteIds = (model: ContextNavigationModel): string[] =>
+  model.sections.flatMap(section => section.routes.map(route => route.id));
