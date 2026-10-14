@@ -63,8 +63,12 @@ npm run build
 
 - 项目/用户/原菜单授权组成 `pulseScopeKey`；切换时直接屏蔽旧 scope 快照，Promise 回调只写当前 scope；某一个 Provider 失败仅降级该卡，其他领域仍可读取。
 - `safeOwnerCount` 只接受非负安全整数。0 是真实 Owner 返回的 0，`null/undefined/NaN/负数/字符串` 全部保持未知；失败显示“暂不可用”，不把未知填 0。
-- 首页既有 `useHomeDataAssets` 与新概况复用 `readSharedHomeAssetOverview(projectId)`，只合并同项目同时在途的请求，Promise settle 后清理，不跨项目缓存上一次业务值。
+- 首页既有 `useHomeDataAssets` 与新概况复用 `readSharedHomeAssetOverview(scopeKey)`，只合并同项目、同用户和同授权组合同时在途的请求，Promise settle 后清理，不跨项目缓存上一次业务值。
 - HomeTaskStarter 不重复显示统计，原 HomeHeader、DataCenter、审批/资源/消费等面板仍保留。没有项目/权限不发敏感 Owner 查询、不呈现跨项目数据卡。
-- 新增 `homeProjectPulse.test.ts` 校验负值/未知、项目与角色分离、逐卡独立权限；还需实际浏览器 320/390/768/1024/1440 与双项目部署联调证明完整 UX。
+- 新增 `projectPulseContract.test.ts` 校验负值/未知、项目与角色分离、逐卡独立权限；还需实际浏览器 320/390/768/1024/1440 与双项目部署联调证明完整 UX。
 
 **仍未实施/不能宣称已完成**：正式导航的 20 任务入口冻结、Model/Metric 的完整状态分布、指标发布/资产上架精确计数、真实跨域 G1/G2 E2E 和 D1–D5 产品签署。所有未批准写合同仍禁用。
+
+### Build 经验与修复
+
+2026-10-14 首轮真实 Umi TypeScript 构建发现 `HomeProjectPulse.tsx` 与 `homeProjectPulse.ts` 名称仅大小写不同，bundler 将纯函数导入解析到组件自身。现统一更名为 `projectPulseContract.ts` 及对应测试，删除旧同名文件；必须以新提交的完整 CI 为准，旧失败不能误标通过。项目切换的资产卡片与近期资源列表在 React 首次 render 即通过完整权限 scope 遮蔽旧快照，不再等待 effect 清理。
