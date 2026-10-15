@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { commitOdsManualImport, getModelingStructure } from '@/services/modeling/api';
+import { listModelingMappings } from '@/services/modeling/mapping';
 import { previewModelingImportColumns } from '@/services/modeling/import';
 import OdsSourceJourney from './OdsSourceJourney';
 
@@ -39,6 +40,7 @@ jest.mock('@/services/modeling/api', () => ({
   createModelingModel: (...args: unknown[]) => mockCreateModel(...args),
   getModelingStructure: jest.fn(), commitOdsManualImport: jest.fn(),
 }));
+jest.mock('@/services/modeling/mapping', () => ({ listModelingMappings: jest.fn() }));
 jest.mock('@/services/modeling/import', () => ({
   getOdsSourceCandidates: (...args: unknown[]) => mockCandidates(...args),
   previewModelingImportColumns: jest.fn(),
@@ -163,6 +165,22 @@ it('delivers the visible complete J1 journey: exact source → live columns → 
   jest.mocked(commitOdsManualImport).mockResolvedValueOnce({
     status: 'SAVED_AND_VERIFIED', modelId: 777, confirmedMappingCount: 2,
   } as Awaited<ReturnType<typeof commitOdsManualImport>>);
+  mockGetModel.mockResolvedValueOnce({
+    id: 777, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+  });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'persisted-definition', columns: [
+      { columnName: 'order_id', dataType: 'BIGINT' },
+      { columnName: 'order_amount', dataType: 'DECIMAL' },
+    ],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(listModelingMappings).mockResolvedValueOnce([
+    { targetColumn: 'order_id', mapped: true, sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+      sourceSchema: 'public', sourceTable: 'orders', sourceColumn: 'order_id' },
+    { targetColumn: 'order_amount', mapped: true, sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+      sourceSchema: 'public', sourceTable: 'orders', sourceColumn: 'order_amount' },
+  ]);
 
   render(<OdsSourceJourney />);
   expect(screen.getByTestId('ods-source-workbench')).toBeInTheDocument();
