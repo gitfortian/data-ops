@@ -16,6 +16,7 @@ import io.yak.ops.business.modeling.controller.v1.dto.ModelingModelQueryDTO;
 import io.yak.ops.business.modeling.controller.v1.vo.ModelVO;
 import io.yak.ops.business.modeling.controller.v1.vo.ModelVersionVO;
 import io.yak.ops.business.modeling.ddl.DdlService;
+import io.yak.ops.business.modeling.deployment.OdsPhysicalTargetInspectionService;
 import io.yak.ops.business.modeling.importer.OdsManualImportCommitService;
 import io.yak.ops.business.modeling.standard.PhysicalStandardCoverageInspectionService;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
@@ -56,6 +57,7 @@ public class ModelingModelController {
   private final ModelStructureService structureService;
   private final OdsManualImportCommitService odsManualImport;
   private final DdlService ddlService;
+  private final OdsPhysicalTargetInspectionService odsPhysicalTargetInspection;
   private final ModelVersionService versionService;
   private final OdsPublishedVersionEvidenceService odsVersionEvidence;
   private final PhysicalDataDevHandoffReadinessService dataDevHandoff;
@@ -184,6 +186,17 @@ public class ModelingModelController {
   @GetMapping("/{id}/ddl")
   public Result<DdlService.DdlView> generateDdl(@PathVariable("id") Long id) {
     return Result.success(ddlService.generate(id));
+  }
+
+  @Operation(summary = "核验当前已发布 ODS 在目标环境的物理列（只读，非部署/运行回执）")
+  @GetMapping("/{id}/versions/{versionNo}/physical-target-inspection")
+  public Result<OdsPhysicalTargetInspectionService.Report> inspectOdsPhysicalTarget(
+      @PathVariable("id") Long id, @PathVariable("versionNo") int versionNo,
+      @org.springframework.web.bind.annotation.RequestParam("targetDatasourceId") Long targetDatasourceId,
+      @org.springframework.web.bind.annotation.RequestParam("database") String database,
+      @org.springframework.web.bind.annotation.RequestParam(value = "schema", required = false) String schema) {
+    return Result.success(odsPhysicalTargetInspection.inspect(
+        id, versionNo, targetDatasourceId, database, schema));
   }
 
   @Operation(summary = "按方言查询数据类型目录")
