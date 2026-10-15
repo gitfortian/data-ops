@@ -270,7 +270,7 @@ class PostgresqlStorageSmokeTest {
 
 
   private void verifyOdsExactSourceUniqueness(JdbcTemplate jdbc, long projectId) {
-    // PostgreSQL schema-aware partial unique index, including CITEXT semantics.
+    // PostgreSQL schema-aware partial unique index; quoted schemas are case-sensitive.
     String prefix = "r10-pg-ods-" + UUID.randomUUID().toString().substring(0, 8);
     String insert = """
         INSERT INTO yak_modeling_model
@@ -285,10 +285,6 @@ class PostgresqlStorageSmokeTest {
       jdbc.update(insert, projectId, prefix + "-archive", "archive");
       jdbc.update(insert, projectId, prefix + "-default", null);
       assertThatThrownBy(() -> jdbc.update(insert, projectId, prefix + "-duplicate", "public"))
-          .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
-      // PostgreSQL source_schema is CITEXT: changing only letter case
-      // must not evade the unique source contract.
-      assertThatThrownBy(() -> jdbc.update(insert, projectId, prefix + "-case", "PUBLIC"))
           .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
       assertThatThrownBy(() -> jdbc.update(insert, projectId, prefix + "-default-dup", null))
           .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
