@@ -121,6 +121,42 @@ export const inspectOdsPhysicalTarget = (
   );
 };
 
+export interface OdsTargetObservation {
+  id: number;
+  modelId: number;
+  versionNo: number;
+  modelVersionId: number;
+  targetDatasourceId: number;
+  targetDatabase: string;
+  targetSchema?: string | null;
+  targetTable: string;
+  observedCatalogSha256: string;
+  frozenVersionChecksum: string;
+  observedColumnCount: number;
+  observedBy: string;
+  observedAt: string;
+  status: 'RECENT_CATALOG_OBSERVATION' | 'STALE_CATALOG_OBSERVATION' | 'VERSION_CHANGED';
+  limitations: string[];
+}
+
+/** Explicitly re-inspects the live target before recording an immutable catalog observation.
+ * It is NEVER a DDL execution or deployment completion receipt. */
+export const recordOdsTargetObservation = (
+  modelId: ModelingModelId, versionNo: number,
+  targetDatasourceId: number, database: string, schema?: string,
+): Promise<OdsTargetObservation> =>
+  HttpUtils.postData<OdsTargetObservation>(
+    `${MODELING_API_PREFIX}/models/${modelId}/versions/${versionNo}/physical-target-observations`,
+    { targetDatasourceId, database, ...(schema ? { schema } : {}) },
+  );
+
+export const listOdsTargetObservations = (
+  modelId: ModelingModelId,
+): Promise<OdsTargetObservation[]> =>
+  HttpUtils.getData<OdsTargetObservation[]>(
+    `${MODELING_API_PREFIX}/models/${modelId}/physical-target-observations`,
+  );
+
 /** 仅生成建库脚本，不在平台内执行（决策 D3）。 */
 export const generateModelingDdl = (id: ModelingModelId): Promise<ModelingDdlRecord> =>
   HttpUtils.getData<ModelingDdlRecord>(`${MODELING_API_PREFIX}/models/${id}/ddl`);
