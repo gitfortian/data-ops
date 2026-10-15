@@ -82,7 +82,7 @@ it('requires real published catalog readback before offering a manual sync hando
     targetTable: 'ods_order_detail', observedCatalogSha256: 'a'.repeat(64),
     frozenVersionChecksum: 'b'.repeat(64), observedColumnCount: 2,
     observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
-    status: 'RECENT_CATALOG_OBSERVATION', limitations: [],
+    status: 'RECENT_CATALOG_OBSERVATION' as const, limitations: [],
   };
   jest.mocked(recordOdsTargetObservation).mockResolvedValueOnce(saved);
   jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([saved]);
@@ -120,7 +120,7 @@ it('records only after fresh server validation and verifies an immutable owner h
     targetTable: 'ods_order_detail', observedCatalogSha256: 'a'.repeat(64),
     frozenVersionChecksum: 'b'.repeat(64), observedColumnCount: 2,
     observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
-    status: 'RECENT_CATALOG_OBSERVATION', limitations: [],
+    status: 'RECENT_CATALOG_OBSERVATION' as const, limitations: [],
   };
   jest.mocked(recordOdsTargetObservation).mockResolvedValueOnce(saved);
   jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([])
