@@ -17,6 +17,7 @@ import io.yak.ops.business.modeling.controller.v1.vo.ModelVO;
 import io.yak.ops.business.modeling.controller.v1.vo.ModelVersionVO;
 import io.yak.ops.business.modeling.ddl.DdlService;
 import io.yak.ops.business.modeling.deployment.OdsPhysicalTargetInspectionService;
+import io.yak.ops.business.modeling.deployment.OdsTargetObservationService;
 import io.yak.ops.business.modeling.importer.OdsManualImportCommitService;
 import io.yak.ops.business.modeling.standard.PhysicalStandardCoverageInspectionService;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
@@ -58,6 +59,7 @@ public class ModelingModelController {
   private final OdsManualImportCommitService odsManualImport;
   private final DdlService ddlService;
   private final OdsPhysicalTargetInspectionService odsPhysicalTargetInspection;
+  private final OdsTargetObservationService odsTargetObservations;
   private final ModelVersionService versionService;
   private final OdsPublishedVersionEvidenceService odsVersionEvidence;
   private final PhysicalDataDevHandoffReadinessService dataDevHandoff;
@@ -197,6 +199,30 @@ public class ModelingModelController {
       @org.springframework.web.bind.annotation.RequestParam(value = "schema", required = false) String schema) {
     return Result.success(odsPhysicalTargetInspection.inspect(
         id, versionNo, targetDatasourceId, database, schema));
+  }
+
+  public record OdsTargetObservationRequest(
+      @jakarta.validation.constraints.NotNull Long targetDatasourceId,
+      @jakarta.validation.constraints.NotBlank String database,
+      String schema) {}
+
+  @Operation(summary = "存储当前 ODS 发布版本对目标库的实时 Catalog 列观察记录；不是部署回执")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  @PostMapping("/{id}/versions/{versionNo}/physical-target-observations")
+  public Result<OdsTargetObservationService.View> observeOdsPhysicalTarget(
+      @PathVariable("id") Long id, @PathVariable("versionNo") int versionNo,
+      @Valid @RequestBody OdsTargetObservationRequest request,
+      HttpServletRequest httpRequest) {
+    return Result.success(odsTargetObservations.observe(
+        id, versionNo, request.targetDatasourceId(), request.database(), request.schema(),
+        currentUserProvider.getCurrentUser(httpRequest)));
+  }
+
+  @Operation(summary = "读取 ODS 目标 Catalog 历史观察及过期状态（只读）")
+  @GetMapping("/{id}/physical-target-observations")
+  public Result<List<OdsTargetObservationService.View>> listOdsPhysicalTargetObservations(
+      @PathVariable("id") Long id) {
+    return Result.success(odsTargetObservations.history(id));
   }
 
   @Operation(summary = "按方言查询数据类型目录")
