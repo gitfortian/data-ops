@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { listAllDataSources } from '@/services/data-source/api';
-import { inspectOdsPhysicalTarget, type OdsPhysicalTargetInspection } from '@/services/modeling/api';
+import { inspectOdsPhysicalTarget, listOdsTargetObservations, recordOdsTargetObservation, type OdsPhysicalTargetInspection, type OdsTargetObservation } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { buildIntegrationCreatePath } from '@/services/integration/sourceHandoff';
 
@@ -24,6 +24,8 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   const [report, setReport] = useState<OdsPhysicalTargetInspection>();
   const [busy, setBusy] = useState(false);
   const [loadingSources, setLoadingSources] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [observations, setObservations] = useState<OdsTargetObservation[]>([]);
   const readEpoch = useRef(0);
   const invalidate = () => { readEpoch.current += 1; setReport(undefined); };
   const modelId = Number(model.id);
@@ -35,12 +37,18 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
     let current = true;
     readEpoch.current += 1;
     setSources([]);
+    setObservations([]);
     setTargetId(undefined);
     setDatabase('');
     setSchema('');
     setReport(undefined);
     if (!open || !allowed) return () => { current = false; };
     setLoadingSources(true);
+    void listOdsTargetObservations(modelId).then(rows => {
+      if (current) setObservations(rows ?? []);
+    }).catch(error => {
+      if (current) message.error(error instanceof Error ? error.message : '核验历史不可读取');
+    });
     void listAllDataSources().then(page => {
       if (!current) return;
       setSources((page.bizData ?? []).filter(item => Number.isSafeInteger(Number(item.id)))
@@ -77,6 +85,38 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
       if (ticket === readEpoch.current)
         message.error(error instanceof Error ? error.message : '目标库核验不可用');
     } finally { if (ticket === readEpoch.current) setBusy(false); }
+  };
+
+  const recordObservation = async () => {
+    if (!allowed || !canAll(['modeling:update']) || !targetId || !database.trim()
+        || report?.state !== 'COLUMN_MATCH_NEEDS_DDL_REVIEW') return;
+    const ticket = ++readEpoch.current;
+    const previous = report;
+    setRecording(true);
+    try {
+      // Never submit a cached UI fingerprint; the server re-inspects the live target.
+      const saved = await recordOdsTargetObservation(
+        modelId, versionNo, targetId, database.trim(), schema.trim() || undefined,
+      );
+      const historyRows = await listOdsTargetObservations(modelId);
+      if (ticket !== readEpoch.current) return;
+      const confirmed = historyRows.find(row => row.id === saved.id);
+      if (!confirmed || confirmed.modelId !== modelId || confirmed.versionNo !== versionNo
+          || confirmed.modelVersionId !== previous.versionId
+          || confirmed.targetDatasourceId !== targetId
+          || confirmed.targetDatabase !== database.trim()
+          || (confirmed.targetSchema || '') !== schema.trim()
+          || confirmed.observedCatalogSha256 !== saved.observedCatalogSha256) {
+        throw new Error('服务端保存回执与核验记录重新读取不一致，不能确认记录成功');
+      }
+      setObservations(historyRows);
+      message.success('目标 Catalog 观察证据已保存并重新读取。不是建表、部署或同步成功回执。');
+    } catch (error) {
+      if (ticket === readEpoch.current) message.error(
+        error instanceof Error ? error.message : '记录保存结果未知，请重新查看核验历史，勿盲目重试');
+    } finally {
+      if (ticket === readEpoch.current) setRecording(false);
+    }
   };
 
   const sourceId = Number(model.sourceDatasourceId);
@@ -144,6 +184,11 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
       {report.limitations.map((line, idx) => <Typography.Paragraph key={idx}
         type="secondary" className="!mb-1">· {line}</Typography.Paragraph>)}
       <Space wrap className="mt-3">
+        <Button disabled={!allowed || !canAll(['modeling:update'])
+            || report.state !== 'COLUMN_MATCH_NEEDS_DDL_REVIEW'}
+          loading={recording} onClick={() => void recordObservation()}>
+          保存此次目标列观察记录
+        </Button>
         <Button disabled={!mayCreateSync} type="primary" onClick={() =>
           history.push(buildIntegrationCreatePath('batch', { dataSourceId: String(sourceId) }))}>
           前往离线同步配置（需人工建任务）
@@ -152,6 +197,25 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
           必须重新选择目标表、核对字段映射，保存/发布同步任务后执行并查看真实运行记录。
         </Typography.Text>
       </Space>
+    </>}
+    {observations.length > 0 && <>
+      <Typography.Title level={5} className="!mt-4">最近目标列核验记录（最多 20 条）</Typography.Title>
+      <Table size="small" rowKey="id" pagination={false} dataSource={observations.slice(0, 5)}
+        columns={[
+          { title: '记录', dataIndex: 'id', width: 75 },
+          { title: '版本', dataIndex: 'versionNo', width: 75, render: (no: number) => `V${no}` },
+          { title: '目标', key: 'target', render: (_, row: OdsTargetObservation) =>
+            `${row.targetDatabase}.${row.targetSchema ? row.targetSchema + '.' : ''}${row.targetTable}` },
+          { title: '观察时间', dataIndex: 'observedAt', width: 168 },
+          { title: '证据状态', dataIndex: 'status', width: 210,
+            render: (status: string) => <Tag color={status === 'RECENT_CATALOG_OBSERVATION' ? 'blue' : 'orange'}>
+              {status === 'RECENT_CATALOG_OBSERVATION' ? '近期列观察（非部署）'
+                : status === 'VERSION_CHANGED' ? '发布版本已变化' : '观察已过期'}
+            </Tag> },
+        ]} />
+      <Typography.Text type="secondary">
+        历史观察不可替代实时目标核验、DDL 部署审计、同步任务发布版本和运行证据。
+      </Typography.Text>
     </>}
   </Modal>;
 }
