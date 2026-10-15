@@ -19,6 +19,57 @@ public class OfflineOdsHandoffGuard {
   private final ObjectProvider<OdsSyncHandoffVerifier> verifier;
   private static final ObjectMapper JSON = new ObjectMapper();
 
+  /**
+   * Publish/execute from the immutable JobRevision/Batch snapshot, not a mutable
+   * Task row. If the snapshot cannot resolve an exact single-table endpoint,
+   * refuse the provenance claim rather than inferring its schema.
+   */
+  public void verifyFrozen(String frozenDefinitionJson) {
+    JsonNode root;
+    try {
+      root = JSON.readTree(frozenDefinitionJson);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("离线任务的冻结定义不可解析", e);
+    }
+    if (root == null || !root.isObject()) {
+      throw new IllegalArgumentException("无效离线任务冻结定义");
+    }
+    if (root.path("odsHandoff").isMissingNode() || root.path("odsHandoff").isNull()) return;
+    if (!"GUIDE_SINGLE".equalsIgnoreCase(root.path("basic").path("mode").asText())) {
+      throw new IllegalArgumentException("ODS 交接当前只支持确切的单表同步，不允许多表或 SQL 模式猜测");
+    }
+    JsonNode source = root.path("source");
+    JsonNode sink = root.path("sink");
+    Long sourceId = endpointId(source);
+    Long sinkId = endpointId(sink);
+    String sourceTable = endpointTable(source);
+    String sinkTable = endpointTable(sink);
+    verify(frozenDefinitionJson, sourceId, sourceTable, sinkId, sinkTable);
+  }
+
+  private static Long endpointId(JsonNode endpoint) {
+    String id = endpoint.path("dataSourceId").asText("");
+    if (!id.matches("[1-9][0-9]{0,18}")) {
+      throw new IllegalArgumentException("ODS 交接端点必须保留可信数据源 ID");
+    }
+    try { return Long.valueOf(id); }
+    catch (NumberFormatException ex) {
+      throw new IllegalArgumentException("无效数据源 ID", ex);
+    }
+  }
+
+  private static String endpointTable(JsonNode endpoint) {
+    JsonNode config = endpoint.path("config");
+    String value = config.path("targetTableName").asText("");
+    if (!StringUtils.hasText(value)) value = config.path("table").asText("");
+    if (!StringUtils.hasText(value)) value = endpoint.path("targetTableName").asText("");
+    if (!StringUtils.hasText(value)) value = endpoint.path("table").asText("");
+    if (!StringUtils.hasText(value)) {
+      throw new IllegalArgumentException("ODS 交接需要可精确核验的单表端点");
+    }
+    return value;
+  }
+
   /** Applies to the frozen definition, NOT the editable UI navigation state. */
   public void verify(String definitionJson, Long sourceId, String sourceTable,
                      Long sinkId, String sinkTable) {
