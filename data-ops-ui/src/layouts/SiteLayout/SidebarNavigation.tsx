@@ -68,7 +68,9 @@ export default function SidebarNavigation({
 
   const popupItems = (group: NavigationGroupWithRoutes): MenuProps['items'] => {
     const model: ContextNavigationModel = models.get(group.id) ?? getContextNavigationModel(group);
-    return model.sections.flatMap(section =>
+    // Widen flatMap's output to Ant Design's menu item union: grouped labels
+    // may be text, while route labels are React elements.
+    return model.sections.flatMap<NonNullable<MenuProps['items']>[number]>(section =>
       section.title && section.routes.length > 1
         ? [{
             type: 'group' as const,

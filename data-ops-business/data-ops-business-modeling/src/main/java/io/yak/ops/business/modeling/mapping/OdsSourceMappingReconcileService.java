@@ -51,7 +51,7 @@ public class OdsSourceMappingReconcileService {
   public record MappingRow(String targetColumn, String dataType, String status,
                            String existingSourceColumn, String suggestedSourceColumn) {}
   public record Preview(Long modelId, Long sourceDatasourceId, String sourceDatabase,
-                        String sourceTable, String definition, List<String> sourceColumns,
+                        String sourceSchema, String sourceTable, String definition, List<String> sourceColumns,
                         List<MappingRow> rows, int mappedCount, int unmappedCount,
                         int technicalCount, int orphanCount, int conflictCount) {}
   public record Selection(String targetColumn, String sourceColumn) {}
@@ -61,11 +61,11 @@ public class OdsSourceMappingReconcileService {
   /** Stable source semantics: never hash mutable PO timestamps or Java Time values. */
   private record MappingEvidence(Long projectId, Long modelId, String targetColumn,
                                  Long sourceDatasourceId, String sourceDatabase,
-                                 String sourceTable, String sourceColumn,
+                                 String sourceSchema, String sourceTable, String sourceColumn,
                                  String transformExpr, Long stdProcessFieldId) {}
   private record Evidence(Long modelId, String code, String dialect, String layerCode,
                           String status, Long processId, Long sourceDatasourceId,
-                          String sourceDatabase, String sourceTable, String importMode,
+                          String sourceDatabase, String sourceSchema, String sourceTable, String importMode,
                           List<ColumnDefinition> columns, List<MappingEvidence> mappings,
                           List<CatalogColumn> sources) {}
   private record State(Preview preview, Model model, Map<String, ColumnDefinition> columns,
@@ -127,6 +127,7 @@ public class OdsSourceMappingReconcileService {
       mapping.setTargetColumn(target.columnName());
       mapping.setSourceDatasourceId(state.model().sourceDatasourceId());
       mapping.setSourceDatabase(state.model().sourceDatabase());
+      mapping.setSourceSchema(state.model().sourceSchema());
       mapping.setSourceTable(state.model().sourceTable());
       mapping.setSourceColumn(source.name());
       mapping.setTransformExpr(null);
@@ -163,7 +164,7 @@ public class OdsSourceMappingReconcileService {
         ? structures.findColumnsForUpdate(modelId) : structures.findColumns(modelId);
     List<ModelingColumnMappingPO> existing = mappings.listByModel(modelId);
     List<CatalogColumn> source = sourceCatalog.listColumnsFresh(
-        model.sourceDatasourceId(), model.sourceDatabase(), null, model.sourceTable());
+        model.sourceDatasourceId(), model.sourceDatabase(), model.sourceSchema(), model.sourceTable());
     if (columns == null || source == null || columns.isEmpty() || source.isEmpty()
         || columns.size() > MAX_COLUMNS || source.size() > MAX_COLUMNS
         || existing.size() > MAX_COLUMNS) {
@@ -226,14 +227,14 @@ public class OdsSourceMappingReconcileService {
         .sorted(Comparator.comparing(c -> key(c.name()))).toList();
     List<MappingEvidence> mappingFacts = orderedMappings.stream().map(m ->
         new MappingEvidence(m.getProjectId(), m.getModelId(), m.getTargetColumn(),
-            m.getSourceDatasourceId(), m.getSourceDatabase(), m.getSourceTable(),
+            m.getSourceDatasourceId(), m.getSourceDatabase(), m.getSourceSchema(), m.getSourceTable(),
             m.getSourceColumn(), m.getTransformExpr(), m.getStdProcessFieldId())).toList();
     String definition = hash(new Evidence(model.id(), model.code(), model.dialect().name(),
         model.layerCode(), model.status().name(), model.processId(),
-        model.sourceDatasourceId(), model.sourceDatabase(), model.sourceTable(),
+        model.sourceDatasourceId(), model.sourceDatabase(), model.sourceSchema(), model.sourceTable(),
         model.importMode(), orderedColumns, mappingFacts, orderedSource));
     Preview preview = new Preview(modelId, model.sourceDatasourceId(), model.sourceDatabase(),
-        model.sourceTable(), definition,
+        model.sourceSchema(), model.sourceTable(), definition,
         orderedSource.stream().map(CatalogColumn::name).toList(), List.copyOf(rows),
         mapped, unmapped, generated, orphan, conflicts);
     return new State(preview, model, targets, saved, sources);
@@ -257,6 +258,7 @@ public class OdsSourceMappingReconcileService {
   private static boolean sameBinding(Model model, ModelingColumnMappingPO mapping) {
     return Objects.equals(model.sourceDatasourceId(), mapping.getSourceDatasourceId())
         && Objects.equals(model.sourceDatabase(), mapping.getSourceDatabase())
+        && Objects.equals(model.sourceSchema(), mapping.getSourceSchema())
         && Objects.equals(model.sourceTable(), mapping.getSourceTable());
   }
 

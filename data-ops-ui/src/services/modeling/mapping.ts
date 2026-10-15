@@ -45,6 +45,7 @@ export interface OdsMappingReconcilePreview {
   modelId: number;
   sourceDatasourceId: number;
   sourceDatabase: string;
+  sourceSchema?: string | null;
   sourceTable: string;
   definition: string;
   sourceColumns: string[];

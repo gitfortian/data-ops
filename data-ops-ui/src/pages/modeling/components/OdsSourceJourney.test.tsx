@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { commitOdsManualImport, getModelingStructure } from '@/services/modeling/api';
+import { listModelingMappings } from '@/services/modeling/mapping';
 import { previewModelingImportColumns } from '@/services/modeling/import';
 import OdsSourceJourney from './OdsSourceJourney';
 
@@ -39,6 +40,7 @@ jest.mock('@/services/modeling/api', () => ({
   createModelingModel: (...args: unknown[]) => mockCreateModel(...args),
   getModelingStructure: jest.fn(), commitOdsManualImport: jest.fn(),
 }));
+jest.mock('@/services/modeling/mapping', () => ({ listModelingMappings: jest.fn() }));
 jest.mock('@/services/modeling/import', () => ({
   getOdsSourceCandidates: (...args: unknown[]) => mockCandidates(...args),
   previewModelingImportColumns: jest.fn(),
@@ -163,6 +165,22 @@ it('delivers the visible complete J1 journey: exact source → live columns → 
   jest.mocked(commitOdsManualImport).mockResolvedValueOnce({
     status: 'SAVED_AND_VERIFIED', modelId: 777, confirmedMappingCount: 2,
   } as Awaited<ReturnType<typeof commitOdsManualImport>>);
+  mockGetModel.mockResolvedValueOnce({
+    id: 777, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+  });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'persisted-definition', columns: [
+      { columnName: 'order_id', dataType: 'BIGINT' },
+      { columnName: 'order_amount', dataType: 'DECIMAL' },
+    ],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(listModelingMappings).mockResolvedValueOnce([
+    { targetColumn: 'order_id', mapped: true, sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+      sourceSchema: 'public', sourceTable: 'orders', sourceColumn: 'order_id' },
+    { targetColumn: 'order_amount', mapped: true, sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+      sourceSchema: 'public', sourceTable: 'orders', sourceColumn: 'order_amount' },
+  ]);
 
   render(<OdsSourceJourney />);
   expect(screen.getByTestId('ods-source-workbench')).toBeInTheDocument();
@@ -205,4 +223,136 @@ it('shows one native ODS content workspace instead of prototype rails and Englis
   await screen.findByRole('button', { name: '打开已保存 ODS' });
   expect(screen.getByText('已有同源 ODS')).toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
+});
+
+
+it('treats a timed-out commit as saved only after exact owner readback', async () => {
+  mockCandidates.mockResolvedValueOnce({
+    state: 'READY', reason: 'no ODS', datasourceId: 10, database: 'trade_db',
+    schema: 'public', table: 'orders', candidates: [],
+  });
+  jest.mocked(previewModelingImportColumns).mockResolvedValueOnce([
+    { name: 'order_id', typeName: 'BIGINT', primaryKey: true, nullable: false, technical: false },
+  ]);
+  mockCreateModel.mockResolvedValueOnce({
+    id: 888, code: 'ods_orders', name: 'ODS orders', layerCode: 'ODS',
+    status: 'DRAFT', sourceDatasourceId: null,
+  });
+  mockGetModel.mockResolvedValueOnce({
+    id: 888, layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null,
+  }).mockResolvedValueOnce({
+    id: 888, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+  });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'before-commit', columns: [],
+  } as Awaited<ReturnType<typeof getModelingStructure>>).mockResolvedValueOnce({
+    definition: 'after-commit', columns: [{ columnName: 'order_id', dataType: 'BIGINT' }],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(commitOdsManualImport).mockRejectedValueOnce(new Error('HTTP timeout'));
+  jest.mocked(listModelingMappings).mockResolvedValueOnce([{
+    targetColumn: 'order_id', mapped: true, sourceDatasourceId: 10,
+    sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+    sourceColumn: 'order_id',
+  }]);
+
+  render(<OdsSourceJourney />);
+  await screen.findByText('no ODS');
+  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
+  await screen.findByLabelText('ODS 字段 order_id');
+  fireEvent.click(screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' }));
+  await screen.findByText(/已保存空草稿 #888/);
+  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  await screen.findByText('ODS 已成功保存');
+  expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
+  expect(listModelingMappings).toHaveBeenCalledWith(888);
+});
+
+
+it('reopening a source-bound draftId shows the exact existing ODS instead of an error or empty draft', async () => {
+  mockQuery.set('draftId', '501');
+  mockGetModel.mockResolvedValueOnce({
+    id: 501, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'public', sourceTable: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  const open = await screen.findByRole('button', { name: '打开已保存 ODS' });
+  expect(screen.queryByText(/已保存 ODS 与当前来源或精确候选不一致/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  fireEvent.click(open);
+  expect(mockPush).toHaveBeenCalledWith('/modeling/models/501');
+  expect(mockCreateModel).not.toHaveBeenCalled();
+  expect(commitOdsManualImport).not.toHaveBeenCalled();
+});
+
+it('rejects a resumed ODS bound to another schema without offering any create or commit action', async () => {
+  mockQuery.set('draftId', '501');
+  mockGetModel.mockResolvedValueOnce({
+    id: 501, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'archive', sourceTable: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  await screen.findByText(/已保存 ODS 与当前来源或精确候选不一致/);
+  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});
+
+it('does not mistake a different server candidate for the persisted draftId on resume', async () => {
+  mockQuery.set('draftId', '502');
+  mockGetModel.mockResolvedValueOnce({
+    id: 502, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'public', sourceTable: 'orders',
+  });
+  // Default candidate list is only 501, not 502.
+  render(<OdsSourceJourney />);
+  await screen.findByText(/已保存 ODS 与当前来源或精确候选不一致/);
+  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});
+
+
+it('never claims saved when successful HTTP receipt reads back another schema', async () => {
+  mockCandidates.mockResolvedValueOnce({
+    state: 'READY', reason: 'new source', datasourceId: 10,
+    database: 'trade_db', schema: 'public', table: 'orders', candidates: [],
+  });
+  jest.mocked(previewModelingImportColumns).mockResolvedValueOnce([
+    { name: 'order_id', typeName: 'BIGINT', primaryKey: true, nullable: false, technical: false },
+  ]);
+  mockCreateModel.mockResolvedValueOnce({
+    id: 889, code: 'ods_orders', layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null,
+  });
+  mockGetModel.mockResolvedValueOnce({
+    id: 889, code: 'ods_orders', layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null,
+  }).mockResolvedValue({
+    id: 889, code: 'ods_orders', layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'archive', sourceTable: 'orders',
+  });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'precommit', columns: [],
+  } as Awaited<ReturnType<typeof getModelingStructure>>).mockResolvedValue({
+    definition: 'postcommit', columns: [{ columnName: 'order_id', dataType: 'BIGINT' }],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(commitOdsManualImport).mockResolvedValueOnce({
+    status: 'SAVED_AND_VERIFIED', modelId: 889, confirmedMappingCount: 1,
+  } as Awaited<ReturnType<typeof commitOdsManualImport>>);
+  jest.mocked(listModelingMappings).mockResolvedValue([{
+    targetColumn: 'order_id', mapped: true, sourceDatasourceId: 10,
+    sourceDatabase: 'trade_db', sourceSchema: 'archive',
+    sourceTable: 'orders', sourceColumn: 'order_id',
+  }]);
+  render(<OdsSourceJourney />);
+  await screen.findByText('new source');
+  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
+  await screen.findByLabelText('ODS 字段 order_id');
+  fireEvent.click(screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' }));
+  await screen.findByText(/已保存空草稿 #889/);
+  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  await screen.findByText(/回读不一致/);
+  expect(screen.queryByText('ODS 已成功保存')).not.toBeInTheDocument();
+  expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
 });

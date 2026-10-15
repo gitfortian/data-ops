@@ -287,6 +287,7 @@ export interface ModelingMappingView {
   mapped: boolean;
   sourceDatasourceId?: number;
   sourceDatabase?: string;
+  sourceSchema?: string | null;
   sourceTable?: string;
   sourceColumn?: string;
   transformExpr?: string;

@@ -227,4 +227,62 @@ class OdsSourceMappingReconcileServiceTest {
     assertEquals(baseline.definition(), service.preview(50L).definition());
   }
 
+
+  @Test void namedSchemaRepairUsesOnlyExactSourceAndPersistsItsIdentity() {
+    var named = model("ODS", ModelStatus.DRAFT).withSourceSchema("public");
+    when(models.findById(50L)).thenReturn(Optional.of(named));
+    when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(named));
+    rows.get(0).setSourceSchema("public");
+    when(catalog.listColumnsFresh(10L, "trade_db", "public", "trade_order"))
+        .thenReturn(List.of(source("order_id"), source("amount")));
+
+    var preview = service.preview(50L);
+    assertEquals("public", preview.sourceSchema());
+    assertEquals(0, preview.conflictCount());
+    var receipt = service.confirm(50L,
+        new OdsSourceMappingReconcileService.ConfirmRequest(preview.definition(),
+            List.of(new OdsSourceMappingReconcileService.Selection("amount", "amount"))),
+        "tester");
+    assertEquals("SAVED_AND_VERIFIED", receipt.status());
+    assertEquals("public", rows.get(1).getSourceSchema());
+    verify(catalog, atLeast(2)).listColumnsFresh(10L, "trade_db", "public", "trade_order");
+    verify(catalog, never()).listColumnsFresh(10L, "trade_db", null, "trade_order");
+  }
+
+  @Test void mappingFromDifferentSchemaIsConflictEvenWhenNamesAndColumnsMatch() {
+    var named = model("ODS", ModelStatus.DRAFT).withSourceSchema("public");
+    when(models.findById(50L)).thenReturn(Optional.of(named));
+    when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(named));
+    rows.get(0).setSourceSchema("archive");
+    when(catalog.listColumnsFresh(10L, "trade_db", "public", "trade_order"))
+        .thenReturn(List.of(source("order_id"), source("amount")));
+    var preview = service.preview(50L);
+    assertEquals("SOURCE_CONFLICT", preview.rows().get(0).status());
+    assertEquals(1, preview.conflictCount());
+    assertThrows(ModelingException.class, () -> service.confirm(50L,
+        new OdsSourceMappingReconcileService.ConfirmRequest(preview.definition(),
+            List.of(new OdsSourceMappingReconcileService.Selection("amount", "amount"))),
+        "tester"));
+    verify(mappings, never()).upsert(any(), anyString());
+  }
+
+  @Test void schemaChangeBetweenPreviewAndCommitInvalidatesFingerprint() {
+    var named = model("ODS", ModelStatus.DRAFT).withSourceSchema("public");
+    when(models.findById(50L)).thenReturn(Optional.of(named));
+    rows.get(0).setSourceSchema("public");
+    when(catalog.listColumnsFresh(10L, "trade_db", "public", "trade_order"))
+        .thenReturn(List.of(source("order_id"), source("amount")));
+    var before = service.preview(50L);
+    var changed = model("ODS", ModelStatus.DRAFT).withSourceSchema("archive");
+    when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(changed));
+    rows.get(0).setSourceSchema("archive");
+    when(catalog.listColumnsFresh(10L, "trade_db", "archive", "trade_order"))
+        .thenReturn(List.of(source("order_id"), source("amount")));
+    assertThrows(ModelingException.class, () -> service.confirm(50L,
+        new OdsSourceMappingReconcileService.ConfirmRequest(before.definition(),
+            List.of(new OdsSourceMappingReconcileService.Selection("amount", "amount"))),
+        "tester"));
+    verify(mappings, never()).upsert(any(), anyString());
+  }
+
 }
