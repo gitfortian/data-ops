@@ -1,6 +1,6 @@
 import { history } from '@umijs/max';
 import { Alert, Button, Input, Modal, Select, Space, Table, Tag, Typography, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { listAllDataSources } from '@/services/data-source/api';
@@ -24,6 +24,8 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   const [report, setReport] = useState<OdsPhysicalTargetInspection>();
   const [busy, setBusy] = useState(false);
   const [loadingSources, setLoadingSources] = useState(false);
+  const readEpoch = useRef(0);
+  const invalidate = () => { readEpoch.current += 1; setReport(undefined); };
   const modelId = Number(model.id);
   const versionNo = Number(model.latestVersionNo);
   const hasVersion = Number.isSafeInteger(versionNo) && versionNo > 0;
@@ -31,6 +33,7 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
 
   useEffect(() => {
     let current = true;
+    readEpoch.current += 1;
     setSources([]);
     setTargetId(undefined);
     setDatabase('');
@@ -56,6 +59,7 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
 
   const inspect = async () => {
     if (!allowed || !hasVersion || !targetId || !database.trim()) return;
+    const ticket = ++readEpoch.current;
     setBusy(true);
     setReport(undefined);
     try {
@@ -68,10 +72,11 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
           || (result.targetSchema || '') !== schema.trim()) {
         throw new Error('目标或模型版本在核验过程中已变化，请重新选择');
       }
-      setReport(result);
+      if (ticket === readEpoch.current) setReport(result);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '目标库核验不可用');
-    } finally { setBusy(false); }
+      if (ticket === readEpoch.current)
+        message.error(error instanceof Error ? error.message : '目标库核验不可用');
+    } finally { if (ticket === readEpoch.current) setBusy(false); }
   };
 
   const sourceId = Number(model.sourceDatasourceId);
@@ -97,7 +102,7 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
         <Typography.Text type="secondary">目标数据源</Typography.Text>
         <Select className="w-full" placeholder="选择目标库连接" loading={loadingSources}
           disabled={!allowed || !hasVersion}
-          value={targetId} onChange={value => { setTargetId(value); setReport(undefined); }}
+          value={targetId} onChange={value => { setTargetId(value); invalidate(); }}
           options={sources.map(item => ({
             value: item.id, label: `${item.name} (${item.dbType || '未知类型'})`,
           }))} />
@@ -106,13 +111,13 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
         <Typography.Text type="secondary">目标 Database</Typography.Text>
         <Input value={database} placeholder="精确数据库名"
           disabled={!hasVersion || !allowed} onChange={event => {
-            setDatabase(event.target.value); setReport(undefined);
+            setDatabase(event.target.value); invalidate();
           }} />
       </div>
       <div className="w-[155px]">
         <Typography.Text type="secondary">目标 Schema（可空）</Typography.Text>
         <Input value={schema} placeholder="如 public" disabled={!hasVersion || !allowed}
-          onChange={event => { setSchema(event.target.value); setReport(undefined); }} />
+          onChange={event => { setSchema(event.target.value); invalidate(); }} />
       </div>
       <Button loading={busy} type="primary" onClick={() => void inspect()}
         disabled={!hasVersion || !allowed || !targetId || !database.trim()}>
