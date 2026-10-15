@@ -1,6 +1,7 @@
 package io.yak.ops.business.sync.offline.execution;
 
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
+import io.yak.ops.business.sync.offline.definition.OfflineOdsHandoffGuard;
 import io.yak.ops.business.sync.offline.domain.OfflineExecutionStatus;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
 import io.yak.ops.business.sync.offline.domain.core.BatchExecution;
@@ -25,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class OfflineExistingBatchClaimManager {
 
   private final OfflineJobDefinitionRepository definitionRepository;
+
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  private OfflineOdsHandoffGuard odsHandoffGuard;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
   private final OfflineBatchRuntime batchRuntime;
@@ -69,6 +73,7 @@ public class OfflineExistingBatchClaimManager {
     if (nextAttemptNo > retryPolicy.maxAttempts()) {
       throw new IllegalStateException("Retry 已达到 Batch 冻结的最大 Attempt 数");
     }
+    verifyOdsBeforeClaim(batch);
     if (!executionRepository.reserveRetry(previous.getId())) {
       throw new IllegalStateException("Retry 已被其他请求保留或已经创建");
     }
@@ -114,6 +119,7 @@ public class OfflineExistingBatchClaimManager {
     }
 
     requirePendingBackfillSlot(batch);
+    verifyOdsBeforeClaim(batch);
     if (!batchRepository.reservePendingBackfill(batchId)) {
       throw new IllegalStateException("Backfill Batch 已被其他 dispatcher reservation");
     }
@@ -128,6 +134,19 @@ public class OfflineExistingBatchClaimManager {
     persistNewAttempt(execution, "创建 Backfill Attempt 1 失败");
     batchRuntime.refreshBatch(batchId);
     return created(batch, execution);
+  }
+
+  private void verifyOdsBeforeClaim(BatchExecution batch) {
+    if (batch.snapshot() == null) {
+      throw new IllegalStateException("Batch 缺少可追溯的冻结执行版本");
+    }
+    String frozen = batch.snapshot().definitionSnapshot();
+    if (frozen == null || !frozen.contains("\"odsHandoff\"")) return;
+    if (odsHandoffGuard == null) {
+      throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 重试或 Backfill");
+    }
+    // Existing Batch retries must never rely on the mutable Task draft.
+    odsHandoffGuard.verifyFrozen(frozen);
   }
 
   private BatchExecution requireRetryBatch(OfflineJobExecution previous) {
