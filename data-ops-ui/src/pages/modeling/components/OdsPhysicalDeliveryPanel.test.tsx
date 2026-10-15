@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { history } from '@umijs/max';
 import OdsPhysicalDeliveryPanel from './OdsPhysicalDeliveryPanel';
-import { inspectOdsPhysicalTarget } from '@/services/modeling/api';
+import { inspectOdsPhysicalTarget, listOdsTargetObservations, recordOdsTargetObservation } from '@/services/modeling/api';
 
 let mockProjectId = 4;
 jest.mock('@umijs/max', () => ({ history: { push: jest.fn() } }));
@@ -14,6 +14,8 @@ jest.mock('@/contexts/SecurityProjectContext', () => ({
 }));
 jest.mock('@/services/modeling/api', () => ({
   inspectOdsPhysicalTarget: jest.fn(),
+  listOdsTargetObservations: jest.fn(),
+  recordOdsTargetObservation: jest.fn(),
 }));
 jest.mock('@/services/data-source/api', () => ({
   listAllDataSources: jest.fn().mockResolvedValue({
@@ -54,6 +56,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockProjectId = 4;
   jest.mocked(inspectOdsPhysicalTarget).mockResolvedValue(report as never);
+  jest.mocked(listOdsTargetObservations).mockResolvedValue([]);
 });
 
 async function chooseTarget() {
@@ -94,4 +97,38 @@ it('requires published version and never inspects a draft model', async () => {
   expect(screen.getByText(/请先保存并发布 ODS 版本/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '读取目标库并核验' })).toBeDisabled();
   expect(inspectOdsPhysicalTarget).not.toHaveBeenCalled();
+});
+
+it('records only after fresh server validation and verifies an immutable owner history readback', async () => {
+  const saved = {
+    id: 701, modelId: 50, versionNo: 2, modelVersionId: 90,
+    targetDatasourceId: 20, targetDatabase: 'warehouse', targetSchema: 'ods',
+    targetTable: 'ods_order_detail', observedCatalogSha256: 'a'.repeat(64),
+    frozenVersionChecksum: 'b'.repeat(64), observedColumnCount: 2,
+    observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
+    status: 'RECENT_CATALOG_OBSERVATION', limitations: [],
+  };
+  jest.mocked(recordOdsTargetObservation).mockResolvedValueOnce(saved);
+  jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([])
+    .mockResolvedValueOnce([saved]);
+  render(<OdsPhysicalDeliveryPanel open model={model} onClose={jest.fn()} />);
+  await chooseTarget();
+  await screen.findByText(/目标 Catalog 物理列匹配/);
+  fireEvent.click(screen.getByRole('button', { name: '保存此次目标列观察记录' }));
+  await screen.findByText('701');
+  expect(recordOdsTargetObservation).toHaveBeenCalledWith(50, 2, 20, 'warehouse', 'ods');
+  expect(listOdsTargetObservations).toHaveBeenCalledTimes(2);
+  expect(screen.getByText(/近期列观察（非部署）/)).toBeInTheDocument();
+});
+
+it('never writes an observation when target is mismatched', async () => {
+  jest.mocked(inspectOdsPhysicalTarget).mockResolvedValueOnce({
+    ...report, state: 'STRUCTURE_DIFFERS',
+  } as never);
+  render(<OdsPhysicalDeliveryPanel open model={model} onClose={jest.fn()} />);
+  await chooseTarget();
+  await screen.findByText(/目标字段与冻结版本存在差异/);
+  expect(screen.getByRole('button', { name: '保存此次目标列观察记录' }))
+    .toBeDisabled();
+  expect(recordOdsTargetObservation).not.toHaveBeenCalled();
 });
