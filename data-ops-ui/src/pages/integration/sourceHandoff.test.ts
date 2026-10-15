@@ -53,4 +53,29 @@ describe('source integration handoff', () => {
       ),
     ).toBe('?view=active');
   });
+  it('round-trips exact ODS published revision and target observation for manual sync', () => {
+    const path = buildIntegrationCreatePath('batch', {
+      dataSourceId: '10', dbType: 'POSTGRE_SQL',
+      odsModelId: 50, odsVersionNo: 2, odsTargetObservationId: 99,
+    });
+    expect(parseIntegrationSourceHandoff(path.split('?')[1])).toEqual({
+      dataSourceId: '10', dbType: 'POSTGRE_SQL',
+      odsModelId: 50, odsVersionNo: 2, odsTargetObservationId: 99,
+    });
+    expect(stripIntegrationCreateHandoff('?view=active&' + path.split('?')[1]))
+      .toBe('?view=active');
+  });
+
+  it('never manufactures an ODS link from incomplete or invalid client hints', () => {
+    const path = buildIntegrationCreatePath('batch', {
+      dataSourceId: '10', odsModelId: 50, odsVersionNo: 2,
+    });
+    expect(parseIntegrationSourceHandoff(path.split('?')[1])).toEqual({
+      dataSourceId: '10',
+    });
+    expect(parseIntegrationSourceHandoff(
+      '?create=1&sourceDataSourceId=10&odsModelId=-5&odsVersionNo=2&odsTargetObservationId=99',
+    )).toEqual({ dataSourceId: '10' });
+  });
+
 });
