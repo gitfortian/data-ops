@@ -4,13 +4,13 @@ import { history } from '@umijs/max';
 import OdsPhysicalDeliveryPanel from './OdsPhysicalDeliveryPanel';
 import { inspectOdsPhysicalTarget } from '@/services/modeling/api';
 
-let projectId = 4;
+let mockProjectId = 4;
 jest.mock('@umijs/max', () => ({ history: { push: jest.fn() } }));
 jest.mock('@/hooks/usePermissionAccess', () => ({
   __esModule: true, default: () => ({ canAll: () => true }),
 }));
 jest.mock('@/contexts/SecurityProjectContext', () => ({
-  useSecurityProject: () => ({ currentProject: { id: projectId } }),
+  useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
 jest.mock('@/services/modeling/api', () => ({
   inspectOdsPhysicalTarget: jest.fn(),
@@ -52,7 +52,7 @@ const report = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  projectId = 4;
+  mockProjectId = 4;
   jest.mocked(inspectOdsPhysicalTarget).mockResolvedValue(report as never);
 });
 
