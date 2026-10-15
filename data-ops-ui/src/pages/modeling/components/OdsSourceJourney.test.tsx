@@ -267,3 +267,48 @@ it('treats a timed-out commit as saved only after exact owner readback', async (
   expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
   expect(listModelingMappings).toHaveBeenCalledWith(888);
 });
+
+
+it('reopening a source-bound draftId shows the exact existing ODS instead of an error or empty draft', async () => {
+  mockQuery.set('draftId', '501');
+  mockGetModel.mockResolvedValueOnce({
+    id: 501, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'public', sourceTable: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  const open = await screen.findByRole('button', { name: '打开已保存 ODS' });
+  expect(screen.queryByText(/已保存 ODS 与当前来源或精确候选不一致/)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  fireEvent.click(open);
+  expect(mockPush).toHaveBeenCalledWith('/modeling/models/501');
+  expect(mockCreateModel).not.toHaveBeenCalled();
+  expect(commitOdsManualImport).not.toHaveBeenCalled();
+});
+
+it('rejects a resumed ODS bound to another schema without offering any create or commit action', async () => {
+  mockQuery.set('draftId', '501');
+  mockGetModel.mockResolvedValueOnce({
+    id: 501, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'archive', sourceTable: 'orders',
+  });
+  render(<OdsSourceJourney />);
+  await screen.findByText(/已保存 ODS 与当前来源或精确候选不一致/);
+  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});
+
+it('does not mistake a different server candidate for the persisted draftId on resume', async () => {
+  mockQuery.set('draftId', '502');
+  mockGetModel.mockResolvedValueOnce({
+    id: 502, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'public', sourceTable: 'orders',
+  });
+  // Default candidate list is only 501, not 502.
+  render(<OdsSourceJourney />);
+  await screen.findByText(/已保存 ODS 与当前来源或精确候选不一致/);
+  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(mockCreateModel).not.toHaveBeenCalled();
+});
