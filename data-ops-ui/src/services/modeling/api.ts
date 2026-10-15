@@ -105,6 +105,8 @@ export interface OdsPhysicalTargetInspection {
     observedType?: string | null;
   }[];
   limitations: string[];
+  /** SHA-256 of the current target Catalog observation; null when not checkable. */
+  observedCatalogSha256: string | null;
 }
 
 /** Read-only catalog inspection, NOT a deployment receipt or execution event. */
