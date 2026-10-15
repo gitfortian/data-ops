@@ -115,6 +115,7 @@ public final class OfflineDefinitionModelAdapter {
     // These are Yak Ops control-plane concerns and are not part of Link-Up's JobSpec contract.
     adapted.remove("notification");
     adapted.remove("editorMeta");
+    adapted.remove("odsHandoff"); // Provenance is never executable Link-Up JobSpec.
     adapted.remove("incremental");
     String mode = text(adapted.path("basic"), "mode", "GUIDE_SINGLE");
     adaptEndpoint(adapted, "source", mode, objectMapper);
