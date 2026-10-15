@@ -120,7 +120,18 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   };
 
   const sourceId = Number(model.sourceDatasourceId);
-  const mayCreateSync = allowed && report?.state === 'COLUMN_MATCH_NEEDS_DDL_REVIEW'
+  const hasCurrentRecordedObservation = report?.state === 'COLUMN_MATCH_NEEDS_DDL_REVIEW'
+    && observations.some(row => row.status === 'RECENT_CATALOG_OBSERVATION'
+      && row.modelId === modelId && row.versionNo === versionNo
+      && row.modelVersionId === report.versionId
+      && row.targetDatasourceId === targetId
+      && row.targetDatabase === database.trim()
+      && (row.targetSchema || '') === schema.trim()
+      && row.targetTable === report.targetTable
+      && row.observedCatalogSha256 === report.observedCatalogSha256);
+  // Navigation only: the Offline Sync owner MUST revalidate before accepting
+  // any binding or permitting a runnable revision.
+  const mayCreateSync = allowed && hasCurrentRecordedObservation
     && Number.isSafeInteger(sourceId) && sourceId > 0;
 
   return <Modal
@@ -194,7 +205,7 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
           前往离线同步配置（需人工建任务）
         </Button>
         <Typography.Text type="secondary">
-          必须重新选择目标表、核对字段映射，保存/发布同步任务后执行并查看真实运行记录。
+          需先保存并回读本次 Catalog 观察，再进入同步配置；同步 Owner 仍须独立核验精确版本、目标和执行权限。
         </Typography.Text>
       </Space>
     </>}
