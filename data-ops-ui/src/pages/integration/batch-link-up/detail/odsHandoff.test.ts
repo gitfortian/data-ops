@@ -18,7 +18,7 @@ describe('ODS provenance in manual offline task revisions', () => {
     const editor = normalizeEditDetail(data, '77');
     expect(editor.odsHandoff).toEqual(data.odsHandoff);
     const payload = buildSavePayload(editor);
-    expect(payload.odsHandoff).toEqual(data.odsHandoff);
+    expect('odsHandoff' in payload && payload.odsHandoff).toEqual(data.odsHandoff);
     expect(payload.source.config.table).toBe('public.trade_order_detail');
     expect(payload.sink.config.table).toBe('ods.ods_order_detail');
   });
@@ -26,7 +26,7 @@ describe('ODS provenance in manual offline task revisions', () => {
   it('does not invent a reference for legacy tasks or broken stored IDs', () => {
     const legacy = normalizeEditDetail({ basic: { mode: 'GUIDE_SINGLE' } }, '78');
     expect(legacy.odsHandoff).toBeUndefined();
-    expect(buildSavePayload(legacy).odsHandoff).toBeUndefined();
+    expect('odsHandoff' in buildSavePayload(legacy)).toBe(false);
     const malformed = normalizeEditDetail({
       basic: { mode: 'GUIDE_SINGLE' },
       odsHandoff: { modelId: 50, versionNo: 0, targetObservationId: 99 },
