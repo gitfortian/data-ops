@@ -41,6 +41,10 @@ public class OfflineJobRevisionService {
 
   private static final ObjectMapper JSON = new ObjectMapper();
 
+  /** Optional in direct unit construction; in the application the guard is injected. */
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  private OfflineOdsHandoffGuard odsHandoffGuard;
+
   private final CurrentProject currentProject;
   private final OfflineJobDefinitionRepository definitionRepository;
   private final OfflineJobRevisionRepository revisionRepository;
@@ -171,6 +175,16 @@ public class OfflineJobRevisionService {
       throw new IllegalStateException("任务仍是草稿，请先完成配置并保存后再发布");
     }
     long projectId = currentProject.requireProjectId();
+    // Do not freeze an unverified client-provided ODS reference into a runnable revision.
+    // The Modeling Owner must re-inspect the current source + target Catalog.
+    if (odsHandoffGuard != null) {
+      odsHandoffGuard.verify(definition.getDefinitionJson(),
+          definition.getSourceDatasourceId(), definition.getSourceTable(),
+          definition.getSinkDatasourceId(), definition.getSinkTable());
+    } else if (definition.getDefinitionJson() != null
+        && definition.getDefinitionJson().contains("\"odsHandoff\"")) {
+      throw new IllegalStateException("ODS 交接验证器缺失，禁止发布带模型证据的同步任务");
+    }
     OfflineJobRevision latest =
         revisionRepository.findLatestByJobDefinitionId(definition.getId()).orElse(null);
 
