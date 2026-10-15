@@ -7,6 +7,7 @@ import { listAllDataSources } from '@/services/data-source/api';
 import { getEntityDetail } from '@/services/metadata/api';
 import { commitOdsManualImport, createModelingModel, getModelingModel, getModelingStructure } from '@/services/modeling/api';
 import { getOdsSourceCandidates, previewModelingImportColumns } from '@/services/modeling/import';
+import { listModelingMappings } from '@/services/modeling/mapping';
 import type { OdsSourceLookup } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord } from '@/services/modeling/types';
 import { MODELING_DIALECT_OPTIONS, dialectOfDbType } from '@/pages/modeling/constants';
@@ -209,6 +210,28 @@ const OdsSourceJourney = () => {
     } finally { if (ticket === readEpoch.current) setCreating(false); }
   };
 
+  // A write receipt (or a timed-out response) is not sufficient evidence of a saved ODS.
+  // Re-read the same project's original Modeling objects, including every source column.
+  const verifySavedOds = async (modelId: number): Promise<boolean> => {
+    if (datasourceId == null || !physicalColumns.length) return false;
+    const [model, structure, mappings] = await Promise.all([
+      getModelingModel(modelId), getModelingStructure(modelId), listModelingMappings(modelId),
+    ]);
+    const identityMatches = model.id != null && Number(model.id) === modelId
+      && model.layerCode === 'ODS' && model.sourceDatasourceId === datasourceId
+      && model.sourceDatabase === database && (model.sourceSchema || undefined) === schema
+      && model.sourceTable === table;
+    if (!identityMatches) return false;
+    const savedColumns = new Set((structure.columns ?? []).map(col => col.columnName?.toLowerCase()));
+    if (!physicalColumns.every(col => savedColumns.has(targetNames[col.name]?.trim().toLowerCase()))) return false;
+    return physicalColumns.every(col => mappings.some(row =>
+      row.mapped && row.targetColumn?.toLowerCase() === targetNames[col.name]?.trim().toLowerCase()
+      && row.sourceDatasourceId === datasourceId && row.sourceDatabase === database
+      && (row.sourceSchema || undefined) === schema && row.sourceTable === table
+      && row.sourceColumn?.toLowerCase() === col.name.toLowerCase()
+      && !row.transformExpr));
+  };
+
   const commit = async () => {
     const ticket = readEpoch.current;
     if (!savedDraft?.id || !can('modeling:update') || !validMappings || datasourceId == null
@@ -256,12 +279,30 @@ const OdsSourceJourney = () => {
           || receipt.confirmedMappingCount !== physicalColumns.length) {
         throw new Error('写入回执尚不足以证明模型与全部来源列已保存；请打开模型核对。');
       }
+      if (!(await verifySavedOds(Number(savedDraft.id)))) {
+        throw new Error('保存接口已返回，但模型结构或来源映射回读不一致；请核对原模型，勿重复写入。');
+      }
+      if (ticket !== readEpoch.current) return;
       setSavedId(Number(savedDraft.id));
       setDirty(false);
-      message.success('ODS 草稿、结构及逐列来源映射已在 Modeling Owner 保存。');
+      setFailure('');
+      message.success('ODS 设计、真实来源和逐列映射已重新读取确认。未部署、未同步。');
     } catch (error) {
-      if (ticket === readEpoch.current)
-        setFailure(error instanceof Error ? error.message : '来源映射保存结果未知，请按草稿 ID 核查原域持久化记录与映射，勿自动重提。');
+      // The POST can have committed even when its HTTP reply was lost. Never retry the
+      // mutation from a timeout; check current persisted evidence first.
+      if (ticket !== readEpoch.current) return;
+      let persisted = false;
+      try { persisted = await verifySavedOds(Number(savedDraft.id)); } catch { /* owner read unavailable */ }
+      if (ticket !== readEpoch.current) return;
+      if (persisted) {
+        setSavedId(Number(savedDraft.id));
+        setDirty(false);
+        setFailure('');
+        message.success('写入响应未确认，但已重新读取到完整 ODS 设计和来源映射。');
+      } else {
+        setFailure((error instanceof Error ? error.message : '来源映射保存结果未知')
+          + '；请先重新核验草稿和来源，禁止直接重复提交。');
+      }
     } finally { if (ticket === readEpoch.current) setCommitting(false); }
   };
 
