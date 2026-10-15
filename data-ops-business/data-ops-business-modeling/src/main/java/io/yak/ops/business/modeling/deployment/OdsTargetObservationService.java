@@ -5,6 +5,7 @@ import io.yak.ops.business.modeling.dao.mapper.OdsTargetObservationMapper;
 import io.yak.ops.business.modeling.dao.model.OdsTargetObservationPO;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.exception.ModelingException;
+import io.yak.ops.business.modeling.mapping.OdsSourceEvidenceInspectionService;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.common.constant.datasource.DataSourcePermissionCode;
@@ -34,6 +35,7 @@ public class OdsTargetObservationService {
   private final ModelRepository models;
   private final ModelVersionService versions;
   private final OdsPhysicalTargetInspectionService inspector;
+  private final OdsSourceEvidenceInspectionService sourceEvidence;
   private final OdsTargetObservationMapper mapper;
 
   public record View(Long id, Long modelId, int versionNo, Long modelVersionId,
@@ -60,6 +62,13 @@ public class OdsTargetObservationService {
     if (locked.isRecycled() || locked.publishedVersionId() == null
         || !Objects.equals(locked.latestVersionNo(), versionNo)) {
       throw invalid("目标核验期间模型版本已变化；请重新核验当前发布版本");
+    }
+    // A matching sink by itself does not make a usable ODS: confirm the
+    // current source and persisted column mappings are still consistent.
+    var source = sourceEvidence.inspect(modelId);
+    if (!"CONSISTENT_NOW".equals(source.status())
+        || source.evidenceSha256() == null || source.evidenceSha256().isBlank()) {
+      throw invalid("ODS 来源字段或逐列映射当前未通过核验；不能留存可接续的目标记录");
     }
     var report = inspector.inspect(modelId, versionNo, targetDatasourceId, database, schema);
     if (!"COLUMN_MATCH_NEEDS_DDL_REVIEW".equals(report.state())
