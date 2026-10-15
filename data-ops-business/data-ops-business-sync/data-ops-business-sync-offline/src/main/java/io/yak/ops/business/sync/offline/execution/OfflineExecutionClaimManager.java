@@ -4,6 +4,7 @@ import io.yak.ops.common.enums.PublishState;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.config.OfflineSyncProperties;
 import io.yak.ops.business.sync.offline.definition.OfflineJobDefinitionService;
+import io.yak.ops.business.sync.offline.definition.OfflineOdsHandoffGuard;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
 import io.yak.ops.business.sync.offline.domain.OfflineSchedule;
@@ -34,6 +35,9 @@ import org.springframework.util.StringUtils;
 public class OfflineExecutionClaimManager {
 
   private final OfflineJobDefinitionService definitionService;
+
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  private OfflineOdsHandoffGuard odsHandoffGuard;
   private final OfflineJobDefinitionRepository definitionRepository;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
@@ -187,6 +191,15 @@ public class OfflineExecutionClaimManager {
       String logicalJobSpecJson,
       Parsed trigger,
       String idempotencyKey) {
+    // Reject expired or foreign ODS evidence before allocating any
+    // BatchExecution/Attempt: a failed verification must not occupy a slot.
+    if (definitionSnapshotJson != null
+        && definitionSnapshotJson.contains("\"odsHandoff\"")) {
+      if (odsHandoffGuard == null) {
+        throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务运行");
+      }
+      odsHandoffGuard.verifyFrozen(definitionSnapshotJson);
+    }
     Long definitionId = definition.getId();
     if (batchRuntime.hasOccupyingBatch(definitionId)) {
       throw new IllegalStateException("任务已有运行中的 BatchExecution，不能重复提交");
