@@ -67,4 +67,24 @@ class OfflineOdsHandoffGuardTest {
     assertThrows(IllegalArgumentException.class,
         () -> guard.verify(VALID, 10L, "public.trade_order_detail", 20L, "ods.ods_order_detail"));
   }
+  @Test void frozenDefinitionVerifiesExactEndpointsNotEditableTaskDraft() {
+    var frozen = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{"table":"ods.ods_order_detail"}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    guard.verifyFrozen(frozen);
+    verify(owner).verify(23L, 50L, 2, 99L, 10L,
+        "public.trade_order_detail", 20L, "ods.ods_order_detail");
+  }
+
+  @Test void frozenDefinitionRejectsMissingEndpointsAndUnsupportedMultitableMode() {
+    assertThrows(IllegalArgumentException.class,
+        () -> guard.verifyFrozen(VALID)); // has a handoff but no endpoints
+    assertThrows(IllegalArgumentException.class,
+        () -> guard.verifyFrozen(VALID.replace("GUIDE_SINGLE", "GUIDE_MULTI")));
+    verifyNoInteractions(owner);
+  }
+
 }
