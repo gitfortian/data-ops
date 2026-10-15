@@ -71,6 +71,53 @@ class DatabaseMigrationSmokeTest {
     });
   }
 
+  @Test
+  void odsSourceUniqueIndexSeparatesSchemasAndBlocksDuplicateBindings() {
+    // Uses the same isolated MySQL 8.0 CI database as the migration smoke.
+    startAndValidate(true, context -> {
+      var jdbc = new org.springframework.jdbc.core.JdbcTemplate(
+          context.getBean("yakBusinessDataSource", DataSource.class));
+      long projectId = java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+      long otherProjectId = java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+      String prefix = "r10-ods-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+      String insert = """
+          INSERT INTO yak_modeling_model
+            (project_id, model_code, model_name, dialect, layer_code,
+             source_datasource_id, source_database, source_schema, source_table,
+             deleted, status)
+          VALUES (?, ?, 'R10 ODS index CI', 'MYSQL', 'ODS', 17,
+                  'trade_db', ?, 'trade_order_detail', 0, 'DRAFT')
+          """;
+      try {
+        jdbc.update(insert, projectId, prefix + "-public", "public");
+        // Different schema is a different physical source even for identical names.
+        jdbc.update(insert, projectId, prefix + "-archive", "archive");
+        jdbc.update(insert, projectId, prefix + "-default", null);
+        // Different projects may independently build ODS for the same datasource.
+        jdbc.update(insert, otherProjectId, prefix + "-other", "public");
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> jdbc.update(insert, projectId, prefix + "-duplicate", "public"))
+            .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> jdbc.update(insert, projectId, prefix + "-duplicate-null", null))
+            .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+        // Recycled models do not block a new active ODS binding.
+        jdbc.update("UPDATE yak_modeling_model SET deleted = 1 WHERE project_id = ? AND model_code = ?",
+            projectId, prefix + "-public");
+        jdbc.update(insert, projectId, prefix + "-recreated", "public");
+        assertThat(jdbc.queryForObject("""
+            SELECT COUNT(*) FROM yak_modeling_model
+            WHERE project_id = ? AND deleted = 0
+              AND source_datasource_id = 17 AND source_database = 'trade_db'
+              AND source_schema = 'public' AND source_table = 'trade_order_detail'
+            """, Long.class, projectId)).isEqualTo(1L);
+      } finally {
+        jdbc.update("DELETE FROM yak_modeling_model WHERE project_id IN (?, ?)",
+            projectId, otherProjectId);
+      }
+    });
+  }
+
   private static void await(java.util.concurrent.CountDownLatch latch) {
     try {
       if (!latch.await(15, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("Fixture barrier timed out");
