@@ -218,12 +218,14 @@ const OdsSourceJourney = () => {
       getModelingModel(modelId), getModelingStructure(modelId), listModelingMappings(modelId),
     ]);
     const identityMatches = model.id != null && Number(model.id) === modelId
-      && model.layerCode === 'ODS' && model.sourceDatasourceId === datasourceId
+      && model.layerCode === 'ODS' && model.status === 'DRAFT'
+      && model.sourceDatasourceId === datasourceId
       && model.sourceDatabase === database && (model.sourceSchema || undefined) === schema
       && model.sourceTable === table;
     if (!identityMatches) return false;
     const savedColumns = new Set((structure.columns ?? []).map(col => col.columnName?.toLowerCase()));
     if (!physicalColumns.every(col => savedColumns.has(targetNames[col.name]?.trim().toLowerCase()))) return false;
+    if (mappings.filter(row => row.mapped).length !== physicalColumns.length) return false;
     return physicalColumns.every(col => mappings.some(row =>
       row.mapped && row.targetColumn?.toLowerCase() === targetNames[col.name]?.trim().toLowerCase()
       && row.sourceDatasourceId === datasourceId && row.sourceDatabase === database
