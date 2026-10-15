@@ -11,9 +11,14 @@ import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.common.constant.datasource.DataSourcePermissionCode;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import io.yak.ops.core.security.ActionAuthorization;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,7 +50,7 @@ public class OdsPhysicalTargetInspectionService {
                        Long targetDatasourceId, String targetDatabase, String targetSchema,
                        String targetTable, String state, int frozenColumns,
                        int observedColumns, List<ColumnDifference> differences,
-                       List<String> limitations) {}
+                       List<String> limitations, String observedCatalogSha256) {}
 
   public Report inspect(Long modelId, int versionNo, Long targetDatasourceId,
                         String database, String schema) {
@@ -98,13 +103,13 @@ public class OdsPhysicalTargetInspectionService {
           targetDatasourceId, database, schema, table, "NOT_CHECKABLE",
           columns.size(), 0, List.of(),
           List.of("目标 Catalog 不可访问或目标表不存在，无法区分；不认定部署失败或成功",
-              "本次仅执行元数据读取，不执行 DDL、创建同步任务或确认数据质量"));
+              "本次仅执行元数据读取，不执行 DDL、创建同步任务或确认数据质量"), null);
     }
     if (observed == null || observed.isEmpty() || observed.size() > MAX_COLUMNS) {
       return new Report(modelId, versionNo, version.version().id(),
           targetDatasourceId, database, schema, table, "NOT_CHECKABLE",
           columns.size(), observed == null ? 0 : observed.size(), List.of(),
-          List.of("目标 Catalog 未返回有效列，不能认定已部署"));
+          List.of("目标 Catalog 未返回有效列，不能认定已部署"), null);
     }
     Map<String, CatalogColumn> live = new HashMap<>();
     List<ColumnDifference> differences = new ArrayList<>();
@@ -113,7 +118,7 @@ public class OdsPhysicalTargetInspectionService {
         return new Report(modelId, versionNo, version.version().id(),
             targetDatasourceId, database, schema, table, "NOT_CHECKABLE",
             columns.size(), observed.size(), List.of(),
-            List.of("Catalog 返回无效或重复物理列，不能认定目标状态"));
+            List.of("Catalog 返回无效或重复物理列，不能认定目标状态"), null);
       }
     }
     for (var column : columns) {
@@ -136,7 +141,23 @@ public class OdsPhysicalTargetInspectionService {
         columns.size(), observed.size(), List.copyOf(differences),
         List.of("只核验当前可读取的物理列类型与可空性；索引、分区、默认值、历史 DDL 和表数据未认证",
             "Catalog 当前匹配不是可持久回读的部署回执，更不是同步运行成功或质量通过",
-            "使用已有离线同步模块独立创建、发布、执行并核对真实任务版本与执行证据"));
+            "使用已有离线同步模块独立创建、发布、执行并核对真实任务版本与执行证据"), catalogHash(observed));
+  }
+
+  /** Fingerprint only the columns actually observed by the DataSource owner. */
+  private static String catalogHash(List<CatalogColumn> columns) {
+    String canonical = columns.stream().sorted(Comparator.comparing(CatalogColumn::name))
+        .map(c -> String.join("\u001f", c.name(),
+            String.valueOf(c.typeName()), String.valueOf(c.size()),
+            String.valueOf(c.scale()), String.valueOf(c.nullable()),
+            String.valueOf(c.ordinalPosition()), String.valueOf(c.primaryKey())))
+        .reduce("", (a, b) -> a + "\u001e" + b);
+    try {
+      return HexFormat.of().formatHex(
+          MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 不可用", e);
+    }
   }
 
   private static boolean valid(String value) {
