@@ -168,4 +168,36 @@ class OdsSourceEvidenceInspectionServiceTest {
     assertThrows(ModelingException.class, () -> service.inspect(50L));
     verifyNoInteractions(catalog);
   }
+
+  @Test void currentEvidenceReadsExactNamedSchemaAndChecksEveryMappingSchema() {
+    var named = model(ModelStatus.DRAFT).withSourceSchema("public");
+    when(models.findById(50L)).thenReturn(Optional.of(named));
+    existing.forEach(m -> m.setSourceSchema("public"));
+    when(catalog.listColumnsFresh(9L, "trade", "public", "trade_order"))
+        .thenAnswer(i -> new ArrayList<>(sources));
+    var first = service.inspect(50L);
+    assertEquals("CONSISTENT_NOW", first.status());
+    assertEquals(64, first.evidenceSha256().length());
+    verify(catalog, never()).listColumnsFresh(9L, "trade", null, "trade_order");
+
+    existing.get(1).setSourceSchema("archive");
+    var changed = service.inspect(50L);
+    assertEquals("NEEDS_REVIEW", changed.status());
+    assertTrue(changed.fields().stream().anyMatch(f -> "SOURCE_CONFLICT".equals(f.status())));
+    assertNotEquals(first.evidenceSha256(), changed.evidenceSha256());
+    verify(mappings, never()).upsert(any(), anyString());
+  }
+
+  @Test void missingHistoricalSchemaDoesNotMasqueradeAsCurrentNamedSchema() {
+    when(models.findById(50L)).thenReturn(Optional.of(
+        model(ModelStatus.DRAFT).withSourceSchema("public")));
+    when(catalog.listColumnsFresh(9L, "trade", "public", "trade_order"))
+        .thenAnswer(i -> new ArrayList<>(sources));
+    var result = service.inspect(50L);
+    assertEquals("NEEDS_REVIEW", result.status());
+    assertEquals(2, result.fields().stream()
+        .filter(f -> "SOURCE_CONFLICT".equals(f.status())).count());
+    verify(catalog, never()).listColumnsFresh(9L, "trade", null, "trade_order");
+  }
+
 }
