@@ -136,13 +136,29 @@ const OdsSourceJourney = () => {
           && entity.entity.facts.tableName === table)) {
         throw new Error('元数据实体与导航来源不一致；拒绝跨源建模。');
       }
-      if (resumed && (resumed.layerCode !== 'ODS' || resumed.status !== 'DRAFT'
-          || resumed.sourceDatasourceId != null)) {
-        throw new Error('已保存的模型已被修改或绑定来源，请直接打开模型复核，不能再次首导。');
+      if (resumed && resumed.layerCode !== 'ODS') {
+        throw new Error('此草稿 ID 不属于 ODS；请从模型目录打开正确模型。');
+      }
+      if (resumed?.sourceDatasourceId != null) {
+        // A bound ODS is a continuation, never a "new ODS" draft.
+        // The server must independently find that *same* model by exact source.
+        const sameSource = Number(resumed.sourceDatasourceId) === datasourceId
+          && resumed.sourceDatabase === database
+          && (resumed.sourceSchema || undefined) === schema
+          && resumed.sourceTable === table;
+        const exactCandidate = response.state === 'READY'
+          && response.candidates.some(candidate => Number(candidate.modelId) === Number(resumed.id));
+        if (!sameSource || !exactCandidate) {
+          throw new Error('已保存 ODS 与当前来源或精确候选不一致；请到模型目录核对，禁止重复首导。');
+        }
+      } else if (resumed && resumed.status !== 'DRAFT') {
+        throw new Error('空草稿状态已变化，请到原模型查看，不能继续首次导入。');
       }
       setSourceVerified(true);
       setLookup(response);
-      if (resumed) setSavedDraft(resumed);
+      // A newly bound draft is now an existing candidate; do not show an
+      // empty-draft save form or try to commit its structure a second time.
+      if (resumed?.sourceDatasourceId == null && resumed) setSavedDraft(resumed);
       const inferred = dialectOfDbType(validSource.dbType);
       if (inferred) setDialect(inferred);
     } catch (error) {
