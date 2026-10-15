@@ -51,7 +51,8 @@ public class OdsTargetObservationService {
   public View observe(Long modelId, int versionNo, Long targetDatasourceId,
                       String database, String schema, String operator) {
     requireReads();
-    if (operator == null || operator.isBlank()) throw invalid("缺少可信操作员身份");
+    authorization.requirePermission(ModelingPermissionCode.UPDATE);
+    if (operator == null || operator.isBlank() || operator.length() > 128) throw invalid("缺少可信操作员身份");
     Long projectId = currentProject.requireProjectId();
     // Serializes concurrent version-pointer changes and the observation for the same model.
     Model locked = models.findByIdForUpdate(modelId)
