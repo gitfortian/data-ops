@@ -120,18 +120,18 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   };
 
   const sourceId = Number(model.sourceDatasourceId);
-  const hasCurrentRecordedObservation = report?.state === 'COLUMN_MATCH_NEEDS_DDL_REVIEW'
-    && observations.some(row => row.status === 'RECENT_CATALOG_OBSERVATION'
+  const matchingObservation = report?.state === 'COLUMN_MATCH_NEEDS_DDL_REVIEW'
+    ? observations.find(row => row.status === 'RECENT_CATALOG_OBSERVATION'
       && row.modelId === modelId && row.versionNo === versionNo
       && row.modelVersionId === report.versionId
       && row.targetDatasourceId === targetId
       && row.targetDatabase === database.trim()
       && (row.targetSchema || '') === schema.trim()
       && row.targetTable === report.targetTable
-      && row.observedCatalogSha256 === report.observedCatalogSha256);
+      && row.observedCatalogSha256 === report.observedCatalogSha256) : undefined;
   // Navigation only: the Offline Sync owner MUST revalidate before accepting
   // any binding or permitting a runnable revision.
-  const mayCreateSync = allowed && hasCurrentRecordedObservation
+  const mayCreateSync = allowed && Boolean(matchingObservation)
     && Number.isSafeInteger(sourceId) && sourceId > 0;
 
   return <Modal
@@ -201,7 +201,10 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
           保存此次目标列观察记录
         </Button>
         <Button disabled={!mayCreateSync} type="primary" onClick={() =>
-          history.push(buildIntegrationCreatePath('batch', { dataSourceId: String(sourceId) }))}>
+          history.push(buildIntegrationCreatePath('batch', {
+            dataSourceId: String(sourceId), odsModelId: modelId,
+            odsVersionNo: versionNo, odsTargetObservationId: matchingObservation!.id,
+          }))}>
           前往离线同步配置（需人工建任务）
         </Button>
         <Typography.Text type="secondary">
