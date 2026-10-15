@@ -69,7 +69,7 @@ it('requires real published catalog readback before offering a manual sync hando
   await chooseTarget();
   await screen.findByText(/目标 Catalog 物理列匹配/);
   expect(inspectOdsPhysicalTarget).toHaveBeenCalledWith(50, 2, 20, 'warehouse', 'ods');
-  expect(screen.getByText(/不是部署回执/)).toBeInTheDocument();
+  expect(screen.getAllByText(/不是部署回执/).length).toBeGreaterThanOrEqual(2);
   expect(history.push).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: '前往离线同步配置（需人工建任务）' }));
   expect(history.push).toHaveBeenCalledWith(expect.stringContaining('/sync/batch-link-up'));
