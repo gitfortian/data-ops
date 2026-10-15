@@ -87,6 +87,40 @@ export const validateModelingStructure = (
 ): Promise<ModelingValidationIssue[]> =>
   HttpUtils.postData<ModelingValidationIssue[]>(`${MODELING_API_PREFIX}/models/${id}/structure/validate`, payload);
 
+export interface OdsPhysicalTargetInspection {
+  modelId: number;
+  versionNo: number;
+  versionId: number;
+  targetDatasourceId: number;
+  targetDatabase: string;
+  targetSchema?: string | null;
+  targetTable: string;
+  state: 'COLUMN_MATCH_NEEDS_DDL_REVIEW' | 'STRUCTURE_DIFFERS' | 'NOT_CHECKABLE';
+  frozenColumns: number;
+  observedColumns: number;
+  differences: {
+    column: string;
+    issue: 'MISSING' | 'UNEXPECTED' | 'TYPE_OR_NULLABILITY_REVIEW';
+    expectedType?: string | null;
+    observedType?: string | null;
+  }[];
+  limitations: string[];
+}
+
+/** Read-only catalog inspection, NOT a deployment receipt or execution event. */
+export const inspectOdsPhysicalTarget = (
+  modelId: ModelingModelId, versionNo: number, targetDatasourceId: number,
+  database: string, schema?: string,
+): Promise<OdsPhysicalTargetInspection> => {
+  const params = new URLSearchParams({
+    targetDatasourceId: String(targetDatasourceId), database,
+  });
+  if (schema) params.set('schema', schema);
+  return HttpUtils.getData<OdsPhysicalTargetInspection>(
+    `${MODELING_API_PREFIX}/models/${modelId}/versions/${versionNo}/physical-target-inspection?${params}`,
+  );
+};
+
 /** 仅生成建库脚本，不在平台内执行（决策 D3）。 */
 export const generateModelingDdl = (id: ModelingModelId): Promise<ModelingDdlRecord> =>
   HttpUtils.getData<ModelingDdlRecord>(`${MODELING_API_PREFIX}/models/${id}/ddl`);
