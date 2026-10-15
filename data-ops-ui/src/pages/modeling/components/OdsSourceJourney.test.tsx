@@ -224,3 +224,46 @@ it('shows one native ODS content workspace instead of prototype rails and Englis
   expect(screen.getByText('已有同源 ODS')).toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });
+
+
+it('treats a timed-out commit as saved only after exact owner readback', async () => {
+  mockCandidates.mockResolvedValueOnce({
+    state: 'READY', reason: 'no ODS', datasourceId: 10, database: 'trade_db',
+    schema: 'public', table: 'orders', candidates: [],
+  });
+  jest.mocked(previewModelingImportColumns).mockResolvedValueOnce([
+    { name: 'order_id', typeName: 'BIGINT', primaryKey: true, nullable: false, technical: false },
+  ]);
+  mockCreateModel.mockResolvedValueOnce({
+    id: 888, code: 'ods_orders', name: 'ODS orders', layerCode: 'ODS',
+    status: 'DRAFT', sourceDatasourceId: null,
+  });
+  mockGetModel.mockResolvedValueOnce({
+    id: 888, layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null,
+  }).mockResolvedValueOnce({
+    id: 888, layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+  });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'before-commit', columns: [],
+  } as Awaited<ReturnType<typeof getModelingStructure>>).mockResolvedValueOnce({
+    definition: 'after-commit', columns: [{ columnName: 'order_id', dataType: 'BIGINT' }],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(commitOdsManualImport).mockRejectedValueOnce(new Error('HTTP timeout'));
+  jest.mocked(listModelingMappings).mockResolvedValueOnce([{
+    targetColumn: 'order_id', mapped: true, sourceDatasourceId: 10,
+    sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
+    sourceColumn: 'order_id',
+  }]);
+
+  render(<OdsSourceJourney />);
+  await screen.findByText('no ODS');
+  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
+  await screen.findByLabelText('ODS 字段 order_id');
+  fireEvent.click(screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' }));
+  await screen.findByText(/已保存空草稿 #888/);
+  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  await screen.findByText('ODS 已成功保存');
+  expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
+  expect(listModelingMappings).toHaveBeenCalledWith(888);
+});
