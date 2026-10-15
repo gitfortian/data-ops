@@ -9,6 +9,7 @@ import io.yak.ops.business.modeling.dao.model.OdsTargetObservationPO;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelVersion;
 import io.yak.ops.business.modeling.exception.ModelingException;
+import io.yak.ops.business.modeling.mapping.OdsSourceEvidenceInspectionService;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.core.project.CurrentProject;
@@ -26,6 +27,7 @@ class OdsTargetObservationServiceTest {
   private ModelRepository models;
   private ModelVersionService versions;
   private OdsPhysicalTargetInspectionService inspector;
+  private OdsSourceEvidenceInspectionService sourceEvidence;
   private OdsTargetObservationMapper mapper;
   private OdsTargetObservationService service;
   private Model model;
@@ -35,14 +37,19 @@ class OdsTargetObservationServiceTest {
     models = mock(ModelRepository.class);
     versions = mock(ModelVersionService.class);
     inspector = mock(OdsPhysicalTargetInspectionService.class);
+    sourceEvidence = mock(OdsSourceEvidenceInspectionService.class);
     mapper = mock(OdsTargetObservationMapper.class);
     service = new OdsTargetObservationService(currentProject, mock(ActionAuthorization.class),
-        models, versions, inspector, mapper);
+        models, versions, inspector, sourceEvidence, mapper);
     model = mock(Model.class);
     when(currentProject.requireProjectId()).thenReturn(17L);
     when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(model));
     when(models.findById(50L)).thenReturn(Optional.of(model));
     when(model.layerCode()).thenReturn("ODS");
+    when(sourceEvidence.inspect(50L)).thenReturn(
+        new OdsSourceEvidenceInspectionService.Inspection(
+            50L, "PUBLISHED", 10L, "trade_db", "trade_order_detail",
+            "CONSISTENT_NOW", "c".repeat(64), 1, 1, 1, List.of(), List.of()));
     when(model.latestVersionNo()).thenReturn(2);
     when(model.publishedVersionId()).thenReturn(88L);
     var frozen = new ModelVersion(88L, 50L, 2, "{}", "{}", 1,
@@ -115,3 +122,14 @@ class OdsTargetObservationServiceTest {
     verify(mapper, times(2)).selectList(any());
   }
 }
+
+  @Test void blocksCurrentSourceDriftEvenWhenTargetCatalogStillMatches() {
+    when(sourceEvidence.inspect(50L)).thenReturn(
+        new OdsSourceEvidenceInspectionService.Inspection(
+            50L, "PUBLISHED", 10L, "trade_db", "trade_order_detail",
+            "NEEDS_REVIEW", "d".repeat(64), 1, 1, 1, List.of(), List.of("来源变化")));
+    assertThrows(ModelingException.class,
+        () -> service.observe(50L, 2, 9L, "warehouse", "ods", "tester"));
+    verify(inspector, never()).inspect(anyLong(), anyInt(), anyLong(), any(), any());
+    verify(mapper, never()).insert(any(OdsTargetObservationPO.class));
+  }
