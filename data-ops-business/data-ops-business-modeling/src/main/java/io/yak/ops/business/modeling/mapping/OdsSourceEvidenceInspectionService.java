@@ -54,8 +54,8 @@ public class OdsSourceEvidenceInspectionService {
                            String sourceDatabase, String sourceTable, String status,
                            String evidenceSha256, int targetCount, int sourceCount,
                            int mappingCount, List<FieldEvidence> fields, List<String> blockers) {}
-  private record SourceRef(Long datasourceId, String database, String table) {}
-  private record MappingFact(String target, Long datasourceId, String database, String table,
+  private record SourceRef(Long datasourceId, String database, String schema, String table) {}
+  private record MappingFact(String target, Long datasourceId, String database, String schema, String table,
                              String source, String transform, Long standardFieldId) {}
   private record Evidence(Long modelId, String modelCode, String modelStatus,
                           String layerCode, SourceRef source, List<ColumnDefinition> columns,
@@ -76,7 +76,7 @@ public class OdsSourceEvidenceInspectionService {
     if (columns == null || saved == null || columns.size() > MAX_COLUMNS
         || saved.size() > MAX_COLUMNS) throw invalid("ODS 模型字段或已有映射不可核验");
     SourceRef binding = new SourceRef(model.sourceDatasourceId(),
-        model.sourceDatabase(), model.sourceTable());
+        model.sourceDatabase(), model.sourceSchema(), model.sourceTable());
     if (model.sourceDatasourceId() == null || !StringUtils.hasText(model.sourceTable())) {
       return new Inspection(modelId, model.status().name(), model.sourceDatasourceId(),
           model.sourceDatabase(), model.sourceTable(), "NOT_CHECKABLE", null, columns.size(),
@@ -86,7 +86,7 @@ public class OdsSourceEvidenceInspectionService {
     // Fresh catalog read is mandatory. Failure/empty must NOT be interpreted
     // as a missing source table, changed schema, or successful verification.
     List<CatalogColumn> sources = catalog.listColumnsFresh(
-        model.sourceDatasourceId(), model.sourceDatabase(), null, model.sourceTable());
+        model.sourceDatasourceId(), model.sourceDatabase(), model.sourceSchema(), model.sourceTable());
     if (sources == null || sources.isEmpty() || sources.size() > MAX_COLUMNS) {
       throw invalid("真实源表返回空或不可用的字段证据，请检查授权和连通性后重试");
     }
@@ -131,6 +131,7 @@ public class OdsSourceEvidenceInspectionService {
       String sourceName = mapping.getSourceColumn();
       if (!Objects.equals(model.sourceDatasourceId(), mapping.getSourceDatasourceId())
           || !Objects.equals(model.sourceDatabase(), mapping.getSourceDatabase())
+          || !Objects.equals(model.sourceSchema(), mapping.getSourceSchema())
           || !Objects.equals(model.sourceTable(), mapping.getSourceTable())) {
         fields.add(new FieldEvidence(physicalName, target.dataType(), sourceName,
             null, "SOURCE_CONFLICT", "映射来源与模型正式绑定来源不一致"));
@@ -193,7 +194,7 @@ public class OdsSourceEvidenceInspectionService {
         .sorted(Comparator.comparing(c -> key(c.columnName()))).toList();
     List<MappingFact> orderedMappings = saved.stream().filter(Objects::nonNull)
         .map(m -> new MappingFact(m.getTargetColumn(), m.getSourceDatasourceId(),
-            m.getSourceDatabase(), m.getSourceTable(), m.getSourceColumn(),
+            m.getSourceDatabase(), m.getSourceSchema(), m.getSourceTable(), m.getSourceColumn(),
             m.getTransformExpr(), m.getStdProcessFieldId()))
         .sorted(Comparator.comparing(m -> m.target() == null ? "" : key(m.target())))
         .toList();
