@@ -64,7 +64,7 @@ class OdsTargetObservationServiceTest {
   @Test void createsScopedAppendOnlyObservedEvidenceOnlyAfterFreshOwnerVerification() {
     var view = service.observe(50L, 2, 9L, "warehouse", "ods", "tester");
     assertEquals(777L, view.id());
-    assertEquals(17L, view.modelId() == 50L ? 17L : -1L);
+    assertEquals(50L, view.modelId());
     assertEquals("RECENT_CATALOG_OBSERVATION", view.status());
     assertEquals("a".repeat(64), view.observedCatalogSha256());
     assertTrue(view.limitations().stream().anyMatch(x -> x.contains("不证明谁执行了 DDL")));
