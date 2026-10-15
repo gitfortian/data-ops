@@ -1,5 +1,5 @@
 import { history, useLocation, useParams } from '@umijs/max';
-import { Button, ConfigProvider, Empty, message, Spin } from 'antd';
+import { Alert, Button, ConfigProvider, Empty, message, Spin } from 'antd';
 import {
   useCallback,
   useEffect,
@@ -670,6 +670,12 @@ export default function SingleBatchLinkUpConfigPage() {
           >
             <div className="min-w-0">
               <main className="pb-4">
+                {editor.odsHandoff && (
+                  <Alert type="info" showIcon className="!mb-4"
+                    message={`已关联 ODS 模型 #${editor.odsHandoff.modelId} · 发布 V${editor.odsHandoff.versionNo}`}
+                    description={`目标观察证据 #${editor.odsHandoff.targetObservationId}。请填写完整的来源/目标 Schema 和表名；保存配置不代表引用已获授权，发布和实际执行前由 Modeling Owner 重新核验。`}
+                  />
+                )}
                 <SyncTaskEditor
                   editor={editor}
                   dataSources={dataSources}
