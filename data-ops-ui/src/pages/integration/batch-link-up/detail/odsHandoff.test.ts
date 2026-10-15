@@ -19,8 +19,8 @@ describe('ODS provenance in manual offline task revisions', () => {
     expect(editor.odsHandoff).toEqual(data.odsHandoff);
     const payload = buildSavePayload(editor);
     expect('odsHandoff' in payload && payload.odsHandoff).toEqual(data.odsHandoff);
-    expect(payload.source.config.table).toBe('public.trade_order_detail');
-    expect(payload.sink.config.table).toBe('ods.ods_order_detail');
+    expect('config' in payload.source && payload.source.config.table).toBe('public.trade_order_detail');
+    expect('config' in payload.sink && payload.sink.config.table).toBe('ods.ods_order_detail');
   });
 
   it('does not invent a reference for legacy tasks or broken stored IDs', () => {
