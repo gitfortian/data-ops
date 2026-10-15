@@ -48,7 +48,7 @@ const report = {
   modelId: 50, versionNo: 2, versionId: 90, targetDatasourceId: 20,
   targetDatabase: 'warehouse', targetSchema: 'ods', targetTable: 'ods_order_detail',
   state: 'COLUMN_MATCH_NEEDS_DDL_REVIEW',
-  frozenColumns: 2, observedColumns: 2, differences: [],
+  frozenColumns: 2, observedColumns: 2, differences: [], observedCatalogSha256: 'a'.repeat(64),
   limitations: ['仅核验当前 Catalog，不是部署回执'],
 };
 
@@ -74,6 +74,20 @@ it('requires real published catalog readback before offering a manual sync hando
   expect(inspectOdsPhysicalTarget).toHaveBeenCalledWith(50, 2, 20, 'warehouse', 'ods');
   expect(screen.getAllByText(/不是部署回执/).length).toBeGreaterThanOrEqual(2);
   expect(history.push).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: '前往离线同步配置（需人工建任务）' }))
+    .toBeDisabled();
+  const saved = {
+    id: 701, modelId: 50, versionNo: 2, modelVersionId: 90,
+    targetDatasourceId: 20, targetDatabase: 'warehouse', targetSchema: 'ods',
+    targetTable: 'ods_order_detail', observedCatalogSha256: 'a'.repeat(64),
+    frozenVersionChecksum: 'b'.repeat(64), observedColumnCount: 2,
+    observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
+    status: 'RECENT_CATALOG_OBSERVATION', limitations: [],
+  };
+  jest.mocked(recordOdsTargetObservation).mockResolvedValueOnce(saved);
+  jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([saved]);
+  fireEvent.click(screen.getByRole('button', { name: '保存此次目标列观察记录' }));
+  await screen.findByText('701');
   fireEvent.click(screen.getByRole('button', { name: '前往离线同步配置（需人工建任务）' }));
   expect(history.push).toHaveBeenCalledWith(expect.stringContaining('/sync/batch-link-up'));
 });
