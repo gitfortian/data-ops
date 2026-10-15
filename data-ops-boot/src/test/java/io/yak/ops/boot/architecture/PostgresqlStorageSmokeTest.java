@@ -83,6 +83,7 @@ class PostgresqlStorageSmokeTest {
       verifySharedCatalogAndSearch(context, jdbc, projectId);
       verifyRuntimeProjections(context, jdbc, projectId);
       verifyMasterRefresh(jdbc, projectId);
+      verifyOdsExactSourceUniqueness(jdbc, projectId);
       var state = AgentState.builder().userId("pg-storage-user").sessionId("pg-storage-session").build();
       state.setSummary("durable agent state");
       var stateStore = context.getBean(AgentStateStore.class);
@@ -264,6 +265,45 @@ class PostgresqlStorageSmokeTest {
         assertThat(facet.count()).isEqualTo(1);
       });
       assertThat(otherProject.search(query).items()).isEmpty();
+    }
+  }
+
+
+  private void verifyOdsExactSourceUniqueness(JdbcTemplate jdbc, long projectId) {
+    // PostgreSQL schema-aware partial unique index, including CITEXT semantics.
+    String prefix = "r10-pg-ods-" + UUID.randomUUID().toString().substring(0, 8);
+    String insert = """
+        INSERT INTO yak_modeling_model
+          (project_id, model_code, model_name, dialect, layer_code,
+           source_datasource_id, source_database, source_schema, source_table,
+           deleted, status)
+        VALUES (?, ?, 'R10 PostgreSQL ODS index smoke', 'POSTGRESQL', 'ODS',
+                17, 'trade_db', ?, 'trade_order_detail', 0, 'DRAFT')
+        """;
+    try {
+      jdbc.update(insert, projectId, prefix + "-public", "public");
+      jdbc.update(insert, projectId, prefix + "-archive", "archive");
+      jdbc.update(insert, projectId, prefix + "-default", null);
+      assertThatThrownBy(() -> jdbc.update(insert, projectId, prefix + "-duplicate", "public"))
+          .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+      // PostgreSQL source_schema is CITEXT: changing only letter case
+      // must not evade the unique source contract.
+      assertThatThrownBy(() -> jdbc.update(insert, projectId, prefix + "-case", "PUBLIC"))
+          .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+      assertThatThrownBy(() -> jdbc.update(insert, projectId, prefix + "-default-dup", null))
+          .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+      jdbc.update("UPDATE yak_modeling_model SET deleted = 1 WHERE project_id = ? AND model_code = ?",
+          projectId, prefix + "-public");
+      jdbc.update(insert, projectId, prefix + "-rebound", "public");
+      assertThat(jdbc.queryForObject("""
+          SELECT COUNT(*) FROM yak_modeling_model
+          WHERE project_id = ? AND deleted = 0
+            AND source_datasource_id = 17 AND source_database = 'trade_db'
+            AND source_schema = 'public' AND source_table = 'trade_order_detail'
+          """, Long.class, projectId)).isEqualTo(1L);
+    } finally {
+      jdbc.update("DELETE FROM yak_modeling_model WHERE project_id = ? AND model_code LIKE ?",
+          projectId, prefix + "%");
     }
   }
 
