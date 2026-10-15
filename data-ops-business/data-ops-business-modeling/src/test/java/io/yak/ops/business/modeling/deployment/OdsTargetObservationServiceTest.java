@@ -121,7 +121,6 @@ class OdsTargetObservationServiceTest {
     assertEquals("VERSION_CHANGED", service.history(50L).get(0).status());
     verify(mapper, times(2)).selectList(any());
   }
-}
 
   @Test void blocksCurrentSourceDriftEvenWhenTargetCatalogStillMatches() {
     when(sourceEvidence.inspect(50L)).thenReturn(
@@ -133,3 +132,4 @@ class OdsTargetObservationServiceTest {
     verify(inspector, never()).inspect(anyLong(), anyInt(), anyLong(), any(), any());
     verify(mapper, never()).insert(any(OdsTargetObservationPO.class));
   }
+}
