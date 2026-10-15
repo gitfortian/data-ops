@@ -145,12 +145,18 @@ const MappingPanel: React.FC = () => {
   const loadSourceColumns = useCallback(async (targetDatasourceId: number, database: string, table: string) => {
     const current = columnsOperation();
     try {
-      const columns = await previewModelingImportColumns(targetDatasourceId, database, table);
+      // A bound ODS must preview the exact persisted source namespace; omitting
+      // Schema can silently show same-named columns from a different schema.
+      const boundSchema = modelRecord?.layerCode === 'ODS'
+        && modelRecord.sourceDatasourceId === targetDatasourceId
+        && modelRecord.sourceDatabase === database && modelRecord.sourceTable === table
+        ? modelRecord.sourceSchema ?? undefined : undefined;
+      const columns = await previewModelingImportColumns(targetDatasourceId, database, table, boundSchema);
       if (current()) setSourceColumns(columns ?? []);
     } catch {
       if (current()) setSourceColumns([]);
     }
-  }, [columnsOperation]);
+  }, [columnsOperation, modelRecord]);
 
   const openEdit = async (view: ModelingMappingView) => {
     if (!modelId || !maySave) return;
@@ -341,7 +347,7 @@ const MappingPanel: React.FC = () => {
       render: (_value, record) =>
         record.mapped ? (
           <Typography.Text className="!text-[13px]">
-            {record.sourceDatabase}.{record.sourceTable}.{record.sourceColumn}
+            {record.sourceDatabase}.{record.sourceSchema ? `${record.sourceSchema}.` : ''}{record.sourceTable}.{record.sourceColumn}
           </Typography.Text>
         ) : (
           <Tag color="warning">未映射</Tag>
