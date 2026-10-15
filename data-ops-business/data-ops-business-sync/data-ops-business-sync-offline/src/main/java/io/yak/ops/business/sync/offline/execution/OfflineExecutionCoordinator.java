@@ -254,26 +254,14 @@ public class OfflineExecutionCoordinator {
 
   private OfflineJobExecution submitClaim(OfflineExecutionClaim claim) {
     OfflineJobExecution execution = claim.getExecution();
-    // The Batch owns the immutable, published definition used by the actual
-    // execution. Re-check ODS provenance on every submission/retry, not the
-    // possibly edited live job draft or a client-provided execution hint.
-    Long batchId = execution.getBatchId();
-    if (batchId == null || batchId <= 0) {
-      throw new IllegalStateException("运行实例缺少已冻结的 BatchExecution");
-    }
-    var frozen = batchRepository.findById(batchId)
-        .orElseThrow(() -> new IllegalStateException("批次快照已不可读取"));
-    if (frozen.snapshot() == null || !StringUtils.hasText(frozen.snapshot().definitionSnapshot())) {
-      throw new IllegalStateException("离线同步批次缺少不可变定义快照");
-    }
-    String frozenDefinition = frozen.snapshot().definitionSnapshot();
-    if (odsHandoffGuard != null) {
-      var job = claim.getDefinition();
-      odsHandoffGuard.verify(frozenDefinition,
-          job.getSourceDatasourceId(), job.getSourceTable(),
-          job.getSinkDatasourceId(), job.getSinkTable());
-    } else if (frozenDefinition.contains("\"odsHandoff\"")) {
-      throw new IllegalStateException("Modeling 校验未就绪，拒绝带 ODS 引用的任务执行");
+    // Attempt carries the Batch's immutable definition snapshot, never the
+    // editable live task. Only a linked ODS needs extra owner verification.
+    String frozenDefinition = execution.getDefinitionSnapshotJson();
+    if (frozenDefinition != null && frozenDefinition.contains("\"odsHandoff\"")) {
+      if (odsHandoffGuard == null) {
+        throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务执行");
+      }
+      odsHandoffGuard.verifyFrozen(frozenDefinition);
     }
     Optional<OfflineExecutionPlan> plan = executionPlanCodec.decode(claim.getLogicalJobSpecJson());
     if (plan.isPresent() && plan.get().isFanOut()) {
