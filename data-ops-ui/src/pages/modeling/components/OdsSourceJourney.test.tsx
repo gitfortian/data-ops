@@ -312,3 +312,47 @@ it('does not mistake a different server candidate for the persisted draftId on r
   expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });
+
+
+it('never claims saved when successful HTTP receipt reads back another schema', async () => {
+  mockCandidates.mockResolvedValueOnce({
+    state: 'READY', reason: 'new source', datasourceId: 10,
+    database: 'trade_db', schema: 'public', table: 'orders', candidates: [],
+  });
+  jest.mocked(previewModelingImportColumns).mockResolvedValueOnce([
+    { name: 'order_id', typeName: 'BIGINT', primaryKey: true, nullable: false, technical: false },
+  ]);
+  mockCreateModel.mockResolvedValueOnce({
+    id: 889, code: 'ods_orders', layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null,
+  });
+  mockGetModel.mockResolvedValueOnce({
+    id: 889, code: 'ods_orders', layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: null,
+  }).mockResolvedValue({
+    id: 889, code: 'ods_orders', layerCode: 'ODS', status: 'DRAFT',
+    sourceDatasourceId: 10, sourceDatabase: 'trade_db',
+    sourceSchema: 'archive', sourceTable: 'orders',
+  });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({
+    definition: 'precommit', columns: [],
+  } as Awaited<ReturnType<typeof getModelingStructure>>).mockResolvedValue({
+    definition: 'postcommit', columns: [{ columnName: 'order_id', dataType: 'BIGINT' }],
+  } as Awaited<ReturnType<typeof getModelingStructure>>);
+  jest.mocked(commitOdsManualImport).mockResolvedValueOnce({
+    status: 'SAVED_AND_VERIFIED', modelId: 889, confirmedMappingCount: 1,
+  } as Awaited<ReturnType<typeof commitOdsManualImport>>);
+  jest.mocked(listModelingMappings).mockResolvedValue([{
+    targetColumn: 'order_id', mapped: true, sourceDatasourceId: 10,
+    sourceDatabase: 'trade_db', sourceSchema: 'archive',
+    sourceTable: 'orders', sourceColumn: 'order_id',
+  }]);
+  render(<OdsSourceJourney />);
+  await screen.findByText('new source');
+  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
+  await screen.findByLabelText('ODS 字段 order_id');
+  fireEvent.click(screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' }));
+  await screen.findByText(/已保存空草稿 #889/);
+  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  await screen.findByText(/回读不一致/);
+  expect(screen.queryByText('ODS 已成功保存')).not.toBeInTheDocument();
+  expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
+});
