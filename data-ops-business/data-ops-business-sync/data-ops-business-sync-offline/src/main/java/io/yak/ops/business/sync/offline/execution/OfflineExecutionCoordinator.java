@@ -40,8 +40,7 @@ public class OfflineExecutionCoordinator {
 
   private final OfflineJobDefinitionService definitionService;
 
-  @Autowired(required = false)
-  private OfflineOdsHandoffGuard odsHandoffGuard;
+  private final OfflineOdsHandoffGuard odsHandoffGuard;
   private final OfflineExecutionClaimManager claimManager;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
@@ -67,8 +66,10 @@ public class OfflineExecutionCoordinator {
       LinkUpClient linkUpClient,
       OfflineExecutionPlanCodec executionPlanCodec,
       OfflineFanOutExecutionCoordinator fanOutCoordinator,
-      @Qualifier("offlineSyncJsonMapper") ObjectMapper objectMapper) {
+      @Qualifier("offlineSyncJsonMapper") ObjectMapper objectMapper,
+      OfflineOdsHandoffGuard odsHandoffGuard) {
     this.definitionService = definitionService;
+    this.odsHandoffGuard = odsHandoffGuard;
     this.claimManager = claimManager;
     this.executionRepository = executionRepository;
     this.batchRepository = batchRepository;
@@ -80,6 +81,25 @@ public class OfflineExecutionCoordinator {
     this.executionPlanCodec = executionPlanCodec;
     this.fanOutCoordinator = fanOutCoordinator;
     this.objectMapper = objectMapper;
+  }
+
+  /** Explicit pre-ODS compatibility constructor for focused, non-Spring tests. */
+  public OfflineExecutionCoordinator(
+      OfflineJobDefinitionService definitionService,
+      OfflineExecutionClaimManager claimManager,
+      OfflineJobExecutionRepository executionRepository,
+      OfflineBatchExecutionRepository batchRepository,
+      OfflineBatchRuntime batchRuntime,
+      OfflineBatchScopeExecutionAdapter scopeExecutionAdapter,
+      OfflineExecutionStateManager stateManager,
+      OfflineAuditBridge auditBridge,
+      LinkUpClient linkUpClient,
+      OfflineExecutionPlanCodec executionPlanCodec,
+      OfflineFanOutExecutionCoordinator fanOutCoordinator,
+      ObjectMapper objectMapper) {
+    this(definitionService, claimManager, executionRepository, batchRepository,
+        batchRuntime, scopeExecutionAdapter, stateManager, auditBridge, linkUpClient,
+        executionPlanCodec, fanOutCoordinator, objectMapper, null);
   }
 
   /** Keeps the pre-PR7 focused-test constructor source-compatible. */
