@@ -174,4 +174,10 @@ it('reads only owner-confirmed frozen execution evidence without implying data r
   expect(screen.getByText('未知')).toBeInTheDocument();
   expect(screen.getByText('target rejected')).toBeInTheDocument();
   expect(screen.getByText(/不等于目标库对账通过/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '任务 #100' }));
+  expect(history.push).toHaveBeenCalledWith(
+    '/sync/batch-link-up/100/config/single?scene=edit',
+  );
+  fireEvent.click(screen.getByRole('button', { name: '刷新本页' }));
+  await waitFor(() => expect(discoverOdsExecutionsBefore).toHaveBeenCalledTimes(2));
 });
