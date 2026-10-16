@@ -25,6 +25,7 @@ import io.yak.ops.business.sync.offline.repository.OfflineScheduleRepository;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,8 +37,7 @@ public class OfflineExecutionClaimManager {
 
   private final OfflineJobDefinitionService definitionService;
 
-  @org.springframework.beans.factory.annotation.Autowired(required = false)
-  private OfflineOdsHandoffGuard odsHandoffGuard;
+  private final OfflineOdsHandoffGuard odsHandoffGuard;
   private final OfflineJobDefinitionRepository definitionRepository;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
@@ -48,6 +48,33 @@ public class OfflineExecutionClaimManager {
   private final OfflineExistingBatchClaimManager existingBatchClaimManager;
   private final OfflineIncrementalPlanner incrementalPlanner;
 
+  @Autowired
+  public OfflineExecutionClaimManager(
+      OfflineJobDefinitionService definitionService,
+      OfflineJobDefinitionRepository definitionRepository,
+      OfflineJobExecutionRepository executionRepository,
+      OfflineBatchExecutionRepository batchRepository,
+      OfflineScheduleRepository scheduleRepository,
+      OfflineBatchRuntime batchRuntime,
+      OfflineSyncProperties properties,
+      OfflineExecutionAttemptFactory attemptFactory,
+      OfflineExistingBatchClaimManager existingBatchClaimManager,
+      OfflineIncrementalPlanner incrementalPlanner,
+      OfflineOdsHandoffGuard odsHandoffGuard) {
+    this.odsHandoffGuard = odsHandoffGuard;
+    this.definitionService = definitionService;
+    this.definitionRepository = definitionRepository;
+    this.executionRepository = executionRepository;
+    this.batchRepository = batchRepository;
+    this.scheduleRepository = scheduleRepository;
+    this.batchRuntime = batchRuntime;
+    this.properties = properties;
+    this.attemptFactory = attemptFactory;
+    this.existingBatchClaimManager = existingBatchClaimManager;
+    this.incrementalPlanner = incrementalPlanner;
+  }
+
+  /** Source-compatible constructor for existing focused tests; production uses the guarded constructor. */
   public OfflineExecutionClaimManager(
       OfflineJobDefinitionService definitionService,
       OfflineJobDefinitionRepository definitionRepository,
@@ -59,16 +86,9 @@ public class OfflineExecutionClaimManager {
       OfflineExecutionAttemptFactory attemptFactory,
       OfflineExistingBatchClaimManager existingBatchClaimManager,
       OfflineIncrementalPlanner incrementalPlanner) {
-    this.definitionService = definitionService;
-    this.definitionRepository = definitionRepository;
-    this.executionRepository = executionRepository;
-    this.batchRepository = batchRepository;
-    this.scheduleRepository = scheduleRepository;
-    this.batchRuntime = batchRuntime;
-    this.properties = properties;
-    this.attemptFactory = attemptFactory;
-    this.existingBatchClaimManager = existingBatchClaimManager;
-    this.incrementalPlanner = incrementalPlanner;
+    this(definitionService, definitionRepository, executionRepository, batchRepository,
+        scheduleRepository, batchRuntime, properties, attemptFactory,
+        existingBatchClaimManager, incrementalPlanner, null);
   }
 
   @Transactional(transactionManager = "offlineSyncTransactionManager", rollbackFor = Exception.class)
