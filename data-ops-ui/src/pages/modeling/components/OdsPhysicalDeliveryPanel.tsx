@@ -7,6 +7,7 @@ import { listAllDataSources } from '@/services/data-source/api';
 import { inspectOdsPhysicalTarget, listOdsTargetObservations, recordOdsTargetObservation, type OdsPhysicalTargetInspection, type OdsTargetObservation } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { buildIntegrationCreatePath } from '@/services/integration/sourceHandoff';
+import { discoverOdsExecutions, type OdsExecutionEvidence } from '@/services/integration/odsExecutionEvidence';
 
 interface Props {
   open: boolean;
@@ -27,6 +28,12 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   const [recording, setRecording] = useState(false);
   const [observations, setObservations] = useState<OdsTargetObservation[]>([]);
   const readEpoch = useRef(0);
+  const executionEpoch = useRef(0);
+  const [executionObservationId, setExecutionObservationId] = useState<number>();
+  const [executionScanPage, setExecutionScanPage] = useState(1);
+  const [executionHistory, setExecutionHistory] = useState<OdsExecutionEvidence[]>([]);
+  const [executionHasMore, setExecutionHasMore] = useState(false);
+  const [executionLoading, setExecutionLoading] = useState(false);
   const invalidate = () => { readEpoch.current += 1; setReport(undefined); };
   const modelId = Number(model.id);
   const versionNo = Number(model.latestVersionNo);
@@ -36,6 +43,11 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   useEffect(() => {
     let current = true;
     readEpoch.current += 1;
+    executionEpoch.current += 1;
+    setExecutionObservationId(undefined);
+    setExecutionHistory([]);
+    setExecutionScanPage(1);
+    setExecutionHasMore(false);
     setSources([]);
     setObservations([]);
     setTargetId(undefined);
@@ -116,6 +128,31 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
         error instanceof Error ? error.message : '记录保存结果未知，请重新查看核验历史，勿盲目重试');
     } finally {
       if (ticket === readEpoch.current) setRecording(false);
+    }
+  };
+
+  const readExecutionHistory = async (observationId: number, nextPage = 1) => {
+    if (!allowed || !hasVersion || !Number.isSafeInteger(observationId) || observationId <= 0) return;
+    const ticket = ++executionEpoch.current;
+    setExecutionLoading(true);
+    try {
+      const page = await discoverOdsExecutions(modelId, versionNo, observationId, nextPage, 50);
+      if (ticket !== executionEpoch.current) return;
+      if (page.scanPage !== nextPage || page.scanSize !== 50 || !Array.isArray(page.matches)) {
+        throw new Error('执行历史服务返回的分页证据不一致');
+      }
+      setExecutionObservationId(observationId);
+      setExecutionScanPage(nextPage);
+      setExecutionHasMore(page.moreCandidates);
+      setExecutionHistory(page.matches);
+    } catch (error) {
+      if (ticket === executionEpoch.current) {
+        setExecutionHistory([]);
+        setExecutionHasMore(false);
+        message.error(error instanceof Error ? error.message : '执行历史不可读取');
+      }
+    } finally {
+      if (ticket === executionEpoch.current) setExecutionLoading(false);
     }
   };
 
@@ -216,6 +253,10 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
       <Typography.Title level={5} className="!mt-4">最近目标列核验记录（最多 20 条）</Typography.Title>
       <Table size="small" rowKey="id" pagination={false} dataSource={observations.slice(0, 5)}
         columns={[
+          { title: '执行证据', key: 'executions', width: 124,
+            render: (_, row: OdsTargetObservation) => <Button size="small"
+              disabled={!allowed || row.versionNo !== versionNo}
+              onClick={() => void readExecutionHistory(row.id)}>查看执行历史</Button> },
           { title: '记录', dataIndex: 'id', width: 75 },
           { title: '版本', dataIndex: 'versionNo', width: 75, render: (no: number) => `V${no}` },
           { title: '目标', key: 'target', render: (_, row: OdsTargetObservation) =>
@@ -230,6 +271,34 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
       <Typography.Text type="secondary">
         历史观察不可替代实时目标核验、DDL 部署审计、同步任务发布版本和运行证据。
       </Typography.Text>
+      {executionObservationId && <div className="mt-3">
+        <Typography.Title level={5}>关联执行证据 · 观察 #{executionObservationId}</Typography.Title>
+        <Alert className="mb-2" type="info" showIcon
+          message="仅展示当前候选扫描页中与冻结 ODS 引用匹配的执行"
+          description="提交行数来自执行引擎的持久指标，不等于目标库对账通过；本页不代表全部历史执行。" />
+        <Table size="small" rowKey="executionId" loading={executionLoading} pagination={false}
+          dataSource={executionHistory} locale={{ emptyText: '本页没有匹配的执行实例' }}
+          columns={[
+            { title: '执行 / Batch', key: 'identity', render: (_, row: OdsExecutionEvidence) =>
+              `#${row.executionId} / #${row.batchId}` },
+            { title: '任务发布版', dataIndex: 'jobRevisionNo',
+              render: (v: number) => `V${v}` },
+            { title: 'Attempt', dataIndex: 'attemptNo' },
+            { title: '实际状态', dataIndex: 'status',
+              render: (v: string) => <Tag color={v === 'SUCCEEDED' ? 'green' : 'default'}>{v || 'UNKNOWN'}</Tag> },
+            { title: '已提交行数', dataIndex: 'sinkCommittedRows',
+              render: (v: number | null) => v == null ? '未知' : v },
+            { title: '失败原因', dataIndex: 'errorMessage',
+              render: (v?: string | null) => v || '—' },
+          ]} />
+        <Space className="mt-2">
+          <Typography.Text type="secondary">候选扫描第 {executionScanPage} 页（不是匹配结果总页数）</Typography.Text>
+          <Button size="small" disabled={executionScanPage <= 1 || executionLoading}
+            onClick={() => void readExecutionHistory(executionObservationId, executionScanPage - 1)}>上一页</Button>
+          <Button size="small" disabled={!executionHasMore || executionLoading}
+            onClick={() => void readExecutionHistory(executionObservationId, executionScanPage + 1)}>下一页候选</Button>
+        </Space>
+      </div>}
     </>}
   </Modal>;
 }
