@@ -410,12 +410,16 @@ export default function LogicalWorkspace() {
     void Promise.all([
       getDwdMappingDraft(physicalModelId),
       listDwdMappingRevisions(physicalModelId),
-    ]).then(([draft, revisions]) => {
+      getDwdPublicationPolicy(physicalModelId),
+    ]).then(([draft, revisions, policy]) => {
       if (!live || epoch !== mappingEpoch.current) return;
       if (draft && draft.physicalModelId === physicalModelId
           && draft.logicalModelId === handoffPreview.logicalModelId
           && draft.logicalVersionNo === handoffPreview.logicalVersionNo) {
         setMappingDraft(draft);
+        // A pending approval outlives browser reloads: derive the state from
+        // the current project's approval owner, not only local React state.
+        setMappingApprovalPending(policy.approvalPending);
         const latest = revisions[0];
         if (draft.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
             && draft.physicalStructureSha256 === handoffPreview.physicalStructureSha256
@@ -1065,7 +1069,8 @@ export default function LogicalWorkspace() {
               setMappingFrozen(previous => previous?.mappingSetId === mappingDraft.mappingSetId
                 && previous.draftRevision === mappingDraft.draftRevision ? previous : undefined);
               setMappingPublished(undefined);
-              setMappingApprovalPending(false);
+              // Preserve the server-owned pending approval status when loading
+              // an old draft; only a fresh owner read may clear it.
               setReviewResult(undefined);
               message.info('已载入持久映射；请重新校验。匹配的历史冻结修订可继续用于发布确认。');
             }}>载入已保存映射并重新校验</Button>
