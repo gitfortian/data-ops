@@ -61,10 +61,8 @@ if (productFiles.length === 0) {
 }
 
 let body = pr.body ?? "";
-// Validate the canonical current PR description rather than trusting a webhook
-// snapshot. This matters when a PR description is edited independently of code
-// synchronization. If the canonical read fails, retain the event payload and
-// fail closed through the normal governance checks below.
+// Pull-request webhook payloads are snapshots. When the description has been
+// edited independently, validate the canonical current PR body instead.
 if (process.env.GITHUB_TOKEN
     && process.env.GITHUB_REPOSITORY
     && pr.number) {
