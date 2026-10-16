@@ -60,8 +60,9 @@ class DwdMappingDraftServiceTest {
 
   @Test void rejectsDraftEditWhilePublishApprovalIsPending() {
     when(approvals.find(ApprovalFlowCodes.MODEL_PUBLISH, "MODEL", "50"))
-        .thenReturn(new ApprovalInstanceView(88L, ApprovalFlowCodes.MODEL_PUBLISH,
-            "MODEL", "50", "PENDING", "applicant", null, null, null));
+        .thenReturn(new ApprovalInstanceView(88L, ApprovalFlowCodes.MODEL_PUBLISH, "模型发布",
+            "MODEL", "50", "DWD 设计发布", "{}", "applicant", "PENDING",
+            1, null, null));
     assertThrows(IllegalStateException.class, () -> service.save(50L, request(0), "operator"));
     verifyNoInteractions(reviews, sets, revisions);
   }
