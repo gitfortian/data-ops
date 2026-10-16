@@ -46,6 +46,19 @@ public class OfflineJobExecutionController {
     this(service, null);
   }
 
+  @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover")
+  public Result<OfflineOdsExecutionEvidenceQuery.DiscoveryPage> discoverOdsEvidence(
+      @RequestParam long modelId, @RequestParam int versionNo,
+      @RequestParam long targetObservationId,
+      @RequestParam(defaultValue = "1") int scanPage,
+      @RequestParam(defaultValue = "50") int scanSize) {
+    if (odsEvidence == null) {
+      throw new IllegalStateException("ODS 运行证据查询不可用");
+    }
+    return Result.success(odsEvidence.discover(
+        modelId, versionNo, targetObservationId, scanPage, scanSize));
+  }
+
   @GetMapping("/api/v1/job/batch-instance/{id}/ods-evidence")
   public Result<OfflineOdsExecutionEvidenceQuery.Evidence> odsEvidence(
       @PathVariable Long id, @RequestParam long modelId,
