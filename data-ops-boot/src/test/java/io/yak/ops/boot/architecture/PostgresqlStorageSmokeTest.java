@@ -84,6 +84,9 @@ class PostgresqlStorageSmokeTest {
       verifyRuntimeProjections(context, jdbc, projectId);
       verifyMasterRefresh(jdbc, projectId);
       verifyOdsExactSourceUniqueness(jdbc, projectId);
+      DwdMappingSqlSmoke.verify(
+          context.getBean("yakBusinessDataSource", DataSource.class),
+          context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class));
       var state = AgentState.builder().userId("pg-storage-user").sessionId("pg-storage-session").build();
       state.setSummary("durable agent state");
       var stateStore = context.getBean(AgentStateStore.class);
