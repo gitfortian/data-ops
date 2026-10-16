@@ -1,0 +1,53 @@
+name: R12-1 resolve PR 581 against current main
+
+on:
+  push:
+    branches:
+      - feature/r12-1-dwd-final-20261016
+    paths:
+      - ".github/workflows/r12-1-resolve-581.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feature/r12-1-dwd-final-20261016
+
+      - name: Merge current main and resolve known conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge --no-edit origin/main; then
+            echo "No merge conflicts detected."
+          else
+            echo "Merge conflict detected; checking the exact expected conflict set."
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            printf '%s\n' "$conflicts"
+            expected=$'data-ops-ui/src/pages/modeling/components/DwdPublishedMappingHistoryPanel.tsx\ndata-ops-ui/src/utils/physicalDataDevHandoff.test.ts\ndocs/product/experience/R12-1-DWD-mapping-publication-acceptance.md'
+            if [ "$conflicts" != "$expected" ]; then
+              echo "Unexpected conflict set; aborting rather than making a broad automatic choice."
+              git merge --abort
+              exit 1
+            fi
+            # The PR branch contains the authoritative R12-1 implementation for these
+            # three files. Keep that side, while retaining all non-conflicting main changes.
+            git checkout --ours --               data-ops-ui/src/pages/modeling/components/DwdPublishedMappingHistoryPanel.tsx               data-ops-ui/src/utils/physicalDataDevHandoff.test.ts               docs/product/experience/R12-1-DWD-mapping-publication-acceptance.md
+            git add --               data-ops-ui/src/pages/modeling/components/DwdPublishedMappingHistoryPanel.tsx               data-ops-ui/src/utils/physicalDataDevHandoff.test.ts               docs/product/experience/R12-1-DWD-mapping-publication-acceptance.md
+            git commit --no-edit
+          fi
+
+          # This workflow is one-shot; do not carry the resolver into main.
+          rm -f .github/workflows/r12-1-resolve-581.yml
+          git add .github/workflows/r12-1-resolve-581.yml
+          git commit -m "chore(R12): remove one-shot conflict resolver"
+          git push origin HEAD:feature/r12-1-dwd-final-20261016
