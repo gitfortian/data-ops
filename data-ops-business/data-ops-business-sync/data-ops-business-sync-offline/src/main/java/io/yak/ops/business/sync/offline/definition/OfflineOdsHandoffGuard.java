@@ -85,11 +85,48 @@ public class OfflineOdsHandoffGuard {
         || !"APPEND".equalsIgnoreCase(outerWriteMode)) {
       throw new IllegalArgumentException("ODS 同步暂仅允许 APPEND；覆盖/更新须先有独立写入冲突合同");
     }
+    // Never allow a second, potentially executable endpoint configuration to
+    // contradict the exact single-table target/source that Modeling inspected.
+    // Link-Up connectorOptions must not smuggle auto-DDL, overwrite or SQL mode.
+    rejectAmbiguousSingleTableEndpoint(source);
+    rejectAmbiguousSingleTableEndpoint(sink);
+    rejectUnreviewedSinkOptions(sink.path("options"));
+    rejectUnreviewedSinkOptions(sinkConfig.path("connectorOptions"));
     Long sourceId = endpointId(source);
     Long sinkId = endpointId(sink);
     String sourceTable = endpointTable(source);
     String sinkTable = endpointTable(sink);
     verify(frozenDefinitionJson, sourceId, sourceTable, sinkId, sinkTable);
+  }
+
+  private static void rejectAmbiguousSingleTableEndpoint(JsonNode endpoint) {
+    JsonNode config = endpoint.path("config");
+    for (JsonNode node : new JsonNode[] {endpoint, config}) {
+      if (StringUtils.hasText(node.path("sql").asText("")) ||
+          StringUtils.hasText(node.path("tablePattern").asText("")) ||
+          node.path("tables").isArray() && !node.path("tables").isEmpty()) {
+        throw new IllegalArgumentException("ODS 同步只允许确定的单表端点，不能混入 SQL/多表选择");
+      }
+      if ("SQL".equalsIgnoreCase(node.path("readMode").asText("")) ||
+          "SQL".equalsIgnoreCase(node.path("targetMode").asText(""))) {
+        throw new IllegalArgumentException("ODS 同步禁止 SQL 模式绕过核验的目标表");
+      }
+    }
+  }
+
+  private static void rejectUnreviewedSinkOptions(JsonNode options) {
+    if (!options.isObject()) return;
+    for (String field : new String[] {"autoCreateTable", "auto_create_table", "createTable",
+        "truncate", "truncateTable", "truncate_table", "overwrite", "replace"}) {
+      if (options.has(field)) {
+        throw new IllegalArgumentException("ODS 目标写入选项含未经核验的 DDL/覆盖设置：" + field);
+      }
+    }
+    for (String field : new String[] {"writeMode", "write_mode", "saveMode", "save_mode"}) {
+      if (options.has(field)) {
+        throw new IllegalArgumentException("ODS 目标写入策略必须从受核验的顶层配置读取：" + field);
+      }
+    }
   }
 
   private static Long endpointId(JsonNode endpoint) {
