@@ -4,6 +4,10 @@ import {
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
+  type DwdMappingDraft, type DwdMappingFrozen,
+} from '@/services/modeling/dwdMapping';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
 import { physicalEvidencePath } from '@/utils/logicalPhysicalJourney';
@@ -50,6 +54,8 @@ export default function LogicalWorkspace() {
   const draftParam = searchParams.get('draftId');
   const requestedDraftId = parseJourneyProcessId(draftParam);
   const { currentProject } = useSecurityProject();
+  const { can } = usePermissionAccess();
+  const canSaveMapping = can('modeling:update');
   const [reviewEntryProblem, setReviewEntryProblem] = useState<string>();
   const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
   const [journeyProblem, setJourneyProblem] = useState<string>();
@@ -84,6 +90,12 @@ export default function LogicalWorkspace() {
   const [handoffPreview, setHandoffPreview] = useState<LogicalPhysicalPreview>();
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [mappingSelections, setMappingSelections] = useState<Record<number, number>>({});
+  const [mappingKinds, setMappingKinds] = useState<Record<number, 'DIRECT' | 'RENAME'>>({});
+  const [mappingDraft, setMappingDraft] = useState<DwdMappingDraft>();
+  const [mappingFrozen, setMappingFrozen] = useState<DwdMappingFrozen>();
+  const [mappingPersistBusy, setMappingPersistBusy] = useState(false);
+  const [mappingPersistError, setMappingPersistError] = useState<string>();
+  const mappingEpoch = useRef(0);
   const [reviewResult, setReviewResult] = useState<LogicalPhysicalReview>();
   const [reviewSelectionSnapshot, setReviewSelectionSnapshot] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -101,6 +113,11 @@ export default function LogicalWorkspace() {
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
+    setMappingKinds({});
+    mappingEpoch.current += 1;
+    setMappingDraft(undefined);
+    setMappingFrozen(undefined);
+    setMappingPersistError(undefined);
     setJourneyProblem(undefined);
     setJourneyProcess(undefined);
     setModels([]);
@@ -368,6 +385,96 @@ export default function LogicalWorkspace() {
       message.error(errorText(error));
     } finally {
       setHandoffLoading(false);
+    }
+  };
+
+  // Persisted MappingSet is a DESIGN DRAFT. Never equate it to physical publishing.
+  useEffect(() => {
+    const epoch = ++mappingEpoch.current;
+    setMappingDraft(undefined);
+    setMappingFrozen(undefined);
+    setMappingPersistError(undefined);
+    if (handoffPreview?.physicalLayer !== 'DWD' || physicalModelId == null) return;
+    let live = true;
+    void getDwdMappingDraft(physicalModelId).then((draft) => {
+      if (!live || epoch !== mappingEpoch.current) return;
+      if (draft && draft.physicalModelId === physicalModelId
+          && draft.logicalModelId === handoffPreview.logicalModelId
+          && draft.logicalVersionNo === handoffPreview.logicalVersionNo) {
+        setMappingDraft(draft);
+      } else if (draft) {
+        setMappingPersistError('目标 DWD 已保存另一份逻辑设计映射；请在对应物理模型中核对，不允许覆盖。');
+      }
+    }).catch(() => {
+      if (live && epoch === mappingEpoch.current) {
+        setMappingPersistError('无法读取当前项目的已保存映射；本次不允许盲目覆盖。');
+      }
+    });
+    return () => { live = false; };
+  }, [currentProject?.id, physicalModelId, handoffPreview?.logicalModelId,
+      handoffPreview?.logicalVersionNo, handoffPreview?.physicalStructureSha256]);
+
+  const saveMappingEvidence = async () => {
+    if (!canSaveMapping || !handoffPreview || handoffPreview.physicalLayer !== 'DWD'
+        || physicalModelId == null || selected == null
+        || reviewSelectionSnapshot !== JSON.stringify(mappingSelections)
+        || !reviewResult?.readyForManualDesign || mappingPersistError
+        || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])) return;
+    const epoch = mappingEpoch.current;
+    const reloadEpoch = loadEpoch.current;
+    setMappingPersistBusy(true);
+    try {
+      const data = await saveDwdMappingDraft(physicalModelId, {
+        logicalModelId: selected,
+        logicalVersionNo: handoffPreview.logicalVersionNo,
+        logicalSnapshotSha256: handoffPreview.logicalSnapshotSha256,
+        physicalStructureSha256: handoffPreview.physicalStructureSha256,
+        expectedDraftRevision: mappingDraft?.draftRevision ?? 0,
+        rules: Object.entries(mappingSelections).map(([key, logicalAttributeId]) => ({
+          physicalColumnId: Number(key), logicalAttributeId,
+          kind: mappingKinds[Number(key)],
+        })),
+      });
+      if (epoch !== mappingEpoch.current || reloadEpoch !== loadEpoch.current) return;
+      if (data.logicalModelId !== selected || data.physicalModelId !== physicalModelId
+          || data.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
+          || data.physicalStructureSha256 !== handoffPreview.physicalStructureSha256) {
+        throw new Error('服务端返回的映射身份与当前工作区不一致');
+      }
+      setMappingDraft(data);
+      setMappingFrozen(undefined);
+      message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
+    } catch (error) {
+      if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+        message.error(errorText(error));
+      }
+    } finally {
+      if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
+    }
+  };
+
+  const freezeMappingEvidence = async () => {
+    if (!canSaveMapping || !mappingDraft || !handoffPreview || physicalModelId == null
+        || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256
+        || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256) return;
+    const epoch = mappingEpoch.current;
+    const reloadEpoch = loadEpoch.current;
+    setMappingPersistBusy(true);
+    try {
+      const frozen = await freezeDwdMappingDraft(physicalModelId, mappingDraft.draftRevision);
+      if (epoch !== mappingEpoch.current || reloadEpoch !== loadEpoch.current) return;
+      if (frozen.mappingSetId !== mappingDraft.mappingSetId
+          || frozen.draftRevision !== mappingDraft.draftRevision) {
+        throw new Error('冻结修订身份或草稿序号不一致，拒绝显示成功');
+      }
+      setMappingFrozen(frozen);
+      message.success('MappingRevision 已冻结保存；DR-06 发布绑定尚未启用');
+    } catch (error) {
+      if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+        message.error(errorText(error));
+      }
+    } finally {
+      if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
     }
   };
 
@@ -781,6 +888,18 @@ export default function LogicalWorkspace() {
             { title: '逻辑属性 ID', dataIndex: 'logicalAttributeId', render: (v?: number) => v ?? '—' },
             { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{v}</Tag> },
             { title: '原因', dataIndex: 'reason' },
+            { title: '规则类型', key: 'ruleKind',
+              render: (_, row) => row.physicalColumnId == null ? '—' : (
+                <Select<'DIRECT' | 'RENAME'> placeholder="请选择规则"
+                  className="min-w-[120px]" style={{ width: 130 }}
+                  value={mappingKinds[row.physicalColumnId]}
+                  options={[{ label: 'DIRECT 原样', value: 'DIRECT' },
+                    { label: 'RENAME 改名', value: 'RENAME' }]}
+                  onChange={value => {
+                    setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
+                    setMappingFrozen(undefined);
+                  }} />
+              ) },
             { title: '人工选择（仅本次浏览器会话）', key: 'selection',
               render: (_, row) => row.physicalColumnId == null ? '—' : (
                 <Select<number> showSearch optionFilterProp="label" allowClear
@@ -797,6 +916,7 @@ export default function LogicalWorkspace() {
                       return next;
                     });
                     setReviewResult(undefined);
+                    setMappingFrozen(undefined);
                   }}
                 />
               ) },
@@ -805,12 +925,34 @@ export default function LogicalWorkspace() {
           <Button type="primary" loading={reviewLoading}
             disabled={Object.keys(mappingSelections).length === 0}
             onClick={() => void validateExplicitReview()}>
-            校验本次人工选择（只读，不保存）
+            校验本次人工选择
           </Button>
           <Typography.Text type="secondary">
-            已选 {Object.keys(mappingSelections).length} 项。本阶段仅可审阅、复查、修正，不创建正式映射或发布版本。
+            已选 {Object.keys(mappingSelections).length} 项。先核验身份，再显式选择规则类型并保存 MappingSet；冻结不代表物理版本发布。
           </Typography.Text>
         </Space>
+        {handoffPreview.physicalLayer === 'DWD' && <>
+          {mappingPersistError && <Alert className="mt-3" type="warning" showIcon
+            message="映射持久化暂不可用" description={mappingPersistError} />}
+          <Space className="mt-3" wrap>
+            <Button loading={mappingPersistBusy}
+              disabled={!canSaveMapping || !!mappingPersistError || !reviewResult?.readyForManualDesign
+                || reviewSelectionSnapshot !== JSON.stringify(mappingSelections)
+                || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])}
+              onClick={() => void saveMappingEvidence()}>保存正式 MappingSet 草稿</Button>
+            <Button loading={mappingPersistBusy}
+              disabled={!canSaveMapping || !mappingDraft || !reviewResult?.readyForManualDesign
+                || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
+                || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256}
+              onClick={() => void freezeMappingEvidence()}>冻结 MappingRevision</Button>
+          </Space>
+          {mappingDraft && <Alert className="mt-3" showIcon type="info"
+            message={`已保存 MappingSet #${mappingDraft.mappingSetId} · 草稿修订 R${mappingDraft.draftRevision}`}
+            description="真实持久草稿；不是已批准逻辑版本、物理发布版本或 DataDev 任务。" />}
+          {mappingFrozen && <Alert className="mt-3" showIcon type="success"
+            message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
+            description="仅冻结设计映射。本轮不自动发布 DWD；发布需 DR-06/PD-010 联合门禁与版本原子绑定。" />}
+        </>}
         {reviewResult
           && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
           && reviewResult.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
