@@ -97,15 +97,25 @@ class ModelingOdsSyncHandoffVerifierTest {
     verifyNoInteractions(inspector);
   }
 
-  @Test void rejectExpiredObservationAndChangedLiveCatalog() {
-    observation.setObservedAt(LocalDateTime.now().minusMinutes(16));
-    assertThrows(IllegalArgumentException.class, this::verifyExact);
-    observation.setObservedAt(LocalDateTime.now());
+  @Test void scheduledRunCanReuseOldObservationOnlyWhenLiveSourceAndCatalogStillMatch() {
+    observation.setObservedAt(LocalDateTime.now().minusDays(7));
+    // Expired display recency is not execution authorization: verification is
+    // anchored to the *current* source and fresh exact target Catalog.
+    assertDoesNotThrow(this::verifyExact);
+    verify(inspector).inspect(50L, 2, 20L, "warehouse", "ods");
     when(inspector.inspect(50L, 2, 20L, "warehouse", "ods")).thenReturn(
         new OdsPhysicalTargetInspectionService.Report(
             50L, 2, 78L, 20L, "warehouse", "ods", "ods_order_detail",
             "COLUMN_MATCH_NEEDS_DDL_REVIEW", 1, 1, List.of(), List.of(), "c".repeat(64)));
     assertThrows(IllegalArgumentException.class, this::verifyExact);
+  }
+
+  @Test void missingOrFutureObservationIsNeverValidProvenance() {
+    observation.setObservedAt(null);
+    assertThrows(IllegalArgumentException.class, this::verifyExact);
+    observation.setObservedAt(LocalDateTime.now().plusMinutes(5));
+    assertThrows(IllegalArgumentException.class, this::verifyExact);
+    verifyNoInteractions(inspector);
   }
 
   @Test void sourceDriftAlwaysBlocksEvenIfDestinationCatalogMatches() {
