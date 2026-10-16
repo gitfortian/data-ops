@@ -34,12 +34,23 @@ import org.springframework.stereotype.Service;
 public class OfflineJobExecutionService implements OfflineScheduleExecutionGateway {
 
   private final OfflineExecutionCoordinator coordinator;
+  private final OfflineOdsExecutionEvidenceQuery odsEvidence;
   private final OfflineBatchRuntime batchRuntime;
   private final OfflineExecutionQuery executionQuery;
   private final OfflineExecutionLogQuery executionLogQuery;
   private final LinkUpClient linkUpClient;
   private final OfflineSyncViewMapper viewMapper;
   private final OfflineSyncConnectorRuntime connectorRuntime;
+
+  public OfflineOdsExecutionEvidenceQuery.Evidence odsEvidence(long id, long modelId,
+      int versionNo, long observationId) {
+    return odsEvidence.require(id, modelId, versionNo, observationId);
+  }
+
+  public OfflineOdsExecutionEvidenceQuery.DiscoveryPage discoverOdsEvidence(
+      long modelId, int versionNo, long observationId, int scanPage, int scanSize) {
+    return odsEvidence.discover(modelId, versionNo, observationId, scanPage, scanSize);
+  }
 
   public OfflineEngineHealthVO health() {
     return viewMapper.engineHealth(linkUpClient.node());
