@@ -136,6 +136,58 @@ class ModelVersionServiceTest {
   }
 
   @Test
+  void legacyPublishOfSameDwdStructureDoesNotInheritBoundMappingHistory() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    ModelVersion previous = version(9L, 3, null);
+    ModelVersion bound = new ModelVersion(previous.id(), previous.modelId(),
+        previous.versionNo(), previous.structureJson(),
+        "{\"mappingRevisionId\":501,\"mappingSetId\":201}",
+        previous.columnCount(), previous.checksum(), previous.publishedBy(),
+        previous.publishTime());
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(bound));
+    when(versionRepository.nextVersionNo(1L)).thenReturn(4);
+    when(versionRepository.insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(10L, 4, "{}"));
+
+    var created = service.publish(1L, "tester");
+    assertThat(created.created()).isTrue();
+    verify(versionRepository).insert(eq(1L), eq(4), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta ->
+            meta != null && !meta.contains("mappingRevisionId")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 10L, 4, "tester");
+  }
+
+  @Test
+  void sameRevisionIdButDifferentMappingSetCannotReusePublishedVersion() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    ModelVersion previous = version(9L, 3, null);
+    String meta = "{\"mappingRevisionId\":501,\"mappingSetId\":999,"
+        + "\"logicalModelId\":77,\"logicalVersionNo\":2,"
+        + "\"mappingContentSha256\":\"" + "c".repeat(64) + "\","
+        + "\"logicalSnapshotSha256\":\"" + "a".repeat(64) + "\","
+        + "\"physicalStructureSha256\":\"" + "b".repeat(64) + "\"}";
+    ModelVersion bound = new ModelVersion(previous.id(), previous.modelId(),
+        previous.versionNo(), previous.structureJson(), meta,
+        previous.columnCount(), previous.checksum(), previous.publishedBy(),
+        previous.publishTime());
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(bound));
+    when(versionRepository.nextVersionNo(1L)).thenReturn(4);
+    when(versionRepository.insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(10L, 4, "{}"));
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+
+    assertThat(service.publishWithMapping(1L, null, evidence, "tester").created()).isTrue();
+    verify(versionRepository).insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"));
+  }
+
+  @Test
   void approvedMappingRejectsChangedPhysicalFingerprintBeforeVersionInsert() {
     Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
         null, null, "DWD", null).withPersisted(1L, "alice", null, null);

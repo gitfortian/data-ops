@@ -158,7 +158,8 @@ public class DwdMappingPublicationService {
       throw new IllegalStateException("物理发布历史中的映射引用损坏", ex);
     }
     var historical = mapping.revisionDetail(modelId, id);
-    if (!Objects.equals(meta.get("mappingContentSha256"), historical.contentSha256())
+    if (!String.valueOf(historical.mappingSetId()).equals(String.valueOf(meta.get("mappingSetId")))
+        || !Objects.equals(meta.get("mappingContentSha256"), historical.contentSha256())
         || !Objects.equals(meta.get("logicalSnapshotSha256"), historical.logicalSnapshotSha256())
         || !Objects.equals(meta.get("physicalStructureSha256"), historical.physicalStructureSha256())
         || !String.valueOf(historical.logicalModelId()).equals(String.valueOf(meta.get("logicalModelId")))

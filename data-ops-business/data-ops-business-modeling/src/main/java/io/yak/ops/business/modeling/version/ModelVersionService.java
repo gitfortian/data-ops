@@ -122,7 +122,9 @@ public class ModelVersionService {
     ModelVersion latest = versionRepository.findLatestByModelId(modelId).orElse(null);
     if (latest != null && semanticJson.equals(
         serialiseStructure(semanticView(deserialiseStructure(latest.structureJson()))))
-        && (mapping == null || matchesMapping(latest.metaJson(), mapping))) {
+        && (mapping == null
+            ? !hasMappingIdentity(latest.metaJson())
+            : matchesMapping(latest.metaJson(), mapping))) {
       if (!java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
         modelRepository.updatePublishState(
             modelId, ModelStatus.PUBLISHED.name(), latest.id(), latest.versionNo(), operator);
@@ -327,9 +329,17 @@ public class ModelVersionService {
     }
   }
 
+  /** A legacy publish must NEVER inherit a previous explicitly bound DWD mapping. */
+  private boolean hasMappingIdentity(String metaJson) {
+    return parseMeta(metaJson).containsKey("mappingRevisionId");
+  }
+
   private boolean matchesMapping(String metaJson, PublicationEvidence mapping) {
     java.util.Map<String, Object> meta = parseMeta(metaJson);
     return mapping.mappingRevisionId().toString().equals(String.valueOf(meta.get("mappingRevisionId")))
+        && mapping.mappingSetId().toString().equals(String.valueOf(meta.get("mappingSetId")))
+        && mapping.logicalModelId().toString().equals(String.valueOf(meta.get("logicalModelId")))
+        && String.valueOf(mapping.logicalVersionNo()).equals(String.valueOf(meta.get("logicalVersionNo")))
         && mapping.contentSha256().equals(meta.get("mappingContentSha256"))
         && mapping.logicalSnapshotSha256().equals(meta.get("logicalSnapshotSha256"))
         && mapping.physicalStructureSha256().equals(meta.get("physicalStructureSha256"));

@@ -123,7 +123,8 @@ class DwdMappingPublicationServiceTest {
   void historyPinsImmutableRevisionNotCurrentDraft() {
     when(versions.getVersionDetail(50L, 4)).thenReturn(
         new ModelVersionService.VersionDetailView(version(), null, Map.of(
-            "mappingRevisionId", 901, "mappingContentSha256", "c".repeat(64),
+            "mappingRevisionId", 901, "mappingSetId", 501,
+            "mappingContentSha256", "c".repeat(64),
             "logicalSnapshotSha256", "a".repeat(64), "physicalStructureSha256",
             "b".repeat(64), "logicalModelId", 77, "logicalVersionNo", 2)));
     when(mappings.revisionDetail(50L, 901L)).thenReturn(
@@ -133,6 +134,22 @@ class DwdMappingPublicationServiceTest {
     var result = service.history(50L, 4);
     assertEquals(901L, result.mapping().mappingRevisionId());
     assertEquals("DESIGN_PUBLISHED_NOT_EXECUTED", result.state());
+  }
+
+  @Test
+  void historicalVersionRejectsMismatchedMappingSetIdentity() {
+    when(versions.getVersionDetail(50L, 4)).thenReturn(
+        new ModelVersionService.VersionDetailView(version(), null, Map.of(
+            "mappingRevisionId", 901, "mappingSetId", 999,
+            "mappingContentSha256", "c".repeat(64),
+            "logicalSnapshotSha256", "a".repeat(64),
+            "physicalStructureSha256", "b".repeat(64),
+            "logicalModelId", 77, "logicalVersionNo", 2)));
+    when(mappings.revisionDetail(50L, 901L)).thenReturn(
+        new DwdMappingDraftService.HistoricalRevision(
+            901L, 501L, 1, 77L, 2, "a".repeat(64), "b".repeat(64),
+            "c".repeat(64), java.util.List.of()));
+    assertThrows(IllegalStateException.class, () -> service.history(50L, 4));
   }
 
   private ModelVersion version() {
