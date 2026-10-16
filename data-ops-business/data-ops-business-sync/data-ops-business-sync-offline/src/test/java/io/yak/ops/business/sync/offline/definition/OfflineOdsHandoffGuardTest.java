@@ -87,4 +87,27 @@ class OfflineOdsHandoffGuardTest {
     verifyNoInteractions(owner);
   }
 
+
+  @Test void escapedHandoffFieldNameCannotBypassPublicationOrExecutionGuard() {
+    String escaped = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{"table":"ods.ods_order_detail"}},
+         "\\u006fdsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertTrue(OfflineOdsHandoffGuard.requiresVerification(escaped));
+    guard.verifyFrozen(escaped);
+    verify(owner).verify(23L, 50L, 2, 99L, 10L,
+        "public.trade_order_detail", 20L, "ods.ods_order_detail");
+  }
+
+  @Test void unrelatedStringContentsCannotForgeAnOdsHandoff() {
+    assertFalse(OfflineOdsHandoffGuard.requiresVerification(
+        "{\"notes\":\"contains literal \\\\"odsHandoff\\\\" in a description\"}"));
+    assertFalse(OfflineOdsHandoffGuard.requiresVerification(
+        "{\"odsHandoff\":null}"));
+    assertThrows(IllegalArgumentException.class, () ->
+        OfflineOdsHandoffGuard.requiresVerification("invalid JSON"));
+  }
+
 }
