@@ -193,8 +193,7 @@ public class OfflineExecutionClaimManager {
       String idempotencyKey) {
     // Reject expired or foreign ODS evidence before allocating any
     // BatchExecution/Attempt: a failed verification must not occupy a slot.
-    if (definitionSnapshotJson != null
-        && definitionSnapshotJson.contains("\"odsHandoff\"")) {
+    if (OfflineOdsHandoffGuard.requiresVerification(definitionSnapshotJson)) {
       if (odsHandoffGuard == null) {
         throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务运行");
       }
