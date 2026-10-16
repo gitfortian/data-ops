@@ -2383,6 +2383,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
               目标库核验与离线同步
             </YakButton>
           )}
+          {modelInfo?.layerCode?.toUpperCase() === 'DWD'
+            && Number(modelInfo?.latestVersionNo) > 0 && (
+              <YakButton className="!h-9 !rounded-lg !px-4"
+                disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setDwdHistoryOpen(true)}>
+                DWD 设计版本与映射历史
+              </YakButton>
+          )}
           {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '') && (
             <Tooltip title={dirty
               ? '请先保存当前物理结构；核验只读取服务端已保存版本'
@@ -3234,6 +3242,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
         <OdsPhysicalDeliveryPanel
           open={odsPhysicalDeliveryOpen} model={modelInfo}
           onClose={() => setOdsPhysicalDeliveryOpen(false)} />
+      )}
+      {modelId && dwdHistoryOpen && (
+        <DwdPublishedMappingHistoryPanel open={dwdHistoryOpen}
+          modelId={Number(modelId)} onClose={() => setDwdHistoryOpen(false)} />
       )}
       {modelId && odsVersionEvidenceOpen && (
         <OdsPublishedVersionEvidencePanel
