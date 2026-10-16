@@ -8,7 +8,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   publishDwdWithMapping, getPublishedDwdMapping,
-  getDwdPublicationPolicy, submitDwdMappingPublishApproval,
+  getDwdPublicationPolicy, submitDwdMappingPublishApproval, listDwdMappingRevisions,
   type DwdMappingDraft, type DwdMappingFrozen, type DwdBoundPublication,
 } from '@/services/modeling/dwdMapping';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
@@ -405,18 +405,32 @@ export default function LogicalWorkspace() {
     setMappingPersistError(undefined);
     if (handoffPreview?.physicalLayer !== 'DWD' || physicalModelId == null) return;
     let live = true;
-    void getDwdMappingDraft(physicalModelId).then((draft) => {
+    // Restore server-persisted freeze evidence as well as the MappingSet draft.
+    // Never infer a frozen version from local browser state or a different revision.
+    void Promise.all([
+      getDwdMappingDraft(physicalModelId),
+      listDwdMappingRevisions(physicalModelId),
+    ]).then(([draft, revisions]) => {
       if (!live || epoch !== mappingEpoch.current) return;
       if (draft && draft.physicalModelId === physicalModelId
           && draft.logicalModelId === handoffPreview.logicalModelId
           && draft.logicalVersionNo === handoffPreview.logicalVersionNo) {
         setMappingDraft(draft);
+        const latest = revisions[0];
+        if (draft.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
+            && draft.physicalStructureSha256 === handoffPreview.physicalStructureSha256
+            && latest?.mappingSetId === draft.mappingSetId
+            && latest?.draftRevision === draft.draftRevision
+            && latest?.mappingRevisionId > 0
+            && /^[a-f0-9]{64}$/.test(latest.contentSha256)) {
+          setMappingFrozen(latest);
+        }
       } else if (draft) {
         setMappingPersistError('目标 DWD 已保存另一份逻辑设计映射；请在对应物理模型中核对，不允许覆盖。');
       }
     }).catch(() => {
       if (live && epoch === mappingEpoch.current) {
-        setMappingPersistError('无法读取当前项目的已保存映射；本次不允许盲目覆盖。');
+        setMappingPersistError('无法完整读取已保存映射与冻结历史；禁止盲目覆盖或发布。');
       }
     });
     return () => { live = false; };
@@ -1043,11 +1057,14 @@ export default function LogicalWorkspace() {
               }
               setMappingSelections(restored.selections);
               setMappingKinds(restored.kinds);
-              setMappingFrozen(undefined);
+              // Existing frozen revision is immutable and belongs to this exact
+              // persisted draft. Revalidate again in the backend at publication.
+              setMappingFrozen(previous => previous?.mappingSetId === mappingDraft.mappingSetId
+                && previous.draftRevision === mappingDraft.draftRevision ? previous : undefined);
               setMappingPublished(undefined);
               setMappingApprovalPending(false);
               setReviewResult(undefined);
-              message.info('已载入持久映射；请重新校验后再冻结');
+              message.info('已载入持久映射；请重新校验。匹配的历史冻结修订可继续用于发布确认。');
             }}>载入已保存映射并重新校验</Button>
           </>}
           {mappingFrozen && <>
