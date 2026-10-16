@@ -52,8 +52,10 @@ class ModelPublishApprovalHandlerTest {
     when(publisher.publishApproved(42L, 501L, fingerprint, "tom"))
         .thenReturn(new DwdMappingPublicationService.BoundReceipt(
             9L, 3, 501L, true, "DESIGN_PUBLISHED_NOT_EXECUTED"));
-    handler.onApproved(decision("{\\"modelId\\":42,\\"structureFingerprint\\":\\""
-        + fingerprint + "\\",\\"mappingRevisionId\\":501}"));
+    String payload = """
+        {"modelId":42,"structureFingerprint":"%s","mappingRevisionId":501}
+        """.formatted(fingerprint);
+    handler.onApproved(decision(payload));
     verify(publisher).publishApproved(42L, 501L, fingerprint, "tom");
     verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
   }
@@ -61,9 +63,10 @@ class ModelPublishApprovalHandlerTest {
   @Test
   void malformedMappingRevisionCannotFallBackToLegacyPublish() {
     String fingerprint = "b".repeat(64);
-    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(
-        "{\\"modelId\\":42,\\"structureFingerprint\\":\\"" + fingerprint
-            + "\\",\\"mappingRevisionId\\":0}")));
+    String payload = """
+        {"modelId":42,"structureFingerprint":"%s","mappingRevisionId":0}
+        """.formatted(fingerprint);
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
     verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
   }
 
