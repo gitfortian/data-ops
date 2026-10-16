@@ -22,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,20 +36,44 @@ import org.springframework.util.StringUtils;
  */
 @ConditionalOnOfflineSyncEnabled
 @Component
-@RequiredArgsConstructor
 public class OfflineJobRevisionService {
 
   private static final ObjectMapper JSON = new ObjectMapper();
 
-  /** Optional in direct unit construction; in the application the guard is injected. */
-  @org.springframework.beans.factory.annotation.Autowired(required = false)
-  private OfflineOdsHandoffGuard odsHandoffGuard;
+  private final OfflineOdsHandoffGuard odsHandoffGuard;
 
   private final CurrentProject currentProject;
   private final OfflineJobDefinitionRepository definitionRepository;
   private final OfflineJobRevisionRepository revisionRepository;
   private final BusinessAuditService auditService;
   private final AuditActorResolver auditActorResolver;
+
+  @Autowired
+  public OfflineJobRevisionService(
+      CurrentProject currentProject,
+      OfflineJobDefinitionRepository definitionRepository,
+      OfflineJobRevisionRepository revisionRepository,
+      BusinessAuditService auditService,
+      AuditActorResolver auditActorResolver,
+      OfflineOdsHandoffGuard odsHandoffGuard) {
+    this.currentProject = currentProject;
+    this.definitionRepository = definitionRepository;
+    this.revisionRepository = revisionRepository;
+    this.auditService = auditService;
+    this.auditActorResolver = auditActorResolver;
+    this.odsHandoffGuard = odsHandoffGuard;
+  }
+
+  /** Compatibility for direct unit-test construction only. */
+  public OfflineJobRevisionService(
+      CurrentProject currentProject,
+      OfflineJobDefinitionRepository definitionRepository,
+      OfflineJobRevisionRepository revisionRepository,
+      BusinessAuditService auditService,
+      AuditActorResolver auditActorResolver) {
+    this(currentProject, definitionRepository, revisionRepository, auditService,
+        auditActorResolver, null);
+  }
 
   /** 发布结果：appended=false 表示内容与最新发布版一致，幂等复用不追加。 */
   public record PublishResult(VersionSummary version, boolean appended) {}
