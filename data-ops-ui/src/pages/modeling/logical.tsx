@@ -606,6 +606,19 @@ export default function LogicalWorkspace() {
     } catch (err) { message.error(errorText(err)); }
   };
 
+  /** A saved mapping may be frozen only when the on-screen editor still shows
+   * EXACTLY the persisted rules. Never freeze a previous selection by accident. */
+  const mappingMatchesEditor = Boolean(mappingDraft && handoffPreview
+    && mappingDraft.rules.length === Object.keys(mappingSelections).length
+    && mappingDraft.rules.every(rule => {
+      const current = handoffPreview.columns.find(row =>
+        row.physicalColumn === rule.targetColumn
+        && row.physicalStdFieldId === rule.stdFieldId);
+      return current?.physicalColumnId != null
+        && mappingSelections[current.physicalColumnId] === rule.logicalAttributeId
+        && mappingKinds[current.physicalColumnId] === rule.kind;
+    }));
+
   const reviewComparison = semanticReview && reviewFeedback
     && reviewFeedback.projectId === currentProject?.id
     && reviewFeedback.baseline.logicalModelId === selected
@@ -941,7 +954,8 @@ export default function LogicalWorkspace() {
                 || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])}
               onClick={() => void saveMappingEvidence()}>保存正式 MappingSet 草稿</Button>
             <Button loading={mappingPersistBusy}
-              disabled={!canSaveMapping || !mappingDraft || !reviewResult?.readyForManualDesign
+              disabled={!canSaveMapping || !mappingDraft || !mappingMatchesEditor
+                || !reviewResult?.readyForManualDesign
                 || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
                 || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256}
               onClick={() => void freezeMappingEvidence()}>冻结 MappingRevision</Button>
