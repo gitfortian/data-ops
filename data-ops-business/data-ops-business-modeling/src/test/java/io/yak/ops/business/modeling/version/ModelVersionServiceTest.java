@@ -168,6 +168,32 @@ class ModelVersionServiceTest {
   }
 
   @Test
+  void mappedDwdPublishRejectsFailedPointerUpdateInsteadOfClaimingSuccess() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
+    when(versionRepository.nextVersionNo(1L)).thenReturn(1);
+    when(versionRepository.insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(9L, 1, "{}"));
+    when(modelRepository.updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1,
+        "tester")).thenReturn(false);
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publishWithMapping(1L, null, evidence, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository).insert(eq(1L), eq(1), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta ->
+            meta != null && meta.contains("mappingRevisionId")
+                && meta.contains("mappingContentSha256")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1,
+        "tester");
+  }
+
+  @Test
   void legacyPublishOfSameDwdStructureDoesNotInheritBoundMappingHistory() {
     Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
         null, null, "DWD", null).withPersisted(1L, "alice", null, null);
