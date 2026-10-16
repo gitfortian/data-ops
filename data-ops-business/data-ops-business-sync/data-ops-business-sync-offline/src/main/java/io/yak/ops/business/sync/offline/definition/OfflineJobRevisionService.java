@@ -177,11 +177,11 @@ public class OfflineJobRevisionService {
     long projectId = currentProject.requireProjectId();
     // Do not freeze an unverified client-provided ODS reference into a runnable revision.
     // The Modeling Owner must re-inspect the current source + target Catalog.
-    if (odsHandoffGuard != null) {
+    if (OfflineOdsHandoffGuard.requiresVerification(definition.getDefinitionJson())) {
+      if (odsHandoffGuard == null) {
+        throw new IllegalStateException("ODS 交接验证器缺失，禁止发布带模型证据的同步任务");
+      }
       odsHandoffGuard.verifyFrozen(definition.getDefinitionJson());
-    } else if (definition.getDefinitionJson() != null
-        && definition.getDefinitionJson().contains("\"odsHandoff\"")) {
-      throw new IllegalStateException("ODS 交接验证器缺失，禁止发布带模型证据的同步任务");
     }
     OfflineJobRevision latest =
         revisionRepository.findLatestByJobDefinitionId(definition.getId()).orElse(null);
