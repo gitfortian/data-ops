@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.modeling.api.ModelingStructureApi;
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.PublicationEvidence;
 import io.yak.ops.business.modeling.domain.ModelStatus;
 import io.yak.ops.business.modeling.domain.ModelVersion;
 import io.yak.ops.business.modeling.domain.ModelVersionSummary;
@@ -72,6 +73,27 @@ public class ModelVersionService {
     return publishLocked(model, structure, operator);
   }
 
+
+  /**
+   * Opt-in DWD design publication. The caller must hold the root lock and have
+   * validated the exact immutable MappingRevision in its enclosing transaction.
+   * Legacy publish entry points are unchanged until DR-06 / PD-010 are accepted.
+   */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public PublishResult publishWithMapping(
+      Long modelId, String expectedFingerprint, PublicationEvidence mapping, String operator) {
+    Model model = requireLiveModelForUpdate(modelId);
+    if (model.status() != ModelStatus.DRAFT
+        || !"DWD".equalsIgnoreCase(model.layerCode()) || mapping == null) {
+      throw new IllegalStateException("只有 DWD 草稿可以显式绑定冻结映射并发布");
+    }
+    StructureView structure = structureService.getForUpdate(modelId);
+    if (expectedFingerprint != null && !expectedFingerprint.equals(fingerprint(structure))) {
+      throw new IllegalStateException("审批后物理结构发生变化，必须重新送审");
+    }
+    return publishLocked(model, structure, operator, mapping);
+  }
+
   /** Content digest used to bind a publish approval to the exact semantic structure. */
   @Transactional(
       transactionManager = "yakBusinessTransactionManager",
@@ -82,6 +104,11 @@ public class ModelVersionService {
   }
 
   private PublishResult publishLocked(Model model, StructureView structure, String operator) {
+    return publishLocked(model, structure, operator, null);
+  }
+
+  private PublishResult publishLocked(Model model, StructureView structure,
+                                      String operator, PublicationEvidence mapping) {
     Long modelId = model.id();
 
     String structureJson = serialiseStructure(structure);
@@ -94,7 +121,8 @@ public class ModelVersionService {
     // Idempotent: semantic equality with the latest version (不依赖存量行旧口径 checksum)
     ModelVersion latest = versionRepository.findLatestByModelId(modelId).orElse(null);
     if (latest != null && semanticJson.equals(
-        serialiseStructure(semanticView(deserialiseStructure(latest.structureJson()))))) {
+        serialiseStructure(semanticView(deserialiseStructure(latest.structureJson()))))
+        && (mapping == null || matchesMapping(latest.metaJson(), mapping))) {
       if (!java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
         modelRepository.updatePublishState(
             modelId, ModelStatus.PUBLISHED.name(), latest.id(), latest.versionNo(), operator);
@@ -104,7 +132,7 @@ public class ModelVersionService {
 
     int nextVersionNo = versionRepository.nextVersionNo(modelId);
     ModelVersion version = versionRepository.insert(
-        modelId, nextVersionNo, structureJson, serialiseMeta(model),
+        modelId, nextVersionNo, structureJson, serialiseMeta(model, mapping),
         columnCount, checksum, operator);
 
     modelRepository.updatePublishState(
@@ -275,7 +303,7 @@ public class ModelVersionService {
   }
 
   /** 元数据快照：发布当时模型的名称/描述/分层/业务域/方言（可空值逐个 put，不整体 Map.of）。 */
-  private String serialiseMeta(Model model) {
+  private String serialiseMeta(Model model, PublicationEvidence mapping) {
     java.util.Map<String, Object> meta = new java.util.LinkedHashMap<>();
     meta.put("code", model.code());
     meta.put("name", model.name());
@@ -283,11 +311,28 @@ public class ModelVersionService {
     meta.put("layerCode", model.layerCode());
     meta.put("dialect", model.dialect() == null ? null : model.dialect().name());
     meta.put("domainId", model.domainId());
+    if (mapping != null) {
+      meta.put("mappingRevisionId", mapping.mappingRevisionId());
+      meta.put("mappingSetId", mapping.mappingSetId());
+      meta.put("logicalModelId", mapping.logicalModelId());
+      meta.put("logicalVersionNo", mapping.logicalVersionNo());
+      meta.put("logicalSnapshotSha256", mapping.logicalSnapshotSha256());
+      meta.put("physicalStructureSha256", mapping.physicalStructureSha256());
+      meta.put("mappingContentSha256", mapping.contentSha256());
+    }
     try {
       return MAPPER.writeValueAsString(meta);
     } catch (JsonProcessingException e) {
       throw new IllegalStateException("模型元数据序列化失败", e);
     }
+  }
+
+  private boolean matchesMapping(String metaJson, PublicationEvidence mapping) {
+    java.util.Map<String, Object> meta = parseMeta(metaJson);
+    return mapping.mappingRevisionId().toString().equals(String.valueOf(meta.get("mappingRevisionId")))
+        && mapping.contentSha256().equals(meta.get("mappingContentSha256"))
+        && mapping.logicalSnapshotSha256().equals(meta.get("logicalSnapshotSha256"))
+        && mapping.physicalStructureSha256().equals(meta.get("physicalStructureSha256"));
   }
 
   private java.util.Map<String, Object> parseMeta(String metaJson) {

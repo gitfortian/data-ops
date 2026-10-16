@@ -272,6 +272,75 @@ public class DwdMappingDraftService {
         .last("LIMIT 100")).stream().map(this::frozen).toList();
   }
 
+
+  /** Exact frozen evidence, revalidated before an explicit DWD publish transaction. */
+  public record PublicationEvidence(
+      Long mappingRevisionId, Long mappingSetId, Long logicalModelId,
+      int logicalVersionNo, String logicalSnapshotSha256,
+      String physicalStructureSha256, String contentSha256) {}
+
+  /** Historical mapping is immutable. It is NEVER validated against today's standards. */
+  public record HistoricalRevision(
+      Long mappingRevisionId, Long mappingSetId, int revisionNo,
+      Long logicalModelId, int logicalVersionNo,
+      String logicalSnapshotSha256, String physicalStructureSha256,
+      String contentSha256, List<StoredRule> rules) {}
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
+  public HistoricalRevision revisionDetail(Long physicalId, Long revisionId) {
+    requireDwd(physicalId);
+    ModelingMappingSetPO root = current(physicalId, false);
+    if (root == null || revisionId == null || revisionId <= 0) {
+      throw new IllegalArgumentException("指定的映射冻结版本不存在");
+    }
+    ModelingMappingRevisionPO revision = findRevision(root, revisionId);
+    if (revision == null) throw new IllegalArgumentException("映射冻结版本不存在或项目不匹配");
+    String expected = VersionDigests.sha256Hex(
+        revision.getLogicalSnapshotSha() + ":" + revision.getPhysicalStructureSha()
+            + ":" + revision.getFrozenJson());
+    if (!expected.equals(revision.getContentSha())) {
+      throw new IllegalStateException("映射冻结历史快照校验失败");
+    }
+    return new HistoricalRevision(revision.getId(), root.getId(), revision.getRevisionNo(),
+        root.getLogicalModelId(), root.getLogicalVersionNo(),
+        revision.getLogicalSnapshotSha(), revision.getPhysicalStructureSha(),
+        revision.getContentSha(), readRules(revision.getFrozenJson()));
+  }
+
+  /**
+   * Called only after the publisher locks the physical root, in the SAME transaction.
+   * Reusing the freeze validator refuses stale draft, semantic standard drift,
+   * column renames, and an older revision chosen instead of the current frozen one.
+   */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public PublicationEvidence requireFrozenForPublication(Long physicalId, Long revisionId) {
+    requireDwd(physicalId);
+    ModelingMappingSetPO root = current(physicalId, true);
+    if (root == null || revisionId == null || revisionId <= 0) {
+      throw new IllegalStateException("先保存并冻结当前 DWD 映射草稿");
+    }
+    ModelingMappingRevisionPO selected = findRevision(root, revisionId);
+    if (selected == null || !Objects.equals(selected.getDraftRevision(), root.getDraftRevision())) {
+      throw new IllegalStateException("所选冻结修订不属于当前映射草稿，请重新冻结");
+    }
+    Frozen rechecked = freeze(physicalId, root.getDraftRevision(), "publication-revalidation");
+    if (!Objects.equals(rechecked.mappingRevisionId(), selected.getId())
+        || !Objects.equals(rechecked.contentSha256(), selected.getContentSha())) {
+      throw new IllegalStateException("冻结映射已失效或存在更新的修订，请重新审阅");
+    }
+    return new PublicationEvidence(selected.getId(), root.getId(),
+        root.getLogicalModelId(), root.getLogicalVersionNo(),
+        selected.getLogicalSnapshotSha(), selected.getPhysicalStructureSha(),
+        selected.getContentSha());
+  }
+
+  private ModelingMappingRevisionPO findRevision(ModelingMappingSetPO root, Long revisionId) {
+    return revisions.selectOne(new LambdaQueryWrapper<ModelingMappingRevisionPO>()
+        .eq(ModelingMappingRevisionPO::getProjectId, currentProject.requireProjectId())
+        .eq(ModelingMappingRevisionPO::getMappingSetId, root.getId())
+        .eq(ModelingMappingRevisionPO::getId, revisionId));
+  }
+
   private Frozen frozen(ModelingMappingRevisionPO po) {
     return new Frozen(po.getId(), po.getMappingSetId(), po.getRevisionNo(),
         po.getContentSha(), po.getDraftRevision(), "FROZEN_DESIGN_ONLY");

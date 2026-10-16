@@ -6,6 +6,8 @@ import io.yak.ops.business.approval.api.ApprovalDecision;
 import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.approval.api.ApprovalFlowHandler;
 import io.yak.ops.business.modeling.version.ModelVersionService;
+import io.yak.ops.business.modeling.mapping.DwdMappingPublicationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,12 +18,24 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private final ModelVersionService versionService;
+  private final DwdMappingPublicationService dwdPublisher;
+
+  @Autowired
+  public ModelPublishApprovalHandler(ModelVersionService versionService,
+                                     DwdMappingPublicationService dwdPublisher) {
+    this.versionService = versionService;
+    this.dwdPublisher = dwdPublisher;
+  }
+
+  /** Backwards-compatible constructor for legacy no-binding unit fixtures. */
+  public ModelPublishApprovalHandler(ModelVersionService versionService) {
+    this(versionService, null);
+  }
 
   @Override
   public String flowCode() {
@@ -32,10 +46,32 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
   public void onApproved(ApprovalDecision decision) {
     long modelId = readModelId(decision.payloadJson());
     String fingerprint = readStructureFingerprint(decision.payloadJson());
-    ModelVersionService.PublishResult result =
-        versionService.publishApproved(modelId, fingerprint, decision.applicant());
-    log.info("模型发布审批通过即发布: modelId={}, versionNo={}, created={}, applicant={}",
-        modelId, result.version().versionNo(), result.created(), decision.applicant());
+    Long revisionId = readOptionalMappingRevisionId(decision.payloadJson());
+    if (revisionId != null) {
+      if (dwdPublisher == null) throw new IllegalStateException("DWD 映射发布处理器未配置");
+      var result = dwdPublisher.publishApproved(modelId, revisionId, fingerprint, decision.applicant());
+      log.info("DWD 映射设计审批发布: modelId={}, versionNo={}, created={}",
+          modelId, result.versionNo(), result.created());
+    } else {
+      ModelVersionService.PublishResult result =
+          versionService.publishApproved(modelId, fingerprint, decision.applicant());
+      log.info("模型发布审批通过即发布: modelId={}, versionNo={}, created={}, applicant={}",
+          modelId, result.version().versionNo(), result.created(), decision.applicant());
+    }
+  }
+
+  private static Long readOptionalMappingRevisionId(String payloadJson) {
+    try {
+      JsonNode payload = MAPPER.readTree(payloadJson);
+      if (!payload.has("mappingRevisionId")) return null;
+      JsonNode id = payload.path("mappingRevisionId");
+      if (!id.isIntegralNumber() || id.asLong() <= 0) {
+        throw new IllegalStateException("审批中的 MappingRevision ID 非法");
+      }
+      return id.asLong();
+    } catch (Exception ex) {
+      throw new IllegalStateException("审批映射版本解析失败", ex);
+    }
   }
 
   private static String readStructureFingerprint(String payloadJson) {

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import io.yak.ops.business.approval.api.ApprovalDecision;
 import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.modeling.domain.ModelVersion;
+import io.yak.ops.business.modeling.mapping.DwdMappingPublicationService;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.business.modeling.version.ModelVersionService.PublishResult;
 import java.time.LocalDateTime;
@@ -23,12 +24,14 @@ import org.junit.jupiter.api.Test;
 class ModelPublishApprovalHandlerTest {
 
   private ModelVersionService versionService;
+  private DwdMappingPublicationService publisher;
   private ModelPublishApprovalHandler handler;
 
   @BeforeEach
   void setUp() {
     versionService = mock(ModelVersionService.class);
-    handler = new ModelPublishApprovalHandler(versionService);
+    publisher = mock(DwdMappingPublicationService.class);
+    handler = new ModelPublishApprovalHandler(versionService, publisher);
   }
 
   @Test
@@ -41,6 +44,27 @@ class ModelPublishApprovalHandlerTest {
 
     verify(versionService).publishApproved(42L, fingerprint, "tom");
     assertEquals(ApprovalFlowCodes.MODEL_PUBLISH, handler.flowCode());
+  }
+
+  @Test
+  void mappedApprovalUsesFrozenRevisionAndNeverFallsBackToLegacyPublish() {
+    String fingerprint = "b".repeat(64);
+    when(publisher.publishApproved(42L, 501L, fingerprint, "tom"))
+        .thenReturn(new DwdMappingPublicationService.BoundReceipt(
+            9L, 3, 501L, true, "DESIGN_PUBLISHED_NOT_EXECUTED"));
+    handler.onApproved(decision("{\\"modelId\\":42,\\"structureFingerprint\\":\\""
+        + fingerprint + "\\",\\"mappingRevisionId\\":501}"));
+    verify(publisher).publishApproved(42L, 501L, fingerprint, "tom");
+    verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
+  }
+
+  @Test
+  void malformedMappingRevisionCannotFallBackToLegacyPublish() {
+    String fingerprint = "b".repeat(64);
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(
+        "{\\"modelId\\":42,\\"structureFingerprint\\":\\"" + fingerprint
+            + "\\",\\"mappingRevisionId\\":0}")));
+    verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
   }
 
   @Test

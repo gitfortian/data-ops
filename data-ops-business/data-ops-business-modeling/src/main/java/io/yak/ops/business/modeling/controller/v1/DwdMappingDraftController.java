@@ -4,6 +4,8 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService;
+import io.yak.ops.business.modeling.mapping.DwdMappingPublicationService;
+import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Draft;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Frozen;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.SaveRequest;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiresPermission(ModelingPermissionCode.READ)
 public class DwdMappingDraftController {
   private final DwdMappingDraftService service;
+  private final DwdMappingPublicationService publisher;
   private final CurrentUserProvider currentUserProvider;
 
   @GetMapping
@@ -50,5 +53,34 @@ public class DwdMappingDraftController {
   @GetMapping("/revisions")
   public Result<List<Frozen>> listRevisions(@PathVariable Long id) {
     return Result.success(service.revisions(id));
+  }
+
+  /** Explicit opt-in only; the legacy physical publish is unchanged. */
+  @PostMapping("/publish-with-mapping")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<DwdMappingPublicationService.BoundReceipt> publishWithMapping(
+      @PathVariable Long id, @RequestParam Long mappingRevisionId, HttpServletRequest http) {
+    return Result.success(publisher.publish(id, mappingRevisionId,
+        currentUserProvider.getCurrentUser(http)));
+  }
+
+  @PostMapping("/publish-approval-with-mapping")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<ApprovalInstanceView> submitPublishApproval(
+      @PathVariable Long id, @RequestParam Long mappingRevisionId, HttpServletRequest http) {
+    return Result.success(publisher.submitApproval(id, mappingRevisionId,
+        currentUserProvider.getCurrentUser(http)));
+  }
+
+  @GetMapping("/published-versions/{versionNo}")
+  public Result<DwdMappingPublicationService.History> readPublishedBinding(
+      @PathVariable Long id, @PathVariable int versionNo) {
+    return Result.success(publisher.history(id, versionNo));
+  }
+
+  @GetMapping("/revisions/{revisionId}")
+  public Result<DwdMappingDraftService.HistoricalRevision> revisionDetail(
+      @PathVariable Long id, @PathVariable Long revisionId) {
+    return Result.success(service.revisionDetail(id, revisionId));
   }
 }
