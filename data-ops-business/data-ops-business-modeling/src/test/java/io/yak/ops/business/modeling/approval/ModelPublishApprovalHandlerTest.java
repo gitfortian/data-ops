@@ -81,6 +81,15 @@ class ModelPublishApprovalHandlerTest {
   }
 
   @Test
+  void orphanMappingDigestMustNeverDowngradeToLegacyApproval() {
+    String payload = """
+        {"modelId":42,"structureFingerprint":"%s","mappingContentSha256":"%s"}
+        """.formatted("a".repeat(64), "b".repeat(64));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
+    verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
+  }
+
+  @Test
   void malformedPayloadFailsVisibly() {
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision("{}")));
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision("not-json")));
