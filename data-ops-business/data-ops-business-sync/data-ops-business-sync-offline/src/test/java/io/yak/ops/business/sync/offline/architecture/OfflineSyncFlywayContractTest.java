@@ -13,7 +13,7 @@ class OfflineSyncFlywayContractTest {
 
   @Test
   void offlineSyncOwnsOrderedMigrationSequence() throws IOException {
-    assertThat(sqlFiles(migrationRoot())).containsExactly("V1__offline_sync_baseline.sql");
+    assertThat(sqlFiles(migrationRoot())).containsExactly("V1__offline_sync_baseline.sql", "V2__ods_append_target_fence.sql");
 
     String baseline = section(
         Files.readString(migrationRoot().resolve("V1__offline_sync_baseline.sql")),
@@ -26,6 +26,33 @@ class OfflineSyncFlywayContractTest {
         .contains("CREATE TABLE IF NOT EXISTS yak_offline_sync_cursor")
         .doesNotContain("ALTER TABLE")
         .doesNotContain("audit_carrier_json");
+  }
+
+  @Test
+  void odsAppendFenceIsAdditiveAndCrossDialectUnique() throws IOException {
+    String mysql = Files.readString(migrationRoot().resolve("V2__ods_append_target_fence.sql"));
+    String pg = Files.readString(postgresMigrationRoot().resolve("V2__ods_append_target_fence.sql"));
+    for (String ddl : List.of(mysql, pg)) {
+      assertThat(ddl)
+          .contains("CREATE TABLE yak_offline_ods_append_fence")
+          .contains("project_id BIGINT NOT NULL")
+          .contains("target_datasource_id BIGINT NOT NULL")
+          .contains("target_table_key VARCHAR(128) NOT NULL")
+          .contains("uk_offline_ods_append_target")
+          .contains("project_id, target_datasource_id, target_table_key")
+          .doesNotContain("DROP TABLE")
+          .doesNotContain("DELETE FROM");
+    }
+    assertThat(mysql).contains("UNIQUE KEY uk_offline_ods_append_target");
+    assertThat(pg).contains("CREATE UNIQUE INDEX uk_offline_ods_append_target");
+  }
+
+  private Path postgresMigrationRoot() {
+    Path local = Path.of("src/main/resources/db/migration-postgresql/yak-offline-sync");
+    if (Files.isDirectory(local)) return local;
+    return Path.of("data-ops-business", "data-ops-business-sync",
+        "data-ops-business-sync-offline", "src", "main", "resources",
+        "db", "migration-postgresql", "yak-offline-sync");
   }
 
   @Test

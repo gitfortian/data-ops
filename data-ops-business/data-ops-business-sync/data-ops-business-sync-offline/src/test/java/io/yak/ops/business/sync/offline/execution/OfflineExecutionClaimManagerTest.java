@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.sync.offline.config.OfflineSyncProperties;
 import io.yak.ops.business.sync.offline.definition.OfflineJobDefinitionService;
+import io.yak.ops.business.sync.offline.definition.OfflineOdsHandoffGuard;
+import io.yak.ops.business.sync.offline.repository.OfflineOdsAppendFenceRepository;
 import io.yak.ops.business.sync.offline.domain.OfflineJobDefinition;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
 import io.yak.ops.business.sync.offline.domain.core.BatchExecution;
@@ -66,6 +68,69 @@ class OfflineExecutionClaimManagerTest {
     org.mockito.Mockito.lenient()
         .when(incrementalPlanner.plan(org.mockito.ArgumentMatchers.anyLong(), anyString()))
         .thenReturn(BatchScope.fullSelection());
+  }
+
+  @Test
+  void odsFencePrecedesBatchInsertAndRequiresFrozenRevision() {
+    OfflineOdsHandoffGuard guard = org.mockito.Mockito.mock(OfflineOdsHandoffGuard.class);
+    OfflineOdsAppendFenceRepository fence = org.mockito.Mockito.mock(OfflineOdsAppendFenceRepository.class);
+    manager = new OfflineExecutionClaimManager(
+        definitionService, definitionRepository, executionRepository, batchRepository,
+        scheduleRepository, batchRuntime, new OfflineSyncProperties(), attemptFactory,
+        existingBatchClaimManager, incrementalPlanner, guard, fence);
+    String frozen = """
+        {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99},
+         "basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{"table":"ods.ods_order_detail"}}}
+        """;
+    OfflineJobDefinition definition = definition();
+    var revision = publishedRevision();
+    revision.setDefinitionJson(frozen);
+    when(definitionService.require(10L)).thenReturn(definition);
+    when(definitionService.publishedRevision(definition)).thenReturn(revision);
+    stubBatchInsert(77L);
+    OfflineJobExecution execution = execution();
+    when(attemptFactory.create(any(BatchExecution.class), eq(1), eq("MANUAL"), eq(null), anyString()))
+        .thenReturn(execution);
+    when(executionRepository.insert(execution)).thenAnswer(call -> {
+      execution.setId(99L);
+      return true;
+    });
+
+    manager.claim(10L, "MANUAL", null, 1);
+
+    var order = org.mockito.Mockito.inOrder(fence, batchRepository);
+    order.verify(fence).claim(eq(frozen), eq(10L), any(BatchScope.class));
+    order.verify(batchRepository).insert(any(BatchExecution.class));
+    verify(guard).verifyFrozen(frozen);
+  }
+
+  @Test
+  void odsFenceConflictAllocatesNeitherBatchNorAttempt() {
+    OfflineOdsHandoffGuard guard = org.mockito.Mockito.mock(OfflineOdsHandoffGuard.class);
+    OfflineOdsAppendFenceRepository fence = org.mockito.Mockito.mock(OfflineOdsAppendFenceRepository.class);
+    manager = new OfflineExecutionClaimManager(
+        definitionService, definitionRepository, executionRepository, batchRepository,
+        scheduleRepository, batchRuntime, new OfflineSyncProperties(), attemptFactory,
+        existingBatchClaimManager, incrementalPlanner, guard, fence);
+    String frozen = """
+        {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99},
+         "basic":{"mode":"GUIDE_SINGLE"}}
+        """;
+    OfflineJobDefinition definition = definition();
+    var revision = publishedRevision();
+    revision.setDefinitionJson(frozen);
+    when(definitionService.require(10L)).thenReturn(definition);
+    when(definitionService.publishedRevision(definition)).thenReturn(revision);
+    org.mockito.Mockito.doThrow(new IllegalStateException("ODS 目标表已有写入围栏"))
+        .when(fence).claim(eq(frozen), eq(10L), any(BatchScope.class));
+
+    assertThatThrownBy(() -> manager.claim(10L, "MANUAL", null, 1))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("围栏");
+    verify(batchRepository, never()).insert(any(BatchExecution.class));
+    verify(executionRepository, never()).insert(any(OfflineJobExecution.class));
   }
 
   @Test

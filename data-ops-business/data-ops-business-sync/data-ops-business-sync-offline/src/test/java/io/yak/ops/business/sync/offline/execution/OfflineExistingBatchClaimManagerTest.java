@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.sync.offline.config.OfflineSyncProperties;
+import io.yak.ops.business.sync.offline.definition.OfflineOdsHandoffGuard;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
 import io.yak.ops.business.sync.offline.domain.core.BatchExecution;
 import io.yak.ops.business.sync.offline.domain.core.BatchKey;
@@ -115,6 +116,33 @@ class OfflineExistingBatchClaimManagerTest {
     order.verify(executionRepository).insert(result.getExecution());
     verify(definitionRepository).lock(10L);
     verify(batchRuntime).refreshBatch(77L);
+  }
+
+  @Test
+  void odsAppendRetryCannotReserveOrWriteAnotherAttempt() {
+    OfflineOdsHandoffGuard guard = org.mockito.Mockito.mock(OfflineOdsHandoffGuard.class);
+    OfflineExistingBatchClaimManager protectedManager = new OfflineExistingBatchClaimManager(
+        definitionRepository, executionRepository, batchRepository, batchRuntime,
+        new OfflineExecutionAttemptFactory(new OfflineSyncProperties()), guard);
+    OfflineJobExecution previous = failedAttempt(99L, 77L, 1);
+    ExecutionSnapshot odsSnapshot = new ExecutionSnapshot(
+        """
+        {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """,
+        3, new RetryPolicySnapshot(3, 0), "digest", "{}");
+    BatchExecution batch = new BatchExecution(77L, 10L, BatchKey.manual("ods-safety"),
+        BatchTrigger.MANUAL, BatchScope.fullSelection(), odsSnapshot,
+        BatchStatus.WAITING_RETRY, List.of());
+    when(executionRepository.findById(99L)).thenReturn(Optional.of(previous));
+    when(batchRepository.findById(77L)).thenReturn(Optional.of(batch));
+    when(executionRepository.findByBatchId(77L)).thenReturn(List.of(previous));
+
+    assertThatThrownBy(() -> protectedManager.claimRetry(99L))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("ODS APPEND");
+    verify(guard).verifyFrozen(odsSnapshot.definitionSnapshot());
+    verify(executionRepository, never()).reserveRetry(99L);
+    verify(executionRepository, never()).insert(any(OfflineJobExecution.class));
   }
 
   @Test

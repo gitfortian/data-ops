@@ -3,6 +3,9 @@ export type IntegrationCreateKind = "batch" | "realtime";
 export interface IntegrationSourceHandoff {
   dataSourceId: string;
   dbType?: string;
+  odsModelId?: number;
+  odsVersionNo?: number;
+  odsTargetObservationId?: number;
 }
 
 const normalizeSourceHandoff = (
@@ -12,9 +15,16 @@ const normalizeSourceHandoff = (
   if (!dataSourceId) return undefined;
 
   const dbType = String(value?.dbType || "").trim();
+  const numbers = [value?.odsModelId, value?.odsVersionNo, value?.odsTargetObservationId];
+  const hasHandoff = numbers.every(n => Number.isSafeInteger(n) && Number(n) > 0);
   return {
     dataSourceId,
     ...(dbType ? { dbType } : {}),
+    ...(hasHandoff ? {
+      odsModelId: Number(value?.odsModelId),
+      odsVersionNo: Number(value?.odsVersionNo),
+      odsTargetObservationId: Number(value?.odsTargetObservationId),
+    } : {}),
   };
 };
 
@@ -31,6 +41,11 @@ export const buildIntegrationCreatePath = (
   params.set("create", "1");
   params.set("sourceDataSourceId", normalized.dataSourceId);
   if (normalized.dbType) params.set("sourceDbType", normalized.dbType);
+  if (normalized.odsModelId && normalized.odsVersionNo && normalized.odsTargetObservationId) {
+    params.set("odsModelId", String(normalized.odsModelId));
+    params.set("odsVersionNo", String(normalized.odsVersionNo));
+    params.set("odsTargetObservationId", String(normalized.odsTargetObservationId));
+  }
 
   const basePath = kind === "batch" ? "/sync/batch-link-up" : "/sync/realtime";
   return `${basePath}?${params.toString()}`;
@@ -45,6 +60,9 @@ export const parseIntegrationSourceHandoff = (
   return normalizeSourceHandoff({
     dataSourceId: params.get("sourceDataSourceId") || "",
     dbType: params.get("sourceDbType") || undefined,
+    odsModelId: Number(params.get("odsModelId")),
+    odsVersionNo: Number(params.get("odsVersionNo")),
+    odsTargetObservationId: Number(params.get("odsTargetObservationId")),
   });
 };
 
@@ -53,6 +71,9 @@ export const stripIntegrationCreateHandoff = (search: string): string => {
   params.delete("create");
   params.delete("sourceDataSourceId");
   params.delete("sourceDbType");
+  params.delete("odsModelId");
+  params.delete("odsVersionNo");
+  params.delete("odsTargetObservationId");
   const next = params.toString();
   return next ? `?${next}` : "";
 };

@@ -33,6 +33,9 @@ public interface OfflineJobExecutionDao {
   /** 原子保留一次 FAILED Attempt 的 Retry 创建权。 */
   boolean reserveRetry(Long executionId, LocalDateTime updateTime);
 
+  /** Stable seek query: ordered by descending ID, never offset pagination. */
+  List<OfflineJobExecutionPO> selectBeforeId(long exclusiveId, int limit);
+
   IPage<OfflineJobExecutionPO> selectPage(PageQuery query);
 
   record PageQuery(

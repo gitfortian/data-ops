@@ -3,6 +3,7 @@ import EmojiIconPicker, {
   type EmojiIconValue,
 } from '@/components/EmojiIconPicker';
 import { YakButton } from '@/components/ui';
+import type { IntegrationSourceHandoff } from '@/services/integration/sourceHandoff';
 import {
   createOfflineSyncDraft,
   getOfflineSyncUniqueId,
@@ -56,6 +57,7 @@ interface CreateSyncTaskDrawerProps {
   open: boolean;
   onCancel: () => void;
   onCreated: (taskId: string, mode: SyncMode) => void;
+  sourceHandoff?: IntegrationSourceHandoff;
 }
 
 interface CreateSyncTaskFormValues extends CreateSyncTaskValues {
@@ -96,7 +98,10 @@ export default function CreateSyncTaskDrawer({
   open,
   onCancel,
   onCreated,
+  sourceHandoff,
 }: CreateSyncTaskDrawerProps) {
+  const hasOdsHandoff = Boolean(sourceHandoff?.odsModelId
+    && sourceHandoff?.odsVersionNo && sourceHandoff?.odsTargetObservationId);
   const intl = useIntl();
   const intlRef = useRef(intl);
   intlRef.current = intl;
@@ -141,7 +146,7 @@ export default function CreateSyncTaskDrawer({
           : 'pages.batchLinkUp.create.mode.profileSingleOnlyDescription',
       }),
       icon: <DatabaseOutlined />,
-      disabled: !guideMultiEnabled,
+      disabled: !guideMultiEnabled || hasOdsHandoff,
     },
   ];
 
@@ -179,10 +184,10 @@ export default function CreateSyncTaskDrawer({
   }, [connectorOptions, form, open]);
 
   useEffect(() => {
-    if (!guideMultiEnabled && form.getFieldValue('mode') === 'GUIDE_MULTI') {
+    if ((!guideMultiEnabled || hasOdsHandoff) && form.getFieldValue('mode') === 'GUIDE_MULTI') {
       form.setFieldValue('mode', 'GUIDE_SINGLE');
     }
-  }, [form, guideMultiEnabled]);
+  }, [form, guideMultiEnabled, hasOdsHandoff]);
 
   const updateAutoJobName = (side: 'source' | 'target', value: string) => {
     const nextSourceDbType =
@@ -238,9 +243,17 @@ export default function CreateSyncTaskDrawer({
 
       setSubmitting(true);
       const taskId = String(await getOfflineSyncUniqueId());
+      if (hasOdsHandoff && normalizedValues.mode !== 'GUIDE_SINGLE') {
+        throw new Error('ODS 已发布版本交接只支持单表同步');
+      }
       const payload = {
         ...buildCreatePayload(taskId, normalizedValues, source, sink),
         editorMeta: { icon },
+        ...(hasOdsHandoff ? { odsHandoff: {
+          modelId: sourceHandoff!.odsModelId,
+          versionNo: sourceHandoff!.odsVersionNo,
+          targetObservationId: sourceHandoff!.odsTargetObservationId,
+        }} : {}),
       };
       const savedId = await createOfflineSyncDraft(payload);
       const createdId = String(savedId ?? taskId);
