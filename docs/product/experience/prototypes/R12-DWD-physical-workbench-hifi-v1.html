@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>R12 DWD 建模工作台 · 高保真交互评审（独立演示）</title>
+  <style>
+  :root{font-family:Inter,"Microsoft YaHei",system-ui,-apple-system,sans-serif;font-size:14px;color:#242731;background:#f8f9fb;font-synthesis:none}
+  *{box-sizing:border-box}body{margin:0;min-width:340px}button,select,input{font:inherit}button{cursor:pointer;transition:background .15s,border-color .15s}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #475467;outline-offset:2px}
+  .appbar{height:48px;background:#fff;border-bottom:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:15}
+  .appbar .brand{font-size:16px;font-weight:800;letter-spacing:-.4px;color:#161823}.appbar .brand .spark{display:inline-grid;place-items:center;border-radius:9px;background:#292c35;color:#fff;width:27px;height:27px;margin-right:9px;font-size:13px}
+  .appbar-meta{display:flex;align-items:center;gap:16px;color:#475467;font-size:12px}.appbar-project{border:1px solid #eaecf0;padding:7px 12px;border-radius:7px;color:#344054;background:#f9fafb}
+  .avatar{height:27px;width:27px;border-radius:50%;background:#eaecf0;display:grid;place-items:center;font-size:11px;color:#475467;font-weight:700}
+  .shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:calc(100vh - 48px)}
+  aside{background:#fff;border-right:1px solid #eaecf0;padding:18px 10px 22px;position:sticky;top:48px;height:calc(100vh - 48px)}
+  aside .logo{margin:5px 15px 17px;color:#98a2b3;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+  aside .menu{border-radius:7px;margin:2px 7px;padding:11px 12px;color:#667085;font-size:13px;display:flex;gap:10px;align-items:center}
+  aside .menu .navicon{width:17px;color:#98a2b3;font-size:15px;text-align:center}
+  aside .menu.current{background:#f2f4f7;color:#242731;font-weight:700}
+  aside .menu.current .navicon{color:#344054}aside .menu.sub{padding:9px 8px 9px 41px;color:#667085;margin-left:8px}
+  aside .menu.sub.current{background:#f8f9fb;color:#292c35}aside .caption-nav{border-top:1px solid #eaecf0;padding:15px 18px;color:#98a2b3;font-size:12px;margin-top:20px}
+  main{max-width:1560px;width:100%;padding:30px 40px 70px;margin:0 auto;min-width:0}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin:0 0 20px}
+  .small{font-size:12px;color:#667085;line-height:1.6}.eyebrow{color:#98a2b3;font-size:12px;font-weight:600}
+  h1{font-size:24px;line-height:1.3;margin:10px 0 4px;font-weight:700;color:#161823;letter-spacing:-.5px}h2{font-size:16px;font-weight:700;margin:0 0 14px;letter-spacing:-.2px}h3{font-size:14px;margin:0 0 10px}
+  p{line-height:1.7;margin:7px 0}a{color:#344054}a:hover{text-decoration:underline}
+  .banner{border:1px solid #d8e4f5;background:#f0f6ff;color:#344054;border-radius:8px;padding:12px 15px;line-height:1.65;margin:0 0 20px;font-size:13px}
+  .banner.warning{background:#fffaeb;border-color:#fedf89;color:#805b20}.banner.danger{background:#fef3f2;border-color:#fecdca;color:#9c302a}
+  .banner.success{background:#ecfdf3;border-color:#a6e7ba;color:#187242}
+  .pill{padding:5px 10px;border-radius:5px;background:#f2f4f7;border:1px solid #eaecf0;color:#475467;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill.mild{background:#eff8ff;border-color:#b2ddff;color:#175cd3}.pill.warn{background:#fffaeb;border-color:#fedf89;color:#9c6515}
+  .muted{color:#667085}.layout{display:grid;grid-template-columns:minmax(0,1fr) 284px;gap:20px;align-items:start}
+  .card{background:#fff;border:1px solid #eaecf0;border-radius:10px;padding:24px;min-width:0;box-shadow:0 1px 2px rgba(16,24,40,.03)}
+  .side-card{position:sticky;top:72px;background:#fff;border:1px solid #eaecf0;border-radius:10px;padding:20px;box-shadow:0 1px 2px rgba(16,24,40,.03)}
+  .side-card h2{font-size:14px}.steps{display:flex;margin:18px 0 22px;background:#fff;border:1px solid #eaecf0;border-radius:10px;overflow:hidden}
+  .step{border:none;background:#fff;flex:1;display:flex;gap:12px;padding:16px 20px;text-align:left;border-right:1px solid #eaecf0;color:#667085;min-width:0;align-items:center}
+  .step:last-child{border-right:0}.step.active{background:#f9fafb;color:#242731;font-weight:700}.step.done{color:#287451}
+  .num{border:1px solid #d0d5dd;border-radius:50%;background:#fff;width:28px;height:28px;min-width:28px;display:inline-flex;justify-content:center;align-items:center;font-size:12px}
+  .step.active .num{border-color:#292c35;background:#292c35;color:#fff}.step.done .num{background:#effaf3;border-color:#abefc6;color:#2f7b51}
+  .columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.kv{padding:14px 16px;background:#fcfcfd;border:1px solid #eaecf0;border-radius:8px;min-width:0}
+  .kv label{display:block;font-size:12px;font-weight:500;color:#667085;margin-bottom:7px}.kv strong{font-size:13px;color:#344054;word-break:break-word}
+  .section{margin:20px 0}.check{display:flex;gap:11px;align-items:flex-start;line-height:1.6;margin:17px 0;color:#344054;font-size:13px}
+  .check input{margin-top:3px;accent-color:#292c35;width:16px;height:16px;min-width:16px}
+  .toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+  .footer{position:sticky;bottom:0;background:linear-gradient(to top,#fff 85%,rgba(255,255,255,.96));margin:20px -24px -24px;padding:17px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid #eaecf0;border-radius:0 0 10px 10px;z-index:2}
+  .btn{border:1px solid #d0d5dd;background:#fff;border-radius:7px;padding:9px 15px;color:#344054;font-size:13px;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+  .btn.primary{background:#292c35;border-color:#292c35;color:white}.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}.btn:hover:not(:disabled){background:#f2f4f7}.btn.primary:hover:not(:disabled){background:#464a55}.btn.text{border:none;background:transparent}
+  .field{width:100%;border:1px solid #d0d5dd;padding:9px 11px;background:#fff;border-radius:7px;color:#344054;font-size:13px}
+  .field:focus{outline:2px solid #98a2b3;outline-offset:1px}
+  .table-wrap{overflow:auto;border:1px solid #eaecf0;border-radius:8px}table{border-collapse:collapse;width:100%;min-width:870px}
+  th,td{padding:12px 11px;text-align:left;vertical-align:top;border-bottom:1px solid #eaecf0}tr:last-child td{border-bottom:0}
+  th{background:#f9fafb;font-size:12px;font-weight:600;color:#667085}td{font-size:12px;color:#344054}
+  td .field{min-width:118px;padding:8px;font-size:12px}.row-error{background:#fff7f7}
+  .code{font-family:Consolas,"SFMono-Regular",monospace;font-size:12px}.stack{display:flex;flex-direction:column;gap:6px}.legend{font-size:12px;color:#667085}
+  .mini-line{display:flex;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #f2f4f7;font-size:12px}.mini-line:last-child{border-bottom:0}
+  .mini-line strong{font-weight:650;text-align:right;color:#344054}
+  .detail{margin:14px 0 0;padding:12px 14px;background:#f9fafb;border-left:3px solid #d0d5dd;color:#475467;font-size:12px;line-height:1.7}
+  .mock-tag{display:inline-block;font-size:10px;color:#667085;border:1px solid #e4e7ec;background:#f9fafb;border-radius:4px;padding:3px 7px;margin-left:6px;vertical-align:middle}
+  .workspace-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0 15px;flex-wrap:wrap}
+  .kicker{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#98a2b3;font-weight:750;margin-bottom:5px}
+  .side-num{color:#98a2b3;font-size:11px}.breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:#98a2b3;margin-bottom:6px}
+  .breadcrumb strong{color:#667085;font-weight:600}
+  .surface-note{color:#667085;font-size:12px;padding:10px 12px;background:#f9fafb;border:1px solid #eaecf0;border-radius:8px;margin-bottom:14px}
+  .dialog-shade{position:fixed;inset:0;background:rgba(16,24,40,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .dialog{width:min(540px,100%);background:#fff;border:1px solid #eaecf0;border-radius:12px;padding:25px;box-shadow:0 18px 48px rgba(16,24,40,.17)}
+  .dialog h2{font-size:17px}.dialog .summary{background:#f9fafb;border:1px solid #eaecf0;padding:12px 15px;border-radius:8px;margin:18px 0}
+  .dialog .actions{display:flex;justify-content:flex-end;gap:8px}
+  [hidden]{display:none!important}ul{padding-left:19px;line-height:1.85}
+  @media(max-width:1220px){.layout{grid-template-columns:minmax(0,1fr)}.side-card{position:static}.shell{grid-template-columns:215px minmax(0,1fr)}main{padding:24px}}
+  @media(max-width:810px){.shell{grid-template-columns:1fr}aside{display:none}.appbar{padding:0 16px}}
+  @media(max-width:630px){main{padding:16px 12px}.columns{grid-template-columns:1fr}.steps{flex-direction:column}.step{border-bottom:1px solid #eaecf0;border-right:none;padding:12px}.step:last-child{border-bottom:0}h1{font-size:21px}.topbar{flex-direction:column;align-items:start}.footer{position:static;flex-direction:column;align-items:stretch}.footer>.toolbar{justify-content:flex-end}.appbar-meta .appbar-project{display:none}.card{padding:16px}}
+</style>
+</head>
+<body>
+<header class="appbar"><div class="brand"><span class="spark">Y</span>data-ops <span class="mock-tag">产品原型</span></div><div class="appbar-meta"><span class="appbar-project">当前项目：交易分析 · 演示</span><span>帮助</span><span class="avatar">UX</span></div></header>
+<div class="shell">
+  <aside aria-label="现有导航位置示意">
+    <div class="logo">当前工作空间</div>
+    <div class="menu"><span class="navicon">⌂</span>首页</div>
+    <div class="menu"><span class="navicon">▣</span>数据接入与元数据</div>
+    <div class="menu"><span class="navicon">◈</span>业务语义与标准</div>
+    <div class="menu current"><span class="navicon">▤</span>数仓建模 <span style="margin-left:auto;color:#98a2b3">⌄</span></div>
+    <div class="menu sub">逻辑模型</div>
+    <div class="menu sub current">物理模型</div>
+    <div class="menu"><span class="navicon">⌘</span>数据开发</div>
+    <div class="menu"><span class="navicon">✓</span>质量与治理</div>
+    <div class="caption-nav">复用现有工作台导航<br>不新增独立专业工具菜单</div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <div><div class="breadcrumb">数仓建模 <span>/</span> <strong>物理模型</strong> <span>/</span> dwd_order_detail</div><div class="eyebrow">R12-0 / UX 高保真评审 v1</div><h1>DWD 明细事实 · 建模与发布 <span class="mock-tag">DWD</span></h1><div class="muted">交易 / 订单　·　dwd_order_detail　·　草稿未发布（演示状态）</div></div>
+      <span class="pill warn">高保真交互演示 · 无后端写入</span>
+    </div>
+    <div class="banner"><strong>本次评审目标：</strong>验证在现有 data-ops 工作台视觉体系中，能否，用连续三步完成“确认业务依据 → 保存并冻结映射 → 发布设计并回读版本”？<br>
+      这份文件是独立静态演示，不是 data-ops 已经上线的新页面；按钮只改变浏览器内的演示状态；不会创建模型、保存 MappingSet、发布版本或运行 SQL。</div>
+    <div class="toolbar" style="margin:0 0 14px">
+      <label for="scenario"><strong>走查场景：</strong></label>
+      <select id="scenario" class="field" style="width:min(310px,100%)">
+        <option value="normal">正常路径（模拟可核验）</option>
+        <option value="grain">业务粒度冲突：订单头 vs 明细</option>
+        <option value="standard">标准字段缺失 / 停用</option>
+        <option value="drift">物理结构保存后发生漂移</option>
+        <option value="permission">项目权限撤销</option>
+        <option value="approval">审批期间映射发生变化</option>
+      </select>
+      <button class="btn" id="reset">重置走查</button>
+    </div>
+    <div class="steps" role="group" aria-label="建模工作流步骤">
+      <button class="step active" id="stepNav1"><span class="num">1</span><span>确认逻辑依据</span></button>
+      <button class="step" id="stepNav2"><span class="num">2</span><span>字段映射与冻结</span></button>
+      <button class="step" id="stepNav3"><span class="num">3</span><span>设计发布与接续</span></button>
+    </div>
+    <div class="layout">
+      <section id="stage" class="card" aria-live="polite"></section>
+      <section class="side-card" aria-label="右侧状态与约束">
+        <div class="kicker">设计追踪</div><h2>当前工作成果 <span class="mock-tag">仅演示</span></h2>
+        <div class="mini-line"><span>逻辑依据</span><strong id="s1">未确认</strong></div>
+        <div class="mini-line"><span>MappingSet</span><strong id="s2">未保存</strong></div>
+        <div class="mini-line"><span>MappingRevision</span><strong id="s3">未冻结</strong></div>
+        <div class="mini-line"><span>物理设计发布</span><strong id="s4">未发布</strong></div>
+        <p class="surface-note" style="margin-top:16px">仅本地演示状态。正式交付以 Semantic / Modeling / DataDev 的服务端持久 ID 和证据摘要为准。</p>
+        <h3 style="margin-top:20px">本轮不做</h3>
+        <ul class="small">
+          <li>自动创建 ODS 或执行 DDL</li>
+          <li>自动 Join、派生或聚合发布</li>
+          <li>代 DataDev 创建可运行任务</li>
+          <li>将设计发布视为数据已入仓</li>
+        </ul>
+        <p class="small"><a href="https://github.com/gitfortian/data-ops/issues/576" target="_blank" rel="noopener">查看 R12 规划及开放决策 ↗</a></p>
+      </section>
+    </div>
+    <p class="small" style="margin-top:22px">本原型按现有 UI 的中性配色、表格密度和工作区排版制作；并非当前产品的真实截图。身份数字与字段内容是交互样例，不代表仓库或真实测试项目内存在对应记录。当前 DR-06 / PD-010 / DR-07 均为待审批设计合同。</p>
+  </main>
+</div>
+<div class="dialog-shade" id="publishDialog" hidden aria-modal="true" role="dialog" aria-labelledby="confirmTitle">
+  <div class="dialog">
+    <div class="kicker">发布确认 / 设计事实</div>
+    <h2 id="confirmTitle">确认发布 DWD 物理设计版本？</h2>
+    <p>此动作在未来产品中应原子绑定业务逻辑快照、冻结映射修订与物理模型版本。</p>
+    <div class="summary"><div class="mini-line"><span>逻辑快照</span><strong>logical:81 / V2</strong></div><div class="mini-line"><span>映射修订</span><strong>mapping:301 / R1</strong></div><div class="mini-line"><span>物理模型</span><strong>dwd_order_detail</strong></div></div>
+    <div class="banner warning">发布仅表示设计版本生效，不代表 DDL 已部署、ETL 已运行或数据已对账。这是本地模拟操作。</div>
+    <div class="actions"><button class="btn" id="cancelPublish">返回检查</button><button class="btn primary" id="confirmPublish">确认模拟发布</button></div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var publishDialog=document.getElementById('publishDialog');
+  var state = {scenario:'normal',step:1,logical:false,mappingSaved:false,mappingFrozen:false,published:false,draftRevision:0,rules:{},check:false};
+  var rows = [
+    {target:'detail_id',type:'BIGINT NOT NULL',attr:'订单明细标识',logical:'attr:501',std:'STD-501',source:'ods_order_detail.detail_id',kind:'DIRECT'},
+    {target:'order_id',type:'BIGINT NOT NULL',attr:'所属订单标识',logical:'attr:502',std:'STD-502',source:'ods_order_detail.order_id',kind:'DIRECT'},
+    {target:'product_id',type:'BIGINT NOT NULL',attr:'商品标识',logical:'attr:503',std:'STD-503',source:'ods_order_detail.product_id',kind:'DIRECT'},
+    {target:'quantity',type:'DECIMAL(18,3)',attr:'销售数量',logical:'attr:504',std:'STD-504',source:'ods_order_detail.qty',kind:'RENAME'},
+    {target:'amount',type:'DECIMAL(18,2)',attr:'明细金额',logical:'attr:505',std:'STD-505',source:'ods_order_detail.amount',kind:'DIRECT'}
+  ];
+  var stage=document.getElementById('stage');
+  var scenario=document.getElementById('scenario');
+  function reset(){publishDialog.hidden=true;state={scenario:scenario.value,step:1,logical:false,mappingSaved:false,mappingFrozen:false,published:false,draftRevision:0,rules:{},check:false};rows.forEach(function(r){state.rules[r.target]=r.kind});render()}
+  function problem(){
+    return {
+      grain:'当前业务过程声明订单头粒度，但 DWD 目标声明订单明细粒度。须由 Semantic Owner 确认明细过程及唯一明细键，再重新选择逻辑快照。',
+      standard:'数量字段关联的 STD-504 当前未通过标准字段/数据标准授权校验。草稿可查看，正式映射冻结及发布必须阻断。',
+      drift:'物理结构或来源 ODS 版本指纹已变化。不得复用旧映射草稿/Revision；请回到模型结构核对后重新冻结。',
+      permission:'当前项目的建模或 Semantic / 来源访问权限已撤销。不得读取或保存过期证据。',
+      approval:'发布审批发起后，MappingRevision 摘要发生变化。审批生效必须重新核验并拒绝旧申请。',
+      normal:''
+    }[state.scenario];
+  }
+  function warn(){return state.scenario==='normal'?'':'<div class="banner danger"><strong>阻断场景：</strong>'+problem()+'</div>'}
+  function nav(s){if(s===1||s===2&&state.logical||s===3&&state.mappingFrozen){state.step=s;render()}}
+  function after(){document.getElementById('s1').textContent=state.logical?'已确认（模拟）':'未确认';document.getElementById('s2').textContent=state.mappingSaved?'草稿 R'+state.draftRevision+'（模拟）':'未保存';document.getElementById('s3').textContent=state.mappingFrozen?'R1 已冻结（模拟）':'未冻结';document.getElementById('s4').textContent=state.published?'设计 V1（模拟）':'未发布';[1,2,3].forEach(function(s){var b=document.getElementById('stepNav'+s);b.className='step'+(s===state.step?' active':(s<state.step?' done':''));b.disabled=(s===2&&!state.logical)||(s===3&&!state.mappingFrozen)})}
+  function step1(){
+    return '<h2>01 · 确认业务过程与逻辑版本</h2>'+
+    '<p class="muted">用户从业务过程或已有逻辑模型接续。系统按真实项目权限回读当前 Semantic 和 Modeling 身份，不能按同名自动选中。</p>'+
+    warn()+
+    '<div class="columns section">'+
+      '<div class="kv"><label>业务过程（样例）</label><strong>下单 · order_create / process:42</strong></div>'+
+      '<div class="kv"><label>业务粒度（样例）</label><strong>'+(state.scenario==='grain'?'一行=一个订单（冲突）':'一行=一个订单明细（待业务核验）')+'</strong></div>'+
+      '<div class="kv"><label>逻辑模型快照</label><strong>订单明细事实 · logical:81 / snapshot V2</strong><div class="small">状态：DRAFT 快照，并非已发布</div></div>'+
+      '<div class="kv"><label>物理目标</label><strong>dwd_order_detail · physical:201</strong><div class="small">分层 DWD · 草稿结构 SHA 已读取（演示）</div></div>'+
+      '<div class="kv"><label>源 ODS（待验证）</label><strong>ods_order_detail · ODS V3</strong><div class="small">来源精确列身份与指纹由 Owner 核验</div></div>'+
+      '<div class="kv"><label>逻辑设计状态</label><strong>需要明确的人工确认记录</strong><div class="small">独立 Confirmation，不篡改 DRAFT 快照</div></div>'+
+    '</div>'+
+    '<div class="detail">需要人工确认：明细唯一键、事件时间、币种、取消状态处理。订单头与订单明细不能因同属“下单”就自动合并粒度。</div>'+
+    '<label class="check"><input id="confirm" type="checkbox" '+(state.check?'checked ':'')+(state.scenario==='permission'?'disabled ':'')+'><span>我已经核对业务粒度、逻辑快照和真实 ODS 来源，并知道本操作在正式产品中应生成独立设计确认记录。</span></label>'+
+    '<div class="footer"><span class="small">失败时停留本页，提供业务语义 / 逻辑模型的修复入口。</span><button class="btn primary" id="to2" '+(!state.check||state.scenario!=='normal'?'disabled':'')+'>确认依据，继续字段映射 →</button></div>';
+  }
+  function step2(){
+    var trs=rows.map(function(r){
+      var std=state.scenario==='standard'&&r.target==='quantity'?'未绑定 / 已失效':r.std;
+      var error=std.indexOf('未绑定')===0;
+      var select='<select class="field rule" data-key="'+r.target+'" '+(state.mappingFrozen?'disabled':'')+' aria-label="'+r.target+' 映射方式"><option value="DIRECT"'+(state.rules[r.target]==='DIRECT'?' selected':'')+'>DIRECT · 原样</option><option value="RENAME"'+(state.rules[r.target]==='RENAME'?' selected':'')+'>RENAME · 改名</option><option value="DERIVED"'+(state.rules[r.target]==='DERIVED'?' selected':'')+'>DERIVED · 不支持发布</option><option value="JOIN"'+(state.rules[r.target]==='JOIN'?' selected':'')+'>JOIN · 不支持发布</option></select>';
+      return '<tr class="'+(error?'row-error':'')+'"><td><strong class="code">'+r.target+'</strong><div class="small">'+r.type+'</div></td><td>'+r.attr+'<div class="small code">'+r.logical+'</div></td><td class="code">'+std+'</td><td class="code">'+r.source+'</td><td>'+select+'</td><td>'+(error?'标准缺失':state.rules[r.target]==='JOIN'||state.rules[r.target]==='DERIVED'?'不支持发布':'候选待确认')+'</td></tr>';
+    }).join('');
+    var unsupported=Object.keys(state.rules).some(function(k){return !['DIRECT','RENAME'].includes(state.rules[k])});
+    var blocked=state.scenario!=='normal'||unsupported;
+    return '<h2>02 · 人工逐列确认并保存映射</h2>'+
+      '<p class="muted">MappingSet 是新设计的 Modeling 持久对象；当前原系统只提供只读预检。这里的“保存、冻结”均只演示未来交互，不会调用接口。</p>'+
+      warn()+
+      '<div class="toolbar section"><span class="pill mild">logical:81 / V2</span><span class="pill">physical:201 / draft SHA</span><span class="pill">来源 ODS V3</span><span class="pill">MappingSet 草稿 R'+state.draftRevision+'</span></div>'+
+      '<div class="table-wrap"><table><thead><tr><th>目标物理列</th><th>逻辑属性</th><th>标准字段</th><th>冻结来源列（示例）</th><th>转换类型</th><th>校验</th></tr></thead><tbody>'+trs+'</tbody></table></div>'+
+      '<div class="detail">一个物理目标列对应一条明确的产出规则。字段同名只是候选；保存后仍须重检业务身份、标准有效性、ODS 版本和物理结构。</div>'+
+      '<div class="section">'+(unsupported?'<div class="banner danger">JOIN / DERIVED 可作为未来扩展候选，但本阶段禁止冻结为可发布规则。</div>':'')+
+      (state.mappingSaved?'<div class="banner success">已模拟保存 MappingSet 草稿 R'+state.draftRevision+'；本地状态，可修改后重新保存。该提示不是服务器持久化回执。</div>':'')+
+      (state.mappingFrozen?'<div class="banner success">已模拟冻结 MappingRevision R1。正式实现将保存不可变规则、来源和证据指纹。</div>':'')+'</div>'+
+      '<div class="footer"><button class="btn" id="back1">← 返回确认业务依据</button><div class="toolbar">'+
+        '<button class="btn" id="save" '+(blocked||state.mappingFrozen?'disabled':'')+'>保存映射草稿（演示）</button>'+
+        '<button class="btn primary" id="freeze" '+(blocked||!state.mappingSaved||state.mappingFrozen?'disabled':'')+'>冻结映射并继续 →</button>'+
+        (state.mappingFrozen?'<button class="btn primary" id="to3">进入设计发布 →</button>':'')+
+      '</div></div>';
+  }
+  function step3(){
+    var blocked=state.scenario!=='normal';
+    return '<h2>03 · 发布 DWD 设计版本并明确下一步</h2>'+
+      '<p class="muted">发布时必须重新验证逻辑、映射、来源、标准和物理结构，并在一个 Modeling 事务内绑定三个精确版本。</p>'+
+      warn()+
+      '<div class="columns section">'+
+        '<div class="kv"><label>逻辑设计依据</label><strong>logical:81 / snapshot V2</strong><div class="small">DesignConfirmation（仅模拟）</div></div>'+
+        '<div class="kv"><label>冻结 MappingRevision</label><strong>mapping:301 / R1</strong><div class="small">含逐列规则、ODS 版本、标准证据摘要</div></div>'+
+        '<div class="kv"><label>物理模型</label><strong>physical:201 / dwd_order_detail</strong><div class="small">待发布结构指纹</div></div>'+
+        '<div class="kv"><label>物理发布结果</label><strong>'+(state.published?'V1 已模拟发布（仅原型）':'尚未发布')+'</strong><div class="small">不能推导数据表已部署或加工成功</div></div>'+
+      '</div>'+
+      '<h3>发布前服务端必须重查</h3>'+
+      '<ul><li>选中的逻辑设计快照、业务粒度和确认记录是否仍有效</li><li>冻结 MappingRevision 是否匹配现有表结构及标准字段</li><li>当前物理列、ODS 来源身份、项目权限与审批指纹是否一致</li><li>直接发布与“审批通过后发布”必须走同一原子绑定门禁</li></ul>'+
+      '<div class="banner warning"><strong>发布 ≠ 交付运行。</strong>本轮设计发布不自动执行建表 DDL，也不在 DataDev 中创建 TaskRevision；后续数据开发需重新确认环境、SQL、权限与执行身份。</div>'+
+      '<label class="check"><input id="publishCheck" type="checkbox" '+(state.check?'checked ':'')+'><span>我已理解设计发布不会创建表或运行加工任务；审批通过时仍须重新核验最新的映射和标准。</span></label>'+
+      (state.published?'<div class="banner success"><strong>本地走查完成：</strong>已经模拟生成设计发布 V1、MappingRevision R1 和 Logic V2 的关联。真实发布须以 Modeling Owner 返回的正式 ID 和不可变摘要为准。</div>':'')+
+      '<div class="footer"><button class="btn" id="back2">← 返回映射检查</button><div class="toolbar"><button class="btn primary" id="publish" '+(blocked||!state.check||state.published?'disabled':'')+'>模拟发布设计版本</button><button class="btn" id="dev" '+(!state.published?'disabled':'')+'>查看 DataDev 接续说明</button></div></div>'+
+      (state.published?'<p class="small">下一步是 DR-07 的人工受权接续，不是原型在后端创建任务。</p>':'');
+  }
+  function render(){stage.innerHTML=state.step===1?step1():state.step===2?step2():step3();after()}
+  document.getElementById('stepNav1').onclick=function(){nav(1)};
+  document.getElementById('stepNav2').onclick=function(){nav(2)};
+  document.getElementById('stepNav3').onclick=function(){nav(3)};
+  document.getElementById('reset').onclick=reset;
+  scenario.onchange=function(){
+    reset();
+    // A negative-case reviewer lands at the step where its invariant is checked.
+    if (state.scenario==='standard'||state.scenario==='drift') {
+      state.logical=true;state.step=2;
+    }
+    if (state.scenario==='approval') {
+      state.logical=true;state.mappingSaved=true;state.mappingFrozen=true;
+      state.draftRevision=1;state.step=3;
+    }
+    render();
+  };
+  stage.addEventListener('change',function(event){
+    var t=event.target;
+    if(t.id==='confirm'||t.id==='publishCheck'){state.check=t.checked;render()}
+    if(t.classList.contains('rule')){state.rules[t.dataset.key]=t.value;state.mappingSaved=false;state.draftRevision=0;render()}
+  });
+  stage.addEventListener('click',function(event){
+    var t=event.target;
+    if(!t||!t.id||t.disabled)return;
+    if(t.id==='to2'&&state.scenario==='normal'&&state.check){state.logical=true;state.check=false;nav(2)}
+    if(t.id==='back1'){nav(1)}
+    if(t.id==='save'&&state.scenario==='normal'){state.mappingSaved=true;state.draftRevision+=1;render()}
+    if(t.id==='freeze'&&state.scenario==='normal'&&state.mappingSaved){state.mappingFrozen=true;state.check=false;nav(3)}
+    if(t.id==='to3'){nav(3)}
+    if(t.id==='back2'){nav(2)}
+    if(t.id==='publish'&&state.scenario==='normal'&&state.check&&state.mappingFrozen){publishDialog.hidden=false}
+    if(t.id==='dev')window.alert('设计走查提示：后续经 DR-07 审批后从 DataDev Owner 创建/关联任务。目前只是说明，并未产生任务或运行。');
+  });
+  document.getElementById('cancelPublish').onclick=function(){publishDialog.hidden=true};
+  document.getElementById('confirmPublish').onclick=function(){if(state.scenario==='normal'&&state.mappingFrozen&&state.check){state.published=true;publishDialog.hidden=true;render()}};
+  reset();
+})();
+</script>
+</body>
+</html>
