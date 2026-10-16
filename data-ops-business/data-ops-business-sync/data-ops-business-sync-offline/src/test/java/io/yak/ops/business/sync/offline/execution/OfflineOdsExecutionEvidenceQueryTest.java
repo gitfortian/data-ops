@@ -90,7 +90,7 @@ class OfflineOdsExecutionEvidenceQueryTest {
     when(batch.taskId()).thenReturn(60L);
     when(batch.snapshot()).thenReturn(snapshot);
     when(snapshot.definitionSnapshot()).thenReturn(
-        "{\\"odsHandoff\\":{\\"modelId\\":50,\\"versionNo\\":2,\\"targetObservationId\\":99}}");
+        "{\"odsHandoff\":{\"modelId\":50,\"versionNo\":2,\"targetObservationId\":99}}");
     when(snapshot.definitionRevision()).thenReturn(3);
     when(batches.findById(80L)).thenReturn(Optional.of(batch));
     var page = query.discover(50, 2, 99, 1, 50);
