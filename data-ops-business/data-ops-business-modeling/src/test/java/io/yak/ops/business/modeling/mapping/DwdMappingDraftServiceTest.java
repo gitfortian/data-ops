@@ -67,6 +67,15 @@ class DwdMappingDraftServiceTest {
     verifyNoInteractions(reviews, sets, revisions);
   }
 
+  @Test void rejectsFreezeWhilePublishApprovalIsPending() {
+    when(approvals.find(ApprovalFlowCodes.MODEL_PUBLISH, "MODEL", "50"))
+        .thenReturn(new ApprovalInstanceView(88L, ApprovalFlowCodes.MODEL_PUBLISH, "模型发布",
+            "MODEL", "50", "DWD 设计发布", "{}", "applicant", "PENDING",
+            1, null, null));
+    assertThrows(IllegalStateException.class, () -> service.freeze(50L, 1L, "operator"));
+    verifyNoInteractions(models, previews, reviews, sets, revisions);
+  }
+
   @Test void persistedRootStoresColumnNameAndNotTransientDatabaseColumnId() {
     when(sets.insert(any(ModelingMappingSetPO.class))).thenAnswer(inv -> {
       ModelingMappingSetPO saved = inv.getArgument(0);
