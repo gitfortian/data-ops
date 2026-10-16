@@ -160,6 +160,26 @@ class OfflineOdsHandoffGuardTest {
     verifyNoInteractions(owner);
   }
 
+  @Test void conflictingPhysicalTableAliasCannotChangeVerifiedWriteTarget() {
+    String conflicting = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","table":"ods.other_table",
+           "config":{"table":"ods.ods_order_detail"}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(conflicting));
+    String hiddenTarget = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{
+           "table":"ods.ods_order_detail", "connectorOptions":{"table":"ods.other_table"}}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(hiddenTarget));
+    verifyNoInteractions(owner);
+  }
+
   @Test void odsAppendReplayIsRejectedWithoutCommittedWindowReceipt() {
     String frozen = """
         {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
