@@ -60,7 +60,29 @@ if (productFiles.length === 0) {
   process.exit(0);
 }
 
-const body = pr.body ?? "";
+let body = pr.body ?? "";
+// GitHub webhook payloads can carry a stale PR description after a description
+// edit/reopen. Product governance must validate the canonical current PR body,
+// while still failing closed when it cannot be obtained.
+if (!sectionBody(body, "Change Classification")
+    && process.env.GITHUB_TOKEN
+    && process.env.GITHUB_REPOSITORY
+    && pr.number) {
+  try {
+    const raw = execFileSync(
+      "gh",
+      ["api", `repos/${process.env.GITHUB_REPOSITORY}/pulls/${pr.number}`],
+      {
+        encoding: "utf8",
+        env: { ...process.env, GH_TOKEN: process.env.GITHUB_TOKEN },
+      },
+    );
+    const latest = JSON.parse(raw);
+    if (typeof latest.body === "string") body = latest.body;
+  } catch (error) {
+    console.warn("WARN: unable to refresh canonical PR body; using webhook payload");
+  }
+}
 const classification = sectionBody(body, "Change Classification");
 const changeType = readField(classification, "Change Type").toUpperCase();
 const behaviorChanged = parseYesNo(readField(classification, "Product Behavior Changed"));
