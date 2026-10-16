@@ -34,6 +34,7 @@ jobs:
           --health-cmd="pg_isready -U data_ops -d architecture_ci"
           --health-interval=10s --health-timeout=5s --health-retries=12
     env:
+      SPRING_PROFILES_ACTIVE: postgresql
       ARCHITECTURE_POSTGRESQL_URL: jdbc:postgresql://127.0.0.1:5432/architecture_ci
       ARCHITECTURE_POSTGRESQL_USERNAME: data_ops
       ARCHITECTURE_POSTGRESQL_PASSWORD: architecture-ci
