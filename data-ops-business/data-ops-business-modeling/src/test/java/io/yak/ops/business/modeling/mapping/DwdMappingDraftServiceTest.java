@@ -129,6 +129,34 @@ class DwdMappingDraftServiceTest {
     assertFalse(captor.getValue().getFrozenJson().contains("physicalColumnId"));
   }
 
+  @Test void repeatedFreezeOfIdenticalSavedDraftReturnsExistingVersion() {
+    ModelingMappingSetPO existing = root();
+    when(sets.selectOne(any())).thenReturn(existing);
+    when(previews.preview(77L, 2, 50L)).thenReturn(new LogicalPhysicalHandoffPreviewService.Preview(
+        77L, 2, 50L, "DWD", "DRAFT", true, List.of(),
+        List.of(new LogicalPhysicalHandoffPreviewService.ColumnCheck(
+            "order_id", 11L, "订单", "订单标识", "CANDIDATE_ONLY", "candidate",
+            800L, 10L, 10L)), LS, PS));
+    when(reviews.validate(eq(77L), eq(2), eq(50L), any())).thenReturn(
+        new LogicalPhysicalHandoffReviewService.ReviewResult(
+            77L, 2, 50L, LS, PS, true, true, List.of(),
+            List.of(new LogicalPhysicalHandoffReviewService.ReviewRow(
+                10L, 800L, 11L, "order_id", "订单标识")), "REVIEWABLE_ONLY"));
+    ModelingMappingRevisionPO old = new ModelingMappingRevisionPO();
+    old.setId(700L);
+    old.setProjectId(1L);
+    old.setMappingSetId(501L);
+    old.setRevisionNo(2);
+    old.setDraftRevision(3L);
+    old.setContentSha(io.yak.ops.common.version.VersionDigests.sha256Hex(
+        LS + ":" + PS + ":" + existing.getMappingJson()));
+    when(revisions.selectList(any())).thenReturn(List.of(old));
+    var result = service.freeze(50L, 3L, "operator");
+    assertEquals(700L, result.mappingRevisionId());
+    assertEquals(2, result.revisionNo());
+    verify(revisions, never()).insert(any());
+  }
+
   @Test void freezeRefusesStalePhysicalSnapshotAndMakesNoRevision() {
     when(sets.selectOne(any())).thenReturn(root());
     when(previews.preview(77L, 2, 50L)).thenReturn(new LogicalPhysicalHandoffPreviewService.Preview(
