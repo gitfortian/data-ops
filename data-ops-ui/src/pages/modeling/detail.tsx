@@ -35,6 +35,7 @@ import { findByBiz, listFlows } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
+import DwdPublishedMappingHistoryPanel from './components/DwdPublishedMappingHistoryPanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
 import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
 import { physicalGovernanceBaseline, type PhysicalGovernanceBaseline } from './governanceRecheck';
@@ -174,6 +175,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   }, [onEditorStateChange]);
   const [publishing, setPublishing] = useState(false);
   const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
+  const [dwdHistoryOpen, setDwdHistoryOpen] = useState(false);
   const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
   const [coverageFeedback, setCoverageFeedback] = useState<{
     projectId?: number | string; baseline: PhysicalGovernanceBaseline;
@@ -2364,6 +2366,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
               核对 ODS 发布版本证据
             </YakButton>
           )}
+          {modelInfo?.layerCode?.toUpperCase() === 'DWD'
+            && Number(modelInfo?.latestVersionNo) > 0 && (
+              <YakButton className="!h-9 !rounded-lg !px-4"
+                disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setDwdHistoryOpen(true)}>
+                DWD 设计版本与映射历史
+              </YakButton>
+            )}
           {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '') && (
             <Tooltip title={dirty
               ? '请先保存当前物理结构；核验只读取服务端已保存版本'
@@ -3205,6 +3215,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
             && coverageFeedback?.baseline.modelId === Number(modelId)
               ? coverageFeedback.baseline : undefined}
           onLocateColumn={locateCoverageGap} />
+      )}
+      {modelId && dwdHistoryOpen && (
+        <DwdPublishedMappingHistoryPanel open={dwdHistoryOpen}
+          modelId={Number(modelId)} onClose={() => setDwdHistoryOpen(false)} />
       )}
       {modelId && odsVersionEvidenceOpen && (
         <OdsPublishedVersionEvidencePanel
