@@ -17,7 +17,7 @@ import io.yak.ops.common.bean.vo.sync.offline.OfflineJobExecutionVO;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,23 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 /** 离线执行命令和执行历史查询接口。 */
 @ConditionalOnOfflineSyncEnabled
 @RestController
+@RequiredArgsConstructor
 @ProjectScope(ProjectMigrationMode.PROJECT_REQUIRED)
 public class OfflineJobExecutionController {
 
   private final OfflineJobExecutionService service;
-  private final OfflineOdsExecutionEvidenceQuery odsEvidence;
 
-  @Autowired
-  public OfflineJobExecutionController(
-      OfflineJobExecutionService service, OfflineOdsExecutionEvidenceQuery odsEvidence) {
-    this.service = service;
-    this.odsEvidence = odsEvidence;
-  }
-
-  /** Compatibility constructor for direct controller unit tests. */
-  public OfflineJobExecutionController(OfflineJobExecutionService service) {
-    this(service, null);
-  }
 
   @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover")
   public Result<OfflineOdsExecutionEvidenceQuery.DiscoveryPage> discoverOdsEvidence(
@@ -52,10 +41,7 @@ public class OfflineJobExecutionController {
       @RequestParam long targetObservationId,
       @RequestParam(defaultValue = "1") int scanPage,
       @RequestParam(defaultValue = "50") int scanSize) {
-    if (odsEvidence == null) {
-      throw new IllegalStateException("ODS 运行证据查询不可用");
-    }
-    return Result.success(odsEvidence.discover(
+    return Result.success(service.discoverOdsEvidence(
         modelId, versionNo, targetObservationId, scanPage, scanSize));
   }
 
@@ -63,10 +49,7 @@ public class OfflineJobExecutionController {
   public Result<OfflineOdsExecutionEvidenceQuery.Evidence> odsEvidence(
       @PathVariable Long id, @RequestParam long modelId,
       @RequestParam int versionNo, @RequestParam long targetObservationId) {
-    if (odsEvidence == null) {
-      throw new IllegalStateException("ODS 运行证据查询不可用");
-    }
-    return Result.success(odsEvidence.require(id, modelId, versionNo, targetObservationId));
+    return Result.success(service.odsEvidence(id, modelId, versionNo, targetObservationId));
   }
 
 
