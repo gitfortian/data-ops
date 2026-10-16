@@ -673,7 +673,7 @@ export default function SingleBatchLinkUpConfigPage() {
                 {editor.odsHandoff && (
                   <Alert type="info" showIcon className="!mb-4"
                     message={`已关联 ODS 模型 #${editor.odsHandoff.modelId} · 发布 V${editor.odsHandoff.versionNo}`}
-                    description={`目标观察证据 #${editor.odsHandoff.targetObservationId}。请填写完整的来源/目标 Schema 和表名；保存配置不代表引用已获授权，发布和实际执行前由 Modeling Owner 重新核验。`}
+                    description={`目标观察证据 #${editor.odsHandoff.targetObservationId}。当前 ODS APPEND 仅支持首次写入：同项目、同数据源、同名目标表再次提交（包括其他任务、调度、重试和回填）会被持久围栏拒绝。请先确认目标表数据与写入范围；不能用删除围栏或换任务名的方式重跑。保存配置不代表部署或运行成功，发布和执行前仍会重新核验。`}
                   />
                 )}
                 <SyncTaskEditor
