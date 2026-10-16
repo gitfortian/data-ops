@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.PublicationEvidence;
 import io.yak.ops.business.modeling.domain.ModelDialect;
 import io.yak.ops.business.modeling.domain.ModelStatus;
 import io.yak.ops.business.modeling.domain.ModelVersion;
@@ -109,6 +110,43 @@ class ModelVersionServiceTest {
 
     assertThat(result.created()).isTrue();
     verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1, "tester");
+  }
+
+  @Test
+  void identicalStructureButDifferentMappingRevisionMustCreateNewPhysicalVersion() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    when(versionRepository.findLatestByModelId(1L))
+        .thenReturn(Optional.of(version(9L, 3, null)));
+    when(versionRepository.nextVersionNo(1L)).thenReturn(4);
+    when(versionRepository.insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(10L, 4, "{}"));
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+
+    var result = service.publishWithMapping(1L, null, evidence, "tester");
+    assertThat(result.created()).isTrue();
+    assertThat(result.version().id()).isEqualTo(10L);
+    verify(versionRepository).insert(eq(1L), eq(4), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta -> meta.contains("\"mappingRevisionId\":501")
+            && meta.contains("\"mappingContentSha256\":\""+ "c".repeat(64) + "\"")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 10L, 4, "tester");
+  }
+
+  @Test
+  void approvedMappingRejectsChangedPhysicalFingerprintBeforeVersionInsert() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publishWithMapping(1L, "f".repeat(64), evidence, "tester")))
+        .hasMessageContaining("审批后物理结构发生变化");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(),
+        anyInt(), any(), any());
   }
 
   @Test

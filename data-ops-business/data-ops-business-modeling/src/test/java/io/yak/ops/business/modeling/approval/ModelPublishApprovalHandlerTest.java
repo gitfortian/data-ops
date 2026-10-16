@@ -49,14 +49,14 @@ class ModelPublishApprovalHandlerTest {
   @Test
   void mappedApprovalUsesFrozenRevisionAndNeverFallsBackToLegacyPublish() {
     String fingerprint = "b".repeat(64);
-    when(publisher.publishApproved(42L, 501L, fingerprint, "tom"))
+    when(publisher.publishApproved(42L, 501L, "c".repeat(64), fingerprint, "tom"))
         .thenReturn(new DwdMappingPublicationService.BoundReceipt(
             9L, 3, 501L, true, "DESIGN_PUBLISHED_NOT_EXECUTED"));
     String payload = """
-        {"modelId":42,"structureFingerprint":"%s","mappingRevisionId":501}
-        """.formatted(fingerprint);
+        {"modelId":42,"structureFingerprint":"%s","mappingRevisionId":501,"mappingContentSha256":"%s"}
+        """.formatted(fingerprint, "c".repeat(64));
     handler.onApproved(decision(payload));
-    verify(publisher).publishApproved(42L, 501L, fingerprint, "tom");
+    verify(publisher).publishApproved(42L, 501L, "c".repeat(64), fingerprint, "tom");
     verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
   }
 
@@ -68,6 +68,16 @@ class ModelPublishApprovalHandlerTest {
         """.formatted(fingerprint);
     assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
     verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
+  }
+
+  @Test
+  void mappedApprovalWithoutSnapshotDigestNeverPublishes() {
+    String payload = """
+        {"modelId":42,"structureFingerprint":"%s","mappingRevisionId":501}
+        """.formatted("a".repeat(64));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
+    verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
+    verify(publisher, never()).publishApproved(anyLong(), anyLong(), anyString(), anyString(), anyString());
   }
 
   @Test

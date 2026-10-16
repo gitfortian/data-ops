@@ -8,7 +8,6 @@ import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.approval.api.ApprovalSubmitCommand;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelStatus;
-import io.yak.ops.business.modeling.domain.ModelVersion;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import java.util.LinkedHashMap;
@@ -38,19 +37,25 @@ public class DwdMappingPublicationService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public BoundReceipt publish(Long modelId, Long mappingRevisionId, String operator) {
-    return publishChecked(modelId, mappingRevisionId, null, operator);
+    return publishChecked(modelId, mappingRevisionId, null, null, operator);
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public BoundReceipt publishApproved(Long modelId, Long mappingRevisionId,
-                                      String approvedFingerprint, String operator) {
+                                      String approvedMappingSha, String approvedFingerprint,
+                                      String operator) {
     if (approvedFingerprint == null || !approvedFingerprint.matches("[a-f0-9]{64}")) {
       throw new IllegalStateException("审批依据缺失");
     }
-    return publishChecked(modelId, mappingRevisionId, approvedFingerprint, operator);
+    if (approvedMappingSha == null || !approvedMappingSha.matches("[a-f0-9]{64}")) {
+      throw new IllegalStateException("审批映射快照指纹缺失");
+    }
+    return publishChecked(modelId, mappingRevisionId, approvedMappingSha,
+        approvedFingerprint, operator);
   }
 
   private BoundReceipt publishChecked(Long modelId, Long revisionId,
+                                      String approvedMappingSha,
                                       String fingerprint, String operator) {
     Model root = requireDwdLock(modelId);
     if (revisionId == null || revisionId <= 0) {
@@ -61,6 +66,8 @@ public class DwdMappingPublicationService {
       History existing = history(modelId, root.latestVersionNo() == null ? 0 : root.latestVersionNo());
       if (existing.mapping() != null
           && Objects.equals(existing.mapping().mappingRevisionId(), revisionId)
+          && (approvedMappingSha == null
+              || approvedMappingSha.equals(existing.mapping().contentSha256()))
           && (fingerprint == null
               || fingerprint.equals(versions.structureFingerprint(modelId)))) {
         return new BoundReceipt(existing.modelVersionId(), existing.versionNo(),
@@ -72,6 +79,9 @@ public class DwdMappingPublicationService {
       throw new IllegalStateException("只有当前 DWD 草稿可正式发布");
     }
     var exact = mapping.requireFrozenForPublication(modelId, revisionId);
+    if (approvedMappingSha != null && !approvedMappingSha.equals(exact.contentSha256())) {
+      throw new IllegalStateException("审批映射快照在提交后已变化");
+    }
     var result = versions.publishWithMapping(modelId, fingerprint, exact, operator);
     return new BoundReceipt(result.version().id(), result.version().versionNo(),
         exact.mappingRevisionId(), result.created(), "DESIGN_PUBLISHED_NOT_EXECUTED");

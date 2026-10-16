@@ -165,6 +165,63 @@ class DwdMappingDraftServiceTest {
     verifyNoInteractions(revisions);
   }
 
+  @Test void publishedMappingEvidenceRefusesOlderFrozenRevision() {
+    when(sets.selectOne(any())).thenReturn(root());
+    ModelingMappingRevisionPO prior = new ModelingMappingRevisionPO();
+    prior.setId(900L);
+    prior.setDraftRevision(2L);
+    when(revisions.selectOne(any())).thenReturn(prior);
+    assertThrows(IllegalStateException.class,
+        () -> service.requireFrozenForPublication(50L, 900L));
+    verify(previews, never()).preview(anyLong(), anyInt(), anyLong());
+    verify(revisions, never()).insert(any());
+  }
+
+  @Test void publishedMappingEvidenceMustMatchRevalidatedCurrentFreeze() {
+    ModelingMappingSetPO current = root();
+    when(sets.selectOne(any())).thenReturn(current);
+    ModelingMappingRevisionPO selected = new ModelingMappingRevisionPO();
+    selected.setId(900L);
+    selected.setProjectId(1L);
+    selected.setMappingSetId(501L);
+    selected.setRevisionNo(1);
+    selected.setDraftRevision(3L);
+    selected.setLogicalSnapshotSha(LS);
+    selected.setPhysicalStructureSha(PS);
+    selected.setFrozenJson(current.getMappingJson());
+    selected.setContentSha(io.yak.ops.common.version.VersionDigests.sha256Hex(
+        LS + ":" + PS + ":" + current.getMappingJson()));
+    when(revisions.selectOne(any())).thenReturn(selected);
+    when(revisions.selectList(any())).thenReturn(List.of(selected));
+    when(previews.preview(77L, 2, 50L)).thenReturn(new LogicalPhysicalHandoffPreviewService.Preview(
+        77L, 2, 50L, "DWD", "DRAFT", true, List.of(),
+        List.of(new LogicalPhysicalHandoffPreviewService.ColumnCheck(
+            "order_id", 11L, "订单", "订单标识", "CANDIDATE_ONLY", "candidate",
+            100L, 10L, 10L)), LS, PS));
+    var evidence = service.requireFrozenForPublication(50L, 900L);
+    assertEquals(900L, evidence.mappingRevisionId());
+    assertEquals(77L, evidence.logicalModelId());
+    assertEquals(PS, evidence.physicalStructureSha256());
+    verify(revisions, never()).insert(any());
+  }
+
+  @Test void immutableHistoryReadUsesFrozenJsonAndRejectsContentCorruption() {
+    ModelingMappingSetPO current = root();
+    when(sets.selectOne(any())).thenReturn(current);
+    ModelingMappingRevisionPO selected = new ModelingMappingRevisionPO();
+    selected.setId(900L);
+    selected.setProjectId(1L);
+    selected.setMappingSetId(501L);
+    selected.setRevisionNo(1);
+    selected.setDraftRevision(3L);
+    selected.setLogicalSnapshotSha(LS);
+    selected.setPhysicalStructureSha(PS);
+    selected.setFrozenJson(current.getMappingJson());
+    selected.setContentSha("f".repeat(64));
+    when(revisions.selectOne(any())).thenReturn(selected);
+    assertThrows(IllegalStateException.class, () -> service.revisionDetail(50L, 900L));
+  }
+
   @Test void projectOrWrongModelIsNotSilentlyInterpretedAsEmptyRoot() {
     when(models.findById(50L)).thenReturn(Optional.empty());
     assertThrows(IllegalArgumentException.class, () -> service.get(50L));

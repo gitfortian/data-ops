@@ -8,7 +8,6 @@ import io.yak.ops.business.approval.api.ApprovalFlowHandler;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.business.modeling.mapping.DwdMappingPublicationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -49,7 +48,8 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
     Long revisionId = readOptionalMappingRevisionId(decision.payloadJson());
     if (revisionId != null) {
       if (dwdPublisher == null) throw new IllegalStateException("DWD 映射发布处理器未配置");
-      var result = dwdPublisher.publishApproved(modelId, revisionId, fingerprint, decision.applicant());
+      var result = dwdPublisher.publishApproved(modelId, revisionId,
+          readMappingContentSha(decision.payloadJson()), fingerprint, decision.applicant());
       log.info("DWD 映射设计审批发布: modelId={}, versionNo={}, created={}",
           modelId, result.versionNo(), result.created());
     } else {
@@ -57,6 +57,18 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
           versionService.publishApproved(modelId, fingerprint, decision.applicant());
       log.info("模型发布审批通过即发布: modelId={}, versionNo={}, created={}, applicant={}",
           modelId, result.version().versionNo(), result.created(), decision.applicant());
+    }
+  }
+
+  private static String readMappingContentSha(String payloadJson) {
+    try {
+      String digest = MAPPER.readTree(payloadJson).path("mappingContentSha256").asText(null);
+      if (digest == null || !digest.matches("[a-f0-9]{64}")) {
+        throw new IllegalStateException("审批映射内容指纹缺失或无效");
+      }
+      return digest;
+    } catch (Exception ex) {
+      throw new IllegalStateException("审批映射证据解析失败", ex);
     }
   }
 
