@@ -75,6 +75,29 @@ class OfflineOdsExecutionEvidenceQueryTest {
     assertThrows(IllegalArgumentException.class, () -> query.discover(50, 2, 99, 1, 101));
   }
 
+  @Test void multipleAttemptsOfOneBatchReadFrozenSnapshotOncePerPage() {
+    OfflineJobExecution first = new OfflineJobExecution();
+    first.setId(100L);
+    first.setBatchId(80L);
+    first.setJobDefinitionId(60L);
+    OfflineJobExecution retry = new OfflineJobExecution();
+    retry.setId(101L);
+    retry.setBatchId(80L);
+    retry.setJobDefinitionId(60L);
+    when(executions.scanRecent(1, 50)).thenReturn(java.util.List.of(first, retry));
+    BatchExecution batch = mock(BatchExecution.class);
+    ExecutionSnapshot snapshot = mock(ExecutionSnapshot.class);
+    when(batch.taskId()).thenReturn(60L);
+    when(batch.snapshot()).thenReturn(snapshot);
+    when(snapshot.definitionSnapshot()).thenReturn(
+        "{\\"odsHandoff\\":{\\"modelId\\":50,\\"versionNo\\":2,\\"targetObservationId\\":99}}");
+    when(snapshot.definitionRevision()).thenReturn(3);
+    when(batches.findById(80L)).thenReturn(Optional.of(batch));
+    var page = query.discover(50, 2, 99, 1, 50);
+    assertEquals(2, page.matches().size());
+    verify(batches, times(1)).findById(80L);
+  }
+
   @Test void missingOrForeignExecutionIsNotDisclosed() {
     assertThrows(IllegalArgumentException.class, () -> query.require(0, 50, 2, 99));
     assertThrows(IllegalArgumentException.class, () -> query.require(100, 50, 2, 99));
