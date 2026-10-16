@@ -98,6 +98,21 @@ class OfflineOdsExecutionEvidenceQueryTest {
     verify(batches, times(1)).findById(80L);
   }
 
+  @Test void cursorIsExclusiveAndRejectsOutOfOrderCandidates() {
+    OfflineJobExecution older = new OfflineJobExecution();
+    older.setId(90L);
+    when(executions.scanBeforeId(101L, 50)).thenReturn(java.util.List.of(older));
+    var page = query.discoverBefore(50, 2, 99, 101L, 50);
+    assertEquals(90L, page.nextBeforeId());
+    assertFalse(page.moreCandidates());
+    assertTrue(page.matches().isEmpty());
+
+    when(executions.scanBeforeId(90L, 50)).thenReturn(java.util.List.of(older));
+    assertThrows(IllegalStateException.class, () -> query.discoverBefore(50, 2, 99, 90L, 50));
+    assertThrows(IllegalArgumentException.class, () -> query.discoverBefore(50, 2, 99, 0L, 50));
+    assertThrows(IllegalArgumentException.class, () -> query.discoverBefore(50, 2, 99, 101L, 101));
+  }
+
   @Test void missingOrForeignExecutionIsNotDisclosed() {
     assertThrows(IllegalArgumentException.class, () -> query.require(0, 50, 2, 99));
     assertThrows(IllegalArgumentException.class, () -> query.require(100, 50, 2, 99));
