@@ -90,6 +90,12 @@ public class OfflineJobExecutionRepositoryAdapter implements OfflineJobExecution
   }
 
   @Override
+  public List<OfflineJobExecution> scanBeforeId(long exclusiveId, int limit) {
+    requireProject();
+    return dao.selectBeforeId(exclusiveId, limit).stream().map(this::toDomain).toList();
+  }
+
+  @Override
   public List<OfflineJobExecution> scanRecent(int page, int pageSize) {
     requireProject();
     if (page < 1 || pageSize < 1 || pageSize > 100) {
