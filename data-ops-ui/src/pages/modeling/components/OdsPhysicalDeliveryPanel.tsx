@@ -289,6 +289,11 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
           columns={[
             { title: '执行 / Batch', key: 'identity', render: (_, row: OdsExecutionEvidence) =>
               `#${row.executionId} / #${row.batchId}` },
+            { title: '同步任务', key: 'job',
+              render: (_, row: OdsExecutionEvidence) => <Button type="link" size="small"
+                onClick={() => history.push(
+                  `/sync/batch-link-up/${encodeURIComponent(String(row.jobDefinitionId))}/config/single?scene=edit`
+                )}>任务 #{row.jobDefinitionId}</Button> },
             { title: '任务发布版', dataIndex: 'jobRevisionNo',
               render: (v: number) => `V${v}` },
             { title: 'Attempt', dataIndex: 'attemptNo' },
@@ -300,6 +305,8 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
               render: (v?: string | null) => v || '—' },
           ]} />
         <Space className="mt-2">
+          <Button size="small" disabled={executionLoading}
+            onClick={() => void readExecutionHistory(executionObservationId, executionCursors)}>刷新本页</Button>
           <Typography.Text type="secondary">候选扫描第 {executionCursors.length} 页（不是匹配结果总页数）</Typography.Text>
           <Button size="small" disabled={executionCursors.length <= 1 || executionLoading}
             onClick={() => void readExecutionHistory(executionObservationId, executionCursors.slice(0, -1))}>上一页</Button>
