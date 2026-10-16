@@ -8,6 +8,7 @@ import io.yak.ops.business.audit.AuditContext;
 import io.yak.ops.business.audit.AuditOperationHandle;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.definition.OfflineJobDefinitionService;
+import io.yak.ops.business.sync.offline.definition.OfflineOdsHandoffGuard;
 import io.yak.ops.business.sync.offline.domain.OfflineExecutionStatus;
 import io.yak.ops.business.sync.offline.domain.OfflineJobExecution;
 import io.yak.ops.business.sync.offline.domain.core.BatchExecution;
@@ -38,6 +39,8 @@ import org.springframework.util.StringUtils;
 public class OfflineExecutionCoordinator {
 
   private final OfflineJobDefinitionService definitionService;
+
+  private final OfflineOdsHandoffGuard odsHandoffGuard;
   private final OfflineExecutionClaimManager claimManager;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
@@ -63,8 +66,10 @@ public class OfflineExecutionCoordinator {
       LinkUpClient linkUpClient,
       OfflineExecutionPlanCodec executionPlanCodec,
       OfflineFanOutExecutionCoordinator fanOutCoordinator,
-      @Qualifier("offlineSyncJsonMapper") ObjectMapper objectMapper) {
+      @Qualifier("offlineSyncJsonMapper") ObjectMapper objectMapper,
+      OfflineOdsHandoffGuard odsHandoffGuard) {
     this.definitionService = definitionService;
+    this.odsHandoffGuard = odsHandoffGuard;
     this.claimManager = claimManager;
     this.executionRepository = executionRepository;
     this.batchRepository = batchRepository;
@@ -76,6 +81,25 @@ public class OfflineExecutionCoordinator {
     this.executionPlanCodec = executionPlanCodec;
     this.fanOutCoordinator = fanOutCoordinator;
     this.objectMapper = objectMapper;
+  }
+
+  /** Explicit pre-ODS compatibility constructor for focused, non-Spring tests. */
+  public OfflineExecutionCoordinator(
+      OfflineJobDefinitionService definitionService,
+      OfflineExecutionClaimManager claimManager,
+      OfflineJobExecutionRepository executionRepository,
+      OfflineBatchExecutionRepository batchRepository,
+      OfflineBatchRuntime batchRuntime,
+      OfflineBatchScopeExecutionAdapter scopeExecutionAdapter,
+      OfflineExecutionStateManager stateManager,
+      OfflineAuditBridge auditBridge,
+      LinkUpClient linkUpClient,
+      OfflineExecutionPlanCodec executionPlanCodec,
+      OfflineFanOutExecutionCoordinator fanOutCoordinator,
+      ObjectMapper objectMapper) {
+    this(definitionService, claimManager, executionRepository, batchRepository,
+        batchRuntime, scopeExecutionAdapter, stateManager, auditBridge, linkUpClient,
+        executionPlanCodec, fanOutCoordinator, objectMapper, null);
   }
 
   /** Keeps the pre-PR7 focused-test constructor source-compatible. */
@@ -152,7 +176,7 @@ public class OfflineExecutionCoordinator {
             logicalJobSpecJson,
             BatchTriggerToken.WORKFLOW,
             idempotencyKey);
-    return submitClaim(claim);
+    return submitClaimIfNeeded(claim);
   }
 
   public OfflineJobExecution executePendingBackfill(Long batchId) {
@@ -242,14 +266,46 @@ public class OfflineExecutionCoordinator {
 
   private OfflineJobExecution submitClaimIfNeeded(OfflineExecutionClaim claim) {
     OfflineJobExecution execution = claim.getExecution();
-    if (claim.isReused() && !OfflineExecutionStatus.isCreated(execution.getStatus())) {
-      return execution;
+    if (claim.isReused()) {
+      // An already submitted, failed, succeeded or UNKNOWN execution is a
+      // historical observation, never an instruction to submit again.
+      if (!OfflineExecutionStatus.isCreated(execution.getStatus())) {
+        return execution;
+      }
+      // Legacy CREATED Attempts could predate the durable ODS write fence.
+      // Never recover them by blindly sending APPEND to Link-Up.
+      Long batchId = execution.getBatchId();
+      if (batchId == null || batchId <= 0) {
+        throw new IllegalStateException("复用的 CREATED Attempt 缺少冻结 Batch");
+      }
+      BatchExecution batch = batchRepository.findById(batchId)
+          .orElseThrow(() -> new IllegalStateException("复用的 CREATED Attempt 缺少冻结 Batch"));
+      if (batch.snapshot() == null) {
+        throw new IllegalStateException("复用的 CREATED Attempt 缺少冻结定义");
+      }
+      OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(batch.snapshot().definitionSnapshot());
     }
     return submitClaim(claim);
   }
 
   private OfflineJobExecution submitClaim(OfflineExecutionClaim claim) {
     OfflineJobExecution execution = claim.getExecution();
+    // Attempt carries the Batch's immutable definition snapshot, never the
+    // editable live task. Only a linked ODS needs extra owner verification.
+    String frozenDefinition = execution.getDefinitionSnapshotJson();
+    if (OfflineOdsHandoffGuard.requiresVerification(frozenDefinition)) {
+      if (odsHandoffGuard == null) {
+        throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务执行");
+      }
+      odsHandoffGuard.verifyFrozen(frozenDefinition);
+      // Final pre-Link-Up defense, including reusable CREATED attempts from
+      // before the claim-time Replay gate was introduced.
+      if ((execution.getAttemptNo() != null && execution.getAttemptNo() > 1)
+          || "RETRY".equalsIgnoreCase(execution.getTriggerType())
+          || "BACKFILL".equalsIgnoreCase(execution.getTriggerType())) {
+        OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(frozenDefinition);
+      }
+    }
     Optional<OfflineExecutionPlan> plan = executionPlanCodec.decode(claim.getLogicalJobSpecJson());
     if (plan.isPresent() && plan.get().isFanOut()) {
       requireFullSelection(execution);

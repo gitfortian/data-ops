@@ -24,7 +24,7 @@ spring:
     time-zone: Asia/Shanghai
   quartz:
     auto-startup: true
-    job-store-type: memory
+    # Storage is selected in each database profile; PostgreSQL needs JDBC.
 
 springdoc:
   api-docs:

@@ -37,4 +37,7 @@ public class OfflineJobDefinitionDTO {
 
   /** UI-only metadata such as the selected EmojiIconPicker icon. */
   private OfflineJobEditorMetaDTO editorMeta;
+
+  /** Verified by Modeling owner on publish; not executable engine configuration. */
+  private OfflineOdsHandoffDTO odsHandoff;
 }

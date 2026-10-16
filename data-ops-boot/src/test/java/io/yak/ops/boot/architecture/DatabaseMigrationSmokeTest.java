@@ -72,6 +72,14 @@ class DatabaseMigrationSmokeTest {
   }
 
   @Test
+  void dwdMappingV6PersistsScopedRevisionsAndRollsBackAtomically() {
+    startAndValidate(true, context -> DwdMappingSqlSmoke.verify(
+        context.getBean("yakBusinessDataSource", DataSource.class),
+        context.getBean("yakBusinessTransactionManager",
+            org.springframework.transaction.PlatformTransactionManager.class)));
+  }
+
+  @Test
   void odsSourceUniqueIndexSeparatesSchemasAndBlocksDuplicateBindings() {
     // Uses the same isolated MySQL 8.0 CI database as the migration smoke.
     startAndValidate(true, context -> {

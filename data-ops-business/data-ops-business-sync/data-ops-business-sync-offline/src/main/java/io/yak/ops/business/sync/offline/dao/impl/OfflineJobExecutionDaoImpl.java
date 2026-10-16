@@ -124,6 +124,19 @@ public class OfflineJobExecutionDaoImpl implements OfflineJobExecutionDao {
   }
 
   @Override
+  public List<OfflineJobExecutionPO> selectBeforeId(long exclusiveId, int limit) {
+    if (exclusiveId <= 0 || limit < 1 || limit > 100) {
+      throw new IllegalArgumentException("执行历史游标或页大小非法");
+    }
+    return mapper.selectList(
+        Wrappers.<OfflineJobExecutionPO>lambdaQuery()
+            .eq(OfflineJobExecutionPO::getProjectId, requiredProjectId())
+            .lt(OfflineJobExecutionPO::getId, exclusiveId)
+            .orderByDesc(OfflineJobExecutionPO::getId)
+            .last("LIMIT " + limit));
+  }
+
+  @Override
   public IPage<OfflineJobExecutionPO> selectPage(PageQuery query) {
     PageQuery condition = query == null ? new PageQuery(1, 10, null, null) : query;
     long projectId = requiredProjectId();

@@ -1,4 +1,5 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { parseIntegrationSourceHandoff } from '@/services/integration/sourceHandoff';
 import {
   listOfflineSyncTasks,
   type OfflineJobDefinitionVO,
@@ -37,6 +38,9 @@ export const useOfflineSyncTasks = () => {
   const previousProjectIdRef = useRef(currentProjectId);
   activeProjectIdRef.current = currentProjectId;
 
+  const initialSourceHandoff = useMemo(
+    () => parseIntegrationSourceHandoff(currentLocationSearch()), []);
+
   const initialSearchState = useMemo(
     () => parseOfflineSyncSearchFromUrl(currentLocationSearch()),
     [],
@@ -50,7 +54,7 @@ export const useOfflineSyncTasks = () => {
     parseOfflineSyncPaginationFromUrl(currentLocationSearch()),
   );
   const [loading, setLoading] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(Boolean(initialSourceHandoff));
   const [selectedRowKeys, setSelectedRowKeys] =
     useState<OfflineSyncSelectedRowKeys>([]);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -241,6 +245,7 @@ export const useOfflineSyncTasks = () => {
     pagination,
     loading,
     createOpen,
+    initialSourceHandoff,
     selectedRowKeys,
     currentStatus,
     advancedFilterCount,
