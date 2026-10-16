@@ -75,7 +75,12 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
   private static Long readOptionalMappingRevisionId(String payloadJson) {
     try {
       JsonNode payload = MAPPER.readTree(payloadJson);
-      if (!payload.has("mappingRevisionId")) return null;
+      if (!payload.has("mappingRevisionId")) {
+        if (payload.has("mappingContentSha256")) {
+          throw new IllegalStateException("审批映射指纹存在但 MappingRevision ID 缺失");
+        }
+        return null;
+      }
       JsonNode id = payload.path("mappingRevisionId");
       if (!id.isIntegralNumber() || id.asLong() <= 0) {
         throw new IllegalStateException("审批中的 MappingRevision ID 非法");
