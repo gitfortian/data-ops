@@ -35,6 +35,16 @@ public class OfflineJobExecutionController {
   private final OfflineJobExecutionService service;
 
 
+  @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover-before")
+  public Result<OfflineOdsExecutionEvidenceQuery.CursorPage> discoverOdsEvidenceBefore(
+      @RequestParam long modelId, @RequestParam int versionNo,
+      @RequestParam long targetObservationId,
+      @RequestParam long beforeId,
+      @RequestParam(defaultValue = "50") int scanSize) {
+    return Result.success(service.discoverOdsEvidenceBefore(
+        modelId, versionNo, targetObservationId, beforeId, scanSize));
+  }
+
   @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover")
   public Result<OfflineOdsExecutionEvidenceQuery.DiscoveryPage> discoverOdsEvidence(
       @RequestParam long modelId, @RequestParam int versionNo,
