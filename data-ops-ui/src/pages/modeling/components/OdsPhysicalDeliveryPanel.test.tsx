@@ -193,8 +193,9 @@ it('discards a pending execution response after switching the security project',
     status: 'STALE_CATALOG_OBSERVATION', limitations: [],
   };
   jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([observation] as never);
-  let finish!: (value: any) => void;
-  jest.mocked(discoverOdsExecutionsBefore).mockReturnValueOnce(new Promise(resolve => {
+  type CursorEvidence = Awaited<ReturnType<typeof discoverOdsExecutionsBefore>>;
+  let finish!: (value: CursorEvidence) => void;
+  jest.mocked(discoverOdsExecutionsBefore).mockReturnValueOnce(new Promise<CursorEvidence>(resolve => {
     finish = resolve;
   }));
 
