@@ -61,11 +61,11 @@ if (productFiles.length === 0) {
 }
 
 let body = pr.body ?? "";
-// GitHub webhook payloads can carry a stale PR description after a description
-// edit/reopen. Product governance must validate the canonical current PR body,
-// while still failing closed when it cannot be obtained.
-if (!sectionBody(body, "Change Classification")
-    && process.env.GITHUB_TOKEN
+// Validate the canonical current PR description rather than trusting a webhook
+// snapshot. This matters when a PR description is edited independently of code
+// synchronization. If the canonical read fails, retain the event payload and
+// fail closed through the normal governance checks below.
+if (process.env.GITHUB_TOKEN
     && process.env.GITHUB_REPOSITORY
     && pr.number) {
   try {
