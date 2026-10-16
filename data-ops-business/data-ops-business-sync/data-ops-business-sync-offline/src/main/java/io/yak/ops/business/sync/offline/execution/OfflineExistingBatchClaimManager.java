@@ -74,6 +74,7 @@ public class OfflineExistingBatchClaimManager {
       throw new IllegalStateException("Retry 已达到 Batch 冻结的最大 Attempt 数");
     }
     verifyOdsBeforeClaim(batch);
+    OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(batch.snapshot().definitionSnapshot());
     if (!executionRepository.reserveRetry(previous.getId())) {
       throw new IllegalStateException("Retry 已被其他请求保留或已经创建");
     }
@@ -120,6 +121,7 @@ public class OfflineExistingBatchClaimManager {
 
     requirePendingBackfillSlot(batch);
     verifyOdsBeforeClaim(batch);
+    OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(batch.snapshot().definitionSnapshot());
     if (!batchRepository.reservePendingBackfill(batchId)) {
       throw new IllegalStateException("Backfill Batch 已被其他 dispatcher reservation");
     }
