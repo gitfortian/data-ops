@@ -60,7 +60,27 @@ if (productFiles.length === 0) {
   process.exit(0);
 }
 
-const body = pr.body ?? "";
+let body = pr.body ?? "";
+// Pull-request webhook payloads are snapshots. When the description has been
+// edited independently, validate the canonical current PR body instead.
+if (process.env.GITHUB_TOKEN
+    && process.env.GITHUB_REPOSITORY
+    && pr.number) {
+  try {
+    const raw = execFileSync(
+      "gh",
+      ["api", `repos/${process.env.GITHUB_REPOSITORY}/pulls/${pr.number}`],
+      {
+        encoding: "utf8",
+        env: { ...process.env, GH_TOKEN: process.env.GITHUB_TOKEN },
+      },
+    );
+    const latest = JSON.parse(raw);
+    if (typeof latest.body === "string") body = latest.body;
+  } catch (error) {
+    console.warn("WARN: unable to refresh canonical PR body; using webhook payload");
+  }
+}
 const classification = sectionBody(body, "Change Classification");
 const changeType = readField(classification, "Change Type").toUpperCase();
 const behaviorChanged = parseYesNo(readField(classification, "Product Behavior Changed"));

@@ -9,11 +9,14 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   product-guard:
     name: Product governance checks
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout repository
