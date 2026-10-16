@@ -22,6 +22,7 @@ import io.yak.ops.business.sync.offline.repository.OfflineBatchExecutionReposito
 import io.yak.ops.business.sync.offline.repository.OfflineJobDefinitionRepository;
 import io.yak.ops.business.sync.offline.repository.OfflineJobExecutionRepository;
 import io.yak.ops.business.sync.offline.repository.OfflineScheduleRepository;
+import io.yak.ops.business.sync.offline.repository.OfflineOdsAppendFenceRepository;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -38,6 +39,7 @@ public class OfflineExecutionClaimManager {
   private final OfflineJobDefinitionService definitionService;
 
   private final OfflineOdsHandoffGuard odsHandoffGuard;
+  private final OfflineOdsAppendFenceRepository odsAppendFence;
   private final OfflineJobDefinitionRepository definitionRepository;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
@@ -60,8 +62,10 @@ public class OfflineExecutionClaimManager {
       OfflineExecutionAttemptFactory attemptFactory,
       OfflineExistingBatchClaimManager existingBatchClaimManager,
       OfflineIncrementalPlanner incrementalPlanner,
-      OfflineOdsHandoffGuard odsHandoffGuard) {
+      OfflineOdsHandoffGuard odsHandoffGuard,
+      OfflineOdsAppendFenceRepository odsAppendFence) {
     this.odsHandoffGuard = odsHandoffGuard;
+    this.odsAppendFence = odsAppendFence;
     this.definitionService = definitionService;
     this.definitionRepository = definitionRepository;
     this.executionRepository = executionRepository;
@@ -72,6 +76,24 @@ public class OfflineExecutionClaimManager {
     this.attemptFactory = attemptFactory;
     this.existingBatchClaimManager = existingBatchClaimManager;
     this.incrementalPlanner = incrementalPlanner;
+  }
+
+  /** Compatibility for direct tests that already provide a guard but no persistent fence. */
+  public OfflineExecutionClaimManager(
+      OfflineJobDefinitionService definitionService,
+      OfflineJobDefinitionRepository definitionRepository,
+      OfflineJobExecutionRepository executionRepository,
+      OfflineBatchExecutionRepository batchRepository,
+      OfflineScheduleRepository scheduleRepository,
+      OfflineBatchRuntime batchRuntime,
+      OfflineSyncProperties properties,
+      OfflineExecutionAttemptFactory attemptFactory,
+      OfflineExistingBatchClaimManager existingBatchClaimManager,
+      OfflineIncrementalPlanner incrementalPlanner,
+      OfflineOdsHandoffGuard odsHandoffGuard) {
+    this(definitionService, definitionRepository, executionRepository, batchRepository,
+        scheduleRepository, batchRuntime, properties, attemptFactory,
+        existingBatchClaimManager, incrementalPlanner, odsHandoffGuard, null);
   }
 
   /** Source-compatible constructor for existing focused tests; production uses the guarded constructor. */
@@ -279,6 +301,16 @@ public class OfflineExecutionClaimManager {
       batchKey = defaultBatchKey(batchTrigger, idempotencyKey, scope);
     }
 
+    // Atomic with Batch/Attempt creation: a unique DB key prevents another
+    // Job or worker from targeting the same ODS table even after a prior Batch
+    // has ended. No fence is released on FAILED/UNKNOWN.
+    if (OfflineOdsHandoffGuard.requiresVerification(definitionSnapshotJson)
+        && !(scope instanceof BatchScope.EmptySelection)) {
+      if (odsAppendFence == null) {
+        throw new IllegalStateException("ODS 持久化写入围栏未配置，禁止创建 Batch");
+      }
+      odsAppendFence.claim(definitionSnapshotJson, definitionId, scope);
+    }
     RetryPolicySnapshot retryPolicy = freezeRetryPolicy(definitionId);
     ExecutionSnapshot snapshot =
         new ExecutionSnapshot(
