@@ -15,24 +15,49 @@ import io.yak.ops.business.sync.offline.repository.OfflineJobExecutionRepository
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Owns Attempt admission on an existing Batch for Retry and pending Backfill. */
 @ConditionalOnOfflineSyncEnabled
 @Component
-@RequiredArgsConstructor
 public class OfflineExistingBatchClaimManager {
 
   private final OfflineJobDefinitionRepository definitionRepository;
 
-  @org.springframework.beans.factory.annotation.Autowired(required = false)
-  private OfflineOdsHandoffGuard odsHandoffGuard;
+  private final OfflineOdsHandoffGuard odsHandoffGuard;
   private final OfflineJobExecutionRepository executionRepository;
   private final OfflineBatchExecutionRepository batchRepository;
   private final OfflineBatchRuntime batchRuntime;
   private final OfflineExecutionAttemptFactory attemptFactory;
+
+  @Autowired
+  public OfflineExistingBatchClaimManager(
+      OfflineJobDefinitionRepository definitionRepository,
+      OfflineJobExecutionRepository executionRepository,
+      OfflineBatchExecutionRepository batchRepository,
+      OfflineBatchRuntime batchRuntime,
+      OfflineExecutionAttemptFactory attemptFactory,
+      OfflineOdsHandoffGuard odsHandoffGuard) {
+    this.definitionRepository = definitionRepository;
+    this.executionRepository = executionRepository;
+    this.batchRepository = batchRepository;
+    this.batchRuntime = batchRuntime;
+    this.attemptFactory = attemptFactory;
+    this.odsHandoffGuard = odsHandoffGuard;
+  }
+
+  /** Direct-test compatibility constructor; Spring uses the guarded constructor. */
+  public OfflineExistingBatchClaimManager(
+      OfflineJobDefinitionRepository definitionRepository,
+      OfflineJobExecutionRepository executionRepository,
+      OfflineBatchExecutionRepository batchRepository,
+      OfflineBatchRuntime batchRuntime,
+      OfflineExecutionAttemptFactory attemptFactory) {
+    this(definitionRepository, executionRepository, batchRepository, batchRuntime,
+        attemptFactory, null);
+  }
 
   @Transactional(transactionManager = "offlineSyncTransactionManager", rollbackFor = Exception.class)
   public OfflineExecutionClaim claimRetry(Long retryFromExecutionId) {
