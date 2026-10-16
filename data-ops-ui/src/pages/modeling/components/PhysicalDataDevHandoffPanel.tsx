@@ -10,7 +10,7 @@ import {
 } from '@/services/modeling/api';
 import type { ModelingVersionSummary } from '@/services/modeling/types';
 import { getPublishedDwdMapping, type DwdPublishedMapping } from '@/services/modeling/dwdMapping';
-import { assessDwdMappingEvidence } from '../dwdHandoffEvidence';
+import { assessDwdMappingEvidence } from '@/utils/dwdHandoffEvidence';
 
 interface Props {
   modelId: number;
