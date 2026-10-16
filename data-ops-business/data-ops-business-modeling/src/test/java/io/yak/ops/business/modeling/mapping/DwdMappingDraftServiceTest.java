@@ -5,6 +5,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.yak.ops.business.approval.api.ApprovalApi;
+import io.yak.ops.business.approval.api.ApprovalFlowCodes;
+import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.modeling.dao.mapper.ModelingMappingRevisionMapper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingMappingSetMapper;
 import io.yak.ops.business.modeling.dao.model.ModelingMappingRevisionPO;
@@ -25,6 +28,7 @@ class DwdMappingDraftServiceTest {
   static final String LS = "a".repeat(64);
   static final String PS = "b".repeat(64);
   final CurrentProject project = mock(CurrentProject.class);
+  final ApprovalApi approvals = mock(ApprovalApi.class);
   final ModelRepository models = mock(ModelRepository.class);
   final ModelingMappingSetMapper sets = mock(ModelingMappingSetMapper.class);
   final ModelingMappingRevisionMapper revisions = mock(ModelingMappingRevisionMapper.class);
@@ -39,8 +43,9 @@ class DwdMappingDraftServiceTest {
   }
 
   @BeforeEach void setup() {
-    service = new DwdMappingDraftService(project, models, sets, revisions, previews, reviews, json);
+    service = new DwdMappingDraftService(project, models, approvals, sets, revisions, previews, reviews, json);
     when(project.requireProjectId()).thenReturn(1L);
+    when(approvals.find(ApprovalFlowCodes.MODEL_PUBLISH, "MODEL", "50")).thenReturn(null);
     Model m = mock(Model.class);
     when(m.layerCode()).thenReturn("DWD");
     when(m.status()).thenReturn(ModelStatus.DRAFT);
@@ -51,6 +56,14 @@ class DwdMappingDraftServiceTest {
             77L, 2, 50L, LS, PS, true, true, List.of(),
             List.of(new LogicalPhysicalHandoffReviewService.ReviewRow(
                 10L, 100L, 11L, "order_id", "订单标识")), "REVIEWABLE_ONLY"));
+  }
+
+  @Test void rejectsDraftEditWhilePublishApprovalIsPending() {
+    when(approvals.find(ApprovalFlowCodes.MODEL_PUBLISH, "MODEL", "50"))
+        .thenReturn(new ApprovalInstanceView(88L, ApprovalFlowCodes.MODEL_PUBLISH,
+            "MODEL", "50", "PENDING", "applicant", null, null, null));
+    assertThrows(IllegalStateException.class, () -> service.save(50L, request(0), "operator"));
+    verifyNoInteractions(reviews, sets, revisions);
   }
 
   @Test void persistedRootStoresColumnNameAndNotTransientDatabaseColumnId() {

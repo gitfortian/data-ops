@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.yak.ops.business.approval.api.ApprovalApi;
+import io.yak.ops.business.approval.api.ApprovalFlowCodes;
 import io.yak.ops.business.modeling.dao.mapper.ModelingMappingRevisionMapper;
 import io.yak.ops.business.modeling.dao.mapper.ModelingMappingSetMapper;
 import io.yak.ops.business.modeling.dao.model.ModelingMappingRevisionPO;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DwdMappingDraftService {
   private final CurrentProject currentProject;
   private final ModelRepository models;
+  private final ApprovalApi approvals;
   private final ModelingMappingSetMapper sets;
   private final ModelingMappingRevisionMapper revisions;
   private final LogicalPhysicalHandoffPreviewService previews;
@@ -140,6 +143,7 @@ public class DwdMappingDraftService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Draft save(Long physicalId, SaveRequest request, String actor) {
     Model model = requireDwd(physicalId);
+    rejectIfPublicationApprovalPending(physicalId);
     if (model.status() != ModelStatus.DRAFT) {
       throw new IllegalStateException("物理模型已发布，请显式建立新的 DWD 草稿版本后再映射");
     }
@@ -188,6 +192,7 @@ public class DwdMappingDraftService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Frozen freeze(Long physicalId, Long expectedDraftRevision, String actor) {
     Model model = requireDwd(physicalId);
+    rejectIfPublicationApprovalPending(physicalId);
     if (model.status() != ModelStatus.DRAFT) {
       throw new IllegalStateException("只有 DWD 物理草稿可冻结映射");
     }
@@ -272,6 +277,15 @@ public class DwdMappingDraftService {
         .last("LIMIT 100")).stream().map(this::frozen).toList();
   }
 
+
+  /** Editing a design under approval would invalidate the pinned approval evidence. */
+  private void rejectIfPublicationApprovalPending(Long physicalId) {
+    var pending = approvals.find(ApprovalFlowCodes.MODEL_PUBLISH, "MODEL",
+        String.valueOf(physicalId));
+    if (pending != null && "PENDING".equals(pending.status())) {
+      throw new IllegalStateException("DWD 设计发布审批进行中，不能修改映射；请等待审批结束后再编辑");
+    }
+  }
 
   /** Exact frozen evidence, revalidated before an explicit DWD publish transaction. */
   public record PublicationEvidence(

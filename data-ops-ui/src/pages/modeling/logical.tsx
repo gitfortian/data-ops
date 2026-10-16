@@ -1002,7 +1002,7 @@ export default function LogicalWorkspace() {
             { title: '原因', dataIndex: 'reason' },
             { title: '规则类型', key: 'ruleKind',
               render: (_, row) => row.physicalColumnId == null ? '—' : (
-                <Select<'DIRECT' | 'RENAME'> placeholder="请选择规则"
+                <Select<'DIRECT' | 'RENAME'> disabled={mappingApprovalPending} placeholder="请选择规则"
                   className="min-w-[120px]" style={{ width: 130 }}
                   value={mappingKinds[row.physicalColumnId]}
                   options={[{ label: 'DIRECT 原样', value: 'DIRECT' },
@@ -1011,12 +1011,11 @@ export default function LogicalWorkspace() {
                     setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
                     setMappingFrozen(undefined);
                     setMappingPublished(undefined);
-                    setMappingApprovalPending(false);
                   }} />
               ) },
             { title: '人工选择（仅本次浏览器会话）', key: 'selection',
               render: (_, row) => row.physicalColumnId == null ? '—' : (
-                <Select<number> showSearch optionFilterProp="label" allowClear
+                <Select<number> disabled={mappingApprovalPending} showSearch optionFilterProp="label" allowClear
                   placeholder="选择逻辑属性" className="min-w-[240px]" style={{ width: 260 }}
                   value={mappingSelections[row.physicalColumnId]}
                   options={logicalReviewOptions
@@ -1032,7 +1031,6 @@ export default function LogicalWorkspace() {
                     setReviewResult(undefined);
                     setMappingFrozen(undefined);
                     setMappingPublished(undefined);
-                    setMappingApprovalPending(false);
                   }}
                 />
               ) },
@@ -1052,12 +1050,12 @@ export default function LogicalWorkspace() {
             message="映射持久化暂不可用" description={mappingPersistError} />}
           <Space className="mt-3" wrap>
             <Button loading={mappingPersistBusy}
-              disabled={!canSaveMapping || !!mappingPersistError || !reviewResult?.readyForManualDesign
+              disabled={!canSaveMapping || mappingApprovalPending || !!mappingPersistError || !reviewResult?.readyForManualDesign
                 || reviewSelectionSnapshot !== JSON.stringify(mappingSelections)
                 || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])}
               onClick={() => void saveMappingEvidence()}>保存正式 MappingSet 草稿</Button>
             <Button loading={mappingPersistBusy}
-              disabled={!canSaveMapping || !mappingDraft || !mappingMatchesEditor
+              disabled={!canSaveMapping || mappingApprovalPending || !mappingDraft || !mappingMatchesEditor
                 || !reviewResult?.readyForManualDesign
                 || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
                 || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256}
