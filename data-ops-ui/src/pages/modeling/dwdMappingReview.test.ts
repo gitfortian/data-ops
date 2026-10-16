@@ -1,4 +1,4 @@
-import { matchesSavedDwdMapping } from './dwdMappingReview';
+import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import type { DwdMappingDraft } from '@/services/modeling/dwdMapping';
 import type { LogicalPhysicalPreview } from '@/services/modeling/logical';
 
@@ -39,4 +39,19 @@ it('resolves unstable physical column row IDs via frozen column identity', () =>
   expect(matchesSavedDwdMapping(saved, {
     ...preview, columns: [{ ...preview.columns[0], physicalColumnId: 1234 }],
   }, { 1234: 10 }, { 1234: 'DIRECT' })).toBe(true);
+});
+
+it('restores persisted mapping only after matching exact model, version, column and standard', () => {
+  expect(restoreSavedDwdMapping(saved, preview)).toEqual({
+    selections: { 999: 10 }, kinds: { 999: 'DIRECT' },
+  });
+  expect(restoreSavedDwdMapping(saved, {
+    ...preview, columns: [{ ...preview.columns[0], physicalStdFieldId: 12 }],
+  })).toBeNull();
+  expect(restoreSavedDwdMapping(saved, {
+    ...preview, columns: [{ ...preview.columns[0], physicalColumn: 'other' }],
+  })).toBeNull();
+  expect(restoreSavedDwdMapping(saved, {
+    ...preview, physicalStructureSha256: 'c'.repeat(64),
+  })).toBeNull();
 });
