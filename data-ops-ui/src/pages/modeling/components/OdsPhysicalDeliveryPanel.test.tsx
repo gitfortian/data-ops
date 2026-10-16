@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { history } from '@umijs/max';
 import OdsPhysicalDeliveryPanel from './OdsPhysicalDeliveryPanel';
 import { discoverOdsExecutionsBefore } from '@/services/integration/odsExecutionEvidence';
@@ -180,4 +180,37 @@ it('reads only owner-confirmed frozen execution evidence without implying data r
   );
   fireEvent.click(screen.getByRole('button', { name: '刷新本页' }));
   await waitFor(() => expect(discoverOdsExecutionsBefore).toHaveBeenCalledTimes(2));
+});
+
+
+it('discards a pending execution response after switching the security project', async () => {
+  const observation = {
+    id: 701, modelId: 50, versionNo: 2, modelVersionId: 90,
+    targetDatasourceId: 20, targetDatabase: 'warehouse', targetSchema: 'ods',
+    targetTable: 'ods_order_detail', observedCatalogSha256: 'a'.repeat(64),
+    frozenVersionChecksum: 'b'.repeat(64), observedColumnCount: 2,
+    observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
+    status: 'STALE_CATALOG_OBSERVATION', limitations: [],
+  };
+  jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([observation] as never);
+  let finish!: (value: any) => void;
+  jest.mocked(discoverOdsExecutionsBefore).mockReturnValueOnce(new Promise(resolve => {
+    finish = resolve;
+  }));
+
+  const { rerender } = render(<OdsPhysicalDeliveryPanel open model={model} onClose={jest.fn()} />);
+  fireEvent.click(await screen.findByRole('button', { name: '查看执行历史' }));
+  expect(discoverOdsExecutionsBefore).toHaveBeenCalledTimes(1);
+
+  mockProjectId = 5;
+  rerender(<OdsPhysicalDeliveryPanel open model={model} onClose={jest.fn()} />);
+  await act(async () => finish({
+    nextBeforeId: 800, moreCandidates: false, matches: [{
+      executionId: 900, jobDefinitionId: 100, batchId: 800,
+      jobRevisionNo: 3, attemptNo: 1, status: 'SUCCEEDED',
+      sinkCommittedRows: 2,
+    }],
+  }));
+  expect(screen.queryByText('#900 / #800')).not.toBeInTheDocument();
+  expect(screen.queryByText(/关联执行证据 · 观察/)).not.toBeInTheDocument();
 });
