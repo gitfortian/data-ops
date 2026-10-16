@@ -68,6 +68,39 @@ class OfflineExecutionCoordinatorTest {
   }
 
   @Test
+  void reusedWorkflowAttemptWithTerminalStateNeverSubmitsAgain() {
+    OfflineJobExecution existing = execution(99L, "SUCCEEDED");
+    when(claimManager.claimSnapshot(10L, 3L, "digest", "{}", "{}", "WORKFLOW", "stable-key"))
+        .thenReturn(new OfflineExecutionClaim(null, "{}", existing, true));
+
+    assertThat(coordinator.executeSnapshot(10L, 3L, "digest", "{}", "{}", "stable-key"))
+        .isSameAs(existing);
+    verifyNoInteractions(linkUpClient, stateManager, batchRepository);
+  }
+
+  @Test
+  void reusedCreatedOdsWorkflowCannotBlindlyResubmitBeforeReceiptReconciliation() {
+    OfflineJobExecution existing = execution(99L, "CREATED");
+    String frozen = """
+        {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    BatchExecution batch = new BatchExecution(
+        77L, 10L, new BatchKey("workflow:stable-key"),
+        BatchTrigger.WORKFLOW, BatchScope.fullSelection(),
+        new ExecutionSnapshot(frozen, 3, new RetryPolicySnapshot(3, 30),
+            "digest", "{}"), BatchStatus.RUNNING, List.of());
+    when(claimManager.claimSnapshot(10L, 3L, "digest", frozen, "{}", "WORKFLOW", "stable-key"))
+        .thenReturn(new OfflineExecutionClaim(null, "{}", existing, true));
+    when(batchRepository.findById(77L)).thenReturn(Optional.of(batch));
+
+    assertThatThrownBy(() ->
+        coordinator.executeSnapshot(10L, 3L, "digest", frozen, "{}", "stable-key"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("ODS APPEND");
+    verifyNoInteractions(linkUpClient, stateManager);
+  }
+
+  @Test
   void transportFailureDelegatesStateDecisionWithoutOwningRetryPolicy() {
     OfflineJobExecution execution = execution(99L, "CREATED");
     BatchExecution batch = frozenBatch(BatchStatus.RUNNING, BatchScope.fullSelection());

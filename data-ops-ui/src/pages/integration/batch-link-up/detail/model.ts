@@ -63,6 +63,13 @@ export interface SyncNotification {
   alertChannelIds: number[];
 }
 
+export interface OdsSyncHandoff {
+  modelId: number;
+  versionNo: number;
+  targetObservationId: number;
+}
+
+/** Explicitly persisted provenance, verified by Modeling when task is published/run. */
 export interface SyncEditorState {
   id: string;
   mode: SyncMode;
@@ -75,6 +82,7 @@ export interface SyncEditorState {
   schedule: SyncSchedule;
   notification: SyncNotification;
   state?: Record<string, any>;
+  odsHandoff?: OdsSyncHandoff;
 }
 
 export interface CreateSyncTaskValues {
@@ -594,6 +602,17 @@ export const normalizeEditDetail = (
     schedule: normalizeSchedule(raw),
     notification: normalizeNotification(raw),
     state: raw?.state,
+    odsHandoff: raw?.odsHandoff && Number.isSafeInteger(Number(raw.odsHandoff.modelId))
+      && Number(raw.odsHandoff.modelId) > 0
+      && Number.isSafeInteger(Number(raw.odsHandoff.versionNo))
+      && Number(raw.odsHandoff.versionNo) > 0
+      && Number.isSafeInteger(Number(raw.odsHandoff.targetObservationId))
+      && Number(raw.odsHandoff.targetObservationId) > 0
+      ? {
+          modelId: Number(raw.odsHandoff.modelId),
+          versionNo: Number(raw.odsHandoff.versionNo),
+          targetObservationId: Number(raw.odsHandoff.targetObservationId),
+        } : undefined,
   };
 };
 
@@ -799,5 +818,6 @@ export const buildSavePayload = (
     },
     schedule,
     notification,
+    ...(editor.odsHandoff ? { odsHandoff: editor.odsHandoff } : {}),
   };
 };

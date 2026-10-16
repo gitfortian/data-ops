@@ -28,6 +28,7 @@ const OfflineSyncPage = () => {
     pagination,
     loading,
     createOpen,
+    initialSourceHandoff,
     selectedRowKeys,
     currentStatus,
     advancedFilterCount,
@@ -103,6 +104,7 @@ const OfflineSyncPage = () => {
 
         <CreateSyncTaskDrawer
           open={createOpen}
+          sourceHandoff={initialSourceHandoff}
           onCancel={() => setCreateOpen(false)}
           onCreated={handleCreated}
         />

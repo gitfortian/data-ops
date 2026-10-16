@@ -90,6 +90,22 @@ public class OfflineJobExecutionRepositoryAdapter implements OfflineJobExecution
   }
 
   @Override
+  public List<OfflineJobExecution> scanBeforeId(long exclusiveId, int limit) {
+    requireProject();
+    return dao.selectBeforeId(exclusiveId, limit).stream().map(this::toDomain).toList();
+  }
+
+  @Override
+  public List<OfflineJobExecution> scanRecent(int page, int pageSize) {
+    requireProject();
+    if (page < 1 || pageSize < 1 || pageSize > 100) {
+      throw new IllegalArgumentException("执行历史扫描分页参数非法");
+    }
+    return dao.selectPage(new PageQuery(page, pageSize, null, null))
+        .getRecords().stream().map(this::toDomain).toList();
+  }
+
+  @Override
   public PageData<OfflineJobExecution> page(OfflineExecutionQuery query) {
     requireProject();
     OfflineExecutionQuery q = query == null ? new OfflineExecutionQuery(1, 10, null, null) : query;

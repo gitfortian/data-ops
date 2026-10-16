@@ -24,22 +24,71 @@ import io.yak.ops.common.bean.vo.sync.offline.OfflineJobExecutionDetailVO;
 import io.yak.ops.common.bean.vo.sync.offline.OfflineJobExecutionVO;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** Stable execution facade for controllers, Backfill dispatch, Schedule and Reconcile. */
 @ConditionalOnOfflineSyncEnabled
 @Service
-@RequiredArgsConstructor
 public class OfflineJobExecutionService implements OfflineScheduleExecutionGateway {
 
   private final OfflineExecutionCoordinator coordinator;
+  private final OfflineOdsExecutionEvidenceQuery odsEvidence;
   private final OfflineBatchRuntime batchRuntime;
   private final OfflineExecutionQuery executionQuery;
   private final OfflineExecutionLogQuery executionLogQuery;
   private final LinkUpClient linkUpClient;
   private final OfflineSyncViewMapper viewMapper;
   private final OfflineSyncConnectorRuntime connectorRuntime;
+
+  @Autowired
+  public OfflineJobExecutionService(
+      OfflineExecutionCoordinator coordinator,
+      OfflineOdsExecutionEvidenceQuery odsEvidence,
+      OfflineBatchRuntime batchRuntime,
+      OfflineExecutionQuery executionQuery,
+      OfflineExecutionLogQuery executionLogQuery,
+      LinkUpClient linkUpClient,
+      OfflineSyncViewMapper viewMapper,
+      OfflineSyncConnectorRuntime connectorRuntime) {
+    this.coordinator = coordinator;
+    this.odsEvidence = odsEvidence;
+    this.batchRuntime = batchRuntime;
+    this.executionQuery = executionQuery;
+    this.executionLogQuery = executionLogQuery;
+    this.linkUpClient = linkUpClient;
+    this.viewMapper = viewMapper;
+    this.connectorRuntime = connectorRuntime;
+  }
+
+  /** Compatibility for existing direct unit constructions, not Spring wiring. */
+  public OfflineJobExecutionService(
+      OfflineExecutionCoordinator coordinator,
+      OfflineBatchRuntime batchRuntime,
+      OfflineExecutionQuery executionQuery,
+      OfflineExecutionLogQuery executionLogQuery,
+      LinkUpClient linkUpClient,
+      OfflineSyncViewMapper viewMapper,
+      OfflineSyncConnectorRuntime connectorRuntime) {
+    this(coordinator, null, batchRuntime, executionQuery, executionLogQuery,
+        linkUpClient, viewMapper, connectorRuntime);
+  }
+
+  public OfflineOdsExecutionEvidenceQuery.Evidence odsEvidence(long id, long modelId,
+      int versionNo, long observationId) {
+    return odsEvidence.require(id, modelId, versionNo, observationId);
+  }
+
+  public OfflineOdsExecutionEvidenceQuery.CursorPage discoverOdsEvidenceBefore(
+      long modelId, int versionNo, long observationId, long beforeId, int scanSize) {
+    if (odsEvidence == null) throw new IllegalStateException("ODS 执行证据查询不可用");
+    return odsEvidence.discoverBefore(modelId, versionNo, observationId, beforeId, scanSize);
+  }
+
+  public OfflineOdsExecutionEvidenceQuery.DiscoveryPage discoverOdsEvidence(
+      long modelId, int versionNo, long observationId, int scanPage, int scanSize) {
+    return odsEvidence.discover(modelId, versionNo, observationId, scanPage, scanSize);
+  }
 
   public OfflineEngineHealthVO health() {
     return viewMapper.engineHealth(linkUpClient.node());

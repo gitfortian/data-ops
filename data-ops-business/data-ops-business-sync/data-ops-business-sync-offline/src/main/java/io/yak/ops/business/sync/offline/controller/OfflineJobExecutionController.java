@@ -33,6 +33,35 @@ public class OfflineJobExecutionController {
 
   private final OfflineJobExecutionService service;
 
+
+  @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover-before")
+  public Result<?> discoverOdsEvidenceBefore(
+      @RequestParam long modelId, @RequestParam int versionNo,
+      @RequestParam long targetObservationId,
+      @RequestParam long beforeId,
+      @RequestParam(defaultValue = "50") int scanSize) {
+    return Result.success(service.discoverOdsEvidenceBefore(
+        modelId, versionNo, targetObservationId, beforeId, scanSize));
+  }
+
+  @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover")
+  public Result<?> discoverOdsEvidence(
+      @RequestParam long modelId, @RequestParam int versionNo,
+      @RequestParam long targetObservationId,
+      @RequestParam(defaultValue = "1") int scanPage,
+      @RequestParam(defaultValue = "50") int scanSize) {
+    return Result.success(service.discoverOdsEvidence(
+        modelId, versionNo, targetObservationId, scanPage, scanSize));
+  }
+
+  @GetMapping("/api/v1/job/batch-instance/{id}/ods-evidence")
+  public Result<?> odsEvidence(
+      @PathVariable Long id, @RequestParam long modelId,
+      @RequestParam int versionNo, @RequestParam long targetObservationId) {
+    return Result.success(service.odsEvidence(id, modelId, versionNo, targetObservationId));
+  }
+
+
   @GetMapping({"/api/v1/job/batch-execution/health", "/api/v1/executor/health"})
   @ProjectScope(ProjectMigrationMode.LEGACY_GLOBAL)
   public Result<OfflineEngineHealthVO> health() { return Result.success(service.health()); }
