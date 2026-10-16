@@ -277,7 +277,7 @@ public class OfflineExecutionCoordinator {
     // Attempt carries the Batch's immutable definition snapshot, never the
     // editable live task. Only a linked ODS needs extra owner verification.
     String frozenDefinition = execution.getDefinitionSnapshotJson();
-    if (frozenDefinition != null && frozenDefinition.contains("\"odsHandoff\"")) {
+    if (OfflineOdsHandoffGuard.requiresVerification(frozenDefinition)) {
       if (odsHandoffGuard == null) {
         throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务执行");
       }
