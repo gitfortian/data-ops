@@ -9,16 +9,19 @@ import {
   type PhysicalDataDevHandoffReadiness,
 } from '@/services/modeling/api';
 import type { ModelingVersionSummary } from '@/services/modeling/types';
+import { getPublishedDwdMapping, type DwdPublishedMapping } from '@/services/modeling/dwdMapping';
+import { assessDwdMappingEvidence } from '../dwdHandoffEvidence';
 
 interface Props {
   modelId: number;
   processId?: number;
+  layerCode?: string;
   open: boolean;
   onClose: () => void;
 }
 
 /** No cross-domain write or DataDev task creation here. */
-export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, onClose }: Props) {
+export default function PhysicalDataDevHandoffPanel({ modelId, processId, layerCode, open, onClose }: Props) {
   const { canAll } = usePermissionAccess();
   const { currentProject } = useSecurityProject();
   const [versions, setVersions] = useState<ModelingVersionSummary[]>([]);
@@ -26,6 +29,13 @@ export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, 
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<PhysicalDataDevHandoffReadiness>();
+  const [mappingEvidence, setMappingEvidence] = useState<DwdPublishedMapping>();
+  const [mappingError, setMappingError] = useState<string>();
+  const [mappingLoading, setMappingLoading] = useState(false);
+  const isDwd = layerCode?.toUpperCase() === 'DWD';
+  const evidence = isDwd
+    ? assessDwdMappingEvidence(modelId, versionNo, report, versions, mappingEvidence)
+    : { ready: true, reason: '' };
 
   useEffect(() => {
     let current = true;
@@ -64,6 +74,24 @@ export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, 
     return () => { current = false; };
   }, [modelId, versionNo, open, currentProject?.id]);
 
+  useEffect(() => {
+    let current = true;
+    setMappingEvidence(undefined);
+    setMappingError(undefined);
+    if (!open || !isDwd || versionNo == null || versions.length === 0) {
+      setMappingLoading(false);
+      return () => { current = false; };
+    }
+    setMappingLoading(true);
+    void getPublishedDwdMapping(modelId, versionNo).then((result) => {
+      if (current) setMappingEvidence(result);
+    }).catch((error: unknown) => {
+      if (current) setMappingError(error instanceof Error ? error.message
+        : '历史映射版本证据不可读取');
+    }).finally(() => { if (current) setMappingLoading(false); });
+    return () => { current = false; };
+  }, [open, isDwd, modelId, versionNo, versions, currentProject?.id]);
+
   return (
     <Modal title="物理设计 → DataDev 版本交接证据（只读）"
       open={open} width={1050} destroyOnHidden onCancel={onClose}
@@ -80,6 +108,39 @@ export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, 
         <Alert type="info" showIcon message="此模型尚无已发布物理版本，无法生成精确交接证据。" />
       )}
       {loading && <Typography.Paragraph type="secondary">正在重读冻结版本与当前 Semantic 标准证据…</Typography.Paragraph>}
+      {isDwd && versionNo != null && !versionsLoading && <>
+        {mappingLoading && <Typography.Paragraph type="secondary">
+          正在核验 DWD 冻结逻辑版本和 MappingRevision…
+        </Typography.Paragraph>}
+        {mappingError && <Alert showIcon type="error" className="mb-3"
+          message="DWD 映射历史读取失败" description={mappingError} />}
+        {!mappingLoading && !mappingError && mappingEvidence?.state === 'LEGACY_UNBOUND' && (
+          <Alert showIcon type="warning" className="mb-3"
+            message={`DWD 物理 V${versionNo} 是旧版设计，没有冻结映射绑定`}
+            description="无法证明该版本使用了哪个逻辑属性和映射规则。请先核实历史版本；此入口不提供完整 DWD 映射交接凭据。" />
+        )}
+        {!mappingLoading && !mappingError && mappingEvidence?.mapping && evidence.ready && <>
+          <Alert showIcon type="info" className="mb-3"
+            message="DWD 设计版本与冻结映射已精确对应"
+            description="这是建模证据，不是 DataDev 任务修订、SQL 产出或数据加工成功。" />
+          <Space wrap className="mb-3">
+            <Tag>MappingRevision #{mappingEvidence.mapping.mappingRevisionId}</Tag>
+            <Tag>逻辑模型 #{mappingEvidence.mapping.logicalModelId} · V{mappingEvidence.mapping.logicalVersionNo}</Tag>
+            <Tag>映射字段 {mappingEvidence.mapping.rules.length}</Tag>
+          </Space>
+          <Typography.Paragraph type="secondary">
+            不可变映射摘要：
+            <Typography.Text copyable={{ text: mappingEvidence.mapping.contentSha256 }}>
+              {mappingEvidence.mapping.contentSha256.slice(0, 20)}…
+            </Typography.Text>
+          </Typography.Paragraph>
+        </>}
+        {!mappingLoading && !mappingError && mappingEvidence && !evidence.ready
+          && mappingEvidence.state !== 'LEGACY_UNBOUND' && (
+          <Alert showIcon type="error" className="mb-3"
+            message="DWD 映射与所选物理版本证据不一致" description={evidence.reason} />
+        )}
+      </>}
       {report && <>
         <Alert type="warning" showIcon className="mb-3"
           message="仅是 Modeling 的交接设计预检，不是 DataDev 建任务许可"
@@ -121,7 +182,8 @@ export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, 
         <Space className="mt-3" wrap>
           <Button type="primary" disabled={!processId || !canAll(['data-development:read', 'modeling:read'])
             || report.modelId !== modelId || report.version.modelId !== modelId
-            || report.version.versionNo !== versionNo}
+            || report.version.versionNo !== versionNo
+            || (isDwd && (!evidence.ready || !!mappingError || mappingLoading))}
             onClick={() => {
               if (processId && versionNo) history.push(physicalDataDevHandoffUrl({
                 processId, modelId, modelVersionNo: versionNo,
@@ -129,7 +191,11 @@ export default function PhysicalDataDevHandoffPanel({ modelId, processId, open, 
             }}>
             前往 DataDev 核对该冻结版本（只读）
           </Button>
-          <Typography.Text type="secondary">DataDev 将重新读取有权原域对象；不建立任务关联、不自动创建 SQL。</Typography.Text>
+          <Typography.Text type="secondary">
+            {isDwd && !evidence.ready
+              ? '仅当选中版本有精确冻结映射时，才允许继续只读交接；旧版和证据不可用时必须先核验。'
+              : 'DataDev 将重新读取有权原域对象；不建立任务关联、不自动创建 SQL。'}
+          </Typography.Text>
         </Space>
         <Typography.Title level={5}>下一步（仍需人工处理）</Typography.Title>
         {report.nextActions.map((action, i) => (
