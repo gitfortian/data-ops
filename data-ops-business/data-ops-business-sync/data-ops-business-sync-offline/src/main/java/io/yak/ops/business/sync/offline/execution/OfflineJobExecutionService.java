@@ -79,6 +79,12 @@ public class OfflineJobExecutionService implements OfflineScheduleExecutionGatew
     return odsEvidence.require(id, modelId, versionNo, observationId);
   }
 
+  public OfflineOdsExecutionEvidenceQuery.CursorPage discoverOdsEvidenceBefore(
+      long modelId, int versionNo, long observationId, long beforeId, int scanSize) {
+    if (odsEvidence == null) throw new IllegalStateException("ODS 执行证据查询不可用");
+    return odsEvidence.discoverBefore(modelId, versionNo, observationId, beforeId, scanSize);
+  }
+
   public OfflineOdsExecutionEvidenceQuery.DiscoveryPage discoverOdsEvidence(
       long modelId, int versionNo, long observationId, int scanPage, int scanSize) {
     return odsEvidence.discover(modelId, versionNo, observationId, scanPage, scanSize);
