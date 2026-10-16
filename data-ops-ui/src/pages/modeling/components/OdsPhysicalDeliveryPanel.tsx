@@ -185,7 +185,7 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
     footer={<Button onClick={onClose}>关闭</Button>}>
     <Alert type="info" showIcon className="mb-3"
       message="建模不执行 DDL，也不自动创建或运行同步任务"
-      description="先从已发布物理版本生成并由授权人员在目标库执行建表脚本，再按目标 Catalog 核验。核验不是部署回执；同步任务和运行结果由离线同步模块独立保存。" />
+      description="先由授权人员执行 ODS 建表 DDL，再实时核验目标 Catalog。当前离线同步采用首次写入保护：同项目、同数据源、同名目标表仅允许首次 APPEND 预留；再次运行、调度、重试和回填会被拒绝，直到具备经核验的增量窗口和提交回执。核验不是部署回执，同步结果由离线同步模块独立保存。" />
     <Space wrap className="mb-3">
       <Tag>模型 #{modelId}</Tag>
       <Tag>{hasVersion ? `当前发布 V${versionNo}` : '尚未发布'}</Tag>
