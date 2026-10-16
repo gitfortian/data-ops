@@ -176,7 +176,7 @@ public class OfflineExecutionCoordinator {
             logicalJobSpecJson,
             BatchTriggerToken.WORKFLOW,
             idempotencyKey);
-    return submitClaim(claim);
+    return submitClaimIfNeeded(claim);
   }
 
   public OfflineJobExecution executePendingBackfill(Long batchId) {
@@ -266,8 +266,24 @@ public class OfflineExecutionCoordinator {
 
   private OfflineJobExecution submitClaimIfNeeded(OfflineExecutionClaim claim) {
     OfflineJobExecution execution = claim.getExecution();
-    if (claim.isReused() && !OfflineExecutionStatus.isCreated(execution.getStatus())) {
-      return execution;
+    if (claim.isReused()) {
+      // An already submitted, failed, succeeded or UNKNOWN execution is a
+      // historical observation, never an instruction to submit again.
+      if (!OfflineExecutionStatus.isCreated(execution.getStatus())) {
+        return execution;
+      }
+      // Legacy CREATED Attempts could predate the durable ODS write fence.
+      // Never recover them by blindly sending APPEND to Link-Up.
+      Long batchId = execution.getBatchId();
+      if (batchId == null || batchId <= 0) {
+        throw new IllegalStateException("复用的 CREATED Attempt 缺少冻结 Batch");
+      }
+      BatchExecution batch = batchRepository.findById(batchId)
+          .orElseThrow(() -> new IllegalStateException("复用的 CREATED Attempt 缺少冻结 Batch"));
+      if (batch.snapshot() == null) {
+        throw new IllegalStateException("复用的 CREATED Attempt 缺少冻结定义");
+      }
+      OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(batch.snapshot().definitionSnapshot());
     }
     return submitClaim(claim);
   }
