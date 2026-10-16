@@ -2,7 +2,7 @@
 
 Status: IMPLEMENTED_DRAFT / MYSQL_STORAGE_SMOKE_PASS / POSTGRESQL_STORAGE_SMOKE_PASS / SAME_HEAD_COMPLETE_CI_PENDING / BUSINESS_E2E_DEFERRED
 
-Product classification for PR governance: Change Type = PRODUCT; Product Behavior Changed = Yes.
+Product classification for PR governance: Change Type = PRODUCT; Product Behavior Changed = Yes. Product Impact, Truth & Ownership, and Acceptance sections are maintained in the PR description for the product governance gate.
 Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](https://github.com/gitfortian/data-ops/pull/578) · [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556) · PD-010 (PROPOSED)
 
 > 本文记录 **Draft PR 中的实际实现能力与验收门槛**；不代表合并、正式发布、产品门禁签收或真实运行成功。上游 ODS V5 的发布前置依赖见 #575。
