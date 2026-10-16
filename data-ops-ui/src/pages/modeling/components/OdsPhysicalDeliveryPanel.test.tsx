@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { history } from '@umijs/max';
 import OdsPhysicalDeliveryPanel from './OdsPhysicalDeliveryPanel';
+import { discoverOdsExecutions } from '@/services/integration/odsExecutionEvidence';
 import { inspectOdsPhysicalTarget, listOdsTargetObservations, recordOdsTargetObservation } from '@/services/modeling/api';
 
 let mockProjectId = 4;
@@ -12,6 +13,7 @@ jest.mock('@/hooks/usePermissionAccess', () => ({
 jest.mock('@/contexts/SecurityProjectContext', () => ({
   useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
+jest.mock('@/services/integration/odsExecutionEvidence', () => ({ discoverOdsExecutions: jest.fn() }));
 jest.mock('@/services/modeling/api', () => ({
   inspectOdsPhysicalTarget: jest.fn(),
   listOdsTargetObservations: jest.fn(),
@@ -145,4 +147,31 @@ it('never writes an observation when target is mismatched', async () => {
   expect(screen.getByRole('button', { name: '保存此次目标列观察记录' }))
     .toBeDisabled();
   expect(recordOdsTargetObservation).not.toHaveBeenCalled();
+});
+
+it('reads only owner-confirmed frozen execution evidence without implying data reconciliation', async () => {
+  jest.mocked(listOdsTargetObservations).mockResolvedValueOnce([{
+    id: 701, modelId: 50, versionNo: 2, modelVersionId: 90,
+    targetDatasourceId: 20, targetDatabase: 'warehouse', targetSchema: 'ods',
+    targetTable: 'ods_order_detail', observedCatalogSha256: 'a'.repeat(64),
+    frozenVersionChecksum: 'b'.repeat(64), observedColumnCount: 2,
+    observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
+    status: 'STALE_CATALOG_OBSERVATION', limitations: [],
+  } as never]);
+  jest.mocked(discoverOdsExecutions).mockResolvedValue({
+    scanPage: 1, scanSize: 50, moreCandidates: false,
+    matches: [{
+      executionId: 900, jobDefinitionId: 100, batchId: 800,
+      jobRevisionNo: 3, attemptNo: 2, status: 'FAILED',
+      sinkCommittedRows: null, errorMessage: 'target rejected',
+    }],
+  });
+  render(<OdsPhysicalDeliveryPanel open model={model} onClose={jest.fn()} />);
+  fireEvent.click(await screen.findByRole('button', { name: '查看执行历史' }));
+  await screen.findByText('#900 / #800');
+  expect(discoverOdsExecutions).toHaveBeenCalledWith(50, 2, 701, 1, 50);
+  expect(screen.getByText('FAILED')).toBeInTheDocument();
+  expect(screen.getByText('未知')).toBeInTheDocument();
+  expect(screen.getByText('target rejected')).toBeInTheDocument();
+  expect(screen.getByText(/不等于目标库对账通过/)).toBeInTheDocument();
 });
