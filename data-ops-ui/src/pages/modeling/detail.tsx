@@ -35,6 +35,7 @@ import { findByBiz, listFlows } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
 import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
+import DwdPublishedMappingHistoryPanel from './components/DwdPublishedMappingHistoryPanel';
 import OdsPhysicalDeliveryPanel from './components/OdsPhysicalDeliveryPanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
 import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
@@ -175,6 +176,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   }, [onEditorStateChange]);
   const [publishing, setPublishing] = useState(false);
   const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
+  const [dwdHistoryOpen, setDwdHistoryOpen] = useState(false);
   const [odsPhysicalDeliveryOpen, setOdsPhysicalDeliveryOpen] = useState(false);
   const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
   const [coverageFeedback, setCoverageFeedback] = useState<{
@@ -2366,6 +2368,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
               核对 ODS 发布版本证据
             </YakButton>
           )}
+          {modelInfo?.layerCode?.toUpperCase() === 'DWD'
+            && Number(modelInfo?.latestVersionNo) > 0 && (
+            <YakButton className="!h-9 !rounded-lg !px-4"
+              disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+              onClick={() => setDwdHistoryOpen(true)}>
+              DWD 设计版本与映射历史
+            </YakButton>
+          )}
           {modelInfo?.layerCode?.toUpperCase() === 'ODS' && (
             <YakButton className="!h-9 !rounded-lg !px-4"
               disabled={!modelId || dirty || loading || !canAll(['modeling:read', 'resource:data-source:read'])}
@@ -3203,7 +3213,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
       )}
       {modelId && dataDevHandoffOpen && (
         <PhysicalDataDevHandoffPanel
-          modelId={Number(modelId)} processId={modelInfo?.processId} open={dataDevHandoffOpen}
+          modelId={Number(modelId)} processId={modelInfo?.processId}
+          layerCode={modelInfo?.layerCode} open={dataDevHandoffOpen}
           onClose={() => setDataDevHandoffOpen(false)} />
       )}
       {modelId && standardCoverageOpen && (
@@ -3214,6 +3225,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
             && coverageFeedback?.baseline.modelId === Number(modelId)
               ? coverageFeedback.baseline : undefined}
           onLocateColumn={locateCoverageGap} />
+      )}
+      {modelId && dwdHistoryOpen && (
+        <DwdPublishedMappingHistoryPanel open={dwdHistoryOpen}
+          modelId={Number(modelId)} onClose={() => setDwdHistoryOpen(false)} />
       )}
       {modelId && modelInfo && odsPhysicalDeliveryOpen && (
         <OdsPhysicalDeliveryPanel

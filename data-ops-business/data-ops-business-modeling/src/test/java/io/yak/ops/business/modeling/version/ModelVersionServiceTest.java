@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.PublicationEvidence;
 import io.yak.ops.business.modeling.domain.ModelDialect;
 import io.yak.ops.business.modeling.domain.ModelStatus;
 import io.yak.ops.business.modeling.domain.ModelVersion;
@@ -43,6 +44,8 @@ class ModelVersionServiceTest {
     when(modelRepository.findByIdForUpdate(1L))
         .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)));
     when(structureService.getForUpdate(1L)).thenReturn(structure("orders_v1"));
+    when(modelRepository.updatePublishState(eq(1L), eq(ModelStatus.PUBLISHED.name()),
+        anyLong(), anyInt(), eq("tester"))).thenReturn(true);
   }
 
   @Test
@@ -82,6 +85,36 @@ class ModelVersionServiceTest {
   }
 
   @Test
+  void newPhysicalVersionFailsClosedWhenPublishPointerUpdateAffectsNoRow() {
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
+    when(versionRepository.nextVersionNo(1L)).thenReturn(1);
+    when(versionRepository.insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(9L, 1, "{}"));
+    when(modelRepository.updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1,
+        "tester")).thenReturn(false);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository).insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"));
+  }
+
+  @Test
+  void idempotentPhysicalVersionFailsClosedWhenPointerRepairAffectsNoRow() {
+    when(versionRepository.findLatestByModelId(1L))
+        .thenReturn(Optional.of(version(9L, 3, null)));
+    when(modelRepository.updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 3,
+        "tester")).thenReturn(false);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(),
+        anyInt(), any(), any());
+  }
+
+  @Test
   void approvedPublishRejectsAChangedStructure() {
     when(structureService.get(1L)).thenReturn(structure("orders_v1"));
     when(structureService.getForUpdate(1L)).thenReturn(structure("orders_v2"));
@@ -109,6 +142,133 @@ class ModelVersionServiceTest {
 
     assertThat(result.created()).isTrue();
     verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1, "tester");
+  }
+
+  @Test
+  void identicalStructureButDifferentMappingRevisionMustCreateNewPhysicalVersion() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    when(versionRepository.findLatestByModelId(1L))
+        .thenReturn(Optional.of(version(9L, 3, null)));
+    when(versionRepository.nextVersionNo(1L)).thenReturn(4);
+    when(versionRepository.insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(10L, 4, "{}"));
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+
+    var result = service.publishWithMapping(1L, null, evidence, "tester");
+    assertThat(result.created()).isTrue();
+    assertThat(result.version().id()).isEqualTo(10L);
+    verify(versionRepository).insert(eq(1L), eq(4), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta -> meta.contains("\"mappingRevisionId\":501")
+            && meta.contains("\"mappingContentSha256\":\""+ "c".repeat(64) + "\"")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 10L, 4, "tester");
+  }
+
+  @Test
+  void mappedDwdPublishRejectsFailedPointerUpdateInsteadOfClaimingSuccess() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
+    when(versionRepository.nextVersionNo(1L)).thenReturn(1);
+    when(versionRepository.insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(9L, 1, "{}"));
+    when(modelRepository.updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1,
+        "tester")).thenReturn(false);
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publishWithMapping(1L, null, evidence, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository).insert(eq(1L), eq(1), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta ->
+            meta != null && meta.contains("mappingRevisionId")
+                && meta.contains("mappingContentSha256")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1,
+        "tester");
+  }
+
+  @Test
+  void malformedVersionMetaFailsClosedInsteadOfBecomingLegacyUnbound() {
+    ModelVersion malformed = new ModelVersion(
+        9L, 1L, 3, serialisePublishedProbe(), "{not-json", 1, "checksum",
+        "alice", LocalDateTime.now());
+    when(versionRepository.findByVersionNo(1L, 3)).thenReturn(Optional.of(malformed));
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.getVersionDetail(1L, 3)))
+        .hasMessageContaining("历史元数据损坏");
+  }
+
+  @Test
+  void legacyPublishOfSameDwdStructureDoesNotInheritBoundMappingHistory() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    ModelVersion previous = version(9L, 3, null);
+    ModelVersion bound = new ModelVersion(previous.id(), previous.modelId(),
+        previous.versionNo(), previous.structureJson(),
+        "{\"mappingRevisionId\":501,\"mappingSetId\":201}",
+        previous.columnCount(), previous.checksum(), previous.publishedBy(),
+        previous.publishTime());
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(bound));
+    when(versionRepository.nextVersionNo(1L)).thenReturn(4);
+    when(versionRepository.insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(10L, 4, "{}"));
+
+    var created = service.publish(1L, "tester");
+    assertThat(created.created()).isTrue();
+    verify(versionRepository).insert(eq(1L), eq(4), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta ->
+            meta != null && !meta.contains("mappingRevisionId")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 10L, 4, "tester");
+  }
+
+  @Test
+  void sameRevisionIdButDifferentMappingSetCannotReusePublishedVersion() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    ModelVersion previous = version(9L, 3, null);
+    String meta = "{\"mappingRevisionId\":501,\"mappingSetId\":999,"
+        + "\"logicalModelId\":77,\"logicalVersionNo\":2,"
+        + "\"mappingContentSha256\":\"" + "c".repeat(64) + "\","
+        + "\"logicalSnapshotSha256\":\"" + "a".repeat(64) + "\","
+        + "\"physicalStructureSha256\":\"" + "b".repeat(64) + "\"}";
+    ModelVersion bound = new ModelVersion(previous.id(), previous.modelId(),
+        previous.versionNo(), previous.structureJson(), meta,
+        previous.columnCount(), previous.checksum(), previous.publishedBy(),
+        previous.publishTime());
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(bound));
+    when(versionRepository.nextVersionNo(1L)).thenReturn(4);
+    when(versionRepository.insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(10L, 4, "{}"));
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+
+    assertThat(service.publishWithMapping(1L, null, evidence, "tester").created()).isTrue();
+    verify(versionRepository).insert(eq(1L), eq(4), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"));
+  }
+
+  @Test
+  void approvedMappingRejectsChangedPhysicalFingerprintBeforeVersionInsert() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    var evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publishWithMapping(1L, "f".repeat(64), evidence, "tester")))
+        .hasMessageContaining("审批后物理结构发生变化");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(),
+        anyInt(), any(), any());
   }
 
   @Test

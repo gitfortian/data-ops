@@ -4,6 +4,13 @@ import {
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
+import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
+  publishDwdWithMapping, getPublishedDwdMapping,
+  getDwdPublicationPolicy, submitDwdMappingPublishApproval, listDwdMappingRevisions,
+  type DwdMappingDraft, type DwdMappingFrozen, type DwdBoundPublication,
+} from '@/services/modeling/dwdMapping';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
 import { physicalEvidencePath } from '@/utils/logicalPhysicalJourney';
@@ -50,6 +57,8 @@ export default function LogicalWorkspace() {
   const draftParam = searchParams.get('draftId');
   const requestedDraftId = parseJourneyProcessId(draftParam);
   const { currentProject } = useSecurityProject();
+  const { can } = usePermissionAccess();
+  const canSaveMapping = can('modeling:update');
   const [reviewEntryProblem, setReviewEntryProblem] = useState<string>();
   const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
   const [journeyProblem, setJourneyProblem] = useState<string>();
@@ -84,6 +93,14 @@ export default function LogicalWorkspace() {
   const [handoffPreview, setHandoffPreview] = useState<LogicalPhysicalPreview>();
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [mappingSelections, setMappingSelections] = useState<Record<number, number>>({});
+  const [mappingKinds, setMappingKinds] = useState<Record<number, 'DIRECT' | 'RENAME'>>({});
+  const [mappingDraft, setMappingDraft] = useState<DwdMappingDraft>();
+  const [mappingFrozen, setMappingFrozen] = useState<DwdMappingFrozen>();
+  const [mappingPublished, setMappingPublished] = useState<DwdBoundPublication>();
+  const [mappingApprovalPending, setMappingApprovalPending] = useState(false);
+  const [mappingPersistBusy, setMappingPersistBusy] = useState(false);
+  const [mappingPersistError, setMappingPersistError] = useState<string>();
+  const mappingEpoch = useRef(0);
   const [reviewResult, setReviewResult] = useState<LogicalPhysicalReview>();
   const [reviewSelectionSnapshot, setReviewSelectionSnapshot] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -101,6 +118,13 @@ export default function LogicalWorkspace() {
     setHandoffPreview(undefined);
     setReviewResult(undefined);
     setMappingSelections({});
+    setMappingKinds({});
+    mappingEpoch.current += 1;
+    setMappingDraft(undefined);
+    setMappingFrozen(undefined);
+    setMappingPublished(undefined);
+    setMappingApprovalPending(false);
+    setMappingPersistError(undefined);
     setJourneyProblem(undefined);
     setJourneyProcess(undefined);
     setModels([]);
@@ -371,6 +395,194 @@ export default function LogicalWorkspace() {
     }
   };
 
+  // Persisted MappingSet is a DESIGN DRAFT. Never equate it to physical publishing.
+  useEffect(() => {
+    const epoch = ++mappingEpoch.current;
+    setMappingDraft(undefined);
+    setMappingFrozen(undefined);
+    setMappingPublished(undefined);
+    setMappingApprovalPending(false);
+    setMappingPersistError(undefined);
+    if (handoffPreview?.physicalLayer !== 'DWD' || physicalModelId == null) return;
+    let live = true;
+    // Restore server-persisted freeze evidence as well as the MappingSet draft.
+    // Never infer a frozen version from local browser state or a different revision.
+    void Promise.all([
+      getDwdMappingDraft(physicalModelId),
+      listDwdMappingRevisions(physicalModelId),
+      getDwdPublicationPolicy(physicalModelId),
+    ]).then(([draft, revisions, policy]) => {
+      if (!live || epoch !== mappingEpoch.current) return;
+      if (draft && draft.physicalModelId === physicalModelId
+          && draft.logicalModelId === handoffPreview.logicalModelId
+          && draft.logicalVersionNo === handoffPreview.logicalVersionNo) {
+        setMappingDraft(draft);
+        // A pending approval outlives browser reloads: derive the state from
+        // the current project's approval owner, not only local React state.
+        setMappingApprovalPending(policy.approvalPending);
+        const latest = revisions[0];
+        if (draft.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
+            && draft.physicalStructureSha256 === handoffPreview.physicalStructureSha256
+            && latest?.mappingSetId === draft.mappingSetId
+            && latest?.draftRevision === draft.draftRevision
+            && latest?.mappingRevisionId > 0
+            && /^[a-f0-9]{64}$/.test(latest.contentSha256)) {
+          setMappingFrozen(latest);
+        }
+      } else if (draft) {
+        setMappingPersistError('目标 DWD 已保存另一份逻辑设计映射；请在对应物理模型中核对，不允许覆盖。');
+      }
+    }).catch(() => {
+      if (live && epoch === mappingEpoch.current) {
+        setMappingPersistError('无法完整读取已保存映射与冻结历史；禁止盲目覆盖或发布。');
+      }
+    });
+    return () => { live = false; };
+  }, [currentProject?.id, physicalModelId, handoffPreview?.logicalModelId,
+      handoffPreview?.logicalVersionNo, handoffPreview?.physicalStructureSha256]);
+
+  const saveMappingEvidence = async () => {
+    if (!canSaveMapping || !handoffPreview || handoffPreview.physicalLayer !== 'DWD'
+        || physicalModelId == null || selected == null
+        || reviewSelectionSnapshot !== JSON.stringify(mappingSelections)
+        || !reviewResult?.readyForManualDesign || mappingPersistError
+        || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])) return;
+    const epoch = mappingEpoch.current;
+    const reloadEpoch = loadEpoch.current;
+    setMappingPersistBusy(true);
+    try {
+      const data = await saveDwdMappingDraft(physicalModelId, {
+        logicalModelId: selected,
+        logicalVersionNo: handoffPreview.logicalVersionNo,
+        logicalSnapshotSha256: handoffPreview.logicalSnapshotSha256,
+        physicalStructureSha256: handoffPreview.physicalStructureSha256,
+        expectedDraftRevision: mappingDraft?.draftRevision ?? 0,
+        rules: Object.entries(mappingSelections).map(([key, logicalAttributeId]) => ({
+          physicalColumnId: Number(key), logicalAttributeId,
+          kind: mappingKinds[Number(key)],
+        })),
+      });
+      if (epoch !== mappingEpoch.current || reloadEpoch !== loadEpoch.current) return;
+      if (data.logicalModelId !== selected || data.physicalModelId !== physicalModelId
+          || data.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
+          || data.physicalStructureSha256 !== handoffPreview.physicalStructureSha256) {
+        throw new Error('服务端返回的映射身份与当前工作区不一致');
+      }
+      setMappingDraft(data);
+      setMappingFrozen(undefined);
+      setMappingPublished(undefined);
+      // Never clear an in-flight approval from a local save. Re-read the
+      // server-owned policy after a successful save so approval completion or
+      // rejection is reflected immediately without trusting stale browser state.
+      try {
+        const policy = await getDwdPublicationPolicy(physicalModelId);
+        if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+          setMappingApprovalPending(policy.approvalPending);
+        }
+      } catch {
+        // Keep the existing approval state when the supplementary policy read
+        // is unavailable; reload will reconcile it from the server.
+      }
+      message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
+    } catch (error) {
+      if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+        message.error(errorText(error));
+      }
+    } finally {
+      if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
+    }
+  };
+
+  const freezeMappingEvidence = async () => {
+    if (!canSaveMapping || !mappingDraft || !handoffPreview || physicalModelId == null
+        || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256
+        || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256) return;
+    const epoch = mappingEpoch.current;
+    const reloadEpoch = loadEpoch.current;
+    setMappingPersistBusy(true);
+    try {
+      const frozen = await freezeDwdMappingDraft(physicalModelId, mappingDraft.draftRevision);
+      if (epoch !== mappingEpoch.current || reloadEpoch !== loadEpoch.current) return;
+      if (frozen.mappingSetId !== mappingDraft.mappingSetId
+          || frozen.draftRevision !== mappingDraft.draftRevision) {
+        throw new Error('冻结修订身份或草稿序号不一致，拒绝显示成功');
+      }
+      setMappingFrozen(frozen);
+      message.success('映射冻结成功。需要另行确认才会发布 DWD 设计版本。');
+    } catch (error) {
+      if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+        message.error(errorText(error));
+      }
+    } finally {
+      if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
+    }
+  };
+
+  /** Explicit, human-confirmed write; then re-read the canonical immutable version. */
+  const publishMappingDesign = () => {
+    if (!canSaveMapping || !mappingDraft || !mappingFrozen || !handoffPreview
+        || !mappingMatchesEditor || physicalModelId == null
+        || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
+        || mappingFrozen.draftRevision !== mappingDraft.draftRevision
+        || handoffPreview.physicalStatus !== 'DRAFT'
+        || mappingPersistBusy || mappingPublished || mappingApprovalPending) return;
+    const physicalId = physicalModelId;
+    const revisionId = mappingFrozen.mappingRevisionId;
+    const epoch = mappingEpoch.current;
+    const reloadEpoch = loadEpoch.current;
+    Modal.confirm({
+      title: '确认发布 DWD 设计版本？',
+      content: `将 DWD 模型 #${physicalId} 与 MappingRevision #${revisionId} 显式绑定发布。仅保存不可变设计版本；不会创建物理表、DataDev 任务或执行 SQL。此入口仍属 R12 受控交付，标准发布门禁待专项签收。`,
+      okText: '确认发布设计',
+      cancelText: '返回审阅',
+      onOk: async () => {
+        setMappingPersistBusy(true);
+        try {
+          const policy = await getDwdPublicationPolicy(physicalId);
+          if (policy.approvalPending) {
+            if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+              setMappingApprovalPending(true);
+              message.info('该物理模型已有在途发布审批，请从审批中心继续');
+            }
+            return;
+          }
+          if (policy.approvalRequired) {
+            const submitted = await submitDwdMappingPublishApproval(physicalId, revisionId);
+            if (submitted.status !== 'PENDING' || submitted.bizId !== String(physicalId)
+                || submitted.flowCode !== 'MODEL_PUBLISH') {
+              throw new Error('审批回执身份或状态异常，不能标记为已提交');
+            }
+            if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+              setMappingApprovalPending(true);
+              message.success('DWD 设计发布审批已提交；审批通过前不会发布物理版本');
+            }
+            return;
+          }
+          const receipt = await publishDwdWithMapping(physicalId, revisionId);
+          const history = await getPublishedDwdMapping(physicalId, receipt.versionNo);
+          if (receipt.state !== 'DESIGN_PUBLISHED_NOT_EXECUTED'
+              || receipt.mappingRevisionId !== revisionId
+              || history.modelVersionId !== receipt.modelVersionId
+              || history.mapping?.mappingRevisionId !== revisionId
+              || history.mapping.contentSha256 !== mappingFrozen.contentSha256
+              || history.state !== 'DESIGN_PUBLISHED_NOT_EXECUTED') {
+            throw new Error('发布回执与不可变历史映射不一致，禁止显示成功');
+          }
+          if (epoch !== mappingEpoch.current || reloadEpoch !== loadEpoch.current) return;
+          setMappingPublished(receipt);
+          message.success(`DWD 设计版本 V${receipt.versionNo} 已发布并回读确认；未执行数据加工`);
+        } catch (error) {
+          if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+            message.error(errorText(error));
+          }
+          throw error;
+        } finally {
+          if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
+        }
+      },
+    });
+  };
+
   const logicalReviewOptions = useMemo(() => {
     const values = new Map<number, { id: number; stdFieldId?: number; label: string }>();
     handoffPreview?.columns.forEach((row) => {
@@ -499,6 +711,10 @@ export default function LogicalWorkspace() {
     } catch (err) { message.error(errorText(err)); }
   };
 
+  const mappingMatchesEditor = matchesSavedDwdMapping(
+    mappingDraft, handoffPreview, mappingSelections, mappingKinds,
+  );
+
   const reviewComparison = semanticReview && reviewFeedback
     && reviewFeedback.projectId === currentProject?.id
     && reviewFeedback.baseline.logicalModelId === selected
@@ -617,7 +833,7 @@ export default function LogicalWorkspace() {
                     filterOption={false}
                     loading={physicalTargetsLoading}
                     placeholder="按物理模型名称或编码搜索"
-                    notFoundContent={physicalTargetsLoading ? '正在查询项目物理模型' : '无匹配模型，请输入更多关键词'}
+                    notFoundContent={physicalTargetsLoading ? '正在查询项目物理模型' : '无匹配模型，可通过旁边入口新建 DWD 草稿'}
                     value={physicalModelId ?? undefined}
                     onSearch={setPhysicalSearch}
                     onClear={() => {
@@ -636,6 +852,9 @@ export default function LogicalWorkspace() {
                         label: `${target.name || target.code}（${target.code || target.id}） · ${target.layerCode || '未分层'} · ${target.status || '未知状态'}`,
                       }))}
                   />
+                  <Button onClick={() => history.push(processToPhysical(detail.model.processId))}>
+                    查找或新建 DWD 物理草稿
+                  </Button>
                   <Button disabled={physicalModelId == null}
                     onClick={() => history.push(`/modeling/models/${physicalModelId}`)}>
                     打开物理模型
@@ -781,9 +1000,22 @@ export default function LogicalWorkspace() {
             { title: '逻辑属性 ID', dataIndex: 'logicalAttributeId', render: (v?: number) => v ?? '—' },
             { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{v}</Tag> },
             { title: '原因', dataIndex: 'reason' },
+            { title: '规则类型', key: 'ruleKind',
+              render: (_, row) => row.physicalColumnId == null ? '—' : (
+                <Select<'DIRECT' | 'RENAME'> disabled={mappingApprovalPending} placeholder="请选择规则"
+                  className="min-w-[120px]" style={{ width: 130 }}
+                  value={mappingKinds[row.physicalColumnId]}
+                  options={[{ label: 'DIRECT 原样', value: 'DIRECT' },
+                    { label: 'RENAME 改名', value: 'RENAME' }]}
+                  onChange={value => {
+                    setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
+                    setMappingFrozen(undefined);
+                    setMappingPublished(undefined);
+                  }} />
+              ) },
             { title: '人工选择（仅本次浏览器会话）', key: 'selection',
               render: (_, row) => row.physicalColumnId == null ? '—' : (
-                <Select<number> showSearch optionFilterProp="label" allowClear
+                <Select<number> disabled={mappingApprovalPending} showSearch optionFilterProp="label" allowClear
                   placeholder="选择逻辑属性" className="min-w-[240px]" style={{ width: 260 }}
                   value={mappingSelections[row.physicalColumnId]}
                   options={logicalReviewOptions
@@ -797,6 +1029,8 @@ export default function LogicalWorkspace() {
                       return next;
                     });
                     setReviewResult(undefined);
+                    setMappingFrozen(undefined);
+                    setMappingPublished(undefined);
                   }}
                 />
               ) },
@@ -805,12 +1039,70 @@ export default function LogicalWorkspace() {
           <Button type="primary" loading={reviewLoading}
             disabled={Object.keys(mappingSelections).length === 0}
             onClick={() => void validateExplicitReview()}>
-            校验本次人工选择（只读，不保存）
+            校验本次人工选择
           </Button>
           <Typography.Text type="secondary">
-            已选 {Object.keys(mappingSelections).length} 项。本阶段仅可审阅、复查、修正，不创建正式映射或发布版本。
+            已选 {Object.keys(mappingSelections).length} 项。先核验身份，再显式选择规则类型并保存 MappingSet；冻结不代表物理版本发布。
           </Typography.Text>
         </Space>
+        {handoffPreview.physicalLayer === 'DWD' && <>
+          {mappingPersistError && <Alert className="mt-3" type="warning" showIcon
+            message="映射持久化暂不可用" description={mappingPersistError} />}
+          <Space className="mt-3" wrap>
+            <Button loading={mappingPersistBusy}
+              disabled={!canSaveMapping || mappingApprovalPending || !!mappingPersistError || !reviewResult?.readyForManualDesign
+                || reviewSelectionSnapshot !== JSON.stringify(mappingSelections)
+                || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])}
+              onClick={() => void saveMappingEvidence()}>保存正式 MappingSet 草稿</Button>
+            <Button loading={mappingPersistBusy}
+              disabled={!canSaveMapping || mappingApprovalPending || !mappingDraft || !mappingMatchesEditor
+                || !reviewResult?.readyForManualDesign
+                || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
+                || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256}
+              onClick={() => void freezeMappingEvidence()}>冻结 MappingRevision</Button>
+          </Space>
+          {mappingDraft && <>
+            <Alert className="mt-3" showIcon type="info"
+              message={`已保存 MappingSet #${mappingDraft.mappingSetId} · 草稿修订 R${mappingDraft.draftRevision}`}
+              description="真实持久草稿；不是已批准逻辑版本、物理发布版本或 DataDev 任务。" />
+            <Button className="mt-2" onClick={() => {
+              const restored = restoreSavedDwdMapping(mappingDraft, handoffPreview);
+              if (!restored) {
+                message.error('已保存映射与当前列/标准/冻结版本不一致，请重新核验');
+                return;
+              }
+              setMappingSelections(restored.selections);
+              setMappingKinds(restored.kinds);
+              // Existing frozen revision is immutable and belongs to this exact
+              // persisted draft. Revalidate again in the backend at publication.
+              setMappingFrozen(previous => previous?.mappingSetId === mappingDraft.mappingSetId
+                && previous.draftRevision === mappingDraft.draftRevision ? previous : undefined);
+              setMappingPublished(undefined);
+              // Preserve the server-owned pending approval status when loading
+              // an old draft; only a fresh owner read may clear it.
+              setReviewResult(undefined);
+              message.info('已载入持久映射；请重新校验。匹配的历史冻结修订可继续用于发布确认。');
+            }}>载入已保存映射并重新校验</Button>
+          </>}
+          {mappingFrozen && <>
+            <Alert className="mt-3" showIcon type="success"
+              message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
+              description="冻结仅保存设计证据。正式发布必须显式二次确认；全局 DR-06/PD-010 门禁仍待签收。" />
+            <Button className="mt-2" loading={mappingPersistBusy}
+              disabled={!canSaveMapping || !!mappingPersistError || !mappingMatchesEditor
+                || !mappingDraft || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
+                || mappingFrozen.draftRevision !== mappingDraft.draftRevision
+                || handoffPreview.physicalStatus !== 'DRAFT' || !!mappingPublished
+                || mappingApprovalPending}
+              onClick={publishMappingDesign}>确认发布 DWD 设计版本（不执行任务）</Button>
+            {mappingApprovalPending && <Alert showIcon className="mt-2" type="info"
+              message="DWD 设计发布审批进行中"
+              description="审批尚未通过，不能显示物理版本已发布；请从审批中心继续。" />}
+          </>}
+          {mappingPublished && <Alert className="mt-3" showIcon type="success"
+            message={`DWD 物理设计 V${mappingPublished.versionNo} 已发布 · Version #${mappingPublished.modelVersionId}`}
+            description={`已从服务端历史版本核验 MappingRevision #${mappingPublished.mappingRevisionId}；未创建 DataDev 任务或执行数据加工。`} />}
+        </>}
         {reviewResult
           && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
           && reviewResult.logicalSnapshotSha256 === handoffPreview.logicalSnapshotSha256
