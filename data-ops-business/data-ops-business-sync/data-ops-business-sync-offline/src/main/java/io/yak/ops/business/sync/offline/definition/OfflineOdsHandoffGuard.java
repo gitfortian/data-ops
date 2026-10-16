@@ -56,6 +56,16 @@ public class OfflineOdsHandoffGuard {
     }
     JsonNode source = root.path("source");
     JsonNode sink = root.path("sink");
+    JsonNode sinkConfig = sink.path("config");
+    // ODS deployment is an operator-controlled DDL step. A sync task must
+    // never silently create its target or perform unreviewed destructive writes.
+    if (sinkConfig.path("autoCreateTable").asBoolean(false)) {
+      throw new IllegalArgumentException("ODS 同步禁止自动建表；必须先人工执行 DDL 并核验目标 Catalog");
+    }
+    String writeMode = sinkConfig.path("writeMode").asText("APPEND");
+    if (!"APPEND".equalsIgnoreCase(writeMode)) {
+      throw new IllegalArgumentException("ODS 同步暂仅允许 APPEND；覆盖/更新须先有独立写入冲突合同");
+    }
     Long sourceId = endpointId(source);
     Long sinkId = endpointId(sink);
     String sourceTable = endpointTable(source);
