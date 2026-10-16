@@ -75,6 +75,28 @@ class DwdMappingPublicationServiceTest {
   }
 
   @Test
+  void pendingApprovalBlocksDirectPublicationEvenWhenFlowWasDisabledLater() {
+    when(approvals.find("MODEL_PUBLISH", "MODEL", "50")).thenReturn(
+        new io.yak.ops.business.approval.api.ApprovalInstanceView(
+            700L, "MODEL_PUBLISH", "设计审批", "MODEL", "50",
+            "订单明细 DWD", "{}", "tom", "PENDING", 1,
+            LocalDateTime.now(), null));
+    assertThrows(IllegalStateException.class, () -> service.publish(50L, 901L, "tom"));
+    verify(versions, never()).publishWithMapping(any(), any(), any(), any());
+    var policy = service.policy(50L);
+    assertTrue(policy.approvalPending());
+    assertEquals(700L, policy.pendingApprovalId());
+  }
+
+  @Test
+  void submittingMappedApprovalRequiresAnEnabledFlow() {
+    assertThrows(IllegalStateException.class,
+        () -> service.submitApproval(50L, 901L, "tom"));
+    verify(approvals, never()).submit(any());
+    verify(versions, never()).publishWithMapping(any(), any(), any(), any());
+  }
+
+  @Test
   void staleFrozenSelectionCannotPublishPhysicalModel() {
     when(mappings.requireFrozenForPublication(50L, 901L))
         .thenThrow(new IllegalStateException("stale mapping"));

@@ -1,6 +1,6 @@
 # R12-1｜DWD 人工映射、设计发布与历史回读验收合同
 
-Status: IMPLEMENTED_IN_DRAFT_PR / CI_PENDING / REAL_DB_DEFERRED
+Status: DRAFT_PR_DESIGN_IMPLEMENTED / MYSQL_STORAGE_SMOKE_PASS / POSTGRESQL_STORAGE_SMOKE_PASS / SAME_HEAD_COMPLETE_CI_PENDING / BUSINESS_E2E_DEFERRED
 Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](https://github.com/gitfortian/data-ops/pull/578) · [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556) · PD-010 (PROPOSED)
 
 > 本文记录 **Draft PR 中的实际实现能力与验收门槛**；不代表合并、正式发布、产品门禁签收或真实运行成功。上游 ODS V5 的发布前置依赖见 #575。
@@ -19,6 +19,9 @@ Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](
 4. 单独点击“确认发布 DWD 设计版本（不执行任务）”；确认对话框解释没有 SQL/DDL/DataDev 动作。
 5. 服务端校验当前项目、DWD 状态、草稿修订、冻结修订、全部映射、逻辑/物理指纹、标准字段身份；同一事务内发布物理 ModelVersion 与精确映射绑定。
 6. 前端重新读取精确物理版本下的历史映射，核实版本 ID、修订 ID、内容哈希后才显示“设计已发布”。
+7. 重新打开逻辑设计工作台可从服务端恢复 MappingSet 和同草稿修订的冻结版本，仍需人工重新校验；从物理模型详情可选择 Vn 独立查看不可变映射历史。
+8. 在现有物理模型工作台可选择“DataDev 交接预检”：DWD 时显示所选物理版本对应的 MappingRevision、冻结逻辑版本及摘要；旧无绑定版本不能冒充可追溯 DWD。这里只允许有版本证据的**只读跳转**，不负责 DataDev 写入。
+9. 没有目标物理模型时，可从逻辑版本页面进入同业务过程的现有物理模型工作台，新建 DWD 草稿后再返回审阅；不自动生成或发布物理模型。
 
 ### 版本身份（当前实现）
 
@@ -48,7 +51,7 @@ Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](
 - **DR-06 #556 与 PD-010 仍未 ACCEPTED**。本轮使用显式 opt-in 设计发布，未更改旧的普通直接发布、原审批发布与历史兼容行为；**不得宣称非 ODS 统一强制发布门禁已经生效**。
 - 尚未完成业务粒度、主键、事件时间、复杂转换、Join 基数的正式冻结及可执行规则合同。DIRECT/RENAME 仅是首批安全范围，不能将未表达的规则默认为通过。
 - 审批入口在 Modeling 后端已可接受带 MappingRevision 的 payload；审批中心是否在目标环境配置 MODEL_PUBLISH 流程与实际终态回调仍需验证。
-- 依赖 ODS #575 的 V5 顺序迁移后方可验证当前 R12 V6，仍需 MySQL/PG 真实迁移和事务性测试。
+- 依赖 ODS #575 的 V5 顺序迁移后才可正式合并 R12 V6。MySQL 与 PostgreSQL 的**隔离 CI 数据库**已分别通过 V6 迁移、映射集合/冻结版本唯一性及基础事务回滚；这**不是**真实发布事务中故障注入或目标用户环境的完整验收。
 - R12-2 DataDev TaskRevision 持久交接、SQL 与真实执行不属于此阶段；DR-07 #557 仍未 ACCEPTED。
 
 ## 4. 必须通过的产品级验收
@@ -66,6 +69,10 @@ Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](
 | DWD-09 | MySQL/PG 注入版本插入、指针更新失败 | 同事务全部回滚，无半发布/悬空绑定 |
 | DWD-10 | UI 刷新/越权/冲突/服务器超时 | 不以旧浏览器状态显示假成功；重开从服务端获取真实状态 |
 | DWD-11 | MappingRevision 通过但未创建 DataDev 任务 | 始终显示“设计发布/未执行”，不显示“已入仓” |
+| DWD-12 | 关闭浏览器后重开已有 MappingSet 和冻结修订 | 真实接口恢复当前草稿与匹配的冻结 ID，用户可载入规则，仍需校验 |
+| DWD-13 | 物理 DWD Vn 打开 DataDev 预检 | 展示准确的 LogicalVersion / MappingRevision 身份和摘要；旧版无绑定阻断该只读交接 |
+| DWD-14 | 审批中途停用流程或存在未终态申请 | 原有在途审批仍阻断显式直接发布，不发生审批绕过 |
+| DWD-15 | 逻辑页没有可复用 DWD 目标 | 引导用户进入同业务过程物理模型工作台新建草稿，而不是卡在选择器 |
 
 完成条件：**同一 HEAD** 的前端、后端、架构、产品守卫绿灯；MySQL/PG 实库迁移及事务故障验证记录单列为 PASS/DEFERRED，不能混为一谈；产品 Owner 明确决定是否接受正式非 ODS 强门禁后才改旧入口。
 
@@ -75,3 +82,25 @@ Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](
 2. 真实 DB 可用时完成 V5→V6 迁移、发布事务、审批回调与回滚验证，并做黄金故事手工业务签收。
 3. 正式决策签收后，统一旧“直接发布”和“审批发布”的必需映射/标准规则（不能只堵一条路径）。
 4. R12-2 接 DataDev **实际创建/关联 TaskRevision**，仍坚持任务 Owner、人工确认和真实执行回执，不由 ModelVersion 推断任务成功。
+
+## 6. 本轮基于真实代码与 CI 的产品收口审查（2026-10-16）
+
+| 功能阶段 | 用户可见结果 | 真实代码范围 | 当前结论 |
+|---|---|---|---|
+| 确认业务逻辑 | 浏览已冻结逻辑版本、标准字段和业务过程 | Logical / Semantic 现有服务 | 可用，真实用户签收未完成 |
+| 准备 DWD 物理目标 | 选择现有草稿，或前往同业务过程创建新草稿 | Modeling 现有物理工作台 | 已接续，未自动建表 |
+| 保存字段映射 | 精确 DIRECT / RENAME，MappingSet 草稿 CAS | DwdMappingDraftService | 已实现，未扩大复杂 JOIN/DERIVED |
+| 冻结设计 | MappingRevision 不可变，重复操作内容幂等 | DwdMappingDraftService | 已实现 |
+| 显式设计发布 | 无审批则直接发布；有审批则送审，后端重检后绑定不可变物理版本 | DwdMappingPublicationService / ModelVersionService | 已实现的 opt-in 能力，非全局强制门禁 |
+| 重开历史与继续交接 | 按 Vn 查看冻结逻辑/映射；DataDev 预检核对 DWD 绑定 | 逻辑页、物理详情及 DataDev 预检面板 | 已实现**只读证据接续** |
+| 真实加工与数据验收 | TaskRevision、SQL、目标库执行、运行/质量回执 | DataDev/Runtime Owner | **未实现跨域持久交接；不可判作 DWD 数据闭环完成** |
+
+**可重复的数据库证据**：
+- GitHub Architecture Checks 在提交 `1f20cfec` 的 MySQL 8 隔离库执行 `DatabaseMigrationSmokeTest`，4/4 PASS，含 MappingSet/Revision 唯一约束、项目隔离、事务回滚。
+- GitHub [PostgreSQL 专项 CI #38890362071](https://github.com/gitfortian/data-ops/actions/runs/38890362071) 在 `883ea50b` 完整执行 `PostgresqlStorageSmokeTest`，1/1 PASS、0 skipped，含相同 DWD 表约束/回滚。
+- 后续 UI 与单元测试提交需按**最新 HEAD**再查 Product Guard、后端、前端、PG 专项和架构门禁；不能用以上旧 SHA 的测试覆盖最新变更。
+
+**不可提前宣布完成的三道门槛**：
+1. 最新 HEAD 的完整前端/后端与架构/产品守卫全部 PASS，保留双数据库真实烟测证据；映射与模型发布在业务事务注入失败时无悬空版本，需独立验收。
+2. Owner 正式评审 DR-06 #556 和 PD-010，决定是否对所有非 ODS 正式发布路径强制逻辑/标准门禁；本 PR 不偷偷改变历史旧路径。
+3. R12-2 需要 DR-07 #557 授权 DataDev 持久 TaskRevision 交接、环境/目标/SQL 人工确认与运行回执；在这之前绝不可宣称完整“DWD 数据入仓闭环”。

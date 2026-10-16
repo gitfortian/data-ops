@@ -818,7 +818,7 @@ export default function LogicalWorkspace() {
                     filterOption={false}
                     loading={physicalTargetsLoading}
                     placeholder="按物理模型名称或编码搜索"
-                    notFoundContent={physicalTargetsLoading ? '正在查询项目物理模型' : '无匹配模型，请输入更多关键词'}
+                    notFoundContent={physicalTargetsLoading ? '正在查询项目物理模型' : '无匹配模型，可通过旁边入口新建 DWD 草稿'}
                     value={physicalModelId ?? undefined}
                     onSearch={setPhysicalSearch}
                     onClear={() => {
@@ -837,6 +837,9 @@ export default function LogicalWorkspace() {
                         label: `${target.name || target.code}（${target.code || target.id}） · ${target.layerCode || '未分层'} · ${target.status || '未知状态'}`,
                       }))}
                   />
+                  <Button onClick={() => history.push(processToPhysical(detail.model.processId))}>
+                    查找或新建 DWD 物理草稿
+                  </Button>
                   <Button disabled={physicalModelId == null}
                     onClick={() => history.push(`/modeling/models/${physicalModelId}`)}>
                     打开物理模型
