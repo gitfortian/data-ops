@@ -9,7 +9,6 @@ import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
 import io.yak.ops.core.modeling.OdsSyncHandoffVerifier;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.security.ActionAuthorization;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ModelingOdsSyncHandoffVerifier implements OdsSyncHandoffVerifier {
-  private static final Duration MAX_AGE = Duration.ofMinutes(15);
   private final CurrentProject currentProject;
   private final ActionAuthorization authorization;
   private final ModelRepository models;
@@ -62,10 +60,12 @@ public class ModelingOdsSyncHandoffVerifier implements OdsSyncHandoffVerifier {
       throw new IllegalArgumentException("离线任务目标和 ODS 目标观察证据不匹配");
     }
     LocalDateTime now = LocalDateTime.now();
-    if (observation.getObservedAt() == null
-        || observation.getObservedAt().isAfter(now)
-        || Duration.between(observation.getObservedAt(), now).compareTo(MAX_AGE) > 0) {
-      throw new IllegalArgumentException("ODS 目标观察已过期，必须重新核验目标 Catalog");
+    // An immutable observation is provenance, not a short-lived execution permit.
+    // Scheduled jobs may run long after it was recorded; below we always require
+    // a *fresh* source inspection and destination Catalog hash comparison. Never
+    // accept missing or future-dated evidence, even when current metadata matches.
+    if (observation.getObservedAt() == null || observation.getObservedAt().isAfter(now)) {
+      throw new IllegalArgumentException("ODS 目标观察时间无效，禁止验证同步来源");
     }
 
     var currentSource = sourceEvidence.inspect(modelId);
