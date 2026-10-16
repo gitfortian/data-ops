@@ -55,6 +55,12 @@ public class DwdMappingDraftController {
     return Result.success(service.revisions(id));
   }
 
+  @GetMapping("/publication-policy")
+  public Result<DwdMappingPublicationService.PublicationPolicy> publicationPolicy(
+      @PathVariable Long id) {
+    return Result.success(publisher.policy(id));
+  }
+
   /** Explicit opt-in only; the legacy physical publish is unchanged. */
   @PostMapping("/publish-with-mapping")
   @RequiresPermission(ModelingPermissionCode.UPDATE)

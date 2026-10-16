@@ -59,6 +59,22 @@ class DwdMappingPublicationServiceTest {
   }
 
   @Test
+  void directDwdPublicationCannotBypassExistingApprovalFlow() {
+    when(approvals.isFlowEnabled("MODEL_PUBLISH")).thenReturn(true);
+    assertThrows(IllegalStateException.class, () -> service.publish(50L, 901L, "tom"));
+    verify(versions, never()).publishWithMapping(any(), any(), any(), any());
+    verify(mappings, never()).requireFrozenForPublication(any(), any());
+  }
+
+  @Test
+  void policyShowsExistingApprovalForCurrentProjectModel() {
+    when(approvals.isFlowEnabled("MODEL_PUBLISH")).thenReturn(true);
+    var result = service.policy(50L);
+    assertTrue(result.approvalRequired());
+    assertFalse(result.approvalPending());
+  }
+
+  @Test
   void staleFrozenSelectionCannotPublishPhysicalModel() {
     when(mappings.requireFrozenForPublication(50L, 901L))
         .thenThrow(new IllegalStateException("stale mapping"));
@@ -75,6 +91,7 @@ class DwdMappingPublicationServiceTest {
 
   @Test
   void approvalSubmissionPinsStructureAndMappingDigest() {
+    when(approvals.isFlowEnabled("MODEL_PUBLISH")).thenReturn(true);
     when(versions.structureFingerprint(50L)).thenReturn("d".repeat(64));
     service.submitApproval(50L, 901L, "tom");
     ArgumentCaptor<ApprovalSubmitCommand> cap =

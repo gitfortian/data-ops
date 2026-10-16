@@ -8,6 +8,7 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   publishDwdWithMapping, getPublishedDwdMapping,
+  getDwdPublicationPolicy, submitDwdMappingPublishApproval,
   type DwdMappingDraft, type DwdMappingFrozen, type DwdBoundPublication,
 } from '@/services/modeling/dwdMapping';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
@@ -96,6 +97,7 @@ export default function LogicalWorkspace() {
   const [mappingDraft, setMappingDraft] = useState<DwdMappingDraft>();
   const [mappingFrozen, setMappingFrozen] = useState<DwdMappingFrozen>();
   const [mappingPublished, setMappingPublished] = useState<DwdBoundPublication>();
+  const [mappingApprovalPending, setMappingApprovalPending] = useState(false);
   const [mappingPersistBusy, setMappingPersistBusy] = useState(false);
   const [mappingPersistError, setMappingPersistError] = useState<string>();
   const mappingEpoch = useRef(0);
@@ -121,6 +123,7 @@ export default function LogicalWorkspace() {
     setMappingDraft(undefined);
     setMappingFrozen(undefined);
     setMappingPublished(undefined);
+    setMappingApprovalPending(false);
     setMappingPersistError(undefined);
     setJourneyProblem(undefined);
     setJourneyProcess(undefined);
@@ -398,6 +401,7 @@ export default function LogicalWorkspace() {
     setMappingDraft(undefined);
     setMappingFrozen(undefined);
     setMappingPublished(undefined);
+    setMappingApprovalPending(false);
     setMappingPersistError(undefined);
     if (handoffPreview?.physicalLayer !== 'DWD' || physicalModelId == null) return;
     let live = true;
@@ -449,6 +453,7 @@ export default function LogicalWorkspace() {
       setMappingDraft(data);
       setMappingFrozen(undefined);
       setMappingPublished(undefined);
+      setMappingApprovalPending(false);
       message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
@@ -491,7 +496,7 @@ export default function LogicalWorkspace() {
         || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
         || mappingFrozen.draftRevision !== mappingDraft.draftRevision
         || handoffPreview.physicalStatus !== 'DRAFT'
-        || mappingPersistBusy || mappingPublished) return;
+        || mappingPersistBusy || mappingPublished || mappingApprovalPending) return;
     const physicalId = physicalModelId;
     const revisionId = mappingFrozen.mappingRevisionId;
     const epoch = mappingEpoch.current;
@@ -504,6 +509,26 @@ export default function LogicalWorkspace() {
       onOk: async () => {
         setMappingPersistBusy(true);
         try {
+          const policy = await getDwdPublicationPolicy(physicalId);
+          if (policy.approvalPending) {
+            if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+              setMappingApprovalPending(true);
+              message.info('该物理模型已有在途发布审批，请从审批中心继续');
+            }
+            return;
+          }
+          if (policy.approvalRequired) {
+            const submitted = await submitDwdMappingPublishApproval(physicalId, revisionId);
+            if (submitted.status !== 'PENDING' || submitted.bizId !== String(physicalId)
+                || submitted.flowCode !== 'MODEL_PUBLISH') {
+              throw new Error('审批回执身份或状态异常，不能标记为已提交');
+            }
+            if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+              setMappingApprovalPending(true);
+              message.success('DWD 设计发布审批已提交；审批通过前不会发布物理版本');
+            }
+            return;
+          }
           const receipt = await publishDwdWithMapping(physicalId, revisionId);
           const history = await getPublishedDwdMapping(physicalId, receipt.versionNo);
           if (receipt.state !== 'DESIGN_PUBLISHED_NOT_EXECUTED'
@@ -954,6 +979,7 @@ export default function LogicalWorkspace() {
                     setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
                     setMappingFrozen(undefined);
                     setMappingPublished(undefined);
+                    setMappingApprovalPending(false);
                   }} />
               ) },
             { title: '人工选择（仅本次浏览器会话）', key: 'selection',
@@ -974,6 +1000,7 @@ export default function LogicalWorkspace() {
                     setReviewResult(undefined);
                     setMappingFrozen(undefined);
                     setMappingPublished(undefined);
+                    setMappingApprovalPending(false);
                   }}
                 />
               ) },
@@ -1018,6 +1045,7 @@ export default function LogicalWorkspace() {
               setMappingKinds(restored.kinds);
               setMappingFrozen(undefined);
               setMappingPublished(undefined);
+              setMappingApprovalPending(false);
               setReviewResult(undefined);
               message.info('已载入持久映射；请重新校验后再冻结');
             }}>载入已保存映射并重新校验</Button>
@@ -1030,8 +1058,12 @@ export default function LogicalWorkspace() {
               disabled={!canSaveMapping || !!mappingPersistError || !mappingMatchesEditor
                 || !mappingDraft || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
                 || mappingFrozen.draftRevision !== mappingDraft.draftRevision
-                || handoffPreview.physicalStatus !== 'DRAFT' || !!mappingPublished}
+                || handoffPreview.physicalStatus !== 'DRAFT' || !!mappingPublished
+                || mappingApprovalPending}
               onClick={publishMappingDesign}>确认发布 DWD 设计版本（不执行任务）</Button>
+            {mappingApprovalPending && <Alert showIcon className="mt-2" type="info"
+              message="DWD 设计发布审批进行中"
+              description="审批尚未通过，不能显示物理版本已发布；请从审批中心继续。" />}
           </>}
           {mappingPublished && <Alert className="mt-3" showIcon type="success"
             message={`DWD 物理设计 V${mappingPublished.versionNo} 已发布 · Version #${mappingPublished.modelVersionId}`}

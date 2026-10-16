@@ -87,8 +87,8 @@ export const publishDwdWithMapping = (
 
 export const submitDwdMappingPublishApproval = (
   physicalId: number, mappingRevisionId: number,
-): Promise<unknown> =>
-  HttpUtils.postData<unknown>(
+): Promise<DwdApprovalSubmission> =>
+  HttpUtils.postData<DwdApprovalSubmission>(
     `${path(physicalId)}/publish-approval-with-mapping?mappingRevisionId=${mappingRevisionId}`, {},
   );
 
@@ -105,3 +105,17 @@ export const getFrozenDwdMappingDetail = (
   HttpUtils.getData<DwdHistoricalRevision>(
     `${path(physicalId)}/revisions/${mappingRevisionId}`,
   );
+
+export interface DwdPublicationPolicy {
+  approvalRequired: boolean;
+  approvalPending: boolean;
+  pendingApprovalId: number | null;
+}
+export interface DwdApprovalSubmission {
+  id: number;
+  flowCode: string;
+  bizId: string;
+  status: 'PENDING' | string;
+}
+export const getDwdPublicationPolicy = (physicalId: number): Promise<DwdPublicationPolicy> =>
+  HttpUtils.getData<DwdPublicationPolicy>(`${path(physicalId)}/publication-policy`);

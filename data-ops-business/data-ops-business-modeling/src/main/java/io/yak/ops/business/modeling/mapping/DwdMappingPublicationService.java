@@ -34,6 +34,22 @@ public class DwdMappingPublicationService {
                              boolean created, String state) {}
   public record History(Long modelVersionId, int versionNo, String state,
                         DwdMappingDraftService.HistoricalRevision mapping) {}
+  public record PublicationPolicy(boolean approvalRequired, boolean approvalPending,
+                                  Long pendingApprovalId) {}
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
+  public PublicationPolicy policy(Long modelId) {
+    Model root = models.findById(modelId)
+        .orElseThrow(() -> new IllegalArgumentException("模型不存在或当前项目不可访问"));
+    if (!"DWD".equalsIgnoreCase(root.layerCode())) {
+      throw new IllegalArgumentException("发布策略仅适用于 DWD");
+    }
+    boolean approvalRequired = approvals.isFlowEnabled(ApprovalFlowCodes.MODEL_PUBLISH);
+    var inFlight = approvals.find(ApprovalFlowCodes.MODEL_PUBLISH, "MODEL",
+        String.valueOf(modelId));
+    boolean pending = inFlight != null && "PENDING".equals(inFlight.status());
+    return new PublicationPolicy(approvalRequired, pending, pending ? inFlight.id() : null);
+  }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public BoundReceipt publish(Long modelId, Long mappingRevisionId, String operator) {
@@ -58,6 +74,14 @@ public class DwdMappingPublicationService {
                                       String approvedMappingSha,
                                       String fingerprint, String operator) {
     Model root = requireDwdLock(modelId);
+    // New opt-in DWD entry must respect the project's existing approval policy.
+    // Approved callbacks supply a pinned fingerprint and may publish in their own transaction.
+    if (fingerprint == null) {
+      PublicationPolicy gate = policy(modelId);
+      if (gate.approvalRequired() || gate.approvalPending()) {
+        throw new IllegalStateException("当前模型需要先完成发布审批，不允许直接发布 DWD 设计");
+      }
+    }
     if (revisionId == null || revisionId <= 0) {
       throw new IllegalArgumentException("必须选择精确 MappingRevision ID");
     }
@@ -93,6 +117,9 @@ public class DwdMappingPublicationService {
     Model root = requireDwdLock(modelId);
     if (root.status() != ModelStatus.DRAFT) {
       throw new IllegalStateException("只有 DWD 草稿可提交映射发布审批");
+    }
+    if (!approvals.isFlowEnabled(ApprovalFlowCodes.MODEL_PUBLISH)) {
+      throw new IllegalStateException("本项目未启用模型发布审批流程，请使用显式直接发布");
     }
     var exact = mapping.requireFrozenForPublication(modelId, mappingRevisionId);
     Map<String, Object> payload = new LinkedHashMap<>();
