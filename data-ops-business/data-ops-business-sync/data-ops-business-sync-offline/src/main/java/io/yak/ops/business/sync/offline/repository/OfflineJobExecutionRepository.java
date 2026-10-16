@@ -24,6 +24,7 @@ public interface OfflineJobExecutionRepository {
   List<ProjectExecutionRef> findRetryCandidatesForReconciliation(LocalDateTime now, int limit);
   /** 原子保留一次 FAILED Attempt 的 Retry 创建权。 */
   /** Bounded project-scoped candidate scan for immutable ODS execution discovery. */
+  List<OfflineJobExecution> scanBeforeId(long exclusiveId, int limit);
   List<OfflineJobExecution> scanRecent(int page, int pageSize);
   boolean reserveRetry(Long executionId);
   PageData<OfflineJobExecution> page(OfflineExecutionQuery query);
