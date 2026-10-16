@@ -10,6 +10,9 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import io.yak.ops.business.sync.offline.domain.core.BatchExecution;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -48,10 +51,14 @@ public class OfflineOdsExecutionEvidenceQuery {
     }
     List<OfflineJobExecution> candidates = executions.scanRecent(scanPage, scanSize);
     List<Evidence> matches = new ArrayList<>();
+    // Attempts from the same Batch share one immutable snapshot. Bound lookups
+    // to one Batch read per candidate page, including missing batches.
+    Map<Long, java.util.Optional<BatchExecution>> batchCache = new HashMap<>();
     for (OfflineJobExecution candidate : candidates) {
       if (candidate.getId() == null || candidate.getBatchId() == null
           || candidate.getBatchId() <= 0) continue;
-      var batch = batches.findById(candidate.getBatchId()).orElse(null);
+      var batch = batchCache.computeIfAbsent(candidate.getBatchId(), batches::findById)
+          .orElse(null);
       if (batch == null || batch.snapshot() == null
           || !Objects.equals(candidate.getJobDefinitionId(), batch.taskId())) continue;
       JsonNode root;
