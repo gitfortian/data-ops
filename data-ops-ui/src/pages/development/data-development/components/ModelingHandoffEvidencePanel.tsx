@@ -8,6 +8,8 @@ import {
   type PhysicalDataDevHandoffReadiness,
 } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
+import { getPublishedDwdMapping, type DwdPublishedMapping } from '@/services/modeling/dwdMapping';
+import { assessDwdMappingEvidence } from '@/utils/dwdHandoffEvidence';
 import { getSemanticProcess } from '@/services/semantic/api';
 import { getDevelopmentTaskDraft } from '@/services/data-development';
 import type { DevelopmentResourceNode, DevelopmentTaskDraft } from '@/services/data-development';
@@ -27,6 +29,7 @@ interface Props {
 interface VerifiedEvidence {
   owner: ModelingModelRecord;
   report: PhysicalDataDevHandoffReadiness;
+  mappedDwd?: DwdPublishedMapping;
 }
 
 /** C5: DataDev consumes Modeling evidence. No creation, binding, SQL or run. */
@@ -68,13 +71,25 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
       getSemanticProcess(processId),
       listModelingVersions(modelId),
       inspectPhysicalDataDevHandoff(modelId, modelVersionNo),
-    ]).then(([owner, process, versions, report]) => {
+    ]).then(async ([owner, process, versions, report]) => {
       if (!active) return;
       const checked = verifyPhysicalDataDevEvidence({
         hint: parsed.value, owner, processId: Number(process?.id),
         versions, report,
       });
       if (!checked.valid) { setProblem(checked.reason); return; }
+      // DataDev revalidates the immutable DWD mapping itself, never trusting URL or sender state.
+      if (owner.layerCode?.toUpperCase() === 'DWD') {
+        const mappedDwd = await getPublishedDwdMapping(modelId, modelVersionNo);
+        if (!active) return;
+        const evidence = assessDwdMappingEvidence(modelId, modelVersionNo, report, versions, mappedDwd);
+        if (!evidence.ready) {
+          setProblem(`DWD 冻结映射证据无法核验：${evidence.reason}`);
+          return;
+        }
+        setVerified({ owner, report, mappedDwd });
+        return;
+      }
       setVerified({ owner, report });
     }).catch((error: unknown) => {
       if (active) setProblem(error instanceof Error ? error.message
@@ -146,6 +161,36 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
               {verified.report.inspectionSha256.slice(0, 20)}…
             </Typography.Text>
           </Typography.Paragraph>
+          {verified.mappedDwd?.mapping && <>
+            <Alert showIcon className="mb-3" type="info"
+              message="DWD 冻结逻辑与映射修订已回读确认"
+              description="这是 Modeling 发布的不可变设计证据；DataDev 尚未持久关联 TaskRevision，也没有执行 SQL。" />
+            <Space wrap className="mb-3">
+              <Tag>MappingRevision #{verified.mappedDwd.mapping.mappingRevisionId}</Tag>
+              <Tag>MappingSet #{verified.mappedDwd.mapping.mappingSetId}</Tag>
+              <Tag>逻辑模型 #{verified.mappedDwd.mapping.logicalModelId} · V{verified.mappedDwd.mapping.logicalVersionNo}</Tag>
+              <Tag>字段映射 {verified.mappedDwd.mapping.rules.length}</Tag>
+            </Space>
+            <Typography.Paragraph type="secondary">
+              冻结映射摘要：<Typography.Text
+                copyable={{ text: verified.mappedDwd.mapping.contentSha256 }}>
+                {verified.mappedDwd.mapping.contentSha256.slice(0, 20)}…
+              </Typography.Text>
+            </Typography.Paragraph>
+            <Table size="small" rowKey="targetColumn" className="mb-3"
+              pagination={{ pageSize: 10 }} scroll={{ x: 630 }}
+              dataSource={verified.mappedDwd.mapping.rules} columns={[
+                { title: 'DWD 物理目标字段', dataIndex: 'targetColumn' },
+                { title: '冻结逻辑属性 ID', dataIndex: 'logicalAttributeId', width: 150 },
+                { title: '绑定标准字段 ID', dataIndex: 'stdFieldId', width: 150 },
+                { title: '人工映射方式', dataIndex: 'kind', width: 120,
+                  render: (value: string) => <Tag>{value}</Tag> },
+              ]} />
+            <Typography.Paragraph type="secondary">
+              这是发布时冻结的映射规则，只用于审阅；DataDev 不据此自动推导 SQL、
+              JOIN、业务粒度或运行目标，任务发布仍须 DataDev 原域确认。
+            </Typography.Paragraph>
+          </>}
           {!verified.report.selectedLatestVersion && <Alert className="mb-3" showIcon type="warning"
             message="当前选择的是历史物理版本，不是最新发布指针；不会自动替换为最新版本" />}
           {verified.report.blockers.map((blocker, i) =>

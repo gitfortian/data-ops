@@ -60,7 +60,29 @@ if (productFiles.length === 0) {
   process.exit(0);
 }
 
-const body = pr.body ?? "";
+let body = pr.body ?? "";
+// Validate the canonical current PR description rather than trusting a webhook
+// snapshot. This matters when a PR description is edited independently of code
+// synchronization. If the canonical read fails, retain the event payload and
+// fail closed through the normal governance checks below.
+if (process.env.GITHUB_TOKEN
+    && process.env.GITHUB_REPOSITORY
+    && pr.number) {
+  try {
+    const raw = execFileSync(
+      "gh",
+      ["api", `repos/${process.env.GITHUB_REPOSITORY}/pulls/${pr.number}`],
+      {
+        encoding: "utf8",
+        env: { ...process.env, GH_TOKEN: process.env.GITHUB_TOKEN },
+      },
+    );
+    const latest = JSON.parse(raw);
+    if (typeof latest.body === "string") body = latest.body;
+  } catch (error) {
+    console.warn("WARN: unable to refresh canonical PR body; using webhook payload");
+  }
+}
 const classification = sectionBody(body, "Change Classification");
 const changeType = readField(classification, "Change Type").toUpperCase();
 const behaviorChanged = parseYesNo(readField(classification, "Product Behavior Changed"));
