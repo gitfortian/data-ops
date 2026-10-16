@@ -5,6 +5,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
+import { matchesSavedDwdMapping } from './dwdMappingReview';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   type DwdMappingDraft, type DwdMappingFrozen,
 } from '@/services/modeling/dwdMapping';
@@ -606,18 +607,9 @@ export default function LogicalWorkspace() {
     } catch (err) { message.error(errorText(err)); }
   };
 
-  /** A saved mapping may be frozen only when the on-screen editor still shows
-   * EXACTLY the persisted rules. Never freeze a previous selection by accident. */
-  const mappingMatchesEditor = Boolean(mappingDraft && handoffPreview
-    && mappingDraft.rules.length === Object.keys(mappingSelections).length
-    && mappingDraft.rules.every(rule => {
-      const current = handoffPreview.columns.find(row =>
-        row.physicalColumn === rule.targetColumn
-        && row.physicalStdFieldId === rule.stdFieldId);
-      return current?.physicalColumnId != null
-        && mappingSelections[current.physicalColumnId] === rule.logicalAttributeId
-        && mappingKinds[current.physicalColumnId] === rule.kind;
-    }));
+  const mappingMatchesEditor = matchesSavedDwdMapping(
+    mappingDraft, handoffPreview, mappingSelections, mappingKinds,
+  );
 
   const reviewComparison = semanticReview && reviewFeedback
     && reviewFeedback.projectId === currentProject?.id
