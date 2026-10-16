@@ -5,7 +5,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
-import { matchesSavedDwdMapping } from './dwdMappingReview';
+import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   type DwdMappingDraft, type DwdMappingFrozen,
 } from '@/services/modeling/dwdMapping';
@@ -952,9 +952,23 @@ export default function LogicalWorkspace() {
                 || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256}
               onClick={() => void freezeMappingEvidence()}>冻结 MappingRevision</Button>
           </Space>
-          {mappingDraft && <Alert className="mt-3" showIcon type="info"
-            message={`已保存 MappingSet #${mappingDraft.mappingSetId} · 草稿修订 R${mappingDraft.draftRevision}`}
-            description="真实持久草稿；不是已批准逻辑版本、物理发布版本或 DataDev 任务。" />}
+          {mappingDraft && <>
+            <Alert className="mt-3" showIcon type="info"
+              message={`已保存 MappingSet #${mappingDraft.mappingSetId} · 草稿修订 R${mappingDraft.draftRevision}`}
+              description="真实持久草稿；不是已批准逻辑版本、物理发布版本或 DataDev 任务。" />
+            <Button className="mt-2" onClick={() => {
+              const restored = restoreSavedDwdMapping(mappingDraft, handoffPreview);
+              if (!restored) {
+                message.error('已保存映射与当前列/标准/冻结版本不一致，请重新核验');
+                return;
+              }
+              setMappingSelections(restored.selections);
+              setMappingKinds(restored.kinds);
+              setMappingFrozen(undefined);
+              setReviewResult(undefined);
+              message.info('已载入持久映射；请重新校验后再冻结');
+            }}>载入已保存映射并重新校验</Button>
+          </>}
           {mappingFrozen && <Alert className="mt-3" showIcon type="success"
             message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
             description="仅冻结设计映射。本轮不自动发布 DWD；发布需 DR-06/PD-010 联合门禁与版本原子绑定。" />}
