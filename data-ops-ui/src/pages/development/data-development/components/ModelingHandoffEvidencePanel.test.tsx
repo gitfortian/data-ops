@@ -5,6 +5,7 @@ import {
   getModelingModel, inspectPhysicalDataDevHandoff, listModelingVersions,
 } from '@/services/modeling/api';
 import { getSemanticProcess } from '@/services/semantic/api';
+import { getPublishedDwdMapping } from '@/services/modeling/dwdMapping';
 import { getDevelopmentTaskDraft } from '@/services/data-development';
 
 let mockProjectId = 1;
@@ -24,6 +25,7 @@ jest.mock('@/services/modeling/api', () => ({
   listModelingVersions: jest.fn(),
 }));
 jest.mock('@/services/semantic/api', () => ({ getSemanticProcess: jest.fn() }));
+jest.mock('@/services/modeling/dwdMapping', () => ({ getPublishedDwdMapping: jest.fn() }));
 jest.mock('@/services/data-development', () => ({ getDevelopmentTaskDraft: jest.fn() }));
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
@@ -52,6 +54,19 @@ const report = {
     explanation: '尚无持久版本引用合同' }],
   nextActions: [],
 };
+const boundMapping = {
+  modelVersionId: 99, versionNo: 3, state: 'DESIGN_PUBLISHED_NOT_EXECUTED',
+  mapping: {
+    mappingRevisionId: 701, mappingSetId: 801, revisionNo: 2,
+    logicalModelId: 77, logicalVersionNo: 4,
+    logicalSnapshotSha256: 'c'.repeat(64),
+    physicalStructureSha256: 'd'.repeat(64),
+    contentSha256: 'e'.repeat(64),
+    rules: [{ targetColumn: 'order_id', logicalAttributeId: 11,
+      stdFieldId: 12, kind: 'DIRECT' }],
+  },
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockProjectId = 1;
@@ -60,6 +75,7 @@ beforeEach(() => {
   (getSemanticProcess as jest.Mock).mockResolvedValue({ id: 7, name: '下单' });
   (listModelingVersions as jest.Mock).mockResolvedValue([version]);
   (inspectPhysicalDataDevHandoff as jest.Mock).mockResolvedValue(report);
+  (getPublishedDwdMapping as jest.Mock).mockResolvedValue(boundMapping);
   (getDevelopmentTaskDraft as jest.Mock).mockResolvedValue({
     nodeId: 'sql-1', draftRevision: 5,
     definition: { taskType: 'SQL', schemaVersion: 1,
@@ -83,8 +99,31 @@ it('shows owner-verified frozen version and unresolved original DataDev blockers
   expect(screen.getByText(/不自动创建新任务/)).toBeInTheDocument();
   expect(getModelingModel).toHaveBeenCalledWith(50);
   expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledWith(50, 3);
+  expect(getPublishedDwdMapping).toHaveBeenCalledWith(50, 3);
+  expect(screen.getByText(/MappingRevision #701/)).toBeInTheDocument();
   expect(getDevelopmentTaskDraft).not.toHaveBeenCalled();
   expect(focus).not.toHaveBeenCalled();
+});
+
+it('rejects an old DWD version without immutable mapping evidence', async () => {
+  (getPublishedDwdMapping as jest.Mock).mockResolvedValue({
+    modelVersionId: 99, versionNo: 3, state: 'LEGACY_UNBOUND', mapping: null,
+  });
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} />);
+  expect(await screen.findByText('交接来源无法核实')).toBeInTheDocument();
+  expect(screen.getByText(/冻结映射证据无法核验/)).toBeInTheDocument();
+  expect(screen.queryByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).not.toBeInTheDocument();
+});
+
+it('rejects forged mapping publication version instead of trusting the URL', async () => {
+  (getPublishedDwdMapping as jest.Mock).mockResolvedValue({
+    ...boundMapping, modelVersionId: 100,
+  });
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} />);
+  expect(await screen.findByText('交接来源无法核实')).toBeInTheDocument();
+  expect(screen.queryByText(/MappingRevision #701/)).not.toBeInTheDocument();
 });
 
 it('rejects changed or foreign ModelVersion identity instead of falling back to latest', async () => {
