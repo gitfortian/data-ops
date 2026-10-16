@@ -471,7 +471,18 @@ export default function LogicalWorkspace() {
       setMappingDraft(data);
       setMappingFrozen(undefined);
       setMappingPublished(undefined);
-      setMappingApprovalPending(false);
+      // Never clear an in-flight approval from a local save. Re-read the
+      // server-owned policy after a successful save so approval completion or
+      // rejection is reflected immediately without trusting stale browser state.
+      try {
+        const policy = await getDwdPublicationPolicy(physicalModelId);
+        if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+          setMappingApprovalPending(policy.approvalPending);
+        }
+      } catch {
+        // Keep the existing approval state when the supplementary policy read
+        // is unavailable; reload will reconcile it from the server.
+      }
       message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
