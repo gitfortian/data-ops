@@ -101,7 +101,19 @@ public class OfflineOdsHandoffGuard {
 
   private static void rejectAmbiguousSingleTableEndpoint(JsonNode endpoint) {
     JsonNode config = endpoint.path("config");
+    String selectedTable = null;
+    // Engine adaptation copies some top-level keys over nested config. Without
+    // exact agreement, the table Modeling verified may differ from the write target.
     for (JsonNode node : new JsonNode[] {endpoint, config}) {
+      for (String key : new String[] {"table", "targetTableName"}) {
+        String candidate = node.path(key).asText("");
+        if (StringUtils.hasText(candidate)) {
+          if (selectedTable != null && !selectedTable.equals(candidate)) {
+            throw new IllegalArgumentException("ODS 单表端点存在互相矛盾的表名配置");
+          }
+          selectedTable = candidate;
+        }
+      }
       if (StringUtils.hasText(node.path("sql").asText("")) ||
           StringUtils.hasText(node.path("tablePattern").asText("")) ||
           node.path("tables").isArray() && !node.path("tables").isEmpty()) {
@@ -117,7 +129,8 @@ public class OfflineOdsHandoffGuard {
   private static void rejectUnreviewedSinkOptions(JsonNode options) {
     if (!options.isObject()) return;
     for (String field : new String[] {"autoCreateTable", "auto_create_table", "createTable",
-        "truncate", "truncateTable", "truncate_table", "overwrite", "replace"}) {
+        "truncate", "truncateTable", "truncate_table", "overwrite", "replace",
+        "table", "targetTableName", "database", "schema"}) {
       if (options.has(field)) {
         throw new IllegalArgumentException("ODS 目标写入选项含未经核验的 DDL/覆盖设置：" + field);
       }
