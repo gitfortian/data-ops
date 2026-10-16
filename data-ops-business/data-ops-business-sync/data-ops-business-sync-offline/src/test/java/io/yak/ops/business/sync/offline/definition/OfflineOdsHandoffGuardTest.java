@@ -186,7 +186,8 @@ class OfflineOdsHandoffGuardTest {
         """;
     assertThrows(IllegalStateException.class,
         () -> OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(frozen));
-    assertThrows(IllegalArgumentException.class,
+    // Explicit null is protected intent; replay protection rejects it as unsafe.
+    assertThrows(IllegalStateException.class,
         () -> OfflineOdsHandoffGuard.rejectUnsafeAppendReplay("{\"odsHandoff\":null}"));
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(
         () -> OfflineOdsHandoffGuard.rejectUnsafeAppendReplay("{\"basic\":{}}"));
