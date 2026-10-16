@@ -177,6 +177,19 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
                 {verified.mappedDwd.mapping.contentSha256.slice(0, 20)}…
               </Typography.Text>
             </Typography.Paragraph>
+            <Table size="small" rowKey="targetColumn" className="mb-3"
+              pagination={{ pageSize: 10 }} scroll={{ x: 630 }}
+              dataSource={verified.mappedDwd.mapping.rules} columns={[
+                { title: 'DWD 物理目标字段', dataIndex: 'targetColumn' },
+                { title: '冻结逻辑属性 ID', dataIndex: 'logicalAttributeId', width: 150 },
+                { title: '绑定标准字段 ID', dataIndex: 'stdFieldId', width: 150 },
+                { title: '人工映射方式', dataIndex: 'kind', width: 120,
+                  render: (value: string) => <Tag>{value}</Tag> },
+              ]} />
+            <Typography.Paragraph type="secondary">
+              这是发布时冻结的映射规则，只用于审阅；DataDev 不据此自动推导 SQL、
+              JOIN、业务粒度或运行目标，任务发布仍须 DataDev 原域确认。
+            </Typography.Paragraph>
           </>}
           {!verified.report.selectedLatestVersion && <Alert className="mb-3" showIcon type="warning"
             message="当前选择的是历史物理版本，不是最新发布指针；不会自动替换为最新版本" />}

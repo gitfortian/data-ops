@@ -30,9 +30,12 @@ jest.mock('@/services/data-development', () => ({ getDevelopmentTaskDraft: jest.
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
   return { ...actual, Table: ({ dataSource }: {
-    dataSource: { code: string; status: string }[];
-  }) => <div>{dataSource.map(row => <div key={row.code}>
-    {row.code} : {row.status}
+    dataSource: { code?: string; status?: string; targetColumn?: string;
+      logicalAttributeId?: number; stdFieldId?: number; kind?: string }[];
+  }) => <div>{dataSource.map((row, i) => <div key={row.code || row.targetColumn || i}>
+    {row.targetColumn
+      ? `${row.targetColumn} → Logical#${row.logicalAttributeId} / Std#${row.stdFieldId} [${row.kind}]`
+      : `${row.code} : ${row.status}`}
   </div>)}</div> };
 });
 
@@ -101,6 +104,7 @@ it('shows owner-verified frozen version and unresolved original DataDev blockers
   expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledWith(50, 3);
   expect(getPublishedDwdMapping).toHaveBeenCalledWith(50, 3);
   expect(screen.getByText(/MappingRevision #701/)).toBeInTheDocument();
+  expect(screen.getByText('order_id → Logical#11 / Std#12 [DIRECT]')).toBeInTheDocument();
   expect(getDevelopmentTaskDraft).not.toHaveBeenCalled();
   expect(focus).not.toHaveBeenCalled();
 });
