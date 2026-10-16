@@ -7,7 +7,7 @@ import { listAllDataSources } from '@/services/data-source/api';
 import { inspectOdsPhysicalTarget, listOdsTargetObservations, recordOdsTargetObservation, type OdsPhysicalTargetInspection, type OdsTargetObservation } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { buildIntegrationCreatePath } from '@/services/integration/sourceHandoff';
-import { discoverOdsExecutions, type OdsExecutionEvidence } from '@/services/integration/odsExecutionEvidence';
+import { discoverOdsExecutionsBefore, type OdsExecutionEvidence } from '@/services/integration/odsExecutionEvidence';
 
 interface Props {
   open: boolean;
@@ -30,7 +30,8 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
   const readEpoch = useRef(0);
   const executionEpoch = useRef(0);
   const [executionObservationId, setExecutionObservationId] = useState<number>();
-  const [executionScanPage, setExecutionScanPage] = useState(1);
+  const [executionCursors, setExecutionCursors] = useState<number[]>([Number.MAX_SAFE_INTEGER]);
+  const [executionNextCursor, setExecutionNextCursor] = useState(Number.MAX_SAFE_INTEGER);
   const [executionHistory, setExecutionHistory] = useState<OdsExecutionEvidence[]>([]);
   const [executionHasMore, setExecutionHasMore] = useState(false);
   const [executionLoading, setExecutionLoading] = useState(false);
@@ -46,7 +47,8 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
     executionEpoch.current += 1;
     setExecutionObservationId(undefined);
     setExecutionHistory([]);
-    setExecutionScanPage(1);
+    setExecutionCursors([Number.MAX_SAFE_INTEGER]);
+    setExecutionNextCursor(Number.MAX_SAFE_INTEGER);
     setExecutionHasMore(false);
     setSources([]);
     setObservations([]);
@@ -131,18 +133,24 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
     }
   };
 
-  const readExecutionHistory = async (observationId: number, nextPage = 1) => {
+  const readExecutionHistory = async (
+    observationId: number, cursors: number[] = [Number.MAX_SAFE_INTEGER],
+  ) => {
     if (!allowed || !hasVersion || !Number.isSafeInteger(observationId) || observationId <= 0) return;
     const ticket = ++executionEpoch.current;
     setExecutionLoading(true);
     try {
-      const page = await discoverOdsExecutions(modelId, versionNo, observationId, nextPage, 50);
+      const beforeId = cursors[cursors.length - 1];
+      const page = await discoverOdsExecutionsBefore(modelId, versionNo, observationId, beforeId, 50);
       if (ticket !== executionEpoch.current) return;
-      if (page.scanPage !== nextPage || page.scanSize !== 50 || !Array.isArray(page.matches)) {
-        throw new Error('执行历史服务返回的分页证据不一致');
+      if (!Array.isArray(page.matches) || !Number.isSafeInteger(page.nextBeforeId)
+          || page.nextBeforeId <= 0 || page.nextBeforeId > beforeId
+          || (page.moreCandidates && page.nextBeforeId === beforeId)) {
+        throw new Error('执行历史服务返回的游标不合法');
       }
       setExecutionObservationId(observationId);
-      setExecutionScanPage(nextPage);
+      setExecutionCursors(cursors);
+      setExecutionNextCursor(page.nextBeforeId);
       setExecutionHasMore(page.moreCandidates);
       setExecutionHistory(page.matches);
     } catch (error) {
@@ -292,11 +300,11 @@ export default function OdsPhysicalDeliveryPanel({ open, model, onClose }: Props
               render: (v?: string | null) => v || '—' },
           ]} />
         <Space className="mt-2">
-          <Typography.Text type="secondary">候选扫描第 {executionScanPage} 页（不是匹配结果总页数）</Typography.Text>
-          <Button size="small" disabled={executionScanPage <= 1 || executionLoading}
-            onClick={() => void readExecutionHistory(executionObservationId, executionScanPage - 1)}>上一页</Button>
+          <Typography.Text type="secondary">候选扫描第 {executionCursors.length} 页（不是匹配结果总页数）</Typography.Text>
+          <Button size="small" disabled={executionCursors.length <= 1 || executionLoading}
+            onClick={() => void readExecutionHistory(executionObservationId, executionCursors.slice(0, -1))}>上一页</Button>
           <Button size="small" disabled={!executionHasMore || executionLoading}
-            onClick={() => void readExecutionHistory(executionObservationId, executionScanPage + 1)}>下一页候选</Button>
+            onClick={() => void readExecutionHistory(executionObservationId, [...executionCursors, executionNextCursor])}>下一页候选</Button>
         </Space>
       </div>}
     </>}
