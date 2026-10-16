@@ -101,10 +101,20 @@ class OfflineOdsHandoffGuardTest {
         "public.trade_order_detail", 20L, "ods.ods_order_detail");
   }
 
+  @Test void explicitNullHandoffCannotDowngradeProtectedFrozenJob() {
+    String nullHandoff = "{\"odsHandoff\":null}";
+    assertTrue(OfflineOdsHandoffGuard.requiresVerification(nullHandoff));
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(nullHandoff));
+    assertThrows(IllegalArgumentException.class,
+        () -> guard.verify(nullHandoff, 10L, "public.trade_order_detail",
+            20L, "ods.ods_order_detail"));
+    verifyNoInteractions(owner);
+  }
+
   @Test void unrelatedStringContentsCannotForgeAnOdsHandoff() {
     assertFalse(OfflineOdsHandoffGuard.requiresVerification(
         "{\"notes\":\"odsHandoff\"}"));
-    assertFalse(OfflineOdsHandoffGuard.requiresVerification(
+    assertTrue(OfflineOdsHandoffGuard.requiresVerification(
         "{\"odsHandoff\":null}"));
     assertThrows(IllegalArgumentException.class, () ->
         OfflineOdsHandoffGuard.requiresVerification("invalid JSON"));
