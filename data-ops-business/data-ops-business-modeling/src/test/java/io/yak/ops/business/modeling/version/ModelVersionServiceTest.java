@@ -194,6 +194,21 @@ class ModelVersionServiceTest {
   }
 
   @Test
+  void malformedVersionMetaFailsClosedInsteadOfBecomingLegacyUnbound() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    ModelVersion malformed = version(9L, 3, "{not-json");
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(malformed));
+    when(structureService.get(1L)).thenReturn(structure("orders_v1"));
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("元数据损坏");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
   void legacyPublishOfSameDwdStructureDoesNotInheritBoundMappingHistory() {
     Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
         null, null, "DWD", null).withPersisted(1L, "alice", null, null);

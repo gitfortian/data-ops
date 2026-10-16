@@ -366,7 +366,7 @@ public class ModelVersionService {
           MAPPER.getTypeFactory().constructMapType(java.util.LinkedHashMap.class,
               String.class, Object.class));
     } catch (JsonProcessingException e) {
-      return java.util.Map.of();
+      throw new IllegalStateException("模型发布历史元数据损坏，拒绝按 LEGACY_UNBOUND 解释", e);
     }
   }
 
