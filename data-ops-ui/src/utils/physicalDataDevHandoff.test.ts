@@ -51,7 +51,7 @@ describe('F-040 C5 explicit Modeling → DataDev evidence only', () => {
     expect(verifyPhysicalDataDevEvidence(eligible)).toEqual({ valid: true });
     expect(verifyPhysicalDataDevEvidence({
       ...eligible, owner: { ...eligible.owner, layerCode: 'DIM' },
-      report: { ...report, layerCode: 'DIM' },
+      report: { ...report, layerCode: 'DIM' } as PhysicalDataDevHandoffReadiness,
     })).toEqual({ valid: true });
     const cases = [
       { ...eligible, processId: 8 },
