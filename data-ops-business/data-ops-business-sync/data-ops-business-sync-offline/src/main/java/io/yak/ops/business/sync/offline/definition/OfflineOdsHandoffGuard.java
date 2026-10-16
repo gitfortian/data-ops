@@ -38,6 +38,17 @@ public class OfflineOdsHandoffGuard {
   }
 
   /**
+   * APPEND is not replay-safe without an external committed-window/idempotency
+   * receipt. Reject fresh Retry/Backfill attempts until that contract exists.
+   */
+  public static void rejectUnsafeAppendReplay(String frozenDefinitionJson) {
+    if (requiresVerification(frozenDefinitionJson)) {
+      throw new IllegalStateException(
+          "ODS APPEND 暂不允许 Retry/Backfill 自动重放；须先核验目标已提交范围并建立幂等写入合同");
+    }
+  }
+
+  /**
    * Publish/execute from the immutable JobRevision/Batch snapshot, not a mutable
    * Task row. If the snapshot cannot resolve an exact single-table endpoint,
    * refuse the provenance claim rather than inferring its schema.
