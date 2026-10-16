@@ -141,7 +141,7 @@ public class OfflineExistingBatchClaimManager {
       throw new IllegalStateException("Batch 缺少可追溯的冻结执行版本");
     }
     String frozen = batch.snapshot().definitionSnapshot();
-    if (frozen == null || !frozen.contains("\"odsHandoff\"")) return;
+    if (!OfflineOdsHandoffGuard.requiresVerification(frozen)) return;
     if (odsHandoffGuard == null) {
       throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 重试或 Backfill");
     }
