@@ -282,6 +282,13 @@ public class OfflineExecutionCoordinator {
         throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务执行");
       }
       odsHandoffGuard.verifyFrozen(frozenDefinition);
+      // Final pre-Link-Up defense, including reusable CREATED attempts from
+      // before the claim-time Replay gate was introduced.
+      if ((execution.getAttemptNo() != null && execution.getAttemptNo() > 1)
+          || "RETRY".equalsIgnoreCase(execution.getTriggerType())
+          || "BACKFILL".equalsIgnoreCase(execution.getTriggerType())) {
+        OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(frozenDefinition);
+      }
     }
     Optional<OfflineExecutionPlan> plan = executionPlanCodec.decode(claim.getLogicalJobSpecJson());
     if (plan.isPresent() && plan.get().isFanOut()) {
