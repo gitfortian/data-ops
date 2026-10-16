@@ -28,7 +28,7 @@ public class OfflineOdsHandoffGuard {
       if (root == null || !root.isObject()) {
         throw new IllegalArgumentException("离线同步任务定义必须为 JSON 对象");
       }
-      return root.hasNonNull("odsHandoff");
+      // Presence is a protected intent: explicit null must fail closed, not silently\n      // downgrade an ODS-linked definition into an unlinked ordinary job.\n      return root.has("odsHandoff");
     } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
       throw new IllegalArgumentException("离线同步任务定义 JSON 无法解析，禁止跳过 ODS 来源核验",
           exception);
@@ -50,7 +50,7 @@ public class OfflineOdsHandoffGuard {
     if (root == null || !root.isObject()) {
       throw new IllegalArgumentException("无效离线任务冻结定义");
     }
-    if (root.path("odsHandoff").isMissingNode() || root.path("odsHandoff").isNull()) return;
+    if (!root.has("odsHandoff")) return;\n    if (root.path("odsHandoff").isNull()) {\n      throw new IllegalArgumentException("ODS 交接引用不能为 null");\n    }
     if (!"GUIDE_SINGLE".equalsIgnoreCase(root.path("basic").path("mode").asText())) {
       throw new IllegalArgumentException("ODS 交接当前只支持确切的单表同步，不允许多表或 SQL 模式猜测");
     }
@@ -98,7 +98,7 @@ public class OfflineOdsHandoffGuard {
     }
     if (root == null || !root.isObject()) throw new IllegalArgumentException("无效离线任务定义");
     JsonNode handoff = root.get("odsHandoff");
-    if (handoff == null || handoff.isNull()) return;
+    if (handoff == null) return;\n    if (handoff.isNull()) {\n      throw new IllegalArgumentException("ODS 交接引用不能为 null");\n    }
     if (!handoff.isObject() || handoff.size() != 3) {
       throw new IllegalArgumentException("ODS 交接必须提供完整的模型、版本及目标观察 ID");
     }
