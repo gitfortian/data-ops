@@ -58,6 +58,8 @@ describe('F-040 C5 explicit Modeling → DataDev evidence only', () => {
       { ...eligible, owner: { ...eligible.owner, id: 51 } },
       { ...eligible, owner: { ...eligible.owner, processId: 8 } },
       { ...eligible, owner: { ...eligible.owner, layerCode: 'ODS' } },
+      { ...eligible, owner: { ...eligible.owner, layerCode: 'DIM' } },
+      { ...eligible, report: { ...report, layerCode: 'DIM' } },
       { ...eligible, versions: [] },
       { ...eligible, versions: [frozen, frozen] },
       { ...eligible, versions: [{ ...frozen, id: 101 }] },

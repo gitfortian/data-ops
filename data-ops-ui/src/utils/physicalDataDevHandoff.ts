@@ -78,7 +78,8 @@ export const verifyPhysicalDataDevEvidence = (input: {
     || !Number.isSafeInteger(report.version.versionId) || report.version.versionId <= 0
     || !/^[a-f0-9]{64}$/i.test(signature)
     || !/^[a-f0-9]{64}$/i.test(report.inspectionSha256)
-    || !['DWD', 'DIM'].includes(report.layerCode)) {
+    || !['DWD', 'DIM'].includes(report.layerCode)
+    || report.layerCode !== owner.layerCode?.toUpperCase()) {
     return { valid: false, reason: 'Modeling / Semantic 的实际对象、冻结版本或指纹与导航不一致；拒绝交接展示' };
   }
   return { valid: true };
