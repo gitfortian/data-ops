@@ -44,6 +44,8 @@ class ModelVersionServiceTest {
     when(modelRepository.findByIdForUpdate(1L))
         .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)));
     when(structureService.getForUpdate(1L)).thenReturn(structure("orders_v1"));
+    when(modelRepository.updatePublishState(eq(1L), eq(ModelStatus.PUBLISHED.name()),
+        anyLong(), anyInt(), eq("tester"))).thenReturn(true);
   }
 
   @Test
@@ -80,6 +82,36 @@ class ModelVersionServiceTest {
     assertThat(result.created()).isFalse();
     assertThat(result.version()).isSameAs(latest);
     verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester");
+  }
+
+  @Test
+  void newPhysicalVersionFailsClosedWhenPublishPointerUpdateAffectsNoRow() {
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
+    when(versionRepository.nextVersionNo(1L)).thenReturn(1);
+    when(versionRepository.insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"))).thenReturn(version(9L, 1, "{}"));
+    when(modelRepository.updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 1,
+        "tester")).thenReturn(false);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository).insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester"));
+  }
+
+  @Test
+  void idempotentPhysicalVersionFailsClosedWhenPointerRepairAffectsNoRow() {
+    when(versionRepository.findLatestByModelId(1L))
+        .thenReturn(Optional.of(version(9L, 3, null)));
+    when(modelRepository.updatePublishState(1L, ModelStatus.PUBLISHED.name(), 9L, 3,
+        "tester")).thenReturn(false);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(),
+        anyInt(), any(), any());
   }
 
   @Test

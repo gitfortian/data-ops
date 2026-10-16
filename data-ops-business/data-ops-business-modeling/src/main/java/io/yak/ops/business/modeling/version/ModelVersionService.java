@@ -126,8 +126,7 @@ public class ModelVersionService {
             ? !hasMappingIdentity(latest.metaJson())
             : matchesMapping(latest.metaJson(), mapping))) {
       if (!java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
-        modelRepository.updatePublishState(
-            modelId, ModelStatus.PUBLISHED.name(), latest.id(), latest.versionNo(), operator);
+        requireUpdatedPublishPointer(modelId, latest.id(), latest.versionNo(), operator);
       }
       return new PublishResult(latest, false);
     }
@@ -137,10 +136,23 @@ public class ModelVersionService {
         modelId, nextVersionNo, structureJson, serialiseMeta(model, mapping),
         columnCount, checksum, operator);
 
-    modelRepository.updatePublishState(
-        modelId, ModelStatus.PUBLISHED.name(), version.id(), nextVersionNo, operator);
+    requireUpdatedPublishPointer(modelId, version.id(), nextVersionNo, operator);
 
     return new PublishResult(version, true);
+  }
+
+  /**
+   * The immutable version insert and the active publication pointer MUST be
+   * committed together. Repository update returns false when no scoped model
+   * row was updated; ignoring that result creates a phantom published version.
+   */
+  private void requireUpdatedPublishPointer(
+      Long modelId, Long versionId, int versionNo, String operator) {
+    if (!modelRepository.updatePublishState(
+        modelId, ModelStatus.PUBLISHED.name(), versionId, versionNo, operator)) {
+      throw new IllegalStateException(
+          "模型发布指针更新失败，物理版本与映射应在同一事务回滚");
+    }
   }
 
   /** Lists all versions for a model (newest first, lightweight). */
