@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { history } from '@umijs/max';
 import OdsPhysicalDeliveryPanel from './OdsPhysicalDeliveryPanel';
-import { discoverOdsExecutions } from '@/services/integration/odsExecutionEvidence';
+import { discoverOdsExecutionsBefore } from '@/services/integration/odsExecutionEvidence';
 import { inspectOdsPhysicalTarget, listOdsTargetObservations, recordOdsTargetObservation } from '@/services/modeling/api';
 
 let mockProjectId = 4;
@@ -13,7 +13,7 @@ jest.mock('@/hooks/usePermissionAccess', () => ({
 jest.mock('@/contexts/SecurityProjectContext', () => ({
   useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
-jest.mock('@/services/integration/odsExecutionEvidence', () => ({ discoverOdsExecutions: jest.fn() }));
+jest.mock('@/services/integration/odsExecutionEvidence', () => ({ discoverOdsExecutionsBefore: jest.fn() }));
 jest.mock('@/services/modeling/api', () => ({
   inspectOdsPhysicalTarget: jest.fn(),
   listOdsTargetObservations: jest.fn(),
@@ -158,8 +158,8 @@ it('reads only owner-confirmed frozen execution evidence without implying data r
     observedBy: 'operator', observedAt: '2026-10-15T00:00:00',
     status: 'STALE_CATALOG_OBSERVATION', limitations: [],
   } as never]);
-  jest.mocked(discoverOdsExecutions).mockResolvedValue({
-    scanPage: 1, scanSize: 50, moreCandidates: false,
+  jest.mocked(discoverOdsExecutionsBefore).mockResolvedValue({
+    nextBeforeId: 900, moreCandidates: false,
     matches: [{
       executionId: 900, jobDefinitionId: 100, batchId: 800,
       jobRevisionNo: 3, attemptNo: 2, status: 'FAILED',
@@ -169,7 +169,7 @@ it('reads only owner-confirmed frozen execution evidence without implying data r
   render(<OdsPhysicalDeliveryPanel open model={model} onClose={jest.fn()} />);
   fireEvent.click(await screen.findByRole('button', { name: '查看执行历史' }));
   await screen.findByText('#900 / #800');
-  expect(discoverOdsExecutions).toHaveBeenCalledWith(50, 2, 701, 1, 50);
+  expect(discoverOdsExecutionsBefore).toHaveBeenCalledWith(50, 2, 701, Number.MAX_SAFE_INTEGER, 50);
   expect(screen.getByText('FAILED')).toBeInTheDocument();
   expect(screen.getByText('未知')).toBeInTheDocument();
   expect(screen.getByText('target rejected')).toBeInTheDocument();
