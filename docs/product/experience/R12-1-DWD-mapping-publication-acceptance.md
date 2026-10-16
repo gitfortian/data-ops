@@ -1,6 +1,6 @@
 # R12-1｜DWD 人工映射、设计发布与历史回读验收合同
 
-Status: DRAFT_PR_DESIGN_IMPLEMENTED / MYSQL_STORAGE_SMOKE_PASS / POSTGRESQL_STORAGE_SMOKE_PASS / SAME_HEAD_COMPLETE_CI_PENDING / BUSINESS_E2E_DEFERRED
+Status: IMPLEMENTED_DRAFT / MYSQL_STORAGE_SMOKE_PASS / POSTGRESQL_STORAGE_SMOKE_PASS / SAME_HEAD_COMPLETE_CI_PENDING / BUSINESS_E2E_DEFERRED
 Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](https://github.com/gitfortian/data-ops/pull/578) · [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556) · PD-010 (PROPOSED)
 
 > 本文记录 **Draft PR 中的实际实现能力与验收门槛**；不代表合并、正式发布、产品门禁签收或真实运行成功。上游 ODS V5 的发布前置依赖见 #575。
@@ -73,6 +73,7 @@ Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](
 | DWD-13 | 物理 DWD Vn 打开 DataDev 预检 | 展示准确的 LogicalVersion / MappingRevision 身份和摘要；旧版无绑定阻断该只读交接 |
 | DWD-14 | 审批中途停用流程或存在未终态申请 | 原有在途审批仍阻断显式直接发布，不发生审批绕过 |
 | DWD-15 | 逻辑页没有可复用 DWD 目标 | 引导用户进入同业务过程物理模型工作台新建草稿，而不是卡在选择器 |
+| DWD-16 | 发布审批处于 PENDING 时尝试修改/冻结映射 | 服务端拒绝编辑；审批回调仍可在同事务内重检当前已批准快照，不发生审批死锁或绕过 |
 
 完成条件：**同一 HEAD** 的前端、后端、架构、产品守卫绿灯；MySQL/PG 实库迁移及事务故障验证记录单列为 PASS/DEFERRED，不能混为一谈；产品 Owner 明确决定是否接受正式非 ODS 强门禁后才改旧入口。
 
