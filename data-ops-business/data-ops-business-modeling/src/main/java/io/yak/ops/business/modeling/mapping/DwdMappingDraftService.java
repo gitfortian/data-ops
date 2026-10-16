@@ -191,8 +191,16 @@ public class DwdMappingDraftService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Frozen freeze(Long physicalId, Long expectedDraftRevision, String actor) {
-    Model model = requireDwd(physicalId);
     rejectIfPublicationApprovalPending(physicalId);
+    return freezeInternal(physicalId, expectedDraftRevision, actor);
+  }
+
+  /**
+   * Revalidates the pinned mapping inside the publication transaction. It may
+   * run while the approval callback is still transitioning the approval row.
+   */
+  private Frozen freezeInternal(Long physicalId, Long expectedDraftRevision, String actor) {
+    Model model = requireDwd(physicalId);
     if (model.status() != ModelStatus.DRAFT) {
       throw new IllegalStateException("只有 DWD 物理草稿可冻结映射");
     }
@@ -337,7 +345,7 @@ public class DwdMappingDraftService {
     if (selected == null || !Objects.equals(selected.getDraftRevision(), root.getDraftRevision())) {
       throw new IllegalStateException("所选冻结修订不属于当前映射草稿，请重新冻结");
     }
-    Frozen rechecked = freeze(physicalId, root.getDraftRevision(), "publication-revalidation");
+    Frozen rechecked = freezeInternal(physicalId, root.getDraftRevision(), "publication-revalidation");
     if (!Objects.equals(rechecked.mappingRevisionId(), selected.getId())
         || !Objects.equals(rechecked.contentSha256(), selected.getContentSha())) {
       throw new IllegalStateException("冻结映射已失效或存在更新的修订，请重新审阅");
