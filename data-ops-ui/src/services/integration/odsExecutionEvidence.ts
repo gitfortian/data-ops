@@ -34,3 +34,20 @@ export const discoverOdsExecutions = (
     `?modelId=${modelId}&versionNo=${versionNo}&targetObservationId=${targetObservationId}` +
     `&scanPage=${scanPage}&scanSize=${scanSize}`,
   );
+
+export interface OdsExecutionCursorPage {
+  nextBeforeId: number;
+  moreCandidates: boolean;
+  matches: OdsExecutionEvidence[];
+}
+
+/** Stable seek: the bound is exclusive and tied to monotonic execution IDs. */
+export const discoverOdsExecutionsBefore = (
+  modelId: number, versionNo: number, targetObservationId: number,
+  beforeId: number, scanSize = 50,
+): Promise<OdsExecutionCursorPage> =>
+  HttpUtils.getData<OdsExecutionCursorPage>(
+    '/api/v1/job/batch-instance/ods-evidence/discover-before' +
+    `?modelId=${modelId}&versionNo=${versionNo}&targetObservationId=${targetObservationId}` +
+    `&beforeId=${beforeId}&scanSize=${scanSize}`,
+  );
