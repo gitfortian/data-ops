@@ -118,6 +118,18 @@ class OfflineOdsHandoffGuardTest {
     verifyNoInteractions(owner);
   }
 
+  @Test void odsAppendReplayIsRejectedWithoutCommittedWindowReceipt() {
+    String frozen = """
+        {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalStateException.class,
+        () -> OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(frozen));
+    assertThrows(IllegalArgumentException.class,
+        () -> OfflineOdsHandoffGuard.rejectUnsafeAppendReplay("{\"odsHandoff\":null}"));
+    org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+        () -> OfflineOdsHandoffGuard.rejectUnsafeAppendReplay("{\"basic\":{}}"));
+  }
+
   @Test void explicitNullHandoffCannotDowngradeProtectedFrozenJob() {
     String nullHandoff = "{\"odsHandoff\":null}";
     assertTrue(OfflineOdsHandoffGuard.requiresVerification(nullHandoff));
