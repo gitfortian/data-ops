@@ -116,3 +116,6 @@ Related: [#576](https://github.com/gitfortian/data-ops/issues/576) · [PR #578](
 - **负例**：已保存冻结 MappingRevision + 在途审批 + 浏览器刷新，页面仍提示“审批进行中”；后端绕过接口仍阻止直接发布。申请终态之后才能按审批回调获得真实 ModelVersion，不能靠本地状态自造成功。
 
 本阶段仍有独立合并阻断：上游 ODS #575 的 V5 迁移未合并，DR-06/PD-010、DR-07 均未批准全局规则及跨域任务写入；最新 HEAD 的完整 CI 必须同 SHA PASS。只读 DataDev 交接不等于真实 SQL 加工闭环。
+
+
+> CI execution note: acceptance claims are valid only for the exact PR HEAD; a later HEAD must rerun the complete Product Guard / Architecture / Data Development / Metric / PostgreSQL evidence suite.
