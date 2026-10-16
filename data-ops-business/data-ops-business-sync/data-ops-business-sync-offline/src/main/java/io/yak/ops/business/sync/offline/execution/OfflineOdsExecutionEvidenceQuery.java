@@ -8,6 +8,8 @@ import io.yak.ops.business.sync.offline.repository.OfflineBatchExecutionReposito
 import io.yak.ops.business.sync.offline.repository.OfflineJobExecutionRepository;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.List;
+import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +31,56 @@ public class OfflineOdsExecutionEvidenceQuery {
       int attemptNo, String status, String externalExecutionId,
       String engineJobId, LocalDateTime startTime, LocalDateTime endTime,
       Long sourceRows, Long sinkCommittedRows, Long failedRows, String errorMessage) {}
+
+  /**
+   * One bounded page of project-local candidate Attempts, filtered against
+   * immutable Batch snapshots. Page positions refer to the candidate scan,
+   * not total matching ODS executions; no fabricated total is returned.
+   */
+  public record DiscoveryPage(int scanPage, int scanSize, boolean moreCandidates,
+                              List<Evidence> matches) {}
+
+  public DiscoveryPage discover(long modelId, int versionNo, long observationId,
+                                int scanPage, int scanSize) {
+    if (modelId <= 0 || versionNo <= 0 || observationId <= 0
+        || scanPage < 1 || scanPage > 100000 || scanSize < 1 || scanSize > 100) {
+      throw new IllegalArgumentException("ODS 执行历史查询参数非法");
+    }
+    List<OfflineJobExecution> candidates = executions.scanRecent(scanPage, scanSize);
+    List<Evidence> matches = new ArrayList<>();
+    for (OfflineJobExecution candidate : candidates) {
+      if (candidate.getId() == null || candidate.getBatchId() == null
+          || candidate.getBatchId() <= 0) continue;
+      var batch = batches.findById(candidate.getBatchId()).orElse(null);
+      if (batch == null || batch.snapshot() == null
+          || !Objects.equals(candidate.getJobDefinitionId(), batch.taskId())) continue;
+      JsonNode root;
+      try {
+        root = JSON.readTree(batch.snapshot().definitionSnapshot());
+      } catch (Exception ignored) {
+        continue;
+      }
+      if (root == null || !root.isObject()) continue;
+      JsonNode handoff = root.path("odsHandoff");
+      if (!handoff.isObject() || handoff.size() != 3
+          || !exactId(handoff.path("modelId"), modelId)
+          || !exactId(handoff.path("versionNo"), versionNo)
+          || !exactId(handoff.path("targetObservationId"), observationId)) continue;
+      matches.add(toEvidence(candidate, batch.snapshot().definitionRevision()));
+    }
+    return new DiscoveryPage(scanPage, scanSize, candidates.size() == scanSize,
+        List.copyOf(matches));
+  }
+
+  private static Evidence toEvidence(OfflineJobExecution execution, int revision) {
+    return new Evidence(execution.getId(), execution.getJobDefinitionId(),
+        execution.getBatchId(), revision,
+        execution.getAttemptNo() == null ? 0 : execution.getAttemptNo(),
+        execution.getStatus(), execution.getExternalExecutionId(),
+        execution.getEngineJobId(), execution.getStartTime(), execution.getEndTime(),
+        execution.getSourceRecordCount(), execution.getSinkCommittedRecordCount(),
+        execution.getFailedRecordCount(), execution.getErrorMessage());
+  }
 
   public Evidence require(long executionId, long modelId, int versionNo, long observationId) {
     if (executionId <= 0 || modelId <= 0 || versionNo <= 0 || observationId <= 0) {
@@ -63,13 +115,7 @@ public class OfflineOdsExecutionEvidenceQuery {
         || !exactId(handoff.path("targetObservationId"), observationId)) {
       throw new IllegalArgumentException("该执行快照不属于指定的 ODS 模型版本及目标观察记录");
     }
-    return new Evidence(execution.getId(), execution.getJobDefinitionId(),
-        execution.getBatchId(), batch.snapshot().definitionRevision(),
-        execution.getAttemptNo() == null ? 0 : execution.getAttemptNo(),
-        execution.getStatus(), execution.getExternalExecutionId(),
-        execution.getEngineJobId(), execution.getStartTime(), execution.getEndTime(),
-        execution.getSourceRecordCount(), execution.getSinkCommittedRecordCount(),
-        execution.getFailedRecordCount(), execution.getErrorMessage());
+    return toEvidence(execution, batch.snapshot().definitionRevision());
   }
 
   private static boolean exactId(JsonNode value, long expected) {
