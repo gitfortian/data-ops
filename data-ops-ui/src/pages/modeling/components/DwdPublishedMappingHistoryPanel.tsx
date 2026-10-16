@@ -10,6 +10,7 @@ import {
 interface Props { open: boolean; modelId: number; onClose: () => void; }
 
 /** Read-only, exact historical evidence; never consult the current editable MappingSet. */
+// R12-1: Modeling exposes design evidence only; execution remains outside this surface.
 export default function DwdPublishedMappingHistoryPanel({ open, modelId, onClose }: Props) {
   const { currentProject } = useSecurityProject();
   const [versions, setVersions] = useState<ModelingVersionSummary[]>([]);
