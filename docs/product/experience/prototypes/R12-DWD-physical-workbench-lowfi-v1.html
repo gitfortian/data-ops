@@ -193,7 +193,18 @@
   document.getElementById('stepNav2').onclick=function(){nav(2)};
   document.getElementById('stepNav3').onclick=function(){nav(3)};
   document.getElementById('reset').onclick=reset;
-  scenario.onchange=reset;
+  scenario.onchange=function(){
+    reset();
+    // A negative-case reviewer lands at the step where its invariant is checked.
+    if (state.scenario==='standard'||state.scenario==='drift') {
+      state.logical=true;state.step=2;
+    }
+    if (state.scenario==='approval') {
+      state.logical=true;state.mappingSaved=true;state.mappingFrozen=true;
+      state.draftRevision=1;state.step=3;
+    }
+    render();
+  };
   stage.addEventListener('change',function(event){
     var t=event.target;
     if(t.id==='confirm'||t.id==='publishCheck'){state.check=t.checked;render()}
