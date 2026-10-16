@@ -54,7 +54,7 @@ class DwdMappingDraftServiceTest {
   }
 
   @Test void persistedRootStoresColumnNameAndNotTransientDatabaseColumnId() {
-    when(sets.insert(any())).thenAnswer(inv -> {
+    when(sets.insert(any(ModelingMappingSetPO.class))).thenAnswer(inv -> {
       ModelingMappingSetPO saved = inv.getArgument(0);
       saved.setId(501L);
       return 1;
@@ -77,7 +77,7 @@ class DwdMappingDraftServiceTest {
     existing.setDraftRevision(8L);
     when(sets.selectOne(any())).thenReturn(existing);
     assertThrows(IllegalStateException.class, () -> service.save(50L, request(7), "operator"));
-    verify(sets, never()).updateById(any());
+    verify(sets, never()).updateById(any(ModelingMappingSetPO.class));
     verifyNoInteractions(revisions);
   }
 
@@ -113,7 +113,7 @@ class DwdMappingDraftServiceTest {
               10L, 505L, 11L, "order_id", "订单标识")), "REVIEWABLE_ONLY");
     });
     when(revisions.selectList(any())).thenReturn(List.of());
-    when(revisions.insert(any())).thenAnswer(inv -> {
+    when(revisions.insert(any(ModelingMappingRevisionPO.class))).thenAnswer(inv -> {
       ModelingMappingRevisionPO saved = inv.getArgument(0);
       saved.setId(900L);
       return 1;
@@ -154,7 +154,7 @@ class DwdMappingDraftServiceTest {
     var result = service.freeze(50L, 3L, "operator");
     assertEquals(700L, result.mappingRevisionId());
     assertEquals(2, result.revisionNo());
-    verify(revisions, never()).insert(any());
+    verify(revisions, never()).insert(any(ModelingMappingRevisionPO.class));
   }
 
   @Test void freezeRefusesStalePhysicalSnapshotAndMakesNoRevision() {
@@ -174,7 +174,7 @@ class DwdMappingDraftServiceTest {
     assertThrows(IllegalStateException.class,
         () -> service.requireFrozenForPublication(50L, 900L));
     verify(previews, never()).preview(anyLong(), anyInt(), anyLong());
-    verify(revisions, never()).insert(any());
+    verify(revisions, never()).insert(any(ModelingMappingRevisionPO.class));
   }
 
   @Test void publishedMappingEvidenceMustMatchRevalidatedCurrentFreeze() {
@@ -202,7 +202,7 @@ class DwdMappingDraftServiceTest {
     assertEquals(900L, evidence.mappingRevisionId());
     assertEquals(77L, evidence.logicalModelId());
     assertEquals(PS, evidence.physicalStructureSha256());
-    verify(revisions, never()).insert(any());
+    verify(revisions, never()).insert(any(ModelingMappingRevisionPO.class));
   }
 
   @Test void immutableHistoryReadUsesFrozenJsonAndRejectsContentCorruption() {
