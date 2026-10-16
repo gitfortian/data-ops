@@ -195,17 +195,14 @@ class ModelVersionServiceTest {
 
   @Test
   void malformedVersionMetaFailsClosedInsteadOfBecomingLegacyUnbound() {
-    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
-        null, null, "DWD", null).withPersisted(1L, "alice", null, null);
-    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
-    ModelVersion malformed = version(9L, 3, "{not-json");
-    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(malformed));
-    when(structureService.get(1L)).thenReturn(structure("orders_v1"));
+    ModelVersion malformed = new ModelVersion(
+        9L, 1L, 3, serialisePublishedProbe(), "{not-json", 1, "checksum",
+        "alice", LocalDateTime.now());
+    when(versionRepository.findByVersionNo(1L, 3)).thenReturn(Optional.of(malformed));
 
     assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
-        () -> service.publish(1L, "tester")))
-        .hasMessageContaining("元数据损坏");
-    verify(versionRepository, never()).insert(any(), anyInt(), any(), any(), anyInt(), any(), any());
+        () -> service.getVersionDetail(1L, 3)))
+        .hasMessageContaining("历史元数据损坏");
   }
 
   @Test
