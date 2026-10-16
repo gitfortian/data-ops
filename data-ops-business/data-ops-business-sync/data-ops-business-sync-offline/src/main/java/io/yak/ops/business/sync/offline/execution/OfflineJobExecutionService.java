@@ -24,13 +24,12 @@ import io.yak.ops.common.bean.vo.sync.offline.OfflineJobExecutionDetailVO;
 import io.yak.ops.common.bean.vo.sync.offline.OfflineJobExecutionVO;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** Stable execution facade for controllers, Backfill dispatch, Schedule and Reconcile. */
 @ConditionalOnOfflineSyncEnabled
 @Service
-@RequiredArgsConstructor
 public class OfflineJobExecutionService implements OfflineScheduleExecutionGateway {
 
   private final OfflineExecutionCoordinator coordinator;
@@ -41,6 +40,39 @@ public class OfflineJobExecutionService implements OfflineScheduleExecutionGatew
   private final LinkUpClient linkUpClient;
   private final OfflineSyncViewMapper viewMapper;
   private final OfflineSyncConnectorRuntime connectorRuntime;
+
+  @Autowired
+  public OfflineJobExecutionService(
+      OfflineExecutionCoordinator coordinator,
+      OfflineOdsExecutionEvidenceQuery odsEvidence,
+      OfflineBatchRuntime batchRuntime,
+      OfflineExecutionQuery executionQuery,
+      OfflineExecutionLogQuery executionLogQuery,
+      LinkUpClient linkUpClient,
+      OfflineSyncViewMapper viewMapper,
+      OfflineSyncConnectorRuntime connectorRuntime) {
+    this.coordinator = coordinator;
+    this.odsEvidence = odsEvidence;
+    this.batchRuntime = batchRuntime;
+    this.executionQuery = executionQuery;
+    this.executionLogQuery = executionLogQuery;
+    this.linkUpClient = linkUpClient;
+    this.viewMapper = viewMapper;
+    this.connectorRuntime = connectorRuntime;
+  }
+
+  /** Compatibility for existing direct unit constructions, not Spring wiring. */
+  public OfflineJobExecutionService(
+      OfflineExecutionCoordinator coordinator,
+      OfflineBatchRuntime batchRuntime,
+      OfflineExecutionQuery executionQuery,
+      OfflineExecutionLogQuery executionLogQuery,
+      LinkUpClient linkUpClient,
+      OfflineSyncViewMapper viewMapper,
+      OfflineSyncConnectorRuntime connectorRuntime) {
+    this(coordinator, null, batchRuntime, executionQuery, executionLogQuery,
+        linkUpClient, viewMapper, connectorRuntime);
+  }
 
   public OfflineOdsExecutionEvidenceQuery.Evidence odsEvidence(long id, long modelId,
       int versionNo, long observationId) {
