@@ -448,7 +448,7 @@ export default function LogicalWorkspace() {
       }
       setMappingDraft(data);
       setMappingFrozen(undefined);
-    setMappingPublished(undefined);
+      setMappingPublished(undefined);
       message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
@@ -953,8 +953,7 @@ export default function LogicalWorkspace() {
                   onChange={value => {
                     setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
                     setMappingFrozen(undefined);
-              setMappingPublished(undefined);
-    setMappingPublished(undefined);
+                    setMappingPublished(undefined);
                   }} />
               ) },
             { title: '人工选择（仅本次浏览器会话）', key: 'selection',
@@ -974,8 +973,7 @@ export default function LogicalWorkspace() {
                     });
                     setReviewResult(undefined);
                     setMappingFrozen(undefined);
-              setMappingPublished(undefined);
-    setMappingPublished(undefined);
+                    setMappingPublished(undefined);
                   }}
                 />
               ) },
@@ -1020,7 +1018,6 @@ export default function LogicalWorkspace() {
               setMappingKinds(restored.kinds);
               setMappingFrozen(undefined);
               setMappingPublished(undefined);
-    setMappingPublished(undefined);
               setReviewResult(undefined);
               message.info('已载入持久映射；请重新校验后再冻结');
             }}>载入已保存映射并重新校验</Button>
