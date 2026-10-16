@@ -19,6 +19,22 @@ public class OfflineOdsHandoffGuard {
   private final ObjectProvider<OdsSyncHandoffVerifier> verifier;
   private static final ObjectMapper JSON = new ObjectMapper();
 
+  /** Interpret JSON structure, never raw substring matching: escaped field names
+   * (for example \\u006f) must not bypass the protected ODS handoff gate. */
+  public static boolean requiresVerification(String frozenDefinitionJson) {
+    if (!StringUtils.hasText(frozenDefinitionJson)) return false;
+    try {
+      JsonNode root = JSON.readTree(frozenDefinitionJson);
+      if (root == null || !root.isObject()) {
+        throw new IllegalArgumentException("离线同步任务定义必须为 JSON 对象");
+      }
+      return root.hasNonNull("odsHandoff");
+    } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+      throw new IllegalArgumentException("离线同步任务定义 JSON 无法解析，禁止跳过 ODS 来源核验",
+          exception);
+    }
+  }
+
   /**
    * Publish/execute from the immutable JobRevision/Batch snapshot, not a mutable
    * Task row. If the snapshot cannot resolve an exact single-table endpoint,
