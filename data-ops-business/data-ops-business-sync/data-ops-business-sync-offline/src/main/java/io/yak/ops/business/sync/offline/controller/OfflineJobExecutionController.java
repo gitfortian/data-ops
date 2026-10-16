@@ -5,7 +5,6 @@ import io.yak.framework.common.PagingData;
 import io.yak.framework.common.Result;
 import io.yak.ops.business.sync.offline.config.ConditionalOnOfflineSyncEnabled;
 import io.yak.ops.business.sync.offline.execution.OfflineJobExecutionService;
-import io.yak.ops.business.sync.offline.execution.OfflineOdsExecutionEvidenceQuery;
 import io.yak.ops.common.bean.dto.sync.offline.OfflineBatchOperationDTO;
 import io.yak.ops.common.bean.dto.sync.offline.OfflineJobExecutionQueryDTO;
 import io.yak.ops.common.bean.vo.sync.offline.OfflineBatchOperationVO;
@@ -36,7 +35,7 @@ public class OfflineJobExecutionController {
 
 
   @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover-before")
-  public Result<OfflineOdsExecutionEvidenceQuery.CursorPage> discoverOdsEvidenceBefore(
+  public Result<?> discoverOdsEvidenceBefore(
       @RequestParam long modelId, @RequestParam int versionNo,
       @RequestParam long targetObservationId,
       @RequestParam long beforeId,
@@ -46,7 +45,7 @@ public class OfflineJobExecutionController {
   }
 
   @GetMapping("/api/v1/job/batch-instance/ods-evidence/discover")
-  public Result<OfflineOdsExecutionEvidenceQuery.DiscoveryPage> discoverOdsEvidence(
+  public Result<?> discoverOdsEvidence(
       @RequestParam long modelId, @RequestParam int versionNo,
       @RequestParam long targetObservationId,
       @RequestParam(defaultValue = "1") int scanPage,
@@ -56,7 +55,7 @@ public class OfflineJobExecutionController {
   }
 
   @GetMapping("/api/v1/job/batch-instance/{id}/ods-evidence")
-  public Result<OfflineOdsExecutionEvidenceQuery.Evidence> odsEvidence(
+  public Result<?> odsEvidence(
       @PathVariable Long id, @RequestParam long modelId,
       @RequestParam int versionNo, @RequestParam long targetObservationId) {
     return Result.success(service.odsEvidence(id, modelId, versionNo, targetObservationId));
