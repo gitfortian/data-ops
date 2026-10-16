@@ -101,6 +101,23 @@ class OfflineOdsHandoffGuardTest {
         "public.trade_order_detail", 20L, "ods.ods_order_detail");
   }
 
+  @Test void frozenOdsTaskRejectsAutomaticDdlAndUnreviewedWriteMode() {
+    String frozen = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{
+           "table":"ods.ods_order_detail","autoCreateTable":true,"writeMode":"APPEND"}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(frozen));
+    String overwrite = frozen.replace("\"autoCreateTable\":true", "\"autoCreateTable\":false")
+        .replace("\"writeMode\":\"APPEND\"", "\"writeMode\":\"OVERWRITE\"");
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(overwrite));
+    String upsert = overwrite.replace("OVERWRITE", "UPSERT");
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(upsert));
+    verifyNoInteractions(owner);
+  }
+
   @Test void explicitNullHandoffCannotDowngradeProtectedFrozenJob() {
     String nullHandoff = "{\"odsHandoff\":null}";
     assertTrue(OfflineOdsHandoffGuard.requiresVerification(nullHandoff));
