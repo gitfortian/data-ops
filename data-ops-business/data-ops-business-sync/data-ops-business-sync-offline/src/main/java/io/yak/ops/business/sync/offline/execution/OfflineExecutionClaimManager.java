@@ -218,6 +218,9 @@ public class OfflineExecutionClaimManager {
         throw new IllegalStateException("Modeling Owner 不可用，拒绝 ODS 同步任务运行");
       }
       odsHandoffGuard.verifyFrozen(definitionSnapshotJson);
+      if (trigger.batchTrigger() == BatchTrigger.BACKFILL) {
+        OfflineOdsHandoffGuard.rejectUnsafeAppendReplay(definitionSnapshotJson);
+      }
     }
     Long definitionId = definition.getId();
     if (batchRuntime.hasOccupyingBatch(definitionId)) {
