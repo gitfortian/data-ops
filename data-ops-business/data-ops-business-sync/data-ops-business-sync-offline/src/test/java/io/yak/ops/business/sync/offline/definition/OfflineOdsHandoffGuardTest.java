@@ -118,6 +118,48 @@ class OfflineOdsHandoffGuardTest {
     verifyNoInteractions(owner);
   }
 
+  @Test void hiddenSinkOptionsCannotBypassReviewedAppendOnlyContract() {
+    String hiddenAutoDdl = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{
+           "table":"ods.ods_order_detail",
+           "connectorOptions":{"autoCreateTable":true}}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(hiddenAutoDdl));
+
+    String hiddenOverwrite = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","options":{"write_mode":"OVERWRITE"},
+           "config":{"table":"ods.ods_order_detail"}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(hiddenOverwrite));
+    verifyNoInteractions(owner);
+  }
+
+  @Test void sqlOrMultiTableConfigurationCannotMasqueradeAsExactOdsTable() {
+    String sourceSql = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{
+           "table":"public.trade_order_detail","sql":"select * from other_table"}},
+         "sink":{"dataSourceId":"20","config":{"table":"ods.ods_order_detail"}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(sourceSql));
+    String targetSql = """
+        {"basic":{"mode":"GUIDE_SINGLE"},
+         "source":{"dataSourceId":"10","config":{"table":"public.trade_order_detail"}},
+         "sink":{"dataSourceId":"20","config":{
+           "table":"ods.ods_order_detail","sql":"truncate table ods.ods_order_detail"}},
+         "odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
+        """;
+    assertThrows(IllegalArgumentException.class, () -> guard.verifyFrozen(targetSql));
+    verifyNoInteractions(owner);
+  }
+
   @Test void odsAppendReplayIsRejectedWithoutCommittedWindowReceipt() {
     String frozen = """
         {"odsHandoff":{"modelId":50,"versionNo":2,"targetObservationId":99}}
