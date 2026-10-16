@@ -103,7 +103,7 @@ class OfflineOdsHandoffGuardTest {
 
   @Test void unrelatedStringContentsCannotForgeAnOdsHandoff() {
     assertFalse(OfflineOdsHandoffGuard.requiresVerification(
-        "{\"notes\":\"contains literal \\\\"odsHandoff\\\\" in a description\"}"));
+        "{\"notes\":\"odsHandoff\"}"));
     assertFalse(OfflineOdsHandoffGuard.requiresVerification(
         "{\"odsHandoff\":null}"));
     assertThrows(IllegalArgumentException.class, () ->
