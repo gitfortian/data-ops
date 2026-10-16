@@ -89,6 +89,46 @@ public class OfflineOdsExecutionEvidenceQuery {
         execution.getFailedRecordCount(), execution.getErrorMessage());
   }
 
+  /** Stable ID-seek slice. Cursor is exclusive; newly inserted IDs cannot shift previous pages. */
+  public record CursorPage(long nextBeforeId, boolean moreCandidates, List<Evidence> matches) {}
+
+  public CursorPage discoverBefore(long modelId, int versionNo, long observationId,
+                                   long beforeId, int scanSize) {
+    if (modelId <= 0 || versionNo <= 0 || observationId <= 0
+        || beforeId <= 0 || scanSize < 1 || scanSize > 100) {
+      throw new IllegalArgumentException("ODS 执行历史游标查询参数非法");
+    }
+    List<OfflineJobExecution> candidates = executions.scanBeforeId(beforeId, scanSize);
+    List<Evidence> matches = new ArrayList<>();
+    Map<Long, java.util.Optional<BatchExecution>> cache = new HashMap<>();
+    long next = beforeId;
+    for (OfflineJobExecution candidate : candidates) {
+      if (candidate.getId() == null || candidate.getId() <= 0 || candidate.getId() >= next) {
+        throw new IllegalStateException("执行游标扫描结果未按 ID 严格降序排列");
+      }
+      next = candidate.getId();
+      if (candidate.getBatchId() == null || candidate.getBatchId() <= 0) continue;
+      var batch = cache.computeIfAbsent(candidate.getBatchId(), batches::findById).orElse(null);
+      if (batch == null || batch.snapshot() == null
+          || !Objects.equals(batch.taskId(), candidate.getJobDefinitionId())) continue;
+      JsonNode root;
+      try {
+        root = JSON.readTree(batch.snapshot().definitionSnapshot());
+      } catch (Exception ignored) {
+        continue;
+      }
+      if (root == null || !root.isObject()) continue;
+      JsonNode ref = root.path("odsHandoff");
+      if (ref.isObject() && ref.size() == 3
+          && exactId(ref.path("modelId"), modelId)
+          && exactId(ref.path("versionNo"), versionNo)
+          && exactId(ref.path("targetObservationId"), observationId)) {
+        matches.add(toEvidence(candidate, batch.snapshot().definitionRevision()));
+      }
+    }
+    return new CursorPage(next, candidates.size() == scanSize, List.copyOf(matches));
+  }
+
   public Evidence require(long executionId, long modelId, int versionNo, long observationId) {
     if (executionId <= 0 || modelId <= 0 || versionNo <= 0 || observationId <= 0) {
       throw new IllegalArgumentException("ODS 执行证据身份必须为正整数");
