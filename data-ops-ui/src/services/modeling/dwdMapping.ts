@@ -51,3 +51,57 @@ export const freezeDwdMappingDraft = (physicalId: number, expectedDraftRevision:
 
 export const listDwdMappingRevisions = (physicalId: number): Promise<DwdMappingFrozen[]> =>
   HttpUtils.getData<DwdMappingFrozen[]>(`${path(physicalId)}/revisions`);
+
+/** Design publication only; never implies DataDev, DDL or a running task. */
+export interface DwdBoundPublication {
+  modelVersionId: number;
+  versionNo: number;
+  mappingRevisionId: number;
+  created: boolean;
+  state: 'DESIGN_PUBLISHED_NOT_EXECUTED';
+}
+export interface DwdHistoricalRevision {
+  mappingRevisionId: number;
+  mappingSetId: number;
+  revisionNo: number;
+  logicalModelId: number;
+  logicalVersionNo: number;
+  logicalSnapshotSha256: string;
+  physicalStructureSha256: string;
+  contentSha256: string;
+  rules: DwdStoredRule[];
+}
+export interface DwdPublishedMapping {
+  modelVersionId: number;
+  versionNo: number;
+  state: 'DESIGN_PUBLISHED_NOT_EXECUTED' | 'LEGACY_UNBOUND';
+  mapping: DwdHistoricalRevision | null;
+}
+
+export const publishDwdWithMapping = (
+  physicalId: number, mappingRevisionId: number,
+): Promise<DwdBoundPublication> =>
+  HttpUtils.postData<DwdBoundPublication>(
+    `${path(physicalId)}/publish-with-mapping?mappingRevisionId=${mappingRevisionId}`, {},
+  );
+
+export const submitDwdMappingPublishApproval = (
+  physicalId: number, mappingRevisionId: number,
+): Promise<unknown> =>
+  HttpUtils.postData<unknown>(
+    `${path(physicalId)}/publish-approval-with-mapping?mappingRevisionId=${mappingRevisionId}`, {},
+  );
+
+export const getPublishedDwdMapping = (
+  physicalId: number, versionNo: number,
+): Promise<DwdPublishedMapping> =>
+  HttpUtils.getData<DwdPublishedMapping>(
+    `${path(physicalId)}/published-versions/${versionNo}`,
+  );
+
+export const getFrozenDwdMappingDetail = (
+  physicalId: number, mappingRevisionId: number,
+): Promise<DwdHistoricalRevision> =>
+  HttpUtils.getData<DwdHistoricalRevision>(
+    `${path(physicalId)}/revisions/${mappingRevisionId}`,
+  );

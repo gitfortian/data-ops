@@ -7,7 +7,8 @@ import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
-  type DwdMappingDraft, type DwdMappingFrozen,
+  publishDwdWithMapping, getPublishedDwdMapping,
+  type DwdMappingDraft, type DwdMappingFrozen, type DwdBoundPublication,
 } from '@/services/modeling/dwdMapping';
 import { getSemanticProcess, listSemanticProcessFields, pageSemanticProcesses } from '@/services/semantic/api';
 import { pageModelingModels } from '@/services/modeling/api';
@@ -94,6 +95,7 @@ export default function LogicalWorkspace() {
   const [mappingKinds, setMappingKinds] = useState<Record<number, 'DIRECT' | 'RENAME'>>({});
   const [mappingDraft, setMappingDraft] = useState<DwdMappingDraft>();
   const [mappingFrozen, setMappingFrozen] = useState<DwdMappingFrozen>();
+  const [mappingPublished, setMappingPublished] = useState<DwdBoundPublication>();
   const [mappingPersistBusy, setMappingPersistBusy] = useState(false);
   const [mappingPersistError, setMappingPersistError] = useState<string>();
   const mappingEpoch = useRef(0);
@@ -118,6 +120,7 @@ export default function LogicalWorkspace() {
     mappingEpoch.current += 1;
     setMappingDraft(undefined);
     setMappingFrozen(undefined);
+    setMappingPublished(undefined);
     setMappingPersistError(undefined);
     setJourneyProblem(undefined);
     setJourneyProcess(undefined);
@@ -394,6 +397,7 @@ export default function LogicalWorkspace() {
     const epoch = ++mappingEpoch.current;
     setMappingDraft(undefined);
     setMappingFrozen(undefined);
+    setMappingPublished(undefined);
     setMappingPersistError(undefined);
     if (handoffPreview?.physicalLayer !== 'DWD' || physicalModelId == null) return;
     let live = true;
@@ -444,6 +448,7 @@ export default function LogicalWorkspace() {
       }
       setMappingDraft(data);
       setMappingFrozen(undefined);
+    setMappingPublished(undefined);
       message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
@@ -469,7 +474,7 @@ export default function LogicalWorkspace() {
         throw new Error('冻结修订身份或草稿序号不一致，拒绝显示成功');
       }
       setMappingFrozen(frozen);
-      message.success('MappingRevision 已冻结保存；DR-06 发布绑定尚未启用');
+      message.success('映射冻结成功。需要另行确认才会发布 DWD 设计版本。');
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
         message.error(errorText(error));
@@ -477,6 +482,51 @@ export default function LogicalWorkspace() {
     } finally {
       if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
     }
+  };
+
+  /** Explicit, human-confirmed write; then re-read the canonical immutable version. */
+  const publishMappingDesign = () => {
+    if (!canSaveMapping || !mappingDraft || !mappingFrozen || !handoffPreview
+        || !mappingMatchesEditor || physicalModelId == null
+        || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
+        || mappingFrozen.draftRevision !== mappingDraft.draftRevision
+        || handoffPreview.physicalStatus !== 'DRAFT'
+        || mappingPersistBusy || mappingPublished) return;
+    const physicalId = physicalModelId;
+    const revisionId = mappingFrozen.mappingRevisionId;
+    const epoch = mappingEpoch.current;
+    const reloadEpoch = loadEpoch.current;
+    Modal.confirm({
+      title: '确认发布 DWD 设计版本？',
+      content: `将 DWD 模型 #${physicalId} 与 MappingRevision #${revisionId} 显式绑定发布。仅保存不可变设计版本；不会创建物理表、DataDev 任务或执行 SQL。此入口仍属 R12 受控交付，标准发布门禁待专项签收。`,
+      okText: '确认发布设计',
+      cancelText: '返回审阅',
+      onOk: async () => {
+        setMappingPersistBusy(true);
+        try {
+          const receipt = await publishDwdWithMapping(physicalId, revisionId);
+          const history = await getPublishedDwdMapping(physicalId, receipt.versionNo);
+          if (receipt.state !== 'DESIGN_PUBLISHED_NOT_EXECUTED'
+              || receipt.mappingRevisionId !== revisionId
+              || history.modelVersionId !== receipt.modelVersionId
+              || history.mapping?.mappingRevisionId !== revisionId
+              || history.mapping.contentSha256 !== mappingFrozen.contentSha256
+              || history.state !== 'DESIGN_PUBLISHED_NOT_EXECUTED') {
+            throw new Error('发布回执与不可变历史映射不一致，禁止显示成功');
+          }
+          if (epoch !== mappingEpoch.current || reloadEpoch !== loadEpoch.current) return;
+          setMappingPublished(receipt);
+          message.success(`DWD 设计版本 V${receipt.versionNo} 已发布并回读确认；未执行数据加工`);
+        } catch (error) {
+          if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
+            message.error(errorText(error));
+          }
+          throw error;
+        } finally {
+          if (epoch === mappingEpoch.current) setMappingPersistBusy(false);
+        }
+      },
+    });
   };
 
   const logicalReviewOptions = useMemo(() => {
@@ -903,6 +953,8 @@ export default function LogicalWorkspace() {
                   onChange={value => {
                     setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
                     setMappingFrozen(undefined);
+              setMappingPublished(undefined);
+    setMappingPublished(undefined);
                   }} />
               ) },
             { title: '人工选择（仅本次浏览器会话）', key: 'selection',
@@ -922,6 +974,8 @@ export default function LogicalWorkspace() {
                     });
                     setReviewResult(undefined);
                     setMappingFrozen(undefined);
+              setMappingPublished(undefined);
+    setMappingPublished(undefined);
                   }}
                 />
               ) },
@@ -965,13 +1019,26 @@ export default function LogicalWorkspace() {
               setMappingSelections(restored.selections);
               setMappingKinds(restored.kinds);
               setMappingFrozen(undefined);
+              setMappingPublished(undefined);
+    setMappingPublished(undefined);
               setReviewResult(undefined);
               message.info('已载入持久映射；请重新校验后再冻结');
             }}>载入已保存映射并重新校验</Button>
           </>}
-          {mappingFrozen && <Alert className="mt-3" showIcon type="success"
-            message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
-            description="仅冻结设计映射。本轮不自动发布 DWD；发布需 DR-06/PD-010 联合门禁与版本原子绑定。" />}
+          {mappingFrozen && <>
+            <Alert className="mt-3" showIcon type="success"
+              message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
+              description="冻结仅保存设计证据。正式发布必须显式二次确认；全局 DR-06/PD-010 门禁仍待签收。" />
+            <Button className="mt-2" loading={mappingPersistBusy}
+              disabled={!canSaveMapping || !!mappingPersistError || !mappingMatchesEditor
+                || !mappingDraft || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
+                || mappingFrozen.draftRevision !== mappingDraft.draftRevision
+                || handoffPreview.physicalStatus !== 'DRAFT' || !!mappingPublished}
+              onClick={publishMappingDesign}>确认发布 DWD 设计版本（不执行任务）</Button>
+          </>}
+          {mappingPublished && <Alert className="mt-3" showIcon type="success"
+            message={`DWD 物理设计 V${mappingPublished.versionNo} 已发布 · Version #${mappingPublished.modelVersionId}`}
+            description={`已从服务端历史版本核验 MappingRevision #${mappingPublished.mappingRevisionId}；未创建 DataDev 任务或执行数据加工。`} />}
         </>}
         {reviewResult
           && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
