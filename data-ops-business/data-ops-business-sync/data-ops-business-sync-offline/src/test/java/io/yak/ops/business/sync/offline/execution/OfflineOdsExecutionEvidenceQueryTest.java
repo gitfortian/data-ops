@@ -43,6 +43,38 @@ class OfflineOdsExecutionEvidenceQueryTest {
     assertThrows(IllegalArgumentException.class, () -> query.require(100L, 50L, 2, 98L));
   }
 
+  @Test void discoveryFiltersImmutableSnapshotsAndDoesNotInventMatchTotal() {
+    OfflineJobExecution matching = new OfflineJobExecution();
+    matching.setId(100L);
+    matching.setBatchId(80L);
+    matching.setJobDefinitionId(60L);
+    OfflineJobExecution unrelated = new OfflineJobExecution();
+    unrelated.setId(101L);
+    unrelated.setBatchId(81L);
+    unrelated.setJobDefinitionId(61L);
+    when(executions.scanRecent(1, 2)).thenReturn(java.util.List.of(matching, unrelated));
+    BatchExecution one = mock(BatchExecution.class);
+    BatchExecution two = mock(BatchExecution.class);
+    ExecutionSnapshot oneSnapshot = mock(ExecutionSnapshot.class);
+    ExecutionSnapshot twoSnapshot = mock(ExecutionSnapshot.class);
+    when(one.taskId()).thenReturn(60L);
+    when(two.taskId()).thenReturn(61L);
+    when(one.snapshot()).thenReturn(oneSnapshot);
+    when(two.snapshot()).thenReturn(twoSnapshot);
+    when(oneSnapshot.definitionSnapshot()).thenReturn(
+        "{\"odsHandoff\":{\"modelId\":50,\"versionNo\":2,\"targetObservationId\":99}}");
+    when(twoSnapshot.definitionSnapshot()).thenReturn(
+        "{\"odsHandoff\":{\"modelId\":50,\"versionNo\":1,\"targetObservationId\":99}}");
+    when(oneSnapshot.definitionRevision()).thenReturn(3);
+    when(batches.findById(80L)).thenReturn(Optional.of(one));
+    when(batches.findById(81L)).thenReturn(Optional.of(two));
+    var page = query.discover(50, 2, 99, 1, 2);
+    assertEquals(1, page.matches().size());
+    assertEquals(100L, page.matches().get(0).executionId());
+    assertTrue(page.moreCandidates());
+    assertThrows(IllegalArgumentException.class, () -> query.discover(50, 2, 99, 1, 101));
+  }
+
   @Test void missingOrForeignExecutionIsNotDisclosed() {
     assertThrows(IllegalArgumentException.class, () -> query.require(0, 50, 2, 99));
     assertThrows(IllegalArgumentException.class, () -> query.require(100, 50, 2, 99));
