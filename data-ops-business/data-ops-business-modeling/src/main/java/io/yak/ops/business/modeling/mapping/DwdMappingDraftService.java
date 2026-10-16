@@ -95,7 +95,7 @@ public class DwdMappingDraftService {
     for (RuleInput r : request.rules()) {
       if (r == null || r.physicalColumnId() == null || r.logicalAttributeId() == null
           || r.physicalColumnId() <= 0 || r.logicalAttributeId() <= 0
-          || !Set.of("DIRECT", "RENAME").contains(r.kind())
+          || r.kind() == null || !Set.of("DIRECT", "RENAME").contains(r.kind())
           || !columns.add(r.physicalColumnId())
           || !attrs.add(r.logicalAttributeId())) {
         throw new IllegalArgumentException("DWD 初版仅允许无重复的一对一 DIRECT/RENAME 映射");
@@ -145,8 +145,11 @@ public class DwdMappingDraftService {
     }
     // Lock the physical root before validating the live column IDs; ordinary
     // structure saves lock the same root. Prevents check-then-replace races.
-    models.findByIdForUpdate(physicalId)
+    Model locked = models.findByIdForUpdate(physicalId)
         .orElseThrow(() -> new IllegalStateException("物理模型已变更或项目权限已失效"));
+    if (locked.status() != ModelStatus.DRAFT || !"DWD".equalsIgnoreCase(locked.layerCode())) {
+      throw new IllegalStateException("物理模型在认领前已变更，不允许保存旧映射");
+    }
     List<StoredRule> rules = check(request, physicalId);
     ModelingMappingSetPO row = current(physicalId, true);
     long expected = request.expectedDraftRevision() == null ? -1 : request.expectedDraftRevision();
@@ -188,8 +191,11 @@ public class DwdMappingDraftService {
     if (model.status() != ModelStatus.DRAFT) {
       throw new IllegalStateException("只有 DWD 物理草稿可冻结映射");
     }
-    models.findByIdForUpdate(physicalId)
+    Model locked = models.findByIdForUpdate(physicalId)
         .orElseThrow(() -> new IllegalStateException("物理模型不存在或项目权限已撤销"));
+    if (locked.status() != ModelStatus.DRAFT || !"DWD".equalsIgnoreCase(locked.layerCode())) {
+      throw new IllegalStateException("物理模型在冻结前已发生状态变化");
+    }
     ModelingMappingSetPO row = current(physicalId, true);
     if (row == null || expectedDraftRevision == null
         || !Objects.equals(row.getDraftRevision(), expectedDraftRevision)) {
@@ -228,8 +234,17 @@ public class DwdMappingDraftService {
         .eq(ModelingMappingRevisionPO::getMappingSetId, row.getId())
         .orderByDesc(ModelingMappingRevisionPO::getRevisionNo)
         .last("LIMIT 1"));
-    int nextNo = latest.isEmpty() ? 1 : latest.get(0).getRevisionNo() + 1;
     String frozenJson = writeJson(saved);
+    String contentSha = VersionDigests.sha256Hex(
+        row.getLogicalSnapshotSha() + ":" + row.getPhysicalStructureSha() + ":" + frozenJson);
+    // A repeated freeze command for the SAME persisted draft is a readback,
+    // never an extra immutable version. The root lock also serializes workers.
+    if (!latest.isEmpty()
+        && Objects.equals(latest.get(0).getDraftRevision(), row.getDraftRevision())
+        && Objects.equals(latest.get(0).getContentSha(), contentSha)) {
+      return frozen(latest.get(0));
+    }
+    int nextNo = latest.isEmpty() ? 1 : latest.get(0).getRevisionNo() + 1;
     ModelingMappingRevisionPO version = new ModelingMappingRevisionPO();
     version.setProjectId(currentProject.requireProjectId());
     version.setMappingSetId(row.getId());
@@ -238,8 +253,7 @@ public class DwdMappingDraftService {
     version.setLogicalSnapshotSha(row.getLogicalSnapshotSha());
     version.setPhysicalStructureSha(row.getPhysicalStructureSha());
     version.setFrozenJson(frozenJson);
-    version.setContentSha(VersionDigests.sha256Hex(
-        row.getLogicalSnapshotSha() + ":" + row.getPhysicalStructureSha() + ":" + frozenJson));
+    version.setContentSha(contentSha);
     version.setFrozenBy(actor == null ? "unknown" : actor);
     version.setFrozenAt(LocalDateTime.now());
     if (revisions.insert(version) != 1) throw new IllegalStateException("映射修订冻结失败");
