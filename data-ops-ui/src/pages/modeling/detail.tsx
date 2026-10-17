@@ -1061,7 +1061,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
         return;
       }
       if (draft.processIds.length > 1) {
-        message.info('所选指标跨多个业务过程,已按首个过程反推,可再次选择补充');
+        message.warning('所选指标跨多个业务过程，请按同一业务过程分别建模；不能静默以首个过程合并字段');
+        return;
       }
       const preview = await previewModelingDerive(
         processId,
@@ -2951,6 +2952,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
                   <div className="mt-2 text-[12px] text-[#667085]">暂无启用的指标</div>
                 ) : null}
               </div>
+              {modelInfo?.layerCode === 'DWS' && (
+                <div className="rounded-lg border border-[#E4E7EC] bg-[#F8FAFC] px-3 py-2 text-[12px] leading-5 text-[#475467]">
+                  DWS 仅从已发布的同过程 DWD 版本继承字段。请在正式发布前确认统计周期、业务时间与时区、分组维度和度量口径；字段反推不会自动完成聚合计算。
+                </div>
+              )}
               {modelInfo?.layerCode === 'ADS' && (
                 <div>
                   <div className="mb-1 text-[13px] text-[#475467]">数据来源</div>
@@ -2964,7 +2970,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
                     optionType="button"
                   />
                   <div className="mt-1 text-[12px] text-[#667085]">
-                    DWS 取已聚合的汇总表;DWD 直接下探明细实时聚合。
+                    DWS 使用已发布的汇总模型；DWD 仅用于明确的明细来源。此操作只生成设计字段，不代表已执行或实时可用。
                   </div>
                 </div>
               )}
