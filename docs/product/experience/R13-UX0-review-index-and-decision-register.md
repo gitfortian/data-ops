@@ -1,6 +1,6 @@
 # R13 UX-0｜DWS / ADS 新产品流程联审、签收表与原型放行清单
 
-> **评审身份**：UX-0 独立产品设计稿，不是低保真、不存在高保真签收。当前 `DWS_UX0_REVIEW_REQUIRED`、`ADS_UX0_REVIEW_REQUIRED`、`LOWFI_NOT_STARTED`、`HIFI_NOT_STARTED`、`UX_NOT_SIGNED`。关联 #593/#513。
+> **评审身份**：UX-0 独立产品设计稿，不是低保真、不存在高保真签收。当前 `DWS_UX0_REVIEW_REQUIRED`、`ADS_UX0_REVIEW_REQUIRED`、`LOWFI_CANDIDATE_REVIEW_REQUIRED`、`HIFI_NOT_STARTED`、`UX_NOT_SIGNED`。关联 #593/#513。
 
 ## 1. 本轮交付与来源边界
 
@@ -67,7 +67,7 @@
 | Gate | DWS | ADS |
 |---|---|---|
 | UX-0 产品流程审核 | `REVIEW_REQUIRED` | `REVIEW_REQUIRED` |
-| UX-1 低保真新原型及用户反馈 | `NOT_STARTED` | `NOT_STARTED` |
+| UX-1 低保真新原型及用户反馈 | `CANDIDATE_REVIEW_REQUIRED` | `CANDIDATE_REVIEW_REQUIRED` |
 | UX-2 专项高保真可点击 + 浏览器真实证据 | `NOT_STARTED` | `NOT_STARTED` |
 | UX-3 高保真用户签收 | `NOT_SIGNED` | `NOT_SIGNED` |
 | UX-4 依签收原型研发 | `BLOCKED_BY_UX_GATE` | `BLOCKED_BY_UX_GATE` |
@@ -81,3 +81,24 @@
 - [ ] DWS、ADS 各自独立新高保真，画面遵守项目风格，真实浏览器屏幕/响应式/键盘检验，不以 CI 代替 Product Owner 审阅。
 - [ ] 用户明确对 DWS 和 ADS 分别签收高保真，记录在 #593。
 - [ ] 研发 PR 精确引用新原型版本、签收证据、正常和异常回归；原已开发页面可重新设计，不因 #592 merge 被豁免。
+
+
+## 7. 数据验证新增联审门禁（DWS-D7 / ADS-D7，待用户决策）
+
+这次从 UX-0 补入**静态设计检查、授权只读样本试算和运行后全量对账**三类不同证据。DWS-04「验证计算」、DWS-05「验证摘要」、ADS-03「验证输出」、ADS-05「结果核对」均属于现有工作区的**内联行为**，不新建专业验证菜单。
+
+- **P0 必须设计**：静态规范检查、详细阻断原因、风险定位及“修正后重新校验”，不要求访问真实仓库数据。
+- **P1 设计并留实施合同**：有权限、有限查询预算、有明确时间窗/采样方式/脱敏的只读样本演算；不可访问时显示 `UNAVAILABLE` 而非伪通过；样本 MATCH 不能替代全量对账。
+- **P2 完整交付验收**：真实 Runtime/Quality/Metric/Dataset/Service 原域凭证与对账结果，有明确 source/version/batch/threshold，不能由建模 UI 内部造假。
+- **状态独立**：`STATIC_PASS/STATIC_BLOCKED`、`NOT_RUN/SAMPLE_MATCH/SAMPLE_WARNING/UNAVAILABLE/STALE`、`NOT_EXECUTED/RECONCILED/FAILED/UNKNOWN`。来源版本/字段/粒度/时间/Metric/过滤/访问范围变化都使关联样本 `STALE`。
+- **权限**：真实验证查询必须具来源 READ、列/行级访问与执行预算授权，禁止预演绕过脱敏或把安全策略当成用户勾选即可获得。
+- **发布**：静态校验是设计发布门槛；样本试算通常不是硬条件（无权限/无数据时需明确未验证）；业务高风险预演差异须人工处置并记录。数据正式交付以真实任务/质量/消费凭证为准，未获得 DR-07 #557 授权的路径不得启动生产 SQL。
+
+**更新黄金故事 T1**：DWS 模拟三条明细 `O001(100,200)`、`O002(150)` → `COUNT(*)=3` 对 `COUNT DISTINCT(order_id)=2`，明细金额样例合计 450；ADS 同口径上游上海 2/450、北京 1/120 → 全范围 3/570，筛上海 2/450，必须解释过滤差异而不是盲目判错。全部为**独立合成样本**，不得宣称来自真库。
+
+**新增待评审决策**：
+- J-9 数据验证放置：内联 DWS-04/05、ADS-03/05；低保真必须展示可点击的验证/差异/修复/重验路径。
+- J-10 结果门禁：静态核验必过、样本可选但重大异常需处置；真正运行后对账才能允许宣布生产数据可用。
+- J-11 实施复用：后续优先调用 DataDev/Metric/Quality 受治理原域，不能为预演另造独立 SQL 执行系统或取消 #557 授权门禁。
+
+**评审状态不变：UX0=REVIEW_REQUIRED，DWS/ADS LOWFI=CANDIDATE_REVIEW_REQUIRED，HIGHFI=NOT_STARTED，R13-C 研发=BLOCKED。** #594 与 #595 的 Draft、CI 均不等于用户签收。
