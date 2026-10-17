@@ -70,6 +70,8 @@ class DwsGrainDesignServiceTest {
     when(models.findByIdForUpdate(10L)).thenReturn(Optional.of(dws));
     when(models.findById(10L)).thenReturn(Optional.of(dws));
     when(models.listByProcessLayer(50L, "DWD")).thenReturn(List.of(dwd));
+    when(models.assignAggregateMeta(eq(10L), eq("1d"), isNull(), isNull(), eq("alice")))
+        .thenReturn(true);
     when(structures.getForUpdate(10L)).thenReturn(target());
     var upstream = new StructureView(20L, "dwd_order_detail", "订单明细",
         "MYSQL", "PUBLISHED", null, "dwd_order_detail", null,
@@ -92,6 +94,7 @@ class DwsGrainDesignServiceTest {
         new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64)));
     assertThat(saved.designSha256()).matches("[a-f0-9]{64}");
     verify(jdbc).update(startsWith("INSERT INTO yak_modeling_dws_grain_design"), any(Object[].class));
+    verify(models).assignAggregateMeta(10L, "1d", null, null, "alice");
   }
 
   @Test
