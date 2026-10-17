@@ -44,7 +44,7 @@ const q=[
 ['能否防止旧 Draft / 不同映射 revision 被静默绑定？','重复请求如何幂等回读而不重复发布？'],
 ['运行精确 TaskRevision，还是意外执行当前编辑器？','UNKNOWN 是否先查原执行回执、禁用直接重试？'],
 ['是否把 EXECUTION_SUCCESS 与 DATA_RECONCILED 严格拆分？','能否回到模型 Vn 和目标数据的差异证据？']];
-let step=0, scenario='happy', confirmed=false, task='none', execution='none';
+let step=0, scenario='happy', confirmed=false, selectedMode='';
 const $=id=>document.getElementById(id);
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function blocked(){return ['legacy','drift','permission'].includes(scenario);}
@@ -81,6 +81,7 @@ $('steps').innerHTML=names.map((name,i)=>'<button type="button" class="step '+(i
 $('stageTitle').textContent=titles[step][0];$('stageSub').textContent=titles[step][1];
 $('stateTag').textContent=step===0?'只读预检':step===1?'人工确认':step===2?'绑定草案':step===3?'运行模拟':'待真实核对';
 $('stageBody').innerHTML=body();
+if($('mode')) $('mode').value=selectedMode;
 $('questions').innerHTML=q[step].map(v=>'<li>'+escape(v)+'</li>').join('');
 $('back').disabled=step===0;
 $('next').textContent=step===0?'进入任务审阅 →':step===1?'模拟保存 / 发布修订 →':step===2?'模拟确认绑定 →':step===3?(scenario==='unknown'?'查询原回执（模拟） →':'模拟运行并回读 →'):'返回版本预检';
@@ -91,11 +92,11 @@ $('taskRef').textContent=step<3?'TaskRevision: NONE':'TaskRevision: 120 / R1（�
 $('execFact').textContent=step<4?'尚未执行':scenario==='unknown'?'UNKNOWN（模拟）':'SUCCEEDED（模拟）';
 $('execRef').textContent=step<4?'Execution: NONE':'Execution: runtime-demo-001（模拟）';
 }
-$('scenario').addEventListener('change',e=>{scenario=e.target.value;step=0;confirmed=false;task='none';execution='none';render();});
+$('scenario').addEventListener('change',e=>{scenario=e.target.value;step=0;confirmed=false;selectedMode='';render();});
 $('next').addEventListener('click',()=>{if(step===0&&blocked())return;if(step===1&&!confirmed)return;if(step===4){step=0;confirmed=false;}else step++;render();});
 $('back').addEventListener('click',()=>{step=Math.max(0,step-1);render();});
 $('steps').addEventListener('click',e=>{const b=e.target.closest('button[data-step]');if(b&&!b.disabled){const target=Number(b.dataset.step);if(target<=step){step=target;render();}}});
-$('stageBody').addEventListener('change',e=>{if(e.target.id==='manual'){confirmed=e.target.checked;const mode=$('mode')?.value||'';if(!mode&&confirmed){confirmed=false;alert('请先选择写入策略（演示），再确认。');}render();}if(e.target.id==='mode'&&e.target.value){confirmed=false;render();}});
+$('stageBody').addEventListener('change',e=>{if(e.target.id==='manual'){confirmed=e.target.checked;const mode=selectedMode;if(!mode&&confirmed){confirmed=false;alert('请先选择写入策略（演示），再确认。');}render();}if(e.target.id==='mode'){selectedMode=e.target.value;confirmed=false;render();}});
 render();
 })();
 </script>
