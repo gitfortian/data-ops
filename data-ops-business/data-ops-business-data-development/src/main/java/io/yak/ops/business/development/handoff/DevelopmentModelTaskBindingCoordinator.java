@@ -47,7 +47,7 @@ public class DevelopmentModelTaskBindingCoordinator {
       long modelId, long modelVersionId, int modelVersionNo,
       long mappingRevisionId, String mappingSha256,
       long nodeId, long taskRevisionId, int taskRevisionNo,
-      String taskDefinitionSha256,
+      String taskDefinitionSha256, long expectedDraftRevision,
       long targetDatasourceId, String targetDatabase,
       String targetSchema, String targetTable,
       String writeMode, String idempotencyKey,
@@ -86,6 +86,7 @@ public class DevelopmentModelTaskBindingCoordinator {
     if (!String.valueOf(cmd.nodeId()).equals(published.nodeId())
         || !String.valueOf(cmd.taskRevisionId()).equals(published.taskRevisionId())
         || published.taskRevisionNo() != cmd.taskRevisionNo()
+        || published.currentDraftRevision() != cmd.expectedDraftRevision()
         || !Objects.equals(published.immutableDefinitionSha256(),
             cmd.taskDefinitionSha256())
         || !"PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED".equals(published.status())
@@ -140,7 +141,8 @@ public class DevelopmentModelTaskBindingCoordinator {
         || cmd.modelVersionNo() <= 0 || cmd.mappingRevisionId() <= 0
         || !validSha(cmd.mappingSha256())
         || cmd.nodeId() <= 0 || cmd.taskRevisionId() <= 0
-        || cmd.taskRevisionNo() <= 0 || !validSha(cmd.taskDefinitionSha256())
+        || cmd.taskRevisionNo() <= 0 || cmd.expectedDraftRevision() <= 0
+        || !validSha(cmd.taskDefinitionSha256())
         || cmd.targetDatasourceId() <= 0
         || invalidName(cmd.targetDatabase()) || invalidName(cmd.targetTable())
         || (cmd.targetSchema() != null && (cmd.targetSchema().length() > 256
