@@ -33,6 +33,7 @@ public class PublishedDwdDesignEvidenceAdapter implements PublishedDwdDesignEvid
     var mapping = publication.mapping();
     return new Evidence(
         projectId, modelId, version.versionId(), version.versionNo(),
+        checked.readiness().modelCode(),
         mapping.mappingRevisionId(), mapping.contentSha256(),
         mapping.logicalSnapshotSha256(), mapping.physicalStructureSha256(),
         checked.readiness().currentStandardEvidenceSha256(),
