@@ -91,6 +91,63 @@ function required(){
  if(noWrite())z.push("当前权限仅可查看，不能编辑/发布");
  return z
 }
+
+function validationSignature(){
+ return JSON.stringify([state.mode,state.fields,state.businessKey,state.whereRule,state.sortRule,
+ state.metric,state.metricReason,state.freshness,state.scenario==="outputmismatch",
+ state.scenario==="metricdrift",state.audience,state.appCode]);
+}
+function validationStatus(){
+ if(!state.validation)return "NOT_RUN";
+ return state.validation.signature===validationSignature()?state.validation.status:"STALE";
+}
+function validateOutput(){
+ var status="SAMPLE_MATCH",filter=state.whereRule.trim(),scope="全部地区";
+ var orders=3,amount=570,explanation="与同范围合成 DWS 汇总一致；不能证明全量业务正确性";
+ if(state.mode!=="DWS"){
+   status="UNAVAILABLE";explanation="DWD 是订单明细粒度，不能直接用 DWS 日汇总样本证明明细 API 输出";
+ }else if(state.scenario==="revoked"||state.scenario==="unpublished"||
+    state.scenario==="metricdrift"||state.fields.includes("customer_phone")){
+   status="UNAVAILABLE";explanation="来源/Metric 授权或敏感字段限制；不得展示无权限样本值";
+ }else if(filter==="city_id = 'SH'"||filter==="city_id='SH'"){
+   scope="仅上海";orders=2;amount=450;
+   explanation="与 DWS 全地区相比少一行，订单 -1 / 金额 -120，这是过滤范围变化而非必然计算错误";
+ }else if(filter.length){
+   status="SAMPLE_WARNING";explanation="当前自定义过滤条件未解析，不能声称结果与上游可比";
+ }
+ if(state.scenario==="outputmismatch"&&status!=="UNAVAILABLE"){
+   status="SAMPLE_WARNING";orders+=1;
+   explanation="在相同过滤范围 ADS 订单数量多 1，疑似业务键重复或字段/指标口径差异";
+ }
+ var keys=state.businessKey.split(",").map(function(x){return x.trim()}).filter(Boolean);
+ if(!keys.length||keys.some(function(x){return !state.fields.includes(x)})){
+   status="SAMPLE_WARNING";explanation="业务键无法从输出字段证明唯一性；需返回字段映射修复";
+ }
+ state.validation={status:status,signature:validationSignature(),scope:scope,orders:orders,
+ amount:amount,reason:explanation};
+ state.message="固定合成输出样本验证："+status+"。已在输出合同内展示差异和恢复动作。";
+}
+function adsValidationDetail(){
+ var status=validationStatus(),v=state.validation;
+ if(status==="NOT_RUN")return notice("V1 样本验证 NOT_RUN。模型仍可保存草稿；未获取真实数据的 READ 权限。");
+ if(status==="STALE")return notice("V1 样本验证 STALE：输出列、过滤、Metric 或来源发生变化，必须重验。","warn");
+ if(status==="UNAVAILABLE")return notice("V1 样本验证 UNAVAILABLE：来源/权限不满足或为明细模式，禁止伪造样本通过。","block");
+ return '<div class="'+(status==="SAMPLE_WARNING"?"warn":"pass")+'"><strong>'+esc(status)+'</strong> · 固定合成样本 · '+esc(v.scope)+
+ '<table><tr><th>同口径比较</th><th>订单数</th><th>金额</th></tr>'+
+ '<tr><td>来源 DWS 全地区</td><td>3</td><td>570</td></tr>'+
+ '<tr><td>ADS 当前范围</td><td>'+v.orders+'</td><td>'+v.amount+'</td></tr>'+
+ '<tr><td>范围差异</td><td>'+(v.orders-3)+'</td><td>'+(v.amount-570)+'</td></tr></table>'+
+ '<p>'+esc(v.reason)+'</p><small>不是真实数据库查询。过滤后应与同范围上游比较；受限字段不会预演回显。</small></div>'+
+ button("返回字段与过滤修复后重验","goto:2");
+}
+function adsVerificationSummary(){
+ return '<div class="record"><h3>验证证据：结构 / 样本 / 运行后对账</h3><table>'+
+ '<tr><td>V0 静态设计合同</td><td>'+esc(required().length?"STATIC_BLOCKED":"STATIC_PASS（模拟）")+'</td></tr>'+
+ '<tr><td>V1 只读输出样本</td><td>'+esc(validationStatus())+'（合成数据）</td></tr>'+
+ '<tr><td>V2 真实数据与服务对账</td><td>NOT_EXECUTED · 未得到 Runtime/Service 回执</td></tr></table>'+
+ '<p class="muted">样本 MATCH 不等于模型已投产或 Dataset/Service 可消费。</p></div>';
+}
+
 function page(){
  switch(state.step){
  case 0:return title("先定义应用需要交付什么","从消费场景和目标用户出发，不要求业务人员先懂 DWS / DWD 术语。")
