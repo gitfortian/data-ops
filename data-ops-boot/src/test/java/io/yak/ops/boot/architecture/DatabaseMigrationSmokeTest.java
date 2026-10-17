@@ -168,6 +168,12 @@ class DatabaseMigrationSmokeTest {
     try (var context = new SpringApplicationBuilder(YakOpsApplication.class)
         .initializers(application -> application.getEnvironment().getPropertySources()
             .addFirst(new MapPropertySource("isolated-migration-smoke", properties))).run()) {
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.DevelopmentModelTaskBindingCoordinator.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.controller.v1.DevelopmentModelTaskBindingController.class))
+          .isEmpty();
       assertThat(context.getBean("yakBusinessDataSource", DataSource.class)).isNotNull();
       assertThat(context.getBean("opsDataSource")).isSameAs(context.getBean("yakBusinessDataSource"));
       Map<String, Flyway> migrations = context.getBeansOfType(Flyway.class);
