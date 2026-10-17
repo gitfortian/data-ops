@@ -75,6 +75,7 @@ function required(){
  if(state.mode==="DWS"&&state.scenario==="unpublished")z.push("当前 DWS 没有可用的正式发布版本");
  if(state.scenario==="revoked")z.push("来源权限或消费者授权已撤销");
  if(state.scenario==="metricdrift")z.push("指标中心已发布新的口径版本，必须重新审阅");
+ if(state.scenario==="outputmismatch"||validationStatus()==="SAMPLE_WARNING")z.push("输出样本发现同范围差异或不可比过滤，须修复/处置并重新验证");
  if(state.pendingMode)z.push("来源粒度切换等待你明确确认或取消");
  if(!state.fields.length)z.push("输出字段为空");
  if(!state.businessKey.trim())z.push("缺少明确的输出业务键");
@@ -94,7 +95,7 @@ function required(){
 
 function validationSignature(){
  return JSON.stringify([state.mode,state.fields,state.businessKey,state.whereRule,state.sortRule,
- state.metric,state.metricReason,state.freshness,state.scenario==="outputmismatch",
+ state.metric,state.metricReason,state.freshness,state.draftRevision,state.scenario==="outputmismatch",
  state.scenario==="metricdrift",state.audience,state.appCode]);
 }
 function validationStatus(){
