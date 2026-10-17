@@ -4,13 +4,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import io.yak.ops.business.development.task.DevelopmentPublishedSqlRevisionEvidenceService;
+import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.business.datasource.domain.DataSourceDefinition;
+import io.yak.ops.common.enums.datasource.DataSourceConnStatus;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.core.project.ProjectContext;
 import io.yak.ops.spi.modeling.PublishedDwdDesignEvidenceProvider;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 class DevelopmentModelTaskBindingCoordinatorTest {
   private static final String SHA = "a".repeat(64);
@@ -24,8 +26,10 @@ class DevelopmentModelTaskBindingCoordinatorTest {
       mock(DevelopmentPublishedSqlRevisionEvidenceService.class);
   private final DevelopmentModelTaskBindingRepository repository =
       mock(DevelopmentModelTaskBindingRepository.class);
+  private final DataSourceReader sources = mock(DataSourceReader.class);
+  private final DataSourceDefinition connected = mock(DataSourceDefinition.class);
   private final DevelopmentModelTaskBindingCoordinator coordinator =
-      new DevelopmentModelTaskBindingCoordinator(project, modeling, tasks, repository);
+      new DevelopmentModelTaskBindingCoordinator(project, modeling, tasks, repository, sources);
 
   private DevelopmentModelTaskBindingCoordinator.BindCommand command() {
     return new DevelopmentModelTaskBindingCoordinator.BindCommand(
@@ -39,13 +43,16 @@ class DevelopmentModelTaskBindingCoordinatorTest {
   void setup() {
     when(modeling.inspect(50L, 3)).thenReturn(
         new PublishedDwdDesignEvidenceProvider.Evidence(
-            42L, 50L, 90L, 3, 901L, SHA,
+            42L, 50L, 90L, 3, "dwd_order_detail", 901L, SHA,
             "c".repeat(64), "d".repeat(64), "e".repeat(64),
             true, "REVIEWABLE_ONLY"));
     when(tasks.inspect(7L, 2)).thenReturn(
         new DevelopmentPublishedSqlRevisionEvidenceService.Report(
             "7", "92", 2, 1L, TASK_SHA, 2L, false,
             "PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED", false));
+    when(sources.require(9L)).thenReturn(connected);
+    when(connected.getProjectId()).thenReturn(42L);
+    when(connected.getConnStatus()).thenReturn(DataSourceConnStatus.CONNECTED);
     when(repository.byKey(REQUEST_KEY)).thenReturn(Optional.empty());
     when(repository.byRevision(7L, 92L)).thenReturn(Optional.empty());
     when(repository.insert(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -69,7 +76,7 @@ class DevelopmentModelTaskBindingCoordinatorTest {
   @Test void staleModelOrForeignProjectNeverPersists() {
     when(modeling.inspect(50L, 3)).thenReturn(
         new PublishedDwdDesignEvidenceProvider.Evidence(
-            99L, 50L, 90L, 3, 901L, SHA,
+            99L, 50L, 90L, 3, "dwd_order_detail", 901L, SHA,
             "c".repeat(64), "d".repeat(64), "e".repeat(64),
             true, "REVIEWABLE_ONLY"));
     assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
@@ -126,7 +133,7 @@ class DevelopmentModelTaskBindingCoordinatorTest {
 
   @Test void projectNotSelectedDeniesEvenAValidClientPayload() {
     var noProject = new DevelopmentModelTaskBindingCoordinator(
-        Optional::empty, modeling, tasks, repository);
+        Optional::empty, modeling, tasks, repository, sources);
     assertThrows(RuntimeException.class, () -> noProject.bind(command()));
     verify(repository, never()).insert(any());
   }
@@ -136,3 +143,46 @@ class DevelopmentModelTaskBindingCoordinatorTest {
     verify(repository, never()).byId(anyLong());
   }
 }
+
+  @Test
+  void foreignDatasourceDeniesBindingBeforeTaskLookupOrDatabaseInsert() {
+    when(connected.getProjectId()).thenReturn(99L);
+    assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
+    verifyNoInteractions(tasks);
+    verify(repository, never()).insert(any());
+  }
+
+  @Test
+  void disconnectedDatasourceCannotProduceExecutableBindingProvenance() {
+    when(connected.getConnStatus()).thenReturn(DataSourceConnStatus.UNKNOWN);
+    assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
+    verify(repository, never()).insert(any());
+  }
+
+  @Test
+  void incorrectTargetPhysicalTableIsRejectedEvenWithValidModelSha() {
+    var cmd = command();
+    var mismatched = new DevelopmentModelTaskBindingCoordinator.BindCommand(
+        cmd.modelId(), cmd.modelVersionId(), cmd.modelVersionNo(),
+        cmd.mappingRevisionId(), cmd.mappingSha256(), cmd.nodeId(),
+        cmd.taskRevisionId(), cmd.taskRevisionNo(), cmd.taskDefinitionSha256(),
+        cmd.targetDatasourceId(), cmd.targetDatabase(), cmd.targetSchema(),
+        "dwd_another_table", cmd.writeMode(), cmd.idempotencyKey(), true);
+    assertThrows(IllegalStateException.class, () -> coordinator.bind(mismatched));
+    verifyNoInteractions(sources, tasks);
+    verify(repository, never()).insert(any());
+  }
+
+  @Test
+  void sameIdempotencyKeyCannotSilentlyReuseChangedCurrentStandardEvidence() {
+    var recorded = coordinator.bind(command());
+    reset(repository);
+    when(repository.byKey(REQUEST_KEY)).thenReturn(Optional.of(recorded));
+    when(modeling.inspect(50L, 3)).thenReturn(
+        new PublishedDwdDesignEvidenceProvider.Evidence(
+            42L, 50L, 90L, 3, "dwd_order_detail", 901L, SHA,
+            "c".repeat(64), "d".repeat(64), "9".repeat(64),
+            true, "REVIEWABLE_ONLY"));
+    assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
+    verify(repository, never()).insert(any());
+  }
