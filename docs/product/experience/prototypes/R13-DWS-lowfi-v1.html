@@ -81,6 +81,8 @@ function issues(){
  if(state.dims.length===0)z.push("至少选一项分组维度");
  if(!state.countKey.trim()||!state.countConfirmed)z.push("订单数量 DISTINCT 业务键/去重口径未确认");
  if(state.countMethod!=="COUNT_DISTINCT")z.push("订单数量不能用 COUNT(*) 代替按 order_id 的订单去重口径");
+ if(state.countKey.trim()&&state.countKey!=="order_id")z.push("当前示例订单数应按业务订单键 order_id 去重，不可用其它键冒充");
+ if(validationStatus()==="SAMPLE_WARNING")z.push("样本已发现计算异常，需修正或由业务负责人记录处置后重新校验");
  if(!state.amountConfirmed)z.push("支付金额聚合来源、重复计量风险未人工确认");
  if(state.source==="header"&&state.amountMode==="line")z.push("当前选订单头却引用明细金额，来源事实不一致");
  if(state.source==="detail"&&state.amountMode==="header")z.push("当前选订单明细却 SUM 订单头金额，将发生重复计量");
@@ -92,7 +94,7 @@ function issues(){
 
 function validationSignature(){
  return JSON.stringify([state.source,state.sourceVersionNo,state.businessTime,state.period,state.timezone,
- state.bucket,state.dims,state.countKey,state.countMethod,state.amountMode,state.grain,state.scenario==="duplicate"]);
+ state.bucket,state.dims,state.countKey,state.countMethod,state.amountMode,state.grain,state.savedRevision,state.scenario==="duplicate"]);
 }
 function validationStatus(){
  if(!state.validation)return "NOT_RUN";
