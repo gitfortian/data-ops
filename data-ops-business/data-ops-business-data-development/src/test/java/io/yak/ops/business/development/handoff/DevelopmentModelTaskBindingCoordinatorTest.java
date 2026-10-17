@@ -165,7 +165,7 @@ class DevelopmentModelTaskBindingCoordinatorTest {
         cmd.modelId(), cmd.modelVersionId(), cmd.modelVersionNo(),
         cmd.mappingRevisionId(), cmd.mappingSha256(), cmd.nodeId(),
         cmd.taskRevisionId(), cmd.taskRevisionNo(), cmd.taskDefinitionSha256(),
-        cmd.targetDatasourceId(), cmd.targetDatabase(), cmd.targetSchema(),
+        cmd.expectedDraftRevision(), cmd.targetDatasourceId(), cmd.targetDatabase(), cmd.targetSchema(),
         "dwd_another_table", cmd.writeMode(), cmd.idempotencyKey(), true);
     assertThrows(IllegalStateException.class, () -> coordinator.bind(mismatched));
     verifyNoInteractions(sources, tasks);
