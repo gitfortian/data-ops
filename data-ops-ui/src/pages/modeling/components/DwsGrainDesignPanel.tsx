@@ -111,7 +111,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     >
       <div className="space-y-4">
         <Alert type="info" showIcon
-          title="保存的是可复现的汇总设计，不是计算成功"
+          message="保存的是可复现的汇总设计，不是计算成功"
           description="先在上方完成维度/度量标准字段和聚合函数，再保存表结构。这里确认 DWD 已发布版本、时间时区、统计粒度和度量口径；发布版本前服务端会重新验证。"
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -171,7 +171,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
             placeholder="请确认精确发布版本，不能使用草稿" />
         </label>
         {saved && saved.structureFingerprint !== structure.definition ? (
-          <Alert showIcon type="warning" title="模型表结构与上次粒度确认不同，请重新保存粒度合同" />
+          <Alert showIcon type="warning" message="模型表结构与上次粒度确认不同，请重新保存粒度合同" />
         ) : null}
         {saved ? (
           <div className="text-[12px] text-[#667085]">
