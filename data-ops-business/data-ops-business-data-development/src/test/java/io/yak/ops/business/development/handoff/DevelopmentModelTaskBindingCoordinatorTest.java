@@ -142,8 +142,6 @@ class DevelopmentModelTaskBindingCoordinatorTest {
     assertThrows(IllegalArgumentException.class, () -> coordinator.get(0L));
     verify(repository, never()).byId(anyLong());
   }
-}
-
   @Test
   void foreignDatasourceDeniesBindingBeforeTaskLookupOrDatabaseInsert() {
     when(connected.getProjectId()).thenReturn(99L);
@@ -186,3 +184,4 @@ class DevelopmentModelTaskBindingCoordinatorTest {
     assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
     verify(repository, never()).insert(any());
   }
+}
