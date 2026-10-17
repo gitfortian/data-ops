@@ -82,7 +82,7 @@ class ModelDeriveServiceTest {
     structureService = mock(ModelStructureService.class);
     structureReader =
         mock(io.yak.ops.business.modeling.version.ModelPublishedStructureReader.class);
-    when(structureReader.publishedStructure(any()))
+    when(structureReader.requirePublishedStructure(any()))
         .thenAnswer(invocation -> structureService.get(invocation.getArgument(0)));
     modelRepository = mock(ModelRepository.class);
     metricQueryApi = mock(MetricQueryApi.class);
@@ -671,6 +671,58 @@ class ModelDeriveServiceTest {
     assertEquals("DWD", view.upstreamLayer());
     assertEquals("APPLICATION", view.mode());
     assertEquals(1, view.upstreamModels().size());
+  }
+
+  @Test
+  void dwsPreviewRejectsExplicitForeignOrDuplicatedUpstreamInsteadOfSilentFiltering() {
+    stubDwdUpstream();
+    ModelingException foreign = assertThrows(ModelingException.class,
+        () -> service.preview(PROCESS_ID, "DWS", "MYSQL", null,
+            List.of(9999L), "1d", null, null, null));
+    assertEquals(ModelingErrorCode.INVALID_SEARCH, foreign.getErrorCode());
+    assertTrue(foreign.getUserMessage().contains("不属于当前业务过程"));
+
+    ModelingException duplicate = assertThrows(ModelingException.class,
+        () -> service.preview(PROCESS_ID, "DWS", "MYSQL", null,
+            List.of(300L, 300L), "1d", null, null, null));
+    assertEquals(ModelingErrorCode.INVALID_SEARCH, duplicate.getErrorCode());
+    verify(structureReader, never()).requirePublishedStructure(9999L);
+  }
+
+  @Test
+  void adsPreviewRejectsUnpublishedSelectedSourceWithoutCreatingModel() {
+    Model dws = new Model(400L, "dws_order_create", "订单汇总",
+        ModelDialect.MYSQL, null, ModelStatus.DRAFT, "tester",
+        null, null, "DWS", PROCESS_ID, null, null, null, null);
+    when(modelRepository.listByProcessLayer(PROCESS_ID, "DWS")).thenReturn(List.of(dws));
+    when(structureReader.requirePublishedStructure(400L))
+        .thenThrow(new ModelingException(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED,
+            "尚无可用的正式发布版本"));
+    ModelingException error = assertThrows(ModelingException.class,
+        () -> service.preview(PROCESS_ID, "ADS", "MYSQL", null,
+            List.of(400L), null, "report_order", "订单报表", null));
+    assertEquals(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED, error.getErrorCode());
+    verify(catalogService, never()).create(any(), any(), any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void selectedPublishedModelDoesNotReadUnselectedDraftAndNeverUsesLiveStructure() {
+    stubDwdUpstream();
+    Model unpublished = new Model(301L, "dwd_order_unpublished", "未发布明细",
+        ModelDialect.MYSQL, null, ModelStatus.DRAFT, "tester",
+        null, null, "DWD", PROCESS_ID, null, null, null, null);
+    var valid = modelRepository.listByProcessLayer(PROCESS_ID, "DWD").get(0);
+    when(modelRepository.listByProcessLayer(PROCESS_ID, "DWD"))
+        .thenReturn(List.of(valid, unpublished));
+    var view = service.preview(PROCESS_ID, "DWS", "MYSQL", null,
+        List.of(300L), "1d", null, null, null);
+    assertTrue(view.supported());
+    assertEquals(2, view.upstreamModels().size());
+    assertEquals(0, view.upstreamModels().get(1).fieldCount());
+    verify(structureReader).requirePublishedStructure(300L);
+    verify(structureReader, never()).requirePublishedStructure(301L);
+    verify(structureReader, never()).publishedStructure(301L);
+    verify(structureService, never()).get(301L);
   }
 
   /** 61:上游覆盖只对 ADS 生效——DWS 的上游固定是 DWD,传错参数按非法请求阻断。 */
