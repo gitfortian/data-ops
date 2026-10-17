@@ -73,6 +73,20 @@ public class DevelopmentTaskExecutionControlService {
     if (!RETRYABLE.contains(status)) {
       throw new IllegalArgumentException("仅失败、超时或已取消的运行记录可以重试");
     }
+    // An SQL Runtime TIMEOUT / lost receipt / unattached or failed submission
+    // is not proof that the external target was not written. The existing
+    // editor retry has no durable idempotency key and must never blindly
+    // re-submit an ambiguous SQL write.
+    if ("SQL".equalsIgnoreCase(previous.taskType())
+        && ("TIMEOUT".equals(status)
+            || Set.of(
+                DevelopmentTaskExecutionService.FAILURE_RUNTIME_STATE_LOST,
+                DevelopmentTaskExecutionService.FAILURE_RUNTIME_NOT_ATTACHED,
+                DevelopmentTaskExecutionService.FAILURE_RUNTIME_SUBMIT)
+                .contains(normalize(previous.failureReason())))) {
+      throw new IllegalStateException(
+          "SQL 运行结果尚无法证明目标未写入；禁止直接重试。请核对原运行回执及目标数据，确认安全后由人工创建新的执行");
+    }
     return runService.submit(
         previous.nodeId(),
         previous.taskType(),
