@@ -52,7 +52,7 @@ step:0,appType:"report",appCode:"ads_order_overview",appName:"订单经营日报
 owner:"订单运营负责人",audience:"运营分析团队",purpose:"每日查看地区订单量及经营趋势",
 mode:"DWS",pendingMode:null,fields:["order_day","city_id","order_count","paid_amount"],
 businessKey:"order_day,city_id",whereRule:"",sortRule:"order_day DESC",
-metric:"order_count_v4",freshness:"D+1",metricApproved:false,privacyApproved:false,
+metric:"order_count_v4",metricReason:"",freshness:"D+1",metricApproved:false,privacyApproved:false,
 scenario:"normal",draftRevision:0,published:false,dirty:true,saveUnknown:false,
 message:"",viewOnly:false
 };
@@ -84,6 +84,7 @@ function required(){
  if(state.mode==="DWD"&&(!state.fields.includes("order_id")||!state.fields.includes("item_id")))z.push("明细模式必须保留订单明细业务键");
  if(state.fields.includes("customer_phone"))z.push("受限字段 customer_phone 需要消费者专门授权；低保真不提供实际授权");
  if(!state.metricApproved)z.push("业务指标版本和用途尚未人工核对");
+ if(state.metric==="none"&&!state.metricReason.trim())z.push("未引用正式指标时必须明确非指标数据的业务含义");
  if(!state.privacyApproved)z.push("消费范围、敏感字段与访问策略尚未人工确认");
  if(state.draftRevision===0)z.push("应用输出设计草稿尚未保存");
  if(state.dirty)z.push("存在未保存修改，不能直接发布");
@@ -112,6 +113,7 @@ function page(){
  case 3:return title("口径、刷新与使用者约定","正式指标口径来自 Metric 原域；应用刷新和消费能力必须由 Runtime / Dataset / Service 独立证明。")
  +'<div class="two">'+input("只读指标引用候选","metric",[["order_count_v4","订单数量 · Metric V4"],["paid_amount_v2","支付金额 · Metric V2"],["none","无指标引用（需显式业务解释）"]])
  +input("业务期待的刷新时效","freshness",[["D+1","次日可用（目标）"],["H+1","次小时（目标）"],["T+5m","5 分钟（目标，未承诺）"]])+'</div>'
+ +(state.metric==="none"?input("未引用指标时的业务含义和原因","metricReason"):"")
  +'<label class="option"><input type="checkbox" data-check="metricApproved" '+(state.metricApproved?"checked":"")+'>业务负责人已核对当前应用使用的已发布指标引用、口径版本及过滤含义</label>'
  +'<label class="option"><input type="checkbox" data-check="privacyApproved" '+(state.privacyApproved?"checked":"")+'>已核对消费者范围与目标字段敏感级别（不等于正式安全授权）</label>'
  +(state.scenario==="metricdrift"?notice("Metric 发布新版导致原引用不再满足当前审阅；保留旧引用，进入版本差异确认。","block"):"")
@@ -130,7 +132,7 @@ function dialog(){
  if(!state.pendingMode){area.innerHTML="";return}
  var next=state.pendingMode;
  var losing=state.fields.filter(function(x){return defs[next].every(function(y){return y[0]!==x})});
- area.innerHTML='<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="dialog"><div class="kicker">SOURCE / GRAIN IMPACT REVIEW</div><h2 id="dialog-title">确认切换来源粒度？</h2><p>当前：<strong>'+state.mode+'</strong> → 目标：<strong>'+next+'</strong>。这不是普通筛选条件变化。</p><table><tr><th>影响范围</th><th>变化</th></tr><tr><td>业务粒度</td><td>'+(next==="DWD"?"从业务日×地区变成订单明细行":"从订单明细行变成业务日×地区")+'</td></tr><tr><td>输出字段</td><td>将失去 '+esc(losing.join(", ")||"无")+'</td></tr><tr><td>业务键</td><td>'+(next==="DWD"?"order_id + item_id":"order_day + city_id")+'</td></tr><tr><td>指标/过滤</td><td>原确认作废，必须重新核对，已保存旧版本保留</td></tr></table><div class="toolbar">'+button("取消，继续现有模式","cancelSwitch")+button("确认切换并重新审阅映射","confirmSwitch","main")+'</div></div></div>';
+ area.innerHTML='<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="dialog"><div class="kicker">SOURCE / GRAIN IMPACT REVIEW</div><h2 id="dialog-title">确认切换来源粒度？</h2><p>当前：<strong>'+state.mode+'</strong> → 目标：<strong>'+next+'</strong>。这不是普通筛选条件变化。</p><table><tr><th>影响范围</th><th>变化</th></tr><tr><td>业务粒度</td><td>'+(next==="DWD"?"从业务日×地区变成订单明细行":"从订单明细行变成业务日×地区")+'</td></tr><tr><td>输出字段</td><td>将失去 '+esc(losing.join(", ")||"无")+'</td></tr><tr><td>业务键</td><td>'+(next==="DWD"?"order_id + item_id":"order_day + city_id")+'</td></tr><tr><td>指标/过滤</td><td>原确认作废，必须重新核对，已保存旧版本保留</td></tr></table><div class="toolbar">'+button("取消，继续现有模式","cancelSwitch")+button("保存旧草稿再切换","saveThenSwitch","",noWrite())+button("确认切换并重新审阅映射","confirmSwitch","main")+'</div></div></div>';
 }
 function redraw(){
  var blockers=required();
@@ -142,7 +144,7 @@ function redraw(){
  dialog()
 }
 function store(){
- var copy=Object.assign({},state,{pendingMode:null,scenario:"normal",viewOnly:false,saveUnknown:false,dirty:false,message:"",step:5});
+ var copy=Object.assign({},state,{pendingMode:null,viewOnly:false,saveUnknown:false,dirty:false,message:"",step:5});
  localStorage.setItem(KEY,JSON.stringify(copy))
 }
 function execute(act){
@@ -159,6 +161,7 @@ function execute(act){
  else if(act==="publish"){var bad=required();state.message=bad.length?"发布失败："+bad.join("；"):"ADS 设计 V1 已发布模拟；Dataset/Service/Query/Usage 未启动或授权。";if(!bad.length){state.published=true;state.dirty=false;store()}}
  else if(act==="reset"){localStorage.removeItem(KEY);state=Object.assign({},seed,{fields:seed.fields.slice(),message:"原型状态已重置"});}
  else if(act==="cancelSwitch"){state.pendingMode=null;state.message="保留原来源、旧草稿字段和业务口径；本次未切换";}
+ else if(act==="saveThenSwitch"){if(noWrite()){state.message="无写权限不能保存旧草稿";}else{state.draftRevision+=1;store();state.message="已保留旧模式草稿 R"+state.draftRevision+"；下一个操作进入新粒度并重审。";state.dirty=false;execute("confirmSwitch");return;}}
  else if(act==="confirmSwitch"){
   state.mode=state.pendingMode;state.pendingMode=null;
   state.fields=state.mode==="DWD"?["order_id","item_id","item_amount","event_time"]:["order_day","city_id","order_count","paid_amount"];
