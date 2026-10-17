@@ -122,6 +122,23 @@ public class DwsGrainDesignService {
     return get(modelId);
   }
 
+  public record UpstreamCandidate(
+      long modelId, String code, String name, Long publishedVersionId,
+      Integer publishedVersionNo, boolean usable) {}
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
+  public List<UpstreamCandidate> candidates(long modelId) {
+    Model target = requireDws(models.findById(modelId).orElseThrow(
+        () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
+    return models.listByProcessLayer(target.processId(), "DWD").stream().map(model -> {
+      boolean valid = model.status() != ModelStatus.DISABLED
+          && model.publishedVersionId() != null
+          && versions.findById(model.publishedVersionId(), model.id()).isPresent();
+      return new UpstreamCandidate(model.id(), model.code(), model.name(),
+          model.publishedVersionId(), model.latestVersionNo(), valid);
+    }).toList();
+  }
+
   /**
    * Called while ModelVersionService holds the physical model write lock.
    * Returns the exact frozen design payload embedded in immutable ModelVersion.metaJson.
