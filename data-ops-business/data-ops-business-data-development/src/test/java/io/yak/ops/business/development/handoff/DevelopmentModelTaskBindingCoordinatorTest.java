@@ -86,7 +86,7 @@ class DevelopmentModelTaskBindingCoordinatorTest {
   @Test void oldOrBlockedPublishedDwdVersionIsRejected() {
     when(modeling.inspect(50L, 3)).thenReturn(
         new PublishedDwdDesignEvidenceProvider.Evidence(
-            42L, 50L, 90L, 3, 901L, SHA,
+            42L, 50L, 90L, 3, "dwd_order_detail", 901L, SHA,
             "c".repeat(64), "d".repeat(64), "e".repeat(64),
             false, "DESIGN_BLOCKED"));
     assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
