@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -18,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
  * This is NOT authority to run an SQL task or claim target reconciliation.
  */
 @Component
+@ConditionalOnProperty(prefix = "data-ops.dwd", name = "binding-write-authorized",
+    havingValue = "true", matchIfMissing = false)
 public class DevelopmentModelTaskBindingCoordinator {
   private final CurrentProject currentProject;
   private final PublishedDwdDesignEvidenceProvider modeling;
