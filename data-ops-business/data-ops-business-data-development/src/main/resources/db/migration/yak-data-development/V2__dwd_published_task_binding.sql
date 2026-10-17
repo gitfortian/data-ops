@@ -1,0 +1,32 @@
+-- R12-2 (DRAFT / NOT AUTHORIZED FOR PRODUCTION): immutable DWD→DataDev binding.
+-- Migration stays on an unmerged review branch until DR-07 D1–D5 approval.
+CREATE TABLE yak_dev_model_task_binding (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    model_id BIGINT NOT NULL,
+    model_version_id BIGINT NOT NULL,
+    model_version_no INT NOT NULL,
+    mapping_revision_id BIGINT NOT NULL,
+    mapping_sha256 CHAR(64) NOT NULL,
+    logical_sha256 CHAR(64) NOT NULL,
+    physical_sha256 CHAR(64) NOT NULL,
+    current_standard_sha256 CHAR(64) NOT NULL,
+    node_id BIGINT NOT NULL,
+    task_revision_id BIGINT NOT NULL,
+    task_revision_no INT NOT NULL,
+    task_definition_sha256 CHAR(64) NOT NULL,
+    target_datasource_id BIGINT NOT NULL,
+    target_database VARCHAR(256) NOT NULL,
+    target_schema VARCHAR(256) NULL,
+    target_table VARCHAR(256) NOT NULL,
+    write_mode VARCHAR(32) NOT NULL,
+    binding_digest CHAR(64) NOT NULL,
+    idempotency_key VARCHAR(80) NOT NULL,
+    state VARCHAR(64) NOT NULL,
+    create_time DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_yak_dev_binding_project_request (project_id, idempotency_key),
+    UNIQUE KEY uk_yak_dev_binding_project_revision (project_id, node_id, task_revision_id),
+    KEY idx_yak_dev_binding_model (project_id, model_id, model_version_id),
+    KEY idx_yak_dev_binding_node (project_id, node_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
