@@ -5,7 +5,7 @@ import {
   getModelingModel, inspectPhysicalDataDevHandoff, listModelingVersions,
 } from '@/services/modeling/api';
 import { getSemanticProcess } from '@/services/semantic/api';
-import { getPublishedDwdMapping } from '@/services/modeling/dwdMapping';
+import { inspectDwdDataDevHandoffEvidence } from '@/services/modeling/dwdMapping';
 import { getDevelopmentTaskDraft } from '@/services/data-development';
 
 let mockProjectId = 1;
@@ -25,7 +25,7 @@ jest.mock('@/services/modeling/api', () => ({
   listModelingVersions: jest.fn(),
 }));
 jest.mock('@/services/semantic/api', () => ({ getSemanticProcess: jest.fn() }));
-jest.mock('@/services/modeling/dwdMapping', () => ({ getPublishedDwdMapping: jest.fn() }));
+jest.mock('@/services/modeling/dwdMapping', () => ({ inspectDwdDataDevHandoffEvidence: jest.fn() }));
 jest.mock('@/services/data-development', () => ({ getDevelopmentTaskDraft: jest.fn() }));
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
@@ -70,6 +70,19 @@ const boundMapping = {
   },
 };
 
+const dwdBundle = {
+  readiness: report, publication: boundMapping,
+  status: 'DESIGN_BLOCKED', blockers: report.blockers,
+  authorizedForTaskCreation: false,
+};
+const reviewableBundle = {
+  ...dwdBundle, status: 'REVIEWABLE_ONLY', blockers: [],
+  readiness: {
+    ...report, selectedLatestVersion: true,
+    designStatus: 'DESIGN_REVIEWABLE', blockers: [],
+  },
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockProjectId = 1;
@@ -78,7 +91,7 @@ beforeEach(() => {
   (getSemanticProcess as jest.Mock).mockResolvedValue({ id: 7, name: '下单' });
   (listModelingVersions as jest.Mock).mockResolvedValue([version]);
   (inspectPhysicalDataDevHandoff as jest.Mock).mockResolvedValue(report);
-  (getPublishedDwdMapping as jest.Mock).mockResolvedValue(boundMapping);
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue(dwdBundle);
   (getDevelopmentTaskDraft as jest.Mock).mockResolvedValue({
     nodeId: 'sql-1', draftRevision: 5,
     definition: { taskType: 'SQL', schemaVersion: 1,
@@ -101,8 +114,8 @@ it('shows owner-verified frozen version and unresolved original DataDev blockers
   expect(screen.getByText(/不是最新发布指针/)).toBeInTheDocument();
   expect(screen.getByText(/不自动创建新任务/)).toBeInTheDocument();
   expect(getModelingModel).toHaveBeenCalledWith(50);
-  expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledWith(50, 3);
-  expect(getPublishedDwdMapping).toHaveBeenCalledWith(50, 3);
+  expect(inspectDwdDataDevHandoffEvidence).toHaveBeenCalledWith(50, 3);
+  expect(inspectPhysicalDataDevHandoff).not.toHaveBeenCalled();
   expect(screen.getByText(/MappingRevision #701/)).toBeInTheDocument();
   expect(screen.getByText('order_id → Logical#11 / Std#12 [DIRECT]')).toBeInTheDocument();
   expect(getDevelopmentTaskDraft).not.toHaveBeenCalled();
@@ -110,8 +123,10 @@ it('shows owner-verified frozen version and unresolved original DataDev blockers
 });
 
 it('rejects an old DWD version without immutable mapping evidence', async () => {
-  (getPublishedDwdMapping as jest.Mock).mockResolvedValue({
-    modelVersionId: 99, versionNo: 3, state: 'LEGACY_UNBOUND', mapping: null,
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue({
+    ...dwdBundle, publication: {
+      modelVersionId: 99, versionNo: 3, state: 'LEGACY_UNBOUND', mapping: null,
+    },
   });
   render(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} />);
@@ -121,8 +136,8 @@ it('rejects an old DWD version without immutable mapping evidence', async () => 
 });
 
 it('rejects forged mapping publication version instead of trusting the URL', async () => {
-  (getPublishedDwdMapping as jest.Mock).mockResolvedValue({
-    ...boundMapping, modelVersionId: 100,
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue({
+    ...dwdBundle, publication: { ...boundMapping, modelVersionId: 100 },
   });
   render(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} />);
@@ -161,23 +176,24 @@ it('rejects tampered URL, missing permission, and unknown Semantic process', asy
 
 it('discards late Modeling owner response when current project changes', async () => {
   let complete: (value: unknown) => void = () => {};
-  (inspectPhysicalDataDevHandoff as jest.Mock)
+  (inspectDwdDataDevHandoffEvidence as jest.Mock)
     .mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }))
     .mockRejectedValueOnce(new Error('新项目不可访问旧模型'));
   const view = render(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} />);
-  await waitFor(() => expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(inspectDwdDataDevHandoffEvidence).toHaveBeenCalledTimes(1));
   mockProjectId = 2;
   view.rerender(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} />);
-  await waitFor(() => expect(inspectPhysicalDataDevHandoff).toHaveBeenCalledTimes(2));
-  await act(async () => complete(report));
+  await waitFor(() => expect(inspectDwdDataDevHandoffEvidence).toHaveBeenCalledTimes(2));
+  await act(async () => complete(dwdBundle));
   expect(await screen.findByText('新项目不可访问旧模型')).toBeInTheDocument();
   expect(screen.queryByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).not.toBeInTheDocument();
 });
 
 it('opens only the native DataDev SQL creation modal after verified Modeling handoff', async () => {
   const openSqlCreation = jest.fn();
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue(reviewableBundle);
   render(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} onCreateSqlNode={openSqlCreation} />);
   expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
@@ -192,12 +208,14 @@ it('opens only the native DataDev SQL creation modal after verified Modeling han
 
 it('does not offer SQL creation when frozen mapping evidence is invalid', async () => {
   const openSqlCreation = jest.fn();
-  (getPublishedDwdMapping as jest.Mock).mockResolvedValue({
-    ...boundMapping,
-    mapping: { ...boundMapping.mapping, rules: [
-      boundMapping.mapping.rules[0],
-      { ...boundMapping.mapping.rules[0], targetColumn: 'ORDER_ID' },
-    ] },
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue({
+    ...dwdBundle, publication: {
+      ...boundMapping,
+      mapping: { ...boundMapping.mapping, rules: [
+        boundMapping.mapping.rules[0],
+        { ...boundMapping.mapping.rules[0], targetColumn: 'ORDER_ID' },
+      ] },
+    },
   });
   render(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} onCreateSqlNode={openSqlCreation} />);
@@ -208,9 +226,33 @@ it('does not offer SQL creation when frozen mapping evidence is invalid', async 
 });
 
 it('does not enable SQL creation when the native node-creation action is unavailable', async () => {
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue(reviewableBundle);
   render(<ModelingHandoffEvidencePanel search={url}
     nodes={[]} onFocusNode={jest.fn()} />);
   expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '人工新建 SQL 任务（不绑定模型）' }))
     .toBeDisabled();
+});
+
+it('keeps historical or drifted DWD evidence visible but prevents SQL creation', async () => {
+  const createSql = jest.fn();
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} onCreateSqlNode={createSql} />);
+  expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
+  expect(screen.getByText('DWD 设计证据存在阻断')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '人工新建 SQL 任务（不绑定模型）' }))
+    .toBeDisabled();
+  expect(createSql).not.toHaveBeenCalled();
+});
+
+it('rejects any combined Modeling report that claims DataDev creation authority', async () => {
+  (inspectDwdDataDevHandoffEvidence as jest.Mock).mockResolvedValue({
+    ...reviewableBundle, authorizedForTaskCreation: true,
+  });
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} onCreateSqlNode={jest.fn()} />);
+  expect(await screen.findByText('交接来源无法核实')).toBeInTheDocument();
+  expect(screen.getByText(/未知或越权/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '人工新建 SQL 任务（不绑定模型）' }))
+    .not.toBeInTheDocument();
 });
