@@ -700,10 +700,12 @@ class ModelDeriveServiceTest {
     when(structureReader.requirePublishedStructure(400L))
         .thenThrow(new ModelingException(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED,
             "尚无可用的正式发布版本"));
-    ModelingException error = assertThrows(ModelingException.class,
-        () -> service.preview(PROCESS_ID, "ADS", "MYSQL", null,
-            List.of(400L), null, "report_order", "订单报表", null));
-    assertEquals(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED, error.getErrorCode());
+    ModelDeriveService.PreviewView blocked =
+        service.preview(PROCESS_ID, "ADS", "MYSQL", null,
+            List.of(400L), null, "report_order", "订单报表", null);
+    assertTrue(!blocked.supported());
+    assertTrue(blocked.unsupportedReason().contains("正式发布版本"));
+    assertTrue(blocked.fields().isEmpty());
     verify(catalogService, never()).create(any(), any(), any(), any(), any(), any(), any(), any());
   }
 
