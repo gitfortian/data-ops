@@ -1,3 +1,4 @@
+import type { PhysicalDataDevHandoffReadiness } from './api';
 import HttpUtils from '@/utils/HttpUtils';
 
 /** R12 draft evidence, NOT an approved logical design or published physical model. */
@@ -119,3 +120,19 @@ export interface DwdApprovalSubmission {
 }
 export const getDwdPublicationPolicy = (physicalId: number): Promise<DwdPublicationPolicy> =>
   HttpUtils.getData<DwdPublicationPolicy>(`${path(physicalId)}/publication-policy`);
+
+/** One Modeling-owned read-only snapshot; NEVER grants a DataDev task write. */
+export interface DwdDataDevHandoffEvidence {
+  readiness: PhysicalDataDevHandoffReadiness;
+  publication: DwdPublishedMapping;
+  status: 'REVIEWABLE_ONLY' | 'DESIGN_BLOCKED';
+  blockers: string[];
+  authorizedForTaskCreation: false;
+}
+
+export const inspectDwdDataDevHandoffEvidence = (
+  physicalId: number, versionNo: number,
+): Promise<DwdDataDevHandoffEvidence> =>
+  HttpUtils.getData<DwdDataDevHandoffEvidence>(
+    `${path(physicalId)}/published-versions/${versionNo}/datadev-handoff-evidence`,
+  );
