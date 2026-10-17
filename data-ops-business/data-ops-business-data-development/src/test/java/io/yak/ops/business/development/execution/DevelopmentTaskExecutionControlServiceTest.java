@@ -1,9 +1,11 @@
 package io.yak.ops.business.development.execution;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -158,6 +160,54 @@ class DevelopmentTaskExecutionControlServiceTest {
 
     assertEquals(11L, result.id());
     verify(runs).submit(7L, "SQL", 3, "select 1", "{\"dataSourceId\":\"9\"}", "bruce", 10L);
+  }
+
+  @Test
+  void sqlTimeoutCannotBlindlyRetryPossiblyWrittenTarget() {
+    var histories = mock(DevelopmentTaskExecutionService.class);
+    var runs = mock(DevelopmentTaskRunService.class);
+    var gateway = mock(TaskExecutionGateway.class);
+    var projectScope = mock(ProjectContextScope.class);
+    when(histories.get(10L)).thenReturn(execution(
+        "TIMEOUT", "runtime-ambiguous", null,
+        DevelopmentTaskExecutionService.FAILURE_TIMEOUT));
+    var service = new DevelopmentTaskExecutionControlService(
+        histories, runs, gateway, projectScope);
+    assertThrows(IllegalStateException.class, () -> service.retry(10L, "bruce"));
+    verifyNoInteractions(runs);
+  }
+
+  @Test
+  void sqlUnknownRuntimeOutcomesCannotBePromotedToSafeRetry() {
+    var histories = mock(DevelopmentTaskExecutionService.class);
+    var runs = mock(DevelopmentTaskRunService.class);
+    var gateway = mock(TaskExecutionGateway.class);
+    var projectScope = mock(ProjectContextScope.class);
+    var service = new DevelopmentTaskExecutionControlService(
+        histories, runs, gateway, projectScope);
+    for (String reason : List.of(
+        DevelopmentTaskExecutionService.FAILURE_RUNTIME_STATE_LOST,
+        DevelopmentTaskExecutionService.FAILURE_RUNTIME_NOT_ATTACHED,
+        DevelopmentTaskExecutionService.FAILURE_RUNTIME_SUBMIT)) {
+      when(histories.get(10L)).thenReturn(execution("FAILED", null, null, reason));
+      assertThrows(IllegalStateException.class, () -> service.retry(10L, "bruce"));
+    }
+    verifyNoInteractions(runs);
+  }
+
+  @Test
+  void sqlExecutionWithAmbiguousRuntimeReceiptCannotRetryDespiteCancelledTerminal() {
+    var histories = mock(DevelopmentTaskExecutionService.class);
+    var runs = mock(DevelopmentTaskRunService.class);
+    var gateway = mock(TaskExecutionGateway.class);
+    var projectScope = mock(ProjectContextScope.class);
+    when(histories.get(10L)).thenReturn(execution(
+        "CANCELLED", "runtime-1", null,
+        DevelopmentTaskExecutionService.FAILURE_RUNTIME_STATE_LOST));
+    var service = new DevelopmentTaskExecutionControlService(
+        histories, runs, gateway, projectScope);
+    assertThrows(IllegalStateException.class, () -> service.retry(10L, "bruce"));
+    verifyNoInteractions(runs);
   }
 
   @Test
