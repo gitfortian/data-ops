@@ -21,7 +21,7 @@ class DataDevelopmentFlywayContractTest {
   }
 
   @Test
-  void firstReleaseNamespaceContainsExactlyOneBaseline() throws IOException {
+  void preservesV1AndAddsOnlyTheReviewedForwardV2Migration() throws IOException {
     List<String> migrations;
     try (var paths = Files.list(migrationRoot())) {
       migrations = paths
@@ -32,7 +32,11 @@ class DataDevelopmentFlywayContractTest {
           .toList();
     }
 
-    assertThat(migrations).containsExactly("V1__baseline_data_development.sql");
+    assertThat(migrations).containsExactly(
+        "V1__baseline_data_development.sql",
+        "V2__dwd_published_task_binding.sql");
+    assertThat(Files.exists(
+        postgresqlMigrationRoot().resolve("V2__dwd_published_task_binding.sql"))).isTrue();
   }
 
   @Test
@@ -57,6 +61,36 @@ class DataDevelopmentFlywayContractTest {
         .doesNotContain("ALTER TABLE")
         .doesNotContain("CREATE TABLE IF NOT EXISTS yak_dev_graph")
         .doesNotContain("DROP TABLE");
+  }
+
+  @Test
+  void immutableDwdBindingIsForwardOnlyAndProjectIsolatedForBothVendors()
+      throws IOException {
+    for (Path root : List.of(migrationRoot(), postgresqlMigrationRoot())) {
+      String v2 = Files.readString(root.resolve("V2__dwd_published_task_binding.sql"));
+      assertThat(v2)
+          .contains("CREATE TABLE yak_dev_model_task_binding")
+          .contains("project_id")
+          .contains("model_version_id")
+          .contains("mapping_revision_id")
+          .contains("task_revision_id")
+          .contains("task_definition_sha256")
+          .contains("target_datasource_id")
+          .contains("idempotency_key")
+          .contains("uk_yak_dev_binding_project_request")
+          .contains("uk_yak_dev_binding_project_revision")
+          .contains("idx_yak_dev_binding_model")
+          .doesNotContain("ALTER TABLE yak_dev_task_revision")
+          .doesNotContain("DROP TABLE")
+          .doesNotContain("INSERT INTO yak_dev_model_task_binding");
+    }
+  }
+
+  private Path postgresqlMigrationRoot() {
+    Path local = Path.of("src/main/resources/db/migration-postgresql/yak-data-development");
+    if (Files.isDirectory(local)) return local;
+    return Path.of("data-ops-business", "data-ops-business-data-development",
+        "src", "main", "resources", "db", "migration-postgresql", "yak-data-development");
   }
 
   private Path configurationSource() {
