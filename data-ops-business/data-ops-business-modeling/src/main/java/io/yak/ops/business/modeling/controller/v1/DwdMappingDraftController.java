@@ -5,6 +5,7 @@ import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService;
 import io.yak.ops.business.modeling.mapping.DwdMappingPublicationService;
+import io.yak.ops.business.modeling.mapping.DwdDataDevHandoffEvidenceService;
 import io.yak.ops.business.approval.api.ApprovalInstanceView;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Draft;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Frozen;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class DwdMappingDraftController {
   private final DwdMappingDraftService service;
   private final DwdMappingPublicationService publisher;
+  private final DwdDataDevHandoffEvidenceService handoffEvidence;
   private final CurrentUserProvider currentUserProvider;
 
   @GetMapping
@@ -82,6 +84,14 @@ public class DwdMappingDraftController {
   public Result<DwdMappingPublicationService.History> readPublishedBinding(
       @PathVariable Long id, @PathVariable int versionNo) {
     return Result.success(publisher.history(id, versionNo));
+  }
+
+  /** Exact DWD version + immutable mapping in one read-only Modeling transaction.
+   * This is not a DataDev task creation, revision publication or run authority. */
+  @GetMapping("/published-versions/{versionNo}/datadev-handoff-evidence")
+  public Result<DwdDataDevHandoffEvidenceService.Report> inspectDataDevHandoffEvidence(
+      @PathVariable Long id, @PathVariable int versionNo) {
+    return Result.success(handoffEvidence.inspect(id, versionNo));
   }
 
   @GetMapping("/revisions/{revisionId}")
