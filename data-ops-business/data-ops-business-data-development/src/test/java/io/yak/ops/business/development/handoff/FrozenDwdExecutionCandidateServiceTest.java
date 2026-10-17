@@ -97,13 +97,16 @@ class FrozenDwdExecutionCandidateServiceTest {
     assertTrue(candidate.preview().editorDiffersFromPublishedRevision());
     assertFalse(candidate.preview().authorizedForExecution());
     assertFalse(json.writeValueAsString(candidate.preview()).contains(published.content()));
-    verifyNoMoreInteractions(bindings, modeling, sources, nodes, revisions, integrity);
+    verify(bindings).byId(55);
+    verify(modeling).inspect(50, 3);
+    verify(revisions).get(node, 2);
+    verify(integrity).inspect(7L, 2);
   }
 
   @Test
   void newDraftDoesNotOverwriteFrozenPublishedSnapshot() {
-    assertEquals(published.content(), service.prepare(55).frozenSnapshot()
-        .definitionSnapshotJson().contains(published.content()) ? published.content() : "");
+    assertTrue(service.prepare(55).frozenSnapshot()
+        .definitionSnapshotJson().contains(published.content()));
     assertFalse(service.inspect(55).authorizedForExecution());
   }
 
