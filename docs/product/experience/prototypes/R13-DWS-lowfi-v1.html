@@ -64,7 +64,7 @@ var originals={
 var state=Object.assign({},originals,{dims:originals.dims.slice()});
 function e(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function h(title,subtitle){return '<div class="kicker">DWS / SCREEN '+(state.step+1)+' OF 6</div><h1>'+title+'</h1><p class="lead">'+subtitle+'</p>'}
-function field(label,id,val,opts){return '<label class="field"><span>'+label+'</span>'+(opts?'<select data-key="'+id+'">'+opts.map(function(o){return '<option value="'+e(o[0])+'" '+(String(val)===o[0]?"selected":"")+'>'+e(o[1])+'</option>'}).join("")+'</select>':'<input type="text" data-key="'+id+'" value="'+e(val)+'">')+'</label>'}
+function field(label,id,val,opts){return '<label class="field"><span>'+label+'</span>'+(opts?'<select data-key="'+id+'" '+(readonly()?"disabled":"")+'>'+opts.map(function(o){return '<option value="'+e(o[0])+'" '+(String(val)===o[0]?"selected":"")+'>'+e(o[1])+'</option>'}).join("")+'</select>':'<input type="text" data-key="'+id+'" '+(readonly()?"disabled":"")+' value="'+e(val)+'">')+'</label>'}
 function t(text,kind){return '<div class="'+(kind||"info")+'">'+text+'</div>'}
 function b(label,act,kind,disabled){return '<button class="btn '+(kind||"")+'" data-act="'+act+'" '+(disabled?"disabled":"")+'>'+label+'</button>'}
 function readonly(){return state.readOnly||state.scenario==="revoked"}
@@ -106,16 +106,16 @@ function section(){
  +field("正式上游的业务时间列","businessTime",state.businessTime,[["event_time","event_time · 业务事件时间"],["paid_at","paid_at · 支付时间"],["none","无有效业务时间（应阻断）"]])
  +field("目标时间桶","bucket",state.bucket,[["order_day","order_day · 业务日"],["order_hour","order_hour · 业务小时"],["order_week","order_week · 业务周"]])+'</div>'
  +'<h2>分组维度（可多选）</h2>'
- +["order_day","city_id","channel_id"].map(function(x){return '<label class="choice"><input type="checkbox" data-dim="'+x+'" '+(state.dims.includes(x)?"checked":"")+'>'+x+' <small>· 来源需有真实标准字段</small></label>'}).join("")
+ +["order_day","city_id","channel_id"].map(function(x){return '<label class="choice"><input type="checkbox" data-dim="'+x+'" '+(state.dims.includes(x)?"checked":"")+' '+(readonly()?"disabled":"")+'>'+x+' <small>· 来源需有真实标准字段</small></label>'}).join("")
  +t("当前目标粒度：每个 "+e(state.period)+" 时间桶 × "+e(state.dims.join(" × ")||"无维度")+" → 一行（设计示意，不是计算结果）。")
  +t("业务日切换、周起点、跨时区与夏令时、迟到数据重算，需要业务/运行专门规则；不能由「按天」选项自动保证。","warn");
  case 3:return h("每个度量，都要解释数字为什么可信","COUNT DISTINCT 需要显式业务键；SUM 必须确认头/明细重复和过滤口径。白名单函数本身不等于业务正确。")
  +'<div class="tile"><h3>① 日下单订单量</h3><p>输出字段 order_count · 函数 COUNT_DISTINCT · 来源：'+e(sourceName())+'</p>'
  +field("DISTINCT 业务键","countKey",state.countKey)
- +'<label class="choice"><input type="checkbox" data-check="countConfirmed" '+(state.countConfirmed?"checked":"")+'>业务负责人确认订单数按业务键去重，已核对取消/重复订单规则</label></div>'
+ +'<label class="choice"><input type="checkbox" data-check="countConfirmed" '+(state.countConfirmed?"checked":"")+' '+(readonly()?"disabled":"")+'>业务负责人确认订单数按业务键去重，已核对取消/重复订单规则</label></div>'
  +'<div class="tile '+(!state.amountConfirmed?"danger":"")+'"><h3>② 支付金额</h3><p>输出字段 paid_amount · 函数 SUM。若订单头总额复制到每行，直接 SUM 将重复计量。</p>'
  +field("来源金额模式","amountMode",state.amountMode,[["line","明细行金额（需核对折扣/退款）"],["header","订单头金额（存在多明细重复风险）"]])
- +'<label class="choice"><input type="checkbox" data-check="amountConfirmed" '+(state.amountConfirmed?"checked":"")+'>已确认来源金额粒度、支付状态/退款/折扣过滤、重复计量与精度口径</label></div>'
+ +'<label class="choice"><input type="checkbox" data-check="amountConfirmed" '+(state.amountConfirmed?"checked":"")+' '+(readonly()?"disabled":"")+'>已确认来源金额粒度、支付状态/退款/折扣过滤、重复计量与精度口径</label></div>'
  +t("设计通过不等于 Metric 口径正式发布。需要引用 Metric 原域版本与标准审核，不能在这里生成假指标。","warn")
  +b("模拟未确认重复计量风险","scenario:duplicate","light");
  case 4:var errors=issues();return h("先审核设计，再决定发布","发布的是不可变 Modeling 设计，不启动 SQL、不产生 Runtime ExecutionId，也不会自动开放 Dataset/Service。")
@@ -158,6 +158,7 @@ function action(act){
  else if(act.indexOf("scenario:")===0){var s=act.slice(9);state.scenario=s;state.readOnly=s==="readonly";state.saveUnknown=false;state.driftReviewed=false;state.message=s==="normal"?"已恢复正常演示状态。":s==="timeout"?"点击「保存草稿」模拟请求已落库但回执丢失；然后回读":s==="duplicate"?"假设头部金额在每条明细重复，必须重新审阅 SUM 口径":s==="drift"?"有新的 DWD 已发布，当前设计仍锁定旧版本，请比较差异":"当前案例阻断编辑或发布；请走授权恢复路径";}
  refresh()
 }
+if(typeof window!=="undefined"&&window.addEventListener){window.addEventListener("beforeunload",function(ev){if(state.dirty){ev.preventDefault();ev.returnValue="";}});}
 document.addEventListener("click",function(ev){var x=ev.target.closest("[data-act],[data-step]");if(!x)return;if(x.dataset.step!==undefined){state.step=Number(x.dataset.step);refresh();return}action(x.dataset.act)});
 document.addEventListener("change",function(ev){
  var x=ev.target;
