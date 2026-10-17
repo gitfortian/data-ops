@@ -57,7 +57,7 @@ var STEPS=[["01","对象与过程","当前为谁建汇总"],["02","来源与行�
 var originals={
  step:0,code:"dws_order_daily",name:"订单每日经营汇总",source:"detail",grain:"每天×城市一行",
  timezone:"Asia/Shanghai",period:"1d",businessTime:"event_time",bucket:"order_day",
- dims:["order_day","city_id"],countKey:"order_id",countConfirmed:false,
+ dims:["order_day","city_id"],countKey:"order_id",countMethod:"COUNT_DISTINCT",countConfirmed:false,validation:null,
  amountMode:"line",amountConfirmed:false,sourceVersionNo:2,driftReviewed:false,scenario:"normal",readOnly:false,
  savedRevision:0,published:false,dirty:true,saveUnknown:false,message:"",compareOpen:false
 };
@@ -80,6 +80,7 @@ function issues(){
  if(state.period!=="ALL"&&!state.dims.includes(state.bucket))z.push("统计周期桶未加入分组维度");
  if(state.dims.length===0)z.push("至少选一项分组维度");
  if(!state.countKey.trim()||!state.countConfirmed)z.push("订单数量 DISTINCT 业务键/去重口径未确认");
+ if(state.countMethod!=="COUNT_DISTINCT")z.push("订单数量不能用 COUNT(*) 代替按 order_id 的订单去重口径");
  if(!state.amountConfirmed)z.push("支付金额聚合来源、重复计量风险未人工确认");
  if(state.source==="header"&&state.amountMode==="line")z.push("当前选订单头却引用明细金额，来源事实不一致");
  if(state.source==="detail"&&state.amountMode==="header")z.push("当前选订单明细却 SUM 订单头金额，将发生重复计量");
@@ -88,6 +89,51 @@ function issues(){
  if(readonly())z.push("当前用户仅可只读，禁止保存或发布");
  return z
 }
+
+function validationSignature(){
+ return JSON.stringify([state.source,state.sourceVersionNo,state.businessTime,state.period,state.timezone,
+ state.bucket,state.dims,state.countKey,state.countMethod,state.amountMode,state.grain,state.scenario==="duplicate"]);
+}
+function validationStatus(){
+ if(!state.validation)return "NOT_RUN";
+ return state.validation.signature===validationSignature()?state.validation.status:"STALE";
+}
+function validateSample(){
+ var status="SAMPLE_MATCH",reason="同口径合成样本去重值与参考一致，仍不证明全量正确";
+ if(state.source==="draft"||state.scenario==="revoked"||state.businessTime==="none"){
+  status="UNAVAILABLE";reason="未发布/无 READ 权限/无业务时间，不能借助样本绕过";
+ }else if(state.countMethod!=="COUNT_DISTINCT"||state.countKey!=="order_id"){
+  status="SAMPLE_WARNING";reason="COUNT(*) 把 3 条明细当作 3 笔订单，参考业务键去重数为 2";
+ }else if(state.amountMode!=="line"||state.scenario==="duplicate"){
+  status="SAMPLE_WARNING";reason="订单头金额可能在明细中重复，必须核对来源和退款/折扣口径";
+ }
+ state.validation={status:status,signature:validationSignature(),reason:reason,
+   scope:"2026-10-17 / 上海",sampleRows:3,orders:2,lineAmount:450};
+ state.message="固定合成样本试算：" + status + "。结果不代表已获得真实数据库查询授权。";
+}
+function dwsValidationDetail(){
+ var status=validationStatus(),v=state.validation;
+ if(status==="NOT_RUN")return t("V1 只读样本：NOT_RUN。未连接真实查询服务，真实业务数据仍未验证。");
+ if(status==="STALE")return t("V1：STALE。来源/时间/维度/公式已变化，请重新验证，不能沿用旧样本。","warn");
+ if(status==="UNAVAILABLE")return t("V1：UNAVAILABLE。来源或权限不可用，不能提供样本或宣称已通过。","error");
+ return '<div class="'+(status==="SAMPLE_WARNING"?"warn":"ok")+'"><strong>'+e(status)+'</strong> · 固定合成样本 · '+e(v.scope)+
+ '<table><tr><th>比较</th><th>示例数值</th></tr>'+
+ '<tr><td>源明细行数 COUNT(*)</td><td>3</td></tr>'+
+ '<tr><td>COUNT DISTINCT(order_id)</td><td>2</td></tr>'+
+ '<tr><td>当前订单数</td><td>'+(state.countMethod==="COUNT"?"3（行数）":"2（订单数）")+'</td></tr>'+
+ '<tr><td>对业务参考订单数差异</td><td>'+(state.countMethod==="COUNT"?"+1 · 重复计数":"0 · 仅样本")+'</td></tr>'+
+ '<tr><td>明细行金额示例合计</td><td>450（不代表支付净额）</td></tr></table>'+
+ '<p>'+e(v.reason)+'</p><small>合成样本匹配 ≠ 全量核对，不自动放行 Runtime、Metric 或消费。</small></div>'+
+ b("修正度量后再次验证","goto:3","light");
+}
+function dwsVerificationSummary(){
+ return '<div class="tile"><h3>静态 / 样本 / 真实对账三层证据</h3><table>'+
+ '<tr><td>V0 静态合同</td><td>'+e(issues().length?"STATIC_BLOCKED":"STATIC_PASS（模拟）")+'</td></tr>'+
+ '<tr><td>V1 只读样本</td><td>'+e(validationStatus())+'（固定合成数据）</td></tr>'+
+ '<tr><td>V2 真实运行后对账</td><td>NOT_EXECUTED / 未交付</td></tr></table>'+
+ '<p class="muted">无法访问真实数据时必须标未验证。样本匹配不能替代真实数据质量验收。</p></div>';
+}
+
 function section(){
  switch(state.step){
  case 0:return h("先明确要建什么","不是先选择物理表。请先核对业务过程、目标行粒度和已有设计版本。")
@@ -109,29 +155,33 @@ function section(){
  +["order_day","city_id","channel_id"].map(function(x){return '<label class="choice"><input type="checkbox" data-dim="'+x+'" '+(state.dims.includes(x)?"checked":"")+' '+(readonly()?"disabled":"")+'>'+x+' <small>· 来源需有真实标准字段</small></label>'}).join("")
  +t("当前目标粒度：每个 "+e(state.period)+" 时间桶 × "+e(state.dims.join(" × ")||"无维度")+" → 一行（设计示意，不是计算结果）。")
  +t("业务日切换、周起点、跨时区与夏令时、迟到数据重算，需要业务/运行专门规则；不能由「按天」选项自动保证。","warn");
- case 3:return h("每个度量，都要解释数字为什么可信","COUNT DISTINCT 需要显式业务键；SUM 必须确认头/明细重复和过滤口径。白名单函数本身不等于业务正确。")
- +'<div class="tile"><h3>① 日下单订单量</h3><p>输出字段 order_count · 函数 COUNT_DISTINCT · 来源：'+e(sourceName())+'</p>'
+ case 3:return h("每个度量，都要解释数字为什么可信","设计校验 → 固定合成样本试算 → 查看数量差异、修正并重验。真实试算另需数据源 READ 权限。")
+ +'<div class="tile"><h3>① 日下单订单量</h3><p>输出字段 order_count · 来源：'+e(sourceName())+'</p>'
+ +field("当前订单数量计算方式","countMethod",state.countMethod,[["COUNT","COUNT(*) · 明细行数（可能错误）"],["COUNT_DISTINCT","COUNT DISTINCT(order_id) · 按订单去重"]])
  +field("DISTINCT 业务键","countKey",state.countKey)
  +'<label class="choice"><input type="checkbox" data-check="countConfirmed" '+(state.countConfirmed?"checked":"")+' '+(readonly()?"disabled":"")+'>业务负责人确认订单数按业务键去重，已核对取消/重复订单规则</label></div>'
  +'<div class="tile '+(!state.amountConfirmed?"danger":"")+'"><h3>② 支付金额</h3><p>输出字段 paid_amount · 函数 SUM。若订单头总额复制到每行，直接 SUM 将重复计量。</p>'
  +field("来源金额模式","amountMode",state.amountMode,[["line","明细行金额（需核对折扣/退款）"],["header","订单头金额（存在多明细重复风险）"]])
  +'<label class="choice"><input type="checkbox" data-check="amountConfirmed" '+(state.amountConfirmed?"checked":"")+' '+(readonly()?"disabled":"")+'>已确认来源金额粒度、支付状态/退款/折扣过滤、重复计量与精度口径</label></div>'
  +t("设计通过不等于 Metric 口径正式发布。需要引用 Metric 原域版本与标准审核，不能在这里生成假指标。","warn")
- +b("模拟未确认重复计量风险","scenario:duplicate","light");
+ +b("模拟未确认重复计量风险","scenario:duplicate","light")
+ +'<div class="tile"><h3>验证计算 · 三层证据（仅线框）</h3>'+t("同一业务日/上海：O001-01=100、O001-02=200、O002-01=150。全部为固定合成样本，不是仓库查询。")
+ +b("验证计算（固定样本模拟）","validateSample","primary")+dwsValidationDetail()+'</div>';
  case 4:var errors=issues();return h("先审核设计，再决定发布","发布的是不可变 Modeling 设计，不启动 SQL、不产生 Runtime ExecutionId，也不会自动开放 Dataset/Service。")
  +'<div class="grid"><div class="tile"><h3>当前设计摘要</h3><p>模型：'+e(state.code)+'<br>源：'+e(sourceName())+'<br>粒度：'+e(state.grain)+'<br>时间：'+e(state.period)+' / '+e(state.timezone)+'<br>分组：'+e(state.dims.join(" × "))+'</p></div><div class="tile"><h3>版本身份</h3><p>项目：交易分析项目<br>草稿：R'+state.savedRevision+'<br>当前上游：'+e(state.source==="detail"?"DWD #701 V2":state.source==="header"?"DWD #700 V3":"未发布")+'<br>发布：'+(state.published?"设计已发布":"未发布")+'</p></div></div>'
+ +dwsVerificationSummary()
  +(errors.length?t("<strong>发布阻断项（"+errors.length+"）</strong><ol>"+errors.map(function(x){return "<li>"+e(x)+"</li>"}).join("")+"</ol>","error"):t("所有示例设计条件已具备，可执行「发布设计」模拟；此模拟不会调用后端。","ok"))
  +'<div class="actions">'+b("保存设计草稿","save","",readonly())+b("发布 DWS 设计版本（模拟）","publish","primary",errors.length>0||readonly())+'</div>';
  case 5:return h("保存、重开、版本漂移和回到来源","设计的证据与真实运行状态分开。重开应定位同一个模型、同一个草稿修订。")
  +'<div class="tile"><h3>模型 DWS #810 / '+e(state.code)+'</h3><p>草稿 Revision：R'+state.savedRevision+' · '+(state.published?"已发布设计 V1":"设计未发布")+'</p><p>上游锁定：'+e(sourceName())+'</p><div class="actions">'+b("重新打开已保存草稿","reopen")+b("返回来源与粒度审阅","goto:1")+b("重置原型演示","reset","alert")+'</div></div>'
- +'<div class="tile"><h3>独立运行事实（全部为演示说明）</h3><table><tr><th>事实</th><th>状态</th></tr><tr><td>建模设计</td><td>'+(state.published?"已发布模拟":"未发布")+'</td></tr><tr><td>DataDev 作业执行</td><td>未接入 / 不可推断</td></tr><tr><td>目标数据质量</td><td>未验证</td></tr><tr><td>Dataset/Service</td><td>未发布 / 无消费凭证</td></tr></table></div>'
+ +'<div class="tile"><h3>独立运行事实（全部为演示说明）</h3><table><tr><th>事实</th><th>状态</th></tr><tr><td>建模设计</td><td>'+(state.published?"已发布模拟":"未发布")+'</td></tr><tr><td>DataDev 作业执行</td><td>未接入 / 不可推断</td></tr><tr><td>样本数据验证</td><td>'+e(validationStatus())+' / 固定合成样本</td></tr><tr><td>目标数据质量</td><td>未验证（尚无真实 ExecutionId）</td></tr><tr><td>Dataset/Service</td><td>未发布 / 无消费凭证</td></tr></table></div>'
  +t("请尝试「模拟保存超时」后回读修订、模拟上游新版本以及只读权限。","info");
  }}
 function refresh(){
  var problems=issues();
  document.getElementById("navigation").innerHTML='<div class="kicker">重新设计 / 信息架构</div><h2>六个工作步骤</h2>'+STEPS.map(function(x,i){return '<button data-step="'+i+'" class="'+(state.step===i?"active":"")+'"><strong>'+x[0]+' · '+x[1]+'</strong><small>'+x[2]+'</small></button>'}).join("")+'<hr><small>点击任意步骤进行设计评审。完成状态由当前模拟记录推导。</small>';
  document.getElementById("screen").innerHTML=section()+(state.message?t(e(state.message),state.saveUnknown?"warn":"info"):"")+'<div class="actions">'+b("上一步","prev","",state.step===0)+b("保存草稿","save","light",readonly())+b(state.step===5?"回到起点":"下一步","next","primary")+'</div>';
- document.getElementById("evidence").innerHTML='<section class="panel"><h2>设计证据</h2><div class="progress">工作状态：'+(state.published?"MODEL_DESIGN_PUBLISHED":state.savedRevision?"DESIGN_DRAFT R"+state.savedRevision:"EMPTY / 未保存")+(state.dirty?" · 未保存编辑":"")+'</div><div class="progress">当前来源：'+e(sourceName())+'</div><div class="progress">发布阻断：'+problems.length+' 项</div>'+problems.slice(0,6).map(function(x){return '<div class="check bad">'+e(x)+'</div>'}).join("")+(problems.length===0?'<div class="check good">设计检查已覆盖本原型的必要项</div>':"")+'</section><section class="panel" style="margin-top:12px"><h2>异常场景切换</h2>'+[
+ document.getElementById("evidence").innerHTML='<section class="panel"><h2>设计证据</h2><div class="progress">工作状态：'+(state.published?"MODEL_DESIGN_PUBLISHED":state.savedRevision?"DESIGN_DRAFT R"+state.savedRevision:"EMPTY / 未保存")+(state.dirty?" · 未保存编辑":"")+'</div><div class="progress">当前来源：'+e(sourceName())+'</div><div class="progress">发布阻断：'+problems.length+' 项</div><div class="progress">V0 静态：'+(problems.length?"STATIC_BLOCKED":"STATIC_PASS（原型）")+'</div><div class="progress">V1 样本：'+e(validationStatus())+'</div><div class="progress">V2 对账：NOT_EXECUTED</div>'+problems.slice(0,6).map(function(x){return '<div class="check bad">'+e(x)+'</div>'}).join("")+(problems.length===0?'<div class="check good">设计检查已覆盖本原型的必要项</div>':"")+'</section><section class="panel" style="margin-top:12px"><h2>异常场景切换</h2>'+[
  ["normal","恢复正常"],["drift","上游版本漂移"],["revoked","来源撤权"],["timeout","保存状态未知"],["readonly","仅有查看权限"],["duplicate","金额口径风险"]].map(function(x){return '<button class="btn" style="width:100%;margin:4px 0;text-align:left" data-act="scenario:'+x[0]+'">'+x[1]+'</button>'}).join("")+(state.saveUnknown?b("按对象身份回读保存结果","verify"):"")+'</section><section class="panel" style="margin-top:12px"><h2>门禁状态</h2><p class="muted">UX-1 低保真候选 · 尚未用户签收<br>无网络请求、无真实权限或发布动作</p></section>';
 }
 function persist(){
@@ -150,6 +200,7 @@ function action(act){
  else if(act==="verify"){var v=localStorage.getItem(KEY);state.saveUnknown=false;state.message=v?"按 DWS #810 回读到草稿 R"+JSON.parse(v).savedRevision+"：已确认记录存在":"没有查到草稿，应保持未知并人工核对"}
  else if(act==="reopen"){var raw=localStorage.getItem(KEY);if(!raw){state.message="没有已保存的草稿；请先保存";refresh();return}state=Object.assign({},originals,JSON.parse(raw),{step:5,message:"已按 projectId + modelId + draftRevision 重开保存版本（模拟）。"});}
  else if(act==="publish"){var problems=issues();if(problems.length){state.message="发布阻断："+problems.join("；")}else{state.published=true;state.dirty=false;persist();state.message="仅模拟设计发布成功 V1；DataDev 未运行、数据未验收。"}}
+ else if(act==="validateSample"){validateSample();}
  else if(act==="keepFrozen"){state.driftReviewed=true;state.dirty=true;state.message="已显式选择继续沿用冻结 V2；需要重新保存并按权限发布。此原型不证明源端旧版一定仍可访问。";}
  else if(act==="adoptLatest"){state.sourceVersionNo=3;state.driftReviewed=false;state.scenario="normal";state.countConfirmed=false;state.amountConfirmed=false;state.dirty=true;state.message="已迁移到 V3 候选，旧草稿保留；请重新核对业务时间、去重业务键与金额口径，然后保存新修订。";}
  else if(act==="reset"){localStorage.removeItem(KEY);state=Object.assign({},originals,{dims:originals.dims.slice(),message:"原型已重置，所有例子都是测试数据"});}
