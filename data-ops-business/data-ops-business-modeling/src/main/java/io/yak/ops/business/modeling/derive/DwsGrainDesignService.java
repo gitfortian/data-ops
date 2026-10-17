@@ -212,11 +212,25 @@ public class DwsGrainDesignService {
           || !SHA256.matcher(version.checksum()).matches()) {
         throw new IllegalStateException("DWS 上游版本摘要无效");
       }
-      // Business time must exist in the immutable upstream source, not just
-      // in an independently edited DWS draft.
-      if (version.structureJson() == null || !version.structureJson()
-          .contains("\"" + request.businessTimeColumn() + "\"")) {
-        throw new IllegalStateException("DWS 上游正式快照没有指定业务时间字段："
+      // Read the typed immutable snapshot: string containment is not
+      // evidence that a column actually exists in the published schema.
+      StructureView published;
+      try {
+        published = mapper.readValue(version.structureJson(), StructureView.class);
+      } catch (Exception error) {
+        throw new IllegalStateException("DWS 上游正式结构快照损坏", error);
+      }
+      if (published.modelId() != null && !source.id().equals(published.modelId())) {
+        throw new IllegalStateException("DWS 上游正式结构属于其他模型");
+      }
+      boolean hasBusinessTime = published.columns() != null
+          && published.columns().stream().anyMatch(col ->
+              request.businessTimeColumn().equalsIgnoreCase(col.columnName())
+                  && col.dataType() != null
+                  && (col.dataType().toUpperCase(Locale.ROOT).contains("DATE")
+                      || col.dataType().toUpperCase(Locale.ROOT).contains("TIME")));
+      if (!hasBusinessTime) {
+        throw new IllegalStateException("DWS 上游正式快照没有有效业务时间字段："
             + request.businessTimeColumn());
       }
       refs.add(new UpstreamVersion(source.id(), version.id(),
