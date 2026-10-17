@@ -174,6 +174,9 @@ class DatabaseMigrationSmokeTest {
       assertThat(context.getBeansOfType(
           io.yak.ops.business.development.controller.v1.DevelopmentModelTaskBindingController.class))
           .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.FrozenDwdExecutionCandidateService.class))
+          .isEmpty();
       assertThat(context.getBean("yakBusinessDataSource", DataSource.class)).isNotNull();
       assertThat(context.getBean("opsDataSource")).isSameAs(context.getBean("yakBusinessDataSource"));
       Map<String, Flyway> migrations = context.getBeansOfType(Flyway.class);
