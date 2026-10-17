@@ -8,7 +8,7 @@ import {
   type PhysicalDataDevHandoffReadiness,
 } from '@/services/modeling/api';
 import type { ModelingModelRecord } from '@/services/modeling/types';
-import { getPublishedDwdMapping, type DwdPublishedMapping } from '@/services/modeling/dwdMapping';
+import { inspectDwdDataDevHandoffEvidence, type DwdPublishedMapping } from '@/services/modeling/dwdMapping';
 import { assessDwdMappingEvidence } from '@/utils/dwdHandoffEvidence';
 import { getSemanticProcess } from '@/services/semantic/api';
 import { getDevelopmentTaskDraft } from '@/services/data-development';
@@ -32,6 +32,9 @@ interface VerifiedEvidence {
   owner: ModelingModelRecord;
   report: PhysicalDataDevHandoffReadiness;
   mappedDwd?: DwdPublishedMapping;
+  /** Modeling-only reviewability is not DataDev task creation authorization. */
+  handoffStatus?: 'REVIEWABLE_ONLY' | 'DESIGN_BLOCKED';
+  handoffBlockers?: string[];
 }
 
 /** C5: DataDev consumes Modeling evidence. No creation, binding, SQL or run. */
@@ -72,26 +75,42 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
       getModelingModel(modelId),
       getSemanticProcess(processId),
       listModelingVersions(modelId),
-      inspectPhysicalDataDevHandoff(modelId, modelVersionNo),
-    ]).then(async ([owner, process, versions, report]) => {
+    ]).then(async ([owner, process, versions]) => {
       if (!active) return;
-      const checked = verifyPhysicalDataDevEvidence({
-        hint: parsed.value, owner, processId: Number(process?.id),
-        versions, report,
-      });
-      if (!checked.valid) { setProblem(checked.reason); return; }
-      // DataDev revalidates the immutable DWD mapping itself, never trusting URL or sender state.
+      // The DWD design and its immutable MappingRevision are read together
+      // by the Modeling Owner. Do not stitch two independent snapshot RPCs.
       if (owner.layerCode?.toUpperCase() === 'DWD') {
-        const mappedDwd = await getPublishedDwdMapping(modelId, modelVersionNo);
+        const bundle = await inspectDwdDataDevHandoffEvidence(modelId, modelVersionNo);
         if (!active) return;
-        const evidence = assessDwdMappingEvidence(modelId, modelVersionNo, report, versions, mappedDwd);
+        if (bundle.authorizedForTaskCreation !== false
+            || !['REVIEWABLE_ONLY', 'DESIGN_BLOCKED'].includes(bundle.status)) {
+          setProblem('建模原域返回了未知或越权的任务创建状态，拒绝交接');
+          return;
+        }
+        const { readiness: report, publication: mappedDwd } = bundle;
+        const checked = verifyPhysicalDataDevEvidence({
+          hint: parsed.value, owner, processId: Number(process?.id), versions, report,
+        });
+        if (!checked.valid) { setProblem(checked.reason); return; }
+        const evidence = assessDwdMappingEvidence(
+          modelId, modelVersionNo, report, versions, mappedDwd);
         if (!evidence.ready) {
           setProblem(`DWD 冻结映射证据无法核验：${evidence.reason}`);
           return;
         }
-        setVerified({ owner, report, mappedDwd });
+        setVerified({
+          owner, report, mappedDwd, handoffStatus: bundle.status,
+          handoffBlockers: bundle.blockers,
+        });
         return;
       }
+      // DIM has no DWD MappingRevision contract and retains its own read-only inspection.
+      const report = await inspectPhysicalDataDevHandoff(modelId, modelVersionNo);
+      if (!active) return;
+      const checked = verifyPhysicalDataDevEvidence({
+        hint: parsed.value, owner, processId: Number(process?.id), versions, report,
+      });
+      if (!checked.valid) { setProblem(checked.reason); return; }
       setVerified({ owner, report });
     }).catch((error: unknown) => {
       if (active) setProblem(error instanceof Error ? error.message
@@ -154,6 +173,9 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
               {verified.report.designStatus === 'DESIGN_REVIEWABLE' ? '设计可人工审阅' : '设计治理待处理'}
             </Tag>
             <Tag color="orange">DataDev 尚未授权持久版本交接</Tag>
+            {verified.handoffStatus && <Tag color={verified.handoffStatus === 'REVIEWABLE_ONLY' ? 'blue' : 'orange'}>
+              {verified.handoffStatus === 'REVIEWABLE_ONLY' ? 'DWD 冻结证据可人工审阅' : 'DWD 设计证据存在阻断'}
+            </Tag>}
           </Space>
           <Typography.Paragraph type="secondary">
             冻结结构指纹：<Typography.Text copyable={{ text: verified.report.version.frozenStructureSha256 }}>
@@ -195,6 +217,10 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
           </>}
           {!verified.report.selectedLatestVersion && <Alert className="mb-3" showIcon type="warning"
             message="当前选择的是历史物理版本，不是最新发布指针；不会自动替换为最新版本" />}
+          {verified.handoffBlockers?.filter(reason => !verified.report.blockers.includes(reason))
+            .map((reason, i) => <Typography.Paragraph key={`handoff-${i}`} type="danger" className="!mb-1">
+              {reason}
+            </Typography.Paragraph>)}
           {verified.report.blockers.map((blocker, i) =>
             <Typography.Paragraph key={i} type="danger" className="!mb-1">{blocker}</Typography.Paragraph>)}
           <Table size="small" rowKey="code" pagination={false}
@@ -227,7 +253,9 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
             </Button>
           </Space>
           <Space wrap className="mb-3">
-            <Button disabled={!onCreateSqlNode || !canAll(['data-development:edit'])}
+            <Button disabled={!onCreateSqlNode || !canAll(['data-development:edit'])
+              || (verified.owner.layerCode?.toUpperCase() === 'DWD'
+                && verified.handoffStatus !== 'REVIEWABLE_ONLY')}
               onClick={() => onCreateSqlNode?.()}>
               人工新建 SQL 任务（不绑定模型）
             </Button>
