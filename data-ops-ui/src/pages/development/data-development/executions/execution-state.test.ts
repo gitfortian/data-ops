@@ -3,6 +3,7 @@ import {
   executionSubmissionToRunResult,
   isDevelopmentExecutionActive,
   isDevelopmentExecutionRetryable,
+  isAmbiguousSqlExecution,
 } from './execution-state';
 
 import type {
@@ -62,5 +63,18 @@ describe('data-development execution state', () => {
       durationMs: 88,
       output: { rows: 1 },
     });
+  });
+});
+
+describe('unsafe SQL retry evidence', () => {
+  it('blocks SQL runtime ambiguity while allowing ordinary confirmed task failures', () => {
+    const base = { taskType: 'SQL', status: 'FAILED' as const, failureReason: null };
+    expect(isAmbiguousSqlExecution({ ...base, status: 'TIMEOUT' })).toBe(true);
+    for (const reason of ['RUNTIME_STATE_LOST', 'RUNTIME_NOT_ATTACHED', 'RUNTIME_SUBMIT_FAILED']) {
+      expect(isAmbiguousSqlExecution({ ...base, failureReason: reason })).toBe(true);
+    }
+    expect(isAmbiguousSqlExecution({ ...base, failureReason: 'TASK_FAILED' })).toBe(false);
+    expect(isAmbiguousSqlExecution({ ...base, taskType: 'SHELL', status: 'TIMEOUT' })).toBe(false);
+    expect(isAmbiguousSqlExecution({ ...base, status: 'SUCCESS' })).toBe(false);
   });
 });
