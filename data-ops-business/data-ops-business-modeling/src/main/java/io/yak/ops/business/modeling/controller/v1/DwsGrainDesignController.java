@@ -32,6 +32,12 @@ public class DwsGrainDesignController {
     return Result.success(service.inspect(modelId).orElse(null));
   }
 
+  @GetMapping("/upstream-candidates")
+  public Result<java.util.List<DwsGrainDesignService.UpstreamCandidate>> candidates(
+      @PathVariable long modelId) {
+    return Result.success(service.candidates(modelId));
+  }
+
   @PutMapping
   @RequiresPermission(ModelingPermissionCode.UPDATE)
   public Result<DwsGrainDesignService.Saved> save(
