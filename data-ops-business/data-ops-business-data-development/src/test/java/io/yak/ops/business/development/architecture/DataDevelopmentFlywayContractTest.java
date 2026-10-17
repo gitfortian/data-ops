@@ -21,7 +21,7 @@ class DataDevelopmentFlywayContractTest {
   }
 
   @Test
-  void preservesV1AndAddsOnlyTheReviewedForwardV2Migration() throws IOException {
+  void preservesAppliedV1V2AndAddsForwardV3RuntimeAttemptMigration() throws IOException {
     List<String> migrations;
     try (var paths = Files.list(migrationRoot())) {
       migrations = paths
@@ -34,7 +34,8 @@ class DataDevelopmentFlywayContractTest {
 
     assertThat(migrations).containsExactly(
         "V1__baseline_data_development.sql",
-        "V2__dwd_published_task_binding.sql");
+        "V2__dwd_published_task_binding.sql",
+        "V3__dwd_frozen_execution_attempt.sql");
     assertThat(Files.exists(
         postgresqlMigrationRoot().resolve("V2__dwd_published_task_binding.sql"))).isTrue();
   }
@@ -83,6 +84,26 @@ class DataDevelopmentFlywayContractTest {
           .doesNotContain("ALTER TABLE yak_dev_task_revision")
           .doesNotContain("DROP TABLE")
           .doesNotContain("INSERT INTO yak_dev_model_task_binding");
+    }
+  }
+
+  @Test
+  void dwdRuntimeAttemptV3IsProjectScopedAppendOnlyAndContainsUniqueRequestKey()
+      throws IOException {
+    for (Path root : List.of(migrationRoot(), postgresqlMigrationRoot())) {
+      String v3 = Files.readString(root.resolve("V3__dwd_frozen_execution_attempt.sql"));
+      assertThat(v3)
+          .contains("CREATE TABLE yak_dev_dwd_execution_attempt")
+          .contains("project_id")
+          .contains("binding_id")
+          .contains("binding_digest")
+          .contains("request_key")
+          .contains("attempt_digest")
+          .contains("runtime_execution_id")
+          .contains("uk_dwd_attempt_project_key")
+          .contains("idx_dwd_attempt_binding")
+          .doesNotContain("DROP TABLE")
+          .doesNotContain("ALTER TABLE yak_dev_model_task_binding");
     }
   }
 
