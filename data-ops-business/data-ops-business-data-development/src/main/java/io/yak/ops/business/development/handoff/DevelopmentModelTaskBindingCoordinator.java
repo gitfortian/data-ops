@@ -1,6 +1,8 @@
 package io.yak.ops.business.development.handoff;
 
 import io.yak.ops.business.development.task.DevelopmentPublishedSqlRevisionEvidenceService;
+import io.yak.ops.business.datasource.query.DataSourceReader;
+import io.yak.ops.common.enums.datasource.DataSourceConnStatus;
 import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.core.project.CurrentProject;
 import io.yak.ops.spi.modeling.PublishedDwdDesignEvidenceProvider;
@@ -26,16 +28,19 @@ public class DevelopmentModelTaskBindingCoordinator {
   private final PublishedDwdDesignEvidenceProvider modeling;
   private final DevelopmentPublishedSqlRevisionEvidenceService revisions;
   private final DevelopmentModelTaskBindingRepository repository;
+  private final DataSourceReader dataSources;
 
   public DevelopmentModelTaskBindingCoordinator(
       CurrentProject currentProject,
       PublishedDwdDesignEvidenceProvider modeling,
       DevelopmentPublishedSqlRevisionEvidenceService revisions,
-      DevelopmentModelTaskBindingRepository repository) {
+      DevelopmentModelTaskBindingRepository repository,
+      DataSourceReader dataSources) {
     this.currentProject = currentProject;
     this.modeling = modeling;
     this.revisions = revisions;
     this.repository = repository;
+    this.dataSources = dataSources;
   }
 
   public record BindCommand(
@@ -60,6 +65,7 @@ public class DevelopmentModelTaskBindingCoordinator {
         || evidence.modelVersionId() != cmd.modelVersionId()
         || evidence.modelVersionNo() != cmd.modelVersionNo()
         || evidence.mappingRevisionId() != cmd.mappingRevisionId()
+        || !Objects.equals(evidence.targetTableCode(), cmd.targetTable())
         || !Objects.equals(evidence.mappingContentSha256(), cmd.mappingSha256())
         || !evidence.reviewable()
         || !"REVIEWABLE_ONLY".equals(evidence.status())
@@ -67,6 +73,14 @@ public class DevelopmentModelTaskBindingCoordinator {
         || !validSha(evidence.physicalStructureSha256())
         || !validSha(evidence.currentStandardEvidenceSha256())) {
       throw new IllegalStateException("DWD 精确版本、冻结映射或当前标准证据已失效");
+    }
+    // Resolve the caller's actual project-owned datasource, never a copied ID
+    // or a browser assertion. A successful connection test is only a
+    // prerequisite; it does NOT grant SQL write/execute permission.
+    var target = dataSources.require(cmd.targetDatasourceId());
+    if (!Objects.equals(target.getProjectId(), projectId)
+        || target.getConnStatus() != DataSourceConnStatus.CONNECTED) {
+      throw new IllegalStateException("目标数据源不属于当前项目或未完成有效连接测试");
     }
     var published = revisions.inspect(cmd.nodeId(), cmd.taskRevisionNo());
     if (!String.valueOf(cmd.nodeId()).equals(published.nodeId())
@@ -83,6 +97,7 @@ public class DevelopmentModelTaskBindingCoordinator {
         String.valueOf(cmd.modelVersionId()), String.valueOf(cmd.modelVersionNo()),
         String.valueOf(cmd.mappingRevisionId()), cmd.mappingSha256(),
         evidence.logicalSnapshotSha256(), evidence.physicalStructureSha256(),
+        evidence.currentStandardEvidenceSha256(),
         String.valueOf(cmd.nodeId()), String.valueOf(cmd.taskRevisionId()),
         String.valueOf(cmd.taskRevisionNo()), cmd.taskDefinitionSha256(),
         String.valueOf(cmd.targetDatasourceId()), cmd.targetDatabase().trim(),
@@ -128,7 +143,8 @@ public class DevelopmentModelTaskBindingCoordinator {
         || cmd.taskRevisionNo() <= 0 || !validSha(cmd.taskDefinitionSha256())
         || cmd.targetDatasourceId() <= 0
         || invalidName(cmd.targetDatabase()) || invalidName(cmd.targetTable())
-        || (cmd.targetSchema() != null && cmd.targetSchema().length() > 256)
+        || (cmd.targetSchema() != null && (cmd.targetSchema().length() > 256
+            || !cmd.targetSchema().equals(cmd.targetSchema().trim())))
         || !Set.of("INSERT", "OVERWRITE_PARTITION").contains(cmd.writeMode())
         || !validUuid(cmd.idempotencyKey())) {
       throw new IllegalArgumentException(
