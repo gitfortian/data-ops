@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ModelingHandoffEvidencePanel from './ModelingHandoffEvidencePanel';
 import {
   getModelingModel, inspectPhysicalDataDevHandoff, listModelingVersions,
@@ -174,4 +174,43 @@ it('discards late Modeling owner response when current project changes', async (
   await act(async () => complete(report));
   expect(await screen.findByText('新项目不可访问旧模型')).toBeInTheDocument();
   expect(screen.queryByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).not.toBeInTheDocument();
+});
+
+it('opens only the native DataDev SQL creation modal after verified Modeling handoff', async () => {
+  const openSqlCreation = jest.fn();
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} onCreateSqlNode={openSqlCreation} />);
+  expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
+  const button = screen.getByRole('button', { name: '人工新建 SQL 任务（不绑定模型）' });
+  expect(button).toBeEnabled();
+  fireEvent.click(button);
+  expect(openSqlCreation).toHaveBeenCalledTimes(1);
+  // Selecting manual creation does not create a TaskRevision, bind a ModelVersion
+  // or even fetch a different draft; the native DataDev modal owns later writes.
+  expect(getDevelopmentTaskDraft).not.toHaveBeenCalled();
+});
+
+it('does not offer SQL creation when frozen mapping evidence is invalid', async () => {
+  const openSqlCreation = jest.fn();
+  (getPublishedDwdMapping as jest.Mock).mockResolvedValue({
+    ...boundMapping,
+    mapping: { ...boundMapping.mapping, rules: [
+      boundMapping.mapping.rules[0],
+      { ...boundMapping.mapping.rules[0], targetColumn: 'ORDER_ID' },
+    ] },
+  });
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} onCreateSqlNode={openSqlCreation} />);
+  expect(await screen.findByText('交接来源无法核实')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '人工新建 SQL 任务（不绑定模型）' }))
+    .not.toBeInTheDocument();
+  expect(openSqlCreation).not.toHaveBeenCalled();
+});
+
+it('does not enable SQL creation when the native node-creation action is unavailable', async () => {
+  render(<ModelingHandoffEvidencePanel search={url}
+    nodes={[]} onFocusNode={jest.fn()} />);
+  expect(await screen.findByText(/DATADEV_PROVENANCE : NOT_APPROVED/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '人工新建 SQL 任务（不绑定模型）' }))
+    .toBeDisabled();
 });

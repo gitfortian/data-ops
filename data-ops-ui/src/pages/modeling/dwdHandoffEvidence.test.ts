@@ -42,3 +42,52 @@ it('fails closed for legacy, missing and corrupted mapping evidence', () => {
     ...binding, mapping: { ...binding.mapping!, rules: [] },
   }).ready).toBe(false);
 });
+
+it('refuses malformed frozen SHA and revision identities before displaying DataDev handoff', () => {
+  for (const mapping of [
+    { ...binding.mapping!, logicalSnapshotSha256: 'malformed' },
+    { ...binding.mapping!, physicalStructureSha256: 'malformed' },
+    { ...binding.mapping!, mappingRevisionId: Number.MAX_SAFE_INTEGER + 1 },
+    { ...binding.mapping!, mappingSetId: 0 },
+    { ...binding.mapping!, revisionNo: 0 },
+    { ...binding.mapping!, logicalModelId: -1 },
+    { ...binding.mapping!, logicalVersionNo: 0 },
+  ]) {
+    expect(assessDwdMappingEvidence(50, 3, readiness, [published], {
+      ...binding, mapping,
+    }).ready).toBe(false);
+  }
+});
+
+it('rejects invalid or duplicate frozen target column mappings, including case-only repeats', () => {
+  const validRule = binding.mapping!.rules[0];
+  const candidateMappings: DwdPublishedMapping['mapping'][] = [
+    { ...binding.mapping!, rules: [{ ...validRule, targetColumn: '' }] },
+    { ...binding.mapping!, rules: [{ ...validRule, targetColumn: ' order_id ' }] },
+    { ...binding.mapping!, rules: [{ ...validRule, logicalAttributeId: 0 }] },
+    { ...binding.mapping!, rules: [{ ...validRule, stdFieldId: -1 }] },
+    { ...binding.mapping!, rules: [{ ...validRule, stdFieldId: Number.MAX_SAFE_INTEGER + 1 }] },
+    { ...binding.mapping!, rules: [{ ...validRule, kind: 'DERIVED' as 'DIRECT' }] },
+    { ...binding.mapping!, rules: [validRule, { ...validRule, targetColumn: 'ORDER_ID' }] },
+  ];
+  for (const mapping of candidateMappings) {
+    const review = assessDwdMappingEvidence(50, 3, readiness, [published], {
+      ...binding, mapping,
+    });
+    expect(review.ready).toBe(false);
+    expect(review.reason).toMatch(/冻结|重复/);
+  }
+});
+
+it('accepts distinct DIRECT/RENAME frozen mapping rules for read-only handoff', () => {
+  expect(assessDwdMappingEvidence(50, 3, readiness, [published], {
+    ...binding,
+    mapping: {
+      ...binding.mapping!,
+      rules: [...binding.mapping!.rules, {
+        targetColumn: 'amount', logicalAttributeId: 12, stdFieldId: 22,
+        kind: 'RENAME',
+      }],
+    },
+  })).toEqual({ ready: true, reason: '' });
+});
