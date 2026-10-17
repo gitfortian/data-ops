@@ -24,6 +24,8 @@ interface Props {
   search: string;
   nodes: DevelopmentResourceNode[];
   onFocusNode: (id: string) => void;
+  /** Opens DataDev's existing SQL Node creation dialog; never writes a Modeling binding. */
+  onCreateSqlNode?: () => void;
 }
 
 interface VerifiedEvidence {
@@ -33,7 +35,7 @@ interface VerifiedEvidence {
 }
 
 /** C5: DataDev consumes Modeling evidence. No creation, binding, SQL or run. */
-export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNode }: Props) {
+export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNode, onCreateSqlNode }: Props) {
   const { currentProject } = useSecurityProject();
   const { canAll } = usePermissionAccess();
   const parsed = useMemo(() => parsePhysicalDataDevHandoff(search), [search]);
@@ -224,8 +226,17 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
               打开所选现有任务（不绑定版本）
             </Button>
           </Space>
+          <Space wrap className="mb-3">
+            <Button disabled={!onCreateSqlNode || !canAll(['data-development:edit'])}
+              onClick={() => onCreateSqlNode?.()}>
+              人工新建 SQL 任务（不绑定模型）
+            </Button>
+            <Typography.Text type="secondary">
+              仅打开 DataDev 原有新建节点表单。保存 SQL、发布修订及绑定模型仍是独立步骤。
+            </Typography.Text>
+          </Space>
           {!candidates.length && <Alert type="info" showIcon
-            message="当前项目没有可见的现有 SQL 任务；不自动创建新任务" />}
+            message="当前项目没有可见的现有 SQL 任务；可人工新建，系统不会自动生成或绑定任务" />}
           {draftLoading && <Typography.Paragraph>正在读取 DataDev 原域草稿…</Typography.Paragraph>}
           {draftProblem && <Alert type="warning" showIcon description={draftProblem}
             message="已有 SQL 任务草稿不可核实" />}
