@@ -1,6 +1,7 @@
 package io.yak.ops.business.modeling.version;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -90,6 +91,62 @@ class ModelPublishedStructureReaderTest {
 
     assertThat(structure.tableName()).isEqualTo("healed");
     verify(versionService).publish(1L, "system:legacy-backfill");
+  }
+
+  @Test
+  void strictDwsUpstreamCannotReadUnpublishedDraftOrTriggerPublish() {
+    when(modelRepository.findById(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)));
+    assertThatThrownBy(() -> reader.requirePublishedStructure(1L))
+        .hasMessageContaining("正式发布版本");
+    verify(versionService, never()).publish(any(), anyString());
+    verify(versionService, never()).liveStructure(any());
+  }
+
+  @Test
+  void strictAdsUpstreamCannotSelfHealDanglingPublishedVersion() {
+    when(modelRepository.findById(1L))
+        .thenReturn(Optional.of(model(ModelStatus.PUBLISHED, 404L)));
+    when(versionRepository.findById(404L, 1L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> reader.requirePublishedStructure(1L))
+        .hasMessageContaining("发布版本缺失");
+    verify(versionService, never()).publish(any(), anyString());
+    verify(versionService, never()).liveStructure(any());
+  }
+
+  @Test
+  void strictDwsUpstreamReadsFrozenVersionEvenWhenDraftEdited() throws Exception {
+    when(modelRepository.findById(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, 9L)));
+    when(versionRepository.findById(9L, 1L)).thenReturn(Optional.of(snapshot("frozen_order")));
+    assertThat(reader.requirePublishedStructure(1L).tableName()).isEqualTo("frozen_order");
+    verify(versionRepository).findById(9L, 1L);
+    verify(versionService, never()).publish(any(), anyString());
+    verify(versionService, never()).liveStructure(any());
+  }
+
+  @Test
+  void strictUpstreamRejectsDisabledModelDespiteExistingPublishedPointer() {
+    when(modelRepository.findById(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DISABLED, 9L)));
+    assertThatThrownBy(() -> reader.requirePublishedStructure(1L))
+        .hasMessageContaining("正式发布版本");
+    verify(versionService, never()).publish(any(), anyString());
+  }
+
+  @Test
+  void strictUpstreamRejectsSnapshotClaimingAnotherModel() throws Exception {
+    when(modelRepository.findById(1L))
+        .thenReturn(Optional.of(model(ModelStatus.PUBLISHED, 9L)));
+    StructureView foreign = new StructureView(
+        2L, "foreign", "Other", "MYSQL", "PUBLISHED", null,
+        "foreign_table", null, List.of(), List.of(), List.of(),
+        new StructureView.PartitionView(null, List.of(), null), Map.of());
+    when(versionRepository.findById(9L, 1L)).thenReturn(Optional.of(
+        new ModelVersion(9L, 1L, 2, JSON.writeValueAsString(foreign), null,
+            0, "checksum", "alice", LocalDateTime.now())));
+    assertThatThrownBy(() -> reader.requirePublishedStructure(1L))
+        .hasMessageContaining("归属不匹配");
   }
 
   @Test
