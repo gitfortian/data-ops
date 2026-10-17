@@ -72,6 +72,12 @@ class PostgresqlStorageSmokeTest {
     long projectId;
     try (var context = start(password)) {
       validate(context);
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.DevelopmentModelTaskBindingCoordinator.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.controller.v1.DevelopmentModelTaskBindingController.class))
+          .isEmpty();
       JdbcTemplate jdbc = new JdbcTemplate(context.getBean("yakBusinessDataSource", DataSource.class));
       var security = new JdbcTemplate(context.getBean("yakSecurityDataSource", DataSource.class));
       projectId = security.queryForObject("SELECT id FROM yak_security_project ORDER BY id LIMIT 1", Long.class);
