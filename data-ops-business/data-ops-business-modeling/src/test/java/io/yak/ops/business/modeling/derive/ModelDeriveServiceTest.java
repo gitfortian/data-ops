@@ -82,6 +82,8 @@ class ModelDeriveServiceTest {
     structureService = mock(ModelStructureService.class);
     structureReader =
         mock(io.yak.ops.business.modeling.version.ModelPublishedStructureReader.class);
+    when(structureReader.publishedStructure(any()))
+        .thenAnswer(invocation -> structureService.get(invocation.getArgument(0)));
     when(structureReader.requirePublishedStructure(any()))
         .thenAnswer(invocation -> structureService.get(invocation.getArgument(0)));
     modelRepository = mock(ModelRepository.class);
