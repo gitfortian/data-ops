@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R12-2 · DWD → DataDev · 人工交接低保真交互评审</title>
+<style>
+:root{font-family:Inter,"Microsoft YaHei",system-ui,sans-serif;font-size:14px;color:#252934;background:#f6f7f9}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.48;cursor:not-allowed}
+header{height:58px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;padding:0 30px;gap:16px}.brand{font-weight:750;font-size:17px}.brand i{font-style:normal;background:#262a34;color:#fff;padding:8px;border-radius:8px;margin-right:10px}.meta{font-size:12px;color:#667085}
+.shell{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:calc(100vh - 58px)}nav{background:#fff;border-right:1px solid #e5e7eb;padding:25px 10px}.navhint{font-size:12px;color:#98a2b3;margin:0 12px 12px}.navitem{padding:13px 15px;border-radius:7px;color:#667085}.navitem.selected{background:#f0f2f5;color:#252934;font-weight:700}main{padding:32px 40px 64px;max-width:1500px;width:100%;margin:0 auto}h1{font-size:23px;letter-spacing:-.4px;margin:0 0 7px}h2{font-size:16px;margin:0 0 16px}h3{font-size:14px;margin:4px 0 8px}p{margin:5px 0;line-height:1.7}.quiet{color:#667085}.tiny{font-size:12px}.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}.tag{font-size:11px;background:#f2f4f7;border:1px solid #e4e7ec;color:#475467;padding:5px 10px;border-radius:5px;white-space:nowrap}.tag.green{background:#ecfdf3;border-color:#abefc6;color:#166534}.tag.warn{background:#fffaeb;border-color:#fedf89;color:#92400e}.tag.red{background:#fef3f2;border-color:#fecaca;color:#b42318}
+.card{background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:24px;margin-bottom:16px;box-shadow:0 1px 2px #10182808}.banner{background:#f8fafc;border:1px solid #dce2ea;border-radius:8px;padding:13px 15px;margin-bottom:18px;line-height:1.6}.banner.warn{background:#fffbeb;border-color:#f4cf75}.banner.danger{background:#fef2f2;border-color:#fca5a5}.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:20px}.step{display:flex;align-items:center;text-align:left;gap:10px;border:1px solid #e4e7ec;border-radius:8px;background:white;padding:14px 12px;color:#667085}.step b{display:grid;place-items:center;min-width:26px;height:26px;border-radius:50%;background:#f2f4f7;color:#667085;font-size:12px}.step.active{background:#f8fafc;border-color:#344054;color:#101828;font-weight:700}.step.active b{background:#344054;color:white}.step.complete b{background:#dcfce7;color:#166534}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px}.side{position:sticky;top:20px;height:max-content}.side .card{padding:20px}.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.fact{border:1px solid #eaecf0;border-radius:8px;padding:13px}.fact span{font-size:12px;color:#667085}.fact strong{font-size:14px;display:block;margin-top:7px}.label{font-size:12px;color:#475467;margin:14px 0 6px;display:block}input,select,textarea{border:1px solid #d0d5dd;border-radius:7px;padding:10px 11px;width:100%;background:#fff;color:#344054}textarea{min-height:145px;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.actionbar{margin-top:22px;padding-top:19px;border-top:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;gap:12px}.button{border:1px solid #d0d5dd;border-radius:7px;padding:11px 17px;background:white;color:#344054}.button.primary{background:#292c35;border-color:#292c35;color:white}.button:hover:not(:disabled){border-color:#667085}.list{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}.list td,.list th{text-align:left;padding:11px;border-bottom:1px solid #eaecf0}.list th{background:#f8fafc;color:#667085;font-weight:600}.info{background:#f9fafb;padding:13px 15px;border-radius:7px;border:1px solid #eaecf0;margin:10px 0;line-height:1.7}.copy{font:12px ui-monospace,monospace;color:#475467;overflow-wrap:anywhere}.checkbox{width:auto;margin-right:8px}.bullet{margin:12px 0;padding-left:19px;color:#475467}.bullet li{margin:9px 0;line-height:1.6}footer{border-top:1px solid #e4e7ec;color:#667085;padding-top:18px;margin-top:30px;font-size:12px}
+@media(max-width:1050px){.shell{grid-template-columns:1fr}nav{display:none}main{padding:20px}.layout{grid-template-columns:1fr}.side{position:static}.steps{grid-template-columns:repeat(2,1fr)}.facts,.three{grid-template-columns:1fr 1fr}}@media(max-width:600px){.two,.facts,.three{grid-template-columns:1fr}.heading{display:block}.steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="brand"><i>Y</i>data-ops <span style="font-size:12px;font-weight:400;color:#98a2b3">/ 建模与数据开发</span></div><div class="meta">订单项目 · 演示用户　|　R12-2 交互评审</div></header>
+<div class="shell"><nav><p class="navhint">数据建设</p><div class="navitem">业务语义 / 逻辑模型</div><div class="navitem selected">数仓建模</div><div class="navitem">数据开发</div><div class="navitem">任务运行</div><p class="navhint" style="margin-top:25px">资产与消费</p><div class="navitem">指标</div><div class="navitem">数据集 / 数据服务</div></nav>
+<main>
+ <div class="heading"><div><div class="tiny quiet">数仓建模　/　DWD 订单明细　/　DataDev 交接</div><h1>DWD 设计 → SQL 加工交接</h1><p class="quiet">从已发布模型版本出发，人工确认 SQL、目标与执行结果；禁止从设计发布推断入仓成功。</p></div><span class="tag warn">低保真模拟 · 无后端连接</span></div>
+ <div class="banner"><strong>评审边界：</strong>本原型不调用 API，不保存模型、不创建真实任务、不执行 SQL。下方所有 TaskRevision / ExecutionId 仅作演示，DR-07 正式写入合同仍待签收。</div>
+ <div class="card"><div class="two"><div><label class="label" for="scenario">评审场景</label><select id="scenario"><option value="happy">黄金路径：精确 DWD 发布版本</option><option value="legacy">旧版无 MappingRevision（阻断）</option><option value="drift">冻结映射与物理版本漂移（阻断）</option><option value="permission">权限已撤销（阻断）</option><option value="unknown">运行超时 / UNKNOWN（只能查回执）</option></select></div><div><label class="label">模型上下文</label><div class="info">订单明细事实模型 · <strong>V3（演示）</strong> · process: order_create</div></div></div></div>
+ <div class="steps" id="steps"></div>
+ <div class="layout"><section class="card">
+ <div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h2 id="stageTitle"></h2><p class="quiet" id="stageSub"></p></div><span id="stateTag" class="tag"></span></div>
+ <div id="stageBody"></div>
+ <div class="actionbar"><button type="button" class="button" id="back">← 上一步</button><div style="display:flex;gap:9px;align-items:center"><span id="helper" class="tiny quiet"></span><button type="button" class="button primary" id="next"></button></div></div>
+ </section><aside class="side"><div class="card"><h2>精确版本证据</h2><div class="info"><div class="tiny quiet">Modeling Owner</div><strong>DWD · 订单明细事实 V3</strong><div class="copy">modelId: 701 / versionId: 830</div><div class="copy">mappingRevisionId: 920</div><div class="copy">mapping SHA: a8b2…f904（演示）</div></div><div class="info"><div class="tiny quiet">DataDev Owner</div><strong id="taskFact">尚无正式绑定</strong><div class="copy" id="taskRef">TaskRevision: NONE</div></div><div class="info"><div class="tiny quiet">Runtime / 对账 Owner</div><strong id="execFact">尚未执行</strong><div class="copy" id="execRef">Execution: NONE</div></div><p class="tiny quiet">三个域的凭据不能彼此代替。此处全是模拟身份，不代表真实数据。</p></div><div class="card"><h3>产品评审核对</h3><ul class="bullet" id="questions"></ul></div></aside></div>
+ <footer>R12-2 低保真交互候选 · 基于 DR-07 #557 / R12 #576 / 数据开发现有 Draft → Revision → Runtime 合同。仅设计与评审，无真实操作。</footer>
+</main></div>
+<script>
+(function(){
+'use strict';
+const names=['版本预检','任务草稿','绑定确认','正式运行','数据核对'];
+const titles=[
+['核对已发布的 DWD 设计','从 Modeling 真实服务核验精确模型版本与冻结映射；导航 URL 不是授权依据。'],
+['人工选择或创建 SQL 任务','复用 DataDev 现有 SQL Node，明确确认 SQL、来源、目标与写入模式。'],
+['发布 TaskRevision 并冻结绑定','重新核验版本、权限、SQL checksum；绑定由 DataDev 原域持久化。'],
+['执行已发布的冻结修订','不得使用用户当前编辑器内容替代已发布 TaskRevision。'],
+['目标数据核对与回链','执行成功只是运行事实；必须独立核实订单明细粒度与目标数据。']];
+const q=[
+['是否只有精确已发布 Vn 和真实 MappingRevision 才能继续？','旧版、漂移、跨项目是否阻断，而非转为最近版本？'],
+['是否要求业务键、事件时间、写入策略和目标环境由人工确认？','是否允许已有 SQL Node 复用但不覆盖现有内容？'],
+['能否防止旧 Draft / 不同映射 revision 被静默绑定？','重复请求如何幂等回读而不重复发布？'],
+['运行精确 TaskRevision，还是意外执行当前编辑器？','UNKNOWN 是否先查原执行回执、禁用直接重试？'],
+['是否把 EXECUTION_SUCCESS 与 DATA_RECONCILED 严格拆分？','能否回到模型 Vn 和目标数据的差异证据？']];
+let step=0, scenario='happy', confirmed=false, task='none', execution='none';
+const $=id=>document.getElementById(id);
+const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function blocked(){return ['legacy','drift','permission'].includes(scenario);}
+function problem(){
+return {legacy:'所选 DWD 物理版本没有冻结 MappingRevision，不能反推历史业务含义。',drift:'ModelVersion 与冻结 MappingRevision 的 SHA 不一致，必须返回 Modeling 重新核验。',permission:'当前项目的模型或 DataDev 权限已撤销，拒绝加载/继续交接。'}[scenario]||'';}
+function notice(text,type){return '<div class="banner '+(type||'')+'">'+escape(text)+'</div>';}
+function body(){
+if(step===0){
+return '<div class="facts"><div class="fact"><span>设计发布状态</span><strong>DESIGN_PUBLISHED</strong></div><div class="fact"><span>冻结逻辑版本</span><strong>Logical V2（演示）</strong></div><div class="fact"><span>当前标准校验</span><strong>'+(blocked()?'不可通过':'需现场重检')+'</strong></div></div>'
++(blocked()?notice(problem(),'danger'):notice('这是只读预检；MappingRevision/结构/标准需要从服务端重读。当前通过仅能进入人工任务审阅。'))
++'<table class="list"><thead><tr><th>证据</th><th>来源</th><th>结果（模拟）</th></tr></thead><tbody>'
++'<tr><td>物理 ModelVersion #830</td><td>Modeling</td><td>'+ (blocked()?'待修复':'精确版本已定位')+'</td></tr>'
++'<tr><td>冻结 MappingRevision #920</td><td>Modeling</td><td>'+(scenario==='legacy'?'LEGACY_UNBOUND':scenario==='drift'?'SHA_MISMATCH':'已读回，需当前权限重检')+'</td></tr>'
++'<tr><td>StandardField 证据</td><td>Semantic</td><td>本次观察，非发布时历史冻结</td></tr></tbody></table>';
+}
+if(step===1) return '<div class="two"><div><label class="label">目标 SQL Node（演示）</label><select id="node"><option>新建订单明细 SQL 任务</option><option>复用当前项目的现有 SQL Node</option></select></div><div><label class="label">写入策略</label><select id="mode"><option value="">请人工选择</option><option>INSERT（只在确有幂等策略时）</option><option>分区覆盖（必须检查影响范围）</option></select></div></div>'
++'<div class="three"><div><label class="label">目标连接</label><input value="warehouse（演示）" readonly></div><div><label class="label">目标 Schema</label><input value="mart" readonly></div><div><label class="label">目标表</label><input value="dwd_order_detail" readonly></div></div>'
++'<label class="label">SQL 预览（仅示意，不可执行）</label><textarea readonly>-- 仅示意，不可执行。必须确认订单明细业务键、粒度、字段标准。\nSELECT detail_id, order_id, amount\nFROM ods_trade_order_detail\n-- TODO: 手工确认去重、状态、金额与执行写入策略</textarea>'
++'<div class="banner warn">此演示 SQL 故意不是可发布的加工脚本；真实执行前必须校验源表、键、事件时间、转换和目标写入策略。</div>'
++'<label><input type="checkbox" id="manual" class="checkbox" '+(confirmed?'checked':'')+'>我已核验 SQL、来源范围、明细粒度、目标权限与写入策略（模拟）</label>';
+if(step===2)return '<div class="facts"><div class="fact"><span>DraftRevision（演示）</span><strong>#4</strong></div><div class="fact"><span>TaskRevision（演示）</span><strong>#120 / R1</strong></div><div class="fact"><span>关联身份</span><strong>V3 + Mapping #920</strong></div></div>'
++notice('模拟发布任务修订和创建绑定收据。真实实现必须由 DataDev 端重读原域对象、校验 CAS / 权限 / 目标 / checksum 并做原子写入。')
++'<table class="list"><tbody><tr><th>核验项</th><th>预期</th></tr><tr><td>精确物理版本</td><td>Model 701 / Version 830 / V3</td></tr><tr><td>冻结映射</td><td>MappingRevision 920 / 内容 SHA</td></tr><tr><td>任务版本</td><td>SQL Node 110 / TaskRevision 120</td></tr><tr><td>幂等与签名</td><td>项目内幂等键 + SQL checksum + 目标身份</td></tr></tbody></table>';
+if(step===3) return '<div class="facts"><div class="fact"><span>任务修订</span><strong>TaskRevision #120</strong></div><div class="fact"><span>运行模式</span><strong>MANUAL</strong></div><div class="fact"><span>请求幂等</span><strong>精确绑定身份</strong></div></div>'
++(scenario==='unknown'?notice('模拟运行超时：状态 UNKNOWN。此时必须查询原 ExecutionId / 幂等回执，不得直接再次提交目标写入。','warn'):notice('执行按钮在评审中仅模拟 Runtime 返回，真实系统必须读取已发布 TaskRevision 的定义，而非前端编辑器内容。'))
++'<div class="info">演示 RuntimeExecutionId：'+(scenario==='unknown'?'UNKNOWN（待回读）':'runtime-demo-001（模拟）')+'<br>任务内容：已发布 SQL R1，不读取当前 Draft 编辑状态。</div>';
+return '<div class="facts"><div class="fact"><span>运行事实（演示）</span><strong>'+ (scenario==='unknown'?'UNKNOWN':'SUCCEEDED')+'</strong></div><div class="fact"><span>数据核对（演示）</span><strong>NOT_VERIFIED</strong></div><div class="fact"><span>消费事实</span><strong>NOT_VERIFIED</strong></div></div>'
++notice(scenario==='unknown'?'运行结果未知，禁止标记数据核对通过；先确认执行回执。':'运行成功不能证明数据正确。需对订单明细业务键、过滤状态、重复行、金额和目标行数独立查询对账。',scenario==='unknown'?'warn':'')
++'<table class="list"><thead><tr><th>对账项</th><th>要求</th><th>当前状态</th></tr></thead><tbody><tr><td>明细业务键唯一性</td><td>确认 detail_id 或复合键</td><td>未验收</td></tr><tr><td>源端/目标端行数</td><td>同时间窗口和过滤规则</td><td>未验收</td></tr><tr><td>金额与状态</td><td>相同币种、金额口径和取消订单规则</td><td>未验收</td></tr><tr><td>失败与迟到数据</td><td>隔离、重试、恢复凭证</td><td>未验收</td></tr></tbody></table>';
+}
+function render(){
+$('scenario').value=scenario;
+$('steps').innerHTML=names.map((name,i)=>'<button type="button" class="step '+(i===step?'active':i<step?'complete':'')+'" data-step="'+i+'" '+(i>step?'disabled':'')+'><b>'+(i+1)+'</b><span>'+escape(name)+'</span></button>').join('');
+$('stageTitle').textContent=titles[step][0];$('stageSub').textContent=titles[step][1];
+$('stateTag').textContent=step===0?'只读预检':step===1?'人工确认':step===2?'绑定草案':step===3?'运行模拟':'待真实核对';
+$('stageBody').innerHTML=body();
+$('questions').innerHTML=q[step].map(v=>'<li>'+escape(v)+'</li>').join('');
+$('back').disabled=step===0;
+$('next').textContent=step===0?'进入任务审阅 →':step===1?'模拟保存 / 发布修订 →':step===2?'模拟确认绑定 →':step===3?(scenario==='unknown'?'查询原回执（模拟） →':'模拟运行并回读 →'):'返回版本预检';
+$('next').disabled=step===0&&blocked()||step===1&&!confirmed||step===4&&scenario==='unknown';
+$('helper').textContent=step===0&&blocked()?'已阻断：返回有权原域修复':step===1&&!confirmed?'需勾选人工确认':step===4?'仅展示验收条件，不生成假成功':'';
+$('taskFact').textContent=step<3?'尚无正式绑定（模拟）':'已关联冻结 SQL（模拟）';
+$('taskRef').textContent=step<3?'TaskRevision: NONE':'TaskRevision: 120 / R1（模拟）';
+$('execFact').textContent=step<4?'尚未执行':scenario==='unknown'?'UNKNOWN（模拟）':'SUCCEEDED（模拟）';
+$('execRef').textContent=step<4?'Execution: NONE':'Execution: runtime-demo-001（模拟）';
+}
+$('scenario').addEventListener('change',e=>{scenario=e.target.value;step=0;confirmed=false;task='none';execution='none';render();});
+$('next').addEventListener('click',()=>{if(step===0&&blocked())return;if(step===1&&!confirmed)return;if(step===4){step=0;confirmed=false;}else step++;render();});
+$('back').addEventListener('click',()=>{step=Math.max(0,step-1);render();});
+$('steps').addEventListener('click',e=>{const b=e.target.closest('button[data-step]');if(b&&!b.disabled){const target=Number(b.dataset.step);if(target<=step){step=target;render();}}});
+$('stageBody').addEventListener('change',e=>{if(e.target.id==='manual'){confirmed=e.target.checked;const mode=$('mode')?.value||'';if(!mode&&confirmed){confirmed=false;alert('请先选择写入策略（演示），再确认。');}render();}if(e.target.id==='mode'&&e.target.value){confirmed=false;render();}});
+render();
+})();
+</script>
+</body></html>
