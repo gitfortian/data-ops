@@ -122,8 +122,13 @@ public class FrozenDwdExecutionCandidateService {
         || published.revisionNo() != binding.taskRevisionNo()
         || published.definition() == null
         || !"SQL".equals(published.definition().taskType())
+        || published.definition().content() == null
+        || published.definition().content().isBlank()
+        || !Objects.equals(published.checksum(), binding.taskDefinitionSha256())
         || !Objects.equals(digests.calculate(published.definition()), binding.taskDefinitionSha256())
         || !Objects.equals(validation.immutableDefinitionSha256(), binding.taskDefinitionSha256())
+        || !Objects.equals(validation.status(), "PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED")
+        || validation.taskRevisionNo() != binding.taskRevisionNo()
         || !Objects.equals(validation.taskRevisionId(), String.valueOf(binding.taskRevisionId()))
         || !Objects.equals(validation.nodeId(), String.valueOf(binding.nodeId()))
         || validation.authorizedForFrozenExecution()) {
