@@ -89,6 +89,11 @@ public class DwsGrainDesignService {
       throw new IllegalStateException("DWS 表结构已发生变化，请重新打开核对后保存粒度");
     }
     Design design = validateAndFreeze(model, structure, request);
+    // Keep the existing Modeling catalog's period display consistent with
+    // the authoritative DWS grain contract; it is never a second period truth.
+    if (!models.assignAggregateMeta(model.id(), design.statPeriod(), null, null, operator)) {
+      throw new IllegalStateException("无法同步 DWS 模型的统计周期");
+    }
     String json = encode(design);
     String digest = VersionDigests.sha256Hex(json);
     Optional<Saved> existing = get(modelId);
@@ -153,6 +158,9 @@ public class DwsGrainDesignService {
       throw new IllegalStateException("DWS 结构或设计已漂移，须重新确认粒度合同");
     }
     Design d = saved.design();
+    if (!Objects.equals(model.statPeriod(), d.statPeriod())) {
+      throw new IllegalStateException("DWS 模型统计周期与冻结粒度合同已发生偏离");
+    }
     Request request = new Request(d.statPeriod(), d.timeZone(),
         d.businessTimeColumn(), d.periodBucketColumn(), d.dimensions(),
         d.measures(), d.upstreamVersions().stream().map(UpstreamVersion::modelId).toList(),
