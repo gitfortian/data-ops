@@ -72,6 +72,16 @@ class DatabaseMigrationSmokeTest {
   }
 
   @Test
+  void dwdTaskBindingV2PreservesProjectScopedUniquenessAndRollbackOnMySql() {
+    startAndValidate(true, context -> DwdTaskBindingSqlSmoke.verifyDwdBindingForwardMigration(
+        new org.springframework.jdbc.core.JdbcTemplate(
+            context.getBean("yakBusinessDataSource", DataSource.class)),
+        context.getBean("yakBusinessTransactionManager",
+            org.springframework.transaction.PlatformTransactionManager.class),
+        990001L));
+  }
+
+  @Test
   void dwdMappingV6PersistsScopedRevisionsAndRollsBackAtomically() {
     startAndValidate(true, context -> DwdMappingSqlSmoke.verify(
         context.getBean("yakBusinessDataSource", DataSource.class),
@@ -158,6 +168,15 @@ class DatabaseMigrationSmokeTest {
     try (var context = new SpringApplicationBuilder(YakOpsApplication.class)
         .initializers(application -> application.getEnvironment().getPropertySources()
             .addFirst(new MapPropertySource("isolated-migration-smoke", properties))).run()) {
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.DevelopmentModelTaskBindingCoordinator.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.controller.v1.DevelopmentModelTaskBindingController.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.FrozenDwdExecutionCandidateService.class))
+          .isEmpty();
       assertThat(context.getBean("yakBusinessDataSource", DataSource.class)).isNotNull();
       assertThat(context.getBean("opsDataSource")).isSameAs(context.getBean("yakBusinessDataSource"));
       Map<String, Flyway> migrations = context.getBeansOfType(Flyway.class);

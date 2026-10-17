@@ -72,6 +72,15 @@ class PostgresqlStorageSmokeTest {
     long projectId;
     try (var context = start(password)) {
       validate(context);
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.DevelopmentModelTaskBindingCoordinator.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.controller.v1.DevelopmentModelTaskBindingController.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.FrozenDwdExecutionCandidateService.class))
+          .isEmpty();
       JdbcTemplate jdbc = new JdbcTemplate(context.getBean("yakBusinessDataSource", DataSource.class));
       var security = new JdbcTemplate(context.getBean("yakSecurityDataSource", DataSource.class));
       projectId = security.queryForObject("SELECT id FROM yak_security_project ORDER BY id LIMIT 1", Long.class);
@@ -87,6 +96,9 @@ class PostgresqlStorageSmokeTest {
       DwdMappingSqlSmoke.verify(
           context.getBean("yakBusinessDataSource", DataSource.class),
           context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class));
+      DwdTaskBindingSqlSmoke.verifyDwdBindingForwardMigration(
+          jdbc, context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class),
+          projectId);
       var state = AgentState.builder().userId("pg-storage-user").sessionId("pg-storage-session").build();
       state.setSummary("durable agent state");
       var stateStore = context.getBean(AgentStateStore.class);
