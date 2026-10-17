@@ -91,7 +91,8 @@ export default function DataDevelopmentPage() {
         ) : null}
 
         <ModelingHandoffEvidencePanel search={window.location.search}
-          nodes={page.nodes} onFocusNode={page.focusNode} />
+          nodes={page.nodes} onFocusNode={page.focusNode}
+          onCreateSqlNode={page.treeFailure ? undefined : () => page.openCreateNode('SQL')} />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[#e4e7ec] bg-white md:flex-row">
           {page.treeFailure ? (
             <WorkspaceLoadFailureState
