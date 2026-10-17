@@ -82,6 +82,16 @@ class DatabaseMigrationSmokeTest {
   }
 
   @Test
+  void dwdFrozenRuntimeAttemptV3IsDurableAndNeverReplaysUnknownSqlOnMySql() {
+    startAndValidate(true, context -> DwdTaskBindingSqlSmoke.verifyFrozenAttemptForwardMigration(
+        new org.springframework.jdbc.core.JdbcTemplate(
+            context.getBean("yakBusinessDataSource", DataSource.class)),
+        context.getBean("yakBusinessTransactionManager",
+            org.springframework.transaction.PlatformTransactionManager.class),
+        990001L));
+  }
+
+  @Test
   void dwdMappingV6PersistsScopedRevisionsAndRollsBackAtomically() {
     startAndValidate(true, context -> DwdMappingSqlSmoke.verify(
         context.getBean("yakBusinessDataSource", DataSource.class),
@@ -176,6 +186,15 @@ class DatabaseMigrationSmokeTest {
           .isEmpty();
       assertThat(context.getBeansOfType(
           io.yak.ops.business.development.handoff.FrozenDwdExecutionCandidateService.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.DwdFrozenExecutionReservationCoordinator.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.handoff.DwdFrozenExecutionDispatchCoordinator.class))
+          .isEmpty();
+      assertThat(context.getBeansOfType(
+          io.yak.ops.business.development.controller.v1.DwdFrozenExecutionController.class))
           .isEmpty();
       assertThat(context.getBean("yakBusinessDataSource", DataSource.class)).isNotNull();
       assertThat(context.getBean("opsDataSource")).isSameAs(context.getBean("yakBusinessDataSource"));
