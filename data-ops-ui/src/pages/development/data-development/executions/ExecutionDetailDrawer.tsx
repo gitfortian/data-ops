@@ -18,6 +18,8 @@ import {
 import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { isAmbiguousSqlExecution } from './execution-state';
+
 import type {
   DevelopmentId,
   DevelopmentSqlRunOutput,
@@ -253,7 +255,8 @@ const ExecutionDetailDrawer = ({
   };
 
   const confirmRetry = () => {
-    if (!detail?.id || !isRetryableExecutionStatus(detail.status)) return;
+    if (!detail?.id || !isRetryableExecutionStatus(detail.status)
+        || isAmbiguousSqlExecution(detail)) return;
     const sourceId = detail.id;
     Modal.confirm({
       title: intl.formatMessage({ id: 'pages.dataDevelopment.execution.retryConfirmTitle' }),
@@ -335,7 +338,8 @@ const ExecutionDetailDrawer = ({
                 {intl.formatMessage({ id: 'pages.dataDevelopment.execution.cancel' })}
               </Button>
             ) : null}
-            {canExecute && isRetryableExecutionStatus(detail.status) ? (
+            {canExecute && isRetryableExecutionStatus(detail.status)
+              && !isAmbiguousSqlExecution(detail) ? (
               <Button size="small" loading={actionLoading} onClick={confirmRetry}>
                 {intl.formatMessage({ id: 'pages.dataDevelopment.execution.retry' })}
               </Button>
@@ -348,6 +352,12 @@ const ExecutionDetailDrawer = ({
         <div className="flex h-64 items-center justify-center"><Spin size="small" /></div>
       ) : detail ? (
         <div className="space-y-6">
+          {isAmbiguousSqlExecution(detail) && (
+            <div role="alert" className="rounded border border-[#fedf89] bg-[#fffaeb] px-3 py-3 text-[13px] text-[#805b20]">
+              SQL 运行结果无法确认目标库是否已写入，已禁止直接重试。请先核对原 Runtime 回执及目标数据；
+              该记录不代表安全重放，也不能作为 DWD 数据对账成功证据。
+            </div>
+          )}
           <Descriptions size="small" column={2} bordered>
             <Descriptions.Item label={intl.formatMessage({ id: 'pages.dataDevelopment.common.taskName' })}>
               {detail.taskName || '-'}

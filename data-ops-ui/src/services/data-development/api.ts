@@ -239,6 +239,26 @@ export const listDevelopmentTaskRevisions = (
     `${resourcePath(NODE_API, nodeId)}/revisions`,
   );
 
+/** Proof of one immutable SQL TaskRevision; NOT an execution or DWD binding permit. */
+export interface PublishedSqlRevisionEvidence {
+  nodeId: string;
+  taskRevisionId: string;
+  taskRevisionNo: number;
+  publishedFromDraftRevision: number;
+  immutableDefinitionSha256: string;
+  currentDraftRevision: number;
+  currentDraftMatchesPublishedDefinition: boolean;
+  status: 'PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED';
+  authorizedForFrozenExecution: false;
+}
+
+export const inspectPublishedSqlRevision = (
+  nodeId: DevelopmentId, revisionNo: number,
+): Promise<PublishedSqlRevisionEvidence> =>
+  HttpUtils.getData<PublishedSqlRevisionEvidence>(
+    `${resourcePath(NODE_API, nodeId)}/revisions/${revisionNo}/immutable-evidence`,
+  );
+
 export const getDevelopmentTaskRevision = (
   nodeId: DevelopmentId,
   revisionNo: number,

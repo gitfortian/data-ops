@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { history } from '@umijs/max';
 import {
-  listDevelopmentTaskExecutions, listDevelopmentTaskRevisions,
+  inspectPublishedSqlRevision, listDevelopmentTaskExecutions, listDevelopmentTaskRevisions,
 } from '@/services/data-development';
 import DevelopmentTaskDeliveryEvidencePanel from './DevelopmentTaskDeliveryEvidencePanel';
 
@@ -10,6 +10,7 @@ jest.mock('@umijs/max', () => ({ history: { push: jest.fn() } }));
 jest.mock('@/services/data-development', () => ({
   listDevelopmentTaskExecutions: jest.fn(),
   listDevelopmentTaskRevisions: jest.fn(),
+  inspectPublishedSqlRevision: jest.fn(),
 }));
 const revision = { id: '99', nodeId: '12', revisionNo: 4,
   sourceDraftRevision: 3, checksum: 'b'.repeat(64) };
@@ -18,6 +19,14 @@ const latest = { id: '100', nodeId: '12', taskType: 'SQL',
 beforeEach(() => {
   jest.clearAllMocks();
   (listDevelopmentTaskRevisions as jest.Mock).mockResolvedValue([revision]);
+  (inspectPublishedSqlRevision as jest.Mock).mockResolvedValue({
+    nodeId: '12', taskRevisionId: '99', taskRevisionNo: 4,
+    publishedFromDraftRevision: 3, currentDraftRevision: 4,
+    immutableDefinitionSha256: 'b'.repeat(64),
+    currentDraftMatchesPublishedDefinition: false,
+    status: 'PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED',
+    authorizedForFrozenExecution: false,
+  });
   (listDevelopmentTaskExecutions as jest.Mock).mockResolvedValue({
     pageNo: 1, pageSize: 100, total: 1, records: [latest],
   });
@@ -85,4 +94,39 @@ it('manual refresh only re-reads DataDev evidence and opens official history, ne
   await waitFor(() => expect(listDevelopmentTaskRevisions).toHaveBeenCalledTimes(2));
   fireEvent.click(screen.getByRole('button', { name: '打开完整运行记录' }));
   expect(history.push).toHaveBeenCalledWith('/data-development/executions');
+});
+
+it('shows an owner-verified frozen SQL revision and explicitly calls out current editor drift', async () => {
+  render(<DevelopmentTaskDeliveryEvidencePanel nodeId="12" projectId="7" />);
+  expect(await screen.findByText(/TaskRevision #99 · 冻结定义校验通过/)).toBeInTheDocument();
+  expect(screen.getByText(/当前编辑器已与冻结修订不同/)).toBeInTheDocument();
+  expect(screen.getByText(/未取得 DWD ModelVersion 绑定或冻结执行授权/)).toBeInTheDocument();
+  expect(inspectPublishedSqlRevision).toHaveBeenCalledWith('12', 4);
+});
+
+it('rejects a forged TaskRevision checksum instead of displaying verified execution readiness', async () => {
+  (inspectPublishedSqlRevision as jest.Mock).mockResolvedValue({
+    nodeId: '12', taskRevisionId: '99', taskRevisionNo: 4,
+    publishedFromDraftRevision: 3, currentDraftRevision: 4,
+    immutableDefinitionSha256: 'c'.repeat(64),
+    currentDraftMatchesPublishedDefinition: true,
+    status: 'PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED',
+    authorizedForFrozenExecution: false,
+  });
+  render(<DevelopmentTaskDeliveryEvidencePanel nodeId="12" projectId="7" />);
+  expect(await screen.findByText('已发布 SQL 修订不可核验')).toBeInTheDocument();
+  expect(screen.queryByText(/TaskRevision #99 · 冻结定义校验通过/)).not.toBeInTheDocument();
+});
+
+it('rejects a read-only revision report that claims execution authorization', async () => {
+  (inspectPublishedSqlRevision as jest.Mock).mockResolvedValue({
+    nodeId: '12', taskRevisionId: '99', taskRevisionNo: 4,
+    publishedFromDraftRevision: 3, currentDraftRevision: 4,
+    immutableDefinitionSha256: 'b'.repeat(64),
+    currentDraftMatchesPublishedDefinition: true,
+    status: 'PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED',
+    authorizedForFrozenExecution: true,
+  });
+  render(<DevelopmentTaskDeliveryEvidencePanel nodeId="12" projectId="7" />);
+  expect(await screen.findByText('已发布 SQL 修订不可核验')).toBeInTheDocument();
 });

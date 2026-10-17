@@ -2,7 +2,8 @@ import { history } from '@umijs/max';
 import { Alert, Button, Card, Space, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import {
-  listDevelopmentTaskExecutions, listDevelopmentTaskRevisions,
+  inspectPublishedSqlRevision, listDevelopmentTaskExecutions, listDevelopmentTaskRevisions,
+  type PublishedSqlRevisionEvidence,
 } from '@/services/data-development';
 import {
   inspectTaskRevisions, observeTaskExecutions,
@@ -28,6 +29,8 @@ export default function DevelopmentTaskDeliveryEvidencePanel({ nodeId, projectId
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(false);
   const [revisions, setRevisions] = useState<TaskRevisionInspection>();
+  const [publishedEvidence, setPublishedEvidence] = useState<PublishedSqlRevisionEvidence>();
+  const [publishedEvidenceProblem, setPublishedEvidenceProblem] = useState<string>();
   const [runs, setRuns] = useState<TaskExecutionObservation>();
   const [revisionProblem, setRevisionProblem] = useState<string>();
   const [runProblem, setRunProblem] = useState<string>();
@@ -35,6 +38,8 @@ export default function DevelopmentTaskDeliveryEvidencePanel({ nodeId, projectId
   useEffect(() => {
     let active = true;
     setRevisions(undefined);
+    setPublishedEvidence(undefined);
+    setPublishedEvidenceProblem(undefined);
     setRuns(undefined);
     setRevisionProblem(undefined);
     setRunProblem(undefined);
@@ -49,12 +54,34 @@ export default function DevelopmentTaskDeliveryEvidencePanel({ nodeId, projectId
       // This API filters SQL taskType, NOT nodeId. Never call its result a
       // complete task history or treat a zero-match sample as no execution.
       listDevelopmentTaskExecutions({ pageNo: 1, pageSize: 100, taskType: 'SQL' }),
-    ]).then(([revisionResult, executionResult]) => {
+    ]).then(async ([revisionResult, executionResult]) => {
       if (!active) return;
       if (revisionResult.status === 'fulfilled') {
         const result = inspectTaskRevisions(nodeId, revisionResult.value);
         if (result.state === 'INVALID_OWNER') setRevisionProblem(result.reason);
-        else setRevisions(result);
+        else {
+          setRevisions(result);
+          if (result.state === 'PUBLISHED_REVISION_EXISTS') {
+            const latest = result.revisions[0];
+            try {
+              const evidence = await inspectPublishedSqlRevision(nodeId, latest.revisionNo);
+              if (!active) return;
+              if (evidence.nodeId !== nodeId
+                  || evidence.taskRevisionId !== latest.id
+                  || evidence.taskRevisionNo !== latest.revisionNo
+                  || evidence.immutableDefinitionSha256 !== latest.checksum
+                  || evidence.authorizedForFrozenExecution !== false
+                  || evidence.status !== 'PUBLISHED_SQL_REVISION_VERIFIED_NOT_EXECUTED') {
+                setPublishedEvidenceProblem('发布修订摘要、身份或执行授权状态与 DataDev 原域不一致');
+              } else {
+                setPublishedEvidence(evidence);
+              }
+            } catch (error: unknown) {
+              if (active) setPublishedEvidenceProblem(error instanceof Error
+                ? error.message : '精确发布任务修订校验失败');
+            }
+          }
+        }
       } else {
         setRevisionProblem(revisionResult.reason instanceof Error
           ? revisionResult.reason.message : '任务已发布版本不可访问');
@@ -102,6 +129,19 @@ export default function DevelopmentTaskDeliveryEvidencePanel({ nodeId, projectId
           </Typography.Text>
         </Space>
       )}
+      {publishedEvidenceProblem && <Alert type="error" showIcon className="!mb-3"
+        message="已发布 SQL 修订不可核验" description={publishedEvidenceProblem} />}
+      {publishedEvidence && <Alert type="info" showIcon className="!mb-3"
+        message={`TaskRevision #${publishedEvidence.taskRevisionId} · 冻结定义校验通过（未执行）`}
+        description={<>
+          <Typography.Text copyable={{ text: publishedEvidence.immutableDefinitionSha256 }}>
+            SHA256：{publishedEvidence.immutableDefinitionSha256.slice(0, 20)}…
+          </Typography.Text>
+          <span> · {publishedEvidence.currentDraftMatchesPublishedDefinition
+            ? '当前编辑器定义与冻结修订一致'
+            : '当前编辑器已与冻结修订不同，禁止用编辑器运行冒充已发布任务运行'}</span>
+          <span> · 未取得 DWD ModelVersion 绑定或冻结执行授权</span>
+        </>} />}
       {runProblem && <Alert showIcon type="error" className="!mb-3"
         message="运行回执不可核查" description={runProblem} />}
       {runs && runs.state !== 'INVALID_PAGE' && (

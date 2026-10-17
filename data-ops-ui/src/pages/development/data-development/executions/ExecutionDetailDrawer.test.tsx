@@ -243,6 +243,32 @@ describe('Data Development execution detail and modern commands', () => {
     expect(get).toHaveBeenCalledTimes(1);
   });
 
+  it('hides SQL retry after TIMEOUT and explains why target writes may be unknown', async () => {
+    get.mockResolvedValue({
+      ...detail('run-1', 'TIMEOUT'), failureReason: 'TIMEOUT',
+    });
+    render(<ExecutionDetailDrawer open record={record('run-1', 'TIMEOUT')}
+      onClose={jest.fn()} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/已禁止直接重试/);
+    expect(screen.queryByRole('button', {
+      name: 'pages.dataDevelopment.execution.retry',
+    })).not.toBeInTheDocument();
+    expect(retry).not.toHaveBeenCalled();
+  });
+
+  it('hides SQL retry after the runtime receipt is lost even if status is FAILED', async () => {
+    get.mockResolvedValue({
+      ...detail('run-1', 'FAILED'), failureReason: 'RUNTIME_STATE_LOST',
+    });
+    render(<ExecutionDetailDrawer open record={record('run-1', 'FAILED')}
+      onClose={jest.fn()} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Runtime 回执/);
+    expect(screen.queryByRole('button', {
+      name: 'pages.dataDevelopment.execution.retry',
+    })).not.toBeInTheDocument();
+    expect(retry).not.toHaveBeenCalled();
+  });
+
   it('does not expose cancel or retry actions without execute permission', async () => {
     mockCanExecute = false;
     get.mockResolvedValue(detail('run-1', 'RUNNING'));
