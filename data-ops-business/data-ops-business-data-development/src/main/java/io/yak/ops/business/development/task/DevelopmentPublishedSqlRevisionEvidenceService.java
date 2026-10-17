@@ -5,7 +5,7 @@ import io.yak.ops.business.development.domain.DevelopmentTaskDraft;
 import io.yak.ops.business.development.domain.DevelopmentTaskRevision;
 import io.yak.ops.spi.task.model.TaskDefinition;
 import java.util.Objects;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
  * No ModelVersionRef or executable DWD task binding is implied; DR-07 must
  * authorize that separate cross-domain transition.
  */
-@Service
+@Component
 public class DevelopmentPublishedSqlRevisionEvidenceService {
   private final DevelopmentTaskNodeResolver nodes;
   private final DevelopmentTaskRevisionReader revisions;
