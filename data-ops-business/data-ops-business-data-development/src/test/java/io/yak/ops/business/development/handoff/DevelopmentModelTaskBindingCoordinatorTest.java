@@ -34,7 +34,7 @@ class DevelopmentModelTaskBindingCoordinatorTest {
   private DevelopmentModelTaskBindingCoordinator.BindCommand command() {
     return new DevelopmentModelTaskBindingCoordinator.BindCommand(
         50L, 90L, 3, 901L, SHA,
-        7L, 92L, 2, TASK_SHA,
+        7L, 92L, 2, TASK_SHA, 2L,
         9L, "warehouse", "public", "dwd_order_detail",
         "INSERT", REQUEST_KEY, true);
   }
@@ -108,6 +108,7 @@ class DevelopmentModelTaskBindingCoordinatorTest {
         cmd.modelId(), cmd.modelVersionId(), cmd.modelVersionNo(),
         cmd.mappingRevisionId(), cmd.mappingSha256(), cmd.nodeId(),
         cmd.taskRevisionId(), cmd.taskRevisionNo(), cmd.taskDefinitionSha256(),
+        cmd.expectedDraftRevision(),
         cmd.targetDatasourceId(), cmd.targetDatabase(), cmd.targetSchema(),
         cmd.targetTable(), cmd.writeMode(), cmd.idempotencyKey(), false);
     assertThrows(IllegalArgumentException.class, () -> coordinator.bind(unconfirmed));
@@ -184,4 +185,17 @@ class DevelopmentModelTaskBindingCoordinatorTest {
     assertThrows(IllegalStateException.class, () -> coordinator.bind(command()));
     verify(repository, never()).insert(any());
   }
+  @Test
+  void concurrentDraftEditBetweenPrecheckAndBindCannotBeSilentlyAccepted() {
+    var cmd = command();
+    var stale = new DevelopmentModelTaskBindingCoordinator.BindCommand(
+        cmd.modelId(), cmd.modelVersionId(), cmd.modelVersionNo(),
+        cmd.mappingRevisionId(), cmd.mappingSha256(), cmd.nodeId(),
+        cmd.taskRevisionId(), cmd.taskRevisionNo(), cmd.taskDefinitionSha256(),
+        1L, cmd.targetDatasourceId(), cmd.targetDatabase(), cmd.targetSchema(),
+        cmd.targetTable(), cmd.writeMode(), cmd.idempotencyKey(), true);
+    assertThrows(IllegalStateException.class, () -> coordinator.bind(stale));
+    verify(repository, never()).insert(any());
+  }
+
 }
