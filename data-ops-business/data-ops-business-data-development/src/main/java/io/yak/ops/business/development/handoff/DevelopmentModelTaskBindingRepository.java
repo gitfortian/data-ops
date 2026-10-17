@@ -3,7 +3,6 @@ package io.yak.ops.business.development.handoff;
 import io.yak.ops.core.project.CurrentProject;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -79,7 +78,7 @@ public class DevelopmentModelTaskBindingRepository {
         + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))";
     var key = new GeneratedKeyHolder();
     jdbc.update(connection -> {
-      var p = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+      var p = connection.prepareStatement(sql, new String[] {"id"});
       p.setLong(1, candidate.projectId());
       p.setLong(2, candidate.modelId());
       p.setLong(3, candidate.modelVersionId());
