@@ -49,6 +49,14 @@ public class DevelopmentModelTaskBindingRepository {
         currentProject.requireProjectId(), key).stream().findFirst();
   }
 
+  public Optional<DevelopmentModelTaskBinding> byRevision(long nodeId, long revisionId) {
+    return jdbc.query(
+        "SELECT " + FIELDS + " FROM yak_dev_model_task_binding "
+            + "WHERE project_id=? AND node_id=? AND task_revision_id=? LIMIT 1",
+        DevelopmentModelTaskBindingRepository::map,
+        currentProject.requireProjectId(), nodeId, revisionId).stream().findFirst();
+  }
+
   public Optional<DevelopmentModelTaskBinding> byId(long id) {
     return jdbc.query(
         "SELECT " + FIELDS + " FROM yak_dev_model_task_binding "
