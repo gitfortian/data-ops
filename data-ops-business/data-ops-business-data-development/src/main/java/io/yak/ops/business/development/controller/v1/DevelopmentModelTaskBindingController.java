@@ -5,6 +5,7 @@ import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.development.handoff.DevelopmentModelTaskBinding;
 import io.yak.ops.business.development.handoff.DevelopmentModelTaskBindingCoordinator;
 import io.yak.ops.business.development.handoff.DevelopmentModelTaskBindingCoordinator.BindCommand;
+import io.yak.ops.business.development.handoff.FrozenDwdExecutionCandidateService;
 import io.yak.ops.common.constant.development.DataDevelopmentPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -32,11 +33,19 @@ import org.springframework.web.bind.annotation.RestController;
     matchIfMissing = false)
 public class DevelopmentModelTaskBindingController {
   private final DevelopmentModelTaskBindingCoordinator coordinator;
+  private final FrozenDwdExecutionCandidateService frozenExecution;
 
   @PostMapping("/bind")
   @RequiresPermission(DataDevelopmentPermissionCode.PUBLISH)
   public Result<DevelopmentModelTaskBinding> bind(@NotNull @RequestBody BindCommand request) {
     return Result.success(coordinator.bind(request));
+  }
+
+  /** Read-only inspection; NOT a run endpoint or Runtime authorization. */
+  @GetMapping("/{bindingId}/frozen-execution-preview")
+  public Result<FrozenDwdExecutionCandidateService.Preview> inspectFrozenExecution(
+      @PathVariable long bindingId) {
+    return Result.success(frozenExecution.inspect(bindingId));
   }
 
   @GetMapping("/{bindingId}")
