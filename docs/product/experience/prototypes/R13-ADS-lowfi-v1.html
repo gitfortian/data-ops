@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R13 ADS｜应用输出契约 · 全新低保真 V1</title>
+<style>
+:root{font-family:"Microsoft YaHei",system-ui,sans-serif;color:#263443;background:#f6f6f7}*{box-sizing:border-box}
+body{margin:0;font-size:14px}input,select,button,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
+header{background:#fff;border-bottom:1px solid #cad1d8;padding:14px 22px;display:flex;justify-content:space-between;gap:18px;align-items:center}
+header strong{font-size:18px}.gray{color:#647382;font-size:12px}.badge{display:inline-block;padding:4px 7px;border:1px solid #adb7c0;border-radius:3px;margin:3px;font-size:11px}
+.workspace{max-width:1510px;padding:16px;margin:auto;display:grid;grid-template-columns:226px minmax(0,1fr) 252px;gap:14px}
+.box{background:#fff;border:1px solid #cbd2d9;border-radius:5px;padding:17px}
+.left,.right{position:sticky;top:16px;align-self:start}.left button{display:block;width:100%;text-align:left;border:1px solid transparent;background:#fff;border-radius:4px;padding:12px 8px;line-height:1.4}
+.left button.chosen{background:#edf0f2;border-color:#748493;font-weight:bold}.left small{display:block;font-size:11px;color:#667788;margin-top:3px}
+h1{font-size:22px;line-height:1.4;margin:8px 0}h2{font-size:17px;margin:19px 0 10px}h3{font-size:14px;margin:6px 0}
+p{line-height:1.6}.kicker{font-size:11px;font-weight:bold;letter-spacing:.1em;color:#647180}
+.lead{font-size:14px;max-width:760px;color:#4e5d6c}
+.field{display:block;margin:12px 0}.field span{display:block;margin:0 0 6px;font-weight:700;font-size:12px}
+input:not([type]),input[type=text],select,textarea{width:100%;border:1px solid #aab6c2;padding:8px;min-height:37px;border-radius:4px;background:#fff;color:#25313d}textarea{min-height:65px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.record{border:1px solid #c6cdd5;border-radius:4px;padding:13px;margin:10px 0;background:#fcfcfd}
+.record.active{border:2px solid #5b6f81;background:#f0f2f4}.muted{color:#687785}
+.record strong{font-size:14px}.panelnote{padding:12px 14px;border-left:4px solid #8796a3;background:#f0f3f5;margin:12px 0;line-height:1.55}
+.warn{padding:12px 14px;border-left:4px solid #a77f4e;background:#f9f3e9;margin:12px 0;line-height:1.5}
+.block{padding:12px 14px;border-left:4px solid #a65752;background:#fbefed;margin:12px 0;line-height:1.5}
+.pass{padding:12px 14px;border-left:4px solid #6a886f;background:#edf3ed;margin:12px 0}
+.btn{padding:8px 12px;border:1px solid #9ba8b4;border-radius:4px;background:#fff;color:#273b4e}.btn.main{background:#374c5c;color:#fff;border-color:#374c5c}.btn.danger{color:#934d4d;border-color:#a47b7b}
+.toolbar{margin-top:24px;border-top:1px solid #d8dde2;padding-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+.check{margin:9px 0;padding:8px;border-bottom:1px dashed #d9dee3;font-size:12px}
+.check.bad:before{content:"! ";color:#a76448;font-weight:700}.check.good:before{content:"✓ ";color:#53745d;font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #d4d8dd;padding:8px;vertical-align:top;text-align:left}th{background:#f0f2f4}
+label.option{display:block;padding:12px 0;border-bottom:1px dashed #d6dce1}label.option input{margin-right:8px}
+.overlay{position:fixed;inset:0;background:rgba(22,33,44,.57);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.dialog{background:#fff;width:min(680px,100%);padding:22px;border:3px solid #536575;border-radius:5px;box-shadow:0 10px 20px rgba(0,0,0,.2)}
+footer{max-width:1510px;margin:auto;padding:12px 20px 30px;font-size:12px;color:#677582}
+:focus-visible{outline:3px solid #4f667c;outline-offset:2px}
+@media(max-width:1000px){.workspace{grid-template-columns:186px 1fr}.right{grid-column:1/-1;position:static}}
+@media(max-width:670px){.workspace{display:block;padding:10px}.left,.right{position:static;margin:0 0 12px}.left button{display:inline-block;width:auto;font-size:12px}.two{grid-template-columns:1fr}h1{font-size:20px}header{display:block}.box{padding:13px}}
+</style></head>
+<body>
+<header><div><strong>ADS · 应用数据设计</strong><div class="gray">R13 UX-1 / 独立全新低保真 V1 · 模拟演示，不是正式产品页面</div></div><div><span class="badge">项目：交易分析项目</span><span class="badge">过程：订单下单</span><span class="badge">不执行 SQL · 不发布服务</span></div></header>
+<div class="workspace"><nav id="left" class="box left" aria-label="ADS 独立六屏导航"></nav><main id="main" class="box" aria-live="polite"></main><aside id="right" class="right"></aside></div><div id="modalHost"></div>
+<footer>操作本原型不会调用 Github、业务 API、Runtime 或真实 Dataset/Service；所有消费授权、刷新状态和 Metric 证据都是用于评审的模拟场景。</footer>
+<script>
+(function(){
+"use strict";
+var KEY="r13-ads-lowfi-v1-draft";
+var screens=[
+["01","应用目标","谁使用数据、为什么"],["02","粒度与来源","汇总或明细的显式选择"],
+["03","输出字段合同","消费者看到什么"],["04","口径和时效","怎样解释数据与刷新"],
+["05","安全与发布","哪些条件尚未满足"],["06","交付与回读","设计发布≠可消费"]];
+var seed={
+step:0,appType:"report",appCode:"ads_order_overview",appName:"订单经营日报",
+owner:"订单运营负责人",audience:"运营分析团队",purpose:"每日查看地区订单量及经营趋势",
+mode:"DWS",pendingMode:null,fields:["order_day","city_id","order_count","paid_amount"],
+businessKey:"order_day,city_id",whereRule:"",sortRule:"order_day DESC",
+metric:"order_count_v4",freshness:"D+1",metricApproved:false,privacyApproved:false,
+scenario:"normal",draftRevision:0,published:false,dirty:true,saveUnknown:false,
+message:"",viewOnly:false
+};
+var state=Object.assign({},seed,{fields:seed.fields.slice()});
+var defs={
+DWS:[["order_day","日期","普通"],["city_id","城市","普通"],["order_count","订单数","普通"],["paid_amount","支付金额","普通"],["customer_phone","客户手机号","受限"]],
+DWD:[["order_id","订单 ID","普通"],["item_id","明细 ID","普通"],["item_amount","明细金额","普通"],["event_time","事件时间","普通"],["customer_phone","客户手机号","受限"]]
+};
+function esc(x){return String(x==null?"":x).replace(/[&<>"']/g,function(y){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[y]})}
+function button(text,act,kind,disabled){return '<button class="btn '+(kind||"")+'" data-act="'+act+'" '+(disabled?"disabled":"")+'>'+text+'</button>'}
+function notice(msg,kind){return '<div class="'+(kind||"panelnote")+'">'+msg+'</div>'}
+function title(t,lead){return '<div class="kicker">ADS / SCREEN '+(state.step+1)+' OF 6</div><h1>'+t+'</h1><p class="lead">'+lead+'</p>'}
+function input(label,key,choices){var value=state[key];return '<label class="field"><span>'+label+'</span>'+(choices?'<select data-key="'+key+'">'+choices.map(function(x){return '<option value="'+esc(x[0])+'" '+(value===x[0]?"selected":"")+'>'+esc(x[1])+'</option>'}).join("")+'</select>':'<input type="text" data-key="'+key+'" value="'+esc(value)+'">')+'</label>'}
+function noWrite(){return state.viewOnly||state.scenario==="revoked"}
+function candidates(){return defs[state.mode]}
+function sourceVersion(){return state.mode==="DWS"?"DWS #810 · 已发布 V2（业务日×地区）":"DWD #701 · 已发布 V2（订单明细行）"}
+function required(){
+ var z=[];
+ if(!state.appCode.trim()||!state.appName.trim()||!state.purpose.trim()||!state.audience.trim())z.push("应用身份、用途和消费方不完整");
+ if(state.mode==="DWS"&&state.scenario==="unpublished")z.push("当前 DWS 没有可用的正式发布版本");
+ if(state.scenario==="revoked")z.push("来源权限或消费者授权已撤销");
+ if(state.scenario==="metricdrift")z.push("指标中心已发布新的口径版本，必须重新审阅");
+ if(state.pendingMode)z.push("来源粒度切换等待你明确确认或取消");
+ if(!state.fields.length)z.push("输出字段为空");
+ if(!state.businessKey.trim())z.push("缺少明确的输出业务键");
+ var keys=state.businessKey.split(",").map(function(x){return x.trim()}).filter(Boolean);
+ if(keys.some(function(x){return state.fields.indexOf(x)<0}))z.push("输出业务键包含未输出的字段");
+ if(state.mode==="DWS"&&state.fields.indexOf("order_day")<0)z.push("日报需输出真实业务日期");
+ if(state.mode==="DWD"&&(!state.fields.includes("order_id")||!state.fields.includes("item_id")))z.push("明细模式必须保留订单明细业务键");
+ if(state.fields.includes("customer_phone"))z.push("受限字段 customer_phone 需要消费者专门授权；低保真不提供实际授权");
+ if(!state.metricApproved)z.push("业务指标版本和用途尚未人工核对");
+ if(!state.privacyApproved)z.push("消费范围、敏感字段与访问策略尚未人工确认");
+ if(state.draftRevision===0)z.push("应用输出设计草稿尚未保存");
+ if(state.dirty)z.push("存在未保存修改，不能直接发布");
+ if(noWrite())z.push("当前权限仅可查看，不能编辑/发布");
+ return z
+}
+function page(){
+ switch(state.step){
+ case 0:return title("先定义应用需要交付什么","从消费场景和目标用户出发，不要求业务人员先懂 DWS / DWD 术语。")
+ +'<div class="two">'+input("应用用途","appType",[["report","经营报表/分析看板"],["dataset","数据集"],["api","明细数据 API"]])
+ +input("应用唯一标识","appCode")+input("应用名称","appName")+input("业务责任人","owner")+'</div>'
+ +input("目标使用者/消费方","audience")+input("使用目的","purpose")
+ +notice("当前需求是设计意向，不创建 Dataset、API，不配置真正的消费者权限或调用 SLA。")
+ +'<div class="record"><strong>已保存的应用对象</strong><p>ADS #920 · '+(state.draftRevision?"草稿 R"+state.draftRevision:"尚无保存的草稿")+'</p>'+button("重新打开这个应用草稿","reopen")+'</div>';
+ case 1:return title("输出一行代表什么？来源该选哪一层？","汇总型默认使用已发布 DWS；明细 API 必须由用户显式改选已发布 DWD。两个模式不可静默互换。")
+ +'<div class="two"><div class="record '+(state.mode==="DWS"?"active":"")+'"><h3>汇总业务输出</h3><p>一行 = 业务日 × 城市</p><p>建议来源：DWS #810 已发布 V2</p>'+button(state.mode==="DWS"?"已选择汇总来源":"改选汇总 DWS","mode:DWS","",noWrite())+'</div>'
+ +'<div class="record '+(state.mode==="DWD"?"active":"")+'"><h3>明细业务输出</h3><p>一行 = 订单行（order_id + item_id）</p><p>建议来源：DWD #701 已发布 V2</p>'+button(state.mode==="DWD"?"已选择明细来源":"明确改选 DWD","mode:DWD","",noWrite())+'</div></div>'
+ +'<div class="record"><h3>当前精确来源</h3><strong>'+esc(sourceVersion())+'</strong><p>当前粒度：'+(state.mode==="DWS"?"每天每个城市一行":"订单明细项一行")+'。选择来源不是性能、实时性或权限承诺。</p></div>'
+ +(state.scenario==="unpublished"?notice("上游 DWS 未发布：可保留需求草稿、返回 DWS 建模，但不能自动退化为 DWD。","block"):"")
+ +notice("切换后必须重新审阅输出字段、业务键、指标引用、筛选条件。后续界面要清楚呈现差异。","warn");
+ case 2:return title("定义真正交付给消费者的字段","不是复制源表；请确认列名、来源、类型、业务键、过滤/排序及受限字段。")
+ +'<table><thead><tr><th>输出</th><th>来源字段</th><th>业务含义</th><th>安全</th></tr></thead><tbody>'+candidates().map(function(f){return '<tr><td><input type="checkbox" aria-label="输出 '+esc(f[0])+'" data-column="'+f[0]+'" '+(state.fields.includes(f[0])?"checked":"")+'></td><td>'+esc(f[0])+'</td><td>'+esc(f[1])+'</td><td>'+esc(f[2])+'</td></tr>'}).join("")+'</tbody></table>'
+ +'<div class="two">'+input("输出业务键（英文逗号分隔）","businessKey")+input("默认排序（设计候选）","sortRule")+'</div>'
+ +input("固定过滤约束（设计意向，不执行 SQL）","whereRule")
+ +notice("受限字段 customer_phone 只用于交互审查；本原型不会展示真实个人数据，也不会自动申请权限。","warn");
+ case 3:return title("口径、刷新与使用者约定","正式指标口径来自 Metric 原域；应用刷新和消费能力必须由 Runtime / Dataset / Service 独立证明。")
+ +'<div class="two">'+input("只读指标引用候选","metric",[["order_count_v4","订单数量 · Metric V4"],["paid_amount_v2","支付金额 · Metric V2"],["none","无指标引用（需显式业务解释）"]])
+ +input("业务期待的刷新时效","freshness",[["D+1","次日可用（目标）"],["H+1","次小时（目标）"],["T+5m","5 分钟（目标，未承诺）"]])+'</div>'
+ +'<label class="option"><input type="checkbox" data-check="metricApproved" '+(state.metricApproved?"checked":"")+'>业务负责人已核对当前应用使用的已发布指标引用、口径版本及过滤含义</label>'
+ +'<label class="option"><input type="checkbox" data-check="privacyApproved" '+(state.privacyApproved?"checked":"")+'>已核对消费者范围与目标字段敏感级别（不等于正式安全授权）</label>'
+ +(state.scenario==="metricdrift"?notice("Metric 发布新版导致原引用不再满足当前审阅；保留旧引用，进入版本差异确认。","block"):"")
+ +notice("刷新时效是需求，不代表 DataDev 已配置/运行成功；ADS 建模不能承诺实际 SLA。");
+ case 4:var z=required();return title("消费安全与 ADS 设计发布审核","这里的「发布」仅产生不可变 ADS 设计版本；不能表示目标物理表已更新或 API 可访问。")
+ +'<div class="two"><div class="record"><h3>应用身份</h3><p>'+esc(state.appName)+'<br>'+esc(state.appCode)+'<br>消费类型：'+esc(state.appType)+'<br>目标：'+esc(state.audience)+'</p></div><div class="record"><h3>依赖与输出</h3><p>'+esc(sourceVersion())+'<br>输出列：'+esc(state.fields.join(", "))+'<br>业务键：'+esc(state.businessKey)+'<br>Metric：'+esc(state.metric)+'</p></div></div>'
+ +(z.length?notice("<strong>设计发布阻断："+z.length+" 项</strong><ol>"+z.map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+"</ol>","block"):notice("示例设计条件已满足，可以模拟发布 ADS 设计；服务和授权依然未创建。","pass"))
+ +'<div class="toolbar">'+button("保存 ADS 设计草稿","save","",noWrite())+button("发布 ADS 设计版本（模拟）","publish","main",z.length>0||noWrite())+'</div>';
+ case 5:return title("设计版本与真实交付必须分开","能够回读 ADS ModelVersion，不等于 Dataset/Service 已发布，也不等于消费者有权查询。")
+ +'<div class="record"><h3>ADS #920 / '+esc(state.appCode)+'</h3><p>草稿 R'+state.draftRevision+' · '+(state.published?"设计版本 V1 已发布（模拟）":"设计未发布")+'</p><p>当前上游：'+esc(sourceVersion())+'</p><div class="toolbar">'+button("重开已保存应用草稿","reopen")+button("回到输出字段","goto:2")+button("清空此原型记录","reset","danger")+'</div></div>'
+ +'<table><thead><tr><th>事实所有者</th><th>当前结果</th></tr></thead><tbody><tr><td>Modeling · ADS 设计</td><td>'+(state.published?"发布模拟 V1":"未发布")+'</td></tr><tr><td>DataDev/Runtime · 加工</td><td>NOT_CONFIGURED · 不可推断</td></tr><tr><td>Dataset · 数据集发布</td><td>未交接</td></tr><tr><td>Service · API 调用</td><td>未授权，不可调用</td></tr><tr><td>Usage / 审计</td><td>无合法调用证据</td></tr></tbody></table>'
+ +notice("此处只能展示原域真实回执的设计占位。无权通过 ADS 页面模拟实际发布 Dataset/Service。");
+ }}
+function dialog(){
+ var area=document.getElementById("modalHost");
+ if(!state.pendingMode){area.innerHTML="";return}
+ var next=state.pendingMode;
+ var losing=state.fields.filter(function(x){return defs[next].every(function(y){return y[0]!==x})});
+ area.innerHTML='<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="dialog"><div class="kicker">SOURCE / GRAIN IMPACT REVIEW</div><h2 id="dialog-title">确认切换来源粒度？</h2><p>当前：<strong>'+state.mode+'</strong> → 目标：<strong>'+next+'</strong>。这不是普通筛选条件变化。</p><table><tr><th>影响范围</th><th>变化</th></tr><tr><td>业务粒度</td><td>'+(next==="DWD"?"从业务日×地区变成订单明细行":"从订单明细行变成业务日×地区")+'</td></tr><tr><td>输出字段</td><td>将失去 '+esc(losing.join(", ")||"无")+'</td></tr><tr><td>业务键</td><td>'+(next==="DWD"?"order_id + item_id":"order_day + city_id")+'</td></tr><tr><td>指标/过滤</td><td>原确认作废，必须重新核对，已保存旧版本保留</td></tr></table><div class="toolbar">'+button("取消，继续现有模式","cancelSwitch")+button("确认切换并重新审阅映射","confirmSwitch","main")+'</div></div></div>';
+}
+function redraw(){
+ var blockers=required();
+ document.getElementById("left").innerHTML='<div class="kicker">全新应用工作流</div><h2>六步完成应用设计</h2>'+screens.map(function(s,i){return '<button class="'+(i===state.step?"chosen":"")+'" data-step="'+i+'">'+s[0]+' · '+s[1]+'<small>'+s[2]+'</small></button>'}).join("")+'<hr><p class="gray">可任意点击步骤验证状态与恢复。不是最终页面视觉方案。</p>';
+ document.getElementById("main").innerHTML=page()+(state.message?notice(esc(state.message),state.saveUnknown?"warn":"panelnote"):"")+'<div class="toolbar">'+button("上一步","prev","",state.step===0)+button("保存需求/设计草稿","save","",noWrite())+button(state.step===5?"回到应用目标":"下一步","next","main")+'</div>';
+ document.getElementById("right").innerHTML='<section class="box"><h2>当前应用证据</h2><p class="gray">ADS #920 · '+esc(state.appCode)+'</p><div class="gray">状态：'+(state.published?"ADS_MODEL_DESIGN_PUBLISHED":state.draftRevision?"ADS_DESIGN_DRAFT R"+state.draftRevision:"APP_REQUIREMENT_DRAFT")+(state.dirty?" · 未保存":"")+'</div><div class="gray" style="margin-top:8px">来源：'+esc(state.mode)+' / '+(state.mode==="DWS"?"汇总":"明细")+'</div><div class="gray" style="margin-top:8px">阻断项 '+blockers.length+'</div>'+blockers.slice(0,6).map(function(x){return '<div class="check bad">'+esc(x)+'</div>'}).join("")+(blockers.length?"":'<div class="check good">模型设计候选检查完毕</div>')+'</section><section class="box" style="margin-top:12px"><h2>评审异常场景</h2>'+[
+ ["normal","恢复正常场景"],["unpublished","上游 DWS 未发布"],["metricdrift","指标版本漂移"],["revoked","权限撤销/只读"],["saveunknown","保存回执不确定"],["servicepending","设计已发，服务未上线"]
+ ].map(function(x){return '<button class="btn" style="display:block;width:100%;text-align:left;margin:5px 0" data-act="scenario:'+x[0]+'">'+x[1]+'</button>'}).join("")+(state.saveUnknown?'<p>'+button("根据 ModelId 核查保存结果","verify")+'</p>':"")+'</section><section class="box" style="margin-top:12px"><h2>本轮 UX 门禁</h2><p class="gray">仅 UX-1 低保真候选。未签收低保真，不能进入高保真或业务代码开发。</p></section>';
+ dialog()
+}
+function store(){
+ var copy=Object.assign({},state,{pendingMode:null,scenario:"normal",viewOnly:false,saveUnknown:false,dirty:false,message:"",step:5});
+ localStorage.setItem(KEY,JSON.stringify(copy))
+}
+function execute(act){
+ if(act==="prev")state.step=Math.max(0,state.step-1);
+ else if(act==="next")state.step=state.step===5?0:state.step+1;
+ else if(act==="save"){
+  if(noWrite()){state.message="无编辑权限，不能保存";redraw();return}
+  state.draftRevision+=1;state.dirty=false;store();
+  state.saveUnknown=state.scenario==="saveunknown";
+  state.message=state.saveUnknown?"保存超时：回执状态不明！先根据 ADS #920 和草稿修订号回读，不能重复创建。":"草稿 R"+state.draftRevision+" 已在浏览器原型本地记录，真实后台未写入。"
+ }
+ else if(act==="verify"){var v=localStorage.getItem(KEY);state.saveUnknown=false;state.message=v?"已按 ADS #920 回读到草稿 R"+JSON.parse(v).draftRevision+"（仅本地模拟）":"未找到该修订，保持未知并人工检查"}
+ else if(act==="reopen"){var v=localStorage.getItem(KEY);if(!v){state.message="没有已保存的原型草稿，请先保存";redraw();return}state=Object.assign({},seed,JSON.parse(v),{step:5,message:"已按 projectId + modelId + draftRevision 找回同一应用设计草稿（模拟）"});}
+ else if(act==="publish"){var bad=required();state.message=bad.length?"发布失败："+bad.join("；"):"ADS 设计 V1 已发布模拟；Dataset/Service/Query/Usage 未启动或授权。";if(!bad.length){state.published=true;state.dirty=false;store()}}
+ else if(act==="reset"){localStorage.removeItem(KEY);state=Object.assign({},seed,{fields:seed.fields.slice(),message:"原型状态已重置"});}
+ else if(act==="cancelSwitch"){state.pendingMode=null;state.message="保留原来源、旧草稿字段和业务口径；本次未切换";}
+ else if(act==="confirmSwitch"){
+  state.mode=state.pendingMode;state.pendingMode=null;
+  state.fields=state.mode==="DWD"?["order_id","item_id","item_amount","event_time"]:["order_day","city_id","order_count","paid_amount"];
+  state.businessKey=state.mode==="DWD"?"order_id,item_id":"order_day,city_id";
+  state.metricApproved=false;state.privacyApproved=false;state.dirty=true;
+  state.message="已显式切换来源粒度并重建输出字段候选，已保存旧草稿未覆盖；请重新核对指标/业务键/权限。"
+ }
+ else if(act.indexOf("mode:")===0){var val=act.slice(5);if(val!==state.mode){state.pendingMode=val;state.message="";}}
+ else if(act.indexOf("goto:")===0)state.step=Number(act.slice(5));
+ else if(act.indexOf("scenario:")===0){var scenario=act.slice(9);state.scenario=scenario;state.viewOnly=scenario==="revoked";state.saveUnknown=false;state.message=scenario==="normal"?"已恢复正常审阅场景。":scenario==="saveunknown"?"先点击「保存草稿」模拟服务端已落库但回执丢失。":scenario==="servicepending"?"ADS 设计发布不能证明 Dataset/Service 已上线，保持交付待完成。":"当前场景引入设计/授权阻断；需先修复才能发布。";}
+ redraw()
+}
+document.addEventListener("click",function(ev){var x=ev.target.closest("[data-act],[data-step]");if(!x)return;if(x.dataset.step!==undefined){state.step=Number(x.dataset.step);redraw();return}execute(x.dataset.act)});
+document.addEventListener("change",function(ev){var x=ev.target;if(x.dataset.column){if(x.checked&&!state.fields.includes(x.dataset.column))state.fields.push(x.dataset.column);if(!x.checked)state.fields=state.fields.filter(function(y){return y!==x.dataset.column});state.dirty=true;redraw();return}
+ if(x.dataset.check){state[x.dataset.check]=x.checked;state.dirty=true;redraw();return}
+ if(x.dataset.key){state[x.dataset.key]=x.value;state.dirty=true;redraw()}}
+);
+document.addEventListener("input",function(ev){var x=ev.target;if(x.dataset.key&&x.tagName==="INPUT"){state[x.dataset.key]=x.value;state.dirty=true}});
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape"&&state.pendingMode){execute("cancelSwitch")}});
+redraw();
+})();
+</script></body></html>
