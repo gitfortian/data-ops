@@ -13,6 +13,7 @@ public interface PublishedDwdDesignEvidenceProvider {
       long modelId,
       long modelVersionId,
       int modelVersionNo,
+      String targetTableCode,
       long mappingRevisionId,
       String mappingContentSha256,
       String logicalSnapshotSha256,
