@@ -322,10 +322,27 @@ public class ModelDeriveService {
           List.of(), 0, 0, 0, 0, 0, 0, 0, null, List.of(blockedReason), mode.name(), List.of(),
           null, null);
     }
-    Resolution resolution =
-        resolve(
-            processId, layer, processCode, targetDialect, scdType, mode, upstream,
-            upstreamModelIds);
+    Resolution resolution;
+    try {
+      resolution = resolve(
+          processId, layer, processCode, targetDialect, scdType, mode, upstream,
+          upstreamModelIds);
+    } catch (ModelingException exception) {
+      if (!DeriveLayerPolicy.isAggregateMode(mode)
+          || exception.getErrorCode() != ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED) {
+        throw exception;
+      }
+      // A preview is a read-only recovery entry. Incomplete/invalid published
+      // upstream is shown as a blocking next step, not a phantom empty model
+      // or a trigger to auto-publish the upstream.
+      String reason = exception.getUserMessage();
+      return new PreviewView(
+          processId, layer.code(), upstream, false, reason,
+          List.of(), List.of(), 0, 0, 0, 0, 0, 0, 0, null,
+          List.of(reason), mode.name(), List.of(),
+          suggestedCode(layer, mode, processCode, statPeriod, appCode),
+          suggestedName(processCode, layer, appName));
+    }
     List<ResolvedDeriveField> included = resolution.fields().stream().filter(ResolvedDeriveField::include).toList();
     // 治理率只统计业务字段(排除管道技术列与维表约定列)
     List<ResolvedDeriveField> business =
