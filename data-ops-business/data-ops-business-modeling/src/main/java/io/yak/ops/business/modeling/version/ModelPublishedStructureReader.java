@@ -66,6 +66,41 @@ public class ModelPublishedStructureReader {
     return withModelId(snapshot, modelId);
   }
 
+  /**
+   * Strict upstream read used by DWS/ADS model derivation.
+   *
+   * <p>Unlike the legacy consumer fallback, this method NEVER publishes,
+   * backfills, heals dangling pointers or reads mutable draft structure.
+   * A model may have an edited DRAFT while its older published version stays
+   * valid: only the exact immutable version row is returned.
+   */
+  public StructureView requirePublishedStructure(Long modelId) {
+    Model model = requireModel(modelId);
+    if (model.status() == ModelStatus.DISABLED
+        || model.publishedVersionId() == null
+        || model.publishedVersionId() <= 0) {
+      throw new ModelingException(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED,
+          "上游模型 " + model.code() + " 尚无可用的正式发布版本，不能用草稿派生 DWS/ADS");
+    }
+    var version = versionRepository.findById(model.publishedVersionId(), modelId)
+        .orElseThrow(() -> new ModelingException(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED,
+            "上游模型 " + model.code() + " 发布版本缺失，须重新审核发布后才能派生"));
+    if (!model.publishedVersionId().equals(version.id())
+        || !modelId.equals(version.modelId())
+        || version.versionNo() <= 0
+        || version.structureJson() == null
+        || version.structureJson().isBlank()) {
+      throw new ModelingException(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED,
+          "上游模型 " + model.code() + " 正式版本身份或结构快照无效");
+    }
+    StructureView snapshot = deserialise(version.structureJson());
+    if (snapshot.modelId() != null && !modelId.equals(snapshot.modelId())) {
+      throw new ModelingException(ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED,
+          "上游模型 " + model.code() + " 发布结构归属不匹配");
+    }
+    return withModelId(snapshot, modelId);
+  }
+
   public List<ColumnDefinition> publishedColumns(Long modelId) {
     return toColumns(publishedStructure(modelId));
   }

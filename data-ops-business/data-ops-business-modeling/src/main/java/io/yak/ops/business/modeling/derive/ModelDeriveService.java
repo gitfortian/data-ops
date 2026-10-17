@@ -322,10 +322,27 @@ public class ModelDeriveService {
           List.of(), 0, 0, 0, 0, 0, 0, 0, null, List.of(blockedReason), mode.name(), List.of(),
           null, null);
     }
-    Resolution resolution =
-        resolve(
-            processId, layer, processCode, targetDialect, scdType, mode, upstream,
-            upstreamModelIds);
+    Resolution resolution;
+    try {
+      resolution = resolve(
+          processId, layer, processCode, targetDialect, scdType, mode, upstream,
+          upstreamModelIds);
+    } catch (ModelingException exception) {
+      if (!DeriveLayerPolicy.isAggregateMode(mode)
+          || exception.getErrorCode() != ModelingErrorCode.LAYER_DERIVE_UNSUPPORTED) {
+        throw exception;
+      }
+      // A preview is a read-only recovery entry. Incomplete/invalid published
+      // upstream is shown as a blocking next step, not a phantom empty model
+      // or a trigger to auto-publish the upstream.
+      String reason = exception.getUserMessage();
+      return new PreviewView(
+          processId, layer.code(), upstream, false, reason,
+          List.of(), List.of(), 0, 0, 0, 0, 0, 0, 0, null,
+          List.of(reason), mode.name(), List.of(),
+          suggestedCode(layer, mode, processCode, statPeriod, appCode),
+          suggestedName(processCode, layer, appName));
+    }
     List<ResolvedDeriveField> included = resolution.fields().stream().filter(ResolvedDeriveField::include).toList();
     // 治理率只统计业务字段(排除管道技术列与维表约定列)
     List<ResolvedDeriveField> business =
@@ -362,7 +379,9 @@ public class ModelDeriveService {
                         upstreamModelIds == null
                             || upstreamModelIds.isEmpty()
                             || upstreamModelIds.contains(model.id()),
-                        structureService.get(model.id()).columns().size()))
+                        resolution.sources().stream()
+                            .filter(item -> model.id().equals(item.odsModelId()))
+                            .findFirst().map(SourceView::fieldCount).orElse(0)))
             .toList(),
         suggestedCode(layer, mode, processCode, statPeriod, appCode),
         suggestedName(processCode, layer, appName));
@@ -690,6 +709,21 @@ public class ModelDeriveService {
       warnings.add(
           "该业务过程还没有 " + upstreamLayer + " 模型(上游缺失),请先按过程派生 " + upstreamLayer);
     }
+    // An explicit selection is a domain identity claim, not a best-effort
+    // filter. Invalid/foreign/duplicated IDs must never silently reduce the
+    // source set and change DWS grouping or ADS application data.
+    if (upstreamModelIds != null && !upstreamModelIds.isEmpty()) {
+      Set<Long> candidateIds = new HashSet<>();
+      for (Model candidate : candidates) candidateIds.add(candidate.id());
+      Set<Long> seen = new HashSet<>();
+      for (Long selectedId : upstreamModelIds) {
+        if (selectedId == null || selectedId <= 0 || !seen.add(selectedId)
+            || !candidateIds.contains(selectedId)) {
+          throw new ModelingException(ModelingErrorCode.INVALID_SEARCH,
+              "上游模型选择无效、重复或不属于当前业务过程的 " + upstreamLayer + " 层：" + selectedId);
+        }
+      }
+    }
     List<Model> selected =
         upstreamModelIds == null || upstreamModelIds.isEmpty()
             ? candidates
@@ -702,8 +736,12 @@ public class ModelDeriveService {
     List<UpstreamModelView> upstreamViews = new ArrayList<>();
     Map<String, ResolvedDeriveField> merged = new LinkedHashMap<>();
     for (Model upstream : candidates) {
-      StructureView structure = structureReader.publishedStructure(upstream.id());
       boolean isSelected = selected.contains(upstream);
+      // Strict published-version access has no write side effects. Never
+      // evaluate unselected candidates or read a mutable draft in previews.
+      StructureView structure = isSelected
+          ? structureReader.requirePublishedStructure(upstream.id())
+          : null;
       int fieldCount = 0;
       if (isSelected) {
         for (StructureView.ColumnView column : structure.columns()) {
@@ -758,12 +796,12 @@ public class ModelDeriveService {
       sourceViews.add(
           new SourceView(
               upstream.id(), null, upstream.code(), upstream.layerCode(), null, upstream.id(),
-              upstream.code(), structure.tableName(), isSelected, fieldCount,
+              upstream.code(), isSelected ? structure.tableName() : null, isSelected, fieldCount,
               isSelected ? null : "未勾选"));
       upstreamViews.add(
           new UpstreamModelView(
               upstream.id(), upstream.code(), upstream.name(), upstream.layerCode(), isSelected,
-              structure.columns().size()));
+              isSelected ? structure.columns().size() : 0));
     }
     for (DeriveTechnicalColumn technical : TARGET_TECHNICALS.values()) {
       if (merged.containsKey(technical.name())) {
