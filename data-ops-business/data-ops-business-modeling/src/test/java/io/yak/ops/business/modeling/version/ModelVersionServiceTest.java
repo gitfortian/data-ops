@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.derive.DwsGrainDesignService;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.PublicationEvidence;
 import io.yak.ops.business.modeling.domain.ModelDialect;
 import io.yak.ops.business.modeling.domain.ModelStatus;
@@ -46,6 +47,52 @@ class ModelVersionServiceTest {
     when(structureService.getForUpdate(1L)).thenReturn(structure("orders_v1"));
     when(modelRepository.updatePublishState(eq(1L), eq(ModelStatus.PUBLISHED.name()),
         anyLong(), anyInt(), eq("tester"))).thenReturn(true);
+  }
+
+  @Test
+  void dwsPublicationRequiresAConfirmedGrainContractEvenFromLegacyPublishEndpoint() {
+    Model dws = Model.create("dws_orders", "日订单汇总", ModelDialect.MYSQL,
+        null, null, "DWS", 50L).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dws));
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("缺少粒度合同校验服务");
+    verify(versionRepository, never()).insert(any(), anyInt(), any(),
+        any(), anyInt(), any(), any());
+  }
+
+  @Test
+  void dwsPublicationFreezesVersionedGrainAndPinnedUpstreamInImmutableMetadata() {
+    Model dws = Model.create("dws_orders", "日订单汇总", ModelDialect.MYSQL,
+        null, null, "DWS", 50L).withPersisted(1L, "alice", null, null);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dws));
+    DwsGrainDesignService contracts = mock(DwsGrainDesignService.class);
+    var design = new DwsGrainDesignService.Design(
+        "1d", "Asia/Shanghai", "event_time", "order_day",
+        List.of("order_day", "order_city"),
+        List.of(new DwsGrainDesignService.Measure("order_count", "COUNT_DISTINCT")),
+        List.of(new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64))));
+    var saved = new DwsGrainDesignService.Saved(
+        1L, 7L, "b".repeat(64), "c".repeat(64), "{}", design);
+    when(contracts.requireForPublish(eq(dws), any())).thenReturn(saved);
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
+    when(versionRepository.nextVersionNo(1L)).thenReturn(1);
+    when(versionRepository.insert(eq(1L), eq(1), anyString(), anyString(),
+        eq(1), anyString(), eq("tester")))
+        .thenReturn(version(40L, 1, "{}"));
+    ModelVersionService checked = new ModelVersionService(
+        modelRepository, versionRepository, structureService, contracts);
+    assertThat(checked.publish(1L, "tester").created()).isTrue();
+    verify(contracts).requireForPublish(eq(dws), any());
+    verify(versionRepository).insert(eq(1L), eq(1), anyString(),
+        org.mockito.ArgumentMatchers.argThat(meta -> meta != null
+            && meta.contains("\"dwsDesignSha256\":\"" + "c".repeat(64) + "\"")
+            && meta.contains("\"versionId\":30")
+            && meta.contains("\"COUNT_DISTINCT\"")
+            && meta.contains("\"Asia/Shanghai\"")),
+        eq(1), anyString(), eq("tester"));
+    verify(modelRepository).updatePublishState(1L, ModelStatus.PUBLISHED.name(),
+        40L, 1, "tester");
   }
 
   @Test

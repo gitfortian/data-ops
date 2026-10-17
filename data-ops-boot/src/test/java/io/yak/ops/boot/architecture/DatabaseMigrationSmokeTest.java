@@ -72,6 +72,16 @@ class DatabaseMigrationSmokeTest {
   }
 
   @Test
+  void dwsGrainV7MigratesAndPersistsAcrossTransactionsOnMySql() {
+    startAndValidate(true, context -> DwsGrainSqlSmoke.verify(
+        new org.springframework.jdbc.core.JdbcTemplate(
+            context.getBean("yakBusinessDataSource", DataSource.class)),
+        context.getBean("yakBusinessTransactionManager",
+            org.springframework.transaction.PlatformTransactionManager.class),
+        990001L));
+  }
+
+  @Test
   void dwdTaskBindingV2PreservesProjectScopedUniquenessAndRollbackOnMySql() {
     startAndValidate(true, context -> DwdTaskBindingSqlSmoke.verifyDwdBindingForwardMigration(
         new org.springframework.jdbc.core.JdbcTemplate(

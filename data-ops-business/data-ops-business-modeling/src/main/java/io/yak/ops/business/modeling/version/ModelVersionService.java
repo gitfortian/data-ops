@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.modeling.api.ModelingStructureApi;
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.derive.DwsGrainDesignService;
 import io.yak.ops.business.modeling.mapping.DwdMappingDraftService.PublicationEvidence;
 import io.yak.ops.business.modeling.domain.ModelStatus;
 import io.yak.ops.business.modeling.domain.ModelVersion;
@@ -39,15 +40,26 @@ public class ModelVersionService {
   private final ModelRepository modelRepository;
   private final ModelVersionRepository versionRepository;
   private final ModelStructureService structureService;
+  private final DwsGrainDesignService dwsGrainDesign;
 
   @Autowired
   public ModelVersionService(
       ModelRepository modelRepository,
       ModelVersionRepository versionRepository,
-      ModelStructureService structureService) {
+      ModelStructureService structureService,
+      DwsGrainDesignService dwsGrainDesign) {
     this.modelRepository = modelRepository;
     this.versionRepository = versionRepository;
     this.structureService = structureService;
+    this.dwsGrainDesign = dwsGrainDesign;
+  }
+
+  /** Compatibility constructor used by pre-R13 focused non-DWS tests. */
+  public ModelVersionService(
+      ModelRepository modelRepository,
+      ModelVersionRepository versionRepository,
+      ModelStructureService structureService) {
+    this(modelRepository, versionRepository, structureService, null);
   }
 
   /**
@@ -110,12 +122,20 @@ public class ModelVersionService {
   private PublishResult publishLocked(Model model, StructureView structure,
                                       String operator, PublicationEvidence mapping) {
     Long modelId = model.id();
+    DwsGrainDesignService.Saved dws = null;
+    if ("DWS".equalsIgnoreCase(model.layerCode())) {
+      if (dwsGrainDesign == null) {
+        throw new IllegalStateException("DWS 发布缺少粒度合同校验服务");
+      }
+      dws = dwsGrainDesign.requireForPublish(model, structure);
+    }
 
     String structureJson = serialiseStructure(structure);
     // 语义投影（去行主键/瞬态字段）做内容等值：全量替换保存会重建列行并换自增 id，
     // 若把 id 计入内容指纹，回滚后原样再发布会被误判“有变化”而伪追加版本。
     String semanticJson = serialiseStructure(semanticView(structure));
-    String checksum = sha256(semanticJson);
+    String checksum = dws == null ? sha256(semanticJson)
+        : sha256(semanticJson + "|" + dws.designSha256());
     int columnCount = structure.columns() == null ? 0 : structure.columns().size();
 
     // Idempotent: semantic equality with the latest version (不依赖存量行旧口径 checksum)
@@ -124,7 +144,9 @@ public class ModelVersionService {
         serialiseStructure(semanticView(deserialiseStructure(latest.structureJson()))))
         && (mapping == null
             ? !hasMappingIdentity(latest.metaJson())
-            : matchesMapping(latest.metaJson(), mapping))) {
+            : matchesMapping(latest.metaJson(), mapping))
+        && (dws == null || dws.designSha256().equals(
+            parseMeta(latest.metaJson()).get("dwsDesignSha256")))) {
       if (!java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
         requireUpdatedPublishPointer(modelId, latest.id(), latest.versionNo(), operator);
       }
@@ -133,7 +155,7 @@ public class ModelVersionService {
 
     int nextVersionNo = versionRepository.nextVersionNo(modelId);
     ModelVersion version = versionRepository.insert(
-        modelId, nextVersionNo, structureJson, serialiseMeta(model, mapping),
+        modelId, nextVersionNo, structureJson, serialiseMeta(model, mapping, dws),
         columnCount, checksum, operator);
 
     requireUpdatedPublishPointer(modelId, version.id(), nextVersionNo, operator);
@@ -317,7 +339,8 @@ public class ModelVersionService {
   }
 
   /** 元数据快照：发布当时模型的名称/描述/分层/业务域/方言（可空值逐个 put，不整体 Map.of）。 */
-  private String serialiseMeta(Model model, PublicationEvidence mapping) {
+  private String serialiseMeta(Model model, PublicationEvidence mapping,
+                               DwsGrainDesignService.Saved dws) {
     java.util.Map<String, Object> meta = new java.util.LinkedHashMap<>();
     meta.put("code", model.code());
     meta.put("name", model.name());
@@ -325,6 +348,11 @@ public class ModelVersionService {
     meta.put("layerCode", model.layerCode());
     meta.put("dialect", model.dialect() == null ? null : model.dialect().name());
     meta.put("domainId", model.domainId());
+    if (dws != null) {
+      meta.put("dwsDesignSha256", dws.designSha256());
+      meta.put("dwsDesignRevision", dws.revision());
+      meta.put("dwsGrainContract", dws.design());
+    }
     if (mapping != null) {
       meta.put("mappingRevisionId", mapping.mappingRevisionId());
       meta.put("mappingSetId", mapping.mappingSetId());

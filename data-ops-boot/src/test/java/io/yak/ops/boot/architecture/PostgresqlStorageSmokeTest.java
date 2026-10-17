@@ -102,6 +102,9 @@ class PostgresqlStorageSmokeTest {
       verifyRuntimeProjections(context, jdbc, projectId);
       verifyMasterRefresh(jdbc, projectId);
       verifyOdsExactSourceUniqueness(jdbc, projectId);
+      DwsGrainSqlSmoke.verify(
+          jdbc, context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class),
+          projectId);
       DwdMappingSqlSmoke.verify(
           context.getBean("yakBusinessDataSource", DataSource.class),
           context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class));
