@@ -62,6 +62,16 @@ public class DwdDataDevHandoffEvidenceService {
       }
       validateMapping(published.mapping());
     }
+    if (!"DESIGN_REVIEWABLE".equals(version.designStatus())
+        && blockers.isEmpty()) {
+      blockers.add("当前物理设计不满足人工审阅条件，请重新核验来源与标准");
+    }
+    if (!version.selectedLatestVersion() && blockers.isEmpty()) {
+      blockers.add("该历史版本已不是当前发布指针，仅能只读查看");
+    }
+    if (!"PUBLISHED".equals(version.modelStatus()) && blockers.isEmpty()) {
+      blockers.add("模型当前不是已发布状态，只能查看历史证据");
+    }
     // No success of this Modeling-only inspection may authorize a task write.
     boolean reviewable = blockers.isEmpty()
         && "DESIGN_REVIEWABLE".equals(version.designStatus())
