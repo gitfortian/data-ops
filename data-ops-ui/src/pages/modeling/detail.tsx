@@ -42,6 +42,7 @@ import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
 import { physicalGovernanceBaseline, type PhysicalGovernanceBaseline } from './governanceRecheck';
 import { canOpenPhysicalGovernanceEvidence, parseJourneyProcessId } from '@/utils/journeyNavigation';
 import PhysicalDataDevHandoffPanel from './components/PhysicalDataDevHandoffPanel';
+import DwsGrainDesignPanel from './components/DwsGrainDesignPanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
@@ -2496,6 +2497,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
               </label>
             </div>
           </Card>
+
+          {modelInfo?.layerCode === 'DWS' && modelId ? (
+            <DwsGrainDesignPanel
+              key={`${currentProject?.id ?? 'none'}:${modelId}`}
+              modelId={Number(modelId)}
+              structure={structure}
+              dirty={dirty}
+            />
+          ) : null}
 
           {validationIssues.length ? (
             <Card
