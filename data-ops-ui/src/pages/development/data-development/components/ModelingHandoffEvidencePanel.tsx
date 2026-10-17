@@ -236,7 +236,7 @@ export default function ModelingHandoffEvidencePanel({ search, nodes, onFocusNod
             </Typography.Text>
           </Space>
           {!candidates.length && <Alert type="info" showIcon
-            message="当前项目没有可见的现有 SQL 任务；可人工新建，系统不会自动生成或绑定任务" />}
+            message="当前项目没有可见的现有 SQL 任务；不自动创建新任务，可人工在 DataDev 新建" />}
           {draftLoading && <Typography.Paragraph>正在读取 DataDev 原域草稿…</Typography.Paragraph>}
           {draftProblem && <Alert type="warning" showIcon description={draftProblem}
             message="已有 SQL 任务草稿不可核实" />}
