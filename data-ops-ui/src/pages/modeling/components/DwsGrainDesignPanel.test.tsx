@@ -196,5 +196,6 @@ it('does not treat an unknown save response as success when read-back is still t
 
   await waitFor(() => expect(getDwsGrain).toHaveBeenCalledTimes(2));
   expect(await screen.findByText(/保存结果未知/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '保存 DWS 设计合同' })).toBeDisabled();
   expect(screen.getByText(/设计修订 R4/)).toBeInTheDocument();
 });
