@@ -72,6 +72,15 @@ class DatabaseMigrationSmokeTest {
   }
 
   @Test
+  void adsV9ContractAndImmutableRevisionsRollBackAtomicallyOnMySql() {
+    startAndValidate(true, context -> AdsApplicationContractSqlSmoke.verify(
+        new org.springframework.jdbc.core.JdbcTemplate(
+            context.getBean("yakBusinessDataSource", DataSource.class)),
+        context.getBean("yakBusinessTransactionManager",
+            org.springframework.transaction.PlatformTransactionManager.class)));
+  }
+
+  @Test
   void dwsGrainV7MigratesAndPersistsAcrossTransactionsOnMySql() {
     startAndValidate(true, context -> DwsGrainSqlSmoke.verify(
         new org.springframework.jdbc.core.JdbcTemplate(
