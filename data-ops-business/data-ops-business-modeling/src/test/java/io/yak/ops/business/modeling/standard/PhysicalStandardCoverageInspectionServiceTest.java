@@ -54,6 +54,14 @@ class PhysicalStandardCoverageInspectionServiceTest {
         "owner", null, null);
   }
 
+  private static Standard securityStandard(long id) {
+    return new Standard(id, StandardKind.SECURITY, "security_level", "安全级别",
+        StandardStatus.ENABLED, 1, 0, false, "测试安全标准",
+        new Standard.KindFields(null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, "L2", "secret-mask-rule"),
+        "owner", null, null);
+  }
+
   private static BusinessProcess process(String grain) {
     return new BusinessProcess(22L, "place_order", "下单", 9L, grain,
         "FACT", "owner", null, 0, "owner", null, null);
@@ -201,6 +209,20 @@ class PhysicalStandardCoverageInspectionServiceTest {
     verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
   }
 
+
+
+  @Test void securityStandardEvidenceDoesNotExposeMaskingRuleText() {
+    StandardField dimension = new StandardField(12L, "order_12", "订单 #12",
+        "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
+        null, 113L, null, StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+    when(semantic.getField(12L)).thenReturn(dimension);
+    when(standardQuery.get(113L)).thenReturn(securityStandard(113L));
+    var report = service.inspect(50L);
+    var evidence = report.columns().stream()
+        .filter(c -> Long.valueOf(12L).equals(c.stdFieldId())).findFirst().orElseThrow();
+    assertEquals("L2", evidence.dataStandards().securityStandard().definition());
+    assertFalse(evidence.dataStandards().securityStandard().definition().contains("secret-mask-rule"));
+  }
 
   @Test void linkedStandardVersionChangesTheEvidenceFingerprint() {
     var first = service.inspect(50L);
