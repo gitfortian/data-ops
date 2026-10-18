@@ -58,7 +58,7 @@ class StandardQueryApiImplTest {
     assertEquals(first, same);
 
     when(repository.listByCodeSetCode("ORDER_STATUS"))
-        .thenReturn(List.of(created, cancelled.withStatus("DISABLED")));
+        .thenReturn(List.of(created, cancelled.withStatus(StandardStatus.DISABLED, null)));
     String changed = api.codeSetReference("ORDER_STATUS").contentSha256();
     assertNotEquals(first, changed);
   }
