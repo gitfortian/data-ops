@@ -128,9 +128,9 @@ it('runs real server-side static validation separately from the synthetic sample
       upstreamModelIds: [20],
       businessTimeColumn: 'event_time',
     })));
-  expect(await screen.findByText('STATIC_PASS')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText('STATIC_PASS').length).toBeGreaterThan(0));
   fireEvent.click(screen.getByRole('button', { name: '运行固定样本演示' }));
-  expect(await screen.findByText('SAMPLE_MATCH')).toBeInTheDocument();
+  expect(screen.getAllByText('SAMPLE_MATCH').length).toBeGreaterThan(0);
   expect(screen.getByText(/不查询真实业务库/)).toBeInTheDocument();
 });
 
