@@ -160,6 +160,37 @@ it('labels ADS evidence as read-only and does not imply consumer contract passed
 });
 
 
+
+it('shows mixed code-set membership and a reproducible code-set revision digest', async () => {
+  const mixed = {
+    ...report,
+    columns: [
+      {
+        ...report.columns[0],
+        dataStandards: {
+          ...report.columns[0].dataStandards,
+          role: 'DIMENSION',
+          codeSetCode: 'order_status',
+          codeSetStatus: 'MIXED',
+          codeSetItemCount: 3,
+          codeSetEnabledItemCount: 2,
+          codeSetEvidenceSha256: 'f'.repeat(64),
+          status: 'INVALID_REFERENCE',
+          invalidReference: true,
+          explanation: '码集包含停用项或状态不一致',
+        },
+      },
+      report.columns[1],
+    ],
+    invalidDataStandardCount: 1,
+    findings: ['码集包含停用项或状态不一致'],
+  };
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(mixed);
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('码集：order_status · 存在停用码值（启用 2/3）')).toBeInTheDocument();
+  expect(screen.getByText(/码集指纹：f{12}…/)).toBeInTheDocument();
+});
+
 it('shows missing required linked data standards separately from the standard-field identity', async () => {
   const incomplete = {
     ...report,
