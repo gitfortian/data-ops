@@ -60,18 +60,24 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
           : '未配置';
     return `${name} (${ref.kind})${definition} · ${status}`;
   };
-  const dataStandardStatusLabel = (status: string): string => ({
-    COMPLETE_NOW: '当前适用引用完整',
-    MISSING_REQUIRED_REFERENCE: '缺少必需引用',
-    INVALID_REFERENCE: '存在失效引用',
-    NEEDS_REVIEW: '需要人工核验',
-  }[status] || '需要人工核验');
-  const codeSetStatusLabel = (status: string): string => ({
-    NOT_APPLICABLE: '不适用',
-    NOT_CONFIGURED: '未配置（选填）',
-    ENABLED_NOW: '当前启用',
-    INVALID_REFERENCE: '不存在或已停用',
-  }[status] || '需要人工核验');
+  const dataStandardStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'COMPLETE_NOW': return '当前适用引用完整';
+      case 'MISSING_REQUIRED_REFERENCE': return '缺少必需引用';
+      case 'INVALID_REFERENCE': return '存在失效引用';
+      case 'NEEDS_REVIEW': return '需要人工核验';
+      default: return '需要人工核验';
+    }
+  };
+  const codeSetStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'NOT_APPLICABLE': return '不适用';
+      case 'NOT_CONFIGURED': return '未配置（选填）';
+      case 'ENABLED_NOW': return '当前启用';
+      case 'INVALID_REFERENCE': return '不存在或已停用';
+      default: return '需要人工核验';
+    }
+  };
 
   return (
     <Modal title={report
