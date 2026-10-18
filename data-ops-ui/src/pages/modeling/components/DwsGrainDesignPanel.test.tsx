@@ -142,6 +142,31 @@ it('requires explicit confirmation before migrating a pinned V2 contract to curr
   expect(await screen.findByText(/设计修订 R5/)).toBeInTheDocument();
 });
 
+
+it('allows re-confirming the grain contract after a saved physical structure fingerprint changes', async () => {
+  const nextFingerprint = 'f'.repeat(64);
+  (saveDwsGrain as jest.Mock).mockResolvedValue({
+    ...makeStored(2, 30, 5), structureFingerprint: nextFingerprint,
+  });
+  render(
+    <DwsGrainDesignPanel
+      modelId={10}
+      structure={{ ...structure, definition: nextFingerprint }}
+      dirty={false}
+    />,
+  );
+  await screen.findByText(/设计修订 R4/);
+  expect(screen.getByText(/物理结构已变化，现有粒度合同尚未重新确认/)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '运行设计校验' }));
+  expect(await screen.findByText(/当前设计的静态约束通过/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '保存 DWS 设计合同' }));
+
+  await waitFor(() => expect(saveDwsGrain).toHaveBeenCalledWith(10,
+    expect.objectContaining({ expectedStructureFingerprint: nextFingerprint })));
+  expect(await screen.findByText(/设计修订 R5/)).toBeInTheDocument();
+});
+
 it('does not treat an unknown save response as success when read-back is still the old design', async () => {
   (saveDwsGrain as jest.Mock).mockRejectedValue(new Error('request timeout'));
   (getDwsGrain as jest.Mock).mockResolvedValue(stored);
