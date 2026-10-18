@@ -271,7 +271,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     }
     return issues;
   }, [
-    dirty, structure.definition, businessTimeColumn, timeZone, periodBucketColumn, dimensions,
+    dirty, structure.definition, statPeriod, businessTimeColumn, timeZone, periodBucketColumn, dimensions,
     dimensionColumns, measures, measureColumns, upstreamIds, selectedCandidates,
     hasSourceChange, sourceMigrationConfirmed, keepFrozen,
   ]);
