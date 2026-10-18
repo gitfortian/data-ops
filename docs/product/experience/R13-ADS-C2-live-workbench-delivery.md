@@ -7,7 +7,7 @@
 沿用现有 Modeling 模型详情路由和页面风格，ADS 对象中嵌入六步输出工作台，不新增专业工具一级菜单：
 
 1. **应用目标**：appCode、appName、owner、purpose、consumerType（Report/Dataset/API/Analysis）。
-2. **精确来源**：从同项目同业务过程已发布 DWS（默认）选择；DWD 明细为主动切换，弹窗确认并丢弃不再适用的旧映射。冻结模型 ID、版本 ID、版本号、checksum；漂移不能自动 latest。
+2. **精确来源**：从同项目同业务过程已发布 DWS（默认）选择；DWD 明细为主动切换，弹窗确认并丢弃不再适用的旧映射。冻结模型 ID、版本 ID、版本号、checksum；同时保存目标物理结构指纹。上游发布指针或目标结构指纹漂移均显示 stale/blocker，不能自动 latest 或静默接受新结构。
 3. **输出设计**：已发布上游快照的列 → ADS 现有物理结构的列，输出列必须已有标准字段绑定；确定业务键和敏感等级标识。
 4. **业务口径**：有限过滤和排序文本、独立 MetricVersion ID 引用及刷新意图；提示 Metric 原域尚未核验，刷新意图不是 Runtime SLA。
 5. **验证保存**：POST 服务端 V0 静态验证，PUT 携带 expectedRevision 进行原子修订保护，GET 回读合同并比较 revision 与合同哈希；静态 PASS 不代表真实数据、权限或服务可用。
