@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import io.yak.ops.business.semantic.catalog.StandardQueryApiImpl;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardMapper;
 import io.yak.ops.business.semantic.dao.model.SemanticStandardPO;
 import io.yak.ops.core.project.CurrentProject;
@@ -36,7 +37,7 @@ class StandardRepositoryAdapterProjectIsolationIntegrationTest {
   private static final long CURRENT_PROJECT_ID = 7L;
 
   @Test
-  void standardAndCodeSetReadsCannotObserveAnotherProjectsRows() throws Exception {
+  void projectScopeIsPreservedThroughTheCodeSetEvidenceApi() throws Exception {
     String url = System.getenv("ARCHITECTURE_MYSQL_URL");
     Assumptions.assumeTrue(url != null && !url.isBlank(),
         "requires the disposable MySQL database configured by Architecture Checks");
@@ -66,6 +67,7 @@ class StandardRepositoryAdapterProjectIsolationIntegrationTest {
         when(currentProject.requireProjectId()).thenReturn(CURRENT_PROJECT_ID);
         StandardRepositoryAdapter repository =
             new StandardRepositoryAdapter(session.getMapper(SemanticStandardMapper.class), currentProject);
+        StandardQueryApiImpl standardQuery = new StandardQueryApiImpl(repository);
 
         // Direct ID lookup must not disclose a row owned by project 8.
         assertTrue(repository.findById(71002L).isEmpty());
@@ -76,11 +78,27 @@ class StandardRepositoryAdapterProjectIsolationIntegrationTest {
             .collect(Collectors.toSet());
         assertEquals(Set.of(71001L, 71003L), memberIds);
 
-        // A foreign-only code set must not appear enabled to the current project.
+        // A foreign-only code set must not appear enabled or visible in evidence.
         assertFalse(repository.existsEnabledByCodeSet("FOREIGN_ONLY"));
+        var foreignOnly = standardQuery.codeSetReference("FOREIGN_ONLY");
+        assertEquals("NOT_FOUND", foreignOnly.status());
+        assertEquals(0, foreignOnly.itemCount());
+        assertTrue(foreignOnly.contentSha256() == null);
 
-        // A disabled foreign member must not contaminate the current project's all-enabled set.
+        // The disabled foreign member must not make this project's fully enabled set mixed.
         assertTrue(repository.existsEnabledByCodeSet("SHARED_STATUS"));
+        var shared = standardQuery.codeSetReference("SHARED_STATUS");
+        assertEquals("ENABLED", shared.status());
+        assertEquals(2, shared.itemCount());
+        assertEquals(2, shared.enabledItemCount());
+        assertTrue(shared.contentSha256().matches("[0-9a-f]{64}"));
+
+        // A disabled member inside the current project must remain visible to completeness evidence.
+        var localMixed = standardQuery.codeSetReference("LOCAL_MIXED");
+        assertEquals("MIXED", localMixed.status());
+        assertEquals(2, localMixed.itemCount());
+        assertEquals(1, localMixed.enabledItemCount());
+        assertTrue(localMixed.contentSha256().matches("[0-9a-f]{64}"));
       }
     } finally {
       dataSource.destroy();
@@ -135,7 +153,11 @@ class StandardRepositoryAdapterProjectIsolationIntegrationTest {
             (71003, 7, 'CODE', 'SHARED_STATUS_PAID', 'Paid', 'ENABLED', 1,
              3, FALSE, 'SHARED_STATUS', 'PAID', 'Paid'),
             (71004, 8, 'CODE', 'FOREIGN_ONLY_ACTIVE', 'Foreign only', 'ENABLED', 1,
-             1, FALSE, 'FOREIGN_ONLY', 'ACTIVE', 'Active')
+             1, FALSE, 'FOREIGN_ONLY', 'ACTIVE', 'Active'),
+            (71005, 7, 'CODE', 'LOCAL_MIXED_ACTIVE', 'Local active', 'ENABLED', 1,
+             1, FALSE, 'LOCAL_MIXED', 'ACTIVE', 'Active'),
+            (71006, 7, 'CODE', 'LOCAL_MIXED_DISABLED', 'Local disabled', 'DISABLED', 1,
+             2, FALSE, 'LOCAL_MIXED', 'DISABLED', 'Disabled')
           """);
     }
   }
