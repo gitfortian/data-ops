@@ -19,6 +19,7 @@ import type {
   MetricValidationEvidence,
   MetricPublicationReadiness,
   PublishedMetricContract,
+  PublishedMetricReference,
   UsageSummary,
 } from './types';
 
@@ -110,6 +111,12 @@ export const getMetricPublication = (id: number): Promise<PublishedMetricContrac
 
 export const listPublishedMetrics = (): Promise<PublishedMetricContract[]> =>
   HttpUtils.getData<PublishedMetricContract[]>(`${METRIC_API_PREFIX}/publications/active`);
+
+/** Minimal active publication identity for safe cross-domain reference selection. */
+export const listActiveMetricPublicationReferences = (): Promise<PublishedMetricReference[]> =>
+  HttpUtils.getData<PublishedMetricReference[]>(
+    `${METRIC_API_PREFIX}/publications/active/references`,
+  );
 
 export const getMetricPublicationSummaries = (metricIds: number[]): Promise<MetricPublicationSummary[]> => {
   if (!metricIds.length) return Promise.resolve([]);
