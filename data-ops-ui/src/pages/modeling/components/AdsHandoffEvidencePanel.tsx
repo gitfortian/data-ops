@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Empty, Space, Spin, Tag, Typography } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import {
@@ -54,23 +54,6 @@ export default function AdsHandoffEvidencePanel({ modelId, refreshKey = 0 }: Pro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryKey, setRetryKey] = useState(0);
-
-  const load = useCallback(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-    getAdsApplicationEvidence(modelId).then((result) => {
-      if (active) setSnapshot(result);
-    }).catch((reason: unknown) => {
-      if (active) {
-        setSnapshot(null);
-        setError(reason instanceof Error ? reason.message : '读取交接证据失败');
-      }
-    }).finally(() => {
-      if (active) setLoading(false);
-    });
-    return () => { active = false; };
-  }, [modelId]);
 
   useEffect(() => {
     let active = true;
