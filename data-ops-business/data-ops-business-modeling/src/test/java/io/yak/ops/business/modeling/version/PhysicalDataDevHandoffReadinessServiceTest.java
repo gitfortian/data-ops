@@ -45,7 +45,7 @@ class PhysicalDataDevHandoffReadinessServiceTest {
     return new PhysicalStandardCoverageInspectionService.Report(
         50L, "dwd_orders", "DWD", model.status().name(), 22L, "下单",
         coverageStatus, StructureFingerprint.of(live), "e".repeat(64),
-        live.columns().size(), live.columns().size(), 0, 0, 0,
+        live.columns().size(), live.columns().size(), 0, 0, 0, 0, 0,
         List.of(), List.of(), List.of());
   }
   private ModelVersionService.VersionDetailView version(long modelId, int no, String layer) {
@@ -149,7 +149,7 @@ class PhysicalDataDevHandoffReadinessServiceTest {
   @Test void refusesStaleOrCrossModelStandardEvidenceAndPropagatesPermissionFailure() {
     when(coverage.inspect(50L)).thenReturn(new PhysicalStandardCoverageInspectionService.Report(
         50L, "dwd_orders", "DWD", "PUBLISHED", 22L, "下单",
-        "COVERED_NOW", "wrong-hash", "a".repeat(64), 2, 2, 0, 0, 0,
+        "COVERED_NOW", "wrong-hash", "a".repeat(64), 2, 2, 0, 0, 0, 0, 0,
         List.of(), List.of(), List.of()));
     assertThrows(ModelingException.class, () -> service.inspect(50L, 2));
     when(coverage.inspect(50L)).thenThrow(SecurityException.class);

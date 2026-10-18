@@ -13,6 +13,7 @@ export type GovernanceRecheckResult =
 export type PhysicalGovernanceBaseline = Pick<
   PhysicalStandardCoverageInspection,
   'modelId' | 'evidenceSha256' | 'missingCount' | 'invalidCount' | 'reviewCount'
+  | 'missingDataStandardCount' | 'invalidDataStandardCount'
 >;
 
 export const physicalGovernanceBaseline = (
@@ -21,6 +22,8 @@ export const physicalGovernanceBaseline = (
   modelId: report.modelId, evidenceSha256: report.evidenceSha256,
   missingCount: report.missingCount, invalidCount: report.invalidCount,
   reviewCount: report.reviewCount,
+  missingDataStandardCount: report.missingDataStandardCount,
+  invalidDataStandardCount: report.invalidDataStandardCount,
 });
 
 export const comparePhysicalGovernance = (
@@ -35,8 +38,10 @@ export const comparePhysicalGovernance = (
   }
   return {
     state: 'CHANGED',
-    explanation: `证据已变化：缺少标准 ${baseline.missingCount}→${current.missingCount}，
-失效引用 ${baseline.invalidCount}→${current.invalidCount}，
+    explanation: `证据已变化：缺少标准字段 ${baseline.missingCount}→${current.missingCount}，
+失效标准字段 ${baseline.invalidCount}→${current.invalidCount}，
+缺少必需数据标准 ${baseline.missingDataStandardCount}→${current.missingDataStandardCount}，
+失效数据标准 ${baseline.invalidDataStandardCount}→${current.invalidDataStandardCount}，
 聚合待确认 ${baseline.reviewCount}→${current.reviewCount}。请以本次报告逐列结果为准，不自动判定修复成功`,
   };
 };
