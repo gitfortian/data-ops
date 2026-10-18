@@ -157,6 +157,21 @@ class MetricPublicationServiceTest {
   }
 
   @Test
+  void activeReferenceSelectorExcludesDisabledMetricDefinitions() {
+    when(publicationRepository.listActive())
+        .thenReturn(List.of(active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST)));
+    when(metricRepository.findById(7L))
+        .thenReturn(Optional.of(metric(7L, "gmv", "GMV", MetricStatus.DISABLED)));
+
+    List<MetricPublicationService.PublishedMetricReference> references =
+        service.listActiveReferences();
+
+    assertThat(references).isEmpty();
+    verify(publicationRepository, never()).findEvent(501L);
+    verify(versionRepository, never()).findByMetricAndVersion(7L, 4);
+  }
+
+  @Test
   void activeReferenceSelectorReturnsMinimalIdentityWithoutMetricSnapshot() {
     MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     MetricPublicationEventPO event = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
@@ -237,10 +252,14 @@ class MetricPublicationServiceTest {
   }
 
   private static Metric metric(Long id, String code, String name) {
+    return metric(id, code, name, MetricStatus.ENABLED);
+  }
+
+  private static Metric metric(Long id, String code, String name, MetricStatus status) {
     LocalDateTime now = LocalDateTime.now();
     return new Metric(id, code, name, null, null, MetricType.ATOMIC,
         null, null, null, null, null, null, null, null, null, null,
-        StatPeriod.DAY, null, null, null, MetricStatus.ENABLED, 4,
+        StatPeriod.DAY, null, null, null, status, 4,
         "alice", "alice", now, now);
   }
 
