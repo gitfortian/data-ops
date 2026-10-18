@@ -49,7 +49,7 @@ class AdsApplicationDesignServiceTest {
         "", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
-        List.of("order_day"), "", "", null, "DAILY", 0L, null);
+        List.of("order_day"), "", "", null, "DAILY", 0L, null, null);
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("应用编码");
@@ -64,7 +64,7 @@ class AdsApplicationDesignServiceTest {
         "order_overview", "订单经营日报", "alice", "订单运营看板", "UNKNOWN", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
-        List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY", 0L, null);
+        List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY", 0L, null, null);
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("消费类型");
@@ -96,7 +96,7 @@ class AdsApplicationDesignServiceTest {
         "order_overview", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", standard, "LOW")),
-        keys, "", "order_day DESC", null, "DAILY", revision, expectedTargetFingerprint);
+        keys, "", "order_day DESC", null, "DAILY", revision, expectedTargetFingerprint, null);
   }
 
   private void prepareValidSource() {
