@@ -74,10 +74,21 @@ class StandardRepositoryAdapterProjectScopeTest {
   }
 
   private static void assertHasCurrentProject(Wrapper<?> wrapper) {
-    Map<String, Object> parameters =
-        ((AbstractWrapper<?, ?, ?>) wrapper).getParamNameValuePairs();
+    AbstractWrapper<?, ?, ?> query = (AbstractWrapper<?, ?, ?>) wrapper;
+    Map<String, Object> parameters = query.getParamNameValuePairs();
+    boolean hasCurrentProjectId =
+        parameters.values().stream()
+            .anyMatch(
+                value ->
+                    value instanceof Number number
+                        && number.longValue() == CURRENT_PROJECT_ID);
     assertTrue(
-        parameters.values().contains(CURRENT_PROJECT_ID),
-        "repository query must include the trusted current project ID");
+        hasCurrentProjectId,
+        "repository query must bind the trusted current project ID "
+            + CURRENT_PROJECT_ID
+            + "; sqlSegment="
+            + query.getSqlSegment()
+            + "; parameters="
+            + parameters);
   }
 }
