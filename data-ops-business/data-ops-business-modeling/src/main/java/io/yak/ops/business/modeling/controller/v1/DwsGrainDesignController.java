@@ -40,7 +40,7 @@ public class DwsGrainDesignController {
   }
 
   @GetMapping("/history")
-  public Result<java.util.List<DwsGrainDesignService.Saved>> history(@PathVariable long modelId) {
+  public Result<java.util.List<DwsGrainDesignService.HistoryEntry>> history(@PathVariable long modelId) {
     return Result.success(service.history(modelId));
   }
 
