@@ -14,6 +14,10 @@ import io.yak.ops.business.modeling.repository.ModelVersionRepository;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.version.ModelPublishedStructureReader;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Evidence;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Reference;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Status;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.RowMapper;
@@ -28,8 +32,11 @@ class AdsApplicationDesignServiceTest {
   private final ModelPublishedStructureReader published = mock(ModelPublishedStructureReader.class);
   private final CurrentProject project = mock(CurrentProject.class);
   private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+  private final MetricPublicationEvidenceProvider metricPublicationEvidence =
+      mock(MetricPublicationEvidenceProvider.class);
   private final AdsApplicationDesignService service = new AdsApplicationDesignService(
-      models, versions, structures, published, project, jdbc, new ObjectMapper());
+      models, versions, structures, published, project, metricPublicationEvidence,
+      jdbc, new ObjectMapper());
 
   private final Model ads = new Model(
       10L, "ads_order_overview", "订单经营日报", ModelDialect.MYSQL, null,
