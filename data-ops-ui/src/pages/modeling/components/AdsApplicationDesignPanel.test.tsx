@@ -92,7 +92,6 @@ test('rehydrates persisted version identity and never invents execution or grant
   await waitFor(() => expect(getModelingVersion).toHaveBeenCalledWith(20, 2));
   expect(screen.getByText(/精确发布版本/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('验证保存'));
-  expect(screen.getByText('NOT_CONNECTED')).toBeInTheDocument();
   expect(screen.getAllByText('NOT_CONNECTED')).toHaveLength(2);
   expect(screen.getByText('UNKNOWN · 未接入消费原域')).toBeInTheDocument();
   expect(saveAdsApplicationContract).not.toHaveBeenCalled();
