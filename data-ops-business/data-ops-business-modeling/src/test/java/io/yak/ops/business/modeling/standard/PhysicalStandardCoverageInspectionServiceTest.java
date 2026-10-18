@@ -211,6 +211,13 @@ class PhysicalStandardCoverageInspectionServiceTest {
 
 
 
+
+  @Test void standardCatalogAuthorizationFailurePropagatesInsteadOfBecomingFalseCoverage() {
+    when(standardQuery.get(111L)).thenThrow(SecurityException.class);
+    assertThrows(SecurityException.class, () -> service.inspect(50L));
+    verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
   @Test void securityStandardEvidenceDoesNotExposeMaskingRuleText() {
     StandardField dimension = new StandardField(12L, "order_12", "订单 #12",
         "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
