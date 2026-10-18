@@ -69,6 +69,17 @@ class MetricPublicationEvidenceProviderImplTest {
   }
 
   @Test
+  void reportsVersionMismatchWhenThePublicationEventPinsAnotherVersion() {
+    Reference alteredVersion =
+        new Reference(METRIC_ID, 999L, VERSION_NO, DIGEST, EVENT_ID);
+
+    Evidence evidence = provider.inspect(alteredVersion);
+
+    assertThat(evidence.status()).isEqualTo(Status.VERSION_MISMATCH);
+    verify(versions, never()).findByMetricAndVersion(METRIC_ID, VERSION_NO);
+  }
+
+  @Test
   void reportsDigestMismatchInsteadOfTreatingTheReferenceAsMissing() {
     Reference alteredDigest =
         new Reference(METRIC_ID, VERSION_ID, VERSION_NO, "c".repeat(64), EVENT_ID);
