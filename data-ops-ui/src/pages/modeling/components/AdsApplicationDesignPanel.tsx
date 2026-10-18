@@ -85,6 +85,15 @@ export default function AdsApplicationDesignPanel({
   const sourceStatus = adsSourceDrift(
     draft, sourceLoaded ? source?.publishedVersionId ?? null : undefined,
   );
+  useEffect(() => {
+    if (!changed || loading) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [changed, loading]);
   const validationState = validated
     ? validated.signature === signature
       ? (validated.result.valid ? 'STATIC_PASS' : 'STATIC_BLOCKED')
