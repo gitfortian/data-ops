@@ -34,6 +34,8 @@ export interface AdsApplicationContract {
   sortExpression: string;
   metricVersionId?: number | null;
   refreshTarget: string;
+  /** Frozen physical target structure identity at the time this contract revision was saved. */
+  targetStructureFingerprint: string;
 }
 
 export interface AdsApplicationContractRequest {
