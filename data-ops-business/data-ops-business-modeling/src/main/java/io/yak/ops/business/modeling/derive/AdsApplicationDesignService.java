@@ -45,7 +45,8 @@ public class AdsApplicationDesignService {
       String consumerType, String sourceMode, long upstreamModelId, long upstreamVersionId,
       int upstreamVersionNo, String upstreamChecksum, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
-      Long metricVersionId, String refreshTarget, Long expectedRevision) {}
+      Long metricVersionId, String refreshTarget, Long expectedRevision,
+      String expectedTargetStructureFingerprint) {}
   public record UpstreamPin(long modelId, long versionId, int versionNo, String checksum,
       String layerCode) {}
   public record Contract(String appCode, String appName, String owner, String purpose,
@@ -116,6 +117,11 @@ public class AdsApplicationDesignService {
     List<String> warnings = new java.util.ArrayList<>();
     Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure, true);
     if (!blockers.isEmpty()) throw new IllegalArgumentException(String.join("；", blockers));
+    String currentTargetFingerprint = StructureFingerprint.of(targetStructure);
+    if (!currentTargetFingerprint.equals(request.expectedTargetStructureFingerprint())) {
+      throw new IllegalArgumentException(
+          "ADS 物理结构指纹已变化，请重新校验当前结构并明确确认后再保存");
+    }
     String json = encode(contract);
     String digest = VersionDigests.sha256Hex(json);
     long projectId = projects.requireProjectId();
