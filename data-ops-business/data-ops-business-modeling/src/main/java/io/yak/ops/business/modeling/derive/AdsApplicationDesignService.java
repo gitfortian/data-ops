@@ -1,5 +1,6 @@
 package io.yak.ops.business.modeling.derive;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.modeling.domain.Model;
@@ -59,7 +60,7 @@ public class AdsApplicationDesignService {
   public record Contract(String appCode, String appName, String owner, String purpose,
       String consumerType, String sourceMode, UpstreamPin upstream, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
-      Long metricVersionId, MetricPublicationPin metricPublicationPin,
+      Long metricVersionId, @JsonInclude(JsonInclude.Include.NON_NULL) MetricPublicationPin metricPublicationPin,
       String refreshTarget, String targetStructureFingerprint) {}
   public record Saved(long modelId, long revision, String contractSha256, String contractJson,
       Contract contract, String updatedBy, String updatedAt) {}
