@@ -386,22 +386,40 @@ export default function AdsApplicationDesignPanel({
         expectedRevision: saved?.revision ?? 0,
         expectedTargetStructureFingerprint: expectedTargetFingerprint,
       });
-      const [readBack, revisions] = await Promise.all([
-        getAdsApplicationContract(modelId),
-        getAdsApplicationContractHistory(modelId),
-      ]);
+      let readBack: AdsApplicationContractSaved | null;
+      try {
+        readBack = await getAdsApplicationContract(modelId);
+      } catch {
+        throw new Error('保存接口已返回，但合同回读失败；请重新读取确认状态，不要重复盲写');
+      }
       if (!readBack || readBack.revision !== result.revision
         || readBack.contractSha256 !== result.contractSha256) {
-        throw new Error('保存可能成功但回读证据不一致；请重新读取后核对，不要重复盲写');
+        throw new Error('保存接口已返回，但合同回读证据不一致；请重新读取确认状态，不要重复盲写');
+      }
+      // The current-contract readback is the save receipt. History is secondary:
+      // if its query fails, keep the confirmed revision visible and allow retry.
+      let revisions: AdsApplicationContractHistoryEntry[] | null = null;
+      try {
+        revisions = await getAdsApplicationContractHistory(modelId);
+      } catch {
+        revisions = null;
       }
       setSaved(readBack);
-      setHistory(revisions ?? []);
+      setHistory(revisions ?? [
+        readBack,
+        ...history.filter((entry) => entry.revision !== readBack.revision),
+      ].slice(0, 50));
       const next = draftFromAdsSaved(readBack);
       setDraft(next);
       setBaseline(adsContractSignature(next));
       setValidated(null);
       setStep(5);
-      message.success('合同已保存并回读，修订版本 ' + readBack.revision + '；数据消费仍未配置');
+      if (revisions) {
+        message.success('合同已保存并回读，修订版本 ' + readBack.revision + '；数据消费仍未配置');
+      } else {
+        message.warning('合同已保存并回读，修订版本 ' + readBack.revision
+          + '；但历史列表刷新失败，请稍后重新读取历史');
+      }
     } catch (error) {
       message.error(errorText(error, '保存失败；请检查后端回执，勿假定保存成功'));
     } finally {
