@@ -97,7 +97,7 @@ public class AdsApplicationDesignService {
     StructureView targetStructure = structures.get(modelId);
     List<String> blockers = new java.util.ArrayList<>();
     List<String> warnings = new java.util.ArrayList<>();
-    Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure);
+    Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure, false);
     String fingerprint = StructureFingerprint.of(targetStructure);
     if (!blockers.isEmpty()) {
       return new ValidationResult(false, List.copyOf(blockers), List.copyOf(warnings),
@@ -114,7 +114,7 @@ public class AdsApplicationDesignService {
     StructureView targetStructure = structures.getForUpdate(modelId);
     List<String> blockers = new java.util.ArrayList<>();
     List<String> warnings = new java.util.ArrayList<>();
-    Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure);
+    Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure, true);
     if (!blockers.isEmpty()) throw new IllegalArgumentException(String.join("；", blockers));
     String json = encode(contract);
     String digest = VersionDigests.sha256Hex(json);
@@ -145,7 +145,8 @@ public class AdsApplicationDesignService {
   }
 
   private Contract validateAndFreeze(Model target, Request request,
-      List<String> blockers, List<String> warnings, StructureView targetStructure) {
+      List<String> blockers, List<String> warnings, StructureView targetStructure,
+      boolean lockUpstream) {
     if (request == null) {
       blockers.add("ADS 应用合同不能为空");
       return null;
@@ -163,7 +164,9 @@ public class AdsApplicationDesignService {
     if (!blockers.isEmpty()) return null;
     if ("DWD".equals(request.sourceMode()))
       warnings.add("当前为明细来源；不得套用 DWS 汇总指标或粒度。");
-    Model upstream = models.findById(request.upstreamModelId()).orElse(null);
+    Model upstream = (lockUpstream
+        ? models.findByIdForUpdate(request.upstreamModelId())
+        : models.findById(request.upstreamModelId())).orElse(null);
     if (upstream == null || upstream.status() == ModelStatus.DISABLED) {
       blockers.add("所选上游不存在、已禁用或不在当前项目内");
       return null;
