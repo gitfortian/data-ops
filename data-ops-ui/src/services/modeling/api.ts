@@ -391,7 +391,10 @@ export interface PhysicalDataStandardEvidence {
   unitStandard?: PhysicalStandardReferenceEvidence | null;
   caliberStandard?: PhysicalStandardReferenceEvidence | null;
   codeSetCode?: string | null;
-  codeSetStatus: 'NOT_APPLICABLE' | 'NOT_CONFIGURED' | 'ENABLED_NOW' | 'INVALID_REFERENCE';
+  codeSetStatus: 'NOT_APPLICABLE' | 'NOT_CONFIGURED' | 'ENABLED_NOW' | 'DISABLED' | 'MIXED' | 'INVALID_REFERENCE';
+  codeSetItemCount?: number | null;
+  codeSetEnabledItemCount?: number | null;
+  codeSetEvidenceSha256?: string | null;
   securityStandard?: PhysicalStandardReferenceEvidence | null;
   status: 'COMPLETE_NOW' | 'MISSING_REQUIRED_REFERENCE' | 'INVALID_REFERENCE' | 'NEEDS_REVIEW';
   missingRequiredReference: boolean;
