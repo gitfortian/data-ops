@@ -40,6 +40,11 @@ export interface DwsGrainCandidate {
   usable: boolean;
 }
 
+export interface DwsGrainHistoryEntry extends DwsGrainSaved {
+  updatedBy: string;
+  updatedAt: string;
+}
+
 export interface SaveDwsGrainRequest {
   statPeriod: string;
   timeZone: string;
@@ -62,3 +67,13 @@ export const listDwsGrainCandidates = (modelId: number): Promise<DwsGrainCandida
 export const saveDwsGrain = (
   modelId: number, payload: SaveDwsGrainRequest,
 ): Promise<DwsGrainSaved> => HttpUtils.putData<DwsGrainSaved>(uri(modelId), payload);
+
+export const getDwsGrainHistory = (
+  modelId: number,
+): Promise<DwsGrainHistoryEntry[]> =>
+  HttpUtils.getData<DwsGrainHistoryEntry[]>(`${uri(modelId)}/history`);
+
+export const restoreDwsGrainRevision = (
+  modelId: number, revision: number,
+): Promise<DwsGrainSaved> =>
+  HttpUtils.postData<DwsGrainSaved>(`${uri(modelId)}/history/${revision}/restore`, {});
