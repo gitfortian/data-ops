@@ -69,11 +69,22 @@ const validTimeZone = (value: string) => {
   }
 };
 
-function sameSavedDesign(saved: DwsGrainSaved, payload: SaveDwsGrainRequest) {
+function sameSavedDesign(
+  saved: DwsGrainSaved,
+  payload: SaveDwsGrainRequest,
+  candidates: DwsGrainCandidate[],
+) {
   const design = saved.design;
   const sameMeasures = JSON.stringify(design.measures.map((item) => ({
     column: item.column, function: item.function,
   }))) === JSON.stringify(payload.measures);
+  const samePinnedVersions = payload.upstreamModelIds.every((modelId) => {
+    const candidate = candidates.find((item) => item.modelId === modelId);
+    const pinned = design.upstreamVersions.find((item) => item.modelId === modelId);
+    return Boolean(candidate?.usable && candidate.publishedVersionId && candidate.publishedVersionNo
+      && pinned?.versionId === candidate.publishedVersionId
+      && pinned.versionNo === candidate.publishedVersionNo);
+  });
   return saved.structureFingerprint === payload.expectedStructureFingerprint
     && design.statPeriod === payload.statPeriod
     && design.timeZone === payload.timeZone
@@ -81,7 +92,8 @@ function sameSavedDesign(saved: DwsGrainSaved, payload: SaveDwsGrainRequest) {
     && design.periodBucketColumn === payload.periodBucketColumn
     && JSON.stringify(design.dimensions) === JSON.stringify(payload.dimensions)
     && sameMeasures
-    && sameNumbers(design.upstreamVersions.map((item) => item.modelId), payload.upstreamModelIds);
+    && sameNumbers(design.upstreamVersions.map((item) => item.modelId), payload.upstreamModelIds)
+    && samePinnedVersions;
 }
 
 /** DWS design contract in the existing model editor. Sample figures are illustrative only. */
@@ -332,13 +344,17 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
       setSourceMigrationConfirmed(false);
       setKeepFrozen(false);
       setValidation(null);
+      if (!sameSavedDesign(recorded, payload, candidates)) {
+        message.warning('服务端已返回保存结果，但回读合同与当前选择的来源版本不完全一致；请重新读取并核对，不要继续发布');
+        return;
+      }
       message.success('DWS 设计合同已保存为修订 ' + recorded.revision + '；发布前仍需后端重新检查来源与结构');
     } catch (error) {
       // A network timeout may hide a successful write. Read back the same object before retrying.
       try {
         const recorded = await getDwsGrain(modelId);
         if (recorded) setSaved(recorded);
-        if (recorded && sameSavedDesign(recorded, payload)) {
+        if (recorded && sameSavedDesign(recorded, payload, candidates)) {
           setSourceMigrationConfirmed(false);
           setKeepFrozen(false);
           setValidation(null);
