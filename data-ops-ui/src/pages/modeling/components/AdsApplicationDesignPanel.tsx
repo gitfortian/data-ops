@@ -3,6 +3,7 @@ import {
   Modal, Select, Space, Spin, Steps, Tag, Typography, message,
 } from 'antd';
 import { ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import AdsHandoffEvidencePanel from './AdsHandoffEvidencePanel';
 import { useEffect, useMemo, useState } from 'react';
 import { listActiveMetricPublicationReferences } from '@/services/metric/api';
 import type { PublishedMetricReference } from '@/services/metric/types';
@@ -825,6 +826,7 @@ export default function AdsApplicationDesignPanel({
           <Descriptions.Item label="合同哈希"><Typography.Text copyable>{saved.contractSha256}</Typography.Text></Descriptions.Item>
           <Descriptions.Item label="最后保存">{saved.updatedBy} · {saved.updatedAt}</Descriptions.Item>
         </Descriptions> : <Empty description="尚无已保存的应用设计合同" />}
+        <AdsHandoffEvidencePanel modelId={modelId} refreshKey={refreshIndex} />
         <Divider orientation="left">不可变修订历史（最多回读最近 50 条）</Divider>
         {history.length === 0 && <Empty description="暂无历史修订" />}
         {history.map((entry) => <div key={entry.revision}
@@ -839,9 +841,6 @@ export default function AdsApplicationDesignPanel({
           </div>
           <Button disabled={!canEdit || saving} onClick={() => reuseRevision(entry)}>作为新草稿编辑</Button>
         </div>)}
-        <Alert type="info" showIcon
-          message="建模设计版本 ≠ 数据已交付"
-          description="DataDev、Runtime、Quality、Dataset、Service 和 Usage 的回执尚未接入本视图；其运行和授权状态均为未知，不能用设计状态推断未执行、成功或已授权。" />
       </div>}
       <Divider />
       <div className="flex flex-wrap justify-between gap-2">
