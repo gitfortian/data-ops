@@ -112,6 +112,7 @@ class AdsApplicationDesignServiceTest {
     org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
     org.assertj.core.api.Assertions.assertThat(result.blockers())
         .anyMatch(item -> item.contains("数据标准不一致"));
+    org.assertj.core.api.Assertions.assertThat(result.contract()).isNull();
   }
 
   @Test
@@ -124,6 +125,7 @@ class AdsApplicationDesignServiceTest {
     org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
     org.assertj.core.api.Assertions.assertThat(result.blockers())
         .anyMatch(item -> item.contains("必须绑定数据标准"));
+    org.assertj.core.api.Assertions.assertThat(result.contract()).isNull();
   }
 
   @Test
