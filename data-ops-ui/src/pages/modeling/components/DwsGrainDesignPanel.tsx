@@ -472,7 +472,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
           description="保存只记录统计周期、时区、分组维度、度量与精确上游版本。当前接口没有真实数据预演能力；本面板的静态校验只检查可见设计约束，服务端仍是保存与发布的最终校验者。"
         />
 
-        <Row gutter={[16, 16]} align="stretch">
+        <Row gutter={[16, 16]}>
           <Col xs={24} xl={15}>
             <div style={{ display: 'grid', gap: 16 }}>
               <Card
