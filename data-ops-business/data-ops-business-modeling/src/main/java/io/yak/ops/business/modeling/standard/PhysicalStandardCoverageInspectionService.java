@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * Today's physical DWD/DIM standard-field coverage. Evidence only: not a
+ * Read-only physical standard-field and referenced-standard evidence for DWD/DIM/DWS/ADS. Evidence only: not a
  * stricter publish gate, not an approved exemption, not historical provenance.
  * Semantic owns the field truth; Modeling owns the physical design.
  */
