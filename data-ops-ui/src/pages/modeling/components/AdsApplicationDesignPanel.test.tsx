@@ -115,6 +115,24 @@ test('uses real server static validation before save and verifies readback', asy
   await waitFor(() => expect(getAdsApplicationContract).toHaveBeenCalledTimes(3));
 });
 
+test('requires explicit review when the saved target structure fingerprint drifts', async () => {
+  (validateAdsApplicationContract as jest.Mock).mockResolvedValue({
+    valid: true, blockers: [], warnings: [],
+    contract: { ...contract, targetStructureFingerprint: 'physical-v2' },
+    targetStructureFingerprint: 'physical-v2',
+    deliveryStatus: 'DELIVERY_NOT_CONFIGURED',
+  });
+  render(<AdsApplicationDesignPanel {...props} />);
+  expect(await screen.findByText('合同修订 R1')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText('ADS 物理结构指纹已变化')).toBeInTheDocument());
+
+  const saveButton = screen.getByRole('button', { name: '保存应用设计合同' });
+  expect(saveButton).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: '服务端静态校验' }));
+  await waitFor(() => expect(saveButton).toBeEnabled());
+  expect(saveAdsApplicationContract).not.toHaveBeenCalled();
+});
+
 test('locks editable fields while saving so in-flight edits cannot be overwritten', async () => {
   let finishSave!: (value: typeof stored) => void;
   (saveAdsApplicationContract as jest.Mock).mockImplementation(() =>
