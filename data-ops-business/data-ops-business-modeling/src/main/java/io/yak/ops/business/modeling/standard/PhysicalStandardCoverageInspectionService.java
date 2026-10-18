@@ -11,7 +11,11 @@ import io.yak.ops.business.modeling.structure.StructureFingerprint;
 import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.api.ProcessApi;
+import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardField;
+import io.yak.ops.business.semantic.api.StandardKind;
+import io.yak.ops.business.semantic.api.StandardQueryApi;
+import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.common.enums.modeling.ModelingErrorCode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -32,9 +36,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * Today's physical DWD/DIM standard-field coverage. Evidence only: not a
- * stricter publish gate, not an approved exemption, not historical provenance.
- * Semantic owns the field truth; Modeling owns the physical design.
+ * Current non-ODS physical standard-field and linked data-standard evidence.
+ * Read-only only: not a publish gate, approved exemption, or historical provenance.
+ * Semantic owns standard truth; Modeling owns physical design.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,16 +47,30 @@ public class PhysicalStandardCoverageInspectionService {
   private final ModelRepository models;
   private final ModelStructureService structures;
   private final ProcessApi semantic;
+  private final StandardQueryApi standardQuery;
   private final ObjectMapper json;
 
+  public record StandardReferenceEvidence(Long id, String kind, String code, String name,
+                                          String status, Integer version,
+                                          String evidenceStatus, String definition,
+                                          String explanation) {}
+  public record DataStandardEvidence(String role, StandardReferenceEvidence typeStandard,
+                                     StandardReferenceEvidence unitStandard,
+                                     StandardReferenceEvidence caliberStandard,
+                                     String codeSetCode, String codeSetStatus,
+                                     StandardReferenceEvidence securityStandard,
+                                     String status, boolean missingRequiredReference,
+                                     boolean invalidReference, String explanation) {}
   public record ColumnEvidence(Long columnId, String columnName, String dataType,
                                Long stdFieldId, String standardName, String semanticRole,
                                String standardType, String physicalRole, String aggregateFunc,
-                               String status, String explanation) {}
+                               String status, String explanation,
+                               DataStandardEvidence dataStandards) {}
   public record Report(Long modelId, String modelCode, String layerCode, String modelStatus,
                        Long processId, String processName, String status,
                        String structureSha256, String evidenceSha256, int columnCount,
                        int enabledCount, int missingCount, int invalidCount, int reviewCount,
+                       int missingDataStandardCount, int invalidDataStandardCount,
                        List<ColumnEvidence> columns, List<String> findings,
                        List<String> limitations) {}
   private record StandardFact(Long id, String code, String status, String role, String type,
@@ -110,6 +128,7 @@ public class PhysicalStandardCoverageInspectionService {
     Set<String> names = new HashSet<>();
     List<ColumnEvidence> rows = new ArrayList<>();
     int covered = 0, missing = 0, invalid = 0, review = 0;
+    int missingDataStandard = 0, invalidDataStandard = 0;
     for (StructureView.ColumnView col : physical) {
       if (col == null || col.id() == null || col.id() <= 0
           || !StringUtils.hasText(col.columnName())
@@ -119,6 +138,7 @@ public class PhysicalStandardCoverageInspectionService {
       }
       Long ref = col.stdFieldId();
       String status, explanation, standardName = null, semanticRole = null, standardType = null;
+      DataStandardEvidence dataStandards = null;
       if (ref == null || ref <= 0) {
         status = "MISSING_STANDARD";
         explanation = "物理字段没有正式 StandardFieldRef；技术字段豁免尚未获批，不自动视为合格";
@@ -137,6 +157,18 @@ public class PhysicalStandardCoverageInspectionService {
           standardName = standard.name();
           semanticRole = standard.role();
           standardType = standard.dataType();
+          dataStandards = inspectDataStandards(standard);
+          if (dataStandards.missingRequiredReference()) {
+            missingDataStandard++;
+          }
+          if (dataStandards.invalidReference()) {
+            invalidDataStandard++;
+          }
+          if (dataStandards.missingRequiredReference() || dataStandards.invalidReference()
+              || "NEEDS_REVIEW".equals(dataStandards.status())) {
+            findings.add("关联数据标准需要复核：" + col.columnName() + "（"
+                + dataStandards.explanation() + "）");
+          }
           if (StringUtils.hasText(col.aggregateFunc())) {
             status = "AGGREGATE_REVIEW";
             explanation = "物理字段配置了聚合表达式，须人工核实业务粒度及度量定义；Semantic 角色不自动等于物理聚合角色";
@@ -151,7 +183,7 @@ public class PhysicalStandardCoverageInspectionService {
       }
       rows.add(new ColumnEvidence(col.id(), col.columnName(), col.dataType(),
           ref, standardName, semanticRole, standardType, col.fieldRole(),
-          col.aggregateFunc(), status, explanation));
+          col.aggregateFunc(), status, explanation, dataStandards));
     }
 
     if (rows.isEmpty()) findings.add("物理草稿尚无字段，无法计算标准字段覆盖");
@@ -176,13 +208,111 @@ public class PhysicalStandardCoverageInspectionService {
         evidenceProcessId, process == null ? null : process.name(),
         findings.isEmpty() ? "COVERED_NOW" : "NEEDS_REVIEW",
         structureSha, evidenceSha, rows.size(), covered, missing, invalid, review,
+        missingDataStandard, invalidDataStandard,
         List.copyOf(rows), List.copyOf(findings),
-        List.of("只读核验当前已保存的非 ODS 物理结构与 Semantic 标准字段状态；仅 DWD/DIM 同时核验当前业务过程/粒度",
-            "本报告只证明当前标准字段引用可读且启用，不证明历史版本冻结了标准证据，也不证明物理类型兼容",
+        List.of("只读核验当前已保存的非 ODS 物理结构、StandardField 与其当前关联的数据标准引用；仅 DWD/DIM 同时核验当前业务过程/粒度",
+            "TYPE 对所有标准字段必需；UNIT 对 METRIC 必需；CALIBER 对 METRIC 选填；CODE 码集与 SECURITY 对 DIMENSION 选填，规则依据 Semantic 当前字段合同",
+            "本报告读取当前标准状态/版本，不证明历史物理版本冻结了当时标准证据，也不替代物理类型兼容审查",
             "DWS 粒度、精确上游版本及 MetricVersionRef 必须由 DWS 专项合同核验；本报告不替代这些检查",
             "ADS 消费场景、脱敏/列权限、消费者授权及 Usage Evidence 必须由 ADS/Consumption 专项合同核验",
             "非 ODS 发布阻断规则与技术列例外仍以 PD-010 正式状态及相关 Owner 签收为准；本报告不改变发布资格",
             "模型结构已保存/发布不代表表已部署、数据已执行、质量通过或可被合法消费"));
+  }
+
+  private DataStandardEvidence inspectDataStandards(StandardField field) {
+    List<String> issues = new ArrayList<>();
+    boolean missingRequired = false;
+    boolean invalidReference = false;
+    boolean needsReview = !StandardField.isValidRole(field.role());
+
+    StandardReferenceEvidence type = inspectStandardReference(
+        field.stdTypeId(), StandardKind.TYPE, true, "类型标准");
+    missingRequired |= "MISSING_REQUIRED_REFERENCE".equals(type.evidenceStatus());
+    invalidReference |= "INVALID_REFERENCE".equals(type.evidenceStatus());
+    if (missingRequired || invalidReference) issues.add(type.explanation());
+
+    StandardReferenceEvidence unit = null;
+    StandardReferenceEvidence caliber = null;
+    StandardReferenceEvidence security = null;
+    String codeSetStatus = "NOT_APPLICABLE";
+    String codeSetCode = null;
+    if ("METRIC".equals(field.role())) {
+      unit = inspectStandardReference(field.stdUnitId(), StandardKind.UNIT, true, "单位标准");
+      caliber = inspectStandardReference(
+          field.stdCaliberId(), StandardKind.CALIBER, false, "口径标准");
+      if ("MISSING_REQUIRED_REFERENCE".equals(unit.evidenceStatus())) missingRequired = true;
+      if ("INVALID_REFERENCE".equals(unit.evidenceStatus())) invalidReference = true;
+      if ("MISSING_REQUIRED_REFERENCE".equals(unit.evidenceStatus())
+          || "INVALID_REFERENCE".equals(unit.evidenceStatus())) issues.add(unit.explanation());
+      if ("INVALID_REFERENCE".equals(caliber.evidenceStatus())) {
+        invalidReference = true;
+        issues.add(caliber.explanation());
+      }
+    } else if ("DIMENSION".equals(field.role())) {
+      codeSetCode = field.stdCodeSetCode();
+      if (!StringUtils.hasText(codeSetCode)) {
+        codeSetStatus = "NOT_CONFIGURED";
+      } else if (standardQuery.existsCodeSet(codeSetCode)) {
+        codeSetStatus = "ENABLED_NOW";
+      } else {
+        codeSetStatus = "INVALID_REFERENCE";
+        invalidReference = true;
+        issues.add("码集不存在或已停用：" + codeSetCode);
+      }
+      security = inspectStandardReference(
+          field.stdSecurityId(), StandardKind.SECURITY, false, "安全标准");
+      if ("INVALID_REFERENCE".equals(security.evidenceStatus())) {
+        invalidReference = true;
+        issues.add(security.explanation());
+      }
+    }
+
+    if (needsReview) issues.add("标准字段角色不在当前 Semantic 合同允许范围内：" + field.role());
+    String status = needsReview || (missingRequired && invalidReference) ? "NEEDS_REVIEW"
+        : missingRequired ? "MISSING_REQUIRED_REFERENCE"
+        : invalidReference ? "INVALID_REFERENCE" : "COMPLETE_NOW";
+    String explanation = issues.isEmpty()
+        ? "当前字段适用的数据标准引用均可读取且启用；不代表物理类型兼容或正式发布获批"
+        : String.join("；", issues);
+    return new DataStandardEvidence(field.role(), type, unit, caliber,
+        codeSetCode, codeSetStatus, security, status, missingRequired,
+        invalidReference, explanation);
+  }
+
+  private StandardReferenceEvidence inspectStandardReference(
+      Long id, StandardKind expectedKind, boolean required, String label) {
+    if (id == null || id <= 0) {
+      return new StandardReferenceEvidence(id, expectedKind.name(), null, null, null, null,
+          required ? "MISSING_REQUIRED_REFERENCE" : "NOT_CONFIGURED", null,
+          required ? "缺少必需的" + label + "引用" : "未配置选填的" + label);
+    }
+    Standard value = standardQuery.get(id);
+    String definition = value == null ? null : standardDefinition(value, expectedKind);
+    if (value == null || !Objects.equals(value.id(), id) || value.kind() != expectedKind
+        || value.status() != StandardStatus.ENABLED || !StringUtils.hasText(definition)) {
+      return new StandardReferenceEvidence(id, expectedKind.name(),
+          value == null ? null : value.code(), value == null ? null : value.name(),
+          value == null || value.status() == null ? null : value.status().name(),
+          value == null ? null : value.version(), "INVALID_REFERENCE", definition,
+          label + "引用不存在、类别不匹配、当前停用或必需定义缺失；不可自动改绑同名标准");
+    }
+    return new StandardReferenceEvidence(value.id(), value.kind().name(), value.code(),
+        value.name(), value.status().name(), value.version(), "ENABLED_NOW", definition,
+        "当前引用的" + label + "存在、类别匹配且启用");
+  }
+
+  private static String standardDefinition(Standard standard, StandardKind expectedKind) {
+    if (standard.fields() == null) return null;
+    return switch (expectedKind) {
+      case TYPE -> standard.fields().stdType();
+      case UNIT -> standard.fields().unitCode();
+      case CALIBER -> standard.fields().calRule();
+      case SECURITY -> StringUtils.hasText(standard.fields().levelCode())
+          && StringUtils.hasText(standard.fields().maskRule())
+          ? standard.fields().levelCode() + " / " + standard.fields().maskRule() : null;
+      case CODE -> standard.fields().codeSetCode();
+      case NAMING -> standard.fields().ruleExpr();
+    };
   }
 
   private String digest(Evidence evidence) {
