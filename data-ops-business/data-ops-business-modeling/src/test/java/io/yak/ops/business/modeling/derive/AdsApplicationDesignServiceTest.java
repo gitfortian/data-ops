@@ -173,6 +173,21 @@ class AdsApplicationDesignServiceTest {
   }
 
   @Test
+  void rejectsMismatchBetweenLegacyVersionIdAndCompleteMetricPin() {
+    prepareValidSource();
+    var pin = new AdsApplicationDesignService.MetricPublicationPin(
+        70L, 71L, 4, "b".repeat(64), 72L);
+    var request = withMetricPin(good(11L, 0L, List.of("order_day")), 99L, pin);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("不一致"));
+    verifyNoInteractions(metricPublicationEvidence);
+  }
+
+  @Test
   void refusesSupersededPublicationWhenFreezingNewContract() {
     prepareValidSource();
     var pin = new AdsApplicationDesignService.MetricPublicationPin(
