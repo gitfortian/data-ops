@@ -106,11 +106,12 @@ public class MetricPublicationEvidenceProviderImpl implements MetricPublicationE
       return new Evidence(Status.NOT_FOUND);
     }
     if (!PUBLISHED.equals(event.getEventType())
-        || !Objects.equals(event.getMetricId(), reference.metricId())
-        || !Objects.equals(event.getMetricVersionId(), reference.metricVersionId())
-        || !Objects.equals(event.getMetricVersion(), reference.metricVersion())
-        || !Objects.equals(event.getSnapshotDigest(), reference.snapshotDigest())) {
+        || !Objects.equals(event.getMetricId(), reference.metricId())) {
       return new Evidence(Status.REFERENCE_MISMATCH);
+    }
+    if (!Objects.equals(event.getMetricVersionId(), reference.metricVersionId())
+        || !Objects.equals(event.getMetricVersion(), reference.metricVersion())) {
+      return new Evidence(Status.VERSION_MISMATCH);
     }
 
     MetricVersionPO version = versions.findByMetricAndVersion(
