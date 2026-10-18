@@ -97,7 +97,7 @@ public class AdsApplicationDesignService {
     StructureView targetStructure = structures.get(modelId);
     List<String> blockers = new java.util.ArrayList<>();
     List<String> warnings = new java.util.ArrayList<>();
-    Contract contract = validateAndFreeze(target, request, blockers, warnings);
+    Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure);
     String fingerprint = StructureFingerprint.of(targetStructure);
     if (!blockers.isEmpty()) {
       return new ValidationResult(false, List.copyOf(blockers), List.copyOf(warnings),
@@ -111,9 +111,10 @@ public class AdsApplicationDesignService {
   public Saved save(long modelId, Request request, String operator) {
     if (!StringUtils.hasText(operator)) throw new IllegalArgumentException("操作人不能为空");
     Model target = requireAdsForUpdate(modelId);
+    StructureView targetStructure = structures.getForUpdate(modelId);
     List<String> blockers = new java.util.ArrayList<>();
     List<String> warnings = new java.util.ArrayList<>();
-    Contract contract = validateAndFreeze(target, request, blockers, warnings);
+    Contract contract = validateAndFreeze(target, request, blockers, warnings, targetStructure);
     if (!blockers.isEmpty()) throw new IllegalArgumentException(String.join("；", blockers));
     String json = encode(contract);
     String digest = VersionDigests.sha256Hex(json);
@@ -139,7 +140,7 @@ public class AdsApplicationDesignService {
   }
 
   private Contract validateAndFreeze(Model target, Request request,
-      List<String> blockers, List<String> warnings) {
+      List<String> blockers, List<String> warnings, StructureView targetStructure) {
     if (request == null) {
       blockers.add("ADS 应用合同不能为空");
       return null;
@@ -183,6 +184,9 @@ public class AdsApplicationDesignService {
     if (fields.isEmpty()) blockers.add("至少需要一个输出字段");
     Set<String> outputNames = new HashSet<>();
     Set<String> sourceNames = new HashSet<>();
+    Set<String> targetColumns = targetStructure.columns() == null ? Set.of()
+        : targetStructure.columns().stream().map(c -> c.columnName().toLowerCase(Locale.ROOT))
+            .collect(java.util.stream.Collectors.toSet());
     for (OutputField field : fields) {
       if (field == null || !StringUtils.hasText(field.sourceColumn())
           || !StringUtils.hasText(field.outputColumn())) {
@@ -193,6 +197,8 @@ public class AdsApplicationDesignService {
         blockers.add("目标输出列名不合法：" + field.outputColumn());
       if (!outputNames.add(field.outputColumn().toLowerCase(Locale.ROOT)))
         blockers.add("目标输出列名重复：" + field.outputColumn());
+      if (!targetColumns.contains(field.outputColumn().toLowerCase(Locale.ROOT)))
+        blockers.add("输出列不存在于当前 ADS 物理结构：" + field.outputColumn());
       if (!sourceNames.add(field.sourceColumn().toLowerCase(Locale.ROOT)))
         warnings.add("同一来源列被映射多次：" + field.sourceColumn());
       if (!sourceColumns.containsKey(field.sourceColumn().toLowerCase(Locale.ROOT)))
