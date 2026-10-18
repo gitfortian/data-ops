@@ -8,12 +8,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardMapper;
+import io.yak.ops.business.semantic.dao.model.SemanticStandardPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Map;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,6 +35,13 @@ class StandardRepositoryAdapterProjectScopeTest {
 
   private SemanticStandardMapper mapper;
   private StandardRepositoryAdapter repository;
+
+  @BeforeAll
+  static void initializeLambdaMetadata() {
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new MybatisConfiguration(), ""),
+        SemanticStandardPO.class);
+  }
 
   @BeforeEach
   void setUp() {
@@ -75,6 +87,7 @@ class StandardRepositoryAdapterProjectScopeTest {
 
   private static void assertHasCurrentProject(Wrapper<?> wrapper) {
     AbstractWrapper<?, ?, ?> query = (AbstractWrapper<?, ?, ?>) wrapper;
+    String sqlSegment = query.getSqlSegment();
     Map<String, Object> parameters = query.getParamNameValuePairs();
     boolean hasCurrentProjectId =
         parameters.values().stream()
@@ -83,9 +96,14 @@ class StandardRepositoryAdapterProjectScopeTest {
                     value instanceof Number number
                         && number.longValue() == CURRENT_PROJECT_ID);
     assertTrue(
+        sqlSegment.contains("project_id"),
+        "repository query must constrain project_id; sqlSegment=" + sqlSegment);
+    assertTrue(
         hasCurrentProjectId,
         "repository query must bind the trusted current project ID "
             + CURRENT_PROJECT_ID
+            + "; sqlSegment="
+            + sqlSegment
             + "; parameters="
             + parameters);
   }
