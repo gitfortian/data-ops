@@ -118,6 +118,41 @@ test('uses real server static validation before save and verifies readback', asy
   await waitFor(() => expect(getAdsApplicationContract).toHaveBeenCalledTimes(3));
 });
 
+test('keeps the confirmed saved revision when history refresh fails', async () => {
+  const nextStored = {
+    ...stored,
+    revision: 2,
+    contractSha256: 'c'.repeat(64),
+    contract: { ...contract, appName: '订单经营日报 V2' },
+  };
+  (getAdsApplicationContract as jest.Mock)
+    .mockResolvedValueOnce(stored)
+    .mockResolvedValueOnce(stored)
+    .mockResolvedValueOnce(nextStored);
+  (getAdsApplicationContractHistory as jest.Mock)
+    .mockResolvedValueOnce([stored])
+    .mockRejectedValueOnce(new Error('history temporarily unavailable'));
+  (saveAdsApplicationContract as jest.Mock).mockResolvedValue(nextStored);
+
+  render(<AdsApplicationDesignPanel {...props} />);
+  expect(await screen.findByText('合同修订 R1')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('应用目标'));
+  fireEvent.change(screen.getByPlaceholderText('订单经营日报'), {
+    target: { value: '订单经营日报 V2' },
+  });
+  fireEvent.click(screen.getByText('验证保存'));
+  fireEvent.click(screen.getByRole('button', { name: '服务端静态校验' }));
+  await waitFor(() => expect(validateAdsApplicationContract).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole('button', { name: '保存应用设计合同' }));
+
+  expect(await screen.findByText('合同修订 R2')).toBeInTheDocument();
+  expect(screen.getByText('R2 · 订单经营日报 V2')).toBeInTheDocument();
+  expect(screen.getByText('R1 · 订单经营日报')).toBeInTheDocument();
+  expect(saveAdsApplicationContract).toHaveBeenCalledWith(10,
+    expect.objectContaining({ appName: '订单经营日报 V2', expectedRevision: 1 }));
+  expect(getAdsApplicationContractHistory).toHaveBeenCalledTimes(2);
+});
+
 test('requires a fresh static review before saving after target structure drift', async () => {
   (validateAdsApplicationContract as jest.Mock).mockResolvedValue({
     valid: true, blockers: [], warnings: [],
