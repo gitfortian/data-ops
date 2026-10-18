@@ -58,6 +58,8 @@ public class PhysicalStandardCoverageInspectionService {
                                      StandardReferenceEvidence unitStandard,
                                      StandardReferenceEvidence caliberStandard,
                                      String codeSetCode, String codeSetStatus,
+                                     Integer codeSetItemCount, Integer codeSetEnabledItemCount,
+                                     String codeSetEvidenceSha256,
                                      StandardReferenceEvidence securityStandard,
                                      String status, boolean missingRequiredReference,
                                      boolean invalidReference, String explanation) {}
@@ -212,7 +214,7 @@ public class PhysicalStandardCoverageInspectionService {
         List.copyOf(rows), List.copyOf(findings),
         List.of("只读核验当前已保存的非 ODS 物理结构、StandardField 与其当前关联的数据标准引用；仅 DWD/DIM 同时核验当前业务过程/粒度",
             "TYPE 对所有标准字段必需；UNIT 对 METRIC 必需；CALIBER 对 METRIC 选填；CODE 码集与 SECURITY 对 DIMENSION 选填，规则依据 Semantic 当前字段合同",
-            "本报告读取当前标准状态/版本，不证明历史物理版本冻结了当时标准证据，也不替代物理类型兼容审查",
+            "本报告读取当前标准状态/版本；CODE 码集摘要覆盖所有成员（包括停用成员），不证明历史物理版本冻结了当时标准证据，也不替代物理类型兼容审查",
             "DWS 粒度、精确上游版本及 MetricVersionRef 必须由 DWS 专项合同核验；本报告不替代这些检查",
             "ADS 消费场景、脱敏/列权限、消费者授权及 Usage Evidence 必须由 ADS/Consumption 专项合同核验",
             "非 ODS 发布阻断规则与技术列例外仍以 PD-010 正式状态及相关 Owner 签收为准；本报告不改变发布资格",
@@ -236,6 +238,9 @@ public class PhysicalStandardCoverageInspectionService {
     StandardReferenceEvidence security = null;
     String codeSetStatus = "NOT_APPLICABLE";
     String codeSetCode = null;
+    Integer codeSetItemCount = null;
+    Integer codeSetEnabledItemCount = null;
+    String codeSetEvidenceSha256 = null;
     if ("METRIC".equals(field.role())) {
       unit = inspectStandardReference(field.stdUnitId(), StandardKind.UNIT, true, "单位标准");
       caliber = inspectStandardReference(
@@ -252,12 +257,26 @@ public class PhysicalStandardCoverageInspectionService {
       codeSetCode = field.stdCodeSetCode();
       if (!StringUtils.hasText(codeSetCode)) {
         codeSetStatus = "NOT_CONFIGURED";
-      } else if (standardQuery.existsCodeSet(codeSetCode)) {
-        codeSetStatus = "ENABLED_NOW";
       } else {
-        codeSetStatus = "INVALID_REFERENCE";
-        invalidReference = true;
-        issues.add("码集不存在或已停用：" + codeSetCode);
+        StandardQueryApi.CodeSetReference codeSet = standardQuery.codeSetReference(codeSetCode);
+        if (codeSet == null || !Objects.equals(codeSet.codeSetCode(), codeSetCode)
+            || codeSet.itemCount() <= 0 || "NOT_FOUND".equals(codeSet.status())) {
+          codeSetStatus = "INVALID_REFERENCE";
+          invalidReference = true;
+          issues.add("码集不存在或当前项目不可访问：" + codeSetCode);
+        } else {
+          codeSetItemCount = codeSet.itemCount();
+          codeSetEnabledItemCount = codeSet.enabledItemCount();
+          codeSetEvidenceSha256 = codeSet.contentSha256();
+          if (!"ENABLED".equals(codeSet.status())) {
+            codeSetStatus = "MIXED".equals(codeSet.status()) ? "MIXED" : "DISABLED";
+            invalidReference = true;
+            issues.add("码集包含停用项或状态不一致：" + codeSetCode
+                + "（启用 " + codeSetEnabledItemCount + "/" + codeSetItemCount + "）");
+          } else {
+            codeSetStatus = "ENABLED_NOW";
+          }
+        }
       }
       security = inspectStandardReference(
           field.stdSecurityId(), StandardKind.SECURITY, false, "安全标准");
@@ -275,7 +294,8 @@ public class PhysicalStandardCoverageInspectionService {
         ? "当前字段适用的数据标准引用均可读取且启用；不代表物理类型兼容或正式发布获批"
         : String.join("；", issues);
     return new DataStandardEvidence(field.role(), type, unit, caliber,
-        codeSetCode, codeSetStatus, security, status, missingRequired,
+        codeSetCode, codeSetStatus, codeSetItemCount, codeSetEnabledItemCount,
+        codeSetEvidenceSha256, security, status, missingRequired,
         invalidReference, explanation);
   }
 
