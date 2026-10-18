@@ -42,6 +42,7 @@ const contract = {
   sortExpression: 'order_day DESC',
   metricVersionId: null,
   refreshTarget: 'DAILY',
+  targetStructureFingerprint: 'physical-v1',
 } as const;
 const stored = {
   modelId: 10, revision: 1, contractSha256: 'a'.repeat(64), contractJson: '{}',
