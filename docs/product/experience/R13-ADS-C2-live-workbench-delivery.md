@@ -10,7 +10,7 @@
 2. **精确来源**：从同项目同业务过程已发布 DWS（默认）选择；DWD 明细为主动切换，弹窗确认并丢弃不再适用的旧映射。冻结模型 ID、版本 ID、版本号、checksum；同时保存目标物理结构指纹。上游发布指针或目标结构指纹漂移均显示 stale/blocker，不能自动 latest 或静默接受新结构。
 3. **输出设计**：已发布上游快照的列 → ADS 现有物理结构的列，输出列必须已有标准字段绑定；确定业务键和敏感等级标识。
 4. **业务口径**：有限过滤和排序文本、独立 MetricVersion ID 引用及刷新意图；提示 Metric 原域尚未核验，刷新意图不是 Runtime SLA。
-5. **验证保存**：POST 服务端 V0 静态验证，PUT 携带 expectedRevision 进行原子修订保护，GET 回读合同并比较 revision 与合同哈希；静态 PASS 不代表真实数据、权限或服务可用。
+5. **验证保存**：POST 服务端 V0 静态验证，PUT 携带 expectedRevision 与用户已核对的 expectedTargetStructureFingerprint 进行原子修订/结构保护，GET 回读合同并比较 revision 与合同哈希；静态 PASS 不代表真实数据、权限或服务可用。
 6. **历史交接**：GET 最多 50 条不可变修订记录，选择旧版只载入新草稿（不会倒写历史）；明确将样本验证与运行后对账标为 NOT_CONNECTED，外部消费授权标为 UNKNOWN；Modeling 自有的 DELIVERY_NOT_CONFIGURED 只描述设计交付配置，不能代表 Dataset/Service 原域确实不存在授权。
 
 正常保存后检查 revision 与哈希回读，不以 PUT 成功提示替代数据库事实。重读时有未保存草稿的二次确认，整页刷新/关闭由 beforeunload 防丢失提示保护。保存请求在途期间锁定可编辑字段、来源切换、历史草稿复用和重新读取，避免回读覆盖用户正在编辑的内容；请求结束后恢复编辑。若 C1 服务不可访问，失败并保留错误，不展示固定样例数据伪造在线结果。
