@@ -201,6 +201,17 @@ class PhysicalStandardCoverageInspectionServiceTest {
     verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
   }
 
+
+  @Test void linkedStandardVersionChangesTheEvidenceFingerprint() {
+    var first = service.inspect(50L);
+    when(standardQuery.get(111L)).thenReturn(typeStandard(111L).withVersion(2, null));
+    var second = service.inspect(50L);
+    assertNotEquals(first.evidenceSha256(), second.evidenceSha256());
+    var orderId = second.columns().stream()
+        .filter(c -> Long.valueOf(11L).equals(c.stdFieldId())).findFirst().orElseThrow();
+    assertEquals(2, orderId.dataStandards().typeStandard().version());
+  }
+
   @Test void missingRequiredTypeStandardIsReportedWithoutAutomaticRepair() {
     StandardField missingType = new StandardField(11L, "order_11", "订单 #11",
         "PROCESS", StandardField.STATUS_ENABLED, "BIGINT", null, null, null,
