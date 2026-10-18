@@ -93,6 +93,7 @@ class AdsApplicationDesignServiceTest {
     when(models.findById(10L)).thenReturn(Optional.of(ads));
     when(models.findByIdForUpdate(10L)).thenReturn(Optional.of(ads));
     when(models.findById(20L)).thenReturn(Optional.of(dws));
+    when(models.findByIdForUpdate(20L)).thenReturn(Optional.of(dws));
     when(structures.get(10L)).thenReturn(structure(10L, 11L));
     when(structures.getForUpdate(10L)).thenReturn(structure(10L, 11L));
     when(published.requirePublishedStructure(20L)).thenReturn(structure(20L, 11L));
@@ -196,6 +197,7 @@ class AdsApplicationDesignServiceTest {
         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     org.assertj.core.api.Assertions.assertThat(service.save(10L, request, "alice").revision())
         .isEqualTo(1L);
+    verify(models).findByIdForUpdate(20L);
     verify(jdbc, org.mockito.Mockito.times(2)).update(
         org.mockito.ArgumentMatchers.anyString(),
         org.mockito.ArgumentMatchers.any(),
