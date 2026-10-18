@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import io.yak.ops.business.semantic.dao.mapper.SemanticStandardMapper;
-import io.yak.ops.business.semantic.dao.model.SemanticStandardPO;
 import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Map;
