@@ -138,7 +138,7 @@ it('restores a prior revision as a new forward revision rather than rewinding hi
   render(<DwsGrainDesignPanel modelId={10} structure={structure} dirty={false} />);
   expect(await screen.findByText(/设计草稿 · R4/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('版本恢复'));
-  await screen.findByText('恢复为新修订');
+  await waitFor(() => expect(screen.getAllByRole('button', { name: '恢复为新修订' }).length).toBe(2));
   const restoreButtons = screen.getAllByRole('button', { name: '恢复为新修订' });
   fireEvent.click(restoreButtons[1]);
   await waitFor(() => expect(restoreDwsGrainRevision).toHaveBeenCalledWith(10, 3));
