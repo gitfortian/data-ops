@@ -60,6 +60,18 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
           : '未配置';
     return `${name} (${ref.kind})${definition} · ${status}`;
   };
+  const dataStandardStatusLabel = (status: string): string => ({
+    COMPLETE_NOW: '当前适用引用完整',
+    MISSING_REQUIRED_REFERENCE: '缺少必需引用',
+    INVALID_REFERENCE: '存在失效引用',
+    NEEDS_REVIEW: '需要人工核验',
+  }[status] || '需要人工核验');
+  const codeSetStatusLabel = (status: string): string => ({
+    NOT_APPLICABLE: '不适用',
+    NOT_CONFIGURED: '未配置（选填）',
+    ENABLED_NOW: '当前启用',
+    INVALID_REFERENCE: '不存在或已停用',
+  }[status] || '需要人工核验');
 
   return (
     <Modal title={report
@@ -135,12 +147,12 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
                   {evidence.caliberStandard
                     && <Typography.Text>口径：{referenceLabel(evidence.caliberStandard)}</Typography.Text>}
                   {evidence.codeSetStatus !== 'NOT_APPLICABLE'
-                    && <Typography.Text>码集：{evidence.codeSetCode || '未配置'} · {evidence.codeSetStatus}</Typography.Text>}
+                    && <Typography.Text>码集：{evidence.codeSetCode || '未配置'} · {codeSetStatusLabel(evidence.codeSetStatus)}</Typography.Text>}
                   {evidence.securityStandard
                     && <Typography.Text>安全：{referenceLabel(evidence.securityStandard)}</Typography.Text>}
                   <Tag color={evidence.status === 'COMPLETE_NOW' ? 'green'
                     : evidence.status === 'INVALID_REFERENCE' || evidence.status === 'NEEDS_REVIEW'
-                      ? 'red' : 'orange'}>{evidence.status}</Tag>
+                      ? 'red' : 'orange'}>{dataStandardStatusLabel(evidence.status)}</Tag>
                   <Typography.Text type="secondary">{evidence.explanation}</Typography.Text>
                 </Space>;
               } },
