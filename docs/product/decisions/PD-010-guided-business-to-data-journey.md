@@ -151,3 +151,15 @@ Related Issues: #512（走查证据）、#513（用户故事地图）
 ## Supersedes
 
 None。与 PD-003 的 Semantic/Modeling/Metric Owner、PD-002 的受治理消费、现有 F-002 / F-008 / F-029 可用边界对齐；如有实际冲突先回到其各自 Owner Contract 评审，不擅自覆盖。
+
+## 12. R14-2 当前数据标准引用只读证据（2026-10-18）
+
+PR #618 已将当前标准字段覆盖核验扩展到 DWD、DIM、DWS、ADS。后续只读证据切片进一步核验每个有效 StandardFieldRef 当前引用的标准对象：
+
+- `stdTypeId` → TYPE；`stdUnitId` → UNIT；`stdCaliberId` → CALIBER；`stdSecurityId` → SECURITY；`stdCodeSetCode` → CODE 码集。
+- 对标准 ID 引用记录当前项目内对象身份、类别、状态、版本与内容摘要；对 CODE 码集记录当前码值成员、启用数量、状态与内容摘要。
+- 缺失引用显示 `NOT_CONFIGURED`，仅表示当前未配置，不自动判定为违反规则；适用性与哪些列必须配置哪些类别仍由正式 Semantic/Modeling 合同决定。
+- 停用、错类别、不存在、不可访问或码集混合状态显示为需复核证据；Semantic Provider 失败不降级为“无引用”或“通过”。
+- 所有摘要代表**本次当前读取**，不伪装成历史物理版本发布时冻结的标准证据；报告仍只读，不写回字段、不自动改绑、不改变发布资格。
+
+本次增强是 PD-010 已获产品负责人认可的核心规则方向下的只读证据准备。PD-010 整体仍为 `PROPOSED`，Implementation 仍为 `NOT_STARTED`；正式全局发布阻断器仍须等 Semantic、Modeling、Security Owner 的适用性规则、权限和发布事务合同签收后另行实施。
