@@ -97,10 +97,6 @@ public class MetricPublicationEvidenceProviderImpl implements MetricPublicationE
       // Project-scoped lookups deliberately make a cross-project ID indistinguishable from absent.
       return new Evidence(Status.NOT_FOUND);
     }
-    if (metric.status() != MetricStatus.ENABLED) {
-      return new Evidence(Status.NOT_CURRENTLY_PUBLISHED);
-    }
-
     MetricPublicationEventPO event = publications.findEvent(reference.publicationEventId());
     if (event == null) {
       return new Evidence(Status.NOT_FOUND);
@@ -130,7 +126,7 @@ public class MetricPublicationEvidenceProviderImpl implements MetricPublicationE
     }
 
     MetricActivePublicationPO active = publications.findActive(reference.metricId());
-    if (matches(active, reference)) {
+    if (metric.status() == MetricStatus.ENABLED && matches(active, reference)) {
       return new Evidence(Status.VERIFIED_ACTIVE);
     }
 
