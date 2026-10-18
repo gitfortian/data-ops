@@ -2394,10 +2394,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 DWD 设计版本与映射历史
               </YakButton>
           )}
-          {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '') && (
+          {['DWD', 'DIM', 'DWS', 'ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') && (
             <Tooltip title={dirty
               ? '请先保存当前物理结构；核验只读取服务端已保存版本'
-              : '只读核验已保存字段对正式标准的当前覆盖，不会改变发布资格'}>
+              : '只读核验当前字段的标准引用；不代替 DWS/ADS 分层专项合同，也不会改变发布资格'}>
               <YakButton className="!h-9 !rounded-lg !px-4"
                 disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
                 onClick={() => setStandardCoverageOpen(true)}>

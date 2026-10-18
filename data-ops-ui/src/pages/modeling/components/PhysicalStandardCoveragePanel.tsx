@@ -52,7 +52,9 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
   const feedback = report && baseline ? comparePhysicalGovernance(baseline, report) : undefined;
 
   return (
-    <Modal title="DWD/DIM 当前字段标准覆盖与治理缺口（只读）"
+    <Modal title={report
+      ? `${report.layerCode} 当前字段标准覆盖与治理缺口（只读）`
+      : '非 ODS 当前字段标准覆盖与治理缺口（只读）'}
       width={1080} open={open} destroyOnHidden
       footer={<Space>
         <Button disabled={loading} onClick={() => setReloadKey(key => key + 1)}>重新读取当前治理证据</Button>
@@ -73,10 +75,14 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
           message={report.status === 'COVERED_NOW'
             ? '当前模型所有字段已关联可用标准；此结果仅供人工设计审阅'
             : '当前物理设计存在标准覆盖或业务含义待核实项'}
-          description="核验的是已保存的当前物理结构及 Semantic 标准引用。尚未批准非 ODS 发布强门禁及技术列豁免，不会自动改动任何发布状态。" />
+          description={['DWS', 'ADS'].includes(report.layerCode)
+            ? '本报告仅核验当前字段的标准引用，不核验 DWS 粒度/上游版本/MetricVersionRef，也不核验 ADS 消费合同/脱敏/消费者授权；正式发布资格不会因本报告改变。'
+            : '核验已保存的当前物理结构及 Semantic 标准字段引用。正式发布强门禁仍待相关 Owner 完成签收，技术列豁免尚未获批；本报告不会自动改动任何发布状态。'} />
         <Space wrap className="mb-3">
           <Tag>{report.layerCode} · {report.modelStatus}</Tag>
-          <Tag>正式业务过程：{report.processName || '未绑定或不可访问'}</Tag>
+          {['DWD', 'DIM'].includes(report.layerCode)
+            ? <Tag>正式业务过程：{report.processName || '未绑定或不可访问'}</Tag>
+            : <Tag>分层专项合同：需单独核验</Tag>}
           <Tag>物理列 {report.columnCount}</Tag>
           <Tag color="green">当前可用 {report.enabledCount}</Tag>
           <Tag color={report.missingCount ? 'orange' : 'default'}>缺少标准 {report.missingCount}</Tag>

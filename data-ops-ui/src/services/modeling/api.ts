@@ -373,11 +373,11 @@ export const getOdsPublishedVersionEvidence = (
     `${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/source-evidence-review`,
   );
 
-/** Current DWD/DIM source-of-truth standards coverage; never a publish gate. */
+/** Current non-ODS physical standard-field evidence; never a publish gate or layer-contract approval. */
 export interface PhysicalStandardCoverageInspection {
   modelId: number;
   modelCode: string;
-  layerCode: 'DWD' | 'DIM';
+  layerCode: 'DWD' | 'DIM' | 'DWS' | 'ADS';
   modelStatus: string;
   processId?: number | null;
   processName?: string | null;

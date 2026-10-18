@@ -160,4 +160,28 @@ class PhysicalStandardCoverageInspectionServiceTest {
     assertEquals("COVERED_NOW", service.inspect(50L).status());
     verify(models, never()).assignImportLineage(anyLong(), anyString(), any(), anyString());
   }
+  @Test void dwsCoverageIsReadOnlyAndDoesNotPretendToValidateMetricOrGrain() {
+    model = Model.create("dws_order_daily", "订单日汇总", ModelDialect.MYSQL,
+        null, null, "DWS", null).withPersisted(50L, "owner", null, null);
+    var report = service.inspect(50L);
+    assertEquals("COVERED_NOW", report.status());
+    assertNull(report.processId());
+    assertTrue(report.limitations().stream().anyMatch(x -> x.contains("MetricVersionRef")));
+    assertTrue(report.limitations().stream().anyMatch(x -> x.contains("DWS 粒度")));
+    verify(semantic, never()).listProcesses(null);
+    verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
+  @Test void adsCoverageIsReadOnlyAndDoesNotPretendToValidateConsumerContract() {
+    model = Model.create("ads_order_board", "订单看板", ModelDialect.MYSQL,
+        null, null, "ADS", null).withPersisted(50L, "owner", null, null);
+    var report = service.inspect(50L);
+    assertEquals("COVERED_NOW", report.status());
+    assertNull(report.processId());
+    assertTrue(report.limitations().stream().anyMatch(x -> x.contains("ADS 消费场景")));
+    assertTrue(report.limitations().stream().anyMatch(x -> x.contains("Usage Evidence")));
+    verify(semantic, never()).listProcesses(null);
+    verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
 }
