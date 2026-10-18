@@ -217,8 +217,17 @@ public class AdsApplicationDesignService {
       }
       if (!sourceNames.add(field.sourceColumn().toLowerCase(Locale.ROOT)))
         warnings.add("同一来源列被映射多次：" + field.sourceColumn());
-      if (!sourceColumns.containsKey(field.sourceColumn().toLowerCase(Locale.ROOT)))
+      StructureView.ColumnView sourceColumn =
+          sourceColumns.get(field.sourceColumn().toLowerCase(Locale.ROOT));
+      if (sourceColumn == null) {
         blockers.add("来源字段不在精确发布快照中：" + field.sourceColumn());
+      } else if (sourceColumn.stdFieldId() == null) {
+        blockers.add("上游来源字段必须绑定数据标准：" + field.sourceColumn());
+      } else if (targetColumn != null && targetColumn.stdFieldId() != null
+          && !sourceColumn.stdFieldId().equals(targetColumn.stdFieldId())) {
+        blockers.add("来源字段与 ADS 输出字段绑定的数据标准不一致："
+            + field.sourceColumn() + " → " + field.outputColumn());
+      }
       if (field.sensitivity() == null || field.sensitivity().isBlank())
         warnings.add("输出字段未标记敏感等级：" + field.outputColumn());
     }
