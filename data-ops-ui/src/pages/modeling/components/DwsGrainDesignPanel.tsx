@@ -2,7 +2,6 @@ import {
   Alert,
   Button,
   Card,
-  Checkbox,
   Col,
   Descriptions,
   Divider,
@@ -273,6 +272,7 @@ export default function DwsGrainDesignPanel({
   const localBlockers = useMemo(() => {
     const issues: string[] = [];
     if (dirty) issues.push('当前物理表结构有未保存修改，请先保存结构');
+    if (!saved) issues.push('尚未保存 DWS 粒度合同');
     if (!structure.definition) issues.push('缺少当前物理结构指纹，无法验证合同');
     if (!selectedCandidate) issues.push('请选择同业务过程的 DWD 正式来源');
     else if (!selectedCandidate.usable) issues.push('所选 DWD 来源没有可用正式版本');
@@ -329,8 +329,6 @@ export default function DwsGrainDesignPanel({
       setSaved(recorded);
       setContractDirty(false);
       setUseLatestSource(false);
-      setStaticValidation(undefined);
-      setSampleValidation(undefined);
       const revisions = await getDwsGrainHistory(modelId);
       setHistory(revisions ?? []);
       message.success('DWS 粒度合同已保存为修订 R' + recorded.revision + '；尚未执行 SQL 或真实数据验证');
@@ -423,8 +421,6 @@ export default function DwsGrainDesignPanel({
       setUpstreamIds(restored.design.upstreamVersions.map((item) => item.modelId).slice(0, 1));
       setUseLatestSource(false);
       setContractDirty(false);
-      setStaticValidation(undefined);
-      setSampleValidation(undefined);
       setStep(3);
       setHistory(await getDwsGrainHistory(modelId));
       message.success('已将历史内容恢复为新的设计修订 R' + restored.revision + '；原历史记录保持不变');
@@ -447,7 +443,6 @@ export default function DwsGrainDesignPanel({
   const countMeasure = measureColumns.find((column) =>
     measures.includes(String(column.columnName))
     && /(order_count|ordercount|订单数量|订单数)/i.test(String(column.columnName)));
-  const currentCountFunction = String(countMeasure?.aggregateFunc ?? '未配置').toUpperCase();
 
   const blockers = [
     ...localBlockers,
@@ -455,6 +450,7 @@ export default function DwsGrainDesignPanel({
     ...(staticStatus === 'STALE' ? ['静态校验证据已过期，必须重新校验'] : []),
     ...(staticStatus === 'STATIC_BLOCKED' && staticValidation
       ? staticValidation.result.blockers : []),
+    ...(sampleStatus === 'STALE' ? ['固定样本证据已过期，请重新运行演示或明确不使用样本证据'] : []),
     ...(sampleStatus === 'SAMPLE_WARNING' ? ['固定订单样本发现聚合计数风险，需修复后重新验证'] : []),
   ];
   const staticIsCurrent = staticStatus === 'STATIC_PASS';
@@ -538,8 +534,6 @@ export default function DwsGrainDesignPanel({
                   setUpstreamIds(value ? [value] : []);
                   setUseLatestSource(true);
                   setBusinessTimeColumn('');
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 });
               }}
             />
@@ -557,8 +551,6 @@ export default function DwsGrainDesignPanel({
                   setUseLatestSource(true);
                   setBusinessTimeColumn('');
                   setContractDirty(true);
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 }}>
                   采用当前正式版本 V{selectedCandidate?.publishedVersionNo}
                 </Button>
@@ -577,8 +569,6 @@ export default function DwsGrainDesignPanel({
                 options={businessTimeOptions}
                 onChange={(value) => changeContract(() => {
                   setBusinessTimeColumn(value || '');
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 })}
               />
             </Spin>
@@ -624,8 +614,6 @@ export default function DwsGrainDesignPanel({
                 ]}
                 onChange={(value) => changeContract(() => {
                   setStatPeriod(value);
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 })}
               />
             </Col>
@@ -635,8 +623,6 @@ export default function DwsGrainDesignPanel({
                 placeholder="Asia/Shanghai"
                 onChange={(event) => changeContract(() => {
                   setTimeZone(event.target.value);
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 })}
               />
             </Col>
@@ -647,8 +633,6 @@ export default function DwsGrainDesignPanel({
                 placeholder="必须属于目标分组维度"
                 onChange={(value) => changeContract(() => {
                   setPeriodBucketColumn(value);
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 })}
               />
             </Col>
@@ -659,8 +643,6 @@ export default function DwsGrainDesignPanel({
                 placeholder="例如 order_day、order_city"
                 onChange={(value) => changeContract(() => {
                   setDimensions(value);
-                  setStaticValidation(undefined);
-                  setSampleValidation(undefined);
                 })}
               />
             </Col>
