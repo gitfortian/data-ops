@@ -16,12 +16,18 @@ import io.yak.ops.business.metric.exception.MetricException;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.PublicationSubject;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
+import io.yak.ops.business.metric.repository.MetricRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
 import io.yak.ops.business.metric.dao.model.MetricActivePublicationPO;
 import io.yak.ops.business.metric.dao.model.MetricPublicationEventPO;
 import io.yak.ops.business.metric.dao.model.MetricVersionPO;
+import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.domain.MetricStatus;
+import io.yak.ops.business.metric.domain.MetricType;
+import io.yak.ops.business.metric.domain.StatPeriod;
 import io.yak.ops.common.enums.metric.MetricErrorCode;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +41,7 @@ class MetricPublicationServiceTest {
 
   private MetricPublicationRepository publicationRepository;
   private MetricVersionRepository versionRepository;
+  private MetricRepository metricRepository;
   private MetricPublicationReadinessService readinessService;
   private BusinessAuditService auditService;
   private AuditOperationHandle auditHandle;
@@ -44,12 +51,13 @@ class MetricPublicationServiceTest {
   void setUp() {
     publicationRepository = mock(MetricPublicationRepository.class);
     versionRepository = mock(MetricVersionRepository.class);
+    metricRepository = mock(MetricRepository.class);
     readinessService = mock(MetricPublicationReadinessService.class);
     auditService = mock(BusinessAuditService.class);
     auditHandle = mock(AuditOperationHandle.class);
     when(auditService.start(any())).thenReturn(auditHandle);
     service = new MetricPublicationService(
-        publicationRepository, versionRepository, readinessService, auditService);
+        publicationRepository, versionRepository, readinessService, auditService, metricRepository);
   }
 
   @Test
@@ -149,6 +157,31 @@ class MetricPublicationServiceTest {
   }
 
   @Test
+  void activeReferenceSelectorReturnsMinimalIdentityWithoutMetricSnapshot() {
+    MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
+    MetricPublicationEventPO event = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
+    event.setReadinessJson("[]");
+    when(publicationRepository.listActive()).thenReturn(List.of(active));
+    when(publicationRepository.findEvent(501L)).thenReturn(event);
+    when(versionRepository.findByMetricAndVersion(7L, 4))
+        .thenReturn(version(91L, 7L, 4, SNAPSHOT));
+    when(metricRepository.findById(7L)).thenReturn(Optional.of(metric(7L, "gmv", "GMV")));
+
+    List<MetricPublicationService.PublishedMetricReference> references =
+        service.listActiveReferences();
+
+    assertThat(references).hasSize(1);
+    assertThat(references.get(0).publicationEventId()).isEqualTo(501L);
+    assertThat(references.get(0).metricId()).isEqualTo(7L);
+    assertThat(references.get(0).metricVersionId()).isEqualTo(91L);
+    assertThat(references.get(0).metricVersion()).isEqualTo(4);
+    assertThat(references.get(0).snapshotDigest()).isEqualTo(SNAPSHOT_DIGEST);
+    assertThat(references.get(0).metricCode()).isEqualTo("gmv");
+    assertThat(references.get(0).metricName()).isEqualTo("GMV");
+    verify(metricRepository).findById(7L);
+  }
+
+  @Test
   void withdrawAppendsLifecycleEventClearsExpectedPointerAndAuditsSuccess() {
     MetricActivePublicationPO active = active(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
     MetricPublicationEventPO published = publishedEvent(501L, 91L, 7L, 4, SNAPSHOT_DIGEST);
@@ -201,6 +234,14 @@ class MetricPublicationServiceTest {
         status,
         new PublicationSubject(7L, 91L, 4, SNAPSHOT_DIGEST),
         List.of(gates));
+  }
+
+  private static Metric metric(Long id, String code, String name) {
+    LocalDateTime now = LocalDateTime.now();
+    return new Metric(id, code, name, null, null, MetricType.ATOMIC,
+        null, null, null, null, null, null, null, null, null, null,
+        StatPeriod.DAY, null, null, null, MetricStatus.ENABLED, 4,
+        "alice", "alice", now, now);
   }
 
   private static MetricVersionPO version(
