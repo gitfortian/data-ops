@@ -39,6 +39,13 @@ public class DwsGrainDesignController {
     return Result.success(service.candidates(modelId));
   }
 
+  @PostMapping("/validate")
+  public Result<DwsGrainDesignService.ValidationResult> validate(
+      @PathVariable long modelId,
+      @Valid @RequestBody DwsGrainDesignService.Request request) {
+    return Result.success(service.validate(modelId, request));
+  }
+
   @GetMapping("/history")
   public Result<java.util.List<DwsGrainDesignService.HistoryEntry>> history(@PathVariable long modelId) {
     return Result.success(service.history(modelId));
