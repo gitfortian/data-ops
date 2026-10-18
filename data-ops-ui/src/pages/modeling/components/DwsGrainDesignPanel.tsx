@@ -253,9 +253,6 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
         || !item.publishedVersionNo)) {
       issues.push('所选上游中存在未发布、不可用或已变化的来源；请重新读取候选版本');
     }
-    if (saved && saved.structureFingerprint !== structure.definition) {
-      issues.push('已保存粒度合同对应的物理结构指纹已变化，必须重新确认合同');
-    }
     if (hasSourceChange && !sourceMigrationConfirmed) {
       issues.push(keepFrozen
         ? '当前选择保留旧冻结合同；由于上游版本已漂移，不能将其标记为可发布'
@@ -264,7 +261,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     return issues;
   }, [
     dirty, structure.definition, businessTimeColumn, timeZone, periodBucketColumn, dimensions,
-    dimensionColumns, measures, measureColumns, upstreamIds, selectedCandidates, saved,
+    dimensionColumns, measures, measureColumns, upstreamIds, selectedCandidates,
     hasSourceChange, sourceMigrationConfirmed, keepFrozen,
   ]);
 
@@ -619,6 +616,14 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                     />
                   </Col>
                 </Row>
+                {saved && saved.structureFingerprint !== structure.definition ? (
+                  <Alert
+                    showIcon
+                    type="warning"
+                    message="物理结构已变化，现有粒度合同尚未重新确认"
+                    description="先运行当前修订的设计校验，再保存新合同修订。保存会绑定当前结构指纹；旧合同不会被静默覆盖。"
+                  />
+                ) : null}
                 <Divider style={{ margin: '18px 0 12px' }} />
                 <div style={{
                   borderRadius: 10, padding: 12, background: '#F8FAFC',
