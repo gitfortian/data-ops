@@ -93,8 +93,8 @@ test('rehydrates persisted version identity and never invents execution or grant
   expect(screen.getByText(/精确发布版本/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('验证保存'));
   expect(screen.getByText('NOT_CONNECTED')).toBeInTheDocument();
-  expect(screen.getByText('NOT_EXECUTED')).toBeInTheDocument();
-  expect(screen.getByText('DELIVERY_NOT_CONFIGURED')).toBeInTheDocument();
+  expect(screen.getAllByText('NOT_CONNECTED')).toHaveLength(2);
+  expect(screen.getByText('UNKNOWN · 未接入消费原域')).toBeInTheDocument();
   expect(saveAdsApplicationContract).not.toHaveBeenCalled();
 });
 
