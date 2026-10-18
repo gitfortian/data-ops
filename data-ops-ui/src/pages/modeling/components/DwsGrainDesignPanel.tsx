@@ -6,6 +6,7 @@ import {
   Col,
   Descriptions,
   Divider,
+  Empty,
   Input,
   Row,
   Select,
@@ -360,10 +361,6 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     label: (column.columnName as string) + ' · ' + column.aggregateFunc,
     value: column.columnName as string,
   }));
-  const currentStatusColor = validationStatus === 'PASS' ? 'success'
-    : validationStatus === 'BLOCKED' ? 'error'
-      : validationStatus === 'STALE' ? 'warning' : 'default';
-
   return (
     <Card
       bordered={false}
