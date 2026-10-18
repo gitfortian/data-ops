@@ -187,6 +187,8 @@ class AdsApplicationDesignServiceTest {
     var request = good(11L, 0L, List.of("order_day"));
     var validated = service.validate(10L, request);
     org.assertj.core.api.Assertions.assertThat(validated.valid()).isTrue();
+    org.assertj.core.api.Assertions.assertThat(validated.contract().targetStructureFingerprint())
+        .isEqualTo(io.yak.ops.business.modeling.structure.StructureFingerprint.of(structure(10L, 11L)));
     var json = new ObjectMapper().writeValueAsString(validated.contract());
     var digest = io.yak.ops.common.version.VersionDigests.sha256Hex(json);
     var stored = new AdsApplicationDesignService.Saved(
