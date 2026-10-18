@@ -67,10 +67,17 @@ public class PhysicalStandardCoverageInspectionService {
     if (modelId == null || modelId <= 0) throw invalid("缺少有效物理模型 ID");
     Model model = models.findById(modelId).orElseThrow(() ->
         new ModelingException(ModelingErrorCode.NOT_FOUND, "物理模型不存在或不属于当前项目"));
-    if (model.isRecycled() || !("DWD".equalsIgnoreCase(model.layerCode())
-        || "DIM".equalsIgnoreCase(model.layerCode()))) {
-      throw invalid("当前仅提供未回收 DWD/DIM 的标准字段设计覆盖核验");
+    String layerCode = model.layerCode() == null
+        ? "" : model.layerCode().toUpperCase(Locale.ROOT);
+    if (model.isRecycled()
+        || !Set.of("DWD", "DIM", "DWS", "ADS").contains(layerCode)) {
+      throw invalid("当前仅提供未回收 DWD/DIM/DWS/ADS 的只读标准字段覆盖核验");
     }
+    // Only DWD/DIM require the current business-process/grain evidence in this
+    // diagnostic. DWS grain/Metric pins and ADS consumer contracts have their
+    // own authoritative inspectors and must not be inferred here.
+    boolean processSemanticsRequired = "DWD".equals(layerCode) || "DIM".equals(layerCode);
+    Long evidenceProcessId = processSemanticsRequired ? model.processId() : null;
     StructureView structure = structures.get(modelId);
     if (structure == null || !Objects.equals(structure.modelId(), modelId)) {
       throw invalid("物理结构归属与所选模型不一致");
@@ -82,17 +89,19 @@ public class PhysicalStandardCoverageInspectionService {
 
     List<String> findings = new ArrayList<>();
     BusinessProcess process = null;
-    if (model.processId() == null) {
-      findings.add("模型未绑定正式业务过程，不能解释 DWD/DIM 的业务粒度");
-    } else {
-      List<BusinessProcess> authorized = semantic.listProcesses(null);
-      if (authorized == null) throw invalid("业务过程目录不可用，不能宣称标准覆盖完整");
-      process = authorized.stream().filter(item ->
-          Objects.equals(item.id(), model.processId())).findFirst().orElse(null);
-      if (process == null) {
-        findings.add("业务过程当前不可访问或已不存在：" + model.processId());
-      } else if (!StringUtils.hasText(process.grain())) {
-        findings.add("业务过程尚未明确粒度，不能从物理字段名称自动推断");
+    if (processSemanticsRequired) {
+      if (model.processId() == null) {
+        findings.add("模型未绑定正式业务过程，不能解释 DWD/DIM 的业务粒度");
+      } else {
+        List<BusinessProcess> authorized = semantic.listProcesses(null);
+        if (authorized == null) throw invalid("业务过程目录不可用，不能宣称标准覆盖完整");
+        process = authorized.stream().filter(item ->
+            Objects.equals(item.id(), model.processId())).findFirst().orElse(null);
+        if (process == null) {
+          findings.add("业务过程当前不可访问或已不存在：" + model.processId());
+        } else if (!StringUtils.hasText(process.grain())) {
+          findings.add("业务过程尚未明确粒度，不能从物理字段名称自动推断");
+        }
       }
     }
 
@@ -160,17 +169,19 @@ public class PhysicalStandardCoverageInspectionService {
         }).toList();
     String structureSha = StructureFingerprint.of(structure);
     String evidenceSha = digest(new Evidence(modelId, model.code(), model.layerCode(),
-        model.status().name(), model.processId(), process == null ? null : process.code(),
+        model.status().name(), evidenceProcessId, process == null ? null : process.code(),
         process == null ? null : process.name(), process == null ? null : process.grain(),
         structureSha, ordered, facts));
     return new Report(modelId, model.code(), model.layerCode(), model.status().name(),
-        model.processId(), process == null ? null : process.name(),
+        evidenceProcessId, process == null ? null : process.name(),
         findings.isEmpty() ? "COVERED_NOW" : "NEEDS_REVIEW",
         structureSha, evidenceSha, rows.size(), covered, missing, invalid, review,
         List.copyOf(rows), List.copyOf(findings),
-        List.of("只读核验当前设计、当前授权业务过程及 Semantic 标准状态，不代表任何发布版本的历史标准引用",
-            "当前标准启用不构成 DWD/DIM 物理类型兼容、逻辑→物理映射批准或聚合口径确认",
-            "非 ODS 全列强制标准及技术列豁免尚待 PD-010 正式决策；本报告绝不修改现行发布资格",
+        List.of("只读核验当前已保存的非 ODS 物理结构与 Semantic 标准字段状态；仅 DWD/DIM 同时核验当前业务过程/粒度",
+            "本报告只证明当前标准字段引用可读且启用，不证明历史版本冻结了标准证据，也不证明物理类型兼容",
+            "DWS 粒度、精确上游版本及 MetricVersionRef 必须由 DWS 专项合同核验；本报告不替代这些检查",
+            "ADS 消费场景、脱敏/列权限、消费者授权及 Usage Evidence 必须由 ADS/Consumption 专项合同核验",
+            "非 ODS 发布阻断规则与技术列例外仍以 PD-010 正式状态及相关 Owner 签收为准；本报告不改变发布资格",
             "模型结构已保存/发布不代表表已部署、数据已执行、质量通过或可被合法消费"));
   }
 
