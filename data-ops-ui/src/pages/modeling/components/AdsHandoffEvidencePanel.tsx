@@ -78,7 +78,7 @@ export default function AdsHandoffEvidencePanel({ modelId, refreshKey = 0 }: Pro
     <Card
       size="small"
       title="交接证据（只读）"
-      extra={<Button size="small" icon={<ReloadOutlined />} onClick={retry} loading={loading}>刷新证据</Button>}
+      extra={<Button aria-label="刷新证据" size="small" icon={<ReloadOutlined />} onClick={retry} loading={loading}>刷新证据</Button>}
     >
       <Typography.Paragraph type="secondary" className="!mb-3">
         状态由当前项目内可证明的来源证据派生。合同保存不代表任务已运行、质量已通过或消费方已获授权。
