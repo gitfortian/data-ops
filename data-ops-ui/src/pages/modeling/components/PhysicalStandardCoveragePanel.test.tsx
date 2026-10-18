@@ -197,7 +197,7 @@ it('shows missing required linked data standards separately from the standard-fi
   (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(incomplete);
   render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
   expect(await screen.findByText('缺少必需数据标准 1')).toBeInTheDocument();
-  expect(screen.getByText('类型：整数类型 · 当前启用 v1')).toBeInTheDocument();
+  expect(screen.getByText('类型：整数类型 (TYPE) · BIGINT · 当前启用 v1')).toBeInTheDocument();
   expect(screen.getByText('单位：未配置 · 缺少必需引用')).toBeInTheDocument();
   expect(screen.getByText('缺少必需的单位标准引用')).toBeInTheDocument();
 });
