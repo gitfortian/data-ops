@@ -114,6 +114,22 @@ test('uses real server static validation before save and verifies readback', asy
   await waitFor(() => expect(getAdsApplicationContract).toHaveBeenCalledTimes(3));
 });
 
+test('locks editable fields while saving so in-flight edits cannot be overwritten', async () => {
+  let finishSave!: (value: typeof stored) => void;
+  (saveAdsApplicationContract as jest.Mock).mockImplementation(() =>
+    new Promise<typeof stored>((resolve) => { finishSave = resolve; }));
+  render(<AdsApplicationDesignPanel {...props} />);
+  expect(await screen.findByText('合同修订 R1')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '保存应用设计合同' }));
+  await waitFor(() => expect(saveAdsApplicationContract).toHaveBeenCalled());
+  fireEvent.click(screen.getByText('应用目标'));
+  expect(screen.getByPlaceholderText('如 order_overview')).toBeDisabled();
+
+  finishSave(stored);
+  await waitFor(() => expect(screen.getByText('合同修订 R1')).toBeInTheDocument());
+});
+
 test('blocks save if the upstream published pointer drifted', async () => {
   (getModelingModel as jest.Mock).mockResolvedValue({
     id: 20, layerCode: 'DWS', processId: 50, publishedVersionId: 31,
