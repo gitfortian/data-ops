@@ -81,6 +81,7 @@ class MetricPublicationEvidenceProviderImplTest {
 
   @Test
   void refusesNewReferencesWhenMetricDefinitionIsDisabled() {
+    when(publications.lockCurrentMetricVersion(METRIC_ID)).thenReturn(5);
     when(metrics.findById(METRIC_ID)).thenReturn(Optional.of(metric(MetricStatus.DISABLED)));
 
     Evidence evidence = provider.verifyForNewContract(PIN);
