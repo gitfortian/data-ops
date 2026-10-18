@@ -225,8 +225,14 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     if (dirty || !structure.definition) {
       issues.push('物理表结构尚未保存；请先保存上方字段与标准配置，再运行设计校验');
     }
+    if (!['1h', '1d', '1w', '1m', 'ALL'].includes(statPeriod)) {
+      issues.push('统计周期不在支持范围内');
+    }
     if (!businessTimeColumn.trim()) {
       issues.push('必须填写业务时间列；列是否真实存在及其类型仍由服务端按上游发布快照复核');
+    }
+    if (timeZone.trim().length > 64) {
+      issues.push('统计时区长度不能超过 64 个字符');
     }
     if (!validTimeZone(timeZone)) {
       issues.push('统计时区不是有效的 IANA 时区');
