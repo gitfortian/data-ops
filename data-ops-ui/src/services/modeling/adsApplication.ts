@@ -20,6 +20,15 @@ export interface AdsApplicationUpstreamPin {
   layerCode: string;
 }
 
+/** Immutable Metric publication identity; metricVersionId alone is not a valid new reference. */
+export interface AdsMetricPublicationPin {
+  metricId: number;
+  metricVersionId: number;
+  metricVersion: number;
+  snapshotDigest: string;
+  publicationEventId: number;
+}
+
 export interface AdsApplicationContract {
   appCode: string;
   appName: string;
@@ -32,7 +41,9 @@ export interface AdsApplicationContract {
   businessKeys: string[];
   filterExpression: string;
   sortExpression: string;
+  /** Legacy compatibility only; new contracts must also carry metricPublicationPin. */
   metricVersionId?: number | null;
+  metricPublicationPin?: AdsMetricPublicationPin | null;
   refreshTarget: string;
   /** Frozen physical target structure identity at the time this contract revision was saved. */
   targetStructureFingerprint: string;
@@ -53,7 +64,9 @@ export interface AdsApplicationContractRequest {
   businessKeys: string[];
   filterExpression?: string;
   sortExpression?: string;
+  /** Legacy compatibility only; the server rejects this without a complete publication pin. */
   metricVersionId?: number | null;
+  metricPublicationPin?: AdsMetricPublicationPin | null;
   refreshTarget?: string;
   /** Required for save: 0 means no previous contract; protects concurrent edits atomically in C1. */
   expectedRevision?: number;

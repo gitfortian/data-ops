@@ -9,6 +9,7 @@ import io.yak.ops.core.project.ProjectScope;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.bind.annotation.GetMapping;
 
 class MetricPublicationControllerSecurityContractTest {
 
@@ -22,6 +23,17 @@ class MetricPublicationControllerSecurityContractTest {
     assertThat(projectScope.value()).isEqualTo(ProjectMigrationMode.PROJECT_REQUIRED);
     assertThat(readPermission).isNotNull();
     assertThat(permissionValues(readPermission)).contains(MetricPermissionCode.READ);
+  }
+
+  @Test
+  void activeReferenceSelectorIsReadOnlyAndInheritsControllerReadAndProjectScope() throws Exception {
+    Method method = MetricPublicationController.class.getMethod("activeReferences");
+    assertThat(method.getAnnotation(GetMapping.class)).isNotNull();
+    assertThat(method.getAnnotation(RequiresPermission.class)).isNull();
+    assertThat(MetricPublicationController.class.getAnnotation(ProjectScope.class).value())
+        .isEqualTo(ProjectMigrationMode.PROJECT_REQUIRED);
+    assertThat(permissionValues(MetricPublicationController.class
+        .getAnnotation(RequiresPermission.class))).contains(MetricPermissionCode.READ);
   }
 
   @Test

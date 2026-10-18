@@ -14,6 +14,10 @@ import io.yak.ops.business.modeling.repository.ModelVersionRepository;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.version.ModelPublishedStructureReader;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Evidence;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Reference;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Status;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.RowMapper;
@@ -28,8 +32,11 @@ class AdsApplicationDesignServiceTest {
   private final ModelPublishedStructureReader published = mock(ModelPublishedStructureReader.class);
   private final CurrentProject project = mock(CurrentProject.class);
   private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+  private final MetricPublicationEvidenceProvider metricPublicationEvidence =
+      mock(MetricPublicationEvidenceProvider.class);
   private final AdsApplicationDesignService service = new AdsApplicationDesignService(
-      models, versions, structures, published, project, jdbc, new ObjectMapper());
+      models, versions, structures, published, project, metricPublicationEvidence,
+      jdbc, new ObjectMapper());
 
   private final Model ads = new Model(
       10L, "ads_order_overview", "订单经营日报", ModelDialect.MYSQL, null,
@@ -42,7 +49,7 @@ class AdsApplicationDesignServiceTest {
         "", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
-        List.of("order_day"), "", "", null, "DAILY", 0L, null);
+        List.of("order_day"), "", "", null, "DAILY", 0L, null, null);
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("应用编码");
@@ -57,7 +64,7 @@ class AdsApplicationDesignServiceTest {
         "order_overview", "订单经营日报", "alice", "订单运营看板", "UNKNOWN", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
-        List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY", 0L, null);
+        List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY", 0L, null, null);
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("消费类型");
@@ -89,7 +96,7 @@ class AdsApplicationDesignServiceTest {
         "order_overview", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", standard, "LOW")),
-        keys, "", "order_day DESC", null, "DAILY", revision, expectedTargetFingerprint);
+        keys, "", "order_day DESC", null, "DAILY", revision, expectedTargetFingerprint, null);
   }
 
   private void prepareValidSource() {
@@ -107,6 +114,93 @@ class AdsApplicationDesignServiceTest {
         new ModelVersion(30L, 20L, 2, "{}", "{}", 1, "a".repeat(64),
             "alice", null)));
     when(project.requireProjectId()).thenReturn(1L);
+  }
+
+  private AdsApplicationDesignService.Request withMetricPin(
+      AdsApplicationDesignService.Request base, Long legacyMetricVersionId,
+      AdsApplicationDesignService.MetricPublicationPin pin) {
+    return new AdsApplicationDesignService.Request(
+        base.appCode(), base.appName(), base.owner(), base.purpose(), base.consumerType(),
+        base.sourceMode(), base.upstreamModelId(), base.upstreamVersionId(),
+        base.upstreamVersionNo(), base.upstreamChecksum(), base.outputFields(),
+        base.businessKeys(), base.filterExpression(), base.sortExpression(),
+        legacyMetricVersionId, base.refreshTarget(), base.expectedRevision(),
+        base.expectedTargetStructureFingerprint(), pin);
+  }
+
+  @Test
+  void omitsNullMetricPinToKeepLegacyContractHashShapeStable() throws Exception {
+    prepareValidSource();
+    var result = service.validate(10L, good(11L, 0L, List.of("order_day")));
+
+    String serialized = new ObjectMapper().writeValueAsString(result.contract());
+
+    org.assertj.core.api.Assertions.assertThat(serialized)
+        .doesNotContain("metricPublicationPin")
+        .contains("\"metricVersionId\":null");
+  }
+
+  @Test
+  void rejectsLegacyMetricVersionIdWithoutCompletePublicationPin() {
+    prepareValidSource();
+    var base = good(11L, 0L, List.of("order_day"));
+    var request = withMetricPin(base, 91L, null);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("缺少完整发布身份"));
+    verifyNoInteractions(metricPublicationEvidence);
+  }
+
+  @Test
+  void requiresExactActivePublicationPinAndCanonicalizesLegacyVersionId() {
+    prepareValidSource();
+    var pin = new AdsApplicationDesignService.MetricPublicationPin(
+        70L, 71L, 4, "b".repeat(64), 72L);
+    when(metricPublicationEvidence.verifyForNewContract(any(Reference.class)))
+        .thenReturn(new Evidence(Status.VERIFIED_ACTIVE));
+    var request = withMetricPin(good(11L, 0L, List.of("order_day")), null, pin);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isTrue();
+    org.assertj.core.api.Assertions.assertThat(result.contract().metricVersionId()).isEqualTo(71L);
+    org.assertj.core.api.Assertions.assertThat(result.contract().metricPublicationPin()).isEqualTo(pin);
+    verify(metricPublicationEvidence).verifyForNewContract(
+        new Reference(70L, 71L, 4, "b".repeat(64), 72L));
+  }
+
+  @Test
+  void rejectsMismatchBetweenLegacyVersionIdAndCompleteMetricPin() {
+    prepareValidSource();
+    var pin = new AdsApplicationDesignService.MetricPublicationPin(
+        70L, 71L, 4, "b".repeat(64), 72L);
+    var request = withMetricPin(good(11L, 0L, List.of("order_day")), 99L, pin);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("不一致"));
+    verifyNoInteractions(metricPublicationEvidence);
+  }
+
+  @Test
+  void refusesSupersededPublicationWhenFreezingNewContract() {
+    prepareValidSource();
+    var pin = new AdsApplicationDesignService.MetricPublicationPin(
+        70L, 71L, 4, "b".repeat(64), 72L);
+    when(metricPublicationEvidence.verifyForNewContract(any(Reference.class)))
+        .thenReturn(new Evidence(Status.NOT_CURRENTLY_PUBLISHED));
+    var request = withMetricPin(good(11L, 0L, List.of("order_day")), 71L, pin);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("不再是当前有效发布"));
   }
 
   @Test

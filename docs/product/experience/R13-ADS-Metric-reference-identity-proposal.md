@@ -1,6 +1,6 @@
 # R13｜ADS Metric 引用身份与服务端核验设计提案
 
-状态：**提案 / 待评审；不包含生产实现**。  
+状态：**方案已获产品负责人批准（2026-10-18）；第一阶段实现见 Draft PR #608，尚未合并**。  
 关联：Issue #605、C3 Issue #602、C1 PR #599、C2 PR #604。
 
 ## 1. 问题与事实
@@ -95,11 +95,12 @@ Provider 输入至少包含当前 project context 与完整引用；输出应为
 - 保存并发冲突、同内容幂等、历史合同哈希稳定。
 - Architecture Checks 不出现模块循环；Product Guard、完整后端/前端测试和分发构建通过。
 
-## 8. 评审结论要求
+## 8. 已批准决策与实施边界
 
-评审需明确：
-1. 是否采用完整 Metric publication pin（包括是否保留 publicationEventId）。
-2. SPI/provider 的身份、授权和错误状态契约。
-3. 已撤回版本是否仅可历史查看，及新修订的保存政策。
-4. 旧合同如何逐步升级，而不重写历史。
-5. 本设计获批后，才拆分/实施后端引用核验与前端选择器；C3 仍保持只读，不代替 Metric 原域管理。
+产品负责人于 2026-10-18 批准：
+1. 新 ADS 合同冻结完整 Metric publication pin：metricId + metricVersionId + metricVersion + snapshotDigest + publicationEventId。
+2. Metric 模块通过 data-ops-spi 提供只读核验；Modeling 不直接依赖 Metric 模块，避免反向 Maven 依赖/循环。
+3. 新合同只允许当前项目内、当前有效、身份与摘要完全匹配且 Metric 启用的发布；撤回/被替换版本不能用于新修订。
+4. 历史合同保留原始 pin、revision 与 hash，不自动补齐旧引用；旧合同仅有 metricVersionId 时显示身份不完整，用户显式重选或清除后创建新修订。
+5. Metric READ 与项目访问必须在 provider 内核验；权限不足、跨项目、服务不可用均失败关闭，不泄露跨项目对象是否存在。
+6. PR #608 实施第一阶段：SPI/provider、服务端 validate/save 门禁、最小已发布引用 API、工作台选择器和回归测试。后续 C3 只读交接证据卡仍独立实施，不代替 Metric 原域管理。

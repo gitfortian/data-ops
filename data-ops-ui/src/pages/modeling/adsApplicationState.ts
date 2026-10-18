@@ -22,6 +22,7 @@ export const newAdsApplicationDraft = (
   filterExpression: '',
   sortExpression: '',
   metricVersionId: null,
+  metricPublicationPin: null,
   refreshTarget: '',
 });
 
@@ -45,6 +46,7 @@ export const draftFromAdsSaved = (
     filterExpression: value.filterExpression,
     sortExpression: value.sortExpression,
     metricVersionId: value.metricVersionId ?? null,
+    metricPublicationPin: value.metricPublicationPin ?? null,
     refreshTarget: value.refreshTarget,
   };
 };
@@ -77,6 +79,7 @@ export const changeAdsSourceMode = (
   filterExpression: '',
   sortExpression: '',
   metricVersionId: null,
+  metricPublicationPin: null,
 });
 
 /** Editing a historic revision is explicitly a new draft, never an in-place overwrite. */

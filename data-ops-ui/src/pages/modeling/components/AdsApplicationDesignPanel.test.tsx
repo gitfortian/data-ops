@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AdsApplicationDesignPanel from './AdsApplicationDesignPanel';
+import { listActiveMetricPublicationReferences } from '@/services/metric/api';
 import {
   getAdsApplicationContract, getAdsApplicationContractHistory,
   validateAdsApplicationContract, saveAdsApplicationContract,
@@ -21,6 +22,9 @@ jest.mock('@/services/modeling/api', () => ({
   getModelingVersion: jest.fn(),
   listModelingVersions: jest.fn(),
   pageModelingModels: jest.fn(),
+}));
+jest.mock('@/services/metric/api', () => ({
+  listActiveMetricPublicationReferences: jest.fn(),
 }));
 
 const contract = {
@@ -60,6 +64,7 @@ const props = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (listActiveMetricPublicationReferences as jest.Mock).mockResolvedValue([]);
   (getAdsApplicationContract as jest.Mock).mockResolvedValue(stored);
   (getAdsApplicationContractHistory as jest.Mock).mockResolvedValue([stored]);
   (pageModelingModels as jest.Mock).mockResolvedValue({
@@ -84,6 +89,30 @@ beforeEach(() => {
     deliveryStatus: 'DELIVERY_NOT_CONFIGURED',
   });
   (saveAdsApplicationContract as jest.Mock).mockResolvedValue(stored);
+});
+
+test('selects and displays a complete immutable Metric publication pin', async () => {
+  (listActiveMetricPublicationReferences as jest.Mock).mockResolvedValue([{
+    publicationEventId: 72,
+    metricId: 70,
+    metricVersionId: 71,
+    metricVersion: 4,
+    snapshotDigest: 'c'.repeat(64),
+    metricCode: 'gmv',
+    metricName: '成交总额',
+    publishedAt: '2026-10-18T10:00:00',
+  }]);
+  render(<AdsApplicationDesignPanel {...props} />);
+  expect(await screen.findByText('合同修订 R1')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('业务口径'));
+  await waitFor(() => expect(listActiveMetricPublicationReferences).toHaveBeenCalled());
+  fireEvent.mouseDown(screen.getByRole('combobox'));
+  fireEvent.click(await screen.findByText(/gmv · 成交总额 · V4/));
+
+  expect(screen.getByText(/Metric #70 · V4/)).toBeInTheDocument();
+  expect(screen.getByText(/发布事件 #72/)).toBeInTheDocument();
+  expect(screen.getByText(/摘要 cccccccccccc/)).toBeInTheDocument();
+  expect(screen.queryByText(/Metric 已发布版本 ID/)).not.toBeInTheDocument();
 });
 
 test('rehydrates persisted version identity and never invents execution or grants', async () => {

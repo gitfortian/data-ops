@@ -1,5 +1,6 @@
 package io.yak.ops.business.modeling.derive;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.yak.ops.business.modeling.domain.Model;
@@ -13,6 +14,10 @@ import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.modeling.version.ModelPublishedStructureReader;
 import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Evidence;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Reference;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Status;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -41,18 +46,22 @@ public class AdsApplicationDesignService {
 
   public record OutputField(String sourceColumn, String outputColumn, Long standardFieldId,
       String sensitivity) {}
+  /** Complete immutable identity of the Metric publication selected for this ADS revision. */
+  public record MetricPublicationPin(Long metricId, Long metricVersionId, Integer metricVersion,
+      String snapshotDigest, Long publicationEventId) {}
   public record Request(String appCode, String appName, String owner, String purpose,
       String consumerType, String sourceMode, long upstreamModelId, long upstreamVersionId,
       int upstreamVersionNo, String upstreamChecksum, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
       Long metricVersionId, String refreshTarget, Long expectedRevision,
-      String expectedTargetStructureFingerprint) {}
+      String expectedTargetStructureFingerprint, MetricPublicationPin metricPublicationPin) {}
   public record UpstreamPin(long modelId, long versionId, int versionNo, String checksum,
       String layerCode) {}
   public record Contract(String appCode, String appName, String owner, String purpose,
       String consumerType, String sourceMode, UpstreamPin upstream, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
-      Long metricVersionId, String refreshTarget, String targetStructureFingerprint) {}
+      Long metricVersionId, @JsonInclude(JsonInclude.Include.NON_NULL) MetricPublicationPin metricPublicationPin,
+      String refreshTarget, String targetStructureFingerprint) {}
   public record Saved(long modelId, long revision, String contractSha256, String contractJson,
       Contract contract, String updatedBy, String updatedAt) {}
   public record ValidationResult(boolean valid, List<String> blockers, List<String> warnings,
@@ -65,17 +74,20 @@ public class AdsApplicationDesignService {
   private final ModelStructureService structures;
   private final ModelPublishedStructureReader published;
   private final CurrentProject projects;
+  private final MetricPublicationEvidenceProvider metricPublicationEvidence;
   private final JdbcTemplate jdbc;
   private final ObjectMapper mapper;
 
   public AdsApplicationDesignService(ModelRepository models, ModelVersionRepository versions,
       ModelStructureService structures, ModelPublishedStructureReader published,
-      CurrentProject projects, JdbcTemplate jdbc, ObjectMapper mapper) {
+      CurrentProject projects, MetricPublicationEvidenceProvider metricPublicationEvidence,
+      JdbcTemplate jdbc, ObjectMapper mapper) {
     this.models = models;
     this.versions = versions;
     this.structures = structures;
     this.published = published;
     this.projects = projects;
+    this.metricPublicationEvidence = metricPublicationEvidence;
     this.jdbc = jdbc;
     this.mapper = mapper;
   }
@@ -167,6 +179,8 @@ public class AdsApplicationDesignService {
     if (!SHA256.matcher(java.util.Objects.toString(request.upstreamChecksum(), "")).matches()) {
       blockers.add("上游版本校验和必须是合法 SHA-256");
     }
+    if (!blockers.isEmpty()) return null;
+    MetricPublicationPin metricPin = validateMetricPublicationPin(request, blockers);
     if (!blockers.isEmpty()) return null;
     if ("DWD".equals(request.sourceMode()))
       warnings.add("当前为明细来源；不得套用 DWS 汇总指标或粒度。");
@@ -263,8 +277,59 @@ public class AdsApplicationDesignService {
         request.purpose().trim(), request.consumerType(), request.sourceMode(), pin, fields, keys,
         request.filterExpression() == null ? "" : request.filterExpression().trim(),
         request.sortExpression() == null ? "" : request.sortExpression().trim(),
-        request.metricVersionId(), request.refreshTarget() == null ? "" : request.refreshTarget().trim(),
+        metricPin == null ? null : metricPin.metricVersionId(), metricPin,
+        request.refreshTarget() == null ? "" : request.refreshTarget().trim(),
         StructureFingerprint.of(targetStructure));
+  }
+
+  private MetricPublicationPin validateMetricPublicationPin(
+      Request request, List<String> blockers) {
+    MetricPublicationPin pin = request.metricPublicationPin();
+    if (pin == null) {
+      if (request.metricVersionId() != null) {
+        blockers.add("旧合同仅有 Metric 版本 ID，缺少完整发布身份；请重新选择当前已发布指标");
+      }
+      return null;
+    }
+    if (pin.metricId() == null || pin.metricId() <= 0
+        || pin.metricVersionId() == null || pin.metricVersionId() <= 0
+        || pin.metricVersion() == null || pin.metricVersion() <= 0
+        || pin.publicationEventId() == null || pin.publicationEventId() <= 0
+        || !SHA256.matcher(java.util.Objects.toString(pin.snapshotDigest(), "")).matches()) {
+      blockers.add("Metric 发布引用身份不完整或快照摘要不是合法 SHA-256");
+      return null;
+    }
+    if (request.metricVersionId() != null
+        && !request.metricVersionId().equals(pin.metricVersionId())) {
+      blockers.add("兼容字段 metricVersionId 与完整 Metric 发布引用不一致");
+      return null;
+    }
+
+    Evidence evidence = metricPublicationEvidence.verifyForNewContract(new Reference(
+        pin.metricId(), pin.metricVersionId(), pin.metricVersion(),
+        pin.snapshotDigest(), pin.publicationEventId()));
+    Status status = evidence == null || evidence.status() == null
+        ? Status.UNAVAILABLE : evidence.status();
+    if (status != Status.VERIFIED_ACTIVE) {
+      blockers.add(metricPublicationBlocker(status));
+      return null;
+    }
+    return pin;
+  }
+
+  private String metricPublicationBlocker(Status status) {
+    return switch (status) {
+      case WITHDRAWN -> "所引用的 Metric 发布已撤回，不能用于新合同";
+      case NOT_CURRENTLY_PUBLISHED ->
+          "所引用的 Metric 发布已不再是当前有效发布，请重新选择";
+      case NOT_FOUND -> "所引用的 Metric 发布不存在或不在当前项目内";
+      case REFERENCE_MISMATCH -> "Metric 发布事件与所选引用身份不一致";
+      case VERSION_MISMATCH -> "Metric 不可变版本身份不匹配";
+      case DIGEST_MISMATCH -> "Metric 发布快照摘要不匹配";
+      case FORBIDDEN -> "当前用户无权读取所引用的 Metric 发布证据";
+      case UNAVAILABLE -> "Metric 原域暂不可用，无法核验发布引用";
+      case VERIFIED_ACTIVE -> "";
+    };
   }
 
   private boolean safeFilterExpression(String value, Set<String> outputNames) {

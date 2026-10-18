@@ -1,6 +1,6 @@
 # R13-C3｜ADS 只读交接证据 API 与真相域盘点
 
-状态：**技术盘点完成，C3 生产实现未开始**。  
+状态：**技术盘点完成；Metric publication pin 第一阶段实现进行中（Draft PR #608，尚未合并）**。  
 基线：C1 #599 已合并；C2 #604 已合并；C3 UX 原型 #603 已合并；产品尚未逐项签收 UX Gate。  
 关联：Issue #602（C3 只读交接证据）、Issue #605（Metric 引用身份与核验边界）。
 
@@ -154,7 +154,7 @@ Dataset API 有 `PROJECT_REQUIRED` 项目作用域。其开发来源关联到 Da
 
 ## 10. C3 实现前的决策与依赖
 
-1. **先完成 Issue #605**：为 ADS Metric 引用定义完整、可冻结、跨项目可核验的身份，并解决模块依赖方向；未完成前 Metric 卡片不能声称已核验。
+1. **Issue #605 设计已获批准，第一阶段正在 PR #608 实施**：完整 Metric publication pin、Metric 所有者 SPI/provider、当前项目权限校验、服务端 validate/save 门禁和最小引用选择器。PR 合并并通过主线 CI 前，不宣称生产交付完成。
 2. DataDev 关联需要一个经过治理批准、只读、按项目和 ADS model/version 查询的反查边界；不能在 C3 内启用 DR-07 绑定写门禁。
 3. Quality 需要明确可由 ADS contract/source identity 稳定追溯到 monitor/rule/run 的关系；否则只显示 NOT_CONNECTED。
 4. Dataset/Service/Consumption 需要明确 owner-approved 的引用或 canonical source identity；订阅与访问授权必须分开建模。
@@ -162,5 +162,8 @@ Dataset API 有 `PROJECT_REQUIRED` 项目作用域。其开发来源关联到 Da
 6. C3 仅允许 GET/只读查询；不执行 SQL、创建/重试任务、运行质量检查、发布 Metric/Dataset/Service、同步消费证据、创建订阅、创建/轮换 API Key 或修改访问策略。
 
 ## 11. 本阶段结论
+
+2026-10-18 产品负责人批准了 Issue #605 的 Metric 引用身份与核验边界方案。PR #608 正在实现第一阶段；下游 Runtime/Quality/Dataset/Service/Consumption 的稳定关联仍未完成，不能因 Metric 引用已核验就声称 C3 全链路完成。
+
 
 当前有多个独立原域的只读 API，但 **没有一条可直接从 ADS 合同贯通 Metric → Runtime → Quality → Dataset/Service → 消费授权的完整、可证明链路**。这不是页面拼接就能补齐的问题；必须先补齐稳定身份与 owner-approved 关联边界。C3 的首个生产版本应如实显示缺口状态，不以猜测匹配或跨域写操作制造“闭环”假象。

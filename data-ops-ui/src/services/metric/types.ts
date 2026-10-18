@@ -218,6 +218,18 @@ export interface PublishedMetricContract {
   snapshot?: string;
 }
 
+/** Minimal identity returned for selecting an active Metric publication in another workflow. */
+export interface PublishedMetricReference {
+  publicationEventId: number;
+  metricId: number;
+  metricVersionId: number;
+  metricVersion: number;
+  snapshotDigest: string;
+  metricCode: string;
+  metricName: string;
+  publishedAt?: string;
+}
+
 export interface MetricPublicationSummary {
   metricId: number;
   metricVersion: number;

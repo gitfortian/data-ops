@@ -4,6 +4,8 @@ import {
 } from 'antd';
 import { ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
+import { listActiveMetricPublicationReferences } from '@/services/metric/api';
+import type { PublishedMetricReference } from '@/services/metric/types';
 import {
   getModelingModel, getModelingVersion, listModelingVersions, pageModelingModels,
 } from '@/services/modeling/api';
@@ -69,6 +71,9 @@ export default function AdsApplicationDesignPanel({
   const [candidates, setCandidates] = useState<ModelingModelRecord[]>([]);
   const [candidateError, setCandidateError] = useState('');
   const [candidateLoading, setCandidateLoading] = useState(false);
+  const [metricReferences, setMetricReferences] = useState<PublishedMetricReference[]>([]);
+  const [metricReferencesStatus, setMetricReferencesStatus] =
+    useState<'NOT_LOADED' | 'LOADING' | 'READY' | 'UNAVAILABLE'>('NOT_LOADED');
   const [source, setSource] = useState<ModelingModelRecord | null>(null);
   const [sourceLoaded, setSourceLoaded] = useState(false);
   const [sourceError, setSourceError] = useState('');
@@ -106,6 +111,34 @@ export default function AdsApplicationDesignPanel({
     value: String(field.columnName),
     label: String(field.columnName) + ' · ' + String(field.dataType ?? '字段'),
   }));
+  const metricReferenceOptions = useMemo(() => {
+    const options: { value: number | string; label: string; disabled?: boolean }[] =
+      metricReferences.map((reference) => ({
+        value: reference.publicationEventId,
+        label: `${reference.metricCode} · ${reference.metricName} · V${reference.metricVersion} · ${reference.snapshotDigest.slice(0, 8)}`,
+      }));
+    const pin = draft.metricPublicationPin;
+    if (pin && !metricReferences.some(
+      (reference) => reference.publicationEventId === pin.publicationEventId,
+    )) {
+      const stateLabel = metricReferencesStatus === 'READY'
+        ? '非当前有效发布'
+        : '状态待核验';
+      options.unshift({
+        value: pin.publicationEventId,
+        label: `已保存引用 · Metric #${pin.metricId} · V${pin.metricVersion} · ${pin.snapshotDigest.slice(0, 8)}（${stateLabel}）`,
+        disabled: true,
+      });
+    } else if (!pin && draft.metricVersionId != null) {
+      options.unshift({
+        value: `legacy:${draft.metricVersionId}`,
+        label: `旧合同引用 · Metric 版本 ID ${draft.metricVersionId}（身份不足，需重选或清除）`,
+        disabled: true,
+      });
+    }
+    return options;
+  }, [draft.metricPublicationPin, draft.metricVersionId, metricReferences, metricReferencesStatus]);
+
   const sourceOptions = (sourceStructure?.columns ?? [])
     .filter((field) => Boolean(field.columnName))
     .map((field) => ({
@@ -153,6 +186,24 @@ export default function AdsApplicationDesignPanel({
     });
     return () => { active = false; };
   }, [modelId, modelCode, modelName, refreshIndex]);
+
+  // Load only minimal, current-project publication identities when the user opens the
+  // Metric reference step. A failed read is not represented as an empty authoritative list.
+  useEffect(() => {
+    if (step !== 3) return undefined;
+    let active = true;
+    setMetricReferencesStatus('LOADING');
+    listActiveMetricPublicationReferences().then((references) => {
+      if (!active) return;
+      setMetricReferences(references);
+      setMetricReferencesStatus('READY');
+    }).catch(() => {
+      if (!active) return;
+      setMetricReferences([]);
+      setMetricReferencesStatus('UNAVAILABLE');
+    });
+    return () => { active = false; };
+  }, [step]);
 
   // Compare the saved contract's immutable target-structure pin with the current
   // server structure; the browser's editable structure snapshot is not authoritative.
@@ -667,11 +718,40 @@ export default function AdsApplicationDesignPanel({
             placeholder="如 order_day DESC, city_id ASC" />
         </label>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label>Metric 已发布版本 ID（引用待原域验证）
-            <InputNumber className="mt-1 !w-full" disabled={!canEdit || saving}
-              min={1} precision={0} value={draft.metricVersionId ?? undefined}
-              onChange={(value) => apply({ metricVersionId: value ?? null })}
-              placeholder="留空代表当前不引用 Metric" />
+          <label className="block">Metric 发布引用（固定不可变版本）
+            <Select
+              className="mt-1 w-full"
+              disabled={!canEdit || saving || metricReferencesStatus === 'LOADING'}
+              loading={metricReferencesStatus === 'LOADING'}
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              value={draft.metricPublicationPin?.publicationEventId
+                ?? (draft.metricVersionId != null ? `legacy:${draft.metricVersionId}` : undefined)}
+              options={metricReferenceOptions}
+              placeholder="不引用 Metric"
+              notFoundContent={metricReferencesStatus === 'LOADING'
+                ? '正在读取已发布指标…'
+                : metricReferencesStatus === 'UNAVAILABLE'
+                  ? '读取失败；不能把失败当作空列表'
+                  : '当前项目暂无可供新合同引用的已发布指标'}
+              onChange={(value: number | string | undefined) => {
+                if (typeof value === 'string' && value.startsWith('legacy:')) return;
+                const selected = typeof value === 'number'
+                  ? metricReferences.find((reference) => reference.publicationEventId === value)
+                  : undefined;
+                apply({
+                  metricVersionId: selected?.metricVersionId ?? null,
+                  metricPublicationPin: selected ? {
+                    metricId: selected.metricId,
+                    metricVersionId: selected.metricVersionId,
+                    metricVersion: selected.metricVersion,
+                    snapshotDigest: selected.snapshotDigest,
+                    publicationEventId: selected.publicationEventId,
+                  } : null,
+                });
+              }}
+            />
           </label>
           <label>期望刷新目标（仅业务意图，非运行 SLA）
             <Input className="mt-1" disabled={!canEdit || saving}
@@ -680,9 +760,23 @@ export default function AdsApplicationDesignPanel({
               placeholder="如 DAILY / 每日 08:00 前" />
           </label>
         </div>
-        <Alert showIcon type="warning"
-          message="Metric / 安全与实际运行状态仍未联通"
-          description="当前 C1 服务只保存 Metric 版本引用，不核验指标原域的发布或漂移；填写刷新目标也不能证明存在真实运行任务。正式开放消费需单独取得授权证据。" />
+        {draft.metricPublicationPin && <Typography.Text type="secondary">
+          固定引用：Metric #{draft.metricPublicationPin.metricId} · V{draft.metricPublicationPin.metricVersion}
+          · 发布事件 #{draft.metricPublicationPin.publicationEventId}
+          · 摘要 {draft.metricPublicationPin.snapshotDigest.slice(0, 12)}
+        </Typography.Text>}
+        {!draft.metricPublicationPin && draft.metricVersionId != null && <Alert showIcon type="warning"
+          message="旧合同仅有 Metric 版本 ID，身份不完整"
+          description="不会根据版本 ID 猜测指标或发布事件。请显式选择当前已发布指标，或清除旧引用后再保存新修订。" />}
+        {metricReferencesStatus === 'UNAVAILABLE' && <Alert showIcon type="warning"
+          message="无法读取当前项目的已发布指标"
+          description="当前用户可能缺少 Metric READ 权限，或 Metric 原域暂不可用。引用选择不可用；不能据此断言指标不存在。" />}
+        {metricReferencesStatus === 'READY' && metricReferences.length === 0 && <Alert showIcon type="info"
+          message="当前项目暂无可供新合同引用的已发布指标"
+          description="可继续设计不引用 Metric 的 ADS 输出合同；不能手工输入 ID 绕过发布身份核验。" />}
+        <Alert showIcon type="info"
+          message="Metric 发布引用按原域事实核验；运行与消费授权仍未接入"
+          description="选择已发布引用后，服务端会核验当前项目权限、发布事件、版本 ID 和 SHA-256 快照摘要。引用本身不证明存在真实运行任务、Dataset 或消费授权。" />
       </div>}
       {step === 4 && <div className="space-y-4">
         <Typography.Title level={5}>05 · 服务端静态验证与合同保存</Typography.Title>
