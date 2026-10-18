@@ -45,7 +45,7 @@ public class AdsApplicationDesignService {
       String consumerType, String sourceMode, long upstreamModelId, long upstreamVersionId,
       int upstreamVersionNo, String upstreamChecksum, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
-      Long metricVersionId, String refreshTarget) {}
+      Long metricVersionId, String refreshTarget, Long expectedRevision) {}
   public record UpstreamPin(long modelId, long versionId, int versionNo, String checksum,
       String layerCode) {}
   public record Contract(String appCode, String appName, String owner, String purpose,
@@ -123,7 +123,12 @@ public class AdsApplicationDesignService {
     if (existing.isPresent() && existing.get().contractSha256().equals(digest)) {
       return existing.get();
     }
-    long revision = existing.map(Saved::revision).orElse(0L) + 1L;
+    long currentRevision = existing.map(Saved::revision).orElse(0L);
+    if (request.expectedRevision() == null
+        || request.expectedRevision().longValue() != currentRevision) {
+      throw new IllegalArgumentException("ADS 合同修订已变化，请重新读取最新版本后再保存");
+    }
+    long revision = currentRevision + 1L;
     if (existing.isEmpty()) {
       jdbc.update("INSERT INTO yak_modeling_ads_application_design "
           + "(project_id,model_id,revision,contract_sha256,contract_json,updated_by,updated_at) "
@@ -152,6 +157,9 @@ public class AdsApplicationDesignService {
     if (!StringUtils.hasText(request.purpose())) blockers.add("必须说明应用用途");
     if (!CONSUMER_TYPES.contains(request.consumerType())) blockers.add("请选择有效消费类型");
     if (!SOURCE_MODES.contains(request.sourceMode())) blockers.add("来源只能选择已发布 DWS 或显式选择的 DWD");
+    if (!SHA256.matcher(java.util.Objects.toString(request.upstreamChecksum(), "")).matches()) {
+      blockers.add("上游版本校验和必须是合法 SHA-256");
+    }
     if (!blockers.isEmpty()) return null;
     if ("DWD".equals(request.sourceMode()))
       warnings.add("当前为明细来源；不得套用 DWS 汇总指标或粒度。");
@@ -184,9 +192,11 @@ public class AdsApplicationDesignService {
     if (fields.isEmpty()) blockers.add("至少需要一个输出字段");
     Set<String> outputNames = new HashSet<>();
     Set<String> sourceNames = new HashSet<>();
-    Set<String> targetColumns = targetStructure.columns() == null ? Set.of()
-        : targetStructure.columns().stream().map(c -> c.columnName().toLowerCase(Locale.ROOT))
-            .collect(java.util.stream.Collectors.toSet());
+    Map<String, StructureView.ColumnView> targetColumns = targetStructure.columns() == null ? Map.of()
+        : targetStructure.columns().stream()
+            .filter(c -> StringUtils.hasText(c.columnName()))
+            .collect(java.util.stream.Collectors.toMap(
+                c -> c.columnName().toLowerCase(Locale.ROOT), c -> c, (a, b) -> a));
     for (OutputField field : fields) {
       if (field == null || !StringUtils.hasText(field.sourceColumn())
           || !StringUtils.hasText(field.outputColumn())) {
@@ -197,8 +207,14 @@ public class AdsApplicationDesignService {
         blockers.add("目标输出列名不合法：" + field.outputColumn());
       if (!outputNames.add(field.outputColumn().toLowerCase(Locale.ROOT)))
         blockers.add("目标输出列名重复：" + field.outputColumn());
-      if (!targetColumns.contains(field.outputColumn().toLowerCase(Locale.ROOT)))
+      StructureView.ColumnView targetColumn =
+          targetColumns.get(field.outputColumn().toLowerCase(Locale.ROOT));
+      if (targetColumn == null) {
         blockers.add("输出列不存在于当前 ADS 物理结构：" + field.outputColumn());
+      } else if (targetColumn.stdFieldId() == null
+          || !targetColumn.stdFieldId().equals(field.standardFieldId())) {
+        blockers.add("ADS 输出列必须绑定当前物理结构已治理的标准字段：" + field.outputColumn());
+      }
       if (!sourceNames.add(field.sourceColumn().toLowerCase(Locale.ROOT)))
         warnings.add("同一来源列被映射多次：" + field.sourceColumn());
       if (!sourceColumns.containsKey(field.sourceColumn().toLowerCase(Locale.ROOT)))
@@ -210,7 +226,11 @@ public class AdsApplicationDesignService {
     List<String> keys = request.businessKeys() == null ? List.of() : new java.util.ArrayList<>(request.businessKeys());
     if (keys.isEmpty()) blockers.add("必须声明输出业务键");
     for (String key : keys) {
-      if (!StringUtils.hasText(key) || !outputNames.contains(key.toLowerCase(Locale.ROOT)))
+      if (!StringUtils.hasText(key)) {
+        blockers.add("业务键不能为空");
+        continue;
+      }
+      if (!outputNames.contains(key.toLowerCase(Locale.ROOT)))
         blockers.add("业务键必须是已映射的输出字段：" + key);
       if (!keySet.add(key.toLowerCase(Locale.ROOT))) blockers.add("业务键重复：" + key);
     }
