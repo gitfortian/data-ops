@@ -11,7 +11,7 @@
 3. **输出设计**：已发布上游快照的列 → ADS 现有物理结构的列，输出列必须已有标准字段绑定；确定业务键和敏感等级标识。
 4. **业务口径**：有限过滤和排序文本、独立 MetricVersion ID 引用及刷新意图；提示 Metric 原域尚未核验，刷新意图不是 Runtime SLA。
 5. **验证保存**：POST 服务端 V0 静态验证，PUT 携带 expectedRevision 进行原子修订保护，GET 回读合同并比较 revision 与合同哈希；静态 PASS 不代表真实数据、权限或服务可用。
-6. **历史交接**：GET 最多 50 条不可变修订记录，选择旧版只载入新草稿（不会倒写历史）；明确将 NOT_CONNECTED / NOT_EXECUTED / DELIVERY_NOT_CONFIGURED 显示为独立状态。
+6. **历史交接**：GET 最多 50 条不可变修订记录，选择旧版只载入新草稿（不会倒写历史）；明确将样本验证与运行后对账标为 NOT_CONNECTED，外部消费授权标为 UNKNOWN；Modeling 自有的 DELIVERY_NOT_CONFIGURED 只描述设计交付配置，不能代表 Dataset/Service 原域确实不存在授权。
 
 正常保存后检查 revision 与哈希回读，不以 PUT 成功提示替代数据库事实。重读时有未保存草稿的二次确认，整页刷新/关闭由 beforeunload 防丢失提示保护。若 C1 服务不可访问，失败并保留错误，不展示固定样例数据伪造在线结果。
 
