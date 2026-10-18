@@ -1,7 +1,10 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PhysicalStandardCoveragePanel from './PhysicalStandardCoveragePanel';
-import { inspectPhysicalStandardCoverage } from '@/services/modeling/api';
+import {
+  inspectPhysicalStandardCoverage,
+  type PhysicalStandardCoverageInspection,
+} from '@/services/modeling/api';
 
 let mockProjectId = 1;
 jest.mock('@/contexts/SecurityProjectContext', () => ({
@@ -13,13 +16,15 @@ jest.mock('@/services/modeling/api', () => ({
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
   return { ...actual, Table: ({ dataSource, columns }: {
-    dataSource: { columnId: number; columnName: string; status: string }[];
-    columns: { key?: string; render?: (_: unknown, row: {
-      columnId: number; columnName: string; status: string;
-    }) => React.ReactNode }[];
+    dataSource: PhysicalStandardCoverageInspection['columns'];
+    columns: { key?: string; render?: (
+      _: unknown, row: PhysicalStandardCoverageInspection['columns'][number],
+    ) => React.ReactNode }[];
   }) => <div>{dataSource.map(row => <div key={row.columnId}>
     {row.columnName} : {row.status}
-    {columns.find(col => col.key === 'action')?.render?.(undefined, row)}
+    {columns.map((column, index) => <span key={column.key || index}>
+      {column.render?.(undefined, row)}
+    </span>)}
   </div>)}</div> };
 });
 
@@ -29,10 +34,20 @@ const report = {
   status: 'NEEDS_REVIEW', structureSha256: 'a'.repeat(64),
   evidenceSha256: 'b'.repeat(64), columnCount: 2, enabledCount: 1,
   missingCount: 1, invalidCount: 0, reviewCount: 0,
+  missingDataStandardCount: 0, invalidDataStandardCount: 0,
   columns: [
     { columnId: 1, columnName: 'order_id', dataType: 'BIGINT',
       stdFieldId: 11, standardName: '订单标识',
-      status: 'ENABLED_NOW', explanation: '当前可用' },
+      status: 'ENABLED_NOW', explanation: '当前可用',
+      dataStandards: {
+        role: 'PROCESS',
+        typeStandard: { id: 111, kind: 'TYPE', code: 'type_int', name: '整数类型',
+          status: 'ENABLED', version: 1, evidenceStatus: 'ENABLED_NOW',
+          definition: 'BIGINT', explanation: '当前启用' },
+        codeSetStatus: 'NOT_APPLICABLE', status: 'COMPLETE_NOW',
+        missingRequiredReference: false, invalidReference: false,
+        explanation: '当前字段适用的数据标准引用均可读取且启用',
+      } },
     { columnId: 2, columnName: 'process_time', dataType: 'TIMESTAMP',
       stdFieldId: null, status: 'MISSING_STANDARD', explanation: '尚未批准技术列例外' },
   ],
@@ -141,4 +156,48 @@ it('labels ADS evidence as read-only and does not imply consumer contract passed
   expect(screen.getByText('分层专项合同：需单独核验')).toBeInTheDocument();
   expect(screen.getByText(/不核验 ADS 消费合同\/脱敏\/消费者授权/)).toBeInTheDocument();
   expect(screen.getByText('ADS 消费合同/脱敏/消费者授权/Usage Evidence 尚未核验')).toBeInTheDocument();
+});
+
+
+it('shows missing required linked data standards separately from the standard-field identity', async () => {
+  const incomplete = {
+    ...report,
+    missingDataStandardCount: 1,
+    findings: ['关联数据标准需要复核：amount（缺少必需的单位标准引用）'],
+    columns: [
+      {
+        ...report.columns[0],
+        columnName: 'amount',
+        dataStandards: {
+          role: 'METRIC',
+          typeStandard: {
+            id: 111, kind: 'TYPE', code: 'type_int', name: '整数类型',
+            status: 'ENABLED', version: 1, evidenceStatus: 'ENABLED_NOW',
+            definition: 'BIGINT', explanation: '当前启用',
+          },
+          unitStandard: {
+            id: null, kind: 'UNIT', name: null, code: null, status: null, version: null,
+            evidenceStatus: 'MISSING_REQUIRED_REFERENCE', definition: null,
+            explanation: '缺少必需的单位标准引用',
+          },
+          caliberStandard: {
+            id: null, kind: 'CALIBER', name: null, code: null, status: null, version: null,
+            evidenceStatus: 'NOT_CONFIGURED', definition: null,
+            explanation: '未配置选填的口径标准',
+          },
+          codeSetStatus: 'NOT_APPLICABLE',
+          status: 'MISSING_REQUIRED_REFERENCE',
+          missingRequiredReference: true, invalidReference: false,
+          explanation: '缺少必需的单位标准引用',
+        },
+      },
+      report.columns[1],
+    ],
+  };
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(incomplete);
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('缺少必需数据标准 1')).toBeInTheDocument();
+  expect(screen.getByText('类型：整数类型 · 当前启用 v1')).toBeInTheDocument();
+  expect(screen.getByText('单位：未配置 · 缺少必需引用')).toBeInTheDocument();
+  expect(screen.getByText('缺少必需的单位标准引用')).toBeInTheDocument();
 });
