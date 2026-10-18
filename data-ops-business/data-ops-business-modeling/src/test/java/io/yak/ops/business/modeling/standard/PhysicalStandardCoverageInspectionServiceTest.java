@@ -275,12 +275,46 @@ class PhysicalStandardCoverageInspectionServiceTest {
         "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
         "order_status", null, null, StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
     when(semantic.getField(12L)).thenReturn(dimensionWithCodeSet);
-    when(standardQuery.existsCodeSet("order_status")).thenReturn(false);
+    when(standardQuery.codeSetReference("order_status")).thenReturn(
+        new StandardQueryApi.CodeSetReference("order_status", 0, 0, "NOT_FOUND", null));
     var report = service.inspect(50L);
     assertEquals(2, report.invalidDataStandardCount());
     assertTrue(report.columns().stream().allMatch(c ->
         "INVALID_REFERENCE".equals(c.dataStandards().status())));
     assertTrue(report.findings().stream().anyMatch(x -> x.contains("码集不存在或已停用")));
+  }
+
+  @Test void mixedCodeSetDoesNotAppearEnabledAndItsWholeMembershipIsFingerprintEvidence() {
+    StandardField dimension = new StandardField(12L, "order_12", "订单 #12",
+        "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
+        "order_status", null, null, StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+    when(semantic.getField(12L)).thenReturn(dimension);
+    when(standardQuery.codeSetReference("order_status")).thenReturn(
+        new StandardQueryApi.CodeSetReference("order_status", 3, 2, "MIXED", "a".repeat(64)));
+
+    var first = service.inspect(50L);
+    var evidence = first.columns().stream()
+        .filter(c -> Long.valueOf(12L).equals(c.stdFieldId())).findFirst().orElseThrow();
+    assertEquals("MIXED", evidence.dataStandards().codeSetStatus());
+    assertEquals(3, evidence.dataStandards().codeSetItemCount());
+    assertEquals(2, evidence.dataStandards().codeSetEnabledItemCount());
+    assertEquals("a".repeat(64), evidence.dataStandards().codeSetEvidenceSha256());
+    assertTrue(evidence.dataStandards().invalidReference());
+    assertEquals(1, first.invalidDataStandardCount());
+
+    when(standardQuery.codeSetReference("order_status")).thenReturn(
+        new StandardQueryApi.CodeSetReference("order_status", 3, 2, "MIXED", "b".repeat(64)));
+    assertNotEquals(first.evidenceSha256(), service.inspect(50L).evidenceSha256());
+  }
+
+  @Test void codeSetProviderFailureDoesNotBecomeAnEnabledOrMissingCodeSet() {
+    StandardField dimension = new StandardField(12L, "order_12", "订单 #12",
+        "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
+        "order_status", null, null, StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+    when(semantic.getField(12L)).thenReturn(dimension);
+    when(standardQuery.codeSetReference("order_status"))
+        .thenThrow(new SecurityException("code set scope denied"));
+    assertThrows(SecurityException.class, () -> service.inspect(50L));
   }
 
 }
