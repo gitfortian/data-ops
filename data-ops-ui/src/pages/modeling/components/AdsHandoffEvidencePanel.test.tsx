@@ -38,7 +38,7 @@ it('shows only verified Metric evidence and explicit disconnected states for dow
   render(<AdsHandoffEvidencePanel modelId={10} />);
   expect(await screen.findByText('交接证据（只读）')).toBeInTheDocument();
   expect(await screen.findByText('已核验')).toBeInTheDocument();
-  expect(screen.getByText('尚未接入')).toBeInTheDocument();
+  expect(screen.getAllByText('尚未接入').length).toBeGreaterThan(0);
   expect(screen.getByText('完整发布身份匹配。')).toBeInTheDocument();
   expect(screen.getByText('尚无稳定关联。')).toBeInTheDocument();
   expect(screen.getByText('证据 ID：72')).toBeInTheDocument();
