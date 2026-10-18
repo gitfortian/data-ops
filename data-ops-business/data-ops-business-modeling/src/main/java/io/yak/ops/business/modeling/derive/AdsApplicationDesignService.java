@@ -247,6 +247,7 @@ public class AdsApplicationDesignService {
       blockers.add("过滤条件只允许输出字段 + 比较运算符 + 字面量；不支持任意 SQL");
     if (!safeSortExpression(request.sortExpression(), outputNames))
       blockers.add("排序只允许已映射输出字段及 ASC/DESC；不支持任意 SQL");
+    if (!blockers.isEmpty()) return null;
     UpstreamPin pin = new UpstreamPin(upstream.id(), version.id(), version.versionNo(),
         version.checksum(), upstream.layerCode());
     return new Contract(request.appCode().trim(), request.appName().trim(), request.owner().trim(),
