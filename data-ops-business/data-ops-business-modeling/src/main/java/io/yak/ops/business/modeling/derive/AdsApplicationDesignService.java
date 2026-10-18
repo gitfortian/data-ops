@@ -214,8 +214,10 @@ public class AdsApplicationDesignService {
         blockers.add("业务键必须是已映射的输出字段：" + key);
       if (!keySet.add(key.toLowerCase(Locale.ROOT))) blockers.add("业务键重复：" + key);
     }
-    if (!safeExpression(request.filterExpression())) blockers.add("过滤表达式包含不允许的语法；请使用受限字段/运算符格式");
-    if (!safeExpression(request.sortExpression())) blockers.add("排序表达式包含不允许的语法；请使用受限字段格式");
+    if (!safeFilterExpression(request.filterExpression(), outputNames))
+      blockers.add("过滤条件只允许输出字段 + 比较运算符 + 字面量；不支持任意 SQL");
+    if (!safeSortExpression(request.sortExpression(), outputNames))
+      blockers.add("排序只允许已映射输出字段及 ASC/DESC；不支持任意 SQL");
     UpstreamPin pin = new UpstreamPin(upstream.id(), version.id(), version.versionNo(),
         version.checksum(), upstream.layerCode());
     return new Contract(request.appCode().trim(), request.appName().trim(), request.owner().trim(),
@@ -225,12 +227,32 @@ public class AdsApplicationDesignService {
         request.metricVersionId(), request.refreshTarget() == null ? "" : request.refreshTarget().trim());
   }
 
-  private boolean safeExpression(String value) {
+  private boolean safeFilterExpression(String value, Set<String> outputNames) {
     if (!StringUtils.hasText(value)) return true;
-    String normalized = value.toLowerCase(Locale.ROOT);
-    return value.length() <= 512 && !value.contains(";") && !normalized.contains("--")
-        && !normalized.contains("/*") && !normalized.contains("*/")
-        && !normalized.matches("(?s).*\\b(select|insert|update|delete|drop|alter|grant|exec|union)\\b.*");
+    if (value.length() > 512 || value.contains(";") || value.contains("--")
+        || value.contains("/*") || value.contains("*/")) return false;
+    String[] clauses = value.split("(?i)\\\\s+AND\\\\s+");
+    Pattern clause = Pattern.compile(
+        "(?i)^([A-Za-z_][A-Za-z0-9_]*)\\\\s*(=|!=|<>|<=|>=|<|>|LIKE|IS NULL|IS NOT NULL)\\\\s*(?:'[^']{0,256}'|[0-9]+(?:\\\\.[0-9]+)?|TRUE|FALSE|NULL)$");
+    for (String item : clauses) {
+      var matcher = clause.matcher(item.trim());
+      if (!matcher.matches() || !outputNames.contains(matcher.group(1).toLowerCase(Locale.ROOT)))
+        return false;
+    }
+    return true;
+  }
+
+  private boolean safeSortExpression(String value, Set<String> outputNames) {
+    if (!StringUtils.hasText(value)) return true;
+    if (value.length() > 512 || value.contains(";") || value.contains("--")
+        || value.contains("/*") || value.contains("*/")) return false;
+    Pattern item = Pattern.compile("(?i)^([A-Za-z_][A-Za-z0-9_]*)(?:\\\\s+(ASC|DESC))?$");
+    for (String part : value.split(",")) {
+      var matcher = item.matcher(part.trim());
+      if (!matcher.matches() || !outputNames.contains(matcher.group(1).toLowerCase(Locale.ROOT)))
+        return false;
+    }
+    return true;
   }
 
   private Model requireAds(long modelId) {
