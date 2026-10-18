@@ -180,7 +180,7 @@ public class AdsApplicationDesignService {
     Map<String, StructureView.ColumnView> sourceColumns = source.columns().stream()
         .collect(java.util.stream.Collectors.toMap(c -> c.columnName().toLowerCase(Locale.ROOT),
             c -> c, (a, b) -> a));
-    List<OutputField> fields = request.outputFields() == null ? List.of() : List.copyOf(request.outputFields());
+    List<OutputField> fields = request.outputFields() == null ? List.of() : new java.util.ArrayList<>(request.outputFields());
     if (fields.isEmpty()) blockers.add("至少需要一个输出字段");
     Set<String> outputNames = new HashSet<>();
     Set<String> sourceNames = new HashSet<>();
@@ -207,7 +207,7 @@ public class AdsApplicationDesignService {
         warnings.add("输出字段未标记敏感等级：" + field.outputColumn());
     }
     Set<String> keySet = new HashSet<>();
-    List<String> keys = request.businessKeys() == null ? List.of() : List.copyOf(request.businessKeys());
+    List<String> keys = request.businessKeys() == null ? List.of() : new java.util.ArrayList<>(request.businessKeys());
     if (keys.isEmpty()) blockers.add("必须声明输出业务键");
     for (String key : keys) {
       if (!StringUtils.hasText(key) || !outputNames.contains(key.toLowerCase(Locale.ROOT)))
