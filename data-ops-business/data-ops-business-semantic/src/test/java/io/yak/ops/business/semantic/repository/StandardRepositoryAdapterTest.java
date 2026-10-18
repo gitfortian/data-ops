@@ -43,6 +43,28 @@ class StandardRepositoryAdapterTest {
   }
 
   @Test
+  void knownEnabledAndDisabledStatusesKeepTheirMeaning() {
+    SemanticStandardPO row = new SemanticStandardPO();
+    row.setId(13L);
+    row.setProjectId(7L);
+    row.setKind("TYPE");
+    row.setStdCode("TYPE_STRING");
+    row.setStdName("字符串");
+    row.setStatus("ENABLED");
+    row.setVersion(1);
+    row.setSortOrder(1);
+    row.setIsPreset(false);
+    when(mapper.selectOne(any(Wrapper.class))).thenReturn(row);
+
+    assertEquals(io.yak.ops.business.semantic.api.StandardStatus.ENABLED,
+        repository.findById(13L).orElseThrow().status());
+
+    row.setStatus("DISABLED");
+    assertEquals(io.yak.ops.business.semantic.api.StandardStatus.DISABLED,
+        repository.findById(13L).orElseThrow().status());
+  }
+
+  @Test
   void missingStoredStatusIsNotSilentlyPromotedToEnabled() {
     SemanticStandardPO row = new SemanticStandardPO();
     row.setId(12L);
