@@ -5,6 +5,7 @@ import { comparePhysicalGovernance, type PhysicalGovernanceBaseline } from '../g
 import {
   inspectPhysicalStandardCoverage,
   type PhysicalStandardCoverageInspection,
+  type PhysicalStandardReferenceEvidence,
 } from '@/services/modeling/api';
 
 interface Props {
@@ -50,6 +51,14 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
   }, [open, modelId, currentProject?.id, reloadKey]);
 
   const feedback = report && baseline ? comparePhysicalGovernance(baseline, report) : undefined;
+  const referenceLabel = (ref: PhysicalStandardReferenceEvidence): string => {
+    const name = ref.name || ref.code || (ref.id ? `#${ref.id}` : '未配置');
+    const status = ref.evidenceStatus === 'ENABLED_NOW' ? `当前启用 v${ref.version}`
+      : ref.evidenceStatus === 'MISSING_REQUIRED_REFERENCE' ? '缺少必需引用'
+        : ref.evidenceStatus === 'INVALID_REFERENCE' ? '引用无效/停用'
+          : '未配置';
+    return `${name} · ${status}`;
+  };
 
   return (
     <Modal title={report
@@ -76,17 +85,23 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
             ? '当前模型所有字段已关联可用标准；此结果仅供人工设计审阅'
             : '当前物理设计存在标准覆盖或业务含义待核实项'}
           description={['DWS', 'ADS'].includes(report.layerCode)
-            ? '本报告仅核验当前字段的标准引用，不核验 DWS 粒度/上游版本/MetricVersionRef，也不核验 ADS 消费合同/脱敏/消费者授权；正式发布资格不会因本报告改变。'
-            : '核验已保存的当前物理结构及 Semantic 标准字段引用。正式发布强门禁仍待相关 Owner 完成签收，技术列豁免尚未获批；本报告不会自动改动任何发布状态。'} />
+            ? '本报告核验当前标准字段及其已配置的数据标准引用；不核验 DWS 粒度/上游版本/MetricVersionRef，也不核验 ADS 消费合同/脱敏/消费者授权；正式发布资格不会因本报告改变。'
+            : '核验已保存的物理结构、标准字段与当前关联的数据标准引用。正式发布强门禁仍待相关 Owner 完成签收，技术列豁免尚未获批；本报告不会自动改动任何发布状态。'} />
         <Space wrap className="mb-3">
           <Tag>{report.layerCode} · {report.modelStatus}</Tag>
           {['DWD', 'DIM'].includes(report.layerCode)
             ? <Tag>正式业务过程：{report.processName || '未绑定或不可访问'}</Tag>
             : <Tag>分层专项合同：需单独核验</Tag>}
           <Tag>物理列 {report.columnCount}</Tag>
-          <Tag color="green">当前可用 {report.enabledCount}</Tag>
-          <Tag color={report.missingCount ? 'orange' : 'default'}>缺少标准 {report.missingCount}</Tag>
-          <Tag color={report.invalidCount ? 'red' : 'default'}>失效引用 {report.invalidCount}</Tag>
+          <Tag color="green">标准字段有效 {report.enabledCount}</Tag>
+          <Tag color={report.missingCount ? 'orange' : 'default'}>缺少标准字段 {report.missingCount}</Tag>
+          <Tag color={report.invalidCount ? 'red' : 'default'}>失效标准字段 {report.invalidCount}</Tag>
+          <Tag color={report.missingDataStandardCount ? 'orange' : 'default'}>
+            缺少必需数据标准 {report.missingDataStandardCount}
+          </Tag>
+          <Tag color={report.invalidDataStandardCount ? 'red' : 'default'}>
+            失效数据标准 {report.invalidDataStandardCount}
+          </Tag>
           <Tag color={report.reviewCount ? 'orange' : 'default'}>聚合待确认 {report.reviewCount}</Tag>
         </Space>
         <Typography.Paragraph type="secondary">
@@ -106,6 +121,28 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
               render: (id?: number) => id ?? '未绑定' },
             { title: '当前标准名称', dataIndex: 'standardName', width: 150,
               render: (name?: string) => name || '—' },
+            { title: '关联数据标准', key: 'dataStandards', width: 260,
+              render: (_: unknown, column: PhysicalStandardCoverageInspection['columns'][number]) => {
+                const evidence = column.dataStandards;
+                if (!evidence) {
+                  return <Typography.Text type="secondary">标准字段无效，未继续读取</Typography.Text>;
+                }
+                return <Space direction="vertical" size={0}>
+                  {<Typography.Text>类型：{referenceLabel(evidence.typeStandard)}</Typography.Text>}
+                  {evidence.unitStandard
+                    && <Typography.Text>单位：{referenceLabel(evidence.unitStandard)}</Typography.Text>}
+                  {evidence.caliberStandard
+                    && <Typography.Text>口径：{referenceLabel(evidence.caliberStandard)}</Typography.Text>}
+                  {evidence.codeSetStatus !== 'NOT_APPLICABLE'
+                    && <Typography.Text>码集：{evidence.codeSetCode || '未配置'} · {evidence.codeSetStatus}</Typography.Text>}
+                  {evidence.securityStandard
+                    && <Typography.Text>安全：{referenceLabel(evidence.securityStandard)}</Typography.Text>}
+                  <Tag color={evidence.status === 'COMPLETE_NOW' ? 'green'
+                    : evidence.status === 'INVALID_REFERENCE' || evidence.status === 'NEEDS_REVIEW'
+                      ? 'red' : 'orange'}>{evidence.status}</Tag>
+                  <Typography.Text type="secondary">{evidence.explanation}</Typography.Text>
+                </Space>;
+              } },
             { title: 'Semantic 角色', dataIndex: 'semanticRole', width: 115,
               render: (role?: string) => role || '—' },
             { title: '物理分析角色', dataIndex: 'physicalRole', width: 115,
