@@ -353,7 +353,8 @@ public class StandardRepositoryAdapter implements SemanticStandardRepository {
         StandardKind.fromStored(po.getKind()).orElseThrow(() -> new IllegalArgumentException(po.getKind())),
         po.getStdCode(),
         po.getStdName(),
-        StandardStatus.fromStored(po.getStatus()).orElse(StandardStatus.ENABLED),
+        StandardStatus.fromStored(po.getStatus()).orElseThrow(
+            () -> new IllegalStateException("标准记录状态无效，拒绝将其视为启用状态")),
         po.getVersion(),
         po.getSortOrder(),
         Boolean.TRUE.equals(po.getIsPreset()),

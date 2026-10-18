@@ -3,7 +3,7 @@
 Status: PROPOSED
 Implementation: NOT_STARTED
 Approval State: OWNER_SIGNOFF_REQUIRED / NO_WRITE_AUTHORIZATION  
-Baseline: `main@709d02266a8e355a489788da9e9bca8774248b9d`  
+Baseline: `main@e0236877df553a489f077aaa1ed9df00d536179e`  
 Parent: [R14-2 #614](https://github.com/gitfortian/data-ops/issues/614) · [Story map #513](https://github.com/gitfortian/data-ops/issues/513) · [R12 design #576](https://github.com/gitfortian/data-ops/issues/576)  
 Decision subjects: [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556) · [DR-07 #557](https://github.com/gitfortian/data-ops/issues/557) · [PD-010](../decisions/PD-010-guided-business-to-data-journey.md)
 
@@ -21,7 +21,7 @@ Decision subjects: [DR-06 #556](https://github.com/gitfortian/data-ops/issues/55
 
 ## 2. 基于当前 main 的源码事实
 
-核验基线为 main commit `709d0226`，并交叉查看已合并 PR #579、#589、#590 及其相关合同。
+本次审定文档原始基线为 `709d0226`；R14-2 最新补充审查基线为 `main@e0236877df553a489f077aaa1ed9df00d536179e`，并交叉核验 PR #579、#589、#590、#618、#619、#621 及其相关合同。
 
 | 领域 | 已有事实 | 仍缺的能力 / 决策 |
 |---|---|---|
@@ -145,3 +145,68 @@ DataDev 持有绑定事实；Modeling 仅提供只读已发布设计证据；Run
 - [ ] DataDev Owner signs immutable TaskRevision binding, CAS/idempotency and audit.
 - [ ] Runtime Owner signs exact execution identity, idempotency and UNKNOWN recovery.
 - [ ] The status of #556, #557 and PD-010 is updated only after actual recorded approvals.
+
+
+## 9. R14-2 发布入口与统一标准门禁覆盖审查（2026-10-18）
+
+审查基线：`main@e0236877df553a489f077aaa1ed9df00d536179e`（PR #621 合并后）。本节是源码审查结果与待批准的实现合同，不改变 `PROPOSED` / `OWNER_SIGNOFF_REQUIRED` 状态。
+
+### 9.0 对 PR #621 原始缺陷表述的证据纠偏
+
+在当前 `main@e0236877df553a489f077aaa1ed9df00d536179e` 源码中，原有 `StandardRepositoryAdapter.existsEnabledByCodeSet` 并非“只要存在一条启用码值就返回 true”：它分别计算码集总成员数与启用成员数，并仅在 `total == enabled` 时返回 true。因此，不能把“旧查询已被证实会将混合码集误判为可用”作为当前源码已证明的事实。
+
+PR #621 的确定增量是将完整成员状态显式投影为全部启用/混合/全部停用/无效引用，展示成员计数与可复核摘要，并把这些证据纳入报告指纹。该增量仍有价值，但缺陷描述必须与实际代码证据一致，不能把尚未复现的旧查询假阳性写成既成事实。
+
+### 9.1 当前发布入口盘点（源码事实）
+
+| 发布入口 | 当前调用路径 | 已有保护 | 尚未统一的保护 |
+|---|---|---|---|
+| 常规直接发布 | `POST /api/v1/modeling/models/{id}/publish` → `ModelVersionService.publish` → `publishLocked` | 项目作用域、模型锁、发布版本/指针同事务；DWS 调用现有粒度合同 | 未统一校验非 ODS 每列有效 `stdFieldId` 及适用数据标准；DWD/DIM/DWS/ADS 均可进入该通用路径 |
+| 常规审批发布 | `POST /api/v1/modeling/models/{id}/publish-approval` → `ModelPublishApprovalService.submit` → `ModelPublishApprovalHandler.onApproved` → `publishApproved` | 审批 payload 固定结构指纹；审批时结构漂移会拒绝 | payload 没有冻结标准证据；标准状态/版本变化不会由该指纹单独发现；回调最终进入相同 legacy `publishLocked` |
+| DWD 显式映射直接发布 | `POST /api/v1/modeling/models/{id}/logical-mapping/publish-with-mapping` → `DwdMappingPublicationService.publish` → `ModelVersionService.publishWithMapping` → `publishLocked` | 精确 MappingRevision、映射/物理结构摘要、DWD 层约束与发布事务 | 仍没有共同的 PD-010 标准验证；该入口的映射保护不能代替数据标准校验 |
+| DWD 显式映射审批发布 | `POST /api/v1/modeling/models/{id}/logical-mapping/publish-approval-with-mapping` → `DwdMappingPublicationService.submitApproval` → `ModelPublishApprovalHandler` → `DwdMappingPublicationService.publishApproved` | 审批 payload 固定 MappingRevision ID、MappingContent SHA 与结构指纹 | 仍没有共同的 PD-010 标准验证；映射审批不能代替标准字段和关联标准核验 |
+
+派生、复制及后续新增入口可以创建或修改草稿，但其最终正式发布仍必须汇入同一服务端发布合同。任何未来批量发布入口也必须调用该合同；不能以“当前 UI 没有按钮”作为服务端安全边界。
+
+### 9.2 关键设计结论
+
+1. **唯一门禁位置应在 Modeling 的版本发布事务内。** 在模型根锁和当前结构快照已取得后、版本幂等复用判断与版本插入之前，调用统一的 `NonOdsPublicationValidator`。这样常规直接发布、常规审批回调、DWD 映射直接发布和 DWD 映射审批回调都能覆盖；不以 Controller 或前端面板作为安全边界。
+2. **Semantic 必须先提供正式只读验证合同。** 现有 `StandardQueryApi` 主要提供 `get/labels/existsCodeSet/codeSetReference` 查询，不能完整表达一次发布校验的字段角色规则、关联标准状态、项目可见性、可审计结果及 provider UNKNOWN。不得让 Modeling 直接访问 Semantic 表或 DAO。
+3. **校验结果必须是三态且 fail-closed。** 建议结果区分 `VALID`、`BLOCKED`、`UNKNOWN`；`UNKNOWN` 包括 Provider 不可用、权限/项目上下文无法确认、响应缺字段或无法稳定计算摘要。只有完整 `VALID` 才允许发布；`BLOCKED/UNKNOWN` 都回滚当前发布事务，不降级为“无配置”或通过。
+4. **将标准证据纳入审批绑定、发布身份和不可变历史。** 当前标准证据 SHA 变化时，不能复用只因物理结构相同的旧发布版本。审批提交时须先运行同一只读校验并把 `standardEvidenceSha256`（以及供审批人查看的安全摘要）写入审批 payload；审批回调必须重新校验并比对该摘要，标准状态/版本/内容变化或 Provider UNKNOWN 均拒绝本次审批发布并要求重新送审。DWD 映射审批在现有 `mappingRevisionId` / `mappingContentSha256` / `structureFingerprint` 之外，也必须绑定标准证据摘要。建议物理版本元数据冻结规范化字段级快照及总摘要：目标列规范身份、`stdFieldId` 与版本、角色、TYPE/UNIT/CALIBER/CODE/SECURITY 引用 ID/类别/版本/状态及各自内容摘要；CODE 记录成员总数/启用数/内容摘要。SECURITY 仅保留必要等级/摘要，不保存或返回 `maskRule` 原文。历史回读展示“发布时快照”，当前健康检查另行显示，二者不可混用。
+5. **保留层级合同分工。** 统一标准验证器负责标准字段身份、项目范围、启停、角色与适用数据标准；Modeling 继续负责物理类型兼容、映射身份、物理结构指纹和发布原子性。DWS 粒度/上游版本/MetricVersionRef 与 ADS 消费、脱敏、授权、Usage Evidence 仍由各自 Owner 的合同验证，不能用标准验证器替代。
+6. **ODS 是明确例外，不是绕过入口。** ODS 贴源发布不强制绑定业务标准字段，但必须保留来源事实与原始字段语义。非 ODS 不设未批准技术列豁免；若字段未绑定有效标准或其适用标准不可验证，必须阻断正式发布。
+
+### 9.3 Semantic SPI 的待签收合同（建议，不是已批准 API）
+
+建议由 Semantic Owner 确认一个批量、只读、项目上下文受控的发布校验命令/结果合同。调用方提交目标层、规范目标列身份、`stdFieldId` 与角色/物理类型信息；Semantic 依据自身事实解析 StandardField 和该角色适用的标准引用，返回逐字段结果与规范化总摘要。
+
+- 每字段结果至少区分有效、缺失、失效/类别不匹配、当前停用、跨项目或不可访问、角色不兼容、必需关联标准缺失、码集不完整、无法核验。
+- 整体结果明确 `VALID/BLOCKED/UNKNOWN`，并返回稳定的标准证据摘要和安全可展示的发现项；不能将权限拒绝、超时或 Provider 错误转换为空列表。
+- 发布审批 payload 固定该摘要；审批回调重新计算当前摘要并进行等值比较，禁止把“结构未变”误当作“标准审批依据未变”。
+- 查询必须由 Semantic 在当前服务端项目上下文执行；客户端传来的项目 ID 不能覆盖当前权限上下文。一次批量读取应有一致的观察语义，或明确标记观察非原子性。
+- 不把当前标准读数误称为历史快照；发布事务须把返回的证据摘要及安全字段级快照写入新物理版本元数据。若需要对并发标准变化提供严格保证，Semantic Owner 还需定义版本复核/快照令牌语义，不能只依赖跨模块事务。
+- 该 SPI 只读，不修改标准、不自动重绑、不触发发布或执行；Modeling 是最终发布阻断方，Semantic 是标准事实与语义规则的唯一 Owner。
+
+### 9.4 获准实施前的验收矩阵
+
+| 场景 | 预期 |
+|---|---|
+| DWD/DIM/DWS/ADS 所有列引用当前有效、角色兼容的 StandardField，且必需数据标准有效 | 允许进入发布；版本记录标准证据快照与摘要 |
+| 非 ODS 任一列缺少 `stdFieldId`，包括标记为技术列的字段 | 阻断；首期没有未经批准的豁免 |
+| TYPE/UNIT 等必需关联缺失、标准停用/类别不符/定义缺失、CODE 码集 MIXED/DISABLED/NOT_FOUND | 阻断并返回可定位字段发现 |
+| Semantic Provider 超时、拒绝、跨项目或响应不完整 | `UNKNOWN` / fail-closed；不写入物理版本 |
+| 物理结构相同但标准版本/状态/内容摘要变化 | 不复用旧发布身份；新版本固定新观察证据，或按 Owner 定义的冻结规则阻断 |
+| 审批后结构、映射修订或标准证据发生变化 | 拒绝该审批发布并要求重新送审/核验；标准摘要必须在审批 payload 中冻结并在回调时复核 |
+| 常规直接发布、常规审批回调、DWD 映射直接发布、DWD 映射审批回调 | 均调用同一服务端 validator；任何路径不得旁路 |
+| ODS 发布 | 保留贴源例外，不强制业务标准绑定；既有来源合同继续生效 |
+| 历史已发布版本 / 版本详情 / 回滚 | 历史快照不可被当前标准状态改写；回滚只恢复草稿，重新发布时重新校验 |
+| DWS 粒度/精确上游版本或 ADS 消费授权未满足 | 仍由对应专项合同拒绝；标准验证通过不代表层级合同通过 |
+
+### 9.5 Owner 签收门槛与状态
+
+- **Semantic Owner：** 签收批量验证 SPI、角色/适用标准规则、项目作用域、UNKNOWN 语义、证据摘要/快照字段与标准并发变化策略。
+- **Modeling Owner：** 签收唯一事务内门禁位置、四条当前发布路径覆盖、发布幂等键纳入标准证据、物理类型/映射/层级规则和历史回读。
+- **Security Owner：** 签收跨项目隔离、权限撤销、UNKNOWN 拒绝、字段级可见性及 SECURITY 脱敏边界。
+- **Product Owner：** 签收 ODS 例外、非 ODS 零技术列豁免、草稿可保存但正式发布硬阻断、历史兼容政策。
+- **状态保持：** 本节不把建议 API 视为批准合同；不改变 DR-06、DR-07、PD-010 状态，不开启 Feature Flag，不新增默认允许的目标写策略，不执行 SQL/DDL 或真实目标写入。
