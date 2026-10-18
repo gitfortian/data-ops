@@ -281,6 +281,56 @@ public class AdsApplicationDesignService {
         StructureFingerprint.of(targetStructure));
   }
 
+  private MetricPublicationPin validateMetricPublicationPin(
+      Request request, List<String> blockers) {
+    MetricPublicationPin pin = request.metricPublicationPin();
+    if (pin == null) {
+      if (request.metricVersionId() != null) {
+        blockers.add("旧合同仅有 Metric 版本 ID，缺少完整发布身份；请重新选择当前已发布指标");
+      }
+      return null;
+    }
+    if (pin.metricId() == null || pin.metricId() <= 0
+        || pin.metricVersionId() == null || pin.metricVersionId() <= 0
+        || pin.metricVersion() == null || pin.metricVersion() <= 0
+        || pin.publicationEventId() == null || pin.publicationEventId() <= 0
+        || !SHA256.matcher(java.util.Objects.toString(pin.snapshotDigest(), "")).matches()) {
+      blockers.add("Metric 发布引用身份不完整或快照摘要不是合法 SHA-256");
+      return null;
+    }
+    if (request.metricVersionId() != null
+        && !request.metricVersionId().equals(pin.metricVersionId())) {
+      blockers.add("兼容字段 metricVersionId 与完整 Metric 发布引用不一致");
+      return null;
+    }
+
+    Evidence evidence = metricPublicationEvidence.verifyForNewContract(new Reference(
+        pin.metricId(), pin.metricVersionId(), pin.metricVersion(),
+        pin.snapshotDigest(), pin.publicationEventId()));
+    Status status = evidence == null || evidence.status() == null
+        ? Status.UNAVAILABLE : evidence.status();
+    if (status != Status.VERIFIED_ACTIVE) {
+      blockers.add(metricPublicationBlocker(status));
+      return null;
+    }
+    return pin;
+  }
+
+  private String metricPublicationBlocker(Status status) {
+    return switch (status) {
+      case WITHDRAWN -> "所引用的 Metric 发布已撤回，不能用于新合同";
+      case NOT_CURRENTLY_PUBLISHED ->
+          "所引用的 Metric 发布已不再是当前有效发布，请重新选择";
+      case NOT_FOUND -> "所引用的 Metric 发布不存在或不在当前项目内";
+      case REFERENCE_MISMATCH -> "Metric 发布事件与所选引用身份不一致";
+      case VERSION_MISMATCH -> "Metric 不可变版本身份不匹配";
+      case DIGEST_MISMATCH -> "Metric 发布快照摘要不匹配";
+      case FORBIDDEN -> "当前用户无权读取所引用的 Metric 发布证据";
+      case UNAVAILABLE -> "Metric 原域暂不可用，无法核验发布引用";
+      case VERIFIED_ACTIVE -> "";
+    };
+  }
+
   private boolean safeFilterExpression(String value, Set<String> outputNames) {
     if (!StringUtils.hasText(value)) return true;
     if (value.length() > 512 || value.contains(";") || value.contains("--")
