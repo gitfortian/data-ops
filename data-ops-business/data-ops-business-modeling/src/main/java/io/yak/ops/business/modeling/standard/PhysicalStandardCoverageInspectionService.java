@@ -287,10 +287,13 @@ public class PhysicalStandardCoverageInspectionService {
           required ? "缺少必需的" + label + "引用" : "未配置选填的" + label);
     }
     Standard value = standardQuery.get(id);
-    String definition = value == null ? null : standardDefinition(value, expectedKind);
+    String definition = value == null || value.kind() == null
+        ? null : standardDefinition(value, value.kind());
     if (value == null || !Objects.equals(value.id(), id) || value.kind() != expectedKind
         || value.status() != StandardStatus.ENABLED || !StringUtils.hasText(definition)) {
-      return new StandardReferenceEvidence(id, expectedKind.name(),
+      String actualKind = value == null || value.kind() == null
+          ? expectedKind.name() : value.kind().name();
+      return new StandardReferenceEvidence(id, actualKind,
           value == null ? null : value.code(), value == null ? null : value.name(),
           value == null || value.status() == null ? null : value.status().name(),
           value == null ? null : value.version(), "INVALID_REFERENCE", definition,
