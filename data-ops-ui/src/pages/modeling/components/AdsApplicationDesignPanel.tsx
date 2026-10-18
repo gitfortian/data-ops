@@ -417,22 +417,22 @@ export default function AdsApplicationDesignPanel({
         <Typography.Title level={5}>01 · 明确应用目标与消费方</Typography.Title>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label>应用编码
-            <Input className="mt-1" value={draft.appCode} disabled={!canEdit}
+            <Input className="mt-1" value={draft.appCode} disabled={!canEdit || saving}
               maxLength={64} onChange={(event) => apply({ appCode: event.target.value })}
               placeholder="如 order_overview" />
           </label>
           <label>应用名称
-            <Input className="mt-1" value={draft.appName} disabled={!canEdit}
+            <Input className="mt-1" value={draft.appName} disabled={!canEdit || saving}
               onChange={(event) => apply({ appName: event.target.value })}
               placeholder="订单经营日报" />
           </label>
           <label>业务负责人
-            <Input className="mt-1" value={draft.owner} disabled={!canEdit}
+            <Input className="mt-1" value={draft.owner} disabled={!canEdit || saving}
               onChange={(event) => apply({ owner: event.target.value })}
               placeholder="明确实际业务负责人" />
           </label>
           <label>消费类型
-            <Select className="mt-1 w-full" disabled={!canEdit}
+            <Select className="mt-1 w-full" disabled={!canEdit || saving}
               value={draft.consumerType}
               onChange={(value: AdsConsumerType) => apply({ consumerType: value })}
               options={[
@@ -444,7 +444,7 @@ export default function AdsApplicationDesignPanel({
           </label>
         </div>
         <label className="block">业务目的
-          <Input.TextArea className="mt-1" rows={3} disabled={!canEdit}
+          <Input.TextArea className="mt-1" rows={3} disabled={!canEdit || saving}
             value={draft.purpose} onChange={(event) => apply({ purpose: event.target.value })}
             placeholder="消费者为什么需要该应用数据？" />
         </label>
@@ -452,7 +452,7 @@ export default function AdsApplicationDesignPanel({
       {step === 1 && <div className="space-y-4">
         <Typography.Title level={5}>02 · 选择可信、已发布的精确来源</Typography.Title>
         <label className="block">来源粒度（DWD 仅用于明确的明细需求）
-          <Select className="mt-1 w-full" value={draft.sourceMode} disabled={!canEdit}
+          <Select className="mt-1 w-full" value={draft.sourceMode} disabled={!canEdit || saving}
             onChange={switchMode}
             options={[
               { label: 'DWS · 已汇总（默认）', value: 'DWS' },
@@ -464,7 +464,7 @@ export default function AdsApplicationDesignPanel({
           description="必须重新确认每行实际粒度、明细业务键与输出字段，不能沿用 DWS 的汇总指标口径。" />}
         <label className="block">已发布的同业务过程上游模型
           <Select className="mt-1 w-full" showSearch optionFilterProp="label"
-            disabled={!canEdit || candidateLoading || choosingSource}
+            disabled={!canEdit || saving || candidateLoading || choosingSource}
             loading={candidateLoading || choosingSource}
             value={draft.upstreamModelId || undefined}
             placeholder="请选择上游正式发布模型"
@@ -494,7 +494,7 @@ export default function AdsApplicationDesignPanel({
               {sourceStatus === 'CURRENT' && !sourceError ? '一致' : sourceStatus}
             </Tag>
             {sourceStatus === 'STALE' && canEdit && <Button className="ml-2"
-              size="small" loading={choosingSource}
+              size="small" disabled={saving} loading={choosingSource}
               onClick={() => void chooseSource(draft.upstreamModelId)}>
               人工确认并改用最新发布版本
             </Button>}
@@ -513,7 +513,7 @@ export default function AdsApplicationDesignPanel({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
             <label>上游发布字段
               <Select className="mt-1 w-full" showSearch optionFilterProp="label"
-                value={field.sourceColumn || undefined} disabled={!canEdit || !sourceStructure}
+                value={field.sourceColumn || undefined} disabled={!canEdit || saving || !sourceStructure}
                 options={sourceOptions}
                 onChange={(value: string) => setDraft((previous) => ({
                   ...previous, outputFields: previous.outputFields.map((item, row) =>
@@ -522,7 +522,7 @@ export default function AdsApplicationDesignPanel({
             </label>
             <label>ADS 目标物理字段
               <Select className="mt-1 w-full" showSearch optionFilterProp="label"
-                value={field.outputColumn || undefined} disabled={!canEdit}
+                value={field.outputColumn || undefined} disabled={!canEdit || saving}
                 options={targetOptions}
                 onChange={(value: string) => setDraft((previous) => ({
                   ...previous, outputFields: previous.outputFields.map((item, row) =>
@@ -535,14 +535,14 @@ export default function AdsApplicationDesignPanel({
             </label>
             <label>敏感等级（标识非授权）
               <Select className="mt-1 w-full" value={field.sensitivity || undefined}
-                disabled={!canEdit} allowClear
+                disabled={!canEdit || saving} allowClear
                 options={['LOW', 'MEDIUM', 'HIGH', 'RESTRICTED'].map((value) => ({ value }))}
                 onChange={(value?: string) => setDraft((previous) => ({
                   ...previous, outputFields: previous.outputFields.map((item, row) =>
                     row === index ? { ...item, sensitivity: value ?? null } : item),
                 }))} />
             </label>
-            <Button className="self-end" danger disabled={!canEdit}
+            <Button className="self-end" danger disabled={!canEdit || saving}
               onClick={() => setDraft((previous) => ({
                 ...previous,
                 outputFields: previous.outputFields.filter((_, row) => row !== index),
@@ -553,12 +553,12 @@ export default function AdsApplicationDesignPanel({
             标准字段必须由现有标准库和物理结构依法绑定；本表不创建新标准，也不生成消费授权。
           </Typography.Text>
         </div>)}
-        <Button disabled={!canEdit || !sourceStructure || targetOptions.length === 0}
+        <Button disabled={!canEdit || saving || !sourceStructure || targetOptions.length === 0}
           onClick={() => apply({ outputFields: [
             ...draft.outputFields, { sourceColumn: '', outputColumn: '', standardFieldId: null, sensitivity: null },
           ] })}>添加输出字段</Button>
         <label className="block">输出业务键（至少一列；应反映交付数据的唯一粒度）
-          <Select className="mt-1 w-full" mode="multiple" disabled={!canEdit}
+          <Select className="mt-1 w-full" mode="multiple" disabled={!canEdit || saving}
             options={keyOptions} value={draft.businessKeys}
             onChange={(values: string[]) => apply({ businessKeys: values })}
             placeholder="选择一个或多个输出列" />
@@ -573,25 +573,25 @@ export default function AdsApplicationDesignPanel({
         <Typography.Title level={5}>04 · 消费口径、固定过滤和刷新预期</Typography.Title>
         <label className="block">固定过滤条件（仅支持已映射输出列的简单比较及 AND）
           <Input.TextArea className="mt-1" rows={2} value={draft.filterExpression}
-            disabled={!canEdit} maxLength={512}
+            disabled={!canEdit || saving} maxLength={512}
             onChange={(event) => apply({ filterExpression: event.target.value })}
             placeholder="如 city_id = '310000'" />
         </label>
         <label className="block">排序规则（仅输出列 ASC / DESC）
-          <Input className="mt-1" disabled={!canEdit} maxLength={512}
+          <Input className="mt-1" disabled={!canEdit || saving} maxLength={512}
             value={draft.sortExpression}
             onChange={(event) => apply({ sortExpression: event.target.value })}
             placeholder="如 order_day DESC, city_id ASC" />
         </label>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label>Metric 已发布版本 ID（引用待原域验证）
-            <InputNumber className="mt-1 !w-full" disabled={!canEdit}
+            <InputNumber className="mt-1 !w-full" disabled={!canEdit || saving}
               min={1} precision={0} value={draft.metricVersionId ?? undefined}
               onChange={(value) => apply({ metricVersionId: value ?? null })}
               placeholder="留空代表当前不引用 Metric" />
           </label>
           <label>期望刷新目标（仅业务意图，非运行 SLA）
-            <Input className="mt-1" disabled={!canEdit}
+            <Input className="mt-1" disabled={!canEdit || saving}
               value={draft.refreshTarget}
               onChange={(event) => apply({ refreshTarget: event.target.value })}
               placeholder="如 DAILY / 每日 08:00 前" />
@@ -624,7 +624,7 @@ export default function AdsApplicationDesignPanel({
         </div>}
         <Space wrap>
           <Button onClick={() => void verify()} loading={validating}
-            disabled={!canEdit || structureDirty || standardMissing.length > 0
+            disabled={!canEdit || saving || structureDirty || standardMissing.length > 0
               || sourceStatus !== 'CURRENT' || Boolean(sourceError)}>
             服务端静态校验
           </Button>
@@ -658,7 +658,7 @@ export default function AdsApplicationDesignPanel({
               {' · '}{entry.contract.outputFields.length} 输出列
             </Typography.Text>
           </div>
-          <Button disabled={!canEdit} onClick={() => reuseRevision(entry)}>作为新草稿编辑</Button>
+          <Button disabled={!canEdit || saving} onClick={() => reuseRevision(entry)}>作为新草稿编辑</Button>
         </div>)}
         <Alert type="info" showIcon
           message="建模设计版本 ≠ 数据已交付"
