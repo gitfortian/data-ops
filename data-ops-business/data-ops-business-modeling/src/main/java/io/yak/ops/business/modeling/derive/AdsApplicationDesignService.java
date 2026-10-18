@@ -179,6 +179,8 @@ public class AdsApplicationDesignService {
       blockers.add("上游版本校验和必须是合法 SHA-256");
     }
     if (!blockers.isEmpty()) return null;
+    MetricPublicationPin metricPin = validateMetricPublicationPin(request, blockers);
+    if (!blockers.isEmpty()) return null;
     if ("DWD".equals(request.sourceMode()))
       warnings.add("当前为明细来源；不得套用 DWS 汇总指标或粒度。");
     Model upstream = (lockUpstream
@@ -274,7 +276,8 @@ public class AdsApplicationDesignService {
         request.purpose().trim(), request.consumerType(), request.sourceMode(), pin, fields, keys,
         request.filterExpression() == null ? "" : request.filterExpression().trim(),
         request.sortExpression() == null ? "" : request.sortExpression().trim(),
-        request.metricVersionId(), request.refreshTarget() == null ? "" : request.refreshTarget().trim(),
+        metricPin == null ? null : metricPin.metricVersionId(), metricPin,
+        request.refreshTarget() == null ? "" : request.refreshTarget().trim(),
         StructureFingerprint.of(targetStructure));
   }
 
