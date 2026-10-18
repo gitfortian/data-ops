@@ -40,6 +40,13 @@ export interface DwsGrainCandidate {
   usable: boolean;
 }
 
+export interface DwsGrainValidationResult {
+  valid: boolean;
+  blockers: string[];
+  structureFingerprint: string;
+  design: DwsGrainDesign | null;
+}
+
 export interface DwsGrainHistoryEntry extends DwsGrainSaved {
   updatedBy: string;
   updatedAt: string;
@@ -63,6 +70,11 @@ export const getDwsGrain = (modelId: number): Promise<DwsGrainSaved | null> =>
 
 export const listDwsGrainCandidates = (modelId: number): Promise<DwsGrainCandidate[]> =>
   HttpUtils.getData<DwsGrainCandidate[]>(`${uri(modelId)}/upstream-candidates`);
+
+export const validateDwsGrain = (
+  modelId: number, payload: SaveDwsGrainRequest,
+): Promise<DwsGrainValidationResult> =>
+  HttpUtils.postData<DwsGrainValidationResult>(`${uri(modelId)}/validate`, payload);
 
 export const saveDwsGrain = (
   modelId: number, payload: SaveDwsGrainRequest,
