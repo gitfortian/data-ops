@@ -41,3 +41,11 @@
 ## 5. 合并门槛
 
 C1 的后端/迁移/权限测试通过并进入 main；C2 最新提交前端 Jest、类型基线、发布构建、Product Guard、Architecture Gate 全绿；功能正反例及消费者未连接状态得到明确验收。否则保持 Draft，不能以 HTML 高保真截图宣称生产可用。
+
+
+## Rebased delivery checkpoint (2026-10-18)
+
+- C1 PR #599 is merged to `main` as `9a7f0e03d27ef8406442e7253f6b3a83df59dd71`.
+- The stale-base PR #601 is closed as superseded; PR #604 is the sole active C2 implementation candidate.
+- The model detail mount was reapplied to the latest `main` file instead of replacing the full file with an older snapshot.
+- The earlier C2 CI result is historical only. The rebased head must pass a fresh Product Guard, full frontend Jest/type-baseline/release build, and architecture gate before it can be marked Ready.
