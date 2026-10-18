@@ -134,7 +134,12 @@ class AdsApplicationDesignServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("修订已变化");
     verify(jdbc, never()).update(org.mockito.ArgumentMatchers.anyString(),
-        org.mockito.ArgumentMatchers.<Object[]>any());
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -167,7 +172,12 @@ class AdsApplicationDesignServiceTest {
         .isEqualTo(1L);
     verify(jdbc, org.mockito.Mockito.times(2)).update(
         org.mockito.ArgumentMatchers.anyString(),
-        org.mockito.ArgumentMatchers.<Object[]>any());
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any());
 
     reset(jdbc);
     org.mockito.Mockito.doReturn(List.of(stored)).when(jdbc).query(
