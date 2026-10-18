@@ -1,6 +1,8 @@
 # R14-2｜DR-06 / DR-07 / PD-010 领域合同审定记录（评审稿）
 
-Status: **REVIEW_REQUIRED / OWNER_SIGNOFF_REQUIRED / NO_WRITE_AUTHORIZATION**  
+Status: PROPOSED
+Implementation: NOT_STARTED
+Approval State: OWNER_SIGNOFF_REQUIRED / NO_WRITE_AUTHORIZATION  
 Baseline: `main@709d02266a8e355a489788da9e9bca8774248b9d`  
 Parent: [R14-2 #614](https://github.com/gitfortian/data-ops/issues/614) · [Story map #513](https://github.com/gitfortian/data-ops/issues/513) · [R12 design #576](https://github.com/gitfortian/data-ops/issues/576)  
 Decision subjects: [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556) · [DR-07 #557](https://github.com/gitfortian/data-ops/issues/557) · [PD-010](../decisions/PD-010-guided-business-to-data-journey.md)
