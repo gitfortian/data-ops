@@ -105,12 +105,13 @@ it('explicit recheck replaces stale evidence and compares pre-repair to current 
     .mockResolvedValueOnce(report).mockResolvedValueOnce(fresh);
   render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()}
     baseline={{ modelId: 50, evidenceSha256: report.evidenceSha256,
-      missingCount: 1, invalidCount: 0, reviewCount: 0 }} />);
+      missingCount: 1, invalidCount: 0, reviewCount: 0,
+      missingDataStandardCount: 0, invalidDataStandardCount: 0 }} />);
   expect(await screen.findByText('已重新核验：证据尚未变化')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '重新读取当前治理证据' }));
   expect(await screen.findByText('已重新读取当前标准状态')).toBeInTheDocument();
   expect(screen.getByText('已重新核验：本次证据与修正前不同')).toBeInTheDocument();
-  expect(screen.getByText(/缺少标准 1→0/)).toBeInTheDocument();
+  expect(screen.getByText(/缺少标准字段 1→0/)).toBeInTheDocument();
   expect(screen.queryByText('未关联正式标准：process_time')).not.toBeInTheDocument();
   expect(inspectPhysicalStandardCoverage).toHaveBeenCalledTimes(2);
 });
