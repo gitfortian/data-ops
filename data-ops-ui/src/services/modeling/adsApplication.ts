@@ -57,6 +57,8 @@ export interface AdsApplicationContractRequest {
   refreshTarget?: string;
   /** Required for save: 0 means no previous contract; protects concurrent edits atomically in C1. */
   expectedRevision?: number;
+  /** The target structure fingerprint the user explicitly reviewed before save. */
+  expectedTargetStructureFingerprint?: string;
 }
 
 export interface AdsApplicationContractSaved {
