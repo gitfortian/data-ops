@@ -14,7 +14,11 @@ import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.api.ProcessApi;
+import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardField;
+import io.yak.ops.business.semantic.api.StandardKind;
+import io.yak.ops.business.semantic.api.StandardQueryApi;
+import io.yak.ops.business.semantic.api.StandardStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +29,7 @@ class PhysicalStandardCoverageInspectionServiceTest {
   private ModelRepository models;
   private ModelStructureService structures;
   private ProcessApi semantic;
+  private StandardQueryApi standardQuery;
   private PhysicalStandardCoverageInspectionService service;
   private Model model;
   private List<ColumnDefinition> columns;
@@ -36,9 +41,22 @@ class PhysicalStandardCoverageInspectionServiceTest {
   }
 
   private static StandardField field(long id, String status, String role) {
+    return field(id, status, role, null, null, null, null, null);
+  }
+
+  private static StandardField field(long id, String status, String role,
+      Long typeId, Long unitId, Long caliberId, String codeSet, Long securityId) {
     return new StandardField(id, "order_" + id, "订单 #" + id, role, status,
-        "BIGINT", null, null, null, null, null, null,
+        "BIGINT", typeId, unitId, caliberId, codeSet, securityId, null,
         StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+  }
+
+  private static Standard standard(long id, StandardKind kind, StandardStatus status, int version) {
+    return new Standard(id, kind, kind.name().toLowerCase() + "_" + id,
+        kind.name() + "标准", status, version, 0, false, "测试标准",
+        new Standard.KindFields(null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null),
+        "owner", null, null);
   }
 
   private static BusinessProcess process(String grain) {
@@ -50,8 +68,9 @@ class PhysicalStandardCoverageInspectionServiceTest {
     models = mock(ModelRepository.class);
     structures = mock(ModelStructureService.class);
     semantic = mock(ProcessApi.class);
+    standardQuery = mock(StandardQueryApi.class);
     service = new PhysicalStandardCoverageInspectionService(
-        models, structures, semantic, new ObjectMapper().findAndRegisterModules());
+        models, structures, semantic, standardQuery, new ObjectMapper().findAndRegisterModules());
     model = Model.create("dwd_orders", "订单明细", ModelDialect.MYSQL, null,
         null, "DWD", 22L).withPersisted(50L, "owner", null, null);
     columns = List.of(col(1L, "order_id", 11L, null), col(2L, "status", 12L, null));
@@ -182,6 +201,70 @@ class PhysicalStandardCoverageInspectionServiceTest {
     assertTrue(report.limitations().stream().anyMatch(x -> x.contains("Usage Evidence")));
     verify(semantic, never()).listProcesses(null);
     verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
+  @Test void configuredTypeUnitCaliberCodeAndSecurityReferencesExposeCurrentVersionedEvidence() {
+    when(semantic.getField(11L)).thenReturn(field(11L, StandardField.STATUS_ENABLED, "PROCESS",
+        101L, 102L, 103L, "ORDER_STATUS", 104L));
+    when(standardQuery.get(101L)).thenReturn(standard(101L, StandardKind.TYPE, StandardStatus.ENABLED, 3));
+    when(standardQuery.get(102L)).thenReturn(standard(102L, StandardKind.UNIT, StandardStatus.ENABLED, 2));
+    when(standardQuery.get(103L)).thenReturn(standard(103L, StandardKind.CALIBER, StandardStatus.ENABLED, 5));
+    when(standardQuery.get(104L)).thenReturn(standard(104L, StandardKind.SECURITY, StandardStatus.ENABLED, 4));
+    when(standardQuery.codeSetReference("ORDER_STATUS")).thenReturn(
+        new StandardQueryApi.CodeSetReference("ORDER_STATUS", 2, 2, "ENABLED", "d".repeat(64)));
+
+    var report = service.inspect(50L);
+    var column = report.columns().stream().filter(c -> c.columnId() == 1L).findFirst().orElseThrow();
+    assertEquals(5, column.standardReferences().size());
+    assertTrue(column.standardReferences().stream().allMatch(r -> "ENABLED_NOW".equals(r.status())));
+    assertEquals(3, column.standardReferences().stream()
+        .filter(r -> "TYPE".equals(r.referenceKind())).findFirst().orElseThrow().version());
+    assertEquals("d".repeat(64), column.standardReferences().stream()
+        .filter(r -> "CODE".equals(r.referenceKind())).findFirst().orElseThrow().contentSha256());
+    assertEquals(0, report.standardReferenceIssueCount());
+    assertEquals("COVERED_NOW", report.status());
+  }
+
+  @Test void disabledWrongKindAndMixedCodeSetReferencesAreExplicitReviewFindings() {
+    when(semantic.getField(11L)).thenReturn(field(11L, StandardField.STATUS_ENABLED, "PROCESS",
+        101L, 102L, null, "ORDER_STATUS", 104L));
+    when(standardQuery.get(101L)).thenReturn(standard(101L, StandardKind.UNIT, StandardStatus.ENABLED, 1));
+    when(standardQuery.get(102L)).thenReturn(standard(102L, StandardKind.UNIT, StandardStatus.DISABLED, 2));
+    when(standardQuery.get(104L)).thenReturn(null);
+    when(standardQuery.codeSetReference("ORDER_STATUS")).thenReturn(
+        new StandardQueryApi.CodeSetReference("ORDER_STATUS", 2, 1, "MIXED", "e".repeat(64)));
+
+    var report = service.inspect(50L);
+    var column = report.columns().stream().filter(c -> c.columnId() == 1L).findFirst().orElseThrow();
+    assertEquals("INVALID_REFERENCE", column.standardReferences().stream()
+        .filter(r -> "TYPE".equals(r.referenceKind())).findFirst().orElseThrow().status());
+    assertEquals("DISABLED", column.standardReferences().stream()
+        .filter(r -> "UNIT".equals(r.referenceKind())).findFirst().orElseThrow().status());
+    assertEquals("NOT_CONFIGURED", column.standardReferences().stream()
+        .filter(r -> "CALIBER".equals(r.referenceKind())).findFirst().orElseThrow().status());
+    assertEquals("MIXED", column.standardReferences().stream()
+        .filter(r -> "CODE".equals(r.referenceKind())).findFirst().orElseThrow().status());
+    assertEquals("INVALID_REFERENCE", column.standardReferences().stream()
+        .filter(r -> "SECURITY".equals(r.referenceKind())).findFirst().orElseThrow().status());
+    assertEquals(4, report.standardReferenceIssueCount());
+    assertEquals("NEEDS_REVIEW", report.status());
+  }
+
+  @Test void referencedStandardVersionChangeChangesEvidenceDigest() {
+    when(semantic.getField(11L)).thenReturn(field(11L, StandardField.STATUS_ENABLED, "PROCESS",
+        101L, null, null, null, null));
+    when(standardQuery.get(101L)).thenReturn(standard(101L, StandardKind.TYPE, StandardStatus.ENABLED, 1));
+    String first = service.inspect(50L).evidenceSha256();
+    when(standardQuery.get(101L)).thenReturn(standard(101L, StandardKind.TYPE, StandardStatus.ENABLED, 2));
+    String second = service.inspect(50L).evidenceSha256();
+    assertNotEquals(first, second);
+  }
+
+  @Test void unavailableStandardProviderDoesNotBecomeMissingOrCompliantEvidence() {
+    when(semantic.getField(11L)).thenReturn(field(11L, StandardField.STATUS_ENABLED, "PROCESS",
+        101L, null, null, null, null));
+    when(standardQuery.get(101L)).thenThrow(new SecurityException("standard scope denied"));
+    assertThrows(SecurityException.class, () -> service.inspect(50L));
   }
 
 }
