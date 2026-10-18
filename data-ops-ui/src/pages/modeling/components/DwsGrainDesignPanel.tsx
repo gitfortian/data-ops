@@ -678,8 +678,6 @@ export default function DwsGrainDesignPanel({
                   options={dimensionOptions}
                   onChange={(value) => changeContract(() => {
                     setDimensions(value);
-                    setStaticValidation(undefined);
-                    setSampleValidation(undefined);
                   })}
                 />
               </Card>
@@ -691,8 +689,6 @@ export default function DwsGrainDesignPanel({
                   placeholder="选择已有标准字段与聚合函数"
                   onChange={(value) => changeContract(() => {
                     setMeasures(value);
-                    setStaticValidation(undefined);
-                    setSampleValidation(undefined);
                   })}
                 />
                 <div className="mt-3">
