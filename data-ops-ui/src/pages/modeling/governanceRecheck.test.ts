@@ -8,6 +8,7 @@ import type { PhysicalStandardCoverageInspection } from '@/services/modeling/api
 const physical = {
   modelId: 20, evidenceSha256: 'a'.repeat(64), missingCount: 2,
   invalidCount: 1, reviewCount: 0,
+  missingDataStandardCount: 0, invalidDataStandardCount: 0,
 } as PhysicalStandardCoverageInspection;
 const logical = {
   logicalModelId: 30, versionNo: 2, frozenSnapshotSha256: 'f'.repeat(64),
@@ -27,9 +28,11 @@ describe('F-040 governance recheck: evidence only, never a persistent approval',
     expect(comparePhysicalGovernance(before, physical).state).toBe('UNCHANGED');
     const fewer = comparePhysicalGovernance(before, {
       ...physical, evidenceSha256: 'b'.repeat(64), missingCount: 1,
+      missingDataStandardCount: 1,
     });
     expect(fewer.state).toBe('CHANGED');
     expect(fewer.explanation).toContain('2→1');
+    expect(fewer.explanation).toContain('缺少必需数据标准 0→1');
     expect(fewer.explanation).toContain('不自动判定修复成功');
     expect(comparePhysicalGovernance(before, { ...physical,
       evidenceSha256: 'c'.repeat(64), missingCount: 2 }).state).toBe('CHANGED');
