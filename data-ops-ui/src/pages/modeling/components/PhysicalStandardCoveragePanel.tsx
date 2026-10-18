@@ -1,4 +1,4 @@
-import { Alert, Button, Modal, Space, Table, Tag, Typography, message } from 'antd';
+import { Alert, Button, Modal, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { comparePhysicalGovernance, type PhysicalGovernanceBaseline } from '../governanceRecheck';
@@ -88,6 +88,9 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
           <Tag color={report.missingCount ? 'orange' : 'default'}>缺少标准 {report.missingCount}</Tag>
           <Tag color={report.invalidCount ? 'red' : 'default'}>失效引用 {report.invalidCount}</Tag>
           <Tag color={report.reviewCount ? 'orange' : 'default'}>聚合待确认 {report.reviewCount}</Tag>
+          <Tag color={report.standardReferenceIssueCount ? 'orange' : 'default'}>
+            引用标准异常 {report.standardReferenceIssueCount}
+          </Tag>
         </Space>
         <Typography.Paragraph type="secondary">
           本次核验指纹：
@@ -113,6 +116,24 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
             { title: '覆盖证据', dataIndex: 'status', width: 155,
               render: (status: string) => <Tag color={status === 'ENABLED_NOW'
                 ? 'green' : status === 'INVALID_STANDARD' ? 'red' : 'orange'}>{status}</Tag> },
+            { title: '引用标准状态', dataIndex: 'standardReferences', width: 280,
+              render: (references: PhysicalStandardCoverageInspection['columns'][number]['standardReferences']) =>
+                <Space wrap size={[4, 4]}>
+                  {(references || []).map(reference => {
+                    const label = reference.status === 'NOT_CONFIGURED'
+                      ? reference.referenceKind + ' 未配置'
+                      : reference.referenceKind === 'CODE'
+                        ? 'CODE ' + (reference.referenceKey || '') + ' · ' + reference.status
+                        : reference.referenceKind + (reference.version ? ' v' + reference.version : '') + ' · ' + reference.status;
+                    const color = reference.status === 'ENABLED_NOW' ? 'green'
+                      : reference.status === 'INVALID_REFERENCE' ? 'red'
+                        : reference.status === 'NOT_CONFIGURED' ? 'default' : 'orange';
+                    return <Tooltip key={reference.referenceKind + ':' + (reference.referenceKey || reference.standardId || '')}
+                      title={reference.explanation}>
+                      <Tag color={color}>{label}</Tag>
+                    </Tooltip>;
+                  })}
+                </Space> },
             { title: '为何需要复核', dataIndex: 'explanation' },
             { title: '下一步', key: 'action', width: 135,
               render: (_: unknown, column: PhysicalStandardCoverageInspection['columns'][number]) =>
