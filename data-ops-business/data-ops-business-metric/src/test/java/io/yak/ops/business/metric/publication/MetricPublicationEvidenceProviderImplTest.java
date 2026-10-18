@@ -69,6 +69,26 @@ class MetricPublicationEvidenceProviderImplTest {
   }
 
   @Test
+  void reportsReferenceMismatchWhenEventIsNotThePublishedEventForThisPin() {
+    MetricPublicationEventPO wrongEventType = publishedEvent();
+    wrongEventType.setEventType("DRAFT");
+    when(publications.findEvent(EVENT_ID)).thenReturn(wrongEventType);
+
+    Evidence evidence = provider.inspect(PIN);
+
+    assertThat(evidence.status()).isEqualTo(Status.REFERENCE_MISMATCH);
+  }
+
+  @Test
+  void refusesNewReferencesWhenMetricDefinitionIsDisabled() {
+    when(metrics.findById(METRIC_ID)).thenReturn(Optional.of(metric(MetricStatus.DISABLED)));
+
+    Evidence evidence = provider.verifyForNewContract(PIN);
+
+    assertThat(evidence.status()).isEqualTo(Status.NOT_CURRENTLY_PUBLISHED);
+  }
+
+  @Test
   void reportsVersionMismatchWhenThePublicationEventPinsAnotherVersion() {
     Reference alteredVersion =
         new Reference(METRIC_ID, 999L, VERSION_NO, DIGEST, EVENT_ID);
@@ -153,10 +173,14 @@ class MetricPublicationEvidenceProviderImplTest {
   }
 
   private static Metric metric() {
+    return metric(MetricStatus.ENABLED);
+  }
+
+  private static Metric metric(MetricStatus status) {
     LocalDateTime now = LocalDateTime.now();
     return new Metric(METRIC_ID, "gmv", "GMV", null, null, MetricType.ATOMIC,
         null, null, null, null, null, null, null, null, null, null,
-        StatPeriod.DAY, null, null, null, MetricStatus.ENABLED, 5,
+        StatPeriod.DAY, null, null, null, status, 5,
         "alice", "alice", now, now);
   }
 
