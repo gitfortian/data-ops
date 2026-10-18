@@ -74,8 +74,10 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
     switch (status) {
       case 'NOT_APPLICABLE': return '不适用';
       case 'NOT_CONFIGURED': return '未配置（选填）';
-      case 'ENABLED_NOW': return '当前启用';
-      case 'INVALID_REFERENCE': return '不存在或已停用';
+      case 'ENABLED_NOW': return '当前全部启用';
+      case 'DISABLED': return '码集全部停用';
+      case 'MIXED': return '存在停用码值';
+      case 'INVALID_REFERENCE': return '码集不存在或不可访问';
       default: return '需要人工核验';
     }
   };
@@ -154,7 +156,17 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
                   {evidence.caliberStandard
                     && <Typography.Text>口径：{referenceLabel(evidence.caliberStandard)}</Typography.Text>}
                   {evidence.codeSetStatus !== 'NOT_APPLICABLE'
-                    && <Typography.Text>码集：{evidence.codeSetCode || '未配置'} · {codeSetStatusLabel(evidence.codeSetStatus)}</Typography.Text>}
+                    && <Typography.Text>
+                      码集：{evidence.codeSetCode || '未配置'} · {codeSetStatusLabel(evidence.codeSetStatus)}
+                      {typeof evidence.codeSetItemCount === 'number'
+                        && typeof evidence.codeSetEnabledItemCount === 'number'
+                        ? `（启用 ${evidence.codeSetEnabledItemCount}/${evidence.codeSetItemCount}）` : ''}
+                    </Typography.Text>}
+                  {evidence.codeSetEvidenceSha256
+                    && <Typography.Text type="secondary"
+                      copyable={{ text: evidence.codeSetEvidenceSha256 }}>
+                      码集指纹：{evidence.codeSetEvidenceSha256.slice(0, 12)}…
+                    </Typography.Text>}
                   {evidence.securityStandard
                     && <Typography.Text>安全：{referenceLabel(evidence.securityStandard)}</Typography.Text>}
                   <Tag color={evidence.status === 'COMPLETE_NOW' ? 'green'
