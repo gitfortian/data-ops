@@ -14,7 +14,11 @@ import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.semantic.api.BusinessProcess;
 import io.yak.ops.business.semantic.api.ProcessApi;
+import io.yak.ops.business.semantic.api.Standard;
 import io.yak.ops.business.semantic.api.StandardField;
+import io.yak.ops.business.semantic.api.StandardKind;
+import io.yak.ops.business.semantic.api.StandardQueryApi;
+import io.yak.ops.business.semantic.api.StandardStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +29,7 @@ class PhysicalStandardCoverageInspectionServiceTest {
   private ModelRepository models;
   private ModelStructureService structures;
   private ProcessApi semantic;
+  private StandardQueryApi standardQuery;
   private PhysicalStandardCoverageInspectionService service;
   private Model model;
   private List<ColumnDefinition> columns;
@@ -37,8 +42,16 @@ class PhysicalStandardCoverageInspectionServiceTest {
 
   private static StandardField field(long id, String status, String role) {
     return new StandardField(id, "order_" + id, "订单 #" + id, role, status,
-        "BIGINT", null, null, null, null, null, null,
+        "BIGINT", id + 100, null, null, null, null, null,
         StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+  }
+
+  private static Standard typeStandard(long id) {
+    return new Standard(id, StandardKind.TYPE, "type_" + id, "类型标准 " + id,
+        StandardStatus.ENABLED, 1, 0, false, "测试类型标准",
+        new Standard.KindFields(null, null, null, null, null, "BIGINT",
+            null, null, null, null, null, null, null, null, null, null, null),
+        "owner", null, null);
   }
 
   private static BusinessProcess process(String grain) {
@@ -50,8 +63,10 @@ class PhysicalStandardCoverageInspectionServiceTest {
     models = mock(ModelRepository.class);
     structures = mock(ModelStructureService.class);
     semantic = mock(ProcessApi.class);
+    standardQuery = mock(StandardQueryApi.class);
     service = new PhysicalStandardCoverageInspectionService(
-        models, structures, semantic, new ObjectMapper().findAndRegisterModules());
+        models, structures, semantic, standardQuery,
+        new ObjectMapper().findAndRegisterModules());
     model = Model.create("dwd_orders", "订单明细", ModelDialect.MYSQL, null,
         null, "DWD", 22L).withPersisted(50L, "owner", null, null);
     columns = List.of(col(1L, "order_id", 11L, null), col(2L, "status", 12L, null));
@@ -61,6 +76,8 @@ class PhysicalStandardCoverageInspectionServiceTest {
     when(semantic.listProcesses(null)).thenReturn(List.of(process("每个订单一行")));
     when(semantic.getField(11L)).thenReturn(field(11L, StandardField.STATUS_ENABLED, "PROCESS"));
     when(semantic.getField(12L)).thenReturn(field(12L, StandardField.STATUS_ENABLED, "DIMENSION"));
+    when(standardQuery.get(111L)).thenReturn(typeStandard(111L));
+    when(standardQuery.get(112L)).thenReturn(typeStandard(112L));
   }
 
   @Test void currentAuthorizedDwdCoverageIsReadOnlyAndReproducible() {
@@ -182,6 +199,48 @@ class PhysicalStandardCoverageInspectionServiceTest {
     assertTrue(report.limitations().stream().anyMatch(x -> x.contains("Usage Evidence")));
     verify(semantic, never()).listProcesses(null);
     verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
+  @Test void missingRequiredTypeStandardIsReportedWithoutAutomaticRepair() {
+    StandardField missingType = new StandardField(11L, "order_11", "订单 #11",
+        "PROCESS", StandardField.STATUS_ENABLED, "BIGINT", null, null, null,
+        null, null, null, StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+    when(semantic.getField(11L)).thenReturn(missingType);
+    var report = service.inspect(50L);
+    var evidence = report.columns().stream()
+        .filter(c -> Long.valueOf(11L).equals(c.stdFieldId())).findFirst().orElseThrow();
+    assertEquals(1, report.missingDataStandardCount());
+    assertEquals("MISSING_REQUIRED_REFERENCE", evidence.dataStandards().status());
+    assertTrue(report.findings().stream().anyMatch(x -> x.contains("类型标准引用")));
+    verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
+  @Test void metricFieldRequiresUnitAndAllowsOptionalCaliberToRemainUnconfigured() {
+    StandardField metric = new StandardField(11L, "order_amount", "订单金额",
+        "METRIC", StandardField.STATUS_ENABLED, "BIGINT", 111L, null, null,
+        null, null, "金额度量", StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+    when(semantic.getField(11L)).thenReturn(metric);
+    var report = service.inspect(50L);
+    var evidence = report.columns().stream()
+        .filter(c -> Long.valueOf(11L).equals(c.stdFieldId())).findFirst().orElseThrow();
+    assertEquals(1, report.missingDataStandardCount());
+    assertEquals("MISSING_REQUIRED_REFERENCE", evidence.dataStandards().status());
+    assertEquals("MISSING_REQUIRED_REFERENCE", evidence.dataStandards().unitStandard().evidenceStatus());
+    assertEquals("NOT_CONFIGURED", evidence.dataStandards().caliberStandard().evidenceStatus());
+  }
+
+  @Test void disabledTypeStandardAndUnavailableCodeSetAreReportedAsInvalid() {
+    when(standardQuery.get(111L)).thenReturn(typeStandard(111L).withStatus(StandardStatus.DISABLED, null));
+    StandardField dimensionWithCodeSet = new StandardField(12L, "order_12", "订单 #12",
+        "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
+        "order_status", null, null, StandardField.SOURCE_MANUAL, 1, false, "owner", null, null);
+    when(semantic.getField(12L)).thenReturn(dimensionWithCodeSet);
+    when(standardQuery.existsCodeSet("order_status")).thenReturn(false);
+    var report = service.inspect(50L);
+    assertEquals(2, report.invalidDataStandardCount());
+    assertTrue(report.columns().stream().allMatch(c ->
+        "INVALID_REFERENCE".equals(c.dataStandards().status())));
+    assertTrue(report.findings().stream().anyMatch(x -> x.contains("码集不存在或已停用")));
   }
 
 }
