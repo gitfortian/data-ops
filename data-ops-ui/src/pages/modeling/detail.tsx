@@ -2504,6 +2504,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
               modelId={Number(modelId)}
               structure={structure}
               dirty={dirty}
+              modelName={modelInfo.name}
+              modelCode={modelInfo.code}
+              processName={modelInfo.processName}
+              latestVersionNo={modelInfo.latestVersionNo}
+              canEdit={canAll(['modeling:update'])}
+              onRequestPublish={() => {
+                if (publishFlowEnabled) void handleSubmitPublishApproval();
+                else void handlePublish();
+              }}
             />
           ) : null}
 
