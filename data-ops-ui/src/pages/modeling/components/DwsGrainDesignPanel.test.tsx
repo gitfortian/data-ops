@@ -143,6 +143,20 @@ it('requires explicit confirmation before migrating a pinned V2 contract to curr
 });
 
 
+
+it('keeps a frozen source read-only and blocks a false static pass after source drift', async () => {
+  (listDwsGrainCandidates as jest.Mock).mockResolvedValue([makeCandidate(3, 31)]);
+  render(<DwsGrainDesignPanel modelId={10} structure={structure} dirty={false} />);
+  expect(await screen.findByText(/冻结 V2/)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '保留冻结合同' }));
+  expect(await screen.findByText(/已保留冻结合同：当前修订只读/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '运行设计校验' }));
+  expect(await screen.findByText(/已选择保留冻结合同；当前面板只读/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '保存 DWS 设计合同' })).toBeDisabled();
+  expect(saveDwsGrain).not.toHaveBeenCalled();
+});
+
 it('allows re-confirming the grain contract after a saved physical structure fingerprint changes', async () => {
   const nextFingerprint = 'f'.repeat(64);
   (saveDwsGrain as jest.Mock).mockResolvedValue({
