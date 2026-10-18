@@ -86,8 +86,6 @@ class StandardRepositoryAdapterProjectScopeTest {
         hasCurrentProjectId,
         "repository query must bind the trusted current project ID "
             + CURRENT_PROJECT_ID
-            + "; sqlSegment="
-            + query.getSqlSegment()
             + "; parameters="
             + parameters);
   }
