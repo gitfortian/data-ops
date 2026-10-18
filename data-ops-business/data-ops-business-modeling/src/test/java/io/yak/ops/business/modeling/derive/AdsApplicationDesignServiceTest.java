@@ -148,4 +148,35 @@ class AdsApplicationDesignServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("修订已变化");
   }
+
+  @Test
+  void firstSaveReadbackAndIdenticalRetryKeepOneImmutableRevision() throws Exception {
+    prepareValidSource();
+    var request = good(11L, 0L, List.of("order_day"));
+    var validated = service.validate(10L, request);
+    org.assertj.core.api.Assertions.assertThat(validated.valid()).isTrue();
+    var json = new ObjectMapper().writeValueAsString(validated.contract());
+    var digest = io.yak.ops.common.version.VersionDigests.sha256Hex(json);
+    var stored = new AdsApplicationDesignService.Saved(
+        10L, 1L, digest, json, validated.contract(), "alice", "2026-10-18");
+    org.mockito.Mockito.doReturn(List.of(), List.of(stored)).when(jdbc).query(
+        org.mockito.ArgumentMatchers.anyString(),
+        org.mockito.ArgumentMatchers.<RowMapper<AdsApplicationDesignService.Saved>>any(),
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    org.assertj.core.api.Assertions.assertThat(service.save(10L, request, "alice").revision())
+        .isEqualTo(1L);
+    verify(jdbc, org.mockito.Mockito.times(2)).update(
+        org.mockito.ArgumentMatchers.anyString(),
+        org.mockito.ArgumentMatchers.<Object[]>any());
+
+    reset(jdbc);
+    org.mockito.Mockito.doReturn(List.of(stored)).when(jdbc).query(
+        org.mockito.ArgumentMatchers.anyString(),
+        org.mockito.ArgumentMatchers.<RowMapper<AdsApplicationDesignService.Saved>>any(),
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    org.assertj.core.api.Assertions.assertThat(service.save(10L, request, "alice").revision())
+        .isEqualTo(1L);
+    verify(jdbc, never()).update(org.mockito.ArgumentMatchers.anyString(),
+        org.mockito.ArgumentMatchers.<Object[]>any());
+  }
 }
