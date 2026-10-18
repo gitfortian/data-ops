@@ -40,6 +40,18 @@ export interface DwsGrainCandidate {
   usable: boolean;
 }
 
+export interface DwsGrainValidationResult {
+  valid: boolean;
+  blockers: string[];
+  structureFingerprint: string;
+  design: DwsGrainDesign | null;
+}
+
+export interface DwsGrainHistoryEntry extends DwsGrainSaved {
+  updatedBy: string;
+  updatedAt: string;
+}
+
 export interface SaveDwsGrainRequest {
   statPeriod: string;
   timeZone: string;
@@ -59,6 +71,21 @@ export const getDwsGrain = (modelId: number): Promise<DwsGrainSaved | null> =>
 export const listDwsGrainCandidates = (modelId: number): Promise<DwsGrainCandidate[]> =>
   HttpUtils.getData<DwsGrainCandidate[]>(`${uri(modelId)}/upstream-candidates`);
 
+export const validateDwsGrain = (
+  modelId: number, payload: SaveDwsGrainRequest,
+): Promise<DwsGrainValidationResult> =>
+  HttpUtils.postData<DwsGrainValidationResult>(`${uri(modelId)}/validate`, payload);
+
 export const saveDwsGrain = (
   modelId: number, payload: SaveDwsGrainRequest,
 ): Promise<DwsGrainSaved> => HttpUtils.putData<DwsGrainSaved>(uri(modelId), payload);
+
+export const getDwsGrainHistory = (
+  modelId: number,
+): Promise<DwsGrainHistoryEntry[]> =>
+  HttpUtils.getData<DwsGrainHistoryEntry[]>(`${uri(modelId)}/history`);
+
+export const restoreDwsGrainRevision = (
+  modelId: number, revision: number,
+): Promise<DwsGrainSaved> =>
+  HttpUtils.postData<DwsGrainSaved>(`${uri(modelId)}/history/${revision}/restore`, {});

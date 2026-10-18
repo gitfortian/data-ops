@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,27 @@ public class DwsGrainDesignController {
   public Result<java.util.List<DwsGrainDesignService.UpstreamCandidate>> candidates(
       @PathVariable long modelId) {
     return Result.success(service.candidates(modelId));
+  }
+
+  @PostMapping("/validate")
+  public Result<DwsGrainDesignService.ValidationResult> validate(
+      @PathVariable long modelId,
+      @Valid @RequestBody DwsGrainDesignService.Request request) {
+    return Result.success(service.validate(modelId, request));
+  }
+
+  @GetMapping("/history")
+  public Result<java.util.List<DwsGrainDesignService.HistoryEntry>> history(@PathVariable long modelId) {
+    return Result.success(service.history(modelId));
+  }
+
+  @PostMapping("/history/{revision}/restore")
+  @RequiresPermission(ModelingPermissionCode.UPDATE)
+  public Result<DwsGrainDesignService.Saved> restore(
+      @PathVariable long modelId, @PathVariable long revision,
+      HttpServletRequest httpRequest) {
+    return Result.success(service.restore(
+        modelId, revision, currentUsers.getCurrentUser(httpRequest)));
   }
 
   @PutMapping

@@ -95,6 +95,7 @@ class DwsGrainDesignServiceTest {
     assertThat(saved.designSha256()).matches("[a-f0-9]{64}");
     verify(jdbc).update(startsWith("INSERT INTO yak_modeling_dws_grain_design"), any(Object[].class));
     verify(models).assignAggregateMeta(10L, "1d", null, null, "alice");
+    verify(jdbc).update(startsWith("INSERT INTO yak_modeling_dws_grain_revision"), any(Object[].class));
   }
 
   @Test
@@ -148,6 +149,87 @@ class DwsGrainDesignServiceTest {
     when(versions.findById(30L, 20L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.save(10L, request(), "alice"))
         .hasMessageContaining("发布版本缺失");
+  }
+
+  @Test
+  void validatesCurrentDwsContractWithoutPersistingOrExecuting() {
+    var result = service.validate(10L, request());
+    assertThat(result.valid()).isTrue();
+    assertThat(result.blockers()).isEmpty();
+    assertThat(result.design().upstreamVersions()).containsExactly(
+        new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64)));
+    verify(jdbc, never()).update(anyString(), any(Object[].class));
+  }
+
+  @Test
+  void returnsStaticBlockerInsteadOfSavingInvalidDwsContract() {
+    var bad = new DwsGrainDesignService.Request("1d", "Asia/Shanghai",
+        "event_time", "order_day", List.of("order_city"), request().measures(),
+        List.of(20L), request().expectedStructureFingerprint());
+    var result = service.validate(10L, bad);
+    assertThat(result.valid()).isFalse();
+    assertThat(result.blockers()).anyMatch(item -> item.contains("周期桶"));
+    verify(jdbc, never()).update(anyString(), any(Object[].class));
+  }
+
+  @Test
+  void listsRevisionHistoryWithinTheCurrentProjectAndModelScope() {
+    assertThat(service.history(10L)).isEmpty();
+    verify(jdbc).query(contains("FROM yak_modeling_dws_grain_revision"),
+        any(RowMapper.class), eq(42L), eq(10L));
+  }
+
+  @Test
+  void restoresHistoricalContentAsANewForwardRevisionWhenStructureAndUpstreamStillMatch()
+      throws Exception {
+    var oldDesign = new DwsGrainDesignService.Design("1d", "Asia/Shanghai", "event_time",
+        "order_day", List.of("order_day", "order_city"),
+        List.of(new DwsGrainDesignService.Measure("order_count", "COUNT_DISTINCT")),
+        List.of(new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64))));
+    String oldJson = json.writeValueAsString(oldDesign);
+    String oldDigest = io.yak.ops.common.version.VersionDigests.sha256Hex(oldJson);
+    var historical = new DwsGrainDesignService.Saved(
+        10L, 1L, StructureFingerprint.of(target()), oldDigest, oldJson, oldDesign);
+
+    var currentDesign = new DwsGrainDesignService.Design("1d", "UTC", "event_time",
+        "order_day", List.of("order_day", "order_city"),
+        List.of(new DwsGrainDesignService.Measure("order_count", "COUNT_DISTINCT")),
+        List.of(new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64))));
+    String currentJson = json.writeValueAsString(currentDesign);
+    var current = new DwsGrainDesignService.Saved(
+        10L, 2L, StructureFingerprint.of(target()),
+        io.yak.ops.common.version.VersionDigests.sha256Hex(currentJson), currentJson, currentDesign);
+
+    when(jdbc.query(contains("FROM yak_modeling_dws_grain_revision"),
+        any(RowMapper.class), eq(42L), eq(10L), eq(1L))).thenReturn(List.of(historical));
+    when(jdbc.query(contains("FROM yak_modeling_dws_grain_design"),
+        any(RowMapper.class), eq(42L), eq(10L))).thenReturn(List.of(current));
+
+    var restored = service.restore(10L, 1L, "alice");
+
+    assertThat(restored.revision()).isEqualTo(3L);
+    assertThat(restored.design()).isEqualTo(oldDesign);
+    verify(jdbc).update(startsWith("UPDATE yak_modeling_dws_grain_design"), any(Object[].class));
+    verify(jdbc).update(startsWith("INSERT INTO yak_modeling_dws_grain_revision"), any(Object[].class));
+  }
+
+  @Test
+  void refusesToRestoreHistoryWhenPhysicalStructureHasChanged() throws Exception {
+    var oldDesign = new DwsGrainDesignService.Design("1d", "Asia/Shanghai", "event_time",
+        "order_day", List.of("order_day", "order_city"),
+        List.of(new DwsGrainDesignService.Measure("order_count", "COUNT_DISTINCT")),
+        List.of(new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64))));
+    String oldJson = json.writeValueAsString(oldDesign);
+    String digest = io.yak.ops.common.version.VersionDigests.sha256Hex(oldJson);
+    var historical = new DwsGrainDesignService.Saved(
+        10L, 1L, "f".repeat(64), digest, oldJson, oldDesign);
+    when(jdbc.query(contains("FROM yak_modeling_dws_grain_revision"),
+        any(RowMapper.class), eq(42L), eq(10L), eq(1L))).thenReturn(List.of(historical));
+
+    assertThatThrownBy(() -> service.restore(10L, 1L, "alice"))
+        .hasMessageContaining("物理结构与历史修订不同");
+    verify(jdbc, never()).update(startsWith("UPDATE yak_modeling_dws_grain_design"),
+        any(Object[].class));
   }
 
   @Test

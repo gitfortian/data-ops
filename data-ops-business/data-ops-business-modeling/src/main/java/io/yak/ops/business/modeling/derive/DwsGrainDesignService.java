@@ -55,6 +55,11 @@ public class DwsGrainDesignService {
   public record Saved(
       long modelId, long revision, String structureFingerprint,
       String designSha256, String designJson, Design design) {}
+  public record ValidationResult(
+      boolean valid, List<String> blockers, String structureFingerprint, Design design) {}
+  public record HistoryEntry(
+      long modelId, long revision, String structureFingerprint, String designSha256,
+      String designJson, Design design, String updatedBy, String updatedAt) {}
 
   private final ModelRepository models;
   private final ModelVersionRepository versions;
@@ -117,7 +122,38 @@ public class DwsGrainDesignService {
           projectId, modelId, existing.get().revision());
       if (changed != 1) throw new IllegalStateException("DWS 粒度设计发生并发变化");
     }
+    // Keep an immutable audit trail for every distinct saved contract revision.
+    // This is a design snapshot only; it never records a warehouse execution.
+    jdbc.update("INSERT INTO yak_modeling_dws_grain_revision "
+        + "(project_id,model_id,revision,structure_fingerprint,design_sha256,design_json,"
+        + "updated_by,updated_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
+        projectId, modelId, revision, fingerprint, digest, json, operator);
     return new Saved(modelId, revision, fingerprint, digest, json, design);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public ValidationResult validate(long modelId, Request request) {
+    Model model = requireDws(models.findByIdForUpdate(modelId).orElseThrow(
+        () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
+    StructureView structure = structures.getForUpdate(modelId);
+    String fingerprint = StructureFingerprint.of(structure);
+    if (request == null) {
+      return new ValidationResult(false, List.of("请提供待校验的 DWS 粒度设计"),
+          fingerprint, null);
+    }
+    if (!fingerprint.equals(request.expectedStructureFingerprint())) {
+      return new ValidationResult(false,
+          List.of("DWS 表结构已发生变化，请重新读取结构并核对字段"),
+          fingerprint, null);
+    }
+    try {
+      Design design = validateAndFreeze(model, structure, request);
+      return new ValidationResult(true, List.of(), fingerprint, design);
+    } catch (RuntimeException error) {
+      String reason = error.getMessage() == null || error.getMessage().isBlank()
+          ? "DWS 设计合同校验失败" : error.getMessage();
+      return new ValidationResult(false, List.of(reason), fingerprint, null);
+    }
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
@@ -125,6 +161,55 @@ public class DwsGrainDesignService {
     requireDws(models.findById(modelId).orElseThrow(
         () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
     return get(modelId);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
+  public List<HistoryEntry> history(long modelId) {
+    requireDws(models.findById(modelId).orElseThrow(
+        () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
+    return jdbc.query("SELECT model_id,revision,structure_fingerprint,design_sha256,"
+        + "design_json,updated_by,updated_at FROM yak_modeling_dws_grain_revision "
+        + "WHERE project_id=? AND model_id=? ORDER BY revision DESC LIMIT 50",
+        (rs, rowNo) -> decodeHistory(rs), projects.requireProjectId(), modelId);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public Saved restore(long modelId, long revision, String operator) {
+    if (revision <= 0 || operator == null || operator.isBlank()) {
+      throw new IllegalArgumentException("必须指定有效历史修订和操作人");
+    }
+    long projectId = projects.requireProjectId();
+    Model model = requireDws(models.findByIdForUpdate(modelId).orElseThrow(
+        () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
+    StructureView structure = structures.getForUpdate(modelId);
+    String fingerprint = StructureFingerprint.of(structure);
+    Saved historical = jdbc.query("SELECT model_id,revision,structure_fingerprint,"
+        + "design_sha256,design_json FROM yak_modeling_dws_grain_revision "
+        + "WHERE project_id=? AND model_id=? AND revision=?",
+        (rs, rowNo) -> decode(rs), projectId, modelId, revision).stream().findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("找不到指定的 DWS 历史修订"));
+    if (!VersionDigests.sha256Hex(historical.designJson()).equals(historical.designSha256())) {
+      throw new IllegalStateException("DWS 历史修订摘要校验失败，已拒绝恢复");
+    }
+    if (!historical.structureFingerprint().equals(fingerprint)) {
+      throw new IllegalStateException("当前 DWS 物理结构与历史修订不同；请先审阅结构差异，禁止直接恢复");
+    }
+    Design old = historical.design();
+    Request request = new Request(old.statPeriod(), old.timeZone(), old.businessTimeColumn(),
+        old.periodBucketColumn(), old.dimensions(), old.measures(),
+        old.upstreamVersions().stream().map(UpstreamVersion::modelId).toList(), fingerprint);
+    Design current = validateAndFreeze(model, structure, request);
+    if (!current.equals(old)) {
+      throw new IllegalStateException("历史修订引用的 DWD 发布版本已变化；请重新选择当前版本并审核，禁止静默重绑");
+    }
+    // Restore is a forward write: if the current design differs, save() creates
+    // a new revision containing the historical content. Revision numbers never rewind.
+    Saved restored = save(modelId, request, operator);
+    if (!restored.design().equals(old)) {
+      throw new IllegalStateException(
+          "恢复期间 DWD 发布版本发生变化；操作已回滚，请重新读取并审核");
+    }
+    return restored;
   }
 
   public record UpstreamCandidate(
@@ -288,6 +373,13 @@ public class DwsGrainDesignService {
         + "WHERE project_id=? AND model_id=?",
         (rs, rowNo) -> decode(rs), projects.requireProjectId(), modelId)
         .stream().findFirst();
+  }
+
+  private HistoryEntry decodeHistory(ResultSet rs) throws SQLException {
+    Saved saved = decode(rs);
+    return new HistoryEntry(saved.modelId(), saved.revision(), saved.structureFingerprint(),
+        saved.designSha256(), saved.designJson(), saved.design(),
+        rs.getString("updated_by"), rs.getString("updated_at"));
   }
 
   private Saved decode(ResultSet rs) throws SQLException {
