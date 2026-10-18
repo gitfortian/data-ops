@@ -111,7 +111,10 @@ test('uses real server static validation before save and verifies readback', asy
     })));
   fireEvent.click(screen.getByRole('button', { name: '保存应用设计合同' }));
   await waitFor(() => expect(saveAdsApplicationContract).toHaveBeenCalledWith(10,
-    expect.objectContaining({ appCode: 'order_overview', expectedRevision: 1 })));
+    expect.objectContaining({
+      appCode: 'order_overview', expectedRevision: 1,
+      expectedTargetStructureFingerprint: 'physical-v1',
+    })));
   await waitFor(() => expect(getAdsApplicationContract).toHaveBeenCalledTimes(3));
 });
 
