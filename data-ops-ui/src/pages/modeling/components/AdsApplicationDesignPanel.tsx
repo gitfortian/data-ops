@@ -371,14 +371,20 @@ export default function AdsApplicationDesignPanel({
         setStep(4);
         return;
       }
-      if (targetPinChanged && reviewedFingerprint !== check.targetStructureFingerprint) {
+      const expectedTargetFingerprint = saved
+        ? (reviewedFingerprint ?? saved.contract.targetStructureFingerprint)
+        : (reviewedFingerprint ?? check.targetStructureFingerprint);
+      if (expectedTargetFingerprint !== check.targetStructureFingerprint) {
+        setTargetStructureStatus('STALE');
         setValidated(null);
         setStep(2);
         message.warning('服务端检测到 ADS 物理结构指纹变化；已停止保存，请核对输出字段/标准/业务键并重新静态校验');
         return;
       }
       const result = await saveAdsApplicationContract(modelId, {
-        ...draft, expectedRevision: saved?.revision ?? 0,
+        ...draft,
+        expectedRevision: saved?.revision ?? 0,
+        expectedTargetStructureFingerprint: expectedTargetFingerprint,
       });
       const [readBack, revisions] = await Promise.all([
         getAdsApplicationContract(modelId),
