@@ -204,7 +204,12 @@ public class DwsGrainDesignService {
     }
     // Restore is a forward write: if the current design differs, save() creates
     // a new revision containing the historical content. Revision numbers never rewind.
-    return save(modelId, request, operator);
+    Saved restored = save(modelId, request, operator);
+    if (!restored.design().equals(old)) {
+      throw new IllegalStateException(
+          "恢复期间 DWD 发布版本发生变化；操作已回滚，请重新读取并审核");
+    }
+    return restored;
   }
 
   public record UpstreamCandidate(
