@@ -61,6 +61,11 @@ export interface AdsApplicationContractRequest {
   expectedTargetStructureFingerprint?: string;
 }
 
+export type AdsApplicationContractSaveRequest = AdsApplicationContractRequest & {
+  expectedRevision: number;
+  expectedTargetStructureFingerprint: string;
+};
+
 export interface AdsApplicationContractSaved {
   modelId: number;
   revision: number;
@@ -103,6 +108,6 @@ export const validateAdsApplicationContract = (
 
 export const saveAdsApplicationContract = (
   modelId: number,
-  request: AdsApplicationContractRequest,
+  request: AdsApplicationContractSaveRequest,
 ) =>
   HttpUtils.putData<AdsApplicationContractSaved>(contractPath(modelId), request);
