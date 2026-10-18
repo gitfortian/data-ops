@@ -105,6 +105,8 @@ class PostgresqlStorageSmokeTest {
       DwsGrainSqlSmoke.verify(
           jdbc, context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class),
           projectId);
+      AdsApplicationContractSqlSmoke.verify(
+          jdbc, context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class));
       DwdMappingSqlSmoke.verify(
           context.getBean("yakBusinessDataSource", DataSource.class),
           context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class));
