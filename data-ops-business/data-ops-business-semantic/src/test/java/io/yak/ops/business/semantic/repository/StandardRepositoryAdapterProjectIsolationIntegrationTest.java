@@ -2,6 +2,7 @@ package io.yak.ops.business.semantic.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -83,7 +84,7 @@ class StandardRepositoryAdapterProjectIsolationIntegrationTest {
         var foreignOnly = standardQuery.codeSetReference("FOREIGN_ONLY");
         assertEquals("NOT_FOUND", foreignOnly.status());
         assertEquals(0, foreignOnly.itemCount());
-        assertTrue(foreignOnly.contentSha256() == null);
+        assertNull(foreignOnly.contentSha256());
 
         // The disabled foreign member must not make this project's fully enabled set mixed.
         assertTrue(repository.existsEnabledByCodeSet("SHARED_STATUS"));
