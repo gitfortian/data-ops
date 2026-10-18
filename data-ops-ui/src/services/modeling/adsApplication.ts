@@ -53,6 +53,8 @@ export interface AdsApplicationContractRequest {
   sortExpression?: string;
   metricVersionId?: number | null;
   refreshTarget?: string;
+  /** Required for save: 0 means no previous contract; protects concurrent edits atomically in C1. */
+  expectedRevision?: number;
 }
 
 export interface AdsApplicationContractSaved {
