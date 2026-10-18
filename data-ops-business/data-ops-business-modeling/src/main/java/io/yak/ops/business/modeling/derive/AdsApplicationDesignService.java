@@ -51,7 +51,7 @@ public class AdsApplicationDesignService {
   public record Contract(String appCode, String appName, String owner, String purpose,
       String consumerType, String sourceMode, UpstreamPin upstream, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
-      Long metricVersionId, String refreshTarget) {}
+      Long metricVersionId, String refreshTarget, String targetStructureFingerprint) {}
   public record Saved(long modelId, long revision, String contractSha256, String contractJson,
       Contract contract, String updatedBy, String updatedAt) {}
   public record ValidationResult(boolean valid, List<String> blockers, List<String> warnings,
@@ -257,7 +257,8 @@ public class AdsApplicationDesignService {
         request.purpose().trim(), request.consumerType(), request.sourceMode(), pin, fields, keys,
         request.filterExpression() == null ? "" : request.filterExpression().trim(),
         request.sortExpression() == null ? "" : request.sortExpression().trim(),
-        request.metricVersionId(), request.refreshTarget() == null ? "" : request.refreshTarget().trim());
+        request.metricVersionId(), request.refreshTarget() == null ? "" : request.refreshTarget().trim(),
+        StructureFingerprint.of(targetStructure));
   }
 
   private boolean safeFilterExpression(String value, Set<String> outputNames) {
