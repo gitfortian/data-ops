@@ -50,15 +50,20 @@ public class StandardQueryApiImpl implements StandardQueryApi {
     if (rows == null || rows.isEmpty()) {
       return new StandardQueryApi.CodeSetReference(codeSetCode, 0, 0, "NOT_FOUND", null);
     }
-    int enabled = (int) rows.stream()
+    var codeRows = rows.stream()
         .filter(row -> row.kind() == io.yak.ops.business.semantic.api.StandardKind.CODE)
         .filter(row -> row.fields() != null
             && codeSetCode.equals(row.fields().codeSetCode()))
+        .toList();
+    if (codeRows.isEmpty()) {
+      return new StandardQueryApi.CodeSetReference(codeSetCode, 0, 0, "NOT_FOUND", null);
+    }
+    int enabled = (int) codeRows.stream()
         .filter(row -> row.status() == StandardStatus.ENABLED)
         .count();
-    String status = enabled == rows.size() ? "ENABLED"
+    String status = enabled == codeRows.size() ? "ENABLED"
         : enabled == 0 ? "DISABLED" : "MIXED";
     return new StandardQueryApi.CodeSetReference(
-        codeSetCode, rows.size(), enabled, status, CodeSetRevision.of(rows));
+        codeSetCode, codeRows.size(), enabled, status, CodeSetRevision.of(codeRows));
   }
 }
