@@ -258,10 +258,10 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
         || !item.publishedVersionNo)) {
       issues.push('所选上游中存在未发布、不可用或已变化的来源；请重新读取候选版本');
     }
-    if (hasSourceChange && !sourceMigrationConfirmed) {
-      issues.push(keepFrozen
-        ? '当前选择保留旧冻结合同；由于上游版本已漂移，不能将其标记为可发布'
-        : '检测到来源选择或发布版本变化；请明确迁移到当前版本并重新校验，或保留冻结合同');
+    if (keepFrozen) {
+      issues.push('已选择保留冻结合同；当前面板只读，不允许保存。若要继续发布，必须解决上游漂移或明确迁移');
+    } else if (hasSourceChange && !sourceMigrationConfirmed) {
+      issues.push('检测到来源选择或发布版本变化；请明确迁移到当前版本并重新校验，或保留冻结合同');
     }
     return issues;
   }, [
