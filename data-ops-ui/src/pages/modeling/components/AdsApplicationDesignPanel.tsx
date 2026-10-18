@@ -104,6 +104,10 @@ export default function AdsApplicationDesignPanel({
   const keyOptions = draft.outputFields
     .filter((field) => Boolean(field.outputColumn))
     .map((field) => ({ value: field.outputColumn, label: field.outputColumn }));
+  const standardMissing = draft.outputFields.filter((field) => {
+    const column = targetFields.find((item) => item.columnName === field.outputColumn);
+    return Boolean(field.outputColumn) && !column?.stdFieldId;
+  });
 
   const apply = (patch: Partial<AdsApplicationContractRequest>) => {
     setDraft((previous) => ({ ...previous, ...patch }));
@@ -264,6 +268,10 @@ export default function AdsApplicationDesignPanel({
   };
 
   const verify = async (): Promise<boolean> => {
+    if (standardMissing.length) {
+      message.warning('ADS 物理字段未绑定标准字段，请先在表结构中完成标准治理');
+      return false;
+    }
     if (!canEdit || structureDirty || sourceStatus !== 'CURRENT' || sourceError) {
       message.warning('请先保存物理结构，并核验当前正式发布来源与冻结版本');
       return false;
@@ -288,6 +296,9 @@ export default function AdsApplicationDesignPanel({
     if (saving || validating || !canEdit) return;
     setSaving(true);
     try {
+      if (standardMissing.length) {
+        throw new Error('ADS 输出列缺少正式标准字段绑定，请先完善模型物理结构');
+      }
       if (structureDirty || sourceStatus !== 'CURRENT' || sourceError) {
         throw new Error('物理结构有未保存更改，或来源冻结版本不再是当前发布版本');
       }
@@ -504,7 +515,10 @@ export default function AdsApplicationDesignPanel({
                 options={targetOptions}
                 onChange={(value: string) => setDraft((previous) => ({
                   ...previous, outputFields: previous.outputFields.map((item, row) =>
-                    row === index ? { ...item, outputColumn: value } : item),
+                    row === index ? {
+                      ...item, outputColumn: value,
+                      standardFieldId: targetFields.find((column) => column.columnName === value)?.stdFieldId ?? null,
+                    } : item),
                   businessKeys: previous.businessKeys.filter((key) => key !== field.outputColumn),
                 }))} />
             </label>
@@ -538,6 +552,10 @@ export default function AdsApplicationDesignPanel({
             onChange={(values: string[]) => apply({ businessKeys: values })}
             placeholder="选择一个或多个输出列" />
         </label>
+        {standardMissing.length > 0 && <Alert type="error" showIcon
+          message="ADS 输出列缺少标准字段绑定"
+          description={'请先在物理结构中为以下非 ODS 列绑定标准字段，再保存合同：'
+            + standardMissing.map((field) => field.outputColumn).join('、')} />}
         <Typography.Text type="secondary">当前 ADS 物理表定义 {targetOptions.length} 列；输出仅允许映射到已存在的物理列。</Typography.Text>
       </div>}
       {step === 3 && <div className="space-y-4">
@@ -595,11 +613,13 @@ export default function AdsApplicationDesignPanel({
         </div>}
         <Space wrap>
           <Button onClick={() => void verify()} loading={validating}
-            disabled={!canEdit || structureDirty || sourceStatus !== 'CURRENT' || Boolean(sourceError)}>
+            disabled={!canEdit || structureDirty || standardMissing.length > 0
+              || sourceStatus !== 'CURRENT' || Boolean(sourceError)}>
             服务端静态校验
           </Button>
           <Button type="primary" loading={saving} disabled={!canEdit || saving
-            || validating || structureDirty || sourceStatus !== 'CURRENT' || Boolean(sourceError)}
+            || validating || structureDirty || standardMissing.length > 0
+            || sourceStatus !== 'CURRENT' || Boolean(sourceError)}
             onClick={() => void persist()}>
             保存应用设计合同
           </Button>
