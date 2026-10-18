@@ -13,6 +13,10 @@ import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.modeling.version.ModelPublishedStructureReader;
 import io.yak.ops.common.version.VersionDigests;
 import io.yak.ops.core.project.CurrentProject;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Evidence;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Reference;
+import io.yak.ops.spi.metric.MetricPublicationEvidenceProvider.Status;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -41,18 +45,22 @@ public class AdsApplicationDesignService {
 
   public record OutputField(String sourceColumn, String outputColumn, Long standardFieldId,
       String sensitivity) {}
+  /** Complete immutable identity of the Metric publication selected for this ADS revision. */
+  public record MetricPublicationPin(Long metricId, Long metricVersionId, Integer metricVersion,
+      String snapshotDigest, Long publicationEventId) {}
   public record Request(String appCode, String appName, String owner, String purpose,
       String consumerType, String sourceMode, long upstreamModelId, long upstreamVersionId,
       int upstreamVersionNo, String upstreamChecksum, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
       Long metricVersionId, String refreshTarget, Long expectedRevision,
-      String expectedTargetStructureFingerprint) {}
+      String expectedTargetStructureFingerprint, MetricPublicationPin metricPublicationPin) {}
   public record UpstreamPin(long modelId, long versionId, int versionNo, String checksum,
       String layerCode) {}
   public record Contract(String appCode, String appName, String owner, String purpose,
       String consumerType, String sourceMode, UpstreamPin upstream, List<OutputField> outputFields,
       List<String> businessKeys, String filterExpression, String sortExpression,
-      Long metricVersionId, String refreshTarget, String targetStructureFingerprint) {}
+      Long metricVersionId, MetricPublicationPin metricPublicationPin,
+      String refreshTarget, String targetStructureFingerprint) {}
   public record Saved(long modelId, long revision, String contractSha256, String contractJson,
       Contract contract, String updatedBy, String updatedAt) {}
   public record ValidationResult(boolean valid, List<String> blockers, List<String> warnings,
@@ -65,17 +73,20 @@ public class AdsApplicationDesignService {
   private final ModelStructureService structures;
   private final ModelPublishedStructureReader published;
   private final CurrentProject projects;
+  private final MetricPublicationEvidenceProvider metricPublicationEvidence;
   private final JdbcTemplate jdbc;
   private final ObjectMapper mapper;
 
   public AdsApplicationDesignService(ModelRepository models, ModelVersionRepository versions,
       ModelStructureService structures, ModelPublishedStructureReader published,
-      CurrentProject projects, JdbcTemplate jdbc, ObjectMapper mapper) {
+      CurrentProject projects, MetricPublicationEvidenceProvider metricPublicationEvidence,
+      JdbcTemplate jdbc, ObjectMapper mapper) {
     this.models = models;
     this.versions = versions;
     this.structures = structures;
     this.published = published;
     this.projects = projects;
+    this.metricPublicationEvidence = metricPublicationEvidence;
     this.jdbc = jdbc;
     this.mapper = mapper;
   }
