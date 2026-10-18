@@ -302,8 +302,8 @@ export default function AdsApplicationDesignPanel({
       if (structureDirty || sourceStatus !== 'CURRENT' || sourceError) {
         throw new Error('物理结构有未保存更改，或来源冻结版本不再是当前发布版本');
       }
-      // Best-effort UI guard; the C1 API does not yet support an atomic
-      // expectedRevision compare-and-swap. Do not claim concurrency safety.
+      // C1 locks the ADS model and atomically verifies this revision on save.
+      // Re-read here as an early user-friendly check, not as the only guard.
       const current = await getAdsApplicationContract(modelId);
       if (current?.revision !== saved?.revision) {
         throw new Error('另一操作已更新 ADS 合同，请核对远端新版本后再编辑，禁止覆盖');
@@ -315,7 +315,9 @@ export default function AdsApplicationDesignPanel({
         setStep(4);
         return;
       }
-      const result = await saveAdsApplicationContract(modelId, draft);
+      const result = await saveAdsApplicationContract(modelId, {
+        ...draft, expectedRevision: saved?.revision ?? 0,
+      });
       const [readBack, revisions] = await Promise.all([
         getAdsApplicationContract(modelId),
         getAdsApplicationContractHistory(modelId),
@@ -625,7 +627,7 @@ export default function AdsApplicationDesignPanel({
           </Button>
         </Space>
         <Typography.Paragraph type="secondary">
-          静态校验 PASS 不代表真实数据、指标口径或安全授权合格。当前合同 API 暂无原子并发版本号校验，保存前会再次核对当前修订；正式并发保护需要后端独立补齐。
+          静态校验 PASS 不代表真实数据、指标口径或安全授权合格。保存携带当前修订号，由服务端在模型行锁内原子校验；并发变更需要重新读取，不会静默覆盖。
         </Typography.Paragraph>
       </div>}
       {step === 5 && <div className="space-y-4">
