@@ -389,6 +389,7 @@ export interface PhysicalStandardCoverageInspection {
   missingCount: number;
   invalidCount: number;
   reviewCount: number;
+  standardReferenceIssueCount: number;
   columns: {
     columnId: number;
     columnName: string;
@@ -401,6 +402,17 @@ export interface PhysicalStandardCoverageInspection {
     aggregateFunc?: string | null;
     status: 'ENABLED_NOW' | 'MISSING_STANDARD' | 'INVALID_STANDARD' | 'AGGREGATE_REVIEW';
     explanation: string;
+    standardReferences: {
+      referenceKind: 'TYPE' | 'UNIT' | 'CALIBER' | 'CODE' | 'SECURITY';
+      referenceKey?: string | null;
+      standardId?: number | null;
+      code?: string | null;
+      name?: string | null;
+      status: 'NOT_CONFIGURED' | 'ENABLED_NOW' | 'DISABLED' | 'INVALID_REFERENCE' | 'MIXED';
+      version?: number | null;
+      contentSha256?: string | null;
+      explanation: string;
+    }[];
   }[];
   findings: string[];
   limitations: string[];
