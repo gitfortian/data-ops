@@ -116,6 +116,66 @@ class AdsApplicationDesignServiceTest {
     when(project.requireProjectId()).thenReturn(1L);
   }
 
+  private AdsApplicationDesignService.Request withMetricPin(
+      AdsApplicationDesignService.Request base, Long legacyMetricVersionId,
+      AdsApplicationDesignService.MetricPublicationPin pin) {
+    return new AdsApplicationDesignService.Request(
+        base.appCode(), base.appName(), base.owner(), base.purpose(), base.consumerType(),
+        base.sourceMode(), base.upstreamModelId(), base.upstreamVersionId(),
+        base.upstreamVersionNo(), base.upstreamChecksum(), base.outputFields(),
+        base.businessKeys(), base.filterExpression(), base.sortExpression(),
+        legacyMetricVersionId, base.refreshTarget(), base.expectedRevision(),
+        base.expectedTargetStructureFingerprint(), pin);
+  }
+
+  @Test
+  void rejectsLegacyMetricVersionIdWithoutCompletePublicationPin() {
+    prepareValidSource();
+    var base = good(11L, 0L, List.of("order_day"));
+    var request = withMetricPin(base, 91L, null);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("缺少完整发布身份"));
+    verifyNoInteractions(metricPublicationEvidence);
+  }
+
+  @Test
+  void requiresExactActivePublicationPinAndCanonicalizesLegacyVersionId() {
+    prepareValidSource();
+    var pin = new AdsApplicationDesignService.MetricPublicationPin(
+        70L, 71L, 4, "b".repeat(64), 72L);
+    when(metricPublicationEvidence.verifyForNewContract(any(Reference.class)))
+        .thenReturn(new Evidence(Status.VERIFIED_ACTIVE));
+    var request = withMetricPin(good(11L, 0L, List.of("order_day")), null, pin);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isTrue();
+    org.assertj.core.api.Assertions.assertThat(result.contract().metricVersionId()).isEqualTo(71L);
+    org.assertj.core.api.Assertions.assertThat(result.contract().metricPublicationPin()).isEqualTo(pin);
+    verify(metricPublicationEvidence).verifyForNewContract(
+        new Reference(70L, 71L, 4, "b".repeat(64), 72L));
+  }
+
+  @Test
+  void refusesSupersededPublicationWhenFreezingNewContract() {
+    prepareValidSource();
+    var pin = new AdsApplicationDesignService.MetricPublicationPin(
+        70L, 71L, 4, "b".repeat(64), 72L);
+    when(metricPublicationEvidence.verifyForNewContract(any(Reference.class)))
+        .thenReturn(new Evidence(Status.NOT_CURRENTLY_PUBLISHED));
+    var request = withMetricPin(good(11L, 0L, List.of("order_day")), 71L, pin);
+
+    var result = service.validate(10L, request);
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("不再是当前有效发布"));
+  }
+
   @Test
   void refusesMappingAcrossDifferentStandardFields() {
     prepareValidSource();
