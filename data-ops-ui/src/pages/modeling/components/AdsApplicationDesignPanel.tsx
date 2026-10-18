@@ -3,6 +3,8 @@ import {
   Modal, Select, Space, Spin, Steps, Tag, Typography, message,
 } from 'antd';
 import { ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import { listActiveMetricPublicationReferences } from '@/services/metric/api';
+import type { PublishedMetricReference } from '@/services/metric/types';
 import { useEffect, useMemo, useState } from 'react';
 import {
   getModelingModel, getModelingVersion, listModelingVersions, pageModelingModels,
@@ -69,6 +71,9 @@ export default function AdsApplicationDesignPanel({
   const [candidates, setCandidates] = useState<ModelingModelRecord[]>([]);
   const [candidateError, setCandidateError] = useState('');
   const [candidateLoading, setCandidateLoading] = useState(false);
+  const [metricReferences, setMetricReferences] = useState<PublishedMetricReference[]>([]);
+  const [metricReferencesStatus, setMetricReferencesStatus] =
+    useState<'NOT_LOADED' | 'LOADING' | 'READY' | 'UNAVAILABLE'>('NOT_LOADED');
   const [source, setSource] = useState<ModelingModelRecord | null>(null);
   const [sourceLoaded, setSourceLoaded] = useState(false);
   const [sourceError, setSourceError] = useState('');
@@ -153,6 +158,24 @@ export default function AdsApplicationDesignPanel({
     });
     return () => { active = false; };
   }, [modelId, modelCode, modelName, refreshIndex]);
+
+  // Load only minimal, current-project publication identities when the user opens the
+  // Metric reference step. A failed read is not represented as an empty authoritative list.
+  useEffect(() => {
+    if (step !== 3) return undefined;
+    let active = true;
+    setMetricReferencesStatus('LOADING');
+    listActiveMetricPublicationReferences().then((references) => {
+      if (!active) return;
+      setMetricReferences(references);
+      setMetricReferencesStatus('READY');
+    }).catch(() => {
+      if (!active) return;
+      setMetricReferences([]);
+      setMetricReferencesStatus('UNAVAILABLE');
+    });
+    return () => { active = false; };
+  }, [step]);
 
   // Compare the saved contract's immutable target-structure pin with the current
   // server structure; the browser's editable structure snapshot is not authoritative.
