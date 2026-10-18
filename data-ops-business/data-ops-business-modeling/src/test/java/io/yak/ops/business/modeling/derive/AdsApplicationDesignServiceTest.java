@@ -47,16 +47,16 @@ class AdsApplicationDesignServiceTest {
   }
 
   @Test
-  void rejectsDuplicateBusinessKeysBeforePersisting() {
+  void rejectsUnsupportedConsumerTypeBeforePersisting() {
     when(models.findByIdForUpdate(10L)).thenReturn(Optional.of(ads));
     var request = new AdsApplicationDesignService.Request(
-        "order_overview", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
+        "order_overview", "订单经营日报", "alice", "订单运营看板", "UNKNOWN", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
         List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY");
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("业务键重复");
+        .hasMessageContaining("消费类型");
     verify(models, never()).findById(20L);
     verifyNoInteractions(versions, published, jdbc);
   }
