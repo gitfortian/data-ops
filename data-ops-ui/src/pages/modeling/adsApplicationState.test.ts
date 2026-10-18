@@ -30,6 +30,7 @@ const sample: AdsApplicationContractSaved = {
     sortExpression: 'order_day DESC',
     metricVersionId: 19,
     refreshTarget: 'DAILY',
+    targetStructureFingerprint: 'physical-v1',
   },
 };
 
