@@ -45,6 +45,23 @@ final class DwsGrainSqlSmoke {
         "SELECT COUNT(*) FROM yak_modeling_dws_grain_design "
             + "WHERE project_id=? AND model_id=?", Long.class, projectId + 1, modelId))
         .isZero();
+
+    assertThat(jdbc.update(
+        "INSERT INTO yak_modeling_dws_grain_revision "
+            + "(project_id,model_id,revision,structure_fingerprint,design_sha256,"
+            + "design_json,updated_by,updated_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
+        projectId, modelId, 1, "a".repeat(64), digest, "{}", "ci"))
+        .isEqualTo(1);
+    assertThatThrownBy(() -> jdbc.update(
+        "INSERT INTO yak_modeling_dws_grain_revision "
+            + "(project_id,model_id,revision,structure_fingerprint,design_sha256,"
+            + "design_json,updated_by,updated_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
+        projectId, modelId, 1, "a".repeat(64), digest, "{}", "ci"))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThat(jdbc.queryForObject(
+        "SELECT COUNT(*) FROM yak_modeling_dws_grain_revision "
+            + "WHERE project_id=? AND model_id=? AND revision=1",
+        Long.class, projectId, modelId)).isEqualTo(1L);
   }
 
   private static void insert(JdbcTemplate jdbc, long projectId, long modelId, String digest) {
