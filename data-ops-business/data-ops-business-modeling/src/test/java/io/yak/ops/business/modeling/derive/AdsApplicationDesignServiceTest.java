@@ -103,6 +103,30 @@ class AdsApplicationDesignServiceTest {
   }
 
   @Test
+  void refusesMappingAcrossDifferentStandardFields() {
+    prepareValidSource();
+    when(published.requirePublishedStructure(20L)).thenReturn(structure(20L, 99L));
+
+    var result = service.validate(10L, good(11L, 0L, List.of("order_day")));
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("数据标准不一致"));
+  }
+
+  @Test
+  void refusesSourceFieldWithoutStandardBinding() {
+    prepareValidSource();
+    when(published.requirePublishedStructure(20L)).thenReturn(structure(20L, null));
+
+    var result = service.validate(10L, good(11L, 0L, List.of("order_day")));
+
+    org.assertj.core.api.Assertions.assertThat(result.valid()).isFalse();
+    org.assertj.core.api.Assertions.assertThat(result.blockers())
+        .anyMatch(item -> item.contains("必须绑定数据标准"));
+  }
+
+  @Test
   void missingBusinessKeyIsAValidationBlockerNotANullPointer() {
     prepareValidSource();
     var result = service.validate(10L, good(11L, 0L,
