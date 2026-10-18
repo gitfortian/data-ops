@@ -281,7 +281,7 @@ class PhysicalStandardCoverageInspectionServiceTest {
     assertEquals(2, report.invalidDataStandardCount());
     assertTrue(report.columns().stream().allMatch(c ->
         "INVALID_REFERENCE".equals(c.dataStandards().status())));
-    assertTrue(report.findings().stream().anyMatch(x -> x.contains("码集不存在或已停用")));
+    assertTrue(report.findings().stream().anyMatch(x -> x.contains("码集不存在或当前项目不可访问")));
   }
 
   @Test void mixedCodeSetDoesNotAppearEnabledAndItsWholeMembershipIsFingerprintEvidence() {
