@@ -129,6 +129,18 @@ class AdsApplicationDesignServiceTest {
   }
 
   @Test
+  void omitsNullMetricPinToKeepLegacyContractHashShapeStable() throws Exception {
+    prepareValidSource();
+    var result = service.validate(10L, good(11L, 0L, List.of("order_day")));
+
+    String serialized = new ObjectMapper().writeValueAsString(result.contract());
+
+    org.assertj.core.api.Assertions.assertThat(serialized)
+        .doesNotContain("metricPublicationPin")
+        .contains("\"metricVersionId\":null");
+  }
+
+  @Test
   void rejectsLegacyMetricVersionIdWithoutCompletePublicationPin() {
     prepareValidSource();
     var base = good(11L, 0L, List.of("order_day"));
