@@ -118,7 +118,7 @@ test('uses real server static validation before save and verifies readback', asy
   await waitFor(() => expect(getAdsApplicationContract).toHaveBeenCalledTimes(3));
 });
 
-test('requires explicit review when the saved target structure fingerprint drifts', async () => {
+test('blocks save when the saved target structure fingerprint drifts', async () => {
   (validateAdsApplicationContract as jest.Mock).mockResolvedValue({
     valid: true, blockers: [], warnings: [],
     contract: { ...contract, targetStructureFingerprint: 'physical-v2' },
@@ -129,14 +129,8 @@ test('requires explicit review when the saved target structure fingerprint drift
   expect(await screen.findByText('合同修订 R1')).toBeInTheDocument();
   await waitFor(() => expect(screen.getByText('ADS 物理结构指纹已变化')).toBeInTheDocument());
 
+  expect(validateAdsApplicationContract).toHaveBeenCalled();
   expect(screen.getByRole('button', { name: '保存应用设计合同' })).toBeDisabled();
-  fireEvent.click(screen.getByText('发布来源'));
-  await waitFor(() => expect(screen.getByText('一致')).toBeInTheDocument());
-  fireEvent.click(screen.getByText('验证保存'));
-  fireEvent.click(screen.getByRole('button', { name: '服务端静态校验' }));
-  await waitFor(() => expect(screen.getByRole('button', {
-    name: '保存应用设计合同',
-  })).toBeEnabled());
   expect(saveAdsApplicationContract).not.toHaveBeenCalled();
 });
 
