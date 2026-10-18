@@ -1,6 +1,6 @@
 # R13｜ADS Metric 引用身份与服务端核验设计提案
 
-状态：**方案已获产品负责人批准（2026-10-18）；第一阶段实现见 Draft PR #608，尚未合并**。  
+状态：**方案已获产品负责人批准（2026-10-18）；第一阶段已由 [PR #608](https://github.com/gitfortian/data-ops/pull/608) 合并。主线完整 CI 以 [Actions run #39104498173](https://github.com/gitfortian/data-ops/actions/runs/39104498173) 的实时结论为准**。  
 关联：Issue #605、C3 Issue #602、C1 PR #599、C2 PR #604。
 
 ## 1. 问题与事实
@@ -103,4 +103,4 @@ Provider 输入至少包含当前 project context 与完整引用；输出应为
 3. 新合同只允许当前项目内、当前有效、身份与摘要完全匹配且 Metric 启用的发布；撤回/被替换版本不能用于新修订。
 4. 历史合同保留原始 pin、revision 与 hash，不自动补齐旧引用；旧合同仅有 metricVersionId 时显示身份不完整，用户显式重选或清除后创建新修订。
 5. Metric READ 与项目访问必须在 provider 内核验；权限不足、跨项目、服务不可用均失败关闭，不泄露跨项目对象是否存在。
-6. PR #608 实施第一阶段：SPI/provider、服务端 validate/save 门禁、最小已发布引用 API、工作台选择器和回归测试。后续 C3 只读交接证据卡仍独立实施，不代替 Metric 原域管理。
+6. PR #608 已合并第一阶段：SPI/provider、服务端 validate/save 门禁、最小已发布引用 API、工作台选择器和回归测试。后续 C3 只读交接证据卡仍独立实施，不代替 Metric 原域管理；DataDev/Runtime 的稳定关联设计单独跟踪于 Issue #609。
