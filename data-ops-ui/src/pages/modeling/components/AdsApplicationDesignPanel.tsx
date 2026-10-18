@@ -112,10 +112,11 @@ export default function AdsApplicationDesignPanel({
     label: String(field.columnName) + ' · ' + String(field.dataType ?? '字段'),
   }));
   const metricReferenceOptions = useMemo(() => {
-    const options = metricReferences.map((reference) => ({
-      value: reference.publicationEventId,
-      label: `${reference.metricCode} · ${reference.metricName} · V${reference.metricVersion} · ${reference.snapshotDigest.slice(0, 8)}`,
-    }));
+    const options: { value: number | string; label: string; disabled?: boolean }[] =
+      metricReferences.map((reference) => ({
+        value: reference.publicationEventId,
+        label: `${reference.metricCode} · ${reference.metricName} · V${reference.metricVersion} · ${reference.snapshotDigest.slice(0, 8)}`,
+      }));
     const pin = draft.metricPublicationPin;
     if (pin && !metricReferences.some(
       (reference) => reference.publicationEventId === pin.publicationEventId,
@@ -128,9 +129,15 @@ export default function AdsApplicationDesignPanel({
         label: `已保存引用 · Metric #${pin.metricId} · V${pin.metricVersion} · ${pin.snapshotDigest.slice(0, 8)}（${stateLabel}）`,
         disabled: true,
       });
+    } else if (!pin && draft.metricVersionId != null) {
+      options.unshift({
+        value: `legacy:${draft.metricVersionId}`,
+        label: `旧合同引用 · Metric 版本 ID ${draft.metricVersionId}（身份不足，需重选或清除）`,
+        disabled: true,
+      });
     }
     return options;
-  }, [draft.metricPublicationPin, metricReferences, metricReferencesStatus]);
+  }, [draft.metricPublicationPin, draft.metricVersionId, metricReferences, metricReferencesStatus]);
 
   const sourceOptions = (sourceStructure?.columns ?? [])
     .filter((field) => Boolean(field.columnName))
