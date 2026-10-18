@@ -15,4 +15,17 @@ public interface StandardQueryApi {
 
   /** 项目内是否存在启用码集(ENABLED 且 code_set_code 匹配的 CODE 行),供码集引用校验。 */
   boolean existsCodeSet(String codeSetCode);
+
+  /**
+   * Read-only, versioned evidence for a CODE set reference. The content digest
+   * covers all rows in the project-scoped set, including disabled values.
+   */
+  CodeSetReference codeSetReference(String codeSetCode);
+
+  record CodeSetReference(
+      String codeSetCode,
+      int itemCount,
+      int enabledItemCount,
+      String status,
+      String contentSha256) {}
 }
