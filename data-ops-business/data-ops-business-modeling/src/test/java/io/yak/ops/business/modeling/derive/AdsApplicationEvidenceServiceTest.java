@@ -90,6 +90,37 @@ class AdsApplicationEvidenceServiceTest {
     assertThat(item.digest()).isNull();
   }
 
+  @Test
+  void forbiddenMetricReferenceDoesNotExposePublicationIdentity() {
+    MetricPublicationPin pin = new MetricPublicationPin(70L, 71L, 4,
+        "c".repeat(64), 72L);
+    when(contracts.inspect(10L)).thenReturn(Optional.of(saved(contract(null, pin))));
+    when(metric.inspect(any(Reference.class))).thenReturn(new Evidence(Status.FORBIDDEN));
+
+    var item = domain(service.inspect(10L), "METRIC");
+
+    assertThat(item.status()).isEqualTo("FORBIDDEN");
+    assertThat(item.evidenceId()).isNull();
+    assertThat(item.version()).isNull();
+    assertThat(item.digest()).isNull();
+  }
+
+  @Test
+  void missingOrCrossProjectMetricReferenceIsUnknownWithoutIdentityDisclosure() {
+    MetricPublicationPin pin = new MetricPublicationPin(70L, 71L, 4,
+        "c".repeat(64), 72L);
+    when(contracts.inspect(10L)).thenReturn(Optional.of(saved(contract(null, pin))));
+    when(metric.inspect(any(Reference.class))).thenReturn(new Evidence(Status.NOT_FOUND));
+
+    var item = domain(service.inspect(10L), "METRIC");
+
+    assertThat(item.status()).isEqualTo("UNKNOWN");
+    assertThat(item.sourceStatus()).isEqualTo("NOT_FOUND");
+    assertThat(item.evidenceId()).isNull();
+    assertThat(item.version()).isNull();
+    assertThat(item.digest()).isNull();
+  }
+
   private static AdsApplicationEvidenceService.DomainEvidence domain(
       AdsApplicationEvidenceService.Snapshot snapshot, String code) {
     return snapshot.domains().stream().filter(item -> item.domainCode().equals(code))
