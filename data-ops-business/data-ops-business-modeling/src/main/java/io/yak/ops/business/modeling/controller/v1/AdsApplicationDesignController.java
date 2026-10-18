@@ -5,6 +5,7 @@ import io.yak.framework.common.Result;
 import io.yak.framework.security.extend.CurrentUserProvider;
 import io.yak.framework.security.web.RequiresPermission;
 import io.yak.ops.business.modeling.derive.AdsApplicationDesignService;
+import io.yak.ops.business.modeling.derive.AdsApplicationEvidenceService;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiresPermission(ModelingPermissionCode.READ)
 public class AdsApplicationDesignController {
   private final AdsApplicationDesignService service;
+  private final AdsApplicationEvidenceService evidenceService;
   private final CurrentUserProvider currentUsers;
 
   @GetMapping
@@ -39,6 +41,11 @@ public class AdsApplicationDesignController {
   public Result<java.util.List<AdsApplicationDesignService.HistoryEntry>> history(
       @PathVariable long modelId) {
     return Result.success(service.history(modelId));
+  }
+
+  @GetMapping("/evidence")
+  public Result<AdsApplicationEvidenceService.Snapshot> evidence(@PathVariable long modelId) {
+    return Result.success(evidenceService.inspect(modelId));
   }
 
   @PostMapping("/validate")

@@ -101,6 +101,25 @@ export interface AdsApplicationContractValidation {
 
 export interface AdsApplicationContractHistoryEntry extends AdsApplicationContractSaved {}
 
+export interface AdsHandoffEvidenceItem {
+  domainCode: string;
+  status: string;
+  sourceStatus?: string | null;
+  sourceDomain: string;
+  summary: string;
+  evidenceId?: string | null;
+  version?: string | null;
+  digest?: string | null;
+}
+
+export interface AdsApplicationEvidenceSnapshot {
+  modelId: number;
+  contractRevision?: number | null;
+  contractSha256?: string | null;
+  checkedAt: string;
+  domains: AdsHandoffEvidenceItem[];
+}
+
 const contractPath = (modelId: number) =>
   `${MODELING_API_PREFIX}/${modelId}/ads-application`;
 
@@ -109,6 +128,9 @@ export const getAdsApplicationContract = (modelId: number) =>
 
 export const getAdsApplicationContractHistory = (modelId: number) =>
   HttpUtils.getData<AdsApplicationContractHistoryEntry[]>(`${contractPath(modelId)}/history`);
+
+export const getAdsApplicationEvidence = (modelId: number) =>
+  HttpUtils.getData<AdsApplicationEvidenceSnapshot>(`${contractPath(modelId)}/evidence`);
 
 export const validateAdsApplicationContract = (
   modelId: number,

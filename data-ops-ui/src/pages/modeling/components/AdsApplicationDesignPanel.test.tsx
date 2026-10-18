@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AdsApplicationDesignPanel from './AdsApplicationDesignPanel';
 import { listActiveMetricPublicationReferences } from '@/services/metric/api';
 import {
-  getAdsApplicationContract, getAdsApplicationContractHistory,
+  getAdsApplicationContract, getAdsApplicationContractHistory, getAdsApplicationEvidence,
   validateAdsApplicationContract, saveAdsApplicationContract,
 } from '@/services/modeling/adsApplication';
 import {
@@ -14,6 +14,7 @@ import type { ModelingStructureRecord } from '@/services/modeling/types';
 jest.mock('@/services/modeling/adsApplication', () => ({
   getAdsApplicationContract: jest.fn(),
   getAdsApplicationContractHistory: jest.fn(),
+  getAdsApplicationEvidence: jest.fn(),
   validateAdsApplicationContract: jest.fn(),
   saveAdsApplicationContract: jest.fn(),
 }));
@@ -67,6 +68,10 @@ beforeEach(() => {
   (listActiveMetricPublicationReferences as jest.Mock).mockResolvedValue([]);
   (getAdsApplicationContract as jest.Mock).mockResolvedValue(stored);
   (getAdsApplicationContractHistory as jest.Mock).mockResolvedValue([stored]);
+  (getAdsApplicationEvidence as jest.Mock).mockResolvedValue({
+    modelId: 10, contractRevision: 1, contractSha256: 'a'.repeat(64),
+    checkedAt: '2026-10-18T10:00:00Z', domains: [],
+  });
   (pageModelingModels as jest.Mock).mockResolvedValue({
     bizData: [
       { id: 20, code: 'dws_order', name: '订单汇总', layerCode: 'DWS',
