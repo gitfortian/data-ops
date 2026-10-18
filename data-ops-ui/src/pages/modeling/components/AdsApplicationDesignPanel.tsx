@@ -77,6 +77,8 @@ export default function AdsApplicationDesignPanel({
   const [validating, setValidating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validated, setValidated] = useState<Validated | null>(null);
+  const [targetStructureStatus, setTargetStructureStatus] =
+    useState<'UNKNOWN' | 'CURRENT' | 'STALE' | 'NOT_PINNED'>('UNKNOWN');
 
   const signature = useMemo(() => JSON.stringify({
     draft, structureDefinition: structure.definition, structureDirty,
@@ -151,6 +153,30 @@ export default function AdsApplicationDesignPanel({
     });
     return () => { active = false; };
   }, [modelId, modelCode, modelName, refreshIndex]);
+
+  // Compare the saved contract's immutable target-structure pin with the current
+  // server structure; the browser's editable structure snapshot is not authoritative.
+  useEffect(() => {
+    if (loading) return;
+    if (!saved) {
+      setTargetStructureStatus('NOT_PINNED');
+      return;
+    }
+    let active = true;
+    setTargetStructureStatus('UNKNOWN');
+    validateAdsApplicationContract(modelId, draftFromAdsSaved(saved))
+      .then((result) => {
+        if (!active) return;
+        const pinned = saved.contract.targetStructureFingerprint;
+        setTargetStructureStatus(
+          pinned && pinned === result.targetStructureFingerprint ? 'CURRENT' : 'STALE',
+        );
+      })
+      .catch(() => {
+        if (active) setTargetStructureStatus('UNKNOWN');
+      });
+    return () => { active = false; };
+  }, [modelId, saved, structure.definition, structureDirty, loading, refreshIndex]);
 
   // Only current-project, same-process, already-published sources are offered.
   useEffect(() => {
