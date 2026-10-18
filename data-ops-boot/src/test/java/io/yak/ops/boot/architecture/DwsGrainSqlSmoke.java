@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** Shared real MySQL / PostgreSQL V7 contract: one DWS design per project/model. */
+/** Shared real MySQL / PostgreSQL V8 contract: current design plus immutable revision history. */
 final class DwsGrainSqlSmoke {
   private DwsGrainSqlSmoke() {}
 
