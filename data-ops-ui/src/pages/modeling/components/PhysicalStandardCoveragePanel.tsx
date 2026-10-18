@@ -53,11 +53,12 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
   const feedback = report && baseline ? comparePhysicalGovernance(baseline, report) : undefined;
   const referenceLabel = (ref: PhysicalStandardReferenceEvidence): string => {
     const name = ref.name || ref.code || (ref.id ? `#${ref.id}` : '未配置');
+    const definition = ref.definition ? ` · ${ref.definition}` : '';
     const status = ref.evidenceStatus === 'ENABLED_NOW' ? `当前启用 v${ref.version}`
       : ref.evidenceStatus === 'MISSING_REQUIRED_REFERENCE' ? '缺少必需引用'
         : ref.evidenceStatus === 'INVALID_REFERENCE' ? '引用无效/停用'
           : '未配置';
-    return `${name} · ${status}`;
+    return `${name} (${ref.kind})${definition} · ${status}`;
   };
 
   return (
@@ -82,8 +83,8 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
         <Alert showIcon className="mb-3"
           type={report.status === 'COVERED_NOW' ? 'info' : 'warning'}
           message={report.status === 'COVERED_NOW'
-            ? '当前模型所有字段已关联可用标准；此结果仅供人工设计审阅'
-            : '当前物理设计存在标准覆盖或业务含义待核实项'}
+            ? '当前字段的标准字段及适用数据标准引用均无待核验项；此结果仅供人工设计审阅'
+            : '当前物理设计存在标准字段、关联数据标准或业务含义待核实项'}
           description={['DWS', 'ADS'].includes(report.layerCode)
             ? '本报告核验当前标准字段及其已配置的数据标准引用；不核验 DWS 粒度/上游版本/MetricVersionRef，也不核验 ADS 消费合同/脱敏/消费者授权；正式发布资格不会因本报告改变。'
             : '核验已保存的物理结构、标准字段与当前关联的数据标准引用。正式发布强门禁仍待相关 Owner 完成签收，技术列豁免尚未获批；本报告不会自动改动任何发布状态。'} />
