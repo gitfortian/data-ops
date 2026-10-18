@@ -111,6 +111,27 @@ export default function AdsApplicationDesignPanel({
     value: String(field.columnName),
     label: String(field.columnName) + ' · ' + String(field.dataType ?? '字段'),
   }));
+  const metricReferenceOptions = useMemo(() => {
+    const options = metricReferences.map((reference) => ({
+      value: reference.publicationEventId,
+      label: `${reference.metricCode} · ${reference.metricName} · V${reference.metricVersion} · ${reference.snapshotDigest.slice(0, 8)}`,
+    }));
+    const pin = draft.metricPublicationPin;
+    if (pin && !metricReferences.some(
+      (reference) => reference.publicationEventId === pin.publicationEventId,
+    )) {
+      const stateLabel = metricReferencesStatus === 'READY'
+        ? '非当前有效发布'
+        : '状态待核验';
+      options.unshift({
+        value: pin.publicationEventId,
+        label: `已保存引用 · Metric #${pin.metricId} · V${pin.metricVersion} · ${pin.snapshotDigest.slice(0, 8)}（${stateLabel}）`,
+        disabled: true,
+      });
+    }
+    return options;
+  }, [draft.metricPublicationPin, metricReferences, metricReferencesStatus]);
+
   const sourceOptions = (sourceStructure?.columns ?? [])
     .filter((field) => Boolean(field.columnName))
     .map((field) => ({
