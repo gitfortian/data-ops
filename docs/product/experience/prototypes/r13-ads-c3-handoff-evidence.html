@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R13-C3 · ADS 交接证据 UX 原型</title>
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#172b4d;background:#f5f7fa;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;background:#f5f7fa;font-size:14px;line-height:1.55}
+button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.app{display:grid;grid-template-columns:228px minmax(0,1fr);min-height:100vh}
+.sidebar{background:#101c33;color:#d4dcec;padding:22px 14px;display:flex;flex-direction:column;gap:28px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 10px;color:#fff;font-weight:700;font-size:17px;letter-spacing:.2px}
+.brand-mark{display:grid;place-items:center;width:31px;height:31px;border-radius:9px;background:linear-gradient(135deg,#7da8ff,#4f70ce);color:white;font-weight:800}
+.workspace{padding:0 9px;color:#92a2bd;font-size:11px;text-transform:uppercase;letter-spacing:1.1px}
+.nav{display:grid;gap:5px}.nav-item{border:0;text-align:left;color:#b8c4d9;background:transparent;border-radius:8px;padding:10px 12px;display:flex;gap:12px;align-items:center}
+.nav-item .glyph{width:18px;text-align:center;color:#8ea4c9}.nav-item.active{background:#243657;color:white;font-weight:600}.nav-item.active .glyph{color:#9ebcff}
+.sidebar-bottom{margin-top:auto;border-top:1px solid #2a3952;padding:16px 10px 0;color:#9baac1;font-size:12px}
+.main{min-width:0}.topbar{height:60px;border-bottom:1px solid #e4e9f1;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+.crumb{color:#75839a;font-size:12px}.crumb strong{color:#263b5b;font-weight:600}.top-right{display:flex;align-items:center;gap:18px;color:#64748b;font-size:12px}.avatar{width:29px;height:29px;border-radius:50%;background:#e7edfb;color:#3158a6;display:grid;place-items:center;font-weight:700}
+.content{max-width:1440px;margin:0 auto;padding:27px 32px 44px}
+.prototype-note{display:flex;gap:10px;align-items:flex-start;border:1px solid #f2d7a0;background:#fffaf0;color:#805d1a;border-radius:9px;padding:11px 14px;margin-bottom:20px;font-size:12px}
+.note-icon{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:#f5e2b7;flex:none;font-weight:800}
+.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:22px}
+.eyebrow{font-size:11px;color:#6b7b94;letter-spacing:1px;font-weight:700;text-transform:uppercase}
+h1{font-size:25px;letter-spacing:-.5px;margin:5px 0 6px;font-weight:700;color:#162947}
+.subtitle{color:#697a92;font-size:13px;margin:0}.heading-actions{display:flex;gap:9px;align-items:center;padding-top:7px}
+.btn{border:1px solid #d8e0eb;border-radius:7px;background:#fff;color:#344966;padding:8px 12px;font-size:12px;font-weight:600;box-shadow:0 1px 1px #0f172a05}
+.btn.primary{background:#315fbd;color:#fff;border-color:#315fbd}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{display:inline-flex;align-items:center;gap:6px;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.status .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.status.neutral{background:#eef1f5;color:#53657c}.status.warn{background:#fff2d8;color:#946313}.status.danger{background:#fde9e8;color:#ae3d38}.status.good{background:#e8f6ed;color:#24764a}.status.blue{background:#e8f0ff;color:#315fbd}
+.model-strip{background:#fff;border:1px solid #e0e7f0;border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:1.3fr 1fr 1fr 1.2fr;gap:18px;margin-bottom:20px;box-shadow:0 1px 2px #172b4d04}
+.strip-label{font-size:11px;color:#7c8ba0;margin-bottom:5px}.strip-value{font-size:13px;color:#243a5b;font-weight:650}.strip-sub{font-size:11px;color:#8190a4;margin-top:3px}
+.steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:20px}
+.step{position:relative;background:#fff;border:1px solid #e0e7f0;border-radius:8px;padding:10px 11px;display:flex;align-items:center;gap:9px;min-width:0;color:#7d8ca1}
+.step-num{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:#edf1f7;color:#61738d;font-size:11px;font-weight:700;flex:none}
+.step-name{font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.step.done .step-num{background:#e6f4eb;color:#257449}.step.done{color:#52657f}.step.active{border-color:#7396e6;box-shadow:0 0 0 2px #eaf0ff;background:#fbfcff;color:#254a9c}.step.active .step-num{background:#315fbd;color:#fff}
+.card{background:#fff;border:1px solid #e0e7f0;border-radius:10px;box-shadow:0 1px 2px #172b4d04;margin-bottom:16px;overflow:hidden}
+.card-head{padding:17px 20px;border-bottom:1px solid #e8edf4;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.card-title{font-size:15px;font-weight:700;color:#233a5d;margin:0 0 3px}.card-desc{font-size:12px;color:#75849a;margin:0}.card-body{padding:18px 20px}
+.tabbar{display:flex;gap:22px;border-bottom:1px solid #e6ebf2;padding:0 20px}
+.tab{border:0;border-bottom:2px solid transparent;padding:13px 1px 12px;background:transparent;color:#73829a;font-size:12px;font-weight:650}
+.tab.active{border-color:#315fbd;color:#2d55a8}
+.current-revision{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.revision-chip{font-size:12px;font-weight:750;color:#244e9d;background:#edf3ff;border:1px solid #dbe7ff;border-radius:6px;padding:5px 9px}
+.hash{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:#6c7b90;background:#f6f8fb;border:1px solid #e8edf4;border-radius:5px;padding:5px 7px}
+.truth-banner{display:flex;gap:11px;align-items:flex-start;background:#f8fafc;border:1px solid #dfe7f1;border-left:3px solid #7d91b2;border-radius:7px;padding:12px 14px;margin-bottom:17px}
+.truth-icon{font-size:16px;color:#617895;line-height:1.2}.truth-title{font-size:12px;font-weight:750;color:#354b68;margin-bottom:3px}.truth-text{font-size:12px;color:#718199}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 11px}.section-title h3{font-size:13px;margin:0;color:#2d4364}.section-title p{font-size:11px;color:#8592a5;margin:0}
+.evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.evidence-card{border:1px solid #e0e7f0;border-radius:9px;overflow:hidden;background:#fff}
+.ev-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:15px 15px 12px}
+.ev-brand{display:flex;align-items:center;gap:10px;min-width:0}.ev-icon{width:36px;height:36px;border-radius:9px;background:#edf2fa;color:#4b6590;display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.ev-name{font-size:13px;font-weight:750;color:#253b5b}.ev-owner{font-size:11px;color:#8592a5;margin-top:2px}
+.ev-summary{font-size:12px;color:#596d88;padding:0 15px 13px}
+.ev-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 15px;border-top:1px solid #edf1f6;border-bottom:1px solid #edf1f6;background:#fbfcfe}
+.field-label{font-size:10px;color:#8a97a9;margin-bottom:3px}.field-value{font-size:11px;color:#5b6f89;font-weight:600;overflow-wrap:anywhere}
+.ev-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 15px}
+.ev-updated{font-size:10px;color:#8a97a9}.ev-link{border:0;background:transparent;color:#2e5db6;font-size:11px;font-weight:700;padding:4px 0}.ev-link[disabled]{color:#9aa7b8;cursor:default}
+.history-list{display:grid;gap:9px}.history-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 13px;border:1px solid #e6ebf2;border-radius:8px}
+.history-rev{font-weight:750;color:#2b4f91}.history-title{font-size:12px;color:#344b6b;font-weight:650}.history-meta{font-size:11px;color:#8794a7;margin-top:3px}
+.footer-note{font-size:11px;color:#8794a7;padding:0 2px;margin-top:12px}
+@media(max-width:1000px){.app{grid-template-columns:70px minmax(0,1fr)}.sidebar{padding:20px 8px}.brand{justify-content:center;padding:0}.brand-name,.workspace,.nav-item .nav-label,.sidebar-bottom{display:none}.nav-item{justify-content:center;padding:12px 0}.model-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.steps{grid-template-columns:repeat(3,minmax(0,1fr))}.content{padding:22px 20px}.topbar{padding:0 20px}}
+@media(max-width:680px){.app{display:block}.sidebar{display:none}.topbar{height:52px;padding:0 15px}.content{padding:15px 12px 30px}.heading{display:block}.heading-actions{padding-top:12px}.model-strip{grid-template-columns:1fr 1fr;padding:13px;gap:14px}.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.evidence-grid{grid-template-columns:1fr}.card-head,.card-body{padding:14px}.tabbar{padding:0 14px}.history-row{grid-template-columns:60px minmax(0,1fr)}.history-row .btn{grid-column:2;justify-self:start}.top-right .environment{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">Y</span><span class="brand-name">数据运营平台</span></div>
+    <div>
+      <div class="workspace">WORKSPACE</div>
+      <nav class="nav" aria-label="主导航">
+        <button class="nav-item"><span class="glyph">▦</span><span class="nav-label">工作台</span></button>
+        <button class="nav-item"><span class="glyph">◈</span><span class="nav-label">数据源</span></button>
+        <button class="nav-item"><span class="glyph">▤</span><span class="nav-label">元数据</span></button>
+        <button class="nav-item active"><span class="glyph">⌘</span><span class="nav-label">数仓建模</span></button>
+        <button class="nav-item"><span class="glyph">◇</span><span class="nav-label">指标管理</span></button>
+        <button class="nav-item"><span class="glyph">▧</span><span class="nav-label">数据开发</span></button>
+        <button class="nav-item"><span class="glyph">◉</span><span class="nav-label">数据质量</span></button>
+        <button class="nav-item"><span class="glyph">▣</span><span class="nav-label">数据服务</span></button>
+      </nav>
+    </div>
+    <div class="sidebar-bottom">当前项目<br><strong style="display:block;color:#d9e3f3;margin-top:5px">订单经营分析</strong></div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">数仓建模&nbsp; / &nbsp;模型详情&nbsp; / &nbsp;<strong>ADS 应用输出</strong></div>
+      <div class="top-right"><span class="environment">项目：订单经营分析</span><span>帮助与反馈</span><span class="avatar">T</span></div>
+    </header>
+    <div class="content">
+      <div class="prototype-note"><span class="note-icon">!</span><div><strong>UX 高保真原型 · 静态示例，不是真实运行数据</strong><br>下方状态用于评审信息架构和交互，不代表当前项目的 Metric、Runtime、Quality 或消费授权事实。生产实现必须由各真相域只读 API 驱动。</div></div>
+      <div class="heading">
+        <div><div class="eyebrow">MODELING / ADS</div><h1>ADS 应用输出工作台</h1><p class="subtitle">订单经营日报 · 面向报表消费的应用输出合同</p></div>
+        <div class="heading-actions"><button class="btn">返回模型列表</button><button class="btn primary">查看合同详情</button></div>
+      </div>
+      <div class="model-strip">
+        <div><div class="strip-label">模型编码</div><div class="strip-value">ads_order_overview</div><div class="strip-sub">ADS · 订单域</div></div>
+        <div><div class="strip-label">业务过程</div><div class="strip-value">订单履约与经营</div><div class="strip-sub">当前项目上下文</div></div>
+        <div><div class="strip-label">设计状态</div><div class="strip-value"><span class="status blue"><span class="dot"></span>合同已保存</span></div><div class="strip-sub">设计状态，不代表已发布</div></div>
+        <div><div class="strip-label">当前合同修订</div><div class="strip-value">R1 · 订单经营日报</div><div class="strip-sub">保存人：示例用户 · 2026-10-18 10:00</div></div>
+      </div>
+      <div class="steps" aria-label="建模步骤">
+        <div class="step done"><span class="step-num">✓</span><span class="step-name">应用目标</span></div>
+        <div class="step done"><span class="step-num">✓</span><span class="step-name">发布来源</span></div>
+        <div class="step done"><span class="step-num">✓</span><span class="step-name">输出设计</span></div>
+        <div class="step done"><span class="step-num">✓</span><span class="step-name">业务口径</span></div>
+        <div class="step done"><span class="step-num">✓</span><span class="step-name">验证保存</span></div>
+        <div class="step active"><span class="step-num">6</span><span class="step-name">历史交接</span></div>
+      </div>
+      <section class="card">
+        <div class="card-head">
+          <div><h2 class="card-title">合同与下游交接</h2><p class="card-desc">查看当前设计修订，以及各业务域能够提供的真实证据</p></div>
+          <span class="status neutral"><span class="dot"></span>只读视图</span>
+        </div>
+        <div class="tabbar" role="tablist" aria-label="合同交接视图">
+          <button class="tab active" id="tab-evidence" role="tab" aria-selected="true" aria-controls="panel-evidence">交接证据</button>
+          <button class="tab" id="tab-history" role="tab" aria-selected="false" aria-controls="panel-history">修订历史 <span style="color:#9aa6b7;font-weight:500">（2）</span></button>
+        </div>
+        <div class="card-body" id="panel-evidence" role="tabpanel" aria-labelledby="tab-evidence">
+          <div class="current-revision" style="margin-bottom:14px">
+            <span class="revision-chip">当前合同 · R1</span>
+            <span class="hash">SHA-256 · a3b8…91d2（示例）</span>
+            <span class="strip-sub">最后保存：示例用户 · 2026-10-18 10:00</span>
+          </div>
+          <div class="truth-banner"><span class="truth-icon">ⓘ</span><div><div class="truth-title">合同设计已保存 ≠ 数据已交付</div><div class="truth-text">此处只展示来源域的真实只读证据。没有接入、没有记录、无权限或无法核验是不同状态；本页面不会触发 SQL、任务运行、质量执行或消费授权。</div></div></div>
+          <div class="section-title"><h3>下游真相域证据</h3><p>示例：4 个域 · 状态均非生产事实</p></div>
+          <div class="evidence-grid">
+            <article class="evidence-card">
+              <div class="ev-top"><div class="ev-brand"><div class="ev-icon">M</div><div><div class="ev-name">Metric / Semantic</div><div class="ev-owner">指标与语义 · 独立事实所有者</div></div></div><span class="status warn"><span class="dot"></span>未配置引用</span></div>
+              <div class="ev-summary">当前合同未关联可核验的已发布指标版本。仅保存指标 ID 不代表指标语义已验证。</div>
+              <div class="ev-fields"><div><div class="field-label">指标版本</div><div class="field-value">未配置</div></div><div><div class="field-label">核验状态</div><div class="field-value">NOT_CONFIGURED</div></div></div>
+              <div class="ev-bottom"><span class="ev-updated">来源：当前合同字段</span><button class="ev-link" disabled>无详情可查看</button></div>
+            </article>
+            <article class="evidence-card">
+              <div class="ev-top"><div class="ev-brand"><div class="ev-icon">R</div><div><div class="ev-name">DataDev / Runtime</div><div class="ev-owner">任务、执行与运行回执</div></div></div><span class="status neutral"><span class="dot"></span>未接入</span></div>
+              <div class="ev-summary">本产品尚未接入可追溯到当前合同的只读运行证据；不能据此判断是否执行过。</div>
+              <div class="ev-fields"><div><div class="field-label">任务 / 运行 ID</div><div class="field-value">—</div></div><div><div class="field-label">核验状态</div><div class="field-value">NOT_CONNECTED</div></div></div>
+              <div class="ev-bottom"><span class="ev-updated">来源：DataDev / Runtime（待接入）</span><button class="ev-link" disabled>暂无真实详情入口</button></div>
+            </article>
+            <article class="evidence-card">
+              <div class="ev-top"><div class="ev-brand"><div class="ev-icon">Q</div><div><div class="ev-name">Quality</div><div class="ev-owner">规则、质量运行与结果</div></div></div><span class="status neutral"><span class="dot"></span>未接入</span></div>
+              <div class="ev-summary">当前视图没有可核验的质量运行结果。无记录或未接入绝不等于质量通过。</div>
+              <div class="ev-fields"><div><div class="field-label">规则 / 运行 ID</div><div class="field-value">—</div></div><div><div class="field-label">核验状态</div><div class="field-value">NOT_CONNECTED</div></div></div>
+              <div class="ev-bottom"><span class="ev-updated">来源：Quality（待接入）</span><button class="ev-link" disabled>暂无真实详情入口</button></div>
+            </article>
+            <article class="evidence-card">
+              <div class="ev-top"><div class="ev-brand"><div class="ev-icon">S</div><div><div class="ev-name">Dataset / Service / Usage</div><div class="ev-owner">交付对象、服务与消费授权</div></div></div><span class="status warn"><span class="dot"></span>授权未知</span></div>
+              <div class="ev-summary">当前没有足够的授权证据确认消费方可访问；合同保存不授予任何权限。</div>
+              <div class="ev-fields"><div><div class="field-label">交付对象 / 服务</div><div class="field-value">尚未核验</div></div><div><div class="field-label">核验状态</div><div class="field-value">UNKNOWN</div></div></div>
+              <div class="ev-bottom"><span class="ev-updated">来源：Dataset / Service / Usage（待接入）</span><button class="ev-link" disabled>暂无真实详情入口</button></div>
+            </article>
+          </div>
+          <div class="footer-note">原型约定：未接入 ≠ 无记录；无记录 ≠ 成功；403 ≠ 对象不存在；任何详情入口都必须来自已核验的真实对象 ID 与当前用户权限。</div>
+        </div>
+        <div class="card-body" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+          <div class="truth-banner"><span class="truth-icon">ⓘ</span><div><div class="truth-title">历史修订只读</div><div class="truth-text">历史合同不可原地修改。载入历史版本只创建新草稿；交接证据始终对应当前合同修订，不混用历史状态。</div></div></div>
+          <div class="history-list">
+            <div class="history-row"><div class="history-rev">R2</div><div><div class="history-title">订单经营日报 · 当前修订</div><div class="history-meta">示例用户 · 2026-10-18 10:00 · DWS V3 · 8 个输出列</div></div><span class="status blue">当前版本</span></div>
+            <div class="history-row"><div class="history-rev">R1</div><div><div class="history-title">订单经营日报 · 历史修订</div><div class="history-meta">示例用户 · 2026-10-17 16:40 · DWS V2 · 7 个输出列</div></div><button class="btn" id="review-history">查看历史（只读）</button></div>
+          </div>
+          <p class="footer-note">以上修订内容均为静态原型示例，不代表数据库中的真实合同历史。</p>
+        </div>
+      </section>
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><button class="btn">← 上一步：验证保存</button><div style="font-size:11px;color:#8190a4">R13-C3 UX Gate · 等待产品评审</div></div>
+    </div>
+  </main>
+</div>
+<script>
+const evidenceTab=document.getElementById('tab-evidence');
+const historyTab=document.getElementById('tab-history');
+const evidencePanel=document.getElementById('panel-evidence');
+const historyPanel=document.getElementById('panel-history');
+function activate(tab){
+  const evidence=tab==='evidence';
+  evidenceTab.classList.toggle('active',evidence);
+  historyTab.classList.toggle('active',!evidence);
+  evidenceTab.setAttribute('aria-selected',String(evidence));
+  historyTab.setAttribute('aria-selected',String(!evidence));
+  evidencePanel.hidden=!evidence;
+  historyPanel.hidden=evidence;
+}
+evidenceTab.addEventListener('click',()=>activate('evidence'));
+historyTab.addEventListener('click',()=>activate('history'));
+document.getElementById('review-history').addEventListener('click',()=>alert('原型交互：历史修订只读；生产实现需从服务端读取真实修订内容。'));
+</script>
+</body>
+</html>
