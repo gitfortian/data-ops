@@ -9,8 +9,11 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.metric.exception.MetricException;
+import io.yak.ops.business.metric.domain.Metric;
+import io.yak.ops.business.metric.domain.MetricStatus;
 import io.yak.ops.business.metric.publication.MetricPublicationGate.GateEvidence;
 import io.yak.ops.business.metric.repository.MetricPublicationRepository;
+import io.yak.ops.business.metric.repository.MetricRepository;
 import io.yak.ops.business.metric.repository.MetricVersionRepository;
 import io.yak.ops.business.metric.support.MetricSnapshotDigest;
 import io.yak.ops.business.metric.dao.model.MetricActivePublicationPO;
@@ -46,16 +49,19 @@ public class MetricPublicationService {
   private final MetricVersionRepository versionRepository;
   private final MetricPublicationReadinessService readinessService;
   private final BusinessAuditService auditService;
+  private final MetricRepository metricRepository;
 
   public MetricPublicationService(
       MetricPublicationRepository publicationRepository,
       MetricVersionRepository versionRepository,
       MetricPublicationReadinessService readinessService,
-      BusinessAuditService auditService) {
+      BusinessAuditService auditService,
+      MetricRepository metricRepository) {
     this.publicationRepository = publicationRepository;
     this.versionRepository = versionRepository;
     this.readinessService = readinessService;
     this.auditService = auditService;
+    this.metricRepository = metricRepository;
   }
 
   public record PublishedMetricContract(
@@ -87,6 +93,18 @@ public class MetricPublicationService {
   }
 
   public record MetricPublicationSummary(Long metricId, int metricVersion) {
+  }
+
+  /** Minimal, project-scoped selector data; deliberately excludes the full Metric snapshot. */
+  public record PublishedMetricReference(
+      Long publicationEventId,
+      Long metricId,
+      Long metricVersionId,
+      int metricVersion,
+      String snapshotDigest,
+      String metricCode,
+      String metricName,
+      LocalDateTime publishedAt) {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -278,6 +296,36 @@ public class MetricPublicationService {
     return publicationRepository.listActive().stream()
         .map(this::requireActiveContract)
         .toList();
+  }
+
+  /**
+   * Lists only currently active references suitable for a new consumer contract.
+   * Disabled Metric definitions are not selectable even if a legacy active pointer remains.
+   */
+  public List<PublishedMetricReference> listActiveReferences() {
+    java.util.ArrayList<PublishedMetricReference> result = new java.util.ArrayList<>();
+    for (MetricActivePublicationPO active : publicationRepository.listActive()) {
+      Metric metric = metricRepository.findById(active.getMetricId()).orElse(null);
+      if (metric == null) {
+        throw new MetricException(
+            MetricErrorCode.PUBLICATION_CONFLICT,
+            "活动发布缺少当前项目内的指标主体");
+      }
+      if (metric.status() != MetricStatus.ENABLED) {
+        continue;
+      }
+      PublishedMetricContract contract = requireActiveContract(active);
+      result.add(new PublishedMetricReference(
+          contract.publicationEventId(),
+          contract.metricId(),
+          contract.metricVersionId(),
+          contract.metricVersion(),
+          contract.snapshotDigest(),
+          metric.metricCode(),
+          metric.metricName(),
+          contract.publishedAt()));
+    }
+    return List.copyOf(result);
   }
 
   /** Returns only the active version pointers needed to decorate a page of Metric rows. */
