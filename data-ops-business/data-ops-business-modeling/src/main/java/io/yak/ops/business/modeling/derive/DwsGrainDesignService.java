@@ -55,6 +55,8 @@ public class DwsGrainDesignService {
   public record Saved(
       long modelId, long revision, String structureFingerprint,
       String designSha256, String designJson, Design design) {}
+  public record ValidationResult(
+      boolean valid, List<String> blockers, String structureFingerprint, Design design) {}
   public record HistoryEntry(
       long modelId, long revision, String structureFingerprint, String designSha256,
       String designJson, Design design, String updatedBy, String updatedAt) {}
@@ -127,6 +129,31 @@ public class DwsGrainDesignService {
         + "updated_by,updated_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
         projectId, modelId, revision, fingerprint, digest, json, operator);
     return new Saved(modelId, revision, fingerprint, digest, json, design);
+  }
+
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public ValidationResult validate(long modelId, Request request) {
+    Model model = requireDws(models.findByIdForUpdate(modelId).orElseThrow(
+        () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
+    StructureView structure = structures.getForUpdate(modelId);
+    String fingerprint = StructureFingerprint.of(structure);
+    if (request == null) {
+      return new ValidationResult(false, List.of("请提供待校验的 DWS 粒度设计"),
+          fingerprint, null);
+    }
+    if (!fingerprint.equals(request.expectedStructureFingerprint())) {
+      return new ValidationResult(false,
+          List.of("DWS 表结构已发生变化，请重新读取结构并核对字段"),
+          fingerprint, null);
+    }
+    try {
+      Design design = validateAndFreeze(model, structure, request);
+      return new ValidationResult(true, List.of(), fingerprint, design);
+    } catch (RuntimeException error) {
+      String reason = error.getMessage() == null || error.getMessage().isBlank()
+          ? "DWS 设计合同校验失败" : error.getMessage();
+      return new ValidationResult(false, List.of(reason), fingerprint, null);
+    }
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
