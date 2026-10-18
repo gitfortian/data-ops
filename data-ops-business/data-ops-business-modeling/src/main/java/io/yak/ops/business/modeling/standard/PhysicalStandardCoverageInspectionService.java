@@ -290,7 +290,8 @@ public class PhysicalStandardCoverageInspectionService {
     String definition = value == null || value.kind() == null
         ? null : standardDefinition(value, value.kind());
     if (value == null || !Objects.equals(value.id(), id) || value.kind() != expectedKind
-        || value.status() != StandardStatus.ENABLED || !StringUtils.hasText(definition)) {
+        || value.status() != StandardStatus.ENABLED
+        || !hasRequiredDefinition(value, expectedKind)) {
       String actualKind = value == null || value.kind() == null
           ? expectedKind.name() : value.kind().name();
       return new StandardReferenceEvidence(id, actualKind,
@@ -304,15 +305,23 @@ public class PhysicalStandardCoverageInspectionService {
         "当前引用的" + label + "存在、类别匹配且启用");
   }
 
+  private static boolean hasRequiredDefinition(Standard standard, StandardKind expectedKind) {
+    if (standard.fields() == null
+        || !StringUtils.hasText(standardDefinition(standard, expectedKind))) {
+      return false;
+    }
+    // Masking rule text is intentionally not included in the read-only modeling response.
+    return expectedKind != StandardKind.SECURITY
+        || StringUtils.hasText(standard.fields().maskRule());
+  }
+
   private static String standardDefinition(Standard standard, StandardKind expectedKind) {
     if (standard.fields() == null) return null;
     return switch (expectedKind) {
       case TYPE -> standard.fields().stdType();
       case UNIT -> standard.fields().unitCode();
       case CALIBER -> standard.fields().calRule();
-      case SECURITY -> StringUtils.hasText(standard.fields().levelCode())
-          && StringUtils.hasText(standard.fields().maskRule())
-          ? standard.fields().levelCode() + " / " + standard.fields().maskRule() : null;
+      case SECURITY -> standard.fields().levelCode();
       case CODE -> standard.fields().codeSetCode();
       case NAMING -> standard.fields().ruleExpr();
     };
