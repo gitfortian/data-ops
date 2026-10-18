@@ -233,7 +233,7 @@ public class AdsApplicationDesignService {
         || value.contains("/*") || value.contains("*/")) return false;
     String[] clauses = value.split("(?i)\\s+AND\\s+");
     Pattern clause = Pattern.compile(
-        "(?i)^([A-Za-z_][A-Za-z0-9_]*)\\s*(=|!=|<>|<=|>=|<|>|LIKE|IS NULL|IS NOT NULL)\\s*(?:'[^']{0,256}'|[0-9]+(?:\\.[0-9]+)?|TRUE|FALSE|NULL)$");
+        "(?i)^([A-Za-z_][A-Za-z0-9_]*)\\s*(=|!=|<>|<=|>=|<|>|LIKE)\\s*(?:'[^']{0,256}'|[0-9]+(?:\\.[0-9]+)?|TRUE|FALSE|NULL)$");
     for (String item : clauses) {
       var matcher = clause.matcher(item.trim());
       if (!matcher.matches() || !outputNames.contains(matcher.group(1).toLowerCase(Locale.ROOT)))
