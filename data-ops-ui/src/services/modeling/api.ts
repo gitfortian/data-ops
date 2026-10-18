@@ -373,7 +373,31 @@ export const getOdsPublishedVersionEvidence = (
     `${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/source-evidence-review`,
   );
 
-/** Current non-ODS physical standard-field evidence; never a publish gate or layer-contract approval. */
+/** Current non-ODS physical standard-field and linked data-standard evidence; never a publish gate. */
+export interface PhysicalStandardReferenceEvidence {
+  id?: number | null;
+  kind: string;
+  code?: string | null;
+  name?: string | null;
+  status?: string | null;
+  version?: number | null;
+  evidenceStatus: 'ENABLED_NOW' | 'MISSING_REQUIRED_REFERENCE' | 'INVALID_REFERENCE' | 'NOT_CONFIGURED';
+  definition?: string | null;
+  explanation: string;
+}
+export interface PhysicalDataStandardEvidence {
+  role: string;
+  typeStandard: PhysicalStandardReferenceEvidence;
+  unitStandard?: PhysicalStandardReferenceEvidence | null;
+  caliberStandard?: PhysicalStandardReferenceEvidence | null;
+  codeSetCode?: string | null;
+  codeSetStatus: 'NOT_APPLICABLE' | 'NOT_CONFIGURED' | 'ENABLED_NOW' | 'INVALID_REFERENCE';
+  securityStandard?: PhysicalStandardReferenceEvidence | null;
+  status: 'COMPLETE_NOW' | 'MISSING_REQUIRED_REFERENCE' | 'INVALID_REFERENCE' | 'NEEDS_REVIEW';
+  missingRequiredReference: boolean;
+  invalidReference: boolean;
+  explanation: string;
+}
 export interface PhysicalStandardCoverageInspection {
   modelId: number;
   modelCode: string;
@@ -389,6 +413,8 @@ export interface PhysicalStandardCoverageInspection {
   missingCount: number;
   invalidCount: number;
   reviewCount: number;
+  missingDataStandardCount: number;
+  invalidDataStandardCount: number;
   columns: {
     columnId: number;
     columnName: string;
@@ -401,6 +427,7 @@ export interface PhysicalStandardCoverageInspection {
     aggregateFunc?: string | null;
     status: 'ENABLED_NOW' | 'MISSING_STANDARD' | 'INVALID_STANDARD' | 'AGGREGATE_REVIEW';
     explanation: string;
+    dataStandards?: PhysicalDataStandardEvidence | null;
   }[];
   findings: string[];
   limitations: string[];
