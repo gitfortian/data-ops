@@ -83,4 +83,16 @@ class StandardQueryApiImplTest {
     assertEquals(0, unrelated.itemCount());
     assertNull(unrelated.contentSha256());
   }
+  @Test
+  void allDisabledMembersProduceDisabledSetWithFullRevisionDigest() {
+    when(repository.listByCodeSetCode("ORDER_STATUS")).thenReturn(List.of(
+        code(1L, "ORDER_STATUS", "CREATED", StandardStatus.DISABLED),
+        code(2L, "ORDER_STATUS", "CANCELLED", StandardStatus.DISABLED)));
+    var result = api.codeSetReference("ORDER_STATUS");
+    assertEquals("DISABLED", result.status());
+    assertEquals(2, result.itemCount());
+    assertEquals(0, result.enabledItemCount());
+    assertEquals(64, result.contentSha256().length());
+  }
+
 }
