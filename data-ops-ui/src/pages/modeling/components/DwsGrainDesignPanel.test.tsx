@@ -120,8 +120,8 @@ it('shows the count-vs-distinct example but never changes the real sample-query 
   expect(screen.getByText(/不连接任何数据源/)).toBeInTheDocument();
   expect(screen.getByText('NOT_CONNECTED')).toBeInTheDocument();
   expect(screen.getByText('NOT_EXECUTED')).toBeInTheDocument();
-  expect(screen.getByText('COUNT(*)')).toBeInTheDocument();
-  expect(screen.getByText('DISTINCT')).toBeInTheDocument();
+  expect(screen.getByText(/明细行数 COUNT\(\*\)/)).toBeInTheDocument();
+  expect(screen.getByText('订单数 DISTINCT')).toBeInTheDocument();
   expect(saveDwsGrain).not.toHaveBeenCalled();
 });
 
