@@ -8,6 +8,7 @@ import {
   Divider,
   Empty,
   Input,
+  Modal,
   Row,
   Select,
   Space,
@@ -113,6 +114,8 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
   const [sampleExampleOpen, setSampleExampleOpen] = useState(false);
   const [sourceMigrationConfirmed, setSourceMigrationConfirmed] = useState(false);
   const [keepFrozen, setKeepFrozen] = useState(false);
+  const [grainDraftDirty, setGrainDraftDirty] = useState(false);
+  const [saveNeedsReconcile, setSaveNeedsReconcile] = useState(false);
 
   const columns = structure.columns ?? [];
   const dimensionColumns = useMemo(() => columns.filter(
@@ -134,6 +137,8 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
       setValidation(null);
       setSourceMigrationConfirmed(false);
       setKeepFrozen(false);
+      setGrainDraftDirty(false);
+      setSaveNeedsReconcile(false);
       if (stored) {
         setStatPeriod(stored.design.statPeriod);
         setTimeZone(stored.design.timeZone);
@@ -272,7 +277,8 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
       : validation.status;
   const validationIsCurrentPass = validationStatus === 'PASS';
   const canSave = validationIsCurrentPass && !dirty && Boolean(structure.definition)
-    && !keepFrozen && (!hasSourceChange || sourceMigrationConfirmed);
+    && !keepFrozen && !saveNeedsReconcile
+    && (!hasSourceChange || sourceMigrationConfirmed);
 
   const validateDesign = () => {
     const issues = validationIssues;
@@ -300,6 +306,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     setUpstreamIds(saved.design.upstreamVersions.map((item) => item.modelId));
     setSourceMigrationConfirmed(false);
     setKeepFrozen(true);
+    setGrainDraftDirty(false);
     setValidation(null);
     message.info('已恢复保存时的冻结合同。当前上游已变化，后端仍会阻止按旧指针发布；未执行迁移或数据查询');
   };
@@ -312,11 +319,30 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
     }
     setKeepFrozen(false);
     setSourceMigrationConfirmed(true);
+    setGrainDraftDirty(true);
     setValidation(null);
     message.info('已显式确认使用当前发布来源；保存时服务端将重新冻结精确版本，需重新运行设计校验');
   };
 
+  const reloadContract = () => {
+    if (!grainDraftDirty && !saveNeedsReconcile) {
+      void load();
+      return;
+    }
+    Modal.confirm({
+      title: '放弃未保存的 DWS 设计修改？',
+      content: '重新读取将用服务端已保存合同覆盖本地粒度、维度、度量和来源选择。',
+      okText: '放弃修改并读取',
+      cancelText: '继续编辑',
+      onOk: () => load(),
+    });
+  };
+
   const store = async () => {
+    if (saveNeedsReconcile) {
+      message.warning('上次保存结果仍需核对；请先放弃本地修改并重新读取服务端合同');
+      return;
+    }
     if (!canSave) {
       message.warning('请先完成当前修订的静态设计校验；修订、来源或物理结构变化后必须重新校验');
       return;
@@ -342,9 +368,13 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
       setKeepFrozen(false);
       setValidation(null);
       if (!sameSavedDesign(recorded, payload, candidates)) {
-        message.warning('服务端已返回保存结果，但回读合同与当前选择的来源版本不完全一致；请重新读取并核对，不要继续发布');
+        setSaveNeedsReconcile(true);
+        setGrainDraftDirty(true);
+        message.warning('服务端已返回保存结果，但回读合同与当前选择的来源版本不完全一致；请先重新读取核对，不要再次保存或继续发布');
         return;
       }
+      setSaveNeedsReconcile(false);
+      setGrainDraftDirty(false);
       message.success('DWS 设计合同已保存为修订 ' + recorded.revision + '；发布前仍需后端重新检查来源与结构');
     } catch (error) {
       // A network timeout may hide a successful write. Read back the same object before retrying.
@@ -354,13 +384,21 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
         if (recorded && sameSavedDesign(recorded, payload, candidates)) {
           setSourceMigrationConfirmed(false);
           setKeepFrozen(false);
+          setSaveNeedsReconcile(false);
+          setGrainDraftDirty(false);
           setValidation(null);
           message.success('保存响应未确认，但已回读同一模型并核对合同内容；当前修订为 ' + recorded.revision);
           return;
         }
-        message.warning('保存结果未知：回读未能确认本次合同已写入。请检查当前记录，不要重复创建模型');
+        setSaveNeedsReconcile(true);
+        setGrainDraftDirty(true);
+        setValidation(null);
+        message.warning('保存结果未知：回读未能确认本次合同已写入。请先重新读取当前记录，不要重复保存');
       } catch {
-        message.error(error instanceof Error ? error.message : '保存结果未知，回读也未成功；请先重新读取，不要重复创建');
+        setSaveNeedsReconcile(true);
+        setGrainDraftDirty(true);
+        setValidation(null);
+        message.error(error instanceof Error ? error.message : '保存结果未知，回读也未成功；请先重新读取，不要重复保存');
       }
     } finally {
       setSaving(false);
@@ -402,7 +440,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
             ? <Tag color="blue">设计修订 R{saved.revision}</Tag>
             : <Tag>尚未保存</Tag>}
           <Tooltip title="重新读取服务端已保存合同与当前上游候选">
-            <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+            <Button icon={<ReloadOutlined />} onClick={reloadContract} loading={loading}>
               重新读取
             </Button>
           </Tooltip>
@@ -448,6 +486,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                     mode="multiple"
                     value={upstreamIds}
                     onChange={(values) => {
+                      setGrainDraftDirty(true);
                       setUpstreamIds(values);
                       setSourceMigrationConfirmed(false);
                       setKeepFrozen(false);
@@ -548,7 +587,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                       aria-label="统计周期"
                       style={{ width: '100%' }}
                       value={statPeriod}
-                      onChange={setStatPeriod}
+                      onChange={(value) => { setStatPeriod(value); setGrainDraftDirty(true); }}
                       options={[
                         { value: '1h', label: '每小时' },
                         { value: '1d', label: '每天' },
@@ -563,7 +602,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                     <Input
                       aria-label="统计时区（IANA）"
                       value={timeZone}
-                      onChange={(event) => setTimeZone(event.target.value)}
+                      onChange={(event) => { setTimeZone(event.target.value); setGrainDraftDirty(true); }}
                       placeholder="Asia/Shanghai"
                     />
                   </Col>
@@ -572,7 +611,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                     <Input
                       aria-label="上游业务时间列"
                       value={businessTimeColumn}
-                      onChange={(event) => setBusinessTimeColumn(event.target.value)}
+                      onChange={(event) => { setBusinessTimeColumn(event.target.value); setGrainDraftDirty(true); }}
                       placeholder="例如 event_time"
                     />
                     <Text type="secondary" style={{ fontSize: 12 }}>
@@ -586,7 +625,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                       allowClear
                       style={{ width: '100%' }}
                       value={periodBucketColumn}
-                      onChange={setPeriodBucketColumn}
+                      onChange={(value) => { setPeriodBucketColumn(value); setGrainDraftDirty(true); }}
                       options={dimensionOptions}
                       placeholder="必须属于分组维度"
                     />
@@ -598,7 +637,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                       className="w-full"
                       mode="multiple"
                       value={dimensions}
-                      onChange={setDimensions}
+                      onChange={(value) => { setDimensions(value); setGrainDraftDirty(true); }}
                       options={dimensionOptions}
                       placeholder="例如 order_day、order_city"
                     />
@@ -610,7 +649,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
                       className="w-full"
                       mode="multiple"
                       value={measures}
-                      onChange={setMeasures}
+                      onChange={(value) => { setMeasures(value); setGrainDraftDirty(true); }}
                       options={measureOptions}
                       placeholder="至少一项 COUNT / SUM / COUNT DISTINCT 等度量"
                     />
@@ -873,6 +912,14 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
           </Col>
         </Row>
 
+        {saveNeedsReconcile ? (
+          <Alert
+            type="error"
+            showIcon
+            message="上次保存结果需要回读确认"
+            description="为避免重复提交或覆盖并发修订，当前保存已锁定。请点击“放弃本地修改并回读”，核对服务端同一模型的实际合同后再继续。"
+          />
+        ) : null}
         <Divider style={{ margin: '0' }} />
         <Row align="middle" justify="space-between" gutter={[12, 12]}>
           <Col xs={24} md={15}>
@@ -891,7 +938,7 @@ export default function DwsGrainDesignPanel({ modelId, structure, dirty }: Props
           </Col>
           <Col xs={24} md={9}>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
-              <Button onClick={() => void load()} disabled={saving} icon={<ReloadOutlined />}>
+              <Button onClick={reloadContract} disabled={saving} icon={<ReloadOutlined />}>
                 放弃本地修改并回读
               </Button>
               <Button
