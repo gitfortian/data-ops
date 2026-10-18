@@ -152,6 +152,27 @@ class DwsGrainDesignServiceTest {
   }
 
   @Test
+  void validatesCurrentDwsContractWithoutPersistingOrExecuting() {
+    var result = service.validate(10L, request());
+    assertThat(result.valid()).isTrue();
+    assertThat(result.blockers()).isEmpty();
+    assertThat(result.design().upstreamVersions()).containsExactly(
+        new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64)));
+    verify(jdbc, never()).update(anyString(), any(Object[].class));
+  }
+
+  @Test
+  void returnsStaticBlockerInsteadOfSavingInvalidDwsContract() {
+    var bad = new DwsGrainDesignService.Request("1d", "Asia/Shanghai",
+        "event_time", "order_day", List.of("order_city"), request().measures(),
+        List.of(20L), request().expectedStructureFingerprint());
+    var result = service.validate(10L, bad);
+    assertThat(result.valid()).isFalse();
+    assertThat(result.blockers()).anyMatch(item -> item.contains("周期桶"));
+    verify(jdbc, never()).update(anyString(), any(Object[].class));
+  }
+
+  @Test
   void listsRevisionHistoryWithinTheCurrentProjectAndModelScope() {
     assertThat(service.history(10L)).isEmpty();
     verify(jdbc).query(contains("FROM yak_modeling_dws_grain_revision"),
