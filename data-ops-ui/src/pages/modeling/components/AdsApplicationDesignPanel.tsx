@@ -315,8 +315,18 @@ export default function AdsApplicationDesignPanel({
     try {
       const result = await validateAdsApplicationContract(modelId, draft);
       setValidated({ signature, result });
-      if (result.valid) message.success('服务端静态合同校验通过；尚未执行真实查询或消费授权');
-      else message.warning('静态合同未通过，请检查具体阻断项');
+      const targetPinChanged = Boolean(saved
+        && saved.contract.targetStructureFingerprint !== result.targetStructureFingerprint);
+      if (saved) {
+        setTargetStructureStatus(targetPinChanged ? 'STALE' : 'CURRENT');
+      }
+      if (result.valid && targetPinChanged) {
+        message.warning('静态校验通过，但 ADS 物理结构指纹已变化；请核对输出字段与业务键后再保存新修订');
+      } else if (result.valid) {
+        message.success('服务端静态合同校验通过；尚未执行真实查询或消费授权');
+      } else {
+        message.warning('静态合同未通过，请检查具体阻断项');
+      }
       return result.valid;
     } catch (error) {
       setValidated(null);
@@ -329,8 +339,16 @@ export default function AdsApplicationDesignPanel({
 
   const persist = async () => {
     if (saving || validating || !canEdit) return;
+    const previouslyReviewed = Boolean(validated?.signature === signature && validated.result.valid);
+    const reviewedFingerprint = previouslyReviewed ? validated?.result.targetStructureFingerprint : null;
     setSaving(true);
     try {
+      if (saved && targetStructureStatus === 'UNKNOWN') {
+        throw new Error('无法确认当前 ADS 物理结构指纹，请重新读取或运行静态校验后再保存');
+      }
+      if (saved && targetStructureStatus === 'STALE' && validationState !== 'STATIC_PASS') {
+        throw new Error('ADS 物理结构指纹已变化；请先核对输出字段与业务键，再运行静态校验');
+      }
       if (standardMissing.length) {
         throw new Error('ADS 输出列缺少正式标准字段绑定，请先完善模型物理结构');
       }
@@ -345,9 +363,18 @@ export default function AdsApplicationDesignPanel({
       }
       const check = await validateAdsApplicationContract(modelId, draft);
       setValidated({ signature, result: check });
+      const targetPinChanged = Boolean(saved
+        && saved.contract.targetStructureFingerprint !== check.targetStructureFingerprint);
+      if (targetPinChanged) setTargetStructureStatus('STALE');
       if (!check.valid) {
         message.warning('存在服务端阻断项，不能保存应用合同');
         setStep(4);
+        return;
+      }
+      if (targetPinChanged && reviewedFingerprint !== check.targetStructureFingerprint) {
+        setValidated(null);
+        setStep(2);
+        message.warning('服务端检测到 ADS 物理结构指纹变化；已停止保存，请核对输出字段/标准/业务键并重新静态校验');
         return;
       }
       const result = await saveAdsApplicationContract(modelId, {
@@ -431,6 +458,12 @@ export default function AdsApplicationDesignPanel({
       {structureDirty && <Alert className="mb-4" showIcon type="warning"
         message="当前物理结构有未保存更改"
         description="ADS 输出校验依赖已保存的物理字段，请先保存表结构，再验证或保存合同。" />}
+      {saved && targetStructureStatus === 'STALE' && <Alert className="mb-4" showIcon type="warning"
+        message="ADS 物理结构指纹已变化"
+        description="合同冻结时的目标结构与当前服务端结构不同。请到“输出设计”核对字段、标准和业务键，再运行服务端静态校验；未重新校验前不能保存。" />}
+      {saved && targetStructureStatus === 'UNKNOWN' && <Alert className="mb-4" showIcon type="warning"
+        message="无法确认当前 ADS 物理结构指纹"
+        description="保存已暂停，等待服务端校验返回。请重试读取或运行静态校验，不会把未知状态视为结构一致。" />}
       {sourceStatus === 'STALE' && <Alert className="mb-4" showIcon type="error"
         message="上游发布版本发生漂移"
         description="合同仍绑定原精确版本。不会自动升级到 latest；必须重新选择当前正式发布版本并审阅字段/业务键。" />}
@@ -656,7 +689,9 @@ export default function AdsApplicationDesignPanel({
           </Button>
           <Button type="primary" loading={saving} disabled={!canEdit || saving
             || validating || structureDirty || standardMissing.length > 0
-            || sourceStatus !== 'CURRENT' || Boolean(sourceError)}
+            || sourceStatus !== 'CURRENT' || Boolean(sourceError)
+            || (saved !== null && targetStructureStatus === 'UNKNOWN')
+            || (saved !== null && targetStructureStatus === 'STALE' && validationState !== 'STATIC_PASS')}
             onClick={() => void persist()}>
             保存应用设计合同
           </Button>
