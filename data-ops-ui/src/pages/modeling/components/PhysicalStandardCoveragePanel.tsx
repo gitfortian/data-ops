@@ -53,12 +53,13 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
   const feedback = report && baseline ? comparePhysicalGovernance(baseline, report) : undefined;
   const referenceLabel = (ref: PhysicalStandardReferenceEvidence): string => {
     const name = ref.name || ref.code || (ref.id ? `#${ref.id}` : '未配置');
-    const definition = ref.definition ? ` · ${ref.definition}` : '';
+    const kind = ref.id ? ` (${ref.kind})` : '';
+    const definition = ref.id && ref.definition ? ` · ${ref.definition}` : '';
     const status = ref.evidenceStatus === 'ENABLED_NOW' ? `当前启用 v${ref.version}`
       : ref.evidenceStatus === 'MISSING_REQUIRED_REFERENCE' ? '缺少必需引用'
         : ref.evidenceStatus === 'INVALID_REFERENCE' ? '引用无效/停用'
           : '未配置';
-    return `${name} (${ref.kind})${definition} · ${status}`;
+    return `${name}${kind}${definition} · ${status}`;
   };
   const dataStandardStatusLabel = (status: string): string => {
     switch (status) {
