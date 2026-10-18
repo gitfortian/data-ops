@@ -151,10 +151,10 @@ public class AdsApplicationDesignService {
     if (!StringUtils.hasText(request.purpose())) blockers.add("必须说明应用用途");
     if (!CONSUMER_TYPES.contains(request.consumerType())) blockers.add("请选择有效消费类型");
     if (!SOURCE_MODES.contains(request.sourceMode())) blockers.add("来源只能选择已发布 DWS 或显式选择的 DWD");
-    if (request.sourceMode() != null && "DWD".equals(request.sourceMode()))
+    if (!blockers.isEmpty()) return null;
+    if ("DWD".equals(request.sourceMode()))
       warnings.add("当前为明细来源；不得套用 DWS 汇总指标或粒度。");
-    Model upstream = models.findById(request.upstreamModelId())
-        .orElse(null);
+    Model upstream = models.findById(request.upstreamModelId()).orElse(null);
     if (upstream == null || upstream.status() == ModelStatus.DISABLED) {
       blockers.add("所选上游不存在、已禁用或不在当前项目内");
       return null;
@@ -171,7 +171,7 @@ public class AdsApplicationDesignService {
     }
     var version = versions.findById(request.upstreamVersionId(), request.upstreamModelId()).orElse(null);
     if (version == null || version.versionNo() != request.upstreamVersionNo()
-        || !request.upstreamChecksum().equals(version.checksum())) {
+        || !java.util.Objects.equals(request.upstreamChecksum(), version.checksum())) {
       blockers.add("精确上游版本身份/校验和不匹配");
     }
     if (!blockers.isEmpty()) return null;
