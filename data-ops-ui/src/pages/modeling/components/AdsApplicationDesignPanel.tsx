@@ -3,9 +3,9 @@ import {
   Modal, Select, Space, Spin, Steps, Tag, Typography, message,
 } from 'antd';
 import { ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
 import { listActiveMetricPublicationReferences } from '@/services/metric/api';
 import type { PublishedMetricReference } from '@/services/metric/types';
-import { useEffect, useMemo, useState } from 'react';
 import {
   getModelingModel, getModelingVersion, listModelingVersions, pageModelingModels,
 } from '@/services/modeling/api';
