@@ -55,6 +55,9 @@ public class DwsGrainDesignService {
   public record Saved(
       long modelId, long revision, String structureFingerprint,
       String designSha256, String designJson, Design design) {}
+  public record HistoryEntry(
+      long modelId, long revision, String structureFingerprint, String designSha256,
+      String designJson, Design design, String updatedBy, String updatedAt) {}
 
   private final ModelRepository models;
   private final ModelVersionRepository versions;
@@ -134,13 +137,13 @@ public class DwsGrainDesignService {
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", readOnly = true)
-  public List<Saved> history(long modelId) {
+  public List<HistoryEntry> history(long modelId) {
     requireDws(models.findById(modelId).orElseThrow(
         () -> new IllegalArgumentException("当前项目没有该 DWS 模型")));
     return jdbc.query("SELECT model_id,revision,structure_fingerprint,design_sha256,"
-        + "design_json FROM yak_modeling_dws_grain_revision "
+        + "design_json,updated_by,updated_at FROM yak_modeling_dws_grain_revision "
         + "WHERE project_id=? AND model_id=? ORDER BY revision DESC LIMIT 50",
-        (rs, rowNo) -> decode(rs), projects.requireProjectId(), modelId);
+        (rs, rowNo) -> decodeHistory(rs), projects.requireProjectId(), modelId);
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -338,6 +341,13 @@ public class DwsGrainDesignService {
         + "WHERE project_id=? AND model_id=?",
         (rs, rowNo) -> decode(rs), projects.requireProjectId(), modelId)
         .stream().findFirst();
+  }
+
+  private HistoryEntry decodeHistory(ResultSet rs) throws SQLException {
+    Saved saved = decode(rs);
+    return new HistoryEntry(saved.modelId(), saved.revision(), saved.structureFingerprint(),
+        saved.designSha256(), saved.designJson(), saved.design(),
+        rs.getString("updated_by"), rs.getString("updated_at"));
   }
 
   private Saved decode(ResultSet rs) throws SQLException {
