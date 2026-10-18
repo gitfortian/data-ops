@@ -58,6 +58,7 @@ class StandardRepositoryAdapterProjectIsolationIntegrationTest {
       MybatisSqlSessionFactoryBean factoryBean = new MybatisSqlSessionFactoryBean();
       factoryBean.setDataSource(dataSource);
       factoryBean.setConfiguration(configuration);
+      factoryBean.afterPropertiesSet();
       SqlSessionFactory factory = factoryBean.getObject();
 
       try (SqlSession session = factory.openSession(true)) {
