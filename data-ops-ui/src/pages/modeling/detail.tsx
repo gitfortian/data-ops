@@ -2498,15 +2498,6 @@ const emptyColumnDraft = (): ColumnDraft => ({
             </div>
           </Card>
 
-          {modelInfo?.layerCode === 'DWS' && modelId ? (
-            <DwsGrainDesignPanel
-              key={`${currentProject?.id ?? 'none'}:${modelId}`}
-              modelId={Number(modelId)}
-              structure={structure}
-              dirty={dirty}
-            />
-          ) : null}
-
           {validationIssues.length ? (
             <Card
               bordered={false}
@@ -2731,6 +2722,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
               </Button>
             </Space>
           </Card>
+
+          {modelInfo?.layerCode === 'DWS' && modelId ? (
+            <DwsGrainDesignPanel
+              key={`${currentProject?.id ?? 'none'}:${modelId}`}
+              modelId={Number(modelId)}
+              structure={structure}
+              dirty={dirty}
+            />
+          ) : null}
 
           {/* C3(2026-09-17):批量添加 N 行 */}
           <Modal
