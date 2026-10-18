@@ -43,6 +43,7 @@ import { physicalGovernanceBaseline, type PhysicalGovernanceBaseline } from './g
 import { canOpenPhysicalGovernanceEvidence, parseJourneyProcessId } from '@/utils/journeyNavigation';
 import PhysicalDataDevHandoffPanel from './components/PhysicalDataDevHandoffPanel';
 import DwsGrainDesignPanel from './components/DwsGrainDesignPanel';
+import AdsApplicationDesignPanel from './components/AdsApplicationDesignPanel';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import StandardAssistantDrawer from '@/pages/modeling/components/StandardAssistantDrawer';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
@@ -2513,6 +2514,19 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 if (publishFlowEnabled) void handleSubmitPublishApproval();
                 else void handlePublish();
               }}
+            />
+          ) : null}
+
+          {modelInfo?.layerCode === 'ADS' && modelId ? (
+            <AdsApplicationDesignPanel
+              key={String(currentProject?.id ?? 'none') + ':' + modelId}
+              modelId={Number(modelId)}
+              structure={structure}
+              structureDirty={dirty}
+              modelName={modelInfo.name}
+              modelCode={modelInfo.code}
+              processId={modelInfo.processId}
+              canEdit={canAll(['modeling:update'])}
             />
           ) : null}
 
