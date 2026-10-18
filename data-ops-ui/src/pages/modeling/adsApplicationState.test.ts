@@ -41,7 +41,7 @@ test('starts with DWS as the default and never assumes an upstream pin', () => {
   expect(adsSourceDrift(draft, undefined)).toBe('NOT_PINNED');
 });
 
-test('roundtrips the exact immutable source version, keys, and Metric reference', () => {
+test('preserves a legacy Metric version ID without inferring a publication identity', () => {
   const draft = draftFromAdsSaved(sample);
   expect(draft).toMatchObject({
     upstreamModelId: 20,
@@ -51,10 +51,30 @@ test('roundtrips the exact immutable source version, keys, and Metric reference'
     businessKeys: ['order_day'],
     metricVersionId: 19,
   });
+  expect(draft.metricPublicationPin).toBeNull();
   expect(adsSourceDrift(draft, 30)).toBe('CURRENT');
   expect(adsSourceDrift(draft, 31)).toBe('STALE');
   expect(adsSourceDrift(draft, null)).toBe('STALE');
   expect(adsSourceDrift(draft, undefined)).toBe('UNKNOWN');
+});
+
+test('roundtrips a complete immutable Metric publication pin', () => {
+  const pin = {
+    metricId: 70,
+    metricVersionId: 71,
+    metricVersion: 4,
+    snapshotDigest: 'c'.repeat(64),
+    publicationEventId: 72,
+  };
+  const pinned: AdsApplicationContractSaved = {
+    ...sample,
+    contract: { ...sample.contract, metricVersionId: 71, metricPublicationPin: pin },
+  };
+
+  const draft = draftFromAdsSaved(pinned);
+
+  expect(draft.metricVersionId).toBe(71);
+  expect(draft.metricPublicationPin).toEqual(pin);
 });
 
 test('changing source layer invalidates mapping, keys, filtering and metric', () => {
@@ -69,6 +89,7 @@ test('changing source layer invalidates mapping, keys, filtering and metric', ()
     outputFields: [],
     filterExpression: '',
     metricVersionId: null,
+    metricPublicationPin: null,
   });
   expect(from.upstreamVersionId).toBe(30);
 });
