@@ -75,6 +75,12 @@ public class MetricPublicationController {
     return Result.success(publicationService.listActiveSummaries(metricIds));
   }
 
+  @Operation(summary = "读取可用于新合同的最小已发布指标引用")
+  @GetMapping("/publications/active/references")
+  public Result<List<MetricPublicationService.PublishedMetricReference>> activeReferences() {
+    return Result.success(publicationService.listActiveReferences());
+  }
+
   @Operation(summary = "读取指标发布生命周期账本")
   @GetMapping("/{id}/publication-history")
   public Result<List<PublicationEventView>> history(@PathVariable("id") Long id) {
