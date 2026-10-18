@@ -32,7 +32,7 @@ const request: AdsApplicationContractRequest = {
   filterExpression: '',
   sortExpression: '',
   refreshTarget: 'DAILY',
-  targetStructureFingerprint: 'physical-v1',
+  expectedTargetStructureFingerprint: 'physical-v1',
 };
 
 describe('ADS application contract API adapter', () => {
@@ -84,4 +84,5 @@ const contract = {
   filterExpression: '',
   sortExpression: '',
   refreshTarget: 'DAILY',
+  targetStructureFingerprint: 'physical-v1',
 };
