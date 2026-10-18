@@ -5,6 +5,7 @@ import {
   saveAdsApplicationContract,
   validateAdsApplicationContract,
   type AdsApplicationContractRequest,
+  type AdsApplicationContractSaveRequest,
 } from './adsApplication';
 
 jest.mock('@/utils/HttpUtils', () => ({
@@ -32,6 +33,11 @@ const request: AdsApplicationContractRequest = {
   filterExpression: '',
   sortExpression: '',
   refreshTarget: 'DAILY',
+};
+
+const saveRequest: AdsApplicationContractSaveRequest = {
+  ...request,
+  expectedRevision: 0,
   expectedTargetStructureFingerprint: 'physical-v1',
 };
 
@@ -54,12 +60,12 @@ describe('ADS application contract API adapter', () => {
     (HttpUtils.postData as jest.Mock).mockResolvedValue({ valid: true, blockers: [], warnings: [] });
     (HttpUtils.putData as jest.Mock).mockResolvedValue({ revision: 1, contract });
     await validateAdsApplicationContract(10, request);
-    await saveAdsApplicationContract(10, request);
+    await saveAdsApplicationContract(10, saveRequest);
     expect(HttpUtils.postData).toHaveBeenCalledWith(
       '/api/v1/modeling/models/10/ads-application/validate', request,
     );
     expect(HttpUtils.putData).toHaveBeenCalledWith(
-      '/api/v1/modeling/models/10/ads-application', request,
+      '/api/v1/modeling/models/10/ads-application', saveRequest,
     );
     expect(request).toMatchObject({
       sourceMode: 'DWS',
