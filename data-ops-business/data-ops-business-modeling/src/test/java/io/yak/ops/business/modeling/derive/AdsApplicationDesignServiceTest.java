@@ -42,7 +42,7 @@ class AdsApplicationDesignServiceTest {
         "", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
-        List.of("order_day"), "", "", null, "DAILY", 0L);
+        List.of("order_day"), "", "", null, "DAILY", 0L, null);
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("应用编码");
@@ -57,7 +57,7 @@ class AdsApplicationDesignServiceTest {
         "order_overview", "订单经营日报", "alice", "订单运营看板", "UNKNOWN", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", null, "LOW")),
-        List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY", 0L);
+        List.of("order_day", "ORDER_DAY"), "", "", null, "DAILY", 0L, null);
     assertThatThrownBy(() -> service.save(10L, request, "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("消费类型");
@@ -79,11 +79,17 @@ class AdsApplicationDesignServiceTest {
 
   private AdsApplicationDesignService.Request good(Long standard, Long revision,
       List<String> keys) {
+    return good(standard, revision, keys,
+        io.yak.ops.business.modeling.structure.StructureFingerprint.of(structure(10L, 11L)));
+  }
+
+  private AdsApplicationDesignService.Request good(Long standard, Long revision,
+      List<String> keys, String expectedTargetFingerprint) {
     return new AdsApplicationDesignService.Request(
         "order_overview", "订单经营日报", "alice", "订单运营看板", "REPORT", "DWS",
         20L, 30L, 2, "a".repeat(64),
         List.of(new AdsApplicationDesignService.OutputField("order_day", "order_day", standard, "LOW")),
-        keys, "", "order_day DESC", null, "DAILY", revision);
+        keys, "", "order_day DESC", null, "DAILY", revision, expectedTargetFingerprint);
   }
 
   private void prepareValidSource() {
@@ -179,6 +185,23 @@ class AdsApplicationDesignServiceTest {
     assertThatThrownBy(() -> service.save(10L, good(11L, null, List.of("order_day")), "alice"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("修订已变化");
+  }
+
+  @Test
+  void rejectsSaveWhenClientHasNotReviewedTheCurrentTargetStructureFingerprint() {
+    prepareValidSource();
+    var request = good(11L, 0L, List.of("order_day"), "stale-physical-fingerprint");
+
+    assertThatThrownBy(() -> service.save(10L, request, "alice"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("物理结构指纹");
+    verify(jdbc, never()).update(org.mockito.ArgumentMatchers.anyString(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any());
   }
 
   @Test
