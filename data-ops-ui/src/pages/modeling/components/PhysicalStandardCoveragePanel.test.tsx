@@ -13,9 +13,15 @@ jest.mock('@/services/modeling/api', () => ({
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
   return { ...actual, Table: ({ dataSource, columns }: {
-    dataSource: { columnId: number; columnName: string; status: string }[];
-    columns: { key?: string; render?: (_: unknown, row: {
+    dataSource: { columnId: number; columnName: string; status: string;
+      standardReferences?: { referenceKind: string; referenceKey?: string | null;
+        standardId?: number | null; status: string; version?: number | null;
+        explanation: string }[] }[];
+    columns: { key?: string; dataIndex?: string; render?: (_: unknown, row: {
       columnId: number; columnName: string; status: string;
+      standardReferences?: { referenceKind: string; referenceKey?: string | null;
+        standardId?: number | null; status: string; version?: number | null;
+        explanation: string }[];
     }) => React.ReactNode }[];
   }) => <div>{dataSource.map(row => <div key={row.columnId}>
     {row.columnName} : {row.status}
@@ -28,13 +34,20 @@ const report = {
   modelStatus: 'DRAFT', processId: 22, processName: '下单',
   status: 'NEEDS_REVIEW', structureSha256: 'a'.repeat(64),
   evidenceSha256: 'b'.repeat(64), columnCount: 2, enabledCount: 1,
-  missingCount: 1, invalidCount: 0, reviewCount: 0,
+  missingCount: 1, invalidCount: 0, reviewCount: 0, standardReferenceIssueCount: 1,
   columns: [
     { columnId: 1, columnName: 'order_id', dataType: 'BIGINT',
       stdFieldId: 11, standardName: '订单标识',
-      status: 'ENABLED_NOW', explanation: '当前可用' },
+      status: 'ENABLED_NOW', explanation: '当前可用',
+      standardReferences: [
+        { referenceKind: 'TYPE', referenceKey: '101', standardId: 101, status: 'ENABLED_NOW',
+          version: 3, contentSha256: 'c'.repeat(64), explanation: '类型标准当前启用' },
+        { referenceKind: 'UNIT', referenceKey: '102', standardId: 102, status: 'DISABLED',
+          version: 2, contentSha256: 'd'.repeat(64), explanation: '单位标准已停用' },
+      ] },
     { columnId: 2, columnName: 'process_time', dataType: 'TIMESTAMP',
-      stdFieldId: null, status: 'MISSING_STANDARD', explanation: '尚未批准技术列例外' },
+      stdFieldId: null, status: 'MISSING_STANDARD', explanation: '尚未批准技术列例外',
+      standardReferences: [] },
   ],
   findings: ['未关联正式标准：process_time'],
   limitations: ['不改变现行发布资格'],
@@ -52,6 +65,16 @@ it('shows saved DWD standard gaps without writing or treating technical columns 
   expect(screen.getByText(/process_time : MISSING_STANDARD/)).toBeInTheDocument();
   expect(screen.getByText('不改变现行发布资格')).toBeInTheDocument();
   expect(inspectPhysicalStandardCoverage).toHaveBeenCalledWith(50);
+});
+
+
+it('shows current referenced standard versions and disabled references as read-only evidence', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(report);
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('TYPE v3 · ENABLED_NOW')).toBeInTheDocument();
+  expect(screen.getByText('UNIT v2 · DISABLED')).toBeInTheDocument();
+  expect(screen.getByText('引用标准异常 1')).toBeInTheDocument();
+  expect(screen.getByText('不改变现行发布资格')).toBeInTheDocument();
 });
 
 it('does not surface late report after selected project changes', async () => {
