@@ -113,3 +113,32 @@ it('does not interpret an owner read failure as empty or compliant standard evid
   expect(await screen.findByText('标准权限已撤销')).toBeInTheDocument();
   expect(screen.queryByText('当前模型所有字段已关联可用标准')).not.toBeInTheDocument();
 });
+
+
+it('labels DWS evidence as read-only and does not imply grain or MetricVersionRef passed', async () => {
+  const dws = {
+    ...report, layerCode: 'DWS', processId: null, processName: null,
+    status: 'COVERED_NOW', findings: [],
+    limitations: ['DWS 粒度/上游版本/MetricVersionRef 尚未核验'],
+  };
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(dws);
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('DWS 当前字段标准覆盖与治理缺口（只读）')).toBeInTheDocument();
+  expect(screen.getByText('分层专项合同：需单独核验')).toBeInTheDocument();
+  expect(screen.getByText(/不核验 DWS 粒度\/上游版本\/MetricVersionRef/)).toBeInTheDocument();
+  expect(screen.getByText('DWS 粒度/上游版本/MetricVersionRef 尚未核验')).toBeInTheDocument();
+});
+
+it('labels ADS evidence as read-only and does not imply consumer contract passed', async () => {
+  const ads = {
+    ...report, layerCode: 'ADS', processId: null, processName: null,
+    status: 'COVERED_NOW', findings: [],
+    limitations: ['ADS 消费合同/脱敏/消费者授权/Usage Evidence 尚未核验'],
+  };
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(ads);
+  render(<PhysicalStandardCoveragePanel modelId={50} open onClose={jest.fn()} />);
+  expect(await screen.findByText('ADS 当前字段标准覆盖与治理缺口（只读）')).toBeInTheDocument();
+  expect(screen.getByText('分层专项合同：需单独核验')).toBeInTheDocument();
+  expect(screen.getByText(/不核验 ADS 消费合同\/脱敏\/消费者授权/)).toBeInTheDocument();
+  expect(screen.getByText('ADS 消费合同/脱敏/消费者授权/Usage Evidence 尚未核验')).toBeInTheDocument();
+});
