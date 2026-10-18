@@ -1,5 +1,6 @@
 package io.yak.ops.business.semantic.repository;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -69,7 +70,7 @@ class StandardRepositoryAdapterProjectScopeTest {
 
     ArgumentCaptor<Wrapper> captor = ArgumentCaptor.forClass(Wrapper.class);
     verify(mapper, times(2)).selectCount(captor.capture());
-    assertTrue(captor.getAllValues().size() == 2);
+    assertEquals(2, captor.getAllValues().size());
     captor.getAllValues().forEach(StandardRepositoryAdapterProjectScopeTest::assertHasCurrentProject);
   }
 
