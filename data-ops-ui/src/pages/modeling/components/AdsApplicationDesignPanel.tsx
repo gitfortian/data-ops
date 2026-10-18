@@ -612,8 +612,8 @@ export default function AdsApplicationDesignPanel({
             <Tag color={validationState === 'STATIC_PASS' ? 'success' : 'warning'}>{validationState}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="真实数据预演"><Tag>NOT_CONNECTED</Tag></Descriptions.Item>
-          <Descriptions.Item label="运行后对账"><Tag>NOT_EXECUTED</Tag></Descriptions.Item>
-          <Descriptions.Item label="消费授权"><Tag>DELIVERY_NOT_CONFIGURED</Tag></Descriptions.Item>
+          <Descriptions.Item label="运行后对账"><Tag>NOT_CONNECTED</Tag></Descriptions.Item>
+          <Descriptions.Item label="消费授权"><Tag>UNKNOWN · 未接入消费原域</Tag></Descriptions.Item>
         </Descriptions>
         {validated?.signature === signature && (validated.result.blockers.length > 0
           || validated.result.warnings.length > 0) && <div className="space-y-2">
@@ -662,7 +662,7 @@ export default function AdsApplicationDesignPanel({
         </div>)}
         <Alert type="info" showIcon
           message="建模设计版本 ≠ 数据已交付"
-          description="DataDev、Runtime、Quality、Dataset、Service 和 Usage 的回执尚未接入本视图；因此不展示任何模拟的运行成功或已授权结果。" />
+          description="DataDev、Runtime、Quality、Dataset、Service 和 Usage 的回执尚未接入本视图；其运行和授权状态均为未知，不能用设计状态推断未执行、成功或已授权。" />
       </div>}
       <Divider />
       <div className="flex flex-wrap justify-between gap-2">
