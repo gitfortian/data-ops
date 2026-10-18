@@ -180,6 +180,40 @@ class DwsGrainDesignServiceTest {
   }
 
   @Test
+  void restoresHistoricalContentAsANewForwardRevisionWhenStructureAndUpstreamStillMatch()
+      throws Exception {
+    var oldDesign = new DwsGrainDesignService.Design("1d", "Asia/Shanghai", "event_time",
+        "order_day", List.of("order_day", "order_city"),
+        List.of(new DwsGrainDesignService.Measure("order_count", "COUNT_DISTINCT")),
+        List.of(new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64))));
+    String oldJson = json.writeValueAsString(oldDesign);
+    String oldDigest = io.yak.ops.common.version.VersionDigests.sha256Hex(oldJson);
+    var historical = new DwsGrainDesignService.Saved(
+        10L, 1L, StructureFingerprint.of(target()), oldDigest, oldJson, oldDesign);
+
+    var currentDesign = new DwsGrainDesignService.Design("1d", "UTC", "event_time",
+        "order_day", List.of("order_day", "order_city"),
+        List.of(new DwsGrainDesignService.Measure("order_count", "COUNT_DISTINCT")),
+        List.of(new DwsGrainDesignService.UpstreamVersion(20L, 30L, 2, "a".repeat(64))));
+    String currentJson = json.writeValueAsString(currentDesign);
+    var current = new DwsGrainDesignService.Saved(
+        10L, 2L, StructureFingerprint.of(target()),
+        io.yak.ops.common.version.VersionDigests.sha256Hex(currentJson), currentJson, currentDesign);
+
+    when(jdbc.query(contains("FROM yak_modeling_dws_grain_revision"),
+        any(RowMapper.class), eq(42L), eq(10L), eq(1L))).thenReturn(List.of(historical));
+    when(jdbc.query(contains("FROM yak_modeling_dws_grain_design"),
+        any(RowMapper.class), eq(42L), eq(10L))).thenReturn(List.of(current));
+
+    var restored = service.restore(10L, 1L, "alice");
+
+    assertThat(restored.revision()).isEqualTo(3L);
+    assertThat(restored.design()).isEqualTo(oldDesign);
+    verify(jdbc).update(startsWith("UPDATE yak_modeling_dws_grain_design"), any(Object[].class));
+    verify(jdbc).update(startsWith("INSERT INTO yak_modeling_dws_grain_revision"), any(Object[].class));
+  }
+
+  @Test
   void refusesToRestoreHistoryWhenPhysicalStructureHasChanged() throws Exception {
     var oldDesign = new DwsGrainDesignService.Design("1d", "Asia/Shanghai", "event_time",
         "order_day", List.of("order_day", "order_city"),
