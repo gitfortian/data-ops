@@ -584,7 +584,7 @@ export default function DwsGrainDesignPanel({
           <Descriptions size="small" column={1}>
             <Descriptions.Item label="已读取结构">
               {sourceStructure
-                ? sourceStructure.columns?.length + ' 个字段 · 来源版本 V' + selectedSourceVersionNo
+                ? String(sourceStructure.columns?.length ?? 0) + ' 个字段 · 来源版本 V' + String(selectedSourceVersionNo)
                 : '尚未读取'}
             </Descriptions.Item>
             <Descriptions.Item label="事实粒度">
