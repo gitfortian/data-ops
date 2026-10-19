@@ -28,7 +28,8 @@ public final class DraftPublicationEpochGuard {
    */
   public record EpochObservation(
       String scheme, long projectId, long modelId, String layerCode,
-      String physicalStructureSha256, long semanticEpoch, long authorizationEpoch) {}
+      String physicalStructureSha256, String authorizationScopeSha256,
+      long semanticEpoch, long authorizationEpoch) {}
 
   public record GuardedFreeze(
       ApprovalFreeze approval, EpochObservation epochs, String guardDigestSha256) {}
@@ -77,6 +78,11 @@ public final class DraftPublicationEpochGuard {
     if (!validEpoch(currentEpochs, currentDesign)) {
       return new Comparison(Verdict.UNKNOWN, "当前纪元身份或来源语义不可验证");
     }
+    // The authenticated subject/permission scope must also remain bound.
+    if (!Objects.equals(currentEpochs.authorizationScopeSha256(),
+        frozen.epochs().authorizationScopeSha256())) {
+      return new Comparison(Verdict.STALE, "授权主体或权限范围已偏离审批绑定");
+    }
     // A rollback of a monotonic epoch signals stale/replayed observations.
     if (currentEpochs.semanticEpoch() < frozen.epochs().semanticEpoch()
         || currentEpochs.authorizationEpoch() < frozen.epochs().authorizationEpoch()) {
@@ -109,6 +115,8 @@ public final class DraftPublicationEpochGuard {
         && Objects.equals(epoch.layerCode(), binding.layerCode())
         && Objects.equals(epoch.physicalStructureSha256(),
             binding.physicalStructureSha256())
+        && epoch.authorizationScopeSha256() != null
+        && epoch.authorizationScopeSha256().matches("[a-f0-9]{64}")
         && epoch.semanticEpoch() > 0 && epoch.authorizationEpoch() > 0;
   }
 
@@ -122,6 +130,7 @@ public final class DraftPublicationEpochGuard {
     append(canonical, Long.toString(epoch.modelId()));
     append(canonical, epoch.layerCode());
     append(canonical, epoch.physicalStructureSha256());
+    append(canonical, epoch.authorizationScopeSha256());
     append(canonical, Long.toString(epoch.semanticEpoch()));
     append(canonical, Long.toString(epoch.authorizationEpoch()));
     return VersionDigests.sha256Hex(canonical.toString());
