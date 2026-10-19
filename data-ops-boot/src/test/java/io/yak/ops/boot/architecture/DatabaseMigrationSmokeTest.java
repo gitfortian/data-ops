@@ -132,33 +132,82 @@ class DatabaseMigrationSmokeTest {
       var manager = context.getBean("yakBusinessTransactionManager",
           org.springframework.transaction.PlatformTransactionManager.class);
       var tx = new org.springframework.transaction.support.TransactionTemplate(manager);
-      long project = java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+      long project = (java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+      var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+      org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+      var writer = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+          business, trusted);
       String select = "SELECT revision_no FROM yak_semantic_publication_revision "
           + "WHERE project_id = ?";
-      String insert = "INSERT INTO yak_semantic_publication_revision "
-          + "(project_id, revision_no) VALUES (?, 1)";
       try {
+        // Fail closed outside the real business transaction.
+        org.assertj.core.api.Assertions.assertThatThrownBy(writer::advanceBeforeMutation)
+            .isInstanceOf(IllegalStateException.class);
+        // First edit in a new project rolls back its row creation as well.
         tx.execute(status -> {
-          jdbc.update(insert, project);
-          assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(1L);
+          assertThat(writer.advanceBeforeMutation()).isEqualTo(2L);
           status.setRollbackOnly();
           return null;
         });
         assertThat(jdbc.queryForObject(
             "SELECT COUNT(*) FROM yak_semantic_publication_revision WHERE project_id = ?",
-            Long.class, project)).isEqualTo(0L);
+            Long.class, project)).isZero();
 
+        assertThat(tx.execute(status -> writer.advanceBeforeMutation())).isEqualTo(2L);
+        assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(2L);
+        // A semantic edit and subsequent revert still advance the revision.
+        assertThat(tx.execute(status -> writer.advanceBeforeMutation())).isEqualTo(3L);
+        assertThat(tx.execute(status -> writer.advanceBeforeMutation())).isEqualTo(4L);
+        assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(4L);
+        // A rejected edit cannot consume a committed revision.
         tx.execute(status -> {
-          jdbc.update(insert, project);
-          assertThat(jdbc.queryForObject(select + " FOR UPDATE", Long.class, project))
-              .isEqualTo(1L);
-          jdbc.update("UPDATE yak_semantic_publication_revision "
-              + "SET revision_no = revision_no + 1 WHERE project_id = ?", project);
-          assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(2L);
+          assertThat(writer.advanceBeforeMutation()).isEqualTo(5L);
+          status.setRollbackOnly();
           return null;
         });
-        assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(2L);
+        assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(4L);
       } finally {
+        jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+            project);
+      }
+    });
+  }
+
+  @Test
+  void b2ConcurrentSemanticWritersSerializePerProjectRevision() {
+    startAndValidate(true, context -> {
+      var business = context.getBean("yakBusinessDataSource", DataSource.class);
+      var jdbc = new org.springframework.jdbc.core.JdbcTemplate(business);
+      var tx = new org.springframework.transaction.support.TransactionTemplate(
+          context.getBean("yakBusinessTransactionManager",
+              org.springframework.transaction.PlatformTransactionManager.class));
+      long project = (java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+      var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+      org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+      var writer = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+          business, trusted);
+      var firstLock = new java.util.concurrent.CountDownLatch(1);
+      var release = new java.util.concurrent.CountDownLatch(1);
+      try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+        var first = workers.submit(() -> tx.execute(status -> {
+          long revision = writer.advanceBeforeMutation();
+          firstLock.countDown();
+          await(release);
+          return revision;
+        }));
+        assertThat(firstLock.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        var second = workers.submit(() ->
+            tx.execute(status -> writer.advanceBeforeMutation()));
+        release.countDown();
+        assertThat(first.get(20, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(2L);
+        assertThat(second.get(20, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(3L);
+        assertThat(jdbc.queryForObject(
+            "SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?",
+            Long.class, project)).isEqualTo(3L);
+      } catch (Exception failure) {
+        throw new AssertionError("Semantic revision writers were not serialized", failure);
+      } finally {
+        release.countDown();
         jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
             project);
       }
