@@ -1,8 +1,8 @@
-# R14-B2 正式发布证据集成合同 R1 — 单一技术负责人裁决候选
+# R14-B2 正式发布证据集成合同 R1 — 已有条件批准研发
 
-**状态：REVISE / TECHNICAL_DECISION_REQUIRED / NO_PRODUCTION_WIRING**  
+**状态：ACCEPT_CONDITIONAL_FOR_DEVELOPMENT / T2_PRECONDITION_PENDING / NO_PRODUCTION_WIRING**  
 关联：[DR-06 #556](https://github.com/gitfortian/data-ops/issues/556)、[R14-2 #614](https://github.com/gitfortian/data-ops/issues/614)、[PR #635](https://github.com/gitfortian/data-ops/pull/635)、[B2 Feature Spec 与 P01–P18](R14-B2-publication-evidence-feature-spec-candidate.md)。  
-治理：一名 Accountable Technical Owner 对 Modeling/Semantic/Security 三份证据作**一份**版本化技术决策，不要求三个人分别点 GitHub 审核按钮。**本文件没有代该 Owner 作技术 ACCEPT。**
+治理：一名 Accountable Technical Owner 对 Modeling/Semantic/Security 三份证据作**一份**版本化技术决策，不要求三个人分别点 GitHub 审核按钮。**唯一技术负责人已明确批准 T1–T4 的有条件研发实施**（[#556 正式授权记录](https://github.com/gitfortian/data-ops/issues/556#issuecomment-6261453377)），不代表 T2 共库/同事务/锁顺序已通过，也不代表生产发布授权。
 
 ## 1. 为什么这次不直接把 Draft validator 接进 publishLocked
 
@@ -65,7 +65,7 @@ Semantic 的项目事实修订不能替代 Security 授权修订。Security 至�
 5. **ODS**：明确贴源例外，不强制业务标准，但仍执行既有权限和结构合同；不得把 ODS 例外泛化为非 ODS 开关。
 6. **历史**：旧 ModelVersion `LEGACY_UNBOUND` 不补历史假证据；标准修订后不会改旧快照；恢复到草稿并再次发布必须重新取当前事实。
 
-## 4. 统一技术负责人应裁决的 4 项事实（缺任何一项为 REVISE）
+## 4. 已有条件批准的 T1–T4 与实施验收关口
 
 | 决策编号 | 推荐 | 必需证据/可执行门槛 |
 |---|---|---|
@@ -74,7 +74,7 @@ Semantic 的项目事实修订不能替代 Security 授权修订。Security 至�
 | T3 Security revision | 后端可认证主体/授权范围及权限修订，审批和回调双重检查 | 跨项目、权限撤销→恢复、角色变化、错人审批、日志脱敏测试 |
 | T4 ModelVersion 身份 | 四入口共用标准 validator，标准证据参与版本复用，新版不可变快照与根指针同事务 | 旧版、标准漂移、同结构不同证据、审批/Mapping 两路径回归、断电/失败回滚及真实读回 |
 
-**签收建议：`REVISE`（技术 R1）。** 不能在缺少 T1–T3 提供者和最后提交一致性保证时从 Draft 提升 Ready、接线发布门禁或合并。由于用户已确认唯一技术负责人身份，只有在他对 **R1 的准确策略和条件**明确授权之后，助手才能代记录一份 Modeling/Semantic/Security 三域的统一技术 `ACCEPT`。本项签收仅可能批准**开发**，不代表生产门禁/目标写入立即授权。
+**正式决策：`ACCEPT_CONDITIONAL_FOR_DEVELOPMENT`（技术 R1，2026-10-19）。** 用户作为统一技术负责人已明确授权 T1–T4 进入真实研发实施，但 T2 的**真实共库、同事务、锁顺序与全写入口**必须先行验证。验证失败禁止绕过，也不得擅自切换 B 方案；需要重新裁决可信 fence。T2 证据不足时，仍不可从 Draft 提升 Ready、接线生产发布门禁或合并。该批准**不**允许 DataDev、Runtime、SQL/DDL 或目标数据写入。
 
 ## 5. 里程碑与验收断言
 
