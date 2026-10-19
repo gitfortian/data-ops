@@ -334,6 +334,98 @@ class DatabaseMigrationSmokeTest {
     });
   }
 
+  /**
+   * T2-A cross-domain database lock experiment. A Modeling transaction holds
+   * an actual model-root row lock and then the Semantic project revision row
+   * lock. A concurrent Semantic writer cannot advance the project revision
+   * until the Modeling transaction commits. Does not grant B2 publication or
+   * prove reverse references/authorization are free of deadlocks.
+   */
+  @Test
+  void b2ModelingRootAndSemanticRevisionLocksShareCommitFenceOnMySql() {
+    startAndValidate(true, context -> {
+      var business = context.getBean("yakBusinessDataSource", DataSource.class);
+      var jdbc = new org.springframework.jdbc.core.JdbcTemplate(business);
+      var manager = context.getBean("yakBusinessTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      long project = (java.util.UUID.randomUUID().getMostSignificantBits()
+          & Long.MAX_VALUE) + 1;
+      String code = "r14_b2_lock_" + java.util.UUID.randomUUID().toString()
+          .substring(0, 12).replace("-", "");
+      var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+      org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+      var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+          business, trusted);
+      var lockHeld = new java.util.concurrent.CountDownLatch(1);
+      var release = new java.util.concurrent.CountDownLatch(1);
+      try {
+        jdbc.update("""
+            INSERT INTO yak_modeling_model
+              (project_id, model_code, model_name, dialect, layer_code, deleted, status)
+            VALUES (?, ?, 'B2 root-lock CI', 'MYSQL', 'DWD', 0, 'DRAFT')
+            """, project, code);
+        Long modelId = jdbc.queryForObject("""
+            SELECT id FROM yak_modeling_model
+             WHERE project_id = ? AND model_code = ?
+            """, Long.class, project, code);
+        Long seeded = new org.springframework.transaction.support.TransactionTemplate(manager)
+            .execute(status -> revision.advanceBeforeMutation());
+        assertThat(seeded).isEqualTo(2L);
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+          var publishing = workers.submit(() ->
+              new org.springframework.transaction.support.TransactionTemplate(manager)
+                  .execute(status -> {
+                    Long lockedRoot = jdbc.queryForObject("""
+                        SELECT id FROM yak_modeling_model
+                         WHERE project_id = ? AND id = ? FOR UPDATE
+                        """, Long.class, project, modelId);
+                    assertThat(lockedRoot).isEqualTo(modelId);
+                    Long observed = revision.lockExistingForReview();
+                    lockHeld.countDown();
+                    await(release);
+                    return observed;
+                  }));
+          assertThat(lockHeld.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+          var attempted = new java.util.concurrent.CountDownLatch(1);
+          var standardWrite = workers.submit(() ->
+              new org.springframework.transaction.support.TransactionTemplate(manager)
+                  .execute(status -> {
+                    attempted.countDown();
+                    // Stand-in for the actual Semantic revision-first mutation
+                    // protocol. This code is not the full StandardCatalogService.
+                    Long advanced = revision.advanceBeforeMutation();
+                    Long rootCount = jdbc.queryForObject("""
+                        SELECT COUNT(*) FROM yak_modeling_model
+                         WHERE project_id = ? AND id = ?
+                        """, Long.class, project, modelId);
+                    assertThat(rootCount).isEqualTo(1L);
+                    return advanced;
+                  }));
+          assertThat(attempted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+          org.assertj.core.api.Assertions.assertThatThrownBy(
+              () -> standardWrite.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+              .isInstanceOf(java.util.concurrent.TimeoutException.class);
+          release.countDown();
+          Long frozen = publishing.get(15, java.util.concurrent.TimeUnit.SECONDS);
+          Long advanced = standardWrite.get(15, java.util.concurrent.TimeUnit.SECONDS);
+          assertThat(frozen).isEqualTo(2L);
+          assertThat(advanced).isEqualTo(3L);
+          assertThat(jdbc.queryForObject("""
+              SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?
+              """, Long.class, project)).isEqualTo(3L);
+        }
+      } catch (Exception failure) {
+        throw new AssertionError("B2 cross-domain root/revision fence regression", failure);
+      } finally {
+        release.countDown();
+        jdbc.update("DELETE FROM yak_modeling_model WHERE project_id = ? AND model_code = ?",
+            project, code);
+        jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+            project);
+      }
+    });
+  }
+
   @Test
   void odsSourceUniqueIndexSeparatesSchemasAndBlocksDuplicateBindings() {
     // Uses the same isolated MySQL 8.0 CI database as the migration smoke.
