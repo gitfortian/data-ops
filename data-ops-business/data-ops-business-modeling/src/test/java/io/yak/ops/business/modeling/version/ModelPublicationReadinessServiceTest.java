@@ -213,6 +213,77 @@ class ModelPublicationReadinessServiceTest {
   }
 
   @Test
+  void dwdReleaseConfirmationShowsExactLogicalVersionAndFrozenMappingIdentity() {
+    mockModel("DWD");
+    var mappings = mock(io.yak.ops.business.modeling.mapping.DwdMappingDraftService.class);
+    var draft = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Draft(
+        31L, 701L, 21L, 4, "c".repeat(64), "d".repeat(64),
+        8L, List.of(), "DRAFT_SAVED_NOT_PUBLISHED");
+    var frozen = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Frozen(
+        41L, 31L, 3, "e".repeat(64), 8L, "FROZEN_DESIGN_ONLY");
+    var historical = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService
+        .HistoricalRevision(41L, 31L, 3, 21L, 4,
+            "c".repeat(64), "d".repeat(64), "e".repeat(64), List.of());
+    when(mappings.get(701L)).thenReturn(draft);
+    when(mappings.revisions(701L)).thenReturn(List.of(frozen));
+    when(mappings.revisionDetail(701L, 41L)).thenReturn(historical);
+    preview = new ModelPublicationReadinessService(
+        models, structures, project, semantic, mappings);
+    when(semantic.evaluate(any(BatchRequest.class))).thenAnswer(invocation -> {
+      BatchRequest req = invocation.getArgument(0);
+      return new BatchResult(Verdict.BLOCKED, req.projectId(), req.modelId(),
+          req.layerCode(), req.physicalStructureSha256(), 11L, null, null,
+          List.of(new ColumnEvidence("order_id", "BIGINT", 11L,
+              "DIMENSION", "VALID", null, List.of(), null, null),
+              new ColumnEvidence("etl_time", "TIMESTAMP", null,
+                  "PROCESS", "BLOCKED", null, List.of(), null, "MISSING_STANDARD")),
+          List.of("MISSING_STANDARD"));
+    });
+    var result = preview.inspect(701L);
+    assertThat(result.mapping()).isNotNull();
+    assertThat(result.mapping().status()).isEqualTo("FROZEN_SAVED_DRAFT");
+    assertThat(result.mapping().logicalModelId()).isEqualTo(21L);
+    assertThat(result.mapping().logicalVersionNo()).isEqualTo(4);
+    assertThat(result.mapping().mappingRevisionId()).isEqualTo(41L);
+    assertThat(result.authorizedForPublication()).isFalse();
+  }
+
+  @Test
+  void dwdChangedSavedDraftCannotReuseOldFrozenMappingAsCurrent() {
+    mockModel("DWD");
+    var mappings = mock(io.yak.ops.business.modeling.mapping.DwdMappingDraftService.class);
+    var draft = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Draft(
+        31L, 701L, 21L, 4, "c".repeat(64), "d".repeat(64),
+        9L, List.of(), "DRAFT_SAVED_NOT_PUBLISHED");
+    var frozen = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Frozen(
+        41L, 31L, 3, "e".repeat(64), 8L, "FROZEN_DESIGN_ONLY");
+    var historical = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService
+        .HistoricalRevision(41L, 31L, 3, 21L, 4,
+            "c".repeat(64), "d".repeat(64), "e".repeat(64), List.of());
+    when(mappings.get(701L)).thenReturn(draft);
+    when(mappings.revisions(701L)).thenReturn(List.of(frozen));
+    when(mappings.revisionDetail(701L, 41L)).thenReturn(historical);
+    preview = new ModelPublicationReadinessService(
+        models, structures, project, semantic, mappings);
+    when(semantic.evaluate(any(BatchRequest.class))).thenAnswer(invocation -> {
+      BatchRequest req = invocation.getArgument(0);
+      return new BatchResult(Verdict.BLOCKED, req.projectId(), req.modelId(),
+          req.layerCode(), req.physicalStructureSha256(), 11L, null, null,
+          List.of(new ColumnEvidence("order_id", "BIGINT", 11L,
+              "DIMENSION", "VALID", null, List.of(), null, null),
+              new ColumnEvidence("etl_time", "TIMESTAMP", null,
+                  "PROCESS", "BLOCKED", null, List.of(), null, "MISSING_STANDARD")),
+          List.of("MISSING_STANDARD"));
+    });
+    var result = preview.inspect(701L);
+    assertThat(result.mapping()).isNotNull();
+    assertThat(result.mapping().status()).isEqualTo("STALE");
+    assertThat(result.mapping().mappingRevisionId()).isEqualTo(41L);
+    assertThat(result.mapping().finding()).contains("重新核验");
+    assertThat(result.authorizedForPublication()).isFalse();
+  }
+
+  @Test
   void odsCannotEnterNonOdsPublicationEvidenceFlow() {
     mockModel("ODS");
     assertThrows(IllegalArgumentException.class, () -> preview.inspect(701L));
