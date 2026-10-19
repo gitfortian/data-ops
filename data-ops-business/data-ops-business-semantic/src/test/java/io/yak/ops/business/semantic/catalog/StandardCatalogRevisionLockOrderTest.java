@@ -21,6 +21,41 @@ import org.springframework.beans.factory.ObjectProvider;
 /** T2 development evidence: project revision lock order precedes a standard row FOR UPDATE. */
 class StandardCatalogRevisionLockOrderTest {
   @Test
+  void approvalVersionMismatchRejectsAfterRevisionLockBeforeAnyStatusWrite() {
+    var standards = mock(SemanticStandardRepository.class);
+    var versions = mock(SemanticStandardVersionRepository.class);
+    var fields = mock(SemanticFieldRepository.class);
+    var audit = mock(BusinessAuditService.class);
+    var layers = mock(SemanticLayerRepository.class);
+    var revision = mock(SemanticPublicationRevisionService.class);
+    @SuppressWarnings("unchecked")
+    ObjectProvider<StandardReferenceReader> readers = mock(ObjectProvider.class);
+    when(readers.orderedStream()).thenReturn(Stream.empty());
+    @SuppressWarnings("unchecked")
+    ObjectProvider<ApprovalApi> approvals = mock(ObjectProvider.class);
+    var current = mock(io.yak.ops.business.semantic.api.Standard.class);
+    when(current.version()).thenReturn(8);
+    when(standards.findByIdForUpdate(91L)).thenReturn(Optional.of(current));
+
+    var service = new StandardCatalogService(standards, versions, fields,
+        audit, layers, readers, approvals, revision);
+    org.junit.jupiter.api.Assertions.assertThrows(
+        io.yak.ops.business.semantic.exception.SemanticException.class,
+        () -> service.enableApprovedVersion(91L, 7, "reviewer"));
+    var ordered = inOrder(revision, standards);
+    ordered.verify(revision).advanceBeforeMutation();
+    ordered.verify(standards).findByIdForUpdate(91L);
+    org.mockito.Mockito.verify(standards, org.mockito.Mockito.never())
+        .updateStatus(org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
+    // Invalid payload revisions cannot even acquire locks.
+    org.junit.jupiter.api.Assertions.assertThrows(
+        io.yak.ops.business.semantic.exception.SemanticException.class,
+        () -> service.enableApprovedVersion(91L, 0, "reviewer"));
+    org.mockito.Mockito.verifyNoMoreInteractions(revision);
+  }
+
+  @Test
   void statusAndUpdateAcquireProjectRevisionBeforeIndividualStandardLock() {
     var standards = mock(SemanticStandardRepository.class);
     var versions = mock(SemanticStandardVersionRepository.class);
