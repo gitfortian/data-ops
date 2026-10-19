@@ -132,6 +132,89 @@ class ModelVersionServiceTest {
   }
 
   @Test
+  void draftWithAlreadyPublishedLatestPointerIsRePublishedWithoutNewVersion() {
+    ModelVersion latest = version(9L, 3, null);
+    // Saving/restoring the same structure resets status to DRAFT but retains pointer 9.
+    when(modelRepository.findByIdForUpdate(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)
+            .withPublishState(ModelStatus.DRAFT, 9L, 3)));
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(latest));
+
+    ModelVersionService.PublishResult result = service.publish(1L, "tester");
+
+    assertThat(result.created()).isFalse();
+    assertThat(result.version()).isSameAs(latest);
+    verify(modelRepository).updatePublishState(
+        1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester");
+    verify(versionRepository, never()).insert(
+        any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
+  void alreadyPublishedSameLatestVersionIsAnUnmodifiedIdempotentRetry() {
+    ModelVersion latest = version(9L, 3, null);
+    when(modelRepository.findByIdForUpdate(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)
+            .withPublishState(ModelStatus.PUBLISHED, 9L, 3)));
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(latest));
+
+    ModelVersionService.PublishResult result = service.publish(1L, "tester");
+
+    assertThat(result.created()).isFalse();
+    verify(modelRepository, never()).updatePublishState(
+        any(), anyString(), any(), anyInt(), anyString());
+    verify(versionRepository, never()).insert(
+        any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
+  void draftRePublishWithSamePointerFailsClosedIfStatusUpdateAffectsNoRow() {
+    when(modelRepository.findByIdForUpdate(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)
+            .withPublishState(ModelStatus.DRAFT, 9L, 3)));
+    when(versionRepository.findLatestByModelId(1L))
+        .thenReturn(Optional.of(version(9L, 3, null)));
+    when(modelRepository.updatePublishState(
+        1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester")).thenReturn(false);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository, never()).insert(
+        any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
+  void mappedDwdDraftWithExistingFrozenVersionRestoresPublishedState() {
+    Model dwd = Model.create("trade_order", "订单", ModelDialect.MYSQL,
+        null, null, "DWD", null).withPersisted(1L, "alice", null, null)
+        .withPublishState(ModelStatus.DRAFT, 9L, 3);
+    when(modelRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(dwd));
+    PublicationEvidence evidence = new PublicationEvidence(501L, 201L, 77L, 2,
+        "a".repeat(64), "b".repeat(64), "c".repeat(64));
+    ModelVersion previous = version(9L, 3, null);
+    String meta = "{\"mappingRevisionId\":501,\"mappingSetId\":201,"
+        + "\"logicalModelId\":77,\"logicalVersionNo\":2,"
+        + "\"mappingContentSha256\":\"" + "c".repeat(64) + "\","
+        + "\"logicalSnapshotSha256\":\"" + "a".repeat(64) + "\","
+        + "\"physicalStructureSha256\":\"" + "b".repeat(64) + "\"}";
+    ModelVersion mapped = new ModelVersion(previous.id(), previous.modelId(),
+        previous.versionNo(), previous.structureJson(), meta,
+        previous.columnCount(), previous.checksum(), previous.publishedBy(),
+        previous.publishTime());
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(mapped));
+
+    ModelVersionService.PublishResult result =
+        service.publishWithMapping(1L, null, evidence, "tester");
+
+    assertThat(result.created()).isFalse();
+    verify(modelRepository).updatePublishState(
+        1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester");
+    verify(versionRepository, never()).insert(
+        any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
   void newPhysicalVersionFailsClosedWhenPublishPointerUpdateAffectsNoRow() {
     when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.empty());
     when(versionRepository.nextVersionNo(1L)).thenReturn(1);
