@@ -50,15 +50,47 @@ public class SemanticPublicationRevisionService {
   }
 
   /**
-   * Lock project revision first, then advance within the caller's transaction.
-   * Rollbacks discard the increment along with the corresponding business edit.
+   * Read-only, row-locked Semantic revision observation for testing the proposed
+   * same-database transaction fence. The lock lives only until the caller's
+   * business transaction ends. Missing project/revision/transaction is UNKNOWN
+   * and MUST fail; do not seed missing rows during a publication observation.
+   *
+   * <p>Review and integration-test primitive, NOT a publish authorization API.
+   * Its existence does not prove all Semantic writers or Security revocations
+   * participate in the same fence. No Modeling publish path calls this method.
    */
-  public long advanceBeforeMutation() {
+  public long lockExistingForReview() {
+    Long projectId = requireTransactionalProject();
+    Connection connection = DataSourceUtils.getConnection(businessDataSource);
+    try {
+      if (!DataSourceUtils.isConnectionTransactional(connection, businessDataSource)) {
+        throw new IllegalStateException("Semantic 观察必须绑定真实业务事务");
+      }
+      Long revision = jdbc.queryForObject(LOCK, Long.class, projectId);
+      if (revision == null || revision <= 0) {
+        throw new IllegalStateException("Semantic 项目修订缺失，不能生成发布观察证据");
+      }
+      return revision;
+    } finally {
+      DataSourceUtils.releaseConnection(connection, businessDataSource);
+    }
+  }
+
+  private Long requireTransactionalProject() {
     Long projectId = currentProject.requireProjectId();
     if (projectId == null || projectId <= 0 || !TransactionSynchronizationManager
         .isActualTransactionActive()) {
       throw new IllegalStateException("Semantic 修订必须在可信项目的业务事务中更新");
     }
+    return projectId;
+  }
+
+  /**
+   * Lock project revision first, then advance within the caller's transaction.
+   * Rollbacks discard the increment along with the corresponding business edit.
+   */
+  public long advanceBeforeMutation() {
+    Long projectId = requireTransactionalProject();
     Connection connection = DataSourceUtils.getConnection(businessDataSource);
     try {
       if (!DataSourceUtils.isConnectionTransactional(connection, businessDataSource)) {
