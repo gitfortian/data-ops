@@ -2,6 +2,7 @@ import { deriveManualJourney, MANUAL_JOURNEY_LABELS, type ManualJourneyFacts } f
 
 const facts: ManualJourneyFacts = {
   hasLogicalDraft: true,
+  hasExistingDraftChoices: true,
   hasFrozenLogicalVersion: true,
   hasPhysicalTarget: true,
   hasMatchingPreview: true,
@@ -29,6 +30,18 @@ it('covers the complete five-step manual modeling path without claiming a Runtim
   expect(published.step).toBe(5);
   expect(published.complete).toBe(true);
   expect(published.explanation).toContain('未创建任务或执行 SQL');
+});
+
+it('selects an existing logical draft instead of proposing a duplicate creation', () => {
+  const existing = deriveManualJourney({ ...facts,
+    hasLogicalDraft: false, hasExistingDraftChoices: true,
+  });
+  const empty = deriveManualJourney({ ...facts,
+    hasLogicalDraft: false, hasExistingDraftChoices: false,
+  });
+  expect(existing.action).toBe('选择现有逻辑草稿');
+  expect(empty.action).toBe('创建逻辑草稿');
+  expect(existing.complete).toBe(false);
 });
 
 it('refuses to call a preflight success an accepted mapping or publication', () => {
