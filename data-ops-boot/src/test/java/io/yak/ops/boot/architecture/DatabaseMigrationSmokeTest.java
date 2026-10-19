@@ -356,6 +356,9 @@ class DatabaseMigrationSmokeTest {
       org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
       var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
           business, trusted);
+      var fieldReferences = new io.yak.ops.business.modeling.api.ModelingSemanticFieldReferenceReader(
+          context.getBean(io.yak.ops.business.modeling.dao.mapper.ModelingModelColumnMapper.class),
+          trusted);
       var lockHeld = new java.util.concurrent.CountDownLatch(1);
       var release = new java.util.concurrent.CountDownLatch(1);
       try {
@@ -399,6 +402,10 @@ class DatabaseMigrationSmokeTest {
                          WHERE project_id = ? AND id = ?
                         """, Long.class, project, modelId);
                     assertThat(rootCount).isEqualTo(1L);
+                    // Exercise the actual Modeling consumer's project-scoped
+                    // SELECT COUNT rather than assuming every reference query
+                    // is harmless under the Semantic revision lock.
+                    assertThat(fieldReferences.countFieldReferences(999999999L)).isZero();
                     return advanced;
                   }));
           assertThat(attempted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
