@@ -76,6 +76,8 @@ class DraftPublicationEvidenceVerifierTest {
     assertThat(verify(request("ODS"), null).snapshot()).isNull();
     assertThat(verify(request("UNKNOWN"), null).verdict())
         .isEqualTo(Verdict.UNKNOWN);
+    assertThat(verify(request(null), null).verdict())
+        .isEqualTo(Verdict.UNKNOWN);
   }
 
   @Test
