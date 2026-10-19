@@ -51,7 +51,19 @@ export default function DwdStandardReviewCard({
       if (result.modelId !== physicalModelId || result.layerCode !== 'DWD'
           || result.structureSha256 !== physicalStructureSha256
           || !/^[a-f0-9]{64}$/.test(result.evidenceSha256)
-          || !['COVERED_NOW', 'NEEDS_REVIEW'].includes(result.status)) {
+          || !['COVERED_NOW', 'NEEDS_REVIEW'].includes(result.status)
+          || !Array.isArray(result.findings)
+          || !Number.isSafeInteger(result.columnCount) || result.columnCount <= 0
+          || !Number.isSafeInteger(result.missingCount) || result.missingCount < 0
+          || !Number.isSafeInteger(result.invalidCount) || result.invalidCount < 0
+          || !Number.isSafeInteger(result.missingDataStandardCount)
+          || result.missingDataStandardCount < 0
+          || !Number.isSafeInteger(result.invalidDataStandardCount)
+          || result.invalidDataStandardCount < 0
+          || (result.status === 'COVERED_NOW' && (
+            result.findings.length > 0 || result.missingCount > 0
+            || result.invalidCount > 0 || result.missingDataStandardCount > 0
+            || result.invalidDataStandardCount > 0 || result.reviewCount > 0))) {
         throw new Error('标准证据与当前 DWD 目标或物理结构不一致，请重新预检物理模型');
       }
       setReport(result);
@@ -80,7 +92,7 @@ export default function DwdStandardReviewCard({
       </Tag>}>
       <Typography.Paragraph type="secondary">
         对照当前已保存的 DWD 物理结构读取 StandardField 和关联数据标准。
-        这是帮助人工修复的即时证据，**不是**发布资格、审批冻结快照或 DR-06 已批准的校验器。
+        这是帮助人工修复的即时证据，不是发布资格、审批冻结快照或 DR-06 已批准的校验器。
       </Typography.Paragraph>
       <Space wrap>
         <Button onClick={() => void checkCurrentStandards()}
