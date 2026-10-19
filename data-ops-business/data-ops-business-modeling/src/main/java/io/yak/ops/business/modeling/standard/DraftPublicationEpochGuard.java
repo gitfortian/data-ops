@@ -4,7 +4,6 @@ import io.yak.ops.business.modeling.standard.DraftPublicationApprovalEvidence.Ap
 import io.yak.ops.business.modeling.standard.DraftPublicationApprovalEvidence.DesignBinding;
 import io.yak.ops.business.modeling.standard.DraftPublicationApprovalEvidence.Result;
 import io.yak.ops.business.modeling.standard.DraftPublicationEvidenceVerifier.Evaluation;
-import io.yak.ops.business.modeling.standard.DraftPublicationEvidenceVerifier.Verdict;
 import io.yak.ops.common.version.VersionDigests;
 import java.util.Objects;
 
@@ -96,7 +95,7 @@ public final class DraftPublicationEpochGuard {
     if (approval == null || approval.binding() == null || approval.standards() == null) {
       return false;
     }
-    Evaluation frozenEvaluation = new Evaluation(Verdict.VALID_CANDIDATE,
+    Evaluation frozenEvaluation = new Evaluation(DraftPublicationEvidenceVerifier.Verdict.VALID_CANDIDATE,
         "isolated frozen evidence", approval.standards());
     return DraftPublicationApprovalEvidence.compare(
         approval, approval.binding(), frozenEvaluation).result() == Result.CANDIDATE_MATCH;
