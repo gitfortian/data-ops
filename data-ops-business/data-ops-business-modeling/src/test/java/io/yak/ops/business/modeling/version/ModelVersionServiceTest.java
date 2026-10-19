@@ -168,6 +168,41 @@ class ModelVersionServiceTest {
   }
 
   @Test
+  void publishedWithMatchingVersionIdButStaleVersionNumberRepairsFullPointer() {
+    ModelVersion latest = version(9L, 3, null);
+    when(modelRepository.findByIdForUpdate(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)
+            .withPublishState(ModelStatus.PUBLISHED, 9L, 2)));
+    when(versionRepository.findLatestByModelId(1L)).thenReturn(Optional.of(latest));
+
+    ModelVersionService.PublishResult result = service.publish(1L, "tester");
+
+    assertThat(result.created()).isFalse();
+    assertThat(result.version()).isSameAs(latest);
+    verify(modelRepository).updatePublishState(
+        1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester");
+    verify(versionRepository, never()).insert(
+        any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
+  void stalePublishedVersionNumberCannotClaimSuccessWhenPointerRepairFails() {
+    when(modelRepository.findByIdForUpdate(1L))
+        .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)
+            .withPublishState(ModelStatus.PUBLISHED, 9L, 2)));
+    when(versionRepository.findLatestByModelId(1L))
+        .thenReturn(Optional.of(version(9L, 3, null)));
+    when(modelRepository.updatePublishState(
+        1L, ModelStatus.PUBLISHED.name(), 9L, 3, "tester")).thenReturn(false);
+
+    assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+        () -> service.publish(1L, "tester")))
+        .hasMessageContaining("发布指针更新失败");
+    verify(versionRepository, never()).insert(
+        any(), anyInt(), any(), any(), anyInt(), any(), any());
+  }
+
+  @Test
   void draftRePublishWithSamePointerFailsClosedIfStatusUpdateAffectsNoRow() {
     when(modelRepository.findByIdForUpdate(1L))
         .thenReturn(Optional.of(model(ModelStatus.DRAFT, null)
