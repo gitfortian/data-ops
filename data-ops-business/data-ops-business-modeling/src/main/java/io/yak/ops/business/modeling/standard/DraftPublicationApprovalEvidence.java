@@ -56,10 +56,15 @@ public final class DraftPublicationApprovalEvidence {
     if (candidate == null) {
       return FreezeResult.reject("当前标准证据未知、缺失或并非当前设计");
     }
-    String digest = frozenDigest(binding, candidate);
+    FrozenCandidate detached = new FrozenCandidate(
+        candidate.projectId(), candidate.modelId(), candidate.layerCode(),
+        candidate.structureSha256(), candidate.semanticDigestAlgorithm(),
+        candidate.semanticEvidenceSha256(), candidate.consistencyToken(),
+        candidate.candidateDigestSha256(), java.util.List.copyOf(candidate.columns()));
+    String digest = frozenDigest(binding, detached);
     return new FreezeResult(Result.CANDIDATE_MATCH,
         "仅供隔离审查；不代表审批通过、发布资格或跨域原子性",
-        new ApprovalFreeze(binding, candidate, PROPOSAL, digest));
+        new ApprovalFreeze(binding, detached, PROPOSAL, digest));
   }
 
   /**
