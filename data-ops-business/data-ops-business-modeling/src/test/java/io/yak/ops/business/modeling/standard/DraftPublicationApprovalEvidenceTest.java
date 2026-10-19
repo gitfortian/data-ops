@@ -170,6 +170,25 @@ class DraftPublicationApprovalEvidenceTest {
   }
 
   @Test
+  void approvalFreezeDetachesEvenExternallyConstructedMutableCandidateLists() {
+    var original = valid().snapshot();
+    var mutable = new ArrayList<>(original.columns());
+    var external = new DraftPublicationEvidenceVerifier.FrozenCandidate(
+        original.projectId(), original.modelId(), original.layerCode(),
+        original.structureSha256(), original.semanticDigestAlgorithm(),
+        original.semanticEvidenceSha256(), original.consistencyToken(),
+        original.candidateDigestSha256(), mutable);
+    var evaluation = new Evaluation(
+        DraftPublicationEvidenceVerifier.Verdict.VALID_CANDIDATE, "external", external);
+    var frozen = DraftPublicationApprovalEvidence.freeze(design(), evaluation).freeze();
+    assertThat(frozen).isNotNull();
+    mutable.clear();
+    assertThat(frozen.standards().columns()).hasSize(2);
+    assertThat(DraftPublicationApprovalEvidence.compare(frozen, design(), valid()).result())
+        .isEqualTo(Result.CANDIDATE_MATCH);
+  }
+
+  @Test
   void frozenColumnListCannotBeMutatedOrChangedByProviderAfterFreeze() {
     var request = new ArrayList<>(List.of(
         new ColumnRequest("order_id", "BIGINT", 11L),
