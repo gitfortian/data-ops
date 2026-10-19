@@ -70,7 +70,8 @@ public final class DraftPublicationEvidenceVerifier {
     if ("ODS".equals(request.layerCode())) {
       return Evaluation.reject(Verdict.ODS_OUT_OF_SCOPE, "ODS 贴源例外由 Modeling 原有合同独立处理");
     }
-    if (!Set.of("DWD", "DIM", "DWS", "ADS").contains(request.layerCode())) {
+    if (request.layerCode() == null
+        || !Set.of("DWD", "DIM", "DWS", "ADS").contains(request.layerCode())) {
       return Evaluation.reject(Verdict.UNKNOWN, "未批准的模型分层");
     }
     Set<String> identities = new HashSet<>();
