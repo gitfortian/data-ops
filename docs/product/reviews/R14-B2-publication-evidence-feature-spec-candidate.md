@@ -17,6 +17,7 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 - `DraftPublicationApprovalEvidence`: 纯 Java 非 Spring Bean，冻结 design binding + 标准证据，比较设计/标准变化；返回 CANDIDATE_MATCH/STALE/UNKNOWN。
 - `evaluateAgainstModelSnapshot(submitted, physicalSnapshot, semanticObservation)`：新增独立候选列集比对；提交的列名/类型/StandardField ID、作用域、结构摘要须与另一个 Modeling 物理快照相符，且与 Semantic 响应完整一致。模型列快照入参**尚无可信来源保证**；这不是 DB 读取、SHA 重算、身份授权、事务/并发保护或发布权。调用方必须未来从 Modeling 持久事实/根锁上下文取得并验证列全集。
 - `Request/Observation` 构造时防御性复制列证据列表，避免调用方在候选校验前后篡改输入集合；不等于对数据来源作可信认证。
+- `DraftPublicationEpochGuard`：隔离的审批双域纪元捕获/复核策略候选，分别比较 Semantic 与 Security 的单调 revision；不自行生成可信 revision，不接入任何正式审批或发布。
 
 - 已有专项测试验证基础正常流、漂移、篡改与跨层复用；现有 CI PASS 仅证明候选实现可编译/运行。
 - 未接 Semantic 正式 SPI、真实授权上下文、四发布入口、审批 payload、ModelVersion/迁移或产品 UI/E2E。
@@ -31,6 +32,16 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 | Product | D4_ONLY 已批准；P01–P18 产品功能范围已签收：非 ODS 逐列有效标准、零技术列豁免、ODS 例外、草稿宽限、历史不回填 | [#614 Product D4 / B2 P01–P18 功能签收](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)；不代表技术合同或实际测试签收 |
 
 **一致性关键问题**：独立 Semantic 观察 token 只是证据标识，不是跨模块锁。需选择并批准可证明的同一语义快照读取/版本 CAS/发布瞬间最终复核方案；无保证时返回 UNKNOWN，不能声称不漂移。
+
+### S2 REVISE：双域单调纪元的可执行候选（非批准合同）
+
+新增 `DraftPublicationEpochGuard`（纯 Java、无 Spring/IO），演示以下**候选策略**：
+1. `EpochObservation` 绑定 `scheme/projectId/modelId/layer/physicalStructureSha256/semanticEpoch/authorizationEpoch`。Semantic 与 Security 分别对所有影响当前标准合法性、项目可见性、撤权与重授权的修改**单调推进**相应 revision；不能仅使用内容 SHA、当前权限布尔值、时间戳或每次读取随机 token。
+2. 审批候选冻结时绑定两种 revision；回调再次观察并比较：任一 revision **增加**即 `STALE`（即使标准/权限回到旧值，阻止 ABA）；任一 revision **减少**即 `UNKNOWN`（旧读或重放）；身份/算法/纪元缺失或篡改即 `UNKNOWN`；两者相同且完整设计、标准证据相同时仅 `CANDIDATE_MATCH`。
+3. **尚未解决的工程关键点**：这些 revision 在当前仓库尚无对应已批准 SPI、持久更新保证或安全服务端来源；冻结 hash 不具有签名/权限语义。两域分别读取与 Modeling 提交之间仍可能改变，最后一次 recheck 也不是跨数据库原子锁。正式实施须由统一技术负责人基于三域 Review 决定：以 Semantic/Security 提供经认证的同版本快照与可验证提交 fence/lease 为准，或选择明确的最终一致性业务策略并声明允许的窗口与重审条件；**未决定前不可生产接线，不得假称 ABA/TOCTOU 已完全解决**。
+4. 范围仅为 DR-06/PD-010 的标准发布审批；不授权 DR-07、Runtime 或真实目标写入。
+
+候选专项测试验证相同内容的标准 ABA / 权限撤销再授予、epoch 回退、跨项目、未知/篡改、标准与映射漂移和稳定候选路径。**测试通过只证明纯算法行为，并非有真实 epoch 提供者、并发锁或发布路径集成**。
 
 ## 3.1 单一技术负责人决策方式（2026-10-19）
 
@@ -65,7 +76,7 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 | P09 | 跨项目/跨模型/撤销权限 | 拒绝并审计，不泄露标准数据 | CANDIDATE_UNIT |
 | P10 | 物理结构、字段名、类型或标准引用变化 | STALE/BLOCKED，必须重审 | CANDIDATE_UNIT |
 | P11 | 审批后逻辑版本或 MappingRevision 漂移 | STALE，不复用旧审批 | CANDIDATE_UNIT |
-| P12 | 审批后标准内容、CODE 内容或 token 变化 | STALE/UNKNOWN，不允许回调发布 | CANDIDATE_UNIT |
+| P12 | 审批后标准内容、CODE 内容、授权状态或观察版本变化（含变更再恢复 ABA） | STALE/UNKNOWN，不允许回调发布；须核对可信纪元与最终提交竞态 | CANDIDATE_UNIT（非生产并发证明） |
 | P13 | 冻结证据/摘要被篡改，跨层复用 | UNKNOWN/STALE，拒绝伪造审批 | CANDIDATE_UNIT |
 | P14 | 常规直接发布入口 | 调用同一服务端验证器，无绕路 | NOT_IMPLEMENTED |
 | P15 | 常规审批发布入口 | 提交冻结、回调重读、失败不写版本 | NOT_IMPLEMENTED |
