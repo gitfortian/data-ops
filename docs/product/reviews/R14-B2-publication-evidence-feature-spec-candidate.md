@@ -35,7 +35,7 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 - `semantic.api.PublicationStandardEvidenceApi`：新增正式领域边界的只读批量 SPI **类型合同**，包含完整请求列、STANDARD FIELD/TYPE/UNIT/CALIBER/CODE/SECURITY 最小脱敏证据、项目作用域、状态/摘要/算法/语义修订；尚无提供可信 revision 的生产实现与真实授权上下文，不对外宣称可以返回 VALID。
 - `PublicationStandardEvidenceApiTest`：验证 DTO 列与返回证据的防御性复制、缺失列表拒绝、`UNKNOWN` 不伪造修订或摘要。
 - `DatabaseMigrationSmokeTest.b2ModelingAndSemanticMappersShareRealBusinessTransactionOnMySql`：新增在**隔离 MySQL Spring 容器**中核验两个实际 MyBatis Mapper 的底层 DataSource、一致 `yakBusinessTransactionManager` 和事务内共享 JDBC 连接的第一道 T2-A 准入测试。**此测试通过仍不证明修订行锁顺序、全部 Semantic 写入口覆盖、授权源和发布并发 fence；T2 未达到完整准入。**
-- **T1 持久事实首段：** 两套 Flyway V2（`db/migration/yak-semantic/V2__r14_b2_semantic_publication_revision.sql` 与 `db/migration-postgresql/yak-semantic/V2__r14_b2_semantic_publication_revision.sql`）建立项目级 `yak_semantic_publication_revision(project_id, revision_no, update_time)`，对已有 Standard/StandardField 项目初始化 revision=1，不改变已发布模型历史；仅隔离 Draft 分支，尚未经最新 MySQL/PostgreSQL 全量 CI 验证。
+- **T1 持久事实首段：** 两套 Flyway V3（与既存 F-039 V2 区分；已修复 Flyway 版本冲突）（`db/migration/yak-semantic/V3__r14_b2_semantic_publication_revision.sql` 与 `db/migration-postgresql/yak-semantic/V3__r14_b2_semantic_publication_revision.sql`）建立项目级 `yak_semantic_publication_revision(project_id, revision_no, update_time)`，对已有 Standard/StandardField 项目初始化 revision=1，不改变已发布模型历史；仅隔离 Draft 分支，尚未经最新 MySQL/PostgreSQL 全量 CI 验证。
 - `DatabaseMigrationSmokeTest.b2SemanticPublicationRevisionMigrationAndRollbackOnIsolatedMySql`：隔离 MySQL 检查新表前向迁移、行锁查询、修订递增与回滚；**没有**连接 Semantic 所有写入口、没有 Security 修订持久事实，也没有 ModelVersion 提交时的 fence。数据库 SQL 仅维护平台自身治理元数据，不执行目标业务表 SQL/DDL。
 
 
