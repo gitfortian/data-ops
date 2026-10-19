@@ -241,4 +241,24 @@ class DraftPublicationApprovalEvidenceTest {
           .isEqualTo(Result.STALE);
     }
   }
+
+  @Test
+  void frozenCandidateConstructorDetachesProviderOwnedListBeforeApprovalFreeze() {
+    var validSnapshot = valid().snapshot();
+    var providerOwned = new ArrayList<>(validSnapshot.columns());
+    var candidate = new DraftPublicationEvidenceVerifier.FrozenCandidate(
+        validSnapshot.projectId(), validSnapshot.modelId(), validSnapshot.layerCode(),
+        validSnapshot.structureSha256(), validSnapshot.semanticDigestAlgorithm(),
+        validSnapshot.semanticEvidenceSha256(), validSnapshot.consistencyToken(),
+        validSnapshot.candidateDigestSha256(), providerOwned);
+    providerOwned.clear();
+    assertThat(candidate.columns()).hasSize(2);
+    assertThat(DraftPublicationEvidenceVerifier.internallyConsistent(candidate)).isTrue();
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> candidate.columns().clear())
+        .isInstanceOf(UnsupportedOperationException.class);
+    var evaluation = new Evaluation(DraftPublicationEvidenceVerifier.Verdict.VALID_CANDIDATE,
+        "provider candidate", candidate);
+    assertThat(DraftPublicationApprovalEvidence.freeze(design(), evaluation).result())
+        .isEqualTo(Result.CANDIDATE_MATCH);
+  }
 }
