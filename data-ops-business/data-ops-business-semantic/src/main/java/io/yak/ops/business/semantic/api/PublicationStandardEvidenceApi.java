@@ -6,10 +6,12 @@ import java.util.List;
  * R14-B2 T1: internal, read-only Semantic-owned publication evidence SPI.
  *
  * <p>This is the approved R1 DEVELOPMENT contract skeleton, NOT a publication
- * permit. No implementation is registered until trusted project/subject scope,
- * full-field applicability, monotonic Semantic revision and publish fencing
- * have passed their integration gates. Modeling must not read Semantic tables.
- * Never accept a client-supplied project ID as authorization.
+ * permit. A current-state Semantic catalog provider is now registered,
+ * but it is NOT wired to Modeling publication or approval. Its VALID verdict
+ * means only that the observed catalog facts pass this transaction's checks;
+ * independent Security subject/permission revision and cross-domain commit
+ * fencing are still required for publication. Modeling must not read Semantic
+ * tables. Never accept a client-supplied project ID as authorization.
  */
 public interface PublicationStandardEvidenceApi {
 
