@@ -167,7 +167,7 @@ public final class DraftPublicationEvidenceVerifier {
       append(stable, fact.codeSetStatus());
       append(stable, fact.codeSetSha256());
       append(stable, Objects.toString(fact.codeSetItemCount(), null));
-      append(stable, Objects.toString(fact.codeSetEnabledItemCount(), null));
+      append(stable, Objects.toString(fact.codeSetEnabledCount(), null));
     }
     try {
       byte[] sha = MessageDigest.getInstance("SHA-256")
