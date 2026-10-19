@@ -66,6 +66,22 @@ it('forces unsafe or unavailable mapping evidence through explicit recovery', ()
   expect(invalid.action).toContain('异常');
 });
 
+it('prioritizes recovery when saved provider evidence is unavailable', () => {
+  const invalid = deriveManualJourney({ ...facts, reviewReady: false, mappingUnavailable: true });
+  expect(invalid.step).toBe(2);
+  expect(invalid.blocked).toBe(true);
+  expect(invalid.action).toContain('异常');
+});
+
+it('pending approval takes precedence over a prior session publication receipt', () => {
+  const pending = deriveManualJourney({ ...facts,
+    verifiedPublishedReceipt: true, approvalPending: true,
+  });
+  expect(pending.complete).toBe(false);
+  expect(pending.blocked).toBe(true);
+  expect(pending.action).toContain('审批');
+});
+
 it('does not confuse a saved mutable draft with an immutable revision', () => {
   const saved = deriveManualJourney({ ...facts, mappingFrozenMatches: false });
   expect(saved.step).toBe(3);
