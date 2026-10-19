@@ -348,6 +348,65 @@ class DatabaseMigrationSmokeTest {
    * This tests the real MySQL lock/unique constraints; permission, source
    * proof and the F-039 service dispatch are covered by their own tests.
    */
+  /**
+   * T3 MySQL real Security-transaction proof; this authorizes no cross-database
+   * ModelVersion publish. Must reject a business-only transaction, preserve
+   * rollback and monotonically record revoke→restore even at same final state.
+   */
+  @Test
+  void b2SecurityAuthorizationRevisionUsesOnlyItsOwnTransactionOnMySql() {
+    startAndValidate(true, context -> {
+      var security = new org.springframework.jdbc.core.JdbcTemplate(
+          context.getBean("yakSecurityDataSource", DataSource.class));
+      var securityManager = context.getBean("yakSecurityTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      var businessManager = context.getBean("yakBusinessTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      var revision = context.getBean(
+          io.yak.framework.security.service.impl.PublicationAuthorizationRevisionService.class);
+      String app = context.getBean(
+          io.yak.framework.security.config.YakSecurityProperties.class)
+          .getApplicationName();
+      long project = (java.util.UUID.randomUUID().getMostSignificantBits()
+          & Long.MAX_VALUE) + 1;
+      String select = """
+          SELECT revision_no FROM yak_security_publication_auth_revision
+           WHERE app_name = ? AND scope_kind = 'PROJECT' AND scope_id = ?
+          """;
+      try {
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> revision.advanceProjectMutation(project))
+            .isInstanceOf(IllegalStateException.class);
+        new org.springframework.transaction.support.TransactionTemplate(businessManager)
+            .execute(status -> {
+              org.assertj.core.api.Assertions.assertThatThrownBy(
+                  () -> revision.advanceProjectMutation(project))
+                  .isInstanceOf(IllegalStateException.class);
+              return null;
+            });
+        var tx = new org.springframework.transaction.support.TransactionTemplate(securityManager);
+        Long first = tx.execute(status -> revision.advanceProjectMutation(project));
+        assertThat(first).isEqualTo(2L);
+        tx.execute(status -> {
+          assertThat(revision.advanceProjectMutation(project)).isEqualTo(3L);
+          status.setRollbackOnly();
+          return null;
+        });
+        assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(2L);
+        Long changed = tx.execute(status -> revision.advanceProjectMutation(project));
+        Long restored = tx.execute(status -> revision.advanceProjectMutation(project));
+        assertThat(changed).isEqualTo(3L);
+        assertThat(restored).isEqualTo(4L);
+        assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(4L);
+      } finally {
+        security.update("""
+            DELETE FROM yak_security_publication_auth_revision
+             WHERE app_name = ? AND scope_kind = 'PROJECT' AND scope_id = ?
+            """, app, project);
+      }
+    });
+  }
+
   @Test
   void b2F039ReceiptRaceRollsBackLosingSemanticRevision() {
     startAndValidate(true, context -> {
