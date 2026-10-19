@@ -84,9 +84,9 @@ class StandardPublishApprovalTest {
 
   @Test
   void approvedEnablesAsOriginalApplicant() {
-    when(catalogService.lockDefinition(88L)).thenReturn(standard(88L, StandardStatus.DISABLED));
     handler.onApproved(decision("{\"standardId\":88,\"standardVersion\":1}"));
-    verify(catalogService).enableAfterApproval(88L, "tom");
+    verify(catalogService).enableApprovedVersion(88L, 1, "tom");
+    verify(catalogService, never()).lockDefinition(88L);
     assertEquals(ApprovalFlowCodes.STANDARD_PUBLISH, handler.flowCode());
   }
 
