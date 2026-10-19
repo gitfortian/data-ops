@@ -78,6 +78,9 @@ class DraftPublicationApprovalEvidenceTest {
     var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
     for (DesignBinding changed : List.of(
         new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 902L, MAPPING, 77L, 2, LOGICAL),
+        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 502L, 901L, MAPPING, 77L, 2, LOGICAL),
+        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, MAPPING, 78L, 2, LOGICAL),
+        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, MAPPING, 77L, 3, LOGICAL),
         new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, "1".repeat(64), 77L, 2, LOGICAL),
         new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, MAPPING, 77L, 2, "2".repeat(64)),
         new DesignBinding(7L, 701L, "DWD", "3".repeat(64), 501L, 901L, MAPPING, 77L, 2, LOGICAL))) {
@@ -118,9 +121,9 @@ class DraftPublicationApprovalEvidenceTest {
   void crossProjectOrModelCannotBorrowAnotherApprovalEvidence() {
     var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
     var wrongProject = new DesignBinding(8L, 701L, "DWD", STRUCTURE,
-        901L, MAPPING, 77L, 2, LOGICAL);
+        501L, 901L, MAPPING, 77L, 2, LOGICAL);
     var wrongModel = new DesignBinding(7L, 702L, "DWD", STRUCTURE,
-        901L, MAPPING, 77L, 2, LOGICAL);
+        501L, 901L, MAPPING, 77L, 2, LOGICAL);
     assertThat(DraftPublicationApprovalEvidence.compare(frozen, wrongProject, valid()).result())
         .isEqualTo(Result.STALE);
     assertThat(DraftPublicationApprovalEvidence.compare(frozen, wrongModel, valid()).result())
