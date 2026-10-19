@@ -24,6 +24,12 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 - 已有专项测试验证基础正常流、漂移、篡改与跨层复用；现有 CI PASS 仅证明候选实现可编译/运行。
 - 未接 Semantic 正式 SPI、真实授权上下文、四发布入口、审批 payload、ModelVersion/迁移或产品 UI/E2E。
 
+## R1 技术集成合同与源码差距（本阶段收敛）
+
+完整的单一技术负责人签收候选见 [R14-B2 正式发布证据集成合同 R1](R14-B2-production-integration-contract-R1.md)。R1 明确了当前 main 的真实发布/审批幂等旁路、Semantic 标准状态写入不具有项目单调纪元、CODE 内容 SHA 无法防止 ABA、`CurrentProject` 只保障项目范围而不代表审批人完整权限、`yakBusinessTransactionManager` 同名还需验证真实物理事务等事实。推荐优先审定**同项目修订行锁的真实共享事务模式**，若无法保证，则设计 Semantic 受信 lease/fence；两种均须有竞态测试，不能仅靠 SHA/epoch 文本等值。
+
+**决策状态：`REVISE / TECHNICAL_DECISION_REQUIRED`；R1 为评审候选，不是准入 ACCEPT。** 用户已确定单一技术负责人身份，允许一份三域技术决策，但没有因角色确认自动批准 R1 的具体事务策略。不得将纯算法和检查项替换为运行时/持久化事实。
+
 ## 3. 待签收技术决策（不可用候选值代替）
 
 | Owner | 必须书面确定 | 验收证据 |
