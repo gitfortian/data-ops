@@ -283,9 +283,33 @@ public class StandardCatalogService {
     return changeStatus(id, StandardStatus.ENABLED.name(), operator, true);
   }
 
+  /**
+   * Approval callback entry: check the exact approved definition version only
+   * AFTER obtaining the project Semantic revision lock, then the standard row
+   * lock, in the SAME business transaction as the status update. Never lock a
+   * standard definition first and then acquire the project revision lock.
+   */
+  @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
+  public Standard enableApprovedVersion(Long id, int expectedVersion, String operator) {
+    if (expectedVersion <= 0) {
+      throw new SemanticException(SemanticErrorCode.VERSION_CONFLICT,
+          "送审标准版本无效，请重新提交审批");
+    }
+    return changeStatus(id, StandardStatus.ENABLED.name(), operator, true, expectedVersion);
+  }
+
   private Standard changeStatus(Long id, String status, String operator, boolean approved) {
+    return changeStatus(id, status, operator, approved, null);
+  }
+
+  private Standard changeStatus(Long id, String status, String operator,
+                                boolean approved, Integer expectedVersion) {
     advancePublicationRevision();
     Standard existing = lockDefinition(id);
+    if (expectedVersion != null && existing.version() != expectedVersion) {
+      throw new SemanticException(SemanticErrorCode.VERSION_CONFLICT,
+          "送审版本已失效，请撤销后重新提交");
+    }
     if (!approved) assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
       throw new SemanticException(SemanticErrorCode.INVALID_STATUS,
