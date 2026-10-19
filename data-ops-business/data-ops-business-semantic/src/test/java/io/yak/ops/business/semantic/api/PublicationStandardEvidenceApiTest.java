@@ -57,6 +57,29 @@ class PublicationStandardEvidenceApiTest {
   }
 
   @Test
+  void validCannotBeForgedWithoutRevisionOrDigestOrPerColumnValidation() {
+    var validField = new ColumnEvidence("order_id", "BIGINT", 11L, "DIMENSION",
+        "VALID", null, List.of(), null, null);
+    var invalidField = new ColumnEvidence("order_id", "BIGINT", 11L, "DIMENSION",
+        "NEEDS_REVIEW", null, List.of(), null, "ROLE_INCOMPATIBLE");
+    assertThatThrownBy(() -> new BatchResult(Verdict.VALID, 7L, 701L, "DWD",
+        SHA, null, "B2_SCHEMA_V1", SHA, List.of(validField), List.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new BatchResult(Verdict.VALID, 7L, 701L, "DWD",
+        SHA, 1L, "B2_SCHEMA_V1", null, List.of(validField), List.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new BatchResult(Verdict.VALID, 7L, 701L, "DWD",
+        SHA, 1L, "B2_SCHEMA_V1", SHA, List.of(invalidField), List.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new BatchResult(Verdict.VALID, 7L, 701L, "DWD",
+        SHA, 1L, "B2_SCHEMA_V1", SHA, List.of(validField), List.of("PROVIDER_UNKNOWN")))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(new BatchResult(Verdict.VALID, 7L, 701L, "DWD",
+        SHA, 1L, "B2_SCHEMA_V1", SHA, List.of(validField), List.of()).verdict())
+        .isEqualTo(Verdict.VALID);
+  }
+
+  @Test
   void incompleteCollectionsCannotMasqueradeAsWellFormedSnapshot() {
     assertThatThrownBy(() -> new BatchRequest(7L, 701L, "DWD", SHA, null))
         .isInstanceOf(NullPointerException.class);
