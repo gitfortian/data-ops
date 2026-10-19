@@ -16,6 +16,7 @@ import io.yak.ops.business.semantic.api.SemanticStandardApi;
 import io.yak.ops.business.semantic.dao.StandardListRow;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticFieldRepository;
+import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.business.semantic.repository.SemanticStandardRepository;
 import io.yak.ops.business.semantic.repository.SemanticStandardVersionRepository;
 import io.yak.ops.business.semantic.repository.SemanticLayerRepository;
@@ -63,6 +64,7 @@ public class StandardCatalogService {
   private final SemanticLayerRepository layerRepository;
   private final List<StandardReferenceReader> referenceReaders;
   private final ApprovalApi approvalApi;
+  private final SemanticPublicationRevisionService publicationRevision;
 
   @Autowired
   public StandardCatalogService(
@@ -72,9 +74,24 @@ public class StandardCatalogService {
       BusinessAuditService auditService,
       SemanticLayerRepository layerRepository,
       ObjectProvider<StandardReferenceReader> referenceReaders,
+      ObjectProvider<ApprovalApi> approvalApi,
+      SemanticPublicationRevisionService publicationRevision) {
+    this(repository, versionRepository, fieldRepository, auditService, layerRepository,
+        referenceReaders.orderedStream().toList(), approvalApi.getIfAvailable(),
+        publicationRevision);
+  }
+
+  /** Compatibility constructor for legacy focused tests using provider stubs. */
+  public StandardCatalogService(
+      SemanticStandardRepository repository,
+      SemanticStandardVersionRepository versionRepository,
+      SemanticFieldRepository fieldRepository,
+      BusinessAuditService auditService,
+      SemanticLayerRepository layerRepository,
+      ObjectProvider<StandardReferenceReader> referenceReaders,
       ObjectProvider<ApprovalApi> approvalApi) {
     this(repository, versionRepository, fieldRepository, auditService, layerRepository,
-        referenceReaders.orderedStream().toList(), approvalApi.getIfAvailable());
+        referenceReaders.orderedStream().toList(), approvalApi.getIfAvailable(), null);
   }
 
   /** Compatibility constructor for focused service tests without consumer modules. */
@@ -83,7 +100,7 @@ public class StandardCatalogService {
       SemanticStandardVersionRepository versionRepository,
       SemanticFieldRepository fieldRepository,
       BusinessAuditService auditService) {
-    this(repository, versionRepository, fieldRepository, auditService, null, List.of(), null);
+    this(repository, versionRepository, fieldRepository, auditService, null, List.of(), null, null);
   }
 
   private StandardCatalogService(
@@ -93,7 +110,8 @@ public class StandardCatalogService {
       BusinessAuditService auditService,
       SemanticLayerRepository layerRepository,
       List<StandardReferenceReader> referenceReaders,
-      ApprovalApi approvalApi) {
+      ApprovalApi approvalApi,
+      SemanticPublicationRevisionService publicationRevision) {
     this.repository = repository;
     this.versionRepository = versionRepository;
     this.fieldRepository = fieldRepository;
@@ -101,10 +119,21 @@ public class StandardCatalogService {
     this.layerRepository = layerRepository;
     this.referenceReaders = referenceReaders;
     this.approvalApi = approvalApi;
+    this.publicationRevision = publicationRevision;
+  }
+
+  /**
+   * Secure the Semantic project revision first. Legacy unit-only constructors
+   * lack a real database revision service; Spring production injection never does.
+   * No publication check may rely on the revision until full write coverage is verified.
+   */
+  private void advancePublicationRevision() {
+    if (publicationRevision != null) publicationRevision.advanceBeforeMutation();
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Standard create(SemanticStandardApi.CreateRequest request, String operator) {
+    advancePublicationRevision();
     StandardKind kind = parseKind(request.kind());
     validateCode(request.code());
     validateName(request.name());
@@ -187,6 +216,7 @@ public class StandardCatalogService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public Standard update(Long id, SemanticStandardApi.UpdateRequest request, String operator) {
+    advancePublicationRevision();
     Standard existing = lockDefinition(id);
     assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
@@ -254,6 +284,7 @@ public class StandardCatalogService {
   }
 
   private Standard changeStatus(Long id, String status, String operator, boolean approved) {
+    advancePublicationRevision();
     Standard existing = lockDefinition(id);
     if (!approved) assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
@@ -300,6 +331,7 @@ public class StandardCatalogService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id, String operator) {
+    advancePublicationRevision();
     Standard existing = lockDefinition(id);
     assertNoPendingApproval(id);
     if (existing.kind() == StandardKind.CODE) {
@@ -354,6 +386,7 @@ public class StandardCatalogService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public List<Standard> createCodeSet(
       SemanticStandardApi.CodeSetSaveRequest request, String operator) {
+    advancePublicationRevision();
     if (StringUtils.hasText(request.originCodeSetCode())) {
       throw new SemanticException(SemanticErrorCode.INVALID_CODE,
           "新建码集不能携带存量迁移组键");
@@ -369,6 +402,7 @@ public class StandardCatalogService {
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public List<Standard> updateCodeSet(
       SemanticStandardApi.CodeSetSaveRequest request, String operator) {
+    advancePublicationRevision();
     if (!StringUtils.hasText(request.originCodeSetCode())
         && !repository.existsByCodeSetCode(request.codeSetCode())) {
       throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, request.codeSetCode());
@@ -385,6 +419,7 @@ public class StandardCatalogService {
    */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public List<Standard> saveCodeSet(SemanticStandardApi.CodeSetSaveRequest request, String operator) {
+    advancePublicationRevision();
     String codeSetCode = request.codeSetCode();
     validateCode(codeSetCode);
     validateName(request.name());
@@ -563,6 +598,7 @@ public class StandardCatalogService {
   /** 整组启停码集(不支持单独停用某一码值行)。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public int changeCodeSetStatus(String codeSetCode, String status, String operator) {
+    advancePublicationRevision();
     List<Standard> rows = repository.listByCodeSetCode(codeSetCode);
     if (rows.isEmpty()) {
       throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, codeSetCode);
@@ -599,6 +635,7 @@ public class StandardCatalogService {
   /** 整组删除码集:任一码值所属码集已被标准字段引用(35)时阻断。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public int deleteCodeSet(String codeSetCode, String operator) {
+    advancePublicationRevision();
     List<Standard> rows = repository.listByCodeSetCode(codeSetCode);
     if (rows.isEmpty()) {
       throw new SemanticException(SemanticErrorCode.CODE_SET_NOT_FOUND, codeSetCode);
