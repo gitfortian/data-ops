@@ -147,7 +147,11 @@ public class ModelVersionService {
             : matchesMapping(latest.metaJson(), mapping))
         && (dws == null || dws.designSha256().equals(
             parseMeta(latest.metaJson()).get("dwsDesignSha256")))) {
-      if (!java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
+      // A structure save/rollback marks the root DRAFT but intentionally retains
+      // its last published pointer. Re-publishing identical content must restore
+      // PUBLISHED even when the version ID is already equal to that pointer.
+      if (model.status() != ModelStatus.PUBLISHED
+          || !java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
         requireUpdatedPublishPointer(modelId, latest.id(), latest.versionNo(), operator);
       }
       return new PublishResult(latest, false);
