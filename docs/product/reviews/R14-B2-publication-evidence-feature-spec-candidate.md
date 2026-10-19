@@ -84,6 +84,35 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 | P17 | 物理结构相同，标准摘要变化/幂等重试 | 不错误复用旧版本；ModelVersion 指针原子一致 | NOT_IMPLEMENTED |
 | P18 | ODS 例外、历史已发布版回读、回滚后再发布 | ODS 原合同有效；旧历史不改；再次发布重新验证 | NOT_IMPLEMENTED |
 
+## 5.1 两套 P01–P18 编号防串台映射（2026-10-19）
+
+**注意：存在两套完全不同的 P01–P18。** 本文件 §5 的 P01–P18 称为 `B2-Pxx`；已合并主线的 [R14-2 DR-06/PD-010 技术裁决候选](../decisions/R14-2-modeling-domain-contract-adjudication.md) §10.5 的 P01–P18 称为 `DR06-Pxx`。**同号不是同一测试**，Product 签收评论接受的是本文件 §5 的产品场景定义，并非自动证明 DR06-Pxx 已通过。
+
+| B2 产品用例 | 对应 DR06 技术/拒绝场景 | 应注意的不同边界 |
+|---|---|---|
+| B2-P01 DWD 成功 | DR06-P01 | DWD 发布时持久冻结，不只是候选 PASS |
+| B2-P02 DIM 成功 | DR06-P01、P05 | DIM 专项键/SCD 合同额外验收 |
+| B2-P03 DWS 成功 | DR06-P01 | 粒度/上游/Metric 专项合同仍生效 |
+| B2-P04 ADS 成功 | DR06-P01 | 消费授权/Metric 身份独立 |
+| B2-P05 任一列无 StandardField | DR06-P02 | 技术列零未经批准豁免 |
+| B2-P06 标准停用/角色/类型 | DR06-P03、P04 | TYPE/UNIT/CALIBER/SECURITY 各自角色适用 |
+| B2-P07 CODE 不完整 | DR06-P05、P16 | CODE 摘要算法版本兼容单独验证 |
+| B2-P08 Provider UNKNOWN/缺列 | DR06-P06、P17 | 单调纪元不能替代提交 fence |
+| B2-P09 跨项目/权限撤销 | DR06-P07、P15、P17 | 权限/敏感信息披露独立拒绝 |
+| B2-P10 物理结构漂移 | DR06-P08、P10 | 物理列全集来自服务端可信源 |
+| B2-P11 逻辑/映射版本漂移 | DR06-P08、P10 | 精确稳定映射修订，不能按最新版本猜测 |
+| B2-P12 标准/权限漂移和 ABA | DR06-P09、P16、P17 | 当前纯纪元算法仍无真实来源/原子提交 |
+| B2-P13 篡改/跨层重用 | DR06-P08、P09、P10 | hash 完整性不等于签名或授权 |
+| B2-P14 既有直接发布入口 | DR06-P12 | 必须验证正式事务路径 |
+| B2-P15 既有审批回调入口 | DR06-P12 | 提交和回调均重新核验 |
+| B2-P16 DWD 两条 Mapping 发布入口 | DR06-P12 | 另核 MappingRevision 绑定 |
+| B2-P17 版本复用/幂等 | DR06-P11 | 同结构但新标准证据不得错误复用 |
+| B2-P18 ODS/历史/回滚 | DR06-P13、P14 | 老历史只读、重新发布重新校验 |
+
+**必须单独保持的 DR06 验收：** `DR06-P18` 无 DR-07/目标写授权时绝不生成 TaskRevision/调用 Runtime/执行 SQL/DDL；`DR06-P15` SECURITY 信息披露与安全日志需要 Security 专项用例；`DR06-P16` 摘要算法切换需代码与历史兼容专测；`DR06-P17` 最终一致性/竞态需真实 Semantic 与 Security 提供者和 Modeling 提交边界的集成证明。不得因 B2 对应单元测试而勾选这些 DR06 用例。
+
+**验收报告必须分别计数：** `B2 Product scope approved: 18/18` 只是验收条目范围确定；`B2 implementation accepted: 0/18` 仍待生产集成；`DR06 integration accepted: 0/18` 仍待技术合同与真实集成。不得把不同台账的 18 项测试混算。
+
 ## 6. 正式 B1 GO / B2 Ready 判据
 
 - [ ] **统一技术负责人**针对同一版合同记录一份明确的 `ROLE: Accountable Technical Owner / DOMAINS: Modeling, Semantic, Security / DECISION: ACCEPT|REVISE|REJECT / VERSION / CONDITIONS / EVIDENCE`；三项审查各须有可追溯证据，不要求三个不同账户分别投票。仅明确责任人身份不等于签收。
