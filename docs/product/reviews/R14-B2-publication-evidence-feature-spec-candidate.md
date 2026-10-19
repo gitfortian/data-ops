@@ -1,9 +1,9 @@
 # B2 非 ODS 发布标准证据 — 集成准入与验收矩阵（候选）
-Status: PROPOSED / REVIEW_ONLY / NO_WRITE_AUTHORIZATION
+Status: PRODUCT_SCOPE_ACCEPTED_ONLY / TECHNICAL_CONTRACT_PROPOSED / REVIEW_ONLY / NO_WRITE_AUTHORIZATION
 PR: #635 | Parent: #614 | DR-06: #556 | PD-010: D4_ONLY
 Baseline: PR #635 head 65f039da (2026-10-19)
 
-> 本文件是供 Modeling / Semantic / Security 独立 Owner 决策的 Feature Spec 候选，不是审批票据或可启用的生产合同。不能把合并此文档视为 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。具体运行时合同须由真实 Owner 逐项签收。
+> 本文件是供 Modeling / Semantic / Security 独立 Owner 决策的 Feature Spec 候选，不是审批票据或可启用的生产合同。**Product 的 P01–P18 功能范围已单独签收**（[R14-2 #614 签收评论](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)，仅 PRODUCT_REQUIREMENTS_ONLY），但具体运行时合同仍为 PROPOSED，P01–P18 实现验收全部未通过。不能把文档合并或 Product 签收视为技术 Owner 的 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。
 
 ## 1. 业务结果与非目标
 
@@ -28,7 +28,7 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 | Semantic | 批量只读验证正式 SPI；TYPE/UNIT/CALIBER/CODE/SECURITY 角色语义；跨项目与撤权拒绝；digest algorithm ID、安全字段级 schema；批量快照/epoch、重读一致性及 ABA 策略 | API 合同、实现方测试、明确版本号和失败模式 |
 | Modeling | 四入口统一 validator 位于 model 根锁内、复用/新增 ModelVersion 判定之前；标准摘要入版本身份；精确 MappingRevision/逻辑快照/物理结构 CAS；审批时冻结与回调复核；事务回滚与历史只读 | 事务/并发集成测试、MySQL/PostgreSQL 迁移和读回 |
 | Security | 服务端可信项目/用户上下文，不接受客户端项目号作为授权；撤权/拒绝/UNKNOWN fail-closed；SECURITY 信息最小化、日志脱敏、审计 | 角色和跨项目负例、审批回调权限重检 |
-| Product | D4_ONLY 已批准：非 ODS 逐列有效标准、零技术列豁免、ODS 例外、草稿宽限、历史不回填 | 已有 #614 Product 签收；不代表以上技术领域签收 |
+| Product | D4_ONLY 已批准；P01–P18 产品功能范围已签收：非 ODS 逐列有效标准、零技术列豁免、ODS 例外、草稿宽限、历史不回填 | [#614 Product D4 / B2 P01–P18 功能签收](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)；不代表技术合同或实际测试签收 |
 
 **一致性关键问题**：独立 Semantic 观察 token 只是证据标识，不是跨模块锁。需选择并批准可证明的同一语义快照读取/版本 CAS/发布瞬间最终复核方案；无保证时返回 UNKNOWN，不能声称不漂移。
 
