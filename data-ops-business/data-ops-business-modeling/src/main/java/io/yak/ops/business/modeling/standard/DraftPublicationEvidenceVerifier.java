@@ -53,7 +53,13 @@ public final class DraftPublicationEvidenceVerifier {
   public record FrozenCandidate(long projectId, long modelId, String layerCode, String structureSha256,
                                 String semanticDigestAlgorithm, String semanticEvidenceSha256,
                                 String consistencyToken, String candidateDigestSha256,
-                                List<ColumnFact> columns) {}
+                                List<ColumnFact> columns) {
+    public FrozenCandidate {
+      // Do not expose a mutable provider-owned list through a frozen evidence DTO.
+      // Null remains representable solely so validation can fail closed.
+      columns = columns == null ? null : List.copyOf(columns);
+    }
+  }
 
   public record Evaluation(Verdict verdict, String reason, FrozenCandidate snapshot) {
     static Evaluation reject(Verdict verdict, String reason) {
