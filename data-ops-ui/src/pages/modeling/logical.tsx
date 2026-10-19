@@ -1,11 +1,12 @@
 import { history, useSearchParams } from '@umijs/max';
 import {
-  Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Table, Tag, Typography, message,
+  Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Steps, Table, Tag, Typography, message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
+import { deriveManualJourney, MANUAL_JOURNEY_LABELS } from './manualModelingJourney';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   publishDwdWithMapping, getPublishedDwdMapping,
   getDwdPublicationPolicy, submitDwdMappingPublishApproval, listDwdMappingRevisions,
@@ -715,6 +716,54 @@ export default function LogicalWorkspace() {
     mappingDraft, handoffPreview, mappingSelections, mappingKinds,
   );
 
+  const selectedPreview = handoffPreview?.logicalModelId === selected
+    && handoffPreview.physicalModelId === physicalModelId ? handoffPreview : undefined;
+  const reviewMatchesCurrent = Boolean(selectedPreview && reviewResult?.readyForManualDesign
+    && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
+    && reviewResult.logicalModelId === selectedPreview.logicalModelId
+    && reviewResult.physicalModelId === selectedPreview.physicalModelId
+    && reviewResult.logicalSnapshotSha256 === selectedPreview.logicalSnapshotSha256
+    && reviewResult.physicalStructureSha256 === selectedPreview.physicalStructureSha256);
+  const savedMappingMatchesCurrent = Boolean(selectedPreview && mappingDraft
+    && mappingMatchesEditor
+    && mappingDraft.logicalSnapshotSha256 === selectedPreview.logicalSnapshotSha256
+    && mappingDraft.physicalStructureSha256 === selectedPreview.physicalStructureSha256);
+  const frozenMappingMatchesCurrent = Boolean(savedMappingMatchesCurrent && mappingFrozen
+    && mappingDraft
+    && mappingFrozen.mappingSetId === mappingDraft.mappingSetId
+    && mappingFrozen.draftRevision === mappingDraft.draftRevision);
+  const manualJourney = deriveManualJourney({
+    hasLogicalDraft: Boolean(detail),
+    hasFrozenLogicalVersion: latestJourneyFrozenVersion(versions) != null,
+    hasPhysicalTarget: physicalModelId != null,
+    hasMatchingPreview: Boolean(selectedPreview),
+    physicalLayer: selectedPreview?.physicalLayer,
+    previewBlocked: Boolean(selectedPreview?.blockers.length),
+    reviewReady: reviewMatchesCurrent,
+    mappingDraftMatches: savedMappingMatchesCurrent,
+    mappingFrozenMatches: frozenMappingMatchesCurrent,
+    verifiedPublishedReceipt: Boolean(frozenMappingMatchesCurrent && mappingPublished
+      && mappingFrozen && mappingPublished.mappingRevisionId === mappingFrozen.mappingRevisionId
+      && mappingPublished.modelVersionId > 0),
+    approvalPending: mappingApprovalPending,
+    mappingUnavailable: Boolean(mappingPersistError),
+  });
+
+  const openManualJourneyAction = () => {
+    if (!detail) {
+      openCreate();
+      return;
+    }
+    if (manualJourney.anchor === 'published' && physicalModelId != null) {
+      history.push(`/modeling/models/${physicalModelId}`);
+      return;
+    }
+    const target = manualJourney.anchor === 'logical' ? 'manual-modeling-logical'
+      : manualJourney.anchor === 'physical' ? 'manual-modeling-physical'
+      : 'manual-modeling-mapping';
+    document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const reviewComparison = semanticReview && reviewFeedback
     && reviewFeedback.projectId === currentProject?.id
     && reviewFeedback.baseline.logicalModelId === selected
@@ -754,6 +803,31 @@ export default function LogicalWorkspace() {
       <Alert className="mb-4" type="info" showIcon
         message="逻辑设计是业务语义与物理模型之间的桥梁"
         description="这里创建和冻结的都是逻辑设计草稿。业务过程、标准字段由 Semantic 正式管理；保存草稿不代表物理模型已经发布、Doris 已建表或数据已执行。" />
+      <Card size="small" className="mb-4" title="当前任务 · 手动建模到设计发布"
+        extra={<Tag color={manualJourney.complete ? 'success' : manualJourney.blocked ? 'warning' : 'processing'}>
+          {manualJourney.complete ? '本次已核对发布回执' : manualJourney.blocked ? '需要处理' : '进行中'}
+        </Tag>}>
+        <Steps size="small" responsive current={manualJourney.step}
+          items={MANUAL_JOURNEY_LABELS.map(title => ({ title }))} />
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <Typography.Text strong>
+              {manualJourney.complete ? '当前会话已完成：' : '下一步：'}{manualJourney.action}
+            </Typography.Text>
+            <Typography.Paragraph type="secondary" className="!mb-0 !mt-1">
+              {manualJourney.explanation}
+            </Typography.Paragraph>
+          </div>
+          <Button type="primary" onClick={openManualJourneyAction}
+            disabled={loading || saving || mappingPersistBusy || Boolean(journeyProblem)}>
+            {manualJourney.action}
+          </Button>
+        </div>
+        <Typography.Text type="secondary" className="!block !mt-2">
+          仅根据本项目当前加载的冻结版本、人工映射和服务器回读结果显示阶段；
+          刷新后若缺少发布回执，需重新核对历史。此导航不代替正式标准发布门禁，也不执行加工任务。
+        </Typography.Text>
+      </Card>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <Card title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
           extra={<Button type="primary" disabled={Boolean(journeyProblem) || loading}
@@ -774,7 +848,7 @@ export default function LogicalWorkspace() {
         <div className="flex min-w-0 flex-col gap-4">
           {!detail ? <Card loading={loading}><Empty description="选择逻辑草稿查看实体及字段" /></Card> : (
             <>
-              <Card title={<Space>{detail.model.name}<Tag>DRAFT</Tag></Space>}
+              <Card id="manual-modeling-logical" title={<Space>{detail.model.name}<Tag>DRAFT</Tag></Space>}
                 extra={<Space wrap>
                   <Button onClick={() => editEntity()}>添加业务实体</Button>
                   <Button disabled={entities.length < 2} onClick={() => editRelation()}>定义实体关系</Button>
@@ -822,7 +896,7 @@ export default function LogicalWorkspace() {
                       <Button type="link" onClick={() => editRelation(row.id)}>编辑</Button> },
                   ]} />
               </Card>
-              <Card title="独立设计快照（不是部署版本）"
+              <Card id="manual-modeling-physical" title="独立设计快照（不是部署版本）"
                 extra={<Space wrap>
                   <Typography.Text type="secondary">对照项目内已有物理模型</Typography.Text>
                   <Select<number>
@@ -953,7 +1027,7 @@ export default function LogicalWorkspace() {
 
       {handoffPreview && handoffPreview.logicalModelId === selected
         && handoffPreview.physicalModelId === physicalModelId
-        && <Card title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 只读候选预检`}>
+        && <Card id="manual-modeling-mapping" title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 只读候选预检`}>
         <Alert type={handoffPreview.blockers.length ? 'warning' : 'info'} showIcon
           message={handoffPreview.blockers.length ? '仍有交接阻断项' : '仅已达到人工审阅条件'}
           description="字段的 stdFieldId 一致只代表可核对候选，不代表 SQL 映射、逻辑版本已发布、物理模型已生成或数据已执行。" />
