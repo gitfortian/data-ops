@@ -32,7 +32,7 @@ public final class DraftPublicationEvidenceVerifier {
 
   public record ColumnRequest(String columnName, String physicalType, Long standardFieldId) {}
 
-  public record Request(long modelId, String layerCode, String physicalStructureSha256,
+  public record Request(long projectId, long modelId, String layerCode, String physicalStructureSha256,
                         List<ColumnRequest> columns) {}
 
   /**
@@ -45,12 +45,12 @@ public final class DraftPublicationEvidenceVerifier {
                            String codeSetStatus, Integer codeSetItemCount,
                            Integer codeSetEnabledCount, String codeSetSha256) {}
 
-  public record Observation(String layerCode, String physicalStructureSha256,
+  public record Observation(long projectId, long modelId, String layerCode, String physicalStructureSha256,
                             String verdict, String digestAlgorithmId,
                             String semanticEvidenceSha256, String consistencyToken,
                             List<ColumnFact> columns) {}
 
-  public record FrozenCandidate(long modelId, String layerCode, String structureSha256,
+  public record FrozenCandidate(long projectId, long modelId, String layerCode, String structureSha256,
                                 String semanticDigestAlgorithm, String semanticEvidenceSha256,
                                 String consistencyToken, String candidateDigestSha256,
                                 List<ColumnFact> columns) {}
@@ -62,7 +62,7 @@ public final class DraftPublicationEvidenceVerifier {
   }
 
   public static Evaluation evaluate(Request request, Observation observation) {
-    if (request == null || request.modelId() <= 0
+    if (request == null || request.projectId() <= 0 || request.modelId() <= 0
         || !digest(request.physicalStructureSha256())
         || request.columns() == null || request.columns().isEmpty()) {
       return Evaluation.reject(Verdict.UNKNOWN, "物理结构或列全集身份不可验证");
@@ -84,7 +84,9 @@ public final class DraftPublicationEvidenceVerifier {
         return Evaluation.reject(Verdict.BLOCKED, "存在未绑定有效标准字段的非 ODS 物理列");
       }
     }
-    if (observation == null || !Objects.equals(observation.layerCode(), request.layerCode())
+    if (observation == null || observation.projectId() != request.projectId()
+        || observation.modelId() != request.modelId()
+        || !Objects.equals(observation.layerCode(), request.layerCode())
         || !Objects.equals(observation.physicalStructureSha256(),
             request.physicalStructureSha256())) {
       return Evaluation.reject(Verdict.UNKNOWN, "Semantic 响应缺失或不属于当前冻结结构");
@@ -130,7 +132,8 @@ public final class DraftPublicationEvidenceVerifier {
     }
     canonical.sort(Comparator.comparing(c -> normalized(c.columnName())));
     String frozenDigest = candidateDigest(request, observation, canonical);
-    FrozenCandidate candidate = new FrozenCandidate(request.modelId(), request.layerCode(),
+    FrozenCandidate candidate = new FrozenCandidate(request.projectId(), request.modelId(),
+        request.layerCode(),
         request.physicalStructureSha256(), observation.digestAlgorithmId(),
         observation.semanticEvidenceSha256(), observation.consistencyToken(),
         frozenDigest, List.copyOf(canonical));
@@ -154,6 +157,7 @@ public final class DraftPublicationEvidenceVerifier {
   private static String candidateDigest(Request request, Observation observation,
                                         List<ColumnFact> columns) {
     StringBuilder stable = new StringBuilder();
+    append(stable, Long.toString(request.projectId()));
     append(stable, Long.toString(request.modelId()));
     append(stable, request.layerCode());
     append(stable, request.physicalStructureSha256());
