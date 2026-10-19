@@ -36,7 +36,11 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 - `PublicationStandardEvidenceApiTest`：验证 DTO 列与返回证据的防御性复制、缺失列表拒绝、`UNKNOWN` 不伪造修订或摘要。
 - `DatabaseMigrationSmokeTest.b2ModelingAndSemanticMappersShareRealBusinessTransactionOnMySql`：新增在**隔离 MySQL Spring 容器**中核验两个实际 MyBatis Mapper 的底层 DataSource、一致 `yakBusinessTransactionManager` 和事务内共享 JDBC 连接的第一道 T2-A 准入测试。**此测试通过仍不证明修订行锁顺序、全部 Semantic 写入口覆盖、授权源和发布并发 fence；T2 未达到完整准入。**
 - **T1 持久事实首段：** 两套 Flyway V3（与既存 F-039 V2 区分；已修复 Flyway 版本冲突）（`db/migration/yak-semantic/V3__r14_b2_semantic_publication_revision.sql` 与 `db/migration-postgresql/yak-semantic/V3__r14_b2_semantic_publication_revision.sql`）建立项目级 `yak_semantic_publication_revision(project_id, revision_no, update_time)`，对已有 Standard/StandardField 项目初始化 revision=1，不改变已发布模型历史；仅隔离 Draft 分支，尚未经最新 MySQL/PostgreSQL 全量 CI 验证。
-- `DatabaseMigrationSmokeTest.b2SemanticPublicationRevisionMigrationAndRollbackOnIsolatedMySql`：隔离 MySQL 检查新表前向迁移、行锁查询、修订递增与回滚；**没有**连接 Semantic 所有写入口、没有 Security 修订持久事实，也没有 ModelVersion 提交时的 fence。数据库 SQL 仅维护平台自身治理元数据，不执行目标业务表 SQL/DDL。
+- `SemanticPublicationRevisionService.advanceBeforeMutation()`：T1 的真实持久修订写入服务。从可信 `CurrentProject` 取项目 ID，强制已有业务事务与实际 `yakBusinessDataSource` 连接绑定；为新项目创建修订行，在同一事务中取得 `FOR UPDATE` 项目锁、检查旧 revision 并递增。支持 MySQL/PostgreSQL upsert，事务失败回滚修订；缺 DB、可信项目或事务则 fail closed。尚不是发布 fence。
+- `SemanticFieldService` 与 `StandardCatalogService` 当前可识别的字段、过程字段绑定/必需性，以及标准、CODE 创建/修改/启停/删除服务入口已在方法最前调用修订推进；即使同一事务内嵌套码集入口推进多次，也不会错误复用旧 revision。**注意**：这是已识别的服务入口覆盖，不能证明 F-039 导入/历史直连 Repository、初始化与所有其他隐含写入口已覆盖；此外标准停用的跨模块引用查询可能与 Modeling 发布锁形成潜在反向锁序，必须进一步做跨域竞态测试。
+- `DatabaseMigrationSmokeTest.b2SemanticPublicationRevisionMigrationAndRollbackOnIsolatedMySql`：使用**真实修订服务**而不再模拟原始 SQL，检查新项目创建、首次回滚、修改→恢复 ABA 仍递增、失败回滚不消耗提交后的 revision；`b2ConcurrentSemanticWritersSerializePerProjectRevision` 验证同项目双事务按项目锁串行化。
+- `SemanticFieldRevisionLockOrderTest` 与 `StandardCatalogRevisionLockOrderTest`：新增 Mockito 顺序证据，断言项目修订先于已有字段读取/标准行锁；这是服务局部的锁序，不等于发布事务跨模块死锁证明。
+- `spring-jdbc` 已从 Semantic 测试依赖提升为编译依赖，修复新生产修订服务的 Maven 编译缺失。
 
 
 ## 3. 待签收技术决策（不可用候选值代替）
