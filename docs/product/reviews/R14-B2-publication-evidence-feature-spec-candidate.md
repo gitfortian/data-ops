@@ -18,6 +18,8 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 - `evaluateAgainstModelSnapshot(submitted, physicalSnapshot, semanticObservation)`：新增独立候选列集比对；提交的列名/类型/StandardField ID、作用域、结构摘要须与另一个 Modeling 物理快照相符，且与 Semantic 响应完整一致。模型列快照入参**尚无可信来源保证**；这不是 DB 读取、SHA 重算、身份授权、事务/并发保护或发布权。调用方必须未来从 Modeling 持久事实/根锁上下文取得并验证列全集。
 - `Request/Observation` 构造时防御性复制列证据列表，避免调用方在候选校验前后篡改输入集合；不等于对数据来源作可信认证。
 - `DraftPublicationEpochGuard`：隔离的审批双域纪元捕获/复核策略候选，分别比较 Semantic 与 Security 的单调 revision；不自行生成可信 revision，不接入任何正式审批或发布。
+- `DraftPublicationPhysicalSnapshot.from(projectId, modelId, layer, StructureView)`：**本轮真实源码口径对齐**。候选桥接层位于 `modeling.version`，只接受非 ODS 且 `structure.modelId` 对应目标模型，从完整 `StructureView.columns` 读取列名、物理类型和 `stdFieldId`，拒绝空列集/重复列/错误身份；缺少标准绑定的列仍保留在请求中，让下游明确 `BLOCKED`。物理摘要与现有 `ModelVersionService.semanticView` 同算法计算，规避原始行 ID/草稿状态等瞬态字段。这仍**不是**可信项目授权或数据库内根锁，尚未被生产入口调用。
+- `DraftPublicationPhysicalSnapshotTest`：6 个纯候选回归覆盖语义结构 SHA 一致、瞬态 ID/状态稳定、类型/标准绑定漂移、无标准的技术列保留、独立 Semantic 完整列比对与拒绝、非法/重复/跨模型结构。
 
 - 已有专项测试验证基础正常流、漂移、篡改与跨层复用；现有 CI PASS 仅证明候选实现可编译/运行。
 - 未接 Semantic 正式 SPI、真实授权上下文、四发布入口、审批 payload、ModelVersion/迁移或产品 UI/E2E。
@@ -42,6 +44,12 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 4. 范围仅为 DR-06/PD-010 的标准发布审批；不授权 DR-07、Runtime 或真实目标写入。
 
 候选专项测试验证相同内容的标准 ABA / 权限撤销再授予、epoch 回退、跨项目、未知/篡改、标准与映射漂移和稳定候选路径。**测试通过只证明纯算法行为，并非有真实 epoch 提供者、并发锁或发布路径集成**。
+
+### Modeling 根结构摘要源码审查（2026-10-19，非生产签收）
+
+主线 `ModelVersionService.publishLocked` 目前已经在数据库模型根锁与 `structureService.getForUpdate(modelId)` 后，用 `semanticView(StructureView)` + `VersionDigests.sha256Hex` 计算结构语义身份，排除可变行 ID/status，并在版本复用判定、插入新版本和发布指针更新之间维持 Modeling 事务。新增桥接器复用**此实际 DTO 投影**，避免和原版本口径发生漂移。
+
+**新增代码只能解决结构语义投影的算法一致性**；生产 B2 仍须在该锁和已有事务中读取真实结构/当前项目范围，调用经正式批准的 Semantic 批量 SPI、安全上下文与提交 fence，冻结标准证据与新 ModelVersion 原子写入；DWD 映射路径的已发布幂等回执也须涵盖标准状态重核验。任何调用者自己拼 `StructureView`、自带 projectId 或自行传入 SHA 仍不能获取发布权。
 
 ## 3.1 单一技术负责人决策方式（2026-10-19）
 
