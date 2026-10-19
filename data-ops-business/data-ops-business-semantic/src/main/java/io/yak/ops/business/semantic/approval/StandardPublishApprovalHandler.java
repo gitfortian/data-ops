@@ -28,19 +28,23 @@ public class StandardPublishApprovalHandler implements ApprovalFlowHandler {
   @Override
   public void onApproved(ApprovalDecision decision) {
     long standardId = readStandardId(decision.payloadJson());
+    int expectedVersion;
     try {
       JsonNode payload = MAPPER.readTree(decision.payloadJson());
-      var current = catalogService.lockDefinition(standardId);
       if (!payload.path("standardVersion").isInt()
-          || payload.path("standardVersion").asInt() != current.version()) {
+          || payload.path("standardVersion").asInt() <= 0) {
         throw new io.yak.ops.business.semantic.exception.SemanticException(
             io.yak.ops.common.enums.semantic.SemanticErrorCode.VERSION_CONFLICT,
             "送审版本已失效，请撤销后重新提交");
       }
+      expectedVersion = payload.path("standardVersion").asInt();
     } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
       throw new IllegalStateException("审批定义快照解析失败", exception);
     }
-    catalogService.enableAfterApproval(standardId, decision.applicant());
+    // The service takes the project revision row lock BEFORE the standard
+    // definition row lock, then checks the version and enables atomically.
+    // The handler must never call lockDefinition before that transaction.
+    catalogService.enableApprovedVersion(standardId, expectedVersion, decision.applicant());
     log.info("标准生效审批通过即启用: standardId={}, applicant={}", standardId,
         decision.applicant());
   }
@@ -50,11 +54,11 @@ public class StandardPublishApprovalHandler implements ApprovalFlowHandler {
       JsonNode node = MAPPER.readTree(payloadJson)
           .path(StandardPublishApprovalService.PAYLOAD_STANDARD_ID);
       if (!node.canConvertToLong()) {
-        throw new IllegalStateException("payload 缺少 standardId: " + payloadJson);
+        throw new IllegalStateException("审批 payload 缺少有效 standardId");
       }
       return node.asLong();
     } catch (Exception e) {
-      throw new IllegalStateException("审批 payload 解析失败:" + e.getMessage(), e);
+      throw new IllegalStateException("审批 payload 解析失败", e);
     }
   }
 }
