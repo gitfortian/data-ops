@@ -44,6 +44,7 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
   @Override
   public void onApproved(ApprovalDecision decision) {
     long modelId = readModelId(decision.payloadJson());
+    requireApprovalTargetIdentity(decision, modelId);
     String fingerprint = readStructureFingerprint(decision.payloadJson());
     Long revisionId = readOptionalMappingRevisionId(decision.payloadJson());
     if (revisionId != null) {
@@ -57,6 +58,19 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
           versionService.publishApproved(modelId, fingerprint, decision.applicant());
       log.info("模型发布审批通过即发布: modelId={}, versionNo={}, created={}, applicant={}",
           modelId, result.version().versionNo(), result.created(), decision.applicant());
+    }
+  }
+
+  /**
+   * The approval engine binds a decision to a business target independently of
+   * the display payload. Never allow the payload to redirect an approval to a
+   * different model (including the explicit DWD MappingRevision route).
+   */
+  private static void requireApprovalTargetIdentity(ApprovalDecision decision, long modelId) {
+    if (!ApprovalFlowCodes.MODEL_PUBLISH.equals(decision.flowCode())
+        || !ModelPublishApprovalService.BIZ_TYPE.equals(decision.bizType())
+        || !String.valueOf(modelId).equals(decision.bizId())) {
+      throw new IllegalStateException("审批业务对象与发布模型身份不一致");
     }
   }
 
@@ -108,8 +122,9 @@ public class ModelPublishApprovalHandler implements ApprovalFlowHandler {
     try {
       JsonNode node = MAPPER.readTree(payloadJson)
           .path(ModelPublishApprovalService.PAYLOAD_MODEL_ID);
-      if (!node.canConvertToLong()) {
-        throw new IllegalStateException("payload 缺少 modelId: " + payloadJson);
+      if (!node.isIntegralNumber() || !node.canConvertToLong()
+          || node.asLong() <= 0) {
+        throw new IllegalStateException("审批 payload 中的 modelId 缺失或非法");
       }
       return node.asLong();
     } catch (Exception e) {
