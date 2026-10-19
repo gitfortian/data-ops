@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -87,6 +88,8 @@ public class ProjectServiceImpl
 
   private final ResourceExtend resourceExtend;
 
+  private final PublicationAuthorizationRevisionService authorizationRevision;
+
   /**
    * 创建项目服务。
    *
@@ -97,6 +100,25 @@ public class ProjectServiceImpl
    * @param userProjectService 用户项目关系服务
    * @param resourceExtend 资源扩展
    */
+  @Autowired
+  public ProjectServiceImpl(
+          ProjectDao projectDao,
+          DeptService deptService,
+          OplogService oplogService,
+          UserService userService,
+          UserProjectService userProjectService,
+          ResourceExtend resourceExtend,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.projectDao = projectDao;
+    this.deptService = deptService;
+    this.oplogService = oplogService;
+    this.userService = userService;
+    this.userProjectService = userProjectService;
+    this.resourceExtend = resourceExtend;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Focused tests without an initialized Security database. */
   public ProjectServiceImpl(
           ProjectDao projectDao,
           DeptService deptService,
@@ -104,13 +126,14 @@ public class ProjectServiceImpl
           UserService userService,
           UserProjectService userProjectService,
           ResourceExtend resourceExtend) {
+    this(projectDao, deptService, oplogService, userService,
+        userProjectService, resourceExtend, null);
+  }
 
-    this.projectDao = projectDao;
-    this.deptService = deptService;
-    this.oplogService = oplogService;
-    this.userService = userService;
-    this.userProjectService = userProjectService;
-    this.resourceExtend = resourceExtend;
+  private void advanceProjectAuthorization(Long projectId) {
+    if (authorizationRevision != null) {
+      authorizationRevision.advanceProjectMutation(projectId);
+    }
   }
 
   /**
@@ -224,6 +247,9 @@ public class ProjectServiceImpl
 
     projectDao.insert(project);
 
+    // Newly allocated identity: the project did not exist before this insert.
+    // Obtain its Security revision before assigning any membership or owner.
+    advanceProjectAuthorization(project.getId());
     userProjectService.saveOwnerProject(
             project.getId(),
             projectSaveDTO.getOwnerIdList());
@@ -292,6 +318,8 @@ public class ProjectServiceImpl
           Long projectId,
           String operator) {
 
+    advanceProjectAuthorization(projectId);
+
     Project project =
             getRequiredProject(projectId);
 
@@ -346,6 +374,8 @@ public class ProjectServiceImpl
       throw new IllegalArgumentException(
               "项目信息和项目 ID 不能为空");
     }
+
+    advanceProjectAuthorization(projectSaveDTO.getId());
 
     getRequiredProject(
             projectSaveDTO.getId());
@@ -404,6 +434,8 @@ public class ProjectServiceImpl
   public void changeProjectStatus(
           Long projectId,
           String operator) {
+
+    advanceProjectAuthorization(projectId);
 
     Project project =
             getRequiredProject(projectId);
