@@ -735,6 +735,7 @@ export default function LogicalWorkspace() {
     && mappingFrozen.draftRevision === mappingDraft.draftRevision);
   const manualJourney = deriveManualJourney({
     hasLogicalDraft: Boolean(detail),
+    hasExistingDraftChoices: models.length > 0,
     hasFrozenLogicalVersion: latestJourneyFrozenVersion(versions) != null,
     hasPhysicalTarget: physicalModelId != null,
     hasMatchingPreview: Boolean(selectedPreview),
@@ -752,7 +753,9 @@ export default function LogicalWorkspace() {
 
   const openManualJourneyAction = () => {
     if (!detail) {
-      openCreate();
+      if (models.length === 0) openCreate();
+      else document.getElementById('manual-modeling-pick')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     if (manualJourney.anchor === 'published' && physicalModelId != null) {
@@ -830,7 +833,7 @@ export default function LogicalWorkspace() {
         </Typography.Text>
       </Card>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <Card title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
+        <Card id="manual-modeling-pick" title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
           extra={<Button type="primary" disabled={Boolean(journeyProblem) || loading}
             onClick={openCreate}>新建草稿</Button>}>
           {models.length === 0 ? <Empty description={journeyProcess
