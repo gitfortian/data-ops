@@ -236,7 +236,7 @@ class PostgresqlStorageSmokeTest {
       jdbc.update("""
           INSERT INTO yak_modeling_model
             (project_id, model_code, model_name, dialect, layer_code, deleted, status)
-          VALUES (?, ?, 'B2 PG root-lock CI', 'POSTGRESQL', 'DWD', false, 'DRAFT')
+          VALUES (?, ?, 'B2 PG root-lock CI', 'POSTGRESQL', 'DWD', 0, 'DRAFT')
           """, project, code);
       Long modelId = jdbc.queryForObject("""
           SELECT id FROM yak_modeling_model
