@@ -153,11 +153,14 @@ class DatabaseMigrationSmokeTest {
             "SELECT COUNT(*) FROM yak_semantic_publication_revision WHERE project_id = ?",
             Long.class, project)).isZero();
 
-        assertThat(tx.execute(status -> writer.advanceBeforeMutation())).isEqualTo(2L);
+        Long firstCommittedRevision = tx.execute(status -> writer.advanceBeforeMutation());
+        assertThat(firstCommittedRevision).isEqualTo(2L);
         assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(2L);
         // A semantic edit and subsequent revert still advance the revision.
-        assertThat(tx.execute(status -> writer.advanceBeforeMutation())).isEqualTo(3L);
-        assertThat(tx.execute(status -> writer.advanceBeforeMutation())).isEqualTo(4L);
+        Long afterMutation = tx.execute(status -> writer.advanceBeforeMutation());
+        assertThat(afterMutation).isEqualTo(3L);
+        Long afterRevert = tx.execute(status -> writer.advanceBeforeMutation());
+        assertThat(afterRevert).isEqualTo(4L);
         assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(4L);
         // A rejected edit cannot consume a committed revision.
         tx.execute(status -> {
