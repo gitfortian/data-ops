@@ -36,8 +36,8 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 ### S2 REVISE：双域单调纪元的可执行候选（非批准合同）
 
 新增 `DraftPublicationEpochGuard`（纯 Java、无 Spring/IO），演示以下**候选策略**：
-1. `EpochObservation` 绑定 `scheme/projectId/modelId/layer/physicalStructureSha256/semanticEpoch/authorizationEpoch`。Semantic 与 Security 分别对所有影响当前标准合法性、项目可见性、撤权与重授权的修改**单调推进**相应 revision；不能仅使用内容 SHA、当前权限布尔值、时间戳或每次读取随机 token。
-2. 审批候选冻结时绑定两种 revision；回调再次观察并比较：任一 revision **增加**即 `STALE`（即使标准/权限回到旧值，阻止 ABA）；任一 revision **减少**即 `UNKNOWN`（旧读或重放）；身份/算法/纪元缺失或篡改即 `UNKNOWN`；两者相同且完整设计、标准证据相同时仅 `CANDIDATE_MATCH`。
+1. `EpochObservation` 绑定 `scheme/projectId/modelId/layer/physicalStructureSha256/authorizationScopeSha256/semanticEpoch/authorizationEpoch`；`authorizationScopeSha256` 只能由受信 Security 上下文按当前主体/角色/权限范围规范计算，不能由浏览器自选，也不暴露原始身份或策略。Semantic 与 Security 分别对所有影响当前标准合法性、项目可见性、撤权与重授权的修改**单调推进**相应 revision；不能仅使用内容 SHA、当前权限布尔值、时间戳或每次读取随机 token。
+2. 审批候选冻结时绑定两种 revision；回调再次观察并比较：任一 revision **增加**即 `STALE`（即使标准/权限回到旧值，阻止 ABA）；任一 revision **减少**即 `UNKNOWN`（旧读或重放）；身份/算法/纪元/授权范围摘要缺失或篡改即 `UNKNOWN`，回调时授权主体或权限范围摘要变化即 `STALE`；两者相同且完整设计、标准证据相同时仅 `CANDIDATE_MATCH`。
 3. **尚未解决的工程关键点**：这些 revision 在当前仓库尚无对应已批准 SPI、持久更新保证或安全服务端来源；冻结 hash 不具有签名/权限语义。两域分别读取与 Modeling 提交之间仍可能改变，最后一次 recheck 也不是跨数据库原子锁。正式实施须由统一技术负责人基于三域 Review 决定：以 Semantic/Security 提供经认证的同版本快照与可验证提交 fence/lease 为准，或选择明确的最终一致性业务策略并声明允许的窗口与重审条件；**未决定前不可生产接线，不得假称 ABA/TOCTOU 已完全解决**。
 4. 范围仅为 DR-06/PD-010 的标准发布审批；不授权 DR-07、Runtime 或真实目标写入。
 
