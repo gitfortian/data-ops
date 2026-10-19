@@ -307,6 +307,59 @@ class PhysicalStandardCoverageInspectionServiceTest {
     assertNotEquals(first.evidenceSha256(), service.inspect(50L).evidenceSha256());
   }
 
+  @Test void codeSetEnabledStatusMustAgreeWithFullMembershipAndDigest() {
+    withCodeSetDimension();
+    String sha = "a".repeat(64);
+    for (StandardQueryApi.CodeSetReference inconsistent : List.of(
+        new StandardQueryApi.CodeSetReference("order_status", 3, 2, "ENABLED", sha),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 4, "ENABLED", sha),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 3, "ENABLED", null),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 3, "ENABLED", "incomplete"),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 0, "MIXED", sha),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 3, "MIXED", sha),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 1, "DISABLED", sha),
+        new StandardQueryApi.CodeSetReference("order_status", 0, 0, "NOT_FOUND", sha),
+        new StandardQueryApi.CodeSetReference("order_status", 1, 0, "NOT_FOUND", null),
+        new StandardQueryApi.CodeSetReference("order_status", 3, 3, "UNKNOWN", sha))) {
+      when(standardQuery.codeSetReference("order_status")).thenReturn(inconsistent);
+      assertThrows(IllegalStateException.class, () -> service.inspect(50L),
+          "inconsistent CODE provider evidence must not become COVERED_NOW: " + inconsistent);
+    }
+    verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
+  }
+
+  @Test void codeSetProviderNullResponseFailsClosedRatherThanBecomingMissing() {
+    withCodeSetDimension();
+    when(standardQuery.codeSetReference("order_status")).thenReturn(null);
+    assertThrows(IllegalStateException.class, () -> service.inspect(50L));
+  }
+
+  @Test void fullyEnabledAndFullyDisabledCodeSetSnapshotsAreDistinguished() {
+    withCodeSetDimension();
+    when(standardQuery.codeSetReference("order_status")).thenReturn(
+        new StandardQueryApi.CodeSetReference(
+            "order_status", 3, 3, "ENABLED", "a".repeat(64)));
+    var fullyEnabled = service.inspect(50L);
+    assertEquals("ENABLED_NOW", fullyEnabled.columns().get(1).dataStandards().codeSetStatus());
+    assertEquals("COVERED_NOW", fullyEnabled.status());
+
+    when(standardQuery.codeSetReference("order_status")).thenReturn(
+        new StandardQueryApi.CodeSetReference(
+            "order_status", 3, 0, "DISABLED", "a".repeat(64)));
+    var disabled = service.inspect(50L);
+    assertEquals("DISABLED", disabled.columns().get(1).dataStandards().codeSetStatus());
+    assertEquals("NEEDS_REVIEW", disabled.status());
+    assertEquals(1, disabled.invalidDataStandardCount());
+  }
+
+  private void withCodeSetDimension() {
+    StandardField dimension = new StandardField(12L, "order_12", "订单 #12",
+        "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
+        "order_status", null, null, StandardField.SOURCE_MANUAL, 1,
+        false, "owner", null, null);
+    when(semantic.getField(12L)).thenReturn(dimension);
+  }
+
   @Test void codeSetProviderFailureDoesNotBecomeAnEnabledOrMissingCodeSet() {
     StandardField dimension = new StandardField(12L, "order_12", "订单 #12",
         "DIMENSION", StandardField.STATUS_ENABLED, "BIGINT", 112L, null, null,
