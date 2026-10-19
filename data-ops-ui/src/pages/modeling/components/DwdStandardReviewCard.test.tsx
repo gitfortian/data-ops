@@ -4,9 +4,9 @@ import { history } from '@umijs/max';
 import { inspectPhysicalStandardCoverage } from '@/services/modeling/api';
 import DwdStandardReviewCard from './DwdStandardReviewCard';
 
-let projectId = 1;
+let mockProjectId = 1;
 jest.mock('@/contexts/SecurityProjectContext', () => ({
-  useSecurityProject: () => ({ currentProject: { id: projectId } }),
+  useSecurityProject: () => ({ currentProject: { id: mockProjectId } }),
 }));
 jest.mock('@umijs/max', () => ({ history: { push: jest.fn() } }));
 jest.mock('@/services/modeling/api', () => ({
@@ -30,7 +30,7 @@ const props = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  projectId = 1;
+  mockProjectId = 1;
 });
 
 it('opens exact physical editor repair location without writing or inventing publication eligibility', async () => {
@@ -97,7 +97,7 @@ it('clears old current-project evidence and ignores late replies when switching 
     .mockResolvedValueOnce({ ...report, findings: ['新项目的缺口'] });
   const view = render(<DwdStandardReviewCard {...props} />);
   fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
-  projectId = 2;
+  mockProjectId = 2;
   view.rerender(<DwdStandardReviewCard {...props} />);
   expect(screen.queryByText('process_time 缺少 StandardField')).not.toBeInTheDocument();
   await act(async () => finish(report));
