@@ -160,6 +160,50 @@ class ModelPublicationReadinessServiceTest {
   }
 
   @Test
+  void providerCannotSubstituteAnotherSemanticRoleForSamePhysicalColumn() {
+    mockModel("DWD");
+    when(semantic.evaluate(any(BatchRequest.class))).thenAnswer(invocation -> {
+      BatchRequest request = invocation.getArgument(0);
+      return new BatchResult(Verdict.BLOCKED, request.projectId(), request.modelId(),
+          request.layerCode(), request.physicalStructureSha256(), 41L, null, null,
+          List.of(
+              new ColumnEvidence("order_id", "BIGINT", 11L,
+                  "METRIC", "BLOCKED", null, List.of(), null, "FIELD_ROLE_MISMATCH"),
+              new ColumnEvidence("etl_time", "TIMESTAMP", null,
+                  "PROCESS", "BLOCKED", null, List.of(), null, "MISSING_STANDARD")),
+          List.of("FIELD_ROLE_MISMATCH", "MISSING_STANDARD"));
+    });
+    var report = preview.inspect(701L);
+    assertThat(report.standardsVerdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(report.columns()).isEmpty();
+    assertThat(report.authorizationStatus()).isEqualTo("EVIDENCE_UNAVAILABLE");
+  }
+
+  @Test
+  void providerCannotAdvertiseValidStandardsWithMissingRevisionOrDigest() {
+    mockModel("DIM");
+    StructureView fixture = saved("DIM");
+    when(structures.getForUpdate(701L)).thenReturn(new StructureView(
+        fixture.modelId(), fixture.modelCode(), fixture.modelName(), fixture.dialect(),
+        fixture.status(), fixture.modelDescription(), fixture.tableName(),
+        fixture.tableComment(), fixture.columns().subList(0, 1),
+        fixture.primaryKey(), fixture.indexes(), fixture.partition(),
+        fixture.tableProperties()));
+    // The SPI constructor itself rejects malformed VALID results. That
+    // provider exception must become UNKNOWN, not a green preview.
+    when(semantic.evaluate(any(BatchRequest.class))).thenAnswer(invocation -> {
+      BatchRequest request = invocation.getArgument(0);
+      return new BatchResult(Verdict.VALID, request.projectId(), request.modelId(),
+          request.layerCode(), request.physicalStructureSha256(), null, null, null,
+          List.of(new ColumnEvidence("order_id", "BIGINT", 11L,
+              "DIMENSION", "VALID", null, List.of(), null, null)), List.of());
+    });
+    var report = preview.inspect(701L);
+    assertThat(report.standardsVerdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(report.authorizedForPublication()).isFalse();
+  }
+
+  @Test
   void missingProviderFailsClosed() {
     mockModel("DWS");
     when(semantic.evaluate(any(BatchRequest.class)))
