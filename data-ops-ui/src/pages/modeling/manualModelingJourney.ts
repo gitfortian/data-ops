@@ -61,13 +61,13 @@ export function deriveManualJourney(facts: ManualJourneyFacts): ManualJourneyRes
     return next(2, '查看物理预检结果',
       '当前正式 MappingSet 保存与设计发布只支持 DWD；其他层不可套用 DWD 写操作。', 'mapping', true);
   }
-  if (!facts.reviewReady) {
-    return next(2, '完成人工映射选择与校验',
-      '逐列选择同标准字段的逻辑属性及 DIRECT/RENAME 规则，再执行服务端人工映射核验。', 'mapping');
-  }
   if (facts.mappingUnavailable) {
     return next(2, '处理映射读取或持久化异常',
       '当前映射版本无法确认，必须重新读取并恢复正确证据，不允许覆盖或继续发布。', 'mapping', true);
+  }
+  if (facts.reviewReady === false) {
+    return next(2, '完成人工映射选择与校验',
+      '逐列选择同标准字段的逻辑属性及 DIRECT/RENAME 规则，再执行服务端人工映射核验。', 'mapping');
   }
   if (!facts.mappingDraftMatches) {
     return next(2, '保存或重新核对 MappingSet',
@@ -77,16 +77,16 @@ export function deriveManualJourney(facts: ManualJourneyFacts): ManualJourneyRes
     return next(3, '冻结 MappingRevision',
       '基于当前已保存草稿执行冻结，持久产生不可变修订；冻结并不等于发布。', 'mapping');
   }
+  if (facts.approvalPending) {
+    return next(4, '查看发布审批',
+      '审批尚未结束。没有当前审批的正式发布回执，不能把设计标记为已发布。', 'mapping', true);
+  }
   if (facts.verifiedPublishedReceipt) {
     return {
       step: 5, action: '打开已发布物理模型',
       explanation: '当前会话已回读服务端历史，核对版本号与 MappingRevision；未创建任务或执行 SQL。',
       anchor: 'published', blocked: false, complete: true,
     };
-  }
-  if (facts.approvalPending) {
-    return next(4, '查看发布审批',
-      '审批尚未结束。没有已核验的正式发布回执，不能把设计标记为已发布。', 'mapping', true);
   }
   return next(4, '确认发布 DWD 设计版本',
     '完成正式发布确认后必须回读准确的 ModelVersion 与 MappingRevision；不代表加工任务执行。', 'mapping');
