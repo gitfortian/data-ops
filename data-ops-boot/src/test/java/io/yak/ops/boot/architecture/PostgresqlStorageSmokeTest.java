@@ -173,8 +173,14 @@ class PostgresqlStorageSmokeTest {
             new TransactionTemplate(manager).execute(status -> {
               long value = revision.lockExistingForReview();
               held.countDown();
-              if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
-                throw new IllegalStateException("PostgreSQL publication fence barrier timed out");
+              try {
+                if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
+                  throw new IllegalStateException("PostgreSQL publication fence barrier timed out");
+                }
+              } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("PostgreSQL publication fence interrupted",
+                    interrupted);
               }
               return value;
             }));
@@ -191,8 +197,10 @@ class PostgresqlStorageSmokeTest {
         assertThatThrownBy(() -> mutation.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
             .isInstanceOf(java.util.concurrent.TimeoutException.class);
         release.countDown();
-        assertThat(observer.get(15, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(2L);
-        assertThat(mutation.get(15, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(3L);
+        Long lockedRevision = observer.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        Long committedRevision = mutation.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        assertThat(lockedRevision).isEqualTo(2L);
+        assertThat(committedRevision).isEqualTo(3L);
         assertThat(jdbc.queryForObject(
             "SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?",
             Long.class, project)).isEqualTo(3L);
