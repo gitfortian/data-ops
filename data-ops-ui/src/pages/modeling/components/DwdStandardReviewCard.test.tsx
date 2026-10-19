@@ -68,6 +68,9 @@ it('rejects wrong model, DWS layer, stale structure or unknown status without sh
     { ...report, structureSha256: 'c'.repeat(64) },
     { ...report, status: 'UNKNOWN' },
     { ...report, evidenceSha256: null },
+    { ...report, status: 'COVERED_NOW', findings: ['仍有待审项'] },
+    { ...report, status: 'COVERED_NOW', findings: [], missingCount: 1 },
+    { ...report, columnCount: 0 },
   ];
   for (const reply of bad) {
     (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValueOnce(reply);
