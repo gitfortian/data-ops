@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
+import DwdStandardReviewCard from './components/DwdStandardReviewCard';
 import { deriveManualJourney, MANUAL_JOURNEY_LABELS } from './manualModelingJourney';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   publishDwdWithMapping, getPublishedDwdMapping,
@@ -1166,6 +1167,14 @@ export default function LogicalWorkspace() {
             <Alert className="mt-3" showIcon type="success"
               message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
               description="冻结仅保存设计证据。正式发布必须显式二次确认；全局 DR-06/PD-010 门禁仍待签收。" />
+            {physicalModelId != null && selected != null && detail
+              && <DwdStandardReviewCard
+                physicalModelId={physicalModelId}
+                physicalStructureSha256={handoffPreview.physicalStructureSha256}
+                processId={detail.model.processId}
+                logicalModelId={selected}
+                logicalVersionNo={handoffPreview.logicalVersionNo} />}
+
             <Button className="mt-2" loading={mappingPersistBusy}
               disabled={!canSaveMapping || !!mappingPersistError || !mappingMatchesEditor
                 || !mappingDraft || mappingFrozen.mappingSetId !== mappingDraft.mappingSetId
