@@ -162,6 +162,50 @@ class PublicationStandardEvidenceServiceTest {
   }
 
   @Test
+  void mismatchedPhysicalAndSemanticRolesMustNotYieldValid() {
+    validField(11L, "DIMENSION", null, null);
+    var wrong = new ColumnRequest("order_id", "BIGINT", 11L, "METRIC");
+    var result = service.evaluate(request(wrong));
+    assertThat(result.verdict()).isEqualTo(Verdict.BLOCKED);
+    assertThat(result.safeReasonCodes()).contains("FIELD_ROLE_MISMATCH");
+  }
+
+  @Test
+  void missingOrUnknownPhysicalRoleRejectsBeforeRead() {
+    for (String physicalRole : new String[] {"", "UNKNOWN_ROLE"}) {
+      var request = request(new ColumnRequest("order_id", "BIGINT", 11L, physicalRole));
+      assertThat(service.evaluate(request).verdict()).isEqualTo(Verdict.UNKNOWN);
+    }
+    verify(revision, never()).lockExistingForReview();
+  }
+
+  @Test
+  void changedTypeDefinitionMustNotAcceptOldPhysicalFieldSnapshot() {
+    validField(11L, "DIMENSION", null, null);
+    var driftedType = new Standard(21L, StandardKind.TYPE, "TYPE_INT", "整数",
+        StandardStatus.ENABLED, 4, 0, false, null,
+        new Standard.KindFields(null, null, null, null, "NUMERIC",
+            "DECIMAL", null, null, null, null, null, null, null,
+            null, null, null, null),
+        "test", null, null);
+    when(standards.get(21L)).thenReturn(driftedType);
+    var result = service.evaluate(request(order("order_id", 11L)));
+    assertThat(result.verdict()).isEqualTo(Verdict.BLOCKED);
+    assertThat(result.safeReasonCodes()).contains("TYPE_STANDARD_DRIFT");
+  }
+
+  @Test
+  void invalidStoredRoleReferencesCannotBeIgnoredByTheVerifier() {
+    // Inconsistent legacy data must fail closed even if the physical type
+    // and standard field status both appear valid.
+    validField(11L, "PROCESS", "legacy_codes", null);
+    var result = service.evaluate(request(
+        new ColumnRequest("order_id", "BIGINT", 11L, "PROCESS")));
+    assertThat(result.verdict()).isEqualTo(Verdict.BLOCKED);
+    assertThat(result.safeReasonCodes()).contains("ROLE_REFERENCE_MISMATCH");
+  }
+
+  @Test
   void physicalTypeMismatchIsBlockedBeforeRelease() {
     validField(11L, "DIMENSION", null, null);
     var result = service.evaluate(request(
