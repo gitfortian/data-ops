@@ -26,7 +26,8 @@ public final class DraftPublicationApprovalEvidence {
    */
   public record DesignBinding(
       long projectId, long modelId, String layerCode, String physicalStructureSha256,
-      Long mappingRevisionId, String mappingContentSha256, String logicalSnapshotSha256) {}
+      Long mappingSetId, Long mappingRevisionId, String mappingContentSha256,
+      Long logicalModelId, Integer logicalVersionNo, String logicalSnapshotSha256) {}
 
   /** Captured proposed evidence; the snapshot contains only hashed standards. */
   public record ApprovalFreeze(DesignBinding binding, FrozenCandidate standards,
@@ -124,10 +125,15 @@ public final class DraftPublicationApprovalEvidence {
       return false;
     }
     if (binding.mappingRevisionId() == null) {
-      return binding.mappingContentSha256() == null
+      return binding.mappingSetId() == null && binding.mappingContentSha256() == null
+          && binding.logicalModelId() == null && binding.logicalVersionNo() == null
           && binding.logicalSnapshotSha256() == null;
     }
-    return binding.mappingRevisionId() > 0 && validHash(binding.mappingContentSha256())
+    return binding.mappingSetId() != null && binding.mappingSetId() > 0
+        && binding.mappingRevisionId() > 0
+        && binding.logicalModelId() != null && binding.logicalModelId() > 0
+        && binding.logicalVersionNo() != null && binding.logicalVersionNo() > 0
+        && validHash(binding.mappingContentSha256())
         && validHash(binding.logicalSnapshotSha256());
   }
 
@@ -138,8 +144,11 @@ public final class DraftPublicationApprovalEvidence {
     append(stable, Long.toString(binding.modelId()));
     append(stable, binding.layerCode());
     append(stable, binding.physicalStructureSha256());
+    append(stable, Objects.toString(binding.mappingSetId(), null));
     append(stable, Objects.toString(binding.mappingRevisionId(), null));
     append(stable, binding.mappingContentSha256());
+    append(stable, Objects.toString(binding.logicalModelId(), null));
+    append(stable, Objects.toString(binding.logicalVersionNo(), null));
     append(stable, binding.logicalSnapshotSha256());
     append(stable, candidate.semanticDigestAlgorithm());
     append(stable, candidate.semanticEvidenceSha256());
