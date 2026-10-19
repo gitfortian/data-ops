@@ -51,7 +51,7 @@ class DraftPublicationEpochGuardTest {
 
   private static EpochObservation epoch(long semantic, long authorization) {
     return new EpochObservation(DraftPublicationEpochGuard.PROPOSED_SCHEME,
-        7L, 701L, "DWD", STRUCTURE, semantic, authorization);
+        7L, 701L, "DWD", STRUCTURE, "9".repeat(64), semantic, authorization);
   }
 
   private static GuardedFreeze capture() {
@@ -101,11 +101,11 @@ class DraftPublicationEpochGuardTest {
         .isNull();
 
     var otherProject = new EpochObservation(DraftPublicationEpochGuard.PROPOSED_SCHEME,
-        8L, 701L, "DWD", STRUCTURE, 40, 90);
+        8L, 701L, "DWD", STRUCTURE, "9".repeat(64), 40, 90);
     var otherModel = new EpochObservation(DraftPublicationEpochGuard.PROPOSED_SCHEME,
-        7L, 702L, "DWD", STRUCTURE, 40, 90);
+        7L, 702L, "DWD", STRUCTURE, "9".repeat(64), 40, 90);
     var wrongScheme = new EpochObservation("LEGACY_UNVERSIONED",
-        7L, 701L, "DWD", STRUCTURE, 40, 90);
+        7L, 701L, "DWD", STRUCTURE, "9".repeat(64), 40, 90);
     for (EpochObservation invalid : List.of(otherProject, otherModel, wrongScheme)) {
       assertThat(DraftPublicationEpochGuard.capture(approval, invalid).verdict())
           .isEqualTo(Verdict.UNKNOWN);
@@ -129,6 +129,24 @@ class DraftPublicationEpochGuardTest {
     assertThat(DraftPublicationEpochGuard.compare(
         capture(), changedDesign, standards(STANDARD), epoch(40, 90)).verdict())
         .isEqualTo(Verdict.STALE);
+  }
+
+  @Test
+  void approvalCannotBeReusedByAnotherAuthorizationSubjectAtSameEpoch() {
+    var differentUserOrPermissions = new EpochObservation(
+        DraftPublicationEpochGuard.PROPOSED_SCHEME,
+        7L, 701L, "DWD", STRUCTURE, "8".repeat(64), 40, 90);
+    assertThat(DraftPublicationEpochGuard.compare(
+        capture(), binding(), standards(STANDARD), differentUserOrPermissions).verdict())
+        .isEqualTo(Verdict.STALE);
+    var malformedScope = new EpochObservation(
+        DraftPublicationEpochGuard.PROPOSED_SCHEME,
+        7L, 701L, "DWD", STRUCTURE, "untrusted", 40, 90);
+    assertThat(DraftPublicationEpochGuard.capture(approved(), malformedScope).verdict())
+        .isEqualTo(Verdict.UNKNOWN);
+    assertThat(DraftPublicationEpochGuard.compare(
+        capture(), binding(), standards(STANDARD), malformedScope).verdict())
+        .isEqualTo(Verdict.UNKNOWN);
   }
 
   @Test
