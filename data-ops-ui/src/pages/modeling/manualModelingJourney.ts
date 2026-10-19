@@ -4,6 +4,7 @@
  */
 export type ManualJourneyFacts = {
   hasLogicalDraft: boolean;
+  hasExistingDraftChoices: boolean;
   hasFrozenLogicalVersion: boolean;
   hasPhysicalTarget: boolean;
   hasMatchingPreview: boolean;
@@ -42,6 +43,10 @@ export function deriveManualJourney(facts: ManualJourneyFacts): ManualJourneyRes
   });
 
   if (!facts.hasLogicalDraft) {
+    if (facts.hasExistingDraftChoices) {
+      return next(0, '选择现有逻辑草稿',
+        '当前项目已有可选草稿，优先选择并核对业务过程，不重复创建业务模型。', 'logical');
+    }
     return next(0, '创建逻辑草稿',
       '从业务过程创建逻辑草稿，补齐业务实体、粒度和属性；不会自动生成物理表。', 'logical');
   }
