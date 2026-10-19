@@ -62,10 +62,17 @@ beforeEach(() => {
 });
 
 async function chooseTarget() {
-  fireEvent.change(await screen.findByLabelText('目标数据源'), { target: { value: '20' } });
+  // DataSource options are loaded asynchronously. Selecting before the option
+  // exists silently resets the controlled test select to empty in a busy CI
+  // runner; that never exercises the actual target-inspection path.
+  await screen.findByRole('option', { name: 'Warehouse DEV (MYSQL)' });
+  fireEvent.change(screen.getByLabelText('目标数据源'), { target: { value: '20' } });
+  await waitFor(() => expect(screen.getByLabelText('目标数据源')).toHaveValue('20'));
   fireEvent.change(screen.getByPlaceholderText('精确数据库名'), { target: { value: 'warehouse' } });
   fireEvent.change(screen.getByPlaceholderText('如 public'), { target: { value: 'ods' } });
-  fireEvent.click(screen.getByRole('button', { name: '读取目标库并核验' }));
+  const inspect = screen.getByRole('button', { name: '读取目标库并核验' });
+  expect(inspect).toBeEnabled();
+  fireEvent.click(inspect);
 }
 
 it('requires real published catalog readback before offering a manual sync handoff', async () => {
