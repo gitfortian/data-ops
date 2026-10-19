@@ -131,6 +131,25 @@ class SemanticAdoptionItemWriterTest {
     ordered.verify(mapper).updateById(any(AdoptionReceiptPO.class));
   }
 
+  @Test void successfulReceiptReplayDoesNotAdvanceRevisionOrWriteAgain() {
+    var revision = mock(io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService.class);
+    var guardedWriter = new SemanticAdoptionItemWriter(mapper,
+        mock(BusinessDomainService.class), mock(BusinessProcessService.class),
+        mock(SemanticFieldService.class), mock(StandardCatalogService.class),
+        bindings, project, source, revision);
+    var request = batch();
+    var chosen = request.candidates().get(3);
+    assertEquals("LINKED", guardedWriter.apply(request, chosen, dependencies()).status());
+    var captured = org.mockito.ArgumentCaptor.forClass(AdoptionReceiptPO.class);
+    verify(mapper).insert(captured.capture());
+    when(mapper.selectOne(any())).thenReturn(captured.getValue());
+
+    assertEquals("LINKED", guardedWriter.apply(request, chosen, dependencies()).status());
+    verify(revision,times(1)).advanceBeforeMutation();
+    verify(mapper,times(1)).insert(any(AdoptionReceiptPO.class));
+    verify(bindings,times(1)).bind(71L,7L,"orders","MAIN",null,"42");
+  }
+
   @Test void revisionFailureBlocksF039ReceiptReservationAndSourceLinkWrite() {
     var revision = mock(io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService.class);
     doThrow(new IllegalStateException("project revision unavailable"))
