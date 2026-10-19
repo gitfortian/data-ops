@@ -214,4 +214,31 @@ class DraftPublicationApprovalEvidenceTest {
       assertThat(frozen.standards().columns()).hasSize(2);
     }
   }
+
+  @Test
+  void frozenObservationTokenCannotBeReplacedWhileReusingOriginalCandidateDigest() {
+    var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
+    var original = frozen.standards();
+    var forged = new DraftPublicationEvidenceVerifier.FrozenCandidate(
+        original.projectId(), original.modelId(), original.layerCode(),
+        original.structureSha256(), original.semanticDigestAlgorithm(),
+        original.semanticEvidenceSha256(), "replacement-observation",
+        original.candidateDigestSha256(), original.columns());
+    assertThat(DraftPublicationEvidenceVerifier.internallyConsistent(forged)).isFalse();
+    var forgedFreeze = new ApprovalFreeze(frozen.binding(), forged,
+        frozen.freezeAlgorithm(), frozen.approvalEvidenceSha256());
+    assertThat(DraftPublicationApprovalEvidence.compare(forgedFreeze, design(), valid()).result())
+        .isEqualTo(Result.UNKNOWN);
+  }
+
+  @Test
+  void physicalLayerIdentityCannotReuseFrozenApprovalFromAnotherLayer() {
+    var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
+    for (String layer : List.of("DIM", "DWS", "ADS")) {
+      var changed = new DesignBinding(7L, 701L, layer, STRUCTURE,
+          501L, 901L, MAPPING, 77L, 2, LOGICAL);
+      assertThat(DraftPublicationApprovalEvidence.compare(frozen, changed, valid()).result())
+          .isEqualTo(Result.STALE);
+    }
+  }
 }
