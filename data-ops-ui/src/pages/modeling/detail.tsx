@@ -3356,6 +3356,31 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 : '全列标准证据不可用'}
               description="当前核验只表示已保存模型的 Semantic 标准状态。Security 与业务库之间的撤权提交保护尚未完成，正式非 ODS 发布不能据此放行；请不要将当前标准检查视为已发布或已执行。"
             />
+            {modelInfo?.layerCode?.toUpperCase() === 'DWD' ? (
+              <div aria-label="发布前逻辑映射冻结版本">
+                <Alert
+                  showIcon
+                  type={publishPreview?.readiness?.mapping?.status === 'FROZEN_SAVED_DRAFT'
+                    ? 'info' : 'warning'}
+                  message={publishPreview?.readiness?.mapping?.status === 'FROZEN_SAVED_DRAFT'
+                    ? '逻辑到物理映射：已找到当前保存草稿的冻结修订'
+                    : '逻辑到物理映射：尚未确认有效冻结修订'}
+                  description={publishPreview?.readiness?.mapping?.finding
+                    || '当前尚无法读取逻辑版本与冻结映射，请返回映射工作台核对'}
+                />
+                {publishPreview?.readiness?.mapping?.mappingRevisionId ? (
+                  <Typography.Text type="secondary" className="text-[12px]">
+                    逻辑模型 #{publishPreview.readiness.mapping.logicalModelId ?? '未知'}，
+                    逻辑 V{publishPreview.readiness.mapping.logicalVersionNo ?? '未知'}，
+                    MappingRevision #{publishPreview.readiness.mapping.mappingRevisionId}
+                    （摘要 {publishPreview.readiness.mapping.mappingContentSha256?.slice(0, 16) || '未知'}…）
+                  </Typography.Text>
+                ) : null}
+                <div className="text-[12px] text-[#667085]">
+                  映射身份仅用于发布前核对；正式提交时必须再次证明来源、标准及权限一致。
+                </div>
+              </div>
+            ) : null}
             {publishPreview?.readiness?.standardEvidenceSha256 ? (
               <Typography.Text type="secondary" className="text-[12px]">
                 标准证据：{publishPreview.readiness.standardEvidenceSha256.slice(0, 16)}…
