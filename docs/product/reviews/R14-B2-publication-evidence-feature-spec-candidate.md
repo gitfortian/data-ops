@@ -1,9 +1,9 @@
 # B2 非 ODS 发布标准证据 — 集成准入与验收矩阵（候选）
-Status: PRODUCT_SCOPE_ACCEPTED_ONLY / TECHNICAL_CONTRACT_PROPOSED / REVIEW_ONLY / NO_WRITE_AUTHORIZATION
+Status: PRODUCT_SCOPE_ACCEPTED / R1_CONDITIONAL_DEVELOPMENT_ACCEPTED / T2_PRECONDITION_PENDING / PRODUCTION_NOT_ADMITTED
 PR: #635 | Parent: #614 | DR-06: #556 | PD-010: D4_ONLY
 Baseline: PR #635 head 65f039da (2026-10-19)
 
-> 本文件是供 Modeling / Semantic / Security 三领域**分别审查**、由项目唯一技术负责人**统一决策**的 Feature Spec 候选，不是审批票据或可启用的生产合同。**Product 的 P01–P18 功能范围已单独签收**（[R14-2 #614 签收评论](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)，仅 PRODUCT_REQUIREMENTS_ONLY），但具体运行时合同仍为 PROPOSED，P01–P18 实现验收全部未通过。不能把文档合并、Product 签收、或负责人身份确认视为最终技术设计的 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。
+> 本文件是供 Modeling / Semantic / Security 三领域**分别审查**、由项目唯一技术负责人**统一决策**的 Feature Spec 候选，不是审批票据或可启用的生产合同。**Product 的 P01–P18 功能范围已单独签收**（[R14-2 #614 签收评论](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)，仅 PRODUCT_REQUIREMENTS_ONLY），R1 T1–T4 的**有条件研发方案已经正式批准**（[#556 签收记录](https://github.com/gitfortian/data-ops/issues/556#issuecomment-6261453377)），但 T2 前置证明仍未完成，P01–P18 实现验收全部未通过。不能把文档合并、Product 签收、或负责人身份确认视为最终技术设计的 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。
 
 ## 1. 业务结果与非目标
 
@@ -28,7 +28,13 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 
 完整的单一技术负责人签收候选见 [R14-B2 正式发布证据集成合同 R1](R14-B2-production-integration-contract-R1.md)。R1 明确了当前 main 的真实发布/审批幂等旁路、Semantic 标准状态写入不具有项目单调纪元、CODE 内容 SHA 无法防止 ABA、`CurrentProject` 只保障项目范围而不代表审批人完整权限、`yakBusinessTransactionManager` 同名还需验证真实物理事务等事实。推荐优先审定**同项目修订行锁的真实共享事务模式**，若无法保证，则设计 Semantic 受信 lease/fence；两种均须有竞态测试，不能仅靠 SHA/epoch 文本等值。
 
-**决策状态：`REVISE / TECHNICAL_DECISION_REQUIRED`；R1 为评审候选，不是准入 ACCEPT。** 用户已确定单一技术负责人身份，允许一份三域技术决策，但没有因角色确认自动批准 R1 的具体事务策略。不得将纯算法和检查项替换为运行时/持久化事实。
+**决策状态：`ACCEPT_CONDITIONAL_FOR_DEVELOPMENT / T2_PRECONDITION_PENDING`。** 统一技术负责人已正式批准 R1 T1–T4 方案进入真实研发，但没有豁免先核实共享数据库事务、锁顺序与变更覆盖；验证失败必须停止 T2-A，不得擅自降级或改用 T2-B。不得将纯算法替换为运行时/持久化事实。
+
+## 已进入开发的 T1 / T2 第一段代码（不等于生产集成）
+
+- `semantic.api.PublicationStandardEvidenceApi`：新增正式领域边界的只读批量 SPI **类型合同**，包含完整请求列、STANDARD FIELD/TYPE/UNIT/CALIBER/CODE/SECURITY 最小脱敏证据、项目作用域、状态/摘要/算法/语义修订；尚无提供可信 revision 的生产实现与真实授权上下文，不对外宣称可以返回 VALID。
+- `PublicationStandardEvidenceApiTest`：验证 DTO 列与返回证据的防御性复制、缺失列表拒绝、`UNKNOWN` 不伪造修订或摘要。
+- `DatabaseMigrationSmokeTest.b2ModelingAndSemanticMappersShareRealBusinessTransactionOnMySql`：新增在**隔离 MySQL Spring 容器**中核验两个实际 MyBatis Mapper 的底层 DataSource、一致 `yakBusinessTransactionManager` 和事务内共享 JDBC 连接的第一道 T2-A 准入测试。**此测试通过仍不证明修订行锁顺序、全部 Semantic 写入口覆盖、授权源和发布并发 fence；T2 未达到完整准入。**
 
 ## 3. 待签收技术决策（不可用候选值代替）
 
@@ -129,7 +135,7 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 
 ## 6. 正式 B1 GO / B2 Ready 判据
 
-- [ ] **统一技术负责人**针对同一版合同记录一份明确的 `ROLE: Accountable Technical Owner / DOMAINS: Modeling, Semantic, Security / DECISION: ACCEPT|REVISE|REJECT / VERSION / CONDITIONS / EVIDENCE`；三项审查各须有可追溯证据，不要求三个不同账户分别投票。仅明确责任人身份不等于签收。
+- [x] **统一技术负责人**针对同一版合同记录一份明确的 `ROLE: Accountable Technical Owner / DOMAINS: Modeling, Semantic, Security / DECISION: ACCEPT|REVISE|REJECT / VERSION / CONDITIONS / EVIDENCE`；三项审查各须有可追溯证据，不要求三个不同账户分别投票。仅明确责任人身份不等于签收。
 - [ ] Semantic 提供真实可用的 batch SPI、可验证 digest/schema 和一致性保证；Security 批准项目上下文/脱敏。
 - [ ] 本 Feature Spec 由规定 Owner 审定，不以本文 PROPOSED 代替已批准的 Feature Spec。
 - [ ] B2 生产集成覆盖四发布入口、ModelVersion 冻结、MySQL/PostgreSQL 迁移、P01–P18 全部适用场景及边界回归。
