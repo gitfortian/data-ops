@@ -456,6 +456,18 @@ export interface ModelPublicationReadiness {
   findings: string[];
   authorizedForPublication: boolean;
   authorizationStatus: string;
+  /** DWD only: exact saved and frozen logical → physical provenance. Read-only. */
+  mapping: {
+    status: 'FROZEN_SAVED_DRAFT' | 'MISSING' | 'NOT_FROZEN' | 'STALE' | 'UNKNOWN' | 'UNAVAILABLE';
+    mappingRevisionId: number | null;
+    mappingSetId: number | null;
+    logicalModelId: number | null;
+    logicalVersionNo: number | null;
+    logicalSnapshotSha256: string | null;
+    physicalStructureSha256: string | null;
+    mappingContentSha256: string | null;
+    finding: string;
+  } | null;
 }
 
 export const getModelPublicationReadiness = (
