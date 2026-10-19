@@ -193,6 +193,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     publishedVersionNo: number | null;
     /** Live, server-owned all-column observation. No Security fence = no new publish permission. */
     readiness: ModelPublicationReadiness | null;
+    action: 'DIRECT' | 'APPROVAL';
   } | null>(null);
   // 发布审批(01):开关=MODEL_PUBLISH 流已配置且启用；在途单=审批中心反查(在途优先,否则最近一单)
   const [publishFlowEnabled, setPublishFlowEnabled] = useState(false);
@@ -1812,7 +1813,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   };
 
   /** 发布:先做「未保存守卫 + 草稿 vs 上次发布 diff」，确认后才固化快照。 */
-  const handlePublish = async () => {
+  const handlePublish = async (action: 'DIRECT' | 'APPROVAL' = 'DIRECT') => {
     const isCurrent = captureEditorResource();
     if (!isCurrent()) return;
     if (!modelId) return;
@@ -1858,6 +1859,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         after: stripVolatile(structure ?? null),
         publishedVersionNo: publishedNo ?? null,
         readiness,
+        action,
       });
     } catch (error) {
       if (!isCurrent()) return;
@@ -2442,7 +2444,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 className="!h-9 !rounded-lg !px-4"
                 disabled={loading || !structure || approvalPending}
                 loading={approvalSubmitting}
-                onClick={() => void handleSubmitPublishApproval()}
+                onClick={() => void handlePublish('APPROVAL')}
               >
                 提交发布审批
               </YakButton>
@@ -3320,7 +3322,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
             ? `发布确认：草稿 vs 线上 V${publishPreview.publishedVersionNo}`
             : '发布确认：首次发布'
         }
-        okText="确认发布"
+        okText={publishPreview?.action === 'APPROVAL' ? '确认提交发布审批' : '确认发布'}
         cancelText="取消"
         confirmLoading={publishing}
         okButtonProps={{
@@ -3331,7 +3333,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
         onOk={async () => {
           const isCurrent = captureEditorResource();
           if (!isCurrent()) return;
-          await doPublish();
+          if (publishPreview?.action === 'APPROVAL') {
+            await handleSubmitPublishApproval();
+          } else {
+            await doPublish();
+          }
           if (!isCurrent()) return;
           setPublishPreview(null);
         }}
@@ -3380,6 +3386,16 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 {finding}
               </Typography.Paragraph>
             ))}
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => {
+                setPublishPreview(null);
+                setStandardCoverageOpen(true);
+              }}
+            >
+              查看逐列标准缺口并定位修复
+            </Button>
           </div>
         ) : null}
         <JsonDiffView
