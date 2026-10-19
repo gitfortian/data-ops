@@ -145,6 +145,31 @@ class DraftPublicationApprovalEvidenceTest {
   }
 
   @Test
+  void tamperedFrozenColumnFactsCannotBorrowOriginalDigestOrApprovalReceipt() {
+    var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
+    var original = frozen.standards();
+    var changedColumns = new ArrayList<>(original.columns());
+    changedColumns.set(0, new ColumnFact("order_id", "BIGINT", 11L, "VALID",
+        "0".repeat(64), "NOT_APPLICABLE", null, null, null));
+    var forgedSnapshot = new DraftPublicationEvidenceVerifier.FrozenCandidate(
+        original.projectId(), original.modelId(), original.layerCode(),
+        original.structureSha256(), original.semanticDigestAlgorithm(),
+        original.semanticEvidenceSha256(), original.consistencyToken(),
+        original.candidateDigestSha256(), List.copyOf(changedColumns));
+    var forgedApproval = new ApprovalFreeze(frozen.binding(), forgedSnapshot,
+        frozen.freezeAlgorithm(), frozen.approvalEvidenceSha256());
+    assertThat(DraftPublicationEvidenceVerifier.internallyConsistent(forgedSnapshot))
+        .isFalse();
+    assertThat(DraftPublicationApprovalEvidence.compare(forgedApproval, design(), valid()).result())
+        .isEqualTo(Result.UNKNOWN);
+
+    var forgedEvaluation = new Evaluation(
+        DraftPublicationEvidenceVerifier.Verdict.VALID_CANDIDATE, "forged", forgedSnapshot);
+    assertThat(DraftPublicationApprovalEvidence.freeze(design(), forgedEvaluation).result())
+        .isEqualTo(Result.UNKNOWN);
+  }
+
+  @Test
   void frozenColumnListCannotBeMutatedOrChangedByProviderAfterFreeze() {
     var request = new ArrayList<>(List.of(
         new ColumnRequest("order_id", "BIGINT", 11L),
