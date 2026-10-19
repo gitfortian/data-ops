@@ -98,6 +98,7 @@ class PostgresqlStorageSmokeTest {
       assertThat(security.queryForObject("SELECT COUNT(*) FROM yak_security_user WHERE user_name = 'pg_storage_owner'", Long.class)).isEqualTo(1);
       verifyLoginAndProjectRequest(context, password, projectId);
       verifyAtomicBusinessWrites(context, jdbc, projectId);
+      verifySemanticPublicationRevisionFence(context, jdbc);
       verifySharedCatalogAndSearch(context, jdbc, projectId);
       verifyRuntimeProjections(context, jdbc, projectId);
       verifyMasterRefresh(jdbc, projectId);
@@ -140,6 +141,66 @@ class PostgresqlStorageSmokeTest {
           .orElseThrow().getSummary()).isEqualTo("durable agent state");
       stateStore.delete("pg-storage-user", "pg-storage-session");
       assertThat(stateStore.exists("pg-storage-user", "pg-storage-session")).isFalse();
+    }
+  }
+
+  /**
+   * B2 T2-A PostgreSQL same-project revision fence experiment.
+   * Proves only the Semantic row lock, not Modeling's root-lock order,
+   * complete mutation writer coverage or Security authorization fencing.
+   */
+  private void verifySemanticPublicationRevisionFence(
+      ConfigurableApplicationContext context, JdbcTemplate jdbc) throws Exception {
+    DataSource business = context.getBean("yakBusinessDataSource", DataSource.class);
+    PlatformTransactionManager manager = context.getBean(
+        "yakBusinessTransactionManager", PlatformTransactionManager.class);
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+    org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+    var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+        business, trusted);
+    var held = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    try {
+      Long initial = new TransactionTemplate(manager).execute(
+          status -> revision.advanceBeforeMutation());
+      assertThat(initial).isEqualTo(2L);
+      // A real observation must refuse an untrusted, non-transactional caller.
+      assertThatThrownBy(revision::lockExistingForReview)
+          .isInstanceOf(IllegalStateException.class);
+      try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+        var observer = workers.submit(() ->
+            new TransactionTemplate(manager).execute(status -> {
+              long value = revision.lockExistingForReview();
+              held.countDown();
+              if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
+                throw new IllegalStateException("PostgreSQL publication fence barrier timed out");
+              }
+              return value;
+            }));
+        assertThat(held.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        var started = new java.util.concurrent.CountDownLatch(1);
+        var mutation = workers.submit(() ->
+            new TransactionTemplate(manager).execute(status -> {
+              started.countDown();
+              return revision.advanceBeforeMutation();
+            }));
+        assertThat(started.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        // PostgreSQL must not let an unrelated transaction advance the project
+        // revision while the observation row remains locked in another transaction.
+        assertThatThrownBy(() -> mutation.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+            .isInstanceOf(java.util.concurrent.TimeoutException.class);
+        release.countDown();
+        assertThat(observer.get(15, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(2L);
+        assertThat(mutation.get(15, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(3L);
+        assertThat(jdbc.queryForObject(
+            "SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?",
+            Long.class, project)).isEqualTo(3L);
+      }
+    } finally {
+      release.countDown();
+      jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+          project);
     }
   }
 
