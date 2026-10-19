@@ -141,6 +141,35 @@ public final class DraftPublicationEvidenceVerifier {
         "仅是隔离分支验证候选；没有发布授权或跨事务一致性保证", candidate);
   }
 
+  /**
+   * Detect an internally corrupted/detached snapshot without querying a
+   * Semantic provider. This is not a substitute for authorized source facts.
+   */
+  public static boolean internallyConsistent(FrozenCandidate candidate) {
+    if (candidate == null || candidate.columns() == null || candidate.columns().isEmpty()) {
+      return false;
+    }
+    try {
+      List<ColumnRequest> requested = candidate.columns().stream()
+          .map(c -> new ColumnRequest(c.columnName(), c.physicalType(), c.standardFieldId()))
+          .toList();
+      Request request = new Request(candidate.projectId(), candidate.modelId(),
+          candidate.layerCode(), candidate.structureSha256(), requested);
+      Observation observation = new Observation(candidate.projectId(), candidate.modelId(),
+          candidate.layerCode(), candidate.structureSha256(), "VALID",
+          candidate.semanticDigestAlgorithm(), candidate.semanticEvidenceSha256(),
+          candidate.consistencyToken(), candidate.columns());
+      Evaluation checked = evaluate(request, observation);
+      return checked.verdict() == Verdict.VALID_CANDIDATE
+          && checked.snapshot() != null
+          && Objects.equals(candidate.candidateDigestSha256(),
+              checked.snapshot().candidateDigestSha256())
+          && candidate.columns().equals(checked.snapshot().columns());
+    } catch (RuntimeException ex) {
+      return false;
+    }
+  }
+
   private static boolean validCodeSetFact(ColumnFact fact) {
     if ("NOT_APPLICABLE".equals(fact.codeSetStatus())) {
       return fact.codeSetItemCount() == null && fact.codeSetEnabledCount() == null
