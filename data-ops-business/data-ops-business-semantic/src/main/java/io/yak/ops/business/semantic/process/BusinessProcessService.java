@@ -11,6 +11,7 @@ import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
 import io.yak.ops.business.semantic.repository.SemanticDomainRepository;
 import io.yak.ops.business.semantic.repository.SemanticProcessRepository;
+import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import java.util.List;
@@ -38,6 +39,7 @@ public class BusinessProcessService {
   private final SemanticProcessBindingService bindingService;
   private final BusinessAuditService auditService;
   private final List<SemanticStructureReferenceReader> referenceReaders;
+  private final SemanticPublicationRevisionService publicationRevision;
 
   @Autowired
   public BusinessProcessService(
@@ -46,9 +48,22 @@ public class BusinessProcessService {
       SemanticFieldService fieldService,
       SemanticProcessBindingService bindingService,
       BusinessAuditService auditService,
+      ObjectProvider<SemanticStructureReferenceReader> referenceReaders,
+      SemanticPublicationRevisionService publicationRevision) {
+    this(repository, domainRepository, fieldService, bindingService, auditService,
+        referenceReaders.orderedStream().toList(), publicationRevision);
+  }
+
+  /** Compatibility constructor for older unit tests using a provided Reader. */
+  public BusinessProcessService(
+      SemanticProcessRepository repository,
+      SemanticDomainRepository domainRepository,
+      SemanticFieldService fieldService,
+      SemanticProcessBindingService bindingService,
+      BusinessAuditService auditService,
       ObjectProvider<SemanticStructureReferenceReader> referenceReaders) {
     this(repository, domainRepository, fieldService, bindingService, auditService,
-        referenceReaders.orderedStream().toList());
+        referenceReaders.orderedStream().toList(), null);
   }
 
   /** Compatibility constructor for existing focused service tests. */
@@ -68,12 +83,33 @@ public class BusinessProcessService {
       SemanticProcessBindingService bindingService,
       BusinessAuditService auditService,
       List<SemanticStructureReferenceReader> referenceReaders) {
+    this(repository, domainRepository, fieldService, bindingService, auditService,
+        referenceReaders, null);
+  }
+
+  BusinessProcessService(
+      SemanticProcessRepository repository,
+      SemanticDomainRepository domainRepository,
+      SemanticFieldService fieldService,
+      SemanticProcessBindingService bindingService,
+      BusinessAuditService auditService,
+      List<SemanticStructureReferenceReader> referenceReaders,
+      SemanticPublicationRevisionService publicationRevision) {
     this.repository = repository;
     this.domainRepository = domainRepository;
     this.fieldService = fieldService;
     this.bindingService = bindingService;
     this.auditService = auditService;
     this.referenceReaders = List.copyOf(referenceReaders);
+    this.publicationRevision = publicationRevision;
+  }
+
+  /**
+   * The project's Semantic revision row must be locked before reading the
+   * domain/process hierarchy and before cross-module reference checks.
+   */
+  private void advancePublicationRevision() {
+    if (publicationRevision != null) publicationRevision.advanceBeforeMutation();
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -87,6 +123,7 @@ public class BusinessProcessService {
       String description,
       Integer sortOrder,
       String operator) {
+    advancePublicationRevision();
     validateCode(code);
     validateName(name);
     validateBizType(bizType);
@@ -150,6 +187,7 @@ public class BusinessProcessService {
       String owner,
       String description,
       Integer sortOrder) {
+    advancePublicationRevision();
     BusinessProcess existing = get(id);
     validateName(name);
     validateBizType(bizType);
@@ -188,6 +226,7 @@ public class BusinessProcessService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id) {
+    advancePublicationRevision();
     BusinessProcess existing = get(id);
     // 引用校验挂点:35(标准字段集引用)/36(源表关联引用)落地后在此阻断。
     AuditOperationHandle audit =
