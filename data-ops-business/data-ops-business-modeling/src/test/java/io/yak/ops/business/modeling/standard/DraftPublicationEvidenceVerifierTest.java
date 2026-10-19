@@ -226,4 +226,73 @@ class DraftPublicationEvidenceVerifierTest {
     var empty = new Request(7L, 701L, "DWD", STRUCTURE_SHA, List.of());
     assertThat(verify(empty, null).verdict()).isEqualTo(Verdict.UNKNOWN);
   }
+
+  @Test
+  void independentModelSnapshotRejectsSubmittedSubsetEvenIfSemanticAgreesWithSubset() {
+    Request subset = new Request(7L, 701L, "DWD", STRUCTURE_SHA, List.of(orderId()));
+    Observation subsetReply = observation("DWD", List.of(orderEvidence()));
+    // Legacy candidate-only API cannot prove completeness against an actual model.
+    assertThat(verify(subset, subsetReply).verdict()).isEqualTo(Verdict.VALID_CANDIDATE);
+    var guarded = DraftPublicationEvidenceVerifier.evaluateAgainstModelSnapshot(
+        subset, request("DWD"), subsetReply);
+    assertThat(guarded.verdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(guarded.snapshot()).isNull();
+  }
+
+  @Test
+  void physicalSnapshotComparisonRejectsChangedTypeStandardAndScope() {
+    var provider = observation("DWD", List.of(orderEvidence(), statusEvidence()));
+    Request submitted = request("DWD");
+    for (Request changed : List.of(
+        new Request(7L, 701L, "DWD", STRUCTURE_SHA,
+            List.of(new ColumnRequest("order_id", "VARCHAR", 11L), statusColumn())),
+        new Request(7L, 701L, "DWD", STRUCTURE_SHA,
+            List.of(orderId(), new ColumnRequest("order_status", "VARCHAR", 44L))),
+        new Request(8L, 701L, "DWD", STRUCTURE_SHA,
+            List.of(orderId(), statusColumn())),
+        new Request(7L, 702L, "DWD", STRUCTURE_SHA,
+            List.of(orderId(), statusColumn())),
+        new Request(7L, 701L, "DIM", STRUCTURE_SHA,
+            List.of(orderId(), statusColumn())),
+        new Request(7L, 701L, "DWD", "f".repeat(64),
+            List.of(orderId(), statusColumn())),
+        new Request(7L, 701L, "DWD", STRUCTURE_SHA,
+            List.of(orderId(), new ColumnRequest("ORDER_ID", "BIGINT", 11L))))) {
+      var result = DraftPublicationEvidenceVerifier.evaluateAgainstModelSnapshot(
+          submitted, changed, provider);
+      assertThat(result.verdict()).isEqualTo(Verdict.UNKNOWN);
+      assertThat(result.snapshot()).isNull();
+    }
+  }
+
+  @Test
+  void reorderedCanonicalModelColumnsMayMatchButCannotAuthorizePublication() {
+    Request reordered = new Request(7L, 701L, "DWD", STRUCTURE_SHA,
+        List.of(new ColumnRequest("ORDER_STATUS", "VARCHAR", 12L),
+            new ColumnRequest("ORDER_ID", "BIGINT", 11L)));
+    var evidence = DraftPublicationEvidenceVerifier.evaluateAgainstModelSnapshot(
+        reordered, request("DWD"),
+        observation("DWD", List.of(statusEvidence(), orderEvidence())));
+    assertThat(evidence.verdict()).isEqualTo(Verdict.VALID_CANDIDATE);
+    assertThat(evidence.reason()).contains("没有发布授权");
+    assertThat(evidence.snapshot()).isNotNull();
+  }
+
+  @Test
+  void modelAndSemanticInputListsAreDetachedAtConstruction() {
+    var submittedColumns = new ArrayList<>(List.of(orderId(), statusColumn()));
+    var semanticColumns = new ArrayList<>(List.of(orderEvidence(), statusEvidence()));
+    Request submitted = new Request(7L, 701L, "DWD", STRUCTURE_SHA, submittedColumns);
+    Observation provider = observation("DWD", semanticColumns);
+    submittedColumns.clear();
+    semanticColumns.clear();
+    assertThat(submitted.columns()).hasSize(2);
+    assertThat(provider.columns()).hasSize(2);
+    assertThat(DraftPublicationEvidenceVerifier.evaluateAgainstModelSnapshot(
+        submitted, request("DWD"), provider).verdict()).isEqualTo(Verdict.VALID_CANDIDATE);
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> submitted.columns().clear())
+        .isInstanceOf(UnsupportedOperationException.class);
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> provider.columns().clear())
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
 }
