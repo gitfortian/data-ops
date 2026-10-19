@@ -66,6 +66,12 @@ Semantic 的项目事实修订不能替代 Security 授权修订。Security 至�
 - **F-039 代码审查：** `SemanticAdoptionItemWriter.apply` 针对 `FIELD` 使用 `fields.create`，针对 `PROCESS_FIELD` 使用 `fields.bindToProcess`，进入当前已接修订推进的 `SemanticFieldService`；已成功回执的幂等重放不执行新字段变更。F-039 的 `SOURCE_LINK` 调用 `SemanticProcessBindingService` 改变来源绑定，属独立业务来源语义，需要明确是否影响 B2 发布适用标准并决定是否加入修订协议。
 - **尚未证明 T2 GO：** 依旧缺 Modeling 实际根锁→Semantic 项目修订行锁、Semantic 项目修订行锁→跨模块引用查询的**端到端资源锁关系**证明。特别是 `StandardCatalogService.delete/changeStatus` 在修订锁之后检查 Modeling 等消费者引用，必须证明消费者只读不会获得逆向根锁，或调整统一锁序再提交真实双 Worker 竞态测试。即使本次 MySQL 行锁互斥测试通过也不得自动打开 #635 生产接线、提交 fence 或审批资格。
 
+### T2-F039 回执预占与项目修订锁顺序收敛（2026-10-19）
+
+- **源码确定的真实反向锁序已修正：** `SemanticAdoptionItemWriter.apply` 原本在 `yak_semantic_adoption_receipt` 执行 `UNIQUE(project_id,task_id,candidate_id)` 新回执 INSERT，随后才由 FIELD / PROCESS_FIELD / SOURCE_LINK 的业务写服务取得 Semantic 项目修订行锁。与主合同的「Semantic 项目修订行锁先于各对象/回执行锁」约定矛盾，可能与其他按修订行优先的写事务形成循环等待。新分支保留 `verifyActor`、来源证明和已成功回执查询/只读重放，而**对新采纳记录**在预占 INSERT 前从可信 `CurrentProject` 的事务性 `SemanticPublicationRevisionService.advanceBeforeMutation()` 先取得项目修订行锁。其后全部回执/业务对象修改处于同一 `yakBusinessTransactionManager` 事务。再次进入字段等服务可递增多次，但不会倒转锁序；失败则整体回滚。
+- **独立回归：** `SemanticAdoptionItemWriterTest` 覆盖 PROJECT_REVISION → RECEIPT_INSERT → SOURCE_LINK 真实服务委托顺序；修订失败时不得预占或绑定；旧成功回执的幂等重放不再推进 revision 或新增业务写。隔离 MySQL 的 `DatabaseMigrationSmokeTest.b2F039ReceiptRaceRollsBackLosingSemanticRevision` 使用真实两个事务、同项目修订锁和 F-039 回执唯一约束，要求竞争的回执写方在持锁事务释放前等待；其重复键失败应回滚新修订而只留下一个成功回执。这是 T2 的一个真实并发断言，**仍需最新 HEAD 的 CI 确实运行并通过**。
+- **剩余风险：** 该测试模拟真实修订服务 + MySQL 回执 SQL，但没有模拟完整真实授权、来源 Schema proof、物理查询或 F-039 Handler 的全部 Worker 调度；PostgreSQL F-039 唯一约束并发与复用旧回执、Security 撤权和全域 Object Reader 锁图尚需验证。严格的 B2 发布/审批接线仍维持禁止。
+
 ## 3. 四入口统一执行顺序（正式实现验收要证明）
 
 1. **常规直接**：`ModelVersionService.publish` → root lock → 真实结构快照 → 共同 validator/fence → 原 DWS 等分层校验 → 标准身份参与幂等复用/新版本 → 原子提交。
