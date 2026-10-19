@@ -99,6 +99,7 @@ class PostgresqlStorageSmokeTest {
       verifyLoginAndProjectRequest(context, password, projectId);
       verifyAtomicBusinessWrites(context, jdbc, projectId);
       verifySemanticPublicationRevisionFence(context, jdbc);
+      verifyModelRootAndSemanticRevisionLockOrder(context, jdbc);
       verifySharedCatalogAndSearch(context, jdbc, projectId);
       verifyRuntimeProjections(context, jdbc, projectId);
       verifyMasterRefresh(jdbc, projectId);
@@ -207,6 +208,95 @@ class PostgresqlStorageSmokeTest {
       }
     } finally {
       release.countDown();
+      jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+          project);
+    }
+  }
+
+  /**
+   * R14-B2 T2-A PostgreSQL experiment: a Modeling model-root FOR UPDATE
+   * followed by the Semantic revision FOR UPDATE shares one actual database
+   * transaction, blocking a competing Semantic revision-first writer. The
+   * full approval callback and consumer-reference lock graph remain unproven.
+   */
+  private void verifyModelRootAndSemanticRevisionLockOrder(
+      ConfigurableApplicationContext context, JdbcTemplate jdbc) throws Exception {
+    DataSource business = context.getBean("yakBusinessDataSource", DataSource.class);
+    PlatformTransactionManager manager =
+        context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class);
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    String code = "r14_b2_pg_" + UUID.randomUUID().toString().substring(0, 12);
+    var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+    org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+    var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+        business, trusted);
+    var locked = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    try {
+      jdbc.update("""
+          INSERT INTO yak_modeling_model
+            (project_id, model_code, model_name, dialect, layer_code, deleted, status)
+          VALUES (?, ?, 'B2 PG root-lock CI', 'POSTGRESQL', 'DWD', false, 'DRAFT')
+          """, project, code);
+      Long modelId = jdbc.queryForObject("""
+          SELECT id FROM yak_modeling_model
+           WHERE project_id = ? AND model_code = ?
+          """, Long.class, project, code);
+      Long seeded = new TransactionTemplate(manager).execute(
+          status -> revision.advanceBeforeMutation());
+      assertThat(seeded).isEqualTo(2L);
+      try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+        var publishing = workers.submit(() -> new TransactionTemplate(manager)
+            .execute(status -> {
+              Long rootId = jdbc.queryForObject("""
+                  SELECT id FROM yak_modeling_model
+                   WHERE project_id = ? AND id = ? FOR UPDATE
+                  """, Long.class, project, modelId);
+              assertThat(rootId).isEqualTo(modelId);
+              long observed = revision.lockExistingForReview();
+              locked.countDown();
+              try {
+                if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
+                  throw new IllegalStateException("B2 PG root lock release timed out");
+                }
+              } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("B2 PG root lock interrupted", interrupted);
+              }
+              return observed;
+            }));
+        assertThat(locked.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        var attempted = new java.util.concurrent.CountDownLatch(1);
+        var semanticWriter = workers.submit(() -> new TransactionTemplate(manager)
+            .execute(status -> {
+              attempted.countDown();
+              Long advanced = revision.advanceBeforeMutation();
+              // Simulate an ordinary non-locking reference count; if consumers
+              // issue a FOR UPDATE read, this test does not prove lock safety.
+              Long references = jdbc.queryForObject("""
+                  SELECT COUNT(*) FROM yak_modeling_model
+                   WHERE project_id = ? AND id = ?
+                  """, Long.class, project, modelId);
+              assertThat(references).isEqualTo(1L);
+              return advanced;
+            }));
+        assertThat(attempted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThatThrownBy(() ->
+            semanticWriter.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+            .isInstanceOf(java.util.concurrent.TimeoutException.class);
+        release.countDown();
+        Long rootAndRevision = publishing.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        Long committedRevision = semanticWriter.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        assertThat(rootAndRevision).isEqualTo(2L);
+        assertThat(committedRevision).isEqualTo(3L);
+        assertThat(jdbc.queryForObject("""
+            SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?
+            """, Long.class, project)).isEqualTo(3L);
+      }
+    } finally {
+      release.countDown();
+      jdbc.update("DELETE FROM yak_modeling_model WHERE project_id = ? AND model_code = ?",
+          project, code);
       jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
           project);
     }
