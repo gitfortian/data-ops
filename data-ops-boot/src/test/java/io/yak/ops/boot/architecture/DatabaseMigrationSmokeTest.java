@@ -71,6 +71,59 @@ class DatabaseMigrationSmokeTest {
     });
   }
 
+  /**
+   * B2 R1 T2-A admission prerequisite. Verify the *actual* wired Modeling and
+   * Semantic MyBatis mappers participate in the same business data source and
+   * transaction, rather than trusting a matching @Transactional bean name.
+   *
+   * <p>This is necessary but NOT sufficient for publication fencing: the new
+   * Semantic revision write-path lock ordering and concurrent publish tests are
+   * separate blocking evidence before production integration may start.
+   */
+  @Test
+  void b2ModelingAndSemanticMappersShareRealBusinessTransactionOnMySql() {
+    startAndValidate(true, context -> {
+      var business = context.getBean("yakBusinessDataSource", DataSource.class);
+      var manager = context.getBean("yakBusinessTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      assertThat(manager)
+          .isInstanceOf(org.springframework.jdbc.datasource.DataSourceTransactionManager.class);
+      var jdbcManager = (org.springframework.jdbc.datasource.DataSourceTransactionManager) manager;
+      assertThat(jdbcManager.getDataSource()).isSameAs(business);
+
+      var factories = context.getBeansOfType(org.apache.ibatis.session.SqlSessionFactory.class);
+      var modelingMapper = io.yak.ops.business.modeling.dao.mapper.ModelingModelMapper.class;
+      var semanticMapper = io.yak.ops.business.semantic.dao.mapper.SemanticStandardMapper.class;
+      var modelingFactories = factories.values().stream()
+          .filter(factory -> factory.getConfiguration().hasMapper(modelingMapper)).toList();
+      var semanticFactories = factories.values().stream()
+          .filter(factory -> factory.getConfiguration().hasMapper(semanticMapper)).toList();
+      assertThat(modelingFactories).hasSize(1);
+      assertThat(semanticFactories).hasSize(1);
+      var modelDataSource = modelingFactories.get(0).getConfiguration()
+          .getEnvironment().getDataSource();
+      var semanticDataSource = semanticFactories.get(0).getConfiguration()
+          .getEnvironment().getDataSource();
+      assertThat(modelDataSource).isSameAs(semanticDataSource).isSameAs(business);
+
+      var tx = new org.springframework.transaction.support.TransactionTemplate(manager);
+      tx.execute(status -> {
+        assertThat(org.springframework.transaction.support.TransactionSynchronizationManager
+            .isActualTransactionActive()).isTrue();
+        var bound = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(business);
+        try {
+          assertThat(org.springframework.jdbc.datasource.DataSourceUtils
+              .getConnection(modelDataSource)).isSameAs(bound);
+          assertThat(org.springframework.jdbc.datasource.DataSourceUtils
+              .getConnection(semanticDataSource)).isSameAs(bound);
+        } finally {
+          org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(bound, business);
+        }
+        return null;
+      });
+    });
+  }
+
   @Test
   void adsV9ContractAndImmutableRevisionsRollBackAtomicallyOnMySql() {
     startAndValidate(true, context -> AdsApplicationContractSqlSmoke.verify(
