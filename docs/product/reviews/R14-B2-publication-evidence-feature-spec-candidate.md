@@ -3,7 +3,7 @@ Status: PRODUCT_SCOPE_ACCEPTED_ONLY / TECHNICAL_CONTRACT_PROPOSED / REVIEW_ONLY 
 PR: #635 | Parent: #614 | DR-06: #556 | PD-010: D4_ONLY
 Baseline: PR #635 head 65f039da (2026-10-19)
 
-> 本文件是供 Modeling / Semantic / Security 独立 Owner 决策的 Feature Spec 候选，不是审批票据或可启用的生产合同。**Product 的 P01–P18 功能范围已单独签收**（[R14-2 #614 签收评论](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)，仅 PRODUCT_REQUIREMENTS_ONLY），但具体运行时合同仍为 PROPOSED，P01–P18 实现验收全部未通过。不能把文档合并或 Product 签收视为技术 Owner 的 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。
+> 本文件是供 Modeling / Semantic / Security 三领域**分别审查**、由项目唯一技术负责人**统一决策**的 Feature Spec 候选，不是审批票据或可启用的生产合同。**Product 的 P01–P18 功能范围已单独签收**（[R14-2 #614 签收评论](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)，仅 PRODUCT_REQUIREMENTS_ONLY），但具体运行时合同仍为 PROPOSED，P01–P18 实现验收全部未通过。不能把文档合并、Product 签收、或负责人身份确认视为最终技术设计的 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。
 
 ## 1. 业务结果与非目标
 
@@ -31,6 +31,14 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 | Product | D4_ONLY 已批准；P01–P18 产品功能范围已签收：非 ODS 逐列有效标准、零技术列豁免、ODS 例外、草稿宽限、历史不回填 | [#614 Product D4 / B2 P01–P18 功能签收](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6260677412)；不代表技术合同或实际测试签收 |
 
 **一致性关键问题**：独立 Semantic 观察 token 只是证据标识，不是跨模块锁。需选择并批准可证明的同一语义快照读取/版本 CAS/发布瞬间最终复核方案；无保证时返回 UNKNOWN，不能声称不漂移。
+
+## 3.1 单一技术负责人决策方式（2026-10-19）
+
+用户已明确确认 data-ops 的 Modeling、Semantic、Security 最终技术决策由同一人负责。适用的流程因此是：**三领域独立技术证据 Review → 同一技术负责人一次明确决策 → 助手在 #556/#614/#635 留档 → 代码/CI/真实验收分离**。参考 [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556) 和 [R14-2 #614](https://github.com/gitfortian/data-ops/issues/614) 的最新责任人规则。
+
+统一签收必须明确：`OWNER_OF_RECORD`、`DOMAINS`、`DECISION`、合同版本/commit、每领域条件与评审证据、允许的实施范围和不授权的风险边界。**不要求三张不同账户的投票，但三域均不能跳过技术审查。**
+
+当前仅已确认 **OWNER_OF_RECORD_CONFIRMED / TECHNICAL_DESIGN_PENDING**；原候选里没有正式 Semantic 读一致性/ABA 协议、生产四入口集成、权限与持久迁移等证据，因此不得把本次负责人确认冒充技术合同 ACCEPT。具体策略须先明确后才能给对应的研发准入决定；任何生产开关仍受独立发布与环境验收门槛限制。
 
 ## 4. 生产接入顺序（仅在 B1 正式 GO 后执行）
 
@@ -67,7 +75,7 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 
 ## 6. 正式 B1 GO / B2 Ready 判据
 
-- [ ] Modeling / Semantic / Security 分别在 #556 / #614 记录真实 `ROLE / DECISION / VERSION / CONDITIONS / EVIDENCE`；独立 ACCEPT 后才准入。
+- [ ] **统一技术负责人**针对同一版合同记录一份明确的 `ROLE: Accountable Technical Owner / DOMAINS: Modeling, Semantic, Security / DECISION: ACCEPT|REVISE|REJECT / VERSION / CONDITIONS / EVIDENCE`；三项审查各须有可追溯证据，不要求三个不同账户分别投票。仅明确责任人身份不等于签收。
 - [ ] Semantic 提供真实可用的 batch SPI、可验证 digest/schema 和一致性保证；Security 批准项目上下文/脱敏。
 - [ ] 本 Feature Spec 由规定 Owner 审定，不以本文 PROPOSED 代替已批准的 Feature Spec。
 - [ ] B2 生产集成覆盖四发布入口、ModelVersion 冻结、MySQL/PostgreSQL 迁移、P01–P18 全部适用场景及边界回归。
