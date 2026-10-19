@@ -9,6 +9,7 @@ import io.yak.ops.business.audit.AuditOperationRequest;
 import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticDomainRepository;
+import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.business.semantic.repository.SemanticProcessRepository;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
@@ -40,15 +41,27 @@ public class BusinessDomainService {
   private final SemanticProcessRepository processRepository;
   private final BusinessAuditService auditService;
   private final List<SemanticStructureReferenceReader> referenceReaders;
+  private final SemanticPublicationRevisionService publicationRevision;
 
   @Autowired
   public BusinessDomainService(
       SemanticDomainRepository repository,
       SemanticProcessRepository processRepository,
       BusinessAuditService auditService,
+      ObjectProvider<SemanticStructureReferenceReader> referenceReaders,
+      SemanticPublicationRevisionService publicationRevision) {
+    this(repository, processRepository, auditService,
+        referenceReaders.orderedStream().toList(), publicationRevision);
+  }
+
+  /** Retained only for older focused tests that construct the service directly. */
+  public BusinessDomainService(
+      SemanticDomainRepository repository,
+      SemanticProcessRepository processRepository,
+      BusinessAuditService auditService,
       ObjectProvider<SemanticStructureReferenceReader> referenceReaders) {
     this(repository, processRepository, auditService,
-        referenceReaders.orderedStream().toList());
+        referenceReaders.orderedStream().toList(), null);
   }
 
   /** Compatibility constructor for existing focused service tests. */
@@ -64,10 +77,25 @@ public class BusinessDomainService {
       SemanticProcessRepository processRepository,
       BusinessAuditService auditService,
       List<SemanticStructureReferenceReader> referenceReaders) {
+    this(repository, processRepository, auditService, referenceReaders, null);
+  }
+
+  BusinessDomainService(
+      SemanticDomainRepository repository,
+      SemanticProcessRepository processRepository,
+      BusinessAuditService auditService,
+      List<SemanticStructureReferenceReader> referenceReaders,
+      SemanticPublicationRevisionService publicationRevision) {
     this.repository = repository;
     this.processRepository = processRepository;
     this.auditService = auditService;
     this.referenceReaders = List.copyOf(referenceReaders);
+    this.publicationRevision = publicationRevision;
+  }
+
+  /** Only production Spring wiring supplies this real transaction-bound dependency. */
+  private void advancePublicationRevision() {
+    if (publicationRevision != null) publicationRevision.advanceBeforeMutation();
   }
 
   /** 全量业务域树(空父集装配为根;排序已在仓库层保证)。 */
@@ -96,6 +124,7 @@ public class BusinessDomainService {
   public BusinessDomain create(
       Long parentId, String code, String name, String owner, String description, Integer sortOrder,
       String operator) {
+    advancePublicationRevision();
     validateCode(code);
     validateName(name);
     Long resolvedParent = parentId == null ? BusinessDomain.ROOT_PARENT_ID : parentId;
@@ -139,6 +168,7 @@ public class BusinessDomainService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void update(Long id, String name, String owner, String description, Integer sortOrder) {
+    advancePublicationRevision();
     BusinessDomain existing = get(id);
     validateName(name);
     AuditOperationHandle audit =
@@ -174,6 +204,7 @@ public class BusinessDomainService {
   /** 拖拽改父/排序:目标父不能是自己或自己的子孙(环检测)。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void move(Long id, Long targetParentId, Integer sortOrder, String operator) {
+    advancePublicationRevision();
     repository.lockTree();
     BusinessDomain existing = get(id);
     Long resolvedParent = targetParentId == null ? BusinessDomain.ROOT_PARENT_ID : targetParentId;
@@ -214,6 +245,7 @@ public class BusinessDomainService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id) {
+    advancePublicationRevision();
     BusinessDomain existing = get(id);
     // 引用校验:子域(33)+业务过程(34)。
     if (repository.existsByParent(id)) {
