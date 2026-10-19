@@ -56,6 +56,7 @@ import {
   getModelingStructure,
   getModelingTypeCatalog,
   getModelingVersion,
+  getModelPublicationReadiness,
   pageModelingModels,
   previewModelingDerive,
   publishModelingModel,
@@ -66,6 +67,7 @@ import {
 import JsonDiffView from '@/components/version/JsonDiffView';
 import { previewModelingImportColumns } from '@/services/modeling/import';
 import type { ModelingModelRecord, ModelingSaveStructurePayload, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
+import type { ModelPublicationReadiness } from '@/services/modeling/api';
 import { getStandardOptions, pageSemanticFields, pageSemanticProcesses } from '@/services/semantic/api';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { listAllDataSources, listDataSourceTables } from '@/services/data-source/api';
@@ -189,6 +191,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
     before: unknown;
     after: unknown;
     publishedVersionNo: number | null;
+    /** Live, server-owned all-column observation. No Security fence = no new publish permission. */
+    readiness: ModelPublicationReadiness | null;
   } | null>(null);
   // 发布审批(01):开关=MODEL_PUBLISH 流已配置且启用；在途单=审批中心反查(在途优先,否则最近一单)
   const [publishFlowEnabled, setPublishFlowEnabled] = useState(false);
@@ -1834,10 +1838,26 @@ const emptyColumnDraft = (): ColumnDraft => ({
             : v.indexes,
         };
       };
+      const nonOds = ['DWD', 'DIM', 'DWS', 'ADS'].includes(
+        modelInfo?.layerCode?.toUpperCase() || '',
+      );
+      // Preview is never constructed from the browser's current draft or
+      // a cached coverage badge; always fetch the saved server-side structure.
+      // Failure to read cannot silently authorize the new publication contract.
+      let readiness: ModelPublicationReadiness | null = null;
+      if (nonOds) {
+        try {
+          readiness = await getModelPublicationReadiness(modelId);
+        } catch {
+          readiness = null;
+        }
+      }
+      if (!isCurrent()) return;
       setPublishPreview({
         before: stripVolatile(published?.structure ?? null),
         after: stripVolatile(structure ?? null),
         publishedVersionNo: publishedNo ?? null,
+        readiness,
       });
     } catch (error) {
       if (!isCurrent()) return;
@@ -3303,6 +3323,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
         okText="确认发布"
         cancelText="取消"
         confirmLoading={publishing}
+        okButtonProps={{
+          disabled: ['DWD', 'DIM', 'DWS', 'ADS'].includes(
+            modelInfo?.layerCode?.toUpperCase() || '',
+          ) && !publishPreview?.readiness?.authorizedForPublication,
+        }}
         onOk={async () => {
           const isCurrent = captureEditorResource();
           if (!isCurrent()) return;
@@ -3315,6 +3340,48 @@ const emptyColumnDraft = (): ColumnDraft => ({
         <div className="mb-2 text-[12px] text-[#667085]">
           发布将把当前已保存的结构固化为新版本；血缘/派生/建库脚本等消费方从此读取该快照。
         </div>
+        {['DWD', 'DIM', 'DWS', 'ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
+          <div className="mb-3 space-y-2" aria-label="发布前全列标准证据">
+            <Alert
+              type={publishPreview?.readiness?.standardsVerdict === 'VALID' ? 'warning' : 'error'}
+              showIcon
+              message={publishPreview?.readiness
+                ? `全列标准证据：${publishPreview.readiness.standardsVerdict}`
+                : '全列标准证据不可用'}
+              description="当前核验只表示已保存模型的 Semantic 标准状态。Security 与业务库之间的撤权提交保护尚未完成，正式非 ODS 发布不能据此放行；请不要将当前标准检查视为已发布或已执行。"
+            />
+            {publishPreview?.readiness?.standardEvidenceSha256 ? (
+              <Typography.Text type="secondary" className="text-[12px]">
+                标准证据：{publishPreview.readiness.standardEvidenceSha256.slice(0, 16)}…
+                （Semantic 修订 {publishPreview.readiness.semanticRevision ?? '未知'}）
+              </Typography.Text>
+            ) : null}
+            {publishPreview?.readiness?.columns?.length ? (
+              <Table
+                size="small"
+                rowKey="columnName"
+                pagination={{ pageSize: 8 }}
+                dataSource={publishPreview.readiness.columns}
+                columns={[
+                  { title: '物理字段', dataIndex: 'columnName', ellipsis: true },
+                  { title: '类型', dataIndex: 'physicalType', width: 105 },
+                  { title: '标准字段 ID', dataIndex: 'standardFieldId', width: 120,
+                    render: (value: number | null) => value ?? '未绑定' },
+                  { title: '标准证据', dataIndex: 'status', width: 110,
+                    render: (value: string) =>
+                      <Tag color={value === 'VALID' ? 'green' : 'red'}>{value}</Tag> },
+                  { title: '待修复原因', dataIndex: 'safeReasonCode',
+                    render: (value?: string | null) => value || '—' },
+                ]}
+              />
+            ) : null}
+            {(publishPreview?.readiness?.findings || []).map((finding, index) => (
+              <Typography.Paragraph key={index} type="secondary" className="!mb-1">
+                {finding}
+              </Typography.Paragraph>
+            ))}
+          </div>
+        ) : null}
         <JsonDiffView
           before={publishPreview?.before ?? null}
           after={publishPreview?.after ?? null}
