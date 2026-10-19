@@ -24,6 +24,7 @@ import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureDialectCatalog;
 import io.yak.ops.business.modeling.structure.StructureView;
 import io.yak.ops.business.modeling.structure.ValidationIssue;
+import io.yak.ops.business.modeling.version.ModelPublicationReadinessService;
 import io.yak.ops.business.modeling.version.ModelVersionService;
 import io.yak.ops.business.modeling.version.OdsPublishedVersionEvidenceService;
 import io.yak.ops.business.modeling.version.PhysicalDataDevHandoffReadinessService;
@@ -64,6 +65,7 @@ public class ModelingModelController {
   private final OdsPublishedVersionEvidenceService odsVersionEvidence;
   private final PhysicalDataDevHandoffReadinessService dataDevHandoff;
   private final PhysicalStandardCoverageInspectionService standardCoverage;
+  private final ModelPublicationReadinessService publicationReadiness;
   private final ModelPublishApprovalService publishApprovalService;
   private final ModelViewConverter viewConverter;
   private final CurrentUserProvider currentUserProvider;
@@ -121,6 +123,13 @@ public class ModelingModelController {
   public Result<PhysicalStandardCoverageInspectionService.Report> standardCoverage(
       @PathVariable("id") Long id) {
     return Result.success(standardCoverage.inspect(id));
+  }
+
+  @Operation(summary = "非 ODS 正式设计发布的全列标准证据预检（只读、不授予发布资格）")
+  @GetMapping("/{id}/publication-readiness")
+  public Result<ModelPublicationReadinessService.Report> publicationReadiness(
+      @PathVariable("id") Long id) {
+    return Result.success(publicationReadiness.inspect(id));
   }
 
   @Operation(summary = "模型详情")
