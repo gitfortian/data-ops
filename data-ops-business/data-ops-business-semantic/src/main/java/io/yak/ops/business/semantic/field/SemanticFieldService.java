@@ -13,6 +13,7 @@ import io.yak.ops.business.semantic.api.StandardKind;
 import io.yak.ops.business.semantic.api.StandardStatus;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticFieldRepository;
+import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.business.semantic.repository.SemanticProcessFieldRepository;
 import io.yak.ops.business.semantic.repository.SemanticProcessRepository;
 import io.yak.ops.business.semantic.repository.SemanticStandardRepository;
@@ -46,6 +47,7 @@ public class SemanticFieldService {
   private final SemanticStandardRepository standardRepository;
   private final BusinessAuditService auditService;
   private final List<SemanticFieldReferenceReader> referenceReaders;
+  private final SemanticPublicationRevisionService publicationRevision;
 
   @Autowired
   public SemanticFieldService(
@@ -54,9 +56,22 @@ public class SemanticFieldService {
       SemanticProcessRepository processRepository,
       SemanticStandardRepository standardRepository,
       BusinessAuditService auditService,
+      ObjectProvider<SemanticFieldReferenceReader> referenceReaders,
+      SemanticPublicationRevisionService publicationRevision) {
+    this(repository, processFieldRepository, processRepository, standardRepository,
+        auditService, referenceReaders.orderedStream().toList(), publicationRevision);
+  }
+
+  /** Legacy focused-test constructor; production Spring always injects the revision owner. */
+  public SemanticFieldService(
+      SemanticFieldRepository repository,
+      SemanticProcessFieldRepository processFieldRepository,
+      SemanticProcessRepository processRepository,
+      SemanticStandardRepository standardRepository,
+      BusinessAuditService auditService,
       ObjectProvider<SemanticFieldReferenceReader> referenceReaders) {
     this(repository, processFieldRepository, processRepository, standardRepository,
-        auditService, referenceReaders.orderedStream().toList());
+        auditService, referenceReaders.orderedStream().toList(), null);
   }
 
   /** Compatibility constructor for focused tests without cross-domain consumers. */
@@ -67,7 +82,7 @@ public class SemanticFieldService {
       SemanticStandardRepository standardRepository,
       BusinessAuditService auditService) {
     this(repository, processFieldRepository, processRepository, standardRepository,
-        auditService, List.of());
+        auditService, List.of(), null);
   }
 
   SemanticFieldService(
@@ -76,17 +91,29 @@ public class SemanticFieldService {
       SemanticProcessRepository processRepository,
       SemanticStandardRepository standardRepository,
       BusinessAuditService auditService,
-      List<SemanticFieldReferenceReader> referenceReaders) {
+      List<SemanticFieldReferenceReader> referenceReaders,
+      SemanticPublicationRevisionService publicationRevision) {
     this.repository = repository;
     this.processFieldRepository = processFieldRepository;
     this.processRepository = processRepository;
     this.standardRepository = standardRepository;
     this.auditService = auditService;
     this.referenceReaders = List.copyOf(referenceReaders);
+    this.publicationRevision = publicationRevision;
+  }
+
+  /**
+   * T1 development path: secure revision row before other Semantic identity locks.
+   * Legacy unit-test instances have no live database; production wiring requires
+   * the constructor-injected revision owner. Never use their results as release proof.
+   */
+  private void advancePublicationRevision() {
+    if (publicationRevision != null) publicationRevision.advanceBeforeMutation();
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public StandardField create(SemanticFieldApi.CreateRequest request, String operator) {
+    advancePublicationRevision();
     validateCode(request.code());
     validateName(request.name());
     validateRole(request.role());
@@ -168,6 +195,7 @@ public class SemanticFieldService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public StandardField update(SemanticFieldApi.UpdateRequest request, String operator) {
+    advancePublicationRevision();
     StandardField existing = get(request.id());
     validateName(request.name());
     validateRole(request.role());
@@ -224,6 +252,7 @@ public class SemanticFieldService {
   /** 启用/停用(约束 4 部分):停用字段不出现在字段集/绑定/派生。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public StandardField changeStatus(Long id, String status, String operator) {
+    advancePublicationRevision();
     StandardField existing = get(id);
     if (!StandardField.STATUS_ENABLED.equals(status)
         && !StandardField.STATUS_DISABLED.equals(status)) {
@@ -251,6 +280,7 @@ public class SemanticFieldService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void delete(Long id) {
+    advancePublicationRevision();
     StandardField existing = get(id);
     if (processFieldRepository.countByField(id) > 0) {
       throw new SemanticException(SemanticErrorCode.FIELD_REFERENCED, "存在业务过程引用");
@@ -293,6 +323,7 @@ public class SemanticFieldService {
   /** 过程绑定字段(is_required 驱动 44 默认勾选);停用字段拒绝绑定。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void bindToProcess(Long processId, Long fieldId, boolean isRequired, String operator) {
+    advancePublicationRevision();
     var process = processRepository
         .findById(processId)
         .orElseThrow(
@@ -323,6 +354,7 @@ public class SemanticFieldService {
   /** 过程移除字段引用。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void unbindFromProcess(Long processId, Long fieldId, String operator) {
+    advancePublicationRevision();
     var process = processRepository.findById(processId)
         .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
     StandardField field = get(fieldId);
@@ -371,6 +403,7 @@ public class SemanticFieldService {
   /** 更新过程字段是否必需。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void updateRequired(Long processId, Long fieldId, boolean required, String operator) {
+    advancePublicationRevision();
     var process = processRepository.findById(processId)
         .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
     var binding = processFieldRepository.bindingsByProcess(processId).stream()
@@ -399,6 +432,7 @@ public class SemanticFieldService {
   /** 过程字段重排序。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void reorderProcessFields(Long processId, List<Long> orderedFieldIds, String operator) {
+    advancePublicationRevision();
     var process = processRepository.findById(processId)
         .orElseThrow(() -> new SemanticException(SemanticErrorCode.NOT_FOUND, "业务过程不存在"));
     List<Long> currentIds = processFieldRepository.bindingsByProcess(processId).stream()
