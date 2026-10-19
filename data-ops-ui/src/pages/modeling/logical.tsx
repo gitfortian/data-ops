@@ -716,7 +716,8 @@ export default function LogicalWorkspace() {
     mappingDraft, handoffPreview, mappingSelections, mappingKinds,
   );
 
-  const selectedPreview = handoffPreview?.logicalModelId === selected
+  const selectedPreview = handoffPreview
+    && handoffPreview.logicalModelId === selected
     && handoffPreview.physicalModelId === physicalModelId ? handoffPreview : undefined;
   const reviewMatchesCurrent = Boolean(selectedPreview && reviewResult?.readyForManualDesign
     && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
