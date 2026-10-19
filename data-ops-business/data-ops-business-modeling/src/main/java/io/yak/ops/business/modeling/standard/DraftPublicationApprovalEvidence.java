@@ -111,7 +111,7 @@ public final class DraftPublicationApprovalEvidence {
         || !DraftPublicationEvidenceVerifier.PROPOSED_ALGORITHM.equals(
             candidate.semanticDigestAlgorithm())
         || !validHash(candidate.semanticEvidenceSha256())
-        || candidate.columns() == null || candidate.columns().isEmpty()) {
+        || !DraftPublicationEvidenceVerifier.internallyConsistent(candidate)) {
       return null;
     }
     return candidate;
