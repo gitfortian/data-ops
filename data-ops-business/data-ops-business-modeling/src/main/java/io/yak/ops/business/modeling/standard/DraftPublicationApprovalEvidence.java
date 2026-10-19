@@ -71,8 +71,8 @@ public final class DraftPublicationApprovalEvidence {
     if (frozen == null || !validBinding(frozen.binding())
         || !validHash(frozen.approvalEvidenceSha256())
         || !PROPOSAL.equals(frozen.freezeAlgorithm())
-        || !validCandidate(frozen.binding(), new Evaluation(
-            Verdict.VALID_CANDIDATE, "frozen proposal", frozen.standards()))) {
+        || validCandidate(frozen.binding(), new Evaluation(
+            Verdict.VALID_CANDIDATE, "frozen proposal", frozen.standards())) == null) {
       return new Comparison(Result.UNKNOWN, "审批冻结证据未建立或已损坏");
     }
     if (!Objects.equals(frozenDigest(frozen.binding(), frozen.standards()),
