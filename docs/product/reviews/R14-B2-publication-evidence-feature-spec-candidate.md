@@ -32,8 +32,9 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 
 ## 已进入开发的 T1 / T2 第一段代码（不等于生产集成）
 
-- `semantic.api.PublicationStandardEvidenceApi`：新增正式领域边界的只读批量 SPI **类型合同**，包含完整请求列、STANDARD FIELD/TYPE/UNIT/CALIBER/CODE/SECURITY 最小脱敏证据、项目作用域、状态/摘要/算法/语义修订；尚无提供可信 revision 的生产实现与真实授权上下文，不对外宣称可以返回 VALID。
+- `semantic.api.PublicationStandardEvidenceApi`：已有只读批量 SPI 类型合同。新增 `semantic.catalog.PublicationStandardEvidenceService` 作为**开发阶段的真实 Semantic Catalog 快照读取实现**：在可信项目和持久 revision `FOR UPDATE` 行锁下按物理列全集读取实际 `StandardField`、TYPE/UNIT/CALIBER、完整 CODE 成员摘要，输出逐列证据和规范 SHA；跨项目/请求不完整/缺标准/不匹配/部分禁用/DB 失败返回 `UNKNOWN` 或 `BLOCKED`。类型 `VALID` **只表示当前读事务内语义证据有效，不代表 Security 许可、审批授权或新模型发布资格**。当存在 SECURITY 引用且缺可信授权纪元时返回 `UNKNOWN`，不保存明文脱敏规则。服务尚未接进正式发布/审批入口，不能宣称 T1/T2/T3 完成。
 - `PublicationStandardEvidenceApiTest`：验证 DTO 列与返回证据的防御性复制、缺失列表拒绝、`UNKNOWN` 不伪造修订或摘要。
+- `PublicationStandardEvidenceServiceTest`：9 个当前事实读取专项场景，覆盖逐列证据与 revision 身份、跨项目不读取、无标准技术列 BLOCKED、物理重复列 UNKNOWN、部分停用码集 BLOCKED、码集全成员 SHA 漂移、SECURITY 引用无可信授权纪元 UNKNOWN、修订查询失败和物理类型不匹配。属于 Catalog 单元证据，**不能替代** MySQL/PG 多事务证明或 P01–P18 发布验收。
 - `DatabaseMigrationSmokeTest.b2ModelingAndSemanticMappersShareRealBusinessTransactionOnMySql`：新增在**隔离 MySQL Spring 容器**中核验两个实际 MyBatis Mapper 的底层 DataSource、一致 `yakBusinessTransactionManager` 和事务内共享 JDBC 连接的第一道 T2-A 准入测试。**此测试通过仍不证明修订行锁顺序、全部 Semantic 写入口覆盖、授权源和发布并发 fence；T2 未达到完整准入。**
 - **T1 持久事实首段：** 两套 Flyway V3（与既存 F-039 V2 区分；已修复 Flyway 版本冲突）（`db/migration/yak-semantic/V3__r14_b2_semantic_publication_revision.sql` 与 `db/migration-postgresql/yak-semantic/V3__r14_b2_semantic_publication_revision.sql`）建立项目级 `yak_semantic_publication_revision(project_id, revision_no, update_time)`，对已有 Standard/StandardField 项目初始化 revision=1，不改变已发布模型历史；仅隔离 Draft 分支，尚未经最新 MySQL/PostgreSQL 全量 CI 验证。
 - `SemanticPublicationRevisionService.advanceBeforeMutation()`：T1 的真实持久修订写入服务。从可信 `CurrentProject` 取项目 ID，强制已有业务事务与实际 `yakBusinessDataSource` 连接绑定；为新项目创建修订行，在同一事务中取得 `FOR UPDATE` 项目锁、检查旧 revision 并递增。支持 MySQL/PostgreSQL upsert，事务失败回滚修订；缺 DB、可信项目或事务则 fail closed。尚不是发布 fence。
