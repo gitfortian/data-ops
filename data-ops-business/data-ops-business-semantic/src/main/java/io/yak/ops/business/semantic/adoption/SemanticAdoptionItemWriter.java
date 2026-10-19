@@ -17,6 +17,7 @@ import io.yak.ops.business.semantic.catalog.StandardCatalogService;
 import io.yak.ops.business.semantic.binding.SemanticProcessBindingService;
 import io.yak.ops.business.semantic.domain.BusinessDomainService;
 import io.yak.ops.business.semantic.field.SemanticFieldService;
+import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.business.semantic.process.BusinessProcessService;
 import io.yak.ops.common.constant.semantic.SemanticPermissionCode;
 import io.yak.ops.core.project.CurrentProject;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,15 +49,28 @@ public class SemanticAdoptionItemWriter {
   private final SemanticProcessBindingService bindings;
   private final CurrentProject currentProject;
   private final SourceSchemaAdoptionProof source;
+  private final SemanticPublicationRevisionService publicationRevision;
 
+  @Autowired
+  public SemanticAdoptionItemWriter(AdoptionReceiptMapper receipts,
+      BusinessDomainService domains, BusinessProcessService processes,
+      SemanticFieldService fields, StandardCatalogService standards,
+      SemanticProcessBindingService bindings, CurrentProject currentProject,
+      SourceSchemaAdoptionProof source,
+      SemanticPublicationRevisionService publicationRevision) {
+    this.receipts=receipts;this.domains=domains;this.processes=processes;
+    this.fields=fields;this.standards=standards;this.bindings=bindings;
+    this.currentProject=currentProject;this.source=source;
+    this.publicationRevision=publicationRevision;
+  }
+
+  /** Legacy focused test constructor only; real Spring wiring requires the revision owner. */
   public SemanticAdoptionItemWriter(AdoptionReceiptMapper receipts,
       BusinessDomainService domains, BusinessProcessService processes,
       SemanticFieldService fields, StandardCatalogService standards,
       SemanticProcessBindingService bindings, CurrentProject currentProject,
       SourceSchemaAdoptionProof source) {
-    this.receipts=receipts;this.domains=domains;this.processes=processes;
-    this.fields=fields;this.standards=standards;this.bindings=bindings;
-    this.currentProject=currentProject;this.source=source;
+    this(receipts,domains,processes,fields,standards,bindings,currentProject,source,null);
   }
 
   public Receipt find(long project,String taskId,String candidateId) {
@@ -139,6 +154,14 @@ public class SemanticAdoptionItemWriter {
     source.assertCurrent(request.evidence());
     var old=stored(request.projectId(),request.taskId(),candidate.id());
     if(old!=null) return replay(request,candidate,old);
+    // F-039 UNIQUE receipt reservation was previously taken before Semantic's
+    // revision row, violating T2's global lock order when a second writer
+    // already held that row. For a NEW candidate, acquire the project revision
+    // before the receipt insert and all downstream Semantic writes, in this
+    // same business transaction. Old committed receipt replay remains read-only.
+    // Every successful new receipt advances the revision; this is conservative
+    // for REUSED outcomes, but cannot hide a newly adopted business fact.
+    if(publicationRevision!=null) publicationRevision.advanceBeforeMutation();
     String actor=Long.toString(request.userId());
     var rec=new AdoptionReceiptPO();
     rec.setReceiptId(UUID.randomUUID().toString());
