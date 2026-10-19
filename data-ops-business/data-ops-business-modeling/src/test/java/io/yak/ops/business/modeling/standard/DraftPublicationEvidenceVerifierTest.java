@@ -40,12 +40,12 @@ class DraftPublicationEvidenceVerifierTest {
   }
 
   private static Request request(String layerCode) {
-    return new Request(701L, layerCode, STRUCTURE_SHA,
+    return new Request(7L, 701L, layerCode, STRUCTURE_SHA,
         List.of(orderId(), statusColumn()));
   }
 
   private static Observation observation(String layerCode, List<ColumnFact> facts) {
-    return new Observation(layerCode, STRUCTURE_SHA, "VALID",
+    return new Observation(7L, 701L, layerCode, STRUCTURE_SHA, "VALID",
         DraftPublicationEvidenceVerifier.PROPOSED_ALGORITHM, SEMANTIC_SHA,
         "semantic-observation-v1", facts);
   }
@@ -82,7 +82,7 @@ class DraftPublicationEvidenceVerifierTest {
 
   @Test
   void missingStandardFieldEvenForTechnicalColumnIsBlocked() {
-    var draft = new Request(701L, "DWD", STRUCTURE_SHA,
+    var draft = new Request(7L, 701L, "DWD", STRUCTURE_SHA,
         List.of(orderId(), new ColumnRequest("process_time", "TIMESTAMP", null)));
     var result = verify(draft, observation("DWD", List.of(orderEvidence())));
     assertThat(result.verdict()).isEqualTo(Verdict.BLOCKED);
@@ -104,9 +104,9 @@ class DraftPublicationEvidenceVerifierTest {
   void semanticOwnerBlockedOrUnavailableDoesNotProduceAValidCandidate() {
     var facts = List.of(orderEvidence(), statusEvidence());
     var base = observation("DWD", facts);
-    var blocked = new Observation("DWD", STRUCTURE_SHA, "BLOCKED",
+    var blocked = new Observation(7L, 701L, "DWD", STRUCTURE_SHA, "BLOCKED",
         base.digestAlgorithmId(), SEMANTIC_SHA, base.consistencyToken(), facts);
-    var unavailable = new Observation("DWD", STRUCTURE_SHA, "UNKNOWN",
+    var unavailable = new Observation(7L, 701L, "DWD", STRUCTURE_SHA, "UNKNOWN",
         base.digestAlgorithmId(), SEMANTIC_SHA, base.consistencyToken(), facts);
 
     assertThat(verify(request("DWD"), blocked).verdict()).isEqualTo(Verdict.BLOCKED);
@@ -117,13 +117,36 @@ class DraftPublicationEvidenceVerifierTest {
   @Test
   void foreignStructureAndWrongLayerEvidenceFailClosed() {
     var good = observation("DWD", List.of(orderEvidence(), statusEvidence()));
-    var otherLayer = new Observation("DIM", STRUCTURE_SHA, "VALID",
+    var otherLayer = new Observation(7L, 701L, "DIM", STRUCTURE_SHA, "VALID",
         good.digestAlgorithmId(), SEMANTIC_SHA, good.consistencyToken(), good.columns());
-    var changedStructure = new Observation("DWD", "e".repeat(64), "VALID",
+    var changedStructure = new Observation(7L, 701L, "DWD", "e".repeat(64), "VALID",
         good.digestAlgorithmId(), SEMANTIC_SHA, good.consistencyToken(), good.columns());
 
     assertThat(verify(request("DWD"), otherLayer).verdict()).isEqualTo(Verdict.UNKNOWN);
     assertThat(verify(request("DWD"), changedStructure).verdict()).isEqualTo(Verdict.UNKNOWN);
+  }
+
+  @Test
+  void mismatchedProjectOrModelProviderEvidenceIsUnknownAndNeverFrozen() {
+    Observation valid = observation("DWD", List.of(orderEvidence(), statusEvidence()));
+    Observation foreignProject = new Observation(8L, 701L, "DWD", STRUCTURE_SHA,
+        "VALID", valid.digestAlgorithmId(), SEMANTIC_SHA, valid.consistencyToken(),
+        valid.columns());
+    Observation foreignModel = new Observation(7L, 702L, "DWD", STRUCTURE_SHA,
+        "VALID", valid.digestAlgorithmId(), SEMANTIC_SHA, valid.consistencyToken(),
+        valid.columns());
+
+    assertThat(verify(request("DWD"), foreignProject).verdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(verify(request("DWD"), foreignModel).verdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(verify(request("DWD"), foreignProject).snapshot()).isNull();
+    assertThat(verify(request("DWD"), foreignModel).snapshot()).isNull();
+
+    var validCandidate = verify(request("DWD"), valid).snapshot();
+    assertThat(validCandidate.projectId()).isEqualTo(7L);
+    assertThat(validCandidate.modelId()).isEqualTo(701L);
+    var missingProject = new Request(0L, 701L, "DWD", STRUCTURE_SHA,
+        List.of(orderId(), statusColumn()));
+    assertThat(verify(missingProject, valid).verdict()).isEqualTo(Verdict.UNKNOWN);
   }
 
   @Test
@@ -162,11 +185,11 @@ class DraftPublicationEvidenceVerifierTest {
   void incompleteDigestAlgorithmAndConsistencyTokenAreUnknown() {
     var facts = List.of(orderEvidence(), statusEvidence());
     for (Observation malformed : List.of(
-        new Observation("DWD", STRUCTURE_SHA, "VALID", "LEGACY_UNKNOWN", SEMANTIC_SHA,
+        new Observation(7L, 701L, "DWD", STRUCTURE_SHA, "VALID", "LEGACY_UNKNOWN", SEMANTIC_SHA,
             "token", facts),
-        new Observation("DWD", STRUCTURE_SHA, "VALID",
+        new Observation(7L, 701L, "DWD", STRUCTURE_SHA, "VALID",
             DraftPublicationEvidenceVerifier.PROPOSED_ALGORITHM, SEMANTIC_SHA, "", facts),
-        new Observation("DWD", STRUCTURE_SHA, "VALID",
+        new Observation(7L, 701L, "DWD", STRUCTURE_SHA, "VALID",
             DraftPublicationEvidenceVerifier.PROPOSED_ALGORITHM, null, "token", facts))) {
       assertThat(verify(request("DWD"), malformed).verdict()).isEqualTo(Verdict.UNKNOWN);
     }
@@ -189,7 +212,7 @@ class DraftPublicationEvidenceVerifierTest {
     assertThat(drift.snapshot().candidateDigestSha256())
         .isNotEqualTo(result.snapshot().candidateDigestSha256());
 
-    var changedToken = new Observation("DWD", STRUCTURE_SHA, "VALID",
+    var changedToken = new Observation(7L, 701L, "DWD", STRUCTURE_SHA, "VALID",
         base.digestAlgorithmId(), SEMANTIC_SHA, "token-after-change", base.columns());
     assertThat(verify(request("DWD"), changedToken).snapshot().candidateDigestSha256())
         .isNotEqualTo(result.snapshot().candidateDigestSha256());
@@ -197,10 +220,10 @@ class DraftPublicationEvidenceVerifierTest {
 
   @Test
   void invalidOrDuplicateTargetColumnsCannotBeTreatedAsAFullSet() {
-    var duplicate = new Request(701L, "DWD", STRUCTURE_SHA,
+    var duplicate = new Request(7L, 701L, "DWD", STRUCTURE_SHA,
         List.of(orderId(), new ColumnRequest("ORDER_ID", "BIGINT", 11L)));
     assertThat(verify(duplicate, null).verdict()).isEqualTo(Verdict.UNKNOWN);
-    var empty = new Request(701L, "DWD", STRUCTURE_SHA, List.of());
+    var empty = new Request(7L, 701L, "DWD", STRUCTURE_SHA, List.of());
     assertThat(verify(empty, null).verdict()).isEqualTo(Verdict.UNKNOWN);
   }
 }
