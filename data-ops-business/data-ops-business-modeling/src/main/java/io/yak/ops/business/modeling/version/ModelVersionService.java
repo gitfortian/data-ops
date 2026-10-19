@@ -151,7 +151,8 @@ public class ModelVersionService {
       // its last published pointer. Re-publishing identical content must restore
       // PUBLISHED even when the version ID is already equal to that pointer.
       if (model.status() != ModelStatus.PUBLISHED
-          || !java.util.Objects.equals(model.publishedVersionId(), latest.id())) {
+          || !java.util.Objects.equals(model.publishedVersionId(), latest.id())
+          || !java.util.Objects.equals(model.latestVersionNo(), latest.versionNo())) {
         requireUpdatedPublishPointer(modelId, latest.id(), latest.versionNo(), operator);
       }
       return new PublishResult(latest, false);
