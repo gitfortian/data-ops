@@ -56,6 +56,13 @@
 
 Semantic 的项目事实修订不能替代 Security 授权修订。Security 至少提供可信服务端 `subject/scopeDigest + authorizationRevision` 和授权回调重检，主体/角色/权限范围变更即撤销原审批资格；不能客户端自行签发或回传自由文本纪元。若权限源不在共享业务事务，Security 必须批准可验证的授权 fence/有效性策略；在缺少该能力时 **UNKNOWN fail-closed**，不可宣称严格消除了提交竞态。日志/ModelVersion 元数据仅存必要安全摘要、判断代码，不保存令牌原文、敏感规则或明文策略。
 
+### R1 T2-A 实测进展及待验收项（2026-10-19）
+
+- **已合并前 CI 验证的事实：** `c786f2c9` 与 `b8871d64` 各自四组 GitHub Checks 全绿；`DatabaseMigrationSmokeTest` 在具备隔离 MySQL 环境的 Architecture job 中实际执行 11 项，包含共用 `yakBusinessDataSource` / 两个 MyBatis Mapper / 同一 `yakBusinessTransactionManager` 的运行时身份核验、T1 修订行迁移/回滚/ABA/并发自增测试。证明的是**CI 部署下共用数据源与 Semantic 写方本身的锁**，不构成生产配置或跨域安全保证。
+- **本次新增、独立待 CI 的读写互斥：** `SemanticPublicationRevisionService.lockExistingForReview()` 只在可信项目的真实业务事务中用 `SELECT ... FOR UPDATE` 读取已存在项目 revision，**不补造缺失行、不提供发布资格**；`b2PublicationRevisionObservationBlocksConcurrentMutationUntilCommit` 在真实隔离 MySQL 双事务中持有观察行锁时，断言另一事务不能提交修订写入，释放后才能自增。该测试只能证明同项目修订行的数据库互斥性，并不能证明其他 Semantic 表快照、Modeling 根锁、Security 撤权均已纳入同一 fence。
+- **F-039 代码审查：** `SemanticAdoptionItemWriter.apply` 针对 `FIELD` 使用 `fields.create`，针对 `PROCESS_FIELD` 使用 `fields.bindToProcess`，进入当前已接修订推进的 `SemanticFieldService`；已成功回执的幂等重放不执行新字段变更。F-039 的 `SOURCE_LINK` 调用 `SemanticProcessBindingService` 改变来源绑定，属独立业务来源语义，需要明确是否影响 B2 发布适用标准并决定是否加入修订协议。
+- **尚未证明 T2 GO：** 依旧缺 Modeling 实际根锁→Semantic 项目修订行锁、Semantic 项目修订行锁→跨模块引用查询的**端到端资源锁关系**证明。特别是 `StandardCatalogService.delete/changeStatus` 在修订锁之后检查 Modeling 等消费者引用，必须证明消费者只读不会获得逆向根锁，或调整统一锁序再提交真实双 Worker 竞态测试。即使本次 MySQL 行锁互斥测试通过也不得自动打开 #635 生产接线、提交 fence 或审批资格。
+
 ## 3. 四入口统一执行顺序（正式实现验收要证明）
 
 1. **常规直接**：`ModelVersionService.publish` → root lock → 真实结构快照 → 共同 validator/fence → 原 DWS 等分层校验 → 标准身份参与幂等复用/新版本 → 原子提交。
