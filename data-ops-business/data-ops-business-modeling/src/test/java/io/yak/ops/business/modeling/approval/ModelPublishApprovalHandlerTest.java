@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,6 +59,57 @@ class ModelPublishApprovalHandlerTest {
     handler.onApproved(decision(payload));
     verify(publisher).publishApproved(42L, 501L, "c".repeat(64), fingerprint, "tom");
     verify(versionService, never()).publishApproved(anyLong(), anyString(), anyString());
+  }
+
+  @Test
+  void legacyApprovalCannotPublishAnotherModelFromPayload() {
+    String payload = """
+        {"modelId":43,"structureFingerprint":"%s"}
+        """.formatted("a".repeat(64));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
+    verifyNoInteractions(versionService, publisher);
+  }
+
+  @Test
+  void mappedApprovalCannotPublishAnotherModelFromPayload() {
+    String payload = """
+        {"modelId":43,"structureFingerprint":"%s",
+         "mappingRevisionId":501,"mappingContentSha256":"%s"}
+        """.formatted("a".repeat(64), "b".repeat(64));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
+    verifyNoInteractions(versionService, publisher);
+  }
+
+  @Test
+  void approvalTargetRequiresCanonicalBusinessIdAndExpectedFlowAndType() {
+    String payload = """
+        {"modelId":42,"structureFingerprint":"%s"}
+        """.formatted("a".repeat(64));
+    var wrongBusinessType = new ApprovalDecision(7L, ApprovalFlowCodes.MODEL_PUBLISH,
+        "TASK", "42", payload, "tom", "carol", "LGTM", LocalDateTime.now());
+    var wrongFlow = new ApprovalDecision(7L, "OTHER_FLOW",
+        "MODEL", "42", payload, "tom", "carol", "LGTM", LocalDateTime.now());
+    var nonCanonicalId = new ApprovalDecision(7L, ApprovalFlowCodes.MODEL_PUBLISH,
+        "MODEL", "042", payload, "tom", "carol", "LGTM", LocalDateTime.now());
+    var missingId = new ApprovalDecision(7L, ApprovalFlowCodes.MODEL_PUBLISH,
+        "MODEL", null, payload, "tom", "carol", "LGTM", LocalDateTime.now());
+
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(wrongBusinessType));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(wrongFlow));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(nonCanonicalId));
+    assertThrows(IllegalStateException.class, () -> handler.onApproved(missingId));
+    verifyNoInteractions(versionService, publisher);
+  }
+
+  @Test
+  void invalidOrNonPositivePayloadModelIdDoesNotDispatch() {
+    String digest = "a".repeat(64);
+    for (String badId : new String[] {"0", "-1", "42.5", "\"42\"", "null"}) {
+      String payload = "{\"modelId\":" + badId
+          + ",\"structureFingerprint\":\"" + digest + "\"}";
+      assertThrows(IllegalStateException.class, () -> handler.onApproved(decision(payload)));
+    }
+    verifyNoInteractions(versionService, publisher);
   }
 
   @Test
