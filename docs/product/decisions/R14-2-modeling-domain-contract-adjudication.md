@@ -210,3 +210,107 @@ PR #621 的确定增量是将完整成员状态显式投影为全部启用/混�
 - **Security Owner：** 签收跨项目隔离、权限撤销、UNKNOWN 拒绝、字段级可见性及 SECURITY 脱敏边界。
 - **Product Owner：** 签收 ODS 例外、非 ODS 零技术列豁免、草稿可保存但正式发布硬阻断、历史兼容政策。
 - **状态保持：** 本节不把建议 API 视为批准合同；不改变 DR-06、DR-07、PD-010 状态，不开启 Feature Flag，不新增默认允许的目标写策略，不执行 SQL/DDL 或真实目标写入。
+
+## 10. DR-06 + PD-010 签收前实施合同冻结包（2026-10-19，供 Owner 决策）
+
+**状态：PROPOSED / NO_WRITE_AUTHORIZATION。** 本节是将第 9 节的方向转为**可逐项签收、可映射至纵向 PR 的候选合同**，并非已批准 API、实际 schema、已执行测试或生产 Feature Flag。实施时须以真实 Owner 批准的最终合同为准。本次最新只读基线已包含 PR #621–#626；其中 #626 合并提交 `4e4f48712395b7afe3e9e4bb2b9b23c920a4a585` 改变了当前 CODE 内容摘要的计算字段，但**未**建立发布时历史快照。
+
+### 10.1 先收紧“批准什么”：最小正式决策切片
+
+| 决策切片 | Product 选择建议 | 所需正式签收 | 不随本切片自动获准的内容 |
+|---|---|---|---|
+| PD-010/D4：标准发布硬门禁 | **推荐批准**：非 ODS 新发布必须逐列绑定有效 StandardField 和所有适用数据标准；草稿允许缺口；ODS 贴源例外；首期零未批准技术列豁免 | Product、Semantic、Modeling、Security | PD-010 D1/D2/D3/D5/D6 全部导航与业务流程并不因此自动获准 |
+| DR-06/S1：精确证据与事务发布 | **推荐批准**：沿用真实逻辑版本身份，MappingRevision/PhysicalStructure/StandardEvidence 共同冻结、CAS、历史不可变 | Modeling、Semantic、Security | JOIN、SCD、复杂聚合、多来源加工；不猜测补旧历史 |
+| DR-07/S2：任务交接与写入 | **保持待决策**：独立评审 TargetPolicy、幂等、UNKNOWN 与目标数据对账 | Modeling、DataDev、Runtime、Security | S1 的成功不等于 SQL 执行授权；DWD-only 不能直接推广各层 |
+
+**禁止自动扩权：** 产品方向认可、Issue 评论、文档 PR 合并或 CI PASS 均不代替上述各角色的 `ACCEPT / REVISE / REJECT`。如不能拆分 PD-010/D4 独立批准，应维持 PD-010 整体 `PROPOSED`，不得自行启用门禁。旧版保持按既有权限只读，不能将旧数据版本自动重算为新规则已通过。
+
+### 10.2 建议冻结的 Semantic SPI（只读、非最终 Java 声明）
+
+建议合同 `validateStandardFieldsForPublication(request): result`；必须由 Semantic Owner 确认最终接口名、入参 DTO、注入式项目/授权上下文和并发一致性约束。
+
+**请求字段：**
+
+- `layerCode`：仅允许 `DWD / DIM / DWS / ADS`；`ODS` 由 Modeling 明确走贴源例外，不得以传入的伪造 layer 绕过。
+- `physicalModelId` / `physicalStructureSha256`：由 Modeling 在持有当前模型锁后生成；外部提交的结构摘要不得代替当前结构。
+- `columns[]`：规范目标列身份（大小写/方言规范需有明确算法）、`stdFieldId`、目标物理类型、目标语义角色；结构列集合必须完整，不可由调用方只传“合规列子集”。
+- `project/authContext` **不由客户端指定或信任**：Semantic 使用服务端当前项目与授权上下文判断标准可见性；对其他项目对象返回安全的拒绝/不可访问语义，不泄露是否存在及其敏感详情。
+
+**结果字段（提议）：**
+
+| 字段 | 语义与边界 |
+|---|---|
+| `verdict = VALID / BLOCKED / UNKNOWN` | 仅 `VALID` 可进入发布；标准缺失/停用/不适用可明确 `BLOCKED`，Provider 错误/查询非完整一致/项目或权限无法确认必须 `UNKNOWN` 且 fail-closed |
+| `columnResults[]` | 对请求的每个目标列一一返回身份与状态；漏列、重复身份或响应字段不足不得解释成通过 |
+| `findings[]` | 可定位字段、具体原因及可审计错误码；跨项目、权限撤销、SECURITY 定义须经脱敏，不向无权用户泄露内容 |
+| `standardEvidenceSha256` | 规范序列化后的字段级当前证据聚合摘要；必须绑定 digest schema/algorithm version、项目作用域、结构身份和适用标准的精确版本 |
+| `fieldEvidenceSnapshot[]` | 仅可安全冻结的字段身份、标准字段/类型/单位/口径/码集/安全标准 Ref、版本、状态及必要摘要；禁止 `maskRule` 原文或越权数据 |
+| `consistencyToken / observedRevision` | **待 Semantic Owner 定稿**：一次批量验证的观察一致性与发布前并发复核能力；不能只凭跨模块数据库事务宣称标准绝不会并发变更 |
+
+**建议失败映射：** `MISSING_STANDARD_FIELD`、`DISABLED_STANDARD_FIELD`、`STANDARD_CATEGORY_MISMATCH`、`ROLE_INCOMPATIBLE`、`REQUIRED_STANDARD_MISSING`、`CODE_SET_INCOMPLETE`、`STANDARD_CHANGED`、`FOREIGN_OR_INACCESSIBLE`、`PROVIDER_UNKNOWN`。这些仅为评审候选，不视为已发布的枚举/API。
+
+### 10.3 Modeling 唯一发布闸门：四条路径同一事务合同
+
+**建议共用调用点：** 模型根锁 + 当前结构取样完成之后，任何版本复用、幂等返回、版本写入及发布指针更新之前。先判定 ODS 合法例外，再对 DWD/DIM/DWS/ADS 逐列执行 Semantic SPI；Modeling 随后核验物理类型、映射/版本和分层专属合同，只有全部通过才允许写入版本。
+
+| 入口 | 审批前冻结/发布时必需动作 | 禁止旁路 |
+|---|---|---|
+| legacy 直接发布 | 在共享 `publishLocked` 边界验证全列标准、结构与当前角色；写入标准证据摘要和安全快照 | 旧版结构一致的版本复用不得绕过标准校验 |
+| legacy 审批回调 | 提交审批冻结结构与标准摘要；回调重新验证并比较，未通过则拒绝本次发布并要求重新送审 | 仅比较结构指纹不够 |
+| DWD MappingRevision 直接发布 | 同上并额外核验 MappingSet ID / append-only Revision ID / mapping content SHA / logical snapshot SHA / physical structure SHA | 有映射证据不等于标准校验合格 |
+| DWD MappingRevision 审批回调 | 审批 payload 同时冻结上述映射身份与标准摘要；回调重新核验两类证据 | 不允许把审批时的旧“VALID”复用为回调时的“VALID” |
+
+- **发布事务的原子性：** 发布前 validator 判定、版本新增/复用、标准安全快照、映射版本引用与发布指针更新要在 Modeling Owner 定义的同一持久提交边界中失败回滚。Semantic 跨域读必须采用已签收的观察一致性/再核验合同。
+- **历史/回滚：** 已发布旧版本缺证据时以 `LEGACY_UNBOUND` / 证据不足状态安全展示，不自动补链或重写。回滚到草稿不携带“历史已验证”捷径，重新发布时重新校验。
+- **跨层：** 统一 StandardField/数据标准验证适用于 DWD/DIM/DWS/ADS；DWS 粒度、精确上游、指标版本及 ADS 消费/授权仍由各自领域合同独立裁决。旧接口/批量/复制若最终可触发正式发布，必须路由到相同闸门。
+- **先审查后发布：** 未完成明确的 Semantic `VALID`、映射合同或分层合同，严禁以“草稿可以保存”为由将模型标记为已发布。正式授权前不得实际接入/开启此新闸门。
+
+### 10.4 #626 后摘要算法兼容与冻结语义：签收必须回答
+
+PR #626 的 `CodeSetRevision` 已改为排除 `createdBy/createTime/updateTime` 的成员内容投影。**相同码集在新旧算法下的 SHA 可能不同；两个长度均为 64 的 SHA 字符串不能说明同一语义。**
+
+建议由 Semantic Owner 决定并在正式 SPI 结果中冻结 `digestAlgorithmId`（例如评审标识 `CODE_MEMBER_CONTENT_V2`；**不声明当前 API 已有该字段**）和字段顺序/空值规范。发布时的安全快照同时保存算法标识、成员总数、启用数、成员/状态/定义摘要与标准版本；后续回读只依赖当时的历史快照，不使用今日码集事实重算历史发布 SHA。
+
+- 旧无算法标识或无字段证据的版本保持 `LEGACY_UNBOUND` / 不可比较，不推断其 SHA 可按 V2 复核。
+- 审计元数据仅作审计事实；标准版本变化、CODE 成员集合/状态/标签/排序或定义变化必须产生可观察漂移。
+- 变更缓存或审批 token 的兼容策略（拒绝并重新送审 / 明确的版本转换）由 Owner 定稿，不可静默迁移。
+- SECURITY 等敏感标准仅冻结可授权的级别/必要哈希，不向前端或快照保存脱敏规则原文。
+
+### 10.5 一次纵向 PR 的验收清单（获准前不得开生产写入）
+
+| ID | 自动化用例 | 必须核实的结果 |
+|---|---|---|
+| P01 | DWD / DIM / DWS / ADS 各自全部合法字段，标准有效 | `VALID`，发布版本固定证据和精确物理身份；层级专项门禁仍生效 |
+| P02 | 非 ODS 任一目标列未绑标准，包括技术列 | BLOCKED；不允许将缺口草稿发布 |
+| P03 | 目标列 / 标准字段角色不兼容、类型不合 | BLOCKED；明确定位列与角色，物理层类型同时核验 |
+| P04 | 引用 TYPE/UNIT/CALIBER/SECURITY 停用、缺失、类别不符或定义不足 | BLOCKED，安全屏蔽敏感原始定义 |
+| P05 | CODE 成员 MIXED、DISABLED、NOT_FOUND 或版本/摘要漂移 | BLOCKED 或按获准策略重新审阅，不接受“至少一项启用” |
+| P06 | 标准服务超时、抛异常、无权限、部分响应/证据 SHA 缺失 | UNKNOWN/fail-closed；无发布版本/指针写入 |
+| P07 | 另一项目的同名标准或 CODE 存在、当前项目不可见 | 不泄露成员计数/定义、不跨项目验收 |
+| P08 | 原模型/物理结构或 MappingRevision 被并发修改（CAS、重复回调） | 拒绝冲突/幂等安全回读；不双重发布 |
+| P09 | 审批后标准被停用、修订或 CODE 内容改变 | 回调拒绝旧审批；标准摘要比较失败 |
+| P10 | 审批后物理结构/逻辑快照/映射内容变化 | 回调拒绝旧审批；不静默重绑 |
+| P11 | 同结构不同标准证据/映射修订重发布 | 不能错误复用旧发布身份 |
+| P12 | legacy 直接/审批 + DWD 映射直接/审批共四入口 | 均调用相同领域验证器；代码与集成测试证明不存在绕过 |
+| P13 | ODS 明确贴源例外 | 不强制业务标准绑定，仍保持来源与原有权限/结构验证 |
+| P14 | 旧历史版本详情、恢复草稿、新发布 | 历史只读不自动补证据；恢复后的新发布必须重新验证 |
+| P15 | SECURITY level、遮蔽规则与越权报错 | 不向前端/持久快照暴露 `maskRule` 或他项目信息 |
+| P16 | CODE 审计元数据变化与算法版本切换 | 元数据变化不改变 V2 内容 SHA；旧未标算法摘要不可假定等价 |
+| P17 | Semantic 校验与 Modeling 提交之间存在标准并发变化 | 按获准的一致性/再验证策略拒绝或确定性冻结，不制造“假原子性” |
+| P18 | 未启用授权 / DR-07 未获准环境 | 不创建 TaskRevision，不调用 Runtime，不执行 SQL/DDL，不向目标数据源写入 |
+
+**CI 与真实验收分离：** 纵向 PR 应运行受影响后端/前端、MySQL + PostgreSQL 迁移与项目隔离集成、Product Guard、Architecture Gate、分发检查；CI PASS 不等于真实数据对账。订单明细真实业务键、行数、取消/支付口径、目标连接授权与质量/消费证据需由真实环境/业务 Owner 单独签收。
+
+### 10.6 逐域 Owner 签收模板（当前全部未记录）
+
+| 决策 | Owner 角色 | 待回复内容 | 当前状态 |
+|---|---|---|---|
+| DR-06 | Modeling | 映射身份/CAS、ModelVersion 事务、四发布入口、结构身份、旧历史回读 | **NOT_RECORDED** |
+| DR-06 / PD-010 | Semantic | 批量标准验证 SPI、适用标准与角色、并发一致性、CODE 摘要算法版本 | **NOT_RECORDED** |
+| DR-06 / PD-010 | Security | 当前项目授权、权限撤销、UNKNOWN、SECURITY 脱敏与快照安全 | **NOT_RECORDED** |
+| PD-010 D4 | Product | ODS 例外、非 ODS 全列、技术列零未批豁免、草稿/发布分离、旧历史策略 | **DIRECTION_ACCEPTED_ONLY** |
+| DR-07 | Modeling / DataDev / Runtime / Security | 精确 TaskRevision 与 TargetPolicy、不可重放 UNKNOWN 和目标对账分离 | **NOT_RECORDED** |
+
+每位真实 Owner 应在 [#556](https://github.com/gitfortian/data-ops/issues/556)、[#557](https://github.com/gitfortian/data-ops/issues/557) 或对应 PD 正式决策记录中注明：`ROLE: <role> / DECISION: ACCEPT|REVISE|REJECT / VERSION: this review revision / CONDITIONS: ... / EVIDENCE: ...`。不可由开发代理代签或把本文件合并视作批准。
+
+**进入代码门槛：** 收到 DR-06 和 PD-010 所需真实批准及适用标准一致性方案后，才实施唯一的非 ODS 标准发布 validator 纵向 PR；DR-07/目标写策略与真实 SQL 仍独立受控。任何一项拒绝、权限不明确或待修订均继续 `NO_WRITE_AUTHORIZATION`。
