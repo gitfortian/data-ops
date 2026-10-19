@@ -91,6 +91,17 @@ public class SemanticFieldService {
       SemanticProcessRepository processRepository,
       SemanticStandardRepository standardRepository,
       BusinessAuditService auditService,
+      List<SemanticFieldReferenceReader> referenceReaders) {
+    this(repository, processFieldRepository, processRepository, standardRepository,
+        auditService, referenceReaders, null);
+  }
+
+  SemanticFieldService(
+      SemanticFieldRepository repository,
+      SemanticProcessFieldRepository processFieldRepository,
+      SemanticProcessRepository processRepository,
+      SemanticStandardRepository standardRepository,
+      BusinessAuditService auditService,
       List<SemanticFieldReferenceReader> referenceReaders,
       SemanticPublicationRevisionService publicationRevision) {
     this.repository = repository;
