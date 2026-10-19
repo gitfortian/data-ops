@@ -125,6 +125,47 @@ class DatabaseMigrationSmokeTest {
   }
 
   @Test
+  void b2SemanticPublicationRevisionMigrationAndRollbackOnIsolatedMySql() {
+    startAndValidate(true, context -> {
+      var business = context.getBean("yakBusinessDataSource", DataSource.class);
+      var jdbc = new org.springframework.jdbc.core.JdbcTemplate(business);
+      var manager = context.getBean("yakBusinessTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      var tx = new org.springframework.transaction.support.TransactionTemplate(manager);
+      long project = java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+      String select = "SELECT revision_no FROM yak_semantic_publication_revision "
+          + "WHERE project_id = ?";
+      String insert = "INSERT INTO yak_semantic_publication_revision "
+          + "(project_id, revision_no) VALUES (?, 1)";
+      try {
+        tx.execute(status -> {
+          jdbc.update(insert, project);
+          assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(1L);
+          status.setRollbackOnly();
+          return null;
+        });
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM yak_semantic_publication_revision WHERE project_id = ?",
+            Long.class, project)).isEqualTo(0L);
+
+        tx.execute(status -> {
+          jdbc.update(insert, project);
+          assertThat(jdbc.queryForObject(select + " FOR UPDATE", Long.class, project))
+              .isEqualTo(1L);
+          jdbc.update("UPDATE yak_semantic_publication_revision "
+              + "SET revision_no = revision_no + 1 WHERE project_id = ?", project);
+          assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(2L);
+          return null;
+        });
+        assertThat(jdbc.queryForObject(select, Long.class, project)).isEqualTo(2L);
+      } finally {
+        jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+            project);
+      }
+    });
+  }
+
+  @Test
   void adsV9ContractAndImmutableRevisionsRollBackAtomicallyOnMySql() {
     startAndValidate(true, context -> AdsApplicationContractSqlSmoke.verify(
         new org.springframework.jdbc.core.JdbcTemplate(
