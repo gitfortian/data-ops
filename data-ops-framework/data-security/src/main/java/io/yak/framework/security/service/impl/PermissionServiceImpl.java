@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -68,6 +69,7 @@ public class PermissionServiceImpl
 
   private final RolePermissionService rolePermissionService;
   private final PermissionCache permissionCache;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
   /**
    * 创建权限服务。
@@ -75,14 +77,28 @@ public class PermissionServiceImpl
    * @param permissionDao 权限数据访问对象
    * @param rolePermissionService 角色权限关系服务
    */
+  @Autowired
+  public PermissionServiceImpl(
+          PermissionDao permissionDao,
+          RolePermissionService rolePermissionService,
+          PermissionCache permissionCache,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.permissionDao = permissionDao;
+    this.rolePermissionService = rolePermissionService;
+    this.permissionCache = permissionCache;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Legacy tests construct without Security persistence. */
   public PermissionServiceImpl(
           PermissionDao permissionDao,
           RolePermissionService rolePermissionService,
           PermissionCache permissionCache) {
+    this(permissionDao, rolePermissionService, permissionCache, null);
+  }
 
-    this.permissionDao = permissionDao;
-    this.rolePermissionService = rolePermissionService;
-    this.permissionCache = permissionCache;
+  private void advanceAuthorizationRevision() {
+    if (authorizationRevision != null) authorizationRevision.advanceGlobalMutation();
   }
 
   /**
@@ -165,6 +181,7 @@ public class PermissionServiceImpl
       return;
     }
 
+    advanceAuthorizationRevision();
     permissionDao.insertBatch(
             permissionList);
     permissionCache.invalidateAll();
@@ -186,6 +203,7 @@ public class PermissionServiceImpl
               "权限 ID 不能为空");
     }
 
+    advanceAuthorizationRevision();
     rolePermissionService
             .deleteRolePermissionByPermissionId(
                     permissionId);
