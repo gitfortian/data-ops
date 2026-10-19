@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -25,18 +26,32 @@ public class RolePermissionServiceImpl
 
   private final RolePermissionDao rolePermissionDao;
   private final PermissionCache permissionCache;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
   /**
    * 创建角色权限关系服务。
    *
    * @param rolePermissionDao 角色权限关系数据访问对象
    */
+  @Autowired
+  public RolePermissionServiceImpl(
+          RolePermissionDao rolePermissionDao,
+          PermissionCache permissionCache,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.rolePermissionDao = rolePermissionDao;
+    this.permissionCache = permissionCache;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Focused tests use in-memory DAOs without real Security transactions. */
   public RolePermissionServiceImpl(
           RolePermissionDao rolePermissionDao,
           PermissionCache permissionCache) {
+    this(rolePermissionDao, permissionCache, null);
+  }
 
-    this.rolePermissionDao = rolePermissionDao;
-    this.permissionCache = permissionCache;
+  private void advanceAuthorizationRevision() {
+    if (authorizationRevision != null) authorizationRevision.advanceGlobalMutation();
   }
 
   /**
@@ -57,6 +72,7 @@ public class RolePermissionServiceImpl
     if (roleId == null) {
       return;
     }
+    advanceAuthorizationRevision();
     permissionCache.invalidateRole(roleId);
 
     List<Long> validPermissionIds =
@@ -93,6 +109,7 @@ public class RolePermissionServiceImpl
     if (roleId == null) {
       return;
     }
+    advanceAuthorizationRevision();
     permissionCache.invalidateRole(roleId);
 
     /*
@@ -132,6 +149,7 @@ public class RolePermissionServiceImpl
     if (roleId == null) {
       return;
     }
+    advanceAuthorizationRevision();
     permissionCache.invalidateRole(roleId);
 
     rolePermissionDao.deleteByRoleId(
@@ -150,6 +168,7 @@ public class RolePermissionServiceImpl
     if (permissionId == null) {
       return;
     }
+    advanceAuthorizationRevision();
     permissionCache.invalidateAll();
     rolePermissionDao.deleteByPermissionId(permissionId);
   }
