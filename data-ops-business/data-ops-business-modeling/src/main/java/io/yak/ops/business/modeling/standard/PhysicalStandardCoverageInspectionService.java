@@ -259,7 +259,8 @@ public class PhysicalStandardCoverageInspectionService {
         codeSetStatus = "NOT_CONFIGURED";
       } else {
         StandardQueryApi.CodeSetReference codeSet = standardQuery.codeSetReference(codeSetCode);
-        if (codeSet == null || !Objects.equals(codeSet.codeSetCode(), codeSetCode)
+        requireConsistentCodeSetEvidence(codeSet);
+        if (!Objects.equals(codeSet.codeSetCode(), codeSetCode)
             || codeSet.itemCount() <= 0 || "NOT_FOUND".equals(codeSet.status())) {
           codeSetStatus = "INVALID_REFERENCE";
           invalidReference = true;
@@ -297,6 +298,45 @@ public class PhysicalStandardCoverageInspectionService {
         codeSetCode, codeSetStatus, codeSetItemCount, codeSetEnabledItemCount,
         codeSetEvidenceSha256, security, status, missingRequired,
         invalidReference, explanation);
+  }
+
+  /**
+   * Check the complete provider evidence instead of trusting a positive status
+   * flag in isolation. Unknown, contradictory or truncated snapshots must fail
+   * closed and must not be presented as a usable CODE reference.
+   */
+  private static void requireConsistentCodeSetEvidence(StandardQueryApi.CodeSetReference codeSet) {
+    if (codeSet == null || codeSet.codeSetCode() == null || codeSet.status() == null) {
+      throw new IllegalStateException("码集证据提供者返回空或不完整结果，不能判断可用性");
+    }
+    int total = codeSet.itemCount();
+    int enabled = codeSet.enabledItemCount();
+    String digest = codeSet.contentSha256();
+    if (total < 0 || enabled < 0 || enabled > total) {
+      throw new IllegalStateException("码集证据成员计数不一致，拒绝核验");
+    }
+    switch (codeSet.status()) {
+      case "NOT_FOUND" -> {
+        if (total != 0 || enabled != 0 || digest != null) {
+          throw new IllegalStateException("码集缺失证据与成员数据不一致，拒绝核验");
+        }
+      }
+      case "ENABLED", "MIXED", "DISABLED" -> {
+        if (total == 0 || digest == null || !digest.matches("[a-f0-9]{64}")) {
+          throw new IllegalStateException("码集证据缺少完整成员摘要，拒绝核验");
+        }
+        boolean consistent = switch (codeSet.status()) {
+          case "ENABLED" -> enabled == total;
+          case "MIXED" -> enabled > 0 && enabled < total;
+          case "DISABLED" -> enabled == 0;
+          default -> false;
+        };
+        if (!consistent) {
+          throw new IllegalStateException("码集状态与启用成员数量不一致，拒绝核验");
+        }
+      }
+      default -> throw new IllegalStateException("码集证据返回未知状态，拒绝核验");
+    }
   }
 
   private StandardReferenceEvidence inspectStandardReference(
