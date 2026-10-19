@@ -5,6 +5,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -33,7 +36,11 @@ public final class DraftPublicationEvidenceVerifier {
   public record ColumnRequest(String columnName, String physicalType, Long standardFieldId) {}
 
   public record Request(long projectId, long modelId, String layerCode, String physicalStructureSha256,
-                        List<ColumnRequest> columns) {}
+                        List<ColumnRequest> columns) {
+    public Request {
+      columns = detached(columns);
+    }
+  }
 
   /**
    * Only non-sensitive standard digests and IDs cross the boundary.
@@ -48,7 +55,11 @@ public final class DraftPublicationEvidenceVerifier {
   public record Observation(long projectId, long modelId, String layerCode, String physicalStructureSha256,
                             String verdict, String digestAlgorithmId,
                             String semanticEvidenceSha256, String consistencyToken,
-                            List<ColumnFact> columns) {}
+                            List<ColumnFact> columns) {
+    public Observation {
+      columns = detached(columns);
+    }
+  }
 
   public record FrozenCandidate(long projectId, long modelId, String layerCode, String structureSha256,
                                 String semanticDigestAlgorithm, String semanticEvidenceSha256,
@@ -65,6 +76,54 @@ public final class DraftPublicationEvidenceVerifier {
     static Evaluation reject(Verdict verdict, String reason) {
       return new Evaluation(verdict, reason, null);
     }
+  }
+
+  /**
+   * Review-only proof that submitted columns equal a *separately supplied*
+   * Modeling physical snapshot before checking Semantic's response. The
+   * authoritative argument MUST eventually be obtained by the Modeling owner
+   * under its model lock; this pure method cannot authenticate its origin,
+   * recompute the structure SHA or authorize a publication.
+   */
+  public static Evaluation evaluateAgainstModelSnapshot(
+      Request submitted, Request physicalSnapshot, Observation semanticObservation) {
+    if (submitted == null || physicalSnapshot == null
+        || submitted.projectId() != physicalSnapshot.projectId()
+        || submitted.modelId() != physicalSnapshot.modelId()
+        || !Objects.equals(submitted.layerCode(), physicalSnapshot.layerCode())
+        || !Objects.equals(submitted.physicalStructureSha256(),
+            physicalSnapshot.physicalStructureSha256())
+        || !sameColumnSet(submitted.columns(), physicalSnapshot.columns())) {
+      return Evaluation.reject(Verdict.UNKNOWN,
+          "提交列集合不能与 Modeling 物理模型完整快照一致核对");
+    }
+    return evaluate(physicalSnapshot, semanticObservation);
+  }
+
+  private static boolean sameColumnSet(List<ColumnRequest> left, List<ColumnRequest> right) {
+    Map<String, ColumnRequest> leftMap = columnMap(left);
+    Map<String, ColumnRequest> rightMap = columnMap(right);
+    return leftMap != null && rightMap != null && leftMap.equals(rightMap);
+  }
+
+  private static Map<String, ColumnRequest> columnMap(List<ColumnRequest> columns) {
+    if (columns == null || columns.isEmpty()) return null;
+    Map<String, ColumnRequest> result = new HashMap<>();
+    for (ColumnRequest column : columns) {
+      if (column == null || !text(column.columnName()) || !text(column.physicalType())) {
+        return null;
+      }
+      String name = normalized(column.columnName());
+      // Compare canonical name, not original casing. Duplicates are invalid.
+      if (result.putIfAbsent(name, new ColumnRequest(
+          name, column.physicalType(), column.standardFieldId())) != null) return null;
+    }
+    return result;
+  }
+
+  /** Detach provider-owned mutable lists without hiding null input errors. */
+  private static <T> List<T> detached(List<T> input) {
+    return input == null ? null : Collections.unmodifiableList(new ArrayList<>(input));
   }
 
   public static Evaluation evaluate(Request request, Observation observation) {
