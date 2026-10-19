@@ -10,7 +10,6 @@ import io.yak.ops.business.semantic.api.StandardQueryApi;
 import io.yak.ops.business.semantic.repository.SemanticFieldRepository;
 import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.core.project.CurrentProject;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
