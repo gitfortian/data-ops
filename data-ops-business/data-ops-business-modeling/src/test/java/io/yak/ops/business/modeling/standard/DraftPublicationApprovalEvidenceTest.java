@@ -24,7 +24,7 @@ class DraftPublicationApprovalEvidenceTest {
   private static final String LOGICAL = "e".repeat(64);
 
   private static DesignBinding design() {
-    return new DesignBinding(7L, 701L, "DWD", STRUCTURE, 901L, MAPPING, LOGICAL);
+    return new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, MAPPING, 77L, 2, LOGICAL);
   }
 
   private static Evaluation observe(String semanticSha, String token, String standardSha) {
@@ -53,7 +53,10 @@ class DraftPublicationApprovalEvidenceTest {
     assertThat(result.result()).isEqualTo(Result.CANDIDATE_MATCH);
     ApprovalFreeze freeze = result.freeze();
     assertThat(freeze).isNotNull();
+    assertThat(freeze.binding().mappingSetId()).isEqualTo(501L);
     assertThat(freeze.binding().mappingRevisionId()).isEqualTo(901L);
+    assertThat(freeze.binding().logicalModelId()).isEqualTo(77L);
+    assertThat(freeze.binding().logicalVersionNo()).isEqualTo(2);
     assertThat(freeze.binding().mappingContentSha256()).isEqualTo(MAPPING);
     assertThat(freeze.binding().logicalSnapshotSha256()).isEqualTo(LOGICAL);
     assertThat(freeze.standards().columns()).hasSize(2);
@@ -74,10 +77,10 @@ class DraftPublicationApprovalEvidenceTest {
   void changedMappingRevisionLogicalVersionOrPhysicalStructureIsStale() {
     var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
     for (DesignBinding changed : List.of(
-        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 902L, MAPPING, LOGICAL),
-        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 901L, "1".repeat(64), LOGICAL),
-        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 901L, MAPPING, "2".repeat(64)),
-        new DesignBinding(7L, 701L, "DWD", "3".repeat(64), 901L, MAPPING, LOGICAL))) {
+        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 902L, MAPPING, 77L, 2, LOGICAL),
+        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, "1".repeat(64), 77L, 2, LOGICAL),
+        new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, MAPPING, 77L, 2, "2".repeat(64)),
+        new DesignBinding(7L, 701L, "DWD", "3".repeat(64), 501L, 901L, MAPPING, 77L, 2, LOGICAL))) {
       assertThat(DraftPublicationApprovalEvidence.compare(frozen, changed, valid()).result())
           .isEqualTo(Result.STALE);
     }
@@ -115,9 +118,9 @@ class DraftPublicationApprovalEvidenceTest {
   void crossProjectOrModelCannotBorrowAnotherApprovalEvidence() {
     var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
     var wrongProject = new DesignBinding(8L, 701L, "DWD", STRUCTURE,
-        901L, MAPPING, LOGICAL);
+        901L, MAPPING, 77L, 2, LOGICAL);
     var wrongModel = new DesignBinding(7L, 702L, "DWD", STRUCTURE,
-        901L, MAPPING, LOGICAL);
+        901L, MAPPING, 77L, 2, LOGICAL);
     assertThat(DraftPublicationApprovalEvidence.compare(frozen, wrongProject, valid()).result())
         .isEqualTo(Result.STALE);
     assertThat(DraftPublicationApprovalEvidence.compare(frozen, wrongModel, valid()).result())
@@ -128,7 +131,7 @@ class DraftPublicationApprovalEvidenceTest {
 
   @Test
   void incompleteMappingIdentityAndTamperedApprovalDigestFailClosed() {
-    var incomplete = new DesignBinding(7L, 701L, "DWD", STRUCTURE, 901L, null, LOGICAL);
+    var incomplete = new DesignBinding(7L, 701L, "DWD", STRUCTURE, 501L, 901L, null, 77L, 2, LOGICAL);
     assertThat(DraftPublicationApprovalEvidence.freeze(incomplete, valid()).result())
         .isEqualTo(Result.UNKNOWN);
     var frozen = DraftPublicationApprovalEvidence.freeze(design(), valid()).freeze();
