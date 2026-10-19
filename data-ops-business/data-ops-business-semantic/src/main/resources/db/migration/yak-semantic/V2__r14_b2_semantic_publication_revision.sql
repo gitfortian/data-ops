@@ -17,4 +17,5 @@ FROM (
     UNION
     SELECT project_id FROM yak_semantic_field
 ) AS existing_project
+WHERE project_id IS NOT NULL
 ON DUPLICATE KEY UPDATE revision_no = revision_no;
