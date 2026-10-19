@@ -132,6 +132,56 @@ class DwdMappingPublicationServiceTest {
   }
 
   @Test
+  void mappedPublishedRetryRequiresExactActiveVersionPointer() {
+    when(models.findByIdForUpdate(50L))
+        .thenReturn(Optional.of(root(ModelStatus.PUBLISHED)));
+    stubValidPublishedMappingHistory();
+
+    var result = service.publish(50L, 901L, "tom");
+
+    assertEquals(600L, result.modelVersionId());
+    assertEquals(4, result.versionNo());
+    assertFalse(result.created());
+    verify(versions, never()).publishWithMapping(any(), any(), any(), any());
+    verify(mappings, never()).requireFrozenForPublication(any(), any());
+  }
+
+  @Test
+  void mappedPublishedRetryRejectsStaleRootVersionIdDespiteValidMappingHistory() {
+    when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(
+        root(ModelStatus.PUBLISHED).withPublishState(ModelStatus.PUBLISHED, 601L, 4)));
+    stubValidPublishedMappingHistory();
+
+    assertThrows(IllegalStateException.class, () -> service.publish(50L, 901L, "tom"));
+    verify(versions, never()).publishWithMapping(any(), any(), any(), any());
+    verify(mappings, never()).requireFrozenForPublication(any(), any());
+  }
+
+  @Test
+  void mappedPublishedRetryRejectsMissingPointerBeforeReturningHistoricalReceipt() {
+    when(models.findByIdForUpdate(50L)).thenReturn(Optional.of(
+        root(ModelStatus.DRAFT).withPublishState(ModelStatus.PUBLISHED, null, 4)));
+
+    assertThrows(IllegalStateException.class, () -> service.publish(50L, 901L, "tom"));
+    verify(versions, never()).getVersionDetail(anyLong(), anyInt());
+    verify(versions, never()).publishWithMapping(any(), any(), any(), any());
+  }
+
+  private void stubValidPublishedMappingHistory() {
+    when(versions.getVersionDetail(50L, 4)).thenReturn(
+        new ModelVersionService.VersionDetailView(version(), null, Map.of(
+            "mappingRevisionId", 901, "mappingSetId", 501,
+            "mappingContentSha256", "c".repeat(64),
+            "logicalSnapshotSha256", "a".repeat(64),
+            "physicalStructureSha256", "b".repeat(64),
+            "logicalModelId", 77, "logicalVersionNo", 2)));
+    when(mappings.revisionDetail(50L, 901L)).thenReturn(
+        new DwdMappingDraftService.HistoricalRevision(
+            901L, 501L, 1, 77L, 2, "a".repeat(64), "b".repeat(64),
+            "c".repeat(64), java.util.List.of()));
+  }
+
+  @Test
   void priorLegacyVersionMustNotBePresentedAsMappedDwd() {
     when(versions.getVersionDetail(50L, 4)).thenReturn(
         new ModelVersionService.VersionDetailView(version(), null, Map.of()));

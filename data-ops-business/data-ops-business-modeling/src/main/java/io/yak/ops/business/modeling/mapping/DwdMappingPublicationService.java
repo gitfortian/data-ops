@@ -87,7 +87,17 @@ public class DwdMappingPublicationService {
     }
     // Retries after commit are read-only: no new version and no second approval receipt.
     if (root.status() == ModelStatus.PUBLISHED) {
-      History existing = history(modelId, root.latestVersionNo() == null ? 0 : root.latestVersionNo());
+      if (root.publishedVersionId() == null || root.publishedVersionId() <= 0
+          || root.latestVersionNo() == null || root.latestVersionNo() <= 0) {
+        throw new IllegalStateException("已发布模型缺少有效发布版本指针，拒绝幂等成功回执");
+      }
+      History existing = history(modelId, root.latestVersionNo());
+      // A validated MappingRevision alone does not prove this is the active
+      // publication: the root pointer must name exactly the historical version.
+      if (!Objects.equals(root.publishedVersionId(), existing.modelVersionId())
+          || !Objects.equals(root.latestVersionNo(), existing.versionNo())) {
+        throw new IllegalStateException("模型当前发布指针与历史版本身份不一致，拒绝重试");
+      }
       if (existing.mapping() != null
           && Objects.equals(existing.mapping().mappingRevisionId(), revisionId)
           && (approvedMappingSha == null
