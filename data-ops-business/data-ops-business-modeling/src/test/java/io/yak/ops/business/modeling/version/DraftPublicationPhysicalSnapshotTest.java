@@ -48,9 +48,10 @@ class DraftPublicationPhysicalSnapshotTest {
     assertThat(request.physicalStructureSha256()).isEqualTo(expected);
     assertThat(request.projectId()).isEqualTo(7L);
     assertThat(request.modelId()).isEqualTo(701L);
-    assertThat(request.columns()).extracting("columnName")
+    assertThat(request.columns().stream().map(c -> c.columnName()).toList())
         .containsExactly("order_id", "order_status");
-    assertThat(request.columns()).extracting("standardFieldId").containsExactly(11L, 12L);
+    assertThat(request.columns().stream().map(c -> c.standardFieldId()).toList())
+        .containsExactly(11L, 12L);
   }
 
   @Test
