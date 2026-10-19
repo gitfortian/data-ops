@@ -89,7 +89,7 @@ public class ModelPublicationReadinessService {
           || observed.projectId() != request.projectId()
           || !Objects.equals(observed.layerCode(), request.layerCode())
           || !Objects.equals(observed.physicalStructureSha256(), request.physicalStructureSha256())
-          || observed.columns().size() != request.columns().size()) {
+          || !samePhysicalColumns(request, observed)) {
         return unavailable(model, "标准证据提供方范围或列集合不一致，禁止复用结果");
       }
       // Even a VALID current catalog result does not establish T3's trusted
@@ -104,6 +104,23 @@ public class ModelPublicationReadinessService {
     } catch (RuntimeException failure) {
       return unavailable(model, "标准证据服务不可用，未形成可信预检结果");
     }
+  }
+
+  /** Reject same-sized but different-column evidence from a stale or confused provider. */
+  private static boolean samePhysicalColumns(
+      PublicationStandardEvidenceApi.BatchRequest request,
+      PublicationStandardEvidenceApi.BatchResult observed) {
+    if (observed.columns().size() != request.columns().size()) return false;
+    for (var expected : request.columns()) {
+      long matches = observed.columns().stream().filter(item ->
+          item != null && item.columnName() != null
+              && item.columnName().equalsIgnoreCase(expected.columnName())
+              && Objects.equals(item.physicalType(), expected.physicalType())
+              && Objects.equals(item.standardFieldId(), expected.standardFieldId()))
+          .count();
+      if (matches != 1) return false;
+    }
+    return true;
   }
 
   private static Report unavailable(Model model, String reason) {
