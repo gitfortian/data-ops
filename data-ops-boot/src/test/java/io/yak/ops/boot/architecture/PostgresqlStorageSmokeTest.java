@@ -230,6 +230,9 @@ class PostgresqlStorageSmokeTest {
     org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
     var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
         business, trusted);
+    var fieldReferences = new io.yak.ops.business.modeling.api.ModelingSemanticFieldReferenceReader(
+        context.getBean(io.yak.ops.business.modeling.dao.mapper.ModelingModelColumnMapper.class),
+        trusted);
     var locked = new java.util.concurrent.CountDownLatch(1);
     var release = new java.util.concurrent.CountDownLatch(1);
     try {
@@ -278,6 +281,8 @@ class PostgresqlStorageSmokeTest {
                    WHERE project_id = ? AND id = ?
                   """, Long.class, project, modelId);
               assertThat(references).isEqualTo(1L);
+              // Real consumer read while Semantic's project revision is held.
+              assertThat(fieldReferences.countFieldReferences(999999999L)).isZero();
               return advanced;
             }));
         assertThat(attempted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
