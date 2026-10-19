@@ -47,6 +47,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -92,6 +93,7 @@ public class RoleServiceImpl implements RoleService {
   private final RolePermissionService rolePermissionService;
 
   private final UserRoleService userRoleService;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
   /**
    * 创建角色服务。
@@ -104,6 +106,27 @@ public class RoleServiceImpl implements RoleService {
    * @param rolePermissionService 角色权限服务
    * @param userRoleService 用户角色服务
    */
+  @Autowired
+  public RoleServiceImpl(
+          RoleDao roleDao,
+          PermissionService permissionService,
+          MessageService messageService,
+          OplogService oplogService,
+          UserDao userDao,
+          RolePermissionService rolePermissionService,
+          UserRoleService userRoleService,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.roleDao = roleDao;
+    this.permissionService = permissionService;
+    this.messageService = messageService;
+    this.oplogService = oplogService;
+    this.userDao = userDao;
+    this.rolePermissionService = rolePermissionService;
+    this.userRoleService = userRoleService;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Focused tests without a persistent Security database. */
   public RoleServiceImpl(
           RoleDao roleDao,
           PermissionService permissionService,
@@ -112,14 +135,12 @@ public class RoleServiceImpl implements RoleService {
           UserDao userDao,
           RolePermissionService rolePermissionService,
           UserRoleService userRoleService) {
+    this(roleDao, permissionService, messageService, oplogService, userDao,
+        rolePermissionService, userRoleService, null);
+  }
 
-    this.roleDao = roleDao;
-    this.permissionService = permissionService;
-    this.messageService = messageService;
-    this.oplogService = oplogService;
-    this.userDao = userDao;
-    this.rolePermissionService = rolePermissionService;
-    this.userRoleService = userRoleService;
+  private void advanceAuthorizationRevision() {
+    if (authorizationRevision != null) authorizationRevision.advanceGlobalMutation();
   }
 
   /**
@@ -358,6 +379,8 @@ public class RoleServiceImpl implements RoleService {
           RoleSaveDTO roleSaveDTO,
           String operator) {
 
+    advanceAuthorizationRevision();
+
     checkParam(roleSaveDTO, false);
 
     Role role =
@@ -414,6 +437,8 @@ public class RoleServiceImpl implements RoleService {
               "角色 ID 不能为空");
     }
 
+    advanceAuthorizationRevision();
+
     Role role =
             roleDao.selectByRoleId(roleId);
 
@@ -461,6 +486,8 @@ public class RoleServiceImpl implements RoleService {
       throw new IllegalArgumentException(
               "角色 ID 和用户 ID 不能为空");
     }
+
+    advanceAuthorizationRevision();
 
     Role role =
             roleDao.selectByRoleId(roleId);
@@ -514,6 +541,8 @@ public class RoleServiceImpl implements RoleService {
       throw new IllegalArgumentException(
               "角色信息和角色 ID 不能为空");
     }
+
+    advanceAuthorizationRevision();
 
     Role currentRole =
             roleDao.selectByRoleId(
@@ -571,6 +600,8 @@ public class RoleServiceImpl implements RoleService {
   public void assignRoles(
           RoleAssignDTO assignDTO,
           String operator) {
+
+    advanceAuthorizationRevision();
 
     checkAssignParam(assignDTO);
 
