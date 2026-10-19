@@ -341,6 +341,91 @@ class DatabaseMigrationSmokeTest {
    * until the Modeling transaction commits. Does not grant B2 publication or
    * prove reverse references/authorization are free of deadlocks.
    */
+  /**
+   * F-039 T2 cross-worker protocol: the Semantic project revision must be
+   * acquired BEFORE the receipt's UNIQUE(project,task,candidate) reservation.
+   * A losing duplicate insertion rolls back both its revision and receipt.
+   * This tests the real MySQL lock/unique constraints; permission, source
+   * proof and the F-039 service dispatch are covered by their own tests.
+   */
+  @Test
+  void b2F039ReceiptRaceRollsBackLosingSemanticRevision() {
+    startAndValidate(true, context -> {
+      var business = context.getBean("yakBusinessDataSource", DataSource.class);
+      var jdbc = new org.springframework.jdbc.core.JdbcTemplate(business);
+      var manager = context.getBean("yakBusinessTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      long project = (java.util.UUID.randomUUID().getMostSignificantBits()
+          & Long.MAX_VALUE) + 1;
+      String task = "b2_" + java.util.UUID.randomUUID().toString().substring(0, 12);
+      var current = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+      org.mockito.Mockito.when(current.requireProjectId()).thenReturn(project);
+      var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+          business, current);
+      var ownerHeld = new java.util.concurrent.CountDownLatch(1);
+      var releaseOwner = new java.util.concurrent.CountDownLatch(1);
+      var duplicateStarted = new java.util.concurrent.CountDownLatch(1);
+      String insert = """
+          INSERT INTO yak_semantic_adoption_receipt
+            (receipt_id, project_id, task_id, candidate_id, payload_digest,
+             operator_id, kind, status)
+          VALUES (?, ?, ?, 'source-link', ?, '42', 'SOURCE_LINK', 'LINKED')
+          """;
+      try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+        var owner = workers.submit(() -> new org.springframework.transaction.support
+            .TransactionTemplate(manager).execute(status -> {
+              long nextRevision = revision.advanceBeforeMutation();
+              jdbc.update(insert, java.util.UUID.randomUUID().toString(), project,
+                  task, "a".repeat(64));
+              ownerHeld.countDown();
+              await(releaseOwner);
+              return nextRevision;
+            }));
+        assertThat(ownerHeld.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        var duplicate = workers.submit(() -> new org.springframework.transaction.support
+            .TransactionTemplate(manager).execute(status -> {
+              duplicateStarted.countDown();
+              long nextRevision = revision.advanceBeforeMutation();
+              // The duplicate key is checked after this transaction holds the
+              // project revision, and forces the entire transaction to roll back.
+              jdbc.update(insert, java.util.UUID.randomUUID().toString(), project,
+                  task, "b".repeat(64));
+              return nextRevision;
+            }));
+        assertThat(duplicateStarted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> duplicate.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+            .isInstanceOf(java.util.concurrent.TimeoutException.class);
+        releaseOwner.countDown();
+        Long committed = owner.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        assertThat(committed).isEqualTo(2L);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> duplicate.get(15, java.util.concurrent.TimeUnit.SECONDS))
+            .isInstanceOf(java.util.concurrent.ExecutionException.class);
+        assertThat(jdbc.queryForObject("""
+            SELECT COUNT(*) FROM yak_semantic_adoption_receipt
+            WHERE project_id = ? AND task_id = ? AND candidate_id = 'source-link'
+            """, Long.class, project, task)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("""
+            SELECT revision_no FROM yak_semantic_publication_revision
+            WHERE project_id = ?
+            """, Long.class, project)).isEqualTo(2L);
+        assertThat(jdbc.queryForObject("""
+            SELECT payload_digest FROM yak_semantic_adoption_receipt
+            WHERE project_id = ? AND task_id = ? AND candidate_id = 'source-link'
+            """, String.class, project, task)).isEqualTo("a".repeat(64));
+      } catch (Exception failure) {
+        throw new AssertionError("F-039 Semantic revision-first duplicate receipt race", failure);
+      } finally {
+        releaseOwner.countDown();
+        jdbc.update("DELETE FROM yak_semantic_adoption_receipt WHERE project_id = ? AND task_id = ?",
+            project, task);
+        jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+            project);
+      }
+    });
+  }
+
   @Test
   void b2ModelingRootAndSemanticRevisionLocksShareCommitFenceOnMySql() {
     startAndValidate(true, context -> {
