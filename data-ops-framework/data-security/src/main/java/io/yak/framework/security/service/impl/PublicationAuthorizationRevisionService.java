@@ -75,8 +75,12 @@ public class PublicationAuthorizationRevisionService {
 
     Connection connection = DataSourceUtils.getConnection(securityDataSource);
     try {
-      if (!DataSourceUtils.isConnectionTransactional(connection, securityDataSource)) {
-        throw new IllegalStateException("Security revision must use the actual Security transaction");
+      if (!DataSourceUtils.isConnectionTransactional(connection, securityDataSource)
+          || connection.getAutoCommit()) {
+        // A business-transaction synchronization may bind a Security connection
+        // without actually starting a Security JDBC transaction. Never mistake
+        // that foreign synchronization for a protected Security write.
+        throw new IllegalStateException("Security revision must use a real Security JDBC transaction");
       }
       String vendor = connection.getMetaData().getDatabaseProductName()
           .toLowerCase(Locale.ROOT);
