@@ -94,6 +94,7 @@ class PostgresqlStorageSmokeTest {
       var security = new JdbcTemplate(context.getBean("yakSecurityDataSource", DataSource.class));
       projectId = security.queryForObject("SELECT id FROM yak_security_project ORDER BY id LIMIT 1", Long.class);
       assertThat(projectId).isPositive();
+      verifySecurityAuthorizationRevision(context, security);
       assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM yak_quality_rule_template", Long.class)).isPositive();
       assertThat(security.queryForObject("SELECT COUNT(*) FROM yak_security_user WHERE user_name = 'pg_storage_owner'", Long.class)).isEqualTo(1);
       verifyLoginAndProjectRequest(context, password, projectId);
@@ -143,6 +144,55 @@ class PostgresqlStorageSmokeTest {
           .orElseThrow().getSummary()).isEqualTo("durable agent state");
       stateStore.delete("pg-storage-user", "pg-storage-session");
       assertThat(stateStore.exists("pg-storage-user", "pg-storage-session")).isFalse();
+    }
+  }
+
+  /**
+   * B2 T3 PostgreSQL write-side evidence: the Security-owned revision can be
+   * changed and rolled back in the actual Security transaction, but NEVER
+   * grants an independently committing Modeling transaction publish rights.
+   */
+  private void verifySecurityAuthorizationRevision(
+      ConfigurableApplicationContext context, JdbcTemplate security) {
+    var revision = context.getBean(
+        io.yak.framework.security.service.impl.PublicationAuthorizationRevisionService.class);
+    var manager = context.getBean("yakSecurityTransactionManager",
+        PlatformTransactionManager.class);
+    var properties = context.getBean(
+        io.yak.framework.security.config.YakSecurityProperties.class);
+    String app = properties.getApplicationName();
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    String select = """
+        SELECT revision_no FROM yak_security_publication_auth_revision
+        WHERE app_name = ? AND scope_kind = 'PROJECT' AND scope_id = ?
+        """;
+    try {
+      assertThatThrownBy(() -> revision.advanceProjectMutation(project))
+          .isInstanceOf(IllegalStateException.class);
+      Long first = new TransactionTemplate(manager).execute(
+          status -> revision.advanceProjectMutation(project));
+      assertThat(first).isEqualTo(2L);
+      assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(2L);
+
+      new TransactionTemplate(manager).execute(status -> {
+        assertThat(revision.advanceProjectMutation(project)).isEqualTo(3L);
+        status.setRollbackOnly();
+        return null;
+      });
+      assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(2L);
+
+      Long next = new TransactionTemplate(manager).execute(
+          status -> revision.advanceProjectMutation(project));
+      Long restored = new TransactionTemplate(manager).execute(
+          status -> revision.advanceProjectMutation(project));
+      assertThat(next).isEqualTo(3L);
+      assertThat(restored).isEqualTo(4L);
+      assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(4L);
+    } finally {
+      security.update("""
+          DELETE FROM yak_security_publication_auth_revision
+          WHERE app_name = ? AND scope_kind = 'PROJECT' AND scope_id = ?
+          """, app, project);
     }
   }
 
