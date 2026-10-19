@@ -1,6 +1,7 @@
 package io.yak.ops.business.modeling.version;
 
 import io.yak.ops.business.modeling.domain.Model;
+import io.yak.ops.business.modeling.mapping.DwdMappingDraftService;
 import io.yak.ops.business.modeling.repository.ModelRepository;
 import io.yak.ops.business.modeling.structure.ModelStructureService;
 import io.yak.ops.business.modeling.structure.StructureView;
@@ -9,6 +10,7 @@ import io.yak.ops.core.project.CurrentProject;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class ModelPublicationReadinessService {
   private final ModelStructureService structures;
   private final CurrentProject project;
   private final PublicationStandardEvidenceApi semantic;
+  private final DwdMappingDraftService mappings;
 
   public record Report(
       Long modelId,
@@ -40,20 +43,42 @@ public class ModelPublicationReadinessService {
       List<PublicationStandardEvidenceApi.ColumnEvidence> columns,
       List<String> findings,
       boolean authorizedForPublication,
-      String authorizationStatus) {
+      String authorizationStatus,
+      MappingContext mapping) {
     public Report {
       columns = List.copyOf(columns);
       findings = List.copyOf(findings);
     }
   }
 
+  /**
+   * Precise DWD logical/physical mapping provenance shown on the same release
+   * confirmation, without mutating a MappingSet or freezing new revisions.
+   * FROZEN_SAVED_DRAFT does not prove the separate Security publish fence.
+   */
+  public record MappingContext(
+      String status, Long mappingRevisionId, Long mappingSetId,
+      Long logicalModelId, Integer logicalVersionNo,
+      String logicalSnapshotSha256, String physicalStructureSha256,
+      String mappingContentSha256, String finding) {}
+
+  @Autowired
   public ModelPublicationReadinessService(
       ModelRepository models, ModelStructureService structures,
-      CurrentProject project, PublicationStandardEvidenceApi semantic) {
+      CurrentProject project, PublicationStandardEvidenceApi semantic,
+      DwdMappingDraftService mappings) {
     this.models = models;
     this.structures = structures;
     this.project = project;
     this.semantic = semantic;
+    this.mappings = mappings;
+  }
+
+  /** Historical unit tests do not construct a real DWD mapping repository. */
+  public ModelPublicationReadinessService(
+      ModelRepository models, ModelStructureService structures,
+      CurrentProject project, PublicationStandardEvidenceApi semantic) {
+    this(models, structures, project, semantic, null);
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -73,6 +98,8 @@ public class ModelPublicationReadinessService {
         || structure.columns() == null || structure.columns().isEmpty()) {
       return unavailable(model, "物理列为空或结构身份不一致，无法进行全字段核验");
     }
+    MappingContext mappingContext = "DWD".equals(model.layerCode())
+        ? inspectMapping(modelId) : null;
     // The model-root/project and physical structure are server-side only.
     // The request never trusts a project identifier or an incomplete column
     // collection supplied by the browser.
@@ -115,9 +142,58 @@ public class ModelPublicationReadinessService {
           : observed.safeReasonCodes();
       return new Report(modelId, model.layerCode(), request.physicalStructureSha256(),
           observed.verdict(), observed.semanticRevision(), observed.evidenceSha256(),
-          observed.columns(), findings, false, "SECURITY_COMMIT_FENCE_NOT_ADMITTED");
+          observed.columns(), findings, false, "SECURITY_COMMIT_FENCE_NOT_ADMITTED",
+          mappingContext);
     } catch (RuntimeException failure) {
       return unavailable(model, "标准证据服务不可用，未形成可信预检结果");
+    }
+  }
+
+  /**
+   * Read exact persisted MappingRevision and logical source for the same DWD
+   * model, not a guessed version or a client-selected latest row. Never call
+   * requireFrozenForPublication here: that method can create revisions.
+   */
+  private MappingContext inspectMapping(Long modelId) {
+    if (mappings == null) {
+      return new MappingContext("UNAVAILABLE", null, null, null, null,
+          null, null, null, "映射服务不可用；无法确认逻辑版本与冻结修订");
+    }
+    try {
+      var draft = mappings.get(modelId);
+      if (draft == null) {
+        return new MappingContext("MISSING", null, null, null, null,
+            null, null, null, "尚未保存 DWD 逻辑→物理映射");
+      }
+      var frozen = mappings.revisions(modelId);
+      if (frozen.isEmpty()) {
+        return new MappingContext("NOT_FROZEN", null, draft.mappingSetId(),
+            draft.logicalModelId(), draft.logicalVersionNo(),
+            draft.logicalSnapshotSha256(), draft.physicalStructureSha256(),
+            null, "映射草稿尚未冻结为不可变 MappingRevision");
+      }
+      var latest = frozen.get(0);
+      var historical = mappings.revisionDetail(modelId, latest.mappingRevisionId());
+      boolean identical =
+          java.util.Objects.equals(draft.mappingSetId(), historical.mappingSetId())
+          && java.util.Objects.equals(draft.logicalModelId(), historical.logicalModelId())
+          && draft.logicalVersionNo() == historical.logicalVersionNo()
+          && java.util.Objects.equals(draft.logicalSnapshotSha256(),
+              historical.logicalSnapshotSha256())
+          && java.util.Objects.equals(draft.physicalStructureSha256(),
+              historical.physicalStructureSha256())
+          && java.util.Objects.equals(latest.contentSha256(), historical.contentSha256())
+          && draft.draftRevision() == latest.draftRevision();
+      return new MappingContext(identical ? "FROZEN_SAVED_DRAFT" : "STALE",
+          historical.mappingRevisionId(), historical.mappingSetId(),
+          historical.logicalModelId(), historical.logicalVersionNo(),
+          historical.logicalSnapshotSha256(), historical.physicalStructureSha256(),
+          historical.contentSha256(), identical
+              ? "已找到当前保存草稿对应的不可变映射修订；仍须正式发布时再次核验"
+              : "逻辑来源或映射草稿已变化，需要重新核验并冻结映射");
+    } catch (RuntimeException error) {
+      return new MappingContext("UNKNOWN", null, null, null, null,
+          null, null, null, "映射历史读取或内容完整性验证失败，不能视为已冻结");
     }
   }
 
@@ -142,6 +218,6 @@ public class ModelPublicationReadinessService {
   private static Report unavailable(Model model, String reason) {
     return new Report(model.id(), model.layerCode(), null,
         PublicationStandardEvidenceApi.Verdict.UNKNOWN, null, null,
-        List.of(), List.of(reason), false, "EVIDENCE_UNAVAILABLE");
+        List.of(), List.of(reason), false, "EVIDENCE_UNAVAILABLE", null);
   }
 }
