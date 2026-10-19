@@ -1,0 +1,74 @@
+# B2 非 ODS 发布标准证据 — 集成准入与验收矩阵（候选）
+Status: PROPOSED / REVIEW_ONLY / NO_WRITE_AUTHORIZATION
+PR: #635 | Parent: #614 | DR-06: #556 | PD-010: D4_ONLY
+Baseline: PR #635 head 65f039da (2026-10-19)
+
+> 本文件是供 Modeling / Semantic / Security 独立 Owner 决策的 Feature Spec 候选，不是审批票据或可启用的生产合同。不能把合并此文档视为 ACCEPT；不得据此接入发布回调、修改发布资格、写 ModelVersion、执行 SQL/DDL 或开启任务写入。具体运行时合同须由真实 Owner 逐项签收。
+
+## 1. 业务结果与非目标
+
+**目标**：用户在非 ODS（DWD/DIM/DWS/ADS）保存草稿后，正式发布前全量检验目标物理列的标准字段与适用标准；审批提交时冻结精确证据，回调时重检；新发布版本持久冻结字段级标准摘要，并可追溯；历史版本不回填、不重算。ODS 保持贴源例外。
+
+**非目标**：DataDev TaskRevision 生成/SQL 执行/目标表写入/质量对账；以标准 VALID 替代 DWS 粒度、ADS Metric/消费或 DIM 专项校验；以候选观察 token 声称跨域事务原子性。
+
+## 2. 当前代码实际能力（不越权）
+
+- `DraftPublicationEvidenceVerifier`: 纯 Java 非 Spring Bean，检查 project/model/layer/structure、目标列全集、字段类型和 StandardField、CODE 完整性及候选 digest；输出 VALID_CANDIDATE/BLOCKED/UNKNOWN/ODS_OUT_OF_SCOPE。
+- `DraftPublicationApprovalEvidence`: 纯 Java 非 Spring Bean，冻结 design binding + 标准证据，比较设计/标准变化；返回 CANDIDATE_MATCH/STALE/UNKNOWN。
+- 已有专项测试验证基础正常流、漂移、篡改与跨层复用；现有 CI PASS 仅证明候选实现可编译/运行。
+- 未接 Semantic 正式 SPI、真实授权上下文、四发布入口、审批 payload、ModelVersion/迁移或产品 UI/E2E。
+
+## 3. 待签收技术决策（不可用候选值代替）
+
+| Owner | 必须书面确定 | 验收证据 |
+|---|---|---|
+| Semantic | 批量只读验证正式 SPI；TYPE/UNIT/CALIBER/CODE/SECURITY 角色语义；跨项目与撤权拒绝；digest algorithm ID、安全字段级 schema；批量快照/epoch、重读一致性及 ABA 策略 | API 合同、实现方测试、明确版本号和失败模式 |
+| Modeling | 四入口统一 validator 位于 model 根锁内、复用/新增 ModelVersion 判定之前；标准摘要入版本身份；精确 MappingRevision/逻辑快照/物理结构 CAS；审批时冻结与回调复核；事务回滚与历史只读 | 事务/并发集成测试、MySQL/PostgreSQL 迁移和读回 |
+| Security | 服务端可信项目/用户上下文，不接受客户端项目号作为授权；撤权/拒绝/UNKNOWN fail-closed；SECURITY 信息最小化、日志脱敏、审计 | 角色和跨项目负例、审批回调权限重检 |
+| Product | D4_ONLY 已批准：非 ODS 逐列有效标准、零技术列豁免、ODS 例外、草稿宽限、历史不回填 | 已有 #614 Product 签收；不代表以上技术领域签收 |
+
+**一致性关键问题**：独立 Semantic 观察 token 只是证据标识，不是跨模块锁。需选择并批准可证明的同一语义快照读取/版本 CAS/发布瞬间最终复核方案；无保证时返回 UNKNOWN，不能声称不漂移。
+
+## 4. 生产接入顺序（仅在 B1 正式 GO 后执行）
+
+1. Semantic 提交批准的只读 batch SPI + digest vN + 授权/一致性合同；Modeling 只依赖 SPI，绝不直读 Semantic DB。
+2. Modeling 在模型根锁与冻结结构获取后统一调用 validator；四入口：常规直接发布、常规审批回调、DWD Mapping 直接发布、DWD Mapping 审批回调。任何未来复制/派生/批量发布也必须汇入同一闸门。
+3. 审批提交：冻结项目/模型/层级/物理结构/逻辑版本/MappingRevision/标准证据及算法；审批回调：可信身份与权限重检、重读同一类语义事实、对比冻结值，任一漂移拒绝而不写版本。
+4. 新发布：把标准字段级最小脱敏快照和摘要与物理版本在 Modeling 同事务落库。幂等复用必须包含标准证据身份；旧版本只读，不补 hash。
+5. 前端：分别展示草稿问题、审批时快照、发布时不可变快照、当前治理健康，禁止将任一阶段说成执行/质量/消费已完成。
+
+## 5. P01–P18 候选验收矩阵
+
+状态：**CANDIDATE_UNIT** = 只有独立候选单元测试线索、尚非生产场景验收；**NOT_IMPLEMENTED** = 需集成实现及测试。所有 P01–P18 当前均 **NOT_ACCEPTED**，不等同于已有 18 项全通过。
+
+| ID | 黄金/拒绝场景 | 期望行为 | 当前层级 |
+|---|---|---|---|
+| P01 | DWD 每个目标列标准有效 | 发布写不可变证据，新版本可回读 | CANDIDATE_UNIT |
+| P02 | DIM 全列有效、CODE 完整启用 | 标准通过且仍必须经过 DIM 专项校验 | CANDIDATE_UNIT |
+| P03 | DWS 全列有效 | 标准通过但不替代粒度/上游/Metric 校验 | NOT_IMPLEMENTED |
+| P04 | ADS 全列有效 | 标准通过但不替代消费/授权专项校验 | NOT_IMPLEMENTED |
+| P05 | 任意非 ODS 列缺 StandardField（含技术列） | 正式发布 BLOCKED，草稿可保存 | CANDIDATE_UNIT |
+| P06 | 标准停用/角色不符/TYPE/UNIT/CALIBER 缺失 | BLOCKED，返回安全、可定位原因 | NOT_IMPLEMENTED |
+| P07 | CODE 部分停用、全部停用、缺失/错误计数 | BLOCKED 或 UNKNOWN，不得冒充全启用 | CANDIDATE_UNIT |
+| P08 | Semantic 超时/未知/部分列/算法版本不匹配 | UNKNOWN、事务回滚、无版本写入 | CANDIDATE_UNIT |
+| P09 | 跨项目/跨模型/撤销权限 | 拒绝并审计，不泄露标准数据 | CANDIDATE_UNIT |
+| P10 | 物理结构、字段名、类型或标准引用变化 | STALE/BLOCKED，必须重审 | CANDIDATE_UNIT |
+| P11 | 审批后逻辑版本或 MappingRevision 漂移 | STALE，不复用旧审批 | CANDIDATE_UNIT |
+| P12 | 审批后标准内容、CODE 内容或 token 变化 | STALE/UNKNOWN，不允许回调发布 | CANDIDATE_UNIT |
+| P13 | 冻结证据/摘要被篡改，跨层复用 | UNKNOWN/STALE，拒绝伪造审批 | CANDIDATE_UNIT |
+| P14 | 常规直接发布入口 | 调用同一服务端验证器，无绕路 | NOT_IMPLEMENTED |
+| P15 | 常规审批发布入口 | 提交冻结、回调重读、失败不写版本 | NOT_IMPLEMENTED |
+| P16 | DWD Mapping 直接与审批两个入口 | 同一校验 + Mapping 精确身份 | NOT_IMPLEMENTED |
+| P17 | 物理结构相同，标准摘要变化/幂等重试 | 不错误复用旧版本；ModelVersion 指针原子一致 | NOT_IMPLEMENTED |
+| P18 | ODS 例外、历史已发布版回读、回滚后再发布 | ODS 原合同有效；旧历史不改；再次发布重新验证 | NOT_IMPLEMENTED |
+
+## 6. 正式 B1 GO / B2 Ready 判据
+
+- [ ] Modeling / Semantic / Security 分别在 #556 / #614 记录真实 `ROLE / DECISION / VERSION / CONDITIONS / EVIDENCE`；独立 ACCEPT 后才准入。
+- [ ] Semantic 提供真实可用的 batch SPI、可验证 digest/schema 和一致性保证；Security 批准项目上下文/脱敏。
+- [ ] 本 Feature Spec 由规定 Owner 审定，不以本文 PROPOSED 代替已批准的 Feature Spec。
+- [ ] B2 生产集成覆盖四发布入口、ModelVersion 冻结、MySQL/PostgreSQL 迁移、P01–P18 全部适用场景及边界回归。
+- [ ] Product Guard、完整前后端、Architecture Gate、数据库集成和真实业务黄金故事通过，证据指向同一最终 HEAD。
+- [ ] 如真实环境不可访问，标记 DEFERRED_REAL_ENV，不宣称正式验收完成。
+
+当前结论：B1 **CONDITIONAL_DEVELOPMENT_ONLY / PRODUCTION_NOT_ADMITTED**；#635 必须保持 **Draft / NOT_MERGED**。
