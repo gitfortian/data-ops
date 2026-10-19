@@ -92,6 +92,21 @@ public class ModelPublicationReadinessService {
           || !samePhysicalColumns(request, observed)) {
         return unavailable(model, "标准证据提供方范围或列集合不一致，禁止复用结果");
       }
+      // A provider verdict must agree with every concrete per-column status.
+      // Do not show a green current-catalog result when it contains a blocked
+      // column, an absent StandardField or incomplete revision/digest identity.
+      if (observed.verdict() == PublicationStandardEvidenceApi.Verdict.VALID
+          && (observed.semanticRevision() == null || observed.semanticRevision() <= 0
+              || observed.digestAlgorithmId() == null
+              || observed.digestAlgorithmId().isBlank()
+              || observed.evidenceSha256() == null
+              || !observed.evidenceSha256().matches("[a-f0-9]{64}")
+              || !observed.safeReasonCodes().isEmpty()
+              || observed.columns().stream().anyMatch(c ->
+                  !"VALID".equals(c.status()) || c.standardFieldId() == null
+                      || c.standardFieldId() <= 0))) {
+        return unavailable(model, "标准证据宣称合格，但列状态或冻结身份不完整，禁止发布");
+      }
       // Even a VALID current catalog result does not establish T3's trusted
       // authorization and revocation-to-commit fence. Do not cache it as a
       // durable publication token or pass it to ModelVersionService.publish.
@@ -116,7 +131,8 @@ public class ModelPublicationReadinessService {
           item != null && item.columnName() != null
               && item.columnName().equalsIgnoreCase(expected.columnName())
               && Objects.equals(item.physicalType(), expected.physicalType())
-              && Objects.equals(item.standardFieldId(), expected.standardFieldId()))
+              && Objects.equals(item.standardFieldId(), expected.standardFieldId())
+              && Objects.equals(item.semanticRole(), expected.physicalRole()))
           .count();
       if (matches != 1) return false;
     }
