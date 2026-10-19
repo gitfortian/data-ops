@@ -264,6 +264,76 @@ class DatabaseMigrationSmokeTest {
             org.springframework.transaction.PlatformTransactionManager.class)));
   }
 
+  /**
+   * T2-A row-fence experiment: a real read-only project revision FOR UPDATE
+   * must stop a concurrent Semantic mutation until the observation transaction
+   * ends. This does NOT establish Modeling/Security commit fencing or prove
+   * coverage of all Semantic writers.
+   */
+  @Test
+  void b2PublicationRevisionObservationBlocksConcurrentMutationUntilCommit() {
+    startAndValidate(true, context -> {
+      var business = context.getBean("yakBusinessDataSource", DataSource.class);
+      var jdbc = new org.springframework.jdbc.core.JdbcTemplate(business);
+      var manager = context.getBean("yakBusinessTransactionManager",
+          org.springframework.transaction.PlatformTransactionManager.class);
+      long project = (java.util.UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+      var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+      org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+      var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+          business, trusted);
+      var lockHeld = new java.util.concurrent.CountDownLatch(1);
+      var release = new java.util.concurrent.CountDownLatch(1);
+      try {
+        var seedTx = new org.springframework.transaction.support.TransactionTemplate(manager);
+        Long seeded = seedTx.execute(status -> revision.advanceBeforeMutation());
+        assertThat(seeded).isEqualTo(2L);
+
+        // No ambient business transaction => no read authority.
+        org.assertj.core.api.Assertions.assertThatThrownBy(revision::lockExistingForReview)
+            .isInstanceOf(IllegalStateException.class);
+
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+          var first = workers.submit(() -> {
+            var tx = new org.springframework.transaction.support.TransactionTemplate(manager);
+            return tx.execute(status -> {
+              Long observed = revision.lockExistingForReview();
+              lockHeld.countDown();
+              await(release);
+              return observed;
+            });
+          });
+          assertThat(lockHeld.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+          var secondAttempted = new java.util.concurrent.CountDownLatch(1);
+          var second = workers.submit(() -> {
+            var tx = new org.springframework.transaction.support.TransactionTemplate(manager);
+            return tx.execute(status -> {
+              secondAttempted.countDown();
+              return revision.advanceBeforeMutation();
+            });
+          });
+          assertThat(secondAttempted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+          // The second transaction cannot commit a mutation while the read
+          // fence transaction holds the same project revision row lock.
+          org.assertj.core.api.Assertions.assertThatThrownBy(
+              () -> second.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+              .isInstanceOf(java.util.concurrent.TimeoutException.class);
+          release.countDown();
+          assertThat(first.get(15, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(2L);
+          assertThat(second.get(15, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(3L);
+          assertThat(jdbc.queryForObject(
+              "SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?",
+              Long.class, project)).isEqualTo(3L);
+        }
+      } catch (Exception failure) {
+        throw new AssertionError("Semantic project revision row fence was not respected", failure);
+      } finally {
+        release.countDown();
+        jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?", project);
+      }
+    });
+  }
+
   @Test
   void odsSourceUniqueIndexSeparatesSchemasAndBlocksDuplicateBindings() {
     // Uses the same isolated MySQL 8.0 CI database as the migration smoke.
