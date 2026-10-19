@@ -68,6 +68,26 @@ public interface PublicationStandardEvidenceApi {
     public BatchResult {
       columns = List.copyOf(columns);
       safeReasonCodes = List.copyOf(safeReasonCodes);
+      // Never let an incomplete or provider-unknown result impersonate VALID.
+      // This is a DTO shape check, not authorization, revision provenance or a
+      // release gate. The future provider must still prove all three.
+      if (verdict == null) {
+        throw new IllegalArgumentException("标准证据结果缺少有效判定");
+      }
+      if (verdict == Verdict.VALID) {
+        if (projectId <= 0 || modelId <= 0 || layerCode == null
+            || physicalStructureSha256 == null
+            || !physicalStructureSha256.matches("[a-f0-9]{64}")
+            || semanticRevision == null || semanticRevision <= 0
+            || digestAlgorithmId == null || digestAlgorithmId.isBlank()
+            || evidenceSha256 == null || !evidenceSha256.matches("[a-f0-9]{64}")
+            || columns.isEmpty() || !safeReasonCodes.isEmpty()
+            || columns.stream().anyMatch(column -> column == null
+                || column.standardFieldId() == null || column.standardFieldId() <= 0
+                || !"VALID".equals(column.status()))) {
+          throw new IllegalArgumentException("VALID 缺少完整可信修订或逐字段标准证据");
+        }
+      }
     }
   }
 
