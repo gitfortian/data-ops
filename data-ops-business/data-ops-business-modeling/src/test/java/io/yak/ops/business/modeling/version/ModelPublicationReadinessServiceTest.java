@@ -99,6 +99,14 @@ class ModelPublicationReadinessServiceTest {
   @Test
   void evenCatalogValidNeverAuthorizesUnfencedSecurityCommit() {
     mockModel("DIM");
+    // Every physical column has a StandardField in a true VALID batch. The
+    // default fixture's technical column has no standard and is blocked.
+    StructureView v = saved("DIM");
+    when(structures.getForUpdate(701L)).thenReturn(new StructureView(
+        v.modelId(), v.modelCode(), v.modelName(), v.dialect(), v.status(),
+        v.modelDescription(), v.tableName(), v.tableComment(),
+        v.columns().subList(0, 1), v.primaryKey(), v.indexes(), v.partition(),
+        v.tableProperties()));
     when(semantic.evaluate(any(BatchRequest.class))).thenAnswer(invocation -> {
       BatchRequest request = invocation.getArgument(0);
       return new BatchResult(Verdict.VALID, request.projectId(), request.modelId(),
@@ -129,6 +137,26 @@ class ModelPublicationReadinessServiceTest {
     assertThat(preview.inspect(701L).standardsVerdict()).isEqualTo(Verdict.UNKNOWN);
     assertThat(preview.inspect(701L).authorizationStatus())
         .isEqualTo("EVIDENCE_UNAVAILABLE");
+  }
+
+  @Test
+  void sameCountButForeignColumnEvidenceCannotBePresentedAsValid() {
+    mockModel("DWD");
+    when(semantic.evaluate(any(BatchRequest.class))).thenAnswer(invocation -> {
+      BatchRequest request = invocation.getArgument(0);
+      return new BatchResult(Verdict.BLOCKED, request.projectId(), request.modelId(),
+          request.layerCode(), request.physicalStructureSha256(), 41L, null, null,
+          List.of(
+              new ColumnEvidence("someone_else", "BIGINT", 11L,
+                  "DIMENSION", "VALID", null, List.of(), null, null),
+              new ColumnEvidence("etl_time", "TIMESTAMP", null,
+                  "PROCESS", "BLOCKED", null, List.of(), null, "MISSING_STANDARD")),
+          List.of("MISSING_STANDARD"));
+    });
+    var report = preview.inspect(701L);
+    assertThat(report.standardsVerdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(report.columns()).isEmpty();
+    assertThat(report.authorizedForPublication()).isFalse();
   }
 
   @Test
