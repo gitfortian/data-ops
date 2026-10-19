@@ -15,7 +15,7 @@ Decision subjects: [DR-06 #556](https://github.com/gitfortian/data-ops/issues/55
 |---|---|---|---|
 | DR-06：逻辑版本 → 物理映射/物理版本 | **有条件接受其领域方向**：Modeling 持有持久 MappingSet、不可变 MappingRevision，并将精确逻辑快照、映射修订和物理版本绑定为一组可回读证据 | #556 仍 DECISION_REQUIRED | Modeling + Semantic + Security Owner 正式签收；明确逻辑版本稳定身份和跨分层支持范围 |
 | DR-07：物理版本/映射修订 → DataDev TaskRevision | **接受 DataDev 持有任务绑定与执行事实的原则；当前只保留已合并、默认禁用的 DWD 能力** | #557 仍 DECISION_REQUIRED / NO_WRITE_AUTHORIZATION | Modeling + DataDev + Runtime + Security Owner 签收；安装经批准的目标写策略，明确层级合同与真实验收 |
-| PD-010：非 ODS 数据标准强制 | **推荐接受核心硬约束**：非 ODS 正式发布列均须有效标准字段引用和适用的数据标准；草稿可留缺口但不得发布；首期不设未批准的技术列豁免 | 现有 PD-010 仍 PROPOSED | Product + Semantic + Modeling + Security Owner 签收发布闸门、校验责任和历史兼容策略 |
+| PD-010：非 ODS 数据标准强制 | **核心产品硬约束已由用户委托 Product D4 专项批准**：非 ODS 正式发布逐列有效标准、ODS 例外、草稿宽限、无未经批准技术列豁免 | D4 Product ACCEPTED_ONLY；PD-010 D1/D2/D3/D5/D6 与整体仍 PROPOSED | Semantic + Modeling + Security 各域独立签收 SPI、并发、授权和历史兼容；批准 Feature Spec 后才可接入/启用生产闸门 |
 
 **禁止混淆：** 代码存在 ≠ 决策批准；Feature Flag 默认关闭 ≠ 目标写策略已获批准；TaskRevision 已绑定 ≠ SQL 已执行；Runtime 已接单/成功 ≠ 目标数据已对账；设计版本已发布 ≠ 质量通过或已消费。
 
@@ -308,9 +308,15 @@ PR #626 的 `CodeSetRevision` 已改为排除 `createdBy/createTime/updateTime` 
 | DR-06 | Modeling | 映射身份/CAS、ModelVersion 事务、四发布入口、结构身份、旧历史回读 | **NOT_RECORDED** |
 | DR-06 / PD-010 | Semantic | 批量标准验证 SPI、适用标准与角色、并发一致性、CODE 摘要算法版本 | **NOT_RECORDED** |
 | DR-06 / PD-010 | Security | 当前项目授权、权限撤销、UNKNOWN、SECURITY 脱敏与快照安全 | **NOT_RECORDED** |
-| PD-010 D4 | Product | ODS 例外、非 ODS 全列、技术列零未批豁免、草稿/发布分离、旧历史策略 | **DIRECTION_ACCEPTED_ONLY** |
+| PD-010 D4 | Product | ODS 例外、非 ODS 全列、技术列零未批豁免、草稿/发布分离、旧历史策略 | **ACCEPTED_PRODUCT_D4_ONLY（2026-10-19 用户授权代签；其他领域仍 NOT_RECORDED）** |
 | DR-07 | Modeling / DataDev / Runtime / Security | 精确 TaskRevision 与 TargetPolicy、不可重放 UNKNOWN 和目标对账分离 | **NOT_RECORDED** |
 
 每位真实 Owner 应在 [#556](https://github.com/gitfortian/data-ops/issues/556)、[#557](https://github.com/gitfortian/data-ops/issues/557) 或对应 PD 正式决策记录中注明：`ROLE: <role> / DECISION: ACCEPT|REVISE|REJECT / VERSION: this review revision / CONDITIONS: ... / EVIDENCE: ...`。不可由开发代理代签或把本文件合并视作批准。
 
 **进入代码门槛：** 收到 DR-06 和 PD-010 所需真实批准及适用标准一致性方案后，才实施唯一的非 ODS 标准发布 validator 纵向 PR；DR-07/目标写策略与真实 SQL 仍独立受控。任何一项拒绝、权限不明确或待修订均继续 `NO_WRITE_AUTHORIZATION`。
+
+### 10.7 Product D4 专项批准与剩余门槛（2026-10-19）
+
+经用户本次明确授权由助手代办签收，[PD-010 §13](../decisions/PD-010-guided-business-to-data-journey.md) 和 [#614 代理签收评论](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6257825609) 正式记录 **Product D4_ONLY = ACCEPTED**。批准范围为 ODS 贴源例外、DWD/DIM/DWS/ADS 正式发布逐列有效标准字段与适用数据标准、草稿可缺不放行、首期零未批准技术列豁免、旧历史不可变及异常 fail-closed。
+
+**没有被本产品签收改变的内容：** 本文件整体仍 `Status: PROPOSED` 和 `NO_WRITE_AUTHORIZATION`；DR-06 Modeling/Semantic/Security 的独立 Owner 评审仍 `NOT_RECORDED`；DR-07 DataDev/Runtime 亦未授权；PD-010 其他 D1/D2/D3/D5/D6 和 Feature Spec 仍需审批。Product D4 接受**不是**运行时代码发布资格自动生效，更不是数据库迁移、任务/SQL 执行或目标数据写入许可。不能把同一个 GitHub 账号下的代理评论拆成多份独立领域投票。

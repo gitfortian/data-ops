@@ -164,3 +164,23 @@ PR #619 已将字段引用的数据标准状态纳入当前只读报告。本次
 - 摘要使用规范化成员内容字段计算：成员 ID、类别/编码/名称、状态、标准版本、排序、预置标记、描述和类别专属定义；不包含 `createdBy`、`createTime`、`updateTime` 等审计元数据。审计记录变化不应伪装成码集内容漂移；标准版本或实际内容变化仍会改变摘要。
 
 PD-010 整体仍为 `PROPOSED`；本节仅收敛只读证据准确性，不授权全局非 ODS 发布阻断器。
+
+## 13. Product Owner D4 专项正式签收（2026-10-19）
+
+**Decision Scope: D4_ONLY**  
+**Product Owner Decision: ACCEPTED（本次用户明确委托助手代办本领域签收）**  
+**Overall PD-010 Status: PROPOSED（D1/D2/D3/D5/D6 未获本次批准）**  
+**Implementation: NOT_STARTED（产品批准不代表领域合同与 Feature Spec 已就绪）**  
+**Decision Record:** [R14-2 #614 Product D4 签收记录](https://github.com/gitfortian/data-ops/issues/614#issuecomment-6257825609) · [DR-06 #556](https://github.com/gitfortian/data-ops/issues/556#issuecomment-6257826083)
+
+按 R14-2 审定稿第 10.1 节的最小产品切片，产品负责人本次明确授权代办签收，并正式确认：
+
+1. **ODS 贴源例外**：保留来源事实，不因缺乏业务标准字段引用而阻断 ODS 草稿与贴源设计；来源保真仍需原有来源/权限/结构约束。
+2. **非 ODS 正式发布逐列强校验**：DWD / DIM / DWS / ADS 的每一个目标物理列必须具备本项目合法启用的 StandardField 身份及适用的 TYPE / UNIT / CALIBER / CODE / SECURITY 等标准证据，缺一不得冒充可发布；仅有“类型标准”或同名匹配不够。
+3. **草稿与发布分离**：草稿可存未完成项并展示明确缺口，真正设计发布必须通过核验；不得把当前只读报告视作放行回执。
+4. **首期技术列无默许豁免**：处理时间、追踪等技术字段没有未经批准的默认放行规则；若未来需要例外必须单独决策并冻结名单、来源、审批身份与版本。
+5. **拒绝与历史**：标准停用、权限撤销、CODE 成员不完整、未知供应方结果与证据漂移不得默认 PASS；历史已发布旧版本保持不可变，缺失标准证据标识为 LEGACY_UNBOUND 或无法核验，不自动改写历史。
+
+**授权边界：** 此签收仅是用户委托下的 *Product D4 产品选择*，不得被解释为 Modeling / Semantic / Security 对数据库、API、并发、权限与审批冻结的独立领域批准，也不等于 DR-07 的 DataDev / Runtime / SQL/DDL 或目标写授权。相关 Owner 必须签收 R14-2 §10.2–10.6 最终领域合同，且 Feature Spec 获得批准，才允许实际开启统一发布阻断器。**本文件总体仍为 PROPOSED。**
+
+用户委托与执行记录均如实披露，未生成或冒称其他独立 Owner 的投票。
