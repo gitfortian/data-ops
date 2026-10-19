@@ -15,6 +15,9 @@ Baseline: PR #635 head 65f039da (2026-10-19)
 
 - `DraftPublicationEvidenceVerifier`: 纯 Java 非 Spring Bean，检查 project/model/layer/structure、目标列全集、字段类型和 StandardField、CODE 完整性及候选 digest；输出 VALID_CANDIDATE/BLOCKED/UNKNOWN/ODS_OUT_OF_SCOPE。
 - `DraftPublicationApprovalEvidence`: 纯 Java 非 Spring Bean，冻结 design binding + 标准证据，比较设计/标准变化；返回 CANDIDATE_MATCH/STALE/UNKNOWN。
+- `evaluateAgainstModelSnapshot(submitted, physicalSnapshot, semanticObservation)`：新增独立候选列集比对；提交的列名/类型/StandardField ID、作用域、结构摘要须与另一个 Modeling 物理快照相符，且与 Semantic 响应完整一致。模型列快照入参**尚无可信来源保证**；这不是 DB 读取、SHA 重算、身份授权、事务/并发保护或发布权。调用方必须未来从 Modeling 持久事实/根锁上下文取得并验证列全集。
+- `Request/Observation` 构造时防御性复制列证据列表，避免调用方在候选校验前后篡改输入集合；不等于对数据来源作可信认证。
+
 - 已有专项测试验证基础正常流、漂移、篡改与跨层复用；现有 CI PASS 仅证明候选实现可编译/运行。
 - 未接 Semantic 正式 SPI、真实授权上下文、四发布入口、审批 payload、ModelVersion/迁移或产品 UI/E2E。
 
