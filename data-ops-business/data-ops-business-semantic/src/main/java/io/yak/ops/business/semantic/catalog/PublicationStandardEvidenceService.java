@@ -110,17 +110,31 @@ public class PublicationStandardEvidenceService implements PublicationStandardEv
         || !StandardField.isValidRole(field.role())) {
       return rejected(column, "INVALID_STANDARD");
     }
+    if (!Objects.equals(field.role(), column.physicalRole())) {
+      return rejected(column, "FIELD_ROLE_MISMATCH");
+    }
+    // Stale references not permitted by the persisted field role must not be
+    // ignored just because the client requested another layer or column role.
+    if (!StandardField.ROLE_DIMENSION.equals(field.role())
+        && (hasText(field.stdCodeSetCode()) || field.stdSecurityId() != null)) {
+      return rejected(column, "ROLE_REFERENCE_MISMATCH");
+    }
+    if (!StandardField.ROLE_METRIC.equals(field.role())
+        && (field.stdUnitId() != null || field.stdCaliberId() != null)) {
+      return rejected(column, "ROLE_REFERENCE_MISMATCH");
+    }
     if (field.dataType() == null || !field.dataType().trim()
         .equalsIgnoreCase(column.physicalType().trim())) {
       return rejected(column, "PHYSICAL_TYPE_MISMATCH");
     }
 
     var references = new ArrayList<StandardReference>();
-    String issue = addReference(references, field.stdTypeId(), StandardKind.TYPE, true);
+    String issue = addReference(references, field.stdTypeId(), StandardKind.TYPE,
+        true, column.physicalType());
     if (issue == null && StandardField.ROLE_METRIC.equals(field.role())) {
-      issue = addReference(references, field.stdUnitId(), StandardKind.UNIT, true);
+      issue = addReference(references, field.stdUnitId(), StandardKind.UNIT, true, null);
       if (issue == null) issue = addReference(references,
-          field.stdCaliberId(), StandardKind.CALIBER, false);
+          field.stdCaliberId(), StandardKind.CALIBER, false, null);
     }
     CodeSetReference codeSet = null;
     if (issue == null && StandardField.ROLE_DIMENSION.equals(field.role())) {
@@ -159,13 +173,18 @@ public class PublicationStandardEvidenceService implements PublicationStandardEv
   }
 
   private String addReference(List<StandardReference> into, Long id,
-                              StandardKind kind, boolean required) {
+                              StandardKind kind, boolean required,
+                              String physicalType) {
     if (id == null || id <= 0) return required ? "MISSING_REQUIRED_REFERENCE" : null;
     Standard fact = standards.get(id);
     if (fact == null || !Objects.equals(fact.id(), id)
         || fact.kind() != kind || fact.status() != StandardStatus.ENABLED
         || fact.fields() == null || !hasDefinition(fact)) {
       return "INVALID_STANDARD_REFERENCE";
+    }
+    if (kind == StandardKind.TYPE && (physicalType == null
+        || !fact.fields().stdType().trim().equalsIgnoreCase(physicalType.trim()))) {
+      return "TYPE_STANDARD_DRIFT";
     }
     String definition = switch (kind) {
       case TYPE -> fact.fields().typeCode() + "|" + fact.fields().stdType();
@@ -208,6 +227,7 @@ public class PublicationStandardEvidenceService implements PublicationStandardEv
     Set<String> names = new HashSet<>();
     for (ColumnRequest col : req.columns()) {
       if (col == null || !hasText(col.columnName()) || !hasText(col.physicalType())
+          || !StandardField.isValidRole(col.physicalRole())
           || !names.add(col.columnName().trim().toLowerCase(Locale.ROOT))) return false;
     }
     return true;
