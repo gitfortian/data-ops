@@ -60,6 +60,7 @@ Semantic 的项目事实修订不能替代 Security 授权修订。Security 至�
 
 - **已合并前 CI 验证的事实：** `c786f2c9` 与 `b8871d64` 各自四组 GitHub Checks 全绿；`DatabaseMigrationSmokeTest` 在具备隔离 MySQL 环境的 Architecture job 中实际执行 11 项，包含共用 `yakBusinessDataSource` / 两个 MyBatis Mapper / 同一 `yakBusinessTransactionManager` 的运行时身份核验、T1 修订行迁移/回滚/ABA/并发自增测试。证明的是**CI 部署下共用数据源与 Semantic 写方本身的锁**，不构成生产配置或跨域安全保证。
 - **本次新增、独立待 CI 的读写互斥：** `SemanticPublicationRevisionService.lockExistingForReview()` 只在可信项目的真实业务事务中用 `SELECT ... FOR UPDATE` 读取已存在项目 revision，**不补造缺失行、不提供发布资格**；`b2PublicationRevisionObservationBlocksConcurrentMutationUntilCommit` 在真实隔离 MySQL 双事务中持有观察行锁时，断言另一事务不能提交修订写入，释放后才能自增。该测试只能证明同项目修订行的数据库互斥性，并不能证明其他 Semantic 表快照、Modeling 根锁、Security 撤权均已纳入同一 fence。
+- **本轮 PostgreSQL 真实行锁实验（待同 HEAD CI）：** `PostgresqlStorageSmokeTest.verifySemanticPublicationRevisionFence` 在已启用 PostgreSQL 的重启烟测中，用两个真实业务事务分别持有 revision 行锁和尝试修改同一项目的 revision。断言前者未提交时后者不能推进，释放后才能提交；验证 `lockExistingForReview` 不允许事务外观察。**不修改生产发布路径，也不证明 Modeling 根锁／消费者跨域引用锁序**。
 - **F-039 代码审查：** `SemanticAdoptionItemWriter.apply` 针对 `FIELD` 使用 `fields.create`，针对 `PROCESS_FIELD` 使用 `fields.bindToProcess`，进入当前已接修订推进的 `SemanticFieldService`；已成功回执的幂等重放不执行新字段变更。F-039 的 `SOURCE_LINK` 调用 `SemanticProcessBindingService` 改变来源绑定，属独立业务来源语义，需要明确是否影响 B2 发布适用标准并决定是否加入修订协议。
 - **尚未证明 T2 GO：** 依旧缺 Modeling 实际根锁→Semantic 项目修订行锁、Semantic 项目修订行锁→跨模块引用查询的**端到端资源锁关系**证明。特别是 `StandardCatalogService.delete/changeStatus` 在修订锁之后检查 Modeling 等消费者引用，必须证明消费者只读不会获得逆向根锁，或调整统一锁序再提交真实双 Worker 竞态测试。即使本次 MySQL 行锁互斥测试通过也不得自动打开 #635 生产接线、提交 fence 或审批资格。
 
