@@ -218,7 +218,6 @@ const UnifiedModelView: React.FC = () => {
           {model?.processName ? <span>业务过程：{model.processName}</span> : null}
           {model?.status ? <Tag>{MODELING_STATUS_LABELS[model.status] || model.status}</Tag> : null}
         </>}
-        onNavigate={(path) => guardDraftAndNavigate(() => history.push(path))}
         actions={<>
           {sourceReturnPath ? <YakButton onClick={returnToVerifiedSource}>返回来源表</YakButton> : null}
           <YakButton onClick={() => guardDraftAndNavigate(() => history.push('/modeling'))}>返回模型库</YakButton>

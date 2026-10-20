@@ -14,7 +14,6 @@ import {
   Tag,
   Tooltip,
 } from 'antd';
-import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
@@ -24,7 +23,6 @@ import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWiza
 import ModelingStartGuide from '@/pages/modeling/components/ModelingStartGuide';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
 import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
-import ModelTreePane from '@/pages/modeling/components/ModelTreePane';
 import ModelingStudioHeader from '@/pages/modeling/components/ModelingStudioHeader';
 import RecycleBinDrawer from '@/pages/modeling/components/RecycleBinDrawer';
 import TagManageModal from '@/pages/modeling/components/TagManageModal';
@@ -48,13 +46,7 @@ import {
 } from '@/utils/journeyNavigation';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
-const TREE_WIDTH_STORAGE_KEY = 'yak.modeling.tree.width';
 const HIDDEN_COLUMNS_KEY = 'yak.modeling.hiddenColumns';
-
-const TREE_MIN_WIDTH = 180;
-const TREE_MAX_WIDTH = 480;
-
-const clampTreeWidth = (width: number) => Math.min(TREE_MAX_WIDTH, Math.max(TREE_MIN_WIDTH, Math.round(width)));
 
 const ModelingWorkspace: React.FC = () => {
   const { can } = usePermissionAccess();
@@ -96,10 +88,6 @@ const ModelingWorkspace: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // 目录树面板状态（复刻数据开发工作台）
-  const [treeWidth, setTreeWidth] = useState(240);
-  const [treeCollapsed, setTreeCollapsed] = useState(false);
-
   // 组织数据
   const [tags, setTags] = useState<ModelingTagRecord[]>([]);
 
@@ -111,43 +99,6 @@ const ModelingWorkspace: React.FC = () => {
   const [recycleOpen, setRecycleOpen] = useState(false);
   const [tagTarget, setTagTarget] = useState<ModelingModelRecord>();
   const [editTarget, setEditTarget] = useState<ModelingModelRecord>();
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(TREE_WIDTH_STORAGE_KEY);
-    if (stored) setTreeWidth(clampTreeWidth(Number(stored)));
-  }, []);
-
-  const handleTreeResizeStart = useCallback(
-    (event: ReactPointerEvent) => {
-      if (treeCollapsed) return;
-      event.preventDefault();
-      const startX = event.clientX;
-      const startWidth = treeWidth;
-      const previousCursor = document.body.style.cursor;
-      const previousUserSelect = document.body.style.userSelect;
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-
-      const handlePointerMove = (moveEvent: PointerEvent) => {
-        setTreeWidth(clampTreeWidth(startWidth + moveEvent.clientX - startX));
-      };
-      const finish = (upEvent: PointerEvent) => {
-        const width = clampTreeWidth(startWidth + upEvent.clientX - startX);
-        setTreeWidth(width);
-        window.localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(width));
-        document.body.style.cursor = previousCursor;
-        document.body.style.userSelect = previousUserSelect;
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', finish);
-        window.removeEventListener('pointercancel', finish);
-      };
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', finish);
-      window.addEventListener('pointercancel', finish);
-    },
-    [treeCollapsed, treeWidth],
-  );
 
   const loadRecords = useCallback(
     async (
@@ -549,37 +500,19 @@ const ModelingWorkspace: React.FC = () => {
     </div>
   );
 
+  const physicalView = searchParams.get('view') === 'physical';
+
   return (
     <div className="modeling-studio-page modeling-studio-catalog">
-      <aside className="modeling-studio-catalog-rail">
-      <ModelTreePane
-        domainTree={domainTree}
-        semanticLoading={optionsLoading}
-        selectedDomainId={domainFilter}
-        width={treeWidth}
-        collapsed={treeCollapsed}
-        onSelect={(domainId) => {
-          // 域树过滤 = 该域全部业务过程(与右侧"全部业务域"下拉同一状态)
-          setDomainFilter(domainId);
-          if (domainId != null) setProcessFilter(undefined);
-          setPageNo(1);
-        }}
-        onResizeStart={handleTreeResizeStart}
-        onCollapsedChange={setTreeCollapsed}
-        onGoSemantic={goSemantic}
-      />
-      </aside>
-
       <div className="modeling-studio-catalog-body">
-        <ModelingStudioHeader area="catalog" title="数仓模型设计中心"
-          description="围绕业务过程组织逻辑与物理设计。选择分层进入真实模型；版本、标准与加工证据分别核验。"
+        <ModelingStudioHeader area="catalog" title={physicalView ? '物理模型' : '模型总览'}
+          description={physicalView
+            ? '选择数仓分层，查找已保存的物理模型并继续设计、映射和版本审阅。'
+            : '集中查看当前项目的建模对象，从业务过程、逻辑设计或已有物理模型继续工作。'}
           context={<><span>当前项目 #{currentProjectId ?? '未选定'}</span><span>当前筛选：{total} 个物理模型</span></>}
           actions={<>
             <Input.Search allowClear placeholder="搜索模型名称或编码" className="!w-[230px]"
               onSearch={handleSearch} />
-            <Button onClick={() => history.push(journeyProcess
-              ? processToLogical(journeyProcess.id) : '/modeling/logical')}>逻辑模型</Button>
-            <Button onClick={() => history.push('/modeling/mainline')}>分层主线</Button>
             <Dropdown menu={{ items: [
               { key: 'recycle', label: '回收站' },
               { key: 'tags', label: '标签管理' },
@@ -599,7 +532,7 @@ const ModelingWorkspace: React.FC = () => {
           <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
           <Button onClick={clearJourney}>查看全部物理模型</Button>
         </div>}
-        <ModelingStartGuide
+        {!physicalView && <ModelingStartGuide
           process={journeyProcess}
           onBusiness={() => history.push(journeyProcess ? processToSemantic(journeyProcess.id) : '/semantic/processes')}
           onLogical={() => history.push(journeyProcess ? processToLogical(journeyProcess.id) : '/modeling/logical')}
@@ -607,12 +540,12 @@ const ModelingWorkspace: React.FC = () => {
           onCreate={() => setWizardOpen(true)}
           canCreate={can('modeling:create') && !Boolean(journeyProblem) && journeyReady && !optionsLoading}
           loading={optionsLoading || !journeyReady}
-        />
+        />}
         <section className="modeling-studio-layer-panel" aria-label="模型分层导航">
           <div className="modeling-studio-section-header">
             <div>
               <span className="modeling-studio-overline">物理设计工作区</span>
-              <h2>按数仓分层查找模型</h2>
+              <h2>{physicalView ? '选择分层' : '按数仓分层查找模型'}</h2>
               <p>仅展示当前项目已配置的分层。切换后重新查询服务端，不用当前页数据推断项目总量。</p>
             </div>
             <span className="modeling-studio-hint">ODS 来源贴合 · 非 ODS 需审阅逻辑依据与数据标准</span>
