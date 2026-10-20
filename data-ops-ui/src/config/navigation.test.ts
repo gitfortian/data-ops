@@ -224,12 +224,13 @@ describe('permission-aware navigation', () => {
     const menu = [YAK_OPS_MENU_CODES.dataSource];
     const route = appRoutes.find(item => item.id === 'data-source-explore')!;
     expect(route.path).toBe('/data-source/explore');
-    expect(resolveNavigationMenuCode(route)).toBe(YAK_OPS_MENU_CODES.dataSource);
-    expect(canAccessNavigationRoute(route, read, menu)).toBe(true);
+    expect(resolveNavigationMenuCode(route)).toBe(YAK_OPS_MENU_CODES.dataSourceExplore);
+    expect(canAccessNavigationRoute(route, read, menu)).toBe(false);
+    expect(canAccessNavigationRoute(route, read, [YAK_OPS_MENU_CODES.dataSourceExplore, YAK_OPS_MENU_CODES.dataSource])).toBe(true);
     expect(canAccessNavigationRoute(route, read, [])).toBe(false);
     expect(canAccessNavigationRoute(route, [], menu)).toBe(false);
     expect(getActiveNavigationId('/data-source/explore', read, menu)).toBe('data-source-explore');
-    const group = getMainNavigationGroups(read, menu).find(g => g.id === 'integration');
+    const group = getMainNavigationGroups(read, [YAK_OPS_MENU_CODES.dataSource, YAK_OPS_MENU_CODES.dataSourceExplore]).find(g => g.id === 'integration');
     expect(group?.routes.map(item => item.id)).toEqual(['data-source', 'data-source-explore']);
   });
 

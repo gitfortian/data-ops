@@ -78,9 +78,10 @@ export const appRoutes: readonly NavigationRoute[] = [
   { id: 'ai-agent', path: '/ai-agent', title: '智能助手', component: './ai-agent', hidden: true, mode: 'public', parentId: 'home' },
   { id: 'data-source', menuCode: YAK_OPS_MENU_CODES.dataSource, mode: 'one', permission: 'resource:data-source:read', path: '/data-source', title: '数据源管理', component: './data-source', iconKey: 'database', menuGroup: 'integration', order: 10 },
   // Same Security data-source menu grant: no new RBAC entitlement.
-  { id: 'data-source-explore', path: '/data-source/explore', title: '数据探查',
-    component: './data-source/explore', parentId: 'data-source',
-    iconKey: 'monitor', menuGroup: 'integration', order: 11 },
+  { id: 'data-source-explore', menuCode: YAK_OPS_MENU_CODES.dataSourceExplore,
+    mode: 'one', permission: 'resource:data-source:read',
+    path: '/data-source/explore', title: '数据探查', component: './data-source/explore',
+    parentId: 'data-source', iconKey: 'monitor', menuGroup: 'integration', order: 11 },
   { id: 'sql-execution-audit', menuCode: YAK_OPS_MENU_CODES.sqlExecutionAudit, mode: 'one', permission: 'resource:sql-execution:read', path: '/sql-execution-audit', title: 'SQL 执行记录', component: './data-source/sql-executions', iconKey: 'monitor', menuGroup: 'integration', order: 50 },
   { id: 'dashboard', menuCode: YAK_OPS_MENU_CODES.dashboard, mode: 'public', path: '/dashboard', title: '仪表盘', component: './data-analysis/dashboard', iconKey: 'insight', menuGroup: 'analysis-presentation', order: 10 },
   { id: 'dashboard-new', path: '/dashboard/new', title: '新建仪表盘', component: './data-analysis/dashboard/editor', hidden: true, parentId: 'dashboard' },

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -28,7 +28,6 @@ const SECURITY_MIGRATION_ROOT = path.resolve(
   __dirname,
   '../../../data-ops-boot/src/main/resources/yak-security/db/migration',
 );
-const BASE_CATALOG_MIGRATION = path.join(SECURITY_MIGRATION_ROOT, 'V2__boot_security_baseline.sql');
 
 const sqlValue = (token: string): string | null =>
   token === 'NULL' ? null : token.slice(1, -1);
@@ -52,8 +51,13 @@ const parseMenuRows = (sql: string): MenuCatalogRow[] => {
 const parseFinalYakOpsMenuCatalog = (): MenuCatalogRow[] => {
   // The consolidated baseline retains the original migrations in execution order.
   // Later upserts replace earlier projections of the same menu identity.
-  const rows = parseMenuRows(readFileSync(BASE_CATALOG_MIGRATION, 'utf8'));
-  if (rows.length === 0) throw new Error('Parsed zero rows from the security baseline');
+  const migrationFiles = readdirSync(SECURITY_MIGRATION_ROOT)
+    .filter(name => /^V[0-9]+__.*\.sql$/.test(name))
+    .sort((a, b) => Number(a.match(/^V(\d+)/)?.[1]) - Number(b.match(/^V(\d+)/)?.[1]));
+  // Preserve V2 immutability; apply V3+ catalog upserts over its projection.
+  const rows = migrationFiles.flatMap(name =>
+    parseMenuRows(readFileSync(path.join(SECURITY_MIGRATION_ROOT, name), 'utf8')));
+  if (rows.length === 0) throw new Error('Parsed zero menu catalog rows');
   const finalRows = new Map(rows.map(row => [row.menuCode, row]));
   return [...finalRows.values()].filter(row => row.visible && row.active);
 };
