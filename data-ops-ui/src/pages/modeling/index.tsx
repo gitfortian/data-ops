@@ -730,6 +730,9 @@ const ModelingWorkspace: React.FC = () => {
           onRow={(record) => ({
             onClick: (event) => {
               const target = event.target as HTMLElement;
+              // Dropdown 菜单通过 React portal 渲染，点击菜单项也会冒泡到行，
+              // 但菜单项并不是行的 DOM 子节点；这类点击不能触发行导航。
+              if (!event.currentTarget.contains(target)) return;
               if (target.closest('a, button, input, .ant-checkbox-wrapper, .ant-dropdown-trigger')) return;
               if (window.getSelection()?.toString()) return;
               history.push(`/modeling/models/${record.id}`);
