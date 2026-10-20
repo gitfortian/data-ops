@@ -21,11 +21,13 @@ export default function OdsSourceSelector() {
   const [sources, setSources] = useState<{ id: number; name: string; dbType?: string }[]>([]);
   const [selectedId, setSelectedId] = useState<number>();
   const [loading, setLoading] = useState(false);
+  const [loadedProjectId, setLoadedProjectId] = useState<number>();
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
     setSources([]);
+    setLoadedProjectId(undefined);
     setSelectedId(undefined);
     setError('');
     if (!allowed || !projectId) return () => { active = false; };
@@ -38,6 +40,7 @@ export default function OdsSourceSelector() {
         dbType: String(item.dbType || ''),
       }));
       setSources(available);
+      setLoadedProjectId(projectId);
     }).catch(e => {
       if (active) setError(e instanceof Error ? e.message : '数据源读取失败，请稍后重试');
     }).finally(() => {
@@ -46,10 +49,13 @@ export default function OdsSourceSelector() {
     return () => { active = false; };
   }, [allowed, projectId]);
 
+  const visibleSources = allowed && projectId === loadedProjectId ? sources : [];
+  const visibleSelection = visibleSources.some(item => item.id === selectedId) ? selectedId : undefined;
+
   const openSource = (source: LiveSourceCoordinate) => {
     const route = buildLiveSourceOdsPath(source);
-    if (!route || Number(source.dataSourceId) !== selectedId
-        || !sources.some(item => item.id === selectedId)) {
+    if (!route || !allowed || Number(source.dataSourceId) !== visibleSelection
+        || !visibleSources.some(item => item.id === visibleSelection)) {
       setError('当前项目无法核验选中的来源表，请重新探查后再进入。');
       return;
     }
@@ -81,21 +87,21 @@ export default function OdsSourceSelector() {
               aria-label="ODS 来源数据源"
               placeholder="选择已授权的数据源"
               disabled={!allowed || !projectId || loading}
-              value={selectedId}
+              value={visibleSelection}
               onChange={setSelectedId}
-              options={sources.map(item => ({ value: item.id, label: item.name + (item.dbType ? ' · ' + item.dbType : '') }))} />
+              options={visibleSources.map(item => ({ value: item.id, label: item.name + (item.dbType ? ' · ' + item.dbType : '') }))} />
           </Spin>
-          {allowed && projectId && !loading && sources.length === 0 && !error ? (
+          {allowed && projectId && !loading && visibleSources.length === 0 && !error ? (
             <Alert className="!mt-3" type="info" showIcon message="当前项目没有可读取的数据源，请先到数据源模块创建连接。" />
           ) : null}
         </section>
-        {selectedId && allowed && projectId && sources.some(item => item.id === selectedId) ? (
+        {visibleSelection && allowed && projectId ? (
           <section className="ods-workbench-card" aria-label="浏览来源库表">
             <div className="ods-workbench-section-title">
               <div><h2>选择真实物理表</h2><p>展开字段核验后选择“打开或创建 ODS”，进入同一 ODS 模型设计页面。</p></div>
             </div>
-            <LiveSchemaExplorer key={String(projectId) + '-' + selectedId}
-              sourceId={String(selectedId)} canRead onOpenOds={openSource} />
+            <LiveSchemaExplorer key={String(projectId) + '-' + visibleSelection}
+              sourceId={String(visibleSelection)} canRead onOpenOds={openSource} />
           </section>
         ) : null}
       </main>

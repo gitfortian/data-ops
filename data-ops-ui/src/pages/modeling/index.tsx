@@ -487,14 +487,7 @@ const ModelingWorkspace: React.FC = () => {
     [actionId, domainNameById, tagNameById, hiddenColumns],
   );
 
-  if (searchParams.get('sourceJourney') === 'ods') return (
-    <div className="modeling-studio-page modeling-studio-detail">
-      <ModelingStudioHeader area="physical" title="ODS · 来源建模" eyebrow="数据建设 / 来源到 ODS"
-        description="核对真实来源表，选择或创建 ODS 物理目标；保存后返回同一来源。资产纳管与本操作相互独立。"
-        actions={<Button onClick={() => history.push('/modeling')}>返回模型总览</Button>} />
-      <OdsSourceJourney />
-    </div>
-  );
+  if (searchParams.get('sourceJourney') === 'ods') return <OdsSourceJourney />;
 
   const physicalView = searchParams.get('view') === 'physical';
 

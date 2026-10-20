@@ -76,6 +76,7 @@ const OdsSourceJourney = () => {
   const [committing, setCommitting] = useState(false);
   const [savingDesign, setSavingDesign] = useState(false);
   const [creationUnknown, setCreationUnknown] = useState(false);
+  const [commitUnknown, setCommitUnknown] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
   const readEpoch = useRef(0);
@@ -109,11 +110,12 @@ const OdsSourceJourney = () => {
     sourceIdentity.current = sourceKey;
     setLoading(true);
     setFailure('');
+    setCommitUnknown(false);
     setLookup(null);
     setSourceVerified(false);
     // A draftId-only redirect must not erase a preview/mapping the user just confirmed.
     if (changedSource) {
-      setColumns(null); setSavedId(null); setDirty(false); setCreationUnknown(false);
+      setColumns(null); setSavedId(null); setDirty(false); setCreationUnknown(false); setCommitUnknown(false);
       setPreviewBusy(false); setCreating(false); setCommitting(false);
       setCode((`ods_${database}_${schema || ''}_${table}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 120));
       setName(`ODS ${table}`);
@@ -354,6 +356,7 @@ const OdsSourceJourney = () => {
         setFailure('');
         message.success('写入响应未确认，但已重新读取到完整 ODS 设计和来源映射。');
       } else {
+        setCommitUnknown(true);
         setFailure((error instanceof Error ? error.message : '来源映射保存结果未知')
           + '；请先重新核验草稿和来源，禁止直接重复提交。');
       }
@@ -371,7 +374,7 @@ const OdsSourceJourney = () => {
   }
 
   const saveOdsDesign = async () => {
-    if (savingDesign || creating || committing || creationUnknown || !validMappings
+    if (savingDesign || creating || committing || creationUnknown || commitUnknown || !validMappings
         || !dialect || !can('modeling:update')) return;
     setSavingDesign(true);
     try {
@@ -540,7 +543,7 @@ const OdsSourceJourney = () => {
                 </>
               ) : (
                 <Button type="primary" loading={savingDesign || creating || committing}
-                  disabled={!validMappings || !dialect || creationUnknown
+                  disabled={!validMappings || !dialect || creationUnknown || commitUnknown
                     || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code)
                     || !name.trim() || !can('modeling:update')
                     || (!savedDraft && !can('modeling:create'))}
