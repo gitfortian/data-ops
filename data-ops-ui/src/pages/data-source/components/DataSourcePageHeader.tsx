@@ -16,7 +16,7 @@ const DataSourcePageHeader = ({ canCreate, onCreate }: DataSourcePageHeaderProps
         <h1 className="m-0 text-xl font-semibold leading-7 tracking-[-0.35px] text-[#252832]">
           {intl.formatMessage({ id: 'pages.datasource.page.title' })}
         </h1>
-        <p className="source-page-subtitle">管理数据连接，即时探查数据库和表结构。</p>
+        <p className="source-page-subtitle">管理连接配置与状态；物理库表结构请进入独立的数据探查页面。</p>
       </div>
 
       {canCreate ? (

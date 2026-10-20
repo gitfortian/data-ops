@@ -237,3 +237,23 @@
   .source-probe-detail-heading { flex-wrap: wrap; }
   .source-probe-heading-actions { justify-content: flex-start; width: 100%; }
 }
+
+
+/* Compact resource list, using the same page shell and brand tokens as data-ops. */
+.source-page { min-height: calc(100dvh - 64px); padding: 24px 26px 30px; background: #f7f8fa; color: #344054; }
+.source-page-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.source-management-toolbar { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #eaecf0; margin: 18px 0; }
+.source-management-tabs .ant-tabs-nav { margin-bottom: 0 !important; }
+.source-management-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding-bottom: 8px; }
+.source-table-wrapper { background: #fff; border: 1px solid #eaecf0; border-radius: 10px; overflow: hidden; }
+.source-table .ant-table-thead > tr > th { background: #f9fafb !important; font-size: 12px; font-weight: 600; color: #475467; }
+.source-table .ant-table-tbody > tr > td { font-size: 12px; padding-top: 12px; padding-bottom: 12px; }
+.source-table .ant-btn-link { font-size: 12px; padding: 4px 6px; }
+.source-list-pagination { display: flex; justify-content: flex-end; padding-top: 18px; }
+.source-explore-page .source-explore-scope,
+.source-explore-page .source-explore-browser { padding: 18px 20px; border: 1px solid #eaecf0; border-radius: 10px; background: #fff; margin-bottom: 16px; }
+.source-explore-section-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: #344054; margin-bottom: 13px; }
+.source-explore-section-title > strong { font-size: 14px; }
+.source-explore-empty { background: #fff; border: 1px dashed #d0d5dd; border-radius: 10px; padding: 72px 24px; color: #98a2b3; text-align: center; }
+.source-explore-browser .source-probe { width: 100%; }
+@media(max-width:780px){ .source-page {padding: 14px;} .source-management-toolbar{align-items:stretch;} .source-management-filters{width:100%;} .source-explore-page .source-explore-scope,.source-explore-page .source-explore-browser{padding:14px;} }
