@@ -161,6 +161,13 @@ public class ModelPublicationReadinessService {
     }
     try {
       var draft = mappings.get(modelId);
+      // A mapping provider must not supply a draft for a different target
+      // physical model, even when it is the same project and has a plausible
+      // latest frozen revision. Never label that cross-target mapping frozen.
+      if (!Objects.equals(draft.physicalModelId(), modelId)) {
+        return new MappingContext("UNKNOWN", null, null, null, null,
+            null, null, null, "映射草稿指向其他物理模型，无法核验发布来源");
+      }
       if (draft == null) {
         return new MappingContext("MISSING", null, null, null, null,
             null, null, null, "尚未保存 DWD 逻辑→物理映射");
@@ -173,9 +180,19 @@ public class ModelPublicationReadinessService {
             null, "映射草稿尚未冻结为不可变 MappingRevision");
       }
       var latest = frozen.get(0);
+      if (latest == null || latest.mappingRevisionId() == null
+          || latest.mappingRevisionId() <= 0 || latest.mappingSetId() == null
+          || !Objects.equals(latest.mappingSetId(), draft.mappingSetId())
+          || !"FROZEN_DESIGN_ONLY".equals(latest.state())) {
+        return new MappingContext("UNKNOWN", null, draft.mappingSetId(),
+            draft.logicalModelId(), draft.logicalVersionNo(),
+            draft.logicalSnapshotSha256(), draft.physicalStructureSha256(),
+            null, "映射冻结版本身份或状态不可信，禁止认定已冻结");
+      }
       var historical = mappings.revisionDetail(modelId, latest.mappingRevisionId());
       boolean identical =
-          java.util.Objects.equals(draft.mappingSetId(), historical.mappingSetId())
+          Objects.equals(historical.mappingRevisionId(), latest.mappingRevisionId())
+          && java.util.Objects.equals(draft.mappingSetId(), historical.mappingSetId())
           && java.util.Objects.equals(draft.logicalModelId(), historical.logicalModelId())
           && draft.logicalVersionNo() == historical.logicalVersionNo()
           && java.util.Objects.equals(draft.logicalSnapshotSha256(),
