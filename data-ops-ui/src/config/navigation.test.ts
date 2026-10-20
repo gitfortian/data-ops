@@ -244,7 +244,7 @@ describe('permission-aware navigation', () => {
       ['resource:data-source:read'],
       [YAK_OPS_MENU_CODES.dataSource],
     ).find((group) => group.id === 'integration');
-    expect(integration?.routes.map((route) => route.id)).toEqual(['data-source']);
+    expect(integration?.routes.map((route) => route.id)).toEqual(['data-source', 'data-source-explore']);
   });
 
   it('keeps the personal settings page addressable without exposing it in the main sidebar', () => {
