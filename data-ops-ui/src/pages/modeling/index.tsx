@@ -23,6 +23,7 @@ import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWiza
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
 import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
 import ModelingStudioHeader from '@/pages/modeling/components/ModelingStudioHeader';
+import ModelingOverviewDashboard from '@/pages/modeling/components/ModelingOverviewDashboard';
 import RecycleBinDrawer from '@/pages/modeling/components/RecycleBinDrawer';
 import TagManageModal from '@/pages/modeling/components/TagManageModal';
 import {
@@ -51,6 +52,10 @@ const ModelingWorkspace: React.FC = () => {
   const currentProjectId = currentProject?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const processParam = searchParams.get('processId');
+  // A process deep link is a physical-catalog task, not a summary page.
+  const physicalView = searchParams.get('view') === 'physical' || processParam !== null;
+  const routeLayer = searchParams.get('layer');
+  const routeStatus = searchParams.get('status');
   const requestedProcessId = parseJourneyProcessId(processParam);
   const [journeyProcess, setJourneyProcess] = useState<SemanticProcessRecord>();
   const [journeyReady, setJourneyReady] = useState(processParam === null);
@@ -223,7 +228,7 @@ const ModelingWorkspace: React.FC = () => {
   }, [processParam, requestedProcessId, currentProjectId]);
 
   useEffect(() => {
-    if (!journeyReady || journeyProblem) return;
+    if (!physicalView || !journeyReady || journeyProblem) return;
     void loadRecords(
       pageNo,
       pageSize,
@@ -235,6 +240,7 @@ const ModelingWorkspace: React.FC = () => {
       domainFilter,
     );
   }, [
+    physicalView,
     journeyReady,
     journeyProblem,
     loadRecords,
@@ -249,6 +255,14 @@ const ModelingWorkspace: React.FC = () => {
   ]);
 
   useEffect(() => {
+    setLayerFilter(routeLayer && /^[A-Z0-9_]{1,20}$/.test(routeLayer) ? routeLayer : undefined);
+    setStatusFilter(routeStatus && Object.prototype.hasOwnProperty.call(MODELING_STATUS_LABELS, routeStatus)
+      ? routeStatus : undefined);
+    setPageNo(1);
+  }, [routeLayer, routeStatus, currentProjectId]);
+
+  useEffect(() => {
+    if (!physicalView) return;
     // Never carry the creation drawer's current Project selections into
     // another Project; dictionaries are fetched under the active Owner scope.
     setWizardOpen(false);
@@ -257,7 +271,7 @@ const ModelingWorkspace: React.FC = () => {
     setLayers([]);
     void loadOrganization();
     void loadFilterOptions();
-  }, [loadOrganization, loadFilterOptions]);
+  }, [physicalView, loadOrganization, loadFilterOptions]);
 
   const domainNameById = useMemo(() => {
     const map = new Map<number, string>();
@@ -485,17 +499,14 @@ const ModelingWorkspace: React.FC = () => {
   );
 
   if (searchParams.get('sourceJourney') === 'ods') return <OdsSourceJourney />;
-
-  const physicalView = searchParams.get('view') === 'physical';
+  if (!physicalView) return <ModelingOverviewDashboard />;
 
   return (
     <div className="modeling-studio-page modeling-studio-catalog">
       <div className="modeling-studio-catalog-body">
-        <ModelingStudioHeader area="catalog" title={physicalView ? '物理模型' : '模型总览'}
-          description={physicalView
-            ? '按分层查找和继续设计当前项目的物理模型。'
-            : '查看当前项目的模型，按分层筛选并继续编辑；创建物理模型请使用右上角入口。'}
-          context={<><span>当前项目 #{currentProjectId ?? '未选定'}</span><span>当前筛选：{total} 个物理模型</span></>}
+        <ModelingStudioHeader area="physical" title="物理模型"
+          description="按分层查找、创建和继续编辑当前项目的物理模型。"
+          context={<><span>当前项目 #{currentProjectId ?? '未选定'}</span><span>查询结果：{total} 个物理模型</span></>}
           actions={<>
             <Input.Search allowClear placeholder="搜索模型名称或编码" className="!w-[230px]"
               onSearch={handleSearch} />
