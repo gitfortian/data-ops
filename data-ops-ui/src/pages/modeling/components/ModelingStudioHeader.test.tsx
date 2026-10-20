@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Button } from 'antd';
 import ModelingStudioHeader from './ModelingStudioHeader';
-import ModelingStartGuide from './ModelingStartGuide';
 
 it('uses the existing SiteLayout instead of adding a third navigation rail', () => {
   render(<ModelingStudioHeader area="catalog" title="模型总览" description="真实建模" />);
@@ -19,16 +18,3 @@ it('preserves contextual actions without creating secondary route buttons', () =
   expect(screen.queryByRole('button', { name: /分层主线/ })).not.toBeInTheDocument();
 });
 
-it('retains authorized task entry and disables physical creation without scope', () => {
-  const onCreate = jest.fn();
-  const onSource = jest.fn();
-  const onLogical = jest.fn();
-  render(<ModelingStartGuide onBusiness={jest.fn()} onLogical={onLogical}
-    onSource={onSource} onCreate={onCreate} canCreate={false} loading={false} />);
-  expect(screen.getByRole('button', { name: '创建物理草稿' })).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: /设计业务逻辑模型/ }));
-  expect(onLogical).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole('button', { name: '从来源表建 ODS' }));
-  expect(onSource).toHaveBeenCalledTimes(1);
-  expect(onCreate).not.toHaveBeenCalled();
-});

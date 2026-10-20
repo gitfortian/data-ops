@@ -20,7 +20,6 @@ import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { ModelTagAssignModal } from '@/pages/modeling/components/ModelAssignModals';
 import ModelCreateWizardDrawer from '@/pages/modeling/components/ModelCreateWizardDrawer';
-import ModelingStartGuide from '@/pages/modeling/components/ModelingStartGuide';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
 import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
 import ModelingStudioHeader from '@/pages/modeling/components/ModelingStudioHeader';
@@ -41,9 +40,7 @@ import {
 import type { ModelingModelRecord, ModelingTagRecord } from '@/services/modeling/types';
 import { getSemanticDomainTree, getSemanticProcess, listSemanticLayers, pageSemanticProcesses } from '@/services/semantic/api';
 import type { SemanticDomainNode, SemanticLayerRecord, SemanticProcessRecord } from '@/services/semantic/types';
-import {
-  parseJourneyProcessId, processToLogical, processToSemantic,
-} from '@/utils/journeyNavigation';
+import { parseJourneyProcessId, processToLogical } from '@/utils/journeyNavigation';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const HIDDEN_COLUMNS_KEY = 'yak.modeling.hiddenColumns';
@@ -496,8 +493,8 @@ const ModelingWorkspace: React.FC = () => {
       <div className="modeling-studio-catalog-body">
         <ModelingStudioHeader area="catalog" title={physicalView ? '物理模型' : '模型总览'}
           description={physicalView
-            ? '选择数仓分层，查找已保存的物理模型并继续设计、映射和版本审阅。'
-            : '集中查看当前项目的建模对象，从业务过程、逻辑设计或已有物理模型继续工作。'}
+            ? '按分层查找和继续设计当前项目的物理模型。'
+            : '查看当前项目的模型，按分层筛选并继续编辑；创建物理模型请使用右上角入口。'}
           context={<><span>当前项目 #{currentProjectId ?? '未选定'}</span><span>当前筛选：{total} 个物理模型</span></>}
           actions={<>
             <Input.Search allowClear placeholder="搜索模型名称或编码" className="!w-[230px]"
@@ -511,10 +508,6 @@ const ModelingWorkspace: React.FC = () => {
             } }}>
               <Button>管理 <DownOutlined /></Button>
             </Dropdown>
-            <Button onClick={() => history.push('/modeling?sourceJourney=ods')}
-              disabled={!can('modeling:create') || !can('resource:data-source:read')}>
-              新建 ODS
-            </Button>
             <Button type="primary" onClick={() => setWizardOpen(true)}
               disabled={Boolean(journeyProblem) || !journeyReady || optionsLoading || !can('modeling:create')}>
               新建物理模型
@@ -525,15 +518,6 @@ const ModelingWorkspace: React.FC = () => {
           <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
           <Button onClick={clearJourney}>查看全部物理模型</Button>
         </div>}
-        {!physicalView && <ModelingStartGuide
-          process={journeyProcess}
-          onBusiness={() => history.push(journeyProcess ? processToSemantic(journeyProcess.id) : '/semantic/processes')}
-          onLogical={() => history.push(journeyProcess ? processToLogical(journeyProcess.id) : '/modeling/logical')}
-          onSource={() => history.push('/modeling?sourceJourney=ods')}
-          onCreate={() => setWizardOpen(true)}
-          canCreate={can('modeling:create') && !Boolean(journeyProblem) && journeyReady && !optionsLoading}
-          loading={optionsLoading || !journeyReady}
-        />}
         <section className="modeling-studio-layer-panel" aria-label="模型分层导航">
           <div className="modeling-studio-section-header">
             <div>
