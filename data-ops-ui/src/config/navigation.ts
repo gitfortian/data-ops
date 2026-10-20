@@ -80,7 +80,7 @@ export const appRoutes: readonly NavigationRoute[] = [
   // Same Security data-source menu grant: no new RBAC entitlement.
   { id: 'data-source-explore', path: '/data-source/explore', title: '数据探查',
     component: './data-source/explore', parentId: 'data-source',
-    iconKey: 'search', menuGroup: 'integration', order: 11 },
+    iconKey: 'monitor', menuGroup: 'integration', order: 11 },
   { id: 'sql-execution-audit', menuCode: YAK_OPS_MENU_CODES.sqlExecutionAudit, mode: 'one', permission: 'resource:sql-execution:read', path: '/sql-execution-audit', title: 'SQL 执行记录', component: './data-source/sql-executions', iconKey: 'monitor', menuGroup: 'integration', order: 50 },
   { id: 'dashboard', menuCode: YAK_OPS_MENU_CODES.dashboard, mode: 'public', path: '/dashboard', title: '仪表盘', component: './data-analysis/dashboard', iconKey: 'insight', menuGroup: 'analysis-presentation', order: 10 },
   { id: 'dashboard-new', path: '/dashboard/new', title: '新建仪表盘', component: './data-analysis/dashboard/editor', hidden: true, parentId: 'dashboard' },
@@ -315,7 +315,9 @@ export const getActiveNavigationId = (
 ) => {
   const route = getRouteMetadata(pathname);
   if (!route || !canAccessNavigationRoute(route, permissionCodes, menuCodes)) return undefined;
-  return route.parentId ?? route.id;
+  // Visible child pages need their own active link; hidden detail descendants
+  // keep highlighting the parent page.
+  return route.hidden ? (route.parentId ?? route.id) : route.id;
 };
 export const getActiveNavigationGroupId = (
   pathname: string,
