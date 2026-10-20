@@ -228,10 +228,6 @@ const ModelCreateWizardDrawer = ({
               if (onGoLogical) discardAndExit(() => onGoLogical(id));
             }}
           />
-          {selectedLayerCode?.toUpperCase() === 'ODS' && onGoSource ? (
-            <div className="mt-2"><Button type="link"
-              onClick={() => discardAndExit(onGoSource)}>进入 ODS 贴源设计（在工作区选择来源表）</Button></div>
-          ) : null}
         </section>
         <Alert showIcon type={requiresLogicalBasis(selectedLayerCode) && !selectedProcess ? 'warning' : 'info'}
           message="提交后进入该物理模型的表结构工作区"
