@@ -10,6 +10,7 @@ let mockQuery = new URLSearchParams({
   schema: 'public', table: 'orders',
 });
 let mockProjectId = 42;
+const mockLayerList = jest.fn();
 const mockPush = jest.fn();
 const mockCandidates = jest.fn();
 const mockSources = jest.fn();
@@ -26,11 +27,20 @@ jest.mock('@/contexts/SecurityProjectContext', () => ({
 jest.mock('@/hooks/usePermissionAccess', () => ({
   __esModule: true,
   default: () => ({
-    can: (permission: string) => ['modeling:read', 'modeling:create', 'modeling:update'].includes(permission),
+    can: (permission: string) => ['modeling:read', 'modeling:create', 'modeling:update', 'resource:data-source:read'].includes(permission),
   }),
 }));
 jest.mock('@/services/data-source/api', () => ({
   listAllDataSources: (...args: unknown[]) => mockSources(...args),
+}));
+jest.mock('@/services/semantic/api', () => ({ listSemanticLayers: (...args: unknown[]) => mockLayerList(...args) }));
+jest.mock('@/pages/data-source/components/LiveSchemaExplorer', () => ({
+  __esModule: true,
+  default: ({ onOpenOds }: { onOpenOds: (source: unknown) => void }) => (
+    <button onClick={() => onOpenOds({ dataSourceId: 10, database: 'trade_db', schema: 'public', table: 'orders' })}>
+      选择订单来源表
+    </button>
+  ),
 }));
 jest.mock('@/services/metadata/api', () => ({
   getEntityDetail: jest.fn(),
@@ -53,7 +63,11 @@ beforeEach(() => {
     sourceJourney: 'ods', datasourceId: '10',
     database: 'trade_db', schema: 'public', table: 'orders',
   });
-  mockSources.mockResolvedValue({ bizData: [{ id: 10, dbType: 'MYSQL' }] });
+  mockSources.mockResolvedValue({ bizData: [
+    { id: 10, name: '交易源库', dbType: 'MYSQL' },
+    { id: 20, name: 'ODS 目标库', dbType: 'MYSQL' },
+  ] });
+  mockLayerList.mockResolvedValue([{ id: 1, code: 'ODS', name: 'ODS', status: 'ENABLED', datasourceId: 20 }]);
   mockCandidates.mockResolvedValue({
     state: 'READY', reason: 'found', datasourceId: 10, database: 'trade_db',
     schema: 'public', table: 'orders',
@@ -66,7 +80,7 @@ beforeEach(() => {
 it('opens an existing precise ODS model without creating or mutating it; Asset write is not required', async () => {
   render(<OdsSourceJourney />);
   expect(await screen.findByRole('button', { name: '打开已保存 ODS' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存 ODS 设计' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '打开已保存 ODS' }));
   expect(mockPush).toHaveBeenCalledWith('/modeling/models/501');
   expect(mockCreateModel).not.toHaveBeenCalled();
@@ -83,7 +97,7 @@ it('does not treat unverified or unowned source as an empty ODS candidate list',
   });
   render(<OdsSourceJourney />);
   expect(await screen.findByText('不能确认来源身份')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存 ODS 设计' })).not.toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });
 
@@ -92,7 +106,7 @@ it('rejects missing project source evidence instead of offering a new model', as
   render(<OdsSourceJourney />);
   await waitFor(() =>
     expect(screen.getByText(/当前项目无法核验来源数据源/)).toBeInTheDocument());
-  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存 ODS 设计' })).not.toBeInTheDocument();
 });
 
 it('returns to the exact live source table rather than forcing Asset catalog after direct source entry', async () => {
@@ -185,20 +199,18 @@ it('delivers the visible complete J1 journey: exact source → live columns → 
   render(<OdsSourceJourney />);
   expect(screen.getByTestId('ods-source-workbench')).toBeInTheDocument();
   expect(await screen.findByText('no matching ODS yet')).toBeInTheDocument();
-  const create = screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' });
+  const create = await screen.findByRole('button', { name: '保存 ODS 设计' });
   expect(create).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
   expect(await screen.findByLabelText('ODS 字段 order_id')).toHaveValue('order_id');
   expect(screen.getByLabelText('ODS 字段 order_amount')).toHaveValue('order_amount');
   expect(screen.getByText('源主键')).toBeInTheDocument();
   expect(create).toBeEnabled();
   fireEvent.click(create);
-  await screen.findByText(/已保存空草稿 #777/);
+  await screen.findByText('ODS 设计已保存');
+  expect(mockCreateModel).toHaveBeenCalledTimes(1);
   expect(mockCreateModel).toHaveBeenCalledWith(expect.objectContaining({
     layerCode: 'ODS', dialect: 'MYSQL',
   }));
-  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
-  await screen.findByText('ODS 已成功保存');
   expect(commitOdsManualImport).toHaveBeenCalledWith(777, expect.objectContaining({
     sourceDatasourceId: 10, sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders',
     expectedSourceColumns: expect.arrayContaining([expect.objectContaining({ name: 'order_id' })]),
@@ -258,11 +270,8 @@ it('treats a timed-out commit as saved only after exact owner readback', async (
 
   render(<OdsSourceJourney />);
   await screen.findByText('no ODS');
-  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
   await screen.findByLabelText('ODS 字段 order_id');
-  fireEvent.click(screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' }));
-  await screen.findByText(/已保存空草稿 #888/);
-  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  fireEvent.click(screen.getByRole('button', { name: '保存 ODS 设计' }));
   await screen.findByText('ODS 已成功保存');
   expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
   expect(listModelingMappings).toHaveBeenCalledWith(888);
@@ -279,7 +288,7 @@ it('reopening a source-bound draftId shows the exact existing ODS instead of an 
   render(<OdsSourceJourney />);
   const open = await screen.findByRole('button', { name: '打开已保存 ODS' });
   expect(screen.queryByText(/已保存 ODS 与当前来源或精确候选不一致/)).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存 ODS 设计' })).not.toBeInTheDocument();
   fireEvent.click(open);
   expect(mockPush).toHaveBeenCalledWith('/modeling/models/501');
   expect(mockCreateModel).not.toHaveBeenCalled();
@@ -295,7 +304,7 @@ it('rejects a resumed ODS bound to another schema without offering any create or
   });
   render(<OdsSourceJourney />);
   await screen.findByText(/已保存 ODS 与当前来源或精确候选不一致/);
-  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存 ODS 设计' })).not.toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });
 
@@ -309,7 +318,7 @@ it('does not mistake a different server candidate for the persisted draftId on r
   // Default candidate list is only 501, not 502.
   render(<OdsSourceJourney />);
   await screen.findByText(/已保存 ODS 与当前来源或精确候选不一致/);
-  expect(screen.queryByRole('button', { name: '保存可恢复的空 ODS 草稿' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '保存 ODS 设计' })).not.toBeInTheDocument();
   expect(mockCreateModel).not.toHaveBeenCalled();
 });
 
@@ -347,12 +356,57 @@ it('never claims saved when successful HTTP receipt reads back another schema', 
   }]);
   render(<OdsSourceJourney />);
   await screen.findByText('new source');
-  fireEvent.click(screen.getByRole('button', { name: '读取当前物理列并核对' }));
   await screen.findByLabelText('ODS 字段 order_id');
-  fireEvent.click(screen.getByRole('button', { name: '保存可恢复的空 ODS 草稿' }));
-  await screen.findByText(/已保存空草稿 #889/);
-  fireEvent.click(screen.getByRole('button', { name: '确认并原子保存结构与映射' }));
+  fireEvent.click(screen.getByRole('button', { name: '保存 ODS 设计' }));
   await screen.findByText(/回读不一致/);
   expect(screen.queryByText('ODS 已成功保存')).not.toBeInTheDocument();
   expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
+});
+
+it('starts from Modeling home and uses the same live TABLE picker without a required business domain', async () => {
+  mockQuery = new URLSearchParams({ sourceJourney: 'ods' });
+  render(<OdsSourceJourney />);
+  expect(screen.getByRole('heading', { name: '新建 ODS · 选择来源表' })).toBeInTheDocument();
+  expect(await screen.findByRole('combobox', { name: 'ODS 来源数据源' })).toBeInTheDocument();
+  const picker = screen.getByRole('combobox', { name: 'ODS 来源数据源' });
+  fireEvent.mouseDown(picker);
+  fireEvent.click(await screen.findByText('交易源库 · MYSQL'));
+  fireEvent.click(screen.getByRole('button', { name: '选择订单来源表' }));
+  const destination = new URL(String(mockPush.mock.calls.at(-1)?.[0]), 'http://localhost');
+  expect(destination.pathname).toBe('/modeling');
+  expect(destination.searchParams.get('origin')).toBe('modeling-home');
+  expect(destination.searchParams.get('datasourceId')).toBe('10');
+  expect(destination.searchParams.get('database')).toBe('trade_db');
+  expect(destination.searchParams.get('schema')).toBe('public');
+  expect(destination.searchParams.get('table')).toBe('orders');
+});
+
+it('suggests target dialect from configured ODS target rather than MySQL source', async () => {
+  mockSources.mockResolvedValue({ bizData: [
+    { id: 10, name: '源 MySQL', dbType: 'MYSQL' },
+    { id: 20, name: '目标 PostgreSQL', dbType: 'POSTGRESQL' },
+  ] });
+  mockCandidates.mockResolvedValueOnce({
+    state: 'READY', reason: 'none', datasourceId: 10, database: 'trade_db',
+    schema: 'public', table: 'orders', candidates: [],
+  });
+  jest.mocked(previewModelingImportColumns).mockResolvedValueOnce([
+    { name: 'order_id', typeName: 'BIGINT', nullable: false, technical: false },
+  ]);
+  mockCreateModel.mockResolvedValueOnce({ id: 909, layerCode: 'ODS', status: 'DRAFT' });
+  mockGetModel.mockResolvedValueOnce({ id: 909, layerCode: 'ODS', status: 'DRAFT' });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({ definition: 'base', columns: [] } as never);
+  jest.mocked(commitOdsManualImport).mockResolvedValueOnce({ status: 'SAVED_AND_VERIFIED', modelId: 909, confirmedMappingCount: 1 } as never);
+  mockGetModel.mockResolvedValueOnce({ id: 909, layerCode: 'ODS', status: 'DRAFT', sourceDatasourceId: 10,
+    sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders' });
+  jest.mocked(getModelingStructure).mockResolvedValueOnce({ definition: 'new',
+    columns: [{ columnName: 'order_id', dataType: 'BIGINT' }] } as never);
+  jest.mocked(listModelingMappings).mockResolvedValueOnce([{
+    mapped: true, targetColumn: 'order_id', sourceDatasourceId: 10,
+    sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders', sourceColumn: 'order_id',
+  }]);
+  render(<OdsSourceJourney />);
+  fireEvent.click(await screen.findByRole('button', { name: '保存 ODS 设计' }));
+  await screen.findByText('ODS 设计已保存');
+  expect(mockCreateModel).toHaveBeenCalledWith(expect.objectContaining({ dialect: 'POSTGRESQL' }));
 });
