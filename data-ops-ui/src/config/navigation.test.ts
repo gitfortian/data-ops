@@ -229,7 +229,8 @@ describe('permission-aware navigation', () => {
     expect(canAccessNavigationRoute(route, read, [YAK_OPS_MENU_CODES.dataSourceExplore, YAK_OPS_MENU_CODES.dataSource])).toBe(true);
     expect(canAccessNavigationRoute(route, read, [])).toBe(false);
     expect(canAccessNavigationRoute(route, [], menu)).toBe(false);
-    expect(getActiveNavigationId('/data-source/explore', read, menu)).toBe('data-source-explore');
+    expect(getActiveNavigationId('/data-source/explore', read, menu)).toBeUndefined();
+    expect(getActiveNavigationId('/data-source/explore', read, [YAK_OPS_MENU_CODES.dataSource, YAK_OPS_MENU_CODES.dataSourceExplore])).toBe('data-source-explore');
     const group = getMainNavigationGroups(read, [YAK_OPS_MENU_CODES.dataSource, YAK_OPS_MENU_CODES.dataSourceExplore]).find(g => g.id === 'integration');
     expect(group?.routes.map(item => item.id)).toEqual(['data-source', 'data-source-explore']);
   });
@@ -245,7 +246,7 @@ describe('permission-aware navigation', () => {
       ['resource:data-source:read'],
       [YAK_OPS_MENU_CODES.dataSource],
     ).find((group) => group.id === 'integration');
-    expect(integration?.routes.map((route) => route.id)).toEqual(['data-source', 'data-source-explore']);
+    expect(integration?.routes.map((route) => route.id)).toEqual(['data-source']);
   });
 
   it('keeps the personal settings page addressable without exposing it in the main sidebar', () => {
