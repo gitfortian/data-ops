@@ -191,7 +191,16 @@ const ModelCreateWizardDrawer = ({
           </Typography.Paragraph>
           <Form.Item name="layerCode" label="数仓目标分层" rules={[{ required: true, message: '请选择目标分层' }]}>
             <Select placeholder="选择已配置的数仓分层"
-              options={layers.map(layer => ({ value: layer.code, label: `${layer.name}（${layer.code}）` }))} />
+              options={layers.map(layer => ({ value: layer.code, label: `${layer.name}（${layer.code}）` }))}
+              onChange={(value) => {
+                if (value !== 'ODS' || !onGoSource) return;
+                // ODS's own source-first workspace must not inherit a mandatory
+                // business-domain constraint from the non-ODS creation wizard.
+                const entered = form.getFieldsValue(['domainId','processId','name','description']);
+                const hasEdited = Boolean(entered.domainId || entered.processId || entered.name || entered.description);
+                if (hasEdited) discardAndExit(onGoSource);
+                else { form.resetFields(); userEdited.current = false; onGoSource(); }
+              }} />
           </Form.Item>
           <Form.Item name="dialect" label="目标数据库方言" rules={[{ required: true, message: '请选择目标方言' }]}>
             <Select options={MODELING_DIALECT_OPTIONS} placeholder="选择目标数据库方言" />
@@ -221,7 +230,7 @@ const ModelCreateWizardDrawer = ({
           />
           {selectedLayerCode?.toUpperCase() === 'ODS' && onGoSource ? (
             <div className="mt-2"><Button type="link"
-              onClick={() => discardAndExit(onGoSource)}>去数据源选择精确来源表（推荐）</Button></div>
+              onClick={() => discardAndExit(onGoSource)}>进入 ODS 贴源设计（在工作区选择来源表）</Button></div>
           ) : null}
         </section>
         <Alert showIcon type={requiresLogicalBasis(selectedLayerCode) && !selectedProcess ? 'warning' : 'info'}

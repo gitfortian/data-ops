@@ -1,0 +1,37 @@
+/* Shared live catalog explorer: consumed by both DataSource and Modeling.
+   Uses current Yak color tokens; data-source-specific wrapping rules stay in its own page. */
+.source-probe { min-width: 0; }
+.source-probe-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 18px; }
+.source-probe-filter { display: flex; flex: 1; min-width: 140px; flex-direction: column; gap: 7px; color: #697588; font-size: 12px; }
+.source-probe-filter .ant-select { width: 100%; }
+.source-probe-search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+.source-probe-search-row .source-workspace-caption { margin: 0 0 0 auto; }
+.source-workspace-caption { font-size: 12px; color: #7b8390; }
+.source-workspace-scope { font-size: 12px; color: #7b8390; margin-top: 4px; overflow-wrap: anywhere; }
+.source-workspace-search { max-width: 330px; min-width: 180px; }
+.source-probe-grid { display: grid; grid-template-columns: minmax(210px, .8fr) minmax(0, 1.5fr); gap: 20px; }
+.source-probe-list { min-width: 0; border-right: 1px solid #edf0f4; padding-right: 16px; }
+.source-probe-list .ant-table-wrapper, .source-probe-detail .ant-table-wrapper { max-width: 100%; overflow-x: auto; }
+.source-probe-table-link.ant-btn { height: auto; padding: 0; font-weight: 500; white-space: normal; text-align: left; color: #344054; }
+.source-probe-selected .ant-table-cell { background: #f5f7fb !important; }
+.source-probe-detail { min-width: 0; }
+.source-probe-detail-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.source-probe-detail-heading h3 { margin: 0; font-size: 16px; color: #273343; overflow-wrap: anywhere; }
+.source-probe-detail-heading p { margin: 5px 0 0; font-size: 12px; color: #7b8390; overflow-wrap: anywhere; }
+.source-probe-heading-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.source-probe-ods-action.ant-btn { min-width: 126px; max-width: 230px; white-space: normal; height: auto; min-height: 32px; }
+.source-probe-column-name { display: inline-flex; align-items: center; gap: 5px; }
+.source-probe-column-name svg { flex-shrink: 0; color: #ab7c28; }
+.source-probe-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; color: #91a0b3; text-align: center; }
+.source-probe-placeholder h3 { margin: 16px 0 6px; font-size: 15px; color: #667085; }
+.source-probe-placeholder p, .source-probe-note { font-size: 12px; color: #7b8390; line-height: 20px; }
+.source-probe-note { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid #f0f1f4; }
+@media (max-width: 760px) {
+  .source-probe-grid { grid-template-columns: 1fr; }
+  .source-probe-list { border-right: 0; padding-right: 0; }
+  .source-probe-detail { border-top: 1px solid #edf0f4; padding-top: 16px; }
+}
+@media (max-width: 560px) {
+  .source-probe-detail-heading { flex-wrap: wrap; }
+  .source-probe-heading-actions { justify-content: flex-start; width: 100%; }
+}

@@ -11,6 +11,8 @@ import { listModelingMappings } from '@/services/modeling/mapping';
 import type { OdsSourceLookup } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord } from '@/services/modeling/types';
 import { MODELING_DIALECT_OPTIONS, dialectOfDbType } from '@/pages/modeling/constants';
+import { listSemanticLayers } from '@/services/semantic/api';
+import OdsSourceSelector from './OdsSourceSelector';
 import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
 import './OdsSourceJourney.less';
 
@@ -41,7 +43,8 @@ const OdsSourceJourney = () => {
   const liveSourceReturn = datasourceId != null && params.get('origin') === 'live-source'
     ? buildLiveSourceReturnPath({ dataSourceId: datasourceId, database, schema, table })
     : null;
-  const sourceReturn = liveSourceReturn ??
+  const fromModeling = params.get('origin') === 'modeling-home';
+  const sourceReturn = fromModeling ? '/modeling?view=physical' : liveSourceReturn ??
     `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
 
   const modelDetailPath = (modelId: number): string => {
@@ -71,10 +74,14 @@ const OdsSourceJourney = () => {
   const [savedDraft, setSavedDraft] = useState<ModelingModelRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [savingDesign, setSavingDesign] = useState(false);
+  const [creationUnknown, setCreationUnknown] = useState(false);
+  const [commitUnknown, setCommitUnknown] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
   const readEpoch = useRef(0);
   const sourceIdentity = useRef('');
+  const autoPreviewKey = useRef('');
 
   const navigateSafely = (path: string) => {
     if (dirty && !savedId) {
@@ -103,12 +110,16 @@ const OdsSourceJourney = () => {
     sourceIdentity.current = sourceKey;
     setLoading(true);
     setFailure('');
+    setCommitUnknown(false);
     setLookup(null);
     setSourceVerified(false);
     // A draftId-only redirect must not erase a preview/mapping the user just confirmed.
     if (changedSource) {
-      setColumns(null); setSavedId(null); setDirty(false);
+      setColumns(null); setSavedId(null); setDirty(false); setCreationUnknown(false); setCommitUnknown(false);
       setPreviewBusy(false); setCreating(false); setCommitting(false);
+      setCode((`ods_${database}_${schema || ''}_${table}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 120));
+      setName(`ODS ${table}`);
+      setDialect('');
     }
     setSavedDraft(null);
     if (!valid || datasourceId == null) {
@@ -117,11 +128,12 @@ const OdsSourceJourney = () => {
       return;
     }
     try {
-      const [sources, response, entity, resumed] = await Promise.all([
+      const [sources, response, entity, resumed, targetLayers] = await Promise.all([
         listAllDataSources(),
         getOdsSourceCandidates({ datasourceId, database, schema, table }),
         entityId ? getEntityDetail(entityId) : Promise.resolve(null),
         draftId ? getModelingModel(draftId) : Promise.resolve(null),
+        listSemanticLayers().catch(() => []),
       ]);
       if (ticket !== readEpoch.current) return;
       // URL hints never grant access. Confirm both the active project's DataSource owner
@@ -159,8 +171,12 @@ const OdsSourceJourney = () => {
       // A newly bound draft is now an existing candidate; do not show an
       // empty-draft save form or try to commit its structure a second time.
       if (resumed?.sourceDatasourceId == null && resumed) setSavedDraft(resumed);
-      const inferred = dialectOfDbType(validSource.dbType);
-      if (inferred) setDialect(inferred);
+      // Infer ODS target dialect only from configured target connection, never from the physical source.
+      const layer = targetLayers.find(item => item.code === 'ODS' && item.status === 'ENABLED');
+      const targetSource = (sources.bizData ?? []).find(item =>
+        layer?.datasourceId != null && Number(item.id) === Number(layer.datasourceId));
+      const inferred = targetSource ? dialectOfDbType(targetSource.dbType) : undefined;
+      if (inferred) setDialect(current => current || inferred);
     } catch (error) {
       if (ticket === readEpoch.current)
         setFailure(error instanceof Error ? error.message : '来源和模型核验失败；请重试。');
@@ -170,9 +186,10 @@ const OdsSourceJourney = () => {
   }, [projectId, datasourceId, database, schema, table, entityId, draftId, valid, reload]);
 
   useEffect(() => {
+    if (!valid) return;
     void refresh();
     return () => { readEpoch.current += 1; };
-  }, [refresh]);
+  }, [refresh, valid]);
 
   const preview = useCallback(async () => {
     const ticket = readEpoch.current;
@@ -198,31 +215,52 @@ const OdsSourceJourney = () => {
     }
   }, [sourceVerified, lookup, datasourceId, database, schema, table]);
 
+  // Re-fetch real columns automatically after the physical table is selected.
+  // Retry after a failure is explicit; avoid an infinite query loop.
+  useEffect(() => {
+    if (!valid || !sourceVerified || lookup?.state !== 'READY'
+        || lookup.candidates.length > 0 || columns || previewBusy) return;
+    const key = JSON.stringify([projectId, datasourceId, database, schema, table]);
+    if (autoPreviewKey.current === key) return;
+    autoPreviewKey.current = key;
+    void preview();
+  }, [valid, sourceVerified, lookup, columns, previewBusy, preview, projectId,
+      datasourceId, database, schema, table]);
+
   const physicalColumns = useMemo(() => columns ?? [], [columns]);
   const targetValues = physicalColumns.map(col => (targetNames[col.name] || '').trim());
   const validMappings = physicalColumns.length > 0
     && targetValues.every(v => /^[A-Za-z_][A-Za-z0-9_]*$/.test(v))
     && new Set(targetValues.map(v => v.toLowerCase())).size === targetValues.length;
 
-  const createDraft = async () => {
+  // Two Owner writes, one user-visible confirmation. Do not re-route between
+  // creating an identified draft and committing its full source mappings.
+  const createDraft = async (): Promise<ModelingModelRecord | null> => {
     const ticket = readEpoch.current;
     if (!sourceVerified || lookup?.state !== 'READY' || lookup.candidates.length > 0
-        || !can('modeling:create') || !dialect || !code || !validMappings || savedDraft) return;
+        || !can('modeling:create') || !dialect || !code || !validMappings
+        || savedDraft || creationUnknown) return null;
     setCreating(true);
     try {
-      const created = await createModelingModel({
+      const draft = await createModelingModel({
         code: code.trim(), name: name.trim(), dialect, layerCode: 'ODS',
       });
-      if (ticket !== readEpoch.current) return;
-      if (!created.id) throw new Error('创建接口未返回可恢复的模型 ID。');
-      setSavedDraft(created);
-      const next = new URLSearchParams(params.toString());
-      next.set('draftId', String(created.id));
-      history.replace(`/modeling?${next.toString()}`);
-      message.info('空 ODS 草稿已保存。字段和来源映射尚未提交，请核对后继续。');
+      if (ticket !== readEpoch.current) return null;
+      if (!draft.id) throw new Error('创建模型未返回有效草稿 ID');
+      setSavedDraft(draft);
+      // Stable browser recovery identity without retriggering useSearchParams,
+      // refresh() and epoch invalidation mid-save.
+      const query = new URLSearchParams(params.toString());
+      query.set('draftId', String(draft.id));
+      window.history.replaceState(window.history.state, '', '/modeling?' + query.toString());
+      return draft;
     } catch (error) {
-      if (ticket === readEpoch.current)
-        setFailure(error instanceof Error ? error.message : '草稿保存结果未知；请按模型编码检查当前项目已有草稿，勿直接重复创建。');
+      if (ticket === readEpoch.current) {
+        setCreationUnknown(true);
+        setFailure((error instanceof Error ? error.message : '草稿创建结果未知')
+          + '；请先在物理模型库按编码核对已有草稿，不能盲目重复创建。');
+      }
+      return null;
     } finally { if (ticket === readEpoch.current) setCreating(false); }
   };
 
@@ -250,22 +288,22 @@ const OdsSourceJourney = () => {
       && !row.transformExpr));
   };
 
-  const commit = async () => {
+  const commit = async (draft: ModelingModelRecord) => {
     const ticket = readEpoch.current;
-    if (!savedDraft?.id || !can('modeling:update') || !validMappings || datasourceId == null
+    if (!draft.id || !can('modeling:update') || !validMappings || datasourceId == null
         || lookup?.state !== 'READY' || lookup.candidates.length > 0 || !sourceVerified) return;
     setCommitting(true);
     try {
       // Re-read persisted version and optimistic definition. Never trust an old local draft.
       const [live, structure] = await Promise.all([
-        getModelingModel(savedDraft.id), getModelingStructure(savedDraft.id),
+        getModelingModel(draft.id), getModelingStructure(draft.id),
       ]);
       if (ticket !== readEpoch.current) return;
       if (live.status !== 'DRAFT' || live.layerCode !== 'ODS' || live.sourceDatasourceId != null
           || !structure.definition || (structure.columns ?? []).length !== 0) {
         throw new Error('草稿已变化或有字段/来源映射；请在原模型核验，禁止覆盖。');
       }
-      const receipt = await commitOdsManualImport(savedDraft.id, {
+      const receipt = await commitOdsManualImport(draft.id, {
         expectedDefinition: structure.definition,
         sourceDatasourceId: datasourceId, sourceDatabase: database, sourceSchema: schema,
         sourceTable: table,
@@ -293,15 +331,15 @@ const OdsSourceJourney = () => {
         })),
       });
       if (ticket !== readEpoch.current) return;
-      if (receipt.status !== 'SAVED_AND_VERIFIED' || receipt.modelId !== Number(savedDraft.id)
+      if (receipt.status !== 'SAVED_AND_VERIFIED' || receipt.modelId !== Number(draft.id)
           || receipt.confirmedMappingCount !== physicalColumns.length) {
         throw new Error('写入回执尚不足以证明模型与全部来源列已保存；请打开模型核对。');
       }
-      if (!(await verifySavedOds(Number(savedDraft.id)))) {
+      if (!(await verifySavedOds(Number(draft.id)))) {
         throw new Error('保存接口已返回，但模型结构或来源映射回读不一致；请核对原模型，勿重复写入。');
       }
       if (ticket !== readEpoch.current) return;
-      setSavedId(Number(savedDraft.id));
+      setSavedId(Number(draft.id));
       setDirty(false);
       setFailure('');
       message.success('ODS 设计、真实来源和逐列映射已重新读取确认。未部署、未同步。');
@@ -310,14 +348,15 @@ const OdsSourceJourney = () => {
       // mutation from a timeout; check current persisted evidence first.
       if (ticket !== readEpoch.current) return;
       let persisted = false;
-      try { persisted = await verifySavedOds(Number(savedDraft.id)); } catch { /* owner read unavailable */ }
+      try { persisted = await verifySavedOds(Number(draft.id)); } catch { /* owner read unavailable */ }
       if (ticket !== readEpoch.current) return;
       if (persisted) {
-        setSavedId(Number(savedDraft.id));
+        setSavedId(Number(draft.id));
         setDirty(false);
         setFailure('');
         message.success('写入响应未确认，但已重新读取到完整 ODS 设计和来源映射。');
       } else {
+        setCommitUnknown(true);
         setFailure((error instanceof Error ? error.message : '来源映射保存结果未知')
           + '；请先重新核验草稿和来源，禁止直接重复提交。');
       }
@@ -325,20 +364,39 @@ const OdsSourceJourney = () => {
   };
 
 
+  // Modeling-home entry begins without a table and shows the same verified
+  // picker used by DataSource instead of creating an unrelated ODS wizard.
+  if (!valid) {
+    const malformed = ['datasourceId', 'database', 'table', 'schema'].some(key => params.has(key));
+    if (malformed) return <Alert type="error" showIcon message="来源身份不完整，无法进入 ODS 设计"
+      description="请从物理模型首页重新选择数据源、数据库、Schema 和真实表。" />;
+    return <OdsSourceSelector />;
+  }
+
+  const saveOdsDesign = async () => {
+    if (savingDesign || creating || committing || creationUnknown || commitUnknown || !validMappings
+        || !dialect || !can('modeling:update')) return;
+    setSavingDesign(true);
+    try {
+      const draft = savedDraft ?? await createDraft();
+      if (draft) await commit(draft);
+    } finally { setSavingDesign(false); }
+  };
+
   const newTarget = lookup?.state === 'READY' && lookup.candidates.length === 0 && sourceVerified;
 
   return (
     <div className="ods-workbench" data-testid="ods-source-workbench">
       <header className="ods-workbench-head">
         <div>
-          <h1>ODS 贴源建模</h1>
-          <p>核对来源表，选择已有 ODS 或创建新草稿。保存后可返回原始表。</p>
+          <h1>ODS 物理建模</h1>
+          <p>确认来源和字段后保存一份完整的 ODS 模型设计；建表、发布和同步分别进行。</p>
         </div>
         <Space wrap>
           <Button onClick={() => navigateSafely(sourceReturn)}>
-            {liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}
+            {fromModeling ? '返回物理模型' : liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}
           </Button>
-          <Button type="text" onClick={() => navigateSafely('/modeling')}>建模工作台</Button>
+
         </Space>
       </header>
 
@@ -392,10 +450,10 @@ const OdsSourceJourney = () => {
               <div className="ods-workbench-section-title">
                 <div>
                   <h2>源表字段与映射</h2>
-                  <p>读取实时源表结构，核对字段类型和主键，再确认对应的 ODS 字段。</p>
+                  <p>选定源表后自动核验来源字段、类型、主键与可空性；请审阅自动建立的一一映射。</p>
                 </div>
                 <Button type="primary" loading={previewBusy} disabled={Boolean(savedId)}
-                  onClick={() => void preview()}>读取当前物理列并核对</Button>
+                  onClick={() => void preview()}>{physicalColumns.length ? '重新读取字段' : '重试读取源字段'}</Button>
               </div>
               <Alert className="ods-workbench-alert" type="info" showIcon
                 message={lookup?.reason || '当前项目尚无精确同源 ODS'}
@@ -428,18 +486,21 @@ const OdsSourceJourney = () => {
                   {!validMappings && <Alert className="ods-workbench-alert"
                     type="error" showIcon message="字段名必须合法且互不重复；未满足时不允许提交。" />}
                 </>
-              ) : <div className="ods-workbench-empty">尚未读取本次实时字段。点击右上方操作开始核对；不会因此执行采集或建表。</div>}
+              ) : <div className="ods-workbench-empty">
+                {previewBusy ? '正在自动读取当前源表字段…' : '暂无已核验的源字段；读取失败时可重新尝试。'}
+                本操作不会采集元数据或执行建表。
+              </div>}
             </section>
 
             <section className="ods-workbench-card" aria-label="目标 ODS 草稿配置">
               <div className="ods-workbench-section-title">
                 <div><h2>目标 ODS 模型</h2>
-                  <p>创建可恢复的物理模型草稿，再原子保存表结构与逐列来源映射。</p></div>
+                  <p>模型名称和编码已按来源推荐；检查 ODS 目标数据库方言，一次保存完整设计。</p></div>
                 {savedDraft?.id ? <Tag color="blue">草稿 #{savedDraft.id}</Tag> : null}
               </div>
               {savedDraft ? (
                 <Alert className="ods-workbench-alert" type={savedId ? 'success' : 'warning'} showIcon
-                  message={`已保存空草稿 #${savedDraft.id}，字段映射${savedId ? '已提交' : '尚未提交'}`}
+                  message={savedId ? `ODS 设计已完整保存 · #${savedId}` : `已找到可恢复草稿 #${savedDraft.id}`}
                   description="刷新后使用真实草稿 ID 恢复。失败后先核对已有模型，禁止重复创建同一目标。" />
               ) : (
                 <div className="ods-workbench-form">
@@ -454,7 +515,7 @@ const OdsSourceJourney = () => {
                   <label>目标方言
                     <Select aria-label="目标方言" className="ods-workbench-select"
                       value={dialect || undefined} onChange={v => { setDirty(true); setDialect(v); }}
-                      options={MODELING_DIALECT_OPTIONS} placeholder="选择目标数据库方言" />
+                      options={MODELING_DIALECT_OPTIONS} placeholder="选择 ODS 目标方言（不是业务源数据库）" />
                   </label>
                 </div>
               )}
@@ -466,32 +527,27 @@ const OdsSourceJourney = () => {
         {newTarget && (
           <footer className="ods-workbench-actionbar" aria-label="保存与后续操作">
             <div className="ods-workbench-action-copy">
-              <strong>{savedId ? 'ODS 已成功保存' : savedDraft ? '待提交字段与来源映射'
-                : physicalColumns.length ? '确认字段后保存草稿' : '请先读取真实源列'}</strong>
-              <span>{savedId ? '已核验 Modeling 服务端保存回执，可返回原表或打开模型。'
-                : savedDraft ? '空草稿不是完整 ODS；请确认字段映射后提交。'
-                : physicalColumns.length ? '保存草稿只建立模型身份，不代表结构和映射已提交。'
-                : '未读取源列前不能创建 ODS 草稿。'}</span>
+              <strong>{savedId ? 'ODS 设计已保存' : savedDraft ? '继续保存 ODS 设计'
+                : physicalColumns.length ? '确认来源与目标配置后保存' : '正在自动核验来源字段'}</strong>
+              <span>{savedId ? '模型、字段和全部来源映射已经回读确认，可以继续完善物理设计。'
+                : savedDraft ? '已有可恢复草稿，点击保存将原子提交结构和全部字段映射。'
+                : '点击一次保存，系统会自动处理可恢复草稿及全列映射；不会执行 DDL。'}</span>
             </div>
             <Space wrap>
               {savedId ? (
                 <>
                   <Button onClick={() => history.push(modelDetailPath(savedId))}>打开 ODS</Button>
-                  <Button type="primary" onClick={() => history.push(sourceReturn)}>保存并返回来源</Button>
+                  <Button type="primary" onClick={() => history.push(sourceReturn)}>
+                    {fromModeling ? '返回物理模型' : '保存并返回来源'}
+                  </Button>
                 </>
-              ) : !savedDraft ? (
-                <Button type="primary" loading={creating}
-                  disabled={!validMappings || !dialect
-                    || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code)
-                    || !name.trim() || !can('modeling:create')}
-                  onClick={() => void createDraft()}>保存可恢复的空 ODS 草稿</Button>
               ) : (
-                <>
-                  <Button onClick={() => history.push(modelDetailPath(Number(savedDraft.id)))}>打开已保存的模型 #{savedDraft.id}</Button>
-                  <Button type="primary" loading={committing}
-                    disabled={!validMappings || !can('modeling:update')}
-                    onClick={() => void commit()}>确认并原子保存结构与映射</Button>
-                </>
+                <Button type="primary" loading={savingDesign || creating || committing}
+                  disabled={!validMappings || !dialect || creationUnknown || commitUnknown
+                    || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code)
+                    || !name.trim() || !can('modeling:update')
+                    || (!savedDraft && !can('modeling:create'))}
+                  onClick={() => void saveOdsDesign()}>保存 ODS 设计</Button>
               )}
             </Space>
           </footer>
