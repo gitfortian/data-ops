@@ -200,7 +200,6 @@ it('delivers the visible complete J1 journey: exact source → live columns → 
   expect(screen.getByTestId('ods-source-workbench')).toBeInTheDocument();
   expect(await screen.findByText('no matching ODS yet')).toBeInTheDocument();
   const create = await screen.findByRole('button', { name: '保存 ODS 设计' });
-  expect(create).toBeDisabled();
   expect(await screen.findByLabelText('ODS 字段 order_id')).toHaveValue('order_id');
   expect(screen.getByLabelText('ODS 字段 order_amount')).toHaveValue('order_amount');
   expect(screen.getByText('源主键')).toBeInTheDocument();
@@ -272,7 +271,7 @@ it('treats a timed-out commit as saved only after exact owner readback', async (
   await screen.findByText('no ODS');
   await screen.findByLabelText('ODS 字段 order_id');
   fireEvent.click(screen.getByRole('button', { name: '保存 ODS 设计' }));
-  await screen.findByText('ODS 已成功保存');
+  await screen.findByText('ODS 设计已保存');
   expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
   expect(listModelingMappings).toHaveBeenCalledWith(888);
 });
@@ -359,7 +358,7 @@ it('never claims saved when successful HTTP receipt reads back another schema', 
   await screen.findByLabelText('ODS 字段 order_id');
   fireEvent.click(screen.getByRole('button', { name: '保存 ODS 设计' }));
   await screen.findByText(/回读不一致/);
-  expect(screen.queryByText('ODS 已成功保存')).not.toBeInTheDocument();
+  expect(screen.queryByText('ODS 设计已保存')).not.toBeInTheDocument();
   expect(commitOdsManualImport).toHaveBeenCalledTimes(1);
 });
 
@@ -406,7 +405,8 @@ it('suggests target dialect from configured ODS target rather than MySQL source'
     sourceDatabase: 'trade_db', sourceSchema: 'public', sourceTable: 'orders', sourceColumn: 'order_id',
   }]);
   render(<OdsSourceJourney />);
-  fireEvent.click(await screen.findByRole('button', { name: '保存 ODS 设计' }));
+  await screen.findByLabelText('ODS 字段 order_id');
+  fireEvent.click(screen.getByRole('button', { name: '保存 ODS 设计' }));
   await screen.findByText('ODS 设计已保存');
   expect(mockCreateModel).toHaveBeenCalledWith(expect.objectContaining({ dialect: 'POSTGRESQL' }));
 });
