@@ -504,9 +504,8 @@ const ModelingWorkspace: React.FC = () => {
   return (
     <div className="modeling-studio-page modeling-studio-catalog">
       <div className="modeling-studio-catalog-body">
-        <ModelingStudioHeader area="physical" title="物理模型"
-          description="按分层查找、创建和继续编辑当前项目的物理模型。"
-          context={<><span>当前项目 #{currentProjectId ?? '未选定'}</span><span>查询结果：{total} 个物理模型</span></>}
+        <ModelingStudioHeader area="physical" title="物理模型" eyebrow={null}
+          description="创建、筛选和继续编辑当前项目的物理模型。"
           actions={<>
             <Input.Search allowClear placeholder="搜索模型名称或编码" className="!w-[230px]"
               onSearch={handleSearch} />
@@ -529,28 +528,6 @@ const ModelingWorkspace: React.FC = () => {
           <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
           <Button onClick={clearJourney}>查看全部物理模型</Button>
         </div>}
-        <section className="modeling-studio-layer-panel" aria-label="模型分层导航">
-          <div className="modeling-studio-section-header">
-            <div>
-              <span className="modeling-studio-overline">物理设计工作区</span>
-              <h2>{physicalView ? '选择分层' : '按数仓分层查找模型'}</h2>
-              <p>仅展示当前项目已配置的分层。切换后重新查询服务端，不用当前页数据推断项目总量。</p>
-            </div>
-            <span className="modeling-studio-hint">ODS 来源贴合 · 非 ODS 需审阅逻辑依据与数据标准</span>
-          </div>
-          <div className="modeling-studio-layer-list" role="group" aria-label="选择数仓分层">
-            <button type="button" className={'modeling-studio-layer-item' + (!layerFilter ? ' is-active' : '')}
-              aria-pressed={!layerFilter} onClick={() => { setLayerFilter(undefined); setDbFilter(undefined); setPageNo(1); }}>
-              全部模型
-            </button>
-            {layers.map((layer) => <button key={layer.code} type="button"
-              className={'modeling-studio-layer-item' + (layerFilter === layer.code ? ' is-active' : '')}
-              aria-pressed={layerFilter === layer.code}
-              onClick={() => { setLayerFilter(layer.code); setDbFilter(undefined); setPageNo(1); }}>
-              {layer.name || layer.code} · {layer.code}
-            </button>)}
-          </div>
-        </section>
         {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-3 text-[12px] text-[#667085]">
           <span>当前过程筛选：<strong>{journeyProcess.name}</strong>（{journeyProcess.code}）</span>
           {can('data-development:read') && <Tooltip
