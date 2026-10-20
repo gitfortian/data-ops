@@ -1957,9 +1957,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
     }
     setStandardCoverageOpen(false);
     setCoverageFeedback({ projectId: currentProject?.id, baseline: physicalGovernanceBaseline(report) });
+    setFoundationOpen(true);
     setHighlightRowKey(result.value);
-    editorRootRef.current?.querySelector(`tr[data-row-key="${result.value}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // The per-layer technical editor may be collapsed; locate only after it mounts.
+    window.setTimeout(() => {
+      editorRootRef.current?.querySelector(`tr[data-row-key="${result.value}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
     clearTimeout(highlightTimerRef.current);
     highlightTimerRef.current = setTimeout(() => setHighlightRowKey(undefined), 2500);
     message.info('已定位当前物理列；请自行审查标准引用并保存，原核验报告不会自动修改');

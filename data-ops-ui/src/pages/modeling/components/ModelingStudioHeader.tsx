@@ -35,9 +35,9 @@ export default function ModelingStudioHeader({
     }] : []),
     { key: 'logical', label: '逻辑建模', description: '定义实体与关系', path: '/modeling/logical', icon: GitBranch },
     { key: 'physical', label: '物理建模', description: '设计模型与映射', path: '/modeling', icon: Database },
-    { key: 'catalog', label: '模型总览', description: '定位与管理模型', path: '/modeling/mainline', icon: LayoutDashboard },
+    { key: 'mainline', label: '分层主线', description: '按过程核对各层', path: '/modeling/mainline', icon: LayoutDashboard },
   ];
-  const active = area === 'catalog' ? 'catalog' : area;
+  const active = area === 'catalog' ? 'physical' : area;
 
   return (
     <header className="modeling-studio-header">

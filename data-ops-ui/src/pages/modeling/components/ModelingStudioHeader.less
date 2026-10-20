@@ -146,3 +146,14 @@ button.modeling-studio-guide-item:hover { transform: translateY(-2px); border-co
   .modeling-studio-guide, .modeling-studio-catalog-results { padding: 15px; }
   .modeling-studio-editor-head { padding: 15px; }
 }
+
+.modeling-studio-more { position: relative; }
+.modeling-studio-more > summary { cursor: pointer; border: 1px solid #dce5ef; border-radius: 7px; padding: 8px 12px; color: #526b8e; background: #fff; user-select: none; }
+.modeling-studio-more > summary::-webkit-details-marker { display: none; }
+.modeling-studio-more > summary::after { content: ' ▾'; color: #7588a5; }
+.modeling-studio-more[open] > summary { background: #edf4ff; border-color: #aabed8; }
+.modeling-studio-more-actions { position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; padding: 12px; min-width: 230px; width: max-content; max-width: min(420px, 84vw); display: flex; flex-direction: column; gap: 8px; border: 1px solid #dce5ef; background: #fff; border-radius: 10px; box-shadow: 0 14px 32px rgba(35,52,76,.15); }
+.modeling-studio-more-actions > .ant-btn { text-align: left; }
+.modeling-studio-foundation-head:hover { background: #edf3fc; }
+.modeling-studio-editor .ant-card-head-title { color: #334963; }
+@media (max-width: 650px) { .modeling-studio-more-actions { right: auto; left: 0; } .modeling-studio-foundation-head small { display: block; margin-left: 0 !important; } }
