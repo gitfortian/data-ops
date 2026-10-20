@@ -41,15 +41,13 @@ export default function SidebarNavigation({
     [groups],
   );
   const [selectedDomain, setSelectedDomain] = useState<string | undefined>(
-    () => groups.find(group => group.id === activeDomain)?.id ?? groups[0]?.id,
+    () => groups.find(group => group.id === activeDomain)?.id,
   );
-  // Keep navigation anchored to the active domain on deep links and back/forward
-  // without forcing home/todo to wipe the operator's last selected domain.
+  // Standalone work entries have no business-domain context. Clear the context
+  // rail when navigating there, including home <-> todo transitions.
   useEffect(() => {
-    setSelectedDomain(previous =>
-      groups.find(group => group.id === activeDomain)?.id
-        ?? (groups.some(group => group.id === previous) ? previous : groups[0]?.id));
-  }, [activeDomain, groups]);
+    setSelectedDomain(groups.find(group => group.id === activeDomain)?.id);
+  }, [activeDomain, activeId, groups]);
 
   // Three direct links in the *existing* authorized SiteLayout context rail.
   // Derive all from the only existing Modeling menu grant; no duplicate menu
@@ -119,12 +117,17 @@ export default function SidebarNavigation({
       : 'bg-transparent font-normal text-[#667085] hover:bg-white hover:text-[#344054]',
   ].join(' ');
 
+  const handleStandaloneNavigate = () => {
+    setSelectedDomain(undefined);
+    onNavigate?.();
+  };
+
   const standaloneLinks = (isCompact: boolean) => standaloneRoutes.map(route => <Link
     key={route.id}
     to={route.path}
     title={route.title}
     aria-label={route.title}
-    onClick={onNavigate}
+    onClick={handleStandaloneNavigate}
     aria-current={activeId === route.id ? 'page' : undefined}
     className={globalButtonClass(activeId === route.id, isCompact)}
   >
@@ -170,7 +173,7 @@ export default function SidebarNavigation({
     <div className="flex min-h-0 flex-1 flex-col gap-1">{domainControls(true)}</div>
   </div>;
 
-  const currentGroup = groups.find(group => group.id === selectedDomain) ?? groups[0];
+  const currentGroup = groups.find(group => group.id === selectedDomain);
   const currentModel = currentGroup && (models.get(currentGroup.id) ?? getContextNavigationModel(currentGroup));
 
   return <div data-testid="dual-rail-navigation" className="flex h-full min-h-0 w-full overflow-hidden">
