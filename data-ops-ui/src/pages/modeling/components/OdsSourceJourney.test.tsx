@@ -34,7 +34,7 @@ jest.mock('@/services/data-source/api', () => ({
   listAllDataSources: (...args: unknown[]) => mockSources(...args),
 }));
 jest.mock('@/services/semantic/api', () => ({ listSemanticLayers: (...args: unknown[]) => mockLayerList(...args) }));
-jest.mock('@/pages/data-source/components/LiveSchemaExplorer', () => ({
+jest.mock('@/components/data-source/LiveSchemaExplorer', () => ({
   __esModule: true,
   default: ({ onOpenOds }: { onOpenOds: (source: unknown) => void }) => (
     <button onClick={() => onOpenOds({ dataSourceId: 10, database: 'trade_db', schema: 'public', table: 'orders' })}>

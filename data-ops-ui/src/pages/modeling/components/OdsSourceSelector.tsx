@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { listAllDataSources } from '@/services/data-source/api';
-import LiveSchemaExplorer from '@/pages/data-source/components/LiveSchemaExplorer';
+import LiveSchemaExplorer from '@/components/data-source/LiveSchemaExplorer';
 import type { LiveSourceCoordinate } from '@/utils/liveSourceOdsJourney';
-import '@/pages/data-source/index.less';
 import { buildLiveSourceOdsPath } from '@/utils/liveSourceOdsJourney';
 
 /**
