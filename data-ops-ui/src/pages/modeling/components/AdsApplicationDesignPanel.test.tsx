@@ -110,7 +110,10 @@ test('selects and displays a complete immutable Metric publication pin', async (
   render(<AdsApplicationDesignPanel {...props} />);
   expect(await screen.findByText('合同修订 R1')).toBeInTheDocument();
   fireEvent.click(screen.getByText('业务口径'));
-  await waitFor(() => expect(listActiveMetricPublicationReferences).toHaveBeenCalled());
+  await waitFor(() => {
+    expect(listActiveMetricPublicationReferences).toHaveBeenCalled();
+    expect(screen.getByRole('combobox')).not.toBeDisabled();
+  });
   fireEvent.mouseDown(screen.getByRole('combobox'));
   fireEvent.click(await screen.findByText(/gmv · 成交总额 · V4/));
 

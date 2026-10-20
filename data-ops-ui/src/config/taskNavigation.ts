@@ -91,7 +91,7 @@ export const getContextNavigationModel = (group: NavigationGroupWithRoutes): Con
       used.add(id);
       return byId.get(id)!;
     });
-    return { id: spec.id, title: spec.title, routes, visibleCount: spec.visible };
+    return { id: spec.id, title: spec.title, routes, visibleCount: Math.min(spec.visible, routes.length) };
   }).filter(section => section.routes.length > 0);
 
   // Fallback is not a miscellaneous sidebar bucket: place each new capability
