@@ -1,0 +1,206 @@
+/* Modeling pages inherit the real data-ops SiteLayout and its two-rail navigation.
+ * Keep a compact neutral work area; only the application theme owns primary buttons.
+ */
+.modeling-studio-page {
+  min-height: calc(100dvh - 64px);
+  color: #242731;
+  background: #f7f8fa;
+  font-size: 13px;
+}
+.modeling-studio-catalog {
+  display: block;
+}
+.modeling-studio-catalog-body {
+  padding: 20px 24px 30px;
+  min-width: 0;
+}
+.modeling-studio-header {
+  margin-bottom: 16px;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  background: #fff;
+}
+.modeling-studio-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 22px;
+}
+.modeling-studio-heading { flex: 1; min-width: 0; }
+.modeling-studio-heading h1 {
+  color: #242731;
+  margin: 7px 0 6px;
+  font-size: 21px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+.modeling-studio-heading p {
+  color: #667085;
+  line-height: 1.65;
+  margin: 0;
+}
+.modeling-studio-kicker, .modeling-studio-overline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 600;
+}
+.modeling-studio-context {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+}
+.modeling-studio-context > span {
+  color: #667085;
+  background: #f9fafb;
+  border: 1px solid #eaecf0;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.modeling-studio-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.modeling-studio-guide,
+.modeling-studio-layer-panel,
+.modeling-studio-catalog-results,
+.modeling-studio-content {
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+}
+.modeling-studio-guide { padding: 18px 20px; margin-bottom: 16px; }
+.modeling-studio-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.modeling-studio-section-header h2 {
+  margin: 5px 0 5px;
+  color: #344054;
+  font-size: 16px;
+  font-weight: 650;
+}
+.modeling-studio-section-header p {
+  color: #667085;
+  margin: 0;
+  line-height: 1.65;
+}
+.modeling-studio-hint { color: #98a2b3; font-size: 11px; }
+.modeling-studio-guide-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.modeling-studio-guide-item {
+  min-height: 156px;
+  min-width: 0;
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  position: relative;
+  border: 1px solid #eaecf0;
+  border-radius: 9px;
+  color: #667085;
+  background: #fcfcfd;
+  text-align: left;
+}
+button.modeling-studio-guide-item { cursor: pointer; }
+button.modeling-studio-guide-item:hover { border-color: #d0d5dd; background: #f9fafb; }
+.modeling-studio-guide-number { position: absolute; top: 16px; right: 16px; font-size: 15px; color: #98a2b3; font-weight: 650; }
+.modeling-studio-guide-symbol {
+  width: 32px; height: 32px; border: 1px solid #eaecf0; border-radius: 7px;
+  background: #fff; color: #475467; display: grid; place-items: center;
+}
+.modeling-studio-guide-item strong { color: #344054; font-size: 13px; }
+.modeling-studio-guide-item > span { line-height: 1.5; }
+.modeling-studio-guide-link { display: flex; gap: 4px; align-items: center; color: #fe2c55; margin-top: auto; font-weight: 600; }
+.modeling-studio-guide-item-final { background: #fcfcfd; }
+.modeling-studio-guide-operations { margin-top: auto; display: flex; flex-wrap: wrap; gap: 7px; }
+.modeling-studio-guide-operations button { border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; padding: 6px 8px; cursor: pointer; color: #475467; font-size: 12px; }
+.modeling-studio-guide-operations button:first-child { background: #fe2c55; border-color: #fe2c55; color: #fff; }
+.modeling-studio-guide-operations button:disabled { opacity: .45; cursor: not-allowed; }
+.modeling-studio-layer-panel { padding: 18px 20px; margin-bottom: 16px; }
+.modeling-studio-layer-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.modeling-studio-layer-item {
+  appearance: none;
+  border: 1px solid #eaecf0;
+  background: #fff;
+  color: #475467;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.modeling-studio-layer-item:hover { background: #f9fafb; border-color: #d0d5dd; }
+.modeling-studio-layer-item.is-active { color: #fe2c55; background: rgba(254,44,85,.06); border-color: rgba(254,44,85,.28); font-weight: 600; }
+.modeling-studio-catalog-results { padding: 18px 20px; }
+.modeling-studio-catalog-results .ant-table-wrapper { overflow-x: auto; }
+.modeling-studio-catalog-results .ant-table-thead > tr > th { background: #f9fafb !important; color: #475467; }
+.modeling-studio-logical, .modeling-studio-detail { padding: 20px 24px 30px; }
+.modeling-studio-logical-board .ant-card, .modeling-studio-detail .ant-card { border-radius: 9px; border-color: #eaecf0; box-shadow: none; }
+.modeling-studio-logical-selector .ant-card-body { padding: 12px; }
+.modeling-studio-logical-choice {
+  text-align: left; width: 100%; display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid #eaecf0; border-radius: 7px; margin-bottom: 8px;
+  padding: 10px 12px; background: #fff; cursor: pointer;
+}
+.modeling-studio-logical-choice strong { color: #344054; }
+.modeling-studio-logical-choice span { color: #98a2b3; font-size: 11px; }
+.modeling-studio-logical-choice:hover { background: #f9fafb; }
+.modeling-studio-logical-choice.is-active { background: rgba(254,44,85,.05); border-color: #fe2c55; }
+.modeling-studio-detail-context {
+  display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+  padding: 12px 18px; border: 1px solid #eaecf0; border-radius: 9px; margin-bottom: 14px; background: #fff;
+}
+.modeling-studio-detail-context strong { display: block; color: #344054; margin-bottom: 3px; }
+.modeling-studio-detail-context span { color: #667085; }
+.modeling-studio-group-switch { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.modeling-studio-group-button { border: 1px solid #eaecf0; background: #fff; color: #667085; text-align: left; padding: 10px 15px; border-radius: 7px; cursor: pointer; }
+.modeling-studio-group-button strong { display: block; font-size: 13px; color: #344054; }
+.modeling-studio-group-button span { display: block; margin-top: 3px; font-size: 11px; }
+.modeling-studio-group-button.is-active { border-color: rgba(254,44,85,.32); background: rgba(254,44,85,.06); }
+.modeling-studio-group-button.is-active strong { color: #fe2c55; }
+.modeling-studio-content { padding: 13px 16px 20px; }
+.modeling-studio-editor { min-height: 0; }
+.modeling-studio-editor-head {
+  display: flex; gap: 14px; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; padding: 15px 17px; background: #f9fafb; border: 1px solid #eaecf0; border-radius: 9px;
+}
+.modeling-studio-editor-head h2 { color: #344054; font-size: 16px; margin: 5px 0; font-weight: 600; }
+.modeling-studio-editor-head p { color: #667085; margin: 0; }
+.modeling-studio-editor-main-actions, .modeling-studio-editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.modeling-studio-editor-tools { padding: 12px 2px; }
+.modeling-studio-editor-tools > span { color: #98a2b3; font-size: 12px; }
+.modeling-studio-layer-intro { padding: 12px 15px; background: #f9fafb; border: 1px solid #eaecf0; border-radius: 8px; }
+.modeling-studio-layer-intro strong { display: block; color: #344054; }
+.modeling-studio-layer-intro p { color: #667085; margin: 5px 0 0; }
+.modeling-studio-specialized { margin-top: 14px; }
+.modeling-studio-foundation { margin-top: 16px; }
+.modeling-studio-foundation-head { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: #f9fafb; border: 1px solid #eaecf0; border-radius: 8px; margin-bottom: 11px; cursor: pointer; }
+.modeling-studio-foundation-head:hover { background: #f4f5f7; }
+.modeling-studio-more { position: relative; }
+.modeling-studio-more > summary { padding: 7px 11px; background: #fff; border: 1px solid #d0d5dd; border-radius: 6px; cursor: pointer; color: #475467; }
+.modeling-studio-more-actions { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #eaecf0; border-radius: 9px; background: white; box-shadow: 0 8px 24px rgba(16,24,40,.10); position: absolute; right: 0; top: calc(100% + 5px); z-index: 20; min-width: 200px; }
+.modeling-studio-page button:focus-visible, .modeling-studio-page a:focus-visible { outline: 2px solid #fe2c55; outline-offset: 2px; }
+@media(max-width:1100px) {
+  .modeling-studio-header-top { flex-direction: column; }
+  .modeling-studio-header-actions { justify-content: flex-start; }
+  .modeling-studio-guide-grid { grid-template-columns: 1fr; }
+  .modeling-studio-guide-item { min-height: 115px; }
+}
+@media(max-width:700px) {
+  .modeling-studio-catalog-body, .modeling-studio-logical, .modeling-studio-detail { padding: 12px; }
+  .modeling-studio-header-top { padding: 16px; }
+  .modeling-studio-guide, .modeling-studio-layer-panel, .modeling-studio-catalog-results { padding: 13px; }
+  .modeling-studio-content { padding: 8px; }
+}

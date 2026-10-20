@@ -1,5 +1,5 @@
 import { history, useLocation, useParams } from '@umijs/max';
-import { Descriptions, message, Modal, Space, Tabs, Tag, Typography } from 'antd';
+import { Descriptions, message, Modal, Tabs, Tag } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { YakButton, YakEmpty } from '@/components/ui';
 import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT, MODELING_STATUS_LABELS } from '@/pages/modeling/constants';
@@ -9,6 +9,7 @@ import ModelingModelDetail from '@/pages/modeling/detail';
 import LogicalPhysicalEvidencePanel from '@/pages/modeling/components/LogicalPhysicalEvidencePanel';
 import type { ModelStructureEditorStatus } from '@/pages/modeling/detail';
 import ModelLifecycleTab from '@/pages/data-lifecycle/components/ModelLifecycleTab';
+import ModelingStudioHeader from '@/pages/modeling/components/ModelingStudioHeader';
 import LayerFieldMappingPage from '@/pages/modeling/layer-mapping';
 import MappingPanel from '@/pages/modeling/mapping';
 import { listDataSources } from '@/services/data-source/api';
@@ -19,17 +20,13 @@ import type { ModelingModelRecord } from '@/services/modeling/types';
 import { listSemanticLayers } from '@/services/semantic/api';
 import type { SemanticLayerRecord } from '@/services/semantic/types';
 
-const COMING_SOON: Record<string, { title: string; ticket: string; note: string }> = {
-  task: { title: '加工任务', ticket: '21/22', note: '来源映射生成 SQL 并接入数据开发后展示' },
-};
-
 /** 模型统一视图(ticket 25):一页看清全貌;各维度空态优雅降级、懒加载。 */
 const UnifiedModelView: React.FC = () => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
   const location = useLocation();
   const queryTab = new URLSearchParams(location.search).get('tab');
-  const tabKeys = ['overview', 'logical', 'structure', 'mapping', 'layer-mapping', 'process', 'lineage', 'lifecycle', 'version', 'task'];
+  const tabKeys = ['overview', 'logical', 'structure', 'mapping', 'layer-mapping', 'lineage', 'lifecycle', 'version'];
   const activeTab = queryTab && tabKeys.includes(queryTab) ? queryTab : 'structure';
   const [model, setModel] = useState<ModelingModelRecord>();
   const [structureEditor, setStructureEditor] = useState<{
@@ -174,84 +171,82 @@ const UnifiedModelView: React.FC = () => {
     />
   );
 
-  const comingSoonTab = (key: string) => {
-    const info = COMING_SOON[key];
-    return <YakEmpty compact title={`${info.title}尚未开放`} description={`${info.note}（ticket ${info.ticket}）`} />;
+  const openTab = (tab: string) => {
+    const query = new URLSearchParams(location.search);
+    query.set('tab', tab);
+    guardDraftAndNavigate(() => history.replace({ pathname: location.pathname, search: '?' + query.toString() }));
+  };
+
+  // Keep legacy deep links, but only surface tasks that have real working panels.
+  const sections = [
+    { key: 'design', name: '设计工作台', description: '结构、逻辑与映射', tabs: ['structure', 'logical', 'mapping', 'layer-mapping'], defaultTab: 'structure' },
+    { key: 'history', name: '版本与关联', description: '版本、血缘和生命周期', tabs: ['version', 'lineage', 'lifecycle'], defaultTab: 'version' },
+    { key: 'overview', name: '模型资料', description: '业务与技术归属', tabs: ['overview'], defaultTab: 'overview' },
+  ];
+  const section = sections.find((item) => item.tabs.includes(activeTab)) ?? sections[0];
+  const items = [
+    { key: 'structure', label: '模型设计', children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
+    { key: 'logical', label: '业务逻辑依据', children: <LogicalPhysicalEvidencePanel
+      model={model?.id != null && String(model.id) === modelId ? model : undefined}
+      search={location.search}
+      onNavigateLogical={(path) => guardDraftAndNavigate(() => history.push(path))}
+    /> },
+    { key: 'mapping', label: '来源映射', children: <MappingPanel /> },
+    { key: 'layer-mapping', label: '字段分层映射', children: <LayerFieldMappingPage /> },
+    { key: 'version', label: '设计版本', children: <ModelVersionPanel /> },
+    { key: 'lineage', label: '血缘关系', children: <ModelLineagePanel /> },
+    { key: 'lifecycle', label: '生命周期', children: <ModelLifecycleTab modelId={modelId ? Number(modelId) : null} /> },
+    { key: 'overview', label: '模型基本信息', children: overview },
+  ];
+  const layerDescription: Record<string, string> = {
+    ODS: '核对来源表、字段与物理结构，并保持保存后的来源回链。',
+    DWD: '以逻辑设计和可信 ODS 来源为依据，完成明细映射与标准核验。',
+    DIM: '确认维度业务键、标准字段与物理设计版本。',
+    DWS: '在模型内完成可信来源、统计粒度、度量验证、发布审核和版本恢复。',
+    ADS: '围绕应用目标、输出字段、指标口径和消费交接设计输出合同。',
   };
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-[20px] font-semibold leading-7">
-            {model?.name ?? '模型详情'}
-            {model?.code ? (
-              <Typography.Text code className="!ml-2 !text-[13px]">
-                {model.code}
-              </Typography.Text>
-            ) : null}
-            {model?.status ? <Tag className="!ml-2">{MODELING_STATUS_LABELS[model.status] || model.status}</Tag> : null}
-          </div>
-          <div className="mt-1 text-[13px] text-[#667085]">
-            统一视图：概览、表结构、来源映射、分层映射、血缘、版本与业务过程一页看清
-          </div>
-        </div>
-        <Space>
-          {sourceReturnPath ? (
-            <YakButton className="!h-9 !rounded-lg !px-4" onClick={returnToVerifiedSource}>
-              返回来源表
-            </YakButton>
-          ) : null}
-          <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => guardDraftAndNavigate(() => history.push('/modeling'))}>
-            返回列表
-          </YakButton>
-        </Space>
-      </div>
+    <div className="modeling-studio-page modeling-studio-detail">
+      <ModelingStudioHeader area="physical" title={model?.name || '物理模型设计工作台'}
+        eyebrow="数据建设 / 数仓建模 / 模型设计"
+        description={layerDescription[(model?.layerCode || '').toUpperCase()] ||
+          '在同一物理模型对象中核对业务依据、数据结构、映射与发布版本。'}
+        context={<>
+          <span>分层：{layerLabel}</span>
+          {model?.code ? <span>编码：{model.code}</span> : null}
+          {model?.processName ? <span>业务过程：{model.processName}</span> : null}
+          {model?.status ? <Tag>{MODELING_STATUS_LABELS[model.status] || model.status}</Tag> : null}
+        </>}
+        actions={<>
+          {sourceReturnPath ? <YakButton onClick={returnToVerifiedSource}>返回来源表</YakButton> : null}
+          <YakButton onClick={() => guardDraftAndNavigate(() => history.push('/modeling'))}>返回模型库</YakButton>
+        </>} />
 
-      <Tabs
-        className="mt-3"
-        activeKey={activeTab}
-        onChange={(tab) => {
-          const query = new URLSearchParams(location.search); query.set('tab', tab);
-          guardDraftAndNavigate(() => history.replace({ pathname: location.pathname, search: `?${query.toString()}` }));
-        }}
-        items={[
-          { key: 'overview', label: '基本信息', children: overview },
-          { key: 'logical', label: '业务逻辑依据', children: <LogicalPhysicalEvidencePanel
-            model={model?.id != null && String(model.id) === modelId ? model : undefined}
-            search={location.search}
-            onNavigateLogical={(path) => guardDraftAndNavigate(() => history.push(path))}
-          /> },
-          { key: 'structure', label: '表结构', children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
-          { key: 'mapping', label: '来源映射', children: <MappingPanel /> },
-          {
-            key: 'layer-mapping',
-            label: '分层映射',
-            children: <LayerFieldMappingPage />,
-          },
-          {
-            key: 'process',
-            label: '业务过程',
-            children: (
-              <YakEmpty
-                compact
-                title="业务过程维度（M4 预留）"
-                description="派生建模（ticket 44）与业务过程主线视图（ticket 47）开放后在此展示"
-              />
-            ),
-          },
-          { key: 'lineage', label: '血缘', children: <ModelLineagePanel /> },
-          {
-            key: 'lifecycle',
-            label: '生命周期',
-            children: <ModelLifecycleTab modelId={modelId ? Number(modelId) : null} />,
-          },
-          { key: 'version', label: '版本', children: <ModelVersionPanel /> },
-          { key: 'task', label: '加工任务', children: comingSoonTab('task') },
-        ]}
-      />
+      <section className="modeling-studio-detail-context" aria-label="当前模型设计边界">
+        <div><strong>当前对象</strong><div>{model?.name || '加载模型中'} · {model?.layerCode || '未配置分层'}</div></div>
+        <div><strong>设计目标</strong><div>{model?.processName || '业务过程未关联'}</div></div>
+        <div><strong>发布事实</strong><div>{model?.status ? (MODELING_STATUS_LABELS[model.status] || model.status) : '加载中'}</div></div>
+        <span>设计发布不代表 SQL 运行、目标数据写入或消费授权</span>
+      </section>
+
+      <nav className="modeling-studio-group-switch" aria-label="模型详情工作区域">
+        {sections.map((entry) => (
+          <button key={entry.key} type="button"
+            aria-current={section.key === entry.key ? 'page' : undefined}
+            className={'modeling-studio-group-button' + (section.key === entry.key ? ' is-active' : '')}
+            onClick={() => openTab(entry.defaultTab)}>
+            <strong>{entry.name}</strong><span>{entry.description}</span>
+          </button>
+        ))}
+      </nav>
+      <section className="modeling-studio-content" aria-label={section.name}>
+        <Tabs activeKey={activeTab} onChange={openTab}
+          items={items.filter((item) => section.tabs.includes(item.key))} />
+      </section>
     </div>
   );
+
 };
 
 export default UnifiedModelView;
