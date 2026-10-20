@@ -27,7 +27,7 @@ interface SectionSpec {
 export const CONTEXT_NAVIGATION_SECTIONS: Readonly<Record<string, readonly SectionSpec[]>> = {
   integration: [
     { id: 'source', title: '来源管理', routes: ['data-source', 'sql-execution-audit'], visible: 1 },
-    { id: 'sync', title: '数据同步', routes: ['batch-link-up', 'realtime-sync'], visible: 2 },
+    { id: 'sync', title: '数据同步', routes: ['batch-link-up'], visible: 1 },
     { id: 'files', title: '文件资源', routes: ['resource-management'], visible: 1 },
   ],
   modeling: [

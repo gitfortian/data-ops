@@ -98,13 +98,6 @@ const CREATE_TABS: CreateTab[] = [
     maxLength: 64,
   },
   {
-    key: 'realtime',
-    label: '实时同步',
-    title: '创建实时同步任务',
-    buttonText: '创建并进入编辑器',
-    maxLength: 200,
-  },
-  {
     key: 'development',
     label: '数据开发',
     title: '创建开发节点',

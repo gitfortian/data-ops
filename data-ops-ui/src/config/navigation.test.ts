@@ -291,6 +291,19 @@ describe('permission-aware navigation', () => {
     ).toBe('data-quality-execution');
   });
 
+  it('hides the realtime-sync feature entry and its quick-create menu while preserving historical authorized routes', () => {
+    const grants = ['task:realtime:read', 'task:realtime:create', 'task:batch:read', 'task:batch:create'];
+    const menuCodes = [YAK_OPS_MENU_CODES.realtimeSync, YAK_OPS_MENU_CODES.batchLinkUp];
+    const group = getMainNavigationGroups(grants, menuCodes).find(g => g.id === 'integration');
+    expect(group?.routes.map(route => route.id)).toEqual(['batch-link-up']);
+    expect(getQuickCreateRoutes(grants, menuCodes).map(route => route.id)).toEqual(['batch-link-up']);
+    const realtime = appRoutes.find(route => route.id === 'realtime-sync');
+    expect(realtime?.hidden).toBe(true);
+    expect(realtime?.quickCreateLabel).toBeUndefined();
+    expect(getActiveNavigationId('/sync/realtime', grants, menuCodes)).toBe('realtime-sync');
+    expect(getActiveNavigationId('/sync/realtime/101/detail', grants, menuCodes)).toBe('realtime-sync');
+  });
+
   it('does not expose removed modules', () => {
     expect(getActiveNavigationId('/sync/realtime-link-up', ['task:realtime:read'])).toBeUndefined();
     expect(getActiveNavigationId('/data-development/workbench', developmentRead)).toBeUndefined();

@@ -74,6 +74,15 @@ describe('IA-550 domain-local navigation without the redundant third level', () 
     expect(contextNavigationRouteIds(model)).not.toContain('data-source');
   });
 
+  it('excludes realtime-sync from the integration context sections even with full grants', () => {
+    const group = getMainNavigationGroups(['security:root']).find(g => g.id === 'integration')!;
+    const model = getContextNavigationModel(group);
+    const sync = model.sections.find(section => section.id === 'sync');
+    expect(sync?.routes.map(route => route.id)).toEqual(['batch-link-up']);
+    expect(sync?.visibleCount).toBe(1);
+    expect(contextNavigationRouteIds(model)).not.toContain('realtime-sync');
+  });
+
   it('keeps all authorized Metadata, quality, security and MDM pages inside their original business neighborhood', () => {
     const asset = getMainNavigationGroups(['security:root']).find(g => g.id === 'data-asset')!;
     const model = getContextNavigationModel(asset);

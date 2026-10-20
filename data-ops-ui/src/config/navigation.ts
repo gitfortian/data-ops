@@ -113,9 +113,9 @@ export const appRoutes: readonly NavigationRoute[] = [
     id: 'realtime-sync', menuCode: YAK_OPS_MENU_CODES.realtimeSync,
     mode: 'one', permission: 'task:realtime:read',
     path: '/sync/realtime', title: '实时同步', component: './integration/realtime-sync',
-    iconKey: 'realtime', menuGroup: 'integration', order: 30,
-    quickCreateRequirement: { mode: 'one', permission: 'task:realtime:create' },
-    quickCreateLabel: '新建实时同步',
+    // Preserve the authorized legacy route and task details, but retire its
+    // product-navigation and quick-create entry points.
+    iconKey: 'realtime', menuGroup: 'integration', order: 30, hidden: true,
   },
   { id: 'batch-link-up-detail', path: '/sync/batch-link-up/:id/detail', title: '离线同步详情', component: './integration/batch-link-up/detail', hidden: true, parentId: 'batch-link-up' },
   { id: 'batch-link-up-single', path: '/sync/batch-link-up/:id/config/single', title: '单表同步配置', component: './integration/batch-link-up/config/single', hidden: true, parentId: 'batch-link-up' },
