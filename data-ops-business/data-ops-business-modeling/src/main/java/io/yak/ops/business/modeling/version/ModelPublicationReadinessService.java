@@ -117,7 +117,7 @@ public class ModelPublicationReadinessService {
           || !Objects.equals(observed.layerCode(), request.layerCode())
           || !Objects.equals(observed.physicalStructureSha256(), request.physicalStructureSha256())
           || !samePhysicalColumns(request, observed)) {
-        return unavailable(model, "标准证据提供方范围或列集合不一致，禁止复用结果");
+        return unavailable(model, "标准证据提供方范围或列集合不一致，禁止复用结果", mappingContext);
       }
       // A provider verdict must agree with every concrete per-column status.
       // Do not show a green current-catalog result when it contains a blocked
@@ -132,7 +132,7 @@ public class ModelPublicationReadinessService {
               || observed.columns().stream().anyMatch(c ->
                   !"VALID".equals(c.status()) || c.standardFieldId() == null
                       || c.standardFieldId() <= 0))) {
-        return unavailable(model, "标准证据宣称合格，但列状态或冻结身份不完整，禁止发布");
+        return unavailable(model, "标准证据宣称合格，但列状态或冻结身份不完整，禁止发布", mappingContext);
       }
       // Even a VALID current catalog result does not establish T3's trusted
       // authorization and revocation-to-commit fence. Do not cache it as a
@@ -145,7 +145,7 @@ public class ModelPublicationReadinessService {
           observed.columns(), findings, false, "SECURITY_COMMIT_FENCE_NOT_ADMITTED",
           mappingContext);
     } catch (RuntimeException failure) {
-      return unavailable(model, "标准证据服务不可用，未形成可信预检结果");
+      return unavailable(model, "标准证据服务不可用，未形成可信预检结果", mappingContext);
     }
   }
 
@@ -164,13 +164,13 @@ public class ModelPublicationReadinessService {
       // A mapping provider must not supply a draft for a different target
       // physical model, even when it is the same project and has a plausible
       // latest frozen revision. Never label that cross-target mapping frozen.
-      if (!Objects.equals(draft.physicalModelId(), modelId)) {
-        return new MappingContext("UNKNOWN", null, null, null, null,
-            null, null, null, "映射草稿指向其他物理模型，无法核验发布来源");
-      }
       if (draft == null) {
         return new MappingContext("MISSING", null, null, null, null,
             null, null, null, "尚未保存 DWD 逻辑→物理映射");
+      }
+      if (!Objects.equals(draft.physicalModelId(), modelId)) {
+        return new MappingContext("UNKNOWN", null, null, null, null,
+            null, null, null, "映射草稿指向其他物理模型，无法核验发布来源");
       }
       var frozen = mappings.revisions(modelId);
       if (frozen.isEmpty()) {
@@ -233,8 +233,14 @@ public class ModelPublicationReadinessService {
   }
 
   private static Report unavailable(Model model, String reason) {
+    return unavailable(model, reason, null);
+  }
+
+  /** Failure of the Semantic provider must not erase independently verified
+   * DWD mapping identity. It still NEVER authorizes publication. */
+  private static Report unavailable(Model model, String reason, MappingContext mapping) {
     return new Report(model.id(), model.layerCode(), null,
         PublicationStandardEvidenceApi.Verdict.UNKNOWN, null, null,
-        List.of(), List.of(reason), false, "EVIDENCE_UNAVAILABLE", null);
+        List.of(), List.of(reason), false, "EVIDENCE_UNAVAILABLE", mapping);
   }
 }
