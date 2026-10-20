@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Import;
     OplogExtraServiceImpl.class, OplogServiceImpl.class,
     PermissionAdministrationService.class, PermissionServiceImpl.class,
     ProjectServiceImpl.class, AuthorizationSnapshotService.class,
+    PublicationAuthorizationRevisionService.class,
     RbacPermissionServiceImpl.class, ResourceTypeServiceImpl.class,
     RolePermissionServiceImpl.class, RoleServiceImpl.class, UserProjectServiceImpl.class,
     UserAdministrationService.class, UserResourceServiceImpl.class,

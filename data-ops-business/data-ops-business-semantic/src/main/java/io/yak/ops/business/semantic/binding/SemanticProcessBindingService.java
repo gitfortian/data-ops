@@ -7,11 +7,13 @@ import io.yak.ops.business.audit.BusinessAuditService;
 import io.yak.ops.business.datasource.connection.DataSourceConnectionTester;
 import io.yak.ops.business.semantic.exception.SemanticException;
 import io.yak.ops.business.semantic.repository.SemanticProcessRepository;
+import io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService;
 import io.yak.ops.business.semantic.repository.SemanticProcessSourceRepository;
 import io.yak.ops.business.audit.AuditTransactions;
 import io.yak.ops.common.enums.semantic.SemanticErrorCode;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,16 +30,33 @@ public class SemanticProcessBindingService {
   private final SemanticProcessRepository processRepository;
   private final DataSourceConnectionTester connectionTester;
   private final BusinessAuditService auditService;
+  private final SemanticPublicationRevisionService publicationRevision;
 
+  @Autowired
+  public SemanticProcessBindingService(
+      SemanticProcessSourceRepository repository,
+      SemanticProcessRepository processRepository,
+      DataSourceConnectionTester connectionTester,
+      BusinessAuditService auditService,
+      SemanticPublicationRevisionService publicationRevision) {
+    this.repository = repository;
+    this.processRepository = processRepository;
+    this.connectionTester = connectionTester;
+    this.auditService = auditService;
+    this.publicationRevision = publicationRevision;
+  }
+
+  /** Existing focused tests use repository fakes, not a real business transaction. */
   public SemanticProcessBindingService(
       SemanticProcessSourceRepository repository,
       SemanticProcessRepository processRepository,
       DataSourceConnectionTester connectionTester,
       BusinessAuditService auditService) {
-    this.repository = repository;
-    this.processRepository = processRepository;
-    this.connectionTester = connectionTester;
-    this.auditService = auditService;
+    this(repository, processRepository, connectionTester, auditService, null);
+  }
+
+  private void advancePublicationRevision() {
+    if (publicationRevision != null) publicationRevision.advanceBeforeMutation();
   }
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
@@ -48,6 +67,10 @@ public class SemanticProcessBindingService {
       String tableRole,
       String joinCondition,
       String operator) {
+    // SOURCE_LINK is part of the business process's source identity. Acquire
+    // project revision before process lookup, datasource checks and binding
+    // repository writes so adoption cannot silently reuse an old revision.
+    advancePublicationRevision();
     requireProcess(processId);
     if (datasourceId == null || datasourceId <= 0) {
       throw new SemanticException(SemanticErrorCode.INVALID_SEARCH, "必须选择数据源");
@@ -99,6 +122,7 @@ public class SemanticProcessBindingService {
 
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void unbind(Long processId, Long bindingId) {
+    advancePublicationRevision();
     if (listByProcess(processId).stream().noneMatch(binding -> binding.id().equals(bindingId))) {
       throw new SemanticException(SemanticErrorCode.NOT_FOUND, "此业务过程不存在该源表关联");
     }

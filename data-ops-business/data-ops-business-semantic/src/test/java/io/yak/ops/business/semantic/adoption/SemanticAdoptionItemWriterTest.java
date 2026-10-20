@@ -113,6 +113,58 @@ class SemanticAdoptionItemWriterTest {
     verify(mapper,never()).insert(any(AdoptionReceiptPO.class));
   }
 
+  @Test void newSourceLinkLocksProjectRevisionBeforeUniqueReceiptAndDownstreamBinding() {
+    var revision = mock(io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService.class);
+    var guardedWriter = new SemanticAdoptionItemWriter(mapper,
+        mock(BusinessDomainService.class), mock(BusinessProcessService.class),
+        mock(SemanticFieldService.class), mock(StandardCatalogService.class),
+        bindings, project, source, revision);
+    var request = batch();
+    assertEquals("LINKED", guardedWriter.apply(
+        request, request.candidates().get(3), dependencies()).status());
+
+    var ordered = inOrder(revision, mapper, bindings);
+    ordered.verify(revision).advanceBeforeMutation();
+    ordered.verify(mapper).insert(any(AdoptionReceiptPO.class));
+    ordered.verify(bindings).listByProcess(71L);
+    ordered.verify(bindings).bind(71L,7L,"orders","MAIN",null,"42");
+    ordered.verify(mapper).updateById(any(AdoptionReceiptPO.class));
+  }
+
+  @Test void successfulReceiptReplayDoesNotAdvanceRevisionOrWriteAgain() {
+    var revision = mock(io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService.class);
+    var guardedWriter = new SemanticAdoptionItemWriter(mapper,
+        mock(BusinessDomainService.class), mock(BusinessProcessService.class),
+        mock(SemanticFieldService.class), mock(StandardCatalogService.class),
+        bindings, project, source, revision);
+    var request = batch();
+    var chosen = request.candidates().get(3);
+    assertEquals("LINKED", guardedWriter.apply(request, chosen, dependencies()).status());
+    var captured = org.mockito.ArgumentCaptor.forClass(AdoptionReceiptPO.class);
+    verify(mapper).insert(captured.capture());
+    when(mapper.selectOne(any())).thenReturn(captured.getValue());
+
+    assertEquals("LINKED", guardedWriter.apply(request, chosen, dependencies()).status());
+    verify(revision,times(1)).advanceBeforeMutation();
+    verify(mapper,times(1)).insert(any(AdoptionReceiptPO.class));
+    verify(bindings,times(1)).bind(71L,7L,"orders","MAIN",null,"42");
+  }
+
+  @Test void revisionFailureBlocksF039ReceiptReservationAndSourceLinkWrite() {
+    var revision = mock(io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService.class);
+    doThrow(new IllegalStateException("project revision unavailable"))
+        .when(revision).advanceBeforeMutation();
+    var guardedWriter = new SemanticAdoptionItemWriter(mapper,
+        mock(BusinessDomainService.class), mock(BusinessProcessService.class),
+        mock(SemanticFieldService.class), mock(StandardCatalogService.class),
+        bindings, project, source, revision);
+    var request = batch();
+    assertThrows(IllegalStateException.class, () -> guardedWriter.apply(
+        request, request.candidates().get(3), dependencies()));
+    verify(mapper,never()).insert(any(AdoptionReceiptPO.class));
+    verify(bindings,never()).bind(any(),any(),any(),any(),any(),any());
+  }
+
   @Test void writerUsesBusinessTransactionManager() throws Exception {
     var annotation=SemanticAdoptionItemWriter.class.getMethod("apply",
         SemanticSourceAdoptionApi.Batch.class,SemanticSourceAdoptionApi.Candidate.class,

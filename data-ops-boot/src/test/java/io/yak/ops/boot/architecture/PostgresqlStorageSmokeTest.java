@@ -94,10 +94,14 @@ class PostgresqlStorageSmokeTest {
       var security = new JdbcTemplate(context.getBean("yakSecurityDataSource", DataSource.class));
       projectId = security.queryForObject("SELECT id FROM yak_security_project ORDER BY id LIMIT 1", Long.class);
       assertThat(projectId).isPositive();
+      verifySecurityAuthorizationRevision(context, security);
       assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM yak_quality_rule_template", Long.class)).isPositive();
       assertThat(security.queryForObject("SELECT COUNT(*) FROM yak_security_user WHERE user_name = 'pg_storage_owner'", Long.class)).isEqualTo(1);
       verifyLoginAndProjectRequest(context, password, projectId);
       verifyAtomicBusinessWrites(context, jdbc, projectId);
+      verifySemanticPublicationRevisionFence(context, jdbc);
+      verifyModelRootAndSemanticRevisionLockOrder(context, jdbc);
+      verifyF039ReceiptRevisionRace(context, jdbc);
       verifySharedCatalogAndSearch(context, jdbc, projectId);
       verifyRuntimeProjections(context, jdbc, projectId);
       verifyMasterRefresh(jdbc, projectId);
@@ -140,6 +144,296 @@ class PostgresqlStorageSmokeTest {
           .orElseThrow().getSummary()).isEqualTo("durable agent state");
       stateStore.delete("pg-storage-user", "pg-storage-session");
       assertThat(stateStore.exists("pg-storage-user", "pg-storage-session")).isFalse();
+    }
+  }
+
+  /**
+   * B2 T3 PostgreSQL write-side evidence: the Security-owned revision can be
+   * changed and rolled back in the actual Security transaction, but NEVER
+   * grants an independently committing Modeling transaction publish rights.
+   */
+  private void verifySecurityAuthorizationRevision(
+      ConfigurableApplicationContext context, JdbcTemplate security) {
+    var revision = context.getBean(
+        io.yak.framework.security.service.impl.PublicationAuthorizationRevisionService.class);
+    var manager = context.getBean("yakSecurityTransactionManager",
+        PlatformTransactionManager.class);
+    var properties = context.getBean(
+        io.yak.framework.security.config.YakSecurityProperties.class);
+    String app = properties.getApplicationName();
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    String select = """
+        SELECT revision_no FROM yak_security_publication_auth_revision
+        WHERE app_name = ? AND scope_kind = 'PROJECT' AND scope_id = ?
+        """;
+    try {
+      assertThatThrownBy(() -> revision.advanceProjectMutation(project))
+          .isInstanceOf(IllegalStateException.class);
+      Long first = new TransactionTemplate(manager).execute(
+          status -> revision.advanceProjectMutation(project));
+      assertThat(first).isEqualTo(2L);
+      assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(2L);
+
+      new TransactionTemplate(manager).execute(status -> {
+        assertThat(revision.advanceProjectMutation(project)).isEqualTo(3L);
+        status.setRollbackOnly();
+        return null;
+      });
+      assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(2L);
+
+      Long next = new TransactionTemplate(manager).execute(
+          status -> revision.advanceProjectMutation(project));
+      Long restored = new TransactionTemplate(manager).execute(
+          status -> revision.advanceProjectMutation(project));
+      assertThat(next).isEqualTo(3L);
+      assertThat(restored).isEqualTo(4L);
+      assertThat(security.queryForObject(select, Long.class, app, project)).isEqualTo(4L);
+    } finally {
+      security.update("""
+          DELETE FROM yak_security_publication_auth_revision
+          WHERE app_name = ? AND scope_kind = 'PROJECT' AND scope_id = ?
+          """, app, project);
+    }
+  }
+
+  /**
+   * B2 T2-A PostgreSQL same-project revision fence experiment.
+   * Proves only the Semantic row lock, not Modeling's root-lock order,
+   * complete mutation writer coverage or Security authorization fencing.
+   */
+  private void verifySemanticPublicationRevisionFence(
+      ConfigurableApplicationContext context, JdbcTemplate jdbc) throws Exception {
+    DataSource business = context.getBean("yakBusinessDataSource", DataSource.class);
+    PlatformTransactionManager manager = context.getBean(
+        "yakBusinessTransactionManager", PlatformTransactionManager.class);
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+    org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+    var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+        business, trusted);
+    var held = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    try {
+      Long initial = new TransactionTemplate(manager).execute(
+          status -> revision.advanceBeforeMutation());
+      assertThat(initial).isEqualTo(2L);
+      // A real observation must refuse an untrusted, non-transactional caller.
+      assertThatThrownBy(revision::lockExistingForReview)
+          .isInstanceOf(IllegalStateException.class);
+      try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+        var observer = workers.submit(() ->
+            new TransactionTemplate(manager).execute(status -> {
+              long value = revision.lockExistingForReview();
+              held.countDown();
+              try {
+                if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
+                  throw new IllegalStateException("PostgreSQL publication fence barrier timed out");
+                }
+              } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("PostgreSQL publication fence interrupted",
+                    interrupted);
+              }
+              return value;
+            }));
+        assertThat(held.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        var started = new java.util.concurrent.CountDownLatch(1);
+        var mutation = workers.submit(() ->
+            new TransactionTemplate(manager).execute(status -> {
+              started.countDown();
+              return revision.advanceBeforeMutation();
+            }));
+        assertThat(started.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        // PostgreSQL must not let an unrelated transaction advance the project
+        // revision while the observation row remains locked in another transaction.
+        assertThatThrownBy(() -> mutation.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+            .isInstanceOf(java.util.concurrent.TimeoutException.class);
+        release.countDown();
+        Long lockedRevision = observer.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        Long committedRevision = mutation.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        assertThat(lockedRevision).isEqualTo(2L);
+        assertThat(committedRevision).isEqualTo(3L);
+        assertThat(jdbc.queryForObject(
+            "SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?",
+            Long.class, project)).isEqualTo(3L);
+      }
+    } finally {
+      release.countDown();
+      jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+          project);
+    }
+  }
+
+  /**
+   * R14-B2 T2-A PostgreSQL experiment: a Modeling model-root FOR UPDATE
+   * followed by the Semantic revision FOR UPDATE shares one actual database
+   * transaction, blocking a competing Semantic revision-first writer. The
+   * full approval callback and consumer-reference lock graph remain unproven.
+   */
+  private void verifyModelRootAndSemanticRevisionLockOrder(
+      ConfigurableApplicationContext context, JdbcTemplate jdbc) throws Exception {
+    DataSource business = context.getBean("yakBusinessDataSource", DataSource.class);
+    PlatformTransactionManager manager =
+        context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class);
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    String code = "r14_b2_pg_" + UUID.randomUUID().toString().substring(0, 12);
+    var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+    org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+    var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+        business, trusted);
+    var fieldReferences = new io.yak.ops.business.modeling.api.ModelingSemanticFieldReferenceReader(
+        context.getBean(io.yak.ops.business.modeling.dao.mapper.ModelingModelColumnMapper.class),
+        trusted);
+    var locked = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    try {
+      jdbc.update("""
+          INSERT INTO yak_modeling_model
+            (project_id, model_code, model_name, dialect, layer_code, deleted, status)
+          VALUES (?, ?, 'B2 PG root-lock CI', 'POSTGRESQL', 'DWD', 0, 'DRAFT')
+          """, project, code);
+      Long modelId = jdbc.queryForObject("""
+          SELECT id FROM yak_modeling_model
+           WHERE project_id = ? AND model_code = ?
+          """, Long.class, project, code);
+      Long seeded = new TransactionTemplate(manager).execute(
+          status -> revision.advanceBeforeMutation());
+      assertThat(seeded).isEqualTo(2L);
+      try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+        var publishing = workers.submit(() -> new TransactionTemplate(manager)
+            .execute(status -> {
+              Long rootId = jdbc.queryForObject("""
+                  SELECT id FROM yak_modeling_model
+                   WHERE project_id = ? AND id = ? FOR UPDATE
+                  """, Long.class, project, modelId);
+              assertThat(rootId).isEqualTo(modelId);
+              long observed = revision.lockExistingForReview();
+              locked.countDown();
+              try {
+                if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
+                  throw new IllegalStateException("B2 PG root lock release timed out");
+                }
+              } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("B2 PG root lock interrupted", interrupted);
+              }
+              return observed;
+            }));
+        assertThat(locked.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        var attempted = new java.util.concurrent.CountDownLatch(1);
+        var semanticWriter = workers.submit(() -> new TransactionTemplate(manager)
+            .execute(status -> {
+              attempted.countDown();
+              Long advanced = revision.advanceBeforeMutation();
+              // Simulate an ordinary non-locking reference count; if consumers
+              // issue a FOR UPDATE read, this test does not prove lock safety.
+              Long references = jdbc.queryForObject("""
+                  SELECT COUNT(*) FROM yak_modeling_model
+                   WHERE project_id = ? AND id = ?
+                  """, Long.class, project, modelId);
+              assertThat(references).isEqualTo(1L);
+              // Real consumer read while Semantic's project revision is held.
+              assertThat(fieldReferences.countFieldReferences(999999999L)).isZero();
+              return advanced;
+            }));
+        assertThat(attempted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        assertThatThrownBy(() ->
+            semanticWriter.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+            .isInstanceOf(java.util.concurrent.TimeoutException.class);
+        release.countDown();
+        Long rootAndRevision = publishing.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        Long committedRevision = semanticWriter.get(15, java.util.concurrent.TimeUnit.SECONDS);
+        assertThat(rootAndRevision).isEqualTo(2L);
+        assertThat(committedRevision).isEqualTo(3L);
+        assertThat(jdbc.queryForObject("""
+            SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?
+            """, Long.class, project)).isEqualTo(3L);
+      }
+    } finally {
+      release.countDown();
+      jdbc.update("DELETE FROM yak_modeling_model WHERE project_id = ? AND model_code = ?",
+          project, code);
+      jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+          project);
+    }
+  }
+
+  /**
+   * R14-B2 F-039 PostgreSQL concurrency: the revision-first project lock
+   * serializes competing adoption receipts on the real UNIQUE key; the losing
+   * transaction must roll back its revision along with the receipt insert.
+   * This intentionally tests the JDBC concurrency contract, while the F-039
+   * handler's auth/source-proof logic is covered in its own focused tests.
+   */
+  private void verifyF039ReceiptRevisionRace(
+      ConfigurableApplicationContext context, JdbcTemplate jdbc) throws Exception {
+    DataSource business = context.getBean("yakBusinessDataSource", DataSource.class);
+    PlatformTransactionManager manager =
+        context.getBean("yakBusinessTransactionManager", PlatformTransactionManager.class);
+    long project = (UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE) + 1;
+    String task = "b2_pg_" + UUID.randomUUID().toString().substring(0, 12);
+    var trusted = org.mockito.Mockito.mock(io.yak.ops.core.project.CurrentProject.class);
+    org.mockito.Mockito.when(trusted.requireProjectId()).thenReturn(project);
+    var revision = new io.yak.ops.business.semantic.repository.SemanticPublicationRevisionService(
+        business, trusted);
+    var firstHeld = new java.util.concurrent.CountDownLatch(1);
+    var releaseFirst = new java.util.concurrent.CountDownLatch(1);
+    var contenderStarted = new java.util.concurrent.CountDownLatch(1);
+    String insert = """
+        INSERT INTO yak_semantic_adoption_receipt
+          (receipt_id, project_id, task_id, candidate_id, payload_digest,
+           operator_id, kind, status)
+        VALUES (?, ?, ?, 'source-link', ?, '42', 'SOURCE_LINK', 'LINKED')
+        """;
+    try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+      var owner = workers.submit(() -> new TransactionTemplate(manager).execute(status -> {
+        long advanced = revision.advanceBeforeMutation();
+        jdbc.update(insert, UUID.randomUUID().toString(), project, task, "a".repeat(64));
+        firstHeld.countDown();
+        try {
+          if (!releaseFirst.await(15, java.util.concurrent.TimeUnit.SECONDS)) {
+            throw new IllegalStateException("F039 PostgreSQL winner barrier timed out");
+          }
+        } catch (InterruptedException interrupted) {
+          Thread.currentThread().interrupt();
+          throw new IllegalStateException("F039 PostgreSQL winner interrupted", interrupted);
+        }
+        return advanced;
+      }));
+      assertThat(firstHeld.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+      var contender = workers.submit(() -> new TransactionTemplate(manager).execute(status -> {
+        contenderStarted.countDown();
+        long advanced = revision.advanceBeforeMutation();
+        jdbc.update(insert, UUID.randomUUID().toString(), project, task, "b".repeat(64));
+        return advanced;
+      }));
+      assertThat(contenderStarted.await(15, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+      assertThatThrownBy(() ->
+          contender.get(300, java.util.concurrent.TimeUnit.MILLISECONDS))
+          .isInstanceOf(java.util.concurrent.TimeoutException.class);
+      releaseFirst.countDown();
+      Long committed = owner.get(15, java.util.concurrent.TimeUnit.SECONDS);
+      assertThat(committed).isEqualTo(2L);
+      assertThatThrownBy(() ->
+          contender.get(15, java.util.concurrent.TimeUnit.SECONDS))
+          .isInstanceOf(java.util.concurrent.ExecutionException.class);
+      assertThat(jdbc.queryForObject("""
+          SELECT COUNT(*) FROM yak_semantic_adoption_receipt
+          WHERE project_id = ? AND task_id = ? AND candidate_id = 'source-link'
+          """, Long.class, project, task)).isEqualTo(1L);
+      assertThat(jdbc.queryForObject("""
+          SELECT revision_no FROM yak_semantic_publication_revision WHERE project_id = ?
+          """, Long.class, project)).isEqualTo(2L);
+      assertThat(jdbc.queryForObject("""
+          SELECT payload_digest FROM yak_semantic_adoption_receipt
+          WHERE project_id = ? AND task_id = ? AND candidate_id = 'source-link'
+          """, String.class, project, task)).isEqualTo("a".repeat(64));
+    } finally {
+      releaseFirst.countDown();
+      jdbc.update("DELETE FROM yak_semantic_adoption_receipt WHERE project_id = ? AND task_id = ?",
+          project, task);
+      jdbc.update("DELETE FROM yak_semantic_publication_revision WHERE project_id = ?",
+          project);
     }
   }
 

@@ -6,6 +6,7 @@ import io.yak.framework.security.dao.mapper.PermissionMapper;
 import io.yak.framework.security.exception.YakSecurityException;
 import io.yak.framework.security.service.PermissionCache;
 import io.yak.framework.security.service.RolePermissionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +28,26 @@ public class PermissionAdministrationService {
   private final PermissionMapper permissionMapper;
   private final RolePermissionService rolePermissionService;
   private final PermissionCache permissionCache;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
+  @Autowired
+  public PermissionAdministrationService(
+          PermissionMapper permissionMapper,
+          RolePermissionService rolePermissionService,
+          PermissionCache permissionCache,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.permissionMapper = permissionMapper;
+    this.rolePermissionService = rolePermissionService;
+    this.permissionCache = permissionCache;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Focused test constructor does not create a Security database. */
   public PermissionAdministrationService(
           PermissionMapper permissionMapper,
           RolePermissionService rolePermissionService,
           PermissionCache permissionCache) {
-
-    this.permissionMapper = permissionMapper;
-    this.rolePermissionService = rolePermissionService;
-    this.permissionCache = permissionCache;
+    this(permissionMapper, rolePermissionService, permissionCache, null);
   }
 
   /**
@@ -56,6 +68,11 @@ public class PermissionAdministrationService {
       throw new YakSecurityException(
               "权限 ID 不正确");
     }
+
+    // Acquire Security's global revision before inspecting rows or modifying
+    // role-permission bindings. Permission deletion has a separate entry path
+    // from PermissionServiceImpl, so it must not bypass T3.
+    if (authorizationRevision != null) authorizationRevision.advanceGlobalMutation();
 
     PermissionPO permission =
             permissionMapper.selectById(permissionId);

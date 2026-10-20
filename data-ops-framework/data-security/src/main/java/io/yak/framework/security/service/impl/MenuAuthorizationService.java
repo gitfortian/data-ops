@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -40,19 +41,34 @@ public class MenuAuthorizationService {
   private final PermissionDao permissionDao;
   private final UserRoleService userRoleService;
   private final PermissionCache permissionCache;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
+  @Autowired
   public MenuAuthorizationService(
           MenuMapper menuMapper,
           RoleMenuMapper roleMenuMapper,
           PermissionDao permissionDao,
           UserRoleService userRoleService,
-          PermissionCache permissionCache) {
+          PermissionCache permissionCache,
+          PublicationAuthorizationRevisionService authorizationRevision) {
 
     this.menuMapper = menuMapper;
     this.roleMenuMapper = roleMenuMapper;
     this.permissionDao = permissionDao;
     this.userRoleService = userRoleService;
     this.permissionCache = permissionCache;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Focused tests without a Security DB. */
+  public MenuAuthorizationService(MenuMapper menuMapper, RoleMenuMapper roleMenuMapper,
+      PermissionDao permissionDao, UserRoleService userRoleService,
+      PermissionCache permissionCache) {
+    this(menuMapper, roleMenuMapper, permissionDao, userRoleService, permissionCache, null);
+  }
+
+  private void advanceGlobalAuthorizationRevision() {
+    if (authorizationRevision != null) authorizationRevision.advanceGlobalMutation();
   }
 
   /** 查询菜单定义，包含停用记录，供角色管理树完整展示。 */
@@ -107,6 +123,7 @@ public class MenuAuthorizationService {
     if (roleId == null) {
       return;
     }
+    advanceGlobalAuthorizationRevision();
     insertRoleMenus(roleId, menuIds);
     permissionCache.invalidateRole(roleId);
   }
@@ -123,6 +140,7 @@ public class MenuAuthorizationService {
       return;
     }
 
+    advanceGlobalAuthorizationRevision();
     roleMenuMapper.delete(
             Wrappers.<RoleMenuPO>lambdaQuery()
                     .eq(RoleMenuPO::getRoleId, roleId));
@@ -139,6 +157,7 @@ public class MenuAuthorizationService {
       return;
     }
 
+    advanceGlobalAuthorizationRevision();
     roleMenuMapper.delete(
             Wrappers.<RoleMenuPO>lambdaQuery()
                     .eq(RoleMenuPO::getRoleId, roleId));

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -25,18 +26,32 @@ public class UserRoleServiceImpl implements UserRoleService {
 
   private final UserRoleDao userRoleDao;
   private final PermissionCache permissionCache;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
   /**
    * 创建用户角色关系服务。
    *
    * @param userRoleDao 用户角色关系数据访问对象
    */
+  @Autowired
+  public UserRoleServiceImpl(
+          UserRoleDao userRoleDao,
+          PermissionCache permissionCache,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.userRoleDao = userRoleDao;
+    this.permissionCache = permissionCache;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Old focused tests construct this service without a Security database. */
   public UserRoleServiceImpl(
           UserRoleDao userRoleDao,
           PermissionCache permissionCache) {
+    this(userRoleDao, permissionCache, null);
+  }
 
-    this.userRoleDao = userRoleDao;
-    this.permissionCache = permissionCache;
+  private void advanceAuthorizationRevision() {
+    if (authorizationRevision != null) authorizationRevision.advanceGlobalMutation();
   }
 
   /**
@@ -109,6 +124,7 @@ public class UserRoleServiceImpl implements UserRoleService {
      *
      * 当 roleIdList 为空时，表示清空该用户的全部角色。
      */
+    advanceAuthorizationRevision();
     userRoleDao.deleteByUserIdOrRoleId(
             userId,
             null);
@@ -146,6 +162,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return;
     }
 
+    advanceAuthorizationRevision();
     permissionCache.invalidateRole(roleId);
 
     /*
@@ -215,6 +232,7 @@ public class UserRoleServiceImpl implements UserRoleService {
       return 0;
     }
 
+    advanceAuthorizationRevision();
     if (userId != null) {
       permissionCache.invalidateUser(userId);
     } else {

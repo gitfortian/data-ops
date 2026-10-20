@@ -435,6 +435,48 @@ export interface PhysicalStandardCoverageInspection {
   findings: string[];
   limitations: string[];
 }
+/** Actual, server-scoped Semantic all-column evidence for non-ODS publication preview.
+ * The response is NOT a release permit until the separate Security commit fence is proven.
+ */
+export interface ModelPublicationReadiness {
+  modelId: number;
+  layerCode: 'DWD' | 'DIM' | 'DWS' | 'ADS';
+  structureSha256: string | null;
+  standardsVerdict: 'VALID' | 'BLOCKED' | 'UNKNOWN';
+  semanticRevision: number | null;
+  standardEvidenceSha256: string | null;
+  columns: {
+    columnName: string;
+    physicalType: string;
+    standardFieldId?: number | null;
+    semanticRole?: string | null;
+    status: 'VALID' | 'BLOCKED' | 'UNKNOWN';
+    safeReasonCode?: string | null;
+  }[];
+  findings: string[];
+  authorizedForPublication: boolean;
+  authorizationStatus: string;
+  /** DWD only: exact saved and frozen logical → physical provenance. Read-only. */
+  mapping: {
+    status: 'FROZEN_SAVED_DRAFT' | 'MISSING' | 'NOT_FROZEN' | 'STALE' | 'UNKNOWN' | 'UNAVAILABLE';
+    mappingRevisionId: number | null;
+    mappingSetId: number | null;
+    logicalModelId: number | null;
+    logicalVersionNo: number | null;
+    logicalSnapshotSha256: string | null;
+    physicalStructureSha256: string | null;
+    mappingContentSha256: string | null;
+    finding: string;
+  } | null;
+}
+
+export const getModelPublicationReadiness = (
+  modelId: ModelingModelId,
+): Promise<ModelPublicationReadiness> =>
+  HttpUtils.getData<ModelPublicationReadiness>(
+    `${MODELING_API_PREFIX}/models/${modelId}/publication-readiness`,
+  );
+
 export const inspectPhysicalStandardCoverage = (
   modelId: ModelingModelId,
 ): Promise<PhysicalStandardCoverageInspection> =>

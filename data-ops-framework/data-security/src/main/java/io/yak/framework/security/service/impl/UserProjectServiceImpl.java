@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -41,6 +42,7 @@ public class UserProjectServiceImpl
   private final UserProjectDao userProjectDao;
 
   private final PermissionCache permissionCache;
+  private final PublicationAuthorizationRevisionService authorizationRevision;
 
   /**
    * 创建用户项目关系服务。
@@ -48,12 +50,27 @@ public class UserProjectServiceImpl
    * @param userProjectDao 用户项目关系数据访问对象
    * @param permissionCache 用户授权缓存
    */
+  @Autowired
+  public UserProjectServiceImpl(
+          UserProjectDao userProjectDao,
+          PermissionCache permissionCache,
+          PublicationAuthorizationRevisionService authorizationRevision) {
+    this.userProjectDao = userProjectDao;
+    this.permissionCache = permissionCache;
+    this.authorizationRevision = authorizationRevision;
+  }
+
+  /** Focused-test compatibility constructor without a physical Security database. */
   public UserProjectServiceImpl(
           UserProjectDao userProjectDao,
           PermissionCache permissionCache) {
+    this(userProjectDao, permissionCache, null);
+  }
 
-    this.userProjectDao = userProjectDao;
-    this.permissionCache = permissionCache;
+  private void advanceAuthorizationRevision(Long projectId) {
+    if (authorizationRevision != null) {
+      authorizationRevision.advanceProjectMutation(projectId);
+    }
   }
 
   /**
@@ -301,6 +318,8 @@ public class UserProjectServiceImpl
       return;
     }
 
+    advanceAuthorizationRevision(projectId);
+
     List<Long> affectedUserIds =
             userProjectDao
                     .selectUserIdListByProjectId(
@@ -331,6 +350,8 @@ public class UserProjectServiceImpl
     if (projectId == null) {
       return;
     }
+
+    advanceAuthorizationRevision(projectId);
 
     List<Long> affectedUserIds =
             userProjectDao
@@ -419,6 +440,8 @@ public class UserProjectServiceImpl
       return;
     }
 
+    advanceAuthorizationRevision(projectId);
+
     List<UserProject> userProjectList =
             buildUserProjectList(
                     projectId,
@@ -454,6 +477,8 @@ public class UserProjectServiceImpl
       return;
     }
 
+    advanceAuthorizationRevision(projectId);
+
     userProjectDao.deleteUserProject(
             buildUserProjectList(
                     projectId,
@@ -485,6 +510,8 @@ public class UserProjectServiceImpl
     if (validUserIds.isEmpty()) {
       return;
     }
+
+    advanceAuthorizationRevision(projectId);
 
     List<Long> existingUserIds =
             userProjectDao
