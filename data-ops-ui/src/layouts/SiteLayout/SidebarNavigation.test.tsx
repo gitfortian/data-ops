@@ -37,10 +37,24 @@ describe('IA-550 fixed global rail + independent business context rail', () => {
     expect(within(context).getByRole('link', { name: '业务过程' })).toHaveAttribute('href', '/semantic/processes');
     expect(within(context).getByRole('link', { name: '数仓分层' })).toHaveAttribute('href', '/semantic/layers');
     expect(within(context).getByRole('link', { name: '影响分析' })).toHaveAttribute('href', '/metric/impact');
-    expect(within(context).getByRole('link', { name: '模型工作台' })).toHaveAttribute('href', '/modeling');
+    expect(within(context).getByRole('link', { name: '模型总览' })).toHaveAttribute('href', '/modeling');
+    expect(within(context).getByRole('link', { name: '逻辑模型' })).toHaveAttribute('href', '/modeling/logical');
+    expect(within(context).getByRole('link', { name: '物理模型' })).toHaveAttribute('href', '/modeling?view=physical');
     expect(within(context).getByRole('link', { name: '数据标准' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByText(/更多 [0-9]+ 项/)).not.toBeInTheDocument();
     expect(screen.queryByText('专业工具')).not.toBeInTheDocument();
+  });
+
+
+  it('does not expose modeling subpages without the original Modeling authorization', () => {
+    const groups = getMainNavigationGroups(['semantic:read'], ['semantic-processes']);
+    render(React.createElement(SidebarNavigation, {
+      ...props, groups, standaloneRoutes: [], activeId: 'semantic-processes',
+    }));
+    const context = screen.getByRole('navigation', { name: '标准、指标与建模页面' });
+    expect(within(context).queryByRole('link', { name: '模型总览' })).not.toBeInTheDocument();
+    expect(within(context).queryByRole('link', { name: '逻辑模型' })).not.toBeInTheDocument();
+    expect(within(context).queryByRole('link', { name: '物理模型' })).not.toBeInTheDocument();
   });
 
   it('switches the right rail without hiding the five global domains', () => {
@@ -83,13 +97,15 @@ describe('IA-550 fixed global rail + independent business context rail', () => {
     fireEvent.click(screen.getByRole('button', { name: '标准、指标与建模' }));
     await waitFor(() => expect(screen.getByRole('link', { name: '业务域' })).toBeInTheDocument());
     expect(screen.getByRole('link', { name: '指标管理' })).toHaveAttribute('href', '/metric/manage');
+    expect(screen.getByRole('link', { name: '逻辑模型' })).toHaveAttribute('href', '/modeling/logical');
+    expect(screen.getByRole('link', { name: '物理模型' })).toHaveAttribute('href', '/modeling?view=physical');
     expect(within(container).queryByRole('link', { name: '业务域' })).toBeNull();
   });
 
   it('closes the mobile drawer through onNavigate after selecting a right-rail page', () => {
     const onNavigate = jest.fn();
     render(React.createElement(SidebarNavigation, { ...props, onNavigate }));
-    fireEvent.click(screen.getByRole('link', { name: '模型工作台' }));
+    fireEvent.click(screen.getByRole('link', { name: '模型总览' }));
     expect(onNavigate).toHaveBeenCalledTimes(1);
   });
 });

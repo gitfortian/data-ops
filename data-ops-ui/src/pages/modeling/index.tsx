@@ -283,10 +283,6 @@ const ModelingWorkspace: React.FC = () => {
     });
   };
 
-  const goSemantic = () => {
-    history.push('/semantic/domains');
-  };
-
   const clearJourney = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('processId');
