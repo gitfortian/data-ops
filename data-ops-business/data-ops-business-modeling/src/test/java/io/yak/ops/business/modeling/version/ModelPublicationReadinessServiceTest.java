@@ -302,6 +302,23 @@ class ModelPublicationReadinessServiceTest {
   }
 
   @Test
+  void dwdAbsentMappingStaysMissingEvenWhenSemanticProviderReturnsNoEvidence() {
+    mockModel("DWD");
+    var mappings = mock(io.yak.ops.business.modeling.mapping.DwdMappingDraftService.class);
+    // The legacy mapping API returns null when there is no saved MappingSet.
+    when(mappings.get(701L)).thenReturn(null);
+    preview = new ModelPublicationReadinessService(
+        models, structures, project, semantic, mappings);
+    var report = preview.inspect(701L);
+    assertThat(report.mapping()).isNotNull();
+    assertThat(report.mapping().status()).isEqualTo("MISSING");
+    assertThat(report.mapping().mappingRevisionId()).isNull();
+    assertThat(report.standardsVerdict()).isEqualTo(Verdict.UNKNOWN);
+    assertThat(report.authorizedForPublication()).isFalse();
+    verify(mappings, never()).revisions(701L);
+  }
+
+  @Test
   void dwdFrozenMappingFromAnotherSetCannotBeTreatedAsCurrent() {
     mockModel("DWD");
     var mappings = mock(io.yak.ops.business.modeling.mapping.DwdMappingDraftService.class);
