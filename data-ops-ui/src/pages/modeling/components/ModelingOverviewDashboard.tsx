@@ -19,7 +19,7 @@ const LAYERS = [
   { code: 'DWS', name: '汇总层' },
   { code: 'ADS', name: '应用层' },
 ] as const;
-type LayerStats = { code: string; count?: number; configured: boolean };
+type LayerStats = { code: string; count?: number; configured?: boolean };
 type OverviewData = {
   projectId: number;
   physicalCount?: number;
@@ -76,9 +76,8 @@ export default function ModelingOverviewDashboard() {
       ? configured.filter(item => item.status === 'ENABLED').map(item => item.code)
       : [];
     const layerTotals = await Promise.all(LAYERS.map(async layer => {
-      if (!available.includes(layer.code)) return {
-        code: layer.code, configured: false,
-      } as LayerStats;
+      if (!Array.isArray(configured)) return { code: layer.code } as LayerStats;
+      if (!available.includes(layer.code)) return { code: layer.code, configured: false } as LayerStats;
       const page = await get(pageModelingModels({ pageNo: 1, pageSize: 1, layerCode: layer.code }));
       return { code: layer.code, configured: true, count: countOf(page) } as LayerStats;
     }));
@@ -183,7 +182,7 @@ export default function ModelingOverviewDashboard() {
                       <span className="modeling-overview-layer-key">{layer.code}</span>
                       <span className="modeling-overview-layer-name">{layer.name}</span>
                       <span className="modeling-overview-layer-count">{loading || !snapshot ? '—'
-                        : !enabled ? '未配置' : textCount(item?.count)}</span>
+                        : item?.configured === false ? '未配置' : !enabled ? '—' : textCount(item?.count)}</span>
                       <ArrowRight size={14} aria-hidden />
                     </button>;
                   })}
