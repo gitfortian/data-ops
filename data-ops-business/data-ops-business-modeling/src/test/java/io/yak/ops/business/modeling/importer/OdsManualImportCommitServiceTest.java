@@ -141,13 +141,22 @@ class OdsManualImportCommitServiceTest {
     verify(models, never()).assignSource(anyLong(), anyLong(), any(), any(), any());
   }
 
-  @Test void missingOrDuplicatedSourceColumnRejectsBeforeAnyWrite() {
-    assertThrows(ModelingException.class, () -> service.commit(50L, request(baseline(),
-        List.of(target("order_id"), target("amount")),
-        List.of(select("order_id", "order_id"))), "tester"));
+  @Test void partialSourceMappingCanBeSavedWithoutForcingSourceCoverage() {
+    var result = service.commit(50L, request(baseline(),
+        List.of(target("order_id")), List.of(select("order_id", "order_id"))), "tester");
+    assertEquals(2, result.sourceColumnCount());
+    assertEquals(1, result.confirmedMappingCount());
+    assertEquals(1, rows.size());
+    verify(structures).saveEditContext(eq(50L), any(), eq("tester"), eq(baseline()));
+  }
+
+  @Test void duplicatedSourceOrTargetRejectsBeforeAnyWrite() {
     assertThrows(ModelingException.class, () -> service.commit(50L, request(baseline(),
         List.of(target("order_id"), target("amount")),
         List.of(select("order_id", "order_id"), select("order_id", "amount"))), "tester"));
+    assertThrows(ModelingException.class, () -> service.commit(50L, request(baseline(),
+        List.of(target("order_id"), target("amount")),
+        List.of(select("order_id", "order_id"), select("amount", "order_id"))), "tester"));
     verify(structures, never()).saveEditContext(anyLong(), any(), anyString(), anyString());
   }
 
@@ -159,15 +168,39 @@ class OdsManualImportCommitServiceTest {
     assertTrue(rows.stream().noneMatch(m -> "process_time".equals(m.getTargetColumn())));
   }
 
-  @Test void unknownExtraTargetOrStaleSourceFailsClosed() {
-    assertThrows(ModelingException.class, () -> service.commit(50L, request(baseline(),
-        List.of(target("order_id"), target("amount"), target("guess_from_name")),
-        List.of(select("order_id", "order_id"), select("amount", "amount"))), "tester"));
+  @Test void customTargetColumnsDoNotReceiveInventedSourceMappings() {
+    var result = service.commit(50L, request(baseline(),
+        List.of(target("order_id"), target("amount"), target("custom_flag")),
+        List.of(select("order_id", "order_id"), select("amount", "amount"))), "tester");
+    assertEquals(2, result.confirmedMappingCount());
+    assertTrue(rows.stream().noneMatch(row -> "custom_flag".equals(row.getTargetColumn())));
+  }
+
+  @Test void sourceAndModelCanHaveNoMatchingFields() {
+    var result = service.commit(50L, request(baseline(), List.of(target("custom_flag")), List.of()), "tester");
+    assertEquals(2, result.sourceColumnCount());
+    assertEquals(0, result.confirmedMappingCount());
+    assertTrue(rows.isEmpty());
+    verify(models).assignSource(50L, 10L, "trade_db", "trade_order", "tester");
+  }
+
+  @Test void extraSourceFieldsDoNotForceNewTargetColumns() {
     when(catalog.listColumnsFresh(10L, "trade_db", null, "trade_order"))
         .thenReturn(List.of(source("order_id"), source("amount"), source("new_status")));
+    var result = service.commit(50L, request(baseline(),
+        List.of(target("order_id"), target("amount")),
+        List.of(select("order_id", "order_id"), select("amount", "amount"))), "tester");
+    assertEquals(3, result.sourceColumnCount());
+    assertEquals(2, result.confirmedMappingCount());
+  }
+
+  @Test void mappingsCannotReferenceMissingSourceOrTargetFields() {
     assertThrows(ModelingException.class, () -> service.commit(50L, request(baseline(),
         List.of(target("order_id"), target("amount")),
-        List.of(select("order_id", "order_id"), select("amount", "amount"))), "tester"));
+        List.of(select("order_id", "missing_source"))), "tester"));
+    assertThrows(ModelingException.class, () -> service.commit(50L, request(baseline(),
+        List.of(target("order_id"), target("amount")),
+        List.of(select("missing_target", "order_id"))), "tester"));
     verify(structures, never()).saveEditContext(anyLong(), any(), anyString(), anyString());
   }
 

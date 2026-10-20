@@ -95,7 +95,19 @@ export interface OdsPhysicalTargetInspection {
   targetDatabase: string;
   targetSchema?: string | null;
   targetTable: string;
-  state: 'COLUMN_MATCH_NEEDS_DDL_REVIEW' | 'STRUCTURE_DIFFERS' | 'NOT_CHECKABLE';
+  state: 'COLUMN_MATCH_NEEDS_DDL_REVIEW' | 'STRUCTURE_DIFFERS' | 'NOT_CHECKABLE' | 'TABLE_NOT_FOUND' | 'TARGET_NOT_TABLE';
+  tableExists?: boolean | null;
+  tableType?: string | null;
+  inspectedAt?: string;
+  columns?: {
+    name: string;
+    dataType?: string | null;
+    length?: number | null;
+    scale?: number | null;
+    nullable: boolean;
+    primaryKey: boolean;
+    comment?: string | null;
+  }[];
   frozenColumns: number;
   observedColumns: number;
   differences: {
@@ -259,7 +271,7 @@ export const assignImportLineage = async (
 export const getModelingLineageAssetId = (id: ModelingModelId): Promise<number | null> =>
   HttpUtils.getData<number | null>(`${MODELING_API_PREFIX}/models/${id}/lineage/asset-id`);
 
-/** 查询模型血缘图(跨模块多跳遍历;未登记时后端自动登记)。root 为空表示暂无可展示资产。
+/** 只读查询模型血缘图，包含已登记关系与模型持有的 ODS 来源绑定。
  *  后端返回的 id 可能为数字，需转为字符串以兼容 LineageGraph 类型。 */
 export const getModelingLineageGraph = async (
   id: ModelingModelId,
@@ -343,35 +355,6 @@ export const listModelingVersions = (id: ModelingModelId): Promise<ModelingVersi
 /** 查看某版本结构详情。 */
 export const getModelingVersion = (id: ModelingModelId, versionNo: number): Promise<ModelingVersionDetail> =>
   HttpUtils.getData<ModelingVersionDetail>(`${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}`);
-
-/** A historical ODS physical structure snapshot compared with today's design/evidence.
- * External source mappings were NOT frozen in existing model versions. */
-export interface OdsPublishedVersionEvidence {
-  modelId: number;
-  versionNo: number;
-  versionId: number;
-  modelStatus: string;
-  latestPublishedVersion: boolean;
-  structureStatus: 'MATCHES_CURRENT' | 'DIFFERS_FROM_CURRENT';
-  frozenColumnCount: number;
-  currentColumnCount: number;
-  differences: {
-    column: string;
-    status: 'CHANGED' | 'REMOVED' | 'ADDED' | 'TABLE_DEFINITION_CHANGED';
-    frozenType?: string | null;
-    currentType?: string | null;
-  }[];
-  currentSourceStatus: 'CONSISTENT_NOW' | 'NEEDS_REVIEW' | 'NOT_CHECKABLE';
-  currentSourceEvidenceSha256?: string | null;
-  historicalSourceStatus: 'NOT_FROZEN';
-  limitations: string[];
-}
-export const getOdsPublishedVersionEvidence = (
-  id: ModelingModelId, versionNo: number,
-): Promise<OdsPublishedVersionEvidence> =>
-  HttpUtils.getData<OdsPublishedVersionEvidence>(
-    `${MODELING_API_PREFIX}/models/${id}/versions/${versionNo}/source-evidence-review`,
-  );
 
 /** Current non-ODS physical standard-field and linked data-standard evidence; never a publish gate. */
 export interface PhysicalStandardReferenceEvidence {

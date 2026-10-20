@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.datasource.domain.DataSourceDefinition;
 import io.yak.ops.business.datasource.domain.catalog.CatalogColumn;
+import io.yak.ops.business.datasource.domain.catalog.CatalogTable;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.domain.ModelDialect;
@@ -60,6 +61,8 @@ class OdsPhysicalTargetInspectionServiceTest {
         new ModelVersionService.VersionDetailView(version, structure, Map.of()));
     when(dataSources.require(9L)).thenReturn(target);
     when(target.getDbType()).thenReturn(DataSourceDbType.MYSQL);
+    when(catalog.findTableFresh(9L, "warehouse", "ods", "ods_order_detail"))
+        .thenReturn(Optional.of(new CatalogTable("warehouse", "ods", "ods_order_detail", "TABLE", null)));
     when(catalog.listColumnsFresh(9L, "warehouse", "ods", "ods_order_detail"))
         .thenReturn(List.of(new CatalogColumn("order_id", "BIGINT", -5, 19, 0,
             false, 1, false, null)));

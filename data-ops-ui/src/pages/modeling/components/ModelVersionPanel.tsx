@@ -1,34 +1,33 @@
 import { useLocation, useParams } from '@umijs/max';
-import { Popconfirm, Table, Tag, message, Tooltip } from 'antd';
+import { Popconfirm, Spin, Table, Tag, Tooltip, message } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import { YakEmpty } from '@/components/ui';
+import { ChevronDown, RefreshCw, RotateCcw, SendHorizontal } from 'lucide-react';
+import { YakButton, YakEmpty } from '@/components/ui';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
 import { MODELING_PUBLISHED_EVENT } from '@/pages/modeling/constants';
 import { findByBiz } from '@/services/approval/api';
-import {
-  getModelingVersion,
-  listModelingVersions,
-  publishModelingModel,
-  rollbackModelingVersion,
-} from '@/services/modeling/api';
+import { getModelingVersion, listModelingVersions, publishModelingModel, rollbackModelingVersion } from '@/services/modeling/api';
 import type { ModelingVersionDetail, ModelingVersionSummary } from '@/services/modeling/types';
-import { History, RotateCcw, SendHorizontal } from 'lucide-react';
-
 import ModelStructureReviewPanel from './ModelStructureReviewPanel';
+import './ModelVersionPanel.less';
 
 const formatDateTime = (value: string) => value?.replace('T', ' ').slice(0, 19) ?? '-';
-
-/** 与详情页同源的发布审批常量(01)：在途单冻结回滚，防止覆盖审批快照语义。 */
 const MODEL_PUBLISH_FLOW_CODE = 'MODEL_PUBLISH';
 const MODEL_PUBLISH_BIZ_TYPE = 'MODEL';
 
-/** 模型版本历史面板(统一视图「版本」Tab)。 */
+/** Published snapshots and explicit recovery actions in the model workspace. */
 const ModelVersionPanel: React.FC = () => {
-  const params = useParams<{ id?: string }>();
-  const modelId = params.id;
+  const { id: modelId } = useParams<{ id?: string }>();
   const location = useLocation();
-
+  const { currentProject } = useSecurityProject();
+  const resource = JSON.stringify([currentProject?.id, modelId]);
+  const beginVersions = useLatestOperation(resource);
+  const beginDetail = useLatestOperation(resource);
+  const beginApproval = useLatestOperation(resource);
+  const captureResource = useResourceScope(resource);
   const [versions, setVersions] = useState<ModelingVersionSummary[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expandedVersionNo, setExpandedVersionNo] = useState<number | null>(null);
   const [detail, setDetail] = useState<ModelingVersionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -37,219 +36,191 @@ const ModelVersionPanel: React.FC = () => {
 
   const refreshApprovalPending = useCallback(async () => {
     if (!modelId) return;
+    const isCurrent = beginApproval();
     try {
       const instance = await findByBiz(MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, modelId);
-      setApprovalPending(instance?.status === 'PENDING');
+      if (isCurrent()) setApprovalPending(instance?.status === 'PENDING');
     } catch {
-      /* 无审批读权限/审批中心不可用：不冻结面板 */
+      /* Approval availability does not change the existing recovery contract. */
     }
-  }, [modelId]);
+  }, [modelId, currentProject?.id, beginApproval]);
 
   const loadVersions = useCallback(async () => {
     if (!modelId) return;
+    const isCurrent = beginVersions();
     setLoading(true);
     try {
       const list = await listModelingVersions(modelId);
-      setVersions(list ?? []);
+      if (isCurrent()) setVersions(list ?? []);
     } catch {
-      setVersions([]);
+      if (isCurrent()) setVersions([]);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [modelId]);
+  }, [modelId, currentProject?.id, beginVersions]);
 
   useEffect(() => {
+    setVersions([]);
+    setExpandedVersionNo(null);
+    setDetail(null);
+    setRollbackVersionNo(null);
+    setApprovalPending(false);
     void loadVersions();
     void refreshApprovalPending();
   }, [loadVersions, refreshApprovalPending]);
 
-  // 发布联动(01):直发/审批回调发布后刷新版本列表并解除在途冻结
   useEffect(() => {
-    const onPublished = () => {
+    const onPublished = (event: Event) => {
+      const target = (event as CustomEvent<{ modelId?: string | number }>).detail?.modelId;
+      if (target != null && String(target) !== modelId) return;
       void loadVersions();
       void refreshApprovalPending();
     };
     window.addEventListener(MODELING_PUBLISHED_EVENT, onPublished);
     return () => window.removeEventListener(MODELING_PUBLISHED_EVENT, onPublished);
-  }, [loadVersions, refreshApprovalPending]);
+  }, [modelId, loadVersions, refreshApprovalPending]);
 
   const handleViewDetail = async (versionNo: number) => {
     if (!modelId) return;
+    const isCurrent = beginDetail();
+    setDetail(null);
     if (expandedVersionNo === versionNo) {
       setExpandedVersionNo(null);
-      setDetail(null);
+      setDetailLoading(false);
       return;
     }
     setExpandedVersionNo(versionNo);
     setDetailLoading(true);
     try {
-      const d = await getModelingVersion(modelId, versionNo);
-      setDetail(d);
+      const snapshot = await getModelingVersion(modelId, versionNo);
+      if (isCurrent()) setDetail(snapshot);
     } catch {
-      message.error('加载版本详情失败');
+      if (isCurrent()) message.error('加载版本详情失败');
     } finally {
-      setDetailLoading(false);
+      if (isCurrent()) setDetailLoading(false);
     }
   };
 
   const handleRollback = async (versionNo: number, andPublish = false) => {
     if (!modelId) return;
+    const isCurrent = captureResource();
     setRollbackVersionNo(versionNo);
     try {
       await rollbackModelingVersion(modelId, versionNo);
+      if (!isCurrent()) return;
       if (andPublish) {
-        const v = await publishModelingModel(modelId);
-        message.success(`已回滚并发布为 V${v.versionNo}`);
+        const version = await publishModelingModel(modelId);
+        if (!isCurrent()) return;
+        message.success(`已回滚并发布为 V${version.versionNo}`);
       } else {
-        message.success(
-          `已用 V${versionNo} 覆盖草稿（现为 DRAFT），需再次「发布」才生效`,
-        );
+        message.success(`已恢复 V${versionNo} 为草稿，再次发布后生效`);
       }
       await loadVersions();
+      if (!isCurrent()) return;
       await refreshApprovalPending();
+      if (!isCurrent()) return;
+      beginDetail();
       setExpandedVersionNo(null);
       setDetail(null);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '回滚失败');
+      if (isCurrent()) message.error(error instanceof Error ? error.message : '回滚失败');
     } finally {
-      setRollbackVersionNo(null);
+      if (isCurrent()) setRollbackVersionNo(null);
     }
   };
 
   if (!modelId) return null;
-
-  if (!loading && versions.length === 0) {
-    return (
-      <div className="space-y-4">
-        <ModelStructureReviewPanel modelId={modelId} search={location.search} />
-        <YakEmpty
-          compact
-          title="暂无发布版本"
-          description="在「表结构」页面编辑字段后点击「发布」按钮即可生成版本快照"
-        />
-      </div>
-    );
-  }
-
-  const detailColumns = detail?.structure?.columns ?? [];
+  const orderedVersions = [...versions].sort((left, right) => right.versionNo - left.versionNo);
+  const showComparison = versions.length > 0 || new URLSearchParams(location.search).has('reviewVersion');
 
   return (
-    <div className="space-y-4">
-      <ModelStructureReviewPanel modelId={modelId} search={location.search} />
-      <div className="flex items-center gap-2 text-[14px] text-[#667085]">
-        <History size={15} />
-        <span>共 {versions.length} 个版本，点击版本号查看结构快照</span>
-        {approvalPending ? (
-          <Tooltip title="存在在途 MODEL_PUBLISH 审批单，批准后按最新保存结构自动发布">
-            <Tag color="processing" className="mr-0">
-              发布审批中，回滚已冻结
-            </Tag>
-          </Tooltip>
-        ) : null}
-      </div>
+    <div className="model-version-management">
+      <header className="model-version-header">
+        <div className="model-version-heading">
+          <h2>版本管理</h2><span>{versions.length} 个发布版本</span>
+          {approvalPending ? <Tooltip title="发布审批在途，暂不可回滚"><Tag color="processing">发布审批中</Tag></Tooltip> : null}
+        </div>
+        <YakButton size="small" icon={<RefreshCw size={13} />} loading={loading}
+          onClick={() => { void loadVersions(); void refreshApprovalPending(); }}>刷新</YakButton>
+      </header>
 
-      <div className="space-y-3">
-        {versions.map((version) => {
-          const isExpanded = expandedVersionNo === version.versionNo;
-          return (
-            <div
-              key={version.id}
-              className="rounded-[8px] border border-[#e7e9ec] p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    className="rounded-[4px] bg-[#f2f4f7] px-2 py-0.5 text-[13px] font-semibold text-[#344054] transition-colors hover:bg-[#e4e7ec]"
-                    onClick={() => void handleViewDetail(version.versionNo)}
-                  >
-                    V{version.versionNo}
-                  </button>
-                  <span className="text-[12px] text-[#667085]">
-                    {formatDateTime(version.publishTime)}
-                  </span>
-                  {version.publishedBy ? (
-                    <span className="text-[12px] text-[#667085]">{version.publishedBy}</span>
+      <Spin spinning={loading}>
+        {versions.length ? (
+          <div className="model-version-list">
+            <div className="model-version-list-head" aria-hidden>
+              <span>发布版本</span><span>发布时间</span><span>发布人</span><span>字段数</span><span>操作</span>
+            </div>
+            {orderedVersions.map((version) => {
+              const isExpanded = expandedVersionNo === version.versionNo;
+              return (
+                <div key={version.id} className="model-version-item">
+                  <div className="model-version-row">
+                    <div className="model-version-identity">
+                      <button type="button" className="model-version-number"
+                        aria-label={`查看版本 V${version.versionNo}`} aria-expanded={isExpanded}
+                        aria-controls={`model-version-${modelId}-${version.versionNo}`}
+                        onClick={() => void handleViewDetail(version.versionNo)}>
+                        V{version.versionNo}<ChevronDown size={13} className={isExpanded ? 'is-expanded' : ''} aria-hidden />
+                      </button>
+                      {version.versionNo === orderedVersions[0]?.versionNo ? <span className="model-version-latest">最新版本</span> : null}
+                    </div>
+                    <time className="model-version-time" dateTime={version.publishTime}>{formatDateTime(version.publishTime)}</time>
+                    <span className="model-version-publisher">{version.publishedBy || '—'}</span>
+                    <span className="model-version-field-count">{version.columnCount}</span>
+                    <div className="model-version-actions">
+                      <Popconfirm title={`恢复 V${version.versionNo} 为草稿？`}
+                        description="将覆盖当前草稿，再次发布后生效。"
+                        onConfirm={() => void handleRollback(version.versionNo)} okText="恢复为草稿" cancelText="取消">
+                        <Tooltip title={approvalPending ? '发布审批在途，回滚已冻结' : '用此版本覆盖当前草稿'}>
+                          <button type="button" className="model-version-action"
+                            aria-label={`回滚到 V${version.versionNo}（恢复为草稿）`}
+                            disabled={rollbackVersionNo !== null || approvalPending}>
+                            <RotateCcw size={13} aria-hidden />恢复草稿
+                          </button>
+                        </Tooltip>
+                      </Popconfirm>
+                      <Popconfirm title={`确认回滚并发布 V${version.versionNo}？`}
+                        description="先用该版本覆盖草稿，再发布为新版本并生效。"
+                        onConfirm={() => void handleRollback(version.versionNo, true)} okText="回滚并发布" cancelText="取消">
+                        <Tooltip title={approvalPending ? '发布审批在途，回滚已冻结' : '恢复此版本并立即发布'}>
+                          <button type="button" className="model-version-action"
+                            aria-label={`回滚并发布 V${version.versionNo}`}
+                            disabled={rollbackVersionNo !== null || approvalPending}>
+                            <SendHorizontal size={13} aria-hidden />回滚并发布
+                          </button>
+                        </Tooltip>
+                      </Popconfirm>
+                    </div>
+                  </div>
+                  {isExpanded ? (
+                    <div id={`model-version-${modelId}-${version.versionNo}`} className="model-version-snapshot">
+                      <div className="model-version-snapshot-head">
+                        <strong>V{version.versionNo} 结构快照</strong>
+                        <Tooltip title={version.checksum}><span>校验码 {version.checksum?.slice(0, 12) || '—'}</span></Tooltip>
+                      </div>
+                      {detailLoading ? <div className="model-version-detail-empty">加载中…</div>
+                        : detail?.version.versionNo === version.versionNo ? (
+                          <Table size="small" dataSource={detail.structure.columns ?? []} rowKey="columnName"
+                            pagination={false} scroll={{ y: 300, x: 660 }} columns={[
+                              { title: '#', width: 45, render: (_value, _record, index) => index + 1 },
+                              { title: '字段名', dataIndex: 'columnName', width: 150 },
+                              { title: '类型', dataIndex: 'dataType', width: 110 },
+                              { title: '长度', dataIndex: 'length', width: 65, render: (value) => value ?? '—' },
+                              { title: '小数位', dataIndex: 'scale', width: 65, render: (value) => value ?? '—' },
+                              { title: '可空', dataIndex: 'nullable', width: 60, render: (value) => value ? '是' : '否' },
+                              { title: '注释', dataIndex: 'comment', ellipsis: true },
+                            ]} />
+                        ) : <div className="model-version-detail-empty">未能加载结构详情</div>}
+                    </div>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[12px] text-[#667085]">{version.columnCount} 字段</span>
-                  <Tooltip title={version.checksum}>
-                    <span className="font-mono text-[12px] text-[#667085]">
-                      {version.checksum?.slice(0, 8)}
-                    </span>
-                  </Tooltip>
-                  <Popconfirm
-                    title={`确认回滚到 V${version.versionNo}？`}
-                    description="将用该版本内容覆盖当前草稿并置为 DRAFT，需再次发布才生效；线上消费方暂时仍读旧发布版。"
-                    onConfirm={() => void handleRollback(version.versionNo)}
-                    okText="恢复为草稿"
-                    cancelText="取消"
-                  >
-                    <Tooltip title={approvalPending ? '发布审批在途，回滚已冻结' : '回滚到此版本（恢复为草稿）'}>
-                      <button
-                        type="button"
-                        aria-label={`回滚到 V${version.versionNo}（恢复为草稿）`}
-                        className="rounded-[4px] border border-[#d0d5dd] p-1 text-[#667085] transition-colors hover:bg-[#f2f4f7]"
-                        disabled={rollbackVersionNo !== null || approvalPending}
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-                    </Tooltip>
-                  </Popconfirm>
-                  <Popconfirm
-                    title={`确认回滚并发布 V${version.versionNo}？`}
-                    description="先用该版本内容覆盖草稿，随即发布为新版本并对消费方生效。"
-                    onConfirm={() => void handleRollback(version.versionNo, true)}
-                    okText="回滚并发布"
-                    cancelText="取消"
-                  >
-                    <Tooltip title={approvalPending ? '发布审批在途，回滚已冻结' : '回滚并发布（直接生效）'}>
-                      <button
-                        type="button"
-                        aria-label={`回滚并发布 V${version.versionNo}`}
-                        className="rounded-[4px] border border-[#91caff] bg-[#e6f4ff] p-1 text-[#1677ff] transition-colors hover:bg-[#bae0ff]"
-                        disabled={rollbackVersionNo !== null || approvalPending}
-                      >
-                        <SendHorizontal size={14} />
-                      </button>
-                    </Tooltip>
-                  </Popconfirm>
-                </div>
-              </div>
+              );
+            })}
+          </div>
+        ) : <YakEmpty compact title={loading ? '加载版本中…' : '暂无发布版本'} description={loading ? undefined : '发布模型后可在此查看版本。'} />}
+      </Spin>
 
-              {isExpanded && (
-                <div className="mt-3 border-t border-[#eaecf0] pt-3">
-                  {detailLoading ? (
-                    <div className="py-4 text-center text-[12px] text-[#667085]">加载中…</div>
-                  ) : detail ? (
-                    <Table
-                      size="small"
-                      dataSource={detailColumns}
-                      rowKey="columnName"
-                      pagination={false}
-                      scroll={{ y: 300 }}
-                      columns={[
-                        { title: '#', width: 40, render: (_v, _r, i) => i + 1 },
-                        { title: '字段名', dataIndex: 'columnName', width: 140 },
-                        { title: '类型', dataIndex: 'dataType', width: 100 },
-                        { title: '长度', dataIndex: 'length', width: 60, render: (v) => v ?? '-' },
-                        { title: '小数', dataIndex: 'scale', width: 50, render: (v) => v ?? '-' },
-                        { title: '可空', dataIndex: 'nullable', width: 50, render: (v) => (v ? '是' : '否') },
-                        { title: '注释', dataIndex: 'comment', ellipsis: true },
-                      ]}
-                    />
-                  ) : (
-                    <div className="py-4 text-center text-[12px] text-[#667085]">
-                      未能加载结构详情
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {showComparison ? <ModelStructureReviewPanel modelId={modelId} search={location.search} /> : null}
     </div>
   );
 };

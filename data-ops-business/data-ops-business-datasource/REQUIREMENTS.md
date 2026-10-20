@@ -42,6 +42,8 @@ Create / Update / Delete 三条命令在事务内发布 `api.DataSourceChangedEv
 
 ## Catalog
 
+跨域目标表核验使用 `DataSourceCatalogReader.findTableFresh`：绕过元数据缓存，按精确表名及指定库/Schema 筛选有界目录结果；无匹配只表示当前授权目录未找到。读取异常、候选到达上限或跨 Schema 同名歧义必须失败，不能推导表不存在；返回已解析的真实 Schema 供后续精确列查询使用。
+
 ```text
 HTTP compatibility Map
   -> typed CatalogReadRequest

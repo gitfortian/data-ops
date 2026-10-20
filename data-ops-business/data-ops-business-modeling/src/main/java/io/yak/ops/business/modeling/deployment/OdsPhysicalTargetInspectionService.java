@@ -2,6 +2,7 @@ package io.yak.ops.business.modeling.deployment;
 
 import io.yak.ops.business.datasource.catalog.DataSourceCatalogReader;
 import io.yak.ops.business.datasource.domain.catalog.CatalogColumn;
+import io.yak.ops.business.datasource.domain.catalog.CatalogTable;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import io.yak.ops.business.modeling.domain.Model;
 import io.yak.ops.business.modeling.exception.ModelingException;
@@ -24,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -46,11 +48,26 @@ public class OdsPhysicalTargetInspectionService {
 
   public record ColumnDifference(String column, String issue,
                                  String expectedType, String observedType) {}
+  public record ObservedColumn(String name, String dataType, Integer length, Integer scale,
+                               Boolean nullable, Boolean primaryKey, String comment) {}
   public record Report(Long modelId, int versionNo, Long versionId,
                        Long targetDatasourceId, String targetDatabase, String targetSchema,
                        String targetTable, String state, int frozenColumns,
                        int observedColumns, List<ColumnDifference> differences,
-                       List<String> limitations, String observedCatalogSha256) {}
+                       List<String> limitations, String observedCatalogSha256,
+                       Boolean tableExists, String tableType, List<ObservedColumn> columns, String inspectedAt) {
+    public Report(Long modelId, int versionNo, Long versionId, Long targetDatasourceId,
+        String targetDatabase, String targetSchema, String targetTable, String state,
+        int frozenColumns, int observedColumns, List<ColumnDifference> differences,
+        List<String> limitations, String observedCatalogSha256) {
+      this(modelId, versionNo, versionId, targetDatasourceId, targetDatabase, targetSchema,
+          targetTable, state, frozenColumns, observedColumns, differences, limitations,
+          observedCatalogSha256, "TABLE_NOT_FOUND".equals(state) ? Boolean.FALSE
+              : ("COLUMN_MATCH_NEEDS_DDL_REVIEW".equals(state) || "STRUCTURE_DIFFERS".equals(state)
+                  || "TARGET_NOT_TABLE".equals(state)) ? Boolean.TRUE : null,
+          null, List.of(), Instant.now().toString());
+    }
+  }
 
   public Report inspect(Long modelId, int versionNo, Long targetDatasourceId,
                         String database, String schema) {
@@ -93,32 +110,55 @@ public class OdsPhysicalTargetInspectionService {
           || !seen.add(column.columnName())) throw invalid("冻结版本中存在缺失或重复列");
     }
 
-    // Discovery is a hint only; always verify columns through the fresh
-    // datasource catalog owner. No exception is translated into 'not found'.
+    // A successful exact catalog lookup can report "not found in the authorized catalog".
+    // Exceptions and incomplete/ambiguous discovery never imply absence.
+    CatalogTable targetTable;
+    try {
+      targetTable = catalog.findTableFresh(targetDatasourceId, database, schema, table).orElse(null);
+    } catch (RuntimeException unavailable) {
+      return new Report(modelId, versionNo, version.version().id(), targetDatasourceId,
+          database, schema, table, "NOT_CHECKABLE", columns.size(), 0, List.of(),
+          List.of("目标目录暂不可读取或表身份不明确，请检查连接、权限和 Schema"), null);
+    }
+    if (targetTable == null) {
+      return new Report(modelId, versionNo, version.version().id(), targetDatasourceId,
+          database, schema, table, "TABLE_NOT_FOUND", columns.size(), 0, List.of(),
+          List.of("当前授权目录未找到该表，请检查目标位置及账号的表可见权限"), null);
+    }
+    String effectiveSchema = StringUtils.hasText(schema) ? schema : targetTable.schema();
+    String tableType = targetTable.type();
+    if (!"TABLE".equalsIgnoreCase(tableType) && !"BASE TABLE".equalsIgnoreCase(tableType)) {
+      return new Report(modelId, versionNo, version.version().id(), targetDatasourceId,
+          database, effectiveSchema, table, "TARGET_NOT_TABLE", columns.size(), 0, List.of(),
+          List.of("目标对象类型为 " + (tableType == null ? "未知" : tableType) + "，当前仅核验普通物理表"),
+          null, true, tableType, List.of(), Instant.now().toString());
+    }
     List<CatalogColumn> observed;
     try {
-      observed = catalog.listColumnsFresh(targetDatasourceId, database, schema, table);
+      observed = catalog.listColumnsFresh(targetDatasourceId, database, effectiveSchema, table);
     } catch (RuntimeException unavailable) {
       return new Report(modelId, versionNo, version.version().id(),
-          targetDatasourceId, database, schema, table, "NOT_CHECKABLE",
+          targetDatasourceId, database, effectiveSchema, table, "NOT_CHECKABLE",
           columns.size(), 0, List.of(),
-          List.of("目标 Catalog 不可访问或目标表不存在，无法区分；不认定部署失败或成功",
-              "本次仅执行元数据读取，不执行 DDL、创建同步任务或确认数据质量"), null);
+          List.of("已找到目标表，字段元数据读取失败，请重新核验"), null,
+          true, tableType, List.of(), Instant.now().toString());
     }
     if (observed == null || observed.isEmpty() || observed.size() > MAX_COLUMNS) {
       return new Report(modelId, versionNo, version.version().id(),
-          targetDatasourceId, database, schema, table, "NOT_CHECKABLE",
+          targetDatasourceId, database, effectiveSchema, table, "NOT_CHECKABLE",
           columns.size(), observed == null ? 0 : observed.size(), List.of(),
-          List.of("目标 Catalog 未返回有效列，不能认定已部署"), null);
+          List.of("已找到目标表，但未返回完整有效的字段信息"), null,
+          true, tableType, List.of(), Instant.now().toString());
     }
     Map<String, CatalogColumn> live = new HashMap<>();
     List<ColumnDifference> differences = new ArrayList<>();
     for (var item : observed) {
       if (item == null || live.putIfAbsent(item.name(), item) != null) {
         return new Report(modelId, versionNo, version.version().id(),
-            targetDatasourceId, database, schema, table, "NOT_CHECKABLE",
+            targetDatasourceId, database, effectiveSchema, table, "NOT_CHECKABLE",
             columns.size(), observed.size(), List.of(),
-            List.of("Catalog 返回无效或重复物理列，不能认定目标状态"), null);
+            List.of("Catalog 返回无效或重复物理列，不能认定目标状态"), null,
+            true, tableType, List.of(), Instant.now().toString());
       }
     }
     for (var column : columns) {
@@ -136,12 +176,14 @@ public class OdsPhysicalTargetInspectionService {
     live.forEach((name, actual) -> differences.add(
         new ColumnDifference(name, "UNEXPECTED", null, actual.typeName())));
     return new Report(modelId, versionNo, version.version().id(),
-        targetDatasourceId, database, schema, table,
+        targetDatasourceId, database, effectiveSchema, table,
         differences.isEmpty() ? "COLUMN_MATCH_NEEDS_DDL_REVIEW" : "STRUCTURE_DIFFERS",
         columns.size(), observed.size(), List.copyOf(differences),
         List.of("只核验当前可读取的物理列类型与可空性；索引、分区、默认值、历史 DDL 和表数据未认证",
             "Catalog 当前匹配不是可持久回读的部署回执，更不是同步运行成功或质量通过",
-            "使用已有离线同步模块独立创建、发布、执行并核对真实任务版本与执行证据"), catalogHash(observed));
+            "使用已有离线同步模块独立创建、发布、执行并核对真实任务版本与执行证据"), catalogHash(observed),
+        true, tableType, observed.stream().map(c -> new ObservedColumn(c.name(), c.typeName(),
+            c.size(), c.scale(), c.nullable(), c.primaryKey(), c.remarks())).toList(), Instant.now().toString());
   }
 
   /** Fingerprint only the columns actually observed by the DataSource owner. */

@@ -71,16 +71,9 @@ export default function ModelCreationLogicalBasis({
     return () => { live = false; };
   }, [scope, selected, selectedDraft?.id]);
 
-  if (!layer) return <Alert type="info" showIcon
-    message="请选择目标数仓分层"
-    description="选择 ODS 将进入贴源分支；选择 DWD/DIM 等非 ODS 分层后，可核对当前业务过程的逻辑草稿与冻结版本。" />;
+  if (!layer) return null;
 
-  if (!active) return (
-    <Alert type="info" showIcon
-      message="ODS 贴源建模是独立路径"
-      description="此处是手动新建 ODS 草稿；要从已核验来源表自动带入准确表结构，请在数据源工作台选择原始表进入 ODS。"
-    />
-  );
+  if (!active) return null;
 
   if (!processId) return <Alert type="warning" showIcon
     message="建议先明确业务过程及数据粒度"

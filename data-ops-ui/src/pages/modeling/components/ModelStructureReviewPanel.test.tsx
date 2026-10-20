@@ -36,7 +36,7 @@ it('prepares only after clicking and opens a frozen task without sending inferen
   await prepare();
   expect(await screen.findByRole('link', { name: 'AI 结构变更说明' })).toHaveAttribute('href', `/ai-agent?purpose=MODEL_STRUCTURE_REVIEW&reviewModelId=7&reviewBaselineVersionNo=3&reviewDefinition=${'a'.repeat(64)}`);
   expect(prepareModelStructureReview).toHaveBeenCalledWith('7', 3);
-  expect(screen.getByRole('link', { name: '打开来源映射核对' })).toHaveAttribute('href', '/modeling/models/7/mapping');
+  expect(screen.queryByRole('link', { name: '打开来源映射核对' })).not.toBeInTheDocument();
   expect(screen.getByText(/没有历史映射快照/)).toBeInTheDocument();
 });
 it.each(['project', 'model', 'version', 'permission'])('ignores a late preparation after changing %s', async (kind) => {

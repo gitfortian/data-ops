@@ -538,15 +538,8 @@ const ModelingWorkspace: React.FC = () => {
           </Tooltip>}
           <Button type="link" size="small" onClick={clearJourney}>清除过程筛选</Button>
         </div>}
-        <section className="modeling-studio-catalog-results" aria-label="模型查询结果">
-          <div className="modeling-studio-section-header">
-            <div>
-              <span className="modeling-studio-overline">已保存的模型对象</span>
-              <h2>物理模型库 <span className="!text-[12px] !font-normal !text-[#7a8798]">共 {total} 条查询结果</span></h2>
-              <p>选择模型继续编辑、检查来源映射或查看冻结版本。</p>
-            </div>
-          </div>
-          <div className="mb-3 mt-4 flex flex-wrap items-center gap-2">
+        <section className="modeling-studio-catalog-results" aria-label="物理模型列表">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
           {/* 目录 vs 标签职责提示(2026-09-17):目录=层级分类,标签=横向标记 */}
           <Tooltip title="目录=层级分类(如 交易/订单)；标签=横向标记(如 核心模型/临时模型)">
             <span className="cursor-help text-[13px] text-[#667085]">标签筛选</span>

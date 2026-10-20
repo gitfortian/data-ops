@@ -20,24 +20,32 @@ import {
   setModelingMapping,
   validateModelingExpression,
 } from '@/services/modeling/mapping';
-import type { ModelingImportColumnView, ModelingMappingView, ModelingModelRecord } from '@/services/modeling/types';
+import type { ModelingImportColumnView, ModelingMappingSavePayload, ModelingMappingView, ModelingModelRecord } from '@/services/modeling/types';
 
 interface MappingFormValues {
-  sourceDatasourceId: number;
-  sourceDatabase: string;
-  sourceTable: string;
-  sourceColumn: string;
+  sourceDatasourceId?: number;
+  sourceDatabase?: string;
+  sourceTable?: string;
+  sourceColumn?: string;
   transformExpr?: string;
   businessDescription?: string;
 }
 
 import { history, useParams } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
-import { Button, Form, Input, Modal, message, Select, Space, Table, Tag, Typography } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { Button, Form, Input, Modal, message, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import './index.less';
+
+type MappingMode = 'SOURCE' | 'EXPRESSION';
 
 /** 常用转换函数提示(19)。 */
 const COMMON_FUNCTIONS = [
+  'CURRENT_TIMESTAMP',
+  'CURRENT_DATE',
+  'NOW()',
+  'UUID()',
   'CAST(x AS DECIMAL(18,2))',
   'CONCAT(a, b)',
   'UPPER(x)',
@@ -54,6 +62,10 @@ interface StructureRecordLite {
   modelCode?: string;
   modelName?: string;
 }
+
+const isExpressionMapping = (mapping: ModelingMappingView) => mapping.mapped
+  && mapping.sourceDatasourceId == null && !mapping.sourceDatabase && !mapping.sourceSchema
+  && !mapping.sourceTable && !mapping.sourceColumn && Boolean(mapping.transformExpr?.trim());
 
 const MappingPanel: React.FC = () => {
   const params = useParams<{ id?: string }>();
@@ -78,7 +90,10 @@ const MappingPanel: React.FC = () => {
   const [sourceTable, setSourceTable] = useState<string | undefined>();
   const [sourceColumns, setSourceColumns] = useState<ModelingImportColumnView[]>([]);
   const [editTarget, setEditTarget] = useState<ModelingMappingView | null>(null);
+  const [mappingMode, setMappingMode] = useState<MappingMode>('SOURCE');
+  const [aiExpanded, setAiExpanded] = useState(false);
   const [form] = Form.useForm<MappingFormValues>();
+  const expressionRef = useRef<TextAreaRef>(null);
   const [saving, setSaving] = useState(false);
   const [odsReview, setOdsReview] = useState<OdsMappingReconcilePreview>();
   const [odsInspection, setOdsInspection] = useState<OdsSourceEvidenceInspection>();
@@ -88,8 +103,11 @@ const MappingPanel: React.FC = () => {
   const [odsChoices, setOdsChoices] = useState<Record<string, string>>({});
   const draft = Form.useWatch<MappingFormValues>([], form);
   const mayInspectOds = canAll(['modeling:read', 'resource:data-source:read']);
-  const maySave = canAll(['modeling:read', 'modeling:update', 'resource:data-source:read']);
-  const maySuggest = maySave && canAll(['agent:chat:run', 'agent:session:read']);
+  const mayEdit = canAll(['modeling:read', 'modeling:update']);
+  const mayReadSource = canAll(['resource:data-source:read']);
+  const maySaveSource = mayEdit && mayReadSource;
+  const maySave = mayEdit && (mappingMode === 'EXPRESSION' || mayReadSource);
+  const maySuggest = maySaveSource && canAll(['agent:chat:run', 'agent:session:read']);
 
   const loadAll = useCallback(async () => {
     if (!modelId) {
@@ -115,18 +133,24 @@ const MappingPanel: React.FC = () => {
   }, [modelId, resource]);
 
   useEffect(() => {
+    let active = true;
     const current = resource();
+    openOperation(); tablesOperation(); columnsOperation();
     setEditTarget(null); setDefinition(''); setSaving(false); setEditorLoading(false);
+    setMappingMode(mayReadSource ? 'SOURCE' : 'EXPRESSION'); setAiExpanded(false);
     setViews([]); setStructure(undefined); setModelRecord(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
     setOdsReview(undefined); setOdsChoices({}); setOdsSaving(false); setOdsReviewLoading(false);
     setOdsInspection(undefined); setOdsInspectionLoading(false);
     setSourceDatasourceId(undefined); setSourceDatabase(undefined); setSourceTable(undefined);
     form.resetFields();
     void loadAll();
-    listDataSources({ pageNo: 1, pageSize: 200 })
-      .then(result => { if (current()) setDatasources(result.bizData ?? []); })
-      .catch(() => { if (current()) setDatasources([]); });
-  }, [loadAll, resource, form]);
+    if (mayReadSource) {
+      listDataSources({ pageNo: 1, pageSize: 200 })
+        .then(result => { if (active && current()) setDatasources(result.bizData ?? []); })
+        .catch(() => { if (active && current()) setDatasources([]); });
+    }
+    return () => { active = false; };
+  }, [loadAll, resource, form, mayReadSource, openOperation, tablesOperation, columnsOperation]);
 
   const loadSourceTables = useCallback(async (targetDatasourceId?: number) => {
     const current = tablesOperation();
@@ -159,22 +183,28 @@ const MappingPanel: React.FC = () => {
   }, [columnsOperation, modelRecord]);
 
   const openEdit = async (view: ModelingMappingView) => {
-    if (!modelId || !maySave) return;
+    if (!modelId || !mayEdit) return;
     const current = openOperation();
+    tablesOperation(); columnsOperation();
+    setAiExpanded(false); setSourceTables([]); setSourceColumns([]);
     setEditTarget(view); setEditorLoading(true); setDefinition(''); form.resetFields();
     try {
       const edit = await getModelingMappingContext(modelId, view.targetColumn);
       if (!current()) return;
       const saved = edit.mapping;
       setEditTarget(saved); setDefinition(edit.definition);
-      const ds = saved.sourceDatasourceId ?? sourceDatasourceId;
-      const db = saved.sourceDatabase ?? sourceDatabase;
-      const table = saved.sourceTable ?? sourceTable;
+      const useExpression = isExpressionMapping(saved) || (!saved.mapped && !mayReadSource);
+      setMappingMode(useExpression ? 'EXPRESSION' : 'SOURCE');
+      const ds = useExpression ? undefined : saved.sourceDatasourceId ?? sourceDatasourceId;
+      const db = useExpression ? undefined : saved.sourceDatabase ?? sourceDatabase;
+      const table = useExpression ? undefined : saved.sourceTable ?? sourceTable;
       form.setFieldsValue({ sourceDatasourceId: ds, sourceDatabase: db, sourceTable: table,
         sourceColumn: saved.sourceColumn, transformExpr: saved.transformExpr, businessDescription: '' });
       setSourceDatasourceId(ds); setSourceDatabase(db); setSourceTable(table);
-      void loadSourceTables(ds);
-      if (ds && db && table) void loadSourceColumns(ds, db, table);
+      if (!useExpression && mayReadSource) {
+        void loadSourceTables(ds);
+        if (ds && db && table) void loadSourceColumns(ds, db, table);
+      }
     } catch (error) {
       if (current()) message.error(error instanceof Error ? error.message : '无法读取当前映射，请重试');
     } finally { if (current()) setEditorLoading(false); }
@@ -185,17 +215,31 @@ const MappingPanel: React.FC = () => {
       return;
     }
     const current = resource();
-    const { businessDescription: _description, ...values } = await form.validateFields();
-    if (!current()) return;
+    const mode = mappingMode;
     setSaving(true);
     try {
-      await setModelingMapping(modelId, editTarget.targetColumn, values, definition);
+      let values: MappingFormValues;
+      try {
+        // Source fields retained by the form must not participate in expression-only saves.
+        values = await form.validateFields(mode === 'EXPRESSION'
+          ? ['transformExpr']
+          : ['sourceDatasourceId', 'sourceDatabase', 'sourceTable', 'sourceColumn', 'transformExpr']);
+      } catch { return; }
+      if (!current()) return;
+      const payload: ModelingMappingSavePayload = {
+        sourceDatasourceId: mode === 'EXPRESSION' ? null : values.sourceDatasourceId,
+        sourceDatabase: mode === 'EXPRESSION' ? null : values.sourceDatabase,
+        sourceTable: mode === 'EXPRESSION' ? null : values.sourceTable,
+        sourceColumn: mode === 'EXPRESSION' ? null : values.sourceColumn,
+        transformExpr: values.transformExpr?.trim(),
+      };
+      await setModelingMapping(modelId, editTarget.targetColumn, payload, definition);
       if (!current()) return;
       message.success('映射已保存');
       setEditTarget(null);
       await loadAll();
-    } catch {
-      if (current()) message.error('保存失败：目标字段、映射或源字段可能已变化，请重新打开核对；也请检查表达式。');
+    } catch (error) {
+      if (current()) message.error(error instanceof Error ? error.message : '保存失败，请重新打开映射后重试');
     } finally {
       if (current()) setSaving(false);
     }
@@ -254,7 +298,7 @@ const MappingPanel: React.FC = () => {
 
   /** Existing source binding is always resolved by the server, not selected in the browser. */
   const loadOdsReview = async () => {
-    if (!modelId || !maySave) return;
+    if (!modelId || !maySaveSource) return;
     const active = resource();
     setOdsReviewLoading(true);
     setOdsChoices({});
@@ -283,7 +327,7 @@ const MappingPanel: React.FC = () => {
   };
 
   const confirmOdsRepair = () => {
-    if (!modelId || !odsReview || !maySave || odsSaving) return;
+    if (!modelId || !odsReview || !maySaveSource || odsSaving) return;
     const selections = Object.entries(odsChoices)
       .filter(([, sourceColumn]) => Boolean(sourceColumn))
       .map(([targetColumn, sourceColumn]) => ({ targetColumn, sourceColumn }));
@@ -321,16 +365,34 @@ const MappingPanel: React.FC = () => {
   };
 
   const checkExpression = async () => {
-    if (!modelId) {
-      return;
-    }
+    if (!modelId || editorLoading || saving) return;
+    try { await form.validateFields(['transformExpr']); }
+    catch { return; }
     const expression = form.getFieldValue('transformExpr');
-    const check = await validateModelingExpression(modelId, expression);
-    if (check.valid) {
-      message.success('表达式语法通过');
-    } else {
-      message.error(check.message || '表达式不合法');
+    const current = resource();
+    try {
+      const check = await validateModelingExpression(modelId, expression);
+      if (!current() || form.getFieldValue('transformExpr') !== expression) return;
+      if (check.valid) message.success('表达式基础校验通过');
+      else message.error(check.message || '表达式不合法');
+    } catch {
+      if (current()) message.error('暂时无法校验，请稍后重试');
     }
+  };
+
+  const insertFunction = (value: string) => {
+    const expression = form.getFieldValue('transformExpr') || '';
+    const input = expressionRef.current?.resizableTextArea?.textArea;
+    const start = input?.selectionStart ?? expression.length;
+    const end = input?.selectionEnd ?? start;
+    const next = `${expression.slice(0, start)}${value}${expression.slice(end)}`;
+    if (next.length > 1000) return;
+    form.setFieldsValue({ transformExpr: next });
+    requestAnimationFrame(() => {
+      if (!input || expressionRef.current?.resizableTextArea?.textArea !== input) return;
+      expressionRef.current?.focus();
+      input.setSelectionRange(start + value.length, start + value.length);
+    });
   };
 
   const columns: TableColumnsType<ModelingMappingView> = [
@@ -342,19 +404,21 @@ const MappingPanel: React.FC = () => {
     },
     { title: '类型', dataIndex: 'dataType', width: 130 },
     {
-      title: '源字段',
+      title: '来源',
       key: 'source',
       render: (_value, record) =>
-        record.mapped ? (
+        isExpressionMapping(record) ? (
+          <Tag>表达式</Tag>
+        ) : record.mapped ? (
           <Typography.Text className="!text-[13px]">
-            {record.sourceDatabase}.{record.sourceSchema ? `${record.sourceSchema}.` : ''}{record.sourceTable}.{record.sourceColumn}
+            {[record.sourceDatabase, record.sourceSchema, record.sourceTable, record.sourceColumn].filter(Boolean).join('.')}
           </Typography.Text>
         ) : (
           <Tag color="warning">未映射</Tag>
         ),
     },
     {
-      title: '转换表达式',
+      title: '表达式',
       dataIndex: 'transformExpr',
       ellipsis: true,
       render: (value?: string) => value || '-',
@@ -368,7 +432,7 @@ const MappingPanel: React.FC = () => {
           <Button
             type="link"
             size="small"
-            disabled={!maySave}
+            disabled={!mayEdit}
             onClick={() => {
               void openEdit(record);
             }}
@@ -403,7 +467,7 @@ const MappingPanel: React.FC = () => {
           {modelRecord?.layerCode?.toUpperCase() === 'ODS'
             && modelRecord.status === 'DRAFT'
             && modelRecord.sourceDatasourceId != null && (
-            <Button disabled={!maySave} loading={odsReviewLoading}
+            <Button disabled={!maySaveSource} loading={odsReviewLoading}
               onClick={() => void loadOdsReview()}>ODS 来源映射批量核验/修复</Button>
           )}
           <YakButton
@@ -476,7 +540,8 @@ const MappingPanel: React.FC = () => {
               { title: '真实源列', dataIndex: 'sourceColumn', render: (v?: string) => v || '—' },
               { title: '源类型', dataIndex: 'sourceType', render: (v?: string) => v || '—' },
               { title: '证据状态', dataIndex: 'status', render: (v: string) => <Tag
-                color={v === 'MATCHED' ? 'green' : v === 'TECHNICAL' ? 'default' : 'warning'}>{v}</Tag> },
+                color={v === 'MATCHED' ? 'green' : ['TECHNICAL', 'EXPRESSION'].includes(v) ? 'default' : 'warning'}>
+                {v === 'EXPRESSION' ? '表达式' : v}</Tag> },
               { title: '说明 / 下一步', dataIndex: 'reason' },
             ]} />
         </>}
@@ -490,7 +555,7 @@ const MappingPanel: React.FC = () => {
           <Button onClick={() => { setOdsReview(undefined); setOdsChoices({}); }} disabled={odsSaving}>关闭</Button>
           <Button disabled={odsSaving} onClick={selectMatchingOdsColumns}>选择全部安全同名候选（仅选择，不保存）</Button>
           <Button type="primary" loading={odsSaving}
-            disabled={!maySave || Object.keys(odsChoices).length === 0
+            disabled={!maySaveSource || Object.keys(odsChoices).length === 0
               || Boolean(odsReview?.conflictCount || odsReview?.orphanCount)}
             onClick={confirmOdsRepair}>确认选中来源映射</Button>
         </Space>}
@@ -523,6 +588,7 @@ const MappingPanel: React.FC = () => {
               { title: '当前来源状态', key: 'sourceStatus',
                 render: (_, row) => row.status === 'MAPPED'
                   ? <Tag color="green">已映射：{row.existingSourceColumn}</Tag>
+                  : row.status === 'EXPRESSION' ? <Tag>表达式</Tag>
                   : row.status === 'SOURCE_CONFLICT' ? <Tag color="red">来源冲突：{row.existingSourceColumn}</Tag>
                   : row.status === 'TECHNICAL' ? <Tag>平台技术列，无真实来源</Tag>
                   : <Tag color="warning">未映射</Tag> },
@@ -554,126 +620,170 @@ const MappingPanel: React.FC = () => {
       </Modal>
       <Modal
         open={Boolean(editTarget)}
-        title={`映射目标字段：${editTarget?.targetColumn || ''}`}
-        width={620}
+        title="字段映射"
+        className="model-mapping-editor"
+        width={680}
+        centered
         okText="保存"
         cancelText="取消"
         confirmLoading={saving}
         okButtonProps={{ disabled: !maySave || !definition || editorLoading }}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        maskClosable={!saving}
+        keyboard={!saving}
         destroyOnClose
         onCancel={() => { openOperation(); setEditTarget(null); }}
         onOk={() => {
           void submitMapping();
         }}
       >
-        <Form form={form} layout="vertical" className="pt-2" disabled={editorLoading || saving}>
-          <div className="grid grid-cols-2 gap-x-4 max-sm:grid-cols-1">
-            <Form.Item name="sourceDatasourceId" label="源数据源" rules={[{ required: true, message: '请选择数据源' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                placeholder="选择数据源"
-                onChange={(value) => {
-                  columnsOperation();
-                  form.setFieldsValue({ sourceDatabase: undefined, sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
-                  setSourceDatasourceId(value);
-                  setSourceDatabase(undefined);
-                  setSourceTable(undefined);
-                  setSourceColumns([]);
-                  void loadSourceTables(value);
-                }}
-                options={datasources.map((item) => ({
-                  label: item.name ?? `数据源 #${item.id}`,
-                  value: item.id as number,
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="sourceDatabase" label="源库" rules={[{ required: true, message: '请选择源库' }]}>
-              <Select
-                showSearch
-                placeholder="选择库"
-                onChange={(value) => {
-                  columnsOperation();
-                  form.setFieldsValue({ sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
-                  setSourceDatabase(value);
-                  setSourceTable(undefined);
-                  setSourceColumns([]);
-                }}
-                options={Array.from(new Set(sourceTables.map((table) => table.database ?? '')))
-                  .filter(Boolean)
-                  .map((database) => ({ label: database, value: database }))}
-              />
-            </Form.Item>
-            <Form.Item name="sourceTable" label="源表" rules={[{ required: true, message: '请选择源表' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                placeholder="选择源表"
-                onChange={(value) => {
-                  form.setFieldsValue({ sourceColumn: undefined, transformExpr: undefined });
-                  setSourceTable(value);
-                  if (sourceDatasourceId && sourceDatabase) {
-                    void loadSourceColumns(sourceDatasourceId, sourceDatabase, value);
-                  }
-                }}
-                options={sourceTables
-                  .filter((table) => !sourceDatabase || table.database === sourceDatabase)
-                  .map((table) => ({ label: table.name, value: table.name }))}
-              />
-            </Form.Item>
-            <Form.Item name="sourceColumn" label="源字段" rules={[{ required: true, message: '请选择源字段' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                placeholder={sourceColumns.length ? '选择源字段' : '先选择源表加载字段'}
-                options={sourceColumns.map((column) => ({
-                  label: `${column.name}（${column.typeName}）`,
-                  value: column.name,
-                }))}
-              />
-            </Form.Item>
-          </div>
-          <Form.Item name="businessDescription" label="业务说明（供 AI 匹配，可选）">
-            <Input.TextArea maxLength={512} rows={2} placeholder="如：业务订单的付款用户编号，不是操作员编号" />
-          </Form.Item>
-          {editTarget && draft?.sourceDatasourceId && draft.sourceDatabase && draft.sourceTable && (
-            <ModelMappingPanel key={JSON.stringify([scope, editTarget.targetColumn, definition, draft])}
-              target={{ modelId: Number(modelId), columnName: editTarget.targetColumn,
-                datasourceId: draft.sourceDatasourceId, database: draft.sourceDatabase, table: draft.sourceTable,
-                businessDescription: draft.businessDescription ?? '', keyword: '' }}
-              definition={definition} disabled={!maySuggest || editorLoading || saving}
-              onApply={sourceColumn => form.setFieldsValue({ sourceColumn, transformExpr: undefined })} />
-          )}
-          <Form.Item label="转换表达式（可空 = 直通）">
-            <Space.Compact className="w-full">
-              <Form.Item name="transformExpr" noStyle>
-                <Input maxLength={1024} placeholder="如 CAST(amount AS DECIMAL(18,2))" />
-              </Form.Item>
-              <Button
-                onClick={() => {
-                  void checkExpression();
-                }}
-              >
-                校验
-              </Button>
-            </Space.Compact>
-          </Form.Item>
-          <Form.Item label="常用函数（点击插入）">
-            <Space wrap>
-              {COMMON_FUNCTIONS.map((func) => (
-                <Tag
-                  key={func}
-                  className="!cursor-pointer"
-                  onClick={() => {
-                    const current = form.getFieldValue('transformExpr') || '';
-                    form.setFieldsValue({ transformExpr: `${current}${func}` });
+        <div className="model-mapping-editor__target">
+          <span>目标字段</span>
+          <code>{editTarget?.targetColumn}</code>
+          <Tag>{editTarget?.dataType || '—'}</Tag>
+        </div>
+        <Segmented<MappingMode>
+          block
+          className="model-mapping-editor__mode"
+          value={mappingMode}
+          disabled={editorLoading || saving}
+          options={[
+            { label: '源字段', value: 'SOURCE', disabled: !mayReadSource },
+            { label: '表达式', value: 'EXPRESSION' },
+          ]}
+          onChange={(value) => { setMappingMode(value); setAiExpanded(false); }}
+        />
+        <Form form={form} layout="vertical" disabled={editorLoading || saving || !maySave}>
+          {mappingMode === 'SOURCE' && (
+            <div className="model-mapping-editor__sources">
+              <Form.Item name="sourceDatasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择数据源"
+                  onChange={(value) => {
+                    columnsOperation();
+                    form.setFieldsValue({ sourceDatabase: undefined, sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
+                    setSourceDatasourceId(value);
+                    setSourceDatabase(undefined);
+                    setSourceTable(undefined);
+                    setSourceColumns([]);
+                    setSourceTables([]);
+                    void loadSourceTables(value);
                   }}
-                >
-                  {func.split('(')[0]}
-                </Tag>
-              ))}
-            </Space>
+                  options={datasources.map((item) => ({
+                    label: item.name ?? `数据源 #${item.id}`,
+                    value: item.id as number,
+                  }))}
+                />
+              </Form.Item>
+              <Form.Item name="sourceDatabase" label="源库" rules={[{ required: true, message: '请选择源库' }]}>
+                <Select
+                  showSearch
+                  disabled={!sourceDatasourceId || editorLoading || saving || !mayReadSource}
+                  placeholder="选择库"
+                  onChange={(value) => {
+                    columnsOperation();
+                    form.setFieldsValue({ sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
+                    setSourceDatabase(value);
+                    setSourceTable(undefined);
+                    setSourceColumns([]);
+                  }}
+                  options={Array.from(new Set(sourceTables.map((table) => table.database ?? '')))
+                    .filter(Boolean)
+                    .map((database) => ({ label: database, value: database }))}
+                />
+              </Form.Item>
+              <Form.Item name="sourceTable" label="源表" rules={[{ required: true, message: '请选择源表' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  disabled={!sourceDatabase || editorLoading || saving || !mayReadSource}
+                  placeholder="选择源表"
+                  onChange={(value) => {
+                    form.setFieldsValue({ sourceColumn: undefined, transformExpr: undefined });
+                    setSourceTable(value);
+                    setSourceColumns([]);
+                    if (sourceDatasourceId && sourceDatabase) {
+                      void loadSourceColumns(sourceDatasourceId, sourceDatabase, value);
+                    }
+                  }}
+                  options={sourceTables
+                    .filter((table) => table.database === sourceDatabase)
+                    .map((table) => ({ label: table.name, value: table.name }))}
+                />
+              </Form.Item>
+              <Form.Item name="sourceColumn" label="源字段" rules={[{ required: true, message: '请选择源字段' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  disabled={!sourceTable || editorLoading || saving || !mayReadSource}
+                  placeholder="选择字段"
+                  options={sourceColumns.map((column) => ({
+                    label: `${column.name}（${column.typeName}）`,
+                    value: column.name,
+                  }))}
+                />
+              </Form.Item>
+            </div>
+          )}
+          <div className="model-mapping-editor__expression-heading">
+            <label htmlFor="transformExpr">
+              {mappingMode === 'EXPRESSION' ? '表达式' : '转换表达式'}
+              {mappingMode === 'SOURCE' && <span>可选</span>}
+            </label>
+            <Button type="link" size="small" onClick={() => void checkExpression()}>校验</Button>
+          </div>
+          <Form.Item
+            name="transformExpr"
+            rules={mappingMode === 'EXPRESSION'
+              ? [{ required: true, whitespace: true, message: '请输入表达式' }]
+              : []}
+          >
+            <Input.TextArea
+              ref={expressionRef}
+              className="model-mapping-editor__expression"
+              maxLength={1000}
+              autoSize={{ minRows: 3, maxRows: 6 }}
+              placeholder={mappingMode === 'EXPRESSION'
+                ? "CURRENT_TIMESTAMP、NOW() 或 'fixed_value'"
+                : '留空则直接使用源字段'}
+            />
           </Form.Item>
+          <div className="model-mapping-editor__functions">
+            <span>常用函数</span>
+            <div>
+              {COMMON_FUNCTIONS.map((func) => (
+                <button type="button" key={func} disabled={editorLoading || saving || !maySave}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => insertFunction(func)}>
+                  {func.split('(')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {mappingMode === 'SOURCE' && maySuggest && (
+            <div className="model-mapping-editor__ai">
+              <Button type="text" size="small" aria-expanded={aiExpanded}
+                onClick={() => setAiExpanded(!aiExpanded)}>
+                {aiExpanded ? '收起 AI 辅助' : 'AI 辅助选字段'}
+              </Button>
+              {aiExpanded && <div className="model-mapping-editor__ai-content">
+                <Form.Item name="businessDescription" label="业务含义">
+                  <Input maxLength={512} placeholder="补充业务含义（可选）" />
+                </Form.Item>
+                {editTarget && draft?.sourceDatasourceId && draft.sourceDatabase && draft.sourceTable ? (
+                  <ModelMappingPanel compact key={JSON.stringify([scope, editTarget.targetColumn, definition, draft])}
+                    target={{ modelId: Number(modelId), columnName: editTarget.targetColumn,
+                      datasourceId: draft.sourceDatasourceId, database: draft.sourceDatabase, table: draft.sourceTable,
+                      businessDescription: draft.businessDescription ?? '', keyword: '' }}
+                    definition={definition} disabled={!maySuggest || editorLoading || saving}
+                    onApply={sourceColumn => form.setFieldsValue({ sourceColumn, transformExpr: undefined })} />
+                ) : <Typography.Text type="secondary">请先选择源表</Typography.Text>}
+              </div>}
+            </div>
+          )}
         </Form>
       </Modal>
     </div>

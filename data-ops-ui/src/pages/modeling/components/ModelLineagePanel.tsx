@@ -21,6 +21,7 @@ import {
   type LineageGraph,
 } from '@/services/data-analysis';
 import { getModelingLineageGraph } from '@/services/modeling/api';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 
 const DEFAULT_DEPTH = 3;
 const nodeTypes = { lineage: LineageNode };
@@ -39,6 +40,7 @@ const countAssetTypes = (graph?: LineageGraph) => {
 const ModelLineagePanel: React.FC = () => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
+  const { currentProject } = useSecurityProject();
 
   const [graph, setGraph] = useState<LineageGraph>();
   const [isLoading, setIsLoading] = useState(false);
@@ -47,10 +49,11 @@ const ModelLineagePanel: React.FC = () => {
   const [direction, setDirection] = useState<LineageDirection>('BOTH');
   const [refreshVersion, setRefreshVersion] = useState(0);
 
-  // 走模型域内端点：资产未登记时后端会按当前结构自动登记（派生以外的手工模型也有血缘）。
+  // The model owner combines registered lineage and saved ODS source bindings without registration writes.
   useEffect(() => {
     if (!modelId) return;
     let cancelled = false;
+    setGraph(undefined);
     setIsLoading(true);
     setError('');
 
@@ -71,7 +74,7 @@ const ModelLineagePanel: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [depth, modelId, refreshVersion]);
+  }, [depth, modelId, currentProject?.id, refreshVersion]);
 
   const view = useMemo(
     () => (graph ? buildLineageView(graph, direction, visibleTypes) : undefined),
@@ -95,13 +98,16 @@ const ModelLineagePanel: React.FC = () => {
       source: relation.sourceAssetId,
       target: relation.targetAssetId,
       type: 'smoothstep',
+      label: relation.properties?.modelSourceBinding === true ? '来源绑定' : undefined,
+      labelStyle: { fill: '#667085', fontSize: 11 },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 14,
         height: 14,
         color: '#b9bec6',
       },
-      style: { stroke: '#c9cdd3', strokeWidth: 1.2 },
+      style: { stroke: '#c9cdd3', strokeWidth: 1.2,
+        strokeDasharray: relation.properties?.modelSourceBinding === true ? '5 4' : undefined },
     })) || []
   ), [view?.relations]);
 
@@ -163,7 +169,7 @@ const ModelLineagePanel: React.FC = () => {
           <span>上游 {summary.upstream}</span>
           <span className="h-3 w-px bg-[#dfe3e8]" />
           <span>下游 {summary.downstream}</span>
-          {rootAsset ? (
+          {rootAsset && rootAsset.properties?.projectionOnly !== true ? (
             <YakButton
               type="link"
               size="small"
@@ -171,7 +177,8 @@ const ModelLineagePanel: React.FC = () => {
               href={`/data-analysis/lineage?assetKey=${encodeURIComponent(rootAsset.assetKey)}`}
               icon={<ArrowUpRight size={12} />}
             >
-              完整血缘
+              {graph?.relations.some(relation => relation.properties?.modelSourceBinding === true)
+                ? '已登记血缘' : '完整血缘'}
             </YakButton>
           ) : null}
         </div>
@@ -234,7 +241,7 @@ const ModelLineagePanel: React.FC = () => {
           <div className="flex h-full min-h-[420px] items-center justify-center">
             <YakEmpty
               title="暂无血缘数据"
-              description="模型还没有可登记的字段结构，保存结构后点刷新即可自动生成血缘。"
+              description="当前模型尚无已登记关系或已绑定来源。"
             />
           </div>
         )}

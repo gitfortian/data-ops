@@ -38,6 +38,8 @@ interface SqlCodeEditorProps {
   showLineNumbers?: boolean;
   expandable?: boolean;
   fullscreenTitle?: string;
+  readOnly?: boolean;
+  wordWrap?: 'on' | 'off';
 }
 
 type SqlLexicalState =
@@ -422,6 +424,8 @@ export default function SqlCodeEditor({
   showLineNumbers = true,
   expandable = true,
   fullscreenTitle = '编辑 SQL',
+  readOnly = false,
+  wordWrap = 'on',
 }: SqlCodeEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>();
@@ -498,7 +502,8 @@ export default function SqlCodeEditor({
       showFoldingControls: 'mouseover',
       scrollBeyondLastLine: false,
       smoothScrolling: true,
-      wordWrap: 'on',
+      wordWrap,
+      readOnly,
       wrappingIndent: 'same',
       renderLineHighlight: 'all',
       renderWhitespace: 'selection',
@@ -617,8 +622,10 @@ export default function SqlCodeEditor({
     editor.updateOptions({
       lineNumbers: showLineNumbers ? 'on' : 'off',
       ariaLabel: `${resolveDialectLabel(dbType)} editor`,
+      readOnly,
+      wordWrap,
     });
-  }, [dbType, showLineNumbers]);
+  }, [dbType, showLineNumbers, readOnly, wordWrap]);
 
   useEffect(() => {
     resizeToContentRef.current?.();
@@ -682,8 +689,8 @@ export default function SqlCodeEditor({
             size="small"
             className="sql-code-editor__expand-btn !text-[#667085]"
             icon={<Maximize2 size={14} />}
-            aria-label="展开 SQL 编辑器"
-            title="展开编辑"
+            aria-label={readOnly ? '全屏查看 SQL' : '展开 SQL 编辑器'}
+            title={readOnly ? '全屏查看' : '展开编辑'}
             onClick={handleOpenFullscreen}
           />
         ) : null}
@@ -699,7 +706,7 @@ export default function SqlCodeEditor({
           destroyOnClose
           maskClosable={false}
           onCancel={handleCancelFullscreen}
-          footer={
+          footer={readOnly ? <YakButton onClick={handleCancelFullscreen}>关闭</YakButton> :
             <div className="sql-code-editor-modal__footer">
               <YakButton
                 type="text"
@@ -728,6 +735,8 @@ export default function SqlCodeEditor({
               className="sql-code-editor--fullscreen"
               showLineNumbers={showLineNumbers}
               expandable={false}
+              readOnly={readOnly}
+              wordWrap={wordWrap}
             />
           </div>
         </Modal>

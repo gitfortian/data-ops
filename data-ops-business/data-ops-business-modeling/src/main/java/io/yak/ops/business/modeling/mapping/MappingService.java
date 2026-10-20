@@ -84,7 +84,7 @@ public class MappingService {
     return views;
   }
 
-  /** 设置/更新一条映射;源列经 catalog 门面校验存在。 */
+  /** 设置/更新一条映射；指定源字段时经 catalog 门面校验，纯表达式不要求来源。 */
   @Transactional(transactionManager = "yakBusinessTransactionManager", rollbackFor = Exception.class)
   public void setMapping(
       Long modelId,
@@ -114,18 +114,13 @@ public class MappingService {
       String operator) {
     var model = requireModelForUpdate(modelId);
     requireTargetColumn(modelId, targetColumn);
-    if (sourceDatasourceId == null
-        || !StringUtils.hasText(sourceTable)
-        || !StringUtils.hasText(sourceColumn)) {
-      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "来源映射必须提供数据源/源表/源字段");
+    boolean expressionOnly = validateMappingInput(sourceDatasourceId, sourceDatabase,
+        sourceTable, sourceColumn, transformExpr);
+    if (!expressionOnly) {
+      validateSourceColumnExists(sourceDatasourceId, sourceDatabase,
+          schemaForSource(model, sourceDatasourceId, sourceDatabase, sourceTable),
+          sourceTable, sourceColumn);
     }
-    String expressionError = TransformExpressionValidator.validate(transformExpr);
-    if (expressionError != null) {
-      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, expressionError);
-    }
-    validateSourceColumnExists(sourceDatasourceId, sourceDatabase,
-        schemaForSource(model, sourceDatasourceId, sourceDatabase, sourceTable),
-        sourceTable, sourceColumn);
 
     persistMapping(modelId, targetColumn, sourceDatasourceId, sourceDatabase, sourceTable, sourceColumn, transformExpr, stdProcessFieldId, operator);
   }
@@ -138,11 +133,11 @@ public class MappingService {
     po.setModelId(modelId);
     po.setTargetColumn(targetColumn);
     po.setSourceDatasourceId(sourceDatasourceId);
-    po.setSourceDatabase(sourceDatabase);
-    po.setSourceSchema(schemaForSource(requireModelForUpdate(modelId),
-        sourceDatasourceId, sourceDatabase, sourceTable));
-    po.setSourceTable(sourceTable);
-    po.setSourceColumn(sourceColumn);
+    po.setSourceDatabase(sourceDatasourceId == null ? null : sourceDatabase);
+    po.setSourceSchema(sourceDatasourceId == null ? null
+        : schemaForSource(requireModelForUpdate(modelId), sourceDatasourceId, sourceDatabase, sourceTable));
+    po.setSourceTable(sourceDatasourceId == null ? null : sourceTable);
+    po.setSourceColumn(sourceDatasourceId == null ? null : sourceColumn);
     po.setTransformExpr(transformExpr);
     po.setStdProcessFieldId(stdProcessFieldId);
     mappingRepository.upsert(po, operator);
@@ -183,21 +178,22 @@ public class MappingService {
   public void saveIfCurrent(Long modelId, String targetColumn, Long datasourceId, String database,
       String table, String sourceColumn, String expression, String expectedDefinition, String operator) {
     authorization.requirePermission(io.yak.ops.common.constant.modeling.ModelingPermissionCode.UPDATE);
-    authorization.requirePermission(io.yak.ops.common.constant.datasource.DataSourcePermissionCode.READ);
     var current = editContext(modelId, targetColumn);
     if (expectedDefinition == null || !expectedDefinition.matches("[0-9a-f]{64}")
         || !current.definition().equals(expectedDefinition)) {
       throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "目标字段或映射已变化，请刷新后重新核对");
     }
-    // Bypass discovery cache on the conditional editor path. External DDL is checked at this instant.
-    var boundModel = requireModelForUpdate(modelId);
-    String schema = schemaForSource(boundModel, datasourceId, database, table);
-    if (catalogReader.listColumnsFresh(datasourceId, database, schema, table).stream()
-        .noneMatch(c -> c.name().equalsIgnoreCase(sourceColumn))) {
-      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段已变化，请重新选择");
+    boolean expressionOnly = validateMappingInput(datasourceId, database, table, sourceColumn, expression);
+    if (!expressionOnly) {
+      authorization.requirePermission(io.yak.ops.common.constant.datasource.DataSourcePermissionCode.READ);
+      // External DDL is checked at this instant; expression-only mappings have no source to probe.
+      var boundModel = requireModelForUpdate(modelId);
+      String schema = schemaForSource(boundModel, datasourceId, database, table);
+      if (catalogReader.listColumnsFresh(datasourceId, database, schema, table).stream()
+          .noneMatch(c -> c.name().equalsIgnoreCase(sourceColumn))) {
+        throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段已变化，请重新选择");
+      }
     }
-    String expressionError = TransformExpressionValidator.validate(expression);
-    if (expressionError != null) throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, expressionError);
     persistMapping(modelId, current.column().columnName(), datasourceId, database, table, sourceColumn,
         expression, current.mapping().stdProcessFieldId(), operator);
   }
@@ -205,6 +201,43 @@ public class MappingService {
   private io.yak.ops.business.modeling.domain.Model requireModelForUpdate(Long modelId) {
     return modelRepository.findByIdForUpdate(modelId)
         .orElseThrow(() -> new ModelingException(ModelingErrorCode.NOT_FOUND, String.valueOf(modelId)));
+  }
+
+  private static boolean hasNoSource(Long datasourceId, String database, String table, String column) {
+    return datasourceId == null && !StringUtils.hasText(database)
+        && !StringUtils.hasText(table) && !StringUtils.hasText(column);
+  }
+
+  /** Derived from existing mapping content, not a second persisted mapping type. */
+  static boolean isExpressionOnly(ModelingColumnMappingPO mapping) {
+    return mapping != null && hasNoSource(mapping.getSourceDatasourceId(), mapping.getSourceDatabase(),
+        mapping.getSourceTable(), mapping.getSourceColumn()) && !StringUtils.hasText(mapping.getSourceSchema())
+        && StringUtils.hasText(mapping.getTransformExpr());
+  }
+
+  private static boolean validateMappingInput(Long datasourceId, String database,
+      String table, String column, String expression) {
+    boolean expressionOnly = hasNoSource(datasourceId, database, table, column);
+    if (expressionOnly && !StringUtils.hasText(expression)) {
+      throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "请选择源字段或填写表达式");
+    }
+    if (!expressionOnly) {
+      if (datasourceId == null || datasourceId <= 0) {
+        throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段映射请选择数据源");
+      }
+      if (!StringUtils.hasText(database)) {
+        throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段映射请选择源库");
+      }
+      if (!StringUtils.hasText(table)) {
+        throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段映射请选择源表");
+      }
+      if (!StringUtils.hasText(column)) {
+        throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, "源字段映射请选择源字段");
+      }
+    }
+    String error = TransformExpressionValidator.validate(expression);
+    if (error != null) throw new ModelingException(ModelingErrorCode.INVALID_COLUMN, error);
+    return expressionOnly;
   }
 
   /** 表达式语法校验(前端输入即时反馈)。 */

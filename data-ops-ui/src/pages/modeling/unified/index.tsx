@@ -1,8 +1,13 @@
 import { history, useLocation, useParams } from '@umijs/max';
-import { Descriptions, message, Modal, Tabs, Tag } from 'antd';
+import { message, Modal, Tabs, Tag } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
+import { useSecurityProject } from '@/contexts/SecurityProjectContext';
+import { useLatestOperation } from '@/hooks/useLatestOperation';
+import { ArrowLeftRight, Columns3, Database, GitBranch, History, Info, Network, RefreshCw } from 'lucide-react';
 import { YakButton, YakEmpty } from '@/components/ui';
-import { MODELING_DIALECT_LABELS, MODELING_PUBLISHED_EVENT, MODELING_STATUS_LABELS } from '@/pages/modeling/constants';
+import { MODELING_PUBLISHED_EVENT, MODELING_STATUS_LABELS } from '@/pages/modeling/constants';
+import ModelBasicInfoPanel from '@/pages/modeling/components/ModelBasicInfoPanel';
+import ModelPhysicalTablePanel from '@/pages/modeling/components/ModelPhysicalTablePanel';
 import ModelLineagePanel from '@/pages/modeling/components/ModelLineagePanel';
 import ModelVersionPanel from '@/pages/modeling/components/ModelVersionPanel';
 import ModelingModelDetail from '@/pages/modeling/detail';
@@ -10,7 +15,6 @@ import LogicalPhysicalEvidencePanel from '@/pages/modeling/components/LogicalPhy
 import type { ModelStructureEditorStatus } from '@/pages/modeling/detail';
 import ModelLifecycleTab from '@/pages/data-lifecycle/components/ModelLifecycleTab';
 import ModelingStudioHeader from '@/pages/modeling/components/ModelingStudioHeader';
-import LayerFieldMappingPage from '@/pages/modeling/layer-mapping';
 import MappingPanel from '@/pages/modeling/mapping';
 import { listDataSources } from '@/services/data-source/api';
 import type { DataSourceRecord } from '@/services/data-source/types';
@@ -26,9 +30,18 @@ const UnifiedModelView: React.FC = () => {
   const modelId = params.id;
   const location = useLocation();
   const queryTab = new URLSearchParams(location.search).get('tab');
-  const tabKeys = ['overview', 'logical', 'structure', 'mapping', 'layer-mapping', 'lineage', 'lifecycle', 'version'];
+  const { currentProject } = useSecurityProject();
+  const modelScope = JSON.stringify([currentProject?.id, modelId]);
+  const beginModelRead = useLatestOperation(modelScope);
+  const [loadedModel, setLoadedModel] = useState<{ scope: string; model: ModelingModelRecord }>();
+  const model = loadedModel?.scope === modelScope ? loadedModel.model : undefined;
+  const hasLogicalBasis = model?.id != null && String(model.id) === modelId
+    && Boolean(model.layerCode) && model.layerCode?.toUpperCase() !== 'ODS';
+  const showPhysicalTable = !model || (String(model.id) === modelId && model.layerCode?.toUpperCase() === 'ODS');
+  const tabKeys = ['overview', 'structure', 'mapping', 'lineage', 'lifecycle', 'version',
+    ...(showPhysicalTable ? ['physical'] : []),
+    ...(hasLogicalBasis ? ['logical'] : [])];
   const activeTab = queryTab && tabKeys.includes(queryTab) ? queryTab : 'structure';
-  const [model, setModel] = useState<ModelingModelRecord>();
   const [structureEditor, setStructureEditor] = useState<{
     modelId?: string; state: ModelStructureEditorStatus;
   }>();
@@ -70,26 +83,31 @@ const UnifiedModelView: React.FC = () => {
     if (!modelId) {
       return;
     }
+    const current = beginModelRead();
     getModelingModel(modelId)
-      .then((data) => setModel(data))
+      .then((data) => { if (current()) { setLoadedModel({ scope: modelScope, model: data }); setLoadError(false); } })
       .catch(() => {
+        if (!current()) return;
         setLoadError(true);
         message.error('加载模型信息失败');
       });
-  }, [modelId]);
+  }, [modelId, modelScope, beginModelRead]);
 
   useEffect(() => {
+    let active = true;
     if (!modelId) {
       return;
     }
+    setLoadedModel(undefined); setLayers([]); setDatasources([]); setLoadError(false);
     reloadModel();
     // 概览"分层/目标库/数据源"经分层配置与数据源目录解析(2026-09-17),失败不阻断概览
     listSemanticLayers()
-      .then((list) => setLayers(list ?? []))
-      .catch(() => setLayers([]));
+      .then((list) => { if (active) setLayers(list ?? []); })
+      .catch(() => { if (active) setLayers([]); });
     listDataSources({ pageNo: 1, pageSize: 200 })
-      .then((result) => setDatasources(result.bizData ?? []))
-      .catch(() => setDatasources([]));
+      .then((result) => { if (active) setDatasources(result.bizData ?? []); })
+      .catch(() => { if (active) setDatasources([]); });
+    return () => { active = false; };
   }, [modelId, reloadModel]);
 
   // 发布联动(01):直发或审批回调发布后,头部状态 Tag 与基本信息 Tab 同步刷新
@@ -106,63 +124,24 @@ const UnifiedModelView: React.FC = () => {
   // 模型关联分层 → 目标库/数据源展示名(只读解析,不改后端)
   const layer = model?.layerCode ? layers.find((item) => item.code === model.layerCode) : undefined;
   const layerLabel = layer ? `${layer.name}（${layer.code}）` : (model?.layerCode ?? '未关联');
-  const databaseName = layer?.databaseName ?? '-';
+  const isOdsModel = model?.layerCode?.toUpperCase() === 'ODS';
+  const databaseName = layer?.databaseName ?? '';
   const datasourceName = layer?.datasourceId
     ? (datasources.find((item) => item.id === layer.datasourceId)?.name ?? `#${layer.datasourceId}`)
-    : '-';
+    : '';
 
   // 来源数据源信息(用于血缘展示)
   const sourceDatasourceName = model?.sourceDatasourceId
     ? (datasources.find((item) => item.id === model.sourceDatasourceId)?.name ?? `#${model.sourceDatasourceId}`)
     : null;
-  const sourceFullTable = model?.sourceDatabase && model?.sourceTable
-    ? `${model.sourceDatabase}.${model.sourceTable}`
-    : model?.sourceTable ?? null;
+  const sourceFullTable = model?.sourceTable
+    ? [model.sourceDatabase, model.sourceSchema, model.sourceTable].filter(Boolean).join('.')
+    : null;
 
   const overview = model ? (
-    <div className="max-w-[880px]">
-      <Descriptions
-        bordered
-        size="small"
-        column={2}
-        items={[
-          { key: 'code', label: '模型编码', children: model.code },
-          { key: 'name', label: '模型名称', children: model.name },
-          { key: 'layer', label: '模型分层', children: layerLabel },
-          {
-            key: 'domain',
-            label: '业务域',
-            children: model.domainName || '未关联',
-          },
-          {
-            key: 'process',
-            label: '业务过程',
-            children: model.processName || '未关联',
-          },
-          { key: 'database', label: '目标库', children: databaseName },
-          { key: 'datasource', label: '数据源', children: datasourceName },
-          {
-            key: 'dialect',
-            label: '方言',
-            children: MODELING_DIALECT_LABELS[model.dialect || ''] || model.dialect || '-',
-          },
-          {
-            key: 'status',
-            label: '状态',
-            children: MODELING_STATUS_LABELS[model.status || ''] || model.status || '-',
-          },
-          { key: 'description', label: '描述', children: model.description || '-', span: 2 },
-          // 来源信息(其他)
-          ...(sourceDatasourceName || sourceFullTable
-            ? [
-                { key: 'sourceHeader', label: '来源信息', children: '', span: 2 },
-                { key: 'sourceDatasource', label: '来源数据源', children: sourceDatasourceName || '-' },
-                { key: 'sourceTable', label: '来源表', children: sourceFullTable || '-' },
-              ]
-            : []),
-        ]}
-      />
-    </div>
+    <ModelBasicInfoPanel model={model} layerLabel={layerLabel}
+      databaseName={databaseName} datasourceName={datasourceName}
+      sourceDatasourceName={sourceDatasourceName} sourceFullTable={sourceFullTable} />
   ) : (
     <YakEmpty
       compact
@@ -172,6 +151,7 @@ const UnifiedModelView: React.FC = () => {
   );
 
   const openTab = (tab: string) => {
+    if (tab === activeTab) return;
     const query = new URLSearchParams(location.search);
     query.set('tab', tab);
     guardDraftAndNavigate(() => history.replace({ pathname: location.pathname, search: '?' + query.toString() }));
@@ -179,24 +159,31 @@ const UnifiedModelView: React.FC = () => {
 
   // Keep legacy deep links, but only surface tasks that have real working panels.
   const sections = [
-    { key: 'design', name: '设计工作台', description: '结构、逻辑与映射', tabs: ['structure', 'logical', 'mapping', 'layer-mapping'], defaultTab: 'structure' },
-    { key: 'history', name: '版本与关联', description: '版本、血缘和生命周期', tabs: ['version', 'lineage', 'lifecycle'], defaultTab: 'version' },
-    { key: 'overview', name: '模型资料', description: '业务与技术归属', tabs: ['overview'], defaultTab: 'overview' },
+    { key: 'overview', name: '基本信息', tabs: ['overview'] },
+    { key: 'design', name: '设计工作台', tabs: hasLogicalBasis
+      ? ['structure', 'logical', 'mapping'] : ['structure', ...(showPhysicalTable ? ['physical'] : []), 'mapping'] },
+    { key: 'history', name: '版本与关联', tabs: ['version', 'lineage', 'lifecycle'] },
   ];
   const section = sections.find((item) => item.tabs.includes(activeTab)) ?? sections[0];
   const items = [
-    { key: 'structure', label: '模型设计', children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
-    { key: 'logical', label: '业务逻辑依据', children: <LogicalPhysicalEvidencePanel
+    { key: 'overview', label: '基本信息', icon: <Info size={16} aria-hidden />,
+      children: overview },
+    { key: 'structure', label: '模型设计', icon: <Columns3 size={16} aria-hidden />,
+      children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
+    ...(showPhysicalTable ? [{ key: 'physical', label: '物理表', icon: <Database size={16} aria-hidden />,
+      children: model && String(model.id) === modelId ? <ModelPhysicalTablePanel model={model}
+        defaultTargetId={layer?.datasourceId} defaultDatabase={layer?.databaseName} />
+        : <YakEmpty compact title={loadError ? '加载失败' : '加载模型中…'} /> }] : []),
+    ...(hasLogicalBasis ? [{ key: 'logical', label: '业务逻辑依据', icon: <GitBranch size={16} aria-hidden />, children: <LogicalPhysicalEvidencePanel
       model={model?.id != null && String(model.id) === modelId ? model : undefined}
       search={location.search}
       onNavigateLogical={(path) => guardDraftAndNavigate(() => history.push(path))}
-    /> },
-    { key: 'mapping', label: '来源映射', children: <MappingPanel /> },
-    { key: 'layer-mapping', label: '字段分层映射', children: <LayerFieldMappingPage /> },
-    { key: 'version', label: '设计版本', children: <ModelVersionPanel /> },
-    { key: 'lineage', label: '血缘关系', children: <ModelLineagePanel /> },
-    { key: 'lifecycle', label: '生命周期', children: <ModelLifecycleTab modelId={modelId ? Number(modelId) : null} /> },
-    { key: 'overview', label: '模型基本信息', children: overview },
+    /> }] : []),
+    { key: 'mapping', label: '来源映射', icon: <ArrowLeftRight size={16} aria-hidden />, children: <MappingPanel /> },
+    { key: 'version', label: '版本管理', icon: <History size={16} aria-hidden />, children: <ModelVersionPanel /> },
+    { key: 'lineage', label: '血缘关系', icon: <Network size={16} aria-hidden />, children: <ModelLineagePanel /> },
+    { key: 'lifecycle', label: '生命周期', icon: <RefreshCw size={16} aria-hidden />,
+      children: <ModelLifecycleTab modelId={modelId ? Number(modelId) : null} /> },
   ];
   const layerDescription: Record<string, string> = {
     ODS: '核对来源表、字段与物理结构，并保持保存后的来源回链。',
@@ -207,11 +194,11 @@ const UnifiedModelView: React.FC = () => {
   };
 
   return (
-    <div className="modeling-studio-page modeling-studio-detail">
+    <div className={'modeling-studio-page modeling-studio-detail' + (isOdsModel ? ' modeling-studio-detail-ods' : '')}>
       <ModelingStudioHeader area="physical" title={model?.name || '物理模型设计工作台'}
-        eyebrow="数据建设 / 数仓建模 / 模型设计"
-        description={layerDescription[(model?.layerCode || '').toUpperCase()] ||
-          '在同一物理模型对象中核对业务依据、数据结构、映射与发布版本。'}
+        eyebrow={isOdsModel ? null : '数据建设 / 数仓建模 / 模型设计'}
+        description={isOdsModel ? undefined : (layerDescription[(model?.layerCode || '').toUpperCase()] ||
+          '在同一物理模型对象中核对业务依据、数据结构、映射与发布版本。')}
         context={<>
           <span>分层：{layerLabel}</span>
           {model?.code ? <span>编码：{model.code}</span> : null}
@@ -223,27 +210,36 @@ const UnifiedModelView: React.FC = () => {
           <YakButton onClick={() => guardDraftAndNavigate(() => history.push('/modeling'))}>返回模型库</YakButton>
         </>} />
 
-      <section className="modeling-studio-detail-context" aria-label="当前模型设计边界">
+      {!isOdsModel ? <section className="modeling-studio-detail-context" aria-label="当前模型设计边界">
         <div><strong>当前对象</strong><div>{model?.name || '加载模型中'} · {model?.layerCode || '未配置分层'}</div></div>
         <div><strong>设计目标</strong><div>{model?.processName || '业务过程未关联'}</div></div>
         <div><strong>发布事实</strong><div>{model?.status ? (MODELING_STATUS_LABELS[model.status] || model.status) : '加载中'}</div></div>
         <span>设计发布不代表 SQL 运行、目标数据写入或消费授权</span>
-      </section>
+      </section> : null}
 
-      <nav className="modeling-studio-group-switch" aria-label="模型详情工作区域">
-        {sections.map((entry) => (
-          <button key={entry.key} type="button"
-            aria-current={section.key === entry.key ? 'page' : undefined}
-            className={'modeling-studio-group-button' + (section.key === entry.key ? ' is-active' : '')}
-            onClick={() => openTab(entry.defaultTab)}>
-            <strong>{entry.name}</strong><span>{entry.description}</span>
-          </button>
-        ))}
-      </nav>
-      <section className="modeling-studio-content" aria-label={section.name}>
-        <Tabs activeKey={activeTab} onChange={openTab}
-          items={items.filter((item) => section.tabs.includes(item.key))} />
-      </section>
+      <Tabs id="modeling-detail" className="modeling-studio-workspace" tabPosition="left"
+        activeKey={activeTab} onChange={openTab}
+        items={items.filter((item) => section.tabs.includes(item.key))}
+        renderTabBar={({ id }) => (
+          <nav className="modeling-studio-detail-nav" aria-label="模型详情导航">
+            <div className="modeling-studio-detail-nav-inner">
+              {sections.map((group) => (
+                <div key={group.key} className="modeling-studio-nav-group">
+                  {group.key !== 'overview' ? <h2>{group.name}</h2> : null}
+                  {items.filter((item) => group.tabs.includes(item.key)).map((item) => (
+                    <button key={item.key} type="button" id={`${id}-tab-${item.key}`}
+                      aria-current={activeTab === item.key ? 'page' : undefined}
+                      aria-controls={`${id}-panel-${item.key}`}
+                      className={'modeling-studio-nav-item' + (activeTab === item.key ? ' is-active' : '')}
+                      onClick={() => openTab(item.key)}>
+                      {item.icon}<span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </nav>
+        )} />
     </div>
   );
 

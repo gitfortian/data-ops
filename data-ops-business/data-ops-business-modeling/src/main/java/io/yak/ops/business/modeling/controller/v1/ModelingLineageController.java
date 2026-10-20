@@ -14,6 +14,7 @@ import io.yak.ops.business.lineage.domain.LineageRelation;
 import io.yak.ops.business.lineage.domain.LineageRelationType;
 import io.yak.ops.business.lineage.query.LineageQueryService;
 import io.yak.ops.business.modeling.lineage.ModelingLineageRegistrationService;
+import io.yak.ops.business.modeling.lineage.ModelingLineageGraphReader;
 import io.yak.ops.common.constant.modeling.ModelingPermissionCode;
 import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
@@ -45,6 +46,7 @@ public class ModelingLineageController {
   private static final Logger log = LoggerFactory.getLogger(ModelingLineageController.class);
 
   private final ModelingLineageRegistrationService registrationService;
+  private final ModelingLineageGraphReader graphReader;
   private final LineageQueryService lineageQueryService;
   private final CurrentUserProvider currentUserProvider;
 
@@ -107,27 +109,14 @@ public class ModelingLineageController {
     return Result.success(asset != null ? asset.id() : null);
   }
 
-  @Operation(summary = "查询模型血缘图（跨模块多跳遍历；未登记时自动触发登记）")
+  @Operation(summary = "查询模型血缘图（只读合并已登记关系与 ODS 来源绑定）")
   @GetMapping("/graph")
   public Result<GraphView> graph(
       @PathVariable("modelId") Long modelId,
       @RequestParam(value = "direction", defaultValue = "BOTH") LineageDirection direction,
       @RequestParam(value = "depth", defaultValue = "3")
-          @Min(1) @Max(LineageQueryService.MAX_GRAPH_DEPTH) int depth,
-      HttpServletRequest httpRequest) {
-    String key = assetKey(modelId);
-    LineageAsset asset = findAssetByKeySafe(key);
-    if (asset == null) {
-      // Auto-register so the graph is available on first query.
-      String operator = currentUserProvider.getCurrentUser(httpRequest);
-      registrationService.registerModel(modelId, operator);
-      asset = findAssetByKeySafe(key);
-    }
-    if (asset == null) {
-      return Result.success(null);
-    }
-    LineageGraph graph = lineageQueryService.graph(asset.id(), direction, depth);
-    return Result.success(toGraphView(graph));
+          @Min(1) @Max(LineageQueryService.MAX_GRAPH_DEPTH) int depth) {
+    return Result.success(toGraphView(graphReader.graph(modelId, direction, depth)));
   }
 
   private static GraphView toGraphView(LineageGraph value) {

@@ -5,7 +5,7 @@ import { MODELING_DIALECT_OPTIONS, toSnakeCase } from '@/pages/modeling/constant
 import type { ModelingCreatePayload, ModelingDialect } from '@/services/modeling/types';
 import type { SemanticDomainNode, SemanticLayerRecord, SemanticProcessRecord } from '@/services/semantic/types';
 import { collectDomainSubtreeIds, toDomainTreeData } from '@/services/semantic/domainTree';
-import { creationNextStep, requiresLogicalBasis, rootDomainForProcess, verifiedProcessInDomain } from './modelCreationScope';
+import { rootDomainForProcess, verifiedProcessInDomain } from './modelCreationScope';
 import ModelCreationLogicalBasis from './ModelCreationLogicalBasis';
 
 export interface WizardSubmitPayload {
@@ -42,7 +42,6 @@ const ModelCreateWizardDrawer = ({
 }: ModelCreateWizardDrawerProps) => {
   const [form] = Form.useForm<WizardFormValues>();
   const codeManuallyEdited = useRef(false);
-  const userEdited = useRef(false);
   const initialized = useRef(false);
   const selectedLayerCode = Form.useWatch('layerCode', form);
   const selectedName = Form.useWatch('name', form);
@@ -72,7 +71,6 @@ const ModelCreateWizardDrawer = ({
       form.setFieldsValue({ domainId: initialRoot, processId: initialProcessId });
     }
     codeManuallyEdited.current = false;
-    userEdited.current = false;
     initialized.current = true;
   }, [form, open, initialProcessId, initialRoot, scopeNotReady]);
 
@@ -83,18 +81,25 @@ const ModelCreateWizardDrawer = ({
     form.setFieldsValue({ code: code.replace(/_+/g, '_').replace(/^_+|_+$/g, '') });
   }, [selectedName, selectedLayerCode, form, open]);
 
+  const hasUnsubmittedModelDetails = () => {
+    const entered = form.getFieldsValue(['processId', 'name', 'code', 'dialect', 'description']);
+    // Business domain and target layer are navigation context, not a model
+    // draft. Only values that would be lost from the model itself need a guard.
+    return Boolean(entered.processId || entered.name?.trim() || entered.code?.trim()
+      || (entered.dialect && entered.dialect !== 'MYSQL') || entered.description?.trim());
+  };
+
   const discardAndExit = (callback: () => void) => {
     if (loading) return;
-    if (userEdited.current) {
+    if (hasUnsubmittedModelDetails()) {
       Modal.confirm({
         title: '物理模型草稿尚未创建',
         content: '离开将放弃向导中尚未提交的名称、业务过程和物理配置。需要保存时请选择“继续编辑”。',
         cancelText: '继续编辑', okText: '放弃并离开', okType: 'danger',
-        onOk: () => { form.resetFields(); userEdited.current = false; callback(); },
+        onOk: () => { form.resetFields(); callback(); },
       });
     } else {
       form.resetFields();
-      userEdited.current = false;
       callback();
     }
   };
@@ -148,7 +153,6 @@ const ModelCreateWizardDrawer = ({
       <Form form={form} layout="vertical" requiredMark
         initialValues={{ dialect: 'MYSQL' }}
         onValuesChange={(changed: Partial<WizardFormValues>, all: WizardFormValues) => {
-          userEdited.current = true;
           // Only an explicit user domain change may invalidate a process; do
           // not clear a verified prefill just because useWatch fires.
           if (Object.prototype.hasOwnProperty.call(changed, 'domainId')
@@ -170,18 +174,12 @@ const ModelCreateWizardDrawer = ({
               allowClear={!processScoped} disabled={processScoped || scopeNotReady}
               placeholder="选择正式业务域（仅根域可选）" />
           </Form.Item>
-          <Form.Item name="processId" label="业务过程（推荐选择）">
+          <Form.Item name="processId" label="业务过程">
             <Select showSearch optionFilterProp="label" allowClear={!processScoped}
               disabled={!selectedDomainId || processScoped || scopeNotReady}
               placeholder={selectedDomainId ? '选择当前业务域下的业务过程' : '先选择业务域'}
               options={filteredProcesses.map(p => ({ value: p.id, label: `${p.name} · ${p.grain || '粒度待确认'}` }))} />
           </Form.Item>
-          {selectedProcess ? <Alert showIcon type={selectedProcess.grain ? 'info' : 'warning'}
-            message={`当前业务过程：${selectedProcess.name}`}
-            description={`业务粒度：${selectedProcess.grain || '尚未确认，建议先返回业务过程核对。'} · 类型：${selectedProcess.bizType === 'FACT' ? '事实' : '维度'}。后续物理设计仍需独立核验逻辑版本。`} />
-            : !scopeNotReady ? <Alert showIcon type="info"
-              message="业务过程尚未选定"
-              description="可以建立独立的物理设计草稿，但不会凭名称猜测业务过程或逻辑模型。" /> : null}
         </section>
 
         <section className="mb-4 rounded-xl border border-[#e4e9f0] bg-white p-5 max-sm:p-4">
@@ -191,17 +189,13 @@ const ModelCreateWizardDrawer = ({
           </Typography.Paragraph>
           <Form.Item name="layerCode" label="数仓目标分层" rules={[{ required: true, message: '请选择目标分层' }]}>
             <Select placeholder="选择已配置的数仓分层"
-              options={layers.map(layer => ({ value: layer.code, label: `${layer.name}（${layer.code}）` }))}
-              onChange={(value) => {
-                if (value !== 'ODS' || !onGoSource) return;
-                // ODS's own source-first workspace must not inherit a mandatory
-                // business-domain constraint from the non-ODS creation wizard.
-                const entered = form.getFieldsValue(['domainId','processId','name','description']);
-                const hasEdited = Boolean(entered.domainId || entered.processId || entered.name || entered.description);
-                if (hasEdited) discardAndExit(onGoSource);
-                else { form.resetFields(); userEdited.current = false; onGoSource(); }
-              }} />
+              options={layers.map(layer => ({ value: layer.code, label: `${layer.name}（${layer.code}）` }))} />
           </Form.Item>
+          {selectedLayerCode === 'ODS' && onGoSource ? (
+            <Button type="link" className="!mb-3 !px-0" onClick={() => discardAndExit(onGoSource)}>
+              从来源表选择并自动带入结构
+            </Button>
+          ) : null}
           <Form.Item name="dialect" label="目标数据库方言" rules={[{ required: true, message: '请选择目标方言' }]}>
             <Select options={MODELING_DIALECT_OPTIONS} placeholder="选择目标数据库方言" />
           </Form.Item>
@@ -229,9 +223,6 @@ const ModelCreateWizardDrawer = ({
             }}
           />
         </section>
-        <Alert showIcon type={requiresLogicalBasis(selectedLayerCode) && !selectedProcess ? 'warning' : 'info'}
-          message="提交后进入该物理模型的表结构工作区"
-          description={creationNextStep(selectedLayerCode)} />
       </Form>
     </Drawer>
   );

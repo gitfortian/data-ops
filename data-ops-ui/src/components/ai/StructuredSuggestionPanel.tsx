@@ -18,6 +18,7 @@ interface Props<T extends object, C, V extends ScenarioValue<T, C>> {
   renderCandidate: (candidate: C) => ReactNode;
   withKeyword?: (target: T, keyword: string) => T;
   sourceLabel?: string;
+  compact?: boolean;
   onApply?: (candidate: C) => void;
   onActivityChange?: (blocked: boolean) => void;
   verifyResult?: (value: V) => Promise<void>;
@@ -30,7 +31,7 @@ export default function StructuredSuggestionPanel<T extends object, C, V extends
 
 function ScopedStructuredSuggestionPanel<T extends object, C, V extends ScenarioValue<T, C>>({
   target, definition, disabled, title, notice, summary, question, generateLabel, adoptLabel,
-  bindTarget, selectTarget, parse, validate, candidateKey, renderCandidate, onApply, withKeyword, sourceLabel, onActivityChange, verifyResult,
+  bindTarget, selectTarget, parse, validate, candidateKey, renderCandidate, onApply, withKeyword, sourceLabel, compact = false, onActivityChange, verifyResult,
 }: Props<T, C, V>) {
   const [keyword, setKeyword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -177,10 +178,11 @@ function ScopedStructuredSuggestionPanel<T extends object, C, V extends Scenario
     } catch { if (live.current && epoch.current === version) { setSuggestion(null); setError('候选或来源暂无法核对，请重新加载原编辑器后生成。'); } }
     finally { if (live.current && epoch.current === version) { busyRef.current = false; setBusy(false); } }
   };
-  return <Card size="small" title={title}>
+  return <Card size="small" title={compact ? undefined : title} bordered={!compact}
+    styles={compact ? { body: { padding: 0 } } : undefined}>
     <Space direction="vertical" className="w-full">
-      <Alert type="info" message={notice} />
-      <div>{summary}</div>
+      {!compact && <Alert type="info" message={notice} />}
+      {!compact && <div>{summary}</div>}
       {withKeyword && <Input value={keyword} onChange={e => {
         if (busyRef.current) return;
         setKeyword(e.target.value);
@@ -189,7 +191,8 @@ function ScopedStructuredSuggestionPanel<T extends object, C, V extends Scenario
         if (selected.current && !sameScenarioTarget(currentTarget.current, selected.current)) {
           setError(blocked.current ? '检索条件已变化，旧候选已失效；请先停止或刷新核对本轮状态。' : '检索条件已变化，旧候选已失效，请重新生成。');
         }
-      }} maxLength={64} disabled={busy || disabled} placeholder="字段/标准检索词（可空，读取有界目录）" />}
+      }} maxLength={64} disabled={busy || disabled}
+        placeholder={compact ? '检索词（可选）' : '字段/标准检索词（可空，读取有界目录）'} />}
       <Space wrap>
         <Button onClick={() => void run()} loading={busy} disabled={disabled || busy || !definition || blocked.current}>{generateLabel}</Button>
         {running && <Button onClick={() => void stop()} disabled={disabled || stopping || checking} loading={stopping}>停止本轮</Button>}
@@ -197,7 +200,10 @@ function ScopedStructuredSuggestionPanel<T extends object, C, V extends Scenario
         {sessionId && <a href={sessionLocation(sessionId)} target="_blank" rel="noopener noreferrer">查看原会话</a>}
       </Space>
       {error && <Alert type="error" message={error} />}
-      {suggestion && <p>Skill v{suggestion.skillVersion} · {suggestion.truncated ? '候选目录已截断，请缩小检索范围' : (sourceLabel || '候选来自当前授权目录')}</p>}
+      {suggestion && (!compact || suggestion.truncated) && <p>
+        {!compact && <>Skill v{suggestion.skillVersion} · </>}
+        {suggestion.truncated ? '候选目录已截断，请缩小检索范围' : (sourceLabel || '候选来自当前授权目录')}
+      </p>}
       {suggestion?.questions.map(q => <Alert key={q} type="warning" message={q} />)}
       {suggestion && !suggestion.candidates.length && <p>没有可带入的候选，请补充业务说明或核对来源后重新生成。</p>}
       {suggestion?.candidates.map(c => <Card size="small" key={candidateKey(c)}>
