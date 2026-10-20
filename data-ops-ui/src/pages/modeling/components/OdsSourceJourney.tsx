@@ -386,14 +386,14 @@ const OdsSourceJourney = () => {
     <div className="ods-workbench" data-testid="ods-source-workbench">
       <header className="ods-workbench-head">
         <div>
-          <h1>ODS 贴源建模</h1>
-          <p>核对来源表，选择已有 ODS 或创建新草稿。保存后可返回原始表。</p>
+          <h1>ODS 物理建模</h1>
+          <p>确认来源和字段后保存一份完整的 ODS 模型设计；建表、发布和同步分别进行。</p>
         </div>
         <Space wrap>
           <Button onClick={() => navigateSafely(sourceReturn)}>
-            {liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}
+            {fromModeling ? '返回物理模型' : liveSourceReturn ? '返回数据源表结构' : '返回来源物理表'}
           </Button>
-          <Button type="text" onClick={() => navigateSafely('/modeling')}>建模工作台</Button>
+
         </Space>
       </header>
 
@@ -447,10 +447,10 @@ const OdsSourceJourney = () => {
               <div className="ods-workbench-section-title">
                 <div>
                   <h2>源表字段与映射</h2>
-                  <p>读取实时源表结构，核对字段类型和主键，再确认对应的 ODS 字段。</p>
+                  <p>选定源表后自动核验来源字段、类型、主键与可空性；请审阅自动建立的一一映射。</p>
                 </div>
                 <Button type="primary" loading={previewBusy} disabled={Boolean(savedId)}
-                  onClick={() => void preview()}>读取当前物理列并核对</Button>
+                  onClick={() => void preview()}>{physicalColumns.length ? '重新读取字段' : '重试读取源字段'}</Button>
               </div>
               <Alert className="ods-workbench-alert" type="info" showIcon
                 message={lookup?.reason || '当前项目尚无精确同源 ODS'}
@@ -483,18 +483,21 @@ const OdsSourceJourney = () => {
                   {!validMappings && <Alert className="ods-workbench-alert"
                     type="error" showIcon message="字段名必须合法且互不重复；未满足时不允许提交。" />}
                 </>
-              ) : <div className="ods-workbench-empty">尚未读取本次实时字段。点击右上方操作开始核对；不会因此执行采集或建表。</div>}
+              ) : <div className="ods-workbench-empty">
+                {previewBusy ? '正在自动读取当前源表字段…' : '暂无已核验的源字段；读取失败时可重新尝试。'}
+                本操作不会采集元数据或执行建表。
+              </div>}
             </section>
 
             <section className="ods-workbench-card" aria-label="目标 ODS 草稿配置">
               <div className="ods-workbench-section-title">
                 <div><h2>目标 ODS 模型</h2>
-                  <p>创建可恢复的物理模型草稿，再原子保存表结构与逐列来源映射。</p></div>
+                  <p>模型名称和编码已按来源推荐；检查 ODS 目标数据库方言，一次保存完整设计。</p></div>
                 {savedDraft?.id ? <Tag color="blue">草稿 #{savedDraft.id}</Tag> : null}
               </div>
               {savedDraft ? (
                 <Alert className="ods-workbench-alert" type={savedId ? 'success' : 'warning'} showIcon
-                  message={`已保存空草稿 #${savedDraft.id}，字段映射${savedId ? '已提交' : '尚未提交'}`}
+                  message={savedId ? `ODS 设计已完整保存 · #${savedId}` : `已找到可恢复草稿 #${savedDraft.id}`}
                   description="刷新后使用真实草稿 ID 恢复。失败后先核对已有模型，禁止重复创建同一目标。" />
               ) : (
                 <div className="ods-workbench-form">
@@ -509,7 +512,7 @@ const OdsSourceJourney = () => {
                   <label>目标方言
                     <Select aria-label="目标方言" className="ods-workbench-select"
                       value={dialect || undefined} onChange={v => { setDirty(true); setDialect(v); }}
-                      options={MODELING_DIALECT_OPTIONS} placeholder="选择目标数据库方言" />
+                      options={MODELING_DIALECT_OPTIONS} placeholder="选择 ODS 目标方言（不是业务源数据库）" />
                   </label>
                 </div>
               )}
@@ -521,32 +524,27 @@ const OdsSourceJourney = () => {
         {newTarget && (
           <footer className="ods-workbench-actionbar" aria-label="保存与后续操作">
             <div className="ods-workbench-action-copy">
-              <strong>{savedId ? 'ODS 已成功保存' : savedDraft ? '待提交字段与来源映射'
-                : physicalColumns.length ? '确认字段后保存草稿' : '请先读取真实源列'}</strong>
-              <span>{savedId ? '已核验 Modeling 服务端保存回执，可返回原表或打开模型。'
-                : savedDraft ? '空草稿不是完整 ODS；请确认字段映射后提交。'
-                : physicalColumns.length ? '保存草稿只建立模型身份，不代表结构和映射已提交。'
-                : '未读取源列前不能创建 ODS 草稿。'}</span>
+              <strong>{savedId ? 'ODS 设计已保存' : savedDraft ? '继续保存 ODS 设计'
+                : physicalColumns.length ? '确认来源与目标配置后保存' : '正在自动核验来源字段'}</strong>
+              <span>{savedId ? '模型、字段和全部来源映射已经回读确认，可以继续完善物理设计。'
+                : savedDraft ? '已有可恢复草稿，点击保存将原子提交结构和全部字段映射。'
+                : '点击一次保存，系统会自动处理可恢复草稿及全列映射；不会执行 DDL。'}</span>
             </div>
             <Space wrap>
               {savedId ? (
                 <>
                   <Button onClick={() => history.push(modelDetailPath(savedId))}>打开 ODS</Button>
-                  <Button type="primary" onClick={() => history.push(sourceReturn)}>保存并返回来源</Button>
+                  <Button type="primary" onClick={() => history.push(sourceReturn)}>
+                    {fromModeling ? '返回物理模型' : '保存并返回来源'}
+                  </Button>
                 </>
-              ) : !savedDraft ? (
-                <Button type="primary" loading={creating}
-                  disabled={!validMappings || !dialect
-                    || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code)
-                    || !name.trim() || !can('modeling:create')}
-                  onClick={() => void createDraft()}>保存可恢复的空 ODS 草稿</Button>
               ) : (
-                <>
-                  <Button onClick={() => history.push(modelDetailPath(Number(savedDraft.id)))}>打开已保存的模型 #{savedDraft.id}</Button>
-                  <Button type="primary" loading={committing}
-                    disabled={!validMappings || !can('modeling:update')}
-                    onClick={() => void commit()}>确认并原子保存结构与映射</Button>
-                </>
+                <Button type="primary" loading={savingDesign || creating || committing}
+                  disabled={!validMappings || !dialect || creationUnknown
+                    || !/^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/.test(code)
+                    || !name.trim() || !can('modeling:update')
+                    || (!savedDraft && !can('modeling:create'))}
+                  onClick={() => void saveOdsDesign()}>保存 ODS 设计</Button>
               )}
             </Space>
           </footer>

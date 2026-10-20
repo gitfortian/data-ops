@@ -5,6 +5,8 @@ import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { listAllDataSources } from '@/services/data-source/api';
 import LiveSchemaExplorer from '@/pages/data-source/components/LiveSchemaExplorer';
+import type { LiveSourceCoordinate } from '@/utils/liveSourceOdsJourney';
+import '@/pages/data-source/index.less';
 import { buildLiveSourceOdsPath } from '@/utils/liveSourceOdsJourney';
 
 /**
@@ -45,9 +47,7 @@ export default function OdsSourceSelector() {
     return () => { active = false; };
   }, [allowed, projectId]);
 
-  const openSource = (source: Parameters<NonNullable<
-    React.ComponentProps<typeof LiveSchemaExplorer>['onOpenOds']
-  >>[0]) => {
+  const openSource = (source: LiveSourceCoordinate) => {
     const route = buildLiveSourceOdsPath(source);
     if (!route || Number(source.dataSourceId) !== selectedId
         || !sources.some(item => item.id === selectedId)) {
