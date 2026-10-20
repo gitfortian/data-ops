@@ -104,7 +104,7 @@ it('keeps prior project data hidden immediately after switching the active proje
   mockModels.mockImplementation(() => new Promise(() => {}));
   rerender(<ModelingOverviewDashboard />);
   expect(screen.queryByRole('button', { name: /物理模型.*9/ })).not.toBeInTheDocument();
-  expect(screen.getByText('当前项目 #99')).toBeInTheDocument();
+  expect(screen.queryByText('当前项目 #99')).not.toBeInTheDocument();
 });
 
 it('does not fabricate layer configuration or process count without semantic read permission', async () => {
