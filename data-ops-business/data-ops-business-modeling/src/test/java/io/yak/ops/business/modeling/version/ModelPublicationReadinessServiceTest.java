@@ -284,6 +284,45 @@ class ModelPublicationReadinessServiceTest {
   }
 
   @Test
+  void dwdCrossTargetSavedMappingIsNeverPresentedAsFrozenForCurrentModel() {
+    mockModel("DWD");
+    var mappings = mock(io.yak.ops.business.modeling.mapping.DwdMappingDraftService.class);
+    var wrong = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Draft(
+        31L, 999L, 21L, 4, "c".repeat(64), "d".repeat(64),
+        8L, List.of(), "DRAFT_SAVED_NOT_PUBLISHED");
+    when(mappings.get(701L)).thenReturn(wrong);
+    preview = new ModelPublicationReadinessService(
+        models, structures, project, semantic, mappings);
+    var report = preview.inspect(701L);
+    assertThat(report.mapping()).isNotNull();
+    assertThat(report.mapping().status()).isEqualTo("UNKNOWN");
+    assertThat(report.mapping().mappingRevisionId()).isNull();
+    assertThat(report.authorizedForPublication()).isFalse();
+    verify(mappings, never()).revisions(701L);
+  }
+
+  @Test
+  void dwdFrozenMappingFromAnotherSetCannotBeTreatedAsCurrent() {
+    mockModel("DWD");
+    var mappings = mock(io.yak.ops.business.modeling.mapping.DwdMappingDraftService.class);
+    var draft = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Draft(
+        31L, 701L, 21L, 4, "c".repeat(64), "d".repeat(64),
+        8L, List.of(), "DRAFT_SAVED_NOT_PUBLISHED");
+    var foreign = new io.yak.ops.business.modeling.mapping.DwdMappingDraftService.Frozen(
+        41L, 888L, 3, "e".repeat(64), 8L, "FROZEN_DESIGN_ONLY");
+    when(mappings.get(701L)).thenReturn(draft);
+    when(mappings.revisions(701L)).thenReturn(List.of(foreign));
+    preview = new ModelPublicationReadinessService(
+        models, structures, project, semantic, mappings);
+    var report = preview.inspect(701L);
+    assertThat(report.mapping()).isNotNull();
+    assertThat(report.mapping().status()).isEqualTo("UNKNOWN");
+    assertThat(report.mapping().mappingRevisionId()).isNull();
+    assertThat(report.authorizedForPublication()).isFalse();
+    verify(mappings, never()).revisionDetail(701L, 41L);
+  }
+
+  @Test
   void odsCannotEnterNonOdsPublicationEvidenceFlow() {
     mockModel("ODS");
     assertThrows(IllegalArgumentException.class, () -> preview.inspect(701L));
