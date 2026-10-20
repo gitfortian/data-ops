@@ -17,6 +17,7 @@ export const YAK_OPS_MENU_CODES = {
   workflowDefinition: 'workflow-definition',
   workflowInstances: 'workflow-instances',
   dataSource: 'data-source',
+  dataSourceExplore: 'data-source-explore',
   sqlExecutionAudit: 'sql-execution-audit',
   resourceManagement: 'resource-management',
   dataQuality: 'data-quality',

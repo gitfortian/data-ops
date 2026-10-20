@@ -44,7 +44,7 @@ export function buildLiveSourceReturnPath(value: LiveSourceCoordinate): string |
     table: value.table,
   });
   if (value.schema) q.set('schema', value.schema);
-  return `/data-source?${q}`;
+  return `/data-source/explore?${q}`;
 }
 
 /** An invalid or partial deep link must not open a different source silently. */

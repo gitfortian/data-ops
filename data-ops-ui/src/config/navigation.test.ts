@@ -219,6 +219,22 @@ describe('permission-aware navigation', () => {
     expect(getActiveNavigationId('/home', [])).toBe('home');
   });
 
+  it('allows the new explore page only under the existing data-source permission and menu grant', () => {
+    const read = ['resource:data-source:read'];
+    const menu = [YAK_OPS_MENU_CODES.dataSource];
+    const route = appRoutes.find(item => item.id === 'data-source-explore')!;
+    expect(route.path).toBe('/data-source/explore');
+    expect(resolveNavigationMenuCode(route)).toBe(YAK_OPS_MENU_CODES.dataSourceExplore);
+    expect(canAccessNavigationRoute(route, read, menu)).toBe(false);
+    expect(canAccessNavigationRoute(route, read, [YAK_OPS_MENU_CODES.dataSourceExplore, YAK_OPS_MENU_CODES.dataSource])).toBe(true);
+    expect(canAccessNavigationRoute(route, read, [])).toBe(false);
+    expect(canAccessNavigationRoute(route, [], menu)).toBe(false);
+    expect(getActiveNavigationId('/data-source/explore', read, menu)).toBeUndefined();
+    expect(getActiveNavigationId('/data-source/explore', read, [YAK_OPS_MENU_CODES.dataSource, YAK_OPS_MENU_CODES.dataSourceExplore])).toBe('data-source-explore');
+    const group = getMainNavigationGroups(read, [YAK_OPS_MENU_CODES.dataSource, YAK_OPS_MENU_CODES.dataSourceExplore]).find(g => g.id === 'integration');
+    expect(group?.routes.map(item => item.id)).toEqual(['data-source', 'data-source-explore']);
+  });
+
   it('moved data-source into the integration domain with its menu grant intact', () => {
     expect(
       getStandaloneNavigationRoutes(
@@ -289,6 +305,19 @@ describe('permission-aware navigation', () => {
     expect(
       getActiveNavigationId('/data-quality/execution/QM-20260807095619-ABC123', qualityPermissions),
     ).toBe('data-quality-execution');
+  });
+
+  it('hides the realtime-sync feature entry and its quick-create menu while preserving historical authorized routes', () => {
+    const grants = ['task:realtime:read', 'task:realtime:create', 'task:batch:read', 'task:batch:create'];
+    const menuCodes = [YAK_OPS_MENU_CODES.realtimeSync, YAK_OPS_MENU_CODES.batchLinkUp];
+    const group = getMainNavigationGroups(grants, menuCodes).find(g => g.id === 'integration');
+    expect(group?.routes.map(route => route.id)).toEqual(['batch-link-up']);
+    expect(getQuickCreateRoutes(grants, menuCodes).map(route => route.id)).toEqual(['batch-link-up']);
+    const realtime = appRoutes.find(route => route.id === 'realtime-sync');
+    expect(realtime?.hidden).toBe(true);
+    expect(realtime?.quickCreateLabel).toBeUndefined();
+    expect(getActiveNavigationId('/sync/realtime', grants, menuCodes)).toBe('realtime-sync');
+    expect(getActiveNavigationId('/sync/realtime/101/detail', grants, menuCodes)).toBe('realtime-sync');
   });
 
   it('does not expose removed modules', () => {

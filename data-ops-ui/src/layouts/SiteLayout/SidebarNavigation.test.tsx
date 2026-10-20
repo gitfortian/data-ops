@@ -64,7 +64,7 @@ describe('IA-550 fixed global rail + independent business context rail', () => {
     const global = screen.getByLabelText('全局导航');
     fireEvent.click(within(global).getByRole('button', { name: '数据接入与集成' }));
     const context = screen.getByRole('navigation', { name: '数据接入与集成页面' });
-    expect(within(context).getByRole('link', { name: '数据源' })).toHaveAttribute('href', '/data-source');
+    expect(within(context).getByRole('link', { name: '数据源管理' })).toHaveAttribute('href', '/data-source');
     expect(within(context).getByRole('link', { name: 'SQL 执行记录' })).toHaveAttribute('href', '/sql-execution-audit');
     expect(within(context).queryByRole('link', { name: '数据标准' })).not.toBeInTheDocument();
     expect(within(global).getByRole('button', { name: '标准、指标与建模' })).toBeInTheDocument();

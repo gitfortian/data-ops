@@ -1,5 +1,5 @@
 export default {
-  'pages.batchLinkUp.page.title': '离线同步',
+  'pages.batchLinkUp.page.title': '任务管理',
   'pages.batchLinkUp.page.create': '新建同步任务',
   'pages.batchLinkUp.page.tipLabel': '【提示】',
   'pages.batchLinkUp.page.tipContent': '任务交互已增加“发布”动作；启动任务前，请先确认任务已经上线。',
