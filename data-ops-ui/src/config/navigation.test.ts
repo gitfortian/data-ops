@@ -219,6 +219,20 @@ describe('permission-aware navigation', () => {
     expect(getActiveNavigationId('/home', [])).toBe('home');
   });
 
+  it('allows the new explore page only under the existing data-source permission and menu grant', () => {
+    const read = ['resource:data-source:read'];
+    const menu = [YAK_OPS_MENU_CODES.dataSource];
+    const route = appRoutes.find(item => item.id === 'data-source-explore')!;
+    expect(route.path).toBe('/data-source/explore');
+    expect(resolveNavigationMenuCode(route)).toBe(YAK_OPS_MENU_CODES.dataSource);
+    expect(canAccessNavigationRoute(route, read, menu)).toBe(true);
+    expect(canAccessNavigationRoute(route, read, [])).toBe(false);
+    expect(canAccessNavigationRoute(route, [], menu)).toBe(false);
+    expect(getActiveNavigationId('/data-source/explore', read, menu)).toBe('data-source-explore');
+    const group = getMainNavigationGroups(read, menu).find(g => g.id === 'integration');
+    expect(group?.routes.map(item => item.id)).toEqual(['data-source', 'data-source-explore']);
+  });
+
   it('moved data-source into the integration domain with its menu grant intact', () => {
     expect(
       getStandaloneNavigationRoutes(

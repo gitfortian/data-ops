@@ -76,7 +76,11 @@ export const appRoutes: readonly NavigationRoute[] = [
   { id: 'home', menuCode: YAK_OPS_MENU_CODES.home, mode: 'public', path: '/home', title: '首页', component: './home', iconKey: 'home', order: 0 },
   { id: 'quick-create', path: '/create', title: '快速创建', component: './create', hidden: true, parentId: 'home' },
   { id: 'ai-agent', path: '/ai-agent', title: '智能助手', component: './ai-agent', hidden: true, mode: 'public', parentId: 'home' },
-  { id: 'data-source', menuCode: YAK_OPS_MENU_CODES.dataSource, mode: 'one', permission: 'resource:data-source:read', path: '/data-source', title: '数据源', component: './data-source', iconKey: 'database', menuGroup: 'integration', order: 10 },
+  { id: 'data-source', menuCode: YAK_OPS_MENU_CODES.dataSource, mode: 'one', permission: 'resource:data-source:read', path: '/data-source', title: '数据源管理', component: './data-source', iconKey: 'database', menuGroup: 'integration', order: 10 },
+  // Same Security data-source menu grant: no new RBAC entitlement.
+  { id: 'data-source-explore', path: '/data-source/explore', title: '数据探查',
+    component: './data-source/explore', parentId: 'data-source',
+    iconKey: 'search', menuGroup: 'integration', order: 11 },
   { id: 'sql-execution-audit', menuCode: YAK_OPS_MENU_CODES.sqlExecutionAudit, mode: 'one', permission: 'resource:sql-execution:read', path: '/sql-execution-audit', title: 'SQL 执行记录', component: './data-source/sql-executions', iconKey: 'monitor', menuGroup: 'integration', order: 50 },
   { id: 'dashboard', menuCode: YAK_OPS_MENU_CODES.dashboard, mode: 'public', path: '/dashboard', title: '仪表盘', component: './data-analysis/dashboard', iconKey: 'insight', menuGroup: 'analysis-presentation', order: 10 },
   { id: 'dashboard-new', path: '/dashboard/new', title: '新建仪表盘', component: './data-analysis/dashboard/editor', hidden: true, parentId: 'dashboard' },
@@ -103,7 +107,7 @@ export const appRoutes: readonly NavigationRoute[] = [
   {
     id: 'batch-link-up', menuCode: YAK_OPS_MENU_CODES.batchLinkUp,
     mode: 'one', permission: 'task:batch:read',
-    path: '/sync/batch-link-up', title: '离线同步', component: './integration/batch-link-up',
+    path: '/sync/batch-link-up', title: '任务管理', component: './integration/batch-link-up',
     iconKey: 'sync', menuGroup: 'integration', order: 20,
     quickCreateRequirement: { mode: 'one', permission: 'task:batch:create' },
     quickCreateLabel: '新建离线同步',

@@ -37,6 +37,17 @@ describe('IA-550 domain-local navigation without the redundant third level', () 
       .toEqual(expect.arrayContaining(['home', 'approval-todo']));
   });
 
+  it('labels batch tasks as task management and keeps the independent explorer in source management', () => {
+    const group = getMainNavigationGroups(['security:root']).find(g => g.id === 'integration')!;
+    const model = getContextNavigationModel(group);
+    const source = model.sections.find(section => section.id === 'source');
+    const sync = model.sections.find(section => section.id === 'sync');
+    expect(source?.routes.map(route => route.id)).toContain('data-source-explore');
+    expect(source?.routes.find(route => route.id === 'data-source')?.title).toBe('数据源管理');
+    expect(sync?.routes.map(route => route.id)).toEqual(['batch-link-up']);
+    expect(sync?.routes[0]?.title).toBe('任务管理');
+  });
+
   it('uses static context captions instead of a repeated clickable task label', () => {
     const group = getMainNavigationGroups(['security:root']).find(g => g.id === 'modeling')!;
     const model = getContextNavigationModel(group);
