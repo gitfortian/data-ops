@@ -51,40 +51,62 @@ export default function SidebarNavigation({
         ?? (groups.some(group => group.id === previous) ? previous : groups[0]?.id));
   }, [activeDomain, groups]);
 
-  const renderRoute = (route: NavigationRoute) => <Link
-    key={route.id}
-    to={route.path}
-    title={route.title}
-    onClick={onNavigate}
-    aria-current={activeId === route.id ? 'page' : undefined}
-    className={[
-      'flex min-h-9 w-full items-center rounded-md px-3 py-2 text-[13px] leading-5',
-      'transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]',
-      activeId === route.id
-        ? 'bg-[rgba(254,44,85,0.07)] font-semibold text-[#fe2c55]'
-        : 'text-[#475467] hover:bg-[#f4f5f7] hover:text-[#344054]',
-    ].join(' ')}
-  >{route.title}</Link>;
+  // Three direct links in the *existing* authorized SiteLayout context rail.
+  // Derive all from the only existing Modeling menu grant; no duplicate menu
+  // codes, Flyway grants, third-level tree or self-invented permissions.
+  const expandedRoutes = (route: NavigationRoute) => route.id === 'modeling-workspace'
+    ? [
+      { id: 'model-overview', path: '/modeling', title: '模型总览' },
+      { id: 'model-logical', path: '/modeling/logical', title: '逻辑模型' },
+      { id: 'model-physical', path: '/modeling?view=physical', title: '物理模型' },
+    ]
+    : [{ id: route.id, path: route.path, title: route.title }];
+
+  const isActiveModelingLink = (id: string, fallbackId: string) => {
+    if (fallbackId !== 'modeling-workspace') return activeId === id;
+    if (typeof window === 'undefined') return id === 'model-overview' && activeId === 'modeling-workspace';
+    const pathname = window.location.pathname;
+    const physical = new URLSearchParams(window.location.search).get('view') === 'physical';
+    return id === 'model-logical' ? pathname === '/modeling/logical'
+      : id === 'model-physical' ? pathname.startsWith('/modeling/models/') || (pathname === '/modeling' && physical)
+      : pathname === '/modeling' && !physical;
+  };
+
+  const renderRoute = (route: NavigationRoute) => expandedRoutes(route).map(link => {
+    const selected = isActiveModelingLink(link.id, route.id);
+    return <Link
+      key={link.id}
+      to={link.path}
+      title={link.title}
+      onClick={onNavigate}
+      aria-current={selected ? 'page' : undefined}
+      className={[
+        'flex min-h-9 w-full items-center rounded-md px-3 py-2 text-[13px] leading-5',
+        'transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#475467]',
+        selected
+          ? 'bg-[rgba(254,44,85,0.07)] font-semibold text-[#fe2c55]'
+          : 'text-[#475467] hover:bg-[#f4f5f7] hover:text-[#344054]',
+      ].join(' ')}
+    >{link.title}</Link>;
+  });
 
   const popupItems = (group: NavigationGroupWithRoutes): MenuProps['items'] => {
     const model: ContextNavigationModel = models.get(group.id) ?? getContextNavigationModel(group);
-    // Widen flatMap's output to Ant Design's menu item union: grouped labels
-    // may be text, while route labels are React elements.
     return model.sections.flatMap<NonNullable<MenuProps['items']>[number]>(section =>
-      section.title && section.routes.length > 1
+      section.title && (section.routes.length > 1 || section.id === 'models')
         ? [{
             type: 'group' as const,
-            key: `section:${group.id}:${section.id}`,
+            key: 'section:' + group.id + ':' + section.id,
             label: section.title,
-            children: section.routes.map(route => ({
-              key: route.id,
-              label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
-            })),
+            children: section.routes.flatMap(route => expandedRoutes(route).map(link => ({
+              key: link.id,
+              label: <Link to={link.path} onClick={onNavigate}>{link.title}</Link>,
+            }))),
           }]
-        : section.routes.map(route => ({
-            key: route.id,
-            label: <Link to={route.path} onClick={onNavigate}>{route.title}</Link>,
-          })),
+        : section.routes.flatMap(route => expandedRoutes(route).map(link => ({
+            key: link.id,
+            label: <Link to={link.path} onClick={onNavigate}>{link.title}</Link>,
+          }))),
     );
   };
 
@@ -171,11 +193,11 @@ export default function SidebarNavigation({
         <div className="space-y-1">
           {currentModel.sections.map(section => <section key={section.id}
             aria-label={section.title || currentGroup.title} className="pb-1">
-            {section.title && section.routes.length > 1 && <div
+            {section.title && (section.routes.length > 1 || section.id === 'models') && <div
               className="px-3 pb-1 pt-3 text-[11px] font-medium text-[#98a2b3]">
               {section.title}
             </div>}
-            {section.routes.map(renderRoute)}
+            {section.routes.flatMap(renderRoute)}
           </section>)}
         </div>
       </>}

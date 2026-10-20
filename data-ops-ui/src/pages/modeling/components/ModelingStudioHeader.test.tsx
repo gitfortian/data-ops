@@ -1,46 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { Button } from 'antd';
 import ModelingStudioHeader from './ModelingStudioHeader';
 import ModelingStartGuide from './ModelingStartGuide';
 
-const mockPush = jest.fn();
-let mockCanReadSemantic = true;
-jest.mock('@umijs/max', () => ({ history: { push: (...args: unknown[]) => mockPush(...args) } }));
-jest.mock('@/hooks/usePermissionAccess', () => ({
-  __esModule: true,
-  default: () => ({ can: (code: string) => code !== 'semantic:read' || mockCanReadSemantic }),
-}));
-
-beforeEach(() => {
-  mockPush.mockReset();
-  mockCanReadSemantic = true;
+it('uses the existing SiteLayout instead of adding a third navigation rail', () => {
+  render(<ModelingStudioHeader area="catalog" title="模型总览" description="真实建模" />);
+  expect(screen.getByRole('heading', { name: '模型总览' })).toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: /数仓建模工作区导航/ })).not.toBeInTheDocument();
+  expect(screen.queryByText('模型目录')).not.toBeInTheDocument();
 });
 
-it('renders actual modeling workspaces and links to the logical editor', () => {
-  render(<ModelingStudioHeader area="catalog" title="数仓模型设计中心"
-    description="真实建模" />);
-  expect(screen.getByRole('heading', { name: '数仓模型设计中心' })).toBeInTheDocument();
-  expect(screen.getByRole('navigation', { name: '数仓建模工作区导航' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /逻辑建模/ }));
-  expect(mockPush).toHaveBeenCalledWith('/modeling/logical');
+it('preserves contextual actions without creating secondary route buttons', () => {
+  const onCreate = jest.fn();
+  render(<ModelingStudioHeader area="physical" title="物理模型" description="模型设计"
+    actions={<Button onClick={onCreate}>新建物理草稿</Button>} />);
+  fireEvent.click(screen.getByRole('button', { name: '新建物理草稿' }));
+  expect(onCreate).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: /分层主线/ })).not.toBeInTheDocument();
 });
 
-it('hides Semantic entry when the user lacks Semantic read permission', () => {
-  mockCanReadSemantic = false;
-  render(<ModelingStudioHeader area="logical" title="业务逻辑设计" description="只读权限" />);
-  expect(screen.queryByRole('button', { name: /业务过程/ })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /物理建模/ })).toBeInTheDocument();
-});
-
-it('delegates navigation to the caller so the unsaved-change guard can intercept it', () => {
-  const onNavigate = jest.fn();
-  render(<ModelingStudioHeader area="physical" title="模型详情" description="草稿"
-    onNavigate={onNavigate} />);
-  fireEvent.click(screen.getByRole('button', { name: /分层主线/ }));
-  expect(onNavigate).toHaveBeenCalledWith('/modeling/mainline');
-  expect(mockPush).not.toHaveBeenCalled();
-});
-
-it('keeps creation unavailable until project scope and authoring permission are ready', () => {
+it('retains authorized task entry and disables physical creation without scope', () => {
   const onCreate = jest.fn();
   const onSource = jest.fn();
   const onLogical = jest.fn();
