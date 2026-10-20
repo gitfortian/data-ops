@@ -11,6 +11,8 @@ import { listModelingMappings } from '@/services/modeling/mapping';
 import type { OdsSourceLookup } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord } from '@/services/modeling/types';
 import { MODELING_DIALECT_OPTIONS, dialectOfDbType } from '@/pages/modeling/constants';
+import { listSemanticLayers } from '@/services/semantic/api';
+import OdsSourceSelector from './OdsSourceSelector';
 import { buildLiveSourceReturnPath } from '@/utils/liveSourceOdsJourney';
 import './OdsSourceJourney.less';
 
@@ -41,7 +43,8 @@ const OdsSourceJourney = () => {
   const liveSourceReturn = datasourceId != null && params.get('origin') === 'live-source'
     ? buildLiveSourceReturnPath({ dataSourceId: datasourceId, database, schema, table })
     : null;
-  const sourceReturn = liveSourceReturn ??
+  const fromModeling = params.get('origin') === 'modeling-home';
+  const sourceReturn = fromModeling ? '/modeling?view=physical' : liveSourceReturn ??
     `/data-asset/catalog?view=entity&datasourceId=${datasourceId || ''}${entityId ? `&entityId=${entityId}` : ''}${database ? `&databaseName=${encodeURIComponent(database)}` : ''}`;
 
   const modelDetailPath = (modelId: number): string => {
@@ -71,10 +74,13 @@ const OdsSourceJourney = () => {
   const [savedDraft, setSavedDraft] = useState<ModelingModelRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [savingDesign, setSavingDesign] = useState(false);
+  const [creationUnknown, setCreationUnknown] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
   const readEpoch = useRef(0);
   const sourceIdentity = useRef('');
+  const autoPreviewKey = useRef('');
 
   const navigateSafely = (path: string) => {
     if (dirty && !savedId) {
@@ -107,8 +113,11 @@ const OdsSourceJourney = () => {
     setSourceVerified(false);
     // A draftId-only redirect must not erase a preview/mapping the user just confirmed.
     if (changedSource) {
-      setColumns(null); setSavedId(null); setDirty(false);
+      setColumns(null); setSavedId(null); setDirty(false); setCreationUnknown(false);
       setPreviewBusy(false); setCreating(false); setCommitting(false);
+      setCode((`ods_${database}_${schema || ''}_${table}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 120));
+      setName(`ODS ${table}`);
+      setDialect('');
     }
     setSavedDraft(null);
     if (!valid || datasourceId == null) {
@@ -117,11 +126,12 @@ const OdsSourceJourney = () => {
       return;
     }
     try {
-      const [sources, response, entity, resumed] = await Promise.all([
+      const [sources, response, entity, resumed, targetLayers] = await Promise.all([
         listAllDataSources(),
         getOdsSourceCandidates({ datasourceId, database, schema, table }),
         entityId ? getEntityDetail(entityId) : Promise.resolve(null),
         draftId ? getModelingModel(draftId) : Promise.resolve(null),
+        listSemanticLayers().catch(() => []),
       ]);
       if (ticket !== readEpoch.current) return;
       // URL hints never grant access. Confirm both the active project's DataSource owner
@@ -159,8 +169,12 @@ const OdsSourceJourney = () => {
       // A newly bound draft is now an existing candidate; do not show an
       // empty-draft save form or try to commit its structure a second time.
       if (resumed?.sourceDatasourceId == null && resumed) setSavedDraft(resumed);
-      const inferred = dialectOfDbType(validSource.dbType);
-      if (inferred) setDialect(inferred);
+      // Infer ODS target dialect only from configured target connection, never from the physical source.
+      const layer = targetLayers.find(item => item.code === 'ODS' && item.status === 'ENABLED');
+      const targetSource = (sources.bizData ?? []).find(item =>
+        layer?.datasourceId != null && Number(item.id) === Number(layer.datasourceId));
+      const inferred = targetSource ? dialectOfDbType(targetSource.dbType) : undefined;
+      if (inferred) setDialect(current => current || inferred);
     } catch (error) {
       if (ticket === readEpoch.current)
         setFailure(error instanceof Error ? error.message : '来源和模型核验失败；请重试。');
@@ -170,9 +184,10 @@ const OdsSourceJourney = () => {
   }, [projectId, datasourceId, database, schema, table, entityId, draftId, valid, reload]);
 
   useEffect(() => {
+    if (!valid) return;
     void refresh();
     return () => { readEpoch.current += 1; };
-  }, [refresh]);
+  }, [refresh, valid]);
 
   const preview = useCallback(async () => {
     const ticket = readEpoch.current;
@@ -197,6 +212,18 @@ const OdsSourceJourney = () => {
       if (ticket === readEpoch.current) setPreviewBusy(false);
     }
   }, [sourceVerified, lookup, datasourceId, database, schema, table]);
+
+  // Re-fetch real columns automatically after the physical table is selected.
+  // Retry after a failure is explicit; avoid an infinite query loop.
+  useEffect(() => {
+    if (!valid || !sourceVerified || lookup?.state !== 'READY'
+        || lookup.candidates.length > 0 || columns || previewBusy) return;
+    const key = JSON.stringify([projectId, datasourceId, database, schema, table]);
+    if (autoPreviewKey.current === key) return;
+    autoPreviewKey.current = key;
+    void preview();
+  }, [valid, sourceVerified, lookup, columns, previewBusy, preview, projectId,
+      datasourceId, database, schema, table]);
 
   const physicalColumns = useMemo(() => columns ?? [], [columns]);
   const targetValues = physicalColumns.map(col => (targetNames[col.name] || '').trim());
@@ -324,6 +351,15 @@ const OdsSourceJourney = () => {
     } finally { if (ticket === readEpoch.current) setCommitting(false); }
   };
 
+
+  // Modeling-home entry begins without a table and shows the same verified
+  // picker used by DataSource instead of creating an unrelated ODS wizard.
+  if (!valid) {
+    const malformed = ['datasourceId', 'database', 'table', 'schema'].some(key => params.has(key));
+    if (malformed) return <Alert type="error" showIcon message="来源身份不完整，无法进入 ODS 设计"
+      description="请从物理模型首页重新选择数据源、数据库、Schema 和真实表。" />;
+    return <OdsSourceSelector />;
+  }
 
   const newTarget = lookup?.state === 'READY' && lookup.candidates.length === 0 && sourceVerified;
 
