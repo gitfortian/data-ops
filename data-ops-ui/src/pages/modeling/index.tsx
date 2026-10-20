@@ -518,9 +518,13 @@ const ModelingWorkspace: React.FC = () => {
             } }}>
               <Button>管理 <DownOutlined /></Button>
             </Dropdown>
+            <Button onClick={() => history.push('/modeling?sourceJourney=ods')}
+              disabled={!can('modeling:create') || !can('resource:data-source:read')}>
+              新建 ODS
+            </Button>
             <Button type="primary" onClick={() => setWizardOpen(true)}
               disabled={Boolean(journeyProblem) || !journeyReady || optionsLoading || !can('modeling:create')}>
-              新建物理草稿
+              新建物理模型
             </Button>
           </>} />
         {journeyProblem && <div role="alert" className="mb-3">
@@ -532,7 +536,7 @@ const ModelingWorkspace: React.FC = () => {
           process={journeyProcess}
           onBusiness={() => history.push(journeyProcess ? processToSemantic(journeyProcess.id) : '/semantic/processes')}
           onLogical={() => history.push(journeyProcess ? processToLogical(journeyProcess.id) : '/modeling/logical')}
-          onSource={() => history.push('/data-source')}
+          onSource={() => history.push('/modeling?sourceJourney=ods')}
           onCreate={() => setWizardOpen(true)}
           canCreate={can('modeling:create') && !Boolean(journeyProblem) && journeyReady && !optionsLoading}
           loading={optionsLoading || !journeyReady}
@@ -811,7 +815,7 @@ const ModelingWorkspace: React.FC = () => {
         }}
         onGoSource={() => {
           setWizardOpen(false);
-          history.push('/data-source');
+          history.push('/modeling?sourceJourney=ods');
         }}
         onClose={() => setWizardOpen(false)}
         onSubmit={(payload) => void handleWizardSubmit(payload)}
